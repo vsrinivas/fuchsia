@@ -6,8 +6,8 @@
 
 #include <zircon/assert.h>
 
-#include "device_interface.h"
 #include "log.h"
+#include "session.h"
 
 namespace network::internal {
 
@@ -24,7 +24,7 @@ zx::status<std::unique_ptr<RxQueue>> RxQueue::Create(DeviceInterface* parent) {
     return zx::error(ZX_ERR_NO_MEMORY);
   }
 
-  fbl::AutoLock lock(&queue->lock_);
+  fbl::AutoLock lock(&queue->parent_->rx_lock());
   // The RxQueue's capacity is the device's FIFO rx depth as opposed to the hardware's queue depth
   // so we can (possibly) reduce the amount of reads on the rx fifo during rx interrupts.
   auto capacity = parent->rx_fifo_depth();
@@ -118,13 +118,13 @@ void RxQueue::JoinThread() {
   }
 }
 
-void RxQueue::PurgeSession(Session* session) {
-  fbl::AutoLock lock(&lock_);
+void RxQueue::PurgeSession(Session& session) {
+  fbl::AutoLock lock(&parent_->rx_lock());
   // Get rid of all available buffers that belong to the session and stop its rx path.
-  session->StopRx();
+  session.StopRx();
   for (auto nu = available_queue_->count(); nu > 0; nu--) {
     auto b = available_queue_->Pop();
-    if (in_flight_->Get(b).session == session) {
+    if (in_flight_->Get(b).session == &session) {
       in_flight_->Free(b);
     } else {
       // Push back to the end of the queue.
@@ -136,7 +136,7 @@ void RxQueue::PurgeSession(Session* session) {
 void RxQueue::Reclaim() {
   for (auto i = in_flight_->begin(); i != in_flight_->end(); ++i) {
     auto& buff = in_flight_->Get(*i);
-    // reclaim the buffer if the device has it
+    // Reclaim the buffer if the device has it.
     if (buff.flags & kDeviceHasBuffer) {
       ReclaimBuffer(*i);
     }
@@ -159,17 +159,24 @@ std::tuple<RxQueue::InFlightBuffer*, uint32_t> RxQueue::GetBuffer() {
     auto idx = available_queue_->Pop();
     return std::make_tuple(&in_flight_->Get(idx), idx);
   }
-  // need to fetch more from the session
+  // Need to fetch more from the session.
   if (in_flight_->available() == 0) {
-    // no more space to keep in flight buffers
+    // No more space to keep in flight buffers.
     LOG_ERROR("network-device: can't fit more in-flight buffers");
     return std::make_tuple(nullptr, 0);
   }
 
-  SessionTransaction transaction(this);
-  if (parent_->LoadRxDescriptors(&transaction) != ZX_OK) {
-    // failed to load descriptors from session.
-    return std::make_tuple(nullptr, 0);
+  RxSessionTransaction transaction(this);
+  switch (zx_status_t status = parent_->LoadRxDescriptors(transaction); status) {
+    case ZX_OK:
+      break;
+    default:
+      LOGF_ERROR("network-device: failed to load rx buffer descriptors: %s",
+                 zx_status_get_string(status));
+    case ZX_ERR_PEER_CLOSED:  // Primary FIFO closed.
+    case ZX_ERR_SHOULD_WAIT:  // No Rx buffers available in FIFO.
+    case ZX_ERR_BAD_STATE:    // Primary session stopped or paused.
+      return std::make_tuple(nullptr, 0);
   }
   // LoadRxDescriptors can't return OK if it couldn't load any descriptors.
   auto idx = available_queue_->Pop();
@@ -185,14 +192,14 @@ zx_status_t RxQueue::PrepareBuff(rx_space_buffer_t* buff) {
   buff->id = index;
   if ((status = session_buffer->session->FillRxSpace(session_buffer->descriptor_index, buff)) !=
       ZX_OK) {
-    // if the session can't fill Rx for any reason, kill it.
+    // If the session can't fill Rx for any reason, kill it.
     session_buffer->session->Kill();
-    // put the index back at the end of the available queue
+    // Put the index back at the end of the available queue.
     available_queue_->Push(index);
     return status;
   }
 
-  // mark that this buffer belongs to implementation.
+  // Mark that this buffer belongs to implementation.
   session_buffer->flags |= kDeviceHasBuffer;
   session_buffer->session->RxTaken();
   device_buffer_count_++;
@@ -200,28 +207,27 @@ zx_status_t RxQueue::PrepareBuff(rx_space_buffer_t* buff) {
 }
 
 void RxQueue::CompleteRxList(const rx_buffer_t* rx, size_t count) {
-  fbl::AutoLock lock(&lock_);
+  fbl::AutoLock lock(&parent_->rx_lock());
+  SharedAutoLock control_lock(&parent_->control_lock());
   device_buffer_count_ -= count;
   while (count--) {
     auto& session_buffer = in_flight_->Get(rx->id);
-    // mark that the buffer does not belong to device anymore:
+    // Mark that the buffer does not belong to device anymore:
     session_buffer.flags &= static_cast<uint16_t>(~kDeviceHasBuffer);
-    session_buffer.session->RxReturned();
+    session_buffer.session->AssertParentControlLockShared(*parent_);
     if (session_buffer.session->CompleteRx(session_buffer.descriptor_index, rx)) {
-      // we can reuse the descriptor
+      // We can reuse the descriptor.
       available_queue_->Push(rx->id);
     } else {
       in_flight_->Free(rx->id);
     }
     rx++;
   }
-  ReturnBuffers();
+  parent_->CommitAllSessions();
   if (device_buffer_count_ <= parent_->rx_notify_threshold()) {
     TriggerRxWatch();
   }
 }
-
-void RxQueue::ReturnBuffers() { parent_->CommitAllSessions(); }
 
 int RxQueue::WatchThread() {
   auto loop = [this]() -> zx_status_t {
@@ -276,7 +282,7 @@ int RxQueue::WatchThread() {
       size_t pushed = 0;
       bool should_wait_on_fifo;
 
-      fbl::AutoLock lock(&lock_);
+      fbl::AutoLock lock(&parent_->rx_lock());
       size_t push_count = parent_->info().rx_depth - device_buffer_count_;
       if (parent_->IsDataPlaneOpen()) {
         for (; pushed < push_count; pushed++) {
@@ -287,8 +293,8 @@ int RxQueue::WatchThread() {
       }
 
       if (fifo_readable && push_count == 0 && in_flight_->available()) {
-        SessionTransaction transaction(this);
-        parent_->LoadRxDescriptors(&transaction);
+        RxSessionTransaction transaction(this);
+        parent_->LoadRxDescriptors(transaction);
       }
       // We only need to wait on the FIFO if we didn't get enough buffers.
       // Otherwise, we'll trigger the loop again once the device calls CompleteRx.
@@ -299,7 +305,7 @@ int RxQueue::WatchThread() {
 
       // We release the main rx queue lock before calling into the parent device,
       // so we don't cause a re-entrant deadlock.
-      // We keep the buffers_lock_ since those are tied to our lifecycle.
+      // We keep the buffers_parent_->rx_lock() since those are tied to our lifecycle.
       lock.release();
 
       if (pushed != 0) {
@@ -336,7 +342,7 @@ int RxQueue::WatchThread() {
   return 0;
 }
 
-uint32_t RxQueue::SessionTransaction::remaining() __TA_REQUIRES(queue_->lock_) {
+uint32_t RxQueue::SessionTransaction::remaining() __TA_REQUIRES(queue_->parent_->rx_lock()) {
   // NB: __TA_REQUIRES here is just encoding that a SessionTransaction always holds a lock for
   // its parent queue, the protection from misuse comes from the annotations on
   // `SessionTransaction`'s constructor and destructor.
@@ -344,7 +350,7 @@ uint32_t RxQueue::SessionTransaction::remaining() __TA_REQUIRES(queue_->lock_) {
 }
 
 void RxQueue::SessionTransaction::Push(Session* session, uint16_t descriptor)
-    __TA_REQUIRES(queue_->lock_) {
+    __TA_REQUIRES(queue_->parent_->rx_lock()) {
   // NB: __TA_REQUIRES here is just encoding that a SessionTransaction always holds a lock for
   // its parent queue, the protection from misuse comes from the annotations on
   // `SessionTransaction`'s constructor and destructor.

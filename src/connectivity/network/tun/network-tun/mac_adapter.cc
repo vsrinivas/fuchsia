@@ -19,11 +19,9 @@ zx::status<std::unique_ptr<MacAdapter>> MacAdapter::Create(MacAdapterParent* par
   if (!ac.check()) {
     return zx::error(ZX_ERR_NO_MEMORY);
   }
-  mac_addr_impl_protocol_t proto = {
-      .ops = &adapter->mac_addr_impl_protocol_ops_,
-      .ctx = adapter.get(),
-  };
-  zx::status device = MacAddrDeviceInterface::Create(ddk::MacAddrImplProtocolClient(&proto));
+
+  mac_addr_protocol_t proto = adapter->proto();
+  zx::status device = MacAddrDeviceInterface::Create(ddk::MacAddrProtocolClient(&proto));
   if (device.is_error()) {
     return device.take_error();
   }
@@ -46,11 +44,11 @@ void MacAdapter::TeardownSync() {
   sync_completion_wait_deadline(&completion, ZX_TIME_INFINITE);
 }
 
-void MacAdapter::MacAddrImplGetAddress(uint8_t* out_mac) {
+void MacAdapter::MacAddrGetAddress(uint8_t* out_mac) {
   std::copy(mac_.octets.begin(), mac_.octets.end(), out_mac);
 }
 
-void MacAdapter::MacAddrImplGetFeatures(features_t* out_features) {
+void MacAdapter::MacAddrGetFeatures(features_t* out_features) {
   if (promisc_only_) {
     out_features->multicast_filter_count = 0;
     out_features->supported_modes = MODE_MULTICAST_PROMISCUOUS;
@@ -61,8 +59,8 @@ void MacAdapter::MacAddrImplGetFeatures(features_t* out_features) {
   }
 }
 
-void MacAdapter::MacAddrImplSetMode(mode_t mode, const uint8_t* multicast_macs_list,
-                                    size_t multicast_macs_count) {
+void MacAdapter::MacAddrSetMode(mode_t mode, const uint8_t* multicast_macs_list,
+                                size_t multicast_macs_count) {
   fbl::AutoLock lock(&state_lock_);
   fuchsia_hardware_network::wire::MacFilterMode filter_mode;
   switch (mode) {

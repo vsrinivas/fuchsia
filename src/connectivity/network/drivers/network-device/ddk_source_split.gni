@@ -31,6 +31,9 @@ template("ddk_source_split") {
       "//src/lib/ddk",
       "//src/lib/ddktl",
     ]
+    if (defined(invoker.ddk_deps)) {
+      public_deps += invoker.ddk_deps
+    }
   }
 
   source_set(target_name) {
@@ -45,5 +48,8 @@ template("ddk_source_split") {
       configs += invoker.configs
     }
     public_deps += [ "//zircon/system/ulib/syslog" ]
+    if (defined(invoker.non_ddk_deps)) {
+      public_deps += invoker.non_ddk_deps
+    }
   }
 }

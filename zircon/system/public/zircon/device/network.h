@@ -40,6 +40,11 @@ typedef struct buffer_descriptor {
   // |DESC_NO_INFO| describes no extra information.
   uint32_t info_type;
 
+  // Frame's device port identifier.
+  uint8_t port_id;
+  // Reserved for future expansion. Maintains 64-bit word alignment.
+  uint8_t _reserved[7];
+
   // Buffer offset in data VMO
   uint64_t offset;
 

@@ -14,10 +14,10 @@
 
 #include "data_structs.h"
 #include "definitions.h"
+#include "device_interface.h"
 
 namespace network::internal {
 
-class DeviceInterface;
 class Session;
 
 class RxQueue {
@@ -30,15 +30,21 @@ class RxQueue {
   static zx::status<std::unique_ptr<RxQueue>> Create(DeviceInterface* parent);
   ~RxQueue();
 
+  // Helper function with TA annotations that bridges the gap between parent's locks and local
+  // locking requirements; TA is not otherwise able to tell that the |parent| and |parent_| are the
+  // same entity.
+  void AssertParentRxLocked(DeviceInterface& parent) __TA_REQUIRES(parent.rx_lock())
+      __TA_ASSERT(parent_->rx_lock()) {
+    ZX_DEBUG_ASSERT(parent_ == &parent);
+  }
+
   // Reclaims all buffers currently held by the device.
-  void Reclaim() __TA_REQUIRES(lock_);
-  void Lock() __TA_ACQUIRE(lock_) { lock_.Acquire(); }
-  void Unlock() __TA_RELEASE(lock_) { lock_.Release(); }
+  void Reclaim() __TA_REQUIRES(parent_->rx_lock());
   // Drops all queued buffers attributed to the given session, and marks the session as rx-disabled.
   // Called by the DeviceInterface parent when the session is marked as dead.
-  void PurgeSession(Session* session);
+  void PurgeSession(Session& session);
   // Returns rx buffers to their respective sessions.
-  void CompleteRxList(const rx_buffer_t* rx, size_t count) __TA_EXCLUDES(lock_);
+  void CompleteRxList(const rx_buffer_t* rx, size_t count) __TA_EXCLUDES(parent_->rx_lock());
   // Notifies watcher thread that the primary session changed.
   void TriggerSessionChanged();
   // Poke watcher thread to try to fetch more rx descriptors.
@@ -49,14 +55,15 @@ class RxQueue {
   // A transaction to add buffers from a session to the RxQueue.
   class SessionTransaction {
    public:
-    explicit SessionTransaction(RxQueue* parent) __TA_REQUIRES(parent->lock_) : queue_(parent) {}
-    ~SessionTransaction() __TA_REQUIRES(queue_->lock_) = default;
+    explicit SessionTransaction(RxQueue* parent) __TA_REQUIRES(parent->parent_->rx_lock())
+        : queue_(parent) {}
+    ~SessionTransaction() __TA_REQUIRES(queue_->parent_->rx_lock()) = default;
     uint32_t remaining();
     void Push(Session* session, uint16_t descriptor);
 
    private:
     // Pointer to parent queue, not owned.
-    RxQueue* queue_;
+    RxQueue* const queue_;
     DISALLOW_COPY_ASSIGN_AND_MOVE(SessionTransaction);
   };
 
@@ -76,23 +83,20 @@ class RxQueue {
   // Get a single buffer from the queue, along with its identifier. On success, the buffer is popped
   // from the queue. The returned buffer pointer is still owned by the queue and the pointer should
   // not outlive the currently held lock.
-  std::tuple<InFlightBuffer*, uint32_t> GetBuffer() __TA_REQUIRES(lock_);
+  std::tuple<InFlightBuffer*, uint32_t> GetBuffer() __TA_REQUIRES(parent_->rx_lock());
   // Pops a buffer from the queue, if any are available, and stores the space information in `buff`.
   // Returns ZX_ERR_NO_RESOURCES if there are no buffers available.
-  zx_status_t PrepareBuff(rx_space_buffer_t* buff) __TA_REQUIRES(lock_);
-  // Signals the parent DeviceInterface to commit all outstanding Rx buffers.
-  void ReturnBuffers() __TA_REQUIRES(lock_);
+  zx_status_t PrepareBuff(rx_space_buffer_t* buff) __TA_REQUIRES(parent_->rx_lock());
   int WatchThread();
   // Reclaims the buffer with `id` from the device. If the buffer's session is still valid, gives it
   // to the session, otherwise drops it.
-  void ReclaimBuffer(uint32_t id) __TA_REQUIRES(lock_);
+  void ReclaimBuffer(uint32_t id) __TA_REQUIRES(parent_->rx_lock());
 
   // pointer to parent device, not owned.
-  DeviceInterface* parent_;
-  std::unique_ptr<IndexedSlab<InFlightBuffer>> in_flight_ __TA_GUARDED(lock_);
-  std::unique_ptr<RingQueue<uint32_t>> available_queue_ __TA_GUARDED(lock_);
-  size_t device_buffer_count_ __TA_GUARDED(lock_) = 0;
-  fbl::Mutex lock_;
+  DeviceInterface* const parent_;
+  std::unique_ptr<IndexedSlab<InFlightBuffer>> in_flight_ __TA_GUARDED(parent_->rx_lock());
+  std::unique_ptr<RingQueue<uint32_t>> available_queue_ __TA_GUARDED(parent_->rx_lock());
+  size_t device_buffer_count_ __TA_GUARDED(parent_->rx_lock()) = 0;
 
   // there are pre-allocated buffers that are only used by the rx watch thread.
   std::unique_ptr<rx_space_buffer_t[]> space_buffers_;
@@ -103,6 +107,14 @@ class RxQueue {
   std::atomic<bool> running_;
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(RxQueue);
+};
+
+// Newtype for the internal SessionTransaction class to allow other header files to forward declare
+// it.
+class RxSessionTransaction : public RxQueue::SessionTransaction {
+ protected:
+  friend RxQueue;
+  explicit RxSessionTransaction(RxQueue* parent) : RxQueue::SessionTransaction(parent) {}
 };
 
 }  // namespace network::internal

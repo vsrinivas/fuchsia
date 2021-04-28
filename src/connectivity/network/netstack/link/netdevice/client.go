@@ -366,12 +366,10 @@ func (c *Client) getDescriptorData(desc *bufferDescriptor) []byte {
 // resetDescriptor resets the the descriptor's fields that a device
 // implementation could have changed, it can be used for either Tx or Rx.
 func (c *Client) resetDescriptor(descriptor *bufferDescriptor) {
-	descriptor.chain_length = 0
-	descriptor.head_length = 0
-	descriptor.tail_length = 0
-	descriptor.data_length = C.uint(c.config.BufferLength)
-	descriptor.inbound_flags = 0
-	descriptor.return_flags = 0
+	*descriptor = bufferDescriptor{
+		offset:      descriptor.offset,
+		data_length: C.uint(c.config.BufferLength),
+	}
 }
 
 // NewClient creates a new client from a provided network device interface.

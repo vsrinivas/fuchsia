@@ -70,22 +70,13 @@ zx::status<std::unique_ptr<TunDevice>> TunDevice::Create(
     return zx::error(status);
   }
 
-  zx::status device =
-      DeviceAdapter::Create(tun->loop_.dispatcher(), tun.get(), tun->config_.online);
+  zx::status device = DeviceAdapter::Create(tun->loop_.dispatcher(), tun.get(), tun->config_.online,
+                                            tun->config_.mac);
   if (device.is_error()) {
     FX_LOGF(ERROR, "tun", "TunDevice::Init device init failed with %s", device.status_string());
     return device.take_error();
   }
   tun->device_ = std::move(device.value());
-
-  if (tun->config_.mac.has_value()) {
-    zx::status mac = MacAdapter::Create(tun.get(), tun->config_.mac.value(), false);
-    if (mac.is_error()) {
-      FX_LOGF(ERROR, "tun", "TunDevice::Init mac init failed with %s", mac.status_string());
-      return mac.take_error();
-    }
-    tun->mac_ = std::move(mac.value());
-  }
 
   thrd_t thread;
   if (zx_status_t status = tun->loop_.StartThread("tun-device", &thread); status != ZX_OK) {
@@ -104,9 +95,6 @@ TunDevice::~TunDevice() {
   // make sure that device is torn down:
   if (device_) {
     device_->TeardownSync();
-  }
-  if (mac_) {
-    mac_->TeardownSync();
   }
   loop_.Shutdown();
   FX_VLOG(1, "tun", "TunDevice destroyed");
@@ -206,8 +194,8 @@ InternalState TunDevice::State() const {
   InternalState state = {
       .has_session = device_->HasSession(),
   };
-  if (mac_) {
-    state.mac = mac_->GetMacState();
+  if (device_->mac()) {
+    state.mac = device_->mac()->GetMacState();
   }
   return state;
 }
@@ -320,8 +308,8 @@ void TunDevice::ConnectProtocols(fuchsia_net_tun::wire::Protocols protos,
   }
   if (protos.has_mac_addressing()) {
     fidl::ServerEnd mac = std::move(protos.mac_addressing());
-    if (mac_) {
-      zx_status_t status = mac_->Bind(loop_.dispatcher(), std::move(mac));
+    if (device_->mac()) {
+      zx_status_t status = device_->mac()->Bind(loop_.dispatcher(), std::move(mac));
       if (status != ZX_OK) {
         FX_LOGF(ERROR, "tun", "Failed to bind to mac addressing: %s", zx_status_get_string(status));
       }

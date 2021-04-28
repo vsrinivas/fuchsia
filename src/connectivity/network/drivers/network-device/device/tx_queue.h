@@ -14,10 +14,10 @@
 
 #include "data_structs.h"
 #include "definitions.h"
+#include "device_interface.h"
 
 namespace network::internal {
 
-class DeviceInterface;
 class Session;
 
 class TxQueue {
@@ -28,41 +28,48 @@ class TxQueue {
   ~TxQueue() = default;
 
   // Reclaims all tx buffers currently held by the device implementation.
-  void Reclaim() __TA_REQUIRES(lock_) __TA_REQUIRES(buffers_lock_);
-  void Lock() __TA_ACQUIRE(lock_) __TA_ACQUIRE(buffers_lock_) {
-    lock_.Acquire();
-    buffers_lock_.Acquire();
+  //
+  // Returns true if the device buffers were full before reclaiming.
+  [[nodiscard]] bool Reclaim() __TA_REQUIRES(parent_->tx_lock(), parent_->tx_buffers_lock());
+
+  // Helper functions with TA annotations that bridges the gap between parent's locks and local
+  // locking requirements; TA is not otherwise able to tell that the |parent| and |parent_| are the
+  // same entity.
+  void AssertParentTxLocked(DeviceInterface& parent) __TA_REQUIRES(parent.tx_lock())
+      __TA_ASSERT(parent_->tx_lock()) {
+    ZX_DEBUG_ASSERT(parent_ == &parent);
   }
-  void Unlock() __TA_RELEASE(lock_) __TA_RELEASE(buffers_lock_) {
-    buffers_lock_.Release();
-    lock_.Release();
+  void AssertParentTxBuffersLocked(DeviceInterface& parent) __TA_REQUIRES(parent.tx_buffers_lock())
+      __TA_ASSERT(parent_->tx_buffers_lock()) {
+    ZX_DEBUG_ASSERT(parent_ == &parent);
   }
 
   // Helper class to handle Tx transactions from sessions.
   class SessionTransaction {
    public:
-    SessionTransaction(TxQueue* parent, Session* session) __TA_ACQUIRE(queue_->lock_)
-        __TA_ACQUIRE(queue_->buffers_lock_);
-    ~SessionTransaction() __TA_RELEASE(queue_->lock_) __TA_RELEASE(queue_->buffers_lock_);
+    SessionTransaction(TxQueue* parent, Session* session)
+        __TA_ACQUIRE(queue_->parent_->tx_lock(), queue_->parent_->tx_buffers_lock());
+    ~SessionTransaction()
+        __TA_RELEASE(queue_->parent_->tx_lock(), queue_->parent_->tx_buffers_lock());
 
     uint32_t available() const { return available_; }
     bool overrun() const { return available_ == 0; }
-    tx_buffer_t* GetBuffer() __TA_REQUIRES(queue_->buffers_lock_);
-    void Push(uint16_t descriptor) __TA_REQUIRES(queue_->lock_)
-        __TA_REQUIRES(queue_->buffers_lock_);
+    tx_buffer_t* GetBuffer() __TA_REQUIRES(queue_->parent_->tx_buffers_lock());
+    void Push(uint16_t descriptor)
+        __TA_REQUIRES(queue_->parent_->tx_lock(), queue_->parent_->tx_buffers_lock());
 
    private:
-    // pointer to queue over which transaction is opened, not owned.
-    TxQueue* queue_;
-    // pointer to session that opened the transaction, not owned.
-    Session* session_;
+    // Pointer to queue over which transaction is opened, not owned.
+    TxQueue* const queue_;
+    // Pointer to session that opened the transaction, not owned.
+    Session* const session_;
     uint32_t available_;
     uint32_t queued_;
     DISALLOW_COPY_ASSIGN_AND_MOVE(SessionTransaction);
   };
 
   // Marks all buffers in tx as complete, returning them to their respective sessions.
-  void CompleteTxList(const tx_result_t* tx, size_t count) __TA_EXCLUDES(lock_);
+  void CompleteTxList(const tx_result_t* tx, size_t count) __TA_EXCLUDES(parent_->tx_lock());
 
  private:
   explicit TxQueue(DeviceInterface* parent) : parent_(parent) {}
@@ -77,24 +84,24 @@ class TxQueue {
   };
 
   // Adds the provided session:descriptor tuple to the queue and returns the buffer id.
-  uint32_t Enqueue(Session* session, uint16_t descriptor) __TA_REQUIRES(lock_);
+  uint32_t Enqueue(Session* session, uint16_t descriptor) __TA_REQUIRES(parent_->tx_lock());
   // Marks the buffer with id as complete with the given status.
-  void MarkComplete(uint32_t id, zx_status_t status) __TA_REQUIRES(lock_);
+  void MarkComplete(uint32_t id, zx_status_t status) __TA_REQUIRES(parent_->tx_lock());
   // Returns all outstanding completed buffers to their respective sessions.
-  void ReturnBuffers() __TA_REQUIRES(lock_);
+  //
+  // Returns true if device buffers were full and sessions should be notified.
+  [[nodiscard]] bool ReturnBuffers() __TA_REQUIRES(parent_->tx_lock());
 
   // pointer to parent device, not owned.
-  DeviceInterface* parent_;
+  DeviceInterface* const parent_;
 
-  fbl::Mutex lock_;
-  std::unique_ptr<RingQueue<uint32_t>> return_queue_ __TA_GUARDED(lock_);
-  std::unique_ptr<IndexedSlab<InFlightBuffer>> in_flight_ __TA_GUARDED(lock_);
+  std::unique_ptr<RingQueue<uint32_t>> return_queue_ __TA_GUARDED(parent_->tx_lock());
+  std::unique_ptr<IndexedSlab<InFlightBuffer>> in_flight_ __TA_GUARDED(parent_->tx_lock());
 
   // pre-allocated buffers that are locked to only allow a single session thread to send tx buffers
   // to the device at once.
-  fbl::Mutex buffers_lock_ __TA_ACQUIRED_AFTER(lock_);
-  std::unique_ptr<tx_buffer_t[]> tx_buffers_ __TA_GUARDED(buffers_lock_);
-  std::unique_ptr<BufferParts[]> buffer_parts_ __TA_GUARDED(buffers_lock_);
+  std::unique_ptr<tx_buffer_t[]> tx_buffers_ __TA_GUARDED(parent_->tx_buffers_lock());
+  std::unique_ptr<BufferParts[]> buffer_parts_ __TA_GUARDED(parent_->tx_buffers_lock());
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(TxQueue);
 };

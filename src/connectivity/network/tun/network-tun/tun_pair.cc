@@ -32,36 +32,21 @@ zx::status<std::unique_ptr<TunPair>> TunPair::Create(
     return zx::error(ZX_ERR_NO_MEMORY);
   }
 
-  zx::status left = DeviceAdapter::Create(tun->loop_.dispatcher(), tun.get(), false);
+  zx::status left =
+      DeviceAdapter::Create(tun->loop_.dispatcher(), tun.get(), false, tun->config_.mac_left);
   if (left.is_error()) {
     FX_LOGF(ERROR, "tun", "TunDevice::Init device init left failed with %s", left.status_string());
     return left.take_error();
   }
   tun->left_ = std::move(left.value());
 
-  zx::status right = DeviceAdapter::Create(tun->loop_.dispatcher(), tun.get(), false);
+  zx::status right =
+      DeviceAdapter::Create(tun->loop_.dispatcher(), tun.get(), false, tun->config_.mac_right);
   if (right.is_error()) {
     FX_LOGF(ERROR, "tun", "TunDevice::Init device init right failed with %s", right.status_value());
     return right.take_error();
   }
   tun->right_ = std::move(right.value());
-
-  if (tun->config_.mac_left.has_value()) {
-    zx::status mac = MacAdapter::Create(tun.get(), tun->config_.mac_left.value(), true);
-    if (mac.is_error()) {
-      FX_LOGF(ERROR, "tun", "TunDevice::Init mac init left failed with %s", mac.status_string());
-      return mac.take_error();
-    }
-    tun->mac_left_ = std::move(mac.value());
-  }
-  if (tun->config_.mac_right.has_value()) {
-    zx::status mac = MacAdapter::Create(tun.get(), tun->config_.mac_right.value(), true);
-    if (mac.is_error()) {
-      FX_LOGF(ERROR, "tun", "TunDevice::Init mac init right failed with %s", mac.status_string());
-      return mac.take_error();
-    }
-    tun->mac_right_ = std::move(mac.value());
-  }
 
   thrd_t thread;
   if (zx_status_t status = tun->loop_.StartThread("tun-device-pair", &thread); status != ZX_OK) {
@@ -92,16 +77,10 @@ TunPair::~TunPair() {
   // make sure that both devices and mac adapters are torn down:
   sync_completion_t left_device_teardown;
   sync_completion_t right_device_teardown;
-  sync_completion_t left_mac_teardown;
-  sync_completion_t right_mac_teardown;
   AdapterTeardown(left_, &left_device_teardown);
   AdapterTeardown(right_, &right_device_teardown);
-  AdapterTeardown(mac_left_, &left_mac_teardown);
-  AdapterTeardown(mac_right_, &right_mac_teardown);
   sync_completion_wait(&left_device_teardown, ZX_TIME_INFINITE);
   sync_completion_wait(&right_device_teardown, ZX_TIME_INFINITE);
-  sync_completion_wait(&left_mac_teardown, ZX_TIME_INFINITE);
-  sync_completion_wait(&right_mac_teardown, ZX_TIME_INFINITE);
   loop_.Shutdown();
   FX_VLOG(1, "tun", "TunDevice destroyed");
 }
@@ -122,21 +101,19 @@ void TunPair::Bind(fidl::ServerEnd<fuchsia_net_tun::DevicePair> req) {
 void TunPair::ConnectProtocols(fuchsia_net_tun::wire::DevicePairEnds requests,
                                ConnectProtocolsCompleter::Sync& completer) {
   if (requests.has_left()) {
-    ConnectProtocols(left_, mac_left_, std::move(requests.left()));
+    ConnectProtocols(*left_, std::move(requests.left()));
   }
   if (requests.has_right()) {
-    ConnectProtocols(right_, mac_right_, std::move(requests.right()));
+    ConnectProtocols(*right_, std::move(requests.right()));
   }
 }
 
-void TunPair::ConnectProtocols(const std::unique_ptr<DeviceAdapter>& device,
-                               const std::unique_ptr<MacAdapter>& mac,
-                               fuchsia_net_tun::wire::Protocols protos) {
-  if (device && protos.has_network_device()) {
-    device->Bind(std::move(protos.network_device()));
+void TunPair::ConnectProtocols(DeviceAdapter& device, fuchsia_net_tun::wire::Protocols protos) {
+  if (protos.has_network_device()) {
+    device.Bind(std::move(protos.network_device()));
   }
-  if (mac && protos.has_mac_addressing()) {
-    mac->Bind(loop_.dispatcher(), std::move(protos.mac_addressing()));
+  if (device.mac() && protos.has_mac_addressing()) {
+    device.mac()->Bind(loop_.dispatcher(), std::move(protos.mac_addressing()));
   }
 }
 

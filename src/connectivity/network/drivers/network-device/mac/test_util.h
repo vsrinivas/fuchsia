@@ -16,17 +16,16 @@ namespace testing {
 
 constexpr zx_signals_t kConfigurationChangedEvent = ZX_USER_SIGNAL_0;
 
-class FakeMacDeviceImpl : public ddk::MacAddrImplProtocol<FakeMacDeviceImpl> {
+class FakeMacDeviceImpl : public ddk::MacAddrProtocol<FakeMacDeviceImpl> {
  public:
   FakeMacDeviceImpl();
 
   zx::status<std::unique_ptr<MacAddrDeviceInterface>> CreateChild();
 
-  void MacAddrImplGetAddress(uint8_t out_mac[MAC_SIZE]);
-  void MacAddrImplGetFeatures(features_t* out_features);
+  void MacAddrGetAddress(uint8_t out_mac[MAC_SIZE]);
+  void MacAddrGetFeatures(features_t* out_features);
 
-  void MacAddrImplSetMode(mode_t mode, const uint8_t* multicast_macs_list,
-                          size_t multicast_macs_count);
+  void MacAddrSetMode(mode_t mode, const uint8_t* multicast_macs_list, size_t multicast_macs_count);
 
   zx_status_t WaitConfigurationChanged();
 
@@ -38,9 +37,7 @@ class FakeMacDeviceImpl : public ddk::MacAddrImplProtocol<FakeMacDeviceImpl> {
 
   std::vector<MacAddress>& addresses() { return addresses_; }
 
-  mac_addr_impl_protocol_t proto() {
-    return mac_addr_impl_protocol_t{.ops = &mac_addr_impl_protocol_ops_, .ctx = this};
-  }
+  mac_addr_protocol_t proto() { return {.ops = &mac_addr_protocol_ops_, .ctx = this}; }
 
  private:
   fuchsia_net::wire::MacAddress mac_ = {0x00, 0x02, 0x03, 0x04, 0x05, 0x06};

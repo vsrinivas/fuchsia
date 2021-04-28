@@ -274,9 +274,10 @@ bool SerialPpp::ConsumeSerial(bool fetch_from_socket) {
       auto copied =
           std::copy(frame.information.begin(), frame.information.end(), buffer.data.begin());
       complete = {.id = buffer.id,
-                  .total_length = static_cast<uint64_t>(copied - buffer.data.begin()),
-                  .meta = buffer_metadata{
-                      .info = frame_info_t{},
+                  .length = static_cast<uint64_t>(copied - buffer.data.begin()),
+                  .meta = {
+                      .port_id = kPortId,
+                      .info = {},
                       .info_type = 0,
                       .flags = 0,
                       .frame_type = static_cast<uint8_t>(frame_type),
@@ -342,6 +343,7 @@ zx_status_t SerialPpp::NetworkDeviceImplInit(const network_device_ifc_protocol_t
     return ZX_ERR_BAD_STATE;
   }
   netdevice_protocol_ = ddk::NetworkDeviceIfcProtocolClient(iface);
+  netdevice_protocol_.AddPort(kPortId, this, &network_port_protocol_ops_);
   return ZX_OK;
 }
 
@@ -365,17 +367,17 @@ void SerialPpp::NetworkDeviceImplStart(network_device_impl_start_callback callba
     port_ = std::move(port);
     thread_ = std::thread([&] { WorkerLoop(); });
   }
-  status_t new_status = {.mtu = kDefaultMtu,
-                         .flags = static_cast<uint32_t>(netdev::wire::StatusFlags::kOnline)};
-  netdevice_protocol_.StatusChanged(&new_status);
+  port_status_t new_status = {.mtu = kDefaultMtu,
+                              .flags = static_cast<uint32_t>(netdev::wire::StatusFlags::kOnline)};
+  netdevice_protocol_.PortStatusChanged(kPortId, &new_status);
 }
 
 void SerialPpp::NetworkDeviceImplStop(network_device_impl_stop_callback callback, void* cookie) {
   auto complete = fit::defer([callback, cookie]() { callback(cookie); });
   Shutdown();
 
-  status_t new_status = {.mtu = kDefaultMtu, .flags = 0};
-  netdevice_protocol_.StatusChanged(&new_status);
+  port_status_t new_status = {.mtu = kDefaultMtu, .flags = 0};
+  netdevice_protocol_.PortStatusChanged(kPortId, &new_status);
 
   // Clear pending buffers.
   {
@@ -390,25 +392,14 @@ void SerialPpp::NetworkDeviceImplStop(network_device_impl_stop_callback callback
 }
 
 void SerialPpp::NetworkDeviceImplGetInfo(device_info_t* out_info) {
-  *out_info = device_info_t{
+  *out_info = {
       .tx_depth = kFifoDepth,
       .rx_depth = kFifoDepth,
       .rx_threshold = kFifoDepth / 2,
-      .device_class = static_cast<uint8_t>(netdev::wire::DeviceClass::kPpp),
-      .rx_types_list = kRxFrameTypes,
-      .rx_types_count = sizeof(kRxFrameTypes) / sizeof(uint8_t),
-      .tx_types_list = kTxFrameSupport,
-      .tx_types_count = sizeof(kTxFrameSupport) / sizeof(tx_support_t),
       .max_buffer_length = kMaxBufferSize,
       .buffer_alignment = 1,
       .min_rx_buffer_length = kDefaultMtu,
   };
-}
-
-void SerialPpp::NetworkDeviceImplGetStatus(status_t* out_status) {
-  *out_status = status_t{
-      .mtu = kDefaultMtu,
-      .flags = serial_.is_valid() ? static_cast<uint32_t>(netdev::wire::StatusFlags::kOnline) : 0};
 }
 
 void SerialPpp::NetworkDeviceImplQueueTx(const tx_buffer_t* buf_list, size_t buf_count) {
@@ -506,6 +497,25 @@ void SerialPpp::NetworkDeviceImplReleaseVmo(uint8_t vmo_id) {
 void SerialPpp::NetworkDeviceImplSetSnoop(bool snoop) {
   // ignored, we're using auto-snoop
 }
+
+void SerialPpp::NetworkPortGetInfo(port_info_t* out_info) {
+  *out_info = {
+      .device_class = static_cast<uint8_t>(netdev::wire::DeviceClass::kPpp),
+      .rx_types_list = kRxFrameTypes,
+      .rx_types_count = sizeof(kRxFrameTypes) / sizeof(uint8_t),
+      .tx_types_list = kTxFrameSupport,
+      .tx_types_count = sizeof(kTxFrameSupport) / sizeof(tx_support_t),
+  };
+}
+void SerialPpp::NetworkPortGetStatus(port_status_t* out_status) {
+  *out_status = {
+      .mtu = kDefaultMtu,
+      .flags = serial_.is_valid() ? static_cast<uint32_t>(netdev::wire::StatusFlags::kOnline) : 0,
+  };
+}
+void SerialPpp::NetworkPortSetActive(bool active) {}
+void SerialPpp::NetworkPortGetMac(mac_addr_protocol_t* out_mac_ifc) { *out_mac_ifc = {}; }
+void SerialPpp::NetworkPortRemoved() {}
 
 }  // namespace ppp
 

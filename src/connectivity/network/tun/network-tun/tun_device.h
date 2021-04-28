@@ -22,12 +22,11 @@ namespace tun {
 
 // Implements `fuchsia.net.tun.Device`.
 //
-// `TunDevice` uses `DeviceAdapter` and `MacAdapter` to fulfill the `fuchsia.net.tun.Device`
-// protocol. All FIDL requests are served over its own internally held `async::Loop`.
+// `TunDevice` uses `DeviceAdapter` to fulfill the `fuchsia.net.tun.Device` protocol. All FIDL
+// requests are served over its own internally held async dispatcher.
 class TunDevice : public fbl::DoublyLinkedListable<std::unique_ptr<TunDevice>>,
                   public fidl::WireInterface<fuchsia_net_tun::Device>,
-                  public DeviceAdapterParent,
-                  public MacAdapterParent {
+                  public DeviceAdapterParent {
  public:
   static constexpr size_t kMaxPendingOps = fuchsia_net_tun::wire::kMaxPendingOperations;
 
@@ -86,7 +85,6 @@ class TunDevice : public fbl::DoublyLinkedListable<std::unique_ptr<TunDevice>>,
   std::optional<thrd_t> loop_thread_;
   std::optional<fidl::ServerBindingRef<fuchsia_net_tun::Device>> binding_;
   std::unique_ptr<DeviceAdapter> device_;
-  std::unique_ptr<MacAdapter> mac_;
 
   // Helper struct to store pending write requests.
   struct PendingWriteRequest {

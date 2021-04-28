@@ -61,8 +61,7 @@ class NetDeviceDriverTest : public ::testing::Test, public fake_ddk::Bind {
     auto proto = device_impl_.proto();
     SetProtocol(ZX_PROTOCOL_NETWORK_DEVICE_IMPL, &proto);
     if (with_mac) {
-      auto proto = mac_impl_.proto();
-      SetProtocol(ZX_PROTOCOL_MAC_ADDR_IMPL, &proto);
+      device_impl_.port0().SetMac(mac_impl_.proto());
     }
 
     return NetworkDevice::Create(nullptr, fake_ddk::kFakeParent);

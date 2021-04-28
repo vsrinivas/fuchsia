@@ -39,39 +39,73 @@ zx_status_t RxBuffer::WriteData(const uint8_t* data, size_t len,
   if (buffer_.data.parts_list[0].length < len) {
     return ZX_ERR_INVALID_ARGS;
   }
-  return_.total_length = len;
+  return_.length = len;
   return vmo->write(data, buffer_.data.parts_list[0].offset, len);
 }
 
 void RxBuffer::FillReturn() {
-  return_.total_length = 0;
+  return_.length = 0;
   return_.meta.info_type = static_cast<uint32_t>(netdev::wire::InfoType::kNoInfo);
   return_.meta.flags = 0;
   return_.meta.frame_type = static_cast<uint8_t>(netdev::wire::FrameType::kEthernet);
   return_.id = buffer_.id;
 }
 
-FakeNetworkDeviceImpl::FakeNetworkDeviceImpl()
-    : ddk::NetworkDeviceImplProtocol<FakeNetworkDeviceImpl>(),
-      rx_types_(),
-      tx_types_(),
-      info_(device_info_t{
-          .tx_depth = kTxDepth,
-          .rx_depth = kRxDepth,
-          .rx_threshold = kRxDepth / 2,
+FakeNetworkPortImpl::FakeNetworkPortImpl()
+    : port_info_({
           .device_class = static_cast<uint8_t>(netdev::wire::DeviceClass::kEthernet),
           .rx_types_list = rx_types_.data(),
           .rx_types_count = 1,
           .tx_types_list = tx_types_.data(),
           .tx_types_count = 1,
-          .max_buffer_length = ZX_PAGE_SIZE / 2,
-          .buffer_alignment = ZX_PAGE_SIZE,
       }) {
   rx_types_[0] = static_cast<uint8_t>(netdev::wire::FrameType::kEthernet);
   tx_types_[0].type = static_cast<uint8_t>(netdev::wire::FrameType::kEthernet);
   tx_types_[0].supported_flags = 0;
   tx_types_[0].features = netdev::wire::kFrameFeaturesRaw;
+  EXPECT_OK(zx::event::create(0, &event_));
+}
 
+FakeNetworkPortImpl::~FakeNetworkPortImpl() {
+  if (port_added_) {
+    EXPECT_TRUE(port_removed_) << "port was added but remove was not called";
+  }
+}
+
+void FakeNetworkPortImpl::NetworkPortGetInfo(port_info_t* out_info) { *out_info = port_info_; }
+
+void FakeNetworkPortImpl::NetworkPortGetStatus(port_status_t* out_status) { *out_status = status_; }
+
+void FakeNetworkPortImpl::NetworkPortSetActive(bool active) {
+  port_active_ = active;
+  ASSERT_OK(event_.signal(0, kEventPortActiveChanged));
+}
+
+void FakeNetworkPortImpl::NetworkPortGetMac(mac_addr_protocol_t* out_mac_ifc) {
+  *out_mac_ifc = mac_proto_;
+}
+
+void FakeNetworkPortImpl::NetworkPortRemoved() {
+  EXPECT_FALSE(port_removed_) << "removed same port twice";
+  port_removed_ = true;
+}
+
+void FakeNetworkPortImpl::AddPort(uint8_t port_id,
+                                  ddk::NetworkDeviceIfcProtocolClient* ifc_client) {
+  ASSERT_FALSE(port_added_) << "can't add the same port object twice";
+  port_added_ = true;
+  ifc_client->AddPort(port_id, this, &network_port_protocol_ops_);
+}
+
+FakeNetworkDeviceImpl::FakeNetworkDeviceImpl()
+    : ddk::NetworkDeviceImplProtocol<FakeNetworkDeviceImpl>(),
+      info_({
+          .tx_depth = kTxDepth,
+          .rx_depth = kRxDepth,
+          .rx_threshold = kRxDepth / 2,
+          .max_buffer_length = ZX_PAGE_SIZE / 2,
+          .buffer_alignment = ZX_PAGE_SIZE,
+      }) {
   EXPECT_OK(zx::event::create(0, &event_));
 }
 
@@ -84,9 +118,12 @@ FakeNetworkDeviceImpl::~FakeNetworkDeviceImpl() {
 
 zx_status_t FakeNetworkDeviceImpl::NetworkDeviceImplInit(
     const network_device_ifc_protocol_t* iface) {
-  status_.mtu = 2048;
-  status_.flags = static_cast<uint32_t>(netdev::wire::StatusFlags::kOnline);
+  port0_.SetStatus(
+      {.mtu = 2048, .flags = static_cast<uint32_t>(netdev::wire::StatusFlags::kOnline)});
   device_client_ = ddk::NetworkDeviceIfcProtocolClient(iface);
+
+  auto port_protocol = port0_.protocol();
+  device_client_.AddPort(kPort0, port_protocol.ctx, port_protocol.ops);
   return ZX_OK;
 }
 
@@ -113,10 +150,6 @@ void FakeNetworkDeviceImpl::NetworkDeviceImplStop(network_device_impl_stop_callb
 }
 
 void FakeNetworkDeviceImpl::NetworkDeviceImplGetInfo(device_info_t* out_info) { *out_info = info_; }
-
-void FakeNetworkDeviceImpl::NetworkDeviceImplGetStatus(status_t* out_status) {
-  *out_status = status_;
-}
 
 void FakeNetworkDeviceImpl::NetworkDeviceImplQueueTx(const tx_buffer_t* buf_list,
                                                      size_t buf_count) {
@@ -187,15 +220,15 @@ bool FakeNetworkDeviceImpl::TriggerStop() {
 }
 
 void FakeNetworkDeviceImpl::SetOnline(bool online) {
-  status_t status = status_;
+  port_status_t status = port0_.status();
   status.flags = static_cast<uint32_t>(online ? netdev::wire::StatusFlags::kOnline
                                               : netdev::wire::StatusFlags());
   SetStatus(status);
 }
 
-void FakeNetworkDeviceImpl::SetStatus(const status_t& status) {
-  status_ = status;
-  device_client_.StatusChanged(&status_);
+void FakeNetworkDeviceImpl::SetStatus(const port_status_t& status) {
+  port0_.SetStatus(status);
+  device_client_.PortStatusChanged(kPort0, &status);
 }
 
 zx::status<std::unique_ptr<NetworkDeviceInterface>> FakeNetworkDeviceImpl::CreateChild(

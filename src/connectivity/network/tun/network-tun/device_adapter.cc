@@ -15,9 +15,9 @@ namespace tun {
 
 constexpr uint16_t kFifoDepth = 128;
 
-zx::status<std::unique_ptr<DeviceAdapter>> DeviceAdapter::Create(async_dispatcher_t* dispatcher,
-                                                                 DeviceAdapterParent* parent,
-                                                                 bool online) {
+zx::status<std::unique_ptr<DeviceAdapter>> DeviceAdapter::Create(
+    async_dispatcher_t* dispatcher, DeviceAdapterParent* parent, bool online,
+    std::optional<fuchsia_net::wire::MacAddress> mac) {
   fbl::AllocChecker ac;
   std::unique_ptr<DeviceAdapter> adapter(new (&ac) DeviceAdapter(parent, online));
   if (!ac.check()) {
@@ -34,6 +34,15 @@ zx::status<std::unique_ptr<DeviceAdapter>> DeviceAdapter::Create(async_dispatche
     return device.take_error();
   }
   adapter->device_ = std::move(device.value());
+
+  if (mac.has_value()) {
+    zx::status mac_adapter = MacAdapter::Create(parent, mac.value(), false);
+    if (mac_adapter.is_error()) {
+      return mac_adapter.take_error();
+    }
+    adapter->mac_ = std::move(mac_adapter.value());
+  }
+
   return zx::ok(std::move(adapter));
 }
 
@@ -43,6 +52,7 @@ zx_status_t DeviceAdapter::Bind(fidl::ServerEnd<netdev::Device> req) {
 
 zx_status_t DeviceAdapter::NetworkDeviceImplInit(const network_device_ifc_protocol_t* iface) {
   device_iface_ = ddk::NetworkDeviceIfcProtocolClient(iface);
+  device_iface_.AddPort(kPort0, this, &network_port_protocol_ops_);
   return ZX_OK;
 }
 
@@ -81,15 +91,6 @@ void DeviceAdapter::NetworkDeviceImplStop(network_device_impl_stop_callback call
 }
 
 void DeviceAdapter::NetworkDeviceImplGetInfo(device_info_t* out_info) { *out_info = device_info_; }
-
-void DeviceAdapter::NetworkDeviceImplGetStatus(status_t* out_status) {
-  fbl::AutoLock lock(&state_lock_);
-  *out_status = {
-      .mtu = parent_->config().mtu,
-      .flags =
-          online_ ? static_cast<uint32_t>(fuchsia_hardware_network::wire::StatusFlags::kOnline) : 0,
-  };
-}
 
 void DeviceAdapter::NetworkDeviceImplQueueTx(const tx_buffer_t* buf_list, size_t buf_count) {
   {
@@ -145,8 +146,27 @@ void DeviceAdapter::NetworkDeviceImplReleaseVmo(uint8_t vmo_id) {
   }
 }
 
+void DeviceAdapter::NetworkPortGetInfo(port_info_t* out_info) { *out_info = port_info_; }
+void DeviceAdapter::NetworkPortGetStatus(port_status_t* out_status) {
+  fbl::AutoLock lock(&state_lock_);
+  *out_status = {
+      .mtu = parent_->config().mtu,
+      .flags =
+          online_ ? static_cast<uint32_t>(fuchsia_hardware_network::wire::StatusFlags::kOnline) : 0,
+  };
+}
+void DeviceAdapter::NetworkPortSetActive(bool active) {}
+void DeviceAdapter::NetworkPortGetMac(mac_addr_protocol_t* out_mac_ifc) {
+  if (mac_) {
+    *out_mac_ifc = mac_->proto();
+  } else {
+    *out_mac_ifc = {};
+  }
+}
+void DeviceAdapter::NetworkPortRemoved() {}
+
 void DeviceAdapter::SetOnline(bool online) {
-  status_t new_status;
+  port_status_t new_status;
   {
     fbl::AutoLock lock(&state_lock_);
     if (online == online_) {
@@ -170,7 +190,8 @@ void DeviceAdapter::SetOnline(bool online) {
       }
     }
   }
-  device_iface_.StatusChanged(&new_status);
+  // TODO(https://fxbug.dev/64310): Don't hard-coded port 0 once tun can have more ports.
+  device_iface_.PortStatusChanged(kPort0, &new_status);
 }
 
 bool DeviceAdapter::HasSession() {
@@ -283,7 +304,13 @@ void DeviceAdapter::CopyTo(DeviceAdapter* other, bool return_failed_buffers) {
 }
 
 void DeviceAdapter::Teardown(fit::function<void()> callback) {
-  device_->Teardown(std::move(callback));
+  device_->Teardown([this, cb = std::move(callback)]() mutable {
+    if (mac_) {
+      mac_->Teardown(std::move(cb));
+    } else {
+      cb();
+    }
+  });
 }
 
 void DeviceAdapter::TeardownSync() {
@@ -293,12 +320,12 @@ void DeviceAdapter::TeardownSync() {
 }
 
 void DeviceAdapter::EnqueueRx(fuchsia_hardware_network::wire::FrameType frame_type,
-                              uint32_t buffer_id, uint32_t total_len,
+                              uint32_t buffer_id, uint32_t length,
                               const std::optional<fuchsia_net_tun::wire::FrameMetadata>& meta) {
   auto& ret = return_rx_list_.emplace_back();
   ret.id = buffer_id;
   ret.meta.frame_type = static_cast<uint32_t>(frame_type);
-  ret.total_length = total_len;
+  ret.length = length;
   if (meta) {
     ret.meta.flags = meta->flags;
     ret.meta.info_type = static_cast<uint32_t>(meta->info_type);
@@ -339,16 +366,18 @@ DeviceAdapter::DeviceAdapter(DeviceAdapterParent* parent, bool online)
           .tx_depth = kFifoDepth,
           .rx_depth = kFifoDepth,
           .rx_threshold = kFifoDepth / 2,
+          .max_buffer_length = fuchsia_net_tun::wire::kMaxMtu,
+          .buffer_alignment = 1,
+          .min_rx_buffer_length = parent->config().mtu,
+          .min_tx_buffer_length = parent->config().min_tx_buffer_length,
+      }),
+      port_info_(port_info_t{
           .device_class =
               static_cast<uint8_t>(fuchsia_hardware_network::wire::DeviceClass::kUnknown),
           .rx_types_list = rx_types_.data(),
           .rx_types_count = parent->config().rx_types.size(),
           .tx_types_list = tx_types_.data(),
           .tx_types_count = parent->config().tx_types.size(),
-          .max_buffer_length = fuchsia_net_tun::wire::kMaxMtu,
-          .buffer_alignment = 1,
-          .min_rx_buffer_length = parent->config().mtu,
-          .min_tx_buffer_length = parent->config().min_tx_buffer_length,
       }) {
   // Initialize rx_types_ and tx_types_ lists from parent config.
   for (size_t i = 0; i < parent_->config().rx_types.size(); i++) {

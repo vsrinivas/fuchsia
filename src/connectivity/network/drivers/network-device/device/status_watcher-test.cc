@@ -25,7 +25,7 @@ using network::internal::StatusWatcher;
 constexpr StatusFlags kStatusOnline = StatusFlags::kOnline;
 constexpr StatusFlags kStatusOffline = StatusFlags();
 
-status_t MakeStatus(StatusFlags status_flags, uint32_t mtu) {
+port_status_t MakeStatus(StatusFlags status_flags, uint32_t mtu) {
   return {
       .mtu = mtu,
       .flags = static_cast<uint32_t>(status_flags),

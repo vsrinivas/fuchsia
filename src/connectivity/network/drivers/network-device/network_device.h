@@ -15,7 +15,6 @@
 #include <ddktl/protocol/empty-protocol.h>
 
 #include "device/public/network_device.h"
-#include "mac/public/network_mac.h"
 
 namespace network {
 
@@ -46,7 +45,6 @@ class NetworkDevice : public DeviceType,
   std::optional<thrd_t> loop_thread_;
   async::Loop loop_;
   std::unique_ptr<NetworkDeviceInterface> device_;
-  std::unique_ptr<MacAddrDeviceInterface> mac_;
 };
 }  // namespace network
 

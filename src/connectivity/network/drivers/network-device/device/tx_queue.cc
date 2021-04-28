@@ -8,17 +8,18 @@
 
 #include "device_interface.h"
 #include "log.h"
+#include "session.h"
 
 namespace network::internal {
 
 TxQueue::SessionTransaction::~SessionTransaction() {
   // when we destroy a session transaction, we commit all the queued buffers to the device.
   // release queue lock first
-  queue_->lock_.Release();
+  queue_->parent_->tx_lock().Release();
   if (queued_ != 0) {
     queue_->parent_->QueueTx(queue_->tx_buffers_.get(), queued_);
   }
-  queue_->buffers_lock_.Release();
+  queue_->parent_->tx_buffers_lock().Release();
 }
 
 tx_buffer_t* TxQueue::SessionTransaction::GetBuffer() {
@@ -38,8 +39,8 @@ TxQueue::SessionTransaction::SessionTransaction(TxQueue* parent, Session* sessio
     : queue_(parent), session_(session), queued_(0) {
   // only get available slots after lock is acquired:
   // 0 available slots if parent is not enabled.
-  queue_->lock_.Acquire();
-  queue_->buffers_lock_.Acquire();
+  queue_->parent_->tx_lock().Acquire();
+  queue_->parent_->tx_buffers_lock().Acquire();
   available_ = queue_->parent_->IsDataPlaneOpen() ? queue_->in_flight_->available() : 0;
 }
 
@@ -53,8 +54,8 @@ zx::status<std::unique_ptr<TxQueue>> TxQueue::Create(DeviceInterface* parent) {
     return zx::error(ZX_ERR_NO_MEMORY);
   }
 
-  fbl::AutoLock lock(&queue->lock_);
-  fbl::AutoLock buffer_lock(&queue->buffers_lock_);
+  fbl::AutoLock lock(&queue->parent_->tx_lock());
+  fbl::AutoLock buffer_lock(&queue->parent_->tx_buffers_lock());
 
   zx::status return_queue = RingQueue<uint32_t>::Create(capacity);
   if (return_queue.is_error()) {
@@ -95,14 +96,14 @@ void TxQueue::MarkComplete(uint32_t id, zx_status_t status) {
   return_queue_->Push(id);
 }
 
-void TxQueue::Reclaim() {
+bool TxQueue::Reclaim() {
   for (auto i = in_flight_->begin(); i != in_flight_->end(); ++i) {
     MarkComplete(*i, ZX_ERR_UNAVAILABLE);
   }
-  ReturnBuffers();
+  return ReturnBuffers();
 }
 
-void TxQueue::ReturnBuffers() {
+bool TxQueue::ReturnBuffers() {
   uint32_t count = 0;
 
   uint16_t desc_buffer[kMaxFifoDepth];
@@ -134,19 +135,17 @@ void TxQueue::ReturnBuffers() {
     cur_session->ReturnTxDescriptors(desc_buffer, count);
   }
 
-  if (was_full) {
-    parent_->NotifyTxQueueAvailable();
-  }
-  parent_->PruneDeadSessions();
+  return was_full;
 }
 
 void TxQueue::CompleteTxList(const tx_result_t* tx, size_t count) {
-  fbl::AutoLock lock(&lock_);
+  fbl::AutoLock lock(&parent_->tx_lock());
   while (count--) {
     MarkComplete(tx->id, tx->status);
     tx++;
   }
-  ReturnBuffers();
+  bool was_full = ReturnBuffers();
+  parent_->NotifyTxReturned(was_full);
 }
 
 }  // namespace network::internal

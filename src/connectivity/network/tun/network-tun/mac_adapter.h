@@ -28,12 +28,12 @@ class MacAdapterParent {
 };
 
 // An entity that instantiates a MacAddrDeviceInterface and provides an implementations of
-// `fuchsia.hardware.network.device.MacAddrImpl` that grants access to the requested operating state
+// `fuchsia.hardware.network.device.MacAddr` that grants access to the requested operating state
 // of its interface.
 //
 // `MacAdapter` is used to provide the business logic of virtual MacAddr implementations both for
 // `tun.Device` and `tun.DevicePair` device classes.
-class MacAdapter : public ddk::MacAddrImplProtocol<MacAdapter>, public MacAddrDeviceInterface {
+class MacAdapter : public ddk::MacAddrProtocol<MacAdapter>, public MacAddrDeviceInterface {
  public:
   // Creates a new `MacAdapter` with `parent`.
   // `mac` is the device's own MAC address, reported to the MacAddrDeviceInterface.
@@ -58,13 +58,13 @@ class MacAdapter : public ddk::MacAddrImplProtocol<MacAdapter>, public MacAddrDe
 
   const fuchsia_net::wire::MacAddress& mac() { return mac_; }
 
-  // MacAddrImpl protocol:
-  void MacAddrImplGetAddress(uint8_t out_mac[MAC_SIZE]);
-  void MacAddrImplGetFeatures(features_t* out_features);
-  void MacAddrImplSetMode(mode_t mode, const uint8_t* multicast_macs_list,
-                          size_t multicast_macs_count);
+  // MacAddr protocol:
+  void MacAddrGetAddress(uint8_t out_mac[MAC_SIZE]);
+  void MacAddrGetFeatures(features_t* out_features);
+  void MacAddrSetMode(mode_t mode, const uint8_t* multicast_macs_list, size_t multicast_macs_count);
 
   MacState GetMacState();
+  mac_addr_protocol_t proto() { return {.ops = &mac_addr_protocol_ops_, .ctx = this}; }
 
  private:
   MacAdapter(MacAdapterParent* parent, fuchsia_net::wire::MacAddress mac, bool promisc_only)

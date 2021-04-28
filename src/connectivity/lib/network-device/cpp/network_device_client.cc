@@ -303,28 +303,24 @@ void* NetworkDeviceClient::data(uint64_t offset) {
 }
 
 void NetworkDeviceClient::ResetRxDescriptor(buffer_descriptor_t* descriptor) {
-  descriptor->chain_length = 0;
-  descriptor->nxt = 0xFFFF;
-  descriptor->tail_length = 0;
-  descriptor->head_length = 0;
-  descriptor->info_type = static_cast<uint32_t>(netdev::wire::InfoType::kNoInfo);
-  descriptor->data_length = session_config_.buffer_length;
-  descriptor->inbound_flags = 0;
-  descriptor->return_flags = 0;
-  descriptor->frame_type = 0;
+  *descriptor = {
+      .nxt = 0xFFFF,
+      .info_type = static_cast<uint32_t>(netdev::wire::InfoType::kNoInfo),
+      .offset = descriptor->offset,
+      .data_length = session_config_.buffer_length,
+  };
 }
 
 void NetworkDeviceClient::ResetTxDescriptor(buffer_descriptor_t* descriptor) {
-  descriptor->chain_length = 0;
-  descriptor->nxt = 0xFFFF;
-  descriptor->tail_length = device_info_.min_tx_buffer_tail;
-  descriptor->head_length = device_info_.min_tx_buffer_head;
-  descriptor->info_type = static_cast<uint32_t>(netdev::wire::InfoType::kNoInfo);
-  descriptor->data_length = session_config_.buffer_length - device_info_.min_tx_buffer_head -
-                            device_info_.min_tx_buffer_tail;
-  descriptor->inbound_flags = 0;
-  descriptor->return_flags = 0;
-  descriptor->frame_type = 0;
+  *descriptor = {
+      .nxt = 0xFFFF,
+      .info_type = static_cast<uint32_t>(netdev::wire::InfoType::kNoInfo),
+      .offset = descriptor->offset,
+      .head_length = device_info_.min_tx_buffer_head,
+      .tail_length = device_info_.min_tx_buffer_tail,
+      .data_length = session_config_.buffer_length - device_info_.min_tx_buffer_head -
+                     device_info_.min_tx_buffer_tail,
+  };
 }
 
 zx_status_t NetworkDeviceClient::PrepareDescriptors() {

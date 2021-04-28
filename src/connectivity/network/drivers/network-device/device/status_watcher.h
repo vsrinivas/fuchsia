@@ -22,7 +22,7 @@
 namespace network::internal {
 
 template <typename F>
-void WithWireStatus(F fn, status_t status) {
+void WithWireStatus(F fn, port_status_t status) {
   netdev::wire::Status::Frame_ frame;
   netdev::wire::Status wire_status(
       fidl::ObjectView<netdev::wire::Status::Frame_>::FromExternal(&frame));
@@ -43,15 +43,15 @@ class StatusWatcher : public fbl::DoublyLinkedListable<std::unique_ptr<StatusWat
                    fit::callback<void(StatusWatcher*)> closed_callback);
   void Unbind();
 
-  void PushStatus(const status_t& status);
+  void PushStatus(const port_status_t& status);
 
  private:
   void WatchStatus(WatchStatusRequestView request, WatchStatusCompleter::Sync& _completer) override;
 
   fbl::Mutex lock_;
   uint32_t max_queue_;
-  std::optional<status_t> last_observed_ __TA_GUARDED(lock_);
-  std::queue<status_t> queue_ __TA_GUARDED(lock_);
+  std::optional<port_status_t> last_observed_ __TA_GUARDED(lock_);
+  std::queue<port_status_t> queue_ __TA_GUARDED(lock_);
   std::optional<WatchStatusCompleter::Async> pending_txn_ __TA_GUARDED(lock_);
   std::optional<fidl::ServerBindingRef<netdev::StatusWatcher>> binding_ __TA_GUARDED(lock_);
   fit::callback<void(StatusWatcher*)> closed_cb_;

@@ -5,6 +5,9 @@
 #ifndef SRC_CONNECTIVITY_NETWORK_DRIVERS_NETWORK_DEVICE_DEVICE_TEST_UTIL_H_
 #define SRC_CONNECTIVITY_NETWORK_DRIVERS_NETWORK_DEVICE_DEVICE_TEST_UTIL_H_
 
+#include <lib/zx/event.h>
+#include <zircon/device/network.h>
+
 #include <memory>
 #include <vector>
 
@@ -93,9 +96,59 @@ constexpr zx_signals_t kEventStop = ZX_USER_SIGNAL_1;
 constexpr zx_signals_t kEventTx = ZX_USER_SIGNAL_2;
 constexpr zx_signals_t kEventSessionStarted = ZX_USER_SIGNAL_3;
 constexpr zx_signals_t kEventRxAvailable = ZX_USER_SIGNAL_4;
+constexpr zx_signals_t kEventPortRemoved = ZX_USER_SIGNAL_5;
+constexpr zx_signals_t kEventPortActiveChanged = ZX_USER_SIGNAL_6;
+
+class FakeNetworkDeviceImpl;
+
+class FakeNetworkPortImpl : public ddk::NetworkPortProtocol<FakeNetworkPortImpl> {
+ public:
+  FakeNetworkPortImpl();
+  ~FakeNetworkPortImpl();
+
+  void NetworkPortGetInfo(port_info_t* out_info);
+  void NetworkPortGetStatus(port_status_t* out_status);
+  void NetworkPortSetActive(bool active);
+  void NetworkPortGetMac(mac_addr_protocol_t* out_mac_ifc);
+  void NetworkPortRemoved();
+
+  port_info_t& port_info() { return port_info_; }
+  const port_status_t& status() const { return status_; }
+  void AddPort(uint8_t port_id, ddk::NetworkDeviceIfcProtocolClient* ifc_client);
+  void SetMac(mac_addr_protocol_t proto) { mac_proto_ = proto; }
+
+  network_port_protocol_t protocol() {
+    return {
+        .ops = &network_port_protocol_ops_,
+        .ctx = this,
+    };
+  }
+
+  bool active() const { return port_active_; }
+  bool removed() const { return port_removed_; }
+
+  const zx::event& events() const { return event_; }
+
+ protected:
+  friend FakeNetworkDeviceImpl;
+  void SetStatus(port_status_t status) { status_ = status; }
+
+ private:
+  std::array<uint8_t, netdev::wire::kMaxFrameTypes> rx_types_;
+  std::array<tx_support_t, netdev::wire::kMaxFrameTypes> tx_types_;
+  mac_addr_protocol_t mac_proto_{};
+  port_info_t port_info_{};
+  std::atomic_bool port_active_ = false;
+  port_status_t status_{};
+  zx::event event_;
+  bool port_removed_ = false;
+  bool port_added_ = false;
+};
 
 class FakeNetworkDeviceImpl : public ddk::NetworkDeviceImplProtocol<FakeNetworkDeviceImpl> {
  public:
+  // TODO(https://fxbug.dev/64310): Remove hard coded port 0.
+  static constexpr uint8_t kPort0 = 0;
   FakeNetworkDeviceImpl();
   ~FakeNetworkDeviceImpl();
 
@@ -105,7 +158,6 @@ class FakeNetworkDeviceImpl : public ddk::NetworkDeviceImplProtocol<FakeNetworkD
   void NetworkDeviceImplStart(network_device_impl_start_callback callback, void* cookie);
   void NetworkDeviceImplStop(network_device_impl_stop_callback callback, void* cookie);
   void NetworkDeviceImplGetInfo(device_info_t* out_info);
-  void NetworkDeviceImplGetStatus(status_t* out_status);
   void NetworkDeviceImplQueueTx(const tx_buffer_t* buf_list, size_t buf_count);
   void NetworkDeviceImplQueueRxSpace(const rx_space_buffer_t* buf_list, size_t buf_count);
   void NetworkDeviceImplPrepareVmo(uint8_t vmo_id, zx::vmo vmo) { vmos_[vmo_id] = std::move(vmo); }
@@ -116,11 +168,11 @@ class FakeNetworkDeviceImpl : public ddk::NetworkDeviceImplProtocol<FakeNetworkD
   fit::function<zx::unowned_vmo(uint8_t)> VmoGetter();
   void ReturnAllTx();
 
-  zx::event& events() { return event_; }
+  const zx::event& events() const { return event_; }
 
   device_info_t& info() { return info_; }
 
-  const status_t& status() const { return status_; }
+  FakeNetworkPortImpl& port0() { return port0_; }
 
   fbl::DoublyLinkedList<std::unique_ptr<RxBuffer>>& rx_buffers() { return rx_buffers_; }
 
@@ -134,7 +186,7 @@ class FakeNetworkDeviceImpl : public ddk::NetworkDeviceImplProtocol<FakeNetworkD
   bool TriggerStop();
 
   void SetOnline(bool online);
-  void SetStatus(const status_t& status);
+  void SetStatus(const port_status_t& status);
 
   network_device_impl_protocol_t proto() {
     return network_device_impl_protocol_t{.ops = &network_device_impl_protocol_ops_, .ctx = this};
@@ -145,11 +197,9 @@ class FakeNetworkDeviceImpl : public ddk::NetworkDeviceImplProtocol<FakeNetworkD
   ddk::NetworkDeviceIfcProtocolClient& client() { return device_client_; }
 
  private:
+  FakeNetworkPortImpl port0_;
   std::array<zx::vmo, MAX_VMOS> vmos_;
-  std::array<uint8_t, netdev::wire::kMaxFrameTypes> rx_types_;
-  std::array<tx_support_t, netdev::wire::kMaxFrameTypes> tx_types_;
   device_info_t info_{};
-  status_t status_{};
   ddk::NetworkDeviceIfcProtocolClient device_client_;
   fbl::DoublyLinkedList<std::unique_ptr<RxBuffer>> rx_buffers_;
   fbl::DoublyLinkedList<std::unique_ptr<TxBuffer>> tx_buffers_;
@@ -237,7 +287,7 @@ class RxReturnTransaction {
   }
 
   void EnqueueWithSize(std::unique_ptr<RxBuffer> buffer, uint64_t return_length) {
-    buffer->return_buffer().total_length = return_length;
+    buffer->return_buffer().length = return_length;
     Enqueue(std::move(buffer));
   }
 

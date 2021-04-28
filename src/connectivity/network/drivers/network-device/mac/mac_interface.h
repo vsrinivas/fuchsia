@@ -33,11 +33,11 @@ namespace internal {
 
 class MacClientInstance;
 
-// Implements the API translation between MacAddrImpl (banjo) and
+// Implements the API translation between MacAddr (banjo) and
 // fuchsia.hardware.network.MacAddressing (FIDL).
 class MacInterface : public ::network::MacAddrDeviceInterface {
  public:
-  static zx::status<std::unique_ptr<MacInterface>> Create(ddk::MacAddrImplProtocolClient parent);
+  static zx::status<std::unique_ptr<MacInterface>> Create(ddk::MacAddrProtocolClient parent);
 
   ~MacInterface() override;
 
@@ -61,9 +61,9 @@ class MacInterface : public ::network::MacAddrDeviceInterface {
   void CloseClient(MacClientInstance* client) __TA_EXCLUDES(lock_);
 
  private:
-  explicit MacInterface(ddk::MacAddrImplProtocolClient parent);
+  explicit MacInterface(ddk::MacAddrProtocolClient parent);
 
-  const ddk::MacAddrImplProtocolClient impl_;
+  const ddk::MacAddrProtocolClient impl_;
   features_t features_{};
   mode_t default_mode_{};
   fbl::Mutex lock_;

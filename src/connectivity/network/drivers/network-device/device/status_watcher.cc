@@ -12,7 +12,7 @@ namespace network::internal {
 
 namespace {
 
-bool StatusEquals(const status_t& a, const status_t& b) {
+bool StatusEquals(const port_status_t& a, const port_status_t& b) {
   return a.flags == b.flags && a.mtu == b.mtu;
 }
 
@@ -93,7 +93,7 @@ void StatusWatcher::WatchStatus(WatchStatusRequestView request,
       pending_txn_ = completer.ToAsync();
     }
   } else {
-    const status_t status = queue_.front();
+    const port_status_t status = queue_.front();
     queue_.pop();
     WithWireStatus([&completer](netdev::wire::Status wire_status) { completer.Reply(wire_status); },
                    status);
@@ -101,9 +101,9 @@ void StatusWatcher::WatchStatus(WatchStatusRequestView request,
   }
 }
 
-void StatusWatcher::PushStatus(const status_t& status) {
+void StatusWatcher::PushStatus(const port_status_t& status) {
   fbl::AutoLock lock(&lock_);
-  std::optional<status_t> tail;
+  std::optional<port_status_t> tail;
   if (queue_.empty()) {
     tail = last_observed_;
   } else {

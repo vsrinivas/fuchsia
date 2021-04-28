@@ -53,17 +53,6 @@ zx_status_t NetworkDevice::Create(void* ctx, zx_device_t* parent) {
   }
   netdev->device_ = std::move(device.value());
 
-  // If our parent supports the MacAddrImpl protocol, create the handler for it.
-  ddk::MacAddrImplProtocolClient mac_impl(parent);
-  if (mac_impl.is_valid()) {
-    zx::status mac = MacAddrDeviceInterface::Create(mac_impl);
-    if (mac.is_error()) {
-      zxlogf(ERROR, "network-device: Failed to create inner mac device: %s", mac.status_string());
-      return mac.status_value();
-    }
-    netdev->mac_ = std::move(mac.value());
-  }
-
   if (zx_status_t status = netdev->DdkAdd(
           ddk::DeviceAddArgs("network-device").set_proto_id(ZX_PROTOCOL_NETWORK_DEVICE));
       status != ZX_OK) {
@@ -86,13 +75,7 @@ zx_status_t NetworkDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn)
 
 void NetworkDevice::DdkUnbind(ddk::UnbindTxn unbindTxn) {
   zxlogf(DEBUG, "network-device: DdkUnbind");
-  device_->Teardown([this, txn = std::move(unbindTxn)]() mutable {
-    if (mac_) {
-      mac_->Teardown([txn = std::move(txn)]() mutable { txn.Reply(); });
-    } else {
-      txn.Reply();
-    }
-  });
+  device_->Teardown([txn = std::move(unbindTxn)]() mutable { txn.Reply(); });
 }
 
 void NetworkDevice::DdkRelease() {
@@ -107,9 +90,8 @@ void NetworkDevice::GetDevice(GetDeviceRequestView request, GetDeviceCompleter::
 
 void NetworkDevice::GetMacAddressing(GetMacAddressingRequestView request,
                                      GetMacAddressingCompleter::Sync& _completer) {
-  if (mac_) {
-    mac_->Bind(loop_.dispatcher(), std::move(request->mac));
-  }
+  ZX_ASSERT_MSG(device_, "Can't serve mac if not bound to parent implementation");
+  device_->BindMac(std::move(request->mac));
 }
 
 static zx_driver_ops_t network_driver_ops = []() {

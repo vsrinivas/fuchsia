@@ -11,6 +11,7 @@
 
 #include "device_interface.h"
 #include "log.h"
+#include "session.h"
 #include "src/lib/testing/predicates/status.h"
 #include "test_util.h"
 
@@ -55,32 +56,37 @@ class NetworkDeviceTest : public ::testing::Test {
     }
   }
 
-  zx_status_t WaitEvents(zx_signals_t signals, zx::time deadline) {
-    zx_status_t status = impl_.events().wait_one(signals, deadline, nullptr);
+  static zx_status_t WaitEvents(const zx::event& events, zx_signals_t signals, zx::time deadline) {
+    zx_status_t status = events.wait_one(signals, deadline, nullptr);
     if (status == ZX_OK) {
-      impl_.events().signal(signals, 0);
+      events.signal(signals, 0);
     }
     return status;
   }
 
   [[nodiscard]] zx_status_t WaitStart(zx::time deadline = TEST_DEADLINE) {
-    return WaitEvents(kEventStart, deadline);
+    return WaitEvents(impl_.events(), kEventStart, deadline);
   }
 
   [[nodiscard]] zx_status_t WaitStop(zx::time deadline = TEST_DEADLINE) {
-    return WaitEvents(kEventStop, deadline);
+    return WaitEvents(impl_.events(), kEventStop, deadline);
   }
 
   [[nodiscard]] zx_status_t WaitSessionStarted(zx::time deadline = TEST_DEADLINE) {
-    return WaitEvents(kEventSessionStarted, deadline);
+    return WaitEvents(impl_.events(), kEventSessionStarted, deadline);
   }
 
   [[nodiscard]] zx_status_t WaitTx(zx::time deadline = TEST_DEADLINE) {
-    return WaitEvents(kEventTx, deadline);
+    return WaitEvents(impl_.events(), kEventTx, deadline);
   }
 
   [[nodiscard]] zx_status_t WaitRxAvailable(zx::time deadline = TEST_DEADLINE) {
-    return WaitEvents(kEventRxAvailable, deadline);
+    return WaitEvents(impl_.events(), kEventRxAvailable, deadline);
+  }
+
+  [[nodiscard]] zx_status_t WaitPortActiveChanged(const FakeNetworkPortImpl& port,
+                                                  zx::time deadline = TEST_DEADLINE) {
+    return WaitEvents(port.events(), kEventPortActiveChanged, deadline);
   }
 
   async_dispatcher_t* dispatcher() {
@@ -160,21 +166,22 @@ TEST_F(NetworkDeviceTest, GetInfo) {
   EXPECT_EQ(info.min_tx_buffer_head, impl_.info().tx_head_length);
   EXPECT_EQ(info.descriptor_version, NETWORK_DEVICE_DESCRIPTOR_VERSION);
   EXPECT_EQ(info.buffer_alignment, impl_.info().buffer_alignment);
-  static_assert(sizeof(buffer_descriptor_t) % 8 == 0);
   EXPECT_EQ(info.min_descriptor_length, sizeof(buffer_descriptor_t) / sizeof(uint64_t));
   EXPECT_EQ(info.class_, netdev::wire::DeviceClass::kEthernet);
   EXPECT_EQ(info.tx_accel.count(), impl_.info().tx_accel_count);
   EXPECT_EQ(info.rx_accel.count(), impl_.info().rx_accel_count);
-  EXPECT_EQ(info.rx_types.count(), impl_.info().rx_types_count);
+
+  const auto& port_info = impl_.port0().port_info();
+  EXPECT_EQ(info.rx_types.count(), port_info.rx_types_count);
   for (size_t i = 0; i < info.rx_types.count(); i++) {
-    EXPECT_EQ(static_cast<uint8_t>(info.rx_types.at(i)), impl_.info().rx_types_list[i]);
+    EXPECT_EQ(static_cast<uint8_t>(info.rx_types.at(i)), port_info.rx_types_list[i]);
   }
-  EXPECT_EQ(info.tx_types.count(), impl_.info().tx_types_count);
+  EXPECT_EQ(info.tx_types.count(), port_info.tx_types_count);
   for (size_t i = 0; i < info.tx_types.count(); i++) {
-    EXPECT_EQ(static_cast<uint8_t>(info.tx_types.at(i).type), impl_.info().tx_types_list[i].type);
-    EXPECT_EQ(info.tx_types.at(i).features, impl_.info().tx_types_list[i].features);
+    EXPECT_EQ(static_cast<uint8_t>(info.tx_types.at(i).type), port_info.tx_types_list[i].type);
+    EXPECT_EQ(info.tx_types.at(i).features, port_info.tx_types_list[i].features);
     EXPECT_EQ(static_cast<uint32_t>(info.tx_types.at(i).supported_flags),
-              impl_.info().tx_types_list[i].supported_flags);
+              port_info.tx_types_list[i].supported_flags);
   }
 }
 
@@ -246,7 +253,7 @@ TEST_F(NetworkDeviceTest, RxBufferBuild) {
   ASSERT_EQ(rx->buff().data.parts_count, 1u);
   ASSERT_EQ(rx->buff().data.parts_list[0].offset, session.descriptor(0)->offset);
   ASSERT_EQ(rx->buff().data.parts_list[0].length, kDefaultBufferLength);
-  rx->return_buffer().total_length = 64;
+  rx->return_buffer().length = 64;
   rx->return_buffer().meta.flags = static_cast<uint32_t>(RxFlags::kRxAccel0);
   return_session.Enqueue(std::move(rx));
   // check second descriptor:
@@ -257,7 +264,7 @@ TEST_F(NetworkDeviceTest, RxBufferBuild) {
   ASSERT_EQ(rx->buff().data.parts_list[0].offset, desc->offset + desc->head_length);
   ASSERT_EQ(rx->buff().data.parts_list[0].length,
             kDefaultBufferLength - desc->head_length - desc->tail_length);
-  rx->return_buffer().total_length = 15;
+  rx->return_buffer().length = 15;
   rx->return_buffer().meta.flags = static_cast<uint32_t>(RxFlags::kRxAccel1);
   return_session.Enqueue(std::move(rx));
   // check third descriptor:
@@ -274,7 +281,7 @@ TEST_F(NetworkDeviceTest, RxBufferBuild) {
   ASSERT_EQ(rx->buff().data.parts_list[2].offset, d2->offset);
   ASSERT_EQ(rx->buff().data.parts_list[2].length, d2->data_length);
   // set the total length up to a part of the middle buffer:
-  rx->return_buffer().total_length = 25;
+  rx->return_buffer().length = 25;
   rx->return_buffer().meta.flags = static_cast<uint32_t>(RxFlags::kRxAccel2);
   return_session.Enqueue(std::move(rx));
   // ensure no more rx buffers were actually returned:
@@ -626,7 +633,7 @@ TEST_F(NetworkDeviceTest, ClosingPrimarySession) {
                                                    zx::deadline_after(zx::msec(20)), nullptr),
             ZX_ERR_TIMED_OUT);
   // and now return data.
-  rx_buff->return_buffer().total_length = 5;
+  rx_buff->return_buffer().length = 5;
   RxReturnTransaction rx_transaction(&impl_);
   rx_transaction.Enqueue(std::move(rx_buff));
   rx_transaction.Commit();
@@ -704,6 +711,7 @@ TEST_F(NetworkDeviceTest, DelayedStop) {
   // The session should NOT be closed until we actually call TriggerStop.
   session_a.ResetDescriptor(0);
   ASSERT_OK(session_a.SendTx(0));
+  ASSERT_OK(WaitTx());
   ASSERT_OK(session_a.Close());
   ASSERT_OK(WaitStop());
   // Session must not have been closed yet:
@@ -859,7 +867,7 @@ TEST_F(NetworkDeviceTest, RxFrameTypeFilter) {
   ASSERT_OK(WaitRxAvailable());
   auto buff = impl_.rx_buffers().pop_front();
   buff->return_buffer().meta.frame_type = static_cast<uint8_t>(netdev::wire::FrameType::kIpv4);
-  buff->return_buffer().total_length = 10;
+  buff->return_buffer().length = 10;
   RxReturnTransaction rx_transaction(&impl_);
   rx_transaction.Enqueue(std::move(buff));
   rx_transaction.Commit();
@@ -879,7 +887,7 @@ TEST_F(NetworkDeviceTest, ObserveStatus) {
   {
     fidl::WireResult result = watcher.WatchStatus();
     ASSERT_OK(result.status());
-    ASSERT_EQ(result.value().device_status.mtu(), impl_.status().mtu);
+    ASSERT_EQ(result.value().device_status.mtu(), impl_.port0().status().mtu);
     ASSERT_TRUE(result.value().device_status.flags() & StatusFlags::kOnline);
   }
   // Set offline, then set online (watcher is buffered, we should be able to observe both).
@@ -888,13 +896,13 @@ TEST_F(NetworkDeviceTest, ObserveStatus) {
   {
     fidl::WireResult result = watcher.WatchStatus();
     ASSERT_OK(result.status());
-    ASSERT_EQ(result.value().device_status.mtu(), impl_.status().mtu);
+    ASSERT_EQ(result.value().device_status.mtu(), impl_.port0().status().mtu);
     ASSERT_FALSE(result.value().device_status.flags() & StatusFlags::kOnline);
   }
   {
     fidl::WireResult result = watcher.WatchStatus();
     ASSERT_OK(result.status());
-    ASSERT_EQ(result.value().device_status.mtu(), impl_.status().mtu);
+    ASSERT_EQ(result.value().device_status.mtu(), impl_.port0().status().mtu);
     ASSERT_TRUE(result.value().device_status.flags() & StatusFlags::kOnline);
   }
 
@@ -1116,6 +1124,104 @@ TEST_F(NetworkDeviceTest, RxQueueIdlesOnPausedSession) {
     zx::status key = get_next_key(zx::duration::infinite());
     ASSERT_OK(key.status_value());
     ASSERT_EQ(key.value(), internal::RxQueue::kSessionSwitchKey);
+  }
+}
+
+TEST_F(NetworkDeviceTest, RemovingPortCausesSessionToPause) {
+  ASSERT_OK(CreateDevice());
+  TestSession session;
+  ASSERT_OK(OpenSession(&session));
+  ASSERT_OK(session.SetPaused(false));
+  ASSERT_OK(WaitStart());
+
+  // Removing the port causes the session to pause, which should cause the data plane to stop.
+  impl_.client().RemovePort(FakeNetworkDeviceImpl::kPort0);
+  ASSERT_OK(WaitStop());
+}
+
+TEST_F(NetworkDeviceTest, OnlyReceiveOnSubscribedPorts) {
+  ASSERT_OK(CreateDevice());
+  TestSession session;
+  ASSERT_OK(OpenSession(&session));
+  ASSERT_OK(session.SetPaused(false));
+  ASSERT_OK(WaitStart());
+  std::array<uint16_t, 2> descriptors = {0, 1};
+
+  for (auto desc : descriptors) {
+    auto* descriptor = session.ResetDescriptor(desc);
+    // Garble descriptor port.
+    descriptor->port_id = MAX_PORTS - 1;
+  }
+  size_t actual;
+  ASSERT_OK(session.SendRx(descriptors.data(), descriptors.size(), &actual));
+  ASSERT_EQ(actual, descriptors.size());
+  ASSERT_OK(WaitRxAvailable());
+  ASSERT_EQ(impl_.rx_buffers().size_slow(), descriptors.size());
+  RxReturnTransaction return_session(&impl_);
+  for (size_t i = 0; i < descriptors.size(); i++) {
+    auto rx_space = impl_.rx_buffers().pop_back();
+    // Set the port ID to the index, we should expect the session to only see port0.
+    uint8_t port_id = static_cast<uint8_t>(i);
+    rx_space->return_buffer().meta.port_id = port_id;
+    // Write some data so the buffer makes it into the session.
+    ASSERT_OK(rx_space->WriteData(&port_id, sizeof(port_id), impl_.VmoGetter()));
+    return_session.Enqueue(std::move(rx_space));
+  }
+  return_session.Commit();
+  ASSERT_OK(session.FetchRx(descriptors.data(), descriptors.size(), &actual));
+  // Only one of the descriptors makes it back into the session.
+  ASSERT_EQ(actual, 1u);
+  uint16_t returned = descriptors[0];
+  ASSERT_EQ(session.descriptor(returned)->port_id, FakeNetworkDeviceImpl::kPort0);
+
+  // The unused descriptor comes right back to us.
+  ASSERT_OK(WaitRxAvailable());
+  ASSERT_EQ(impl_.rx_buffers().size_slow(), 1u);
+}
+
+TEST_F(NetworkDeviceTest, SessionsAttachToPort) {
+  ASSERT_OK(CreateDevice());
+  TestSession session;
+  ASSERT_OK(OpenSession(&session));
+  auto& port0 = impl_.port0();
+  // Just opening a session doesn't attach to port 0.
+  ASSERT_STATUS(WaitPortActiveChanged(port0, zx::deadline_after(zx::msec(20))), ZX_ERR_TIMED_OUT);
+  ASSERT_FALSE(port0.active());
+
+  ASSERT_OK(session.SetPaused(false));
+  ASSERT_OK(WaitPortActiveChanged(port0));
+  ASSERT_TRUE(port0.active());
+
+  ASSERT_OK(session.SetPaused(true));
+  ASSERT_OK(WaitPortActiveChanged(port0));
+  ASSERT_FALSE(port0.active());
+
+  // Unpause the session once again, then observe that session detaches on destruction.
+  ASSERT_OK(session.SetPaused(false));
+  ASSERT_OK(WaitPortActiveChanged(port0));
+  ASSERT_TRUE(port0.active());
+
+  ASSERT_OK(session.Close());
+  ASSERT_OK(WaitPortActiveChanged(port0));
+  ASSERT_FALSE(port0.active());
+}
+
+TEST_F(NetworkDeviceTest, RejectsInvalidPortIds) {
+  ASSERT_OK(CreateDevice());
+  {
+    // Add a port with an invalid ID.
+    FakeNetworkPortImpl fake_port;
+    network_port_protocol_t proto = fake_port.protocol();
+    impl_.client().AddPort(MAX_PORTS, proto.ctx, proto.ops);
+    ASSERT_TRUE(fake_port.removed());
+  }
+
+  {
+    // Add a port with a duplicate ID.
+    FakeNetworkPortImpl fake_port;
+    network_port_protocol_t proto = fake_port.protocol();
+    impl_.client().AddPort(FakeNetworkDeviceImpl::kPort0, proto.ctx, proto.ops);
+    ASSERT_TRUE(fake_port.removed());
   }
 }
 

@@ -13,7 +13,7 @@
 namespace network {
 
 zx::status<std::unique_ptr<MacAddrDeviceInterface>> MacAddrDeviceInterface::Create(
-    ddk::MacAddrImplProtocolClient parent) {
+    ddk::MacAddrProtocolClient parent) {
   return internal::MacInterface::Create(parent);
 }
 
@@ -26,7 +26,7 @@ constexpr uint8_t kMacMulticast = 0x01;
 static_assert(MODE_MULTICAST_PROMISCUOUS == MODE_MULTICAST_FILTER << 1u);
 static_assert(MODE_PROMISCUOUS == MODE_MULTICAST_PROMISCUOUS << 1u);
 
-MacInterface::MacInterface(ddk::MacAddrImplProtocolClient parent) : impl_(parent) {}
+MacInterface::MacInterface(ddk::MacAddrProtocolClient parent) : impl_(parent) {}
 
 MacInterface::~MacInterface() {
   ZX_ASSERT_MSG(clients_.is_empty(),
@@ -34,8 +34,7 @@ MacInterface::~MacInterface() {
                 clients_.size_slow());
 }
 
-zx::status<std::unique_ptr<MacInterface>> MacInterface::Create(
-    ddk::MacAddrImplProtocolClient parent) {
+zx::status<std::unique_ptr<MacInterface>> MacInterface::Create(ddk::MacAddrProtocolClient parent) {
   fbl::AllocChecker ac;
   std::unique_ptr<MacInterface> mac(new (&ac) MacInterface(parent));
   if (!ac.check()) {
@@ -85,13 +84,13 @@ zx_status_t MacInterface::Bind(async_dispatcher_t* dispatcher,
     return ZX_ERR_NO_MEMORY;
   }
   zx_status_t status = client_instance->Bind(dispatcher, std::move(req));
-
-  if (status == ZX_OK) {
-    clients_.push_back(std::move(client_instance));
-    Consolidate();
+  if (status != ZX_OK) {
+    return status;
   }
 
-  return status;
+  clients_.push_back(std::move(client_instance));
+  Consolidate();
+  return ZX_OK;
 }
 
 mode_t MacInterface::ConvertMode(const netdev::wire::MacFilterMode& mode) const {

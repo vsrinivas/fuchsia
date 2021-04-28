@@ -6,6 +6,7 @@
 
 #include <fuchsia/hardware/network/llcpp/fidl.h>
 #include <lib/fidl/epitaph.h>
+#include <lib/fit/defer.h>
 #include <zircon/device/network.h>
 
 #include <fbl/alloc_checker.h>
@@ -13,6 +14,7 @@
 
 #include "device_interface.h"
 #include "log.h"
+#include "tx_queue.h"
 
 namespace network::internal {
 
@@ -51,20 +53,14 @@ bool Session::ShouldTakeOverPrimary(const Session* current_primary) const {
 }
 
 zx::status<std::pair<std::unique_ptr<Session>, netdev::wire::Fifos>> Session::Create(
-    async_dispatcher_t* dispatcher, netdev::wire::SessionInfo info, fidl::StringView name,
+    async_dispatcher_t* dispatcher, netdev::wire::SessionInfo& info, fidl::StringView name,
     DeviceInterface* parent, fidl::ServerEnd<netdev::Session> control) {
-  for (const auto& rx_request : info.rx_frames) {
-    if (!parent->IsValidRxFrameType(static_cast<uint8_t>(rx_request))) {
-      return zx::error(ZX_ERR_INVALID_ARGS);
-    }
-  }
-
   if (info.descriptor_version != NETWORK_DEVICE_DESCRIPTOR_VERSION) {
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
   fbl::AllocChecker ac;
-  std::unique_ptr<Session> session(new (&ac) Session(dispatcher, &info, std::move(name), parent));
+  std::unique_ptr<Session> session(new (&ac) Session(dispatcher, info, name, parent));
   if (!ac.check()) {
     LOGF_ERROR("network-device: Failed to allocate session");
     return zx::error(ZX_ERR_NO_MEMORY);
@@ -79,34 +75,36 @@ zx::status<std::pair<std::unique_ptr<Session>, netdev::wire::Fifos>> Session::Cr
 
   session->Bind(std::move(control));
 
-  zx::status registration = parent->RegisterDataVmo(std::move(info.data));
-  if (registration.is_error()) {
-    return registration.take_error();
-  }
-  auto& [id, vmo] = registration.value();
-  session->vmo_id_ = id;
-  session->data_vmo_ = vmo;
-
   return zx::ok(std::make_pair(std::move(session), std::move(fifos.value())));
 }
 
-Session::Session(async_dispatcher_t* dispatcher, netdev::wire::SessionInfo* info,
+Session::Session(async_dispatcher_t* dispatcher, netdev::wire::SessionInfo& info,
                  fidl::StringView name, DeviceInterface* parent)
     : dispatcher_(dispatcher),
-      vmo_descriptors_(std::move(info->descriptors)),
+      name_([&name]() {
+        std::remove_const<decltype(name_)>::type t;
+        ZX_ASSERT(name.size() < t.size());
+        char* end = std::copy(name.begin(), name.end(), t.begin());
+        *end = '\0';
+        return t;
+      }()),
+      vmo_descriptors_(std::move(info.descriptors)),
       paused_(true),
-      descriptor_count_(info->descriptor_count),
-      descriptor_length_(info->descriptor_length * sizeof(uint64_t)),
-      flags_(info->options),
-      frame_type_count_(static_cast<uint32_t>(info->rx_frames.count())),
+      descriptor_count_(info.descriptor_count),
+      descriptor_length_(info.descriptor_length * sizeof(uint64_t)),
+      flags_(info.options),
+      frame_types_([&info]() {
+        std::remove_const<decltype(frame_types_)>::type t;
+        ZX_ASSERT(info.rx_frames.count() <= t.size());
+        for (size_t i = 0; i < info.rx_frames.count(); i++) {
+          t[i] = static_cast<uint8_t>(info.rx_frames[i]);
+        }
+        return t;
+      }()),
+      frame_type_count_(static_cast<uint32_t>(info.rx_frames.count())),
       parent_(parent) {
-  ZX_ASSERT(frame_type_count_ <= netdev::wire::kMaxFrameTypes);
-  for (uint32_t i = 0; i < frame_type_count_; i++) {
-    frame_types_[i] = static_cast<uint8_t>(info->rx_frames[i]);
-  }
-
-  auto* end = std::copy(name.begin(), name.end(), name_.begin());
-  *end = '\0';
+  // TODO(http://fxbug.dev/64310): We're storing requested frame types for now and using it on
+  // SetPaused. This will not be necessary once session FIDL updates.
 }
 
 Session::~Session() {
@@ -116,6 +114,9 @@ Session::~Session() {
   ZX_ASSERT(in_flight_rx_ == 0);
   ZX_ASSERT(in_flight_tx_ == 0);
   ZX_ASSERT(vmo_id_ == MAX_VMOS);
+  for (size_t i = 0; i < attached_ports_.size(); i++) {
+    ZX_ASSERT_MSG(!attached_ports_[i].has_value(), "outstanding attached port %ld", i);
+  }
   // attempts to send an epitaph, signaling that the buffers are reclaimed:
   if (control_channel_.has_value()) {
     fidl_epitaph_write(control_channel_->channel().get(), ZX_ERR_CANCELED);
@@ -231,9 +232,18 @@ void Session::OnUnbind(fidl::UnbindInfo::Reason reason, fidl::ServerEnd<netdev::
       break;
   }
 
+  // When the session is unbound we can just detach all the ports from it.
+  {
+    fbl::AutoLock lock(&parent_->control_lock());
+    for (uint8_t i = 0; i < MAX_PORTS; i++) {
+      // We can ignore the return from detaching, this port is about to get destroyed.
+      zx::status<bool> __UNUSED result = DetachPortLocked(i);
+    }
+  }
+
   // NOTE: the parent may destroy the session synchronously in NotifyDeadSession, this is the
   // last thing we can do safely with this session object.
-  parent_->NotifyDeadSession(this);
+  parent_->NotifyDeadSession(*this);
 }
 
 void Session::StopTxThread() {
@@ -332,9 +342,9 @@ zx_status_t Session::FetchTx() {
   ZX_ASSERT(transaction.available() <= kMaxFifoDepth);
   uint16_t fetch_buffer[kMaxFifoDepth];
   size_t read;
-  zx_status_t status =
-      fifo_tx_.read(sizeof(uint16_t), fetch_buffer, transaction.available(), &read);
-  if (status != ZX_OK) {
+  if (zx_status_t status =
+          fifo_tx_.read(sizeof(uint16_t), fetch_buffer, transaction.available(), &read);
+      status != ZX_OK) {
     if (status != ZX_ERR_SHOULD_WAIT) {
       LOGF_TRACE("network-device(%s): tx fifo read failed %s", name(),
                  zx_status_get_string(status));
@@ -349,6 +359,7 @@ zx_status_t Session::FetchTx() {
   bool notify_listeners = false;
 
   uint32_t total_length = 0;
+  SharedAutoLock lock(&parent_->control_lock());
   while (read > 0) {
     auto* desc = descriptor(*desc_idx);
     if (!desc) {
@@ -356,10 +367,35 @@ zx_status_t Session::FetchTx() {
       return ZX_ERR_IO_INVALID;
     }
 
-    // Reject invalid tx types
-    if (!parent_->IsValidTxFrameType(desc->frame_type)) {
-      LOGF_ERROR("network-device(%s): received invalid tx frame type: %d", name(),
-                 desc->frame_type);
+    if (desc->port_id >= attached_ports_.size()) {
+      LOGF_ERROR("network-device(%s): received invalid tx port id: %d", name(), desc->port_id);
+      return ZX_ERR_IO_INVALID;
+    }
+    std::optional<AttachedPort>& slot = attached_ports_[desc->port_id];
+    if (!slot.has_value()) {
+      // Port is not attached, immediately return the buffer with an error.
+      // Tx on unattached port is not an unrecoverable error, especially because detaching a port
+      // can race with regular tx.
+      // This is not expected to be part of fast path operation, so it should be
+      // fine to return one of these buffers at a time.
+      desc->return_flags = static_cast<uint32_t>(netdev::wire::TxReturnFlags::kTxRetError |
+                                                 netdev::wire::TxReturnFlags::kTxRetNotAvailable);
+      if (zx_status_t status = fifo_tx_.write(sizeof(desc_idx), desc_idx, 1, nullptr);
+          status != ZX_OK) {
+        LOGF_ERROR("network-device(%s): failed to return buffer with bad port number %d: %s",
+                   name(), desc->port_id, zx_status_get_string(status));
+        return ZX_ERR_IO_INVALID;
+      }
+      desc_idx++;
+      read--;
+      continue;
+    }
+    AttachedPort& port = slot.value();
+    // Reject invalid tx types.
+    port.AssertParentControlLockShared(*parent_);
+    if (!port.WithPort([frame_type = desc->frame_type](DevicePort& p) {
+          return p.IsValidRxFrameType(frame_type);
+        })) {
       return ZX_ERR_IO_INVALID;
     }
 
@@ -491,22 +527,105 @@ void Session::ResumeTx() {
 }
 
 void Session::SetPaused(SetPausedRequestView request, SetPausedCompleter::Sync& _completer) {
-  bool old = paused_.exchange(request->paused);
-  if (request->paused != old) {
-    // NOTE: SetPaused is served from the same thread as we operate the Tx FIFO on, so we can
-    // ensure that the Tx FIFO will not be running until we return from here. If that changes, we
-    // need to split the paused boolean into two signals to prevent a race.
-    if (request->paused) {
-      parent_->SessionStopped(this);
-    } else {
-      parent_->SessionStarted(this);
+  // TODO(http://fxbug.dev/64310): Transitionally setting a session as paused means attaching or
+  // detaching port0, until we migrate the session FIDL.
+  zx_status_t status;
+  if (request->paused) {
+    status = DetachPort(DeviceInterface::kPort0);
+  } else {
+    status = AttachPort(DeviceInterface::kPort0, fbl::Span(frame_types_.data(), frame_type_count_));
+  }
+  if (status != ZX_OK) {
+    LOGF_WARN("network-device(%s): SetPaused(%d): %s", name(), request->paused,
+              zx_status_get_string(status));
+  }
+}
+
+zx_status_t Session::AttachPort(uint8_t port_id, fbl::Span<const uint8_t> frame_types) {
+  size_t attached_count;
+  {
+    fbl::AutoLock lock(&parent_->control_lock());
+
+    if (port_id >= attached_ports_.size()) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    std::optional<AttachedPort>& slot = attached_ports_[port_id];
+    if (slot.has_value()) {
+      return ZX_ERR_ALREADY_EXISTS;
     }
 
-    if (!request->paused) {
-      // If we're unpausing a session, signal that we want to resume Tx:
-      ResumeTx();
+    zx::status<AttachedPort> acquire_port = parent_->AcquirePort(port_id, frame_types);
+    if (acquire_port.is_error()) {
+      return acquire_port.status_value();
     }
+    AttachedPort& port = acquire_port.value();
+    port.AssertParentControlLockShared(*parent_);
+    port.WithPort([](DevicePort& p) { p.SessionAttached(); });
+    slot = port;
+
+    // Count how many ports we have attached now so we know if we need to notify the parent of
+    // changes to our state.
+    attached_count =
+        std::count_if(attached_ports_.begin(), attached_ports_.end(),
+                      [](const std::optional<AttachedPort>& p) { return p.has_value(); });
   }
+  // The newly attached port is the only port we're attached to, notify the parent that we want to
+  // start up and kick the tx thread.
+  if (attached_count == 1) {
+    paused_.store(false);
+    parent_->SessionStarted(*this);
+    ResumeTx();
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t Session::DetachPort(uint8_t port_id) {
+  bool stop_session;
+  {
+    fbl::AutoLock lock(&parent_->control_lock());
+    auto result = DetachPortLocked(port_id);
+    if (result.is_error()) {
+      return result.error_value();
+    }
+    stop_session = result.value();
+  }
+  // The newly detached port was the last one standing, notify parent we're a stopped session now.
+  if (stop_session) {
+    paused_.store(true);
+    parent_->SessionStopped(*this);
+  }
+  return ZX_OK;
+}
+
+zx::status<bool> Session::DetachPortLocked(uint8_t port_id) {
+  if (port_id >= attached_ports_.size()) {
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  }
+  std::optional<AttachedPort>& slot = attached_ports_[port_id];
+  if (!slot.has_value()) {
+    return zx::error(ZX_ERR_NOT_FOUND);
+  }
+  AttachedPort& attached_port = slot.value();
+  attached_port.AssertParentControlLockShared(*parent_);
+  attached_port.WithPort([](DevicePort& p) { p.SessionDetached(); });
+  slot = std::nullopt;
+  return zx::ok(
+      std::all_of(attached_ports_.begin(), attached_ports_.end(),
+                  [](const std::optional<AttachedPort>& port) { return !port.has_value(); }));
+}
+
+bool Session::OnPortDestroyed(uint8_t port_id) {
+  zx::status status = DetachPortLocked(port_id);
+  // Tolerate errors on port destruction, just means we weren't attached to this port.
+  if (status.is_error()) {
+    return false;
+  }
+  bool should_stop = status.value();
+  if (should_stop) {
+    paused_ = true;
+  }
+  return should_stop;
 }
 
 void Session::Close(CloseRequestView request, CloseCompleter::Sync& _completer) { Kill(); }
@@ -550,13 +669,13 @@ void Session::ReturnTxDescriptors(const uint16_t* descriptors, uint32_t count) {
   }
 }
 
-bool Session::LoadAvailableRxDescriptors(RxQueue::SessionTransaction* transact) {
+bool Session::LoadAvailableRxDescriptors(RxQueue::SessionTransaction& transact) {
   if (rx_avail_queue_count_ == 0) {
     return false;
   }
-  while (transact->remaining() != 0 && rx_avail_queue_count_ != 0) {
+  while (transact.remaining() != 0 && rx_avail_queue_count_ != 0) {
     rx_avail_queue_count_--;
-    transact->Push(this, rx_avail_queue_[rx_avail_queue_count_]);
+    transact.Push(this, rx_avail_queue_[rx_avail_queue_count_]);
   }
   return true;
 }
@@ -577,7 +696,7 @@ zx_status_t Session::FetchRxDescriptors() {
   return ZX_OK;
 }
 
-zx_status_t Session::LoadRxDescriptors(RxQueue::SessionTransaction* transact) {
+zx_status_t Session::LoadRxDescriptors(RxQueue::SessionTransaction& transact) {
   if (rx_avail_queue_count_ == 0) {
     zx_status_t status = FetchRxDescriptors();
     if (status != ZX_OK) {
@@ -647,30 +766,35 @@ zx_status_t Session::FillRxSpace(uint16_t descriptor_index, rx_space_buffer_t* b
 
 bool Session::CompleteRx(uint16_t descriptor_index, const rx_buffer_t* buff) {
   ZX_ASSERT(IsPrimary());
-  // if there's no data in the buffer, just immediately return and allow it to be reused.
-  if (buff->total_length == 0) {
+
+  // Always mark a single buffer as returned upon completion.
+  auto defer = fit::defer([this]() { RxReturned(); });
+
+  // If there's no data in the buffer, just immediately return and allow it to be reused.
+  if (buff->length == 0) {
     return true;
   }
 
-  bool ignore = !IsSubscribedToFrameType(buff->meta.frame_type) || paused_.load();
+  bool ignore =
+      !IsSubscribedToFrameType(buff->meta.port_id, buff->meta.frame_type) || paused_.load();
 
   // Copy session data to other sessions (if any) even if this session is paused.
   parent_->CopySessionData(*this, descriptor_index, buff);
 
   if (!ignore) {
-    // we validated the descriptor coming in, writing it back should always work.
+    // We validated the descriptor coming in, writing it back should always work.
     ZX_ASSERT(LoadRxInfo(descriptor_index, buff) == ZX_OK);
     rx_return_queue_[rx_return_queue_count_++] = descriptor_index;
   }
 
-  // allow the buffer to be immediately reused if we ignored the frame AND if our rx is still valid
+  // Allow the buffer to be immediately reused if we ignored the frame AND if our rx is still valid.
   return ignore && rx_valid_;
 }
 
 void Session::CompleteRxWith(const Session& owner, uint16_t owner_index, const rx_buffer_t* buff) {
   // can't call this if owner is self.
   ZX_ASSERT(&owner != this);
-  if (!IsSubscribedToFrameType(buff->meta.frame_type) || paused_.load()) {
+  if (!IsSubscribedToFrameType(buff->meta.port_id, buff->meta.frame_type) || paused_.load()) {
     // don't do anything if we're paused or not subscribed to this frame type.
     return;
   }
@@ -704,7 +828,7 @@ void Session::CompleteRxWith(const Session& owner, uint16_t owner_index, const r
   // by calling LoadRxInfo above.
   auto* owner_desc = owner.descriptor(owner_index);
   auto* desc = descriptor(target_desc);
-  auto len = buff->total_length;
+  auto len = buff->length;
   uint32_t owner_off = 0;
   uint32_t self_off = 0;
   while (len > 0) {
@@ -822,7 +946,7 @@ zx_status_t Session::LoadRxInfo(uint16_t descriptor_index, const rx_buffer_t* bu
     LOGF_ERROR("network-device(%s): invalid descriptor index %d", name(), descriptor_index);
     return ZX_ERR_INVALID_ARGS;
   }
-  auto len = static_cast<uint32_t>(buff->total_length);
+  auto len = static_cast<uint32_t>(buff->length);
 
   if (buff->meta.info_type != static_cast<uint32_t>(netdev::wire::InfoType::kNoInfo)) {
     LOGF_WARN("network-device(%s): InfoType not recognized :%d", name(), buff->meta.info_type);
@@ -831,6 +955,7 @@ zx_status_t Session::LoadRxInfo(uint16_t descriptor_index, const rx_buffer_t* bu
   }
   desc->frame_type = buff->meta.frame_type;
   desc->inbound_flags = buff->meta.flags;
+  desc->port_id = buff->meta.port_id;
   if (desc->chain_length >= netdev::wire::kMaxDescriptorChain) {
     LOGF_ERROR("network-device(%s): invalid descriptor %d chain length %d", name(),
                descriptor_index, desc->chain_length);
@@ -885,17 +1010,27 @@ void Session::CommitRx() {
   rx_return_queue_count_ = 0;
 }
 
-bool Session::IsSubscribedToFrameType(uint8_t frame_type) {
-  auto* end = frame_types_.begin() + frame_type_count_;
-  for (auto* i = frame_types_.begin(); i != end; i++) {
-    if (*i == frame_type) {
-      return true;
-    }
+bool Session::IsSubscribedToFrameType(uint8_t port, uint8_t frame_type) {
+  if (port >= attached_ports_.size()) {
+    return false;
   }
-  return false;
+  std::optional<AttachedPort>& slot = attached_ports_[port];
+  if (!slot.has_value()) {
+    return false;
+  }
+  fbl::Span subscribed = slot.value().frame_types();
+  return std::any_of(subscribed.begin(), subscribed.end(),
+                     [frame_type](const uint8_t& t) { return t == frame_type; });
 }
 
-uint8_t Session::ReleaseDataVmo() {
+void Session::SetDataVmo(uint8_t vmo_id, DataVmoStore::StoredVmo* vmo) {
+  ZX_ASSERT_MSG(vmo_id_ == MAX_VMOS, "data VMO already set");
+  ZX_ASSERT_MSG(vmo_id < MAX_VMOS, "invalid vmo_id %d", vmo_id);
+  vmo_id_ = vmo_id;
+  data_vmo_ = vmo;
+}
+
+uint8_t Session::ClearDataVmo() {
   uint8_t id = vmo_id_;
   // Reset identifier to the marker value. The destructor will assert that `ReleaseDataVmo` was
   // called by checking the value.

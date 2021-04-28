@@ -41,8 +41,10 @@ using DeviceType = ddk::Device<SerialPpp>;
 
 class SerialPpp final : public DeviceType,
                         public ddk::NetworkDeviceImplProtocol<SerialPpp>,
+                        public ddk::NetworkPortProtocol<SerialPpp>,
                         public ddk::EmptyProtocol<ZX_PROTOCOL_NETWORK_DEVICE_IMPL> {
  public:
+  static constexpr uint8_t kPortId = 0;
   static constexpr zx::duration kSerialTimeout = zx::msec(10);
   // FIFO depth is abitrarily low since PPP is quite slow. There's no point in having many buffers.
   static constexpr uint16_t kFifoDepth = 64;
@@ -63,12 +65,18 @@ class SerialPpp final : public DeviceType,
   void NetworkDeviceImplStart(network_device_impl_start_callback callback, void* cookie);
   void NetworkDeviceImplStop(network_device_impl_stop_callback callback, void* cookie);
   void NetworkDeviceImplGetInfo(device_info_t* out_info);
-  void NetworkDeviceImplGetStatus(status_t* out_status);
   void NetworkDeviceImplQueueTx(const tx_buffer_t* buf_list, size_t buf_count);
   void NetworkDeviceImplQueueRxSpace(const rx_space_buffer_t* buf_list, size_t buf_count);
   void NetworkDeviceImplPrepareVmo(uint8_t vmo_id, zx::vmo vmo);
   void NetworkDeviceImplReleaseVmo(uint8_t vmo_id);
   void NetworkDeviceImplSetSnoop(bool snoop);
+
+  // ddk::NetworkPortProtocol
+  void NetworkPortGetInfo(port_info_t* out_info);
+  void NetworkPortGetStatus(port_status_t* out_status);
+  void NetworkPortSetActive(bool active);
+  void NetworkPortGetMac(mac_addr_protocol_t* out_mac_ifc);
+  void NetworkPortRemoved();
 
   // Used in tests:
   void set_enable_rx_timeout(bool enable) { enable_rx_timeout_ = enable; }

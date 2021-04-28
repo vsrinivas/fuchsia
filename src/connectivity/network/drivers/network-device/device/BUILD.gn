@@ -11,6 +11,8 @@ ddk_source_split("device") {
     "definitions.h",
     "device_interface.cc",
     "device_interface.h",
+    "device_port.cc",
+    "device_port.h",
     "log.h",
     "public/network_device.h",
     "rx_queue.cc",
@@ -25,6 +27,7 @@ ddk_source_split("device") {
 
   public_deps = [
     "//sdk/banjo/fuchsia.hardware.network.device:fuchsia.hardware.network.device_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.network.mac:fuchsia.hardware.network.mac_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_llcpp",
     "//src/lib/vmo_store",
     "//zircon/public/lib/async-cpp",
@@ -36,6 +39,9 @@ ddk_source_split("device") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/zxc",
   ]
+
+  ddk_deps = [ "//src/connectivity/network/drivers/network-device/mac:mac_ddk" ]
+  non_ddk_deps = [ "//src/connectivity/network/drivers/network-device/mac" ]
 }
 
 group("tests") {

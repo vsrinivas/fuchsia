@@ -17,12 +17,11 @@ namespace tun {
 
 // Implements `fuchsia.net.tun.DevicePair`.
 //
-// `TunPair` uses `DeviceAdapter` and `MacAdapter` to fulfill the `fuchsia.net.tun.DevicePair`
-// protocol. All FIDL requests are served over its own internally held AsyncLoop.
+// `TunPair` uses `DeviceAdapter` to fulfill the `fuchsia.net.tun.DevicePair` protocol. All FIDL
+// requests are served over its own internally held async dispatcher.
 class TunPair : public fbl::DoublyLinkedListable<std::unique_ptr<TunPair>>,
                 public fidl::WireInterface<fuchsia_net_tun::DevicePair>,
-                public DeviceAdapterParent,
-                public MacAdapterParent {
+                public DeviceAdapterParent {
  public:
   // Creates a new `TunPair` with `config`.
   // `teardown` is called when all the bound client channels are closed.
@@ -51,9 +50,7 @@ class TunPair : public fbl::DoublyLinkedListable<std::unique_ptr<TunPair>>,
 
  private:
   TunPair(fit::callback<void(TunPair*)> teardown, DevicePairConfig config);
-  void ConnectProtocols(const std::unique_ptr<DeviceAdapter>& device,
-                        const std::unique_ptr<MacAdapter>& mac,
-                        fuchsia_net_tun::wire::Protocols protos);
+  void ConnectProtocols(DeviceAdapter& device, fuchsia_net_tun::wire::Protocols protos);
   void Teardown();
 
   fit::callback<void(TunPair*)> teardown_callback_;
@@ -65,8 +62,6 @@ class TunPair : public fbl::DoublyLinkedListable<std::unique_ptr<TunPair>>,
   std::optional<fidl::ServerBindingRef<fuchsia_net_tun::DevicePair>> binding_;
   std::unique_ptr<DeviceAdapter> left_;
   std::unique_ptr<DeviceAdapter> right_;
-  std::unique_ptr<MacAdapter> mac_left_;
-  std::unique_ptr<MacAdapter> mac_right_;
 };
 
 }  // namespace tun

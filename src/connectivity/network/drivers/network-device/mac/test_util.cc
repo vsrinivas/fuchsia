@@ -21,19 +21,17 @@ FakeMacDeviceImpl::FakeMacDeviceImpl() {
 
 zx::status<std::unique_ptr<MacAddrDeviceInterface>> FakeMacDeviceImpl::CreateChild() {
   auto protocol = proto();
-  return MacAddrDeviceInterface::Create(ddk::MacAddrImplProtocolClient(&protocol));
+  return MacAddrDeviceInterface::Create(ddk::MacAddrProtocolClient(&protocol));
 }
 
-void FakeMacDeviceImpl::MacAddrImplGetAddress(uint8_t* out_mac) {
+void FakeMacDeviceImpl::MacAddrGetAddress(uint8_t* out_mac) {
   std::copy(mac_.octets.begin(), mac_.octets.end(), out_mac);
 }
 
-void FakeMacDeviceImpl::MacAddrImplGetFeatures(features_t* out_features) {
-  *out_features = features_;
-}
+void FakeMacDeviceImpl::MacAddrGetFeatures(features_t* out_features) { *out_features = features_; }
 
-void FakeMacDeviceImpl::MacAddrImplSetMode(mode_t mode, const uint8_t* multicast_macs_list,
-                                           size_t multicast_macs_count) {
+void FakeMacDeviceImpl::MacAddrSetMode(mode_t mode, const uint8_t* multicast_macs_list,
+                                       size_t multicast_macs_count) {
   EXPECT_EQ(mode & kSupportedModesMask, mode);
   EXPECT_NE(mode, 0u);
   mode_t old_mode = mode_;
