@@ -2,6 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/drivers/verify_shared_libraries.gni")
+import("//build/zircon/c_utils.gni")
+
 # Declare a driver module target.
 #
 # This target allows you to create an object file that can be used as a driver
@@ -21,6 +24,35 @@
 # General: check_includes, configs, data, inputs, output_name,
 #          output_extension, public, sources, testonly, visibility
 template("driver_module") {
+  check_target = "_driver.shlib-allowlist-check.$target_name"
+  shared_libraries_used_target = "_driver.shlib-used.$target_name"
+
+  driver_label = get_label_info(":$target_name", "label_with_toolchain")
+  shared_libraries_used_file =
+      "${target_gen_dir}/${target_name}.driver-shlib-used"
+
+  # Generates a list of all of the things our driver links against.
+  link_output_rspfile(shared_libraries_used_target) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                           ])
+    outputs = [ shared_libraries_used_file ]
+  }
+
+  # Checks the driver's shared libraries against an allowlist.
+  verify_shared_libraries(check_target) {
+    forward_variables_from(invoker, [ "testonly" ])
+    target_label = driver_label
+    libraries_used_file = shared_libraries_used_file
+    libraries_allowlist_file = "//build/drivers/driver_shared_library_allowlist"
+    output_file = "$target_gen_dir/${check_target}.dynamic_libs"
+
+    deps = [ ":$shared_libraries_used_target" ]
+  }
+
+  # This is the actual driver module.
   loadable_module(target_name) {
     variant_selector_target_type = "driver_module"
 
@@ -41,6 +73,10 @@ template("driver_module") {
 
     # Restore the target name.
     target_name = _target_name
+
+    if (!defined(deps)) {
+      deps = []
+    }
 
     if (!defined(output_dir)) {
       output_dir = root_out_dir
@@ -65,15 +101,15 @@ template("driver_module") {
 
     has_syslog_backend = false
 
-    if (defined(deps)) {
-      foreach(dep, deps) {
-        dep = get_label_info(dep, "label_no_toolchain")
-        has_syslog_backend =
-            has_syslog_backend || dep == "//sdk/lib/syslog/cpp:backend" ||
-            dep == "//sdk/lib/syslog/cpp:backend_legacy" ||
-            dep == "//sdk/lib/syslog/cpp:backend_fuchsia_compat"
-      }
+    foreach(dep, deps) {
+      dep = get_label_info(dep, "label_no_toolchain")
+      has_syslog_backend =
+          has_syslog_backend || dep == "//sdk/lib/syslog/cpp:backend" ||
+          dep == "//sdk/lib/syslog/cpp:backend_legacy" ||
+          dep == "//sdk/lib/syslog/cpp:backend_fuchsia_compat"
     }
+
+    deps += [ ":$check_target" ]
 
     # If no syslog backend is found, ensure we have not included the syslog frontend.
     if (!has_syslog_backend) {

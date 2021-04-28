@@ -1,0 +1,48 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Verifies the list of shared libraries against an allowlist.
+#
+# Parameters
+#
+#   target_label
+#     Label of the target that we are checking. Used for error printing.
+#   libraries_used_file
+#     Path to the file that lists the shared libraries that the target is using.
+#   libraries_allowlist_file
+#     Path to the file that lists the shared libraries in the allowlist
+#   output_file
+#     Path to the output. The output exists so the build knows we completed the action.
+template("verify_shared_libraries") {
+  assert(defined(invoker.target_label), "target_label must be provided")
+  assert(defined(invoker.libraries_used_file),
+         "libraries_used_file must be provided")
+  assert(defined(invoker.libraries_allowlist_file),
+         "libraries_allowlist_file must be provided")
+  assert(defined(invoker.output_file), "output_file must be provided")
+
+  action(target_name) {
+    script = "//build/drivers/verify_shared_libraries.sh"
+
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                           ])
+
+    inputs = [
+      invoker.libraries_allowlist_file,
+      invoker.libraries_used_file,
+    ]
+
+    outputs = [ invoker.output_file ]
+
+    args = [
+      invoker.target_label,
+      rebase_path(invoker.libraries_used_file, root_build_dir),
+      rebase_path(invoker.libraries_allowlist_file, root_build_dir),
+      rebase_path(invoker.output_file, root_build_dir),
+    ]
+  }
+}
