@@ -13,7 +13,7 @@
 
 namespace storage {
 
-constexpr zx::duration kDefaultWaitTime = zx::sec(10);
+constexpr zx::duration kDefaultWaitTime = zx::sec(20);
 
 static zx::status<> WaitForRamctl(zx::duration time = kDefaultWaitTime) {
   auto status = isolated_devmgr::OneTimeSetUp();
