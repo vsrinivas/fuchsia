@@ -29,7 +29,7 @@ async fn set_interface_status_unknown_interface() -> Result {
     let (_env, netstack) =
         sandbox.new_netstack::<Netstack2, fidl_fuchsia_netstack::NetstackMarker, _>(name)?;
 
-    let interfaces = netstack.get_interfaces2().await.context("failed to call get_interfaces2")?;
+    let interfaces = netstack.get_interfaces().await.context("failed to call get_interfaces")?;
     let next_id =
         1 + interfaces.iter().map(|interface| interface.id).max().ok_or(anyhow::format_err!(
             "failed to find any network interfaces (at least localhost should be present)"
@@ -39,7 +39,7 @@ async fn set_interface_status_unknown_interface() -> Result {
         .set_interface_status(next_id, false)
         .context("failed to call set_interface_status")?;
     let _interfaces = netstack
-        .get_interfaces2()
+        .get_interfaces()
         .await
         .context("failed to invoke netstack method after calling set_interface_status with an invalid argument")?;
 
@@ -76,7 +76,7 @@ async fn add_ethernet_device() -> Result {
         .map_err(fuchsia_zircon::Status::from_raw)
         .context("add_ethernet_device failed")?;
     let interface = netstack
-        .get_interfaces2()
+        .get_interfaces()
         .await
         .context("failed to get interfaces")?
         .into_iter()
@@ -482,7 +482,7 @@ async fn test_add_interface_causes_interfaces_changed<E: netemul::Endpoint>(name
 
     // Ensure we're connected to Netstack so we don't miss any events.
     // Since we do it, assert that only loopback exists.
-    let ifs = netstack.get_interfaces2().await.context("failed to get interfaces")?;
+    let ifs = netstack.get_interfaces().await.context("failed to get interfaces")?;
     assert_eq!(ifs.len(), 1);
 
     let id = device.add_to_stack(&stack).await.context("failed to add device")?;
@@ -520,7 +520,7 @@ async fn test_close_interface<E: netemul::Endpoint>(enabled: bool, name: &str) -
 
     // Ensure we're connected to Netstack so we don't miss any events.
     // Since we do it, assert that only loopback exists.
-    let ifs = netstack.get_interfaces2().await.context("failed to get interfaces")?;
+    let ifs = netstack.get_interfaces().await.context("failed to get interfaces")?;
     assert_eq!(ifs.len(), 1);
 
     let id = device.add_to_stack(&stack).await.context("failed to add device")?;

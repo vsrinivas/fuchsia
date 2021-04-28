@@ -7,7 +7,7 @@ use {
     fidl_fuchsia_net,
     fidl_fuchsia_netemul_network::{EndpointManagerMarker, NetworkContextMarker},
     fidl_fuchsia_netstack::{
-        InterfaceConfig, NetstackMarker, RouteTableEntry2, RouteTableTransactionMarker,
+        InterfaceConfig, NetstackMarker, RouteTableEntry, RouteTableTransactionMarker,
     },
     fuchsia_async as fasync,
     fuchsia_component::client,
@@ -208,7 +208,7 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
             .context("fidl error calling route_proxy.start_route_table_transaction")?
             .context("error starting route table transaction")?;
 
-        let mut entry = RouteTableEntry2 {
+        let mut entry = RouteTableEntry {
             destination: unspec_addr,
             netmask: unspec_addr,
             gateway: Some(Box::new(gw_addr)),

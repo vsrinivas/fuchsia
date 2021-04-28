@@ -11,15 +11,11 @@ using fuchsia.net;
 using fuchsia.net.name;
 using fuchsia.posix.socket;
 
-/// A list of IP addresses for an interface.
-alias interface_address_list = vector<fuchsia.net.Subnet>:MAX;
-
 /// A path to a device node.
 alias device_path = string:255;
 
-/// A list of interface descriptors.
-alias interface_list = vector<InterfaceInfo>:255;
-
+// TODO(https://fxbug.dev/75554): Migrate callers and remove this.
+[Deprecated = "Use fuchsia.net.interfaces/Watcher"]
 enum PhysicalStatus {
     /// The link is not attached to the medium.
     DOWN = 1;
@@ -27,6 +23,8 @@ enum PhysicalStatus {
     UP = 2;
 };
 
+// TODO(https://fxbug.dev/75554): Migrate callers and remove this.
+[Deprecated = "Use fuchsia.net.interfaces/Watcher"]
 enum AdministrativeStatus {
     /// The interface is administratively disabled.
     DISABLED = 1;
@@ -34,6 +32,8 @@ enum AdministrativeStatus {
     ENABLED = 2;
 };
 
+// TODO(https://fxbug.dev/75554): Migrate callers and remove this.
+[Deprecated = "Use fuchsia.net.interfaces/Watcher"]
 struct InterfaceInfo {
     /// An opaque identifier for the interface, assigned by the stack.
     /// This identifier will never be 0, and will not be reused even if the device is removed and
@@ -44,6 +44,8 @@ struct InterfaceInfo {
     InterfaceProperties properties;
 };
 
+// TODO(https://fxbug.dev/75554): Migrate callers and remove this.
+[Deprecated = "Use fuchsia.net.interfaces/Watcher"]
 struct InterfaceProperties {
     /// Human-readable name of the interface. eg. eth001, wlanx35.
     fuchsia.posix.socket.interface_name name;
@@ -72,7 +74,7 @@ struct InterfaceProperties {
     PhysicalStatus physical_status;
 
     /// The list of addresses currently assigned to the interface.
-    interface_address_list addresses;
+    vector<fuchsia.net.Subnet>:MAX addresses;
 };
 
 /// A ForwardingDestination represents either the device that should transmit a packet or the address
@@ -152,9 +154,13 @@ protocol Stack {
     DelEthernetInterface(fuchsia.net.interface_id id) -> () error Error;
 
     /// List all the interfaces available in the network stack.
-    ListInterfaces() -> (interface_list ifs);
+    // TODO(https://fxbug.dev/75554): Migrate callers and remove this.
+    [Deprecated = "Use fuchsia.net.interfaces/Watcher"]
+    ListInterfaces() -> (vector<InterfaceInfo>:255 ifs);
 
     /// Retrieve info about a specific interface.
+    // TODO(https://fxbug.dev/75554): Migrate callers and remove this.
+    [Deprecated = "Use fuchsia.net.interfaces/Watcher"]
     GetInterfaceInfo(fuchsia.net.interface_id id) -> (InterfaceInfo info) error Error;
 
     /// Enable the interface. Packets may be processed by the stack after this call is processed.

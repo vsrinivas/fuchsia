@@ -1189,19 +1189,19 @@ func compareInterfaceAddresses(t *testing.T, got, want []tcpip.AddressWithPrefix
 	}
 }
 
-func TestNetstackImpl_GetInterfaces2(t *testing.T) {
+func TestNetstackImpl_GetInterfaces(t *testing.T) {
 	ns := newNetstack(t)
 	ni := &netstackImpl{ns: ns}
 
 	t.Cleanup(addNoopEndpoint(t, ns, "").Remove)
 
-	ifaces, err := ni.GetInterfaces2(context.Background())
+	ifaces, err := ni.GetInterfaces(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	if l := len(ifaces); l == 0 {
-		t.Fatalf("got len(GetInterfaces2()) = %d, want != %d", l, l)
+		t.Fatalf("got len(GetInterfaces()) = %d, want != %d", l, l)
 	}
 
 	var expectedAddr fidlnet.IpAddress

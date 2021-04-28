@@ -58,17 +58,17 @@ std::optional<std::string> GetInterfaceName(InterfaceType interface_type) {
 // the networking stack that all valid interface IDs are positive).
 std::optional<uint64_t> GetInterfaceId(fuchsia::netstack::NetstackSyncPtr &stack_sync_ptr,
                                        std::string interface_name) {
-  std::vector<fuchsia::netstack::NetInterface2> ifs;
+  std::vector<fuchsia::netstack::NetInterface> ifs;
 
-  zx_status_t status = stack_sync_ptr->GetInterfaces2(&ifs);
+  zx_status_t status = stack_sync_ptr->GetInterfaces(&ifs);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to acquire interface list: " << zx_status_get_string(status);
     return std::nullopt;
   }
 
-  std::vector<fuchsia::netstack::NetInterface2>::iterator it = std::find_if(
+  std::vector<fuchsia::netstack::NetInterface>::iterator it = std::find_if(
       ifs.begin(), ifs.end(),
-      [&](const fuchsia::netstack::NetInterface2 &info) { return info.name == interface_name; });
+      [&](const fuchsia::netstack::NetInterface &info) { return info.name == interface_name; });
   if (it == ifs.end()) {
     FX_LOGS(ERROR) << "Failed to acquire interface id for " << interface_name;
     return 0;
@@ -190,7 +190,7 @@ PlatformResult AddRemoveHostRoute(InterfaceType interface_type, const Inet::IPPr
   }
 
   // Construct route table entry to add or remove.
-  fuchsia::netstack::RouteTableEntry2 route_table_entry;
+  fuchsia::netstack::RouteTableEntry route_table_entry;
   fuchsia::net::IpAddress destination;
   fuchsia::net::IpAddress netmask;
 

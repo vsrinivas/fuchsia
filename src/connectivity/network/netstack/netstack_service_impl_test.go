@@ -47,7 +47,7 @@ func TestRouteTableTransactions(t *testing.T) {
 		ifs := addNoopEndpoint(t, netstackServiceImpl.ns, "")
 		t.Cleanup(ifs.Remove)
 
-		originalTable, err := netstackServiceImpl.GetRouteTable2(context.Background())
+		originalTable, err := netstackServiceImpl.GetRouteTable(context.Background())
 		AssertNoError(t, err)
 
 		req, transactionInterface, err := netstack.NewRouteTableTransactionWithCtxInterfaceRequest()
@@ -71,7 +71,7 @@ func TestRouteTableTransactions(t *testing.T) {
 			t.Fatal("Cannot create gateway IP")
 		}
 		gateway := toIpAddress(gatewayAddress)
-		newRouteTableEntry2 := netstack.RouteTableEntry2{
+		newRouteTableEntry := netstack.RouteTableEntry{
 			Destination: toIpAddress(destinationSubnet.IP),
 			Netmask:     toIpAddress(net.IP(destinationSubnet.Mask)),
 			Gateway:     &gateway,
@@ -79,55 +79,32 @@ func TestRouteTableTransactions(t *testing.T) {
 			Metric:      100,
 		}
 
-		success, err = transactionInterface.AddRoute(context.Background(), newRouteTableEntry2)
+		success, err = transactionInterface.AddRoute(context.Background(), newRouteTableEntry)
 		AssertNoError(t, err)
 		if zx.Status(success) != zx.ErrOk {
 			t.Fatal("can't add new route entry")
 		}
 
 		// New table should contain the one route we just added.
-		actualTable2, err := netstackServiceImpl.GetRouteTable2(context.Background())
+		actualTable2, err := netstackServiceImpl.GetRouteTable(context.Background())
 		AssertNoError(t, err)
 		if len(actualTable2) == 0 {
-			t.Errorf("got empty table, expected first entry equal to %+v", newRouteTableEntry2)
-		} else if diff := cmp.Diff(actualTable2[0], newRouteTableEntry2, cmpopts.IgnoreTypes(struct{}{})); diff != "" {
+			t.Errorf("got empty table, expected first entry equal to %+v", newRouteTableEntry)
+		} else if diff := cmp.Diff(actualTable2[0], newRouteTableEntry, cmpopts.IgnoreTypes(struct{}{})); diff != "" {
 			t.Errorf("(-want +got)\n%s", diff)
 		}
 
-		// Verify deprecated GetRouteTable() function returns equal entries.
-		expectedRouteTableEntry := netstack.RouteTableEntry{
-			Destination: newRouteTableEntry2.Destination,
-			Netmask:     newRouteTableEntry2.Netmask,
-			Gateway:     *newRouteTableEntry2.Gateway,
-			Nicid:       newRouteTableEntry2.Nicid,
-			// no metric
-		}
-		actualTable, err := netstackServiceImpl.GetRouteTable(context.Background())
-		AssertNoError(t, err)
-		if len(actualTable) == 0 {
-			t.Errorf("got empty table, expected first entry equal to %+v", expectedRouteTableEntry)
-		} else if diff := cmp.Diff(actualTable[0], expectedRouteTableEntry, cmpopts.IgnoreTypes(struct{}{})); diff != "" {
-			t.Errorf("(-want +got)\n%s", diff)
-		}
-
-		success, err = transactionInterface.DelRoute(context.Background(), newRouteTableEntry2)
+		success, err = transactionInterface.DelRoute(context.Background(), newRouteTableEntry)
 		AssertNoError(t, err)
 		if zx.Status(success) != zx.ErrOk {
 			t.Error("can't delete route entry")
 		}
 
 		// New table should be empty.
-		actualTable2, err = netstackServiceImpl.GetRouteTable2(context.Background())
+		actualTable2, err = netstackServiceImpl.GetRouteTable(context.Background())
 		AssertNoError(t, err)
 		if len(actualTable2) != len(originalTable) {
 			t.Errorf("got %v, want <nothing>", actualTable2)
-		}
-
-		// Same for deprecated route table.
-		actualTable, err = netstackServiceImpl.GetRouteTable(context.Background())
-		AssertNoError(t, err)
-		if len(actualTable) != len(originalTable) {
-			t.Errorf("got %v, want <nothing>", actualTable)
 		}
 	})
 

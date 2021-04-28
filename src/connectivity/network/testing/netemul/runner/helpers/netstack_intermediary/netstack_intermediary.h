@@ -50,10 +50,8 @@ class NetstackIntermediary : public fuchsia::netstack::Netstack {
 
   // The following methods are not used by Machina guests and are stubbed out.
   void GetInterfaces(GetInterfacesCallback callback) override {}
-  void GetInterfaces2(GetInterfaces2Callback callback) override {}
 
   void GetRouteTable(GetRouteTableCallback callback) override {}
-  void GetRouteTable2(GetRouteTable2Callback callback) override {}
 
   void RemoveInterfaceAddress(uint32_t nicid, fuchsia::net::IpAddress addr, uint8_t prefixLen,
                               RemoveInterfaceAddressCallback callback) override {}

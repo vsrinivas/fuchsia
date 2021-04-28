@@ -557,10 +557,10 @@ macro_rules! route_struct {
             pub metric: u32,
         }
 
-        impl Into<fidl_fuchsia_netstack::RouteTableEntry2> for $ty_name {
-            fn into(self) -> fidl_fuchsia_netstack::RouteTableEntry2 {
+        impl Into<fidl_fuchsia_netstack::RouteTableEntry> for $ty_name {
+            fn into(self) -> fidl_fuchsia_netstack::RouteTableEntry {
                 let Self { destination, netmask, gateway, nicid, metric } = self;
-                fidl_fuchsia_netstack::RouteTableEntry2 {
+                fidl_fuchsia_netstack::RouteTableEntry {
                     destination: fidl_fuchsia_net_ext::IpAddress(destination).into(),
                     netmask: fidl_fuchsia_net_ext::IpAddress(netmask).into(),
                     gateway: gateway

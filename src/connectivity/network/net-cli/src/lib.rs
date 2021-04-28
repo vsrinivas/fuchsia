@@ -278,14 +278,14 @@ async fn do_route(cmd: opts::RouteEnum, netstack: NetstackProxy) -> Result<(), E
     match cmd {
         RouteEnum::List(RouteList {}) => {
             let response =
-                netstack.get_route_table2().await.context("error retrieving routing table")?;
+                netstack.get_route_table().await.context("error retrieving routing table")?;
 
             let mut t = Table::new();
             t.set_format(format::FormatBuilder::new().padding(2, 2).build());
 
             t.set_titles(row!["Destination", "Netmask", "Gateway", "NICID", "Metric"]);
             for entry in response {
-                let route = fidl_fuchsia_netstack_ext::RouteTableEntry2::from(entry);
+                let route = fidl_fuchsia_netstack_ext::RouteTableEntry::from(entry);
                 let gateway_str = match route.gateway {
                     None => "-".to_string(),
                     Some(g) => format!("{}", g),

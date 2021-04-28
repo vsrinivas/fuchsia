@@ -208,7 +208,7 @@ async fn test_resolve_route() -> Result {
         .context("start_route_table_transaction error")?;
         let () = fuchsia_zircon::ok(
             route_transaction
-                .add_route(&mut fidl_fuchsia_netstack::RouteTableEntry2 {
+                .add_route(&mut fidl_fuchsia_netstack::RouteTableEntry {
                     destination: unspecified,
                     netmask: unspecified,
                     gateway: Some(Box::new(gateway)),
@@ -316,7 +316,7 @@ async fn test_resolve_default_route_while_dhcp_is_running() -> Result {
     .context("start_route_table_transaction error")?;
     let () = fuchsia_zircon::ok(
         route_transaction
-            .add_route(&mut fidl_fuchsia_netstack::RouteTableEntry2 {
+            .add_route(&mut fidl_fuchsia_netstack::RouteTableEntry {
                 destination: UNSPECIFIED_IP,
                 netmask: UNSPECIFIED_IP,
                 gateway: Some(Box::new(GATEWAY_ADDR)),

@@ -31,7 +31,7 @@ type netstackClientApp struct {
 }
 
 func (a *netstackClientApp) printAll() {
-	ifaces, err := a.netstack.GetInterfaces2(context.Background())
+	ifaces, err := a.netstack.GetInterfaces(context.Background())
 	if err != nil {
 		fmt.Print("ifconfig: failed to fetch interfaces\n")
 		return
@@ -42,8 +42,8 @@ func (a *netstackClientApp) printAll() {
 	}
 }
 
-func getIfaceByNameFromIfaces(name string, ifaces []netstack.NetInterface2) *netstack.NetInterface2 {
-	var candidate *netstack.NetInterface2
+func getIfaceByNameFromIfaces(name string, ifaces []netstack.NetInterface) *netstack.NetInterface {
+	var candidate *netstack.NetInterface
 	for i, iface := range ifaces {
 		if strings.HasPrefix(iface.Name, name) {
 			if candidate != nil {
@@ -55,7 +55,7 @@ func getIfaceByNameFromIfaces(name string, ifaces []netstack.NetInterface2) *net
 	return candidate
 }
 
-func getIfaceByIdFromIfaces(id uint32, ifaces []netstack.NetInterface2) *netstack.NetInterface2 {
+func getIfaceByIdFromIfaces(id uint32, ifaces []netstack.NetInterface) *netstack.NetInterface {
 	for _, iface := range ifaces {
 		if iface.Id == id {
 			return &iface
@@ -64,7 +64,7 @@ func getIfaceByIdFromIfaces(id uint32, ifaces []netstack.NetInterface2) *netstac
 	return nil
 }
 
-func (a *netstackClientApp) printIface(iface netstack.NetInterface2) {
+func (a *netstackClientApp) printIface(iface netstack.NetInterface) {
 	fmt.Printf("%s\tHWaddr %s Id:%d\n", iface.Name, hwAddrToString(iface.Hwaddr), iface.Id)
 	fmt.Printf("\tinet addr:%s  Bcast:%s  Mask:%s\n", netAddrToString(iface.Addr), netAddrToString(iface.Broadaddr), netAddrToString(iface.Netmask))
 	for _, addr := range iface.Ipv6addrs {
@@ -75,11 +75,11 @@ func (a *netstackClientApp) printIface(iface netstack.NetInterface2) {
 	fmt.Printf("\t%s\n", iface.Flags)
 }
 
-func (a *netstackClientApp) setStatus(iface netstack.NetInterface2, up bool) {
+func (a *netstackClientApp) setStatus(iface netstack.NetInterface, up bool) {
 	a.netstack.SetInterfaceStatus(context.Background(), iface.Id, up)
 }
 
-func (a *netstackClientApp) addIfaceAddress(iface netstack.NetInterface2, cidr string) {
+func (a *netstackClientApp) addIfaceAddress(iface netstack.NetInterface, cidr string) {
 	netAddr, prefixLen := validateCidr(os.Args[3])
 	result, _ := a.netstack.SetInterfaceAddress(context.Background(), iface.Id, netAddr, prefixLen)
 	if result.Status != netstack.StatusOk {
@@ -87,7 +87,7 @@ func (a *netstackClientApp) addIfaceAddress(iface netstack.NetInterface2, cidr s
 	}
 }
 
-func (a *netstackClientApp) removeIfaceAddress(iface netstack.NetInterface2, cidr string) {
+func (a *netstackClientApp) removeIfaceAddress(iface netstack.NetInterface, cidr string) {
 	netAddr, prefixLen := validateCidr(os.Args[3])
 	result, _ := a.netstack.RemoveInterfaceAddress(context.Background(), iface.Id, netAddr, prefixLen)
 	if result.Status != netstack.StatusOk {
@@ -95,7 +95,7 @@ func (a *netstackClientApp) removeIfaceAddress(iface netstack.NetInterface2, cid
 	}
 }
 
-func (a *netstackClientApp) parseRouteAttribute(in *netstack.RouteTableEntry2, args []string) (remaining []string, err error) {
+func (a *netstackClientApp) parseRouteAttribute(in *netstack.RouteTableEntry, args []string) (remaining []string, err error) {
 	if len(args) < 2 {
 		return args, fmt.Errorf("not enough args to make attribute")
 	}
@@ -111,7 +111,7 @@ func (a *netstackClientApp) parseRouteAttribute(in *netstack.RouteTableEntry2, a
 		}
 		in.Metric = uint32(m)
 	case "iface":
-		ifaces, err := a.netstack.GetInterfaces2(context.Background())
+		ifaces, err := a.netstack.GetInterfaces(context.Background())
 		if err != nil {
 			return remaining, err
 		}
@@ -131,7 +131,7 @@ func (a *netstackClientApp) parseRouteAttribute(in *netstack.RouteTableEntry2, a
 	return remaining, nil
 }
 
-func (a *netstackClientApp) newRouteFromArgs(args []string) (route netstack.RouteTableEntry2, err error) {
+func (a *netstackClientApp) newRouteFromArgs(args []string) (route netstack.RouteTableEntry, err error) {
 	destination, remaining := args[0], args[1:]
 	_, dstSubnet, err := net.ParseCIDR(destination)
 	if err != nil {
@@ -155,7 +155,7 @@ func (a *netstackClientApp) newRouteFromArgs(args []string) (route netstack.Rout
 	return route, nil
 }
 
-func (a *netstackClientApp) addRoute(r netstack.RouteTableEntry2) error {
+func (a *netstackClientApp) addRoute(r netstack.RouteTableEntry) error {
 	if r.Gateway == nil && r.Nicid == 0 {
 		return fmt.Errorf("either gateway or iface must be provided when adding a route")
 	}
@@ -180,7 +180,7 @@ func (a *netstackClientApp) addRoute(r netstack.RouteTableEntry2) error {
 	return nil
 }
 
-func (a *netstackClientApp) deleteRoute(r netstack.RouteTableEntry2) error {
+func (a *netstackClientApp) deleteRoute(r netstack.RouteTableEntry) error {
 	req, transactionInterface, err := netstack.NewRouteTableTransactionWithCtxInterfaceRequest()
 	if err != nil {
 		return fmt.Errorf("could not make a new route table transaction: %s", err)
@@ -201,7 +201,7 @@ func (a *netstackClientApp) deleteRoute(r netstack.RouteTableEntry2) error {
 	return nil
 }
 
-func routeTableEntryToString(r netstack.RouteTableEntry2, ifaces []netstack.NetInterface2) string {
+func routeTableEntryToString(r netstack.RouteTableEntry, ifaces []netstack.NetInterface) string {
 	iface := getIfaceByIdFromIfaces(r.Nicid, ifaces)
 	var ifaceName string
 	if iface == nil {
@@ -223,11 +223,11 @@ func routeTableEntryToString(r netstack.RouteTableEntry2, ifaces []netstack.NetI
 }
 
 func (a *netstackClientApp) showRoutes() error {
-	rs, err := a.netstack.GetRouteTable2(context.Background())
+	rs, err := a.netstack.GetRouteTable(context.Background())
 	if err != nil {
 		return fmt.Errorf("Could not get route table from netstack: %s", err)
 	}
-	ifaces, err := a.netstack.GetInterfaces2(context.Background())
+	ifaces, err := a.netstack.GetInterfaces(context.Background())
 	if err != nil {
 		return err
 	}
@@ -238,10 +238,10 @@ func (a *netstackClientApp) showRoutes() error {
 }
 
 func (a *netstackClientApp) bridge(ifNames []string) (uint32, error) {
-	ifs := make([]*netstack.NetInterface2, len(ifNames))
+	ifs := make([]*netstack.NetInterface, len(ifNames))
 	nicIDs := make([]uint32, len(ifNames))
 	// first, validate that all interfaces exist
-	ifaces, err := a.netstack.GetInterfaces2(context.Background())
+	ifaces, err := a.netstack.GetInterfaces(context.Background())
 	if err != nil {
 		return 0, err
 	}
@@ -262,7 +262,7 @@ func (a *netstackClientApp) bridge(ifNames []string) (uint32, error) {
 	return nicid, nil
 }
 
-func (a *netstackClientApp) setDHCP(iface netstack.NetInterface2, startStop string) error {
+func (a *netstackClientApp) setDHCP(iface netstack.NetInterface, startStop string) error {
 	req, client, err := dhcp.NewClientWithCtxInterfaceRequest()
 	if err != nil {
 		return err
@@ -395,7 +395,7 @@ func Main() {
 		return
 	}
 
-	var iface *netstack.NetInterface2
+	var iface *netstack.NetInterface
 	switch os.Args[1] {
 	case "route":
 		if len(os.Args) == 2 || os.Args[2] == "show" {
@@ -441,7 +441,7 @@ func Main() {
 		if err != nil {
 			fmt.Printf("error creating bridge: %s\n", err)
 		} else {
-			interfaces, _ := a.netstack.GetInterfaces2(context.Background())
+			interfaces, _ := a.netstack.GetInterfaces(context.Background())
 			bridge := getIfaceByIdFromIfaces(uint32(nicid), interfaces)
 			fmt.Printf("Bridged interfaces %s.\nInterface '%s' created.\nPlease run `ifconfig %[2]s up` to enable it.\n", ifaces, bridge.Name)
 		}
@@ -450,7 +450,7 @@ func Main() {
 		usage()
 		return
 	default:
-		ifaces, err := a.netstack.GetInterfaces2(context.Background())
+		ifaces, err := a.netstack.GetInterfaces(context.Background())
 		if err != nil {
 			fmt.Printf("Error finding interface name: %s\n", err)
 			return

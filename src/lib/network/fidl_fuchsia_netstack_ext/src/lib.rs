@@ -7,7 +7,7 @@ use fidl_fuchsia_netstack as fidl;
 use prettytable::{cell, row, Row, Table};
 use std::io::Result;
 
-pub struct RouteTableEntry2 {
+pub struct RouteTableEntry {
     pub destination: fidl_fuchsia_net_ext::IpAddress,
     pub netmask: fidl_fuchsia_net_ext::IpAddress,
     pub gateway: Option<fidl_fuchsia_net_ext::IpAddress>,
@@ -15,11 +15,11 @@ pub struct RouteTableEntry2 {
     pub metric: u32,
 }
 
-impl From<fidl::RouteTableEntry2> for RouteTableEntry2 {
+impl From<fidl::RouteTableEntry> for RouteTableEntry {
     fn from(
-        fidl::RouteTableEntry2 {
+        fidl::RouteTableEntry {
             destination, netmask, gateway, nicid, metric
-            }: fidl::RouteTableEntry2,
+            }: fidl::RouteTableEntry,
     ) -> Self {
         let destination = destination.into();
         let netmask = netmask.into();
@@ -37,15 +37,21 @@ impl RouteTable {
     }
 
     pub fn display(&self) -> Result<String> {
-        let mut table = Table::new();
-        let _: &mut Row = table.add_row(row!["Destination", "Netmask", "Gateway", "NicID"]);
         let RouteTable(route_table) = self;
-        for fidl::RouteTableEntry { destination, netmask, gateway, nicid } in route_table.iter() {
+
+        let mut table = Table::new();
+        let _: &mut Row =
+            table.add_row(row!["Destination", "Netmask", "Gateway", "NIC ID", "Metric"]);
+        for fidl::RouteTableEntry { destination, netmask, gateway, nicid, metric } in route_table {
             let _: &mut Row = table.add_row(row![
-                IpAddress::from(*destination).to_string(),
-                IpAddress::from(*netmask).to_string(),
-                IpAddress::from(*gateway).to_string(),
-                nicid.to_string(),
+                IpAddress::from(*destination),
+                IpAddress::from(*netmask),
+                match gateway {
+                    Some(gateway) => IpAddress::from(**gateway).to_string(),
+                    None => "-".to_string(),
+                },
+                nicid,
+                metric,
             ]);
         }
         let mut bytes = Vec::new();

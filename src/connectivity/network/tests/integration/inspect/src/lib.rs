@@ -346,7 +346,7 @@ async fn inspect_routing_table() -> Result {
 
     // Capture the state of the routing table to verify the inspect data, and
     // confirm that it's not empty.
-    let routing_table = netstack.get_route_table2().await.context("get_route_table2 FIDL error")?;
+    let routing_table = netstack.get_route_table().await.context("get_route_table FIDL error")?;
     assert!(!routing_table.is_empty());
     println!("Got routing table: {:#?}", routing_table);
 
@@ -365,13 +365,8 @@ async fn inspect_routing_table() -> Result {
     let mut routing_table_assertion = TreeAssertion::new("Routes", true);
     for (i, route) in routing_table.into_iter().enumerate() {
         let index = &i.to_string();
-        let fidl_fuchsia_netstack::RouteTableEntry2 {
-            destination,
-            netmask,
-            gateway,
-            nicid,
-            metric,
-        } = route;
+        let fidl_fuchsia_netstack::RouteTableEntry { destination, netmask, gateway, nicid, metric } =
+            route;
         let route_assertion = fuchsia_inspect::tree_assertion!(var index: {
             "Destination": format!(
                 "{}/{}",

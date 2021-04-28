@@ -10,12 +10,6 @@ using fuchsia.net;
 using fuchsia.posix.socket;
 using zx;
 
-enum Protocol {
-    UNSPECIFIED = 0;
-    UDP = 1;
-    TCP = 2;
-};
-
 enum Status {
     OK = 0;
     UNKNOWN_ERROR = 1;
@@ -41,6 +35,8 @@ struct InterfaceConfig {
 };
 
 /// Flags describe an interface's runtime configuration.
+// TODO(https://fxbug.dev/75555): Migrate callers and remove this.
+[Deprecated = "Use fuchsia.net.interfaces/Watcher"]
 bits Flags : uint32 {
     /// Set if the interface is up.
     UP = 0x01;
@@ -49,37 +45,9 @@ bits Flags : uint32 {
 };
 
 /// https://linux.die.net/man/7/netdevice
+// TODO(https://fxbug.dev/75555): Migrate callers and remove this.
+[Deprecated = "Use fuchsia.net.interfaces/Watcher"]
 struct NetInterface {
-    uint32 id;
-    Flags flags;
-    fuchsia.hardware.ethernet.Features features;
-    uint32 configuration;
-    fuchsia.posix.socket.interface_name name;
-    /// addr is one of the interface's IPv4 addresses, even if the interface
-    /// holds multiple. No guarantees are made about which address is used when
-    /// an interface has multiple IPv4 addresses.
-    ///
-    /// If the interface does not have an IPv4 address, addr is the unspecified
-    /// IPv4 address (0.0.0.0).
-    fuchsia.net.IpAddress addr;
-    /// netmask is addr's corresponding network mask.
-    ///
-    /// If the interface does not have an IPv4 address, netmask is the 0 netmask
-    /// (0.0.0.0).
-    fuchsia.net.IpAddress netmask;
-    /// netmask is addr's corresponding network's broadcast address.
-    ///
-    /// If the interface does not have an IPv4 address, broadaddr is the
-    /// unspecified IPv4 address (0.0.0.0).
-    fuchsia.net.IpAddress broadaddr;
-    vector<fuchsia.net.Subnet>:MAX ipv6addrs;
-    bytes hwaddr;
-};
-
-/// New version that includes a metric value.
-// TODO(fxbug.dev/21079): Move this to NetInterface once Chromium stops using
-// netstack.fidl.
-struct NetInterface2 {
     uint32 id;
     Flags flags;
     fuchsia.hardware.ethernet.Features features;
@@ -110,16 +78,6 @@ struct NetInterface2 {
 struct RouteTableEntry {
     fuchsia.net.IpAddress destination;
     fuchsia.net.IpAddress netmask;
-    fuchsia.net.IpAddress gateway;
-    uint32 nicid;
-};
-
-/// New version that includes a metric value.
-// TODO(fxbug.dev/21079): Move this to NetInterface once Chromium stops using
-// netstack.fidl.
-struct RouteTableEntry2 {
-    fuchsia.net.IpAddress destination;
-    fuchsia.net.IpAddress netmask;
     fuchsia.net.IpAddress? gateway;
     uint32 nicid;
     uint32 metric;
@@ -133,12 +91,12 @@ struct SocketAddress {
 [Discoverable]
 protocol Netstack {
     /// Returns the list of registered network interfaces.
+    // TODO(https://fxbug.dev/75555): Migrate callers and remove this.
+    [Deprecated = "Use fuchsia.net.interfaces/Watcher"]
     GetInterfaces() -> (vector<NetInterface>:MAX interfaces);
-    GetInterfaces2() -> (vector<NetInterface2>:MAX interfaces);
 
     /// Returns current route table.
     GetRouteTable() -> (vector<RouteTableEntry>:MAX rt);
-    GetRouteTable2() -> (vector<RouteTableEntry2>:MAX rt);
 
     /// Sets the status (up or down) for the interface with the given nicid.
     SetInterfaceStatus(uint32 nicid, bool enabled);
@@ -175,6 +133,6 @@ protocol Netstack {
 
 [Discoverable]
 protocol RouteTableTransaction {
-    AddRoute(RouteTableEntry2 r) -> (zx.status status);
-    DelRoute(RouteTableEntry2 r) -> (zx.status status);
+    AddRoute(RouteTableEntry r) -> (zx.status status);
+    DelRoute(RouteTableEntry r) -> (zx.status status);
 };

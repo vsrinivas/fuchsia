@@ -191,7 +191,7 @@ async fn add_ethernet_device(
     // Check that the newly added ethernet interface is present before continuing with the
     // actual tests.
     let interface = netstack_proxy
-        .get_interfaces2()
+        .get_interfaces()
         .await
         .expect("failed to get interfaces")
         .into_iter()

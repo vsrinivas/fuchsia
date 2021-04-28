@@ -126,8 +126,8 @@ impl From<&ForwardingEntry> for Route {
     }
 }
 
-impl From<&netstack::RouteTableEntry2> for Route {
-    fn from(r: &netstack::RouteTableEntry2) -> Self {
+impl From<&netstack::RouteTableEntry> for Route {
+    fn from(r: &netstack::RouteTableEntry) -> Self {
         Route {
             target: LifIpAddr {
                 address: to_ip_addr(r.destination),
@@ -885,7 +885,7 @@ impl NetCfg {
 
     /// Returns the running routing table (as seen by the network stack).
     pub async fn routes(&mut self) -> Option<Vec<Route>> {
-        let table = self.netstack.get_route_table2().await;
+        let table = self.netstack.get_route_table().await;
         match table {
             Ok(entries) => Some(
                 entries
@@ -1087,7 +1087,7 @@ mod tests {
     #[test]
     fn test_route_from_routetableentry2() {
         assert_eq!(
-            Route::from(&netstack::RouteTableEntry2 {
+            Route::from(&netstack::RouteTableEntry {
                 destination: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [1, 2, 3, 0] }),
                 netmask: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [255, 255, 254, 0] }),
                 gateway: Some(Box::new(fnet::IpAddress::Ipv4(fnet::Ipv4Address {
@@ -1106,7 +1106,7 @@ mod tests {
         );
 
         assert_eq!(
-            Route::from(&netstack::RouteTableEntry2 {
+            Route::from(&netstack::RouteTableEntry {
                 destination: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [1, 2, 3, 0] }),
                 netmask: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [255, 255, 254, 0] }),
                 gateway: None,
@@ -1123,7 +1123,7 @@ mod tests {
         );
 
         assert_eq!(
-            Route::from(&netstack::RouteTableEntry2 {
+            Route::from(&netstack::RouteTableEntry {
                 destination: fnet::IpAddress::Ipv6(fnet::Ipv6Address {
                     addr: [0x26, 0x20, 0, 0, 0x10, 0, 0x50, 0, 0, 0, 0, 0, 0, 0, 0, 0]
                 }),
@@ -1148,7 +1148,7 @@ mod tests {
         );
 
         assert_eq!(
-            Route::from(&netstack::RouteTableEntry2 {
+            Route::from(&netstack::RouteTableEntry {
                 destination: fnet::IpAddress::Ipv6(fnet::Ipv6Address {
                     addr: [0x26, 0x20, 0, 0, 0x10, 0, 0x50, 0, 0, 0, 0, 0, 0, 0, 0, 0]
                 }),

@@ -6,7 +6,7 @@ use {
     fidl::endpoints::create_endpoints,
     fidl_fuchsia_net_stack::StackMarker,
     fidl_fuchsia_netemul_sync::{BusMarker, BusProxy, Event, SyncManagerMarker},
-    fidl_fuchsia_netstack::{NetstackMarker, RouteTableEntry2, RouteTableTransactionMarker},
+    fidl_fuchsia_netstack::{NetstackMarker, RouteTableEntry, RouteTableTransactionMarker},
     fuchsia_async as fasync,
     fuchsia_component::client,
     fuchsia_component::client::connect_to_service,
@@ -107,7 +107,7 @@ async fn add_route_table_entry(
     nicid: u64,
     route_proxy: &fidl_fuchsia_netstack::RouteTableTransactionProxy,
 ) -> Result<(), Error> {
-    let mut entry = RouteTableEntry2 {
+    let mut entry = RouteTableEntry {
         destination: dest,
         netmask: netmask,
         gateway: None,
@@ -202,15 +202,14 @@ async fn run_fuchsia_node() -> Result<(), Error> {
 
     fx_log_info!("successfully added entries to route table");
 
-    let route_table =
-        netstack.get_route_table2().await.context("error retrieving routing table")?;
+    let route_table = netstack.get_route_table().await.context("error retrieving routing table")?;
 
     let mut t = Table::new();
     t.set_format(format::FormatBuilder::new().padding(2, 2).build());
 
     t.set_titles(row!["Destination", "Netmask", "Gateway", "NICID", "Metric"]);
     for entry in route_table {
-        let route = fidl_fuchsia_netstack_ext::RouteTableEntry2::from(entry);
+        let route = fidl_fuchsia_netstack_ext::RouteTableEntry::from(entry);
         let gateway_str = match route.gateway {
             None => "-".to_string(),
             Some(g) => format!("{}", g),

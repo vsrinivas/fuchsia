@@ -107,7 +107,7 @@ async fn run_netstack_and_get_ipv6_addrs_for_endpoint<N: Netstack>(
         .map_err(fuchsia_zircon::Status::from_raw)
         .context("add_ethernet_device error")?;
     let interface = netstack
-        .get_interfaces2()
+        .get_interfaces()
         .await
         .context("failed to get interfaces")?
         .into_iter()
@@ -629,18 +629,17 @@ async fn router_and_prefix_discovery<E: netemul::Endpoint>(name: &str) -> Result
     // Test that the default router should be discovered after it is advertised.
     let () = check_route_table(&netstack, |route_table| {
         route_table.iter().any(|netstack::RouteTableEntry { destination, gateway, .. }| {
-            if let net::IpAddress::Ipv6(gateway) = gateway {
-                if let net::IpAddress::Ipv6(destination) = destination {
-                    let gateway = net_types_ip::Ipv6Addr::new(gateway.addr);
-                    let destination = net_types_ip::Ipv6Addr::new(destination.addr);
-                    if destination == net_types_ip::Ipv6::UNSPECIFIED_ADDRESS
-                        && gateway == ipv6_consts::LINK_LOCAL_ADDR
-                    {
-                        return true;
-                    }
+            (match destination {
+                net::IpAddress::Ipv4(net::Ipv4Address { addr: _ }) => false,
+                net::IpAddress::Ipv6(net::Ipv6Address { addr }) => {
+                    net_types_ip::Ipv6Addr::new(*addr) == net_types_ip::Ipv6::UNSPECIFIED_ADDRESS
                 }
-            }
-            false
+            }) && (match gateway.as_deref() {
+                None | Some(net::IpAddress::Ipv4(net::Ipv4Address { addr: _ })) => false,
+                Some(net::IpAddress::Ipv6(net::Ipv6Address { addr })) => {
+                    net_types_ip::Ipv6Addr::new(*addr) == ipv6_consts::LINK_LOCAL_ADDR
+                }
+            })
         })
     })
     .await

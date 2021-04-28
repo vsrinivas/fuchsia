@@ -32,8 +32,8 @@ namespace Platform {
 namespace testing {
 
 namespace {
-using fuchsia::netstack::NetInterface2;
-using fuchsia::netstack::RouteTableEntry2;
+using fuchsia::netstack::NetInterface;
+using fuchsia::netstack::RouteTableEntry;
 using fuchsia::netstack::Status;
 
 using DeviceLayer::PlatformMgrImpl;
@@ -82,8 +82,8 @@ class FakeNetstack : public fuchsia::netstack::testing::Netstack_TestBase,
   void NotImplemented_(const std::string& name) override { FAIL() << "Not implemented: " << name; }
 
   // FIDL interface definitions.
-  void GetInterfaces2(GetInterfaces2Callback callback) override {
-    std::vector<NetInterface2> result(interfaces_.size());
+  void GetInterfaces(GetInterfacesCallback callback) override {
+    std::vector<NetInterface> result(interfaces_.size());
     for (size_t i = 0; i < result.size(); ++i) {
       ASSERT_EQ(interfaces_[i].Clone(&result[i]), ZX_OK);
     }
@@ -97,7 +97,7 @@ class FakeNetstack : public fuchsia::netstack::testing::Netstack_TestBase,
 
     // Find the interface with the specified ID and append the address.
     auto it = std::find_if(interfaces_.begin(), interfaces_.end(),
-                           [&](const NetInterface2& interface) { return nicid == interface.id; });
+                           [&](const NetInterface& interface) { return nicid == interface.id; });
     if (it == interfaces_.end()) {
       callback({.status = Status::UNKNOWN_INTERFACE});
       return;
@@ -113,7 +113,7 @@ class FakeNetstack : public fuchsia::netstack::testing::Netstack_TestBase,
                               RemoveInterfaceAddressCallback callback) override {
     // Find the interface with the specified ID and remove the address.
     auto it = std::find_if(interfaces_.begin(), interfaces_.end(),
-                           [&](const NetInterface2& interface) { return nicid == interface.id; });
+                           [&](const NetInterface& interface) { return nicid == interface.id; });
     if (it == interfaces_.end()) {
       callback({.status = Status::UNKNOWN_INTERFACE});
       return;
@@ -137,16 +137,16 @@ class FakeNetstack : public fuchsia::netstack::testing::Netstack_TestBase,
     callback(ZX_OK);
   }
 
-  void AddRoute(::fuchsia::netstack::RouteTableEntry2 route_table_entry,
+  void AddRoute(::fuchsia::netstack::RouteTableEntry route_table_entry,
                 AddRouteCallback callback) override {
     route_table_.push_back(std::move(route_table_entry));
     callback(ZX_OK);
   }
 
-  void DelRoute(::fuchsia::netstack::RouteTableEntry2 route_table_entry,
+  void DelRoute(::fuchsia::netstack::RouteTableEntry route_table_entry,
                 DelRouteCallback callback) override {
     auto it = std::remove_if(route_table_.begin(), route_table_.end(),
-                             [&](const ::fuchsia::netstack::RouteTableEntry2& entry) {
+                             [&](const ::fuchsia::netstack::RouteTableEntry& entry) {
                                return route_table_entry.nicid == entry.nicid &&
                                       route_table_entry.metric == entry.metric &&
                                       CompareIpAddress(route_table_entry.destination,
@@ -180,23 +180,22 @@ class FakeNetstack : public fuchsia::netstack::testing::Netstack_TestBase,
 
   // Remove the fake interface with the given name. If it is not present, no change occurs.
   FakeNetstack& RemoveFakeInterface(std::string name) {
-    auto it =
-        std::remove_if(interfaces_.begin(), interfaces_.end(),
-                       [&](const NetInterface2& interface) { return interface.name == name; });
+    auto it = std::remove_if(interfaces_.begin(), interfaces_.end(),
+                             [&](const NetInterface& interface) { return interface.name == name; });
     interfaces_.erase(it, interfaces_.end());
     return *this;
   }
 
   // Access the current interfaces.
-  const std::vector<NetInterface2>& interfaces() const { return interfaces_; }
+  const std::vector<NetInterface>& interfaces() const { return interfaces_; }
 
   // Access the current route table.
-  const std::vector<RouteTableEntry2>& route_table() const { return route_table_; }
+  const std::vector<RouteTableEntry>& route_table() const { return route_table_; }
 
   // Get a pointer to an interface by name.
-  void GetInterfaceByName(const std::string name, NetInterface2& interface) {
+  void GetInterfaceByName(const std::string name, NetInterface& interface) {
     auto it = std::find_if(interfaces_.begin(), interfaces_.end(),
-                           [&](const NetInterface2& interface) { return interface.name == name; });
+                           [&](const NetInterface& interface) { return interface.name == name; });
     ASSERT_NE(it, interfaces_.end());
     ASSERT_EQ(it->Clone(&interface), ZX_OK);
   }
@@ -205,7 +204,7 @@ class FakeNetstack : public fuchsia::netstack::testing::Netstack_TestBase,
   bool FindRouteTableEntry(uint32_t nicid, ::nl::Inet::IPAddress addr,
                            uint32_t metric = kRouteMetric_HighPriority) {
     auto it = std::find_if(
-        route_table_.begin(), route_table_.end(), [&](const RouteTableEntry2& route_table_entry) {
+        route_table_.begin(), route_table_.end(), [&](const RouteTableEntry& route_table_entry) {
           return nicid == route_table_entry.nicid && metric == route_table_entry.metric &&
                  CompareIpAddress(addr, route_table_entry.destination);
         });
@@ -225,8 +224,8 @@ class FakeNetstack : public fuchsia::netstack::testing::Netstack_TestBase,
   fidl::Binding<fuchsia::netstack::Netstack> binding_{this};
   fidl::Binding<fuchsia::netstack::RouteTableTransaction> route_table_binding_{this};
   async_dispatcher_t* dispatcher_;
-  std::vector<NetInterface2> interfaces_;
-  std::vector<RouteTableEntry2> route_table_;
+  std::vector<NetInterface> interfaces_;
+  std::vector<RouteTableEntry> route_table_;
   uint32_t last_id_assigned = 0;
 };
 
@@ -259,23 +258,23 @@ class WarmTest : public testing::WeaveTestFixture<> {
  protected:
   FakeNetstack& fake_net_stack() { return fake_net_stack_; }
 
-  NetInterface2& GetThreadInterface(NetInterface2& interface) {
+  NetInterface& GetThreadInterface(NetInterface& interface) {
     fake_net_stack().GetInterfaceByName(ThreadStackMgrImpl().GetInterfaceName(), interface);
     return interface;
   }
 
   uint32_t GetThreadInterfaceId() {
-    NetInterface2 interface;
+    NetInterface interface;
     return GetThreadInterface(interface).id;
   }
 
-  NetInterface2& GetTunnelInterface(NetInterface2& interface) {
+  NetInterface& GetTunnelInterface(NetInterface& interface) {
     fake_net_stack().GetInterfaceByName(kTunInterfaceName, interface);
     return interface;
   }
 
   uint32_t GetTunnelInterfaceId() {
-    NetInterface2 interface;
+    NetInterface interface;
     return GetTunnelInterface(interface).id;
   }
 
@@ -287,7 +286,7 @@ class WarmTest : public testing::WeaveTestFixture<> {
 TEST_F(WarmTest, AddRemoveAddressThread) {
   constexpr char kSubnetIp[] = "2001:0DB8:0042::";
   constexpr uint8_t kPrefixLength = 48;
-  NetInterface2 lowpan;
+  NetInterface lowpan;
   Inet::IPAddress addr;
 
   // Sanity check - no addresses assigned.
@@ -316,7 +315,7 @@ TEST_F(WarmTest, AddRemoveAddressThread) {
 TEST_F(WarmTest, AddRemoveAddressTunnel) {
   constexpr char kSubnetIp[] = "2001:0DB8:0042::";
   constexpr uint8_t kPrefixLength = 48;
-  NetInterface2 weave_tun;
+  NetInterface weave_tun;
   Inet::IPAddress addr;
 
   // Sanity check - no addresses assigned.
@@ -345,7 +344,7 @@ TEST_F(WarmTest, AddRemoveAddressTunnel) {
 TEST_F(WarmTest, RemoveAddressThreadNotFound) {
   constexpr char kSubnetIp[] = "2001:0DB8:0042::";
   constexpr uint8_t kPrefixLength = 48;
-  NetInterface2 lowpan;
+  NetInterface lowpan;
   Inet::IPAddress addr;
 
   // Sanity check - no addresses assigned.
@@ -365,7 +364,7 @@ TEST_F(WarmTest, RemoveAddressThreadNotFound) {
 TEST_F(WarmTest, RemoveAddressTunnelNotFound) {
   constexpr char kSubnetIp[] = "2001:0DB8:0042::";
   constexpr uint8_t kPrefixLength = 48;
-  NetInterface2 weave_tun;
+  NetInterface weave_tun;
   Inet::IPAddress addr;
 
   // Sanity check - no addresses assigned.
