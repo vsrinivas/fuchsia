@@ -15,8 +15,8 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon::{
         self as zx, sys::zx_exception_info_t, sys::ZX_EXCEPTION_STATE_HANDLED,
-        sys::ZX_EXCEPTION_STATE_TRY_NEXT, sys::ZX_EXCP_POLICY_CODE_BAD_SYSCALL, AsHandleRef,
-        Task as zxTask,
+        sys::ZX_EXCEPTION_STATE_TRY_NEXT, sys::ZX_EXCP_POLICY_CODE_BAD_SYSCALL,
+        sys::ZX_EXCP_POLICY_ERROR, AsHandleRef, Task as zxTask,
     },
     futures::{StreamExt, TryStreamExt},
     io_util::directory,
@@ -84,21 +84,16 @@ fn run_task(task: Arc<Task>, exceptions: zx::Channel) -> Result<i32, Error> {
         assert!(buffer.n_handles() == 1);
         let exception = zx::Exception::from(buffer.take_handle(0).unwrap());
 
-        if info.type_ != 0x8208 {
-            // ZX_EXCP_POLICY_ERROR
+        if info.type_ != ZX_EXCP_POLICY_ERROR {
             info!("exception type: 0x{:x}", info.type_);
             exception.set_exception_state(&ZX_EXCEPTION_STATE_TRY_NEXT)?;
             continue;
         }
 
         let thread = exception.get_thread()?;
-
-        // TODO: We current assume thread == task.thread, which is valid because
-        // we only have one thread in each process. When we start another thread,
-        // we'll need to refactor this code to understand multiple threads.
         assert!(
             thread.get_koid() == task.thread.get_koid(),
-            "Starnix currently assumes a single thread."
+            "Exception thread did not match task thread."
         );
 
         let report = thread.get_exception_report()?;
@@ -113,8 +108,6 @@ fn run_task(task: Arc<Task>, exceptions: zx::Channel) -> Result<i32, Error> {
 
         let regs = &ctx.registers;
         let args = (regs.rdi, regs.rsi, regs.rdx, regs.r10, regs.r8, regs.r9);
-        // TODO(tbodt): Print the name of the syscall instead of its number (using a proc macro or
-        // something)
         info!(target: "strace", "{}({:#x}, {:#x}, {:#x}, {:#x}, {:#x}, {:#x})", SyscallDecl::from_number(syscall_number).name, args.0, args.1, args.2, args.3, args.4, args.5);
         match dispatch_syscall(&mut ctx, syscall_number, args) {
             Ok(SyscallResult::Exit(return_value)) => {
@@ -186,7 +179,7 @@ async fn start_component(
     std::thread::spawn(move || {
         let err = (|| -> Result<(), Error> {
             let task = block_on(load_executable(&kernel, executable_vmo, &params, root_proxy))?;
-            let exceptions = task.thread_group.read().process.create_exception_channel()?;
+            let exceptions = task.thread.create_exception_channel()?;
             let exit_code = run_task(task, exceptions)?;
 
             // TODO(fxb/74803): Using the component controller's epitaph may not be the best way to
