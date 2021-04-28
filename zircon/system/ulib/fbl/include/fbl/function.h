@@ -37,7 +37,7 @@ struct NullEq {
 
 // Partial specialization for |T| values comparable to nullptr.
 template <typename T>
-struct NullEq<T, decltype(*static_cast<T*>(nullptr) == nullptr)> {
+struct NullEq<T, decltype(std::declval<T>() == nullptr)> {
   // This is intended for a T that's a function pointer type.  However, it
   // also matches for a T that can be implicitly coerced to a function
   // pointer type, such as a function type or a captureless lambda's closure
