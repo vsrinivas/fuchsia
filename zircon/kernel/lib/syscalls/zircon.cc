@@ -109,25 +109,6 @@ zx_ticks_t sys_ticks_get_via_kernel() {
   return current_ticks();
 }
 
-// zx_status_t zx_clock_adjust
-zx_status_t sys_clock_adjust(zx_handle_t hrsrc, zx_clock_t clock_id, int64_t offset) {
-  // TODO(fxbug.dev/30918): finer grained validation
-  zx_status_t status;
-  if ((status = validate_resource(hrsrc, ZX_RSRC_KIND_ROOT)) < 0) {
-    return status;
-  }
-
-  switch (clock_id) {
-    case ZX_CLOCK_MONOTONIC:
-      return ZX_ERR_ACCESS_DENIED;
-    case ZX_CLOCK_UTC:
-      utc_offset.store(offset);
-      return ZX_OK;
-    default:
-      return ZX_ERR_INVALID_ARGS;
-  }
-}
-
 // zx_status_t zx_event_create
 zx_status_t sys_event_create(uint32_t options, user_out_handle* event_out) {
   LTRACEF("options 0x%x\n", options);
