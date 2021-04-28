@@ -197,7 +197,7 @@ static int msm_pgetc(void) {
 static interrupt_eoi uart_irq_handler(void* arg) {
   uint32_t misr = uart_read(UART_DM_MISR);
   if (misr & UART_IRQ_TX_READY) {
-    uart_txemt_event.SignalNoResched();
+    uart_txemt_event.Signal();
     uart_write(UART_DM_CR_CMD_RESET_TX_READY, UART_DM_CR);
   }
   if (misr & UART_IRQ_RXSTALE) {

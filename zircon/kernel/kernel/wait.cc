@@ -306,13 +306,12 @@ zx_status_t WaitQueue::BlockEtc(const Deadline& deadline, uint signal_mask,
  * This function removes one thread (if any) from the head of the wait queue and
  * makes it executable.  The new thread will be placed in the run queue.
  *
- * @param reschedule  If true, the newly-woken thread will run immediately.
  * @param wait_queue_error  The return value which the new thread will receive
  * from wait_queue_block().
  *
  * @return  Whether a thread was woken
  */
-bool WaitQueue::WakeOne(bool reschedule, zx_status_t wait_queue_error) {
+bool WaitQueue::WakeOne(zx_status_t wait_queue_error) {
   Thread* t;
   bool woke = false;
 
@@ -334,10 +333,9 @@ bool WaitQueue::WakeOne(bool reschedule, zx_status_t wait_queue_error) {
 
     ktrace_ptr(TAG_KWAIT_WAKE, this, 0, 0);
 
-    // wake up the new thread, putting it in a run queue on a cpu. reschedule if the local
-    // cpu run queue was modified
-    bool local_resched = Scheduler::Unblock(t);
-    if (reschedule && local_resched) {
+    // Wake up the new thread, putting it in a run queue on a cpu. Reschedule if
+    // the local cpu run queue was modified.
+    if (Scheduler::Unblock(t)) {
       Scheduler::Reschedule();
     }
 
@@ -388,13 +386,12 @@ void WaitQueue::MoveThread(WaitQueue* source, WaitQueue* dest, Thread* t) {
  * makes them executable.  The new threads will be placed at the head of the
  * run queue.
  *
- * @param reschedule  If true, the newly-woken threads will run immediately.
  * @param wait_queue_error  The return value which the new thread will receive
  * from wait_queue_block().
  *
  * @return  The number of threads woken
  */
-void WaitQueue::WakeAll(bool reschedule, zx_status_t wait_queue_error) {
+void WaitQueue::WakeAll(zx_status_t wait_queue_error) {
   Thread* t;
 
   // Note(johngro): See the note in wake_one.  On one should ever be calling
@@ -424,10 +421,9 @@ void WaitQueue::WakeAll(bool reschedule, zx_status_t wait_queue_error) {
 
   ktrace_ptr(TAG_KWAIT_WAKE, this, 0, 0);
 
-  // wake up the new thread(s), putting it in a run queue on a cpu. reschedule if the local
-  // cpu run queue was modified
-  bool local_resched = Scheduler::Unblock(ktl::move(list));
-  if (reschedule && local_resched) {
+  // Wake up the new thread(s), putting it in a run queue on a cpu. Reschedule
+  // if the local cpu run queue was modified.
+  if (Scheduler::Unblock(ktl::move(list))) {
     Scheduler::Reschedule();
   }
 }

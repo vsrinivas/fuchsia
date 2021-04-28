@@ -542,7 +542,8 @@ void arch_flush_state_and_halt(Event* flush_done) {
 
   __asm__ volatile("wbinvd" : : : "memory");
 
-  flush_done->SignalNoResched();
+  Thread::Current::Get()->preemption_state().PreemptDisable();
+  flush_done->Signal();
   while (1) {
     __asm__ volatile("cli; hlt" : : : "memory");
   }

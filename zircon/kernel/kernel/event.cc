@@ -72,14 +72,14 @@ zx_status_t Event::WaitWorker(const Deadline& deadline, Interruptible interrupti
   return ret;
 }
 
-void Event::SignalInternal(bool reschedule, zx_status_t wait_result) TA_REQ(thread_lock) {
+void Event::SignalInternal(zx_status_t wait_result) {
   DEBUG_ASSERT(magic_ == kMagic);
   DEBUG_ASSERT(wait_result != kNotSignalled);
 
   if (result_.load(ktl::memory_order_relaxed) == kNotSignalled) {
     if (flags_ & Event::AUTOUNSIGNAL) {
       /* try to release one thread and leave unsignaled if successful */
-      if (!wait_.WakeOne(reschedule, wait_result)) {
+      if (!wait_.WakeOne(wait_result)) {
         /*
          * if we didn't actually find a thread to wake up, go to
          * signaled state and let the next call to Wait
@@ -90,7 +90,7 @@ void Event::SignalInternal(bool reschedule, zx_status_t wait_result) TA_REQ(thre
     } else {
       /* release all threads and remain signaled */
       result_.store(wait_result, ktl::memory_order_relaxed);
-      wait_.WakeAll(reschedule, wait_result);
+      wait_.WakeAll(wait_result);
     }
   }
 }
@@ -104,25 +104,19 @@ void Event::SignalInternal(bool reschedule, zx_status_t wait_result) TA_REQ(thre
  * Event::Unsignal() is called.
  *
  * @param e           Event object
- * @param reschedule  If true, waiting thread(s) are executed immediately,
- *                    and the current thread resumes only after the
- *                    waiting threads have been satisfied. If false,
- *                    waiting threads are placed at the head of the run
- *                    queue.
  * @param wait_result What status a wait call will return to the
  *                    thread or threads that are woken up.
  */
-void Event::SignalEtc(bool reschedule, zx_status_t wait_result) {
+void Event::Signal(zx_status_t wait_result) {
   Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
-  SignalInternal(reschedule, wait_result);
+  SignalInternal(wait_result);
 }
 
 /* same as above, but the thread lock must already be held */
-void Event::SignalThreadLocked() {
+void Event::SignalLocked() {
   DEBUG_ASSERT(arch_ints_disabled());
   DEBUG_ASSERT(thread_lock.IsHeld());
-
-  SignalInternal(false, ZX_OK);
+  SignalInternal(ZX_OK);
 }
 
 /**
@@ -139,8 +133,6 @@ void Event::SignalThreadLocked() {
  */
 zx_status_t Event::Unsignal() {
   DEBUG_ASSERT(magic_ == kMagic);
-
   result_.store(kNotSignalled, ktl::memory_order_relaxed);
-
   return ZX_OK;
 }

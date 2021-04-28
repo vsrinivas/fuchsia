@@ -185,9 +185,9 @@ void SystemInitThreadLockState(ThreadLockState*) {}
 void SystemTriggerLoopDetection() {
   if (ThreadLock::Get()->lock().IsHeld()) {
     AssertHeld<ThreadLock, IrqSave>(*ThreadLock::Get());
-    graph_edge_event.SignalThreadLocked();
+    graph_edge_event.SignalLocked();
   } else {
-    graph_edge_event.SignalNoResched();
+    graph_edge_event.Signal();
   }
 }
 

@@ -54,11 +54,12 @@ static bool test_dpc_queue() {
 
   // Fire off DPCs.
   for (int i = 0; i < kNumDPCs; i++) {
+    AutoPreemptDisabler preempt_disable;
     (*context)[i].dpc =
         Dpc{&event_signal_from_dpc_check_cpu, reinterpret_cast<void*>(&(*context)[i])};
     interrupt_saved_state_t int_state = arch_interrupt_save();
     (*context)[i].expected_cpu = arch_curr_cpu_num();
-    (*context)[i].dpc.Queue(/*reschedule=*/false);
+    (*context)[i].dpc.Queue();
     arch_interrupt_restore(int_state);
   }
   for (int i = 0; i < kNumDPCs; i++) {
@@ -95,7 +96,7 @@ static bool test_dpc_requeue() {
   for (unsigned i = 0; i < kNumIterations; ++i) {
     // If we queue faster than the DPC worker thread can dequeue, the call may fail with
     // ZX_ERR_ALREADY_EXISTS.  That's OK, we just won't increment |expected_count| in that case.
-    zx_status_t status = dpc_increment.Queue(/* reschedule = */ true);
+    zx_status_t status = dpc_increment.Queue();
     if (status == ZX_OK) {
       ++expected_count;
     } else {
@@ -106,7 +107,7 @@ static bool test_dpc_requeue() {
   // There might still be one DPC queued up for execution.  Wait for it to "flush" the queue.
   Event event_flush;
   Dpc dpc_flush([](Dpc* d) { d->arg<Event>()->Signal(); }, &event_flush);
-  dpc_flush.Queue(/* reschedule = */ true);
+  dpc_flush.Queue();
   event_flush.Wait(Deadline::no_slack(ZX_TIME_INFINITE));
 
   ASSERT_EQ(actual_count.load(), expected_count);

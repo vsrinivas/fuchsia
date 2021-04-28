@@ -158,7 +158,7 @@ class Barrier {
     bool expected = !state;
     if (signaled_.compare_exchange_strong(expected, state) && state) {
       Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
-      queue_.WakeAll(true, ZX_OK);
+      queue_.WakeAll(ZX_OK);
     }
   }
 

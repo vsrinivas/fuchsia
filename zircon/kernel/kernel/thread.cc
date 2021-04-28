@@ -194,7 +194,7 @@ zx_status_t TaskState::Join(zx_time_t deadline) {
   return retcode_wait_queue_.Block(deadline, Interruptible::No);
 }
 
-void TaskState::WakeJoiners(zx_status_t status) { retcode_wait_queue_.WakeAll(false, status); }
+void TaskState::WakeJoiners(zx_status_t status) { retcode_wait_queue_.WakeAll(status); }
 
 void Thread::Trampoline() {
   // Release the thread lock that was implicitly held across the reschedule.
@@ -541,6 +541,10 @@ __NO_RETURN void Thread::Current::ExitLocked(int retcode) TA_REQ(thread_lock) {
   // kernel mode mutex, it might be time to panic.
   OwnedWaitQueue::DisownAllQueues(current_thread);
 
+  // Disable preemption to keep from switching to the DPC thread until the final
+  // reschedule.
+  current_thread->preemption_state().PreemptDisable();
+
   // if we're detached, then do our teardown here
   if (current_thread->flags_ & THREAD_FLAG_DETACHED) {
     kcounter_add(thread_detached_exit_count, 1);
@@ -559,7 +563,7 @@ __NO_RETURN void Thread::Current::ExitLocked(int retcode) TA_REQ(thread_lock) {
     current_thread->task_state_.WakeJoiners(ZX_OK);
   }
 
-  // reschedule
+  // Final reschedule.
   Scheduler::RescheduleInternal();
 
   panic("somehow fell through thread_exit()\n");
@@ -1169,6 +1173,12 @@ void thread_construct_first(Thread* t, const char* name) {
   t->scheduler_state().next_cpu_ = INVALID_CPU;
   t->scheduler_state().hard_affinity_ = cpu_num_to_mask(cpu);
 
+  // Start out with preemption disabled to avoid attempts to reschedule until
+  // threading is fulling enabled. This simplifies code paths shared between
+  // initialization and runtime (e.g. logging). Preemption is enabled when the
+  // idle thread for the current CPU is ready.
+  t->preemption_state().PreemptDisable();
+
   arch_thread_construct_first(t);
 
   Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
@@ -1289,12 +1299,14 @@ void Thread::Current::BecomeIdle() {
   // Cpu is active now
   mp_set_curr_cpu_active(true);
 
-  // Grab the thread lock, mark ourself idle and reschedule
+  // Grab the thread lock, mark ourself idle, enable preemption and reschedule.
+  // Preemption is disabled during early threading startup on each CPU to
+  // prevent incidental thread wakeups (e.g. due to logging) from rescheduling
+  // on the local CPU before the idle thread is ready.
   {
     Guard<MonitoredSpinLock, NoIrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
-
     mp_set_cpu_idle(curr_cpu);
-
+    t->preemption_state().PreemptReenableNoResched();
     Scheduler::Reschedule();
   }
 

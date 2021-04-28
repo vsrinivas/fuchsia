@@ -460,8 +460,10 @@ bool migrate_unpinned_threads_test() {
     return 0;
   };
   AutounsignalEvent* const event = &events.event;
-  auto fn = [event](Thread* thread, Thread::MigrateStage stage)
-                TA_NO_THREAD_SAFETY_ANALYSIS { event->SignalThreadLocked(); };
+  auto fn = [event](Thread* thread, Thread::MigrateStage stage) {
+    thread_lock.AssertHeld();
+    event->SignalLocked();
+  };
   Thread* worker = Thread::Create("worker", worker_body, &events, DEFAULT_PRIORITY);
   worker->SetSoftCpuAffinity(cpu_num_to_mask(kStartingCpu));
   worker->SetMigrateFn(fn);

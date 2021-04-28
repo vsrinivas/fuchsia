@@ -22,6 +22,7 @@
 
 #include <new>
 
+#include <arch/ops.h>
 #include <ffl/string.h>
 #include <kernel/lockdep.h>
 #include <kernel/mp.h>
@@ -1624,7 +1625,11 @@ void Scheduler::Reschedule() {
   SchedulerState* const current_state = &current_thread->scheduler_state();
   const cpu_num_t current_cpu = arch_curr_cpu_num();
 
-  if (current_thread->preemption_state().PreemptOrEagerReschedDisabled()) {
+  // Pend the preemption rather than rescheduling if preemption is disabled or
+  // if there is more than one spinlock held.
+  // TODO(fxbug.dev/64884): Remove check when spinlocks imply preempt disable.
+  if (current_thread->preemption_state().PreemptOrEagerReschedDisabled() ||
+      arch_num_spinlocks_held() > 1 || arch_blocking_disallowed()) {
     current_thread->preemption_state().preempt_pending() = true;
     return;
   }

@@ -12,6 +12,7 @@
 #include <zircon/listnode.h>
 #include <zircon/types.h>
 
+#include <kernel/auto_preempt_disabler.h>
 #include <kernel/event.h>
 #include <kernel/lockdep.h>
 #include <kernel/percpu.h>
@@ -22,11 +23,10 @@
 
 DECLARE_SINGLETON_SPINLOCK(dpc_lock);
 
-zx_status_t Dpc::Queue(bool reschedule) {
+zx_status_t Dpc::Queue() {
   DEBUG_ASSERT(func_);
 
-  DpcQueue* dpc_queue;
-
+  DpcQueue* dpc_queue = nullptr;
   {
     Guard<SpinLock, IrqSave> guard{dpc_lock::Get()};
 
@@ -40,15 +40,17 @@ zx_status_t Dpc::Queue(bool reschedule) {
     dpc_queue->Enqueue(this);
   }
 
-  dpc_queue->Signal(reschedule);
-
+  // Signal outside of the lock to avoid lock order inversion with the thread
+  // lock.
+  dpc_queue->Signal();
   return ZX_OK;
 }
 
 zx_status_t Dpc::QueueThreadLocked() {
   DEBUG_ASSERT(func_);
+  DEBUG_ASSERT(arch_ints_disabled());
 
-  // Interrupts are already disabled.
+  DpcQueue& dpc_queue = percpu::GetCurrent().dpc_queue;
   {
     Guard<SpinLock, NoIrqSave> guard{dpc_lock::Get()};
 
@@ -60,9 +62,9 @@ zx_status_t Dpc::QueueThreadLocked() {
 
     // Put this Dpc at the tail of the list and signal the worker.
     dpc_queue.Enqueue(this);
-    dpc_queue.SignalLocked();
   }
 
+  dpc_queue.SignalLocked();
   return ZX_OK;
 }
 
@@ -73,9 +75,8 @@ void Dpc::Invoke() {
 
 void DpcQueue::Enqueue(Dpc* dpc) { list_.push_back(dpc); }
 
-void DpcQueue::Signal(bool reschedule) { event_.SignalEtc(reschedule); }
-
-void DpcQueue::SignalLocked() { event_.SignalThreadLocked(); }
+void DpcQueue::Signal() { event_.Signal(); }
+void DpcQueue::SignalLocked() { event_.SignalLocked(); }
 
 zx_status_t DpcQueue::Shutdown(zx_time_t deadline) {
   Thread* t;
@@ -95,10 +96,9 @@ zx_status_t DpcQueue::Shutdown(zx_time_t deadline) {
     thread_ = nullptr;
   }
 
-  // Wake it.
-  event->SignalNoResched();
-
-  // Wait for it to terminate.
+  // Wake the thread and wait for it to terminate.
+  AutoPreemptDisabler preempt_disabled;
+  event->Signal();
   return t->Join(nullptr, deadline);
 }
 

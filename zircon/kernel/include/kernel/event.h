@@ -19,8 +19,8 @@
 #include <kernel/timer.h>
 
 // Rules for Events and AutounsignalEvents:
-// - Events may be signaled from interrupt context *but* the reschedule
-//   parameter must be false in that case.
+// - Events may be signaled from interrupt context *but* preemption must be
+//   disabled.
 // - Events may not be waited upon from interrupt context.
 // - Standard Events:
 //   - Wake up any waiting threads when signaled.
@@ -73,14 +73,8 @@ class Event {
     return WaitWorker(Deadline::no_slack(deadline), interruptible, 0);
   }
 
-  void Signal(zx_status_t status = ZX_OK) { SignalEtc(true, status); }
-
-  void SignalThreadLocked() TA_REQ(thread_lock);
-
-  void SignalNoResched() { SignalEtc(false); }
-
-  void SignalEtc(bool reschedule, zx_status_t wait_result = ZX_OK);
-
+  void Signal(zx_status_t wait_result = ZX_OK) TA_EXCL(thread_lock);
+  void SignalLocked() TA_REQ(thread_lock);
   zx_status_t Unsignal() TA_EXCL(thread_lock);
 
  protected:
@@ -94,7 +88,7 @@ class Event {
 
  private:
   zx_status_t WaitWorker(const Deadline& deadline, Interruptible interruptible, uint signal_mask);
-  void SignalInternal(bool reschedule, zx_status_t wait_result) TA_REQ(thread_lock);
+  void SignalInternal(zx_status_t wait_result) TA_REQ(thread_lock);
 
   static constexpr uint32_t kMagic = fbl::magic("evnt");
   uint32_t magic_;

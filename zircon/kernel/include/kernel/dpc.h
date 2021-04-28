@@ -34,14 +34,11 @@ class Dpc : public fbl::DoublyLinkedListable<Dpc*, fbl::NodeOptions::AllowCopyMo
   //
   // |Queue| will not block, but it may wait briefly for a spinlock.
   //
-  // If |reschedule| is true, ask the scheduler to reschedule immediately.  The thread chosen by the
-  // scheduler to execute next may or may not be the Dpc worker thread.
-  //
   // |Queue| may return before or after the Dpc has executed.  It is the caller's responsibilty to
   // ensure that a queued Dpc object is not destroyed prior to its execution.
   //
   // Returns ZX_ERR_ALREADY_EXISTS if |this| is already queued.
-  zx_status_t Queue(bool reschedule);
+  zx_status_t Queue();
 
   // Queue this object and signal the worker thread to execute it.
   //
@@ -106,7 +103,7 @@ class DpcQueue {
 
   // These are called by Dpc::Queue and Dpc::QueueThreadLocked.
   void Enqueue(Dpc* dpc);
-  void Signal(bool reschedule) TA_EXCL(thread_lock);
+  void Signal() TA_EXCL(thread_lock);
   void SignalLocked() TA_REQ(thread_lock);
 
  private:

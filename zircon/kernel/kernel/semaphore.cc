@@ -23,7 +23,7 @@ void Semaphore::Post() {
   if (waitq_.IsEmpty()) {
     ++count_;
   } else {
-    waitq_.WakeOne(true, ZX_OK);
+    waitq_.WakeOne(ZX_OK);
   }
 }
 

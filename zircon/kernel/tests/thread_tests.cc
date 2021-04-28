@@ -747,7 +747,7 @@ static int prio_test_thread(void* arg) {
   ASSERT(t->scheduler_state().base_priority() == LOW_PRIORITY);
 
   auto ev = (Event*)arg;
-  ev->SignalNoResched();
+  ev->Signal();
 
   // Busy loop until our priority changes.
   int count = 0;
@@ -758,7 +758,7 @@ static int prio_test_thread(void* arg) {
     ++count;
   }
 
-  ev->SignalNoResched();
+  ev->Signal();
 
   // And then when it changes again.
   for (;;) {
