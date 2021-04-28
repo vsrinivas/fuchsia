@@ -235,8 +235,8 @@ impl<'a, 'b> Encoder<'a, 'b> {
             // This if statement is needed to not break the padding write below.
             if ty_inline_size != 0 {
                 let aligned_inline_size = round_up_to_align(ty_inline_size, 8);
-                // Safety: The uninitialized elements are assigned in
-                // prepare_for_encoding and x.encode.
+                // Safety: The uninitialized elements are written by `x.encode`,
+                // except for the trailing padding which is zeroed below.
                 unsafe {
                     resize_vec_no_zeroing(buf, aligned_inline_size);
 
@@ -270,6 +270,13 @@ impl<'a, 'b> Encoder<'a, 'b> {
         <Target as Layout>::inline_size(&self.context)
     }
 
+    /// In debug mode only, asserts that there is enough room in the buffer to
+    /// write an object of type `Target` at `offset`.
+    #[inline(always)]
+    pub fn debug_check_bounds<Target: Encodable>(&self, offset: usize) {
+        debug_assert!(offset + self.inline_size_of::<Target>() <= self.buf.len());
+    }
+
     /// Extends buf by `len` bytes and calls the provided closure to write
     /// out-of-line data, with `offset` set to the start of the new region.
     #[inline(always)]
@@ -281,7 +288,8 @@ impl<'a, 'b> Encoder<'a, 'b> {
         let new_depth = recursion_depth + 1;
         Self::check_recursion_depth(new_depth)?;
         let padded_len = round_up_to_align(len, 8);
-        // Safety: The uninitialized elements are assigned in self.padding and f.
+        // Safety: The uninitialized elements are written by `f`, except the
+        // trailing padding which is zeroed below.
         unsafe {
             // In order to zero bytes for padding, we assume that at least 8 bytes are in the
             // out-of-line block.
@@ -661,6 +669,13 @@ impl<'a> Decoder<'a> {
         <Target as Layout>::inline_size(&self.context)
     }
 
+    /// In debug mode only, asserts that there is enough room in the buffer to
+    /// read an object of type `Target` at `offset`.
+    #[inline(always)]
+    pub fn debug_check_bounds<Target: Decodable>(&self, offset: usize) {
+        debug_assert!(offset + self.inline_size_of::<Target>() <= self.buf.len());
+    }
+
     /// Returns the decoder's context.
     ///
     /// This is needed for accessing the context in macros during migrations.
@@ -704,12 +719,16 @@ pub trait Layout {
         Self: Sized;
 
     /// Returns the size of the inline portion of the encoded object, including
-    /// padding for the type's minimum alignment.
+    /// padding for the type's alignment. Must be a multiple of `inline_align`.
     fn inline_size(context: &Context) -> usize
     where
         Self: Sized;
 
     /// Returns true iff the type can be encoded or decoded via simple copy.
+    ///
+    /// Implementations that return true must use `mem::align_of::<Self>()` and
+    /// `mem::size_of::<Self>()` for `inline_align` and `inline_size`.
+    /// TODO: enforce this.
     ///
     /// Simple copying only works for types when (1) the Rust data layout
     /// matches the FIDL wire format, and (2) no validation is required. This is
@@ -770,56 +789,23 @@ impl<T: Layout> LayoutObject for T {
 /// reduce binary bloat. However, they can only be encoded directly: there are
 /// no implementations of `Encodable` for enclosing types such as
 /// `Vec<&dyn Encodable>`, and similarly for references, arrays, tuples, etc.
-///
-/// Types must implement either `encode` or `unsafe_encode`:
-///
-/// * `encode`: The implementation cannot skip bounds checks. In particular,
-///   it can only `encode` internal values, not `unsafe_encode` them.
-///
-/// * `unsafe_encode`: The implementation can skip bounds checks when
-///   writing to `encoder.buf`, and can `unsafe_encode` internal values.
-///
-/// (Using both method's default impl will cause infinite recursion.)
-///
-/// We need `unsafe_encode` as a separate method, rather than just writing
-/// unsafe blocks in `encode` implementations, so that we can call it
-/// directly from other `unsafe_encode` methods (skipping the assert).
 pub trait Encodable: LayoutObject {
     /// Encode the object into the buffer. Any handles stored in the object are
-    /// swapped for `Handle::INVALID`. Callers should ensure that `offset` is a
+    /// swapped for `Handle::INVALID`. Callers must ensure that `offset` is a
     /// multiple of `Layout::inline_align`, and that `encoder.buf` has room for
     /// writing `Layout::inline_size` bytes at `offset`.
     ///
-    /// Implementations that encode out-of-line objects should pass
+    /// Implementations must write every byte in `encoder.buf[offset..offset+S]`
+    /// (where `S` is `Layout::inline_size`) unless returning an `Err` value.
+    /// Implementations that encode out-of-line objects must pass
     /// `recursion_depth` to `Encoder::write_out_of_line`, or manually call
     /// `Encoder::check_recursion_depth(recursion_depth + 1)`.
-    #[inline(always)]
     fn encode(
         &mut self,
         encoder: &mut Encoder<'_, '_>,
         offset: usize,
         recursion_depth: usize,
-    ) -> Result<()> {
-        assert!(offset + self.inline_size(encoder.context) <= encoder.buf.len());
-        unsafe { self.unsafe_encode(encoder, offset, recursion_depth) }
-    }
-
-    /// Unsafe version of encode that does not check the buffer boundaries.
-    /// This exists for performance.
-    ///
-    /// # Safety
-    ///
-    /// The caller must check that a write to the buffer of this object's
-    /// size will not exceed the buffer length.
-    #[inline(always)]
-    unsafe fn unsafe_encode(
-        &mut self,
-        encoder: &mut Encoder<'_, '_>,
-        offset: usize,
-        recursion_depth: usize,
-    ) -> Result<()> {
-        self.encode(encoder, offset, recursion_depth)
-    }
+    ) -> Result<()>;
 }
 
 assert_obj_safe!(Encodable);
@@ -828,43 +814,19 @@ assert_obj_safe!(Encodable);
 ///
 /// This trait is not object-safe, since `new_empty` returns `Self`. This is not
 /// really a problem: there are not many use cases for `dyn Decodable`.
-///
-/// Types must implement either `decode` or `unsafe_decode`:
-///
-/// * `decode`: The implementation cannot skip bounds checks. It can only call
-///  `unsafe_decode` after ensuring that the called method won't go out of bounds.
-///
-/// * `unsafe_decode`: The implementation can skip bounds checks when
-///   reading from `decoder.buf`, and can `unsafe_decode` internal values.
-///
-/// (Using both method's default impl will cause infinite recursion.)
-///
-/// We need `unsafe_decode` as a separate method, rather than just reading
-/// unsafe blocks in `decode` implementations, so that we can call it
-/// directly from other `unsafe_decode` methods (skipping the assert).
 pub trait Decodable: Layout + Sized {
     /// Creates a new value of this type with an "empty" representation.
     fn new_empty() -> Self;
 
-    /// Decodes an object of this type from the provided buffer and list of handles.
-    /// On success, returns `Self`, as well as the yet-unused tails of the data and handle buffers.
-    #[inline(always)]
-    fn decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
-        assert!(offset + decoder.inline_size_of::<Self>() <= decoder.buf.len());
-        unsafe { self.unsafe_decode(decoder, offset) }
-    }
-
-    /// Unsafe version of decode that does not check the buffer boundaries.
-    /// This exists for performance.
+    /// Decodes an object of this type from the decoder's buffers into `self`.
+    /// Callers must ensure that `offset` is a multiple of
+    /// `Layout::inline_align`, and that `decoder.buf` has room for reading
+    /// `Layout::inline_size` bytes at `offset`.
     ///
-    /// # Safety
-    ///
-    /// The caller must check that a read from the buffer of this object's
-    /// size will not exceed the buffer length.
-    #[inline(always)]
-    unsafe fn unsafe_decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
-        self.decode(decoder, offset)
-    }
+    /// Implementations must read every byte in `decoder.buf[offset..offset+S]`
+    /// (where `S` is `Layout::inline_size`) and validate them, unless returning
+    /// an `Err` value.
+    fn decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()>;
 }
 
 macro_rules! impl_layout {
@@ -940,11 +902,16 @@ macro_rules! impl_codable_int { ($($int_ty:ty,)*) => { $(
 
     impl Encodable for $int_ty {
         #[inline(always)]
-        unsafe fn unsafe_encode(&mut self, encoder: &mut Encoder<'_, '_>, offset: usize, _recursion_depth: usize) -> Result<()> {
-            debug_assert!(encoder.buf.len() >= offset + mem::size_of::<$int_ty>());
-            let ptr = encoder.buf.get_unchecked_mut(offset);
-            let int_ptr = mem::transmute::<*mut u8, *mut $int_ty>(ptr);
-            int_ptr.write_unaligned(*self);
+        fn encode(&mut self, encoder: &mut Encoder<'_, '_>, offset: usize, _recursion_depth: usize) -> Result<()> {
+            encoder.debug_check_bounds::<Self>(offset);
+            // Safety: The caller ensures `offset` is valid for writing
+            // sizeof($int_ty) bytes. Transmuting to a same-or-wider integer is
+            // safe because we use `write_unaligned`.
+            unsafe {
+                let ptr = encoder.buf.get_unchecked_mut(offset);
+                let int_ptr = mem::transmute::<*mut u8, *mut $int_ty>(ptr);
+                int_ptr.write_unaligned(*self);
+            }
             Ok(())
         }
     }
@@ -954,11 +921,16 @@ macro_rules! impl_codable_int { ($($int_ty:ty,)*) => { $(
         fn new_empty() -> Self { 0 as $int_ty }
 
         #[inline(always)]
-        unsafe fn unsafe_decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
-            debug_assert!(decoder.buf.len() >= offset + mem::size_of::<$int_ty>());
-            let ptr = decoder.buf.get_unchecked(offset);
-            let int_ptr = mem::transmute::<*const u8, *const $int_ty>(ptr);
-            *self = int_ptr.read_unaligned();
+        fn decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
+            decoder.debug_check_bounds::<Self>(offset);
+            // Safety: The caller ensures `offset` is valid for reading
+            // sizeof($int_ty) bytes. Transmuting to a same-or-wider integer is
+            // safe because we use `read_unaligned`.
+            unsafe {
+                let ptr = decoder.buf.get_unchecked(offset);
+                let int_ptr = mem::transmute::<*const u8, *const $int_ty>(ptr);
+                *self = int_ptr.read_unaligned();
+            }
             Ok(())
         }
     }
@@ -978,11 +950,16 @@ macro_rules! impl_codable_float { ($($float_ty:ty,)*) => { $(
 
     impl Encodable for $float_ty {
         #[inline]
-        unsafe fn unsafe_encode(&mut self, encoder: &mut Encoder<'_, '_>, offset: usize, _recursion_depth: usize) -> Result<()> {
-            debug_assert!(encoder.buf.len() >= offset + mem::size_of::<$float_ty>());
-            let ptr = encoder.buf.get_unchecked_mut(offset);
-            let float_ptr = mem::transmute::<*mut u8, *mut $float_ty>(ptr);
-            float_ptr.write_unaligned(*self);
+        fn encode(&mut self, encoder: &mut Encoder<'_, '_>, offset: usize, _recursion_depth: usize) -> Result<()> {
+            encoder.debug_check_bounds::<Self>(offset);
+            // Safety: The caller ensures `offset` is valid for writing
+            // sizeof($float_ty) bytes. Transmuting *u8 to *f32 or *f64 is safe
+            // because we use `write_unaligned`.
+            unsafe {
+                let ptr = encoder.buf.get_unchecked_mut(offset);
+                let float_ptr = mem::transmute::<*mut u8, *mut $float_ty>(ptr);
+                float_ptr.write_unaligned(*self);
+            }
             Ok(())
         }
     }
@@ -992,11 +969,16 @@ macro_rules! impl_codable_float { ($($float_ty:ty,)*) => { $(
         fn new_empty() -> Self { 0 as $float_ty }
 
         #[inline]
-        unsafe fn unsafe_decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
-            debug_assert!(decoder.buf.len() >= offset + mem::size_of::<$float_ty>());
-            let ptr = decoder.buf.get_unchecked(offset);
-            let float_ptr = mem::transmute::<*const u8, *const $float_ty>(ptr);
-            *self = float_ptr.read_unaligned();
+        fn decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
+            decoder.debug_check_bounds::<Self>(offset);
+            // Safety: The caller ensures `offset` is valid for reading
+            // sizeof($float_ty) bytes. Transmuting *u8 to *f32 or *f64 is safe
+            // because we use `read_unaligned`.
+            unsafe {
+                let ptr = decoder.buf.get_unchecked(offset);
+                let float_ptr = mem::transmute::<*const u8, *const $float_ty>(ptr);
+                *self = float_ptr.read_unaligned();
+            }
             Ok(())
         }
     }
@@ -1031,15 +1013,16 @@ macro_rules! impl_slice_encoding_base {
 
         impl Encodable for Option<&[$prim_ty]> {
             #[inline]
-            unsafe fn unsafe_encode(
+            fn encode(
                 &mut self,
                 encoder: &mut Encoder<'_, '_>,
                 offset: usize,
                 recursion_depth: usize,
             ) -> Result<()> {
+                encoder.debug_check_bounds::<Self>(offset);
                 match self {
                     None => encode_absent_vector(encoder, offset, recursion_depth),
-                    Some(slice) => slice.unsafe_encode(encoder, offset, recursion_depth),
+                    Some(slice) => slice.encode(encoder, offset, recursion_depth),
                 }
             }
         }
@@ -1053,12 +1036,13 @@ macro_rules! impl_slice_encoding_by_iter {
 
         impl Encodable for &[$prim_ty] {
             #[inline]
-            unsafe fn unsafe_encode(
+            fn encode(
                 &mut self,
                 encoder: &mut Encoder<'_, '_>,
                 offset: usize,
                 recursion_depth: usize,
             ) -> Result<()> {
+                encoder.debug_check_bounds::<Self>(offset);
                 encode_vector_from_iter(
                     encoder,
                     offset,
@@ -1077,14 +1061,15 @@ macro_rules! impl_slice_encoding_by_copy {
 
         impl Encodable for &[$prim_ty] {
             #[inline]
-            unsafe fn unsafe_encode(
+            fn encode(
                 &mut self,
                 encoder: &mut Encoder<'_, '_>,
                 offset: usize,
                 recursion_depth: usize,
             ) -> Result<()> {
-                (self.len() as u64).unsafe_encode(encoder, offset, recursion_depth)?;
-                ALLOC_PRESENT_U64.clone().unsafe_encode(encoder, offset + 8, recursion_depth)?;
+                encoder.debug_check_bounds::<Self>(offset);
+                (self.len() as u64).encode(encoder, offset, recursion_depth)?;
+                ALLOC_PRESENT_U64.clone().encode(encoder, offset + 8, recursion_depth)?;
                 Encoder::check_recursion_depth(recursion_depth + 1)?;
                 if self.len() == 0 {
                     return Ok(());
@@ -1111,7 +1096,13 @@ impl Encodable for bool {
         offset: usize,
         _recursion_depth: usize,
     ) -> Result<()> {
-        encoder.buf[offset] = if *self { 1 } else { 0 };
+        encoder.debug_check_bounds::<Self>(offset);
+        // Safety: The caller ensures `offset` is valid for writing 1 byte.
+        unsafe {
+            // From https://doc.rust-lang.org/std/primitive.bool.html: "If you
+            // cast a bool into an integer, true will be 1 and false will be 0."
+            *encoder.buf.get_unchecked_mut(offset) = *self as u8;
+        }
         Ok(())
     }
 }
@@ -1123,7 +1114,8 @@ impl Decodable for bool {
     }
     #[inline]
     fn decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
-        *self = match decoder.buf[offset] {
+        // Safety: The caller ensures `offset` is valid for reading 1 byte.
+        *self = match unsafe { *decoder.buf.get_unchecked(offset) } {
             0 => false,
             1 => true,
             _ => return Err(Error::Invalid),
@@ -1137,14 +1129,17 @@ impl_slice_encoding_by_copy!(u8);
 
 impl Encodable for u8 {
     #[inline(always)]
-    unsafe fn unsafe_encode(
+    fn encode(
         &mut self,
         encoder: &mut Encoder<'_, '_>,
         offset: usize,
         _recursion_depth: usize,
     ) -> Result<()> {
-        debug_assert!(encoder.buf.len() >= offset + 1);
-        *encoder.buf.get_unchecked_mut(offset) = *self;
+        encoder.debug_check_bounds::<Self>(offset);
+        // Safety: The caller ensures `offset` is valid for writing 1 byte.
+        unsafe {
+            *encoder.buf.get_unchecked_mut(offset) = *self;
+        }
         Ok(())
     }
 }
@@ -1156,9 +1151,10 @@ impl Decodable for u8 {
     }
 
     #[inline(always)]
-    unsafe fn unsafe_decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
-        debug_assert!(decoder.buf.len() >= offset + 1);
-        *self = *decoder.buf.get_unchecked(offset);
+    fn decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
+        decoder.debug_check_bounds::<Self>(offset);
+        // Safety: The caller ensures `offset` is valid for reading 1 byte.
+        *self = unsafe { *decoder.buf.get_unchecked(offset) };
         Ok(())
     }
 }
@@ -1168,14 +1164,18 @@ impl_slice_encoding_by_copy!(i8);
 
 impl Encodable for i8 {
     #[inline(always)]
-    unsafe fn unsafe_encode(
+    fn encode(
         &mut self,
         encoder: &mut Encoder<'_, '_>,
         offset: usize,
         _recursion_depth: usize,
     ) -> Result<()> {
-        debug_assert!(encoder.buf.len() >= offset + 1);
-        *mem::transmute::<*mut u8, *mut i8>(encoder.buf.get_unchecked_mut(offset)) = *self;
+        encoder.debug_check_bounds::<Self>(offset);
+        // Safety: The caller ensures `offset` is valid for writing 1 byte.
+        // Transmuting is safe because u8 and i8 have the same size/alignment.
+        unsafe {
+            *mem::transmute::<*mut u8, *mut i8>(encoder.buf.get_unchecked_mut(offset)) = *self;
+        }
         Ok(())
     }
 }
@@ -1187,16 +1187,19 @@ impl Decodable for i8 {
     }
 
     #[inline(always)]
-    unsafe fn unsafe_decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
-        debug_assert!(decoder.buf.len() >= offset + 1);
-        *self = *mem::transmute::<*const u8, *const i8>(decoder.buf.get_unchecked(offset));
+    fn decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
+        decoder.debug_check_bounds::<Self>(offset);
+        // Safety: The caller ensures `offset` is valid for reading 1 byte.
+        // Transmuting is safe because u8 and i8 have the same size/alignment.
+        *self =
+            unsafe { *mem::transmute::<*const u8, *const i8>(decoder.buf.get_unchecked(offset)) };
         Ok(())
     }
 }
 
 /// Encodes `slice` as a FIDL array.
 #[inline]
-unsafe fn encode_array<T: Encodable>(
+fn encode_array<T: Encodable>(
     slice: &mut [T],
     encoder: &mut Encoder<'_, '_>,
     offset: usize,
@@ -1205,16 +1208,23 @@ unsafe fn encode_array<T: Encodable>(
     let stride = encoder.inline_size_of::<T>();
     let len = slice.len();
     if T::supports_simple_copy() {
-        let src = slice.as_ptr() as *const u8;
-        let dst: *mut u8 = encoder.buf.get_unchecked_mut(offset);
-        ptr::copy_nonoverlapping(src, dst, len * stride);
+        debug_assert_eq!(stride, mem::size_of::<T>());
+        // Safety:
+        // - The caller ensures `offset` if valid for writing `stride` bytes
+        //   (inline size of `T`) `len` times, i.e. `len * stride`.
+        // - Since Layout::inline_size is the same as mem::size_of for simple
+        //   copy types, `slice` also has exactly `len * stride` bytes.
+        // - Rust guarantees `slice` and `encoder.buf` do not alias.
+        unsafe {
+            let src = slice.as_ptr() as *const u8;
+            let dst: *mut u8 = encoder.buf.get_unchecked_mut(offset);
+            ptr::copy_nonoverlapping(src, dst, len * stride);
+        }
     } else {
         for i in 0..len {
-            slice.get_unchecked_mut(i).unsafe_encode(
-                encoder,
-                offset + i * stride,
-                recursion_depth,
-            )?;
+            // Safety: `i` is in bounds since `len` is defined as `slice.len()`.
+            let item = unsafe { slice.get_unchecked_mut(i) };
+            item.encode(encoder, offset + i * stride, recursion_depth)?;
         }
     }
     Ok(())
@@ -1222,7 +1232,7 @@ unsafe fn encode_array<T: Encodable>(
 
 /// Decodes a FIDL array into `slice`.
 #[inline]
-unsafe fn decode_array<T: Decodable>(
+fn decode_array<T: Decodable>(
     slice: &mut [T],
     decoder: &mut Decoder<'_>,
     offset: usize,
@@ -1230,15 +1240,23 @@ unsafe fn decode_array<T: Decodable>(
     let stride = decoder.inline_size_of::<T>();
     let len = slice.len();
     if T::supports_simple_copy() {
-        // Safety: offset is guaranteed to be within the buffer because of the same
-        // property as unsafe_decode -- the offset is always within an inline object
-        // in the buffer.
-        let src: *const u8 = decoder.buf.get_unchecked(offset);
-        let dst = slice.as_mut_ptr() as *mut u8;
-        ptr::copy_nonoverlapping(src, dst, len * stride);
+        debug_assert_eq!(stride, mem::size_of::<T>());
+        // Safety:
+        // - The caller ensures `offset` if valid for reading `stride` bytes
+        //   (inline size of `T`) `len` times, i.e. `len * stride`.
+        // - Since Layout::inline_size is the same as mem::size_of for simple
+        //   copy types, `slice` also has exactly `len * stride` bytes.
+        // - Rust guarantees `slice` and `decoder.buf` do not alias.
+        unsafe {
+            let src: *const u8 = decoder.buf.get_unchecked(offset);
+            let dst = slice.as_mut_ptr() as *mut u8;
+            ptr::copy_nonoverlapping(src, dst, len * stride);
+        }
     } else {
         for i in 0..len {
-            slice.get_unchecked_mut(i).unsafe_decode(decoder, offset + i * stride)?;
+            // Safety: `i` is in bounds since `len` is defined as `slice.len()`.
+            let item = unsafe { slice.get_unchecked_mut(i) };
+            item.decode(decoder, offset + i * stride)?;
         }
     }
     Ok(())
@@ -1257,12 +1275,13 @@ impl<T: Layout, const N: usize> Layout for [T; N] {
 
 impl<T: Encodable, const N: usize> Encodable for [T; N] {
     #[inline]
-    unsafe fn unsafe_encode(
+    fn encode(
         &mut self,
         encoder: &mut Encoder<'_, '_>,
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
+        encoder.debug_check_bounds::<Self>(offset);
         encode_array(self, encoder, offset, recursion_depth)
     }
 }
@@ -1281,14 +1300,15 @@ impl<T: Decodable, const N: usize> Decodable for [T; N] {
     }
 
     #[inline]
-    unsafe fn unsafe_decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
+    fn decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
+        decoder.debug_check_bounds::<Self>(offset);
         decode_array(self, decoder, offset)
     }
 }
 
 /// Encode an optional vector-like component.
 #[inline]
-pub unsafe fn encode_vector<T: Encodable>(
+fn encode_vector<T: Encodable>(
     encoder: &mut Encoder<'_, '_>,
     offset: usize,
     recursion_depth: usize,
@@ -1297,8 +1317,8 @@ pub unsafe fn encode_vector<T: Encodable>(
     match slice_opt {
         Some(slice) => {
             // Two u64: (len, present)
-            (slice.len() as u64).unsafe_encode(encoder, offset, recursion_depth)?;
-            ALLOC_PRESENT_U64.clone().unsafe_encode(encoder, offset + 8, recursion_depth)?;
+            (slice.len() as u64).encode(encoder, offset, recursion_depth)?;
+            ALLOC_PRESENT_U64.clone().encode(encoder, offset + 8, recursion_depth)?;
             // write_out_of_line must not be called with a zero-sized out-of-line block.
             if slice.len() == 0 {
                 return Ok(());
@@ -1318,18 +1338,18 @@ pub unsafe fn encode_vector<T: Encodable>(
 
 /// Encode an missing vector-like component.
 #[inline]
-pub unsafe fn encode_absent_vector(
+fn encode_absent_vector(
     encoder: &mut Encoder<'_, '_>,
     offset: usize,
     recursion_depth: usize,
 ) -> Result<()> {
-    0u64.unsafe_encode(encoder, offset, recursion_depth)?;
-    ALLOC_ABSENT_U64.clone().unsafe_encode(encoder, offset + 8, recursion_depth)
+    0u64.encode(encoder, offset, recursion_depth)?;
+    ALLOC_ABSENT_U64.clone().encode(encoder, offset + 8, recursion_depth)
 }
 
 /// Like `encode_vector`, but optimized for `&[u8]`.
 #[inline]
-unsafe fn encode_vector_from_bytes(
+fn encode_vector_from_bytes(
     encoder: &mut Encoder<'_, '_>,
     offset: usize,
     recursion_depth: usize,
@@ -1338,8 +1358,8 @@ unsafe fn encode_vector_from_bytes(
     match slice_opt {
         Some(slice) => {
             // Two u64: (len, present)
-            (slice.len() as u64).unsafe_encode(encoder, offset, recursion_depth)?;
-            ALLOC_PRESENT_U64.clone().unsafe_encode(encoder, offset + 8, recursion_depth)?;
+            (slice.len() as u64).encode(encoder, offset, recursion_depth)?;
+            ALLOC_PRESENT_U64.clone().encode(encoder, offset + 8, recursion_depth)?;
             Encoder::check_recursion_depth(recursion_depth + 1)?;
             encoder.append_out_of_line_bytes(slice);
             Ok(())
@@ -1350,7 +1370,7 @@ unsafe fn encode_vector_from_bytes(
 
 /// Like `encode_vector`, but encodes from an iterator.
 #[inline]
-pub unsafe fn encode_vector_from_iter<Iter, T>(
+fn encode_vector_from_iter<Iter, T>(
     encoder: &mut Encoder<'_, '_>,
     offset: usize,
     recursion_depth: usize,
@@ -1363,17 +1383,17 @@ where
     match iter_opt {
         Some(iter) => {
             // Two u64: (len, present)
-            (iter.len() as u64).unsafe_encode(encoder, offset, recursion_depth)?;
-            ALLOC_PRESENT_U64.clone().unsafe_encode(encoder, offset + 8, recursion_depth)?;
+            (iter.len() as u64).encode(encoder, offset, recursion_depth)?;
+            ALLOC_PRESENT_U64.clone().encode(encoder, offset + 8, recursion_depth)?;
             if iter.len() == 0 {
                 return Ok(());
             }
-            let bytes_len = iter.len() * encoder.inline_size_of::<T>();
+            let stride = encoder.inline_size_of::<T>();
+            let bytes_len = iter.len() * stride;
             encoder.write_out_of_line(
                 bytes_len,
                 recursion_depth,
                 |encoder, offset, recursion_depth| {
-                    let stride = encoder.inline_size_of::<T>();
                     for (i, mut item) in iter.enumerate() {
                         item.encode(encoder, offset + stride * i, recursion_depth)?;
                     }
@@ -1415,16 +1435,16 @@ fn decode_string(decoder: &mut Decoder<'_>, string: &mut String, offset: usize) 
 /// Attempts to decode a FIDL vector into `vec`, returning a `bool` indicating
 /// whether the vector was present.
 #[inline]
-unsafe fn decode_vector<T: Decodable>(
+fn decode_vector<T: Decodable>(
     decoder: &mut Decoder<'_>,
     vec: &mut Vec<T>,
     offset: usize,
 ) -> Result<bool> {
     let mut len: u64 = 0;
-    len.unsafe_decode(decoder, offset)?;
+    len.decode(decoder, offset)?;
 
     let mut present: u64 = 0;
-    present.unsafe_decode(decoder, offset + 8)?;
+    present.decode(decoder, offset + 8)?;
 
     match present {
         ALLOC_PRESENT_U64 => {}
@@ -1440,7 +1460,9 @@ unsafe fn decode_vector<T: Decodable>(
         if T::supports_simple_copy() {
             // Safety: The uninitalized elements are immediately written by
             // `decode_array`, which always succeeds in the simple copy case.
-            resize_vec_no_zeroing(vec, len);
+            unsafe {
+                resize_vec_no_zeroing(vec, len);
+            }
         } else {
             vec.resize_with(len, T::new_empty);
         }
@@ -1454,12 +1476,13 @@ impl_layout!(&str, align: 8, size: 16);
 
 impl Encodable for &str {
     #[inline]
-    unsafe fn unsafe_encode(
+    fn encode(
         &mut self,
         encoder: &mut Encoder<'_, '_>,
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
+        encoder.debug_check_bounds::<Self>(offset);
         encode_vector_from_bytes(encoder, offset, recursion_depth, Some(self.as_bytes()))
     }
 }
@@ -1468,12 +1491,13 @@ impl_layout!(String, align: 8, size: 16);
 
 impl Encodable for String {
     #[inline]
-    unsafe fn unsafe_encode(
+    fn encode(
         &mut self,
         encoder: &mut Encoder<'_, '_>,
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
+        encoder.debug_check_bounds::<Self>(offset);
         encode_vector_from_bytes(encoder, offset, recursion_depth, Some(self.as_bytes()))
     }
 }
@@ -1486,6 +1510,7 @@ impl Decodable for String {
 
     #[inline]
     fn decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
+        decoder.debug_check_bounds::<Self>(offset);
         if decode_string(decoder, self, offset)? {
             Ok(())
         } else {
@@ -1498,12 +1523,13 @@ impl_layout!(Option<&str>, align: 8, size: 16);
 
 impl Encodable for Option<&str> {
     #[inline]
-    unsafe fn unsafe_encode(
+    fn encode(
         &mut self,
         encoder: &mut Encoder<'_, '_>,
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
+        encoder.debug_check_bounds::<Self>(offset);
         encode_vector_from_bytes(
             encoder,
             offset,
@@ -1517,12 +1543,13 @@ impl_layout!(Option<String>, align: 8, size: 16);
 
 impl Encodable for Option<String> {
     #[inline]
-    unsafe fn unsafe_encode(
+    fn encode(
         &mut self,
         encoder: &mut Encoder<'_, '_>,
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
+        encoder.debug_check_bounds::<Self>(offset);
         encode_vector_from_bytes(
             encoder,
             offset,
@@ -1540,6 +1567,7 @@ impl Decodable for Option<String> {
 
     #[inline]
     fn decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
+        decoder.debug_check_bounds::<Self>(offset);
         let was_some;
         {
             let string = self.get_or_insert(String::new());
@@ -1556,12 +1584,13 @@ impl_layout_forall_T!(&mut dyn ExactSizeIterator<Item = T>, align: 8, size: 16);
 
 impl<T: Encodable> Encodable for &mut dyn ExactSizeIterator<Item = T> {
     #[inline]
-    unsafe fn unsafe_encode(
+    fn encode(
         &mut self,
         encoder: &mut Encoder<'_, '_>,
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
+        encoder.debug_check_bounds::<Self>(offset);
         encode_vector_from_iter(encoder, offset, recursion_depth, Some(self))
     }
 }
@@ -1570,12 +1599,13 @@ impl_layout_forall_T!(Vec<T>, align: 8, size: 16);
 
 impl<T: Encodable> Encodable for Vec<T> {
     #[inline]
-    unsafe fn unsafe_encode(
+    fn encode(
         &mut self,
         encoder: &mut Encoder<'_, '_>,
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
+        encoder.debug_check_bounds::<Self>(offset);
         encode_vector(encoder, offset, recursion_depth, Some(self))
     }
 }
@@ -1586,7 +1616,8 @@ impl<T: Decodable> Decodable for Vec<T> {
         Vec::new()
     }
 
-    unsafe fn unsafe_decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
+    fn decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
+        decoder.debug_check_bounds::<Self>(offset);
         if decode_vector(decoder, self, offset)? {
             Ok(())
         } else {
@@ -1599,12 +1630,13 @@ impl_layout_forall_T!(Option<&mut dyn ExactSizeIterator<Item = T>>, align: 8, si
 
 impl<T: Encodable> Encodable for Option<&mut dyn ExactSizeIterator<Item = T>> {
     #[inline]
-    unsafe fn unsafe_encode(
+    fn encode(
         &mut self,
         encoder: &mut Encoder<'_, '_>,
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
+        encoder.debug_check_bounds::<Self>(offset);
         encode_vector_from_iter(encoder, offset, recursion_depth, self.as_mut().map(|x| &mut **x))
     }
 }
@@ -1613,12 +1645,13 @@ impl_layout_forall_T!(Option<Vec<T>>, align: 8, size: 16);
 
 impl<T: Encodable> Encodable for Option<Vec<T>> {
     #[inline]
-    unsafe fn unsafe_encode(
+    fn encode(
         &mut self,
         encoder: &mut Encoder<'_, '_>,
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
+        encoder.debug_check_bounds::<Self>(offset);
         encode_vector(encoder, offset, recursion_depth, self.as_deref_mut())
     }
 }
@@ -1629,7 +1662,8 @@ impl<T: Decodable> Decodable for Option<Vec<T>> {
         None
     }
 
-    unsafe fn unsafe_decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
+    fn decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
+        decoder.debug_check_bounds::<Self>(offset);
         let was_some;
         {
             let vec = self.get_or_insert(Vec::new());
@@ -1693,6 +1727,7 @@ macro_rules! fidl_strict_bits {
                 offset: usize,
                 recursion_depth: usize,
             ) -> std::result::Result<(), $crate::Error> {
+                encoder.debug_check_bounds::<Self>(offset);
                 if self.bits & Self::all().bits != self.bits {
                     return Err($crate::Error::InvalidBitsValue);
                 }
@@ -1712,6 +1747,7 @@ macro_rules! fidl_strict_bits {
                 decoder: &mut $crate::encoding::Decoder<'_>,
                 offset: usize,
             ) -> std::result::Result<(), $crate::Error> {
+                decoder.debug_check_bounds::<Self>(offset);
                 let mut prim = <$prim_ty>::new_empty();
                 prim.decode(decoder, offset)?;
                 *self = Self::from_bits(prim).ok_or($crate::Error::InvalidBitsValue)?;
@@ -1773,6 +1809,7 @@ macro_rules! fidl_flexible_bits {
                 offset: usize,
                 recursion_depth: usize,
             ) -> std::result::Result<(), $crate::Error> {
+                encoder.debug_check_bounds::<Self>(offset);
                 self.bits.encode(encoder, offset, recursion_depth)
             }
         }
@@ -1789,6 +1826,7 @@ macro_rules! fidl_flexible_bits {
                 decoder: &mut $crate::encoding::Decoder<'_>,
                 offset: usize,
             ) -> std::result::Result<(), $crate::Error> {
+                decoder.debug_check_bounds::<Self>(offset);
                 let mut prim = <$prim_ty>::new_empty();
                 prim.decode(decoder, offset)?;
                 *self = Self::from_bits_allow_unknown(prim);
@@ -1868,6 +1906,7 @@ macro_rules! fidl_strict_enum {
             fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_, '_>, offset: usize, recursion_depth: usize)
                 -> std::result::Result<(), $crate::Error>
             {
+                encoder.debug_check_bounds::<Self>(offset);
                 (*self as $prim_ty).encode(encoder, offset, recursion_depth)
             }
         }
@@ -1887,6 +1926,7 @@ macro_rules! fidl_strict_enum {
             fn decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>, offset: usize)
                 -> std::result::Result<(), $crate::Error>
             {
+                decoder.debug_check_bounds::<Self>(offset);
                 let mut prim = <$prim_ty>::new_empty();
                 prim.decode(decoder, offset)?;
                 *self = Self::from_primitive(prim).ok_or($crate::Error::InvalidEnumValue)?;
@@ -1994,6 +2034,7 @@ macro_rules! fidl_flexible_enum {
             fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_, '_>, offset: usize, recursion_depth: usize)
                 -> std::result::Result<(), $crate::Error>
             {
+                encoder.debug_check_bounds::<Self>(offset);
                 self.into_primitive().encode(encoder, offset, recursion_depth)
             }
         }
@@ -2007,6 +2048,7 @@ macro_rules! fidl_flexible_enum {
             fn decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>, offset: usize)
                 -> std::result::Result<(), $crate::Error>
             {
+                decoder.debug_check_bounds::<Self>(offset);
                 let mut prim = <$prim_ty>::new_empty();
                 prim.decode(decoder, offset)?;
                 *self = Self::from_primitive_allow_unknown(prim);
@@ -2019,13 +2061,14 @@ macro_rules! fidl_flexible_enum {
 impl_layout!(Handle, align: 4, size: 4);
 
 impl Encodable for Handle {
-    unsafe fn unsafe_encode(
+    fn encode(
         &mut self,
         encoder: &mut Encoder<'_, '_>,
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
-        ALLOC_PRESENT_U32.clone().unsafe_encode(encoder, offset, recursion_depth)?;
+        encoder.debug_check_bounds::<Self>(offset);
+        ALLOC_PRESENT_U32.clone().encode(encoder, offset, recursion_depth)?;
         // TODO(fxbug.dev/41920) Add object type and rights from FIDL here.
         Ok(encoder.handles.push(HandleDisposition {
             handle_op: HandleOp::Move(take_handle(self)),
@@ -2041,7 +2084,9 @@ impl Decodable for Handle {
     fn new_empty() -> Self {
         Handle::invalid()
     }
+
     fn decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
+        decoder.debug_check_bounds::<Self>(offset);
         let mut present: u32 = 0;
         present.decode(decoder, offset)?;
         match present {
@@ -2063,6 +2108,7 @@ impl Encodable for Option<Handle> {
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
+        encoder.debug_check_bounds::<Self>(offset);
         match self {
             Some(handle) => handle.encode(encoder, offset, recursion_depth),
             None => ALLOC_ABSENT_U32.clone().encode(encoder, offset, recursion_depth),
@@ -2075,7 +2121,9 @@ impl Decodable for Option<Handle> {
     fn new_empty() -> Self {
         None
     }
+
     fn decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
+        decoder.debug_check_bounds::<Self>(offset);
         let mut present: u32 = 0;
         present.decode(decoder, offset)?;
         match present {
@@ -2111,6 +2159,7 @@ macro_rules! handle_based_codable {
             fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_, '_>, offset: usize, recursion_depth: usize)
                 -> $crate::Result<()>
             {
+                encoder.debug_check_bounds::<Self>(offset);
                 let mut handle = $crate::encoding::take_handle(self);
                 handle.encode(encoder, offset, recursion_depth)
             }
@@ -2144,6 +2193,7 @@ macro_rules! handle_based_codable {
             fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_, '_>, offset: usize, recursion_depth: usize)
                 -> $crate::Result<()>
             {
+                encoder.debug_check_bounds::<Self>(offset);
                 match self {
                     Some(handle) => handle.encode(encoder, offset, recursion_depth),
                     None => $crate::encoding::ALLOC_ABSENT_U32.clone().encode(encoder, offset, recursion_depth),
@@ -2156,6 +2206,7 @@ macro_rules! handle_based_codable {
             fn new_empty() -> Self { None }
             #[inline]
             fn decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>, offset: usize) -> $crate::Result<()> {
+                decoder.debug_check_bounds::<Self>(offset);
                 let mut handle: Option<$crate::handle::Handle> = None;
                 handle.decode(decoder, offset)?;
                 *self = handle.map(Into::into);
@@ -2178,13 +2229,14 @@ impl Layout for zx_status::Status {
 
 impl Encodable for zx_status::Status {
     #[inline]
-    unsafe fn unsafe_encode(
+    fn encode(
         &mut self,
         encoder: &mut Encoder<'_, '_>,
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
-        self.into_raw().unsafe_encode(encoder, offset, recursion_depth)
+        encoder.debug_check_bounds::<Self>(offset);
+        self.into_raw().encode(encoder, offset, recursion_depth)
     }
 }
 
@@ -2194,9 +2246,10 @@ impl Decodable for zx_status::Status {
         Self::from_raw(0)
     }
     #[inline]
-    unsafe fn unsafe_decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
+    fn decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
+        decoder.debug_check_bounds::<Self>(offset);
         let mut val: i32 = 0;
-        val.unsafe_decode(decoder, offset)?;
+        val.decode(decoder, offset)?;
         *self = Self::from_raw(val);
         Ok(())
     }
@@ -2221,13 +2274,14 @@ impl Layout for EpitaphBody {
 }
 
 impl Encodable for EpitaphBody {
-    unsafe fn unsafe_encode(
+    fn encode(
         &mut self,
         encoder: &mut Encoder<'_, '_>,
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
-        self.error.unsafe_encode(encoder, offset, recursion_depth)
+        encoder.debug_check_bounds::<Self>(offset);
+        self.error.encode(encoder, offset, recursion_depth)
     }
 }
 
@@ -2236,8 +2290,9 @@ impl Decodable for EpitaphBody {
     fn new_empty() -> Self {
         Self { error: zx_status::Status::new_empty() }
     }
-    unsafe fn unsafe_decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
-        self.error.unsafe_decode(decoder, offset)
+    fn decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
+        decoder.debug_check_bounds::<Self>(offset);
+        self.error.decode(decoder, offset)
     }
 }
 
@@ -2291,6 +2346,7 @@ impl<T: Autonull> Encodable for Option<&mut T> {
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
+        encoder.debug_check_bounds::<Self>(offset);
         if T::naturally_nullable(encoder.context) {
             match self {
                 Some(x) => x.encode(encoder, offset, recursion_depth),
@@ -2337,6 +2393,7 @@ impl<T: Autonull> Encodable for Option<Box<T>> {
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
+        encoder.debug_check_bounds::<Self>(offset);
         // Call Option<&mut T>'s encode method.
         self.as_deref_mut().encode(encoder, offset, recursion_depth)
     }
@@ -2360,6 +2417,7 @@ impl<T: Autonull> Decodable for Option<Box<T>> {
     }
     #[inline]
     fn decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
+        decoder.debug_check_bounds::<Self>(offset);
         if T::naturally_nullable(decoder.context) {
             let inline_size = decoder.inline_size_of::<T>();
             let present = check_for_presence(decoder, offset, inline_size)?;
@@ -2433,12 +2491,15 @@ macro_rules! fidl_struct {
 
         impl $crate::encoding::Encodable for $name {
             #[inline]
-            unsafe fn unsafe_encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_, '_>, offset: usize, recursion_depth: usize) -> $crate::Result<()> {
+            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_, '_>, offset: usize, recursion_depth: usize) -> $crate::Result<()> {
+                encoder.debug_check_bounds::<Self>(offset);
                 // Ensure padding is zero by writing zero to the padded region which will be partially overwritten
                 // when the field is written.
                 $(
-                    let ptr = encoder.mut_buffer().as_mut_ptr().offset(offset as isize).offset($padding_offset);
-                    std::mem::transmute::<*mut u8, *mut $padding_ty>(ptr).write_unaligned(0);
+                    unsafe {
+                        let ptr = encoder.mut_buffer().as_mut_ptr().offset(offset as isize).offset($padding_offset);
+                        std::mem::transmute::<*mut u8, *mut $padding_ty>(ptr).write_unaligned(0);
+                    }
                 )*
                 // Write the fields.
                 $(
@@ -2446,7 +2507,7 @@ macro_rules! fidl_struct {
                         encoder.set_next_handle_subtype($member_handle_subtype);
                         encoder.set_next_handle_rights($member_handle_rights);
                     )?
-                    self.$member_name.unsafe_encode(encoder, offset + $member_offset_v1, recursion_depth)?;
+                    self.$member_name.encode(encoder, offset + $member_offset_v1, recursion_depth)?;
                 )*
                 Ok(())
             }
@@ -2463,11 +2524,12 @@ macro_rules! fidl_struct {
             }
 
             #[inline]
-            unsafe fn unsafe_decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>, offset: usize) -> $crate::Result<()> {
+            fn decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>, offset: usize) -> $crate::Result<()> {
+                decoder.debug_check_bounds::<Self>(offset);
                 // Apply masks to check if padded regions are zero.
                 $(
-                    let ptr = decoder.buffer().as_ptr().offset(offset as isize).offset($padding_offset);
-                    let padval = std::mem::transmute::<*const u8, *const $padding_ty>(ptr).read_unaligned();
+                    let ptr = unsafe { decoder.buffer().as_ptr().offset(offset as isize).offset($padding_offset) };
+                    let padval = unsafe { std::mem::transmute::<*const u8, *const $padding_ty>(ptr).read_unaligned() };
                     let maskedval = padval & $padding_mask;
                     if (maskedval != 0) {
                         return Err($crate::Error::NonZeroPadding {
@@ -2482,7 +2544,7 @@ macro_rules! fidl_struct {
                         decoder.set_next_handle_subtype($member_handle_subtype);
                         decoder.set_next_handle_rights($member_handle_rights);
                     )?
-                    self.$member_name.unsafe_decode(decoder, offset + $member_offset_v1)?;
+                    self.$member_name.decode(decoder, offset + $member_offset_v1)?;
                 )*
                 Ok(())
             }
@@ -2548,16 +2610,18 @@ macro_rules! fidl_struct_copy {
 
         impl $crate::encoding::Encodable for $name {
             #[inline]
-            unsafe fn unsafe_encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_, '_>, offset: usize, _recursion_depth: usize) -> $crate::Result<()> {
-                let buf_ptr = encoder.mut_buffer().as_mut_ptr().offset(offset as isize);
-                let typed_buf_ptr = std::mem::transmute::<*mut u8, *mut $name>(buf_ptr);
-                typed_buf_ptr.write_unaligned((self as *const $name).read());
-
-                $(
-                    let ptr = buf_ptr.offset($padding_offset);
-                    let padding_ptr = std::mem::transmute::<*mut u8, *mut $padding_ty>(ptr);
-                    padding_ptr.write_unaligned(padding_ptr.read_unaligned() & !$padding_mask);
-                )*
+            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_, '_>, offset: usize, _recursion_depth: usize) -> $crate::Result<()> {
+                encoder.debug_check_bounds::<Self>(offset);
+                unsafe {
+                    let buf_ptr = encoder.mut_buffer().as_mut_ptr().offset(offset as isize);
+                    let typed_buf_ptr = std::mem::transmute::<*mut u8, *mut $name>(buf_ptr);
+                    typed_buf_ptr.write_unaligned((self as *const $name).read());
+                    $(
+                        let ptr = buf_ptr.offset($padding_offset);
+                        let padding_ptr = std::mem::transmute::<*mut u8, *mut $padding_ty>(ptr);
+                        padding_ptr.write_unaligned(padding_ptr.read_unaligned() & !$padding_mask);
+                    )*
+                }
                 Ok(())
             }
         }
@@ -2573,13 +2637,14 @@ macro_rules! fidl_struct_copy {
             }
 
             #[inline]
-            unsafe fn unsafe_decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>, offset: usize) -> $crate::Result<()> {
-                let buf_ptr = decoder.buffer().as_ptr().offset(offset as isize);
+            fn decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>, offset: usize) -> $crate::Result<()> {
+                decoder.debug_check_bounds::<Self>(offset);
+                let buf_ptr = unsafe { decoder.buffer().as_ptr().offset(offset as isize) };
 
                 // Apply masks to check if padded regions are zero.
                 $(
-                    let ptr = buf_ptr.offset($padding_offset);
-                    let padval = std::mem::transmute::<*const u8, *const $padding_ty>(ptr).read_unaligned();
+                    let ptr = unsafe { buf_ptr.offset($padding_offset) };
+                    let padval = unsafe { std::mem::transmute::<*const u8, *const $padding_ty>(ptr).read_unaligned() };
                     let maskedval = padval & $padding_mask;
                     if (maskedval != 0) {
                         return Err($crate::Error::NonZeroPadding {
@@ -2589,8 +2654,10 @@ macro_rules! fidl_struct_copy {
                     }
                 )*
 
-                let obj_ptr = std::mem::transmute::<*mut $name, *mut u8>(self);
-                std::ptr::copy_nonoverlapping(buf_ptr, obj_ptr, $size_v1);
+                unsafe {
+                    let obj_ptr = std::mem::transmute::<*mut $name, *mut u8>(self);
+                    std::ptr::copy_nonoverlapping(buf_ptr, obj_ptr, $size_v1);
+                }
 
                 Ok(())
             }
@@ -2623,13 +2690,14 @@ macro_rules! fidl_empty_struct {
 
         impl $crate::encoding::Encodable for $name {
             #[inline]
-            unsafe fn unsafe_encode(
+            fn encode(
                 &mut self,
                 encoder: &mut $crate::encoding::Encoder<'_, '_>,
                 offset: usize,
                 recursion_depth: usize,
             ) -> $crate::Result<()> {
-                0u8.unsafe_encode(encoder, offset, recursion_depth)
+                encoder.debug_check_bounds::<Self>(offset);
+                0u8.encode(encoder, offset, recursion_depth)
             }
         }
 
@@ -2639,13 +2707,14 @@ macro_rules! fidl_empty_struct {
                 $name
             }
             #[inline]
-            unsafe fn unsafe_decode(
+            fn decode(
                 &mut self,
                 decoder: &mut $crate::encoding::Decoder<'_>,
                 offset: usize,
             ) -> $crate::Result<()> {
+                decoder.debug_check_bounds::<Self>(offset);
                 let mut x = 0u8;
-                x.unsafe_decode(decoder, offset)?;
+                x.decode(decoder, offset)?;
                 if x == 0 {
                     Ok(())
                 } else {
@@ -2665,15 +2734,15 @@ macro_rules! fidl_empty_struct {
 
 /// Encode the provided unknown bytes and handles behind a FIDL "envelope".
 #[doc(hidden)] // only exported for macro use
-pub unsafe fn encode_unknown_data(
+pub fn encode_unknown_data(
     val: &mut UnknownData,
     encoder: &mut Encoder<'_, '_>,
     offset: usize,
     recursion_depth: usize,
 ) -> Result<()> {
-    (val.bytes.len() as u32).unsafe_encode(encoder, offset, recursion_depth)?;
-    (val.handles.len() as u32).unsafe_encode(encoder, offset + 4, recursion_depth)?;
-    ALLOC_PRESENT_U64.clone().unsafe_encode(encoder, offset + 8, recursion_depth)?;
+    (val.bytes.len() as u32).encode(encoder, offset, recursion_depth)?;
+    (val.handles.len() as u32).encode(encoder, offset + 4, recursion_depth)?;
+    ALLOC_PRESENT_U64.clone().encode(encoder, offset + 8, recursion_depth)?;
     Encoder::check_recursion_depth(recursion_depth + 1)?;
     encoder.append_out_of_line_bytes(&val.bytes);
     encoder.set_next_handle_subtype(ObjectType::NONE);
@@ -2684,14 +2753,14 @@ pub unsafe fn encode_unknown_data(
 
 /// Encode the provided unknown bytes behind a FIDL "envelope".
 #[doc(hidden)] // only exported for macro use
-pub unsafe fn encode_unknown_bytes(
+pub fn encode_unknown_bytes(
     val: &[u8],
     encoder: &mut Encoder<'_, '_>,
     offset: usize,
     recursion_depth: usize,
 ) -> Result<()> {
-    (val.len() as u64).unsafe_encode(encoder, offset, recursion_depth)?;
-    ALLOC_PRESENT_U64.clone().unsafe_encode(encoder, offset + 8, recursion_depth)?;
+    (val.len() as u64).encode(encoder, offset, recursion_depth)?;
+    ALLOC_PRESENT_U64.clone().encode(encoder, offset + 8, recursion_depth)?;
     Encoder::check_recursion_depth(recursion_depth + 1)?;
     encoder.append_out_of_line_bytes(val);
     Ok(())
@@ -2699,7 +2768,7 @@ pub unsafe fn encode_unknown_bytes(
 
 /// Encode the provided value behind a FIDL "envelope".
 #[doc(hidden)] // only exported for macro use
-pub unsafe fn encode_in_envelope(
+pub fn encode_in_envelope(
     val: &mut Option<&mut dyn Encodable>,
     encoder: &mut Encoder<'_, '_>,
     offset: usize,
@@ -2713,7 +2782,7 @@ pub unsafe fn encode_in_envelope(
         Some(x) => {
             // Start at offset 8 because we write the first 8 bytes (number of bytes and number
             // number of handles, both u32) at the end.
-            ALLOC_PRESENT_U64.clone().unsafe_encode(encoder, offset + 8, recursion_depth)?;
+            ALLOC_PRESENT_U64.clone().encode(encoder, offset + 8, recursion_depth)?;
             let bytes_before = encoder.buf.len();
             let handles_before = encoder.handles.len();
             encoder.write_out_of_line(
@@ -2723,13 +2792,13 @@ pub unsafe fn encode_in_envelope(
             )?;
             let mut bytes_written = (encoder.buf.len() - bytes_before) as u32;
             let mut handles_written = (encoder.handles.len() - handles_before) as u32;
-            bytes_written.unsafe_encode(encoder, offset, recursion_depth)?;
-            handles_written.unsafe_encode(encoder, offset + 4, recursion_depth)?;
+            bytes_written.encode(encoder, offset, recursion_depth)?;
+            handles_written.encode(encoder, offset + 4, recursion_depth)?;
         }
         None => {
-            0u32.unsafe_encode(encoder, offset, recursion_depth)?; // num_bytes
-            0u32.unsafe_encode(encoder, offset + 4, recursion_depth)?; // num_handles
-            ALLOC_ABSENT_U64.clone().unsafe_encode(encoder, offset + 8, recursion_depth)?;
+            0u32.encode(encoder, offset, recursion_depth)?; // num_bytes
+            0u32.encode(encoder, offset + 4, recursion_depth)?; // num_handles
+            ALLOC_ABSENT_U64.clone().encode(encoder, offset + 8, recursion_depth)?;
         }
     }
     Ok(())
@@ -2914,17 +2983,22 @@ macro_rules! fidl_table {
                     self.$resource_unknown_name.as_ref().map_or(0, |data| *data.keys().next_back().unwrap())
                 )?
             }
+        }
 
-            // Implementation of unsafe_encode that isn't an unsafe function to avoid a large unsafe block that may
-            // lead to unintended unsafe operations.
+        impl $crate::encoding::Layout for $name {
             #[inline(always)]
-            fn unsafe_encode_impl(&mut self, encoder: &mut $crate::encoding::Encoder<'_, '_>, offset: usize, recursion_depth: usize) -> $crate::Result<()> {
+            fn inline_align(_context: &$crate::encoding::Context) -> usize { 8 }
+            #[inline(always)]
+            fn inline_size(_context: &$crate::encoding::Context) -> usize { 16 }
+        }
+
+        impl $crate::encoding::Encodable for $name {
+            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_, '_>, offset: usize, recursion_depth: usize) -> $crate::Result<()> {
+                encoder.debug_check_bounds::<Self>(offset);
                 // Vector header
                 let max_ordinal = self.find_max_ordinal();
-                unsafe {
-                    (max_ordinal as u64).unsafe_encode(encoder, offset, recursion_depth)?;
-                    $crate::encoding::ALLOC_PRESENT_U64.clone().unsafe_encode(encoder, offset + 8, recursion_depth)?;
-                }
+                (max_ordinal as u64).encode(encoder, offset, recursion_depth)?;
+                $crate::encoding::ALLOC_PRESENT_U64.clone().encode(encoder, offset + 8, recursion_depth)?;
                 // write_out_of_line must not be called with a zero-sized out-of-line block.
                 if max_ordinal == 0 {
                     return Ok(());
@@ -2956,9 +3030,7 @@ macro_rules! fidl_table {
                             // - bytes_len is calculated to fit 16*max(member.ordinal).
                             // - Since cur_offset is 16*(member.ordinal - 1) and the envelope takes
                             //   16 bytes, there is always sufficient room.
-                            unsafe {
-                                _unknown_encoder_func(*data, _encoder, _offset + cur_offset, _recursion_depth)?;
-                            }
+                            _unknown_encoder_func(*data, _encoder, _offset + cur_offset, _recursion_depth)?;
                             _next_unknown = _unknown_fields.next();
                             _prev_end_offset = cur_offset + 16;
                         }
@@ -2981,10 +3053,8 @@ macro_rules! fidl_table {
                         // - bytes_len is calculated to fit 16*max(member.ordinal).
                         // - Since cur_offset is 16*(member.ordinal - 1) and the envelope takes
                         //   16 bytes, there is always sufficient room.
-                        unsafe {
-                            let mut field = self.$member_name.as_mut().map(|x| x as &mut dyn $crate::encoding::Encodable);
-                            $crate::encoding::encode_in_envelope(&mut field, _encoder, _offset + cur_offset, _recursion_depth)?;
-                        }
+                        let mut field = self.$member_name.as_mut().map(|x| x as &mut dyn $crate::encoding::Encodable);
+                        $crate::encoding::encode_in_envelope(&mut field, _encoder, _offset + cur_offset, _recursion_depth)?;
 
                         _prev_end_offset = cur_offset + 16;
                     )*
@@ -3001,148 +3071,13 @@ macro_rules! fidl_table {
                         // - bytes_len is calculated to fit 16*max(member.ordinal).
                         // - Since cur_offset is 16*(member.ordinal - 1) and the envelope takes
                         //   16 bytes, there is always sufficient room.
-                        unsafe {
-                            _unknown_encoder_func(data, _encoder, _offset + cur_offset, _recursion_depth)?;
-                        }
+                        _unknown_encoder_func(data, _encoder, _offset + cur_offset, _recursion_depth)?;
                         _next_unknown = _unknown_fields.next();
                         _prev_end_offset = cur_offset + 16;
                     }
 
                     Ok(())
                 })
-            }
-
-            // Implementation of unsafe_decode that isn't an unsafe function to avoid a large unsafe block that may
-            // lead to unintended unsafe operations
-            #[inline(always)]
-            fn unsafe_decode_impl(&mut self, decoder: &mut $crate::encoding::Decoder<'_>, offset: usize) -> $crate::Result<()> {
-                    // Decode envelope vector header
-                    let mut len: u64 = 0;
-                    let mut present: u64 = 0;
-                    unsafe {
-                        len.unsafe_decode(decoder, offset)?;
-                        present.unsafe_decode(decoder, offset+8)?;
-                    }
-
-                    match present {
-                        $crate::encoding::ALLOC_PRESENT_U64 => (),
-                        $crate::encoding::ALLOC_ABSENT_U64 => return Err($crate::Error::UnexpectedNullRef),
-                        _ => return Err($crate::Error::InvalidPresenceIndicator),
-                    }
-
-                    let len = len as usize;
-                    let bytes_len = len * 16; // envelope inline_size is 16
-                    decoder.read_out_of_line(bytes_len, |decoder, offset| {
-                        // Decode the envelope for each type.
-                        // u32 num_bytes
-                        // u32_num_handles
-                        // 64-bit presence indicator
-                        let mut _next_ordinal_to_read = 0;
-                        let mut next_offset = offset;
-                        let end_offset = offset + bytes_len;
-                        $(
-                            stringify!($value_unknown_name); // placeholder use for expansion
-                            let mut _unknown_data = std::collections::BTreeMap::<u64, Vec<u8>>::new();
-                            let _unknown_decoder_func = $crate::encoding::decode_unknown_bytes;
-                        )?
-                        $(
-                            stringify!($resource_unknown_name); // placeholder use for expansion
-                            let mut _unknown_data = std::collections::BTreeMap::<u64, $crate::encoding::UnknownData>::new();
-                            let _unknown_decoder_func = $crate::encoding::decode_unknown_data;
-                        )?
-                        $(
-                            _next_ordinal_to_read += 1;
-                            if next_offset >= end_offset {
-                                return Ok(());
-                            }
-
-                            // Decode unknown envelopes for gaps in ordinals.
-                            while _next_ordinal_to_read < $ordinal {
-                                if let Some(field) = _unknown_decoder_func(decoder, next_offset)? {
-                                    _unknown_data.insert(_next_ordinal_to_read, field);
-                                }
-                                _next_ordinal_to_read += 1;
-                                next_offset += 16;
-                            }
-
-                            let mut num_bytes: u32 = 0;
-                            num_bytes.decode(decoder, next_offset)?;
-                            let mut num_handles: u32 = 0;
-                            num_handles.decode(decoder, next_offset + 4)?;
-                            let mut present: u64 = 0;
-                            present.decode(decoder, next_offset + 8)?;
-                            let next_out_of_line = decoder.next_out_of_line();
-                            let handles_before = decoder.remaining_handles();
-                            match present {
-                                $crate::encoding::ALLOC_PRESENT_U64 => {
-                                    decoder.read_out_of_line(
-                                        decoder.inline_size_of::<$member_ty>(),
-
-                                        |decoder, offset| {
-                                            $(
-                                                decoder.set_next_handle_subtype($member_handle_subtype);
-                                                decoder.set_next_handle_rights($member_handle_rights);
-                                            )?
-                                            let val_ref =
-                                                self.$member_name.get_or_insert_with(
-                                                    || <$member_ty>::new_empty());
-                                            val_ref.decode(decoder, offset)?;
-                                            Ok(())
-                                        },
-                                    )?;
-                                }
-                                $crate::encoding::ALLOC_ABSENT_U64 => {
-                                    if num_bytes != 0 {
-                                        return Err($crate::Error::InvalidNumBytesInEnvelope);
-                                    }
-                                    if num_handles != 0 {
-                                        return Err($crate::Error::InvalidNumHandlesInEnvelope);
-                                    }
-                                }
-                                _ => return Err($crate::Error::InvalidPresenceIndicator),
-                            }
-                            if decoder.next_out_of_line() != (next_out_of_line + (num_bytes as usize)) {
-                                return Err($crate::Error::InvalidNumBytesInEnvelope);
-                            }
-                            if handles_before != (decoder.remaining_handles() + (num_handles as usize)) {
-                                return Err($crate::Error::InvalidNumHandlesInEnvelope);
-                            }
-
-                            next_offset += 16;
-                        )*
-
-                        // Decode the remaining unknown envelopes.
-                        while next_offset < end_offset {
-                            _next_ordinal_to_read += 1;
-                            if let Some(field) = _unknown_decoder_func(decoder, next_offset)? {
-                                _unknown_data.insert(_next_ordinal_to_read, field);
-                            }
-                            next_offset += 16;
-                        }
-
-                        if !_unknown_data.is_empty() {
-                            $(
-                                self.$value_unknown_name = Some(_unknown_data);
-                            )?
-                            $(
-                                self.$resource_unknown_name = Some(_unknown_data);
-                            )?
-                        }
-                        Ok(())
-                    })
-            }
-        }
-
-        impl $crate::encoding::Layout for $name {
-            #[inline(always)]
-            fn inline_align(_context: &$crate::encoding::Context) -> usize { 8 }
-            #[inline(always)]
-            fn inline_size(_context: &$crate::encoding::Context) -> usize { 16 }
-        }
-
-        impl $crate::encoding::Encodable for $name {
-            unsafe fn unsafe_encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_, '_>, offset: usize, recursion_depth: usize) -> $crate::Result<()> {
-                self.unsafe_encode_impl(encoder, offset, recursion_depth)
             }
         }
 
@@ -3151,8 +3086,120 @@ macro_rules! fidl_table {
             fn new_empty() -> Self {
                 Self::EMPTY
             }
-            unsafe fn unsafe_decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>, offset: usize) -> $crate::Result<()> {
-                self.unsafe_decode_impl(decoder, offset)
+            fn decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>, offset: usize) -> $crate::Result<()> {
+                decoder.debug_check_bounds::<Self>(offset);
+                // Decode envelope vector header
+                let mut len: u64 = 0;
+                let mut present: u64 = 0;
+                len.decode(decoder, offset)?;
+                present.decode(decoder, offset+8)?;
+
+                match present {
+                    $crate::encoding::ALLOC_PRESENT_U64 => (),
+                    $crate::encoding::ALLOC_ABSENT_U64 => return Err($crate::Error::UnexpectedNullRef),
+                    _ => return Err($crate::Error::InvalidPresenceIndicator),
+                }
+
+                let len = len as usize;
+                let bytes_len = len * 16; // envelope inline_size is 16
+                decoder.read_out_of_line(bytes_len, |decoder, offset| {
+                    // Decode the envelope for each type.
+                    // u32 num_bytes
+                    // u32_num_handles
+                    // 64-bit presence indicator
+                    let mut _next_ordinal_to_read = 0;
+                    let mut next_offset = offset;
+                    let end_offset = offset + bytes_len;
+                    $(
+                        stringify!($value_unknown_name); // placeholder use for expansion
+                        let mut _unknown_data = std::collections::BTreeMap::<u64, Vec<u8>>::new();
+                        let _unknown_decoder_func = $crate::encoding::decode_unknown_bytes;
+                    )?
+                    $(
+                        stringify!($resource_unknown_name); // placeholder use for expansion
+                        let mut _unknown_data = std::collections::BTreeMap::<u64, $crate::encoding::UnknownData>::new();
+                        let _unknown_decoder_func = $crate::encoding::decode_unknown_data;
+                    )?
+                    $(
+                        _next_ordinal_to_read += 1;
+                        if next_offset >= end_offset {
+                            return Ok(());
+                        }
+
+                        // Decode unknown envelopes for gaps in ordinals.
+                        while _next_ordinal_to_read < $ordinal {
+                            if let Some(field) = _unknown_decoder_func(decoder, next_offset)? {
+                                _unknown_data.insert(_next_ordinal_to_read, field);
+                            }
+                            _next_ordinal_to_read += 1;
+                            next_offset += 16;
+                        }
+
+                        let mut num_bytes: u32 = 0;
+                        num_bytes.decode(decoder, next_offset)?;
+                        let mut num_handles: u32 = 0;
+                        num_handles.decode(decoder, next_offset + 4)?;
+                        let mut present: u64 = 0;
+                        present.decode(decoder, next_offset + 8)?;
+                        let next_out_of_line = decoder.next_out_of_line();
+                        let handles_before = decoder.remaining_handles();
+                        match present {
+                            $crate::encoding::ALLOC_PRESENT_U64 => {
+                                decoder.read_out_of_line(
+                                    decoder.inline_size_of::<$member_ty>(),
+
+                                    |decoder, offset| {
+                                        $(
+                                            decoder.set_next_handle_subtype($member_handle_subtype);
+                                            decoder.set_next_handle_rights($member_handle_rights);
+                                        )?
+                                        let val_ref =
+                                            self.$member_name.get_or_insert_with(
+                                                || <$member_ty>::new_empty());
+                                        val_ref.decode(decoder, offset)?;
+                                        Ok(())
+                                    },
+                                )?;
+                            }
+                            $crate::encoding::ALLOC_ABSENT_U64 => {
+                                if num_bytes != 0 {
+                                    return Err($crate::Error::InvalidNumBytesInEnvelope);
+                                }
+                                if num_handles != 0 {
+                                    return Err($crate::Error::InvalidNumHandlesInEnvelope);
+                                }
+                            }
+                            _ => return Err($crate::Error::InvalidPresenceIndicator),
+                        }
+                        if decoder.next_out_of_line() != (next_out_of_line + (num_bytes as usize)) {
+                            return Err($crate::Error::InvalidNumBytesInEnvelope);
+                        }
+                        if handles_before != (decoder.remaining_handles() + (num_handles as usize)) {
+                            return Err($crate::Error::InvalidNumHandlesInEnvelope);
+                        }
+
+                        next_offset += 16;
+                    )*
+
+                    // Decode the remaining unknown envelopes.
+                    while next_offset < end_offset {
+                        _next_ordinal_to_read += 1;
+                        if let Some(field) = _unknown_decoder_func(decoder, next_offset)? {
+                            _unknown_data.insert(_next_ordinal_to_read, field);
+                        }
+                        next_offset += 16;
+                    }
+
+                    if !_unknown_data.is_empty() {
+                        $(
+                            self.$value_unknown_name = Some(_unknown_data);
+                        )?
+                        $(
+                            self.$resource_unknown_name = Some(_unknown_data);
+                        )?
+                    }
+                    Ok(())
+                })
             }
         }
     }
@@ -3193,27 +3240,22 @@ macro_rules! fidl_reverse_blocks {
 }
 
 /// Decodes the inline portion of a xunion. Returns `(ordinal, num_bytes, num_handles)`.
-///
-/// # Safety
-///
-/// Unsafe due to calls to `unsafe_decode`. See the `unsafe_decode`
-/// documentation for a description of safety requirements.
 #[inline]
-pub unsafe fn unsafe_decode_xunion_inline_portion(
+pub fn decode_xunion_inline_portion(
     decoder: &mut Decoder,
     offset: usize,
 ) -> Result<(u64, u32, u32)> {
     let mut ordinal: u64 = 0;
-    ordinal.unsafe_decode(decoder, offset)?;
+    ordinal.decode(decoder, offset)?;
 
     let mut num_bytes: u32 = 0;
-    num_bytes.unsafe_decode(decoder, offset + 8)?;
+    num_bytes.decode(decoder, offset + 8)?;
 
     let mut num_handles: u32 = 0;
-    num_handles.unsafe_decode(decoder, offset + 12)?;
+    num_handles.decode(decoder, offset + 12)?;
 
     let mut present: u64 = 0;
-    present.unsafe_decode(decoder, offset + 16)?;
+    present.decode(decoder, offset + 16)?;
     match present {
         ALLOC_PRESENT_U64 => (),
         ALLOC_ABSENT_U64 => {
@@ -3252,16 +3294,17 @@ where
     E: Encodable,
 {
     #[inline]
-    unsafe fn unsafe_encode(
+    fn encode(
         &mut self,
         encoder: &mut Encoder<'_, '_>,
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
+        encoder.debug_check_bounds::<Self>(offset);
         match self {
             Ok(val) => {
                 // Encode success ordinal
-                1u64.unsafe_encode(encoder, offset, recursion_depth)?;
+                1u64.encode(encoder, offset, recursion_depth)?;
                 // If the inline size is 0, meaning the type is (),
                 // encode a zero byte instead because () in this context
                 // means an empty struct, not an absent payload.
@@ -3273,7 +3316,7 @@ where
             }
             Err(val) => {
                 // Encode error ordinal
-                2u64.unsafe_encode(encoder, offset, recursion_depth)?;
+                2u64.encode(encoder, offset, recursion_depth)?;
                 encode_in_envelope(&mut Some(val), encoder, offset + 8, recursion_depth)
             }
         }
@@ -3291,8 +3334,9 @@ where
     }
 
     #[inline]
-    unsafe fn unsafe_decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
-        let (ordinal, _, _) = unsafe_decode_xunion_inline_portion(decoder, offset)?;
+    fn decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
+        decoder.debug_check_bounds::<Self>(offset);
+        let (ordinal, _, _) = decode_xunion_inline_portion(decoder, offset)?;
         let member_inline_size = match ordinal {
             1 => {
                 // If the inline size is 0, meaning the type is (), use an inline
@@ -3497,10 +3541,11 @@ macro_rules! fidl_xunion {
 
         impl $crate::encoding::Encodable for $name {
             #[inline]
-            unsafe fn unsafe_encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_, '_>, offset: usize, recursion_depth: usize) -> $crate::Result<()> {
+            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_, '_>, offset: usize, recursion_depth: usize) -> $crate::Result<()> {
+                encoder.debug_check_bounds::<Self>(offset);
                 let mut ordinal = self.ordinal();
                 // Encode ordinal
-                ordinal.unsafe_encode(encoder, offset, recursion_depth)?;
+                ordinal.encode(encoder, offset, recursion_depth)?;
                 match self {
                     $(
                         $name::$member_name ( val ) => {
@@ -3554,11 +3599,12 @@ macro_rules! fidl_xunion {
             }
 
             #[inline]
-            unsafe fn unsafe_decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>, offset: usize) -> $crate::Result<()> {
+            fn decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>, offset: usize) -> $crate::Result<()> {
+                decoder.debug_check_bounds::<Self>(offset);
                 #[allow(unused_variables)]
                 let next_out_of_line = decoder.next_out_of_line();
                 let handles_before = decoder.remaining_handles();
-                let (ordinal, num_bytes, num_handles) = $crate::encoding::unsafe_decode_xunion_inline_portion(decoder, offset)?;
+                let (ordinal, num_bytes, num_handles) = $crate::encoding::decode_xunion_inline_portion(decoder, offset)?;
                 let member_inline_size = match ordinal {
                     $(
                         $member_ordinal => decoder.inline_size_of::<$member_ty>(),
@@ -3599,51 +3645,51 @@ macro_rules! fidl_xunion {
                 };
 
                 decoder.read_out_of_line(member_inline_size, |decoder, offset| {
-                        match ordinal {
-                            $(
-                                $member_ordinal => {
-                                    $(
-                                        decoder.set_next_handle_subtype($member_handle_subtype);
-                                        decoder.set_next_handle_rights($member_handle_rights);
-                                    )?
-                                    #[allow(irrefutable_let_patterns)]
-                                    if let $name::$member_name(_) = self {
-                                        // Do nothing, read the value into the object
-                                    } else {
-                                        // Initialize `self` to the right variant
-                                        *self = $name::$member_name(
-                                            <$member_ty>::new_empty()
-                                        );
-                                    }
-                                    #[allow(irrefutable_let_patterns)]
-                                    if let $name::$member_name(val) = self {
-                                        val.decode(decoder, offset)?;
-                                    } else {
-                                        unreachable!()
-                                    }
+                    match ordinal {
+                        $(
+                            $member_ordinal => {
+                                $(
+                                    decoder.set_next_handle_subtype($member_handle_subtype);
+                                    decoder.set_next_handle_rights($member_handle_rights);
+                                )?
+                                #[allow(irrefutable_let_patterns)]
+                                if let $name::$member_name(_) = self {
+                                    // Do nothing, read the value into the object
+                                } else {
+                                    // Initialize `self` to the right variant
+                                    *self = $name::$member_name(
+                                        <$member_ty>::new_empty()
+                                    );
                                 }
-                            )*
-                            $(
-                                #[allow(deprecated)]
-                                ordinal => {
-                                    let data = $crate::encoding::decode_unknown_data_contents(decoder, offset, num_bytes, num_handles)?;
-                                    *self = $name::$resource_unknown_name { ordinal, data };
+                                #[allow(irrefutable_let_patterns)]
+                                if let $name::$member_name(val) = self {
+                                    val.decode(decoder, offset)?;
+                                } else {
+                                    unreachable!()
                                 }
-                            )?
-                            $(
-                                #[allow(deprecated)]
-                                ordinal => {
-                                    let bytes = decoder.buffer()[offset.. offset+(num_bytes as usize)].to_vec();
-                                    *self = $name::$value_unknown_name { ordinal, bytes };
-                                }
-                            )?
-                            // This should be unreachable, since we already
-                            // checked for unknown ordinals above and returned
-                            // an error in the strict case.
-                            #[allow(unreachable_patterns)]
-                            ordinal => panic!("unexpected ordinal {:?}", ordinal)
-                        }
-                        Ok(())
+                            }
+                        )*
+                        $(
+                            #[allow(deprecated)]
+                            ordinal => {
+                                let data = $crate::encoding::decode_unknown_data_contents(decoder, offset, num_bytes, num_handles)?;
+                                *self = $name::$resource_unknown_name { ordinal, data };
+                            }
+                        )?
+                        $(
+                            #[allow(deprecated)]
+                            ordinal => {
+                                let bytes = decoder.buffer()[offset.. offset+(num_bytes as usize)].to_vec();
+                                *self = $name::$value_unknown_name { ordinal, bytes };
+                            }
+                        )?
+                        // This should be unreachable, since we already
+                        // checked for unknown ordinals above and returned
+                        // an error in the strict case.
+                        #[allow(unreachable_patterns)]
+                        ordinal => panic!("unexpected ordinal {:?}", ordinal)
+                    }
+                    Ok(())
                 })?;
 
                 if handles_before != (decoder.remaining_handles() + (num_handles as usize)) {
@@ -3811,14 +3857,15 @@ impl<T: Layout> Layout for TransactionMessage<'_, T> {
 
 impl<T: Encodable> Encodable for TransactionMessage<'_, T> {
     #[inline]
-    unsafe fn unsafe_encode(
+    fn encode(
         &mut self,
         encoder: &mut Encoder<'_, '_>,
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
-        self.header.unsafe_encode(encoder, offset, recursion_depth)?;
-        (*self.body).unsafe_encode(
+        encoder.debug_check_bounds::<Self>(offset);
+        self.header.encode(encoder, offset, recursion_depth)?;
+        (*self.body).encode(
             encoder,
             offset + encoder.inline_size_of::<TransactionHeader>(),
             recursion_depth,
@@ -3950,14 +3997,15 @@ impl<T: Layout> Layout for PersistentMessage<'_, T> {
 
 impl<T: Encodable> Encodable for PersistentMessage<'_, T> {
     #[inline]
-    unsafe fn unsafe_encode(
+    fn encode(
         &mut self,
         encoder: &mut Encoder<'_, '_>,
         offset: usize,
         recursion_depth: usize,
     ) -> Result<()> {
-        self.header.unsafe_encode(encoder, offset, recursion_depth)?;
-        (*self.body).unsafe_encode(
+        encoder.debug_check_bounds::<Self>(offset);
+        self.header.encode(encoder, offset, recursion_depth)?;
+        (*self.body).encode(
             encoder,
             offset + encoder.inline_size_of::<PersistentHeader>(),
             recursion_depth,
@@ -4060,15 +4108,16 @@ macro_rules! wrap_handle_metadata {
 
         impl<T: $crate::encoding::Encodable> $crate::encoding::Encodable for $name<T> {
             #[inline]
-            unsafe fn unsafe_encode(
+            fn encode(
                 &mut self,
                 encoder: &mut $crate::encoding::Encoder<'_, '_>,
                 offset: usize,
                 recursion_depth: usize,
             ) -> $crate::Result<()> {
+                encoder.debug_check_bounds::<Self>(offset);
                 encoder.set_next_handle_subtype($object_type);
                 encoder.set_next_handle_rights($rights);
-                self.0.unsafe_encode(encoder, offset, recursion_depth)
+                self.0.encode(encoder, offset, recursion_depth)
             }
         }
 
@@ -4079,14 +4128,15 @@ macro_rules! wrap_handle_metadata {
             }
 
             #[inline]
-            unsafe fn unsafe_decode(
+            fn decode(
                 &mut self,
                 decoder: &mut $crate::encoding::Decoder<'_>,
                 offset: usize,
             ) -> $crate::Result<()> {
+                decoder.debug_check_bounds::<Self>(offset);
                 decoder.set_next_handle_subtype($object_type);
                 decoder.set_next_handle_rights($rights);
-                self.0.unsafe_decode(decoder, offset)
+                self.0.decode(decoder, offset)
             }
         }
     };
@@ -4151,10 +4201,11 @@ macro_rules! tuple_impls {
                   $( $ntyp: Encodable,)*
         {
             #[inline]
-            unsafe fn unsafe_encode(&mut self, encoder: &mut Encoder<'_, '_>, offset: usize, recursion_depth: usize) -> Result<()> {
+            fn encode(&mut self, encoder: &mut Encoder<'_, '_>, offset: usize, recursion_depth: usize) -> Result<()> {
+                encoder.debug_check_bounds::<Self>(offset);
                 // Tuples are encoded like structs.
                 // $idx is always 0 for the first element.
-                self.$idx.unsafe_encode(encoder, offset, recursion_depth)?;
+                self.$idx.encode(encoder, offset, recursion_depth)?;
                 let mut cur_offset = 0;
                 cur_offset += encoder.inline_size_of::<$typ>();
                 $(
@@ -4162,7 +4213,7 @@ macro_rules! tuple_impls {
                     let member_offset =
                         round_up_to_align(cur_offset, encoder.inline_align_of::<$ntyp>());
                     encoder.padding(offset + cur_offset, member_offset - cur_offset);
-                    self.$nidx.unsafe_encode(encoder, offset + member_offset, recursion_depth)?;
+                    self.$nidx.encode(encoder, offset + member_offset, recursion_depth)?;
                     cur_offset = member_offset + encoder.inline_size_of::<$ntyp>();
                 )*
                 encoder.padding(offset + cur_offset, encoder.inline_size_of::<Self>() - cur_offset);
@@ -4185,15 +4236,16 @@ macro_rules! tuple_impls {
             }
 
             #[inline]
-            unsafe fn unsafe_decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
-                self.$idx.unsafe_decode(decoder, offset)?;
+            fn decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
+                decoder.debug_check_bounds::<Self>(offset);
+                self.$idx.decode(decoder, offset)?;
                 let mut _cur_offset = decoder.inline_size_of::<$typ>();
                 $(
                     // Skip to the start of the next field
                     let member_offset =
                         round_up_to_align(_cur_offset, decoder.inline_align_of::<$ntyp>());
                     decoder.check_padding(offset + _cur_offset, member_offset - _cur_offset)?;
-                    self.$nidx.unsafe_decode(decoder, offset + member_offset)?;
+                    self.$nidx.decode(decoder, offset + member_offset)?;
                     _cur_offset = member_offset + decoder.inline_size_of::<$ntyp>();
                 )*
                 // Skip to the end of the struct's size
@@ -4275,16 +4327,6 @@ impl<T: Encodable> Encodable for &mut T {
         recursion_depth: usize,
     ) -> Result<()> {
         (&mut **self).encode(encoder, offset, recursion_depth)
-    }
-
-    #[inline]
-    unsafe fn unsafe_encode(
-        &mut self,
-        encoder: &mut Encoder<'_, '_>,
-        offset: usize,
-        recursion_depth: usize,
-    ) -> Result<()> {
-        (&mut **self).unsafe_encode(encoder, offset, recursion_depth)
     }
 }
 
