@@ -411,6 +411,14 @@ DEFINE_OPTION("kernel.memory-limit-dbg", bool, memory_limit_dbg, {true}, R"""(
 This option enables verbose logging from the memory limit library.
 )""")
 
+DEFINE_OPTION("kernel.memory-limit-mb", uint64_t, memory_limit_mb, {0}, R"""(
+This option sets an upper-bound in megabytes for the system memory.
+If set to zero, then no upper-bound is set.
+
+For example, choosing a low enough value would allow a user simulating a system with less physical
+memory than it actually has.
+)""")
+
 // Machine-specific options are included here for all the kernel places.
 // In the generator program, they're included separately.
 

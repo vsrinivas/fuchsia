@@ -293,12 +293,6 @@ jitterentropy, producing output data that looks closer to uniformly random. Note
 that even when set to false, the CPRNG will re-process the samples, so the
 processing inside of jitterentropy is somewhat redundant.
 
-## kernel.memory-limit-mb=\<num>
-
-This option tells the kernel to limit system memory to the MB value specified
-by 'num'. Using this effectively allows a user to simulate the system having
-less physical memory than physically present.
-
 ## kernel.portobserver.reserve-pages=\<num>
 
 Specifies the number of pages per CPU to reserve for port observer (async

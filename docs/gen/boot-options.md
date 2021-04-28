@@ -429,6 +429,15 @@ Hex values may be specified as 0xNNN.
 
 This option enables verbose logging from the memory limit library.
 
+### kernel.memory-limit-mb=\<uint64_t>
+**Default:** `0x0`
+
+This option sets an upper-bound in megabytes for the system memory.
+If set to zero, then no upper-bound is set.
+
+For example, choosing a low enough value would allow a user simulating a system with less physical
+memory than it actually has.
+
 
 ## Options available only on arm64 machines
 

@@ -8,7 +8,6 @@
 #include <assert.h>
 #include <inttypes.h>
 #include <lib/boot-options/boot-options.h>
-#include <lib/cmdline.h>
 #include <lib/memory_limit.h>
 #include <lib/zircon-internal/macros.h>
 #include <platform.h>
@@ -74,7 +73,7 @@ static void print_reserve_state(void) {
 zx_status_t memory_limit_init() {
   if (!SystemMemoryLimit) {
     ReservedRegionCount = 0;
-    SystemMemoryLimit = gCmdline.GetUInt64(kernel_option::kMemoryLimitMb, 0u) * MB;
+    SystemMemoryLimit = gBootOptions->memory_limit_mb * MB;
     if (!SystemMemoryLimit) {
       return ZX_ERR_NOT_SUPPORTED;
     }
