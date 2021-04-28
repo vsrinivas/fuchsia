@@ -25,7 +25,7 @@ using fuchsia_device_environment_test::TestDevice;
 class TestEnvironmentDriver;
 using DeviceType = ddk::Device<TestEnvironmentDriver, ddk::Unbindable, ddk::Messageable>;
 
-class TestEnvironmentDriver : public DeviceType, public fidl::WireInterface<TestDevice> {
+class TestEnvironmentDriver : public DeviceType, public fidl::WireServer<TestDevice> {
  public:
   explicit TestEnvironmentDriver(zx_device_t* parent) : DeviceType(parent) {}
   ~TestEnvironmentDriver() {}
@@ -37,7 +37,8 @@ class TestEnvironmentDriver : public DeviceType, public fidl::WireInterface<Test
   void DdkRelease() { delete this; }
 
   // Device message ops implementation.
-  void GetServiceList(GetServiceListCompleter::Sync& completer) override;
+  void GetServiceList(GetServiceListRequestView request,
+                      GetServiceListCompleter::Sync& completer) override;
 
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);
@@ -46,7 +47,8 @@ class TestEnvironmentDriver : public DeviceType, public fidl::WireInterface<Test
   }
 };
 
-void TestEnvironmentDriver::GetServiceList(GetServiceListCompleter::Sync& completer) {
+void TestEnvironmentDriver::GetServiceList(GetServiceListRequestView request,
+                                           GetServiceListCompleter::Sync& completer) {
   files::Glob glob("/svc/*");
   std::vector<fidl::StringView> services;
   for (const char* file : glob) {

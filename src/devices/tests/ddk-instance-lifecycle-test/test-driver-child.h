@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef SRC_DEVICES_TESTS_DDK_INSTANCE_LIFECYCLE_TEST_TEST_DRIVER_CHILD_H_
+#define SRC_DEVICES_TESTS_DDK_INSTANCE_LIFECYCLE_TEST_TEST_DRIVER_CHILD_H_
+
 #include <fuchsia/device/instancelifecycle/test/llcpp/fidl.h>
 #include <lib/zx/channel.h>
 
@@ -49,7 +52,7 @@ using InstanceDeviceType = ddk::Device<TestLifecycleDriverChildInstance, ddk::Un
 using fuchsia_device_instancelifecycle_test::InstanceDevice;
 
 class TestLifecycleDriverChildInstance : public InstanceDeviceType,
-                                         public fidl::WireInterface<InstanceDevice> {
+                                         public fidl::WireServer<InstanceDevice> {
  public:
   TestLifecycleDriverChildInstance(zx_device_t* parent, TestLifecycleDriverChild* parent_ctx)
       : InstanceDeviceType(parent), parent_ctx_(parent_ctx) {}
@@ -68,8 +71,9 @@ class TestLifecycleDriverChildInstance : public InstanceDeviceType,
   }
 
   // Implementation of InstanceDevice protocol
-  void RemoveDevice(RemoveDeviceCompleter::Sync& completer) override;
-  void SubscribeToLifecycle(fidl::ServerEnd<Lifecycle> client,
+  void RemoveDevice(RemoveDeviceRequestView request,
+                    RemoveDeviceCompleter::Sync& completer) override;
+  void SubscribeToLifecycle(SubscribeToLifecycleRequestView request,
                             SubscribeToLifecycleCompleter::Sync& completer) override;
 
  private:
@@ -79,3 +83,5 @@ class TestLifecycleDriverChildInstance : public InstanceDeviceType,
   // Connection to a Lifecycle client
   fidl::WireEventSender<fuchsia_device_instancelifecycle_test::Lifecycle> lifecycle_;
 };
+
+#endif  // SRC_DEVICES_TESTS_DDK_INSTANCE_LIFECYCLE_TEST_TEST_DRIVER_CHILD_H_

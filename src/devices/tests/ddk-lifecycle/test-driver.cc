@@ -27,7 +27,7 @@ class TestLifecycleDriver;
 using DeviceType =
     ddk::Device<TestLifecycleDriver, ddk::Unbindable, ddk::Messageable, ddk::ChildPreReleaseable>;
 
-class TestLifecycleDriver : public DeviceType, public fidl::WireInterface<TestDevice> {
+class TestLifecycleDriver : public DeviceType, public fidl::WireServer<TestDevice> {
  public:
   explicit TestLifecycleDriver(zx_device_t* parent) : DeviceType(parent) {}
   ~TestLifecycleDriver() {}
@@ -40,14 +40,16 @@ class TestLifecycleDriver : public DeviceType, public fidl::WireInterface<TestDe
   void DdkRelease() { delete this; }
 
   // Device message ops implementation.
-  void SubscribeToLifecycle(fidl::ServerEnd<Lifecycle> client,
+  void SubscribeToLifecycle(SubscribeToLifecycleRequestView request,
                             SubscribeToLifecycleCompleter::Sync& completer) override;
-  void AddChild(bool complete_init, int32_t init_status,
-                AddChildCompleter::Sync& completer) override;
-  void RemoveChild(uint64_t child_id, RemoveChildCompleter::Sync& completer) override;
-  void AsyncRemoveChild(uint64_t child_id, AsyncRemoveChildCompleter::Sync& completer) override;
-  void CompleteUnbind(uint64_t child_id, CompleteUnbindCompleter::Sync& completer) override;
-  void CompleteChildInit(uint64_t child_id, CompleteChildInitCompleter::Sync& completer) override;
+  void AddChild(AddChildRequestView request, AddChildCompleter::Sync& completer) override;
+  void RemoveChild(RemoveChildRequestView request, RemoveChildCompleter::Sync& completer) override;
+  void AsyncRemoveChild(AsyncRemoveChildRequestView request,
+                        AsyncRemoveChildCompleter::Sync& completer) override;
+  void CompleteUnbind(CompleteUnbindRequestView request,
+                      CompleteUnbindCompleter::Sync& completer) override;
+  void CompleteChildInit(CompleteChildInitRequestView request,
+                         CompleteChildInitCompleter::Sync& completer) override;
 
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);
@@ -81,11 +83,11 @@ void TestLifecycleDriver::DdkChildPreRelease(void* child_ctx) {
                   children_.end());
 }
 
-void TestLifecycleDriver::AddChild(bool complete_init, int32_t init_status,
+void TestLifecycleDriver::AddChild(AddChildRequestView request,
                                    AddChildCompleter::Sync& completer) {
   fbl::RefPtr<TestLifecycleDriverChild> child;
-  zx_status_t status =
-      TestLifecycleDriverChild::Create(zxdev(), complete_init, init_status, &child);
+  zx_status_t status = TestLifecycleDriverChild::Create(zxdev(), request->init_complete,
+                                                        request->init_status, &child);
   if (status != ZX_OK) {
     completer.ReplyError(status);
   } else {
@@ -94,10 +96,11 @@ void TestLifecycleDriver::AddChild(bool complete_init, int32_t init_status,
   }
 }
 
-void TestLifecycleDriver::RemoveChild(uint64_t id, RemoveChildCompleter::Sync& completer) {
+void TestLifecycleDriver::RemoveChild(RemoveChildRequestView request,
+                                      RemoveChildCompleter::Sync& completer) {
   bool found = false;
   for (auto& child : children_) {
-    if (zxdev_to_id(child->zxdev()) == id) {
+    if (zxdev_to_id(child->zxdev()) == request->child_id) {
       // We will remove it from our |children_| vector when we get the child pre-release callback.
       child->DdkAsyncRemove();
       found = true;
@@ -105,18 +108,18 @@ void TestLifecycleDriver::RemoveChild(uint64_t id, RemoveChildCompleter::Sync& c
     }
   }
   if (!found) {
-    zxlogf(ERROR, "Could not find child: id %lu", id);
+    zxlogf(ERROR, "Could not find child: id %lu", request->child_id);
     completer.ReplyError(ZX_ERR_NOT_FOUND);
     return;
   }
   completer.ReplySuccess();
 }
 
-void TestLifecycleDriver::AsyncRemoveChild(uint64_t id,
+void TestLifecycleDriver::AsyncRemoveChild(AsyncRemoveChildRequestView request,
                                            AsyncRemoveChildCompleter::Sync& completer) {
   bool found = false;
   for (auto& child : children_) {
-    if (zxdev_to_id(child->zxdev()) == id) {
+    if (zxdev_to_id(child->zxdev()) == request->child_id) {
       // We will remove it from our |children_| vector when we get the child pre-release callback.
       child->AsyncRemove(
           [completion = completer.ToAsync()]() mutable { completion.ReplySuccess(); });
@@ -125,51 +128,51 @@ void TestLifecycleDriver::AsyncRemoveChild(uint64_t id,
     }
   }
   if (!found) {
-    zxlogf(ERROR, "Could not find child: id %lu", id);
+    zxlogf(ERROR, "Could not find child: id %lu", request->child_id);
     completer.ReplyError(ZX_ERR_NOT_FOUND);
     return;
   }
 }
 
-void TestLifecycleDriver::CompleteUnbind(uint64_t child_id,
+void TestLifecycleDriver::CompleteUnbind(CompleteUnbindRequestView request,
                                          CompleteUnbindCompleter::Sync& completer) {
   for (auto& child : children_) {
-    if (zxdev_to_id(child->zxdev()) == child_id) {
+    if (zxdev_to_id(child->zxdev()) == request->child_id) {
       // We will remove it from our |children_| vector when we get the child pre-release callback.
       child->CompleteUnbind();
       completer.ReplySuccess();
       return;
     }
   }
-  zxlogf(ERROR, "Could not find child: id %lu", child_id);
+  zxlogf(ERROR, "Could not find child: id %lu", request->child_id);
   completer.ReplyError(ZX_ERR_NOT_FOUND);
   return;
 }
 
-void TestLifecycleDriver::CompleteChildInit(uint64_t id,
+void TestLifecycleDriver::CompleteChildInit(CompleteChildInitRequestView request,
                                             CompleteChildInitCompleter::Sync& completer) {
   zx_status_t status = ZX_ERR_NOT_FOUND;
   for (auto& child : children_) {
-    if (zxdev_to_id(child->zxdev()) == id) {
+    if (zxdev_to_id(child->zxdev()) == request->child_id) {
       status = child->CompleteInit();
       break;
     }
   }
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to complete child init: id %lu", id);
+    zxlogf(ERROR, "Failed to complete child init: id %lu", request->child_id);
     completer.ReplyError(status);
     return;
   }
   completer.ReplySuccess();
 }
 
-void TestLifecycleDriver::SubscribeToLifecycle(fidl::ServerEnd<Lifecycle> client,
+void TestLifecycleDriver::SubscribeToLifecycle(SubscribeToLifecycleRequestView request,
                                                SubscribeToLifecycleCompleter::Sync& completer) {
   // Currently we only care about supporting one client.
   if (lifecycle_event_sender_.is_valid()) {
     completer.ReplyError(ZX_ERR_ALREADY_BOUND);
   } else {
-    lifecycle_event_sender_ = fidl::WireEventSender<Lifecycle>(std::move(client));
+    lifecycle_event_sender_ = fidl::WireEventSender<Lifecycle>(std::move(request->client));
     completer.ReplySuccess();
   }
 }

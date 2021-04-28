@@ -47,7 +47,8 @@ zx_status_t DdkFidlDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn)
   return ZX_ERR_ASYNC;
 }
 
-void DdkFidlDevice::GetChannel(GetChannelCompleter::Sync& completer) {
+void DdkFidlDevice::GetChannel(GetChannelRequestView request,
+                               GetChannelCompleter::Sync& completer) {
   ZX_ASSERT(ZX_OK ==
             async::PostTask(loop_.dispatcher(), [completer = completer.ToAsync()]() mutable {
               zx::channel local;

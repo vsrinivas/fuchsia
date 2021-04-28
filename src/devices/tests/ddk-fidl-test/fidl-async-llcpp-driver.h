@@ -22,7 +22,7 @@ namespace fidl {
 class DdkFidlDevice;
 using DeviceType = ddk::Device<DdkFidlDevice, ddk::Messageable>;
 
-class DdkFidlDevice : public DeviceType, public fidl::WireInterface<fuchsia_hardware_test::Device> {
+class DdkFidlDevice : public DeviceType, public fidl::WireServer<fuchsia_hardware_test::Device> {
  public:
   explicit DdkFidlDevice(zx_device_t* parent)
       : DeviceType(parent), loop_(&kAsyncLoopConfigNeverAttachToThread) {}
@@ -34,7 +34,7 @@ class DdkFidlDevice : public DeviceType, public fidl::WireInterface<fuchsia_hard
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease();
 
-  void GetChannel(GetChannelCompleter::Sync& completer) override;
+  void GetChannel(GetChannelRequestView request, GetChannelCompleter::Sync& completer) override;
   async::Loop loop_;
 };
 }  // namespace fidl

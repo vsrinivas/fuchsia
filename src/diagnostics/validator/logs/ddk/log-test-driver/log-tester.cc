@@ -47,7 +47,7 @@ void LogTester::DdkInit(ddk::InitTxn txn) {
   return txn.Reply(ZX_OK);
 }
 
-void LogTester::EmitPrintfLog(::fuchsia_validate_logs::wire::PrintfRecordSpec spec,
+void LogTester::EmitPrintfLog(EmitPrintfLogRequestView request,
                               EmitPrintfLogCompleter::Sync& completer) {
   completer.Reply();
 }
@@ -59,18 +59,17 @@ zx_koid_t GetKoid(zx_handle_t handle) {
   return status == ZX_OK ? info.koid : ZX_KOID_INVALID;
 }
 
-void LogTester::GetInfo(GetInfoCompleter::Sync& completer) {
+void LogTester::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) {
   fuchsia_validate_logs::wire::PuppetInfo info;
   info.pid = GetKoid(zx_process_self());
   info.tid = GetKoid(zx_thread_self());
   completer.Reply(std::move(info));
 }
 
-void LogTester::EmitLog(fuchsia_validate_logs::wire::RecordSpec spec,
-                        EmitLogCompleter::Sync& completer) {
+void LogTester::EmitLog(EmitLogRequestView request, EmitLogCompleter::Sync& completer) {
   using fuchsia_diagnostics::wire::Severity;
   fx_log_severity_t severity;
-  switch (spec.record.severity) {
+  switch (request->spec.record.severity) {
     case Severity::kTrace:
       severity = DDK_LOG_TRACE;
       break;
@@ -94,10 +93,10 @@ void LogTester::EmitLog(fuchsia_validate_logs::wire::RecordSpec spec,
     default:
       abort();
   }
-  auto& txt = spec.record.arguments.at(0).value.text();
+  auto& txt = request->spec.record.arguments.at(0).value.text();
   std::string cpp_str(txt.begin(), txt.end());
-  driver_logf_internal(__zircon_driver_rec__.driver, severity, spec.file.data(), spec.line, "%s\n",
-                       cpp_str.c_str());
+  driver_logf_internal(__zircon_driver_rec__.driver, severity, request->spec.file.data(),
+                       request->spec.line, "%s\n", cpp_str.c_str());
   completer.Reply();
 }
 

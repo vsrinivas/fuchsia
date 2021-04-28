@@ -26,7 +26,7 @@ using fuchsia_device_firmware_test::TestDevice;
 class TestFirmwareDriver;
 using DeviceType = ddk::Device<TestFirmwareDriver, ddk::Unbindable, ddk::Messageable>;
 
-class TestFirmwareDriver : public DeviceType, public fidl::WireInterface<TestDevice> {
+class TestFirmwareDriver : public DeviceType, public fidl::WireServer<TestDevice> {
  public:
   explicit TestFirmwareDriver(zx_device_t* parent) : DeviceType(parent) {}
 
@@ -37,8 +37,9 @@ class TestFirmwareDriver : public DeviceType, public fidl::WireInterface<TestDev
   void DdkRelease() { delete this; }
 
   // Device message ops implementation.
-  void LoadFirmware(fidl::StringView path, LoadFirmwareCompleter::Sync& completer) override;
-  void LoadFirmwareAsync(fidl::StringView path,
+  void LoadFirmware(LoadFirmwareRequestView request,
+                    LoadFirmwareCompleter::Sync& completer) override;
+  void LoadFirmwareAsync(LoadFirmwareAsyncRequestView request,
                          LoadFirmwareAsyncCompleter::Sync& completer) override;
 
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
@@ -51,11 +52,11 @@ class TestFirmwareDriver : public DeviceType, public fidl::WireInterface<TestDev
   static zx_status_t CheckFirmware(zx_handle_t fw, size_t size);
 };
 
-void TestFirmwareDriver::LoadFirmware(fidl::StringView path,
+void TestFirmwareDriver::LoadFirmware(LoadFirmwareRequestView request,
                                       LoadFirmwareCompleter::Sync& completer) {
   zx_handle_t fw;
   size_t size;
-  std::string str_path(path.begin(), path.size());
+  std::string str_path(request->path.begin(), request->path.size());
   auto status = load_firmware(zxdev(), str_path.c_str(), &fw, &size);
   if (status != ZX_OK) {
     ZX_DEBUG_ASSERT(completer.ReplyError(status).status() == ZX_OK);
@@ -66,7 +67,7 @@ void TestFirmwareDriver::LoadFirmware(fidl::StringView path,
   completer.ReplySuccess();
 }
 
-void TestFirmwareDriver::LoadFirmwareAsync(fidl::StringView path,
+void TestFirmwareDriver::LoadFirmwareAsync(LoadFirmwareAsyncRequestView request,
                                            LoadFirmwareAsyncCompleter::Sync& completer) {
   struct FwCtx {
     LoadFirmwareAsyncCompleter::Async completer;
@@ -75,7 +76,7 @@ void TestFirmwareDriver::LoadFirmwareAsync(fidl::StringView path,
   auto ctx = std::make_unique<FwCtx>(FwCtx{
       .completer = completer.ToAsync(),
   });
-  std::string str_path(path.begin(), path.size());
+  std::string str_path(request->path.begin(), request->path.size());
 
   load_firmware_async(
       zxdev(), str_path.c_str(),

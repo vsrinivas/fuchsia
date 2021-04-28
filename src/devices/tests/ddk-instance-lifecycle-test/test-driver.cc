@@ -24,7 +24,7 @@ using fuchsia_device_instancelifecycle_test::TestDevice;
 class TestLifecycleDriver;
 using DeviceType = ddk::Device<TestLifecycleDriver, ddk::Unbindable, ddk::Messageable>;
 
-class TestLifecycleDriver : public DeviceType, public fidl::WireInterface<TestDevice> {
+class TestLifecycleDriver : public DeviceType, public fidl::WireServer<TestDevice> {
  public:
   explicit TestLifecycleDriver(zx_device_t* parent) : DeviceType(parent) {}
   ~TestLifecycleDriver() {}
@@ -34,7 +34,7 @@ class TestLifecycleDriver : public DeviceType, public fidl::WireInterface<TestDe
   void DdkRelease() { delete this; }
 
   // Device message ops implementation.
-  void CreateDevice(fidl::ServerEnd<Lifecycle> lifecycle_client, zx::channel instance_client,
+  void CreateDevice(CreateDeviceRequestView request,
                     CreateDeviceCompleter::Sync& completer) override;
 
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
@@ -44,11 +44,10 @@ class TestLifecycleDriver : public DeviceType, public fidl::WireInterface<TestDe
   }
 };
 
-void TestLifecycleDriver::CreateDevice(fidl::ServerEnd<Lifecycle> lifecycle_client,
-                                       zx::channel instance_client,
+void TestLifecycleDriver::CreateDevice(CreateDeviceRequestView request,
                                        CreateDeviceCompleter::Sync& completer) {
-  zx_status_t status = TestLifecycleDriverChild::Create(zxdev(), std::move(lifecycle_client),
-                                                        std::move(instance_client));
+  zx_status_t status = TestLifecycleDriverChild::Create(zxdev(), std::move(request->lifecycle),
+                                                        std::move(request->client_remote));
   if (status != ZX_OK) {
     completer.ReplyError(status);
   } else {

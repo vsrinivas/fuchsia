@@ -73,17 +73,18 @@ void TestLifecycleDriverChildInstance::DdkRelease() {
   delete this;
 }
 
-void TestLifecycleDriverChildInstance::RemoveDevice(RemoveDeviceCompleter::Sync& completer) {
+void TestLifecycleDriverChildInstance::RemoveDevice(RemoveDeviceRequestView request,
+                                                    RemoveDeviceCompleter::Sync& completer) {
   parent_ctx_->DdkAsyncRemove();
 }
 
 void TestLifecycleDriverChildInstance::SubscribeToLifecycle(
-    fidl::ServerEnd<Lifecycle> client, SubscribeToLifecycleCompleter::Sync& completer) {
+    SubscribeToLifecycleRequestView request, SubscribeToLifecycleCompleter::Sync& completer) {
   // Currently we only care about supporting one client.
   if (lifecycle_.is_valid()) {
     completer.ReplyError(ZX_ERR_ALREADY_BOUND);
   } else {
-    lifecycle_ = fidl::WireEventSender<Lifecycle>(std::move(client));
+    lifecycle_ = fidl::WireEventSender<Lifecycle>(std::move(request->lifecycle));
     completer.ReplySuccess();
   }
 }

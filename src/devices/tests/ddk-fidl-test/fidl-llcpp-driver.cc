@@ -46,7 +46,8 @@ zx_status_t DdkFidlDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn)
   return transaction.Status();
 }
 
-void DdkFidlDevice::GetChannel(GetChannelCompleter::Sync& completer) {
+void DdkFidlDevice::GetChannel(GetChannelRequestView request,
+                               GetChannelCompleter::Sync& completer) {
   zx::channel local;
   zx::channel remote;
   zx::channel::create(0, &local, &remote);
