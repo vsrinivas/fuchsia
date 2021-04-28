@@ -45,6 +45,11 @@ while [[ $# -ge 1 ]]; do
   shift
 done
 
+if [[ ! -n "$NUM_THREADS" ]]; then
+  fx-error "Must specify --num-threads. Recommended value is NCPUS / 2 or less."
+  fx-error "NOTE: using all cores can deadlock your kernel. See https://fxbug.dev/75382."
+  exit 1
+fi
 
 fx-command-run build ${OWNERS_TOOL_TARGET} || ( \
   fx-error "Failed to build rust owners tool."; \
