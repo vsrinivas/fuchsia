@@ -795,7 +795,8 @@ mod tests {
             Increment::Determined(DEFAULT_INCREMENTS_MS.millis().into_nanos()),
         );
         assert_eq!(
-            fasync::OnSignals::new(&client_event, zx::Signals::EVENTPAIR_SIGNALED).await.unwrap(),
+            fasync::OnSignals::new(&client_event, zx::Signals::EVENTPAIR_SIGNALED).await.unwrap()
+                & !zx::Signals::EVENTPAIR_CLOSED,
             zx::Signals::EVENTPAIR_SIGNALED
         );
         assert!(!clock_handle.lock().unwrap().is_free_running());
@@ -883,7 +884,8 @@ mod tests {
             Increment::Determined(DEFAULT_INCREMENTS_MS.millis().into_nanos()),
         );
         assert_eq!(
-            fasync::OnSignals::new(&client_event_2, zx::Signals::EVENTPAIR_SIGNALED).await.unwrap(),
+            fasync::OnSignals::new(&client_event_2, zx::Signals::EVENTPAIR_SIGNALED).await.unwrap()
+                & !zx::Signals::EVENTPAIR_CLOSED,
             zx::Signals::EVENTPAIR_SIGNALED
         );
         assert!(!clock_handle.lock().unwrap().is_free_running());
