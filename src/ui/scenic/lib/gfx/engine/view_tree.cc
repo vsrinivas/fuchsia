@@ -50,18 +50,6 @@ glm::vec2 TransformPointerCoords(const glm::vec2& pointer, const glm::mat4 trans
 
 }  // namespace
 
-fuchsia::ui::focus::FocusChain ViewTree::CloneFocusChain() const {
-  FX_DCHECK(IsStateValid()) << "invariant";
-
-  fuchsia::ui::focus::FocusChain full_copy{};
-  for (zx_koid_t koid : focus_chain_) {
-    full_copy.mutable_focus_chain()->push_back(CloneViewRefOf(koid));
-  }
-  return full_copy;
-}
-
-const std::vector<zx_koid_t>& ViewTree::focus_chain() const { return focus_chain_; }
-
 std::optional<zx_koid_t> ViewTree::ParentOf(zx_koid_t child) const {
   FX_DCHECK(IsTracked(child)) << "invariant";
 
@@ -104,6 +92,13 @@ EventReporterWeakPtr ViewTree::EventReporterOf(zx_koid_t koid) const {
 }
 
 std::optional<zx_koid_t> ViewTree::ConnectedViewRefKoidOf(SessionId session_id) const {
+  FX_DCHECK(root_ == ZX_KOID_INVALID ||
+            (nodes_.count(root_) != 0 && std::holds_alternative<RefNode>(nodes_.at(root_))));
+  // Root Session should act on authority of the scene koid, not the root view.
+  if (root_ != ZX_KOID_INVALID && std::get<RefNode>(nodes_.at(root_)).session_id == session_id) {
+    return root_;
+  }
+
   const auto range = ref_node_koids_.equal_range(session_id);
   for (auto it = range.first; it != range.second; ++it) {
     const zx_koid_t koid = it->second;
@@ -319,147 +314,7 @@ bool ViewTree::IsStateValid() const {
     }
   }
 
-  // Focus chain state: relationship with root_.
-  if (IsValid(root_)) {
-    if (focus_chain_.size() == 0) {
-      FX_LOGS(ERROR) << "Focus chain should be not empty but is.";
-      return false;
-    }
-    if (focus_chain_[0] != root_) {
-      FX_LOGS(ERROR) << "Focus chain's zeroth element should be root but isn't: " << root_ << ", "
-                     << focus_chain_[0];
-      return false;
-    }
-  } else {
-    if (focus_chain_.size() > 0) {
-      FX_LOGS(ERROR) << "Focus chain should be empty but isn't.";
-      return false;
-    }
-  }
-
-  // Focus chain state: relationship with nodes_.
-  for (size_t idx = 1; idx < focus_chain_.size(); ++idx) {
-    const zx_koid_t koid = focus_chain_[idx];
-    if (!IsValid(koid) || !IsTracked(koid) || !IsRefNode(koid)) {
-      FX_LOGS(ERROR) << "Focus chain element isn't a valid and tracked RefNode: " << koid
-                     << ", at index: " << idx;
-      return false;
-    }
-    const zx_koid_t parent = std::get_if<RefNode>(&nodes_.at(koid))->parent;
-    if (!IsValid(parent) || !IsTracked(parent) || IsRefNode(parent)) {
-      FX_LOGS(ERROR) << "Focus chain element's parent isn't a valid and tracked AttachNode: "
-                     << koid << ", at index: " << idx;
-      return false;
-    }
-    const zx_koid_t grandparent = std::get_if<AttachNode>(&nodes_.at(parent))->parent;
-    if (!IsValid(grandparent) || !IsTracked(grandparent) || !IsRefNode(grandparent)) {
-      FX_LOGS(ERROR) << "Focus chain element's grandparent isn't a valid and tracked RefNode: "
-                     << koid << ", at index: " << idx;
-      return false;
-    }
-    if (grandparent != focus_chain_[idx - 1]) {
-      FX_LOGS(ERROR)
-          << "Focus chain element's grandparent doesn't match previous focus chain element: "
-          << koid << ", at index: " << idx;
-      return false;
-    }
-  }
-
-  // Focus chain state: root node may receive focus, terminal node may receive focus.
-  if (focus_chain_.size() > 0) {
-    if (!MayReceiveFocus(root_)) {
-      FX_LOGS(ERROR) << "Focus chain's root element must be able to receive focus: koid=" << root_;
-      return false;
-    }
-
-    if (!MayReceiveFocus(focus_chain_.back())) {
-      FX_LOGS(ERROR) << "Focus chain's terminal element must be able to receive focus: koid="
-                     << focus_chain_.back();
-      return false;
-    }
-  }
   return true;
-}
-
-ViewTree::FocusChangeStatus ViewTree::RequestFocusChange(const zx_koid_t requestor,
-                                                         const zx_koid_t request) {
-  // Invalid requestor.
-  if (!IsTracked(requestor) || !IsRefNode(requestor) || !IsConnectedToScene(requestor))
-    return ViewTree::FocusChangeStatus::kErrorRequestorInvalid;
-
-  // Invalid request.
-  if (!IsTracked(request) || !IsRefNode(request) || !IsConnectedToScene(request))
-    return ViewTree::FocusChangeStatus::kErrorRequestInvalid;
-
-  // Transfer policy: requestor must be authorized.
-  {
-    bool has_authority = false;
-    for (zx_koid_t authority : focus_chain_) {
-      if (requestor == authority) {
-        has_authority = true;
-        break;
-      }
-    }
-    if (!has_authority)
-      return ViewTree::FocusChangeStatus::kErrorRequestorNotAuthorized;
-  }
-
-  // Transfer policy: requestor must be an ancestor of request.
-  {
-    bool is_ancestor = false;
-    zx_koid_t curr = request;
-    while (IsValid(curr)) {
-      if (curr == requestor) {
-        is_ancestor = true;
-        break;
-      }
-
-      // Iterate upward.
-      if (const auto ptr = std::get_if<RefNode>(&nodes_.at(curr))) {
-        curr = ptr->parent;
-      } else if (const auto ptr = std::get_if<AttachNode>(&nodes_.at(curr))) {
-        curr = ptr->parent;
-      } else {
-        FX_NOTREACHED() << "impossible";
-        return ViewTree::FocusChangeStatus::kErrorUnhandledCase;
-      }
-    }
-    if (!is_ancestor)
-      return ViewTree::FocusChangeStatus::kErrorRequestorNotRequestAncestor;
-  }
-
-  // Transfer policy: request must have "may receive focus" property.
-  {
-    const auto ptr = std::get_if<RefNode>(&nodes_.at(request));
-    if (!ptr->may_receive_focus())
-      return ViewTree::FocusChangeStatus::kErrorRequestCannotReceiveFocus;
-  }
-
-  // It's a valid request for a change to focus chain. Regenerate chain.
-  {
-    std::vector<zx_koid_t> buffer;
-    zx_koid_t curr = request;
-    while (IsValid(curr)) {
-      if (const auto ptr = std::get_if<RefNode>(&nodes_.at(curr))) {
-        buffer.push_back(curr);
-        curr = ptr->parent;
-      } else if (const auto ptr = std::get_if<AttachNode>(&nodes_.at(curr))) {
-        curr = ptr->parent;
-      } else {
-        FX_NOTREACHED() << "impossible";
-        return ViewTree::FocusChangeStatus::kErrorUnhandledCase;
-      }
-    }
-
-    // Clear state; populate with root and move downwards.
-    focus_chain_.clear();
-    for (auto iter = buffer.crbegin(); iter != buffer.crend(); ++iter) {
-      focus_chain_.push_back(*iter);
-    }
-  }
-
-  FX_DCHECK(IsStateValid()) << "postcondition";
-  return ViewTree::FocusChangeStatus::kAccept;
 }
 
 void ViewTree::NewRefNode(ViewTreeNewRefNode new_node) {
@@ -539,9 +394,6 @@ void ViewTree::DeleteNode(const zx_koid_t koid) {
     root_ = ZX_KOID_INVALID;
   }
 
-  // Remove |koid| if it is in the focus chain.
-  RepairFocus();
-
   FX_DCHECK(IsStateValid()) << "postcondition";
 }
 
@@ -550,8 +402,6 @@ void ViewTree::MakeGlobalRoot(zx_koid_t koid) {
       << "precondition";
 
   root_ = koid;
-
-  RepairFocus();
 
   FX_DCHECK(IsStateValid()) << "postcondition";
 }
@@ -585,7 +435,6 @@ void ViewTree::DisconnectFromParent(zx_koid_t child) {
 
     if (auto parent_ptr = std::get_if<RefNode>(&nodes_[ptr->parent])) {
       ptr->parent = ZX_KOID_INVALID;
-      RepairFocus();
       FX_DCHECK(IsStateValid()) << "postcondition";
       return;
     }
@@ -595,7 +444,6 @@ void ViewTree::DisconnectFromParent(zx_koid_t child) {
 
     if (auto parent_ptr = std::get_if<AttachNode>(&nodes_[ptr->parent])) {
       ptr->parent = ZX_KOID_INVALID;
-      RepairFocus();
       FX_DCHECK(IsStateValid()) << "postcondition";
       return;
     }
@@ -634,70 +482,8 @@ std::string ViewTree::ToString() const {
   for (const auto& item : ref_node_koids_) {
     output << "    session-id " << item.first << " has koid " << item.second << std::endl;
   }
-  output << "  focus-chain: [ ";
-  for (auto koid : focus_chain_) {
-    output << koid << " ";
-  }
-  output << "]" << std::endl;
 
   return output.str();
-}
-
-fuchsia::ui::views::ViewRef ViewTree::CloneViewRefOf(zx_koid_t koid) const {
-  FX_DCHECK(IsTracked(koid)) << "precondition";
-  FX_DCHECK(IsRefNode(koid)) << "precondition";
-  fuchsia::ui::views::ViewRef clone;
-  if (const auto ptr = std::get_if<RefNode>(&nodes_.at(koid))) {
-    fidl::Clone(ptr->view_ref, &clone);
-  }
-  return clone;
-}
-
-void ViewTree::RepairFocus() {
-  // root_ was destroyed, set focus_chain_ to empty.
-  if (!IsTracked(root_)) {
-    FX_DCHECK(!IsValid(root_)) << "invariant";
-    focus_chain_.clear();
-    return;
-  }
-
-  // root_ exists, but it's fresh or a replacement. Use it.
-  if (focus_chain_.size() == 0 || focus_chain_[0] != root_) {
-    focus_chain_.clear();
-    focus_chain_.push_back(root_);
-    return;
-  }
-
-  // root_ exists, and is already valid.
-  // Walk down chain until we find a divergence from relationship data in nodes_.
-  {
-    size_t curr = 1;
-    for (; curr < focus_chain_.size(); ++curr) {
-      const zx_koid_t child = focus_chain_[curr];
-      if (!IsTracked(child))
-        break;  // child destroyed
-      const std::optional<zx_koid_t> parent = ParentOf(child);
-      if (!parent.has_value())
-        break;  // parent reset or destroyed
-      const std::optional<zx_koid_t> grandparent = ParentOf(parent.value());
-      if (!grandparent.has_value())
-        break;  // grandparent reset or destroyed
-      if (grandparent.value() != focus_chain_[curr - 1])
-        break;  // focus chain relation changed
-    }
-
-    // Trim out invalid entries.
-    FX_DCHECK(curr >= 1 && curr <= focus_chain_.size()) << "invariant";
-    focus_chain_.erase(focus_chain_.begin() + curr, focus_chain_.end());
-  }
-
-  // Trim upward until we find a node that may receive focus.
-  FX_DCHECK(focus_chain_.size() > 0) << "invariant";
-  while (focus_chain_.size() > 0 && !MayReceiveFocus(focus_chain_.back())) {
-    focus_chain_.pop_back();
-  }
-
-  // Run state validity check at call site.
 }
 
 void ViewTree::UpdateInstalledRefs() {

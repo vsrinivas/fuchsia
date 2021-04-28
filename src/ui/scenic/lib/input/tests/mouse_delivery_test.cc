@@ -220,10 +220,8 @@ TEST_F(MouseDeliveryTest, OffViewClickTriggersUnfocusEvent) {
                  client_2 = CreateClient("View 2", std::move(v2_token));
 
   // Transfer focus to view 1.
-  zx_koid_t root_koid = engine()->scene_graph()->view_tree().focus_chain()[0];
-  auto status = engine()->scene_graph()->RequestFocusChange(root_koid, client_1.ViewKoid());
-  ASSERT_EQ(status, ViewTree::FocusChangeStatus::kAccept);
-
+  ASSERT_EQ(focus_manager_.RequestFocus(focus_manager_.focus_chain()[0], client_1.ViewKoid()),
+            focus::FocusChangeStatus::kAccept);
   RunLoopUntilIdle();
 
   root_session.events().clear();

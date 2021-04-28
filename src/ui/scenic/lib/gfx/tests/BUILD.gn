@@ -145,8 +145,6 @@ executable("unittests") {
     "dump_visitor_unittest.cc",
     "engine_unittest.cc",
     "escher_vulkan_smoke_test.cc",
-    "focus_chain_unittest.cc",
-    "focus_transfer_unittest.cc",
     "frame_timings_unittest.cc",
     "gfx_buffer_collection_importer_unittest.cc",
     "gfx_command_applier_unittest.cc",

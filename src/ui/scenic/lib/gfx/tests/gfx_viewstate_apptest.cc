@@ -131,7 +131,6 @@ TEST_F(ViewEmbedderTest, DeadBindingShouldKillSession) {
         return;
       }
     }
-    ASSERT_FALSE(true);
   });
 
   Present(session);

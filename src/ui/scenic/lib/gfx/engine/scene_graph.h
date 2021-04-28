@@ -5,7 +5,6 @@
 #ifndef SRC_UI_SCENIC_LIB_GFX_ENGINE_SCENE_GRAPH_H_
 #define SRC_UI_SCENIC_LIB_GFX_ENGINE_SCENE_GRAPH_H_
 
-#include <fuchsia/ui/focus/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -25,15 +24,17 @@ namespace gfx {
 class SceneGraph;
 using SceneGraphWeakPtr = fxl::WeakPtr<SceneGraph>;
 
+// Function for requesting focus transfers to view of ViewRef koid |request| on the authority of
+// |requestor|. Return true if focus was transferred, false if it wasn't.
+using RequestFocusFunc = fit::function<bool(zx_koid_t requestor, zx_koid_t request)>;
+
 // SceneGraph stores pointers to all the Compositors created with it as a constructor argument, but
 // it does not hold ownership of them.
 //
-// SceneGraph is the source of truth for the tree of ViewRefs, from which a FocusChain is generated.
-// Command processors update this tree, and the input system may read or modify the focus.
-class SceneGraph : public fuchsia::ui::focus::FocusChainListenerRegistry,
-                   public ViewFocuserRegistry {
+// Command processors update this tree.
+class SceneGraph final : public ViewFocuserRegistry {
  public:
-  explicit SceneGraph(sys::ComponentContext* app_context);
+  explicit SceneGraph(sys::ComponentContext* app_context, RequestFocusFunc request_focus);
 
   SceneGraphWeakPtr GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
@@ -58,8 +59,10 @@ class SceneGraph : public fuchsia::ui::focus::FocusChainListenerRegistry,
   // Returns the compositor requested, or nullptr if it does not exist.
   CompositorWeakPtr GetCompositor(GlobalId compositor_id) const;
 
+  void OnNewFocusedView(zx_koid_t newly_focused_koid);
+
   //
-  // View tree and focus chain functions
+  // View tree functions
   //
 
   // Expose view tree in a read-only manner.
@@ -74,15 +77,6 @@ class SceneGraph : public fuchsia::ui::focus::FocusChainListenerRegistry,
   // Tree topolocy: Apply all enqueued updates to the view tree in a transactional step.
   // Post: view_tree_ updated
   void ProcessViewTreeUpdates(ViewTreeUpdates view_tree_updates);
-
-  // Focus chain: Adjust focus in the view tree.
-  // Return kAccept if request was honored; otherwise return an error enum.
-  // Invariant: view_tree_ not modified
-  ViewTree::FocusChangeStatus RequestFocusChange(zx_koid_t requestor, zx_koid_t request);
-
-  // |fuchsia.ui.focus.FocusChainListenerRegistry|
-  void Register(
-      fidl::InterfaceHandle<fuchsia::ui::focus::FocusChainListener> focus_chain_listener) override;
 
   //
   // Focus transfer functionality
@@ -124,15 +118,6 @@ class SceneGraph : public fuchsia::ui::focus::FocusChainListenerRegistry,
   void AddCompositor(const CompositorWeakPtr& compositor);
   void RemoveCompositor(const CompositorWeakPtr& compositor);
 
-  // If the focus chain has changed, (1) dispatch an updated focus chain to the FocusChainListener,
-  // and (2) dispatch a FocusEvent to the clients that have gained and lost focus.
-  void MaybeDispatchFidlFocusChainAndFocusEvents(const std::vector<zx_koid_t>& old_focus_chain);
-
-  // Dispatch current focus chain to all FocusChainListeners.
-  void DispatchFocusChain();
-  // Dispatch current focus chain to a FocusChainListener.
-  void DispatchFocusChainTo(const fuchsia::ui::focus::FocusChainListenerPtr& listener);
-
   //
   // Fields
   //
@@ -141,13 +126,13 @@ class SceneGraph : public fuchsia::ui::focus::FocusChainListenerRegistry,
 
   ViewTree view_tree_;
 
-  fidl::Binding<fuchsia::ui::focus::FocusChainListenerRegistry> focus_chain_listener_registry_;
-  uint64_t next_focus_chain_listener_id_ = 0;
-  std::map<uint64_t, fuchsia::ui::focus::FocusChainListenerPtr> focus_chain_listeners_;
+  const RequestFocusFunc request_focus_;
 
   // Lifetime of ViewFocuserEndpoint is tied to owning Session's lifetime.
   // An early disconnect of ViewFocuserEndpoint is okay.
   std::unordered_map<SessionId, ViewFocuserEndpoint> view_focuser_endpoints_;
+
+  zx_koid_t currently_focused_koid_ = ZX_KOID_INVALID;
 
   fxl::WeakPtrFactory<SceneGraph> weak_factory_;  // Must be last.
 };

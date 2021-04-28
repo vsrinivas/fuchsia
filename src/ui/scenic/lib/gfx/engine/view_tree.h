@@ -109,27 +109,7 @@ class ViewTree {
     bool installed = false;
   };
 
-  // Provide detail on if/why focus change request was denied.
-  // Specific error-handling policy is responsibility of caller.
-  enum class FocusChangeStatus {
-    kAccept = 0,
-    kErrorRequestorInvalid,
-    kErrorRequestInvalid,
-    kErrorRequestorNotAuthorized,
-    kErrorRequestorNotRequestAncestor,
-    kErrorRequestCannotReceiveFocus,
-    kErrorUnhandledCase,  // last
-  };
-
   ViewTree() : view_ref_installed_impl_(fit::bind_member(this, &ViewTree::IsInstalled)){};
-
-  // Return the current focus chain with cloned ViewRefs.
-  // - Error conditions should not force the return of an empty focus chain; instead, the root_, if
-  //   valid, should be returned. This allows client-side recovery from focus loss.
-  fuchsia::ui::focus::FocusChain CloneFocusChain() const;
-
-  // Return the current focus chain.
-  const std::vector<zx_koid_t>& focus_chain() const;
 
   void PublishViewRefInstalledService(sys::ComponentContext* app_context) {
     view_ref_installed_impl_.Publish(app_context);
@@ -213,12 +193,6 @@ class ViewTree {
   // - Runtime is O(N^2), chiefly due to the "AttachNode, when a parent, has one child" check.
   bool IsStateValid() const;
 
-  // Request focus transfer to the proposed ViewRef's KOID. Return kAccept if successful.
-  // - If the KOID is not in nodes_ map, or isn't a ViewRef, or isn't connected to the root, then
-  //   return error.
-  // - If the KOID is otherwise valid, but violates the focus transfer policy, then return error.
-  FocusChangeStatus RequestFocusChange(zx_koid_t requestor, zx_koid_t request);
-
   // Update tree topology.
 
   // Pre: view_ref is a valid ViewRef
@@ -272,21 +246,6 @@ class ViewTree {
   view_tree::SubtreeSnapshot Snapshot() const;
 
  private:
-  // Utility.
-  fuchsia::ui::views::ViewRef CloneViewRefOf(zx_koid_t koid) const;
-
-  // Ensure the focus chain is valid; preserve as much of the existing focus chain as possible.
-  // - If the focus chain is still valid, do nothing.
-  // - Otherwise, "trim" the focus chain so that every pairwise parent-child relationship is valid
-  //   in the current tree.
-  // - Runtime is O(N) in the depth of the view tree, even for an already-valid focus chain.
-  // - Mutator operations must call this function when finishing.
-  // Post: if root_ is valid, (1) focus_chain_ is a prefix from the previous focus_chain_,
-  //       (2) each element of focus_chain_ is a RefNode's KOID, and (3) each adjacent pair of
-  //       KOIDs (P, R) is part of the ancestor hierarchy (P - Q - R) in the view tree.
-  // Post: if root_ is invalid, focus_chain_ is empty.
-  void RepairFocus();
-
   // Returns true if there is a RefNode corresponding to |koid| that has ever been connected to the
   // SceneGraph. Returns false otherwise.
   bool IsInstalled(zx_koid_t koid);
@@ -314,11 +273,6 @@ class ViewTree {
   // - Invariant: for each session, at most one RefNode is connected to root_.
   // - Lifecycle (add/remove) is handled by callbacks from command processors.
   std::unordered_multimap<SessionId, zx_koid_t> ref_node_koids_;
-
-  // The focus chain. The last element is the ViewRef considered to "have focus".
-  // - Mutator operations are required to keep the focus chain updated.
-  // - If no view has focus (because there is no root), then the focus chain is empty.
-  std::vector<zx_koid_t> focus_chain_;
 
   ViewRefInstalledImpl view_ref_installed_impl_;
 };

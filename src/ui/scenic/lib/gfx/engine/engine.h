@@ -93,7 +93,7 @@ class Engine : public scheduling::FrameRenderer {
  public:
   Engine(sys::ComponentContext* app_context, escher::EscherWeakPtr escher,
          std::shared_ptr<GfxBufferCollectionImporter> buffer_collection_importer,
-         inspect::Node inspect_node);
+         inspect::Node inspect_node, RequestFocusFunc request_focus);
 
   // Only used for testing.
   Engine(sys::ComponentContext* app_context, escher::EscherWeakPtr escher);

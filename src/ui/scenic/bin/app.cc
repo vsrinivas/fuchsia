@@ -275,9 +275,15 @@ void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
 
   {
     TRACE_DURATION("gfx", "App::InitializeServices[engine]");
-    engine_ = std::make_shared<gfx::Engine>(app_context_.get(), escher_->GetWeakPtr(),
-                                            gfx_buffer_collection_importer,
-                                            scenic_->inspect_node()->CreateChild("Engine"));
+    engine_ = std::make_shared<gfx::Engine>(
+        app_context_.get(), escher_->GetWeakPtr(), gfx_buffer_collection_importer,
+        scenic_->inspect_node()->CreateChild("Engine"),
+        /*request_focus*/
+        [this](zx_koid_t requestor, zx_koid_t request) {
+          FX_DCHECK(focus_manager_);
+          return focus_manager_->RequestFocus(requestor, request) ==
+                 focus::FocusChangeStatus::kAccept;
+        });
   }
   scenic_->SetFrameScheduler(frame_scheduler_);
   annotation_registry_.InitializeWithGfxAnnotationManager(engine_->annotation_manager());
@@ -316,31 +322,26 @@ void App::InitializeInput() {
   TRACE_DURATION("gfx", "App::InitializeInput");
   input_ = scenic_->RegisterSystem<input::InputSystem>(
       engine_->scene_graph(),
-      /*request_focus*/ [scene_graph = engine_->scene_graph(),
+      /*request_focus*/ [this,
                          use_auto_focus = config_values_.pointer_auto_focus_on](zx_koid_t koid) {
         if (!use_auto_focus)
           return;
 
-        if (!scene_graph)
-          return;  // No scene graph, no view tree, no focus chain.
-
-        if (scene_graph->view_tree().focus_chain().empty())
-          return;  // Scene not present, or scene not connected to compositor.
-
-        // Input system acts on authority of top-most view.
-        const zx_koid_t requestor = scene_graph->view_tree().focus_chain().front();
-        const zx_koid_t request = koid != ZX_KOID_INVALID ? koid : requestor;
-        const auto status = scene_graph->RequestFocusChange(requestor, request);
-        FX_VLOGS(1) << "Scenic RequestFocusChange. Authority: " << requestor
-                    << ", request: " << request << ", status: " << static_cast<int>(status);
-
-        FX_DCHECK(status == gfx::ViewTree::FocusChangeStatus::kAccept ||
-                  status == gfx::ViewTree::FocusChangeStatus::kErrorRequestCannotReceiveFocus)
-            << "User has authority to request focus change, but the only valid rejection is when "
-               "the requested view may not receive focus. Error code: "
-            << static_cast<int>(status);
+        const auto& focus_chain = focus_manager_->focus_chain();
+        if (!focus_chain.empty()) {
+          const zx_koid_t requestor = focus_chain[0];
+          const zx_koid_t request = koid != ZX_KOID_INVALID ? koid : requestor;
+          focus_manager_->RequestFocus(requestor, request);
+        }
       });
   FX_DCHECK(input_);
+
+  focus_manager_ =
+      std::make_unique<focus::FocusManager>(scenic_->inspect_node()->CreateChild("FocusManager"),
+                                            /*legacy_focus_listener*/ [this](zx_koid_t koid) {
+                                              engine_->scene_graph()->OnNewFocusedView(koid);
+                                            });
+  focus_manager_->Publish(*app_context_);
 }
 
 void App::InitializeHeartbeat() {
@@ -355,12 +356,16 @@ void App::InitializeHeartbeat() {
              [this](auto snapshot) { input_->OnNewViewTreeSnapshot(std::move(snapshot)); },
          .dispatcher = async_get_default_dispatcher()});
 
+    subscribers.push_back(
+        {.on_new_view_tree =
+             [this](auto snapshot) { focus_manager_->OnNewViewTreeSnapshot(std::move(snapshot)); },
+         .dispatcher = async_get_default_dispatcher()});
+
     view_tree_snapshotter_ = std::make_shared<view_tree::ViewTreeSnapshotter>(
         std::move(subtrees), std::move(subscribers));
   }
 
   // |session_updaters| will be updated in submission order.
-  // TODO(fxbug.dev/73451): Add ViewTreeSnapshotter to the end of |session_updaters|.
   frame_scheduler_->Initialize(
       /*frame_renderer*/ engine_,
       /*session_updaters*/ {scenic_, image_pipe_updater_, flatland_manager_,

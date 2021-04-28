@@ -29,10 +29,17 @@ enum class FocusChangeStatus {
   kErrorUnhandledCase,  // last
 };
 
+// Callback that should receive either the focused koid or ZX_KOID_INVALID every time the focus
+// chain updates. Used by GFX to send focus events over the SessionListener.
+// TODO(fxbug.dev/64376): Remove when we remove GFX input.
+using LegacyFocusListener = fit::function<void(zx_koid_t)>;
+
 // Class for tracking focus state.
 class FocusManager final : public fuchsia::ui::focus::FocusChainListenerRegistry {
  public:
-  FocusManager(inspect::Node inspect_node = inspect::Node());
+  explicit FocusManager(
+      inspect::Node inspect_node = inspect::Node(),
+      LegacyFocusListener legacy_focus_listener = [](auto) {});
   FocusManager(FocusManager&& other) = delete;  // Disallow moving.
 
   void Publish(sys::ComponentContext& component_context);
@@ -88,6 +95,9 @@ class FocusManager final : public fuchsia::ui::focus::FocusChainListenerRegistry
   fidl::Binding<fuchsia::ui::focus::FocusChainListenerRegistry> focus_chain_listener_registry_;
   uint64_t next_focus_chain_listener_id_ = 0;
   std::unordered_map<uint64_t, fuchsia::ui::focus::FocusChainListenerPtr> focus_chain_listeners_;
+
+  // TODO(fxbug.dev/64376): Remove when we remove GFX input.
+  const LegacyFocusListener legacy_focus_listener_;
 
   inspect::Node inspect_node_;
   inspect::LazyNode lazy_;

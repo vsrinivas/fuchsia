@@ -1147,9 +1147,9 @@ TEST_F(LargeDisplayAccessibilityPointerEventsTest, NoDownLatchAndA11yRejects) {
 
   // Transfer focus to view.
   {
-    zx_koid_t scene_koid = engine()->scene_graph()->view_tree().focus_chain()[0];
-    auto status = engine()->scene_graph()->RequestFocusChange(scene_koid, view.ViewKoid());
-    ASSERT_EQ(status, ViewTree::FocusChangeStatus::kAccept);
+    zx_koid_t scene_koid = focus_manager_.focus_chain()[0];
+    auto status = focus_manager_.RequestFocus(scene_koid, view.ViewKoid());
+    ASSERT_EQ(status, focus::FocusChangeStatus::kAccept);
   }
   RunLoopUntilIdle();  // Flush out focus events to clients.
 
@@ -1228,9 +1228,9 @@ TEST_F(LargeDisplayAccessibilityPointerEventsTest, NoDownLatchAndA11yAccepts) {
 
   // Transfer focus to view.
   {
-    zx_koid_t scene_koid = engine()->scene_graph()->view_tree().focus_chain()[0];
-    auto status = engine()->scene_graph()->RequestFocusChange(scene_koid, view.ViewKoid());
-    ASSERT_EQ(status, ViewTree::FocusChangeStatus::kAccept);
+    zx_koid_t scene_koid = focus_manager_.focus_chain()[0];
+    auto status = focus_manager_.RequestFocus(scene_koid, view.ViewKoid());
+    ASSERT_EQ(status, focus::FocusChangeStatus::kAccept);
   }
   RunLoopUntilIdle();  // Flush out focus events to clients.
 

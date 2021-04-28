@@ -164,48 +164,36 @@ void InputSystemTest::InitializeScenic(std::shared_ptr<Scenic> scenic) {
                                                /*image_pipe_updater*/ nullptr);
   scenic->SetFrameScheduler(frame_scheduler_);
 
-  input_system_ =
-      scenic
-          ->RegisterSystem<InputSystem>(
-              engine_->scene_graph(),
-              /*request_focus*/
-              [scene_graph = engine_->scene_graph(),
-               use_auto_focus = auto_focus_behavior()](zx_koid_t koid) {
-                if (!use_auto_focus)
-                  return;
+  // TODO(fxbug.dev/72919): There's a bunch of logic copied from app.cc here. This will be removed
+  // when moving out the integration tests from this folder.
+  input_system_ = scenic->RegisterSystem<InputSystem>(
+      engine_->scene_graph(),
+      /*request_focus*/
+      [this, use_auto_focus = auto_focus_behavior()](zx_koid_t koid) {
+        if (!use_auto_focus)
+          return;
 
-                if (!scene_graph)
-                  return;  // No scene graph, no view tree, no focus chain.
-
-                if (scene_graph->view_tree().focus_chain().empty())
-                  return;  // Scene not present, or scene not connected to compositor.
-
-                // Input system acts on authority of top-most view.
-                const zx_koid_t requestor = scene_graph->view_tree().focus_chain().front();
-                const zx_koid_t request = koid != ZX_KOID_INVALID ? koid : requestor;
-                const auto status = scene_graph->RequestFocusChange(requestor, request);
-                FX_VLOGS(1) << "Scenic RequestFocusChange. Authority: " << requestor
-                            << ", request: " << request << ", status: " << static_cast<int>(status);
-
-                FX_DCHECK(status == scenic_impl::gfx::ViewTree::FocusChangeStatus::kAccept ||
-                          status == scenic_impl::gfx::ViewTree::FocusChangeStatus::
-                                        kErrorRequestCannotReceiveFocus)
-                    << "User has authority to request focus change, but the only valid rejection "
-                       "is when the requested view may not receive focus. Error code: "
-                    << static_cast<int>(status);
-              })
-          .get();
+        const auto& focus_chain = focus_manager_.focus_chain();
+        if (!focus_chain.empty()) {
+          const zx_koid_t requestor = focus_chain[0];
+          const zx_koid_t request = koid != ZX_KOID_INVALID ? koid : requestor;
+          focus_manager_.RequestFocus(requestor, request);
+        }
+      });
 
   {
     std::vector<view_tree::SubtreeSnapshotGenerator> subtrees;
     subtrees.emplace_back(
         [engine = engine_]() { return engine->scene_graph()->view_tree().Snapshot(); });
     std::vector<view_tree::ViewTreeSnapshotter::Subscriber> subscribers;
-    subscribers.push_back({.on_new_view_tree =
-                               [input = input_system_](auto snapshot) {
-                                 input->OnNewViewTreeSnapshot(std::move(snapshot));
-                               },
-                           .dispatcher = async_get_default_dispatcher()});
+    subscribers.push_back(
+        {.on_new_view_tree =
+             [this](auto snapshot) { input_system_->OnNewViewTreeSnapshot(std::move(snapshot)); },
+         .dispatcher = async_get_default_dispatcher()});
+    subscribers.push_back(
+        {.on_new_view_tree =
+             [this](auto snapshot) { focus_manager_.OnNewViewTreeSnapshot(std::move(snapshot)); },
+         .dispatcher = async_get_default_dispatcher()});
 
     view_tree_snapshotter_ = std::make_shared<view_tree::ViewTreeSnapshotter>(
         std::move(subtrees), std::move(subscribers));

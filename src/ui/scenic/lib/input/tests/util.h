@@ -16,6 +16,7 @@
 
 #include "src/ui/lib/escher/impl/command_buffer_sequencer.h"
 #include "src/ui/scenic/lib/display/display.h"
+#include "src/ui/scenic/lib/focus/focus_manager.h"
 #include "src/ui/scenic/lib/gfx/tests/gfx_test.h"
 #include "src/ui/scenic/lib/gfx/tests/mocks/mocks.h"
 #include "src/ui/scenic/lib/input/input_system.h"
@@ -99,11 +100,16 @@ class InputSystemTest : public scenic_impl::test::ScenicTest {
   };
   // clang-format on
 
+  InputSystemTest()
+      : focus_manager_(inspect::Node(), [this](zx_koid_t koid) {
+          engine()->scene_graph()->OnNewFocusedView(koid);
+        }) {}
+
   // Convenience function; triggers scene operations by scheduling the next
   // render task in the event loop.
   void RequestToPresent(scenic::Session* session);
 
-  scenic_impl::input::InputSystem* input_system() { return input_system_; }
+  scenic_impl::input::InputSystem* input_system() { return input_system_.get(); }
 
   scenic_impl::gfx::Engine* engine() { return engine_.get(); }
 
@@ -137,6 +143,8 @@ class InputSystemTest : public scenic_impl::test::ScenicTest {
   void TearDown() override;
 
  protected:
+  focus::FocusManager focus_manager_;
+
   virtual bool auto_focus_behavior() const { return true; }
 
  private:
@@ -149,8 +157,7 @@ class InputSystemTest : public scenic_impl::test::ScenicTest {
   std::shared_ptr<scenic_impl::gfx::Engine> engine_;
   std::shared_ptr<scenic_impl::display::Display> display_;
   std::shared_ptr<view_tree::ViewTreeSnapshotter> view_tree_snapshotter_;
-
-  scenic_impl::input::InputSystem* input_system_ = nullptr;
+  std::shared_ptr<scenic_impl::input::InputSystem> input_system_;
   fuchsia::ui::pointerinjector::DevicePtr injector_;
 };
 

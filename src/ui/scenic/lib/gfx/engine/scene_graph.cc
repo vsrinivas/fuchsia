@@ -33,13 +33,9 @@ CompositorWeakPtr SceneGraph::GetCompositor(GlobalId compositor_id) const {
   return Compositor::kNullWeakPtr;
 }
 
-SceneGraph::SceneGraph(sys::ComponentContext* app_context)
-    : focus_chain_listener_registry_(this), weak_factory_(this) {
+SceneGraph::SceneGraph(sys::ComponentContext* app_context, RequestFocusFunc request_focus)
+    : request_focus_(std::move(request_focus)), weak_factory_(this) {
   if (app_context) {
-    app_context->outgoing()->AddPublicService<FocusChainListenerRegistry>(
-        [this](fidl::InterfaceRequest<FocusChainListenerRegistry> request) {
-          focus_chain_listener_registry_.Bind(std::move(request));
-        });
     view_tree_.PublishViewRefInstalledService(app_context);
   } else {
     FX_LOGS(ERROR) << "SceneGraph failed to register fuchsia.ui.focus.FocusChainListenerRegistry.";
@@ -67,7 +63,6 @@ void SceneGraph::InvalidateAnnotationViewHolder(zx_koid_t koid) {
 // To avoid unnecessary complexity or cost of maintaining state, view_tree_ modifications are
 // destructive.  This operation must preserve any needed state before applying updates.
 void SceneGraph::ProcessViewTreeUpdates(ViewTreeUpdates view_tree_updates) {
-  std::vector<zx_koid_t> old_focus_chain = view_tree_.focus_chain();
   // Process all updates.
   for (auto& update : view_tree_updates) {
     if (auto ptr = std::get_if<ViewTreeNewRefNode>(&update)) {
@@ -88,34 +83,6 @@ void SceneGraph::ProcessViewTreeUpdates(ViewTreeUpdates view_tree_updates) {
     }
   }
   view_tree_.PostProcessUpdates();
-
-  MaybeDispatchFidlFocusChainAndFocusEvents(old_focus_chain);
-}
-
-ViewTree::FocusChangeStatus SceneGraph::RequestFocusChange(zx_koid_t requestor, zx_koid_t request) {
-  std::vector<zx_koid_t> old_focus_chain = view_tree_.focus_chain();
-
-  ViewTree::FocusChangeStatus status = view_tree_.RequestFocusChange(requestor, request);
-  if (status == ViewTree::FocusChangeStatus::kAccept) {
-    MaybeDispatchFidlFocusChainAndFocusEvents(old_focus_chain);
-  }
-  return status;
-}
-
-void SceneGraph::Register(fidl::InterfaceHandle<FocusChainListener> focus_chain_listener) {
-  const uint64_t id = next_focus_chain_listener_id_++;
-  fuchsia::ui::focus::FocusChainListenerPtr new_listener;
-  new_listener.Bind(std::move(focus_chain_listener));
-  new_listener.set_error_handler([weak = weak_factory_.GetWeakPtr(), id](zx_status_t) {
-    if (weak) {
-      weak->focus_chain_listeners_.erase(id);
-    }
-  });
-  auto [ignore, success] = focus_chain_listeners_.emplace(id, std::move(new_listener));
-  FX_DCHECK(success);
-
-  // Dispatch current chain on register.
-  DispatchFocusChainTo(focus_chain_listeners_.at(id));
 }
 
 void SceneGraph::RegisterViewFocuser(SessionId session_id,
@@ -125,20 +92,14 @@ void SceneGraph::RegisterViewFocuser(SessionId session_id,
 
   fit::function<void(ViewRef, ViewFocuser::RequestFocusCallback)> request_focus_handler =
       [this, session_id](ViewRef view_ref, ViewFocuser::RequestFocusCallback response) {
-        bool is_honored = false;
         std::optional<zx_koid_t> requestor = this->view_tree().ConnectedViewRefKoidOf(session_id);
-        if (requestor) {
-          auto status = this->RequestFocusChange(requestor.value(), utils::ExtractKoid(view_ref));
-          if (status == ViewTree::FocusChangeStatus::kAccept) {
-            is_honored = true;
-          }
+        if (requestor.has_value() &&
+            request_focus_(requestor.value(), utils::ExtractKoid(view_ref))) {
+          response(fit::ok());  // Request received, and honored.
+          return;
         }
 
-        if (is_honored) {
-          response(fit::ok());  // Request received, and honored.
-        } else {
-          response(fit::error(Error::DENIED));  // Report a problem.
-        }
+        response(fit::error(Error::DENIED));  // Report a problem.
       };
 
   view_focuser_endpoints_.emplace(
@@ -149,72 +110,37 @@ void SceneGraph::UnregisterViewFocuser(SessionId session_id) {
   view_focuser_endpoints_.erase(session_id);
 }
 
-std::string FocusChainToString(const std::vector<zx_koid_t>& focus_chain) {
-  if (focus_chain.empty())
-    return "(none)";
-
-  std::stringstream output;
-  output << "[";
-  for (zx_koid_t koid : focus_chain) {
-    output << koid << " ";
-  }
-  output << "]";
-  return output.str();
-}
-
-void SceneGraph::DispatchFocusChainTo(const fuchsia::ui::focus::FocusChainListenerPtr& listener) {
-  FocusChainListener::OnFocusChangeCallback callback = [] { /* No flow control yet. */ };
-  listener->OnFocusChange(view_tree_.CloneFocusChain(), std::move(callback));
-}
-
-void SceneGraph::DispatchFocusChain() {
-  TRACE_DURATION("gfx", "SceneGraphFocusChainDispatch", "chain_depth",
-                 view_tree_.focus_chain().size());
-  for (auto& [id, listener] : focus_chain_listeners_) {
-    DispatchFocusChainTo(listener);
-  }
-}
-
-void SceneGraph::MaybeDispatchFidlFocusChainAndFocusEvents(
-    const std::vector<zx_koid_t>& old_focus_chain) {
-  const std::vector<zx_koid_t>& new_focus_chain = view_tree_.focus_chain();
-
-  if (old_focus_chain == new_focus_chain) {
-    FX_VLOGS(1) << "Scenic, view focus changed: false" << std::endl
-                << "\t Old focus chain: " << FocusChainToString(old_focus_chain);
+void SceneGraph::OnNewFocusedView(const zx_koid_t newly_focused_koid) {
+  if (currently_focused_koid_ == newly_focused_koid) {
     return;
   }
 
-  FX_VLOGS(1) << "Scenic, view focus changed: true" << std::endl
-              << "\t Old focus chain: " << FocusChainToString(old_focus_chain) << std::endl
-              << "\t New focus chain: " << FocusChainToString(new_focus_chain);
-
-  DispatchFocusChain();
-
+  const zx_koid_t old_focused_koid = currently_focused_koid_;
+  currently_focused_koid_ = newly_focused_koid;
   const zx_time_t focus_time = dispatcher_clock_now();
-  if (!old_focus_chain.empty()) {
+  if (old_focused_koid != ZX_KOID_INVALID) {
     fuchsia::ui::input::FocusEvent focus;
     focus.event_time = focus_time;
     focus.focused = false;
 
-    if (view_tree_.EventReporterOf(old_focus_chain.back())) {
+    if (view_tree_.EventReporterOf(old_focused_koid)) {
       fuchsia::ui::input::InputEvent input;
       input.set_focus(std::move(focus));
-      view_tree_.EventReporterOf(old_focus_chain.back())->EnqueueEvent(std::move(input));
+      view_tree_.EventReporterOf(old_focused_koid)->EnqueueEvent(std::move(input));
     } else {
       FX_VLOGS(1) << "Old focus event; could not enqueue. No reporter. Event was: " << focus;
     }
   }
 
-  if (!new_focus_chain.empty()) {
+  if (currently_focused_koid_ != ZX_KOID_INVALID) {
     fuchsia::ui::input::FocusEvent focus;
     focus.event_time = focus_time;
     focus.focused = true;
 
-    if (view_tree_.EventReporterOf(new_focus_chain.back())) {
+    if (view_tree_.EventReporterOf(currently_focused_koid_)) {
       fuchsia::ui::input::InputEvent input;
       input.set_focus(std::move(focus));
-      view_tree_.EventReporterOf(new_focus_chain.back())->EnqueueEvent(std::move(input));
+      view_tree_.EventReporterOf(currently_focused_koid_)->EnqueueEvent(std::move(input));
     } else {
       FX_VLOGS(1) << "New focus event; could not enqueue. No reporter. Event was: " << focus;
     }

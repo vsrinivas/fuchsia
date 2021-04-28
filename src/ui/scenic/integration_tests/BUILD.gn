@@ -1,0 +1,40 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//src/graphics/lib/magma/gnbuild/magma.gni")
+
+group("integration_tests") {
+  testonly = true
+  public_deps = [ ":gfx_integration_tests" ]
+}
+
+executable("gfx_focus_integration_test_bin") {
+  testonly = true
+  sources = [ "gfx_focus_integration_test.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.ui.focus",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/syslog/cpp",
+    "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//src/ui/scenic/lib/utils",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+fuchsia_test_component("gfx_focus_integration_test") {
+  testonly = true
+  component_name = "gfx_focus_integration_test"
+  manifest = "meta/gfx_focus_integration_test.cmx"
+  deps = [ ":gfx_focus_integration_test_bin" ]
+}
+
+fuchsia_test_package("gfx_integration_tests") {
+  test_components = [ ":gfx_focus_integration_test" ]
+  test_specs = {
+    environments = [ aemu_env ] + magma_libvulkan_hardware_envs
+  }
+}

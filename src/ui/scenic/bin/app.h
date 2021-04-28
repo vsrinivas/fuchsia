@@ -21,6 +21,7 @@
 #include "src/ui/scenic/lib/flatland/flatland_manager.h"
 #include "src/ui/scenic/lib/flatland/link_system.h"
 #include "src/ui/scenic/lib/flatland/uber_struct_system.h"
+#include "src/ui/scenic/lib/focus/focus_manager.h"
 #include "src/ui/scenic/lib/gfx/engine/engine.h"
 #include "src/ui/scenic/lib/input/input_system.h"
 #include "src/ui/scenic/lib/scenic/scenic.h"
@@ -96,6 +97,7 @@ class App {
   std::shared_ptr<flatland::DisplayCompositor> flatland_compositor_;
 
   std::shared_ptr<input::InputSystem> input_;
+  std::unique_ptr<focus::FocusManager> focus_manager_;
 
   std::shared_ptr<scheduling::DefaultFrameScheduler> frame_scheduler_;
 

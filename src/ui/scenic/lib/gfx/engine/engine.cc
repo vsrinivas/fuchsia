@@ -31,7 +31,7 @@ namespace gfx {
 
 Engine::Engine(sys::ComponentContext* app_context, escher::EscherWeakPtr weak_escher,
                std::shared_ptr<GfxBufferCollectionImporter> buffer_collection_importer,
-               inspect::Node inspect_node)
+               inspect::Node inspect_node, RequestFocusFunc request_focus)
     : escher_(std::move(weak_escher)),
       engine_renderer_(std::make_unique<EngineRenderer>(
           escher_,
@@ -40,7 +40,7 @@ Engine::Engine(sys::ComponentContext* app_context, escher::EscherWeakPtr weak_es
       image_factory_(std::make_unique<escher::ImageFactoryAdapter>(escher()->gpu_allocator(),
                                                                    escher()->resource_recycler())),
       buffer_collection_importer_(buffer_collection_importer),
-      scene_graph_(app_context),
+      scene_graph_(app_context, std::move(request_focus)),
       inspect_node_(std::move(inspect_node)),
       weak_factory_(this) {
   FX_DCHECK(escher_);
@@ -54,7 +54,7 @@ Engine::Engine(sys::ComponentContext* app_context, escher::EscherWeakPtr weak_es
       image_factory_(escher() ? std::make_unique<escher::ImageFactoryAdapter>(
                                     escher()->gpu_allocator(), escher()->resource_recycler())
                               : nullptr),
-      scene_graph_(app_context),
+      scene_graph_(app_context, /*request_focus*/ [](auto...) { return false; }),
       weak_factory_(this) {
   InitializeInspectObjects();
   InitializeAnnotationManager();

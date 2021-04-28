@@ -8,8 +8,10 @@
 
 namespace focus {
 
-FocusManager::FocusManager(inspect::Node inspect_node)
-    : focus_chain_listener_registry_(this), inspect_node_(std::move(inspect_node)) {
+FocusManager::FocusManager(inspect::Node inspect_node, LegacyFocusListener legacy_focus_listener)
+    : focus_chain_listener_registry_(this),
+      legacy_focus_listener_(std::move(legacy_focus_listener)),
+      inspect_node_(std::move(inspect_node)) {
   // Track the focus chain in inspect.
   lazy_ = inspect_node_.CreateLazyValues("values", [this] {
     inspect::Inspector inspector;
@@ -91,6 +93,7 @@ void FocusManager::DispatchFocusChain() {
   for (auto& [_, listener] : focus_chain_listeners_) {
     DispatchFocusChainTo(listener);
   }
+  legacy_focus_listener_(focus_chain_.empty() ? ZX_KOID_INVALID : focus_chain_.back());
 }
 
 fuchsia::ui::views::ViewRef FocusManager::CloneViewRefOf(zx_koid_t koid) const {

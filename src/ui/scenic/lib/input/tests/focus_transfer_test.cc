@@ -123,14 +123,9 @@ class FocusTransferTest : public InputSystemTest {
                    client_2 = CreateClient("View 2", std::move(view_pair_2.view_token));
 
     // Transfer focus to client 1.
-    {
-      root_session.SetViewKoid(engine()->scene_graph()->view_tree().focus_chain()[0]);
-      auto status =
-          engine()->scene_graph()->RequestFocusChange(root_session.ViewKoid(), client_1.ViewKoid());
-      ASSERT_EQ(status, ViewTree::FocusChangeStatus::kAccept);
-
-      RunLoopUntilIdle();  // Flush out focus events to clients.
-    }
+    ASSERT_EQ(focus_manager_.RequestFocus(focus_manager_.focus_chain()[0], client_1.ViewKoid()),
+              focus::FocusChangeStatus::kAccept);
+    RunLoopUntilIdle();  // Flush out focus events to clients.
 
     // Transfer ownership to test fixture.
     root_session_ = std::make_unique<SessionWrapper>(std::move(root_session));
