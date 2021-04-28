@@ -502,6 +502,32 @@ generated_file("my_file") {
 }
 ```
 
+### Prefer relative paths from `rebase_path()` {#prefer-relative-paths-from-rebase-path}
+
+Always specify a `new_base` in `rebase_path()`, for example
+`rebase_path("foo/bar.txt", root_build_dir)`. Avoid its one-parameter form, that
+is `rebase_path("foo/bar.txt")`.
+
+GN's `rebase_path()` has three parameters, with the latter two being optional.
+Its one-parameter form returns an absolute path, and it is
+[being deprecated][rebase-path-thread]. Avoid it in build templates and targets.
+The value of `new_base` varies case-by-case, with `root_build_dir` being a
+common choice, because it is where build scripts are executed. See more
+information about `rebase_path()` in its
+[GN reference][gn-reference-rebase-path].
+
+Relative paths can stay unchanged when paths to project or build output
+directory changes. It has a few advantages over absolute paths:
+
+*   Protects user privacy by not leaking potentially sensitive information from
+    paths in build outputs.
+*   Improves efficiency of content-addressed caches.
+*   Makes interactions between bots possible, for example, one bot performs an
+    action following another bot.
+
+See also:
+[`rebase_path(x)` returning absolute paths considered harmful?][rebase-path-thread]
+
 ## Patterns and anti-patterns {#patterns-and-anti-patterns}
 
 ### Target outputs {#target-outputs}
@@ -586,3 +612,6 @@ by the Chromium team.
 
 An allowlist has been set up in `//.gn`. Please consult `OWNERS` for changes
 made to this allowlist.
+
+[rebase-path-thread]: https://groups.google.com/a/chromium.org/g/gn-dev/c/WOFiYgcGgjw
+[gn-reference-rebase-path]: https://gn.googlesource.com/gn/+/master/docs/reference.md#func_rebase_path

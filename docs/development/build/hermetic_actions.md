@@ -93,7 +93,8 @@ format of a depfile is one or more lines as follows:
 ```
 
 All paths in a depfile must be relative to `root_build_dir` (which is set as the
-current working directory for actions).
+current working directory for actions). See also:
+[prefer relative paths from `rebase_path()`][relative-paths].
 
 Tools like compilers should (and do) support emitting a trace of all of the
 files used in compilation in the form of a depfile.
@@ -264,3 +265,4 @@ See also: [hermetic actions in open projects][hermetic-actions-bb]
 [depfile]: https://gn.googlesource.com/gn/+/master/docs/reference.md#var_depfile
 [hermetic-actions-bb]: /docs/contribute/open_projects/build/hermetic_actions.md
 [no_op]: /docs/development/build/ninja_no_op.md
+[relative-paths]: /docs/concepts/build_system/best_practices.md#prefer-relative-paths-from-rebase-path
