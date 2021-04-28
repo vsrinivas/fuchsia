@@ -3710,6 +3710,13 @@ Whether libraries under //vendor should be linted.
 
 From //build/fidl/fidl_library.gni:13
 
+### virtcon_logo_path
+Path to file to use for logo
+
+**Current value (from the default):** `"//src/bringup/bin/virtcon2/data/square-logo.riv"`
+
+From //src/bringup/bin/virtcon2/virtcon_args.gni:7
+
 ### virtmagma_debug
 Enable verbose logging in virtmagma-related code
 
