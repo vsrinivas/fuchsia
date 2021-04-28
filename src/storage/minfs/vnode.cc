@@ -136,8 +136,6 @@ zx::status<LazyBuffer*> VnodeMinfs::GetIndirectFile() {
 // TODO(smklein): Even this hack can be optimized; a bitmap could be used to
 // track all 'empty/read/dirty' blocks for each vnode, rather than reading
 // the entire file.
-//
-// TODO(fxbug.dev/51589): Add init metrics.
 zx_status_t VnodeMinfs::InitVmo() {
   TRACE_DURATION("minfs", "VnodeMinfs::InitVmo");
   if (vmo_.is_valid()) {
@@ -145,6 +143,7 @@ zx_status_t VnodeMinfs::InitVmo() {
   }
 
   zx_status_t status;
+  fs::Ticker ticker(fs_->StartTicker());
   const size_t vmo_size = fbl::round_up(GetSize(), fs_->BlockSize());
   if ((status = zx::vmo::create(vmo_size, ZX_VMO_RESIZABLE, &vmo_)) != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to initialize vmo; error: " << status;
@@ -185,6 +184,9 @@ zx_status_t VnodeMinfs::InitVmo() {
   }
   status = fs_->GetMutableBcache()->RunRequests(builder.TakeOperations());
   ValidateVmoTail(GetSize());
+  // For now, we only track the time it takes to initialize VMOs.
+  // TODO(fxbug.dev/51589): add more expansive init metrics.
+  fs_->UpdateInitMetrics(0, 0, 0, 0, ticker.End());
   return status;
 }
 
