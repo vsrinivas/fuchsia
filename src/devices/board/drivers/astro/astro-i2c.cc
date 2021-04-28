@@ -12,6 +12,7 @@
 #include <soc/aml-s905d2/s905d2-hw.h>
 
 #include "astro.h"
+#include "astro-gpios.h"
 
 namespace astro {
 
@@ -103,14 +104,25 @@ zx_status_t Astro::I2cInit() {
   // setup pinmux for our I2C busses
 
   // i2c_ao_0
-  gpio_impl_.SetAltFunction(S905D2_GPIOAO(2), 1);
-  gpio_impl_.SetAltFunction(S905D2_GPIOAO(3), 1);
+  gpio_impl_.SetAltFunction(GPIO_SOC_SENSORS_I2C_SDA, 1);
+  gpio_impl_.SetDriveStrength(GPIO_SOC_SENSORS_I2C_SDA, 4000, nullptr);
+
+  gpio_impl_.SetAltFunction(GPIO_SOC_SENSORS_I2C_SCL, 1);
+  gpio_impl_.SetDriveStrength(GPIO_SOC_SENSORS_I2C_SCL, 4000, nullptr);
+
   // i2c2
-  gpio_impl_.SetAltFunction(S905D2_GPIOZ(14), 3);
-  gpio_impl_.SetAltFunction(S905D2_GPIOZ(15), 3);
+  gpio_impl_.SetAltFunction(GPIO_SOC_TOUCH_I2C_SDA, 3);
+  gpio_impl_.SetDriveStrength(GPIO_SOC_TOUCH_I2C_SDA, 4000, nullptr);
+  gpio_impl_.SetAltFunction(GPIO_SOC_TOUCH_I2C_SCL, 3);
+  gpio_impl_.SetDriveStrength(GPIO_SOC_TOUCH_I2C_SCL, 4000, nullptr);
+
   // i2c3
-  gpio_impl_.SetAltFunction(S905D2_GPIOA(14), 2);
-  gpio_impl_.SetAltFunction(S905D2_GPIOA(15), 2);
+  gpio_impl_.SetAltFunction(GPIO_SOC_AV_I2C_SDA, 2);
+  gpio_impl_.SetDriveStrength(GPIO_SOC_AV_I2C_SDA, 3000, nullptr);
+
+  gpio_impl_.SetAltFunction(GPIO_SOC_AV_I2C_SCL, 2);
+  gpio_impl_.SetDriveStrength(GPIO_SOC_AV_I2C_SCL, 3000, nullptr);
+
 
   zx_status_t status = pbus_.DeviceAdd(&i2c_dev);
   if (status != ZX_OK) {
