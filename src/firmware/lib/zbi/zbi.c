@@ -6,7 +6,7 @@
 #include <stdbool.h>
 #include <string.h>
 
-// At most, a ZBI container can be the header + 32 bytes of length.
+// At most, a ZBI container can be the header + 32 bits of length.
 #define MAX_CONTAINER_SIZE (sizeof(zbi_header_t) + 0xFFFFFFFFull)
 
 struct check_state {
