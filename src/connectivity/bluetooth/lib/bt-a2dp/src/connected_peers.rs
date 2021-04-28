@@ -23,7 +23,12 @@ use {
         Future,
     },
     log::{info, warn},
-    std::{collections::HashMap, convert::TryInto, pin::Pin, sync::Arc},
+    std::{
+        collections::{hash_map::Entry, HashMap, HashSet},
+        convert::TryInto,
+        pin::Pin,
+        sync::Arc,
+    },
 };
 
 use crate::{codec::CodecNegotiation, peer::Peer, permits::Permits, stream::Streams};
@@ -63,8 +68,9 @@ impl Inspect for &mut PeerStats {
 #[derive(Default)]
 struct DiscoveredPeers {
     /// The peers that we have discovered, with their descriptors and potential preferred
-    /// endpoint direction.
-    descriptors: HashMap<PeerId, (ProfileDescriptor, Option<avdtp::EndpointType>)>,
+    /// endpoint directions. Because the same peer can be discovered multiple times, with
+    /// potentially different endpoints, we maintain a set of advertised directions.
+    descriptors: HashMap<PeerId, (ProfileDescriptor, HashSet<avdtp::EndpointType>)>,
     /// Holds the child nodes which include the ids and profile descriptors for inspect.
     stats: HashMap<PeerId, PeerStats>,
     /// Inspect node, usually at "discovered" in the tree.
@@ -76,9 +82,17 @@ impl DiscoveredPeers {
         &mut self,
         id: PeerId,
         descriptor: ProfileDescriptor,
-        preferred_direction: Option<avdtp::EndpointType>,
+        directions: HashSet<avdtp::EndpointType>,
     ) {
-        self.descriptors.insert(id, (descriptor, preferred_direction));
+        match self.descriptors.entry(id) {
+            Entry::Occupied(mut entry) => {
+                entry.get_mut().0 = descriptor;
+                entry.get_mut().1.extend(&directions);
+            }
+            Entry::Vacant(entry) => {
+                let _ = entry.insert((descriptor, directions));
+            }
+        };
         self.stats
             .entry(id)
             .or_insert({
@@ -93,8 +107,9 @@ impl DiscoveredPeers {
         self.stats.get_mut(&id).map(|stats| stats.record_connected());
     }
 
-    fn get(&self, id: &PeerId) -> Option<&(ProfileDescriptor, Option<avdtp::EndpointType>)> {
-        self.descriptors.get(id)
+    /// Returns the descriptor and preferred endpoint direction associated with the peer `id`.
+    fn get(&self, id: &PeerId) -> Option<(ProfileDescriptor, Option<avdtp::EndpointType>)> {
+        self.descriptors.get(id).map(|(desc, dirs)| (desc.clone(), find_preferred_direction(dirs)))
     }
 }
 
@@ -102,6 +117,20 @@ impl Inspect for &mut DiscoveredPeers {
     fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
         self.inspect_node = parent.create_child(name);
         Ok(())
+    }
+}
+
+/// Given a set of endpoint `directions`, returns the preferred direction or None
+/// if both Sink and Source are specified.
+fn find_preferred_direction(
+    directions: &HashSet<avdtp::EndpointType>,
+) -> Option<avdtp::EndpointType> {
+    if directions.len() == 1 {
+        directions.iter().next().cloned()
+    } else {
+        // Otherwise, either there are no A2DP services or both Sink & Source are specified
+        // in which case there is no preferred direction.
+        None
     }
 }
 
@@ -199,9 +228,9 @@ impl ConnectedPeers {
         &mut self,
         id: PeerId,
         desc: ProfileDescriptor,
-        preferred_direction: Option<avdtp::EndpointType>,
+        preferred_directions: HashSet<avdtp::EndpointType>,
     ) {
-        self.discovered.insert(id, desc.clone(), preferred_direction);
+        self.discovered.insert(id, desc.clone(), preferred_directions);
         self.get(&id).map(|p| p.set_descriptor(desc));
     }
 
@@ -297,8 +326,8 @@ impl ConnectedPeers {
         self.discovered.connected(id);
 
         let peer_preferred_direction = if let Some((desc, dir)) = self.discovered.get(&id) {
-            peer.set_descriptor(desc.clone());
-            dir.clone()
+            peer.set_descriptor(desc);
+            dir
         } else {
             None
         };
@@ -411,7 +440,10 @@ mod tests {
     use fuchsia_inspect::assert_data_tree;
     use futures::channel::mpsc;
     use futures::{self, pin_mut, task::Poll, StreamExt};
-    use std::convert::{TryFrom, TryInto};
+    use std::{
+        convert::{TryFrom, TryInto},
+        iter::FromIterator,
+    };
 
     use crate::{media_task::tests::TestMediaTaskBuilder, media_types::*, stream::Stream};
 
@@ -522,6 +554,23 @@ mod tests {
         assert_eq!(weak.key(), &id2);
 
         exercise_avdtp(&mut exec, remote2, &peer2);
+    }
+
+    #[test]
+    fn find_preferred_direction_returns_correct_endpoints() {
+        let empty = HashSet::new();
+        assert_eq!(find_preferred_direction(&empty), None);
+
+        let sink_only = HashSet::from_iter(vec![avdtp::EndpointType::Sink].into_iter());
+        assert_eq!(find_preferred_direction(&sink_only), Some(avdtp::EndpointType::Sink));
+
+        let source_only = HashSet::from_iter(vec![avdtp::EndpointType::Source].into_iter());
+        assert_eq!(find_preferred_direction(&source_only), Some(avdtp::EndpointType::Source));
+
+        let both = HashSet::from_iter(
+            vec![avdtp::EndpointType::Sink, avdtp::EndpointType::Source].into_iter(),
+        );
+        assert_eq!(find_preferred_direction(&both), None);
     }
 
     // Arbitrarily chosen ID for the SBC sink stream endpoint.
@@ -777,10 +826,13 @@ mod tests {
     /// Tests connection initiation selects the appropriate stream endpoint based
     /// on a biased codec negotiation that is set from the peer's discovered services.
     #[test]
-    fn connect_initiation_uses_biased_codec_negotiation() {
+    fn connect_initiation_uses_biased_codec_negotiation_by_peer() {
         let (mut exec, mut peers, _stream, sbc_codec, _aac_codec) = setup_negotiation_test();
         let id = PeerId(1);
         let (remote, channel) = Channel::create();
+
+        // System biases towards the Source direction (called when the AudioMode FIDL changes).
+        peers.set_preferred_direction(avdtp::EndpointType::Source);
 
         // New fake peer discovered with some descriptor - the peer's SDP entry shows Sink.
         let remote = avdtp::Peer::new(remote);
@@ -789,9 +841,9 @@ mod tests {
             major_version: 1,
             minor_version: 2,
         };
-        let preferred_direction = Some(avdtp::EndpointType::Sink);
+        let preferred_direction = vec![avdtp::EndpointType::Sink];
         let delay = zx::Duration::from_seconds(1);
-        peers.found(id, desc, preferred_direction);
+        peers.found(id, desc, HashSet::from_iter(preferred_direction.into_iter()));
 
         peers.connected(id, channel, Some(delay)).expect("connect control channel is ok");
         // run the start task until it's stalled.
@@ -807,7 +859,7 @@ mod tests {
 
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
         // Even though the peer supports both SBC Sink and Source, we expect to negotiate and start
-        // on the Sink endpoint since that is the preferred one.
+        // on the Sink endpoint since that is the peer's preferred one.
         let (peer_sbc_source_seid, peer_sbc_source_endpoint) = sbc_source_endpoint();
         let (peer_sbc_sink_seid, peer_sbc_sink_endpoint) = sbc_sink_endpoint();
         expect_peer_discovery(
@@ -841,8 +893,90 @@ mod tests {
                 // We expect the set configuration to apply to the remote peer's Sink SEID and the
                 // local Source SEID.
                 assert_eq!(peer_sbc_sink_seid, local_stream_id);
-                let local_sbc_sink_seid: avdtp::StreamEndpointId =
+                let local_sbc_source_seid: avdtp::StreamEndpointId =
                     SBC_SOURCE_SEID.try_into().unwrap();
+                assert_eq!(local_sbc_source_seid, remote_stream_id);
+                responder.send().expect("response sends");
+            }
+            x => panic!("Expected a ready set configuration request, got {:?}", x),
+        };
+    }
+
+    /// Tests connection initiation selects the appropriate stream endpoint based
+    /// on a biased codec negotiation that is set from by the system (in practice, the AudioMode
+    /// FIDL). This case typically occurs when a peer advertises both sink and source, and therefore
+    /// has no preference for the endpoint direction.
+    #[test]
+    fn connect_initiation_uses_biased_codec_negotiation_by_system() {
+        let (mut exec, mut peers, _stream, sbc_codec, _aac_codec) = setup_negotiation_test();
+        let id = PeerId(1);
+        let (remote, channel) = Channel::create();
+
+        // System biases towards the Source direction (called when the AudioMode FIDL changes).
+        peers.set_preferred_direction(avdtp::EndpointType::Source);
+
+        // New fake peer discovered with separate Sink and Source entries.
+        let remote = avdtp::Peer::new(remote);
+        let desc = ProfileDescriptor {
+            profile_id: ServiceClassProfileIdentifier::AdvancedAudioDistribution,
+            major_version: 1,
+            minor_version: 2,
+        };
+        peers.found(
+            id,
+            desc.clone(),
+            HashSet::from_iter(vec![avdtp::EndpointType::Source].into_iter()),
+        );
+        peers.found(id, desc, HashSet::from_iter(vec![avdtp::EndpointType::Sink].into_iter()));
+
+        let delay = zx::Duration::from_seconds(1);
+        peers.connected(id, channel, Some(delay)).expect("connect control channel is ok");
+        let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
+
+        let mut remote_requests = remote.take_request_stream();
+        // Should wait for the specified amount of time.
+        assert!(exec.run_until_stalled(&mut remote_requests.next()).is_pending());
+        exec.set_fake_time(fasync::Time::after(delay + zx::Duration::from_micros(1)));
+        exec.wake_expired_timers();
+        let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
+
+        // Because the peer advertises both Sink and Source, we fall back to the system-biased
+        // direction, which is Source for the peer.
+        let (peer_sbc_source_seid, peer_sbc_source_endpoint) = sbc_source_endpoint();
+        let (peer_sbc_sink_seid, peer_sbc_sink_endpoint) = sbc_sink_endpoint();
+        expect_peer_discovery(
+            &mut exec,
+            &mut remote_requests,
+            vec![peer_sbc_source_endpoint, peer_sbc_sink_endpoint],
+        );
+        for _twice in 1..=2 {
+            match exec.run_until_stalled(&mut remote_requests.next()) {
+                Poll::Ready(Some(Ok(avdtp::Request::GetCapabilities { stream_id, responder }))) => {
+                    let codec = match stream_id {
+                        id if id == peer_sbc_source_seid => sbc_codec.clone(),
+                        id if id == peer_sbc_sink_seid => sbc_codec.clone(),
+                        x => panic!("Got unexpected get_capabilities seid {:?}", x),
+                    };
+                    responder
+                        .send(&vec![avdtp::ServiceCapability::MediaTransport, codec])
+                        .expect("respond succeeds");
+                }
+                x => panic!("Expected a ready get capabilities request, got {:?}", x),
+            };
+        }
+
+        match exec.run_until_stalled(&mut remote_requests.next()) {
+            Poll::Ready(Some(Ok(avdtp::Request::SetConfiguration {
+                local_stream_id,
+                remote_stream_id,
+                capabilities: _,
+                responder,
+            }))) => {
+                // We expect the set configuration to apply to the remote peer's Source SEID and the
+                // local Sink SEID.
+                assert_eq!(peer_sbc_source_seid, local_stream_id);
+                let local_sbc_sink_seid: avdtp::StreamEndpointId =
+                    SBC_SINK_SEID.try_into().unwrap();
                 assert_eq!(local_sbc_sink_seid, remote_stream_id);
                 responder.send().expect("response sends");
             }

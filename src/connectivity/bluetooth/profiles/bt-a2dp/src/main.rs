@@ -35,7 +35,7 @@ use {
     futures::{self, Stream, StreamExt},
     log::{debug, error, info, trace, warn},
     parking_lot::Mutex,
-    std::{convert::TryFrom, sync::Arc},
+    std::{collections::HashSet, convert::TryFrom, sync::Arc},
 };
 
 mod avrcp_relay;
@@ -354,21 +354,22 @@ async fn connect_after_timeout(
     }
 }
 
-/// Given a set of service classes, tries to find the preferred A2DP direction.
-fn find_preferred_direction(service_classes: Vec<AssignedNumber>) -> Option<avdtp::EndpointType> {
-    let source = service_classes
+/// Returns the set of supported endpoint directions from a list of service classes.
+fn find_endpoint_directions(service_classes: Vec<AssignedNumber>) -> HashSet<avdtp::EndpointType> {
+    let mut directions = HashSet::new();
+    if service_classes
         .iter()
-        .find(|an| an.number == bredr::ServiceClassProfileIdentifier::AudioSource as u16);
-    let sink = service_classes
-        .iter()
-        .find(|an| an.number == bredr::ServiceClassProfileIdentifier::AudioSink as u16);
-    match (source, sink) {
-        (Some(_), None) => Some(avdtp::EndpointType::Source),
-        (None, Some(_)) => Some(avdtp::EndpointType::Sink),
-        // Otherwise, either there are no A2DP services or both Sink & Source are specified
-        // in which case there is no preferred direction.
-        _ => None,
+        .any(|an| an.number == bredr::ServiceClassProfileIdentifier::AudioSource as u16)
+    {
+        let _ = directions.insert(avdtp::EndpointType::Source);
     }
+    if service_classes
+        .iter()
+        .any(|an| an.number == bredr::ServiceClassProfileIdentifier::AudioSink as u16)
+    {
+        let _ = directions.insert(avdtp::EndpointType::Sink);
+    }
+    directions
 }
 
 /// Handles found services. Stores the found information and then spawns a task which will
@@ -382,7 +383,7 @@ fn handle_services_found(
 ) {
     let service_classes = find_service_classes(attributes);
     let service_names: Vec<&str> = service_classes.iter().map(|an| an.name).collect();
-    let peer_preferred_direction = find_preferred_direction(service_classes);
+    let peer_preferred_directions = find_endpoint_directions(service_classes);
     let profiles = find_profile_descriptors(attributes).unwrap_or(vec![]);
     let profile_names: Vec<String> = profiles
         .iter()
@@ -405,7 +406,7 @@ fn handle_services_found(
     };
 
     debug!("Marking peer {} found...", peer_id);
-    peers.lock().found(peer_id.clone(), profile, peer_preferred_direction);
+    peers.lock().found(peer_id.clone(), profile, peer_preferred_directions);
 
     if let Some(initiator_delay) = initiator_delay {
         fasync::Task::local(connect_after_timeout(
@@ -648,7 +649,7 @@ mod tests {
     use fuchsia_bluetooth::types::Channel;
     use futures::channel::mpsc;
     use futures::{task::Poll, StreamExt};
-    use std::convert::TryInto;
+    use std::{convert::TryInto, iter::FromIterator};
 
     pub(crate) fn fake_cobalt_sender() -> (CobaltSender, mpsc::Receiver<CobaltEvent>) {
         const BUFFER_SIZE: usize = 100;
@@ -888,13 +889,13 @@ mod tests {
     }
 
     #[test]
-    fn find_preferred_direction_returns_expected_direction() {
+    fn find_endpoint_directions_returns_expected_direction() {
         let empty = Vec::new();
-        assert_eq!(find_preferred_direction(empty), None);
+        assert_eq!(find_endpoint_directions(empty), HashSet::new());
 
         let no_a2dp_attributes =
             vec![AssignedNumber { number: 0x1234, abbreviation: None, name: "FooBar" }];
-        assert_eq!(find_preferred_direction(no_a2dp_attributes), None);
+        assert_eq!(find_endpoint_directions(no_a2dp_attributes), HashSet::new());
 
         let sink_attribute = AssignedNumber {
             number: bredr::ServiceClassProfileIdentifier::AudioSink as u16,
@@ -908,12 +909,17 @@ mod tests {
         };
 
         let only_sink = vec![sink_attribute.clone()];
-        assert_eq!(find_preferred_direction(only_sink), Some(avdtp::EndpointType::Sink));
+        let expected_directions = HashSet::from_iter(vec![avdtp::EndpointType::Sink].into_iter());
+        assert_eq!(find_endpoint_directions(only_sink), expected_directions);
 
         let only_source = vec![source_attribute.clone()];
-        assert_eq!(find_preferred_direction(only_source), Some(avdtp::EndpointType::Source));
+        let expected_directions = HashSet::from_iter(vec![avdtp::EndpointType::Source].into_iter());
+        assert_eq!(find_endpoint_directions(only_source), expected_directions);
 
         let both = vec![sink_attribute, source_attribute];
-        assert_eq!(find_preferred_direction(both), None);
+        let expected_directions = HashSet::from_iter(
+            vec![avdtp::EndpointType::Sink, avdtp::EndpointType::Source].into_iter(),
+        );
+        assert_eq!(find_endpoint_directions(both), expected_directions);
     }
 }
