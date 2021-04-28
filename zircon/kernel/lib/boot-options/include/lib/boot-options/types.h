@@ -53,5 +53,6 @@ constexpr uint64_t kMaxEntropyLength = 1u << 20;
 // List of command lines argument names that are explicitly referenced in code.
 // TODO(fxb/74740): remove all usages of this.
 constexpr std::string_view kForceWatchdogDisabledName = "kernel.force-watchdog-disabled";
+constexpr std::string_view kPageScannerEnableEvictionName = "kernel.page-scanner.enable-eviction";
 
 #endif  // ZIRCON_KERNEL_LIB_BOOT_OPTIONS_INCLUDE_LIB_BOOT_OPTIONS_TYPES_H_

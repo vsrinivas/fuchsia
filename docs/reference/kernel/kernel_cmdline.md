@@ -343,12 +343,6 @@ additional system predictability for benchmarking or other workloads.
 The page scanner must be running for this option to have any effect. It can be
 enabled at boot with the `kernel.page-scanner.start-at-boot` option.
 
-## kernel.page-scanner.enable-eviction=\<bool>
-
-This option, true by default, allows for the scanner to evict user pager backed
-pages. Eviction can reduce memory usage and prevent out of memory scenarios, but
-removes some timing predictability from system behavior.
-
 ## kernel.page-scanner.promote-no-clones=\<bool>
 
 This option, false by default, allows the scanner to evict first the pages owned

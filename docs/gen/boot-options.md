@@ -435,8 +435,15 @@ This option enables verbose logging from the memory limit library.
 This option sets an upper-bound in megabytes for the system memory.
 If set to zero, then no upper-bound is set.
 
-For example, choosing a low enough value would allow a user simulating a system with less physical
-memory than it actually has.
+For example, choosing a low enough value would allow a user simulating a system with
+less physical memory than it actually has.
+
+### kernel.page-scanner.enable-eviction=\<bool>
+**Default:** `true`
+
+When set, allows the page scanner to evict user pager backed pages. Eviction can
+reduce memory usage and prevent out of memory scenarios, but removes some
+timing predictability from system behavior.
 
 
 ## Options available only on arm64 machines

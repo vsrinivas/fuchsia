@@ -415,8 +415,15 @@ DEFINE_OPTION("kernel.memory-limit-mb", uint64_t, memory_limit_mb, {0}, R"""(
 This option sets an upper-bound in megabytes for the system memory.
 If set to zero, then no upper-bound is set.
 
-For example, choosing a low enough value would allow a user simulating a system with less physical
-memory than it actually has.
+For example, choosing a low enough value would allow a user simulating a system with
+less physical memory than it actually has.
+)""")
+
+DEFINE_OPTION("kernel.page-scanner.enable-eviction", bool, page_scanner_enable_eviction, {true},
+              R"""(
+When set, allows the page scanner to evict user pager backed pages. Eviction can
+reduce memory usage and prevent out of memory scenarios, but removes some
+timing predictability from system behavior.
 )""")
 
 // Machine-specific options are included here for all the kernel places.

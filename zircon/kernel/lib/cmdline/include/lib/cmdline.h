@@ -124,7 +124,6 @@ extern Cmdline gCmdline;
 
 // TODO(53594): migrate these to BootOptions.
 namespace kernel_option {
-static constexpr const char kPageScannerEnableEviction[] = "kernel.page-scanner.enable-eviction";
 static constexpr const char kPageScannerDiscardableEvictionsPercent[] =
     "kernel.page-scanner.discardable-evictions-percent";
 static constexpr const char kPageScannerPageTableEvictionPolicy[] =

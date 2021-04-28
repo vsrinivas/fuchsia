@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/boot-options/boot-options.h>
 #include <lib/cmdline.h>
 #include <lib/console.h>
 #include <lib/counters.h>
@@ -472,7 +473,7 @@ static void scanner_init_func(uint level) {
   Thread *thread =
       Thread::Create("scanner-request-thread", scanner_request_thread, nullptr, LOW_PRIORITY);
   DEBUG_ASSERT(thread);
-  eviction_enabled = gCmdline.GetBool(kernel_option::kPageScannerEnableEviction, true);
+  eviction_enabled = gBootOptions->page_scanner_enable_eviction;
   zero_page_scans_per_second = gCmdline.GetUInt64(kernel_option::kPageScannerZeroPageScansPerSecond,
                                                   kDefaultZeroPageScansPerSecond);
   if (!gCmdline.GetBool(kernel_option::kPageScannerStartAtBoot, true)) {
@@ -544,7 +545,7 @@ static int cmd_scanner(int argc, const cmd_args *argv, uint32_t flags) {
     }
     if (!eviction_enabled) {
       printf("%s is false, reclamation request will have no effect\n",
-             kernel_option::kPageScannerEnableEviction);
+             kPageScannerEnableEvictionName.data());
     }
     scanner::EvictionLevel eviction_level = scanner::EvictionLevel::IncludeNewest;
     if (argc >= 4 && !strcmp(argv[3].str, "only_old")) {
