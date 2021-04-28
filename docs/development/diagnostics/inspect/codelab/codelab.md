@@ -87,19 +87,19 @@ command line arguments as strings to Reverse:
    * {C++}
 
       ```
-      fx shell run inspect_cpp_codelab_client
+      fx run fuchsia-pkg://fuchsia.com/inspect_cpp_codelab#meta/inspect_cpp_codelab_client.cmx
       ```
 
    * {Rust}
 
       ```
-      fx shell run inspect_rust_codelab_client
+      fx run fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/inspect_rust_codelab_client.cmx
       ```
 
    * {Dart}
 
       ```
-      fx shell run inspect_dart_codelab_client
+      fx run fuchsia-pkg://fuchsia.com/inspect_dart_codelab#meta/inspect_dart_codelab_client.cmx
       ```
 
 2. Run part 1 code, and reverse the string "Hello"
@@ -107,13 +107,13 @@ command line arguments as strings to Reverse:
    * {C++}
 
       ```
-      fx shell run inspect_cpp_codelab_client 1 Hello
+      fx run fuchsia-pkg://fuchsia.com/inspect_cpp_codelab#meta/inspect_cpp_codelab_client.cmx 1 Hello
       ```
 
    * {Rust}
 
       ```
-      fx shell run inspect_rust_codelab_client 1 Hello
+      fx run fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/inspect_rust_codelab_client.cmx 1 Hello
       ```
 
       This command prints some output containing errors.
@@ -121,7 +121,7 @@ command line arguments as strings to Reverse:
    * {Dart}
 
       ```
-      fx shell run inspect_dart_codelab_client 1 Hello
+      fx run fuchsia-pkg://fuchsia.com/inspect_dart_codelab#meta/inspect_dart_codelab_client.cmx 1 Hello
       ```
 
    These commands hang.
@@ -132,19 +132,19 @@ command line arguments as strings to Reverse:
    * {C++}
 
       ```
-      fx shell run inspect_cpp_codelab_client 1 Hello World
+      fx run fuchsia-pkg://fuchsia.com/inspect_cpp_codelab#meta/inspect_cpp_codelab_client.cmx 1 Hello World
       ```
 
    * {Rust}
 
       ```
-      fx shell run inspect_rust_codelab_client 1 Hello World
+      fx run fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/inspect_rust_codelab_client.cmx 1 Hello World
       ```
 
    * {Dart}
 
       ```
-      fx shell run inspect_dart_codelab_client 1 Hello World
+      fx run fuchsia-pkg://fuchsia.com/inspect_dart_codelab#meta/inspect_dart_codelab_client.cmx 1 Hello World
       ```
 
       This command also prints no outputs.
@@ -461,19 +461,19 @@ Now that you have added Inspect to your component, you can read what it says:
    * {C++}
 
       ```
-      fx run inspect_cpp_codelab_client 1 Hello
+      fx run fuchsia-pkg://fuchsia.com/inspect_cpp_codelab#meta/inspect_cpp_codelab_client.cmx 1 Hello
       ```
 
    * {Rust}
 
       ```
-      fx run inspect_rust_codelab_client 1 Hello
+      fx run fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/inspect_rust_codelab_client.cmx 1 Hello
       ```
 
    * {Dart}
 
       ```
-      fx run inspect_dart_codelab_client 1 Hello
+      fx run fuchsia-pkg://fuchsia.com/inspect_dart_codelab#meta/inspect_dart_codelab_client.cmx 1 Hello
       ```
 
    Note that these should still hang.
@@ -823,7 +823,7 @@ The output above shows that the connection is still open and it received one req
    * {C++}
 
       ```
-      fx shell run inspect_cpp_codelab_client 1 hello
+      fx run fuchsia-pkg://fuchsia.com/inspect_cpp_codelab#meta/inspect_cpp_codelab_client.cmx 1 hello
       Input: hello
       Output: olleh
       Done. Press Ctrl+C to exit
@@ -832,7 +832,7 @@ The output above shows that the connection is still open and it received one req
    * {Rust}
 
       ```
-      fx shell run inspect_rust_codelab_client 1 hello
+      fx run fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/inspect_rust_codelab_client.cmx 1 hello
       Input: hello
       Output: olleh
       Done. Press Ctrl+C to exit
@@ -841,7 +841,7 @@ The output above shows that the connection is still open and it received one req
    * {Dart}
 
       ```
-      fx shell run inspect_dart_codelab_client 1 hello
+      fx run fuchsia-pkg://fuchsia.com/inspect_dart_codelab#meta/inspect_dart_codelab_client.cmx 1 hello
       Input: hello
       Output: olleh
       Done. Press Ctrl+C to exit
@@ -916,19 +916,19 @@ You will need to diagnose and solve this problem.
    * {C++}
 
       ```
-      $ fx shell run inspect_cpp_codelab_client 2 hello
+      $ fx run fuchsia-pkg://fuchsia.com/inspect_cpp_codelab#meta/inspect_cpp_codelab_client.cmx 2 hello
       ```
 
    * {Rust}
 
       ```
-      $ fx shell run inspect_rust_codelab_client 2 hello
+      $ fx run fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/inspect_rust_codelab_client.cmx 2 hello
       ```
 
    * {Dart}
 
       ```
-      $ fx shell run inspect_dart_codelab_client 2 hello
+      $ fx run fuchsia-pkg://fuchsia.com/inspect_dart_codelab#meta/inspect_dart_codelab_client.cmx 2 hello
       ```
 
    Fortunately the FizzBuzz team instrumented their component using Inspect.
