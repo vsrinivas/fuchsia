@@ -116,7 +116,7 @@ impl std::fmt::Display for StepType {
                 );
                 format!("{}{}\n{}{}", style::Bold, welcome_str, DAEMON_CHECK_INTRO, style::Reset)
             }
-            StepType::AttemptStarted(i, total) => format!("\n\nAttempt {} of {}", i + 1, total),
+            StepType::AttemptStarted(i, total) => format!("\n\nKilling the daemon and trying again. Attempt {} of {}", i + 1, total),
             StepType::KillingZombieDaemons => KILLING_ZOMBIE_DAEMONS.to_string(),
             StepType::DaemonForceRestart => FORCE_DAEMON_RESTART_MESSAGE.to_string(),
             StepType::DaemonRunning => DAEMON_RUNNING_CHECK.to_string(),
