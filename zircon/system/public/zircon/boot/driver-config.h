@@ -34,11 +34,13 @@
 typedef struct {
   uint64_t mmio_phys;
   uint32_t irq;
+  uint32_t reserved;
 } dcfg_simple_t;
 
 // Used by KDRV_I8250_PIO_UART.
 typedef struct {
   uint16_t base;
+  uint16_t reserved;
   uint32_t irq;
 } dcfg_simple_pio_t;
 
@@ -47,11 +49,13 @@ typedef struct {
   uint64_t soc_mmio_phys;
   uint64_t uart_mmio_phys;
   uint32_t irq;
+  uint32_t reserved;
 } dcfg_soc_uart_t;
 
 // for KDRV_ARM_PSCI
 typedef struct {
-  bool use_hvc;
+  uint8_t use_hvc;
+  uint8_t reserved[7];
   uint64_t shutdown_args[3];
   uint64_t reboot_args[3];
   uint64_t reboot_bootloader_args[3];
@@ -72,8 +76,9 @@ typedef struct {
   uint64_t gich_offset;
   uint64_t gicv_offset;
   uint32_t ipi_base;
-  bool optional;
-  bool use_msi;
+  uint8_t optional;
+  uint8_t use_msi;
+  uint16_t reserved;
 } dcfg_arm_gicv2_driver_t;
 
 // for KDRV_ARM_GIC_V3
@@ -84,7 +89,8 @@ typedef struct {
   uint64_t gicr_stride;
   uint64_t mx8_gpr_phys;
   uint32_t ipi_base;
-  bool optional;
+  uint8_t optional;
+  uint8_t reserved[3];
 } dcfg_arm_gicv3_driver_t;
 
 // for KDRV_ARM_GENERIC_TIMER
@@ -158,6 +164,7 @@ typedef struct {
   dcfg_generic_32bit_watchdog_action_t disable_action;
   zx_duration_t watchdog_period_nsec;
   uint32_t flags;
+  uint32_t reserved;
 } dcfg_generic_32bit_watchdog_t;
 
 #endif  // SYSROOT_ZIRCON_BOOT_DRIVER_CONFIG_H_
