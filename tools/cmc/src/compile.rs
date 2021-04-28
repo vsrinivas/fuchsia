@@ -314,13 +314,16 @@ fn translate_use(
                 subscriptions: opt_subscriptions.map(|subscriptions| {
                     subscriptions
                         .iter()
-                        .map(|subscription| fsys::EventSubscription {
-                            event_name: Some(subscription.event.to_string()),
-                            mode: Some(match subscription.mode {
-                                Some(cml::EventMode::Sync) => fsys::EventMode::Sync,
-                                _ => fsys::EventMode::Async,
-                            }),
-                            ..fsys::EventSubscription::EMPTY
+                        .flat_map(|subscription| {
+                            let mode = subscription.mode.as_ref();
+                            subscription.event.iter().map(move |event| fsys::EventSubscription {
+                                event_name: Some(event.to_string()),
+                                mode: Some(match mode {
+                                    Some(cml::EventMode::Sync) => fsys::EventMode::Sync,
+                                    _ => fsys::EventMode::Async,
+                                }),
+                                ..fsys::EventSubscription::EMPTY
+                            })
                         })
                         .collect()
                 }),
@@ -1696,6 +1699,19 @@ mod tests {
                         "from": "parent",
                         "filter": { "name": "diagnostics" }
                     },
+                    {
+                        "event_stream": "foo_stream",
+                        "subscriptions": [
+                            {
+                                "event": [ "started", "diagnostics" ],
+                                "mode": "async",
+                            },
+                            {
+                                "event": [ "destroyed" ],
+                                "mode": "sync"
+                            }
+                        ]
+                    }
                 ],
                 "capabilities": [
                     {
@@ -1822,6 +1838,27 @@ mod tests {
                             ..fsys::UseEventDecl::EMPTY
                         }
                     ),
+                    fsys::UseDecl::EventStream(fsys::UseEventStreamDecl {
+                        name: Some("foo_stream".to_string()),
+                        subscriptions: Some(vec![
+                            fsys::EventSubscription {
+                                event_name: Some("started".to_string()),
+                                mode: Some(fsys::EventMode::Async),
+                                ..fsys::EventSubscription::EMPTY
+                            },
+                            fsys::EventSubscription {
+                                event_name: Some("diagnostics".to_string()),
+                                mode: Some(fsys::EventMode::Async),
+                                ..fsys::EventSubscription::EMPTY
+                            },
+                            fsys::EventSubscription {
+                                event_name: Some("destroyed".to_string()),
+                                mode: Some(fsys::EventMode::Sync),
+                                ..fsys::EventSubscription::EMPTY
+                            },
+                        ]),
+                        ..fsys::UseEventStreamDecl::EMPTY
+                    })
                 ]),
                 capabilities: Some(vec![
                     fsys::CapabilityDecl::Storage(fsys::StorageDecl {
