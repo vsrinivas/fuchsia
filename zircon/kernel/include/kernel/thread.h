@@ -274,7 +274,7 @@ class WaitQueue {
   // Used by WaitQueue and OwnedWaitQueue to manage changes to the maximum
   // priority of a wait queue due to external effects (thread priority change,
   // thread timeout, thread killed).
-  bool UpdatePriority(int old_prio) TA_REQ(thread_lock);
+  void UpdatePriority(int old_prio) TA_REQ(thread_lock);
 
   // A thread's priority has changed.  Update the wait queue bookkeeping to
   // properly reflect this change.
@@ -288,7 +288,7 @@ class WaitQueue {
   //
   // If |propagate| is PropagatePI::No, do not attempt to propagate the PI change.
   // This is the mode used by OwnedWaitQueue during a batch update of a PI chain.
-  bool PriorityChanged(Thread* t, int old_prio, PropagatePI propagate) TA_REQ(thread_lock);
+  void PriorityChanged(Thread* t, int old_prio, PropagatePI propagate) TA_REQ(thread_lock);
 
   // OwnedWaitQueue needs to be able to call this on WaitQueues to
   // determine if they are base WaitQueues or the OwnedWaitQueue
@@ -394,152 +394,130 @@ static inline void dump_thread_tid_during_panic(zx_koid_t tid,
 
 class PreemptionState {
  public:
-  RelaxedAtomic<bool>& preempt_pending() { return preempt_pending_; }
-  const RelaxedAtomic<bool>& preempt_pending() const { return preempt_pending_; }
+  static constexpr uint32_t kMaxFieldCount = 0xffff;
+  static constexpr uint32_t kPreemptDisableMask = kMaxFieldCount;
+  static constexpr uint32_t kEagerReschedDisableShift = 16;
+  static constexpr uint32_t kEagerReschedDisableMask = kMaxFieldCount << kEagerReschedDisableShift;
 
-  void CheckPreemptPending() const;
+  cpu_mask_t preempts_pending() const { return preempts_pending_; }
 
-  bool PreemptOrEagerReschedDisabled() const {
-    return PreemptDisableCount() > 0 || EagerReschedDisableCount() > 0;
-  }
+  bool PreemptIsEnabled() const { return disable_counts_ == 0; }
 
-  uint32_t PreemptDisableCount() const { return disable_counts_ & 0xffff; }
+  uint32_t PreemptDisableCount() const { return disable_counts_ & kPreemptDisableMask; }
+  uint32_t EagerReschedDisableCount() const { return disable_counts_ >> kEagerReschedDisableShift; }
 
-  uint32_t EagerReschedDisableCount() const { return disable_counts_ >> 16; }
+  enum Flush { FlushLocal = 0x1, FlushRemote = 0x2, FlushAll = FlushLocal | FlushRemote };
 
-  // PreemptDisable() increments the preempt_disable counter for the
-  // current thread.  While preempt_disable is non-zero, preemption of the
-  // thread is disabled, including preemption from interrupt handlers.
-  // During this time, any call to Reschedule()
-  // will only record that a reschedule is pending, and won't do a context
-  // switch.
+  // Flushes local, remote, or all pending preemptions.
+  void FlushPending(Flush flush);
+
+  // PreemptDisable() increments the preempt disable counter for the current
+  // thread. While preempt disable is non-zero, preemption of the thread is
+  // disabled, including preemption from interrupt handlers. During this time,
+  // any call to Reschedule() will only record that a reschedule is pending, and
+  // won't do a context switch.
   //
-  // Note that this does not disallow blocking operations
-  // (e.g. mutex.Acquire()).  Disabling preemption does not prevent switching
-  // away from the current thread if it blocks.
+  // Note that this does not disallow blocking operations (e.g.
+  // mutex.Acquire()). Disabling preemption does not prevent switching away from
+  // the current thread if it blocks.
   //
   // A call to PreemptDisable() must be matched by a later call to
-  // PreemptReenable() to decrement the preempt_disable counter.
+  // PreemptReenable() to decrement the preempt disable counter.
   void PreemptDisable() {
-    DEBUG_ASSERT(PreemptDisableCount() < 0xffff);
-
-    ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
-    disable_counts_ = disable_counts_ + 1;
-    ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
+    ASSERT(PreemptDisableCount() < kMaxFieldCount);
+    disable_counts_ += 1;
   }
 
-  // PreemptReenable() decrements the preempt_disable counter.  See
-  // PreemptDisable().
-  void PreemptReenable() {
-    DEBUG_ASSERT(PreemptDisableCount() > 0);
+  // PreemptReenable() decrements the preempt disable counter and flushes a
+  // pending local preemption if enabled.
+  //
+  // It is the responsibility of the caller to correctly handle flushing when
+  // passing flush_pending=false. Disabling automatic flushing is strongly
+  // discouraged outside of top-level interrupt glue and early threading setup.
+  void PreemptReenable(bool flush_pending = true) {
+    ASSERT(PreemptDisableCount() > 0);
+    const uint32_t new_count = disable_counts_ -= 1;
 
-    ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
-    disable_counts_ = disable_counts_ - 1;
-    uint32_t new_count = disable_counts_;
-    ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
-
-    if (new_count == 0) {
+    if (new_count == 0 && flush_pending) {
       DEBUG_ASSERT(!arch_blocking_disallowed());
-      CheckPreemptPending();
+      FlushPending(FlushLocal);
     }
   }
 
-  // This is the same as thread_preempt_reenable(), except that it does not
-  // check for any pending reschedules.  This is useful in interrupt handlers
-  // when we know that no reschedules should have become pending since
-  // calling thread_preempt_disable().
-  void PreemptReenableNoResched() {
-    DEBUG_ASSERT(PreemptDisableCount() > 0);
-
-    ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
-    disable_counts_ = disable_counts_ - 1;
-    ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
-  }
-
-  // EagerReschedDisable() increments the resched_disable counter for the
-  // current thread.  When resched_disable is non-zero, preemption of the
-  // thread from outside interrupt handlers is disabled.  However, interrupt
-  // handlers may still preempt the thread.
-  //
-  // This is a weaker version of PreemptDisable().
+  // EagerReschedDisable() increments the eager resched disable counter for the
+  // current thread. When early resched disable is non-zero, issuing local and
+  // remote preemptions is disabled, including from interrupt handlers. During
+  // this time, any call to Reschedule() or other scheduler entry points that
+  // imply a reschedule will only record the pending reschedule for the affected
+  // CPU, but will not perform reschedule IPIs or a local context switch.
   //
   // As with PreemptDisable, blocking operations are still allowed while
-  // resched_disable is non-zero.
+  // eager resched disable is non-zero.
   //
   // A call to EagerReschedDisable() must be matched by a later call to
-  // ReschedReenable() to decrement the preempt_disable counter.
+  // EagerReschedReenable() to decrement the eager resched disable counter.
   void EagerReschedDisable() {
-    DEBUG_ASSERT(EagerReschedDisableCount() < 0xffff);
-
-    ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
-    disable_counts_ = disable_counts_ + (1 << 16);
-    ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
+    ASSERT(EagerReschedDisableCount() < kMaxFieldCount);
+    disable_counts_ += 1 << kEagerReschedDisableShift;
   }
 
-  // EagerReschedReenable() decrements the preempt_disable counter.  See
-  // EagerReschedDisable().
-  void EagerReschedReenable() {
-    DEBUG_ASSERT(EagerReschedDisableCount() > 0);
+  // EagerReschedReenable() decrements the eager resched disable counter and
+  // flushes pending local and/or remote preemptions if enabled, respectively.
+  //
+  // It is the responsibility of the caller to correctly handle flushing when
+  // passing flush_pending=false. Disabling automatic flushing is strongly
+  // discouraged outside of top-level interrupt glue and early threading setup.
+  void EagerReschedReenable(bool flush_pending = true) {
+    ASSERT(EagerReschedDisableCount() > 0);
+    const uint32_t new_count = disable_counts_ -= (1 << kEagerReschedDisableShift);
 
-    ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
-    uint32_t new_count = disable_counts_ - (1 << 16);
-    disable_counts_ = new_count;
-    ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
-
-    if (new_count == 0) {
-      DEBUG_ASSERT(!arch_blocking_disallowed());
-      CheckPreemptPending();
+    if ((new_count & kEagerReschedDisableMask) == 0 && flush_pending) {
+      DEBUG_ASSERT(new_count != 0 || !arch_blocking_disallowed());
+      FlushPending(new_count == 0 ? FlushAll : FlushRemote);
     }
   }
 
-  // PreemptSetPending() marks a preemption as pending for the
-  // current CPU.
+  // PreemptSetPending() marks a pending preemption for the given CPUs.
   //
-  // This is similar to Reschedule(), except that it may only be
-  // used inside an interrupt handler while interrupts and preemption
-  // are disabled, between PreemptPisable() and
-  // PreemptReenable().  It is similar to Scheduler::Reschedule(),
+  // This is similar to Reschedule(), except that it may only be used inside an
+  // interrupt handler while interrupts and preemption are disabled, between
+  // PreemptDisable() and PreemptReenable(). It is similar to Reschedule(),
   // except that it does not need to be called with thread_lock held.
-  void PreemptSetPending() {
+  void PreemptSetPending(cpu_mask_t reschedule_mask = cpu_num_to_mask(arch_curr_cpu_num())) {
     DEBUG_ASSERT(arch_ints_disabled());
     DEBUG_ASSERT(arch_blocking_disallowed());
-    DEBUG_ASSERT(PreemptDisableCount() > 0);
+    DEBUG_ASSERT(!PreemptIsEnabled());
 
-    preempt_pending_ = true;
+    preempts_pending_ |= reschedule_mask;
   }
 
  private:
+  friend class Scheduler;
+  friend class PreemptDisableTestAccess;
+
   // disable_counts_ contains two fields:
   //
-  //  * Bottom 16 bits: the preempt_disable counter.  See
-  //    PreemptDisable().
-  //  * Top 16 bits: the resched_disable counter.  See
-  //    ReschedDisable().
+  //  * Bottom 16 bits: the preempt disable counter.
+  //  * Top 16 bits: the eager resched disable counter.
   //
   // This is a single field so that both counters can be compared against
   // zero with a single memory access and comparison.
   //
   // disable_counts_ is modified by interrupt handlers, but it is always
   // restored to its original value before the interrupt handler returns,
-  // so modifications are not visible to the interrupted thread.  Despite
-  // that, "volatile" is still technically needed.  Otherwise the
-  // compiler is technically allowed to compile
-  // "++thread->disable_counts" into code that stores a junk value into
-  // preempt_disable temporarily.
-  volatile uint32_t disable_counts_;
+  // so modifications are not visible to the interrupted thread.
+  RelaxedAtomic<uint32_t> disable_counts_;
 
-  // preempt_pending_ tracks whether a thread reschedule is pending.
+  // preempts_pending_ tracks pending reschedules to both local and remote CPUs
+  // due to activity in the context of the current thread.
   //
-  // This is volatile because it can be changed asynchronously by an
-  // interrupt handler: If preempt_disable_ is set, an interrupt handler
-  // may change this from false to true.  Otherwise, if resched_disable_
-  // is set, an interrupt handler may change this from true to false.
+  // This value can be changed asynchronously by an interrupt handler.
   //
-  // preempt_pending_ should only be true:
-  //  * if preempt_disable_ or resched_disable_ are non-zero, or
-  //  * after preempt_disable_ or resched_disable_ have been decremented,
-  //    while preempt_pending_ is being checked.
-  RelaxedAtomic<bool> preempt_pending_;
+  // preempts_pending_ should only be non-zero:
+  //  * if PreemptDisableCount() or EagerReschedDisable() are non-zero, or
+  //  * after PreemptDisableCount() or EagerReschedDisable() have been
+  //    decremented, while preempts_pending_ is being checked.
+  RelaxedAtomic<cpu_mask_t> preempts_pending_;
 };
 
 // TaskState is responsible for running the task defined by

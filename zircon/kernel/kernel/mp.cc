@@ -49,14 +49,12 @@ struct mp_state mp __CPU_ALIGN_EXCLUSIVE;
 struct mp_sync_context;
 static void mp_sync_task(void* context);
 
-void mp_init(void) {}
+void mp_init() {}
 
 void mp_prepare_current_cpu_idle_state(bool idle) { arch_prepare_current_cpu_idle_state(idle); }
 
 void mp_reschedule(cpu_mask_t mask, uint flags) {
-  // we must be holding the thread lock to access some of the cpu
-  // state bitmaps and some arch_mp_reschedule implementations.
-  DEBUG_ASSERT(thread_lock.IsHeld());
+  DEBUG_ASSERT(arch_ints_disabled());
 
   const cpu_num_t local_cpu = arch_curr_cpu_num();
 
@@ -65,11 +63,6 @@ void mp_reschedule(cpu_mask_t mask, uint flags) {
   // mask out cpus that are not active and the local cpu
   mask &= mp.active_cpus.load();
   mask &= ~cpu_num_to_mask(local_cpu);
-
-  // mask out cpus that are currently running realtime code
-  if ((flags & MP_RESCHEDULE_FLAG_REALTIME) == 0) {
-    mask &= ~mp.realtime_cpus;
-  }
 
   LTRACEF("local %u, post mask target now 0x%x\n", local_cpu, mask);
 
@@ -432,7 +425,7 @@ interrupt_eoi mp_mbx_reschedule_irq(void*) {
   CPU_STATS_INC(reschedule_ipis);
 
   if (mp.active_cpus.load() & cpu_num_to_mask(cpu)) {
-    Thread::Current::preemption_state().PreemptSetPending();
+    Thread::Current::preemption_state().PreemptSetPending(cpu_num_to_mask(cpu));
   }
 
   return IRQ_EOI_DEACTIVATE;

@@ -128,8 +128,7 @@ class OwnedWaitQueue : public WaitQueue, public fbl::DoublyLinkedListable<OwnedW
   // Wake the up to specified number of threads from the wait queue and then
   // handle the ownership bookkeeping based on what the Hook told us to do.
   // See |Hook::Action| for details.
-  void WakeThreads(uint32_t wake_count, Hook on_thread_wake_hook = {})
-      TA_REQ(thread_lock);
+  void WakeThreads(uint32_t wake_count, Hook on_thread_wake_hook = {}) TA_REQ(thread_lock);
 
   // A specialization of WakeThreads which will...
   //
@@ -156,21 +155,18 @@ class OwnedWaitQueue : public WaitQueue, public fbl::DoublyLinkedListable<OwnedW
  private:
   // Give permission to the WaitQueue thunk to call the
   // WaitersPriorityChanged method (below).
-  friend bool WaitQueue::UpdatePriority(int old_prio);
+  friend void WaitQueue::UpdatePriority(int old_prio);
 
   // Called whenever the pressure of a wait queue currently owned by |t| has
-  // just changed.  Propagates priority inheritance side effects, but do not
-  // send any IPIs.  Simply update the accum_cpu_mask to indicate which CPUs
-  // were affected by the change.
+  // just changed.  Propagates priority inheritance side effects.
   //
   // It is an error to call this function if |old_prio| == |new_prio|.  Be
   // sure to check inline before calling.
-  static void QueuePressureChanged(Thread* t, int old_prio, int new_prio,
-                                   cpu_mask_t* accum_cpu_mask) TA_REQ(thread_lock);
+  static void QueuePressureChanged(Thread* t, int old_prio, int new_prio) TA_REQ(thread_lock);
 
   // A hook called by the WaitQueue level when the maximum priority across all
   // current waiters has changed.
-  bool WaitersPriorityChanged(int old_prio) TA_REQ(thread_lock);
+  void WaitersPriorityChanged(int old_prio) TA_REQ(thread_lock);
 
   // Updates ownership bookkeeping and deals with priority inheritance side
   // effects.  Called by internal code, typically after changes to the
@@ -184,15 +180,7 @@ class OwnedWaitQueue : public WaitQueue, public fbl::DoublyLinkedListable<OwnedW
   // |old_prio|
   //   The priority of this wait queue as recorded by the caller before
   //   they started to make changes to the queue's contents.
-  //
-  // |accum_cpu_mask|
-  //   An optional pointer to a cpu_mask_t.  When non-null, UpdateBookkeeping
-  //   will accumulate into this mask the CPUs which have been affected by the
-  //   PI side effects of updating this bookkeeping.  When nullptr,
-  //   UpdateBookkeeping will automatically update kernel counters and send
-  //   IPIs to processors which have been affected by the PI side effects.
-  void UpdateBookkeeping(Thread* new_owner, int old_prio, cpu_mask_t* out_accum_cpu_mask = nullptr)
-      TA_REQ(thread_lock);
+  void UpdateBookkeeping(Thread* new_owner, int old_prio) TA_REQ(thread_lock);
 
   // Wake the specified number of threads from the wait queue, and return the
   // new owner (first thread woken) via the |out_new_owner| out param, or

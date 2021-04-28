@@ -69,4 +69,40 @@ class AutoPreemptDisabler {
   bool disabled_{true};
 };
 
+// AutoEagerReschedDisabler is a RAII helper that automatically manages
+// disabling and re-enabling eager reschedules, including both local and remote
+// CPUs. This type works the same as AutoPreemptDisable, except that it also
+// prevents sending reschedule IPIs until eager reschedules are re-enabled.
+class AutoEagerReschedDisabler {
+ public:
+  // Tag type to construct the AutoEagerReschedDisabler without eager
+  // reschedules initially disabled.
+  enum DeferType { Defer };
+
+  AutoEagerReschedDisabler() { Thread::Current::preemption_state().EagerReschedDisable(); }
+  explicit AutoEagerReschedDisabler(DeferType) : disabled_{false} {}
+
+  ~AutoEagerReschedDisabler() {
+    if (disabled_) {
+      Thread::Current::preemption_state().EagerReschedReenable();
+    }
+  }
+
+  AutoEagerReschedDisabler(const AutoEagerReschedDisabler&) = delete;
+  AutoEagerReschedDisabler& operator=(const AutoEagerReschedDisabler&) = delete;
+  AutoEagerReschedDisabler(AutoEagerReschedDisabler&&) = delete;
+  AutoEagerReschedDisabler& operator=(AutoEagerReschedDisabler&&) = delete;
+
+  // Disables preemption if it was not disabled by this instance already.
+  void Disable() {
+    if (!disabled_) {
+      Thread::Current::preemption_state().EagerReschedDisable();
+      disabled_ = true;
+    }
+  }
+
+ private:
+  bool disabled_{true};
+};
+
 #endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_AUTO_PREEMPT_DISABLER_H_

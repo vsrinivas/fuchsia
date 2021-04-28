@@ -353,7 +353,7 @@ void Mutex::ReleaseThreadLocked() {
   magic_.Assert();
   DEBUG_ASSERT(!arch_blocking_disallowed());
   DEBUG_ASSERT(arch_ints_disabled());
-  DEBUG_ASSERT(Thread::Current::Get()->preemption_state().PreemptDisableCount() > 0);
+  DEBUG_ASSERT(!Thread::Current::Get()->preemption_state().PreemptIsEnabled());
   thread_lock.AssertHeld();
   Thread* current_thread = Thread::Current::Get();
   if (const uintptr_t old_mutex_state = TryRelease(current_thread); old_mutex_state != STATE_FREE) {

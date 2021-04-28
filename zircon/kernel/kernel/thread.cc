@@ -38,6 +38,8 @@
 
 #include <arch/debugger.h>
 #include <arch/exception.h>
+#include <arch/interrupt.h>
+#include <arch/ops.h>
 #include <kernel/auto_preempt_disabler.h>
 #include <kernel/cpu.h>
 #include <kernel/dpc.h>
@@ -965,19 +967,41 @@ void Thread::Current::Reschedule() {
   Scheduler::Reschedule();
 }
 
-void PreemptionState::CheckPreemptPending() const {
-  // First check preempt_pending without the expense of taking the lock.
-  // At this point, interrupts could be enabled, so an interrupt handler
-  // might preempt us and set preempt_pending to false after we read it.
-  if (unlikely(preempt_pending_)) {
-    Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
-    // Recheck preempt_pending just in case it got set to false after
-    // our earlier check.  Its value now cannot change because
-    // interrupts are now disabled.
-    if (likely(preempt_pending_)) {
-      // This will set preempt_pending = false for us.
-      Scheduler::Reschedule();
+void PreemptionState::FlushPending(Flush flush) {
+  // Early out to avoid unnecessarily taking the thread lock. This check races
+  // any potential flush due to context switch, however, the context switch can
+  // only clear bits that would have been flushed below, no new pending
+  // preemptions are possible in the mask bits indicated by |flush|.
+  if (likely(preempts_pending_ == 0)) {
+    return;
+  }
+
+  const auto do_flush = [this, flush]() TA_REQ(thread_lock) {
+    // Recheck, pending preemptions could have been flushed by a context switch
+    // before interrupts were disabled.
+    const cpu_mask_t pending_mask = preempts_pending_;
+
+    // If there is a pending local preemption the scheduler will take care of
+    // flushing all pending reschedules.
+    const cpu_mask_t current_cpu_mask = cpu_num_to_mask(arch_curr_cpu_num());
+    if ((pending_mask & current_cpu_mask) != 0 && (flush & FlushLocal) != 0) {
+      Scheduler::Preempt();
+    } else if ((flush & FlushRemote) != 0) {
+      // The current cpu is ignored by mp_reschedule if present in the mask.
+      mp_reschedule(pending_mask, 0);
+      preempts_pending_ &= current_cpu_mask;
     }
+  };
+
+  // This method may be called with interrupts enabled or disabled and with or
+  // without holding the thread lock.
+  InterruptDisableGuard interrupt_disable;
+  if (thread_lock.IsHeld()) {
+    thread_lock.AssertHeld();
+    do_flush();
+  } else {
+    Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
+    do_flush();
   }
 }
 
@@ -1269,20 +1293,23 @@ void Thread::Current::BecomeIdle() {
   t->scheduler_state_.last_cpu_ = curr_cpu;
   t->scheduler_state_.curr_cpu_ = curr_cpu;
   t->scheduler_state_.hard_affinity_ = cpu_num_to_mask(curr_cpu);
+  t->set_running();
 
-  // Cpu is active now
+  // Cpu is active.
   mp_set_curr_cpu_active(true);
+  mp_set_cpu_idle(curr_cpu);
 
-  // Grab the thread lock, mark ourself idle, enable preemption and reschedule.
-  // Preemption is disabled during early threading startup on each CPU to
-  // prevent incidental thread wakeups (e.g. due to logging) from rescheduling
-  // on the local CPU before the idle thread is ready.
-  {
-    Guard<MonitoredSpinLock, NoIrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
-    mp_set_cpu_idle(curr_cpu);
-    t->preemption_state().PreemptReenableNoResched();
-    Scheduler::Reschedule();
-  }
+  // Pend a preemption to ensure a reschedule.
+  arch_set_blocking_disallowed(true);
+  t->preemption_state().PreemptSetPending();
+  arch_set_blocking_disallowed(false);
+
+  // Enable preemption to start scheduling. Preemption is disabled during early
+  // threading startup on each CPU to prevent incidental thread wakeups (e.g.
+  // due to logging) from rescheduling on the local CPU before the idle thread
+  // is ready.
+  t->preemption_state().PreemptReenable();
+  DEBUG_ASSERT(t->preemption_state().PreemptIsEnabled());
 
   // We're now properly in the idle routine. Reenable interrupts and drop
   // into the idle routine, never return.

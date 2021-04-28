@@ -42,12 +42,12 @@ typedef enum { MP_IPI_GENERIC, MP_IPI_RESCHEDULE, MP_IPI_INTERRUPT, MP_IPI_HALT 
 // serve as shortcuts and potentially optimizations in the lower layers.
 typedef enum { MP_IPI_TARGET_MASK, MP_IPI_TARGET_ALL, MP_IPI_TARGET_ALL_BUT_LOCAL } mp_ipi_target_t;
 
-void mp_init(void);
+void mp_init();
 void mp_prepare_current_cpu_idle_state(bool idle);
 
-// Trigger a reschedule on another cpu. Used mostly by inner threading
-// and scheduler logic. Must be holding the thread lock.
-void mp_reschedule(cpu_mask_t mask, uint flags) TA_REQ(thread_lock);
+// Trigger reschedules on other CPUs. Used mostly by inner threading
+// and scheduler logic.
+void mp_reschedule(cpu_mask_t mask, uint flags);
 
 // Trigger an interrupt on another cpu without a corresponding reschedule.
 // Used by the hypervisor to trigger a vmexit.
@@ -94,10 +94,8 @@ struct mp_state {
   ktl::atomic<cpu_mask_t> online_cpus;
   // cpus that are currently schedulable
   ktl::atomic<cpu_mask_t> active_cpus;
-
-  // both are only safely accessible with thread lock held
-  cpu_mask_t idle_cpus TA_GUARDED(thread_lock);
-  cpu_mask_t realtime_cpus TA_GUARDED(thread_lock);
+  // cpus that are currently idle.
+  ktl::atomic<cpu_mask_t> idle_cpus;
 
   SpinLock ipi_task_lock;
   // list of outstanding tasks for CPUs to execute.  Should only be
@@ -113,32 +111,12 @@ extern struct mp_state mp;
 // idle/busy is used to track if the cpu is running anything or has a non empty run queue
 // idle == (cpu run queue empty & cpu running idle thread)
 // busy == !idle
-// must be called with the thread lock held
-static inline cpu_mask_t mp_get_idle_mask(void) TA_REQ(thread_lock) { return mp.idle_cpus; }
-
-static inline void mp_set_cpu_idle(cpu_num_t cpu) TA_REQ(thread_lock) {
-  mp.idle_cpus |= cpu_num_to_mask(cpu);
-}
-
-static inline void mp_set_cpu_busy(cpu_num_t cpu) TA_REQ(thread_lock) {
-  mp.idle_cpus &= ~cpu_num_to_mask(cpu);
-}
-
-static inline int mp_is_cpu_idle(cpu_num_t cpu) TA_REQ(thread_lock) {
+static inline cpu_mask_t mp_get_idle_mask() { return mp.idle_cpus.load(); }
+static inline void mp_set_cpu_idle(cpu_num_t cpu) { mp.idle_cpus.fetch_or(cpu_num_to_mask(cpu)); }
+static inline void mp_set_cpu_busy(cpu_num_t cpu) { mp.idle_cpus.fetch_and(~cpu_num_to_mask(cpu)); }
+static inline bool mp_is_cpu_idle(cpu_num_t cpu) {
   return mp_get_idle_mask() & cpu_num_to_mask(cpu);
 }
-
-// marks whether or not a cpu is currently running a realtime thread or not
-// must be called with the thread lock held
-static inline void mp_set_cpu_realtime(cpu_num_t cpu) TA_REQ(thread_lock) {
-  mp.realtime_cpus |= cpu_num_to_mask(cpu);
-}
-
-static inline void mp_set_cpu_non_realtime(cpu_num_t cpu) TA_REQ(thread_lock) {
-  mp.realtime_cpus &= ~cpu_num_to_mask(cpu);
-}
-
-static inline cpu_mask_t mp_get_realtime_mask(void) TA_REQ(thread_lock) { return mp.realtime_cpus; }
 
 // tracks if a cpu is online and initialized
 static inline void mp_set_curr_cpu_online(bool online) {
@@ -149,11 +127,8 @@ static inline void mp_set_curr_cpu_online(bool online) {
   }
 }
 
-static inline cpu_mask_t mp_get_online_mask(void) {
-  return mp.online_cpus.load();
-}
-
-static inline int mp_is_cpu_online(cpu_num_t cpu) {
+static inline cpu_mask_t mp_get_online_mask() { return mp.online_cpus.load(); }
+static inline bool mp_is_cpu_online(cpu_num_t cpu) {
   return mp_get_online_mask() & cpu_num_to_mask(cpu);
 }
 
@@ -167,11 +142,8 @@ static inline void mp_set_curr_cpu_active(bool active) {
   arch_set_blocking_disallowed(!active);
 }
 
-static inline cpu_mask_t mp_get_active_mask(void) {
-  return mp.active_cpus.load();
-}
-
-static inline int mp_is_cpu_active(cpu_num_t cpu) {
+static inline cpu_mask_t mp_get_active_mask() { return mp.active_cpus.load(); }
+static inline bool mp_is_cpu_active(cpu_num_t cpu) {
   return mp_get_active_mask() & cpu_num_to_mask(cpu);
 }
 

@@ -150,12 +150,7 @@ class Scheduler {
   static void TimerTick(SchedTime now);
 
   // Set the inherited priority of a thread.
-  //
-  // Update a mask of affected CPUs. After the caller has finished any batch
-  // update operations, it is their responsibility to trigger remote IPIs to
-  // affected CPUs.
-  static void InheritPriority(Thread* t, int priority, cpu_mask_t* cpus_to_reschedule_mask)
-      TA_REQ(thread_lock);
+  static void InheritPriority(Thread* t, int priority) TA_REQ(thread_lock);
 
   // Set the priority of a thread and reset the boost value. This function might reschedule.
   // pri should be 0 <= to <= MAX_PRIORITY.
@@ -178,6 +173,8 @@ class Scheduler {
   friend struct LoadBalancerTestAccess;
   // Allow tests to modify our state.
   friend class LoadBalancerTest;
+
+  static inline void RescheduleMask(cpu_mask_t cpus_to_reschedule_mask) TA_REQ(thread_lock);
 
   static void ChangeWeight(Thread* thread, int priority, cpu_mask_t* cpus_to_reschedule_mask)
       TA_REQ(thread_lock);

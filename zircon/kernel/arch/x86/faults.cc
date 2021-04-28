@@ -110,13 +110,17 @@ static bool try_dispatch_user_exception(iframe_t* frame, uint exception_type) {
         .is_page_fault = false,
     };
     PreemptionState& preemption_state = Thread::Current::preemption_state();
-    preemption_state.PreemptReenableNoResched();
+
     arch_set_blocking_disallowed(false);
     arch_enable_ints();
+    preemption_state.PreemptReenable();
+
     zx_status_t erc = dispatch_user_exception(exception_type, &context);
+
+    preemption_state.PreemptDisable();
     arch_disable_ints();
     arch_set_blocking_disallowed(true);
-    preemption_state.PreemptDisable();
+
     if (erc == ZX_OK)
       return true;
   }
@@ -284,15 +288,15 @@ static zx_status_t x86_pfe_handler(iframe_t* frame) {
 
   /* reenable interrupts */
   PreemptionState& preemption_state = Thread::Current::preemption_state();
-  preemption_state.PreemptReenableNoResched();
   arch_set_blocking_disallowed(false);
   arch_enable_ints();
+  preemption_state.PreemptReenable();
 
   /* make sure we put interrupts back as we exit */
   auto cleanup = fit::defer([&preemption_state]() {
+    preemption_state.PreemptDisable();
     arch_disable_ints();
     arch_set_blocking_disallowed(true);
-    preemption_state.PreemptDisable();
   });
 
   /* check for flags we're not prepared to handle */

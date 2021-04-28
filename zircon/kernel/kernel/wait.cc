@@ -99,14 +99,12 @@ void WaitQueue::TimeoutHandler(Timer* timer, zx_time_t now, void* arg) {
 
 // Deal with the consequences of a change of maximum priority across the set of
 // waiters in a wait queue.
-bool WaitQueue::UpdatePriority(int old_prio) TA_REQ(thread_lock) {
+void WaitQueue::UpdatePriority(int old_prio) TA_REQ(thread_lock) {
   // If this is an owned wait queue, and the maximum priority of its set of
   // waiters has changed, make sure to apply any needed priority inheritance.
   if ((magic_ == OwnedWaitQueue::kOwnedMagic) && (old_prio != BlockedPriority())) {
-    return static_cast<OwnedWaitQueue*>(this)->WaitersPriorityChanged(old_prio);
+    static_cast<OwnedWaitQueue*>(this)->WaitersPriorityChanged(old_prio);
   }
-
-  return false;
 }
 
 // Remove a thread from a wait queue, maintain the wait queue's internal count,
@@ -485,7 +483,7 @@ zx_status_t WaitQueue::UnblockThread(Thread* t, zx_status_t wait_queue_error) {
   return ZX_OK;
 }
 
-bool WaitQueue::PriorityChanged(Thread* t, int old_prio, PropagatePI propagate) {
+void WaitQueue::PriorityChanged(Thread* t, int old_prio, PropagatePI propagate) {
   t->canary().Assert();
   DEBUG_ASSERT(arch_ints_disabled());
   DEBUG_ASSERT(thread_lock.IsHeld());
@@ -500,7 +498,7 @@ bool WaitQueue::PriorityChanged(Thread* t, int old_prio, PropagatePI propagate) 
   // currently at the head of this WaitQueue, then |t|'s old priority is the
   // previous priority of the WaitQueue.  Otherwise, it is the priority of
   // the WaitQueue as it stands before we re-insert |t|.
-  int old_wq_prio = (Peek() == t) ? old_prio : BlockedPriority();
+  const int old_wq_prio = (Peek() == t) ? old_prio : BlockedPriority();
 
   // simple algorithm: remove the thread from the queue and add it back
   // TODO: implement optimal algorithm depending on all the different edge
@@ -509,10 +507,10 @@ bool WaitQueue::PriorityChanged(Thread* t, int old_prio, PropagatePI propagate) 
   collection_.Remove(t);
   collection_.Insert(t);
 
-  bool ret = (propagate == PropagatePI::Yes) ? UpdatePriority(old_wq_prio) : false;
-
+  if (propagate == PropagatePI::Yes) {
+    UpdatePriority(old_wq_prio);
+  }
   if (WAIT_QUEUE_VALIDATION) {
     ValidateQueue();
   }
-  return ret;
 }

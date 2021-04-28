@@ -487,7 +487,9 @@ zx_status_t FutexContext::FutexWake(user_in_ptr<const zx_futex_t> value_ptr, uin
   // lock and see if there are any actual waiters to wake up.
   ResetBlockingFutexIdState wake_op;
   {
-    AutoPreemptDisabler preempt_disabler;
+    // Optimize lock contention by delaying local/remote reschedules until the
+    // mutex is released.
+    AutoEagerReschedDisabler eager_resched_disabler;
     Guard<Mutex> guard{&futex_ref->lock_};
 
     // Now, enter the thread lock and actually wake up the threads.
@@ -615,7 +617,7 @@ zx_status_t FutexContext::FutexRequeueInternal(
   ResetBlockingFutexIdState wake_op;
   SetBlockingFutexIdState requeue_op(requeue_id);
   {
-    AutoPreemptDisabler preempt_disabler;
+    AutoEagerReschedDisabler eager_resched_disabler;
     GuardMultiple<2, Mutex> futex_guards{&wake_futex_ref->lock_, &requeue_futex_ref->lock_};
 
     // Validate the futex storage state.

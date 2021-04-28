@@ -13,6 +13,7 @@
 #include <arch/ops.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
+#include <kernel/mp.h>
 #include <kernel/scheduler.h>
 #include <kernel/wait_queue_internal.h>
 #include <ktl/algorithm.h>
@@ -150,16 +151,16 @@ class InfiniteLoopGuard<true> {
   uint32_t expected_next_ = 1;
 };
 
-// Update our reschedule related kernel counters and send a request for any
-// needed IPIs.
-inline void UpdateStatsAndSendIPIs(cpu_mask_t accum_cpu_mask) TA_REQ(thread_lock) {
-  if (accum_cpu_mask & cpu_num_to_mask(arch_curr_cpu_num())) {
-    pi_triggered_local_reschedules.Add(1);
+// Update our reschedule related kernel counters.
+inline void UpdateStats() TA_REQ(thread_lock) {
+  const cpu_mask_t pending_reschedule_mask =
+      Thread::Current::Get()->preemption_state().preempts_pending();
+  const cpu_mask_t current_cpu_mask = cpu_num_to_mask(arch_curr_cpu_num());
+  if (pending_reschedule_mask & ~current_cpu_mask) {
+    pi_triggered_ipis.Add(ktl::popcount(pending_reschedule_mask & ~current_cpu_mask));
   }
-  accum_cpu_mask &= ~cpu_num_to_mask(arch_curr_cpu_num());
-  if (accum_cpu_mask) {
-    mp_reschedule(accum_cpu_mask, 0);
-    pi_triggered_ipis.Add(ktl::popcount(accum_cpu_mask));
+  if (pending_reschedule_mask & current_cpu_mask) {
+    pi_triggered_local_reschedules.Add(1);
   }
 }
 
@@ -266,8 +267,8 @@ void OwnedWaitQueue::DisownAllQueues(Thread* t) {
   t->wait_queue_state_.owned_wait_queues_.clear();
 }
 
-void OwnedWaitQueue::QueuePressureChanged(Thread* t, int old_prio, int new_prio,
-                                          cpu_mask_t* accum_cpu_mask) TA_REQ(thread_lock) {
+void OwnedWaitQueue::QueuePressureChanged(Thread* t, int old_prio, int new_prio)
+    TA_REQ(thread_lock) {
   fbl::AutoLock guard(&qpc_recursion_guard);
   DEBUG_ASSERT(old_prio != new_prio);
 
@@ -340,7 +341,7 @@ void OwnedWaitQueue::QueuePressureChanged(Thread* t, int old_prio, int new_prio,
     int old_queue_prio = bwq ? bwq->BlockedPriority() : -1;
     int new_queue_prio;
 
-    Scheduler::InheritPriority(t, new_prio, accum_cpu_mask);
+    Scheduler::InheritPriority(t, new_prio);
 
     new_queue_prio = bwq ? bwq->BlockedPriority() : -1;
 
@@ -379,27 +380,22 @@ void OwnedWaitQueue::QueuePressureChanged(Thread* t, int old_prio, int new_prio,
   }
 }
 
-bool OwnedWaitQueue::WaitersPriorityChanged(int old_prio) {
+void OwnedWaitQueue::WaitersPriorityChanged(int old_prio) {
   if (owner() == nullptr) {
-    return false;
+    return;
   }
 
   int new_prio = BlockedPriority();
   if (old_prio == new_prio) {
-    return false;
+    return;
   }
 
-  cpu_mask_t accum_cpu_mask = 0;
-  QueuePressureChanged(owner(), old_prio, new_prio, &accum_cpu_mask);
-  UpdateStatsAndSendIPIs(accum_cpu_mask);
-
-  return accum_cpu_mask != 0;
+  QueuePressureChanged(owner(), old_prio, new_prio);
+  UpdateStats();
 }
 
-void OwnedWaitQueue::UpdateBookkeeping(Thread* new_owner, int old_prio,
-                                       cpu_mask_t* out_accum_cpu_mask) {
-  int new_prio = BlockedPriority();
-  cpu_mask_t accum_cpu_mask = 0;
+void OwnedWaitQueue::UpdateBookkeeping(Thread* new_owner, int old_prio) {
+  const int new_prio = BlockedPriority();
 
   // The new owner may not be a dying thread.
   if ((new_owner != nullptr) && (new_owner->state() == THREAD_DEATH)) {
@@ -413,7 +409,7 @@ void OwnedWaitQueue::UpdateBookkeeping(Thread* new_owner, int old_prio,
     if ((owner() == nullptr) || (new_prio == old_prio)) {
       return;
     }
-    QueuePressureChanged(owner(), old_prio, new_prio, &accum_cpu_mask);
+    QueuePressureChanged(owner(), old_prio, new_prio);
   } else {
     // Looks like the ownership has actually changed.  Start releasing
     // ownership and propagating the PI consequences for the old owner (if
@@ -425,7 +421,7 @@ void OwnedWaitQueue::UpdateBookkeeping(Thread* new_owner, int old_prio,
       owner_ = nullptr;
 
       if (old_prio >= 0) {
-        QueuePressureChanged(old_owner, old_prio, -1, &accum_cpu_mask);
+        QueuePressureChanged(old_owner, old_prio, -1);
       }
 
       // If we no longer own any queues, then we had better not be inheriting any priority at
@@ -443,15 +439,9 @@ void OwnedWaitQueue::UpdateBookkeeping(Thread* new_owner, int old_prio,
       new_owner->wait_queue_state_.owned_wait_queues_.push_back(this);
 
       if (new_prio >= 0) {
-        QueuePressureChanged(new_owner, -1, new_prio, &accum_cpu_mask);
+        QueuePressureChanged(new_owner, -1, new_prio);
       }
     }
-  }
-
-  if (out_accum_cpu_mask != nullptr) {
-    *out_accum_cpu_mask |= accum_cpu_mask;
-  } else {
-    UpdateStatsAndSendIPIs(accum_cpu_mask);
   }
 }
 
@@ -546,6 +536,7 @@ zx_status_t OwnedWaitQueue::BlockAndAssignOwner(const Deadline& deadline, Thread
   // (ownership because of |new_owner| and pressure because of the addition of
   // the thread to the queue.
   UpdateBookkeeping(new_owner, old_queue_prio);
+  UpdateStats();
 
   // Finally, go ahead and run the second half of the BlockEtc operation.
   // This will actually block our thread and handle setting any timeout timers
@@ -557,9 +548,10 @@ void OwnedWaitQueue::WakeThreads(uint32_t wake_count, Hook on_thread_wake_hook) 
   DEBUG_ASSERT(magic() == kOwnedMagic);
 
   Thread* new_owner;
-  int old_queue_prio = BlockedPriority();
+  const int old_queue_prio = BlockedPriority();
   WakeThreadsInternal(wake_count, &new_owner, on_thread_wake_hook);
   UpdateBookkeeping(new_owner, old_queue_prio);
+  UpdateStats();
 }
 
 void OwnedWaitQueue::WakeAndRequeue(uint32_t wake_count, OwnedWaitQueue* requeue_target,
@@ -585,8 +577,8 @@ void OwnedWaitQueue::WakeAndRequeue(uint32_t wake_count, OwnedWaitQueue* requeue
 
   // Remember what our queue priorities had been.  We will need this when it
   // comes time to update the PI chains.
-  int old_wake_prio = BlockedPriority();
-  int old_requeue_prio = requeue_target->BlockedPriority();
+  const int old_wake_prio = BlockedPriority();
+  const int old_requeue_prio = requeue_target->BlockedPriority();
 
   Thread* new_wake_owner;
   WakeThreadsInternal(wake_count, &new_wake_owner, on_thread_wake_hook);
@@ -621,15 +613,14 @@ void OwnedWaitQueue::WakeAndRequeue(uint32_t wake_count, OwnedWaitQueue* requeue
   // Now that we are finished moving everyone around, update the ownership of
   // the queues involved in the operation.  These updates should deal with
   // propagating any priority inheritance consequences of the requeue operation.
-  cpu_mask_t accum_cpu_mask = 0;
-  UpdateBookkeeping(new_wake_owner, old_wake_prio, &accum_cpu_mask);
+  UpdateBookkeeping(new_wake_owner, old_wake_prio);
 
   // If there is no one waiting in the requeue target, then it is not allowed to
   // have an owner.
   if (requeue_target->IsEmpty()) {
     requeue_owner = nullptr;
   }
-  requeue_target->UpdateBookkeeping(requeue_owner, old_requeue_prio, &accum_cpu_mask);
 
-  UpdateStatsAndSendIPIs(accum_cpu_mask);
+  requeue_target->UpdateBookkeeping(requeue_owner, old_requeue_prio);
+  UpdateStats();
 }

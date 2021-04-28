@@ -24,6 +24,7 @@
 
 #include <arch/ops.h>
 #include <ffl/string.h>
+#include <kernel/cpu.h>
 #include <kernel/lockdep.h>
 #include <kernel/mp.h>
 #include <kernel/percpu.h>
@@ -654,8 +655,11 @@ Thread* Scheduler::EvaluateNextThread(SchedTime now, Thread* current_thread, boo
 
   // Returns true when the given thread requires active migration.
   const auto needs_migration = [active_mask, current_cpu_mask](Thread* const thread) {
-    return (thread->scheduler_state().GetEffectiveCpuMask(active_mask) & current_cpu_mask) == 0 ||
-           thread->scheduler_state().next_cpu_ != INVALID_CPU;
+    // Threads may be created and resumed before the thread init level. Work
+    // around an empty active mask by assuming only the current cpu is available.
+    return active_mask != 0 &&
+           ((thread->scheduler_state().GetEffectiveCpuMask(active_mask) & current_cpu_mask) == 0 ||
+            thread->scheduler_state().next_cpu_ != INVALID_CPU);
   };
 
   Thread* next_thread = nullptr;
@@ -752,9 +756,7 @@ Thread* Scheduler::EvaluateNextThread(SchedTime now, Thread* current_thread, boo
   }
 
   // Issue reschedule IPIs to CPUs with migrated threads.
-  if (cpus_to_reschedule_mask) {
-    mp_reschedule(cpus_to_reschedule_mask, 0);
-  }
+  mp_reschedule(cpus_to_reschedule_mask, 0);
 
   return next_thread;
 }
@@ -1000,8 +1002,11 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
                 fair_run_queue_.is_empty() ? "[none]" : fair_run_queue_.front().name(),
                 deadline_run_queue_.is_empty() ? "[none]" : deadline_run_queue_.front().name());
 
+  // Flush pending preemptions.
+  mp_reschedule(current_thread->preemption_state().preempts_pending_, 0);
+  current_thread->preemption_state().preempts_pending_ = 0;
+
   // Update the state of the current and next thread.
-  current_thread->preemption_state().preempt_pending() = false;
   next_thread->set_running();
   const cpu_num_t last_cpu = next_state->last_cpu_;
   next_state->last_cpu_ = current_cpu;
@@ -1058,10 +1063,6 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
   } else {
     mp_set_cpu_busy(current_cpu);
   }
-
-  // The task is always non-realtime when managed by this scheduler.
-  // TODO(eieio): Revisit this when deadline scheduling is addressed.
-  mp_set_cpu_non_realtime(current_cpu);
 
   if (current_thread->IsIdle()) {
     percpu::Get(current_cpu).stats.idle_time += actual_runtime_ns;
@@ -1477,6 +1478,19 @@ void Scheduler::Remove(Thread* thread) {
   }
 }
 
+inline void Scheduler::RescheduleMask(cpu_mask_t cpus_to_reschedule_mask) {
+  PreemptionState& preemption_state = Thread::Current::Get()->preemption_state();
+  if (preemption_state.EagerReschedDisableCount() != 0) {
+    preemption_state.preempts_pending_ |= cpus_to_reschedule_mask;
+  } else {
+    mp_reschedule(cpus_to_reschedule_mask, 0);
+  }
+  if (preemption_state.PreemptIsEnabled() &&
+      cpus_to_reschedule_mask & cpu_num_to_mask(arch_curr_cpu_num())) {
+    Preempt();
+  }
+}
+
 void Scheduler::Block() {
   LocalTraceDuration<KTRACE_COMMON> trace{"sched_block"_stringref};
 
@@ -1508,11 +1522,8 @@ void Scheduler::Unblock(Thread* thread) {
   thread->set_ready();
   target->Insert(now, thread);
 
-  if (target_cpu == arch_curr_cpu_num()) {
-    Reschedule();
-  } else {
-    mp_reschedule(cpu_num_to_mask(target_cpu), 0);
-  }
+  trace.End();
+  RescheduleMask(cpu_num_to_mask(target_cpu));
 }
 
 void Scheduler::Unblock(WaitQueueSublist list) {
@@ -1539,16 +1550,8 @@ void Scheduler::Unblock(WaitQueueSublist list) {
     cpus_to_reschedule_mask |= cpu_num_to_mask(target_cpu);
   }
 
-  // Issue reschedule IPIs to other CPUs.
-  if (cpus_to_reschedule_mask) {
-    mp_reschedule(cpus_to_reschedule_mask, 0);
-  }
-
-  // Return true if the current CPU is in the mask.
-  const cpu_mask_t current_cpu_mask = cpu_num_to_mask(arch_curr_cpu_num());
-  if (cpus_to_reschedule_mask & current_cpu_mask) {
-    Reschedule();
-  }
+  trace.End();
+  RescheduleMask(cpus_to_reschedule_mask);
 }
 
 void Scheduler::UnblockIdle(Thread* thread) {
@@ -1629,9 +1632,9 @@ void Scheduler::Reschedule() {
   // Pend the preemption rather than rescheduling if preemption is disabled or
   // if there is more than one spinlock held.
   // TODO(fxbug.dev/64884): Remove check when spinlocks imply preempt disable.
-  if (current_thread->preemption_state().PreemptOrEagerReschedDisabled() ||
-      arch_num_spinlocks_held() > 1 || arch_blocking_disallowed()) {
-    current_thread->preemption_state().preempt_pending() = true;
+  if (!current_thread->preemption_state()
+           .PreemptIsEnabled() /*|| arch_num_spinlocks_held() > 1 || arch_blocking_disallowed()*/) {
+    current_thread->preemption_state().preempts_pending_ |= cpu_num_to_mask(current_cpu);
     return;
   }
 
@@ -1682,15 +1685,8 @@ void Scheduler::Migrate(Thread* thread) {
     }
   }
 
-  if (cpus_to_reschedule_mask) {
-    mp_reschedule(cpus_to_reschedule_mask, 0);
-  }
-
-  const cpu_mask_t current_cpu_mask = cpu_num_to_mask(arch_curr_cpu_num());
-  if (cpus_to_reschedule_mask & current_cpu_mask) {
-    trace.End();
-    Reschedule();
-  }
+  trace.End();
+  RescheduleMask(cpus_to_reschedule_mask);
 }
 
 void Scheduler::MigrateUnpinnedThreads() {
@@ -1760,9 +1756,8 @@ void Scheduler::MigrateUnpinnedThreads() {
   // Call all migrate functions for threads last run on the current CPU.
   Thread::CallMigrateFnForCpuLocked(current_cpu);
 
-  if (cpus_to_reschedule_mask) {
-    mp_reschedule(cpus_to_reschedule_mask, 0);
-  }
+  trace.End();
+  RescheduleMask(cpus_to_reschedule_mask);
 }
 
 void Scheduler::UpdateWeightCommon(Thread* thread, int original_priority, SchedWeight weight,
@@ -2042,39 +2037,22 @@ void Scheduler::TimerTick(SchedTime now) {
   Thread::Current::preemption_state().PreemptSetPending();
 }
 
-void Scheduler::InheritPriority(Thread* thread, int priority, cpu_mask_t* cpus_to_reschedule_mask) {
-  InheritWeight(thread, priority, cpus_to_reschedule_mask);
-
-  const cpu_mask_t current_cpu_mask = cpu_num_to_mask(arch_curr_cpu_num());
-  if (*cpus_to_reschedule_mask & current_cpu_mask) {
-    Reschedule();
-  }
+void Scheduler::InheritPriority(Thread* thread, int priority) {
+  cpu_mask_t cpus_to_reschedule_mask = 0;
+  InheritWeight(thread, priority, &cpus_to_reschedule_mask);
+  RescheduleMask(cpus_to_reschedule_mask);
 }
 
 void Scheduler::ChangePriority(Thread* thread, int priority) {
   cpu_mask_t cpus_to_reschedule_mask = 0;
   ChangeWeight(thread, priority, &cpus_to_reschedule_mask);
-
-  const cpu_mask_t current_cpu_mask = cpu_num_to_mask(arch_curr_cpu_num());
-  if (cpus_to_reschedule_mask & current_cpu_mask) {
-    Reschedule();
-  }
-  if (cpus_to_reschedule_mask & ~current_cpu_mask) {
-    mp_reschedule(cpus_to_reschedule_mask, 0);
-  }
+  RescheduleMask(cpus_to_reschedule_mask);
 }
 
 void Scheduler::ChangeDeadline(Thread* thread, const zx_sched_deadline_params_t& params) {
   cpu_mask_t cpus_to_reschedule_mask = 0;
   ChangeDeadline(thread, params, &cpus_to_reschedule_mask);
-
-  const cpu_mask_t current_cpu_mask = cpu_num_to_mask(arch_curr_cpu_num());
-  if (cpus_to_reschedule_mask & current_cpu_mask) {
-    Reschedule();
-  }
-  if (cpus_to_reschedule_mask & ~current_cpu_mask) {
-    mp_reschedule(cpus_to_reschedule_mask, 0);
-  }
+  RescheduleMask(cpus_to_reschedule_mask);
 }
 
 zx_time_t Scheduler::GetTargetPreemptionTime() {
