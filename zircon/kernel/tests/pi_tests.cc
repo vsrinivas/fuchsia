@@ -192,20 +192,13 @@ class LockedOwnedWaitQueue : public OwnedWaitQueue {
 
   void ReleaseAllThreads() TA_EXCL(thread_lock) {
     Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
-
-    if (OwnedWaitQueue::WakeThreads(ktl::numeric_limits<uint32_t>::max())) {
-      Scheduler::Reschedule();
-    }
+    OwnedWaitQueue::WakeThreads(ktl::numeric_limits<uint32_t>::max());
   }
 
   void ReleaseOneThread() TA_EXCL(thread_lock) {
     Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
-
     auto hook = [](Thread*, void*) { return Hook::Action::SelectAndAssignOwner; };
-
-    if (OwnedWaitQueue::WakeThreads(1u, {hook, nullptr})) {
-      Scheduler::Reschedule();
-    }
+    OwnedWaitQueue::WakeThreads(1u, {hook, nullptr});
   }
 
   void AssignOwner(TestThread* thread) TA_EXCL(thread_lock);
@@ -540,10 +533,7 @@ bool TestThread::WaitFor() {
 
 void LockedOwnedWaitQueue::AssignOwner(TestThread* thread) {
   Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
-
-  if (OwnedWaitQueue::AssignOwner(thread ? thread->thread_ : nullptr)) {
-    Scheduler::Reschedule();
-  }
+  OwnedWaitQueue::AssignOwner(thread ? thread->thread_ : nullptr);
 }
 
 bool pi_test_basic() {

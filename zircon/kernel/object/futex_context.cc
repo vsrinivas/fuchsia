@@ -376,15 +376,10 @@ zx_status_t FutexContext::FutexWaitInternal(user_in_ptr<const zx_futex_t> value_
     // ThreadDispatcher's object lock for the thread spin-lock in the process)
     // and wait on the futex wait queue, assigning ownership properly in the
     // process.
-    //
-    // We specifically want reschedule=MutexPolicy::NoReschedule here,
-    // otherwise the combination of releasing the mutex and enqueuing the
-    // current thread would not be atomic, which would mean that we could
-    // miss wakeups.
     Guard<MonitoredSpinLock, IrqSave> thread_lock_guard{ThreadLock::Get(), SOURCE_TAG};
     ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::FUTEX);
-    guard.Release(MutexPolicy::ThreadLockHeld, MutexPolicy::NoReschedule);
-    new_owner_guard.Release(MutexPolicy::ThreadLockHeld, MutexPolicy::NoReschedule);
+    guard.Release(MutexPolicy::ThreadLockHeld);
+    new_owner_guard.Release(MutexPolicy::ThreadLockHeld);
 
     wait_tracer.FutexWait(futex_id, new_owner);
 
@@ -457,8 +452,8 @@ zx_status_t FutexContext::FutexWaitInternal(user_in_ptr<const zx_futex_t> value_
   // inside of the thread lock.
   {
     Guard<MonitoredSpinLock, IrqSave> thread_lock_guard{ThreadLock::Get(), SOURCE_TAG};
-    if (futex_ref->waiters_.IsEmpty() && futex_ref->waiters_.AssignOwner(nullptr)) {
-      Scheduler::Reschedule();
+    if (futex_ref->waiters_.IsEmpty()) {
+      futex_ref->waiters_.AssignOwner(nullptr);
     }
   }
 
@@ -508,10 +503,7 @@ zx_status_t FutexContext::FutexWake(user_in_ptr<const zx_futex_t> value_ptr, uin
       auto hook = (owner_action == OwnerAction::RELEASE)
                       ? ResetBlockingFutexId<Action::SelectAndKeepGoing>
                       : ResetBlockingFutexId<Action::SelectAndAssignOwner>;
-
-      if (futex_ref->waiters_.WakeThreads(wake_count, {hook, &wake_op})) {
-        Scheduler::Reschedule();
-      }
+      futex_ref->waiters_.WakeThreads(wake_count, {hook, &wake_op});
 
       // Either our owner action was RELEASE (in which case we should not have
       // any owner), or our action was ASSIGN_WOKEN (in which case we should
@@ -659,8 +651,7 @@ zx_status_t FutexContext::FutexRequeueInternal(
       DEBUG_ASSERT(wake_futex_ref != nullptr);
       // Exchange ThreadDispatcher's object lock for the global ThreadLock.
       Guard<MonitoredSpinLock, IrqSave> thread_lock_guard{ThreadLock::Get(), SOURCE_TAG};
-      new_owner_guard.Release(MutexPolicy::ThreadLockHeld, MutexPolicy::NoReschedule);
-      bool do_resched;
+      new_owner_guard.Release(MutexPolicy::ThreadLockHeld);
 
       using Action = OwnedWaitQueue::Hook::Action;
       auto wake_hook = (owner_action == OwnerAction::RELEASE)
@@ -670,11 +661,11 @@ zx_status_t FutexContext::FutexRequeueInternal(
 
       if (requeue_count) {
         DEBUG_ASSERT(requeue_futex_ref != nullptr);
-        do_resched = wake_futex_ref->waiters_.WakeAndRequeue(
+        wake_futex_ref->waiters_.WakeAndRequeue(
             wake_count, &(requeue_futex_ref->waiters_), requeue_count, new_requeue_owner,
             {wake_hook, &wake_op}, {requeue_hook, &requeue_op});
       } else {
-        do_resched = wake_futex_ref->waiters_.WakeThreads(wake_count, {wake_hook, &wake_op});
+        wake_futex_ref->waiters_.WakeThreads(wake_count, {wake_hook, &wake_op});
 
         // We made no attempt to requeue anyone, but we still need to update
         // ownership.  If it has waiters currently, make sure that we clear out
@@ -683,10 +674,7 @@ zx_status_t FutexContext::FutexRequeueInternal(
         if (requeue_futex_ref->waiters_.IsEmpty()) {
           new_requeue_owner = nullptr;
         }
-
-        if (requeue_futex_ref->waiters_.AssignOwner(new_requeue_owner)) {
-          do_resched = true;
-        }
+        requeue_futex_ref->waiters_.AssignOwner(new_requeue_owner);
       }
 
       // If we requeued any threads, we need to transfer their pending operation
@@ -706,10 +694,6 @@ zx_status_t FutexContext::FutexRequeueInternal(
                        wake_futex_ref->waiters_.owner());
       tracer.FutexRequeue(requeue_id, requeue_futex_was_active, requeue_op.count,
                           new_requeue_owner);
-
-      if (do_resched) {
-        Scheduler::Reschedule();
-      }
     }
   }
 

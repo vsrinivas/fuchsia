@@ -38,6 +38,7 @@
 
 #include <arch/debugger.h>
 #include <arch/exception.h>
+#include <kernel/auto_preempt_disabler.h>
 #include <kernel/cpu.h>
 #include <kernel/dpc.h>
 #include <kernel/lockdep.h>
@@ -127,16 +128,15 @@ void WaitQueueState::UnblockIfInterruptible(Thread* thread, zx_status_t status) 
   }
 }
 
-bool WaitQueueState::Unsleep(Thread* thread, zx_status_t status) {
+void WaitQueueState::Unsleep(Thread* thread, zx_status_t status) {
   blocked_status_ = status;
-  return Scheduler::Unblock(thread);
+  Scheduler::Unblock(thread);
 }
 
-bool WaitQueueState::UnsleepIfInterruptible(Thread* thread, zx_status_t status) {
+void WaitQueueState::UnsleepIfInterruptible(Thread* thread, zx_status_t status) {
   if (interruptible_ == Interruptible::Yes) {
-    return Unsleep(thread, status);
+    Unsleep(thread, status);
   }
-  return false;
 }
 
 void WaitQueueState::UpdatePriorityIfBlocked(Thread* thread, int priority, PropagatePI propagate) {
@@ -310,31 +310,18 @@ static void free_thread_resources(Thread* t) {
 void Thread::Resume() {
   canary_.Assert();
 
-  bool ints_disabled = arch_ints_disabled();
-  bool resched = false;
-  if (!ints_disabled) {  // HACK, don't resced into bootstrap thread before idle thread is set up
-    resched = true;
+  Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
+
+  if (state() == THREAD_DEATH) {
+    // The thread is dead, resuming it is a no-op.
+    return;
   }
 
-  {
-    Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
-
-    if (state() == THREAD_DEATH) {
-      // The thread is dead, resuming it is a no-op.
-      return;
-    }
-
-    // Clear the suspend signal in case there is a pending suspend
-    signals_.fetch_and(~THREAD_SIGNAL_SUSPEND, ktl::memory_order_relaxed);
-
-    if (state() == THREAD_INITIAL || state() == THREAD_SUSPENDED) {
-      // wake up the new thread, putting it in a run queue on a cpu. reschedule if the local
-      // cpu run queue was modified
-      bool local_resched = Scheduler::Unblock(this);
-      if (resched && local_resched) {
-        Scheduler::Reschedule();
-      }
-    }
+  // Clear the suspend signal in case there is a pending suspend
+  signals_.fetch_and(~THREAD_SIGNAL_SUSPEND, ktl::memory_order_relaxed);
+  if (state() == THREAD_INITIAL || state() == THREAD_SUSPENDED) {
+    // Wake up the new thread, putting it in a run queue on a cpu.
+    Scheduler::Unblock(this);
   }
 
   kcounter_add(thread_resume_count, 1);
@@ -358,6 +345,8 @@ zx_status_t Thread::Suspend() {
   canary_.Assert();
   DEBUG_ASSERT(!IsIdle());
 
+  // Disable preemption to defer rescheduling until the end of this scope.
+  AutoPreemptDisabler preempt_disable;
   Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
 
   if (state() == THREAD_DEATH) {
@@ -366,7 +355,6 @@ zx_status_t Thread::Suspend() {
 
   signals_.fetch_or(THREAD_SIGNAL_SUSPEND, ktl::memory_order_relaxed);
 
-  bool local_resched = false;
   switch (state()) {
     case THREAD_DEATH:
       // This should be unreachable because this state was handled above.
@@ -380,7 +368,7 @@ zx_status_t Thread::Suspend() {
       // already executed ThreadDispatcher::Start() so all the userspace
       // entry data has been initialized and will be ready to go as soon as
       // the thread is unsuspended.
-      local_resched = Scheduler::Unblock(this);
+      Scheduler::Unblock(this);
       break;
     case THREAD_READY:
       // thread is ready to run and not blocked or suspended.
@@ -403,13 +391,8 @@ zx_status_t Thread::Suspend() {
       break;
     case THREAD_SLEEPING:
       // thread is sleeping
-      local_resched = wait_queue_state_.UnsleepIfInterruptible(this, ZX_ERR_INTERNAL_INTR_RETRY);
+      wait_queue_state_.UnsleepIfInterruptible(this, ZX_ERR_INTERNAL_INTR_RETRY);
       break;
-  }
-
-  // reschedule if the local cpu run queue was modified
-  if (local_resched) {
-    Scheduler::Reschedule();
   }
 
   kcounter_add(thread_suspend_count, 1);
@@ -620,12 +603,12 @@ void Thread::Current::Exit(int retcode) {
 void Thread::Kill() {
   canary_.Assert();
 
+  // Disable preemption to defer rescheduling until the end of this scope.
+  AutoPreemptDisabler preempt_disable;
   Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
 
   // deliver a signal to the thread.
   signals_.fetch_or(THREAD_SIGNAL_KILL, ktl::memory_order_relaxed);
-
-  bool local_resched = false;
 
   // we are killing ourself
   if (this == Thread::Current::Get()) {
@@ -654,7 +637,7 @@ void Thread::Kill() {
       break;
     case THREAD_SUSPENDED:
       // thread is suspended, resume it so it can get the kill signal
-      local_resched = Scheduler::Unblock(this);
+      Scheduler::Unblock(this);
       break;
     case THREAD_BLOCKED:
     case THREAD_BLOCKED_READ_LOCK:
@@ -663,16 +646,11 @@ void Thread::Kill() {
       break;
     case THREAD_SLEEPING:
       // thread is sleeping
-      local_resched = wait_queue_state_.UnsleepIfInterruptible(this, ZX_ERR_INTERNAL_INTR_KILLED);
+      wait_queue_state_.UnsleepIfInterruptible(this, ZX_ERR_INTERNAL_INTR_KILLED);
       break;
     case THREAD_DEATH:
       // thread is already dead
       return;
-  }
-
-  if (local_resched) {
-    // reschedule if the local cpu run queue was modified
-    Scheduler::Reschedule();
   }
 }
 
@@ -1024,11 +1002,7 @@ void Thread::HandleSleep(Timer* timer, zx_time_t now) {
   }
 
   // Unblock the thread, regardless of whether the sleep was interruptible.
-  const bool resched = wait_queue_state_.Unsleep(this, ZX_OK);
-  if (resched) {
-    Scheduler::Reschedule();
-  }
-
+  wait_queue_state_.Unsleep(this, ZX_OK);
   thread_lock.Release();
 }
 

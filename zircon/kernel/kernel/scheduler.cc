@@ -1493,7 +1493,7 @@ void Scheduler::Block() {
   Scheduler::Get()->RescheduleCommon(now, trace.Completer());
 }
 
-bool Scheduler::Unblock(Thread* thread) {
+void Scheduler::Unblock(Thread* thread) {
   LocalTraceDuration<KTRACE_COMMON> trace{"sched_unblock"_stringref};
 
   thread->canary().Assert();
@@ -1509,14 +1509,13 @@ bool Scheduler::Unblock(Thread* thread) {
   target->Insert(now, thread);
 
   if (target_cpu == arch_curr_cpu_num()) {
-    return true;
+    Reschedule();
   } else {
     mp_reschedule(cpu_num_to_mask(target_cpu), 0);
-    return false;
   }
 }
 
-bool Scheduler::Unblock(WaitQueueSublist list) {
+void Scheduler::Unblock(WaitQueueSublist list) {
   LocalTraceDuration<KTRACE_COMMON> trace{"sched_unblock_list"_stringref};
 
   DEBUG_ASSERT(thread_lock.IsHeld());
@@ -1547,7 +1546,9 @@ bool Scheduler::Unblock(WaitQueueSublist list) {
 
   // Return true if the current CPU is in the mask.
   const cpu_mask_t current_cpu_mask = cpu_num_to_mask(arch_curr_cpu_num());
-  return cpus_to_reschedule_mask & current_cpu_mask;
+  if (cpus_to_reschedule_mask & current_cpu_mask) {
+    Reschedule();
+  }
 }
 
 void Scheduler::UnblockIdle(Thread* thread) {
@@ -2041,13 +2042,12 @@ void Scheduler::TimerTick(SchedTime now) {
   Thread::Current::preemption_state().PreemptSetPending();
 }
 
-void Scheduler::InheritPriority(Thread* thread, int priority, bool* local_reschedule,
-                                cpu_mask_t* cpus_to_reschedule_mask) {
+void Scheduler::InheritPriority(Thread* thread, int priority, cpu_mask_t* cpus_to_reschedule_mask) {
   InheritWeight(thread, priority, cpus_to_reschedule_mask);
 
   const cpu_mask_t current_cpu_mask = cpu_num_to_mask(arch_curr_cpu_num());
   if (*cpus_to_reschedule_mask & current_cpu_mask) {
-    *local_reschedule = true;
+    Reschedule();
   }
 }
 

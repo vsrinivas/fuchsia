@@ -30,6 +30,7 @@
 #include <zircon/time.h>
 #include <zircon/types.h>
 
+#include <kernel/auto_preempt_disabler.h>
 #include <kernel/scheduler.h>
 #include <kernel/task_runtime_timers.h>
 #include <kernel/thread.h>
@@ -197,6 +198,7 @@ __NO_INLINE void Mutex::AcquireContendedMutex(zx_duration_t spin_max_duration,
 
   {
     // we contended with someone else, will probably need to block
+    AutoPreemptDisabler preempt_disable;
     Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
 
     // Check if the queued flag is currently set. The contested flag can only be changed
@@ -244,53 +246,37 @@ __NO_INLINE void Mutex::AcquireContendedMutex(zx_duration_t spin_max_duration,
   }
 }
 
-// Shared implementation of release
-template <Mutex::ThreadLockState TLS>
-inline void Mutex::ReleaseInternal(const bool allow_reschedule) {
-  Thread* ct = Thread::Current::Get();
-
+inline uintptr_t Mutex::TryRelease(Thread* current_thread) {
   // Try the fast path.  Assume that we are locked, but uncontested.
-  uintptr_t old_mutex_state = reinterpret_cast<uintptr_t>(ct);
+  uintptr_t old_mutex_state = reinterpret_cast<uintptr_t>(current_thread);
   if (likely(val_.compare_exchange_strong(old_mutex_state, STATE_FREE, ktl::memory_order_release,
                                           ktl::memory_order_relaxed))) {
     // We're done.  Since this mutex was uncontested, we know that we were
     // not receiving any priority pressure from the wait queue, and there is
     // nothing further to do.
     KTracer{}.KernelMutexUncontestedRelease(this);
-    return;
+    return STATE_FREE;
   }
 
-  // Otherwise, the mutex is contended. Drop into the slow path.
-  ReleaseContendedMutex<TLS>(allow_reschedule, old_mutex_state);
+  // The mutex is contended, return the current state of the mutex.
+  return old_mutex_state;
 }
 
-template <Mutex::ThreadLockState TLS>
-__NO_INLINE void Mutex::ReleaseContendedMutex(const bool allow_reschedule,
-                                              uintptr_t old_mutex_state) {
-  Thread* ct = Thread::Current::Get();
-
+__NO_INLINE void Mutex::ReleaseContendedMutex(Thread* current_thread, uintptr_t old_mutex_state) {
   // Sanity checks.  The mutex should have been either locked by us and
   // uncontested, or locked by us and contested.  Anything else is an internal
   // consistency error worthy of a panic.
   if (LK_DEBUGLEVEL > 0) {
-    uintptr_t expected_state = reinterpret_cast<uintptr_t>(ct) | STATE_FLAG_CONTESTED;
+    uintptr_t expected_state = reinterpret_cast<uintptr_t>(current_thread) | STATE_FLAG_CONTESTED;
 
     if (unlikely(old_mutex_state != expected_state)) {
       auto other_holder = reinterpret_cast<Thread*>(old_mutex_state & ~STATE_FLAG_CONTESTED);
       panic(
-          "Mutex::ReleaseInternal: sanity check failure.  Thread %p (%s) tried to release "
+          "Mutex::ReleaseContendedMutex: sanity check failure.  Thread %p (%s) tried to release "
           "mutex %p.  Expected state (%lx) != observed state (%lx).  Other holder (%s)\n",
-          ct, ct->name(), this, expected_state, old_mutex_state,
+          current_thread, current_thread->name(), this, expected_state, old_mutex_state,
           other_holder ? other_holder->name() : "<none>");
     }
-  }
-
-  // compile-time conditionally acquire/release the thread lock
-  // NOTE: using the manual spinlock grab/release instead of THREAD_LOCK because
-  // the state variable needs to exit in either path.
-  __UNUSED interrupt_saved_state_t irq_state;
-  if constexpr (TLS == ThreadLockState::NotHeld) {
-    thread_lock.AcquireIrqSave(irq_state, SOURCE_TAG);
   }
 
   // Attempt to release a thread. If there are still waiters in the queue
@@ -305,7 +291,7 @@ __NO_INLINE void Mutex::ReleaseContendedMutex(const bool allow_reschedule,
   };
 
   KTracer tracer;
-  bool need_reschedule = wait_.WakeThreads(1, {cbk, &woken});
+  wait_.WakeThreads(1, {cbk, &woken});
   tracer.KernelMutexWake(this, woken, wait_.Count());
 
   ktrace_ptr(TAG_KWAIT_WAKE, &wait_, 1, 0);
@@ -343,34 +329,34 @@ __NO_INLINE void Mutex::ReleaseContendedMutex(const bool allow_reschedule,
                                              ktl::memory_order_release,
                                              ktl::memory_order_relaxed))) {
     panic("bad state (%lx != %lx) in mutex release %p, current thread %p\n",
-          reinterpret_cast<uintptr_t>(ct) | STATE_FLAG_CONTESTED, old_mutex_state, this, ct);
-  }
-
-  if (allow_reschedule && need_reschedule) {
-    Scheduler::Reschedule();
-  }
-
-  // compile-time conditionally THREAD_UNLOCK
-  if constexpr (TLS == ThreadLockState::NotHeld) {
-    thread_lock.ReleaseIrqRestore(irq_state);
+          reinterpret_cast<uintptr_t>(current_thread) | STATE_FLAG_CONTESTED, old_mutex_state, this,
+          current_thread);
   }
 }
 
 void Mutex::Release() {
   magic_.Assert();
   DEBUG_ASSERT(!arch_blocking_disallowed());
-
-  // default release will reschedule if any threads are woken up and acquire the thread lock
-  ReleaseInternal<ThreadLockState::NotHeld>(true);
+  Thread* current_thread = Thread::Current::Get();
+  if (const uintptr_t old_mutex_state = TryRelease(current_thread); old_mutex_state != STATE_FREE) {
+    // Disable preemption to prevent switching to the woken thread inside of
+    // WakeThreads() if it is assigned to this CPU. If the woken thread is
+    // assigned to a different CPU, the thread lock prevents it from observing
+    // the inconsistent owner before the correct owner is recorded.
+    AutoPreemptDisabler preempt_disable;
+    Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
+    ReleaseContendedMutex(current_thread, old_mutex_state);
+  }
 }
 
-void Mutex::ReleaseThreadLocked(const bool allow_reschedule) {
+void Mutex::ReleaseThreadLocked() {
   magic_.Assert();
   DEBUG_ASSERT(!arch_blocking_disallowed());
   DEBUG_ASSERT(arch_ints_disabled());
-  DEBUG_ASSERT(thread_lock.IsHeld());
-
-  // This special version of release will pass through the allow_reschedule flag
-  // and not acquire the thread_lock
-  ReleaseInternal<ThreadLockState::Held>(allow_reschedule);
+  DEBUG_ASSERT(Thread::Current::Get()->preemption_state().PreemptDisableCount() > 0);
+  thread_lock.AssertHeld();
+  Thread* current_thread = Thread::Current::Get();
+  if (const uintptr_t old_mutex_state = TryRelease(current_thread); old_mutex_state != STATE_FREE) {
+    ReleaseContendedMutex(current_thread, old_mutex_state);
+  }
 }

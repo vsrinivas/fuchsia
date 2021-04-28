@@ -82,10 +82,7 @@ ResourceOwnership BrwLock<PI>::Wake() {
       }
     };
 
-    bool resched = wait_.WakeThreads(ktl::numeric_limits<uint32_t>::max(), {cbk, &context});
-    if (resched) {
-      Scheduler::Reschedule();
-    }
+    wait_.WakeThreads(ktl::numeric_limits<uint32_t>::max(), {cbk, &context});
     return context.ownership;
   } else {
     Thread* next = wait_.Peek();

@@ -330,15 +330,10 @@ bool WaitQueue::WakeOne(zx_status_t wait_queue_error) {
   t = Peek();
   if (t) {
     Dequeue(t, wait_queue_error);
-
     ktrace_ptr(TAG_KWAIT_WAKE, this, 0, 0);
 
-    // Wake up the new thread, putting it in a run queue on a cpu. Reschedule if
-    // the local cpu run queue was modified.
-    if (Scheduler::Unblock(t)) {
-      Scheduler::Reschedule();
-    }
-
+    // Wake up the new thread, putting it in a run queue on a cpu.
+    Scheduler::Unblock(t);
     woke = true;
   }
 
@@ -418,14 +413,10 @@ void WaitQueue::WakeAll(zx_status_t wait_queue_error) {
   }
 
   DEBUG_ASSERT(collection_.Count() == 0);
-
   ktrace_ptr(TAG_KWAIT_WAKE, this, 0, 0);
 
-  // Wake up the new thread(s), putting it in a run queue on a cpu. Reschedule
-  // if the local cpu run queue was modified.
-  if (Scheduler::Unblock(ktl::move(list))) {
-    Scheduler::Reschedule();
-  }
+  // Wake up the new thread(s), putting it in a run queue on a cpu.
+  Scheduler::Unblock(ktl::move(list));
 }
 
 bool WaitQueue::IsEmpty() const {
@@ -490,10 +481,7 @@ zx_status_t WaitQueue::UnblockThread(Thread* t, zx_status_t wait_queue_error) {
   wq->Dequeue(t, wait_queue_error);
   wq->UpdatePriority(old_wq_prio);
 
-  if (Scheduler::Unblock(t)) {
-    Scheduler::Reschedule();
-  }
-
+  Scheduler::Unblock(t);
   return ZX_OK;
 }
 

@@ -44,8 +44,9 @@ class TA_CAP("mutex") Mutex {
   // Release the mutex. Must be held by the current thread.
   void Release() TA_REL() TA_EXCL(thread_lock);
 
-  // Special version of Release which operates with the thread lock held
-  void ReleaseThreadLocked(bool allow_reschedule) TA_REL() TA_REQ(thread_lock);
+  // Special version of Release which operates with the thread lock held. Must
+  // be called with preemption disabled.
+  void ReleaseThreadLocked() TA_REL() TA_REQ(thread_lock);
 
   // does the current thread hold the mutex?
   bool IsHeld() const { return (holder() == Thread::Current::Get()); }
@@ -57,11 +58,10 @@ class TA_CAP("mutex") Mutex {
   void AssertHeld() const TA_ASSERT() { DEBUG_ASSERT(IsHeld()); }
 
  private:
-  enum class ThreadLockState : bool { NotHeld = false, Held = true };
-
-  // Templated implementation for |Release| and |ReleaseThreadLocked|.
-  template <ThreadLockState TLS>
-  void ReleaseInternal(bool allow_reschedule) TA_REL() __TA_NO_THREAD_SAFETY_ANALYSIS;
+  // Attempts to release the mutex. Returns STATE_FREE if the mutex was
+  // uncontested and released, otherwise returns the contested state of the
+  // mutex.
+  inline uintptr_t TryRelease(Thread* current_thread);
 
   // Acquire a lock held by another thread.
   //
@@ -75,14 +75,12 @@ class TA_CAP("mutex") Mutex {
 
   // Release a lock contended by another thread.
   //
-  // This is a slowpath taken by |Release| (via |ReleaseInternal|) when releasing a
-  // lock that is being waited for by another thread.
+  // This is the slowpath taken by |Release| when releasing a lock that is being
+  // waited for by another thread.
   //
-  // This function is deliberately moved out of line from |Release| to keep the stack
-  // set up, tear down in the |Release| fastpath small.
-  template <Mutex::ThreadLockState TLS>
-  void ReleaseContendedMutex(bool allow_rescheduled,
-                             uintptr_t old_mutex_state) __TA_NO_THREAD_SAFETY_ANALYSIS;
+  // This function is deliberately moved out of line from |Release| to keep the
+  // stack set up, tear down in the |Release| fastpath small.
+  void ReleaseContendedMutex(Thread* current_thread, uintptr_t old_mutex_state) TA_REQ(thread_lock);
 
   static constexpr uint32_t MAGIC = 0x6D757478;  // 'mutx'
   static constexpr uintptr_t STATE_FREE = 0u;
@@ -184,22 +182,15 @@ struct MutexPolicy {
   // select the special-case release method below.
   enum SelectThreadLockHeld { ThreadLockHeld };
 
-  // Specifies whether the special-case release method below should
-  // reschedule.
-  enum RescheduleOption : bool {
-    NoReschedule = false,
-    Reschedule = true,
-  };
-
   // Releases the lock using the special mutex release operation. This
   // is selected by calling:
   //
-  //  Guard<TrivialMutex|Mutex|Mutex>::Release(ThreadLockHeld [, Reschedule | NoReschedule])
+  //  Guard<TrivialMutex|Mutex|Mutex>::Release(ThreadLockHeld)
   //
   template <typename LockType>
-  static void Release(LockType* lock, State*, SelectThreadLockHeld,
-                      RescheduleOption reschedule = Reschedule) TA_REL(lock) TA_REQ(thread_lock) {
-    lock->ReleaseThreadLocked(reschedule);
+  static void Release(LockType* lock, State*, SelectThreadLockHeld) TA_REL(lock)
+      TA_REQ(thread_lock) {
+    lock->ReleaseThreadLocked();
   }
 };
 

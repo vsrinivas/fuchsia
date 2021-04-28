@@ -107,9 +107,8 @@ class WaitQueueState {
 
   void UnblockIfInterruptible(Thread* thread, zx_status_t status) TA_REQ(thread_lock);
 
-  // Returns whether a reschedule needs to be performed.
-  bool Unsleep(Thread* thread, zx_status_t status) TA_REQ(thread_lock);
-  bool UnsleepIfInterruptible(Thread* thread, zx_status_t status) TA_REQ(thread_lock);
+  void Unsleep(Thread* thread, zx_status_t status) TA_REQ(thread_lock);
+  void UnsleepIfInterruptible(Thread* thread, zx_status_t status) TA_REQ(thread_lock);
 
   void UpdatePriorityIfBlocked(Thread* thread, int priority, PropagatePI propagate)
       TA_REQ(thread_lock);

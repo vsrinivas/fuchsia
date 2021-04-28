@@ -108,18 +108,11 @@ class OwnedWaitQueue : public WaitQueue, public fbl::DoublyLinkedListable<OwnedW
   // Note, if the new owner exists, but is dead or dying, it will not be
   // permitted to become the new owner of the wait_queue.  Any existing owner
   // will be replaced with no owner in this situation.
-  //
-  // Returns true if a local reschedule is required, or false otherwise.
-  bool AssignOwner(Thread* new_owner) TA_REQ(thread_lock) __WARN_UNUSED_RESULT {
+  void AssignOwner(Thread* new_owner) TA_REQ(thread_lock) {
     DEBUG_ASSERT(magic() == kOwnedMagic);
-
-    // If the new owner is the same as the old owner, then we have nothing
-    // special to do here.  Just short-circuit.
-    if (new_owner == owner()) {
-      return false;
+    if (new_owner != owner()) {
+      UpdateBookkeeping(new_owner, BlockedPriority());
     }
-
-    return UpdateBookkeeping(new_owner, BlockedPriority());
   }
 
   // Block the current thread on this wait queue, and re-assign ownership to
@@ -135,11 +128,8 @@ class OwnedWaitQueue : public WaitQueue, public fbl::DoublyLinkedListable<OwnedW
   // Wake the up to specified number of threads from the wait queue and then
   // handle the ownership bookkeeping based on what the Hook told us to do.
   // See |Hook::Action| for details.
-  //
-  // Returns true if a local reschedule is required, or false otherwise.
-  // Appropriate IPIs will already have been sent.
-  bool WakeThreads(uint32_t wake_count, Hook on_thread_wake_hook = {})
-      TA_REQ(thread_lock) __WARN_UNUSED_RESULT;
+  void WakeThreads(uint32_t wake_count, Hook on_thread_wake_hook = {})
+      TA_REQ(thread_lock);
 
   // A specialization of WakeThreads which will...
   //
@@ -159,11 +149,9 @@ class OwnedWaitQueue : public WaitQueue, public fbl::DoublyLinkedListable<OwnedW
   // Note, if the |requeue_owner| exists, but is dead or dying, it will not be
   // permitted to become the new owner of the |requeue_target|.  Any existing
   // owner will be replaced with no owner in this situation.
-  //
-  // Returns true if a local reschedule is required, or false otherwise.
-  bool WakeAndRequeue(uint32_t wake_count, OwnedWaitQueue* requeue_target, uint32_t requeue_count,
+  void WakeAndRequeue(uint32_t wake_count, OwnedWaitQueue* requeue_target, uint32_t requeue_count,
                       Thread* requeue_owner, Hook on_thread_wake_hook = {},
-                      Hook on_thread_requeue_hook = {}) TA_REQ(thread_lock) __WARN_UNUSED_RESULT;
+                      Hook on_thread_requeue_hook = {}) TA_REQ(thread_lock);
 
  private:
   // Give permission to the WaitQueue thunk to call the
@@ -177,16 +165,12 @@ class OwnedWaitQueue : public WaitQueue, public fbl::DoublyLinkedListable<OwnedW
   //
   // It is an error to call this function if |old_prio| == |new_prio|.  Be
   // sure to check inline before calling.
-  //
-  // Returns true if a local reschedule is required, or false otherwise.
-  static bool QueuePressureChanged(Thread* t, int old_prio, int new_prio,
+  static void QueuePressureChanged(Thread* t, int old_prio, int new_prio,
                                    cpu_mask_t* accum_cpu_mask) TA_REQ(thread_lock);
 
   // A hook called by the WaitQueue level when the maximum priority across all
   // current waiters has changed.
-  //
-  // Returns true if a local reschedule is required, or false otherwise.
-  bool WaitersPriorityChanged(int old_prio) TA_REQ(thread_lock) __WARN_UNUSED_RESULT;
+  bool WaitersPriorityChanged(int old_prio) TA_REQ(thread_lock);
 
   // Updates ownership bookkeeping and deals with priority inheritance side
   // effects.  Called by internal code, typically after changes to the
@@ -207,10 +191,8 @@ class OwnedWaitQueue : public WaitQueue, public fbl::DoublyLinkedListable<OwnedW
   //   PI side effects of updating this bookkeeping.  When nullptr,
   //   UpdateBookkeeping will automatically update kernel counters and send
   //   IPIs to processors which have been affected by the PI side effects.
-  //
-  // Returns true if a local reschedule is required, or false otherwise.
-  bool UpdateBookkeeping(Thread* new_owner, int old_prio, cpu_mask_t* out_accum_cpu_mask = nullptr)
-      TA_REQ(thread_lock) __WARN_UNUSED_RESULT;
+  void UpdateBookkeeping(Thread* new_owner, int old_prio, cpu_mask_t* out_accum_cpu_mask = nullptr)
+      TA_REQ(thread_lock);
 
   // Wake the specified number of threads from the wait queue, and return the
   // new owner (first thread woken) via the |out_new_owner| out param, or
@@ -218,10 +200,8 @@ class OwnedWaitQueue : public WaitQueue, public fbl::DoublyLinkedListable<OwnedW
   // well as WakeAndRequeue.  Doing so allows us to preserve common code, and
   // to defer the PI pressure recalculations until the point at which all of
   // the queue manipulations have taken place.
-  //
-  // Returns true if a local reschedule is required, or false otherwise.
-  bool WakeThreadsInternal(uint32_t wake_count, Thread** out_new_owner, Hook on_thread_wake_hook)
-      TA_REQ(thread_lock) __WARN_UNUSED_RESULT;
+  void WakeThreadsInternal(uint32_t wake_count, Thread** out_new_owner, Hook on_thread_wake_hook)
+      TA_REQ(thread_lock);
 
   Thread* owner_ TA_GUARDED(thread_lock) = nullptr;
 };

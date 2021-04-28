@@ -137,11 +137,8 @@ class Scheduler {
   static void Preempt() TA_REQ(thread_lock);
   static void Reschedule() TA_REQ(thread_lock);
   static void RescheduleInternal() TA_REQ(thread_lock);
-
-  // Return true if the thread was placed on the current cpu's run queue.
-  // This usually means the caller should locally reschedule soon.
-  static bool Unblock(Thread* thread) __WARN_UNUSED_RESULT TA_REQ(thread_lock);
-  static bool Unblock(WaitQueueSublist thread_list) __WARN_UNUSED_RESULT TA_REQ(thread_lock);
+  static void Unblock(Thread* thread) TA_REQ(thread_lock);
+  static void Unblock(WaitQueueSublist thread_list) TA_REQ(thread_lock);
   static void UnblockIdle(Thread* idle_thread) TA_REQ(thread_lock);
 
   static void Migrate(Thread* thread) TA_REQ(thread_lock);
@@ -154,13 +151,10 @@ class Scheduler {
 
   // Set the inherited priority of a thread.
   //
-  // Update a mask of affected CPUs along with a flag indicating whether or not a
-  // local reschedule is needed.  After the caller has finished any batch update
-  // operations, it is their responsibility to trigger reschedule operations on
-  // the local CPU (if needed) as well as any other CPUs.  This allows callers to
-  // bacth update the state of several threads in a priority inheritance chain
-  // before finally rescheduling.
-  static void InheritPriority(Thread* t, int pri, bool* local_resched, cpu_mask_t* accum_cpu_mask)
+  // Update a mask of affected CPUs. After the caller has finished any batch
+  // update operations, it is their responsibility to trigger remote IPIs to
+  // affected CPUs.
+  static void InheritPriority(Thread* t, int priority, cpu_mask_t* cpus_to_reschedule_mask)
       TA_REQ(thread_lock);
 
   // Set the priority of a thread and reset the boost value. This function might reschedule.
