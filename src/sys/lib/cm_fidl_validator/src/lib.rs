@@ -436,6 +436,14 @@ impl<'a> ValidationContext<'a> {
     }
 
     fn validate_use_decls(&mut self, uses: &'a [fsys::UseDecl]) {
+        // Validate all events first so that we keep track of them for validation of event_streams.
+        for use_ in uses.iter() {
+            match use_ {
+                fsys::UseDecl::Event(e) => self.validate_event(e),
+                _ => {}
+            }
+        }
+
         // Validate individual fields.
         for use_ in uses.iter() {
             self.validate_use_decl(&use_);
@@ -516,11 +524,12 @@ impl<'a> ValidationContext<'a> {
                     &mut self.errors,
                 );
             }
-            fsys::UseDecl::Event(e) => {
-                self.validate_event(e);
-            }
             fsys::UseDecl::EventStream(e) => {
                 self.validate_event_stream(e);
+            }
+            fsys::UseDecl::Event(_) => {
+                // Skip events. We must have already validated by this point.
+                // See `validate_use_decls`.
             }
             fsys::UseDeclUnknown!() => {
                 self.errors.push(Error::invalid_field("ComponentDecl", "use"));
@@ -2472,6 +2481,10 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
+                Error::missing_field("UseEventDecl", "source"),
+                Error::missing_field("UseEventDecl", "source_name"),
+                Error::missing_field("UseEventDecl", "target_name"),
+                Error::missing_field("UseEventDecl", "mode"),
                 Error::missing_field("UseServiceDecl", "source"),
                 Error::missing_field("UseServiceDecl", "source_name"),
                 Error::missing_field("UseServiceDecl", "target_path"),
@@ -2485,10 +2498,6 @@ mod tests {
                 Error::missing_field("UseStorageDecl", "source_name"),
                 Error::missing_field("UseStorageDecl", "target_path"),
                 Error::missing_field("UseStorageDecl", "target_path"),
-                Error::missing_field("UseEventDecl", "source"),
-                Error::missing_field("UseEventDecl", "source_name"),
-                Error::missing_field("UseEventDecl", "target_name"),
-                Error::missing_field("UseEventDecl", "mode"),
                 Error::missing_field("UseEventStreamDecl", "name"),
                 Error::missing_field("UseEventStreamDecl", "subscriptions"),
             ])),
@@ -2591,6 +2600,9 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
+                Error::invalid_field("UseEventDecl", "source"),
+                Error::invalid_field("UseEventDecl", "source_name"),
+                Error::invalid_field("UseEventDecl", "target_name"),
                 Error::invalid_field("UseDirectoryDecl", "source"),
                 Error::invalid_field("UseDirectoryDecl", "source_name"),
                 Error::invalid_field("UseDirectoryDecl", "target_path"),
@@ -2598,9 +2610,6 @@ mod tests {
                 Error::invalid_field("UseStorageDecl", "source_name"),
                 Error::invalid_field("UseStorageDecl", "target_path"),
                 Error::invalid_field("UseStorageDecl", "target_path"),
-                Error::invalid_field("UseEventDecl", "source"),
-                Error::invalid_field("UseEventDecl", "source_name"),
-                Error::invalid_field("UseEventDecl", "target_name"),
                 Error::event_stream_event_not_found("UseEventStreamDecl", "events", "a".to_string()),
                 Error::event_stream_event_not_found("UseEventStreamDecl", "events", "b".to_string()),
                 Error::event_stream_unsupported_mode("UseEventStreamDecl", "events", "started".to_string(), "Sync".to_string()),
@@ -2662,12 +2671,11 @@ mod tests {
                     ..new_component_decl()
                 }
             },
-            result =
-                Err(ErrorList::new(vec![
+            result = Err(ErrorList::new(vec![
+                Error::invalid_child("UseEventDecl", "source", "no-such-child"),
                 Error::invalid_child("UseProtocolDecl", "source", "no-such-child"),
                 Error::invalid_child("UseServiceDecl", "source", "no-such-child"),
                 Error::invalid_child("UseDirectoryDecl", "source", "no-such-child"),
-                Error::invalid_child("UseEventDecl", "source", "no-such-child"),
             ])),
         },
         test_validate_has_events_in_event_stream => {
@@ -2758,6 +2766,8 @@ mod tests {
                 decl
             },
             result = Err(ErrorList::new(vec![
+                Error::field_too_long("UseEventDecl", "source_name"),
+                Error::field_too_long("UseEventDecl", "target_name"),
                 Error::field_too_long("UseServiceDecl", "source_name"),
                 Error::field_too_long("UseServiceDecl", "target_path"),
                 Error::field_too_long("UseProtocolDecl", "source_name"),
@@ -2765,8 +2775,6 @@ mod tests {
                 Error::field_too_long("UseDirectoryDecl", "source_name"),
                 Error::field_too_long("UseDirectoryDecl", "target_path"),
                 Error::field_too_long("UseStorageDecl", "target_path"),
-                Error::field_too_long("UseEventDecl", "source_name"),
-                Error::field_too_long("UseEventDecl", "target_name"),
             ])),
         },
         test_validate_conflicting_paths => {
@@ -2800,6 +2808,45 @@ mod tests {
                 Error::duplicate_field("UseProtocolDecl", "path", "/bar"),
                 Error::duplicate_field("UseDirectoryDecl", "path", "/bar"),
             ])),
+        },
+        test_validate_events_can_come_before_or_after_event_stream => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.uses = Some(vec![
+                    UseDecl::Event(UseEventDecl {
+                        source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
+                        source_name: Some("started".to_string()),
+                        target_name: Some("started".to_string()),
+                        filter: Some(fdata::Dictionary { entries: None, ..fdata::Dictionary::EMPTY }),
+                        mode: Some(EventMode::Async),
+                        ..UseEventDecl::EMPTY
+                    }),
+                    UseDecl::EventStream(UseEventStreamDecl {
+                        name: Some("bar".to_string()),
+                        subscriptions: Some(
+                            vec!["started".to_string(), "stopped".to_string()]
+                                .into_iter()
+                                .map(|name| fsys::EventSubscription {
+                                    event_name: Some(name),
+                                    mode: Some(fsys::EventMode::Async),
+                                    ..fsys::EventSubscription::EMPTY
+                                })
+                                .collect()
+                            ),
+                        ..UseEventStreamDecl::EMPTY
+                    }),
+                    UseDecl::Event(UseEventDecl {
+                        source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
+                        source_name: Some("stopped".to_string()),
+                        target_name: Some("stopped".to_string()),
+                        filter: Some(fdata::Dictionary { entries: None, ..fdata::Dictionary::EMPTY }),
+                        mode: Some(EventMode::Async),
+                        ..UseEventDecl::EMPTY
+                    }),
+                ]);
+                decl
+            },
+            result = Ok(()),
         },
 
         // exposes
