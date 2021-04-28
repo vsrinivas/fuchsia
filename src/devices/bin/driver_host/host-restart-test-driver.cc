@@ -26,7 +26,7 @@ using fuchsia_device_restarttest::TestDevice;
 class TestHostRestartDriver;
 using DeviceType = ddk::Device<TestHostRestartDriver, ddk::Unbindable, ddk::Messageable>;
 
-class TestHostRestartDriver : public DeviceType, public fidl::WireInterface<TestDevice> {
+class TestHostRestartDriver : public DeviceType, public fidl::WireServer<TestDevice> {
  public:
   explicit TestHostRestartDriver(zx_device_t* parent) : DeviceType(parent) {}
 
@@ -44,10 +44,10 @@ class TestHostRestartDriver : public DeviceType, public fidl::WireInterface<Test
     return transaction.Status();
   }
 
-  void GetPid(GetPidCompleter::Sync& _completer) override;
+  void GetPid(GetPidRequestView request, GetPidCompleter::Sync& _completer) override;
 };
 
-void TestHostRestartDriver::GetPid(GetPidCompleter::Sync& _completer) {
+void TestHostRestartDriver::GetPid(GetPidRequestView request, GetPidCompleter::Sync& _completer) {
   pid_t pid;
   auto self = zx_process_self();
   zx_info_handle_basic_t info;

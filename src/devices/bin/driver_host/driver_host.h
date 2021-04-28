@@ -48,7 +48,7 @@ void RegisterContextForApi(DriverHostContext* context);
 
 class DevhostControllerConnection
     : public AsyncLoopOwnedRpcHandler<DevhostControllerConnection>,
-      public fidl::WireRawChannelInterface<fuchsia_device_manager::DevhostController> {
+      public fidl::WireServer<fuchsia_device_manager::DevhostController> {
  public:
   // |ctx| must outlive this connection
   explicit DevhostControllerConnection(DriverHostContext* ctx) : driver_host_context_(ctx) {}
@@ -59,18 +59,13 @@ class DevhostControllerConnection
   zx_status_t HandleRead();
 
  private:
-  void CreateDevice(zx::channel coordinator_client, zx::channel device_controller_rpc,
-                    ::fidl::StringView driver_path, ::zx::vmo driver, ::zx::handle parent_proxy,
-                    ::fidl::StringView proxy_args, uint64_t local_device_id,
+  void CreateDevice(CreateDeviceRequestView request,
                     CreateDeviceCompleter::Sync& completer) override;
-  void CreateCompositeDevice(zx::channel coordinator_client, zx::channel device_controller_rpc,
-                             ::fidl::VectorView<fuchsia_device_manager::wire::Fragment> fragments,
-                             ::fidl::StringView name, uint64_t local_device_id,
+  void CreateCompositeDevice(CreateCompositeDeviceRequestView request,
                              CreateCompositeDeviceCompleter::Sync& completer) override;
-  void CreateDeviceStub(zx::channel coordinator_client, zx::channel device_controller_rpc,
-                        uint32_t protocol_id, uint64_t local_device_id,
+  void CreateDeviceStub(CreateDeviceStubRequestView request,
                         CreateDeviceStubCompleter::Sync& completer) override;
-  void Restart(RestartCompleter::Sync& completer) override;
+  void Restart(RestartRequestView request, RestartCompleter::Sync& completer) override;
 
   DriverHostContext* const driver_host_context_;
   fbl::RefPtr<zx_driver> proxy_driver_;

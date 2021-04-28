@@ -54,14 +54,14 @@ void BindReply(const fbl::RefPtr<zx_device_t>& dev,
 }  // namespace
 
 void DeviceControllerConnection::CompleteCompatibilityTests(
-    fuchsia_device_manager::wire::CompatibilityTestStatus status,
+    CompleteCompatibilityTestsRequestView request,
     CompleteCompatibilityTestsCompleter::Sync& _completer) {
   if (auto compat_conn = dev()->PopTestCompatibilityConn(); compat_conn) {
-    compat_conn(static_cast<zx_status_t>(status));
+    compat_conn(static_cast<zx_status_t>(request->status));
   }
 }
 
-void DeviceControllerConnection::Init(InitCompleter::Sync& completer) {
+void DeviceControllerConnection::Init(InitRequestView request, InitCompleter::Sync& completer) {
   ZX_ASSERT(this->dev()->init_cb == nullptr);
 
   auto trace = this->dev()->BeginAsyncTrace("driver_host:lifecycle", "init");
@@ -71,7 +71,8 @@ void DeviceControllerConnection::Init(InitCompleter::Sync& completer) {
   driver_host_context_->DeviceInit(this->dev());
 }
 
-void DeviceControllerConnection::Suspend(uint32_t flags, SuspendCompleter::Sync& completer) {
+void DeviceControllerConnection::Suspend(SuspendRequestView request,
+                                         SuspendCompleter::Sync& completer) {
   ZX_ASSERT(this->dev()->suspend_cb == nullptr);
 
   auto trace = this->dev()->BeginAsyncTrace("driver_host:lifecycle", "suspend");
@@ -83,10 +84,10 @@ void DeviceControllerConnection::Suspend(uint32_t flags, SuspendCompleter::Sync&
     completer.Reply(status);
   };
   fbl::AutoLock lock(&driver_host_context_->api_lock());
-  driver_host_context_->DeviceSystemSuspend(this->dev(), flags);
+  driver_host_context_->DeviceSystemSuspend(this->dev(), request->flags);
 }
 
-void DeviceControllerConnection::Resume(uint32_t target_system_state,
+void DeviceControllerConnection::Resume(ResumeRequestView request,
                                         ResumeCompleter::Sync& completer) {
   ZX_ASSERT(this->dev()->resume_cb == nullptr);
 
@@ -107,22 +108,23 @@ void DeviceControllerConnection::Resume(uint32_t target_system_state,
     completer.Reply(status);
   };
   fbl::AutoLock lock(&driver_host_context_->api_lock());
-  driver_host_context_->DeviceSystemResume(this->dev(), target_system_state);
+  driver_host_context_->DeviceSystemResume(this->dev(), request->target_system_state);
 }
 
-void DeviceControllerConnection::ConnectProxy(::zx::channel shadow,
+void DeviceControllerConnection::ConnectProxy(ConnectProxyRequestView request,
                                               ConnectProxyCompleter::Sync& _completer) {
   VLOGD(1, *dev(), "Connected to proxy for device %p", dev().get());
   dev()->ops()->rxrpc(dev()->ctx, ZX_HANDLE_INVALID);
   // Ignore any errors in the creation for now?
   // TODO(teisenbe): Investigate if this is the right thing
-  ProxyIostate::Create(dev(), std::move(shadow), driver_host_context_->loop().dispatcher());
+  ProxyIostate::Create(dev(), std::move(request->shadow),
+                       driver_host_context_->loop().dispatcher());
 }
 
-void DeviceControllerConnection::BindDriver(::fidl::StringView driver_path_view, zx::vmo driver,
+void DeviceControllerConnection::BindDriver(BindDriverRequestView request,
                                             BindDriverCompleter::Sync& completer) {
   const auto& dev = this->dev();
-  std::string_view driver_path(driver_path_view.data(), driver_path_view.size());
+  std::string_view driver_path(request->driver_path.data(), request->driver_path.size());
 
   // TODO: api lock integration
   LOGD(INFO, *dev, "Binding driver '%.*s'", static_cast<int>(driver_path.size()),
@@ -134,7 +136,7 @@ void DeviceControllerConnection::BindDriver(::fidl::StringView driver_path_view,
     return;
   }
 
-  zx_status_t r = driver_host_context_->FindDriver(driver_path, std::move(driver), &drv);
+  zx_status_t r = driver_host_context_->FindDriver(driver_path, std::move(request->driver), &drv);
   if (r != ZX_OK) {
     LOGD(ERROR, *dev, "Failed to load driver '%.*s': %s", static_cast<int>(driver_path.size()),
          driver_path.data(), zx_status_get_string(r));
@@ -184,7 +186,8 @@ void DeviceControllerConnection::BindDriver(::fidl::StringView driver_path_view,
   BindReply(dev, completer, ZX_ERR_NOT_SUPPORTED, std::move(test_output));
 }
 
-void DeviceControllerConnection::Unbind(UnbindCompleter::Sync& completer) {
+void DeviceControllerConnection::Unbind(UnbindRequestView request,
+                                        UnbindCompleter::Sync& completer) {
   ZX_ASSERT(this->dev()->unbind_cb == nullptr);
 
   auto trace = this->dev()->BeginAsyncTrace("driver_host:lifecycle", "unbind");
@@ -210,7 +213,8 @@ void DeviceControllerConnection::Unbind(UnbindCompleter::Sync& completer) {
   driver_host_context_->DeviceUnbind(this->dev());
 }
 
-void DeviceControllerConnection::CompleteRemoval(CompleteRemovalCompleter::Sync& completer) {
+void DeviceControllerConnection::CompleteRemoval(CompleteRemovalRequestView request,
+                                                 CompleteRemovalCompleter::Sync& completer) {
   ZX_ASSERT(this->dev()->removal_cb == nullptr);
   this->dev()->removal_cb = [completer = completer.ToAsync()](zx_status_t status) mutable {
     fuchsia_device_manager::wire::DeviceControllerCompleteRemovalResult result;
@@ -258,12 +262,12 @@ zx_status_t DeviceControllerConnection::Create(
 }
 
 // Handler for when a io.fidl open() is called on a device
-void DeviceControllerConnection::Open(uint32_t flags, uint32_t mode, ::fidl::StringView path,
-                                      ::zx::channel object, OpenCompleter::Sync& completer) {
-  if (path.size() != 1 && path.data()[0] != '.') {
-    LOGD(ERROR, *dev(), "Attempt to open path '%.*s'", static_cast<int>(path.size()), path.data());
+void DeviceControllerConnection::Open(OpenRequestView request, OpenCompleter::Sync& completer) {
+  if (request->path.size() > 1 && request->path.data()[0] != '.') {
+    LOGD(ERROR, *dev(), "Attempt to open path '%.*s'", static_cast<int>(request->path.size()),
+         request->path.data());
   }
-  driver_host_context_->DeviceConnect(this->dev(), flags, std::move(object));
+  driver_host_context_->DeviceConnect(this->dev(), request->flags, request->object.TakeChannel());
 }
 
 void DeviceControllerConnection::HandleRpc(std::unique_ptr<DeviceControllerConnection> conn,

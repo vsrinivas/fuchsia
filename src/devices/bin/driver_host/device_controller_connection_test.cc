@@ -81,8 +81,7 @@ TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
                                      std::move(coordinator_client)),
           local_(local) {}
 
-    void BindDriver(::fidl::StringView driver_path, ::zx::vmo driver,
-                    BindDriverCompleter::Sync& completer) override {
+    void BindDriver(BindDriverRequestView request, BindDriverCompleter::Sync& completer) override {
       // Pretend that a device closure happened right before we began
       // processing BindDriver.  Close the other half of the channel, so the reply below will fail
       // from ZX_ERR_PEER_CLOSED.
@@ -206,7 +205,7 @@ TEST(DeviceControllerConnectionTestCase, UnbindHook) {
         : DeviceControllerConnection(ctx, std::move(dev), std::move(rpc),
                                      std::move(coordinator_client)) {}
 
-    void Unbind(UnbindCompleter::Sync& completer) final {
+    void Unbind(UnbindRequestView request, UnbindCompleter::Sync& completer) final {
       fbl::RefPtr<zx_device> dev = this->dev();
       // Set dev->flags() so that we can check that the unbind hook is called in
       // the test.

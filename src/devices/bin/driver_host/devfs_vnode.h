@@ -15,7 +15,7 @@
 #include "src/lib/storage/vfs/cpp/vnode.h"
 #include "zx_device.h"
 
-class DevfsVnode : public fs::Vnode, public fidl::WireInterface<fuchsia_device::Controller> {
+class DevfsVnode : public fs::Vnode, public fidl::WireServer<fuchsia_device::Controller> {
  public:
   explicit DevfsVnode(fbl::RefPtr<zx_device> dev) : dev_(std::move(dev)) {}
 
@@ -29,34 +29,44 @@ class DevfsVnode : public fs::Vnode, public fidl::WireInterface<fuchsia_device::
                                      fs::VnodeRepresentation* info) override;
   void HandleFsSpecificMessage(fidl::IncomingMessage& msg, fidl::Transaction* txn) override;
 
-  // fidl::WireInterface<fuchsia_device::Controller> methods
-  void Bind(::fidl::StringView driver, BindCompleter::Sync& _completer) override;
-  void Rebind(::fidl::StringView driver, RebindCompleter::Sync& _completer) override;
-  void UnbindChildren(UnbindChildrenCompleter::Sync& completer) override;
-  void ScheduleUnbind(ScheduleUnbindCompleter::Sync& _completer) override;
-  void GetDriverName(GetDriverNameCompleter::Sync& _completer) override;
-  void GetDeviceName(GetDeviceNameCompleter::Sync& _completer) override;
-  void GetTopologicalPath(GetTopologicalPathCompleter::Sync& _completer) override;
-  void GetEventHandle(GetEventHandleCompleter::Sync& _completer) override;
-  void GetDriverLogFlags(GetDriverLogFlagsCompleter::Sync& _completer) override;
-  void GetDevicePerformanceStates(GetDevicePerformanceStatesCompleter::Sync& completer) override;
-  void GetCurrentPerformanceState(GetCurrentPerformanceStateCompleter::Sync& completer) override;
-  void SetDriverLogFlags(uint32_t clear_flags, uint32_t set_flags,
+  // fidl::WireServer<fuchsia_device::Controller> methods
+  void Bind(BindRequestView request, BindCompleter::Sync& _completer) override;
+  void Rebind(RebindRequestView request, RebindCompleter::Sync& _completer) override;
+  void UnbindChildren(UnbindChildrenRequestView request,
+                      UnbindChildrenCompleter::Sync& completer) override;
+  void ScheduleUnbind(ScheduleUnbindRequestView request,
+                      ScheduleUnbindCompleter::Sync& _completer) override;
+  void GetDriverName(GetDriverNameRequestView request,
+                     GetDriverNameCompleter::Sync& _completer) override;
+  void GetDeviceName(GetDeviceNameRequestView request,
+                     GetDeviceNameCompleter::Sync& _completer) override;
+  void GetTopologicalPath(GetTopologicalPathRequestView request,
+                          GetTopologicalPathCompleter::Sync& _completer) override;
+  void GetEventHandle(GetEventHandleRequestView request,
+                      GetEventHandleCompleter::Sync& _completer) override;
+  void GetDriverLogFlags(GetDriverLogFlagsRequestView request,
+                         GetDriverLogFlagsCompleter::Sync& _completer) override;
+  void GetDevicePerformanceStates(GetDevicePerformanceStatesRequestView request,
+                                  GetDevicePerformanceStatesCompleter::Sync& completer) override;
+  void GetCurrentPerformanceState(GetCurrentPerformanceStateRequestView request,
+                                  GetCurrentPerformanceStateCompleter::Sync& completer) override;
+  void SetDriverLogFlags(SetDriverLogFlagsRequestView request,
                          SetDriverLogFlagsCompleter::Sync& _completer) override;
-  void RunCompatibilityTests(int64_t hook_wait_time,
+  void RunCompatibilityTests(RunCompatibilityTestsRequestView request,
                              RunCompatibilityTestsCompleter::Sync& _completer) override;
-  void GetDevicePowerCaps(GetDevicePowerCapsCompleter::Sync& _completer) override;
-  void SetPerformanceState(uint32_t requested_state,
+  void GetDevicePowerCaps(GetDevicePowerCapsRequestView request,
+                          GetDevicePowerCapsCompleter::Sync& _completer) override;
+  void SetPerformanceState(SetPerformanceStateRequestView request,
                            SetPerformanceStateCompleter::Sync& _completer) override;
-  void ConfigureAutoSuspend(bool enable, fuchsia_device::wire::DevicePowerState requested_state,
+  void ConfigureAutoSuspend(ConfigureAutoSuspendRequestView request,
                             ConfigureAutoSuspendCompleter::Sync& _completer) override;
 
-  void UpdatePowerStateMapping(::fidl::Array<fuchsia_device::wire::SystemPowerStateInfo, 7> mapping,
+  void UpdatePowerStateMapping(UpdatePowerStateMappingRequestView request,
                                UpdatePowerStateMappingCompleter::Sync& _completer) override;
-  void GetPowerStateMapping(GetPowerStateMappingCompleter::Sync& _completer) override;
-  void Suspend(fuchsia_device::wire::DevicePowerState requested_state,
-               SuspendCompleter::Sync& _completer) override;
-  void Resume(ResumeCompleter::Sync& _complete) override;
+  void GetPowerStateMapping(GetPowerStateMappingRequestView request,
+                            GetPowerStateMappingCompleter::Sync& _completer) override;
+  void Suspend(SuspendRequestView request, SuspendCompleter::Sync& _completer) override;
+  void Resume(ResumeRequestView request, ResumeCompleter::Sync& _complete) override;
 
  private:
   // Vnode protected implementation:

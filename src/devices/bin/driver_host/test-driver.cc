@@ -28,7 +28,7 @@ using DeviceType =
     ddk::Device<TestDevhostDriver, ddk::Initializable, ddk::Unbindable, ddk::Messageable>;
 class TestDevhostDriver : public DeviceType,
                           public ddk::EmptyProtocol<ZX_PROTOCOL_DEVHOST_TEST>,
-                          public fidl::WireInterface<TestDevice> {
+                          public fidl::WireServer<TestDevice> {
  public:
   TestDevhostDriver(zx_device_t* parent) : DeviceType(parent) {}
   zx_status_t Bind();
@@ -48,10 +48,10 @@ class TestDevhostDriver : public DeviceType,
   struct devhost_test_metadata metadata_;
   size_t metadata_size_;
 
-  void GetPid(GetPidCompleter::Sync& _completer) override;
+  void GetPid(GetPidRequestView request, GetPidCompleter::Sync& _completer) override;
 };
 
-void TestDevhostDriver::GetPid(GetPidCompleter::Sync& _completer) {
+void TestDevhostDriver::GetPid(GetPidRequestView request, GetPidCompleter::Sync& _completer) {
   pid_t pid;
   auto self = zx_process_self();
   zx_info_handle_basic_t info;
