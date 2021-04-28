@@ -16,20 +16,20 @@
 template <class T>
 class GuestTest : public ::testing::Test {
  public:
-  static void SetUpTestCase() {
+  static void SetUpTestSuite() {
     FX_LOGS(INFO) << "Guest: " << fbl::TypeInfo<T>::Name();
     enclosed_guest_ = new T();
     ASSERT_EQ(enclosed_guest_->Start(), ZX_OK);
   }
 
-  static void TearDownTestCase() {
+  static void TearDownTestSuite() {
     EXPECT_EQ(enclosed_guest_->Stop(), ZX_OK);
     delete enclosed_guest_;
   }
 
  protected:
-  void SetUp() {
-    // An assertion failure in SetUpTestCase doesn't prevent tests from running,
+  void SetUp() override {
+    // An assertion failure in SetUpTestSuite doesn't prevent tests from running,
     // so we need to check that it succeeded here.
     ASSERT_TRUE(enclosed_guest_->Ready()) << "Guest setup failed";
   }
