@@ -63,7 +63,7 @@ copy_pubspec_target = dart_library_target_name + "_copy_pubspec"
 
 generated_file("protoc_gen_dart_snapshot_info") {
   outputs = [ "$target_gen_dir/${target_name}.snapshot_info" ]
-  data_keys = [ "snapshot_path" ]
+  data_keys = [ "rebased_snapshot_path" ]
   deps = [ protoc_gen_dart_label ]
 }
 
