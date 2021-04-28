@@ -24,14 +24,10 @@ namespace usb_xhci {
 
 // Event Ring Segment table entry (6.5)
 struct ERSTEntry {
-  uint64_t address;
-  union {
-    uint64_t value;
-    // Number of entries in ring segment.
-    // Must be between 16 and 4096.
-    // In practice, this will always be set to 256
-    uint16_t size;
-  } u;
+  uint32_t address_low;
+  uint32_t address_high;
+  uint32_t size;
+  uint32_t rsvd;
 };
 
 // Used for managing event ring segments.

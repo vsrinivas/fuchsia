@@ -1755,14 +1755,9 @@ zx_status_t UsbXhci::InitPci() {
     return status;
   }
   mmio_ = std::move(*buffer);
-  // TODO (bbosak): Convert to MSI-X when we have kernel support
-  // for it (see kpci.c TODO).
-  uint32_t irq_count;
-  status = pci_.QueryIrqMode(ZX_PCIE_IRQ_MODE_MSI, &irq_count);
+  uint32_t irq_count = 1;
+  status = pci_.ConfigureIrqMode(irq_count, nullptr);
   if (status != ZX_OK) {
-    return status;
-  }
-  if (pci_.SetIrqMode(ZX_PCIE_IRQ_MODE_MSI, irq_count) != ZX_OK) {
     return status;
   }
   irq_count_ = irq_count;
@@ -1845,20 +1840,20 @@ void UsbXhci::ResetController() {
 
 int UsbXhci::InitThread() {
   ZX_ASSERT(init_txn_.has_value());  // This is set in DdkInit before creating this thread.
-
   auto call = fit::defer([=]() { init_txn_->Reply(ZX_ERR_INTERNAL); });
   auto init_completer = fit::defer([=]() { sync_completion_signal(&init_complete_); });
   // Initialize either the PCI or MMIO structures first
+  zx_status_t status;
   if (pci_.is_valid()) {
-    zx_status_t status = InitPci();
-    if (status != 0) {
-      zxlogf(ERROR, "PCI initialization failed with code %i", (int)status);
+    status = InitPci();
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "PCI initialization failed with: %s", zx_status_get_string(status));
       return status;
     }
   } else {
-    int status = InitMmio();
-    if (status != 0) {
-      zxlogf(ERROR, "MMIO initialization failed with code %i", (int)status);
+    status = InitMmio();
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "MMIO initialization failed with: %s", zx_status_get_string(status));
       return status;
     }
   }
@@ -1886,9 +1881,9 @@ int UsbXhci::InitThread() {
   }
   ddk_interaction_thread_ = thrd;
   // Finish HCI initialization
-  zx_status_t status = HciFinalize();
+  status = HciFinalize();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "xHCI initialization failed with code %i", (int)status);
+    zxlogf(ERROR, "xHCI initialization failed with %s", zx_status_get_string(status));
     return status;
   }
   // If |HciFinalize| succeeded, it would have replied to |init_txn_| and made the device visible.

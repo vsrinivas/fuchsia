@@ -15,6 +15,9 @@
 
 namespace usb_xhci {
 
+// The minimum required number of event ring segment table entries.
+static constexpr uint16_t kMinERSTEntries = 16;
+
 zx_status_t EventRingSegmentTable::Init(size_t page_size, const zx::bti& bti, bool is_32bit,
                                         uint32_t erst_max, ERSTSZ erst_size,
                                         const dma_buffer::BufferFactory& factory,
@@ -48,8 +51,9 @@ zx_status_t EventRingSegmentTable::AddSegment(zx_paddr_t paddr) {
     return ZX_ERR_NO_MEMORY;
   }
   ERSTEntry entry;
-  entry.address = paddr;
-  entry.u.size = static_cast<uint16_t>(page_size_ / 16);
+  entry.address_low = static_cast<uint32_t>(paddr & UINT32_MAX);
+  entry.address_high = static_cast<uint32_t>(paddr >> 32);
+  entry.size = static_cast<uint16_t>(page_size_ / kMinERSTEntries);
   entries_[offset_] = entry;
   hw_mb();
   offset_++;
