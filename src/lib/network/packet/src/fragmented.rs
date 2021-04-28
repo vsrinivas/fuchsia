@@ -133,33 +133,35 @@ impl<'a, B: 'a + Fragment> FragmentedByteSlice<'a, B> {
         // fragments.
         let mut c = range.start;
         while c != 0 {
-            if bytes[0].len() > c {
+            let first = &mut bytes[0];
+            if first.len() > c {
                 // if the first fragment contains more than c bytes, just take
                 // c bytes out of its front and we're done.
-                bytes[0].take_front(c);
+                let _: B = first.take_front(c);
                 break;
             } else {
                 // otherwise, just account for the first fragment's entire
                 // length and drop it.
-                c -= bytes[0].len();
-                bytes = bytes.split_first_mut().unwrap().1;
+                c -= first.len();
+                bytes = &mut bytes[1..];
             }
         }
         // c is the amount of bytes we need to discard from the end of the
         // fragments.
         let mut c = len - range.end;
         while c != 0 {
-            let last = bytes.last_mut().unwrap();
+            let idx = bytes.len() - 1;
+            let last = &mut bytes[idx];
             if last.len() > c {
                 // if the last fragment contains more than c bytes, just take
                 // c bytes out of its back and we're done.
-                last.take_back(c);
+                let _: B = last.take_back(c);
                 break;
             } else {
                 // otherwise, just account for the last fragment's entire length
                 // and drop it.
                 c -= last.len();
-                bytes = bytes.split_last_mut().unwrap().1;
+                bytes = &mut bytes[..idx];
             }
         }
         Self(bytes)
@@ -558,7 +560,7 @@ mod tests {
                 with_fragments(|bytes| {
                     let range = bytes.slice(i..j);
                     let x = [1_u8, 2, 3, 4, 5];
-                    assert_eq!(&range.to_flattened_vec()[..], &x[i..j]);
+                    assert_eq!(&range.to_flattened_vec()[..], &x[i..j], "{}..{}", i, j);
                 });
             }
         }

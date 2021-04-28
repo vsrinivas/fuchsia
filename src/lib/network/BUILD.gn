@@ -29,7 +29,7 @@ group("tests") {
     "fidl_fuchsia_net_name_ext:fidl-fuchsia-net-name-ext-tests",
     "fidl_fuchsia_net_stack_ext:fidl-fuchsia-net-stack-ext-tests",
     "fidl_fuchsia_netstack_ext:fidl-fuchsia-netstack-ext-tests",
-    "packet:packet-test",
+    "packet:tests",
     "packet-formats:tests",
     "packet-formats-dhcp:tests",
   ]

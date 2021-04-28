@@ -1932,13 +1932,13 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_either_unwrap_a_panic() {
-        Either::<u16, u32>::B(10).unwrap_a();
+        let _: u16 = Either::<u16, u32>::B(10).unwrap_a();
     }
 
     #[test]
     #[should_panic]
     fn test_either_unwrap_b_panic() {
-        Either::<u16, u32>::A(5).unwrap_b();
+        let _: u32 = Either::<u16, u32>::A(5).unwrap_b();
     }
 
     #[test]

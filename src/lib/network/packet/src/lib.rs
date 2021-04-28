@@ -1712,10 +1712,10 @@ fn zero(bytes: &mut [u8]) {
 impl<'a> ContiguousBufferImpl for &'a [u8] {}
 impl<'a> ShrinkBuffer for &'a [u8] {
     fn shrink_front(&mut self, n: usize) {
-        take_front(self, n);
+        let _: &[u8] = take_front(self, n);
     }
     fn shrink_back(&mut self, n: usize) {
-        take_back(self, n);
+        let _: &[u8] = take_back(self, n);
     }
 }
 impl<'a> ParseBuffer for &'a [u8] {
@@ -1730,10 +1730,10 @@ impl<'a> ContiguousBufferImpl for &'a mut [u8] {}
 impl<'a> ContiguousBufferMutImpl for &'a mut [u8] {}
 impl<'a> ShrinkBuffer for &'a mut [u8] {
     fn shrink_front(&mut self, n: usize) {
-        take_front_mut(self, n);
+        let _: &[u8] = take_front_mut(self, n);
     }
     fn shrink_back(&mut self, n: usize) {
-        take_back_mut(self, n);
+        let _: &[u8] = take_back_mut(self, n);
     }
 }
 impl<'a> ParseBuffer for &'a mut [u8] {
@@ -2005,7 +2005,7 @@ mod tests {
     // constructs a buffer of length n, and initializes its contents to [0, 1,
     // 2, ..., n -1].
     fn test_parse_buffer<B: ParseBuffer, N: FnMut(u8) -> B>(new_buf: N) {
-        test_parse_buffer_inner(new_buf, |buf, _, len, _, _, contents| {
+        let _: B = test_parse_buffer_inner(new_buf, |buf, _, len, _, _, contents| {
             assert_eq!(buf.len(), len);
             assert_eq!(buf.as_ref(), contents);
         });
@@ -2166,8 +2166,8 @@ mod tests {
             type Error = ();
             fn parse<BV: BufferView<B>>(mut buffer: BV, args: &[u8]) -> Result<(), ()> {
                 assert_eq!(buffer.as_ref(), args);
-                buffer.take_front(1);
-                buffer.take_back(1);
+                let _: B = buffer.take_front(1).unwrap();
+                let _: B = buffer.take_back(1).unwrap();
                 Ok(())
             }
 
