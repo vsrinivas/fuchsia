@@ -90,11 +90,37 @@ Timed out waiting on the Daemon.\nRun `ffx doctor` for further diagnostics";
 
 struct Injection {
     daemon_once: Once<DaemonProxy>,
+    remote_once: Once<RemoteControlProxy>,
 }
 
 impl Default for Injection {
     fn default() -> Self {
-        Self { daemon_once: Once::new() }
+        Self { daemon_once: Once::new(), remote_once: Once::new() }
+    }
+}
+
+impl Injection {
+    async fn init_remote_proxy(&self) -> Result<RemoteControlProxy> {
+        let daemon_proxy = self.daemon_factory().await?;
+        let (remote_proxy, remote_server_end) = create_proxy::<RemoteControlMarker>()?;
+        let app: Ffx = argh::from_env();
+        let target = app.target().await?;
+        let result = timeout(
+            proxy_timeout().await?,
+            daemon_proxy.get_remote_control(target.as_ref().map(|s| s.as_str()), remote_server_end),
+        )
+        .await
+        .context("timeout")?
+        .context("connecting to target via daemon")?;
+
+        match result {
+            Ok(_) => Ok(remote_proxy),
+            Err(DaemonError::TargetAmbiguous) => Err(ffx_error!(TARGET_AMBIGUOUS_MSG).into()),
+            Err(DaemonError::TargetNotFound) => Err(target_not_found(target)),
+            Err(DaemonError::TargetCacheError) => Err(ffx_error!(TARGET_FAILURE_MSG).into()),
+            Err(DaemonError::TargetInFastboot) => Err(ffx_error!(TARGET_IN_FASTBOOT).into()),
+            Err(e) => Err(anyhow!("unexpected failure connecting to RCS: {:?}", e)),
+        }
     }
 }
 
@@ -130,26 +156,7 @@ impl Injector for Injection {
     }
 
     async fn remote_factory(&self) -> Result<RemoteControlProxy> {
-        let daemon_proxy = self.daemon_factory().await?;
-        let (remote_proxy, remote_server_end) = create_proxy::<RemoteControlMarker>()?;
-        let app: Ffx = argh::from_env();
-        let target = app.target().await?;
-        let result = timeout(
-            proxy_timeout().await?,
-            daemon_proxy.get_remote_control(target.as_ref().map(|s| s.as_str()), remote_server_end),
-        )
-        .await
-        .context("timeout")?
-        .context("connecting to target via daemon")?;
-
-        match result {
-            Ok(_) => Ok(remote_proxy),
-            Err(DaemonError::TargetAmbiguous) => Err(ffx_error!(TARGET_AMBIGUOUS_MSG).into()),
-            Err(DaemonError::TargetNotFound) => Err(target_not_found(target)),
-            Err(DaemonError::TargetCacheError) => Err(ffx_error!(TARGET_FAILURE_MSG).into()),
-            Err(DaemonError::TargetInFastboot) => Err(ffx_error!(TARGET_IN_FASTBOOT).into()),
-            Err(e) => Err(anyhow!("unexpected failure connecting to RCS: {:?}", e)),
-        }
+        self.remote_once.get_or_try_init(self.init_remote_proxy()).await.map(|proxy| proxy.clone())
     }
 
     async fn is_experiment(&self, key: &str) -> bool {
