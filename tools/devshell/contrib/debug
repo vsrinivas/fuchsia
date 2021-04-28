@@ -124,42 +124,29 @@ if [[ -z "${port}" ]]; then
 fi
 
 if [[ -n "${target_core}" ]]; then
-  crash_reports_cache_dir=`fx-command-run shell ls /data/cache/r/sys | grep crash_reports`
-  crash_reports_tmp_dir=`fx-command-run shell ls /tmp/r/sys | grep crash_reports`
-  if [[ -z "${crash_reports_tmp_dir}" ]] || [[ -z "${crash_reports_cache_dir}" ]]; then
-    fx-error "Could not find crash reports directory on target"
+  id='fd81549e77f2f3b199d4dca16131c3525428140828f0843a0fd30e7c0d2e2631'
+  cache_coredumps=(`fx-command-run shell "find /data/cache/${id}/reports -name minidump.dmp -type f"`)
+  tmp_coredumps=(`fx-command-run shell "find /tmp/${id}/reports -name minidump.dmp -type f"`)
+  all_coredumps=(${cache_coredumps[@]} ${tmp_coredumps[@]})
+  num_coredumps=${#all_coredumps[@]}
+
+  if [[  ${num_coredumps} -eq 0 ]]; then
+    fx-error "No core dumps available on device"
     exit 1
-  fi
-
-  cache_core_names=`fx-command-run shell \
-    "cd /data/cache/r/sys/${crash_reports_cache_dir}/reports 2>/dev/null && find . -name minidump.dmp -type f"`
-  tmp_core_names=`fx-command-run shell \
-    "cd /tmp/r/sys/${crash_reports_tmp_dir}/reports 2>/dev/null && find . -name minidump.dmp -type f"`
-
-  core_name="$echo "${cache_core_names[@]}" "${tmp_core_names[@]}""
-
-  if [[ -z "${core_name}" ]]; then
-    fx-error "No cores available on device"
-    exit 1
-  fi
-
-  if [[ "$(echo "${core_name}" | wc -l)" -ge 2 ]]; then
-    echo "Which core would you like to analyze?"
-    select choice in ${core_name}; do
-      core_name=${choice}
+  elif [[ ${num_coredumps} -ge 2 ]]; then
+    echo "Which core dump would you like to analyze?"
+    select choice in ${all_coredumps[@]}; do
+      coredump=${choice}
       break
     done
+  else
+    coredump=${all_coredumps[0]}
   fi
 
   core="/tmp/zxdb_fetched_core.dmp"
-  if [[ " ${cache_core_names[*]} " == *"$core_name"* ]]; then
-    fx-command-run "cp" "--to-host" \
-      "/data/cache/r/sys/${crash_reports_cache_dir}/reports/${core_name}" \
-      "${core}"
-  else
-    fx-command-run "cp" "--to-host" \
-      "/tmp/r/sys/${crash_reports_tmp_dir}/reports/${core_name}" \
-      "${core}"
+  if ! fx-command-run cp --to-host ${coredump} ${core}; then
+    fx-error "Failed to copy core dump over to host"
+    exit 1
   fi
 fi
 
