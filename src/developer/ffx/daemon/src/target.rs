@@ -711,6 +711,12 @@ impl Target {
         self.inner.state.lock().await.clone()
     }
 
+    #[cfg(test)]
+    pub async fn set_state(&self, state: ConnectionState) {
+        let mut inner_state = self.inner.state.lock().await;
+        *inner_state = TargetState { connection_state: state }
+    }
+
     pub async fn get_connection_state(&self) -> ConnectionState {
         let state = self.inner.state.lock().await;
         state.connection_state.clone()

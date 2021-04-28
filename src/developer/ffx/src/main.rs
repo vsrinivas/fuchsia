@@ -13,7 +13,10 @@ use {
     ffx_lib_args::{from_env, Ffx},
     ffx_lib_sub_command::Subcommand,
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_developer_bridge::{DaemonError, DaemonProxy, FastbootMarker, FastbootProxy},
+    fidl_fuchsia_developer_bridge::{
+        DaemonError, DaemonProxy, FastbootMarker, FastbootProxy, TargetControlMarker,
+        TargetControlProxy,
+    },
     fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
     fuchsia_async::TimeoutExt,
     futures::{Future, FutureExt},
@@ -148,6 +151,28 @@ impl Injector for Injection {
         match result {
             Ok(_) => Ok(fastboot_proxy),
             Err(DaemonError::NonFastbootDevice) => Err(ffx_error!(NON_FASTBOOT_MSG).into()),
+            Err(DaemonError::TargetAmbiguous) => Err(ffx_error!(TARGET_AMBIGUOUS_MSG).into()),
+            Err(DaemonError::TargetNotFound) => Err(target_not_found(target)),
+            Err(DaemonError::TargetCacheError) => Err(ffx_error!(TARGET_FAILURE_MSG).into()),
+            Err(e) => Err(anyhow!("unexpected failure connecting to Fastboot: {:?}", e)),
+        }
+    }
+
+    async fn target_factory(&self) -> Result<TargetControlProxy> {
+        let daemon_proxy = self.daemon_factory().await?;
+        let (target_proxy, target_server_end) = create_proxy::<TargetControlMarker>()?;
+        let app: Ffx = argh::from_env();
+        let target = app.target().await?;
+        let result = timeout(
+            proxy_timeout().await?,
+            daemon_proxy.get_target(target.as_ref().map(|s| s.as_str()), target_server_end),
+        )
+        .await
+        .context("timeout")?
+        .context("connecting to Target")?;
+
+        match result {
+            Ok(_) => Ok(target_proxy),
             Err(DaemonError::TargetAmbiguous) => Err(ffx_error!(TARGET_AMBIGUOUS_MSG).into()),
             Err(DaemonError::TargetNotFound) => Err(target_not_found(target)),
             Err(DaemonError::TargetCacheError) => Err(ffx_error!(TARGET_FAILURE_MSG).into()),

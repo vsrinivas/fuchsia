@@ -9,7 +9,6 @@ ffx_plugin("ffx_reboot") {
   edition = "2018"
   with_unit_tests = true
   deps = [
-    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol-rustc",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:termion",

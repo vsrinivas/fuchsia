@@ -15,6 +15,7 @@ if (is_host) {
       "//sdk/fidl/fuchsia.developer.bridge:fuchsia.developer.bridge-rustc",
       "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
       "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
+      "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol-rustc",
       "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
       "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
       "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
@@ -26,6 +27,7 @@ if (is_host) {
       "//src/developer/ffx/core:lib",
       "//src/developer/ffx/core/version:lib",
       "//src/developer/ffx/daemon/core:lib",
+      "//src/developer/ffx/lib/async-once:lib",
       "//src/developer/ffx/lib/netext:lib",
       "//src/developer/ffx/lib/timeout:lib",
       "//src/developer/ffx/logger/data:lib",
@@ -85,6 +87,7 @@ if (is_host) {
       "src/onet.rs",
       "src/ssh.rs",
       "src/target.rs",
+      "src/target_control.rs",
       "src/target_task.rs",
       "src/util.rs",
     ]

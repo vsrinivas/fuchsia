@@ -63,3 +63,25 @@ table Target {
     /// port number has been set.
     10: TargetAddrInfo ssh_address;
 };
+
+enum TargetRebootError {
+    UNKNOWN = 1;
+    /// Cannot reboot from fastboot to recovery.
+    FASTBOOT_TO_RECOVERY = 2;
+    /// There was an Overnet communication issue with the target.
+    TARGET_COMMUNICATION = 3;
+    /// There was a Fastboot protocol communication issue with the
+    /// target.
+    FASTBOOT_COMMUNICATION = 4;
+};
+
+enum TargetRebootState {
+    PRODUCT = 1;
+    BOOTLOADER = 2;
+    RECOVERY = 3;
+};
+
+[Discoverable]
+protocol TargetControl {
+    Reboot(TargetRebootState state) -> () error TargetRebootError;
+};

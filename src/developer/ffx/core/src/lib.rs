@@ -7,7 +7,7 @@ pub use core_macros::{ffx_command, ffx_plugin};
 use {
     anyhow::Result,
     async_trait::async_trait,
-    fidl_fuchsia_developer_bridge::{DaemonProxy, FastbootProxy},
+    fidl_fuchsia_developer_bridge::{DaemonProxy, FastbootProxy, TargetControlProxy},
     fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
     futures::stream::{FuturesUnordered, StreamExt, TryStream},
     futures::{future::FusedFuture, Future},
@@ -27,6 +27,7 @@ pub trait Injector {
     async fn daemon_factory(&self) -> Result<DaemonProxy>;
     async fn remote_factory(&self) -> Result<RemoteControlProxy>;
     async fn fastboot_factory(&self) -> Result<FastbootProxy>;
+    async fn target_factory(&self) -> Result<TargetControlProxy>;
     async fn is_experiment(&self, key: &str) -> bool;
 }
 

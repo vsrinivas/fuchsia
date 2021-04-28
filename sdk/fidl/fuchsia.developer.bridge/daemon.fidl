@@ -63,7 +63,7 @@ protocol Daemon {
     /// The target param expects an exact match with a target's
     /// nodename.
     ///
-    /// If the target nodename is not included, this will return the remote
+    /// If the target nodename is not included, this will return the fastboot
     /// control instance for the target iff there is only one target in the
     /// cache, else will return an error. If there are no targets in the cache,
     /// will wait until the client chooses to time out.
@@ -115,4 +115,16 @@ protocol Daemon {
         DaemonDiagnosticsStreamParameters parameters,
         request<rc.ArchiveIterator> iterator)
         -> () error DiagnosticsStreamError;
+
+    /// Gets a target proxy for the given target.
+    /// The target param expects an exact match with a target's
+    /// nodename.
+    ///
+    /// If the target nodename is not included, this will return the target
+    /// control instance for the target iff there is only one target in the
+    /// cache, else will return an error. If there are no targets in the cache,
+    /// will wait until the client chooses to time out.
+    GetTarget(
+        string:fuchsia.device.DEVICE_NAME_MAX? target,
+        request<TargetControl> target_controller) -> () error DaemonError;
 };

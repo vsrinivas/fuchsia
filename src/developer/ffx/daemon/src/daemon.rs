@@ -14,6 +14,7 @@ use {
         ConnectionState, RcsConnection, Target, TargetAddrEntry, TargetCollection, TargetEvent,
         ToFidlTarget,
     },
+    crate::target_control::TargetControl,
     anyhow::{anyhow, Context, Result},
     ascendd::Ascendd,
     async_trait::async_trait,
@@ -606,6 +607,27 @@ impl Daemon {
                 });
                 responder.send(&mut Ok(()))?;
                 task.await?;
+            }
+            DaemonRequest::GetTarget { target, target_controller, responder } => {
+                let target = match self.get_target(target).await {
+                    Ok(t) => t,
+                    Err(e) => {
+                        responder.send(&mut Err(e)).context("sending error response")?;
+                        return Ok(());
+                    }
+                };
+                let mut target_control_server = TargetControl::new(target);
+                let stream = target_controller.into_stream()?;
+                fuchsia_async::Task::spawn(async move {
+                    match target_control_server.handle_requests_from_stream(stream).await {
+                        Ok(_) => log::debug!("Target Control proxy finished - client disconnected"),
+                        Err(e) => {
+                            log::error!("There was an error handling fastboot requests: {:?}", e)
+                        }
+                    }
+                })
+                .detach();
+                responder.send(&mut Ok(())).context("error sending response")?;
             }
         }
         Ok(())
