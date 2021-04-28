@@ -28,6 +28,7 @@
 #include "src/ui/scenic/lib/scheduling/default_frame_scheduler.h"
 #include "src/ui/scenic/lib/shutdown/lifecycle_controller_impl.h"
 #include "src/ui/scenic/lib/shutdown/shutdown_manager.h"
+#include "src/ui/scenic/lib/view_tree/view_ref_installed_impl.h"
 #include "src/ui/scenic/lib/view_tree/view_tree_snapshotter.h"
 
 namespace scenic_impl {
@@ -102,6 +103,8 @@ class App {
   std::shared_ptr<scheduling::DefaultFrameScheduler> frame_scheduler_;
 
   std::shared_ptr<view_tree::ViewTreeSnapshotter> view_tree_snapshotter_;
+
+  view_tree::ViewRefInstalledImpl view_ref_installed_impl_;
 
   AnnotationRegistry annotation_registry_;
 

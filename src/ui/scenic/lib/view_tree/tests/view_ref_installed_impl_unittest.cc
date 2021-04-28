@@ -41,6 +41,35 @@ TEST(ViewRefInstalledImplTest, AlreadyInstalled_ShouldReturnImmediately) {
   EXPECT_TRUE(was_installed);
 }
 
+TEST(ViewRefInstalledImplTest, AlreadyInstalledButDisconnected_ShouldReturnImmediately) {
+  async::TestLoop test_loop;
+
+  ViewRefInstalledImpl view_ref_installed_impl;
+
+  auto [control_ref, view_ref] = scenic::ViewRefPair::New();
+  const zx_koid_t koid = utils::ExtractKoid(view_ref);
+
+  {  // Koid is in the ViewTree.
+    auto snapshot = std::make_shared<Snapshot>();
+    snapshot->view_tree[koid];
+    view_ref_installed_impl.OnNewViewTreeSnapshot(snapshot);
+  }
+
+  {  // Koid is unconnected.
+    auto snapshot = std::make_shared<Snapshot>();
+    snapshot->unconnected_views.emplace(koid);
+    view_ref_installed_impl.OnNewViewTreeSnapshot(snapshot);
+  }
+
+  bool was_installed = false;
+  view_ref_installed_impl.Watch(
+      std::move(view_ref),
+      [&was_installed](ViewRefInstalled_Watch_Result result) { was_installed = !result.is_err(); });
+
+  test_loop.RunUntilIdle();
+  EXPECT_TRUE(was_installed);
+}
+
 TEST(ViewRefInstalledImplTest, ViewRefWithBadHandle_ShouldReturnErrorImmediately) {
   async::TestLoop test_loop;
 

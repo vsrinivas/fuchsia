@@ -8,6 +8,7 @@
 // TODO(fxbug.dev/23687): Don't support GetDisplayInfo in scenic fidl API.
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/fit/function.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include <unordered_map>
 

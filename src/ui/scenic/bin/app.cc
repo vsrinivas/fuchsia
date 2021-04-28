@@ -132,6 +132,8 @@ App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect::Node inspe
   fit::bridge<escher::EscherUniquePtr> escher_bridge;
   fit::bridge<std::shared_ptr<display::Display>> display_bridge;
 
+  view_ref_installed_impl_.Publish(app_context_.get());
+
   device_watcher_ = fsl::DeviceWatcher::Create(
       kDependencyDir, [this, completer = std::move(escher_bridge.completer)](
                           int dir_fd, std::string filename) mutable {
@@ -275,15 +277,15 @@ void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
 
   {
     TRACE_DURATION("gfx", "App::InitializeServices[engine]");
-    engine_ = std::make_shared<gfx::Engine>(
-        app_context_.get(), escher_->GetWeakPtr(), gfx_buffer_collection_importer,
-        scenic_->inspect_node()->CreateChild("Engine"),
-        /*request_focus*/
-        [this](zx_koid_t requestor, zx_koid_t request) {
-          FX_DCHECK(focus_manager_);
-          return focus_manager_->RequestFocus(requestor, request) ==
-                 focus::FocusChangeStatus::kAccept;
-        });
+    engine_ =
+        std::make_shared<gfx::Engine>(escher_->GetWeakPtr(), gfx_buffer_collection_importer,
+                                      scenic_->inspect_node()->CreateChild("Engine"),
+                                      /*request_focus*/
+                                      [this](zx_koid_t requestor, zx_koid_t request) {
+                                        FX_DCHECK(focus_manager_);
+                                        return focus_manager_->RequestFocus(requestor, request) ==
+                                               focus::FocusChangeStatus::kAccept;
+                                      });
   }
   scenic_->SetFrameScheduler(frame_scheduler_);
   annotation_registry_.InitializeWithGfxAnnotationManager(engine_->annotation_manager());
@@ -361,6 +363,12 @@ void App::InitializeHeartbeat() {
              [this](auto snapshot) { focus_manager_->OnNewViewTreeSnapshot(std::move(snapshot)); },
          .dispatcher = async_get_default_dispatcher()});
 
+    subscribers.push_back({.on_new_view_tree =
+                               [this](auto snapshot) {
+                                 view_ref_installed_impl_.OnNewViewTreeSnapshot(
+                                     std::move(snapshot));
+                               },
+                           .dispatcher = async_get_default_dispatcher()});
     view_tree_snapshotter_ = std::make_shared<view_tree::ViewTreeSnapshotter>(
         std::move(subtrees), std::move(subscribers));
   }

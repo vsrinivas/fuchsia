@@ -19,7 +19,6 @@
 #include "src/ui/lib/escher/geometry/transform.h"
 #include "src/ui/scenic/lib/gfx/engine/hit.h"
 #include "src/ui/scenic/lib/gfx/engine/hit_accumulator.h"
-#include "src/ui/scenic/lib/gfx/engine/view_ref_installed_impl.h"
 #include "src/ui/scenic/lib/gfx/id.h"
 #include "src/ui/scenic/lib/scenic/event_reporter.h"
 #include "src/ui/scenic/lib/view_tree/snapshot_types.h"
@@ -105,15 +104,7 @@ class ViewTree {
     fit::function<void(fxl::RefPtr<ViewHolder>)> add_annotation_view_holder;
 
     scheduling::SessionId session_id = 0u;  // Default value: an invalid ID.
-
-    bool installed = false;
   };
-
-  ViewTree() : view_ref_installed_impl_(fit::bind_member(this, &ViewTree::IsInstalled)){};
-
-  void PublishViewRefInstalledService(sys::ComponentContext* app_context) {
-    view_ref_installed_impl_.Publish(app_context);
-  }
 
   // Return parent's KOID, if valid. Otherwise return std::nullopt.
   // Invariant: child exists in nodes_ map.
@@ -233,9 +224,6 @@ class ViewTree {
   // TODO(fxbug.dev/59407): Disentangle the annotation logic from ViewTree.
   void InvalidateAnnotationViewHolder(zx_koid_t koid);
 
-  // To be called after a batch of ViewTree updates have been applied.
-  void PostProcessUpdates() { UpdateInstalledRefs(); }
-
   // Debug aid.
   // - Do not rely on the concrete format for testing or any other purpose.
   // - Do not rely on this function being runtime efficient; it is not guaranteed to be.
@@ -246,14 +234,6 @@ class ViewTree {
   view_tree::SubtreeSnapshot Snapshot() const;
 
  private:
-  // Returns true if there is a RefNode corresponding to |koid| that has ever been connected to the
-  // SceneGraph. Returns false otherwise.
-  bool IsInstalled(zx_koid_t koid);
-
-  // Cycles through all nodes, updating any that got connected to the SceneGraph for the first time
-  // and notifies any ViewRefInstalled clients. Called in PostProcessUpdates().
-  void UpdateInstalledRefs();
-
   // Map of ViewHolder's or ViewRef's KOID to its node representation.
   // - Nodes that are connected have an unbroken parent chain to root_.
   // - Nodes may be disconnected from root_ and still inhabit this map.
@@ -273,8 +253,6 @@ class ViewTree {
   // - Invariant: for each session, at most one RefNode is connected to root_.
   // - Lifecycle (add/remove) is handled by callbacks from command processors.
   std::unordered_multimap<SessionId, zx_koid_t> ref_node_koids_;
-
-  ViewRefInstalledImpl view_ref_installed_impl_;
 };
 
 struct ViewTreeNewRefNode {

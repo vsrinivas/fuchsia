@@ -61,8 +61,7 @@ class CompositorTest : public SessionTest {
     FX_DCHECK(!scene_graph_);
 
     // Generate scene graph.
-    scene_graph_ = std::make_unique<SceneGraph>(context_provider_.context(),
-                                                /*request_focus*/ [](auto...) { return false; });
+    scene_graph_ = std::make_unique<SceneGraph>(/*request_focus*/ [](auto...) { return false; });
 
     // Finally apply scene graph weak pointer.
     session_context.scene_graph = scene_graph_->GetWeakPtr();

@@ -92,7 +92,7 @@ void ViewRefInstalledImpl::Watch(fuchsia::ui::views::ViewRef view_ref,
 void ViewRefInstalledImpl::OnNewViewTreeSnapshot(std::shared_ptr<const Snapshot> snapshot) {
   // Remove any stale views from the installed_views_ set.
   for (auto it = installed_views_.begin(); it != installed_views_.end();) {
-    if (snapshot->view_tree.count(*it) == 0 && snapshot->unconnected_views.count(*it)) {
+    if (snapshot->view_tree.count(*it) == 0 && snapshot->unconnected_views.count(*it) == 0) {
       it = installed_views_.erase(it);
     } else {
       ++it;

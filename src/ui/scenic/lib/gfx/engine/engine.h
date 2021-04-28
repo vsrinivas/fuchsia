@@ -6,7 +6,6 @@
 #define SRC_UI_SCENIC_LIB_GFX_ENGINE_ENGINE_H_
 
 #include <lib/fit/function.h>
-#include <lib/sys/cpp/component_context.h>
 
 #include <memory>
 #include <set>
@@ -91,12 +90,12 @@ using OnPresentedCallback = fit::function<void(PresentationInfo)>;
 //
 class Engine : public scheduling::FrameRenderer {
  public:
-  Engine(sys::ComponentContext* app_context, escher::EscherWeakPtr escher,
+  Engine(escher::EscherWeakPtr escher,
          std::shared_ptr<GfxBufferCollectionImporter> buffer_collection_importer,
          inspect::Node inspect_node, RequestFocusFunc request_focus);
 
   // Only used for testing.
-  Engine(sys::ComponentContext* app_context, escher::EscherWeakPtr escher);
+  explicit Engine(escher::EscherWeakPtr escher);
 
   ~Engine() override = default;
 

@@ -33,14 +33,8 @@ CompositorWeakPtr SceneGraph::GetCompositor(GlobalId compositor_id) const {
   return Compositor::kNullWeakPtr;
 }
 
-SceneGraph::SceneGraph(sys::ComponentContext* app_context, RequestFocusFunc request_focus)
-    : request_focus_(std::move(request_focus)), weak_factory_(this) {
-  if (app_context) {
-    view_tree_.PublishViewRefInstalledService(app_context);
-  } else {
-    FX_LOGS(ERROR) << "SceneGraph failed to register fuchsia.ui.focus.FocusChainListenerRegistry.";
-  }
-}
+SceneGraph::SceneGraph(RequestFocusFunc request_focus)
+    : request_focus_(std::move(request_focus)), weak_factory_(this) {}
 
 void SceneGraph::AddCompositor(const CompositorWeakPtr& compositor) {
   FX_DCHECK(compositor);
@@ -82,7 +76,6 @@ void SceneGraph::ProcessViewTreeUpdates(ViewTreeUpdates view_tree_updates) {
                       << update.index();
     }
   }
-  view_tree_.PostProcessUpdates();
 }
 
 void SceneGraph::RegisterViewFocuser(SessionId session_id,

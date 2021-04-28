@@ -5,8 +5,6 @@
 #ifndef SRC_UI_SCENIC_LIB_GFX_TESTS_GFX_TEST_H_
 #define SRC_UI_SCENIC_LIB_GFX_TESTS_GFX_TEST_H_
 
-#include <lib/sys/cpp/testing/component_context_provider.h>
-
 #include <memory>
 
 #include "src/ui/scenic/lib/gfx/gfx_system.h"
@@ -26,12 +24,10 @@ class GfxSystemTest : public scenic_impl::test::ScenicTest {
 
   GfxSystem* gfx_system() { return gfx_system_.lock().get(); }
   Engine* engine() { return engine_.get(); }
-  sys::testing::ComponentContextProvider& context_provider() { return context_provider_; }
 
  private:
   void InitializeScenic(std::shared_ptr<Scenic> scenic) override;
 
-  sys::testing::ComponentContextProvider context_provider_;
   std::shared_ptr<scheduling::DefaultFrameScheduler> frame_scheduler_;
   std::shared_ptr<Engine> engine_;
 

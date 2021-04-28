@@ -8,7 +8,6 @@
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/sys/cpp/component_context.h>
 
 #include <vector>
 
@@ -18,8 +17,7 @@
 #include "src/ui/scenic/lib/gfx/resources/compositor/compositor.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/display_compositor.h"
 
-namespace scenic_impl {
-namespace gfx {
+namespace scenic_impl::gfx {
 
 class SceneGraph;
 using SceneGraphWeakPtr = fxl::WeakPtr<SceneGraph>;
@@ -34,7 +32,7 @@ using RequestFocusFunc = fit::function<bool(zx_koid_t requestor, zx_koid_t reque
 // Command processors update this tree.
 class SceneGraph final : public ViewFocuserRegistry {
  public:
-  explicit SceneGraph(sys::ComponentContext* app_context, RequestFocusFunc request_focus);
+  explicit SceneGraph(RequestFocusFunc request_focus);
 
   SceneGraphWeakPtr GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
@@ -137,7 +135,6 @@ class SceneGraph final : public ViewFocuserRegistry {
   fxl::WeakPtrFactory<SceneGraph> weak_factory_;  // Must be last.
 };
 
-}  // namespace gfx
-}  // namespace scenic_impl
+}  // namespace scenic_impl::gfx
 
 #endif  // SRC_UI_SCENIC_LIB_GFX_ENGINE_SCENE_GRAPH_H_

@@ -45,7 +45,7 @@ void VkSessionHandlerTest::InitializeScenic() {
   frame_scheduler_ = std::make_shared<scheduling::DefaultFrameScheduler>(
       std::make_shared<scheduling::VsyncTiming>(),
       std::make_unique<scheduling::ConstantFramePredictor>(/* static_vsync_offset */ zx::msec(5)));
-  engine_ = std::make_shared<Engine>(app_context_.context(), escher_->GetWeakPtr());
+  engine_ = std::make_shared<Engine>(escher_->GetWeakPtr());
 
   session_manager_ = std::make_unique<SessionManager>();
   session_updater_ = std::make_shared<TestSessionUpdater>(engine_.get(), session_manager_.get(),

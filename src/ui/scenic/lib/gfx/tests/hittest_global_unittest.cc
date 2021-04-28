@@ -9,7 +9,6 @@
 #include <lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
 #include <lib/fostr/fidl/fuchsia/ui/scenic/formatting.h>
 #include <lib/gtest/test_loop_fixture.h>
-#include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/commands.h>
 #include <lib/ui/scenic/cpp/resources.h>
@@ -115,8 +114,7 @@ class HitTestTest : public gtest::TestLoopFixture {
   // | ::testing::Test |
   void SetUp() override {
     gtest::TestLoopFixture::SetUp();
-    engine_ = std::make_unique<Engine>(context_provider_.context(),
-                                       /* escher */ nullptr);
+    engine_ = std::make_unique<Engine>(/* escher */ nullptr);
   }
 
   // | ::testing::Test |
@@ -168,7 +166,6 @@ class HitTestTest : public gtest::TestLoopFixture {
   }
 
  private:
-  sys::testing::ComponentContextProvider context_provider_;
   std::unique_ptr<Engine> engine_;
   ViewTreeUpdater view_tree_updater_;
 
