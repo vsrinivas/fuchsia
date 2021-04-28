@@ -15,7 +15,7 @@ These are non-owning views that only keep a reference and do not manage the obje
 lifetime of the objects must be managed externally. That means that the referenced objects must
 outlive the views.
 
-In particular, LLCPP generated types do not own theit out-of-line children, as defined by the FIDL
+In particular, LLCPP generated types do not own their out-of-line children, as defined by the FIDL
 wire format.
 
 ### Create LLCPP object using the FidlAllocator
