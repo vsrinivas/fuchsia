@@ -71,7 +71,9 @@ class FakeGraphicalPresenter : public modular_testing::FakeComponent,
   void CloseFirstViewController();
   void CloseAllViewControllers() { view_controller_bindings_.CloseAll(); }
 
-  void set_on_create(fit::function<void()> on_create) { on_create_ = std::move(on_create); }
+  void set_on_create(fit::function<void(fit::function<void()>)> on_create) {
+    on_create_ = std::move(on_create);
+  }
   void set_on_destroy(fit::function<void()> on_destroy) { on_destroy_ = std::move(on_destroy); }
 
   void set_on_graphical_presenter_connected(
@@ -96,7 +98,8 @@ class FakeGraphicalPresenter : public modular_testing::FakeComponent,
 
  private:
   // |modular_testing::FakeComponent|
-  void OnCreate(fuchsia::sys::StartupInfo startup_info) override;
+  void OnCreateAsync(fuchsia::sys::StartupInfo startup_info,
+                     fit::function<void()> callback) override;
 
   // |modular_testing::FakeComponent|
   void OnDestroy() override;
@@ -116,7 +119,7 @@ class FakeGraphicalPresenter : public modular_testing::FakeComponent,
 
   std::vector<std::shared_ptr<FakeViewController>> view_controllers_;
 
-  fit::function<void()> on_create_;
+  fit::function<void(fit::function<void()>)> on_create_;
   fit::function<void()> on_destroy_;
   fit::function<void()> on_graphical_presenter_connected_;
   fit::function<void(zx_status_t)> on_graphical_presenter_error_;

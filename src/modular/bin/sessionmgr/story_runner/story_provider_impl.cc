@@ -246,14 +246,13 @@ void StoryProviderImpl::SetPresentationProtocol(PresentationProtocolPtr presenta
     graphical_presenter->set_error_handler([](zx_status_t status) {
       FX_PLOGS(ERROR, status)
           << "GraphicalPresenter service channel (from session shell component) "
-          << "unexpectedly closed.";
+             "unexpectedly closed.";
     });
   } else if (auto session_shell =
                  std::get_if<fuchsia::modular::SessionShellPtr>(&presentation_protocol_)) {
     session_shell->set_error_handler([](zx_status_t status) {
-      FX_PLOGS(ERROR, status)
-          << "GraphicalPresenter service channel (from session shell component) "
-          << "unexpectedly closed.";
+      FX_PLOGS(ERROR, status) << "SessionShell service channel (from session shell component) "
+                                 "unexpectedly closed.";
     });
   } else {
     FX_LOGS(FATAL) << "Unhandled PresentationProtocolPtr alternative: "
@@ -476,6 +475,11 @@ void StoryProviderImpl::PresentView(std::string story_id,
   view_spec.set_view_holder_token(std::move(view_holder_token));
 
   fuchsia::modular::internal::StoryDataPtr story_data = session_storage_->GetStoryData(story_id);
+  if (!story_data) {
+    FX_LOGS(WARNING) << "Not presenting view, story does not exist: " << story_id;
+    return;
+  }
+
   if (story_data->story_info().has_annotations()) {
     view_spec.set_annotations(
         annotations::ToElementAnnotations(story_data->story_info().annotations()));
@@ -573,8 +577,13 @@ void StoryProviderImpl::DismissView(std::string story_id, fit::function<void()> 
          "sessionmgr to function.";
 
   auto controllers_it = view_controllers_.find(story_id);
-  FX_CHECK(controllers_it != view_controllers_.end())
-      << "No story with id: " << story_id << " found.";
+  if (controllers_it == view_controllers_.end()) {
+    FX_LOGS(WARNING) << "Not dismissing view, story ViewController does not exist: " << story_id;
+    dismiss_callbacks_.erase(story_id);
+    annotation_controllers_.erase(story_id);
+    done();
+    return;
+  }
 
   for (auto it = view_controllers_[story_id].begin(); it != view_controllers_[story_id].end();) {
     // Notify the ViewController to Dismiss the view, if it's connected, or erase the

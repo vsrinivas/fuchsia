@@ -39,7 +39,8 @@ void FakeGraphicalPresenter::CloseFirstViewController() {
   view_controllers_.erase(view_controllers_.begin());
 }
 
-void FakeGraphicalPresenter::OnCreate(fuchsia::sys::StartupInfo startup_info) {
+void FakeGraphicalPresenter::OnCreateAsync(fuchsia::sys::StartupInfo startup_info,
+                                           fit::function<void()> callback) {
   component_context()->svc()->Connect(session_shell_context_.NewRequest());
   session_shell_context_->GetStoryProvider(story_provider_.NewRequest());
 
@@ -57,7 +58,9 @@ void FakeGraphicalPresenter::OnCreate(fuchsia::sys::StartupInfo startup_info) {
   component_context()->outgoing()->AddPublicService(std::move(graphical_presenter_handler));
 
   if (on_create_) {
-    on_create_();
+    on_create_(std::move(callback));
+  } else {
+    callback();
   }
 }
 

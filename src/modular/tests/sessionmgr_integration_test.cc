@@ -51,7 +51,6 @@ class SessionmgrIntegrationTest : public modular_testing::TestHarnessFixture {
     });
     fake_graphical_presenter_->set_on_graphical_presenter_error([&](zx_status_t status) {
       FX_PLOGS(FATAL, status) << "Failed to connect to FakeGraphicalPresenter";
-      FX_NOTREACHED();
     });
 
     // Create the test harness and verify the session shell is up
@@ -409,7 +408,7 @@ TEST_F(SessionmgrIntegrationTest, DeleteStoryWhenViewControllerIsClosed) {
   fake_graphical_presenter->set_on_graphical_presenter_connected(
       [&]() { graphical_presenter_connected = true; });
   fake_graphical_presenter->set_on_graphical_presenter_error([&](zx_status_t status) {
-    FX_NOTREACHED() << "Failed to connect to FakeGraphicalPresenter";
+    FX_PLOGS(FATAL, status) << "Failed to connect to FakeGraphicalPresenter";
   });
 
   // Register two fake components to be launched as a story mods
@@ -719,11 +718,12 @@ TEST_F(SessionmgrIntegrationTest, PresentViewBeforePresentationProtocolConnected
   auto fake_graphical_presenter =
       modular_testing::FakeGraphicalPresenter::CreateWithDefaultOptions();
 
-  fake_graphical_presenter->set_on_create([&]() {
+  fake_graphical_presenter->set_on_create([&](fit::function<void()> done) {
     // Create the story before the FakeGraphicalPresenter component starts serving its outgoing
     // directory. This ensures that StoryProviderImpl has not yet selected a presentation protocol.
     auto story_puppet_master = ControlStory();
     LaunchMod(&story_puppet_master);
+    done();
   });
 
   bool called_present_view = false;
@@ -739,7 +739,6 @@ TEST_F(SessionmgrIntegrationTest, PresentViewBeforePresentationProtocolConnected
 
   fake_graphical_presenter->set_on_graphical_presenter_error([&](zx_status_t status) {
     FX_PLOGS(FATAL, status) << "Failed to connect to FakeGraphicalPresenter";
-    FX_NOTREACHED();
   });
 
   builder.InterceptSessionShell(fake_graphical_presenter->BuildInterceptOptions());
@@ -754,6 +753,57 @@ TEST_F(SessionmgrIntegrationTest, PresentViewBeforePresentationProtocolConnected
   // StoryProviderImpl should have selected GraphicalPresenter called PresentView.
   RunLoopUntil([&] { return graphical_presenter_connected; });
   RunLoopUntil([&] { return called_present_view; });
+}
+
+// Tests that creating and deleting a story before the presentation protocol is chosen as a
+// result of the session component exposing its outgoing directory does not cause sessionmgr
+// to try to present a pended view for a nonexistent story.
+TEST_F(SessionmgrIntegrationTest, PresentViewDeletedStory) {
+  modular_testing::TestHarnessBuilder builder;
+  fake_graphical_presenter_ = modular_testing::FakeGraphicalPresenter::CreateWithDefaultOptions();
+
+  fit::function<void()> serve_outgoing;
+  fake_graphical_presenter_->set_on_create(
+      [&](fit::function<void()> done) { serve_outgoing = std::move(done); });
+
+  fake_graphical_presenter_->set_on_present_view(
+      [&](fuchsia::element::ViewSpec view_spec,
+          fidl::InterfaceHandle<fuchsia::element::AnnotationController> annotation_controller) {
+        FX_LOGS(FATAL) << "PresentView should not be called for a view from a deleted story.";
+      });
+
+  bool graphical_presenter_connected = false;
+  fake_graphical_presenter_->set_on_graphical_presenter_connected(
+      [&]() { graphical_presenter_connected = true; });
+
+  builder.InterceptSessionShell(fake_graphical_presenter_->BuildInterceptOptions());
+  builder.InterceptComponent(fake_module_->BuildInterceptOptions());
+  builder.UseSessionShellForStoryShellFactory();
+
+  // Create the test harness and verify the session shell is up
+  builder.BuildAndRun(test_harness());
+
+  RunLoopUntil([&] { return !!serve_outgoing; });
+
+  auto story_puppet_master = ControlStory();
+
+  // Create the story before the FakeGraphicalPresenter component starts serving its outgoing
+  // directory. This ensures that StoryProviderImpl has not yet selected a presentation protocol.
+  bool created_story{false};
+  LaunchMod(&story_puppet_master, [&](const fuchsia::modular::ExecuteResult& result) mutable {
+    EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK, result.status);
+    created_story = true;
+  });
+  RunLoopUntil([&] { return created_story; });
+
+  bool deleted_story{false};
+  auto puppet_master = ConnectToPuppetMaster();
+  puppet_master->DeleteStory(kTestStoryId, [&] { deleted_story = true; });
+  RunLoopUntil([&] { return deleted_story; });
+
+  serve_outgoing();
+
+  RunLoopUntil([&] { return graphical_presenter_connected; });
 }
 
 }  // namespace
