@@ -86,9 +86,14 @@ def main():
             manifest, out, indent=2, sort_keys=True, separators=(',', ': '))
 
     with open(args.depfile, 'w') as dep_file:
-        dep_file.write(args.out + ': ')
-        for destination, source in extra_files:
-            dep_file.write(source + ' ')
+        dep_file.write(
+            '{}: {}\n'.format(
+                args.out,
+                # Always write relative paths to depfiles. See more information
+                # from https://fxbug.dev/75451.
+                ' '.join(os.path.relpath(source) for _, source in extra_files),
+            ),
+        )
 
 
 if __name__ == '__main__':

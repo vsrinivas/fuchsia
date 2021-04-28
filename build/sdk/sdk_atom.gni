@@ -154,11 +154,10 @@ template("sdk_atom") {
     assert(defined(file.source), "File $file does not specify a source.")
     assert(defined(file.dest), "File $file does not specify a destination.")
     file_inputs += [ file.source ]
-    source = rebase_path(file.source)
     file_args += [
       "--file",
       file.dest,
-      source,
+      rebase_path(file.source, root_build_dir),
     ]
   }
 
@@ -203,11 +202,10 @@ template("sdk_atom") {
   }
 
   # Add the metadata file to the set of files to include in SDKs.
-  meta_source = rebase_path(meta_file)
   file_args += [
     "--file",
     meta.dest,
-    meta_source,
+    rebase_path(meta_file, root_build_dir),
   ]
 
   if (defined(invoker.api)) {
@@ -257,7 +255,7 @@ template("sdk_atom") {
         deps = [ ":$generate_api_target_name" ]
       }
     }
-  }  # if defined(invoker.api)
+  }
 
   # Builds a manifest representing this element.
   action(target_name) {
@@ -290,7 +288,7 @@ template("sdk_atom") {
              "--out",
              rebase_path(manifest, root_build_dir),
              "--depfile",
-             rebase_path(depfile),
+             rebase_path(depfile, root_build_dir),
              "--gn-label",
              get_label_info(":$target_name", "label_with_toolchain"),
              "--category",
@@ -300,7 +298,7 @@ template("sdk_atom") {
              "--type",
              meta.schema,
              "--deps",
-           ] + dep_manifests + file_args
+           ] + rebase_path(dep_manifests, root_build_dir) + file_args
 
     if (defined(invoker.file_list)) {
       inputs += [ rebase_path(invoker.file_list) ]
