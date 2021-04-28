@@ -62,20 +62,32 @@ class SessionmgrIntegrationTest : public modular_testing::TestHarnessFixture {
     RunLoopUntil([&] { return graphical_presenter_connected; });
   }
 
-  std::unique_ptr<modular_testing::SimpleStoryProviderWatcher> CreateStory(
-      fuchsia::modular::StoryPuppetMasterPtr* story_master,
-      std::vector<fuchsia::modular::StoryState>* sequence_of_story_states) {
-    // Connect to PuppetMaster
+  fuchsia::modular::PuppetMasterPtr ConnectToPuppetMaster() {
     fuchsia::modular::PuppetMasterPtr puppet_master;
     fuchsia::modular::testing::ModularService svc;
     svc.set_puppet_master(puppet_master.NewRequest());
     test_harness()->ConnectToModularService(std::move(svc));
+    return puppet_master;
+  }
 
+  fuchsia::modular::StoryPuppetMasterPtr ControlStory() {
+    auto puppet_master = ConnectToPuppetMaster();
+    fuchsia::modular::StoryPuppetMasterPtr story_puppet_master;
+    puppet_master->ControlStory(kTestStoryId, story_puppet_master.NewRequest());
+    return story_puppet_master;
+  }
+
+  // Watches for changes to story states on the session shell's StoryProvider and appends new
+  // states to |sequence_of_story_states|.
+  //
+  // Expects that only the story with ID |kTestStoryId| is changed. This story does not have to
+  // exist prior to calling WatchStoryStates.
+  [[nodiscard]] std::unique_ptr<modular_testing::SimpleStoryProviderWatcher> WatchStoryStates(
+      std::vector<fuchsia::modular::StoryState>* sequence_of_story_states) const {
     fuchsia::modular::StoryProvider* story_provider = fake_graphical_presenter_->story_provider();
     EXPECT_TRUE(story_provider != nullptr);
 
-    // Have the mock session_shell record the sequence of story states it sees,
-    // and confirm that it only sees the correct story id.
+    // Have the StoryProviderWatcher record the sequence of story states it sees.
     auto watcher = std::make_unique<modular_testing::SimpleStoryProviderWatcher>();
     watcher->set_on_change_2([sequence_of_story_states](fuchsia::modular::StoryInfo2 story_info,
                                                         fuchsia::modular::StoryState story_state,
@@ -85,18 +97,31 @@ class SessionmgrIntegrationTest : public modular_testing::TestHarnessFixture {
       sequence_of_story_states->push_back(story_state);
     });
     watcher->Watch(story_provider, /*on_get_stories=*/nullptr);
-    puppet_master->ControlStory(kTestStoryId, story_master->NewRequest());
 
     return watcher;
   }
 
-  void LaunchMod() {
-    // Add the module to the story.
+  void LaunchMod(
+      fuchsia::modular::StoryPuppetMasterPtr* story_puppet_master,
+      fit::function<void(fuchsia::modular::ExecuteResult result)> callback = [](auto result) {
+      }) const {
     fuchsia::modular::Intent intent;
     intent.handler = fake_module_->url();
     intent.action = "action";
 
-    modular_testing::AddModToStory(test_harness(), kTestStoryId, "modname", std::move(intent));
+    fuchsia::modular::AddMod add_mod;
+    add_mod.mod_name_transitional = "modname";
+    add_mod.intent = std::move(intent);
+
+    fuchsia::modular::StoryCommand cmd;
+    cmd.set_add_mod(std::move(add_mod));
+
+    std::vector<fuchsia::modular::StoryCommand> cmds;
+    cmds.push_back(std::move(cmd));
+
+    // Add the module to the story
+    (*story_puppet_master)->Enqueue(std::move(cmds));
+    (*story_puppet_master)->Execute(std::move(callback));
   }
 
   void StopStory() {
@@ -257,12 +282,11 @@ TEST_F(SessionmgrIntegrationTest, PresentViewIsCalled) {
     fake_graphical_presenter_->CloseAllViewControllers();
   });
 
-  // Create the story
-  fuchsia::modular::StoryPuppetMasterPtr story_master;
   std::vector<fuchsia::modular::StoryState> sequence_of_story_states;
-  auto watcher = CreateStory(&story_master, &sequence_of_story_states);
+  auto watcher = WatchStoryStates(&sequence_of_story_states);
 
-  LaunchMod();
+  auto story_puppet_master = ControlStory();
+  LaunchMod(&story_puppet_master);
 
   // Since this test is using a GraphicalPresenter PresentView should be called.
   RunLoopUntil([&] { return called_present_view; });
@@ -310,21 +334,22 @@ TEST_F(SessionmgrIntegrationTest, AnnotationsAreReflectedInAnnotationController)
       });
 
   // Create the story and add annotations
-  fuchsia::modular::StoryPuppetMasterPtr story_master;
   std::vector<fuchsia::modular::StoryState> sequence_of_story_states;
-  auto watcher = CreateStory(&story_master, &sequence_of_story_states);
+  auto watcher = WatchStoryStates(&sequence_of_story_states);
+
+  auto story_puppet_master = ControlStory();
 
   std::vector<fuchsia::modular::Annotation> annotations;
   annotations.push_back(fuchsia::modular::Annotation{
       .key = kTestAnnotationKey,
       .value = std::make_unique<fuchsia::modular::AnnotationValue>(
           fuchsia::modular::AnnotationValue::WithText(kTestAnnotationValue))});
-  story_master->Annotate(std::move(annotations),
-                         [&](fuchsia::modular::StoryPuppetMaster_Annotate_Result result) {
-                           ASSERT_FALSE(result.is_err());
-                         });
+  story_puppet_master->Annotate(std::move(annotations),
+                                [&](fuchsia::modular::StoryPuppetMaster_Annotate_Result result) {
+                                  ASSERT_FALSE(result.is_err());
+                                });
 
-  LaunchMod();
+  LaunchMod(&story_puppet_master);
 
   // Wait for PresentView to be called
   RunLoopUntil([&] { return called_present_view; });
@@ -336,11 +361,11 @@ TEST_F(SessionmgrIntegrationTest, AnnotationsAreReflectedInAnnotationController)
       .value = std::make_unique<fuchsia::modular::AnnotationValue>(
           fuchsia::modular::AnnotationValue::WithText(kTestAnnotationUpdateValue))});
   bool updated_annotations{false};
-  story_master->Annotate(std::move(annotation_update),
-                         [&](fuchsia::modular::StoryPuppetMaster_Annotate_Result result) {
-                           ASSERT_FALSE(result.is_err());
-                           updated_annotations = true;
-                         });
+  story_puppet_master->Annotate(std::move(annotation_update),
+                                [&](fuchsia::modular::StoryPuppetMaster_Annotate_Result result) {
+                                  ASSERT_FALSE(result.is_err());
+                                  updated_annotations = true;
+                                });
   RunLoopUntil([&]() { return updated_annotations; });
 
   // Get the annotations using the AnnotationController passed to PresentView
@@ -690,9 +715,6 @@ TEST_F(SessionmgrIntegrationTestWithoutDefaultHarness, PuppetMasterInAgentTermin
 // Tests that creating a story before StoryProviderImpl connects to a presentation protocol
 // results in the PresentView call being pended and called again once connected.
 TEST_F(SessionmgrIntegrationTest, PresentViewBeforePresentationProtocolConnected) {
-  fuchsia::modular::StoryPuppetMasterPtr story_master;
-  std::vector<fuchsia::modular::StoryState> sequence_of_story_states;
-
   modular_testing::TestHarnessBuilder builder;
   auto fake_graphical_presenter =
       modular_testing::FakeGraphicalPresenter::CreateWithDefaultOptions();
@@ -700,7 +722,8 @@ TEST_F(SessionmgrIntegrationTest, PresentViewBeforePresentationProtocolConnected
   fake_graphical_presenter->set_on_create([&]() {
     // Create the story before the FakeGraphicalPresenter component starts serving its outgoing
     // directory. This ensures that StoryProviderImpl has not yet selected a presentation protocol.
-    LaunchMod();
+    auto story_puppet_master = ControlStory();
+    LaunchMod(&story_puppet_master);
   });
 
   bool called_present_view = false;
