@@ -26,6 +26,12 @@
 namespace scenic_impl {
 namespace input {
 
+// RequestFocusFunc should attempt to move focus to the passed in zx_koid_t.
+// If the passed in koid is ZX_KOID_INVALID, then focus should be moved to
+// the current root of the focus chain. If there is no root, then the call should
+// silently fail.
+using RequestFocusFunc = fit::function<void(zx_koid_t)>;
+
 // Implementation of PointerEventRegistry API.
 class A11yPointerEventRegistry : public fuchsia::ui::policy::accessibility::PointerEventRegistry {
  public:
@@ -70,7 +76,7 @@ class InputSystem : public System,
   static const char* kName;
 
   explicit InputSystem(SystemContext context, fxl::WeakPtr<gfx::SceneGraph> scene_graph,
-                       bool pointer_auto_focus);
+                       RequestFocusFunc request_focus);
   ~InputSystem() override = default;
 
   CommandDispatcherUniquePtr CreateCommandDispatcher(
@@ -99,10 +105,6 @@ class InputSystem : public System,
   void DispatchPointerCommand(const fuchsia::ui::input::SendPointerInputCmd& command,
                               scheduling::SessionId session_id);
 
-  // Retrieve focused ViewRef's KOID from the scene graph.
-  // Return ZX_KOID_INVALID if scene does not exist, or if the focus chain is empty.
-  zx_koid_t focus() const;
-
   // For tests.
   void RegisterA11yListener(
       fidl::InterfaceHandle<fuchsia::ui::input::accessibility::PointerEventListener> listener,
@@ -121,17 +123,6 @@ class InputSystem : public System,
   // Injects a touch event by hit testing for appropriate targets.
   void InjectTouchEventHitTested(const InternalPointerEvent& event, StreamId stream_id);
   void InjectMouseEventHitTested(const InternalPointerEvent& event);
-
-  // Retrieve KOID of focus chain's root view.
-  // Return ZX_KOID_INVALID if scene does not exist, or if the focus chain is empty.
-  zx_koid_t focus_chain_root() const;
-
-  // Request a focus change in the SceneGraph's ViewTree.
-  //
-  // The request is performed with the authority of the focus chain's root view (typically the
-  // Scene). However, a request may be denied if the requested view may not receive focus (a
-  // property set by the view holder).
-  void RequestFocusChange(zx_koid_t view_ref_koid);
 
   // Send a copy of the event to the singleton listener of the pointer capture API if there is one.
   // TODO(fxbug.dev/48150): Delete when we delete the PointerCapture functionality.
@@ -173,14 +164,14 @@ class InputSystem : public System,
   std::optional<glm::mat4> GetDestinationViewFromSourceViewTransform(zx_koid_t source,
                                                                      zx_koid_t destination) const;
 
-  // Determines whether focus should be automatically changed by pointer input.
-  const bool pointer_auto_focus_;
-
   using InjectorId = uint64_t;
   InjectorId last_injector_id_ = 0;
   std::map<InjectorId, Injector> injectors_;
 
+  // TODO(fxbug.dev/64206): Remove when we no longer have any legacy clients.
   fxl::WeakPtr<gfx::SceneGraph> scene_graph_;
+
+  const RequestFocusFunc request_focus_;
 
   std::unique_ptr<A11yPointerEventRegistry> pointer_event_registry_;
 

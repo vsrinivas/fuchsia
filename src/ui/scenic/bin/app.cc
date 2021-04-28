@@ -314,8 +314,32 @@ void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
 
 void App::InitializeInput() {
   TRACE_DURATION("gfx", "App::InitializeInput");
-  input_ = scenic_->RegisterSystem<input::InputSystem>(engine_->scene_graph(),
-                                                       config_values_.pointer_auto_focus_on);
+  input_ = scenic_->RegisterSystem<input::InputSystem>(
+      engine_->scene_graph(),
+      /*request_focus*/ [scene_graph = engine_->scene_graph(),
+                         use_auto_focus = config_values_.pointer_auto_focus_on](zx_koid_t koid) {
+        if (!use_auto_focus)
+          return;
+
+        if (!scene_graph)
+          return;  // No scene graph, no view tree, no focus chain.
+
+        if (scene_graph->view_tree().focus_chain().empty())
+          return;  // Scene not present, or scene not connected to compositor.
+
+        // Input system acts on authority of top-most view.
+        const zx_koid_t requestor = scene_graph->view_tree().focus_chain().front();
+        const zx_koid_t request = koid != ZX_KOID_INVALID ? koid : requestor;
+        const auto status = scene_graph->RequestFocusChange(requestor, request);
+        FX_VLOGS(1) << "Scenic RequestFocusChange. Authority: " << requestor
+                    << ", request: " << request << ", status: " << static_cast<int>(status);
+
+        FX_DCHECK(status == gfx::ViewTree::FocusChangeStatus::kAccept ||
+                  status == gfx::ViewTree::FocusChangeStatus::kErrorRequestCannotReceiveFocus)
+            << "User has authority to request focus change, but the only valid rejection is when "
+               "the requested view may not receive focus. Error code: "
+            << static_cast<int>(status);
+      });
   FX_DCHECK(input_);
 }
 

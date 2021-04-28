@@ -24,7 +24,6 @@ namespace scenic_impl {
 namespace input {
 
 using AccessibilityPointerEvent = fuchsia::ui::input::accessibility::PointerEvent;
-using FocusChangeStatus = scenic_impl::gfx::ViewTree::FocusChangeStatus;
 using fuchsia::ui::input::InputEvent;
 using fuchsia::ui::input::PointerEvent;
 using fuchsia::ui::input::PointerEventType;
@@ -102,10 +101,10 @@ void ChattyA11yLog(const fuchsia::ui::input::accessibility::PointerEvent& event)
 const char* InputSystem::kName = "InputSystem";
 
 InputSystem::InputSystem(SystemContext context, fxl::WeakPtr<gfx::SceneGraph> scene_graph,
-                         bool pointer_auto_focus)
+                         fit::function<void(zx_koid_t)> request_focus)
     : System(std::move(context)),
-      pointer_auto_focus_(pointer_auto_focus),
-      scene_graph_(scene_graph) {
+      scene_graph_(scene_graph),
+      request_focus_(std::move(request_focus)) {
   FX_CHECK(scene_graph);
 
   pointer_event_registry_ = std::make_unique<A11yPointerEventRegistry>(
@@ -307,10 +306,11 @@ ContenderId InputSystem::AddGfxLegacyContender(StreamId stream_id, zx_koid_t vie
           if (event.phase == Phase::kAdd) {
             if (view_tree_snapshot_->view_tree.count(view_ref_koid) != 0) {
               if (view_tree_snapshot_->view_tree.at(view_ref_koid).is_focusable) {
-                RequestFocusChange(view_ref_koid);
+                request_focus_(view_ref_koid);
               }
-            } else if (focus_chain_root() != ZX_KOID_INVALID) {
-              RequestFocusChange(focus_chain_root());
+            } else {
+              // Focus root.
+              request_focus_(ZX_KOID_INVALID);
             }
           }
         }
@@ -497,9 +497,9 @@ void InputSystem::InjectTouchEventHitTested(const InternalPointerEvent& event, S
     std::vector<ContenderId> contenders = CollectContenders(stream_id, event);
     if (!contenders.empty()) {
       gesture_arenas_.emplace(stream_id, GestureArena{std::move(contenders)});
-    } else if (focus_chain_root() != ZX_KOID_INVALID) {
+    } else {
       // No node was hit. Transfer focus to root.
-      RequestFocusChange(focus_chain_root());
+      request_focus_(ZX_KOID_INVALID);
     }
   }
 
@@ -612,9 +612,7 @@ void InputSystem::DestroyArenaIfComplete(StreamId stream_id) {
     // If no one won the contest then it will appear as if nothing was hit. Transfer focus to root.
     // TODO(fxbug.dev/59858): This probably needs to change when we figure out the exact semantics
     // we want.
-    if (focus_chain_root() != ZX_KOID_INVALID) {
-      RequestFocusChange(focus_chain_root());
-    }
+    request_focus_(ZX_KOID_INVALID);
     gesture_arenas_.erase(stream_id);
   } else if (arena.contest_has_ended() && arena.stream_has_ended()) {
     // If both the contest and the stream is over, destroy the arena.
@@ -654,12 +652,12 @@ void InputSystem::InjectMouseEventHitTested(const InternalPointerEvent& event) {
 
     if (!hit_views.empty()) {
       // Request that focus be transferred to the top view.
-      RequestFocusChange(hit_views.front());
-    } else if (focus_chain_root() != ZX_KOID_INVALID) {
+      request_focus_(hit_views.front());
+    } else {
       // The mouse event stream has no designated receiver.
       // Request that focus be transferred to the root view, so that (1) the currently focused
       // view becomes unfocused, and (2) the focus chain remains under control of the root view.
-      RequestFocusChange(focus_chain_root());
+      request_focus_(ZX_KOID_INVALID);
     }
 
     // Save target for consistent delivery of mouse events.
@@ -687,59 +685,6 @@ void InputSystem::InjectMouseEventHitTested(const InternalPointerEvent& event) {
                                         fuchsia::ui::input::PointerEventType::MOUSE);
     }
   }
-}
-
-zx_koid_t InputSystem::focus() const {
-  if (!scene_graph_)
-    return ZX_KOID_INVALID;  // No scene graph, no view tree, no focus chain.
-
-  const auto& chain = scene_graph_->view_tree().focus_chain();
-  if (chain.empty())
-    return ZX_KOID_INVALID;  // Scene not present, or scene not connected to compositor.
-
-  const zx_koid_t focused_view = chain.back();
-  FX_DCHECK(focused_view != ZX_KOID_INVALID) << "invariant";
-  return focused_view;
-}
-
-zx_koid_t InputSystem::focus_chain_root() const {
-  if (!scene_graph_)
-    return ZX_KOID_INVALID;  // No scene graph, no view tree, no focus chain.
-
-  const auto& chain = scene_graph_->view_tree().focus_chain();
-  if (chain.empty())
-    return ZX_KOID_INVALID;  // Scene not present, or scene not connected to compositor.
-
-  const zx_koid_t root_view = chain.front();
-  FX_DCHECK(root_view != ZX_KOID_INVALID) << "invariant";
-  return root_view;
-}
-
-void InputSystem::RequestFocusChange(zx_koid_t view) {
-  if (!pointer_auto_focus_) {
-    return;
-  }
-
-  FX_DCHECK(view != ZX_KOID_INVALID) << "precondition";
-
-  if (!scene_graph_)
-    return;  // No scene graph, no view tree, no focus chain.
-
-  if (scene_graph_->view_tree().focus_chain().empty())
-    return;  // Scene not present, or scene not connected to compositor.
-
-  // Input system acts on authority of top-most view.
-  const zx_koid_t requestor = scene_graph_->view_tree().focus_chain().front();
-
-  auto status = scene_graph_->RequestFocusChange(requestor, view);
-  FX_VLOGS(1) << "Scenic RequestFocusChange. Authority: " << requestor << ", request: " << view
-              << ", status: " << static_cast<int>(status);
-
-  FX_DCHECK(status == FocusChangeStatus::kAccept ||
-            status == FocusChangeStatus::kErrorRequestCannotReceiveFocus)
-      << "User has authority to request focus change, but the only valid rejection is when the "
-         "requested view may not receive focus. Error code: "
-      << static_cast<int>(status);
 }
 
 // TODO(fxbug.dev/48150): Delete when we delete the PointerCapture functionality.

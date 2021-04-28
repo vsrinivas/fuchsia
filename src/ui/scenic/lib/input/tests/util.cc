@@ -165,7 +165,36 @@ void InputSystemTest::InitializeScenic(std::shared_ptr<Scenic> scenic) {
   scenic->SetFrameScheduler(frame_scheduler_);
 
   input_system_ =
-      scenic->RegisterSystem<InputSystem>(engine_->scene_graph(), auto_focus_behavior()).get();
+      scenic
+          ->RegisterSystem<InputSystem>(
+              engine_->scene_graph(),
+              /*request_focus*/
+              [scene_graph = engine_->scene_graph(),
+               use_auto_focus = auto_focus_behavior()](zx_koid_t koid) {
+                if (!use_auto_focus)
+                  return;
+
+                if (!scene_graph)
+                  return;  // No scene graph, no view tree, no focus chain.
+
+                if (scene_graph->view_tree().focus_chain().empty())
+                  return;  // Scene not present, or scene not connected to compositor.
+
+                // Input system acts on authority of top-most view.
+                const zx_koid_t requestor = scene_graph->view_tree().focus_chain().front();
+                const zx_koid_t request = koid != ZX_KOID_INVALID ? koid : requestor;
+                const auto status = scene_graph->RequestFocusChange(requestor, request);
+                FX_VLOGS(1) << "Scenic RequestFocusChange. Authority: " << requestor
+                            << ", request: " << request << ", status: " << static_cast<int>(status);
+
+                FX_DCHECK(status == scenic_impl::gfx::ViewTree::FocusChangeStatus::kAccept ||
+                          status == scenic_impl::gfx::ViewTree::FocusChangeStatus::
+                                        kErrorRequestCannotReceiveFocus)
+                    << "User has authority to request focus change, but the only valid rejection "
+                       "is when the requested view may not receive focus. Error code: "
+                    << static_cast<int>(status);
+              })
+          .get();
 
   {
     std::vector<view_tree::SubtreeSnapshotGenerator> subtrees;
