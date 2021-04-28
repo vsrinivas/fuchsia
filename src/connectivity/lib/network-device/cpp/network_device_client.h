@@ -303,7 +303,7 @@ class NetworkDeviceClient {
   bool session_running_ = false;
   RxCallback rx_callback_;
   ErrorCallback err_callback_;
-  async_dispatcher_t* dispatcher_;
+  async_dispatcher_t* const dispatcher_;
   SessionConfig session_config_;
   uint16_t descriptor_count_;
   zx::vmo data_vmo_;
@@ -312,9 +312,9 @@ class NetworkDeviceClient {
   fzl::VmoMapper descriptors_;
   zx::fifo rx_fifo_;
   zx::fifo tx_fifo_;
-  std::shared_ptr<EventHandler<netdev::Device>> device_handler_;
+  const std::shared_ptr<EventHandler<netdev::Device>> device_handler_;
   fidl::Client<netdev::Device> device_;
-  std::shared_ptr<EventHandler<netdev::Session>> session_handler_;
+  const std::shared_ptr<EventHandler<netdev::Session>> session_handler_;
   fidl::Client<netdev::Session> session_;
   netdev::wire::Info device_info_;
   // rx descriptors ready to be sent back to the device.
@@ -329,7 +329,7 @@ class NetworkDeviceClient {
   async::WaitMethod<NetworkDeviceClient, &NetworkDeviceClient::TxSignal> tx_writable_wait_{this};
   async::WaitMethod<NetworkDeviceClient, &NetworkDeviceClient::RxSignal> rx_writable_wait_{this};
 
-  std::unique_ptr<async::Executor> executor_;
+  const std::unique_ptr<async::Executor> executor_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(NetworkDeviceClient);
 };

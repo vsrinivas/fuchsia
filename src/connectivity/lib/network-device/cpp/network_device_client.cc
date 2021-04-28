@@ -42,15 +42,20 @@ NetworkDeviceClient::NetworkDeviceClient(fidl::ClientEnd<netdev::Device> handle,
         }
       })),
       device_(std::move(handle), dispatcher_, device_handler_),
+      session_handler_(
+          std::make_shared<EventHandler<netdev::Session>>([this](fidl::UnbindInfo info) {
+            if (info.status != ZX_OK) {
+              FX_LOGS(ERROR) << "session handler error " << zx_status_get_string(info.status);
+              ErrorTeardown(info.status);
+            }
+          })),
       executor_(std::make_unique<async::Executor>(dispatcher_)) {}
 
 NetworkDeviceClient::~NetworkDeviceClient() {
   device_handler_->Cancel();
   device_ = {};
-  if (session_.is_valid()) {
-    session_handler_->Cancel();
-    session_ = {};
-  }
+  session_handler_->Cancel();
+  session_ = {};
 }
 
 SessionConfig NetworkDeviceClient::DefaultSessionConfig(const netdev::wire::Info& dev_info) {
@@ -116,14 +121,6 @@ void NetworkDeviceClient::OpenSession(const std::string& name,
                       break;
                     case netdev::wire::DeviceOpenSessionResult::Tag::kResponse:
                       netdev::wire::DeviceOpenSessionResponse& response = result.mutable_response();
-                      session_handler_ = std::make_shared<EventHandler<netdev::Session>>(
-                          [this](fidl::UnbindInfo info) {
-                            if (info.status != ZX_OK) {
-                              FX_LOGS(ERROR)
-                                  << "session handler error " << zx_status_get_string(info.status);
-                              ErrorTeardown(info.status);
-                            }
-                          });
                       session_.Bind(std::move(response.session), dispatcher_, session_handler_);
                       rx_fifo_ = std::move(response.fifos.rx);
                       tx_fifo_ = std::move(response.fifos.tx);
