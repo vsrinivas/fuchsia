@@ -9,10 +9,12 @@ use {
 };
 
 mod file_system;
+pub mod http_repository;
 mod manager;
 mod server;
 
 pub use file_system::FileSystemRepository;
+pub use http_repository::package_download;
 pub use manager::RepositoryManager;
 pub use server::{RepositoryServer, RepositoryServerBuilder};
 

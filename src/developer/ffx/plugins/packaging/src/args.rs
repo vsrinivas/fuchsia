@@ -4,6 +4,7 @@
 
 use argh::FromArgs;
 use ffx_core::ffx_command;
+use std::path::PathBuf;
 
 #[ffx_command()]
 #[derive(FromArgs, PartialEq, Debug)]
@@ -19,6 +20,7 @@ pub enum SubCommand {
     Build(BuildCommand),
     Export(ExportCommand),
     Import(ImportCommand),
+    Download(DownloadCommand),
 }
 
 #[derive(FromArgs, PartialEq, Debug, Default)]
@@ -62,4 +64,24 @@ pub struct ExportCommand {
 pub struct ImportCommand {
     #[argh(positional, description = "archive to import")]
     pub archive: String,
+}
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "download", description = "download Package from TUF package server.")]
+pub struct DownloadCommand {
+    #[argh(positional, description = "hostname of TUF repository")]
+    pub tuf_hostname: String,
+
+    #[argh(positional, description = "hostname of Blobs Server")]
+    pub blob_hostname: String,
+
+    #[argh(positional, description = "target_path")]
+    pub target_path: String,
+
+    #[argh(
+        option,
+        short = 'o',
+        default = "PathBuf::from(\".\")",
+        description = "directory to save package"
+    )]
+    pub output_path: PathBuf,
 }

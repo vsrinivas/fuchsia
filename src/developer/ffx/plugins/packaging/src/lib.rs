@@ -9,7 +9,8 @@ mod tuf_repo;
 
 use anyhow::{Context, Result};
 use ffx_core::{ffx_error, ffx_plugin};
-use ffx_packaging_args::{BuildCommand, PackageCommand, SubCommand};
+use ffx_packaging_args::{BuildCommand, DownloadCommand, PackageCommand, SubCommand};
+use pkg::repository::http_repository::package_download;
 use repository::Repository;
 use std::collections::BTreeMap;
 use std::fs;
@@ -21,6 +22,7 @@ pub async fn cmd_package(cmd: PackageCommand) -> Result<()> {
     let repo = &Repository::default_repo().await?;
     match cmd.sub {
         SubCommand::Build(subcmd) => cmd_package_build(subcmd, std::io::stdout(), repo),
+        SubCommand::Download(subcmd) => cmd_package_download(subcmd).await,
         SubCommand::Export(subcmd) => archive::cmd_export(subcmd, repo),
         SubCommand::Import(subcmd) => archive::cmd_import(subcmd, std::io::stdout(), repo),
     }
@@ -124,6 +126,11 @@ fn write_depfile(depfile: String, output_file: String, deps: Vec<String>) -> Res
     for dep in deps {
         write!(f, "{} ", dep)?;
     }
+    Ok(())
+}
+
+async fn cmd_package_download(cmd: DownloadCommand) -> Result<()> {
+    package_download(cmd.tuf_hostname, cmd.blob_hostname, cmd.target_path, cmd.output_path).await?;
     Ok(())
 }
 
