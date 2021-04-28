@@ -12,9 +12,6 @@
             // Check archivist saw at least one START event
             "bootstrap/archivist:root/event_stats/recent_events/*:event WHERE [a] Count(Filter(Fn([b], b == 'START'), a)) > 0",
 
-            // Check archivist saw at least one LOG_SINK_REQUESTED event
-            "bootstrap/archivist:root/event_stats/recent_events/*:event WHERE [a] Count(Filter(Fn([b], b == \"LOG_SINK_REQUESTED\"), a)) > 0",
-
             // Check archivist counted components running
             "bootstrap/archivist:root/event_stats:components_seen_running WHERE [a] a > 1",
         ],

@@ -1,0 +1,16 @@
+{
+    include: [ "src/sys/test_runners/inspect/default.shard.cml" ],
+    program: {
+        accessor: "ALL",
+        timeout_seconds: "30",
+        cases: [
+            // Component manager reports that it is healthy.
+            "<component_manager>:root/fuchsia.inspect.Health:status WHERE [a] a == 'OK'",
+
+            // Ensure component manager has at least 256KiB of space
+            // for inspect, and that this limit is not reached.
+            "<component_manager>:root/inspect_stats:current_size WHERE [a] a < 256*1024",
+            "<component_manager>:root/inspect_stats:maximum_size WHERE [a] a >= 256*1024",
+        ],
+    },
+}

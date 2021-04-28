@@ -170,33 +170,6 @@ async fn launch_and_test_sample_test() {
                         vec![],
                         vec![DiagnosticsHierarchy::new(
                             "0",
-                            vec![Property::String(
-                                "event".to_string(),
-                                "LOG_SINK_REQUESTED".to_string(),
-                            )],
-                            vec![],
-                        )],
-                    )],
-                )],
-            )),
-            0,
-            "no-url",
-            "fake-file-name",
-            vec![],
-        ),
-        Data::for_inspect(
-            "bootstrap/archivist",
-            Some(DiagnosticsHierarchy::new(
-                "root",
-                vec![],
-                vec![DiagnosticsHierarchy::new(
-                    "event_stats",
-                    vec![],
-                    vec![DiagnosticsHierarchy::new(
-                        "recent_events",
-                        vec![],
-                        vec![DiagnosticsHierarchy::new(
-                            "0",
                             vec![Property::String("event".to_string(), "START".to_string())],
                             vec![],
                         )],
@@ -246,7 +219,6 @@ async fn launch_and_test_sample_test() {
         vec![
             vec!["bootstrap/archivist:root"],
             vec!["bootstrap/archivist:root/event_stats/recent_events/*:event"],
-            vec!["bootstrap/archivist:root/event_stats/recent_events/*:event"],
             vec!["bootstrap/archivist:root/event_stats:components_seen_running"],
             vec!["bootstrap/archivist:root/event_stats:components_seen_running"],
         ],
@@ -258,7 +230,6 @@ async fn launch_and_test_sample_test() {
 
     let expected_events: Vec<TestEvent> = vec![
             "bootstrap/archivist:root",
-            "bootstrap/archivist:root/event_stats/recent_events/*:event WHERE [a] Count(Filter(Fn([b], b == \"LOG_SINK_REQUESTED\"), a)) > 0",
             "bootstrap/archivist:root/event_stats/recent_events/*:event WHERE [a] Count(Filter(Fn([b], b == 'START'), a)) > 0",
             "bootstrap/archivist:root/event_stats:components_seen_running WHERE [a] a > 1"
     ]
