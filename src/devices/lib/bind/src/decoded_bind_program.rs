@@ -152,10 +152,6 @@ fn read_instructions(bytecode: Vec<u8>) -> Result<Vec<u8>, BytecodeError> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::compiler::{BindProgram, Symbol, SymbolTable};
-    use crate::encode_bind_program_v2::encode_to_bytecode_v2;
-    use crate::make_identifier;
-    use crate::parser_common::CompoundIdentifier;
 
     const BIND_HEADER: [u8; 8] = [0x42, 0x49, 0x4E, 0x44, 0x02, 0, 0, 0];
 
@@ -198,35 +194,6 @@ mod test {
             Err(BytecodeError::InvalidHeader(INSTRUCTION_MAGIC_NUM, 0xAAAAAAAA)),
             DecodedProgram::new(bytecode)
         );
-    }
-
-    #[test]
-    fn test_symbol_table() {
-        let mut symbol_table: SymbolTable = HashMap::new();
-        symbol_table
-            .insert(make_identifier!("aglaeactis"), Symbol::StringValue("sunbeam".to_string()));
-        symbol_table
-            .insert(make_identifier!("eriocnemis"), Symbol::StringValue("puffleg".to_string()));
-        symbol_table
-            .insert(make_identifier!("heliangelus"), Symbol::StringValue("sunangel".to_string()));
-
-        let bind_program = BindProgram {
-            instructions: vec![],
-            symbol_table: symbol_table.clone(),
-            use_new_bytecode: true,
-        };
-        let bytecode = encode_to_bytecode_v2(bind_program).unwrap();
-
-        let bind_program = DecodedProgram::new(bytecode).unwrap();
-        let expected_symbols = vec!["sunbeam", "puffleg", "sunangel"];
-        let decoded_symbols = bind_program
-            .symbol_table
-            .values()
-            .map(|symbol| symbol.clone())
-            .collect::<Vec<String>>();
-        for symbol in expected_symbols {
-            assert!(decoded_symbols.contains(&symbol.to_string()));
-        }
     }
 
     #[test]

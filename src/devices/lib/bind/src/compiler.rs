@@ -46,12 +46,10 @@ impl fmt::Display for CompilerError {
 #[derive(Debug, Error, Clone, PartialEq)]
 pub enum BindProgramEncodeError {
     InvalidStringLength(String),
-    DuplicateSymbol(String),
     UnsupportedSymbol,
     IntegerOutOfRange,
     MismatchValueTypes(bind_library::ValueType, bind_library::ValueType),
     IncorrectTypesInValueComparison,
-    MissingStringInSymbolTable(String),
     DuplicateLabel(u32),
     MissingLabel(u32),
     InvalidGotoLocation(u32),

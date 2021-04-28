@@ -28,10 +28,58 @@ struct LabelInfo {
     pub jump_instructions: Vec<JumpInstructionOffsetInfo>,
 }
 
+struct SymbolTableEncoder {
+    pub encoded_symbols: HashMap<String, u32>,
+    unique_key: u32,
+    pub bytecode: Vec<u8>,
+}
+
+impl SymbolTableEncoder {
+    pub fn new() -> Self {
+        SymbolTableEncoder {
+            encoded_symbols: HashMap::<String, u32>::new(),
+            unique_key: SYMB_TBL_START_KEY,
+            bytecode: vec![],
+        }
+    }
+
+    // Assign a unique key to |value| and add it to the list of encoded symbols and
+    // the bytecode.
+    // TODO(fxb/67919): Add support for enum values.
+    fn add_symbol(&mut self, value: String) -> Result<u32, BindProgramEncodeError> {
+        if value.len() > MAX_STRING_LENGTH {
+            return Err(BindProgramEncodeError::InvalidStringLength(value));
+        }
+
+        let symbol_key = self.unique_key;
+
+        self.encoded_symbols.insert(value.to_string(), self.unique_key);
+
+        // Add the symbol to the bytecode. The string value is followed by a zero
+        // terminator.
+        self.bytecode.extend_from_slice(&self.unique_key.to_le_bytes());
+        self.bytecode.append(&mut value.into_bytes());
+        self.bytecode.push(0);
+
+        self.unique_key += 1;
+
+        Ok(symbol_key)
+    }
+
+    // Retrieve the key for |value|. Add |value| if it's missing.
+    pub fn get_key(&mut self, value: String) -> Result<u32, BindProgramEncodeError> {
+        match self.encoded_symbols.get(&value) {
+            Some(key) => Ok(*key),
+            None => self.add_symbol(value),
+        }
+    }
+}
+
+#[allow(dead_code)]
 struct Encoder<'a> {
     inst_iter: std::vec::IntoIter<SymbolicInstructionInfo<'a>>,
     symbol_table: SymbolTable,
-    pub encoded_symbols: HashMap<String, u32>,
+    symbol_table_encoder: SymbolTableEncoder,
     label_map: HashMap<u32, LabelInfo>,
 }
 
@@ -41,9 +89,7 @@ impl<'a> Encoder<'a> {
             inst_iter: bind_program.instructions.into_iter(),
             symbol_table: bind_program.symbol_table,
 
-            // Contains the key-value pairs in the symbol table.
-            // Populated when the symbol tabel is encoded.
-            encoded_symbols: HashMap::<String, u32>::new(),
+            symbol_table_encoder: SymbolTableEncoder::new(),
 
             // Map of the label ID and the information. Used to
             // store the label location in the bytecode and to
@@ -53,6 +99,10 @@ impl<'a> Encoder<'a> {
     }
 
     pub fn encode_to_bytecode(mut self) -> Result<Vec<u8>, BindProgramEncodeError> {
+        // The instruction bytecode must be encoded before the symbol table since
+        // encoding the instructions might add new values to the symbol table.
+        let mut instruction_bytecode = self.encode_inst_block()?;
+
         let mut bytecode: Vec<u8> = vec![];
 
         // Encode the header.
@@ -60,48 +110,15 @@ impl<'a> Encoder<'a> {
         bytecode.extend_from_slice(&BYTECODE_VERSION.to_le_bytes());
 
         // Encode the symbol table.
-        let mut symbol_table = self.encode_symbol_table()?;
         bytecode.extend_from_slice(&SYMB_MAGIC_NUM.to_be_bytes());
-        bytecode.extend_from_slice(&(symbol_table.len() as u32).to_le_bytes());
-        bytecode.append(&mut symbol_table);
+        bytecode
+            .extend_from_slice(&(self.symbol_table_encoder.bytecode.len() as u32).to_le_bytes());
+        bytecode.append(&mut self.symbol_table_encoder.bytecode);
 
         // Encode the instruction section.
-        let mut instruction_bytecode = self.encode_inst_block()?;
         bytecode.extend_from_slice(&INSTRUCTION_MAGIC_NUM.to_be_bytes());
         bytecode.extend_from_slice(&(instruction_bytecode.len() as u32).to_le_bytes());
         bytecode.append(&mut instruction_bytecode);
-
-        Ok(bytecode)
-    }
-
-    fn encode_symbol_table(&mut self) -> Result<Vec<u8>, BindProgramEncodeError> {
-        let mut bytecode: Vec<u8> = vec![];
-        let mut unique_id: u32 = SYMB_TBL_START_KEY;
-
-        // TODO(fxb/67919): Add support for enum values.
-        for value in self.symbol_table.values() {
-            if let Symbol::StringValue(str) = value {
-                if str.len() > MAX_STRING_LENGTH {
-                    return Err(BindProgramEncodeError::InvalidStringLength(str.to_string()));
-                }
-
-                // The strings in the symbol table contain fully qualified namespace, so
-                // it's safe to assume that it won't contain duplicates in production.
-                // However, as a precaution, panic if that happens.
-                if self.encoded_symbols.contains_key(&str.to_string()) {
-                    return Err(BindProgramEncodeError::DuplicateSymbol(str.to_string()));
-                }
-
-                self.encoded_symbols.insert(str.to_string(), unique_id);
-                bytecode.extend_from_slice(&unique_id.to_le_bytes());
-
-                // Encode the string followed by a zero terminator.
-                bytecode.append(&mut str.to_string().into_bytes());
-                bytecode.push(0);
-
-                unique_id += 1;
-            }
-        }
 
         Ok(bytecode)
     }
@@ -152,7 +169,7 @@ impl<'a> Encoder<'a> {
     }
 
     fn append_abort_instruction(
-        &self,
+        &mut self,
         bytecode: &mut Vec<u8>,
         condition: Condition,
     ) -> Result<(), BindProgramEncodeError> {
@@ -244,7 +261,7 @@ impl<'a> Encoder<'a> {
     }
 
     fn append_value_comparison(
-        &self,
+        &mut self,
         bytecode: &mut Vec<u8>,
         lhs: Symbol,
         rhs: Symbol,
@@ -279,7 +296,7 @@ impl<'a> Encoder<'a> {
     }
 
     fn append_value(
-        &self,
+        &mut self,
         bytecode: &mut Vec<u8>,
         symbol: Symbol,
     ) -> Result<(), BindProgramEncodeError> {
@@ -287,9 +304,11 @@ impl<'a> Encoder<'a> {
             Symbol::NumberValue(value) => Ok((RawValueType::NumberValue as u8, value as u32)),
             Symbol::BoolValue(value) => Ok((RawValueType::BoolValue as u8, value as u32)),
             Symbol::StringValue(value) => {
-                Ok((RawValueType::StringValue as u8, *self.lookup_symbol_table(value)?))
+                Ok((RawValueType::StringValue as u8, self.symbol_table_encoder.get_key(value)?))
             }
-            Symbol::Key(key, _) => Ok((RawValueType::Key as u8, *self.lookup_symbol_table(key)?)),
+            Symbol::Key(key, _) => {
+                Ok((RawValueType::Key as u8, self.symbol_table_encoder.get_key(key)?))
+            }
             Symbol::DeprecatedKey(key) => Ok((RawValueType::NumberValue as u8, key)),
             _ => unimplemented!("Unsupported symbol"),
         }?;
@@ -297,12 +316,6 @@ impl<'a> Encoder<'a> {
         bytecode.push(value_type);
         bytecode.extend_from_slice(&value.to_le_bytes());
         Ok(())
-    }
-
-    fn lookup_symbol_table(&self, value: String) -> Result<&u32, BindProgramEncodeError> {
-        self.encoded_symbols
-            .get(&value)
-            .ok_or(BindProgramEncodeError::MissingStringInSymbolTable(value.to_string()))
     }
 }
 
@@ -332,8 +345,6 @@ pub fn encode_to_string_v2(
 mod test {
     use super::*;
     use crate::compiler::{SymbolicInstruction, SymbolicInstructionInfo};
-    use crate::make_identifier;
-    use crate::parser_common::CompoundIdentifier;
     use std::collections::HashMap;
 
     // Constants representing the number of bytes in an operand and value.
@@ -471,50 +482,81 @@ mod test {
     }
 
     #[test]
-    fn test_symbol_table() {
-        let mut symbol_table: SymbolTable = HashMap::new();
-
-        symbol_table
-            .insert(make_identifier!("cupwing"), Symbol::StringValue("wren-babbler".to_string()));
-        symbol_table.insert(make_identifier!("shoveler"), Symbol::NumberValue(0));
-        symbol_table.insert(make_identifier!("scoter"), Symbol::BoolValue(false));
-        symbol_table.insert(make_identifier!("goldeneye"), Symbol::EnumValue);
-        symbol_table.insert(make_identifier!("bufflehead"), Symbol::DeprecatedKey(0));
-        symbol_table.insert(
-            make_identifier!("canvasback"),
-            Symbol::Key("redhead".to_string(), ValueType::Number),
-        );
-        symbol_table
-            .insert(make_identifier!("nightjar"), Symbol::StringValue("frogmouth".to_string()));
-
-        let symbol_table_values: Vec<String> = symbol_table
-            .values()
-            .filter_map(|symbol| match symbol {
-                Symbol::StringValue(str) => Some(str.clone()),
-                _ => None,
-            })
-            .collect();
+    fn test_string_values() {
+        let instructions = vec![
+            SymbolicInstruction::AbortIfNotEqual {
+                lhs: Symbol::DeprecatedKey(5),
+                rhs: Symbol::StringValue("shoveler".to_string()),
+            },
+            SymbolicInstruction::AbortIfEqual {
+                lhs: Symbol::DeprecatedKey(1),
+                rhs: Symbol::BoolValue(false),
+            },
+            SymbolicInstruction::JumpIfEqual {
+                lhs: Symbol::DeprecatedKey(15),
+                rhs: Symbol::StringValue("canvasback".to_string()),
+                label: 1,
+            },
+            SymbolicInstruction::AbortIfEqual {
+                lhs: Symbol::DeprecatedKey(2),
+                rhs: Symbol::StringValue("canvasback".to_string()),
+            },
+            SymbolicInstruction::Label(1),
+            SymbolicInstruction::AbortIfEqual {
+                lhs: Symbol::Key("bufflehead".to_string(), ValueType::Number),
+                rhs: Symbol::NumberValue(1),
+            },
+            SymbolicInstruction::AbortIfEqual {
+                lhs: Symbol::Key("pintail".to_string(), ValueType::Str),
+                rhs: Symbol::StringValue("mallard".to_string()),
+            },
+        ];
 
         let bind_program = BindProgram {
-            instructions: to_symbolic_inst_info(vec![SymbolicInstruction::UnconditionalAbort]),
-            symbol_table: symbol_table,
+            instructions: to_symbolic_inst_info(instructions),
+            symbol_table: HashMap::new(),
             use_new_bytecode: true,
         };
 
         let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_program).unwrap());
         checker.verify_bind_program_header();
-        checker.verify_sym_table_header(31);
+        checker.verify_sym_table_header(67);
 
-        // Only the symbols with string values should be in the symbol table.
         let mut unique_id = 1;
-        symbol_table_values.into_iter().for_each(|value| {
+        let expected_symbols = ["shoveler", "canvasback", "bufflehead", "pintail", "mallard"];
+        expected_symbols.iter().for_each(|value| {
             checker.verify_next_u32(unique_id);
-            checker.verify_string(value);
+            checker.verify_string(value.to_string());
             unique_id += 1;
         });
 
-        checker.verify_instructions_header(UNCOND_ABORT_BYTES);
-        checker.verify_unconditional_abort();
+        checker.verify_instructions_header((COND_ABORT_BYTES * 5) + COND_JMP_BYTES + JMP_PAD_BYTES);
+        checker.verify_abort_not_equal(
+            EncodedValue { value_type: RawValueType::NumberValue, value: 5 },
+            EncodedValue { value_type: RawValueType::StringValue, value: 1 },
+        );
+        checker.verify_abort_equal(
+            EncodedValue { value_type: RawValueType::NumberValue, value: 1 },
+            EncodedValue { value_type: RawValueType::BoolValue, value: 0 },
+        );
+        checker.verify_jmp_if_equal(
+            COND_ABORT_BYTES,
+            EncodedValue { value_type: RawValueType::NumberValue, value: 15 },
+            EncodedValue { value_type: RawValueType::StringValue, value: 2 },
+        );
+        checker.verify_abort_equal(
+            EncodedValue { value_type: RawValueType::NumberValue, value: 2 },
+            EncodedValue { value_type: RawValueType::StringValue, value: 2 },
+        );
+        checker.verify_jmp_pad();
+        checker.verify_abort_equal(
+            EncodedValue { value_type: RawValueType::Key, value: 3 },
+            EncodedValue { value_type: RawValueType::NumberValue, value: 1 },
+        );
+        checker.verify_abort_equal(
+            EncodedValue { value_type: RawValueType::Key, value: 4 },
+            EncodedValue { value_type: RawValueType::StringValue, value: 5 },
+        );
         checker.verify_end();
     }
 
@@ -536,46 +578,100 @@ mod test {
     }
 
     #[test]
-    fn test_duplicates_in_symbol_table() {
-        let mut symbol_table: SymbolTable = HashMap::new();
-        symbol_table
-            .insert(make_identifier!("curlew"), Symbol::StringValue("sandpiper".to_string()));
-        symbol_table
-            .insert(make_identifier!("turnstone"), Symbol::StringValue("sandpiper".to_string()));
+    fn test_duplicate_symbols() {
+        let instructions = vec![
+            SymbolicInstruction::AbortIfNotEqual {
+                lhs: Symbol::DeprecatedKey(5),
+                rhs: Symbol::StringValue("puffleg".to_string()),
+            },
+            SymbolicInstruction::AbortIfEqual {
+                lhs: Symbol::Key("sunangel".to_string(), ValueType::Number),
+                rhs: Symbol::NumberValue(1),
+            },
+            SymbolicInstruction::AbortIfEqual {
+                lhs: Symbol::Key("puffleg".to_string(), ValueType::Number),
+                rhs: Symbol::NumberValue(1),
+            },
+            SymbolicInstruction::AbortIfNotEqual {
+                lhs: Symbol::DeprecatedKey(5),
+                rhs: Symbol::StringValue("sunangel".to_string()),
+            },
+            SymbolicInstruction::AbortIfEqual {
+                lhs: Symbol::Key("puffleg".to_string(), ValueType::Str),
+                rhs: Symbol::StringValue("sunangel".to_string()),
+            },
+            SymbolicInstruction::AbortIfEqual {
+                lhs: Symbol::Key("mountaingem".to_string(), ValueType::Str),
+                rhs: Symbol::StringValue("mountaingem".to_string()),
+            },
+        ];
 
         let bind_program = BindProgram {
-            instructions: to_symbolic_inst_info(vec![SymbolicInstruction::UnconditionalAbort]),
-            symbol_table: symbol_table,
+            instructions: to_symbolic_inst_info(instructions),
+            symbol_table: HashMap::new(),
             use_new_bytecode: true,
         };
 
-        assert_eq!(
-            Err(BindProgramEncodeError::DuplicateSymbol("sandpiper".to_string())),
-            encode_to_bytecode_v2(bind_program)
+        let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_program).unwrap());
+        checker.verify_bind_program_header();
+        checker.verify_sym_table_header(41);
+
+        let mut unique_id = 1;
+        let expected_symbols = ["puffleg", "sunangel", "mountaingem"];
+        expected_symbols.iter().for_each(|value| {
+            checker.verify_next_u32(unique_id);
+            checker.verify_string(value.to_string());
+            unique_id += 1;
+        });
+
+        checker.verify_instructions_header(COND_ABORT_BYTES * 6);
+        checker.verify_abort_not_equal(
+            EncodedValue { value_type: RawValueType::NumberValue, value: 5 },
+            EncodedValue { value_type: RawValueType::StringValue, value: 1 },
+        );
+        checker.verify_abort_equal(
+            EncodedValue { value_type: RawValueType::Key, value: 2 },
+            EncodedValue { value_type: RawValueType::NumberValue, value: 1 },
+        );
+        checker.verify_abort_equal(
+            EncodedValue { value_type: RawValueType::Key, value: 1 },
+            EncodedValue { value_type: RawValueType::NumberValue, value: 1 },
+        );
+        checker.verify_abort_not_equal(
+            EncodedValue { value_type: RawValueType::NumberValue, value: 5 },
+            EncodedValue { value_type: RawValueType::StringValue, value: 2 },
+        );
+        checker.verify_abort_equal(
+            EncodedValue { value_type: RawValueType::Key, value: 1 },
+            EncodedValue { value_type: RawValueType::StringValue, value: 2 },
+        );
+        checker.verify_abort_equal(
+            EncodedValue { value_type: RawValueType::Key, value: 3 },
+            EncodedValue { value_type: RawValueType::StringValue, value: 3 },
         );
     }
 
     #[test]
-    fn test_long_string_in_symbol_table() {
-        let mut symbol_table: SymbolTable = HashMap::new();
-
+    fn test_long_string() {
         let long_str = "loooooooooooooooooooooooooo\
-                        oooooooooooooooooooooooooooo\
-                        ooooooooooooooooooooooooooo\
-                        ooooooooooooooooooooooong, \
-                        loooooooooooooooooooooooooo\
-                        ooooooooooooooooooooooooooo\
-                        ooooooooooooooooooooooooooo\
-                        ooooooooooooooooooooooooooo\
-                        ooooooooooooooooooooooooooo\
-                        oooooooong string";
+            oooooooooooooooooooooooooooo\
+            ooooooooooooooooooooooooooo\
+            ooooooooooooooooooooooong, \
+            loooooooooooooooooooooooooo\
+            ooooooooooooooooooooooooooo\
+            ooooooooooooooooooooooooooo\
+            ooooooooooooooooooooooooooo\
+            ooooooooooooooooooooooooooo\
+            oooooooong string";
 
-        symbol_table
-            .insert(make_identifier!("long"), Symbol::StringValue(long_str.clone().to_string()));
+        let instructions = vec![SymbolicInstruction::AbortIfNotEqual {
+            lhs: Symbol::DeprecatedKey(5),
+            rhs: Symbol::StringValue(long_str.to_string()),
+        }];
 
         let bind_program = BindProgram {
-            instructions: to_symbolic_inst_info(vec![SymbolicInstruction::UnconditionalAbort]),
-            symbol_table: symbol_table,
+            instructions: to_symbolic_inst_info(instructions),
+            symbol_table: HashMap::new(),
             use_new_bytecode: true,
         };
 
@@ -618,43 +714,6 @@ mod test {
             EncodedValue { value_type: RawValueType::BoolValue, value: 0 },
         );
         checker.verify_end();
-    }
-
-    #[test]
-    fn test_missing_string_in_symbol_table() {
-        // Test with missing string in the string value.
-        let instructions = vec![SymbolicInstruction::AbortIfNotEqual {
-            lhs: Symbol::DeprecatedKey(10),
-            rhs: Symbol::StringValue("treecreeper".to_string()),
-        }];
-
-        let bind_program = BindProgram {
-            instructions: to_symbolic_inst_info(instructions),
-            symbol_table: HashMap::new(),
-            use_new_bytecode: true,
-        };
-
-        assert_eq!(
-            Err(BindProgramEncodeError::MissingStringInSymbolTable("treecreeper".to_string())),
-            encode_to_bytecode_v2(bind_program)
-        );
-
-        // Test with missing string in the key.
-        let instructions = vec![SymbolicInstruction::AbortIfNotEqual {
-            lhs: Symbol::Key("wallcreeper".to_string(), ValueType::Number),
-            rhs: Symbol::NumberValue(10),
-        }];
-
-        let bind_program = BindProgram {
-            instructions: to_symbolic_inst_info(instructions),
-            symbol_table: HashMap::new(),
-            use_new_bytecode: true,
-        };
-
-        assert_eq!(
-            Err(BindProgramEncodeError::MissingStringInSymbolTable("wallcreeper".to_string())),
-            encode_to_bytecode_v2(bind_program)
-        );
     }
 
     #[test]
@@ -781,87 +840,6 @@ mod test {
             EncodedValue { value_type: RawValueType::BoolValue, value: 1 },
         );
         checker.verify_unconditional_abort();
-
-        checker.verify_jmp_pad();
-        checker.verify_end();
-    }
-
-    #[test]
-    fn test_instructions_with_strings() {
-        let instructions = vec![
-            SymbolicInstruction::JumpIfNotEqual {
-                lhs: Symbol::Key("shining sunbeam".to_string(), ValueType::Str),
-                rhs: Symbol::StringValue("bearded mountaineer".to_string()),
-                label: 1,
-            },
-            SymbolicInstruction::AbortIfEqual {
-                lhs: Symbol::Key("puffleg".to_string(), ValueType::Str),
-                rhs: Symbol::StringValue("bearded mountaineer".to_string()),
-            },
-            SymbolicInstruction::Label(1),
-        ];
-
-        let mut symbol_table: SymbolTable = HashMap::new();
-        symbol_table.insert(
-            make_identifier!("aglaeactis"),
-            Symbol::StringValue("shining sunbeam".to_string()),
-        );
-        symbol_table.insert(
-            make_identifier!("oreonympha"),
-            Symbol::StringValue("bearded mountaineer".to_string()),
-        );
-        symbol_table
-            .insert(make_identifier!("eriocnemis"), Symbol::StringValue("puffleg".to_string()));
-
-        let symbol_table_values: Vec<String> = symbol_table
-            .values()
-            .filter_map(|symbol| match symbol {
-                Symbol::StringValue(str) => Some(str.clone()),
-                _ => None,
-            })
-            .collect();
-
-        let bind_program = BindProgram {
-            instructions: to_symbolic_inst_info(instructions),
-            symbol_table: symbol_table,
-            use_new_bytecode: true,
-        };
-
-        let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_program).unwrap());
-        checker.verify_bind_program_header();
-
-        checker.verify_sym_table_header(56);
-        let mut unique_id = 1;
-        let mut sym_map: HashMap<String, u32> = HashMap::<String, u32>::new();
-        symbol_table_values.iter().for_each(|value| {
-            checker.verify_next_u32(unique_id);
-            checker.verify_string(value.clone());
-            sym_map.insert(value.clone(), unique_id);
-            unique_id += 1;
-        });
-
-        checker.verify_instructions_header(COND_JMP_BYTES + COND_ABORT_BYTES + JMP_PAD_BYTES);
-        checker.verify_jmp_if_not_equal(
-            COND_ABORT_BYTES,
-            EncodedValue {
-                value_type: RawValueType::Key,
-                value: *sym_map.get(&"shining sunbeam".to_string()).unwrap(),
-            },
-            EncodedValue {
-                value_type: RawValueType::StringValue,
-                value: *sym_map.get(&"bearded mountaineer".to_string()).unwrap(),
-            },
-        );
-        checker.verify_abort_equal(
-            EncodedValue {
-                value_type: RawValueType::Key,
-                value: *sym_map.get(&"puffleg".to_string()).unwrap(),
-            },
-            EncodedValue {
-                value_type: RawValueType::StringValue,
-                value: *sym_map.get(&"bearded mountaineer".to_string()).unwrap(),
-            },
-        );
 
         checker.verify_jmp_pad();
         checker.verify_end();

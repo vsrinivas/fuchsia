@@ -372,54 +372,42 @@ impl From<BindProgramEncodeError> for UserError {
                 None,
                 true,
             ),
-            BindProgramEncodeError::DuplicateSymbol(str) => UserError::new(
-                "E601",
-                &format!("The bind program contains a duplicate symbol: {}.", str),
-                None,
-                true,
-            ),
             BindProgramEncodeError::UnsupportedSymbol => UserError::new(
-                "E602",
+                "E601",
                 "Symbol is not supported in the old bytecode format.",
                 None,
                 true,
             ),
             BindProgramEncodeError::IntegerOutOfRange => {
-                UserError::new("E603", &format!("Integer out of range"), None, true)
+                UserError::new("E602", &format!("Integer out of range"), None, true)
             }
             BindProgramEncodeError::MismatchValueTypes(lhs, rhs) => UserError::new(
-                "E604",
+                "E603",
                 &format!("Cannot compare different value types for {:?} and {:?}", lhs, rhs),
                 None,
                 true,
             ),
             BindProgramEncodeError::IncorrectTypesInValueComparison => UserError::new(
-                "E605",
+                "E604",
                 "The LHS value must represent a key and the RHS value must represent a bool,
                  string, number or enum value",
                 None,
                 true,
             ),
-            BindProgramEncodeError::MissingStringInSymbolTable(str) => UserError::new(
-                "E606",
-                &format!("Missing string {} in symbol table", str),
-                None,
-                true,
-            ),
             BindProgramEncodeError::DuplicateLabel(label_id) => UserError::new(
-                "E607",
+                "E605",
                 &format!("Duplicate label {} in instructions", label_id),
                 None,
                 true,
             ),
             BindProgramEncodeError::MissingLabel(label_id) => UserError::new(
-                "E608",
+                "E606",
                 &format!("Missing label {} in instructions", label_id),
                 None,
                 true,
             ),
             BindProgramEncodeError::InvalidGotoLocation(label_id) => UserError::new(
-                "E609",
+                "E607",
                 &format!(
                     "Bind program cannot move backwards. Label {} appears before Goto statement",
                     label_id
@@ -428,13 +416,13 @@ impl From<BindProgramEncodeError> for UserError {
                 true,
             ),
             BindProgramEncodeError::JumpOffsetOutOfRange(label_id) => UserError::new(
-                "E610",
+                "E608",
                 &format!("The jump offset for label {} exceeds 32 bits", label_id),
                 None,
                 true,
             ),
             BindProgramEncodeError::MatchNotSupported => UserError::new(
-                "E611",
+                "E609",
                 "Match instructions are not supported in the new bytecode",
                 None,
                 true,
