@@ -269,7 +269,8 @@ void CrashReporter::ScheduleHourlySnapshot(const zx::duration delay) {
         auto schedule_next = ::fit::defer([this] { ScheduleHourlySnapshot(zx::hour(1)); });
 
         if (queue_.HasHourlyReport()) {
-          FX_LOGS(INFO) << "Skipping hourly snapshot; a previous one is still pending";
+          FX_LOGS(INFO) << "Skipping hourly snapshot as the last one has not been uploaded yet "
+                           "– connectivity issues?";
           return;
         }
 
