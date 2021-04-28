@@ -22,24 +22,22 @@ namespace {
 
 namespace fio2 = fuchsia_io2;
 
-class TestServerBase : public fidl::WireInterface<fio2::File> {
+class TestServerBase : public fidl::WireServer<fio2::File> {
  public:
   TestServerBase() = default;
 
   // Exercised by |zxio_close|.
-  void Close(CloseCompleter::Sync& completer) override {
+  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
     num_close_.fetch_add(1);
     completer.Close(ZX_OK);
   }
 
-  void Reopen(fio2::wire::ConnectionOptions options, ::zx::channel object_request,
-              ReopenCompleter::Sync& completer) override {
+  void Reopen(ReopenRequestView request, ReopenCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Describe(fio2::wire::ConnectionInfoQuery query,
-                DescribeCompleter::Sync& completer) override {
-    if (query == fio2::wire::ConnectionInfoQuery::kRepresentation) {
+  void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {
+    if (request->query == fio2::wire::ConnectionInfoQuery::kRepresentation) {
       fidl::FidlAllocator allocator;
       fio2::wire::ConnectionInfo info(allocator);
       info.set_representation(allocator,
@@ -50,49 +48,49 @@ class TestServerBase : public fidl::WireInterface<fio2::File> {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void GetToken(GetTokenCompleter::Sync& completer) override {
+  void GetToken(GetTokenRequestView request, GetTokenCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void GetAttributes(fio2::wire::NodeAttributesQuery query,
+  void GetAttributes(GetAttributesRequestView request,
                      GetAttributesCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void UpdateAttributes(fio2::wire::NodeAttributes attributes,
+  void UpdateAttributes(UpdateAttributesRequestView request,
                         UpdateAttributesCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Sync(SyncCompleter::Sync& completer) override { completer.Close(ZX_ERR_NOT_SUPPORTED); }
-
-  void Read(uint64_t count, ReadCompleter::Sync& completer) override {
+  void Sync(SyncRequestView request, SyncCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void ReadAt(uint64_t count, uint64_t offset, ReadAtCompleter::Sync& completer) override {
+  void Read(ReadRequestView request, ReadCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync& completer) override {
+  void ReadAt(ReadAtRequestView request, ReadAtCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void WriteAt(fidl::VectorView<uint8_t> data, uint64_t offset,
-               WriteAtCompleter::Sync& completer) override {
+  void Write(WriteRequestView request, WriteCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Seek(fio2::wire::SeekOrigin origin, int64_t offset,
-            SeekCompleter::Sync& completer) override {
+  void WriteAt(WriteAtRequestView request, WriteAtCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Resize(uint64_t length, ResizeCompleter::Sync& completer) override {
+  void Seek(SeekRequestView request, SeekCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void GetMemRange(fio2::wire::VmoFlags flags, GetMemRangeCompleter::Sync& completer) override {
+  void Resize(ResizeRequestView request, ResizeCompleter::Sync& completer) override {
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  void GetMemRange(GetMemRangeRequestView request, GetMemRangeCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
@@ -171,9 +169,8 @@ class TestServerEvent final : public TestServerBase {
 
   const zx::event& observer() const { return observer_; }
 
-  void Describe(fio2::wire::ConnectionInfoQuery query,
-                DescribeCompleter::Sync& completer) override {
-    if (query == fio2::wire::ConnectionInfoQuery::kRepresentation) {
+  void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {
+    if (request->query == fio2::wire::ConnectionInfoQuery::kRepresentation) {
       zx::event client_observer;
       zx_status_t status = observer_.duplicate(ZX_RIGHTS_BASIC, &client_observer);
       if (status != ZX_OK) {
@@ -238,15 +235,15 @@ class TestServerChannel final : public TestServerBase {
     ASSERT_OK(zx::stream::create(ZX_STREAM_MODE_READ | ZX_STREAM_MODE_WRITE, store_, 0, &stream_));
   }
 
-  void Read(uint64_t count, ReadCompleter::Sync& completer) override {
-    if (count > fio2::wire::kMaxTransferSize) {
+  void Read(ReadRequestView request, ReadCompleter::Sync& completer) override {
+    if (request->count > fio2::wire::kMaxTransferSize) {
       completer.Close(ZX_ERR_OUT_OF_RANGE);
       return;
     }
     uint8_t buffer[fio2::wire::kMaxTransferSize];
     zx_iovec_t vec = {
         .buffer = buffer,
-        .capacity = count,
+        .capacity = request->count,
     };
     size_t actual = 0u;
     zx_status_t status = stream_.readv(0, &vec, 1, &actual);
@@ -257,18 +254,18 @@ class TestServerChannel final : public TestServerBase {
     completer.ReplySuccess(fidl::VectorView<uint8_t>::FromExternal(buffer, actual));
   }
 
-  void ReadAt(uint64_t count, uint64_t offset, ReadAtCompleter::Sync& completer) override {
-    if (count > fio2::wire::kMaxTransferSize) {
+  void ReadAt(ReadAtRequestView request, ReadAtCompleter::Sync& completer) override {
+    if (request->count > fio2::wire::kMaxTransferSize) {
       completer.Close(ZX_ERR_OUT_OF_RANGE);
       return;
     }
     uint8_t buffer[fio2::wire::kMaxTransferSize];
     zx_iovec_t vec = {
         .buffer = buffer,
-        .capacity = count,
+        .capacity = request->count,
     };
     size_t actual = 0u;
-    zx_status_t status = stream_.readv_at(0, offset, &vec, 1, &actual);
+    zx_status_t status = stream_.readv_at(0, request->offset, &vec, 1, &actual);
     if (status != ZX_OK) {
       completer.ReplyError(status);
       return;
@@ -276,14 +273,14 @@ class TestServerChannel final : public TestServerBase {
     completer.ReplySuccess(fidl::VectorView<uint8_t>::FromExternal(buffer, actual));
   }
 
-  void Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync& completer) override {
-    if (data.count() > fio2::wire::kMaxTransferSize) {
+  void Write(WriteRequestView request, WriteCompleter::Sync& completer) override {
+    if (request->data.count() > fio2::wire::kMaxTransferSize) {
       completer.Close(ZX_ERR_OUT_OF_RANGE);
       return;
     }
     zx_iovec_t vec = {
-        .buffer = data.mutable_data(),
-        .capacity = data.count(),
+        .buffer = request->data.mutable_data(),
+        .capacity = request->data.count(),
     };
     size_t actual = 0u;
     zx_status_t status = stream_.writev(0, &vec, 1, &actual);
@@ -294,18 +291,17 @@ class TestServerChannel final : public TestServerBase {
     completer.ReplySuccess(actual);
   }
 
-  void WriteAt(fidl::VectorView<uint8_t> data, uint64_t offset,
-               WriteAtCompleter::Sync& completer) override {
-    if (data.count() > fio2::wire::kMaxTransferSize) {
+  void WriteAt(WriteAtRequestView request, WriteAtCompleter::Sync& completer) override {
+    if (request->data.count() > fio2::wire::kMaxTransferSize) {
       completer.Close(ZX_ERR_OUT_OF_RANGE);
       return;
     }
     zx_iovec_t vec = {
-        .buffer = data.mutable_data(),
-        .capacity = data.count(),
+        .buffer = request->data.mutable_data(),
+        .capacity = request->data.count(),
     };
     size_t actual = 0u;
-    zx_status_t status = stream_.writev_at(0, offset, &vec, 1, &actual);
+    zx_status_t status = stream_.writev_at(0, request->offset, &vec, 1, &actual);
     if (status != ZX_OK) {
       completer.ReplyError(status);
       return;
@@ -313,10 +309,10 @@ class TestServerChannel final : public TestServerBase {
     completer.ReplySuccess(actual);
   }
 
-  void Seek(fio2::wire::SeekOrigin origin, int64_t offset,
-            SeekCompleter::Sync& completer) override {
+  void Seek(SeekRequestView request, SeekCompleter::Sync& completer) override {
     zx_off_t seek = 0u;
-    zx_status_t status = stream_.seek(static_cast<zx_stream_seek_origin_t>(origin), offset, &seek);
+    zx_status_t status =
+        stream_.seek(static_cast<zx_stream_seek_origin_t>(request->origin), request->offset, &seek);
     if (status != ZX_OK) {
       completer.ReplyError(status);
       return;
@@ -345,9 +341,8 @@ class TestServerStream final : public TestServerBase {
     ASSERT_OK(zx::stream::create(ZX_STREAM_MODE_READ | ZX_STREAM_MODE_WRITE, store_, 0, &stream_));
   }
 
-  void Describe(fio2::wire::ConnectionInfoQuery query,
-                DescribeCompleter::Sync& completer) override {
-    if (query == fio2::wire::ConnectionInfoQuery::kRepresentation) {
+  void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {
+    if (request->query == fio2::wire::ConnectionInfoQuery::kRepresentation) {
       zx::stream client_stream;
       zx_status_t status = stream_.duplicate(ZX_RIGHT_SAME_RIGHTS, &client_stream);
       if (status != ZX_OK) {

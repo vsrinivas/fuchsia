@@ -19,42 +19,42 @@ namespace {
 
 namespace fio2 = fuchsia_io2;
 
-class TestServerBase : public fidl::WireInterface<fio2::Node> {
+class TestServerBase : public fidl::WireServer<fio2::Node> {
  public:
   TestServerBase() = default;
   virtual ~TestServerBase() = default;
 
-  void Reopen(fio2::wire::ConnectionOptions options, ::zx::channel object_request,
-              ReopenCompleter::Sync& completer) override {
+  void Reopen(ReopenRequestView request, ReopenCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
   // Exercised by |zxio_close|.
-  void Close(CloseCompleter::Sync& completer) override {
+  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
     num_close_.fetch_add(1);
     completer.Close(ZX_OK);
   }
 
-  void Describe(fio2::wire::ConnectionInfoQuery query,
-                DescribeCompleter::Sync& completer) override {
+  void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void GetToken(GetTokenCompleter::Sync& completer) override {
+  void GetToken(GetTokenRequestView request, GetTokenCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void GetAttributes(fio2::wire::NodeAttributesQuery query,
+  void GetAttributes(GetAttributesRequestView request,
                      GetAttributesCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void UpdateAttributes(fio2::wire::NodeAttributes attributes,
+  void UpdateAttributes(UpdateAttributesRequestView request,
                         UpdateAttributesCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Sync(SyncCompleter::Sync& completer) override { completer.Close(ZX_ERR_NOT_SUPPORTED); }
+  void Sync(SyncRequestView request, SyncCompleter::Sync& completer) override {
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
 
   uint32_t num_close() const { return num_close_.load(); }
 
@@ -109,9 +109,9 @@ TEST_F(RemoteV2, GetAttributes) {
   constexpr uint64_t kId = 1;
   class TestServer : public TestServerBase {
    public:
-    void GetAttributes(fio2::wire::NodeAttributesQuery query,
+    void GetAttributes(GetAttributesRequestView request,
                        GetAttributesCompleter::Sync& completer) override {
-      EXPECT_EQ(query, fio2::wire::NodeAttributesQuery::kMask);
+      EXPECT_EQ(request->query, fio2::wire::NodeAttributesQuery::kMask);
       uint64_t content_size = kContentSize;
       uint64_t id = kId;
 
@@ -144,7 +144,7 @@ TEST_F(RemoteV2, GetAttributes) {
 TEST_F(RemoteV2, GetAttributesError) {
   class TestServer : public TestServerBase {
    public:
-    void GetAttributes(fio2::wire::NodeAttributesQuery query,
+    void GetAttributes(GetAttributesRequestView request,
                        GetAttributesCompleter::Sync& completer) override {
       completer.ReplyError(ZX_ERR_INVALID_ARGS);
     }
@@ -159,18 +159,18 @@ TEST_F(RemoteV2, SetAttributes) {
   constexpr uint64_t kCreationTime = 123;
   class TestServer : public TestServerBase {
    public:
-    void UpdateAttributes(fio2::wire::NodeAttributes attributes,
+    void UpdateAttributes(UpdateAttributesRequestView request,
                           UpdateAttributesCompleter::Sync& completer) override {
-      EXPECT_TRUE(attributes.has_creation_time());
-      EXPECT_FALSE(attributes.has_protocols());
-      EXPECT_FALSE(attributes.has_abilities());
-      EXPECT_FALSE(attributes.has_modification_time());
-      EXPECT_FALSE(attributes.has_content_size());
-      EXPECT_FALSE(attributes.has_storage_size());
-      EXPECT_FALSE(attributes.has_link_count());
+      EXPECT_TRUE(request->attributes.has_creation_time());
+      EXPECT_FALSE(request->attributes.has_protocols());
+      EXPECT_FALSE(request->attributes.has_abilities());
+      EXPECT_FALSE(request->attributes.has_modification_time());
+      EXPECT_FALSE(request->attributes.has_content_size());
+      EXPECT_FALSE(request->attributes.has_storage_size());
+      EXPECT_FALSE(request->attributes.has_link_count());
 
       uint64_t creation_time = kCreationTime;
-      EXPECT_EQ(creation_time, attributes.creation_time());
+      EXPECT_EQ(creation_time, request->attributes.creation_time());
       called_.store(true);
       completer.ReplySuccess();
     }
@@ -190,7 +190,7 @@ TEST_F(RemoteV2, SetAttributes) {
 TEST_F(RemoteV2, SetAttributesError) {
   class TestServer : public TestServerBase {
    public:
-    void UpdateAttributes(fio2::wire::NodeAttributes attributes,
+    void UpdateAttributes(UpdateAttributesRequestView request,
                           UpdateAttributesCompleter::Sync& completer) override {
       completer.ReplyError(ZX_ERR_INVALID_ARGS);
     }

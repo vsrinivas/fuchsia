@@ -17,34 +17,35 @@
 // If it ever gets out of sync, that would be surfaced by a linker error.
 void zxio_node_init(zxio_node_t* node, zx_handle_t control, const zxio_extension_ops_t* ops);
 
-class TestServerBase : public fidl::WireRawChannelInterface<fuchsia_io::Node> {
+class TestServerBase : public fidl::WireServer<fuchsia_io::Node> {
  public:
   virtual ~TestServerBase() = default;
 
   // Exercised by |zxio_close|.
-  void Close(CloseCompleter::Sync& completer) override {
+  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
     num_close_.fetch_add(1);
     completer.Reply(ZX_OK);
     // After the reply, we should close the connection.
     completer.Close(ZX_OK);
   }
 
-  void Clone(uint32_t flags, zx::channel object, CloneCompleter::Sync& completer) override {
+  void Clone(CloneRequestView request, CloneCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Describe(DescribeCompleter::Sync& completer) override {
+  void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Sync(SyncCompleter::Sync& completer) override { completer.Close(ZX_ERR_NOT_SUPPORTED); }
-
-  void GetAttr(GetAttrCompleter::Sync& completer) override {
+  void Sync(SyncRequestView request, SyncCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void SetAttr(uint32_t flags, fuchsia_io::wire::NodeAttributes attribute,
-               SetAttrCompleter::Sync& completer) override {
+  void GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) override {
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  void SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
@@ -107,7 +108,9 @@ TEST_F(ExtensionNode, CloseError) {
 
   class TestServer : public TestServerBase {
    public:
-    void Close(CloseCompleter::Sync& completer) override { completer.Reply(ZX_ERR_IO); }
+    void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
+      completer.Reply(ZX_ERR_IO);
+    }
   };
   TestServer* server;
   ASSERT_NO_FAILURES(server = StartServer<TestServer>());
@@ -189,7 +192,7 @@ TEST_F(ExtensionNode, GetAttr) {
 
   class TestServer : public TestServerBase {
    public:
-    void GetAttr(GetAttrCompleter::Sync& completer) override {
+    void GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) override {
       ASSERT_FALSE(called());
       called_.store(true);
       fuchsia_io::wire::NodeAttributes attr = {};

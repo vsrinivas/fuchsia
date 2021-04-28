@@ -20,37 +20,38 @@ namespace {
 
 namespace fio = fuchsia_io;
 
-class TestServerBase : public fidl::WireRawChannelInterface<fio::Node> {
+class TestServerBase : public fidl::WireServer<fio::Node> {
  public:
   TestServerBase() = default;
   virtual ~TestServerBase() = default;
 
   // Exercised by |zxio_close|.
-  void Close(CloseCompleter::Sync& completer) override {
+  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
     num_close_.fetch_add(1);
     completer.Reply(ZX_OK);
     // After the reply, we should close the connection.
     completer.Close(ZX_OK);
   }
 
-  void Clone(uint32_t flags, zx::channel object, CloneCompleter::Sync& completer) override {
+  void Clone(CloneRequestView request, CloneCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Describe(DescribeCompleter::Sync& completer) override {
+  void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {
     fio::wire::FileObject file_object;
     completer.Reply(fio::wire::NodeInfo::WithFile(
         fidl::ObjectView<fio::wire::FileObject>::FromExternal(&file_object)));
   }
 
-  void Sync(SyncCompleter::Sync& completer) override { completer.Close(ZX_ERR_NOT_SUPPORTED); }
-
-  void GetAttr(GetAttrCompleter::Sync& completer) override {
+  void Sync(SyncRequestView request, SyncCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void SetAttr(uint32_t flags, fuchsia_io::wire::NodeAttributes attribute,
-               SetAttrCompleter::Sync& completer) override {
+  void GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) override {
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  void SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
@@ -105,7 +106,7 @@ class Remote : public zxtest::Test {
 TEST_F(Remote, ServiceGetAttributes) {
   class TestServer : public TestServerBase {
    public:
-    void GetAttr(GetAttrCompleter::Sync& completer) override {
+    void GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) override {
       completer.Reply(ZX_OK,
                       fuchsia_io::wire::NodeAttributes{.mode = fuchsia_io::wire::kModeTypeService});
     }

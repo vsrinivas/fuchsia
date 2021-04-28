@@ -20,75 +20,69 @@ namespace {
 
 namespace fio2 = fuchsia_io2;
 
-class TestServerBase : public fidl::WireRawChannelInterface<fio2::Directory> {
+class TestServerBase : public fidl::WireServer<fio2::Directory> {
  public:
   TestServerBase() = default;
   virtual ~TestServerBase() = default;
 
   // Exercised by |zxio_close|.
-  void Close(CloseCompleter::Sync& completer) override {
+  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
     num_close_.fetch_add(1);
     completer.Close(ZX_OK);
   }
 
-  void Reopen(fio2::wire::ConnectionOptions options, ::zx::channel object_request,
-              ReopenCompleter::Sync& completer) override {
+  void Reopen(ReopenRequestView request, ReopenCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Describe(fio2::wire::ConnectionInfoQuery query,
-                DescribeCompleter::Sync& completer) override {
+  void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void GetToken(GetTokenCompleter::Sync& completer) override {
+  void GetToken(GetTokenRequestView request, GetTokenCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void GetAttributes(fio2::wire::NodeAttributesQuery query,
+  void GetAttributes(GetAttributesRequestView request,
                      GetAttributesCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void UpdateAttributes(fio2::wire::NodeAttributes attributes,
+  void UpdateAttributes(UpdateAttributesRequestView request,
                         UpdateAttributesCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Sync(SyncCompleter::Sync& completer) override { completer.Close(ZX_ERR_NOT_SUPPORTED); }
-
-  void Open(fidl::StringView path, fio2::wire::OpenMode mode, fio2::wire::ConnectionOptions options,
-            zx::channel object_request, OpenCompleter::Sync& completer) override {
+  void Sync(SyncRequestView request, SyncCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void AddInotifyFilter(fidl::StringView path, fio2::wire::InotifyWatchMask filters,
-                        uint32_t watch_descriptor, zx::socket socket,
+  void Open(OpenRequestView request, OpenCompleter::Sync& completer) override {
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  void AddInotifyFilter(AddInotifyFilterRequestView request,
                         AddInotifyFilterCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Unlink(fidl::StringView path, UnlinkCompleter::Sync& completer) override {
+  void Unlink(UnlinkRequestView request, UnlinkCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Enumerate(fio2::wire::DirectoryEnumerateOptions options, zx::channel iterator,
-                 EnumerateCompleter::Sync& completer) override {
+  void Enumerate(EnumerateRequestView request, EnumerateCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Rename(fidl::StringView src, zx::event dst_parent_token, fidl::StringView dst,
-              RenameCompleter::Sync& completer) override {
+  void Rename(RenameRequestView request, RenameCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Link(fidl::StringView src, zx::event dst_parent_token, fidl::StringView dst,
-            LinkCompleter::Sync& completer) override {
+  void Link(LinkRequestView request, LinkCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Watch(fio2::wire::DirectoryWatchMask mask, fio2::wire::DirectoryWatchOptions options,
-             zx::channel watcher, WatchCompleter::Sync& completer) override {
+  void Watch(WatchRequestView request, WatchCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
@@ -139,14 +133,13 @@ class DirV2 : public zxtest::Test {
 TEST_F(DirV2, Enumerate) {
   class TestServer : public TestServerBase {
    public:
-    void Enumerate(fio2::wire::DirectoryEnumerateOptions options, zx::channel iterator,
-                   EnumerateCompleter::Sync& completer) override {
-      class IteratorServer : public fidl::WireInterface<fio2::DirectoryIterator> {
+    void Enumerate(EnumerateRequestView request, EnumerateCompleter::Sync& completer) override {
+      class IteratorServer : public fidl::WireServer<fio2::DirectoryIterator> {
        public:
         explicit IteratorServer(sync_completion_t* completion) : completion_(completion) {}
 
         // Sends a different entry every time.
-        void GetNext(GetNextCompleter::Sync& completer) override {
+        void GetNext(GetNextRequestView request, GetNextCompleter::Sync& completer) override {
           fidl::FidlAllocator allocator;
           fidl::VectorView<fio2::wire::DirectoryEntry> entry(allocator, 1);
           entry[0].Allocate(allocator);
@@ -178,7 +171,7 @@ TEST_F(DirV2, Enumerate) {
         sync_completion_t* completion_;
       };
       EXPECT_OK(fidl::BindSingleInFlightOnly(
-          async_get_default_dispatcher(), std::move(iterator),
+          async_get_default_dispatcher(), std::move(request->iterator),
           std::make_unique<IteratorServer>(&iterator_teardown_completion_)));
     }
 

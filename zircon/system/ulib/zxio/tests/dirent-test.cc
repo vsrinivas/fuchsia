@@ -22,58 +22,56 @@ namespace {
 namespace fio = fuchsia_io;
 namespace fio2 = fuchsia_io2;
 
-class TestServer final : public fidl::WireRawChannelInterface<fio::Directory> {
+class TestServer final : public fidl::WireServer<fio::Directory> {
  public:
   TestServer() = default;
 
   constexpr static int kEntryCount = 1000;
 
   // Exercised by |zxio_close|.
-  void Close(CloseCompleter::Sync& completer) override {
+  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
     num_close_.fetch_add(1);
     completer.Reply(ZX_OK);
   }
 
-  void Clone(uint32_t flags, zx::channel object, CloneCompleter::Sync& completer) override {
+  void Clone(CloneRequestView request, CloneCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Describe(DescribeCompleter::Sync& completer) override {
+  void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Sync(SyncCompleter::Sync& completer) override { completer.Close(ZX_ERR_NOT_SUPPORTED); }
-
-  void GetAttr(GetAttrCompleter::Sync& completer) override {
+  void Sync(SyncRequestView request, SyncCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void SetAttr(uint32_t flags, fio::wire::NodeAttributes attribute,
-               SetAttrCompleter::Sync& completer) override {
+  void GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Open(uint32_t flags, uint32_t mode, ::fidl::StringView path, ::zx::channel object,
-            OpenCompleter::Sync& completer) override {
+  void SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void AddInotifyFilter(::fidl::StringView path, fio2::wire::InotifyWatchMask filters,
-                        uint32_t watch_descriptor, ::zx::socket socket,
+  void Open(OpenRequestView request, OpenCompleter::Sync& completer) override {
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  void AddInotifyFilter(AddInotifyFilterRequestView request,
                         AddInotifyFilterCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Unlink(::fidl::StringView path, UnlinkCompleter::Sync& completer) override {
+  void Unlink(UnlinkRequestView request, UnlinkCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Unlink2(::fidl::StringView name, fuchsia_io2::wire::UnlinkOptions options,
-               Unlink2Completer::Sync& completer) override {
+  void Unlink2(Unlink2RequestView request, Unlink2Completer::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void ReadDirents(uint64_t max_bytes, ReadDirentsCompleter::Sync& completer) override {
+  void ReadDirents(ReadDirentsRequestView request, ReadDirentsCompleter::Sync& completer) override {
     auto buffer_start = reinterpret_cast<uint8_t*>(buffer_);
     size_t actual = 0;
 
@@ -91,7 +89,7 @@ class TestServer final : public fidl::WireRawChannelInterface<fio::Directory> {
       auto entry = reinterpret_cast<dirent*>(buffer_position);
       size_t entry_size = sizeof(dirent) + name_length;
 
-      if (actual + entry_size > max_bytes) {
+      if (actual + entry_size > request->max_bytes) {
         completer.Reply(ZX_OK, fidl::VectorView<uint8_t>::FromExternal(buffer_start, actual));
         return;
       }
@@ -113,28 +111,25 @@ class TestServer final : public fidl::WireRawChannelInterface<fio::Directory> {
     completer.Reply(ZX_OK, fidl::VectorView<uint8_t>::FromExternal(buffer_start, actual));
   }
 
-  void Rewind(RewindCompleter::Sync& completer) override {
+  void Rewind(RewindRequestView request, RewindCompleter::Sync& completer) override {
     memset(buffer_, 0, sizeof(buffer_));
     index_ = 0;
     completer.Reply(ZX_OK);
   }
 
-  void GetToken(GetTokenCompleter::Sync& completer) override {
+  void GetToken(GetTokenRequestView request, GetTokenCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Rename(::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst,
-              RenameCompleter::Sync& completer) override {
+  void Rename(RenameRequestView request, RenameCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Link(::fidl::StringView src, ::zx::handle dst_parent_token, ::fidl::StringView dst,
-            LinkCompleter::Sync& completer) override {
+  void Link(LinkRequestView request, LinkCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Watch(uint32_t mask, uint32_t options, ::zx::channel watcher,
-             WatchCompleter::Sync& completer) override {
+  void Watch(WatchRequestView request, WatchCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
