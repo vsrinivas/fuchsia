@@ -330,10 +330,10 @@ fn calculate_monotonic_time(
 
 async fn print_symbolizer_warning(err: Error, should_sleep: bool) {
     println!(
-        "Warning: attempting to get the symbolizer binary failed. This likely \
-                            means that your logs will not be symbolized."
+        "Warning: attempting to get the symbolizer binary failed.
+This likely means that your logs will not be symbolized."
     );
-    println!("The failure was: {}", err);
+    println!("\nThe failure was: {}", err);
 
     let sdk_type: Result<String, _> = get("sdk.type").await;
     if sdk_type.is_err() || sdk_type.unwrap() == "" {
@@ -342,7 +342,7 @@ async fn print_symbolizer_warning(err: Error, should_sleep: bool) {
     }
 
     println!(
-        "\nYou can silence this message by passing the --ignore-symbolizer-failure flag: \
+        "\nYou can silence this warning by passing `--ignore-symbolizer-failure`: \
                             \n  `ffx target log --ignore-symbolizer-failure <subcommand>`",
     );
 
