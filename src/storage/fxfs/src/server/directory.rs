@@ -23,8 +23,8 @@ use {
     either::{Left, Right},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
-        self as fio, NodeAttributes, NodeMarker, MODE_TYPE_DIRECTORY, OPEN_FLAG_CREATE,
-        OPEN_FLAG_CREATE_IF_ABSENT,
+        self as fio, NodeAttributes, NodeMarker, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE,
+        OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NOT_DIRECTORY,
     },
     fuchsia_async as fasync,
     fuchsia_zircon::Status,
@@ -170,6 +170,23 @@ impl FxDirectory {
                 Ok((object_id, object_descriptor)) => {
                     if transaction_or_guard.is_left() && flags & OPEN_FLAG_CREATE_IF_ABSENT != 0 {
                         bail!(FxfsError::AlreadyExists);
+                    }
+                    if last_segment {
+                        match object_descriptor {
+                            ObjectDescriptor::File => {
+                                if mode & MODE_TYPE_DIRECTORY > 0 || flags & OPEN_FLAG_DIRECTORY > 0
+                                {
+                                    bail!(FxfsError::NotDir)
+                                }
+                            }
+                            ObjectDescriptor::Directory => {
+                                if mode & MODE_TYPE_FILE > 0 || flags & OPEN_FLAG_NOT_DIRECTORY > 0
+                                {
+                                    bail!(FxfsError::NotFile)
+                                }
+                            }
+                            ObjectDescriptor::Volume(_) => bail!(FxfsError::Inconsistent),
+                        }
                     }
                     self.volume
                         .get_or_load_node(object_id, object_descriptor, Some(self.clone()))
