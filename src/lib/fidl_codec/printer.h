@@ -88,6 +88,9 @@ class PrettyPrinter {
   // Displays a cache policy.
   void DisplayCachePolicy(uint32_t cache_policy);
 
+  // Displays channel options.
+  void DisplayChannelOption(uint32_t options);
+
   // Displays a clock.
   void DisplayClock(zx_clock_t clock);
 

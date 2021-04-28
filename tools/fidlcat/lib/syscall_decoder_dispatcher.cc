@@ -35,6 +35,8 @@ std::unique_ptr<fidl_codec::Type> SyscallTypeToFidlCodecType(fidlcat::SyscallTyp
       return std::make_unique<fidl_codec::Uint32Type>(fidl_codec::Uint32Type::Kind::kBtiPerm);
     case SyscallType::kCachePolicy:
       return std::make_unique<fidl_codec::Uint32Type>(fidl_codec::Uint32Type::Kind::kCachePolicy);
+    case SyscallType::kChannelOption:
+      return std::make_unique<fidl_codec::Uint32Type>(fidl_codec::Uint32Type::Kind::kChannelOption);
     case SyscallType::kChar:
       return std::make_unique<fidl_codec::Int8Type>(fidl_codec::Int8Type::Kind::kChar);
     case SyscallType::kClock:

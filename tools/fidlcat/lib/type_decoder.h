@@ -29,6 +29,7 @@ enum class SyscallType {
   kBool,
   kBtiPerm,
   kCachePolicy,
+  kChannelOption,
   kChar,
   kClock,
   kDuration,

@@ -547,6 +547,8 @@ std::string_view TypeName(SyscallType type) {
       return "zx_bti_perm_t";
     case SyscallType::kCachePolicy:
       return "zx_cache_policy_t";
+    case SyscallType::kChannelOption:
+      return "uint32";
     case SyscallType::kClock:
       return "clock";
     case SyscallType::kDuration:

@@ -2351,6 +2351,9 @@ inline void DisplayValue<uint32_t>(SyscallType type, uint32_t value,
     case SyscallType::kCachePolicy:
       printer.DisplayCachePolicy(value);
       break;
+    case SyscallType::kChannelOption:
+      printer.DisplayChannelOption(value);
+      break;
     case SyscallType::kClock:
       printer.DisplayClock(value);
       break;

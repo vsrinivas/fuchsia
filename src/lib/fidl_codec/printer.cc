@@ -91,6 +91,25 @@ void PrettyPrinter::DisplayCachePolicy(uint32_t cache_policy) {
   }
 }
 
+#define ChannelOptionNameCase(name)   \
+  if ((options & (name)) == (name)) { \
+    *this << separator << #name;      \
+    separator = " | ";                \
+  }
+
+void PrettyPrinter::DisplayChannelOption(uint32_t options) {
+  if (options == 0) {
+    *this << Blue << "0" << ResetColor;
+    return;
+  }
+
+  *this << Blue;
+  const char* separator = "";
+  ChannelOptionNameCase(ZX_CHANNEL_READ_MAY_DISCARD);
+  ChannelOptionNameCase(ZX_CHANNEL_WRITE_USE_IOVEC);
+  *this << ResetColor;
+}
+
 #define ClockNameCase(name)               \
   case name:                              \
     *this << Blue << #name << ResetColor; \

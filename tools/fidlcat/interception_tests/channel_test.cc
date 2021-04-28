@@ -207,6 +207,36 @@ WRITE_DISPLAY_TEST(ZxChannelWritePeerClosed, ZX_ERR_PEER_CLOSED,
                    "\x1B[32m0.000000\x1B[0m "
                    "  -> \x1B[31mZX_ERR_PEER_CLOSED\x1B[0m\n");
 
+// TODO(fxbug.dev/75634): implement decoding with iovec option.
+#define WRITE_IOVEC_DISPLAY_TEST_CONTENT(errno, expected)                                \
+  PerformDisplayTest(                                                                    \
+      "$plt(zx_channel_write)",                                                          \
+      ZxChannelWrite(errno, #errno, kHandle, ZX_CHANNEL_WRITE_USE_IOVEC, data().bytes(), \
+                     data().num_bytes(), data().handles(), data().num_handles()),        \
+      expected)
+
+#define WRITE_IOVEC_DISPLAY_TEST(name, errno, expected)                                            \
+  TEST_F(InterceptionWorkflowTestX64, name) { WRITE_IOVEC_DISPLAY_TEST_CONTENT(errno, expected); } \
+  TEST_F(InterceptionWorkflowTestArm, name) { WRITE_IOVEC_DISPLAY_TEST_CONTENT(errno, expected); }
+
+WRITE_IOVEC_DISPLAY_TEST(
+    ZxChannelWriteIovec, ZX_OK,
+    "\n"
+    "\x1B[32m0.000000\x1B[0m "
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_write("
+    "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+    "options: \x1B[32muint32\x1B[0m = \x1B[34mZX_CHANNEL_WRITE_USE_IOVEC\x1B[0m)\n"
+    ""
+    "  \x1B[31mCan't decode message: num_bytes=16 num_handles=2 "
+    "txid=aaaaaaaa ordinal=77e4cceb00000000\x1B[0m\n"
+    "    data=\n"
+    "      0000: \x1B[31maa, aa, aa, aa\x1B[0m, 00, 00, 00, 01\x1B[31m"
+    ", 00, 00, 00, 00\x1B[0m, eb, cc, e4, 77\x1B[0m\n"
+    "    handles=\n"
+    "      0000: 01234567, 89abcdef\n"
+    "\x1B[32m0.000000\x1B[0m "
+    "  -> \x1B[32mZX_OK\x1B[0m\n");
+
 #define LARGE_WRITE_DISPLAY_TEST_CONTENT(errno, expected)                                       \
   PerformDisplayTest(                                                                           \
       "$plt(zx_channel_write)",                                                                 \

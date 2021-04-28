@@ -248,6 +248,7 @@ class Uint32Type : public IntegralType<uint32_t> {
   enum class Kind {
     kBtiPerm,
     kCachePolicy,
+    kChannelOption,
     kClock,
     kDecimal,
     kExceptionChannelType,

@@ -413,6 +413,8 @@ std::string Uint32Type::Name() const {
       return "zx.bti_perm";
     case Kind::kCachePolicy:
       return "zx.cache_policy";
+    case Kind::kChannelOption:
+      return "uint32";
     case Kind::kClock:
       return "zx.clock";
     case Kind::kDecimal:
@@ -458,6 +460,9 @@ void Uint32Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
         break;
       case Kind::kCachePolicy:
         printer.DisplayCachePolicy(static_cast<uint32_t>(absolute));
+        break;
+      case Kind::kChannelOption:
+        printer.DisplayChannelOption(static_cast<uint32_t>(absolute));
         break;
       case Kind::kClock:
         printer.DisplayClock(static_cast<uint32_t>(absolute));
