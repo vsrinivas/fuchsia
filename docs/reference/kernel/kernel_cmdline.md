@@ -455,12 +455,6 @@ corruption.  A value of oops will cause a non-fatal kernel OOPS to be emitted
 when corruption is detected.  A value of panic will cause a fatal kernel panic
 to occur when corruption is detected.  Defaults to oops.
 
-## ktrace.grpmask
-
-This option specifies what ktrace records are emitted.
-The value is a bitmask of KTRACE\_GRP\_\* values from zircon/ktrace.h.
-Hex values may be specified as 0xNNN.
-
 ## ldso.trace
 
 This option (disabled by default) turns on dynamic linker trace output.

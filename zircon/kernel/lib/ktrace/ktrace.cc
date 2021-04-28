@@ -6,7 +6,6 @@
 
 #include <debug.h>
 #include <lib/boot-options/boot-options.h>
-#include <lib/cmdline.h>
 #include <lib/ktrace.h>
 #include <lib/ktrace/string_ref.h>
 #include <lib/syscalls/zx-syscall-numbers.h>
@@ -288,7 +287,7 @@ void ktrace_init(unsigned level) {
   // the other functions in this file need not check for enabled-ness manually.
   bool syscalls_enabled = gBootOptions->enable_debugging_syscalls;
   ktrace_bufsize_mb = gBootOptions->ktrace_bufsize;
-  uint32_t grpmask = gCmdline.GetUInt32(kernel_option::kKtraceGrpMask, KTRACE_DEFAULT_GRPMASK);
+  uint32_t grpmask = gBootOptions->ktrace_grpmask;
 
   if (ktrace_bufsize_mb == 0 || !syscalls_enabled) {
     dprintf(INFO, "ktrace: disabled\n");

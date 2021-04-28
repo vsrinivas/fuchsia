@@ -417,6 +417,13 @@ again it will be replaced.
 
 This option specifies the number of megabytes allocated for ktrace records.
 
+### ktrace.grpmask=\<uint32_t>
+**Default:** `0xfff`
+
+This option specifies what ktrace records are emitted.
+The value is a bitmask of KTRACE\_GRP\_\* values from zircon/ktrace.h.
+Hex values may be specified as 0xNNN.
+
 
 ## Options available only on arm64 machines
 

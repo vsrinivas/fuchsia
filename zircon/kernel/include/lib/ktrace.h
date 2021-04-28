@@ -290,8 +290,6 @@ inline void ktrace_name(uint32_t tag, uint32_t id, uint32_t arg, const char* nam
 ssize_t ktrace_read_user(void* ptr, uint32_t off, size_t len);
 zx_status_t ktrace_control(uint32_t action, uint32_t options, void* ptr);
 
-#define KTRACE_DEFAULT_GRPMASK 0xFFF
-
 void ktrace_report_live_threads();
 void ktrace_report_live_processes();
 
