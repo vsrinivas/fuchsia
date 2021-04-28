@@ -24,6 +24,8 @@
 #include <lib/zx/object.h>
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
+#include <lib/zx/vmar.h>
+#include <lib/zx/vmo.h>
 #include <zircon/compiler.h>
 #include <zircon/errors.h>
 #include <zircon/rights.h>
@@ -1440,6 +1442,38 @@ TEST(ChannelTest, ChannelFullException) {
   zx_info_process_t proc_info;
   ASSERT_OK(proc.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr));
   ASSERT_EQ(proc_info.return_code, ZX_TASK_RETCODE_EXCEPTION_KILL);
+}
+
+// This is a regression test for fxbug.dev/75568.
+//
+// Ensure that the kernel does not leak handle objects when copy out faults.
+TEST(ChannelTest, ReadFaultDoesNotLeakHandles) {
+  // Create a channel.
+  zx::channel a;
+  zx::channel b;
+  ASSERT_OK(zx::channel::create(0, &a, &b));
+
+  char msg{};
+
+  // Obtain a invalid pointer.  When reading a we'll ask the kernel to place the handles here, which
+  // will fail.  Ideally, to obtain an invalid pointer we'd map a single page VMO with no read/write
+  // permissions.  However, that will generate a lot of log spam (`PageFault: error -30`).  Instead
+  // provide a value that's in the kernel's section of the address space.  That way, the copy out
+  // will fail early.
+  static constexpr zx_vaddr_t kBadAddress = 0xfffffffffffffff0;
+
+  // This value should be larger than the kernel's maximum number of handles to ensure that if we do
+  // create a leak we will completely exhaust the handle arena.
+  static constexpr size_t kCount = (256 + 1) * 1024;
+  for (size_t i = 0; i < kCount; ++i){
+    zx::event event;
+    // If the handle area is exhausted, we may see this call fail with ZX_ERR_NO_MEMORY.
+    ASSERT_OK(zx::event::create(0, &event));
+    zx_handle_t handle = event.release();
+    a.write(0, &msg, sizeof(msg), &handle, 1);
+    ASSERT_EQ(ZX_ERR_INVALID_ARGS, b.read(0, &msg, reinterpret_cast<zx_handle_t*>(kBadAddress),
+                                          sizeof(msg), 1, nullptr, nullptr));
+  }
 }
 
 }  // namespace

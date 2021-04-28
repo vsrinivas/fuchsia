@@ -101,12 +101,16 @@ static void MapHandleToValue(ProcessDispatcher* up, const Handle* handle, zx_han
   out->unused = 0;
 }
 
+// Removes the handles from |msg|, install them in |up|'s handle table, and copies them out to the
+// user array |handles|.
+//
+// Upon completion, the Handle object will either be owned by the process (success) or closed
+// (error).
 template <typename HandleT>
 static __WARN_UNUSED_RESULT zx_status_t msg_get_handles(ProcessDispatcher* up, MessagePacket* msg,
                                                         user_out_ptr<HandleT> handles,
                                                         uint32_t num_handles) {
   Handle* const* handle_list = msg->handles();
-  msg->set_owns_handles(false);
 
   HandleT hvs[kMaxMessageHandles];
   for (size_t i = 0; i < num_handles; ++i) {
@@ -118,6 +122,8 @@ static __WARN_UNUSED_RESULT zx_status_t msg_get_handles(ProcessDispatcher* up, M
     return status;
   }
 
+  // The MessagePacket currently owns the handle.  Only after transferring the handles into this
+  // process's handle table can we relieve MessagePacket of its handle ownership responsibility.
   for (size_t i = 0; i < num_handles; ++i) {
     if (handle_list[i]->dispatcher()->is_waitable())
       handle_list[i]->dispatcher()->Cancel(handle_list[i]);
@@ -125,6 +131,7 @@ static __WARN_UNUSED_RESULT zx_status_t msg_get_handles(ProcessDispatcher* up, M
     // TODO(fxbug.dev/30916): This takes a lock per call. Consider doing these in a batch.
     up->handle_table().AddHandle(ktl::move(handle));
   }
+  msg->set_owns_handles(false);
 
   return ZX_OK;
 }
