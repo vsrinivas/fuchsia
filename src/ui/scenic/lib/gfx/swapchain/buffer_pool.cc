@@ -292,6 +292,8 @@ bool BufferPool::CreateBuffers(size_t count, BufferPool::Environment* environmen
       return false;
     }
 
+    FX_CHECK(memory_requirements.memoryTypeBits & collection_properties.value.memoryTypeBits)
+        << memory_requirements.memoryTypeBits << " " << collection_properties.value.memoryTypeBits;
     uint32_t memory_type_index = escher::CountTrailingZeros(
         memory_requirements.memoryTypeBits & collection_properties.value.memoryTypeBits);
     vk::StructureChain<vk::MemoryAllocateInfo, vk::ImportMemoryBufferCollectionFUCHSIA,
