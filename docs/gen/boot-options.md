@@ -424,6 +424,11 @@ This option specifies what ktrace records are emitted.
 The value is a bitmask of KTRACE\_GRP\_\* values from zircon/ktrace.h.
 Hex values may be specified as 0xNNN.
 
+### kernel.memory-limit-dbg=\<bool>
+**Default:** `true`
+
+This option enables verbose logging from the memory limit library.
+
 
 ## Options available only on arm64 machines
 

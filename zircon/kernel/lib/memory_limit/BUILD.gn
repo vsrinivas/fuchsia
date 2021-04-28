@@ -10,6 +10,7 @@ zx_library("memory_limit") {
   kernel = true
   sources = [ "memory_limit.cc" ]
   deps = [
+    "//zircon/kernel/lib/boot-options",
     "//zircon/kernel/lib/cmdline",
     "//zircon/kernel/lib/fbl",
     "//zircon/system/ulib/pretty",

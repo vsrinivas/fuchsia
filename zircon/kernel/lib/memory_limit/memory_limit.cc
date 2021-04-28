@@ -7,6 +7,7 @@
 #include <align.h>
 #include <assert.h>
 #include <inttypes.h>
+#include <lib/boot-options/boot-options.h>
 #include <lib/cmdline.h>
 #include <lib/memory_limit.h>
 #include <lib/zircon-internal/macros.h>
@@ -78,8 +79,7 @@ zx_status_t memory_limit_init() {
       return ZX_ERR_NOT_SUPPORTED;
     }
 
-    // For now, always print debug information if a limit is imposed.
-    MemoryLimitDbg = gCmdline.GetBool(kernel_option::kMemoryLimitDbg, true);
+    MemoryLimitDbg = gBootOptions->memory_limit_dbg;
     SystemMemoryRemaining = SystemMemoryLimit;
     return ZX_OK;
   }
