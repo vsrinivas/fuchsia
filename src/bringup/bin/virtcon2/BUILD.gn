@@ -7,6 +7,7 @@ import("//build/config/fuchsia/rules.gni")
 import("//build/dist/component_manifest_resources.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
+import("//src/bringup/bin/virtcon2/virtcon_args.gni")
 
 group("bootfs") {
   deps = [
@@ -22,6 +23,11 @@ group("tests") {
 
 component_manifest_resources("meta") {
   sources = [ "meta/virtual-console.cml" ]
+}
+
+resource("logo") {
+  sources = [ virtcon_logo_path ]
+  outputs = [ "data/logo.riv" ]
 }
 
 resource("robotoslab") {
@@ -40,9 +46,11 @@ rustc_library("lib") {
     "src/view.rs",
   ]
   deps = [
+    ":logo",
     ":robotoslab",
     "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty-rustc",
     "//sdk/fidl/fuchsia.virtualconsole:fuchsia.virtualconsole-rustc",
+    "//src/graphics/lib/compute/rive-rs",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
