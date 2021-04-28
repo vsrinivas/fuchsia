@@ -75,7 +75,10 @@ template("build_id_dir") {
     script = "${fuchsia_sdk}/build/populate_build_id_dir.py"
     inputs = [ _all_ids_txt_path ]
     _stamp = "$target_gen_dir/$target_name.stamp"
-    outputs = [ _stamp ]
+    outputs = [
+      _stamp,
+      output_path,
+    ]
     depfile = "$target_gen_dir/$target_name.d"
     deps = invoker.deps + [ ":${_all_ids_txt_target_name}" ]
 
