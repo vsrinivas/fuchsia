@@ -11,7 +11,7 @@ mod element_repository;
 use {
     crate::element_repository::{ElementEventHandler, ElementManagerServer, ElementRepository},
     anyhow::{Context as _, Error},
-    fidl::endpoints::{ClientEnd, DiscoverableService, Proxy, ServiceMarker},
+    fidl::endpoints::{ClientEnd, DiscoverableService, Proxy},
     fidl_fuchsia_session::{
         ElementManagerMarker, ElementManagerRequestStream, GraphicalPresenterMarker,
     },
@@ -79,9 +79,16 @@ async fn expose_services(
     server_chan: zx::Channel,
 ) -> Result<(), Error> {
     let mut fs = ServiceFs::new();
-    fs.add_fidl_service_at(ElementManagerMarker::NAME, ExposedServices::ElementManager);
-    fs.add_fidl_service_at(PresentationMarker::NAME, ExposedServices::Presentation);
 
+    // Add services for component outgoing directory.
+    fs.dir("svc")
+        .add_fidl_service(ExposedServices::ElementManager)
+        .add_fidl_service(ExposedServices::Presentation);
+    fs.take_and_serve_directory_handle()?;
+
+    // Add services served over `server_chan`.
+    fs.add_fidl_service_at(ElementManagerMarker::SERVICE_NAME, ExposedServices::ElementManager);
+    fs.add_fidl_service_at(PresentationMarker::SERVICE_NAME, ExposedServices::Presentation);
     fs.serve_connection(server_chan).unwrap();
 
     // create a reference so that we can use this within the `for_each_concurrent` generator.
