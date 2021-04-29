@@ -1,6 +1,6 @@
 # Life of a protocol open (Components v2)
 
-<<../_v2_banner.md>>
+<<../../_v2_banner.md>>
 
 This document describes the steps that occur when a component attempts to
 connect to a protocol in its namespace.
