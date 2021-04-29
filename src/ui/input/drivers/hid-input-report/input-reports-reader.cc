@@ -73,7 +73,7 @@ void InputReportsReader::SendReportsToWaitingRead() {
                                                                               num_reports));
   if (result.status() != ZX_OK) {
     zxlogf(ERROR, "SendReport: Failed to send reports (%s): %s\n", result.status_string(),
-           result.error());
+           result.error_message());
   }
   waiting_read_.reset();
 

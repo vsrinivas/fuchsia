@@ -66,8 +66,8 @@ TEST(BindServerTestCase, SyncReply) {
   sync_completion_t closed;
   fidl::OnUnboundFn<SyncServer> on_unbound = [&closed](SyncServer*, fidl::UnbindInfo info,
                                                        fidl::ServerEnd<Simple> server_end) {
-    EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
-    EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status);
+    EXPECT_EQ(fidl::Reason::kPeerClosed, info.reason());
+    EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status());
     EXPECT_TRUE(server_end);
     sync_completion_signal(&closed);
   };
@@ -110,8 +110,8 @@ TEST(BindServerTestCase, AsyncReply) {
   sync_completion_t closed;
   fidl::OnUnboundFn<AsyncServer> on_unbound = [&closed](AsyncServer*, fidl::UnbindInfo info,
                                                         fidl::ServerEnd<Simple> server_end) {
-    EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
-    EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status);
+    EXPECT_EQ(fidl::Reason::kPeerClosed, info.reason());
+    EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status());
     EXPECT_TRUE(server_end);
     sync_completion_signal(&closed);
   };
@@ -164,8 +164,8 @@ TEST(BindServerTestCase, MultipleAsyncReplies) {
   fidl::OnUnboundFn<AsyncDelayedServer> on_unbound = [&closed](AsyncDelayedServer* server,
                                                                fidl::UnbindInfo info,
                                                                fidl::ServerEnd<Simple> server_end) {
-    EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
-    EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status);
+    EXPECT_EQ(fidl::Reason::kPeerClosed, info.reason());
+    EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status());
     EXPECT_TRUE(server_end);
     sync_completion_signal(&closed);
   };
@@ -237,8 +237,8 @@ TEST(BindServerTestCase, MultipleAsyncRepliesOnePeerClose) {
   sync_completion_t closed;
   fidl::OnUnboundFn<AsyncDelayedServer> on_unbound =
       [&closed](AsyncDelayedServer*, fidl::UnbindInfo info, fidl::ServerEnd<Simple> server_end) {
-        EXPECT_EQ(fidl::UnbindInfo::kClose, info.reason);
-        EXPECT_OK(info.status);
+        EXPECT_EQ(fidl::Reason::kClose, info.reason());
+        EXPECT_OK(info.status());
         EXPECT_TRUE(server_end);
         sync_completion_signal(&closed);
       };
@@ -281,8 +281,8 @@ TEST(BindServerTestCase, CallbackDestroyOnClientClose) {
 
   fidl::OnUnboundFn<Server> on_unbound = [](Server* server, fidl::UnbindInfo info,
                                             fidl::ServerEnd<Simple> server_end) {
-    EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
-    EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status);
+    EXPECT_EQ(fidl::Reason::kPeerClosed, info.reason());
+    EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status());
     EXPECT_TRUE(server_end);
     delete server;
   };
@@ -331,8 +331,8 @@ TEST(BindServerTestCase, CallbackErrorClientTriggered) {
 
   fidl::OnUnboundFn<ErrorServer> on_unbound = [&error](ErrorServer*, fidl::UnbindInfo info,
                                                        fidl::ServerEnd<Simple> server_end) {
-    EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
-    EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status);
+    EXPECT_EQ(fidl::Reason::kPeerClosed, info.reason());
+    EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status());
     EXPECT_TRUE(server_end);
     sync_completion_signal(&error);
   };
@@ -397,8 +397,8 @@ TEST(BindServerTestCase, DestroyBindingWithPendingCancel) {
   sync_completion_t closed;
   fidl::OnUnboundFn<WorkingServer> on_unbound = [&closed](WorkingServer*, fidl::UnbindInfo info,
                                                           fidl::ServerEnd<Simple> server_end) {
-    EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
-    EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status);
+    EXPECT_EQ(fidl::Reason::kPeerClosed, info.reason());
+    EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status());
     EXPECT_TRUE(server_end);
     sync_completion_signal(&closed);
   };
@@ -469,8 +469,8 @@ TEST(BindServerTestCase, CallbackErrorServerTriggered) {
 
   fidl::OnUnboundFn<ErrorServer> on_unbound = [&closed](ErrorServer*, fidl::UnbindInfo info,
                                                         fidl::ServerEnd<Simple> server_end) {
-    EXPECT_EQ(fidl::UnbindInfo::kClose, info.reason);
-    EXPECT_OK(info.status);
+    EXPECT_EQ(fidl::Reason::kClose, info.reason());
+    EXPECT_OK(info.status());
     EXPECT_TRUE(server_end);
     sync_completion_signal(&closed);
   };
@@ -528,8 +528,8 @@ TEST(BindServerTestCase, CallbackDestroyOnServerClose) {
 
   fidl::OnUnboundFn<Server> on_unbound = [](Server* server, fidl::UnbindInfo info,
                                             fidl::ServerEnd<Simple> server_end) {
-    EXPECT_EQ(fidl::UnbindInfo::kClose, info.reason);
-    EXPECT_OK(info.status);
+    EXPECT_EQ(fidl::Reason::kClose, info.reason());
+    EXPECT_OK(info.status());
     EXPECT_TRUE(server_end);
     delete server;
   };
@@ -565,8 +565,8 @@ TEST(BindServerTestCase, ExplicitUnbind) {
 
   fidl::OnUnboundFn<Server> on_unbound = [remote_handle](Server* server, fidl::UnbindInfo info,
                                                          fidl::ServerEnd<Simple> server_end) {
-    EXPECT_EQ(fidl::UnbindInfo::kUnbind, info.reason);
-    EXPECT_OK(info.status);
+    EXPECT_EQ(fidl::Reason::kUnbind, info.reason());
+    EXPECT_OK(info.status());
     EXPECT_EQ(server_end.channel().get(), remote_handle);
     delete server;
   };
@@ -616,8 +616,8 @@ TEST(BindServerTestCase, ExplicitUnbindWithPendingTransaction) {
   fidl::OnUnboundFn<WorkingServer> on_unbound = [remote_handle, &unbound](
                                                     WorkingServer*, fidl::UnbindInfo info,
                                                     fidl::ServerEnd<Simple> server_end) {
-    EXPECT_EQ(fidl::UnbindInfo::kUnbind, info.reason);
-    EXPECT_OK(info.status);
+    EXPECT_EQ(fidl::Reason::kUnbind, info.reason());
+    EXPECT_OK(info.status());
     EXPECT_EQ(server_end.channel().get(), remote_handle);
     sync_completion_signal(&unbound);
   };
@@ -816,8 +816,8 @@ TEST(BindServerTestCase, ConcurrentIdempotentClose) {
       [&unbound](ConcurrentSyncServer*, fidl::UnbindInfo info, fidl::ServerEnd<Simple> server_end) {
         static std::atomic_flag invoked = ATOMIC_FLAG_INIT;
         ASSERT_FALSE(invoked.test_and_set());  // Must only be called once.
-        EXPECT_EQ(fidl::UnbindInfo::kClose, info.reason);
-        EXPECT_OK(info.status);
+        EXPECT_EQ(fidl::Reason::kClose, info.reason());
+        EXPECT_OK(info.status());
         EXPECT_TRUE(server_end);
         sync_completion_signal(&unbound);
       };
@@ -856,8 +856,8 @@ TEST(BindServerTestCase, ServerUnbind) {
   fidl::OnUnboundFn<Server> on_unbound = [remote_handle, remote = &remote](
                                              Server* server, fidl::UnbindInfo info,
                                              fidl::ServerEnd<Simple> server_end) {
-    EXPECT_EQ(fidl::UnbindInfo::kUnbind, info.reason);
-    EXPECT_OK(info.status);
+    EXPECT_EQ(fidl::Reason::kUnbind, info.reason());
+    EXPECT_OK(info.status());
     EXPECT_EQ(server_end.channel().get(), remote_handle);
     *remote = std::move(server_end);
     delete server;
@@ -894,8 +894,8 @@ TEST(BindServerTestCase, ServerClose) {
   auto [local, remote] = std::move(*endpoints);
   fidl::OnUnboundFn<Server> on_unbound = [](Server* server, fidl::UnbindInfo info,
                                             fidl::ServerEnd<Simple> server_end) {
-    EXPECT_EQ(fidl::UnbindInfo::kClose, info.reason);
-    EXPECT_OK(info.status);
+    EXPECT_EQ(fidl::Reason::kClose, info.reason());
+    EXPECT_OK(info.status());
     EXPECT_TRUE(server_end);
     delete server;
   };
@@ -943,8 +943,8 @@ TEST(BindServerTestCase, UnbindInfoChannelError) {
   sync_completion_t closed;
   fidl::OnUnboundFn<WorkingServer> on_unbound = [&closed](WorkingServer*, fidl::UnbindInfo info,
                                                           fidl::ServerEnd<Simple>) {
-    EXPECT_EQ(fidl::UnbindInfo::kChannelError, info.reason);
-    EXPECT_EQ(ZX_ERR_ACCESS_DENIED, info.status);
+    EXPECT_EQ(fidl::Reason::kTransportError, info.reason());
+    EXPECT_EQ(ZX_ERR_ACCESS_DENIED, info.status());
     sync_completion_signal(&closed);
   };
   fidl::BindServer(loop.dispatcher(), std::move(remote), server.get(), std::move(on_unbound));
@@ -971,8 +971,8 @@ TEST(BindServerTestCase, UnbindInfoDispatcherError) {
   fidl::OnUnboundFn<Server> on_unbound = [remote_handle, remote = &remote](
                                              Server* server, fidl::UnbindInfo info,
                                              fidl::ServerEnd<Simple> server_end) {
-    EXPECT_EQ(fidl::UnbindInfo::kDispatcherError, info.reason);
-    EXPECT_EQ(ZX_ERR_CANCELED, info.status);
+    EXPECT_EQ(fidl::Reason::kDispatcherError, info.reason());
+    EXPECT_EQ(ZX_ERR_CANCELED, info.status());
     EXPECT_EQ(server_end.channel().get(), remote_handle);
     *remote = std::move(server_end);
     delete server;
@@ -1020,8 +1020,8 @@ TEST(BindServerTestCase, ReplyNotRequiredAfterUnbound) {
   auto server = std::make_unique<WorkingServer>(&async_completer, &ready);
   fidl::OnUnboundFn<WorkingServer> on_unbound = [&unbound](WorkingServer*, fidl::UnbindInfo info,
                                                            fidl::ServerEnd<Simple>) {
-    EXPECT_EQ(fidl::UnbindInfo::kUnbind, info.reason);
-    EXPECT_EQ(ZX_OK, info.status);
+    EXPECT_EQ(fidl::Reason::kUnbind, info.reason());
+    EXPECT_EQ(ZX_OK, info.status());
     sync_completion_signal(&unbound);
   };
   auto binding_ref =
@@ -1099,8 +1099,8 @@ TEST(BindServerTestCase, MultipleInheritanceServer) {
   fidl::OnUnboundFn<MultiInheritanceServer> on_unbound = [](MultiInheritanceServer* server,
                                                             fidl::UnbindInfo info,
                                                             fidl::ServerEnd<Simple> server_end) {
-    EXPECT_EQ(fidl::UnbindInfo::kClose, info.reason);
-    EXPECT_OK(info.status);
+    EXPECT_EQ(fidl::Reason::kClose, info.reason());
+    EXPECT_OK(info.status());
     EXPECT_TRUE(server_end);
     delete server;
   };

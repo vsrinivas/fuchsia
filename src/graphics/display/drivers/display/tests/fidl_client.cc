@@ -55,14 +55,14 @@ bool TestFidlClient::CreateChannel(zx_handle_t provider, bool is_vc) {
     auto response = fidl::WireCall<fhd::Provider>(zx::unowned_channel(provider))
                         .OpenVirtconController(std::move(device_server), std::move(dc_server));
     if (!response.ok()) {
-      zxlogf(ERROR, "Could not open VC controller, error=%s", response.error());
+      zxlogf(ERROR, "Could not open VC controller, error=%s", response.error_message());
       return false;
     }
   } else {
     auto response = fidl::WireCall<fhd::Provider>(zx::unowned_channel(provider))
                         .OpenController(std::move(device_server), std::move(dc_server));
     if (!response.ok()) {
-      zxlogf(ERROR, "Could not open controller, error=%s", response.error());
+      zxlogf(ERROR, "Could not open controller, error=%s", response.error_message());
       return false;
     }
   }
@@ -271,7 +271,7 @@ zx_status_t TestFidlClient::ImportImageWithSysmemLocked(const fhd::wire::ImageCo
     }
     if (auto result = local_token->Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(server));
         !result.ok()) {
-      zxlogf(ERROR, "Failed to duplicate token %d %s", result.status(), result.error());
+      zxlogf(ERROR, "Failed to duplicate token %d %s", result.status(), result.error_message());
       return ZX_ERR_NO_MEMORY;
     }
   }
@@ -280,7 +280,7 @@ zx_status_t TestFidlClient::ImportImageWithSysmemLocked(const fhd::wire::ImageCo
   static uint64_t display_collection_id = 0;
   display_collection_id++;
   if (auto result = local_token->Sync(); !result.ok()) {
-    zxlogf(ERROR, "Failed to sync token %d %s", result.status(), result.error());
+    zxlogf(ERROR, "Failed to sync token %d %s", result.status(), result.error_message());
     return result.status();
   }
   if (auto result = dc_->ImportBufferCollection(display_collection_id, std::move(display_token));
@@ -294,7 +294,7 @@ zx_status_t TestFidlClient::ImportImageWithSysmemLocked(const fhd::wire::ImageCo
       dc_->SetBufferCollectionConstraints(display_collection_id, image_config);
   if (!set_constraints_result.ok() || set_constraints_result->res != ZX_OK) {
     zxlogf(ERROR, "Setting buffer (%dx%d) collection constraints failed: %s", image_config.width,
-           image_config.height, set_constraints_result.error());
+           image_config.height, set_constraints_result.error_message());
     dc_->ReleaseBufferCollection(display_collection_id);
     return set_constraints_result.ok() ? set_constraints_result->res
                                        : set_constraints_result.status();

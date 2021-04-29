@@ -21,8 +21,7 @@ const fragmentClientSyncMethodsTmpl = `
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return {{ .WireUnownedResult }}({{ RenderForwardParams $base_args "_response_buffer.data" "_response_buffer.capacity" }});
   }
-  return {{ .WireUnownedResult }}(
-    ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
+  return {{ .WireUnownedResult }}(::fidl::Result::Unbound());
 }
 {{- EndifFuchsia -}}
   {{- else }}{{ if .RequestArgs }}
@@ -31,9 +30,9 @@ const fragmentClientSyncMethodsTmpl = `
     {{- template "SyncRequestCallerAllocateMethodArguments" . }}) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = {{ .WireUnownedResult }}({{ RenderForwardParams $base_args }});
-    return ::fidl::Result(_res.status(), _res.error());
+    return _res;
   }
-  return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return ::fidl::Result::Unbound();
 }
 {{- EndifFuchsia -}}
   {{- end }}{{ end }}
@@ -51,8 +50,7 @@ const fragmentClientSyncMethodsTmpl = `
       {{- RenderForwardParams (printf "::fidl::UnownedClientEnd<%s>(_channel->handle())" .Protocol)
                               .RequestArgs }});
   }
-  return {{ .WireResult }}(
-    ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
+  return {{ .WireResult }}(::fidl::Result::Unbound());
 }
 {{- EndifFuchsia -}}
   {{- else }}
@@ -62,9 +60,9 @@ const fragmentClientSyncMethodsTmpl = `
     auto _res = {{ .WireResult }}(
       {{- RenderForwardParams (printf "::fidl::UnownedClientEnd<%s>(_channel->handle())" .Protocol)
                               .RequestArgs }});
-    return ::fidl::Result(_res.status(), _res.error());
+    return _res;
   }
-  return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return ::fidl::Result::Unbound();
 }
 {{- EndifFuchsia -}}
   {{- end }}

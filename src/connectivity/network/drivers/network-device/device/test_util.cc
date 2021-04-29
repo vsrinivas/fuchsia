@@ -273,7 +273,7 @@ zx_status_t TestSession::Open(fidl::WireSyncClient<netdev::Device>& netdevice, c
 
   auto res = netdevice.OpenSession(std::move(session_name), std::move(info));
   if (res.status() != ZX_OK) {
-    printf("OpenSession FIDL failure: %s %s\n", zx_status_get_string(res.status()), res.error());
+    printf("OpenSession FIDL failure: %s %s\n", res.status_string(), res.error_message());
     return res.status();
   }
   if (res.value().result.is_err()) {

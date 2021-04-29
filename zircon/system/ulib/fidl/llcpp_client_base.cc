@@ -76,7 +76,7 @@ void ClientBase::ReleaseResponseContextsWithError() {
 
 std::optional<UnbindInfo> ClientBase::Dispatch(fidl::IncomingMessage& msg) {
   if (fit::nullable epitaph = msg.maybe_epitaph(); unlikely(epitaph)) {
-    return UnbindInfo{UnbindInfo::kPeerClosed, (*epitaph)->error};
+    return UnbindInfo::PeerClosed((*epitaph)->error);
   }
 
   auto* hdr = msg.header();
@@ -94,13 +94,14 @@ std::optional<UnbindInfo> ClientBase::Dispatch(fidl::IncomingMessage& msg) {
       list_delete(static_cast<list_node_t*>(context));
     } else {
       // Received unknown txid.
-      return UnbindInfo{UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_FOUND};
+      return UnbindInfo{
+          Result::UnexpectedMessage(ZX_ERR_NOT_FOUND, fidl::internal::kErrorUnknownTxId)};
     }
   }
   zx_status_t status = context->OnRawReply(std::move(msg));
   if (unlikely(status != ZX_OK)) {
     context->OnError();
-    return UnbindInfo{UnbindInfo::kDecodeError, msg.status()};
+    return UnbindInfo{Result::DecodeError(msg.status())};
   }
   return std::nullopt;
 }

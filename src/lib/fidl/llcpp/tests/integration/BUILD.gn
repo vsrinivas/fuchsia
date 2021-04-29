@@ -124,7 +124,10 @@ fidl("llcpptest.protocol.test") {
 
 test("fidl_llcpp_protocol_tests_bin") {
   output_name = "fidl_llcpp_protocol_tests"
-  sources = [ "protocol_test.cc" ]
+  sources = [
+    "protocol_test.cc",
+    "sync_client_error_tests.cc",
+  ]
   deps = [
     ":llcpptest.protocol.test_llcpp",
     "//src/lib/fxl/test:gtest_main",

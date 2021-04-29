@@ -25,7 +25,7 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder, DecodeFu
   fidl::FidlAllocator<65536> allocator;
   FidlType aligned_value = builder(allocator);
   fidl::OwnedEncodedMessage<FidlType> encoded(&aligned_value);
-  ZX_ASSERT(encoded.ok() && encoded.error() == nullptr);
+  ZX_ASSERT(encoded.ok() && encoded.error_message() == nullptr);
 
   state->DeclareStep("Setup/WallTime");
   state->DeclareStep("Decode/WallTime");
@@ -49,7 +49,7 @@ bool DecodeBenchmark(perftest::RepeatState* state, BuilderFunc builder, DecodeFu
   // Reencode the decoded result and compare against the initial (expected) encode_result.
   fidl::OwnedEncodedMessage<FidlType> reencoded(reinterpret_cast<FidlType*>(bytes.data()));
   if (!reencoded.ok()) {
-    std::cout << "fidl::Encode failed with error: " << reencoded.error() << std::endl;
+    std::cout << "fidl::Encode failed with error: " << reencoded.error_message() << std::endl;
     return false;
   }
   auto reencoded_bytes = reencoded.GetOutgoingMessage().CopyBytes();

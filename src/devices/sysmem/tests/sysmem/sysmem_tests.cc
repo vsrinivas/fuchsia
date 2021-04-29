@@ -3880,7 +3880,7 @@ TEST(Sysmem, EventSink) {
                    [&was_unbound, &loop](EventSinkServer* server, fidl::UnbindInfo info,
                                          fidl::ServerEnd<fuchsia_sysmem::BufferCollectionEvents>) {
                      was_unbound = true;
-                     EXPECT_EQ(info.reason, fidl::UnbindInfo::kPeerClosed);
+                     EXPECT_EQ(info.reason(), fidl::Reason::kPeerClosed);
                      loop.Quit();
                    });
   loop.Run();

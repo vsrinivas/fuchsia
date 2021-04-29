@@ -63,7 +63,7 @@ void LoaderConnection::LoadObject(fidl::StringView object_name,
     auto result = completer.Reply(status.status_value(), std::move(status).value_or(zx::vmo()));
     if (!result.ok()) {
       FX_LOGS(WARNING) << log_prefix() << "failed to reply to LoadObject(" << name
-                       << "): " << result.status_string() << " (" << result.error() << ')';
+                       << "): " << result.status_string() << " (" << result.error_message() << ')';
     }
   };
 
@@ -91,7 +91,7 @@ void LoaderConnection::Config(fidl::StringView config, ConfigCompleter::Sync& co
     auto result = completer.Reply(status);
     if (!result.ok()) {
       FX_LOGS(WARNING) << log_prefix() << "failed to reply to Config(" << config_str
-                       << "): " << result.status_string() << " (" << result.error() << ')';
+                       << "): " << result.status_string() << " (" << result.error_message() << ')';
     }
   };
 

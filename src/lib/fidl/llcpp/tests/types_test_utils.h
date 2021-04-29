@@ -86,7 +86,8 @@ void CannotProxyUnknownEnvelope(std::vector<uint8_t> bytes, std::vector<zx_handl
   fidl::UnownedEncodedMessage<FidlType> encoded(encoded_bytes, ZX_CHANNEL_MAX_MSG_BYTES, result);
   ASSERT_EQ(encoded.status(), ZX_ERR_INVALID_ARGS) << encoded.status_string();
 
-  EXPECT_STREQ(encoded.error(), "Cannot encode unknown union or table") << encoded.error();
+  EXPECT_STREQ(encoded.error_message(), "Cannot encode unknown union or table")
+      << encoded.error_message();
 }
 
 }  // namespace llcpp_types_test_utils

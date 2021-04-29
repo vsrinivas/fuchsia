@@ -6,10 +6,10 @@
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/envelope.h>
-#include <lib/fidl/llcpp/errors.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/message_storage.h>
 #include <lib/fidl/llcpp/object_view.h>
+#include <lib/fidl/llcpp/result.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/vector_view.h>
@@ -24,7 +24,6 @@
 #include <lib/fidl/llcpp/client.h>
 #include <lib/fidl/llcpp/client_end.h>
 #include <lib/fidl/llcpp/connect_service.h>
-#include <lib/fidl/llcpp/result.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/server_end.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
@@ -322,7 +321,7 @@ class TableSmallArray final {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
@@ -345,7 +344,7 @@ class TableSmallArray final {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -510,7 +509,7 @@ class TableLargeArray final {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
@@ -533,7 +532,7 @@ class TableLargeArray final {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -638,7 +637,7 @@ struct StructSmallArray {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
@@ -661,7 +660,7 @@ struct StructSmallArray {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -740,7 +739,7 @@ struct StructLargeArray {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
@@ -763,7 +762,7 @@ struct StructLargeArray {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();

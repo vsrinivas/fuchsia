@@ -79,7 +79,7 @@ zx_status_t ConnectListener(fidl::ClientEnd<fuchsia_logger::LogListenerSafe> lis
       std::move(listener),
       fidl::ObjectView<fuchsia_logger::wire::LogFilterOptions>::FromExternal(&options));
   if (!result.ok()) {
-    printf("console: fuchsia.logger.Log/ListenSafe() = %s\n", result.error());
+    printf("console: fuchsia.logger.Log/ListenSafe() = %s\n", result.error_message());
     return result.status();
   }
   return ZX_OK;

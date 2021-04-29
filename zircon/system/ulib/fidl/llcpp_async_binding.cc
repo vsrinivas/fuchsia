@@ -46,13 +46,13 @@ void AsyncBinding::OnUnbind(std::shared_ptr<AsyncBinding>&& calling_ref, UnbindI
       // No other thread will touch the internal reference.
       keep_alive_ = nullptr;
     }
-    unbind_ = sync_unbind_ = true;
+    sync_unbind_ = true;
 
-    // If the peer was not closed, and the user invoked Close() or there was a dispatch error,
-    // overwrite the unbound reason and recover the epitaph or error status. Note that
-    // UnbindInfo::kUnbind is simply the default value for unbind_info_.reason.
-    if (info.reason != UnbindInfo::kPeerClosed && unbind_info_.reason != UnbindInfo::kUnbind) {
-      info = unbind_info_;
+    // If the unbind info was already set, respect the existing.
+    if (unbind_info_.has_value()) {
+      info = *unbind_info_;
+    } else {
+      unbind_info_ = info;
     }
   }
 
@@ -63,7 +63,7 @@ void AsyncBinding::MessageHandler(zx_status_t dispatcher_status, const zx_packet
   ZX_ASSERT(keep_alive_);
 
   if (dispatcher_status != ZX_OK)
-    return OnUnbind(std::move(keep_alive_), {UnbindInfo::kDispatcherError, dispatcher_status});
+    return OnUnbind(std::move(keep_alive_), UnbindInfo::DispatcherError(dispatcher_status));
 
   if (signal->observed & ZX_CHANNEL_READABLE) {
     uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
@@ -73,10 +73,7 @@ void AsyncBinding::MessageHandler(zx_status_t dispatcher_status, const zx_packet
       IncomingMessage msg = fidl::ChannelReadEtc(
           handle(), 0, fidl::BufferSpan(bytes, std::size(bytes)), cpp20::span(handles));
       if (!msg.ok()) {
-        // NOTE: Slight imprecision here; the error should be |kChannelError|
-        // if failed to read from channel, and |kUnexpectedMessage| if failed
-        // validation.
-        return OnUnbind(std::move(keep_alive_), {UnbindInfo::kChannelError, msg.status()});
+        return OnUnbind(std::move(keep_alive_), fidl::UnbindInfo{msg});
       }
       fidl_trace(DidLLCPPAsyncChannelRead, nullptr /* type */, bytes, msg.byte_actual(),
                  msg.handle_actual());
@@ -84,7 +81,7 @@ void AsyncBinding::MessageHandler(zx_status_t dispatcher_status, const zx_packet
       // Flag indicating whether this thread still has access to the binding.
       bool binding_released = false;
       // Dispatch the message.
-      auto maybe_unbind = Dispatch(msg, &binding_released);
+      std::optional<fidl::UnbindInfo> maybe_unbind = Dispatch(msg, &binding_released);
 
       // If binding_released is not set, keep_alive_ is still valid and this thread will continue to
       // read messages on this binding.
@@ -94,8 +91,6 @@ void AsyncBinding::MessageHandler(zx_status_t dispatcher_status, const zx_packet
 
       // If there was any error enabling dispatch or an unexpected message, destroy the binding.
       if (maybe_unbind) {
-        if (maybe_unbind->status == ZX_ERR_PEER_CLOSED)
-          maybe_unbind->reason = UnbindInfo::kPeerClosed;
         return OnUnbind(std::move(keep_alive_), *maybe_unbind);
       }
     }
@@ -104,10 +99,10 @@ void AsyncBinding::MessageHandler(zx_status_t dispatcher_status, const zx_packet
     // NOTE: If EnableNextDispatch() fails due to a dispatcher error, unbind_info_ will override the
     // arguments passed to OnUnbind().
     if (EnableNextDispatch() != ZX_OK)
-      OnUnbind(std::move(keep_alive_), {UnbindInfo::kUnbind, ZX_OK});
+      OnUnbind(std::move(keep_alive_), UnbindInfo::Unbind());
   } else {
     ZX_ASSERT(signal->observed & ZX_CHANNEL_PEER_CLOSED);
-    OnUnbind(std::move(keep_alive_), {UnbindInfo::kPeerClosed, ZX_ERR_PEER_CLOSED});
+    OnUnbind(std::move(keep_alive_), UnbindInfo::PeerClosed(ZX_ERR_PEER_CLOSED));
   }
 }
 
@@ -140,11 +135,7 @@ void AsyncBinding::BeginWait() {
   //   processed.
   //
   using Result = AsyncBinding::UnboundNotificationPostingResult;
-  Result result =
-      InternalError(std::shared_ptr(keep_alive_), UnbindInfo{
-                                                      .reason = UnbindInfo::kDispatcherError,
-                                                      .status = status,
-                                                  });
+  Result result = InternalError(std::shared_ptr(keep_alive_), UnbindInfo::DispatcherError(status));
   switch (result) {
     case Result::kDispatcherError:
       // We are crashing the process anyways, but clearing |keep_alive_| helps
@@ -163,11 +154,11 @@ void AsyncBinding::BeginWait() {
 
 zx_status_t AsyncBinding::EnableNextDispatch() {
   std::scoped_lock lock(lock_);
-  if (unbind_)
+  if (unbind_info_.has_value())
     return ZX_ERR_CANCELED;
-  auto status = async_begin_wait(dispatcher_, this);
-  if (status != ZX_OK && unbind_info_.status == ZX_OK)
-    unbind_info_ = {UnbindInfo::kDispatcherError, status};
+  zx_status_t status = async_begin_wait(dispatcher_, this);
+  if (status != ZX_OK)
+    unbind_info_ = fidl::UnbindInfo::DispatcherError(status);
   return status;
 }
 
@@ -180,10 +171,11 @@ auto AsyncBinding::UnbindInternal(std::shared_ptr<AsyncBinding>&& calling_ref, U
   std::scoped_lock lock(lock_);
   // Another thread has entered this critical section already via Unbind(), Close(), or
   // OnUnbind(). Release our reference and return to unblock that caller.
-  if (unbind_)
+  if (unbind_info_.has_value())
     return UnboundNotificationPostingResult::kRacedWithInProgressUnbind;
-  unbind_ = true;       // Indicate that waits should no longer be added to the dispatcher.
-  unbind_info_ = info;  // Store the reason for unbinding.
+  // Indicate that waits should no longer be added to the dispatcher.
+  // Store the reason for unbinding.
+  unbind_info_ = info;
 
   // Attempt to add a task to unbind the channel. On failure, the dispatcher was shutdown;
   // if another thread was monitoring incoming messages, that thread would do the unbinding.

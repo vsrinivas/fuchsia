@@ -123,7 +123,7 @@ public:
     const char* status_string() const { return message_.status_string(); }
 {{- EndifFuchsia -}}
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
@@ -149,7 +149,7 @@ public:
     const char* status_string() const { return message_.status_string(); }
 {{- EndifFuchsia -}}
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_.GetOutgoingMessage(); }
 

@@ -47,12 +47,11 @@ extern "C" const fidl_type_t
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>>
       _request(zx_txid_t(0));
-  _request.GetOutgoingMessage()
-      .Call<
-          ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChild>>(
-          _client, bytes_.data(), bytes_.size());
-  status_ = _request.status();
-  error_ = _request.error();
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Call<
+      ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChild>>(
+      _client, bytes_.data(), bytes_.size());
+  SetResult(_outgoing);
 }
 
 ::fidl::WireResult<::fidl_test_protocolrequest::Parent::GetChild>::WireResult(
@@ -61,12 +60,11 @@ extern "C" const fidl_type_t
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>>
       _request(zx_txid_t(0));
-  _request.GetOutgoingMessage()
-      .Call<
-          ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChild>>(
-          _client, bytes_.data(), bytes_.size(), _deadline);
-  status_ = _request.status();
-  error_ = _request.error();
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Call<
+      ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChild>>(
+      _client, bytes_.data(), bytes_.size(), _deadline);
+  SetResult(_outgoing);
 }
 namespace fidl_test_protocolrequest {
 #endif  // __Fuchsia__
@@ -81,12 +79,11 @@ namespace fidl_test_protocolrequest {
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChild>>
       _request(zx_txid_t(0));
-  _request.GetOutgoingMessage()
-      .Call<
-          ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChild>>(
-          _client, _response_bytes, _response_byte_capacity);
-  status_ = _request.status();
-  error_ = _request.error();
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Call<
+      ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChild>>(
+      _client, _response_bytes, _response_byte_capacity);
+  ::fidl::Result::operator=(_outgoing);
 }
 namespace fidl_test_protocolrequest {
 #endif  // __Fuchsia__
@@ -99,12 +96,11 @@ namespace fidl_test_protocolrequest {
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChildRequest>>
       _request(zx_txid_t(0));
-  _request.GetOutgoingMessage()
-      .Call<::fidl::WireResponse<
-          ::fidl_test_protocolrequest::Parent::GetChildRequest>>(
-          _client, bytes_.data(), bytes_.size());
-  status_ = _request.status();
-  error_ = _request.error();
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Call<::fidl::WireResponse<
+      ::fidl_test_protocolrequest::Parent::GetChildRequest>>(
+      _client, bytes_.data(), bytes_.size());
+  SetResult(_outgoing);
 }
 
 ::fidl::WireResult<::fidl_test_protocolrequest::Parent::GetChildRequest>::
@@ -114,12 +110,11 @@ namespace fidl_test_protocolrequest {
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChildRequest>>
       _request(zx_txid_t(0));
-  _request.GetOutgoingMessage()
-      .Call<::fidl::WireResponse<
-          ::fidl_test_protocolrequest::Parent::GetChildRequest>>(
-          _client, bytes_.data(), bytes_.size(), _deadline);
-  status_ = _request.status();
-  error_ = _request.error();
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Call<::fidl::WireResponse<
+      ::fidl_test_protocolrequest::Parent::GetChildRequest>>(
+      _client, bytes_.data(), bytes_.size(), _deadline);
+  SetResult(_outgoing);
 }
 namespace fidl_test_protocolrequest {
 #endif  // __Fuchsia__
@@ -135,12 +130,11 @@ namespace fidl_test_protocolrequest {
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::GetChildRequest>>
       _request(zx_txid_t(0));
-  _request.GetOutgoingMessage()
-      .Call<::fidl::WireResponse<
-          ::fidl_test_protocolrequest::Parent::GetChildRequest>>(
-          _client, _response_bytes, _response_byte_capacity);
-  status_ = _request.status();
-  error_ = _request.error();
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Call<::fidl::WireResponse<
+      ::fidl_test_protocolrequest::Parent::GetChildRequest>>(
+      _client, _response_bytes, _response_byte_capacity);
+  ::fidl::Result::operator=(_outgoing);
 }
 namespace fidl_test_protocolrequest {
 #endif  // __Fuchsia__
@@ -153,9 +147,9 @@ namespace fidl_test_protocolrequest {
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChild>>
       _request(zx_txid_t(0), std::move(c));
-  _request.GetOutgoingMessage().Write(_client);
-  status_ = _request.status();
-  error_ = _request.error();
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Write(_client);
+  SetResult(_outgoing);
 }
 namespace fidl_test_protocolrequest {
 #endif  // __Fuchsia__
@@ -169,10 +163,11 @@ namespace fidl_test_protocolrequest {
         ::fidl::ClientEnd<::fidl_test_protocolrequest::Child>&& c) {
   ::fidl::UnownedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChild>>
-      _request(_request_bytes, _request_byte_capacity, 0, std::move(c));
-  _request.GetOutgoingMessage().Write(_client);
-  status_ = _request.status();
-  error_ = _request.error();
+      _request(_request_bytes, _request_byte_capacity, zx_txid_t(0),
+               std::move(c));
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Write(_client);
+  ::fidl::Result::operator=(_outgoing);
 }
 namespace fidl_test_protocolrequest {
 #endif  // __Fuchsia__
@@ -186,9 +181,9 @@ namespace fidl_test_protocolrequest {
   ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_protocolrequest::Parent::TakeChildRequest>>
       _request(zx_txid_t(0), std::move(r));
-  _request.GetOutgoingMessage().Write(_client);
-  status_ = _request.status();
-  error_ = _request.error();
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Write(_client);
+  SetResult(_outgoing);
 }
 namespace fidl_test_protocolrequest {
 #endif  // __Fuchsia__
@@ -203,10 +198,11 @@ namespace fidl_test_protocolrequest {
         ::fidl::ServerEnd<::fidl_test_protocolrequest::Child>&& r) {
   ::fidl::UnownedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_protocolrequest::Parent::TakeChildRequest>>
-      _request(_request_bytes, _request_byte_capacity, 0, std::move(r));
-  _request.GetOutgoingMessage().Write(_client);
-  status_ = _request.status();
-  error_ = _request.error();
+      _request(_request_bytes, _request_byte_capacity, zx_txid_t(0),
+               std::move(r));
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Write(_client);
+  ::fidl::Result::operator=(_outgoing);
 }
 namespace fidl_test_protocolrequest {
 #endif  // __Fuchsia__
@@ -222,7 +218,7 @@ fidl::internal::WireClientImpl<
             _channel->handle()));
   }
   return ::fidl::WireResult<::fidl_test_protocolrequest::Parent::GetChild>(
-      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
+      ::fidl::Result::Unbound());
 }
 #endif  // __Fuchsia__
 
@@ -238,8 +234,7 @@ fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::
         _response_buffer.data, _response_buffer.capacity);
   }
   return ::fidl::WireUnownedResult<
-      ::fidl_test_protocolrequest::Parent::GetChild>(
-      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
+      ::fidl_test_protocolrequest::Parent::GetChild>(::fidl::Result::Unbound());
 }
 #endif  // __Fuchsia__
 
@@ -329,7 +324,7 @@ fidl::internal::WireClientImpl<
   }
   return ::fidl::WireResult<
       ::fidl_test_protocolrequest::Parent::GetChildRequest>(
-      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
+      ::fidl::Result::Unbound());
 }
 #endif  // __Fuchsia__
 
@@ -346,7 +341,7 @@ fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::
   }
   return ::fidl::WireUnownedResult<
       ::fidl_test_protocolrequest::Parent::GetChildRequest>(
-      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
+      ::fidl::Result::Unbound());
 }
 #endif  // __Fuchsia__
 
@@ -434,9 +429,9 @@ fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::TakeChild(
             ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent>(
                 _channel->handle()),
             std::move(c));
-    return ::fidl::Result(_res.status(), _res.error());
+    return _res;
   }
-  return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return ::fidl::Result::Unbound();
 }
 #endif  // __Fuchsia__
 
@@ -451,9 +446,9 @@ fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::TakeChild(
         ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent>(
             _channel->handle()),
         _request_buffer.data, _request_buffer.capacity, std::move(c));
-    return ::fidl::Result(_res.status(), _res.error());
+    return _res;
   }
-  return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return ::fidl::Result::Unbound();
 }
 #endif  // __Fuchsia__
 
@@ -467,9 +462,9 @@ fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::TakeChild(
         ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent>(
             _channel->handle()),
         std::move(r));
-    return ::fidl::Result(_res.status(), _res.error());
+    return _res;
   }
-  return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return ::fidl::Result::Unbound();
 }
 #endif  // __Fuchsia__
 
@@ -484,9 +479,9 @@ fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::TakeChild(
         ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent>(
             _channel->handle()),
         _request_buffer.data, _request_buffer.capacity, std::move(r));
-    return ::fidl::Result(_res.status(), _res.error());
+    return _res;
   }
-  return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return ::fidl::Result::Unbound();
 }
 #endif  // __Fuchsia__
 
@@ -494,8 +489,7 @@ fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::TakeChild(
 std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
     ::fidl_test_protocolrequest::Parent>::DispatchEvent(fidl::IncomingMessage&
                                                             msg) {
-  return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
-                            ZX_ERR_NOT_SUPPORTED};
+  return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__
 
@@ -590,8 +584,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     std::move(msg).CloseHandles();
-    txn->InternalError(
-        {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
+    txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal());
   }
   return dispatch_result;
 }
@@ -686,8 +679,7 @@ fidl::internal::WireDispatcher<::fidl_test_protocolrequest::Parent>::Dispatch(
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     std::move(msg).CloseHandles();
-    txn->InternalError(
-        {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
+    txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal());
   }
   return dispatch_result;
 }
@@ -821,8 +813,7 @@ void ::fidl::WireRequest<
 std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
     ::fidl_test_protocolrequest::Child>::DispatchEvent(fidl::IncomingMessage&
                                                            msg) {
-  return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
-                            ZX_ERR_NOT_SUPPORTED};
+  return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__
 
@@ -840,8 +831,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
         ::fidl::WireServer<::fidl_test_protocolrequest::Child>* impl,
         ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   std::move(msg).CloseHandles();
-  txn->InternalError(
-      {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
+  txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal());
   return ::fidl::DispatchResult::kNotFound;
 }
 ::fidl::DispatchResult
@@ -863,8 +853,7 @@ fidl::internal::WireDispatcher<::fidl_test_protocolrequest::Child>::Dispatch(
     ::fidl::WireInterface<::fidl_test_protocolrequest::Child>* impl,
     fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   std::move(msg).CloseHandles();
-  txn->InternalError(
-      {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
+  txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal());
   return ::fidl::DispatchResult::kNotFound;
 }
 ::fidl::DispatchResult

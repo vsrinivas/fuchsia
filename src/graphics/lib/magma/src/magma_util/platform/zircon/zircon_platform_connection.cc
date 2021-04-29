@@ -59,7 +59,7 @@ bool ZirconPlatformConnection::Bind(zx::channel server_endpoint) {
         // |kDispatcherError| indicates the async loop itself is shutting down,
         // which could only happen when |interface| is being destructed.
         // Therefore, we must avoid using the same object.
-        if (unbind_info.reason == fidl::UnbindInfo::Reason::kDispatcherError)
+        if (unbind_info.reason() == fidl::Reason::kDispatcherError)
           return;
 
         self->server_binding_ = cpp17::nullopt;

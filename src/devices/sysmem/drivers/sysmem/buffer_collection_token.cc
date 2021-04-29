@@ -9,7 +9,6 @@
 #include <lib/fidl/llcpp/server.h>
 #include <zircon/errors.h>
 
-#include "lib/fidl/llcpp/types.h"
 #include "node_properties.h"
 #include "src/devices/sysmem/drivers/sysmem/device.h"
 #include "src/devices/sysmem/drivers/sysmem/node.h"
@@ -67,8 +66,8 @@ void BufferCollectionToken::Bind(
                          // asynchronously and can run after the parent closes a handle to this
                          // class.
                          if (error_handler_) {
-                           zx_status_t status = info.status;
-                           if (async_failure_result_ && info.reason == fidl::UnbindInfo::kClose) {
+                           zx_status_t status = info.status();
+                           if (async_failure_result_ && info.reason() == fidl::Reason::kClose) {
                              // On kClose the error is always ZX_OK, so report the real error to
                              // LogicalBufferCollection if the close was caused by FailAsync or
                              // FailSync.

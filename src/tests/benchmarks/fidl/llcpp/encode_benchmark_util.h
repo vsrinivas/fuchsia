@@ -34,8 +34,8 @@ bool EncodeBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
 
     {
       ::fidl::OwnedEncodedMessage<FidlType> encoded(&aligned_value);
-      if (encoded.error() != nullptr) {
-        std::cerr << "Unexpected error: " << encoded.error() << '\n';
+      if (encoded.error_message() != nullptr) {
+        std::cerr << "Unexpected error: " << encoded.error_message() << '\n';
       }
       ZX_ASSERT(encoded.ok());
     }

@@ -18,11 +18,10 @@ extern "C" const fidl_type_t fidl_test_inheritance_superfooResponseTable;
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo>>
       _request(zx_txid_t(0), s);
-  _request.GetOutgoingMessage()
-      .Call<::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>>(
-          _client, bytes_.data(), bytes_.size());
-  status_ = _request.status();
-  error_ = _request.error();
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Call<::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>>(
+      _client, bytes_.data(), bytes_.size());
+  SetResult(_outgoing);
 }
 
 ::fidl::WireResult<::fidl_test_inheritance::Super::Foo>::WireResult(
@@ -31,11 +30,10 @@ extern "C" const fidl_type_t fidl_test_inheritance_superfooResponseTable;
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo>>
       _request(zx_txid_t(0), s);
-  _request.GetOutgoingMessage()
-      .Call<::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>>(
-          _client, bytes_.data(), bytes_.size(), _deadline);
-  status_ = _request.status();
-  error_ = _request.error();
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Call<::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>>(
+      _client, bytes_.data(), bytes_.size(), _deadline);
+  SetResult(_outgoing);
 }
 namespace fidl_test_inheritance {
 #endif  // __Fuchsia__
@@ -51,12 +49,11 @@ namespace fidl_test_inheritance {
     : bytes_(_response_bytes) {
   ::fidl::UnownedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo>>
-      _request(_request_bytes, _request_byte_capacity, 0, s);
-  _request.GetOutgoingMessage()
-      .Call<::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>>(
-          _client, _response_bytes, _response_byte_capacity);
-  status_ = _request.status();
-  error_ = _request.error();
+      _request(_request_bytes, _request_byte_capacity, zx_txid_t(0), s);
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Call<::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>>(
+      _client, _response_bytes, _response_byte_capacity);
+  ::fidl::Result::operator=(_outgoing);
 }
 namespace fidl_test_inheritance {
 #endif  // __Fuchsia__
@@ -73,7 +70,7 @@ fidl::internal::WireClientImpl<::fidl_test_inheritance::Super>::Foo_Sync(
         s);
   }
   return ::fidl::WireResult<::fidl_test_inheritance::Super::Foo>(
-      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
+      ::fidl::Result::Unbound());
 }
 #endif  // __Fuchsia__
 
@@ -90,7 +87,7 @@ fidl::internal::WireClientImpl<::fidl_test_inheritance::Super>::Foo_Sync(
         _response_buffer.data, _response_buffer.capacity);
   }
   return ::fidl::WireUnownedResult<::fidl_test_inheritance::Super::Foo>(
-      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
+      ::fidl::Result::Unbound());
 }
 #endif  // __Fuchsia__
 
@@ -169,8 +166,7 @@ fidl::internal::WireClientImpl<::fidl_test_inheritance::Super>::Foo(
 #ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
     ::fidl_test_inheritance::Super>::DispatchEvent(fidl::IncomingMessage& msg) {
-  return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
-                            ZX_ERR_NOT_SUPPORTED};
+  return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__
 
@@ -213,8 +209,7 @@ fidl::internal::WireServerDispatcher<::fidl_test_inheritance::Super>::Dispatch(
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     std::move(msg).CloseHandles();
-    txn->InternalError(
-        {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
+    txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal());
   }
   return dispatch_result;
 }
@@ -263,8 +258,7 @@ fidl::internal::WireDispatcher<::fidl_test_inheritance::Super>::Dispatch(
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     std::move(msg).CloseHandles();
-    txn->InternalError(
-        {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
+    txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal());
   }
   return dispatch_result;
 }
@@ -323,11 +317,10 @@ extern "C" const fidl_type_t fidl_test_inheritance_subfooResponseTable;
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo>>
       _request(zx_txid_t(0), s);
-  _request.GetOutgoingMessage()
-      .Call<::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>>(
-          _client, bytes_.data(), bytes_.size());
-  status_ = _request.status();
-  error_ = _request.error();
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Call<::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>>(
+      _client, bytes_.data(), bytes_.size());
+  SetResult(_outgoing);
 }
 
 ::fidl::WireResult<::fidl_test_inheritance::Sub::Foo>::WireResult(
@@ -336,11 +329,10 @@ extern "C" const fidl_type_t fidl_test_inheritance_subfooResponseTable;
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo>>
       _request(zx_txid_t(0), s);
-  _request.GetOutgoingMessage()
-      .Call<::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>>(
-          _client, bytes_.data(), bytes_.size(), _deadline);
-  status_ = _request.status();
-  error_ = _request.error();
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Call<::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>>(
+      _client, bytes_.data(), bytes_.size(), _deadline);
+  SetResult(_outgoing);
 }
 namespace fidl_test_inheritance {
 #endif  // __Fuchsia__
@@ -355,12 +347,11 @@ namespace fidl_test_inheritance {
     : bytes_(_response_bytes) {
   ::fidl::UnownedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo>>
-      _request(_request_bytes, _request_byte_capacity, 0, s);
-  _request.GetOutgoingMessage()
-      .Call<::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>>(
-          _client, _response_bytes, _response_byte_capacity);
-  status_ = _request.status();
-  error_ = _request.error();
+      _request(_request_bytes, _request_byte_capacity, zx_txid_t(0), s);
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Call<::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>>(
+      _client, _response_bytes, _response_byte_capacity);
+  ::fidl::Result::operator=(_outgoing);
 }
 namespace fidl_test_inheritance {
 #endif  // __Fuchsia__
@@ -377,7 +368,7 @@ fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub>::Foo_Sync(
         s);
   }
   return ::fidl::WireResult<::fidl_test_inheritance::Sub::Foo>(
-      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
+      ::fidl::Result::Unbound());
 }
 #endif  // __Fuchsia__
 
@@ -394,7 +385,7 @@ fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub>::Foo_Sync(
         _response_buffer.data, _response_buffer.capacity);
   }
   return ::fidl::WireUnownedResult<::fidl_test_inheritance::Sub::Foo>(
-      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
+      ::fidl::Result::Unbound());
 }
 #endif  // __Fuchsia__
 
@@ -472,8 +463,7 @@ fidl::internal::WireClientImpl<::fidl_test_inheritance::Sub>::Foo(
 #ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
     ::fidl_test_inheritance::Sub>::DispatchEvent(fidl::IncomingMessage& msg) {
-  return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
-                            ZX_ERR_NOT_SUPPORTED};
+  return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__
 
@@ -516,8 +506,7 @@ fidl::internal::WireServerDispatcher<::fidl_test_inheritance::Sub>::Dispatch(
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     std::move(msg).CloseHandles();
-    txn->InternalError(
-        {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
+    txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal());
   }
   return dispatch_result;
 }
@@ -565,8 +554,7 @@ fidl::internal::WireDispatcher<::fidl_test_inheritance::Sub>::Dispatch(
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     std::move(msg).CloseHandles();
-    txn->InternalError(
-        {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
+    txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal());
   }
   return dispatch_result;
 }

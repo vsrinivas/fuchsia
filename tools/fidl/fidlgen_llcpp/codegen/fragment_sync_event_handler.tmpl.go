@@ -13,7 +13,7 @@ const fragmentSyncEventHandlerTmpl = `
                                                       ::zx::time::infinite(),
                                                       nullptr);
   if (status != ZX_OK) {
-    return ::fidl::Result(status, ::fidl::kErrorWaitOneFailed);
+    return ::fidl::Result::TransportError(status, ::fidl::internal::kErrorWaitOneFailed);
   }
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
     uint32_t x = 0;
@@ -40,7 +40,7 @@ const fragmentSyncEventHandlerTmpl = `
     // Message size is unexpectedly larger than calculated.
     // This can only be due to a newer version of the protocol defining a new event,
     // whose size exceeds the maximum of known events in the current protocol.
-    return ::fidl::Result(Unknown(), nullptr);
+    return ::fidl::Result::UnexpectedMessage(Unknown());
   }
   if (!msg.ok()) {
     return msg;
@@ -51,14 +51,14 @@ const fragmentSyncEventHandlerTmpl = `
     case {{ .OrdinalName }}: {
       ::fidl::DecodedMessage<{{ .WireResponse }}> decoded{::std::move(msg)};
       if (!decoded.ok()) {
-        return ::fidl::Result(decoded.status(), decoded.error());
+        return ::fidl::Result(decoded);
       }
       {{ .Name }}(decoded.PrimaryObject());
-      return ::fidl::Result(ZX_OK, nullptr);
+      return ::fidl::Result::Ok();
     }
   {{- end }}
     default: {
-      return ::fidl::Result(Unknown(), nullptr);
+      return ::fidl::Result::UnexpectedMessage(Unknown());
     }
   }
 }

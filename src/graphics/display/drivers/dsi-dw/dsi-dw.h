@@ -17,7 +17,6 @@
 #include <lib/device-protocol/platform-device.h>
 #include <lib/fidl/llcpp/async_binding.h>
 #include <lib/fidl/llcpp/server.h>
-#include <lib/fidl/llcpp/types.h>
 #include <lib/fidl/llcpp/vector_view.h>
 #include <lib/mipi-dsi/mipi-dsi.h>
 #include <lib/mmio/mmio.h>

@@ -43,7 +43,7 @@ bool EncodeBenchmark(perftest::RepeatState* state, BuilderFunc builder, EncodeFu
   fidl::FidlAllocator<65536> allocator;
   FidlType aligned_value = builder(allocator);
   ::fidl::OwnedEncodedMessage<FidlType> encoded(&aligned_value);
-  ZX_ASSERT(encoded.ok() && encoded.error() == nullptr);
+  ZX_ASSERT(encoded.ok() && encoded.error_message() == nullptr);
 
   fidl::FidlAllocator<65536> allocator2;
   aligned_value = builder(allocator2);

@@ -73,28 +73,28 @@ class {{ .WireUnownedResult }} final : public ::fidl::Result {
 {{- end }}
 {{- $args = (List $args .RequestArgs) }}
 {{- if .HasResponse }}
-    {{- $args = (List $args "uint8_t* _response_bytes" "uint32_t _response_byte_capacity") }}
+  {{- $args = (List $args "uint8_t* _response_bytes" "uint32_t _response_byte_capacity") }}
 {{- end -}}
 {{ .WireUnownedResult }}::{{ .WireUnownedResult.Self }}({{ RenderCalleeParams $args }})
-  {{- if .HasResponse }}
+{{- if .HasResponse }}
     : bytes_(_response_bytes)
-  {{- end }}
-  {
-  {{- if .RequestArgs -}}
+{{- end }}
+{
+{{- if .RequestArgs -}}
   ::fidl::UnownedEncodedMessage<{{ .WireRequest }}> _request(
-    {{- RenderForwardParams "_request_bytes" "_request_byte_capacity" "0" .RequestArgs }});
-  {{- else -}}
-    ::fidl::OwnedEncodedMessage<{{ .WireRequest }}> _request(
-        {{- RenderForwardParams "zx_txid_t(0)" .RequestArgs }});
-  {{- end -}}
-  {{- if .HasResponse }}
-      _request.GetOutgoingMessage().Call<{{ .WireResponse }}>(_client, _response_bytes,
-                                                              _response_byte_capacity);
-  {{- else }}
-    _request.GetOutgoingMessage().Write(_client);
-  {{- end }}
-  status_ = _request.status();
-  error_ = _request.error();
+      {{- RenderForwardParams "_request_bytes" "_request_byte_capacity"
+          "zx_txid_t(0)" .RequestArgs }});
+{{- else -}}
+  ::fidl::OwnedEncodedMessage<{{ .WireRequest }}> _request(
+      {{- RenderForwardParams "zx_txid_t(0)" .RequestArgs }});
+{{- end -}}
+  auto& _outgoing = _request.GetOutgoingMessage();
+{{- if .HasResponse }}
+  _outgoing.Call<{{ .WireResponse }}>(_client, _response_bytes, _response_byte_capacity);
+{{- else }}
+  _outgoing.Write(_client);
+{{- end }}
+  ::fidl::Result::operator=(_outgoing);
 }
 {{- EndifFuchsia -}}
 {{- end }}

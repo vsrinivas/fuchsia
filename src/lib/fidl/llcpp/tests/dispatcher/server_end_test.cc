@@ -81,8 +81,8 @@ TEST(ServerEnd, Close) {
   EXPECT_FALSE(server_end.is_valid());
 
   loop.RunUntilIdle();
-  EXPECT_EQ(fidl::UnbindInfo::Reason::kPeerClosed, event_handler->recorded_unbind_info().reason);
-  EXPECT_EQ(kSysError, event_handler->recorded_unbind_info().status);
+  EXPECT_EQ(fidl::Reason::kPeerClosed, event_handler->recorded_unbind_info().reason());
+  EXPECT_EQ(kSysError, event_handler->recorded_unbind_info().status());
 }
 
 TEST(ServerEnd, CloseTwice) {

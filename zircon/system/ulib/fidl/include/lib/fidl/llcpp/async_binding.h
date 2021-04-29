@@ -11,9 +11,9 @@
 #include <lib/fidl/epitaph.h>
 #include <lib/fidl/llcpp/extract_resource_on_destruction.h>
 #include <lib/fidl/llcpp/message.h>
+#include <lib/fidl/llcpp/result.h>
 #include <lib/fidl/llcpp/server_end.h>
 #include <lib/fidl/llcpp/transaction.h>
-#include <lib/fidl/llcpp/types.h>
 #include <lib/fidl/llcpp/wire_messaging.h>
 #include <lib/fit/function.h>
 #include <lib/fit/result.h>
@@ -97,13 +97,11 @@ class AsyncBinding : private async_wait_t {
   };
 
   void Unbind(std::shared_ptr<AsyncBinding>&& calling_ref) __TA_EXCLUDES(lock_) {
-    UnbindInternal(std::move(calling_ref), {UnbindInfo::kUnbind, ZX_OK});
+    UnbindInternal(std::move(calling_ref), ::fidl::UnbindInfo::Unbind());
   }
 
   UnboundNotificationPostingResult InternalError(std::shared_ptr<AsyncBinding>&& calling_ref,
                                                  UnbindInfo error) __TA_EXCLUDES(lock_) {
-    if (error.status == ZX_ERR_PEER_CLOSED)
-      error.reason = UnbindInfo::kPeerClosed;
     return UnbindInternal(std::move(calling_ref), error);
   }
 
@@ -130,7 +128,7 @@ class AsyncBinding : private async_wait_t {
       // Using a raw pointer to ensure that there is only one strong reference
       // to the binding object during unbinding.
       auto* binding_ptr = binding.get();
-      binding_ptr->OnUnbind(std::move(binding), {UnbindInfo::kUnbind, ZX_OK}, true);
+      binding_ptr->OnUnbind(std::move(binding), ::fidl::UnbindInfo::Unbind(), true);
     }
     delete unbind_task;
   }
@@ -189,8 +187,7 @@ class AsyncBinding : private async_wait_t {
   std::shared_ptr<AsyncBinding> keep_alive_ = {};
 
   std::mutex lock_;
-  UnbindInfo unbind_info_ __TA_GUARDED(lock_) = {UnbindInfo::kUnbind, ZX_OK};
-  bool unbind_ __TA_GUARDED(lock_) = false;
+  std::optional<UnbindInfo> unbind_info_ __TA_GUARDED(lock_) = {};
   bool begun_ __TA_GUARDED(lock_) = false;
   bool sync_unbind_ __TA_GUARDED(lock_) = false;
   bool canceled_ __TA_GUARDED(lock_) = false;
@@ -208,7 +205,7 @@ class AnyAsyncServerBinding : public AsyncBinding {
 
   void Close(std::shared_ptr<AsyncBinding>&& calling_ref, zx_status_t epitaph)
       __TA_EXCLUDES(lock_) {
-    UnbindInternal(std::move(calling_ref), {UnbindInfo::kClose, epitaph});
+    UnbindInternal(std::move(calling_ref), fidl::UnbindInfo::Close(epitaph));
   }
 
  protected:
@@ -277,8 +274,10 @@ class AsyncServerBinding final : public AnyAsyncServerBinding {
 
                         // If required, send the epitaph.
                         zx::channel channel = std::move(event_sender.channel());
-                        if (info.reason == UnbindInfo::kClose)
-                          info.status = fidl_epitaph_write(channel.get(), info.status);
+                        if (info.reason() == Reason::kClose) {
+                          info =
+                              UnbindInfo::Close(fidl_epitaph_write(channel.get(), info.status()));
+                        }
 
                         // Execute the unbound hook if specified.
                         if (on_unbound_fn)
@@ -293,6 +292,9 @@ class AsyncServerBinding final : public AnyAsyncServerBinding {
   AnyOnUnboundFn on_unbound_fn_ = {};
 };
 
+// Invoked from a dispatcher thread after the client end of a channel is unbound.
+using OnClientUnboundFn = fit::callback<void(UnbindInfo)>;
+
 // The async client binding. The client supports both synchronous and
 // asynchronous calls. Because the channel lifetime must outlast the duration
 // of any synchronous calls, and that synchronous calls do not yet support
@@ -304,7 +306,7 @@ class AsyncClientBinding final : public AsyncBinding {
   static std::shared_ptr<AsyncClientBinding> Create(async_dispatcher_t* dispatcher,
                                                     std::shared_ptr<ChannelRef> channel,
                                                     std::shared_ptr<ClientBase> client,
-                                                    OnClientUnboundFn&& on_unbound_fn);
+                                                    internal::OnClientUnboundFn&& on_unbound_fn);
 
   virtual ~AsyncClientBinding() = default;
 
@@ -312,7 +314,8 @@ class AsyncClientBinding final : public AsyncBinding {
 
  private:
   AsyncClientBinding(async_dispatcher_t* dispatcher, std::shared_ptr<ChannelRef> channel,
-                     std::shared_ptr<ClientBase> client, OnClientUnboundFn&& on_unbound_fn);
+                     std::shared_ptr<ClientBase> client,
+                     internal::OnClientUnboundFn&& on_unbound_fn);
 
   std::optional<UnbindInfo> Dispatch(fidl::IncomingMessage& msg, bool* binding_released) override;
 
@@ -320,7 +323,7 @@ class AsyncClientBinding final : public AsyncBinding {
 
   std::shared_ptr<ChannelRef> channel_ = nullptr;  // Strong reference to the channel.
   std::shared_ptr<ClientBase> client_;
-  OnClientUnboundFn on_unbound_fn_;
+  internal::OnClientUnboundFn on_unbound_fn_;
 };
 
 }  // namespace internal

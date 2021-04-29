@@ -11,8 +11,6 @@
 
 #include <fbl/auto_lock.h>
 
-#include "lib/fidl/llcpp/types.h"
-
 namespace goldfish {
 namespace {
 
@@ -117,18 +115,18 @@ void Pipe::Bind(zx::channel server_request) {
   using PipeProtocol = fuchsia_hardware_goldfish::Pipe;
   using PipeServer = fidl::WireServer<PipeProtocol>;
   auto on_unbound = [this](PipeServer*, fidl::UnbindInfo info, fidl::ServerEnd<PipeProtocol>) {
-    switch (info.reason) {
-      case fidl::UnbindInfo::kUnbind:
-      case fidl::UnbindInfo::kPeerClosed:
+    switch (info.reason()) {
+      case fidl::Reason::kUnbind:
+      case fidl::Reason::kPeerClosed:
         // Client closed without errors. No-op.
         break;
-      case fidl::UnbindInfo::kClose:
+      case fidl::Reason::kClose:
         // Client closed with epitaph.
-        zxlogf(DEBUG, "[%s] Pipe closed with epitaph: %d\n", kTag, info.status);
+        zxlogf(DEBUG, "[%s] Pipe closed with epitaph: %d\n", kTag, info.status());
         break;
       default:
         // handle pipe error.
-        zxlogf(ERROR, "[%s] Pipe error: %d\n", kTag, info.status);
+        zxlogf(ERROR, "[%s] Pipe error: %d, %s\n", kTag, info.status(), info.error_message());
     }
     if (on_close_) {
       on_close_(this);

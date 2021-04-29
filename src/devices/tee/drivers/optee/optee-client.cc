@@ -1401,7 +1401,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemReadFile(ReadFileFileSystemRp
                                               response_buffer.view());
     if (!result.ok()) {
       LOG(ERROR, "failed to read from file (FIDL status: %s, FIDL error: %s)",
-          result.status_string(), result.error());
+          result.status_string(), result.error_message());
       message->set_return_code(TEEC_ERROR_GENERIC);
       return result.status();
     }
@@ -1463,7 +1463,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemWriteFile(
         fidl::VectorView<uint8_t>::FromExternal(buffer, write_chunk_request), offset);
     if (!result.ok()) {
       LOG(ERROR, "failed to write to file (FIDL status: %s, FIDL error: %s)",
-          result.status_string(), result.error());
+          result.status_string(), result.error_message());
       message->set_return_code(TEEC_ERROR_GENERIC);
       return result.status();
     }
@@ -1499,7 +1499,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemTruncateFile(
   auto result = fidl::WireCall(maybe_file.value()).Truncate(message->target_file_size());
   if (!result.ok()) {
     LOG(ERROR, "failed to truncate file (FIDL status: %s, FIDL error: %s)", result.status_string(),
-        result.error());
+        result.error_message());
     message->set_return_code(TEEC_ERROR_GENERIC);
     return result.status();
   }

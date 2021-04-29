@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fidl/llcpp/errors.h>
 #include <lib/fidl/llcpp/message.h>
+#include <lib/fidl/llcpp/result.h>
 #include <lib/fidl/llcpp/transaction.h>
 
 namespace fidl {
@@ -69,15 +69,16 @@ fidl::Result CompleterBase::SendReply(::fidl::OutgoingMessage* message) {
   // further replies.
   needs_to_reply_ = false;
   if (!message->ok()) {
-    transaction_->InternalError({::fidl::UnbindInfo::kEncodeError, message->status()});
-    return fidl::Result(message->status(), message->error());
+    transaction_->InternalError(fidl::UnbindInfo{*message});
+    return *message;
   }
-  auto status = transaction_->Reply(message);
+  zx_status_t status = transaction_->Reply(message);
   if (status != ZX_OK) {
-    transaction_->InternalError({UnbindInfo::kChannelError, status});
-    return fidl::Result(status, ::fidl::kErrorWriteFailed);
+    auto error = fidl::Result::TransportError(status);
+    transaction_->InternalError(fidl::UnbindInfo{error});
+    return error;
   }
-  return fidl::Result(ZX_OK, nullptr);
+  return fidl::Result::Ok();
 }
 
 void CompleterBase::InternalError(UnbindInfo error) {

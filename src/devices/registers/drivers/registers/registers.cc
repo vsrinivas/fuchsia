@@ -5,11 +5,10 @@
 #include "registers.h"
 
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <lib/ddk/metadata.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fidl/epitaph.h>
-
-#include <lib/ddk/metadata.h>
 
 #include "src/devices/registers/drivers/registers/registers-bind.h"
 
@@ -282,8 +281,8 @@ zx_status_t Bind(void* ctx, zx_device_t* parent) {
 
   // Parse
   fidl::DecodedMessage<Metadata> decoded(bytes.get(), static_cast<uint32_t>(size), nullptr, 0);
-  if (!decoded.ok() || (decoded.error() != nullptr)) {
-    zxlogf(ERROR, "Unable to parse metadata %s", decoded.error());
+  if (!decoded.ok() || (decoded.error_message() != nullptr)) {
+    zxlogf(ERROR, "Unable to parse metadata %s", decoded.error_message());
     return ZX_ERR_INTERNAL;
   }
   const auto& metadata = decoded.PrimaryObject();

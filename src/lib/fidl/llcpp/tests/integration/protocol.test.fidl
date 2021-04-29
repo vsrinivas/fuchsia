@@ -48,5 +48,10 @@ protocol HandleProvider {
     GetHandleUnion() -> (HandleUnionStruct value);
 };
 
+protocol EnumMethods {
+    SendEnum(MyError e);
+    GetEnum() -> (MyError e);
+};
+
 protocol Empty {
 };

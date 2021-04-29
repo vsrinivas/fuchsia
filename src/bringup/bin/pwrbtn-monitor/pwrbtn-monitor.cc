@@ -169,7 +169,7 @@ zx_status_t send_poweroff() {
 
   if (resp.status() != ZX_OK) {
     printf("pwrbtn-monitor: Call to %s failed: ret: %s, %s\n", service.c_str(),
-           zx_status_get_string(resp.status()), resp.error());
+           resp.status_string(), resp.error_message());
     return resp.status();
   }
 

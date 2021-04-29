@@ -19,10 +19,10 @@ const fileHeaderTmpl = `
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/envelope.h>
-#include <lib/fidl/llcpp/errors.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/message_storage.h>
 #include <lib/fidl/llcpp/object_view.h>
+#include <lib/fidl/llcpp/result.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/vector_view.h>
@@ -33,7 +33,6 @@ const fileHeaderTmpl = `
 #include <lib/fidl/llcpp/client_end.h>
 #include <lib/fidl/llcpp/client.h>
 #include <lib/fidl/llcpp/connect_service.h>
-#include <lib/fidl/llcpp/result.h>
 #include <lib/fidl/llcpp/server_end.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>

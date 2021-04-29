@@ -6,21 +6,24 @@
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 
+#include <array>
+#include <memory>
+#include <string>
+
 #include <gtest/gtest.h>
 
 #include "src/lib/fidl/llcpp/tests/types_test_utils.h"
 
 TEST(IncomingMessage, ConstructNonOkMessage) {
   constexpr auto kError = "test error";
-  fidl::IncomingMessage message(ZX_ERR_ACCESS_DENIED, kError);
+  fidl::IncomingMessage message(fidl::Result::TransportError(ZX_ERR_ACCESS_DENIED, kError));
   EXPECT_FALSE(message.ok());
   EXPECT_EQ(ZX_ERR_ACCESS_DENIED, message.status());
 }
 
 TEST(IncomingMessage, ConstructNonOkMessageRequiresNonOkStatus) {
 #if ZX_DEBUG_ASSERT_IMPLEMENTED
-  constexpr auto kError = "test error";
-  ASSERT_DEATH({ fidl::IncomingMessage message(ZX_OK, kError); }, "!= ZX_OK");
+  ASSERT_DEATH({ fidl::IncomingMessage message(fidl::Result::DecodeError(ZX_OK)); }, "!= ZX_OK");
 #else
   GTEST_SKIP() << "Debug assertions are disabled";
 #endif
@@ -130,4 +133,70 @@ TEST(IncomingMessage, ValidateTransactionalMessageHeader) {
     EXPECT_EQ(ZX_OK, incoming.status());
     EXPECT_TRUE(incoming.ok());
   }
+}
+
+class IncomingMessageChannelReadEtcTest : public ::testing::Test {
+ protected:
+  void SetUp() override {
+    byte_buffer_ = std::make_unique<std::array<uint8_t, ZX_CHANNEL_MAX_MSG_BYTES>>();
+    handle_buffer_ = std::make_unique<std::array<zx_handle_info_t, ZX_CHANNEL_MAX_MSG_HANDLES>>();
+  }
+
+  fidl::BufferSpan byte_buffer_view() {
+    return fidl::BufferSpan(byte_buffer_->data(), ZX_CHANNEL_MAX_MSG_HANDLES);
+  }
+
+  cpp20::span<zx_handle_info_t> handle_buffer_view() { return cpp20::span(*handle_buffer_); }
+
+ private:
+  std::unique_ptr<std::array<uint8_t, ZX_CHANNEL_MAX_MSG_BYTES>> byte_buffer_;
+  std::unique_ptr<std::array<zx_handle_info_t, ZX_CHANNEL_MAX_MSG_HANDLES>> handle_buffer_;
+};
+
+TEST_F(IncomingMessageChannelReadEtcTest, ReadFromChannel) {
+  zx::channel source, sink;
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &source, &sink));
+
+  uint8_t bytes[sizeof(fidl_message_header_t)] = {};
+  auto* hdr = reinterpret_cast<fidl_message_header_t*>(bytes);
+  fidl_init_txn_header(hdr, /* txid */ 1, /* ordinal */ 1);
+  sink.write(0, bytes, std::size(bytes), nullptr, 0);
+
+  auto incoming = fidl::ChannelReadEtc(source.get(), 0, byte_buffer_view(), handle_buffer_view());
+  EXPECT_EQ(ZX_OK, incoming.status());
+  EXPECT_EQ(incoming.byte_actual(), sizeof(fidl_message_header_t));
+  EXPECT_EQ(0, memcmp(incoming.bytes(), bytes, incoming.byte_actual()));
+  EXPECT_EQ(0u, incoming.handle_actual());
+
+  auto incoming2 = fidl::ChannelReadEtc(source.get(), 0, byte_buffer_view(), handle_buffer_view());
+  EXPECT_EQ(ZX_ERR_SHOULD_WAIT, incoming2.status());
+  EXPECT_EQ(fidl::Reason::kTransportError, incoming2.reason());
+  EXPECT_EQ(std::string(fidl::internal::kErrorTransport), std::string(incoming2.error_message()));
+}
+
+TEST_F(IncomingMessageChannelReadEtcTest, ReadFromClosedChannel) {
+  zx::channel source, sink;
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &source, &sink));
+
+  sink.reset();
+  auto incoming = fidl::ChannelReadEtc(source.get(), 0, byte_buffer_view(), handle_buffer_view());
+  EXPECT_EQ(ZX_ERR_PEER_CLOSED, incoming.status());
+  EXPECT_EQ(fidl::Reason::kPeerClosed, incoming.reason());
+}
+
+TEST_F(IncomingMessageChannelReadEtcTest, ReadFromChannelInvalidMessage) {
+  zx::channel source, sink;
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &source, &sink));
+
+  uint8_t bytes[sizeof(fidl_message_header_t)] = {};
+  auto* hdr = reinterpret_cast<fidl_message_header_t*>(bytes);
+  // An epitaph must have zero txid, so the following is invalid.
+  fidl_init_txn_header(hdr, /* txid */ 42, /* ordinal */ kFidlOrdinalEpitaph);
+  sink.write(0, bytes, std::size(bytes), nullptr, 0);
+
+  auto incoming = fidl::ChannelReadEtc(source.get(), 0, byte_buffer_view(), handle_buffer_view());
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, incoming.status());
+  EXPECT_EQ(fidl::Reason::kUnexpectedMessage, incoming.reason());
+  EXPECT_EQ(std::string(fidl::internal::kErrorInvalidHeader),
+            std::string(incoming.error_message()));
 }

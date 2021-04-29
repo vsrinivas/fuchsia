@@ -56,9 +56,9 @@ extern "C" const fidl_type_t
   ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_placementofattributes::ExampleProtocol::Method>>
       _request(zx_txid_t(0), arg);
-  _request.GetOutgoingMessage().Write(_client);
-  status_ = _request.status();
-  error_ = _request.error();
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Write(_client);
+  SetResult(_outgoing);
 }
 namespace fidl_test_placementofattributes {
 #endif  // __Fuchsia__
@@ -74,10 +74,10 @@ namespace fidl_test_placementofattributes {
                       const ::exampleusing::wire::Empty& arg) {
   ::fidl::UnownedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_placementofattributes::ExampleProtocol::Method>>
-      _request(_request_bytes, _request_byte_capacity, 0, arg);
-  _request.GetOutgoingMessage().Write(_client);
-  status_ = _request.status();
-  error_ = _request.error();
+      _request(_request_bytes, _request_byte_capacity, zx_txid_t(0), arg);
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Write(_client);
+  ::fidl::Result::operator=(_outgoing);
 }
 namespace fidl_test_placementofattributes {
 #endif  // __Fuchsia__
@@ -94,9 +94,9 @@ namespace fidl_test_placementofattributes {
             ::fidl_test_placementofattributes::ExampleProtocol>(
             _channel->handle()),
         arg);
-    return ::fidl::Result(_res.status(), _res.error());
+    return _res;
   }
-  return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return ::fidl::Result::Unbound();
 }
 #endif  // __Fuchsia__
 
@@ -112,9 +112,9 @@ namespace fidl_test_placementofattributes {
             ::fidl_test_placementofattributes::ExampleProtocol>(
             _channel->handle()),
         _request_buffer.data, _request_buffer.capacity, arg);
-    return ::fidl::Result(_res.status(), _res.error());
+    return _res;
   }
-  return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return ::fidl::Result::Unbound();
 }
 #endif  // __Fuchsia__
 
@@ -122,8 +122,7 @@ namespace fidl_test_placementofattributes {
 std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
     ::fidl_test_placementofattributes::ExampleProtocol>::
     DispatchEvent(fidl::IncomingMessage& msg) {
-  return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
-                            ZX_ERR_NOT_SUPPORTED};
+  return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__
 
@@ -169,8 +168,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     std::move(msg).CloseHandles();
-    txn->InternalError(
-        {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
+    txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal());
   }
   return dispatch_result;
 }
@@ -224,8 +222,7 @@ fidl::WireServer<::fidl_test_placementofattributes::ExampleProtocol>::
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     std::move(msg).CloseHandles();
-    txn->InternalError(
-        {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
+    txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal());
   }
   return dispatch_result;
 }

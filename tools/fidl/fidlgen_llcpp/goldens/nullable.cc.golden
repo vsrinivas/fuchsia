@@ -37,11 +37,11 @@ extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddResponseTable;
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_nullable::SimpleProtocol::Add>>
       _request(zx_txid_t(0), a, b);
-  _request.GetOutgoingMessage()
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing
       .Call<::fidl::WireResponse<::fidl_test_nullable::SimpleProtocol::Add>>(
           _client, bytes_.data(), bytes_.size());
-  status_ = _request.status();
-  error_ = _request.error();
+  SetResult(_outgoing);
 }
 
 ::fidl::WireResult<::fidl_test_nullable::SimpleProtocol::Add>::WireResult(
@@ -50,11 +50,11 @@ extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddResponseTable;
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_nullable::SimpleProtocol::Add>>
       _request(zx_txid_t(0), a, b);
-  _request.GetOutgoingMessage()
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing
       .Call<::fidl::WireResponse<::fidl_test_nullable::SimpleProtocol::Add>>(
           _client, bytes_.data(), bytes_.size(), _deadline);
-  status_ = _request.status();
-  error_ = _request.error();
+  SetResult(_outgoing);
 }
 namespace fidl_test_nullable {
 #endif  // __Fuchsia__
@@ -69,12 +69,12 @@ namespace fidl_test_nullable {
     : bytes_(_response_bytes) {
   ::fidl::UnownedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_nullable::SimpleProtocol::Add>>
-      _request(_request_bytes, _request_byte_capacity, 0, a, b);
-  _request.GetOutgoingMessage()
+      _request(_request_bytes, _request_byte_capacity, zx_txid_t(0), a, b);
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing
       .Call<::fidl::WireResponse<::fidl_test_nullable::SimpleProtocol::Add>>(
           _client, _response_bytes, _response_byte_capacity);
-  status_ = _request.status();
-  error_ = _request.error();
+  ::fidl::Result::operator=(_outgoing);
 }
 namespace fidl_test_nullable {
 #endif  // __Fuchsia__
@@ -91,7 +91,7 @@ fidl::internal::WireClientImpl<::fidl_test_nullable::SimpleProtocol>::Add_Sync(
         a, b);
   }
   return ::fidl::WireResult<::fidl_test_nullable::SimpleProtocol::Add>(
-      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
+      ::fidl::Result::Unbound());
 }
 #endif  // __Fuchsia__
 
@@ -108,7 +108,7 @@ fidl::internal::WireClientImpl<::fidl_test_nullable::SimpleProtocol>::Add_Sync(
         _response_buffer.data, _response_buffer.capacity);
   }
   return ::fidl::WireUnownedResult<::fidl_test_nullable::SimpleProtocol::Add>(
-      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
+      ::fidl::Result::Unbound());
 }
 #endif  // __Fuchsia__
 
@@ -190,8 +190,7 @@ fidl::internal::WireClientImpl<::fidl_test_nullable::SimpleProtocol>::Add(
 std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
     ::fidl_test_nullable::SimpleProtocol>::DispatchEvent(fidl::IncomingMessage&
                                                              msg) {
-  return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
-                            ZX_ERR_NOT_SUPPORTED};
+  return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__
 
@@ -235,8 +234,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     std::move(msg).CloseHandles();
-    txn->InternalError(
-        {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
+    txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal());
   }
   return dispatch_result;
 }
@@ -286,8 +284,7 @@ fidl::internal::WireDispatcher<::fidl_test_nullable::SimpleProtocol>::Dispatch(
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     std::move(msg).CloseHandles();
-    txn->InternalError(
-        {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
+    txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal());
   }
   return dispatch_result;
 }

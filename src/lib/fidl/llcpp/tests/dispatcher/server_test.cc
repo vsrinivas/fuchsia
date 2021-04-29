@@ -101,8 +101,8 @@ TEST(BindServerTestCase, InsufficientChannelRights) {
   sync_completion_t unbound;
   fidl::OnUnboundFn<TestServer> on_unbound = [&](TestServer*, fidl::UnbindInfo info,
                                                  fidl::ServerEnd<fidl_test::TestProtocol>) {
-    EXPECT_EQ(info.reason, fidl::UnbindInfo::Reason::kDispatcherError);
-    EXPECT_EQ(info.status, ZX_ERR_ACCESS_DENIED);
+    EXPECT_EQ(info.reason(), fidl::Reason::kDispatcherError);
+    EXPECT_EQ(info.status(), ZX_ERR_ACCESS_DENIED);
     sync_completion_signal(&unbound);
   };
   fidl::BindServer(loop.dispatcher(), std::move(server_end), std::make_unique<TestServer>(),
@@ -125,8 +125,8 @@ TEST(BindServerTestCase, PeerAlreadyClosed) {
   sync_completion_t unbound;
   fidl::OnUnboundFn<TestServer> on_unbound = [&](TestServer*, fidl::UnbindInfo info,
                                                  fidl::ServerEnd<fidl_test::TestProtocol>) {
-    EXPECT_EQ(info.reason, fidl::UnbindInfo::Reason::kPeerClosed);
-    EXPECT_EQ(info.status, ZX_ERR_PEER_CLOSED);
+    EXPECT_EQ(info.reason(), fidl::Reason::kPeerClosed);
+    EXPECT_EQ(info.status(), ZX_ERR_PEER_CLOSED);
     sync_completion_signal(&unbound);
   };
   fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), std::make_unique<TestServer>(),

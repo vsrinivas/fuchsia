@@ -202,7 +202,7 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   zx::status<netdev::wire::Fifos> Init();
   void Bind(fidl::ServerEnd<netdev::Session> channel);
   void StopTxThread();
-  void OnUnbind(fidl::UnbindInfo::Reason reason, fidl::ServerEnd<netdev::Session> channel);
+  void OnUnbind(fidl::Reason reason, fidl::ServerEnd<netdev::Session> channel);
   int Thread();
 
   // Detaches a port from the session.

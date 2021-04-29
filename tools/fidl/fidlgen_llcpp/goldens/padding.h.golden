@@ -6,10 +6,10 @@
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/envelope.h>
-#include <lib/fidl/llcpp/errors.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/message_storage.h>
 #include <lib/fidl/llcpp/object_view.h>
+#include <lib/fidl/llcpp/result.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/vector_view.h>
@@ -24,7 +24,6 @@
 #include <lib/fidl/llcpp/client.h>
 #include <lib/fidl/llcpp/client_end.h>
 #include <lib/fidl/llcpp/connect_service.h>
-#include <lib/fidl/llcpp/result.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/server_end.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
@@ -105,7 +104,7 @@ struct Padding7ByteMiddle {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
@@ -128,7 +127,7 @@ struct Padding7ByteMiddle {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -209,7 +208,7 @@ struct Padding7ByteEnd {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
@@ -232,7 +231,7 @@ struct Padding7ByteEnd {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -313,7 +312,7 @@ struct Padding6ByteMiddle {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
@@ -336,7 +335,7 @@ struct Padding6ByteMiddle {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -417,7 +416,7 @@ struct Padding6ByteEnd {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
@@ -440,7 +439,7 @@ struct Padding6ByteEnd {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -523,7 +522,7 @@ struct Padding5ByteMiddle {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
@@ -546,7 +545,7 @@ struct Padding5ByteMiddle {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -629,7 +628,7 @@ struct Padding5ByteEnd {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
@@ -652,7 +651,7 @@ struct Padding5ByteEnd {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -733,7 +732,7 @@ struct Padding4ByteMiddle {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
@@ -756,7 +755,7 @@ struct Padding4ByteMiddle {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -837,7 +836,7 @@ struct Padding4ByteEnd {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
@@ -860,7 +859,7 @@ struct Padding4ByteEnd {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -946,7 +945,7 @@ struct Padding4ByteAlignmentLength12 {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
@@ -969,7 +968,7 @@ struct Padding4ByteAlignmentLength12 {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -1050,7 +1049,7 @@ struct Padding3ByteMiddle {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
@@ -1073,7 +1072,7 @@ struct Padding3ByteMiddle {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -1154,7 +1153,7 @@ struct Padding3ByteEnd {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
@@ -1177,7 +1176,7 @@ struct Padding3ByteEnd {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -1258,7 +1257,7 @@ struct Padding2ByteMiddle {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
@@ -1281,7 +1280,7 @@ struct Padding2ByteMiddle {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -1362,7 +1361,7 @@ struct Padding2ByteEnd {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
@@ -1385,7 +1384,7 @@ struct Padding2ByteEnd {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -1469,7 +1468,7 @@ struct Padding2ByteAlignmentLength6 {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
@@ -1492,7 +1491,7 @@ struct Padding2ByteAlignmentLength6 {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -1573,7 +1572,7 @@ struct Padding1ByteMiddle {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
@@ -1596,7 +1595,7 @@ struct Padding1ByteMiddle {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -1677,7 +1676,7 @@ struct Padding1ByteEnd {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
@@ -1700,7 +1699,7 @@ struct Padding1ByteEnd {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();

@@ -402,7 +402,7 @@ TEST_F(TunTest, InvalidConfigs) {
     if (!RunLoopWithTimeoutOrUntil([handler] { return handler->info_.has_value(); }, kTimeout)) {
       return ZX_ERR_TIMED_OUT;
     }
-    return handler->info_.value().status;
+    return handler->info_.value().status();
   };
 
   // Zero MTU
@@ -497,8 +497,8 @@ TEST_F(TunTest, Teardown) {
       kTimeout, zx::duration::infinite()))
       << "Timed out waiting for channels to close; device_dead="
       << device_handler->info_.has_value() << ", mac_dead=" << mac_handler->info_.has_value();
-  ASSERT_STATUS(device_handler->info_.value().status, ZX_ERR_PEER_CLOSED);
-  ASSERT_STATUS(mac_handler->info_.value().status, ZX_ERR_PEER_CLOSED);
+  ASSERT_STATUS(device_handler->info_.value().status(), ZX_ERR_PEER_CLOSED);
+  ASSERT_STATUS(mac_handler->info_.value().status(), ZX_ERR_PEER_CLOSED);
 }
 
 TEST_F(TunTest, Status) {

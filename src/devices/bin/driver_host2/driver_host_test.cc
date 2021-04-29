@@ -257,7 +257,7 @@ TEST_F(DriverHostTest, Start_OutgoingServices) {
 
     zx_status_t status() const { return status_; }
 
-    void Unbound(fidl::UnbindInfo info) override { status_ = info.status; }
+    void Unbound(fidl::UnbindInfo info) override { status_ = info.status(); }
 
    private:
     zx_status_t status_ = ZX_ERR_INVALID_ARGS;

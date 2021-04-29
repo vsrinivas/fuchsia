@@ -150,13 +150,12 @@ extern "C" const fidl_type_t
       ::fidl::WireRequest<::fidl_test_union::TestProtocol::
                               StrictXUnionHenceResponseMayBeStackAllocated>>
       _request(zx_txid_t(0));
-  _request.GetOutgoingMessage()
-      .Call<::fidl::WireResponse<
-          ::fidl_test_union::TestProtocol::
-              StrictXUnionHenceResponseMayBeStackAllocated>>(
-          _client, bytes_.data(), bytes_.size());
-  status_ = _request.status();
-  error_ = _request.error();
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Call<
+      ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                               StrictXUnionHenceResponseMayBeStackAllocated>>(
+      _client, bytes_.data(), bytes_.size());
+  SetResult(_outgoing);
 }
 
 ::fidl::WireResult<::fidl_test_union::TestProtocol::
@@ -168,13 +167,12 @@ extern "C" const fidl_type_t
       ::fidl::WireRequest<::fidl_test_union::TestProtocol::
                               StrictXUnionHenceResponseMayBeStackAllocated>>
       _request(zx_txid_t(0));
-  _request.GetOutgoingMessage()
-      .Call<::fidl::WireResponse<
-          ::fidl_test_union::TestProtocol::
-              StrictXUnionHenceResponseMayBeStackAllocated>>(
-          _client, bytes_.data(), bytes_.size(), _deadline);
-  status_ = _request.status();
-  error_ = _request.error();
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Call<
+      ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                               StrictXUnionHenceResponseMayBeStackAllocated>>(
+      _client, bytes_.data(), bytes_.size(), _deadline);
+  SetResult(_outgoing);
 }
 namespace fidl_test_union {
 #endif  // __Fuchsia__
@@ -191,13 +189,12 @@ namespace fidl_test_union {
       ::fidl::WireRequest<::fidl_test_union::TestProtocol::
                               StrictXUnionHenceResponseMayBeStackAllocated>>
       _request(zx_txid_t(0));
-  _request.GetOutgoingMessage()
-      .Call<::fidl::WireResponse<
-          ::fidl_test_union::TestProtocol::
-              StrictXUnionHenceResponseMayBeStackAllocated>>(
-          _client, _response_bytes, _response_byte_capacity);
-  status_ = _request.status();
-  error_ = _request.error();
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Call<
+      ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                               StrictXUnionHenceResponseMayBeStackAllocated>>(
+      _client, _response_bytes, _response_byte_capacity);
+  ::fidl::Result::operator=(_outgoing);
 }
 namespace fidl_test_union {
 #endif  // __Fuchsia__
@@ -212,13 +209,12 @@ namespace fidl_test_union {
       ::fidl::WireRequest<::fidl_test_union::TestProtocol::
                               FlexibleXUnionHenceResponseMustBeHeapAllocated>>
       _request(zx_txid_t(0));
-  _request.GetOutgoingMessage()
-      .Call<::fidl::WireResponse<
-          ::fidl_test_union::TestProtocol::
-              FlexibleXUnionHenceResponseMustBeHeapAllocated>>(
-          _client, bytes_.data(), bytes_.size());
-  status_ = _request.status();
-  error_ = _request.error();
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Call<
+      ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                               FlexibleXUnionHenceResponseMustBeHeapAllocated>>(
+      _client, bytes_.data(), bytes_.size());
+  SetResult(_outgoing);
 }
 
 ::fidl::WireResult<::fidl_test_union::TestProtocol::
@@ -230,13 +226,12 @@ namespace fidl_test_union {
       ::fidl::WireRequest<::fidl_test_union::TestProtocol::
                               FlexibleXUnionHenceResponseMustBeHeapAllocated>>
       _request(zx_txid_t(0));
-  _request.GetOutgoingMessage()
-      .Call<::fidl::WireResponse<
-          ::fidl_test_union::TestProtocol::
-              FlexibleXUnionHenceResponseMustBeHeapAllocated>>(
-          _client, bytes_.data(), bytes_.size(), _deadline);
-  status_ = _request.status();
-  error_ = _request.error();
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Call<
+      ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                               FlexibleXUnionHenceResponseMustBeHeapAllocated>>(
+      _client, bytes_.data(), bytes_.size(), _deadline);
+  SetResult(_outgoing);
 }
 namespace fidl_test_union {
 #endif  // __Fuchsia__
@@ -253,13 +248,12 @@ namespace fidl_test_union {
       ::fidl::WireRequest<::fidl_test_union::TestProtocol::
                               FlexibleXUnionHenceResponseMustBeHeapAllocated>>
       _request(zx_txid_t(0));
-  _request.GetOutgoingMessage()
-      .Call<::fidl::WireResponse<
-          ::fidl_test_union::TestProtocol::
-              FlexibleXUnionHenceResponseMustBeHeapAllocated>>(
-          _client, _response_bytes, _response_byte_capacity);
-  status_ = _request.status();
-  error_ = _request.error();
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Call<
+      ::fidl::WireResponse<::fidl_test_union::TestProtocol::
+                               FlexibleXUnionHenceResponseMustBeHeapAllocated>>(
+      _client, _response_bytes, _response_byte_capacity);
+  ::fidl::Result::operator=(_outgoing);
 }
 namespace fidl_test_union {
 #endif  // __Fuchsia__
@@ -278,7 +272,7 @@ fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol>::
   }
   return ::fidl::WireResult<::fidl_test_union::TestProtocol::
                                 StrictXUnionHenceResponseMayBeStackAllocated>(
-      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
+      ::fidl::Result::Unbound());
 }
 #endif  // __Fuchsia__
 
@@ -299,7 +293,7 @@ fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol>::
   return ::fidl::WireUnownedResult<
       ::fidl_test_union::TestProtocol::
           StrictXUnionHenceResponseMayBeStackAllocated>(
-      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
+      ::fidl::Result::Unbound());
 }
 #endif  // __Fuchsia__
 
@@ -404,7 +398,7 @@ fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol>::
   }
   return ::fidl::WireResult<::fidl_test_union::TestProtocol::
                                 FlexibleXUnionHenceResponseMustBeHeapAllocated>(
-      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
+      ::fidl::Result::Unbound());
 }
 #endif  // __Fuchsia__
 
@@ -425,7 +419,7 @@ fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol>::
   return ::fidl::WireUnownedResult<
       ::fidl_test_union::TestProtocol::
           FlexibleXUnionHenceResponseMustBeHeapAllocated>(
-      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
+      ::fidl::Result::Unbound());
 }
 #endif  // __Fuchsia__
 
@@ -520,8 +514,7 @@ fidl::WireResponseContext<::fidl_test_union::TestProtocol::
 std::optional<::fidl::UnbindInfo>
 fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol>::DispatchEvent(
     fidl::IncomingMessage& msg) {
-  return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
-                            ZX_ERR_NOT_SUPPORTED};
+  return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__
 
@@ -583,8 +576,7 @@ fidl::internal::WireServerDispatcher<::fidl_test_union::TestProtocol>::Dispatch(
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     std::move(msg).CloseHandles();
-    txn->InternalError(
-        {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
+    txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal());
   }
   return dispatch_result;
 }
@@ -643,8 +635,7 @@ fidl::internal::WireDispatcher<::fidl_test_union::TestProtocol>::Dispatch(
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     std::move(msg).CloseHandles();
-    txn->InternalError(
-        {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
+    txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal());
   }
   return dispatch_result;
 }

@@ -633,8 +633,12 @@ The managed variants of each method of `SyncClient` and `Call` all return a
     first error encountered during (if applicable) linearizing, encoding, making
     a call on the underlying channel, and decoding the result. If the status is
     `ZX_OK`, the call has succeeded, and vice versa.
-*   `const char* error() const` contains a brief error message when status is
-    not `ZX_OK`. Otherwise, returns `nullptr`.
+*   `fidl::Reason reason() const` returns details about which operation failed,
+    when `status()` is not `ZX_OK`. For example, if encoding failed, `reason()`
+    will return `fidl::Reason::kEncodeError`. `reason()` should not be called
+    when status is `ZX_OK`.
+*   `const char* error_message() const` contains a brief error message when
+    status is not `ZX_OK`. Otherwise, returns `nullptr`.
 *   **(only for ResultOf and UnownedResultOf for two-way calls)** `T* Unwrap()`
     returns a pointer to the [response struct](#request-response-structs). For
     `ResultOf::`, the pointer points to memory owned by the result object. For
@@ -1098,7 +1102,7 @@ methods are available on an encoded FIDL type:
 
 * `bool encoded.ok()`
 * `zx_status_t encoded.status()`
-* `const char* encoded.error()`
+* `const char* encoded.error_message()`
 * `::fidl::OutgoingMessage& encoded.GetOutgoingMessage()`
 
 `::fidl::OutgoingMessage` is defined in
@@ -1127,7 +1131,7 @@ type:
 
 * `bool decoded.ok()`
 * `zx_status_t decoded.status()`
-* `const char* decoded.error()`
+* `const char* decoded.error_message()`
 * `FidlType* decoded.PrimaryObject()`
 * `void decoded.ReleasePrimaryObject()`
 

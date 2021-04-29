@@ -90,8 +90,8 @@ void BufferCollection::Bind(zx::channel channel) {
         // We need to keep a refptr to this class, since the unbind happens asynchronously and
         // can run after the parent closes a handle to this class.
         if (error_handler_) {
-          zx_status_t status = info.status;
-          if (async_failure_result_ && info.reason == fidl::UnbindInfo::kClose) {
+          zx_status_t status = info.status();
+          if (async_failure_result_ && info.reason() == fidl::Reason::kClose) {
             // On kClose the error is always ZX_OK, so report the real error to
             // LogicalBufferCollection if the close was caused by FailAsync or FailSync.
             status = *async_failure_result_;
@@ -674,7 +674,7 @@ void BufferCollection::MaybeCompleteWaitForBuffersAllocated() {
       FailAsync(FROM_HERE, reply_status.status(),
                 "fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated_"
                 "reply failed - status: %s",
-                reply_status.error());
+                reply_status.error_message());
       return;
     }
     // ~txn

@@ -141,6 +141,7 @@ TEST_F(HandleRightsTest, SyncSendTooFewRights) {
   auto resp = client.SendEventWithTransferAndSignal(std::move(ev));
   // The channel is closed after a rights error on the sending side.
   ASSERT_EQ(resp.status(), ZX_ERR_INVALID_ARGS);
+  ASSERT_EQ(resp.reason(), ::fidl::Reason::kTransportError);
 }
 
 TEST_F(HandleRightsTest, SyncSendTooManyRights) {
@@ -159,6 +160,7 @@ TEST_F(HandleRightsTest, SyncSendWrongType) {
   auto resp = client.SendChannel(zx::channel(ev.release()));
   // The channel is closed after a type error on the sending side.
   ASSERT_EQ(resp.status(), ZX_ERR_WRONG_TYPE);
+  ASSERT_EQ(resp.reason(), ::fidl::Reason::kTransportError);
 }
 
 TEST_F(HandleRightsTest, AsyncSendTooFewRights) {
@@ -169,6 +171,7 @@ TEST_F(HandleRightsTest, AsyncSendTooFewRights) {
   auto resp = client->SendEventWithTransferAndSignal(std::move(ev));
   // The channel is closed after a rights error on the sending side.
   ASSERT_EQ(resp.status(), ZX_ERR_INVALID_ARGS);
+  ASSERT_EQ(resp.reason(), ::fidl::Reason::kTransportError);
 }
 
 TEST_F(HandleRightsTest, AsyncSendTooManyRights) {
@@ -187,4 +190,5 @@ TEST_F(HandleRightsTest, AsyncSendWrongType) {
   auto resp = client->SendChannel(zx::channel(ev.release()));
   // The channel is closed after a type error on the sending side.
   ASSERT_EQ(resp.status(), ZX_ERR_WRONG_TYPE);
+  ASSERT_EQ(resp.reason(), ::fidl::Reason::kTransportError);
 }

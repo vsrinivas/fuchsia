@@ -38,7 +38,7 @@ std::optional<UnbindInfo> AsyncTransaction::Dispatch(std::shared_ptr<AsyncBindin
       return unbind_info_;
     case fidl::DispatchResult::kNotFound:
       // The message was not recognized by the |dispatch_fn_|.
-      return UnbindInfo{UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED};
+      return fidl::UnbindInfo::UnknownOrdinal();
   }
 }
 
@@ -68,7 +68,7 @@ void AsyncTransaction::EnableNextDispatch() {
   if (binding_raw->EnableNextDispatch() == ZX_OK) {
     *binding_released_ = true;
   } else {
-    unbind_info_ = {UnbindInfo::kUnbind, ZX_OK};
+    unbind_info_ = UnbindInfo::Unbind();
   }
 }
 
@@ -80,7 +80,8 @@ void AsyncTransaction::Close(zx_status_t epitaph) {
     }
     return;
   }
-  unbind_info_ = {UnbindInfo::kClose, epitaph};  // OnUnbind() will run after Dispatch() returns.
+  // OnUnbind() will run after Dispatch() returns.
+  unbind_info_ = UnbindInfo::Close(epitaph);
   // Return ownership of the binding to the dispatcher.
   auto* binding_raw = static_cast<AnyAsyncServerBinding*>(owned_binding_.get());
   binding_raw->keep_alive_ = std::move(owned_binding_);

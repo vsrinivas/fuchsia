@@ -168,7 +168,7 @@ class OutgoingMessage : public ::fidl::Result {
 
  protected:
   OutgoingMessage(fidl_outgoing_msg_t msg, uint32_t handle_capacity)
-      : ::fidl::Result(ZX_OK, nullptr), message_(msg), handle_capacity_(handle_capacity) {}
+      : ::fidl::Result(::fidl::Result::Ok()), message_(msg), handle_capacity_(handle_capacity) {}
 
   void EncodeImpl(const fidl_type_t* message_type, void* data);
 
@@ -195,7 +195,7 @@ class OutgoingMessage : public ::fidl::Result {
     return message_.iovec;
   }
 
-  void SetResult(zx_status_t status, const char* error) { Result::SetResult(status, error); }
+  using Result::SetResult;
 
   fidl_outgoing_msg_t message_ = {};
   uint32_t iovec_capacity_ = 0;
@@ -277,9 +277,8 @@ class IncomingMessage : public ::fidl::Result {
   // Creates an empty incoming message representing an error (e.g. failed to read from
   // a channel).
   //
-  // |status| must not be |ZX_OK|, and it is recommended to provide a non-null
-  // |error| reason string.
-  IncomingMessage(zx_status_t status, const char* error);
+  // |failure| must contain an error result.
+  explicit IncomingMessage(const ::fidl::Result& failure);
 
   IncomingMessage(const IncomingMessage&) = delete;
   IncomingMessage& operator=(const IncomingMessage&) = delete;
@@ -432,7 +431,7 @@ class OutgoingToIncomingMessage {
 
   [[nodiscard]] zx_status_t status() const { return incoming_message_.status(); }
   [[nodiscard]] bool ok() const { return incoming_message_.ok(); }
-  [[nodiscard]] const char* error() const { return incoming_message_.error(); }
+  [[nodiscard]] const char* error_message() const { return incoming_message_.error_message(); }
 
  private:
   static fidl::IncomingMessage ConversionImpl(OutgoingMessage& input,

@@ -34,9 +34,9 @@ extern "C" const fidl_type_t fidl_test_doccomments_InterfaceOnEventEventTable;
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_doccomments::Interface::Method>>
       _request(zx_txid_t(0));
-  _request.GetOutgoingMessage().Write(_client);
-  status_ = _request.status();
-  error_ = _request.error();
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Write(_client);
+  SetResult(_outgoing);
 }
 namespace fidl_test_doccomments {
 #endif  // __Fuchsia__
@@ -49,9 +49,9 @@ fidl::internal::WireClientImpl<::fidl_test_doccomments::Interface>::Method() {
     auto _res = ::fidl::WireResult<::fidl_test_doccomments::Interface::Method>(
         ::fidl::UnownedClientEnd<::fidl_test_doccomments::Interface>(
             _channel->handle()));
-    return ::fidl::Result(_res.status(), _res.error());
+    return _res;
   }
-  return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return ::fidl::Result::Unbound();
 }
 #endif  // __Fuchsia__
 
@@ -67,8 +67,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
             ::fidl::WireResponse<::fidl_test_doccomments::Interface::OnEvent>>
             decoded{std::move(msg)};
         if (!decoded.ok()) {
-          return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError,
-                                    decoded.status()};
+          return ::fidl::UnbindInfo{decoded};
         }
         event_handler_->OnEvent(decoded.PrimaryObject());
         return std::nullopt;
@@ -77,8 +76,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
         break;
     }
   }
-  return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
-                            ZX_ERR_NOT_SUPPORTED};
+  return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__
 
@@ -89,7 +87,8 @@ fidl::WireSyncEventHandler<::fidl_test_doccomments::Interface>::HandleOneEvent(
       ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ::zx::time::infinite(),
       nullptr);
   if (status != ZX_OK) {
-    return ::fidl::Result(status, ::fidl::kErrorWaitOneFailed);
+    return ::fidl::Result::TransportError(
+        status, ::fidl::internal::kErrorWaitOneFailed);
   }
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
     uint32_t x = 0;
@@ -114,7 +113,7 @@ fidl::WireSyncEventHandler<::fidl_test_doccomments::Interface>::HandleOneEvent(
     // This can only be due to a newer version of the protocol defining a new
     // event, whose size exceeds the maximum of known events in the current
     // protocol.
-    return ::fidl::Result(Unknown(), nullptr);
+    return ::fidl::Result::UnexpectedMessage(Unknown());
   }
   if (!msg.ok()) {
     return msg;
@@ -126,13 +125,13 @@ fidl::WireSyncEventHandler<::fidl_test_doccomments::Interface>::HandleOneEvent(
           ::fidl::WireResponse<::fidl_test_doccomments::Interface::OnEvent>>
           decoded{::std::move(msg)};
       if (!decoded.ok()) {
-        return ::fidl::Result(decoded.status(), decoded.error());
+        return ::fidl::Result(decoded);
       }
       OnEvent(decoded.PrimaryObject());
-      return ::fidl::Result(ZX_OK, nullptr);
+      return ::fidl::Result::Ok();
     }
     default: {
-      return ::fidl::Result(Unknown(), nullptr);
+      return ::fidl::Result::UnexpectedMessage(Unknown());
     }
   }
 }
@@ -172,8 +171,7 @@ fidl::WireSyncEventHandler<::fidl_test_doccomments::Interface>::HandleOneEvent(
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     std::move(msg).CloseHandles();
-    txn->InternalError(
-        {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
+    txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal());
   }
   return dispatch_result;
 }
@@ -215,8 +213,7 @@ fidl::internal::WireDispatcher<::fidl_test_doccomments::Interface>::Dispatch(
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     std::move(msg).CloseHandles();
-    txn->InternalError(
-        {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
+    txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal());
   }
   return dispatch_result;
 }

@@ -200,11 +200,11 @@ void Session::Bind(fidl::ServerEnd<netdev::Session> channel) {
   binding_ = fidl::BindServer(dispatcher_, std::move(channel), this,
                               [](Session* self, fidl::UnbindInfo info,
                                  fidl::ServerEnd<fuchsia_hardware_network::Session> server_end) {
-                                self->OnUnbind(info.reason, std::move(server_end));
+                                self->OnUnbind(info.reason(), std::move(server_end));
                               });
 }
 
-void Session::OnUnbind(fidl::UnbindInfo::Reason reason, fidl::ServerEnd<netdev::Session> channel) {
+void Session::OnUnbind(fidl::Reason reason, fidl::ServerEnd<netdev::Session> channel) {
   LOGF_TRACE("network-device(%s): session unbound, reason=%d", name(), reason);
 
   // Stop the Tx thread immediately, so we stop fetching more tx buffers from the client.
@@ -218,17 +218,17 @@ void Session::OnUnbind(fidl::UnbindInfo::Reason reason, fidl::ServerEnd<netdev::
   fifo_tx_.reset();
 
   switch (reason) {
-    case fidl::UnbindInfo::kUnbind:
-    case fidl::UnbindInfo::kDispatcherError:
-    case fidl::UnbindInfo::kChannelError:
-    case fidl::UnbindInfo::kEncodeError:
-    case fidl::UnbindInfo::kDecodeError:
-    case fidl::UnbindInfo::kUnexpectedMessage:
+    case fidl::Reason::kUnbind:
+    case fidl::Reason::kDispatcherError:
+    case fidl::Reason::kTransportError:
+    case fidl::Reason::kEncodeError:
+    case fidl::Reason::kDecodeError:
+    case fidl::Reason::kUnexpectedMessage:
       // Store the channel to send an epitaph once the session is destroyed.
       control_channel_ = std::move(channel);
       break;
-    case fidl::UnbindInfo::kClose:
-    case fidl::UnbindInfo::kPeerClosed:
+    case fidl::Reason::kClose:
+    case fidl::Reason::kPeerClosed:
       break;
   }
 

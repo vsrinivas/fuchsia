@@ -327,10 +327,11 @@ zx_status_t SyncTimeline::Bind(zx::channel request) {
 }
 
 void SyncTimeline::OnClose(fidl::UnbindInfo info, zx::channel channel) {
-  if (info.reason == fidl::UnbindInfo::kPeerClosed) {
-    zxlogf(INFO, "Client closed SyncTimeline connection: epitaph: %d", info.status);
-  } else if (info.reason != fidl::UnbindInfo::kUnbind && info.reason != fidl::UnbindInfo::kClose) {
-    zxlogf(ERROR, "Channel internal error: status: %d", info.status);
+  if (info.reason() == fidl::Reason::kPeerClosed) {
+    zxlogf(INFO, "Client closed SyncTimeline connection: epitaph: %d", info.status());
+  } else if (!info.ok()) {
+    zxlogf(ERROR, "Channel internal error: status: %d, description: %s", info.status(),
+           info.error_message());
   }
 
   if (InContainer()) {

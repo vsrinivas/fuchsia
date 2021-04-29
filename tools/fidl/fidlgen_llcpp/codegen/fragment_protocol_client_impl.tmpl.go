@@ -124,7 +124,7 @@ std::optional<::fidl::UnbindInfo>
       {
         ::fidl::DecodedMessage<{{ .WireResponse }}> decoded{std::move(msg)};
         if (!decoded.ok()) {
-          return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError, decoded.status()};
+          return ::fidl::UnbindInfo{decoded};
         }
         event_handler_->{{ .Name }}(decoded.PrimaryObject());
         return std::nullopt;
@@ -135,7 +135,7 @@ std::optional<::fidl::UnbindInfo>
     }
   }
   {{- end }}
-  return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED};
+  return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 {{- EndifFuchsia -}}
 {{- end }}

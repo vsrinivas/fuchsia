@@ -160,7 +160,8 @@ zx::status<fidl::ClientEnd<fdf::Driver>> DriverHostComponent::Start(
   auto start = driver_host_->Start(std::move(args), std::move(endpoints->server));
   if (!start.ok()) {
     auto binary = start_args::ProgramValue(program, "binary").value_or("");
-    LOGF(ERROR, "Failed to start driver '%s' in driver host: %s", binary.data(), start.error());
+    LOGF(ERROR, "Failed to start driver '%s' in driver host: %s", binary.data(),
+         start.error_message());
     return zx::error(start.status());
   }
   return zx::ok(std::move(endpoints->client));
@@ -495,7 +496,7 @@ void DriverRunner::Start(StartRequestView request, StartCompleter::Sync& complet
                                  .collection = fidl::StringView::FromExternal(collection)},
             std::move(destroy_callback));
         if (!destroy.ok()) {
-          LOGF(ERROR, "Failed to destroy component '%s': %s", name.data(), destroy.error());
+          LOGF(ERROR, "Failed to destroy component '%s': %s", name.data(), destroy.error_message());
         }
       });
   driver_args.node->set_driver_ref(bind_driver);
@@ -539,7 +540,8 @@ void DriverRunner::Bind(Node* node, fdf::wire::NodeAddArgs args,
   };
   auto match_result = driver_index_->MatchDriver(std::move(args), std::move(match_callback));
   if (!match_result.ok()) {
-    LOGF(ERROR, "Failed to call match driver %s: %s", node->name().data(), match_result.error());
+    LOGF(ERROR, "Failed to call match driver %s: %s", node->name().data(),
+         match_result.error_message());
     callback(zx::error(match_result.status()));
   }
 }
@@ -593,7 +595,7 @@ zx::status<fidl::ClientEnd<fio::Directory>> DriverRunner::CreateComponent(std::s
                              .collection = fidl::StringView::FromExternal(collection)},
         std::move(server_end), std::move(bind_callback));
     if (!bind.ok()) {
-      LOGF(ERROR, "Failed to bind component '%s': %s", name.data(), bind.error());
+      LOGF(ERROR, "Failed to bind component '%s': %s", name.data(), bind.error_message());
     }
   };
   fidl::FidlAllocator allocator;
@@ -605,7 +607,7 @@ zx::status<fidl::ClientEnd<fio::Directory>> DriverRunner::CreateComponent(std::s
       fsys::wire::CollectionRef{.name = fidl::StringView::FromExternal(collection)},
       std::move(child_decl), std::move(create_callback));
   if (!create.ok()) {
-    LOGF(ERROR, "Failed to create component '%s': %s", name.data(), create.error());
+    LOGF(ERROR, "Failed to create component '%s': %s", name.data(), create.error_message());
     return zx::error(ZX_ERR_INTERNAL);
   }
   return zx::ok(std::move(endpoints->client));

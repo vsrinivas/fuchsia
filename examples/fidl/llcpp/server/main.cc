@@ -27,13 +27,14 @@ class EchoImpl final : public fidl::WireServer<fuchsia_examples::Echo> {
     fidl::OnUnboundFn<EchoImpl> unbound_handler =
         [](EchoImpl* self, fidl::UnbindInfo info,
            fidl::ServerEnd<fuchsia_examples::Echo> server_end) {
-          switch (info.reason) {
-            case fidl::UnbindInfo::kClose:
-            case fidl::UnbindInfo::kUnbind:
+          switch (info.reason()) {
+            case fidl::Reason::kClose:
+            case fidl::Reason::kUnbind:
               // These are initiated by ourself.
               break;
             default:
-              std::cerr << "server error: " << info.reason << ", status: " << info.status
+              std::cerr << "server error: " << static_cast<int>(info.reason())
+                        << ", status: " << info.status() << ", message: " << info.error_message()
                         << std::endl;
           }
         };

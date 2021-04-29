@@ -75,17 +75,17 @@ class {{ .WireResult }} final : public ::fidl::Result {
                           .RequestArgs }})
    {
   ::fidl::OwnedEncodedMessage<{{ .WireRequest }}> _request(
-	  {{- RenderForwardParams "zx_txid_t(0)" .RequestArgs }});
+      {{- RenderForwardParams "zx_txid_t(0)" .RequestArgs }});
+  auto& _outgoing = _request.GetOutgoingMessage();
   {{- if .HasResponse }}
-  _request.GetOutgoingMessage().Call<{{ .WireResponse }}>(
+  _outgoing.Call<{{ .WireResponse }}>(
       _client,
       bytes_.data(),
       bytes_.size());
   {{- else }}
-  _request.GetOutgoingMessage().Write(_client);
+  _outgoing.Write(_client);
   {{- end }}
-  status_ = _request.status();
-  error_ = _request.error();
+  SetResult(_outgoing);
 }
   {{- if .HasResponse }}
 
@@ -95,13 +95,13 @@ class {{ .WireResult }} final : public ::fidl::Result {
    {
   ::fidl::OwnedEncodedMessage<{{ .WireRequest }}> _request(
 	  {{- RenderForwardParams "zx_txid_t(0)" .RequestArgs }});
-  _request.GetOutgoingMessage().Call<{{ .WireResponse }}>(
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Call<{{ .WireResponse }}>(
       _client,
       bytes_.data(),
       bytes_.size(),
       _deadline);
-  status_ = _request.status();
-  error_ = _request.error();
+  SetResult(_outgoing);
 }
   {{- end }}
 {{- EndifFuchsia -}}

@@ -73,7 +73,6 @@ if (is_fuchsia) {
       "lib/fidl/llcpp/coding.h",
       "lib/fidl/llcpp/connect_service.h",
       "lib/fidl/llcpp/envelope.h",
-      "lib/fidl/llcpp/errors.h",
       "lib/fidl/llcpp/extract_resource_on_destruction.h",
       "lib/fidl/llcpp/fidl_allocator.h",
       "lib/fidl/llcpp/internal/server_details.h",
@@ -89,7 +88,6 @@ if (is_fuchsia) {
       "lib/fidl/llcpp/sync_call.h",
       "lib/fidl/llcpp/traits.h",
       "lib/fidl/llcpp/transaction.h",
-      "lib/fidl/llcpp/types.h",
       "lib/fidl/llcpp/vector_view.h",
       "lib/fidl/llcpp/wire_messaging.h",
     ]
@@ -101,6 +99,7 @@ if (is_fuchsia) {
       "llcpp_coding.c",
       "llcpp_fidl_allocator.cc",
       "llcpp_message.cc",
+      "llcpp_result.cc",
       "llcpp_server.cc",
       "llcpp_transaction.cc",
     ]
@@ -117,7 +116,6 @@ if (is_fuchsia) {
       "//zircon/system/ulib/fbl:headers",
 
       # <lib/fidl/llcpp/sync_call.h> has #include <lib/fit/result.h>.
-      # <lib/fidl/llcpp/types.h> has #include <lib/fit/function.h>
       "//sdk/lib/fit:headers",
       "//sdk/lib/fit-promise:headers",
 
@@ -161,6 +159,7 @@ if (is_fuchsia) {
       "llcpp_coding.c",
       "llcpp_fidl_allocator.cc",
       "llcpp_message.cc",
+      "llcpp_result.cc",
     ]
     public_deps = [
       "//sdk/lib/fit:headers",

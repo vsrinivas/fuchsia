@@ -6,10 +6,10 @@
 #include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/envelope.h>
-#include <lib/fidl/llcpp/errors.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/message_storage.h>
 #include <lib/fidl/llcpp/object_view.h>
+#include <lib/fidl/llcpp/result.h>
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/vector_view.h>
@@ -24,7 +24,6 @@
 #include <lib/fidl/llcpp/client.h>
 #include <lib/fidl/llcpp/client_end.h>
 #include <lib/fidl/llcpp/connect_service.h>
-#include <lib/fidl/llcpp/result.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/server_end.h>
 #include <lib/fidl/llcpp/service_handler_interface.h>
@@ -829,7 +828,7 @@ struct ::fidl::WireRequest<
     zx_status_t status() const { return message_.status(); }
     const char* status_string() const { return message_.status_string(); }
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
     template <typename ChannelLike>
@@ -859,7 +858,7 @@ struct ::fidl::WireRequest<
     zx_status_t status() const { return message_.status(); }
     const char* status_string() const { return message_.status_string(); }
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -985,7 +984,7 @@ struct ::fidl::WireRequest<
     zx_status_t status() const { return message_.status(); }
     const char* status_string() const { return message_.status_string(); }
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
     template <typename ChannelLike>
@@ -1015,7 +1014,7 @@ struct ::fidl::WireRequest<
     zx_status_t status() const { return message_.status(); }
     const char* status_string() const { return message_.status_string(); }
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -1138,7 +1137,7 @@ struct ::fidl::WireResponse<
     zx_status_t status() const { return message_.status(); }
     const char* status_string() const { return message_.status_string(); }
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
     template <typename ChannelLike>
@@ -1171,7 +1170,7 @@ struct ::fidl::WireResponse<
     zx_status_t status() const { return message_.status(); }
     const char* status_string() const { return message_.status_string(); }
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -1294,7 +1293,7 @@ struct ::fidl::WireResponse<
     zx_status_t status() const { return message_.status(); }
     const char* status_string() const { return message_.status_string(); }
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
     template <typename ChannelLike>
@@ -1326,7 +1325,7 @@ struct ::fidl::WireResponse<
     zx_status_t status() const { return message_.status(); }
     const char* status_string() const { return message_.status_string(); }
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -1967,7 +1966,7 @@ struct WithErrorSyntaxResponseAsStructResponse {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
@@ -1990,7 +1989,7 @@ struct WithErrorSyntaxResponseAsStructResponse {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -2071,7 +2070,7 @@ struct WithErrorSyntaxErrorAsPrimitiveResponse {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
@@ -2094,7 +2093,7 @@ struct WithErrorSyntaxErrorAsPrimitiveResponse {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -2175,7 +2174,7 @@ struct WithErrorSyntaxErrorAsEnumResponse {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
@@ -2198,7 +2197,7 @@ struct WithErrorSyntaxErrorAsEnumResponse {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -2351,7 +2350,7 @@ struct ::fidl::WireRequest<::fidl_test_protocols::DiscoverableProtocol::Method>
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
@@ -2381,7 +2380,7 @@ struct ::fidl::WireRequest<::fidl_test_protocols::DiscoverableProtocol::Method>
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -2766,7 +2765,7 @@ struct ::fidl::WireRequest<::fidl_test_protocols::Transitional::Request> final {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
@@ -2796,7 +2795,7 @@ struct ::fidl::WireRequest<::fidl_test_protocols::Transitional::Request> final {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -2905,7 +2904,7 @@ struct ::fidl::WireResponse<::fidl_test_protocols::Transitional::Request>
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
@@ -2937,7 +2936,7 @@ struct ::fidl::WireResponse<::fidl_test_protocols::Transitional::Request>
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -3048,7 +3047,7 @@ struct ::fidl::WireRequest<::fidl_test_protocols::Transitional::OneWay> final {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
@@ -3078,7 +3077,7 @@ struct ::fidl::WireRequest<::fidl_test_protocols::Transitional::OneWay> final {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -3185,7 +3184,7 @@ struct ::fidl::WireResponse<::fidl_test_protocols::Transitional::Event> final {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
@@ -3217,7 +3216,7 @@ struct ::fidl::WireResponse<::fidl_test_protocols::Transitional::Event> final {
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -3883,7 +3882,7 @@ struct ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MethodA>
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
@@ -3914,7 +3913,7 @@ struct ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MethodA>
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -4024,7 +4023,7 @@ struct ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::EventA>
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
@@ -4056,7 +4055,7 @@ struct ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::EventA>
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -4170,7 +4169,7 @@ struct ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MethodB>
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
@@ -4201,7 +4200,7 @@ struct ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MethodB>
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -4308,7 +4307,7 @@ struct ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::MethodB>
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
@@ -4340,7 +4339,7 @@ struct ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::MethodB>
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -4458,7 +4457,7 @@ struct ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::TakeHandle>
     zx_status_t status() const { return message_.status(); }
     const char* status_string() const { return message_.status_string(); }
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
     template <typename ChannelLike>
@@ -4488,7 +4487,7 @@ struct ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::TakeHandle>
     zx_status_t status() const { return message_.status(); }
     const char* status_string() const { return message_.status_string(); }
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -4598,7 +4597,7 @@ struct ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::TakeHandle>
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
@@ -4630,7 +4629,7 @@ struct ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::TakeHandle>
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -4750,7 +4749,7 @@ struct ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MutateSocket>
     zx_status_t status() const { return message_.status(); }
     const char* status_string() const { return message_.status_string(); }
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
     template <typename ChannelLike>
@@ -4780,7 +4779,7 @@ struct ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MutateSocket>
     zx_status_t status() const { return message_.status(); }
     const char* status_string() const { return message_.status_string(); }
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -4901,7 +4900,7 @@ struct ::fidl::WireResponse<
     zx_status_t status() const { return message_.status(); }
     const char* status_string() const { return message_.status_string(); }
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
     template <typename ChannelLike>
@@ -4933,7 +4932,7 @@ struct ::fidl::WireResponse<
     zx_status_t status() const { return message_.status(); }
     const char* status_string() const { return message_.status_string(); }
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -6125,7 +6124,7 @@ struct ::fidl::WireRequest<
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
@@ -6155,7 +6154,7 @@ struct ::fidl::WireRequest<
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -6263,7 +6262,7 @@ struct ::fidl::WireRequest<
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
@@ -6293,7 +6292,7 @@ struct ::fidl::WireRequest<
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -6403,7 +6402,7 @@ struct ::fidl::WireResponse<
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
@@ -6436,7 +6435,7 @@ struct ::fidl::WireResponse<
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -6548,7 +6547,7 @@ struct ::fidl::WireRequest<
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
@@ -6578,7 +6577,7 @@ struct ::fidl::WireRequest<
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -6690,7 +6689,7 @@ struct ::fidl::WireResponse<
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
@@ -6723,7 +6722,7 @@ struct ::fidl::WireResponse<
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -6839,7 +6838,7 @@ struct ::fidl::WireRequest<
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
@@ -6870,7 +6869,7 @@ struct ::fidl::WireRequest<
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -6985,7 +6984,7 @@ struct ::fidl::WireRequest<
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
@@ -7016,7 +7015,7 @@ struct ::fidl::WireRequest<
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -7127,7 +7126,7 @@ struct ::fidl::WireResponse<
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
@@ -7160,7 +7159,7 @@ struct ::fidl::WireResponse<
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -7279,7 +7278,7 @@ struct ::fidl::WireRequest<
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
@@ -7310,7 +7309,7 @@ struct ::fidl::WireRequest<
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -7424,7 +7423,7 @@ struct ::fidl::WireResponse<
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
@@ -7457,7 +7456,7 @@ struct ::fidl::WireResponse<
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -7569,7 +7568,7 @@ struct ::fidl::WireResponse<
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
@@ -7602,7 +7601,7 @@ struct ::fidl::WireResponse<
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -7716,7 +7715,7 @@ struct ::fidl::WireResponse<
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
@@ -7749,7 +7748,7 @@ struct ::fidl::WireResponse<
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -9401,7 +9400,7 @@ struct ::fidl::WireRequest<
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
@@ -9431,7 +9430,7 @@ struct ::fidl::WireRequest<
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -9546,7 +9545,7 @@ struct ::fidl::WireResponse<
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
@@ -9580,7 +9579,7 @@ struct ::fidl::WireResponse<
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -9688,7 +9687,7 @@ struct ::fidl::WireRequest<
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
@@ -9718,7 +9717,7 @@ struct ::fidl::WireRequest<
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -9833,7 +9832,7 @@ struct ::fidl::WireResponse<
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
@@ -9867,7 +9866,7 @@ struct ::fidl::WireResponse<
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -9974,7 +9973,7 @@ struct ::fidl::WireRequest<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
@@ -10004,7 +10003,7 @@ struct ::fidl::WireRequest<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
@@ -10116,7 +10115,7 @@ struct ::fidl::WireResponse<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
@@ -10149,7 +10148,7 @@ struct ::fidl::WireResponse<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>
     const char* status_string() const { return message_.status_string(); }
 #endif  // __Fuchsia__
     bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
+    const char* error_message() const { return message_.error_message(); }
 
     ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();

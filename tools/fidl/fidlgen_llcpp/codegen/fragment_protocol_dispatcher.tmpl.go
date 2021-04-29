@@ -74,12 +74,12 @@ struct {{ .WireServerDispatcher }} final {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     std::move(msg).CloseHandles();
-    txn->InternalError({::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
+    txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal());
   }
   return dispatch_result;
   {{- else }}
   std::move(msg).CloseHandles();
-  txn->InternalError({::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
+  txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal());
   return ::fidl::DispatchResult::kNotFound;
   {{- end }}
 }
@@ -131,12 +131,12 @@ struct {{ .WireServerDispatcher }} final {
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     std::move(msg).CloseHandles();
-    txn->InternalError({::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
+    txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal());
   }
   return dispatch_result;
   {{- else }}
   std::move(msg).CloseHandles();
-  txn->InternalError({::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
+  txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal());
   return ::fidl::DispatchResult::kNotFound;
   {{- end }}
 }

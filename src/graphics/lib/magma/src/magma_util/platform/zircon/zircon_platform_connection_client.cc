@@ -490,13 +490,13 @@ magma_status_t PrimaryWrapper::GetError() {
     auto unbind_info = async_handler_->unbind_info();
     DASSERT(unbind_info);
     if (unbind_info) {
-      DMESSAGE("Primary protocol unbind_info: reason %d status %d", unbind_info->reason,
-               unbind_info->status);
+      DMESSAGE("Primary protocol unbind_info: reason %d status %d error %s", unbind_info->reason(),
+               unbind_info->status(), unbind_info->error_message());
       error_ = MAGMA_STATUS_INTERNAL_ERROR;
-      if (unbind_info->reason == fidl::UnbindInfo::kPeerClosed) {
-        if (unbind_info->status > 0) {
-          error_ = -unbind_info->status;
-        } else if (unbind_info->status == ZX_ERR_PEER_CLOSED) {
+      if (unbind_info->reason() == fidl::Reason::kPeerClosed) {
+        if (unbind_info->status() > 0) {
+          error_ = -unbind_info->status();
+        } else if (unbind_info->status() == ZX_ERR_PEER_CLOSED) {
           // ZX_ERR_PEER_CLOSED may be returned if the MSD crashes
           error_ = MAGMA_STATUS_CONNECTION_LOST;
         } else {

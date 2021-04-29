@@ -36,17 +36,19 @@ NetworkDeviceClient::NetworkDeviceClient(fidl::ClientEnd<netdev::Device> handle,
         return async_get_default_dispatcher();
       }()),
       device_handler_(std::make_shared<EventHandler<netdev::Device>>([this](fidl::UnbindInfo info) {
-        if (info.status != ZX_OK) {
-          FX_LOGS(ERROR) << "device handler error " << zx_status_get_string(info.status);
-          ErrorTeardown(info.status);
+        if (!info.ok()) {
+          FX_LOGS(ERROR) << "device handler error: " << info.status_string()
+                         << ", message: " << info.error_message();
+          ErrorTeardown(info.status());
         }
       })),
       device_(std::move(handle), dispatcher_, device_handler_),
       session_handler_(
           std::make_shared<EventHandler<netdev::Session>>([this](fidl::UnbindInfo info) {
-            if (info.status != ZX_OK) {
-              FX_LOGS(ERROR) << "session handler error " << zx_status_get_string(info.status);
-              ErrorTeardown(info.status);
+            if (!info.ok()) {
+              FX_LOGS(ERROR) << "session handler error: " << info.status_string()
+                             << ", message: " << info.error_message();
+              ErrorTeardown(info.status());
             }
           })),
       executor_(std::make_unique<async::Executor>(dispatcher_)) {}

@@ -162,8 +162,8 @@ TEST(GenAPITestCase, Epitaph) {
     explicit EventHandler(sync_completion_t& unbound) : unbound_(unbound) {}
 
     void Unbound(fidl::UnbindInfo info) override {
-      EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
-      EXPECT_EQ(ZX_ERR_BAD_STATE, info.status);
+      EXPECT_EQ(fidl::Reason::kPeerClosed, info.reason());
+      EXPECT_EQ(ZX_ERR_BAD_STATE, info.status());
       sync_completion_signal(&unbound_);
     };
 
@@ -210,8 +210,8 @@ TEST(GenAPITestCase, UnbindInfoEncodeError) {
   fidl::OnUnboundFn<ErrorServer> on_unbound =
       [&done](ErrorServer*, fidl::UnbindInfo info,
               fidl::ServerEnd<fidl_test_coding_fuchsia::Example>) {
-        EXPECT_EQ(fidl::UnbindInfo::kEncodeError, info.reason);
-        EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL, info.status);
+        EXPECT_EQ(fidl::Reason::kEncodeError, info.reason());
+        EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL, info.status());
         sync_completion_signal(&done);
       };
   auto server = std::make_unique<ErrorServer>();
@@ -246,7 +246,7 @@ TEST(GenAPITestCase, UnbindInfoDecodeError) {
     }
 
     void Unbound(fidl::UnbindInfo info) override {
-      EXPECT_EQ(fidl::UnbindInfo::kDecodeError, info.reason);
+      EXPECT_EQ(fidl::Reason::kDecodeError, info.reason());
       sync_completion_signal(&done_);
     };
 

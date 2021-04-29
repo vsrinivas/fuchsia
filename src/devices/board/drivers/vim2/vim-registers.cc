@@ -70,8 +70,8 @@ zx_status_t Vim::RegistersInit() {
   auto metadata =
       registers::BuildMetadata(allocator, std::move(mmio_entries), std::move(register_entries));
   fidl::OwnedEncodedMessage<registers::Metadata> encoded_metadata(&metadata);
-  if (!encoded_metadata.ok() || (encoded_metadata.error() != nullptr)) {
-    zxlogf(ERROR, "%s: Could not build metadata %s\n", __func__, encoded_metadata.error());
+  if (!encoded_metadata.ok()) {
+    zxlogf(ERROR, "%s: Could not build metadata %s\n", __func__, encoded_metadata.error_message());
     return encoded_metadata.status();
   }
 

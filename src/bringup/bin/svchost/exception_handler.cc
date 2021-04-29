@@ -53,12 +53,12 @@ void ExceptionHandler::SetUpClient() {
 void ExceptionHandler::OnUnbind(const fidl::UnbindInfo info) {
   // If the unbind was not an error, don't reconnect and stop sending exceptions to
   // fuchsia.exception.Handler. This should only happen in tests.
-  if (info.status == ZX_OK || info.status == ZX_ERR_CANCELED) {
+  if (info.status() == ZX_OK || info.status() == ZX_ERR_CANCELED) {
     drop_exceptions_ = true;
     return;
   }
 
-  LogError("Lost connection to fuchsia.exception.Handler", info.status);
+  LogError("Lost connection to fuchsia.exception.Handler", info.status());
 
   // We immediately bind the |connection_| again, but we don't re-connect to the server of
   // fuchsia.exception.Handler, i.e sending the other endpoint of the channel to the server. Instead

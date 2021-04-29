@@ -39,9 +39,9 @@ extern "C" const fidl_type_t
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::Send>>
       _request(zx_txid_t(0), e);
-  _request.GetOutgoingMessage().Write(_client);
-  status_ = _request.status();
-  error_ = _request.error();
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Write(_client);
+  SetResult(_outgoing);
 }
 namespace fidl_test_emptystruct {
 #endif  // __Fuchsia__
@@ -56,10 +56,10 @@ namespace fidl_test_emptystruct {
         const ::fidl_test_emptystruct::wire::Empty& e) {
   ::fidl::UnownedEncodedMessage<
       ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::Send>>
-      _request(_request_bytes, _request_byte_capacity, 0, e);
-  _request.GetOutgoingMessage().Write(_client);
-  status_ = _request.status();
-  error_ = _request.error();
+      _request(_request_bytes, _request_byte_capacity, zx_txid_t(0), e);
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Write(_client);
+  ::fidl::Result::operator=(_outgoing);
 }
 namespace fidl_test_emptystruct {
 #endif  // __Fuchsia__
@@ -73,12 +73,11 @@ namespace fidl_test_emptystruct {
   ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>>
       _request(zx_txid_t(0), e);
-  _request.GetOutgoingMessage()
-      .Call<::fidl::WireResponse<
-          ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>>(
-          _client, bytes_.data(), bytes_.size());
-  status_ = _request.status();
-  error_ = _request.error();
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Call<::fidl::WireResponse<
+      ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>>(
+      _client, bytes_.data(), bytes_.size());
+  SetResult(_outgoing);
 }
 
 ::fidl::WireResult<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>::
@@ -89,12 +88,11 @@ namespace fidl_test_emptystruct {
   ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>>
       _request(zx_txid_t(0), e);
-  _request.GetOutgoingMessage()
-      .Call<::fidl::WireResponse<
-          ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>>(
-          _client, bytes_.data(), bytes_.size(), _deadline);
-  status_ = _request.status();
-  error_ = _request.error();
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Call<::fidl::WireResponse<
+      ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>>(
+      _client, bytes_.data(), bytes_.size(), _deadline);
+  SetResult(_outgoing);
 }
 namespace fidl_test_emptystruct {
 #endif  // __Fuchsia__
@@ -112,13 +110,12 @@ namespace fidl_test_emptystruct {
     : bytes_(_response_bytes) {
   ::fidl::UnownedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>>
-      _request(_request_bytes, _request_byte_capacity, 0, e);
-  _request.GetOutgoingMessage()
-      .Call<::fidl::WireResponse<
-          ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>>(
-          _client, _response_bytes, _response_byte_capacity);
-  status_ = _request.status();
-  error_ = _request.error();
+      _request(_request_bytes, _request_byte_capacity, zx_txid_t(0), e);
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Call<::fidl::WireResponse<
+      ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>>(
+      _client, _response_bytes, _response_byte_capacity);
+  ::fidl::Result::operator=(_outgoing);
 }
 namespace fidl_test_emptystruct {
 #endif  // __Fuchsia__
@@ -134,9 +131,9 @@ fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::Send(
             ::fidl::UnownedClientEnd<::fidl_test_emptystruct::EmptyProtocol>(
                 _channel->handle()),
             e);
-    return ::fidl::Result(_res.status(), _res.error());
+    return _res;
   }
-  return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return ::fidl::Result::Unbound();
 }
 #endif  // __Fuchsia__
 
@@ -151,9 +148,9 @@ fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::Send(
             ::fidl::UnownedClientEnd<::fidl_test_emptystruct::EmptyProtocol>(
                 _channel->handle()),
             _request_buffer.data, _request_buffer.capacity, e);
-    return ::fidl::Result(_res.status(), _res.error());
+    return _res;
   }
-  return ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound);
+  return ::fidl::Result::Unbound();
 }
 #endif  // __Fuchsia__
 
@@ -170,7 +167,7 @@ fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::
   }
   return ::fidl::WireResult<
       ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>(
-      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
+      ::fidl::Result::Unbound());
 }
 #endif  // __Fuchsia__
 
@@ -191,7 +188,7 @@ fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::
   }
   return ::fidl::WireUnownedResult<
       ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>(
-      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
+      ::fidl::Result::Unbound());
 }
 #endif  // __Fuchsia__
 
@@ -285,8 +282,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
             ::fidl_test_emptystruct::EmptyProtocol::Receive>>
             decoded{std::move(msg)};
         if (!decoded.ok()) {
-          return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError,
-                                    decoded.status()};
+          return ::fidl::UnbindInfo{decoded};
         }
         event_handler_->Receive(decoded.PrimaryObject());
         return std::nullopt;
@@ -295,8 +291,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
         break;
     }
   }
-  return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
-                            ZX_ERR_NOT_SUPPORTED};
+  return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__
 
@@ -309,7 +304,8 @@ fidl::WireSyncEventHandler<::fidl_test_emptystruct::EmptyProtocol>::
       ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ::zx::time::infinite(),
       nullptr);
   if (status != ZX_OK) {
-    return ::fidl::Result(status, ::fidl::kErrorWaitOneFailed);
+    return ::fidl::Result::TransportError(
+        status, ::fidl::internal::kErrorWaitOneFailed);
   }
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
     uint32_t x = 0;
@@ -335,7 +331,7 @@ fidl::WireSyncEventHandler<::fidl_test_emptystruct::EmptyProtocol>::
     // This can only be due to a newer version of the protocol defining a new
     // event, whose size exceeds the maximum of known events in the current
     // protocol.
-    return ::fidl::Result(Unknown(), nullptr);
+    return ::fidl::Result::UnexpectedMessage(Unknown());
   }
   if (!msg.ok()) {
     return msg;
@@ -347,13 +343,13 @@ fidl::WireSyncEventHandler<::fidl_test_emptystruct::EmptyProtocol>::
           ::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::Receive>>
           decoded{::std::move(msg)};
       if (!decoded.ok()) {
-        return ::fidl::Result(decoded.status(), decoded.error());
+        return ::fidl::Result(decoded);
       }
       Receive(decoded.PrimaryObject());
-      return ::fidl::Result(ZX_OK, nullptr);
+      return ::fidl::Result::Ok();
     }
     default: {
-      return ::fidl::Result(Unknown(), nullptr);
+      return ::fidl::Result::UnexpectedMessage(Unknown());
     }
   }
 }
@@ -418,8 +414,7 @@ fidl::WireSyncEventHandler<::fidl_test_emptystruct::EmptyProtocol>::
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     std::move(msg).CloseHandles();
-    txn->InternalError(
-        {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
+    txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal());
   }
   return dispatch_result;
 }
@@ -489,8 +484,7 @@ fidl::WireServer<::fidl_test_emptystruct::EmptyProtocol>::dispatch_message(
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     std::move(msg).CloseHandles();
-    txn->InternalError(
-        {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
+    txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal());
   }
   return dispatch_result;
 }

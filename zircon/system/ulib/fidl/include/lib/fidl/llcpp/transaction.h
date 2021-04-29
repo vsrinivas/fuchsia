@@ -8,7 +8,6 @@
 #include <lib/fidl/llcpp/message_storage.h>
 #include <lib/fidl/llcpp/result.h>
 #include <lib/fidl/llcpp/traits.h>
-#include <lib/fidl/llcpp/types.h>
 #include <lib/fidl/txn_header.h>
 #include <zircon/assert.h>
 #include <zircon/fidl.h>

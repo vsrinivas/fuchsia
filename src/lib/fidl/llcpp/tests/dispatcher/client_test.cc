@@ -142,8 +142,9 @@ TEST(ClientBindingTestCase, AsyncTxn) {
         : unbound_(unbound), client_(client) {}
 
     void Unbound(::fidl::UnbindInfo info) override {
-      EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
-      EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status);
+      EXPECT_EQ(fidl::Reason::kPeerClosed, info.reason());
+      EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status());
+      EXPECT_EQ(std::string("peer closed"), std::string(info.error_message()));
       EXPECT_EQ(0, client_->GetTxidCount());
       sync_completion_signal(&unbound_);
     }
@@ -186,8 +187,8 @@ TEST(ClientBindingTestCase, ParallelAsyncTxns) {
         : unbound_(unbound), client_(client) {}
 
     void Unbound(::fidl::UnbindInfo info) override {
-      EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
-      EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status);
+      EXPECT_EQ(fidl::Reason::kPeerClosed, info.reason());
+      EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status());
       EXPECT_EQ(0, client_->GetTxidCount());
       sync_completion_signal(&unbound_);
     }
@@ -258,8 +259,9 @@ TEST(ClientBindingTestCase, UnknownResponseTxid) {
         : unbound_(unbound), client_(client) {}
 
     void Unbound(::fidl::UnbindInfo info) override {
-      EXPECT_EQ(fidl::UnbindInfo::kUnexpectedMessage, info.reason);
-      EXPECT_EQ(ZX_ERR_NOT_FOUND, info.status);
+      EXPECT_EQ(fidl::Reason::kUnexpectedMessage, info.reason());
+      EXPECT_EQ(ZX_ERR_NOT_FOUND, info.status());
+      EXPECT_EQ(std::string(fidl::internal::kErrorUnknownTxId), std::string(info.error_message()));
       EXPECT_EQ(0, client_->GetTxidCount());
       sync_completion_signal(&unbound_);
     }
@@ -298,8 +300,8 @@ TEST(ClientBindingTestCase, Events) {
         : unbound_(unbound), client_(client) {}
 
     void Unbound(::fidl::UnbindInfo info) override {
-      EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
-      EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status);
+      EXPECT_EQ(fidl::Reason::kPeerClosed, info.reason());
+      EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status());
       EXPECT_EQ(10, client_->GetEventCount());  // Expect 10 events.
       sync_completion_signal(&unbound_);
     }
@@ -343,8 +345,8 @@ TEST(ClientBindingTestCase, Unbind) {
     explicit EventHandler(sync_completion_t& unbound) : unbound_(unbound) {}
 
     void Unbound(::fidl::UnbindInfo info) override {
-      EXPECT_EQ(fidl::UnbindInfo::kUnbind, info.reason);
-      EXPECT_OK(info.status);
+      EXPECT_EQ(fidl::Reason::kUnbind, info.reason());
+      EXPECT_OK(info.status());
       sync_completion_signal(&unbound_);
     }
 
@@ -375,8 +377,8 @@ TEST(ClientBindingTestCase, UnbindOnDestroy) {
     explicit EventHandler(sync_completion_t& unbound) : unbound_(unbound) {}
 
     void Unbound(::fidl::UnbindInfo info) override {
-      EXPECT_EQ(fidl::UnbindInfo::kUnbind, info.reason);
-      EXPECT_OK(info.status);
+      EXPECT_EQ(fidl::Reason::kUnbind, info.reason());
+      EXPECT_OK(info.status());
       sync_completion_signal(&unbound_);
     }
 
@@ -407,8 +409,8 @@ TEST(ClientBindingTestCase, UnbindWhileActiveChannelRefs) {
     explicit EventHandler(sync_completion_t& unbound) : unbound_(unbound) {}
 
     void Unbound(::fidl::UnbindInfo info) override {
-      EXPECT_EQ(fidl::UnbindInfo::kUnbind, info.reason);
-      EXPECT_OK(info.status);
+      EXPECT_EQ(fidl::Reason::kUnbind, info.reason());
+      EXPECT_OK(info.status());
       sync_completion_signal(&unbound_);
     }
 
@@ -448,8 +450,8 @@ TEST(ClientBindingTestCase, Clone) {
         : unbound_(unbound), client_(client) {}
 
     void Unbound(::fidl::UnbindInfo info) override {
-      EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
-      EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status);
+      EXPECT_EQ(fidl::Reason::kPeerClosed, info.reason());
+      EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status());
       // All the transactions should be finished by the time the connection is dropped.
       EXPECT_EQ(0, client_->GetTxidCount());
       sync_completion_signal(&unbound_);
@@ -505,8 +507,8 @@ TEST(ClientBindingTestCase, CloneCanExtendClientLifetime) {
     void Unbound(::fidl::UnbindInfo info) override {
       // The reason should be |kUnbind| because |outer_clone| going out of
       // scope will trigger unbinding.
-      EXPECT_EQ(fidl::UnbindInfo::kUnbind, info.reason);
-      EXPECT_EQ(ZX_OK, info.status);
+      EXPECT_EQ(fidl::Reason::kUnbind, info.reason());
+      EXPECT_EQ(ZX_OK, info.status());
       did_unbind_ = true;
     }
 
@@ -572,8 +574,8 @@ TEST(ClientBindingTestCase, CloneSupportsExplicitUnbind) {
 
     void Unbound(::fidl::UnbindInfo info) override {
       // The reason should be |kUnbind| because we are explicitly calling |Unbind|.
-      EXPECT_EQ(fidl::UnbindInfo::kUnbind, info.reason);
-      EXPECT_EQ(ZX_OK, info.status);
+      EXPECT_EQ(fidl::Reason::kUnbind, info.reason());
+      EXPECT_EQ(ZX_OK, info.status());
       did_unbind_ = true;
     }
 
@@ -614,8 +616,8 @@ TEST(ClientBindingTestCase, CloneSupportsWaitForChannel) {
     void Unbound(::fidl::UnbindInfo info) override {
       // The reason should be |kUnbind| because we are calling |WaitForChannel|
       // which triggers unbinding.
-      EXPECT_EQ(fidl::UnbindInfo::kUnbind, info.reason);
-      EXPECT_EQ(ZX_OK, info.status);
+      EXPECT_EQ(fidl::Reason::kUnbind, info.reason());
+      EXPECT_EQ(ZX_OK, info.status());
       sync_completion_signal(&did_unbind_);
     }
 
@@ -722,8 +724,8 @@ TEST(ClientBindingTestCase, Epitaph) {
     explicit EventHandler(sync_completion_t& unbound) : unbound_(unbound) {}
 
     void Unbound(::fidl::UnbindInfo info) override {
-      EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
-      EXPECT_EQ(ZX_ERR_BAD_STATE, info.status);
+      EXPECT_EQ(fidl::Reason::kPeerClosed, info.reason());
+      EXPECT_EQ(ZX_ERR_BAD_STATE, info.status());
       sync_completion_signal(&unbound_);
     }
 
@@ -754,9 +756,9 @@ TEST(ClientBindingTestCase, PeerClosedNoEpitaph) {
     explicit EventHandler(sync_completion_t& unbound) : unbound_(unbound) {}
 
     void Unbound(::fidl::UnbindInfo info) override {
-      EXPECT_EQ(fidl::UnbindInfo::kPeerClosed, info.reason);
+      EXPECT_EQ(fidl::Reason::kPeerClosed, info.reason());
       // No epitaph is equivalent to ZX_ERR_PEER_CLOSED epitaph.
-      EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status);
+      EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status());
       sync_completion_signal(&unbound_);
     }
 

@@ -22,12 +22,11 @@ extern "C" const fidl_type_t
   ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>
       _request(zx_txid_t(0));
-  _request.GetOutgoingMessage()
-      .Call<::fidl::WireResponse<
-          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>(
-          _client, bytes_.data(), bytes_.size());
-  status_ = _request.status();
-  error_ = _request.error();
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Call<::fidl::WireResponse<
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>(
+      _client, bytes_.data(), bytes_.size());
+  SetResult(_outgoing);
 }
 
 ::fidl::WireResult<
@@ -39,12 +38,11 @@ extern "C" const fidl_type_t
   ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>
       _request(zx_txid_t(0));
-  _request.GetOutgoingMessage()
-      .Call<::fidl::WireResponse<
-          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>(
-          _client, bytes_.data(), bytes_.size(), _deadline);
-  status_ = _request.status();
-  error_ = _request.error();
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Call<::fidl::WireResponse<
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>(
+      _client, bytes_.data(), bytes_.size(), _deadline);
+  SetResult(_outgoing);
 }
 namespace fidl_test_foreigntypeinresponseusedthroughcompose {
 #endif  // __Fuchsia__
@@ -62,12 +60,11 @@ namespace fidl_test_foreigntypeinresponseusedthroughcompose {
   ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>
       _request(zx_txid_t(0));
-  _request.GetOutgoingMessage()
-      .Call<::fidl::WireResponse<
-          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>(
-          _client, _response_bytes, _response_byte_capacity);
-  status_ = _request.status();
-  error_ = _request.error();
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Call<::fidl::WireResponse<
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>(
+      _client, _response_bytes, _response_byte_capacity);
+  ::fidl::Result::operator=(_outgoing);
 }
 namespace fidl_test_foreigntypeinresponseusedthroughcompose {
 #endif  // __Fuchsia__
@@ -87,7 +84,7 @@ fidl::internal::WireClientImpl<
   }
   return ::fidl::WireResult<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(
-      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
+      ::fidl::Result::Unbound());
 }
 #endif  // __Fuchsia__
 
@@ -107,7 +104,7 @@ fidl::internal::WireClientImpl<
   }
   return ::fidl::WireUnownedResult<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(
-      ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
+      ::fidl::Result::Unbound());
 }
 #endif  // __Fuchsia__
 
@@ -197,8 +194,7 @@ zx_status_t fidl::WireResponseContext<
 std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
     ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
     DispatchEvent(fidl::IncomingMessage& msg) {
-  return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
-                            ZX_ERR_NOT_SUPPORTED};
+  return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__
 
@@ -244,8 +240,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     std::move(msg).CloseHandles();
-    txn->InternalError(
-        {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
+    txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal());
   }
   return dispatch_result;
 }
@@ -294,8 +289,7 @@ fidl::WireServer<::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
   ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
   if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
     std::move(msg).CloseHandles();
-    txn->InternalError(
-        {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
+    txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal());
   }
   return dispatch_result;
 }

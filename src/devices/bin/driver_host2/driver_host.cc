@@ -25,9 +25,9 @@ class FileEventHandler : public fidl::WireAsyncEventHandler<fio::File> {
   explicit FileEventHandler(const std::string& binary_value) : binary_value_(binary_value) {}
 
   void Unbound(fidl::UnbindInfo info) override {
-    if (info.status != ZX_OK) {
-      LOGF(ERROR, "Failed to start driver '/pkg/%s', could not open library: %s",
-           binary_value_.c_str(), zx_status_get_string(info.status));
+    if (!info.ok()) {
+      LOGF(ERROR, "Failed to start driver '/pkg/%s', could not open library: %s, %s",
+           binary_value_.c_str(), info.status_string(), info.error_message());
     }
   }
 
@@ -164,7 +164,7 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
       std::make_unique<fdf::wire::DriverStartArgs::OwnedEncodedMessage>(&request->start_args);
   if (!message->ok()) {
     LOGF(ERROR, "Failed to start driver '/pkg/%s', could not encode start args: %s", binary->data(),
-         message->error());
+         message->error_message());
     completer.Close(message->status());
     return;
   }

@@ -117,7 +117,7 @@ void Client::ImportImage(ImportImageRequestView request, ImportImageCompleter::S
   fidl::WireSyncClient<sysmem::BufferCollection>& collection = it->second.driver;
 
   auto check_status = collection.CheckBuffersAllocated();
-  if (check_status.error() || check_status->status != ZX_OK) {
+  if (check_status.error_message() || check_status->status != ZX_OK) {
     _completer.Reply(ZX_ERR_SHOULD_WAIT, 0);
     return;
   }
@@ -142,7 +142,7 @@ void Client::ImportImage(ImportImageRequestView request, ImportImageCompleter::S
   if (is_vc_) {
     ZX_ASSERT(it->second.kernel.channel());
     auto res = it->second.kernel.WaitForBuffersAllocated();
-    if (res.error() || res->status != ZX_OK) {
+    if (res.error_message() || res->status != ZX_OK) {
       _completer.Reply(ZX_ERR_NO_MEMORY, 0);
       return;
     }
@@ -223,13 +223,13 @@ void Client::ImportBufferCollection(ImportBufferCollectionRequestView request,
     zx::channel::create(0, &vc_token_server, &vc_token_client);
     if (fidl::WireCall<sysmem::BufferCollectionToken>(request->collection_token.borrow().channel())
             .Duplicate(UINT32_MAX, std::move(vc_token_server))
-            .error()) {
+            .error_message()) {
       _completer.Reply(ZX_ERR_INTERNAL);
       return;
     }
     if (fidl::WireCall<sysmem::BufferCollectionToken>(request->collection_token.borrow().channel())
             .Sync()
-            .error()) {
+            .error_message()) {
       _completer.Reply(ZX_ERR_INTERNAL);
       return;
     }
@@ -238,7 +238,7 @@ void Client::ImportBufferCollection(ImportBufferCollectionRequestView request,
     zx::channel::create(0, &collection_server, &vc_collection);
     if (sysmem_allocator_
             .BindSharedCollection(std::move(vc_token_client), std::move(collection_server))
-            .error()) {
+            .error_message()) {
       _completer.Reply(ZX_ERR_INTERNAL);
       return;
     }
@@ -249,7 +249,7 @@ void Client::ImportBufferCollection(ImportBufferCollectionRequestView request,
   if (sysmem_allocator_
           .BindSharedCollection(request->collection_token.TakeChannel(),
                                 std::move(collection_server))
-          .error()) {
+          .error_message()) {
     _completer.Reply(ZX_ERR_INTERNAL);
     return;
   }
@@ -832,7 +832,7 @@ void Client::ImportImageForCapture(ImportImageForCaptureRequestView request,
   // Check whether buffer has already been allocated for the requested collection id.
   fidl::WireSyncClient<sysmem::BufferCollection>& collection = it->second.driver;
   auto check_status = collection.CheckBuffersAllocated();
-  if (check_status.error() || check_status->status != ZX_OK) {
+  if (check_status.error_message() || check_status->status != ZX_OK) {
     _completer.ReplyError(ZX_ERR_SHOULD_WAIT);
     return;
   }
@@ -1511,12 +1511,8 @@ fit::result<fidl::ServerBindingRef<fuchsia_hardware_display::Controller>, zx_sta
     sync_completion_signal(client->fidl_unbound());
     // DdkRelease will cancel the FIDL binding before destroying the client. Therefore, we
     // should TearDown() so that no further tasks are scheduled on the controller loop.
-    switch (info.reason) {
-      case fidl::UnbindInfo::kUnbind:
-      case fidl::UnbindInfo::kClose:
-        break;
-      default:
-        client->TearDown();
+    if (!info.ok()) {
+      client->TearDown();
     }
   };
 

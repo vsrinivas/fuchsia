@@ -8,14 +8,24 @@
 #include <lib/fidl/llcpp/async_binding.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/message_storage.h>
+#include <lib/fidl/llcpp/result.h>
 #include <lib/fidl/llcpp/server_end.h>
-#include <lib/fidl/llcpp/types.h>
 
 namespace fidl {
 
 // Forward declarations.
 template <typename Protocol>
 class ServerBindingRef;
+
+// |OnUnboundFn| can represent the callback which will be invoked after the
+// server end of a channel is unbound from the dispatcher. See documentation on
+// |BindServer| for details.
+//
+// It is not required to wrap the callback lambda in this type; |BindServer|
+// accepts a lambda function directly.
+template <typename ServerImpl>
+using OnUnboundFn = fit::callback<void(ServerImpl*, UnbindInfo,
+                                       fidl::ServerEnd<typename ServerImpl::_EnclosingProtocol>)>;
 
 namespace internal {
 

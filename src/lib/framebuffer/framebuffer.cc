@@ -331,7 +331,7 @@ zx_status_t fb_bind_with_channel(bool single_buffer, const char** err_msg_out,
   auto layers_rsp = dc_client->SetDisplayLayers(
       display_id, fidl::VectorView<uint64_t>::FromExternal(&create_layer_rsp->layer_id, 1));
   if (!layers_rsp.ok()) {
-    *err_msg_out = layers_rsp.error();
+    *err_msg_out = layers_rsp.error_message();
     return layers_rsp.status();
   }
 

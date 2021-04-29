@@ -12,7 +12,7 @@ namespace internal {
                                    ::fidl::Transaction* txn, const MethodEntry* begin,
                                    const MethodEntry* end) {
   if (!msg.ok()) {
-    txn->InternalError({::fidl::UnbindInfo::kUnexpectedMessage, msg.status()});
+    txn->InternalError(fidl::UnbindInfo{msg});
     return ::fidl::DispatchResult::kNotFound;
   }
   auto* hdr = msg.header();
@@ -20,7 +20,7 @@ namespace internal {
     if (hdr->ordinal == begin->ordinal) {
       zx_status_t decode_status = begin->dispatch(impl, std::move(msg), txn);
       if (unlikely(decode_status != ZX_OK)) {
-        txn->InternalError({::fidl::UnbindInfo::kDecodeError, decode_status});
+        txn->InternalError(UnbindInfo{fidl::Result::DecodeError(decode_status)});
       }
       return ::fidl::DispatchResult::kFound;
     }

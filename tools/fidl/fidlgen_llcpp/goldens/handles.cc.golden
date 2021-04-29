@@ -46,8 +46,7 @@ void ::fidl_test_handles::wire::Handles::_CloseHandles() {
 std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
     ::fidl_test_handles::SomeProtocol>::DispatchEvent(fidl::IncomingMessage&
                                                           msg) {
-  return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
-                            ZX_ERR_NOT_SUPPORTED};
+  return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__
 
@@ -65,8 +64,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
         ::fidl::WireServer<::fidl_test_handles::SomeProtocol>* impl,
         ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   std::move(msg).CloseHandles();
-  txn->InternalError(
-      {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
+  txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal());
   return ::fidl::DispatchResult::kNotFound;
 }
 ::fidl::DispatchResult
@@ -88,8 +86,7 @@ fidl::internal::WireDispatcher<::fidl_test_handles::SomeProtocol>::Dispatch(
     ::fidl::WireInterface<::fidl_test_handles::SomeProtocol>* impl,
     fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   std::move(msg).CloseHandles();
-  txn->InternalError(
-      {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
+  txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal());
   return ::fidl::DispatchResult::kNotFound;
 }
 ::fidl::DispatchResult

@@ -19,8 +19,8 @@ zx_status_t SystemStateManager::Create(async_dispatcher_t* dispatcher, Coordinat
   fidl::OnUnboundFn<SystemStateManager> unbound_fn(
       [](SystemStateManager* sys_state_manager, fidl::UnbindInfo info,
          fidl::ServerEnd<fuchsia_device_manager::SystemStateTransition>) {
-        LOGF(ERROR, "system state transition channel with power manager got unbound:%d",
-             static_cast<uint32_t>(info.reason));
+        LOGF(ERROR, "system state transition channel with power manager got unbound: %d, %s",
+             static_cast<uint32_t>(info.reason()), info.error_message());
         SystemStateManager* system_state_manager =
             static_cast<SystemStateManager*>(sys_state_manager);
         Coordinator* dev_coord = system_state_manager->dev_coord_;

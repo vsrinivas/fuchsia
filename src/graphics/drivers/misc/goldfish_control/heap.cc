@@ -51,19 +51,19 @@ void Heap::BindWithHeapProperties(zx::channel server_request,
 }
 
 void Heap::OnClose(fidl::UnbindInfo info, zx::channel channel) {
-  if (info.status == ZX_ERR_CANCELED) {
+  if (info.status() == ZX_ERR_CANCELED) {
     // If the status is "ZX_ERR_CANCELLED", it means that the Control device
     // Heap belongs to is already destroyed so that the pending wait is
     // cancelled. In that case we don't need to remove the heap, instead just
     // exit.
-    zxlogf(INFO, "[%s] Control device is destroyed: status: %d", tag_.c_str(), info.status);
+    zxlogf(INFO, "[%s] Control device is destroyed: status: %d", tag_.c_str(), info.status());
     return;
   }
 
-  if (info.reason == fidl::UnbindInfo::kPeerClosed) {
-    zxlogf(INFO, "[%s] Client closed Heap connection: epitaph: %d", tag_.c_str(), info.status);
-  } else if (info.reason != fidl::UnbindInfo::kUnbind && info.reason != fidl::UnbindInfo::kClose) {
-    zxlogf(ERROR, "[%s] Channel internal error: status: %d", tag_.c_str(), info.status);
+  if (info.reason() == fidl::Reason::kPeerClosed) {
+    zxlogf(INFO, "[%s] Client closed Heap connection: epitaph: %d", tag_.c_str(), info.status());
+  } else if (!info.ok()) {
+    zxlogf(ERROR, "[%s] Channel internal error: status: %d", tag_.c_str(), info.status());
   }
 
   control_->RemoveHeap(this);

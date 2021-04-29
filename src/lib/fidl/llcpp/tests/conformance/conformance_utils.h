@@ -79,9 +79,9 @@ bool EncodeSuccess(FidlType* value, const std::vector<uint8_t>& bytes,
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
 
   ::fidl::OwnedEncodedMessage<FidlType> encoded(value);
-  if (!encoded.ok() || encoded.error() != nullptr) {
+  if (!encoded.ok()) {
     std::cout << "Encoding failed (" << zx_status_get_string(encoded.status())
-              << "): " << encoded.error() << std::endl;
+              << "): " << encoded.error_message() << std::endl;
     return false;
   }
   auto encoded_bytes = encoded.GetOutgoingMessage().CopyBytes();
@@ -120,7 +120,7 @@ bool EncodeFailure(FidlType* value, zx_status_t expected_error_code) {
   }
   if (encoded.status() != expected_error_code) {
     std::cout << "Encoding failed with error code " << zx_status_get_string(encoded.status())
-              << " (" << encoded.error() << "), but expected error code "
+              << " (" << encoded.error_message() << "), but expected error code "
               << zx_status_get_string(expected_error_code) << std::endl;
     return false;
   }
@@ -137,9 +137,9 @@ bool DecodeSuccess(FidlType* value, std::vector<uint8_t> bytes,
   fidl::DecodedMessage<FidlType> decoded(bytes.data(), static_cast<uint32_t>(bytes.size()),
                                          handle_infos.data(),
                                          static_cast<uint32_t>(handle_infos.size()));
-  if (!decoded.ok() || decoded.error() != nullptr) {
+  if (!decoded.ok()) {
     std::cout << "Decoding failed (" << zx_status_get_string(decoded.status())
-              << "): " << decoded.error() << std::endl;
+              << "): " << decoded.error_message() << std::endl;
     return false;
   }
   return equality_check(*decoded.PrimaryObject());
@@ -160,7 +160,7 @@ bool DecodeFailure(std::vector<uint8_t> bytes, std::vector<zx_handle_info_t> han
   }
   if (decoded.status() != expected_error_code) {
     std::cout << "Decoding failed with error code " << zx_status_get_string(decoded.status())
-              << " (" << decoded.error() << "), but expected error code "
+              << " (" << decoded.error_message() << "), but expected error code "
               << zx_status_get_string(expected_error_code) << std::endl;
     return false;
   }

@@ -85,7 +85,7 @@ class BootstrapThreadImplTest : public gtest::TestLoopFixture {
 
     void Unbound(fidl::UnbindInfo info) override {
       client_bound_ = false;
-      client_unbind_status_ = info.status;
+      client_unbind_status_ = info.status();
     }
 
     bool client_bound_ = false;
