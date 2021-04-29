@@ -1158,3 +1158,16 @@
   reviewers: ['aaronwood@google.com', 'geb@google.com', 'jsankey@google.com', 'shayba@google.com', 'thatguy@google.com']
   submitted: '2021-03-04'
   reviewed: '2021-04-19'
+
+- name: 'RFC-0090'
+  title: 'Driver shared libraries allowlist'
+  short_description: 'Add an allowlist for drivers shared libraries.'
+  authors: ['dgilhooley@google.com']
+  file: '0090_drivers_shared_library_allowlist.md'
+  area: ['Zircon']
+  issue: ['']
+  gerrit_change_id: ['508918']
+  status: 'Accepted'
+  reviewers: ['jamesr@google.com', 'mangini@google.com', 'bryanhenry@google.com', 'digit@google.com', 'benwright@google.com', 'surajmalhotra@google.com']
+  submitted: '2021-03-30'
+  reviewed: '2021-04-28'
