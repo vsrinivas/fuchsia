@@ -99,6 +99,7 @@ fit::result<void, std::string> Pave(const PaveParams& params) {
     case TargetType::kMtd: {
       MtdParams mtd_params;
       mtd_params.offset = params.offset.value_or(0);
+      mtd_params.format = true;
       if (!params.max_bad_blocks.has_value()) {
         return fit::error("Pave to |kMtd| target, requires |max_bad_blocks| to be set.");
       }

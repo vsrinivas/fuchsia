@@ -120,7 +120,7 @@ TEST(MtdWriterTest, WriteContentsAreOk) {
   }
 }
 
-TEST(MtdWriterTest, WriteFvmIsOk) {
+TEST(MtdWriterTest, WriteFvmAndPersistsIsOk) {
   // check that the mtd device and the block device are both present.
   fbl::unique_fd mtd_fd(open(kTestMtdDevicePath, O_RDWR));
 
@@ -128,43 +128,35 @@ TEST(MtdWriterTest, WriteFvmIsOk) {
     GTEST_SKIP() << "No MTD device availble. " << strerror(errno);
   }
 
-  MtdParams params;
-  params.offset = 0;
-  params.max_bad_blocks = 5;
-  FtlHandle handle;
-  auto mtd_writer_or = CreateMtdWriter(kTestMtdDevicePath, params, &handle);
-  ASSERT_TRUE(mtd_writer_or.is_ok()) << mtd_writer_or.error();
-
   // Read the compressed sparse image.
   auto compressed_sparse_reader_or = FdReader::Create(kFvmSparseImagePath);
   ASSERT_TRUE(compressed_sparse_reader_or.is_ok()) << compressed_sparse_reader_or.error();
-  FdReader compressed_sparse_reader = compressed_sparse_reader_or.take_value();
+  auto compressed_sparse_reader =
+      std::make_unique<FdReader>(compressed_sparse_reader_or.take_value());
 
-  // Decompress the image.
-  auto decompressed_image_or = TempFile::Create();
-  ASSERT_TRUE(decompressed_image_or.is_ok()) << decompressed_image_or.error();
-  auto decompressed_image = decompressed_image_or.take_value();
-
-  auto decompressed_writer_or = FdWriter::Create(decompressed_image.path());
-  ASSERT_TRUE(decompressed_writer_or.is_ok()) << decompressed_writer_or.error();
-  auto decompressed_writer = decompressed_writer_or.take_value();
-
-  auto decompress_result =
-      FvmSparseDecompressImage(0, compressed_sparse_reader, decompressed_writer);
-  ASSERT_TRUE(decompress_result.is_ok()) << decompress_result.error();
-  ASSERT_TRUE(decompress_result.value());
-
-  auto decompressed_reader_or = FdReader::Create(decompressed_image.path());
-  ASSERT_TRUE(decompressed_reader_or.is_ok()) << decompressed_reader_or.error();
-  auto decompressed_reader = std::make_unique<FdReader>(decompressed_reader_or.take_value());
-
-  // Write the contents to the mtd device.
-  auto fvm_descriptor_or = FvmSparseReadImage(0, std::move(decompressed_reader));
+  auto fvm_descriptor_or = FvmSparseReadImage(0, std::move(compressed_sparse_reader));
   ASSERT_TRUE(fvm_descriptor_or.is_ok()) << fvm_descriptor_or.error();
   auto fvm_descriptor = fvm_descriptor_or.take_value();
 
-  auto write_result = fvm_descriptor.WriteBlockImage(*mtd_writer_or.value());
-  ASSERT_TRUE(write_result.is_ok()) << write_result.error();
+  MtdParams params;
+  params.offset = 0;
+  params.max_bad_blocks = 5;
+  params.format = true;
+  {  // So the handle and the writer are destroyed, thus contents should be flushed.
+    FtlHandle handle;
+    auto mtd_writer_or = CreateMtdWriter(kTestMtdDevicePath, params, &handle);
+    ASSERT_TRUE(mtd_writer_or.is_ok()) << mtd_writer_or.error();
+
+    // Write the contents to the mtd device.
+    auto write_result = fvm_descriptor.WriteBlockImage(*mtd_writer_or.value());
+    ASSERT_TRUE(write_result.is_ok()) << write_result.error();
+  }
+
+  // Obtain a new FTL instance, this should verify that the FTL is persisted.
+  FtlHandle handle;
+  params.format = false;
+  auto mtd_writer_or = CreateMtdWriter(kTestMtdDevicePath, params, &handle);
+  ASSERT_TRUE(mtd_writer_or.is_ok()) << mtd_writer_or.error();
 
   // Write the contents into a file and compare each pair of blocks.
   auto expected_image_or = TempFile::Create();

@@ -22,6 +22,9 @@ struct MtdParams {
 
   // Maximum number of bad blocks for usage in the underlying FTL.
   uint64_t max_bad_blocks = 0;
+
+  // Whether the FTL contents should be formatted.
+  bool format = false;
 };
 
 // Returns a writer into the underlying MTD(Memory Technology Device) protocol.

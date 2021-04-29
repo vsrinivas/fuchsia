@@ -61,9 +61,12 @@ fit::result<std::unique_ptr<Writer>, std::string> CreateMtdWriter(std::string_vi
     *ftl_handle = *handle;
   }
 
-  status = handle->volume().Format();
-  if (status != ZX_OK) {
-    return fit::error("Device FTL formatting failed. Error code: " + std::to_string(status) + ".");
+  if (params.format) {
+    status = handle->volume().Format();
+    if (status != ZX_OK) {
+      return fit::error("Device FTL formatting failed. Error code: " + std::to_string(status) +
+                        ".");
+    }
   }
 
   return fit::ok(std::make_unique<BlockWriter>(handle->instance().page_size(),
