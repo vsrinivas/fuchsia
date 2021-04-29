@@ -5,13 +5,18 @@
 import("//build/sdk/sdk_host_tool.gni")
 import("//build/test.gni")
 
+static_library("common") {
+  public = [ "blobfs-compression.h" ]
+  sources = [ "common.cc" ]
+  deps = [ "//src/storage/blobfs" ]
+  public_deps = [ "//src/lib/chunked-compression" ]
+}
+
 executable("blobfs-compression") {
-  sources = [
-    "common.cc",
-    "main.cc",
-  ]
+  sources = [ "main.cc" ]
   deps = [
-    "//src/lib/chunked-compression",
+    ":common",
+    "//src/lib/digest",
     "//src/lib/fxl",
     "//src/storage/blobfs/compression/configs",
   ]

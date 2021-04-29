@@ -12,6 +12,8 @@
 #include "blobfs-compression.h"
 #include "src/lib/chunked-compression/chunked-compressor.h"
 #include "src/lib/chunked-compression/status.h"
+#include "src/lib/digest/merkle-tree.h"
+#include "src/storage/blobfs/format.h"
 
 namespace blobfs_compress {
 namespace {
@@ -99,14 +101,16 @@ zx_status_t ValidateCliOptions(const CompressionCliOptionStruct& options) {
 // Returns 0 if the compression runs successfully; otherwise non-zero values.
 // This method reads |src_sz| from |src|, compresses it using the compression
 // |params|, and then writes the compressed bytes to |dest_write_buf| and the
-// compressed size to |out_compressed_size|.
+// compressed size to |out_compressed_size|. |cli_options| will be used to
+// configure what information to include in the output.
 //
 // |dest_write_buf| can be nullptr if wanting the final compressed size only.
 // However, even if |dest_write_buf| is set to nullptr, there will still be
 // temporary RAM consumption for storing compressed data due to current internal
 // compression API design.
 zx_status_t BlobfsCompress(const uint8_t* src, const size_t src_sz, uint8_t* dest_write_buf,
-                           size_t* out_compressed_size, CompressionParams params) {
+                           size_t* out_compressed_size, CompressionParams params,
+                           const CompressionCliOptionStruct& cli_options) {
   ChunkedCompressor compressor(params);
 
   ProgressWriter progress;
@@ -133,15 +137,29 @@ zx_status_t BlobfsCompress(const uint8_t* src, const size_t src_sz, uint8_t* des
     return ToZxStatus(compression_status);
   }
 
-  double saving_ratio = static_cast<double>(src_sz) - static_cast<double>(compressed_size);
-  if (src_sz) {
-    saving_ratio /= static_cast<double>(src_sz);
+  // Include merkle tree size in the compressed size.
+  const size_t merkle_tree_size = digest::CalculateMerkleTreeSize(
+      src_sz, digest::kDefaultNodeSize, cli_options.use_compact_merkle_tree);
+  compressed_size += merkle_tree_size;
+
+  // Final size output should be aligned with block size unless disabled explicitly.
+  size_t aligned_source_size = src_sz, aligned_compressed_size = compressed_size;
+  if (!cli_options.disable_size_alignment) {
+    aligned_source_size = fbl::round_up(aligned_source_size, blobfs::kBlobfsBlockSize);
+    aligned_compressed_size = fbl::round_up(aligned_compressed_size, blobfs::kBlobfsBlockSize);
+  }
+
+  double saving_ratio =
+      static_cast<double>(aligned_source_size) - static_cast<double>(aligned_compressed_size);
+  if (aligned_source_size) {
+    saving_ratio /= static_cast<double>(aligned_source_size);
   } else {
     saving_ratio = 0;
   }
-  progress.Final("Wrote %lu bytes (%.2f%% space saved).\n", compressed_size, saving_ratio * 100);
+  progress.Final("Wrote %lu bytes (%.2f%% space saved).\n", aligned_compressed_size,
+                 saving_ratio * 100);
 
-  *out_compressed_size = compressed_size;
+  *out_compressed_size = aligned_compressed_size;
   return ZX_OK;
 }
 }  // namespace blobfs_compress

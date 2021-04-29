@@ -15,14 +15,13 @@ group("tests") {
 }
 
 test("blobfs-compression-test") {
-  sources = [
-    "//src/storage/tools/blobfs-compression/common.cc",
-    "blobfs-compression-test.cc",
-  ]
+  sources = [ "blobfs-compression-test.cc" ]
   deps = [
     "//src/lib/chunked-compression",
+    "//src/lib/digest",
     "//src/lib/fxl/test:gtest_main",
     "//src/storage/blobfs/compression/configs",
+    "//src/storage/tools/blobfs-compression:common",
     "//zircon/public/lib/fbl",
   ]
 }
@@ -35,14 +34,12 @@ fuchsia_component("blobfs-compression-tests-component") {
 }
 
 test("cli-option-validation-test") {
-  sources = [
-    "//src/storage/tools/blobfs-compression/common.cc",
-    "cli-option-validation-test.cc",
-  ]
+  sources = [ "cli-option-validation-test.cc" ]
   deps = [
     "//src/lib/chunked-compression",
     "//src/lib/fxl/test:gtest_main",
     "//src/storage/fs_test",
+    "//src/storage/tools/blobfs-compression:common",
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/id_allocator",

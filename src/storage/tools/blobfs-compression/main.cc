@@ -21,24 +21,30 @@
 
 namespace {
 
-using ::chunked_compression::ChunkedCompressor;
 using ::chunked_compression::CompressionParams;
 
 const auto kCliOptions = std::set<std::string>({
     "source_file",
     "compressed_file",
+    "disable_size_alignment",
+    "use_compact_merkle_tree",
     "help",
     "verbose",
 });
 
 void usage(const char* fname) {
-  fprintf(stderr, "Usage: %s [--option=value ...]\n\n", fname);
+  fprintf(stderr, "Usage: %s [--option1=value --option2 ...]\n\n", fname);
   fprintf(stderr, "Options:\n");
-  fprintf(stderr, "  %-20s%s\n", "source_file", "(required) the file to be compressed.");
-  fprintf(stderr, "  %-20s%s\n", "compressed_file",
+  fprintf(stderr, "--%s=/path/to/file\n    %s\n", "source_file",
+          "(required) the file to be compressed.");
+  fprintf(stderr, "--%s=/path/to/file\n    %s\n", "compressed_file",
           "(optional) the compressed file output path (override if existing).");
-  fprintf(stderr, "  %-20s%s\n", "help", "print this usage message.");
-  fprintf(stderr, "  %-20s%s\n", "verbose", "show debugging information.");
+  fprintf(stderr, "--%s\n    %s\n", "disable_size_alignment",
+          "not align the final compressed output size with block size.");
+  fprintf(stderr, "--%s\n    %s\n", "use_compact_merkle_tree",
+          "specify to use the future compact merkle tree for calculation.");
+  fprintf(stderr, "--%s\n    %s\n", "help", "print this usage message.");
+  fprintf(stderr, "--%s\n    %s\n", "verbose", "show debugging information.");
 }
 
 // Truncates |fd| to |write_size|, and mmaps the file for writing.
@@ -116,7 +122,10 @@ int main(int argc, char** argv) {
   }
 
   // Parse command line options.
-  blobfs_compress::CompressionCliOptionStruct options;
+  blobfs_compress::CompressionCliOptionStruct options = {
+      .disable_size_alignment = cl.HasOption("disable_size_alignment", nullptr),
+      .use_compact_merkle_tree = cl.HasOption("use_compact_merkle_tree", nullptr),
+  };
   cl.GetOptionValue("source_file", &options.source_file);
   options.source_file_fd.reset(open(options.source_file.c_str(), O_RDONLY));
   cl.GetOptionValue("compressed_file", &options.compressed_file);
@@ -147,8 +156,8 @@ int main(int argc, char** argv) {
   }
 
   size_t compressed_size;
-  if (blobfs_compress::BlobfsCompress(src_data, src_size, dest_write_buf, &compressed_size,
-                                      params)) {
+  if (blobfs_compress::BlobfsCompress(src_data, src_size, dest_write_buf, &compressed_size, params,
+                                      options)) {
     return ZX_ERR_INTERNAL;
   }
 
