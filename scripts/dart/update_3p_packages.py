@@ -30,10 +30,7 @@ FLUTTER_PUBSPECS = [
 # These are the locations of yaml files listing the Dart dependencies of a git
 # project.
 PROJECT_DEPENDENCIES = [
-    'sdk/testing/sl4f/client',
-    'src/testing',
-    'topaz/public/dart',
-    'topaz/tools',
+    'src/dart',
 ]
 
 
@@ -70,8 +67,9 @@ def main():
     flutter_tool = os.path.join(flutter_absolute_root, 'bin', 'flutter')
     subprocess.check_call([flutter_tool, '--version'])
 
-    python_tool = os.path.join(paths.FUCHSIA_ROOT, 'prebuilt', 'third_party',
-                               'python3', platform, 'bin', 'python3.8')
+    python_tool = os.path.join(
+        paths.FUCHSIA_ROOT, 'prebuilt', 'third_party', 'python3', platform,
+        'bin', 'python3.8')
     args = [python_tool, importer_path]
     if script_args.debug:
         args.append('--debug')

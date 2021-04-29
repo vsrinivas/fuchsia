@@ -116,13 +116,14 @@ def parse_min_sdk_version_and_full_dependencies(yaml_path):
     deps = get_deps(package_name, parsed, 'dependencies')
     dev_deps = get_deps(package_name, parsed, 'dev_dependencies')
     dep_overrides = get_deps(package_name, parsed, 'dependency_overrides')
-    return (package_name, min_sdk_version, deps, dev_deps, dep_overrides)
+    pinned_deps = get_deps(package_name, parsed, 'pinned_dependencies')
+    return (package_name, min_sdk_version, deps, dev_deps, dep_overrides, pinned_deps)
 
 
 def parse_min_sdk_and_dependencies(yaml_path):
     """ parse the min sdk version and dependency map out of a pubspec.yaml """
-    _, min_sdk_version, deps, _, _ = parse_min_sdk_version_and_full_dependencies(yaml_path)
-    return min_sdk_version, deps
+    _, min_sdk_version, deps, _, _, pinned_deps = parse_min_sdk_version_and_full_dependencies(yaml_path)
+    return min_sdk_version, deps, pinned_deps
 
 
 def write_build_file(build_gn_path, package_name, name_with_version, language_version, deps, dart_sources):
@@ -234,7 +235,7 @@ def main():
         debug_print('------------------------')
         for path in args.pubspecs:
             yaml_file = os.path.join(path, 'pubspec.yaml')
-            package_name, _, _, dev_deps, _ = parse_min_sdk_version_and_full_dependencies(yaml_file)
+            package_name, _, _, dev_deps, _, _ = parse_min_sdk_version_and_full_dependencies(yaml_file)
             packages[package_name] = path
             additional_deps.update(dev_deps)
             debug_print('# From ' + yaml_file)
@@ -252,9 +253,11 @@ def main():
         debug_print('-------------------------')
         debug_print('Manually-set dependencies')
         debug_print('-------------------------')
+        pinned_deps = None
         for project in args.projects:
             yaml_file = os.path.join(project, 'dart_dependencies.yaml')
-            _, project_deps = parse_min_sdk_and_dependencies(yaml_file)
+            _, project_deps, pinned = parse_min_sdk_and_dependencies(yaml_file)
+            pinned_deps = pinned if pinned else pinned_deps
             debug_print('# From ' + yaml_file)
             for dep, version in sorted(project_deps.items()):
                 dependencies[dep] = version
@@ -312,7 +315,7 @@ def main():
         if os.path.exists(args.output):
             for (root, dirs, files) in os.walk(args.output):
                 for dir in dirs:
-                    if dir != '.git':
+                    if dir != '.git' and pinned_deps and dir not in pinned_deps.keys():
                         shutil.rmtree(os.path.join(root, dir))
                 # Only process the root of the output tree.
                 break
@@ -356,7 +359,7 @@ def main():
             deps = []
             min_sdk_version = '2.8'
             if os.path.exists(pubspec_path):
-                min_sdk_version, deps = parse_min_sdk_and_dependencies(pubspec_path)
+                min_sdk_version, deps, _ = parse_min_sdk_and_dependencies(pubspec_path)
             dest_dir = os.path.join(args.output, package_name)
             dart_sources = []
             # Add all dart files in source_dir subdirectory into dart_sources
