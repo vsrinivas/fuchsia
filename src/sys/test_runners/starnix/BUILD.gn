@@ -42,6 +42,13 @@ fuchsia_component("starnix_test_runner") {
   deps = [ ":bin" ]
 }
 
+fuchsia_component("starnix_unit_test_runner") {
+  testonly = true
+  manifest = "meta/starnix_unit_test_runner.cml"
+  component_name = "starnix_unit_test_runner"
+  deps = [ "//src/sys/test_runners/rust:bin" ]
+}
+
 fuchsia_component("starnix_test_runner_parent") {
   testonly = true
   manifest = "meta/starnix_test_runner_parent.cml"
@@ -53,6 +60,7 @@ fuchsia_package("starnix-test-runner") {
   deps = [
     ":starnix_test_runner",
     ":starnix_test_runner_parent",
+    ":starnix_unit_test_runner",
   ]
 }
 

@@ -17,4 +17,11 @@ fx set core.x64 --with //src/sys/test_runners/starnix
 fx build
 ```
 
+# Starnix Unit Test Runner
+
+This runner is intended to be used by the starnix runner's unit tests. It is a
+wrapper around the regular Rust test runner that adds additional permissions
+required by starnix unit tests that shouldn't be available to regular Rust test
+components.
+
 [test-runner]: ../README.md

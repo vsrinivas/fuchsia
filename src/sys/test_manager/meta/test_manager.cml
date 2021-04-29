@@ -22,6 +22,10 @@
                     from: "#starnix_test_runner",
                 },
                 {
+                    runner: "starnix_unit_test_runner",
+                    from: "#starnix_unit_test_runner",
+                },
+                {
                     runner: "inspect_test_runner",
                     from: "#inspect_test_runner",
                 },
