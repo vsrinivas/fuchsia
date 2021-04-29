@@ -437,28 +437,34 @@ function get-device-addr-url {
 
 function fx-command-run {
   local -r command_name="$1"
-  local -r command_path="$(find_executable "${command_name}")"
+  local command_path
+  # Use an array because the command may be multiple elements, if it comes from
+  # a .fx metadata file.
+  command_path=( $(find_executable "${command_name}") )
 
-  if [[ ! -f "${command_path}" ]]; then
+  if [[ $? -ne 0 || ! -x "${command_path[0]}" ]]; then
     fx-error "Unknown command ${command_name}"
     exit 1
   fi
 
   shift
-  env FX_CALLER="$0" "${command_path}" "$@"
+  env FX_CALLER="$0" "${command_path[@]}" "$@"
 }
 
 function fx-command-exec {
   local -r command_name="$1"
-  local -r command_path="$(find_executable "${command_name}")"
+  local command_path
+  # Use an array because the command may be multiple elements, if it comes from
+  # a .fx metadata file.
+  command_path=( $(find_executable "${command_name}") )
 
-  if [[ ! -f "${command_path}" ]]; then
+  if [[ $? -ne 0 || ! -x "${command_path[0]}" ]]; then
     fx-error "Unknown command ${command_name}"
     exit 1
   fi
 
   shift
-  exec env FX_CALLER="$0" "${command_path}" "$@"
+  exec env FX_CALLER="$0" "${command_path[@]}" "$@"
 }
 
 function fx-print-command-help {

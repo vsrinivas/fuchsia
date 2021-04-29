@@ -39,7 +39,8 @@ function _relative {
 
 function find_executable {
   local cmd_name="$1"
-  local cmd_path="$(commands "${cmd_name}")"
+  local cmd_path
+  cmd_path="$(commands "${cmd_name}")"
   # no metadata, so let's try to find the file
   if [[ -z "${cmd_path}" ]]; then
     # no file in regular script directories, look in host_tools
