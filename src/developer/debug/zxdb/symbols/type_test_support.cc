@@ -115,7 +115,7 @@ fxl::RefPtr<Collection> MakeDerivedClassPair(DwarfTag type_tag, const std::strin
 
 fxl::RefPtr<CompileUnit> MakeRustUnit() {
   auto unit = fxl::MakeRefCounted<CompileUnit>(fxl::WeakPtr<ModuleSymbols>(), DwarfLang::kRust,
-                                               "<<internal>>");
+                                               "<<internal>>", std::nullopt);
   return unit;
 }
 

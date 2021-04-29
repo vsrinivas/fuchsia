@@ -138,8 +138,8 @@ TEST_F(ResolveBase, PromotePtrRefToDerived) {
   // Replace the inheritance record with one indicating virtual inheritance. This placeholder
   // expression won't work in practice (see VirtualInheritanceTestSetup for a real one) but the
   // presence of some expression will trigger a casting failure.
-  auto virtual_inheritance = fxl::MakeRefCounted<InheritedFrom>(
-      setup.base_class, std::vector<uint8_t>{llvm::dwarf::DW_OP_dup});
+  auto virtual_inheritance =
+      fxl::MakeRefCounted<InheritedFrom>(setup.base_class, DwarfExpr({llvm::dwarf::DW_OP_dup}));
   setup.derived_class->set_inherited_from({LazySymbol(virtual_inheritance)});
 
   result = Err("Not called");

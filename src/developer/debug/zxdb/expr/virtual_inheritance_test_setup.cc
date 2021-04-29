@@ -43,14 +43,14 @@ VirtualInheritanceTestSetup::VirtualInheritanceTestSetup() {
 
   // Virtual inheritance. This expression is what GCC generated for a simple example. Recall the
   // initial stack state for running this program will have the address of IntermediateDerived.
-  std::vector<uint8_t> expression = {
+  DwarfExpr expression({
       llvm::dwarf::DW_OP_dup,    // Make 2 copies of the IntermediateDerived address.
       llvm::dwarf::DW_OP_deref,  // Read the vtable_ptr to top of stack.
       llvm::dwarf::DW_OP_lit24,  // Move pointer backwards 24 bytes to point to the offset.
       llvm::dwarf::DW_OP_minus,  //   (cont)
       llvm::dwarf::DW_OP_deref,  // Read the offset from the computed pointer.
       llvm::dwarf::DW_OP_plus    // Add the IntermediateDerived address and the offset.
-  };
+  });
   intermediate_base_inherited = fxl::MakeRefCounted<InheritedFrom>(intermediate_base, expression);
   intermediate_derived->set_inherited_from({LazySymbol(intermediate_base_inherited)});
 

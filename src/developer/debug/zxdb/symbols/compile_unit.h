@@ -5,6 +5,8 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_COMPILE_UNIT_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_COMPILE_UNIT_H_
 
+#include <optional>
+
 #include "src/developer/debug/zxdb/symbols/dwarf_lang.h"
 #include "src/developer/debug/zxdb/symbols/symbol.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
@@ -28,6 +30,11 @@ class CompileUnit final : public Symbol {
   // The file name that generated this unit.
   const std::string& name() const { return name_; }
 
+  // Returns the DW_AT_addr_base attribute on the unit, if given. This attribute points to the
+  // beginning of the compilation unit's contribution to the .debug_addr section of the module. It
+  // is used for evaluating some DWARF expressions.
+  const std::optional<uint64_t>& addr_base() const { return addr_base_; }
+
   // Compilation units have a lot of other stuff which we currently have no need for. These can be
   // added here as needed.
 
@@ -35,13 +42,15 @@ class CompileUnit final : public Symbol {
   FRIEND_REF_COUNTED_THREAD_SAFE(CompileUnit);
   FRIEND_MAKE_REF_COUNTED(CompileUnit);
 
-  explicit CompileUnit(fxl::WeakPtr<ModuleSymbols> module, DwarfLang lang, std::string name);
+  explicit CompileUnit(fxl::WeakPtr<ModuleSymbols> module, DwarfLang lang, std::string name,
+                       const std::optional<uint64_t>& addr_base);
   ~CompileUnit() override;
 
   fxl::WeakPtr<ModuleSymbols> module_;
 
   DwarfLang language_ = DwarfLang::kNone;
   std::string name_;
+  std::optional<uint64_t> addr_base_;
 };
 
 }  // namespace zxdb

@@ -43,6 +43,11 @@ void ProcessSymbolDataProvider::Disown() { process_ = nullptr; }
 
 debug_ipc::Arch ProcessSymbolDataProvider::GetArch() { return arch_; }
 
+ErrOr<uint64_t> ProcessSymbolDataProvider::GetDebugAddrEntry(uint64_t offset) const {
+  // TODO(fxbug.dev/75488) implement this.
+  return Err("Unimplemented");
+}
+
 void ProcessSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
                                                GetMemoryCallback callback) {
   if (!process_) {
@@ -156,7 +161,7 @@ void ProcessSymbolDataProvider::GetTLSSegment(const SymbolContext& symbol_contex
     // in the context of another DwarfExprEval).
     auto dwarf_eval = std::make_shared<DwarfExprEval>();
     dwarf_eval->Push(static_cast<DwarfExprEval::StackEntry>(debug_address));
-    dwarf_eval->Eval(this_ref, symbol_context, program,
+    dwarf_eval->Eval(this_ref, symbol_context, DwarfExpr(std::move(program)),
                      [dwarf_eval, cb = std::move(cb)](DwarfExprEval*, const Err& err) mutable {
                        // Prevent the DwarfExprEval from getting reentrantly deleted from within its
                        // own callback by posting a reference back to the message loop. This creates

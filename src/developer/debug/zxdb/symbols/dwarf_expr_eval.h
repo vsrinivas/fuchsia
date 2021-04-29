@@ -15,6 +15,7 @@
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/common/int128_t.h"
 #include "src/developer/debug/zxdb/symbols/arch.h"
+#include "src/developer/debug/zxdb/symbols/dwarf_expr.h"
 #include "src/developer/debug/zxdb/symbols/symbol_context.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
@@ -84,9 +85,6 @@ class DwarfExprEval {
   using StackEntry = uint128_t;
   using SignedStackEntry = int128_t;
 
-  // Storage for opcode data.
-  using Expression = std::vector<uint8_t>;
-
   using CompletionCallback = fit::callback<void(DwarfExprEval* eval, const Err& err)>;
 
   DwarfExprEval();
@@ -139,7 +137,7 @@ class DwarfExprEval {
   //
   // This class must not be deleted from within the completion callback.
   Completion Eval(fxl::RefPtr<SymbolDataProvider> data_provider,
-                  const SymbolContext& symbol_context, Expression expr, CompletionCallback cb);
+                  const SymbolContext& symbol_context, DwarfExpr expr, CompletionCallback cb);
 
   // Converts the given DWARF expression to a string. The result values on this class won't be
   // set since the expression won't actually be evaluated.
@@ -150,11 +148,11 @@ class DwarfExprEval {
   // When "pretty" mode is enabled, operations will be simplified and platform register names will
   // be substituted.
   std::string ToString(fxl::RefPtr<SymbolDataProvider> data_provider,
-                       const SymbolContext& symbol_context, Expression expr, bool pretty);
+                       const SymbolContext& symbol_context, DwarfExpr expr, bool pretty);
 
  private:
   void SetUp(fxl::RefPtr<SymbolDataProvider> data_provider, const SymbolContext& symbol_context,
-             Expression expr, CompletionCallback cb);
+             DwarfExpr expr, CompletionCallback cb);
 
   // Evaluates the next phases of the expression until an asynchronous operation is required.
   // Returns the value of |is_complete| because |this| could be deleted by the time this method
@@ -202,6 +200,9 @@ class DwarfExprEval {
   // Executes the given binary operation by popping the top two stack entries as parameters (the
   // first is the next-to-top, the second is the top) and pushing the result on the stack.
   Completion OpBinary(StackEntry (*op)(StackEntry, StackEntry), const char* op_name);
+
+  // Implements DW_OP_addrx and DW_OP_constx (corresponding to the given result types).
+  Completion OpAddrBase(ResultType result_type, const char* op_name);
 
   // Operations. On call, the expr_index_ will index the byte following the opcode, and on return
   // expr_index_ will index the next instruction (any parameters will be consumed).
@@ -266,15 +267,15 @@ class DwarfExprEval {
   SymbolContext symbol_context_;
 
   // The expression. See also expr_index_.
-  Expression expr_;
+  DwarfExpr expr_;
 
   // Determines if a string describing the expression is being generated instead of evaluating
   // the expression. See is_string_output() and AppendString().
   StringOutput string_output_mode_ = StringOutput::kNone;
   std::string string_output_;  // Result when string_output_mode_ != kNone;
 
-  // Index into expr_ of the next thing to read. This is a uint64_t to integrate with LLVM
-  // DataExtractor.
+  // Index into expr_.data() data of the next thing to read. This is a uint64_t to integrate with
+  // LLVM DataExtractor.
   uint64_t expr_index_ = 0;
 
   CompletionCallback completion_callback_;  // Null in string printing mode (it's synchronous).

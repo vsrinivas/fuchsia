@@ -12,9 +12,8 @@
 namespace zxdb {
 
 void AsyncDwarfExprEval::Eval(const fxl::RefPtr<EvalContext>& context,
-                              const SymbolContext& expr_symbol_context,
-                              const std::vector<uint8_t>& expr) {
-  dwarf_eval_.Eval(context->GetDataProvider(), expr_symbol_context, expr,
+                              const SymbolContext& expr_symbol_context, DwarfExpr expr) {
+  dwarf_eval_.Eval(context->GetDataProvider(), expr_symbol_context, std::move(expr),
                    [this_ref = RefPtrTo(this), context](DwarfExprEval*, const Err& err) {
                      this_ref->OnEvalComplete(err, context);
 

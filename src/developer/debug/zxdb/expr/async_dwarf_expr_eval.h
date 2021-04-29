@@ -40,7 +40,7 @@ class AsyncDwarfExprEval : public fxl::RefCountedThreadSafe<AsyncDwarfExprEval> 
   // The symbol context should be the one for the module the expression came from so that addresses
   // within the expression can be interpreted correctly.
   void Eval(const fxl::RefPtr<EvalContext>& context, const SymbolContext& expr_symbol_context,
-            const std::vector<uint8_t>& expr);
+            DwarfExpr expr);
 
  protected:
   FRIEND_REF_COUNTED_THREAD_SAFE(AsyncDwarfExprEval);

@@ -19,17 +19,23 @@ namespace zxdb {
 // Decodes the variable location contained in the given form value. It's assumed the form value
 // contains either a block, an ExprLoc, or an offset into the .debug_loc section.
 //
+// The source is the symbol that created this location entry, it will be passed to the
+// VariableLocation.
+//
 // On error this will return an empty VariableLocation.
 VariableLocation DecodeVariableLocation(const llvm::DWARFUnit* unit,
-                                        const llvm::DWARFFormValue& form);
+                                        const llvm::DWARFFormValue& form, const LazySymbol& source);
 
 // Low-level decode for a variable location description. The data should start at the beginning
 // of the location list to parse, and cover as much data as the location list could possibly
 // cover (normally the end of the .debug_loc section).
 //
+// The source is the symbol that created this location entry, it will be passed to the
+// VariableLocation.
+//
 // On error this will return an empty VariableLocation.
 VariableLocation DecodeLocationList(TargetPointer unit_base_addr,
-                                    containers::array_view<uint8_t> data);
+                                    containers::array_view<uint8_t> data, const LazySymbol& source);
 
 }  // namespace zxdb
 

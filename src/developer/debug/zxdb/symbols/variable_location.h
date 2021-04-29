@@ -9,6 +9,8 @@
 
 #include <vector>
 
+#include "src/developer/debug/zxdb/symbols/dwarf_expr.h"
+
 namespace zxdb {
 
 class SymbolContext;
@@ -39,14 +41,14 @@ class VariableLocation {
     bool InRange(const SymbolContext& symbol_context, uint64_t ip) const;
 
     // The DWARF expression that evaluates to the result. Evaluate with the DwarfExprEval object.
-    std::vector<uint8_t> expression;
+    DwarfExpr expression;
   };
 
   VariableLocation();
 
   // Constructs a Location with a single location valid for all address ranges, with the program
   // contained in the given buffer.
-  VariableLocation(const uint8_t* data, size_t size);
+  VariableLocation(const uint8_t* data, size_t size, const LazySymbol& source);
 
   // Constructs with an extracted array of Entries.
   VariableLocation(std::vector<Entry> locations);

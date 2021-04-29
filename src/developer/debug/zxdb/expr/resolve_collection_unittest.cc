@@ -485,7 +485,7 @@ TEST_F(ResolveCollectionTest, VirtualInheritance) {
   std::vector<uint8_t> base_loc_expr{
       llvm::dwarf::DW_OP_dup,   llvm::dwarf::DW_OP_deref, llvm::dwarf::DW_OP_constu, 0x18,
       llvm::dwarf::DW_OP_minus, llvm::dwarf::DW_OP_deref, llvm::dwarf::DW_OP_plus};
-  auto inherited = fxl::MakeRefCounted<InheritedFrom>(base_type, base_loc_expr);
+  auto inherited = fxl::MakeRefCounted<InheritedFrom>(base_type, DwarfExpr(base_loc_expr));
   derived_type->set_inherited_from({LazySymbol(inherited)});
 
   ExprValue derived(derived_type, derived_data, ExprValueSource(kDerivedAddress));

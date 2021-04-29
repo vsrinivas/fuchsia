@@ -19,13 +19,13 @@ bool VariableLocation::Entry::InRange(const SymbolContext& symbol_context, uint6
 
 VariableLocation::VariableLocation() = default;
 
-VariableLocation::VariableLocation(const uint8_t* data, size_t size) {
+VariableLocation::VariableLocation(const uint8_t* data, size_t size, const LazySymbol& source) {
   locations_.emplace_back();
   Entry& entry = locations_.back();
 
   entry.begin = 0;
   entry.end = 0;
-  entry.expression.assign(&data[0], &data[size]);
+  entry.expression = DwarfExpr(std::vector<uint8_t>(&data[0], &data[size]), source);
 }
 
 VariableLocation::VariableLocation(std::vector<Entry> locations)

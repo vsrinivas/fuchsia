@@ -58,7 +58,7 @@ TEST(FindName, FindLocalVariable) {
   auto int32_type = MakeInt32Type();
 
   // Empty DWARF location expression. Since we don't evaluate any variables they can all be empty.
-  std::vector<uint8_t> var_loc;
+  DwarfExpr var_loc;
 
   // Set up the module symbols. This creates "ns" and "ns_value" in the symbol index.
   const char kNsName[] = "ns";
@@ -393,8 +393,9 @@ TEST(FindName, FindTypeName) {
   // never compute its value, but since it's syntactically in-scope, we should still be able to use
   // its type to resolve type names on the current class.
   auto global_type_ptr = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, global_type);
-  auto this_var = MakeVariableForTest("this", global_type_ptr, 0x9000, 0x9001,
-                                      {llvm::dwarf::DW_OP_reg0, llvm::dwarf::DW_OP_stack_value});
+  auto this_var =
+      MakeVariableForTest("this", global_type_ptr, 0x9000, 0x9001,
+                          DwarfExpr({llvm::dwarf::DW_OP_reg0, llvm::dwarf::DW_OP_stack_value}));
 
   // Function as a member of GlobalType.
   auto function = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);

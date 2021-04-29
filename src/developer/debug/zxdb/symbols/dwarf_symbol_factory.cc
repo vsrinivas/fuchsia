@@ -250,8 +250,9 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(const llvm::DWARFDie& die
 
   VariableLocation frame_base;
   decoder.AddCustom(llvm::dwarf::DW_AT_frame_base,
-                    [unit = die.getDwarfUnit(), &frame_base](const llvm::DWARFFormValue& value) {
-                      frame_base = DecodeVariableLocation(unit, value);
+                    [unit = die.getDwarfUnit(), &frame_base,
+                     source = MakeLazy(die)](const llvm::DWARFFormValue& value) {
+                      frame_base = DecodeVariableLocation(unit, value, source);
                     });
 
   llvm::DWARFDie object_ptr;
@@ -504,6 +505,9 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeCompileUnit(const llvm::DWARFDie& 
   llvm::Optional<uint64_t> language;
   decoder.AddUnsignedConstant(llvm::dwarf::DW_AT_language, &language);
 
+  llvm::Optional<uint64_t> addr_base;
+  decoder.AddUnsignedConstant(llvm::dwarf::DW_AT_addr_base, &addr_base);
+
   if (!decoder.Decode(die))
     return fxl::MakeRefCounted<Symbol>();
 
@@ -515,9 +519,14 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeCompileUnit(const llvm::DWARFDie& 
   if (language && *language >= 0 && *language < static_cast<int>(DwarfLang::kLast))
     lang_enum = static_cast<DwarfLang>(*language);
 
+  // Convert addr_base to std optional.
+  std::optional<uint64_t> addr_base_opt;
+  if (addr_base)
+    addr_base_opt = *addr_base;
+
   // We know the symbols_ is valid, that was checked on entry to CreateSymbol().
   return fxl::MakeRefCounted<CompileUnit>(static_cast<ModuleSymbols*>(symbols_.get())->GetWeakPtr(),
-                                          lang_enum, std::move(name_str));
+                                          lang_enum, std::move(name_str), addr_base_opt);
 }
 
 fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeDataMember(const llvm::DWARFDie& die) {
@@ -742,8 +751,10 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeInheritedFrom(const llvm::DWARFDie
 
   if (member_offset)
     return fxl::MakeRefCounted<InheritedFrom>(std::move(lazy_type), *member_offset);
-  if (!offset_expression.empty())
-    return fxl::MakeRefCounted<InheritedFrom>(std::move(lazy_type), std::move(offset_expression));
+  if (!offset_expression.empty()) {
+    return fxl::MakeRefCounted<InheritedFrom>(std::move(lazy_type),
+                                              DwarfExpr(std::move(offset_expression)));
+  }
   return fxl::MakeRefCounted<Symbol>();  // Missing location.
 }
 
@@ -902,8 +913,9 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeVariable(const llvm::DWARFDie& die
 
   VariableLocation location;
   decoder.AddCustom(llvm::dwarf::DW_AT_location,
-                    [unit = die.getDwarfUnit(), &location](const llvm::DWARFFormValue& value) {
-                      location = DecodeVariableLocation(unit, value);
+                    [unit = die.getDwarfUnit(), &location,
+                     source = MakeLazy(die)](const llvm::DWARFFormValue& value) {
+                      location = DecodeVariableLocation(unit, value, source);
                     });
 
   llvm::DWARFDie type;

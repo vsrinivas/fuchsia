@@ -72,7 +72,7 @@ DwarfExprEval::StackEntry DwarfExprEval::GetResult() const {
 }
 
 DwarfExprEval::Completion DwarfExprEval::Eval(fxl::RefPtr<SymbolDataProvider> data_provider,
-                                              const SymbolContext& symbol_context, Expression expr,
+                                              const SymbolContext& symbol_context, DwarfExpr expr,
                                               CompletionCallback cb) {
   SetUp(std::move(data_provider), symbol_context, expr, std::move(cb));
 
@@ -81,7 +81,7 @@ DwarfExprEval::Completion DwarfExprEval::Eval(fxl::RefPtr<SymbolDataProvider> da
 }
 
 std::string DwarfExprEval::ToString(fxl::RefPtr<SymbolDataProvider> data_provider,
-                                    const SymbolContext& symbol_context, Expression expr,
+                                    const SymbolContext& symbol_context, DwarfExpr expr,
                                     bool pretty) {
   SetUp(std::move(data_provider), symbol_context, expr, nullptr);
 
@@ -99,7 +99,7 @@ std::string DwarfExprEval::ToString(fxl::RefPtr<SymbolDataProvider> data_provide
 }
 
 void DwarfExprEval::SetUp(fxl::RefPtr<SymbolDataProvider> data_provider,
-                          const SymbolContext& symbol_context, Expression expr,
+                          const SymbolContext& symbol_context, DwarfExpr expr,
                           CompletionCallback cb) {
   is_complete_ = false;
   data_provider_ = std::move(data_provider);
@@ -108,10 +108,10 @@ void DwarfExprEval::SetUp(fxl::RefPtr<SymbolDataProvider> data_provider,
   expr_index_ = 0;
   completion_callback_ = std::move(cb);
 
-  if (!expr_.empty()) {
+  if (!expr_.data().empty()) {
     // Assume little-endian.
     data_extractor_ = std::make_unique<llvm::DataExtractor>(
-        llvm::StringRef(reinterpret_cast<const char*>(&expr_[0]), expr_.size()), true,
+        llvm::StringRef(reinterpret_cast<const char*>(&expr_.data()[0]), expr_.data().size()), true,
         kTargetPointerSize);
   }
 }
@@ -126,7 +126,7 @@ bool DwarfExprEval::ContinueEval() {
 
   do {
     // Check for successfully reaching the end of the stream.
-    if (!is_complete_ && expr_index_ == expr_.size()) {
+    if (!is_complete_ && expr_index_ == expr_.data().size()) {
       if (is_string_output())
         return true;  // Only expecting to produce a string.
 
@@ -165,13 +165,13 @@ bool DwarfExprEval::ContinueEval() {
 
 DwarfExprEval::Completion DwarfExprEval::EvalOneOp() {
   FX_DCHECK(!is_complete_);
-  FX_DCHECK(expr_index_ < expr_.size());
+  FX_DCHECK(expr_index_ < expr_.data().size());
 
   // Clear any current register information. See current_register_id_ declaration for more.
   current_register_id_ = debug_ipc::RegisterID::kUnknown;
 
   // Opcode is next byte in the data buffer. Consume it.
-  uint8_t op = expr_[expr_index_];
+  uint8_t op = expr_.data()[expr_index_];
   expr_index_++;
 
   // Literals 0-31.
@@ -203,6 +203,8 @@ DwarfExprEval::Completion DwarfExprEval::EvalOneOp() {
   switch (op) {
     case llvm::dwarf::DW_OP_addr:
       return OpAddr();
+    case llvm::dwarf::DW_OP_addrx:
+      return OpAddrBase(ResultType::kPointer, "DW_OP_addrx");
     case llvm::dwarf::DW_OP_const1u:
       return OpPushUnsigned(1, "DW_OP_const1u");
     case llvm::dwarf::DW_OP_const1s:
@@ -223,6 +225,8 @@ DwarfExprEval::Completion DwarfExprEval::EvalOneOp() {
       return OpPushLEBUnsigned();
     case llvm::dwarf::DW_OP_consts:
       return OpPushLEBSigned();
+    case llvm::dwarf::DW_OP_constx:
+      return OpAddrBase(ResultType::kValue, "DW_OP_constx");
     case llvm::dwarf::DW_OP_dup:
       return OpDup();
     case llvm::dwarf::DW_OP_drop:
@@ -541,8 +545,17 @@ DwarfExprEval::Completion DwarfExprEval::OpBinary(StackEntry (*op)(StackEntry, S
   return Completion::kSync;
 }
 
-// 1 parameter: unsigned the size of a pointer. This is relative to the load address of the current
-// module. It is used to for globals and statics.
+// ULEB128 index into the .debug_addr section where a machine address-length value is stored. The
+// index is relative to the value of the DW_AT_addr_base attribute of the compilation unit.
+//
+// result_type == kAddress corresponds to DW_OP_addrx
+// result_type == kValue corresponds to DW_OP_constx.
+DwarfExprEval::Completion DwarfExprEval::OpAddrBase(ResultType result_type, const char* op_name) {
+  // TODO(fxbug.dev/75488) implement this.
+  ReportError("Unimplemented DWARF expression operator.");
+  return Completion::kSync;
+}
+
 DwarfExprEval::Completion DwarfExprEval::OpAddr() {
   StackEntry offset;
   if (!ReadUnsigned(kTargetPointerSize, &offset))
@@ -789,7 +802,7 @@ DwarfExprEval::Completion DwarfExprEval::OpImplicitValue() {
   StackEntry len = 0;
   if (!ReadLEBUnsigned(&len))
     return Completion::kSync;
-  if (len > sizeof(StackEntry) || expr_index_ + static_cast<size_t>(len) > expr_.size()) {
+  if (len > sizeof(StackEntry) || expr_index_ + static_cast<size_t>(len) > expr_.data().size()) {
     ReportError(fxl::StringPrintf("DWARF implicit value length too long: 0x%x.",
                                   static_cast<unsigned>(len)));
     return Completion::kSync;
@@ -797,7 +810,7 @@ DwarfExprEval::Completion DwarfExprEval::OpImplicitValue() {
 
   StackEntry value = 0;
   if (len > 0) {
-    memcpy(&value, &expr_[expr_index_], static_cast<size_t>(len));
+    memcpy(&value, &expr_.data()[expr_index_], static_cast<size_t>(len));
     Skip(len);
   }
 
@@ -1162,9 +1175,9 @@ DwarfExprEval::Completion DwarfExprEval::OpTlsAddr(const char* op_name) {
 
 void DwarfExprEval::Skip(SignedStackEntry amount) {
   SignedStackEntry new_index = static_cast<SignedStackEntry>(expr_index_) + amount;
-  if (new_index >= static_cast<SignedStackEntry>(expr_.size())) {
+  if (new_index >= static_cast<SignedStackEntry>(expr_.data().size())) {
     // Skip to or past the end just terminates the program.
-    expr_index_ = expr_.size();
+    expr_index_ = expr_.data().size();
   } else if (new_index < 0) {
     // Skip before beginning is an error.
     ReportError("DWARF expression skips out-of-bounds.");

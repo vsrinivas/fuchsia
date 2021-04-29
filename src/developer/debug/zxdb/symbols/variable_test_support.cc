@@ -10,7 +10,7 @@ namespace zxdb {
 
 fxl::RefPtr<Variable> MakeVariableForTest(const std::string& name, fxl::RefPtr<Type> type,
                                           uint64_t begin_ip_range, uint64_t end_ip_range,
-                                          std::vector<uint8_t> location_expression) {
+                                          DwarfExpr location_expression) {
   auto variable = fxl::MakeRefCounted<Variable>(DwarfTag::kVariable);
   variable->set_assigned_name(name);
 
@@ -26,7 +26,7 @@ fxl::RefPtr<Variable> MakeVariableForTest(const std::string& name, fxl::RefPtr<T
 
 fxl::RefPtr<Variable> MakeUint64VariableForTest(const std::string& name, uint64_t begin_ip_range,
                                                 uint64_t end_ip_range,
-                                                std::vector<uint8_t> location_expression) {
+                                                DwarfExpr location_expression) {
   return MakeVariableForTest(
       name, fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, 8, "uint64_t"),
       begin_ip_range, end_ip_range, std::move(location_expression));

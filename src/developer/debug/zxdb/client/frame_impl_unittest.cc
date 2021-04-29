@@ -114,7 +114,7 @@ TEST_F(FrameImplTest, AsyncBasePointer) {
   // This describes the frame base location for the function. This encodes the memory pointed to by
   // register 0.
   const uint8_t kSelectRegRef[2] = {llvm::dwarf::DW_OP_reg0, llvm::dwarf::DW_OP_deref};
-  VariableLocation frame_base(kSelectRegRef, 2);
+  VariableLocation frame_base(kSelectRegRef, 2, LazySymbol());
 
   auto function = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
   function->set_frame_base(frame_base);

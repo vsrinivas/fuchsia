@@ -21,13 +21,13 @@ TEST(FormatSymbol, Variable) {
   loc_entries.resize(2);
   loc_entries[0].begin = 0x1000;
   loc_entries[0].end = 0x2000;
-  loc_entries[0].expression.push_back(0x30);  // DW_OP_lit0
-  loc_entries[0].expression.push_back(0x71);  // DW_OP_breg1
-  loc_entries[0].expression.push_back(1);     // 1 (param for breg).
+  loc_entries[0].expression = DwarfExpr({0x30,  // DW_OP_lit0
+                                         0x71,  // DW_OP_breg1
+                                         1});   // 1 (param for breg).
 
   loc_entries[1].begin = 0x3000;
   loc_entries[1].end = 0x4000;
-  loc_entries[1].expression.push_back(0x31);  // DW_OP_lit1
+  loc_entries[1].expression = DwarfExpr({0x31});  // DW_OP_lit1
 
   auto var = fxl::MakeRefCounted<Variable>(DwarfTag::kVariable, "my_var", int32_type,
                                            VariableLocation(loc_entries));
@@ -102,8 +102,7 @@ TEST(FormatSymbol, Collection) {
 
   // Virtual inheritance has no location but an expression to compute it. We use a dummy expression.
   auto virtual_base_type = MakeCollectionType(DwarfTag::kStructureType, "VirtualBase", {});
-  auto virtual_base_from =
-      fxl::MakeRefCounted<InheritedFrom>(virtual_base_type, std::vector<uint8_t>{0x01});
+  auto virtual_base_from = fxl::MakeRefCounted<InheritedFrom>(virtual_base_type, DwarfExpr({0x01}));
 
   coll->set_inherited_from({LazySymbol(base_from), LazySymbol(virtual_base_from)});
 

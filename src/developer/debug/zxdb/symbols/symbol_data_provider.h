@@ -96,6 +96,10 @@ class SymbolDataProvider : public fxl::RefCountedThreadSafe<SymbolDataProvider> 
   // variables live.
   virtual void GetTLSSegment(const SymbolContext& symbol_context, GetTLSSegmentCallback cb);
 
+  // Returns the address at the given offset in the .debug_addr section of the binary. This defauilt
+  // implementation reports failure.
+  virtual ErrOr<uint64_t> GetDebugAddrEntry(uint64_t offset) const;
+
   // Request to retrieve a memory block from the debugged process. On success, the implementation
   // will call the callback with the retrieved data pointer.
   //

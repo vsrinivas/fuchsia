@@ -404,7 +404,7 @@ TEST_F(StackTest, InlineVars) {
 
   // The inline function has a local variable ("var") that always evaluates to 3.
   VariableLocation::Entry loc_entry;
-  loc_entry.expression = {llvm::dwarf::DW_OP_lit3, llvm::dwarf::DW_OP_stack_value};
+  loc_entry.expression = DwarfExpr({llvm::dwarf::DW_OP_lit3, llvm::dwarf::DW_OP_stack_value});
   VariableLocation var_loc({loc_entry});
 
   auto int32_type = MakeInt32Type();

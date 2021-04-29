@@ -41,9 +41,8 @@ TestIndexedSymbol::TestIndexedSymbol(MockModuleSymbols* mod_sym, IndexNode* inde
 TestIndexedGlobalVariable::TestIndexedGlobalVariable(MockModuleSymbols* mod_sym,
                                                      IndexNode* index_parent,
                                                      const std::string& var_name)
-    : TestIndexedSymbol(
-          mod_sym, index_parent, var_name,
-          MakeVariableForTest(var_name, MakeInt32Type(), 0x100, 0x200, std::vector<uint8_t>())),
+    : TestIndexedSymbol(mod_sym, index_parent, var_name,
+                        MakeVariableForTest(var_name, MakeInt32Type(), 0x100, 0x200, DwarfExpr())),
       var(symbol->AsVariable()) {}
 
 }  // namespace zxdb

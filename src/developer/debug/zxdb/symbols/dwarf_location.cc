@@ -15,14 +15,15 @@
 namespace zxdb {
 
 VariableLocation DecodeVariableLocation(const llvm::DWARFUnit* unit,
-                                        const llvm::DWARFFormValue& form) {
+                                        const llvm::DWARFFormValue& form,
+                                        const LazySymbol& source) {
   if (form.isFormClass(llvm::DWARFFormValue::FC_Block) ||
       form.isFormClass(llvm::DWARFFormValue::FC_Exprloc)) {
     // These forms are both a block of data which is interpreted as a DWARF expression. There is no
     // validity range for this so assume the expression is valid as long as the variable is in
     // scope.
     llvm::ArrayRef<uint8_t> block = *form.getAsBlock();
-    return VariableLocation(block.data(), block.size());
+    return VariableLocation(block.data(), block.size(), source);
   }
 
   if (!form.isFormClass(llvm::DWARFFormValue::FC_SectionOffset))
@@ -49,11 +50,13 @@ VariableLocation DecodeVariableLocation(const llvm::DWARFUnit* unit,
 
   // Interpret the resulting list.
   auto base_address = const_cast<llvm::DWARFUnit*>(unit)->getBaseAddress();
-  return DecodeLocationList(base_address ? base_address->Address : 0, section_data.subview(offset));
+  return DecodeLocationList(base_address ? base_address->Address : 0, section_data.subview(offset),
+                            source);
 }
 
 VariableLocation DecodeLocationList(TargetPointer unit_base_addr,
-                                    containers::array_view<uint8_t> data) {
+                                    containers::array_view<uint8_t> data,
+                                    const LazySymbol& source) {
   DataExtractor ext(data);
   std::vector<VariableLocation::Entry> entries;
 
@@ -108,7 +111,7 @@ VariableLocation DecodeLocationList(TargetPointer unit_base_addr,
     VariableLocation::Entry& dest = entries.emplace_back();
     dest.begin = base_address + *begin;
     dest.end = base_address + *end;
-    dest.expression = std::move(expression);
+    dest.expression = DwarfExpr(std::move(expression), source);
   }
 
   return VariableLocation(std::move(entries));

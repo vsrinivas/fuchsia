@@ -63,7 +63,7 @@ TEST_F(AsyncDwarfExprEvalTest, MemoryManagement) {
                                                            data_provider, ExprLanguage::kC);
 
   // This expression evaluates the relative address.
-  std::vector<uint8_t> expr{llvm::dwarf::DW_OP_addr, kRelativeAddress, 0, 0, 0, 0, 0, 0, 0};
+  DwarfExpr expr({llvm::dwarf::DW_OP_addr, kRelativeAddress, 0, 0, 0, 0, 0, 0, 0});
 
   bool called = false;
   auto value_callback = [&called, kMemoryValue](ErrOrValue value) {

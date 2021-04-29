@@ -244,7 +244,7 @@ OutputBuffer FormatVariableLocation(int indent, const std::string& title,
 
     if (opts.dwarf_expr == FormatSymbolOptions::DwarfExpr::kBytes) {
       // Dump the raw DWARF expression bytes.
-      for (uint8_t byte : entry.expression)
+      for (uint8_t byte : entry.expression.data())
         out.Append(fxl::StringPrintf(" 0x%02x", byte));
     } else {
       out.Append(" ");

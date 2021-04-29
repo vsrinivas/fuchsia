@@ -60,13 +60,13 @@ void DwarfExprEvalTest::DoEvalTest(const std::vector<uint8_t> data, bool expecte
   // Check string-ification. Do this first because it won't set up the complete state of the
   // DwarfExprEval and some tests want to validate this after the DoEvalTest call.
   eval_.Clear();
-  std::string stringified = eval_.ToString(provider(), symbol_context_, data, false);
+  std::string stringified = eval_.ToString(provider(), symbol_context_, DwarfExpr(data), false);
   EXPECT_EQ(expected_string, stringified);
 
   eval_.Clear();
   bool callback_issued = false;
   EXPECT_EQ(expected_completion,
-            eval_.Eval(provider(), symbol_context_, data,
+            eval_.Eval(provider(), symbol_context_, DwarfExpr(data),
                        [&callback_issued, expected_success, expected_result, expected_result_type,
                         expected_message](DwarfExprEval* eval, const Err& err) {
                          EXPECT_TRUE(eval->is_complete());
@@ -141,7 +141,7 @@ TEST_F(DwarfExprEvalTest, InfiniteLoop) {
   std::unique_ptr<DwarfExprEval> eval = std::make_unique<DwarfExprEval>();
 
   bool callback_issued = false;
-  eval->Eval(provider(), symbol_context(), loop_data,
+  eval->Eval(provider(), symbol_context(), DwarfExpr(loop_data),
              [&callback_issued](DwarfExprEval* eval, const Err& err) { callback_issued = true; });
 
   // Let the message loop process messages for a few times so the evaluator can run.
@@ -873,10 +873,10 @@ TEST_F(DwarfExprEvalTest, PrettyPrint) {
   eval().Clear();
   std::string stringified =
       eval().ToString(provider(), symbol_context(),
-                      {llvm::dwarf::DW_OP_reg3, llvm::dwarf::DW_OP_breg0, 2,
-                       llvm::dwarf::DW_OP_lit3, llvm::dwarf::DW_OP_plus_uconst, 1,
-                       // This address is "1" relative to the module base.
-                       llvm::dwarf::DW_OP_addr, 1, 0, 0, 0, 0, 0, 0, 0},
+                      DwarfExpr({llvm::dwarf::DW_OP_reg3, llvm::dwarf::DW_OP_breg0, 2,
+                                 llvm::dwarf::DW_OP_lit3, llvm::dwarf::DW_OP_plus_uconst, 1,
+                                 // This address is "1" relative to the module base.
+                                 llvm::dwarf::DW_OP_addr, 1, 0, 0, 0, 0, 0, 0, 0}),
                       true);
   EXPECT_EQ(
       "register(x3), register(x0) + 2, push(3), + 1, push(" + to_hex_string(kModuleBase + 1) + ")",

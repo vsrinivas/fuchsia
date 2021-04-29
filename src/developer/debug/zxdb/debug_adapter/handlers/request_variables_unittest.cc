@@ -17,7 +17,8 @@ namespace zxdb {
 TEST_F(RequestVariablesTest, LocalsNoChildren) {
   // Make a mock frame with test_var variable.
   auto variable = MakeUint64VariableForTest(
-      "test_var", 0x10000, 0x10020, {llvm::dwarf::DW_OP_reg0, llvm::dwarf::DW_OP_stack_value});
+      "test_var", 0x10000, 0x10020,
+      DwarfExpr({llvm::dwarf::DW_OP_reg0, llvm::dwarf::DW_OP_stack_value}));
 
   fxl::RefPtr<Function> function(fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram));
   function->set_assigned_name("test_func1");

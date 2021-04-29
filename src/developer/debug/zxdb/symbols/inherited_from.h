@@ -5,6 +5,7 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_INHERITED_FROM_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_INHERITED_FROM_H_
 
+#include "src/developer/debug/zxdb/symbols/dwarf_expr.h"
 #include "src/developer/debug/zxdb/symbols/symbol.h"
 
 namespace zxdb {
@@ -44,7 +45,7 @@ class InheritedFrom final : public Symbol {
 
   // This is the DW_AT_data_member_location attribute for general expression locations. This will be
   // valid when kind() == kExpression. See class-level comment above.
-  std::vector<uint8_t> location_expression() const { return location_expression_; }
+  const DwarfExpr& location_expression() const { return location_expression_; }
 
   // We could add the value of the DW_AT_accessibility for public/private and DW_TAG_virtuality for
   // virtual inheritance.
@@ -54,14 +55,14 @@ class InheritedFrom final : public Symbol {
   FRIEND_MAKE_REF_COUNTED(InheritedFrom);
 
   InheritedFrom(LazySymbol from, uint64_t offset);
-  InheritedFrom(LazySymbol from, std::vector<uint8_t> expr);
+  InheritedFrom(LazySymbol from, DwarfExpr expr);
   ~InheritedFrom();
 
   Kind kind_ = kConstant;
   LazySymbol from_;
 
   uint64_t offset_ = 0;
-  std::vector<uint8_t> location_expression_;
+  DwarfExpr location_expression_;
 };
 
 }  // namespace zxdb

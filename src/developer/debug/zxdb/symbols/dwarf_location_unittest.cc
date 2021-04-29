@@ -27,14 +27,14 @@ TEST(DwarfLocation, UnitRelative) {
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
   constexpr TargetPointer kUnitBaseAddress = 0x1000000;
-  VariableLocation result = DecodeLocationList(kUnitBaseAddress, data);
+  VariableLocation result = DecodeLocationList(kUnitBaseAddress, data, LazySymbol());
   EXPECT_FALSE(result.is_null());
   ASSERT_EQ(1u, result.locations().size());  // Only the last range was nonempty.
 
   EXPECT_EQ(kUnitBaseAddress + 0xdf8, result.locations()[0].begin);
   EXPECT_EQ(kUnitBaseAddress + 0x1051, result.locations()[0].end);
   std::vector<uint8_t> expected_expr{0x7f, 0xd8, 0x75};
-  EXPECT_EQ(expected_expr, result.locations()[0].expression);
+  EXPECT_EQ(expected_expr, result.locations()[0].expression.data());
 }
 
 TEST(DwarfLocation, NewBaseAddress) {
@@ -53,21 +53,22 @@ TEST(DwarfLocation, NewBaseAddress) {
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // End of expression marker (0, 0).
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
-  VariableLocation result = DecodeLocationList(0, data);
+  VariableLocation result = DecodeLocationList(0, data, LazySymbol());
   EXPECT_FALSE(result.is_null());
   ASSERT_EQ(2u, result.locations().size());
 
   EXPECT_EQ(0x2206au, result.locations()[0].begin);
   EXPECT_EQ(0x22e16u, result.locations()[0].end);
   std::vector<uint8_t> expected_expr{0x7f, 0xd8, 0x75};
-  EXPECT_EQ(expected_expr, result.locations()[0].expression);
+  EXPECT_EQ(expected_expr, result.locations()[0].expression.data());
 
   EXPECT_EQ(0x22e18u, result.locations()[1].begin);
   EXPECT_EQ(0x23071u, result.locations()[1].end);
-  EXPECT_EQ(expected_expr, result.locations()[1].expression);
+  EXPECT_EQ(expected_expr, result.locations()[1].expression.data());
 
   // Now test a truncated list.
-  result = DecodeLocationList(0, containers::array_view<uint8_t>(&data[0], data.size() - 4));
+  result = DecodeLocationList(0, containers::array_view<uint8_t>(&data[0], data.size() - 4),
+                              LazySymbol());
   EXPECT_TRUE(result.is_null());
 }
 
@@ -78,7 +79,7 @@ TEST(DwarfLocation, BadExpr) {
                             0x00, 0x80,         // Expression byte length.
                             0x7f, 0xd8, 0x75};  // Expression (shorter than byte length).
 
-  VariableLocation result = DecodeLocationList(0, data);
+  VariableLocation result = DecodeLocationList(0, data, LazySymbol());
   EXPECT_TRUE(result.is_null());
 }
 
