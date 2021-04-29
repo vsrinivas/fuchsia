@@ -14,6 +14,7 @@
 
 #include <cstdint>
 #include <cstdlib>
+#include <cstring>
 #include <limits>
 
 #ifdef __Fuchsia__
@@ -553,8 +554,8 @@ zx_status_t EncodeIovecEtc(const fidl_type_t* type, void* value, zx_channel_iove
   }
 
   iovecs[0] = zx_channel_iovec_t{
-    .buffer = backing_buffer,
-    .capacity = encoder.num_out_bytes(),
+      .buffer = backing_buffer,
+      .capacity = encoder.num_out_bytes(),
   };
   *out_actual_iovec = 1;
   *out_actual_handles = encoder.num_out_handles();

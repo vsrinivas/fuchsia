@@ -7,14 +7,15 @@
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/trace.h>
+#include <zircon/assert.h>
+
+#include <cstring>
 
 #ifdef __Fuchsia__
 #include <lib/fidl/llcpp/client_base.h>
 #include <lib/fidl/llcpp/server.h>
 #include <zircon/syscalls.h>
 #endif  // __Fuchsia__
-
-#include <zircon/assert.h>
 
 namespace fidl {
 
