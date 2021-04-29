@@ -66,7 +66,7 @@ use {
     fidl_fuchsia_sys::{LoaderMarker, LoaderProxy},
     fuchsia_async as fasync,
     fuchsia_component::{client, server::*},
-    fuchsia_inspect::{component, health::Reporter, Inspector},
+    fuchsia_inspect::{self as inspect, component, health::Reporter, Inspector},
     fuchsia_runtime::{take_startup_handle, HandleType},
     fuchsia_zircon::{self as zx, Clock, HandleBased},
     futures::lock::Mutex,
@@ -259,7 +259,7 @@ impl BuiltinEnvironmentBuilder {
             builtin_runners,
             boot_resolver,
             self.utc_clock,
-            Arc::new(self.inspector.unwrap_or(component::inspector().clone())),
+            self.inspector.unwrap_or(component::inspector().clone()),
             self.enable_hub,
         )
         .await?)
@@ -314,7 +314,7 @@ pub struct BuiltinEnvironment {
     pub execution_mode: ExecutionMode,
     pub num_threads: usize,
     pub out_dir_contents: OutDirContents,
-    pub inspector: Arc<Inspector>,
+    pub inspector: Inspector,
     _service_fs_task: Option<fasync::Task<()>>,
 }
 
@@ -326,7 +326,7 @@ impl BuiltinEnvironment {
         builtin_runners: Vec<Arc<BuiltinRunner>>,
         boot_resolver: Option<Arc<FuchsiaBootResolver>>,
         utc_clock: Option<Arc<Clock>>,
-        inspector: Arc<Inspector>,
+        inspector: Inspector,
         enable_hub: bool,
     ) -> Result<BuiltinEnvironment, Error> {
         let execution_mode = match runtime_config.debug {
@@ -611,20 +611,8 @@ impl BuiltinEnvironment {
         model.root.hooks.install(component_tree_stats.hooks()).await;
 
         // Serve stats about inspect in a lazy node.
-        let weak_inspector = Arc::downgrade(&inspector);
-        inspector.root().record_lazy_values("inspect_stats", move || {
-            let weak_inspector_for_fut = weak_inspector.clone();
-            async move {
-                let inspector = Inspector::new();
-                if let Some(root_inspector) = weak_inspector_for_fut.upgrade() {
-                    let stats_node = inspector.root().create_child("inspect_stats");
-                    root_inspector.write_stats_to(&stats_node);
-                    inspector.root().record(stats_node);
-                }
-                Ok(inspector)
-            }
-            .boxed()
-        });
+        let node = inspect::stats::Node::new(&inspector, inspector.root());
+        inspector.root().record(node.take());
 
         // Set up the capability ready notifier.
         let capability_ready_notifier =

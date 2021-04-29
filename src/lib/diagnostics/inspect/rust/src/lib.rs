@@ -122,6 +122,7 @@ pub mod health;
 pub mod heap;
 pub mod reader;
 mod state;
+pub mod stats;
 
 pub mod testing {
     pub use diagnostics_hierarchy::{
@@ -204,25 +205,6 @@ impl Inspector {
         Inspector::new_with_size(constants::DEFAULT_VMO_SIZE_BYTES)
     }
 
-    /// Returns statistics about the current inspect state.
-    pub fn stats(&self) -> Option<Stats> {
-        self.root_node
-            .inner
-            .inner_ref()
-            .and_then(|inner_ref| inner_ref.state.try_lock().ok().map(|state| state.stats()))
-    }
-
-    /// Write stats about this inspector under a node of the given `name` under root.
-    pub fn write_stats_to(&self, node: &Node) {
-        if let Some(stats) = self.stats() {
-            // We set the value after creating the objects so that they are taken into account when
-            // fetching the stats.
-            node.record_uint("current_size", stats.current_size as u64);
-            node.record_uint("maximum_size", stats.maximum_size as u64);
-            node.record_uint("total_dynamic_children", stats.total_dynamic_children as u64);
-        }
-    }
-
     /// True if the Inspector was created successfully (it's not No-Op)
     pub fn is_valid(&self) -> bool {
         self.vmo.is_some() && self.root_node.is_valid()
@@ -290,10 +272,6 @@ impl Inspector {
         self.root().atomic_update(update_fn)
     }
 
-    fn state(&self) -> Option<State> {
-        self.root().inner.inner_ref().map(|inner_ref| inner_ref.state.clone())
-    }
-
     /// Creates a new No-Op inspector
     pub fn new_no_op() -> Self {
         Inspector { vmo: None, root_node: Arc::new(Node::new_no_op()) }
@@ -318,6 +296,10 @@ impl Inspector {
     fn no_op_from_vmo(vmo: Arc<zx::Vmo>) -> Inspector {
         Inspector { vmo: Some(vmo), root_node: Arc::new(Node::new_no_op()) }
     }
+
+    pub(crate) fn state(&self) -> Option<State> {
+        self.root().inner.inner_ref().map(|inner_ref| inner_ref.state.clone())
+    }
 }
 
 /// Trait implemented by all inspect types.
@@ -325,7 +307,7 @@ pub trait InspectType: Send + Sync {}
 
 /// Trait implemented by all inspect types. It provides constructor functions that are not
 /// intended for use outside the crate.
-trait InspectTypeInternal {
+pub(crate) trait InspectTypeInternal {
     fn new(state: State, block_index: u32) -> Self;
     fn new_no_op() -> Self;
     fn is_valid(&self) -> bool;
@@ -516,6 +498,7 @@ macro_rules! inspect_type_impl {
                 pub fn block_index(&self) -> u32 {
                     self.inner.inner_ref().unwrap().block_index
                 }
+
             }
 
             impl InspectType for $name {}
@@ -723,6 +706,11 @@ impl Node {
     /// Creates a new root node.
     pub(in crate) fn new_root(state: State) -> Node {
         Node::new(state, 0)
+    }
+
+    /// Returns the inner state where operations in this node write.
+    pub(in crate) fn state(&self) -> Option<State> {
+        self.inner.inner_ref().map(|inner_ref| inner_ref.state.clone())
     }
 
     /// Create a weak reference to the original node. All operations on a weak

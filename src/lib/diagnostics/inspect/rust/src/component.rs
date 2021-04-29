@@ -33,7 +33,7 @@
 //! health.set_ok();
 //! ```
 
-use super::{health, Inspector};
+use super::{health, stats, Inspector, LazyNode};
 use inspect_format::constants;
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
@@ -49,6 +49,9 @@ lazy_static! {
 
   // Health node based on the global inspector from `inspector()`.
   static ref HEALTH: Arc<Mutex<health::Node>> = Arc::new(Mutex::new(health::Node::new(INSPECTOR.root())));
+
+  // Stats node based on the global inspector from `inspector()`.
+  static ref STATS: stats::Node<LazyNode> = stats::Node::new(&INSPECTOR, INSPECTOR.root());
 }
 
 /// A thread-safe handle to a health reporter.  See `component::health()` for instructions on how
@@ -102,10 +105,17 @@ pub fn health() -> Health {
     return Health { health_node: HEALTH.clone() };
 }
 
+/// Serves statistics about inspect such as size or number of dynamic children in the
+/// `fuchsia.inspect.Stats` lazy node.
+pub fn serve_inspect_stats() {
+    lazy_static::initialize(&STATS);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{assert_data_tree, health::Reporter, testing::AnyProperty};
+    use futures::FutureExt;
 
     #[test]
     fn health_checker_lifecycle() {
@@ -180,5 +190,29 @@ mod tests {
     fn init_inspector_with_size() {
         super::init_inspector_with_size(8192);
         assert_eq!(super::inspector().vmo.as_ref().unwrap().get_size().unwrap(), 8192);
+    }
+
+    #[test]
+    fn inspect_stats() {
+        let inspector = super::inspector();
+        super::serve_inspect_stats();
+        inspector.root().record_lazy_child("foo", || {
+            async move {
+                let inspector = Inspector::new();
+                inspector.root().record_uint("a", 1);
+                Ok(inspector)
+            }
+            .boxed()
+        });
+        assert_data_tree!(inspector, root: {
+            foo: {
+                a: 1u64,
+            },
+            "fuchsia.inspect.Stats": {
+                current_size: 4096u64,
+                maximum_size: constants::DEFAULT_VMO_SIZE_BYTES as u64,
+                total_dynamic_children: 2u64,
+            }
+        });
     }
 }

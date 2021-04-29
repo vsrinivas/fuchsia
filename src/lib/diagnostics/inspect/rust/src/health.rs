@@ -2,10 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Not sure why this is needed: without it, the compiler will report that practically all of the
-// code here is unused.
-#![allow(unused)]
-
 //! # Health-checking inspect node.
 //!
 //! Health installs a health checking inspect node.  This node reports the current program's health
@@ -43,9 +39,8 @@
 //! ```
 
 use {
-    super::{Inspector, Property, StringProperty},
+    super::{Property, StringProperty},
     fuchsia_zircon as zx,
-    std::sync::{Arc, Mutex},
 };
 
 /// A trait of a standardized health checker.
@@ -172,15 +167,13 @@ impl Node {
 mod tests {
     use {
         super::*,
-        crate::assert_data_tree,
-        diagnostics_hierarchy::{DiagnosticsHierarchy, Property},
-        std::convert::TryFrom,
+        crate::{assert_data_tree, Inspector},
     };
 
     #[test]
     fn health_checker_lifecycle() {
         let inspector = Inspector::new();
-        let mut root = inspector.root();
+        let root = inspector.root();
         // In the beginning, the inspector has no stats.
         assert_data_tree!(inspector, root: contains {});
 

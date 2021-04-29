@@ -53,6 +53,7 @@ rustc_library("fuchsia-inspect") {
     "src/reader/snapshot.rs",
     "src/reader/tree_reader.rs",
     "src/state.rs",
+    "src/stats.rs",
   ]
 }
 

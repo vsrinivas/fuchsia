@@ -22,8 +22,8 @@
 
             // TODO(fxbug.dev/75656): Reenable
             // Ensure that component manager has at least 2MB of space for CPU measurements and that not all of it is used.
-            // "<component_manager>:root/cpu_stats/measurements/inspect_stats:current_size WHERE [a] a < 2*1024*1024",
-            // "<component_manager>:root/cpu_stats/measurements/inspect_stats:maximum_size WHERE [a] a >= 2*1024*1024",
+            // "<component_manager>:root/cpu_stats/measurements/fuchsia.inspect.Stats:current_size WHERE [a] a < 2*1024*1024",
+            // "<component_manager>:root/cpu_stats/measurements/fuchsia.inspect.Stats:maximum_size WHERE [a] a >= 2*1024*1024",
 
             // Component manager exposes the number of tracked tasks, and the value is not zero.
             "<component_manager>:root/cpu_stats/measurements:task_count WHERE [a] a > 0",

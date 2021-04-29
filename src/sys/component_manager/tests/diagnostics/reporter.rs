@@ -46,7 +46,7 @@ async fn main() {
         cpu_stats: contains {
             measurements: {
                 task_count: 3u64,
-                inspect_stats: {
+                "fuchsia.inspect.Stats": {
                     current_size: 4096u64,
                     maximum_size: 2097152u64,
                     total_dynamic_children: 0u64,
@@ -78,7 +78,7 @@ async fn main() {
                 }
             },
         },
-        inspect_stats: {
+        "fuchsia.inspect.Stats": {
             current_size: 4096u64,
             maximum_size: 262144u64,
             total_dynamic_children: 3u64,
