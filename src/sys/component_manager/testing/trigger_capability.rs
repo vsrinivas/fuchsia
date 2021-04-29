@@ -4,8 +4,6 @@
 
 use {
     anyhow::Error,
-    async_trait::async_trait,
-    component_events::injectors::ProtocolInjector,
     fidl_fidl_test_components as ftest, fuchsia_async as fasync,
     futures::{channel::*, lock::Mutex, sink::SinkExt, StreamExt},
     std::sync::Arc,
@@ -80,11 +78,6 @@ impl TriggerCapability {
         })
         .detach();
     }
-}
-
-#[async_trait]
-impl ProtocolInjector for TriggerCapability {
-    type Marker = ftest::TriggerMarker;
 
     async fn serve(
         self: Arc<Self>,

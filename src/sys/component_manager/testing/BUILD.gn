@@ -46,8 +46,6 @@ rustc_library("test_utils_lib") {
   ]
 
   sources = [
-    "echo_capability.rs",
-    "echo_factory_capability.rs",
     "lib.rs",
     "opaque_test.rs",
     "trigger_capability.rs",
