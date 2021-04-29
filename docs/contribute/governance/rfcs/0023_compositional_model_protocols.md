@@ -18,7 +18,7 @@ We propose the following changes:
 * Binding authors **must avoid subsumption** (e.g. "is-a" hierarchy, inheritance, subtyping)
   when representing composed protocols in target languages.
 
-# Motivation
+## Motivation
 
 The contextual baggage that comes with the term **interface** are things such as method
 overloading, constructors and destructors, an object model as recipient of messages, and so on.
@@ -42,7 +42,7 @@ and leads to incorrect expectations.
 See the ["Is A" Relationship Considered Harmful](#is-a-relationship-considered-harmful)
 section for more details.
 
-# Design
+## Design
 
 This proposal introduces formal semantics to describe process interaction, and protocols.
 
@@ -59,7 +59,7 @@ This proposal does not change the wire format.
 This proposal does not change the JSON IR, though we do expect to include a key rename as part
 of larger changes down the road.
 
-## A Model for Protocols
+### A Model for Protocols {#a-model-for-protocols}
 
 Zircon channels do not require a specific schema for payloads they carry.
 FIDL builds upon this primitive and restricts channels to carry specific protocols.
@@ -91,7 +91,7 @@ Absent from this model are more complex interactions, such as three-way handshak
 **SYN**/**SYN-ACK**/**ACK** of TCP.
 We consider this to be out of scope, and unlikely to be covered by future refinements to the model.
 
-## Compositional Model
+### Compositional Model
 
 Today, a protocol can both define interactions, as well as extend one or more protocols.
 The resulting protocol (the "composed protocol") carries all interactions defined directly,
@@ -111,7 +111,7 @@ However, whether `Method1` and `Method2` were defined in `Child` as a result of 
 or directly, is not carried to language-specific backends, i.e. this is not represented
 in the JSON IR.
 
-## "Is A" Relationship Considered Harmful
+### "Is A" Relationship Considered Harmful
 
 Since protocols can carry requests in both directions, having a subtyping relationship
 requires more care.
@@ -134,7 +134,7 @@ Instead, we will be looking to support specific protocol annotations such as "on
 to server interactions" to support and allow "is a" relationships.
 When this occurs, such relationships would carry to the JSON IR for the use of backends.
 
-## Reliance on "Is A" Relationship Today
+### Reliance on "Is A" Relationship Today
 
 Looking at a concrete example, the [fuchsia.media] library composes various protocols together.
 In particular:
@@ -171,7 +171,7 @@ In a subsequent proposal, we expect to introduce attributes, or new keywords, to
 this directionality constraint, and based on this, provide "is a" relationships in bindings.
 Before such a proposal, we cannot provide better support as part of the FIDL toolchain.
 
-## Syntactic Changes
+### Syntactic Changes
 
 > During the design phase, several different alternatives were proposed,
 > see [Drawbacks, Alternatives, and Unknowns, below](#drawbacks_alternatives_and-unknowns)
@@ -218,14 +218,14 @@ compose-declaration = "compose", compound-identifier ;
 
 A composed protocol may only be mentioned once.
 
-### Possible Extension
+#### Possible Extension
 
-We expect a subsequent proposal to additionally allow server to client interactions from
-requiring a response, thus enabling multiplexing protocols on a channel, possibly in
-reverse order.
-For instance [coordinator.fidl] defines two
-command-response protocols, one from devmgr -> devhost, and one from devhost -> devmgr.
-Currently, these are muxed manually, with reliance on ordinal dispatch to sort out which is which.
+We expect a subsequent proposal to additionally allow server to client
+interactions from requiring a response, thus enabling multiplexing protocols on
+a channel, possibly in reverse order. For instance [coordinator.fidl] defines
+two command-response protocols, one from devmgr -> devhost, and one from devhost
+-> devmgr. Currently, these are muxed manually, with reliance on ordinal
+dispatch to sort out which is which.
 
 We may use the "->" syntax in the compose block to later introduce muxing in reverse direction.
 An alternative would be to only require explicit direction when extension includes a
@@ -238,7 +238,7 @@ We could alternatively have only one block, and could also require this to be at
 Here, we're choosing to be open, and instead rely on automated formatting and/or style guides
 for recommendations, rather than have enforcement baked into the language itself.
 
-## JSON IR
+### JSON IR
 
 We will not change the JSON IR as part of this change.
 
@@ -247,23 +247,19 @@ as part of a larger set of changes.
 This larger set of changes will require a multi-step approach, bumping the schema version from
 0.0.1 to 0.0.2, and have a transitional period for backends to adapt.
 
-## Breakage at a Distance, and the Use of `[FragileBase]`
+### Breakage at a Distance, and the Use of `[FragileBase]`
 
 The status of the possibility of breakage at a distance is unchanged by this proposal,
 and we therefore reaffirm the use of `[FragileBase]` for any protocol being extended[[1](#Footnote-1)].
 
-## Documentation
-
-We will need to update the language, grammar, rubric, and other such documentation.
-
-## Guidance to Bindings Authors
+### Guidance to Bindings Authors
 
 * Binding **must avoid subsumption** (e.g. "is-a" hierarchy, inheritance, subtyping)
   when representing composed protocols in target languages.
 * It should be **an error to receive an unknown ordinal**.
   Bindings should bubble this as "unknown ordinal error", and close the channel.
 
-# Implementation strategy
+## Implementation strategy
 
 Three steps:
 
@@ -271,17 +267,17 @@ Three steps:
 2. Convert all FIDL files to use the new syntax;
 3. Drop support for the old syntax.
 
-# Ergonomics
+## Ergonomics
 
 This change makes FIDL clearer to understand, see [motivation](#motivation) section.
 This change may not make FIDL simpler to understand upfront, but avoids
 misunderstandings down the road, and misaligned expectations.
 
-# Documentation and examples
+## Documentation and examples
 
-See [documentation](#Documentation) sub-section, above.
+We will need to update the language, grammar, rubric, and other such documentation.
 
-# Backwards compatibility
+## Backwards compatibility
 
 This change breaks source compatibility with FIDL files currently using inheritance.
 As described in the [implementation](#syntactic-changes), we will use a phased approach to
@@ -289,24 +285,24 @@ introduce the new syntax, migrate all FIDL files, and then remove support for th
 
 This change does not change the FIDL wire format, so it is a backward-compatible ABI change.
 
-# Performance
+## Performance
 
 No performance impact.
 
-# Security
+## Security
 
 We may be able to leverage tighter typing semantics for securing channels, or observing channels.
 This is not a goal of this proposal, does not regress the status quo, and arguably improves it.
 
-# Testing
+## Testing
 
 Testing of this change can be done entirely with unit tests, at the `fidlc` level.
 
-# Drawbacks, alternatives, and unknowns
+## Drawbacks, alternatives, and unknowns
 
 The following sections record alternate syntax proposed during the design phase.
 
-## Alternative Syntax (pascallouis@)
+### Alternative Syntax (pascallouis@)
 
 **Example**:
 
@@ -332,7 +328,7 @@ Finally, we chose to back away from having a directional "`->`" indicator on pro
 to introduce this down the road along with multidirectional muxing (if such a feature
 is ever considered).
 
-## Alternative Syntax (jeremymanson@)
+### Alternative Syntax (jeremymanson@)
 
 **Why**: To clarify the difference between a list of methods we expect to implement and
 a list of methods that defines a communications protocol:
@@ -366,7 +362,7 @@ We wouldn't necessarily expect, say, a `StreamSource` to have its own implementa
 This gets us further away from implementation inheritance by clarifying that none will take place.
 You would not be able to compose an interface into another interface.
 
-## Alternative Syntax: Go-like interface composition (proppy@)
+### Alternative Syntax: Go-like interface composition (proppy@)
 
 **Why**: Doesn't look like inheritance, familiarity with Golang syntax for interface
 [embedding](https://golang.org/doc/effective_go.html#embedding)
@@ -386,7 +382,7 @@ protocol Child {
 **Notes**: Go language [spec](https://golang.org/ref/spec#Interface_types)
 on interface and embedding.
 
-## Alternative Syntax: Using Declaration (jeffbrown@)
+### Alternative Syntax: Using Declaration (jeffbrown@)
 
 **Why**: Doesn't look like inheritance, reuses existing keyword to indicate names
 being brought into scope.
@@ -406,14 +402,14 @@ protocol Child {
 
 **Notes**: Precedents in FIDL, C++, Rust, and other languages.
 
-## Alternative Keywords
+### Alternative Keywords
 
 Alternatives to "`compose`" keyword:
 
 * `extends` (pascallouis@)
 * `contains` (smklein@)
 
-# Prior art and references
+## Prior art and references
 
 Nothing specific.
 
