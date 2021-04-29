@@ -35,6 +35,7 @@ mod syscall_table;
 mod syscalls;
 mod task;
 mod uapi;
+mod user_address;
 
 use loader::*;
 use syscall_table::dispatch_syscall;

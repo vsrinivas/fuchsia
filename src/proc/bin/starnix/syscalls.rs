@@ -44,12 +44,11 @@ pub fn sys_write(
 pub fn sys_fstat(
     ctx: &SyscallContext<'_>,
     fd: FileDescriptor,
-    buffer: UserAddress,
+    buffer: UserRef<stat_t>,
 ) -> Result<SyscallResult, Errno> {
     let fd = ctx.task.files.get(fd)?;
     let result = fd.fstat(&ctx.task)?;
-    let bytes = result.as_bytes();
-    ctx.task.mm.write_memory(buffer, bytes)?;
+    ctx.task.mm.write_object(buffer, &result)?;
     return Ok(SUCCESS);
 }
 
@@ -223,7 +222,7 @@ pub fn sys_writev(
 
 pub fn sys_access(
     _ctx: &SyscallContext<'_>,
-    path: UserAddress,
+    path: UserCString,
     mode: i32,
 ) -> Result<SyscallResult, Errno> {
     info!("access: path={} mode={}", path, mode);
@@ -255,7 +254,10 @@ pub fn sys_exit_group(ctx: &SyscallContext<'_>, error_code: i32) -> Result<Sysca
     Ok(SyscallResult::Exit(error_code))
 }
 
-pub fn sys_uname(ctx: &SyscallContext<'_>, name: UserAddress) -> Result<SyscallResult, Errno> {
+pub fn sys_uname(
+    ctx: &SyscallContext<'_>,
+    name: UserRef<utsname_t>,
+) -> Result<SyscallResult, Errno> {
     fn init_array(fixed: &mut [u8; 65], init: &'static str) {
         let init_bytes = init.as_bytes();
         let len = init.len();
@@ -274,14 +276,13 @@ pub fn sys_uname(ctx: &SyscallContext<'_>, name: UserAddress) -> Result<SyscallR
     init_array(&mut result.release, "5.7.17-starnix");
     init_array(&mut result.version, "starnix");
     init_array(&mut result.machine, "x86_64");
-    let bytes = result.as_bytes();
-    ctx.task.mm.write_memory(name, bytes)?;
+    ctx.task.mm.write_object(name, &result)?;
     return Ok(SUCCESS);
 }
 
 pub fn sys_readlink(
     _ctx: &SyscallContext<'_>,
-    _path: UserAddress,
+    _path: UserCString,
     _buffer: UserAddress,
     _buffer_size: usize,
 ) -> Result<SyscallResult, Errno> {
@@ -311,10 +312,10 @@ pub fn sys_getegid(ctx: &SyscallContext<'_>) -> Result<SyscallResult, Errno> {
 pub fn sys_fstatfs(
     ctx: &SyscallContext<'_>,
     _fd: FileDescriptor,
-    buf_addr: UserAddress,
+    user_buf: UserRef<statfs>,
 ) -> Result<SyscallResult, Errno> {
     let result = statfs::default();
-    ctx.task.mm.write_memory(buf_addr, result.as_bytes())?;
+    ctx.task.mm.write_object(user_buf, &result)?;
     Ok(SUCCESS)
 }
 
@@ -323,6 +324,30 @@ pub fn sys_sched_getscheduler(
     _pid: i32,
 ) -> Result<SyscallResult, Errno> {
     Ok(SCHED_NORMAL.into())
+}
+
+pub fn sys_sched_getaffinity(
+    ctx: &SyscallContext<'_>,
+    _pid: pid_t,
+    _cpusetsize: usize,
+    user_mask: UserAddress,
+) -> Result<SyscallResult, Errno> {
+    let result = vec![0xFFu8; _cpusetsize];
+    ctx.task.mm.write_memory(user_mask, &result)?;
+    Ok(SUCCESS)
+}
+
+pub fn sys_sched_setaffinity(
+    ctx: &SyscallContext<'_>,
+    _pid: pid_t,
+    _cpusetsize: usize,
+    user_mask: UserAddress,
+) -> Result<SyscallResult, Errno> {
+    let mut mask = vec![0x0u8; _cpusetsize];
+    ctx.task.mm.read_memory(user_mask, &mut mask)?;
+    // Currently, we ignore the mask and act as if the system reset the mask
+    // immediately to allowing all CPUs.
+    Ok(SUCCESS)
 }
 
 pub fn sys_arch_prctl(
@@ -363,7 +388,7 @@ async fn async_openat(
 pub fn sys_openat(
     ctx: &SyscallContext<'_>,
     dir_fd: i32,
-    path_addr: UserAddress,
+    user_path: UserCString,
     flags: i32,
     mode: i32,
 ) -> Result<SyscallResult, Errno> {
@@ -372,7 +397,7 @@ pub fn sys_openat(
         return Err(EINVAL);
     }
     let mut buf = [0u8; PATH_MAX as usize];
-    let path = ctx.task.mm.read_c_string(path_addr, &mut buf)?;
+    let path = ctx.task.mm.read_c_string(user_path, &mut buf)?;
     info!("openat({}, {}, {:#x}, {:#o})", dir_fd, String::from_utf8_lossy(path), flags, mode);
     if path[0] != b'/' {
         warn!("non-absolute paths are unimplemented");
@@ -409,7 +434,7 @@ const NANOS_PER_SECOND: i64 = 1000 * 1000 * 1000;
 pub fn sys_clock_gettime(
     ctx: &SyscallContext<'_>,
     which_clock: u32,
-    tp_addr: UserAddress,
+    tp_addr: UserRef<timespec_t>,
 ) -> Result<SyscallResult, Errno> {
     let time = match which_clock {
         CLOCK_REALTIME => utc_time(),
@@ -418,21 +443,21 @@ pub fn sys_clock_gettime(
     };
     let nanos = time.into_nanos();
     let tv = timespec_t { tv_sec: nanos / NANOS_PER_SECOND, tv_nsec: nanos % NANOS_PER_SECOND };
-    return ctx.task.mm.write_memory(tp_addr, tv.as_bytes()).map(|_| SUCCESS);
+    return ctx.task.mm.write_object(tp_addr, &tv).map(|_| SUCCESS);
 }
 
 pub fn sys_gettimeofday(
     ctx: &SyscallContext<'_>,
-    tv_addr: UserAddress,
-    tz_addr: UserAddress,
+    user_tv: UserRef<timeval_t>,
+    user_tz: UserRef<timezone>,
 ) -> Result<SyscallResult, Errno> {
-    if !tv_addr.is_null() {
+    if !user_tv.is_null() {
         let now = utc_time().into_nanos();
         let tv =
             timeval_t { tv_sec: now / NANOS_PER_SECOND, tv_usec: (now % NANOS_PER_SECOND) / 1000 };
-        ctx.task.mm.write_memory(tv_addr, tv.as_bytes())?;
+        ctx.task.mm.write_object(user_tv, &tv)?;
     }
-    if !tz_addr.is_null() {
+    if !user_tz.is_null() {
         warn!("NOT_IMPLEMENTED: gettimeofday does not implement tz argument");
     }
     return Ok(SUCCESS);

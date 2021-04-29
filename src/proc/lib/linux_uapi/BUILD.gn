@@ -11,4 +11,6 @@ rustc_library("linux_uapi") {
     "src/x86_64.rs",
     "src/x86_64_types.rs",
   ]
+
+  deps = [ "//src/lib/zerocopy" ]
 }

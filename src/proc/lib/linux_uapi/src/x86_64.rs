@@ -4,6 +4,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use zerocopy::{AsBytes, FromBytes};
+
 pub use crate::x86_64_types::*;
 
 pub const EPERM: u32 = 1;
@@ -823,7 +825,7 @@ pub type __u32 = crate::x86_64_types::c_uint;
 pub type __s64 = crate::x86_64_types::c_longlong;
 pub type __u64 = crate::x86_64_types::c_ulonglong;
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 pub struct __kernel_fd_set {
     pub fds_bits: [crate::x86_64_types::c_ulong; 16usize],
 }
@@ -850,7 +852,7 @@ pub type __kernel_size_t = __kernel_ulong_t;
 pub type __kernel_ssize_t = __kernel_long_t;
 pub type __kernel_ptrdiff_t = __kernel_long_t;
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 pub struct __kernel_fsid_t {
     pub val: [crate::x86_64_types::c_int; 2usize],
 }
@@ -875,20 +877,20 @@ pub type __sum16 = __u16;
 pub type __wsum = __u32;
 pub type __poll_t = crate::x86_64_types::c_uint;
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 pub struct f_owner_ex {
     pub type_: crate::x86_64_types::c_int,
     pub pid: __kernel_pid_t,
 }
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 pub struct open_how {
     pub flags: __u64,
     pub mode: __u64,
     pub resolve: __u64,
 }
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 pub struct clone_args {
     pub flags: __u64,
     pub pidfd: __u64,
@@ -903,55 +905,55 @@ pub struct clone_args {
     pub cgroup: __u64,
 }
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 pub struct __kernel_timespec {
     pub tv_sec: __kernel_time64_t,
     pub tv_nsec: crate::x86_64_types::c_longlong,
 }
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 pub struct __kernel_itimerspec {
     pub it_interval: __kernel_timespec,
     pub it_value: __kernel_timespec,
 }
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 pub struct __kernel_old_timespec {
     pub tv_sec: __kernel_old_time_t,
     pub tv_nsec: crate::x86_64_types::c_long,
 }
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 pub struct __kernel_sock_timeval {
     pub tv_sec: __s64,
     pub tv_usec: __s64,
 }
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 pub struct timespec {
     pub tv_sec: __kernel_old_time_t,
     pub tv_nsec: crate::x86_64_types::c_long,
 }
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 pub struct timeval {
     pub tv_sec: __kernel_old_time_t,
     pub tv_usec: __kernel_suseconds_t,
 }
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 pub struct itimerspec {
     pub it_interval: timespec,
     pub it_value: timespec,
 }
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 pub struct itimerval {
     pub it_interval: timeval,
     pub it_value: timeval,
 }
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 pub struct timezone {
     pub tz_minuteswest: crate::x86_64_types::c_int,
     pub tz_dsttime: crate::x86_64_types::c_int,
@@ -961,4 +963,9 @@ pub struct timezone {
 pub struct iovec {
     pub iov_base: *mut crate::x86_64_types::c_void,
     pub iov_len: __kernel_size_t,
+}
+impl Default for iovec {
+    fn default() -> Self {
+        unsafe { ::std::mem::zeroed() }
+    }
 }

@@ -5,6 +5,7 @@
 use fuchsia_zircon::{self as zx, HandleBased, Status};
 use lazy_static::lazy_static;
 use parking_lot::RwLock;
+use zerocopy::{AsBytes, FromBytes};
 
 use crate::uapi::*;
 
@@ -128,12 +129,21 @@ impl MemoryManager {
         Ok(())
     }
 
+    #[allow(dead_code)] // Not used yet.
+    pub fn read_object<T: AsBytes + FromBytes>(
+        &self,
+        user: UserRef<T>,
+        object: &mut T,
+    ) -> Result<(), Errno> {
+        self.read_memory(user.addr(), object.as_bytes_mut())
+    }
+
     pub fn read_c_string<'a>(
         &self,
-        addr: UserAddress,
+        string: UserCString,
         buffer: &'a mut [u8],
     ) -> Result<&'a [u8], Errno> {
-        let actual = self.process.read_memory(addr.ptr(), buffer).map_err(|_| EFAULT)?;
+        let actual = self.process.read_memory(string.ptr(), buffer).map_err(|_| EFAULT)?;
         let buffer = &mut buffer[..actual];
         let null_index = memchr::memchr(b'\0', buffer).ok_or(ENAMETOOLONG)?;
         Ok(&buffer[..null_index])
@@ -145,5 +155,13 @@ impl MemoryManager {
             return Err(EFAULT);
         }
         Ok(())
+    }
+
+    pub fn write_object<T: AsBytes + FromBytes>(
+        &self,
+        user: UserRef<T>,
+        object: &T,
+    ) -> Result<(), Errno> {
+        self.write_memory(user.addr(), &object.as_bytes())
     }
 }

@@ -6,13 +6,13 @@
 #![allow(non_camel_case_types)]
 #![allow(non_upper_case_globals)]
 
-use fuchsia_zircon::{self as zx, sys::zx_vaddr_t};
+use fuchsia_zircon as zx;
 use paste::paste;
 use std::fmt;
-use std::ops;
 use zerocopy::{AsBytes, FromBytes};
 
 use crate::fs::FileDescriptor;
+pub use crate::user_address::*;
 
 #[cfg(target_arch = "x86_64")]
 use linux_uapi::x86_64 as uapi;
@@ -641,66 +641,6 @@ impl SyscallDecl {
     }
 }
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd, AsBytes, FromBytes)]
-#[repr(transparent)]
-pub struct UserAddress(u64);
-
-impl UserAddress {
-    const NULL_PTR: u64 = 0;
-
-    pub fn ptr(&self) -> zx_vaddr_t {
-        self.0 as zx_vaddr_t
-    }
-
-    pub fn round_up(&self, increment: u64) -> UserAddress {
-        UserAddress((self.0 + (increment - 1)) & !(increment - 1))
-    }
-
-    pub fn is_null(&self) -> bool {
-        self.0 == UserAddress::NULL_PTR
-    }
-}
-
-impl Default for UserAddress {
-    fn default() -> UserAddress {
-        UserAddress(UserAddress::NULL_PTR)
-    }
-}
-
-impl From<u64> for UserAddress {
-    fn from(value: u64) -> Self {
-        UserAddress(value)
-    }
-}
-
-impl From<usize> for UserAddress {
-    fn from(value: usize) -> Self {
-        UserAddress(value as u64)
-    }
-}
-
-impl ops::Add<u64> for UserAddress {
-    type Output = UserAddress;
-
-    fn add(self, rhs: u64) -> UserAddress {
-        UserAddress(self.0 + rhs)
-    }
-}
-
-impl ops::Sub<UserAddress> for UserAddress {
-    type Output = usize;
-
-    fn sub(self, rhs: UserAddress) -> usize {
-        self.ptr() - rhs.ptr()
-    }
-}
-
-impl fmt::Display for UserAddress {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "0x{:x}", self.0)
-    }
-}
-
 /// The result of executing a syscall.
 ///
 /// It would be nice to have this also cover errors, but currently there is no stable way
@@ -754,7 +694,7 @@ impl From<usize> for SyscallResult {
     }
 }
 
-#[derive(Debug, Eq, PartialEq, Hash, Copy, Clone, AsBytes)]
+#[derive(Debug, Eq, PartialEq, Hash, Copy, Clone, AsBytes, FromBytes)]
 #[repr(C)]
 pub struct utsname_t {
     pub sysname: [u8; 65],
@@ -764,21 +704,21 @@ pub struct utsname_t {
     pub machine: [u8; 65],
 }
 
-#[derive(Debug, Default, Eq, PartialEq, Hash, Copy, Clone, AsBytes)]
+#[derive(Debug, Default, Eq, PartialEq, Hash, Copy, Clone, AsBytes, FromBytes)]
 #[repr(C)]
 pub struct timespec_t {
     pub tv_sec: i64,
     pub tv_nsec: i64,
 }
 
-#[derive(Debug, Default, Eq, PartialEq, Hash, Copy, Clone, AsBytes)]
+#[derive(Debug, Default, Eq, PartialEq, Hash, Copy, Clone, AsBytes, FromBytes)]
 #[repr(C)]
 pub struct timeval_t {
     pub tv_sec: i64,
     pub tv_usec: i64,
 }
 
-#[derive(Debug, Default, Eq, PartialEq, Hash, Copy, Clone, AsBytes)]
+#[derive(Debug, Default, Eq, PartialEq, Hash, Copy, Clone, AsBytes, FromBytes)]
 #[repr(C)]
 pub struct stat_t {
     pub st_dev: dev_t,
@@ -805,7 +745,7 @@ pub struct iovec_t {
     pub iov_len: usize,
 }
 
-#[derive(Debug, Default, AsBytes)]
+#[derive(Debug, Default, AsBytes, FromBytes)]
 #[repr(C)]
 pub struct statfs {
     f_type: i64,

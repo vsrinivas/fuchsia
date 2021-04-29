@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use paste::paste;
+use zerocopy::{AsBytes, FromBytes};
 
 use crate::fs::FileDescriptor;
 use crate::syscalls::*;
@@ -36,6 +37,19 @@ impl FromSyscallArg for UserAddress {
         UserAddress::from(arg)
     }
 }
+
+impl<T: AsBytes + FromBytes> FromSyscallArg for UserRef<T> {
+    fn from_arg(arg: u64) -> UserRef<T> {
+        UserRef::<T>::new(UserAddress::from(arg))
+    }
+}
+
+impl FromSyscallArg for UserCString {
+    fn from_arg(arg: u64) -> UserCString {
+        UserCString::new(UserAddress::from(arg))
+    }
+}
+
 impl FromSyscallArg for FileDescriptor {
     fn from_arg(arg: u64) -> FileDescriptor {
         FileDescriptor::from_raw(arg as i32)
@@ -104,7 +118,9 @@ pub fn dispatch_syscall(
         openat[4],
         pread64[4],
         readlink[3],
+        sched_getaffinity[3],
         sched_getscheduler[1],
+        sched_setaffinity[3],
         set_tid_address[1],
         uname[1],
         write[3],
