@@ -73,7 +73,7 @@ class {{ .Name }} final {
 
   void Encode(::fidl::Encoder* encoder, size_t offset,
               cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t offset);
+  static void Decode(::fidl::Decoder* _decoder, {{ .Name }}* value, size_t offset);
   zx_status_t Clone({{ .Name }}* result) const;
 
   bool has_invalid_tag() const {
@@ -326,8 +326,8 @@ void {{ .Name }}::Encode(::fidl::Encoder* encoder, size_t offset,
   }
 }
 
-void {{ .Name }}::Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t offset) {
-  fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
+void {{ .Name }}::Decode(::fidl::Decoder* _decoder, {{ .Name }}* value, size_t offset) {
+  fidl_xunion_t* xunion = _decoder->GetPtr<fidl_xunion_t>(offset);
 
   if (!xunion->envelope.data) {
     value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>({{ .TagInvalid }}));
@@ -337,7 +337,7 @@ void {{ .Name }}::Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t of
   value->EnsureStorageInitialized(xunion->tag);
 
 {{ if len .Members }}
-  const size_t envelope_offset = decoder->GetOffset(xunion->envelope.data);
+  const size_t envelope_offset = _decoder->GetOffset(xunion->envelope.data);
 
   switch (value->tag_) {
   {{- range .Members }}
@@ -345,7 +345,7 @@ void {{ .Name }}::Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t of
       {{- if .Type.NeedsDtor }}
       new (&value->{{ .StorageName }}) {{ .Type }}();
       {{- end }}
-      ::fidl::Decode(decoder, &value->{{ .StorageName }}, envelope_offset);
+      ::fidl::Decode(_decoder, &value->{{ .StorageName }}, envelope_offset);
       break;
   {{- end }}
     default:
@@ -353,10 +353,10 @@ void {{ .Name }}::Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t of
     {{- if .IsResourceType }}
       value->unknown_data_.bytes.resize(xunion->envelope.num_bytes);
       value->unknown_data_.handles.resize(xunion->envelope.num_handles);
-      ::fidl::DecodeUnknownDataContents(decoder, &value->unknown_data_, envelope_offset);
+      ::fidl::DecodeUnknownDataContents(_decoder, &value->unknown_data_, envelope_offset);
     {{- else }}
       value->unknown_data_.resize(xunion->envelope.num_bytes);
-      ::fidl::DecodeUnknownBytesContents(decoder, &value->unknown_data_, envelope_offset);
+      ::fidl::DecodeUnknownBytesContents(_decoder, &value->unknown_data_, envelope_offset);
     {{- end }}
   {{ end -}}
       break;
@@ -484,8 +484,8 @@ struct CodingTraits<std::unique_ptr<{{ . }}>> {
     }
   }
 
-  static void Decode(Decoder* decoder, std::unique_ptr<{{ . }}>* value, size_t offset) {
-    fidl_xunion_t* encoded = decoder->GetPtr<fidl_xunion_t>(offset);
+  static void Decode(Decoder* _decoder, std::unique_ptr<{{ . }}>* value, size_t offset) {
+    fidl_xunion_t* encoded = _decoder->GetPtr<fidl_xunion_t>(offset);
     if (encoded->tag == 0) {
       value->reset(nullptr);
       return;
@@ -493,7 +493,7 @@ struct CodingTraits<std::unique_ptr<{{ . }}>> {
 
     value->reset(new {{ . }});
 
-    {{ . }}::Decode(decoder, value->get(), offset);
+    {{ . }}::Decode(_decoder, value->get(), offset);
   }
 };
 

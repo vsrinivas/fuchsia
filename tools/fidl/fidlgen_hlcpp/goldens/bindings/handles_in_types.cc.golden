@@ -105,9 +105,9 @@ void UnionWithHandle::Encode(
   }
 }
 
-void UnionWithHandle::Decode(::fidl::Decoder* decoder, UnionWithHandle* value,
+void UnionWithHandle::Decode(::fidl::Decoder* _decoder, UnionWithHandle* value,
                              size_t offset) {
-  fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
+  fidl_xunion_t* xunion = _decoder->GetPtr<fidl_xunion_t>(offset);
 
   if (!xunion->envelope.data) {
     value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
@@ -117,18 +117,18 @@ void UnionWithHandle::Decode(::fidl::Decoder* decoder, UnionWithHandle* value,
 
   value->EnsureStorageInitialized(xunion->tag);
 
-  const size_t envelope_offset = decoder->GetOffset(xunion->envelope.data);
+  const size_t envelope_offset = _decoder->GetOffset(xunion->envelope.data);
 
   switch (value->tag_) {
     case ::fidl::test::handlesintypes::UnionWithHandle::Tag::kH:
       new (&value->h_)::zx::vmo();
-      ::fidl::Decode(decoder, &value->h_, envelope_offset);
+      ::fidl::Decode(_decoder, &value->h_, envelope_offset);
       break;
     default:
 
       value->unknown_data_.bytes.resize(xunion->envelope.num_bytes);
       value->unknown_data_.handles.resize(xunion->envelope.num_handles);
-      ::fidl::DecodeUnknownDataContents(decoder, &value->unknown_data_,
+      ::fidl::DecodeUnknownDataContents(_decoder, &value->unknown_data_,
                                         envelope_offset);
       break;
   }

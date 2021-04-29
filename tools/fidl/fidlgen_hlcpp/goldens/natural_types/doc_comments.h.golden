@@ -473,7 +473,7 @@ class StrictUnion final {
   void Encode(::fidl::Encoder* encoder, size_t offset,
               cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
                   cpp17::nullopt);
-  static void Decode(::fidl::Decoder* decoder, StrictUnion* value,
+  static void Decode(::fidl::Decoder* _decoder, StrictUnion* value,
                      size_t offset);
   zx_status_t Clone(StrictUnion* result) const;
 
@@ -602,7 +602,7 @@ class FlexibleUnion final {
   void Encode(::fidl::Encoder* encoder, size_t offset,
               cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
                   cpp17::nullopt);
-  static void Decode(::fidl::Decoder* decoder, FlexibleUnion* value,
+  static void Decode(::fidl::Decoder* _decoder, FlexibleUnion* value,
                      size_t offset);
   zx_status_t Clone(FlexibleUnion* result) const;
 
@@ -755,10 +755,10 @@ struct CodingTraits<std::unique_ptr<::fidl::test::doccomments::StrictUnion>> {
   }
 
   static void Decode(
-      Decoder* decoder,
+      Decoder* _decoder,
       std::unique_ptr<::fidl::test::doccomments::StrictUnion>* value,
       size_t offset) {
-    fidl_xunion_t* encoded = decoder->GetPtr<fidl_xunion_t>(offset);
+    fidl_xunion_t* encoded = _decoder->GetPtr<fidl_xunion_t>(offset);
     if (encoded->tag == 0) {
       value->reset(nullptr);
       return;
@@ -766,7 +766,7 @@ struct CodingTraits<std::unique_ptr<::fidl::test::doccomments::StrictUnion>> {
 
     value->reset(new ::fidl::test::doccomments::StrictUnion);
 
-    ::fidl::test::doccomments::StrictUnion::Decode(decoder, value->get(),
+    ::fidl::test::doccomments::StrictUnion::Decode(_decoder, value->get(),
                                                    offset);
   }
 };
@@ -965,10 +965,10 @@ struct CodingTraits<std::unique_ptr<::fidl::test::doccomments::FlexibleUnion>> {
   }
 
   static void Decode(
-      Decoder* decoder,
+      Decoder* _decoder,
       std::unique_ptr<::fidl::test::doccomments::FlexibleUnion>* value,
       size_t offset) {
-    fidl_xunion_t* encoded = decoder->GetPtr<fidl_xunion_t>(offset);
+    fidl_xunion_t* encoded = _decoder->GetPtr<fidl_xunion_t>(offset);
     if (encoded->tag == 0) {
       value->reset(nullptr);
       return;
@@ -976,7 +976,7 @@ struct CodingTraits<std::unique_ptr<::fidl::test::doccomments::FlexibleUnion>> {
 
     value->reset(new ::fidl::test::doccomments::FlexibleUnion);
 
-    ::fidl::test::doccomments::FlexibleUnion::Decode(decoder, value->get(),
+    ::fidl::test::doccomments::FlexibleUnion::Decode(_decoder, value->get(),
                                                      offset);
   }
 };

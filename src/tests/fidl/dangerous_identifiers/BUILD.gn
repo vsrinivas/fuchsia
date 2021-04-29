@@ -7,25 +7,21 @@ import("//build/fidl/fidl.gni")
 # List of contexts where dangerous identifiers can be used
 uses = [
   "constants",
-  "using",
   "enums",
-  "struct.types",
-  "struct.names",
-  "table.names",
-  "table.fields",
-  "protocol.names",
-  "method.names",
   "event.names",
+  "method.event.arguments",
+  "method.names",
   "method.request.arguments",
   "method.response.arguments",
-  "method.event.arguments",
+  "protocol.names",
+  "struct.names",
+  "struct.types",
+  "table.fields",
+  "table.names",
+  "union.names",
+  "union.types",
+  "using",
 ]
-
-# TODO(fxbug.dev/8081)
-# uses += [
-#   "union.types",
-#   "union.names",
-# ]
 
 # List of identifiers styles to test
 styles = [

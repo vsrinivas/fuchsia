@@ -59,7 +59,7 @@ class UnionWithHandle final {
   void Encode(::fidl::Encoder* encoder, size_t offset,
               cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
                   cpp17::nullopt);
-  static void Decode(::fidl::Decoder* decoder, UnionWithHandle* value,
+  static void Decode(::fidl::Decoder* _decoder, UnionWithHandle* value,
                      size_t offset);
   zx_status_t Clone(UnionWithHandle* result) const;
 
@@ -348,10 +348,10 @@ struct CodingTraits<
   }
 
   static void Decode(
-      Decoder* decoder,
+      Decoder* _decoder,
       std::unique_ptr<::fidl::test::handlesintypes::UnionWithHandle>* value,
       size_t offset) {
-    fidl_xunion_t* encoded = decoder->GetPtr<fidl_xunion_t>(offset);
+    fidl_xunion_t* encoded = _decoder->GetPtr<fidl_xunion_t>(offset);
     if (encoded->tag == 0) {
       value->reset(nullptr);
       return;
@@ -359,8 +359,8 @@ struct CodingTraits<
 
     value->reset(new ::fidl::test::handlesintypes::UnionWithHandle);
 
-    ::fidl::test::handlesintypes::UnionWithHandle::Decode(decoder, value->get(),
-                                                          offset);
+    ::fidl::test::handlesintypes::UnionWithHandle::Decode(_decoder,
+                                                          value->get(), offset);
   }
 };
 

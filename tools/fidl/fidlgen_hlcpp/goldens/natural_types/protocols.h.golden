@@ -324,7 +324,7 @@ class WithErrorSyntax_ResponseAsStruct_Result final {
   void Encode(::fidl::Encoder* encoder, size_t offset,
               cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
                   cpp17::nullopt);
-  static void Decode(::fidl::Decoder* decoder,
+  static void Decode(::fidl::Decoder* _decoder,
                      WithErrorSyntax_ResponseAsStruct_Result* value,
                      size_t offset);
   zx_status_t Clone(WithErrorSyntax_ResponseAsStruct_Result* result) const;
@@ -502,7 +502,7 @@ class WithErrorSyntax_ErrorAsPrimitive_Result final {
   void Encode(::fidl::Encoder* encoder, size_t offset,
               cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
                   cpp17::nullopt);
-  static void Decode(::fidl::Decoder* decoder,
+  static void Decode(::fidl::Decoder* _decoder,
                      WithErrorSyntax_ErrorAsPrimitive_Result* value,
                      size_t offset);
   zx_status_t Clone(WithErrorSyntax_ErrorAsPrimitive_Result* result) const;
@@ -1159,7 +1159,7 @@ class WithErrorSyntax_ErrorAsEnum_Result final {
   void Encode(::fidl::Encoder* encoder, size_t offset,
               cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
                   cpp17::nullopt);
-  static void Decode(::fidl::Decoder* decoder,
+  static void Decode(::fidl::Decoder* _decoder,
                      WithErrorSyntax_ErrorAsEnum_Result* value, size_t offset);
   zx_status_t Clone(WithErrorSyntax_ErrorAsEnum_Result* result) const;
 
@@ -1525,12 +1525,12 @@ struct CodingTraits<std::unique_ptr<
   }
 
   static void Decode(
-      Decoder* decoder,
+      Decoder* _decoder,
       std::unique_ptr<
           ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result>*
           value,
       size_t offset) {
-    fidl_xunion_t* encoded = decoder->GetPtr<fidl_xunion_t>(offset);
+    fidl_xunion_t* encoded = _decoder->GetPtr<fidl_xunion_t>(offset);
     if (encoded->tag == 0) {
       value->reset(nullptr);
       return;
@@ -1540,7 +1540,7 @@ struct CodingTraits<std::unique_ptr<
         new ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result);
 
     ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::Decode(
-        decoder, value->get(), offset);
+        _decoder, value->get(), offset);
   }
 };
 
@@ -1648,12 +1648,12 @@ struct CodingTraits<std::unique_ptr<
   }
 
   static void Decode(
-      Decoder* decoder,
+      Decoder* _decoder,
       std::unique_ptr<
           ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result>*
           value,
       size_t offset) {
-    fidl_xunion_t* encoded = decoder->GetPtr<fidl_xunion_t>(offset);
+    fidl_xunion_t* encoded = _decoder->GetPtr<fidl_xunion_t>(offset);
     if (encoded->tag == 0) {
       value->reset(nullptr);
       return;
@@ -1663,7 +1663,7 @@ struct CodingTraits<std::unique_ptr<
         new ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result);
 
     ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Decode(
-        decoder, value->get(), offset);
+        _decoder, value->get(), offset);
   }
 };
 
@@ -1796,11 +1796,11 @@ struct CodingTraits<std::unique_ptr<
   }
 
   static void Decode(
-      Decoder* decoder,
+      Decoder* _decoder,
       std::unique_ptr<
           ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>* value,
       size_t offset) {
-    fidl_xunion_t* encoded = decoder->GetPtr<fidl_xunion_t>(offset);
+    fidl_xunion_t* encoded = _decoder->GetPtr<fidl_xunion_t>(offset);
     if (encoded->tag == 0) {
       value->reset(nullptr);
       return;
@@ -1810,7 +1810,7 @@ struct CodingTraits<std::unique_ptr<
         new ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result);
 
     ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Decode(
-        decoder, value->get(), offset);
+        _decoder, value->get(), offset);
   }
 };
 

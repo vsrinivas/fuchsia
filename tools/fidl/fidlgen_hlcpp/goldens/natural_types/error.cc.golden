@@ -137,9 +137,9 @@ void Example_foo_Result::Encode(
   }
 }
 
-void Example_foo_Result::Decode(::fidl::Decoder* decoder,
+void Example_foo_Result::Decode(::fidl::Decoder* _decoder,
                                 Example_foo_Result* value, size_t offset) {
-  fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
+  fidl_xunion_t* xunion = _decoder->GetPtr<fidl_xunion_t>(offset);
 
   if (!xunion->envelope.data) {
     value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
@@ -149,15 +149,15 @@ void Example_foo_Result::Decode(::fidl::Decoder* decoder,
 
   value->EnsureStorageInitialized(xunion->tag);
 
-  const size_t envelope_offset = decoder->GetOffset(xunion->envelope.data);
+  const size_t envelope_offset = _decoder->GetOffset(xunion->envelope.data);
 
   switch (value->tag_) {
     case ::fidl::test::error::Example_foo_Result::Tag::kResponse:
       new (&value->response_)::fidl::test::error::Example_foo_Response();
-      ::fidl::Decode(decoder, &value->response_, envelope_offset);
+      ::fidl::Decode(_decoder, &value->response_, envelope_offset);
       break;
     case ::fidl::test::error::Example_foo_Result::Tag::kErr:
-      ::fidl::Decode(decoder, &value->err_, envelope_offset);
+      ::fidl::Decode(_decoder, &value->err_, envelope_offset);
       break;
     default:
       break;

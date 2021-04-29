@@ -86,9 +86,9 @@ void UnionSmallArray::Encode(
   }
 }
 
-void UnionSmallArray::Decode(::fidl::Decoder* decoder, UnionSmallArray* value,
+void UnionSmallArray::Decode(::fidl::Decoder* _decoder, UnionSmallArray* value,
                              size_t offset) {
-  fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
+  fidl_xunion_t* xunion = _decoder->GetPtr<fidl_xunion_t>(offset);
 
   if (!xunion->envelope.data) {
     value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
@@ -98,12 +98,12 @@ void UnionSmallArray::Decode(::fidl::Decoder* decoder, UnionSmallArray* value,
 
   value->EnsureStorageInitialized(xunion->tag);
 
-  const size_t envelope_offset = decoder->GetOffset(xunion->envelope.data);
+  const size_t envelope_offset = _decoder->GetOffset(xunion->envelope.data);
 
   switch (value->tag_) {
     case ::fidl::test::arrays::UnionSmallArray::Tag::kA:
       new (&value->a_)::std::array<uint32_t, 2>();
-      ::fidl::Decode(decoder, &value->a_, envelope_offset);
+      ::fidl::Decode(_decoder, &value->a_, envelope_offset);
       break;
     default:
       break;
@@ -236,9 +236,9 @@ void UnionLargeArray::Encode(
   }
 }
 
-void UnionLargeArray::Decode(::fidl::Decoder* decoder, UnionLargeArray* value,
+void UnionLargeArray::Decode(::fidl::Decoder* _decoder, UnionLargeArray* value,
                              size_t offset) {
-  fidl_xunion_t* xunion = decoder->GetPtr<fidl_xunion_t>(offset);
+  fidl_xunion_t* xunion = _decoder->GetPtr<fidl_xunion_t>(offset);
 
   if (!xunion->envelope.data) {
     value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
@@ -248,12 +248,12 @@ void UnionLargeArray::Decode(::fidl::Decoder* decoder, UnionLargeArray* value,
 
   value->EnsureStorageInitialized(xunion->tag);
 
-  const size_t envelope_offset = decoder->GetOffset(xunion->envelope.data);
+  const size_t envelope_offset = _decoder->GetOffset(xunion->envelope.data);
 
   switch (value->tag_) {
     case ::fidl::test::arrays::UnionLargeArray::Tag::kA:
       new (&value->a_)::std::array<uint32_t, 100>();
-      ::fidl::Decode(decoder, &value->a_, envelope_offset);
+      ::fidl::Decode(_decoder, &value->a_, envelope_offset);
       break;
     default:
       break;
