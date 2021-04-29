@@ -450,7 +450,7 @@ inline fbl::RefPtr<const Dispatcher> DownCastDispatcher(fbl::RefPtr<const Dispat
 // Dispatcher -> FooDispatcher
 template <typename T>
 T* DownCastDispatcher(Dispatcher* disp) {
-  return (likely(DispatchTag<T>::ID == disp->get_type())) ? reinterpret_cast<T*>(disp) : nullptr;
+  return (likely(DispatchTag<T>::ID == disp->get_type())) ? static_cast<T*>(disp) : nullptr;
 }
 
 // Dispatcher -> Dispatcher
@@ -464,7 +464,7 @@ template <typename T>
 const T* DownCastDispatcher(const Dispatcher* disp) {
   static_assert(ktl::is_const<T>::value, "");
   return (likely(DispatchTag<typename ktl::remove_const<T>::type>::ID == disp->get_type()))
-             ? reinterpret_cast<const T*>(disp)
+             ? static_cast<const T*>(disp)
              : nullptr;
 }
 
