@@ -3,54 +3,51 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{Context as _, Error},
-    fidl_fuchsia_test_hub as fhub,
-    fuchsia_component::client::connect_to_service,
+    fidl_fidl_examples_routing_echo as fecho, fidl_fuchsia_sys2 as fsys,
+    files_async::readdir,
+    fuchsia_component::client::connect_to_service_at_path,
+    io_util::{open_directory_in_namespace, open_file_in_namespace},
+    log::info,
 };
 
-macro_rules! get_names_from_listing {
-    ($dir_listing:ident) => {
-        &mut $dir_listing.iter().map(|entry| &entry.name as &str)
-    };
-}
+pub async fn expect_dir_listing(path: &str, mut expected_listing: Vec<&str>) {
+    info!("{} should contain {:?}", path, expected_listing);
+    let dir_proxy = open_directory_in_namespace(path, io_util::OPEN_RIGHT_READABLE).unwrap();
+    let actual_listing = readdir(&dir_proxy).await.unwrap();
 
-/// Connects to HubReport service and provides convenience methods.
-pub struct HubReport {
-    hub_report: fhub::HubReportProxy,
-}
-
-impl HubReport {
-    pub fn new() -> Result<Self, Error> {
-        let hub_report = connect_to_service::<fhub::HubReportMarker>()
-            .context("error connecting to HubReport")?;
-        Ok(Self { hub_report })
+    for actual_entry in &actual_listing {
+        let index = expected_listing
+            .iter()
+            .position(|expected_entry| *expected_entry == actual_entry.name)
+            .unwrap();
+        expected_listing.remove(index);
     }
 
-    /// Report the contents of a directory to the integration test.
-    /// This method blocks until the integration test is ready to accept the contents.
-    pub async fn report_directory_contents(&self, dir_path: &str) -> Result<(), Error> {
-        let dir_proxy =
-            io_util::open_directory_in_namespace(dir_path, io_util::OPEN_RIGHT_READABLE)
-                .expect("Unable to open directory in namespace");
-        let dir_listing = files_async::readdir(&dir_proxy).await.expect("readdir failed");
-        self.hub_report
-            .list_directory(dir_path, get_names_from_listing!(dir_listing))
-            .await
-            .context("list directory failed")?;
-        Ok(())
-    }
+    assert_eq!(expected_listing.len(), 0);
+}
 
-    /// Report the contents of a file to the integration test.
-    /// This method blocks until the integration test is ready to accept the contents.
-    pub async fn report_file_content(&self, path: &str) -> Result<(), Error> {
-        let resolved_url_proxy =
-            io_util::open_file_in_namespace(path, io_util::OPEN_RIGHT_READABLE)
-                .expect("Unable to open the file.");
-        let resolved_url_file_content = io_util::read_file(&resolved_url_proxy).await?;
-        self.hub_report
-            .report_file_content(path, &resolved_url_file_content)
-            .await
-            .context("report file content failed")?;
-        Ok(())
+pub async fn expect_file_content(path: &str, expected_file_content: &str) {
+    info!("{} should contain \"{}\"", path, expected_file_content);
+    let file_proxy = open_file_in_namespace(path, io_util::OPEN_RIGHT_READABLE).unwrap();
+    let actual_file_content = io_util::read_file(&file_proxy).await.unwrap();
+    assert_eq!(expected_file_content, actual_file_content);
+}
+
+pub async fn expect_echo_service(path: &str) {
+    info!("{} should be an Echo service", path);
+    let echo_proxy = connect_to_service_at_path::<fecho::EchoMarker>(path).unwrap();
+    let result = echo_proxy.echo_string(Some("hippos")).await.unwrap().unwrap();
+    assert_eq!(&result, "hippos");
+}
+
+pub async fn resolve_component(path: &str, relative_moniker: &str, expect_success: bool) {
+    info!("Attempting to resolve {} from {}", relative_moniker, path);
+    let resolve_component_proxy =
+        connect_to_service_at_path::<fsys::ResolveComponentMarker>(path).unwrap();
+    let result = resolve_component_proxy.resolve(relative_moniker).await.unwrap();
+    if expect_success {
+        result.unwrap();
+    } else {
+        result.unwrap_err();
     }
 }

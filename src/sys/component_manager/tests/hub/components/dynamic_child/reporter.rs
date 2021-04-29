@@ -3,15 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Context as _,
     component_events::{events::*, matcher::EventMatcher},
     fidl::endpoints,
     fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     fuchsia_syslog as syslog,
-    futures::prelude::*,
-    hub_report::HubReport,
+    hub_report::*,
 };
 
 #[fasync::run_singlethreaded]
@@ -20,20 +18,11 @@ async fn main() {
     let event_source = EventSource::new().unwrap();
 
     // Subscribe to relevant events
-    let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(
-            vec![Stopped::NAME, MarkedForDestruction::NAME, Destroyed::NAME],
-            EventMode::Sync,
-        )])
-        .await
-        .unwrap();
-
-    // Creating children will not complete until `start_component_tree` is called.
-    event_source.start_component_tree().await;
+    let mut event_stream =
+        event_source.take_static_event_stream("DynamicChildEventStream").await.unwrap();
 
     // Create a dynamic child component
-    let realm =
-        connect_to_service::<fsys::RealmMarker>().context("error connecting to realm").unwrap();
+    let realm = connect_to_service::<fsys::RealmMarker>().unwrap();
     let mut collection_ref = fsys::CollectionRef { name: String::from("coll") };
     let child_decl = fsys::ChildDecl {
         name: Some(String::from("simple_instance")),
@@ -42,33 +31,17 @@ async fn main() {
         environment: None,
         ..fsys::ChildDecl::EMPTY
     };
-    realm
-        .create_child(&mut collection_ref, child_decl)
-        .await
-        .context("create_child failed")
-        .unwrap()
-        .expect("failed to create child");
 
-    let hub_report = HubReport::new().unwrap();
+    realm.create_child(&mut collection_ref, child_decl).await.unwrap().unwrap();
 
-    // Read the children of this component and pass the results to the integration test
-    // via HubReport.
-    hub_report.report_directory_contents("/hub/children").await.unwrap();
-
-    // Read the hub of the dynamic child and pass the results to the integration test
-    // via HubReport
-    hub_report.report_directory_contents("/hub/children/coll:simple_instance").await.unwrap();
-
-    // Read the instance id of the dynamic child and pass the results to the integration test
-    // via HubReport
-    hub_report.report_file_content("/hub/children/coll:simple_instance/id").await.unwrap();
-
-    // Read the children of the dynamic child and pass the results to the integration test
-    // via HubReport
-    hub_report
-        .report_directory_contents("/hub/children/coll:simple_instance/children")
-        .await
-        .unwrap();
+    expect_dir_listing("/hub/children", vec!["coll:simple_instance"]).await;
+    expect_dir_listing(
+        "/hub/children/coll:simple_instance",
+        vec!["children", "component_type", "debug", "deleting", "id", "url"],
+    )
+    .await;
+    expect_dir_listing("/hub/children/coll:simple_instance/children", vec![]).await;
+    expect_file_content("/hub/children/coll:simple_instance/id", "1").await;
 
     // Bind to the dynamic child
     let mut child_ref = fsys::ChildRef {
@@ -76,40 +49,36 @@ async fn main() {
         collection: Some("coll".to_string()),
     };
     let (_dir_proxy, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
-    realm.bind_child(&mut child_ref, server_end).await.unwrap().expect("failed to bind to child");
+    realm.bind_child(&mut child_ref, server_end).await.unwrap().unwrap();
 
-    // Read the hub of the dynamic child and pass the results to the integration test
-    // via HubReport
-    hub_report.report_directory_contents("/hub/children/coll:simple_instance").await.unwrap();
-
-    // Read the children of the dynamic child and pass the results to the integration test
-    // via HubReport
-    hub_report
-        .report_directory_contents("/hub/children/coll:simple_instance/children")
-        .await
-        .unwrap();
-
-    // Read the instance id of the dynamic child's static child and pass the results to the
-    // integration test via HubReport
-    hub_report
-        .report_file_content("/hub/children/coll:simple_instance/children/child/id")
-        .await
-        .unwrap();
+    expect_dir_listing(
+        "/hub/children/coll:simple_instance",
+        vec!["children", "component_type", "debug", "deleting", "exec", "id", "resolved", "url"],
+    )
+    .await;
+    expect_dir_listing("/hub/children/coll:simple_instance/children", vec!["child"]).await;
+    expect_file_content("/hub/children/coll:simple_instance/children/child/id", "0").await;
 
     // Delete the dynamic child
     let mut child_ref = fsys::ChildRef {
         name: "simple_instance".to_string(),
         collection: Some("coll".to_string()),
     };
-    let (f, destroy_handle) = realm.destroy_child(&mut child_ref).remote_handle();
-    fasync::Task::spawn(f).detach();
+
+    let destroy_task = fasync::Task::spawn(realm.destroy_child(&mut child_ref));
 
     // Wait for the dynamic child to stop
     let event = EventMatcher::ok()
         .moniker("./coll:simple_instance:1")
         .expect_match::<Stopped>(&mut event_stream)
         .await;
-    hub_report.report_directory_contents("/hub/children/coll:simple_instance").await.unwrap();
+
+    expect_dir_listing(
+        "/hub/children/coll:simple_instance",
+        vec!["children", "component_type", "debug", "deleting", "id", "resolved", "url"],
+    )
+    .await;
+
     event.resume().await.unwrap();
 
     // Wait for the dynamic child to begin deletion
@@ -117,31 +86,26 @@ async fn main() {
         .moniker("./coll:simple_instance:1")
         .expect_match::<MarkedForDestruction>(&mut event_stream)
         .await;
-    hub_report.report_directory_contents("/hub/children").await.unwrap();
-    hub_report.report_directory_contents("/hub/deleting").await.unwrap();
-    hub_report.report_directory_contents("/hub/deleting/coll:simple_instance:1").await.unwrap();
-    event.resume().await.unwrap();
 
-    // Wait for the destroy call to return
-    destroy_handle.await.context("delete_child failed").unwrap().expect("failed to delete child");
+    expect_dir_listing("/hub/children", vec![]).await;
+    expect_dir_listing("/hub/deleting", vec!["coll:simple_instance:1"]).await;
+    expect_dir_listing(
+        "/hub/deleting/coll:simple_instance:1",
+        vec!["children", "component_type", "debug", "deleting", "id", "resolved", "url"],
+    )
+    .await;
+
+    event.resume().await.unwrap();
 
     // Wait for the dynamic child's static child to begin deletion
     let event = EventMatcher::ok()
         .moniker("./coll:simple_instance:1/child:0")
         .expect_match::<MarkedForDestruction>(&mut event_stream)
         .await;
-    hub_report
-        .report_directory_contents("/hub/deleting/coll:simple_instance:1/children")
-        .await
-        .unwrap();
-    hub_report
-        .report_directory_contents("/hub/deleting/coll:simple_instance:1/deleting")
-        .await
-        .unwrap();
-    hub_report
-        .report_directory_contents("/hub/deleting/coll:simple_instance:1/deleting/child:0")
-        .await
-        .unwrap();
+
+    expect_dir_listing("/hub/deleting/coll:simple_instance:1/children", vec![]).await;
+    expect_dir_listing("/hub/deleting/coll:simple_instance:1/deleting", vec!["child:0"]).await;
+
     event.resume().await.unwrap();
 
     // Wait for the dynamic child's static child to be destroyed
@@ -149,10 +113,11 @@ async fn main() {
         .moniker("./coll:simple_instance:1/child:0")
         .expect_match::<Destroyed>(&mut event_stream)
         .await;
-    hub_report
-        .report_directory_contents("/hub/deleting/coll:simple_instance:1/deleting")
-        .await
-        .unwrap();
+
+    destroy_task.await.unwrap().unwrap();
+
+    expect_dir_listing("/hub/deleting/coll:simple_instance:1/deleting", vec![]).await;
+
     event.resume().await.unwrap();
 
     // Wait for the dynamic child to be destroyed
@@ -160,6 +125,8 @@ async fn main() {
         .moniker("./coll:simple_instance:1")
         .expect_match::<Destroyed>(&mut event_stream)
         .await;
-    hub_report.report_directory_contents("/hub/deleting").await.unwrap();
+
+    expect_dir_listing("/hub/deleting", vec![]).await;
+
     event.resume().await.unwrap();
 }

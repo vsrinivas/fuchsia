@@ -2,23 +2,68 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {anyhow::Error, fuchsia_async as fasync, hub_report::HubReport};
+use {fuchsia_async as fasync, hub_report::*};
 
 #[fasync::run_singlethreaded]
-async fn main() -> Result<(), Error> {
-    let hub_report = HubReport::new()?;
+async fn main() {
+    fuchsia_syslog::init().unwrap();
 
-    // Read the listing of entries of the hub rooted at this component and
-    // pass the results to the integration test.
-    hub_report.report_directory_contents("/hub").await?;
+    expect_dir_listing("/parent_hub/children", vec!["echo_server", "reporter"]).await;
 
-    // Read the listing of the children of the parent from its hub, and pass the
-    // results to the integration test.
-    hub_report.report_directory_contents("/parent_hub/children").await?;
+    expect_file_content("/parent_hub/children/reporter/exec/runtime/args/0", "Hippos").await;
+    expect_file_content("/parent_hub/children/reporter/exec/runtime/args/1", "rule!").await;
 
-    // Read the content of the resolved_url file in the sibling hub, and pass the
-    // results to the integration test.
-    hub_report.report_file_content("/sibling_hub/exec/resolved_url").await?;
+    expect_dir_listing(
+        "/parent_hub/children/echo_server/exec/expose",
+        vec!["fidl.examples.routing.echo.Echo", "hub"],
+    )
+    .await;
 
-    Ok(())
+    expect_dir_listing(
+        "/parent_hub/children/echo_server/resolved/expose",
+        vec!["fidl.examples.routing.echo.Echo", "hub"],
+    )
+    .await;
+
+    expect_dir_listing("/parent_hub/children/echo_server/exec/out", vec!["svc"]).await;
+
+    expect_dir_listing(
+        "/parent_hub/children/echo_server/exec/out/svc",
+        vec!["fidl.examples.routing.echo.Echo"],
+    )
+    .await;
+
+    expect_dir_listing(
+        "/parent_hub/children/reporter/exec/in/svc",
+        vec!["fidl.examples.routing.echo.Echo", "fuchsia.logger.LogSink"],
+    )
+    .await;
+
+    expect_dir_listing("/parent_hub/children/reporter/exec/in/pkg", vec!["bin", "lib", "meta"])
+        .await;
+
+    expect_echo_service(
+        "/parent_hub/children/echo_server/resolved/expose/fidl.examples.routing.echo.Echo",
+    )
+    .await;
+    expect_echo_service(
+        "/parent_hub/children/echo_server/exec/expose/fidl.examples.routing.echo.Echo",
+    )
+    .await;
+    expect_echo_service(
+        "/parent_hub/children/echo_server/exec/out/svc/fidl.examples.routing.echo.Echo",
+    )
+    .await;
+    expect_echo_service(
+        "/parent_hub/children/reporter/exec/in/svc/fidl.examples.routing.echo.Echo",
+    )
+    .await;
+
+    expect_dir_listing("/hub", vec!["expose", "in", "out", "resolved_url", "runtime"]).await;
+
+    expect_file_content(
+        "/sibling_hub/exec/resolved_url",
+        "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/echo_server.cm",
+    )
+    .await;
 }

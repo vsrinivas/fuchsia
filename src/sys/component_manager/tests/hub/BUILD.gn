@@ -6,32 +6,11 @@ import("//build/components.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 
-rustc_library("hub_report_capability") {
-  name = "hub_report_capability"
-  edition = "2018"
-  source_root = "hub_report_capability.rs"
-  testonly = true
-  deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
-    "//src/sys/component_manager/tests/fidl:hub-rustc",
-    "//src/sys/lib/component-events",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:async-trait",
-    "//third_party/rust_crates:futures",
-  ]
-
-  sources = [ "hub_report_capability.rs" ]
-}
-
 rustc_test("hub_integration_test_bin") {
   name = "hub_integration_test"
   edition = "2018"
   source_root = "hub_integration_test.rs"
   deps = [
-    ":hub_report_capability",
     "//examples/components/routing/fidl:echo-rustc",
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
@@ -83,6 +62,12 @@ fuchsia_component("visibility_reporter") {
   manifest = "components/visibility/meta/reporter.cml"
 }
 
+fuchsia_component("resolver") {
+  testonly = true
+  deps = [ "components:resolver_bin" ]
+  manifest = "components/resolver/meta/resolver.cml"
+}
+
 fuchsia_component("child") {
   testonly = true
   manifest = "components/visibility/meta/child.cml"
@@ -103,6 +88,7 @@ fuchsia_unittest_package("hub_integration_test") {
     ":grandchild",
     ":hub_client",
     ":hub_integration_test_bin",
+    ":resolver",
     ":simple",
     ":visibility_reporter",
     "//examples/components/routing/echo_server:echo_server_component",

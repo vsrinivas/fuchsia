@@ -1,8 +1,5 @@
 {
-    include: [
-        "sdk/lib/diagnostics/syslog/client.shard.cml",
-        "src/sys/component_manager/testing/meta/start_component_tree.shard.cml",
-    ],
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         runner: "elf",
         binary: "bin/dynamic_child_reporter",
@@ -16,10 +13,7 @@
     use: [
         { protocol: "fuchsia.sys2.EventSource" },
         {
-            protocol: [
-                "fuchsia.sys2.Realm",
-                "fuchsia.test.hub.HubReport",
-            ],
+            protocol: [ "fuchsia.sys2.Realm" ],
             from: "framework",
         },
         {
@@ -36,6 +30,23 @@
             ],
             from: "framework",
             modes: [ "sync" ],
+        },
+        {
+            event_stream: "DynamicChildEventStream",
+            subscriptions: [
+                {
+                    event: "destroyed",
+                    mode: "sync",
+                },
+                {
+                    event: "marked_for_destruction",
+                    mode: "sync",
+                },
+                {
+                    event: "stopped",
+                    mode: "sync",
+                },
+            ],
         },
     ],
 }

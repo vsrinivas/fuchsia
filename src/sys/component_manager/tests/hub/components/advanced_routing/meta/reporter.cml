@@ -29,9 +29,5 @@
             path: "/sibling_hub",
         },
         { protocol: "fidl.examples.routing.echo.Echo" },
-        {
-            protocol: [ "fuchsia.test.hub.HubReport" ],
-            from: "framework",
-        },
     ],
 }

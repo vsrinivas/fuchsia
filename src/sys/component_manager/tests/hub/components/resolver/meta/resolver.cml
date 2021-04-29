@@ -1,0 +1,25 @@
+{
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/resolver",
+    },
+    children: [
+        {
+            name: "child_a",
+            url: "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/hub_client.cm",
+        },
+        {
+            name: "child_b",
+            url: "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/hub_client.cm",
+        },
+    ],
+    use: [
+        {
+            directory: "hub",
+            from: "framework",
+            rights: [ "r*" ],
+            path: "/hub",
+        },
+    ],
+}
