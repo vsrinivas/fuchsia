@@ -3,38 +3,36 @@
 // found in the LICENSE file.
 
 use {
-    component_events::{injectors::CapabilityInjector, matcher::EventMatcher},
+    component_events::{events::*, matcher::*},
     fuchsia_async as fasync,
-    test_utils_lib::{echo_capability::EchoCapability, opaque_test::*},
+    test_utils_lib::opaque_test::*,
 };
 
 #[fasync::run_singlethreaded(test)]
 async fn echo_with_args() {
-    run_single_test(
-        "fuchsia-pkg://fuchsia.com/elf-runner-test#meta/reporter_args.cm",
-        "/pkg/bin/args_reporter Hippos rule!",
-    )
-    .await
+    run_single_test("fuchsia-pkg://fuchsia.com/elf-runner-test#meta/reporter_args.cm").await
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn echo_without_args() {
-    run_single_test(
-        "fuchsia-pkg://fuchsia.com/elf-runner-test#meta/reporter_no_args.cm",
-        "/pkg/bin/args_reporter",
-    )
-    .await
+    run_single_test("fuchsia-pkg://fuchsia.com/elf-runner-test#meta/reporter_no_args.cm").await
 }
 
-async fn run_single_test(url: &str, expected_output: &str) {
+async fn run_single_test(url: &str) {
     let test = OpaqueTest::default(url).await.unwrap();
 
     let event_source = test.connect_to_event_source().await.unwrap();
-    let (capability, mut echo_rx) = EchoCapability::new();
-    capability.inject(&event_source, EventMatcher::ok()).await;
+
+    let mut event_stream = event_source
+        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME], EventMode::Async)])
+        .await
+        .unwrap();
+
     event_source.start_component_tree().await;
 
-    let event = echo_rx.next().await.unwrap();
-    assert_eq!(expected_output, event.message);
-    event.resume();
+    EventMatcher::ok()
+        .stop(Some(ExitStatusMatcher::Clean))
+        .wait::<Stopped>(&mut event_stream)
+        .await
+        .unwrap();
 }

@@ -4,9 +4,7 @@
 
 use {
     diagnostics_reader::{assert_data_tree, AnyProperty, ArchiveReader, Inspect},
-    fidl_fidl_examples_routing_echo as fecho, fidl_fuchsia_io as fio, fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
-    fuchsia_syslog as syslog, io_util,
+    fidl_fuchsia_io as fio, fuchsia_async as fasync, fuchsia_syslog as syslog, io_util,
     std::path::Path,
 };
 
@@ -86,7 +84,4 @@ async fn main() {
             total_dynamic_children: 3u64,
         }
     });
-
-    let echo = connect_to_service::<fecho::EchoMarker>().unwrap();
-    let _ = echo.echo_string(Some("OK")).await;
 }

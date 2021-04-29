@@ -8,7 +8,4 @@
             "rule!",
         ],
     },
-    use: [
-        { protocol: "fidl.examples.routing.echo.Echo" },
-    ],
 }

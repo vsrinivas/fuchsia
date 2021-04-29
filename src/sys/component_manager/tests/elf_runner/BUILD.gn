@@ -33,19 +33,19 @@ rustc_binary("args_reporter_bin") {
   name = "args_reporter"
   edition = "2018"
   source_root = "args_reporter.rs"
-  deps = [
-    "//examples/components/routing/fidl:echo-rustc",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
-    "//src/lib/syslog/rust:syslog",
-  ]
-
   sources = [ "args_reporter.rs" ]
+}
+
+rustc_binary("no_args_reporter_bin") {
+  name = "no_args_reporter"
+  edition = "2018"
+  source_root = "no_args_reporter.rs"
+  sources = [ "no_args_reporter.rs" ]
 }
 
 fuchsia_component("reporter_no_args") {
   testonly = true
-  deps = [ ":args_reporter_bin" ]
+  deps = [ ":no_args_reporter_bin" ]
   manifest = "meta/reporter_no_args.cml"
 }
 
