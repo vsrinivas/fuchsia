@@ -93,7 +93,7 @@ function for-each-build {
         status=$?
         failed+=("${MULTI_LIST[i]}")
       }
-      ((i++))
+      ((++i))
     done
   fi
   for dir in "${failed[@]}"; do
