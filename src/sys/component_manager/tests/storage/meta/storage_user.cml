@@ -4,23 +4,15 @@
         runner: "elf",
         binary: "bin/storage_user",
     },
-    capabilities: [
-        {
-            directory: "data",
-            rights: [ "rw*" ],
-            path: "/data",
-        },
-    ],
     use: [
         {
             storage: "data",
             path: "/data",
         },
-    ],
-    expose: [
         {
-            directory: "data",
-            from: "self",
+            directory: "memfs",
+            rights: [ "rw*" ],
+            path: "/memfs",
         },
     ],
 }

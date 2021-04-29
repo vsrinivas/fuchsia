@@ -3,17 +3,19 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{Context as _, Error},
+    component_events::{events::*, matcher::*},
     fidl::endpoints::create_proxy,
-    fidl_fidl_test_components as ftest, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
-    fuchsia_zircon as zx,
+    std::fs::{read_dir, DirEntry},
 };
 
 #[fasync::run_singlethreaded]
-async fn main() -> Result<(), Error> {
+async fn main() {
+    fuchsia_syslog::init().unwrap();
+
     // Create the dynamic child
-    let realm = connect_to_service::<fsys::RealmMarker>().context("error connecting to realm")?;
+    let realm = connect_to_service::<fsys::RealmMarker>().unwrap();
     let mut collection_ref = fsys::CollectionRef { name: String::from("coll") };
     let child_decl = fsys::ChildDecl {
         name: Some(String::from("storage_user")),
@@ -25,36 +27,38 @@ async fn main() -> Result<(), Error> {
         ..fsys::ChildDecl::EMPTY
     };
 
-    realm
-        .create_child(&mut collection_ref, child_decl)
-        .await
-        .context("create_child failed")?
-        .expect("failed to create child");
+    realm.create_child(&mut collection_ref, child_decl).await.unwrap().unwrap();
 
     // Bind to child
     let mut child_ref =
         fsys::ChildRef { name: "storage_user".to_string(), collection: Some("coll".to_string()) };
-    let (_keep_alive, server_end) = create_proxy::<fidl_fuchsia_io::DirectoryMarker>()?;
+    let (_, server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();
 
-    realm
-        .bind_child(&mut child_ref, server_end)
+    realm.bind_child(&mut child_ref, server_end).await.unwrap().unwrap();
+
+    let source = EventSource::new().unwrap();
+    let mut event_stream = source.take_static_event_stream("TestEventStream").await.unwrap();
+
+    // Expect the dynamic child to stop
+    EventMatcher::ok()
+        .stop(Some(ExitStatusMatcher::Clean))
+        .moniker("./coll:storage_user:1")
+        .wait::<Stopped>(&mut event_stream)
         .await
-        .context("bind_child failed")?
-        .expect("failed to bind child");
+        .unwrap();
 
-    // Wait for a response from the TriggerService before destroying the child.
-    let trigger =
-        connect_to_service::<ftest::TriggerMarker>().context("error connecting to trigger")?;
-    trigger.run().await?;
+    // Destroy the child
+    realm.destroy_child(&mut child_ref).await.unwrap().unwrap();
 
-    // Destroy child
-    realm
-        .destroy_child(&mut child_ref)
+    // Expect the dynamic child to be destroyed
+    EventMatcher::ok()
+        .moniker("./coll:storage_user:1")
+        .wait::<Destroyed>(&mut event_stream)
         .await
-        .context("delete_child failed")?
-        .expect("failed to delete child");
+        .unwrap();
 
-    loop {
-        fasync::Timer::new(fasync::Time::after(zx::Duration::from_hours(1))).await;
-    }
+    // Ensure that memfs does not have a directory for the dynamic child
+    let dir = read_dir("/hub/children/memfs/exec/out/svc/fuchsia.io.Directory").unwrap();
+    let entries: Vec<DirEntry> = dir.map(|e| e.unwrap()).collect();
+    assert!(entries.is_empty());
 }

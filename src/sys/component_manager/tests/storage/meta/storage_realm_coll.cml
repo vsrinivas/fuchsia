@@ -31,14 +31,46 @@
             from: "framework",
         },
         {
-            protocol: "fidl.test.components.Trigger",
+            protocol: "fuchsia.sys2.EventSource",
+            from: "parent",
+        },
+        {
+            event: [
+                "destroyed",
+                "stopped",
+            ],
             from: "framework",
+            modes: [ "async" ],
+        },
+        {
+            event_stream: "TestEventStream",
+            subscriptions: [
+                {
+                    event: "stopped",
+                    mode: "async",
+                },
+                {
+                    event: "destroyed",
+                    mode: "async",
+                },
+            ],
+        },
+        {
+            directory: "hub",
+            from: "framework",
+            rights: [ "r*" ],
+            path: "/hub",
         },
     ],
     offer: [
         {
             storage: "data",
             from: "self",
+            to: "#coll",
+        },
+        {
+            directory: "memfs",
+            from: "#memfs",
             to: "#coll",
         },
         {
