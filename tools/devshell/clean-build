@@ -4,7 +4,7 @@
 # found in the LICENSE file.
 
 #### CATEGORY=Build
-### clean the build directory and then perform a full build
+### Clean the build directory and then perform a full build
 
 set -e
 

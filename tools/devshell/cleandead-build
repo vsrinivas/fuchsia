@@ -1,0 +1,16 @@
+#!/bin/bash
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+#### CATEGORY=Build
+### Delete stale generated files and then perform a full build.
+### This can be used to recover from persistent build errors on incremental
+### rebuilds.
+
+set -e
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+
+fx-command-run cleandead
+fx-command-run build
