@@ -19,6 +19,7 @@
 
 #include <fbl/algorithm.h>
 
+#include "src/lib/fsl/handles/object_info.h"
 #include "src/virtualization/bin/vmm/bits.h"
 
 fuchsia::sysmem::PixelFormatType DrmFormatToSysmemFormat(uint32_t drm_format) {
@@ -282,6 +283,7 @@ void VirtioWl::Start(fuchsia::virtualization::hardware::StartInfo start_info, zx
   vmar_ = std::move(vmar);
   dispatcher_ = dispatcher.Bind();
   sysmem_allocator_ = sysmem_allocator.BindSync();
+  sysmem_allocator_->SetDebugClientInfo(fsl::GetCurrentProcessName(), fsl::GetCurrentProcessKoid());
   scenic_allocator_ = scenic_allocator.Bind();
 
   // Configure device queues.

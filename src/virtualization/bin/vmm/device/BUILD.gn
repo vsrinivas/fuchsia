@@ -316,6 +316,7 @@ executable("virtio_wl_bin") {
     ":virtio",
     "//sdk/fidl/fuchsia.scenic.allocation",
     "//sdk/fidl/fuchsia.sysmem",
+    "//src/lib/fsl",
     "//zircon/system/ulib/fbl",
   ]
 

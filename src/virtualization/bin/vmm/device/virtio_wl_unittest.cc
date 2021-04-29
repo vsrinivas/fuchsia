@@ -126,6 +126,7 @@ class TestSysmemAllocator : public fuchsia::sysmem::testing::Allocator_TestBase 
       fidl::InterfaceRequest<fuchsia::sysmem::BufferCollection> request) override {
     collections_.emplace_back(std::make_unique<TestBufferCollection>(std::move(request)));
   }
+  void SetDebugClientInfo(std::string name, uint64_t id) override {}
 
   void NotImplemented_(const std::string& name) override {
     FAIL() << "Not Implemented Allocator." << name;
