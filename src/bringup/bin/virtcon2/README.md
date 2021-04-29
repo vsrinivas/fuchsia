@@ -43,7 +43,7 @@ then pave and boot.
 
 Configure
 
-    fx set core.x64 --with //src/binrgup/bin/virtcon2:tests
+    fx set core.x64 --with //src/bringup/bin/virtcon2:tests
 
 Then test
 
