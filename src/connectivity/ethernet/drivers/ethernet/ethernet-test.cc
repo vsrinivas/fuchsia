@@ -358,15 +358,34 @@ TEST(EthernetTest, GetStatusTest) {
   EthernetDeviceTest test;
   uint32_t device_status;
 
-  // start device
+  // Start device.
   test.Start();
 
-  // set mock ethmac status
+  // Set mock ethmac status.
   EXPECT_TRUE(test.tester.ethmac().SetStatus(1));
 
-  // verify status
+  // Verify FIFO is signalled.
+  zx::fifo& rx = test.ReceiveFifo();
+  zx_signals_t pending;
+  ASSERT_OK(
+      rx.wait_one(fuchsia_hardware_ethernet_SIGNAL_STATUS, zx::time::infinite_past(), &pending));
+  ASSERT_EQ(pending & fuchsia_hardware_ethernet_SIGNAL_STATUS,
+            fuchsia_hardware_ethernet_SIGNAL_STATUS);
+
+  // Verify status.
   ASSERT_OK(fuchsia_hardware_ethernet_DeviceGetStatus(test.FidlChannel(), &device_status));
-  EXPECT_TRUE(device_status == 1);
+  EXPECT_EQ(device_status, 1);
+
+  // Status is cleared by reading through FIDL.
+  ASSERT_STATUS(
+      rx.wait_one(fuchsia_hardware_ethernet_SIGNAL_STATUS, zx::time::infinite_past(), &pending),
+      ZX_ERR_TIMED_OUT);
+
+  // Verify that updating status to the same value doesn't assert FIFO signals.
+  EXPECT_TRUE(test.tester.ethmac().SetStatus(1));
+  ASSERT_STATUS(
+      rx.wait_one(fuchsia_hardware_ethernet_SIGNAL_STATUS, zx::time::infinite_past(), &pending),
+      ZX_ERR_TIMED_OUT);
 }
 
 TEST(EthernetTest, SendTest) {

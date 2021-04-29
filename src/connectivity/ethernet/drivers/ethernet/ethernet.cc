@@ -223,11 +223,12 @@ void EthDev0::SetStatus(uint32_t status) {
 
   fbl::AutoLock lock(&ethdev_lock_);
   static_assert(ETHERNET_STATUS_ONLINE == fuchsia_hardware_ethernet_DeviceStatus_ONLINE, "");
-  status_ = status;
-
   static_assert(fuchsia_hardware_ethernet_SIGNAL_STATUS == ZX_USER_SIGNAL_0, "");
-  for (auto& edev : list_active_) {
-    edev.receive_fifo_.signal_peer(0, fuchsia_hardware_ethernet_SIGNAL_STATUS);
+  if (status != status_) {
+    status_ = status;
+    for (auto& edev : list_active_) {
+      edev.receive_fifo_.signal_peer(0, fuchsia_hardware_ethernet_SIGNAL_STATUS);
+    }
   }
 }
 
