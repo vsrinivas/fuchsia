@@ -338,8 +338,8 @@ void InputSystem::RegisterListener(
 
   // Remove listener if the interface closes.
   new_listener.set_error_handler([this](zx_status_t status) {
-    FX_LOGS(ERROR) << "Pointer capture listener interface closed with error: "
-                   << zx_status_get_string(status);
+    FX_LOGS(INFO) << "Pointer capture listener interface closed with error: "
+                  << zx_status_get_string(status);
     pointer_capture_listener_ = std::nullopt;
   });
 
