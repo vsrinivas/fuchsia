@@ -6,6 +6,7 @@ import("//build/compiled_action.gni")
 import("//build/component/component_id_index.gni")
 import("//build/config.gni")
 import("//build/dist/generated_resource.gni")
+import("//build/drivers/driver_manifest.gni")
 import("//build/images/collect_blob_manifest.gni")
 import("//build/images/fvm.gni")
 import("//build/images/manifest.gni")
@@ -29,6 +30,9 @@ import("//src/sys/pkg/bin/pm/pm.gni")
 #
 #   base_packages (required)
 #     [list of labels] The packages to include in the base package set.
+#
+#   base_driver_packages (optional)
+#     [list of labels] The driver packages to include in the base package set.
 #
 #   cache_packages (optional)
 #     [list of labels] The packages to cache in the images.
@@ -108,8 +112,14 @@ template("assemble_system") {
   assert(defined(invoker.bootfs_labels), "Need to define bootfs_labels")
 
   base_packages = invoker.base_packages
+  base_driver_packages = []
   cache_packages = []
   universe_packages = []
+  if (defined(invoker.base_driver_packages)) {
+    base_driver_packages = invoker.base_driver_packages
+  }
+  base_packages += base_driver_packages
+
   if (defined(invoker.cache_packages)) {
     cache_packages = invoker.cache_packages
   }
@@ -150,6 +160,26 @@ template("assemble_system") {
   if (defined(invoker.devmgr_config)) {
     devmgr_config = invoker.devmgr_config
   }
+
+  # Generate the base driver manifest file that lists all available drivers
+  # collected from base_driver_packages dependency tree. This manifest file
+  # will be included in the driver-manager-base-config package.
+  base_driver_manifest_label = "${target_name}_base-driver-manifest"
+  combined_driver_manifest(base_driver_manifest_label) {
+    forward_variables_from(invoker, [ "testonly" ])
+    manifest_name = "base-driver-manifest"
+    deps = base_driver_packages
+  }
+
+  # The driver-manager-base-config package is read by Driver Manager to
+  # discover where the base drivers are located.
+  driver_manager_base_config_label = "${target_name}_driver-manager-base-config"
+  fuchsia_package(driver_manager_base_config_label) {
+    forward_variables_from(invoker, [ "testonly" ])
+    package_name = "driver-manager-base-config"
+    deps = [ ":${base_driver_manifest_label}" ]
+  }
+  base_packages += [ ":${driver_manager_base_config_label}" ]
 
   shell_commands("${target_name}_shell-commands") {
     package_name = "shell-commands"

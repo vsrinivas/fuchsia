@@ -48,6 +48,8 @@ product_bootfs_labels += [
 
 meta_package_labels = []
 
+base_driver_package_labels = []
+
 base_package_labels = []
 
 cache_package_labels = []
