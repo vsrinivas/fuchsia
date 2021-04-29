@@ -434,7 +434,7 @@ const NANOS_PER_SECOND: i64 = 1000 * 1000 * 1000;
 pub fn sys_clock_gettime(
     ctx: &SyscallContext<'_>,
     which_clock: u32,
-    tp_addr: UserRef<timespec_t>,
+    tp_addr: UserRef<timespec>,
 ) -> Result<SyscallResult, Errno> {
     let time = match which_clock {
         CLOCK_REALTIME => utc_time(),
@@ -442,19 +442,19 @@ pub fn sys_clock_gettime(
         _ => return Err(EINVAL),
     };
     let nanos = time.into_nanos();
-    let tv = timespec_t { tv_sec: nanos / NANOS_PER_SECOND, tv_nsec: nanos % NANOS_PER_SECOND };
+    let tv = timespec { tv_sec: nanos / NANOS_PER_SECOND, tv_nsec: nanos % NANOS_PER_SECOND };
     return ctx.task.mm.write_object(tp_addr, &tv).map(|_| SUCCESS);
 }
 
 pub fn sys_gettimeofday(
     ctx: &SyscallContext<'_>,
-    user_tv: UserRef<timeval_t>,
+    user_tv: UserRef<timeval>,
     user_tz: UserRef<timezone>,
 ) -> Result<SyscallResult, Errno> {
     if !user_tv.is_null() {
         let now = utc_time().into_nanos();
         let tv =
-            timeval_t { tv_sec: now / NANOS_PER_SECOND, tv_usec: (now % NANOS_PER_SECOND) / 1000 };
+            timeval { tv_sec: now / NANOS_PER_SECOND, tv_usec: (now % NANOS_PER_SECOND) / 1000 };
         ctx.task.mm.write_object(user_tv, &tv)?;
     }
     if !user_tz.is_null() {

@@ -704,21 +704,7 @@ pub struct utsname_t {
     pub machine: [u8; 65],
 }
 
-#[derive(Debug, Default, Eq, PartialEq, Hash, Copy, Clone, AsBytes, FromBytes)]
-#[repr(C)]
-pub struct timespec_t {
-    pub tv_sec: i64,
-    pub tv_nsec: i64,
-}
-
-#[derive(Debug, Default, Eq, PartialEq, Hash, Copy, Clone, AsBytes, FromBytes)]
-#[repr(C)]
-pub struct timeval_t {
-    pub tv_sec: i64,
-    pub tv_usec: i64,
-}
-
-#[derive(Debug, Default, Eq, PartialEq, Hash, Copy, Clone, AsBytes, FromBytes)]
+#[derive(Debug, Default, Clone, Copy, AsBytes, FromBytes)]
 #[repr(C)]
 pub struct stat_t {
     pub st_dev: dev_t,
@@ -732,9 +718,9 @@ pub struct stat_t {
     pub st_size: off_t,
     pub st_blksize: i64,
     pub st_blocks: i64,
-    pub st_atim: timespec_t,
-    pub st_mtim: timespec_t,
-    pub st_ctim: timespec_t,
+    pub st_atim: timespec,
+    pub st_mtim: timespec,
+    pub st_ctim: timespec,
     pub _pad3: [i64; 3],
 }
 
