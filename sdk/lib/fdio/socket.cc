@@ -46,25 +46,25 @@ struct SocketAddress {
         if (addr_len < sizeof(struct sockaddr_in)) {
           return ZX_ERR_INVALID_ARGS;
         }
-        const auto* s = reinterpret_cast<const struct sockaddr_in*>(addr);
+        const auto& s = *reinterpret_cast<const struct sockaddr_in*>(addr);
         address.set_ipv4(
             fidl::ObjectView<fnet::wire::Ipv4SocketAddress>::FromExternal(&storage.ipv4));
-        std::copy_n(reinterpret_cast<const uint8_t*>(&s->sin_addr.s_addr),
+        std::copy_n(reinterpret_cast<const uint8_t*>(&s.sin_addr.s_addr),
                     decltype(storage.ipv4.address.addr)::size(), storage.ipv4.address.addr.begin());
-        storage.ipv4.port = ntohs(s->sin_port);
+        storage.ipv4.port = ntohs(s.sin_port);
         return ZX_OK;
       }
       case AF_INET6: {
         if (addr_len < sizeof(struct sockaddr_in6)) {
           return ZX_ERR_INVALID_ARGS;
         }
-        const auto* s = reinterpret_cast<const struct sockaddr_in6*>(addr);
+        const auto& s = *reinterpret_cast<const struct sockaddr_in6*>(addr);
         address.set_ipv6(
             fidl::ObjectView<fnet::wire::Ipv6SocketAddress>::FromExternal(&storage.ipv6));
-        std::copy(std::begin(s->sin6_addr.s6_addr), std::end(s->sin6_addr.s6_addr),
+        std::copy(std::begin(s.sin6_addr.s6_addr), std::end(s.sin6_addr.s6_addr),
                   storage.ipv6.address.addr.begin());
-        storage.ipv6.port = ntohs(s->sin6_port);
-        storage.ipv6.zone_index = s->sin6_scope_id;
+        storage.ipv6.port = ntohs(s.sin6_port);
+        storage.ipv6.zone_index = s.sin6_scope_id;
         return ZX_OK;
       }
       default:
@@ -1393,11 +1393,11 @@ Errno zxsio_posix_ioctl(int req, va_list va, F fallback) {
           ifr->ifr_name[len] = 0;
 
           // Write interface address.
-          auto* s = reinterpret_cast<struct sockaddr_in*>(&ifr->ifr_addr);
+          auto& s = *reinterpret_cast<struct sockaddr_in*>(&ifr->ifr_addr);
           const auto& ipv4 = addr.ipv4();
-          s->sin_family = AF_INET;
-          s->sin_port = 0;
-          std::copy(ipv4.addr.begin(), ipv4.addr.end(), reinterpret_cast<uint8_t*>(&s->sin_addr));
+          s.sin_family = AF_INET;
+          s.sin_port = 0;
+          std::copy(ipv4.addr.begin(), ipv4.addr.end(), reinterpret_cast<uint8_t*>(&s.sin_addr));
 
           ifr++;
         }
