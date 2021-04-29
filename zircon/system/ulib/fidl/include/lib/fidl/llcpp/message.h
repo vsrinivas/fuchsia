@@ -208,6 +208,13 @@ class OutgoingMessage : public ::fidl::Result {
   zx_channel_iovec_t converted_byte_message_iovec_ = {};
 };
 
+namespace internal {
+
+template <typename T>
+class DecodedMessageBase;
+
+}  // namespace internal
+
 // |IncomingMessage| represents a FIDL message on the read path.
 // Each instantiation of the class should only be used for one message.
 //
@@ -332,10 +339,10 @@ class IncomingMessage : public ::fidl::Result {
   // This consumes the |IncomingMessage|.
   void CloseHandles() &&;
 
- protected:
-  // Reset the byte pointer. Used by subclasses to release their ownership over
-  // handles in the message while the message is in decoded form.
-  void ResetBytes() { message_.bytes = nullptr; }
+ private:
+  // Only |fidl::DecodedMessage<T>| instances may decode this message.
+  template <typename T>
+  friend class internal::DecodedMessageBase;
 
   // Decodes the message using |FidlType|. If this operation succeed, |status()| is ok and
   // |bytes()| contains the decoded object.
@@ -353,7 +360,6 @@ class IncomingMessage : public ::fidl::Result {
   // method is only useful when interfacing with C APIs.
   void ReleaseHandles() { message_.num_handles = 0; }
 
- private:
   void MoveImpl(IncomingMessage&& other) noexcept {
     message_ = other.message_;
     other.ReleaseHandles();
@@ -387,6 +393,45 @@ IncomingMessage ChannelReadEtc(zx_handle_t channel, uint32_t options,
                                cpp20::span<zx_handle_info_t> handles_storage);
 
 #endif  // __Fuchsia__
+
+namespace internal {
+
+// DecodedMessageBase implements the common behavior to all
+// |fidl::DecodedMessage<T>| subclasses. They may be created from an incoming
+// message in encoded form, in which case they would perform the necessary
+// decoding and own the decoded handles via RAII.
+//
+// |DecodedMessageBase| should never be instantiated directly. Rather, a
+// subclass should be defined which adds the FIDL type-specific handle RAII
+// behavior.
+template <typename FidlType>
+class DecodedMessageBase : public ::fidl::Result {
+ public:
+  // Creates an |DecodedMessageBase| by decoding the incoming message |msg|.
+  // Consumes |msg|.
+  explicit DecodedMessageBase(::fidl::IncomingMessage&& msg) {
+    bytes_ = msg.bytes();
+    msg.Decode<FidlType>();
+    SetResult(msg);
+  }
+
+ protected:
+  DecodedMessageBase(const DecodedMessageBase&) = delete;
+  DecodedMessageBase(DecodedMessageBase&&) = delete;
+  DecodedMessageBase& operator=(const DecodedMessageBase&) = delete;
+  DecodedMessageBase& operator=(DecodedMessageBase&&) = delete;
+
+  ~DecodedMessageBase() = default;
+
+  uint8_t* bytes() const { return bytes_; }
+
+  void ResetBytes() { bytes_ = nullptr; }
+
+ private:
+  uint8_t* bytes_ = nullptr;
+};
+
+}  // namespace internal
 
 // This class owns a message of |FidlType| and encodes the message automatically upon construction
 // into a byte buffer.

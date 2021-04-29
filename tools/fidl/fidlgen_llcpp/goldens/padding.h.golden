@@ -138,36 +138,31 @@ struct Padding7ByteMiddle {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<Padding7ByteMiddle> {
    public:
+    using DecodedMessageBase<Padding7ByteMiddle>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(
+        : DecodedMessageBase(::fidl::IncomingMessage(
               bytes, byte_actual, handles, handle_actual,
-              ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
-      Decode<struct Padding7ByteMiddle>();
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<struct Padding7ByteMiddle>();
-    }
-    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
-        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
-                         msg->handles, msg->num_handles) {}
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+              ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    struct Padding7ByteMiddle* PrimaryObject() {
+    DecodedMessage(const fidl_incoming_msg_t* c_msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
+    }
+
+    Padding7ByteMiddle* PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<struct Padding7ByteMiddle*>(bytes());
+      return reinterpret_cast<Padding7ByteMiddle*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
@@ -242,36 +237,31 @@ struct Padding7ByteEnd {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<Padding7ByteEnd> {
    public:
+    using DecodedMessageBase<Padding7ByteEnd>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(
+        : DecodedMessageBase(::fidl::IncomingMessage(
               bytes, byte_actual, handles, handle_actual,
-              ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
-      Decode<struct Padding7ByteEnd>();
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<struct Padding7ByteEnd>();
-    }
-    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
-        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
-                         msg->handles, msg->num_handles) {}
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+              ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    struct Padding7ByteEnd* PrimaryObject() {
+    DecodedMessage(const fidl_incoming_msg_t* c_msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
+    }
+
+    Padding7ByteEnd* PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<struct Padding7ByteEnd*>(bytes());
+      return reinterpret_cast<Padding7ByteEnd*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
@@ -346,36 +336,31 @@ struct Padding6ByteMiddle {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<Padding6ByteMiddle> {
    public:
+    using DecodedMessageBase<Padding6ByteMiddle>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(
+        : DecodedMessageBase(::fidl::IncomingMessage(
               bytes, byte_actual, handles, handle_actual,
-              ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
-      Decode<struct Padding6ByteMiddle>();
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<struct Padding6ByteMiddle>();
-    }
-    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
-        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
-                         msg->handles, msg->num_handles) {}
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+              ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    struct Padding6ByteMiddle* PrimaryObject() {
+    DecodedMessage(const fidl_incoming_msg_t* c_msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
+    }
+
+    Padding6ByteMiddle* PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<struct Padding6ByteMiddle*>(bytes());
+      return reinterpret_cast<Padding6ByteMiddle*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
@@ -450,36 +435,31 @@ struct Padding6ByteEnd {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<Padding6ByteEnd> {
    public:
+    using DecodedMessageBase<Padding6ByteEnd>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(
+        : DecodedMessageBase(::fidl::IncomingMessage(
               bytes, byte_actual, handles, handle_actual,
-              ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
-      Decode<struct Padding6ByteEnd>();
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<struct Padding6ByteEnd>();
-    }
-    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
-        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
-                         msg->handles, msg->num_handles) {}
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+              ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    struct Padding6ByteEnd* PrimaryObject() {
+    DecodedMessage(const fidl_incoming_msg_t* c_msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
+    }
+
+    Padding6ByteEnd* PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<struct Padding6ByteEnd*>(bytes());
+      return reinterpret_cast<Padding6ByteEnd*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
@@ -556,36 +536,31 @@ struct Padding5ByteMiddle {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<Padding5ByteMiddle> {
    public:
+    using DecodedMessageBase<Padding5ByteMiddle>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(
+        : DecodedMessageBase(::fidl::IncomingMessage(
               bytes, byte_actual, handles, handle_actual,
-              ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
-      Decode<struct Padding5ByteMiddle>();
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<struct Padding5ByteMiddle>();
-    }
-    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
-        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
-                         msg->handles, msg->num_handles) {}
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+              ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    struct Padding5ByteMiddle* PrimaryObject() {
+    DecodedMessage(const fidl_incoming_msg_t* c_msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
+    }
+
+    Padding5ByteMiddle* PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<struct Padding5ByteMiddle*>(bytes());
+      return reinterpret_cast<Padding5ByteMiddle*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
@@ -662,36 +637,31 @@ struct Padding5ByteEnd {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<Padding5ByteEnd> {
    public:
+    using DecodedMessageBase<Padding5ByteEnd>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(
+        : DecodedMessageBase(::fidl::IncomingMessage(
               bytes, byte_actual, handles, handle_actual,
-              ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
-      Decode<struct Padding5ByteEnd>();
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<struct Padding5ByteEnd>();
-    }
-    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
-        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
-                         msg->handles, msg->num_handles) {}
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+              ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    struct Padding5ByteEnd* PrimaryObject() {
+    DecodedMessage(const fidl_incoming_msg_t* c_msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
+    }
+
+    Padding5ByteEnd* PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<struct Padding5ByteEnd*>(bytes());
+      return reinterpret_cast<Padding5ByteEnd*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
@@ -766,36 +736,31 @@ struct Padding4ByteMiddle {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<Padding4ByteMiddle> {
    public:
+    using DecodedMessageBase<Padding4ByteMiddle>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(
+        : DecodedMessageBase(::fidl::IncomingMessage(
               bytes, byte_actual, handles, handle_actual,
-              ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
-      Decode<struct Padding4ByteMiddle>();
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<struct Padding4ByteMiddle>();
-    }
-    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
-        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
-                         msg->handles, msg->num_handles) {}
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+              ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    struct Padding4ByteMiddle* PrimaryObject() {
+    DecodedMessage(const fidl_incoming_msg_t* c_msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
+    }
+
+    Padding4ByteMiddle* PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<struct Padding4ByteMiddle*>(bytes());
+      return reinterpret_cast<Padding4ByteMiddle*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
@@ -870,36 +835,31 @@ struct Padding4ByteEnd {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<Padding4ByteEnd> {
    public:
+    using DecodedMessageBase<Padding4ByteEnd>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(
+        : DecodedMessageBase(::fidl::IncomingMessage(
               bytes, byte_actual, handles, handle_actual,
-              ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
-      Decode<struct Padding4ByteEnd>();
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<struct Padding4ByteEnd>();
-    }
-    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
-        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
-                         msg->handles, msg->num_handles) {}
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+              ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    struct Padding4ByteEnd* PrimaryObject() {
+    DecodedMessage(const fidl_incoming_msg_t* c_msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
+    }
+
+    Padding4ByteEnd* PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<struct Padding4ByteEnd*>(bytes());
+      return reinterpret_cast<Padding4ByteEnd*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
@@ -979,36 +939,31 @@ struct Padding4ByteAlignmentLength12 {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final : public ::fidl::internal::DecodedMessageBase<
+                                   Padding4ByteAlignmentLength12> {
    public:
+    using DecodedMessageBase<Padding4ByteAlignmentLength12>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(
+        : DecodedMessageBase(::fidl::IncomingMessage(
               bytes, byte_actual, handles, handle_actual,
-              ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
-      Decode<struct Padding4ByteAlignmentLength12>();
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<struct Padding4ByteAlignmentLength12>();
-    }
-    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
-        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
-                         msg->handles, msg->num_handles) {}
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+              ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    struct Padding4ByteAlignmentLength12* PrimaryObject() {
+    DecodedMessage(const fidl_incoming_msg_t* c_msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
+    }
+
+    Padding4ByteAlignmentLength12* PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<struct Padding4ByteAlignmentLength12*>(bytes());
+      return reinterpret_cast<Padding4ByteAlignmentLength12*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
@@ -1083,36 +1038,31 @@ struct Padding3ByteMiddle {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<Padding3ByteMiddle> {
    public:
+    using DecodedMessageBase<Padding3ByteMiddle>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(
+        : DecodedMessageBase(::fidl::IncomingMessage(
               bytes, byte_actual, handles, handle_actual,
-              ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
-      Decode<struct Padding3ByteMiddle>();
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<struct Padding3ByteMiddle>();
-    }
-    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
-        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
-                         msg->handles, msg->num_handles) {}
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+              ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    struct Padding3ByteMiddle* PrimaryObject() {
+    DecodedMessage(const fidl_incoming_msg_t* c_msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
+    }
+
+    Padding3ByteMiddle* PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<struct Padding3ByteMiddle*>(bytes());
+      return reinterpret_cast<Padding3ByteMiddle*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
@@ -1187,36 +1137,31 @@ struct Padding3ByteEnd {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<Padding3ByteEnd> {
    public:
+    using DecodedMessageBase<Padding3ByteEnd>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(
+        : DecodedMessageBase(::fidl::IncomingMessage(
               bytes, byte_actual, handles, handle_actual,
-              ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
-      Decode<struct Padding3ByteEnd>();
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<struct Padding3ByteEnd>();
-    }
-    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
-        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
-                         msg->handles, msg->num_handles) {}
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+              ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    struct Padding3ByteEnd* PrimaryObject() {
+    DecodedMessage(const fidl_incoming_msg_t* c_msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
+    }
+
+    Padding3ByteEnd* PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<struct Padding3ByteEnd*>(bytes());
+      return reinterpret_cast<Padding3ByteEnd*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
@@ -1291,36 +1236,31 @@ struct Padding2ByteMiddle {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<Padding2ByteMiddle> {
    public:
+    using DecodedMessageBase<Padding2ByteMiddle>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(
+        : DecodedMessageBase(::fidl::IncomingMessage(
               bytes, byte_actual, handles, handle_actual,
-              ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
-      Decode<struct Padding2ByteMiddle>();
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<struct Padding2ByteMiddle>();
-    }
-    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
-        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
-                         msg->handles, msg->num_handles) {}
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+              ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    struct Padding2ByteMiddle* PrimaryObject() {
+    DecodedMessage(const fidl_incoming_msg_t* c_msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
+    }
+
+    Padding2ByteMiddle* PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<struct Padding2ByteMiddle*>(bytes());
+      return reinterpret_cast<Padding2ByteMiddle*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
@@ -1395,36 +1335,31 @@ struct Padding2ByteEnd {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<Padding2ByteEnd> {
    public:
+    using DecodedMessageBase<Padding2ByteEnd>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(
+        : DecodedMessageBase(::fidl::IncomingMessage(
               bytes, byte_actual, handles, handle_actual,
-              ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
-      Decode<struct Padding2ByteEnd>();
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<struct Padding2ByteEnd>();
-    }
-    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
-        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
-                         msg->handles, msg->num_handles) {}
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+              ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    struct Padding2ByteEnd* PrimaryObject() {
+    DecodedMessage(const fidl_incoming_msg_t* c_msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
+    }
+
+    Padding2ByteEnd* PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<struct Padding2ByteEnd*>(bytes());
+      return reinterpret_cast<Padding2ByteEnd*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
@@ -1502,36 +1437,31 @@ struct Padding2ByteAlignmentLength6 {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final : public ::fidl::internal::DecodedMessageBase<
+                                   Padding2ByteAlignmentLength6> {
    public:
+    using DecodedMessageBase<Padding2ByteAlignmentLength6>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(
+        : DecodedMessageBase(::fidl::IncomingMessage(
               bytes, byte_actual, handles, handle_actual,
-              ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
-      Decode<struct Padding2ByteAlignmentLength6>();
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<struct Padding2ByteAlignmentLength6>();
-    }
-    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
-        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
-                         msg->handles, msg->num_handles) {}
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+              ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    struct Padding2ByteAlignmentLength6* PrimaryObject() {
+    DecodedMessage(const fidl_incoming_msg_t* c_msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
+    }
+
+    Padding2ByteAlignmentLength6* PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<struct Padding2ByteAlignmentLength6*>(bytes());
+      return reinterpret_cast<Padding2ByteAlignmentLength6*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
@@ -1606,36 +1536,31 @@ struct Padding1ByteMiddle {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<Padding1ByteMiddle> {
    public:
+    using DecodedMessageBase<Padding1ByteMiddle>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(
+        : DecodedMessageBase(::fidl::IncomingMessage(
               bytes, byte_actual, handles, handle_actual,
-              ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
-      Decode<struct Padding1ByteMiddle>();
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<struct Padding1ByteMiddle>();
-    }
-    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
-        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
-                         msg->handles, msg->num_handles) {}
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+              ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    struct Padding1ByteMiddle* PrimaryObject() {
+    DecodedMessage(const fidl_incoming_msg_t* c_msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
+    }
+
+    Padding1ByteMiddle* PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<struct Padding1ByteMiddle*>(bytes());
+      return reinterpret_cast<Padding1ByteMiddle*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
@@ -1710,36 +1635,31 @@ struct Padding1ByteEnd {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<Padding1ByteEnd> {
    public:
+    using DecodedMessageBase<Padding1ByteEnd>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(
+        : DecodedMessageBase(::fidl::IncomingMessage(
               bytes, byte_actual, handles, handle_actual,
-              ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
-      Decode<struct Padding1ByteEnd>();
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<struct Padding1ByteEnd>();
-    }
-    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
-        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
-                         msg->handles, msg->num_handles) {}
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+              ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    struct Padding1ByteEnd* PrimaryObject() {
+    DecodedMessage(const fidl_incoming_msg_t* c_msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
+    }
+
+    Padding1ByteEnd* PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<struct Padding1ByteEnd*>(bytes());
+      return reinterpret_cast<Padding1ByteEnd*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };

@@ -138,40 +138,33 @@ struct {{ .WireResponse }} final {
   UnownedEncodedMessage message_;
   };
 
-public:
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+ public:
+  class DecodedMessage final : public ::fidl::internal::DecodedMessageBase<{{ .WireResponse }}> {
    public:
-  DecodedMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_info_t* handles = nullptr,
-          uint32_t handle_actual = 0)
-      : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-    if (ok()) {
-      Decode<{{ .WireResponse }}>();
-    }
-  }
-  DecodedMessage(::fidl::IncomingMessage&& msg) : ::fidl::IncomingMessage(std::move(msg)) {
-    Decode<{{ .WireResponse }}>();
-  }
-  DecodedMessage(const DecodedMessage&) = delete;
-  DecodedMessage(DecodedMessage&&) = delete;
-  DecodedMessage* operator=(const DecodedMessage&) = delete;
-  DecodedMessage* operator=(DecodedMessage&&) = delete;
-  {{- if .Response.IsResource }}
-  ~DecodedMessage() {
-    if (ok() && (PrimaryObject() != nullptr)) {
-      PrimaryObject()->_CloseHandles();
-    }
-  }
-  {{- end }}
+    using DecodedMessageBase<{{ .WireResponse }}>::DecodedMessageBase;
 
-  {{ .WireResponse.Self }}* PrimaryObject() {
-    ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<{{ .WireResponse }}*>(bytes());
-  }
+    DecodedMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_info_t* handles = nullptr,
+                   uint32_t handle_actual = 0)
+        : DecodedMessageBase(
+            ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual)) {}
 
-  // Release the ownership of the decoded message. That means that the handles won't be closed
-  // When the object is destroyed.
-  // After calling this method, the DecodedMessage object should not be used anymore.
-  void ReleasePrimaryObject() { ResetBytes(); }
+    {{- if .Response.IsResource }}
+    ~DecodedMessage() {
+      if (ok() && (PrimaryObject() != nullptr)) {
+        PrimaryObject()->_CloseHandles();
+      }
+    }
+    {{- end }}
+
+    {{ .WireResponse }}* PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<{{ .WireResponse }}*>(bytes());
+    }
+
+    // Release the ownership of the decoded message. That means that the handles won't be closed
+    // When the object is destroyed.
+    // After calling this method, the |DecodedMessage| object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
   };
 
  private:

@@ -288,37 +288,33 @@ struct ::fidl::WireRequest<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
   };
 
  public:
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<::fidl::WireRequest<
+            ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                LibfuzzerNeedsNonemptyProtocol>> {
    public:
+    using DecodedMessageBase<::fidl::WireRequest<
+        ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+            LibfuzzerNeedsNonemptyProtocol>>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-      if (ok()) {
-        Decode<::fidl::WireRequest<
-            ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                LibfuzzerNeedsNonemptyProtocol>>();
-      }
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<::fidl::WireRequest<
-          ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-              LibfuzzerNeedsNonemptyProtocol>>();
-    }
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
+                                                     handles, handle_actual)) {}
 
-    WireRequest* PrimaryObject() {
+    ::fidl::WireRequest<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                            LibfuzzerNeedsNonemptyProtocol>*
+    PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<WireRequest*>(bytes());
+      return reinterpret_cast<::fidl::WireRequest<
+          ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+              LibfuzzerNeedsNonemptyProtocol>*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
@@ -430,30 +426,24 @@ struct ::fidl::WireResponse<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
   };
 
  public:
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<::fidl::WireResponse<
+            ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                LibfuzzerNeedsNonemptyProtocol>> {
    public:
+    using DecodedMessageBase<::fidl::WireResponse<
+        ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+            LibfuzzerNeedsNonemptyProtocol>>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-      if (ok()) {
-        Decode<::fidl::WireResponse<
-            ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                LibfuzzerNeedsNonemptyProtocol>>();
-      }
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<::fidl::WireResponse<
-          ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-              LibfuzzerNeedsNonemptyProtocol>>();
-    }
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
+                                                     handles, handle_actual)) {}
 
-    WireResponse* PrimaryObject() {
+    ::fidl::WireResponse<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                             LibfuzzerNeedsNonemptyProtocol>*
+    PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<::fidl::WireResponse<
           ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
@@ -462,7 +452,7 @@ struct ::fidl::WireResponse<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 

@@ -874,40 +874,37 @@ struct ::fidl::WireRequest<
   };
 
  public:
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<::fidl::WireRequest<
+            ::fidl_test_protocols::HandleRightsProtocol::NoResponseMethod>> {
    public:
+    using DecodedMessageBase<::fidl::WireRequest<
+        ::fidl_test_protocols::HandleRightsProtocol::NoResponseMethod>>::
+        DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-      if (ok()) {
-        Decode<::fidl::WireRequest<
-            ::fidl_test_protocols::HandleRightsProtocol::NoResponseMethod>>();
-      }
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<::fidl::WireRequest<
-          ::fidl_test_protocols::HandleRightsProtocol::NoResponseMethod>>();
-    }
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
+                                                     handles, handle_actual)) {}
     ~DecodedMessage() {
       if (ok() && (PrimaryObject() != nullptr)) {
         PrimaryObject()->_CloseHandles();
       }
     }
 
-    WireRequest* PrimaryObject() {
+    ::fidl::WireRequest<
+        ::fidl_test_protocols::HandleRightsProtocol::NoResponseMethod>*
+    PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<WireRequest*>(bytes());
+      return reinterpret_cast<::fidl::WireRequest<
+          ::fidl_test_protocols::HandleRightsProtocol::NoResponseMethod>*>(
+          bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
@@ -1030,40 +1027,37 @@ struct ::fidl::WireRequest<
   };
 
  public:
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<::fidl::WireRequest<
+            ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>> {
    public:
+    using DecodedMessageBase<::fidl::WireRequest<
+        ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>>::
+        DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-      if (ok()) {
-        Decode<::fidl::WireRequest<
-            ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>>();
-      }
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<::fidl::WireRequest<
-          ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>>();
-    }
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
+                                                     handles, handle_actual)) {}
     ~DecodedMessage() {
       if (ok() && (PrimaryObject() != nullptr)) {
         PrimaryObject()->_CloseHandles();
       }
     }
 
-    WireRequest* PrimaryObject() {
+    ::fidl::WireRequest<
+        ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>*
+    PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<WireRequest*>(bytes());
+      return reinterpret_cast<::fidl::WireRequest<
+          ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>*>(
+          bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
@@ -1186,33 +1180,28 @@ struct ::fidl::WireResponse<
   };
 
  public:
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<::fidl::WireResponse<
+            ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>> {
    public:
+    using DecodedMessageBase<::fidl::WireResponse<
+        ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>>::
+        DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-      if (ok()) {
-        Decode<::fidl::WireResponse<
-            ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>>();
-      }
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<::fidl::WireResponse<
-          ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>>();
-    }
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
+                                                     handles, handle_actual)) {}
     ~DecodedMessage() {
       if (ok() && (PrimaryObject() != nullptr)) {
         PrimaryObject()->_CloseHandles();
       }
     }
 
-    WireResponse* PrimaryObject() {
+    ::fidl::WireResponse<
+        ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>*
+    PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<::fidl::WireResponse<
           ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>*>(
@@ -1221,7 +1210,7 @@ struct ::fidl::WireResponse<
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
@@ -1341,33 +1330,27 @@ struct ::fidl::WireResponse<
   };
 
  public:
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<::fidl::WireResponse<
+            ::fidl_test_protocols::HandleRightsProtocol::AnEvent>> {
    public:
+    using DecodedMessageBase<::fidl::WireResponse<
+        ::fidl_test_protocols::HandleRightsProtocol::AnEvent>>::
+        DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-      if (ok()) {
-        Decode<::fidl::WireResponse<
-            ::fidl_test_protocols::HandleRightsProtocol::AnEvent>>();
-      }
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<::fidl::WireResponse<
-          ::fidl_test_protocols::HandleRightsProtocol::AnEvent>>();
-    }
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
+                                                     handles, handle_actual)) {}
     ~DecodedMessage() {
       if (ok() && (PrimaryObject() != nullptr)) {
         PrimaryObject()->_CloseHandles();
       }
     }
 
-    WireResponse* PrimaryObject() {
+    ::fidl::WireResponse<::fidl_test_protocols::HandleRightsProtocol::AnEvent>*
+    PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<::fidl::WireResponse<
           ::fidl_test_protocols::HandleRightsProtocol::AnEvent>*>(bytes());
@@ -1375,7 +1358,7 @@ struct ::fidl::WireResponse<
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
@@ -2000,37 +1983,33 @@ struct WithErrorSyntaxResponseAsStructResponse {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final : public ::fidl::internal::DecodedMessageBase<
+                                   WithErrorSyntaxResponseAsStructResponse> {
    public:
+    using DecodedMessageBase<
+        WithErrorSyntaxResponseAsStructResponse>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(
+        : DecodedMessageBase(::fidl::IncomingMessage(
               bytes, byte_actual, handles, handle_actual,
-              ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
-      Decode<struct WithErrorSyntaxResponseAsStructResponse>();
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<struct WithErrorSyntaxResponseAsStructResponse>();
-    }
-    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
-        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
-                         msg->handles, msg->num_handles) {}
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+              ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    struct WithErrorSyntaxResponseAsStructResponse* PrimaryObject() {
+    DecodedMessage(const fidl_incoming_msg_t* c_msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
+    }
+
+    WithErrorSyntaxResponseAsStructResponse* PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<struct WithErrorSyntaxResponseAsStructResponse*>(
+      return reinterpret_cast<WithErrorSyntaxResponseAsStructResponse*>(
           bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
@@ -2104,37 +2083,33 @@ struct WithErrorSyntaxErrorAsPrimitiveResponse {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final : public ::fidl::internal::DecodedMessageBase<
+                                   WithErrorSyntaxErrorAsPrimitiveResponse> {
    public:
+    using DecodedMessageBase<
+        WithErrorSyntaxErrorAsPrimitiveResponse>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(
+        : DecodedMessageBase(::fidl::IncomingMessage(
               bytes, byte_actual, handles, handle_actual,
-              ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
-      Decode<struct WithErrorSyntaxErrorAsPrimitiveResponse>();
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<struct WithErrorSyntaxErrorAsPrimitiveResponse>();
-    }
-    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
-        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
-                         msg->handles, msg->num_handles) {}
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+              ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    struct WithErrorSyntaxErrorAsPrimitiveResponse* PrimaryObject() {
+    DecodedMessage(const fidl_incoming_msg_t* c_msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
+    }
+
+    WithErrorSyntaxErrorAsPrimitiveResponse* PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<struct WithErrorSyntaxErrorAsPrimitiveResponse*>(
+      return reinterpret_cast<WithErrorSyntaxErrorAsPrimitiveResponse*>(
           bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
@@ -2208,37 +2183,32 @@ struct WithErrorSyntaxErrorAsEnumResponse {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final : public ::fidl::internal::DecodedMessageBase<
+                                   WithErrorSyntaxErrorAsEnumResponse> {
    public:
+    using DecodedMessageBase<
+        WithErrorSyntaxErrorAsEnumResponse>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(
+        : DecodedMessageBase(::fidl::IncomingMessage(
               bytes, byte_actual, handles, handle_actual,
-              ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
-      Decode<struct WithErrorSyntaxErrorAsEnumResponse>();
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<struct WithErrorSyntaxErrorAsEnumResponse>();
-    }
-    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
-        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
-                         msg->handles, msg->num_handles) {}
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+              ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    struct WithErrorSyntaxErrorAsEnumResponse* PrimaryObject() {
+    DecodedMessage(const fidl_incoming_msg_t* c_msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
+    }
+
+    WithErrorSyntaxErrorAsEnumResponse* PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<struct WithErrorSyntaxErrorAsEnumResponse*>(
-          bytes());
+      return reinterpret_cast<WithErrorSyntaxErrorAsEnumResponse*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
@@ -2397,35 +2367,30 @@ struct ::fidl::WireRequest<::fidl_test_protocols::DiscoverableProtocol::Method>
   };
 
  public:
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<::fidl::WireRequest<
+            ::fidl_test_protocols::DiscoverableProtocol::Method>> {
    public:
+    using DecodedMessageBase<::fidl::WireRequest<
+        ::fidl_test_protocols::DiscoverableProtocol::Method>>::
+        DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-      if (ok()) {
-        Decode<::fidl::WireRequest<
-            ::fidl_test_protocols::DiscoverableProtocol::Method>>();
-      }
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<::fidl::WireRequest<
-          ::fidl_test_protocols::DiscoverableProtocol::Method>>();
-    }
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
+                                                     handles, handle_actual)) {}
 
-    WireRequest* PrimaryObject() {
+    ::fidl::WireRequest<::fidl_test_protocols::DiscoverableProtocol::Method>*
+    PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<WireRequest*>(bytes());
+      return reinterpret_cast<::fidl::WireRequest<
+          ::fidl_test_protocols::DiscoverableProtocol::Method>*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
@@ -2812,35 +2777,30 @@ struct ::fidl::WireRequest<::fidl_test_protocols::Transitional::Request> final {
   };
 
  public:
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<
+            ::fidl::WireRequest<::fidl_test_protocols::Transitional::Request>> {
    public:
+    using DecodedMessageBase<::fidl::WireRequest<
+        ::fidl_test_protocols::Transitional::Request>>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-      if (ok()) {
-        Decode<::fidl::WireRequest<
-            ::fidl_test_protocols::Transitional::Request>>();
-      }
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<
-          ::fidl::WireRequest<::fidl_test_protocols::Transitional::Request>>();
-    }
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
+                                                     handles, handle_actual)) {}
 
-    WireRequest* PrimaryObject() {
+    ::fidl::WireRequest<::fidl_test_protocols::Transitional::Request>*
+    PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<WireRequest*>(bytes());
+      return reinterpret_cast<
+          ::fidl::WireRequest<::fidl_test_protocols::Transitional::Request>*>(
+          bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
@@ -2953,28 +2913,21 @@ struct ::fidl::WireResponse<::fidl_test_protocols::Transitional::Request>
   };
 
  public:
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<::fidl::WireResponse<
+            ::fidl_test_protocols::Transitional::Request>> {
    public:
+    using DecodedMessageBase<::fidl::WireResponse<
+        ::fidl_test_protocols::Transitional::Request>>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-      if (ok()) {
-        Decode<::fidl::WireResponse<
-            ::fidl_test_protocols::Transitional::Request>>();
-      }
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<
-          ::fidl::WireResponse<::fidl_test_protocols::Transitional::Request>>();
-    }
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
+                                                     handles, handle_actual)) {}
 
-    WireResponse* PrimaryObject() {
+    ::fidl::WireResponse<::fidl_test_protocols::Transitional::Request>*
+    PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<
           ::fidl::WireResponse<::fidl_test_protocols::Transitional::Request>*>(
@@ -2983,7 +2936,7 @@ struct ::fidl::WireResponse<::fidl_test_protocols::Transitional::Request>
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
@@ -3094,35 +3047,30 @@ struct ::fidl::WireRequest<::fidl_test_protocols::Transitional::OneWay> final {
   };
 
  public:
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<
+            ::fidl::WireRequest<::fidl_test_protocols::Transitional::OneWay>> {
    public:
+    using DecodedMessageBase<::fidl::WireRequest<
+        ::fidl_test_protocols::Transitional::OneWay>>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-      if (ok()) {
-        Decode<
-            ::fidl::WireRequest<::fidl_test_protocols::Transitional::OneWay>>();
-      }
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<
-          ::fidl::WireRequest<::fidl_test_protocols::Transitional::OneWay>>();
-    }
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
+                                                     handles, handle_actual)) {}
 
-    WireRequest* PrimaryObject() {
+    ::fidl::WireRequest<::fidl_test_protocols::Transitional::OneWay>*
+    PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<WireRequest*>(bytes());
+      return reinterpret_cast<
+          ::fidl::WireRequest<::fidl_test_protocols::Transitional::OneWay>*>(
+          bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
@@ -3233,28 +3181,21 @@ struct ::fidl::WireResponse<::fidl_test_protocols::Transitional::Event> final {
   };
 
  public:
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<
+            ::fidl::WireResponse<::fidl_test_protocols::Transitional::Event>> {
    public:
+    using DecodedMessageBase<::fidl::WireResponse<
+        ::fidl_test_protocols::Transitional::Event>>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-      if (ok()) {
-        Decode<
-            ::fidl::WireResponse<::fidl_test_protocols::Transitional::Event>>();
-      }
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<
-          ::fidl::WireResponse<::fidl_test_protocols::Transitional::Event>>();
-    }
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
+                                                     handles, handle_actual)) {}
 
-    WireResponse* PrimaryObject() {
+    ::fidl::WireResponse<::fidl_test_protocols::Transitional::Event>*
+    PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<
           ::fidl::WireResponse<::fidl_test_protocols::Transitional::Event>*>(
@@ -3263,7 +3204,7 @@ struct ::fidl::WireResponse<::fidl_test_protocols::Transitional::Event> final {
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
@@ -3930,35 +3871,29 @@ struct ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MethodA>
   };
 
  public:
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<::fidl::WireRequest<
+            ::fidl_test_protocols::ChannelProtocol::MethodA>> {
    public:
+    using DecodedMessageBase<::fidl::WireRequest<
+        ::fidl_test_protocols::ChannelProtocol::MethodA>>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-      if (ok()) {
-        Decode<::fidl::WireRequest<
-            ::fidl_test_protocols::ChannelProtocol::MethodA>>();
-      }
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<::fidl::WireRequest<
-          ::fidl_test_protocols::ChannelProtocol::MethodA>>();
-    }
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
+                                                     handles, handle_actual)) {}
 
-    WireRequest* PrimaryObject() {
+    ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MethodA>*
+    PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<WireRequest*>(bytes());
+      return reinterpret_cast<::fidl::WireRequest<
+          ::fidl_test_protocols::ChannelProtocol::MethodA>*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
@@ -4072,28 +4007,21 @@ struct ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::EventA>
   };
 
  public:
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<::fidl::WireResponse<
+            ::fidl_test_protocols::ChannelProtocol::EventA>> {
    public:
+    using DecodedMessageBase<::fidl::WireResponse<
+        ::fidl_test_protocols::ChannelProtocol::EventA>>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-      if (ok()) {
-        Decode<::fidl::WireResponse<
-            ::fidl_test_protocols::ChannelProtocol::EventA>>();
-      }
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<::fidl::WireResponse<
-          ::fidl_test_protocols::ChannelProtocol::EventA>>();
-    }
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
+                                                     handles, handle_actual)) {}
 
-    WireResponse* PrimaryObject() {
+    ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::EventA>*
+    PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<::fidl::WireResponse<
           ::fidl_test_protocols::ChannelProtocol::EventA>*>(bytes());
@@ -4101,7 +4029,7 @@ struct ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::EventA>
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
@@ -4217,35 +4145,29 @@ struct ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MethodB>
   };
 
  public:
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<::fidl::WireRequest<
+            ::fidl_test_protocols::ChannelProtocol::MethodB>> {
    public:
+    using DecodedMessageBase<::fidl::WireRequest<
+        ::fidl_test_protocols::ChannelProtocol::MethodB>>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-      if (ok()) {
-        Decode<::fidl::WireRequest<
-            ::fidl_test_protocols::ChannelProtocol::MethodB>>();
-      }
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<::fidl::WireRequest<
-          ::fidl_test_protocols::ChannelProtocol::MethodB>>();
-    }
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
+                                                     handles, handle_actual)) {}
 
-    WireRequest* PrimaryObject() {
+    ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MethodB>*
+    PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<WireRequest*>(bytes());
+      return reinterpret_cast<::fidl::WireRequest<
+          ::fidl_test_protocols::ChannelProtocol::MethodB>*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
@@ -4356,28 +4278,21 @@ struct ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::MethodB>
   };
 
  public:
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<::fidl::WireResponse<
+            ::fidl_test_protocols::ChannelProtocol::MethodB>> {
    public:
+    using DecodedMessageBase<::fidl::WireResponse<
+        ::fidl_test_protocols::ChannelProtocol::MethodB>>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-      if (ok()) {
-        Decode<::fidl::WireResponse<
-            ::fidl_test_protocols::ChannelProtocol::MethodB>>();
-      }
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<::fidl::WireResponse<
-          ::fidl_test_protocols::ChannelProtocol::MethodB>>();
-    }
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
+                                                     handles, handle_actual)) {}
 
-    WireResponse* PrimaryObject() {
+    ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::MethodB>*
+    PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<::fidl::WireResponse<
           ::fidl_test_protocols::ChannelProtocol::MethodB>*>(bytes());
@@ -4385,7 +4300,7 @@ struct ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::MethodB>
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
@@ -4503,40 +4418,35 @@ struct ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::TakeHandle>
   };
 
  public:
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<::fidl::WireRequest<
+            ::fidl_test_protocols::ChannelProtocol::TakeHandle>> {
    public:
+    using DecodedMessageBase<::fidl::WireRequest<
+        ::fidl_test_protocols::ChannelProtocol::TakeHandle>>::
+        DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-      if (ok()) {
-        Decode<::fidl::WireRequest<
-            ::fidl_test_protocols::ChannelProtocol::TakeHandle>>();
-      }
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<::fidl::WireRequest<
-          ::fidl_test_protocols::ChannelProtocol::TakeHandle>>();
-    }
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
+                                                     handles, handle_actual)) {}
     ~DecodedMessage() {
       if (ok() && (PrimaryObject() != nullptr)) {
         PrimaryObject()->_CloseHandles();
       }
     }
 
-    WireRequest* PrimaryObject() {
+    ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::TakeHandle>*
+    PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<WireRequest*>(bytes());
+      return reinterpret_cast<::fidl::WireRequest<
+          ::fidl_test_protocols::ChannelProtocol::TakeHandle>*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
@@ -4646,28 +4556,22 @@ struct ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::TakeHandle>
   };
 
  public:
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<::fidl::WireResponse<
+            ::fidl_test_protocols::ChannelProtocol::TakeHandle>> {
    public:
+    using DecodedMessageBase<::fidl::WireResponse<
+        ::fidl_test_protocols::ChannelProtocol::TakeHandle>>::
+        DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-      if (ok()) {
-        Decode<::fidl::WireResponse<
-            ::fidl_test_protocols::ChannelProtocol::TakeHandle>>();
-      }
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<::fidl::WireResponse<
-          ::fidl_test_protocols::ChannelProtocol::TakeHandle>>();
-    }
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
+                                                     handles, handle_actual)) {}
 
-    WireResponse* PrimaryObject() {
+    ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::TakeHandle>*
+    PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<::fidl::WireResponse<
           ::fidl_test_protocols::ChannelProtocol::TakeHandle>*>(bytes());
@@ -4675,7 +4579,7 @@ struct ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::TakeHandle>
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
@@ -4795,40 +4699,35 @@ struct ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MutateSocket>
   };
 
  public:
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<::fidl::WireRequest<
+            ::fidl_test_protocols::ChannelProtocol::MutateSocket>> {
    public:
+    using DecodedMessageBase<::fidl::WireRequest<
+        ::fidl_test_protocols::ChannelProtocol::MutateSocket>>::
+        DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-      if (ok()) {
-        Decode<::fidl::WireRequest<
-            ::fidl_test_protocols::ChannelProtocol::MutateSocket>>();
-      }
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<::fidl::WireRequest<
-          ::fidl_test_protocols::ChannelProtocol::MutateSocket>>();
-    }
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
+                                                     handles, handle_actual)) {}
     ~DecodedMessage() {
       if (ok() && (PrimaryObject() != nullptr)) {
         PrimaryObject()->_CloseHandles();
       }
     }
 
-    WireRequest* PrimaryObject() {
+    ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MutateSocket>*
+    PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<WireRequest*>(bytes());
+      return reinterpret_cast<::fidl::WireRequest<
+          ::fidl_test_protocols::ChannelProtocol::MutateSocket>*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
@@ -4948,33 +4847,27 @@ struct ::fidl::WireResponse<
   };
 
  public:
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<::fidl::WireResponse<
+            ::fidl_test_protocols::ChannelProtocol::MutateSocket>> {
    public:
+    using DecodedMessageBase<::fidl::WireResponse<
+        ::fidl_test_protocols::ChannelProtocol::MutateSocket>>::
+        DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-      if (ok()) {
-        Decode<::fidl::WireResponse<
-            ::fidl_test_protocols::ChannelProtocol::MutateSocket>>();
-      }
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<::fidl::WireResponse<
-          ::fidl_test_protocols::ChannelProtocol::MutateSocket>>();
-    }
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
+                                                     handles, handle_actual)) {}
     ~DecodedMessage() {
       if (ok() && (PrimaryObject() != nullptr)) {
         PrimaryObject()->_CloseHandles();
       }
     }
 
-    WireResponse* PrimaryObject() {
+    ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::MutateSocket>*
+    PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<::fidl::WireResponse<
           ::fidl_test_protocols::ChannelProtocol::MutateSocket>*>(bytes());
@@ -4982,7 +4875,7 @@ struct ::fidl::WireResponse<
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
@@ -6171,37 +6064,33 @@ struct ::fidl::WireRequest<
   };
 
  public:
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<::fidl::WireRequest<
+            ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                NoRequestNoResponse>> {
    public:
+    using DecodedMessageBase<::fidl::WireRequest<
+        ::fidl_test_protocols::WithAndWithoutRequestResponse::
+            NoRequestNoResponse>>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-      if (ok()) {
-        Decode<::fidl::WireRequest<
-            ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                NoRequestNoResponse>>();
-      }
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<::fidl::WireRequest<
-          ::fidl_test_protocols::WithAndWithoutRequestResponse::
-              NoRequestNoResponse>>();
-    }
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
+                                                     handles, handle_actual)) {}
 
-    WireRequest* PrimaryObject() {
+    ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                            NoRequestNoResponse>*
+    PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<WireRequest*>(bytes());
+      return reinterpret_cast<::fidl::WireRequest<
+          ::fidl_test_protocols::WithAndWithoutRequestResponse::
+              NoRequestNoResponse>*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
@@ -6309,37 +6198,33 @@ struct ::fidl::WireRequest<
   };
 
  public:
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<::fidl::WireRequest<
+            ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                NoRequestEmptyResponse>> {
    public:
+    using DecodedMessageBase<::fidl::WireRequest<
+        ::fidl_test_protocols::WithAndWithoutRequestResponse::
+            NoRequestEmptyResponse>>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-      if (ok()) {
-        Decode<::fidl::WireRequest<
-            ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                NoRequestEmptyResponse>>();
-      }
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<::fidl::WireRequest<
-          ::fidl_test_protocols::WithAndWithoutRequestResponse::
-              NoRequestEmptyResponse>>();
-    }
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
+                                                     handles, handle_actual)) {}
 
-    WireRequest* PrimaryObject() {
+    ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                            NoRequestEmptyResponse>*
+    PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<WireRequest*>(bytes());
+      return reinterpret_cast<::fidl::WireRequest<
+          ::fidl_test_protocols::WithAndWithoutRequestResponse::
+              NoRequestEmptyResponse>*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
@@ -6452,30 +6337,24 @@ struct ::fidl::WireResponse<
   };
 
  public:
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<::fidl::WireResponse<
+            ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                NoRequestEmptyResponse>> {
    public:
+    using DecodedMessageBase<::fidl::WireResponse<
+        ::fidl_test_protocols::WithAndWithoutRequestResponse::
+            NoRequestEmptyResponse>>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-      if (ok()) {
-        Decode<::fidl::WireResponse<
-            ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                NoRequestEmptyResponse>>();
-      }
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<::fidl::WireResponse<
-          ::fidl_test_protocols::WithAndWithoutRequestResponse::
-              NoRequestEmptyResponse>>();
-    }
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
+                                                     handles, handle_actual)) {}
 
-    WireResponse* PrimaryObject() {
+    ::fidl::WireResponse<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                             NoRequestEmptyResponse>*
+    PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<::fidl::WireResponse<
           ::fidl_test_protocols::WithAndWithoutRequestResponse::
@@ -6484,7 +6363,7 @@ struct ::fidl::WireResponse<
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
@@ -6594,37 +6473,33 @@ struct ::fidl::WireRequest<
   };
 
  public:
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<::fidl::WireRequest<
+            ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                NoRequestWithResponse>> {
    public:
+    using DecodedMessageBase<::fidl::WireRequest<
+        ::fidl_test_protocols::WithAndWithoutRequestResponse::
+            NoRequestWithResponse>>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-      if (ok()) {
-        Decode<::fidl::WireRequest<
-            ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                NoRequestWithResponse>>();
-      }
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<::fidl::WireRequest<
-          ::fidl_test_protocols::WithAndWithoutRequestResponse::
-              NoRequestWithResponse>>();
-    }
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
+                                                     handles, handle_actual)) {}
 
-    WireRequest* PrimaryObject() {
+    ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                            NoRequestWithResponse>*
+    PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<WireRequest*>(bytes());
+      return reinterpret_cast<::fidl::WireRequest<
+          ::fidl_test_protocols::WithAndWithoutRequestResponse::
+              NoRequestWithResponse>*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
@@ -6740,30 +6615,24 @@ struct ::fidl::WireResponse<
   };
 
  public:
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<::fidl::WireResponse<
+            ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                NoRequestWithResponse>> {
    public:
+    using DecodedMessageBase<::fidl::WireResponse<
+        ::fidl_test_protocols::WithAndWithoutRequestResponse::
+            NoRequestWithResponse>>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-      if (ok()) {
-        Decode<::fidl::WireResponse<
-            ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                NoRequestWithResponse>>();
-      }
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<::fidl::WireResponse<
-          ::fidl_test_protocols::WithAndWithoutRequestResponse::
-              NoRequestWithResponse>>();
-    }
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
+                                                     handles, handle_actual)) {}
 
-    WireResponse* PrimaryObject() {
+    ::fidl::WireResponse<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                             NoRequestWithResponse>*
+    PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<::fidl::WireResponse<
           ::fidl_test_protocols::WithAndWithoutRequestResponse::
@@ -6772,7 +6641,7 @@ struct ::fidl::WireResponse<
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
@@ -6887,37 +6756,33 @@ struct ::fidl::WireRequest<
   };
 
  public:
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<::fidl::WireRequest<
+            ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                WithRequestNoResponse>> {
    public:
+    using DecodedMessageBase<::fidl::WireRequest<
+        ::fidl_test_protocols::WithAndWithoutRequestResponse::
+            WithRequestNoResponse>>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-      if (ok()) {
-        Decode<::fidl::WireRequest<
-            ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                WithRequestNoResponse>>();
-      }
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<::fidl::WireRequest<
-          ::fidl_test_protocols::WithAndWithoutRequestResponse::
-              WithRequestNoResponse>>();
-    }
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
+                                                     handles, handle_actual)) {}
 
-    WireRequest* PrimaryObject() {
+    ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                            WithRequestNoResponse>*
+    PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<WireRequest*>(bytes());
+      return reinterpret_cast<::fidl::WireRequest<
+          ::fidl_test_protocols::WithAndWithoutRequestResponse::
+              WithRequestNoResponse>*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
@@ -7033,37 +6898,33 @@ struct ::fidl::WireRequest<
   };
 
  public:
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<::fidl::WireRequest<
+            ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                WithRequestEmptyResponse>> {
    public:
+    using DecodedMessageBase<::fidl::WireRequest<
+        ::fidl_test_protocols::WithAndWithoutRequestResponse::
+            WithRequestEmptyResponse>>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-      if (ok()) {
-        Decode<::fidl::WireRequest<
-            ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                WithRequestEmptyResponse>>();
-      }
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<::fidl::WireRequest<
-          ::fidl_test_protocols::WithAndWithoutRequestResponse::
-              WithRequestEmptyResponse>>();
-    }
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
+                                                     handles, handle_actual)) {}
 
-    WireRequest* PrimaryObject() {
+    ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                            WithRequestEmptyResponse>*
+    PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<WireRequest*>(bytes());
+      return reinterpret_cast<::fidl::WireRequest<
+          ::fidl_test_protocols::WithAndWithoutRequestResponse::
+              WithRequestEmptyResponse>*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
@@ -7176,30 +7037,24 @@ struct ::fidl::WireResponse<
   };
 
  public:
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<::fidl::WireResponse<
+            ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                WithRequestEmptyResponse>> {
    public:
+    using DecodedMessageBase<::fidl::WireResponse<
+        ::fidl_test_protocols::WithAndWithoutRequestResponse::
+            WithRequestEmptyResponse>>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-      if (ok()) {
-        Decode<::fidl::WireResponse<
-            ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                WithRequestEmptyResponse>>();
-      }
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<::fidl::WireResponse<
-          ::fidl_test_protocols::WithAndWithoutRequestResponse::
-              WithRequestEmptyResponse>>();
-    }
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
+                                                     handles, handle_actual)) {}
 
-    WireResponse* PrimaryObject() {
+    ::fidl::WireResponse<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                             WithRequestEmptyResponse>*
+    PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<::fidl::WireResponse<
           ::fidl_test_protocols::WithAndWithoutRequestResponse::
@@ -7208,7 +7063,7 @@ struct ::fidl::WireResponse<
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
@@ -7327,37 +7182,33 @@ struct ::fidl::WireRequest<
   };
 
  public:
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<::fidl::WireRequest<
+            ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                WithRequestWithResponse>> {
    public:
+    using DecodedMessageBase<::fidl::WireRequest<
+        ::fidl_test_protocols::WithAndWithoutRequestResponse::
+            WithRequestWithResponse>>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-      if (ok()) {
-        Decode<::fidl::WireRequest<
-            ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                WithRequestWithResponse>>();
-      }
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<::fidl::WireRequest<
-          ::fidl_test_protocols::WithAndWithoutRequestResponse::
-              WithRequestWithResponse>>();
-    }
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
+                                                     handles, handle_actual)) {}
 
-    WireRequest* PrimaryObject() {
+    ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                            WithRequestWithResponse>*
+    PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<WireRequest*>(bytes());
+      return reinterpret_cast<::fidl::WireRequest<
+          ::fidl_test_protocols::WithAndWithoutRequestResponse::
+              WithRequestWithResponse>*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
@@ -7474,30 +7325,24 @@ struct ::fidl::WireResponse<
   };
 
  public:
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<::fidl::WireResponse<
+            ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                WithRequestWithResponse>> {
    public:
+    using DecodedMessageBase<::fidl::WireResponse<
+        ::fidl_test_protocols::WithAndWithoutRequestResponse::
+            WithRequestWithResponse>>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-      if (ok()) {
-        Decode<::fidl::WireResponse<
-            ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                WithRequestWithResponse>>();
-      }
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<::fidl::WireResponse<
-          ::fidl_test_protocols::WithAndWithoutRequestResponse::
-              WithRequestWithResponse>>();
-    }
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
+                                                     handles, handle_actual)) {}
 
-    WireResponse* PrimaryObject() {
+    ::fidl::WireResponse<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                             WithRequestWithResponse>*
+    PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<::fidl::WireResponse<
           ::fidl_test_protocols::WithAndWithoutRequestResponse::
@@ -7506,7 +7351,7 @@ struct ::fidl::WireResponse<
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
@@ -7618,30 +7463,24 @@ struct ::fidl::WireResponse<
   };
 
  public:
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<::fidl::WireResponse<
+            ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                OnEmptyResponse>> {
    public:
+    using DecodedMessageBase<::fidl::WireResponse<
+        ::fidl_test_protocols::WithAndWithoutRequestResponse::
+            OnEmptyResponse>>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-      if (ok()) {
-        Decode<::fidl::WireResponse<
-            ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                OnEmptyResponse>>();
-      }
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<::fidl::WireResponse<
-          ::fidl_test_protocols::WithAndWithoutRequestResponse::
-              OnEmptyResponse>>();
-    }
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
+                                                     handles, handle_actual)) {}
 
-    WireResponse* PrimaryObject() {
+    ::fidl::WireResponse<
+        ::fidl_test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>*
+    PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<::fidl::WireResponse<
           ::fidl_test_protocols::WithAndWithoutRequestResponse::
@@ -7650,7 +7489,7 @@ struct ::fidl::WireResponse<
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
@@ -7766,30 +7605,24 @@ struct ::fidl::WireResponse<
   };
 
  public:
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<::fidl::WireResponse<
+            ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                OnWithResponse>> {
    public:
+    using DecodedMessageBase<::fidl::WireResponse<
+        ::fidl_test_protocols::WithAndWithoutRequestResponse::OnWithResponse>>::
+        DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-      if (ok()) {
-        Decode<::fidl::WireResponse<
-            ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                OnWithResponse>>();
-      }
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<::fidl::WireResponse<
-          ::fidl_test_protocols::WithAndWithoutRequestResponse::
-              OnWithResponse>>();
-    }
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
+                                                     handles, handle_actual)) {}
 
-    WireResponse* PrimaryObject() {
+    ::fidl::WireResponse<
+        ::fidl_test_protocols::WithAndWithoutRequestResponse::OnWithResponse>*
+    PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<::fidl::WireResponse<
           ::fidl_test_protocols::WithAndWithoutRequestResponse::
@@ -7798,7 +7631,7 @@ struct ::fidl::WireResponse<
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
@@ -9447,35 +9280,31 @@ struct ::fidl::WireRequest<
   };
 
  public:
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<::fidl::WireRequest<
+            ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>> {
    public:
+    using DecodedMessageBase<::fidl::WireRequest<
+        ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>>::
+        DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-      if (ok()) {
-        Decode<::fidl::WireRequest<
-            ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>>();
-      }
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<::fidl::WireRequest<
-          ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>>();
-    }
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
+                                                     handles, handle_actual)) {}
 
-    WireRequest* PrimaryObject() {
+    ::fidl::WireRequest<
+        ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>*
+    PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<WireRequest*>(bytes());
+      return reinterpret_cast<::fidl::WireRequest<
+          ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
@@ -9596,28 +9425,23 @@ struct ::fidl::WireResponse<
   };
 
  public:
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<::fidl::WireResponse<
+            ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>> {
    public:
+    using DecodedMessageBase<::fidl::WireResponse<
+        ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>>::
+        DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-      if (ok()) {
-        Decode<::fidl::WireResponse<
-            ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>>();
-      }
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<::fidl::WireResponse<
-          ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>>();
-    }
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
+                                                     handles, handle_actual)) {}
 
-    WireResponse* PrimaryObject() {
+    ::fidl::WireResponse<
+        ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>*
+    PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<::fidl::WireResponse<
           ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>*>(bytes());
@@ -9625,7 +9449,7 @@ struct ::fidl::WireResponse<
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
@@ -9734,35 +9558,31 @@ struct ::fidl::WireRequest<
   };
 
  public:
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<::fidl::WireRequest<
+            ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>> {
    public:
+    using DecodedMessageBase<::fidl::WireRequest<
+        ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>>::
+        DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-      if (ok()) {
-        Decode<::fidl::WireRequest<
-            ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>>();
-      }
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<::fidl::WireRequest<
-          ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>>();
-    }
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
+                                                     handles, handle_actual)) {}
 
-    WireRequest* PrimaryObject() {
+    ::fidl::WireRequest<
+        ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>*
+    PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<WireRequest*>(bytes());
+      return reinterpret_cast<::fidl::WireRequest<
+          ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
@@ -9883,28 +9703,23 @@ struct ::fidl::WireResponse<
   };
 
  public:
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<::fidl::WireResponse<
+            ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>> {
    public:
+    using DecodedMessageBase<::fidl::WireResponse<
+        ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>>::
+        DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-      if (ok()) {
-        Decode<::fidl::WireResponse<
-            ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>>();
-      }
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<::fidl::WireResponse<
-          ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>>();
-    }
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
+                                                     handles, handle_actual)) {}
 
-    WireResponse* PrimaryObject() {
+    ::fidl::WireResponse<
+        ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>*
+    PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<::fidl::WireResponse<
           ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>*>(bytes());
@@ -9912,7 +9727,7 @@ struct ::fidl::WireResponse<
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
@@ -10020,35 +9835,30 @@ struct ::fidl::WireRequest<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>
   };
 
  public:
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<::fidl::WireRequest<
+            ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>> {
    public:
+    using DecodedMessageBase<::fidl::WireRequest<
+        ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>>::
+        DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-      if (ok()) {
-        Decode<::fidl::WireRequest<
-            ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>>();
-      }
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<::fidl::WireRequest<
-          ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>>();
-    }
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
+                                                     handles, handle_actual)) {}
 
-    WireRequest* PrimaryObject() {
+    ::fidl::WireRequest<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>*
+    PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<WireRequest*>(bytes());
+      return reinterpret_cast<::fidl::WireRequest<
+          ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
@@ -10165,28 +9975,22 @@ struct ::fidl::WireResponse<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>
   };
 
  public:
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<::fidl::WireResponse<
+            ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>> {
    public:
+    using DecodedMessageBase<::fidl::WireResponse<
+        ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>>::
+        DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-      if (ok()) {
-        Decode<::fidl::WireResponse<
-            ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>>();
-      }
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<::fidl::WireResponse<
-          ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>>();
-    }
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
+                                                     handles, handle_actual)) {}
 
-    WireResponse* PrimaryObject() {
+    ::fidl::WireResponse<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>*
+    PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
       return reinterpret_cast<::fidl::WireResponse<
           ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>*>(bytes());
@@ -10194,7 +9998,7 @@ struct ::fidl::WireResponse<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 

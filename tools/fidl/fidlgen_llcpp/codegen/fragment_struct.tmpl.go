@@ -98,24 +98,20 @@ struct {{ .Name }} {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final : public ::fidl::internal::DecodedMessageBase<{{ .Name }}> {
    public:
+    using DecodedMessageBase<{{ .Name }}>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual,
-                                  ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
-      Decode<struct {{ .Name }}>();
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg) : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<struct {{ .Name }}>();
-    }
-    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
-        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
-                         msg->handles, msg->num_handles) {}
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+        : DecodedMessageBase(
+              ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual,
+                  ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
+
+    DecodedMessage(const fidl_incoming_msg_t* c_msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes), c_msg->num_bytes,
+                         c_msg->handles, c_msg->num_handles) {}
+
     {{- if .IsResourceType }}
     ~DecodedMessage() {
       if (ok() && (PrimaryObject() != nullptr)) {
@@ -124,14 +120,14 @@ struct {{ .Name }} {
     }
     {{- end }}
 
-    struct {{ .Name }}* PrimaryObject() {
+    {{ .Name }}* PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<struct {{ .Name }}*>(bytes());
+      return reinterpret_cast<{{ .Name }}*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles won't be closed
     // When the object is destroyed.
-    // After calling this method, the DecodedMessage object should not be used anymore.
+    // After calling this method, the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };

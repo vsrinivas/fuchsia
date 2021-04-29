@@ -197,35 +197,30 @@ struct ::fidl::WireRequest<::fidl_test_service::SecondProtocol::MethodOnSecond>
   };
 
  public:
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<::fidl::WireRequest<
+            ::fidl_test_service::SecondProtocol::MethodOnSecond>> {
    public:
+    using DecodedMessageBase<::fidl::WireRequest<
+        ::fidl_test_service::SecondProtocol::MethodOnSecond>>::
+        DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-      if (ok()) {
-        Decode<::fidl::WireRequest<
-            ::fidl_test_service::SecondProtocol::MethodOnSecond>>();
-      }
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<::fidl::WireRequest<
-          ::fidl_test_service::SecondProtocol::MethodOnSecond>>();
-    }
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
+                                                     handles, handle_actual)) {}
 
-    WireRequest* PrimaryObject() {
+    ::fidl::WireRequest<::fidl_test_service::SecondProtocol::MethodOnSecond>*
+    PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<WireRequest*>(bytes());
+      return reinterpret_cast<::fidl::WireRequest<
+          ::fidl_test_service::SecondProtocol::MethodOnSecond>*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
@@ -578,35 +573,29 @@ struct ::fidl::WireRequest<::fidl_test_service::FirstProtocol::MethodOnFirst>
   };
 
  public:
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<::fidl::WireRequest<
+            ::fidl_test_service::FirstProtocol::MethodOnFirst>> {
    public:
+    using DecodedMessageBase<::fidl::WireRequest<
+        ::fidl_test_service::FirstProtocol::MethodOnFirst>>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-      if (ok()) {
-        Decode<::fidl::WireRequest<
-            ::fidl_test_service::FirstProtocol::MethodOnFirst>>();
-      }
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<::fidl::WireRequest<
-          ::fidl_test_service::FirstProtocol::MethodOnFirst>>();
-    }
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
+                                                     handles, handle_actual)) {}
 
-    WireRequest* PrimaryObject() {
+    ::fidl::WireRequest<::fidl_test_service::FirstProtocol::MethodOnFirst>*
+    PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<WireRequest*>(bytes());
+      return reinterpret_cast<::fidl::WireRequest<
+          ::fidl_test_service::FirstProtocol::MethodOnFirst>*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 

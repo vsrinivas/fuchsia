@@ -513,36 +513,31 @@ struct SandwichUnionSize8Alignment4 {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final : public ::fidl::internal::DecodedMessageBase<
+                                   SandwichUnionSize8Alignment4> {
    public:
+    using DecodedMessageBase<SandwichUnionSize8Alignment4>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(
+        : DecodedMessageBase(::fidl::IncomingMessage(
               bytes, byte_actual, handles, handle_actual,
-              ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
-      Decode<struct SandwichUnionSize8Alignment4>();
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<struct SandwichUnionSize8Alignment4>();
-    }
-    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
-        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
-                         msg->handles, msg->num_handles) {}
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+              ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    struct SandwichUnionSize8Alignment4* PrimaryObject() {
+    DecodedMessage(const fidl_incoming_msg_t* c_msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
+    }
+
+    SandwichUnionSize8Alignment4* PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<struct SandwichUnionSize8Alignment4*>(bytes());
+      return reinterpret_cast<SandwichUnionSize8Alignment4*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
@@ -620,36 +615,31 @@ struct SandwichUnionSize36Alignment4 {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final : public ::fidl::internal::DecodedMessageBase<
+                                   SandwichUnionSize36Alignment4> {
    public:
+    using DecodedMessageBase<SandwichUnionSize36Alignment4>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(
+        : DecodedMessageBase(::fidl::IncomingMessage(
               bytes, byte_actual, handles, handle_actual,
-              ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
-      Decode<struct SandwichUnionSize36Alignment4>();
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<struct SandwichUnionSize36Alignment4>();
-    }
-    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
-        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
-                         msg->handles, msg->num_handles) {}
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+              ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    struct SandwichUnionSize36Alignment4* PrimaryObject() {
+    DecodedMessage(const fidl_incoming_msg_t* c_msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
+    }
+
+    SandwichUnionSize36Alignment4* PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<struct SandwichUnionSize36Alignment4*>(bytes());
+      return reinterpret_cast<SandwichUnionSize36Alignment4*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
@@ -727,36 +717,31 @@ struct SandwichUnionSize12Alignment4 {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final : public ::fidl::internal::DecodedMessageBase<
+                                   SandwichUnionSize12Alignment4> {
    public:
+    using DecodedMessageBase<SandwichUnionSize12Alignment4>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(
+        : DecodedMessageBase(::fidl::IncomingMessage(
               bytes, byte_actual, handles, handle_actual,
-              ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
-      Decode<struct SandwichUnionSize12Alignment4>();
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<struct SandwichUnionSize12Alignment4>();
-    }
-    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
-        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
-                         msg->handles, msg->num_handles) {}
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+              ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    struct SandwichUnionSize12Alignment4* PrimaryObject() {
+    DecodedMessage(const fidl_incoming_msg_t* c_msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
+    }
+
+    SandwichUnionSize12Alignment4* PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<struct SandwichUnionSize12Alignment4*>(bytes());
+      return reinterpret_cast<SandwichUnionSize12Alignment4*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
@@ -832,36 +817,31 @@ struct StructSize16Alignment8 {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<StructSize16Alignment8> {
    public:
+    using DecodedMessageBase<StructSize16Alignment8>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(
+        : DecodedMessageBase(::fidl::IncomingMessage(
               bytes, byte_actual, handles, handle_actual,
-              ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
-      Decode<struct StructSize16Alignment8>();
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<struct StructSize16Alignment8>();
-    }
-    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
-        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
-                         msg->handles, msg->num_handles) {}
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+              ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    struct StructSize16Alignment8* PrimaryObject() {
+    DecodedMessage(const fidl_incoming_msg_t* c_msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
+    }
+
+    StructSize16Alignment8* PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<struct StructSize16Alignment8*>(bytes());
+      return reinterpret_cast<StructSize16Alignment8*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };
@@ -939,36 +919,31 @@ struct SandwichUnionSize24Alignment8 {
     UnownedEncodedMessage message_;
   };
 
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final : public ::fidl::internal::DecodedMessageBase<
+                                   SandwichUnionSize24Alignment8> {
    public:
+    using DecodedMessageBase<SandwichUnionSize24Alignment8>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
                    zx_handle_info_t* handles = nullptr,
                    uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(
+        : DecodedMessageBase(::fidl::IncomingMessage(
               bytes, byte_actual, handles, handle_actual,
-              ::fidl::IncomingMessage::kSkipMessageHeaderValidation) {
-      Decode<struct SandwichUnionSize24Alignment8>();
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg)
-        : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<struct SandwichUnionSize24Alignment8>();
-    }
-    explicit DecodedMessage(const fidl_incoming_msg_t* msg)
-        : DecodedMessage(reinterpret_cast<uint8_t*>(msg->bytes), msg->num_bytes,
-                         msg->handles, msg->num_handles) {}
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+              ::fidl::IncomingMessage::kSkipMessageHeaderValidation)) {}
 
-    struct SandwichUnionSize24Alignment8* PrimaryObject() {
+    DecodedMessage(const fidl_incoming_msg_t* c_msg)
+        : DecodedMessage(reinterpret_cast<uint8_t*>(c_msg->bytes),
+                         c_msg->num_bytes, c_msg->handles, c_msg->num_handles) {
+    }
+
+    SandwichUnionSize24Alignment8* PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<struct SandwichUnionSize24Alignment8*>(bytes());
+      return reinterpret_cast<SandwichUnionSize24Alignment8*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles
     // won't be closed When the object is destroyed. After calling this method,
-    // the DecodedMessage object should not be used anymore.
+    // the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 };

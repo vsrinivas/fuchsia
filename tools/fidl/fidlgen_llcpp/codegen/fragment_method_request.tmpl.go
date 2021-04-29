@@ -144,22 +144,15 @@ struct {{ .WireRequest }} final {
   };
 
  public:
-  class DecodedMessage final : public ::fidl::IncomingMessage {
+  class DecodedMessage final : public ::fidl::internal::DecodedMessageBase<{{ .WireRequest }}> {
    public:
+    using DecodedMessageBase<{{ .WireRequest }}>::DecodedMessageBase;
+
     DecodedMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_info_t* handles = nullptr,
-            uint32_t handle_actual = 0)
-        : ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-      if (ok()) {
-        Decode<{{ .WireRequest }}>();
-      }
-    }
-    DecodedMessage(::fidl::IncomingMessage&& msg) : ::fidl::IncomingMessage(std::move(msg)) {
-      Decode<{{ .WireRequest }}>();
-    }
-    DecodedMessage(const DecodedMessage&) = delete;
-    DecodedMessage(DecodedMessage&&) = delete;
-    DecodedMessage* operator=(const DecodedMessage&) = delete;
-    DecodedMessage* operator=(DecodedMessage&&) = delete;
+                   uint32_t handle_actual = 0)
+        : DecodedMessageBase(
+            ::fidl::IncomingMessage(bytes, byte_actual, handles, handle_actual)) {}
+
     {{- if .Request.IsResource }}
     ~DecodedMessage() {
       if (ok() && (PrimaryObject() != nullptr)) {
@@ -168,14 +161,14 @@ struct {{ .WireRequest }} final {
     }
     {{- end }}
 
-    {{ .WireRequest.Self }}* PrimaryObject() {
+    {{ .WireRequest }}* PrimaryObject() {
       ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<{{ .WireRequest.Self }}*>(bytes());
+      return reinterpret_cast<{{ .WireRequest }}*>(bytes());
     }
 
     // Release the ownership of the decoded message. That means that the handles won't be closed
     // When the object is destroyed.
-    // After calling this method, the DecodedMessage object should not be used anymore.
+    // After calling this method, the |DecodedMessage| object should not be used anymore.
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
