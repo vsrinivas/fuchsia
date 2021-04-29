@@ -7,13 +7,20 @@ _prebuilt_gcc_dir = "//prebuilt/third_party/gcc/$host_platform"
 _prebuilt_cipd_version =
     read_file("$_prebuilt_gcc_dir/.versions/gcc.cipd_version", "json")
 
-# Directory where the GCC toolchain binaries ("gcc", "nm", etc.) are
-# found. This directory is expected to contain `aarch64-elf-*` and `x86_64-elf-*`
-# tools used to build for the Fuchsia targets.  This directory will not
-# be used for host tools.
-gcc_tool_dir = "$_prebuilt_gcc_dir/bin"
+declare_args() {
+  # Directory where the GCC toolchain binaries ("gcc", "nm", etc.) are found.
+  # This directory is expected to contain `aarch64-elf-*` and `x86_64-elf-*`
+  # tools used to build for the Fuchsia targets.  This directory will not be
+  # used for host tools.  If this is "", then a standard prebuilt is used.
+  gcc_tool_dir = ""
+}
 
 # This is a string identifying the particular toolchain version in use.  Its
 # only purpose is to be unique enough that it changes when switching to a new
 # toolchain, so that recompilations with the new compiler can be triggered.
-gcc_version_string = _prebuilt_cipd_version.instance_id
+gcc_version_string = gcc_tool_dir
+
+if (gcc_tool_dir == "") {
+  gcc_tool_dir = "$_prebuilt_gcc_dir/bin"
+  gcc_version_string = _prebuilt_cipd_version.instance_id
+}
