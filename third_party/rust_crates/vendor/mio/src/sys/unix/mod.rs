@@ -14,8 +14,6 @@ macro_rules! syscall {
 }
 
 cfg_os_poll! {
-    mod net;
-
     mod selector;
     pub(crate) use self::selector::{event, Event, Events, Selector};
 
@@ -25,20 +23,16 @@ cfg_os_poll! {
     mod waker;
     pub(crate) use self::waker::Waker;
 
-    cfg_tcp! {
+    cfg_net! {
+        mod net;
+
         pub(crate) mod tcp;
-    }
-
-    cfg_udp! {
         pub(crate) mod udp;
-    }
-
-    cfg_uds! {
         pub(crate) mod uds;
         pub use self::uds::SocketAddr;
     }
 
-    cfg_net! {
+    cfg_io_source! {
         use std::io;
 
         // Both `kqueue` and `epoll` don't need to hold any user space state.
@@ -59,15 +53,19 @@ cfg_os_poll! {
             }
         }
     }
+
+    cfg_os_ext! {
+        pub(crate) mod pipe;
+    }
 }
 
 cfg_not_os_poll! {
-    cfg_uds! {
+    cfg_net! {
         mod uds;
         pub use self::uds::SocketAddr;
     }
 
-    cfg_any_os_util! {
+    cfg_any_os_ext! {
         mod sourcefd;
         pub use self::sourcefd::SourceFd;
     }

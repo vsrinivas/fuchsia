@@ -2,11 +2,17 @@ use super::afd::{self, Afd, AfdPollInfo};
 use super::io_status_block::IoStatusBlock;
 use super::Event;
 use crate::sys::Events;
-use crate::Interest;
+
+cfg_net! {
+    use crate::sys::event::{
+        ERROR_FLAGS, READABLE_FLAGS, READ_CLOSED_FLAGS, WRITABLE_FLAGS, WRITE_CLOSED_FLAGS,
+    };
+    use crate::Interest;
+}
 
 use miow::iocp::{CompletionPort, CompletionStatus};
-use miow::Overlapped;
 use std::collections::VecDeque;
+use std::io;
 use std::marker::PhantomPinned;
 use std::os::windows::io::RawSocket;
 use std::pin::Pin;
@@ -15,17 +21,11 @@ use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
-use std::{io, ptr};
 use winapi::shared::ntdef::NT_SUCCESS;
 use winapi::shared::ntdef::{HANDLE, PVOID};
 use winapi::shared::ntstatus::STATUS_CANCELLED;
 use winapi::shared::winerror::{ERROR_INVALID_HANDLE, ERROR_IO_PENDING, WAIT_TIMEOUT};
 use winapi::um::minwinbase::OVERLAPPED;
-
-/// Overlapped value to indicate a `Waker` event.
-//
-// Note: this must be null, `SelectorInner::feed_events` depends on it.
-pub const WAKER_OVERLAPPED: *mut Overlapped = ptr::null_mut();
 
 #[derive(Debug)]
 struct AfdGroup {
@@ -47,7 +47,7 @@ impl AfdGroup {
     }
 }
 
-cfg_net! {
+cfg_io_source! {
     const POLL_GROUP__MAX_GROUP_SIZE: usize = 32;
 
     impl AfdGroup {
@@ -229,15 +229,7 @@ impl SockState {
         // In mio, we have to simulate Edge-triggered behavior to match API usage.
         // The strategy here is to intercept all read/write from user that could cause WouldBlock usage,
         // then reregister the socket to reset the interests.
-
-        // Reset readable event
-        if (afd_events & interests_to_afd_flags(Interest::READABLE)) != 0 {
-            self.user_evts &= !(interests_to_afd_flags(Interest::READABLE));
-        }
-        // Reset writable event
-        if (afd_events & interests_to_afd_flags(Interest::WRITABLE)) != 0 {
-            self.user_evts &= !interests_to_afd_flags(Interest::WRITABLE);
-        }
+        self.user_evts &= !afd_events;
 
         Some(Event {
             data: self.user_data,
@@ -264,7 +256,7 @@ impl SockState {
     }
 }
 
-cfg_net! {
+cfg_io_source! {
     impl SockState {
         fn new(raw_socket: RawSocket, afd: Arc<Afd>) -> io::Result<SockState> {
             Ok(SockState {
@@ -335,8 +327,9 @@ static NEXT_ID: AtomicUsize = AtomicUsize::new(0);
 pub struct Selector {
     #[cfg(debug_assertions)]
     id: usize,
-
-    inner: Arc<SelectorInner>,
+    pub(super) inner: Arc<SelectorInner>,
+    #[cfg(debug_assertions)]
+    has_waker: AtomicBool,
 }
 
 impl Selector {
@@ -348,6 +341,8 @@ impl Selector {
                 #[cfg(debug_assertions)]
                 id,
                 inner: Arc::new(inner),
+                #[cfg(debug_assertions)]
+                has_waker: AtomicBool::new(false),
             }
         })
     }
@@ -357,6 +352,8 @@ impl Selector {
             #[cfg(debug_assertions)]
             id: self.id,
             inner: Arc::clone(&self.inner),
+            #[cfg(debug_assertions)]
+            has_waker: AtomicBool::new(self.has_waker.load(Ordering::Acquire)),
         })
     }
 
@@ -368,12 +365,22 @@ impl Selector {
         self.inner.select(events, timeout)
     }
 
+    #[cfg(debug_assertions)]
+    pub fn register_waker(&self) -> bool {
+        self.has_waker.swap(true, Ordering::AcqRel)
+    }
+
     pub(super) fn clone_port(&self) -> Arc<CompletionPort> {
         self.inner.cp.clone()
     }
+
+    #[cfg(feature = "os-ext")]
+    pub(super) fn same_port(&self, other: &Arc<CompletionPort>) -> bool {
+        Arc::ptr_eq(&self.inner.cp, other)
+    }
 }
 
-cfg_net! {
+cfg_io_source! {
     use super::InternalState;
     use crate::Token;
 
@@ -405,7 +412,7 @@ cfg_net! {
 
 #[derive(Debug)]
 pub struct SelectorInner {
-    cp: Arc<CompletionPort>,
+    pub(super) cp: Arc<CompletionPort>,
     update_queue: Mutex<VecDeque<Pin<Arc<Mutex<SockState>>>>>,
     afd_group: AfdGroup,
     is_polling: AtomicBool,
@@ -496,12 +503,16 @@ impl SelectorInner {
         let mut update_queue = self.update_queue.lock().unwrap();
         for iocp_event in iocp_events.iter() {
             if iocp_event.overlapped().is_null() {
-                // `Waker` event, we'll add a readable event to match the other platforms.
-                events.push(Event {
-                    flags: afd::POLL_RECEIVE,
-                    data: iocp_event.token() as u64,
-                });
+                events.push(Event::from_completion_status(iocp_event));
                 n += 1;
+                continue;
+            } else if iocp_event.token() % 2 == 1 {
+                // Handle is a named pipe. This could be extended to be any non-AFD event.
+                let callback = (*(iocp_event.overlapped() as *mut super::Overlapped)).callback;
+
+                let len = events.len();
+                callback(iocp_event.entry(), Some(events));
+                n += events.len() - len;
                 continue;
             }
 
@@ -524,10 +535,11 @@ impl SelectorInner {
     }
 }
 
-cfg_net! {
+cfg_io_source! {
     use std::mem::size_of;
     use std::ptr::null_mut;
-    use winapi::um::mswsock::SIO_BASE_HANDLE;
+    use winapi::um::mswsock;
+    use winapi::um::winsock2::WSAGetLastError;
     use winapi::um::winsock2::{WSAIoctl, SOCKET_ERROR};
 
     impl SelectorInner {
@@ -557,7 +569,7 @@ cfg_net! {
             };
 
             this.queue_state(sock);
-            unsafe { this.update_sockets_events_if_polling()?; }
+            unsafe { this.update_sockets_events_if_polling()? };
 
             Ok(state)
         }
@@ -623,14 +635,13 @@ cfg_net! {
         }
     }
 
-    fn get_base_socket(raw_socket: RawSocket) -> io::Result<RawSocket> {
+    fn try_get_base_socket(raw_socket: RawSocket, ioctl: u32) -> Result<RawSocket, i32> {
         let mut base_socket: RawSocket = 0;
         let mut bytes: u32 = 0;
-
         unsafe {
             if WSAIoctl(
                 raw_socket as usize,
-                SIO_BASE_HANDLE,
+                ioctl,
                 null_mut(),
                 0,
                 &mut base_socket as *mut _ as PVOID,
@@ -638,13 +649,45 @@ cfg_net! {
                 &mut bytes,
                 null_mut(),
                 None,
-            ) == SOCKET_ERROR
+            ) != SOCKET_ERROR
             {
-                Err(io::Error::last_os_error())
-            } else {
                 Ok(base_socket)
+            } else {
+                Err(WSAGetLastError())
             }
         }
+    }
+
+    fn get_base_socket(raw_socket: RawSocket) -> io::Result<RawSocket> {
+        let res = try_get_base_socket(raw_socket, mswsock::SIO_BASE_HANDLE);
+        if let Ok(base_socket) = res {
+            return Ok(base_socket);
+        }
+
+        // The `SIO_BASE_HANDLE` should not be intercepted by LSPs, therefore
+        // it should not fail as long as `raw_socket` is a valid socket. See
+        // https://docs.microsoft.com/en-us/windows/win32/winsock/winsock-ioctls.
+        // However, at least one known LSP deliberately breaks it, so we try
+        // some alternative IOCTLs, starting with the most appropriate one.
+        for &ioctl in &[
+            mswsock::SIO_BSP_HANDLE_SELECT,
+            mswsock::SIO_BSP_HANDLE_POLL,
+            mswsock::SIO_BSP_HANDLE,
+        ] {
+            if let Ok(base_socket) = try_get_base_socket(raw_socket, ioctl) {
+                // Since we know now that we're dealing with an LSP (otherwise
+                // SIO_BASE_HANDLE would't have failed), only return any result
+                // when it is different from the original `raw_socket`.
+                if base_socket != raw_socket {
+                    return Ok(base_socket);
+                }
+            }
+        }
+
+        // If the alternative IOCTLs also failed, return the original error.
+        let os_error = res.unwrap_err();
+        let err = io::Error::from_raw_os_error(os_error);
+        Err(err)
     }
 }
 
@@ -661,7 +704,16 @@ impl Drop for SelectorInner {
                 Ok(iocp_events) => {
                     events_num = iocp_events.iter().len();
                     for iocp_event in iocp_events.iter() {
-                        if !iocp_event.overlapped().is_null() {
+                        if iocp_event.overlapped().is_null() {
+                            // Custom event
+                        } else if iocp_event.token() % 2 == 1 {
+                            // Named pipe, dispatch the event so it can release resources
+                            let callback = unsafe {
+                                (*(iocp_event.overlapped() as *mut super::Overlapped)).callback
+                            };
+
+                            callback(iocp_event.entry(), None);
+                        } else {
                             // drain sock state to release memory of Arc reference
                             let _sock_state = from_overlapped(iocp_event.overlapped());
                         }
@@ -683,17 +735,18 @@ impl Drop for SelectorInner {
     }
 }
 
-fn interests_to_afd_flags(interests: Interest) -> u32 {
-    let mut flags = 0;
+cfg_net! {
+    fn interests_to_afd_flags(interests: Interest) -> u32 {
+        let mut flags = 0;
 
-    if interests.is_readable() {
-        // afd::POLL_DISCONNECT for is_read_hup()
-        flags |= afd::POLL_RECEIVE | afd::POLL_ACCEPT | afd::POLL_DISCONNECT;
+        if interests.is_readable() {
+            flags |= READABLE_FLAGS | READ_CLOSED_FLAGS | ERROR_FLAGS;
+        }
+
+        if interests.is_writable() {
+            flags |= WRITABLE_FLAGS | WRITE_CLOSED_FLAGS | ERROR_FLAGS;
+        }
+
+        flags
     }
-
-    if interests.is_writable() {
-        flags |= afd::POLL_SEND;
-    }
-
-    flags
 }

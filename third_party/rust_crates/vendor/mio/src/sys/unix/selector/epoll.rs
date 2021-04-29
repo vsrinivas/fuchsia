@@ -4,7 +4,7 @@ use libc::{EPOLLET, EPOLLIN, EPOLLOUT, EPOLLRDHUP};
 use log::error;
 use std::os::unix::io::{AsRawFd, RawFd};
 #[cfg(debug_assertions)]
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::time::Duration;
 use std::{cmp, i32, io, ptr};
 
@@ -17,17 +17,26 @@ pub struct Selector {
     #[cfg(debug_assertions)]
     id: usize,
     ep: RawFd,
+    #[cfg(debug_assertions)]
+    has_waker: AtomicBool,
 }
 
 impl Selector {
     pub fn new() -> io::Result<Selector> {
-        // According to libuv `EPOLL_CLOEXEC` is not defined on Android API <
-        // 21. But `EPOLL_CLOEXEC` is an alias for `O_CLOEXEC` on all platforms,
-        // so we use that instead.
-        syscall!(epoll_create1(libc::O_CLOEXEC)).map(|ep| Selector {
+        // According to libuv, `EPOLL_CLOEXEC` is not defined on Android API <
+        // 21. But `EPOLL_CLOEXEC` is an alias for `O_CLOEXEC` on that platform,
+        // so we use it instead.
+        #[cfg(target_os = "android")]
+        let flag = libc::O_CLOEXEC;
+        #[cfg(not(target_os = "android"))]
+        let flag = libc::EPOLL_CLOEXEC;
+
+        syscall!(epoll_create1(flag)).map(|ep| Selector {
             #[cfg(debug_assertions)]
             id: NEXT_ID.fetch_add(1, Ordering::Relaxed),
             ep,
+            #[cfg(debug_assertions)]
+            has_waker: AtomicBool::new(false),
         })
     }
 
@@ -37,12 +46,22 @@ impl Selector {
             #[cfg(debug_assertions)]
             id: self.id,
             ep,
+            #[cfg(debug_assertions)]
+            has_waker: AtomicBool::new(self.has_waker.load(Ordering::Acquire)),
         })
     }
 
     pub fn select(&self, events: &mut Events, timeout: Option<Duration>) -> io::Result<()> {
+        // A bug in kernels < 2.6.37 makes timeouts larger than LONG_MAX / CONFIG_HZ
+        // (approx. 30 minutes with CONFIG_HZ=1200) effectively infinite on 32 bits
+        // architectures. The magic number is the same constant used by libuv.
+        #[cfg(target_pointer_width = "32")]
+        const MAX_SAFE_TIMEOUT: u128 = 1789569;
+        #[cfg(not(target_pointer_width = "32"))]
+        const MAX_SAFE_TIMEOUT: u128 = libc::c_int::max_value() as u128;
+
         let timeout = timeout
-            .map(|to| cmp::min(to.as_millis(), libc::c_int::max_value() as u128) as libc::c_int)
+            .map(|to| cmp::min(to.as_millis(), MAX_SAFE_TIMEOUT) as libc::c_int)
             .unwrap_or(-1);
 
         events.clear();
@@ -80,9 +99,14 @@ impl Selector {
     pub fn deregister(&self, fd: RawFd) -> io::Result<()> {
         syscall!(epoll_ctl(self.ep, libc::EPOLL_CTL_DEL, fd, ptr::null_mut())).map(|_| ())
     }
+
+    #[cfg(debug_assertions)]
+    pub fn register_waker(&self) -> bool {
+        self.has_waker.swap(true, Ordering::AcqRel)
+    }
 }
 
-cfg_net! {
+cfg_io_source! {
     impl Selector {
         #[cfg(debug_assertions)]
         pub fn id(&self) -> usize {
@@ -159,6 +183,8 @@ pub mod event {
             // Unix pipe write end has closed
             || (event.events as libc::c_int & libc::EPOLLOUT != 0
                 && event.events as libc::c_int & libc::EPOLLERR != 0)
+            // The other side (read end) of a Unix pipe has closed.
+            || event.events as libc::c_int == libc::EPOLLERR
     }
 
     pub fn is_priority(event: &Event) -> bool {
@@ -212,6 +238,7 @@ pub mod event {
     }
 }
 
+#[cfg(target_os = "android")]
 #[test]
 fn assert_close_on_exec_flag() {
     // This assertion need to be true for Selector::new.

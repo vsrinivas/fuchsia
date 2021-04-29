@@ -1,4 +1,4 @@
-#![doc(html_root_url = "https://docs.rs/mio/0.7.0")]
+#![doc(html_root_url = "https://docs.rs/mio/0.7.11")]
 #![deny(
     missing_docs,
     missing_debug_implementations,
@@ -35,27 +35,11 @@
 //!
 //! ## Guide
 //!
-//! A getting started guide is available in the
-#![cfg_attr(
-    feature = "extra-docs",
-    doc = "[`guide`](../mio/guide/index.html) module."
-)]
-#![cfg_attr(
-    not(feature = "extra-docs"),
-    doc = "`guide` (only available when the `extra-docs` feature is enabled)."
-)]
+//! A getting started guide is available in the [`guide`] module.
 //!
 //! ## Available features
 //!
-//! The available features are described in the
-#![cfg_attr(
-    feature = "extra-docs",
-    doc = "[`features`](../mio/features/index.html) module."
-)]
-#![cfg_attr(
-    not(feature = "extra-docs"),
-    doc = "`features` (only available when the `extra-docs` feature is enabled)."
-)]
+//! The available features are described in the [`features`] module.
 
 // macros used internally
 #[macro_use]
@@ -69,9 +53,11 @@ mod waker;
 
 pub mod event;
 
-cfg_net! {
+cfg_io_source! {
     mod io_source;
+}
 
+cfg_net! {
     pub mod net;
 }
 
@@ -82,15 +68,30 @@ pub use poll::{Poll, Registry};
 pub use token::Token;
 pub use waker::Waker;
 
-#[cfg(all(unix, feature = "os-util"))]
-#[cfg_attr(docsrs, doc(cfg(all(unix, feature = "os-util"))))]
+#[cfg(all(unix, feature = "os-ext"))]
+#[cfg_attr(docsrs, doc(cfg(all(unix, feature = "os-ext"))))]
 pub mod unix {
     //! Unix only extensions.
+
+    pub mod pipe {
+        //! Unix pipe.
+        //!
+        //! See the [`new`] function for documentation.
+
+        pub use crate::sys::pipe::{new, Receiver, Sender};
+    }
+
     pub use crate::sys::SourceFd;
 }
 
-// Enable with `cargo doc --features extra-docs`.
-#[cfg(feature = "extra-docs")]
+#[cfg(all(windows, feature = "os-ext"))]
+#[cfg_attr(docsrs, doc(cfg(all(windows, feature = "os-ext"))))]
+pub mod windows {
+    //! Windows only extensions.
+
+    pub use crate::sys::named_pipe::NamedPipe;
+}
+
 pub mod features {
     //! # Mio's optional features.
     //!
@@ -105,38 +106,18 @@ pub mod features {
     //!
     //! This makes `Poll`, `Registry` and `Waker` functional.
     //!
-    #![cfg_attr(feature = "os-util", doc = "## `os-util` (enabled)")]
-    #![cfg_attr(not(feature = "os-util"), doc = "## `os-util` (disabled)")]
+    #![cfg_attr(feature = "os-ext", doc = "## `os-ext` (enabled)")]
+    #![cfg_attr(not(feature = "os-ext"), doc = "## `os-ext` (disabled)")]
     //!
-    //! `os-util` enables additional OS specific facilities. Currently this
-    //! means the `unix` module (with `SourceFd`) becomes available.
+    //! `os-ext` enables additional OS specific facilities. These facilities can
+    //! be found in the `unix` and `windows` module.
     //!
-    //! ## Network types
+    #![cfg_attr(feature = "net", doc = "## Network types (enabled)")]
+    #![cfg_attr(not(feature = "net"), doc = "## Network types (disabled)")]
     //!
-    //! Mio provide three features to enable network types:
-    //!
-    #![cfg_attr(feature = "tcp", doc = "* `tcp` (enabled)")]
-    #![cfg_attr(not(feature = "tcp"), doc = "* `tcp` (disabled)")]
-    //! : includes `TcpStream` and `TcpListener`,
-    #![cfg_attr(feature = "udp", doc = "* `udp` (enabled)")]
-    #![cfg_attr(not(feature = "udp"), doc = "* `udp` (disabled)")]
-    //! : includes `UdpSocket`, and
-    #![cfg_attr(feature = "uds", doc = "* `uds` (enabled)")]
-    #![cfg_attr(not(feature = "uds"), doc = "* `uds` (disabled)")]
-    //! : includes `UnixDatagram`, `UnixListener`, `UnixStream` and `SocketAddr`.
-    //!
-    //! All types can be found in the `net` module.
-    //!
-    #![cfg_attr(feature = "extra-docs", doc = "## `extra-docs` (enabled)")]
-    #![cfg_attr(not(feature = "extra-docs"), doc = "## `extra-docs` (disabled)")]
-    //!
-    //! This feature includes additional documentation such as this document and
-    //! the getting started guide. It adds nothing in terms of types (only
-    //! documentation).
+    //! The `net` feature enables networking primitives in the `net` module.
 }
 
-// Enable with `cargo doc --features extra-docs`.
-#[cfg(feature = "extra-docs")]
 pub mod guide {
     //! # Getting started guide.
     //!
@@ -158,7 +139,8 @@ pub mod guide {
     //! [`Poll`]: ../struct.Poll.html
     //! [`Events`]: ../event/struct.Events.html
     //!
-    //! ```
+    #![cfg_attr(feature = "os-poll", doc = "```")]
+    #![cfg_attr(not(feature = "os-poll"), doc = "```ignore")]
     //! # use mio::{Poll, Events};
     //! # fn main() -> std::io::Result<()> {
     //! // `Poll` allows for polling of readiness events.
@@ -192,7 +174,8 @@ pub mod guide {
     //!
     //! [event source]: ../event/trait.Source.html
     //!
-    //! ```
+    #![cfg_attr(all(feature = "os-poll", features = "net"), doc = "```")]
+    #![cfg_attr(not(all(feature = "os-poll", features = "net")), doc = "```ignore")]
     //! # use mio::net::TcpListener;
     //! # use mio::{Poll, Token, Interest};
     //! # fn main() -> std::io::Result<()> {
@@ -230,7 +213,8 @@ pub mod guide {
     //! [poll]: ../struct.Poll.html#method.poll
     //! [event sources]: ../event/trait.Source.html
     //!
-    //! ```
+    #![cfg_attr(all(feature = "os-poll", features = "net"), doc = "```")]
+    #![cfg_attr(not(all(feature = "os-poll", features = "net")), doc = "```ignore")]
     //! # use std::io;
     //! # use std::time::Duration;
     //! # use mio::net::TcpListener;

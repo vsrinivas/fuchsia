@@ -1,3 +1,186 @@
+# 0.7.11
+
+## Fixes
+
+* Fix missing feature of winapi.
+  (https://github.com/tokio-rs/mio/commit/a7e61db9e3c2b929ef1a33532bfcc22045d163ce).
+
+# 0.7.10
+
+## Fixes
+
+* Fix an instance of not doc(cfg(.*))
+  (https://github.com/tokio-rs/mio/commit/25e8f911357c740034f10a170dfa4ea1b28234ce).
+
+## Fixes
+
+* Fix error handling in `NamedPipe::write`
+  (https://github.com/tokio-rs/mio/commit/aec872be9732e5c6685100674278be27f54a271b).
+* Use `accept(2)` on x86 Android instead of `accept4(2)`
+  (https://github.com/tokio-rs/mio/commit/6f86b925d3e48f30905d5cfa54348acf3f1fa036,
+  https://github.com/tokio-rs/mio/commit/8d5414880ab82178305ac1d2c16d715e58633d3e).
+* Improve error message when opening AFD device
+  (https://github.com/tokio-rs/mio/commit/139f7c4422321eb4a17b14ae2c296fddd19a8804).
+
+# 0.7.8
+
+## Fixes
+
+* Fix `TcpStream::set_linger` on macOS
+  (https://github.com/tokio-rs/mio/commit/175773ce02e85977db81224c782c8d140aba8543).
+* Fix compilation on DragonFlyBSD
+  (https://github.com/tokio-rs/mio/commit/b51af46b28871f8dd3233b490ee62237ffed6a26).
+
+# 0.7.7
+
+## Added
+
+* `UdpSocket::only_v6`
+  (https://github.com/tokio-rs/mio/commit/0101e05a800f17fb88f4315d9b9fe0f08cca6e57).
+* `Clone` implementation for `Event`
+  (https://github.com/tokio-rs/mio/commit/26540ebbae89df6d4d08465c56f715d8f2addfc3).
+* `AsRawFd` implementation for `Registry`
+  (https://github.com/tokio-rs/mio/commit/f70daa72da0042b1880256164774c3286d315a02).
+* `Read` and `Write` implementation for `&unix::pipe::Sender` and `Receiver`,
+  that is on the reference to them, an implementation existed on the types
+  themselves already
+  (https://github.com/tokio-rs/mio/commit/1be481dcbbcb6906364008b5d61e7f53cddc3eb3).
+
+
+## Fixes
+
+* Underflow in `SocketAddr::address`
+  (https://github.com/tokio-rs/mio/commit/6d3fa69240cd4bb95e9d34605c660c30245a18bd).
+* Android build with the net feature enabled, but with os-poll disabled
+  (https://github.com/tokio-rs/mio/commit/49d8fd33e026ad6e2c055d05d6667180ba2af7be).
+* Solaris build with the net feature enabled, but with os-poll disabled
+  (https://github.com/tokio-rs/mio/commit/a6e025e9d9511639ec106ebedc0dd312bdc9be12).
+* Ensure that `Waker::wake` works on illumos systems with poor `pipe(2)` and
+  `epoll(2)` interaction using `EPOLLET`
+  (https://github.com/tokio-rs/mio/commit/943d4249dcc17cd8b4d2250c4fa19116097248fa).
+* Fix `unix::pipe` on illumos
+  (https://github.com/tokio-rs/mio/commit/0db49f6d5caf54b12176821363d154384357e70a).
+
+# 0.7.6
+
+## Added
+
+* `net` feature, replaces `tcp`, `udp` and `uds` features
+  (https://github.com/tokio-rs/mio/commit/a301ba520a8479b459c4acdcefa4a7c5eea818c7).
+* `os-ext` feature, replaces `os-util` and `pipe` features
+  (https://github.com/tokio-rs/mio/commit/f5017fae8a3d3bb4b4cada25b01a2d76a406badc).
+* Added keepalive support to `TcpSocket`
+  (https://github.com/tokio-rs/mio/commit/290c43a96662d54ab7c4b8814e5a9f9a9e523fda).
+* `TcpSocket::set_{send, recv}_buffer_size`
+  (https://github.com/tokio-rs/mio/commit/40c4af79bf5b32b8fbdbf6f2e5c16290e1d3d406).
+* `TcpSocket::get_linger`
+  (https://github.com/tokio-rs/mio/commit/13e82ced655bbb6e2729226e485a7de9f2c2ccd9).
+* Implement `IntoRawFd` for `TcpSocket`
+  (https://github.com/tokio-rs/mio/commit/50548ed45d0b2c98f1f2e003e210d14195284ef4).
+
+## Deprecated
+
+* The `tcp`, `udp` and `uds` features, replaced by a new `net` feature.
+  (https://github.com/tokio-rs/mio/commit/a301ba520a8479b459c4acdcefa4a7c5eea818c7).
+* The `extra-docs` feature, now enabled by default.
+  (https://github.com/tokio-rs/mio/commit/25731e8688a2d91c5c700674a2c2d3841240ece1).
+* The `os-util` and `pipe` features, replaced by a new `os-ext` feature.
+  (https://github.com/tokio-rs/mio/commit/f5017fae8a3d3bb4b4cada25b01a2d76a406badc).
+
+## Fixes
+
+* Incorrect assumption of the layout of `std::net::SocketAddr`. Previously Mio
+  would assume that `SocketAddrV{4,6}` had the same layout as
+  `libc::sockaddr_in(6)`, however this is not guaranteed by the standard
+  library.
+  (https://github.com/tokio-rs/mio/commit/152e0751f0be1c9b0cbd6778645b76bcb0eba93c).
+* Also bumped the miow dependency to version 0.3.6 to solve the same problem as
+  above.
+
+# 0.7.5
+
+## Added
+
+* `TcpSocket::get_localaddr()` retrieves local address
+  (https://github.com/tokio-rs/mio/commit/b41a022b2242eef1969c70c8ba93e04c528dba47).
+* `TcpSocket::set_reuseport()` & `TcpSocket::get_reuseport()` configures and reads `SO_REUSEPORT`
+  (https://github.com/tokio-rs/mio/commit/183bbe409ab69cbf9db41d0263b41ec86202d9a0).
+* `unix:pipe()` a wrapper around pipe(2) sys call
+  (https://github.com/tokio-rs/mio/commit/2b7c0967a7362303946deb3d4ca2ae507af6c72d).
+* Add a check that a single Waker is active per Poll instance (only in debug mode)
+  (https://github.com/tokio-rs/mio/commit/f4874f28b32efcf4841691884c65a89734d96a56).
+* Added `Interest:remove()`
+  (https://github.com/tokio-rs/mio/commit/b8639c3d9ac07bb7e2e27685680c8a6510fa1357).
+
+# 0.7.4
+
+## Fixes
+
+* lost "socket closed" events on windows
+  (https://github.com/tokio-rs/mio/commit/50c299aca56c4a26e5ed20c283007239fbe6a7a7).
+
+## Added
+
+* `TcpSocket::set_linger()` configures SO_LINGER
+  (https://github.com/tokio-rs/mio/commit/3b4096565c1a879f651b8f8282ecdcbdbd5c92d3).
+
+# 0.7.3
+
+## Added
+
+* `TcpSocket` for configuring a TCP socket before connecting or listening
+  (https://github.com/tokio-rs/mio/commit/5b09e60d0f64419b989bda88c86a3147334a03b3).
+
+# 0.7.2
+
+## Added
+
+* Windows named pipe support.
+  (https://github.com/tokio-rs/mio/commit/52e8c2220e87696d20f13561402bcaabba4136ed).
+
+# 0.7.1
+
+## Reduced support for 32-bit Apple targets
+
+In January 2020 Rust reduced its support for 32-bit Apple targets
+(https://blog.rust-lang.org/2020/01/03/reducing-support-for-32-bit-apple-targets.html).
+Starting with v0.7.1 Mio will do the same as we're no longer checking 32 bit
+iOS/macOS on our CI.
+
+## Added
+
+* Support for illumos
+  (https://github.com/tokio-rs/mio/commit/976f2354d0e8fbbb64fba3bf017d7131f9c369a0).
+* Report `epoll(2)`'s `EPOLLERR` event as `Event::is_write_closed` if it's the
+  only event
+  (https://github.com/tokio-rs/mio/commit/0c77b5712d675eeb9bd43928b5dd7d22b2c7ac0c).
+* Optimised event::Iter::{size_hint, count}
+  (https://github.com/tokio-rs/mio/commit/40df934a11b05233a7796c4de19a4ee06bc4e03e).
+
+## Fixed
+
+* Work around Linux kernel < 2.6.37 bug on 32-bits making timeouts longer then
+  ~30 minutes effectively infinite
+  (https://github.com/tokio-rs/mio/commit/d555991f5ee81f6c1eec0fe481557d3d5b8d5ff4).
+* Set `SO_NOSIGPIPE` on all sockets (not just UDP) on for Apple targets
+  (https://github.com/tokio-rs/mio/commit/b8bbdcb0d3236f4c4acb257996d42a88dc9987d9).
+* Properly handle `POLL_ABORT` on Windows
+  (https://github.com/tokio-rs/mio/commit/a98da62b3ed1eeed1770aaca12f46d647e4fa749).
+* Improved error handling around failing `SIO_BASE_HANDLE` calls on Windows
+  (https://github.com/tokio-rs/mio/commit/b15fc18458a79ef8a51f73effa92548650f4e5dc).
+
+## Changed
+
+* On NetBSD we now use `accept4(2)`
+  (https://github.com/tokio-rs/mio/commit/4e306addc7144f2e02a7e8397c220b179a006a19).
+* The package uploaded to crates.io should be slightly smaller
+  (https://github.com/tokio-rs/mio/commit/eef8d3b9500bc0db957cd1ac68ee128ebc68351f).
+
+## Removed
+
+* Dependency on `lazy_static` on Windows
+  (https://github.com/tokio-rs/mio/commit/57e4c2a8ac153bc7bb87829e22cf0a21e3927e8a).
+
 # 0.7.0
 
 Version 0.7 of Mio contains various major changes compared to version 0.6.
@@ -44,7 +227,7 @@ information.
   significantly larger on some OSes.
 * `Ready` was removed and replaced with various `is_*` methods on `Event`. For
   example instead checking for readable readiness using
-  `Event::ready().is_readble()`, you would call `Event::is_readble()`.
+  `Event::ready().is_readable()`, you would call `Event::is_readable()`.
 * `Ready::is_hup` was removed in favour of `Event::is_read_closed` and
   `Event::is_write_closed`.
 * The Iterator implementation of `Events` was changed to return `&Event`.
@@ -61,6 +244,36 @@ information.
   creating and using sockets, e.g. making use of `accept4(2)`.
 * The `fmt::Debug` implementation of `Events` is now actually useful as it
   prints all `Event`s.
+
+# 0.6.23 (Dec 01, 2020)
+
+### Changed
+- **MSRV**: Increased the MSRV from 1.18.0 (Jun 8, 2017) to 1.31.0 (Dec 6,
+  2018)
+  (https://github.com/tokio-rs/mio/commit/4879e0d32ddfd98e762fc87240e594a3ad8fca30).
+
+### Fixed
+- Work around Linux kernel < 2.6.37 bug on 32-bits making timeouts longer then
+  ~30 minutes effectively infinite
+  (https://github.com/tokio-rs/mio/commit/e7cba59950e9c9fa6194e29b5b1e72029e3df455).
+- Update miow and net2 depedencies to get rid of invalid memory layout assumption
+  (https://github.com/tokio-rs/mio/commit/13f02ac0a86d7c0c0001e5ff8960a0b4340d075c).
+
+# 0.6.22 (May 01, 2020)
+
+### Added
+- Add support for illumos target (#1294)
+
+# 0.6.21 (November 27, 2019)
+
+### Fixed
+- remove `=` dependency on `cfg-if`.
+
+# 0.6.20 (November 21, 2019)
+
+### Fixed
+- Use default IOCP concurrency value (#1161).
+- setting FD_CLOEXEC in pipe (#1095).
 
 # 0.6.19 (May 28, 2018)
 

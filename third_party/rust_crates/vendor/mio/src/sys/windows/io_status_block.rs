@@ -1,10 +1,11 @@
-use ntapi::ntioapi::IO_STATUS_BLOCK;
 use std::fmt;
 use std::ops::{Deref, DerefMut};
 
+use ntapi::ntioapi::IO_STATUS_BLOCK;
+
 pub struct IoStatusBlock(IO_STATUS_BLOCK);
 
-cfg_net! {
+cfg_io_source! {
     use ntapi::ntioapi::IO_STATUS_BLOCK_u;
 
     impl IoStatusBlock {

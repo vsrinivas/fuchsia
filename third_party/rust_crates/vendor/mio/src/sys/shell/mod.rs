@@ -10,20 +10,14 @@ pub(crate) use self::selector::{event, Event, Events, Selector};
 mod waker;
 pub(crate) use self::waker::Waker;
 
-cfg_tcp! {
+cfg_net! {
     pub(crate) mod tcp;
-}
-
-cfg_udp! {
     pub(crate) mod udp;
-}
-
-#[cfg(unix)]
-cfg_uds! {
+    #[cfg(unix)]
     pub(crate) mod uds;
 }
 
-cfg_net! {
+cfg_io_source! {
     use std::io;
     #[cfg(windows)]
     use std::os::windows::io::RawSocket;

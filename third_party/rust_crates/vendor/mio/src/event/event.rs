@@ -12,6 +12,7 @@ use std::fmt;
 /// [`Poll::poll`]: ../struct.Poll.html#method.poll
 /// [`Poll`]: ../struct.Poll.html
 /// [`Token`]: ../struct.Token.html
+#[derive(Clone)]
 #[repr(transparent)]
 pub struct Event {
     inner: sys::Event,
@@ -65,9 +66,9 @@ impl Event {
     /// Read closed readiness can be expected after any of the following have
     /// occurred:
     /// * The local stream has shutdown the read half of its socket
-    /// * The local stream has shtudown both the read half and the write half
+    /// * The local stream has shutdown both the read half and the write half
     ///   of its socket
-    /// * The peer stream has shtudown the write half its socket; this sends a
+    /// * The peer stream has shutdown the write half its socket; this sends a
     ///   `FIN` packet that has been received by the local stream
     ///
     /// Method is a best effort implementation. While some platforms may not
@@ -79,7 +80,7 @@ impl Event {
     /// | [OS selector] | Flag(s) checked |
     /// |---------------|-----------------|
     /// | [epoll]       | `EPOLLHUP`, or  |
-    /// |               | `EPOLLIN` and EPOLLRDHUP` |
+    /// |               | `EPOLLIN` and `EPOLLRDHUP` |
     /// | [kqueue]      | `EV_EOF`        |
     ///
     /// [OS selector]: ../struct.Poll.html#implementation-notes
@@ -108,6 +109,7 @@ impl Event {
     /// | [OS selector] | Flag(s) checked |
     /// |---------------|-----------------|
     /// | [epoll]       | `EPOLLHUP`, or  |
+    /// |               | only `EPOLLERR`, or |
     /// |               | `EPOLLOUT` and `EPOLLERR` |
     /// | [kqueue]      | `EV_EOF`        |
     ///

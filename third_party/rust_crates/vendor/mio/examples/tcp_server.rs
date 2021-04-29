@@ -43,10 +43,25 @@ fn main() -> io::Result<()> {
 
         for event in events.iter() {
             match event.token() {
-                SERVER => {
-                    // Received an event for the TCP server socket.
-                    // Accept an connection.
-                    let (mut connection, address) = server.accept()?;
+                SERVER => loop {
+                    // Received an event for the TCP server socket, which
+                    // indicates we can accept an connection.
+                    let (mut connection, address) = match server.accept() {
+                        Ok((connection, address)) => (connection, address),
+                        Err(e) if e.kind() == io::ErrorKind::WouldBlock => {
+                            // If we get a `WouldBlock` error we know our
+                            // listener has no more incoming connections queued,
+                            // so we can return to polling and wait for some
+                            // more.
+                            break;
+                        }
+                        Err(e) => {
+                            // If it was any other kind of error, something went
+                            // wrong and we terminate with an error.
+                            return Err(e);
+                        }
+                    };
+
                     println!("Accepted connection from: {}", address);
 
                     let token = next(&mut unique_token);
@@ -57,13 +72,13 @@ fn main() -> io::Result<()> {
                     )?;
 
                     connections.insert(token, connection);
-                }
+                },
                 token => {
-                    // (maybe) received an event for a TCP connection.
+                    // Maybe received an event for a TCP connection.
                     let done = if let Some(connection) = connections.get_mut(&token) {
                         handle_connection_event(poll.registry(), connection, event)?
                     } else {
-                        // Sporadic events happen.
+                        // Sporadic events happen, we can safely ignore them.
                         false
                     };
                     if done {
@@ -113,18 +128,23 @@ fn handle_connection_event(
 
     if event.is_readable() {
         let mut connection_closed = false;
-        let mut received_data = Vec::with_capacity(4096);
+        let mut received_data = vec![0; 4096];
+        let mut bytes_read = 0;
         // We can (maybe) read from the connection.
         loop {
-            let mut buf = [0; 256];
-            match connection.read(&mut buf) {
+            match connection.read(&mut received_data[bytes_read..]) {
                 Ok(0) => {
                     // Reading 0 bytes means the other side has closed the
                     // connection or is done writing, then so are we.
                     connection_closed = true;
                     break;
                 }
-                Ok(n) => received_data.extend_from_slice(&buf[..n]),
+                Ok(n) => {
+                    bytes_read += n;
+                    if bytes_read == received_data.len() {
+                        received_data.resize(received_data.len() + 1024, 0);
+                    }
+                }
                 // Would block "errors" are the OS's way of saying that the
                 // connection is not actually ready to perform this I/O operation.
                 Err(ref err) if would_block(err) => break,
@@ -134,10 +154,13 @@ fn handle_connection_event(
             }
         }
 
-        if let Ok(str_buf) = from_utf8(&received_data) {
-            println!("Received data: {}", str_buf.trim_end());
-        } else {
-            println!("Received (none UTF-8) data: {:?}", &received_data);
+        if bytes_read != 0 {
+            let received_data = &received_data[..bytes_read];
+            if let Ok(str_buf) = from_utf8(received_data) {
+                println!("Received data: {}", str_buf.trim_end());
+            } else {
+                println!("Received (none UTF-8) data: {:?}", received_data);
+            }
         }
 
         if connection_closed {

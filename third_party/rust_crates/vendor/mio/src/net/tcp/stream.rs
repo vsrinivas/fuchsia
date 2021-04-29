@@ -7,7 +7,8 @@ use std::os::unix::io::{AsRawFd, FromRawFd, IntoRawFd, RawFd};
 use std::os::windows::io::{AsRawSocket, FromRawSocket, IntoRawSocket, RawSocket};
 
 use crate::io_source::IoSource;
-use crate::{event, sys, Interest, Registry, Token};
+use crate::net::TcpSocket;
+use crate::{event, Interest, Registry, Token};
 
 /// A non-blocking TCP stream between a local socket and a remote socket.
 ///
@@ -15,7 +16,8 @@ use crate::{event, sys, Interest, Registry, Token};
 ///
 /// # Examples
 ///
-/// ```
+#[cfg_attr(feature = "os-poll", doc = "```")]
+#[cfg_attr(not(feature = "os-poll"), doc = "```ignore")]
 /// # use std::net::{TcpListener, SocketAddr};
 /// # use std::error::Error;
 /// #
@@ -48,7 +50,8 @@ impl TcpStream {
     /// Create a new TCP stream and issue a non-blocking connect to the
     /// specified address.
     pub fn connect(addr: SocketAddr) -> io::Result<TcpStream> {
-        sys::tcp::connect(addr).map(TcpStream::from_std)
+        let socket = TcpSocket::new_for_addr(addr)?;
+        socket.connect(addr)
     }
 
     /// Creates a new `TcpStream` from a standard `net::TcpStream`.

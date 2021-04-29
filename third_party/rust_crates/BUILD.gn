@@ -2482,7 +2482,7 @@ rust_library("crossterm-v0_19_0") {
   deps += [ ":parking_lot-v0_11_1" ]
   if (true) {
     deps += [ ":libc-v0_2_88" ]
-    deps += [ ":mio-v0_7_0" ]
+    deps += [ ":mio-v0_7_11" ]
     deps += [ ":signal-hook-v0_1_17" ]
   }
   if (false) {
@@ -4853,10 +4853,10 @@ rust_library("miniz_oxide-v0_3_6") {
   ]
 }
 
-rust_library("mio-v0_7_0") {
+rust_library("mio-v0_7_11") {
   crate_name = "mio"
   crate_root = "//third_party/rust_crates/vendor/mio/src/lib.rs"
-  output_name = "mio-35621ccd559c52ed"
+  output_name = "mio-eef556696bb9a707"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -4868,8 +4868,7 @@ rust_library("mio-v0_7_0") {
     deps += [ ":libc-v0_2_88" ]
   }
   if (false) {
-    deps += [ ":lazy_static-v1_4_0" ]
-    deps += [ ":miow-v0_3_5" ]
+    deps += [ ":miow-v0_3_7" ]
     deps += [ ":ntapi-v0_3_4" ]
     deps += [ ":winapi-v0_3_9" ]
   }
@@ -4879,18 +4878,19 @@ rust_library("mio-v0_7_0") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=35621ccd559c52ed",
-    "-Cextra-filename=-35621ccd559c52ed",
+    "-Cmetadata=eef556696bb9a707",
+    "-Cextra-filename=-eef556696bb9a707",
     "--cfg=feature=\"default\"",
+    "--cfg=feature=\"os-ext\"",
     "--cfg=feature=\"os-poll\"",
     "--cfg=feature=\"os-util\"",
   ]
 }
 
-rust_library("miow-v0_3_5") {
+rust_library("miow-v0_3_7") {
   crate_name = "miow"
   crate_root = "//third_party/rust_crates/tiny_mirrors/miow/src/lib.rs"
-  output_name = "miow-dc82f42c60569f01"
+  output_name = "miow-299ced46ef99541f"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -4903,8 +4903,8 @@ rust_library("miow-v0_3_5") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=dc82f42c60569f01",
-    "-Cextra-filename=-dc82f42c60569f01",
+    "-Cmetadata=299ced46ef99541f",
+    "-Cextra-filename=-299ced46ef99541f",
   ]
 }
 
@@ -8486,7 +8486,7 @@ rust_library("signal-hook-v0_1_17") {
 
   deps = []
   deps += [ ":libc-v0_2_88" ]
-  deps += [ ":mio-v0_7_0" ]
+  deps += [ ":mio-v0_7_11" ]
   deps += [ ":signal-hook-registry-v1_3_0" ]
 
   rustenv = []
@@ -8501,7 +8501,7 @@ rust_library("signal-hook-v0_1_17") {
   ]
 
   aliased_deps = {
-    mio_0_7 = ":mio-v0_7_0"
+    mio_0_7 = ":mio-v0_7_11"
   }
 }
 
@@ -10890,6 +10890,7 @@ rust_library("winapi-v0_3_9") {
     "--cfg=feature=\"minschannel\"",
     "--cfg=feature=\"minwinbase\"",
     "--cfg=feature=\"minwindef\"",
+    "--cfg=feature=\"mstcpip\"",
     "--cfg=feature=\"mswsock\"",
     "--cfg=feature=\"ntdef\"",
     "--cfg=feature=\"ntsecapi\"",

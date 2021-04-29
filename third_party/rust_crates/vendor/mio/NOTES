@@ -1,3 +1,0 @@
-
-When creating using socket2, we can change Windows settings before connecting,
-just not while connecting.

@@ -21,6 +21,7 @@ overhead as possible over the OS abstractions.
 **API documentation**
 
 * [master](https://tokio-rs.github.io/mio/doc/mio/)
+* [v0.7](https://docs.rs/mio/^0.7)
 * [v0.6](https://docs.rs/mio/^0.6)
 
 This is a low level library, if you are looking for something easier to get
@@ -32,11 +33,12 @@ To use `mio`, first add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-mio = "0.6"
+mio = "0.7"
 ```
 
 Next we can start using Mio. The following is quick introduction using
-`TcpListener` and `TcpStream`. Note that `features = ["os-poll", "tcp"]` must be specified for this example.
+`TcpListener` and `TcpStream`. Note that `features = ["os-poll", "net"]` must be
+specified for this example.
 
 ```rust
 use std::error::Error;
@@ -152,10 +154,10 @@ This uses the Windows AFD system to access socket readiness events.
 
 ## Community
 
-A group of Mio users hang out on [Gitter], this can be a good place to go for
+A group of Mio users hang out on [Discord], this can be a good place to go for
 questions.
 
-[Gitter]: https://gitter.im/tokio-rs/mio
+[Discord]: https://discord.gg/tokio
 
 ## Contributing
 
@@ -164,6 +166,6 @@ bug fixes, just submit a PR with the fix and we can discuss the fix
 directly in the PR. If the fix is more complex, start with an issue.
 
 If you want to propose an API change, create an issue to start a
-discussion with the community. Also, feel free to talk with us in Gitter.
+discussion with the community. Also, feel free to talk with us in Discord.
 
 Finally, be kind. We support the [Rust Code of Conduct](https://www.rust-lang.org/policies/code-of-conduct).

@@ -8,7 +8,7 @@ use std::{fmt, ops};
 /// registered with [readable] interests and the socket becomes writable, no
 /// event will be returned from a call to [`poll`].
 ///
-/// [registering]: struct.Registry.html#method.reregister
+/// [registering]: struct.Registry.html#method.register
 /// [`event::Source`]: ./event/trait.Source.html
 /// [`Poll`]: struct.Poll.html
 /// [readable]: struct.Interest.html#associatedconstant.READABLE
@@ -68,6 +68,30 @@ impl Interest {
     #[allow(clippy::should_implement_trait)]
     pub const fn add(self, other: Interest) -> Interest {
         Interest(unsafe { NonZeroU8::new_unchecked(self.0.get() | other.0.get()) })
+    }
+
+    /// Removes `other` `Interest` from `self`.
+    ///
+    /// Returns `None` if the set would be empty after removing `other`.
+    ///
+    /// ```
+    /// use mio::Interest;
+    ///
+    /// const RW_INTERESTS: Interest = Interest::READABLE.add(Interest::WRITABLE);
+    ///
+    /// // As long a one interest remain this will return `Some`.
+    /// let w_interest = RW_INTERESTS.remove(Interest::READABLE).unwrap();
+    /// assert!(!w_interest.is_readable());
+    /// assert!(w_interest.is_writable());
+    ///
+    /// // Removing all interests from the set will return `None`.
+    /// assert_eq!(w_interest.remove(Interest::WRITABLE), None);
+    ///
+    /// // Its also possible to remove multiple interests at once.
+    /// assert_eq!(RW_INTERESTS.remove(RW_INTERESTS), None);
+    /// ```
+    pub fn remove(self, other: Interest) -> Option<Interest> {
+        NonZeroU8::new(self.0.get() & !other.0.get()).map(Interest)
     }
 
     /// Returns true if the value includes readable readiness.

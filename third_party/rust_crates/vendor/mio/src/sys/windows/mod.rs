@@ -7,6 +7,9 @@ pub use event::{Event, Events};
 mod selector;
 pub use selector::{Selector, SelectorInner, SockState};
 
+mod overlapped;
+use overlapped::Overlapped;
+
 // Macros must be defined before the modules that use them
 cfg_net! {
     /// Helper macro to execute a system call that returns an `io::Result`.
@@ -22,28 +25,27 @@ cfg_net! {
             }
         }};
     }
-}
 
-cfg_tcp! {
+    mod net;
+
     pub(crate) mod tcp;
+    pub(crate) mod udp;
 }
 
-cfg_udp! {
-    pub(crate) mod udp;
+cfg_os_ext! {
+    pub(crate) mod named_pipe;
 }
 
 mod waker;
 pub(crate) use waker::Waker;
 
-cfg_net! {
+cfg_io_source! {
     use std::io;
     use std::os::windows::io::RawSocket;
     use std::pin::Pin;
     use std::sync::{Arc, Mutex};
 
     use crate::{poll, Interest, Registry, Token};
-
-    mod net;
 
     struct InternalState {
         selector: Arc<SelectorInner>,

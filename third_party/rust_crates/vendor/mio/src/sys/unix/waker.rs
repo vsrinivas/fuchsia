@@ -100,6 +100,7 @@ pub use self::kqueue::Waker;
 
 #[cfg(any(
     target_os = "dragonfly",
+    target_os = "illumos",
     target_os = "netbsd",
     target_os = "openbsd",
     target_os = "solaris"
@@ -136,6 +137,12 @@ mod pipe {
         }
 
         pub fn wake(&self) -> io::Result<()> {
+            // The epoll emulation on some illumos systems currently requires
+            // the pipe buffer to be completely empty for an edge-triggered
+            // wakeup on the pipe read side.
+            #[cfg(target_os = "illumos")]
+            self.empty();
+
             match (&self.sender).write(&[1]) {
                 Ok(_) => Ok(()),
                 Err(ref err) if err.kind() == io::ErrorKind::WouldBlock => {
@@ -165,6 +172,7 @@ mod pipe {
 
 #[cfg(any(
     target_os = "dragonfly",
+    target_os = "illumos",
     target_os = "netbsd",
     target_os = "openbsd",
     target_os = "solaris"

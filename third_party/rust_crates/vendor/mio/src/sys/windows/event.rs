@@ -5,6 +5,7 @@ use miow::iocp::CompletionStatus;
 use super::afd;
 use crate::Token;
 
+#[derive(Clone)]
 pub struct Event {
     pub flags: u32,
     pub data: u64,
@@ -14,26 +15,64 @@ pub fn token(event: &Event) -> Token {
     Token(event.data as usize)
 }
 
+impl Event {
+    pub(super) fn new(token: Token) -> Event {
+        Event {
+            flags: 0,
+            data: usize::from(token) as u64,
+        }
+    }
+
+    pub(super) fn set_readable(&mut self) {
+        self.flags |= afd::POLL_RECEIVE
+    }
+
+    #[cfg(feature = "os-ext")]
+    pub(super) fn set_writable(&mut self) {
+        self.flags |= afd::POLL_SEND;
+    }
+
+    pub(super) fn from_completion_status(status: &CompletionStatus) -> Event {
+        Event {
+            flags: status.bytes_transferred(),
+            data: status.token() as u64,
+        }
+    }
+
+    pub(super) fn to_completion_status(&self) -> CompletionStatus {
+        CompletionStatus::new(self.flags, self.data as usize, std::ptr::null_mut())
+    }
+}
+
+pub(crate) const READABLE_FLAGS: u32 = afd::POLL_RECEIVE
+    | afd::POLL_DISCONNECT
+    | afd::POLL_ACCEPT
+    | afd::POLL_ABORT
+    | afd::POLL_CONNECT_FAIL;
+pub(crate) const WRITABLE_FLAGS: u32 = afd::POLL_SEND | afd::POLL_ABORT | afd::POLL_CONNECT_FAIL;
+pub(crate) const ERROR_FLAGS: u32 = afd::POLL_CONNECT_FAIL;
+pub(crate) const READ_CLOSED_FLAGS: u32 =
+    afd::POLL_DISCONNECT | afd::POLL_ABORT | afd::POLL_CONNECT_FAIL;
+pub(crate) const WRITE_CLOSED_FLAGS: u32 = afd::POLL_ABORT | afd::POLL_CONNECT_FAIL;
+
 pub fn is_readable(event: &Event) -> bool {
-    event.flags
-        & (afd::POLL_RECEIVE | afd::POLL_DISCONNECT | afd::POLL_ACCEPT | afd::POLL_CONNECT_FAIL)
-        != 0
+    event.flags & READABLE_FLAGS != 0
 }
 
 pub fn is_writable(event: &Event) -> bool {
-    event.flags & (afd::POLL_SEND | afd::POLL_CONNECT_FAIL) != 0
+    event.flags & WRITABLE_FLAGS != 0
 }
 
 pub fn is_error(event: &Event) -> bool {
-    event.flags & afd::POLL_CONNECT_FAIL != 0
+    event.flags & ERROR_FLAGS != 0
 }
 
 pub fn is_read_closed(event: &Event) -> bool {
-    event.flags & afd::POLL_DISCONNECT != 0
+    event.flags & READ_CLOSED_FLAGS != 0
 }
 
 pub fn is_write_closed(event: &Event) -> bool {
-    event.flags & (afd::POLL_ABORT | afd::POLL_CONNECT_FAIL) != 0
+    event.flags & WRITE_CLOSED_FLAGS != 0
 }
 
 pub fn is_priority(event: &Event) -> bool {
@@ -104,6 +143,10 @@ impl Events {
 
     pub fn capacity(&self) -> usize {
         self.events.capacity()
+    }
+
+    pub fn len(&self) -> usize {
+        self.events.len()
     }
 
     pub fn get(&self, idx: usize) -> Option<&Event> {

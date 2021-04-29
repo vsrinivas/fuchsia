@@ -30,7 +30,8 @@ use std::{fmt, io};
 ///
 /// A basic example -- establishing a `TcpStream` connection.
 ///
-/// ```
+#[cfg_attr(all(feature = "os-poll", features = "net"), doc = "```")]
+#[cfg_attr(not(all(feature = "os-poll", features = "net")), doc = "```ignore")]
 /// # use std::error::Error;
 /// # fn main() -> Result<(), Box<dyn Error>> {
 /// use mio::{Events, Poll, Interest, Token};
@@ -126,7 +127,8 @@ use std::{fmt, io};
 ///
 /// For example:
 ///
-/// ```
+#[cfg_attr(all(feature = "os-poll", features = "net"), doc = "```")]
+#[cfg_attr(not(all(feature = "os-poll", features = "net")), doc = "```ignore")]
 /// # use std::error::Error;
 /// # use std::net;
 /// # fn main() -> Result<(), Box<dyn Error>> {
@@ -174,6 +176,7 @@ use std::{fmt, io};
 /// | NetBSD        | [kqueue]  |
 /// | OpenBSD       | [kqueue]  |
 /// | Solaris       | [epoll]   |
+/// | illumos       | [epoll]   |
 /// | Windows       | [IOCP]    |
 /// | iOS           | [kqueue]  |
 /// | macOS         | [kqueue]  |
@@ -257,7 +260,8 @@ impl Poll {
     ///
     /// A basic example -- establishing a `TcpStream` connection.
     ///
-    /// ```
+    #[cfg_attr(all(feature = "os-poll", features = "net"), doc = "```")]
+    #[cfg_attr(not(all(feature = "os-poll", features = "net")), doc = "```ignore")]
     /// # use std::error::Error;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use mio::{Events, Poll, Interest, Token};
@@ -357,7 +361,7 @@ cfg_os_poll! {
 #[cfg(unix)]
 impl AsRawFd for Poll {
     fn as_raw_fd(&self) -> RawFd {
-        self.registry.selector.as_raw_fd()
+        self.registry.as_raw_fd()
     }
 }
 
@@ -421,7 +425,8 @@ impl Registry {
     ///
     /// # Examples
     ///
-    /// ```
+    #[cfg_attr(all(feature = "os-poll", features = "net"), doc = "```")]
+    #[cfg_attr(not(all(feature = "os-poll", features = "net")), doc = "```ignore")]
     /// # use std::error::Error;
     /// # use std::net;
     /// # fn main() -> Result<(), Box<dyn Error>> {
@@ -498,7 +503,8 @@ impl Registry {
     ///
     /// # Examples
     ///
-    /// ```
+    #[cfg_attr(all(feature = "os-poll", features = "net"), doc = "```")]
+    #[cfg_attr(not(all(feature = "os-poll", features = "net")), doc = "```ignore")]
     /// # use std::error::Error;
     /// # use std::net;
     /// # fn main() -> Result<(), Box<dyn Error>> {
@@ -522,7 +528,7 @@ impl Registry {
     /// // the token is the same it must be specified.
     /// poll.registry().reregister(
     ///     &mut socket,
-    ///     Token(2),
+    ///     Token(0),
     ///     Interest::WRITABLE)?;
     /// #     Ok(())
     /// # }
@@ -564,7 +570,8 @@ impl Registry {
     ///
     /// # Examples
     ///
-    /// ```
+    #[cfg_attr(all(feature = "os-poll", features = "net"), doc = "```")]
+    #[cfg_attr(not(all(feature = "os-poll", features = "net")), doc = "```ignore")]
     /// # use std::error::Error;
     /// # use std::net;
     /// # fn main() -> Result<(), Box<dyn Error>> {
@@ -612,11 +619,27 @@ impl Registry {
             .try_clone()
             .map(|selector| Registry { selector })
     }
+
+    /// Internal check to ensure only a single `Waker` is active per [`Poll`]
+    /// instance.
+    #[cfg(debug_assertions)]
+    pub(crate) fn register_waker(&self) {
+        if self.selector.register_waker() {
+            panic!("Only a single `Waker` can be active per `Poll` instance");
+        }
+    }
 }
 
 impl fmt::Debug for Registry {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt.debug_struct("Registry").finish()
+    }
+}
+
+#[cfg(unix)]
+impl AsRawFd for Registry {
+    fn as_raw_fd(&self) -> RawFd {
+        self.selector.as_raw_fd()
     }
 }
 

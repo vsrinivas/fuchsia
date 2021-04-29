@@ -28,6 +28,10 @@ enum AddressKind<'a> {
 impl SocketAddr {
     fn address(&self) -> AddressKind<'_> {
         let offset = path_offset(&self.sockaddr);
+        // Don't underflow in `len` below.
+        if (self.socklen as usize) < offset {
+            return AddressKind::Unnamed;
+        }
         let len = self.socklen as usize - offset;
         let path = unsafe { &*(&self.sockaddr.sun_path as *const [libc::c_char] as *const [u8]) };
 
@@ -74,6 +78,8 @@ cfg_os_poll! {
         /// Documentation reflected in [`SocketAddr`]
         ///
         /// [`SocketAddr`]: std::os::unix::net::SocketAddr
+        // FIXME: The matches macro requires rust 1.42.0 and we still support 1.39.0
+        #[allow(clippy::match_like_matches_macro)]
         pub fn is_unnamed(&self) -> bool {
             if let AddressKind::Unnamed = self.address() {
                 true
@@ -106,8 +112,6 @@ impl fmt::Debug for SocketAddr {
         }
     }
 }
-
-// ===== impl AsciiEscaped =====
 
 impl<'a> fmt::Display for AsciiEscaped<'a> {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
