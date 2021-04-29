@@ -87,7 +87,7 @@ class Directory final : public VnodeMinfs, public fbl::Recyclable<Directory> {
   // Other, non-virtual methods:
 
   // Lookup which can traverse '..'
-  zx_status_t LookupInternal(fbl::RefPtr<fs::Vnode>* out, std::string_view name);
+  zx_status_t LookupInternal(std::string_view name, fbl::RefPtr<fs::Vnode>* out);
 
   // Verify that the 'newdir' inode is not a subdirectory of this Vnode.
   // Traces the path from newdir back to the root inode.

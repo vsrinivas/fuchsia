@@ -507,10 +507,10 @@ zx_status_t Directory::Lookup(std::string_view name, fbl::RefPtr<fs::Vnode>* out
   TRACE_DURATION("minfs", "Directory::Lookup", "name", name);
   ZX_DEBUG_ASSERT(fs::vfs_valid_name(name));
 
-  return LookupInternal(out, name);
+  return LookupInternal(name, out);
 }
 
-zx_status_t Directory::LookupInternal(fbl::RefPtr<fs::Vnode>* out, std::string_view name) {
+zx_status_t Directory::LookupInternal(std::string_view name, fbl::RefPtr<fs::Vnode>* out) {
   DirArgs args;
   args.name = name;
 
@@ -769,7 +769,7 @@ zx_status_t Directory::CheckNotSubdirectory(fbl::RefPtr<Directory> newdir) {
     }
 
     fbl::RefPtr<fs::Vnode> out = nullptr;
-    if ((status = vn->LookupInternal(&out, "..")) < 0) {
+    if ((status = vn->LookupInternal("..", &out)) < 0) {
       break;
     }
     vn = fbl::RefPtr<Directory>::Downcast(out);
