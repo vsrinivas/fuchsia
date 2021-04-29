@@ -125,6 +125,12 @@ impl {{ $protocol.Name }}SynchronousProxy {
 		self.client.into_channel()
 	}
 
+    /// Waits until an event arrives and returns it. It is safe for other
+    /// threads to make concurrent requests while waiting for an event.
+	pub fn wait_for_event(&self, deadline: zx::Time) -> Result<{{ $protocol.Name }}Event, fidl::Error> {
+		{{ $protocol.Name }}Event::decode(self.client.wait_for_event(deadline)?)
+	}
+
 	{{- range $method := $protocol.Methods }}
 	{{- if $method.HasRequest }}
 	{{- range .DocComments}}
@@ -317,51 +323,14 @@ impl futures::Stream for {{ $protocol.Name }}EventStream {
 	fn poll_next(mut self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>)
 		-> std::task::Poll<Option<Self::Item>>
 	{
-		let mut buf = match futures::ready!(
+		let buf = match futures::ready!(
 			futures::stream::StreamExt::poll_next_unpin(&mut self.event_receiver, cx)?
 		) {
 			Some(buf) => buf,
 			None => return std::task::Poll::Ready(None),
 		};
-		let (bytes, _handles) = buf.split_mut();
-		let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
-		std::task::Poll::Ready(Some(match tx_header.ordinal() {
-			{{- range $method := $protocol.Methods }}
-			{{- if not $method.HasRequest }}
-			{{ .Ordinal | printf "%#x" }} => {
-				let mut out_tuple: (
-					{{- range $index, $param := $method.Response -}}
-					{{- if .HasHandleMetadata -}}
-					{{ .HandleWrapperName }}<{{- $param.Type -}}>,
-					{{- else -}}
-					{{- $param.Type -}},
-					{{- end -}}
-					{{- end -}}
-				) = fidl::encoding::Decodable::new_empty();
-				fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "{{ $protocol.ECI }}{{ $method.CamelName }}Event");
-				fidl::trace_blob!("fidl:blob", "decode", bytes);
-				fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
-				fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
-				Ok((
-					{{ $protocol.Name }}Event::{{ $method.CamelName }} {
-						{{- range $index, $param := $method.Response -}}
-						{{ if $param.HasHandleMetadata }}
-						{{- $param.Name -}}: out_tuple.{{- $index -}}.into_inner(),
-						{{- else -}}
-						{{- $param.Name -}}: out_tuple.{{- $index -}},
-						{{- end -}}
-						{{- end -}}
-					}
-				))
-			}
-			{{- end -}}
-			{{- end }}
-			_ => Err(fidl::Error::UnknownOrdinal {
-				ordinal: tx_header.ordinal(),
-				service_name: <{{ $protocol.Name }}Marker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
-			})
-		}))
+		std::task::Poll::Ready(Some({{ $protocol.Name }}Event::decode(buf)))
 	}
 }
 
@@ -405,6 +374,48 @@ impl {{ $protocol.Name }}Event {
 	}
 	{{ end }}
 	{{- end }}
+
+	fn decode(mut buf: fidl::MessageBufEtc) -> Result<{{ $protocol.Name }}Event, fidl::Error> {
+		let (bytes, _handles) = buf.split_mut();
+		let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+
+		match tx_header.ordinal() {
+			{{- range $method := $protocol.Methods }}
+			{{- if not $method.HasRequest }}
+			{{ .Ordinal | printf "%#x" }} => {
+				let mut out_tuple: (
+					{{- range $index, $param := $method.Response -}}
+					{{- if .HasHandleMetadata -}}
+					{{ .HandleWrapperName }}<{{- $param.Type -}}>,
+					{{- else -}}
+					{{- $param.Type -}},
+					{{- end -}}
+					{{- end -}}
+				) = fidl::encoding::Decodable::new_empty();
+				fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "{{ $protocol.ECI }}{{ $method.CamelName }}Event");
+				fidl::trace_blob!("fidl:blob", "decode", bytes);
+				fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
+				fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
+				Ok((
+					{{ $protocol.Name }}Event::{{ $method.CamelName }} {
+						{{- range $index, $param := $method.Response -}}
+						{{ if $param.HasHandleMetadata }}
+						{{- $param.Name -}}: out_tuple.{{- $index -}}.into_inner(),
+						{{- else -}}
+						{{- $param.Name -}}: out_tuple.{{- $index -}},
+						{{- end -}}
+						{{- end -}}
+					}
+				))
+			}
+			{{- end -}}
+			{{- end }}
+			_ => Err(fidl::Error::UnknownOrdinal {
+				ordinal: tx_header.ordinal(),
+				service_name: <{{ $protocol.Name }}Marker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+			})
+		}
+	}
 }
 
 /// A type which can be used to send responses and events into a borrowed channel.

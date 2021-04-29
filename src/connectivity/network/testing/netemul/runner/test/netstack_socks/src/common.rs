@@ -38,7 +38,7 @@ impl BusConnection {
     pub async fn wait_for_event(&self, code: i32) -> Result<(), Error> {
         let _ = self
             .bus
-            .wait_for_event(
+            .wait_for_event_(
                 Event { code: Some(code), message: None, arguments: None, ..Event::EMPTY },
                 0,
             )

@@ -189,6 +189,11 @@ pub enum Error {
     #[error("A FIDL client encountered an IO error issuing a channel call: {}", _0)]
     ClientCall(#[source] zx_status::Status),
 
+    /// A FIDL client encountered an IO error while waiting for an event. For the
+    /// `zx_status::Status::PEER_CLOSED` error, `Error::ClientChannelClosed` is used instead.
+    #[error("A FIDL client encountered an IO error issuing a channel call: {}", _0)]
+    ClientEvent(#[source] zx_status::Status),
+
     /// A FIDL client's channel was closed. Contains an epitaph if one was sent by the server, or
     /// `zx_status::Status::PEER_CLOSED` otherwise.
     #[error("A FIDL client's channel to the service {} was closed: {}", service_name, status)]

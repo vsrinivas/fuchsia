@@ -435,6 +435,12 @@ impl SomeProtocolSynchronousProxy {
     pub fn into_channel(self) -> fidl::Channel {
         self.client.into_channel()
     }
+
+    /// Waits until an event arrives and returns it. It is safe for other
+    /// threads to make concurrent requests while waiting for an event.
+    pub fn wait_for_event(&self, deadline: zx::Time) -> Result<SomeProtocolEvent, fidl::Error> {
+        SomeProtocolEvent::decode(self.client.wait_for_event(deadline)?)
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -496,29 +502,34 @@ impl futures::Stream for SomeProtocolEventStream {
         mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Self::Item>> {
-        let mut buf = match futures::ready!(futures::stream::StreamExt::poll_next_unpin(
+        let buf = match futures::ready!(futures::stream::StreamExt::poll_next_unpin(
             &mut self.event_receiver,
             cx
         )?) {
             Some(buf) => buf,
             None => return std::task::Poll::Ready(None),
         };
-        let (bytes, _handles) = buf.split_mut();
-        let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
-        std::task::Poll::Ready(Some(match tx_header.ordinal() {
-            _ => Err(fidl::Error::UnknownOrdinal {
-                ordinal: tx_header.ordinal(),
-                service_name: <SomeProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
-            }),
-        }))
+        std::task::Poll::Ready(Some(SomeProtocolEvent::decode(buf)))
     }
 }
 
 #[derive(Debug)]
 pub enum SomeProtocolEvent {}
 
-impl SomeProtocolEvent {}
+impl SomeProtocolEvent {
+    fn decode(mut buf: fidl::MessageBufEtc) -> Result<SomeProtocolEvent, fidl::Error> {
+        let (bytes, _handles) = buf.split_mut();
+        let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+
+        match tx_header.ordinal() {
+            _ => Err(fidl::Error::UnknownOrdinal {
+                ordinal: tx_header.ordinal(),
+                service_name: <SomeProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+            }),
+        }
+    }
+}
 
 /// A type which can be used to send responses and events into a borrowed channel.
 ///

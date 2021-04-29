@@ -342,6 +342,9 @@ var reservedWords = map[string]struct{}{
 	"async":   {},
 	"on_open": {},
 	"OnOpen":  {},
+	// TODO(fxbug.dev/66767): Remove "WaitForEvent".
+	"wait_for_event": {},
+	"WaitForEvent":   {},
 }
 
 var reservedSuffixes = []string{

@@ -268,6 +268,12 @@ impl InterfaceSynchronousProxy {
     pub fn into_channel(self) -> fidl::Channel {
         self.client.into_channel()
     }
+
+    /// Waits until an event arrives and returns it. It is safe for other
+    /// threads to make concurrent requests while waiting for an event.
+    pub fn wait_for_event(&self, deadline: zx::Time) -> Result<InterfaceEvent, fidl::Error> {
+        InterfaceEvent::decode(self.client.wait_for_event(deadline)?)
+    }
     /// method comment #1
     ///
     /// method comment #3
@@ -346,17 +352,38 @@ impl futures::Stream for InterfaceEventStream {
         mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Self::Item>> {
-        let mut buf = match futures::ready!(futures::stream::StreamExt::poll_next_unpin(
+        let buf = match futures::ready!(futures::stream::StreamExt::poll_next_unpin(
             &mut self.event_receiver,
             cx
         )?) {
             Some(buf) => buf,
             None => return std::task::Poll::Ready(None),
         };
+
+        std::task::Poll::Ready(Some(InterfaceEvent::decode(buf)))
+    }
+}
+
+#[derive(Debug)]
+pub enum InterfaceEvent {
+    OnEvent {},
+}
+
+impl InterfaceEvent {
+    #[allow(irrefutable_let_patterns)]
+    pub fn into_on_event(self) -> Option<()> {
+        if let InterfaceEvent::OnEvent {} = self {
+            Some(())
+        } else {
+            None
+        }
+    }
+
+    fn decode(mut buf: fidl::MessageBufEtc) -> Result<InterfaceEvent, fidl::Error> {
         let (bytes, _handles) = buf.split_mut();
         let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
-        std::task::Poll::Ready(Some(match tx_header.ordinal() {
+        match tx_header.ordinal() {
             0x37812b697096f6fa => {
                 let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
                 fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.doccomments/InterfaceOnEventEvent");
@@ -374,22 +401,6 @@ impl futures::Stream for InterfaceEventStream {
                 ordinal: tx_header.ordinal(),
                 service_name: <InterfaceMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
             }),
-        }))
-    }
-}
-
-#[derive(Debug)]
-pub enum InterfaceEvent {
-    OnEvent {},
-}
-
-impl InterfaceEvent {
-    #[allow(irrefutable_let_patterns)]
-    pub fn into_on_event(self) -> Option<()> {
-        if let InterfaceEvent::OnEvent {} = self {
-            Some(())
-        } else {
-            None
         }
     }
 }

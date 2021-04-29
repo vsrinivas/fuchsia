@@ -59,6 +59,12 @@ impl ChildSynchronousProxy {
     pub fn into_channel(self) -> fidl::Channel {
         self.client.into_channel()
     }
+
+    /// Waits until an event arrives and returns it. It is safe for other
+    /// threads to make concurrent requests while waiting for an event.
+    pub fn wait_for_event(&self, deadline: zx::Time) -> Result<ChildEvent, fidl::Error> {
+        ChildEvent::decode(self.client.wait_for_event(deadline)?)
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -120,29 +126,34 @@ impl futures::Stream for ChildEventStream {
         mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Self::Item>> {
-        let mut buf = match futures::ready!(futures::stream::StreamExt::poll_next_unpin(
+        let buf = match futures::ready!(futures::stream::StreamExt::poll_next_unpin(
             &mut self.event_receiver,
             cx
         )?) {
             Some(buf) => buf,
             None => return std::task::Poll::Ready(None),
         };
-        let (bytes, _handles) = buf.split_mut();
-        let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
-        std::task::Poll::Ready(Some(match tx_header.ordinal() {
-            _ => Err(fidl::Error::UnknownOrdinal {
-                ordinal: tx_header.ordinal(),
-                service_name: <ChildMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
-            }),
-        }))
+        std::task::Poll::Ready(Some(ChildEvent::decode(buf)))
     }
 }
 
 #[derive(Debug)]
 pub enum ChildEvent {}
 
-impl ChildEvent {}
+impl ChildEvent {
+    fn decode(mut buf: fidl::MessageBufEtc) -> Result<ChildEvent, fidl::Error> {
+        let (bytes, _handles) = buf.split_mut();
+        let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+
+        match tx_header.ordinal() {
+            _ => Err(fidl::Error::UnknownOrdinal {
+                ordinal: tx_header.ordinal(),
+                service_name: <ChildMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+            }),
+        }
+    }
+}
 
 /// A type which can be used to send responses and events into a borrowed channel.
 ///
@@ -343,6 +354,12 @@ impl ParentSynchronousProxy {
     pub fn into_channel(self) -> fidl::Channel {
         self.client.into_channel()
     }
+
+    /// Waits until an event arrives and returns it. It is safe for other
+    /// threads to make concurrent requests while waiting for an event.
+    pub fn wait_for_event(&self, deadline: zx::Time) -> Result<ParentEvent, fidl::Error> {
+        ParentEvent::decode(self.client.wait_for_event(deadline)?)
+    }
     pub fn r#get_child(
         &self,
         ___deadline: zx::Time,
@@ -519,29 +536,34 @@ impl futures::Stream for ParentEventStream {
         mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Self::Item>> {
-        let mut buf = match futures::ready!(futures::stream::StreamExt::poll_next_unpin(
+        let buf = match futures::ready!(futures::stream::StreamExt::poll_next_unpin(
             &mut self.event_receiver,
             cx
         )?) {
             Some(buf) => buf,
             None => return std::task::Poll::Ready(None),
         };
-        let (bytes, _handles) = buf.split_mut();
-        let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
-        std::task::Poll::Ready(Some(match tx_header.ordinal() {
-            _ => Err(fidl::Error::UnknownOrdinal {
-                ordinal: tx_header.ordinal(),
-                service_name: <ParentMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
-            }),
-        }))
+        std::task::Poll::Ready(Some(ParentEvent::decode(buf)))
     }
 }
 
 #[derive(Debug)]
 pub enum ParentEvent {}
 
-impl ParentEvent {}
+impl ParentEvent {
+    fn decode(mut buf: fidl::MessageBufEtc) -> Result<ParentEvent, fidl::Error> {
+        let (bytes, _handles) = buf.split_mut();
+        let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+
+        match tx_header.ordinal() {
+            _ => Err(fidl::Error::UnknownOrdinal {
+                ordinal: tx_header.ordinal(),
+                service_name: <ParentMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+            }),
+        }
+    }
+}
 
 /// A type which can be used to send responses and events into a borrowed channel.
 ///

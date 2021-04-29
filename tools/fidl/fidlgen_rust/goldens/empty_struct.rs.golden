@@ -65,6 +65,12 @@ impl EmptyProtocolSynchronousProxy {
     pub fn into_channel(self) -> fidl::Channel {
         self.client.into_channel()
     }
+
+    /// Waits until an event arrives and returns it. It is safe for other
+    /// threads to make concurrent requests while waiting for an event.
+    pub fn wait_for_event(&self, deadline: zx::Time) -> Result<EmptyProtocolEvent, fidl::Error> {
+        EmptyProtocolEvent::decode(self.client.wait_for_event(deadline)?)
+    }
     pub fn r#send_(&self, mut e: &mut Empty) -> Result<(), fidl::Error> {
         self.client.send(&mut (e), 0x1e4e78d0556b6f28)
     }
@@ -161,17 +167,38 @@ impl futures::Stream for EmptyProtocolEventStream {
         mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Self::Item>> {
-        let mut buf = match futures::ready!(futures::stream::StreamExt::poll_next_unpin(
+        let buf = match futures::ready!(futures::stream::StreamExt::poll_next_unpin(
             &mut self.event_receiver,
             cx
         )?) {
             Some(buf) => buf,
             None => return std::task::Poll::Ready(None),
         };
+
+        std::task::Poll::Ready(Some(EmptyProtocolEvent::decode(buf)))
+    }
+}
+
+#[derive(Debug)]
+pub enum EmptyProtocolEvent {
+    Receive { e: Empty },
+}
+
+impl EmptyProtocolEvent {
+    #[allow(irrefutable_let_patterns)]
+    pub fn into_receive(self) -> Option<(Empty)> {
+        if let EmptyProtocolEvent::Receive { e } = self {
+            Some((e))
+        } else {
+            None
+        }
+    }
+
+    fn decode(mut buf: fidl::MessageBufEtc) -> Result<EmptyProtocolEvent, fidl::Error> {
         let (bytes, _handles) = buf.split_mut();
         let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
-        std::task::Poll::Ready(Some(match tx_header.ordinal() {
+        match tx_header.ordinal() {
             0x45bd261c537791e0 => {
                 let mut out_tuple: (Empty,) = fidl::encoding::Decodable::new_empty();
                 fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.emptystruct/EmptyProtocolReceiveEvent");
@@ -189,22 +216,6 @@ impl futures::Stream for EmptyProtocolEventStream {
                 ordinal: tx_header.ordinal(),
                 service_name: <EmptyProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
             }),
-        }))
-    }
-}
-
-#[derive(Debug)]
-pub enum EmptyProtocolEvent {
-    Receive { e: Empty },
-}
-
-impl EmptyProtocolEvent {
-    #[allow(irrefutable_let_patterns)]
-    pub fn into_receive(self) -> Option<(Empty)> {
-        if let EmptyProtocolEvent::Receive { e } = self {
-            Some((e))
-        } else {
-            None
         }
     }
 }

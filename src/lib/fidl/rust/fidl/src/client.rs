@@ -739,7 +739,7 @@ impl ClientInner {
 pub mod sync {
     //! Synchronous FIDL Client
 
-    use fuchsia_zircon as zx;
+    use fuchsia_zircon::{self as zx, AsHandleRef};
 
     use super::*;
 
@@ -812,6 +812,35 @@ pub mod sync {
             Ok(output)
         }
 
+        /// Wait for an event to arrive on the underlying channel.
+        pub fn wait_for_event(&self, deadline: zx::Time) -> Result<MessageBufEtc, Error> {
+            let mut buf = zx::MessageBufEtc::new();
+            buf.ensure_capacity_bytes(zx::sys::ZX_CHANNEL_MAX_MSG_BYTES as usize);
+            buf.ensure_capacity_handle_infos(zx::sys::ZX_CHANNEL_MAX_MSG_HANDLES as usize);
+
+            loop {
+                self.channel
+                    .wait_handle(
+                        zx::Signals::CHANNEL_READABLE | zx::Signals::CHANNEL_PEER_CLOSED,
+                        deadline,
+                    )
+                    .map_err(|e| self.wrap_error(Error::ClientEvent, e))?;
+                match self.channel.read_etc(&mut buf) {
+                    Ok(()) => {
+                        // We succeeded in reading the message.
+                        return Ok(buf);
+                    }
+                    Err(zx::Status::SHOULD_WAIT) => {
+                        // Some other thread read the message we woke up to read.
+                        continue;
+                    }
+                    Err(e) => {
+                        return Err(self.wrap_error(Error::ClientRead, e));
+                    }
+                }
+            }
+        }
+
         /// Wraps an error in the given `variant` of the `Error` enum, except
         /// for `zx_status::Status::PEER_CLOSED`, in which case it uses the
         /// `Error::ClientChannelClosed` variant.
@@ -852,6 +881,8 @@ mod tests {
     const SEND_ORDINAL_HIGH_BYTE: u8 = 42;
     const SEND_ORDINAL: u64 = 42 << 32;
     const SEND_DATA: u8 = 55;
+
+    const EVENT_ORDINAL: u64 = 854 << 23;
 
     #[rustfmt::skip]
     fn expected_sent_bytes(tx_id_low_byte: u8) -> [u8; 24] {
@@ -936,7 +967,7 @@ mod tests {
             assert_ne!(header.tx_id(), 0);
             assert_eq!(header.ordinal(), SEND_ORDINAL);
             // First, send an event.
-            send_transaction(TransactionHeader::new(0, 5), &server_end);
+            send_transaction(TransactionHeader::new(0, EVENT_ORDINAL), &server_end);
             // Then send the reply. The kernel should pick the correct message to deliver based
             // on the tx_id.
             send_transaction(TransactionHeader::new(header.tx_id(), header.ordinal()), &server_end);
@@ -949,6 +980,38 @@ mod tests {
             )
             .context("sending query")?;
         assert_eq!(SEND_DATA, response_data);
+
+        let event_buf =
+            client.wait_for_event(zx::Time::after(5.seconds())).context("waiting for event")?;
+        let (bytes, _handles) = event_buf.split();
+        let (header, _body) = decode_transaction_header(&bytes).expect("event decode");
+        assert_eq!(header.ordinal(), EVENT_ORDINAL);
+
+        Ok(())
+    }
+
+    #[test]
+    fn sync_client_with_racing_events() -> Result<(), Error> {
+        let (client_end, server_end) = zx::Channel::create().context("chan create")?;
+        let client1 = Arc::new(sync::Client::new(client_end, "test_service"));
+        let client2 = client1.clone();
+
+        let thread1 = thread::spawn(move || {
+            let result = client1.wait_for_event(zx::Time::after(5.seconds()));
+            assert!(result.is_ok());
+        });
+
+        let thread2 = thread::spawn(move || {
+            let result = client2.wait_for_event(zx::Time::after(5.seconds()));
+            assert!(result.is_ok());
+        });
+
+        send_transaction(TransactionHeader::new(0, EVENT_ORDINAL), &server_end);
+        send_transaction(TransactionHeader::new(0, EVENT_ORDINAL), &server_end);
+
+        assert!(thread1.join().is_ok());
+        assert!(thread2.join().is_ok());
+
         Ok(())
     }
 
