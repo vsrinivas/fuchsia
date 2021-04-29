@@ -43,6 +43,8 @@
 namespace fidl {
 namespace flat {
 
+constexpr uint32_t kHandleSameRights = 0x80000000;  // ZX_HANDLE_SAME_RIGHTS
+
 using diagnostics::Diagnostic;
 using diagnostics::ErrorDef;
 using reporter::Reporter;
@@ -146,8 +148,6 @@ struct TypeConstructor final {
 
   // Set during compilation.
   const Type* type = nullptr;
-  uint32_t handle_obj_type_resolved = std::numeric_limits<uint32_t>::max();
-  types::HandleSubtype handle_subtype_identifier_resolved;
   std::optional<FromTypeAlias> from_type_alias;
 };
 
@@ -544,6 +544,36 @@ struct TypeAlias final : public Decl {
   const std::unique_ptr<TypeConstructor> partial_type_ctor;
 };
 
+// Wrapper class around a Library to provide specific methods to TypeTemplates.
+// Unlike making a direct friend relationship, this approach:
+// 1. avoids having to declare every TypeTemplate subclass as a friend
+// 2. only exposes the methods that are needed from the Library to the TypeTemplate.
+class LibraryMediator {
+ public:
+  explicit LibraryMediator(Library* library) : library_(library) {}
+
+  // These methods forward their implementation to the library_
+  bool ResolveType(TypeConstructor* type) const;
+  bool ResolveSizeBound(Constant* size_constant, const Size** out_size) const;
+  bool ResolveAsOptional(Constant* constant) const;
+  bool ResolveAsHandleSubtype(Resource* resource, const std::unique_ptr<Constant>& constant,
+                              uint32_t* out_obj_type) const;
+  bool ResolveAsHandleRights(Resource* resource, Constant* constant,
+                             const HandleRights** out_rights) const;
+
+  // This is unrelated to resolving arguments: it is required in the workaround for
+  // the special handling of handles, and can be removed once resources are fully
+  // generalized (see HandleTypeTemplate::GetResource)
+  Decl* LookupDeclByName(Name::Key name) const;
+
+  // Used specificaly in TypeAliasTypeTemplates to recursively compile the next
+  // type alias.
+  bool CompileDecl(Decl* decl) const;
+
+ private:
+  Library* library_;
+};
+
 class TypeTemplate {
  public:
   TypeTemplate(Name name, Typespace* typespace, Reporter* reporter)
@@ -556,25 +586,63 @@ class TypeTemplate {
   const Name& name() const { return name_; }
 
   struct CreateInvocation {
-    const std::optional<SourceSpan>& span;
+    CreateInvocation(const Name& name, const Type* arg_type, std::optional<uint32_t> obj_type,
+                     std::optional<types::HandleSubtype> handle_subtype,
+                     const HandleRights* handle_rights, const Size* size,
+                     const types::Nullability nullability)
+        : name(name),
+          arg_type(arg_type),
+          obj_type(obj_type),
+          handle_subtype(handle_subtype),
+          handle_rights(handle_rights),
+          size(size),
+          nullability(nullability) {}
+
+    const Name& name;
     const Type* arg_type;
-    const std::optional<uint32_t>& obj_type;
-    const std::optional<types::HandleSubtype>& handle_subtype;
+    std::optional<uint32_t> obj_type;
+    std::optional<types::HandleSubtype> handle_subtype;
     const HandleRights* handle_rights;
     const Size* size;
     const types::Nullability nullability;
   };
-  virtual bool Create(const CreateInvocation& args, std::unique_ptr<Type>* out_type,
+
+  // The set of unresolved layout arguments and constraints as they appear in the
+  // old syntax, i.e. coming directly from flat::TypeConstructorOld.
+  // Unlike in the more general form ArgsAndConstraintsNew, this representation
+  // can be resolved to the CreateInvocation before determining what the layout is.
+  struct ArgsAndConstraintsOld {
+    // Type templates should not need to know the name of the layout and should
+    // only require a span for reporting errors, since any logic related to the
+    // name itself should be encapsulated in the layout resolution process. However,
+    // currently an exception must be made for handles so that we can double check
+    // whether the name actual refers to a Resource at runtime (see
+    // TypeTemplate::GetResource for details).
+    const Name& name;
+    const std::unique_ptr<TypeConstructor>& maybe_arg_type_ctor;
+    const std::optional<Name>& handle_subtype_identifier;
+    const std::unique_ptr<Constant>& handle_rights;
+    const std::unique_ptr<Constant>& maybe_size;
+    const types::Nullability nullability;
+  };
+  virtual bool Create(const LibraryMediator& resolver, const ArgsAndConstraintsOld& unresolved_args,
+                      std::unique_ptr<Type>* out_type,
                       std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const = 0;
+  bool ResolveArgs(const LibraryMediator& resolver, const ArgsAndConstraintsOld& unresolved_args,
+                   std::unique_ptr<CreateInvocation>* out_args) const;
+
+  virtual bool GetResource(const LibraryMediator& resolver, const Name& name,
+                           Resource** out_resource) const;
 
  protected:
   bool Fail(const ErrorDef<const TypeTemplate*>& err, const std::optional<SourceSpan>& span) const;
+  template <typename... Args>
+  bool Fail(const ErrorDef<Args...>& err, const Args&... args) const;
 
   Typespace* typespace_;
 
   Name name_;
 
- private:
   Reporter* reporter_;
 };
 
@@ -587,9 +655,11 @@ class Typespace {
  public:
   explicit Typespace(Reporter* reporter) : reporter_(reporter) {}
 
-  bool Create(const flat::Name& name, const Type* arg_type, const std::optional<uint32_t>& obj_type,
-              const std::optional<types::HandleSubtype>& handle_subtype,
-              const HandleRights* handle_rights, const Size* size, types::Nullability nullability,
+  bool Create(const LibraryMediator& resolver, const flat::Name& name,
+              const std::unique_ptr<TypeConstructor>& maybe_arg_type_ctor,
+              const std::optional<Name>& handle_subtype_identifier,
+              const std::unique_ptr<Constant>& handle_rights,
+              const std::unique_ptr<Constant>& maybe_size, types::Nullability nullability,
               const Type** out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias);
 
@@ -608,11 +678,12 @@ class Typespace {
  private:
   friend class TypeAliasTypeTemplate;
 
-  bool CreateNotOwned(const flat::Name& name, const Type* arg_type,
-                      const std::optional<uint32_t>& obj_type,
-                      const std::optional<types::HandleSubtype>& handle_subtype,
-                      const HandleRights* handle_rights, const Size* size,
-                      types::Nullability nullability, std::unique_ptr<Type>* out_type,
+  bool CreateNotOwned(const LibraryMediator& resolver, const flat::Name& name,
+                      const std::unique_ptr<TypeConstructor>& maybe_arg_type_ctor,
+                      const std::optional<Name>& handle_subtype_identifier,
+                      const std::unique_ptr<Constant>& handle_rights,
+                      const std::unique_ptr<Constant>& maybe_size, types::Nullability nullability,
+                      std::unique_ptr<Type>* out_type,
                       std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias);
 
   std::map<Name::Key, std::unique_ptr<TypeTemplate>> templates_;
@@ -883,6 +954,9 @@ class Library {
 
   bool TypeCanBeConst(const Type* type);
   const Type* TypeResolve(const Type* type);
+  // Return true if this constant refers to the built in `optional` constraint,
+  // false otherwise.
+  bool ResolveAsOptional(Constant* constant) const;
   bool TypeIsConvertibleTo(const Type* from_type, const Type* to_type);
   std::unique_ptr<TypeConstructor> IdentifierTypeForDecl(const Decl* decl,
                                                          types::Nullability nullability,
@@ -931,10 +1005,11 @@ class Library {
   bool VerifyTypeCategory(TypeConstructor* type, AllowedCategories category);
 
   ConstantValue::Kind ConstantValuePrimitiveKind(const types::PrimitiveSubtype primitive_subtype);
-  bool ResolveHandleRightsConstant(TypeConstructor* type_ctor, const HandleRights** out_rights);
-  bool ResolveHandleSubtypeIdentifier(TypeConstructor* type_ctor, uint32_t* out_obj_type,
-                                      types::HandleSubtype* out_subtype);
-  bool ResolveSizeBound(TypeConstructor* type_ctor, const Size** out_size);
+  bool ResolveHandleRightsConstant(Resource* resource, Constant* constant,
+                                   const HandleRights** out_rights);
+  bool ResolveHandleSubtypeIdentifier(Resource* resource, const std::unique_ptr<Constant>& constant,
+                                      uint32_t* out_obj_type);
+  bool ResolveSizeBound(Constant* size_constant, const Size** out_size);
   bool ResolveOrOperatorConstant(Constant* constant, const Type* type,
                                  const ConstantValue& left_operand,
                                  const ConstantValue& right_operand);
@@ -1022,6 +1097,7 @@ class Library {
   uint32_t anon_counter_ = 0;
 
   VirtualSourceFile generated_source_file_{"generated"};
+  friend class LibraryMediator;
 };
 
 class StepBase {

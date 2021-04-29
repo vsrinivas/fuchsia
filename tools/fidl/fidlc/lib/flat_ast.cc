@@ -31,8 +31,6 @@ using namespace diagnostics;
 
 namespace {
 
-constexpr uint32_t kHandleSameRights = 0x80000000;  // ZX_HANDLE_SAME_RIGHTS
-
 class ScopeInsertResult {
  public:
   explicit ScopeInsertResult(std::unique_ptr<SourceSpan> previous_occurrence)
@@ -306,25 +304,27 @@ std::vector<std::reference_wrapper<const Union::Member>> Union::MembersSortedByX
   return sorted_members;
 }
 
-bool Typespace::Create(const flat::Name& name, const Type* arg_type,
-                       const std::optional<uint32_t>& obj_type,
-                       const std::optional<types::HandleSubtype>& handle_subtype,
-                       const HandleRights* handle_rights, const Size* size,
-                       types::Nullability nullability, const Type** out_type,
+bool Typespace::Create(const LibraryMediator& lib, const flat::Name& name,
+                       const std::unique_ptr<TypeConstructor>& maybe_arg_type_ctor,
+                       const std::optional<Name>& handle_subtype_identifier,
+                       const std::unique_ptr<Constant>& handle_rights,
+                       const std::unique_ptr<Constant>& maybe_size, types::Nullability nullability,
+                       const Type** out_type,
                        std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) {
   std::unique_ptr<Type> type;
-  if (!CreateNotOwned(name, arg_type, obj_type, handle_subtype, handle_rights, size, nullability,
-                      &type, out_from_type_alias))
+  if (!CreateNotOwned(lib, name, maybe_arg_type_ctor, handle_subtype_identifier, handle_rights,
+                      maybe_size, nullability, &type, out_from_type_alias))
     return false;
   types_.push_back(std::move(type));
   *out_type = types_.back().get();
   return true;
 }
 
-bool Typespace::CreateNotOwned(const flat::Name& name, const Type* arg_type,
-                               const std::optional<uint32_t>& obj_type,
-                               const std::optional<types::HandleSubtype>& handle_subtype,
-                               const HandleRights* handle_rights, const Size* size,
+bool Typespace::CreateNotOwned(const LibraryMediator& lib, const flat::Name& name,
+                               const std::unique_ptr<TypeConstructor>& maybe_arg_type_ctor,
+                               const std::optional<Name>& handle_subtype_identifier,
+                               const std::unique_ptr<Constant>& handle_rights,
+                               const std::unique_ptr<Constant>& maybe_size,
                                types::Nullability nullability, std::unique_ptr<Type>* out_type,
                                std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) {
   // TODO(pascallouis): lookup whether we've already created the type, and
@@ -336,12 +336,12 @@ bool Typespace::CreateNotOwned(const flat::Name& name, const Type* arg_type,
     reporter_->Report(ErrUnknownType, name.span(), name);
     return false;
   }
-  return type_template->Create({.span = name.span(),
-                                .arg_type = arg_type,
-                                .obj_type = obj_type,
-                                .handle_subtype = handle_subtype,
+  return type_template->Create(lib,
+                               {.name = name,
+                                .maybe_arg_type_ctor = maybe_arg_type_ctor,
+                                .handle_subtype_identifier = handle_subtype_identifier,
                                 .handle_rights = handle_rights,
-                                .size = size,
+                                .maybe_size = maybe_size,
                                 .nullability = nullability},
                                out_type, out_from_type_alias);
 }
@@ -369,23 +369,97 @@ bool TypeTemplate::Fail(const ErrorDef<const TypeTemplate*>& err,
   return false;
 }
 
+template <typename... Args>
+bool TypeTemplate::Fail(const ErrorDef<Args...>& err, const Args&... args) const {
+  reporter_->Report(err, args...);
+  return false;
+}
+
+bool TypeTemplate::ResolveArgs(const LibraryMediator& lib,
+                               const ArgsAndConstraintsOld& unresolved_args,
+                               std::unique_ptr<TypeTemplate::CreateInvocation>* out_args) const {
+  const Type* maybe_arg_type = nullptr;
+  if (unresolved_args.maybe_arg_type_ctor != nullptr) {
+    if (!lib.ResolveType(unresolved_args.maybe_arg_type_ctor.get()))
+      return false;
+    maybe_arg_type = unresolved_args.maybe_arg_type_ctor->type;
+  }
+
+  const Size* size = nullptr;
+  if (unresolved_args.maybe_size != nullptr) {
+    if (!lib.ResolveSizeBound(unresolved_args.maybe_size.get(), &size)) {
+      return false;
+    }
+  }
+
+  Resource* handle_resource_decl;
+  if (unresolved_args.handle_subtype_identifier || unresolved_args.handle_rights) {
+    if (!GetResource(lib, unresolved_args.name, &handle_resource_decl))
+      return false;
+  }
+
+  std::optional<uint32_t> obj_type = std::nullopt;
+  std::optional<types::HandleSubtype> handle_subtype = std::nullopt;
+  if (unresolved_args.handle_subtype_identifier) {
+    const Name& name = *unresolved_args.handle_subtype_identifier;
+    // the new path uses Constants, the old path uses Names; convert the Name
+    // to a Constant here to share code paths.
+    auto into_constant = static_cast<std::unique_ptr<Constant>>(
+        std::make_unique<IdentifierConstant>(name, *name.span()));
+    assert(handle_resource_decl);
+    uint32_t raw_obj_type;
+    if (!lib.ResolveAsHandleSubtype(handle_resource_decl, into_constant, &raw_obj_type))
+      return Fail(ErrCouldNotResolveHandleSubtype, name);
+    obj_type = raw_obj_type;
+    handle_subtype = types::HandleSubtype(raw_obj_type);
+  }
+
+  const HandleRights* rights = nullptr;
+  if (unresolved_args.handle_rights) {
+    if (!lib.ResolveAsHandleRights(handle_resource_decl, unresolved_args.handle_rights.get(),
+                                   &rights))
+      return Fail(ErrCouldNotResolveHandleRights);
+  }
+
+  // No work needed for nullability - in the old syntax there's nothing to resolve
+  // because ? always indicates nullable.
+
+  *out_args =
+      std::make_unique<CreateInvocation>(unresolved_args.name, maybe_arg_type, obj_type,
+                                         handle_subtype, rights, size, unresolved_args.nullability);
+  return true;
+}
+
+bool TypeTemplate::GetResource(const LibraryMediator& lib, const Name& name,
+                               Resource** out_resource) const {
+  assert(false &&
+         "Only the HandleTypeTemplate should ever need to do this, because of hardcoding in the "
+         "parser");
+  __builtin_unreachable();
+}
+
 class PrimitiveTypeTemplate : public TypeTemplate {
  public:
   PrimitiveTypeTemplate(Typespace* typespace, Reporter* reporter, const std::string& name,
                         types::PrimitiveSubtype subtype)
       : TypeTemplate(Name::CreateIntrinsic(name), typespace, reporter), subtype_(subtype) {}
 
-  bool Create(const CreateInvocation& args, std::unique_ptr<Type>* out_type,
+  bool Create(const LibraryMediator& lib, const ArgsAndConstraintsOld& unresolved_args,
+              std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
-    assert(!args.handle_subtype);
-    assert(!args.handle_rights);
+    std::unique_ptr<CreateInvocation> args;
+    if (!ResolveArgs(lib, unresolved_args, &args))
+      return false;
 
-    if (args.arg_type != nullptr)
-      return Fail(ErrCannotBeParameterized, args.span);
-    if (args.size != nullptr)
-      return Fail(ErrCannotHaveSize, args.span);
-    if (args.nullability == types::Nullability::kNullable)
-      return Fail(ErrCannotBeNullable, args.span);
+    assert(!args->handle_subtype);
+    assert(!args->handle_rights);
+
+    if (args->arg_type != nullptr)
+      return Fail(ErrCannotBeParameterized, args->name.span());
+    if (args->size != nullptr)
+      return Fail(ErrCannotHaveSize, args->name.span());
+    if (args->nullability == types::Nullability::kNullable)
+      return Fail(ErrCannotBeNullable, args->name.span());
 
     *out_type = std::make_unique<PrimitiveType>(name_, subtype_);
     return true;
@@ -401,18 +475,23 @@ class BytesTypeTemplate final : public TypeTemplate {
       : TypeTemplate(Name::CreateIntrinsic("vector"), typespace, reporter),
         uint8_type_(kUint8Type) {}
 
-  bool Create(const CreateInvocation& args, std::unique_ptr<Type>* out_type,
+  bool Create(const LibraryMediator& lib, const ArgsAndConstraintsOld& unresolved_args,
+              std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
-    assert(!args.handle_subtype);
-    assert(!args.handle_rights);
+    std::unique_ptr<CreateInvocation> args;
+    if (!ResolveArgs(lib, unresolved_args, &args))
+      return false;
 
-    if (args.arg_type != nullptr)
-      return Fail(ErrCannotBeParameterized, args.span);
-    const Size* size = args.size;
+    assert(!args->handle_subtype);
+    assert(!args->handle_rights);
+
+    if (args->arg_type != nullptr)
+      return Fail(ErrCannotBeParameterized, args->name.span());
+    const Size* size = args->size;
     if (size == nullptr)
       size = &kMaxSize;
 
-    *out_type = std::make_unique<VectorType>(name_, &uint8_type_, size, args.nullability);
+    *out_type = std::make_unique<VectorType>(name_, &uint8_type_, size, args->nullability);
     return true;
   }
 
@@ -432,21 +511,26 @@ class ArrayTypeTemplate final : public TypeTemplate {
   ArrayTypeTemplate(Typespace* typespace, Reporter* reporter)
       : TypeTemplate(Name::CreateIntrinsic("array"), typespace, reporter) {}
 
-  bool Create(const CreateInvocation& args, std::unique_ptr<Type>* out_type,
+  bool Create(const LibraryMediator& lib, const ArgsAndConstraintsOld& unresolved_args,
+              std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
-    assert(!args.handle_subtype);
-    assert(!args.handle_rights);
+    std::unique_ptr<CreateInvocation> args;
+    if (!ResolveArgs(lib, unresolved_args, &args))
+      return false;
 
-    if (args.arg_type == nullptr)
-      return Fail(ErrMustBeParameterized, args.span);
-    if (args.size == nullptr)
-      return Fail(ErrMustHaveSize, args.span);
-    if (args.size->value == 0)
-      return Fail(ErrMustHaveNonZeroSize, args.span);
-    if (args.nullability == types::Nullability::kNullable)
-      return Fail(ErrCannotBeNullable, args.span);
+    assert(!args->handle_subtype);
+    assert(!args->handle_rights);
 
-    *out_type = std::make_unique<ArrayType>(name_, args.arg_type, args.size);
+    if (args->arg_type == nullptr)
+      return Fail(ErrMustBeParameterized, args->name.span());
+    if (args->size == nullptr)
+      return Fail(ErrMustHaveSize, args->name.span());
+    if (args->size->value == 0)
+      return Fail(ErrMustHaveNonZeroSize, args->name.span());
+    if (args->nullability == types::Nullability::kNullable)
+      return Fail(ErrCannotBeNullable, args->name.span());
+
+    *out_type = std::make_unique<ArrayType>(name_, args->arg_type, args->size);
     return true;
   }
 };
@@ -456,18 +540,23 @@ class VectorTypeTemplate final : public TypeTemplate {
   VectorTypeTemplate(Typespace* typespace, Reporter* reporter)
       : TypeTemplate(Name::CreateIntrinsic("vector"), typespace, reporter) {}
 
-  bool Create(const CreateInvocation& args, std::unique_ptr<Type>* out_type,
+  bool Create(const LibraryMediator& lib, const ArgsAndConstraintsOld& unresolved_args,
+              std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
-    assert(!args.handle_subtype);
-    assert(!args.handle_rights);
+    std::unique_ptr<CreateInvocation> args;
+    if (!ResolveArgs(lib, unresolved_args, &args))
+      return false;
 
-    if (args.arg_type == nullptr)
-      return Fail(ErrMustBeParameterized, args.span);
-    const Size* size = args.size;
+    assert(!args->handle_subtype);
+    assert(!args->handle_rights);
+
+    if (args->arg_type == nullptr)
+      return Fail(ErrMustBeParameterized, args->name.span());
+    const Size* size = args->size;
     if (size == nullptr)
       size = &kMaxSize;
 
-    *out_type = std::make_unique<VectorType>(name_, args.arg_type, size, args.nullability);
+    *out_type = std::make_unique<VectorType>(name_, args->arg_type, size, args->nullability);
     return true;
   }
 
@@ -482,18 +571,23 @@ class StringTypeTemplate final : public TypeTemplate {
   StringTypeTemplate(Typespace* typespace, Reporter* reporter)
       : TypeTemplate(Name::CreateIntrinsic("string"), typespace, reporter) {}
 
-  bool Create(const CreateInvocation& args, std::unique_ptr<Type>* out_type,
+  bool Create(const LibraryMediator& lib, const ArgsAndConstraintsOld& unresolved_args,
+              std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
-    assert(!args.handle_subtype);
-    assert(!args.handle_rights);
+    std::unique_ptr<CreateInvocation> args;
+    if (!ResolveArgs(lib, unresolved_args, &args))
+      return false;
 
-    if (args.arg_type != nullptr)
-      return Fail(ErrCannotBeParameterized, args.span);
-    const Size* size = args.size;
+    assert(!args->handle_subtype);
+    assert(!args->handle_rights);
+
+    if (args->arg_type != nullptr)
+      return Fail(ErrCannotBeParameterized, args->name.span());
+    const Size* size = args->size;
     if (size == nullptr)
       size = &kMaxSize;
 
-    *out_type = std::make_unique<StringType>(name_, size, args.nullability);
+    *out_type = std::make_unique<StringType>(name_, size, args->nullability);
     return true;
   }
 
@@ -508,24 +602,58 @@ class HandleTypeTemplate final : public TypeTemplate {
   HandleTypeTemplate(Typespace* typespace, Reporter* reporter)
       : TypeTemplate(Name::CreateIntrinsic("handle"), typespace, reporter) {}
 
-  bool Create(const CreateInvocation& args, std::unique_ptr<Type>* out_type,
+  bool Create(const LibraryMediator& lib, const ArgsAndConstraintsOld& unresolved_args,
+              std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
-    assert(args.arg_type == nullptr);
+    std::unique_ptr<CreateInvocation> args;
+    if (!ResolveArgs(lib, unresolved_args, &args))
+      return false;
 
-    if (args.size != nullptr)
-      return Fail(ErrCannotHaveSize, args.span);
+    assert(args->arg_type == nullptr);
+
+    if (args->size != nullptr)
+      return Fail(ErrCannotHaveSize, args->name.span());
 
     // TODO(fxbug.dev/64629): When we are ready to create handle types, we
     // should have an object type (and/or subtype) determined and not require
     // these hardcoded defaults.
-    auto obj_type = args.obj_type.value_or(static_cast<uint32_t>(types::HandleSubtype::kHandle));
-    auto handle_subtype = args.handle_subtype.value_or(types::HandleSubtype::kHandle);
-    const HandleRights* handle_rights = args.handle_rights;
+    // We need to allow setting a default obj_type in resource_definition
+    // declarations rather than hard-coding.
+    auto obj_type = args->obj_type.value_or(static_cast<uint32_t>(types::HandleSubtype::kHandle));
+    auto handle_subtype = args->handle_subtype.value_or(types::HandleSubtype::kHandle);
+    const HandleRights* handle_rights = args->handle_rights;
     if (handle_rights == nullptr)
       handle_rights = &kSameRights;
 
     *out_type = std::make_unique<HandleType>(name_, obj_type, handle_subtype, handle_rights,
-                                             args.nullability);
+                                             args->nullability);
+    return true;
+  }
+
+  // Currently we take a name as parameter, but the parser restricts this name to be
+  // something that ends in "handle".
+  // In a more general implementation, we would add such an entry at "Consume" time of
+  // the resource in question, allowing us to set a pointer to the Resource declaration
+  // in on the HandleTypeTemplate itself. We can't currently do this because we don't have
+  // access to the definition of "handle" when we insert it into the root typespace, so we
+  // need to resort to looking it up and doing validation at runtime.
+  bool GetResource(const LibraryMediator& lib, const Name& name, Resource** out_resource) const {
+    Decl* handle_decl = lib.LookupDeclByName(name);
+    if (!handle_decl || handle_decl->kind != Decl::Kind::kResource) {
+      // These errors are not TypeTemplate errors, and so there's no support for them
+      // with TypeTemplate::Fail(). Eventually, these errors will be reported elsewhere;
+      // manually report them for now.
+      reporter_->Report(ErrHandleSubtypeNotResource, name);
+      return false;
+    }
+
+    auto* resource = static_cast<Resource*>(handle_decl);
+    if (!resource->subtype_ctor || resource->subtype_ctor->name.full_name() != "uint32") {
+      reporter_->Report(ErrResourceMustBeUint32Derived, resource->name);
+      return false;
+    }
+
+    *out_resource = resource;
     return true;
   }
 
@@ -540,22 +668,27 @@ class RequestTypeTemplate final : public TypeTemplate {
   RequestTypeTemplate(Typespace* typespace, Reporter* reporter)
       : TypeTemplate(Name::CreateIntrinsic("request"), typespace, reporter) {}
 
-  bool Create(const CreateInvocation& args, std::unique_ptr<Type>* out_type,
+  bool Create(const LibraryMediator& lib, const ArgsAndConstraintsOld& unresolved_args,
+              std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
-    assert(!args.handle_subtype);
-    assert(!args.handle_rights);
+    std::unique_ptr<CreateInvocation> args;
+    if (!ResolveArgs(lib, unresolved_args, &args))
+      return false;
 
-    if (args.arg_type == nullptr)
-      return Fail(ErrMustBeParameterized, args.span);
-    if (args.arg_type->kind != Type::Kind::kIdentifier)
-      return Fail(ErrMustBeAProtocol, args.span);
-    auto protocol_type = static_cast<const IdentifierType*>(args.arg_type);
+    assert(!args->handle_subtype);
+    assert(!args->handle_rights);
+
+    if (args->arg_type == nullptr)
+      return Fail(ErrMustBeParameterized, args->name.span());
+    if (args->arg_type->kind != Type::Kind::kIdentifier)
+      return Fail(ErrMustBeAProtocol, args->name.span());
+    auto protocol_type = static_cast<const IdentifierType*>(args->arg_type);
     if (protocol_type->type_decl->kind != Decl::Kind::kProtocol)
-      return Fail(ErrMustBeAProtocol, args.span);
-    if (args.size != nullptr)
-      return Fail(ErrCannotHaveSize, args.span);
+      return Fail(ErrMustBeAProtocol, args->name.span());
+    if (args->size != nullptr)
+      return Fail(ErrCannotHaveSize, args->name.span());
 
-    *out_type = std::make_unique<RequestHandleType>(name_, protocol_type, args.nullability);
+    *out_type = std::make_unique<RequestHandleType>(name_, protocol_type, args->nullability);
     return true;
   }
 };
@@ -568,9 +701,14 @@ class TypeDeclTypeTemplate final : public TypeTemplate {
         library_(library),
         type_decl_(type_decl) {}
 
-  bool Create(const CreateInvocation& args, std::unique_ptr<Type>* out_type,
+  bool Create(const LibraryMediator& lib, const ArgsAndConstraintsOld& unresolved_args,
+              std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
-    assert(!args.handle_subtype);
+    std::unique_ptr<CreateInvocation> args;
+    if (!ResolveArgs(lib, unresolved_args, &args))
+      return false;
+
+    assert(!args->handle_subtype);
 
     if (!type_decl_->compiled && type_decl_->kind != Decl::Kind::kProtocol) {
       if (type_decl_->compiling) {
@@ -595,8 +733,8 @@ class TypeDeclTypeTemplate final : public TypeTemplate {
       case Decl::Kind::kBits:
       case Decl::Kind::kEnum:
       case Decl::Kind::kTable:
-        if (args.nullability == types::Nullability::kNullable)
-          return Fail(ErrCannotBeNullable, args.span);
+        if (args->nullability == types::Nullability::kNullable)
+          return Fail(ErrCannotBeNullable, args->name.span());
         break;
 
       case Decl::Kind::kResource: {
@@ -608,11 +746,11 @@ class TypeDeclTypeTemplate final : public TypeTemplate {
       }
 
       default:
-        if (args.nullability == types::Nullability::kNullable)
+        if (args->nullability == types::Nullability::kNullable)
           break;
     }
 
-    *out_type = std::make_unique<IdentifierType>(name_, args.nullability, type_decl_);
+    *out_type = std::make_unique<IdentifierType>(name_, args->nullability, type_decl_);
     return true;
   }
 
@@ -623,82 +761,76 @@ class TypeDeclTypeTemplate final : public TypeTemplate {
 
 class TypeAliasTypeTemplate final : public TypeTemplate {
  public:
-  TypeAliasTypeTemplate(Name name, Typespace* typespace, Reporter* reporter, Library* library,
-                        TypeAlias* decl)
-      : TypeTemplate(std::move(name), typespace, reporter), library_(library), decl_(decl) {}
+  TypeAliasTypeTemplate(Name name, Typespace* typespace, Reporter* reporter, TypeAlias* decl)
+      : TypeTemplate(std::move(name), typespace, reporter), decl_(decl) {}
 
-  bool Create(const CreateInvocation& args, std::unique_ptr<Type>* out_type,
+  bool Create(const LibraryMediator& lib, const ArgsAndConstraintsOld& unresolved_args,
+              std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
+    std::unique_ptr<CreateInvocation> args;
+    if (!ResolveArgs(lib, unresolved_args, &args))
+      return false;
+
     // Note that because fidlc only populates these handle fields if it sees
     // "handle" in the type constructor, aliases of handles will never correctly
     // capture any handle constraints. It is not a TODO to fix this since this
     // issue does not exist in the new syntax.
-    assert(!args.handle_subtype);
-    assert(!args.handle_rights);
+    assert(!args->handle_subtype);
+    assert(!args->handle_rights);
 
     if (!decl_->compiled) {
       assert(!decl_->compiling && "TODO(fxbug.dev/35218): Improve support for recursive types.");
 
-      if (!library_->CompileDecl(decl_)) {
-        return Fail(ErrMustBeParameterized, args.span);
+      if (!lib.CompileDecl(decl_)) {
+        return Fail(ErrMustBeParameterized, args->name.span());
       }
     }
 
-    if (args.arg_type != nullptr)
-      return Fail(ErrCannotParameterizeAlias, args.span);
-    const Type* arg_type = nullptr;
-    if (decl_->partial_type_ctor->maybe_arg_type_ctor) {
-      arg_type = decl_->partial_type_ctor->maybe_arg_type_ctor->type;
-    }
+    const auto& aliased_type = decl_->partial_type_ctor;
+
+    if (unresolved_args.maybe_arg_type_ctor)
+      return Fail(ErrCannotParameterizeAlias, args->name.span());
+    // We know unresolved_args.maybe_arg_type_ctor is null, but need to use a conditional here
+    // for the compiler to accept the reference
+    const auto& maybe_arg_type_ctor = aliased_type->maybe_arg_type_ctor;
 
     // TODO(fxbug.dev/74193): This code needs to "merge" the two size constraints
     // by taking the stronger of the two (smaller bound). If we are applying a weaker
     // constraint (i.e. the arg has no effect), we could consider making this a warning.
-    const Size* size = nullptr;
-    if (decl_->partial_type_ctor->maybe_size) {
-      if (args.size) {
-        return Fail(ErrCannotBoundTwice, args.span);
-      }
-      size = static_cast<const Size*>(&decl_->partial_type_ctor->maybe_size->Value());
-    } else {
-      size = args.size;
-    }
+    if (unresolved_args.maybe_size && aliased_type->maybe_size)
+      return Fail(ErrCannotBoundTwice, unresolved_args.name.span());
+    const auto& maybe_size =
+        unresolved_args.maybe_size ? unresolved_args.maybe_size : aliased_type->maybe_size;
 
-    std::optional<uint32_t> obj_type;
-    std::optional<types::HandleSubtype> handle_subtype;
-    if (decl_->partial_type_ctor->handle_subtype_identifier) {
-      obj_type = decl_->partial_type_ctor->handle_obj_type_resolved;
-      handle_subtype = decl_->partial_type_ctor->handle_subtype_identifier_resolved;
-    }
+    // TODO(fxbug.dev/74193): Restrict rights further rather than just taking the
+    // rights specified in the aliased type.
+    // We know unresolved_args.handle_subtype_identifier is null, but need to use a conditional here
+    // for the compiler to accept the reference (see asserts above)
+    const auto& handle_subtype_identifier = unresolved_args.handle_subtype_identifier
+                                                ? unresolved_args.handle_subtype_identifier
+                                                : aliased_type->handle_subtype_identifier;
 
     // TODO(fxbug.dev/74193): The type is nullable if optional is specified in
     // either context
-    types::Nullability nullability;
-    if (decl_->partial_type_ctor->nullability == types::Nullability::kNullable) {
-      if (args.nullability == types::Nullability::kNullable) {
-        return Fail(ErrCannotIndicateNullabilityTwice, args.span);
-      }
-      nullability = types::Nullability::kNullable;
-    } else {
-      nullability = args.nullability;
-    }
+    bool is_arg_nullable = unresolved_args.nullability == types::Nullability::kNullable;
+    bool is_aliased_nullable = aliased_type->nullability == types::Nullability::kNullable;
+    if (is_arg_nullable && is_aliased_nullable)
+      return Fail(ErrCannotIndicateNullabilityTwice, unresolved_args.name.span());
+    types::Nullability nullability = is_arg_nullable || is_aliased_nullable
+                                         ? types::Nullability::kNullable
+                                         : types::Nullability::kNonnullable;
 
-    const HandleRights* rights = nullptr;
-    if (decl_->partial_type_ctor->handle_rights) {
-      rights = static_cast<const HandleRights*>(&decl_->partial_type_ctor->handle_rights->Value());
-    }
-
-    if (!typespace_->CreateNotOwned(decl_->partial_type_ctor->name, arg_type, obj_type,
-                                    handle_subtype, rights, size, nullability, out_type, nullptr))
+    if (!typespace_->CreateNotOwned(
+            lib, aliased_type->name, maybe_arg_type_ctor, handle_subtype_identifier,
+            decl_->partial_type_ctor->handle_rights, maybe_size, nullability, out_type, nullptr))
       return false;
     if (out_from_type_alias)
-      *out_from_type_alias = TypeConstructor::FromTypeAlias(decl_, args.arg_type, args.size,
-                                                            args.handle_subtype, args.nullability);
+      *out_from_type_alias = TypeConstructor::FromTypeAlias(
+          decl_, args->arg_type, args->size, args->handle_subtype, args->nullability);
     return true;
   }
 
  private:
-  Library* library_;
   TypeAlias* decl_;
 };
 
@@ -1432,8 +1564,8 @@ bool Library::RegisterDecl(std::unique_ptr<Decl> decl) {
     }
     case Decl::Kind::kTypeAlias: {
       auto type_alias_decl = static_cast<TypeAlias*>(decl_ptr);
-      auto type_alias_template = std::make_unique<TypeAliasTypeTemplate>(
-          name, typespace_, reporter_, this, type_alias_decl);
+      auto type_alias_template =
+          std::make_unique<TypeAliasTypeTemplate>(name, typespace_, reporter_, type_alias_decl);
       typespace_->AddTemplate(std::move(type_alias_template));
       break;
     }
@@ -2788,6 +2920,24 @@ bool Library::ResolveLiteralConstant(LiteralConstant* literal_constant, const Ty
   }
 }
 
+bool Library::ResolveAsOptional(Constant* constant) const {
+  assert(constant);
+
+  if (constant->kind != Constant::Kind::kIdentifier)
+    return false;
+
+  // This refers to the `optional` constraint only if it is "optional" AND
+  // it is not shadowed by a previous definition.
+  // Note that as we improve scoping rules, we would need to allow `fidl.optional`
+  // to be the FQN for the `optional` constant.
+  auto identifier_constant = static_cast<IdentifierConstant*>(constant);
+  auto decl = LookupDeclByName(identifier_constant->name.memberless_key());
+  if (decl)
+    return false;
+
+  return identifier_constant->name.decl_name() == "optional";
+}
+
 const Type* Library::TypeResolve(const Type* type) {
   if (type->kind != Type::Kind::kIdentifier) {
     return type;
@@ -3959,11 +4109,8 @@ bool Library::CompileUnion(Union* union_declaration) {
   return true;
 }
 
-bool Library::CompileTypeAlias(TypeAlias* decl) {
-  if (!CompileTypeConstructor(decl->partial_type_ctor.get())) {
-    return false;
-  }
-  return ResolveSizeBound(decl->partial_type_ctor.get(), nullptr /* out_size */);
+bool Library::CompileTypeAlias(TypeAlias* type_alias) {
+  return CompileTypeConstructor(type_alias->partial_type_ctor.get());
 }
 
 bool Library::Compile() {
@@ -4019,40 +4166,10 @@ bool Library::CompileTypeConstructor(TypeConstructor* type_ctor) {
 
 bool Library::CompileTypeConstructorAllowing(TypeConstructor* type_ctor,
                                              AllowedCategories category) {
-  const Type* maybe_arg_type = nullptr;
-  if (type_ctor->maybe_arg_type_ctor != nullptr) {
-    if (!CompileTypeConstructor(type_ctor->maybe_arg_type_ctor.get()))
-      return false;
-    maybe_arg_type = type_ctor->maybe_arg_type_ctor->type;
-  }
-  const Size* size = nullptr;
-  if (!ResolveSizeBound(type_ctor, &size)) {
-    return false;
-  }
-
-  std::optional<types::HandleSubtype> handle_subtype;
-  if (type_ctor->handle_subtype_identifier) {
-    if (!ResolveHandleSubtypeIdentifier(type_ctor, &type_ctor->handle_obj_type_resolved,
-                                        &type_ctor->handle_subtype_identifier_resolved)) {
-      return Fail(ErrCouldNotResolveHandleSubtype, type_ctor->name.span(),
-                  type_ctor->handle_subtype_identifier.value());
-    }
-    handle_subtype = type_ctor->handle_subtype_identifier_resolved;
-  } else {
-    // TODO(fxbug.dev/64629): We need to allow setting a default obj_type in
-    // resource_definition declarations rather than hard-coding.
-    type_ctor->handle_obj_type_resolved = static_cast<uint32_t>(types::HandleSubtype::kHandle);
-  }
-  std::optional<uint32_t> obj_type = type_ctor->handle_obj_type_resolved;
-
-  const HandleRights* rights = nullptr;
-  if (type_ctor->handle_rights) {
-    if (!ResolveHandleRightsConstant(type_ctor, &rights))
-      return Fail(ErrCouldNotResolveHandleRights);
-  }
-
-  if (!typespace_->Create(type_ctor->name, maybe_arg_type, obj_type, handle_subtype, rights, size,
-                          type_ctor->nullability, &type_ctor->type, &type_ctor->from_type_alias))
+  if (!typespace_->Create(LibraryMediator(this), type_ctor->name, type_ctor->maybe_arg_type_ctor,
+                          type_ctor->handle_subtype_identifier, type_ctor->handle_rights,
+                          type_ctor->maybe_size, type_ctor->nullability, &type_ctor->type,
+                          &type_ctor->from_type_alias))
     return false;
 
   // postcondition: compilation sets the Type of the TypeConstructor
@@ -4088,72 +4205,63 @@ bool Library::VerifyTypeCategory(TypeConstructor* type_ctor, AllowedCategories c
   return true;
 }
 
-bool Library::ResolveHandleRightsConstant(TypeConstructor* type_ctor,
+bool Library::ResolveHandleRightsConstant(Resource* resource, Constant* constant,
                                           const HandleRights** out_rights) {
-  Decl* handle_decl = LookupDeclByName(type_ctor->name);
-  if (!handle_decl || handle_decl->kind != Decl::Kind::kResource) {
-    return Fail(ErrHandleSubtypeNotResource, type_ctor->name.span(), type_ctor->name);
-  }
-
-  auto* resource = static_cast<Resource*>(handle_decl);
   if (!resource->subtype_ctor || resource->subtype_ctor->name.full_name() != "uint32") {
-    return Fail(ErrResourceMustBeUint32Derived, type_ctor->name.span(), resource->name);
+    return Fail(ErrResourceMustBeUint32Derived, resource->name);
   }
 
   auto rights_property = resource->LookupProperty("rights");
   if (!rights_property) {
-    return Fail(ErrResourceMissingRightsProperty, type_ctor->name.span(), resource->name);
+    return Fail(ErrResourceMissingRightsProperty, resource->name);
   }
 
   Decl* rights_decl = LookupDeclByName(rights_property->type_ctor->name);
   if (!rights_decl || rights_decl->kind != Decl::Kind::kBits) {
-    return Fail(ErrResourceRightsPropertyMustReferToBits, type_ctor->name.span(), resource->name);
+    return Fail(ErrResourceRightsPropertyMustReferToBits, resource->name);
   }
 
-  const Type* rights_type = rights_property->type_ctor.get()->type;
-  if (!ResolveConstant(type_ctor->handle_rights.get(), rights_type)) {
+  const Type* rights_type = rights_property->type_ctor->type;
+  if (!ResolveConstant(constant, rights_type))
     return false;
-  }
-  if (out_rights) {
-    *out_rights = static_cast<const HandleRights*>(&type_ctor->handle_rights->Value());
-  }
+
+  if (out_rights)
+    *out_rights = static_cast<const HandleRights*>(&constant->Value());
   return true;
 }
 
-bool Library::ResolveHandleSubtypeIdentifier(TypeConstructor* type_ctor, uint32_t* out_obj_type,
-                                             types::HandleSubtype* out_subtype) {
-  assert(type_ctor->handle_subtype_identifier);
-
+bool Library::ResolveHandleSubtypeIdentifier(Resource* resource,
+                                             const std::unique_ptr<Constant>& constant,
+                                             uint32_t* out_obj_type) {
   // We only support an extremely limited form of resource suitable for
   // handles here, where it must be:
   // - derived from uint32
   // - have a single properties element
   // - the single property element must be a reference to an enum
   // - the single property must be named "subtype".
-
-  Decl* handle_decl = LookupDeclByName(type_ctor->name);
-  if (!handle_decl || handle_decl->kind != Decl::Kind::kResource) {
-    return Fail(ErrHandleSubtypeNotResource, type_ctor->name.span(), type_ctor->name);
+  if (constant->kind != Constant::Kind::kIdentifier) {
+    return Fail(ErrHandleSubtypeMustReferToResourceSubtype, constant->span);
   }
+  auto identifier_constant = static_cast<IdentifierConstant*>(constant.get());
+  const Name& handle_subtype_identifier = identifier_constant->name;
 
-  auto* resource = static_cast<Resource*>(handle_decl);
   if (!resource->subtype_ctor || resource->subtype_ctor->name.full_name() != "uint32") {
-    return Fail(ErrResourceMustBeUint32Derived, type_ctor->name.span(), resource->name);
+    return Fail(ErrResourceMustBeUint32Derived, resource->name);
   }
   auto subtype_property = resource->LookupProperty("subtype");
   if (!subtype_property) {
-    return Fail(ErrResourceMissingSubtypeProperty, type_ctor->name.span(), resource->name);
+    return Fail(ErrResourceMissingSubtypeProperty, resource->name);
   }
 
   Decl* subtype_decl = LookupDeclByName(subtype_property->type_ctor->name);
   if (!subtype_decl || subtype_decl->kind != Decl::Kind::kEnum) {
-    return Fail(ErrResourceSubtypePropertyMustReferToEnum, type_ctor->name.span(), resource->name);
+    return Fail(ErrResourceSubtypePropertyMustReferToEnum, resource->name);
   }
 
-  const Type* subtype_type = subtype_property->type_ctor.get()->type;
+  const Type* subtype_type = subtype_property->type_ctor->type;
   auto* subtype_enum = static_cast<Enum*>(subtype_decl);
   for (const auto& member : subtype_enum->members) {
-    if (member.name.data() == type_ctor->handle_subtype_identifier->span()->data()) {
+    if (member.name.data() == handle_subtype_identifier.span()->data()) {
       if (!ResolveConstant(member.value.get(), subtype_type)) {
         return false;
       }
@@ -4161,8 +4269,6 @@ bool Library::ResolveHandleSubtypeIdentifier(TypeConstructor* type_ctor, uint32_
       auto obj_type = static_cast<uint32_t>(
           reinterpret_cast<const flat::NumericConstantValue<uint32_t>&>(value));
       *out_obj_type = obj_type;
-      // TODO(fxbug.dev/64629): Remove.
-      *out_subtype = types::HandleSubtype(obj_type);
       return true;
     }
   }
@@ -4170,15 +4276,7 @@ bool Library::ResolveHandleSubtypeIdentifier(TypeConstructor* type_ctor, uint32_
   return false;
 }
 
-bool Library::ResolveSizeBound(TypeConstructor* type_ctor, const Size** out_size) {
-  if (!type_ctor->maybe_size) {
-    if (out_size) {
-      *out_size = nullptr;
-    }
-    return true;
-  }
-
-  Constant* size_constant = type_ctor->maybe_size.get();
+bool Library::ResolveSizeBound(Constant* size_constant, const Size** out_size) {
   if (!ResolveConstant(size_constant, &kSizeType)) {
     if (size_constant->kind == Constant::Kind::kIdentifier) {
       auto name = static_cast<IdentifierConstant*>(size_constant)->name;
@@ -4188,7 +4286,7 @@ bool Library::ResolveSizeBound(TypeConstructor* type_ctor, const Size** out_size
     }
   }
   if (!size_constant->IsResolved()) {
-    return Fail(ErrCouldNotParseSizeBound, type_ctor->name.span());
+    return Fail(ErrCouldNotParseSizeBound, size_constant->span);
   }
   if (out_size) {
     *out_size = static_cast<const Size*>(&size_constant->Value());
@@ -4355,6 +4453,35 @@ std::unique_ptr<TypeConstructor> TypeConstructor::CreateSizeType() {
       std::optional<Name>() /* handle_subtype_identifier */, nullptr /* handle_rights */,
       nullptr /* maybe_size */, types::Nullability::kNonnullable, fidl::utils::Syntax::kOld);
 }
+
+bool LibraryMediator::ResolveType(TypeConstructor* type) const {
+  return library_->CompileTypeConstructor(type);
+}
+
+bool LibraryMediator::ResolveSizeBound(Constant* size_constant, const Size** out_size) const {
+  return library_->ResolveSizeBound(size_constant, out_size);
+}
+
+bool LibraryMediator::ResolveAsOptional(Constant* constant) const {
+  return library_->ResolveAsOptional(constant);
+}
+
+bool LibraryMediator::ResolveAsHandleSubtype(Resource* resource,
+                                             const std::unique_ptr<Constant>& constant,
+                                             uint32_t* out_obj_type) const {
+  return library_->ResolveHandleSubtypeIdentifier(resource, constant, out_obj_type);
+}
+
+bool LibraryMediator::ResolveAsHandleRights(Resource* resource, Constant* constant,
+                                            const HandleRights** out_rights) const {
+  return library_->ResolveHandleRightsConstant(resource, constant, out_rights);
+}
+
+Decl* LibraryMediator::LookupDeclByName(Name::Key name) const {
+  return library_->LookupDeclByName(name);
+}
+
+bool LibraryMediator::CompileDecl(Decl* decl) const { return library_->CompileDecl(decl); }
 
 }  // namespace flat
 }  // namespace fidl

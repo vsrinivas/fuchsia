@@ -13,6 +13,7 @@
 #include <zxtest/zxtest.h>
 
 #include "error_test.h"
+#include "fidl/diagnostics.h"
 #include "test_library.h"
 
 namespace {
@@ -973,11 +974,7 @@ struct Foo {
 };
 
 )FIDL");
-    EXPECT_FALSE(library.Compile());
-    const auto& errors = library.errors();
-    ASSERT_EQ(errors.size(), 2);
-    ASSERT_ERR(errors[0], fidl::ErrExpectedValueButGotType);
-    ASSERT_ERR(errors[1], fidl::ErrCouldNotParseSizeBound);
+    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownType);
   }
 
   {
@@ -991,11 +988,7 @@ struct Foo {
 };
 
 )FIDL");
-    EXPECT_FALSE(library.Compile());
-    const auto& errors = library.errors();
-    ASSERT_EQ(errors.size(), 2);
-    ASSERT_ERR(errors[0], fidl::ErrExpectedValueButGotType);
-    ASSERT_ERR(errors[1], fidl::ErrCouldNotParseSizeBound);
+    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownType);
   }
 }
 

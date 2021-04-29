@@ -308,6 +308,8 @@ constexpr ErrorDef<flat::Name> ErrResourceMissingRightsProperty(
     "resource {} expected to have the rights property, but it was missing");
 constexpr ErrorDef<flat::Name> ErrResourceSubtypePropertyMustReferToEnum(
     "the subtype property must be an enum, but wasn't in resource {}");
+constexpr ErrorDef<> ErrHandleSubtypeMustReferToResourceSubtype(
+    "the subtype must be a constant referring to the resource's subtype enum");
 constexpr ErrorDef<flat::Name> ErrResourceRightsPropertyMustReferToBits(
     "the rights property must be a bits, but wasn't in resource {}");
 

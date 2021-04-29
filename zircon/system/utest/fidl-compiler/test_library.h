@@ -392,7 +392,7 @@ class TestLibrary final {
 
   void set_warnings_as_errors(bool value) { reporter_->set_warnings_as_errors(value); }
 
-  const fidl::flat::Library* library() const { return library_.get(); }
+  fidl::flat::Library* library() const { return library_.get(); }
 
   const fidl::SourceFile& source_file() const {
     assert(all_sources_.size() == 1 && "convenience method only possible with single source");
