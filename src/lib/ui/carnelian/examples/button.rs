@@ -16,7 +16,7 @@ use carnelian::{
             TextVerticalAlignment,
         },
         layout::{CrossAxisAlignment, Flex, FlexOptions, MainAxisAlignment, MainAxisSize, Stack},
-        scene::{Scene, SceneBuilder, SceneOptions},
+        scene::{Scene, SceneBuilder},
     },
     App, AppAssistant, Message, Point, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr,
     ViewKey,
@@ -314,12 +314,6 @@ impl ViewAssistant for ButtonViewAssistant {
             let min_dimension = target_size.width.min(target_size.height);
             let font_size = (min_dimension / 5.0).ceil().min(64.0);
             let padding = (min_dimension / 20.0).ceil().max(8.0);
-            let mut options = SceneOptions::with_background_color(self.bg_color);
-            options.root_arranger = Some(Flex::with_options_ptr(FlexOptions::column(
-                MainAxisSize::Max,
-                MAIN_AXIS_ALIGNMENTS[self.column_main_alignment_index],
-                CrossAxisAlignment::Center,
-            )));
             let mut builder = SceneBuilder::new().background_color(self.bg_color);
             let mut button = None;
             let mut indicator_id = None;
