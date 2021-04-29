@@ -9,6 +9,7 @@
 #include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/fidl/epitaph.h>
+#include <lib/fit/defer.h>
 #include <threads.h>
 #include <zircon/status.h>
 
@@ -174,6 +175,7 @@ zx_status_t InputReport::Bind() {
     zxlogf(ERROR, "hid-parser: parsing report descriptor failed with error %d", int(parse_res));
     return ZX_ERR_INTERNAL;
   }
+  auto free_desc = fit::defer([dev_desc]() { hid::FreeDeviceDescriptor(dev_desc); });
 
   auto count = dev_desc->rep_count;
   if (count == 0) {
