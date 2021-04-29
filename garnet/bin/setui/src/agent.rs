@@ -38,6 +38,9 @@ pub mod inspect;
 /// Earcons.
 pub mod earcons;
 
+/// Agent for capturing config load events.
+pub mod inspect_config;
+
 /// Agent for capturing policy state from messages from the message hub to
 /// policy proxies.
 pub mod inspect_policy;

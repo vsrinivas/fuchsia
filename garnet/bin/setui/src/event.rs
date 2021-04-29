@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use crate::base::SettingType;
+use crate::config;
 use crate::event;
 use crate::message::base::{role, Audience};
 use crate::payload_convert;
@@ -20,6 +21,7 @@ pub enum Payload {
 pub enum Event {
     Custom(&'static str),
     CameraUpdate(camera_watcher::Event),
+    ConfigLoad(config::base::Event),
     Earcon(earcon::Event),
     MediaButtons(media_buttons::Event),
     Restore(restore::Event),
