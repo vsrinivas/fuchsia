@@ -38,7 +38,6 @@ template("generate_flavors") {
         name = "canary"
         archive = "${invoker.prebuilt_archive_base_path}_latest/arch/$target_cpu/${invoker.target_name}.far"
         production_safe = true
-        debug_archive = "${invoker.debug_archive_base_path}_latest/${invoker.target_name}.symbols.tar.bz2"
       },
       {
         name = "custom"
