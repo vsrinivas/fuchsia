@@ -10,10 +10,7 @@
     use: [
         { protocol: "fuchsia.sys2.WorkSchedulerControl" },
         {
-            protocol: [
-                "fuchsia.sys2.WorkScheduler",
-                "fuchsia.test.workscheduler.WorkSchedulerDispatchReporter",
-            ],
+            protocol: [ "fuchsia.sys2.WorkScheduler" ],
             from: "framework",
         },
     ],

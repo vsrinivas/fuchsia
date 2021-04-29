@@ -3,35 +3,25 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{Context as _, Error},
-    fidl_fuchsia_sys2 as fsys, fidl_fuchsia_test_workscheduler as fws, fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
-    fuchsia_component::server::ServiceFs,
-    futures::{StreamExt, TryStreamExt},
+    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_component::server::ServiceFs,
+    futures::StreamExt,
 };
 
-fn main() -> Result<(), Error> {
-    let mut executor = fasync::Executor::new().expect("error creating executor");
-    let mut fs = ServiceFs::new_local();
-    fs.dir("svc").add_fidl_service(move |stream| {
-        fasync::Task::local(run_worker_service(stream)).detach();
-    });
-    fs.take_and_serve_directory_handle().expect("failed to serve outgoing directory");
-    executor.run_singlethreaded(fs.collect::<()>());
-    Ok(())
+enum ExposedServices {
+    Worker(fsys::WorkerRequestStream),
 }
 
-async fn run_worker_service(mut stream: fsys::WorkerRequestStream) {
-    if let Some(event) = stream.try_next().await.expect("failed to serve Worker service") {
-        let fsys::WorkerRequest::DoWork { work_id, responder } = event;
-        responder.send(&mut Ok(())).expect("failed to send DoWork response");
-        let work_scheduler_dispath_reporter =
-            connect_to_service::<fws::WorkSchedulerDispatchReporterMarker>()
-                .context("error connecting to WorkSchedulerDispatchReporter")
-                .unwrap();
-        work_scheduler_dispath_reporter
-            .on_do_work_called(&work_id)
-            .await
-            .expect("error reporting dispatched work");
-    }
+#[fasync::run_singlethreaded]
+async fn main() {
+    // Serve the worker protocol and receive the scheduled work
+    let mut fs = ServiceFs::new_local();
+    fs.dir("svc").add_fidl_service(ExposedServices::Worker);
+    fs.take_and_serve_directory_handle().expect("failed to serve outgoing directory");
+
+    let ExposedServices::Worker(mut stream) = fs.next().await.unwrap();
+
+    let fsys::WorkerRequest::DoWork { work_id, responder } = stream.next().await.unwrap().unwrap();
+
+    assert_eq!(work_id, "TEST");
+    responder.send(&mut Ok(())).unwrap();
 }

@@ -3,23 +3,21 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{Context as _, Error},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
 };
 
 #[fasync::run_singlethreaded]
-async fn main() -> Result<(), Error> {
-    let work_scheduler_control = connect_to_service::<fsys::WorkSchedulerControlMarker>()
-        .context("error connecting to WorkSchedulerControl")?;
+async fn main() {
+    // Schedule some work (against ourselves)
+    let work_scheduler_control = connect_to_service::<fsys::WorkSchedulerControlMarker>().unwrap();
+    let work_scheduler = connect_to_service::<fsys::WorkSchedulerMarker>().unwrap();
+
     work_scheduler_control
         .set_batch_period(1)
         .await
         .expect("connection error setting batch period")
         .expect("error setting batch period");
-
-    let work_scheduler = connect_to_service::<fsys::WorkSchedulerMarker>()
-        .context("error connecting to WorkScheduler")?;
     work_scheduler
         .schedule_work(
             "TEST",
@@ -32,5 +30,4 @@ async fn main() -> Result<(), Error> {
         .await
         .expect("connection error scheduling work item")
         .expect("error scheduling work item");
-    Ok(())
 }

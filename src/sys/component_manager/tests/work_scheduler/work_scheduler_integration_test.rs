@@ -3,9 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    component_events::{events::*, injectors::*, matcher::EventMatcher},
+    component_events::{events::*, matcher::*, sequence::*},
     test_utils_lib::opaque_test::*,
-    work_scheduler_dispatch_reporter::{DispatchedEvent, WorkSchedulerDispatchReporter},
 };
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -16,20 +15,18 @@ async fn basic_work_scheduler_test() {
 
     let event_source = test.connect_to_event_source().await.unwrap();
     let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Started::NAME], EventMode::Async)])
+        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME], EventMode::Async)])
         .await
         .unwrap();
 
-    let work_scheduler_dispatch_reporter = WorkSchedulerDispatchReporter::new();
-    work_scheduler_dispatch_reporter.inject(&event_source, EventMatcher::ok()).await;
-
     event_source.start_component_tree().await;
 
-    // Expect the root component to be bound to
-    EventMatcher::ok().moniker(".").expect_match::<Started>(&mut event_stream).await;
-
-    let dispatched_event = work_scheduler_dispatch_reporter.wait_for_dispatched().await;
-    assert_eq!(DispatchedEvent::new("TEST".to_string()), dispatched_event);
+    // Expect the root component to exit cleanly
+    EventMatcher::ok()
+        .stop(Some(ExitStatusMatcher::Clean))
+        .moniker(".")
+        .expect_match::<Stopped>(&mut event_stream)
+        .await;
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -39,28 +36,25 @@ async fn unbound_work_scheduler_test() {
     let test = OpaqueTest::default(root_component_url).await.unwrap();
 
     let event_source = test.connect_to_event_source().await.unwrap();
-    let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Started::NAME], EventMode::Async)])
+    let event_stream = event_source
+        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME], EventMode::Async)])
         .await
         .unwrap();
 
-    let work_scheduler_dispatch_reporter = WorkSchedulerDispatchReporter::new();
-    work_scheduler_dispatch_reporter.inject(&event_source, EventMatcher::ok()).await;
-
     event_source.start_component_tree().await;
 
-    // Expect the root component to be bound to
-    EventMatcher::ok().moniker(".").expect_match::<Started>(&mut event_stream).await;
-
-    // `/worker_sibling:0` has started.
-    EventMatcher::ok()
-        .moniker("./worker_sibling:0")
-        .expect_match::<Started>(&mut event_stream)
-        .await;
-
-    // We no longer need to track `StartInstance` events.
-    drop(event_stream);
-
-    let dispatched_event = work_scheduler_dispatch_reporter.wait_for_dispatched().await;
-    assert_eq!(DispatchedEvent::new("TEST".to_string()), dispatched_event);
+    // Expect both components to exit cleanly
+    EventSequence::new()
+        .all_of(
+            vec![
+                EventMatcher::ok()
+                    .stop(Some(ExitStatusMatcher::Clean))
+                    .moniker("./worker_sibling:0"),
+                EventMatcher::ok().stop(Some(ExitStatusMatcher::Clean)).moniker("./worker_child:0"),
+            ],
+            Ordering::Unordered,
+        )
+        .expect(event_stream)
+        .await
+        .unwrap();
 }
