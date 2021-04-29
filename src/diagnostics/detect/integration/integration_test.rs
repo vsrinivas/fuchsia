@@ -25,36 +25,24 @@ mod fake_crash_reporting_product_register;
 use {
     anyhow::{bail, format_err, Error},
     async_trait::async_trait,
-    component_events::{
-        events::{Event, EventMode, EventStream, EventSubscription, Stopped},
-        injectors::{CapabilityInjector, DirectoryInjector},
-        matcher::EventMatcher,
-    },
+    component_events::{events::*, matcher::*},
     fake_archive_accessor::FakeArchiveAccessor,
     fake_crash_reporter::FakeCrashReporter,
     fake_crash_reporting_product_register::FakeCrashReportingProductRegister,
+    fidl_fuchsia_diagnostics as diagnostics, fidl_fuchsia_feedback as fcrash,
+    fidl_fuchsia_io2 as fio2,
+    fuchsia_component::server::*,
+    fuchsia_component_test::builder::*,
+    fuchsia_zircon as zx,
     futures::{channel::mpsc, FutureExt, SinkExt, StreamExt},
     log::*,
     std::sync::Arc,
-    test_utils_lib::opaque_test::OpaqueTest,
-    vfs::{
-        directory::{
-            helper::DirectlyMutable, immutable::connection::io1::ImmutableConnection,
-            simple::Simple,
-        },
-        file::vmo::asynchronous::read_only_const,
-        pseudo_directory,
-    },
 };
 
 const DETECT_PROGRAM_URL: &str =
     "fuchsia-pkg://fuchsia.com/detect-integration-test#meta/detect-component.cm";
 // Keep this the same as the command line arg in meta/detect.cml.
 const CHECK_PERIOD_SECONDS: u64 = 5;
-// The capability name Detect needs for its config/data directory
-const CONFIG_DATA_CAPABILITY_NAME: &str = "config-data";
-// The capability name Detect needs for its ArchiveAccessor connection
-const ARCHIVE_ACCESSOR_CAPABILITY_NAME: &str = "fuchsia.diagnostics.FeedbackArchiveAccessor";
 
 // Test that the "repeat" field of snapshots works correctly.
 mod test_snapshot_throttle;
@@ -64,35 +52,48 @@ mod test_trigger_truth;
 mod test_filing_enable;
 // Test that all characters other than [a-z-] are converted to that set.
 mod test_snapshot_sanitizing;
-// run_a_test() verifies the Diagnostic-reading period by checking that no test completes too early.
-// Manually verified: test fails if command line is 4 seconds and CHECK_PERIOD_SECONDS is 5.
 
-async fn run_all_tests() -> Vec<Result<(), Error>> {
-    futures::future::join_all(vec![
-        run_a_test(test_snapshot_throttle::test()),
-        run_a_test(test_trigger_truth::test()),
-        run_a_test(test_filing_enable::test_with_enable()),
-        run_a_test(test_filing_enable::test_bad_enable()),
-        run_a_test(test_filing_enable::test_false_enable()),
-        run_a_test(test_filing_enable::test_no_enable()),
-        run_a_test(test_filing_enable::test_without_file()),
-        run_a_test(test_snapshot_sanitizing::test()),
-    ])
-    .await
+#[fuchsia::test]
+async fn test_snapshot_throttle() -> Result<(), Error> {
+    run_a_test(test_snapshot_throttle::test()).await
 }
 
 #[fuchsia::test]
-async fn entry_point() -> Result<(), Error> {
-    for result in run_all_tests().await.into_iter() {
-        if result.is_err() {
-            error!("{:?}", result);
-            return result;
-        }
-    }
-    Ok(())
+async fn test_trigger_truth() -> Result<(), Error> {
+    run_a_test(test_trigger_truth::test()).await
+}
+#[fuchsia::test]
+async fn test_snapshot_sanitizing() -> Result<(), Error> {
+    run_a_test(test_snapshot_sanitizing::test()).await
+}
+
+#[fuchsia::test]
+async fn test_filing_enable() -> Result<(), Error> {
+    run_a_test(test_filing_enable::test_with_enable()).await
+}
+
+#[fuchsia::test]
+async fn test_filing_bad_enable() -> Result<(), Error> {
+    run_a_test(test_filing_enable::test_bad_enable()).await
+}
+
+#[fuchsia::test]
+async fn test_filing_false_enable() -> Result<(), Error> {
+    run_a_test(test_filing_enable::test_false_enable()).await
+}
+
+#[fuchsia::test]
+async fn test_filing_no_enable() -> Result<(), Error> {
+    run_a_test(test_filing_enable::test_no_enable()).await
+}
+
+#[fuchsia::test]
+async fn test_filing_without_file() -> Result<(), Error> {
+    run_a_test(test_filing_enable::test_without_file()).await
 }
 
 // Each test*.rs file returns one of these from its "pub test()" method.
+#[derive(Clone)]
 pub struct TestData {
     // Just used for logging.
     name: String,
@@ -108,6 +109,7 @@ pub struct TestData {
 }
 
 // ConfigFile contains file information to help build a PseudoDirectory of configuration files.
+#[derive(Clone)]
 struct ConfigFile {
     name: String,
     contents: String,
@@ -152,18 +154,8 @@ impl DoneWaiter {
         DoneSignaler { sender: self.sender.clone() }
     }
 
-    async fn wait(&mut self, exit_stream: Option<&mut EventStream>) {
-        match exit_stream {
-            Some(exit_stream) => {
-                let receiver = self.receiver.next().fuse();
-                let exit_event = exit_stream.next().fuse();
-                pin_utils::pin_mut!(receiver, exit_event);
-                futures::select!(_ = receiver => {}, _ = exit_event => {});
-            }
-            None => {
-                self.receiver.next().await;
-            }
-        }
+    async fn wait(&mut self) {
+        self.receiver.next().await;
     }
 }
 
@@ -190,53 +182,153 @@ impl fake_archive_accessor::EventSignaler for ArchiveEventSignaler {
         self.event_sender.clone().send(Err(format_err!("{}", error))).await.unwrap();
     }
 }
+
+fn create_mock_component(
+    test_data: TestData,
+    crash_reporter: Arc<FakeCrashReporter>,
+    crash_reporting_product_register: Arc<FakeCrashReportingProductRegister>,
+    archive_accessor: Arc<FakeArchiveAccessor>,
+) -> ComponentSource {
+    ComponentSource::mock(move |mock_handles| {
+        let test_data = test_data.clone();
+        let crash_reporter = crash_reporter.clone();
+        let crash_reporting_product_register = crash_reporting_product_register.clone();
+        let archive_accessor = archive_accessor.clone();
+
+        async move {
+            let mut fs = ServiceFs::new();
+
+            // Serve data directory
+            let mut config_dir = fs.dir("config");
+            let mut data_dir = config_dir.dir("data");
+
+            for ConfigFile { name, contents } in test_data.config_files.iter() {
+                let size = contents.len() as u64;
+                let vmo = zx::Vmo::create(size).unwrap();
+                vmo.write(contents.as_bytes(), 0).unwrap();
+                data_dir.add_vmo_file_at(name, vmo, 0, size);
+            }
+
+            // Serve crash reporter, crash reporting product register, and archive accessor
+            fs.dir("svc")
+                .add_fidl_service(|stream: fcrash::CrashReporterRequestStream| {
+                    crash_reporter.clone().serve_async(stream);
+                })
+                .add_fidl_service(|stream: fcrash::CrashReportingProductRegisterRequestStream| {
+                    crash_reporting_product_register.clone().serve_async(stream);
+                })
+                .add_fidl_service_at(
+                    "fuchsia.diagnostics.FeedbackArchiveAccessor",
+                    |stream: diagnostics::ArchiveAccessorRequestStream| {
+                        archive_accessor.clone().serve_async(stream);
+                    },
+                );
+
+            fs.serve_connection(mock_handles.outgoing_dir.into_channel()).unwrap();
+            fs.collect::<()>().await;
+            Ok::<(), anyhow::Error>(())
+        }
+        .boxed()
+    })
+}
+
 async fn run_a_test(test_data: TestData) -> Result<(), Error> {
-    info!("Running test {}", test_data.name);
     let start_time = std::time::Instant::now();
     let mut done_waiter = DoneWaiter::new();
     let (events_sender, events_receiver) = mpsc::unbounded();
 
-    // Start a component_manager as a v1 component
-    let test = OpaqueTest::default(DETECT_PROGRAM_URL).await.unwrap();
-    let event_source = test.connect_to_event_source().await.unwrap();
-    let mut exit_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME], EventMode::Sync)])
-        .await
-        .unwrap();
+    let crash_reporter = FakeCrashReporter::new(events_sender.clone(), done_waiter.get_signaler());
 
-    DirectoryInjector::new(prepare_injected_config_directory(&test_data))
-        .inject(&event_source, EventMatcher::ok().capability_name(CONFIG_DATA_CAPABILITY_NAME))
-        .await;
-
-    let registration_capability =
+    let crash_reporting_product_register =
         FakeCrashReportingProductRegister::new(done_waiter.get_signaler());
-    registration_capability.inject(&event_source, EventMatcher::ok()).await;
 
     let event_signaler =
         Box::new(ArchiveEventSignaler::new(events_sender.clone(), done_waiter.get_signaler()));
-    let archive_capability =
-        FakeArchiveAccessor::new(&test_data.inspect_data, Some(event_signaler));
-    archive_capability
-        .inject(&event_source, EventMatcher::ok().capability_name(ARCHIVE_ACCESSOR_CAPABILITY_NAME))
-        .await;
+    let archive_accessor = FakeArchiveAccessor::new(&test_data.inspect_data, Some(event_signaler));
 
-    let report_capability =
-        FakeCrashReporter::new(events_sender.clone(), done_waiter.get_signaler());
-    report_capability.inject(&event_source, EventMatcher::ok()).await;
+    let mut builder = RealmBuilder::new().await.unwrap();
+    builder.add_eager_component("detect", ComponentSource::url(DETECT_PROGRAM_URL)).await.unwrap();
 
-    // Unblock the component_manager.
-    event_source.start_component_tree().await;
+    let mock_component = create_mock_component(
+        test_data.clone(),
+        crash_reporter.clone(),
+        crash_reporting_product_register.clone(),
+        archive_accessor.clone(),
+    );
+
+    builder.add_component("mocks", mock_component).await.unwrap();
+
+    // Forward logging to debug test breakages.
+    builder
+        .add_route(CapabilityRoute {
+            capability: Capability::protocol("fuchsia.logger.LogSink"),
+            source: RouteEndpoint::AboveRoot,
+            targets: vec![RouteEndpoint::component("detect")],
+        })
+        .unwrap();
+
+    // Forward mocks to detect
+    builder
+        .add_route(CapabilityRoute {
+            capability: Capability::protocol("fuchsia.feedback.CrashReporter"),
+            source: RouteEndpoint::component("mocks"),
+            targets: vec![RouteEndpoint::component("detect")],
+        })
+        .unwrap();
+
+    builder
+        .add_route(CapabilityRoute {
+            capability: Capability::protocol("fuchsia.feedback.CrashReportingProductRegister"),
+            source: RouteEndpoint::component("mocks"),
+            targets: vec![RouteEndpoint::component("detect")],
+        })
+        .unwrap();
+
+    builder
+        .add_route(CapabilityRoute {
+            capability: Capability::protocol("fuchsia.diagnostics.FeedbackArchiveAccessor"),
+            source: RouteEndpoint::component("mocks"),
+            targets: vec![RouteEndpoint::component("detect")],
+        })
+        .unwrap();
+
+    let rights = fio2::Operations::from_bits(fio2::R_STAR_DIR).unwrap();
+    builder
+        .add_route(CapabilityRoute {
+            capability: Capability::directory("config-data", "/config", rights),
+            source: RouteEndpoint::component("mocks"),
+            targets: vec![RouteEndpoint::component("detect")],
+        })
+        .unwrap();
+
+    // Register for stopped events
+    let event_source = EventSource::new().unwrap();
+    let mut exit_stream = event_source
+        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME], EventMode::Async)])
+        .await
+        .unwrap();
+
+    // Start the component tree
+    let realm_instance = builder.build().create().await.unwrap();
 
     // Await the test result.
     if test_data.bails {
+        let root_name = realm_instance.root.child_name();
+        let moniker = format!(".*{}.*detect:0", root_name);
+        let exit_future = EventMatcher::ok()
+            .stop(None)
+            .moniker(moniker)
+            .wait::<Stopped>(&mut exit_stream)
+            .boxed();
+
         // If it should bail, exit_stream will tell us it has exited. However,
         // still collect events in case we observe more activity than we should.
-        done_waiter.wait(Some(&mut exit_stream)).await;
+        futures::future::select(done_waiter.wait().boxed(), exit_future).await;
     } else {
         // If it shouldn't bail, avoid race conditions by not checking exit_stream.
         // If the program doesn't do what it should and done_waiter never fires,
         // the test will eventually time out and fail.
-        done_waiter.wait(None).await;
+        done_waiter.wait().await;
     }
     let events = drain(events_receiver).await?;
     let end_time = std::time::Instant::now();
@@ -246,9 +338,9 @@ async fn run_a_test(test_data: TestData) -> Result<(), Error> {
     // having arrived and been recorded. To avoid any possibility of flakes, if the
     // test takes less than 10 seconds, only insist that no error was detected; don't insist that
     // a correct registration has arrived.
-    if registration_capability.detected_error()
+    if crash_reporting_product_register.detected_error()
         || (minimum_test_time_seconds >= 10
-            && !registration_capability.detected_good_registration())
+            && !crash_reporting_product_register.detected_good_registration())
     {
         error!("Test {} failed: Incorrect registration.", test_data.name);
         bail!("Test {} failed: Incorrect registration.", test_data.name);
@@ -349,15 +441,4 @@ fn evaluate_test_events(test: &TestData, events: &Vec<TestEvent>) -> Result<(), 
         which_iteration += 1;
     }
     Ok(())
-}
-
-fn prepare_injected_config_directory(test: &TestData) -> Arc<Simple<ImmutableConnection>> {
-    let leaf;
-    let data_directory = pseudo_directory! {
-        "data" => pseudo_directory! {leaf -> },
-    };
-    for ConfigFile { name, contents } in test.config_files.iter() {
-        leaf.add_entry(name, read_only_const(contents.as_bytes())).unwrap();
-    }
-    data_directory
 }

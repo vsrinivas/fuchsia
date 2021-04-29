@@ -13,8 +13,7 @@ use {
     },
     archivist_accessor::ArchiveAccessor,
     async_trait::async_trait,
-    component_events::injectors::ProtocolInjector,
-    fidl_fuchsia_diagnostics as diagnostics,
+    fidl_fuchsia_diagnostics as diagnostics, fuchsia_async as fasync,
     futures::StreamExt,
     log::*,
     parking_lot::Mutex,
@@ -127,19 +126,17 @@ impl FakeArchiveAccessor {
         Ok(())
     }
 
+    pub fn serve_async(self: Arc<Self>, stream: diagnostics::ArchiveAccessorRequestStream) {
+        fasync::Task::spawn(async move {
+            let result = self.serve_stream(stream).await;
+            if let Err(e) = result {
+                error!("Error while serving ArchiveAccessor: {:?}", e);
+            }
+        })
+        .detach();
+    }
+
     pub fn get_selectors_requested(&self) -> Vec<BTreeSet<String>> {
         self.selectors_requested.lock().clone()
-    }
-}
-
-#[async_trait]
-impl ProtocolInjector for FakeArchiveAccessor {
-    type Marker = diagnostics::ArchiveAccessorMarker;
-
-    async fn serve(
-        self: Arc<Self>,
-        request_stream: diagnostics::ArchiveAccessorRequestStream,
-    ) -> Result<(), Error> {
-        self.serve_stream(request_stream).await
     }
 }

@@ -5,9 +5,7 @@
 use {
     super::DoneSignaler,
     anyhow::{bail, Error},
-    async_trait::async_trait,
-    component_events::injectors::ProtocolInjector,
-    fidl_fuchsia_feedback as fcrash,
+    fidl_fuchsia_feedback as fcrash, fuchsia_async as fasync,
     futures::StreamExt,
     log::*,
     std::sync::{
@@ -37,6 +35,24 @@ pub struct FakeCrashReportingProductRegister {
     ok_tracker: AtomicUsize,
 }
 
+fn evaluate_registration(
+    program_name: String,
+    product: &fcrash::CrashReportingProduct,
+) -> Result<(), Error> {
+    let fcrash::CrashReportingProduct { name: product_name, .. } = product;
+    if product_name != &Some(REGISTER_PRODUCT_NAME.to_string()) {
+        bail!(
+            "Crash report program name should be {} but it was {:?}",
+            REGISTER_PRODUCT_NAME,
+            product_name
+        );
+    }
+    if &program_name != REPORT_PROGRAM_NAME {
+        bail!("program_name should be {} but it was {:?}", REGISTER_PRODUCT_NAME, program_name);
+    }
+    Ok(())
+}
+
 impl FakeCrashReportingProductRegister {
     pub fn new(done_signaler: DoneSignaler) -> Arc<FakeCrashReportingProductRegister> {
         Arc::new(FakeCrashReportingProductRegister {
@@ -63,29 +79,6 @@ impl FakeCrashReportingProductRegister {
         let state = self.ok_tracker.load(Ordering::Relaxed);
         state == 1
     }
-}
-
-fn evaluate_registration(
-    program_name: String,
-    product: &fcrash::CrashReportingProduct,
-) -> Result<(), Error> {
-    let fcrash::CrashReportingProduct { name: product_name, .. } = product;
-    if product_name != &Some(REGISTER_PRODUCT_NAME.to_string()) {
-        bail!(
-            "Crash report program name should be {} but it was {:?}",
-            REGISTER_PRODUCT_NAME,
-            product_name
-        );
-    }
-    if &program_name != REPORT_PROGRAM_NAME {
-        bail!("program_name should be {} but it was {:?}", REGISTER_PRODUCT_NAME, program_name);
-    }
-    Ok(())
-}
-
-#[async_trait]
-impl ProtocolInjector for FakeCrashReportingProductRegister {
-    type Marker = fcrash::CrashReportingProductRegisterMarker;
 
     async fn serve(
         self: Arc<Self>,
@@ -138,5 +131,18 @@ impl ProtocolInjector for FakeCrashReportingProductRegister {
             }
         }
         Ok(())
+    }
+
+    pub fn serve_async(
+        self: Arc<Self>,
+        stream: fcrash::CrashReportingProductRegisterRequestStream,
+    ) {
+        fasync::Task::spawn(async move {
+            let result = self.serve(stream).await;
+            if let Err(e) = result {
+                error!("Error while serving CrashReportingProductRegister: {:?}", e);
+            }
+        })
+        .detach();
     }
 }

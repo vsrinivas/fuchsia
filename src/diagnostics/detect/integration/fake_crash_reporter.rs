@@ -5,9 +5,7 @@
 use {
     super::{DoneSignaler, TestEvent, TestEventSender},
     anyhow::{bail, Context, Error},
-    async_trait::async_trait,
-    component_events::injectors::ProtocolInjector,
-    fidl_fuchsia_feedback as fcrash,
+    fidl_fuchsia_feedback as fcrash, fuchsia_async as fasync,
     futures::{SinkExt, StreamExt},
     log::*,
     std::sync::Arc,
@@ -19,15 +17,6 @@ const REPORT_PROGRAM_NAME: &str = "triage_detect";
 pub struct FakeCrashReporter {
     event_sender: TestEventSender,
     done_signaler: DoneSignaler,
-}
-
-impl FakeCrashReporter {
-    pub fn new(
-        event_sender: TestEventSender,
-        done_signaler: DoneSignaler,
-    ) -> Arc<FakeCrashReporter> {
-        Arc::new(FakeCrashReporter { event_sender, done_signaler })
-    }
 }
 
 fn evaluate_report(report: &fcrash::CrashReport) -> Result<String, Error> {
@@ -48,9 +37,13 @@ fn evaluate_report(report: &fcrash::CrashReport) -> Result<String, Error> {
     }
 }
 
-#[async_trait]
-impl ProtocolInjector for FakeCrashReporter {
-    type Marker = fcrash::CrashReporterMarker;
+impl FakeCrashReporter {
+    pub fn new(
+        event_sender: TestEventSender,
+        done_signaler: DoneSignaler,
+    ) -> Arc<FakeCrashReporter> {
+        Arc::new(FakeCrashReporter { event_sender, done_signaler })
+    }
 
     async fn serve(
         self: Arc<Self>,
@@ -83,5 +76,15 @@ impl ProtocolInjector for FakeCrashReporter {
             }
         }
         Ok(())
+    }
+
+    pub fn serve_async(self: Arc<Self>, stream: fcrash::CrashReporterRequestStream) {
+        fasync::Task::spawn(async move {
+            let result = self.serve(stream).await;
+            if let Err(e) = result {
+                error!("Error while serving CrashReporter: {:?}", e);
+            }
+        })
+        .detach();
     }
 }
