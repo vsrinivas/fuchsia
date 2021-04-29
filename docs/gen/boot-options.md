@@ -445,6 +445,18 @@ When set, allows the page scanner to evict user pager backed pages. Eviction can
 reduce memory usage and prevent out of memory scenarios, but removes some
 timing predictability from system behavior.
 
+### kernel.page-scanner.discardable-evictions-percent=\<uint32_t>
+**Default:** `0x0`
+
+Percentage of page evictions, that should be satisfied from
+discardable VMOs, as opposed to pager-backed VMOs. For example, if this value
+is set to `X` and the kernel needs to reclaim `N` pages to relieve memory
+pressure, it will evict `(N * X / 100)` pages from discardable VMOs, and the
+remaining `(N * (100 - X) / 100)` pages from pager-backed VMOs.
+
+Note that the kernel will try its best to honor this ratio between discardable
+and pager-backed pages evicted, but the actual numbers might not be exact.
+
 
 ## Options available only on arm64 machines
 

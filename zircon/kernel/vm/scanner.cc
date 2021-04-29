@@ -43,13 +43,7 @@ constexpr zx_duration_t kQueueRotateTime = ZX_SEC(10);
 // configurations may wish to tune this higher (or lower) as needed.
 constexpr uint64_t kDefaultZeroPageScansPerSecond = 20000;
 
-// A rough percentage of page evictions that should be satisfied from discardable vmos (as opposed
-// to pager-backed vmos). Will require tuning when discardable vmos start being used. Currently sets
-// the number of discardable pages to evict to 0, putting all the burden of eviction on pager-backed
-// pages.
-constexpr uint32_t kDefaultDiscardableEvictionsPercent = 0;
-
-uint32_t discardable_evictions_percent = kDefaultDiscardableEvictionsPercent;
+uint32_t discardable_evictions_percent = 0;
 
 // Number of pages to attempt to de-dupe back to zero every second. This not atomic as it is only
 // set during init before the scanner thread starts up, at which point it becomes read only.
@@ -496,8 +490,7 @@ static void scanner_init_func(uint level) {
     // Leave the policy at the default.
   }
 
-  uint32_t discardable_evictions = gCmdline.GetUInt32(
-      kernel_option::kPageScannerDiscardableEvictionsPercent, kDefaultDiscardableEvictionsPercent);
+  uint32_t discardable_evictions = gBootOptions->page_scanner_discardable_evictions_percent;
   if (discardable_evictions <= 100) {
     discardable_evictions_percent = discardable_evictions;
   }

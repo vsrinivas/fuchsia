@@ -426,6 +426,18 @@ reduce memory usage and prevent out of memory scenarios, but removes some
 timing predictability from system behavior.
 )""")
 
+DEFINE_OPTION("kernel.page-scanner.discardable-evictions-percent", uint32_t,
+              page_scanner_discardable_evictions_percent, {0}, R"""(
+Percentage of page evictions, that should be satisfied from
+discardable VMOs, as opposed to pager-backed VMOs. For example, if this value
+is set to `X` and the kernel needs to reclaim `N` pages to relieve memory
+pressure, it will evict `(N * X / 100)` pages from discardable VMOs, and the
+remaining `(N * (100 - X) / 100)` pages from pager-backed VMOs.
+
+Note that the kernel will try its best to honor this ratio between discardable
+and pager-backed pages evicted, but the actual numbers might not be exact.
+)""")
+
 // Machine-specific options are included here for all the kernel places.
 // In the generator program, they're included separately.
 
