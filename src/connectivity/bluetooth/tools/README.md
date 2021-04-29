@@ -5,13 +5,26 @@ This directory contains command-line tools for Bluetooth development.
 `bt-hci-tool` uses the [host HCI library](../../../drivers/bluetooth/lib/hci) to send
 HCI commands directly to a bt-hci device (`/dev/class/bt-hci/000` by default)
 
-Currently all bt-hci devices are automatically claimed by the bt-host driver. To
-use bt-hci-tool, disable the bt-host driver by passing `driver.bthost.disable`
-to the kernel command line:
+Currently all bt-hci devices are automatically claimed by the bt-host driver. To use bt-hci-tool,
+disable the bt-host driver, which is done via the
+[driver.<driver_name>.disable kernel cmdline flag](https://fuchsia.dev/fuchsia-src/reference/kernel/kernel_cmdline?hl=en#drivernamedisable).
+
+This can be done at build-time by modifying your `fx set` to:
+```
+fx set <whatever else you put here> --args=dev_bootfs_labels=\[\"//src/connectivity/bluetooth:disable-bt-host\"\]
+```
+or by adding:
+```
+dev_bootfs_labels = [ "//src/connectivity/bluetooth:disable-bt-host" ]
+```
+to your `fx args`.
+
+The build-time method is recommended, but you may also be able to do so by passing
+`driver.bt_host.disable` to the kernel command line at pave time (not tested):
 
 On host machine:
 ```
-$ fx pave -- driver.bthost.disable
+$ fx pave -- driver.bt_host.disable
 ```
 
 On Fuchsia:

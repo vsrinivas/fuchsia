@@ -12,9 +12,14 @@ The command channel of a bt-hci device must be unclaimed for this tool to
 function as intended. The bt-host driver is a common reason for the HCI
 endpoints to be unavailable. If the bt-host driver isn't disabled or excluded
 in the image, it can be disabled by passing `driver.bt_host.disable` to the
-kernel command-line.
+[kernel command-line](https://fuchsia.dev/fuchsia-src/reference/kernel/kernel_cmdline?hl=en#drivernamedisable).
 
 On the host machine while configuring set options add:
 ```
-$ fx set --args=dev_bootfs_labels+=\[\"//src/connectivity/bluetooth/tools:disable-bt-host\"\] ...
+$ fx set --args=dev_bootfs_labels=\[\"//src/connectivity/bluetooth:disable-bt-host\"\] ...
+```
+
+Or, if you prefer `fx args`, just add the following line to your args.gn:
+```
+dev_bootfs_labels = [ "//src/connectivity/bluetooth:disable-bt-host" ]
 ```
