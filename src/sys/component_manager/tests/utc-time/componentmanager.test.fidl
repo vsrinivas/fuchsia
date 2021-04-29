@@ -6,21 +6,7 @@ library componentmanager.test;
 
 using zx;
 
-union TestOutcome {
-    1: SuccessOutcome success;
-    2: FailedOutcome failed;
-};
-
-struct SuccessOutcome {
-    zx.time backstop;
-    zx.time current_time;
-};
-
-struct FailedOutcome {
-    string message;
-};
-
 [Discoverable]
 protocol TestOutcomeReport {
-    Report(TestOutcome outcome) -> ();
+    Report(zx.time backstop, zx.time current_time) -> ();
 };

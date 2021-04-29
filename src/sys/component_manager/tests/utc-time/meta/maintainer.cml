@@ -7,8 +7,16 @@
         runner: "elf",
         binary: "bin/utc_time_maintainer_bin",
     },
+    capabilities: [
+        { protocol: "componentmanager.test.TestOutcomeReport" },
+    ],
     use: [
         { protocol: "fuchsia.time.Maintenance" },
-        { protocol: "componentmanager.test.TestOutcomeReport" },
+    ],
+    expose: [
+        {
+            protocol: "componentmanager.test.TestOutcomeReport",
+            from: "self",
+        },
     ],
 }
