@@ -1192,7 +1192,7 @@ mod tests {
             credential_type: CredentialTypeArg::Password,
             credential: Some("".to_string()),
         };
-        construct_network_config(malformed_open_config)
+        let _errmsg = construct_network_config(malformed_open_config)
             .expect_err("network config constructed for malformed PolicyNetworkConfig");
     }
 
@@ -1205,7 +1205,7 @@ mod tests {
             credential_type: CredentialTypeArg::None,
             credential: Some("".to_string()),
         };
-        construct_network_config(malformed_wpa2_config)
+        let _errmsg = construct_network_config(malformed_wpa2_config)
             .expect_err("network config constructed for malformed PolicyNetworkConfig");
     }
 

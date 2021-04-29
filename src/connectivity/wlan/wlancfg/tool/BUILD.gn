@@ -39,6 +39,8 @@ rustc_binary("bin") {
     "src/policy/mod.rs",
     "src/policy/serialize.rs",
   ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 fuchsia_shell_package("donut") {
