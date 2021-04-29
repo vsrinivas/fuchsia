@@ -466,9 +466,8 @@ function main {
 
   # Automatically detect goma and ccache if not specified explicitly.
   if [[ -z "${use_goma}" ]] && [[ -z "${ccache}" ]]; then
-    # Use Goma if --goma-dir was given or if the prebuilt Goma
-    # seems to have been setup.
-    if "$PREBUILT_PYTHON3_DIR/bin/python3" "$PREBUILT_GOMA_DIR/goma_auth.py" info > /dev/null 2>&1; then
+    # Use Goma if the user has authorized with the Goma service.
+    if fx-command-run goma_auth info > /dev/null 2>&1; then
       use_goma=1
     elif [[ -n "${CCACHE_DIR}" ]] && [[ -d "${CCACHE_DIR}" ]]; then
       ccache=1
