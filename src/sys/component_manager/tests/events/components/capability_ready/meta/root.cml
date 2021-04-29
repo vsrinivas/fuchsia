@@ -1,8 +1,5 @@
 {
-    include: [
-        "sdk/lib/diagnostics/syslog/client.shard.cml",
-        "src/sys/component_manager/testing/meta/start_component_tree.shard.cml",
-    ],
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         runner: "elf",
         binary: "bin/capability_ready_root",
@@ -32,6 +29,15 @@
                 ],
             },
             modes: [ "async" ],
+        },
+        {
+            event_stream: "CapabilityReadyStream",
+            subscriptions: [
+                {
+                    event: "capability_ready",
+                    mode: "async",
+                },
+            ],
         },
     ],
 }

@@ -18,10 +18,6 @@
             protocol: [ "fuchsia.sys2.EventSource" ],
         },
         {
-            protocol: [ "fidl.examples.routing.echo.Echo" ],
-            from: "framework",
-        },
-        {
             event: [
                 "destroyed",
                 "started",

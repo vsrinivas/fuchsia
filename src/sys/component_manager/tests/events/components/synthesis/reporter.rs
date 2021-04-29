@@ -3,13 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error,
     component_events::events::{
         CapabilityReady, Event, EventMode, EventSource, EventSubscription, MarkedForDestruction,
         Running, Started,
     },
-    fidl_fidl_examples_routing_echo as fecho, fuchsia_async as fasync,
-    fuchsia_component::client::{self as component},
+    fuchsia_async as fasync,
     fuchsia_component_test::ScopedInstance,
     fuchsia_syslog as syslog,
     log::*,
@@ -18,45 +16,47 @@ use {
 };
 
 #[fasync::run_singlethreaded]
-async fn main() -> Result<(), Error> {
+async fn main() {
     syslog::init_with_tags(&[]).unwrap();
+
+    // Make 4 components: 1 capability ready child and 3 stub children
     let mut instances = vec![];
     let url =
         "fuchsia-pkg://fuchsia.com/events_integration_test#meta/stub_component.cm".to_string();
     let url_cap_ready =
         "fuchsia-pkg://fuchsia.com/events_integration_test#meta/capability_ready_child.cm"
             .to_string();
-    let scoped_instance = ScopedInstance::new("coll".to_string(), url_cap_ready.clone()).await?;
+    let scoped_instance =
+        ScopedInstance::new("coll".to_string(), url_cap_ready.clone()).await.unwrap();
     instances.push(scoped_instance);
     for _ in 0..3 {
-        let scoped_instance = ScopedInstance::new("coll".to_string(), url.clone()).await?;
+        let scoped_instance = ScopedInstance::new("coll".to_string(), url.clone()).await.unwrap();
         instances.push(scoped_instance);
     }
 
-    // Destroy one instance, this shouldn't appear anywhere in the events.
+    // Destroy one stub child, this shouldn't appear anywhere in the events.
     let mut instance = instances.pop().unwrap();
     let destroy_waiter = instance.take_destroy_waiter();
     drop(instance);
-    let () = destroy_waiter.await?;
+    destroy_waiter.await.unwrap();
 
     // Subscribe to events.
-    let event_source = EventSource::new()?;
+    let event_source = EventSource::new().unwrap();
     let mut event_stream = event_source
         .subscribe(vec![EventSubscription::new(
             vec![Started::NAME, Running::NAME, MarkedForDestruction::NAME, CapabilityReady::NAME],
             EventMode::Async,
         )])
-        .await?;
-
-    let echo = component::connect_to_service::<fecho::EchoMarker>()?;
+        .await
+        .unwrap();
 
     // There were 4 running instances when the stream was created: this instance itself and three
     // more. We are also expecting capability ready for one of them.
     let mut running = vec![];
-    let mut capability_ready = BTreeSet::new();
+    let mut capability_ready = vec![];
 
     while running.len() < 4 || capability_ready.len() < 1 {
-        let event = event_stream.next().await?;
+        let event = event_stream.next().await.unwrap();
         if let Some(header) = &event.header {
             match header.event_type {
                 Some(Running::TYPE) => {
@@ -68,25 +68,23 @@ async fn main() -> Result<(), Error> {
                     let event =
                         CapabilityReady::try_from(event).expect("convert to capability ready");
                     info!("Got capability ready event");
-                    capability_ready.insert(event.target_moniker().to_string());
+                    capability_ready.push(event.target_moniker().to_string());
                 }
                 other => panic!("unexpected event type: {:?}", other),
             }
         }
     }
 
-    for _ in &running {
-        let _ = echo.echo_string(Some(&format!("{:?}", Running::TYPE))).await?;
-    }
-    for _ in &capability_ready {
-        let _ = echo.echo_string(Some(&format!("{:?}", CapabilityReady::TYPE))).await?;
-    }
-
+    // There must be exactly 4 unique running events, 1 capability ready event.
+    // The first running event must be for this component itself.
+    // The others must be from the dynamic collection.
     assert_eq!(running.len(), 4);
     assert_eq!(capability_ready.len(), 1);
     assert_eq!(running[0], ".");
+
     let re = Regex::new(r"./coll:auto-\d+:\d").unwrap();
     assert!(running[1..].iter().all(|m| re.is_match(m)));
+
     assert_eq!(BTreeSet::from_iter::<Vec<String>>(running).len(), 4);
 
     // Dropping instances stops and destroys the children.
@@ -95,16 +93,13 @@ async fn main() -> Result<(), Error> {
     // The three instances were marked for destruction.
     let mut seen_marked_for_destruction = 0;
     while seen_marked_for_destruction != 3 {
-        let event = event_stream.next().await?;
+        let event = event_stream.next().await.unwrap();
         if let Some(header) = event.header {
             match header.event_type {
                 Some(CapabilityReady::TYPE) => {
                     // ignore. we could get a duplicate here.
                 }
                 Some(MarkedForDestruction::TYPE) => {
-                    let _ = echo
-                        .echo_string(Some(&format!("{:?}", MarkedForDestruction::TYPE)))
-                        .await?;
                     seen_marked_for_destruction += 1;
                 }
                 event => {
@@ -113,6 +108,4 @@ async fn main() -> Result<(), Error> {
             }
         }
     }
-
-    Ok(())
 }

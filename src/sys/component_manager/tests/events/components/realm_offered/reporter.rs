@@ -4,26 +4,26 @@
 
 use {
     component_events::{
-        events::{Event, EventMode, EventSource, EventSubscription, Handler, Started},
+        events::{EventMode, EventSource, EventSubscription},
         matcher::EventMatcher,
+        sequence::*,
     },
-    fidl_fidl_examples_routing_echo as fecho, fidl_fidl_test_components as ftest,
-    fuchsia_async as fasync,
+    fidl_fidl_test_components as ftest, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
 };
 
 #[fasync::run_singlethreaded]
 async fn main() {
+    fuchsia_syslog::init().unwrap();
+
     // Track all the starting components.
     let event_source = EventSource::new().unwrap();
-    let mut event_stream = event_source
+    let event_stream = event_source
         .subscribe(vec![EventSubscription::new(vec!["started_nested"], EventMode::Async)])
         .await
         .unwrap();
 
     event_source.start_component_tree().await;
-
-    let echo = connect_to_service::<fecho::EchoMarker>().unwrap();
 
     // Connect to the parent offered Trigger. The parent will start the lazy child components and
     // this component should know about their started events given that it was offered those
@@ -32,10 +32,16 @@ async fn main() {
         connect_to_service::<ftest::TriggerMarker>().expect("error connecting to trigger");
     trigger.run().await.expect("start trigger failed");
 
-    for _ in 0..3 {
-        let event = EventMatcher::ok().expect_match::<Started>(&mut event_stream).await;
-        let target_moniker = event.target_moniker();
-        let _ = echo.echo_string(Some(target_moniker)).await.unwrap();
-        event.resume().await.unwrap();
-    }
+    EventSequence::new()
+        .all_of(
+            vec![
+                EventMatcher::ok().moniker("./child_a:0"),
+                EventMatcher::ok().moniker("./child_b:0"),
+                EventMatcher::ok().moniker("./child_c:0"),
+            ],
+            Ordering::Unordered,
+        )
+        .expect(event_stream)
+        .await
+        .unwrap();
 }

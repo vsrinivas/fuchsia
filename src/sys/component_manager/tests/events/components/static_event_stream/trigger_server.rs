@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error,
     component_events::{
         events::{
             CapabilityRequested, CapabilityRequestedError, Event, EventSource, EventStream,
@@ -12,9 +11,7 @@ use {
         matcher::EventMatcher,
     },
     fidl::endpoints::ServiceMarker,
-    fidl_fidl_examples_routing_echo as fecho, fidl_fidl_test_components as ftest,
-    fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
+    fidl_fidl_test_components as ftest, fuchsia_async as fasync,
     futures::{channel::mpsc, SinkExt, StreamExt},
     std::sync::Arc,
     test_utils_lib::trigger_capability::{TriggerCapability, TriggerReceiver},
@@ -28,18 +25,13 @@ use {
 async fn start_trigger_server(
     mut trigger_receiver: TriggerReceiver,
     mut rx: mpsc::UnboundedReceiver<()>,
-) -> Result<(), Error> {
-    let echo = connect_to_service::<fecho::EchoMarker>()?;
+) {
     let start_logging_trigger = trigger_receiver.next().await.unwrap();
-
-    let _ = echo.echo_string(Some("Start trigger")).await?;
     start_logging_trigger.resume();
     // These will only succeed if all EventStreams are handled.
     rx.next().await.unwrap();
     rx.next().await.unwrap();
     rx.next().await.unwrap();
-
-    Ok(())
 }
 
 fn run_main_event_stream(
@@ -109,5 +101,5 @@ async fn main() {
     let event_stream = event_source.take_static_event_stream("resolved_stream").await.unwrap();
     run_resolved_event_stream(event_stream, tx3.clone());
 
-    start_trigger_server(receiver, rx).await.expect("failed running trigger_server");
+    start_trigger_server(receiver, rx).await;
 }

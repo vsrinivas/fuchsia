@@ -6,10 +6,9 @@ use {
     component_events::{
         events::{Event, EventMode, EventSource, EventSubscription, Started},
         matcher::EventMatcher,
+        sequence::*,
     },
-    fidl_fidl_examples_routing_echo as fecho, fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
-    fuchsia_syslog as syslog,
+    fuchsia_async as fasync, fuchsia_syslog as syslog,
 };
 
 #[fasync::run_singlethreaded]
@@ -18,17 +17,22 @@ async fn main() {
 
     // Track all the starting child components.
     let event_source = EventSource::new().unwrap();
-    let mut event_stream = event_source
+    let event_stream = event_source
         .subscribe(vec![EventSubscription::new(vec![Started::NAME], EventMode::Async)])
         .await
         .unwrap();
     event_source.start_component_tree().await;
 
-    let echo = connect_to_service::<fecho::EchoMarker>().unwrap();
-
-    for _ in 1..=3 {
-        let event = EventMatcher::ok().expect_match::<Started>(&mut event_stream).await;
-        let target_moniker = event.target_moniker();
-        let _ = echo.echo_string(Some(target_moniker)).await;
-    }
+    EventSequence::new()
+        .all_of(
+            vec![
+                EventMatcher::ok().moniker("./child_a:0"),
+                EventMatcher::ok().moniker("./child_b:0"),
+                EventMatcher::ok().moniker("./child_c:0"),
+            ],
+            Ordering::Unordered,
+        )
+        .expect(event_stream)
+        .await
+        .unwrap();
 }

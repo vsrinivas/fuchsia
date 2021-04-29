@@ -7,8 +7,7 @@ use {
         events::{Destroyed, Event, EventMode, EventSource, EventSubscription, Started},
         matcher::EventMatcher,
     },
-    fidl_fidl_examples_routing_echo as fecho, fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_async as fasync,
     fuchsia_component_test::ScopedInstance,
     fuchsia_syslog as syslog,
 };
@@ -38,16 +37,13 @@ async fn main() {
     // Dropping instances destroys the children.
     drop(instances);
 
-    let echo = connect_to_service::<fecho::EchoMarker>().unwrap();
-
     for _ in 1..=3 {
         let event = EventMatcher::ok().expect_match::<Started>(&mut event_stream).await;
         assert_eq!(event.component_url(), url);
-        let _ = echo.echo_string(Some(&format!("{:?}", Started::TYPE))).await;
     }
 
     for _ in 1..=3 {
-        let _ = EventMatcher::ok().expect_match::<Destroyed>(&mut event_stream).await;
-        let _ = echo.echo_string(Some(&format!("{:?}", Destroyed::TYPE))).await;
+        let event = EventMatcher::ok().expect_match::<Destroyed>(&mut event_stream).await;
+        assert_eq!(event.component_url(), url);
     }
 }

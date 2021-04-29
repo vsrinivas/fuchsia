@@ -7,8 +7,7 @@ use {
         events::{Event, EventMode, EventSource, EventSubscription, Resolved, Started},
         matcher::EventMatcher,
     },
-    fidl_fidl_examples_routing_echo as fecho, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
-    fuchsia_async as fasync,
+    fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     fuchsia_syslog as syslog,
 };
@@ -29,8 +28,6 @@ async fn main() {
 
     event_source.start_component_tree().await;
 
-    let echo = connect_to_service::<fecho::EchoMarker>().unwrap();
-
     // This will trigger the resolution of the child.
     let realm = connect_to_service::<fsys::RealmMarker>().unwrap();
     let mut child_ref = fsys::ChildRef { name: "child_a".to_string(), collection: None };
@@ -43,8 +40,4 @@ async fn main() {
     // A started event should still be dispatched indicating failure due to a resolution
     // error.
     let _started_event = EventMatcher::err().expect_match::<Started>(&mut event_stream).await;
-
-    // Swallow the error as the test might terminate and stop serving the capability before this
-    // component exits. An error here is not an issue, the assertion was made in the test case.
-    let _ = echo.echo_string(Some("ERROR")).await;
 }

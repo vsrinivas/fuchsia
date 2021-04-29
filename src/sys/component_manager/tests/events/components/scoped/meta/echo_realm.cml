@@ -17,17 +17,17 @@
     // Route Echo service from server to client.
     offer: [
         {
-            protocol: [ "fuchsia.sys2.EventSource" ],
+            protocol: "fuchsia.sys2.EventSource",
             from: "parent",
             to: "#echo_reporter",
         },
         {
-            protocol: "fidl.examples.routing.echo.Echo",
-            from: "#echo_reporter",
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
             to: "#echo_client",
         },
         {
-            protocol: "fidl.test.components.Trigger",
+            protocol: "fidl.examples.routing.echo.Echo",
             from: "#echo_reporter",
             to: "#echo_client",
         },

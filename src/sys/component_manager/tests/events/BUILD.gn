@@ -6,52 +6,11 @@ import("//build/components.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 
-rustc_library("echo_interposer") {
-  name = "echo_interposer"
-  edition = "2018"
-  source_root = "echo_interposer.rs"
-  testonly = true
-  deps = [
-    "//examples/components/routing/fidl:echo-rustc",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
-    "//src/sys/lib/component-events",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:async-trait",
-    "//third_party/rust_crates:futures",
-  ]
-
-  sources = [ "echo_interposer.rs" ]
-}
-
-rustc_library("echo_factory_interposer") {
-  name = "echo_factory_interposer"
-  edition = "2018"
-  source_root = "echo_factory_interposer.rs"
-  testonly = true
-  deps = [
-    ":echo_interposer",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
-    "//src/sys/component_manager/tests/fidl:echofactory-rustc",
-    "//src/sys/lib/component-events",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:async-trait",
-    "//third_party/rust_crates:futures",
-  ]
-
-  sources = [ "echo_factory_interposer.rs" ]
-}
-
 rustc_test("events_integration_test_bin") {
   name = "events_integration_test"
   edition = "2018"
   source_root = "integration_test.rs"
   deps = [
-    ":echo_factory_interposer",
-    ":echo_interposer",
     "//examples/components/routing/fidl:echo-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -110,17 +69,6 @@ fuchsia_component("echo_reporter") {
   manifest = "components/scoped/meta/echo_reporter.cml"
 }
 
-fuchsia_component("interpose_echo_looper") {
-  testonly = true
-  deps = [ "components:interpose_echo_looper_bin" ]
-  manifest = "components/interpose/meta/echo_looper.cml"
-}
-
-fuchsia_component("interpose_echo_realm") {
-  testonly = true
-  manifest = "components/interpose/meta/echo_realm.cml"
-}
-
 fuchsia_component("nested_reporter") {
   testonly = true
   deps = [ "components:nested_reporter_bin" ]
@@ -131,23 +79,6 @@ fuchsia_component("resolved_error_reporter") {
   testonly = true
   deps = [ "components:resolved_error_reporter_bin" ]
   manifest = "components/resolved_error/meta/reporter.cml"
-}
-
-fuchsia_component("chained_interpose_echo_client") {
-  testonly = true
-  deps = [ "components:chained_interpose_echo_client_bin" ]
-  manifest = "components/chained_interpose/meta/echo_client.cml"
-}
-
-fuchsia_component("chained_interpose_echo_factory") {
-  testonly = true
-  deps = [ "components:chained_interpose_echo_factory_bin" ]
-  manifest = "components/chained_interpose/meta/echo_factory.cml"
-}
-
-fuchsia_component("chained_interpose_echo_realm") {
-  testonly = true
-  manifest = "components/chained_interpose/meta/echo_realm.cml"
 }
 
 fuchsia_component("event_dispatch_order_root") {
@@ -190,12 +121,6 @@ fuchsia_component("trigger_realm") {
   manifest = "components/static_event_stream/meta/trigger_realm.cml"
 }
 
-fuchsia_component("file_contents_reporter") {
-  testonly = true
-  deps = [ "components:file_contents_reporter_bin" ]
-  manifest = "components/dir_capability_routed/meta/reporter.cml"
-}
-
 fuchsia_component("realm_offered_reporter") {
   testonly = true
   deps = [ "components:realm_offered_bin" ]
@@ -219,18 +144,12 @@ fuchsia_unittest_package("events_integration_test") {
     ":async_reporter",
     ":capability_ready_child",
     ":capability_ready_root",
-    ":chained_interpose_echo_client",
-    ":chained_interpose_echo_factory",
-    ":chained_interpose_echo_realm",
     ":echo_client",
     ":echo_realm",
     ":echo_reporter",
     ":echo_server",
     ":event_dispatch_order_root",
     ":events_integration_test_bin",
-    ":file_contents_reporter",
-    ":interpose_echo_looper",
-    ":interpose_echo_realm",
     ":nested_reporter",
     ":realm_offered_nested",
     ":realm_offered_reporter",

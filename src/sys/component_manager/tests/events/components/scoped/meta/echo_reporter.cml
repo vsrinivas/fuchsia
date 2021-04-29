@@ -1,8 +1,5 @@
 {
-    include: [
-        "sdk/lib/diagnostics/syslog/client.shard.cml",
-        "src/sys/component_manager/testing/meta/start_component_tree.shard.cml",
-    ],
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         runner: "elf",
         binary: "bin/scoped_echo_reporter",
@@ -11,34 +8,35 @@
         {
             name: "echo_server",
             url: "fuchsia-pkg://fuchsia.com/events_integration_test#meta/echo_server.cm",
-            startup: "lazy",
         },
-    ],
-    capabilities: [
-        { protocol: "fidl.test.components.Trigger" },
     ],
     use: [
         {
             protocol: [ "fuchsia.sys2.EventSource" ],
         },
         {
-            protocol: "fidl.examples.routing.echo.Echo",
-            from: "framework",
-        },
-        {
             event: [
-                "capability_routed",
                 "started",
+                "stopped",
             ],
             from: "framework",
-            modes: [ "sync" ],
+            modes: [ "async" ],
+        },
+        {
+            event_stream: "ScopedEventStream",
+            subscriptions: [
+                {
+                    event: "started",
+                    mode: "async",
+                },
+                {
+                    event: "stopped",
+                    mode: "async",
+                },
+            ],
         },
     ],
     expose: [
-        {
-            protocol: "fidl.test.components.Trigger",
-            from: "self",
-        },
         {
             protocol: "fidl.examples.routing.echo.Echo",
             from: "#echo_server",
