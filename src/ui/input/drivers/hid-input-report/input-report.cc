@@ -27,7 +27,10 @@
 
 namespace hid_input_report_dev {
 
-void InputReport::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
+void InputReport::DdkUnbind(ddk::UnbindTxn txn) {
+  hiddev_.UnregisterListener();
+  txn.Reply();
+}
 
 zx_status_t InputReport::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
@@ -194,9 +197,6 @@ zx_status_t InputReport::Bind() {
     return ZX_ERR_INTERNAL;
   }
 
-  // Register to listen to HID reports.
-  hiddev_.RegisterListener(this, &hid_report_listener_protocol_ops_);
-
   // Start the async loop for the Readers.
   {
     fbl::AutoLock lock(&readers_lock_);
@@ -207,7 +207,20 @@ zx_status_t InputReport::Bind() {
     }
   }
 
-  return DdkAdd("InputReport");
+  // Register to listen to HID reports.
+  status = hiddev_.RegisterListener(this, &hid_report_listener_protocol_ops_);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to register for HID reports: %s", zx_status_get_string(status));
+    return status;
+  }
+
+  status = DdkAdd("InputReport");
+  if (status != ZX_OK) {
+    hiddev_.UnregisterListener();
+    return status;
+  }
+
+  return ZX_OK;
 }
 
 zx_status_t InputReport::WaitForNextReader(zx::duration timeout) {

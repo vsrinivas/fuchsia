@@ -61,7 +61,7 @@ class FakeHidDevice : public ddk::HidDeviceProtocol<FakeHidDevice> {
     return ZX_OK;
   }
 
-  void HidDeviceUnregisterListener() {}
+  void HidDeviceUnregisterListener() { listener_.reset(); }
 
   zx_status_t HidDeviceGetDescriptor(uint8_t* out_descriptor_list, size_t descriptor_count,
                                      size_t* out_descriptor_actual) {
@@ -108,11 +108,13 @@ class FakeHidDevice : public ddk::HidDeviceProtocol<FakeHidDevice> {
   void SetReportDesc(std::vector<uint8_t> report_desc) { report_desc_ = report_desc; }
 
   void SendReport(const std::vector<uint8_t>& report) {
-    listener_.ops->receive_report(listener_.ctx, report.data(), report.size(),
-                                  zx_clock_get_monotonic());
+    if (listener_.has_value()) {
+      listener_->ops->receive_report(listener_->ctx, report.data(), report.size(),
+                                     zx_clock_get_monotonic());
+    }
   }
 
-  hid_report_listener_protocol_t listener_;
+  std::optional<hid_report_listener_protocol_t> listener_;
   hid_device_protocol_t proto_;
   std::vector<uint8_t> report_desc_;
 
@@ -146,6 +148,30 @@ TEST_F(HidDevTest, HidLifetimeTest) {
   fake_hid_.SetReportDesc(boot_mouse);
 
   ASSERT_OK(device_->Bind());
+}
+
+TEST(HidDevTest, InputReportUnregisterTest) {
+  fake_ddk::Bind ddk_;
+  FakeHidDevice fake_hid_;
+  InputReport* device_;
+  ddk::HidDeviceProtocolClient client_;
+
+  client_ = ddk::HidDeviceProtocolClient(&fake_hid_.proto_);
+  device_ = new InputReport(fake_ddk::kFakeParent, client_);
+
+  std::vector<uint8_t> boot_mouse(boot_mouse_desc, boot_mouse_desc + sizeof(boot_mouse_desc));
+  fake_hid_.SetReportDesc(boot_mouse);
+
+  ASSERT_OK(device_->Bind());
+
+  device_->DdkAsyncRemove();
+  EXPECT_TRUE(ddk_.Ok());
+
+  // This should delete the object, which means this test should not leak.
+  device_->DdkRelease();
+
+  // Make sure that the InputReport class has unregistered from the HID device.
+  ASSERT_FALSE(fake_hid_.listener_);
 }
 
 TEST_F(HidDevTest, GetReportDescTest) {
