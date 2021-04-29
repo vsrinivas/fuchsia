@@ -380,11 +380,17 @@ zx_status_t Session::FetchTx() {
       // fine to return one of these buffers at a time.
       desc->return_flags = static_cast<uint32_t>(netdev::wire::TxReturnFlags::kTxRetError |
                                                  netdev::wire::TxReturnFlags::kTxRetNotAvailable);
-      if (zx_status_t status = fifo_tx_.write(sizeof(desc_idx), desc_idx, 1, nullptr);
-          status != ZX_OK) {
-        LOGF_ERROR("network-device(%s): failed to return buffer with bad port number %d: %s",
-                   name(), desc->port_id, zx_status_get_string(status));
-        return ZX_ERR_IO_INVALID;
+      zx_status_t status = fifo_tx_.write(sizeof(*desc_idx), desc_idx, 1, nullptr);
+      switch (status) {
+        case ZX_OK:
+          break;
+        case ZX_ERR_PEER_CLOSED:
+          // Tx FIFO closing is an expected error.
+          return ZX_ERR_PEER_CLOSED;
+        default:
+          LOGF_ERROR("network-device(%s): failed to return buffer with bad port number %d: %s",
+                     name(), desc->port_id, zx_status_get_string(status));
+          return ZX_ERR_IO_INVALID;
       }
       desc_idx++;
       read--;

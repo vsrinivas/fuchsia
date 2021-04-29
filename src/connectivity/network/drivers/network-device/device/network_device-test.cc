@@ -1225,5 +1225,30 @@ TEST_F(NetworkDeviceTest, RejectsInvalidPortIds) {
   }
 }
 
+TEST_F(NetworkDeviceTest, TxOnUnattachedPort) {
+  // Test that transmitting a frame to a port we're not attached to returns the buffer with an
+  // error.
+  ASSERT_OK(CreateDevice());
+  TestSession session;
+  ASSERT_OK(OpenSession(&session));
+  ASSERT_OK(session.SetPaused(false));
+  ASSERT_OK(WaitStart());
+  constexpr uint16_t kDesc = 0;
+  buffer_descriptor_t* desc = session.ResetDescriptor(kDesc);
+  desc->port_id = MAX_PORTS - 1;
+  ASSERT_OK(session.SendTx(kDesc));
+  // Should be returned with an error.
+  zx_signals_t observed;
+  ASSERT_OK(session.tx_fifo().wait_one(ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED, zx::time::infinite(),
+                                       &observed));
+  ASSERT_EQ(observed & (ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED), ZX_FIFO_READABLE);
+  uint16_t read_desc = 0xFFFF;
+  ASSERT_OK(session.FetchTx(&read_desc));
+  ASSERT_EQ(read_desc, kDesc);
+  ASSERT_EQ(desc->return_flags,
+            static_cast<uint32_t>(netdev::wire::TxReturnFlags::kTxRetError |
+                                  netdev::wire::TxReturnFlags::kTxRetNotAvailable));
+}
+
 }  // namespace testing
 }  // namespace network

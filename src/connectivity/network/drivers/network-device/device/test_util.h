@@ -266,6 +266,8 @@ class TestSession {
 
   uint64_t canonical_offset(uint16_t index) const { return buffer_length_ * index; }
 
+  const zx::fifo& tx_fifo() const { return fifos_.tx; }
+
  private:
   uint16_t descriptors_count_{};
   uint64_t buffer_length_{};
