@@ -1074,7 +1074,8 @@ void LogicalBufferCollection::TryLateLogicalAllocation(std::vector<NodePropertie
     existing_constraints.image_format_constraints()[0] = sysmem::V2CloneImageFormatConstraints(
         table_set_.allocator(), existing.settings().image_format_constraints());
   }
-  if (existing.buffers()[0].vmo_usable_start() & kNeedAuxVmoAlso) {
+  if (existing.buffers()[0].has_vmo_usable_start() &&
+      existing.buffers()[0].vmo_usable_start() & kNeedAuxVmoAlso) {
     existing_constraints.set_need_clear_aux_buffers_for_secure(table_set_.allocator(), true);
   }
   existing_constraints.set_allow_clear_aux_buffers_for_secure(table_set_.allocator(), true);
