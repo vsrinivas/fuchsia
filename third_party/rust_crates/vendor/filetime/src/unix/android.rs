@@ -23,7 +23,12 @@ pub fn set_file_handle_times(
     mtime: Option<FileTime>,
 ) -> io::Result<()> {
     let times = [super::to_timespec(&atime), super::to_timespec(&mtime)];
-    let rc = unsafe { libc::futimens(f.as_raw_fd(), times.as_ptr()) };
+
+    // On Android NDK before version 19, `futimens` is not available.
+    //
+    // For better compatibility, we reimplement `futimens` using `utimensat`,
+    // the same way as bionic libc uses it to implement `futimens`.
+    let rc = unsafe { libc::utimensat(f.as_raw_fd(), core::ptr::null(), times.as_ptr(), 0) };
     if rc == 0 {
         Ok(())
     } else {

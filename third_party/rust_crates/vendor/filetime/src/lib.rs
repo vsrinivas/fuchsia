@@ -9,7 +9,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! filetime = "0.1"
+//! filetime = "0.2"
 //! ```
 //!
 //! # Usage
@@ -34,21 +34,21 @@
 //! println!("{}", mtime.seconds());
 //! ```
 
-#[macro_use]
-extern crate cfg_if;
-
 use std::fmt;
 use std::fs;
 use std::io;
 use std::path::Path;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-cfg_if! {
+cfg_if::cfg_if! {
     if #[cfg(target_os = "redox")] {
         #[path = "redox.rs"]
         mod imp;
     } else if #[cfg(windows)] {
         #[path = "windows.rs"]
+        mod imp;
+    } else if #[cfg(target_arch = "wasm32")] {
+        #[path = "wasm.rs"]
         mod imp;
     } else {
         #[path = "unix/mod.rs"]
@@ -72,7 +72,40 @@ impl FileTime {
     ///
     /// Useful for creating the base of a cmp::max chain of times.
     pub fn zero() -> FileTime {
-        FileTime { seconds: 0, nanos: 0 }
+        FileTime {
+            seconds: 0,
+            nanos: 0,
+        }
+    }
+
+    fn emulate_second_only_system(self) -> FileTime {
+        if cfg!(emulate_second_only_system) {
+            FileTime {
+                seconds: self.seconds,
+                nanos: 0,
+            }
+        } else {
+            self
+        }
+    }
+
+    /// Creates a new timestamp representing the current system time.
+    ///
+    /// ```
+    /// # use filetime::FileTime;
+    /// #
+    /// # fn example() -> std::io::Result<()> {
+    /// #     let path = "";
+    /// #
+    /// filetime::set_file_mtime(path, FileTime::now())?;
+    /// #
+    /// #     Ok(())
+    /// # }
+    /// ```
+    ///
+    /// Equivalent to `FileTime::from_system_time(SystemTime::now())`.
+    pub fn now() -> FileTime {
+        FileTime::from_system_time(SystemTime::now())
     }
 
     /// Creates a new instance of `FileTime` with a number of seconds and
@@ -87,9 +120,10 @@ impl FileTime {
     /// instance may not be the same as that passed in.
     pub fn from_unix_time(seconds: i64, nanos: u32) -> FileTime {
         FileTime {
-            seconds: seconds + if cfg!(windows) {11644473600} else {0},
+            seconds: seconds + if cfg!(windows) { 11644473600 } else { 0 },
             nanos,
         }
+        .emulate_second_only_system()
     }
 
     /// Creates a new timestamp from the last modification time listed in the
@@ -98,7 +132,7 @@ impl FileTime {
     /// The returned value corresponds to the `mtime` field of `stat` on Unix
     /// platforms and the `ftLastWriteTime` field on Windows platforms.
     pub fn from_last_modification_time(meta: &fs::Metadata) -> FileTime {
-        imp::from_last_modification_time(meta)
+        imp::from_last_modification_time(meta).emulate_second_only_system()
     }
 
     /// Creates a new timestamp from the last access time listed in the
@@ -107,7 +141,7 @@ impl FileTime {
     /// The returned value corresponds to the `atime` field of `stat` on Unix
     /// platforms and the `ftLastAccessTime` field on Windows platforms.
     pub fn from_last_access_time(meta: &fs::Metadata) -> FileTime {
-        imp::from_last_access_time(meta)
+        imp::from_last_access_time(meta).emulate_second_only_system()
     }
 
     /// Creates a new timestamp from the creation time listed in the specified
@@ -118,7 +152,7 @@ impl FileTime {
     /// that not all Unix platforms have this field available and may return
     /// `None` in some circumstances.
     pub fn from_creation_time(meta: &fs::Metadata) -> Option<FileTime> {
-        imp::from_creation_time(meta)
+        imp::from_creation_time(meta).map(|x| x.emulate_second_only_system())
     }
 
     /// Creates a new timestamp from the given SystemTime.
@@ -133,23 +167,25 @@ impl FileTime {
             UNIX_EPOCH
         };
 
-        time.duration_since(epoch).map(|d| FileTime {
-            seconds: d.as_secs() as i64,
-            nanos: d.subsec_nanos()
-        })
-        .unwrap_or_else(|e| {
-            let until_epoch = e.duration();
-            let (sec_offset, nanos) = if until_epoch.subsec_nanos() == 0 {
-                (0, 0)
-            } else {
-                (-1, 1_000_000_000 - until_epoch.subsec_nanos())
-            };
+        time.duration_since(epoch)
+            .map(|d| FileTime {
+                seconds: d.as_secs() as i64,
+                nanos: d.subsec_nanos(),
+            })
+            .unwrap_or_else(|e| {
+                let until_epoch = e.duration();
+                let (sec_offset, nanos) = if until_epoch.subsec_nanos() == 0 {
+                    (0, 0)
+                } else {
+                    (-1, 1_000_000_000 - until_epoch.subsec_nanos())
+                };
 
-            FileTime {
-                seconds: -1 * until_epoch.as_secs() as i64 + sec_offset,
-                nanos
-            }
-        })
+                FileTime {
+                    seconds: -1 * until_epoch.as_secs() as i64 + sec_offset,
+                    nanos,
+                }
+            })
+            .emulate_second_only_system()
     }
 
     /// Returns the whole number of seconds represented by this timestamp.
@@ -157,7 +193,9 @@ impl FileTime {
     /// Note that this value's meaning is **platform specific**. On Unix
     /// platform time stamps are typically relative to January 1, 1970, but on
     /// Windows platforms time stamps are relative to January 1, 1601.
-    pub fn seconds(&self) -> i64 { self.seconds }
+    pub fn seconds(&self) -> i64 {
+        self.seconds
+    }
 
     /// Returns the whole number of seconds represented by this timestamp,
     /// relative to the Unix epoch start of January 1, 1970.
@@ -165,7 +203,7 @@ impl FileTime {
     /// Note that this does not return the same value as `seconds` for Windows
     /// platforms as seconds are relative to a different date there.
     pub fn unix_seconds(&self) -> i64 {
-        self.seconds - if cfg!(windows) {11644473600} else {0}
+        self.seconds - if cfg!(windows) { 11644473600 } else { 0 }
     }
 
     /// Returns the nanosecond precision of this timestamp.
@@ -173,7 +211,9 @@ impl FileTime {
     /// The returned value is always less than one billion and represents a
     /// portion of a second forward from the seconds returned by the `seconds`
     /// method.
-    pub fn nanoseconds(&self) -> u32 { self.nanos }
+    pub fn nanoseconds(&self) -> u32 {
+        self.nanos
+    }
 }
 
 impl fmt::Display for FileTime {
@@ -192,11 +232,25 @@ impl From<SystemTime> for FileTime {
 ///
 /// This function will set the `atime` and `mtime` metadata fields for a file
 /// on the local filesystem, returning any error encountered.
-pub fn set_file_times<P>(p: P, atime: FileTime, mtime: FileTime)
-    -> io::Result<()>
-    where P: AsRef<Path>
+pub fn set_file_times<P>(p: P, atime: FileTime, mtime: FileTime) -> io::Result<()>
+where
+    P: AsRef<Path>,
 {
     imp::set_file_times(p.as_ref(), atime, mtime)
+}
+
+/// Set the last access and modification times for a file handle.
+///
+/// This function will either or both of  the `atime` and `mtime` metadata
+/// fields for a file handle , returning any error encountered. If `None` is
+/// specified then the time won't be updated. If `None` is specified for both
+/// options then no action is taken.
+pub fn set_file_handle_times(
+    f: &fs::File,
+    atime: Option<FileTime>,
+    mtime: Option<FileTime>,
+) -> io::Result<()> {
+    imp::set_file_handle_times(f, atime, mtime)
 }
 
 /// Set the last access and modification times for a file on the filesystem.
@@ -204,40 +258,97 @@ pub fn set_file_times<P>(p: P, atime: FileTime, mtime: FileTime)
 ///
 /// This function will set the `atime` and `mtime` metadata fields for a file
 /// on the local filesystem, returning any error encountered.
-pub fn set_symlink_file_times<P>(p: P, atime: FileTime, mtime: FileTime)
-    -> io::Result<()>
-    where P: AsRef<Path>
+pub fn set_symlink_file_times<P>(p: P, atime: FileTime, mtime: FileTime) -> io::Result<()>
+where
+    P: AsRef<Path>,
 {
     imp::set_symlink_file_times(p.as_ref(), atime, mtime)
 }
 
+/// Set the last modification time for a file on the filesystem.
+///
+/// This function will set the `mtime` metadata field for a file on the local
+/// filesystem, returning any error encountered.
+///
+/// # Platform support
+///
+/// Where supported this will attempt to issue just one syscall to update only
+/// the `mtime`, but where not supported this may issue one syscall to learn the
+/// existing `atime` so only the `mtime` can be configured.
+pub fn set_file_mtime<P>(p: P, mtime: FileTime) -> io::Result<()>
+where
+    P: AsRef<Path>,
+{
+    imp::set_file_mtime(p.as_ref(), mtime)
+}
+
+/// Set the last access time for a file on the filesystem.
+///
+/// This function will set the `atime` metadata field for a file on the local
+/// filesystem, returning any error encountered.
+///
+/// # Platform support
+///
+/// Where supported this will attempt to issue just one syscall to update only
+/// the `atime`, but where not supported this may issue one syscall to learn the
+/// existing `mtime` so only the `atime` can be configured.
+pub fn set_file_atime<P>(p: P, atime: FileTime) -> io::Result<()>
+where
+    P: AsRef<Path>,
+{
+    imp::set_file_atime(p.as_ref(), atime)
+}
+
 #[cfg(test)]
 mod tests {
-    extern crate tempdir;
-
+    use super::{
+        set_file_atime, set_file_handle_times, set_file_mtime, set_file_times,
+        set_symlink_file_times, FileTime,
+    };
+    use std::fs::{self, File};
     use std::io;
     use std::path::Path;
-    use std::fs::{self, File};
-    use self::tempdir::TempDir;
-    use super::{FileTime, set_file_times, set_symlink_file_times};
     use std::time::{Duration, UNIX_EPOCH};
+    use tempfile::Builder;
 
     #[cfg(unix)]
-    fn make_symlink<P,Q>(src: P, dst: Q) -> io::Result<()>
-        where P: AsRef<Path>,
-              Q: AsRef<Path>,
+    fn make_symlink_file<P, Q>(src: P, dst: Q) -> io::Result<()>
+    where
+        P: AsRef<Path>,
+        Q: AsRef<Path>,
     {
         use std::os::unix::fs::symlink;
         symlink(src, dst)
     }
 
     #[cfg(windows)]
-    fn make_symlink<P,Q>(src: P, dst: Q) -> io::Result<()>
-        where P: AsRef<Path>,
-              Q: AsRef<Path>,
+    fn make_symlink_file<P, Q>(src: P, dst: Q) -> io::Result<()>
+    where
+        P: AsRef<Path>,
+        Q: AsRef<Path>,
     {
         use std::os::windows::fs::symlink_file;
         symlink_file(src, dst)
+    }
+
+    #[cfg(unix)]
+    fn make_symlink_dir<P, Q>(src: P, dst: Q) -> io::Result<()>
+    where
+        P: AsRef<Path>,
+        Q: AsRef<Path>,
+    {
+        use std::os::unix::fs::symlink;
+        symlink(src, dst)
+    }
+
+    #[cfg(windows)]
+    fn make_symlink_dir<P, Q>(src: P, dst: Q) -> io::Result<()>
+    where
+        P: AsRef<Path>,
+        Q: AsRef<Path>,
+    {
+        use std::os::windows::fs::symlink_dir;
+        symlink_dir(src, dst)
     }
 
     #[test]
@@ -313,52 +424,134 @@ mod tests {
     }
 
     #[test]
-    fn set_file_times_test() {
-        let td = TempDir::new("filetime").unwrap();
+    fn set_file_times_test() -> io::Result<()> {
+        let td = Builder::new().prefix("filetime").tempdir()?;
         let path = td.path().join("foo.txt");
-        File::create(&path).unwrap();
+        let mut f = File::create(&path)?;
 
-        let metadata = fs::metadata(&path).unwrap();
+        let metadata = fs::metadata(&path)?;
         let mtime = FileTime::from_last_modification_time(&metadata);
         let atime = FileTime::from_last_access_time(&metadata);
-        set_file_times(&path, atime, mtime).unwrap();
+        set_file_times(&path, atime, mtime)?;
 
         let new_mtime = FileTime::from_unix_time(10_000, 0);
-        set_file_times(&path, atime, new_mtime).unwrap();
+        set_file_times(&path, atime, new_mtime)?;
 
-        let metadata = fs::metadata(&path).unwrap();
+        let metadata = fs::metadata(&path)?;
         let mtime = FileTime::from_last_modification_time(&metadata);
-        assert_eq!(mtime, new_mtime);
+        assert_eq!(mtime, new_mtime, "modification should be updated");
+
+        // Update just mtime
+        let new_mtime = FileTime::from_unix_time(20_000, 0);
+        set_file_handle_times(&mut f, None, Some(new_mtime))?;
+        let metadata = f.metadata()?;
+        let mtime = FileTime::from_last_modification_time(&metadata);
+        assert_eq!(mtime, new_mtime, "modification time should be updated");
+        let new_atime = FileTime::from_last_access_time(&metadata);
+        assert_eq!(atime, new_atime, "accessed time should not be updated");
+
+        // Update just atime
+        let new_atime = FileTime::from_unix_time(30_000, 0);
+        set_file_handle_times(&mut f, Some(new_atime), None)?;
+        let metadata = f.metadata()?;
+        let mtime = FileTime::from_last_modification_time(&metadata);
+        assert_eq!(mtime, new_mtime, "modification time should not be updated");
+        let atime = FileTime::from_last_access_time(&metadata);
+        assert_eq!(atime, new_atime, "accessed time should be updated");
 
         let spath = td.path().join("bar.txt");
-        make_symlink(&path, &spath).unwrap();
-        let metadata = fs::symlink_metadata(&spath).unwrap();
+        make_symlink_file(&path, &spath)?;
+        let metadata = fs::symlink_metadata(&spath)?;
         let smtime = FileTime::from_last_modification_time(&metadata);
 
-        set_file_times(&spath, atime, mtime).unwrap();
+        set_file_times(&spath, atime, mtime)?;
 
-        let metadata = fs::metadata(&path).unwrap();
+        let metadata = fs::metadata(&path)?;
         let cur_mtime = FileTime::from_last_modification_time(&metadata);
         assert_eq!(mtime, cur_mtime);
 
-        let metadata = fs::symlink_metadata(&spath).unwrap();
+        let metadata = fs::symlink_metadata(&spath)?;
         let cur_mtime = FileTime::from_last_modification_time(&metadata);
         assert_eq!(smtime, cur_mtime);
 
-        set_file_times(&spath, atime, new_mtime).unwrap();
+        set_file_times(&spath, atime, new_mtime)?;
 
-        let metadata = fs::metadata(&path).unwrap();
+        let metadata = fs::metadata(&path)?;
         let mtime = FileTime::from_last_modification_time(&metadata);
         assert_eq!(mtime, new_mtime);
 
-        let metadata = fs::symlink_metadata(&spath).unwrap();
+        let metadata = fs::symlink_metadata(&spath)?;
         let mtime = FileTime::from_last_modification_time(&metadata);
         assert_eq!(mtime, smtime);
+        Ok(())
+    }
+
+    #[test]
+    fn set_dir_times_test() -> io::Result<()> {
+        let td = Builder::new().prefix("filetime").tempdir()?;
+        let path = td.path().join("foo");
+        fs::create_dir(&path)?;
+
+        let metadata = fs::metadata(&path)?;
+        let mtime = FileTime::from_last_modification_time(&metadata);
+        let atime = FileTime::from_last_access_time(&metadata);
+        set_file_times(&path, atime, mtime)?;
+
+        let new_mtime = FileTime::from_unix_time(10_000, 0);
+        set_file_times(&path, atime, new_mtime)?;
+
+        let metadata = fs::metadata(&path)?;
+        let mtime = FileTime::from_last_modification_time(&metadata);
+        assert_eq!(mtime, new_mtime, "modification should be updated");
+
+        // Update just mtime
+        let new_mtime = FileTime::from_unix_time(20_000, 0);
+        set_file_mtime(&path, new_mtime)?;
+        let metadata = fs::metadata(&path)?;
+        let mtime = FileTime::from_last_modification_time(&metadata);
+        assert_eq!(mtime, new_mtime, "modification time should be updated");
+        let new_atime = FileTime::from_last_access_time(&metadata);
+        assert_eq!(atime, new_atime, "accessed time should not be updated");
+
+        // Update just atime
+        let new_atime = FileTime::from_unix_time(30_000, 0);
+        set_file_atime(&path, new_atime)?;
+        let metadata = fs::metadata(&path)?;
+        let mtime = FileTime::from_last_modification_time(&metadata);
+        assert_eq!(mtime, new_mtime, "modification time should not be updated");
+        let atime = FileTime::from_last_access_time(&metadata);
+        assert_eq!(atime, new_atime, "accessed time should be updated");
+
+        let spath = td.path().join("bar");
+        make_symlink_dir(&path, &spath)?;
+        let metadata = fs::symlink_metadata(&spath)?;
+        let smtime = FileTime::from_last_modification_time(&metadata);
+
+        set_file_times(&spath, atime, mtime)?;
+
+        let metadata = fs::metadata(&path)?;
+        let cur_mtime = FileTime::from_last_modification_time(&metadata);
+        assert_eq!(mtime, cur_mtime);
+
+        let metadata = fs::symlink_metadata(&spath)?;
+        let cur_mtime = FileTime::from_last_modification_time(&metadata);
+        assert_eq!(smtime, cur_mtime);
+
+        set_file_times(&spath, atime, new_mtime)?;
+
+        let metadata = fs::metadata(&path)?;
+        let mtime = FileTime::from_last_modification_time(&metadata);
+        assert_eq!(mtime, new_mtime);
+
+        let metadata = fs::symlink_metadata(&spath)?;
+        let mtime = FileTime::from_last_modification_time(&metadata);
+        assert_eq!(mtime, smtime);
+        Ok(())
     }
 
     #[test]
     fn set_file_times_pre_unix_epoch_test() {
-        let td = TempDir::new("filetime").unwrap();
+        let td = Builder::new().prefix("filetime").tempdir().unwrap();
         let path = td.path().join("foo.txt");
         File::create(&path).unwrap();
 
@@ -378,7 +571,7 @@ mod tests {
     #[test]
     #[cfg(windows)]
     fn set_file_times_pre_windows_epoch_test() {
-        let td = TempDir::new("filetime").unwrap();
+        let td = Builder::new().prefix("filetime").tempdir().unwrap();
         let path = td.path().join("foo.txt");
         File::create(&path).unwrap();
 
@@ -393,7 +586,7 @@ mod tests {
 
     #[test]
     fn set_symlink_file_times_test() {
-        let td = TempDir::new("filetime").unwrap();
+        let td = Builder::new().prefix("filetime").tempdir().unwrap();
         let path = td.path().join("foo.txt");
         File::create(&path).unwrap();
 
@@ -410,7 +603,7 @@ mod tests {
         assert_eq!(mtime, new_mtime);
 
         let spath = td.path().join("bar.txt");
-        make_symlink(&path, &spath).unwrap();
+        make_symlink_file(&path, &spath).unwrap();
 
         let metadata = fs::symlink_metadata(&spath).unwrap();
         let smtime = FileTime::from_last_modification_time(&metadata);
@@ -431,5 +624,85 @@ mod tests {
         let metadata = fs::symlink_metadata(&spath).unwrap();
         let mtime = FileTime::from_last_modification_time(&metadata);
         assert_eq!(mtime, new_smtime);
+    }
+
+    #[test]
+    fn set_symlink_dir_times_test() {
+        let td = Builder::new().prefix("filetime").tempdir().unwrap();
+        let path = td.path().join("foo");
+        fs::create_dir(&path);
+
+        let metadata = fs::metadata(&path).unwrap();
+        let mtime = FileTime::from_last_modification_time(&metadata);
+        let atime = FileTime::from_last_access_time(&metadata);
+        set_symlink_file_times(&path, atime, mtime).unwrap();
+
+        let new_mtime = FileTime::from_unix_time(10_000, 0);
+        set_symlink_file_times(&path, atime, new_mtime).unwrap();
+
+        let metadata = fs::metadata(&path).unwrap();
+        let mtime = FileTime::from_last_modification_time(&metadata);
+        assert_eq!(mtime, new_mtime);
+
+        let spath = td.path().join("bar");
+        make_symlink_dir(&path, &spath).unwrap();
+
+        let metadata = fs::symlink_metadata(&spath).unwrap();
+        let smtime = FileTime::from_last_modification_time(&metadata);
+        let satime = FileTime::from_last_access_time(&metadata);
+        set_symlink_file_times(&spath, smtime, satime).unwrap();
+
+        let metadata = fs::metadata(&path).unwrap();
+        let mtime = FileTime::from_last_modification_time(&metadata);
+        assert_eq!(mtime, new_mtime);
+
+        let new_smtime = FileTime::from_unix_time(20_000, 0);
+        set_symlink_file_times(&spath, atime, new_smtime).unwrap();
+
+        let metadata = fs::metadata(&spath).unwrap();
+        let mtime = FileTime::from_last_modification_time(&metadata);
+        assert_eq!(mtime, new_mtime);
+
+        let metadata = fs::symlink_metadata(&spath).unwrap();
+        let mtime = FileTime::from_last_modification_time(&metadata);
+        assert_eq!(mtime, new_smtime);
+    }
+
+    #[test]
+    fn set_single_time_test() {
+        use super::{set_file_atime, set_file_mtime};
+
+        let td = Builder::new().prefix("filetime").tempdir().unwrap();
+        let path = td.path().join("foo.txt");
+        File::create(&path).unwrap();
+
+        let metadata = fs::metadata(&path).unwrap();
+        let mtime = FileTime::from_last_modification_time(&metadata);
+        let atime = FileTime::from_last_access_time(&metadata);
+        set_file_times(&path, atime, mtime).unwrap();
+
+        let new_mtime = FileTime::from_unix_time(10_000, 0);
+        set_file_mtime(&path, new_mtime).unwrap();
+
+        let metadata = fs::metadata(&path).unwrap();
+        let mtime = FileTime::from_last_modification_time(&metadata);
+        assert_eq!(mtime, new_mtime, "modification time should be updated");
+        assert_eq!(
+            atime,
+            FileTime::from_last_access_time(&metadata),
+            "access time should not be updated",
+        );
+
+        let new_atime = FileTime::from_unix_time(20_000, 0);
+        set_file_atime(&path, new_atime).unwrap();
+
+        let metadata = fs::metadata(&path).unwrap();
+        let atime = FileTime::from_last_access_time(&metadata);
+        assert_eq!(atime, new_atime, "access time should be updated");
+        assert_eq!(
+            mtime,
+            FileTime::from_last_modification_time(&metadata),
+            "modification time should not be updated"
+        );
     }
 }

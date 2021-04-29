@@ -2,61 +2,101 @@
 //! always available so we also fall back to `utimes` if we couldn't find
 //! `utimensat` at runtime.
 
+use crate::FileTime;
+use std::ffi::CString;
+use std::fs;
 use std::io;
-use std::mem;
+use std::os::unix::prelude::*;
 use std::path::Path;
-use std::sync::atomic::{AtomicUsize, Ordering, ATOMIC_USIZE_INIT};
-use std::sync::atomic::{AtomicBool, ATOMIC_BOOL_INIT};
-
-use FileTime;
-use super::libc::{self, c_int, c_char, timespec};
+use std::ptr;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering::SeqCst;
 
 pub fn set_file_times(p: &Path, atime: FileTime, mtime: FileTime) -> io::Result<()> {
-    set_times(p, atime, mtime, false)
+    set_times(p, Some(atime), Some(mtime), false)
+}
+
+pub fn set_file_mtime(p: &Path, mtime: FileTime) -> io::Result<()> {
+    set_times(p, None, Some(mtime), false)
+}
+
+pub fn set_file_atime(p: &Path, atime: FileTime) -> io::Result<()> {
+    set_times(p, Some(atime), None, false)
+}
+
+pub fn set_file_handle_times(
+    f: &fs::File,
+    atime: Option<FileTime>,
+    mtime: Option<FileTime>,
+) -> io::Result<()> {
+    // Attempt to use the `utimensat` syscall, but if it's not supported by the
+    // current kernel then fall back to an older syscall.
+    static INVALID: AtomicBool = AtomicBool::new(false);
+    if !INVALID.load(SeqCst) {
+        let times = [super::to_timespec(&atime), super::to_timespec(&mtime)];
+        let rc = unsafe {
+            libc::syscall(
+                libc::SYS_utimensat,
+                f.as_raw_fd(),
+                ptr::null::<libc::c_char>(),
+                times.as_ptr(),
+                0,
+            )
+        };
+        if rc == 0 {
+            return Ok(());
+        }
+        let err = io::Error::last_os_error();
+        if err.raw_os_error() == Some(libc::ENOSYS) {
+            INVALID.store(true, SeqCst);
+        } else {
+            return Err(err);
+        }
+    }
+
+    super::utimes::set_file_handle_times(f, atime, mtime)
 }
 
 pub fn set_symlink_file_times(p: &Path, atime: FileTime, mtime: FileTime) -> io::Result<()> {
-    set_times(p, atime, mtime, true)
+    set_times(p, Some(atime), Some(mtime), true)
 }
 
-fn set_times(p: &Path, atime: FileTime, mtime: FileTime, symlink: bool) -> io::Result<()> {
-    let flags = if symlink { libc::AT_SYMLINK_NOFOLLOW } else { 0 };
-    let utimes = if symlink { libc::lutimes } else { libc::utimes };
+fn set_times(
+    p: &Path,
+    atime: Option<FileTime>,
+    mtime: Option<FileTime>,
+    symlink: bool,
+) -> io::Result<()> {
+    let flags = if symlink {
+        libc::AT_SYMLINK_NOFOLLOW
+    } else {
+        0
+    };
 
-    // Try to use the more-accurate `utimensat` when possible.
-    static INVALID: AtomicBool = ATOMIC_BOOL_INIT;
-    if !INVALID.load(Ordering::SeqCst) {
-        if let Some(f) = utimensat() {
-            // Even when libc has `utimensat`, the kernel may return `ENOSYS`,
-            // and then we'll need to use the `utimes` fallback instead.
-            match super::utimensat(p, atime, mtime, f, flags) {
-                Err(ref e) if e.raw_os_error() == Some(libc::ENOSYS) => {
-                    INVALID.store(true, Ordering::SeqCst);
-                }
-                valid => return valid,
-            }
-        }
-    }
-
-    super::utimes(p, atime, mtime, utimes)
-}
-
-fn utimensat() -> Option<unsafe extern fn(c_int, *const c_char, *const timespec, c_int) -> c_int> {
-    static ADDR: AtomicUsize = ATOMIC_USIZE_INIT;
-    unsafe {
-        match ADDR.load(Ordering::SeqCst) {
-            0 => {}
-            1 => return None,
-            n => return Some(mem::transmute(n)),
-        }
-        let name = b"utimensat\0";
-        let sym = libc::dlsym(libc::RTLD_DEFAULT, name.as_ptr() as *const _);
-        let (val, ret) = if sym.is_null() {
-            (1, None)
-        } else {
-            (sym as usize, Some(mem::transmute(sym)))
+    // Same as the `if` statement above.
+    static INVALID: AtomicBool = AtomicBool::new(false);
+    if !INVALID.load(SeqCst) {
+        let p = CString::new(p.as_os_str().as_bytes())?;
+        let times = [super::to_timespec(&atime), super::to_timespec(&mtime)];
+        let rc = unsafe {
+            libc::syscall(
+                libc::SYS_utimensat,
+                libc::AT_FDCWD,
+                p.as_ptr(),
+                times.as_ptr(),
+                flags,
+            )
         };
-        ADDR.store(val, Ordering::SeqCst);
-        return ret
+        if rc == 0 {
+            return Ok(());
+        }
+        let err = io::Error::last_os_error();
+        if err.raw_os_error() == Some(libc::ENOSYS) {
+            INVALID.store(true, SeqCst);
+        } else {
+            return Err(err);
+        }
     }
+
+    super::utimes::set_times(p, atime, mtime, symlink)
 }

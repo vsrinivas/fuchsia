@@ -917,13 +917,14 @@ dependencies = [
 
 [[package]]
 name = "filetime"
-version = "0.2.4"
+version = "0.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a2df5c1a8c4be27e7707789dc42ae65976e60b394afd293d1419ab915833e646"
+checksum = "1d34cfa13a63ae058bfa601fe9e313bbdb3746427c1459185464ce0fcf62e1e8"
 dependencies = [
- "cfg-if 0.1.10",
+ "cfg-if 1.0.0",
  "libc",
- "redox_syscall 0.1.51",
+ "redox_syscall 0.2.5",
+ "winapi",
 ]
 
 [[package]]

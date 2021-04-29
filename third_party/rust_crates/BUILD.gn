@@ -3155,35 +3155,38 @@ rust_library("fatfs-v0_4_0") {
   ]
 }
 
-rust_library("filetime-v0_2_4") {
+rust_library("filetime-v0_2_14") {
   crate_name = "filetime"
   crate_root = "//third_party/rust_crates/vendor/filetime/src/lib.rs"
-  output_name = "filetime-244356ab2e506ab"
+  output_name = "filetime-771a5d3d16b52760"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
   ]
 
   deps = []
-  deps += [ ":cfg-if-v0_1_10" ]
+  deps += [ ":cfg-if-v1_0_0" ]
   if (false) {
-    deps += [ ":redox_syscall-v0_1_51" ]
+    deps += [ ":redox_syscall-v0_2_5" ]
   }
   if (true) {
     deps += [ ":libc-v0_2_88" ]
+  }
+  if (false) {
+    deps += [ ":winapi-v0_3_9" ]
   }
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=244356ab2e506ab",
-    "-Cextra-filename=-244356ab2e506ab",
+    "--edition=2018",
+    "-Cmetadata=771a5d3d16b52760",
+    "-Cextra-filename=-771a5d3d16b52760",
   ]
 
   aliased_deps = {
-    syscall = ":redox_syscall-v0_1_51"
+    syscall = ":redox_syscall-v0_2_5"
   }
 }
 
@@ -7471,7 +7474,7 @@ rust_library("rouille-v3_0_0") {
   deps += [ ":brotli2-v0_3_2" ]
   deps += [ ":chrono-v0_4_11" ]
   deps += [ ":deflate-v0_7_19" ]
-  deps += [ ":filetime-v0_2_4" ]
+  deps += [ ":filetime-v0_2_14" ]
   deps += [ ":multipart-v0_15_4" ]
   deps += [ ":num_cpus-v1_12_0" ]
   deps += [ ":rand-v0_5_6" ]
@@ -8998,7 +9001,7 @@ rust_library("tar-v0_4_25") {
   ]
 
   deps = []
-  deps += [ ":filetime-v0_2_4" ]
+  deps += [ ":filetime-v0_2_14" ]
   if (false) {
     deps += [ ":redox_syscall-v0_1_51" ]
   }

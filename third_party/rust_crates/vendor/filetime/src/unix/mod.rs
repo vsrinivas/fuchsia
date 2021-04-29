@@ -1,27 +1,27 @@
-extern crate libc;
-
-use std::ffi::CString;
+use crate::FileTime;
+use libc::{time_t, timespec};
 use std::fs;
-use std::io;
 use std::os::unix::prelude::*;
-use std::path::Path;
 
-use self::libc::{c_int, c_char, timeval, time_t, suseconds_t};
-use self::libc::{timespec};
-
-use FileTime;
-
-cfg_if! {
+cfg_if::cfg_if! {
     if #[cfg(target_os = "linux")] {
+        mod utimes;
         mod linux;
         pub use self::linux::*;
-    // netbsd, openbsd and freebsd should use utimensat, but the call is not
-    // in the latest rust libc (0.2.43). as soon as a new version is available
-    // these target_os'es should be added back in.
-    } else if #[cfg(any(target_os = "android",
-                        target_os = "solaris",
+    } else if #[cfg(target_os = "android")] {
+        mod android;
+        pub use self::android::*;
+    } else if #[cfg(target_os = "macos")] {
+        mod utimes;
+        mod macos;
+        pub use self::macos::*;
+    } else if #[cfg(any(target_os = "solaris",
+                        target_os = "illumos",
                         target_os = "emscripten",
-                        target_os = "openbsd"))] {
+                        target_os = "freebsd",
+                        target_os = "netbsd",
+                        target_os = "openbsd",
+                        target_os = "haiku"))] {
         mod utimensat;
         pub use self::utimensat::*;
     } else {
@@ -31,51 +31,37 @@ cfg_if! {
 }
 
 #[allow(dead_code)]
-fn utimes(p: &Path,
-          atime: FileTime,
-          mtime: FileTime,
-          utimes: unsafe extern fn(*const c_char, *const timeval) -> c_int)
-    -> io::Result<()>
-{
-    let times = [to_timeval(&atime), to_timeval(&mtime)];
-    let p = try!(CString::new(p.as_os_str().as_bytes()));
-    return if unsafe { utimes(p.as_ptr() as *const _, times.as_ptr()) == 0 } {
-        Ok(())
-    } else {
-        Err(io::Error::last_os_error())
-    };
-
-    fn to_timeval(ft: &FileTime) -> timeval {
-        timeval {
-            tv_sec: ft.seconds() as time_t,
-            tv_usec: (ft.nanoseconds() / 1000) as suseconds_t,
+fn to_timespec(ft: &Option<FileTime>) -> timespec {
+    cfg_if::cfg_if! {
+        if #[cfg(any(target_os = "macos",
+                     target_os = "illumos",
+                     target_os = "freebsd"))] {
+            // https://github.com/apple/darwin-xnu/blob/a449c6a3b8014d9406c2ddbdc81795da24aa7443/bsd/sys/stat.h#L541
+            // https://github.com/illumos/illumos-gate/blob/master/usr/src/boot/sys/sys/stat.h#L312
+            // https://svnweb.freebsd.org/base/head/sys/sys/stat.h?view=markup#l359
+            const UTIME_OMIT: i64 = -2;
+        } else if #[cfg(target_os = "openbsd")] {
+            // https://github.com/openbsd/src/blob/master/sys/sys/stat.h#L189
+            const UTIME_OMIT: i64 = -1;
+        } else if #[cfg(target_os = "haiku")] {
+            // https://git.haiku-os.org/haiku/tree/headers/posix/sys/stat.h?#n106
+            const UTIME_OMIT: i64 = 1000000001;
+        } else {
+            // http://cvsweb.netbsd.org/bsdweb.cgi/src/sys/sys/stat.h?annotate=1.68.30.1
+            // https://github.com/emscripten-core/emscripten/blob/master/system/include/libc/sys/stat.h#L71
+            const UTIME_OMIT: i64 = 1_073_741_822;
         }
     }
-}
 
-#[allow(dead_code)]
-fn utimensat(p: &Path,
-             atime: FileTime,
-             mtime: FileTime,
-             f: unsafe extern fn(c_int, *const c_char, *const timespec, c_int) -> c_int,
-             flags: c_int)
-    -> io::Result<()>
-{
-    let times = [to_timespec(&atime), to_timespec(&mtime)];
-    let p = try!(CString::new(p.as_os_str().as_bytes()));
-    let rc = unsafe {
-        f(libc::AT_FDCWD, p.as_ptr() as *const _, times.as_ptr(), flags)
-    };
-    return if rc == 0 {
-        Ok(())
-    } else {
-        Err(io::Error::last_os_error())
-    };
-
-    fn to_timespec(ft: &FileTime) -> timespec {
+    if let &Some(ft) = ft {
         timespec {
             tv_sec: ft.seconds() as time_t,
             tv_nsec: ft.nanoseconds() as _,
+        }
+    } else {
+        timespec {
+            tv_sec: 0,
+            tv_nsec: UTIME_OMIT as _,
         }
     }
 }

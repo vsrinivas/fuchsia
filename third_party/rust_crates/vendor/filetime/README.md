@@ -1,11 +1,8 @@
 # filetime
 
-[![Build Status](https://travis-ci.org/alexcrichton/filetime.svg?branch=master)](https://travis-ci.org/alexcrichton/filetime)
-[![Build status](https://ci.appveyor.com/api/projects/status/9tatexq47i3ee13k?svg=true)](https://ci.appveyor.com/project/alexcrichton/filetime)
-
 [Documentation](https://docs.rs/filetime)
 
-A helper library for inspecting the various timestamps of files in Rust. This
+A helper library for inspecting and setting the various timestamps of files in Rust. This
 library takes into account cross-platform differences in terms of where the
 timestamps are located, what they are called, and how to convert them into a
 platform-independent representation.
@@ -15,6 +12,12 @@ platform-independent representation.
 [dependencies]
 filetime = "0.2"
 ```
+
+# Advantages over using `std::fs::Metadata`
+
+This library includes the ability to set this data, which std does not.
+
+This library, when built with `RUSTFLAGS=--cfg emulate_second_only_system` set, will return all times rounded down to the second. This emulates the behavior of some file systems, mostly [HFS](https://en.wikipedia.org/wiki/HFS_Plus), allowing debugging on other hardware.
 
 # License
 
@@ -30,5 +33,5 @@ at your option.
 ### Contribution
 
 Unless you explicitly state otherwise, any contribution intentionally submitted
-for inclusion in Serde by you, as defined in the Apache-2.0 license, shall be
+for inclusion in Filetime by you, as defined in the Apache-2.0 license, shall be
 dual licensed as above, without any additional terms or conditions.
