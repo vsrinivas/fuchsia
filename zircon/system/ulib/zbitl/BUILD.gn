@@ -17,9 +17,9 @@ zx_library("zbitl") {
   sdk_migrated = true
 
   sources = [
-    "checking.cc",
     "item.cc",
     "mem_config.cc",
+    "view.cc",
   ]
   deps = [
     ":internal.decompress-zstd",
