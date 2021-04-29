@@ -11,6 +11,11 @@
 
 namespace flatland {
 
+namespace test {
+class DisplayCompositorPixelTest;
+class DisplayCompositorTest;
+}  // namespace test
+
 // The DisplayCompositor is responsible for compositing Flatland render data onto the display(s).
 // It accomplishes this either by direct hardware compositing via the display controller
 // interface, or rendering on the GPU via a custom renderer API. It also handles the
@@ -66,6 +71,9 @@ class DisplayCompositor final : public allocation::BufferCollectionImporter {
       uint32_t num_vmos, fuchsia::sysmem::BufferCollectionInfo_2* collection_info = nullptr);
 
  private:
+  friend class test::DisplayCompositorPixelTest;
+  friend class test::DisplayCompositorTest;
+
   struct DisplayConfigResponse {
     // Whether or not the config can be successfully applied or not.
     fuchsia::hardware::display::ConfigResult result;
@@ -158,6 +166,16 @@ class DisplayCompositor final : public allocation::BufferCollectionImporter {
   // Maps a display ID to a struct of all the information needed to properly render to
   // that display in both the hardware and software composition paths.
   std::unordered_map<uint64_t, DisplayEngineData> display_engine_data_map_;
+
+  // Maps a buffer collection ID to a BufferCollection. This is used as a bridge between
+  // ImportBufferCollection() and ImportBufferImage() calls, so that we can check if the attach
+  // token can be used on the existing allocation.
+  std::unordered_map<allocation::GlobalBufferCollectionId, fuchsia::sysmem::BufferCollectionSyncPtr>
+      attach_tokens_for_display_;
+
+  // Maps a buffer collection ID to a boolean indicating if it can be imported into display.
+  std::unordered_map<allocation::GlobalBufferCollectionId, bool>
+      buffer_collection_supports_display_;
 };
 
 }  // namespace flatland

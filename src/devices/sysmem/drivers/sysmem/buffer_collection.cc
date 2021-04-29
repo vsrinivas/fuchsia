@@ -343,7 +343,6 @@ void BufferCollection::AttachToken(
   } else {
     new_node_properties->client_debug_info().name = "from AttachToken()";
   }
-  ZX_DEBUG_ASSERT(new_node_properties->client_debug_info().id == 0);
 
   if (rights_attenuation_mask != ZX_RIGHT_SAME_RIGHTS) {
     new_node_properties->rights_attenuation_mask() &= rights_attenuation_mask;
