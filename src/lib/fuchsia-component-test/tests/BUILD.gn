@@ -70,6 +70,7 @@ rustc_binary("realm") {
     "//src/lib/fuchsia-component-test",
     "//src/lib/syslog/rust:syslog",
     "//src/sys/component_manager/testing:test_utils_lib",
+    "//src/sys/lib/component-events",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:futures",

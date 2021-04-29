@@ -20,8 +20,22 @@
     ],
     use: [
         {
-            protocol: "fuchsia.component.client.test.EmptyProtocol",
+            event: [ "destroyed" ],
+            from: "framework",
+            modes: [ "async" ],
+        },
+        {
+            protocol: "fuchsia.sys2.EventSource",
             from: "parent",
+        },
+        {
+            event_stream: "DestroyedEventStream",
+            subscriptions: [
+                {
+                    event: "destroyed",
+                    mode: "async",
+                },
+            ],
         },
     ],
 }

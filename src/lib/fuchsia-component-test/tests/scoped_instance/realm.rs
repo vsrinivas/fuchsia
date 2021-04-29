@@ -3,6 +3,11 @@
 // found in the LICENSE file.
 use {
     anyhow::{format_err, Context, Error},
+    component_events::{
+        events::*,
+        matcher::EventMatcher,
+        sequence::{EventSequence, Ordering},
+    },
     fidl_fidl_examples_routing_echo as fecho, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_childs_service,
     fuchsia_component_test::ScopedInstance,
@@ -18,31 +23,24 @@ struct Args {
     #[argh(switch, long = "wait")]
     wait: bool,
 }
-fn main() {
+
+#[fasync::run_singlethreaded]
+async fn main() {
     let Args { wait } = argh::from_env();
-    let mut exec = fasync::Executor::new().expect("failed to make async executor");
     syslog::init().expect("could not initialize logging");
     info!("Realm started");
 
+    let event_source = EventSource::new().unwrap();
+    let event_stream = event_source.take_static_event_stream("DestroyedEventStream").await.unwrap();
+
     // Create 3 scoped instances
-    let mut instances =
-        exec.run_singlethreaded(create_instances()).expect("failed to create instances");
+    let mut instances = create_instances().await.expect("failed to create instances");
     info!("Created instances");
 
     let waiters = if wait {
         // Grab the destroy waiters for each scoped instance, each of which will resolve once
         // destruction for its instance is complete
-        let mut waiters: Vec<_> = instances.iter_mut().map(|i| i.take_destroy_waiter()).collect();
-
-        // None of the waiters should be ready yet, since we haven't dropped any of the instances
-        for waiter in waiters.iter_mut() {
-            exec.wake_main_future();
-            match exec.run_one_step(waiter) {
-                None => panic!("waiter future has not been dispatched"),
-                Some(core::task::Poll::Ready(_)) => panic!("waiter future should not be ready yet"),
-                Some(core::task::Poll::Pending) => (),
-            }
-        }
+        let waiters: Vec<_> = instances.iter_mut().map(|i| i.take_destroy_waiter()).collect();
         Some(waiters)
     } else {
         None
@@ -55,29 +53,26 @@ fn main() {
     if let Some(waiters) = waiters {
         info!("Waiting on destroy waiters");
         // Wait for all of the instances to be destroyed, assert that there were no errors
-        for destruction_result in exec.run_singlethreaded(join_all(waiters)) {
-            let () = destruction_result.expect("destruction failed");
+        for result in join_all(waiters).await {
+            result.expect("destruction failed");
         }
     }
 
-    // Connect to a bogus service as a way to signal that this test component has performed all the
-    // logic it wanted. The runner uses this signal as a statement that this component is alive and
-    // to keep it living up to this point.
-    let _proxy = fuchsia_component::client::connect_to_service::<
-        fidl_fuchsia_component_client_test::EmptyProtocolMarker,
-    >()
-    .expect("can create bogus service request");
-
-    // The orchestrator of this test is observing component manager events to determine when the
-    // test is over based on the children exiting. If we exit from main the children will be stopped
-    // for different reasons than dropping our scoped instances here, thus invalidating the test.
-    //
-    // When not waiting on destruction result, we're intentionally not giving the executor any
-    // chance to run after dropping instances to prove that the children will be deleted without an
-    // executor running.
-    loop {
-        let () = std::thread::park();
-    }
+    EventSequence::new()
+        .all_of(
+            vec![
+                EventMatcher::ok()
+                    .r#type(Destroyed::TYPE)
+                    .moniker("./coll:static_name".to_string()),
+                EventMatcher::ok().r#type(Destroyed::TYPE).moniker("./coll:auto-*".to_string()),
+                EventMatcher::ok().r#type(Destroyed::TYPE).moniker("./coll:auto-*".to_string()),
+                EventMatcher::ok().r#type(Destroyed::TYPE).moniker("./coll:auto-*".to_string()),
+            ],
+            Ordering::Unordered,
+        )
+        .expect(event_stream)
+        .await
+        .unwrap();
 }
 
 async fn create_instances() -> Result<Vec<ScopedInstance>, Error> {

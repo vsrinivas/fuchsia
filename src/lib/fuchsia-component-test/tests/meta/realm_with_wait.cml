@@ -20,14 +20,23 @@
         },
     ],
     use: [
-        // Needed to instantiate dynamic components.
         {
-            protocol: "fuchsia.sys2.Realm",
+            event: [ "destroyed" ],
             from: "framework",
+            modes: [ "async" ],
         },
         {
-            protocol: "fuchsia.component.client.test.EmptyProtocol",
+            protocol: "fuchsia.sys2.EventSource",
             from: "parent",
+        },
+        {
+            event_stream: "DestroyedEventStream",
+            subscriptions: [
+                {
+                    event: "destroyed",
+                    mode: "async",
+                },
+            ],
         },
     ],
 }
