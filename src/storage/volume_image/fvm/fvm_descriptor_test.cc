@@ -326,15 +326,22 @@ TEST(FvmDescriptorTest, MakeHeader) {
   options.max_volume_size = kMaxSize;
   options.target_volume_size = kTargetSize;
 
-  // Max size is used if it's set.
+  // Max size is used for allocated data.
   fvm::Header header = internal::MakeHeader(options, kSliceCount);
-  EXPECT_GE(header.fvm_partition_size, kMaxSize);
+  EXPECT_GE(header.fvm_partition_size, kTargetSize);
+  EXPECT_LT(header.fvm_partition_size, kMaxSize);
+  auto expected = fvm::Header::FromDiskSize(fvm::kMaxVPartitions - 1, kMaxSize, kSliceSize);
+  EXPECT_EQ(header.GetAllocationTableAllocatedEntryCount(),
+            expected.GetAllocationTableAllocatedEntryCount());
 
   // The target size should be used if the max size isn't set.
   options.max_volume_size = std::nullopt;
   header = internal::MakeHeader(options, kSliceCount);
   EXPECT_GE(header.fvm_partition_size, kTargetSize);
   EXPECT_LT(header.fvm_partition_size, kMaxSize);
+  expected = fvm::Header::FromDiskSize(fvm::kMaxVPartitions - 1, kTargetSize, kSliceSize);
+  EXPECT_EQ(header.GetAllocationTableAllocatedEntryCount(),
+            expected.GetAllocationTableAllocatedEntryCount());
 
   // The slice count should be used if nothing else is set.
   options.target_volume_size = std::nullopt;

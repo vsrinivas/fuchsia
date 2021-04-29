@@ -445,5 +445,34 @@ TEST(AdapterTest, CompressedSparseImageWithoutExplicitDecompressionToFvmImagePas
   ASSERT_NO_FATAL_FAILURE(CheckPartitionsInRamdisk(fvm_descriptor));
 }
 
+TEST(AdapterTest, CheckWithMaxVolumeSizeSet) {
+  auto compressed_sparse_reader_or = FdReader::Create(kFvmSparseImagePath);
+  ASSERT_TRUE(compressed_sparse_reader_or.is_ok()) << compressed_sparse_reader_or.error();
+  FdReader compressed_sparse_reader = compressed_sparse_reader_or.take_value();
+
+  // Read the decompressed image.
+  auto fvm_descriptor_or =
+      FvmSparseReadImage(0, std::make_unique<FdReader>(std::move(compressed_sparse_reader)));
+  ASSERT_TRUE(fvm_descriptor_or.is_ok()) << fvm_descriptor_or.error();
+  auto fvm_descriptor_base = fvm_descriptor_or.take_value();
+
+  FvmOptions options = fvm_descriptor_base.options();
+  options.target_volume_size = kImageSize;
+  options.max_volume_size = 2 * kImageSize;
+  options.compression.schema = CompressionSchema::kNone;
+
+  fvm_descriptor_or =
+      FvmDescriptor::Builder(std::move(fvm_descriptor_base)).SetOptions(options).Build();
+  ASSERT_TRUE(fvm_descriptor_or.is_ok()) << fvm_descriptor_or.error();
+  auto fvm_descriptor = fvm_descriptor_or.take_value();
+
+  auto write_result = WriteFvmImage(fvm_descriptor);
+  ASSERT_TRUE(write_result.is_ok()) << write_result.error();
+  auto [fvm_vmo, fvm_writer] = write_result.take_value();
+
+  auto ramdisk_handle = LaunchFvm(fvm_vmo);
+  ASSERT_NO_FATAL_FAILURE(CheckPartitionsInRamdisk(fvm_descriptor));
+}
+
 }  // namespace
 }  // namespace storage::volume_image
