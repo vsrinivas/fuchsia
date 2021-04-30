@@ -7,7 +7,6 @@
         {
             name: "integration-test",
             url: "fuchsia-pkg://fuchsia.com/device-name-provider-tests#meta/integration-test-component.cm",
-            startup: "eager",
         },
     ],
     offer: [
