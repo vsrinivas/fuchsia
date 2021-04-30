@@ -25,7 +25,7 @@ use {
     fidl_fuchsia_ui_views::ViewRefInstalledMarker,
     fuchsia_async as fasync,
     fuchsia_component::{
-        client::{connect_to_service, launch_with_options, App, LaunchOptions},
+        client::{connect_to_protocol, launch_with_options, App, LaunchOptions},
         server::ServiceFs,
     },
     fuchsia_zircon as zx,
@@ -50,7 +50,7 @@ enum ExposedServices {
 const NUM_CONCURRENT_REQUESTS: usize = 5;
 
 async fn launch_ermine() -> Result<(App, zx::Channel), Error> {
-    let launcher = connect_to_service::<LauncherMarker>()?;
+    let launcher = connect_to_protocol::<LauncherMarker>()?;
 
     let (client_chan, server_chan) = zx::Channel::create().unwrap();
 
@@ -134,7 +134,7 @@ async fn set_view_focus(
     let mut viewref_dup = fuchsia_scenic::duplicate_view_ref(&view_ref)?;
 
     // Wait for the view_ref to signal its ready to be focused.
-    let view_ref_installed = connect_to_service::<ViewRefInstalledMarker>()
+    let view_ref_installed = connect_to_protocol::<ViewRefInstalledMarker>()
         .context("Could not connect to ViewRefInstalledMarker")?;
     let watch_result = view_ref_installed.watch(&mut view_ref).await;
     match watch_result {
@@ -161,18 +161,18 @@ async fn set_view_focus(
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["workstation_session"]).expect("Failed to initialize logger.");
     let realm =
-        connect_to_service::<fsys::RealmMarker>().context("Could not connect to Realm service.")?;
+        connect_to_protocol::<fsys::RealmMarker>().context("Could not connect to Realm service.")?;
     let element_manager = SimpleElementManager::new(realm);
 
     let mut element_repository = ElementRepository::new(Rc::new(element_manager));
 
     let (app, element_channel) = launch_ermine().await?;
-    let view_provider = app.connect_to_service::<ViewProviderMarker>()?;
+    let view_provider = app.connect_to_protocol::<ViewProviderMarker>()?;
 
-    let presenter = app.connect_to_service::<GraphicalPresenterMarker>()?;
+    let presenter = app.connect_to_protocol::<GraphicalPresenterMarker>()?;
     let mut handler = ElementEventHandler::new(presenter);
 
-    let scene_manager = Arc::new(connect_to_service::<ManagerMarker>().unwrap());
+    let scene_manager = Arc::new(connect_to_protocol::<ManagerMarker>().unwrap());
 
     let scene_channel: ClientEnd<ViewProviderMarker> = view_provider
         .into_channel()
