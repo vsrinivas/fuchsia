@@ -7,28 +7,61 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
 
-PeriodicLogger::PeriodicLogger(std::string operation, zx::duration logging_interval)
-    : start_time_(zx::clock::get_monotonic()),
-      operation_(std::move(operation)),
-      logging_interval_(logging_interval),
-      last_log_time_(start_time_) {}
+#include <chrono>
 
-PeriodicLogger::~PeriodicLogger() {
+namespace {
+
+void LoggingThread(std::string message, zx::duration logging_interval,
+                   std::future<void> should_stop) {
+  bool message_printed = false;
+  zx::time start_time = zx::clock::get_monotonic();
+
+  while (true) {
+    // Wait until the next logging interval or we are asked to finish up.
+    std::future_status status =
+        should_stop.wait_for(std::chrono::microseconds(logging_interval.to_usecs()));
+    if (status == std::future_status::ready) {
+      break;
+    }
+
+    // Print out a log message.
+    zx::time now = zx::clock::get_monotonic();
+    FX_LOGS(INFO) << message << ": Waiting... (" << (now - start_time).to_secs() << "s passed)";
+    message_printed = true;
+  }
+
   // Only print a final message if we already printed a progress message.
-  if (message_printed_) {
-    FX_LOGS(INFO) << operation_ << ": Finished after "
-                  << (zx::clock::get_monotonic() - start_time_).to_secs() << "s.";
+  if (message_printed) {
+    FX_LOGS(INFO) << message << ": Finished after "
+                  << (zx::clock::get_monotonic() - start_time).to_secs() << "s.";
   }
 }
 
-// Print a log message about the current operation if enough time has passed
-// since the operation started / since the last log message.
-void PeriodicLogger::LogIfRequired() {
-  const zx::time now = zx::clock::get_monotonic();
-  if (now - last_log_time_ >= logging_interval_) {
-    FX_LOGS(INFO) << operation_ << ": Still waiting... (" << (now - start_time_).to_secs()
-                  << "s passed)";
-    last_log_time_ = now;
-    message_printed_ = true;
+}  // namespace
+
+PeriodicLogger::PeriodicLogger(std::string message, zx::duration logging_interval) {
+  Start(std::move(message), logging_interval);
+}
+
+void PeriodicLogger::Start(std::string message, zx::duration logging_interval) {
+  // Print the message.
+  FX_LOGS(INFO) << message;
+
+  // Stop any existing thread.
+  Stop();
+
+  // Start a new thread.
+  should_stop_ = std::promise<void>();
+  logging_thread_.emplace(&LoggingThread, std::move(message), logging_interval,
+                          should_stop_.get_future());
+}
+
+void PeriodicLogger::Stop() {
+  if (logging_thread_) {
+    should_stop_.set_value();
+    logging_thread_->join();
+    logging_thread_.reset();
   }
 }
+
+PeriodicLogger::~PeriodicLogger() { Stop(); }

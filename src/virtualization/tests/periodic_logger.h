@@ -5,29 +5,40 @@
 #ifndef SRC_VIRTUALIZATION_TESTS_PERIODIC_LOGGER_H_
 #define SRC_VIRTUALIZATION_TESTS_PERIODIC_LOGGER_H_
 
-#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
+#include <zircon/compiler.h>
+
+#include <future>
+#include <optional>
+#include <thread>
 
 // Print a log message every |logging_interval| units of time.
 //
-// Users should periodically call |LogIfRequired|. Once |logging_interval|
-// has passed since class creation, a log message will be printed. Log
-// messages will then continue to be printed every |logging_interval|.
-class PeriodicLogger {
+// A thread will be started that will log the string |message| after
+// |logging_interval| has passed, and then continue to print |message|
+// every |logging_interval|.
+class __WARN_UNUSED_CONSTRUCTOR PeriodicLogger {
  public:
-  PeriodicLogger(std::string operation, zx::duration logging_interval);
+  PeriodicLogger() = default;
+  PeriodicLogger(std::string message, zx::duration logging_interval);
   ~PeriodicLogger();
 
-  // Print a log message about the current operation if enough time has passed
-  // since the operation started / since the last log message.
-  void LogIfRequired();
+  // Prevent copy and move.
+  PeriodicLogger(const PeriodicLogger&) = delete;
+  PeriodicLogger& operator=(const PeriodicLogger&) = delete;
+
+  // Start logging the given message.
+  //
+  // If a message is already being logged, this new message and interval
+  // will replace it.
+  void Start(std::string message, zx::duration logging_interval);
+
+  // Stop logging.
+  void Stop();
 
  private:
-  const zx::time start_time_;
-  const std::string operation_;
-  const zx::duration logging_interval_;
-  bool message_printed_ = false;
-  zx::time last_log_time_;
+  std::promise<void> should_stop_;
+  std::optional<std::thread> logging_thread_;
 };
 
 #endif  // SRC_VIRTUALIZATION_TESTS_PERIODIC_LOGGER_H_

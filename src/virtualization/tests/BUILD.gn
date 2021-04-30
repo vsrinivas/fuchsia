@@ -63,6 +63,16 @@ source_set("logger") {
   ]
 }
 
+source_set("periodic_logger") {
+  visibility = [ ":*" ]
+  sources = [
+    "periodic_logger.cc",
+    "periodic_logger.h",
+  ]
+  deps = [ "//src/lib/fxl" ]
+  public_deps = [ "//zircon/public/lib/zx" ]
+}
+
 source_set("guest_console") {
   visibility = [
     "//src/connectivity/network/testing/netemul/*",
@@ -128,9 +138,13 @@ source_set("fake_scenic") {
 executable("unit_tests") {
   testonly = true
   output_name = "guest_unit_tests"
-  sources = [ "guest_console_test.cc" ]
+  sources = [
+    "guest_console_test.cc",
+    "periodic_logger_test.cc",
+  ]
   deps = [
     ":guest_console",
+    ":periodic_logger",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]
@@ -154,12 +168,11 @@ source_set("lib") {
     "enclosed_guest.cc",
     "enclosed_guest.h",
     "guest_test.h",
-    "periodic_logger.cc",
-    "periodic_logger.h",
   ]
 
   deps = [
     ":guest_console",
+    ":periodic_logger",
     "//sdk/fidl/fuchsia.kernel",
     "//sdk/fidl/fuchsia.sysinfo",
     "//sdk/lib/fit-promise",
@@ -255,6 +268,7 @@ executable("virtualization_gpu_tests") {
   deps = [
     ":guest_console",
     ":lib",
+    ":periodic_logger",
     ":test_main",
     "//third_party/googletest:gmock",
   ]
