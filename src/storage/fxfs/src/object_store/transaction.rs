@@ -9,6 +9,7 @@ use {
             allocator::AllocatorItem,
             constants::INVALID_OBJECT_ID,
             record::{ObjectItem, ObjectKey, ObjectValue},
+            StoreInfo,
         },
     },
     anyhow::Error,
@@ -16,7 +17,6 @@ use {
     futures::future::poll_fn,
     serde::{Deserialize, Serialize},
     std::{
-        any::Any,
         cmp::Ordering,
         collections::{
             hash_map::{Entry, HashMap},
@@ -64,6 +64,7 @@ pub trait TransactionHandler: Send + Sync {
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub enum Mutation {
     ObjectStore(ObjectStoreMutation),
+    ObjectStoreInfo(StoreInfoMutation),
     Allocator(AllocatorMutation),
     // Seal the mutable layer and create a new one.
     TreeSeal,
@@ -91,6 +92,10 @@ impl Mutation {
             item: Item::new(key, value),
             op: Operation::Merge,
         })
+    }
+
+    pub fn store_info(store_info: StoreInfo) -> Self {
+        Mutation::ObjectStoreInfo(StoreInfoMutation(store_info))
     }
 
     pub fn allocation(item: AllocatorItem) -> Self {
@@ -135,6 +140,29 @@ impl PartialEq for ObjectStoreMutation {
 }
 
 impl Eq for ObjectStoreMutation {}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct StoreInfoMutation(pub StoreInfo);
+
+impl Ord for StoreInfoMutation {
+    fn cmp(&self, _other: &Self) -> Ordering {
+        Ordering::Equal
+    }
+}
+
+impl PartialOrd for StoreInfoMutation {
+    fn partial_cmp(&self, _other: &Self) -> Option<Ordering> {
+        Some(Ordering::Equal)
+    }
+}
+
+impl PartialEq for StoreInfoMutation {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+
+impl Eq for StoreInfoMutation {}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AllocatorMutation(pub AllocatorItem);
@@ -189,7 +217,9 @@ impl LockKey {
 // Mutations can be associated with an object so that when mutations are applied, updates can be
 // applied to in-memory strucutres.  For example, we cache object sizes, so when a size change is
 // applied, we can update the cached object size.
-pub type AssociatedObject<'a> = &'a (dyn Any + Send + Sync);
+pub trait AssociatedObject: Send + Sync {
+    fn will_apply_mutation(&self, mutation: &Mutation);
+}
 
 #[derive(Clone)]
 pub struct TxnMutation<'a> {
@@ -203,7 +233,7 @@ pub struct TxnMutation<'a> {
 
     // An optional associated object for the mutation.  During replay, there will always be no
     // associated object.
-    pub associated_object: Option<AssociatedObject<'a>>,
+    pub associated_object: Option<&'a dyn AssociatedObject>,
 }
 
 // We store TxnMutation in a set, and for that, we only use object_id and mutation and not the
@@ -266,7 +296,7 @@ impl<'a> Transaction<'a> {
         &mut self,
         object_id: u64,
         mutation: Mutation,
-        associated_object: AssociatedObject<'a>,
+        associated_object: &'a dyn AssociatedObject,
     ) {
         assert!(object_id != INVALID_OBJECT_ID);
         self.mutations.replace(TxnMutation {
@@ -296,6 +326,23 @@ impl<'a> Transaction<'a> {
             })
         {
             Some(mutation)
+        } else {
+            None
+        }
+    }
+
+    /// Searches for an exsting store info object mutation within the transaction and returns it if
+    /// found.
+    pub fn get_store_info(&self, object_id: u64) -> Option<&StoreInfo> {
+        if let Some(TxnMutation {
+            mutation: Mutation::ObjectStoreInfo(StoreInfoMutation(store_info)),
+            ..
+        }) = self.mutations.get(&TxnMutation {
+            object_id,
+            mutation: Mutation::store_info(StoreInfo::default()),
+            associated_object: None,
+        }) {
+            Some(store_info)
         } else {
             None
         }

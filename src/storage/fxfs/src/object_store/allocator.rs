@@ -18,8 +18,8 @@ use {
         object_handle::{ObjectHandle, ObjectHandleExt},
         object_store::{
             filesystem::{Filesystem, Mutations},
-            transaction::{AllocatorMutation, AssociatedObject, Mutation, Transaction},
-            HandleOptions,
+            transaction::{AllocatorMutation, Mutation, Transaction},
+            HandleOptions, ObjectStore,
         },
     },
     anyhow::{bail, ensure, Error},
@@ -189,20 +189,28 @@ impl SimpleAllocator {
 
         if self.empty {
             let mut transaction = filesystem.clone().new_transaction(&[]).await?;
-            root_store
-                .create_object_with_id(&mut transaction, self.object_id(), HandleOptions::default())
-                .await?;
+            ObjectStore::create_object_with_id(
+                &root_store,
+                &mut transaction,
+                self.object_id(),
+                HandleOptions::default(),
+            )
+            .await?;
             transaction.commit().await;
         } else {
-            let handle = root_store.open_object(self.object_id, HandleOptions::default()).await?;
+            let handle =
+                ObjectStore::open_object(&root_store, self.object_id, HandleOptions::default())
+                    .await?;
 
             if handle.get_size() > 0 {
                 let serialized_info = handle.contents(MAX_ALLOCATOR_INFO_SERIALIZED_SIZE).await?;
                 let info: AllocatorInfo = deserialize_from(&serialized_info[..])?;
                 let mut handles = Vec::new();
                 for object_id in &info.layers {
-                    handles
-                        .push(root_store.open_object(*object_id, HandleOptions::default()).await?);
+                    handles.push(
+                        ObjectStore::open_object(&root_store, *object_id, HandleOptions::default())
+                            .await?,
+                    );
                 }
                 self.inner.lock().unwrap().info = info;
                 self.tree.set_layers(handles.into_boxed_slice()).await?;
@@ -300,7 +308,8 @@ impl Allocator for SimpleAllocator {
 
         let root_store = self.filesystem.upgrade().unwrap().root_store();
         let layer_object_handle =
-            root_store.create_object(&mut transaction, HandleOptions::default()).await?;
+            ObjectStore::create_object(&root_store, &mut transaction, HandleOptions::default())
+                .await?;
 
         transaction.add(self.object_id(), Mutation::TreeSeal);
         transaction.commit().await;
@@ -317,7 +326,8 @@ impl Allocator for SimpleAllocator {
 
         log::debug!("using {} for allocator layer file", object_id);
         let object_handle =
-            root_store.open_object(self.object_id(), HandleOptions::default()).await?;
+            ObjectStore::open_object(&root_store, self.object_id(), HandleOptions::default())
+                .await?;
         // TODO(jfsulliv): Can we preallocate the buffer instead of doing a bounce? Do we know the
         // size up front?
         let mut serialized_info = Vec::new();
@@ -349,12 +359,7 @@ impl Allocator for SimpleAllocator {
 
 #[async_trait]
 impl Mutations for SimpleAllocator {
-    async fn apply_mutation(
-        &self,
-        mutation: Mutation,
-        replay: bool,
-        _object: Option<AssociatedObject<'_>>,
-    ) {
+    async fn apply_mutation(&self, mutation: Mutation, replay: bool) {
         match mutation {
             Mutation::Allocator(AllocatorMutation(item)) => {
                 self.reserved_allocations.erase(item.as_item_ref()).await;

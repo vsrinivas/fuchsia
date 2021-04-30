@@ -16,7 +16,6 @@ use {
             file::FxFile,
             node::{FxNode, GetResult, NodeCache},
         },
-        volume::Volume,
     },
     anyhow::{bail, Error},
     async_trait::async_trait,
@@ -33,20 +32,15 @@ use {
 pub struct FxVolume {
     cache: NodeCache,
     store: Arc<ObjectStore>,
-    graveyard: Directory,
 }
 
 impl FxVolume {
-    pub fn new(store: Arc<ObjectStore>, graveyard: Directory) -> Self {
-        Self { cache: NodeCache::new(), store, graveyard }
+    pub fn new(store: Arc<ObjectStore>) -> Self {
+        Self { cache: NodeCache::new(), store }
     }
 
     pub fn store(&self) -> &Arc<ObjectStore> {
         &self.store
-    }
-
-    pub fn graveyard(&self) -> &Directory {
-        &self.graveyard
     }
 
     pub fn cache(&self) -> &NodeCache {
@@ -68,14 +62,11 @@ impl FxVolume {
             GetResult::Node(node) => Ok(node),
             GetResult::Placeholder(placeholder) => {
                 let node = match object_descriptor {
-                    ObjectDescriptor::File => {
-                        let file =
-                            self.store.open_object(object_id, HandleOptions::default()).await?;
-                        Arc::new(FxFile::new(file, self.clone())) as Arc<dyn FxNode>
-                    }
+                    ObjectDescriptor::File => Arc::new(FxFile::new(
+                        ObjectStore::open_object(self, object_id, HandleOptions::default()).await?,
+                    )) as Arc<dyn FxNode>,
                     ObjectDescriptor::Directory => {
-                        let directory = self.store.open_directory(object_id).await?;
-                        Arc::new(FxDirectory::new(self.clone(), parent, directory))
+                        Arc::new(FxDirectory::new(parent, Directory::open(self, object_id).await?))
                             as Arc<dyn FxNode>
                     }
                     _ => bail!(FxfsError::Inconsistent),
@@ -84,6 +75,16 @@ impl FxVolume {
                 Ok(node)
             }
         }
+    }
+
+    pub fn into_store(self) -> Arc<ObjectStore> {
+        self.store
+    }
+}
+
+impl AsRef<ObjectStore> for FxVolume {
+    fn as_ref(&self) -> &ObjectStore {
+        &self.store
     }
 }
 
@@ -126,8 +127,12 @@ impl FilesystemRename for FxVolume {
             Err(e) => return Err(map_to_status(e)),
         };
 
-        let (moved_id, moved_descriptor) =
-            src_dir.directory().lookup(src).await.map_err(map_to_status)?;
+        let (moved_id, moved_descriptor) = src_dir
+            .directory()
+            .lookup(src)
+            .await
+            .map_err(map_to_status)?
+            .ok_or(Status::NOT_FOUND)?;
         // Make sure the dst path is compatible with the moved node.
         if let ObjectDescriptor::File = moved_descriptor {
             if src_name.is_dir() || dst_name.is_dir() {
@@ -181,7 +186,6 @@ impl FilesystemRename for FxVolume {
                 &mut transaction,
                 Some((src_dir.directory(), src)),
                 (dst_dir.directory(), dst),
-                None,
             )
             .await
             .map_err(map_to_status)?;
@@ -203,17 +207,16 @@ pub struct FxVolumeAndRoot {
 }
 
 impl FxVolumeAndRoot {
-    pub async fn new(volume: Volume) -> Self {
-        let (store, root_directory, graveyard) = volume.into();
-        let root_object_id = root_directory.object_id();
-        let volume = Arc::new(FxVolume::new(store, graveyard));
-        let root: Arc<dyn FxNode> =
-            Arc::new(FxDirectory::new(volume.clone(), None, root_directory));
+    pub async fn new(store: Arc<ObjectStore>) -> Result<Self, Error> {
+        let volume = Arc::new(FxVolume::new(store));
+        let root_object_id = volume.store().root_directory_object_id();
+        let root_dir = Directory::open(&volume, root_object_id).await?;
+        let root: Arc<dyn FxNode> = Arc::new(FxDirectory::new(None, root_dir));
         match volume.cache.get_or_reserve(root_object_id).await {
             GetResult::Node(_) => unreachable!(),
             GetResult::Placeholder(placeholder) => placeholder.commit(&root),
         }
-        Self { volume, root }
+        Ok(Self { volume, root })
     }
 
     pub fn volume(&self) -> &Arc<FxVolume> {
@@ -264,7 +267,9 @@ mod tests {
         let device = Arc::new(FakeDevice::new(2048, 512));
         let filesystem = FxFilesystem::new_empty(device.clone()).await.unwrap();
         let root_volume = root_volume(&filesystem).await.unwrap();
-        let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await.unwrap()).await;
+        let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await.unwrap())
+            .await
+            .expect("new failed");
         let (dir_proxy, dir_server_end) =
             fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
         vol.root().clone().open(
@@ -323,7 +328,9 @@ mod tests {
         let device = Arc::new(FakeDevice::new(2048, 512));
         let filesystem = FxFilesystem::new_empty(device.clone()).await.unwrap();
         let root_volume = root_volume(&filesystem).await.unwrap();
-        let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await.unwrap()).await;
+        let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await.unwrap())
+            .await
+            .expect("new failed");
         let (dir_proxy, dir_server_end) =
             fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
         vol.root().clone().open(
@@ -373,7 +380,9 @@ mod tests {
         let device = Arc::new(FakeDevice::new(2048, 512));
         let filesystem = FxFilesystem::new_empty(device.clone()).await.unwrap();
         let root_volume = root_volume(&filesystem).await.unwrap();
-        let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await.unwrap()).await;
+        let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await.unwrap())
+            .await
+            .expect("new failed");
         let (dir_proxy, dir_server_end) =
             fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
         vol.root().clone().open(
@@ -448,7 +457,9 @@ mod tests {
         let device = Arc::new(FakeDevice::new(2048, 512));
         let filesystem = FxFilesystem::new_empty(device.clone()).await.unwrap();
         let root_volume = root_volume(&filesystem).await.unwrap();
-        let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await.unwrap()).await;
+        let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await.unwrap())
+            .await
+            .expect("new failed");
         let (dir_proxy, dir_server_end) =
             fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
         vol.root().clone().open(

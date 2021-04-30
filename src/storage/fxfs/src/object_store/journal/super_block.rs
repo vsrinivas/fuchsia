@@ -67,9 +67,6 @@ pub(super) struct SuperBlock {
 
     // object id -> journal file offset. Indicates where each object has been flushed to.
     pub journal_file_offsets: HashMap<u64, u64>,
-
-    // The object ID in the root object store that contains VolumeInfo.
-    pub root_volume_info_object_id: u64,
 }
 
 // TODO(csuter): Add support for multiple super-blocks.
@@ -315,13 +312,16 @@ mod tests {
 
         // Create a large number of objects in the root parent store so that we test handling of
         // extents.
-        for _i in 0..10000 {
+        for _ in 0..10000 {
             let mut transaction =
                 fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-            root_parent_store
-                .create_object(&mut transaction, HandleOptions::default())
-                .await
-                .expect("create_object failed");
+            ObjectStore::create_object(
+                &root_parent_store,
+                &mut transaction,
+                HandleOptions::default(),
+            )
+            .await
+            .expect("create_object failed");
             transaction.commit().await;
         }
 
@@ -337,14 +337,14 @@ mod tests {
         let handle; // extend will borrow handle and needs to outlive transaction.
         let mut transaction =
             fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-        handle = root_store
-            .create_object_with_id(
-                &mut transaction,
-                SUPER_BLOCK_OBJECT_ID,
-                HandleOptions { overwrite: true, ..Default::default() },
-            )
-            .await
-            .expect("create_object_with_id failed");
+        handle = ObjectStore::create_object_with_id(
+            &root_store,
+            &mut transaction,
+            SUPER_BLOCK_OBJECT_ID,
+            HandleOptions { overwrite: true, ..Default::default() },
+        )
+        .await
+        .expect("create_object_with_id failed");
         handle.extend(&mut transaction, super::first_extent()).await.expect("extend failed");
 
         transaction.commit().await;
@@ -355,10 +355,10 @@ mod tests {
         super_block.write(&root_parent_store, handle).await.expect("write failed");
 
         // Make sure we did actually extend the super block.
-        let handle = root_store
-            .open_object(SUPER_BLOCK_OBJECT_ID, HandleOptions::default())
-            .await
-            .expect("open_object failed");
+        let handle =
+            ObjectStore::open_object(&root_store, SUPER_BLOCK_OBJECT_ID, HandleOptions::default())
+                .await
+                .expect("open_object failed");
         assert!(handle.get_size() > MIN_SUPER_BLOCK_SIZE);
 
         let mut written_super_block = SuperBlock::read(device).await.expect("read failed");

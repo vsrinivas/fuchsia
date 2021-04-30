@@ -34,14 +34,13 @@ use {
 
 /// FxFile represents an open connection to a file.
 pub struct FxFile {
-    handle: StoreObjectHandle,
-    volume: Arc<FxVolume>,
+    handle: StoreObjectHandle<FxVolume>,
     open_count: AtomicUsize,
 }
 
 impl FxFile {
-    pub fn new(handle: StoreObjectHandle, volume: Arc<FxVolume>) -> Self {
-        Self { handle, volume, open_count: AtomicUsize::new(0) }
+    pub fn new(handle: StoreObjectHandle<FxVolume>) -> Self {
+        Self { handle, open_count: AtomicUsize::new(0) }
     }
     pub fn open_count(&self) -> usize {
         self.open_count.load(Ordering::Relaxed)
@@ -50,7 +49,7 @@ impl FxFile {
 
 impl Drop for FxFile {
     fn drop(&mut self) {
-        self.volume.cache().remove(self.object_id());
+        self.handle.owner().cache().remove(self.object_id());
     }
 }
 
@@ -198,7 +197,8 @@ mod tests {
         let device = Arc::new(FakeDevice::new(2048, 512));
         let filesystem = FxFilesystem::new_empty(device.clone()).await?;
         let root_volume = root_volume(&filesystem).await?;
-        let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await;
+        let vol =
+            FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
         let dir = vol.root().clone();
 
         let (dir_proxy, dir_server_end) =
@@ -233,7 +233,8 @@ mod tests {
         let device = Arc::new(FakeDevice::new(2048, 512));
         let filesystem = FxFilesystem::new_empty(device.clone()).await?;
         let root_volume = root_volume(&filesystem).await?;
-        let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await;
+        let vol =
+            FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
         let dir = vol.root().clone();
 
         let (dir_proxy, dir_server_end) =
@@ -279,12 +280,16 @@ mod tests {
             let (filesystem, vol) = if i == 0 {
                 let filesystem = FxFilesystem::new_empty(device.clone()).await?;
                 let root_volume = root_volume(&filesystem).await?;
-                let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await;
+                let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await?)
+                    .await
+                    .expect("new failed");
                 (filesystem, vol)
             } else {
                 let filesystem = FxFilesystem::open(device.clone()).await?;
                 let root_volume = root_volume(&filesystem).await?;
-                let vol = FxVolumeAndRoot::new(root_volume.volume("vol").await?).await;
+                let vol = FxVolumeAndRoot::new(root_volume.volume("vol").await?)
+                    .await
+                    .expect("new failed");
                 (filesystem, vol)
             };
             let dir = vol.root().clone();
@@ -328,7 +333,8 @@ mod tests {
         let device = Arc::new(FakeDevice::new(2048, 512));
         let filesystem = FxFilesystem::new_empty(device.clone()).await?;
         let root_volume = root_volume(&filesystem).await?;
-        let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await;
+        let vol =
+            FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
         let dir = vol.root().clone();
 
         let (dir_proxy, dir_server_end) =
@@ -376,7 +382,8 @@ mod tests {
         let device = Arc::new(FakeDevice::new(2048, 512));
         let filesystem = FxFilesystem::new_empty(device.clone()).await?;
         let root_volume = root_volume(&filesystem).await?;
-        let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await;
+        let vol =
+            FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
         let dir = vol.root().clone();
 
         let (dir_proxy, dir_server_end) =
@@ -444,7 +451,8 @@ mod tests {
         let device = Arc::new(FakeDevice::new(2048, 512));
         let filesystem = FxFilesystem::new_empty(device.clone()).await?;
         let root_volume = root_volume(&filesystem).await?;
-        let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await;
+        let vol =
+            FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
         let dir = vol.root().clone();
 
         let (dir_proxy, dir_server_end) =
@@ -510,7 +518,8 @@ mod tests {
         let device = Arc::new(FakeDevice::new(2048, 512));
         let filesystem = FxFilesystem::new_empty(device.clone()).await?;
         let root_volume = root_volume(&filesystem).await?;
-        let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await;
+        let vol =
+            FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
         let dir = vol.root().clone();
 
         let (dir_proxy, dir_server_end) =
@@ -582,7 +591,8 @@ mod tests {
         let device = Arc::new(FakeDevice::new(2048, 512));
         let filesystem = FxFilesystem::new_empty(device.clone()).await?;
         let root_volume = root_volume(&filesystem).await?;
-        let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await;
+        let vol =
+            FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
         let dir = vol.root().clone();
 
         let (dir_proxy, dir_server_end) =

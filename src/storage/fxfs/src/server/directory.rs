@@ -9,7 +9,7 @@ use {
             self,
             directory::{self, ObjectDescriptor},
             transaction::{LockKey, Transaction},
-            INVALID_OBJECT_ID,
+            ObjectStore, INVALID_OBJECT_ID,
         },
         server::{
             errors::map_to_status,
@@ -52,34 +52,35 @@ use {
 };
 
 pub struct FxDirectory {
-    volume: Arc<FxVolume>,
     // The root directory is the only directory which has no parent, and its parent can never
     // change, hence the Option can go on the outside.
     parent: Option<Mutex<Arc<FxDirectory>>>,
-    directory: object_store::Directory,
+    directory: object_store::Directory<FxVolume>,
     is_deleted: AtomicBool,
 }
 
 impl FxDirectory {
     pub(super) fn new(
-        volume: Arc<FxVolume>,
         parent: Option<Arc<FxDirectory>>,
-        directory: object_store::Directory,
+        directory: object_store::Directory<FxVolume>,
     ) -> Self {
         Self {
-            volume,
             parent: parent.map(|p| Mutex::new(p)),
             directory,
             is_deleted: AtomicBool::new(false),
         }
     }
 
-    pub(super) fn directory(&self) -> &object_store::Directory {
+    pub(super) fn directory(&self) -> &object_store::Directory<FxVolume> {
         &self.directory
     }
 
-    pub(super) fn volume(&self) -> &Arc<FxVolume> {
-        &self.volume
+    pub fn volume(&self) -> &Arc<FxVolume> {
+        self.directory.owner()
+    }
+
+    pub fn store(&self) -> &ObjectStore {
+        self.directory.store()
     }
 
     /// Acquires a transaction with the appropriate locks to unlink |name|. Returns the transaction,
@@ -99,7 +100,7 @@ impl FxDirectory {
         // Note that the returned transaction may lock more objects than is necessary (for example,
         // if the child "foo" was first a directory, then was renamed to "bar" and a file "foo" was
         // created, we might acquire a lock on both the parent and "bar").
-        let store = self.volume.store();
+        let store = self.store();
         let mut child_object_id = INVALID_OBJECT_ID;
         loop {
             let mut lock_keys = if child_object_id == INVALID_OBJECT_ID {
@@ -114,7 +115,8 @@ impl FxDirectory {
             let fs = store.filesystem().clone();
             let transaction = fs.new_transaction(&lock_keys).await?;
 
-            let (object_id, object_descriptor) = self.directory.lookup(name).await?;
+            let (object_id, object_descriptor) =
+                self.directory.lookup(name).await?.ok_or(FxfsError::NotFound)?;
             match object_descriptor {
                 ObjectDescriptor::File => {
                     return Ok((transaction, object_id, object_descriptor));
@@ -125,7 +127,7 @@ impl FxDirectory {
                     }
                     child_object_id = object_id;
                 }
-                ObjectDescriptor::Volume(_) => bail!(FxfsError::Inconsistent),
+                ObjectDescriptor::Volume => bail!(FxfsError::Inconsistent),
             }
         }
     }
@@ -144,7 +146,7 @@ impl FxDirectory {
         mode: u32,
         mut path: Path,
     ) -> Result<Arc<dyn FxNode>, Error> {
-        let store = self.volume.store();
+        let store = self.store();
         let fs = store.filesystem();
         let mut current_node = self.clone() as Arc<dyn FxNode>;
         while !path.is_empty() {
@@ -166,8 +168,8 @@ impl FxDirectory {
                 Right(fs.read_lock(&keys).await)
             };
 
-            current_node = match current_dir.directory.lookup(name).await {
-                Ok((object_id, object_descriptor)) => {
+            current_node = match current_dir.directory.lookup(name).await? {
+                Some((object_id, object_descriptor)) => {
                     if transaction_or_guard.is_left() && flags & OPEN_FLAG_CREATE_IF_ABSENT != 0 {
                         bail!(FxfsError::AlreadyExists);
                     }
@@ -185,18 +187,18 @@ impl FxDirectory {
                                     bail!(FxfsError::NotFile)
                                 }
                             }
-                            ObjectDescriptor::Volume(_) => bail!(FxfsError::Inconsistent),
+                            ObjectDescriptor::Volume => bail!(FxfsError::Inconsistent),
                         }
                     }
-                    self.volume
+                    self.volume()
                         .get_or_load_node(object_id, object_descriptor, Some(self.clone()))
                         .await?
                 }
-                Err(e) if FxfsError::NotFound.matches(&e) => {
+                None => {
                     if let Left(mut transaction) = transaction_or_guard {
                         let node = current_dir.create_child(&mut transaction, name, mode).await?;
                         if let GetResult::Placeholder(p) =
-                            self.volume.cache().get_or_reserve(node.object_id()).await
+                            self.volume().cache().get_or_reserve(node.object_id()).await
                         {
                             p.commit(&node);
                             transaction.commit().await;
@@ -208,10 +210,9 @@ impl FxDirectory {
                         }
                         node
                     } else {
-                        bail!(e)
+                        bail!(FxfsError::NotFound);
                     }
                 }
-                Err(e) => bail!(e),
             };
         }
         Ok(current_node)
@@ -225,12 +226,13 @@ impl FxDirectory {
     ) -> Result<Arc<dyn FxNode>, Error> {
         self.ensure_writable()?;
         if mode & MODE_TYPE_DIRECTORY != 0 {
-            let dir = self.directory.create_child_dir(transaction, name).await?;
-            Ok(Arc::new(FxDirectory::new(self.volume.clone(), Some(self.clone()), dir))
-                as Arc<dyn FxNode>)
+            Ok(Arc::new(FxDirectory::new(
+                Some(self.clone()),
+                self.directory.create_child_dir(transaction, name).await?,
+            )) as Arc<dyn FxNode>)
         } else {
-            let handle = self.directory.create_child_file(transaction, name).await?;
-            Ok(Arc::new(FxFile::new(handle, self.volume.clone())) as Arc<dyn FxNode>)
+            Ok(Arc::new(FxFile::new(self.directory.create_child_file(transaction, name).await?))
+                as Arc<dyn FxNode>)
         }
     }
 
@@ -255,10 +257,10 @@ impl FxDirectory {
         descriptor: ObjectDescriptor,
         replacement: Option<(&'a Arc<FxDirectory>, &str)>,
     ) -> Result<Option<Arc<dyn FxNode>>, Error> {
-        let (dir, graveyard) = if let ObjectDescriptor::File = descriptor {
+        let dir = if let ObjectDescriptor::File = descriptor {
             // TODO(jfsulliv): We can immediately delete files if they have no open references, but
             // we need appropriate locking in place to be able to check the file's open count.
-            (None, Some(self.volume.graveyard()))
+            None
         } else {
             // For directories, we need to set |is_deleted| on the in-memory node. If the node's
             // absent from the cache, we *must* load the node into memory, and make sure the node
@@ -269,30 +271,47 @@ impl FxDirectory {
             // until there are no readers, but a reader could be blocked on the cache by the
             // placeholder.
             let dir = self
-                .volume
+                .volume()
                 .get_or_load_node(object_id, descriptor, Some(self.clone()))
                 .await?
                 .into_any()
                 .downcast::<FxDirectory>()
                 .unwrap();
             dir.is_deleted.store(true, Ordering::Relaxed);
-            (Some(dir as Arc<dyn FxNode>), None)
+            Some(dir as Arc<dyn FxNode>)
         };
         // TODO(jfsulliv): This results in an unnecessary second lookup; we could pass in object_id
         // and descriptor here, since we've already resolved them.
-        directory::replace_child(
+        if let Some((existing_oid, descriptor)) = directory::replace_child(
             transaction,
             replacement.map(|(dir, name)| (dir.directory(), name)),
             (self.directory(), name),
-            graveyard,
         )
-        .await?;
+        .await?
+        {
+            let store = self.store();
+            if let ObjectDescriptor::File = descriptor {
+                store
+                    .filesystem()
+                    .object_manager()
+                    .graveyard(store.store_object_id())
+                    .unwrap()
+                    .insert_child(
+                        transaction,
+                        &format!("{}", existing_oid),
+                        existing_oid,
+                        descriptor,
+                    );
+            } else {
+                // TODO(csuter): We need to delete the directory.
+            }
+        }
         Ok(dir)
     }
 
     // TODO(jfsulliv): Change the VFS to send in &Arc<Self> so we don't need this.
     async fn as_strong(&self) -> Arc<Self> {
-        self.volume
+        self.volume()
             .get_or_load_node(self.object_id(), ObjectDescriptor::Directory, self.parent())
             .await
             .expect("open_or_load_node on self failed")
@@ -304,7 +323,7 @@ impl FxDirectory {
 
 impl Drop for FxDirectory {
     fn drop(&mut self) {
-        self.volume.cache().remove(self.object_id());
+        self.volume().cache().remove(self.object_id());
     }
 }
 
@@ -353,7 +372,7 @@ impl MutableDirectory for FxDirectory {
     }
 
     fn get_filesystem(&self) -> &dyn Filesystem {
-        &*self.volume
+        self.volume().as_ref()
     }
 
     fn into_any(self: Arc<Self>) -> Arc<dyn Any + Sync + Send> {
@@ -428,7 +447,7 @@ impl Directory for FxDirectory {
             return Err(Status::BAD_STATE);
         }
 
-        let store = self.volume.store();
+        let store = self.store();
         let fs = store.filesystem();
         let _read_guard =
             fs.read_lock(&[LockKey::object(store.store_object_id(), self.object_id())]).await;
@@ -456,7 +475,7 @@ impl Directory for FxDirectory {
             _ => unreachable!(),
         };
 
-        let layer_set = self.directory.object_store().tree().layer_set();
+        let layer_set = self.store().tree().layer_set();
         let mut merger = layer_set.merger();
         let mut iter =
             self.directory.iter_from(&mut merger, starting_name).await.map_err(map_to_status)?;
@@ -464,7 +483,7 @@ impl Directory for FxDirectory {
             let entry_type = match object_descriptor {
                 ObjectDescriptor::File => fio::DIRENT_TYPE_FILE,
                 ObjectDescriptor::Directory => fio::DIRENT_TYPE_DIRECTORY,
-                ObjectDescriptor::Volume(_) => return Err(Status::IO_DATA_INTEGRITY),
+                ObjectDescriptor::Volume => return Err(Status::IO_DATA_INTEGRITY),
             };
             let info = EntryInfo::new(object_id, entry_type);
             match sink.append(&info, name) {
@@ -526,6 +545,7 @@ mod tests {
             MODE_TYPE_FILE, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DIRECTORY,
             OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
         },
+        fidl_fuchsia_io2::UnlinkOptions,
         files_async::{DirEntry, DirentKind},
         fuchsia_async as fasync,
         fuchsia_zircon::Status,
@@ -541,7 +561,8 @@ mod tests {
         let device = Arc::new(FakeDevice::new(2048, 512));
         let filesystem = FxFilesystem::new_empty(device.clone()).await?;
         let root_volume = root_volume(&filesystem).await?;
-        let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await;
+        let vol =
+            FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
         {
             let (dir_proxy, dir_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>()
                 .expect("Create proxy to succeed");
@@ -572,12 +593,28 @@ mod tests {
             .await
             .expect("Create file failed");
 
+            dir_proxy
+                .unlink2("foo", UnlinkOptions::EMPTY)
+                .await
+                .expect("fidl failed")
+                .expect("unlink failed");
+
             dir_proxy.close().await?;
         }
 
         // Ensure that there's no remaining references to |vol|, which would indicate a reference
         // cycle or other leak.
-        Arc::try_unwrap(vol.into_volume()).map_err(|_| "References to vol still exist").unwrap();
+        let volume = Arc::try_unwrap(vol.into_volume())
+            .map_err(|_| "References to vol still exist")
+            .unwrap();
+
+        std::mem::drop(root_volume);
+        std::mem::drop(filesystem);
+
+        Arc::try_unwrap(volume.into_store())
+            .map_err(|_| "References to store still exist")
+            .unwrap();
+        Arc::try_unwrap(device).map_err(|_| "References to device still exist").unwrap();
 
         Ok(())
     }
@@ -587,7 +624,8 @@ mod tests {
         let device = Arc::new(FakeDevice::new(2048, 512));
         let filesystem = FxFilesystem::new_empty(device.clone()).await?;
         let root_volume = root_volume(&filesystem).await?;
-        let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await;
+        let vol =
+            FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
         let dir = vol.root().clone();
 
         let (dir_proxy, dir_server_end) =
@@ -613,12 +651,16 @@ mod tests {
             let (filesystem, vol) = if i == 0 {
                 let filesystem = FxFilesystem::new_empty(device.clone()).await?;
                 let root_volume = root_volume(&filesystem).await?;
-                let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await;
+                let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await?)
+                    .await
+                    .expect("new failed");
                 (filesystem, vol)
             } else {
                 let filesystem = FxFilesystem::open(device.clone()).await?;
                 let root_volume = root_volume(&filesystem).await?;
-                let vol = FxVolumeAndRoot::new(root_volume.volume("vol").await?).await;
+                let vol = FxVolumeAndRoot::new(root_volume.volume("vol").await?)
+                    .await
+                    .expect("new failed");
                 (filesystem, vol)
             };
             let dir = vol.root().clone();
@@ -650,7 +692,8 @@ mod tests {
         let device = Arc::new(FakeDevice::new(2048, 512));
         let filesystem = FxFilesystem::new_empty(device.clone()).await?;
         let root_volume = root_volume(&filesystem).await?;
-        let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await;
+        let vol =
+            FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
         let dir = vol.root().clone();
 
         let (dir_proxy, dir_server_end) =
@@ -684,7 +727,8 @@ mod tests {
         let device = Arc::new(FakeDevice::new(2048, 512));
         let filesystem = FxFilesystem::new_empty(device.clone()).await?;
         let root_volume = root_volume(&filesystem).await?;
-        let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await;
+        let vol =
+            FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
         let dir = vol.root().clone();
 
         let (dir_proxy, dir_server_end) =
@@ -719,7 +763,8 @@ mod tests {
         let device = Arc::new(FakeDevice::new(2048, 512));
         let filesystem = FxFilesystem::new_empty(device.clone()).await?;
         let root_volume = root_volume(&filesystem).await?;
-        let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await;
+        let vol =
+            FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
         let dir = vol.root().clone();
 
         let (dir_proxy, dir_server_end) =
@@ -763,7 +808,8 @@ mod tests {
         let device = Arc::new(FakeDevice::new(2048, 512));
         let filesystem = FxFilesystem::new_empty(device.clone()).await?;
         let root_volume = root_volume(&filesystem).await?;
-        let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await;
+        let vol =
+            FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
         let dir = vol.root().clone();
 
         let (dir_proxy, dir_server_end) =
@@ -811,7 +857,8 @@ mod tests {
         let device = Arc::new(FakeDevice::new(2048, 512));
         let filesystem = FxFilesystem::new_empty(device.clone()).await?;
         let root_volume = root_volume(&filesystem).await?;
-        let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await;
+        let vol =
+            FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
         let dir = vol.root().clone();
 
         let (dir_proxy, dir_server_end) =
@@ -886,7 +933,8 @@ mod tests {
         let device = Arc::new(FakeDevice::new(2048, 512));
         let filesystem = FxFilesystem::new_empty(device.clone()).await?;
         let root_volume = root_volume(&filesystem).await?;
-        let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await;
+        let vol =
+            FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
         let dir = vol.root().clone();
 
         let (dir_proxy, dir_server_end) =
@@ -931,7 +979,8 @@ mod tests {
         let device = Arc::new(FakeDevice::new(2048, 512));
         let filesystem = FxFilesystem::new_empty(device.clone()).await?;
         let root_volume = root_volume(&filesystem).await?;
-        let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await;
+        let vol =
+            FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
         let dir = vol.root().clone();
 
         let (dir_proxy, dir_server_end) =
@@ -984,7 +1033,8 @@ mod tests {
         let device = Arc::new(FakeDevice::new(2048, 512));
         let filesystem = FxFilesystem::new_empty(device.clone()).await?;
         let root_volume = root_volume(&filesystem).await?;
-        let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await;
+        let vol =
+            FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
         let dir = vol.root().clone();
 
         let (dir_proxy, dir_server_end) =
@@ -1033,7 +1083,8 @@ mod tests {
         let device = Arc::new(FakeDevice::new(2048, 512));
         let filesystem = FxFilesystem::new_empty(device.clone()).await?;
         let root_volume = root_volume(&filesystem).await?;
-        let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await;
+        let vol =
+            FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
         let dir = vol.root().clone();
 
         let (dir_proxy, dir_server_end) =
@@ -1082,7 +1133,8 @@ mod tests {
         let device = Arc::new(FakeDevice::new(2048, 512));
         let filesystem = FxFilesystem::new_empty(device.clone()).await?;
         let root_volume = root_volume(&filesystem).await?;
-        let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await;
+        let vol =
+            FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
         let dir = vol.root().clone();
 
         let (dir_proxy, dir_server_end) =
@@ -1201,7 +1253,8 @@ mod tests {
         let device = Arc::new(FakeDevice::new(2048, 512));
         let filesystem = FxFilesystem::new_empty(device.clone()).await?;
         let root_volume = root_volume(&filesystem).await?;
-        let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await;
+        let vol =
+            FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
         let dir = vol.root().clone();
 
         let (root_proxy, dir_server_end) =
@@ -1284,7 +1337,8 @@ mod tests {
         let device = Arc::new(FakeDevice::new(2048, 512));
         let filesystem = FxFilesystem::new_empty(device.clone()).await?;
         let root_volume = root_volume(&filesystem).await?;
-        let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await;
+        let vol =
+            FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
         let dir = vol.root().clone();
 
         let (root_proxy, dir_server_end) =

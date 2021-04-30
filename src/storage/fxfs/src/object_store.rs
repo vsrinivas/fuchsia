@@ -35,7 +35,8 @@ use {
                 DEFAULT_DATA_ATTRIBUTE_ID,
             },
             transaction::{
-                AssociatedObject, LockKey, Mutation, ObjectStoreMutation, Operation, Transaction,
+                AssociatedObject, LockKey, Mutation, ObjectStoreMutation, Operation,
+                StoreInfoMutation, Transaction,
             },
         },
     },
@@ -44,6 +45,7 @@ use {
     async_trait::async_trait,
     bincode::{deserialize_from, serialize_into},
     futures::{future::BoxFuture, FutureExt},
+    once_cell::sync::OnceCell,
     serde::{Deserialize, Serialize},
     std::{
         cmp::min,
@@ -62,6 +64,12 @@ pub struct StoreInfo {
     // Object ids for layers.  TODO(csuter): need a layer of indirection here so we can
     // support snapshots.
     layers: Vec<u64>,
+
+    // The object ID for the root directory.
+    root_directory_object_id: u64,
+
+    // The object ID for the graveyard.
+    graveyard_directory_object_id: u64,
 }
 
 // TODO(csuter): We should test or put checks in place to ensure this limit isn't exceeded.  It
@@ -88,10 +96,10 @@ pub struct ObjectStore {
     tree: LSMTree<ObjectKey, ObjectValue>,
 
     // When replaying the journal, the store cannot read StoreInfo until the whole journal
-    // has been replayed, so during that time, opened will be false and records
+    // has been replayed, so during that time, store_info_handle will be None and records
     // just get sent to the tree. Once the journal has been replayed, we can open the store
     // and load all the other layer information.
-    opened: Mutex<bool>,
+    store_info_handle: OnceCell<StoreObjectHandle<ObjectStore>>,
 }
 
 impl ObjectStore {
@@ -101,7 +109,6 @@ impl ObjectStore {
         filesystem: Arc<dyn Filesystem>,
         store_info: StoreInfo,
         tree: LSMTree<ObjectKey, ObjectValue>,
-        opened: bool,
     ) -> Arc<ObjectStore> {
         let device = filesystem.device();
         let block_size = device.block_size();
@@ -113,7 +120,7 @@ impl ObjectStore {
             filesystem: Arc::downgrade(&filesystem),
             store_info: Mutex::new(store_info),
             tree,
-            opened: Mutex::new(opened),
+            store_info_handle: OnceCell::new(),
         });
         filesystem.register_store(&store);
         store
@@ -130,7 +137,6 @@ impl ObjectStore {
             filesystem,
             StoreInfo::default(),
             LSMTree::new(merge::merge),
-            true,
         )
     }
 
@@ -146,6 +152,30 @@ impl ObjectStore {
         &self.tree
     }
 
+    pub fn root_directory_object_id(&self) -> u64 {
+        self.store_info.lock().unwrap().root_directory_object_id
+    }
+
+    pub fn set_root_directory_object_id<'a>(&'a self, transaction: &mut Transaction<'a>, oid: u64) {
+        let mut store_info = self.txn_get_store_info(transaction);
+        store_info.root_directory_object_id = oid;
+        transaction.add_with_object(self.store_object_id, Mutation::store_info(store_info), self);
+    }
+
+    pub fn graveyard_directory_object_id(&self) -> u64 {
+        self.store_info.lock().unwrap().graveyard_directory_object_id
+    }
+
+    pub fn set_graveyard_directory_object_id<'a>(
+        &'a self,
+        transaction: &mut Transaction<'a>,
+        oid: u64,
+    ) {
+        let mut store_info = self.txn_get_store_info(transaction);
+        store_info.graveyard_directory_object_id = oid;
+        transaction.add_with_object(self.store_object_id, Mutation::store_info(store_info), self);
+    }
+
     pub async fn create_child_store<'a>(
         self: &'a Arc<ObjectStore>,
         transaction: &mut Transaction<'a>,
@@ -155,19 +185,26 @@ impl ObjectStore {
     }
 
     async fn create_child_store_with_id<'a>(
-        self: &'a Arc<ObjectStore>,
+        self: &'a Arc<Self>,
         transaction: &mut Transaction<'a>,
         object_id: u64,
     ) -> Result<Arc<ObjectStore>, Error> {
         self.ensure_open().await?;
-        let handle =
-            self.create_object_with_id(transaction, object_id, HandleOptions::default()).await?;
         // TODO(csuter): if the transaction rolls back, we need to delete the store.
-        Ok(Self::new_empty(
+        let handle = ObjectStore::create_object_with_id(
+            self,
+            transaction,
+            object_id,
+            HandleOptions::default(),
+        )
+        .await?;
+        let store = Self::new_empty(
             Some(self.clone()),
             handle.object_id(),
             self.filesystem.upgrade().unwrap(),
-        ))
+        );
+        let _ = store.store_info_handle.set(handle);
+        Ok(store)
     }
 
     // When replaying the journal, we need to replay mutation records into the LSM tree, but we
@@ -185,7 +222,6 @@ impl ObjectStore {
             self.filesystem.upgrade().unwrap(),
             StoreInfo::default(),
             LSMTree::new(merge::merge),
-            false,
         )
     }
 
@@ -198,23 +234,24 @@ impl ObjectStore {
         Ok(store)
     }
 
-    pub async fn open_object(
-        self: &Arc<Self>,
+    pub async fn open_object<S: AsRef<ObjectStore>>(
+        owner: &Arc<S>,
         object_id: u64,
         options: HandleOptions,
-    ) -> Result<StoreObjectHandle, Error> {
-        self.ensure_open().await?;
-        let item = self
+    ) -> Result<StoreObjectHandle<S>, Error> {
+        let store = owner.as_ref().as_ref();
+        store.ensure_open().await?;
+        let item = store
             .tree
             .find(&ObjectKey::attribute(object_id, DEFAULT_DATA_ATTRIBUTE_ID))
             .await?
             .ok_or(FxfsError::NotFound)?;
         if let ObjectValue::Attribute { size } = item.value {
             Ok(StoreObjectHandle {
-                store: self.clone(),
+                owner: owner.clone(),
                 object_id,
                 attribute_id: DEFAULT_DATA_ATTRIBUTE_ID,
-                block_size: self.block_size.into(),
+                block_size: store.block_size.into(),
                 size: Mutex::new(size),
                 options,
             })
@@ -223,27 +260,28 @@ impl ObjectStore {
         }
     }
 
-    async fn create_object_with_id(
-        self: &Arc<Self>,
+    async fn create_object_with_id<S: AsRef<ObjectStore>>(
+        owner: &Arc<S>,
         transaction: &mut Transaction<'_>,
         object_id: u64,
         options: HandleOptions,
-    ) -> Result<StoreObjectHandle, Error> {
-        self.ensure_open().await?;
+    ) -> Result<StoreObjectHandle<S>, Error> {
+        let store = owner.as_ref().as_ref();
+        store.ensure_open().await?;
         transaction.add(
-            self.store_object_id,
+            store.store_object_id(),
             Mutation::insert_object(ObjectKey::object(object_id), ObjectValue::file(1, 0)),
         );
         transaction.add(
-            self.store_object_id,
+            store.store_object_id(),
             Mutation::insert_object(
                 ObjectKey::attribute(object_id, DEFAULT_DATA_ATTRIBUTE_ID),
                 ObjectValue::attribute(0),
             ),
         );
         Ok(StoreObjectHandle {
-            store: self.clone(),
-            block_size: self.block_size.into(),
+            owner: owner.clone(),
+            block_size: store.block_size.into(),
             object_id,
             attribute_id: DEFAULT_DATA_ATTRIBUTE_ID,
             size: Mutex::new(0),
@@ -251,13 +289,13 @@ impl ObjectStore {
         })
     }
 
-    pub async fn create_object(
-        self: &Arc<Self>,
+    pub async fn create_object<S: AsRef<ObjectStore>>(
+        owner: &Arc<S>,
         mut transaction: &mut Transaction<'_>,
         options: HandleOptions,
-    ) -> Result<StoreObjectHandle, Error> {
-        let object_id = self.get_next_object_id();
-        self.create_object_with_id(&mut transaction, object_id, options).await
+    ) -> Result<StoreObjectHandle<S>, Error> {
+        let object_id = owner.as_ref().as_ref().get_next_object_id();
+        ObjectStore::create_object_with_id(owner, &mut transaction, object_id, options).await
     }
 
     /// Push all in-memory structures to the device. This is not necessary for sync since the
@@ -276,15 +314,12 @@ impl ObjectStore {
         let parent_store = self.parent_store.as_ref().unwrap();
         let mut transaction = filesystem.clone().new_transaction(&[]).await?;
         let object_handle =
-            parent_store.create_object(&mut transaction, HandleOptions::default()).await?;
+            ObjectStore::create_object(parent_store, &mut transaction, HandleOptions::default())
+                .await?;
         transaction.add(self.store_object_id(), Mutation::TreeSeal);
         transaction.commit().await;
 
         let object_id = object_handle.object_id();
-        let handle = parent_store
-            .clone()
-            .open_object(self.store_object_id, HandleOptions::default())
-            .await?;
         self.tree.compact(object_handle).await?;
         let mut serialized_info = Vec::new();
         {
@@ -293,9 +328,13 @@ impl ObjectStore {
             serialize_into(&mut serialized_info, &*store_info)?;
         }
         let mut buf = self.device.allocate_buffer(serialized_info.len());
-        buf.as_mut_slice()[..serialized_info.len()].copy_from_slice(&serialized_info[..]);
+        buf.as_mut_slice().copy_from_slice(&serialized_info[..]);
         let mut transaction = filesystem.clone().new_transaction(&[]).await?;
-        handle.txn_write(&mut transaction, 0u64, buf.as_ref()).await?;
+        self.store_info_handle
+            .get()
+            .unwrap()
+            .txn_write(&mut transaction, 0u64, buf.as_ref())
+            .await?;
 
         transaction.add(self.store_object_id(), Mutation::TreeCompact);
         transaction.commit().await;
@@ -373,7 +412,7 @@ impl ObjectStore {
     }
 
     async fn ensure_open(&self) -> Result<(), Error> {
-        if *self.opened.lock().unwrap() {
+        if self.parent_store.is_none() || self.store_info_handle.get().is_some() {
             return Ok(());
         }
 
@@ -386,15 +425,24 @@ impl ObjectStore {
         async move {
             // TODO(csuter): we need to introduce an async lock here.
             let parent_store = self.parent_store.as_ref().unwrap();
-            let handle =
-                parent_store.open_object(self.store_object_id, HandleOptions::default()).await?;
+            let handle = ObjectStore::open_object(
+                &parent_store,
+                self.store_object_id,
+                HandleOptions::default(),
+            )
+            .await?;
             if handle.get_size() > 0 {
                 let serialized_info = handle.contents(MAX_STORE_INFO_SERIALIZED_SIZE).await?;
                 let store_info: StoreInfo = deserialize_from(&serialized_info[..])?;
                 let mut handles = Vec::new();
                 for object_id in &store_info.layers {
                     handles.push(
-                        parent_store.open_object(*object_id, HandleOptions::default()).await?,
+                        ObjectStore::open_object(
+                            &parent_store,
+                            *object_id,
+                            HandleOptions::default(),
+                        )
+                        .await?,
                     );
                 }
                 self.tree.set_layers(handles.into()).await?;
@@ -403,7 +451,7 @@ impl ObjectStore {
                     current_store_info.last_object_id = store_info.last_object_id
                 }
             }
-            *self.opened.lock().unwrap() = true;
+            let _ = self.store_info_handle.set(handle);
             Ok(())
         }
         .boxed()
@@ -418,22 +466,24 @@ impl ObjectStore {
     fn allocator(&self) -> Arc<dyn Allocator> {
         self.filesystem().allocator()
     }
+
+    fn txn_get_store_info(&self, transaction: &Transaction<'_>) -> StoreInfo {
+        match transaction.get_store_info(self.store_object_id) {
+            None => self.store_info.lock().unwrap().clone(),
+            Some(store_info) => store_info.clone(),
+        }
+    }
 }
 
 #[async_trait]
 impl Mutations for ObjectStore {
-    async fn apply_mutation(
-        &self,
-        mutation: Mutation,
-        replay: bool,
-        object: Option<AssociatedObject<'_>>,
-    ) {
+    async fn apply_mutation(&self, mutation: Mutation, replay: bool) {
         // It's not safe to fully open a store until replay is fully complete (because
         // subsequent mutations could render current records invalid). The exception to
         // this is the root parent object store which contains the extents for the journal
         // file: whilst we are replaying we need to be able to track new extents for the
         // journal file so that we can read from it whilst we are replaying.
-        assert!(!replay || !*self.opened.lock().unwrap() || self.parent_store.is_none());
+        assert!(!replay || self.store_info_handle.get().is_none() || self.parent_store.is_none());
 
         match mutation {
             Mutation::ObjectStore(ObjectStoreMutation { item, op }) => {
@@ -443,15 +493,6 @@ impl Mutations for ObjectStore {
                         store_info.last_object_id = item.key.object_id;
                     }
                 }
-                // If this mutation is a size change, update the cached size if there is an
-                // associated object.
-                match (object, &item) {
-                    (Some(object), ObjectItem { value: ObjectValue::Attribute { size }, .. }) => {
-                        *object.downcast_ref::<StoreObjectHandle>().unwrap().size.lock().unwrap() =
-                            *size;
-                    }
-                    _ => {}
-                }
                 match op {
                     Operation::Insert => self.tree.insert(item).await,
                     Operation::ReplaceOrInsert => self.tree.replace_or_insert(item).await,
@@ -460,6 +501,13 @@ impl Mutations for ObjectStore {
                         self.tree.merge_into(item, &lower_bound).await;
                     }
                 }
+            }
+            Mutation::ObjectStoreInfo(StoreInfoMutation(mut store_info)) => {
+                let mut info = self.store_info.lock().unwrap();
+                if info.last_object_id > store_info.last_object_id {
+                    store_info.last_object_id = info.last_object_id;
+                }
+                *info = store_info;
             }
             Mutation::TreeSeal => self.tree.seal(),
             Mutation::TreeCompact => {
@@ -474,10 +522,30 @@ impl Mutations for ObjectStore {
     fn drop_mutation(&self, _mutation: Mutation) {}
 }
 
+impl AsRef<ObjectStore> for ObjectStore {
+    fn as_ref(&self) -> &ObjectStore {
+        self
+    }
+}
+
+impl AssociatedObject for ObjectStore {
+    fn will_apply_mutation(&self, mutation: &Mutation) {
+        match mutation {
+            Mutation::ObjectStoreInfo(StoreInfoMutation(store_info)) => {
+                let mut info = self.store_info.lock().unwrap();
+                let last_object_id = std::cmp::max(info.last_object_id, store_info.last_object_id);
+                *info = store_info.clone();
+                info.last_object_id = last_object_id;
+            }
+            _ => {}
+        }
+    }
+}
+
 // TODO(csuter): We should probably be a little more frugal about what we store here since there
 // could be a lot of these structures. We could remove block_size and change the size to be atomic.
-pub struct StoreObjectHandle {
-    store: Arc<ObjectStore>,
+pub struct StoreObjectHandle<S> {
+    owner: Arc<S>,
     object_id: u64,
     block_size: u64,
     attribute_id: u64,
@@ -485,9 +553,13 @@ pub struct StoreObjectHandle {
     options: HandleOptions,
 }
 
-impl StoreObjectHandle {
-    pub fn store(&self) -> Arc<ObjectStore> {
-        self.store.clone()
+impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
+    pub fn owner(&self) -> &Arc<S> {
+        &self.owner
+    }
+
+    pub fn store(&self) -> &ObjectStore {
+        self.owner.as_ref().as_ref()
     }
 
     /// Extend the file with the given extent.  The only use case for this right now is for files
@@ -499,9 +571,9 @@ impl StoreObjectHandle {
     ) -> Result<(), Error> {
         let old_end = round_up(self.txn_get_size(transaction), self.block_size);
         let new_size = old_end + device_range.end - device_range.start;
-        self.store.allocator().reserve(transaction, device_range.clone()).await;
+        self.store().allocator().reserve(transaction, device_range.clone()).await;
         transaction.add_with_object(
-            self.store.store_object_id,
+            self.store().store_object_id,
             Mutation::replace_or_insert_object(
                 ObjectKey::attribute(self.object_id, self.attribute_id),
                 ObjectValue::attribute(new_size),
@@ -509,7 +581,7 @@ impl StoreObjectHandle {
             self,
         );
         transaction.add(
-            self.store.store_object_id(),
+            self.store().store_object_id,
             Mutation::merge_object(
                 ObjectKey::extent(self.object_id, self.attribute_id, old_end..new_size),
                 ObjectValue::extent(device_range.start),
@@ -529,7 +601,7 @@ impl StoreObjectHandle {
         let mut buf_offset = 0;
         if offset + buf.len() as u64 > self.txn_get_size(transaction) {
             transaction.add_with_object(
-                self.store.store_object_id,
+                self.store().store_object_id,
                 Mutation::replace_or_insert_object(
                     ObjectKey::attribute(self.object_id, self.attribute_id),
                     ObjectValue::attribute(offset + buf.len() as u64),
@@ -540,7 +612,7 @@ impl StoreObjectHandle {
         let deallocated =
             self.deallocate_old_extents(transaction, &ExtentKey::new(aligned.clone())).await?;
         let mut allocated = 0;
-        let allocator = self.store.allocator();
+        let allocator = self.store().allocator();
         while buf_offset < buf.len() {
             let device_range = allocator.allocate(transaction, aligned.end - aligned.start).await?;
             allocated += device_range.end - device_range.start;
@@ -555,7 +627,7 @@ impl StoreObjectHandle {
             )
             .await?;
             transaction.add(
-                self.store.store_object_id,
+                self.store().store_object_id,
                 Mutation::merge_object(
                     ObjectKey::extent(self.object_id, self.attribute_id, aligned.start..end),
                     ObjectValue::extent(device_range.start),
@@ -571,7 +643,7 @@ impl StoreObjectHandle {
     // All the extents for the range must have been preallocated using preallocate_range or from
     // existing writes.
     async fn overwrite(&self, mut offset: u64, buf: BufferRef<'_>) -> Result<(), Error> {
-        let tree = &self.store.tree;
+        let tree = &self.store().tree;
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
         let end = offset + buf.len() as u64;
@@ -622,13 +694,13 @@ impl StoreObjectHandle {
         let remainder = if start_align > 0 {
             let (head, remainder) =
                 buf.split_at(min(self.block_size as usize - start_align, buf.len()));
-            let mut align_buf = self.store.device.allocate_buffer(self.block_size as usize);
+            let mut align_buf = self.store().device.allocate_buffer(self.block_size as usize);
             let read = self.read(start_offset, align_buf.as_mut()).await?;
             align_buf.as_mut_slice()[read..].fill(0);
             align_buf.as_mut_slice()[start_align..(start_align + head.len())]
                 .copy_from_slice(head.as_slice());
             device_offset -= start_align as u64;
-            self.store.device.write(device_offset, align_buf.as_ref()).await?;
+            self.store().device.write(device_offset, align_buf.as_ref()).await?;
             device_offset += self.block_size;
             remainder
         } else {
@@ -638,14 +710,14 @@ impl StoreObjectHandle {
             let end = offset + buf.len() as u64;
             let end_align = (end % self.block_size) as usize;
             let (whole_blocks, tail) = remainder.split_at(remainder.len() - end_align);
-            self.store.device.write(device_offset, whole_blocks).await?;
+            self.store().device.write(device_offset, whole_blocks).await?;
             device_offset += whole_blocks.len() as u64;
             if tail.len() > 0 {
-                let mut align_buf = self.store.device.allocate_buffer(self.block_size as usize);
+                let mut align_buf = self.store().device.allocate_buffer(self.block_size as usize);
                 let read = self.read(end - end_align as u64, align_buf.as_mut()).await?;
                 align_buf.as_mut_slice()[read..].fill(0);
                 &align_buf.as_mut_slice()[..tail.len()].copy_from_slice(tail.as_slice());
-                self.store.device.write(device_offset, align_buf.as_ref()).await?;
+                self.store().device.write(device_offset, align_buf.as_ref()).await?;
             }
         }
         Ok(())
@@ -657,13 +729,13 @@ impl StoreObjectHandle {
         transaction: &mut Transaction<'_>,
         key: &ExtentKey,
     ) -> Result<u64, Error> {
-        let tree = &self.store.tree;
+        let tree = &self.store().tree;
         let layer_set = tree.layer_set();
         let lower_bound =
             ObjectKey::with_extent_key(self.object_id, self.attribute_id, key.search_key());
         let mut merger = layer_set.merger();
         let mut iter = merger.seek(Bound::Included(&lower_bound)).await?;
-        let allocator = self.store.allocator();
+        let allocator = self.store().allocator();
         let mut deallocated = 0;
         loop {
             let (extent_key, extent_value) = match iter.get().and_then(Into::into) {
@@ -698,7 +770,7 @@ impl StoreObjectHandle {
     fn txn_get_size(&self, transaction: &Transaction<'_>) -> u64 {
         transaction
             .get_object_mutation(
-                self.store.store_object_id,
+                self.store().store_object_id,
                 ObjectKey::attribute(self.object_id, self.attribute_id),
             )
             .and_then(|m| {
@@ -717,7 +789,7 @@ impl StoreObjectHandle {
             value: ObjectValue::Object { kind: ObjectKind::File { allocated_size, .. } },
             ..
         } = self
-            .store
+            .store()
             .tree
             .find(&ObjectKey::object(self.object_id))
             .await?
@@ -739,11 +811,11 @@ impl StoreObjectHandle {
             return Ok(());
         }
         let mut item = if let Some(ObjectStoreMutation { item, .. }) = transaction
-            .get_object_mutation(self.store.store_object_id, ObjectKey::object(self.object_id))
+            .get_object_mutation(self.store().store_object_id, ObjectKey::object(self.object_id))
         {
             item.clone()
         } else {
-            self.store
+            self.store()
                 .tree
                 .find(&ObjectKey::object(self.object_id))
                 .await?
@@ -764,10 +836,22 @@ impl StoreObjectHandle {
             panic!("Unexpceted object value");
         }
         transaction.add(
-            self.store.store_object_id,
+            self.store().store_object_id,
             Mutation::replace_or_insert_object(item.key, item.value),
         );
         Ok(())
+    }
+}
+
+impl<S: Send + Sync> AssociatedObject for StoreObjectHandle<S> {
+    fn will_apply_mutation(&self, mutation: &Mutation) {
+        match mutation {
+            Mutation::ObjectStore(ObjectStoreMutation {
+                item: ObjectItem { value: ObjectValue::Attribute { size }, .. },
+                ..
+            }) => *self.size.lock().unwrap() = *size,
+            _ => {}
+        }
     }
 }
 
@@ -782,23 +866,23 @@ fn round_up<T: Into<u64>>(offset: u64, block_size: T) -> u64 {
 }
 
 #[async_trait]
-impl ObjectHandle for StoreObjectHandle {
+impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObjectHandle<S> {
     fn object_id(&self) -> u64 {
         return self.object_id;
     }
 
     fn allocate_buffer(&self, size: usize) -> Buffer<'_> {
-        self.store.device.allocate_buffer(size)
+        self.store().device.allocate_buffer(size)
     }
 
     async fn read(&self, mut offset: u64, mut buf: MutableBufferRef<'_>) -> Result<usize, Error> {
         if buf.len() == 0 {
             return Ok(0);
         }
-        let fs = self.store.filesystem();
+        let fs = self.store().filesystem();
         let _guard = fs
             .read_lock(&[LockKey::object_attribute(
-                self.store.store_object_id,
+                self.store().store_object_id,
                 self.object_id,
                 self.attribute_id,
             )])
@@ -807,7 +891,7 @@ impl ObjectHandle for StoreObjectHandle {
         if offset >= size {
             return Ok(0);
         }
-        let tree = &self.store.tree;
+        let tree = &self.store().tree;
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
         let mut iter = merger
@@ -848,8 +932,9 @@ impl ObjectHandle for StoreObjectHandle {
                 // Deal with starting alignment by reading the existing contents into an alignment
                 // buffer.
                 if start_align > 0 {
-                    let mut align_buf = self.store.device.allocate_buffer(self.block_size as usize);
-                    self.store.device.read(device_offset, align_buf.as_mut()).await?;
+                    let mut align_buf =
+                        self.store().device.allocate_buffer(self.block_size as usize);
+                    self.store().device.read(device_offset, align_buf.as_mut()).await?;
                     let to_copy = min(self.block_size as usize - start_align, buf.len());
                     buf.as_mut_slice()[..to_copy].copy_from_slice(
                         &align_buf.as_slice()[start_align..(start_align + to_copy)],
@@ -865,7 +950,7 @@ impl ObjectHandle for StoreObjectHandle {
 
                 let to_copy = min(buf.len() - end_align, (extent_key.range.end - offset) as usize);
                 if to_copy > 0 {
-                    self.store
+                    self.store()
                         .device
                         .read(device_offset, buf.reborrow().subslice_mut(..to_copy))
                         .await?;
@@ -880,8 +965,9 @@ impl ObjectHandle for StoreObjectHandle {
                 // Deal with end alignment, again by reading the exsting contents into an alignment
                 // buffer.
                 if offset < extent_key.range.end && end_align > 0 {
-                    let mut align_buf = self.store.device.allocate_buffer(self.block_size as usize);
-                    self.store.device.read(device_offset, align_buf.as_mut()).await?;
+                    let mut align_buf =
+                        self.store().device.allocate_buffer(self.block_size as usize);
+                    self.store().device.read(device_offset, align_buf.as_mut()).await?;
                     buf.as_mut_slice().copy_from_slice(&align_buf.as_slice()[..end_align]);
                     buf = buf.subslice_mut(0..0);
                     break;
@@ -926,7 +1012,7 @@ impl ObjectHandle for StoreObjectHandle {
             let deleted_range =
                 round_up(size, self.block_size)..round_up(old_size, self.block_size);
             transaction.add(
-                self.store.store_object_id,
+                self.store().store_object_id,
                 Mutation::merge_object(
                     ObjectKey::extent(self.object_id, self.attribute_id, deleted_range.clone()),
                     ObjectValue::deleted_extent(),
@@ -950,7 +1036,7 @@ impl ObjectHandle for StoreObjectHandle {
             }
         }
         transaction.add_with_object(
-            self.store.store_object_id,
+            self.store().store_object_id,
             Mutation::replace_or_insert_object(
                 ObjectKey::attribute(self.object_id, self.attribute_id),
                 ObjectValue::attribute(size),
@@ -967,7 +1053,7 @@ impl ObjectHandle for StoreObjectHandle {
         mut file_range: Range<u64>,
     ) -> Result<Vec<Range<u64>>, Error> {
         let mut ranges = Vec::new();
-        let tree = &self.store.tree;
+        let tree = &self.store().tree;
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
         let mut iter = merger
@@ -1023,7 +1109,7 @@ impl ObjectHandle for StoreObjectHandle {
                 }
             };
             let device_range = self
-                .store
+                .store()
                 .allocator()
                 .allocate(transaction, allocate_end - file_range.start)
                 .await?;
@@ -1032,7 +1118,7 @@ impl ObjectHandle for StoreObjectHandle {
                 file_range.start..file_range.start + device_range.end - device_range.start;
             file_range.start = this_file_range.end;
             transaction.add(
-                self.store.store_object_id,
+                self.store().store_object_id,
                 Mutation::merge_object(
                     ObjectKey::extent(self.object_id, self.attribute_id, this_file_range),
                     ObjectValue::extent(device_range.start),
@@ -1044,7 +1130,7 @@ impl ObjectHandle for StoreObjectHandle {
         // Update the file size if it changed.
         if file_range.end > self.txn_get_size(transaction) {
             transaction.add_with_object(
-                self.store.store_object_id,
+                self.store().store_object_id,
                 Mutation::replace_or_insert_object(
                     ObjectKey::attribute(self.object_id, self.attribute_id),
                     ObjectValue::attribute(file_range.end),
@@ -1058,10 +1144,10 @@ impl ObjectHandle for StoreObjectHandle {
 
     async fn new_transaction<'a>(&self) -> Result<Transaction<'a>, Error> {
         Ok(self
-            .store
+            .store()
             .filesystem()
             .new_transaction(&[LockKey::object_attribute(
-                self.store.store_object_id,
+                self.store().store_object_id,
                 self.object_id,
                 self.attribute_id,
             )])
@@ -1121,13 +1207,12 @@ mod tests {
     }
 
     async fn test_filesystem_and_object(
-    ) -> (Arc<FakeFilesystem>, Arc<FakeAllocator>, StoreObjectHandle) {
+    ) -> (Arc<FakeFilesystem>, Arc<FakeAllocator>, StoreObjectHandle<ObjectStore>) {
         let (fs, allocator, store) = test_filesystem_and_store().await;
         let object;
         let mut transaction =
             fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-        object = store
-            .create_object(&mut transaction, HandleOptions::default())
+        object = ObjectStore::create_object(&store, &mut transaction, HandleOptions::default())
             .await
             .expect("create_object failed");
         {
@@ -1178,7 +1263,7 @@ mod tests {
     async fn test_read_after_writes_interspersed_with_flush() {
         let (_fs, _, object) = test_filesystem_and_object().await;
 
-        object.store().flush(false).await.expect("flush failed");
+        object.owner().flush(false).await.expect("flush failed");
 
         // Write more test data to the first block fo the file.
         let mut buf = object.allocate_buffer(TEST_DATA.len());
@@ -1238,13 +1323,13 @@ mod tests {
         buffer.as_mut_slice().fill(0xaf);
         object.write(0, buffer.as_ref()).await.expect("write failed");
 
-        let store = object.store();
+        let store = object.owner();
         let mut transaction =
             fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-        let object2 = store
-            .create_object(&mut transaction, HandleOptions::default())
-            .await
-            .expect("create_object failed");
+        let object2 =
+            ObjectStore::create_object(&store, &mut transaction, HandleOptions::default())
+                .await
+                .expect("create_object failed");
         transaction.commit().await;
         let mut ef_buffer = object.allocate_buffer(512);
         ef_buffer.as_mut_slice().fill(0xef);
@@ -1267,7 +1352,10 @@ mod tests {
         assert_eq!(&buffer.as_slice()[..1024], &[0xef; 1024]);
     }
 
-    async fn test_preallocate_common(allocator: &FakeAllocator, object: StoreObjectHandle) {
+    async fn test_preallocate_common(
+        allocator: &FakeAllocator,
+        object: StoreObjectHandle<ObjectStore>,
+    ) {
         let allocated_before = allocator.allocated();
         let mut transaction = object.new_transaction().await.expect("new_transaction failed");
         object.preallocate_range(&mut transaction, 0..512).await.expect("preallocate_range failed");
@@ -1285,14 +1373,13 @@ mod tests {
         assert_eq!(allocated_after - allocated_before, 1048576 - TEST_DEVICE_BLOCK_SIZE as usize);
 
         // Reopen the object in overwrite mode.
-        let object = object
-            .store
-            .open_object(
-                object.object_id(),
-                HandleOptions { overwrite: true, ..Default::default() },
-            )
-            .await
-            .expect("open_object_with_id failed");
+        let object = ObjectStore::open_object(
+            &object.owner,
+            object.object_id(),
+            HandleOptions { overwrite: true, ..Default::default() },
+        )
+        .await
+        .expect("open_object failed");
         let mut buf = object.allocate_buffer(2048);
         buf.as_mut_slice().fill(47);
         object.write(0, buf.subslice(..TEST_DATA_OFFSET as usize)).await.expect("write failed");
@@ -1325,7 +1412,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_preallocate_suceeds_when_extents_are_in_different_layers() {
         let (_fs, allocator, object) = test_filesystem_and_object().await;
-        object.store().flush(false).await.expect("flush failed");
+        object.owner().flush(false).await.expect("flush failed");
         test_preallocate_common(&allocator, object).await;
     }
 
@@ -1348,14 +1435,13 @@ mod tests {
     async fn test_overwrite_fails_if_not_preallocated() {
         let (_fs, _, object) = test_filesystem_and_object().await;
 
-        let object = object
-            .store
-            .open_object(
-                object.object_id(),
-                HandleOptions { overwrite: true, ..Default::default() },
-            )
-            .await
-            .expect("open_object_with_id failed");
+        let object = ObjectStore::open_object(
+            &object.owner,
+            object.object_id(),
+            HandleOptions { overwrite: true, ..Default::default() },
+        )
+        .await
+        .expect("open_object failed");
         let mut buf = object.allocate_buffer(2048);
         buf.as_mut_slice().fill(95);
         let offset = round_up(TEST_OBJECT_SIZE, TEST_DEVICE_BLOCK_SIZE);
@@ -1368,13 +1454,13 @@ mod tests {
         let handle;
         let mut transaction =
             fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-        handle = store
-            .create_object(
-                &mut transaction,
-                HandleOptions { overwrite: true, ..Default::default() },
-            )
-            .await
-            .expect("create_object failed");
+        handle = ObjectStore::create_object(
+            &store,
+            &mut transaction,
+            HandleOptions { overwrite: true, ..Default::default() },
+        )
+        .await
+        .expect("create_object failed");
         handle
             .extend(&mut transaction, 0..5 * TEST_DEVICE_BLOCK_SIZE as u64)
             .await
@@ -1417,7 +1503,7 @@ mod tests {
         let (fs, allocator, object) = test_filesystem_and_object().await;
         let mut transaction =
             fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-        let store = object.store();
+        let store = object.owner();
         store
             .adjust_refs(&mut transaction, object.object_id(), 1)
             .await
@@ -1501,8 +1587,7 @@ mod tests {
         let mut transaction =
             fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
         object = Arc::new(
-            store
-                .create_object(&mut transaction, HandleOptions::default())
+            ObjectStore::create_object(&store, &mut transaction, HandleOptions::default())
                 .await
                 .expect("create_object failed"),
         );

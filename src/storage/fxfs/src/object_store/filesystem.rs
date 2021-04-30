@@ -8,6 +8,7 @@ use {
         object_store::{
             allocator::Allocator,
             constants::INVALID_OBJECT_ID,
+            directory::Directory,
             journal::{Journal, JournalCheckpoint},
             transaction::{
                 AssociatedObject, LockKey, LockManager, Mutation, ReadGuard, Transaction,
@@ -64,6 +65,8 @@ struct Objects {
     // Records dependencies on the journal for objects i.e. an entry for object ID 1, would mean it
     // has a dependency on journal records from that offset.
     journal_file_checkpoints: HashMap<u64, JournalCheckpoint>,
+
+    graveyards: HashMap<u64, Arc<Directory<ObjectStore>>>,
 }
 
 impl ObjectManager {
@@ -76,6 +79,7 @@ impl ObjectManager {
                 allocator_object_id: INVALID_OBJECT_ID,
                 allocator: None,
                 journal_file_checkpoints: HashMap::new(),
+                graveyards: HashMap::new(),
             }),
         }
     }
@@ -137,8 +141,11 @@ impl ObjectManager {
         mutation: Mutation,
         replay: bool,
         checkpoint: &JournalCheckpoint,
-        object: Option<AssociatedObject<'_>>,
+        object: Option<&dyn AssociatedObject>,
     ) {
+        if let Some(object) = object {
+            object.will_apply_mutation(&mutation);
+        }
         {
             let mut objects = self.objects.write().unwrap();
             objects.journal_file_checkpoints.entry(object_id).or_insert_with(|| checkpoint.clone());
@@ -149,7 +156,7 @@ impl ObjectManager {
             }
         }
         .unwrap_or_else(|| self.root_store().lazy_open_store(object_id))
-        .apply_mutation(mutation, replay, object)
+        .apply_mutation(mutation, replay)
         .await;
     }
 
@@ -196,6 +203,14 @@ impl ObjectManager {
             self.objects.write().unwrap().journal_file_checkpoints.remove(&object_id);
         ObjectSync { object_manager: self.clone(), object_id, old_journal_file_checkpoint }
     }
+
+    pub fn graveyard(&self, store_object_id: u64) -> Option<Arc<Directory<ObjectStore>>> {
+        self.objects.read().unwrap().graveyards.get(&store_object_id).cloned()
+    }
+
+    pub fn register_graveyard(&self, store_object_id: u64, directory: Arc<Directory<ObjectStore>>) {
+        self.objects.write().unwrap().graveyards.insert(store_object_id, directory);
+    }
 }
 
 /// ObjectSync is used by objects to indicate some kind of event such that if successful, existing
@@ -239,12 +254,7 @@ pub trait Mutations: Send + Sync {
     /// method will get called when the transaction commits, which can either be during live
     /// operation or during journal replay, in which case |replay| will be true.  Also see
     /// ObjectManager's apply_mutation method.
-    async fn apply_mutation(
-        &self,
-        mutation: Mutation,
-        replay: bool,
-        object: Option<AssociatedObject<'_>>,
-    );
+    async fn apply_mutation(&self, mutation: Mutation, replay: bool);
 
     /// Called when a transaction fails to commit.
     fn drop_mutation(&self, mutation: Mutation);
@@ -301,14 +311,6 @@ impl FxFilesystem {
 
     pub async fn sync(&self, options: SyncOptions) -> Result<(), Error> {
         self.journal.sync(options).await
-    }
-
-    pub fn root_volume_info_object_id(&self) -> u64 {
-        self.journal.root_volume_info_object_id()
-    }
-
-    pub fn set_root_volume_info_object_id(&self, object_id: u64) {
-        self.journal.set_root_volume_info_object_id(object_id);
     }
 
     pub async fn close(&self) -> Result<(), Error> {

@@ -49,7 +49,7 @@ impl FxfsServer {
                 .await
                 .expect("Open or create volume failed"),
         )
-        .await;
+        .await?;
         Ok(Self { fs, volume })
     }
 

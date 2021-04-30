@@ -22,9 +22,7 @@ pub enum ObjectDescriptor {
     /// A directory (in the generic sense; i.e. an object with children).
     Directory,
     /// A volume, which is the root of a distinct object store containing Files and Directories.
-    /// The contained u64 is the object ID of an object within the object store that contains volume
-    /// information.
-    Volume(u64),
+    Volume,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord, Serialize, Deserialize)]

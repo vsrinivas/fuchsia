@@ -16,54 +16,79 @@ use {
             HandleOptions, ObjectStore, StoreObjectHandle,
         },
     },
-    anyhow::{anyhow, bail, Context, Error},
-    std::{ops::Bound, sync::Arc},
+    anyhow::{anyhow, bail, Error},
+    std::{fmt, ops::Bound, sync::Arc},
 };
 
 // ObjectDescriptor is exposed in Directory::lookup.
 pub use crate::object_store::record::ObjectDescriptor;
 
 /// A directory stores name to child object mappings.
-pub struct Directory {
-    store: Arc<ObjectStore>,
+pub struct Directory<S> {
+    owner: Arc<S>,
     object_id: u64,
 }
 
-impl Directory {
-    pub fn new(store: Arc<ObjectStore>, object_id: u64) -> Self {
-        Directory { store, object_id }
-    }
-
-    pub fn object_store(&self) -> Arc<ObjectStore> {
-        self.store.clone()
+impl<S: AsRef<ObjectStore> + Send + Sync + 'static> Directory<S> {
+    pub fn new(owner: Arc<S>, object_id: u64) -> Self {
+        Directory { owner, object_id }
     }
 
     pub fn object_id(&self) -> u64 {
         return self.object_id;
     }
 
+    pub fn owner(&self) -> &Arc<S> {
+        &self.owner
+    }
+
+    pub fn store(&self) -> &ObjectStore {
+        self.owner.as_ref().as_ref()
+    }
+
+    pub async fn create(
+        transaction: &mut Transaction<'_>,
+        owner: &Arc<S>,
+    ) -> Result<Directory<S>, Error> {
+        let store = owner.as_ref().as_ref();
+        store.ensure_open().await?;
+        let object_id = store.get_next_object_id();
+        transaction.add(
+            store.store_object_id,
+            Mutation::insert_object(
+                ObjectKey::object(object_id),
+                ObjectValue::Object { kind: ObjectKind::Directory },
+            ),
+        );
+        Ok(Directory::new(owner.clone(), object_id))
+    }
+
+    pub async fn open(owner: &Arc<S>, object_id: u64) -> Result<Directory<S>, Error> {
+        let store = owner.as_ref().as_ref();
+        if let ObjectItem { value: ObjectValue::Object { kind: ObjectKind::Directory }, .. } =
+            store.tree.find(&ObjectKey::object(object_id)).await?.ok_or(FxfsError::NotFound)?
+        {
+            Ok(Directory::new(owner.clone(), object_id))
+        } else {
+            bail!(FxfsError::NotDir);
+        }
+    }
+
     pub async fn has_children(&self) -> Result<bool, Error> {
-        let layer_set = self.store.tree().layer_set();
+        let layer_set = self.store().tree().layer_set();
         let mut merger = layer_set.merger();
         Ok(self.iter(&mut merger).await?.get().is_some())
     }
 
-    /// Returns the object ID and descriptor for the given child, or FxfsError::NotFound if not
-    /// found.
-    pub async fn lookup(&self, name: &str) -> Result<(u64, ObjectDescriptor), Error> {
-        let item = self
-            .store
-            .tree()
-            .find(&ObjectKey::child(self.object_id, name))
-            .await?
-            .ok_or(FxfsError::NotFound)?;
-        if let ObjectValue::Child { object_id, object_descriptor } = item.value {
-            Ok((object_id, object_descriptor))
-        } else if let ObjectValue::None = item.value {
-            bail!(FxfsError::NotFound);
-        } else {
-            Err(anyhow!(FxfsError::Inconsistent)
-                .context(format!("Unexpected item in lookup: {:?}", item)))
+    /// Returns the object ID and descriptor for the given child, or None if not found.
+    pub async fn lookup(&self, name: &str) -> Result<Option<(u64, ObjectDescriptor)>, Error> {
+        match self.store().tree().find(&ObjectKey::child(self.object_id, name)).await? {
+            None | Some(ObjectItem { value: ObjectValue::None, .. }) => Ok(None),
+            Some(ObjectItem {
+                value: ObjectValue::Child { object_id, object_descriptor }, ..
+            }) => Ok(Some((object_id, object_descriptor))),
+            Some(item) => Err(anyhow!(FxfsError::Inconsistent)
+                .context(format!("Unexpected item in lookup: {:?}", item))),
         }
     }
 
@@ -71,10 +96,10 @@ impl Directory {
         &self,
         transaction: &mut Transaction<'_>,
         name: &str,
-    ) -> Result<Directory, Error> {
-        let handle = self.store.create_directory(transaction).await?;
+    ) -> Result<Directory<S>, Error> {
+        let handle = Directory::create(transaction, &self.owner).await?;
         transaction.add(
-            self.store.store_object_id(),
+            self.store().store_object_id(),
             Mutation::insert_object(
                 ObjectKey::child(self.object_id, name),
                 ObjectValue::child(handle.object_id(), ObjectDescriptor::Directory),
@@ -87,10 +112,11 @@ impl Directory {
         &self,
         transaction: &mut Transaction<'_>,
         name: &str,
-    ) -> Result<StoreObjectHandle, Error> {
-        let handle = self.store.create_object(transaction, HandleOptions::default()).await?;
+    ) -> Result<StoreObjectHandle<S>, Error> {
+        let handle =
+            ObjectStore::create_object(&self.owner, transaction, HandleOptions::default()).await?;
         transaction.add(
-            self.store.store_object_id(),
+            self.store().store_object_id(),
             Mutation::insert_object(
                 ObjectKey::child(self.object_id, name),
                 ObjectValue::child(handle.object_id(), ObjectDescriptor::File),
@@ -104,16 +130,12 @@ impl Directory {
         transaction: &mut Transaction<'_>,
         volume_name: &str,
         store_object_id: u64,
-        volume_info_object_id: u64,
     ) {
         transaction.add(
-            self.store.store_object_id(),
+            self.store().store_object_id(),
             Mutation::insert_object(
                 ObjectKey::child(self.object_id, volume_name),
-                ObjectValue::child(
-                    store_object_id,
-                    ObjectDescriptor::Volume(volume_info_object_id),
-                ),
+                ObjectValue::child(store_object_id, ObjectDescriptor::Volume),
             ),
         );
     }
@@ -122,14 +144,14 @@ impl Directory {
     ///
     /// Requires transaction locks on |self|.
     pub fn insert_child<'a>(
-        &'a self,
+        &self,
         transaction: &mut Transaction<'a>,
         name: &str,
         object_id: u64,
         descriptor: ObjectDescriptor,
     ) {
         transaction.add(
-            self.store.store_object_id(),
+            self.store().store_object_id(),
             Mutation::replace_or_insert_object(
                 ObjectKey::child(self.object_id, name),
                 ObjectValue::child(object_id, descriptor),
@@ -140,7 +162,7 @@ impl Directory {
     /// Returns an iterator that will return directory entries skipping deleted ones.  Example
     /// usage:
     ///
-    ///   let layer_set = dir.object_store().tree().layer_set();
+    ///   let layer_set = dir.store().tree().layer_set();
     ///   let mut merger = layer_set.merger();
     ///   let mut iter = dir.iter(&mut merger).await?;
     ///
@@ -153,7 +175,7 @@ impl Directory {
 
     /// Like "iter", but seeks from a specific filename (inclusive).  Example usage:
     ///
-    ///   let layer_set = dir.object_store().tree().layer_set();
+    ///   let layer_set = dir.store().tree().layer_set();
     ///   let mut merger = layer_set.merger();
     ///   let mut iter = dir.iter_from(&mut merger, "foo").await?;
     ///
@@ -175,6 +197,15 @@ impl Directory {
             iter.advance().await?;
         }
         Ok(DirectoryIterator { object_id: self.object_id, iter })
+    }
+}
+
+impl<S: AsRef<ObjectStore> + Send + Sync + 'static> fmt::Debug for Directory<S> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Directory")
+            .field("store_id", &self.store().store_object_id())
+            .field("object_id", &self.object_id)
+            .finish()
     }
 }
 
@@ -210,99 +241,53 @@ impl DirectoryIterator<'_, '_> {
 /// Moves src.0/src.1 to dst.0/dst.1.
 ///
 /// If |dst.0| already has a child |dst.1|, it is removed. If that child was a directory, it must
-/// be empty. If |graveyard| is set, the child is moved there instead of being deleted.
+/// be empty.
 ///
 /// If |src| is None, this is effectively the same as unlink(dst.0/dst.1).
-pub async fn replace_child<'a>(
+///
+/// If there is an existing entry, it is returned and the caller is responsible for adjusting the
+/// reference count or moving into the graveyard as appropriate.
+#[must_use]
+pub async fn replace_child<'a, S: AsRef<ObjectStore> + Send + Sync + 'static>(
     transaction: &mut Transaction<'a>,
-    src: Option<(&'a Directory, &str)>,
-    dst: (&'a Directory, &str),
-    graveyard: Option<&'a Directory>,
-) -> Result<(), Error> {
-    let deleted_id_and_descriptor = match dst.0.lookup(dst.1).await {
-        Ok((old_id, ObjectDescriptor::File)) => {
-            if graveyard.is_none() {
-                dst.0
-                    .store
-                    .adjust_refs(transaction, old_id, -1)
-                    .await
-                    .context("Failed to adjust refs")?;
-            }
-            Some((old_id, ObjectDescriptor::File))
-        }
-        Ok((old_id, ObjectDescriptor::Directory)) => {
-            let dir = dst.0.store.open_directory(old_id).await?;
+    src: Option<(&'a Directory<S>, &str)>,
+    dst: (&'a Directory<S>, &str),
+) -> Result<Option<(u64, ObjectDescriptor)>, Error> {
+    let deleted_id_and_descriptor = dst.0.lookup(dst.1).await?;
+    match deleted_id_and_descriptor {
+        Some((_, ObjectDescriptor::File)) => {}
+        Some((old_id, ObjectDescriptor::Directory)) => {
+            let dir = Directory::open(&dst.0.owner(), old_id).await?;
             if dir.has_children().await? {
                 bail!(FxfsError::NotEmpty);
             }
-            Some((old_id, ObjectDescriptor::Directory))
         }
-        Ok((_, ObjectDescriptor::Volume(_))) => bail!(FxfsError::Inconsistent),
-        Err(e) if FxfsError::NotFound.matches(&e) => {
+        Some((_, ObjectDescriptor::Volume)) => bail!(FxfsError::Inconsistent),
+        None => {
             if src.is_none() {
                 // Neither src nor dst exist
                 bail!(FxfsError::NotFound);
             }
-            None
         }
-        Err(e) => bail!(e),
     };
     let new_value = if let Some((src_dir, src_name)) = src {
         transaction.add(
-            src_dir.store.store_object_id(),
+            src_dir.store().store_object_id(),
             Mutation::replace_or_insert_object(
                 ObjectKey::child(src_dir.object_id, src_name),
                 ObjectValue::None,
             ),
         );
-        src_dir.lookup(src_name).await.map(|(id, descriptor)| ObjectValue::child(id, descriptor))?
+        let (id, descriptor) = src_dir.lookup(src_name).await?.ok_or(FxfsError::NotFound)?;
+        ObjectValue::child(id, descriptor)
     } else {
         ObjectValue::None
     };
     transaction.add(
-        dst.0.store.store_object_id(),
+        dst.0.store().store_object_id(),
         Mutation::replace_or_insert_object(ObjectKey::child(dst.0.object_id, dst.1), new_value),
     );
-    if let Some(graveyard) = graveyard {
-        if let Some((id, descriptor)) = deleted_id_and_descriptor {
-            transaction.add(
-                graveyard.store.store_object_id(),
-                Mutation::insert_object(
-                    ObjectKey::child(graveyard.object_id, &format!("{}", id)),
-                    ObjectValue::child(id, descriptor),
-                ),
-            );
-        }
-    }
-    Ok(())
-}
-
-impl ObjectStore {
-    pub async fn create_directory(
-        self: &Arc<Self>,
-        transaction: &mut Transaction<'_>,
-    ) -> Result<Directory, Error> {
-        self.ensure_open().await?;
-        let object_id = self.get_next_object_id();
-        transaction.add(
-            self.store_object_id,
-            Mutation::insert_object(
-                ObjectKey::object(object_id),
-                ObjectValue::Object { kind: ObjectKind::Directory },
-            ),
-        );
-        Ok(Directory::new(self.clone(), object_id))
-    }
-
-    pub async fn open_directory(self: &Arc<Self>, object_id: u64) -> Result<Directory, Error> {
-        if let ObjectItem { value: ObjectValue::Object { kind: ObjectKind::Directory }, .. } =
-            self.tree.find(&ObjectKey::object(object_id)).await?.ok_or(FxfsError::NotFound)?
-        {
-            Ok(Directory::new(self.clone(), object_id))
-        } else {
-            bail!(FxfsError::NotDir);
-        }
-    }
+    Ok(deleted_id_and_descriptor)
 }
 
 #[cfg(test)]
@@ -311,10 +296,10 @@ mod tests {
         crate::{
             errors::FxfsError,
             object_store::{
-                directory::replace_child,
+                directory::{replace_child, Directory},
                 filesystem::{FxFilesystem, SyncOptions},
                 transaction::TransactionHandler,
-                HandleOptions, ObjectDescriptor, ObjectHandle, ObjectHandleExt,
+                HandleOptions, ObjectDescriptor, ObjectHandle, ObjectHandleExt, ObjectStore,
             },
             testing::fake_device::FakeDevice,
         },
@@ -331,11 +316,8 @@ mod tests {
             let fs = FxFilesystem::new_empty(device.clone()).await.expect("new_empty failed");
             let mut transaction =
                 fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-            let dir = fs
-                .root_store()
-                .create_directory(&mut transaction)
-                .await
-                .expect("create_directory failed");
+            let dir =
+                Directory::create(&mut transaction, &fs.root_store()).await.expect("create failed");
 
             let child_dir = dir
                 .create_child_dir(&mut transaction, "foo")
@@ -349,50 +331,42 @@ mod tests {
                 .create_child_file(&mut transaction, "baz")
                 .await
                 .expect("create_child_file failed");
-            dir.add_child_volume(&mut transaction, "corge", 100, 101);
+            dir.add_child_volume(&mut transaction, "corge", 100);
             transaction.commit().await;
             fs.sync(SyncOptions::default()).await.expect("sync failed");
             dir.object_id()
         };
         {
             let fs = FxFilesystem::open(device).await.expect("open failed");
-            let dir =
-                fs.root_store().open_directory(object_id).await.expect("open_directory failed");
-            let (object_id, object_descriptor) = dir.lookup("foo").await.expect("lookup failed");
+            let dir = Directory::open(&fs.root_store(), object_id).await.expect("open failed");
+            let (object_id, object_descriptor) =
+                dir.lookup("foo").await.expect("lookup failed").expect("not found");
             assert_eq!(object_descriptor, ObjectDescriptor::Directory);
             let child_dir =
-                fs.root_store().open_directory(object_id).await.expect("open_directory failed");
+                Directory::open(&fs.root_store(), object_id).await.expect("open failed");
             let (object_id, object_descriptor) =
-                child_dir.lookup("bar").await.expect("lookup failed");
+                child_dir.lookup("bar").await.expect("lookup failed").expect("not found");
             assert_eq!(object_descriptor, ObjectDescriptor::File);
-            let _child_dir_file = fs
-                .root_store()
-                .open_object(object_id, HandleOptions::default())
-                .await
-                .expect("open object failed");
-            let (object_id, object_descriptor) = dir.lookup("baz").await.expect("lookup failed");
+            let _child_dir_file =
+                ObjectStore::open_object(&fs.root_store(), object_id, HandleOptions::default())
+                    .await
+                    .expect("open object failed");
+            let (object_id, object_descriptor) =
+                dir.lookup("baz").await.expect("lookup failed").expect("not found");
             assert_eq!(object_descriptor, ObjectDescriptor::File);
-            let _child_file = fs
-                .root_store()
-                .open_object(object_id, HandleOptions::default())
-                .await
-                .expect("open object failed");
-            let (object_id, object_descriptor) = dir.lookup("corge").await.expect("lookup failed");
+            let _child_file =
+                ObjectStore::open_object(&fs.root_store(), object_id, HandleOptions::default())
+                    .await
+                    .expect("open object failed");
+            let (object_id, object_descriptor) =
+                dir.lookup("corge").await.expect("lookup failed").expect("not found");
             assert_eq!(object_id, 100);
-            if let ObjectDescriptor::Volume(volume_info_object_id) = object_descriptor {
-                assert_eq!(volume_info_object_id, 101);
+            if let ObjectDescriptor::Volume = object_descriptor {
             } else {
                 panic!("wrong ObjectDescriptor");
             }
 
-            assert_eq!(
-                dir.lookup("qux")
-                    .await
-                    .expect_err("lookup succeeded")
-                    .downcast::<FxfsError>()
-                    .expect("wrong error"),
-                FxfsError::NotFound
-            );
+            assert_eq!(dir.lookup("qux").await.expect("lookup failed"), None);
         }
     }
 
@@ -402,70 +376,21 @@ mod tests {
         let fs = FxFilesystem::new_empty(device.clone()).await.expect("new_empty failed");
         let mut transaction =
             fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-        let dir = fs
-            .root_store()
-            .create_directory(&mut transaction)
-            .await
-            .expect("create_directory failed");
+        let dir =
+            Directory::create(&mut transaction, &fs.root_store()).await.expect("create failed");
 
         dir.create_child_file(&mut transaction, "foo").await.expect("create_child_file failed");
         transaction.commit().await;
 
         let mut transaction =
             fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-        replace_child(&mut transaction, None, (&dir, "foo"), None)
+        assert!(replace_child(&mut transaction, None, (&dir, "foo"))
             .await
-            .expect("replace_child failed");
+            .expect("replace_child failed")
+            .is_some());
         transaction.commit().await;
 
-        assert_eq!(
-            dir.lookup("foo")
-                .await
-                .expect_err("lookup succeeded")
-                .downcast::<FxfsError>()
-                .expect("wrong error"),
-            FxfsError::NotFound
-        );
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_delete_child_into_graveyard() {
-        let device = Arc::new(FakeDevice::new(2048, TEST_DEVICE_BLOCK_SIZE));
-        let fs = FxFilesystem::new_empty(device.clone()).await.expect("new_empty failed");
-        let mut transaction =
-            fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-        let dir = fs
-            .root_store()
-            .create_directory(&mut transaction)
-            .await
-            .expect("create_directory failed");
-        let graveyard = fs
-            .root_store()
-            .create_directory(&mut transaction)
-            .await
-            .expect("create_directory failed");
-
-        dir.create_child_file(&mut transaction, "foo").await.expect("create_child_file failed");
-        transaction.commit().await;
-
-        assert!(!graveyard.has_children().await.expect("has_children failed"));
-
-        let mut transaction =
-            fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-        replace_child(&mut transaction, None, (&dir, "foo"), Some(&graveyard))
-            .await
-            .expect("replace_child failed");
-        transaction.commit().await;
-
-        assert_eq!(
-            dir.lookup("foo")
-                .await
-                .expect_err("lookup succeeded")
-                .downcast::<FxfsError>()
-                .expect("wrong error"),
-            FxfsError::NotFound
-        );
-        assert!(graveyard.has_children().await.expect("has_children failed"));
+        assert_eq!(dir.lookup("foo").await.expect("lookup failed"), None);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -474,11 +399,8 @@ mod tests {
         let fs = FxFilesystem::new_empty(device.clone()).await.expect("new_empty failed");
         let mut transaction =
             fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-        let dir = fs
-            .root_store()
-            .create_directory(&mut transaction)
-            .await
-            .expect("create_directory failed");
+        let dir =
+            Directory::create(&mut transaction, &fs.root_store()).await.expect("create failed");
 
         let child =
             dir.create_child_dir(&mut transaction, "foo").await.expect("create_child_dir failed");
@@ -488,7 +410,7 @@ mod tests {
         let mut transaction =
             fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
         assert_eq!(
-            replace_child(&mut transaction, None, (&dir, "foo"), None)
+            replace_child(&mut transaction, None, (&dir, "foo"))
                 .await
                 .expect_err("replace_child succeeded")
                 .downcast::<FxfsError>()
@@ -498,26 +420,21 @@ mod tests {
 
         let mut transaction =
             fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-        replace_child(&mut transaction, None, (&child, "bar"), None)
+        assert!(replace_child(&mut transaction, None, (&child, "bar"))
             .await
-            .expect("replace_child failed");
+            .expect("replace_child failed")
+            .is_some());
         transaction.commit().await;
 
         let mut transaction =
             fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-        replace_child(&mut transaction, None, (&dir, "foo"), None)
+        assert!(replace_child(&mut transaction, None, (&dir, "foo"))
             .await
-            .expect("replace_child failed");
+            .expect("replace_child failed")
+            .is_some());
         transaction.commit().await;
 
-        assert_eq!(
-            dir.lookup("foo")
-                .await
-                .expect_err("lookup succeeded")
-                .downcast::<FxfsError>()
-                .expect("wrong error"),
-            FxfsError::NotFound
-        );
+        assert_eq!(dir.lookup("foo").await.expect("lookup failed"), None);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -526,20 +443,18 @@ mod tests {
         let fs = FxFilesystem::new_empty(device.clone()).await.expect("new_empty failed");
         let mut transaction =
             fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-        let dir = fs
-            .root_store()
-            .create_directory(&mut transaction)
-            .await
-            .expect("create_directory failed");
+        let dir =
+            Directory::create(&mut transaction, &fs.root_store()).await.expect("create failed");
 
         dir.create_child_file(&mut transaction, "foo").await.expect("create_child_file failed");
         transaction.commit().await;
 
         let mut transaction =
             fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-        replace_child(&mut transaction, None, (&dir, "foo"), None)
+        assert!(replace_child(&mut transaction, None, (&dir, "foo"))
             .await
-            .expect("replace_child failed");
+            .expect("replace_child failed")
+            .is_some());
         transaction.commit().await;
 
         let mut transaction =
@@ -557,11 +472,8 @@ mod tests {
             let fs = FxFilesystem::new_empty(device.clone()).await.expect("new_empty failed");
             let mut transaction =
                 fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-            let dir = fs
-                .root_store()
-                .create_directory(&mut transaction)
-                .await
-                .expect("create_directory failed");
+            let dir =
+                Directory::create(&mut transaction, &fs.root_store()).await.expect("create failed");
 
             dir.create_child_file(&mut transaction, "foo").await.expect("create_child_file failed");
             transaction.commit().await;
@@ -569,9 +481,10 @@ mod tests {
 
             let mut transaction =
                 fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-            replace_child(&mut transaction, None, (&dir, "foo"), None)
+            assert!(replace_child(&mut transaction, None, (&dir, "foo"))
                 .await
-                .expect("replace_child failed");
+                .expect("replace_child failed")
+                .is_some());
             transaction.commit().await;
 
             fs.sync(SyncOptions::default()).await.expect("sync failed");
@@ -579,15 +492,8 @@ mod tests {
         };
 
         let fs = FxFilesystem::open(device.clone()).await.expect("new_empty failed");
-        let dir = fs.root_store().open_directory(object_id).await.expect("open_directory failed");
-        assert_eq!(
-            dir.lookup("foo")
-                .await
-                .expect_err("lookup succeeded")
-                .downcast::<FxfsError>()
-                .expect("wrong error"),
-            FxfsError::NotFound
-        );
+        let dir = Directory::open(&fs.root_store(), object_id).await.expect("open failed");
+        assert_eq!(dir.lookup("foo").await.expect("lookup failed"), None);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -596,11 +502,8 @@ mod tests {
         let fs = FxFilesystem::new_empty(device.clone()).await.expect("new_empty failed");
         let mut transaction =
             fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-        let dir = fs
-            .root_store()
-            .create_directory(&mut transaction)
-            .await
-            .expect("create_directory failed");
+        let dir =
+            Directory::create(&mut transaction, &fs.root_store()).await.expect("create failed");
 
         let child_dir1 =
             dir.create_child_dir(&mut transaction, "dir1").await.expect("create_child_dir failed");
@@ -614,20 +517,12 @@ mod tests {
 
         let mut transaction =
             fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-        replace_child(&mut transaction, Some((&child_dir1, "foo")), (&child_dir2, "bar"), None)
+        replace_child(&mut transaction, Some((&child_dir1, "foo")), (&child_dir2, "bar"))
             .await
             .expect("replace_child failed");
         transaction.commit().await;
 
-        assert_eq!(
-            child_dir1
-                .lookup("foo")
-                .await
-                .expect_err("lookup succeeded")
-                .downcast::<FxfsError>()
-                .expect("wrong error"),
-            FxfsError::NotFound
-        );
+        assert_eq!(child_dir1.lookup("foo").await.expect("lookup failed"), None);
         child_dir2.lookup("bar").await.expect("lookup failed");
     }
 
@@ -637,11 +532,8 @@ mod tests {
         let fs = FxFilesystem::new_empty(device.clone()).await.expect("new_empty failed");
         let mut transaction =
             fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-        let dir = fs
-            .root_store()
-            .create_directory(&mut transaction)
-            .await
-            .expect("create_directory failed");
+        let dir =
+            Directory::create(&mut transaction, &fs.root_store()).await.expect("create failed");
 
         let child_dir1 =
             dir.create_child_dir(&mut transaction, "dir1").await.expect("create_child_dir failed");
@@ -669,27 +561,18 @@ mod tests {
 
         let mut transaction =
             fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-        replace_child(&mut transaction, Some((&child_dir1, "foo")), (&child_dir2, "bar"), None)
+        replace_child(&mut transaction, Some((&child_dir1, "foo")), (&child_dir2, "bar"))
             .await
             .expect("replace_child failed");
         transaction.commit().await;
 
-        assert_eq!(
-            child_dir1
-                .lookup("foo")
-                .await
-                .expect_err("lookup succeeded")
-                .downcast::<FxfsError>()
-                .expect("wrong error"),
-            FxfsError::NotFound
-        );
+        assert_eq!(child_dir1.lookup("foo").await.expect("lookup failed"), None);
 
         // Check the contents to ensure that the file was replaced.
-        let (oid, object_descriptor) = child_dir2.lookup("bar").await.expect("lookup failed");
+        let (oid, object_descriptor) =
+            child_dir2.lookup("bar").await.expect("lookup failed").expect("not found");
         assert_eq!(object_descriptor, ObjectDescriptor::File);
-        let bar = child_dir2
-            .object_store()
-            .open_object(oid, HandleOptions::default())
+        let bar = ObjectStore::open_object(&child_dir2.owner, oid, HandleOptions::default())
             .await
             .expect("Open failed");
         let mut buf = bar.allocate_buffer(TEST_DEVICE_BLOCK_SIZE as usize);
@@ -703,11 +586,8 @@ mod tests {
         let fs = FxFilesystem::new_empty(device.clone()).await.expect("new_empty failed");
         let mut transaction =
             fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-        let dir = fs
-            .root_store()
-            .create_directory(&mut transaction)
-            .await
-            .expect("create_directory failed");
+        let dir =
+            Directory::create(&mut transaction, &fs.root_store()).await.expect("create failed");
 
         let child_dir1 =
             dir.create_child_dir(&mut transaction, "dir1").await.expect("create_child_dir failed");
@@ -730,7 +610,7 @@ mod tests {
         let mut transaction =
             fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
         assert_eq!(
-            replace_child(&mut transaction, Some((&child_dir1, "foo")), (&child_dir2, "bar"), None)
+            replace_child(&mut transaction, Some((&child_dir1, "foo")), (&child_dir2, "bar"))
                 .await
                 .expect_err("replace_child succeeded")
                 .downcast::<FxfsError>()
@@ -745,29 +625,19 @@ mod tests {
         let fs = FxFilesystem::new_empty(device.clone()).await.expect("new_empty failed");
         let mut transaction =
             fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-        let dir = fs
-            .root_store()
-            .create_directory(&mut transaction)
-            .await
-            .expect("create_directory failed");
+        let dir =
+            Directory::create(&mut transaction, &fs.root_store()).await.expect("create failed");
         dir.create_child_file(&mut transaction, "foo").await.expect("create_child_file failed");
         transaction.commit().await;
 
         let mut transaction =
             fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-        replace_child(&mut transaction, Some((&dir, "foo")), (&dir, "bar"), None)
+        replace_child(&mut transaction, Some((&dir, "foo")), (&dir, "bar"))
             .await
             .expect("replace_child failed");
         transaction.commit().await;
 
-        assert_eq!(
-            dir.lookup("foo")
-                .await
-                .expect_err("lookup old name succeeded")
-                .downcast::<FxfsError>()
-                .expect("wrong error"),
-            FxfsError::NotFound
-        );
+        assert_eq!(dir.lookup("foo").await.expect("lookup failed"), None);
         dir.lookup("bar").await.expect("lookup new name failed");
     }
 
@@ -777,11 +647,8 @@ mod tests {
         let fs = FxFilesystem::new_empty(device.clone()).await.expect("new_empty failed");
         let mut transaction =
             fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-        let dir = fs
-            .root_store()
-            .create_directory(&mut transaction)
-            .await
-            .expect("create_directory failed");
+        let dir =
+            Directory::create(&mut transaction, &fs.root_store()).await.expect("create failed");
         let _cat =
             dir.create_child_file(&mut transaction, "cat").await.expect("create_child_file failed");
         let _ball = dir
@@ -797,11 +664,11 @@ mod tests {
         transaction.commit().await;
         let mut transaction =
             fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-        replace_child(&mut transaction, None, (&dir, "apple"), None)
+        replace_child(&mut transaction, None, (&dir, "apple"))
             .await
             .expect("rereplace_child failed");
         transaction.commit().await;
-        let layer_set = dir.object_store().tree().layer_set();
+        let layer_set = dir.store().tree().layer_set();
         let mut merger = layer_set.merger();
         let mut iter = dir.iter(&mut merger).await.expect("iter failed");
         let mut entries = Vec::new();

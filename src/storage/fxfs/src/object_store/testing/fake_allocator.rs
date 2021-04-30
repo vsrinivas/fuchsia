@@ -6,7 +6,7 @@ use {
     crate::object_store::{
         allocator::Allocator,
         filesystem::Mutations,
-        transaction::{AssociatedObject, Mutation, Transaction},
+        transaction::{Mutation, Transaction},
     },
     anyhow::Error,
     async_trait::async_trait,
@@ -88,13 +88,7 @@ impl Allocator for FakeAllocator {
 
 #[async_trait]
 impl Mutations for FakeAllocator {
-    async fn apply_mutation(
-        &self,
-        _mutation: Mutation,
-        _replay: bool,
-        _object: Option<AssociatedObject<'_>>,
-    ) {
-    }
+    async fn apply_mutation(&self, _mutation: Mutation, _replay: bool) {}
 
     fn drop_mutation(&self, _mutation: Mutation) {}
 }

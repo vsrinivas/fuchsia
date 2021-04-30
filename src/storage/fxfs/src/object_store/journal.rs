@@ -25,6 +25,7 @@ use {
         object_store::{
             allocator::{Allocator, SimpleAllocator},
             constants::SUPER_BLOCK_OBJECT_ID,
+            directory::Directory,
             filesystem::{Filesystem, Mutations, ObjectManager, SyncOptions},
             journal::{
                 reader::{JournalReader, ReadResult},
@@ -38,7 +39,7 @@ use {
             HandleOptions, ObjectStore, StoreObjectHandle,
         },
     },
-    anyhow::Error,
+    anyhow::{Context, Error},
     bincode::serialize_into,
     byteorder::{ByteOrder, LittleEndian},
     rand::Rng,
@@ -116,7 +117,7 @@ fn journal_handle_options() -> HandleOptions {
 /// ability to have mutations that are to be applied atomically together.
 pub struct Journal {
     objects: Arc<ObjectManager>,
-    writer: futures::lock::Mutex<JournalWriter<StoreObjectHandle>>,
+    writer: futures::lock::Mutex<JournalWriter<StoreObjectHandle<ObjectStore>>>,
     inner: Mutex<Inner>,
 }
 
@@ -159,9 +160,7 @@ impl Journal {
             ObjectStore::new_empty(None, super_block.root_parent_store_object_id, filesystem);
 
         while let Some(item) = reader.next_item().await? {
-            root_parent
-                .apply_mutation(Mutation::insert_object(item.key, item.value), true, None)
-                .await;
+            root_parent.apply_mutation(Mutation::insert_object(item.key, item.value), true).await;
         }
 
         {
@@ -176,9 +175,12 @@ impl Journal {
         root_parent.lazy_open_store(super_block.root_store_object_id);
         self.objects.set_root_store_object_id(super_block.root_store_object_id);
         let mut reader = JournalReader::new(
-            root_parent
-                .open_object(super_block.journal_object_id, journal_handle_options())
-                .await?,
+            ObjectStore::open_object(
+                &root_parent,
+                super_block.journal_object_id,
+                journal_handle_options(),
+            )
+            .await?,
             self.block_size(),
             &super_block.journal_checkpoint,
         );
@@ -280,26 +282,48 @@ impl Journal {
 
         let journal_handle;
         let super_block_handle;
+        let root_store;
         let mut transaction = filesystem.new_transaction(&[]).await?;
-        let root_store = root_parent
+        root_store = root_parent
             .create_child_store_with_id(&mut transaction, INIT_ROOT_STORE_OBJECT_ID)
-            .await?;
+            .await
+            .context("create root store")?;
         self.objects.set_root_store_object_id(root_store.store_object_id());
 
         // Create the super-block object...
-        super_block_handle = root_store
-            .create_object_with_id(
-                &mut transaction,
-                SUPER_BLOCK_OBJECT_ID,
-                HandleOptions { overwrite: true, ..Default::default() },
-            )
-            .await?;
-        super_block_handle.extend(&mut transaction, super_block::first_extent()).await?;
+        super_block_handle = ObjectStore::create_object_with_id(
+            &root_store,
+            &mut transaction,
+            SUPER_BLOCK_OBJECT_ID,
+            HandleOptions { overwrite: true, ..Default::default() },
+        )
+        .await
+        .context("create super block")?;
+        super_block_handle
+            .extend(&mut transaction, super_block::first_extent())
+            .await
+            .context("extend super block")?;
 
-        // and the journal object...
+        // the journal object...
         journal_handle =
-            root_parent.create_object(&mut transaction, journal_handle_options()).await?;
-        journal_handle.preallocate_range(&mut transaction, 0..self.chunk_size()).await?;
+            ObjectStore::create_object(&root_parent, &mut transaction, journal_handle_options())
+                .await
+                .context("create journal")?;
+        journal_handle
+            .preallocate_range(&mut transaction, 0..self.chunk_size())
+            .await
+            .context("preallocate journal")?;
+
+        // the root store's graveyard and root directory...
+        let graveyard = Arc::new(Directory::create(&mut transaction, &root_store).await?);
+        root_store.set_graveyard_directory_object_id(&mut transaction, graveyard.object_id());
+        self.objects.register_graveyard(root_store.store_object_id(), graveyard);
+
+        let root_directory = Directory::create(&mut transaction, &root_store)
+            .await
+            .context("create root directory")?;
+        root_store.set_root_directory_object_id(&mut transaction, root_directory.object_id());
+
         self.commit(transaction).await;
 
         // Cache the super-block.
@@ -336,19 +360,9 @@ impl Journal {
             .await;
     }
 
-    pub fn root_volume_info_object_id(&self) -> u64 {
-        self.inner.lock().unwrap().super_block.root_volume_info_object_id
-    }
-
-    pub fn set_root_volume_info_object_id(&self, object_id: u64) {
-        let mut inner = self.inner.lock().unwrap();
-        inner.super_block.root_volume_info_object_id = object_id;
-        inner.needs_super_block = true;
-    }
-
     async fn maybe_extend_journal_file(
         &self,
-        writer: &mut JournalWriter<StoreObjectHandle>,
+        writer: &mut JournalWriter<StoreObjectHandle<ObjectStore>>,
     ) -> Result<(), Error> {
         // TODO(csuter): this currently assumes that a transaction can fit in CHUNK_SIZE.
         let file_offset = writer.journal_file_checkpoint().file_offset;
@@ -433,7 +447,7 @@ impl Journal {
         journal_file_checkpoint: &JournalCheckpoint,
         mutation: Mutation,
         filter: bool,
-        object: Option<AssociatedObject<'_>>,
+        object: Option<&dyn AssociatedObject>,
     ) {
         if !filter || self.should_apply(object_id, journal_file_checkpoint) {
             log::debug!("applying mutation: {}: {:?}, filter: {}", object_id, mutation, filter);
@@ -462,10 +476,12 @@ impl Journal {
         new_super_block
             .write(
                 &root_parent_store,
-                self.objects
-                    .root_store()
-                    .open_object(SUPER_BLOCK_OBJECT_ID, journal_handle_options())
-                    .await?,
+                ObjectStore::open_object(
+                    &self.objects.root_store(),
+                    SUPER_BLOCK_OBJECT_ID,
+                    journal_handle_options(),
+                )
+                .await?,
             )
             .await?;
 
@@ -517,7 +533,7 @@ mod tests {
                 filesystem::{FxFilesystem, SyncOptions},
                 fsck::fsck,
                 transaction::TransactionHandler,
-                HandleOptions,
+                HandleOptions, ObjectStore,
             },
             testing::fake_device::FakeDevice,
         },
@@ -537,11 +553,13 @@ mod tests {
             let fs = FxFilesystem::new_empty(device.clone()).await.expect("new_empty failed");
             let mut transaction =
                 fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-            let handle = fs
-                .root_store()
-                .create_object(&mut transaction, HandleOptions::default())
-                .await
-                .expect("create_object failed");
+            let handle = ObjectStore::create_object(
+                &fs.root_store(),
+                &mut transaction,
+                HandleOptions::default(),
+            )
+            .await
+            .expect("create_object failed");
             transaction.commit().await;
             let mut buf = handle.allocate_buffer(TEST_DATA.len());
             buf.as_mut_slice().copy_from_slice(TEST_DATA);
@@ -554,11 +572,10 @@ mod tests {
 
         {
             let fs = FxFilesystem::open(device).await.expect("open failed");
-            let handle = fs
-                .root_store()
-                .open_object(object_id, HandleOptions::default())
-                .await
-                .expect("create_object failed");
+            let handle =
+                ObjectStore::open_object(&fs.root_store(), object_id, HandleOptions::default())
+                    .await
+                    .expect("create_object failed");
             let mut buf = handle.allocate_buffer(TEST_DEVICE_BLOCK_SIZE as usize);
             assert_eq!(handle.read(0, buf.as_mut()).await.expect("read failed"), TEST_DATA.len());
             assert_eq!(&buf.as_slice()[..TEST_DATA.len()], TEST_DATA);
@@ -578,11 +595,13 @@ mod tests {
             let fs = FxFilesystem::new_empty(device.clone()).await.expect("new_empty failed");
             let mut transaction =
                 fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-            let handle = fs
-                .root_store()
-                .create_object(&mut transaction, HandleOptions::default())
-                .await
-                .expect("create_object failed");
+            let handle = ObjectStore::create_object(
+                &fs.root_store(),
+                &mut transaction,
+                HandleOptions::default(),
+            )
+            .await
+            .expect("create_object failed");
             transaction.commit().await;
             let mut buf = handle.allocate_buffer(TEST_DATA.len());
             buf.as_mut_slice().copy_from_slice(TEST_DATA);
@@ -595,11 +614,13 @@ mod tests {
             for _ in 0..1000 {
                 let mut transaction =
                     fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-                let handle = fs
-                    .root_store()
-                    .create_object(&mut transaction, HandleOptions::default())
-                    .await
-                    .expect("create_object failed");
+                let handle = ObjectStore::create_object(
+                    &fs.root_store(),
+                    &mut transaction,
+                    HandleOptions::default(),
+                )
+                .await
+                .expect("create_object failed");
                 transaction.commit().await;
                 let mut buf = handle.allocate_buffer(TEST_DATA.len());
                 buf.as_mut_slice().copy_from_slice(TEST_DATA);
@@ -613,11 +634,10 @@ mod tests {
 
             // Check the first two objects which should exist.
             for &object_id in &object_ids[0..1] {
-                let handle = fs
-                    .root_store()
-                    .open_object(object_id, HandleOptions::default())
-                    .await
-                    .expect("create_object failed");
+                let handle =
+                    ObjectStore::open_object(&fs.root_store(), object_id, HandleOptions::default())
+                        .await
+                        .expect("create_object failed");
                 let mut buf = handle.allocate_buffer(TEST_DEVICE_BLOCK_SIZE as usize);
                 assert_eq!(
                     handle.read(0, buf.as_mut()).await.expect("read failed"),
@@ -629,11 +649,13 @@ mod tests {
             // Write one more object and sync.
             let mut transaction =
                 fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-            let handle = fs
-                .root_store()
-                .create_object(&mut transaction, HandleOptions::default())
-                .await
-                .expect("create_object failed");
+            let handle = ObjectStore::create_object(
+                &fs.root_store(),
+                &mut transaction,
+                HandleOptions::default(),
+            )
+            .await
+            .expect("create_object failed");
             transaction.commit().await;
             let mut buf = handle.allocate_buffer(TEST_DATA.len());
             buf.as_mut_slice().copy_from_slice(TEST_DATA);
@@ -647,11 +669,10 @@ mod tests {
 
             // Check the first two and the last objects.
             for &object_id in object_ids[0..1].iter().chain(object_ids.last().cloned().iter()) {
-                let handle = fs
-                    .root_store()
-                    .open_object(object_id, HandleOptions::default())
-                    .await
-                    .expect("create_object failed");
+                let handle =
+                    ObjectStore::open_object(&fs.root_store(), object_id, HandleOptions::default())
+                        .await
+                        .expect("create_object failed");
                 let mut buf = handle.allocate_buffer(TEST_DEVICE_BLOCK_SIZE as usize);
                 assert_eq!(
                     handle.read(0, buf.as_mut()).await.expect("read failed"),
@@ -660,23 +681,6 @@ mod tests {
                 assert_eq!(&buf.as_slice()[..TEST_DATA.len()], TEST_DATA);
             }
 
-            fsck(fs.as_ref()).await.expect("fsck failed");
-        }
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_volume_info_object_id() {
-        let device = Arc::new(FakeDevice::new(4096, TEST_DEVICE_BLOCK_SIZE));
-
-        {
-            let fs = FxFilesystem::new_empty(device.clone()).await.expect("new_empty failed");
-            fs.set_root_volume_info_object_id(567);
-            fs.sync(SyncOptions::default()).await.expect("sync failed");
-        }
-
-        {
-            let fs = FxFilesystem::open(device).await.expect("open failed");
-            assert_eq!(fs.root_volume_info_object_id(), 567);
             fsck(fs.as_ref()).await.expect("fsck failed");
         }
     }
