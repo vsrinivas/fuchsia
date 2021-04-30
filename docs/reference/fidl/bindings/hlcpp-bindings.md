@@ -670,6 +670,14 @@ For the same `TicTacToe` protocol listed above, the FIDL toolchain generates a
 `StartGame` and `MakeMove`, which are implemented to just call
 `NotImplemented_("StartGame")` and `NotImplemented_("MakeMove")`, respectively.
 
+
+## Extensions
+
+[`fostr`][fostr] is a separate library that provides utilities for formatting
+(pretty printing) FIDL types in HLCPP. Usage information can be found in the
+[tutorial][fostr-tutorial].
+
+
 <!-- xrefs -->
 [client-tut]: /docs/development/languages/fidl/tutorials/hlcpp/basics/client.md
 [server-tut]: /docs/development/languages/fidl/tutorials/hlcpp/basics/server.md
@@ -686,3 +694,5 @@ For the same `TicTacToe` protocol listed above, the FIDL toolchain generates a
 [union-lexicon]: /docs/reference/fidl/language/lexicon.md#union-terms
 [unknown-attr]: /docs/reference/fidl/language/attributes.md#unknown
 [traversal]: /docs/reference/fidl/language/wire-format/README.md#traversal-order
+[fostr]: /garnet/public/lib/fostr
+[fostr-tutorial]: /docs/development/languages/fidl/tutorials/hlcpp/topics/fostr.md
