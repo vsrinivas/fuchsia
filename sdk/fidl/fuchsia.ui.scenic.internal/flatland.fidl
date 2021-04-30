@@ -10,8 +10,8 @@ using zx;
 
 // The set of error codes returned by Flatland::Present().
 enum Error {
-    BAD_OPERATION = 0;
-    NO_PRESENTS_REMAINING = 1;
+    BAD_OPERATION = 1;
+    NO_PRESENTS_REMAINING = 2;
 };
 
 // TODO(fxbug.dev/36766): Unify with math types for other APIs.
@@ -21,10 +21,10 @@ struct Vec2 {
 };
 
 enum Orientation {
-    CCW_0_DEGREES = 0;
-    CCW_90_DEGREES = 1;
-    CCW_180_DEGREES = 2;
-    CCW_270_DEGREES = 3;
+    CCW_0_DEGREES = 1;
+    CCW_90_DEGREES = 2;
+    CCW_180_DEGREES = 3;
+    CCW_270_DEGREES = 4;
 };
 
 /// The return type of GraphLink::GetLayout(). This table contains most of the information necessary
@@ -45,8 +45,8 @@ table LayoutInfo {
 /// directly, or through a chain of parent links) and when they are not. Until they are connected to
 /// a display, some pieces of information (such as pixel scale) may be unavailable.
 enum GraphLinkStatus {
-    CONNECTED_TO_DISPLAY = 0;
-    DISCONNECTED_FROM_DISPLAY = 1;
+    CONNECTED_TO_DISPLAY = 1;
+    DISCONNECTED_FROM_DISPLAY = 2;
 };
 
 /// A protocol that provides information about a particular Link to the child client. Each Flatland
@@ -79,7 +79,7 @@ enum ContentLinkStatus {
     /// The underlying Graph has connected its Link, called Present(), and the acquisition fences
     /// of the Present() call have all be reached, indicating that it has some content ready to be
     /// displayed.
-    CONTENT_HAS_PRESENTED = 0;
+    CONTENT_HAS_PRESENTED = 1;
 };
 
 /// A protocol that provides information about a particular Link to the parent client. Flatland
