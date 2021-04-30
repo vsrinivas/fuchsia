@@ -127,6 +127,13 @@ impl BrightnessManager for () {
         info: DisplayInfo,
         client: &ClientProxy,
     ) -> SettingHandlerResult {
+        if (!info.is_finite()) {
+            return Err(ControllerError::InvalidArgument(
+                SettingType::Display,
+                "display_info".into(),
+                format!("{:?}", info).into(),
+            ));
+        }
         client.write_setting(info.into(), false).await.into_handler_result()
     }
 }
@@ -153,6 +160,13 @@ impl BrightnessManager for ExternalBrightnessControl {
         info: DisplayInfo,
         client: &ClientProxy,
     ) -> SettingHandlerResult {
+        if (!info.is_finite()) {
+            return Err(ControllerError::InvalidArgument(
+                SettingType::Display,
+                "display_info".into(),
+                format!("{:?}", info).into(),
+            ));
+        }
         client.write_setting(info.into(), false).await?;
 
         if info.auto_brightness {
@@ -207,12 +221,14 @@ where
         match request {
             Request::Restore => {
                 let display_info = self.client.read_setting::<DisplayInfo>().await;
+                assert!(display_info.is_finite());
 
                 // Load and set value.
                 Some(self.brightness_manager.update_brightness(display_info, &self.client).await)
             }
             Request::SetDisplayInfo(mut set_display_info) => {
                 let display_info = self.client.read_setting::<DisplayInfo>().await;
+                assert!(display_info.is_finite());
 
                 if let Some(theme) = set_display_info.theme {
                     set_display_info.theme = self.build_theme(theme, &display_info);

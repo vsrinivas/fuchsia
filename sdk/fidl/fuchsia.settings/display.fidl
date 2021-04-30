@@ -53,9 +53,10 @@ protocol Display {
 /// Brightness_value is used in manual mode to set a specific brightness level
 /// for the screen. This level will be maintained while in manual mode.
 table DisplaySettings {
-    /// Auto brightness enabled
+    /// Auto brightness enabled.
     1: bool auto_brightness;
-    /// Manual brightness value [0.0 - 1.0]
+    /// Manually set brightness value [0.0 - 1.0]. Not a number, infinity or
+    /// negative infinity will cause SetDisplayInfo to fail with INVALID_VALUE.
     2: float32 brightness_value;
     3: reserved;
     /// The low light mode state of the device.

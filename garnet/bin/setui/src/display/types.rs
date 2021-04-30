@@ -37,6 +37,10 @@ impl DisplayInfo {
             theme,
         }
     }
+
+    pub(crate) fn is_finite(&self) -> bool {
+        self.manual_brightness_value.is_finite()
+    }
 }
 
 #[derive(Debug, Default, PartialEq, Copy, Clone)]
