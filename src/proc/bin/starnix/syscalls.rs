@@ -5,9 +5,7 @@
 use fidl::endpoints::Proxy;
 use fidl_fuchsia_io as fio;
 use fuchsia_runtime::utc_time;
-use fuchsia_zircon::{
-    self as zx, sys::zx_thread_state_general_regs_t, AsHandleRef, Task as zxTask,
-};
+use fuchsia_zircon::{self as zx, sys::zx_thread_state_general_regs_t, AsHandleRef};
 use io_util::directory;
 use io_util::node::OpenError;
 use log::{info, warn};
@@ -229,10 +227,10 @@ pub fn sys_access(
     Err(ENOSYS)
 }
 
-pub fn sys_getpid(_ctx: &SyscallContext<'_>) -> Result<SyscallResult, Errno> {
+pub fn sys_getpid(ctx: &SyscallContext<'_>) -> Result<SyscallResult, Errno> {
+    let _pid = ctx.task.get_pid();
     // This is set to 1 because Bionic skips referencing /dev if getpid() == 1, under the
     // assumption that anything running after init will have access to /dev.
-    // TODO(tbodt): actual PID field (e.g., ctx.task.get_pid()).
     Ok(1.into())
 }
 
@@ -240,17 +238,29 @@ pub fn sys_gettid(ctx: &SyscallContext<'_>) -> Result<SyscallResult, Errno> {
     Ok(ctx.task.get_tid().into())
 }
 
-pub fn sys_exit(ctx: &SyscallContext<'_>, error_code: i32) -> Result<SyscallResult, Errno> {
+pub fn sys_getppid(ctx: &SyscallContext<'_>) -> Result<SyscallResult, Errno> {
+    Ok(ctx.task.parent.into())
+}
+
+pub fn sys_getpgrp(ctx: &SyscallContext<'_>) -> Result<SyscallResult, Errno> {
+    Ok(ctx.task.get_pgrp().into())
+}
+
+pub fn sys_getpgid(ctx: &SyscallContext<'_>, pid: pid_t) -> Result<SyscallResult, Errno> {
+    if pid == 0 {
+        return Ok(ctx.task.get_pgrp().into());
+    }
+    Ok(ctx.task.get_task(pid).ok_or(ESRCH)?.get_pgrp().into())
+}
+
+pub fn sys_exit(_ctx: &SyscallContext<'_>, error_code: i32) -> Result<SyscallResult, Errno> {
     info!("exit: error_code={}", error_code);
-    let process: &zx::Process = &ctx.task.thread_group.read().process;
-    process.kill().map_err(impossible_error)?;
     Ok(SyscallResult::Exit(error_code))
 }
 
-pub fn sys_exit_group(ctx: &SyscallContext<'_>, error_code: i32) -> Result<SyscallResult, Errno> {
+pub fn sys_exit_group(_ctx: &SyscallContext<'_>, error_code: i32) -> Result<SyscallResult, Errno> {
     info!("exit_group: error_code={}", error_code);
-    let process: &zx::Process = &ctx.task.thread_group.read().process;
-    process.kill().map_err(impossible_error)?;
+    // TODO: Once we have more than one thread in a thread group, we'll need to exit them as well.
     Ok(SyscallResult::Exit(error_code))
 }
 

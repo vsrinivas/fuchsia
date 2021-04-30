@@ -78,7 +78,8 @@ fn read_channel_sync(chan: &zx::Channel, buf: &mut zx::MessageBuf) -> Result<(),
 ///
 /// Once this function has completed, the process' exit code (if one is available) can be read from
 /// `process_context.exit_code`.
-fn run_task(task: Arc<Task>, exceptions: zx::Channel) -> Result<i32, Error> {
+fn run_task(task_owner: TaskOwner, exceptions: zx::Channel) -> Result<i32, Error> {
+    let task = &task_owner.task;
     let mut buffer = zx::MessageBuf::new();
     while read_channel_sync(&exceptions, &mut buffer).is_ok() {
         let info = as_exception_info(&buffer);
@@ -105,18 +106,17 @@ fn run_task(task: Arc<Task>, exceptions: zx::Channel) -> Result<i32, Error> {
         }
 
         let syscall_number = report.context.synth_data as u64;
-        let mut ctx = SyscallContext { task: &task, registers: thread.read_state_general_regs()? };
+        let mut ctx = SyscallContext { task, registers: thread.read_state_general_regs()? };
 
         let regs = &ctx.registers;
         let args = (regs.rdi, regs.rsi, regs.rdx, regs.r10, regs.r8, regs.r9);
         info!(target: "strace", "{}({:#x}, {:#x}, {:#x}, {:#x}, {:#x}, {:#x})", SyscallDecl::from_number(syscall_number).name, args.0, args.1, args.2, args.3, args.4, args.5);
         match dispatch_syscall(&mut ctx, syscall_number, args) {
-            Ok(SyscallResult::Exit(return_value)) => {
-                info!(target: "strace", "-> exit {:#x}", return_value);
-                // The process has been killed at this point, so execution is stopped. If, for
-                // example, this function continued to attempt to write to th thread's registers
-                // there would be a race between the process teardown and the register write.
-                return Ok(return_value);
+            Ok(SyscallResult::Exit(error_code)) => {
+                info!(target: "strace", "-> exit {:#x}", error_code);
+                // TODO: Set the error_code on the Zircon process object. Currently missing a way
+                //       to do this in Zircon. Might be easier in the new execution model.
+                return Ok(error_code);
             }
             Ok(SyscallResult::Success(return_value)) => {
                 info!(target: "strace", "-> {:#x}", return_value);
@@ -179,9 +179,10 @@ async fn start_component(
 
     std::thread::spawn(move || {
         let err = (|| -> Result<(), Error> {
-            let task = block_on(load_executable(&kernel, executable_vmo, &params, root_proxy))?;
-            let exceptions = task.thread.create_exception_channel()?;
-            let exit_code = run_task(task, exceptions)?;
+            let task_owner =
+                block_on(load_executable(&kernel, executable_vmo, &params, root_proxy))?;
+            let exceptions = task_owner.task.thread.create_exception_channel()?;
+            let exit_code = run_task(task_owner, exceptions)?;
 
             // TODO(fxb/74803): Using the component controller's epitaph may not be the best way to
             // communicate the exit code. The component manager could interpret certain epitaphs as starnix

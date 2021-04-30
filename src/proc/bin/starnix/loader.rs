@@ -118,10 +118,11 @@ pub async fn load_executable(
     executable: zx::Vmo,
     params: &ProcessParameters,
     root: fio::DirectoryProxy,
-) -> Result<Arc<Task>, Error> {
+) -> Result<TaskOwner, Error> {
     let creds = Credentials { uid: 3, gid: 3, euid: 3, egid: 3 };
     let fs = Arc::new(FileSystem::new(root));
-    let task = Task::new(&kernel, &params.name, fs.clone(), creds)?;
+    let task_owner = Task::new(&kernel, &params.name, fs.clone(), creds)?;
+    let task = &task_owner.task;
 
     let main_elf = load_elf(&executable, &task.mm.root_vmar).context("Main ELF failed to load")?;
     let interp_elf = if let Some(interp_hdr) =
@@ -175,9 +176,9 @@ pub async fn load_executable(
     ];
     let stack = populate_initial_stack(&stack_vmo, &params, auxv, stack_base, stack)?;
 
-    task.thread_group.read().process.start(&task.thread, entry, stack, zx::Handle::invalid(), 0)?;
+    task.thread_group.process.start(&task.thread, entry, stack, zx::Handle::invalid(), 0)?;
 
-    Ok(task)
+    Ok(task_owner)
 }
 
 #[cfg(test)]
