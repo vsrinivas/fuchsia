@@ -24,9 +24,11 @@ namespace monitor {
 
 class Metrics {
  public:
+  using CaptureCb = fit::function<zx_status_t(memory::Capture*)>;
+  using DigestCb = fit::function<void(const memory::Capture&, memory::Digest*)>;
   Metrics(const std::vector<memory::BucketMatch>& bucket_matches, zx::duration poll_frequency,
           async_dispatcher_t* dispatcher, sys::ComponentInspector* inspector,
-          fuchsia::cobalt::Logger_Sync* logger, memory::CaptureFn capture_cb);
+          fuchsia::cobalt::Logger_Sync* logger, CaptureCb capture_cb, DigestCb digest_cb);
 
   // Allow monitor to update the memory bandwidth readings
   // once a second to metrics
@@ -57,11 +59,11 @@ class Metrics {
   zx::duration poll_frequency_;
   async_dispatcher_t* dispatcher_;
   fuchsia::cobalt::Logger_Sync* logger_;
-  memory::CaptureFn capture_cb_;
+  CaptureCb capture_cb_;
+  DigestCb digest_cb_;
   async::TaskClosureMethod<Metrics, &Metrics::CollectMetrics> task_{this};
   std::unordered_map<std::string, cobalt_registry::MemoryMetricDimensionBucket>
       bucket_name_to_code_;
-  memory::Digester digester_;
 
   // The component inspector to publish data to.
   // Not owned.

@@ -34,12 +34,6 @@ const std::string kValidConfiguration = R"([
     }
 ])";
 
-Vmo CreateVmo(const std::string& name, size_t num_children = 0) {
-  zx_info_vmo_t vmo_info{0, {}, 0, 0, num_children, 0, 0, 0, {0, 0, 0, 0}, 0, 0, 0, 0, 0};
-  name.copy(vmo_info.name, ZX_MAX_NAME_LEN);
-  return Vmo(vmo_info);
-}
-
 TEST_F(ConfigUnitTest, ValidConfiguration) {
   auto result = BucketMatch::ReadBucketMatchesFromConfig(kValidConfiguration);
   ASSERT_TRUE(result);
@@ -50,14 +44,14 @@ TEST_F(ConfigUnitTest, ValidConfiguration) {
   BucketMatch& match_0 = bucket_matches[0];
   EXPECT_EQ(match_0.name(), "ContiguousPool");
   EXPECT_EQ(match_0.event_code(), 1);
-  EXPECT_TRUE(match_0.ProcessMatch("driver_host:some_process"));
-  EXPECT_TRUE(match_0.VmoMatch(CreateVmo("SysmemContiguousPool")));
+  EXPECT_TRUE(match_0.ProcessMatch(Process{1, "driver_host:some_process", {}}));
+  EXPECT_TRUE(match_0.VmoMatch("SysmemContiguousPool"));
 
   BucketMatch& match_1 = bucket_matches[1];
   EXPECT_EQ(match_1.name(), "Blobfs");
   EXPECT_EQ(match_1.event_code(), 2);
-  EXPECT_TRUE(match_1.ProcessMatch("active_blobfs"));
-  EXPECT_TRUE(match_1.VmoMatch(CreateVmo("blob-01234", 4)));
+  EXPECT_TRUE(match_1.ProcessMatch(Process{1, "active_blobfs", {}}));
+  EXPECT_TRUE(match_1.VmoMatch("blob-01234"));
 }
 
 TEST_F(ConfigUnitTest, InvalidConfiguration) {

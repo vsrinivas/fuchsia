@@ -25,12 +25,11 @@ struct Process {
 };
 
 struct Vmo {
-  explicit Vmo(const zx_info_vmo_t& v)
+  explicit Vmo(zx_info_vmo_t v)
       : koid(v.koid),
         parent_koid(v.parent_koid),
         committed_bytes(v.committed_bytes),
-        allocated_bytes(v.size_bytes),
-        num_children(v.num_children) {
+        allocated_bytes(v.size_bytes) {
     strncpy(name, v.name, sizeof(name));
   }
   zx_koid_t koid;
@@ -38,7 +37,6 @@ struct Vmo {
   zx_koid_t parent_koid;
   uint64_t committed_bytes;
   uint64_t allocated_bytes;
-  unsigned num_children;
   std::vector<zx_koid_t> children;
 };
 

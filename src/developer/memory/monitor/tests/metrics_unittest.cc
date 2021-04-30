@@ -141,10 +141,10 @@ TEST_F(MetricsUnitTest, Inspect) {
   CaptureSupplier cs(Template());
   cobalt::FakeLogger_Sync logger;
   sys::ComponentInspector inspector(context_provider_.context());
-  Metrics m(kBucketMatches, zx::min(5), dispatcher(), &inspector, &logger,
-            [&cs](Capture* c, CaptureLevel l) {
-              return cs.GetCapture(c, l, true /*use_capture_supplier_time*/);
-            });
+  Metrics m(
+      kBucketMatches, zx::min(5), dispatcher(), &inspector, &logger,
+      [&cs](Capture* c) { return cs.GetCapture(c, VMO, true /*use_capture_supplier_time*/); },
+      [](const Capture& c, Digest* d) { Digester(kBucketMatches).Digest(c, d); });
   RunLoopUntil([&cs] { return cs.empty(); });
 
   // [START get_hierarchy]
@@ -171,10 +171,10 @@ TEST_F(MetricsUnitTest, All) {
   CaptureSupplier cs(Template());
   cobalt::FakeLogger_Sync logger;
   sys::ComponentInspector inspector(context_provider_.context());
-  Metrics m(kBucketMatches, zx::msec(10), dispatcher(), &inspector, &logger,
-            [&cs](Capture* c, CaptureLevel l) {
-              return cs.GetCapture(c, l, true /*use_capture_supplier_time*/);
-            });
+  Metrics m(
+      kBucketMatches, zx::msec(10), dispatcher(), &inspector, &logger,
+      [&cs](Capture* c) { return cs.GetCapture(c, VMO, true /*use_capture_supplier_time*/); },
+      [](const Capture& c, Digest* d) { Digester(kBucketMatches).Digest(c, d); });
   RunLoopUntil([&cs] { return cs.empty(); });
   // memory metric: 20 buckets + 4 (Orphaned, Kernel, Undigested and Free buckets)  +
   // memory_general_breakdown metric: 10 +
@@ -339,8 +339,10 @@ TEST_F(MetricsUnitTest, One) {
   }});
   cobalt::FakeLogger_Sync logger;
   sys::ComponentInspector inspector(context_provider_.context());
-  Metrics m(kBucketMatches, zx::msec(10), dispatcher(), &inspector, &logger,
-            [&cs](Capture* c, CaptureLevel l) { return cs.GetCapture(c, l); });
+  Metrics m(
+      kBucketMatches, zx::msec(10), dispatcher(), &inspector, &logger,
+      [&cs](Capture* c) { return cs.GetCapture(c, VMO); },
+      [](const Capture& c, Digest* d) { Digester(kBucketMatches).Digest(c, d); });
   RunLoopUntil([&cs] { return cs.empty(); });
   EXPECT_EQ(21U, logger.event_count());  // 1 + 10 + 10
 }
@@ -372,8 +374,10 @@ TEST_F(MetricsUnitTest, Undigested) {
   }});
   cobalt::FakeLogger_Sync logger;
   sys::ComponentInspector inspector(context_provider_.context());
-  Metrics m(kBucketMatches, zx::msec(10), dispatcher(), &inspector, &logger,
-            [&cs](Capture* c, CaptureLevel l) { return cs.GetCapture(c, l); });
+  Metrics m(
+      kBucketMatches, zx::msec(10), dispatcher(), &inspector, &logger,
+      [&cs](Capture* c) { return cs.GetCapture(c, VMO); },
+      [](const Capture& c, Digest* d) { Digester(kBucketMatches).Digest(c, d); });
   RunLoopUntil([&cs] { return cs.empty(); });
   EXPECT_EQ(22U, logger.event_count());  // 2 + 10 + 10
 }

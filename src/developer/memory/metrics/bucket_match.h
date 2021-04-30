@@ -31,8 +31,8 @@ class BucketMatch {
   // Returns the Cobalt event code associated with this bucket. This is used for reporting bucket
   // usage through Cobalt.
   std::optional<int64_t> event_code() const { return event_code_; }
-  bool ProcessMatch(const std::string& process);
-  bool VmoMatch(const Vmo& vmo);
+  bool ProcessMatch(const Process& process);
+  bool VmoMatch(const std::string& vmo);
 
   // Parses a configuration string (e.g. stored in a file) to create bucket matches. The
   // configuration format is described in the README.md file in this directory. Returns true if the
@@ -42,12 +42,14 @@ class BucketMatch {
 
  private:
   const std::string name_;
+  bool match_all_processes_;
   const std::regex process_;
+  bool match_all_vmos_;
   const std::regex vmo_;
   const std::optional<int64_t> event_code_;
 
   // Cache of the matching results against the |process_| regexp.
-  std::unordered_map<std::string, bool> process_match_;
+  std::unordered_map<zx_koid_t, bool> process_match_;
   // Cache of the matching results against the |vmo_| regexp.
   std::unordered_map<std::string, bool> vmo_match_;
 };

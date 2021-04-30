@@ -19,9 +19,10 @@ namespace monitor {
 
 class HighWater {
  public:
+  using DigestCb = fit::function<void(const memory::Capture&, memory::Digest*)>;
+
   HighWater(const std::string& dir, zx::duration poll_frequency, uint64_t high_water_threshold,
-            async_dispatcher_t* dispatcher, const std::vector<memory::BucketMatch>& bucket_matches,
-            memory::CaptureFn capture_cb);
+            async_dispatcher_t* dispatcher, memory::CaptureFn capture_cb, DigestCb digest_cb);
   ~HighWater() = default;
 
   void RecordHighWater(const memory::Capture& capture);
@@ -36,7 +37,7 @@ class HighWater {
   const std::string dir_;
   memory::Watcher watcher_;
   memory::Namer namer_;
-  memory::Digester digester_;
+  DigestCb digest_cb_;
   FXL_DISALLOW_COPY_AND_ASSIGN(HighWater);
 };
 

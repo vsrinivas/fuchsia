@@ -42,11 +42,12 @@ static const std::map<zx_duration_t, TimeSinceBoot> UptimeLevelMap = {
 Metrics::Metrics(const std::vector<memory::BucketMatch>& bucket_matches,
                  zx::duration poll_frequency, async_dispatcher_t* dispatcher,
                  sys::ComponentInspector* inspector, fuchsia::cobalt::Logger_Sync* logger,
-                 CaptureFn capture_cb)
+                 CaptureCb capture_cb, DigestCb digest_cb)
     : poll_frequency_(poll_frequency),
       dispatcher_(dispatcher),
       logger_(logger),
       capture_cb_(std::move(capture_cb)),
+      digest_cb_(std::move(digest_cb)),
       bucket_name_to_code_({
           {"TotalBytes", MemoryMetricDimensionBucket::TotalBytes},
           {"Free", MemoryMetricDimensionBucket::Free},
@@ -59,7 +60,6 @@ Metrics::Metrics(const std::vector<memory::BucketMatch>& bucket_matches,
           {"[Addl]DiscardableLocked", MemoryMetricDimensionBucket::__Addl_DiscardableLocked},
           {"[Addl]DiscardableUnlocked", MemoryMetricDimensionBucket::__Addl_DiscardableUnlocked},
       }),
-      digester_(bucket_matches),
       inspector_(inspector),
       platform_metric_node_(inspector_->root().CreateChild(kInspectPlatformNodeName)),
       // Diagram of hierarchy can be seen below:
@@ -80,13 +80,13 @@ Metrics::Metrics(const std::vector<memory::BucketMatch>& bucket_matches,
       inspect_memory_bandwidth_timestamp_(
           metric_memory_bandwidth_node_.CreateInt(kReadingMemoryTimestamp, 0)) {
   for (const auto& bucket : bucket_matches) {
-    if (!bucket.event_code()) {
+    if (!bucket.event_code().has_value()) {
       continue;
     }
     bucket_name_to_code_.emplace(bucket.name(),
                                  static_cast<MemoryMetricDimensionBucket>(*bucket.event_code()));
   }
-  for (auto& element : bucket_name_to_code_) {
+  for (const auto& element : bucket_name_to_code_) {
     inspect_memory_usages_.insert(std::pair<std::string, inspect::UintProperty>(
         element.first, metric_memory_node_.CreateUint(element.first, 0)));
   }
@@ -97,8 +97,9 @@ Metrics::Metrics(const std::vector<memory::BucketMatch>& bucket_matches,
 void Metrics::CollectMetrics() {
   TRACE_DURATION("memory_monitor", "Watcher::Metrics::CollectMetrics");
   Capture capture;
-  capture_cb_(&capture, VMO);
-  Digest digest(capture, &digester_);
+  capture_cb_(&capture);
+  Digest digest;
+  digest_cb_(capture, &digest);
   std::ostringstream oss;
   Printer p(oss);
 
@@ -143,11 +144,12 @@ void Metrics::WriteDigestToInspect(const memory::Digest& digest) {
   // The unit in seconds is sufficient.
   inspect_memory_timestamp_.Set(digest.time() / 1000000000);
   for (auto const& bucket : digest.buckets()) {
-    if (inspect_memory_usages_.find(bucket.name()) != inspect_memory_usages_.end()) {
-      inspect_memory_usages_[bucket.name()].Set(bucket.size());
-    } else {
-      FX_LOGS(INFO) << "Not_in_map: " << bucket.name() << ": " << bucket.size() << "\n";
+    auto it = inspect_memory_usages_.find(bucket.name());
+    if (it == inspect_memory_usages_.end()) {
+      FX_LOGS_FIRST_N(INFO, 3) << "Not_in_map: " << bucket.name() << ": " << bucket.size() << "\n";
+      continue;
     }
+    it->second.Set(bucket.size());
   }
 }
 

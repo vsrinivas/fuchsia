@@ -66,6 +66,9 @@ class Monitor : public fuchsia::memory::Monitor {
   // Alerts all watchers when an update has occurred.
   void NotifyWatchers(const zx_info_kmem_stats_t& stats);
 
+  zx_status_t GetCapture(memory::Capture* capture);
+  void GetDigest(const memory::Capture& capture, memory::Digest* digest);
+
   memory::CaptureState capture_state_;
   std::unique_ptr<HighWater> high_water_;
   uint64_t prealloc_size_;
@@ -84,6 +87,7 @@ class Monitor : public fuchsia::memory::Monitor {
   std::unique_ptr<Metrics> metrics_;
   std::unique_ptr<PressureNotifier> pressure_notifier_;
   std::unique_ptr<MemoryDebugger> memory_debugger_;
+  std::unique_ptr<memory::Digester> digester_;
   fuchsia::hardware::ram::metrics::DevicePtr ram_device_;
   uint64_t pending_bandwidth_measurements_ = 0;
 

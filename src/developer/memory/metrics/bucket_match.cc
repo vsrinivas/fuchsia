@@ -20,25 +20,37 @@ namespace memory {
 
 BucketMatch::BucketMatch(const std::string& name, const std::string& process,
                          const std::string& vmo, std::optional<int64_t> event_code)
-    : name_(name), process_(process), vmo_(vmo), event_code_(event_code) {}
+    : name_(name),
+      match_all_processes_(process.empty() || process == ".*"),
+      process_(process),
+      match_all_vmos_(vmo.empty() || vmo == ".*"),
+      vmo_(vmo),
+      event_code_(event_code) {
+}
 
-bool BucketMatch::ProcessMatch(const std::string& process) {
-  const auto& pi = process_match_.find(process);
+bool BucketMatch::ProcessMatch(const Process& process) {
+  if (match_all_processes_) {
+    return true;
+  }
+  const auto& pi = process_match_.find(process.koid);
   if (pi != process_match_.end()) {
     return pi->second;
   }
-  bool match = std::regex_match(process, process_);
-  process_match_.emplace(process, match);
+  bool match = std::regex_match(process.name, process_);
+  process_match_.emplace(process.koid, match);
   return match;
 }
 
-bool BucketMatch::VmoMatch(const Vmo& vmo) {
-  const auto& vi = vmo_match_.find(vmo.name);
+bool BucketMatch::VmoMatch(const std::string& vmo) {
+  if (match_all_vmos_) {
+    return true;
+  }
+  const auto& vi = vmo_match_.find(vmo);
   if (vi != vmo_match_.end()) {
     return vi->second;
   }
-  bool match = std::regex_match(vmo.name, vmo_);
-  vmo_match_.emplace(vmo.name, match);
+  bool match = std::regex_match(vmo, vmo_);
+  vmo_match_.emplace(vmo, match);
   return match;
 }
 

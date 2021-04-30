@@ -55,7 +55,7 @@ TEST_F(DigestUnitTest, VMONames) {
                                        },
                                });
 
-  Digester digester({{"A", ".*", "a.*"}, {"B", ".*", "b.*"}});
+  Digester digester({{"A", "", "a.*"}, {"B", ".*", "b.*"}});
   Digest d(c, &digester);
   ConfirmBuckets(d, {{"B", 200U}, {"A", 100U}});
   EXPECT_EQ(0U, d.undigested_vmos().size());
@@ -76,7 +76,7 @@ TEST_F(DigestUnitTest, ProcessNames) {
                                        },
                                });
 
-  Digester digester({{"P", "p.*", ".*"}, {"Q", "q.*", ".*"}});
+  Digester digester({{"P", "p.*", ""}, {"Q", "q.*", ".*"}});
   Digest d(c, &digester);
   ConfirmBuckets(d, {{"Q", 200U}, {"P", 100U}});
   EXPECT_EQ(0U, d.undigested_vmos().size());

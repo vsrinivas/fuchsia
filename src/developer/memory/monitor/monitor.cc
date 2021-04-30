@@ -23,6 +23,7 @@
 #include <filesystem>
 #include <iostream>
 #include <iterator>
+#include <memory>
 
 #include <soc/aml-common/aml-ram.h>
 #include <trace-vthread/event_vthread.h>
@@ -140,10 +141,11 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
       component_context_(std::move(context)),
       inspector_(component_context_.get()) {
   auto bucket_matches = CreateBucketMatchesFromConfigData();
+  digester_ = std::make_unique<Digester>(Digester(bucket_matches));
   high_water_ = std::make_unique<HighWater>(
-          "/cache", kHighWaterPollFrequency, kHighWaterThreshold, dispatcher,
-          bucket_matches,
-          [this](Capture* c, CaptureLevel l) { return Capture::GetCapture(c, capture_state_, l); });
+      "/cache", kHighWaterPollFrequency, kHighWaterThreshold, dispatcher,
+      [this](Capture* c, CaptureLevel l) { return Capture::GetCapture(c, capture_state_, l); },
+      [this](const Capture& c, Digest* d) { digester_->Digest(c, d); });
   auto s = Capture::GetCaptureState(&capture_state_);
   if (s != ZX_OK) {
     FX_LOGS(ERROR) << "Error getting capture state: " << zx_status_get_string(s);
@@ -252,9 +254,9 @@ void Monitor::CreateMetrics(const std::vector<memory::BucketMatch>& bucket_match
   }
 
   metrics_ = std::make_unique<Metrics>(
-      bucket_matches, kMetricsPollFrequency, dispatcher_, &inspector_,
-      logger_.get(),
-      [this](Capture* c, CaptureLevel l) { return Capture::GetCapture(c, capture_state_, l); });
+      bucket_matches, kMetricsPollFrequency, dispatcher_, &inspector_, logger_.get(),
+      [this](Capture* c) { return GetCapture(c); },
+      [this](const Capture& c, Digest* d) { GetDigest(c, d); });
 }
 
 void Monitor::Watch(fidl::InterfaceHandle<fuchsia::memory::Watcher> watcher) {
@@ -344,8 +346,8 @@ inspect::Inspector Monitor::Inspect(const std::vector<memory::BucketMatch>& buck
   values.CreateUint("wired_bytes", capture.kmem().wired_bytes, &inspector);
   inspector.emplace(std::move(values));
 
-  Digester digester(bucket_matches);
-  Digest digest(capture, &digester);
+  Digest digest;
+  digester_->Digest(capture, &digest);
   std::ostringstream digest_stream;
   Printer digest_printer(digest_stream);
   digest_printer.PrintDigest(digest);
@@ -522,6 +524,14 @@ void Monitor::UpdateState() {
       tracing_ = false;
     }
   }
+}
+
+zx_status_t Monitor::GetCapture(memory::Capture* capture) {
+  return Capture::GetCapture(capture, capture_state_, VMO);
+}
+
+void Monitor::GetDigest(const memory::Capture& capture, memory::Digest* digest) {
+  digester_->Digest(capture, digest);
 }
 
 }  // namespace monitor

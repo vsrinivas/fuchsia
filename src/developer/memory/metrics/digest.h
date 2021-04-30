@@ -34,6 +34,7 @@ class Bucket {
 class Digester;
 class Digest {
  public:
+  Digest() = default;
   Digest(const Capture& capture, Digester* digester);
   zx_time_t time() const { return time_; }
   const std::vector<Bucket>& buckets() const { return buckets_; }
@@ -50,9 +51,9 @@ class Digest {
 class Digester {
  public:
   explicit Digester(const std::vector<BucketMatch>& bucket_matches);
+  void Digest(const Capture& capture, Digest* digest);
 
  private:
-  void Digest(const Capture& capture, Digest* digest);
   std::vector<BucketMatch> bucket_matches_;
 
   friend class Digest;
