@@ -147,6 +147,14 @@ class HidDevTest : public zxtest::Test {
   ddk::HidDeviceProtocolClient client_;
 };
 
+class FakeDdkBindFailure : public fake_ddk::Bind {
+ protected:
+  virtual zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
+                                zx_device_t** out) override {
+    return ZX_ERR_INTERNAL;
+  }
+};
+
 TEST_F(HidDevTest, HidLifetimeTest) {
   std::vector<uint8_t> boot_mouse(boot_mouse_desc, boot_mouse_desc + sizeof(boot_mouse_desc));
   fake_hid_.SetReportDesc(boot_mouse);
@@ -176,6 +184,23 @@ TEST(HidDevTest, InputReportUnregisterTest) {
 
   // Make sure that the InputReport class has unregistered from the HID device.
   ASSERT_FALSE(fake_hid_.listener_);
+}
+
+TEST(HidDevTest, InputReportUnregisterTestBindFailed) {
+  FakeDdkBindFailure ddk;
+  FakeHidDevice fake_hid;
+  ddk::HidDeviceProtocolClient client;
+
+  client = ddk::HidDeviceProtocolClient(&fake_hid.proto_);
+  auto device = std::make_unique<InputReport>(fake_ddk::kFakeParent, client);
+
+  std::vector<uint8_t> boot_mouse(boot_mouse_desc, boot_mouse_desc + sizeof(boot_mouse_desc));
+  fake_hid.SetReportDesc(boot_mouse);
+
+  ASSERT_EQ(device->Bind(), ZX_ERR_INTERNAL);
+
+  // Make sure that the InputReport class is not registered to the HID device.
+  ASSERT_FALSE(fake_hid.listener_);
 }
 
 TEST_F(HidDevTest, GetReportDescTest) {
