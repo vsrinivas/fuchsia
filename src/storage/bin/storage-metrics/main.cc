@@ -5,7 +5,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
-#include <fuchsia/io/llcpp/fidl.h>
 #include <fuchsia/minfs/c/fidl.h>
 #include <fuchsia/minfs/llcpp/fidl.h>
 #include <fuchsia/storage/metrics/c/fidl.h>
@@ -168,43 +167,13 @@ void ParseCommandLineArguments(int argc, char** argv, StorageMetricOptions* opti
 
 // Retrieves filesystem metrics for the filesystem at path and prints them.
 void RunFsMetrics(const char* path, const StorageMetricOptions options) {
-  fbl::unique_fd fd(open(path, O_RDONLY | O_ADMIN));
-  if (!fd) {
-    fd.reset(open(path, O_RDONLY));
-    if (!fd) {
-      fprintf(stderr, "storage-metrics could not open target: %s, errno %d (%s)\n", path, errno,
-              strerror(errno));
-      return;
-    }
-  }
-
-  fdio_cpp::FdioCaller caller(std::move(fd));
-  auto result = fidl::WireCall<fio::DirectoryAdmin>(
-                    ::fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.borrow_channel()))
-                    .QueryFilesystem();
-  if (!result.ok()) {
-    fprintf(stderr, "storage-metrics could not open %s, status %d\n", path, result.status());
-    return;
-  }
-
-  // Skip any filesystems that aren't minfs
-  fio::wire::FilesystemInfo* info = result.value().info.get();
-  info->name[fio::wire::kMaxFsNameBuffer - 1] = '\0';
-  const char* name = reinterpret_cast<const char*>(info->name.data());
-  if (strcmp(name, "minfs") != 0) {
-    fprintf(stderr, "storage-metrics does not support filesystem type %s\n", name);
-    return;
-  }
-
   zx_status_t rc;
   // The order of these conditionals allows for stats to be output regardless of the
   // value of enable.
   if (options.enable_fs_metrics == BooleanFlagState::kEnable) {
     rc = EnableFsMetrics(path, true);
     if (rc != ZX_OK) {
-      fprintf(stderr,
-              "storage-metrics could not enable filesystem metrics for %s,"
-              " status %d\n",
+      fprintf(stderr, "storage-metrics could not enable filesystem metrics for %s, status %d\n",
               path, rc);
       return;
     }
@@ -215,17 +184,15 @@ void RunFsMetrics(const char* path, const StorageMetricOptions options) {
     PrintFsMetrics(metrics, path);
   } else {
     fprintf(stderr,
-            "storage-metrics could not get filesystem metrics for %s,"
-            " status %d\n",
+            "storage-metrics could not get filesystem metrics for %s, status %d. This may mean "
+            "that it is not a minfs file system.\n",
             path, rc);
     return;
   }
   if (options.enable_fs_metrics == BooleanFlagState::kDisable) {
     rc = EnableFsMetrics(path, false);
     if (rc != ZX_OK) {
-      fprintf(stderr,
-              "storage-metrics could not disable filesystem metrics for %s,"
-              " status %d\n",
+      fprintf(stderr, "storage-metrics could not disable filesystem metrics for %s, status %d\n",
               path, rc);
     }
   }
