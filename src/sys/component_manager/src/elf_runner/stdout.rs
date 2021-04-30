@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    super::config::StreamSink,
     crate::model::{
         logging::FmtArgsLogger,
         namespace::{get_logger_from_proxy, NamespaceLogger},
@@ -16,7 +17,7 @@ use {
     fuchsia_zircon as zx,
     futures::AsyncReadExt,
     log::Level,
-    runner::{component::ComponentNamespace, StreamSink},
+    runner::component::ComponentNamespace,
     std::{boxed::Box, num::NonZeroUsize, sync::Arc},
     zx::HandleBased,
 };

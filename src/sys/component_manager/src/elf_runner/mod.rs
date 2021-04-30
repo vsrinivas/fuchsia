@@ -71,6 +71,7 @@ impl ElfRunner {
         &self,
         resolved_url: &String,
         start_info: fcrunner::ComponentStartInfo,
+        elf_config: &ElfProgramConfig,
         job: zx::Job,
         launcher: &fidl_fuchsia_process::LauncherProxy,
         lifecycle_server: Option<zx::Channel>,
@@ -81,11 +82,8 @@ impl ElfRunner {
         let args = runner::get_program_args(&start_info)
             .map_err(|e| RunnerError::invalid_args(resolved_url.clone(), e))?;
 
-        let stdout_sink = runner::get_program_stdout_sink(&start_info)
-            .map_err(|e| RunnerError::invalid_args(resolved_url.clone(), e))?;
-
-        let stderr_sink = runner::get_program_stderr_sink(&start_info)
-            .map_err(|e| RunnerError::invalid_args(resolved_url.clone(), e))?;
+        let stdout_sink = elf_config.get_stdout_sink();
+        let stderr_sink = elf_config.get_stderr_sink();
 
         // TODO(fxbug.dev/45586): runtime_dir may be unavailable in tests. We should fix tests so
         // that we don't have to have this check here.
@@ -191,7 +189,7 @@ impl ElfRunner {
             .unwrap_or_default();
 
         let url = resolved_url.clone();
-        let main_process_critical = program_config.main_process_critical;
+        let main_process_critical = program_config.has_critical_main_process();
         let res: Result<Option<ElfComponent>, ElfRunnerError> =
             self.start_component_helper(start_info, resolved_url, program_config).await;
         match res {
@@ -235,7 +233,7 @@ impl ElfRunner {
         // The kernel-level mechanisms for creating processes are very low-level. We require that
         // all processes be created via fuchsia.process.Launcher in order for the platform to
         // maintain change-control over how processes are created.
-        if !program_config.create_raw_processes {
+        if !program_config.can_create_raw_processes() {
             component_job
                 .set_policy(zx::JobPolicy::Basic(
                     zx::JobPolicyOption::Absolute,
@@ -246,7 +244,7 @@ impl ElfRunner {
 
         // Default deny the job policy which allows ambiently marking VMOs executable, i.e. calling
         // vmo_replace_as_executable without an appropriate resource handle.
-        if !program_config.ambient_mark_vmo_exec {
+        if !program_config.has_ambient_mark_vmo_exec() {
             component_job
                 .set_policy(zx::JobPolicy::Basic(
                     zx::JobPolicyOption::Absolute,
@@ -255,7 +253,7 @@ impl ElfRunner {
                 .map_err(|e| ElfRunnerError::component_job_policy_error(resolved_url.clone(), e))?;
         }
 
-        let (lifecycle_client, lifecycle_server) = match program_config.notify_lifecycle_stop {
+        let (lifecycle_client, lifecycle_server) = match program_config.notify_when_stopped() {
             true => {
                 fidl::endpoints::create_proxy::<LifecycleMarker>().map(|(c, s)| (Some(c), Some(s)))
             }
@@ -269,7 +267,14 @@ impl ElfRunner {
         })?;
 
         let (mut launch_info, runtime_dir_builder, tasks) = match self
-            .configure_launcher(&resolved_url, start_info, job_dup, &launcher, lifecycle_server)
+            .configure_launcher(
+                &resolved_url,
+                start_info,
+                &program_config,
+                job_dup,
+                &launcher,
+                lifecycle_server,
+            )
             .await?
         {
             Some(result) => (result.launch_info, result.runtime_dir_builder, result.tasks),
@@ -296,7 +301,7 @@ impl ElfRunner {
             resolved_url.clone(),
             format_err!("failed to launch component, no process"),
         ))?;
-        if program_config.main_process_critical {
+        if program_config.has_critical_main_process() {
             job_default()
                 .set_critical(zx::JobCriticalOptions::RETCODE_NONZERO, &process)
                 .map_err(|s| {
@@ -317,7 +322,7 @@ impl ElfRunner {
             Job::from(component_job),
             process,
             lifecycle_client,
-            program_config.main_process_critical,
+            program_config.has_critical_main_process(),
             tasks,
             resolved_url.clone(),
         )))
