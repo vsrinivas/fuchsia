@@ -35,7 +35,7 @@ using DeviceManagerType =
 // device.
 class DeviceManager final
     : public DeviceManagerType,
-      public fidl::WireInterface<fuchsia_hardware_block_verified::DeviceManager> {
+      public fidl::WireServer<fuchsia_hardware_block_verified::DeviceManager> {
  public:
   explicit DeviceManager(zx_device_t* parent)
       : DeviceManagerType(parent),
@@ -65,16 +65,17 @@ class DeviceManager final
   // ddk::ChildPreRelease methods
   void DdkChildPreRelease(void* child_ctx);
 
-  // implement `fidl::WireInterface<DeviceManager>`
-  void OpenForWrite(fuchsia_hardware_block_verified::wire::Config config,
+  // implement `fidl::WireServer<DeviceManager>`
+  void OpenForWrite(OpenForWriteRequestView request,
                     OpenForWriteCompleter::Sync& completer) override __TA_EXCLUDES(mtx_);
-  void CloseAndGenerateSeal(CloseAndGenerateSealCompleter::Sync& completer) override
+  void CloseAndGenerateSeal(CloseAndGenerateSealRequestView request,
+                            CloseAndGenerateSealCompleter::Sync& completer) override
       __TA_EXCLUDES(mtx_);
-  void OpenForVerifiedRead(fuchsia_hardware_block_verified::wire::Config config,
-                           fuchsia_hardware_block_verified::wire::Seal seal,
+  void OpenForVerifiedRead(OpenForVerifiedReadRequestView request,
                            OpenForVerifiedReadCompleter::Sync& completer) override
       __TA_EXCLUDES(mtx_);
-  void Close(CloseCompleter::Sync& completer) override __TA_EXCLUDES(mtx_);
+  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override
+      __TA_EXCLUDES(mtx_);
 
   void OnSealCompleted(zx_status_t status, const uint8_t* seal_buf, size_t seal_len)
       __TA_EXCLUDES(mtx_);

@@ -32,15 +32,17 @@ namespace block_fidl = fuchsia_hardware_block;
 
 constexpr char kDeviceName[] = "ftl";
 
-class FidlService final : public fidl::WireInterface<block_fidl::Ftl> {
+class FidlService final : public fidl::WireServer<block_fidl::Ftl> {
  public:
   FidlService() = delete;
   constexpr explicit FidlService(ftl::BlockDevice* device) : device_(device) {}
   ~FidlService() final = default;
 
-  void Format(FormatCompleter::Sync& completer) final { completer.Reply(device_->Format()); }
+  void Format(FormatRequestView request, FormatCompleter::Sync& completer) final {
+    completer.Reply(device_->Format());
+  }
 
-  void GetVmo(GetVmoCompleter::Sync& completer) final {
+  void GetVmo(GetVmoRequestView request, GetVmoCompleter::Sync& completer) final {
     completer.ReplySuccess(device_->DuplicateInspectVmo());
   }
 

@@ -14,80 +14,86 @@
 
 namespace sdio {
 
-class SdioTest : public zxtest::Test, public fidl::WireInterface<fuchsia_hardware_sdio::Device> {
+class SdioTest : public zxtest::Test, public fidl::WireServer<fuchsia_hardware_sdio::Device> {
  public:
   SdioTest() : loop_(&kAsyncLoopConfigAttachToCurrentThread) {
     zx::channel server;
     ASSERT_OK(zx::channel::create(0, &client_, &server));
-    ASSERT_OK(fidl::BindSingleInFlightOnly<fidl::WireInterface<Device>>(loop_.dispatcher(),
-                                                                        std::move(server), this));
+    ASSERT_OK(fidl::BindSingleInFlightOnly<fidl::WireServer<Device>>(loop_.dispatcher(),
+                                                                     std::move(server), this));
     loop_.StartThread("sdio-test-loop");
   }
 
-  void GetDevHwInfo(GetDevHwInfoCompleter::Sync& completer) override { completer.ReplySuccess({}); }
+  void GetDevHwInfo(GetDevHwInfoRequestView request,
+                    GetDevHwInfoCompleter::Sync& completer) override {
+    completer.ReplySuccess({});
+  }
 
-  void EnableFn(EnableFnCompleter::Sync& completer) override {
+  void EnableFn(EnableFnRequestView request, EnableFnCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void DisableFn(DisableFnCompleter::Sync& completer) override {
+  void DisableFn(DisableFnRequestView request, DisableFnCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void EnableFnIntr(EnableFnIntrCompleter::Sync& completer) override {
+  void EnableFnIntr(EnableFnIntrRequestView request,
+                    EnableFnIntrCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void DisableFnIntr(DisableFnIntrCompleter::Sync& completer) override {
+  void DisableFnIntr(DisableFnIntrRequestView request,
+                     DisableFnIntrCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void UpdateBlockSize(uint16_t blk_sz, bool deflt,
+  void UpdateBlockSize(UpdateBlockSizeRequestView request,
                        UpdateBlockSizeCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void GetBlockSize(GetBlockSizeCompleter::Sync& completer) override {
+  void GetBlockSize(GetBlockSizeRequestView request,
+                    GetBlockSizeCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void DoRwTxn(wire::SdioRwTxn txn, DoRwTxnCompleter::Sync& completer) override {
+  void DoRwTxn(DoRwTxnRequestView request, DoRwTxnCompleter::Sync& completer) override {
     txns_.push_back(wire::SdioRwTxn{
-        .addr = txn.addr,
-        .data_size = txn.data_size,
-        .incr = txn.incr,
-        .write = txn.write,
-        .use_dma = txn.use_dma,
+        .addr = request->txn.addr,
+        .data_size = request->txn.data_size,
+        .incr = request->txn.incr,
+        .write = request->txn.write,
+        .use_dma = request->txn.use_dma,
         .dma_vmo = {},
         .virt = {},
         .buf_offset = 0,
     });
-    completer.ReplySuccess(std::move(txn));
+    completer.ReplySuccess(std::move(request->txn));
   }
 
-  void DoRwByte(bool write, uint32_t addr, uint8_t write_byte,
-                DoRwByteCompleter::Sync& completer) override {
-    if (write) {
-      byte_ = write_byte;
+  void DoRwByte(DoRwByteRequestView request, DoRwByteCompleter::Sync& completer) override {
+    if (request->write) {
+      byte_ = request->write_byte;
     }
 
-    address_ = addr;
-    completer.ReplySuccess(write ? 0 : byte_);
+    address_ = request->addr;
+    completer.ReplySuccess(request->write ? 0 : byte_);
   }
 
-  void GetInBandIntr(GetInBandIntrCompleter::Sync& completer) override {
+  void GetInBandIntr(GetInBandIntrRequestView request,
+                     GetInBandIntrCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void IoAbort(IoAbortCompleter::Sync& completer) override {
+  void IoAbort(IoAbortRequestView request, IoAbortCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void IntrPending(IntrPendingCompleter::Sync& completer) override {
+  void IntrPending(IntrPendingRequestView request, IntrPendingCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void DoVendorControlRwByte(bool write, uint8_t addr, uint8_t write_byte,
+  void DoVendorControlRwByte(DoVendorControlRwByteRequestView request,
                              DoVendorControlRwByteCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }

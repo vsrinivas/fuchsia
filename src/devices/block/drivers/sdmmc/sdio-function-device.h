@@ -25,7 +25,7 @@ using SdioFunctionDeviceType = ddk::Device<SdioFunctionDevice, ddk::Messageable>
 
 class SdioFunctionDevice : public SdioFunctionDeviceType,
                            public ddk::SdioProtocol<SdioFunctionDevice, ddk::base_protocol>,
-                           public fidl::WireInterface<fuchsia_hardware_sdio::Device> {
+                           public fidl::WireServer<fuchsia_hardware_sdio::Device> {
  public:
   SdioFunctionDevice(zx_device_t* parent, SdioControllerDevice* sdio_parent)
       : SdioFunctionDeviceType(parent), sdio_parent_(sdio_parent) {}
@@ -64,21 +64,25 @@ class SdioFunctionDevice : public SdioFunctionDeviceType,
   }
 
   // FIDL methods
-  void GetDevHwInfo(GetDevHwInfoCompleter::Sync& completer) override;
-  void EnableFn(EnableFnCompleter::Sync& completer) override;
-  void DisableFn(DisableFnCompleter::Sync& completer) override;
-  void EnableFnIntr(EnableFnIntrCompleter::Sync& completer) override;
-  void DisableFnIntr(DisableFnIntrCompleter::Sync& completer) override;
-  void UpdateBlockSize(uint16_t blk_sz, bool deflt,
+  void GetDevHwInfo(GetDevHwInfoRequestView request,
+                    GetDevHwInfoCompleter::Sync& completer) override;
+  void EnableFn(EnableFnRequestView request, EnableFnCompleter::Sync& completer) override;
+  void DisableFn(DisableFnRequestView request, DisableFnCompleter::Sync& completer) override;
+  void EnableFnIntr(EnableFnIntrRequestView request,
+                    EnableFnIntrCompleter::Sync& completer) override;
+  void DisableFnIntr(DisableFnIntrRequestView request,
+                     DisableFnIntrCompleter::Sync& completer) override;
+  void UpdateBlockSize(UpdateBlockSizeRequestView request,
                        UpdateBlockSizeCompleter::Sync& completer) override;
-  void GetBlockSize(GetBlockSizeCompleter::Sync& completer) override;
-  void DoRwTxn(SdioRwTxn txn, DoRwTxnCompleter::Sync& completer) override;
-  void DoRwByte(bool write, uint32_t addr, uint8_t write_byte,
-                DoRwByteCompleter::Sync& completer) override;
-  void GetInBandIntr(GetInBandIntrCompleter::Sync& completer) override;
-  void IoAbort(IoAbortCompleter::Sync& completer) override;
-  void IntrPending(IntrPendingCompleter::Sync& completer) override;
-  void DoVendorControlRwByte(bool write, uint8_t addr, uint8_t write_byte,
+  void GetBlockSize(GetBlockSizeRequestView request,
+                    GetBlockSizeCompleter::Sync& completer) override;
+  void DoRwTxn(DoRwTxnRequestView request, DoRwTxnCompleter::Sync& completer) override;
+  void DoRwByte(DoRwByteRequestView request, DoRwByteCompleter::Sync& completer) override;
+  void GetInBandIntr(GetInBandIntrRequestView request,
+                     GetInBandIntrCompleter::Sync& completer) override;
+  void IoAbort(IoAbortRequestView request, IoAbortCompleter::Sync& completer) override;
+  void IntrPending(IntrPendingRequestView request, IntrPendingCompleter::Sync& completer) override;
+  void DoVendorControlRwByte(DoVendorControlRwByteRequestView request,
                              DoVendorControlRwByteCompleter::Sync& completer) override;
 
  private:

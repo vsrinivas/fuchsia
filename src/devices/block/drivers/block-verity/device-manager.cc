@@ -160,7 +160,7 @@ void DeviceManager::DdkChildPreRelease(void* child_ctx) {
   }
 }
 
-void DeviceManager::OpenForWrite(fuchsia_hardware_block_verified::wire::Config config,
+void DeviceManager::OpenForWrite(OpenForWriteRequestView request,
                                  OpenForWriteCompleter::Sync& completer) {
   fbl::AutoLock lock(&mtx_);
   auto async_completer = completer.ToAsync();
@@ -175,7 +175,7 @@ void DeviceManager::OpenForWrite(fuchsia_hardware_block_verified::wire::Config c
   block_protocol_client.Query(&blk, &op_size);
 
   // Check args
-  zx_status_t rc = CheckConfig(config, blk);
+  zx_status_t rc = CheckConfig(request->config, blk);
   if (rc != ZX_OK) {
     zxlogf(WARNING, "Refusing OpenForWrite: invalid config");
     async_completer.ReplyError(rc);
@@ -215,7 +215,8 @@ void DeviceManager::OpenForWrite(fuchsia_hardware_block_verified::wire::Config c
   async_completer.ReplySuccess();
 }
 
-void DeviceManager::CloseAndGenerateSeal(CloseAndGenerateSealCompleter::Sync& completer) {
+void DeviceManager::CloseAndGenerateSeal(CloseAndGenerateSealRequestView request,
+                                         CloseAndGenerateSealCompleter::Sync& completer) {
   fbl::AutoLock lock(&mtx_);
   auto async_completer = completer.ToAsync();
   fuchsia_hardware_block_verified::wire::Seal seal;
@@ -327,8 +328,7 @@ void DeviceManager::CompleteOpenForVerifiedRead(zx_status_t status) {
   superblock_verifier_.reset();
 }
 
-void DeviceManager::OpenForVerifiedRead(fuchsia_hardware_block_verified::wire::Config config,
-                                        fuchsia_hardware_block_verified::wire::Seal seal,
+void DeviceManager::OpenForVerifiedRead(OpenForVerifiedReadRequestView request,
                                         OpenForVerifiedReadCompleter::Sync& completer) {
   fbl::AutoLock lock(&mtx_);
   auto async_completer = completer.ToAsync();
@@ -343,7 +343,7 @@ void DeviceManager::OpenForVerifiedRead(fuchsia_hardware_block_verified::wire::C
   block_protocol_client.Query(&blk, &op_size);
 
   // Check args.
-  zx_status_t rc = CheckConfig(config, blk);
+  zx_status_t rc = CheckConfig(request->config, blk);
   if (rc != ZX_OK) {
     zxlogf(WARNING, "Refusing OpenForVerifiedRead: invalid config");
     async_completer.ReplyError(rc);
@@ -357,13 +357,13 @@ void DeviceManager::OpenForVerifiedRead(fuchsia_hardware_block_verified::wire::C
   // Load superblock.  Check seal.  Check config matches seal.
   DeviceInfo info = DeviceInfo::CreateFromDevice(parent());
   std::array<uint8_t, kHashOutputSize> expected_hash;
-  memcpy(expected_hash.data(), seal.sha256().superblock_hash.data(), kHashOutputSize);
+  memcpy(expected_hash.data(), request->seal.sha256().superblock_hash.data(), kHashOutputSize);
   superblock_verifier_ = std::make_unique<SuperblockVerifier>(std::move(info), expected_hash);
   state_ = kVerifiedReadCheck;
   superblock_verifier_->StartVerifying(this, SuperblockVerificationCallback);
 }
 
-void DeviceManager::Close(CloseCompleter::Sync& completer) {
+void DeviceManager::Close(CloseRequestView request, CloseCompleter::Sync& completer) {
   fbl::AutoLock lock(&mtx_);
   auto async_completer = completer.ToAsync();
   if (state_ != kAuthoring && state_ != kVerifiedRead) {

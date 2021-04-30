@@ -87,21 +87,19 @@ class MockBlockDevice {
 
   // This implementation of Node is decidedly non-standard and incomplete, but it is
   // sufficient to test the cloning behavior used below.
-  class MockNode : public fidl::WireInterface<fio::Node> {
+  class MockNode : public fidl::WireServer<fio::Node> {
    public:
     explicit MockNode(MockBlockDevice* self) : self_(self) {}
 
-    void Clone(uint32_t flags, ::fidl::ServerEnd<fuchsia_io::Node> object,
-               CloneCompleter::Sync& completer) override {
-      self_->Bind(self_->dispatcher_, object.TakeChannel());
+    void Clone(CloneRequestView request, CloneCompleter::Sync& completer) override {
+      self_->Bind(self_->dispatcher_, request->object.TakeChannel());
     }
 
-    void Close(CloseCompleter::Sync& completer) override {}
-    void Describe(DescribeCompleter::Sync& completer) override {}
-    void Sync(SyncCompleter::Sync& completer) override {}
-    void GetAttr(GetAttrCompleter::Sync& completer) override {}
-    void SetAttr(uint32_t flags, fuchsia_io::wire::NodeAttributes attributes,
-                 SetAttrCompleter::Sync& completer) override {}
+    void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {}
+    void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {}
+    void Sync(SyncRequestView request, SyncCompleter::Sync& completer) override {}
+    void GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) override {}
+    void SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) override {}
 
    private:
     MockBlockDevice* self_;

@@ -139,7 +139,8 @@ void RpmbDevice::RpmbConnectServer(zx::channel server) {
   }
 }
 
-void RpmbDevice::GetDeviceInfo(GetDeviceInfoCompleter::Sync& completer) {
+void RpmbDevice::GetDeviceInfo(GetDeviceInfoRequestView request,
+                               GetDeviceInfoCompleter::Sync& completer) {
   using DeviceInfo = fuchsia_hardware_rpmb::wire::DeviceInfo;
   using EmmcDeviceInfo = fuchsia_hardware_rpmb::wire::EmmcDeviceInfo;
 
@@ -153,18 +154,17 @@ void RpmbDevice::GetDeviceInfo(GetDeviceInfoCompleter::Sync& completer) {
   completer.ToAsync().Reply(DeviceInfo::WithEmmcInfo(emmc_info_ptr));
 }
 
-void RpmbDevice::Request(fuchsia_hardware_rpmb::wire::Request request,
-                         RequestCompleter::Sync& completer) {
+void RpmbDevice::Request(RequestRequestView request, RequestCompleter::Sync& completer) {
   RpmbRequestInfo info = {
-      .tx_frames = std::move(request.tx_frames),
+      .tx_frames = std::move(request->request.tx_frames),
       .completer = completer.ToAsync(),
   };
 
-  if (request.rx_frames) {
+  if (request->request.rx_frames) {
     info.rx_frames = {
-        .vmo = std::move(request.rx_frames->vmo),
-        .offset = request.rx_frames->offset,
-        .size = request.rx_frames->size,
+        .vmo = std::move(request->request.rx_frames->vmo),
+        .offset = request->request.rx_frames->offset,
+        .size = request->request.rx_frames->size,
     };
   }
 
