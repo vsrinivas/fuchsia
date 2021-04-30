@@ -5,7 +5,7 @@
 use serde::Deserialize;
 use {
     anyhow::format_err,
-    log::error,
+    log::{error, warn},
     parking_lot::{Mutex, MutexGuard},
     serde::Serialize,
     serde_json,
@@ -73,7 +73,9 @@ impl KnownEssStore {
         };
         let mut ess_by_ssid = HashMap::with_capacity(ess_list.len());
         for ess in ess_list {
-            ess_by_ssid.insert(ess.ssid, KnownEss { password: ess.password });
+            if let Some(_) = ess_by_ssid.insert(ess.ssid, KnownEss { password: ess.password }) {
+                warn!("Duplicate ssid found in ess list");
+            };
         }
         let ess_by_ssid = Mutex::new(ess_by_ssid);
         Ok(KnownEssStore { storage_path, tmp_storage_path, ess_by_ssid })
@@ -89,7 +91,9 @@ impl KnownEssStore {
         let mut guard = self.ess_by_ssid.lock();
         // Even if writing into the file fails, it is still okay
         // to modify the in-memory map. We are not too worried about consistency here.
-        guard.insert(ssid, ess);
+        if let Some(_) = guard.insert(ssid, ess) {
+            warn!("Overwriting prior entry for ssid");
+        };
         self.write(guard)
     }
 
@@ -99,7 +103,7 @@ impl KnownEssStore {
         let mut guard = self.ess_by_ssid.lock();
         if let Some(known_ess) = guard.get(&ssid) {
             if known_ess.password == ess {
-                guard.remove(&ssid);
+                let _ = guard.remove(&ssid);
                 self.write(guard)?;
             }
         }
@@ -219,7 +223,7 @@ mod tests {
         let path = temp_dir.path().join(STORE_JSON_PATH);
         let mut file = fs::File::create(&path).expect("failed to open file for writing");
         // Write invalid JSON and close the file
-        file.write(b"{").expect("failed to write broken json into file");
+        assert_eq!(file.write(b"{").expect("failed to write broken json into file"), 1);
         mem::drop(file);
         assert!(path.exists());
 

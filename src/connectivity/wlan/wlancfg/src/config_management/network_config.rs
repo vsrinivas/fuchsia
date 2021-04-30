@@ -102,7 +102,7 @@ impl ConnectFailureList {
     /// if the list of denial reasons is already full before adding.
     pub fn add(&mut self, bssid: types::Bssid, reason: FailureReason) {
         if self.0.len() == self.0.capacity() {
-            self.0.pop_front();
+            let _ = self.0.pop_front();
         }
         self.0.push_back(ConnectFailure { time: zx::Time::get_monotonic(), reason, bssid });
     }

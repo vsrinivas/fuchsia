@@ -254,9 +254,9 @@ async fn starting_state(
         ApStateUpdate::new(req.id.clone(), types::OperatingState::Starting, req.mode, req.band);
 
     // Apply default PHY, CBW, and channel settings.
-    req.radio_config.phy.get_or_insert(DEFAULT_PHY);
-    req.radio_config.cbw.get_or_insert(DEFAULT_CBW);
-    req.radio_config.primary_chan.get_or_insert(DEFAULT_CHANNEL);
+    let _ = req.radio_config.phy.get_or_insert(DEFAULT_PHY);
+    let _ = req.radio_config.cbw.get_or_insert(DEFAULT_CBW);
+    let _ = req.radio_config.primary_chan.get_or_insert(DEFAULT_CHANNEL);
 
     // Send a stop request to ensure that the AP begins in an unstarting state.
     let stop_result = match proxy.stop().await {

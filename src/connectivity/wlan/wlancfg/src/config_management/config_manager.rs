@@ -19,7 +19,7 @@ use {
     fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_cobalt::CobaltSender,
     futures::lock::Mutex,
-    log::{error, info},
+    log::{error, info, warn},
     rand::Rng,
     std::{
         clone::Clone,
@@ -200,7 +200,9 @@ impl SavedNetworksManager {
                             &network_config_vec_to_persistent_data(&configs),
                         )
                         .await?;
-                    saved_networks.insert(net_id, configs);
+                    if let Some(_) = saved_networks.insert(net_id, configs) {
+                        warn!("Overwriting saved network with one from legacy config file");
+                    };
                 }
             }
             Err(e) => {
@@ -672,6 +674,7 @@ fn log_cobalt_metrics(saved_networks: &NetworkConfigMap, cobalt_api: &mut Cobalt
 }
 
 #[cfg(test)]
+#[allow(unused_results)]
 mod tests {
     use {
         super::*,
@@ -971,14 +974,18 @@ mod tests {
         let network_id_password = NetworkIdentifier::new(ssid.clone(), SecurityType::Wpa3);
         let credential_psk = Credential::Psk(vec![5; 32]);
         let credential_password = Credential::Password(b"mypassword".to_vec());
-        exec.run_singlethreaded(
-            saved_networks.store(network_id_psk.clone(), credential_psk.clone()),
-        )
-        .expect("Failed to store network");
-        exec.run_singlethreaded(
-            saved_networks.store(network_id_password.clone(), credential_password.clone()),
-        )
-        .expect("Failed to store network");
+        assert!(exec
+            .run_singlethreaded(
+                saved_networks.store(network_id_psk.clone(), credential_psk.clone()),
+            )
+            .expect("Failed to store network")
+            .is_none());
+        assert!(exec
+            .run_singlethreaded(
+                saved_networks.store(network_id_password.clone(), credential_password.clone()),
+            )
+            .expect("Failed to store network")
+            .is_none());
 
         // Only the WPA3 config with a credential should be returned.
         let expected_config_wpa3 =

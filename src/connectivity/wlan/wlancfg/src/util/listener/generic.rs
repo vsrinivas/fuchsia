@@ -239,12 +239,12 @@ mod tests {
         // Register #1 listener & ack initial update.
         let mut l1_stream =
             test_utils::register_listener(&mut exec, &mut update_sender, &mut serve_listeners);
-        test_utils::ack_next_status_update(&mut exec, &mut l1_stream, &mut serve_listeners);
+        let _ = test_utils::ack_next_status_update(&mut exec, &mut l1_stream, &mut serve_listeners);
 
         // Register #2 listener & ack initial update.
         let mut l2_stream =
             test_utils::register_listener(&mut exec, &mut update_sender, &mut serve_listeners);
-        test_utils::ack_next_status_update(&mut exec, &mut l2_stream, &mut serve_listeners);
+        let _ = test_utils::ack_next_status_update(&mut exec, &mut l2_stream, &mut serve_listeners);
 
         // Send an update to both listeners.
         let update = ClientStateUpdate {
@@ -291,12 +291,12 @@ mod tests {
         // Register #1 listener & ack initial update.
         let mut l1_stream =
             test_utils::register_listener(&mut exec, &mut update_sender, &mut serve_listeners);
-        test_utils::ack_next_status_update(&mut exec, &mut l1_stream, &mut serve_listeners);
+        let _ = test_utils::ack_next_status_update(&mut exec, &mut l1_stream, &mut serve_listeners);
 
         // Register #2 listener & ack initial update.
         let mut l2_stream =
             test_utils::register_listener(&mut exec, &mut update_sender, &mut serve_listeners);
-        test_utils::ack_next_status_update(&mut exec, &mut l2_stream, &mut serve_listeners);
+        let _ = test_utils::ack_next_status_update(&mut exec, &mut l2_stream, &mut serve_listeners);
 
         // Send an update to both listeners.
         let update = ClientStateUpdate { state: None, networks: vec![] };
@@ -308,7 +308,7 @@ mod tests {
         );
 
         // #1 listener acknowledges update.
-        test_utils::ack_next_status_update(&mut exec, &mut l1_stream, &mut serve_listeners);
+        let _ = test_utils::ack_next_status_update(&mut exec, &mut l1_stream, &mut serve_listeners);
 
         // #2 listener does not yet acknowledge update.
         let (_, l2_responder) = test_utils::try_next_status_update(&mut exec, &mut l2_stream)

@@ -100,7 +100,8 @@ async fn serve_fidl(
         iface_manager.start_client_connections().await?;
     }
 
-    fs.dir("svc")
+    let _ = fs
+        .dir("svc")
         .add_fidl_service(move |reqs| {
             fasync::Task::spawn(client::serve_provider_requests(
                 iface_manager.clone(),
@@ -131,8 +132,7 @@ async fn serve_fidl(
                     .unwrap_or_else(|e| error!("error serving deprecated client API: {}", e));
             fasync::Task::spawn(fut).detach()
         });
-    fs.take_and_serve_directory_handle()?;
-    let service_fut = fs.collect::<()>().fuse();
+    let service_fut = fs.take_and_serve_directory_handle()?.collect::<()>().fuse();
     pin_mut!(service_fut);
 
     let serve_client_policy_listeners = util::listener::serve::<

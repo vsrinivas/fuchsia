@@ -26,7 +26,7 @@ use {
     },
     fuchsia_zircon as zx,
     futures::lock::Mutex,
-    log::{debug, error, info, trace},
+    log::{debug, error, info, trace, warn},
     rand::Rng,
     std::{collections::HashMap, convert::TryInto as _, sync::Arc},
     wlan_common::{channel::Channel, hasher::WlanHasher},
@@ -422,7 +422,7 @@ async fn load_saved_networks(
         };
         // We allow networks saved as WPA to be also used as WPA2 or WPA2 to be used for WPA3
         if let Some(security_type) = upgrade_security(&saved_network.security_type) {
-            networks.insert(
+            if let Some(_) = networks.insert(
                 types::NetworkIdentifier { ssid: saved_network.ssid.clone(), type_: security_type },
                 InternalSavedNetworkData {
                     network_id: id.clone(),
@@ -430,9 +430,11 @@ async fn load_saved_networks(
                     has_ever_connected: saved_network.has_ever_connected,
                     recent_failures: recent_failures.clone(),
                 },
-            );
+            ) {
+                warn!("Replaced saved network with automatically upgrade security version");
+            };
         }
-        networks.insert(
+        if let Some(_) = networks.insert(
             id.clone(),
             InternalSavedNetworkData {
                 network_id: id,
@@ -440,7 +442,9 @@ async fn load_saved_networks(
                 has_ever_connected: saved_network.has_ever_connected,
                 recent_failures: recent_failures,
             },
-        );
+        ) {
+            warn!("Duplicate saved network found");
+        };
     }
     networks
 }
@@ -668,6 +672,7 @@ fn record_metrics_on_scan(
 }
 
 #[cfg(test)]
+#[allow(unused_results)]
 mod tests {
     use {
         super::*,

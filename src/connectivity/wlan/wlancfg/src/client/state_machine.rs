@@ -1678,10 +1678,12 @@ mod tests {
             network_config::NetworkIdentifier::from(next_network_identifier.clone());
         let bss_desc = generate_random_bss_desc();
         // save network to check that failed connect is recorded
-        exec.run_singlethreaded(
-            saved_networks_manager.store(config_net_id.clone(), next_credential.clone()),
-        )
-        .expect("Failed to save network");
+        assert!(exec
+            .run_singlethreaded(
+                saved_networks_manager.store(config_net_id.clone(), next_credential.clone()),
+            )
+            .expect("Failed to save network")
+            .is_none());
         let before_recording = zx::Time::get_monotonic();
 
         let connect_request = types::ConnectRequest {
@@ -1817,10 +1819,12 @@ mod tests {
         let next_credential = Credential::Password("password".as_bytes().to_vec());
         // save network to check that failed connect is recorded
         let saved_networks_manager = common_options.saved_networks_manager.clone();
-        exec.run_singlethreaded(
-            saved_networks_manager.store(config_net_id.clone(), next_credential.clone()),
-        )
-        .expect("Failed to save network");
+        assert!(exec
+            .run_singlethreaded(
+                saved_networks_manager.store(config_net_id.clone(), next_credential.clone()),
+            )
+            .expect("Failed to save network")
+            .is_none());
         let before_recording = zx::Time::get_monotonic();
 
         let bss_desc = generate_random_bss_desc();

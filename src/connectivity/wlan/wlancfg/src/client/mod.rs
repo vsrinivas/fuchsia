@@ -478,6 +478,7 @@ fn reject_provider_request(req: fidl_policy::ClientProviderRequest) -> Result<()
 }
 
 #[cfg(test)]
+#[allow(unused_results)]
 mod tests {
     use {
         super::*,

@@ -1340,10 +1340,12 @@ mod tests {
         let unseen_active_id =
             types::NetworkIdentifier { ssid: unseen_ssid.clone(), type_: types::SecurityType::Wpa };
         let credential = Credential::Password(b"some-cred".to_vec());
-        exec.run_singlethreaded(
-            saved_networks_manager.store(unseen_active_id.clone().into(), credential),
-        )
-        .expect("failed to store network");
+        assert!(exec
+            .run_singlethreaded(
+                saved_networks_manager.store(unseen_active_id.clone().into(), credential),
+            )
+            .expect("failed to store network")
+            .is_none());
         let config = exec
             .run_singlethreaded(saved_networks_manager.lookup(unseen_active_id.clone().into()))
             .pop()

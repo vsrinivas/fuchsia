@@ -282,16 +282,22 @@ impl PhyManagerApi for PhyManager {
                 create_iface(&self.device_service, phy_id, MacRole::Client, None).await?;
             // Find out the capabilities of the iface.
             let driver_features = self.get_iface_driver_features(iface_id).await?;
-            phy_container.client_ifaces.insert(iface_id, driver_features);
+            if let Some(_) = phy_container.client_ifaces.insert(iface_id, driver_features) {
+                warn!("Unexpectedly replaced existing iface information for id {}", iface_id);
+            };
         }
 
-        self.phys.insert(phy_id, phy_container);
+        if let Some(_) = self.phys.insert(phy_id, phy_container) {
+            warn!("Unexpectedly replaced existing phy information for id {}", phy_id);
+        };
 
         Ok(())
     }
 
     fn remove_phy(&mut self, phy_id: u16) {
-        self.phys.remove(&phy_id);
+        if self.phys.remove(&phy_id).is_none() {
+            warn!("Attempted to remove non-existed phy {}", phy_id);
+        };
     }
 
     async fn on_iface_added(&mut self, iface_id: u16) -> Result<(), PhyManagerError> {
@@ -302,15 +308,21 @@ impl PhyManagerApi for PhyManager {
 
             match query_iface_response.role {
                 MacRole::Client => {
-                    if !phy.client_ifaces.contains_key(&iface_id) {
-                        warn!("Detected an unexpected client iface created outside of PhyManager");
-                        let _ = phy.client_ifaces.insert(iface_id, driver_features);
+                    if let Some(old_driver_features) =
+                        phy.client_ifaces.insert(iface_id, driver_features.clone())
+                    {
+                        if old_driver_features != driver_features {
+                            warn!("Driver features changed unexpectedly for id {}", iface_id);
+                        }
+                    } else {
+                        // The iface wasn't in the hashmap, so it was created by someone else
+                        warn!("Detected an unexpected client iface id {} created outside of PhyManager", iface_id);
                     }
                 }
                 MacRole::Ap => {
-                    if !phy.ap_ifaces.contains(&iface_id) {
+                    if phy.ap_ifaces.insert(iface_id) {
+                        // `.insert()` returns true if the value was not already present
                         warn!("Detected an unexpected AP iface created outside of PhyManager");
-                        let _ = phy.ap_ifaces.insert(iface_id);
                     }
                 }
                 MacRole::Mesh => {
@@ -323,8 +335,14 @@ impl PhyManagerApi for PhyManager {
 
     fn on_iface_removed(&mut self, iface_id: u16) {
         for (_, phy_info) in self.phys.iter_mut() {
-            phy_info.client_ifaces.remove(&iface_id);
-            phy_info.ap_ifaces.remove(&iface_id);
+            if phy_info.client_ifaces.remove(&iface_id).is_none()
+                && !phy_info.ap_ifaces.remove(&iface_id)
+            {
+                warn!(
+                    "Attempted to remove iface id {} but it was not in client or ap iface list",
+                    iface_id
+                );
+            };
         }
     }
 
@@ -375,7 +393,7 @@ impl PhyManagerApi for PhyManager {
                             error!("Error occurred getting iface driver features: {}", e);
                             Vec::new()
                         });
-                    phy_container.client_ifaces.insert(iface_id, driver_features);
+                    let _ = phy_container.client_ifaces.insert(iface_id, driver_features);
 
                     recovered_iface_ids.push(iface_id);
                 }
@@ -410,7 +428,9 @@ impl PhyManagerApi for PhyManager {
                     Ok(()) => {}
                     Err(e) => {
                         result = Err(e);
-                        lingering_ifaces.insert(iface_id, driver_features);
+                        if let Some(_) = lingering_ifaces.insert(iface_id, driver_features) {
+                            warn!("Unexpected duplicate lingering iface for id {}", iface_id);
+                        };
                     }
                 }
             }
@@ -464,7 +484,7 @@ impl PhyManagerApi for PhyManager {
                 let iface_id =
                     create_iface(&self.device_service, *ap_phy_id, MacRole::Ap, mac).await?;
 
-                phy_container.ap_ifaces.insert(iface_id);
+                let _ = phy_container.ap_ifaces.insert(iface_id);
                 return Ok(Some(iface_id));
             }
         }
@@ -490,7 +510,7 @@ impl PhyManagerApi for PhyManager {
                 match destroy_iface(&self.device_service, iface_id).await {
                     Ok(()) => {}
                     Err(e) => {
-                        phy_container.ap_ifaces.insert(iface_id);
+                        let _ = phy_container.ap_ifaces.insert(iface_id);
                         return Err(e);
                     }
                 }
@@ -514,7 +534,7 @@ impl PhyManagerApi for PhyManager {
                     Ok(()) => {}
                     Err(e) => {
                         result = Err(e);
-                        lingering_ifaces.insert(iface_id);
+                        let _ = lingering_ifaces.insert(iface_id);
                     }
                 }
             }
@@ -1052,7 +1072,7 @@ mod tests {
         let phy_info = fake_phy_info(fake_phy_id, fake_mac_roles);
 
         let phy_container = PhyContainer::new(phy_info);
-        phy_manager.phys.insert(fake_phy_id, phy_container);
+        let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
         phy_manager.remove_phy(fake_phy_id);
         assert!(phy_manager.phys.is_empty());
     }
@@ -1071,7 +1091,7 @@ mod tests {
         let phy_info = fake_phy_info(fake_phy_id, fake_mac_roles);
 
         let phy_container = PhyContainer::new(phy_info);
-        phy_manager.phys.insert(fake_phy_id, phy_container);
+        let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
         phy_manager.remove_phy(2);
         assert!(phy_manager.phys.contains_key(&fake_phy_id));
     }
@@ -1110,7 +1130,7 @@ mod tests {
 
         {
             // Inject the fake PHY information
-            phy_manager.phys.insert(fake_phy_id, phy_container);
+            let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
 
             // Add the fake iface
             let on_iface_added_fut = phy_manager.on_iface_added(fake_iface_id);
@@ -1215,7 +1235,7 @@ mod tests {
 
         // Inject the fake PHY information
         let phy_container = PhyContainer::new(phy_info);
-        phy_manager.phys.insert(fake_phy_id, phy_container);
+        let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
 
         // Create an IfaceResponse to be sent to the PhyManager when the iface ID is queried
         let fake_role = MacRole::Client;
@@ -1300,9 +1320,9 @@ mod tests {
         let mut phy_container = PhyContainer::new(phy_info);
         let fake_iface_id = 1;
         let driver_features = Vec::new();
-        phy_container.client_ifaces.insert(fake_iface_id, driver_features);
+        let _ = phy_container.client_ifaces.insert(fake_iface_id, driver_features);
 
-        phy_manager.phys.insert(fake_phy_id, phy_container);
+        let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
 
         phy_manager.on_iface_removed(fake_iface_id);
 
@@ -1330,9 +1350,9 @@ mod tests {
 
         // Inject the fake PHY information
         let mut phy_container = PhyContainer::new(phy_info);
-        phy_container.client_ifaces.insert(present_iface_id, Vec::new());
-        phy_container.client_ifaces.insert(removed_iface_id, Vec::new());
-        phy_manager.phys.insert(fake_phy_id, phy_container);
+        let _ = phy_container.client_ifaces.insert(present_iface_id, Vec::new());
+        let _ = phy_container.client_ifaces.insert(removed_iface_id, Vec::new());
+        let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
         phy_manager.on_iface_removed(removed_iface_id);
 
         // Expect that the iface ID has been removed from the PhyContainer
@@ -1367,7 +1387,7 @@ mod tests {
         let phy_info = fake_phy_info(fake_phy_id, fake_mac_roles);
         let phy_container = PhyContainer::new(phy_info);
 
-        phy_manager.phys.insert(fake_phy_id, phy_container);
+        let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
 
         // Retrieve the client ID
         let client = phy_manager.get_client();
@@ -1389,13 +1409,13 @@ mod tests {
         let phy_info = fake_phy_info(fake_phy_id, fake_mac_roles);
         let phy_container = PhyContainer::new(phy_info);
 
-        phy_manager.phys.insert(fake_phy_id, phy_container);
+        let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
 
         // Insert the fake iface
         let fake_iface_id = 1;
         let phy_container = phy_manager.phys.get_mut(&fake_phy_id).unwrap();
         let driver_features = Vec::new();
-        phy_container.client_ifaces.insert(fake_iface_id, driver_features);
+        let _ = phy_container.client_ifaces.insert(fake_iface_id, driver_features);
 
         // Retrieve the client ID
         let client = phy_manager.get_client();
@@ -1417,9 +1437,9 @@ mod tests {
         let fake_mac_roles = vec![MacRole::Ap];
         let phy_info = fake_phy_info(fake_phy_id, fake_mac_roles);
         let mut phy_container = PhyContainer::new(phy_info);
-        phy_container.ap_ifaces.insert(fake_iface_id);
+        let _ = phy_container.ap_ifaces.insert(fake_iface_id);
 
-        phy_manager.phys.insert(fake_phy_id, phy_container);
+        let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
 
         // Retrieve the client ID
         let client = phy_manager.get_client();
@@ -1440,16 +1460,16 @@ mod tests {
         let fake_mac_roles = vec![MacRole::Ap];
         let phy_info = fake_phy_info(fake_phy_id, fake_mac_roles);
         let mut phy_container = PhyContainer::new(phy_info);
-        phy_container.ap_ifaces.insert(1);
-        phy_manager.phys.insert(fake_phy_id, phy_container);
+        let _ = phy_container.ap_ifaces.insert(1);
+        let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
         // Create a PhyContainer that has a client iface but no WPA3 support.
         let fake_phy_id_client = 2;
         let fake_mac_roles_client = vec![MacRole::Client];
         let phy_info_client = fake_phy_info(fake_phy_id_client, fake_mac_roles_client);
         let mut phy_container_client = PhyContainer::new(phy_info_client);
         let driver_features = Vec::new();
-        phy_container_client.client_ifaces.insert(2, driver_features);
-        phy_manager.phys.insert(fake_phy_id_client, phy_container_client);
+        let _ = phy_container_client.client_ifaces.insert(2, driver_features);
+        let _ = phy_manager.phys.insert(fake_phy_id_client, phy_container_client);
 
         // Retrieve the client ID
         let client = phy_manager.get_wpa3_capable_client();
@@ -1475,9 +1495,9 @@ mod tests {
         // Insert the fake iface
         let fake_iface_id = 1;
         let driver_features = vec![wpa3_feature];
-        phy_container.client_ifaces.insert(fake_iface_id, driver_features);
+        let _ = phy_container.client_ifaces.insert(fake_iface_id, driver_features);
 
-        phy_manager.phys.insert(fake_phy_id, phy_container);
+        let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
 
         // Retrieve the client ID
         let client = phy_manager.get_wpa3_capable_client();
@@ -1502,12 +1522,12 @@ mod tests {
         let phy_container = PhyContainer::new(phy_info);
 
         {
-            phy_manager.phys.insert(fake_phy_id, phy_container);
+            let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
 
             // Insert the fake iface
             let phy_container = phy_manager.phys.get_mut(&fake_phy_id).unwrap();
             let driver_features = Vec::new();
-            phy_container.client_ifaces.insert(fake_iface_id, driver_features);
+            let _ = phy_container.client_ifaces.insert(fake_iface_id, driver_features);
 
             // Stop client connections
             let stop_clients_future = phy_manager.destroy_all_client_ifaces();
@@ -1545,11 +1565,11 @@ mod tests {
 
         // Insert the fake AP iface and then stop clients
         {
-            phy_manager.phys.insert(fake_phy_id, phy_container);
+            let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
 
             // Insert the fake AP iface
             let phy_container = phy_manager.phys.get_mut(&fake_phy_id).unwrap();
-            phy_container.ap_ifaces.insert(fake_iface_id);
+            let _ = phy_container.ap_ifaces.insert(fake_iface_id);
 
             // Stop client connections
             let stop_clients_future = phy_manager.destroy_all_client_ifaces();
@@ -1595,7 +1615,7 @@ mod tests {
         let phy_info = fake_phy_info(fake_phy_id, fake_mac_roles);
         let phy_container = PhyContainer::new(phy_info);
 
-        phy_manager.phys.insert(fake_phy_id, phy_container);
+        let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
 
         // Retrieve the AP interface ID
         let fake_iface_id = 1;
@@ -1631,12 +1651,12 @@ mod tests {
         let phy_info = fake_phy_info(fake_phy_id, fake_mac_roles);
         let phy_container = PhyContainer::new(phy_info);
 
-        phy_manager.phys.insert(fake_phy_id, phy_container);
+        let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
 
         // Insert the fake iface
         let fake_iface_id = 1;
         let phy_container = phy_manager.phys.get_mut(&fake_phy_id).unwrap();
-        phy_container.ap_ifaces.insert(fake_iface_id);
+        let _ = phy_container.ap_ifaces.insert(fake_iface_id);
 
         // Retrieve the AP iface ID
         let get_ap_future = phy_manager.create_or_get_ap_iface();
@@ -1662,7 +1682,7 @@ mod tests {
         let phy_info = fake_phy_info(fake_phy_id, fake_mac_roles);
         let phy_container = PhyContainer::new(phy_info);
 
-        phy_manager.phys.insert(fake_phy_id, phy_container);
+        let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
 
         // Retrieve the client ID
         let get_ap_future = phy_manager.create_or_get_ap_iface();
@@ -1688,11 +1708,11 @@ mod tests {
             let phy_info = fake_phy_info(fake_phy_id, fake_mac_roles);
             let phy_container = PhyContainer::new(phy_info);
 
-            phy_manager.phys.insert(fake_phy_id, phy_container);
+            let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
 
             // Insert the fake iface
             let phy_container = phy_manager.phys.get_mut(&fake_phy_id).unwrap();
-            phy_container.ap_ifaces.insert(fake_iface_id);
+            let _ = phy_container.ap_ifaces.insert(fake_iface_id);
 
             // Remove the AP iface ID
             let destroy_ap_iface_future = phy_manager.destroy_ap_iface(fake_iface_id);
@@ -1727,11 +1747,11 @@ mod tests {
             let phy_info = fake_phy_info(fake_phy_id, fake_mac_roles);
             let phy_container = PhyContainer::new(phy_info);
 
-            phy_manager.phys.insert(fake_phy_id, phy_container);
+            let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
 
             // Insert the fake iface
             let phy_container = phy_manager.phys.get_mut(&fake_phy_id).unwrap();
-            phy_container.ap_ifaces.insert(fake_iface_id);
+            let _ = phy_container.ap_ifaces.insert(fake_iface_id);
 
             // Remove a non-existent AP iface ID
             let destroy_ap_iface_future = phy_manager.destroy_ap_iface(2);
@@ -1766,12 +1786,12 @@ mod tests {
             let phy_info = fake_phy_info(fake_phy_id, fake_mac_roles);
             let phy_container = PhyContainer::new(phy_info);
 
-            phy_manager.phys.insert(fake_phy_id, phy_container);
+            let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
 
             // Insert the fake iface
             let phy_container = phy_manager.phys.get_mut(&fake_phy_id).unwrap();
-            phy_container.ap_ifaces.insert(0);
-            phy_container.ap_ifaces.insert(1);
+            let _ = phy_container.ap_ifaces.insert(0);
+            let _ = phy_container.ap_ifaces.insert(1);
 
             // Expect two interface destruction requests
             let destroy_ap_iface_future = phy_manager.destroy_all_ap_ifaces();
@@ -1812,11 +1832,11 @@ mod tests {
             let phy_container = PhyContainer::new(phy_info);
             let driver_features = Vec::new();
 
-            phy_manager.phys.insert(fake_phy_id, phy_container);
+            let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
 
             // Insert the fake iface
             let phy_container = phy_manager.phys.get_mut(&fake_phy_id).unwrap();
-            phy_container.client_ifaces.insert(fake_iface_id, driver_features);
+            let _ = phy_container.client_ifaces.insert(fake_iface_id, driver_features);
 
             // Stop all AP ifaces
             let destroy_ap_iface_future = phy_manager.destroy_all_ap_ifaces();
@@ -1849,11 +1869,11 @@ mod tests {
         let phy_info = fake_phy_info(fake_phy_id, fake_mac_roles);
         let phy_container = PhyContainer::new(phy_info);
 
-        phy_manager.phys.insert(fake_phy_id, phy_container);
+        let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
 
         // Insert the fake iface
         let phy_container = phy_manager.phys.get_mut(&fake_phy_id).unwrap();
-        phy_container.client_ifaces.insert(fake_iface_id, driver_features);
+        let _ = phy_container.client_ifaces.insert(fake_iface_id, driver_features);
 
         // Suggest an AP MAC
         let mac = MacAddress::from_bytes(&[1, 2, 3, 4, 5, 6]).unwrap();
@@ -1901,7 +1921,7 @@ mod tests {
         let phy_info = fake_phy_info(fake_phy_id, fake_mac_roles);
         let phy_container = PhyContainer::new(phy_info);
 
-        phy_manager.phys.insert(fake_phy_id, phy_container);
+        let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
 
         // Suggest an AP MAC
         let mac = MacAddress::from_bytes(&[1, 2, 3, 4, 5, 6]);
@@ -2034,7 +2054,7 @@ mod tests {
         let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
         // Insert a couple fake PHYs.
-        phy_manager.phys.insert(
+        let _ = phy_manager.phys.insert(
             0,
             PhyContainer {
                 phy_info: fake_phy_info(0, vec![]),
@@ -2042,7 +2062,7 @@ mod tests {
                 ap_ifaces: HashSet::new(),
             },
         );
-        phy_manager.phys.insert(
+        let _ = phy_manager.phys.insert(
             1,
             PhyContainer {
                 phy_info: fake_phy_info(1, vec![]),
@@ -2119,7 +2139,7 @@ mod tests {
         let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
 
         // Insert a fake PHY.
-        phy_manager.phys.insert(
+        let _ = phy_manager.phys.insert(
             0,
             PhyContainer {
                 phy_info: fake_phy_info(0, vec![]),
@@ -2179,12 +2199,12 @@ mod tests {
         for phy_id in 0..4 {
             let fake_mac_roles = fake_mac_roles.clone();
             let phy_info = fake_phy_info(phy_id, fake_mac_roles);
-            phy_manager.phys.insert(phy_id, PhyContainer::new(phy_info));
+            let _ = phy_manager.phys.insert(phy_id, PhyContainer::new(phy_info));
 
             // Give the 0th and 2nd PHYs have client interfaces.
             if phy_id % 2 == 0 {
                 let phy_container = phy_manager.phys.get_mut(&phy_id).expect("missing PHY");
-                phy_container.client_ifaces.insert(phy_id, Vec::new());
+                let _ = phy_container.client_ifaces.insert(phy_id, Vec::new());
             }
         }
 
@@ -2269,7 +2289,7 @@ mod tests {
         // assigned that interface.
         for phy_id in 0..3 {
             let phy_info = fake_phy_info(phy_id, fake_mac_roles.clone());
-            phy_manager.phys.insert(phy_id, PhyContainer::new(phy_info));
+            let _ = phy_manager.phys.insert(phy_id, PhyContainer::new(phy_info));
         }
 
         // Run recovery.
@@ -2365,7 +2385,7 @@ mod tests {
         // not been set to enabled.
         let fake_mac_roles = vec![fidl_fuchsia_wlan_device::MacRole::Client];
         let phy_info = fake_phy_info(0, fake_mac_roles);
-        phy_manager.phys.insert(0, PhyContainer::new(phy_info));
+        let _ = phy_manager.phys.insert(0, PhyContainer::new(phy_info));
 
         // Run recovery and ensure that it completes immediately and does not recover any
         // interfaces.
@@ -2400,8 +2420,8 @@ mod tests {
 
         let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
         let mut phy_container = PhyContainer::new(phy_info);
-        phy_container.client_ifaces.insert(0, driver_features);
-        phy_manager.phys.insert(fake_phy_id, phy_container);
+        let _ = phy_container.client_ifaces.insert(0, driver_features);
+        let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
 
         // Check that has_wpa3_client_iface recognizes that WPA3 is supported
         assert_eq!(phy_manager.has_wpa3_client_iface(), true);
@@ -2410,7 +2430,7 @@ mod tests {
         let fake_phy_id = 1;
         let phy_info = fake_phy_info(fake_phy_id, Vec::new());
         let phy_container = PhyContainer::new(phy_info);
-        phy_manager.phys.insert(fake_phy_id, phy_container);
+        let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
 
         // Phy manager has at least one WPA3 capable iface, so has_wpa3_iface should still be true.
         assert_eq!(phy_manager.has_wpa3_client_iface(), true);
@@ -2426,10 +2446,10 @@ mod tests {
         let fake_phy_id = 0;
         let phy_info = fake_phy_info(fake_phy_id, Vec::new());
         let mut phy_container = PhyContainer::new(phy_info);
-        phy_container.client_ifaces.insert(0, driver_features);
+        let _ = phy_container.client_ifaces.insert(0, driver_features);
 
         let mut phy_manager = PhyManager::new(test_values.proxy, test_values.node);
-        phy_manager.phys.insert(fake_phy_id, phy_container);
+        let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
 
         assert_eq!(phy_manager.has_wpa3_client_iface(), false);
     }
