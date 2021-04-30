@@ -26,7 +26,7 @@ table MaskEntry {
     /// Overlap check.
     /// If true, checks this mask for overlapping bits defined for all registers.
     /// If false, doesn't check.
-    /// If in doubt, default to true. If not set, defaults to true.
+    /// If absent, interpreted as true.
     4: bool overlap_check_on;
 };
 

@@ -28,11 +28,11 @@ enum BondableMode {
 /// fields of this table are optional and pairing can still succeed if none of them are set.
 table PairingOptions {
     /// Only relevant for LE. If present, determines the Security Manager security level to pair
-    /// with. If not present, defaults to PairingSecurityLevel.AUTHENTICATED.
+    /// with. If not present, interpreted as PairingSecurityLevel.AUTHENTICATED.
     1: PairingSecurityLevel le_security_level;
 
     /// If transport is LOW_ENERGY or DUAL_MODE, whether the device should form a bond or not during
-    /// pairing. If not present, the pairing will default to bondable mode.
+    /// pairing. If not present, interpreted as bondable mode.
     ///
     /// If transport is CLASSIC, this option must be absent or otherwise the value BONDABLE.
     /// NON_BONDABLE mode is not currently supported for the CLASSIC transport
@@ -42,6 +42,6 @@ table PairingOptions {
     /// If transport is LOW_ENERGY, indicate a desire to pair over the LE transport.
     /// If transport is CLASSIC, indicate a desire to pair over the Br/Edr transport.
     /// If transport is DUAL_MODE, indicate a desire to pair over both transports.
-    /// If absent, shall be interpreted as DUAL_MODE
+    /// If not present, interpreted as TechnologyType.DUAL_MODE
     3: TechnologyType transport;
 };

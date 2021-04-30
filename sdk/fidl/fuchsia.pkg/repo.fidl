@@ -83,7 +83,8 @@ table RepositoryConfig {
     /// Only used for the fuchsia-pkg://fuchsia.com/ repo.
     4: string update_package_url;
 
-    /// The initial trusted root metadata version. Optional, defaulting to 1.
+    /// The initial trusted root metadata version. Optional, if absent presumed
+    /// to be 1.
     ///
     /// This value describes the initial root metadata version the resolver will
     /// fetch to initialize trust, once it's signatures has been verified by the
@@ -98,7 +99,7 @@ table RepositoryConfig {
 
     /// The number of `root_keys` that need to have signed the root metadata for it
     /// to be considered trusted. This value must be greater than or equal to 1.
-    /// Optional, defaulting to 1.
+    /// Optional, if absent presumed to be 1.
     6: uint32 root_threshold;
 
     /// Whether the package resolver should check attached storage for blobs and

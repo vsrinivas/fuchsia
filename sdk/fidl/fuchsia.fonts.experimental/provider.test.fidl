@@ -69,7 +69,7 @@ table ListTypefacesRequest {
     1: ListTypefacesFlags flags;
 
     /// The name or alias of a font family. By default, families whose name
-    /// exactly matches`family`. For substring matching, set the request's
+    /// exactly matches `family`. For substring matching, set the request's
     /// `MATCH_FAMILY_NAME_SUBSTRING` flag.
     2: ff.FamilyName family;
 

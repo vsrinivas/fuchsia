@@ -54,7 +54,7 @@ table CreateDecoder_Params {
     /// This must be true when creating a video encoder, or the CodecFactory
     /// channel will close.
     ///
-    /// If not set, defaults to false.
+    /// If not set, interpreted as false.
     2: bool promise_separate_access_units_on_input;
 
     // "require" fields:
@@ -86,7 +86,7 @@ table CreateDecoder_Params {
     /// separate AUs.  This means the client cannot have parts of two separate AUs
     /// in the same packet, unless require_can_stream_bytes_input is true.
     ///
-    /// If not set, defaults to false.
+    /// If not set, interpreted as false.
     3: bool require_can_stream_bytes_input;
 
     /// A decoder is allowed to be capable of streaming bytes but not capable of
@@ -98,7 +98,7 @@ table CreateDecoder_Params {
     /// the client must start the first packet with the start of an AU, but can
     /// send a stream of bytes after that.
     ///
-    /// If not set, defaults to false.
+    /// If not set, interpreted as false.
     4: bool require_can_find_start;
 
     /// On problematic input data, all decoders are expected to at least be able to
@@ -110,7 +110,7 @@ table CreateDecoder_Params {
     /// Codec is encouraged, but not required, to also satisfy requirements of
     /// require_report_all_detected_errors.
     ///
-    /// If not set, defaults to false.
+    /// If not set, interpreted as false.
     5: bool require_can_re_sync;
 
     /// Sometimes a client would rather fail an overall use of a decoder than fail
@@ -144,13 +144,13 @@ table CreateDecoder_Params {
     /// Regardless of this setting, not all timestamp_ish values provided on input
     /// are guaranteed to show up on output.
     ///
-    /// If not set, defaults to false.
+    /// If not set, interpreted as false.
     6: bool require_report_all_detected_errors;
 
     /// If true, require that the returned codec is HW-accelerated.  See also
     /// `require_sw`.
     ///
-    /// If not set, defaults to false.
+    /// If not set, interpreted as false.
     7: bool require_hw;
 
     /// permit_lack_of_split_header_handling
@@ -182,7 +182,7 @@ table CreateDecoder_Params {
     /// headers.  This is not an attempt at a mechanism to fully work around a
     /// codec that doesn't handle split headers.
     ///
-    /// If not set, defaults to false.
+    /// If not set, interpreted as false.
     //
     // TODO(dustingreen): In the near term, wire this up so that SoftAAC2.cpp
     // used for ADTS is not selected when this field is false, even if there is
@@ -216,7 +216,7 @@ table CreateDecoder_Params {
     /// builds may lack a SW-based decoder for some formats.  See also
     /// `require_hw`.
     ///
-    /// If not set, defaults to false.
+    /// If not set, interpreted as false.
     11: bool require_sw;
 };
 
@@ -232,7 +232,7 @@ table CreateEncoder_Params {
 
     /// If true, require that the returned codec is HW-accelerated.
     ///
-    /// If not set, defaults to false.
+    /// If not set, interpreted as false.
     2: bool require_hw;
 };
 

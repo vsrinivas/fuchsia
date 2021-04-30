@@ -51,7 +51,7 @@ table BaseShellConfig {
     /// When set to true, the base shell is kept alive after a log in. This is
     /// used for testing because current integration tests expect base shell
     /// to always be running.
-    /// Default: false
+    /// Optional, if absent presumed to be false.
     2: bool keep_alive_after_login;
 };
 
@@ -69,17 +69,17 @@ table SessionShellConfig {
 
     /// The display usage policy for this session shell.
     ///
-    /// Optional: defaults to DisplayUsage::kUnknown.
+    /// Optional, if absent presumed to be [`fuchsia.ui.policy/DisplayUsage.UNKNOWN`].
     2: fuchsia.ui.policy.DisplayUsage display_usage;
 
     /// The screen height in millimeters for the session shell's display.
     ///
-    /// Optional: defaults to full screen.
+    /// Optional, if absent presumed to be full screen.
     3: float32 screen_height;
 
     /// The screen width in millimeters for the session shell's display.
     ///
-    /// Optional: defaults to full screen.
+    /// Optional, if absent presumed to be full screen.
     4: float32 screen_width;
 };
 

@@ -10,6 +10,6 @@ table Interest {
     /// Minimum desired severity. Components should include records at or
     /// above this severity.
     ///
-    /// The default is `INFO`.
+    /// If not present, interpreted as Severity.INFO.
     1: Severity min_severity;
 };

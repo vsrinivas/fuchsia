@@ -588,23 +588,24 @@ table H264QuantizationParameters {
 
 /// Settings for H264 Encoders.
 table H264EncoderSettings {
-    /// Target bits per second for encoded stream. Defaults to 200,000 if
-    /// omitted.
+    /// Target bits per second for encoded stream.
+    /// If omitted, interpreted as 200,000.
     1: uint32 bit_rate;
-    /// Target frames per second for encoded stream. Defaults to 30 if omitted.
+    /// Target frames per second for encoded stream.
+    /// If omitted, interpreted as 30.
     2: uint32 frame_rate;
-    /// Number of pictures per keyframe. Defaults to 8 if omitted. Setting to 0
-    /// will disable key frame encoding, except for if force_key_frame is set to
-    /// true.
+    /// Number of pictures per keyframe.  Setting to 0 will disable key frame
+    /// encoding, except for if force_key_frame is set to true.
+    /// If omitted, interpreted as 8.
     3: uint32 gop_size;
     /// Whether to enable frame rate adjustments in order to meet target bitrate.
-    /// False if omitted.
+    /// If omitted, interpreted as false.
     4: bool variable_frame_rate;
-    /// Lowest frame rate allowed if `variable_frame_rate` is enabled. Defaults
-    /// to 10 if omitted.
+    /// Lowest frame rate allowed if `variable_frame_rate` is enabled. If
+    /// omitted, interpreted as 10.
     5: uint32 min_frame_rate;
-    /// If true, next frame encoded will be a key frame. If omitted, defaults to
-    /// false.
+    /// If true, next frame encoded will be a key frame. If omitted, interpreted
+    /// as false.
     6: bool force_key_frame;
     /// Allow customization of quantization parameters for encoding. Each frame
     /// submitted after setting this will use the new values. If omitted, no

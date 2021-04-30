@@ -46,15 +46,16 @@ table Config {
     6: bool maintain_utc_clock;
 
     /// The number of threads to use for running component_manager's executor.
-    /// Value defaults to 1.
+    /// If not present, interpreted as 1.
     7: uint32 num_threads;
 
-    /// Which builtin resolver to use for the fuchsia-pkg scheme. If not supplied this defaults to
-    /// the NONE option.
+    /// Which builtin resolver to use for the fuchsia-pkg scheme.
+    /// If not present, interpreted as BuiltinPkgResolver.NONE.
     8: BuiltinPkgResolver builtin_pkg_resolver;
 
     /// Determine what content to expose through the component manager's
-    /// outgoing directory. If no value is set, this defaults to NONE.
+    /// outgoing directory.
+    /// If not present, interpreted as OutDirContents.NONE.
     9: OutDirContents out_dir_contents;
 
     /// URL of the root component to launch. This field is used if the no URL
@@ -69,8 +70,8 @@ table Config {
     /// If true, component manager will log all events dispatched in the topology.
     12: bool log_all_events;
 
-    /// Which builtin resolver to use for the fuchsia-boot scheme. If not supplied this defaults to
-    /// the NONE option.
+    /// Which builtin resolver to use for the fuchsia-boot scheme.
+    /// If not present, interpreted as BuiltinBootResolver.NONE.
     13: BuiltinBootResolver builtin_boot_resolver;
 };
 

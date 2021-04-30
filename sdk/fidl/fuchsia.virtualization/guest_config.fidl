@@ -148,17 +148,17 @@ resource table GuestConfig {
     /// Optional virtio-magma device.
     13: MagmaDevice magma_device;
 
-    /// Whether to add a default network device (default).
+    /// Whether to add a default network device (assumed if absent).
     14: bool default_net;
-    /// Enable virtio-balloon (default).
+    /// Enable virtio-balloon (assumed if absent).
     15: bool virtio_balloon;
-    /// Enable virtio-console (default).
+    /// Enable virtio-console (assumed if absent).
     16: bool virtio_console;
-    /// Enable virtio-gpu (default).
+    /// Enable virtio-gpu (assumed if absent).
     17: bool virtio_gpu;
-    /// Enable virtio-rng (default).
+    /// Enable virtio-rng (assumed if absent).
     18: bool virtio_rng;
-    /// Enable virtio-vsock (default).
+    /// Enable virtio-vsock (assumed if absent).
     19: bool virtio_vsock;
 };
 

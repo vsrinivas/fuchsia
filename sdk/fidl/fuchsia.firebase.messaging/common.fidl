@@ -77,7 +77,8 @@ table DownstreamMessage {
     /// "control" is used for connection control.
     4: string type;
 
-    /// Priority level. By default messages are sent with normal priority.
+    /// Priority level. If absent, indicates normal priority (i.e.
+    /// Priority.NORMAL).
     5: Priority priority;
 
     /// Time to live, in seconds.

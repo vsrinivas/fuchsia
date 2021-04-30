@@ -19,7 +19,7 @@ enum PairingSecurityLevel {
 /// fields of this table are optional and pairing can still succeed if none of them are set.
 table PairingOptions {
     /// Only relevant for LE. If present, determines the Security Manager security level to pair
-    /// with. If not present, defaults to PairingSecurityLevel.AUTHENTICATED.
+    /// with. If not present, interpreted as PairingSecurityLevel.AUTHENTICATED.
     1: PairingSecurityLevel le_security_level;
 
     /// If not present or false, the pairing will default to bondable mode. Otherwise, setting this

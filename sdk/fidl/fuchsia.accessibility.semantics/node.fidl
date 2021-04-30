@@ -309,6 +309,6 @@ table Node {
     8: fuchsia.ui.gfx.mat4 transform;
 
     /// Node ID of the ancestor of this node that is used as the target of |transform|.
-    /// If not present, this defaults to this node's parent.
+    /// If not present, this is interpreted as this node's parent.
     9: uint32 container_id;
 };
