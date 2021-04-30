@@ -31,6 +31,19 @@ lazy_static! {
             KERNEL_URL,
         )
     };
+    pub static ref DART_SPAM: Vec<String> = vec![
+        concat!(
+            "WARNING: 'dart.async_::_scheduleMicrotask (kind RegularFunction)' is accessed",
+            " through Dart C API without being marked as an entry point; its",
+            " tree-shaken signature cannot be verified."
+        )
+        .to_string(),
+        concat!(
+            "WARNING: See https://github.com/dart-lang/sdk/blob/master/runtime/docs/",
+            "compiler/aot/entry_point_pragma.md"
+        )
+        .to_string(),
+    ];
 }
 
 #[async_trait]
@@ -143,8 +156,16 @@ pub fn convert_debuglog_to_log_message(buf: &[u8]) -> Option<Message> {
         }
         Ok(s) => s,
     };
+
     if let Some(b'\n') = contents.bytes().last() {
         contents.pop();
+    }
+
+    // Check to see if the klog message matches a pattern of known dart runner spam.
+    // NOTE: This should only be present in the F1R release. This is not meant to
+    // be supported behavior of the diagnostics platform.
+    if (&*DART_SPAM).contains(&contents) {
+        return None;
     }
 
     // TODO(fxbug.dev/32998): Once we support structured logs we won't need this
@@ -399,6 +420,41 @@ mod tests {
 
         let log_message = log_stream.try_next().await.unwrap().unwrap();
         assert_eq!(log_message.msg().unwrap(), &long_log);
+        assert_eq!(log_message.metadata.severity, Severity::Info);
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn known_spam_skipped() {
+        let debug_log = TestDebugLog::new();
+        debug_log.enqueue_read_entry(&TestDebugEntry::new(
+            concat!(
+                "WARNING: 'dart.async_::_scheduleMicrotask (kind RegularFunction)' is accessed",
+                " through Dart C API without being marked as an entry point; its",
+                " tree-shaken signature cannot be verified."
+            )
+            .as_bytes(),
+        ));
+
+        debug_log.enqueue_read_entry(&TestDebugEntry::new(
+            concat!(
+                "WARNING: See https://github.com/dart-lang/sdk/blob/master/runtime/docs/",
+                "compiler/aot/entry_point_pragma.md"
+            )
+            .as_bytes(),
+        ));
+
+        debug_log.enqueue_read_entry(&TestDebugEntry::new("WARNING: first real log".as_bytes()));
+        debug_log.enqueue_read_entry(&TestDebugEntry::new("INFO: second real log".as_bytes()));
+
+        let log_bridge = DebugLogBridge::create(debug_log);
+        let mut log_stream = Box::pin(log_bridge.listen());
+
+        let log_message = log_stream.try_next().await.unwrap().unwrap();
+        assert_eq!(log_message.msg().unwrap(), "WARNING: first real log");
+        assert_eq!(log_message.metadata.severity, Severity::Warn);
+
+        let log_message = log_stream.try_next().await.unwrap().unwrap();
+        assert_eq!(log_message.msg().unwrap(), "INFO: second real log");
         assert_eq!(log_message.metadata.severity, Severity::Info);
     }
 }
