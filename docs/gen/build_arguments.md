@@ -110,21 +110,21 @@ AVB algorithm type.Supported options:
 
 **Current value (from the default):** `"SHA512_RSA4096"`
 
-From //build/images/vbmeta.gni:33
+From //build/images/vbmeta.gni:35
 
 ### avb_atx_metadata
 AVB metadata which will be used to validate public key
 
 **Current value (from the default):** `""`
 
-From //build/images/vbmeta.gni:24
+From //build/images/vbmeta.gni:26
 
 ### avb_key
 a key which will be used to sign VBMETA and images for AVB
 
 **Current value (from the default):** `""`
 
-From //build/images/vbmeta.gni:21
+From //build/images/vbmeta.gni:23
 
 ### base_driver_package_labels
 If you add fuchsia_driver_package labels to this variable, any drivers in these packages will
@@ -299,7 +299,7 @@ struct.
 
 **Current value (from the default):** `[]`
 
-From //build/images/vbmeta.gni:40
+From //build/images/vbmeta.gni:42
 
 ### board_has_libvulkan_arm_mali
 Board files can set this to true if they have a package with a mali libvulkan VCD.
@@ -1511,7 +1511,7 @@ instead of bootfs.
 
 **Current value (from the default):** `false`
 
-From //build/images/vbmeta.gni:18
+From //build/images/vbmeta.gni:20
 
 ### include_fvm_blob_sparse
 Include fvm.blob.sparse.blk image into the build if set to true
@@ -3707,7 +3707,7 @@ and the paving script will pave vbmeta images to the target device.
 
 **Current value (from the default):** `false`
 
-From //build/images/vbmeta.gni:14
+From //build/images/vbmeta.gni:16
 
 ### use_vboot
 Use vboot images
@@ -3982,7 +3982,7 @@ Partition name from where image will be verified
 
 **Current value (from the default):** `"zircon"`
 
-From //build/images/vbmeta.gni:36
+From //build/images/vbmeta.gni:38
 
 ### zx_assert_level
 Controls which asserts are enabled.
