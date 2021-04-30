@@ -371,4 +371,23 @@ TEST_F(AmlPwmDeviceTest, DisableTest) {
   EXPECT_OK(pwm_->PwmImplDisable(5));  // Disable other PWMs
 }
 
+TEST_F(AmlPwmDeviceTest, SetConfigPeriodNotDivisibleBy100Test) {
+  (*mock_mmio0_)[2 * 4].ExpectRead(0x01000000).ExpectWrite(0x01000001);  // SetMode
+  (*mock_mmio0_)[2 * 4].ExpectRead(0xFFFFFFFF).ExpectWrite(0xFBFFFFFF);  // Invert
+  (*mock_mmio0_)[2 * 4].ExpectRead(0x00000000).ExpectWrite(0x10000000);  // EnableConst
+  (*mock_mmio0_)[0 * 4].ExpectRead(0xA39D9259).ExpectWrite(0x10420000);  // SetDutyCycle
+  mode_config on{
+      .mode = ON,
+      .regular = {},
+  };
+  pwm_config on_cfg{
+      .polarity = false,
+      .period_ns = 170625,
+      .duty_cycle = 100.0,
+      .mode_config_buffer = reinterpret_cast<uint8_t*>(&on),
+      .mode_config_size = sizeof(on),
+  };
+  EXPECT_OK(pwm_->PwmImplSetConfig(0, &on_cfg));  // Success
+}
+
 }  // namespace pwm

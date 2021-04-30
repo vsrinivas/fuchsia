@@ -33,8 +33,8 @@ void DutyCycleToClockCount(float duty_cycle, uint32_t period_ns, uint16_t* high_
 
   // Calculate the high and low count first based on the duty cycle requested.
   const auto high_time_ns =
-      static_cast<uint64_t>((duty_cycle * static_cast<float>(period_ns)) / 100.0);
-  const auto period_count = static_cast<uint16_t>(period_ns / kNanosecondsPerClock);
+      static_cast<uint64_t>(DivideRounded((duty_cycle * static_cast<float>(period_ns)), 100.0));
+  const auto period_count = static_cast<uint16_t>(DivideRounded(period_ns, kNanosecondsPerClock));
 
   const auto duty_count = static_cast<uint16_t>(DivideRounded(high_time_ns, kNanosecondsPerClock));
 
