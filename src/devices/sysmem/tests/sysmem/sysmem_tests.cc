@@ -462,6 +462,7 @@ bool AttachTokenSucceeds(
     fit::function<void(BufferCollectionConstraints& to_modify)> modify_constraints_initiator,
     fit::function<void(BufferCollectionConstraints& to_modify)> modify_constraints_participant,
     fit::function<void(BufferCollectionConstraints& to_modify)> modify_constraints_attached,
+    fit::function<void(BufferCollectionInfo& to_verify)> verify_info,
     uint32_t expected_buffer_count = 6) {
   ZX_DEBUG_ASSERT(!fail_attached_early || attach_before_also);
   zx_status_t status;
@@ -4082,7 +4083,8 @@ TEST(Sysmem, AttachToken_BeforeAllocate_Success) {
   EXPECT_TRUE(AttachTokenSucceeds(
       true, false, [](BufferCollectionConstraints& to_modify) {},
       [](BufferCollectionConstraints& to_modify) {},
-      [](BufferCollectionConstraints& to_modify) {}));
+      [](BufferCollectionConstraints& to_modify) {},
+      [](BufferCollectionInfo& to_verify){}));
   IF_FAILURES_RETURN();
 }
 
@@ -4090,7 +4092,8 @@ TEST(Sysmem, AttachToken_AfterAllocate_Success) {
   EXPECT_TRUE(AttachTokenSucceeds(
       false, false, [](BufferCollectionConstraints& to_modify) {},
       [](BufferCollectionConstraints& to_modify) {},
-      [](BufferCollectionConstraints& to_modify) {}));
+      [](BufferCollectionConstraints& to_modify) {},
+      [](BufferCollectionInfo& to_verify){}));
 }
 
 TEST(Sysmem, AttachToken_BeforeAllocate_AttachedFailedEarly_Failure) {
@@ -4099,7 +4102,8 @@ TEST(Sysmem, AttachToken_BeforeAllocate_AttachedFailedEarly_Failure) {
   EXPECT_FALSE(AttachTokenSucceeds(
       true, true, [](BufferCollectionConstraints& to_modify) {},
       [](BufferCollectionConstraints& to_modify) {},
-      [](BufferCollectionConstraints& to_modify) {}));
+      [](BufferCollectionConstraints& to_modify) {},
+      [](BufferCollectionInfo& to_verify){}));
 }
 
 TEST(Sysmem, AttachToken_BeforeAllocate_Failure_BufferSizes) {
@@ -4108,7 +4112,8 @@ TEST(Sysmem, AttachToken_BeforeAllocate_Failure_BufferSizes) {
       [](BufferCollectionConstraints& to_modify) {},
       [](BufferCollectionConstraints& to_modify) {
         to_modify->buffer_memory_constraints.max_size_bytes = (512 * 512) * 3 / 2 - 1;
-      }));
+      },
+      [](BufferCollectionInfo& to_verify){}));
 }
 
 TEST(Sysmem, AttachToken_AfterAllocate_Failure_BufferSizes) {
@@ -4117,7 +4122,8 @@ TEST(Sysmem, AttachToken_AfterAllocate_Failure_BufferSizes) {
       [](BufferCollectionConstraints& to_modify) {},
       [](BufferCollectionConstraints& to_modify) {
         to_modify->buffer_memory_constraints.max_size_bytes = (512 * 512) * 3 / 2 - 1;
-      }));
+      },
+      [](BufferCollectionInfo& to_verify){}));
 }
 
 TEST(Sysmem, AttachToken_BeforeAllocate_Success_BufferCounts) {
@@ -4139,6 +4145,7 @@ TEST(Sysmem, AttachToken_BeforeAllocate_Success_BufferCounts) {
         // 2
         to_modify->min_buffer_count_for_camping = kAttachTokenBufferCount;
       },
+      [](BufferCollectionInfo& to_verify){},
       8  // max(8, 3 + 3 + 2)
       ));
 }
@@ -4162,6 +4169,7 @@ TEST(Sysmem, AttachToken_AfterAllocate_Success_BufferCounts) {
         // 2
         to_modify->min_buffer_count_for_camping = kAttachTokenBufferCount;
       },
+      [](BufferCollectionInfo& to_verify){},
       8  // max(8, 3 + 3)
       ));
 }
@@ -4171,6 +4179,7 @@ TEST(Sysmem, AttachToken_BeforeAllocate_Failure_BufferCounts) {
       true, false, [](BufferCollectionConstraints& to_modify) {},
       [](BufferCollectionConstraints& to_modify) {},
       [](BufferCollectionConstraints& to_modify) { to_modify->min_buffer_count_for_camping = 1; },
+      [](BufferCollectionInfo& to_verify){},
       // Only 6 get allocated, despite AttachToken() before allocation, because we intentionally
       // want AttachToken() before vs. after initial allocation to behave as close to the same as
       // possible.
@@ -4182,9 +4191,74 @@ TEST(Sysmem, AttachToken_AfterAllocate_Failure_BufferCounts) {
       false, false, [](BufferCollectionConstraints& to_modify) {},
       [](BufferCollectionConstraints& to_modify) {},
       [](BufferCollectionConstraints& to_modify) { to_modify->min_buffer_count_for_camping = 1; },
+      [](BufferCollectionInfo& to_verify){},
       // Only 6 get allocated at first, then AttachToken() sequence started after initial allocation
       // fails (it would have failed even if it had started before initial allocation though).
       6));
+}
+
+TEST(Sysmem, AttachToken_SelectsSameDomainAsInitialAllocation) {
+  // The first part is mostly to verify that we have a way of influencing an initial allocation
+  // to pick RAM coherency domain, for the benefit of the second AttachTokenSucceeds() call below.
+  EXPECT_TRUE(AttachTokenSucceeds(
+      false, false,
+      [](BufferCollectionConstraints& to_modify) {
+        to_modify->buffer_memory_constraints.cpu_domain_supported = true;
+        to_modify->buffer_memory_constraints.ram_domain_supported = true;
+        to_modify->buffer_memory_constraints.inaccessible_domain_supported = false;
+        // This will influence the initial allocation to pick RAM.
+        to_modify->usage.display = fuchsia_sysmem_displayUsageLayer;
+        EXPECT_TRUE(to_modify->usage.cpu != 0);
+      },
+      [](BufferCollectionConstraints& to_modify) {
+        to_modify->buffer_memory_constraints.cpu_domain_supported = true;
+        to_modify->buffer_memory_constraints.ram_domain_supported = true;
+        to_modify->buffer_memory_constraints.inaccessible_domain_supported = false;
+        EXPECT_TRUE(to_modify->usage.cpu != 0);
+      },
+      [](BufferCollectionConstraints& to_modify) {
+        to_modify->buffer_memory_constraints.cpu_domain_supported = true;
+        to_modify->buffer_memory_constraints.ram_domain_supported = true;
+        to_modify->buffer_memory_constraints.inaccessible_domain_supported = false;
+        EXPECT_TRUE(to_modify->usage.cpu != 0);
+      },
+      [](BufferCollectionInfo& to_verify){
+        EXPECT_EQ(fuchsia_sysmem_CoherencyDomain_RAM, to_verify->settings.buffer_settings.coherency_domain);
+      },
+      6
+      ));
+  // Now verify that if the initial allocation is CPU coherency domain, an attached token that would
+  // normally prefer RAM domain can succeed but will get CPU because the initial allocation already
+  // picked CPU.
+  EXPECT_TRUE(AttachTokenSucceeds(
+      false, false,
+      [](BufferCollectionConstraints& to_modify) {
+        to_modify->buffer_memory_constraints.cpu_domain_supported = true;
+        to_modify->buffer_memory_constraints.ram_domain_supported = true;
+        to_modify->buffer_memory_constraints.inaccessible_domain_supported = false;
+        EXPECT_TRUE(to_modify->usage.cpu != 0);
+      },
+      [](BufferCollectionConstraints& to_modify) {
+        to_modify->buffer_memory_constraints.cpu_domain_supported = true;
+        to_modify->buffer_memory_constraints.ram_domain_supported = true;
+        to_modify->buffer_memory_constraints.inaccessible_domain_supported = false;
+        EXPECT_TRUE(to_modify->usage.cpu != 0);
+      },
+      [](BufferCollectionConstraints& to_modify) {
+        to_modify->buffer_memory_constraints.cpu_domain_supported = true;
+        to_modify->buffer_memory_constraints.ram_domain_supported = true;
+        to_modify->buffer_memory_constraints.inaccessible_domain_supported = false;
+        // This would normally influence to pick RAM coherency domain, but because the existing
+        // BufferCollectionInfo says CPU, the attached participant will get CPU instead of its
+        // normally-preferred RAM.
+        to_modify->usage.display = fuchsia_sysmem_displayUsageLayer;
+        EXPECT_TRUE(to_modify->usage.cpu != 0);
+      },
+      [](BufferCollectionInfo& to_verify){
+        EXPECT_EQ(fuchsia_sysmem_CoherencyDomain_CPU, to_verify->settings.buffer_settings.coherency_domain);
+      },
+      6
+      ));
 }
 
 TEST(Sysmem, SetDispensable) {

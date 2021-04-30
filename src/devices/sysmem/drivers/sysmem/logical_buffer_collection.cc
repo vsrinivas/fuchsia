@@ -1053,12 +1053,21 @@ void LogicalBufferCollection::TryLateLogicalAllocation(std::vector<NodePropertie
   }
   switch (existing.settings().buffer_settings().coherency_domain()) {
     case fuchsia_sysmem2::wire::CoherencyDomain::kCpu:
+      // We don't want defaults chosen based on usage, so explicitly specify each of these fields.
       buffer_memory_constraints.set_cpu_domain_supported(table_set_.allocator(), true);
+      buffer_memory_constraints.set_ram_domain_supported(table_set_.allocator(), false);
+      buffer_memory_constraints.set_inaccessible_domain_supported(table_set_.allocator(), false);
       break;
     case fuchsia_sysmem2::wire::CoherencyDomain::kRam:
+      // We don't want defaults chosen based on usage, so explicitly specify each of these fields.
+      buffer_memory_constraints.set_cpu_domain_supported(table_set_.allocator(), false);
       buffer_memory_constraints.set_ram_domain_supported(table_set_.allocator(), true);
+      buffer_memory_constraints.set_inaccessible_domain_supported(table_set_.allocator(), false);
       break;
     case fuchsia_sysmem2::wire::CoherencyDomain::kInaccessible:
+      // We don't want defaults chosen based on usage, so explicitly specify each of these fields.
+      buffer_memory_constraints.set_cpu_domain_supported(table_set_.allocator(), false);
+      buffer_memory_constraints.set_ram_domain_supported(table_set_.allocator(), false);
       buffer_memory_constraints.set_inaccessible_domain_supported(table_set_.allocator(), true);
       break;
     default:
@@ -1682,7 +1691,8 @@ bool LogicalBufferCollection::CheckSanitizeBufferMemoryConstraints(
   // The CPU domain is supported by default.
   FIELD_DEFAULT(constraints, cpu_domain_supported, true);
   // If !usage.cpu, then participant doesn't care what domain, so indicate support
-  // for RAM and inaccessible domains in that case.
+  // for RAM and inaccessible domains in that case.  This only takes effect if the participant
+  // didn't explicitly specify a value for these fields.
   FIELD_DEFAULT(constraints, ram_domain_supported, !buffer_usage.cpu());
   FIELD_DEFAULT(constraints, inaccessible_domain_supported, !buffer_usage.cpu());
   if (stage != CheckSanitizeStage::kAggregated) {
