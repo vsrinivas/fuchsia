@@ -20,7 +20,6 @@ namespace fidl_codec {
 // Else, the handle comes from the write of an "etc" function (zx_channel_write_etc or write part of
 // a zx_channel_call_etc). In that case, the full disposition is used to print the handle.
 void DisplayHandle(const zx_handle_disposition_t& handle, PrettyPrinter& printer);
-void ObjTypeName(zx_obj_type_t obj_type, PrettyPrinter& printer);
 
 }  // namespace fidl_codec
 

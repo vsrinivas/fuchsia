@@ -21,49 +21,6 @@ constexpr int kUint32Precision = 8;
 
 }  // namespace
 
-#define ObjTypeNameCase(name) \
-  case name:                  \
-    printer << #name;         \
-    return
-
-void ObjTypeName(zx_obj_type_t obj_type, PrettyPrinter& printer) {
-  switch (obj_type) {
-    ObjTypeNameCase(ZX_OBJ_TYPE_NONE);
-    ObjTypeNameCase(ZX_OBJ_TYPE_PROCESS);
-    ObjTypeNameCase(ZX_OBJ_TYPE_THREAD);
-    ObjTypeNameCase(ZX_OBJ_TYPE_VMO);
-    ObjTypeNameCase(ZX_OBJ_TYPE_CHANNEL);
-    ObjTypeNameCase(ZX_OBJ_TYPE_EVENT);
-    ObjTypeNameCase(ZX_OBJ_TYPE_PORT);
-    ObjTypeNameCase(ZX_OBJ_TYPE_INTERRUPT);
-    ObjTypeNameCase(ZX_OBJ_TYPE_PCI_DEVICE);
-    ObjTypeNameCase(ZX_OBJ_TYPE_LOG);
-    ObjTypeNameCase(ZX_OBJ_TYPE_SOCKET);
-    ObjTypeNameCase(ZX_OBJ_TYPE_RESOURCE);
-    ObjTypeNameCase(ZX_OBJ_TYPE_EVENTPAIR);
-    ObjTypeNameCase(ZX_OBJ_TYPE_JOB);
-    ObjTypeNameCase(ZX_OBJ_TYPE_VMAR);
-    ObjTypeNameCase(ZX_OBJ_TYPE_FIFO);
-    ObjTypeNameCase(ZX_OBJ_TYPE_GUEST);
-    ObjTypeNameCase(ZX_OBJ_TYPE_VCPU);
-    ObjTypeNameCase(ZX_OBJ_TYPE_TIMER);
-    ObjTypeNameCase(ZX_OBJ_TYPE_IOMMU);
-    ObjTypeNameCase(ZX_OBJ_TYPE_BTI);
-    ObjTypeNameCase(ZX_OBJ_TYPE_PROFILE);
-    ObjTypeNameCase(ZX_OBJ_TYPE_PMT);
-    ObjTypeNameCase(ZX_OBJ_TYPE_SUSPEND_TOKEN);
-    ObjTypeNameCase(ZX_OBJ_TYPE_PAGER);
-    ObjTypeNameCase(ZX_OBJ_TYPE_EXCEPTION);
-    ObjTypeNameCase(ZX_OBJ_TYPE_CLOCK);
-    ObjTypeNameCase(ZX_OBJ_TYPE_STREAM);
-    ObjTypeNameCase(ZX_OBJ_TYPE_MSI_ALLOCATION);
-    ObjTypeNameCase(ZX_OBJ_TYPE_MSI_INTERRUPT);
-    default:
-      printer << obj_type;
-      return;
-  }
-}
-
 #define ShortObjTypeNameCase(name, text) \
   case name:                             \
     printer << text;                     \

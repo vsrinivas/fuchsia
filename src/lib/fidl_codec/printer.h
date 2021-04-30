@@ -127,8 +127,23 @@ class PrettyPrinter {
   // Displays a uint64_t value in padded hexadecimal format.
   void DisplayHexa64(uint64_t value);
 
+  // Displays an info maps type.
+  void DisplayInfoMapsType(zx_info_maps_type_t type);
+
+  // Display interrupt flags.
+  void DisplayInterruptFlags(uint32_t flags);
+
+  // Display and iommu type.
+  void DisplayIommuType(uint32_t type);
+
+  // Displays a ktrace control action.
+  void DisplayKtraceControlAction(uint32_t action);
+
   // Displays an object info topic.
   void DisplayObjectInfoTopic(uint32_t topic);
+
+  // Displays an object type.
+  void DisplayObjType(zx_obj_type_t obj_type);
 
   // Displays a packet guest_vcpu type.
   void DisplayPacketGuestVcpuType(uint8_t type);
@@ -142,6 +157,15 @@ class PrettyPrinter {
   // Displays PCI bar type.
   void DisplayPciBarType(uint32_t type);
 
+  // Displays a policy action.
+  void DisplayPolicyAction(uint32_t action);
+
+  // Displays a policy condition.
+  void DisplayPolicyCondition(uint32_t condition);
+
+  // Displays a policy topic.
+  void DisplayPolicyTopic(uint32_t topic);
+
   // Displays profile info flags name.
   void DisplayProfileInfoFlags(uint32_t flags);
 
@@ -154,8 +178,20 @@ class PrettyPrinter {
   // Displays rights.
   void DisplayRights(uint32_t rights);
 
+  // Displays rsrc kind.
+  void DisplayRsrcKind(zx_rsrc_kind_t kind);
+
   // Displays signals
   void DisplaySignals(zx_signals_t signals);
+
+  // Displays a socket create option.
+  void DisplaySocketCreateOptions(uint32_t options);
+
+  // Display a socket read option.
+  void DisplaySocketReadOptions(uint32_t options);
+
+  // Display socket shutdown options.
+  void DisplaySocketShutdownOptions(uint32_t options);
 
   // Displays status.
   void DisplayStatus(zx_status_t status);
@@ -163,8 +199,23 @@ class PrettyPrinter {
   // Displays string.
   void DisplayString(std::string_view string);
 
+  // Displays a system event type.
+  void DisplaySystemEventType(zx_system_event_type_t type);
+
+  // Displays a system powerctl.
+  void DisplaySystemPowerctl(uint32_t powerctl);
+
+  // Displays a thread state.
+  void DisplayThreadState(uint32_t state);
+
+  // Display a threda state topic.
+  void DisplayThreadStateTopic(zx_thread_state_topic_t topic);
+
   // Displays a time.
   void DisplayTime(zx_time_t time_ns);
+
+  // Displays a timer option.
+  void DisplayTimerOption(uint32_t option);
 
   // Displays a uintptr.
 #ifdef __MACH__
@@ -175,6 +226,24 @@ class PrettyPrinter {
 
   // Displays a vaddr.
   void DisplayVaddr(zx_vaddr_t addr);
+
+  // Displays a vcpu.
+  void DisplayVcpu(uint32_t type);
+
+  // Display a vmo option.
+  void DisplayVmOption(zx_vm_option_t option);
+
+  // Displays a vmo creation option.
+  void DisplayVmoCreationOption(uint32_t options);
+
+  // Displays a vmo operation.
+  void DisplayVmoOp(uint32_t op);
+
+  // Displays a vmo option.
+  void DisplayVmoOption(uint32_t options);
+
+  // Displays a vmo type.
+  void DisplayVmoType(uint32_t type);
 
   void IncrementTabulations();
   void DecrementTabulations();

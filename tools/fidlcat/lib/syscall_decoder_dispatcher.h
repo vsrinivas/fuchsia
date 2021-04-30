@@ -2358,22 +2358,16 @@ inline void DisplayValue<uint32_t>(SyscallType type, uint32_t value,
       printer.DisplayClock(value);
       break;
     case SyscallType::kExceptionChannelType:
-      printer << fidl_codec::Blue;
-      ExceptionChannelTypeName(value, printer);
-      printer << fidl_codec::ResetColor;
+      printer.DisplayExceptionChannelType(value);
       break;
     case SyscallType::kExceptionState:
       printer.DisplayExceptionState(value);
       break;
     case SyscallType::kFeatureKind:
-      printer << fidl_codec::Red;
-      FeatureKindName(value, printer);
-      printer << fidl_codec::ResetColor;
+      printer.DisplayFeatureKind(value);
       break;
     case SyscallType::kGuestTrap:
-      printer << fidl_codec::Red;
-      GuestTrapName(value, printer);
-      printer << fidl_codec::ResetColor;
+      printer.DisplayGuestTrap(value);
       break;
     case SyscallType::kHandle: {
       zx_handle_disposition_t handle_disposition;
@@ -2386,50 +2380,34 @@ inline void DisplayValue<uint32_t>(SyscallType type, uint32_t value,
       break;
     }
     case SyscallType::kInfoMapsType:
-      printer << fidl_codec::Red;
-      InfoMapsTypeName(value, printer);
-      printer << fidl_codec::ResetColor;
+      printer.DisplayInfoMapsType(value);
       break;
     case SyscallType::kInterruptFlags:
-      printer << fidl_codec::Red;
-      InterruptFlagsName(value, printer);
-      printer << fidl_codec::ResetColor;
+      printer.DisplayInterruptFlags(value);
       break;
     case SyscallType::kIommuType:
-      printer << fidl_codec::Red;
-      IommuTypeName(value, printer);
-      printer << fidl_codec::ResetColor;
+      printer.DisplayIommuType(value);
       break;
     case SyscallType::kKtraceControlAction:
-      printer << fidl_codec::Blue;
-      KtraceControlActionName(value, printer);
-      printer << fidl_codec::ResetColor;
+      printer.DisplayKtraceControlAction(value);
       break;
     case SyscallType::kObjectInfoTopic:
       printer.DisplayObjectInfoTopic(value);
       break;
     case SyscallType::kObjType:
-      printer << fidl_codec::Blue;
-      fidl_codec::ObjTypeName(value, printer);
-      printer << fidl_codec::ResetColor;
+      printer.DisplayObjType(value);
       break;
     case SyscallType::kPciBarType:
       printer.DisplayPciBarType(value);
       break;
     case SyscallType::kPolicyAction:
-      printer << fidl_codec::Blue;
-      PolicyActionName(value, printer);
-      printer << fidl_codec::ResetColor;
+      printer.DisplayPolicyAction(value);
       break;
     case SyscallType::kPolicyCondition:
-      printer << fidl_codec::Blue;
-      PolicyConditionName(value, printer);
-      printer << fidl_codec::ResetColor;
+      printer.DisplayPolicyCondition(value);
       break;
     case SyscallType::kPolicyTopic:
-      printer << fidl_codec::Blue;
-      PolicyTopicName(value, printer);
-      printer << fidl_codec::ResetColor;
+      printer.DisplayPolicyTopic(value);
       break;
     case SyscallType::kPortPacketType:
       printer.DisplayPortPacketType(value);
@@ -2444,82 +2422,52 @@ inline void DisplayValue<uint32_t>(SyscallType type, uint32_t value,
       printer.DisplayRights(value);
       break;
     case SyscallType::kRsrcKind:
-      printer << fidl_codec::Blue;
-      RsrcKindName(value, printer);
-      printer << fidl_codec::ResetColor;
+      printer.DisplayRsrcKind(value);
       break;
     case SyscallType::kSignals:
       printer.DisplaySignals(value);
       break;
     case SyscallType::kSocketCreateOptions:
-      printer << fidl_codec::Blue;
-      SocketCreateOptionsName(value, printer);
-      printer << fidl_codec::ResetColor;
+      printer.DisplaySocketCreateOptions(value);
       break;
     case SyscallType::kSocketReadOptions:
-      printer << fidl_codec::Blue;
-      SocketReadOptionsName(value, printer);
-      printer << fidl_codec::ResetColor;
+      printer.DisplaySocketReadOptions(value);
       break;
     case SyscallType::kSocketShutdownOptions:
-      printer << fidl_codec::Blue;
-      SocketShutdownOptionsName(value, printer);
-      printer << fidl_codec::ResetColor;
+      printer.DisplaySocketShutdownOptions(value);
       break;
     case SyscallType::kSystemEventType:
-      printer << fidl_codec::Blue;
-      SystemEventTypeName(value, printer);
-      printer << fidl_codec::ResetColor;
+      printer.DisplaySystemEventType(value);
       break;
     case SyscallType::kSystemPowerctl:
-      printer << fidl_codec::Blue;
-      SystemPowerctlName(value, printer);
-      printer << fidl_codec::ResetColor;
+      printer.DisplaySystemPowerctl(value);
       break;
     case SyscallType::kThreadState:
-      printer << fidl_codec::Blue;
-      ThreadStateName(value, printer);
-      printer << fidl_codec::ResetColor;
+      printer.DisplayThreadState(value);
       break;
     case SyscallType::kThreadStateTopic:
-      printer << fidl_codec::Blue;
-      ThreadStateTopicName(value, printer);
-      printer << fidl_codec::ResetColor;
+      printer.DisplayThreadStateTopic(value);
       break;
     case SyscallType::kTimerOption:
-      printer << fidl_codec::Blue;
-      TimerOptionName(value, printer);
-      printer << fidl_codec::ResetColor;
+      printer.DisplayTimerOption(value);
       break;
     case SyscallType::kVcpu:
-      printer << fidl_codec::Red;
-      VcpuName(value, printer);
-      printer << fidl_codec::ResetColor;
+      printer.DisplayVcpu(value);
       break;
     case SyscallType::kVmOption:
-      printer << fidl_codec::Red;
-      VmOptionName(value, printer);
-      printer << fidl_codec::ResetColor;
+      printer.DisplayVmOption(value);
       break;
     case SyscallType::kVmoCreationOption:
-      printer << fidl_codec::Blue;
-      VmoCreationOptionName(value, printer);
-      printer << fidl_codec::ResetColor;
+      printer.DisplayVmoCreationOption(value);
       break;
     case SyscallType::kVmoOp:
-      printer << fidl_codec::Blue;
-      VmoOpName(value, printer);
-      printer << fidl_codec::ResetColor;
+      printer.DisplayVmoOp(value);
       break;
     case SyscallType::kVmoOption:
-      printer << fidl_codec::Blue;
-      VmoOptionName(value, printer);
-      printer << fidl_codec::ResetColor;
+      printer.DisplayVmoOption(value);
       break;
     case SyscallType::kVmoType:
-      printer << fidl_codec::Blue;
-      VmoTypeName(value, printer);
-      printer << fidl_codec::ResetColor;
+      printer.DisplayVmoType(value);
       break;
     default:
       printer << "unimplemented uint32_t value " << static_cast<uint32_t>(type);
