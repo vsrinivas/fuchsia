@@ -7,7 +7,7 @@ use std::fmt;
 use crate::{
     features::AgFeatures,
     peer::{
-        calls::Call,
+        calls::{Call, CallAction},
         gain_control::Gain,
         indicators::{AgIndicators, HfIndicator},
         procedure::{dtmf::DtmfCode, hold::CallHoldAction, ProcedureMarker},
@@ -44,6 +44,8 @@ pub enum SlcRequest {
     HangUp { response: Box<dyn FnOnce(Result<(), ()>) -> AgUpdate> },
 
     Hold { command: CallHoldAction, response: Box<dyn FnOnce(Result<(), ()>) -> AgUpdate> },
+
+    InitiateCall { call_action: CallAction, response: Box<dyn FnOnce(Result<(), ()>) -> AgUpdate> },
 }
 
 impl From<&SlcRequest> for ProcedureMarker {
@@ -63,6 +65,7 @@ impl From<&SlcRequest> for ProcedureMarker {
             Answer { .. } => Self::Answer,
             HangUp { .. } => Self::HangUp,
             Hold { .. } => Self::Hold,
+            InitiateCall { .. } => Self::InitiateCall,
         }
     }
 }
@@ -95,6 +98,10 @@ impl fmt::Debug for SlcRequest {
             Self::Answer { .. } => "Answer",
             Self::HangUp { .. } => "HangUp",
             Self::Hold { .. } => "Hold",
+            Self::InitiateCall { call_action, .. } => {
+                s = format!("InitiateCall({:?})", call_action);
+                &s
+            }
         }
         .to_string();
         write!(f, "{}", output)

@@ -8,7 +8,7 @@ use crate::peer::{service_level_connection::SlcState, update::AgUpdate};
 /// Represents the speaker volume section of the Audio Volume Control procedure as defined in
 /// HFP v1.8 Section 4.29.1
 ///
-/// Sectin 4.29.1 defines two separate unsolicited responses that may be sent in any order or only
+/// Section 4.29.1 defines two separate unsolicited responses that may be sent in any order or only
 /// one at a time.  This procedure handles the +VGS response, which is used to set the speaker volume
 ///
 /// This procedure is implemented from the perspective of the AG. Namely, outgoing `requests`

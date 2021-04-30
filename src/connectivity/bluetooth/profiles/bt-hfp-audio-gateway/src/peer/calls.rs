@@ -3,6 +3,10 @@
 // found in the LICENSE file.
 
 use {
+    super::calls::{
+        call_list::CallList,
+        types::{CallIndicators, CallIndicatorsUpdates, FidlNumber},
+    },
     crate::{
         error::CallError,
         peer::procedure::{dtmf::DtmfCode, hold::CallHoldAction},
@@ -12,7 +16,10 @@ use {
         stream::{StreamItem, StreamMap, StreamWithEpitaph, Tagged, WithEpitaph, WithTag},
     },
     fidl::endpoints::ClientEnd,
-    fidl_fuchsia_bluetooth_hfp::{CallMarker, CallProxy, PeerHandlerProxy},
+    fidl_fuchsia_bluetooth_hfp::{
+        CallAction as FidlCallAction, CallMarker, CallProxy, PeerHandlerProxy, RedialLast,
+        TransferActive,
+    },
     fuchsia_async as fasync,
     futures::stream::{FusedStream, Stream, StreamExt},
     log::{debug, info, warn},
@@ -22,6 +29,8 @@ use {
     },
 };
 
+pub use {fidl_fuchsia_bluetooth_hfp::CallState, number::Number, types::Direction};
+
 /// Defines the types associated with a phone number.
 mod number;
 
@@ -30,13 +39,6 @@ mod call_list;
 
 /// Defines commonly used types when interacting with a call.
 pub mod types;
-
-use {
-    call_list::CallList,
-    types::FidlNumber,
-    types::{CallIndicators, CallIndicatorsUpdates},
-};
-pub use {fidl_fuchsia_bluetooth_hfp::CallState, number::Number, types::Direction};
 
 /// The index associated with a call, that is guaranteed to be unique for the lifetime of the call,
 /// but will be recycled after the call is released.
@@ -494,6 +496,37 @@ impl Stream for Calls {
 impl FusedStream for Calls {
     fn is_terminated(&self) -> bool {
         self.terminated
+    }
+}
+
+/// Call actions that can be requested of the AG.
+#[derive(Debug)]
+pub enum CallAction {
+    InitiateByNumber(String),
+    InitiateByMemoryLocation(String),
+    InitiateByRedialLast,
+    TransferActive,
+}
+
+impl From<CallAction> for FidlCallAction {
+    fn from(call_action: CallAction) -> Self {
+        match call_action {
+            CallAction::InitiateByNumber(number) => Self::DialFromNumber(number),
+            CallAction::InitiateByMemoryLocation(location) => Self::DialFromLocation(location),
+            CallAction::InitiateByRedialLast => Self::RedialLast(RedialLast),
+            CallAction::TransferActive => Self::TransferActive(TransferActive),
+        }
+    }
+}
+
+impl From<FidlCallAction> for CallAction {
+    fn from(fidl_call_action: FidlCallAction) -> Self {
+        match fidl_call_action {
+            FidlCallAction::DialFromNumber(number) => Self::InitiateByNumber(number),
+            FidlCallAction::DialFromLocation(location) => Self::InitiateByMemoryLocation(location),
+            FidlCallAction::RedialLast(RedialLast) => Self::InitiateByRedialLast,
+            FidlCallAction::TransferActive(TransferActive) => Self::TransferActive,
+        }
     }
 }
 

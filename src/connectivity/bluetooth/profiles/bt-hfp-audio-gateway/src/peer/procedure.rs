@@ -66,6 +66,9 @@ use answer::AnswerProcedure;
 /// Defines the implementation of the the Audio Volume Control Procedure.
 pub mod volume_control;
 
+/// defines the implementaion of several ways for the HF to initiate calls.
+pub mod initiate_call;
+
 use call_line_ident_notifications::CallLineIdentNotificationsProcedure;
 use call_waiting_notifications::CallWaitingNotificationsProcedure;
 use dtmf::DtmfProcedure;
@@ -73,6 +76,7 @@ use extended_errors::ExtendedErrorsProcedure;
 use hang_up::HangUpProcedure;
 use hold::HoldProcedure;
 use indicators_activation::IndicatorsActivationProcedure;
+use initiate_call::InitiateCallProcedure;
 use nrec::NrecProcedure;
 use phone_status::PhoneStatusProcedure;
 use query_current_calls::QueryCurrentCallsProcedure;
@@ -166,6 +170,8 @@ pub enum ProcedureMarker {
     Hold,
     /// The Audio Volume Control procedure as defined in HFP v.18 Section 4.29.1
     VolumeControl,
+    /// Procedures for HF initiated calls defined in HFP v1.8 Sections 4.18-4.20
+    InitiateCall,
 }
 
 impl ProcedureMarker {
@@ -194,6 +200,7 @@ impl ProcedureMarker {
             Self::TransferHfIndicator => Box::new(TransferHfIndicatorProcedure::new()),
             Self::Hold => Box::new(HoldProcedure::new()),
             Self::VolumeControl => Box::new(VolumeControlProcedure::new()),
+            Self::InitiateCall => Box::new(InitiateCallProcedure::new()),
         }
     }
 
@@ -228,6 +235,9 @@ impl ProcedureMarker {
             at::Command::Biev { .. } => Ok(Self::TransferHfIndicator),
             at::Command::Bia { .. } => Ok(Self::Indicators),
             at::Command::Chld { .. } => Ok(Self::Hold),
+            at::Command::AtdNumber { .. }
+            | at::Command::AtdMemory { .. }
+            | at::Command::Bldn { .. } => Ok(Self::InitiateCall),
             _ => Err(ProcedureError::NotImplemented),
         }
     }

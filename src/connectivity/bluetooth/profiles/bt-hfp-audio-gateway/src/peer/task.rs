@@ -285,6 +285,19 @@ impl PeerTask {
                 });
                 self.connection.receive_ag_request(marker, response(result)).await;
             }
+            SlcRequest::InitiateCall { call_action, response } => {
+                let result = match &self.handler {
+                    Some(h) => match h.initiate_outgoing_call(&mut call_action.into()).await {
+                        Ok(Ok(())) => Ok(()),
+                        err => {
+                            warn!("Error initiating outgoing call by number: {:?}", err);
+                            Err(())
+                        }
+                    },
+                    None => Err(()),
+                };
+                self.connection.receive_ag_request(marker, response(result)).await;
+            }
         };
     }
 
