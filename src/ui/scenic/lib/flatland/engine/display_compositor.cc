@@ -393,9 +393,11 @@ DisplayCompositor::FrameEventData DisplayCompositor::NewFrameEventData() {
   result.wait_id = scenic_impl::ImportEvent(*display_controller_.get(), result.wait_event);
   FX_DCHECK(result.wait_id != fuchsia::hardware::display::INVALID_DISP_ID);
 
-  // The DC signals this once it has set the layer image.
+  // The DC signals this once it has set the layer image.  We pre-signal this event so the first
+  // frame rendered with it behaves as though it was previously OKed for recycling.
   status = zx::event::create(0, &result.signal_event);
   FX_DCHECK(status == ZX_OK);
+  result.signal_event.signal(0, ZX_EVENT_SIGNALED);
   result.signal_id = scenic_impl::ImportEvent(*display_controller_.get(), result.signal_event);
   FX_DCHECK(result.signal_id != fuchsia::hardware::display::INVALID_DISP_ID);
 
