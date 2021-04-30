@@ -13,12 +13,12 @@ use {
     ffx_core::{build_info, ffx_bail, ffx_plugin},
     ffx_doctor_args::DoctorCommand,
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_developer_bridge::{DaemonProxy, Target, VersionInfo},
+    fidl_fuchsia_developer_bridge::{DaemonProxy, Target, TargetState, VersionInfo},
     fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
-    itertools::{Either, Itertools},
+    itertools::Itertools,
     std::sync::Arc,
     std::{
-        collections::HashSet,
+        collections::HashMap,
         io::{stdout, Write},
         path::PathBuf,
         time::Duration,
@@ -67,11 +67,12 @@ enum StepType {
     DaemonChecksFailed,
     NoTargetsFound,
     TerminalNoTargetsFound,
+    SkippedFastboot(Option<String>),
     CheckingTarget(Option<String>),
     RcsAttemptStarted(usize, usize),
     ConnectingToRcs,
     CommunicatingWithRcs,
-    TargetSummary(Vec<String>, Vec<String>),
+    TargetSummary(HashMap<TargetCheckResult, Vec<Option<String>>>),
     RcsTerminalFailure,
     GeneratingRecord,
     RecordGenerated(PathBuf),
@@ -149,6 +150,13 @@ impl std::fmt::Display for StepType {
             StepType::TerminalNoTargetsFound => {
                 self.with_bug_link(&format!("\n{}", NO_TARGETS_FOUND_EXTENDED))
             }
+            StepType::SkippedFastboot(nodename) => format!(
+                "{}\nSkipping target in fastboot: '{}'. {}{}",
+                style::Bold,
+                nodename.as_ref().unwrap_or(&"UNKNOWN".to_string()),
+                TARGET_CHOICE_HELP,
+                style::Reset
+            ),
             StepType::CheckingTarget(nodename) => format!(
                 "{}\nChecking target: '{}'. {}{}",
                 style::Bold,
@@ -161,13 +169,24 @@ impl std::fmt::Display for StepType {
             }
             StepType::ConnectingToRcs => CONNECTING_TO_RCS.to_string(),
             StepType::CommunicatingWithRcs => COMMUNICATING_WITH_RCS.to_string(),
-            StepType::TargetSummary(successes, failures) => {
+            StepType::TargetSummary(results) => {
                 let mut s = format!("\n\n{}{}\n", style::Bold, TARGET_SUMMARY);
-                for nodename in successes.iter() {
-                    s.push_str(&format!("{}✓ {}\n", color::Fg(color::Green), nodename));
-                }
-                for nodename in failures.iter() {
-                    s.push_str(&format!("{}✗ {}\n", color::Fg(color::Red), nodename));
+                let keys = results.keys().into_iter().sorted_by_key(|k| format!("{:?}", k));
+                for key in keys {
+                    for nodename_opt in results.get(key).unwrap_or(&vec![]).iter() {
+                        let nodename = nodename_opt.clone().unwrap_or("UNKNOWN".to_string());
+                        match *key {
+                            TargetCheckResult::Success => {
+                                s.push_str(&format!("{}✓ {}\n", color::Fg(color::Green), nodename));
+                            }
+                            TargetCheckResult::Failed => {
+                                s.push_str(&format!("{}✗ {}\n", color::Fg(color::Red), nodename));
+                            }
+                            TargetCheckResult::SkippedFastboot => {
+                                s.push_str(&format!("skipped: {}\n", nodename));
+                            }
+                        }
+                    }
                 }
                 s.push_str(&format!("{}", style::Reset));
                 s
@@ -245,6 +264,13 @@ struct DoctorRecorderParameters {
     log_root: PathBuf,
     output_dir: PathBuf,
     recorder: Arc<Mutex<dyn Recorder>>,
+}
+
+#[derive(Debug, PartialEq, Eq, Hash)]
+enum TargetCheckResult {
+    Success,
+    Failed,
+    SkippedFastboot,
 }
 
 #[ffx_plugin()]
@@ -445,9 +471,24 @@ async fn execute_steps(
 
     let targets = targets_opt.unwrap();
     let daemon = proxy_opt.take().unwrap();
-    let mut successful_targets = HashSet::new();
+    let mut target_results: HashMap<Option<String>, TargetCheckResult> = HashMap::new();
 
     for target in targets.iter() {
+        // Note: this match statement intentionally does not have a fallback case in order to ensure
+        // that behavior is considered when we add a new state.
+        match target.target_state {
+            None => {}
+            Some(TargetState::Unknown) => {}
+            Some(TargetState::Disconnected) => {}
+            Some(TargetState::Product) => {}
+            Some(TargetState::Fastboot) => {
+                target_results.insert(target.nodename.clone(), TargetCheckResult::SkippedFastboot);
+                step_handler
+                    .output_step(StepType::SkippedFastboot(target.nodename.clone()))
+                    .await?;
+                continue;
+            }
+        }
         step_handler.output_step(StepType::CheckingTarget(target.nodename.clone())).await?;
         for i in 0..retry_count {
             if i > 0 {
@@ -477,34 +518,22 @@ async fn execute_steps(
                 step_handler,
                 _t,
                 {
-                    successful_targets.insert(
-                        target
-                            .nodename
-                            .as_ref()
-                            .map(|s| s.as_str())
-                            .unwrap_or("UNKNOWN")
-                            .to_string(),
-                    );
+                    target_results.insert(target.nodename.clone(), TargetCheckResult::Success);
                 }
             );
             break;
         }
+
+        if target_results.get(&target.nodename).is_none() {
+            target_results.insert(target.nodename.clone(), TargetCheckResult::Failed);
+        }
     }
 
-    let (successes, failures): (Vec<_>, Vec<_>) = targets
-        .iter()
-        .map(|t| t.nodename.as_ref().map(|s| s.as_str()).unwrap_or("UNKNOWN").to_string())
-        .partition_map(|n| {
-            if successful_targets.contains(&n) {
-                Either::Left(n.to_string())
-            } else {
-                Either::Right(n.to_string())
-            }
-        });
+    let grouped_map = target_results.into_iter().map(|(k, v)| (v, k)).into_group_map();
+    let has_failure = grouped_map.get(&TargetCheckResult::Failed).is_some();
+    step_handler.output_step(StepType::TargetSummary(grouped_map)).await?;
 
-    step_handler.output_step(StepType::TargetSummary(successes, failures)).await?;
-
-    if targets.len() != successful_targets.len() {
+    if has_failure {
         step_handler.output_step(StepType::RcsTerminalFailure).await?;
     }
 
@@ -531,12 +560,14 @@ mod test {
         futures::future::Shared,
         futures::{Future, FutureExt, TryFutureExt, TryStreamExt},
         std::cell::Cell,
+        std::collections::HashSet,
         std::sync::Arc,
         tempfile::tempdir,
     };
 
     const NODENAME: &str = "fake-nodename";
     const UNRESPONSIVE_NODENAME: &str = "fake-nodename-unresponsive";
+    const FASTBOOT_NODENAME: &str = "fastboot-nodename-unresponsive";
     const NON_EXISTENT_NODENAME: &str = "extra-fake-nodename";
     const DEFAULT_RETRY_DELAY: Duration = Duration::from_millis(2000);
     const DAEMON_VERSION_STR: &str = "daemon-build-string";
@@ -864,6 +895,40 @@ mod test {
         });
     }
 
+    fn setup_responsive_daemon_server_with_fastboot_target() -> DaemonProxy {
+        spawn_local_stream_handler(move |req| async move {
+            match req {
+                DaemonRequest::GetRemoteControl { remote, target: _, responder } => {
+                    serve_responsive_rcs(remote);
+                    responder.send(&mut Ok(())).unwrap();
+                }
+                DaemonRequest::GetVersionInfo { responder } => {
+                    responder.send(daemon_version_info()).unwrap();
+                }
+                DaemonRequest::ListTargets { value: _, responder } => {
+                    responder
+                        .send(
+                            &mut vec![Target {
+                                nodename: Some(FASTBOOT_NODENAME.to_string()),
+                                addresses: Some(vec![]),
+                                age_ms: Some(0),
+                                rcs_state: Some(RemoteControlState::Unknown),
+                                target_type: Some(TargetType::Unknown),
+                                target_state: Some(TargetState::Fastboot),
+                                ..Target::EMPTY
+                            }]
+                            .drain(..),
+                        )
+                        .unwrap();
+                }
+                _ => {
+                    assert!(false, "got unexpected request: {:?}", req);
+                }
+            }
+        })
+        .unwrap()
+    }
+
     fn setup_responsive_daemon_server_with_targets(
         has_nodename: bool,
         waiter: Shared<Receiver<()>>,
@@ -986,6 +1051,13 @@ mod test {
             }
         })
         .unwrap()
+    }
+
+    fn default_results_map() -> HashMap<TargetCheckResult, Vec<Option<String>>> {
+        let mut map = HashMap::new();
+        map.insert(TargetCheckResult::Success, vec![Some(NODENAME.to_string())]);
+        map.insert(TargetCheckResult::Failed, vec![Some(UNRESPONSIVE_NODENAME.to_string())]);
+        map
     }
 
     fn empty_error() -> Error {
@@ -1286,10 +1358,7 @@ mod test {
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::step(StepType::CommunicatingWithRcs),
                 TestStepEntry::result(StepResult::Timeout),
-                TestStepEntry::output_step(StepType::TargetSummary(
-                    vec![NODENAME.to_string()],
-                    vec![UNRESPONSIVE_NODENAME.to_string()],
-                )),
+                TestStepEntry::output_step(StepType::TargetSummary(default_results_map())),
                 TestStepEntry::output_step(StepType::RcsTerminalFailure),
             ])
             .await;
@@ -1322,6 +1391,9 @@ mod test {
         .unwrap();
         tx.send(()).unwrap();
 
+        let mut map = HashMap::new();
+        map.insert(TargetCheckResult::Success, vec![Some(NODENAME.to_string())]);
+
         handler
             .assert_matches_steps(vec![
                 TestStepEntry::output_step(StepType::Started(version_str())),
@@ -1339,10 +1411,7 @@ mod test {
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::step(StepType::CommunicatingWithRcs),
                 TestStepEntry::result(StepResult::Success),
-                TestStepEntry::output_step(StepType::TargetSummary(
-                    vec![NODENAME.to_string()],
-                    vec![],
-                )),
+                TestStepEntry::output_step(StepType::TargetSummary(map)),
             ])
             .await;
 
@@ -1481,7 +1550,6 @@ mod test {
         fake.assert_no_leftover_calls().await;
         r.assert_generate_called();
     }
-
     #[fasync::run_singlethreaded(test)]
     async fn test_finds_target_with_missing_nodename() {
         let (tx, rx) = oneshot::channel::<()>();
@@ -1507,6 +1575,10 @@ mod test {
         .unwrap();
         tx.send(()).unwrap();
 
+        let mut map = HashMap::new();
+        map.insert(TargetCheckResult::Success, vec![None]);
+        map.insert(TargetCheckResult::Failed, vec![Some(UNRESPONSIVE_NODENAME.to_string())]);
+
         handler
             .assert_matches_steps(vec![
                 TestStepEntry::output_step(StepType::Started(version_str())),
@@ -1531,11 +1603,55 @@ mod test {
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::step(StepType::CommunicatingWithRcs),
                 TestStepEntry::result(StepResult::Timeout),
-                TestStepEntry::output_step(StepType::TargetSummary(
-                    vec!["UNKNOWN".to_string()],
-                    vec![UNRESPONSIVE_NODENAME.to_string()],
-                )),
+                TestStepEntry::output_step(StepType::TargetSummary(map)),
                 TestStepEntry::output_step(StepType::RcsTerminalFailure),
+            ])
+            .await;
+
+        fake.assert_no_leftover_calls().await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_skips_fastboot_target() {
+        let fake = FakeDaemonManager::new(
+            vec![true],
+            vec![],
+            vec![],
+            vec![Ok(setup_responsive_daemon_server_with_fastboot_target())],
+        );
+        let mut handler = FakeStepHandler::new();
+        doctor(
+            &mut handler,
+            &fake,
+            "",
+            1,
+            DEFAULT_RETRY_DELAY,
+            false,
+            version_str(),
+            record_params_no_record(),
+        )
+        .await
+        .unwrap();
+
+        let mut map = HashMap::new();
+        map.insert(TargetCheckResult::SkippedFastboot, vec![Some(FASTBOOT_NODENAME.to_string())]);
+
+        handler
+            .assert_matches_steps(vec![
+                TestStepEntry::output_step(StepType::Started(version_str())),
+                TestStepEntry::step(StepType::DaemonRunning),
+                TestStepEntry::result(StepResult::Other(FOUND.to_string())),
+                TestStepEntry::step(StepType::ConnectingToDaemon),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::step(StepType::CommunicatingWithDaemon),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::output_step(StepType::DaemonVersion(daemon_version_info())),
+                TestStepEntry::step(StepType::ListingTargets(String::default())),
+                TestStepEntry::result(StepResult::Success),
+                TestStepEntry::output_step(StepType::SkippedFastboot(Some(
+                    FASTBOOT_NODENAME.to_string(),
+                ))),
+                TestStepEntry::output_step(StepType::TargetSummary(map)),
             ])
             .await;
 
