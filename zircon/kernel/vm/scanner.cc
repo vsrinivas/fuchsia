@@ -52,13 +52,7 @@ uint64_t zero_page_scans_per_second = 0;
 // Eviction is globally enabled/disabled on startup through the kernel cmdline.
 bool eviction_enabled = false;
 
-enum class PageTableReclaim {
-  Always,
-  Never,
-  OnRequest,
-};
-
-PageTableReclaim page_table_reclaim_policy = PageTableReclaim::Always;
+PageTableEvictionPolicy page_table_reclaim_policy = PageTableEvictionPolicy::kAlways;
 
 // Tracks what the scanner should do when it is next woken up.
 ktl::atomic<uint32_t> scanner_operation = 0;
@@ -309,14 +303,15 @@ int scanner_request_thread(void *) {
       op &= ~kScannerOpHarvestAccessed;
       // Determine if our architecture requires us to harvest the terminal accessed bits in order
       // to perform page table reclamation.
-      const bool pt_reclaim_harvest_terminal = !ArchVmAspace::HasNonTerminalAccessedFlag() &&
-                                               page_table_reclaim_policy != PageTableReclaim::Never;
+      const bool pt_reclaim_harvest_terminal =
+          !ArchVmAspace::HasNonTerminalAccessedFlag() &&
+          page_table_reclaim_policy != PageTableEvictionPolicy::kNever;
       // Potentially reclaim any unaccessed user page tables. This must be done before the other
       // accessed bit harvesting, otherwise if we do not have non-terminal accessed flags we will
       // always reclaim everything.
-      if (page_table_reclaim_policy != PageTableReclaim::Never) {
+      if (page_table_reclaim_policy != PageTableEvictionPolicy::kNever) {
         const VmAspace::NonTerminalAction action =
-            page_table_reclaim_policy == PageTableReclaim::Always || pt_eviction_enabled
+            page_table_reclaim_policy == PageTableEvictionPolicy::kAlways || pt_eviction_enabled
                 ? VmAspace::NonTerminalAction::FreeUnaccessed
                 : VmAspace::NonTerminalAction::Retain;
         VmAspace::HarvestAllUserPageTables(action);
@@ -427,7 +422,7 @@ uint64_t scanner_do_zero_scan(uint64_t limit) {
 }
 
 void scanner_enable_page_table_reclaim() {
-  if (page_table_reclaim_policy != PageTableReclaim::OnRequest) {
+  if (page_table_reclaim_policy != PageTableEvictionPolicy::kOnRequest) {
     return;
   }
   scanner_operation.fetch_or(kScannerOpEnablePTReclaim);
@@ -435,7 +430,7 @@ void scanner_enable_page_table_reclaim() {
 }
 
 void scanner_disable_page_table_reclaim() {
-  if (page_table_reclaim_policy != PageTableReclaim::OnRequest) {
+  if (page_table_reclaim_policy != PageTableEvictionPolicy::kOnRequest) {
     return;
   }
   scanner_operation.fetch_or(kScannerOpDisablePTReclaim);
@@ -479,16 +474,7 @@ static void scanner_init_func(uint level) {
   if (gCmdline.GetBool(kernel_option::kPageScannerPromoteNoClones, false)) {
     VmObject::EnableEvictionPromoteNoClones();
   }
-  const char *pt_eviction = gCmdline.GetString(kernel_option::kPageScannerPageTableEvictionPolicy);
-  if (pt_eviction && !strcmp(pt_eviction, "never")) {
-    page_table_reclaim_policy = PageTableReclaim::Never;
-  } else if (pt_eviction && !strcmp(pt_eviction, "always")) {
-    page_table_reclaim_policy = PageTableReclaim::Always;
-  } else if (pt_eviction && !strcmp(pt_eviction, "on_request")) {
-    page_table_reclaim_policy = PageTableReclaim::OnRequest;
-  } else {
-    // Leave the policy at the default.
-  }
+  page_table_reclaim_policy = gBootOptions->page_scanner_page_table_eviction_policy;
 
   uint32_t discardable_evictions = gBootOptions->page_scanner_discardable_evictions_percent;
   if (discardable_evictions <= 100) {
@@ -558,9 +544,9 @@ static int cmd_scanner(int argc, const cmd_args *argv, uint32_t flags) {
     } else {
       goto usage;
     }
-    if (page_table_reclaim_policy == PageTableReclaim::Always) {
+    if (page_table_reclaim_policy == PageTableEvictionPolicy::kAlways) {
       printf("Page table reclamation set to always by command line, cannot adjust\n");
-    } else if (page_table_reclaim_policy == PageTableReclaim::Never) {
+    } else if (page_table_reclaim_policy == PageTableEvictionPolicy::kNever) {
       printf("Page table reclamation set to never by command line, cannot adjust\n");
     } else {
       if (enable) {

@@ -350,20 +350,6 @@ by pager backed VMOs with no clones. VMOs with no clones are meant to approximat
 inactive VMOs. Evicting inactive pages first is expected to free up memory that
 remains free for longer, and can be more effective at relieving memory pressure.
 
-## kernel.page-scanner.page-table-eviction-policy=\<string>
-
-Sets the policy for what to do with user page tables that are not accessed
-between scanner runs. The following options are supported:
-
-*   `on_request`: Only performs eviction on request, such as in response to a
-    low memory scenario.
-*   `never`: Page tables are never evicted.
-*   `always`: (default) Unused page tables are always evicted every time the
-    scanner runs.
-
-The page scanner must be running for this option to have any effect. It can be
-enabled at boot with the `kernel.page-scanner.start-at-boot` option.
-
 ## kernel.serial=\<string>
 
 This controls what serial port is used.  If provided, it overrides the serial

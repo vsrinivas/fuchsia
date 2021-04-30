@@ -50,6 +50,9 @@ enum class OomBehavior { kReboot, kJobKill };
 // See kernel.entropy-test.len.
 constexpr uint64_t kMaxEntropyLength = 1u << 20;
 
+// See kernel.page-scanner.eviction_policy.
+enum class PageTableEvictionPolicy { kOnRequest, kNever, kAlways };
+
 // List of command lines argument names that are explicitly referenced in code.
 // TODO(fxb/74740): remove all usages of this.
 constexpr std::string_view kForceWatchdogDisabledName = "kernel.force-watchdog-disabled";

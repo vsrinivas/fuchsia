@@ -438,6 +438,20 @@ Note that the kernel will try its best to honor this ratio between discardable
 and pager-backed pages evicted, but the actual numbers might not be exact.
 )""")
 
+DEFINE_OPTION("kernel.page-scanner.page-table-eviction-policy", PageTableEvictionPolicy,
+              page_scanner_page_table_eviction_policy, {PageTableEvictionPolicy::kAlways}, R"""(
+Sets the policy for what to do with user page tables that are not accessed
+between scanner runs.
+
+When `on_request`, only performs eviction on request, such as in response to a
+low memory scenario.
+
+When `never`, page tables are never evicted.
+
+When `always`, Unused page tables are always evicted every time the
+scanner runs.
+)""")
+
 // Machine-specific options are included here for all the kernel places.
 // In the generator program, they're included separately.
 

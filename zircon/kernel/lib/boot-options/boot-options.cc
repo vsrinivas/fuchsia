@@ -11,6 +11,8 @@
 #include <lib/stdcompat/algorithm.h>
 #include <zircon/compiler.h>
 
+#include "lib/boot-options/types.h"
+
 namespace {
 #include "enum.h"
 }
@@ -333,6 +335,14 @@ void BootOptions::Parse(std::string_view value, OomBehavior BootOptions::*member
 
 void BootOptions::PrintValue(const OomBehavior& value, FILE* out) {
   Enum<OomBehavior>(EnumPrinter{value, out});
+}
+
+void BootOptions::Parse(std::string_view value, PageTableEvictionPolicy BootOptions::*member) {
+  Enum<PageTableEvictionPolicy>(EnumParser{value, &(this->*member)});
+}
+
+void BootOptions::PrintValue(const PageTableEvictionPolicy& value, FILE* out) {
+  Enum<PageTableEvictionPolicy>(EnumPrinter{value, out});
 }
 
 #if BOOT_OPTIONS_TESTONLY_OPTIONS

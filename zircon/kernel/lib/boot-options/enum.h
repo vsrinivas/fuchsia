@@ -35,6 +35,14 @@ constexpr auto Enum<OomBehavior> = [](auto&& Switch) {
       .Case("jobkill", OomBehavior::kJobKill);
 };
 
+template <>
+constexpr auto Enum<PageTableEvictionPolicy> = [](auto&& Switch) {
+  Switch  //
+      .Case("always", PageTableEvictionPolicy::kAlways)
+      .Case("never", PageTableEvictionPolicy::kNever)
+      .Case("on_request", PageTableEvictionPolicy::kOnRequest);
+};
+
 #if BOOT_OPTIONS_GENERATOR || defined(__x86_64__)
 
 template <>
