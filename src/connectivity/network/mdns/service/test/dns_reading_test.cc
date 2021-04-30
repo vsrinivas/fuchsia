@@ -581,5 +581,17 @@ TEST(DnsReadingTest, RegressionFxb54110_4) {
   EXPECT_TRUE(reader.complete());
 }
 
+TEST(DnsReadingTest, NameCompressionLoopFxb62458) {
+  std::vector<uint8_t> buffer{
+      0x1, 0x9, 0xc0, 0x2, 0x0, 0x8, 0x1, 0x0, 0x2, 0x2, 0x0, 0x22, 0xc0, 0x2,
+  };
+
+  PacketReader reader(buffer);
+  DnsMessage message;
+  reader >> message;
+  EXPECT_FALSE(reader.healthy());
+  EXPECT_FALSE(reader.complete());
+}
+
 }  // namespace test
 }  // namespace mdns
