@@ -47,7 +47,7 @@ The format for the `--oem-stage` parameter is a comma separated pair:
 '<OEM_COMMAND>,<FILE_TO_STAGE>'"
 )]
 pub struct FlashCommand {
-    //path to flashing manifest
+    //path to flashing manifest or zip file containing images and manifest
     #[argh(positional)]
     pub manifest: String,
 

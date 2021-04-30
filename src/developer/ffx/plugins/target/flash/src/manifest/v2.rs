@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::manifest::{v1::FlashManifest as FlashManifestV1, verify_hardware, Flash},
+    crate::{
+        file::FileResolver,
+        manifest::{v1::FlashManifest as FlashManifestV1, verify_hardware, Flash},
+    },
     anyhow::Result,
     async_trait::async_trait,
     ffx_flash_args::FlashCommand,
@@ -21,17 +24,19 @@ pub(crate) struct FlashManifest {
 
 #[async_trait]
 impl Flash for FlashManifest {
-    async fn flash<W>(
+    async fn flash<W, F>(
         &self,
         writer: &mut W,
+        file_resolver: &mut F,
         fastboot_proxy: FastbootProxy,
         cmd: FlashCommand,
     ) -> Result<()>
     where
         W: Write + Send,
+        F: FileResolver + Send + Sync,
     {
         verify_hardware(&self.hw_revision, &fastboot_proxy).await?;
-        self.v1.flash(writer, fastboot_proxy, cmd).await
+        self.v1.flash(writer, file_resolver, fastboot_proxy, cmd).await
     }
 }
 
@@ -41,7 +46,7 @@ impl Flash for FlashManifest {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::test::setup;
+    use crate::test::{setup, TestResolver};
     use serde_json::from_str;
     use tempfile::NamedTempFile;
 
@@ -89,8 +94,13 @@ mod test {
         let (state, proxy) = setup();
         state.lock().unwrap().variables.push("rev_test-b4".to_string());
         let mut writer = Vec::<u8>::new();
-        v.flash(&mut writer, proxy, FlashCommand { manifest: tmp_file_name, ..Default::default() })
-            .await
+        v.flash(
+            &mut writer,
+            &mut TestResolver::new(),
+            proxy,
+            FlashCommand { manifest: tmp_file_name, ..Default::default() },
+        )
+        .await
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -103,6 +113,7 @@ mod test {
         assert!(v
             .flash(
                 &mut writer,
+                &mut TestResolver::new(),
                 proxy,
                 FlashCommand { manifest: tmp_file_name, ..Default::default() }
             )

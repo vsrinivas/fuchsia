@@ -3,10 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    crate::manifest::{
-        v1::{FlashManifest as FlashManifestV1, Partition as PartitionV1, Product as ProductV1},
-        v2::FlashManifest as FlashManifestV2,
-        Flash,
+    crate::{
+        file::FileResolver,
+        manifest::{
+            v1::{
+                FlashManifest as FlashManifestV1, Partition as PartitionV1, Product as ProductV1,
+            },
+            v2::FlashManifest as FlashManifestV2,
+            Flash,
+        },
     },
     anyhow::Result,
     async_trait::async_trait,
@@ -92,17 +97,19 @@ impl From<&FlashManifest> for FlashManifestV2 {
 
 #[async_trait]
 impl Flash for FlashManifest {
-    async fn flash<W>(
+    async fn flash<W, F>(
         &self,
         writer: &mut W,
+        file_resolver: &mut F,
         fastboot_proxy: FastbootProxy,
         cmd: FlashCommand,
     ) -> Result<()>
     where
         W: Write + Send,
+        F: FileResolver + Send + Sync,
     {
         let v2: FlashManifestV2 = self.into();
-        v2.flash(writer, fastboot_proxy, cmd).await
+        v2.flash(writer, file_resolver, fastboot_proxy, cmd).await
     }
 }
 
@@ -111,7 +118,7 @@ impl Flash for FlashManifest {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::test::setup;
+    use crate::test::{setup, TestResolver};
     use serde_json::from_str;
     use tempfile::NamedTempFile;
 
@@ -179,8 +186,13 @@ mod test {
         let (state, proxy) = setup();
         state.lock().unwrap().variables.push("rev_test-b4".to_string());
         let mut writer = Vec::<u8>::new();
-        v.flash(&mut writer, proxy, FlashCommand { manifest: tmp_file_name, ..Default::default() })
-            .await
+        v.flash(
+            &mut writer,
+            &mut TestResolver::new(),
+            proxy,
+            FlashCommand { manifest: tmp_file_name, ..Default::default() },
+        )
+        .await
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -191,7 +203,12 @@ mod test {
         let (state, proxy) = setup();
         state.lock().unwrap().variables.push("rev_test-b4".to_string());
         let mut writer = Vec::<u8>::new();
-        v.flash(&mut writer, proxy, FlashCommand { manifest: tmp_file_name, ..Default::default() })
-            .await
+        v.flash(
+            &mut writer,
+            &mut TestResolver::new(),
+            proxy,
+            FlashCommand { manifest: tmp_file_name, ..Default::default() },
+        )
+        .await
     }
 }

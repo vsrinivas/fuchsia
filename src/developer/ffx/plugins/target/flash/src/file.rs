@@ -1,0 +1,161 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+use {
+    crate::manifest::done_time,
+    anyhow::{anyhow, bail, Context, Result},
+    chrono::Utc,
+    ffx_core::ffx_bail,
+    std::fs::{create_dir_all, File},
+    std::io::{copy, Write},
+    std::path::{Path, PathBuf},
+    tempfile::{tempdir, TempDir},
+    zip::read::ZipArchive,
+};
+
+pub(crate) trait FileResolver {
+    fn manifest(&self) -> &Path;
+    fn get_file<W: Write + Send>(&mut self, writer: &mut W, file: &str) -> Result<String>;
+}
+
+pub(crate) struct Resolver {
+    manifest_path: PathBuf,
+}
+
+impl Resolver {
+    pub(crate) fn new(path: PathBuf) -> Result<Self> {
+        Ok(Self {
+            manifest_path: path
+                .canonicalize()
+                .context("Getting absolute path of flashing manifest")?,
+        })
+    }
+}
+
+impl FileResolver for Resolver {
+    fn manifest(&self) -> &Path {
+        self.manifest_path.as_path()
+    }
+
+    fn get_file<W: Write + Send>(&mut self, _writer: &mut W, file: &str) -> Result<String> {
+        if PathBuf::from(file).is_absolute() {
+            Ok(file.to_string())
+        } else if let Some(p) = self.manifest().parent() {
+            let mut parent = p.to_path_buf();
+            parent.push(file);
+            if let Some(f) = parent.to_str() {
+                Ok(f.to_string())
+            } else {
+                ffx_bail!("Only UTF-8 strings are currently supported in the flash manifest")
+            }
+        } else {
+            bail!("Could not get file to upload");
+        }
+    }
+}
+
+pub(crate) struct ArchiveResolver {
+    temp_dir: TempDir,
+    manifest_path: PathBuf,
+    internal_manifest_path: PathBuf,
+    archive: ZipArchive<File>,
+}
+
+impl ArchiveResolver {
+    pub(crate) fn new<W: Write + Send>(writer: &mut W, path: PathBuf) -> Result<Self> {
+        let temp_dir = tempdir()?;
+        let file =
+            File::open(path.clone()).map_err(|e| anyhow!("Could not open archive file: {}", e))?;
+        let mut archive =
+            ZipArchive::new(file).map_err(|e| anyhow!("Could not read archive: {}", e))?;
+        let mut internal_manifest_path = None;
+        let mut manifest_path = None;
+
+        for i in 0..archive.len() {
+            let mut archive_file = archive.by_index(i)?;
+            let outpath = archive_file.sanitized_name();
+            if (&*archive_file.name()).ends_with("flash.json") {
+                let mut internal_path = PathBuf::new();
+                internal_path.push(outpath.clone());
+                internal_manifest_path.replace(internal_path.clone());
+                let mut manifest = PathBuf::new();
+                manifest.push(temp_dir.path());
+                manifest.push(outpath);
+                if let Some(p) = manifest.parent() {
+                    if !p.exists() {
+                        create_dir_all(&p)?;
+                    }
+                }
+                let mut outfile = File::create(&manifest)?;
+                let time = Utc::now();
+                write!(
+                    writer,
+                    "Extracting {} to {}... ",
+                    internal_path.file_name().expect("has a file name").to_string_lossy(),
+                    temp_dir.path().display()
+                )?;
+                writer.flush()?;
+                copy(&mut archive_file, &mut outfile)?;
+                let duration = Utc::now().signed_duration_since(time);
+                done_time(writer, duration)?;
+                manifest_path.replace(manifest);
+                break;
+            }
+        }
+
+        match (internal_manifest_path, manifest_path) {
+            (Some(i), Some(m)) => {
+                Ok(Self { temp_dir, manifest_path: m, internal_manifest_path: i, archive })
+            }
+            _ => ffx_bail!("Could not locate `flash.json` in archive: {}", path.display()),
+        }
+    }
+}
+
+impl FileResolver for ArchiveResolver {
+    fn manifest(&self) -> &Path {
+        self.manifest_path.as_path()
+    }
+
+    fn get_file<W: Write + Send>(&mut self, writer: &mut W, file: &str) -> Result<String> {
+        let mut file = match self.internal_manifest_path.parent() {
+            Some(p) => {
+                let mut path = PathBuf::new();
+                path.push(p);
+                path.push(file);
+                self.archive
+                    .by_name(path.to_str().ok_or(anyhow!("invalid archive file name"))?)
+                    .map_err(|_| anyhow!("File not found in archive: {}", file))?
+            }
+            None => self
+                .archive
+                .by_name(file)
+                .map_err(|_| anyhow!("File not found in archive: {}", file))?,
+        };
+        let mut outpath = PathBuf::new();
+        outpath.push(self.temp_dir.path());
+        outpath.push(file.sanitized_name());
+        if let Some(p) = outpath.parent() {
+            if !p.exists() {
+                create_dir_all(&p)?;
+            }
+        }
+        let time = Utc::now();
+        write!(
+            writer,
+            "Extracting {} to {}... ",
+            file.sanitized_name().file_name().expect("has a file name").to_string_lossy(),
+            self.temp_dir.path().display()
+        )?;
+        if file.size() > (1 << 24) {
+            write!(writer, "large file, please wait... ")?;
+        }
+        writer.flush()?;
+        let mut outfile = File::create(&outpath)?;
+        copy(&mut file, &mut outfile)?;
+        let duration = Utc::now().signed_duration_since(time);
+        done_time(writer, duration)?;
+        Ok(outpath.to_str().ok_or(anyhow!("invalid temp file name"))?.to_owned())
+    }
+}

@@ -3,9 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    crate::manifest::{
-        v1::FlashManifest as FlashManifestV1, v2::FlashManifest as FlashManifestV2,
-        v3::FlashManifest as FlashManifestV3,
+    crate::{
+        file::FileResolver,
+        manifest::{
+            v1::FlashManifest as FlashManifestV1, v2::FlashManifest as FlashManifestV2,
+            v3::FlashManifest as FlashManifestV3,
+        },
     },
     anyhow::{anyhow, bail, Context, Error, Result},
     async_trait::async_trait,
@@ -24,7 +27,6 @@ use {
     serde::{Deserialize, Serialize},
     serde_json::{from_value, Value},
     std::io::{Read, Write},
-    std::path::{Path, PathBuf},
     termion::{color, style},
 };
 
@@ -38,14 +40,16 @@ const REVISION_VAR: &str = "hw-revision";
 
 #[async_trait]
 pub(crate) trait Flash {
-    async fn flash<W>(
+    async fn flash<W, F>(
         &self,
         writer: &mut W,
+        file_resolver: &mut F,
         fastboot_proxy: FastbootProxy,
         cmd: FlashCommand,
     ) -> Result<()>
     where
-        W: Write + Send;
+        W: Write + Send,
+        F: FileResolver + Send + Sync;
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -81,19 +85,21 @@ impl FlashManifest {
 
 #[async_trait]
 impl Flash for FlashManifest {
-    async fn flash<W>(
+    async fn flash<W, F>(
         &self,
         writer: &mut W,
+        file_resolver: &mut F,
         fastboot_proxy: FastbootProxy,
         cmd: FlashCommand,
     ) -> Result<()>
     where
         W: Write + Send,
+        F: FileResolver + Send + Sync,
     {
         match self {
-            Self::V1(v) => v.flash(writer, fastboot_proxy, cmd).await,
-            Self::V2(v) => v.flash(writer, fastboot_proxy, cmd).await,
-            Self::V3(v) => v.flash(writer, fastboot_proxy, cmd).await,
+            Self::V1(v) => v.flash(writer, file_resolver, fastboot_proxy, cmd).await,
+            Self::V2(v) => v.flash(writer, file_resolver, fastboot_proxy, cmd).await,
+            Self::V3(v) => v.flash(writer, file_resolver, fastboot_proxy, cmd).await,
         }
     }
 }
@@ -216,14 +222,19 @@ async fn handle_upload_progress_for_flashing<W: Write + Send>(
     }
 }
 
-pub(crate) async fn stage_file<W: Write + Send>(
+pub(crate) async fn stage_file<W: Write + Send, F: FileResolver + Send + Sync>(
     writer: &mut W,
-    path: &Path,
+    file_resolver: &mut F,
+    resolve: bool,
     file: &str,
     fastboot_proxy: &FastbootProxy,
 ) -> Result<()> {
     let (prog_client, prog_server) = create_endpoints::<UploadProgressListenerMarker>()?;
-    let file_to_upload = get_file(path, file).context("reconciling file for upload")?;
+    let file_to_upload = if resolve {
+        file_resolver.get_file(writer, file).context("reconciling file for upload")?
+    } else {
+        file.to_string()
+    };
     writeln!(writer, "Preparing to stage {}", file_to_upload)?;
     try_join!(
         fastboot_proxy.stage(&file_to_upload, prog_client).map_err(map_fidl_error),
@@ -234,31 +245,16 @@ pub(crate) async fn stage_file<W: Write + Send>(
     })
 }
 
-fn get_file(path: &Path, file: &str) -> Result<String> {
-    if PathBuf::from(file).is_absolute() {
-        Ok(file.to_string())
-    } else if let Some(p) = path.parent() {
-        let mut parent = p.to_path_buf();
-        parent.push(file);
-        if let Some(f) = parent.to_str() {
-            Ok(f.to_string())
-        } else {
-            bail!("Only UTF-8 strings are currently supported")
-        }
-    } else {
-        bail!("Could not get file to upload");
-    }
-}
-
-pub(crate) async fn flash_partition<W: Write + Send>(
+pub(crate) async fn flash_partition<W: Write + Send, F: FileResolver + Send + Sync>(
     writer: &mut W,
-    path: &Path,
+    file_resolver: &mut F,
     name: &str,
     file: &str,
     fastboot_proxy: &FastbootProxy,
 ) -> Result<()> {
     let (prog_client, prog_server) = create_endpoints::<UploadProgressListenerMarker>()?;
-    let file_to_upload = get_file(path, file).context("reconciling file for upload")?;
+    let file_to_upload =
+        file_resolver.get_file(writer, file).context("reconciling file for upload")?;
     writeln!(writer, "Preparing to upload {}", file_to_upload)?;
     try_join!(
         fastboot_proxy.flash(name, &file_to_upload, prog_client).map_err(map_fidl_error),

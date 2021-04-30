@@ -3,20 +3,25 @@
 // found in the LICENSE file.
 
 use {
-    crate::manifest::{Flash, FlashManifest},
+    crate::{
+        file::{ArchiveResolver, FileResolver, Resolver},
+        manifest::{Flash, FlashManifest},
+    },
     anyhow::{Context, Result},
     ffx_config::file,
     ffx_core::{ffx_bail, ffx_plugin},
     ffx_flash_args::{FlashCommand, OemFile},
     fidl_fuchsia_developer_bridge::FastbootProxy,
     std::fs::File,
-    std::io::{stdout, BufReader, Read, Write},
-    std::path::Path,
+    std::io::{stdout, BufReader, Write},
+    std::path::{Path, PathBuf},
 };
 
+mod file;
 mod manifest;
 
 const SSH_OEM_COMMAND: &str = "add-staged-bootloader-file ssh.authorized_keys";
+const EXT_ERR: &str = "Expecting manifest file to have an extension of `.json` or `.zip`";
 
 #[ffx_plugin()]
 pub async fn flash(
@@ -24,7 +29,8 @@ pub async fn flash(
     // TODO(fxb/74841): remove allow attribute
     #[allow(unused_mut)] mut cmd: FlashCommand,
 ) -> Result<()> {
-    let path = Path::new(&cmd.manifest);
+    let mut path = PathBuf::new();
+    path.push(&cmd.manifest);
     if !path.is_file() {
         ffx_bail!("Manifest \"{}\" is not a file.", cmd.manifest);
     }
@@ -56,17 +62,31 @@ pub async fn flash(
         }
     }
     let mut writer = Box::new(stdout());
-    let reader = File::open(path).context("opening file for read").map(BufReader::new)?;
-    flash_impl(&mut writer, reader, fastboot_proxy, cmd).await
+    match path.extension() {
+        Some(ext) => {
+            if ext == "json" {
+                flash_impl(&mut writer, Resolver::new(path)?, fastboot_proxy, cmd).await
+            } else if ext == "zip" {
+                let r = ArchiveResolver::new(&mut writer, path)?;
+                flash_impl(&mut writer, r, fastboot_proxy, cmd).await
+            } else {
+                ffx_bail!("{}", EXT_ERR)
+            }
+        }
+        _ => ffx_bail!("{}", EXT_ERR),
+    }
 }
 
-async fn flash_impl<W: Write + Send, R: Read>(
+async fn flash_impl<W: Write + Send, F: FileResolver + Send + Sync>(
     mut writer: W,
-    reader: R,
+    mut file_resolver: F,
     fastboot_proxy: FastbootProxy,
     cmd: FlashCommand,
 ) -> Result<()> {
-    FlashManifest::load(reader)?.flash(&mut writer, fastboot_proxy, cmd).await
+    let reader = File::open(file_resolver.manifest())
+        .context("opening file for read")
+        .map(BufReader::new)?;
+    FlashManifest::load(reader)?.flash(&mut writer, &mut file_resolver, fastboot_proxy, cmd).await
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -85,6 +105,28 @@ mod test {
         pub(crate) staged_files: Vec<String>,
         pub(crate) oem_commands: Vec<String>,
         pub(crate) variables: Vec<String>,
+    }
+
+    pub(crate) struct TestResolver {
+        manifest: PathBuf,
+    }
+
+    impl TestResolver {
+        pub(crate) fn new() -> Self {
+            let mut test = PathBuf::new();
+            test.push("./flash.json");
+            Self { manifest: test }
+        }
+    }
+
+    impl FileResolver for TestResolver {
+        fn manifest(&self) -> &Path {
+            self.manifest.as_path()
+        }
+
+        fn get_file<W: Write + Send>(&mut self, _writer: &mut W, file: &str) -> Result<String> {
+            Ok(file.to_owned())
+        }
     }
 
     pub(crate) fn setup() -> (Arc<Mutex<FakeServiceCommands>>, FastbootProxy) {

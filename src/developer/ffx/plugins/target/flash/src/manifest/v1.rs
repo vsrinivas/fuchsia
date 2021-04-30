@@ -3,10 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    crate::manifest::{
-        done_time, flash_partition, map_fidl_error, stage_file, verify_variable_value, Flash,
+    crate::{
+        file::FileResolver,
+        manifest::{
+            done_time, flash_partition, map_fidl_error, stage_file, verify_variable_value, Flash,
+        },
     },
-    anyhow::{anyhow, bail, Context as _, Result},
+    anyhow::{anyhow, bail, Result},
     async_trait::async_trait,
     chrono::Utc,
     ffx_core::ffx_bail,
@@ -16,7 +19,7 @@ use {
     futures::prelude::*,
     futures::try_join,
     serde::{Deserialize, Serialize},
-    std::{io::Write, path::Path},
+    std::io::Write,
     termion::{color, style},
 };
 
@@ -73,19 +76,18 @@ pub(crate) struct FlashManifest(pub(crate) Vec<Product>);
 
 #[async_trait]
 impl Flash for FlashManifest {
-    async fn flash<W>(
+    async fn flash<W, F>(
         &self,
         writer: &mut W,
+        file_resolver: &mut F,
         fastboot_proxy: FastbootProxy,
         cmd: FlashCommand,
     ) -> Result<()>
     where
         W: Write + Send,
+        F: FileResolver + Send + Sync,
     {
         let total_time = Utc::now();
-        let path = Path::new(&cmd.manifest)
-            .canonicalize()
-            .context("Getting absolute path of flashing manifest")?;
         let product = match cmd.product {
             Some(p) => match self.0.iter().find(|product| product.name == p) {
                 Some(res) => res,
@@ -102,7 +104,8 @@ impl Flash for FlashManifest {
                 }
             }
         };
-        flash_partitions(writer, &path, &product.bootloader_partitions, &fastboot_proxy).await?;
+        flash_partitions(writer, file_resolver, &product.bootloader_partitions, &fastboot_proxy)
+            .await?;
         if product.bootloader_partitions.len() > 0 {
             write!(writer, "Rebooting to bootloader... ")?;
             writer.flush()?;
@@ -128,21 +131,9 @@ impl Flash for FlashManifest {
                 reboot.map_err(|e| anyhow!("failed booting to bootloader: {:?}", e))
             })?;
         }
-        flash_partitions(writer, &path, &product.partitions, &fastboot_proxy).await?;
-        for oem_file in &product.oem_files {
-            stage_file(writer, &path, oem_file.file(), &fastboot_proxy).await?;
-            writeln!(writer, "Sending command \"{}\"", oem_file.command())?;
-            fastboot_proxy.oem(oem_file.command()).await?.map_err(|_| {
-                anyhow!("There was an error sending oem command \"{}\"", oem_file.command())
-            })?;
-        }
-        for oem_file in &cmd.oem_stage {
-            stage_file(writer, &path, oem_file.file(), &fastboot_proxy).await?;
-            writeln!(writer, "Sending command \"{}\"", oem_file.command())?;
-            fastboot_proxy.oem(oem_file.command()).await?.map_err(|_| {
-                anyhow!("There was an error sending oem command \"{}\"", oem_file.command())
-            })?;
-        }
+        flash_partitions(writer, file_resolver, &product.partitions, &fastboot_proxy).await?;
+        stage_oem_files(writer, file_resolver, true, &product.oem_files, &fastboot_proxy).await?;
+        stage_oem_files(writer, file_resolver, false, &cmd.oem_stage, &fastboot_proxy).await?;
         fastboot_proxy
             .erase("misc")
             .await?
@@ -164,9 +155,26 @@ impl Flash for FlashManifest {
     }
 }
 
-pub(crate) async fn flash_partitions<W: Write + Send>(
+pub(crate) async fn stage_oem_files<W: Write + Send, F: FileResolver + Send + Sync>(
     writer: &mut W,
-    path: &Path,
+    file_resolver: &mut F,
+    resolve: bool,
+    oem_files: &Vec<OemFile>,
+    fastboot_proxy: &FastbootProxy,
+) -> Result<()> {
+    for oem_file in oem_files {
+        stage_file(writer, file_resolver, resolve, oem_file.file(), &fastboot_proxy).await?;
+        writeln!(writer, "Sending command \"{}\"", oem_file.command())?;
+        fastboot_proxy.oem(oem_file.command()).await?.map_err(|_| {
+            anyhow!("There was an error sending oem command \"{}\"", oem_file.command())
+        })?;
+    }
+    Ok(())
+}
+
+pub(crate) async fn flash_partitions<W: Write + Send, F: FileResolver + Send + Sync>(
+    writer: &mut W,
+    file_resolver: &mut F,
     partitions: &Vec<Partition>,
     fastboot_proxy: &FastbootProxy,
 ) -> Result<()> {
@@ -176,7 +184,7 @@ pub(crate) async fn flash_partitions<W: Write + Send>(
                 if verify_variable_value(var, value, fastboot_proxy).await? {
                     flash_partition(
                         writer,
-                        &path,
+                        file_resolver,
                         partition.name(),
                         partition.file(),
                         fastboot_proxy,
@@ -185,8 +193,14 @@ pub(crate) async fn flash_partitions<W: Write + Send>(
                 }
             }
             _ => {
-                flash_partition(writer, &path, partition.name(), partition.file(), fastboot_proxy)
-                    .await?
+                flash_partition(
+                    writer,
+                    file_resolver,
+                    partition.name(),
+                    partition.file(),
+                    fastboot_proxy,
+                )
+                .await?
             }
         }
     }
@@ -199,7 +213,7 @@ pub(crate) async fn flash_partitions<W: Write + Send>(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::test::setup;
+    use crate::test::{setup, TestResolver};
     use regex::Regex;
     use serde_json::from_str;
     use tempfile::NamedTempFile;
@@ -312,8 +326,13 @@ mod test {
         let tmp_file_name = tmp_file.path().to_string_lossy().to_string();
         let (_, proxy) = setup();
         let mut writer = Vec::<u8>::new();
-        v.flash(&mut writer, proxy, FlashCommand { manifest: tmp_file_name, ..Default::default() })
-            .await
+        v.flash(
+            &mut writer,
+            &mut TestResolver::new(),
+            proxy,
+            FlashCommand { manifest: tmp_file_name, ..Default::default() },
+        )
+        .await
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -326,6 +345,7 @@ mod test {
         assert!(v
             .flash(
                 &mut writer,
+                &mut TestResolver::new(),
                 proxy,
                 FlashCommand { manifest: tmp_file_name, ..Default::default() },
             )
@@ -344,6 +364,7 @@ mod test {
         assert!(v
             .flash(
                 &mut writer,
+                &mut TestResolver::new(),
                 proxy,
                 FlashCommand {
                     manifest: tmp_file_name,
@@ -365,6 +386,7 @@ mod test {
         let mut writer = Vec::<u8>::new();
         v.flash(
             &mut writer,
+            &mut TestResolver::new(),
             proxy,
             FlashCommand {
                 manifest: tmp_file_name,
@@ -396,6 +418,7 @@ mod test {
         let mut writer = Vec::<u8>::new();
         v.flash(
             &mut writer,
+            &mut TestResolver::new(),
             proxy,
             FlashCommand {
                 manifest: manifest_file_name,
@@ -426,6 +449,7 @@ mod test {
         let mut writer = Vec::<u8>::new();
         v.flash(
             &mut writer,
+            &mut TestResolver::new(),
             proxy,
             FlashCommand {
                 manifest: tmp_file_name,
