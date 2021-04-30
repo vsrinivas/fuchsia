@@ -75,3 +75,7 @@ struct StrictEnumUint32Struct {
 struct StrictEnumUint64Struct {
     StrictEnumUint64 e;
 };
+
+struct VectorOfEnumStruct {
+    vector<StrictEnumInt16> v;
+};

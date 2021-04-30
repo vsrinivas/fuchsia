@@ -90,6 +90,19 @@ success("StrictEnumUint64Struct") {
     },
 }
 
+success("VectorOfEnumStruct") {
+    value = VectorOfEnumStruct {
+        v: [0x0102],
+    },
+    bytes = {
+        v1 = [
+            0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+            0x02, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        ],
+    },
+}
+
 encode_failure("StrictEnumInt8StructUnknownValue") {
     // Rust: cannot construct invalid enum.
     bindings_denylist = [rust],
