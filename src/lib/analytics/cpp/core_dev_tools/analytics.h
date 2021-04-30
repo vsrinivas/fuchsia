@@ -9,6 +9,7 @@
 #include <string>
 
 #include "lib/fit/function.h"
+#include "sdk/lib/syslog/cpp/macros.h"
 #include "src/developer/debug/zxdb/common/version.h"
 #include "src/lib/analytics/cpp/core_dev_tools/analytics_internal.h"
 #include "src/lib/analytics/cpp/core_dev_tools/analytics_messages.h"
@@ -85,12 +86,22 @@ class Analytics {
     }
   }
 
-  // Same as Init() but will disable analytics when run by bot
-  static void InitBotAware(AnalyticsOption analytics_option) {
-    if (IsRunByBot()) {
-      T::SetRuntimeAnalyticsStatus(AnalyticsStatus::kDisabled);
+  // Same as Init() but will behave differently when run by bot
+  static void InitBotAware(AnalyticsOption analytics_option, bool enable_on_bots = false) {
+    BotInfo bot = GetBotInfo();
+    if (bot.IsRunByBot()) {
+      T::SetRuntimeAnalyticsStatus(enable_on_bots ? AnalyticsStatus::kEnabled
+                                                  : AnalyticsStatus::kDisabled);
     } else {
       Init(analytics_option);
+    }
+
+    // Remove "&& bot.IsRunByBot()" if one wants to add "ds=user" parameter for non-bot users
+    // Currently, non-bot users will have "(not set)" for the "ds" (data source) parameter, which
+    // appears to be enough for now
+    if (enable_on_bots && IsEnabled() && bot.IsRunByBot()) {
+      FX_DCHECK(!client_ && !client_is_cleaned_up_);
+      CreateAndPrepareGoogleAnalyticsClient(bot);
     }
   }
 
@@ -208,9 +219,9 @@ class Analytics {
 
   static void InitSubLaunchedFirst() { T::SetRuntimeAnalyticsStatus(AnalyticsStatus::kDisabled); }
 
-  static void CreateAndPrepareGoogleAnalyticsClient() {
+  static void CreateAndPrepareGoogleAnalyticsClient(std::optional<BotInfo> bot = std::nullopt) {
     client_ = new GoogleAnalyticsClient(T::kQuitTimeoutMs);
-    internal::PrepareGoogleAnalyticsClient(*client_, T::kToolName, T::kTrackingId);
+    internal::PrepareGoogleAnalyticsClient(*client_, T::kToolName, T::kTrackingId, bot);
   };
 
   static void SendAnalyticsManualEnableEvent() {

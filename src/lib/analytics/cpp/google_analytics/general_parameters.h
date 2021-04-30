@@ -34,6 +34,7 @@ class GeneralParameters {
   void SetCustomMetric(int index, int64_t value);
   void SetApplicationName(std::string_view application_name);
   void SetApplicationVersion(std::string_view application_version);
+  void SetDataSource(std::string_view data_source);
 
  private:
   std::map<std::string, std::string> parameters_;

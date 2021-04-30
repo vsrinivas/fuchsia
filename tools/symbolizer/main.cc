@@ -93,7 +93,7 @@ int Main(int argc, const char* argv[]) {
   if (EarlyProcessAnalyticsOptions<Analytics>(options.analytics, options.analytics_show)) {
     return 0;
   }
-  Analytics::InitBotAware(options.analytics);
+  Analytics::InitBotAware(options.analytics, true);
   Analytics::IfEnabledSendInvokeEvent();
 
   if (options.auth_mode) {

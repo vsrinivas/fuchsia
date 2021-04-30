@@ -14,6 +14,7 @@ class GeneralParameters : public google_analytics::GeneralParameters {
   // Explicitly pick which parameters to expose
   using google_analytics::GeneralParameters::SetApplicationName;
   using google_analytics::GeneralParameters::SetApplicationVersion;
+  using google_analytics::GeneralParameters::SetDataSource;
 
   void SetOsVersion(std::string_view os);
 };

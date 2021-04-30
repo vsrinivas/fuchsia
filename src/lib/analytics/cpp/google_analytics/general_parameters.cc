@@ -27,6 +27,7 @@ constexpr int kCustomMetricIndexMax = 200;
 // See https://developers.google.com/analytics/devguides/collection/protocol/v1/parameters
 constexpr char kApplicationNameKey[] = "an";
 constexpr char kApplicationVersionKey[] = "av";
+constexpr char kDataSourceKey[] = "ds";
 
 }  // namespace
 
@@ -48,6 +49,10 @@ void GeneralParameters::SetApplicationName(std::string_view application_name) {
 
 void GeneralParameters::SetApplicationVersion(std::string_view application_version) {
   parameters_[kApplicationVersionKey] = application_version;
+}
+
+void GeneralParameters::SetDataSource(std::string_view data_source) {
+  parameters_[kDataSourceKey] = data_source;
 }
 
 }  // namespace analytics::google_analytics

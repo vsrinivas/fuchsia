@@ -12,6 +12,7 @@ import("//build/testing/host_test_data.gni")
 if (is_host) {
   source_set("src") {
     sources = [
+      "analytics.cc",
       "command_line_options.cc",
       "log_parser.cc",
       "symbolizer_impl.cc",
@@ -46,6 +47,7 @@ if (is_host) {
 
   test("symbolizer_tests") {
     sources = [
+      "analytics_test.cc",
       "command_line_options_test.cc",
       "log_parser_test.cc",
       "symbolizer_impl_test.cc",
