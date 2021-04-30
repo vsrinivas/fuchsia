@@ -530,6 +530,10 @@ impl Facade for AvrcpFacade {
                 let result = self.inform_battery_status(battery_status.clone()).await?;
                 Ok(to_value(result)?)
             }
+            "AvrcpNotifyNotificationHandled" => {
+                let result = self.notify_notification_handled().await?;
+                Ok(to_value(result)?)
+            }
             "AvrcpSetAddressedPlayer" => {
                 let player_id: u16 = match from_value(args.clone()) {
                     Ok(settings) => settings,

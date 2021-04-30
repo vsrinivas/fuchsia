@@ -239,8 +239,8 @@ impl AvrcpFacade {
     ///
     /// # Arguments
     /// * `notifications_filter` - the notification ids as bit flags for which to filter.
-    /// * `position_change_interval` - the `position_change_interval` argument is used to set the interval in seconds that the
-    /// controller client would like to be notified of `TRACK_POS_CHANGED` events.  It is ignored if 'TRACK_POS' bit flag is not set.
+    /// * `position_change_interval` - the interval in seconds that the controller client would
+    ///  like to be notified of `TRACK_POS_CHANGED` events.  It is ignored if 'TRACK_POS' bit flag is not set.
     pub async fn set_notification_filter(
         &self,
         notifications_filter: u32,
@@ -267,6 +267,21 @@ impl AvrcpFacade {
                     ),
                 }
             }
+            None => fx_err_and_bail!(&with_line!(tag), "No AVRCP service proxy available"),
+        }
+    }
+
+    /// Notifies that the OnNotification event was handled.
+    pub async fn notify_notification_handled(&self) -> Result<(), Error> {
+        let tag = "AvrcpFacade::notify_notification_handled";
+        match self.inner.read().controller_proxy.clone() {
+            Some(proxy) => match proxy.notify_notification_handled() {
+                Ok(()) => Ok(()),
+                Err(e) => fx_err_and_bail!(
+                    &with_line!(tag),
+                    format!("Error setting notification filter: {:?}", e)
+                ),
+            },
             None => fx_err_and_bail!(&with_line!(tag), "No AVRCP service proxy available"),
         }
     }
