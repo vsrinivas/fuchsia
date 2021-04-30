@@ -33,7 +33,7 @@ void ReadNameLabels(PacketReader& reader, std::vector<char>& chars) {
       reader >> label_size;
       offset |= label_size;
 
-      if (offset > start_position_of_current_run) {
+      if (offset >= start_position_of_current_run) {
         // This is an attempt to loop or point forward: bad in either case.
         reader.MarkUnhealthy();
         return;
