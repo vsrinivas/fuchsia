@@ -2,7 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//build/components.gni")
+import("//build/dist/renamed_binary.gni")
 
 group("intl_services") {
   testonly = true
@@ -47,6 +48,7 @@ source_set("lib") {
 }
 
 executable("intl_services_bin") {
+  output_name = "intl_services"
   sources = [ "main.cc" ]
 
   deps = [
@@ -55,54 +57,29 @@ executable("intl_services_bin") {
   ]
 }
 
-package("pkg") {
+fuchsia_package_with_single_component("pkg") {
   package_name = "intl_services"
-  deps = [ ":intl_services_bin" ]
-
-  binaries = [
-    {
-      name = "intl_services_bin"
-      dest = "intl_services"
-    },
-  ]
-
-  meta = [
-    {
-      path = "meta/intl_services.cmx"
-      dest = "intl_services.cmx"
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path("//third_party/icu/common/icudtl.dat")
-      dest = "icudtl.dat"
-    },
+  manifest = "meta/intl_services.cmx"
+  deps = [
+    ":intl_services_bin",
+    "//src/intl:icudtl",
   ]
 }
 
-package("pkg_small") {
+# The a11y_manager and intl_services binaries have been fused together for
+# storage space reasons, busybox style.
+renamed_binary("renamed_a11y_manager") {
+  source = "$root_out_dir/a11y_manager"
+  source_deps = [ "//src/ui/a11y/bin/a11y_manager:bin" ]
+  dest = "bin/intl_services"
+}
+
+fuchsia_package_with_single_component("pkg_small") {
   package_name = "intl-services-small"
-  deps = [ "//src/ui/a11y/bin/a11y_manager:bin" ]
-
-  binaries = [
-    {
-      name = "a11y_manager"
-      dest = "intl_services"
-    },
-  ]
-
-  meta = [
-    {
-      path = "meta/intl_services.cmx"
-      dest = "intl_services.cmx"
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path("//third_party/icu/common/icudtl.dat")
-      dest = "icudtl.dat"
-    },
+  component_name = "intl_services"
+  manifest = "meta/intl_services.cmx"
+  deps = [
+    ":renamed_a11y_manager",
+    "//src/intl:icudtl",
   ]
 }
