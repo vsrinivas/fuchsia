@@ -154,6 +154,7 @@ zx_status_t NamespaceBuilder::AddSandbox(
       PushDirectoryFromPath("/dev/class/goldfish-address-space");
       PushDirectoryFromPath("/dev/class/goldfish-control");
       PushDirectoryFromPath("/dev/class/goldfish-pipe");
+      PushDirectoryFromPath("/dev/class/goldfish-sync");
       PushDirectoryFromPath("/dev/class/gpu");
       PushDirectoryFromPathAs("/pkgfs/packages/config-data/0/meta/data/vulkan-icd/icd.d",
                               "/config/vulkan/icd.d");
