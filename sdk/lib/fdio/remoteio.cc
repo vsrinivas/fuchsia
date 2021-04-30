@@ -45,96 +45,80 @@ zx_status_t fdio_validate_path(const char* path, size_t* out_length) {
   return ZX_OK;
 }
 
-static zx_status_t check_connected(const zx::socket& socket, bool* out_connected) {
-  zx_signals_t observed;
-
-  zx_status_t status =
-      socket.wait_one(ZXSIO_SIGNAL_CONNECTED, zx::time::infinite_past(), &observed);
-  switch (status) {
-    case ZX_OK:
-      __FALLTHROUGH;
-    case ZX_ERR_TIMED_OUT:
-      break;
-    default:
-      return status;
-  }
-  *out_connected = observed & ZXSIO_SIGNAL_CONNECTED;
-  return ZX_OK;
-}
-
 zx::status<fdio_ptr> fdio::create(fidl::ClientEnd<fio::Node> node, fio::wire::NodeInfo info) {
-  bool connected = false;
-
-  zx::status io = [&]() -> zx::status<fdio_ptr> {
-    switch (info.which()) {
-      case fio::wire::NodeInfo::Tag::kDirectory:
-        return fdio_internal::dir::create(fidl::ClientEnd<fio::Directory>(node.TakeChannel()));
-      case fio::wire::NodeInfo::Tag::kService:
-        return fdio_internal::remote::create(std::move(node), zx::eventpair{});
-      case fio::wire::NodeInfo::Tag::kFile: {
-        auto& file = info.mutable_file();
-        return fdio_internal::remote::create(fidl::ClientEnd<fio::File>(node.TakeChannel()),
-                                             std::move(file.event), std::move(file.stream));
-      }
-      case fio::wire::NodeInfo::Tag::kDevice: {
-        auto& device = info.mutable_device();
-        return fdio_internal::remote::create(std::move(node), std::move(device.event));
-      }
-      case fio::wire::NodeInfo::Tag::kTty: {
-        auto& tty = info.mutable_tty();
-        return fdio_internal::pty::create(fidl::ClientEnd<fpty::Device>(node.TakeChannel()),
-                                          std::move(tty.event));
-      }
-      case fio::wire::NodeInfo::Tag::kVmofile: {
-        auto& file = info.mutable_vmofile();
-        auto control = fidl::ClientEnd<fio::File>(node.TakeChannel());
-        auto result = fidl::WireCall(control.borrow()).Seek(0, fio::wire::SeekOrigin::kStart);
-        zx_status_t status = result.status();
-        if (status != ZX_OK) {
-          return zx::error(status);
-        }
-        status = result->s;
-        if (status != ZX_OK) {
-          return zx::error(status);
-        }
-        return fdio_internal::remote::create(std::move(control), std::move(file.vmo), file.offset,
-                                             file.length, result->offset);
-      }
-      case fio::wire::NodeInfo::Tag::kPipe: {
-        auto& pipe = info.mutable_pipe();
-        return fdio_internal::pipe::create(std::move(pipe.socket));
-      }
-      case fio::wire::NodeInfo::Tag::kDatagramSocket: {
-        auto& socket = info.mutable_datagram_socket();
-        return zx::ok(fdio_datagram_socket_create(
-            std::move(socket.event), fidl::ClientEnd<fsocket::DatagramSocket>(node.TakeChannel())));
-      }
-      case fio::wire::NodeInfo::Tag::kStreamSocket: {
-        auto& socket = info.mutable_stream_socket();
-        zx_status_t status = check_connected(socket.socket, &connected);
-        if (status != ZX_OK) {
-          return zx::error(status);
-        }
-        zx_info_socket_t socket_info;
-        status = socket.socket.get_info(ZX_INFO_SOCKET, &socket_info, sizeof(socket_info), nullptr,
-                                        nullptr);
-        if (status != ZX_OK) {
-          return zx::error(status);
-        }
-        return zx::ok(fdio_stream_socket_create(
-            std::move(socket.socket), fidl::ClientEnd<fsocket::StreamSocket>(node.TakeChannel()),
-            socket_info));
-      }
-      default:
-        return zx::error(ZX_ERR_NOT_SUPPORTED);
+  switch (info.which()) {
+    case fio::wire::NodeInfo::Tag::kDirectory:
+      return fdio_internal::dir::create(fidl::ClientEnd<fio::Directory>(node.TakeChannel()));
+    case fio::wire::NodeInfo::Tag::kService:
+      return fdio_internal::remote::create(std::move(node), zx::eventpair{});
+    case fio::wire::NodeInfo::Tag::kFile: {
+      auto& file = info.mutable_file();
+      return fdio_internal::remote::create(fidl::ClientEnd<fio::File>(node.TakeChannel()),
+                                           std::move(file.event), std::move(file.stream));
     }
-  }();
+    case fio::wire::NodeInfo::Tag::kDevice: {
+      auto& device = info.mutable_device();
+      return fdio_internal::remote::create(std::move(node), std::move(device.event));
+    }
+    case fio::wire::NodeInfo::Tag::kTty: {
+      auto& tty = info.mutable_tty();
+      return fdio_internal::pty::create(fidl::ClientEnd<fpty::Device>(node.TakeChannel()),
+                                        std::move(tty.event));
+    }
+    case fio::wire::NodeInfo::Tag::kVmofile: {
+      auto& file = info.mutable_vmofile();
+      auto control = fidl::ClientEnd<fio::File>(node.TakeChannel());
+      auto result = fidl::WireCall(control.borrow()).Seek(0, fio::wire::SeekOrigin::kStart);
+      zx_status_t status = result.status();
+      if (status != ZX_OK) {
+        return zx::error(status);
+      }
+      status = result->s;
+      if (status != ZX_OK) {
+        return zx::error(status);
+      }
+      return fdio_internal::remote::create(std::move(control), std::move(file.vmo), file.offset,
+                                           file.length, result->offset);
+    }
+    case fio::wire::NodeInfo::Tag::kPipe: {
+      auto& pipe = info.mutable_pipe();
+      return fdio_internal::pipe::create(std::move(pipe.socket));
+    }
+    case fio::wire::NodeInfo::Tag::kDatagramSocket: {
+      auto& socket = info.mutable_datagram_socket();
+      return zx::ok(fdio_datagram_socket_create(
+          std::move(socket.event), fidl::ClientEnd<fsocket::DatagramSocket>(node.TakeChannel())));
+    }
+    case fio::wire::NodeInfo::Tag::kStreamSocket: {
+      auto& socket = info.mutable_stream_socket().socket;
+      zx_info_socket_t socket_info;
+      zx_status_t status =
+          socket.get_info(ZX_INFO_SOCKET, &socket_info, sizeof(socket_info), nullptr, nullptr);
+      if (status != ZX_OK) {
+        return zx::error(status);
+      }
+      StreamSocketState state;
+      status = socket.wait_one(ZXSIO_SIGNAL_CONNECTED, zx::time::infinite_past(), nullptr);
+      // TODO(tamird): Transferring a listening or connecting socket to another process doesn't work
+      // correctly since those states can't be observed here.
+      switch (status) {
+        case ZX_OK:
+          state = StreamSocketState::kConnected;
+          break;
+        case ZX_ERR_TIMED_OUT:
+          state = StreamSocketState::kUnconnected;
+          break;
+        default:
+          return zx::error(status);
+      }
 
-  if (io.is_ok() && connected) {
-    io->ioflag() |= IOFLAG_SOCKET_CONNECTED;
+      return zx::ok(fdio_stream_socket_create(
+          std::move(socket), fidl::ClientEnd<fsocket::StreamSocket>(node.TakeChannel()),
+          socket_info, state));
+    }
+    default:
+      return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
-
-  return io;
 }
 
 zx::status<fdio_ptr> fdio::create_with_describe(fidl::ClientEnd<fio::Node> node) {

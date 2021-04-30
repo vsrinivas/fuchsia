@@ -55,17 +55,7 @@ struct Errno {
 #define IOFLAG_CLOEXEC (1 << 0)
 #define IOFLAG_EPOLL (1 << 2)
 #define IOFLAG_WAITABLE (1 << 3)
-
-// Socket is connecting to the peer.
-#define IOFLAG_SOCKET_CONNECTING (1 << 4)
-// Socket is connected to the peer.
-#define IOFLAG_SOCKET_CONNECTED (1 << 5)
-// Socket is operating in non-blocking mode.
-#define IOFLAG_NONBLOCK (1 << 6)
-// Socket has an error signal asserted.
-#define IOFLAG_SOCKET_HAS_ERROR (1 << 7)
-// Socket is listening for new connections.
-#define IOFLAG_SOCKET_LISTENING (1 << 8)
+#define IOFLAG_NONBLOCK (1 << 4)
 
 // The subset of fdio_t per-fd flags queryable via fcntl.
 // Static assertions in unistd.cc ensure we aren't colliding.
@@ -85,9 +75,25 @@ fdio_ptr fdio_iodir(const char** path, int dirfd);
 fdio_ptr fdio_datagram_socket_create(zx::eventpair event,
                                      fidl::ClientEnd<fuchsia_posix_socket::DatagramSocket> client);
 
+// Possible states for a stream socket.
+//
+// Exposed here to keep the factory function infallible; i.e. state observation happens in the
+// factory's caller.
+enum class StreamSocketState {
+  kUnconnected,
+  kListening,
+  kConnecting,
+  kConnected,
+  // TODO(https://fxbug.dev/75717): Remove these states, they are used only to propagate side
+  // effects from stream_socket::wait_end.
+  kRefused,
+  kReset,
+  kErrorConsumed,
+};
+
 fdio_ptr fdio_stream_socket_create(zx::socket socket,
                                    fidl::ClientEnd<fuchsia_posix_socket::StreamSocket> client,
-                                   zx_info_socket_t info);
+                                   zx_info_socket_t info, StreamSocketState state);
 
 // Creates an |fdio_t| referencing the root of the |ns| namespace.
 zx::status<fdio_ptr> fdio_ns_open_root(fdio_ns_t* ns);
@@ -211,6 +217,9 @@ struct fdio : protected fbl::RefCounted<fdio>, protected fbl::Recyclable<fdio> {
 
   // |ioflag| contains mutable properties of this object, shared by
   // different transports. Possible values are |IOFLAG_*| in private.h.
+  //
+  // TODO(https://fxbug.dev/75778): The value of this field is not preserved when fdio_fd_transfer
+  // is used.
   uint32_t& ioflag() { return ioflag_; }
 
   // The zxio object, if the zxio transport is selected in |ops|.

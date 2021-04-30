@@ -113,7 +113,6 @@ int socket(int domain, int type, int protocol) {
     return ERROR(io.status_value());
   }
 
-  // TODO(tamird): we're not handling this flag in fdio_from_channel, which seems bad.
   if (type & SOCK_NONBLOCK) {
     io->ioflag() |= IOFLAG_NONBLOCK;
   }
@@ -143,7 +142,6 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
   }
   if (out_code == EINPROGRESS) {
     auto& ioflag = io->ioflag();
-    ioflag = (ioflag & ~IOFLAG_SOCKET_LISTENING) | IOFLAG_SOCKET_CONNECTING;
     if (!(ioflag & IOFLAG_NONBLOCK)) {
       if ((status = fdio_wait(io, FDIO_EVT_WRITABLE, zx::time::infinite(), nullptr)) != ZX_OK) {
         return ERROR(status);
@@ -155,16 +153,10 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
     }
   }
 
-  switch (out_code) {
-    case 0: {
-      io->ioflag() |= IOFLAG_SOCKET_CONNECTED;
-      return out_code;
-    }
-
-    default: {
-      return ERRNO(out_code);
-    }
+  if (out_code) {
+    return ERRNO(out_code);
   }
+  return 0;
 }
 
 template <typename F>
@@ -272,7 +264,6 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict addr
     return ERROR(accepted_io.status_value());
   }
 
-  // TODO(tamird): we're not handling this flag in fdio_from_channel, which seems bad.
   if (flags & SOCK_NONBLOCK) {
     accepted_io->ioflag() |= IOFLAG_NONBLOCK;
   }

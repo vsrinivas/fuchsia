@@ -706,8 +706,12 @@ ssize_t preadv(int fd, const struct iovec* iov, int iovcnt, off_t offset) {
     size_t actual;
     zx_status_t status = zxio_readv_at(&io->zxio_storage().io, offset, zx_iov, iovcnt, 0, &actual);
     if (status == ZX_ERR_SHOULD_WAIT && !nonblocking) {
-      if (fdio_wait(io, FDIO_EVT_READABLE, deadline, nullptr) != ZX_ERR_TIMED_OUT) {
+      status = fdio_wait(io, FDIO_EVT_READABLE, deadline, nullptr);
+      if (status == ZX_OK) {
         continue;
+      }
+      if (status == ZX_ERR_TIMED_OUT) {
+        status = ZX_ERR_SHOULD_WAIT;
       }
     }
     if (status != ZX_OK) {
@@ -738,8 +742,12 @@ ssize_t pwritev(int fd, const struct iovec* iov, int iovcnt, off_t offset) {
     size_t actual;
     zx_status_t status = zxio_writev_at(&io->zxio_storage().io, offset, zx_iov, iovcnt, 0, &actual);
     if (status == ZX_ERR_SHOULD_WAIT && !nonblocking) {
-      if (fdio_wait(io, FDIO_EVT_WRITABLE, deadline, nullptr) != ZX_ERR_TIMED_OUT) {
+      status = fdio_wait(io, FDIO_EVT_WRITABLE, deadline, nullptr);
+      if (status == ZX_OK) {
         continue;
+      }
+      if (status == ZX_ERR_TIMED_OUT) {
+        status = ZX_ERR_SHOULD_WAIT;
       }
     }
     if (status != ZX_OK) {
@@ -1947,27 +1955,21 @@ ssize_t sendmsg(int fd, const struct msghdr* msg, int flags) {
     size_t actual;
     int16_t out_code;
     zx_status_t status = io->sendmsg(msg, flags, &actual, &out_code);
-    if ((status == ZX_ERR_SHOULD_WAIT || (status == ZX_OK && out_code == EWOULDBLOCK)) &&
-        !nonblocking) {
-      uint32_t pending;
-      switch (fdio_wait(io, FDIO_EVT_WRITABLE, deadline, &pending)) {
-        case ZX_ERR_TIMED_OUT:
-          break;
+    if (!nonblocking) {
+      switch (status) {
         case ZX_OK:
-          if (pending & POLLERR) {
-            if (ioflag & IOFLAG_SOCKET_CONNECTING) {
-              status = ZX_ERR_CONNECTION_REFUSED;
-            } else {
-              status = ZX_ERR_CONNECTION_RESET;
-            }
-            // Reset error state so that subsequent read/write calls do not fail with the same
-            // error.
-            ioflag &= ~IOFLAG_SOCKET_HAS_ERROR;
+          if (out_code != EWOULDBLOCK) {
             break;
           }
           __FALLTHROUGH;
-        default:
-          continue;
+        case ZX_ERR_SHOULD_WAIT:
+          status = fdio_wait(io, FDIO_EVT_WRITABLE, deadline, nullptr);
+          if (status == ZX_OK) {
+            continue;
+          }
+          if (status == ZX_ERR_TIMED_OUT) {
+            status = ZX_ERR_SHOULD_WAIT;
+          }
       }
     }
     if (status != ZX_OK) {
@@ -1994,27 +1996,21 @@ ssize_t recvmsg(int fd, struct msghdr* msg, int flags) {
     size_t actual;
     int16_t out_code;
     zx_status_t status = io->recvmsg(msg, flags, &actual, &out_code);
-    if ((status == ZX_ERR_SHOULD_WAIT || (status == ZX_OK && out_code == EWOULDBLOCK)) &&
-        !nonblocking) {
-      uint32_t pending;
-      switch (fdio_wait(io, FDIO_EVT_READABLE, deadline, &pending)) {
-        case ZX_ERR_TIMED_OUT:
-          break;
+    if (!nonblocking) {
+      switch (status) {
         case ZX_OK:
-          if (pending & POLLERR) {
-            if (ioflag & IOFLAG_SOCKET_CONNECTING) {
-              status = ZX_ERR_CONNECTION_REFUSED;
-            } else {
-              status = ZX_ERR_CONNECTION_RESET;
-            }
-            // Reset error state so that subsequent read/write calls do not fail with the same
-            // error.
-            ioflag &= ~IOFLAG_SOCKET_HAS_ERROR;
+          if (out_code != EWOULDBLOCK) {
             break;
           }
           __FALLTHROUGH;
-        default:
-          continue;
+        case ZX_ERR_SHOULD_WAIT:
+          status = fdio_wait(io, FDIO_EVT_READABLE, deadline, nullptr);
+          if (status == ZX_OK) {
+            continue;
+          }
+          if (status == ZX_ERR_TIMED_OUT) {
+            status = ZX_ERR_SHOULD_WAIT;
+          }
       }
     }
     if (status != ZX_OK) {

@@ -445,9 +445,19 @@ auto timeout = [](fbl::unique_fd& fd, zx::socket& server_socket) {
   EXPECT_EQ(fut.wait_for(margin), std::future_status::timeout);
   // Resetting the remote end socket should cause the read/write to complete.
   server_socket.reset();
+  // Closing the socket without asserting ZXSIO_SIGNAL_CONNECTION_{REFUSED,RESET} looks like the
+  // connection was gracefully closed. The same behavior is exercised in
+  // src/connectivity/network/tests/bsdsocket_test.cc:{StopListenWhileConnect,BlockedIOTest/CloseWhileBlocked}.
   auto return_code_and_errno = fut.get();
-  EXPECT_EQ(return_code_and_errno.first, -1);
-  ASSERT_EQ(return_code_and_errno.second, ECONNRESET, "%s", strerror(return_code_and_errno.second));
+  switch (optname) {
+    case SO_RCVTIMEO:
+      EXPECT_EQ(return_code_and_errno.first, 0);
+      break;
+    case SO_SNDTIMEO:
+      EXPECT_EQ(return_code_and_errno.first, -1);
+      ASSERT_EQ(return_code_and_errno.second, EPIPE, "%s", strerror(return_code_and_errno.second));
+      break;
+  }
 
   ASSERT_SUCCESS(close(fd.release()));
 };
