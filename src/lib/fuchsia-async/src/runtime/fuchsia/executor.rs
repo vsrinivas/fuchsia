@@ -868,7 +868,7 @@ impl Drop for Executor {
         self.inner.active_tasks.lock().clear();
 
         // Drop all of the uncompleted tasks
-        while let Ok(_) = self.inner.ready_tasks.pop() {}
+        while let Some(_) = self.inner.ready_tasks.pop() {}
 
         // Synthetic main task marked completed
         self.inner.collector.task_completed(MAIN_TASK_ID);
@@ -1113,7 +1113,7 @@ impl PartialEq for TimeWaker {
 impl Inner {
     fn poll_ready_tasks(&self, local_collector: &mut LocalCollector<'_>) {
         // TODO: loop but don't starve
-        if let Ok(task) = self.ready_tasks.pop() {
+        if let Some(task) = self.ready_tasks.pop() {
             let complete = task.try_poll();
             local_collector.task_polled(task.id, complete, self.ready_tasks.len());
             if complete {

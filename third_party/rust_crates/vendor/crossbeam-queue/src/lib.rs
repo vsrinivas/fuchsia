@@ -4,37 +4,29 @@
 //!
 //! * [`ArrayQueue`], a bounded MPMC queue that allocates a fixed-capacity buffer on construction.
 //! * [`SegQueue`], an unbounded MPMC queue that allocates small buffers, segments, on demand.
-//!
-//! [`ArrayQueue`]: struct.ArrayQueue.html
-//! [`SegQueue`]: struct.SegQueue.html
 
-#![warn(missing_docs)]
-#![warn(missing_debug_implementations)]
+#![doc(test(
+    no_crate_inject,
+    attr(
+        deny(warnings, rust_2018_idioms),
+        allow(dead_code, unused_assignments, unused_variables)
+    )
+))]
+#![warn(missing_docs, missing_debug_implementations, rust_2018_idioms)]
 #![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(feature = "nightly", feature(cfg_target_has_atomic))]
+// matches! requires Rust 1.42
+#![allow(clippy::match_like_matches_macro)]
 
-#[macro_use]
-extern crate cfg_if;
-#[cfg(feature = "std")]
-extern crate core;
-
-cfg_if! {
+#[cfg_attr(feature = "nightly", cfg(target_has_atomic = "ptr"))]
+cfg_if::cfg_if! {
     if #[cfg(feature = "alloc")] {
         extern crate alloc;
-    } else if #[cfg(feature = "std")] {
-        extern crate std as alloc;
-    }
-}
 
-extern crate crossbeam_utils;
-
-cfg_if! {
-    if #[cfg(any(feature = "alloc", feature = "std"))] {
         mod array_queue;
-        mod err;
         mod seg_queue;
 
         pub use self::array_queue::ArrayQueue;
-        pub use self::err::{PopError, PushError};
         pub use self::seg_queue::SegQueue;
     }
 }

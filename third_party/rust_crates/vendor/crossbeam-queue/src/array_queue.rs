@@ -1,24 +1,21 @@
 //! The implementation is based on Dmitry Vyukov's bounded MPMC queue.
 //!
 //! Source:
-//!   - http://www.1024cores.net/home/lock-free-algorithms/queues/bounded-mpmc-queue
+//!   - <http://www.1024cores.net/home/lock-free-algorithms/queues/bounded-mpmc-queue>
 //!
 //! Copyright & License:
 //!   - Copyright (c) 2010-2011 Dmitry Vyukov
 //!   - Simplified BSD License and Apache License, Version 2.0
-//!   - http://www.1024cores.net/home/code-license
+//!   - <http://www.1024cores.net/home/code-license>
 
-use alloc::vec::Vec;
+use alloc::boxed::Box;
 use core::cell::UnsafeCell;
 use core::fmt;
 use core::marker::PhantomData;
-use core::mem;
-use core::ptr;
+use core::mem::{self, MaybeUninit};
 use core::sync::atomic::{self, AtomicUsize, Ordering};
 
 use crossbeam_utils::{Backoff, CachePadded};
-
-use err::{PopError, PushError};
 
 /// A slot in a queue.
 struct Slot<T> {
@@ -29,7 +26,7 @@ struct Slot<T> {
     stamp: AtomicUsize,
 
     /// The value in this slot.
-    value: UnsafeCell<T>,
+    value: UnsafeCell<MaybeUninit<T>>,
 }
 
 /// A bounded multi-producer multi-consumer queue.
@@ -39,19 +36,19 @@ struct Slot<T> {
 /// element into a full queue will fail. Having a buffer allocated upfront makes this queue a bit
 /// faster than [`SegQueue`].
 ///
-/// [`SegQueue`]: struct.SegQueue.html
+/// [`SegQueue`]: super::SegQueue
 ///
 /// # Examples
 ///
 /// ```
-/// use crossbeam_queue::{ArrayQueue, PushError};
+/// use crossbeam_queue::ArrayQueue;
 ///
 /// let q = ArrayQueue::new(2);
 ///
 /// assert_eq!(q.push('a'), Ok(()));
 /// assert_eq!(q.push('b'), Ok(()));
-/// assert_eq!(q.push('c'), Err(PushError('c')));
-/// assert_eq!(q.pop(), Ok('a'));
+/// assert_eq!(q.push('c'), Err('c'));
+/// assert_eq!(q.pop(), Some('a'));
 /// ```
 pub struct ArrayQueue<T> {
     /// The head of the queue.
@@ -108,22 +105,22 @@ impl<T> ArrayQueue<T> {
         let head = 0;
         let tail = 0;
 
-        // Allocate a buffer of `cap` slots.
+        // Allocate a buffer of `cap` slots initialized
+        // with stamps.
         let buffer = {
-            let mut v = Vec::<Slot<T>>::with_capacity(cap);
-            let ptr = v.as_mut_ptr();
-            mem::forget(v);
+            let mut boxed: Box<[Slot<T>]> = (0..cap)
+                .map(|i| {
+                    // Set the stamp to `{ lap: 0, index: i }`.
+                    Slot {
+                        stamp: AtomicUsize::new(i),
+                        value: UnsafeCell::new(MaybeUninit::uninit()),
+                    }
+                })
+                .collect();
+            let ptr = boxed.as_mut_ptr();
+            mem::forget(boxed);
             ptr
         };
-
-        // Initialize stamps in the slots.
-        for i in 0..cap {
-            unsafe {
-                // Set the stamp to `{ lap: 0, index: i }`.
-                let slot = buffer.add(i);
-                ptr::write(&mut (*slot).stamp, AtomicUsize::new(i));
-            }
-        }
 
         // One lap is the smallest power of two greater than `cap`.
         let one_lap = (cap + 1).next_power_of_two();
@@ -145,14 +142,14 @@ impl<T> ArrayQueue<T> {
     /// # Examples
     ///
     /// ```
-    /// use crossbeam_queue::{ArrayQueue, PushError};
+    /// use crossbeam_queue::ArrayQueue;
     ///
     /// let q = ArrayQueue::new(1);
     ///
     /// assert_eq!(q.push(10), Ok(()));
-    /// assert_eq!(q.push(20), Err(PushError(20)));
+    /// assert_eq!(q.push(20), Err(20));
     /// ```
-    pub fn push(&self, value: T) -> Result<(), PushError<T>> {
+    pub fn push(&self, value: T) -> Result<(), T> {
         let backoff = Backoff::new();
         let mut tail = self.tail.load(Ordering::Relaxed);
 
@@ -187,7 +184,7 @@ impl<T> ArrayQueue<T> {
                     Ok(_) => {
                         // Write the value into the slot and update the stamp.
                         unsafe {
-                            slot.value.get().write(value);
+                            slot.value.get().write(MaybeUninit::new(value));
                         }
                         slot.stamp.store(tail + 1, Ordering::Release);
                         return Ok(());
@@ -204,7 +201,7 @@ impl<T> ArrayQueue<T> {
                 // If the head lags one lap behind the tail as well...
                 if head.wrapping_add(self.one_lap) == tail {
                     // ...then the queue is full.
-                    return Err(PushError(value));
+                    return Err(value);
                 }
 
                 backoff.spin();
@@ -219,20 +216,20 @@ impl<T> ArrayQueue<T> {
 
     /// Attempts to pop an element from the queue.
     ///
-    /// If the queue is empty, an error is returned.
+    /// If the queue is empty, `None` is returned.
     ///
     /// # Examples
     ///
     /// ```
-    /// use crossbeam_queue::{ArrayQueue, PopError};
+    /// use crossbeam_queue::ArrayQueue;
     ///
     /// let q = ArrayQueue::new(1);
     /// assert_eq!(q.push(10), Ok(()));
     ///
-    /// assert_eq!(q.pop(), Ok(10));
-    /// assert_eq!(q.pop(), Err(PopError));
+    /// assert_eq!(q.pop(), Some(10));
+    /// assert!(q.pop().is_none());
     /// ```
-    pub fn pop(&self) -> Result<T, PopError> {
+    pub fn pop(&self) -> Option<T> {
         let backoff = Backoff::new();
         let mut head = self.head.load(Ordering::Relaxed);
 
@@ -266,10 +263,10 @@ impl<T> ArrayQueue<T> {
                 ) {
                     Ok(_) => {
                         // Read the value from the slot and update the stamp.
-                        let msg = unsafe { slot.value.get().read() };
+                        let msg = unsafe { slot.value.get().read().assume_init() };
                         slot.stamp
                             .store(head.wrapping_add(self.one_lap), Ordering::Release);
-                        return Ok(msg);
+                        return Some(msg);
                     }
                     Err(h) => {
                         head = h;
@@ -282,7 +279,7 @@ impl<T> ArrayQueue<T> {
 
                 // If the tail equals the head, that means the channel is empty.
                 if tail == head {
-                    return Err(PopError);
+                    return None;
                 }
 
                 backoff.spin();
@@ -300,7 +297,7 @@ impl<T> ArrayQueue<T> {
     /// # Examples
     ///
     /// ```
-    /// use crossbeam_queue::{ArrayQueue, PopError};
+    /// use crossbeam_queue::ArrayQueue;
     ///
     /// let q = ArrayQueue::<i32>::new(100);
     ///
@@ -315,7 +312,7 @@ impl<T> ArrayQueue<T> {
     /// # Examples
     ///
     /// ```
-    /// use crossbeam_queue::{ArrayQueue, PopError};
+    /// use crossbeam_queue::ArrayQueue;
     ///
     /// let q = ArrayQueue::new(100);
     ///
@@ -340,7 +337,7 @@ impl<T> ArrayQueue<T> {
     /// # Examples
     ///
     /// ```
-    /// use crossbeam_queue::{ArrayQueue, PopError};
+    /// use crossbeam_queue::ArrayQueue;
     ///
     /// let q = ArrayQueue::new(1);
     ///
@@ -364,7 +361,7 @@ impl<T> ArrayQueue<T> {
     /// # Examples
     ///
     /// ```
-    /// use crossbeam_queue::{ArrayQueue, PopError};
+    /// use crossbeam_queue::ArrayQueue;
     ///
     /// let q = ArrayQueue::new(100);
     /// assert_eq!(q.len(), 0);
@@ -415,19 +412,28 @@ impl<T> Drop for ArrayQueue<T> {
             };
 
             unsafe {
-                self.buffer.add(index).drop_in_place();
+                let p = {
+                    let slot = &mut *self.buffer.add(index);
+                    let value = &mut *slot.value.get();
+                    value.as_mut_ptr()
+                };
+                p.drop_in_place();
             }
         }
 
         // Finally, deallocate the buffer, but don't run any destructors.
         unsafe {
-            Vec::from_raw_parts(self.buffer, 0, self.cap);
+            // Create a slice from the buffer to make
+            // a fat pointer. Then, use Box::from_raw
+            // to deallocate it.
+            let ptr = core::slice::from_raw_parts_mut(self.buffer, self.cap) as *mut [Slot<T>];
+            Box::from_raw(ptr);
         }
     }
 }
 
 impl<T> fmt::Debug for ArrayQueue<T> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.pad("ArrayQueue { .. }")
     }
 }

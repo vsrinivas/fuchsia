@@ -1,17 +1,12 @@
 //! Tests for the zero channel flavor.
 
-#[macro_use]
-extern crate crossbeam_channel;
-extern crate crossbeam_utils;
-extern crate rand;
-
 use std::any::Any;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 use std::thread;
 use std::time::Duration;
 
-use crossbeam_channel::{bounded, Receiver};
+use crossbeam_channel::{bounded, select, Receiver};
 use crossbeam_channel::{RecvError, RecvTimeoutError, TryRecvError};
 use crossbeam_channel::{SendError, SendTimeoutError, TrySendError};
 use crossbeam_utils::thread::scope;
@@ -404,7 +399,7 @@ fn drops() {
     let mut rng = thread_rng();
 
     for _ in 0..100 {
-        let steps = rng.gen_range(0, 3_000);
+        let steps = rng.gen_range(0..3_000);
 
         DROPS.store(0, Ordering::SeqCst);
         let (s, r) = bounded::<DropCounter>(0);

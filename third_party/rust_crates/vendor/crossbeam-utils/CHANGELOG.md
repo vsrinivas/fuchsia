@@ -1,3 +1,34 @@
+# Version 0.8.4
+
+- Bump `loom` dependency to version 0.5. (#686)
+
+# Version 0.8.3
+
+- Make `loom` dependency optional. (#666)
+
+# Version 0.8.2
+
+- Deprecate `AtomicCell::compare_and_swap`. Use `AtomicCell::compare_exchange` instead. (#619)
+- Add `Parker::park_deadline`. (#563)
+- Improve implementation of `CachePadded`. (#636)
+- Add unstable support for `loom`. (#487)
+
+# Version 0.8.1
+
+- Make `AtomicCell::is_lock_free` always const fn. (#600)
+- Fix a bug in `seq_lock_wide`. (#596)
+- Remove `const_fn` dependency. (#600)
+- `crossbeam-utils` no longer fails to compile if unable to determine rustc version. Instead, it now displays a warning. (#604)
+
+# Version 0.8.0
+
+- Bump the minimum supported Rust version to 1.36.
+- Remove deprecated `AtomicCell::get_mut()` and `Backoff::is_complete()` methods.
+- Remove `alloc` feature.
+- Make `CachePadded::new()` const function.
+- Make `AtomicCell::is_lock_free()` const function at 1.46+.
+- Implement `From<T>` for `AtomicCell<T>`.
+
 # Version 0.7.2
 
 - Fix bug in release (yanking 0.7.1)

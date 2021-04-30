@@ -1,6 +1,3 @@
-extern crate crossbeam_utils;
-extern crate rand;
-
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc::channel;
 use std::sync::{Arc, TryLockError};
@@ -179,11 +176,8 @@ fn try_write() {
     let write_result = lock.try_write();
     match write_result {
         Err(TryLockError::WouldBlock) => (),
-        Ok(_) => assert!(
-            false,
-            "try_write should not succeed while read_guard is in scope"
-        ),
-        Err(_) => assert!(false, "unexpected error"),
+        Ok(_) => panic!("try_write should not succeed while read_guard is in scope"),
+        Err(_) => panic!("unexpected error"),
     }
 
     drop(read_guard);

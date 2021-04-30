@@ -28,45 +28,28 @@
 //! * [`CachePadded`], for padding and aligning a value to the length of a cache line.
 //! * [`scope`], for spawning threads that borrow local variables from the stack.
 //!
-//! [`AtomicCell`]: atomic/struct.AtomicCell.html
-//! [`AtomicConsume`]: atomic/trait.AtomicConsume.html
-//! [`deque`]: deque/index.html
-//! [`ArrayQueue`]: queue/struct.ArrayQueue.html
-//! [`SegQueue`]: queue/struct.SegQueue.html
-//! [`channel`]: channel/index.html
-//! [`Parker`]: sync/struct.Parker.html
-//! [`ShardedLock`]: sync/struct.ShardedLock.html
-//! [`WaitGroup`]: sync/struct.WaitGroup.html
-//! [`epoch`]: epoch/index.html
-//! [`Backoff`]: utils/struct.Backoff.html
-//! [`CachePadded`]: utils/struct.CachePadded.html
-//! [`scope`]: fn.scope.html
+//! [`AtomicCell`]: atomic::AtomicCell
+//! [`AtomicConsume`]: atomic::AtomicConsume
+//! [`ArrayQueue`]: queue::ArrayQueue
+//! [`SegQueue`]: queue::SegQueue
+//! [`Parker`]: sync::Parker
+//! [`ShardedLock`]: sync::ShardedLock
+//! [`WaitGroup`]: sync::WaitGroup
+//! [`Backoff`]: utils::Backoff
+//! [`CachePadded`]: utils::CachePadded
 
-#![warn(missing_docs)]
-#![warn(missing_debug_implementations)]
+#![doc(test(
+    no_crate_inject,
+    attr(
+        deny(warnings, rust_2018_idioms),
+        allow(dead_code, unused_assignments, unused_variables)
+    )
+))]
+#![warn(missing_docs, missing_debug_implementations, rust_2018_idioms)]
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(feature = "nightly", feature(cfg_target_has_atomic))]
-
-#[macro_use]
-extern crate cfg_if;
-#[cfg(feature = "std")]
-extern crate core;
-
-cfg_if! {
-    if #[cfg(feature = "alloc")] {
-        extern crate alloc;
-    } else if #[cfg(feature = "std")] {
-        extern crate std as alloc;
-    }
-}
-
-mod _epoch {
-    pub extern crate crossbeam_epoch;
-}
-#[doc(inline)]
-pub use _epoch::crossbeam_epoch as epoch;
-
-extern crate crossbeam_utils;
+// matches! requires Rust 1.42
+#![allow(clippy::match_like_matches_macro)]
 
 #[cfg_attr(feature = "nightly", cfg(target_has_atomic = "ptr"))]
 pub use crossbeam_utils::atomic;
@@ -77,30 +60,39 @@ pub mod utils {
     pub use crossbeam_utils::CachePadded;
 }
 
+use cfg_if::cfg_if;
+
+cfg_if! {
+    if #[cfg(feature = "alloc")] {
+        mod _epoch {
+            pub use crossbeam_epoch;
+        }
+        #[doc(inline)]
+        pub use crate::_epoch::crossbeam_epoch as epoch;
+
+        mod _queue {
+            pub use crossbeam_queue;
+        }
+        #[doc(inline)]
+        pub use crate::_queue::crossbeam_queue as queue;
+    }
+}
+
 cfg_if! {
     if #[cfg(feature = "std")] {
         mod _deque {
-            pub extern crate crossbeam_deque;
+            pub use crossbeam_deque;
         }
         #[doc(inline)]
-        pub use _deque::crossbeam_deque as deque;
+        pub use crate::_deque::crossbeam_deque as deque;
 
         mod _channel {
-            pub extern crate crossbeam_channel;
-            pub use self::crossbeam_channel::*;
+            pub use crossbeam_channel;
         }
         #[doc(inline)]
-        pub use _channel::crossbeam_channel as channel;
+        pub use crate::_channel::crossbeam_channel as channel;
 
-        // HACK(stjepang): This is the only way to reexport `select!` in Rust older than 1.30.0
-        #[doc(hidden)]
-        pub use _channel::*;
-
-        mod _queue {
-            pub extern crate crossbeam_queue;
-        }
-        #[doc(inline)]
-        pub use _queue::crossbeam_queue as queue;
+        pub use crossbeam_channel::select;
 
         pub use crossbeam_utils::sync;
         pub use crossbeam_utils::thread;

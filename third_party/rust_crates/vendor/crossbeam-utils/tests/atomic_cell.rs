@@ -1,5 +1,3 @@
-extern crate crossbeam_utils;
-
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::SeqCst;
 
@@ -22,6 +20,12 @@ fn is_lock_free() {
     assert_eq!(AtomicCell::<I16Wrap>::is_lock_free(), cfg!(has_atomic_u16));
 
     assert_eq!(AtomicCell::<u128>::is_lock_free(), cfg!(has_atomic_u128));
+}
+
+#[test]
+fn const_is_lock_free() {
+    const _U: bool = AtomicCell::<usize>::is_lock_free();
+    const _I: bool = AtomicCell::<isize>::is_lock_free();
 }
 
 #[test]
@@ -223,7 +227,6 @@ fn garbage_padding() {
     println!();
 }
 
-#[cfg(has_min_const_fn)]
 #[test]
 fn const_atomic_cell_new() {
     static CELL: AtomicCell<usize> = AtomicCell::new(0);

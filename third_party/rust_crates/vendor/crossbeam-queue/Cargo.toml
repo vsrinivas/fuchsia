@@ -11,8 +11,9 @@
 # will likely look very different (and much more reasonable)
 
 [package]
+edition = "2018"
 name = "crossbeam-queue"
-version = "0.2.1"
+version = "0.3.1"
 authors = ["The Crossbeam Project Developers"]
 description = "Concurrent queues"
 homepage = "https://github.com/crossbeam-rs/crossbeam/tree/master/crossbeam-utils"
@@ -20,18 +21,19 @@ documentation = "https://docs.rs/crossbeam-queue"
 readme = "README.md"
 keywords = ["queue", "mpmc", "lock-free", "producer", "consumer"]
 categories = ["concurrency", "data-structures"]
-license = "MIT/Apache-2.0 AND BSD-2-Clause"
+license = "MIT OR Apache-2.0"
 repository = "https://github.com/crossbeam-rs/crossbeam"
 [dependencies.cfg-if]
-version = "0.1.2"
+version = "1"
 
 [dependencies.crossbeam-utils]
-version = "0.7"
+version = "0.8"
 default-features = false
 [dev-dependencies.rand]
-version = "0.6"
+version = "0.7.3"
 
 [features]
-alloc = ["crossbeam-utils/alloc"]
+alloc = []
 default = ["std"]
-std = ["crossbeam-utils/std"]
+nightly = ["crossbeam-utils/nightly"]
+std = ["alloc", "crossbeam-utils/std"]

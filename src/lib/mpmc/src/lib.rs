@@ -47,7 +47,7 @@ impl<T: Clone> Sender<T> {
     /// Sending is never an error, even if there are no receivers.
     pub async fn send(&self, payload: T) {
         let mut inner = self.inner.lock().await;
-        while let Ok(new_sender) = self.enqueued_senders.pop() {
+        while let Some(new_sender) = self.enqueued_senders.pop() {
             inner.push(new_sender);
         }
 

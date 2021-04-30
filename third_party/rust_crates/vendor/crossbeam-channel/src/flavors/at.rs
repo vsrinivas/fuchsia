@@ -1,4 +1,4 @@
-//! Channel that delivers a message after a certain amount of time.
+//! Channel that delivers a message at a certain moment in time.
 //!
 //! Messages cannot be sent into this kind of channel; they are materialized on demand.
 
@@ -6,16 +6,16 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use context::Context;
-use err::{RecvTimeoutError, TryRecvError};
-use select::{Operation, SelectHandle, Token};
-use utils;
+use crate::context::Context;
+use crate::err::{RecvTimeoutError, TryRecvError};
+use crate::select::{Operation, SelectHandle, Token};
+use crate::utils;
 
 /// Result of a receive operation.
-pub type AfterToken = Option<Instant>;
+pub(crate) type AtToken = Option<Instant>;
 
-/// Channel that delivers a message after a certain amount of time.
-pub struct Channel {
+/// Channel that delivers a message at a certain moment in time
+pub(crate) struct Channel {
     /// The instant at which the message will be delivered.
     delivery_time: Instant,
 
@@ -24,18 +24,23 @@ pub struct Channel {
 }
 
 impl Channel {
-    /// Creates a channel that delivers a message after a certain duration of time.
+    /// Creates a channel that delivers a message at a certain instant in time.
     #[inline]
-    pub fn new(dur: Duration) -> Self {
+    pub(crate) fn new_deadline(when: Instant) -> Self {
         Channel {
-            delivery_time: Instant::now() + dur,
+            delivery_time: when,
             received: AtomicBool::new(false),
         }
+    }
+    /// Creates a channel that delivers a message after a certain duration of time.
+    #[inline]
+    pub(crate) fn new_timeout(dur: Duration) -> Self {
+        Self::new_deadline(Instant::now() + dur)
     }
 
     /// Attempts to receive a message without blocking.
     #[inline]
-    pub fn try_recv(&self) -> Result<Instant, TryRecvError> {
+    pub(crate) fn try_recv(&self) -> Result<Instant, TryRecvError> {
         // We use relaxed ordering because this is just an optional optimistic check.
         if self.received.load(Ordering::Relaxed) {
             // The message has already been received.
@@ -59,7 +64,7 @@ impl Channel {
 
     /// Receives a message from the channel.
     #[inline]
-    pub fn recv(&self, deadline: Option<Instant>) -> Result<Instant, RecvTimeoutError> {
+    pub(crate) fn recv(&self, deadline: Option<Instant>) -> Result<Instant, RecvTimeoutError> {
         // We use relaxed ordering because this is just an optional optimistic check.
         if self.received.load(Ordering::Relaxed) {
             // The message has already been received.
@@ -71,21 +76,18 @@ impl Channel {
         loop {
             let now = Instant::now();
 
-            // Check if we can receive the next message.
-            if now >= self.delivery_time {
-                break;
-            }
+            let deadline = match deadline {
+                // Check if we can receive the next message.
+                _ if now >= self.delivery_time => break,
+                // Check if the timeout deadline has been reached.
+                Some(d) if now >= d => return Err(RecvTimeoutError::Timeout),
 
-            // Check if the deadline has been reached.
-            if let Some(d) = deadline {
-                if now >= d {
-                    return Err(RecvTimeoutError::Timeout);
-                }
+                // Sleep until one of the above happens
+                Some(d) if d < self.delivery_time => d,
+                _ => self.delivery_time,
+            };
 
-                thread::sleep(self.delivery_time.min(d) - now);
-            } else {
-                thread::sleep(self.delivery_time - now);
-            }
+            thread::sleep(deadline - now);
         }
 
         // Try receiving the message if it is still available.
@@ -101,13 +103,13 @@ impl Channel {
 
     /// Reads a message from the channel.
     #[inline]
-    pub unsafe fn read(&self, token: &mut Token) -> Result<Instant, ()> {
-        token.after.ok_or(())
+    pub(crate) unsafe fn read(&self, token: &mut Token) -> Result<Instant, ()> {
+        token.at.ok_or(())
     }
 
     /// Returns `true` if the channel is empty.
     #[inline]
-    pub fn is_empty(&self) -> bool {
+    pub(crate) fn is_empty(&self) -> bool {
         // We use relaxed ordering because this is just an optional optimistic check.
         if self.received.load(Ordering::Relaxed) {
             return true;
@@ -125,13 +127,13 @@ impl Channel {
 
     /// Returns `true` if the channel is full.
     #[inline]
-    pub fn is_full(&self) -> bool {
+    pub(crate) fn is_full(&self) -> bool {
         !self.is_empty()
     }
 
     /// Returns the number of messages in the channel.
     #[inline]
-    pub fn len(&self) -> usize {
+    pub(crate) fn len(&self) -> usize {
         if self.is_empty() {
             0
         } else {
@@ -140,8 +142,9 @@ impl Channel {
     }
 
     /// Returns the capacity of the channel.
+    #[allow(clippy::unnecessary_wraps)] // This is intentional.
     #[inline]
-    pub fn capacity(&self) -> Option<usize> {
+    pub(crate) fn capacity(&self) -> Option<usize> {
         Some(1)
     }
 }
@@ -151,11 +154,11 @@ impl SelectHandle for Channel {
     fn try_select(&self, token: &mut Token) -> bool {
         match self.try_recv() {
             Ok(msg) => {
-                token.after = Some(msg);
+                token.at = Some(msg);
                 true
             }
             Err(TryRecvError::Disconnected) => {
-                token.after = None;
+                token.at = None;
                 true
             }
             Err(TryRecvError::Empty) => false,

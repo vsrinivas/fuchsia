@@ -10,14 +10,14 @@ use std::time::{Duration, Instant};
 use crossbeam_utils::Backoff;
 
 /// Randomly shuffles a slice.
-pub fn shuffle<T>(v: &mut [T]) {
+pub(crate) fn shuffle<T>(v: &mut [T]) {
     let len = v.len();
     if len <= 1 {
         return;
     }
 
     thread_local! {
-        static RNG: Cell<Wrapping<u32>> = Cell::new(Wrapping(1406868647));
+        static RNG: Cell<Wrapping<u32>> = Cell::new(Wrapping(1_406_868_647));
     }
 
     let _ = RNG.try_with(|rng| {
@@ -46,7 +46,7 @@ pub fn shuffle<T>(v: &mut [T]) {
 }
 
 /// Sleeps until the deadline, or forever if the deadline isn't specified.
-pub fn sleep_until(deadline: Option<Instant>) {
+pub(crate) fn sleep_until(deadline: Option<Instant>) {
     loop {
         match deadline {
             None => thread::sleep(Duration::from_secs(1000)),
@@ -62,14 +62,14 @@ pub fn sleep_until(deadline: Option<Instant>) {
 }
 
 /// A simple spinlock.
-pub struct Spinlock<T> {
+pub(crate) struct Spinlock<T> {
     flag: AtomicBool,
     value: UnsafeCell<T>,
 }
 
 impl<T> Spinlock<T> {
     /// Returns a new spinlock initialized with `value`.
-    pub fn new(value: T) -> Spinlock<T> {
+    pub(crate) fn new(value: T) -> Spinlock<T> {
         Spinlock {
             flag: AtomicBool::new(false),
             value: UnsafeCell::new(value),
@@ -77,7 +77,7 @@ impl<T> Spinlock<T> {
     }
 
     /// Locks the spinlock.
-    pub fn lock(&self) -> SpinlockGuard<'_, T> {
+    pub(crate) fn lock(&self) -> SpinlockGuard<'_, T> {
         let backoff = Backoff::new();
         while self.flag.swap(true, Ordering::Acquire) {
             backoff.snooze();
@@ -87,17 +87,17 @@ impl<T> Spinlock<T> {
 }
 
 /// A guard holding a spinlock locked.
-pub struct SpinlockGuard<'a, T: 'a> {
+pub(crate) struct SpinlockGuard<'a, T> {
     parent: &'a Spinlock<T>,
 }
 
-impl<'a, T> Drop for SpinlockGuard<'a, T> {
+impl<T> Drop for SpinlockGuard<'_, T> {
     fn drop(&mut self) {
         self.parent.flag.store(false, Ordering::Release);
     }
 }
 
-impl<'a, T> Deref for SpinlockGuard<'a, T> {
+impl<T> Deref for SpinlockGuard<'_, T> {
     type Target = T;
 
     fn deref(&self) -> &T {
@@ -105,7 +105,7 @@ impl<'a, T> Deref for SpinlockGuard<'a, T> {
     }
 }
 
-impl<'a, T> DerefMut for SpinlockGuard<'a, T> {
+impl<T> DerefMut for SpinlockGuard<'_, T> {
     fn deref_mut(&mut self) -> &mut T {
         unsafe { &mut *self.parent.value.get() }
     }

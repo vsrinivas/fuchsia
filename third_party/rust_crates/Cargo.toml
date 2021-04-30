@@ -42,7 +42,7 @@ chrono-english = "0.1.4"
 clap = "2.33"
 crc = "1.8.1"
 criterion = { version = "0.2", default-features = false }
-crossbeam = "0.7.3"
+crossbeam = "0.8.0"
 csv = "1.0.7"
 cxx = "0.3.5"
 cxxbridge-cmd = "0.3.5"
@@ -326,6 +326,17 @@ env_vars = ["OUT_DIR=../../../compat/crc"]
 [gn.package.crc32fast."1.2.0"]
 rustflags = ["--cfg=crc32fast_stdarchx86"]
 
+[gn.package.crossbeam-utils."0.8.4"]
+rustflags = [
+  "--cfg=has_min_const_fn",
+  "--cfg=has_atomic_u8",
+  "--cfg=has_atomic_u16",
+  "--cfg=has_atomic_u32",
+  "--cfg=has_atomic_u64",
+  # TODO(https://github.com/rust-lang/rust/issues/32976): AtomicU128 is unstable.
+  # "--cfg=has_atomic_u128",
+]
+
 [gn.package.getrandom."0.2.2"]
 rustflags = []
 
@@ -370,6 +381,9 @@ rustflags = ["--cfg=has_i128"]
 
 [gn.package.maybe-uninit."2.0.0"]
 rustflags = ["--cfg=derive_copy", "--cfg=repr_transparent", "--cfg=native_uninit"]
+
+[gn.package.memoffset."0.6.3"]
+rustflags = ["--cfg=tuple_ty", "--cfg=allow_clippy", "--cfg=maybe_uninit", "--cfg=doctests", "--cfg=raw_ref_macros"]
 
 [gn.package.num-iter."0.1.37"]
 rustflags = ["--cfg=has_i128"]

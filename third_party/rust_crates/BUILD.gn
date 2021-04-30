@@ -123,7 +123,7 @@ group("criterion") {
 }
 
 group("crossbeam") {
-  deps = [ ":crossbeam-v0_7_3" ]
+  deps = [ ":crossbeam-v0_8_0" ]
 }
 
 if (!(current_os == "fuchsia")) {
@@ -2307,64 +2307,69 @@ rust_library("criterion-v0_2_11") {
   ]
 }
 
-rust_library("crossbeam-v0_7_3") {
+rust_library("crossbeam-v0_8_0") {
   crate_name = "crossbeam"
   crate_root = "//third_party/rust_crates/vendor/crossbeam/src/lib.rs"
-  output_name = "crossbeam-398f15e80c220e91"
+  output_name = "crossbeam-8cfd474d0e0be27"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
   ]
 
   deps = []
-  deps += [ ":cfg-if-v0_1_10" ]
-  deps += [ ":crossbeam-channel-v0_4_2" ]
-  deps += [ ":crossbeam-deque-v0_7_3" ]
-  deps += [ ":crossbeam-epoch-v0_8_2" ]
-  deps += [ ":crossbeam-queue-v0_2_1" ]
-  deps += [ ":crossbeam-utils-v0_7_2" ]
+  deps += [ ":cfg-if-v1_0_0" ]
+  deps += [ ":crossbeam-channel-v0_5_1" ]
+  deps += [ ":crossbeam-deque-v0_8_0" ]
+  deps += [ ":crossbeam-epoch-v0_9_4" ]
+  deps += [ ":crossbeam-queue-v0_3_1" ]
+  deps += [ ":crossbeam-utils-v0_8_4" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=398f15e80c220e91",
-    "-Cextra-filename=-398f15e80c220e91",
+    "--edition=2018",
+    "-Cmetadata=8cfd474d0e0be27",
+    "-Cextra-filename=-8cfd474d0e0be27",
+    "--cfg=feature=\"alloc\"",
     "--cfg=feature=\"crossbeam-channel\"",
     "--cfg=feature=\"crossbeam-deque\"",
+    "--cfg=feature=\"crossbeam-epoch\"",
     "--cfg=feature=\"crossbeam-queue\"",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
 }
 
-rust_library("crossbeam-channel-v0_4_2") {
+rust_library("crossbeam-channel-v0_5_1") {
   crate_name = "crossbeam_channel"
   crate_root = "//third_party/rust_crates/vendor/crossbeam-channel/src/lib.rs"
-  output_name = "crossbeam_channel-b1ac2d23ad50ed6a"
+  output_name = "crossbeam_channel-4f2cca7fb0f4b481"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
   ]
 
   deps = []
-  deps += [ ":crossbeam-utils-v0_7_2" ]
-  deps += [ ":maybe-uninit-v2_0_0" ]
+  deps += [ ":cfg-if-v1_0_0" ]
+  deps += [ ":crossbeam-utils-v0_8_4" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=b1ac2d23ad50ed6a",
-    "-Cextra-filename=-b1ac2d23ad50ed6a",
+    "--edition=2018",
+    "-Cmetadata=4f2cca7fb0f4b481",
+    "-Cextra-filename=-4f2cca7fb0f4b481",
+    "--cfg=feature=\"crossbeam-utils\"",
+    "--cfg=feature=\"std\"",
   ]
 }
 
 rust_library("crossbeam-deque-v0_7_3") {
   crate_name = "crossbeam_deque"
-  crate_root = "//third_party/rust_crates/vendor/crossbeam-deque/src/lib.rs"
+  crate_root =
+      "//third_party/rust_crates/vendor/crossbeam-deque-0.7.3/src/lib.rs"
   output_name = "crossbeam_deque-1b8ed12e68dce902"
   configs -= [
     "//build/config/rust:edition_2018",
@@ -2386,9 +2391,37 @@ rust_library("crossbeam-deque-v0_7_3") {
   ]
 }
 
+rust_library("crossbeam-deque-v0_8_0") {
+  crate_name = "crossbeam_deque"
+  crate_root = "//third_party/rust_crates/vendor/crossbeam-deque/src/lib.rs"
+  output_name = "crossbeam_deque-4640cf1a9043276e"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":cfg-if-v1_0_0" ]
+  deps += [ ":crossbeam-epoch-v0_9_4" ]
+  deps += [ ":crossbeam-utils-v0_8_4" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=4640cf1a9043276e",
+    "-Cextra-filename=-4640cf1a9043276e",
+    "--cfg=feature=\"crossbeam-epoch\"",
+    "--cfg=feature=\"crossbeam-utils\"",
+    "--cfg=feature=\"std\"",
+  ]
+}
+
 rust_library("crossbeam-epoch-v0_8_2") {
   crate_name = "crossbeam_epoch"
-  crate_root = "//third_party/rust_crates/vendor/crossbeam-epoch/src/lib.rs"
+  crate_root =
+      "//third_party/rust_crates/vendor/crossbeam-epoch-0.8.2/src/lib.rs"
   output_name = "crossbeam_epoch-c9fde0457794d33"
   configs -= [
     "//build/config/rust:edition_2018",
@@ -2416,9 +2449,39 @@ rust_library("crossbeam-epoch-v0_8_2") {
   ]
 }
 
+rust_library("crossbeam-epoch-v0_9_4") {
+  crate_name = "crossbeam_epoch"
+  crate_root = "//third_party/rust_crates/vendor/crossbeam-epoch/src/lib.rs"
+  output_name = "crossbeam_epoch-5332a575293037f6"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":cfg-if-v1_0_0" ]
+  deps += [ ":crossbeam-utils-v0_8_4" ]
+  deps += [ ":lazy_static-v1_4_0" ]
+  deps += [ ":memoffset-v0_6_3" ]
+  deps += [ ":scopeguard-v1_1_0" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=5332a575293037f6",
+    "-Cextra-filename=-5332a575293037f6",
+    "--cfg=feature=\"alloc\"",
+    "--cfg=feature=\"lazy_static\"",
+    "--cfg=feature=\"std\"",
+  ]
+}
+
 rust_library("crossbeam-queue-v0_2_1") {
   crate_name = "crossbeam_queue"
-  crate_root = "//third_party/rust_crates/vendor/crossbeam-queue/src/lib.rs"
+  crate_root =
+      "//third_party/rust_crates/vendor/crossbeam-queue-0.2.1/src/lib.rs"
   output_name = "crossbeam_queue-e8eb2d3b2d6a8126"
   configs -= [
     "//build/config/rust:edition_2018",
@@ -2441,9 +2504,35 @@ rust_library("crossbeam-queue-v0_2_1") {
   ]
 }
 
+rust_library("crossbeam-queue-v0_3_1") {
+  crate_name = "crossbeam_queue"
+  crate_root = "//third_party/rust_crates/vendor/crossbeam-queue/src/lib.rs"
+  output_name = "crossbeam_queue-14b2ad0739ad313f"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":cfg-if-v1_0_0" ]
+  deps += [ ":crossbeam-utils-v0_8_4" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=14b2ad0739ad313f",
+    "-Cextra-filename=-14b2ad0739ad313f",
+    "--cfg=feature=\"alloc\"",
+    "--cfg=feature=\"std\"",
+  ]
+}
+
 rust_library("crossbeam-utils-v0_7_2") {
   crate_name = "crossbeam_utils"
-  crate_root = "//third_party/rust_crates/vendor/crossbeam-utils/src/lib.rs"
+  crate_root =
+      "//third_party/rust_crates/vendor/crossbeam-utils-0.7.2/src/lib.rs"
   output_name = "crossbeam_utils-5b2f6810d5833e99"
   configs -= [
     "//build/config/rust:edition_2018",
@@ -2464,6 +2553,36 @@ rust_library("crossbeam-utils-v0_7_2") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"lazy_static\"",
     "--cfg=feature=\"std\"",
+  ]
+}
+
+rust_library("crossbeam-utils-v0_8_4") {
+  crate_name = "crossbeam_utils"
+  crate_root = "//third_party/rust_crates/vendor/crossbeam-utils/src/lib.rs"
+  output_name = "crossbeam_utils-ce7b66cf33ed05e6"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":cfg-if-v1_0_0" ]
+  deps += [ ":lazy_static-v1_4_0" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=ce7b66cf33ed05e6",
+    "-Cextra-filename=-ce7b66cf33ed05e6",
+    "--cfg=feature=\"lazy_static\"",
+    "--cfg=feature=\"std\"",
+    "--cfg=has_min_const_fn",
+    "--cfg=has_atomic_u8",
+    "--cfg=has_atomic_u16",
+    "--cfg=has_atomic_u32",
+    "--cfg=has_atomic_u64",
   ]
 }
 
@@ -4766,7 +4885,7 @@ rust_library("memchr-v2_3_3") {
 
 rust_library("memoffset-v0_5_3") {
   crate_name = "memoffset"
-  crate_root = "//third_party/rust_crates/vendor/memoffset/src/lib.rs"
+  crate_root = "//third_party/rust_crates/vendor/memoffset-0.5.3/src/lib.rs"
   output_name = "memoffset-86fca2d18c439f83"
   configs -= [
     "//build/config/rust:edition_2018",
@@ -4782,6 +4901,33 @@ rust_library("memoffset-v0_5_3") {
     "--edition=2015",
     "-Cmetadata=86fca2d18c439f83",
     "-Cextra-filename=-86fca2d18c439f83",
+  ]
+}
+
+rust_library("memoffset-v0_6_3") {
+  crate_name = "memoffset"
+  crate_root = "//third_party/rust_crates/vendor/memoffset/src/lib.rs"
+  output_name = "memoffset-4f8761547d1c3d9f"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2015",
+    "-Cmetadata=4f8761547d1c3d9f",
+    "-Cextra-filename=-4f8761547d1c3d9f",
+    "--cfg=feature=\"default\"",
+    "--cfg=tuple_ty",
+    "--cfg=allow_clippy",
+    "--cfg=maybe_uninit",
+    "--cfg=doctests",
+    "--cfg=raw_ref_macros",
   ]
 }
 

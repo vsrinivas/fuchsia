@@ -93,50 +93,41 @@ macro_rules! span_of {
     (@helper $root:ident, [] ..) => {
         _memoffset__compile_error!("Expected a range, found '..'")
     };
-    // Lots of UB due to taking references to uninitialized fields! But that can currently
-    // not be avoided.
     // No explicit begin for range.
     (@helper $root:ident, $parent:path, [] ..) => {{
         ($root as usize,
-         $root as usize + $crate::mem::size_of_val(&(*$root)))
+         $root as usize + $crate::__priv::size_of_pointee($root))
     }};
-    (@helper $root:ident, $parent:path, [] ..= $field:tt) => {{
-        _memoffset__field_check!($parent, $field);
-        ($root as usize,
-         &(*$root).$field as *const _ as usize + $crate::mem::size_of_val(&(*$root).$field))
+    (@helper $root:ident, $parent:path, [] ..= $end:tt) => {{
+        let end = raw_field!($root, $parent, $end);
+        ($root as usize, end as usize + $crate::__priv::size_of_pointee(end))
     }};
-    (@helper $root:ident, $parent:path, [] .. $field:tt) => {{
-        _memoffset__field_check!($parent, $field);
-        ($root as usize, &(*$root).$field as *const _ as usize)
+    (@helper $root:ident, $parent:path, [] .. $end:tt) => {{
+        ($root as usize, raw_field!($root, $parent, $end) as usize)
     }};
     // Explicit begin and end for range.
     (@helper $root:ident, $parent:path, # $begin:tt [] ..= $end:tt) => {{
-        _memoffset__field_check!($parent, $begin);
-        _memoffset__field_check!($parent, $end);
-        (&(*$root).$begin as *const _ as usize,
-         &(*$root).$end as *const _ as usize + $crate::mem::size_of_val(&(*$root).$end))
+        let begin = raw_field!($root, $parent, $begin);
+        let end = raw_field!($root, $parent, $end);
+        (begin as usize, end as usize + $crate::__priv::size_of_pointee(end))
     }};
     (@helper $root:ident, $parent:path, # $begin:tt [] .. $end:tt) => {{
-        _memoffset__field_check!($parent, $begin);
-        _memoffset__field_check!($parent, $end);
-        (&(*$root).$begin as *const _ as usize,
-         &(*$root).$end as *const _ as usize)
+        (raw_field!($root, $parent, $begin) as usize,
+         raw_field!($root, $parent, $end) as usize)
     }};
     // No explicit end for range.
     (@helper $root:ident, $parent:path, # $begin:tt [] ..) => {{
-        _memoffset__field_check!($parent, $begin);
-        (&(*$root).$begin as *const _ as usize,
-         $root as usize + $crate::mem::size_of_val(&*$root))
+        (raw_field!($root, $parent, $begin) as usize,
+         $root as usize + $crate::__priv::size_of_pointee($root))
     }};
     (@helper $root:ident, $parent:path, # $begin:tt [] ..=) => {{
         _memoffset__compile_error!(
             "Found inclusive range to the end of a struct. Did you mean '..' instead of '..='?")
     }};
     // Just one field.
-    (@helper $root:ident, $parent:path, # $begin:tt []) => {{
-        _memoffset__field_check!($parent, $begin);
-        (&(*$root).$begin as *const _ as usize,
-         &(*$root).$begin as *const _ as usize + $crate::mem::size_of_val(&(*$root).$begin))
+    (@helper $root:ident, $parent:path, # $field:tt []) => {{
+        let field = raw_field!($root, $parent, $field);
+        (field as usize, field as usize + $crate::__priv::size_of_pointee(field))
     }};
     // Parsing.
     (@helper $root:ident, $parent:path, $(# $begin:tt)+ [] $tt:tt $($rest:tt)*) => {{
@@ -148,13 +139,11 @@ macro_rules! span_of {
 
     // Entry point.
     ($sty:path, $($exp:tt)+) => ({
-        unsafe {
-            // Get a base pointer.
-            _memoffset__let_base_ptr!(root, $sty);
-            let base = root as usize;
-            let (begin, end) = span_of!(@helper root, $sty, [] $($exp)*);
-            begin-base..end-base
-        }
+        // Get a base pointer.
+        _memoffset__let_base_ptr!(root, $sty);
+        let base = root as usize;
+        let (begin, end) = span_of!(@helper root, $sty, [] $($exp)*);
+        begin-base..end-base
     });
 }
 
@@ -177,7 +166,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(miri))] // this creates unaligned references
+    #[cfg_attr(miri, ignore)] // this creates unaligned references
     fn span_simple_packed() {
         #[repr(C, packed)]
         struct Foo {

@@ -1,7 +1,3 @@
-extern crate crossbeam_queue;
-extern crate crossbeam_utils;
-extern crate rand;
-
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use crossbeam_queue::SegQueue;
@@ -12,11 +8,11 @@ use rand::{thread_rng, Rng};
 fn smoke() {
     let q = SegQueue::new();
     q.push(7);
-    assert_eq!(q.pop(), Ok(7));
+    assert_eq!(q.pop(), Some(7));
 
     q.push(8);
-    assert_eq!(q.pop(), Ok(8));
-    assert!(q.pop().is_err());
+    assert_eq!(q.pop(), Some(8));
+    assert!(q.pop().is_none());
 }
 
 #[test]
@@ -66,13 +62,13 @@ fn spsc() {
         scope.spawn(|_| {
             for i in 0..COUNT {
                 loop {
-                    if let Ok(x) = q.pop() {
+                    if let Some(x) = q.pop() {
                         assert_eq!(x, i);
                         break;
                     }
                 }
             }
-            assert!(q.pop().is_err());
+            assert!(q.pop().is_none());
         });
         scope.spawn(|_| {
             for i in 0..COUNT {
@@ -96,7 +92,7 @@ fn mpmc() {
             scope.spawn(|_| {
                 for _ in 0..COUNT {
                     let n = loop {
-                        if let Ok(x) = q.pop() {
+                        if let Some(x) = q.pop() {
                             break x;
                         }
                     };
@@ -144,7 +140,7 @@ fn drops() {
         scope(|scope| {
             scope.spawn(|_| {
                 for _ in 0..steps {
-                    while q.pop().is_err() {}
+                    while q.pop().is_none() {}
                 }
             });
 

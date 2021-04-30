@@ -2,18 +2,17 @@
 
 use std::cell::UnsafeCell;
 use std::marker::PhantomData;
+use std::mem::MaybeUninit;
 use std::ptr;
 use std::sync::atomic::{self, AtomicPtr, AtomicUsize, Ordering};
 use std::time::Instant;
 
 use crossbeam_utils::{Backoff, CachePadded};
 
-use maybe_uninit::MaybeUninit;
-
-use context::Context;
-use err::{RecvTimeoutError, SendTimeoutError, TryRecvError, TrySendError};
-use select::{Operation, SelectHandle, Selected, Token};
-use waker::SyncWaker;
+use crate::context::Context;
+use crate::err::{RecvTimeoutError, SendTimeoutError, TryRecvError, TrySendError};
+use crate::select::{Operation, SelectHandle, Selected, Token};
+use crate::waker::SyncWaker;
 
 // TODO(stjepang): Once we bump the minimum required Rust version to 1.28 or newer, re-apply the
 // following changes by @kleimkuhler:
@@ -96,8 +95,8 @@ impl<T> Block<T> {
 
     /// Sets the `DESTROY` bit in slots starting from `start` and destroys the block.
     unsafe fn destroy(this: *mut Block<T>, start: usize) {
-        // It is not necessary to set the `DESTROY bit in the last slot because that slot has begun
-        // destruction of the block.
+        // It is not necessary to set the `DESTROY` bit in the last slot because that slot has
+        // begun destruction of the block.
         for i in start..BLOCK_CAP - 1 {
             let slot = (*this).slots.get_unchecked(i);
 
@@ -152,7 +151,7 @@ impl Default for ListToken {
 ///
 /// Consecutive messages are grouped into blocks in order to put less pressure on the allocator and
 /// improve cache efficiency.
-pub struct Channel<T> {
+pub(crate) struct Channel<T> {
     /// The head of the channel.
     head: CachePadded<Position<T>>,
 
@@ -168,7 +167,7 @@ pub struct Channel<T> {
 
 impl<T> Channel<T> {
     /// Creates a new unbounded channel.
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Channel {
             head: CachePadded::new(Position {
                 block: AtomicPtr::new(ptr::null_mut()),
@@ -184,12 +183,12 @@ impl<T> Channel<T> {
     }
 
     /// Returns a receiver handle to the channel.
-    pub fn receiver(&self) -> Receiver<T> {
+    pub(crate) fn receiver(&self) -> Receiver<'_, T> {
         Receiver(self)
     }
 
     /// Returns a sender handle to the channel.
-    pub fn sender(&self) -> Sender<T> {
+    pub(crate) fn sender(&self) -> Sender<'_, T> {
         Sender(self)
     }
 
@@ -232,8 +231,8 @@ impl<T> Channel<T> {
                 if self
                     .tail
                     .block
-                    .compare_and_swap(block, new, Ordering::Release)
-                    == block
+                    .compare_exchange(block, new, Ordering::Release, Ordering::Relaxed)
+                    .is_ok()
                 {
                     self.head.block.store(new, Ordering::Release);
                     block = new;
@@ -277,7 +276,7 @@ impl<T> Channel<T> {
     }
 
     /// Writes a message into the channel.
-    pub unsafe fn write(&self, token: &mut Token, msg: T) -> Result<(), T> {
+    pub(crate) unsafe fn write(&self, token: &mut Token, msg: T) -> Result<(), T> {
         // If there is no slot, the channel is disconnected.
         if token.list.block.is_null() {
             return Err(msg);
@@ -381,7 +380,7 @@ impl<T> Channel<T> {
     }
 
     /// Reads a message from the channel.
-    pub unsafe fn read(&self, token: &mut Token) -> Result<T, ()> {
+    pub(crate) unsafe fn read(&self, token: &mut Token) -> Result<T, ()> {
         if token.list.block.is_null() {
             // The channel is disconnected.
             return Err(());
@@ -406,7 +405,7 @@ impl<T> Channel<T> {
     }
 
     /// Attempts to send a message into the channel.
-    pub fn try_send(&self, msg: T) -> Result<(), TrySendError<T>> {
+    pub(crate) fn try_send(&self, msg: T) -> Result<(), TrySendError<T>> {
         self.send(msg, None).map_err(|err| match err {
             SendTimeoutError::Disconnected(msg) => TrySendError::Disconnected(msg),
             SendTimeoutError::Timeout(_) => unreachable!(),
@@ -414,7 +413,11 @@ impl<T> Channel<T> {
     }
 
     /// Sends a message into the channel.
-    pub fn send(&self, msg: T, _deadline: Option<Instant>) -> Result<(), SendTimeoutError<T>> {
+    pub(crate) fn send(
+        &self,
+        msg: T,
+        _deadline: Option<Instant>,
+    ) -> Result<(), SendTimeoutError<T>> {
         let token = &mut Token::default();
         assert!(self.start_send(token));
         unsafe {
@@ -424,7 +427,7 @@ impl<T> Channel<T> {
     }
 
     /// Attempts to receive a message without blocking.
-    pub fn try_recv(&self) -> Result<T, TryRecvError> {
+    pub(crate) fn try_recv(&self) -> Result<T, TryRecvError> {
         let token = &mut Token::default();
 
         if self.start_recv(token) {
@@ -435,7 +438,7 @@ impl<T> Channel<T> {
     }
 
     /// Receives a message from the channel.
-    pub fn recv(&self, deadline: Option<Instant>) -> Result<T, RecvTimeoutError> {
+    pub(crate) fn recv(&self, deadline: Option<Instant>) -> Result<T, RecvTimeoutError> {
         let token = &mut Token::default();
         loop {
             // Try receiving a message several times.
@@ -487,7 +490,7 @@ impl<T> Channel<T> {
     }
 
     /// Returns the current number of messages inside the channel.
-    pub fn len(&self) -> usize {
+    pub(crate) fn len(&self) -> usize {
         loop {
             // Load the tail index, then load the head index.
             let mut tail = self.tail.index.load(Ordering::SeqCst);
@@ -499,6 +502,14 @@ impl<T> Channel<T> {
                 tail &= !((1 << SHIFT) - 1);
                 head &= !((1 << SHIFT) - 1);
 
+                // Fix up indices if they fall onto block ends.
+                if (tail >> SHIFT) & (LAP - 1) == LAP - 1 {
+                    tail = tail.wrapping_add(1 << SHIFT);
+                }
+                if (head >> SHIFT) & (LAP - 1) == LAP - 1 {
+                    head = head.wrapping_add(1 << SHIFT);
+                }
+
                 // Rotate indices so that head falls into the first block.
                 let lap = (head >> SHIFT) / LAP;
                 tail = tail.wrapping_sub((lap * LAP) << SHIFT);
@@ -508,15 +519,6 @@ impl<T> Channel<T> {
                 tail >>= SHIFT;
                 head >>= SHIFT;
 
-                // Fix up indices if they fall onto block ends.
-                if head == BLOCK_CAP {
-                    head = 0;
-                    tail -= LAP;
-                }
-                if tail == BLOCK_CAP {
-                    tail += 1;
-                }
-
                 // Return the difference minus the number of blocks between tail and head.
                 return tail - head - tail / LAP;
             }
@@ -524,14 +526,14 @@ impl<T> Channel<T> {
     }
 
     /// Returns the capacity of the channel.
-    pub fn capacity(&self) -> Option<usize> {
+    pub(crate) fn capacity(&self) -> Option<usize> {
         None
     }
 
-    /// Disconnects the channel and wakes up all blocked receivers.
+    /// Disconnects senders and wakes up all blocked receivers.
     ///
     /// Returns `true` if this call disconnected the channel.
-    pub fn disconnect(&self) -> bool {
+    pub(crate) fn disconnect_senders(&self) -> bool {
         let tail = self.tail.index.fetch_or(MARK_BIT, Ordering::SeqCst);
 
         if tail & MARK_BIT == 0 {
@@ -542,20 +544,90 @@ impl<T> Channel<T> {
         }
     }
 
+    /// Disconnects receivers.
+    ///
+    /// Returns `true` if this call disconnected the channel.
+    pub(crate) fn disconnect_receivers(&self) -> bool {
+        let tail = self.tail.index.fetch_or(MARK_BIT, Ordering::SeqCst);
+
+        if tail & MARK_BIT == 0 {
+            // If receivers are dropped first, discard all messages to free
+            // memory eagerly.
+            self.discard_all_messages();
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Discards all messages.
+    ///
+    /// This method should only be called when all receivers are dropped.
+    fn discard_all_messages(&self) {
+        let backoff = Backoff::new();
+        let mut tail = self.tail.index.load(Ordering::Acquire);
+        loop {
+            let offset = (tail >> SHIFT) % LAP;
+            if offset != BLOCK_CAP {
+                break;
+            }
+
+            // New updates to tail will be rejected by MARK_BIT and aborted unless it's
+            // at boundary. We need to wait for the updates take affect otherwise there
+            // can be memory leaks.
+            backoff.snooze();
+            tail = self.tail.index.load(Ordering::Acquire);
+        }
+
+        let mut head = self.head.index.load(Ordering::Acquire);
+        let mut block = self.head.block.load(Ordering::Acquire);
+
+        unsafe {
+            // Drop all messages between head and tail and deallocate the heap-allocated blocks.
+            while head >> SHIFT != tail >> SHIFT {
+                let offset = (head >> SHIFT) % LAP;
+
+                if offset < BLOCK_CAP {
+                    // Drop the message in the slot.
+                    let slot = (*block).slots.get_unchecked(offset);
+                    slot.wait_write();
+                    let p = &mut *slot.msg.get();
+                    p.as_mut_ptr().drop_in_place();
+                } else {
+                    (*block).wait_next();
+                    // Deallocate the block and move to the next one.
+                    let next = (*block).next.load(Ordering::Acquire);
+                    drop(Box::from_raw(block));
+                    block = next;
+                }
+
+                head = head.wrapping_add(1 << SHIFT);
+            }
+
+            // Deallocate the last remaining block.
+            if !block.is_null() {
+                drop(Box::from_raw(block));
+            }
+        }
+        head &= !MARK_BIT;
+        self.head.block.store(ptr::null_mut(), Ordering::Release);
+        self.head.index.store(head, Ordering::Release);
+    }
+
     /// Returns `true` if the channel is disconnected.
-    pub fn is_disconnected(&self) -> bool {
+    pub(crate) fn is_disconnected(&self) -> bool {
         self.tail.index.load(Ordering::SeqCst) & MARK_BIT != 0
     }
 
     /// Returns `true` if the channel is empty.
-    pub fn is_empty(&self) -> bool {
+    pub(crate) fn is_empty(&self) -> bool {
         let head = self.head.index.load(Ordering::SeqCst);
         let tail = self.tail.index.load(Ordering::SeqCst);
         head >> SHIFT == tail >> SHIFT
     }
 
     /// Returns `true` if the channel is full.
-    pub fn is_full(&self) -> bool {
+    pub(crate) fn is_full(&self) -> bool {
         false
     }
 }
@@ -599,12 +671,12 @@ impl<T> Drop for Channel<T> {
 }
 
 /// Receiver handle to a channel.
-pub struct Receiver<'a, T: 'a>(&'a Channel<T>);
+pub(crate) struct Receiver<'a, T>(&'a Channel<T>);
 
 /// Sender handle to a channel.
-pub struct Sender<'a, T: 'a>(&'a Channel<T>);
+pub(crate) struct Sender<'a, T>(&'a Channel<T>);
 
-impl<'a, T> SelectHandle for Receiver<'a, T> {
+impl<T> SelectHandle for Receiver<'_, T> {
     fn try_select(&self, token: &mut Token) -> bool {
         self.0.start_recv(token)
     }
@@ -640,7 +712,7 @@ impl<'a, T> SelectHandle for Receiver<'a, T> {
     }
 }
 
-impl<'a, T> SelectHandle for Sender<'a, T> {
+impl<T> SelectHandle for Sender<'_, T> {
     fn try_select(&self, token: &mut Token) -> bool {
         self.0.start_send(token)
     }
