@@ -682,9 +682,35 @@ static bool lock_dep_dynamic_analysis_tests() {
       EXPECT_TRUE(guard_a);
       EXPECT_EQ(LockResult::Success, test::GetLastResult());
 
+      [&]() TA_NO_THREAD_SAFETY_ANALYSIS {
+        Guard<ReadWriteLock, ReadWriteLock::Read> guard_b{&a.lock};
+        EXPECT_TRUE(guard_b);
+        EXPECT_EQ(LockResult::Reentrance, test::GetLastResult());
+        return true;
+      }();
+    }
+
+    {
+      Guard<ReadWriteLock, ReadWriteLock::Read> guard_a{&a.lock};
+      EXPECT_TRUE(guard_a);
+      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+
       Guard<ReadWriteLock, ReadWriteLock::Write> guard_b{&b.lock};
       EXPECT_TRUE(guard_b);
       EXPECT_EQ(LockResult::AlreadyAcquired, test::GetLastResult());
+    }
+
+    {
+      Guard<ReadWriteLock, ReadWriteLock::Read> guard_a{&a.lock};
+      EXPECT_TRUE(guard_a);
+      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+
+      [&]() TA_NO_THREAD_SAFETY_ANALYSIS {
+        Guard<ReadWriteLock, ReadWriteLock::Write> guard_b{&a.lock};
+        EXPECT_TRUE(guard_b);
+        EXPECT_EQ(LockResult::Reentrance, test::GetLastResult());
+        return true;
+      }();
     }
 
     {
@@ -702,9 +728,35 @@ static bool lock_dep_dynamic_analysis_tests() {
       EXPECT_TRUE(guard_a);
       EXPECT_EQ(LockResult::Success, test::GetLastResult());
 
+      [&]() TA_NO_THREAD_SAFETY_ANALYSIS {
+        Guard<ReadWriteLock, ReadWriteLock::Read> guard_b{&a.lock};
+        EXPECT_TRUE(guard_b);
+        EXPECT_EQ(LockResult::Reentrance, test::GetLastResult());
+        return true;
+      }();
+    }
+
+    {
+      Guard<ReadWriteLock, ReadWriteLock::Write> guard_a{&a.lock};
+      EXPECT_TRUE(guard_a);
+      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+
       Guard<ReadWriteLock, ReadWriteLock::Write> guard_b{&b.lock};
       EXPECT_TRUE(guard_b);
       EXPECT_EQ(LockResult::AlreadyAcquired, test::GetLastResult());
+    }
+
+    {
+      Guard<ReadWriteLock, ReadWriteLock::Write> guard_a{&a.lock};
+      EXPECT_TRUE(guard_a);
+      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+
+      [&]() TA_NO_THREAD_SAFETY_ANALYSIS {
+        Guard<ReadWriteLock, ReadWriteLock::Write> guard_b{&a.lock};
+        EXPECT_TRUE(guard_b);
+        EXPECT_EQ(LockResult::Reentrance, test::GetLastResult());
+        return true;
+      }();
     }
 
     {
@@ -714,9 +766,21 @@ static bool lock_dep_dynamic_analysis_tests() {
     }
 
     {
+      GuardMultiple<2, ReadWriteLock, ReadWriteLock::Read> guard{&a.lock, &a.lock};
+      EXPECT_TRUE(guard);
+      EXPECT_EQ(LockResult::Reentrance, test::GetLastResult());
+    }
+
+    {
       GuardMultiple<2, ReadWriteLock, ReadWriteLock::Write> guard{&a.lock, &b.lock};
       EXPECT_TRUE(guard);
       EXPECT_EQ(LockResult::Success, test::GetLastResult());
+    }
+
+    {
+      GuardMultiple<2, ReadWriteLock, ReadWriteLock::Write> guard{&a.lock, &a.lock};
+      EXPECT_TRUE(guard);
+      EXPECT_EQ(LockResult::Reentrance, test::GetLastResult());
     }
   }
 
@@ -938,7 +1002,6 @@ static bool lock_dep_dynamic_analysis_tests() {
     zx_status_t status = TriggerAndWaitForLoopDetection(ZX_TIME_INFINITE);
     EXPECT_EQ(ZX_OK, status);
   }
-
 
   // Reset the tracking state to ensure that circular dependencies are not
   // reported outside of the test.

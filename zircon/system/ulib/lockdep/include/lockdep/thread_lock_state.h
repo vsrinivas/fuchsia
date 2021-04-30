@@ -25,32 +25,40 @@ namespace lockdep {
 class AcquiredLockEntry : public fbl::DoublyLinkedListable<AcquiredLockEntry*> {
  public:
   AcquiredLockEntry() = default;
-  AcquiredLockEntry(LockClassId id, uintptr_t order) : id_{id}, order_{order} {}
+  AcquiredLockEntry(void* address, LockClassId id, uintptr_t order)
+      : address_{address}, id_{id}, order_{order} {}
 
   ~AcquiredLockEntry() { ZX_DEBUG_ASSERT(!InContainer()); }
 
   AcquiredLockEntry(const AcquiredLockEntry&) = delete;
   AcquiredLockEntry& operator=(const AcquiredLockEntry&) = delete;
 
-  AcquiredLockEntry(AcquiredLockEntry&& other) { *this = std::move(other); }
-  AcquiredLockEntry& operator=(AcquiredLockEntry&& other) {
+  AcquiredLockEntry(AcquiredLockEntry&& other) noexcept { *this = std::move(other); }
+  AcquiredLockEntry& operator=(AcquiredLockEntry&& other) noexcept {
     if (this != &other) {
       ZX_ASSERT(!InContainer());
 
       if (other.InContainer())
         Replace(&other);
 
+      address_ = other.address_;
       id_ = other.id_;
       order_ = other.order_;
 
-      other.id_ = kInvalidLockClassId;
-      other.order_ = 0;
+      other.Clear();
     }
     return *this;
   }
 
+  void* address() const { return address_; }
   LockClassId id() const { return id_; }
   uintptr_t order() const { return order_; }
+
+  void Clear() {
+    address_ = nullptr;
+    id_ = kInvalidLockClassId;
+    order_ = 0;
+  }
 
  private:
   friend class ThreadLockState;
@@ -58,6 +66,7 @@ class AcquiredLockEntry : public fbl::DoublyLinkedListable<AcquiredLockEntry*> {
   // Replaces the given entry in the list with this entry.
   void Replace(AcquiredLockEntry* target);
 
+  void* address_{nullptr};
   LockClassId id_{kInvalidLockClassId};
   uintptr_t order_{0};
 };
@@ -96,15 +105,18 @@ class ThreadLockState {
     //  1. Checks that the given lock class is not already in the list unless
     //     the lock class is multi-acquire, or is nestable and external/address
     //     ordering is correctly applied.
-    //  2. Checks that the given lock class is not in the dependency set for
+    //  2. Checks that the given lock instance is not already in the list.
+    //  3. Checks that the given lock class is not in the dependency set for
     //     any lock class already in the list.
-    //  3. Checks that irq-safe locks are not held when acquiring an irq-unsafe
+    //  4. Checks that irq-safe locks are not held when acquiring an irq-unsafe
     //     lock.
-    //  4. Adds each lock class already in the list to the dependency set of the
+    //  5. Adds each lock class already in the list to the dependency set of the
     //     given lock class.
     for (AcquiredLockEntry& entry : acquired_locks_) {
       if (entry.id() == lock_entry->id()) {
-        if (!LockClassState::IsMultiAcquire(lock_entry->id()) &&
+        if (lock_entry->address() == entry.address()) {
+          Report(lock_entry, &entry, LockResult::Reentrance);
+        } else if (!LockClassState::IsMultiAcquire(lock_entry->id()) &&
             lock_entry->order() <= entry.order()) {
           if (!LockClassState::IsNestable(lock_entry->id()) && lock_entry->order() == 0)
             Report(lock_entry, &entry, LockResult::AlreadyAcquired);

@@ -88,6 +88,7 @@ enum class LockResult : uint8_t {
   OutOfOrder,
   InvalidNesting,
   InvalidIrqSafety,
+  Reentrance,
 
   // Non-fatal error that indicates the dependency hash set for a particular
   // lock class is full. Consider increasing the size of the lock dependency
@@ -113,6 +114,8 @@ static inline const char* ToString(LockResult result) {
       return "Invalid Nesting";
     case LockResult::InvalidIrqSafety:
       return "Invalid Irq Safety";
+    case LockResult::Reentrance:
+      return "Reentrance";
     case LockResult::MaxLockDependencies:
       return "Max Lock Dependencies";
     case LockResult::DependencyExists:

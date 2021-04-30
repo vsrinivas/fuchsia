@@ -14,6 +14,7 @@
 
 namespace {
 
+using lockdep::AdoptLock;
 using lockdep::AssertHeld;
 using lockdep::Guard;
 
@@ -48,6 +49,22 @@ void SecretlyReleaseLock(Lock* lock) __TA_NO_THREAD_SAFETY_ANALYSIS {
 }
 
 LOCK_DEP_SINGLETON_LOCK(SingletonLock, FakeMutex);
+
+TEST(LockDep, GuardMoveSemantics) {
+  Guard<FakeMutex> guard{SingletonLock::Get()};
+  EXPECT_TRUE(guard);
+  EXPECT_TRUE(SingletonLock::Get()->lock().acquired);
+
+  Guard<FakeMutex> guard2{AdoptLock, guard.take()};
+  EXPECT_FALSE(guard);
+  EXPECT_TRUE(guard2);
+  EXPECT_TRUE(SingletonLock::Get()->lock().acquired);
+
+  guard2.Release();
+  EXPECT_FALSE(guard);
+  EXPECT_FALSE(guard2);
+  EXPECT_FALSE(SingletonLock::Get()->lock().acquired);
+}
 
 TEST(LockDep, SingletonLockGuard) {
   static int guarded_var TA_GUARDED(SingletonLock::Get()) = 0;

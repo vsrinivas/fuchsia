@@ -130,7 +130,7 @@ class __TA_SCOPED_CAPABILITY
             typename = internal::EnableIfNotNestable<Lockable, LockType>>
   __WARN_UNUSED_CONSTRUCTOR Guard(Lockable* lock, Args&&... state_args) __TA_ACQUIRE(lock)
       __TA_ACQUIRE(lock->capability())
-      : validator_{lock->id()}, lock_{&lock->lock()}, state_{std::forward<Args>(state_args)...} {
+      : validator_{&lock->lock(), lock->id()}, state_{std::forward<Args>(state_args)...} {
     ValidateAndAcquire();
   }
 
@@ -148,17 +148,19 @@ class __TA_SCOPED_CAPABILITY
   // Releases the lock early before this guard instance goes out of scope.
   template <typename... Args>
   void Release(Args&&... args) __TA_RELEASE() {
-    if (lock_ != nullptr) {
-      LockPolicy<LockType, Option>::Release(lock_, &state_, std::forward<Args>(args)...);
+    if (validator_.lock() != nullptr) {
+      LockPolicy<LockType, Option>::Release(validator_.lock(), &state_,
+                                            std::forward<Args>(args)...);
       validator_.ValidateRelease();
-      lock_ = nullptr;
+      validator_.Clear();
     }
   }
 
   // Returns true if the guard has an actively acquired lock.
-  explicit operator bool() const { return lock_ != nullptr; }
+  explicit operator bool() const { return validator_.lock() != nullptr; }
+
   // Returns true if this guard wraps |lock|.
-  bool wraps_lock(const LockType& lock) const { return &lock == lock_; }
+  bool wraps_lock(const LockType& lock) const { return &lock == validator_.lock(); }
 
   // Releases this scoped capability without releasing the underlying lock or
   // un-tracking the lock in the validator. Returns an rvalue reference to the
@@ -184,12 +186,8 @@ class __TA_SCOPED_CAPABILITY
   // Example:
   //  Guard<fbl::Mutex> guard{AdoptLock, std::move(rvalue_arugment)};
   //
-  __WARN_UNUSED_CONSTRUCTOR Guard(AdoptLockTag, Guard&& other) __TA_ACQUIRE(other.lock_)
-      : validator_{std::move(other.validator_)},
-        lock_{other.lock_},
-        state_{std::move(other.state_)} {
-    other.lock_ = nullptr;
-  }
+  __WARN_UNUSED_CONSTRUCTOR Guard(AdoptLockTag, Guard&& other) __TA_ACQUIRE(other.validator_.lock())
+      : validator_{std::move(other.validator_)}, state_{std::move(other.state_)} {}
 
   // Temporarily releases and un-tracks the guarded lock before executing the
   // given callable Op and then re-acquires and tracks the lock. This permits
@@ -208,9 +206,9 @@ class __TA_SCOPED_CAPABILITY
   //
   template <typename Op, typename... ReleaseArgs>
   void CallUnlocked(Op&& op, ReleaseArgs&&... release_args) __TA_NO_THREAD_SAFETY_ANALYSIS {
-    ZX_DEBUG_ASSERT(lock_ != nullptr);
+    ZX_DEBUG_ASSERT(validator_.lock() != nullptr);
 
-    LockPolicy<LockType, Option>::Release(lock_, &state_,
+    LockPolicy<LockType, Option>::Release(validator_.lock(), &state_,
                                           std::forward<ReleaseArgs>(release_args)...);
     validator_.ValidateRelease();
 
@@ -231,9 +229,9 @@ class __TA_SCOPED_CAPABILITY
   // body.
   void ValidateAndAcquire() __TA_NO_THREAD_SAFETY_ANALYSIS {
     validator_.ValidateAcquire();
-    if (!LockPolicy<LockType, Option>::Acquire(lock_, &state_)) {
-      lock_ = nullptr;
+    if (!LockPolicy<LockType, Option>::Acquire(validator_.lock(), &state_)) {
       validator_.ValidateRelease();
+      validator_.Clear();
     }
   }
 
@@ -243,9 +241,7 @@ class __TA_SCOPED_CAPABILITY
   __WARN_UNUSED_CONSTRUCTOR Guard(OrderedLockTag, Lockable* lock, uintptr_t order,
                                   Args&&... state_args) __TA_ACQUIRE(lock)
       __TA_ACQUIRE(lock->capability())
-      : validator_{lock->id(), order},
-        lock_{&lock->lock()},
-        state_{std::forward<Args>(state_args)...} {
+      : validator_{&lock->lock(), lock->id(), order}, state_{std::forward<Args>(state_args)...} {
     ValidateAndAcquire();
   }
 
@@ -253,29 +249,45 @@ class __TA_SCOPED_CAPABILITY
   // AcquiredLockEntry instance and bookkeeping calls required by
   // ThreadLockState.
   struct LockValidator {
-    LockValidator(LockClassId id, uintptr_t order = 0) : lock_entry{id, order} {}
+    LockValidator(LockType* lock, LockClassId id, uintptr_t order = 0)
+        : lock_entry{lock, id, order} {}
 
     void ValidateAcquire() { ThreadLockState::Get()->Acquire(&lock_entry); }
     void ValidateRelease() { ThreadLockState::Get()->Release(&lock_entry); }
+    void Clear() { lock_entry.Clear(); }
+
+    LockType* lock() const { return static_cast<LockType*>(lock_entry.address()); }
 
     AcquiredLockEntry lock_entry;
   };
 
   // Validator type used when lock validation is disabled.
-  struct DummyValidator {
-    DummyValidator(LockClassId, uintptr_t = 0) {}
+  struct NoValidator {
+    NoValidator(LockType* lock, LockClassId, uintptr_t = 0) : address{lock} {}
+
+    NoValidator(NoValidator&& other) noexcept { *this = std::move(other); }
+    NoValidator& operator=(NoValidator&& other) noexcept {
+      if (this != &other) {
+        address = other.address;
+        other.Clear();
+      }
+      return *this;
+    }
+
     void ValidateAcquire() {}
     void ValidateRelease() {}
+    void Clear() { address = nullptr; }
+
+    LockType* lock() const { return address; }
+
+    LockType* address;
   };
 
   // Alias of the configured validator.
-  using Validator = IfLockValidationEnabled<LockValidator, DummyValidator>;
+  using Validator = IfLockValidationEnabled<LockValidator, NoValidator>;
 
   // The validator to use when acquiring and releasing the lock.
   Validator validator_;
-
-  // Pointer to the acquired lock.
-  LockType* lock_;
 
   // State to store in the guard as specified by the lock policy. For example,
   // this may be used to save IRQ state for spinlocks.
@@ -303,7 +315,7 @@ class __TA_SCOPED_CAPABILITY Guard<LockType, Option, internal::EnableIfShared<Lo
             typename = internal::EnableIfNotNestable<Lockable, LockType>>
   __WARN_UNUSED_CONSTRUCTOR Guard(Lockable* lock, Args&&... state_args) __TA_ACQUIRE_SHARED(lock)
       __TA_ACQUIRE_SHARED(lock->capability())
-      : validator_{lock->id()}, lock_{&lock->lock()}, state_{std::forward<Args>(state_args)...} {
+      : validator_{&lock->lock(), lock->id()}, state_{std::forward<Args>(state_args)...} {
     ValidateAndAcquire();
   }
 
@@ -321,15 +333,19 @@ class __TA_SCOPED_CAPABILITY Guard<LockType, Option, internal::EnableIfShared<Lo
   // Releases the lock early before this guard instance goes out of scope.
   template <typename... Args>
   void Release(Args&&... args) __TA_RELEASE() {
-    if (lock_ != nullptr) {
-      LockPolicy<LockType, Option>::Release(lock_, &state_, std::forward<Args>(args)...);
+    if (validator_.lock() != nullptr) {
+      LockPolicy<LockType, Option>::Release(validator_.lock(), &state_,
+                                            std::forward<Args>(args)...);
       validator_.ValidateRelease();
-      lock_ = nullptr;
+      validator_.Clear();
     }
   }
 
   // Returns true if the guard has an actively acquired lock.
-  explicit operator bool() const { return lock_ != nullptr; }
+  explicit operator bool() const { return validator_.lock() != nullptr; }
+
+  // Returns true if this guard wraps |lock|.
+  bool wraps_lock(const LockType& lock) const { return &lock == validator_.lock(); }
 
   // Releases this scoped capability without releasing the underlying lock or
   // un-tracking the lock in the validator. Returns an rvalue reference to the
@@ -355,12 +371,9 @@ class __TA_SCOPED_CAPABILITY Guard<LockType, Option, internal::EnableIfShared<Lo
   // Example:
   //  Guard<fbl::Mutex> guard{AdoptLock, std::move(rvalue_arugment)};
   //
-  __WARN_UNUSED_CONSTRUCTOR Guard(AdoptLockTag, Guard&& other) __TA_ACQUIRE_SHARED(other.lock_)
-      : validator_{std::move(other.validator_)},
-        lock_{other.lock_},
-        state_{std::move(other.state_)} {
-    other.lock_ = nullptr;
-  }
+  __WARN_UNUSED_CONSTRUCTOR Guard(AdoptLockTag, Guard&& other)
+      __TA_ACQUIRE_SHARED(other.validator_.lock())
+      : validator_{std::move(other.validator_)}, state_{std::move(other.state_)} {}
 
   // Temporarily releases and un-tracks the guarded lock before executing the
   // given callable Op and then re-acquires and tracks the lock. This permits
@@ -379,9 +392,9 @@ class __TA_SCOPED_CAPABILITY Guard<LockType, Option, internal::EnableIfShared<Lo
   //
   template <typename Op, typename... ReleaseArgs>
   void CallUnlocked(Op&& op, ReleaseArgs&&... release_args) __TA_NO_THREAD_SAFETY_ANALYSIS {
-    ZX_DEBUG_ASSERT(lock_ != nullptr);
+    ZX_DEBUG_ASSERT(validator_.lock() != nullptr);
 
-    LockPolicy<LockType, Option>::Release(lock_, &state_,
+    LockPolicy<LockType, Option>::Release(validator_.lock(), &state_,
                                           std::forward<ReleaseArgs>(release_args)...);
     validator_.ValidateRelease();
 
@@ -402,9 +415,9 @@ class __TA_SCOPED_CAPABILITY Guard<LockType, Option, internal::EnableIfShared<Lo
   // body.
   void ValidateAndAcquire() __TA_NO_THREAD_SAFETY_ANALYSIS {
     validator_.ValidateAcquire();
-    if (!LockPolicy<LockType, Option>::Acquire(lock_, &state_)) {
-      lock_ = nullptr;
+    if (!LockPolicy<LockType, Option>::Acquire(validator_.lock(), &state_)) {
       validator_.ValidateRelease();
+      validator_.Clear();
     }
   }
 
@@ -414,9 +427,7 @@ class __TA_SCOPED_CAPABILITY Guard<LockType, Option, internal::EnableIfShared<Lo
   __WARN_UNUSED_CONSTRUCTOR Guard(OrderedLockTag, Lockable* lock, uintptr_t order,
                                   Args&&... state_args) __TA_ACQUIRE_SHARED(lock)
       __TA_ACQUIRE_SHARED(lock->capability())
-      : validator_{lock->id(), order},
-        lock_{&lock->lock()},
-        state_{std::forward<Args>(state_args)...} {
+      : validator_{&lock->lock(), lock->id(), order}, state_{std::forward<Args>(state_args)...} {
     ValidateAndAcquire();
   }
 
@@ -424,29 +435,45 @@ class __TA_SCOPED_CAPABILITY Guard<LockType, Option, internal::EnableIfShared<Lo
   // AcquiredLockEntry instance and bookkeeping calls required by
   // ThreadLockState.
   struct LockValidator {
-    LockValidator(LockClassId id, uintptr_t order = 0) : lock_entry{id, order} {}
+    LockValidator(LockType* lock, LockClassId id, uintptr_t order = 0)
+        : lock_entry{lock, id, order} {}
 
     void ValidateAcquire() { ThreadLockState::Get()->Acquire(&lock_entry); }
     void ValidateRelease() { ThreadLockState::Get()->Release(&lock_entry); }
+    void Clear() { lock_entry.Clear(); }
+
+    LockType* lock() const { return static_cast<LockType*>(lock_entry.address()); }
 
     AcquiredLockEntry lock_entry;
   };
 
   // Validator type used when lock validation is disabled.
-  struct DummyValidator {
-    DummyValidator(LockClassId, uintptr_t = 0) {}
+  struct NoValidator {
+    NoValidator(LockType* lock, LockClassId, uintptr_t = 0) : address{lock} {}
+
+    NoValidator(NoValidator&& other) noexcept { *this = std::move(other); }
+    NoValidator& operator=(NoValidator&& other) noexcept {
+      if (this != &other) {
+        address = other.address;
+        other.Clear();
+      }
+      return *this;
+    }
+
     void ValidateAcquire() {}
     void ValidateRelease() {}
+    void Clear() { address = nullptr; }
+
+    LockType* lock() const { return address; }
+
+    LockType* address;
   };
 
   // Alias of the configured validator.
-  using Validator = IfLockValidationEnabled<LockValidator, DummyValidator>;
+  using Validator = IfLockValidationEnabled<LockValidator, NoValidator>;
 
   // The validator to use when acquiring and releasing the lock.
   Validator validator_;
-
-  // Pointer to the acquired lock.
-  LockType* lock_;
 
   // State to store in the guard as specified by the lock policy. For example,
   // this may be used to save IRQ state for spinlocks.
