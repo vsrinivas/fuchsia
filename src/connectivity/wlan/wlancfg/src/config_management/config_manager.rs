@@ -674,7 +674,6 @@ fn log_cobalt_metrics(saved_networks: &NetworkConfigMap, cobalt_api: &mut Cobalt
 }
 
 #[cfg(test)]
-#[allow(unused_results)]
 mod tests {
     use {
         super::*,
@@ -717,10 +716,11 @@ mod tests {
         assert_eq!(0, saved_networks.known_network_count().await);
 
         // Store a network and verify it was stored.
-        saved_networks
+        assert!(saved_networks
             .store(network_id_foo.clone(), Credential::Password(b"qwertyuio".to_vec()))
             .await
-            .expect("storing 'foo' failed");
+            .expect("storing 'foo' failed")
+            .is_none());
         assert_eq!(
             vec![network_config("foo", "qwertyuio")],
             saved_networks.lookup(network_id_foo.clone()).await
@@ -728,10 +728,11 @@ mod tests {
         assert_eq!(1, saved_networks.known_network_count().await);
 
         // Store another network with the same SSID.
-        saved_networks
+        let popped_network = saved_networks
             .store(network_id_foo.clone(), Credential::Password(b"12345678".to_vec()))
             .await
             .expect("storing 'foo' a second time failed");
+        assert_eq!(popped_network, Some(network_config("foo", "qwertyuio")));
 
         // There should only be one saved "foo" network because MAX_CONFIGS_PER_SSID is 1.
         // When this constant becomes greater than 1, both network configs should be found
@@ -746,10 +747,11 @@ mod tests {
         let psk = Credential::Psk(vec![1; 32]);
         let config_baz = NetworkConfig::new(network_id_baz.clone(), psk.clone(), false)
             .expect("failed to create network config");
-        saved_networks
+        assert!(saved_networks
             .store(network_id_baz.clone(), psk)
             .await
-            .expect("storing 'baz' with PSK failed");
+            .expect("storing 'baz' with PSK failed")
+            .is_none());
         assert_eq!(vec![config_baz.clone()], saved_networks.lookup(network_id_baz.clone()).await);
         assert_eq!(2, saved_networks.known_network_count().await);
 
@@ -782,14 +784,17 @@ mod tests {
         let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
         let network_id = NetworkIdentifier::new(b"foo".to_vec(), SecurityType::Wpa2);
 
-        saved_networks
+        assert!(saved_networks
             .store(network_id.clone(), Credential::Password(b"qwertyuio".to_vec()))
             .await
-            .expect("storing 'foo' failed");
-        saved_networks
+            .expect("storing 'foo' failed")
+            .is_none());
+        let popped_network = saved_networks
             .store(network_id.clone(), Credential::Password(b"qwertyuio".to_vec()))
             .await
             .expect("storing 'foo' a second time failed");
+        // Because the same network was stored twice, nothing was evicted, so popped_network == None
+        assert_eq!(popped_network, None);
         let expected_cfgs = vec![network_config("foo", "qwertyuio")];
         assert_eq!(expected_cfgs, saved_networks.lookup(network_id).await);
         assert_eq!(1, saved_networks.known_network_count().await);
@@ -811,10 +816,15 @@ mod tests {
         for i in 0..MAX_CONFIGS_PER_SSID + 1 {
             let mut password = b"password".to_vec();
             password.push(i as u8);
-            saved_networks
+            let popped_network = saved_networks
                 .store(network_id.clone(), Credential::Password(password))
                 .await
                 .expect("Failed to saved network");
+            if i >= MAX_CONFIGS_PER_SSID {
+                assert!(popped_network.is_some());
+            } else {
+                assert!(popped_network.is_none());
+            }
         }
 
         // since none have been connected to yet, we don't care which config was removed
@@ -835,10 +845,11 @@ mod tests {
         assert_eq!(0, saved_networks.known_network_count().await);
 
         // Store a network and verify it was stored.
-        saved_networks
+        assert!(saved_networks
             .store(network_id.clone(), credential.clone())
             .await
-            .expect("storing 'foo' failed");
+            .expect("storing 'foo' failed")
+            .is_none());
         assert_eq!(
             vec![network_config("foo", "qwertyuio")],
             saved_networks.lookup(network_id.clone()).await
@@ -926,20 +937,23 @@ mod tests {
         let network_id_wpa3 = NetworkIdentifier::new(ssid.clone(), SecurityType::Wpa3);
         let credential_wpa2 = Credential::Password(b"password".to_vec());
         let credential_wpa3 = Credential::Password(b"wpa3-password".to_vec());
-        saved_networks
+        assert!(saved_networks
             .store(network_id_wpa2.clone(), credential_wpa2.clone())
             .await
-            .expect("Failed to store network");
-        saved_networks
+            .expect("Failed to store network")
+            .is_none());
+        assert!(saved_networks
             .store(network_id_wpa3.clone(), credential_wpa3.clone())
             .await
-            .expect("Failed to store network");
+            .expect("Failed to store network")
+            .is_none());
         // Store a network with the same SSID but a not-compatible security type.
         let network_id_wep = NetworkIdentifier::new(ssid.clone(), SecurityType::Wpa);
-        saved_networks
+        assert!(saved_networks
             .store(network_id_wep.clone(), Credential::Password(b"abcdefgh".to_vec()))
             .await
-            .expect("Failed to store network");
+            .expect("Failed to store network")
+            .is_none());
 
         let results = saved_networks
             .lookup_compatible(ssid.clone(), types::SecurityTypeDetailed::Wpa2Wpa3Personal)
@@ -1024,10 +1038,11 @@ mod tests {
         assert_eq!(0, saved_networks.known_network_count().await);
 
         // Save the network and record a successful connection.
-        saved_networks
+        assert!(saved_networks
             .store(network_id.clone(), credential.clone())
             .await
-            .expect("Failed save network");
+            .expect("Failed save network")
+            .is_none());
 
         let config = network_config("bar", "password");
         assert_eq!(vec![config], saved_networks.lookup(network_id.clone()).await);
@@ -1119,14 +1134,16 @@ mod tests {
         let saved_unrecorded_id = NetworkIdentifier::new("foo", SecurityType::Wpa3);
         let bssid = [3; 6];
 
-        saved_networks
+        assert!(saved_networks
             .store(saved_network_id.clone(), credential.clone())
             .await
-            .expect("Failed save network");
-        saved_networks
+            .expect("Failed save network")
+            .is_none());
+        assert!(saved_networks
             .store(saved_unrecorded_id.clone(), credential.clone())
             .await
-            .expect("Failed save network");
+            .expect("Failed save network")
+            .is_none());
 
         saved_networks
             .record_connect_result(
@@ -1159,14 +1176,16 @@ mod tests {
         let bssid = [2; 6];
 
         // Save the networks and record a successful connection.
-        saved_networks
+        assert!(saved_networks
             .store(net_id.clone(), credential.clone())
             .await
-            .expect("Failed save network");
-        saved_networks
+            .expect("Failed save network")
+            .is_none());
+        assert!(saved_networks
             .store(net_id_also_valid.clone(), credential.clone())
             .await
-            .expect("Failed save network");
+            .expect("Failed save network")
+            .is_none());
         saved_networks
             .record_connect_result(
                 net_id.clone(),
@@ -1213,10 +1232,11 @@ mod tests {
         assert_eq!(0, saved_networks.known_network_count().await);
 
         // Record that the connect failed.
-        saved_networks
+        assert!(saved_networks
             .store(network_id.clone(), credential.clone())
             .await
-            .expect("Failed save network");
+            .expect("Failed save network")
+            .is_none());
         saved_networks
             .record_connect_result(
                 network_id.clone(),
@@ -1283,10 +1303,11 @@ mod tests {
         assert_eq!(0, saved_networks.known_network_count().await);
 
         // Record that the connect was canceled.
-        saved_networks
+        assert!(saved_networks
             .store(network_id.clone(), credential.clone())
             .await
-            .expect("Failed save network");
+            .expect("Failed save network")
+            .is_none());
         saved_networks
             .record_connect_result(
                 network_id.clone(),
@@ -1330,14 +1351,16 @@ mod tests {
         let unseen_credential = Credential::Password(b"password".to_vec());
 
         // Save the networks
-        saved_networks
+        assert!(saved_networks
             .store(saved_seen_id.clone(), seen_credential.clone())
             .await
-            .expect("Failed to save network");
-        saved_networks
+            .expect("Failed to save network")
+            .is_none());
+        assert!(saved_networks
             .store(saved_unseen_id.clone(), unseen_credential.clone())
             .await
-            .expect("Failed to save network");
+            .expect("Failed to save network")
+            .is_none());
 
         // Record passive scan results, including the saved network and another network.
         let seen_networks = vec![saved_seen_network, unsaved_network];
@@ -1364,7 +1387,11 @@ mod tests {
         let credential = Credential::Password(b"credential".to_vec());
 
         // Save the networks
-        saved_networks.store(id.clone(), credential.clone()).await.expect("Failed to save network");
+        assert!(saved_networks
+            .store(id.clone(), credential.clone())
+            .await
+            .expect("Failed to save network")
+            .is_none());
 
         // Record passive scan results
         let seen_networks = vec![types::NetworkIdentifierDetailed {
@@ -1391,7 +1418,11 @@ mod tests {
         let credential = Credential::Psk(vec![8; 32]);
 
         // Save the networks
-        saved_networks.store(id.clone(), credential.clone()).await.expect("Failed to save network");
+        assert!(saved_networks
+            .store(id.clone(), credential.clone())
+            .await
+            .expect("Failed to save network")
+            .is_none());
 
         // Record passive scan results, including the saved network and another network.
         let seen_networks = vec![types::NetworkIdentifierDetailed {
@@ -1419,7 +1450,11 @@ mod tests {
         let credential = Credential::Password(b"credential".to_vec());
 
         // Save the networks
-        saved_networks.store(id.clone(), credential.clone()).await.expect("Failed to save network");
+        assert!(saved_networks
+            .store(id.clone(), credential.clone())
+            .await
+            .expect("Failed to save network")
+            .is_none());
         let config =
             saved_networks.lookup(id.clone()).await.pop().expect("failed to lookup config");
         assert_eq!(config.hidden_probability, PROB_HIDDEN_DEFAULT);
@@ -1455,7 +1490,11 @@ mod tests {
         let credential = Credential::Psk(vec![11; 32]);
 
         // Save the networks
-        saved_networks.store(id.clone(), credential.clone()).await.expect("Failed to save network");
+        assert!(saved_networks
+            .store(id.clone(), credential.clone())
+            .await
+            .expect("Failed to save network")
+            .is_none());
         let config =
             saved_networks.lookup(id.clone()).await.pop().expect("failed to lookup config");
         assert_eq!(config.hidden_probability, PROB_HIDDEN_DEFAULT);
@@ -1492,7 +1531,11 @@ mod tests {
         let diff_ssid = b"other-ssid".to_vec();
 
         // Save the networks
-        saved_networks.store(id.clone(), credential.clone()).await.expect("Failed to save network");
+        assert!(saved_networks
+            .store(id.clone(), credential.clone())
+            .await
+            .expect("Failed to save network")
+            .is_none());
         let config =
             saved_networks.lookup(id.clone()).await.pop().expect("failed to lookup config");
         assert_eq!(config.hidden_probability, PROB_HIDDEN_DEFAULT);
@@ -1526,7 +1569,11 @@ mod tests {
         let credential = Credential::Password(b"foo-pass".to_vec());
 
         // Save the networks
-        saved_networks.store(id.clone(), credential.clone()).await.expect("Failed to save network");
+        assert!(saved_networks
+            .store(id.clone(), credential.clone())
+            .await
+            .expect("Failed to save network")
+            .is_none());
         let config =
             saved_networks.lookup(id.clone()).await.pop().expect("failed to lookup config");
         assert_eq!(config.hidden_probability, PROB_HIDDEN_DEFAULT);
@@ -1601,10 +1648,11 @@ mod tests {
         let network_id = NetworkIdentifier::new(b"foo".to_vec(), SecurityType::Wpa2);
         let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
 
-        saved_networks
+        assert!(saved_networks
             .store(network_id.clone(), Credential::Password(b"qwertyuio".to_vec()))
             .await
-            .expect("storing 'foo' failed");
+            .expect("storing 'foo' failed")
+            .is_none());
         assert!(path.exists());
         assert_eq!(
             vec![network_config("foo", "qwertyuio")],
@@ -1635,7 +1683,7 @@ mod tests {
         let tmp_path = temp_dir.path().join("tmp.json");
         let mut file = fs::File::create(&path).expect("failed to open file for writing");
         // Write invalid JSON and close the file
-        file.write(b"{").expect("failed to write broken json into file");
+        assert_eq!(file.write(b"{").expect("failed to write broken json into file"), 1);
         mem::drop(file);
         assert!(path.exists());
         // Constructing a saved network config store should still succeed,
@@ -1654,10 +1702,11 @@ mod tests {
         // Writing an entry should not create the file yet because networks configs don't persist.
         assert_eq!(0, saved_networks.known_network_count().await);
         let network_id = NetworkIdentifier::new(b"foo".to_vec(), SecurityType::Wpa2);
-        saved_networks
+        assert!(saved_networks
             .store(network_id.clone(), Credential::Password(b"qwertyuio".to_vec()))
             .await
-            .expect("storing 'foo' failed");
+            .expect("storing 'foo' failed")
+            .is_none());
 
         // There should be a file here again since we stored a network, so one will be created.
         assert!(path.exists());
@@ -1675,7 +1724,7 @@ mod tests {
         let tmp_path = temp_dir.path().join("tmp.json");
         let mut file = fs::File::create(&path).expect("failed to open file for writing");
 
-        file.write(contents).expect("Failed to write to file");
+        assert_eq!(file.write(contents).expect("Failed to write to file"), contents.len());
         file.flush().expect("failed to flush contents of file");
 
         let stash_id = "read_network_from_legacy_storage";
@@ -1715,7 +1764,7 @@ mod tests {
         let tmp_path = temp_dir.path().join("tmp.json");
         let mut file = fs::File::create(&path).expect("failed to open file for writing");
 
-        file.write(contents).expect("Failed to write to file");
+        assert_eq!(file.write(contents).expect("Failed to write to file"), contents.len());
         file.flush().expect("failed to flush contents of file");
 
         let stash_id = rand_string();
@@ -1736,13 +1785,14 @@ mod tests {
         let net_config =
             NetworkConfig::new(net_id.clone(), Credential::Password(b"password".to_vec()), false)
                 .expect("failed to create network config");
-        assert_eq!(vec![net_config], saved_networks.lookup(net_id.clone()).await);
+        assert_eq!(vec![net_config.clone()], saved_networks.lookup(net_id.clone()).await);
 
         // Replace the network 'bar' that was read from legacy version storage
-        saved_networks
+        let popped_network = saved_networks
             .store(net_id.clone(), Credential::Password(b"foobarbaz".to_vec()))
             .await
             .expect("failed to store network");
+        assert_eq!(popped_network, Some(net_config));
         let new_net_config =
             NetworkConfig::new(net_id.clone(), Credential::Password(b"foobarbaz".to_vec()), false)
                 .expect("failed to create network config");
@@ -1774,7 +1824,7 @@ mod tests {
         let tmp_path = temp_dir.path().join("tmp.json");
         let mut file = fs::File::create(&path).expect("failed to open file for writing");
 
-        file.write(contents).expect("Failed to write to file");
+        assert_eq!(file.write(contents).expect("Failed to write to file"), contents.len());
         file.flush().expect("failed to flush contents of file");
 
         let stash_id = rand_string();
@@ -1795,13 +1845,14 @@ mod tests {
         let net_config =
             NetworkConfig::new(net_id.clone(), Credential::Password(b"password".to_vec()), false)
                 .expect("failed to create network config");
-        assert_eq!(vec![net_config], saved_networks.lookup(net_id.clone()).await);
+        assert_eq!(vec![net_config.clone()], saved_networks.lookup(net_id.clone()).await);
 
         // Replace the network 'bar' that was read from legacy version storage
-        saved_networks
+        let popped_network = saved_networks
             .store(net_id.clone(), Credential::Password(b"foobarbaz".to_vec()))
             .await
             .expect("failed to store network");
+        assert_eq!(popped_network, Some(net_config));
         let new_net_config =
             NetworkConfig::new(net_id.clone(), Credential::Password(b"foobarbaz".to_vec()), false)
                 .expect("failed to create network config");
@@ -1809,7 +1860,7 @@ mod tests {
 
         // Add legacy store file again as if we had failed to delete it
         let mut file = fs::File::create(&path).expect("failed to open file for writing");
-        file.write(contents).expect("Failed to write to file");
+        assert_eq!(file.write(contents).expect("Failed to write to file"), contents.len());
         file.flush().expect("failed to flush contents of file");
 
         // Recreate the SavedNetworksManager again, as would happen when the device restasts
@@ -1837,10 +1888,11 @@ mod tests {
 
         // Save a network, which should write to the legacy store
         let net_id = NetworkIdentifier::new(b"bar".to_vec(), SecurityType::Wpa2);
-        saved_networks
+        assert!(saved_networks
             .store(net_id.clone(), Credential::Password(b"foobarbaz".to_vec()))
             .await
-            .expect("failed to store network");
+            .expect("failed to store network")
+            .is_none());
 
         // Explicitly clear just the stash
         saved_networks.stash.lock().await.clear().await.expect("failed to clear the stash");
@@ -1942,17 +1994,19 @@ mod tests {
         assert_eq!(0, saved_networks.known_network_count().await);
 
         // Store a network and verify it was stored.
-        saved_networks
+        assert!(saved_networks
             .store(network_id_foo.clone(), Credential::Password(b"qwertyuio".to_vec()))
             .await
-            .expect("storing 'foo' failed");
+            .expect("storing 'foo' failed")
+            .is_none());
         assert_eq!(1, saved_networks.known_network_count().await);
 
         // Store another network and verify.
-        saved_networks
+        assert!(saved_networks
             .store(network_id_baz.clone(), Credential::Psk(vec![1; 32]))
             .await
-            .expect("storing 'baz' with PSK failed");
+            .expect("storing 'baz' with PSK failed")
+            .is_none());
         assert_eq!(2, saved_networks.known_network_count().await);
 
         // Record metrics
@@ -2160,9 +2214,21 @@ mod tests {
         let credential_4 = Credential::None;
 
         // Save 3 of the 4 networks
-        saved_networks.store(id_1.clone(), credential_1).await.expect("failed to store network");
-        saved_networks.store(id_2.clone(), credential_2).await.expect("failed to store network");
-        saved_networks.store(id_4.clone(), credential_4).await.expect("failed to store network");
+        assert!(saved_networks
+            .store(id_1.clone(), credential_1)
+            .await
+            .expect("failed to store network")
+            .is_none());
+        assert!(saved_networks
+            .store(id_2.clone(), credential_2)
+            .await
+            .expect("failed to store network")
+            .is_none());
+        assert!(saved_networks
+            .store(id_4.clone(), credential_4)
+            .await
+            .expect("failed to store network")
+            .is_none());
         // Check that the saved networks have the default hidden probability so later we can just
         // check that the probability has changed.
         let config_1 = saved_networks.lookup(id_1.clone()).await.pop().expect("failed to lookup");

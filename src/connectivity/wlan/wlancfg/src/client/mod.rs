@@ -478,7 +478,6 @@ fn reject_provider_request(req: fidl_policy::ClientProviderRequest) -> Result<()
 }
 
 #[cfg(test)]
-#[allow(unused_results)]
 mod tests {
     use {
         super::*,
@@ -687,18 +686,21 @@ mod tests {
             NetworkIdentifier::new(b"foobar-protected".to_vec(), SecurityType::Wpa2);
         let network_id_psk = NetworkIdentifier::new(b"foobar-psk".to_vec(), SecurityType::Wpa2);
 
-        saved_networks
+        assert!(saved_networks
             .store(network_id_none, Credential::None)
             .await
-            .expect("error saving network");
-        saved_networks
+            .expect("error saving network")
+            .is_none());
+        assert!(saved_networks
             .store(network_id_password, Credential::Password(b"supersecure".to_vec()))
             .await
-            .expect("error saving network");
-        saved_networks
+            .expect("error saving network")
+            .is_none());
+        assert!(saved_networks
             .store(network_id_psk, Credential::Psk(vec![64; WPA_PSK_BYTE_LEN].to_vec()))
             .await
-            .expect("error saving network foobar-psk");
+            .expect("error saving network foobar-psk")
+            .is_none());
 
         saved_networks
     }
@@ -1204,7 +1206,7 @@ mod tests {
         let password = Credential::Password(b"password".to_vec());
         let save_fut = test_values.saved_networks.store(net_id.clone().into(), password);
         pin_mut!(save_fut);
-        exec.run_singlethreaded(&mut save_fut).expect("Failed to save network");
+        assert!(exec.run_singlethreaded(&mut save_fut).expect("Failed to save network").is_none());
 
         // Issue connect request to a WPA3 network.
         let connect_fut = controller.connect(&mut net_id);
@@ -1840,8 +1842,10 @@ mod tests {
 
         // Save the networks specified for this test.
         for (net_id, credential) in saved_configs {
-            exec.run_singlethreaded(saved_networks.store(net_id, credential))
-                .expect("failed to store network");
+            assert!(exec
+                .run_singlethreaded(saved_networks.store(net_id, credential))
+                .expect("failed to store network")
+                .is_none());
         }
 
         // Request a new controller.
@@ -2239,10 +2243,11 @@ mod tests {
         )
         .expect("Failed to create network config");
 
-        saved_networks
+        assert!(saved_networks
             .store(network_id.clone(), Credential::Password(b"password".to_vec()))
             .await
-            .expect("Failed to store network config");
+            .expect("Failed to store network config")
+            .is_none());
 
         assert_eq!(
             Some(cfg),

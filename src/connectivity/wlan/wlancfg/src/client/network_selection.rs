@@ -672,7 +672,6 @@ fn record_metrics_on_scan(
 }
 
 #[cfg(test)]
-#[allow(unused_results)]
 mod tests {
     use {
         super::*,
@@ -865,17 +864,19 @@ mod tests {
         let bssid_2 = [1, 2, 3, 4, 5, 6];
 
         // insert some new saved networks
-        test_values
+        assert!(test_values
             .saved_network_manager
             .store(test_id_1.clone().into(), credential_1.clone())
             .await
-            .unwrap();
+            .unwrap()
+            .is_none());
 
-        test_values
+        assert!(test_values
             .saved_network_manager
             .store(test_id_2.clone().into(), credential_2.clone())
             .await
-            .unwrap();
+            .unwrap()
+            .is_none());
 
         // mark the first one as having connected
         test_values
@@ -903,7 +904,7 @@ mod tests {
 
         // check these networks were loaded
         let mut expected_hashmap = HashMap::new();
-        expected_hashmap.insert(
+        let _ = expected_hashmap.insert(
             test_id_1.clone(),
             InternalSavedNetworkData {
                 network_id: test_id_1,
@@ -920,9 +921,9 @@ mod tests {
             has_ever_connected: false,
             recent_failures: connect_failures,
         };
-        expected_hashmap.insert(test_id_2.clone(), internal_data_2.clone());
+        let _ = expected_hashmap.insert(test_id_2.clone(), internal_data_2.clone());
         // Networks saved as WPA can be used to auto connect to WPA2 networks
-        expected_hashmap.insert(
+        let _ = expected_hashmap.insert(
             types::NetworkIdentifier { ssid: ssid_2.clone(), type_: types::SecurityType::Wpa2 },
             internal_data_2.clone(),
         );
@@ -1003,7 +1004,7 @@ mod tests {
 
         // create the saved networks hashmap
         let mut saved_networks = HashMap::new();
-        saved_networks.insert(
+        let _ = saved_networks.insert(
             test_id_1.clone(),
             InternalSavedNetworkData {
                 network_id: test_id_1.clone(),
@@ -1012,7 +1013,7 @@ mod tests {
                 recent_failures: recent_failures.clone(),
             },
         );
-        saved_networks.insert(
+        let _ = saved_networks.insert(
             test_id_2.clone(),
             InternalSavedNetworkData {
                 network_id: test_id_2.clone(),
@@ -2039,14 +2040,22 @@ mod tests {
         let bss_desc2_active = generate_random_bss_desc();
 
         // insert some new saved networks
-        exec.run_singlethreaded(
-            test_values.saved_network_manager.store(test_id_1.clone().into(), credential_1.clone()),
-        )
-        .unwrap();
-        exec.run_singlethreaded(
-            test_values.saved_network_manager.store(test_id_2.clone().into(), credential_2.clone()),
-        )
-        .unwrap();
+        assert!(exec
+            .run_singlethreaded(
+                test_values
+                    .saved_network_manager
+                    .store(test_id_1.clone().into(), credential_1.clone()),
+            )
+            .unwrap()
+            .is_none());
+        assert!(exec
+            .run_singlethreaded(
+                test_values
+                    .saved_network_manager
+                    .store(test_id_2.clone().into(), credential_2.clone()),
+            )
+            .unwrap()
+            .is_none());
 
         // Mark them as having connected. Make connection passive so that no active scans are made.
         exec.run_singlethreaded(test_values.saved_network_manager.record_connect_result(
@@ -2277,21 +2286,25 @@ mod tests {
         let wpa_network_id =
             types::NetworkIdentifier { ssid: ssid.clone(), type_: types::SecurityType::Wpa };
         let credential = Credential::Password("foo_password".as_bytes().to_vec());
-        exec.run_singlethreaded(
-            test_values
-                .saved_network_manager
-                .store(wpa_network_id.clone().into(), credential.clone()),
-        )
-        .expect("Failed to save network");
+        assert!(exec
+            .run_singlethreaded(
+                test_values
+                    .saved_network_manager
+                    .store(wpa_network_id.clone().into(), credential.clone()),
+            )
+            .expect("Failed to save network")
+            .is_none());
         let wpa3_network_id =
             types::NetworkIdentifier { ssid: ssid.clone(), type_: types::SecurityType::Wpa3 };
         let wpa3_credential = Credential::Password("wpa3_only_password".as_bytes().to_vec());
-        exec.run_singlethreaded(
-            test_values
-                .saved_network_manager
-                .store(wpa3_network_id.clone().into(), wpa3_credential.clone()),
-        )
-        .expect("Failed to save network");
+        assert!(exec
+            .run_singlethreaded(
+                test_values
+                    .saved_network_manager
+                    .store(wpa3_network_id.clone().into(), wpa3_credential.clone()),
+            )
+            .expect("Failed to save network")
+            .is_none());
 
         // Record passive connects so that the test will not active scan.
         exec.run_singlethreaded(test_values.saved_network_manager.record_connect_result(
@@ -2373,10 +2386,14 @@ mod tests {
         let bss_desc_1 = generate_random_bss_desc();
 
         // insert saved networks
-        exec.run_singlethreaded(
-            test_values.saved_network_manager.store(test_id_1.clone().into(), credential_1.clone()),
-        )
-        .unwrap();
+        assert!(exec
+            .run_singlethreaded(
+                test_values
+                    .saved_network_manager
+                    .store(test_id_1.clone().into(), credential_1.clone()),
+            )
+            .unwrap()
+            .is_none());
 
         // get the sme proxy
         let mut iface_manager_inner = exec.run_singlethreaded(test_values.iface_manager.lock());
@@ -2591,7 +2608,7 @@ mod tests {
         ];
 
         let mut mock_saved_networks = HashMap::new();
-        mock_saved_networks.insert(
+        let _ = mock_saved_networks.insert(
             test_id_1.clone(),
             InternalSavedNetworkData {
                 network_id: test_id_1.clone(),
@@ -2600,7 +2617,7 @@ mod tests {
                 recent_failures: Vec::new(),
             },
         );
-        mock_saved_networks.insert(
+        let _ = mock_saved_networks.insert(
             test_id_2.clone(),
             InternalSavedNetworkData {
                 network_id: test_id_2.clone(),
@@ -2610,11 +2627,11 @@ mod tests {
             },
         );
         let random_saved_net = generate_random_saved_network();
-        mock_saved_networks.insert(random_saved_net.0, random_saved_net.1);
+        let _ = mock_saved_networks.insert(random_saved_net.0, random_saved_net.1);
         let random_saved_net = generate_random_saved_network();
-        mock_saved_networks.insert(random_saved_net.0, random_saved_net.1);
+        let _ = mock_saved_networks.insert(random_saved_net.0, random_saved_net.1);
         let random_saved_net = generate_random_saved_network();
-        mock_saved_networks.insert(random_saved_net.0, random_saved_net.1);
+        let _ = mock_saved_networks.insert(random_saved_net.0, random_saved_net.1);
 
         record_metrics_on_scan(&mock_scan_results, mock_saved_networks, &mut cobalt_api, true);
 
