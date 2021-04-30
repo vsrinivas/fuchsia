@@ -15,6 +15,7 @@
 #include <fbl/algorithm.h>
 
 #include "src/graphics/lib/magma/include/magma_abi/magma.h"
+#include "src/lib/fsl/handles/object_info.h"
 #include "src/virtualization/bin/vmm/device/test_with_device.h"
 #include "src/virtualization/bin/vmm/device/virtio_queue_fake.h"
 
@@ -70,6 +71,8 @@ class ScenicAllocatorFake : public fuchsia::scenic::allocation::Allocator {
     fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;
     auto context = sys::ComponentContext::Create();
     context->svc()->Connect(sysmem_allocator.NewRequest());
+    sysmem_allocator->SetDebugClientInfo(fsl::GetCurrentProcessName(),
+                                         fsl::GetCurrentProcessKoid());
 
     fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
     zx_status_t status = sysmem_allocator->BindSharedCollection(std::move(scenic_token),

@@ -360,6 +360,7 @@ executable("device_tests") {
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/graphics/lib/magma/include:magma_abi",
     "//src/graphics/lib/magma/include/virtio:headers",
+    "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/mesa/include:drm-uapi",
     "//zircon/system/ulib/fzl",
