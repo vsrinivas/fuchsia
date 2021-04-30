@@ -195,20 +195,21 @@ bool part_size_gte(const gpt_partition_t* part, uint64_t size, uint64_t block_si
   return size_in_blocks * block_size >= size;
 }
 
-gpt_partition_t* find_by_type_and_name(const GptDevice* gpt, const uint8_t type_guid[GPT_GUID_LEN],
-                                       const char* name) {
+const gpt_partition_t* find_by_type_and_name(const GptDevice* gpt,
+                                             const uint8_t type_guid[GPT_GUID_LEN],
+                                             const char* name) {
   for (uint32_t i = 0; i < gpt::kPartitionCount; ++i) {
-    gpt_partition_t* p = gpt->GetPartition(i);
-    if (p == NULL) {
+    zx::status<const gpt_partition_t*> p = gpt->GetPartition(i);
+    if (p.is_error()) {
       continue;
     }
     char buf[GPT_NAME_LEN] = {0};
-    utf16_to_cstring(&buf[0], (const uint16_t*)p->name, GPT_NAME_LEN / 2);
+    utf16_to_cstring(&buf[0], reinterpret_cast<const uint16_t*>((*p)->name), GPT_NAME_LEN / 2);
     if (!strncmp(buf, name, GPT_NAME_LEN)) {
-      return p;
+      return p.value();
     }
   }
-  return NULL;
+  return nullptr;
 }
 
 void create_partition(GptDevice* d, const char* name, const uint8_t* type, partition_t* p) {
@@ -332,7 +333,7 @@ void resize_rootc_from_state(TestState* test, gpt_partition_t* rootc, gpt_partit
 }
 
 void assert_required_partitions(GptDevice* gpt) {
-  gpt_partition_t* part;
+  const gpt_partition_t* part;
   part = find_by_type_and_name(gpt, kFvmGUID, "fvm");
   ASSERT_NOT_NULL(part);
   ASSERT_TRUE(part_size_gte(part, SZ_FVM_PART, BLOCK_SIZE), "FVM size");
@@ -375,10 +376,10 @@ TEST(DiskWizardTests, TestAlreadyConfigured) {
   GptDevice* dev = test.Device();
 
   ASSERT_NO_FATAL_FAILURES(create_test_layout(&test), "Test layout creation failed.");
-  ASSERT_NO_FATAL_FAILURES(add_fvm_part(&test, dev->GetPartition(0)),
+  ASSERT_NO_FATAL_FAILURES(add_fvm_part(&test, dev->GetPartition(0).value()),
                            "Could not add FVM partition record");
-  resize_kernc_from_state(&test, dev->GetPartition(5), dev->GetPartition(0));
-  resize_rootc_from_state(&test, dev->GetPartition(6), dev->GetPartition(0));
+  resize_kernc_from_state(&test, dev->GetPartition(5).value(), dev->GetPartition(0).value());
+  resize_rootc_from_state(&test, dev->GetPartition(6).value(), dev->GetPartition(0).value());
 
   ASSERT_FALSE(is_ready_to_pave(dev, test.Info(), SZ_ZX_PART),
                "Device SHOULD NOT be ready to pave.");
@@ -423,7 +424,7 @@ TEST(DiskWizardTests, TestNoRootc) {
 
   ASSERT_NO_FATAL_FAILURES(create_default_c_parts(&test), "Couldn't create c parts\n");
 
-  ASSERT_EQ(dev->RemovePartition(dev->GetPartition(11)->guid), ZX_OK,
+  ASSERT_EQ(dev->RemovePartition(dev->GetPartition(11).value()->guid), ZX_OK,
             "Failed to remove ROOT-C partition");
 
   ASSERT_FALSE(is_ready_to_pave(dev, test.Info(), SZ_ZX_PART),
@@ -448,7 +449,7 @@ TEST(DiskWizardTests, TestNoKernc) {
 
   ASSERT_NO_FATAL_FAILURES(create_default_c_parts(&test), "Couldn't create c parts\n");
 
-  ASSERT_EQ(dev->RemovePartition(dev->GetPartition(10)->guid), ZX_OK,
+  ASSERT_EQ(dev->RemovePartition(dev->GetPartition(10).value()->guid), ZX_OK,
             "Failed to remove ROOT-C partition");
 
   ASSERT_FALSE(is_ready_to_pave(dev, test.Info(), SZ_ZX_PART),
@@ -482,7 +483,7 @@ TEST(DiskWizardTests, TestDiskTooSmall) {
 
   fuchsia_hardware_block_BlockInfo info;
   memcpy(&info, &kDefaultBlockInfo, sizeof(fuchsia_hardware_block_BlockInfo));
-  info.block_count = dev->GetPartition(0)->first + needed_blks - 1;
+  info.block_count = dev->GetPartition(0).value()->first + needed_blks - 1;
 
   // now that we've calculated the block count, create a device with that
   // smaller count
@@ -510,8 +511,8 @@ TEST(DiskWizardTests, TestIsCrosDevice) {
   ASSERT_NO_FATAL_FAILURES(create_test_layout(&test), "Failed to create test layout");
 
   ASSERT_TRUE(is_cros(dev), "This should be recognized as a chromeos layout");
-  zx_cprng_draw(dev->GetPartition(1)->type, GPT_GUID_LEN);
-  zx_cprng_draw(dev->GetPartition(4)->type, GPT_GUID_LEN);
+  zx_cprng_draw(dev->GetPartition(1).value()->type, GPT_GUID_LEN);
+  zx_cprng_draw(dev->GetPartition(4).value()->type, GPT_GUID_LEN);
   ASSERT_FALSE(is_cros(dev), "This should NOT be recognized as a chromos layout");
 }
 

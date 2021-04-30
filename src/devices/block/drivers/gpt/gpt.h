@@ -11,10 +11,10 @@
 #include <fuchsia/hardware/block/partition/cpp/banjo.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
+#include <lib/ddk/metadata.h>
 #include <lib/sync/completion.h>
 #include <zircon/types.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/gpt.h>
 #include <ddktl/device.h>
 #include <fbl/ref_counted.h>
@@ -52,12 +52,12 @@ class PartitionDevice : public DeviceType,
 
   // Block protocol implementation.
   void BlockImplQuery(block_info_t* info_out, size_t* block_op_size_out);
-  void BlockImplQueue(block_op_t* operation, block_impl_queue_callback completion_cb, void* cookie);
+  void BlockImplQueue(block_op_t* bop, block_impl_queue_callback completion_cb, void* cookie);
 
   // Device protocol.
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
-  zx_off_t DdkGetSize();
+  zx_off_t DdkGetSize() const;
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
 
   // Partition protocol implementation.

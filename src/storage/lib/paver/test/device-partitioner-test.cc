@@ -253,18 +253,18 @@ void utf16_to_cstring(char* dst, const uint8_t* src, size_t charcount) {
 // Note: some care must be used with this function: the UEFI standard makes no guarantee
 // that a GPT won't contain two partitions with the same label; for test data, using
 // label names is convenient, however.
-gpt_partition_t* FindPartitionWithLabel(const gpt::GptDevice* gpt, std::string_view name) {
-  gpt_partition_t* result = nullptr;
+const gpt_partition_t* FindPartitionWithLabel(const gpt::GptDevice* gpt, std::string_view name) {
+  const gpt_partition_t* result = nullptr;
 
   for (uint32_t i = 0; i < gpt->EntryCount(); i++) {
-    auto* gpt_part = gpt->GetPartition(i);
-    if (gpt_part == nullptr) {
+    zx::status<const gpt_partition_t*> gpt_part = gpt->GetPartition(i);
+    if (gpt_part.is_error()) {
       continue;
     }
 
     // Convert UTF-16 partition label to ASCII.
     char cstring_name[GPT_NAME_LEN + 1] = {};
-    utf16_to_cstring(cstring_name, gpt_part->name, GPT_NAME_LEN);
+    utf16_to_cstring(cstring_name, (*gpt_part)->name, GPT_NAME_LEN);
     cstring_name[GPT_NAME_LEN] = 0;
     auto partition_name = std::string_view(cstring_name, strlen(cstring_name));
 
@@ -280,7 +280,7 @@ gpt_partition_t* FindPartitionWithLabel(const gpt::GptDevice* gpt, std::string_v
       return nullptr;
     }
 
-    result = gpt_part;
+    result = *gpt_part;
   }
 
   return result;
@@ -290,7 +290,7 @@ gpt_partition_t* FindPartitionWithLabel(const gpt::GptDevice* gpt, std::string_v
 void EnsurePartitionsMatch(const gpt::GptDevice* gpt,
                            fbl::Span<const PartitionDescription> expected) {
   for (auto& part : expected) {
-    gpt_partition_t* gpt_part = FindPartitionWithLabel(gpt, part.name);
+    const gpt_partition_t* gpt_part = FindPartitionWithLabel(gpt, part.name);
     ASSERT_TRUE(gpt_part != nullptr, "Partition \"%s\" not found", part.name);
     EXPECT_TRUE(memcmp(part.type, gpt_part->type, GPT_GUID_LEN) == 0);
     EXPECT_EQ(part.start, gpt_part->first);
@@ -410,8 +410,8 @@ class GptDevicePartitionerTests : public zxtest::Test {
   }
 
   // Create GPT from a device.
-  void CreateGptDevice(BlockDevice* device, std::unique_ptr<gpt::GptDevice>* gpt) {
-    ASSERT_OK(gpt::GptDevice::Create(device->fd(), /*block_size=*/device->block_size(),
+  static void CreateGptDevice(BlockDevice* device, std::unique_ptr<gpt::GptDevice>* gpt) {
+    ASSERT_OK(gpt::GptDevice::Create(device->fd(), /*blocksize=*/device->block_size(),
                                      /*blocks=*/device->block_count(), gpt));
     ASSERT_OK((*gpt)->Sync());
   }
@@ -1087,7 +1087,7 @@ TEST_F(CrosDevicePartitionerTests, KernelPriority) {
   {
     std::unique_ptr<gpt::GptDevice> gpt;
     ASSERT_NO_FATAL_FAILURES(CreateGptDevice(disk.get(), &gpt));
-    gpt_partition_t* partition = FindPartitionWithLabel(gpt.get(), GUID_ZIRCON_A_NAME);
+    const gpt_partition_t* partition = FindPartitionWithLabel(gpt.get(), GUID_ZIRCON_A_NAME);
     ASSERT_TRUE(partition != nullptr);
     EXPECT_EQ(gpt_cros_attr_get_priority(partition->flags), 4);
   }
@@ -1103,7 +1103,7 @@ TEST_F(CrosDevicePartitionerTests, KernelPriority) {
   {
     std::unique_ptr<gpt::GptDevice> gpt;
     ASSERT_NO_FATAL_FAILURES(CreateGptDevice(disk.get(), &gpt));
-    gpt_partition_t* partition = FindPartitionWithLabel(gpt.get(), GUID_ZIRCON_A_NAME);
+    const gpt_partition_t* partition = FindPartitionWithLabel(gpt.get(), GUID_ZIRCON_A_NAME);
     ASSERT_TRUE(partition != nullptr);
     EXPECT_EQ(gpt_cros_attr_get_priority(partition->flags), 4);
   }

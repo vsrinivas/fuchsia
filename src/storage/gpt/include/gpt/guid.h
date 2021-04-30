@@ -30,7 +30,7 @@ constexpr uint8_t kKnownGuidEntries = 41;
 class GuidProperties {
  public:
   GuidProperties(std::string_view name, uuid::Uuid type_guid, PartitionScheme scheme)
-      : name_(name), type_guid_(std::move(type_guid)), scheme_(scheme) {}
+      : name_(name), type_guid_(type_guid), scheme_(scheme) {}
 
   // The GPT partition name.
   std::string_view name() const { return name_; }

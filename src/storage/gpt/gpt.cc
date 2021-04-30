@@ -17,6 +17,7 @@
 #include <zircon/device/block.h>
 #include <zircon/syscalls.h>  // for zx_cprng_draw
 
+#include <algorithm>
 #include <memory>
 
 #include <fbl/algorithm.h>
@@ -110,15 +111,15 @@ zx_status_t gpt_sync_current(int fd, uint64_t blocksize, gpt_header_t* header,
 int compare(const void* ls, const void* rs) {
   const auto* l = *static_cast<gpt_partition_t* const*>(ls);
   const auto* r = *static_cast<gpt_partition_t* const*>(rs);
-  if (l == NULL && r == NULL) {
+  if (l == nullptr && r == nullptr) {
     return 0;
   }
 
-  if (l == NULL) {
+  if (l == nullptr) {
     return 1;
   }
 
-  if (r == NULL) {
+  if (r == nullptr) {
     return -1;
   }
 
@@ -146,8 +147,8 @@ __BEGIN_CDECLS
 
 void gpt_set_debug_output_enabled(bool enabled) { debug_out = enabled; }
 
-void gpt_sort_partitions(gpt_partition_t** base, size_t count) {
-  qsort(base, count, sizeof(gpt_partition_t*), compare);
+void gpt_sort_partitions(gpt_partition_t** partitions, size_t count) {
+  qsort(partitions, count, sizeof(gpt_partition_t*), compare);
 }
 
 // TODO(69527): migrate usages to |utf8_to_utf16| in utf_conversion.h
@@ -417,7 +418,7 @@ zx_status_t GptDevice::FinalizeAndSync(bool persist) {
 
   // generate partition table
   uint8_t* ptr = reinterpret_cast<uint8_t*>(buf.get());
-  for (uint32_t i = 0; i < kPartitionCount && partitions_[i] != NULL; i++) {
+  for (uint32_t i = 0; i < kPartitionCount && partitions_[i] != nullptr; i++) {
     memcpy(ptr, partitions_[i], kEntrySize);
     ptr += kEntrySize;
   }
@@ -474,19 +475,14 @@ zx_status_t GptDevice::FinalizeAndSync(bool persist) {
 
 void GptDevice::PrintTable() const {
   int count = 0;
-  for (; partitions_[count] != NULL; ++count)
+  for (; partitions_[count] != nullptr; ++count)
     ;
   print_array(partitions_, count);
 }
 
 bool RangesOverlapsWithOtherRanges(const fbl::Vector<BlockRange>& ranges, const BlockRange& range) {
-  for (auto r = ranges.begin(); r != ranges.end(); r++) {
-    if (Overlap(*r, range)) {
-      return true;
-    }
-  }
-
-  return false;
+  return std::any_of(ranges.begin(), ranges.end(),
+                     [&range](const BlockRange& r) { return Overlap(r, range); });
 }
 
 zx_status_t GptDevice::ValidateEntries(const uint8_t* buffer) const {
@@ -542,7 +538,7 @@ zx_status_t GptDevice::ValidateEntries(const uint8_t* buffer) const {
 
 zx_status_t GptDevice::LoadEntries(const uint8_t* buffer, uint64_t buffer_size) {
   zx_status_t status;
-  size_t entries_size = header_.entries_count * kEntrySize;
+  size_t entries_size = static_cast<size_t>(header_.entries_count) * kEntrySize;
 
   // Ensure that we have large buffer that can contain all the
   // entries in the GPT.
@@ -565,7 +561,8 @@ zx_status_t GptDevice::LoadEntries(const uint8_t* buffer, uint64_t buffer_size) 
     // It is ok to have an empty entry but not invalid entry.
     if (result.is_error()) {
       return result.error();
-    } else if (result.value() == false) {
+    }
+    if (result.value() == false) {
       continue;
     }
     partitions_[i] = &ptable_[i];
@@ -581,16 +578,16 @@ zx_status_t GptDevice::GetDiffs(uint32_t idx, uint32_t* diffs) const {
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  if (partitions_[idx] == NULL) {
+  if (partitions_[idx] == nullptr) {
     return ZX_ERR_NOT_FOUND;
   }
 
   const gpt_partition_t* a = partitions_[idx];
   const gpt_partition_t* b = &ptable_backup_[idx];
-  if (memcmp(a->type, b->type, sizeof(a->type))) {
+  if (memcmp(a->type, b->type, sizeof(a->type)) != 0) {
     *diffs |= kGptDiffType;
   }
-  if (memcmp(a->guid, b->guid, sizeof(a->guid))) {
+  if (memcmp(a->guid, b->guid, sizeof(a->guid)) != 0) {
     *diffs |= kGptDiffGuid;
   }
   if (a->first != b->first) {
@@ -602,7 +599,7 @@ zx_status_t GptDevice::GetDiffs(uint32_t idx, uint32_t* diffs) const {
   if (a->flags != b->flags) {
     *diffs |= kGptDiffFlags;
   }
-  if (memcmp(a->name, b->name, sizeof(a->name))) {
+  if (memcmp(a->name, b->name, sizeof(a->name)) != 0) {
     *diffs |= kGptDiffName;
   }
 
@@ -639,12 +636,12 @@ zx_status_t GptDevice::Init(int fd, uint32_t blocksize, uint64_t block_count,
   }
 
   // read the gpt header (lba 1)
-  offset = kPrimaryHeaderStartBlock * blocksize;
-  ssize_t size = MinimumBytesPerCopy(blocksize).value();
+  offset = static_cast<off_t>(kPrimaryHeaderStartBlock) * blocksize;
+  size_t size = MinimumBytesPerCopy(blocksize).value();
   std::unique_ptr<uint8_t[]> buffer(new uint8_t[size]);
   ret = pread(fdp.get(), buffer.get(), size, offset);
 
-  if (ret != size) {
+  if (ret < 0 || static_cast<size_t>(ret) != size) {
     return ZX_ERR_IO;
   }
 
@@ -760,7 +757,7 @@ zx_status_t GptDevice::AddPartition(const char* name, const uint8_t* type, const
   }
 
   // find a free slot
-  gpt_partition_t* part = NULL;
+  gpt_partition_t* part = nullptr;
   for (i = 0; i < kPartitionCount; i++) {
     if (ptable_[i].first == 0 && ptable_[i].last == 0) {
       part = &ptable_[i];
@@ -824,8 +821,8 @@ zx_status_t GptDevice::RemovePartition(const uint8_t* guid) {
   memset(partitions_[i], 0, kEntrySize);
   // pack the partition list
   for (i = i + 1; i < kPartitionCount; i++) {
-    if (partitions_[i] == NULL) {
-      partitions_[i - 1] = NULL;
+    if (partitions_[i] == nullptr) {
+      partitions_[i - 1] = nullptr;
     } else {
       partitions_[i - 1] = partitions_[i];
     }
@@ -838,47 +835,50 @@ zx_status_t GptDevice::RemoveAllPartitions() {
   return ZX_OK;
 }
 
-gpt_partition_t* GptDevice::GetPartition(uint32_t partition_index) const {
-  if (partition_index >= kPartitionCount) {
-    return nullptr;
-  }
+zx::status<gpt_partition_t*> GptDevice::GetPartitionPtr(uint32_t partition_index) const {
+  if (partition_index >= kPartitionCount)
+    return zx::error(ZX_ERR_OUT_OF_RANGE);
+  if (partitions_[partition_index] == nullptr)
+    return zx::error(ZX_ERR_NOT_FOUND);
+  return zx::ok(partitions_[partition_index]);
+}
 
-  return partitions_[partition_index];
+zx::status<gpt_partition_t*> GptDevice::GetPartition(uint32_t partition_index) {
+  return GetPartitionPtr(partition_index);
+}
+
+zx::status<const gpt_partition_t*> GptDevice::GetPartition(uint32_t partition_index) const {
+  return GetPartitionPtr(partition_index);
 }
 
 zx_status_t GptDevice::SetPartitionType(uint32_t partition_index, const uint8_t* type) {
-  gpt_partition_t* p = GetPartition(partition_index);
-  if (p == nullptr) {
-    return ZX_ERR_OUT_OF_RANGE;
+  zx::status<gpt_partition_t*> p = GetPartition(partition_index);
+  if (p.is_ok()) {
+    memcpy((*p)->type, type, GPT_GUID_LEN);
   }
-
-  memcpy(p->type, type, GPT_GUID_LEN);
-  return ZX_OK;
+  return p.status_value();
 }
 
 zx_status_t GptDevice::SetPartitionGuid(uint32_t partition_index, const uint8_t* guid) {
-  gpt_partition_t* p = GetPartition(partition_index);
-  if (p == nullptr) {
-    return ZX_ERR_OUT_OF_RANGE;
+  zx::status<gpt_partition_t*> p = GetPartition(partition_index);
+  if (p.is_ok()) {
+    memcpy((*p)->guid, guid, GPT_GUID_LEN);
   }
-  memcpy(p->guid, guid, GPT_GUID_LEN);
-  return ZX_OK;
+  return p.status_value();
 }
 
 zx_status_t GptDevice::SetPartitionVisibility(uint32_t partition_index, bool visible) {
-  gpt_partition_t* p = GetPartition(partition_index);
-  if (p == nullptr) {
-    return ZX_ERR_OUT_OF_RANGE;
+  zx::status<gpt_partition_t*> p = GetPartition(partition_index);
+  if (p.is_ok()) {
+    gpt::SetPartitionVisibility(*p, visible);
   }
-  gpt::SetPartitionVisibility(p, visible);
-
-  return ZX_OK;
+  return p.status_value();
 }
 
 zx_status_t GptDevice::SetPartitionRange(uint32_t partition_index, uint64_t start, uint64_t end) {
-  gpt_partition_t* p = GetPartition(partition_index);
-  if (p == nullptr) {
-    return ZX_ERR_OUT_OF_RANGE;
+  zx::status<gpt_partition_t*> p = GetPartition(partition_index);
+  if (p.is_error()) {
+    return p.error_value();
   }
 
   zx_status_t ret;
@@ -892,43 +892,40 @@ zx_status_t GptDevice::SetPartitionRange(uint32_t partition_index, uint64_t star
   }
 
   for (uint32_t idx = 0; idx < kPartitionCount; idx++) {
+    zx::status<const gpt_partition_t*> curr_partition = GetPartition(idx);
     // skip this partition and non-existent partitions
-    if ((idx == partition_index) || (GetPartition(idx) == NULL)) {
+    if ((idx == partition_index) || (curr_partition.is_error())) {
       continue;
     }
 
     // skip partitions we don't intersect
-    if ((start > GetPartition(idx)->last) || (end < GetPartition(idx)->first)) {
+    if ((start > (*curr_partition)->last) || (end < (*curr_partition)->first)) {
       continue;
     }
 
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  p->first = start;
-  p->last = end;
+  (*p)->first = start;
+  (*p)->last = end;
   return ZX_OK;
 }
 
 zx_status_t GptDevice::GetPartitionFlags(uint32_t partition_index, uint64_t* flags) const {
-  gpt_partition_t* p = GetPartition(partition_index);
-  if (p == nullptr) {
-    return ZX_ERR_OUT_OF_RANGE;
+  zx::status<const gpt_partition_t*> p = GetPartition(partition_index);
+  if (p.is_ok()) {
+    *flags = (*p)->flags;
   }
-
-  *flags = p->flags;
-  return ZX_OK;
+  return p.status_value();
 }
 
 // TODO(auradkar): flags are unckecked for invalid flags
 zx_status_t GptDevice::SetPartitionFlags(uint32_t partition_index, uint64_t flags) {
-  gpt_partition_t* p = GetPartition(partition_index);
-  if (p == nullptr) {
-    return ZX_ERR_OUT_OF_RANGE;
+  zx::status<gpt_partition_t*> p = GetPartition(partition_index);
+  if (p.is_ok()) {
+    (*p)->flags = flags;
   }
-
-  p->flags = flags;
-  return ZX_OK;
+  return p.status_value();
 }
 
 void GptDevice::GetHeaderGuid(uint8_t (*disk_guid_out)[GPT_GUID_LEN]) const {

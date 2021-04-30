@@ -312,13 +312,13 @@ zx::status<GptDevicePartitioner::FindFirstFitResult> GptDevicePartitioner::FindF
   partitions[partition_count++].length = reserved_blocks;
 
   for (uint32_t i = 0; i < gpt::kPartitionCount; i++) {
-    const gpt_partition_t* p = gpt_->GetPartition(i);
-    if (!p) {
+    zx::status<const gpt_partition_t*> p = gpt_->GetPartition(i);
+    if (p.is_error()) {
       continue;
     }
-    partitions[partition_count].start = p->first;
-    partitions[partition_count].length = p->last - p->first + 1;
-    LOG("Partition seen with start %zu, end %zu (length %zu)\n", p->first, p->last,
+    partitions[partition_count].start = (*p)->first;
+    partitions[partition_count].length = (*p)->last - (*p)->first + 1;
+    LOG("Partition seen with start %zu, end %zu (length %zu)\n", (*p)->first, (*p)->last,
         partitions[partition_count].length);
     partition_count++;
   }
@@ -423,20 +423,19 @@ zx::status<std::unique_ptr<PartitionClient>> GptDevicePartitioner::AddPartition(
 zx::status<GptDevicePartitioner::FindPartitionResult> GptDevicePartitioner::FindPartition(
     FilterCallback filter) const {
   for (uint32_t i = 0; i < gpt::kPartitionCount; i++) {
-    gpt_partition_t* p = gpt_->GetPartition(i);
-    if (!p) {
+    zx::status<gpt_partition_t*> p = gpt_->GetPartition(i);
+    if (p.is_error()) {
       continue;
     }
-
-    if (filter(*p)) {
+    if (filter(**p)) {
       LOG("Found partition in GPT, partition %u\n", i);
-      auto status = OpenBlockPartition(devfs_root_, Uuid(p->guid), Uuid(p->type), ZX_SEC(5));
+      auto status = OpenBlockPartition(devfs_root_, Uuid((*p)->guid), Uuid((*p)->type), ZX_SEC(5));
       if (status.is_error()) {
         ERROR("Couldn't open partition\n");
         return status.take_error();
       }
       auto part = std::make_unique<BlockPartitionClient>(std::move(status.value()));
-      return zx::ok(FindPartitionResult{std::move(part), p});
+      return zx::ok(FindPartitionResult{std::move(part), *p});
     }
   }
   return zx::error(ZX_ERR_NOT_FOUND);
@@ -445,20 +444,17 @@ zx::status<GptDevicePartitioner::FindPartitionResult> GptDevicePartitioner::Find
 zx::status<> GptDevicePartitioner::WipePartitions(FilterCallback filter) const {
   bool modify = false;
   for (uint32_t i = 0; i < gpt::kPartitionCount; i++) {
-    const gpt_partition_t* p = gpt_->GetPartition(i);
-    if (!p) {
-      continue;
-    }
-    if (!filter(*p)) {
+    zx::status<const gpt_partition_t*> p = gpt_->GetPartition(i);
+    if (p.is_error() || !filter(**p)) {
       continue;
     }
 
     modify = true;
 
     // Ignore the return status; wiping is a best-effort approach anyway.
-    WipeBlockPartition(devfs_root_, Uuid(p->guid), Uuid(p->type)).status_value();
+    static_cast<void>(WipeBlockPartition(devfs_root_, Uuid((*p)->guid), Uuid((*p)->type)));
 
-    if (gpt_->RemovePartition(p->guid) != ZX_OK) {
+    if (gpt_->RemovePartition((*p)->guid) != ZX_OK) {
       ERROR("Warning: Could not remove partition\n");
     } else {
       // If we successfully clear the partition, then all subsequent
@@ -472,7 +468,7 @@ zx::status<> GptDevicePartitioner::WipePartitions(FilterCallback filter) const {
     gpt_->Sync();
     LOG("Immediate reboot strongly recommended\n");
   }
-  __UNUSED auto unused = RebindGptDriver(svc_root_, Channel()).status_value();
+  static_cast<void>(RebindGptDriver(svc_root_, Channel()));
   return zx::ok();
 }
 

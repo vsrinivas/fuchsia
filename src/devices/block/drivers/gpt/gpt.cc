@@ -38,8 +38,6 @@ namespace {
 constexpr size_t kDeviceNameLength = 40;
 constexpr size_t kMaxUtf16NameLen = GPT_NAME_LEN / sizeof(char16_t);
 
-using gpt_t = gpt_header_t;
-
 struct Guid {
   uint32_t data1;
   uint16_t data2;
@@ -50,11 +48,11 @@ struct Guid {
 template <class Facet>
 struct DeletableFacet : Facet {
   template <class... Args>
-  DeletableFacet(Args&&... args) : Facet(std::forward<Args>(args)...) {}
+  explicit DeletableFacet(Args&&... args) : Facet(std::forward<Args>(args)...) {}
 };
 
-void uint8_to_guid_string(char* dst, uint8_t* src) {
-  Guid* guid = (Guid*)src;
+void uint8_to_guid_string(char* dst, const uint8_t* src) {
+  const Guid* guid = reinterpret_cast<const Guid*>(src);
   sprintf(dst, "%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X", guid->data1, guid->data2,
           guid->data3, guid->data4[0], guid->data4[1], guid->data4[2], guid->data4[3],
           guid->data4[4], guid->data4[5], guid->data4[6], guid->data4[7]);
@@ -93,7 +91,7 @@ using DummyDeviceType = ddk::Device<DummyDevice>;
 
 class DummyDevice : public DummyDeviceType {
  public:
-  DummyDevice(zx_device_t* parent) : DummyDeviceType(parent) {}
+  explicit DummyDevice(zx_device_t* parent) : DummyDeviceType(parent) {}
   void DdkRelease() { delete this; }
 };
 
@@ -150,7 +148,7 @@ void PartitionDevice::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void PartitionDevice::DdkRelease() { delete this; }
 
-zx_off_t PartitionDevice::DdkGetSize() { return info_.block_count * info_.block_size; }
+zx_off_t PartitionDevice::DdkGetSize() const { return info_.block_count * info_.block_size; }
 
 static_assert(GPT_GUID_LEN == GUID_LENGTH, "GUID length mismatch");
 
@@ -214,7 +212,7 @@ void gpt_read_sync_complete(void* cookie, zx_status_t status, block_op_t* bop) {
   // Pass 32bit status back to caller via 32bit command field
   // Saves from needing custom structs, etc.
   bop->command = status;
-  sync_completion_signal((sync_completion_t*)cookie);
+  sync_completion_signal(static_cast<sync_completion_t*>(cookie));
 }
 
 zx_status_t ReadBlocks(block_impl_protocol_t* block_protocol, size_t block_op_size,
@@ -225,7 +223,8 @@ zx_status_t ReadBlocks(block_impl_protocol_t* block_protocol, size_t block_op_si
   std::unique_ptr<uint8_t[]> bop_buffer(new uint8_t[block_op_size]);
   block_op_t* bop = reinterpret_cast<block_op_t*>(bop_buffer.get());
   zx::vmo vmo;
-  if ((status = zx::vmo::create(block_count * block_info.block_size, 0, &vmo)) != ZX_OK) {
+  size_t vmo_size = static_cast<size_t>(block_count) * block_info.block_size;
+  if ((status = zx::vmo::create(vmo_size, 0, &vmo)) != ZX_OK) {
     zxlogf(ERROR, "gpt: VMO create failed(%d)", status);
     return status;
   }
@@ -240,10 +239,10 @@ zx_status_t ReadBlocks(block_impl_protocol_t* block_protocol, size_t block_op_si
   sync_completion_wait(&completion, ZX_TIME_INFINITE);
   if (bop->command != ZX_OK) {
     zxlogf(ERROR, "gpt: error %d reading GPT", bop->command);
-    return bop->command;
+    return static_cast<zx_status_t>(bop->command);
   }
 
-  return vmo.read(out_buffer, 0, block_info.block_size * block_count);
+  return vmo.read(out_buffer, 0, vmo_size);
 }
 
 zx_status_t PartitionTable::CreateAndBind(void* ctx, zx_device_t* parent) {
@@ -318,7 +317,7 @@ zx_status_t PartitionTable::Bind() {
   }
 
   uint32_t gpt_block_count = static_cast<uint32_t>(result.value());
-  size_t gpt_buffer_size = gpt_block_count * block_info.block_size;
+  size_t gpt_buffer_size = static_cast<size_t>(gpt_block_count) * block_info.block_size;
   std::unique_ptr<uint8_t[]> buffer(new uint8_t[gpt_buffer_size]);
   std::unique_ptr<GptDevice> gpt;
 
@@ -346,10 +345,11 @@ zx_status_t PartitionTable::Bind() {
   bool has_partition = false;
   unsigned int partitions;
   for (partitions = 0; partitions < gpt->EntryCount(); partitions++) {
-    auto entry = gpt->GetPartition(partitions);
-    if (entry == nullptr) {
+    zx::status<gpt_partition_t*> p = gpt->GetPartition(partitions);
+    if (!p.is_ok()) {
       continue;
     }
+    gpt_partition_t* entry = p.value();
     has_partition = true;
 
     auto result = ValidateEntry(entry);

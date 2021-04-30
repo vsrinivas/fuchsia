@@ -10,6 +10,7 @@
 #include <lib/fdio/cpp/caller.h>
 #include <zircon/assert.h>
 
+#include <functional>
 #include <memory>
 #include <optional>
 
@@ -109,10 +110,6 @@ class Partitions {
   // Returns number of partition that should exist on GPT.
   uint32_t CreatedCount() const;
 
-  // Returns true if two partitions are the same.
-  bool Compare(const gpt_partition_t* in_mem_partition,
-               const gpt_partition_t* on_disk_partition) const;
-
   // Returns true if the partition p exists in partitions_.
   bool Find(const gpt_partition_t* p, uint32_t* out_index) const;
 
@@ -137,6 +134,10 @@ class Partitions {
 
   // Sets the current value of gpt_partition_t.flags
   void SetPartitionFlags(uint32_t partition_index, uint64_t flags);
+
+  // Returns true if two partitions are the same.
+  static bool Compare(const gpt_partition_t* in_mem_partition,
+                      const gpt_partition_t* on_disk_partition);
 
  private:
   // List of partitions
@@ -211,7 +212,7 @@ uint32_t Partitions::CreatedCount() const {
 }
 
 bool Partitions::Compare(const gpt_partition_t* in_mem_partition,
-                         const gpt_partition_t* on_disk_partition) const {
+                         const gpt_partition_t* on_disk_partition) {
   if (memcmp(in_mem_partition->type, on_disk_partition->type, sizeof(in_mem_partition->type)) !=
       0) {
     return false;
@@ -512,9 +513,9 @@ void PartitionVerify(LibGptTest* libGptTest, const Partitions* partitions) {
   // Note: The index of an entry/partition need not match with the index of
   // the partition in "Partition* partition".
   for (uint32_t i = 0; i < gpt::kPartitionCount; i++) {
-    gpt_partition_t* p = libGptTest->GetPartition(i);
+    const gpt_partition_t* p = libGptTest->GetPartition(i);
 
-    if (p == NULL) {
+    if (p == nullptr) {
       continue;
     }
 
@@ -711,12 +712,12 @@ zx_status_t FindPartitionToShrink(const Partitions* partitions, uint32_t* out_in
 // On success The output parameters
 //  - out_index is the partition that can be modified.
 //  - out_first is new value of partition's first block.
-//  - out_last is the new value of partition's last black.
-typedef zx_status_t (*find_partition_t)(const Partitions* partitions, uint32_t* out_index,
-                                        uint64_t* out_first, uint64_t* out_last);
+//  - out_last is the new value of partition's last block.
+using FindPartitionFn = std::function<zx_status_t(const Partitions* partitions, uint32_t* out_index,
+                                                  uint64_t* out_first, uint64_t* out_last)>;
 
 void SetPartitionRangeTestHelper(LibGptTest* libGptTest, uint32_t total_partitions, bool sync,
-                                 find_partition_t find_part) {
+                                 FindPartitionFn find_part) {
   uint64_t new_last = 0, new_first = 0;
 
   ASSERT_GT(total_partitions, 1, "For range to test we need at least two partition");
@@ -741,7 +742,7 @@ void SetPartitionRangeTestHelper(LibGptTest* libGptTest, uint32_t total_partitio
   EXPECT_OK(libGptTest->SetPartitionRange(index, new_first, new_last));
 
   // Get the changes
-  gpt_partition_t* p = libGptTest->GetPartition(index);
+  const gpt_partition_t* p = libGptTest->GetPartition(index);
   EXPECT_EQ(p->first, new_first, "First doesn't match after update");
   EXPECT_EQ(p->last, new_last, "Last doesn't match after update");
 

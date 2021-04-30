@@ -104,8 +104,10 @@ class LibGptTest {
     return gpt_->GetDiffs(partition_index, diffs);
   }
 
-  // Get's a partition at index pindex.
-  gpt_partition_t* GetPartition(uint32_t pindex) const { return gpt_->GetPartition(pindex); }
+  // Gets a partition at index pindex.
+  const gpt_partition_t* GetPartition(uint32_t pindex) const {
+    return gpt_->GetPartition(pindex).value_or(nullptr);
+  }
 
   // Adds a partition
   zx_status_t AddPartition(const char* name, const uint8_t* type, const uint8_t* guid,

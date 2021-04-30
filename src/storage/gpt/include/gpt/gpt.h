@@ -6,6 +6,7 @@
 #define SRC_STORAGE_GPT_INCLUDE_GPT_GPT_H_
 
 #include <lib/fit/result.h>
+#include <lib/zx/status.h>
 
 #include <memory>
 
@@ -54,12 +55,12 @@ constexpr uint32_t kEntrySize = GPT_ENTRY_SIZE;
 static_assert(kEntrySize == sizeof(gpt_entry_t), "invalid gpt entry size");
 
 // Maximum size of the partition entry table.
-constexpr size_t kMaxPartitionTableSize = kPartitionCount * kEntrySize;
+constexpr size_t kMaxPartitionTableSize = static_cast<size_t>(kPartitionCount) * kEntrySize;
 
 // Size of array need to store "C12A7328-F81F-11D2-BA4B-00A0C93EC93B"
 // There are other places where we use different macros to get this
 // string length. Assert that we are in sync with the rest.
-constexpr uint64_t kGuidStrLength = (2 * GPT_GUID_LEN) + (4 * sizeof('-')) + sizeof('\0');
+constexpr size_t kGuidStrLength = (2UL * GPT_GUID_LEN) + (4UL * sizeof('-')) + sizeof('\0');
 static_assert(kGuidStrLength == GPT_GUID_STRLEN, "Guid print format changed");
 
 // Size of null terminated char array to store non-utf16 GUID partition name.
@@ -166,11 +167,13 @@ class GptDevice {
   // return true if partition# idx has been locally modified
   zx_status_t GetDiffs(uint32_t idx, uint32_t* diffs) const;
 
-  // Returns pointer to partition entry on finding a valid entry at given index. Else
-  // returns nullptr.
-  // TODO(auradkar): consider returning changing the prototype to
-  // zx_status_t GetPartition(uint32_t partition_index, const gpt_partition_t** out)
-  gpt_partition_t* GetPartition(uint32_t partition_index) const;
+  // Returns mutable pointer to partition entry at given index, otherwise ZX_ERR_NOT_FOUND
+  // if the partition entry is nullptr, or ZX_ERR_OUT_OF_RANGE if the index is out of range.
+  zx::status<gpt_partition_t*> GetPartition(uint32_t partition_index);
+
+  // Returns const pointer to partition entry at given index, otherwise ZX_ERR_NOT_FOUND
+  // if the partition entry is nullptr, or ZX_ERR_OUT_OF_RANGE if the index is out of range.
+  zx::status<const gpt_partition_t*> GetPartition(uint32_t partition_index) const;
 
   // Updates the type of partition at index partition_index
   zx_status_t SetPartitionType(uint32_t partition_index, const uint8_t* type);
@@ -210,7 +213,7 @@ class GptDevice {
       return kMaxPartitionTableSize;
     }
 
-    return (header_.entries_count * kEntrySize);
+    return (static_cast<uint64_t>(header_.entries_count) * kEntrySize);
   }
 
   // Return number of blocks that entries array occupies.
@@ -227,13 +230,15 @@ class GptDevice {
   zx_status_t FinalizeAndSync(bool persist);
 
   // read the partition table from the device.
-  static zx_status_t Init(int fd, uint32_t blocksize, uint64_t blocks,
+  static zx_status_t Init(int fd, uint32_t blocksize, uint64_t block_count,
                           std::unique_ptr<GptDevice>* out_dev);
 
   zx_status_t LoadEntries(const uint8_t* buffer, uint64_t buffer_size);
 
   // Walks entries array and returns error if crc doesn't match or ValidateEntry returns error.
   zx_status_t ValidateEntries(const uint8_t* buffer) const;
+
+  zx::status<gpt_partition_t*> GetPartitionPtr(uint32_t partition_index) const;
 
   // true if the partition table on the device is valid
   bool valid_;

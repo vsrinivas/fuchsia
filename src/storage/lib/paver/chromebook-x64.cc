@@ -211,18 +211,19 @@ zx::status<> CrosDevicePartitioner::FinalizePartition(const PartitionSpec& spec)
   // Find the highest priority kernel partition.
   uint8_t top_priority = 0;
   for (uint32_t i = 0; i < gpt::kPartitionCount; ++i) {
-    const gpt_partition_t* part = gpt_->GetGpt()->GetPartition(i);
-    if (part == NULL) {
+    zx::status<const gpt_partition_t*> partition_or = gpt_->GetGpt()->GetPartition(i);
+    if (partition_or.is_error()) {
       continue;
     }
-    const uint8_t priority = gpt_cros_attr_get_priority(part->flags);
+    const gpt_partition_t* partition = partition_or.value();
+    const uint8_t priority = gpt_cros_attr_get_priority(partition->flags);
     // Ignore anything not of type CROS KERNEL.
-    if (Uuid(part->type) != Uuid(GUID_CROS_KERNEL_VALUE)) {
+    if (Uuid(partition->type) != Uuid(GUID_CROS_KERNEL_VALUE)) {
       continue;
     }
 
     // Ignore ourself.
-    if (part == zircon_a_partition) {
+    if (partition == zircon_a_partition) {
       continue;
     }
 

@@ -16,6 +16,7 @@ zx_library("gpt") {
     "//sdk/lib/fit-promise",
     "//src/lib/uuid",
     "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/zxc",
   ]
 
   if (is_fuchsia) {

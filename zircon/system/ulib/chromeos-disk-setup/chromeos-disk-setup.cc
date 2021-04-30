@@ -35,12 +35,12 @@ constexpr uint64_t kSysCfgSize = 1 << 20;
 // part_name_eql compares the name field in the given partition to the cstring
 // name, returning true if the partition name is equal to name and zero-padded.
 bool part_name_eql(const gpt_partition_t* part, const char* name) {
-  if (part == NULL) {
+  if (part == nullptr) {
     return false;
   }
   char buf[GPT_NAME_LEN] = {0};
-  utf16_to_cstring(&buf[0], (const uint16_t*)part->name, GPT_NAME_LEN / 2);
-  // We use a case-insenstive comparison to be compatible with the previous naming scheme.
+  utf16_to_cstring(&buf[0], reinterpret_cast<const uint16_t*>(part->name), GPT_NAME_LEN / 2);
+  // We use a case-insensitive comparison to be compatible with the previous naming scheme.
   // On a ChromeOS device, all of the kernel partitions share a common GUID type, so we
   // distinguish Zircon kernel partitions based on name.
   return !strncasecmp(buf, name, GPT_NAME_LEN);
@@ -50,19 +50,16 @@ bool part_name_eql(const gpt_partition_t* part, const char* name) {
 // the given type GUID, false otherwise.
 bool part_name_guid_eql(const gpt_partition_t* part, const char* name,
                         const uint8_t guid[GPT_GUID_LEN]) {
-  if (part == NULL) {
+  if (part == nullptr) {
     return false;
   }
-  if (!memcmp(part->type, &guid[0], GPT_GUID_LEN) && part_name_eql(part, name)) {
-    return true;
-  }
-  return false;
+  return !memcmp(part->type, &guid[0], GPT_GUID_LEN) && part_name_eql(part, name);
 }
 
 // part_size_gte returns true if the partition size is greater than or equal to
 // the size given, false otherwise.
-bool part_size_gte(gpt_partition_t* part, uint64_t size, uint64_t block_size) {
-  if (part == NULL) {
+bool part_size_gte(const gpt_partition_t* part, uint64_t size, uint64_t block_size) {
+  if (part == nullptr) {
     return false;
   }
   uint64_t size_in_blocks = part->last - part->first + 1;
@@ -70,32 +67,26 @@ bool part_size_gte(gpt_partition_t* part, uint64_t size, uint64_t block_size) {
 }
 
 // find_by_type finds the first partition matching the given type guid.
-gpt_partition_t* find_by_type(const GptDevice* gpt, const uint8_t type_guid[GPT_GUID_LEN]) {
+gpt_partition_t* find_by_type(GptDevice* gpt, const uint8_t type_guid[GPT_GUID_LEN]) {
   for (uint32_t i = 0; i < gpt::kPartitionCount; ++i) {
-    gpt_partition_t* p = gpt->GetPartition(i);
-    if (p == NULL) {
-      continue;
-    }
-    if (!memcmp(p->type, &type_guid[0], GPT_GUID_LEN)) {
-      return p;
+    zx::status<gpt_partition_t*> p = gpt->GetPartition(i);
+    if (p.is_ok() && memcmp((*p)->type, &type_guid[0], GPT_GUID_LEN) == 0) {
+      return *p;
     }
   }
-  return NULL;
+  return nullptr;
 }
 
 // find_by_type_and_name finds the first partition matching the given type guid and name.
-gpt_partition_t* find_by_type_and_name(const GptDevice* gpt, const uint8_t type_guid[GPT_GUID_LEN],
+gpt_partition_t* find_by_type_and_name(GptDevice* gpt, const uint8_t type_guid[GPT_GUID_LEN],
                                        const char* name) {
   for (uint32_t i = 0; i < gpt::kPartitionCount; ++i) {
-    gpt_partition_t* p = gpt->GetPartition(i);
-    if (p == NULL) {
-      continue;
-    }
-    if (part_name_guid_eql(p, name, type_guid)) {
-      return p;
+    zx::status<gpt_partition_t*> p = gpt->GetPartition(i);
+    if (p.is_ok() && part_name_guid_eql(*p, name, type_guid)) {
+      return *p;
     }
   }
-  return NULL;
+  return nullptr;
 }
 
 // Find a contiguous run of free space on the disk at least blocks_req in length.
@@ -103,37 +94,37 @@ gpt_partition_t* find_by_type_and_name(const GptDevice* gpt, const uint8_t type_
 // contain the first free and last free blocks in a contiguous run.
 bool find_space(GptDevice* gpt, const uint64_t blocks_req, uint64_t* out_hole_start,
                 uint64_t* out_hole_end) {
-  gpt_partition_t* parts[gpt::kPartitionCount] = {0};
+  gpt_partition_t* partitions[gpt::kPartitionCount] = {};
   for (uint32_t i = 0; i < gpt::kPartitionCount; i++) {
-    parts[i] = gpt->GetPartition(i);
+    partitions[i] = gpt->GetPartition(i).value_or(nullptr);
   }
 
   // XXX(raggi): once the lib supports more and less than gpt::kPartitionCount,
   // this will need to be fixed (as will many loops).
-  gpt_sort_partitions(parts, gpt::kPartitionCount);
+  gpt_sort_partitions(partitions, gpt::kPartitionCount);
 
   uint64_t first_usable, last_usable;
   ZX_ASSERT(gpt->Range(&first_usable, &last_usable) == ZX_OK);
 
   uint64_t prev_end = first_usable - 1;
-  for (uint32_t i = 0; i < gpt::kPartitionCount; i++) {
-    if (parts[i] == NULL) {
+  for (const gpt_partition_t* partition : partitions) {
+    if (partition == nullptr) {
       continue;
     }
 
     // TODO(raggi): find out how the tests end up making this state
-    if (parts[i]->first >= last_usable || parts[i]->last >= last_usable) {
+    if (partition->first >= last_usable || partition->last >= last_usable) {
       break;
     }
 
-    uint64_t gap = parts[i]->first - (prev_end + 1);
+    uint64_t gap = partition->first - (prev_end + 1);
     if (gap >= blocks_req) {
       *out_hole_start = prev_end + 1;
-      *out_hole_end = parts[i]->first - 1;
+      *out_hole_end = partition->first - 1;
 
       return true;
     }
-    prev_end = parts[i]->last;
+    prev_end = partition->last;
   }
 
   if (prev_end < last_usable && last_usable - (prev_end + 1) >= blocks_req) {
@@ -173,20 +164,20 @@ bool is_cros(const GptDevice* gpt) {
   bool state = false;
 
   for (uint32_t i = 0; i < gpt::kPartitionCount; ++i) {
-    gpt_partition_t* p = gpt->GetPartition(i);
-    if (p == NULL) {
+    zx::status<const gpt_partition_t*> p = gpt->GetPartition(i);
+    if (p.is_error()) {
       continue;
     }
 
-    if (!memcmp(p->type, kRootGuid, GPT_GUID_LEN) &&
-        (part_name_eql(p, "ROOT-A") || part_name_eql(p, "ROOT-B"))) {
+    if (!memcmp((*p)->type, kRootGuid, GPT_GUID_LEN) &&
+        (part_name_eql(*p, "ROOT-A") || part_name_eql(*p, "ROOT-B"))) {
       roots++;
-    } else if (!memcmp(p->type, kKernGuid, GPT_GUID_LEN) &&
-               (part_name_eql(p, "KERN-A") || part_name_eql(p, "KERN-B"))) {
+    } else if (!memcmp((*p)->type, kKernGuid, GPT_GUID_LEN) &&
+               (part_name_eql(*p, "KERN-A") || part_name_eql(*p, "KERN-B"))) {
       kerns++;
-    } else if ((!memcmp(p->type, kStateCrosGuid, GPT_GUID_LEN) ||
-                !memcmp(p->type, kStateLinuxGuid, GPT_GUID_LEN)) &&
-               part_name_eql(p, "STATE")) {
+    } else if ((!memcmp((*p)->type, kStateCrosGuid, GPT_GUID_LEN) ||
+                !memcmp((*p)->type, kStateLinuxGuid, GPT_GUID_LEN)) &&
+               part_name_eql(*p, "STATE")) {
       // Note that STATE GUID type can either be cros_data or, in the case of a
       // freshly recovered device, linux_filesystem
       state = true;
@@ -201,39 +192,40 @@ bool is_cros(const GptDevice* gpt) {
 // * ZIRCON-B is a GUID_CROS_KERNEL_VALUE at least sz_kern in size.
 // * ZIRCON-R is a GUID_CROS_KERNEL_VALUE at least sz_kern in size.
 // * FVM      is a GUID_FVM_VALUE         at least sz_kern * 8 in size
-bool is_ready_to_pave(const GptDevice* gpt, const fuchsia_hardware_block_BlockInfo* blk_info,
+bool is_ready_to_pave(const GptDevice* gpt, const fuchsia_hardware_block_BlockInfo* block_info,
                       const uint64_t sz_kern) {
   bool found_zircon_a = false, found_zircon_b = false, found_zircon_r = false;
   bool found_fvm = false, found_syscfg = false;
 
   for (uint32_t i = 0; i < gpt::kPartitionCount; i++) {
-    gpt_partition_t* part = gpt->GetPartition(i);
-    if (part == NULL) {
+    zx::status<const gpt_partition_t*> partition_or = gpt->GetPartition(i);
+    if (partition_or.is_error()) {
       continue;
     }
-    if (!memcmp(part->type, kFvmGuid, GPT_GUID_LEN)) {
-      if (!part_size_gte(part, kMinFvmSize, blk_info->block_size)) {
+    const gpt_partition_t* partition = partition_or.value();
+    if (!memcmp(partition->type, kFvmGuid, GPT_GUID_LEN)) {
+      if (!part_size_gte(partition, kMinFvmSize, block_info->block_size)) {
         continue;
       }
       found_fvm = true;
       continue;
     }
-    if (!memcmp(part->type, kKernGuid, GPT_GUID_LEN)) {
-      if (!part_size_gte(part, sz_kern, blk_info->block_size)) {
+    if (!memcmp(partition->type, kKernGuid, GPT_GUID_LEN)) {
+      if (!part_size_gte(partition, sz_kern, block_info->block_size)) {
         continue;
       }
-      if (part_name_eql(part, "ZIRCON-A")) {
+      if (part_name_eql(partition, "ZIRCON-A")) {
         found_zircon_a = true;
       }
-      if (part_name_eql(part, "ZIRCON-B")) {
+      if (part_name_eql(partition, "ZIRCON-B")) {
         found_zircon_b = true;
       }
-      if (part_name_eql(part, "ZIRCON-R")) {
+      if (part_name_eql(partition, "ZIRCON-R")) {
         found_zircon_r = true;
       }
     }
-    if (!memcmp(part->type, kSysCfgGuid, GPT_GUID_LEN)) {
-      if (!part_size_gte(part, kSysCfgSize, blk_info->block_size)) {
+    if (!memcmp(partition->type, kSysCfgGuid, GPT_GUID_LEN)) {
+      if (!part_size_gte(partition, kSysCfgSize, block_info->block_size)) {
         continue;
       }
       found_syscfg = true;
@@ -275,19 +267,19 @@ zx_status_t config_cros_for_fuchsia(GptDevice* gpt,
   // intermediate gaps between these partitions.
 
   gpt_partition_t* p;
-  if ((p = find_by_type_and_name(gpt, kKernGuid, "ZIRCON-A")) != NULL) {
+  if ((p = find_by_type_and_name(gpt, kKernGuid, "ZIRCON-A")) != nullptr) {
     ZX_ASSERT(gpt->RemovePartition(p->guid) == ZX_OK);
   }
-  if ((p = find_by_type_and_name(gpt, kKernGuid, "ZIRCON-B")) != NULL) {
+  if ((p = find_by_type_and_name(gpt, kKernGuid, "ZIRCON-B")) != nullptr) {
     ZX_ASSERT(gpt->RemovePartition(p->guid) == ZX_OK);
   }
-  if ((p = find_by_type_and_name(gpt, kKernGuid, "ZIRCON-R")) != NULL) {
+  if ((p = find_by_type_and_name(gpt, kKernGuid, "ZIRCON-R")) != nullptr) {
     ZX_ASSERT(gpt->RemovePartition(p->guid) == ZX_OK);
   }
-  if ((p = find_by_type(gpt, kFvmGuid)) != NULL) {
+  if ((p = find_by_type(gpt, kFvmGuid)) != nullptr) {
     ZX_ASSERT(gpt->RemovePartition(p->guid) == ZX_OK);
   }
-  if ((p = find_by_type_and_name(gpt, kSysCfgGuid, "SYSCFG")) != NULL) {
+  if ((p = find_by_type_and_name(gpt, kSysCfgGuid, "SYSCFG")) != nullptr) {
     ZX_ASSERT(gpt->RemovePartition(p->guid) == ZX_OK);
   }
 
@@ -307,10 +299,10 @@ zx_status_t config_cros_for_fuchsia(GptDevice* gpt,
   // First try removing the kernc and rootc partitions, as they're often a good fit for us:
   if (!found_hole) {
     // Some partitions were not large enough. If we found a KERN-C or a ROOT-C, delete them:
-    if ((p = find_by_type_and_name(gpt, kKernGuid, "KERN-C")) != NULL) {
+    if ((p = find_by_type_and_name(gpt, kKernGuid, "KERN-C")) != nullptr) {
       ZX_ASSERT(gpt->RemovePartition(p->guid) == ZX_OK);
     }
-    if ((p = find_by_type_and_name(gpt, kRootGuid, "ROOT-C")) != NULL) {
+    if ((p = find_by_type_and_name(gpt, kRootGuid, "ROOT-C")) != nullptr) {
       ZX_ASSERT(gpt->RemovePartition(p->guid) == ZX_OK);
     }
 
@@ -320,8 +312,8 @@ zx_status_t config_cros_for_fuchsia(GptDevice* gpt,
   // Still not enough contiguous space is available on disk, try shrinking STATE
   // Note STATE type GUID can either be cros_data or, in the case of a freshly
   // recovered device, linux_filesystem
-  if (!found_hole && (((p = find_by_type_and_name(gpt, kStateCrosGuid, "STATE")) != NULL) ||
-                      (p = find_by_type_and_name(gpt, kStateLinuxGuid, "STATE")) != NULL)) {
+  if (!found_hole && (((p = find_by_type_and_name(gpt, kStateCrosGuid, "STATE")) != nullptr) ||
+                      (p = find_by_type_and_name(gpt, kStateLinuxGuid, "STATE")) != nullptr)) {
     uint64_t min_state_sz_blks = howmany(MIN_SZ_STATE, blk_info->block_size);
 
     // TODO (fxbug.dev/27721) consider if there is free space on either side of STATE
@@ -367,12 +359,12 @@ zx_status_t config_cros_for_fuchsia(GptDevice* gpt,
   uint64_t sz_kern_blks = howmany(sz_kern, blk_info->block_size);
 
   // Create GPT entries for ZIRCON-A, ZIRCON-B, ZIRCON-R and FVM if needed.
-  const char* kernel_names[3] = {"ZIRCON-A", "ZIRCON-B", "ZIRCON-R"};
-  for (size_t i = 0; i < 3; ++i) {
-    printf("cros-disk-setup: Creating %s\n", kernel_names[i]);
-    if ((status = create_gpt_entry(gpt, hole_start, sz_kern_blks, kKernGuid, kernel_names[i])) !=
+  const char* kernel_names[] = {"ZIRCON-A", "ZIRCON-B", "ZIRCON-R"};
+  for (const char* kernel_name : kernel_names) {
+    printf("cros-disk-setup: Creating %s\n", kernel_name);
+    if ((status = create_gpt_entry(gpt, hole_start, sz_kern_blks, kKernGuid, kernel_name)) !=
         ZX_OK) {
-      printf("cros-disk-setup: Error creating %s: %d\n", kernel_names[i], status);
+      printf("cros-disk-setup: Error creating %s: %d\n", kernel_name, status);
       return ZX_ERR_INTERNAL;
     }
     hole_start += sz_kern_blks;

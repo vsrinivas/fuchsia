@@ -88,7 +88,7 @@ int Usage(zx_status_t ret) {
   return status_to_retcode(ret);
 }
 
-int CGetC(void) {
+int CGetC() {
   uint8_t ch;
   for (;;) {
     ssize_t r = read(0, &ch, 1);
@@ -111,9 +111,8 @@ char* CrosFlagsToCString(char* dst, size_t dst_len, uint64_t flags) {
 char* FlagsToCString(char* dst, size_t dst_len, const uint8_t* guid, uint64_t flags) {
   if (gpt_cros_is_kernel_guid(guid, GPT_GUID_LEN)) {
     return CrosFlagsToCString(dst, dst_len, flags);
-  } else {
-    snprintf(dst, dst_len, "0x%016" PRIx64, flags);
   }
+  snprintf(dst, dst_len, "0x%016" PRIx64, flags);
   dst[dst_len - 1] = 0;
   return dst;
 }
@@ -167,44 +166,44 @@ zx_status_t BlockRrPart(int fd) {
   return status;
 }
 
-void Dump(const GptDevice* gpt, int* count) {
+size_t Dump(const GptDevice* gpt) {
   if (!gpt->Valid()) {
-    return;
+    return 0;
   }
-  const gpt_partition_t* p;
   char name[gpt::kGuidCNameLength];
   char guid[gpt::kGuidStrLength];
   char id[gpt::kGuidStrLength];
   char flags_str[256];
   const char* X;
   const char* Y;
-  uint32_t i;
+  size_t i;
   for (i = 0; i < gpt::kPartitionCount; i++) {
-    p = gpt->GetPartition(i);
-    if (p == nullptr)
+    zx::status<const gpt_partition_t*> entry = gpt->GetPartition(i);
+    if (!entry.is_ok())
       break;
+    const gpt_partition_t* p = entry.value();
     memset(name, 0, gpt::kGuidCNameLength);
     unsigned diff;
     ZX_ASSERT(gpt->GetDiffs(i, &diff) == ZX_OK);
     SetXY(diff & gpt::kGptDiffName, &X, &Y);
-    printf("Partition %d: %s%s%s\n", i, X,
-           utf16_to_cstring(name, (const uint16_t*)p->name, gpt::kGuidCNameLength - 1), Y);
+    printf("Partition %zu: %s%s%s\n", i, X,
+           utf16_to_cstring(name, reinterpret_cast<const uint16_t*>(p->name),
+                            gpt::kGuidCNameLength - 1),
+           Y);
     SetXY(diff & (gpt::kGptDiffFirst | gpt::kGptDiffLast), &X, &Y);
     printf("    Start: %s%" PRIu64 "%s, End: %s%" PRIu64 "%s (%" PRIu64 " blocks)\n", X, p->first,
            Y, X, p->last, Y, p->last - p->first + 1);
     SetXY(diff & gpt::kGptDiffGuid, &X, &Y);
-    uint8_to_guid_string(guid, (const uint8_t*)p->guid);
+    uint8_to_guid_string(guid, p->guid);
     printf("    id:   %s%s%s\n", X, guid, Y);
     SetXY(diff & gpt::kGptDiffType, &X, &Y);
-    uint8_to_guid_string(id, (const uint8_t*)p->type);
+    uint8_to_guid_string(id, p->type);
     printf("    type: %s%s%s\n", X, id, Y);
     SetXY(diff & gpt::kGptDiffName, &X, &Y);
     printf("    flags: %s%s%s\n", X,
            FlagsToCString(flags_str, sizeof(flags_str), p->type, p->flags), Y);
   }
-  if (count) {
-    *count = i;
-  }
+  return i;
 }
 
 void DumpPartitions(const char* dev) {
@@ -226,14 +225,13 @@ void DumpPartitions(const char* dev) {
   }
 
   printf("GPT contains usable blocks from %" PRIu64 " to %" PRIu64 " (inclusive)\n", start, end);
-  int count;
-  Dump(gpt.get(), &count);
-  printf("Total: %d partitions\n", count);
+  size_t count = Dump(gpt.get());
+  printf("Total: %zu partitions\n", count);
 }
 
 bool ConfirmCommit(const GptDevice* gpt, const char* dev) {
   if (confirm_writes) {
-    Dump(gpt, NULL);
+    Dump(gpt);
     printf("\n");
     printf("WARNING: About to write partition table to: %s\n", dev);
     printf("WARNING: Type 'y' to continue, 'n' or ESC to cancel\n");
@@ -327,16 +325,16 @@ zx_status_t RemovePartition(const char* dev, uint32_t n) {
     return ZX_ERR_INTERNAL;
   }
 
-  gpt_partition_t* p = gpt->GetPartition(n);
-  if (p == nullptr) {
+  zx::status<const gpt_partition_t*> p = gpt->GetPartition(n);
+  if (!p.is_ok()) {
     fprintf(stderr, "Failed to get partition at index %u\n", n);
     return ZX_ERR_INVALID_ARGS;
   }
   char name[gpt::kGuidCNameLength];
   memset(name, 0, gpt::kGuidCNameLength);
-  utf16_to_cstring(name, reinterpret_cast<const uint16_t*>(p->name), gpt::kGuidCNameLength - 1);
+  utf16_to_cstring(name, reinterpret_cast<const uint16_t*>((*p)->name), gpt::kGuidCNameLength - 1);
   zx_status_t status;
-  if ((status = gpt->RemovePartition(p->guid)) != ZX_OK) {
+  if ((status = gpt->RemovePartition((*p)->guid)) != ZX_OK) {
     fprintf(stderr, "Failed to remove partiton: %s\n", zx_status_get_string(status));
     return status;
   }
@@ -451,9 +449,9 @@ int GetCrosPartitionArgs(char* const* argv, int argc, cros_partition_args_t* out
         break;
       }
       case 'S': {
-        if (!strncmp(optarg, "0", 2)) {
+        if (!strcmp(optarg, "0")) {
           out_args->successful = 0;
-        } else if (!strncmp(optarg, "1", 2)) {
+        } else if (!strcmp(optarg, "1")) {
           out_args->successful = 1;
         } else {
           fprintf(stderr, "successful must be 0 or 1\n");
@@ -480,7 +478,6 @@ int GetCrosPartitionArgs(char* const* argv, int argc, cros_partition_args_t* out
 // Edit a Chrome OS kernel partition, changing its attributes.
 // argv/argc should correspond only to the arguments after the command.
 zx_status_t EditCrosPartition(char* const* argv, int argc) {
-  gpt_partition_t* part = NULL;
   int rc;
   zx_status_t ret;
 
@@ -495,12 +492,13 @@ zx_status_t EditCrosPartition(char* const* argv, int argc) {
     return ZX_ERR_INTERNAL;
   }
 
-  if ((part = gpt->GetPartition(args.idx_part)) == nullptr) {
+  zx::status<const gpt_partition_t*> part = gpt->GetPartition(args.idx_part);
+  if (part.is_error()) {
     fprintf(stderr, "Partition not found at given index\n");
     return ZX_ERR_INVALID_ARGS;
   }
 
-  if (!gpt_cros_is_kernel_guid(part->type, GPT_GUID_LEN)) {
+  if (!gpt_cros_is_kernel_guid((*part)->type, GPT_GUID_LEN)) {
     fprintf(stderr, "Partition is not a CrOS kernel partition\n");
     return ZX_ERR_INVALID_ARGS;
   }
@@ -565,7 +563,7 @@ zx_status_t SetVisibility(char* dev, uint32_t idx_part, bool visible) {
 // negative, in order to indicate a proportion.
 int64_t ParseSize(char* s) {
   char* end = s;
-  long long int v = strtoll(s, &end, 10);
+  long long v = strtoll(s, &end, 10);
 
   switch (*end) {
     case 0:
@@ -640,17 +638,17 @@ zx_status_t Repartition(int argc, char** argv, std::optional<PartitionScheme> sc
   const char* dev = argv[0];
   uint64_t logical, free_space;
   std::unique_ptr<GptDevice> gpt = Init(dev);
-  if (gpt == NULL) {
+  if (gpt == nullptr) {
     return ZX_ERR_INTERNAL;
   }
 
   argc--;
   argv = &argv[1];
-  int num_partitions = argc / 3;
-
-  gpt_partition_t* p = gpt->GetPartition(0);
-  while (p) {
-    ZX_ASSERT(gpt->RemovePartition(p->guid) == ZX_OK);
+  ZX_ASSERT(argc > 0);
+  size_t num_partitions = static_cast<size_t>(argc / 3);
+  zx::status<const gpt_partition_t*> p = gpt->GetPartition(0);
+  while (p.is_ok()) {
+    ZX_ASSERT(gpt->RemovePartition((*p)->guid) == ZX_OK);
     p = gpt->GetPartition(0);
   }
 
@@ -665,7 +663,7 @@ zx_status_t Repartition(int argc, char** argv, std::optional<PartitionScheme> sc
       uint64_t percent = 100;
       uint64_t portions[num_partitions];
       memset(portions, 0, sizeof(portions));
-      for (int i = 0; i < num_partitions; i++) {
+      for (size_t i = 0; i < num_partitions; i++) {
         int64_t sz = ParseSize(argv[(i * 3) + 2]);
         if (sz > 0) {
           sizes[i] = sz;
@@ -680,7 +678,7 @@ zx_status_t Repartition(int argc, char** argv, std::optional<PartitionScheme> sc
           percent -= -sz;
         }
       }
-      for (int i = 0; i < num_partitions; i++) {
+      for (size_t i = 0; i < num_partitions; i++) {
         if (portions[i] != 0)
           sizes[i] = (free_space * portions[i]) / 100;
       }
@@ -695,7 +693,7 @@ zx_status_t Repartition(int argc, char** argv, std::optional<PartitionScheme> sc
 
     uint64_t start = Align(first_usable, logical, physical);
 
-    for (int i = 0; i < num_partitions; i++) {
+    for (size_t i = 0; i < num_partitions; i++) {
       char* name = argv[i * 3];
       char* guid_name = argv[(i * 3) + 1];
 
@@ -781,8 +779,8 @@ int main(int argc, char** argv) {
     if (argc <= 5) {
       return Usage(ZX_OK);
     }
-    if (AddPartition(argv[5], strtoull(argv[2], NULL, 0), strtoull(argv[3], NULL, 0), argv[4]) !=
-        ZX_OK) {
+    if (AddPartition(argv[5], strtoull(argv[2], nullptr, 0), strtoull(argv[3], nullptr, 0),
+                     argv[4]) != ZX_OK) {
       return 1;
     }
   } else if (!strcmp(cmd, "remove")) {
@@ -819,8 +817,8 @@ int main(int argc, char** argv) {
     if (ReadPartitionIndex(argv[2], &idx_part) != ZX_OK) {
       return Usage(ZX_OK);
     }
-    if (AdjustPartition(argv[5], idx_part, strtoull(argv[3], NULL, 0),
-                        strtoull(argv[4], NULL, 0)) != ZX_OK) {
+    if (AdjustPartition(argv[5], idx_part, strtoull(argv[3], nullptr, 0),
+                        strtoull(argv[4], nullptr, 0)) != ZX_OK) {
       return 1;
     }
   } else if (!strcmp(cmd, "visible")) {
