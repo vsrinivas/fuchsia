@@ -1,0 +1,64 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+/// AVB Test key
+pub const ATX_TEST_KEY: &str = include_str!(
+    "../../../../../third_party/android/platform/external/avb/test/data/testkey_atx_psk.pem"
+);
+
+/// Test private key that was generated with:
+///   openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:4096 \
+///     -pkeyopt rsa_keygen_pubexp:65537
+pub const TEST_RSA_4096_PEM: &'static str = r"-----BEGIN PRIVATE KEY-----
+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
+cI/N08jLg0hu0xf793n1EDrcxE1pv1FB
+-----END PRIVATE KEY-----";

@@ -138,14 +138,13 @@ fn generate_auth_data(
 mod tests {
     use super::*;
     use crate::descriptor::builder::RawHashDescriptorBuilder;
+    use crate::descriptor::Salt;
+    use crate::test;
+    use std::convert::TryFrom;
     use zerocopy::LayoutVerified;
 
     #[test]
     fn simple_vbmeta() {
-        use crate::descriptor::Salt;
-        use crate::test;
-        use std::convert::TryFrom;
-
         #[rustfmt::skip]
         let expected_header = [
             // Magic: "AVB0"
@@ -219,10 +218,6 @@ mod tests {
 
     #[test]
     fn vbmeta_with_multiple_descriptors() {
-        use crate::descriptor::Salt;
-        use crate::test;
-        use std::convert::TryFrom;
-
         #[rustfmt::skip]
         let expected_header_bytes: [u8; 256] = [
             // Magic: "AVB0"
