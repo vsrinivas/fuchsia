@@ -51,7 +51,6 @@ protocol Controller {
     /// Set a particular configuration and create the requested stream.
     /// `config_index` : Configuration index from the vector which needs to be applied.
     /// `stream_index` : Stream index from the vector of streams provided within a config.
-    /// `buffer_collection` : Buffer collections for the stream.
     /// `stream` : Stream channel for the stream requested
     /// `image_format_index` : Image format index which needs to be set up upon creation.
     /// If there is already an active configuration which is different than the one
@@ -62,7 +61,6 @@ protocol Controller {
     CreateStream(uint32 config_index,
                  uint32 stream_index,
                  uint32 image_format_index,
-                 fuchsia.sysmem.BufferCollectionInfo_2 buffer_collection,
                  request<fuchsia.camera2.Stream> stream);
 
     /// Enable/Disable Streaming

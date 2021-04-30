@@ -72,30 +72,31 @@ TEST_F(ControllerMemoryAllocatorTest, MonitorConfigFR) {
   auto internal_config = MonitorConfigFullRes();
   auto fr_constraints = internal_config.output_constraints;
   auto gdc1_constraints = internal_config.child_nodes[1].input_constraints;
-  fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info;
+  BufferCollection buffer_collection;
   std::vector<fuchsia::sysmem::BufferCollectionConstraints> constraints;
   constraints.push_back(fr_constraints);
   constraints.push_back(gdc1_constraints);
   RelaxMemoryConstraints(constraints);
   ASSERT_EQ(ZX_OK, controller_memory_allocator_->AllocateSharedMemory(
-                       constraints, &buffer_collection_info, "TestMonitorConfigFR"));
-  EXPECT_EQ(buffer_collection_info.buffer_count, kOutputStreamMlDSMinBufferForCamping);
-  EXPECT_GT(buffer_collection_info.settings.buffer_settings.size_bytes,
+                       constraints, buffer_collection, "TestMonitorConfigFR"));
+  EXPECT_EQ(buffer_collection.buffers.buffer_count,
+            kOutputStreamMlDSMinBufferForCamping + kNumClientBuffers);
+  EXPECT_GT(buffer_collection.buffers.settings.buffer_settings.size_bytes,
             kOutputStreamMlFRHeight * kOutputStreamMlFRWidth);
-  EXPECT_TRUE(buffer_collection_info.settings.has_image_format_constraints);
+  EXPECT_TRUE(buffer_collection.buffers.settings.has_image_format_constraints);
   EXPECT_EQ(fuchsia::sysmem::PixelFormatType::NV12,
-            buffer_collection_info.settings.image_format_constraints.pixel_format.type);
+            buffer_collection.buffers.settings.image_format_constraints.pixel_format.type);
   EXPECT_EQ(kOutputStreamMlFRHeight,
-            buffer_collection_info.settings.image_format_constraints.required_max_coded_height);
+            buffer_collection.buffers.settings.image_format_constraints.required_max_coded_height);
   EXPECT_EQ(kOutputStreamMlFRWidth,
-            buffer_collection_info.settings.image_format_constraints.required_max_coded_width);
+            buffer_collection.buffers.settings.image_format_constraints.required_max_coded_width);
   EXPECT_EQ(kIspBytesPerRowDivisor,
-            buffer_collection_info.settings.image_format_constraints.bytes_per_row_divisor);
-  for (uint32_t i = 0; i < buffer_collection_info.buffer_count; i++) {
-    EXPECT_TRUE(buffer_collection_info.buffers.at(i).vmo.is_valid());
+            buffer_collection.buffers.settings.image_format_constraints.bytes_per_row_divisor);
+  for (uint32_t i = 0; i < buffer_collection.buffers.buffer_count; i++) {
+    EXPECT_TRUE(buffer_collection.buffers.buffers.at(i).vmo.is_valid());
   }
   EXPECT_FALSE(
-      buffer_collection_info.buffers.at(buffer_collection_info.buffer_count).vmo.is_valid());
+      buffer_collection.buffers.buffers.at(buffer_collection.buffers.buffer_count).vmo.is_valid());
 }
 
 // Validate FR --> GDC1
@@ -103,29 +104,31 @@ TEST_F(ControllerMemoryAllocatorTest, VideoConfigFRGDC1) {
   auto internal_config = VideoConfigFullRes(false);
   auto fr_constraints = internal_config.output_constraints;
   auto gdc1_constraints = internal_config.child_nodes[0].input_constraints;
-  fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info;
+  BufferCollection buffer_collection;
   std::vector<fuchsia::sysmem::BufferCollectionConstraints> constraints;
   constraints.push_back(fr_constraints);
   constraints.push_back(gdc1_constraints);
   RelaxMemoryConstraints(constraints);
   ASSERT_EQ(ZX_OK, controller_memory_allocator_->AllocateSharedMemory(
-                       constraints, &buffer_collection_info, "TestVideoConfigFRGDC1"));
-  EXPECT_EQ(buffer_collection_info.buffer_count, kMlFRMinBufferForCamping + kGdcBufferForCamping);
-  EXPECT_GT(buffer_collection_info.settings.buffer_settings.size_bytes, kIspFRWidth * kIspFRHeight);
-  EXPECT_TRUE(buffer_collection_info.settings.has_image_format_constraints);
+                       constraints, buffer_collection, "TestVideoConfigFRGDC1"));
+  EXPECT_EQ(buffer_collection.buffers.buffer_count,
+            kMlFRMinBufferForCamping + kGdcBufferForCamping);
+  EXPECT_GT(buffer_collection.buffers.settings.buffer_settings.size_bytes,
+            kIspFRWidth * kIspFRHeight);
+  EXPECT_TRUE(buffer_collection.buffers.settings.has_image_format_constraints);
   EXPECT_EQ(fuchsia::sysmem::PixelFormatType::NV12,
-            buffer_collection_info.settings.image_format_constraints.pixel_format.type);
+            buffer_collection.buffers.settings.image_format_constraints.pixel_format.type);
   EXPECT_EQ(kIspFRHeight,
-            buffer_collection_info.settings.image_format_constraints.required_max_coded_height);
+            buffer_collection.buffers.settings.image_format_constraints.required_max_coded_height);
   EXPECT_EQ(kIspFRWidth,
-            buffer_collection_info.settings.image_format_constraints.required_max_coded_width);
+            buffer_collection.buffers.settings.image_format_constraints.required_max_coded_width);
   EXPECT_EQ(kIspBytesPerRowDivisor,
-            buffer_collection_info.settings.image_format_constraints.bytes_per_row_divisor);
-  for (uint32_t i = 0; i < buffer_collection_info.buffer_count; i++) {
-    EXPECT_TRUE(buffer_collection_info.buffers.at(i).vmo.is_valid());
+            buffer_collection.buffers.settings.image_format_constraints.bytes_per_row_divisor);
+  for (uint32_t i = 0; i < buffer_collection.buffers.buffer_count; i++) {
+    EXPECT_TRUE(buffer_collection.buffers.buffers.at(i).vmo.is_valid());
   }
   EXPECT_FALSE(
-      buffer_collection_info.buffers.at(buffer_collection_info.buffer_count).vmo.is_valid());
+      buffer_collection.buffers.buffers.at(buffer_collection.buffers.buffer_count).vmo.is_valid());
 }
 
 // Validate GDC1 ---> GDC2
@@ -139,31 +142,31 @@ TEST_F(ControllerMemoryAllocatorTest, VideoConfigGDC1GDC2) {
   auto gdc1_constraints = gdc1_node.output_constraints;
   auto gdc2_constraints = gdc2_node.input_constraints;
   auto ge2d_constraints = ge2d_node.input_constraints;
-  fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info;
+  BufferCollection buffer_collection;
   std::vector<fuchsia::sysmem::BufferCollectionConstraints> constraints;
   constraints.push_back(gdc1_constraints);
   constraints.push_back(gdc2_constraints);
   constraints.push_back(ge2d_constraints);
   RelaxMemoryConstraints(constraints);
   ASSERT_EQ(ZX_OK, controller_memory_allocator_->AllocateSharedMemory(
-                       constraints, &buffer_collection_info, "TestvideoConfigGDC1GDC2"));
-  EXPECT_EQ(buffer_collection_info.buffer_count,
-            kVideoMinBufferForCamping + kVideoMinBufferForCamping);
-  EXPECT_GT(buffer_collection_info.settings.buffer_settings.size_bytes, kGdcFRWidth * kGdcFRHeight);
-  EXPECT_TRUE(buffer_collection_info.settings.has_image_format_constraints);
+                       constraints, buffer_collection, "TestvideoConfigGDC1GDC2"));
+  EXPECT_EQ(buffer_collection.buffers.buffer_count, kVideoMinBufferForCamping + kNumClientBuffers);
+  EXPECT_GT(buffer_collection.buffers.settings.buffer_settings.size_bytes,
+            kGdcFRWidth * kGdcFRHeight);
+  EXPECT_TRUE(buffer_collection.buffers.settings.has_image_format_constraints);
   EXPECT_EQ(fuchsia::sysmem::PixelFormatType::NV12,
-            buffer_collection_info.settings.image_format_constraints.pixel_format.type);
+            buffer_collection.buffers.settings.image_format_constraints.pixel_format.type);
   EXPECT_EQ(kGdcFRHeight,
-            buffer_collection_info.settings.image_format_constraints.required_max_coded_height);
+            buffer_collection.buffers.settings.image_format_constraints.required_max_coded_height);
   EXPECT_EQ(kGdcFRWidth,
-            buffer_collection_info.settings.image_format_constraints.required_max_coded_width);
+            buffer_collection.buffers.settings.image_format_constraints.required_max_coded_width);
   EXPECT_EQ(kGe2dBytesPerRowDivisor,
-            buffer_collection_info.settings.image_format_constraints.bytes_per_row_divisor);
-  for (uint32_t i = 0; i < buffer_collection_info.buffer_count; i++) {
-    EXPECT_TRUE(buffer_collection_info.buffers.at(i).vmo.is_valid());
+            buffer_collection.buffers.settings.image_format_constraints.bytes_per_row_divisor);
+  for (uint32_t i = 0; i < buffer_collection.buffers.buffer_count; i++) {
+    EXPECT_TRUE(buffer_collection.buffers.buffers.at(i).vmo.is_valid());
   }
   EXPECT_FALSE(
-      buffer_collection_info.buffers.at(buffer_collection_info.buffer_count).vmo.is_valid());
+      buffer_collection.buffers.buffers.at(buffer_collection.buffers.buffer_count).vmo.is_valid());
 }
 
 // Validate DS --> GDC2 --> (GE2D) --> OutputStreamMonitoring
@@ -173,60 +176,60 @@ TEST_F(ControllerMemoryAllocatorTest, MonitorConfigDS) {
   auto internal_config = MonitorConfigDownScaledRes();
   auto ds_constraints = internal_config.output_constraints;
   auto gdc2_constraints = internal_config.child_nodes[0].input_constraints;
-  fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info;
+  BufferCollection buffer_collection;
   std::vector<fuchsia::sysmem::BufferCollectionConstraints> constraints;
   constraints.push_back(ds_constraints);
   constraints.push_back(gdc2_constraints);
   RelaxMemoryConstraints(constraints);
   ASSERT_EQ(ZX_OK, controller_memory_allocator_->AllocateSharedMemory(
-                       constraints, &buffer_collection_info, "TestMonitorConfigDS"));
-  EXPECT_EQ(buffer_collection_info.buffer_count, kOutputStreamMonitoringMinBufferForCamping);
-  EXPECT_GT(buffer_collection_info.settings.buffer_settings.size_bytes,
+                       constraints, buffer_collection, "TestMonitorConfigDS"));
+  EXPECT_EQ(buffer_collection.buffers.buffer_count, kOutputStreamMonitoringMinBufferForCamping);
+  EXPECT_GT(buffer_collection.buffers.settings.buffer_settings.size_bytes,
             kOutputStreamDSHeight * kOutputStreamDSWidth);
-  EXPECT_TRUE(buffer_collection_info.settings.has_image_format_constraints);
+  EXPECT_TRUE(buffer_collection.buffers.settings.has_image_format_constraints);
   EXPECT_EQ(fuchsia::sysmem::PixelFormatType::NV12,
-            buffer_collection_info.settings.image_format_constraints.pixel_format.type);
-  EXPECT_EQ(0u, buffer_collection_info.settings.image_format_constraints.min_coded_height);
-  EXPECT_EQ(0u, buffer_collection_info.settings.image_format_constraints.min_coded_width);
+            buffer_collection.buffers.settings.image_format_constraints.pixel_format.type);
   EXPECT_EQ(kIspBytesPerRowDivisor,
-            buffer_collection_info.settings.image_format_constraints.bytes_per_row_divisor);
-  for (uint32_t i = 0; i < buffer_collection_info.buffer_count; i++) {
-    EXPECT_TRUE(buffer_collection_info.buffers.at(i).vmo.is_valid());
+            buffer_collection.buffers.settings.image_format_constraints.bytes_per_row_divisor);
+  for (uint32_t i = 0; i < buffer_collection.buffers.buffer_count; i++) {
+    EXPECT_TRUE(buffer_collection.buffers.buffers.at(i).vmo.is_valid());
   }
   EXPECT_FALSE(
-      buffer_collection_info.buffers.at(buffer_collection_info.buffer_count).vmo.is_valid());
+      buffer_collection.buffers.buffers.at(buffer_collection.buffers.buffer_count).vmo.is_valid());
 }
 
 TEST_F(ControllerMemoryAllocatorTest, ConvertBufferCollectionInfo2TypeTest) {
   auto internal_config = MonitorConfigFullRes();
   auto fr_constraints = internal_config.output_constraints;
   auto gdc1_constraints = internal_config.child_nodes[1].input_constraints;
-  fuchsia::sysmem::BufferCollectionInfo_2 hlcpp_buffer;
+  BufferCollection buffer_collection;
   std::vector<fuchsia::sysmem::BufferCollectionConstraints> constraints;
   constraints.push_back(fr_constraints);
   constraints.push_back(gdc1_constraints);
   RelaxMemoryConstraints(constraints);
   // Allocating some buffer collection
   ASSERT_EQ(ZX_OK, controller_memory_allocator_->AllocateSharedMemory(
-                       constraints, &hlcpp_buffer, "TestConvertBufferCollection2TypeTest"));
-  EXPECT_EQ(hlcpp_buffer.buffer_count, kOutputStreamMlDSMinBufferForCamping);
+                       constraints, buffer_collection, "TestConvertBufferCollection2TypeTest"));
+  EXPECT_EQ(buffer_collection.buffers.buffer_count,
+            kOutputStreamMlDSMinBufferForCamping + kNumClientBuffers);
 
-  BufferCollectionHelper buffer_collection_helper(hlcpp_buffer);
+  BufferCollectionHelper buffer_collection_helper(buffer_collection.buffers);
 
   fuchsia_sysmem_BufferCollectionInfo_2 c_buffer = *buffer_collection_helper.GetC();
 
-  EXPECT_EQ(c_buffer.buffer_count, hlcpp_buffer.buffer_count);
+  EXPECT_EQ(c_buffer.buffer_count, buffer_collection.buffers.buffer_count);
   auto& c_buffer_settings = c_buffer.settings.buffer_settings;
-  auto& hlcpp_buffer_settings = hlcpp_buffer.settings.buffer_settings;
+  auto& hlcpp_buffer_settings = buffer_collection.buffers.settings.buffer_settings;
 
   EXPECT_EQ(c_buffer_settings.size_bytes, hlcpp_buffer_settings.size_bytes);
   EXPECT_EQ(c_buffer_settings.heap,
             *reinterpret_cast<const fuchsia_sysmem_HeapType*>(&hlcpp_buffer_settings.heap));
   EXPECT_EQ(c_buffer.settings.has_image_format_constraints,
-            hlcpp_buffer.settings.has_image_format_constraints);
+            buffer_collection.buffers.settings.has_image_format_constraints);
 
   auto& c_image_format_constraints = c_buffer.settings.image_format_constraints;
-  auto& hlcpp_image_format_constraints = hlcpp_buffer.settings.image_format_constraints;
+  auto& hlcpp_image_format_constraints =
+      buffer_collection.buffers.settings.image_format_constraints;
 
   EXPECT_EQ(c_image_format_constraints.pixel_format.type,
             *reinterpret_cast<const fuchsia_sysmem_PixelFormatType*>(

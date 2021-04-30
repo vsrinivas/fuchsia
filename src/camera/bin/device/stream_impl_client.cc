@@ -177,21 +177,4 @@ void StreamImpl::Client::Rebind(fidl::InterfaceRequest<Stream> request) {
   stream_.OnNewRequest(std::move(request));
 }
 
-void StreamImpl::Client::SetInitialToken(fuchsia::sysmem::BufferCollectionTokenHandle token) {
-  initial_token_ = token.Bind();
-  initial_token_.set_error_handler([this](zx_status_t status) {
-    Participant() = false;
-    FX_LOGS(INFO) << "Client closed initial BufferCollectionToken.";
-    CloseConnection(ZX_ERR_BAD_STATE);
-  });
-}
-
-const fuchsia::sysmem::BufferCollectionTokenPtr& StreamImpl::Client::InitialToken() {
-  return initial_token_;
-}
-
-fuchsia::sysmem::BufferCollectionTokenHandle StreamImpl::Client::TakeInitialToken() {
-  return initial_token_.Unbind();
-}
-
 }  // namespace camera

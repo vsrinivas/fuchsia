@@ -51,7 +51,6 @@ class FakeCamera : public fuchsia::hardware::camera::Device,
   }
   void GetNextConfig(fuchsia::camera2::hal::Controller::GetNextConfigCallback callback) override {}
   void CreateStream(uint32_t config_index, uint32_t stream_index, uint32_t image_format_index,
-                    fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection,
                     fidl::InterfaceRequest<fuchsia::camera2::Stream> stream) override {}
   void EnableStreaming() override {}
   void DisableStreaming() override {}

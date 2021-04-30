@@ -75,7 +75,6 @@ static InternalConfigNode* GetStreamConfigNode(
 
 void ControllerImpl::CreateStream(uint32_t config_index, uint32_t stream_index,
                                   uint32_t image_format_index,
-                                  fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection,
                                   fidl::InterfaceRequest<fuchsia::camera2::Stream> stream) {
   TRACE_DURATION("camera", "ControllerImpl::CreateStream");
   zx_status_t status = ZX_OK;
@@ -102,13 +101,6 @@ void ControllerImpl::CreateStream(uint32_t config_index, uint32_t stream_index,
     status = ZX_ERR_INVALID_ARGS;
     return;
   }
-
-  if (buffer_collection.buffer_count == 0) {
-    FX_LOGST(DEBUG, kTag) << "Invalid buffer count " << buffer_collection.buffer_count;
-    status = ZX_ERR_INVALID_ARGS;
-    return;
-  }
-
   // Get Internal Configuration
   InternalConfigInfo* internal_config;
   status = GetInternalConfiguration(config_index, &internal_config);
@@ -126,7 +118,6 @@ void ControllerImpl::CreateStream(uint32_t config_index, uint32_t stream_index,
   }
 
   StreamCreationData info;
-  info.output_buffers = std::move(buffer_collection);
   info.image_format_index = image_format_index;
   info.node = *stream_config_node;
   info.stream_config = fidl::Clone(stream_config);

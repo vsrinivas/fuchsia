@@ -46,6 +46,7 @@ struct StreamConstraints {
   void set_buffer_count_for_camping(uint32_t buffer_count_for_camping) {
     buffer_count_for_camping_ = buffer_count_for_camping;
   }
+  void set_min_buffer_count(uint32_t min_buffer_count) { min_buffer_count_ = min_buffer_count; }
 
   static fuchsia::sysmem::ImageFormat_2 MakeImageFormat(uint32_t width, uint32_t height,
                                                         fuchsia::sysmem::PixelFormatType format,
@@ -62,6 +63,7 @@ struct StreamConstraints {
  private:
   uint32_t bytes_per_row_divisor_ = 128;
   uint32_t buffer_count_for_camping_ = 3;
+  uint32_t min_buffer_count_ = 0;
   uint32_t frames_per_second_ = 30;
   bool contiguous_ = false;
   std::vector<fuchsia::sysmem::ImageFormat_2> formats_;

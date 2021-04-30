@@ -15,7 +15,8 @@
 class FakeLegacyStreamTest : public gtest::TestLoopFixture {
  protected:
   void SetUp() override {
-    auto result = camera::FakeLegacyStream::Create(stream_.NewRequest(), 0, dispatcher());
+    auto result =
+        camera::FakeLegacyStream::Create(stream_.NewRequest(), allocator_, 0, dispatcher());
     ASSERT_TRUE(result.is_ok());
     fake_legacy_stream_ = result.take_value();
     stream_.set_error_handler(
@@ -36,6 +37,7 @@ class FakeLegacyStreamTest : public gtest::TestLoopFixture {
   fuchsia::camera2::StreamPtr stream_;
   std::unique_ptr<camera::FakeLegacyStream> fake_legacy_stream_;
   std::vector<fuchsia::camera2::FrameAvailableInfo> frames_;
+  fuchsia::sysmem::AllocatorPtr allocator_;
 };
 
 // Conformant Stream client.
@@ -117,7 +119,8 @@ TEST_F(FakeLegacyStreamTest, BadClient3) {
 TEST_F(FakeLegacyStreamTest, WrongDispatcher) {
   fuchsia::camera2::StreamPtr stream;
   async::Loop other(&kAsyncLoopConfigNoAttachToCurrentThread);
-  auto result = camera::FakeLegacyStream::Create(stream.NewRequest(), 0, other.dispatcher());
+  auto result =
+      camera::FakeLegacyStream::Create(stream.NewRequest(), allocator_, 0, other.dispatcher());
   ASSERT_TRUE(result.is_ok());
   auto fake = result.take_value();
   ASSERT_DEATH(fake->IsStreaming(), ".*thread.*");

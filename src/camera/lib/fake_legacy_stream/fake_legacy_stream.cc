@@ -68,7 +68,8 @@ static constexpr std::array<fuchsia::sysmem::ImageFormat_2, 3> kFakeImageFormats
 
 class FakeLegacyStreamImpl : public FakeLegacyStream, public fuchsia::camera2::Stream {
  public:
-  FakeLegacyStreamImpl() : binding_(this) {}
+  FakeLegacyStreamImpl(fuchsia::sysmem::AllocatorPtr& allocator)
+      : binding_(this), allocator_(allocator) {}
 
   void CheckSameThread() {
     auto dispatcher = async_get_default_dispatcher();
@@ -193,6 +194,12 @@ class FakeLegacyStreamImpl : public FakeLegacyStream, public fuchsia::camera2::S
     callback({kFakeImageFormats.begin(), kFakeImageFormats.end()});
   }
 
+  void GetBuffers(GetBuffersCallback callback) override {
+    fuchsia::sysmem::BufferCollectionTokenHandle token;
+    allocator_->AllocateSharedCollection(token.NewRequest());
+    callback(std::move(token));
+  }
+
   fidl::Binding<fuchsia::camera2::Stream> binding_;
   bool stopped_ = true;
   std::unordered_set<uint32_t> outstanding_buffer_ids_;
@@ -201,14 +208,17 @@ class FakeLegacyStreamImpl : public FakeLegacyStream, public fuchsia::camera2::S
   std::stringstream client_error_explanation_;
   std::tuple<float, float, float, float> region_of_interest_{0.0f, 0.0f, 1.0f, 1.0f};
   uint32_t image_format_ = 0;
+  fuchsia::sysmem::AllocatorPtr& allocator_;
 
   friend class FakeLegacyStream;
 };
 
 fit::result<std::unique_ptr<FakeLegacyStream>, zx_status_t> FakeLegacyStream::Create(
-    fidl::InterfaceRequest<fuchsia::camera2::Stream> request, uint32_t format_index,
+    fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
+    fuchsia::sysmem::AllocatorPtr& allocator, uint32_t format_index,
+
     async_dispatcher_t* dispatcher) {
-  auto impl = std::make_unique<FakeLegacyStreamImpl>();
+  auto impl = std::make_unique<FakeLegacyStreamImpl>(allocator);
   zx_status_t status = impl->binding_.Bind(std::move(request), dispatcher);
   impl->image_format_ = format_index;
   if (status) {

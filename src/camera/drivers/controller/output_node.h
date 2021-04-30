@@ -18,7 +18,7 @@ class OutputNode : public ProcessNode {
  public:
   OutputNode(async_dispatcher_t* dispatcher, ProcessNode* parent_node,
              const camera::InternalConfigNode& internal_output_node,
-             fuchsia::sysmem::BufferCollectionInfo_2 output_buffer_collection,
+             BufferCollection output_buffer_collection,
              fuchsia::camera2::CameraStreamType current_stream_type,
              uint32_t current_image_format_index)
       : ProcessNode(NodeType::kOutputStream, parent_node, current_stream_type,

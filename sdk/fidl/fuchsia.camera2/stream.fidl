@@ -114,4 +114,11 @@ protocol Stream {
 
     /// Get the image formats that this stream supports.
     GetImageFormats() -> (vector<fuchsia.sysmem.ImageFormat_2>:MAX_IMAGE_FORMATS image_formats);
+
+    /// Returns a token to the buffers that are being used to output frames on the stream. The
+    /// token is `dispensable` which means it doesn't have to be turned in to sysmem for allocation
+    /// to complete. This also means that any SetConstraints call on the returned token can't
+    /// conflict with the constraints in the `StreamConfig`, otherwise attempts to wait for buffers
+    /// on the token will fail.
+    GetBuffers() -> (fuchsia.sysmem.BufferCollectionToken token);
 };

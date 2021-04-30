@@ -131,8 +131,9 @@ void StreamCycler::WatchCurrentConfigurationCallback(uint32_t config_index) {
 }
 
 void StreamCycler::ConnectToAllStreams() {
-  // Connect all streams in descending order to put more stress on the controller.
-  ConnectToStream(current_config_index_, configurations_[current_config_index_].streams.size() - 1);
+  for (size_t i = 0; i < configurations_[current_config_index_].streams.size(); i++) {
+    ConnectToStream(current_config_index_, i);
+  }
 }
 
 void StreamCycler::ConnectToStream(uint32_t config_index, uint32_t stream_index) {
@@ -167,10 +168,6 @@ void StreamCycler::ConnectToStream(uint32_t config_index, uint32_t stream_index)
           add_collection_handler_(std::move(token_back), image_format, oss.str());
     } else {
       token_back.BindSync()->Close();
-    }
-
-    if (stream_index > 0) {
-      ConnectToStream(config_index, stream_index - 1);
     }
 
     // Kick start the stream

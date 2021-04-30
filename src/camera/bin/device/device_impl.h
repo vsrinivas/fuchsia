@@ -82,14 +82,13 @@ class DeviceImpl : public fuchsia::ui::policy::MediaButtonsListener {
   void ConnectToStream(uint32_t index, fidl::InterfaceRequest<fuchsia::camera3::Stream> request);
 
   // Called by a stream when it has sufficient information to connect to the legacy stream protocol.
-  void OnStreamRequested(uint32_t index,
-                         fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
-                         fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
-                         fit::function<void(uint32_t)> max_camping_buffers_callback,
+  void OnStreamRequested(uint32_t index, fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
+
                          uint32_t format_index);
 
-  // TODO(fxbug.dev/42241): Remove workaround once ordering constraint is removed.
-  void MaybeConnectToLegacyStreams();
+  // Called by a stream when it has received a buffer token from the legacy stream.
+  void OnBuffersRequested(uint32_t index, fuchsia::sysmem::BufferCollectionTokenHandle token,
+                          fit::function<void(uint32_t)> max_camping_buffers_callback);
 
   // |fuchsia::ui::policy::MediaButtonsListener|
   void OnMediaButtonsEvent(fuchsia::ui::input::MediaButtonsEvent event) override;
@@ -134,14 +133,6 @@ class DeviceImpl : public fuchsia::ui::policy::MediaButtonsListener {
     HangingGetHelper<MuteState> mute_state_;
   };
 
-  struct ControllerCreateStreamParams {
-    uint32_t format_index;
-    fuchsia::sysmem::BufferCollectionInfo_2 buffers;
-    fidl::InterfaceRequest<fuchsia::camera2::Stream> request;
-    uint32_t requeue_count = 0;
-  };
-  std::map<uint32_t, ControllerCreateStreamParams> stream_to_pending_legacy_stream_request_params_;
-  std::map<uint32_t, bool> stream_request_sent_to_controller_;
   async_dispatcher_t* dispatcher_;
   fit::executor& executor_;
   MetricsReporter metrics_;

@@ -93,7 +93,8 @@ static std::vector<fuchsia::camera2::hal::Config> DefaultConfigs() {
 }
 
 fit::result<std::unique_ptr<FakeController>, zx_status_t> FakeController::Create(
-    fidl::InterfaceRequest<fuchsia::camera2::hal::Controller> request) {
+    fidl::InterfaceRequest<fuchsia::camera2::hal::Controller> request,
+    fuchsia::sysmem::AllocatorHandle allocator) {
   auto controller = std::make_unique<FakeController>();
 
   zx_status_t status = controller->loop_.StartThread("Fake Controller Loop");
@@ -103,6 +104,12 @@ fit::result<std::unique_ptr<FakeController>, zx_status_t> FakeController::Create
   }
 
   status = controller->binding_.Bind(std::move(request), controller->loop_.dispatcher());
+  if (status != ZX_OK) {
+    FX_PLOGS(ERROR, status);
+    return fit::error(status);
+  }
+
+  status = controller->allocator_.Bind(std::move(allocator), controller->loop_.dispatcher());
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status);
     return fit::error(status);
@@ -159,9 +166,9 @@ void FakeController::GetNextConfig(
 
 void FakeController::CreateStream(uint32_t config_index, uint32_t stream_index,
                                   uint32_t image_format_index,
-                                  fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection,
                                   fidl::InterfaceRequest<fuchsia::camera2::Stream> stream) {
-  auto result = camera::FakeLegacyStream::Create(std::move(stream), 0, loop_.dispatcher());
+  auto result =
+      camera::FakeLegacyStream::Create(std::move(stream), allocator_, 0, loop_.dispatcher());
   if (result.is_error()) {
     // Failing to bind the stream is expected if the stream was destroyed before completing setup.
     FX_PLOGS(INFO, result.error());

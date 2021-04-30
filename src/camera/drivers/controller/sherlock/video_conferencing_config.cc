@@ -35,6 +35,7 @@ static fuchsia::camera2::hal::StreamConfig MLVideoFRConfig(bool extended_fov) {
   stream.set_contiguous(true);
   stream.set_frames_per_second(kMlFRFrameRate);
   stream.set_buffer_count_for_camping(kMlFRMinBufferForCamping);
+  stream.set_min_buffer_count(kMlFRMinBufferForCamping + kNumClientBuffers);
   return stream.ConvertToStreamConfig();
 }
 
@@ -63,7 +64,8 @@ static fuchsia::camera2::hal::StreamConfig VideoConfig(bool extended_fov) {
   stream.set_bytes_per_row_divisor(kGdcBytesPerRowDivisor);
   stream.set_contiguous(true);
   stream.set_frames_per_second(kVideoFrameRate);
-  stream.set_buffer_count_for_camping(kVideoMinBufferForCamping);
+  stream.set_buffer_count_for_camping(0);
+  stream.set_min_buffer_count(kVideoMinBufferForCamping + kNumClientBuffers);
   return stream.ConvertToStreamConfig();
 };
 
@@ -156,9 +158,7 @@ static InternalConfigNode GdcVideo2(bool extended_fov) {
               GdcConfig::VIDEO_CONFERENCE_ML,
           },
       .input_constraints = GdcVideo2Constraints(),
-      // This node doesn't need |output_constraints| because next node is Output node so
-      // there is no need to create internal buffers.
-      .output_constraints = InvalidConstraints(),
+      .output_constraints = MLVideoFRConfig(extended_fov).constraints,
       .image_formats = MLFRImageFormats(),
       .in_place = false,
   };
@@ -207,9 +207,7 @@ static InternalConfigNode Ge2d(bool extended_fov) {
               .output_rotation = GE2D_ROTATION_ROTATION_0,
           },
       .input_constraints = Ge2dConstraints(),
-      // This node doesn't need |output_constraints| because next node is Output node so
-      // there is no need to create internal buffers.
-      .output_constraints = InvalidConstraints(),
+      .output_constraints = VideoConfig(extended_fov).constraints,
       .image_formats = VideoImageFormats(),
       .in_place = false,
   };
@@ -230,6 +228,7 @@ fuchsia::sysmem::BufferCollectionConstraints GdcVideo1OutputConstraints() {
   stream_constraints.set_contiguous(true);
   stream_constraints.AddImageFormat(kGdcFRWidth, kGdcFRHeight, kFramePixelFormat);
   stream_constraints.set_buffer_count_for_camping(0);
+  stream_constraints.set_min_buffer_count(kVideoMinBufferForCamping + kNumClientBuffers);
   return stream_constraints.MakeBufferCollectionConstraints();
 }
 

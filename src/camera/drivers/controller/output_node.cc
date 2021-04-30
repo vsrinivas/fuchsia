@@ -23,7 +23,7 @@ fit::result<OutputNode*, zx_status_t> OutputNode::CreateOutputNode(
     return fit::error(ZX_ERR_INVALID_ARGS);
   }
 
-  fuchsia::sysmem::BufferCollectionInfo_2 unused_buffer_collection;
+  BufferCollection unused_buffer_collection;
 
   auto output_node = std::make_unique<camera::OutputNode>(
       dispatcher, parent_node, internal_output_node, std::move(unused_buffer_collection),

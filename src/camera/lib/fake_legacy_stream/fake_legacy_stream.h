@@ -22,7 +22,9 @@ class FakeLegacyStream {
   // Creates a fake stream using the given request, processing events using an optionally provided
   // dispatcher. If dispatcher is omitted or null, uses the current thread's default dispatcher.
   static fit::result<std::unique_ptr<FakeLegacyStream>, zx_status_t> Create(
-      fidl::InterfaceRequest<fuchsia::camera2::Stream> request, uint32_t format_index = 0,
+      fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
+      fuchsia::sysmem::AllocatorPtr& allocator, uint32_t format_index = 0,
+
       async_dispatcher_t* dispatcher = nullptr);
 
   virtual ~FakeLegacyStream() = default;

@@ -62,7 +62,6 @@ class ControllerImpl : public fuchsia::camera2::hal::Controller {
   // Set a particular configuration and create the requested stream.
   // |config_index| : Configuration index from the vector which needs to be applied.
   // |stream_index| : Stream index
-  // |buffer_collection| : Buffer collections for the stream.
   // |stream| : Stream channel for the stream requested
   // |image_format_index| : Image format index which needs to be set up upon creation.
   // If there is already an active configuration which is different than the one
@@ -71,7 +70,6 @@ class ControllerImpl : public fuchsia::camera2::hal::Controller {
   // If the new stream requested is already part of the existing running configuration
   // the HAL will just be creating this new stream while the other stream still exists as is.
   void CreateStream(uint32_t config_index, uint32_t stream_index, uint32_t image_format_index,
-                    fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection,
                     fidl::InterfaceRequest<fuchsia::camera2::Stream> stream) override;
 
   void GetDeviceInfo(GetDeviceInfoCallback callback) override;

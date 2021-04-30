@@ -33,12 +33,14 @@ StreamImpl::StreamImpl(async_dispatcher_t* dispatcher, MetricsReporter::Stream& 
                        const fuchsia::camera3::StreamProperties2& properties,
                        const fuchsia::camera2::hal::StreamConfig& legacy_config,
                        fidl::InterfaceRequest<fuchsia::camera3::Stream> request,
-                       StreamRequestedCallback on_stream_requested, fit::closure on_no_clients)
+                       StreamRequestedCallback on_stream_requested,
+                       BuffersRequestedCallback on_buffers_requested, fit::closure on_no_clients)
     : dispatcher_(dispatcher),
       metrics_(metrics),
       properties_(properties),
       legacy_config_(legacy_config),
       on_stream_requested_(std::move(on_stream_requested)),
+      on_buffers_requested_(std::move(on_buffers_requested)),
       on_no_clients_(std::move(on_no_clients)) {
   legacy_stream_.set_error_handler(fit::bind_member(this, &StreamImpl::OnLegacyStreamDisconnected));
   legacy_stream_.events().OnFrameAvailable = fit::bind_member(this, &StreamImpl::OnFrameAvailable);
@@ -186,35 +188,40 @@ void StreamImpl::SetBufferCollection(
   auto it = clients_.find(id);
   if (it == clients_.end()) {
     FX_LOGS(ERROR) << "Client " << id << " not found.";
-    token_handle.BindSync()->Close();
+    if (token_handle) {
+      token_handle.BindSync()->Close();
+    }
     ZX_DEBUG_ASSERT(false);
     return;
   }
+  bool legacy_stream_needs_start = false;
   auto& client = it->second;
+  client->Participant() = !!token_handle;
 
-  // If null, just unregister the client and return.
-  if (!token_handle) {
-    client->Participant() = false;
-    return;
+  if (token_handle) {
+    token_handle.BindSync()->Close();
   }
 
-  client->SetInitialToken(std::move(token_handle));
+  frame_waiters_.clear();
 
-  // Sync token before marking as a Participant to avoid introducing non-responsive tokens to
-  // the participant list.
-  client->InitialToken()->Sync([this, &client]() {
-    client->Participant() = true;
+  if (!legacy_stream_) {
+    // Connect to stream
+    on_stream_requested_(legacy_stream_.NewRequest(), legacy_stream_format_index_);
+    legacy_stream_needs_start = true;
+  }
 
-    // Duplicate and send each client a token.
-    std::map<uint64_t, fuchsia::sysmem::BufferCollectionTokenHandle> client_tokens;
-    for (auto& client_i : clients_) {
-      if (client_i.second->Participant()) {
-        client->InitialToken()->Duplicate(ZX_RIGHT_SAME_RIGHTS,
-                                          client_tokens[client_i.first].NewRequest());
-      }
-    }
-    client->InitialToken()->Sync(
-        [this, &client, client_tokens = std::move(client_tokens)]() mutable {
+  legacy_stream_->GetBuffers(
+      [this, legacy_stream_needs_start](fuchsia::sysmem::BufferCollectionTokenHandle token_handle) {
+        // Duplicate and send each client a token.
+        std::map<uint64_t, fuchsia::sysmem::BufferCollectionTokenHandle> client_tokens;
+        fuchsia::sysmem::BufferCollectionTokenPtr token = token_handle.Bind();
+        for (auto& client_i : clients_) {
+          if (client_i.second->Participant()) {
+            token->Duplicate(ZX_RIGHT_SAME_RIGHTS, client_tokens[client_i.first].NewRequest());
+          }
+        }
+        token->Sync([this, token = std::move(token), client_tokens = std::move(client_tokens),
+                     legacy_stream_needs_start]() mutable {
           for (auto& [id, token] : client_tokens) {
             auto it = clients_.find(id);
             if (it == clients_.end()) {
@@ -223,16 +230,15 @@ void StreamImpl::SetBufferCollection(
               it->second->ReceiveBufferCollection(std::move(token));
             }
           }
-          // Send the last token to the device for constraints application.
-          frame_waiters_.clear();
-          on_stream_requested_(
-              client->TakeInitialToken(), legacy_stream_.NewRequest(),
-              [this](uint32_t max_camping_buffers) { max_camping_buffers_ = max_camping_buffers; },
-              legacy_stream_format_index_);
+          on_buffers_requested_(std::move(token), [this](uint32_t max_camping_buffers) {
+            max_camping_buffers_ = max_camping_buffers;
+          });
           RestoreLegacyStreamState();
-          legacy_stream_->Start();
+          if (legacy_stream_needs_start) {
+            legacy_stream_->Start();
+          }
         });
-  });
+      });
 }
 
 void StreamImpl::SetResolution(uint64_t id, fuchsia::math::Size coded_size) {

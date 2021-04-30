@@ -24,7 +24,8 @@ class FakeController : public fuchsia::camera2::hal::Controller {
   FakeController();
   ~FakeController() override;
   static fit::result<std::unique_ptr<FakeController>, zx_status_t> Create(
-      fidl::InterfaceRequest<fuchsia::camera2::hal::Controller> request);
+      fidl::InterfaceRequest<fuchsia::camera2::hal::Controller> request,
+      fuchsia::sysmem::AllocatorHandle allocator);
   static std::vector<fuchsia::camera2::hal::Config> GetDefaultConfigs();
   zx_status_t SendFrameViaLegacyStream(fuchsia::camera2::FrameAvailableInfo info);
   bool LegacyStreamBufferIsOutstanding(uint32_t id);
@@ -33,7 +34,6 @@ class FakeController : public fuchsia::camera2::hal::Controller {
   // |fuchsia::camera2::hal::Controller|
   void GetNextConfig(fuchsia::camera2::hal::Controller::GetNextConfigCallback callback) override;
   void CreateStream(uint32_t config_index, uint32_t stream_index, uint32_t image_format_index,
-                    fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection,
                     fidl::InterfaceRequest<fuchsia::camera2::Stream> stream) override;
   void EnableStreaming() override;
   void DisableStreaming() override;
@@ -43,6 +43,7 @@ class FakeController : public fuchsia::camera2::hal::Controller {
   uint32_t get_configs_call_count_ = 0;
   fidl::Binding<fuchsia::camera2::hal::Controller> binding_;
   std::unique_ptr<camera::FakeLegacyStream> stream_;
+  fuchsia::sysmem::AllocatorPtr allocator_;
   bool streaming_enabled_ = true;
 };
 

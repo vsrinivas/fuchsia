@@ -28,22 +28,10 @@ const InternalConfigNode* GetNextNodeInPipeline(const fuchsia::camera2::CameraSt
   return nullptr;
 }
 
-fit::result<fuchsia::sysmem::BufferCollectionInfo_2, zx_status_t> GetClientBuffer(
-    StreamCreationData* info) {
-  for (uint32_t i = 0; i < info->output_buffers.buffer_count; i++) {
-    std::string buffer_collection_name = "camera_controller_output_node";
-    auto buffer_name = buffer_collection_name.append(std::to_string(i));
-    fsl::MaybeSetObjectName(
-        info->output_buffers.buffers[i].vmo.get(), buffer_name,
-        [](std::string s) { return s.find("Sysmem") == 0 || s.find("ImagePipe2") == 0; });
-  }
-  return fit::ok(fidl::Clone(info->output_buffers));
-}
-
-fit::result<fuchsia::sysmem::BufferCollectionInfo_2, zx_status_t> GetBuffers(
+fit::result<BufferCollection, zx_status_t> GetBuffers(
     const ControllerMemoryAllocator& memory_allocator, const InternalConfigNode& producer,
     StreamCreationData* info, const std::string& buffer_tag) {
-  fuchsia::sysmem::BufferCollectionInfo_2 buffers;
+  BufferCollection collection;
   const auto* consumer = GetNextNodeInPipeline(info->stream_type(), producer);
   auto current_producer = &producer;
 
@@ -66,11 +54,6 @@ fit::result<fuchsia::sysmem::BufferCollectionInfo_2, zx_status_t> GetBuffers(
     constraints.push_back(consumer->input_constraints);
     current_producer = consumer;
     consumer = &consumer->child_nodes[0];
-  };
-
-  // If the consumer is the client, we use the client buffers.
-  if (consumer->type == kOutputStream) {
-    return GetClientBuffer(info);
   }
 
   for (const auto& node : current_producer->child_nodes) {
@@ -79,13 +62,15 @@ fit::result<fuchsia::sysmem::BufferCollectionInfo_2, zx_status_t> GetBuffers(
     }
   }
 
-  auto status = memory_allocator.AllocateSharedMemory(constraints, &buffers, buffer_tag);
+  auto status = memory_allocator.AllocateSharedMemory(constraints, collection, buffer_tag);
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to allocate shared memory";
     return fit::error(status);
   }
+  FX_LOGST(DEBUG, kTag) << "Allocated " << collection.buffers.buffer_count << " buffers for "
+                        << buffer_tag;
 
-  return fit::ok(std::move(buffers));
+  return fit::ok(std::move(collection));
 }
 
 }  // namespace camera

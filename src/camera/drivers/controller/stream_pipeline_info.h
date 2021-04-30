@@ -26,8 +26,6 @@ struct StreamCreationData {
   // |image_format_index| is the output resolution index
   // passed by clients when requesting a stream.
   uint32_t image_format_index;
-  // Ouput buffers received from the client.
-  fuchsia::sysmem::BufferCollectionInfo_2 output_buffers;
   // Allowed frame rate range for a particular configuration.
   camera::FrameRateRange frame_rate_range;
 

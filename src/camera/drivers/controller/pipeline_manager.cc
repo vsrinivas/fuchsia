@@ -153,24 +153,6 @@ void PipelineManager::ConfigureStreamPipeline(
         return;
       }
 
-      // If the next node is an output node, it is currently not supported.
-      // Currently the expectation is that the clients will request streams in a fixed order.
-      // TODO(fxbug.dev/42241): Remove this check when 42241 is fixed.
-      const auto* next_node_internal =
-          GetNextNodeInPipeline(info.stream_type(), result.value().first);
-      if (!next_node_internal) {
-        FX_LOGS(ERROR) << "Failed to get next node";
-        status = ZX_ERR_INTERNAL;
-        return;
-      }
-
-      if (next_node_internal->type == NodeType::kOutputStream) {
-        FX_LOGS(WARNING)
-            << "Cannot create this stream due to unexpected ordering of stream create requests";
-        status = ZX_ERR_NOT_SUPPORTED;
-        return;
-      }
-
       graph_node_to_be_appended = result.value().second;
       internal_graph_node_to_be_appended = result.value().first;
     } else {

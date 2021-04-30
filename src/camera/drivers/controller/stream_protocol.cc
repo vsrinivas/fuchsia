@@ -135,4 +135,20 @@ void StreamImpl::GetImageFormats(GetImageFormatsCallback callback) {
   callback({available_image_formats.begin(), available_image_formats.end()});
 }
 
+void StreamImpl::GetBuffers(GetBuffersCallback callback) {
+  auto parent_node = output_node_.parent_node();
+
+  // in_place nodes may not have bound buffer collection ptr, walk up to find the real collection.
+  while (parent_node && !parent_node->output_buffer_collection()) {
+    parent_node = parent_node->parent_node();
+  }
+
+  auto& input_buffer_collection = parent_node->output_buffer_collection();
+  ZX_ASSERT(input_buffer_collection);
+
+  fuchsia::sysmem::BufferCollectionTokenHandle token;
+  input_buffer_collection->AttachToken(ZX_RIGHT_SAME_RIGHTS, token.NewRequest());
+  callback(std::move(token));
+}
+
 }  // namespace camera

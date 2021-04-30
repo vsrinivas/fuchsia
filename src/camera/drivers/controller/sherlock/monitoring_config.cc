@@ -32,7 +32,8 @@ static fuchsia::camera2::hal::StreamConfig OutputStreamMLFRConfig() {
   stream.set_bytes_per_row_divisor(kIspBytesPerRowDivisor);
   stream.set_contiguous(true);
   stream.set_frames_per_second(kOutputStreamMlFRFrameRate);
-  stream.set_buffer_count_for_camping(kOutputStreamMlFRMinBufferForCamping);
+  stream.set_buffer_count_for_camping(0);
+  stream.set_min_buffer_count(kOutputStreamMlFRMinBufferForCamping + kNumClientBuffers);
   return stream.ConvertToStreamConfig();
 }
 
@@ -56,7 +57,8 @@ static fuchsia::camera2::hal::StreamConfig OutputStreamMLDSConfig() {
   stream.set_bytes_per_row_divisor(kGdcBytesPerRowDivisor);
   stream.set_contiguous(true);
   stream.set_frames_per_second(kOutputStreamMlDSFrameRate);
-  stream.set_buffer_count_for_camping(kOutputStreamMlDSMinBufferForCamping);
+  stream.set_buffer_count_for_camping(0);
+  stream.set_min_buffer_count(kOutputStreamMlDSMinBufferForCamping + kNumClientBuffers);
   return stream.ConvertToStreamConfig();
 }
 
@@ -97,7 +99,8 @@ static fuchsia::camera2::hal::StreamConfig OutputStreamMonitoringConfig() {
   stream.set_bytes_per_row_divisor(kGe2dBytesPerRowDivisor);
   stream.set_contiguous(true);
   stream.set_frames_per_second(kMaxOutputStreamMonitoringFrameRate);
-  stream.set_buffer_count_for_camping(kOutputStreamMonitoringMinBufferForCamping);
+  stream.set_buffer_count_for_camping(0);
+  stream.set_min_buffer_count(kOutputStreamMonitoringMinBufferForCamping + kNumClientBuffers);
   return stream.ConvertToStreamConfig();
 };
 
@@ -191,9 +194,7 @@ static InternalConfigNode Gdc1() {
               GdcConfig::MONITORING_ML,
           },
       .input_constraints = Gdc1Constraints(),
-      // This node doesn't need |output_constraints| because next node is Output node so
-      // there is no need to create internal buffers.
-      .output_constraints = InvalidConstraints(),
+      .output_constraints = OutputStreamMLDSConfig().constraints,
       .image_formats = OutputStreamMLDSImageFormats(),
       .in_place = false,
   };
@@ -205,7 +206,8 @@ fuchsia::sysmem::BufferCollectionConstraints MonitorConfigFullResConstraints() {
   stream_constraints.set_contiguous(true);
   stream_constraints.AddImageFormat(kOutputStreamMlFRWidth, kOutputStreamMlFRHeight,
                                     kOutputStreamMlFRPixelFormat);
-  stream_constraints.set_buffer_count_for_camping(kOutputStreamMlFRMinBufferForCamping);
+  stream_constraints.set_buffer_count_for_camping(0);
+  stream_constraints.set_min_buffer_count(kOutputStreamMlFRMinBufferForCamping + kNumClientBuffers);
   return stream_constraints.MakeBufferCollectionConstraints();
 }
 
@@ -337,8 +339,6 @@ static InternalConfigNode Ge2dMonitoring() {
           },
 
       .input_constraints = Ge2dMonitoringConstraints(),
-      // This node doesn't need |output_constraints| because next node is Output node so
-      // there is no need to create internal buffers.
       .output_constraints = Ge2dMonitoringConstraints(),
       .image_formats = OutputStreamMonitoringImageFormats(),
       .in_place = true,
@@ -355,7 +355,9 @@ fuchsia::sysmem::BufferCollectionConstraints Gdc2OutputConstraints() {
                                     kOutputStreamMonitoringPixelFormat);
   stream_constraints.AddImageFormat(kOutputStreamMonitoringWidth2, kOutputStreamMonitoringHeight2,
                                     kOutputStreamMonitoringPixelFormat);
-  stream_constraints.set_buffer_count_for_camping(kOutputStreamMonitoringMinBufferForCamping);
+  stream_constraints.set_buffer_count_for_camping(0);
+  stream_constraints.set_min_buffer_count(kOutputStreamMonitoringMinBufferForCamping +
+                                          kNumClientBuffers);
   return stream_constraints.MakeBufferCollectionConstraints();
 }
 

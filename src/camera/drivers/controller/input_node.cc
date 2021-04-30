@@ -41,7 +41,7 @@ fit::result<std::unique_ptr<InputNode>, zx_status_t> InputNode::CreateInputNode(
 
   // Use a BufferCollectionHelper to manage the conversion
   // between buffer collection representations.
-  BufferCollectionHelper buffer_collection_helper(buffers);
+  BufferCollectionHelper buffer_collection_helper(buffers.buffers);
 
   auto image_format = ConvertHlcppImageFormat2toCType(info->node.image_formats[0]);
 
@@ -88,7 +88,8 @@ void InputNode::OnReadyToProcess(const frame_available_info_t* info) {
 
 void InputNode::OnFrameAvailable(const frame_available_info_t* info) {
   ZX_ASSERT(thread_checker_.is_thread_valid());
-  TRACE_DURATION("camera", "InputNode::OnFrameAvailable", "buffer_index", info->buffer_id);
+  TRACE_DURATION("camera", "InputNode::OnFrameAvailable", "buffer_index", info->buffer_id,
+                 "isp_stream_type", (int)isp_stream_type_);
   if (shutdown_requested_ || info->frame_status != FRAME_STATUS_OK) {
     TRACE_INSTANT("camera", "bad_status", TRACE_SCOPE_THREAD, "frame_status",
                   static_cast<uint32_t>(info->frame_status));

@@ -227,27 +227,19 @@ TEST_F(ControllerDeviceTest, CreateStreamInvalidArgs) {
     RunLoopUntilIdle();
   }
 
-  fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
-  buffer_collection.buffer_count = 0;
-
   // Invalid config index.
   constexpr uint32_t kInvalidConfigIndex = 10;
-  controller_protocol_->CreateStream(kInvalidConfigIndex, 0, 0, std::move(buffer_collection),
-                                     stream.NewRequest());
+  controller_protocol_->CreateStream(kInvalidConfigIndex, 0, 0, stream.NewRequest());
   WaitForInterfaceClosure(stream, ZX_ERR_INVALID_ARGS);
 
   // Invalid stream index.
   controller_protocol_->CreateStream(0, camera_config->stream_configs.size(), 0,
-                                     std::move(buffer_collection), stream.NewRequest());
+                                     stream.NewRequest());
   WaitForInterfaceClosure(stream, ZX_ERR_INVALID_ARGS);
 
   // Invalid format index.
   controller_protocol_->CreateStream(0, 0, camera_config->stream_configs[0].image_formats.size(),
-                                     std::move(buffer_collection), stream.NewRequest());
-  WaitForInterfaceClosure(stream, ZX_ERR_INVALID_ARGS);
-
-  // Not enough buffers.
-  controller_protocol_->CreateStream(0, 0, 0, std::move(buffer_collection), stream.NewRequest());
+                                     stream.NewRequest());
   WaitForInterfaceClosure(stream, ZX_ERR_INVALID_ARGS);
 }
 

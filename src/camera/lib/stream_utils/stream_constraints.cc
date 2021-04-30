@@ -72,6 +72,7 @@ fuchsia::sysmem::BufferCollectionConstraints StreamConstraints::MakeBufferCollec
   ZX_ASSERT(!formats_.empty());
   fuchsia::sysmem::BufferCollectionConstraints constraints;
   constraints.min_buffer_count_for_camping = buffer_count_for_camping_;
+  constraints.min_buffer_count = min_buffer_count_;
   constraints.has_buffer_memory_constraints = true;
   constraints.buffer_memory_constraints.cpu_domain_supported = false;
   constraints.buffer_memory_constraints.ram_domain_supported = true;
@@ -82,12 +83,20 @@ fuchsia::sysmem::BufferCollectionConstraints StreamConstraints::MakeBufferCollec
   constraints.usage.cpu = fuchsia::sysmem::cpuUsageWrite;
   constraints.usage.video = fuchsia::sysmem::videoUsageCapture;
 
-  // Just make one constraint that has the biggest width/height for each format type:
-  // TODO(fxbug.dev/41321): Map these out. Right now we just use NV12 for everything.
+  // Fully constrain the image dimensions. This will make it more likely that a client's constraints
+  // won't conflict with the cameras. Unspecified dimensions default to MIN/MAX which doesn't let
+  // AttachToken clients resolve to the same constraints.
   uint32_t max_width = 0, max_height = 0;
+  uint32_t min_width = std::numeric_limits<uint32_t>::max();
+  uint32_t min_height = std::numeric_limits<uint32_t>::max();
+  constexpr uint32_t kCodedHeightDivisor = 2;
+  constexpr uint32_t kStartOffsetDivisor = 2;
+
   for (auto& format : formats_) {
     max_width = std::max(max_width, format.coded_width);
     max_height = std::max(max_height, format.coded_height);
+    min_width = std::min(min_width, format.coded_width);
+    min_height = std::min(min_height, format.coded_height);
   }
   constraints.image_format_constraints_count = 1;
   constraints.image_format_constraints[0] = {
@@ -97,9 +106,21 @@ fuchsia::sysmem::BufferCollectionConstraints StreamConstraints::MakeBufferCollec
           {
               {{fuchsia::sysmem::ColorSpaceType::REC601_PAL}},
           },
+      .min_coded_width = min_width,
+      .max_coded_width = max_width,
+      .min_coded_height = min_height,
+      .max_coded_height = max_height,
+      .min_bytes_per_row = min_width,
+      .max_coded_width_times_coded_height = max_width * max_height,
+      .coded_width_divisor = bytes_per_row_divisor_,
+      .coded_height_divisor = kCodedHeightDivisor,
       .bytes_per_row_divisor = bytes_per_row_divisor_,
+      .start_offset_divisor = kStartOffsetDivisor,
+      .required_min_coded_width = max_width,
       .required_max_coded_width = max_width,
+      .required_min_coded_height = max_height,
       .required_max_coded_height = max_height,
+      .required_min_bytes_per_row = max_width,
   };
   return constraints;
 }

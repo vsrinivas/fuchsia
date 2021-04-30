@@ -19,6 +19,7 @@
 #include <fbl/macros.h>
 
 #include "src/camera/drivers/controller/configs/internal_config.h"
+#include "src/camera/drivers/controller/memory_allocation.h"
 
 namespace camera {
 
@@ -31,7 +32,7 @@ class ProcessNode {
   ProcessNode(NodeType type, ProcessNode* parent_node,
               fuchsia::camera2::CameraStreamType current_stream_type,
               const std::vector<fuchsia::sysmem::ImageFormat_2>& output_image_formats,
-              fuchsia::sysmem::BufferCollectionInfo_2 output_buffer_collection,
+              BufferCollection output_buffer_collection,
               const std::vector<StreamInfo>& supported_streams, async_dispatcher_t* dispatcher,
               fuchsia::camera2::FrameRate frame_rate, uint32_t current_image_format_index)
       : dispatcher_(dispatcher),
@@ -42,7 +43,7 @@ class ProcessNode {
         output_image_formats_(output_image_formats),
         enabled_(false),
         supported_streams_(supported_streams),
-        in_use_buffer_count_(output_buffer_collection.buffer_count, 0),
+        in_use_buffer_count_(output_buffer_collection_.buffers.buffer_count, 0),
         current_image_format_index_(current_image_format_index) {
     configured_streams_.push_back(current_stream_type);
   }
@@ -96,8 +97,12 @@ class ProcessNode {
     return output_image_formats_;
   }
 
-  fuchsia::sysmem::BufferCollectionInfo_2& output_buffer_collection() {
-    return output_buffer_collection_;
+  fuchsia::sysmem::BufferCollectionInfo_2& output_buffer_collection_info() {
+    return output_buffer_collection_.buffers;
+  }
+
+  fuchsia::sysmem::BufferCollectionPtr& output_buffer_collection() {
+    return output_buffer_collection_.ptr;
   }
 
   uint32_t current_image_format_index() const { return current_image_format_index_; }
@@ -200,8 +205,8 @@ class ProcessNode {
   std::vector<std::unique_ptr<ProcessNode>> child_nodes_;
   // Parent node.
   ProcessNode* const parent_node_;
-  fuchsia::sysmem::BufferCollectionInfo_2 output_buffer_collection_;
-  // Ouput Image formats.
+  BufferCollection output_buffer_collection_;
+  // Output Image formats.
   // These are needed when we initialize HW accelerators.
   std::vector<fuchsia::sysmem::ImageFormat_2> output_image_formats_;
   bool enabled_;

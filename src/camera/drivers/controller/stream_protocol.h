@@ -37,6 +37,7 @@ class StreamImpl : public fuchsia::camera2::Stream {
                            SetRegionOfInterestCallback callback) override;
   void SetImageFormat(uint32_t image_format_index, SetImageFormatCallback callback) override;
   void GetImageFormats(GetImageFormatsCallback callback) override;
+  void GetBuffers(GetBuffersCallback callback) override;
 
  private:
   // Closes the Stream connection, sending the given |status| to the client, and cleans up

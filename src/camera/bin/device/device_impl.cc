@@ -20,6 +20,8 @@
 namespace camera {
 namespace {
 
+constexpr uint32_t kNumControllerCampingBuffers = 5;
+
 using ConfigPtr = std::unique_ptr<fuchsia::camera2::hal::Config>;
 
 fit::promise<fuchsia::camera2::DeviceInfo> FetchDeviceInfo(
@@ -208,8 +210,6 @@ void DeviceImpl::SetConfiguration(uint32_t index) {
 
   streams_.clear();
   streams_.resize(configurations_[index].streams().size());
-  stream_to_pending_legacy_stream_request_params_.clear();
-  stream_request_sent_to_controller_.clear();
   FX_LOGS(DEBUG) << "Configuration set to " << index << ".";
   for (auto& client : clients_) {
     client.second->ConfigurationUpdated(current_configuration_index_);
@@ -254,53 +254,57 @@ void DeviceImpl::ConnectToStream(uint32_t index,
     return;
   }
 
-  // Once the necessary token is received, post a task to send the request to the controller.
-  auto on_stream_requested =
-      [this, index](fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
-                    fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
-                    fit::function<void(uint32_t)> max_camping_buffers_callback,
-                    uint32_t format_index) {
-        FX_LOGS(DEBUG) << "New request for legacy stream.";
-        OnStreamRequested(index, std::move(token), std::move(request),
-                          std::move(max_camping_buffers_callback), format_index);
-      };
-
-  // When the last client disconnects, post a task to the device thread to destroy the stream.
-  auto on_no_clients = [this, index]() {
-    stream_request_sent_to_controller_[index] = false;
-    streams_[index] = nullptr;
+  auto on_stream_requested = [this, index](fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
+                                           uint32_t format_index) {
+    FX_LOGS(DEBUG) << "New request for legacy stream.";
+    OnStreamRequested(index, std::move(request), format_index);
   };
+
+  auto on_buffers_requested = [this, index](
+                                  fuchsia::sysmem::BufferCollectionTokenHandle token,
+                                  fit::function<void(uint32_t)> max_camping_buffers_callback) {
+    OnBuffersRequested(index, std::move(token), std::move(max_camping_buffers_callback));
+  };
+
+  // When the last client disconnects destroy the stream.
+  auto on_no_clients = [this, index]() { streams_[index] = nullptr; };
 
   streams_[index] = std::make_unique<StreamImpl>(
       dispatcher_, configuration_metrics_[current_configuration_index_]->stream(index),
       configurations_[current_configuration_index_].streams()[index],
       configs_[current_configuration_index_].stream_configs[index], std::move(request),
-      std::move(on_stream_requested), std::move(on_no_clients));
+      std::move(on_stream_requested), std::move(on_buffers_requested), std::move(on_no_clients));
 }
 
-void DeviceImpl::OnStreamRequested(
-    uint32_t index, fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
-    fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
-    fit::function<void(uint32_t)> max_camping_buffers_callback, uint32_t format_index) {
+void DeviceImpl::OnStreamRequested(uint32_t index,
+                                   fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
+                                   uint32_t format_index) {
+  auto connect_to_stream =
+      [this, index, format_index, request = std::move(request)](
+          const fit::result<std::vector<fit::result<void, zx_status_t>>>& results) mutable {
+        controller_->CreateStream(current_configuration_index_, index, format_index,
+                                  std::move(request));
+      };
+
+  // Wait for any previous configurations buffers to finish deallocation, then connect
+  // to stream.
+  executor_.schedule_task(fit::join_promise_vector(std::move(deallocation_promises_))
+                              .then(std::move(connect_to_stream))
+                              .wrap_with(streams_[index]->Scope()));
+}
+
+void DeviceImpl::OnBuffersRequested(uint32_t index,
+                                    fuchsia::sysmem::BufferCollectionTokenHandle token,
+                                    fit::function<void(uint32_t)> max_camping_buffers_callback) {
   // Assign friendly names to each buffer for debugging and profiling.
   std::ostringstream oss;
   oss << "camera_c" << current_configuration_index_ << "_s" << index;
 
-  auto allocate_buffers =
-      [this, token = std::move(token), name = oss.str(),
-       index](const fit::result<std::vector<fit::result<void, zx_status_t>>>& results) mutable
-      -> fit::promise<BufferCollectionWithLifetime, zx_status_t> {
-    return sysmem_allocator_.BindSharedCollection(
-        std::move(token), configs_[current_configuration_index_].stream_configs[index].constraints,
-        name);
-  };
-
-  auto connect_to_stream =
-      [this, index, format_index, request = std::move(request),
-       max_camping_buffers_callback = std::move(max_camping_buffers_callback)](
+  auto allocation_complete =
+      [this, max_camping_buffers_callback = std::move(max_camping_buffers_callback)](
           fit::result<BufferCollectionWithLifetime, zx_status_t>& result) mutable {
         if (result.is_error()) {
-          request.Close(result.error());
+          FX_LOGS(WARNING) << "Failed to allocate buffers";
           return;
         }
 
@@ -309,67 +313,17 @@ void DeviceImpl::OnStreamRequested(
         deallocation_events_.push_back(std::move(buffer_collection_lifetime.deallocation_complete));
 
         // Inform the stream of the maxmimum number of buffers it may hand out.
-        uint32_t max_camping_buffers =
-            buffers.buffer_count - configs_[current_configuration_index_]
-                                       .stream_configs[index]
-                                       .constraints.min_buffer_count_for_camping;
+        uint32_t max_camping_buffers = buffers.buffer_count - kNumControllerCampingBuffers;
         max_camping_buffers_callback(max_camping_buffers);
-
-        // Get the legacy stream using the negotiated buffers.
-        stream_to_pending_legacy_stream_request_params_.insert_or_assign(
-            index,
-            ControllerCreateStreamParams{format_index, std::move(buffers), std::move(request)});
-        MaybeConnectToLegacyStreams();
       };
 
-  // Wait for any previous configurations buffers to finish deallocation, then allocate and connect
-  // to stream.
-  executor_.schedule_task(fit::join_promise_vector(std::move(deallocation_promises_))
-                              .then(std::move(allocate_buffers))
-                              .then(std::move(connect_to_stream))
-                              .wrap_with(streams_[index]->Scope()));
-}
-
-// HUGE CAVEAT: Please see b/181345355 comment #24 for details.
-constexpr uint32_t kMaxLegacyStreamRequestRequeueCount = 64;
-constexpr zx::duration kLegacyStreamRequestDelay = zx::msec(1500);
-
-// TODO(fxbug.dev/42241): Remove workaround once ordering constraint is removed.
-void DeviceImpl::MaybeConnectToLegacyStreams() {
-  if (stream_to_pending_legacy_stream_request_params_.empty()) {
-    return;
-  }
-
-  bool preceding_streams_bound = true;
-  for (uint32_t i = 0; i < streams_.size(); ++i) {
-    auto it = stream_to_pending_legacy_stream_request_params_.find(i);
-    if (it != stream_to_pending_legacy_stream_request_params_.end()) {
-      auto& [index, params] = *it;
-      if (preceding_streams_bound ||
-          params.requeue_count++ == kMaxLegacyStreamRequestRequeueCount) {
-        // Definitely need an error log message if timed out because this affects the normal
-        // Sherlock use cases!
-        if (!preceding_streams_bound) {
-          FX_LOGS(ERROR) << "Legacy stream re-order wait timed out for stream_index=" << i;
-          FX_LOGS(ERROR) << "Controller behavior could be problematic from here on!";
-        }
-
-        // If all preceding streams are bound, or the threshold requeue count has been reached,
-        // immediately send the creation request and delete the pending map element.
-        controller_->CreateStream(current_configuration_index_, index, params.format_index,
-                                  std::move(params.buffers), std::move(params.request));
-        stream_request_sent_to_controller_[index] = true;
-        stream_to_pending_legacy_stream_request_params_.erase(it);
-      }
-    }
-    if (!stream_request_sent_to_controller_[i]) {
-      preceding_streams_bound = false;
-    }
-  }
-
-  // If any pending requests still exist, retry after a delay.
-  async::PostDelayedTask(
-      dispatcher_, [this] { MaybeConnectToLegacyStreams(); }, kLegacyStreamRequestDelay);
+  executor_.schedule_task(
+      sysmem_allocator_
+          .BindSharedCollection(
+              std::move(token),
+              configs_[current_configuration_index_].stream_configs[index].constraints, oss.str())
+          .then(std::move(allocation_complete))
+          .wrap_with(streams_[index]->Scope()));
 }
 
 void DeviceImpl::OnMediaButtonsEvent(fuchsia::ui::input::MediaButtonsEvent event) {

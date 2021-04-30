@@ -63,7 +63,7 @@ fit::result<ProcessNode*, zx_status_t> GdcNode::CreateGdcNode(
     const ControllerMemoryAllocator& memory_allocator, async_dispatcher_t* dispatcher,
     zx_device_t* device, const ddk::GdcProtocolClient& gdc, StreamCreationData* info,
     ProcessNode* parent_node, const InternalConfigNode& internal_gdc_node) {
-  auto& input_buffers_hlcpp = parent_node->output_buffer_collection();
+  auto& input_buffers_hlcpp = parent_node->output_buffer_collection_info();
   auto result = GetBuffers(memory_allocator, internal_gdc_node, info, kTag);
   if (result.is_error()) {
     FX_LOGST(ERROR, kTag) << "Failed to get buffers";
@@ -72,7 +72,7 @@ fit::result<ProcessNode*, zx_status_t> GdcNode::CreateGdcNode(
 
   auto output_buffers_hlcpp = std::move(result.value());
 
-  BufferCollectionHelper output_buffer_collection_helper(output_buffers_hlcpp);
+  BufferCollectionHelper output_buffer_collection_helper(output_buffers_hlcpp.buffers);
   BufferCollectionHelper input_buffer_collection_helper(input_buffers_hlcpp);
 
   // Convert the formats to C type
@@ -91,6 +91,17 @@ fit::result<ProcessNode*, zx_status_t> GdcNode::CreateGdcNode(
   auto input_image_formats_c = GetImageFormatFromBufferCollection(
       *input_buffer_collection_helper.GetC(), parent_node->output_image_formats()[0].coded_width,
       parent_node->output_image_formats()[0].coded_height);
+
+  // Image format index refers to the final output format list of the pipeline. If this GDC node
+  // only has one output format, then the image format index must not be meant for this node. If
+  // this assumption is false the GdcTask will fail to init. Without this filter then streams which
+  // have a multiple output resolution node, but only a single output resolution GDC node will fail
+  // to init.
+  //
+  // Note: this is highly specific to sherlock use case. It would be good to revisit how nodes
+  // receive their output format index when this assumption doesn't hold on another platform.
+  uint32_t output_format_index =
+      internal_gdc_node.image_formats.size() > 1 ? info->image_format_index : 0;
 
   // Get the GDC configurations loaded
   auto product_config = ProductConfig::Create();
@@ -113,7 +124,7 @@ fit::result<ProcessNode*, zx_status_t> GdcNode::CreateGdcNode(
   // Create GDC Node
   auto gdc_node = std::make_unique<camera::GdcNode>(dispatcher, gdc, parent_node, internal_gdc_node,
                                                     std::move(output_buffers_hlcpp),
-                                                    info->stream_type(), info->image_format_index);
+                                                    info->stream_type(), output_format_index);
   if (!gdc_node) {
     FX_LOGST(ERROR, kTag) << "Failed to create GDC node";
     return fit::error(ZX_ERR_NO_MEMORY);
@@ -128,11 +139,11 @@ fit::result<ProcessNode*, zx_status_t> GdcNode::CreateGdcNode(
   sysmem::buffer_collection_info_2_banjo_from_fidl(*output_buffer_collection_helper.GetC(),
                                                    temp_output_collection);
   sysmem::image_format_2_banjo_from_fidl(input_image_formats_c, temp_image_format);
-  auto status = gdc.InitTask(
-      &temp_input_collection, &temp_output_collection, &temp_image_format,
-      output_image_formats_c.data(), output_image_formats_c.size(), info->image_format_index,
-      config_vmos_info.data(), config_vmos_info.size(), gdc_node->frame_callback(),
-      gdc_node->res_callback(), gdc_node->remove_task_callback(), &gdc_task_index);
+  auto status = gdc.InitTask(&temp_input_collection, &temp_output_collection, &temp_image_format,
+                             output_image_formats_c.data(), output_image_formats_c.size(),
+                             output_format_index, config_vmos_info.data(), config_vmos_info.size(),
+                             gdc_node->frame_callback(), gdc_node->res_callback(),
+                             gdc_node->remove_task_callback(), &gdc_task_index);
   if (status != ZX_OK) {
     FX_PLOGST(ERROR, kTag, status) << "Failed to initialize GDC";
     return fit::error(status);

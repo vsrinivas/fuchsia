@@ -21,8 +21,7 @@ namespace camera {
 
 class InputNode : public ProcessNode {
  public:
-  InputNode(StreamCreationData* info,
-            fuchsia::sysmem::BufferCollectionInfo_2 output_buffer_collection,
+  InputNode(StreamCreationData* info, BufferCollection output_buffer_collection,
             async_dispatcher_t* dispatcher, const ddk::IspProtocolClient& isp)
       : ProcessNode(NodeType::kInputStream, nullptr, info->stream_type(), info->node.image_formats,
                     std::move(output_buffer_collection), info->node.supported_streams, dispatcher,
@@ -91,7 +90,7 @@ class InputNode : public ProcessNode {
   }
 
   // ISP stream type.
-  __UNUSED fuchsia::camera2::CameraStreamType isp_stream_type_;
+  fuchsia::camera2::CameraStreamType isp_stream_type_;
   // ISP Frame callback.
   hw_accel_frame_callback_t isp_frame_callback_;
   // ISP stream protocol.

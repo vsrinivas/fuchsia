@@ -31,7 +31,7 @@ class Ge2dNode : public ProcessNode {
  public:
   Ge2dNode(async_dispatcher_t* dispatcher, const ddk::Ge2dProtocolClient& ge2d,
            ProcessNode* parent_node, const camera::InternalConfigNode& internal_ge2d_node,
-           fuchsia::sysmem::BufferCollectionInfo_2 output_buffer_collection,
+           BufferCollection output_buffer_collection,
            fuchsia::camera2::CameraStreamType current_stream_type,
            uint32_t current_image_format_index, bool in_place_processing)
       : ProcessNode(NodeType::kGe2d, parent_node, current_stream_type,

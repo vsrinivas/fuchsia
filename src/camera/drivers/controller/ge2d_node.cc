@@ -51,16 +51,23 @@ fit::result<ProcessNode*, zx_status_t> Ge2dNode::CreateGe2dNode(
     zx_device_t* device, const ddk::Ge2dProtocolClient& ge2d, StreamCreationData* info,
     ProcessNode* parent_node, const InternalConfigNode& internal_ge2d_node) {
   zx_status_t status = ZX_OK;
-  auto& input_buffers_hlcpp = parent_node->output_buffer_collection();
-  auto result = GetBuffers(memory_allocator, internal_ge2d_node, info, kTag);
-  if (result.is_error()) {
-    FX_LOGST(ERROR, kTag) << "Failed to get buffers";
-    return fit::error(result.error());
+  BufferCollection output_buffers;
+
+  auto& input_buffers_hlcpp = parent_node->output_buffer_collection_info();
+
+  if (internal_ge2d_node.in_place) {
+    output_buffers.buffers = fidl::Clone(input_buffers_hlcpp);
+    // ptr to collection remains invalid. Should reference via parent in case of in_place.
+  } else {
+    auto result = GetBuffers(memory_allocator, internal_ge2d_node, info, kTag);
+    if (result.is_error()) {
+      FX_LOGST(ERROR, kTag) << "Failed to get buffers";
+      return fit::error(result.error());
+    }
+    output_buffers = std::move(result.value());
   }
 
-  auto output_buffers_hlcpp = std::move(result.value());
-
-  BufferCollectionHelper output_buffer_collection_helper(output_buffers_hlcpp);
+  BufferCollectionHelper output_buffer_collection_helper(output_buffers.buffers);
   BufferCollectionHelper input_buffer_collection_helper(input_buffers_hlcpp);
 
   std::vector<image_format_2_t> output_image_formats_c;
@@ -82,7 +89,7 @@ fit::result<ProcessNode*, zx_status_t> Ge2dNode::CreateGe2dNode(
   }
 
   auto ge2d_node = std::make_unique<camera::Ge2dNode>(
-      dispatcher, ge2d, parent_node, internal_ge2d_node, std::move(output_buffers_hlcpp),
+      dispatcher, ge2d, parent_node, internal_ge2d_node, std::move(output_buffers),
       info->stream_type(), info->image_format_index, internal_ge2d_node.in_place);
   if (!ge2d_node) {
     FX_LOGST(ERROR, kTag) << "Failed to create GE2D node";

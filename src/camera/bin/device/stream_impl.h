@@ -29,16 +29,19 @@ namespace camera {
 // camera3.Stream protocol.
 class StreamImpl {
  public:
-  // Called by the stream on its thread when it needs to connect to its associated legacy stream.
-  using StreamRequestedCallback = fit::function<void(
-      fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>,
-      fidl::InterfaceRequest<fuchsia::camera2::Stream>, fit::function<void(uint32_t)>, uint32_t)>;
+  // Called by the stream when it needs to connect to its associated legacy stream.
+  using StreamRequestedCallback =
+      fit::function<void(fidl::InterfaceRequest<fuchsia::camera2::Stream>, uint32_t)>;
+  // Called by the stream when it has received a buffer token from the legacy stream.
+  using BuffersRequestedCallback = fit::function<void(fuchsia::sysmem::BufferCollectionTokenHandle,
+                                                      fit::function<void(uint32_t)>)>;
 
   StreamImpl(async_dispatcher_t* dispatcher, MetricsReporter::Stream& metrics,
              const fuchsia::camera3::StreamProperties2& properties,
              const fuchsia::camera2::hal::StreamConfig& legacy_config,
              fidl::InterfaceRequest<fuchsia::camera3::Stream> request,
-             StreamRequestedCallback on_stream_requested, fit::closure on_no_clients);
+             StreamRequestedCallback on_stream_requested,
+             BuffersRequestedCallback on_buffers_requested, fit::closure on_no_clients);
   ~StreamImpl();
 
   // Close all client connections with given status as epitaph.
@@ -105,11 +108,6 @@ class StreamImpl {
     // Clears the client's queue of unsent frames.
     void ClearFrames();
 
-    // Store token during Sync/Duplicate phase to handle token disconnects.
-    void SetInitialToken(fuchsia::sysmem::BufferCollectionTokenHandle token);
-    const fuchsia::sysmem::BufferCollectionTokenPtr& InitialToken();
-    fuchsia::sysmem::BufferCollectionTokenHandle TakeInitialToken();
-
    private:
     // Called when the client endpoint of |binding_| is closed.
     void OnClientDisconnected(zx_status_t status);
@@ -140,7 +138,6 @@ class StreamImpl {
     GetNextFrame2Callback frame_callback_;
     bool participant_ = false;
     std::queue<fuchsia::camera3::FrameInfo2> frames_;
-    fuchsia::sysmem::BufferCollectionTokenPtr initial_token_;
   };
 
   async_dispatcher_t* dispatcher_;
@@ -152,6 +149,7 @@ class StreamImpl {
   std::map<uint64_t, std::unique_ptr<Client>> clients_;
   uint64_t client_id_next_ = 1;
   StreamRequestedCallback on_stream_requested_;
+  BuffersRequestedCallback on_buffers_requested_;
   fit::closure on_no_clients_;
   uint32_t max_camping_buffers_ = 0;
   uint64_t frame_counter_ = 0;

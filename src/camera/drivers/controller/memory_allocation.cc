@@ -24,13 +24,14 @@ ControllerMemoryAllocator::ControllerMemoryAllocator(
 
 zx_status_t ControllerMemoryAllocator::AllocateSharedMemory(
     const std::vector<fuchsia::sysmem::BufferCollectionConstraints>& constraints,
-    fuchsia::sysmem::BufferCollectionInfo_2* out_buffer_collection_info, std::string name) const {
+    BufferCollection& out_buffer_collection, std::string name) const {
   TRACE_DURATION("camera", "ControllerMemoryAllocator::AllocateSharedMemory");
-  if (out_buffer_collection_info == nullptr) {
-    return ZX_ERR_INVALID_ARGS;
-  }
 
   auto num_constraints = constraints.size();
+
+  if (!num_constraints) {
+    return ZX_ERR_INVALID_ARGS;
+  }
 
   // Create tokens which we'll hold on to to get our buffer_collection.
   std::vector<fuchsia::sysmem::BufferCollectionTokenSyncPtr> tokens(num_constraints);
@@ -82,6 +83,10 @@ zx_status_t ControllerMemoryAllocator::AllocateSharedMemory(
 
   // Set constraints
   for (uint32_t i = 0; i < num_constraints; i++) {
+    FX_LOGF(DEBUG, kTag, "Allocate %s with constraints %dx%d camp %d min %d", name.c_str(),
+            constraints[i].image_format_constraints[0].required_max_coded_width,
+            constraints[i].image_format_constraints[0].required_max_coded_height,
+            constraints[i].min_buffer_count_for_camping, constraints[i].min_buffer_count);
     status = buffer_collections[i]->SetConstraints(true, constraints[i]);
     if (status != ZX_OK) {
       FX_LOG(ERROR, kTag, "Failed to set buffer collection constraints");
@@ -91,13 +96,20 @@ zx_status_t ControllerMemoryAllocator::AllocateSharedMemory(
 
   zx_status_t allocation_status;
   status = buffer_collections[0]->WaitForBuffersAllocated(&allocation_status,
-                                                          out_buffer_collection_info);
-  if (status != ZX_OK || allocation_status != ZX_OK) {
+                                                          &out_buffer_collection.buffers);
+  if (status != ZX_OK) {
     FX_LOG(ERROR, kTag, "Failed to wait for buffer collection info.");
     return status;
   }
+  if (allocation_status != ZX_OK) {
+    FX_LOG(ERROR, kTag, "Failed to allocate buffer collection.");
+    return allocation_status;
+  }
 
-  for (uint32_t i = 0; i < num_constraints; i++) {
+  // Leave first collection handle open to return
+  out_buffer_collection.ptr = buffer_collections[0].Unbind().Bind();
+
+  for (uint32_t i = 1; i < num_constraints; i++) {
     status = buffer_collections[i]->Close();
     if (status != ZX_OK) {
       FX_LOG(ERROR, kTag, "Failed to close producer buffer collection");
@@ -105,8 +117,6 @@ zx_status_t ControllerMemoryAllocator::AllocateSharedMemory(
     }
   }
 
-  // TODO(fxbug.dev/38569): Keep at least one buffer collection around to know about
-  // any failures sysmem wants to notify by closing the channel.
   return ZX_OK;
 }
 
