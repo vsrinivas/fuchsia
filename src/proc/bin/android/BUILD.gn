@@ -67,14 +67,41 @@ fuchsia_component("sh_test") {
   manifest = "meta/sh_test.cml"
 }
 
+system_image_gen_dir = get_label_info(":android_system_image", "target_gen_dir")
+system_image_base = "$system_image_gen_dir/android_system_image__untar"
+
+resource("system_bin") {
+  sources = [ "$system_image_base/system/bin/bootstrap/linker64" ]
+  outputs = [ "root/system/bin/{{source_file_part}}" ]
+  deps = [ ":android_system_image" ]
+}
+
+resource("syscalls_test_bin") {
+  sources = [ "//prebuilt/starnix/tests/syscalls/linux-amd64/syscalls" ]
+  outputs = [ "root/system/bin/syscalls_test" ]
+}
+
+fuchsia_component("syscalls_test") {
+  check_references = false
+  manifest = "meta/syscalls_test.cml"
+  deps = [
+    ":syscalls_test_bin",
+    ":system_bin",
+  ]
+}
+
 fuchsia_test_package("test_android_distro") {
   deps = [
     ":android_system_image",
     ":init",
     ":sh",
+    ":syscalls_test",
   ]
 
-  test_components = [ ":sh_test" ]
+  test_components = [
+    ":sh_test",
+    ":syscalls_test",
+  ]
 
   # This package intentionally contains many non-Fuchia ELF binaries that
   # are not under /data/, and some of them are even unstripped, so disable
