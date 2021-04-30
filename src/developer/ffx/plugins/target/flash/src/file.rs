@@ -75,7 +75,9 @@ impl ArchiveResolver {
         for i in 0..archive.len() {
             let mut archive_file = archive.by_index(i)?;
             let outpath = archive_file.sanitized_name();
-            if (&*archive_file.name()).ends_with("flash.json") {
+            if (&*archive_file.name()).ends_with("flash.json")
+                || (&*archive_file.name()).ends_with("flash-manifest.manifest")
+            {
                 let mut internal_path = PathBuf::new();
                 internal_path.push(outpath.clone());
                 internal_manifest_path.replace(internal_path.clone());

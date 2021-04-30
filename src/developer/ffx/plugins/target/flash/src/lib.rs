@@ -21,7 +21,6 @@ mod file;
 mod manifest;
 
 const SSH_OEM_COMMAND: &str = "add-staged-bootloader-file ssh.authorized_keys";
-const EXT_ERR: &str = "Expecting manifest file to have an extension of `.json` or `.zip`";
 
 #[ffx_plugin()]
 pub async fn flash(
@@ -64,16 +63,14 @@ pub async fn flash(
     let mut writer = Box::new(stdout());
     match path.extension() {
         Some(ext) => {
-            if ext == "json" {
-                flash_impl(&mut writer, Resolver::new(path)?, fastboot_proxy, cmd).await
-            } else if ext == "zip" {
+            if ext == "zip" {
                 let r = ArchiveResolver::new(&mut writer, path)?;
                 flash_impl(&mut writer, r, fastboot_proxy, cmd).await
             } else {
-                ffx_bail!("{}", EXT_ERR)
+                flash_impl(&mut writer, Resolver::new(path)?, fastboot_proxy, cmd).await
             }
         }
-        _ => ffx_bail!("{}", EXT_ERR),
+        _ => flash_impl(&mut writer, Resolver::new(path)?, fastboot_proxy, cmd).await,
     }
 }
 
