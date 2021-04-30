@@ -327,7 +327,7 @@ void JSONGenerator::Generate(const flat::Protocol::MethodWithInfo& method_with_i
   });
 }
 
-void JSONGenerator::GenerateTypeAndFromTypeAlias(const flat::TypeConstructor& value,
+void JSONGenerator::GenerateTypeAndFromTypeAlias(const flat::TypeConstructorOld& value,
                                                  Position position) {
   GenerateTypeAndFromTypeAlias(TypeKind::kConcrete, value, position);
 }
@@ -340,7 +340,7 @@ bool ShouldExposeTypeAliasOfParametrizedType(const flat::Type& type) {
 }
 
 void JSONGenerator::GenerateTypeAndFromTypeAlias(TypeKind parent_type_kind,
-                                                 const flat::TypeConstructor& value,
+                                                 const flat::TypeConstructorOld& value,
                                                  Position position) {
   if (fidl::ShouldExposeTypeAliasOfParametrizedType(*value.type)) {
     if (value.from_type_alias) {
@@ -360,13 +360,13 @@ void JSONGenerator::GenerateTypeAndFromTypeAlias(TypeKind parent_type_kind,
   GenerateExperimentalMaybeFromTypeAlias(value);
 }
 
-void JSONGenerator::GenerateExperimentalMaybeFromTypeAlias(const flat::TypeConstructor& value) {
+void JSONGenerator::GenerateExperimentalMaybeFromTypeAlias(const flat::TypeConstructorOld& value) {
   if (value.from_type_alias)
     GenerateObjectMember("experimental_maybe_from_type_alias", value.from_type_alias.value());
 }
 
 void JSONGenerator::GenerateParameterizedType(TypeKind parent_type_kind, const flat::Type* type,
-                                              const flat::TypeConstructor& type_ctor,
+                                              const flat::TypeConstructorOld& type_ctor,
                                               Position position) {
   std::string key = parent_type_kind == TypeKind::kConcrete ? "type" : "element_type";
 
@@ -596,7 +596,7 @@ void JSONGenerator::Generate(const flat::Union::Member& value) {
   });
 }
 
-void JSONGenerator::Generate(const flat::TypeConstructor::FromTypeAlias& value) {
+void JSONGenerator::Generate(const flat::TypeConstructorOld::FromTypeAlias& value) {
   GenerateObject([&]() {
     GenerateObjectMember("name", value.decl->name, Position::kFirst);
     GenerateObjectPunctuation(Position::kSubsequent);
@@ -622,7 +622,7 @@ void JSONGenerator::Generate(const flat::TypeConstructor::FromTypeAlias& value) 
   });
 }
 
-void JSONGenerator::Generate(const flat::TypeConstructor& value) {
+void JSONGenerator::Generate(const flat::TypeConstructorOld& value) {
   GenerateObject([&]() {
     GenerateObjectMember("name", value.type ? value.type->name : value.name, Position::kFirst);
     GenerateObjectPunctuation(Position::kSubsequent);

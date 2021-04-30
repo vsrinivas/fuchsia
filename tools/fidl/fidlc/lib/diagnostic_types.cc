@@ -52,7 +52,7 @@ std::string Display(const std::vector<std::string_view>& library_name) {
 
 std::string Display(const flat::Constant* c) { return NameFlatConstant(c); }
 
-std::string Display(const flat::TypeConstructor* tc) { return NameFlatTypeConstructor(tc); }
+std::string Display(const flat::TypeConstructorOld* tc) { return NameFlatTypeConstructorOld(tc); }
 
 std::string Display(const flat::Type* t) { return NameFlatType(t); }
 

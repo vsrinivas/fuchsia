@@ -25,7 +25,7 @@ namespace flat {
 struct Constant;
 struct IdentifierConstant;
 struct LiteralConstant;
-struct TypeConstructor;
+struct TypeConstructorOld;
 struct Type;
 class TypeTemplate;
 class Name;
@@ -45,7 +45,7 @@ std::string Display(const raw::Attribute& a);
 std::string Display(const raw::AttributeList& a);
 std::string Display(const std::vector<std::string_view>& library_name);
 std::string Display(const flat::Constant* c);
-std::string Display(const flat::TypeConstructor* tc);
+std::string Display(const flat::TypeConstructorOld* tc);
 std::string Display(const flat::Type* t);
 std::string Display(const flat::TypeTemplate* t);
 std::string Display(const flat::Name& n);

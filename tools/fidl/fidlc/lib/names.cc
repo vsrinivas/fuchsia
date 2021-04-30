@@ -193,12 +193,12 @@ std::string NameRawLiteralKind(raw::Literal::Kind kind) {
 
 std::string NameFlatName(const flat::Name& name) { return FormatName(name, ".", "/"); }
 
-void NameFlatTypeConstructorHelper(std::ostringstream& buf,
-                                   const flat::TypeConstructor* type_ctor) {
+void NameFlatTypeConstructorHelperOld(std::ostringstream& buf,
+                                      const flat::TypeConstructorOld* type_ctor) {
   buf << NameFlatName(type_ctor->name);
   if (type_ctor->maybe_arg_type_ctor) {
     buf << "<";
-    NameFlatTypeConstructorHelper(buf, type_ctor->maybe_arg_type_ctor.get());
+    NameFlatTypeConstructorHelperOld(buf, type_ctor->maybe_arg_type_ctor.get());
     buf << ">";
   }
   if (type_ctor->maybe_size) {
@@ -213,9 +213,9 @@ void NameFlatTypeConstructorHelper(std::ostringstream& buf,
   }
 }
 
-std::string NameFlatTypeConstructor(const flat::TypeConstructor* type_ctor) {
+std::string NameFlatTypeConstructorOld(const flat::TypeConstructorOld* type_ctor) {
   std::ostringstream buf;
-  NameFlatTypeConstructorHelper(buf, type_ctor);
+  NameFlatTypeConstructorHelperOld(buf, type_ctor);
   return buf.str();
 }
 

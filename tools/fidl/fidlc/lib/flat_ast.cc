@@ -305,12 +305,12 @@ std::vector<std::reference_wrapper<const Union::Member>> Union::MembersSortedByX
 }
 
 bool Typespace::Create(const LibraryMediator& lib, const flat::Name& name,
-                       const std::unique_ptr<TypeConstructor>& maybe_arg_type_ctor,
+                       const std::unique_ptr<TypeConstructorOld>& maybe_arg_type_ctor,
                        const std::optional<Name>& handle_subtype_identifier,
                        const std::unique_ptr<Constant>& handle_rights,
                        const std::unique_ptr<Constant>& maybe_size, types::Nullability nullability,
                        const Type** out_type,
-                       std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) {
+                       std::optional<TypeConstructorOld::FromTypeAlias>* out_from_type_alias) {
   std::unique_ptr<Type> type;
   if (!CreateNotOwned(lib, name, maybe_arg_type_ctor, handle_subtype_identifier, handle_rights,
                       maybe_size, nullability, &type, out_from_type_alias))
@@ -320,13 +320,13 @@ bool Typespace::Create(const LibraryMediator& lib, const flat::Name& name,
   return true;
 }
 
-bool Typespace::CreateNotOwned(const LibraryMediator& lib, const flat::Name& name,
-                               const std::unique_ptr<TypeConstructor>& maybe_arg_type_ctor,
-                               const std::optional<Name>& handle_subtype_identifier,
-                               const std::unique_ptr<Constant>& handle_rights,
-                               const std::unique_ptr<Constant>& maybe_size,
-                               types::Nullability nullability, std::unique_ptr<Type>* out_type,
-                               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) {
+bool Typespace::CreateNotOwned(
+    const LibraryMediator& lib, const flat::Name& name,
+    const std::unique_ptr<TypeConstructorOld>& maybe_arg_type_ctor,
+    const std::optional<Name>& handle_subtype_identifier,
+    const std::unique_ptr<Constant>& handle_rights, const std::unique_ptr<Constant>& maybe_size,
+    types::Nullability nullability, std::unique_ptr<Type>* out_type,
+    std::optional<TypeConstructorOld::FromTypeAlias>* out_from_type_alias) {
   // TODO(pascallouis): lookup whether we've already created the type, and
   // return it rather than create a new one. Lookup must be by name,
   // arg_type, size, and nullability.
@@ -454,7 +454,7 @@ class PrimitiveTypeTemplate : public TypeTemplate {
 
   bool Create(const LibraryMediator& lib, const ArgsAndConstraintsOld& unresolved_args,
               std::unique_ptr<Type>* out_type,
-              std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
+              std::optional<TypeConstructorOld::FromTypeAlias>* out_from_type_alias) const {
     std::unique_ptr<CreateInvocation> args;
     if (!ResolveArgs(lib, unresolved_args, &args))
       return false;
@@ -485,7 +485,7 @@ class BytesTypeTemplate final : public TypeTemplate {
 
   bool Create(const LibraryMediator& lib, const ArgsAndConstraintsOld& unresolved_args,
               std::unique_ptr<Type>* out_type,
-              std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
+              std::optional<TypeConstructorOld::FromTypeAlias>* out_from_type_alias) const {
     std::unique_ptr<CreateInvocation> args;
     if (!ResolveArgs(lib, unresolved_args, &args))
       return false;
@@ -521,7 +521,7 @@ class ArrayTypeTemplate final : public TypeTemplate {
 
   bool Create(const LibraryMediator& lib, const ArgsAndConstraintsOld& unresolved_args,
               std::unique_ptr<Type>* out_type,
-              std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
+              std::optional<TypeConstructorOld::FromTypeAlias>* out_from_type_alias) const {
     std::unique_ptr<CreateInvocation> args;
     if (!ResolveArgs(lib, unresolved_args, &args))
       return false;
@@ -550,7 +550,7 @@ class VectorTypeTemplate final : public TypeTemplate {
 
   bool Create(const LibraryMediator& lib, const ArgsAndConstraintsOld& unresolved_args,
               std::unique_ptr<Type>* out_type,
-              std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
+              std::optional<TypeConstructorOld::FromTypeAlias>* out_from_type_alias) const {
     std::unique_ptr<CreateInvocation> args;
     if (!ResolveArgs(lib, unresolved_args, &args))
       return false;
@@ -581,7 +581,7 @@ class StringTypeTemplate final : public TypeTemplate {
 
   bool Create(const LibraryMediator& lib, const ArgsAndConstraintsOld& unresolved_args,
               std::unique_ptr<Type>* out_type,
-              std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
+              std::optional<TypeConstructorOld::FromTypeAlias>* out_from_type_alias) const {
     std::unique_ptr<CreateInvocation> args;
     if (!ResolveArgs(lib, unresolved_args, &args))
       return false;
@@ -612,7 +612,7 @@ class HandleTypeTemplate final : public TypeTemplate {
 
   bool Create(const LibraryMediator& lib, const ArgsAndConstraintsOld& unresolved_args,
               std::unique_ptr<Type>* out_type,
-              std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
+              std::optional<TypeConstructorOld::FromTypeAlias>* out_from_type_alias) const {
     std::unique_ptr<CreateInvocation> args;
     if (!ResolveArgs(lib, unresolved_args, &args))
       return false;
@@ -681,7 +681,7 @@ class RequestTypeTemplate final : public TypeTemplate {
 
   bool Create(const LibraryMediator& lib, const ArgsAndConstraintsOld& unresolved_args,
               std::unique_ptr<Type>* out_type,
-              std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
+              std::optional<TypeConstructorOld::FromTypeAlias>* out_from_type_alias) const {
     std::unique_ptr<CreateInvocation> args;
     if (!ResolveArgs(lib, unresolved_args, &args))
       return false;
@@ -714,7 +714,7 @@ class TypeDeclTypeTemplate final : public TypeTemplate {
 
   bool Create(const LibraryMediator& lib, const ArgsAndConstraintsOld& unresolved_args,
               std::unique_ptr<Type>* out_type,
-              std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
+              std::optional<TypeConstructorOld::FromTypeAlias>* out_from_type_alias) const {
     std::unique_ptr<CreateInvocation> args;
     if (!ResolveArgs(lib, unresolved_args, &args))
       return false;
@@ -777,7 +777,7 @@ class TypeAliasTypeTemplate final : public TypeTemplate {
 
   bool Create(const LibraryMediator& lib, const ArgsAndConstraintsOld& unresolved_args,
               std::unique_ptr<Type>* out_type,
-              std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
+              std::optional<TypeConstructorOld::FromTypeAlias>* out_from_type_alias) const {
     std::unique_ptr<CreateInvocation> args;
     if (!ResolveArgs(lib, unresolved_args, &args))
       return false;
@@ -838,7 +838,7 @@ class TypeAliasTypeTemplate final : public TypeTemplate {
             decl_->partial_type_ctor->handle_rights, maybe_size, nullability, out_type, nullptr))
       return false;
     if (out_from_type_alias)
-      *out_from_type_alias = TypeConstructor::FromTypeAlias(
+      *out_from_type_alias = TypeConstructorOld::FromTypeAlias(
           decl_, args->arg_type, args->size, args->handle_subtype, args->nullability);
     return true;
   }
@@ -1640,12 +1640,12 @@ bool Library::ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant,
 }
 
 bool Library::ConsumeTypeConstructorOld(std::unique_ptr<raw::TypeConstructorOld> raw_type_ctor,
-                                        std::unique_ptr<TypeConstructor>* out_type_ctor) {
+                                        std::unique_ptr<TypeConstructorOld>* out_type_ctor) {
   auto name = CompileCompoundIdentifier(raw_type_ctor->identifier.get());
   if (!name)
     return false;
 
-  std::unique_ptr<TypeConstructor> maybe_arg_type_ctor;
+  std::unique_ptr<TypeConstructorOld> maybe_arg_type_ctor;
   if (raw_type_ctor->maybe_arg_type_ctor != nullptr) {
     if (!ConsumeTypeConstructorOld(std::move(raw_type_ctor->maybe_arg_type_ctor),
                                    &maybe_arg_type_ctor))
@@ -1670,7 +1670,7 @@ bool Library::ConsumeTypeConstructorOld(std::unique_ptr<raw::TypeConstructorOld>
         Name::CreateSourced(this, raw_type_ctor->handle_subtype_identifier->span());
   }
 
-  *out_type_ctor = std::make_unique<TypeConstructor>(
+  *out_type_ctor = std::make_unique<TypeConstructorOld>(
       std::move(name.value()), std::move(maybe_arg_type_ctor), std::move(handle_subtype_identifier),
       std::move(handle_rights), std::move(maybe_size), raw_type_ctor->nullability,
       fidl::utils::Syntax::kOld);
@@ -1713,7 +1713,7 @@ bool Library::ConsumeTypeAlias(std::unique_ptr<raw::AliasDeclaration> alias_decl
   assert(alias_declaration->alias && IsTypeConstructorDefined(alias_declaration->type_ctor));
 
   auto alias_name = Name::CreateSourced(this, alias_declaration->alias->span());
-  std::unique_ptr<TypeConstructor> type_ctor_;
+  std::unique_ptr<TypeConstructorOld> type_ctor_;
 
   if (!ConsumeTypeConstructor(std::move(alias_declaration->type_ctor), alias_name, &type_ctor_))
     return false;
@@ -1735,12 +1735,12 @@ void Library::ConsumeBitsDeclaration(std::unique_ptr<raw::BitsDeclaration> bits_
     // <name_of_bits>.<name_of_member>.
   }
 
-  std::unique_ptr<TypeConstructor> type_ctor;
+  std::unique_ptr<TypeConstructorOld> type_ctor;
   if (bits_declaration->maybe_type_ctor) {
     if (!ConsumeTypeConstructorOld(std::move(bits_declaration->maybe_type_ctor), &type_ctor))
       return;
   } else {
-    type_ctor = TypeConstructor::CreateSizeType();
+    type_ctor = TypeConstructorOld::CreateSizeType();
   }
 
   RegisterDecl(std::make_unique<Bits>(
@@ -1753,7 +1753,7 @@ void Library::ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> con
   auto attributes = std::move(const_declaration->attributes);
   auto span = const_declaration->identifier->span();
   auto name = Name::CreateSourced(this, span);
-  std::unique_ptr<TypeConstructor> type_ctor;
+  std::unique_ptr<TypeConstructorOld> type_ctor;
   // TODO(fxbug.dev/73285): shouldn't need to care about context here
   if (!ConsumeTypeConstructor(std::move(const_declaration->type_ctor), name, &type_ctor))
     return;
@@ -1779,12 +1779,12 @@ void Library::ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_
     // <name_of_enum>.<name_of_member>.
   }
 
-  std::unique_ptr<TypeConstructor> type_ctor;
+  std::unique_ptr<TypeConstructorOld> type_ctor;
   if (enum_declaration->maybe_type_ctor) {
     if (!ConsumeTypeConstructorOld(std::move(enum_declaration->maybe_type_ctor), &type_ctor))
       return;
   } else {
-    type_ctor = TypeConstructor::CreateSizeType();
+    type_ctor = TypeConstructorOld::CreateSizeType();
   }
 
   RegisterDecl(std::make_unique<Enum>(
@@ -1797,7 +1797,7 @@ bool Library::CreateMethodResult(const Name& protocol_name, SourceSpan response_
                                  raw::ProtocolMethod* method, Struct* in_response,
                                  fidl::utils::Syntax syntax, Struct** out_response) {
   // Compile the error type.
-  std::unique_ptr<TypeConstructor> error_type_ctor;
+  std::unique_ptr<TypeConstructorOld> error_type_ctor;
   if (!ConsumeTypeConstructorOld(std::move(method->maybe_error_ctor), &error_type_ctor))
     return false;
 
@@ -1924,7 +1924,7 @@ bool Library::ConsumeResourceDeclaration(
   auto name = Name::CreateSourced(this, resource_declaration->identifier->span());
   std::vector<Resource::Property> properties;
   for (auto& property : resource_declaration->properties) {
-    std::unique_ptr<TypeConstructor> type_ctor;
+    std::unique_ptr<TypeConstructorOld> type_ctor;
     auto anonymous_resource_name = Name::CreateDerived(
         this, property->span(),
         std::string(name.decl_name()) + std::string(property->identifier->span().data()));
@@ -1936,13 +1936,13 @@ bool Library::ConsumeResourceDeclaration(
                             std::move(attributes));
   }
 
-  std::unique_ptr<TypeConstructor> type_ctor;
+  std::unique_ptr<TypeConstructorOld> type_ctor;
   if (raw::IsTypeConstructorDefined(resource_declaration->maybe_type_ctor)) {
     // TODO(fxbug.dev/73285): shouldn't need to care about the naming context here.
     if (!ConsumeTypeConstructor(std::move(resource_declaration->maybe_type_ctor), name, &type_ctor))
       return false;
   } else {
-    type_ctor = TypeConstructor::CreateSizeType();
+    type_ctor = TypeConstructorOld::CreateSizeType();
   }
 
   return RegisterDecl(std::make_unique<Resource>(std::move(resource_declaration->attributes),
@@ -1950,13 +1950,13 @@ bool Library::ConsumeResourceDeclaration(
                                                  std::move(properties)));
 }
 
-std::unique_ptr<TypeConstructor> Library::IdentifierTypeForDecl(const Decl* decl,
-                                                                types::Nullability nullability,
-                                                                fidl::utils::Syntax syntax) {
-  return std::make_unique<TypeConstructor>(decl->name, nullptr /* maybe_arg_type */,
-                                           std::optional<Name>() /* handle_subtype_identifier */,
-                                           nullptr /* handle_rights */, nullptr /* maybe_size */,
-                                           nullability, syntax);
+std::unique_ptr<TypeConstructorOld> Library::IdentifierTypeForDecl(const Decl* decl,
+                                                                   types::Nullability nullability,
+                                                                   fidl::utils::Syntax syntax) {
+  return std::make_unique<TypeConstructorOld>(decl->name, nullptr /* maybe_arg_type */,
+                                              std::optional<Name>() /* handle_subtype_identifier */,
+                                              nullptr /* handle_rights */, nullptr /* maybe_size */,
+                                              nullability, syntax);
 }
 
 bool Library::ConsumeParameterList(Name name, std::unique_ptr<raw::ParameterList> parameter_list,
@@ -1964,7 +1964,7 @@ bool Library::ConsumeParameterList(Name name, std::unique_ptr<raw::ParameterList
                                    Struct** out_struct_decl) {
   std::vector<Struct::Member> members;
   for (auto& parameter : parameter_list->parameter_list) {
-    std::unique_ptr<TypeConstructor> type_ctor;
+    std::unique_ptr<TypeConstructorOld> type_ctor;
     // TODO(fxbug.dev/73285): finalize layout naming
     auto param_name = Name::CreateDerived(
         this, parameter->span(),
@@ -1993,7 +1993,7 @@ void Library::ConsumeServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration>
 
   std::vector<Service::Member> members;
   for (auto& member : service_decl->members) {
-    std::unique_ptr<TypeConstructor> type_ctor;
+    std::unique_ptr<TypeConstructorOld> type_ctor;
     // TODO(fxbug.dev/73285): shouldn't need to care about naming context here.
     if (!ConsumeTypeConstructor(std::move(member->type_ctor), name, &type_ctor))
       return;
@@ -2011,7 +2011,7 @@ void Library::ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> s
 
   std::vector<Struct::Member> members;
   for (auto& member : struct_declaration->members) {
-    std::unique_ptr<TypeConstructor> type_ctor;
+    std::unique_ptr<TypeConstructorOld> type_ctor;
     if (!ConsumeTypeConstructorOld(std::move(member->type_ctor), &type_ctor))
       return;
     std::unique_ptr<Constant> maybe_default_value;
@@ -2037,7 +2037,7 @@ void Library::ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> tab
     auto ordinal_literal = std::move(member->ordinal);
 
     if (member->maybe_used) {
-      std::unique_ptr<TypeConstructor> type_ctor;
+      std::unique_ptr<TypeConstructorOld> type_ctor;
       if (!ConsumeTypeConstructorOld(std::move(member->maybe_used->type_ctor), &type_ctor))
         return;
       std::unique_ptr<Constant> maybe_default_value;
@@ -2075,7 +2075,7 @@ void Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
     auto explicit_ordinal = std::move(member->ordinal);
 
     if (member->maybe_used) {
-      std::unique_ptr<TypeConstructor> type_ctor;
+      std::unique_ptr<TypeConstructorOld> type_ctor;
       if (!ConsumeTypeConstructorOld(std::move(member->maybe_used->type_ctor), &type_ctor))
         return;
       if (member->maybe_used->maybe_default_value) {
@@ -2117,12 +2117,12 @@ bool Library::ConsumeValueLayout(std::unique_ptr<raw::Layout> layout, const Name
     index++;
   }
 
-  std::unique_ptr<TypeConstructor> subtype_ctor;
+  std::unique_ptr<TypeConstructorOld> subtype_ctor;
   if (layout->subtype_ctor != nullptr) {
     if (!ConsumeTypeConstructorNew(std::move(layout->subtype_ctor), context, &subtype_ctor))
       return false;
   } else {
-    subtype_ctor = TypeConstructor::CreateSizeType();
+    subtype_ctor = TypeConstructorOld::CreateSizeType();
   }
 
   RegisterDecl(std::make_unique<T>(
@@ -2145,7 +2145,7 @@ bool Library::ConsumeOrdinaledLayout(std::unique_ptr<raw::Layout> layout, const 
         this, member->span(),
         std::string(context.decl_name()) +
             utils::to_upper_camel_case(std::string(member->identifier->span().data())));
-    std::unique_ptr<TypeConstructor> type_ctor;
+    std::unique_ptr<TypeConstructorOld> type_ctor;
     if (!ConsumeTypeConstructorNew(std::move(member->type_ctor), name_of_anonymous_layout,
                                    &type_ctor))
       return false;
@@ -2176,7 +2176,7 @@ bool Library::ConsumeStructLayout(std::unique_ptr<raw::Layout> layout, const Nam
         std::string(context.decl_name()) +
             utils::to_upper_camel_case(std::string(member->identifier->span().data())));
 
-    std::unique_ptr<TypeConstructor> type_ctor;
+    std::unique_ptr<TypeConstructorOld> type_ctor;
     if (!ConsumeTypeConstructorNew(std::move(member->type_ctor), name_of_anonymous_layout,
                                    &type_ctor))
       return false;
@@ -2217,7 +2217,7 @@ bool Library::ConsumeLayout(std::unique_ptr<raw::Layout> layout, const Name& con
   return true;
 }
 
-bool Library::IsOptionalConstraint(std::unique_ptr<TypeConstructor>& type_ctor,
+bool Library::IsOptionalConstraint(std::unique_ptr<TypeConstructorOld>& type_ctor,
                                    const std::unique_ptr<raw::Constant>& constant) {
   if (constant->span().data() == "optional") {
     return true;
@@ -2227,7 +2227,7 @@ bool Library::IsOptionalConstraint(std::unique_ptr<TypeConstructor>& type_ctor,
 
 bool Library::ConsumeTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew> raw_type_ctor,
                                         const Name& context,
-                                        std::unique_ptr<TypeConstructor>* out_type) {
+                                        std::unique_ptr<TypeConstructorOld>* out_type) {
   auto params = std::move(raw_type_ctor->parameters);
   auto constraints = std::move(raw_type_ctor->constraints);
   size_t num_constraints = constraints == nullptr ? 0 : constraints->items.size();
@@ -2239,7 +2239,7 @@ bool Library::ConsumeTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew>
     if (!ConsumeLayout(std::move(inline_ref->layout), context)) {
       return false;
     }
-    auto type_ctor = std::make_unique<TypeConstructor>(
+    auto type_ctor = std::make_unique<TypeConstructorOld>(
         context,
         /*maybe_arg_type_ctor=*/nullptr,
         /*handle_subtype_identifier=*/std::nullopt,
@@ -2273,7 +2273,7 @@ bool Library::ConsumeTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew>
     return false;
 
   // Initialize the typector with just a name. The other parameters are filled in below.
-  auto type_ctor = std::make_unique<TypeConstructor>(
+  auto type_ctor = std::make_unique<TypeConstructorOld>(
       std::move(name.value()), nullptr, std::nullopt, nullptr, nullptr,
       types::Nullability::kNonnullable, fidl::utils::Syntax::kNew);
 
@@ -2305,7 +2305,7 @@ bool Library::ConsumeTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew>
         case raw::LayoutParameter::Kind::kIdentifier: {
           auto type_param = static_cast<raw::IdentifierLayoutParameter*>(param.get());
           auto inner_name = Name::CreateSourced(this, type_param->identifier->span());
-          type_ctor->maybe_arg_type_ctor = std::make_unique<TypeConstructor>(
+          type_ctor->maybe_arg_type_ctor = std::make_unique<TypeConstructorOld>(
               inner_name,
               /*maybe_arg_type_ctor=*/nullptr,
               /*handle_subtype_identifier=*/std::nullopt,
@@ -2435,7 +2435,7 @@ bool Library::ConsumeTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew>
 }
 
 bool Library::ConsumeTypeConstructor(raw::TypeConstructor raw_type_ctor, const Name& context,
-                                     std::unique_ptr<TypeConstructor>* out_type) {
+                                     std::unique_ptr<TypeConstructorOld>* out_type) {
   return std::visit(fidl::utils::matchers{
                         [&, this](std::unique_ptr<raw::TypeConstructorOld> e) -> bool {
                           return ConsumeTypeConstructorOld(std::move(e), out_type);
@@ -2667,7 +2667,7 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
     return false;
   }
 
-  const TypeConstructor* const_type_ctor = nullptr;
+  const TypeConstructorOld* const_type_ctor = nullptr;
   const ConstantValue* const_val = nullptr;
   switch (decl->kind) {
     case Decl::Kind::kConst: {
@@ -3102,8 +3102,8 @@ bool Library::AddConstantDependencies(const Constant* constant, std::set<const D
 bool Library::DeclDependencies(const Decl* decl, std::set<const Decl*>* out_edges) {
   std::set<const Decl*> edges;
 
-  auto maybe_add_decl = [&edges](const TypeConstructor* type_ctor) {
-    const TypeConstructor* current = type_ctor;
+  auto maybe_add_decl = [&edges](const TypeConstructorOld* type_ctor) {
+    const TypeConstructorOld* current = type_ctor;
     for (;;) {
       if (current->from_type_alias) {
         assert(!current->maybe_arg_type_ctor &&
@@ -4219,14 +4219,14 @@ bool Library::Compile() {
   return reporter_->errors().size() == 0;
 }
 
-bool Library::CompileTypeConstructor(TypeConstructor* type_ctor) {
+bool Library::CompileTypeConstructor(TypeConstructorOld* type_ctor) {
   if (type_ctor->syntax == fidl::utils::Syntax::kNew) {
     return CompileTypeConstructorAllowing(type_ctor, AllowedCategories::kTypeOnly);
   }
   return CompileTypeConstructorAllowing(type_ctor, AllowedCategories::kTypeOrProtocol);
 }
 
-bool Library::CompileTypeConstructorAllowing(TypeConstructor* type_ctor,
+bool Library::CompileTypeConstructorAllowing(TypeConstructorOld* type_ctor,
                                              AllowedCategories category) {
   if (!typespace_->Create(LibraryMediator(this), type_ctor->name, type_ctor->maybe_arg_type_ctor,
                           type_ctor->handle_subtype_identifier, type_ctor->handle_rights,
@@ -4239,7 +4239,7 @@ bool Library::CompileTypeConstructorAllowing(TypeConstructor* type_ctor,
   return VerifyTypeCategory(type_ctor, category);
 }
 
-bool Library::VerifyTypeCategory(TypeConstructor* type_ctor, AllowedCategories category) {
+bool Library::VerifyTypeCategory(TypeConstructorOld* type_ctor, AllowedCategories category) {
   assert(type_ctor->type && "CompileTypeConstructor did not set Type");
   if (type_ctor->type->kind != Type::Kind::kIdentifier) {
     // we assume that all non-identifier types (i.e. builtins) are actually
@@ -4520,14 +4520,14 @@ bool Library::HasAttribute(std::string_view name) const {
 
 const std::set<Library*>& Library::dependencies() const { return dependencies_.dependencies(); }
 
-std::unique_ptr<TypeConstructor> TypeConstructor::CreateSizeType() {
-  return std::make_unique<TypeConstructor>(
+std::unique_ptr<TypeConstructorOld> TypeConstructorOld::CreateSizeType() {
+  return std::make_unique<TypeConstructorOld>(
       Name::CreateIntrinsic("uint32"), nullptr /* maybe_arg_type */,
       std::optional<Name>() /* handle_subtype_identifier */, nullptr /* handle_rights */,
       nullptr /* maybe_size */, types::Nullability::kNonnullable, fidl::utils::Syntax::kOld);
 }
 
-bool LibraryMediator::ResolveType(TypeConstructor* type) const {
+bool LibraryMediator::ResolveType(TypeConstructorOld* type) const {
   return library_->CompileTypeConstructor(type);
 }
 

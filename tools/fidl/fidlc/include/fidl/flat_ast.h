@@ -104,7 +104,7 @@ struct TypeDecl : public Decl, public Object {
 
 struct TypeAlias;
 
-struct TypeConstructor final {
+struct TypeConstructorOld final {
   struct FromTypeAlias {
     FromTypeAlias(const TypeAlias* decl, const Type* maybe_arg_type, const Size* maybe_size,
                   std::optional<types::HandleSubtype> maybe_handle_subtype,
@@ -122,10 +122,10 @@ struct TypeConstructor final {
     types::Nullability nullability;
   };
 
-  TypeConstructor(Name name, std::unique_ptr<TypeConstructor> maybe_arg_type_ctor,
-                  std::optional<Name> handle_subtype_identifier,
-                  std::unique_ptr<Constant> handle_rights, std::unique_ptr<Constant> maybe_size,
-                  types::Nullability nullability, fidl::utils::Syntax syntax)
+  TypeConstructorOld(Name name, std::unique_ptr<TypeConstructorOld> maybe_arg_type_ctor,
+                     std::optional<Name> handle_subtype_identifier,
+                     std::unique_ptr<Constant> handle_rights, std::unique_ptr<Constant> maybe_size,
+                     types::Nullability nullability, fidl::utils::Syntax syntax)
       : name(std::move(name)),
         maybe_arg_type_ctor(std::move(maybe_arg_type_ctor)),
         handle_subtype_identifier(std::move(handle_subtype_identifier)),
@@ -135,11 +135,11 @@ struct TypeConstructor final {
         syntax(syntax) {}
 
   // Returns a type constructor for the size type (used for bounds).
-  static std::unique_ptr<TypeConstructor> CreateSizeType();
+  static std::unique_ptr<TypeConstructorOld> CreateSizeType();
 
   // Set during construction.
   const Name name;
-  std::unique_ptr<TypeConstructor> maybe_arg_type_ctor;
+  std::unique_ptr<TypeConstructorOld> maybe_arg_type_ctor;
   std::optional<Name> handle_subtype_identifier;
   std::unique_ptr<Constant> handle_rights;
   std::unique_ptr<Constant> maybe_size;
@@ -163,11 +163,11 @@ struct Using final {
 // left-hand-side Name (found in Decl) and a right-hand-side Constant.
 struct Const final : public Decl {
   Const(std::unique_ptr<raw::AttributeList> attributes, Name name,
-        std::unique_ptr<TypeConstructor> type_ctor, std::unique_ptr<Constant> value)
+        std::unique_ptr<TypeConstructorOld> type_ctor, std::unique_ptr<Constant> value)
       : Decl(Kind::kConst, std::move(attributes), std::move(name)),
         type_ctor(std::move(type_ctor)),
         value(std::move(value)) {}
-  std::unique_ptr<TypeConstructor> type_ctor;
+  std::unique_ptr<TypeConstructorOld> type_ctor;
   std::unique_ptr<Constant> value;
 };
 
@@ -182,7 +182,7 @@ struct Enum final : public TypeDecl {
   };
 
   Enum(std::unique_ptr<raw::AttributeList> attributes, Name name,
-       std::unique_ptr<TypeConstructor> subtype_ctor, std::vector<Member> members,
+       std::unique_ptr<TypeConstructorOld> subtype_ctor, std::vector<Member> members,
        types::Strictness strictness)
       : TypeDecl(Kind::kEnum, std::move(attributes), std::move(name)),
         subtype_ctor(std::move(subtype_ctor)),
@@ -190,7 +190,7 @@ struct Enum final : public TypeDecl {
         strictness(strictness) {}
 
   // Set during construction.
-  std::unique_ptr<TypeConstructor> subtype_ctor;
+  std::unique_ptr<TypeConstructorOld> subtype_ctor;
   std::vector<Member> members;
   const types::Strictness strictness;
 
@@ -215,7 +215,7 @@ struct Bits final : public TypeDecl {
   };
 
   Bits(std::unique_ptr<raw::AttributeList> attributes, Name name,
-       std::unique_ptr<TypeConstructor> subtype_ctor, std::vector<Member> members,
+       std::unique_ptr<TypeConstructorOld> subtype_ctor, std::vector<Member> members,
        types::Strictness strictness)
       : TypeDecl(Kind::kBits, std::move(attributes), std::move(name)),
         subtype_ctor(std::move(subtype_ctor)),
@@ -223,7 +223,7 @@ struct Bits final : public TypeDecl {
         strictness(strictness) {}
 
   // Set during construction.
-  std::unique_ptr<TypeConstructor> subtype_ctor;
+  std::unique_ptr<TypeConstructorOld> subtype_ctor;
   std::vector<Member> members;
   const types::Strictness strictness;
 
@@ -235,13 +235,13 @@ struct Bits final : public TypeDecl {
 
 struct Service final : public TypeDecl {
   struct Member {
-    Member(std::unique_ptr<TypeConstructor> type_ctor, SourceSpan name,
+    Member(std::unique_ptr<TypeConstructorOld> type_ctor, SourceSpan name,
            std::unique_ptr<raw::AttributeList> attributes)
         : type_ctor(std::move(type_ctor)),
           name(std::move(name)),
           attributes(std::move(attributes)) {}
 
-    std::unique_ptr<TypeConstructor> type_ctor;
+    std::unique_ptr<TypeConstructorOld> type_ctor;
     SourceSpan name;
     std::unique_ptr<raw::AttributeList> attributes;
   };
@@ -262,14 +262,14 @@ struct Struct;
 // backward-compatibility, Struct::Member is now an alias for this top-level StructMember.
 // TODO(fxbug.dev/37535): Move this to a nested class inside Struct.
 struct StructMember : public Object {
-  StructMember(std::unique_ptr<TypeConstructor> type_ctor, SourceSpan name,
+  StructMember(std::unique_ptr<TypeConstructorOld> type_ctor, SourceSpan name,
                std::unique_ptr<Constant> maybe_default_value,
                std::unique_ptr<raw::AttributeList> attributes)
       : type_ctor(std::move(type_ctor)),
         name(std::move(name)),
         maybe_default_value(std::move(maybe_default_value)),
         attributes(std::move(attributes)) {}
-  std::unique_ptr<TypeConstructor> type_ctor;
+  std::unique_ptr<TypeConstructorOld> type_ctor;
   SourceSpan name;
   std::unique_ptr<Constant> maybe_default_value;
   std::unique_ptr<raw::AttributeList> attributes;
@@ -314,14 +314,14 @@ struct Table;
 // See the comment on the StructMember class for why this is a top-level class.
 // TODO(fxbug.dev/37535): Move this to a nested class inside Table::Member.
 struct TableMemberUsed : public Object {
-  TableMemberUsed(std::unique_ptr<TypeConstructor> type_ctor, SourceSpan name,
+  TableMemberUsed(std::unique_ptr<TypeConstructorOld> type_ctor, SourceSpan name,
                   std::unique_ptr<Constant> maybe_default_value,
                   std::unique_ptr<raw::AttributeList> attributes)
       : type_ctor(std::move(type_ctor)),
         name(std::move(name)),
         maybe_default_value(std::move(maybe_default_value)),
         attributes(std::move(attributes)) {}
-  std::unique_ptr<TypeConstructor> type_ctor;
+  std::unique_ptr<TypeConstructorOld> type_ctor;
   SourceSpan name;
   std::unique_ptr<Constant> maybe_default_value;
   std::unique_ptr<raw::AttributeList> attributes;
@@ -336,13 +336,13 @@ struct TableMemberUsed : public Object {
 struct TableMember : public Object {
   using Used = TableMemberUsed;
 
-  TableMember(std::unique_ptr<raw::Ordinal64> ordinal, std::unique_ptr<TypeConstructor> type,
+  TableMember(std::unique_ptr<raw::Ordinal64> ordinal, std::unique_ptr<TypeConstructorOld> type,
               SourceSpan name, std::unique_ptr<Constant> maybe_default_value,
               std::unique_ptr<raw::AttributeList> attributes)
       : ordinal(std::move(ordinal)),
         maybe_used(std::make_unique<Used>(std::move(type), name, std::move(maybe_default_value),
                                           std::move(attributes))) {}
-  TableMember(std::unique_ptr<raw::Ordinal64> ordinal, std::unique_ptr<TypeConstructor> type,
+  TableMember(std::unique_ptr<raw::Ordinal64> ordinal, std::unique_ptr<TypeConstructorOld> type,
               SourceSpan name, std::unique_ptr<raw::AttributeList> attributes)
       : ordinal(std::move(ordinal)),
         maybe_used(std::make_unique<Used>(std::move(type), name, nullptr, std::move(attributes))) {}
@@ -381,10 +381,10 @@ struct Union;
 // See the comment on the StructMember class for why this is a top-level class.
 // TODO(fxbug.dev/37535): Move this to a nested class inside Union.
 struct UnionMemberUsed : public Object {
-  UnionMemberUsed(std::unique_ptr<TypeConstructor> type_ctor, SourceSpan name,
+  UnionMemberUsed(std::unique_ptr<TypeConstructorOld> type_ctor, SourceSpan name,
                   std::unique_ptr<raw::AttributeList> attributes)
       : type_ctor(std::move(type_ctor)), name(name), attributes(std::move(attributes)) {}
-  std::unique_ptr<TypeConstructor> type_ctor;
+  std::unique_ptr<TypeConstructorOld> type_ctor;
   SourceSpan name;
   std::unique_ptr<raw::AttributeList> attributes;
 
@@ -400,8 +400,9 @@ struct UnionMemberUsed : public Object {
 struct UnionMember : public Object {
   using Used = UnionMemberUsed;
 
-  UnionMember(std::unique_ptr<raw::Ordinal64> ordinal, std::unique_ptr<TypeConstructor> type_ctor,
-              SourceSpan name, std::unique_ptr<raw::AttributeList> attributes)
+  UnionMember(std::unique_ptr<raw::Ordinal64> ordinal,
+              std::unique_ptr<TypeConstructorOld> type_ctor, SourceSpan name,
+              std::unique_ptr<raw::AttributeList> attributes)
       : ordinal(std::move(ordinal)),
         maybe_used(std::make_unique<Used>(std::move(type_ctor), name, std::move(attributes))) {}
   UnionMember(std::unique_ptr<raw::Ordinal64> ordinal, SourceSpan span)
@@ -502,24 +503,24 @@ struct Protocol final : public TypeDecl {
 
 struct Resource final : public Decl {
   struct Property {
-    Property(std::unique_ptr<TypeConstructor> type_ctor, SourceSpan name,
+    Property(std::unique_ptr<TypeConstructorOld> type_ctor, SourceSpan name,
              std::unique_ptr<raw::AttributeList> attributes)
         : type_ctor(std::move(type_ctor)),
           name(std::move(name)),
           attributes(std::move(attributes)) {}
-    std::unique_ptr<TypeConstructor> type_ctor;
+    std::unique_ptr<TypeConstructorOld> type_ctor;
     SourceSpan name;
     std::unique_ptr<raw::AttributeList> attributes;
   };
 
   Resource(std::unique_ptr<raw::AttributeList> attributes, Name name,
-           std::unique_ptr<TypeConstructor> subtype_ctor, std::vector<Property> properties)
+           std::unique_ptr<TypeConstructorOld> subtype_ctor, std::vector<Property> properties)
       : Decl(Kind::kResource, std::move(attributes), std::move(name)),
         subtype_ctor(std::move(subtype_ctor)),
         properties(std::move(properties)) {}
 
   // Set during construction.
-  std::unique_ptr<TypeConstructor> subtype_ctor;
+  std::unique_ptr<TypeConstructorOld> subtype_ctor;
   std::vector<Property> properties;
 
   const Property* LookupProperty(std::string_view name);
@@ -527,7 +528,7 @@ struct Resource final : public Decl {
 
 struct TypeAlias final : public Decl {
   TypeAlias(std::unique_ptr<raw::AttributeList> attributes, Name name,
-            std::unique_ptr<TypeConstructor> partial_type_ctor)
+            std::unique_ptr<TypeConstructorOld> partial_type_ctor)
       : Decl(Kind::kTypeAlias, std::move(attributes), std::move(name)),
         partial_type_ctor(std::move(partial_type_ctor)) {}
 
@@ -541,7 +542,7 @@ struct TypeAlias final : public Decl {
   // at any point in a "type alias chain" can specify a constraint, but any
   // constraint can only specified once. This behavior will change in
   // fxbug.dev/74193.
-  const std::unique_ptr<TypeConstructor> partial_type_ctor;
+  const std::unique_ptr<TypeConstructorOld> partial_type_ctor;
 };
 
 // Wrapper class around a Library to provide specific methods to TypeTemplates.
@@ -553,7 +554,7 @@ class LibraryMediator {
   explicit LibraryMediator(Library* library) : library_(library) {}
 
   // These methods forward their implementation to the library_
-  bool ResolveType(TypeConstructor* type) const;
+  bool ResolveType(TypeConstructorOld* type) const;
   bool ResolveSizeBound(Constant* size_constant, const Size** out_size) const;
   bool ResolveAsOptional(Constant* constant) const;
   bool ResolveAsHandleSubtype(Resource* resource, const std::unique_ptr<Constant>& constant,
@@ -619,15 +620,16 @@ class TypeTemplate {
     // whether the name actual refers to a Resource at runtime (see
     // TypeTemplate::GetResource for details).
     const Name& name;
-    const std::unique_ptr<TypeConstructor>& maybe_arg_type_ctor;
+    const std::unique_ptr<TypeConstructorOld>& maybe_arg_type_ctor;
     const std::optional<Name>& handle_subtype_identifier;
     const std::unique_ptr<Constant>& handle_rights;
     const std::unique_ptr<Constant>& maybe_size;
     const types::Nullability nullability;
   };
-  virtual bool Create(const LibraryMediator& resolver, const ArgsAndConstraintsOld& unresolved_args,
-                      std::unique_ptr<Type>* out_type,
-                      std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const = 0;
+  virtual bool Create(
+      const LibraryMediator& resolver, const ArgsAndConstraintsOld& unresolved_args,
+      std::unique_ptr<Type>* out_type,
+      std::optional<TypeConstructorOld::FromTypeAlias>* out_from_type_alias) const = 0;
   bool ResolveArgs(const LibraryMediator& resolver, const ArgsAndConstraintsOld& unresolved_args,
                    std::unique_ptr<CreateInvocation>* out_args) const;
 
@@ -657,13 +659,13 @@ class Typespace {
  public:
   explicit Typespace(Reporter* reporter) : reporter_(reporter) {}
 
-  bool Create(const LibraryMediator& resolver, const flat::Name& name,
-              const std::unique_ptr<TypeConstructor>& maybe_arg_type_ctor,
+  bool Create(const LibraryMediator& lib, const flat::Name& name,
+              const std::unique_ptr<TypeConstructorOld>& maybe_arg_type_ctor,
               const std::optional<Name>& handle_subtype_identifier,
               const std::unique_ptr<Constant>& handle_rights,
               const std::unique_ptr<Constant>& maybe_size, types::Nullability nullability,
               const Type** out_type,
-              std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias);
+              std::optional<TypeConstructorOld::FromTypeAlias>* out_from_type_alias);
 
   void AddTemplate(std::unique_ptr<TypeTemplate> type_template);
 
@@ -680,13 +682,13 @@ class Typespace {
  private:
   friend class TypeAliasTypeTemplate;
 
-  bool CreateNotOwned(const LibraryMediator& resolver, const flat::Name& name,
-                      const std::unique_ptr<TypeConstructor>& maybe_arg_type_ctor,
+  bool CreateNotOwned(const LibraryMediator& lib, const flat::Name& name,
+                      const std::unique_ptr<TypeConstructorOld>& maybe_arg_type_ctor,
                       const std::optional<Name>& handle_subtype_identifier,
                       const std::unique_ptr<Constant>& handle_rights,
                       const std::unique_ptr<Constant>& maybe_size, types::Nullability nullability,
                       std::unique_ptr<Type>* out_type,
-                      std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias);
+                      std::optional<TypeConstructorOld::FromTypeAlias>* out_from_type_alias);
 
   std::map<Name::Key, std::unique_ptr<TypeTemplate>> templates_;
   std::vector<std::unique_ptr<Type>> types_;
@@ -908,7 +910,7 @@ class Library {
   bool ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant,
                        std::unique_ptr<Constant>* out_constant);
   bool ConsumeTypeConstructorOld(std::unique_ptr<raw::TypeConstructorOld> raw_type_ctor,
-                                 std::unique_ptr<TypeConstructor>* out_type);
+                                 std::unique_ptr<TypeConstructorOld>* out_type);
 
   void ConsumeUsing(std::unique_ptr<raw::Using> using_directive, fidl::utils::Syntax syntax);
   bool ConsumeTypeAlias(std::unique_ptr<raw::AliasDeclaration> alias_declaration,
@@ -935,9 +937,10 @@ class Library {
   // start new syntax
   void ConsumeTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl);
   bool ConsumeTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew> raw_type_ctor,
-                                 const Name& context, std::unique_ptr<TypeConstructor>* out_type);
+                                 const Name& context,
+                                 std::unique_ptr<TypeConstructorOld>* out_type);
   bool ConsumeTypeConstructor(raw::TypeConstructor raw_type_ctor, const Name& context,
-                              std::unique_ptr<TypeConstructor>* out_type);
+                              std::unique_ptr<TypeConstructorOld>* out_type);
 
   // Here, T is expected to be an ordinal-carrying flat AST class (ie, Table or
   // Union), while M is its "Member" sub-class.
@@ -950,7 +953,7 @@ class Library {
   template <typename T, typename M>
   bool ConsumeValueLayout(std::unique_ptr<raw::Layout>, const Name&);
   bool ConsumeLayout(std::unique_ptr<raw::Layout>, const Name&);
-  bool IsOptionalConstraint(std::unique_ptr<TypeConstructor>&,
+  bool IsOptionalConstraint(std::unique_ptr<TypeConstructorOld>&,
                             const std::unique_ptr<raw::Constant>&);
   // end new syntax
 
@@ -960,9 +963,9 @@ class Library {
   // false otherwise.
   bool ResolveAsOptional(Constant* constant) const;
   bool TypeIsConvertibleTo(const Type* from_type, const Type* to_type);
-  std::unique_ptr<TypeConstructor> IdentifierTypeForDecl(const Decl* decl,
-                                                         types::Nullability nullability,
-                                                         fidl::utils::Syntax syntax);
+  std::unique_ptr<TypeConstructorOld> IdentifierTypeForDecl(const Decl* decl,
+                                                            types::Nullability nullability,
+                                                            fidl::utils::Syntax syntax);
 
   bool AddConstantDependencies(const Constant* constant, std::set<const Decl*>* out_edges);
   bool DeclDependencies(const Decl* decl, std::set<const Decl*>* out_edges);
@@ -990,7 +993,7 @@ class Library {
   // This top level function switches behavior depending on what syntax is
   // being read, calling into CompileTypeConstructorAllowing to do the actual
   // compilation.
-  bool CompileTypeConstructor(TypeConstructor* type);
+  bool CompileTypeConstructor(TypeConstructorOld* type);
   // This version compiles the constructor, then validates that it is of the
   // expected "category". The possible "categories" are the different classes of things
   // that are stored in the Typespace: types, protocols, and services - things
@@ -1003,8 +1006,8 @@ class Library {
   };
   // Compiles the TypeConstructor and then validates that it's in one of the
   // allowed categories.
-  bool CompileTypeConstructorAllowing(TypeConstructor* type, AllowedCategories category);
-  bool VerifyTypeCategory(TypeConstructor* type, AllowedCategories category);
+  bool CompileTypeConstructorAllowing(TypeConstructorOld* type, AllowedCategories category);
+  bool VerifyTypeCategory(TypeConstructorOld* type, AllowedCategories category);
 
   ConstantValue::Kind ConstantValuePrimitiveKind(const types::PrimitiveSubtype primitive_subtype);
   bool ResolveHandleRightsConstant(Resource* resource, Constant* constant,
