@@ -26,6 +26,13 @@ fuchsia_package_with_single_component("hardware-display-controller-provider") {
   deps = [ "real:bin" ]
 }
 
+fuchsia_component("fake-hardware-display-controller-provider-cmv2-component") {
+  manifest = "meta/fake_hdcp.cml"
+  component_name = "hdcp"
+  testonly = true
+  deps = [ "fake:bin" ]
+}
+
 group("tests") {
   testonly = true
   public_deps = [ "fake/tests" ]

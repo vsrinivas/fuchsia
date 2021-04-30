@@ -9,8 +9,8 @@ use {
     std::sync::Arc,
 };
 
-pub const DISPLAY_WIDTH: u16 = 640;
-pub const DISPLAY_HEIGHT: u16 = 480;
+pub const DISPLAY_WIDTH: u16 = 1024;
+pub const DISPLAY_HEIGHT: u16 = 600;
 
 pub const MIN_CIRCLE_RADIUS: u16 = 5;
 pub const MAX_CIRCLE_RADIUS: u16 = 100;

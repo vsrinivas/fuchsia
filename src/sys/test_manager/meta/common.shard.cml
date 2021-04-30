@@ -115,6 +115,7 @@
                 "fuchsia.scheduler.ProfileProvider",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
+                "fuchsia.vulkan.loader.Loader",
             ],
             from: "parent",
             to: "#tests",
@@ -248,6 +249,32 @@
         // Some non-hermetic tests require access to the real display controller.
         {
             directory: "dev-display-controller",
+            from: "parent",
+            to: "#tests",
+            rights: [ "rw*" ],
+        },
+
+        // Some non-hermetic tests require access to the GPU and vulkan
+        {
+            directory: "dev-goldfish-address-space",
+            from: "parent",
+            to: "#tests",
+            rights: [ "rw*" ],
+        },
+        {
+            directory: "dev-goldfish-control",
+            from: "parent",
+            to: "#tests",
+            rights: [ "rw*" ],
+        },
+        {
+            directory: "dev-goldfish-pipe",
+            from: "parent",
+            to: "#tests",
+            rights: [ "rw*" ],
+        },
+        {
+            directory: "dev-gpu",
             from: "parent",
             to: "#tests",
             rights: [ "rw*" ],

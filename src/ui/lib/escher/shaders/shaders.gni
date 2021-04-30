@@ -87,3 +87,31 @@ foreach(spirv, _test_shader_files_spirv) {
     },
   ]
 }
+
+# Exported for Scenic. |source| is the path in host file system,
+# |dest| is the destination in the package. These resource arrays can be
+# used with the `resource_group` build templates.
+
+# TODO(75781): Remove the redundant resource arrays in this file
+
+escher_shaders_files = []
+
+escher_shaders_spirv_files = []
+
+foreach(shader, _shader_files) {
+  escher_shaders_files += [
+    {
+      source = rebase_path(shader)
+      dest = "data/shaders/$shader"
+    },
+  ]
+}
+
+foreach(spirv, _shader_files_spirv) {
+  escher_shaders_spirv_files += [
+    {
+      source = rebase_path("spirv/$spirv")
+      dest = "data/shaders/$spirv"
+    },
+  ]
+}

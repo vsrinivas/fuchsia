@@ -11,13 +11,15 @@ import("//src/lib/vulkan/layers.gni")
 import("//src/ui/lib/escher/build_args.gni")
 import("//src/ui/lib/escher/shaders/shaders.gni")
 
-rustc_binary("scenic-stressor-bin") {
+rustc_test("scenic-stressor-bin") {
   name = "scenic_stressor"
   edition = "2018"
   testonly = true
+  source_root = "src/main.rs"
 
   deps = [
-    "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//sdk/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx-rustc",
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
@@ -42,7 +44,6 @@ rustc_binary("scenic-stressor-bin") {
   ]
 
   sources = [
-    "src/display_provider.rs",
     "src/environment.rs",
     "src/input_actor.rs",
     "src/main.rs",
@@ -52,55 +53,46 @@ rustc_binary("scenic-stressor-bin") {
   ]
 }
 
-test_package("scenic-stress-tests") {
+resource_group("escher_shaders_resource_group") {
+  files = escher_shaders_files
+}
+
+resource_group("escher_shaders_spirv_resource_group") {
+  files = escher_shaders_spirv_files
+}
+
+fuchsia_component("scenic-for-stress-tests") {
+  manifest = "meta/scenic-for-stress-tests.cml"
+  deps = [ "//src/ui/scenic/bin" ]
+}
+
+fuchsia_unittest_package("scenic-stress-tests") {
+  manifest = "meta/scenic_stressor.cml"
   deps = [
+    ":scenic-for-stress-tests",
     ":scenic-stressor-bin",
-    "//src/ui/scenic/bin",
+    "//src/lib/vulkan/validation_layers",
+    "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
   ]
-
-  binaries = [
-    {
-      name = "scenic"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/scenic.cml")
-      dest = "scenic.cm"
-    },
-  ]
-
-  tests = [
-    {
-      log_settings = {
-        max_severity = "ERROR"
-      }
-      name = "scenic_stressor"
-      environments = [
-        {
-          dimensions = {
-            device_type = "AEMU"
-          }
-          tags = [ "stress-tests" ]
-        },
-      ]
-    },
-  ]
-
-  resources = []
 
   if (escher_use_runtime_glsl) {
-    resources += escher_shaders_resources
+    deps += [ ":escher_shaders_resource_group" ]
   } else {
-    resources += escher_shaders_spirv_resources
+    deps += [ ":escher_shaders_spirv_resource_group" ]
   }
 
-  # If configured, include the vulkan validation layers.
-  if (is_debug) {
-    loadable_modules = vulkan_validation_layers.loadable_modules
-    public_deps = vulkan_validation_layers.public_deps
-    resources += vulkan_validation_layers.resources
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+    environments = [
+      {
+        dimensions = {
+          device_type = "AEMU"
+        }
+        tags = [ "stress-tests" ]
+      },
+    ]
   }
 }
 

@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-mod display_provider;
 mod environment;
 mod input_actor;
 mod pointer_state;
@@ -10,7 +9,6 @@ mod session;
 mod session_actor;
 
 use {
-    anyhow::Error,
     argh::FromArgs,
     environment::ScenicEnvironment,
     fuchsia_async as fasync,
@@ -36,10 +34,14 @@ pub struct Args {
     /// if set, the test runs for this time limit before exiting successfully.
     #[argh(option, short = 't')]
     time_limit_secs: Option<u64>,
+
+    /// flag passed in by rust test runner
+    #[argh(switch)]
+    nocapture: bool,
 }
 
-#[fasync::run_singlethreaded]
-async fn main() -> Result<(), Error> {
+#[fasync::run_singlethreaded(test)]
+async fn test() {
     // Get arguments from command line
     let args: Args = argh::from_env();
 
@@ -51,6 +53,4 @@ async fn main() -> Result<(), Error> {
 
     // Run the test
     run_test(env).await;
-
-    Ok(())
 }

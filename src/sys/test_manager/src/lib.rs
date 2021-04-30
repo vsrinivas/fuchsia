@@ -493,6 +493,31 @@ async fn get_realm(
             capability: Capability::directory("dev-display-controller", "", *READ_WRITE_RIGHTS),
             source: RouteEndpoint::AboveRoot,
             targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
+        })?
+        .add_route(CapabilityRoute {
+            capability: Capability::directory("dev-goldfish-address-space", "", *READ_WRITE_RIGHTS),
+            source: RouteEndpoint::AboveRoot,
+            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
+        })?
+        .add_route(CapabilityRoute {
+            capability: Capability::directory("dev-goldfish-control", "", *READ_WRITE_RIGHTS),
+            source: RouteEndpoint::AboveRoot,
+            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
+        })?
+        .add_route(CapabilityRoute {
+            capability: Capability::directory("dev-goldfish-pipe", "", *READ_WRITE_RIGHTS),
+            source: RouteEndpoint::AboveRoot,
+            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
+        })?
+        .add_route(CapabilityRoute {
+            capability: Capability::directory("dev-gpu", "", *READ_WRITE_RIGHTS),
+            source: RouteEndpoint::AboveRoot,
+            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
+        })?
+        .add_route(CapabilityRoute {
+            capability: Capability::protocol("fuchsia.vulkan.loader.Loader"),
+            source: RouteEndpoint::AboveRoot,
+            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
         })?;
 
     Ok(builder.build())

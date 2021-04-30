@@ -1,5 +1,13 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// TODO(xbhatnag): Once scenic has migrated to v2, this manifest should no longer be used.
 {
-    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [
+        "sdk/lib/diagnostics/inspect/client.shard.cml",
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+    ],
     program: {
         runner: "elf",
         binary: "bin/scenic",
@@ -41,7 +49,12 @@
             path: "/dev/class/goldfish-pipe",
         },
         {
-            directory: "config-vulkan-icd.d",
+            directory: "dev-gpu",
+            rights: [ "rw*" ],
+            path: "/dev/class/gpu",
+        },
+        {
+            directory: "config-vulkan-icd",
             rights: [ "r*" ],
             path: "/config/vulkan/icd.d",
         },

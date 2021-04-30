@@ -357,6 +357,7 @@ realm with the following services:
 | `fuchsia.scheduler.ProfileProvider` | Profile provider for scheduler |
 | `fuchsia.sysmem.Allocator` | Allocates system memory buffers |
 | `fuchsia.tracing.provider.Registry` | Register to trace provider |
+| `fuchsia.vulkan.loader.Loader` | Vulkan library provider |
 
 Consider the following example test component that uses a single system service,
 `fuchsia.sysmem.Allocator`:
@@ -1622,6 +1623,10 @@ to be used by non-hermetic tests:
 | ---------- | ----------- |
 | `dev-input-report` | Input method events |
 | `dev-display-controller` | Graphical display controller |
+| `dev-goldfish-address-space` | Goldfish address space device |
+| `dev-goldfish-control` | Goldfish control device |
+| `dev-goldfish-pipe` | Goldfish pipe device |
+| `dev-gpu` | GPU device |
 
 Following the example in [Test uses injected services](#injected-services), add
 the following to route directory access to your test driver from the test root:
