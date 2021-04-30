@@ -4,5 +4,50 @@
 #
 # [0]: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files.
 
+# rust wg
+anyhow = ["third_party/rust_crates/OWNERS"]
+argh = ["third_party/rust_crates/OWNERS"]
+async-trait = ["third_party/rust_crates/OWNERS"]
+backtrace = ["third_party/rust_crates/OWNERS"]
+bitflags = ["third_party/rust_crates/OWNERS"]
+crossbeam = ["third_party/rust_crates/OWNERS"]
+futures = ["third_party/rust_crates/OWNERS"]
+itertools = ["third_party/rust_crates/OWNERS"]
+lazy_static = ["third_party/rust_crates/OWNERS"]
+libc = ["third_party/rust_crates/OWNERS"]
+matches = ["third_party/rust_crates/OWNERS"]
+parking_lot = ["third_party/rust_crates/OWNERS"]
+pin-project = ["third_party/rust_crates/OWNERS"]
+pin-project-lite = ["third_party/rust_crates/OWNERS"]
+pin-utils = ["third_party/rust_crates/OWNERS"]
+regex = ["third_party/rust_crates/OWNERS"]
+serde = ["third_party/rust_crates/OWNERS"]
+serde_json = ["third_party/rust_crates/OWNERS"]
+static_assertions = ["third_party/rust_crates/OWNERS"]
+syn = ["third_party/rust_crates/OWNERS"]
+thiserror = ["third_party/rust_crates/OWNERS"]
+
+# diagnostics team
 log = ["src/diagnostics/OWNERS"]
 tracing = ["src/diagnostics/OWNERS"]
+
+# security team
+c2-chacha = ["src/security/OWNERS"]
+hyper-rustls = ["src/security/OWNERS"]
+openssl-probe = ["src/security/OWNERS"]
+pem = ["src/security/OWNERS"]
+rand = ["src/security/OWNERS"]
+rand_chacha = ["src/security/OWNERS"]
+rand_core = ["src/security/OWNERS"]
+ring = ["src/security/OWNERS"]
+rustls = ["src/lib/fuchsia-hyper", "src/security/OWNERS"]
+rustls-native-certs = ["src/security/OWNERS"]
+sct = ["src/security/OWNERS"]
+security-framework-sys = ["src/security/OWNERS"]
+sha1 = ["src/security/OWNERS"]
+siphasher = ["src/security/OWNERS"]
+tokio-rustls = ["src/security/OWNERS"]
+webpki = ["src/security/OWNERS"]
+
+# storage team
+fatfs = ["src/storage/OWNERS"]

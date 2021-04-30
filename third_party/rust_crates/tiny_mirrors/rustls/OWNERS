@@ -1,2 +1,5 @@
-dhobsd@google.com
-computerdruid@google.com
+# TO MAKE CHANGES HERE, UPDATE //third_party/rust_crates/owners.toml.
+# DOCS: https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party#owners-files
+
+include src/lib/fuchsia-hyper
+include src/security/OWNERS
