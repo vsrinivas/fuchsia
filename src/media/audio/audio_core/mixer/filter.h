@@ -12,7 +12,7 @@
 
 #include "src/media/audio/audio_core/mixer/coefficient_table.h"
 #include "src/media/audio/audio_core/mixer/constants.h"
-#include "src/media/audio/lib/format/frames.h"
+#include "src/media/audio/lib/format/constants.h"
 
 namespace media::audio::mixer {
 

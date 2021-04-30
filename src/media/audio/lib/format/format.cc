@@ -6,7 +6,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-#include "src/media/audio/lib/format/frames.h"
+#include "src/media/audio/lib/format/constants.h"
 #include "src/media/audio/lib/format/traits.h"
 
 namespace media::audio {

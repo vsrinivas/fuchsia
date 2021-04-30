@@ -14,7 +14,7 @@
 #include "src/media/audio/audio_core/mixer/mixer.h"
 #include "src/media/audio/lib/clock/pid_control.h"
 #include "src/media/audio/lib/clock/utils.h"
-#include "src/media/audio/lib/format/frames.h"
+#include "src/media/audio/lib/format/constants.h"
 #include "src/media/audio/lib/timeline/timeline_function.h"
 
 namespace media::audio {

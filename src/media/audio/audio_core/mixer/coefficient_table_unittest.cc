@@ -6,7 +6,7 @@
 
 #include <gtest/gtest.h>
 
-#include "src/media/audio/lib/format/frames.h"
+#include "src/media/audio/lib/format/constants.h"
 
 namespace media::audio::mixer {
 namespace {

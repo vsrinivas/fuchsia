@@ -9,6 +9,9 @@
 
 #include <limits>
 
+#include <ffl/fixed.h>
+#include <ffl/string.h>
+
 namespace media::audio {
 
 constexpr int32_t kMaxInt24In32 = std::numeric_limits<int32_t>::max() & ~0x0FF;
@@ -48,6 +51,11 @@ constexpr double kInt24In32ToFloat = 1.0 / kFloatToInt24In32;
 constexpr int32_t kPtsFractionalBits = 13;
 // Used in places where PTS must be an integral number of frames.
 constexpr int64_t kPtsFractionalMask = (1 << kPtsFractionalBits) - 1;
+
+// Type to use for frame numbers.
+using Fixed = ffl::Fixed<int64_t, kPtsFractionalBits>;
+static constexpr Fixed kOneFrame = Fixed(1);
+static constexpr Fixed kHalfFrame = ffl::FromRatio(1, 2);
 
 }  // namespace media::audio
 
