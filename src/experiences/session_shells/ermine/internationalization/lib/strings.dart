@@ -448,11 +448,31 @@ class Strings {
             'The title displayed for choosing whether to consent to send usage and diagnostics data to Google in the OOBE',
       );
 
-  static String get dataSharingDesc => Intl.message(
-        'We will use the information you give to us to help address technical issues and to improve our services, subject to our privacy policy. You can change this set-up at anytime later in Settings.',
-        name: 'dataSharingDesc',
+  static String get dataSharingDesc1 => Intl.message(
+        'We will use the information you give to us to help address technical issues and to improve our services, subject to our ',
+        name: 'dataSharingDesc1',
         desc:
             'The description of what is being agreed to when choosing to send usage and diagnostics data to Google in the OOBE',
+      );
+
+  static String get dataSharingDesc2 => Intl.message(
+        'privacy policy',
+        name: 'dataSharingDesc2',
+        desc:
+            'The text from the data sharing description that when clicked will display the privacy policy',
+      );
+
+  static String get dataSharingDesc3 => Intl.message(
+        '. You can change this set-up at anytime later in Settings.',
+        name: 'dataSharingDesc3',
+        desc:
+            'The description of what is being agreed to when choosing to send usage and diagnostics data to Google in the OOBE',
+      );
+
+  static String get privacyPolicyTitle => Intl.message(
+        'Privacy Policy',
+        name: 'privacyPolicyTitle',
+        desc: 'The title displayed for the privacy policy',
       );
 
   static String get oobeSshKeysTitle => Intl.message(
@@ -471,5 +491,23 @@ class Strings {
         'Next',
         name: 'next',
         desc: 'The label for the "next" button.',
+      );
+
+  static String get agree => Intl.message(
+        'Agree',
+        name: 'agree',
+        desc: 'The label for the "agree" button.',
+      );
+
+  static String get disagree => Intl.message(
+        'Disagree',
+        name: 'disagree',
+        desc: 'The label for the "disagree" button.',
+      );
+
+  static String get close => Intl.message(
+        'Close',
+        name: 'close',
+        desc: 'The label for the "close" button.',
       );
 }

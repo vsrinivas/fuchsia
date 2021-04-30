@@ -25,6 +25,7 @@
             "fuchsia.power.BatteryManager",
             "fuchsia.session.ElementManager",
             "fuchsia.settings.Intl",
+            "fuchsia.settings.Privacy",
             "fuchsia.sys.Environment",
             "fuchsia.ui.brightness.Control",
             "fuchsia.ui.focus.FocusChainListenerRegistry",

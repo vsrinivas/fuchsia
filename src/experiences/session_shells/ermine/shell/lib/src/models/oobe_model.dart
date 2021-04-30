@@ -5,7 +5,8 @@
 import 'package:flutter/material.dart';
 
 import '../widgets/oobe/channel.dart';
-import '../widgets/oobe/data_sharing.dart';
+// TODO(fxbug.dev/73407): Complete data sharing feature.
+//import '../widgets/oobe/data_sharing.dart';
 import '../widgets/oobe/ssh_keys.dart';
 
 /// Model that manages the state of the OOBE UX.
@@ -23,7 +24,8 @@ class OobeModel {
   void loadOobeItems() {
     oobeItems = [
       Channel.withSvcPath(onBack, onNext),
-      DataSharing(onBack: onBack, onNext: onNext),
+      // TODO(fxbug.dev/73407): Complete data sharing feature.
+      // DataSharing.withSvcPath(onBack, onNext),
       SshKeys(onBack: onBack, onNext: onNext),
     ];
   }

@@ -95,7 +95,7 @@ class ErmineStyle {
   static const double kOobeBodyVerticalMargins = 72;
 
   /// Oobe button margins.
-  static const double kOobeButtonMargin = 8;
+  static const double kOobeButtonMargin = 24;
 
   /// Oobe footer square size.
   static const double kOobeFooterSquareSize = 12;
