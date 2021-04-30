@@ -113,17 +113,9 @@ ViewTreeSnapshotter::ViewTreeSnapshotter(std::vector<SubtreeSnapshotGenerator> s
     : subtree_generators_(std::move(subtree_generators)) {
   for (auto& [subscriber_callback, dispatcher] : subscribers) {
     FX_DCHECK(dispatcher);
-    // Create a std::shared_ptr out of |subscriber_callback| to ensure lifetime of the closure
-    // across threads.
-    subscriber_callbacks_.emplace_back(
-        [dispatcher = dispatcher,
-         callback = std::make_shared<OnNewViewTree>(std::move(subscriber_callback))](
-            std::shared_ptr<const Snapshot> snapshot) {
-          // Queue the closure on |dispatcher|.
-          async::PostTask(dispatcher, [callback, snapshot = std::move(snapshot)] {
-            (*callback)(std::move(snapshot));
-          });
-        });
+    // TODO(fxbug.dev/75864): We save the callback directly and ignore the dispatcher as a
+    // workaround to avoid flakes. Rework this after deciding on a new synchronization mechanism.
+    subscriber_callbacks_.emplace_back(std::move(subscriber_callback));
   }
 }
 
