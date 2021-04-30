@@ -173,7 +173,7 @@ declare FIDL_LINT_TARGET="$( fx-command-run list-build-artifacts --expect-one --
 declare FIDL_LINT="${FUCHSIA_BUILD_DIR}/${FIDL_LINT_TARGET}"
 
 declare CLANG_TIDY_CMD=(
-  "${PREBUILT_PYTHON3_DIR}/bin/python3"
+  "${PREBUILT_PYTHON3_DIR}/bin/python3.8"
   "${RUN_CLANG_TIDY}"
   -clang-tidy-binary "${CLANG_TIDY}"
   -clang-apply-replacements-binary "${CLANG_APPLY_REPLACEMENTS}"

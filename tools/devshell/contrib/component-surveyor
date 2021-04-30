@@ -12,4 +12,4 @@
 ## - Service dependencies between components
 ## - cmx features used by components
 
-PYTHONPATH="${PYTHONPATH}:${FUCHSIA_DIR}/scripts/component_graph" python3 -m surveyor "$@"
+PYTHONPATH="${PYTHONPATH}:${FUCHSIA_DIR}/scripts/component_graph" python3.8 -m surveyor "$@"

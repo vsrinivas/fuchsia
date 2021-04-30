@@ -76,7 +76,7 @@ set -e
 readonly GOMA_AUTH="$PREBUILT_GOMA_DIR/goma_auth.py"
 readonly GOMA_CTL="$PREBUILT_GOMA_DIR/goma_ctl.py"
 readonly GOMACC="$PREBUILT_GOMA_DIR/gomacc"
-readonly PYTHON_CMD="$PREBUILT_PYTHON3_DIR/bin/python3"
+readonly PYTHON_CMD="$PREBUILT_PYTHON3_DIR/bin/python3.8"
 GOMA_CACHE_DIR="${FUCHSIA_DIR}/.jiri_root/goma_cache"
 
 if [[ ! -x "$GOMA_AUTH" || ! -x "$GOMA_CTL" ]]; then
