@@ -60,5 +60,11 @@
             as: "dev-goldfish-address-space",
             rights: [ "rw*" ],
         },
+        {
+            directory: "dev",
+            from: "self",
+            as: "dev-goldfish-sync",
+            rights: [ "rw*" ],
+        },
     ],
 }

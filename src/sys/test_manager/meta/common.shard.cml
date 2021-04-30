@@ -274,6 +274,12 @@
             rights: [ "rw*" ],
         },
         {
+            directory: "dev-goldfish-sync",
+            from: "parent",
+            to: "#tests",
+            rights: [ "rw*" ],
+        },
+        {
             directory: "dev-gpu",
             from: "parent",
             to: "#tests",

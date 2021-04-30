@@ -56,6 +56,11 @@
             from: "#test_lib_provider",
             to: [ "#vulkan_loader" ],
         },
+        {
+            directory: "dev-goldfish-sync",
+            from: "#test_lib_provider",
+            to: [ "#vulkan_loader" ],
+        },
     ],
     expose: [
         {

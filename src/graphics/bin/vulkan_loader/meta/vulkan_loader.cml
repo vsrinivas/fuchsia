@@ -50,6 +50,11 @@
             path: "/dev/class/goldfish-address-space",
         },
         {
+            directory: "dev-goldfish-sync",
+            rights: [ "rw*" ],
+            path: "/dev/class/goldfish-sync",
+        },
+        {
             protocol: "fuchsia.sys2.Realm",
             from: "framework",
         },

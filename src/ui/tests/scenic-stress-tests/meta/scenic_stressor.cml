@@ -52,6 +52,11 @@
             to: "#scenic",
         },
         {
+            directory: "dev-goldfish-sync",
+            from: "parent",
+            to: "#scenic",
+        },
+        {
             directory: "dev-gpu",
             from: "parent",
             to: "#scenic",

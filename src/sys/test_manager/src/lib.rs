@@ -510,6 +510,11 @@ async fn get_realm(
             targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
         })?
         .add_route(CapabilityRoute {
+            capability: Capability::directory("dev-goldfish-sync", "", *READ_WRITE_RIGHTS),
+            source: RouteEndpoint::AboveRoot,
+            targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],
+        })?
+        .add_route(CapabilityRoute {
             capability: Capability::directory("dev-gpu", "", *READ_WRITE_RIGHTS),
             source: RouteEndpoint::AboveRoot,
             targets: vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)],

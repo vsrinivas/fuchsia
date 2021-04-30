@@ -507,6 +507,13 @@
         {
             directory: "dev",
             from: "parent",
+            as: "dev-goldfish-sync",
+            to: "#test_manager",
+            subdir: "class/goldfish-sync",
+        },
+        {
+            directory: "dev",
+            from: "parent",
             as: "dev-gpu",
             to: "#test_manager",
             subdir: "class/gpu",
@@ -952,6 +959,13 @@
             as: "dev-goldfish-address-space",
             to: [ "#vulkan_loader" ],
             subdir: "class/goldfish-address-space",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-goldfish-sync",
+            to: [ "#vulkan_loader" ],
+            subdir: "class/goldfish-sync",
         },
     ],
     expose: [

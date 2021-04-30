@@ -49,6 +49,11 @@
             path: "/dev/class/goldfish-pipe",
         },
         {
+            directory: "dev-goldfish-sync",
+            rights: [ "rw*" ],
+            path: "/dev/class/goldfish-sync",
+        },
+        {
             directory: "dev-gpu",
             rights: [ "rw*" ],
             path: "/dev/class/gpu",
