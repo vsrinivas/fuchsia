@@ -38,7 +38,7 @@ SOCKET_CREATE_DISPLAY_TEST(
     "\x1B[32m0.000000\x1B[0m "
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_socket_create("
-    "options: \x1B[32mzx_socket_create_options_t\x1B[0m = \x1B[34mZX_SOCKET_STREAM\x1B[0m)\n"
+    "options: \x1B[32mzx.socket_create_options\x1B[0m = \x1B[34mZX_SOCKET_STREAM\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m ("
     "out0: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m, "
@@ -236,7 +236,7 @@ SOCKET_SHUTDOWN_DISPLAY_TEST(ZxSocketShutdownRead, ZX_OK, ZX_SOCKET_SHUTDOWN_REA
                              "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                              "zx_socket_shutdown("
                              "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
-                             "options: \x1B[32mzx_socket_shutdown_options_t\x1B[0m = "
+                             "options: \x1B[32mzx.socket_shutdown_options\x1B[0m = "
                              "\x1B[34mZX_SOCKET_SHUTDOWN_READ\x1B[0m)\n"
                              "\x1B[32m0.000000\x1B[0m "
                              "  -> \x1B[32mZX_OK\x1B[0m\n");
@@ -247,7 +247,7 @@ SOCKET_SHUTDOWN_DISPLAY_TEST(ZxSocketShutdownWrite, ZX_OK, ZX_SOCKET_SHUTDOWN_WR
                              "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                              "zx_socket_shutdown("
                              "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
-                             "options: \x1B[32mzx_socket_shutdown_options_t\x1B[0m = "
+                             "options: \x1B[32mzx.socket_shutdown_options\x1B[0m = "
                              "\x1B[34mZX_SOCKET_SHUTDOWN_WRITE\x1B[0m)\n"
                              "\x1B[32m0.000000\x1B[0m "
                              "  -> \x1B[32mZX_OK\x1B[0m\n");

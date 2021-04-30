@@ -428,10 +428,26 @@ std::string Uint32Type::Name() const {
       return "zx.feature_kind_t";
     case Kind::kGuestTrap:
       return "zx.guest_trap";
+    case Kind::kInfoMapsType:
+      return "zx.info_maps_type";
+    case Kind::kInterruptFlags:
+      return "zx.interrupt_flags";
+    case Kind::kIommuType:
+      return "zx.iommu_type";
+    case Kind::kKtraceControlAction:
+      return "uint32";
     case Kind::kObjectInfoTopic:
       return "zx.object_info_topic";
+    case Kind::kObjType:
+      return "zx.obj_type";
     case Kind::kPciBarType:
       return "zx.pci_bar_type";
+    case Kind::kPolicyAction:
+      return "uint32";
+    case Kind::kPolicyCondition:
+      return "uint32";
+    case Kind::kPolicyTopic:
+      return "uint32";
     case Kind::kPortPacketType:
       return "zx.port_packet::type";
     case Kind::kProfileInfoFlags:
@@ -440,10 +456,38 @@ std::string Uint32Type::Name() const {
       return "zx.prop_type";
     case Kind::kRights:
       return "zx.rights";
+    case Kind::kRsrcKind:
+      return "zx.rsrc_kind";
     case Kind::kSignals:
       return "signals";
+    case Kind::kSocketCreateOptions:
+      return "zx.socket_create_options";
+    case Kind::kSocketReadOptions:
+      return "zx.socket_read_options";
+    case Kind::kSocketShutdownOptions:
+      return "zx.socket_shutdown_options";
     case Kind::kStatus:
       return "zx.status";
+    case Kind::kSystemEventType:
+      return "zx.system_event_type";
+    case Kind::kSystemPowerctl:
+      return "zx.system_powerctl";
+    case Kind::kThreadState:
+      return "uint32";
+    case Kind::kTimerOption:
+      return "uint32";
+    case Kind::kVcpu:
+      return "zx.vcpu";
+    case Kind::kVmOption:
+      return "zx.vm_option";
+    case Kind::kVmoCreationOption:
+      return "zx.vmo_creation_option";
+    case Kind::kVmoOp:
+      return "zx.vmo_op";
+    case Kind::kVmoOption:
+      return "zx.vmo_option";
+    case Kind::kVmoType:
+      return "uint32";
   }
 }
 
@@ -485,11 +529,35 @@ void Uint32Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
       case Kind::kHexaDecimal:
         printer.DisplayHexa32(static_cast<uint32_t>(absolute));
         break;
+      case Kind::kInfoMapsType:
+        printer.DisplayInfoMapsType(static_cast<uint32_t>(absolute));
+        break;
+      case Kind::kInterruptFlags:
+        printer.DisplayInterruptFlags(static_cast<uint32_t>(absolute));
+        break;
+      case Kind::kIommuType:
+        printer.DisplayIommuType(static_cast<uint32_t>(absolute));
+        break;
+      case Kind::kKtraceControlAction:
+        printer.DisplayKtraceControlAction(static_cast<uint32_t>(absolute));
+        break;
       case Kind::kObjectInfoTopic:
         printer.DisplayObjectInfoTopic(static_cast<uint32_t>(absolute));
         break;
+      case Kind::kObjType:
+        printer.DisplayObjType(static_cast<uint32_t>(absolute));
+        break;
       case Kind::kPciBarType:
         printer.DisplayPciBarType(static_cast<uint32_t>(absolute));
+        break;
+      case Kind::kPolicyAction:
+        printer.DisplayPolicyAction(static_cast<uint32_t>(absolute));
+        break;
+      case Kind::kPolicyCondition:
+        printer.DisplayPolicyCondition(static_cast<uint32_t>(absolute));
+        break;
+      case Kind::kPolicyTopic:
+        printer.DisplayPolicyTopic(static_cast<uint32_t>(absolute));
         break;
       case Kind::kProfileInfoFlags:
         printer.DisplayProfileInfoFlags(static_cast<uint32_t>(absolute));
@@ -503,11 +571,53 @@ void Uint32Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
       case Kind::kRights:
         printer.DisplayRights(static_cast<uint32_t>(absolute));
         break;
+      case Kind::kRsrcKind:
+        printer.DisplayRsrcKind(static_cast<uint32_t>(absolute));
+        break;
       case Kind::kSignals:
         printer.DisplaySignals(static_cast<uint32_t>(absolute));
         break;
+      case Kind::kSocketCreateOptions:
+        printer.DisplaySocketCreateOptions(static_cast<uint32_t>(absolute));
+        break;
+      case Kind::kSocketReadOptions:
+        printer.DisplaySocketReadOptions(static_cast<uint32_t>(absolute));
+        break;
+      case Kind::kSocketShutdownOptions:
+        printer.DisplaySocketShutdownOptions(static_cast<uint32_t>(absolute));
+        break;
       case Kind::kStatus:
         printer.DisplayStatus(static_cast<uint32_t>(absolute));
+        break;
+      case Kind::kSystemEventType:
+        printer.DisplaySystemEventType(static_cast<uint32_t>(absolute));
+        break;
+      case Kind::kSystemPowerctl:
+        printer.DisplaySystemPowerctl(static_cast<uint32_t>(absolute));
+        break;
+      case Kind::kThreadState:
+        printer.DisplayThreadState(static_cast<uint32_t>(absolute));
+        break;
+      case Kind::kTimerOption:
+        printer.DisplayTimerOption(static_cast<uint32_t>(absolute));
+        break;
+      case Kind::kVcpu:
+        printer.DisplayVcpu(static_cast<uint32_t>(absolute));
+        break;
+      case Kind::kVmOption:
+        printer.DisplayVmOption(static_cast<uint32_t>(absolute));
+        break;
+      case Kind::kVmoCreationOption:
+        printer.DisplayVmoCreationOption(static_cast<uint32_t>(absolute));
+        break;
+      case Kind::kVmoOp:
+        printer.DisplayVmoOp(static_cast<uint32_t>(absolute));
+        break;
+      case Kind::kVmoOption:
+        printer.DisplayVmoOption(static_cast<uint32_t>(absolute));
+        break;
+      case Kind::kVmoType:
+        printer.DisplayVmoType(static_cast<uint32_t>(absolute));
         break;
     }
   }

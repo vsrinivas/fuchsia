@@ -35,7 +35,7 @@ VMO_CREATE_DISPLAY_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_vmo_create("
     "size: \x1B[32muint64\x1B[0m = \x1B[34m1024\x1B[0m, "
-    "options: \x1B[32mzx_vmo_creation_option_t\x1B[0m = \x1B[34mZX_VMO_RESIZABLE\x1B[0m)\n"
+    "options: \x1B[32mzx.vmo_creation_option\x1B[0m = \x1B[34mZX_VMO_RESIZABLE\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
 
@@ -217,7 +217,7 @@ VMO_OP_RANGE_DISPLAY_TEST(ZxVmoOpRange, ZX_OK,
                           "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                           "zx_vmo_op_range("
                           "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
-                          "op: \x1B[32mzx_vmo_op_t\x1B[0m = \x1B[34mZX_VMO_OP_CACHE_SYNC\x1B[0m, "
+                          "op: \x1B[32mzx.vmo_op\x1B[0m = \x1B[34mZX_VMO_OP_CACHE_SYNC\x1B[0m, "
                           "offset: \x1B[32muint64\x1B[0m = \x1B[34m10\x1B[0m, "
                           "size: \x1B[32muint64\x1B[0m = \x1B[34m20\x1B[0m)\n"
                           "\x1B[32m0.000000\x1B[0m "
@@ -258,7 +258,7 @@ VMO_CREATE_CHILD_DISPLAY_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_vmo_create_child("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
-    "options: \x1B[32mzx_vmo_option_t\x1B[0m = \x1B[34mZX_VMO_CHILD_SNAPSHOT\x1B[0m, "
+    "options: \x1B[32mzx.vmo_option\x1B[0m = \x1B[34mZX_VMO_CHILD_SNAPSHOT\x1B[0m, "
     "offset: \x1B[32muint64\x1B[0m = \x1B[34m10\x1B[0m, "
     "size: \x1B[32muint64\x1B[0m = \x1B[34m20\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "

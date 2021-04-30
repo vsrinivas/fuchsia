@@ -45,7 +45,7 @@ INTERRUPT_CREATE_DISPLAY_TEST(
     "zx_interrupt_create("
     "src_obj: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "src_num: \x1B[32muint32\x1B[0m = \x1B[34m1\x1B[0m, "
-    "options: \x1B[32mzx_interrupt_flags_t\x1B[0m = "
+    "options: \x1B[32mzx.interrupt_flags\x1B[0m = "
     "\x1B[31mZX_INTERRUPT_MODE_EDGE_LOW | ZX_INTERRUPT_REMAP_IRQ\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (out_handle: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");

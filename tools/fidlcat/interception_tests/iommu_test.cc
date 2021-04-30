@@ -46,7 +46,7 @@ IOMMU_CREATE_DUMMY_DISPLAY_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_iommu_create("
     "resource: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
-    "type: \x1B[32mzx_iommu_type_t\x1B[0m = \x1B[31mZX_IOMMU_TYPE_DUMMY\x1B[0m)\n"
+    "type: \x1B[32mzx.iommu_type\x1B[0m = \x1B[31mZX_IOMMU_TYPE_DUMMY\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
 
@@ -77,9 +77,9 @@ IOMMU_CREATE_INTEL_DISPLAY_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_iommu_create("
     "resource: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
-    "type: \x1B[32mzx_iommu_type_t\x1B[0m = \x1B[31mZX_IOMMU_TYPE_INTEL\x1B[0m)\n"
+    "type: \x1B[32mzx.iommu_type\x1B[0m = \x1B[31mZX_IOMMU_TYPE_INTEL\x1B[0m)\n"
     "  desc: \x1B[32mzx_iommu_desc_intel_t\x1B[0m = {\n"
-    "    register_base: \x1B[32mzx_paddr_t\x1B[0m = \x1B[34m0000000000001234\x1B[0m\n"
+    "    register_base: \x1B[32mzx.paddr\x1B[0m = \x1B[34m0000000000001234\x1B[0m\n"
     "    pci_segment: \x1B[32muint16\x1B[0m = \x1B[34m100\x1B[0m\n"
     "    whole_segment: \x1B[32mbool\x1B[0m = \x1B[34mtrue\x1B[0m\n"
     "    scope_bytes: \x1B[32muint8\x1B[0m = \x1B[34m8\x1B[0m\n"

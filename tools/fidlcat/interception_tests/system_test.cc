@@ -160,7 +160,7 @@ SYSTEM_GET_EVENT_DISPLAY_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_system_get_event("
     "root_job: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
-    "kind: \x1B[32mzx_system_event_type_t\x1B[0m = \x1B[34mZX_SYSTEM_EVENT_OUT_OF_MEMORY\x1B[0m)\n"
+    "kind: \x1B[32mzx.system_event_type\x1B[0m = \x1B[34mZX_SYSTEM_EVENT_OUT_OF_MEMORY\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m (event: \x1B[32mhandle\x1B[0m = \x1B[31mbde90caf\x1B[0m)\n");
 
@@ -303,7 +303,7 @@ SYSTEM_POWERCTL_DISPLAY_TEST(ZxSystemPowerctl, ZX_OK,
                              "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                              "zx_system_powerctl("
                              "resource: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
-                             "cmd: \x1B[32mzx_system_powerctl_t\x1B[0m = "
+                             "cmd: \x1B[32mzx.system_powerctl\x1B[0m = "
                              "\x1B[34mZX_SYSTEM_POWERCTL_ENABLE_ALL_CPUS\x1B[0m)\n"
                              "\x1B[32m0.000000\x1B[0m "
                              "  -> \x1B[32mZX_OK\x1B[0m\n");
@@ -330,13 +330,12 @@ SYSTEM_POWERCTL_ACPI_DISPLAY_TEST(ZxSystemPowerctlAcpi, ZX_OK,
                                   "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                                   "zx_system_powerctl("
                                   "resource: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
-                                  "cmd: \x1B[32mzx_system_powerctl_t\x1B[0m = "
+                                  "cmd: \x1B[32mzx.system_powerctl\x1B[0m = "
                                   "\x1B[34mZX_SYSTEM_POWERCTL_ACPI_TRANSITION_S_STATE\x1B[0m)\n"
-                                  "  arg: \x1B[32mzx_system_powerctl_arg_t\x1B[0m = {\n"
-                                  "    target_s_state: \x1B[32muint8\x1B[0m = \x1B[34m1\x1B[0m\n"
-                                  "    sleep_type_a: \x1B[32muint8\x1B[0m = \x1B[34m2\x1B[0m\n"
-                                  "    sleep_type_b: \x1B[32muint8\x1B[0m = \x1B[34m3\x1B[0m\n"
-                                  "  }\n"
+                                  "  arg: \x1B[32mzx_system_powerctl_arg_t\x1B[0m = { "
+                                  "target_s_state: \x1B[32muint8\x1B[0m = \x1B[34m1\x1B[0m, "
+                                  "sleep_type_a: \x1B[32muint8\x1B[0m = \x1B[34m2\x1B[0m, "
+                                  "sleep_type_b: \x1B[32muint8\x1B[0m = \x1B[34m3\x1B[0m }\n"
                                   "\x1B[32m0.000000\x1B[0m "
                                   "  -> \x1B[32mZX_OK\x1B[0m\n");
 
@@ -363,14 +362,13 @@ SYSTEM_POWERCTL_PL1_DISPLAY_TEST(ZxSystemPowerctlPl1, ZX_OK,
                                  "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
                                  "zx_system_powerctl("
                                  "resource: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
-                                 "cmd: \x1B[32mzx_system_powerctl_t\x1B[0m = "
+                                 "cmd: \x1B[32mzx.system_powerctl\x1B[0m = "
                                  "\x1B[34mZX_SYSTEM_POWERCTL_X86_SET_PKG_PL1\x1B[0m)\n"
-                                 "  arg: \x1B[32mzx_system_powerctl_arg_t\x1B[0m = {\n"
-                                 "    power_limit: \x1B[32muint32\x1B[0m = \x1B[34m200\x1B[0m\n"
-                                 "    time_window: \x1B[32muint32\x1B[0m = \x1B[34m300\x1B[0m\n"
-                                 "    clamp: \x1B[32muint8\x1B[0m = \x1B[34m0\x1B[0m\n"
-                                 "    enable: \x1B[32muint8\x1B[0m = \x1B[34m1\x1B[0m\n"
-                                 "  }\n"
+                                 "  arg: \x1B[32mzx_system_powerctl_arg_t\x1B[0m = { "
+                                 "power_limit: \x1B[32muint32\x1B[0m = \x1B[34m200\x1B[0m, "
+                                 "time_window: \x1B[32muint32\x1B[0m = \x1B[34m300\x1B[0m, "
+                                 "clamp: \x1B[32muint8\x1B[0m = \x1B[34m0\x1B[0m, "
+                                 "enable: \x1B[32muint8\x1B[0m = \x1B[34m1\x1B[0m }\n"
                                  "\x1B[32m0.000000\x1B[0m "
                                  "  -> \x1B[32mZX_OK\x1B[0m\n");
 
