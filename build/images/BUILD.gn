@@ -1633,57 +1633,57 @@ action("flash_script") {
   # generated.  The first item should be the partition name and the
   # second should be the path to the image for the partition.
   parts = [
-    [
-      zircon_a_partition,
-      rebase_path(image, root_build_dir),
-    ],
-    [
-      zircon_b_partition,
-      rebase_path(image, root_build_dir),
-    ],
-    [
-      zircon_r_partition,
-      rebase_path(recovery_image, root_build_dir),
-    ],
-    [
-      vbmeta_a_partition,
-      rebase_path(vbmeta, root_build_dir),
-    ],
-    [
-      vbmeta_b_partition,
-      rebase_path(vbmeta, root_build_dir),
-    ],
-    [
-      vbmeta_r_partition,
-      rebase_path(recovery_vbmeta, root_build_dir),
-    ],
+    {
+      name = zircon_a_partition
+      path = rebase_path(image, root_build_dir)
+    },
+    {
+      name = zircon_b_partition
+      path = rebase_path(image, root_build_dir)
+    },
+    {
+      name = zircon_r_partition
+      path = rebase_path(recovery_image, root_build_dir)
+    },
+    {
+      name = vbmeta_a_partition
+      path = rebase_path(vbmeta, root_build_dir)
+    },
+    {
+      name = vbmeta_b_partition
+      path = rebase_path(vbmeta, root_build_dir)
+    },
+    {
+      name = vbmeta_r_partition
+      path = rebase_path(recovery_vbmeta, root_build_dir)
+    },
   ]
 
   recovery_parts = [
-    [
-      zircon_a_partition,
-      rebase_path(recovery_image, root_build_dir),
-    ],
-    [
-      zircon_b_partition,
-      rebase_path(recovery_image, root_build_dir),
-    ],
-    [
-      zircon_r_partition,
-      rebase_path(recovery_image, root_build_dir),
-    ],
-    [
-      vbmeta_a_partition,
-      rebase_path(recovery_vbmeta, root_build_dir),
-    ],
-    [
-      vbmeta_b_partition,
-      rebase_path(recovery_vbmeta, root_build_dir),
-    ],
-    [
-      vbmeta_r_partition,
-      rebase_path(recovery_vbmeta, root_build_dir),
-    ],
+    {
+      name = zircon_a_partition
+      path = rebase_path(recovery_image, root_build_dir)
+    },
+    {
+      name = zircon_b_partition
+      path = rebase_path(recovery_image, root_build_dir)
+    },
+    {
+      name = zircon_r_partition
+      path = rebase_path(recovery_image, root_build_dir)
+    },
+    {
+      name = vbmeta_a_partition
+      path = rebase_path(recovery_vbmeta, root_build_dir)
+    },
+    {
+      name = vbmeta_b_partition
+      path = rebase_path(recovery_vbmeta, root_build_dir)
+    },
+    {
+      name = vbmeta_r_partition
+      path = rebase_path(recovery_vbmeta, root_build_dir)
+    },
   ]
 
   host_out_dir = get_label_info(":bogus($host_toolchain)", "root_out_dir")
@@ -1716,10 +1716,12 @@ action("flash_script") {
   foreach(info, firmware_info) {
     args += [ "--firmware=${info.partition}:${info.out_path}" ]
     deps += [ ":${info.name}" ]
-    bootloader_parts += [ [
-          info.partition,
-          rebase_path("$root_out_dir/${info.out_path}", root_build_dir),
-        ] ]
+    bootloader_parts += [
+      {
+        name = info.partition
+        path = rebase_path("$root_out_dir/${info.out_path}", root_build_dir)
+      },
+    ]
   }
 
   if (fvm_partition != "") {
@@ -1729,10 +1731,12 @@ action("flash_script") {
       "--fvm=${fvm_partition}",
     ]
     deps += [ ":fvm.fastboot.blk" ]
-    parts += [ [
-          fvm_partition,
-          rebase_path(image_path[0], root_build_dir),
-        ] ]
+    parts += [
+      {
+        name = fvm_partition
+        path = rebase_path(image_path[0], root_build_dir)
+      },
+    ]
   }
 
   metadata = {
@@ -1746,7 +1750,7 @@ action("flash_script") {
     image_paths = [ "IMAGE_FLASH_SH=netboot.sh" ]
     flash_manifest = [
       {
-        version = 2
+        version = 3
         manifest = {
           hw_revision = "${board_name}"
           products = [
@@ -1812,57 +1816,57 @@ archive_recovery_vbmeta = "zircon-r.vbmeta"
 # generated.  The first item should be the partition name and the
 # second should be the path to the image for the partition.
 archive_parts = [
-  [
-    zircon_a_partition,
-    archive_image,
-  ],
-  [
-    zircon_b_partition,
-    archive_image,
-  ],
-  [
-    zircon_r_partition,
-    archive_recovery_image,
-  ],
-  [
-    vbmeta_a_partition,
-    archive_vbmeta,
-  ],
-  [
-    vbmeta_b_partition,
-    archive_vbmeta,
-  ],
-  [
-    vbmeta_r_partition,
-    archive_recovery_vbmeta,
-  ],
+  {
+    name = zircon_a_partition
+    path = archive_image
+  },
+  {
+    name = zircon_b_partition
+    path = archive_image
+  },
+  {
+    name = zircon_r_partition
+    path = archive_recovery_image
+  },
+  {
+    name = vbmeta_a_partition
+    path = archive_vbmeta
+  },
+  {
+    name = vbmeta_b_partition
+    path = archive_vbmeta
+  },
+  {
+    name = vbmeta_r_partition
+    path = archive_recovery_vbmeta
+  },
 ]
 
 archive_recovery_parts = [
-  [
-    zircon_a_partition,
-    archive_recovery_image,
-  ],
-  [
-    zircon_b_partition,
-    archive_recovery_image,
-  ],
-  [
-    zircon_r_partition,
-    archive_recovery_image,
-  ],
-  [
-    vbmeta_a_partition,
-    archive_recovery_vbmeta,
-  ],
-  [
-    vbmeta_b_partition,
-    archive_recovery_vbmeta,
-  ],
-  [
-    vbmeta_r_partition,
-    archive_recovery_vbmeta,
-  ],
+  {
+    name = zircon_a_partition
+    path = archive_recovery_image
+  },
+  {
+    name = zircon_b_partition
+    path = archive_recovery_image
+  },
+  {
+    name = zircon_r_partition
+    path = archive_recovery_image
+  },
+  {
+    name = vbmeta_a_partition
+    path = archive_recovery_vbmeta
+  },
+  {
+    name = vbmeta_b_partition
+    path = archive_recovery_vbmeta
+  },
+  {
+    name = vbmeta_r_partition
+    path = archive_recovery_vbmeta
+  },
 ]
 
 archive_outputs = [ "$root_out_dir/flash-archive.sh" ]
@@ -1890,10 +1894,12 @@ archive_bootloader_parts = []
 
 foreach(info, firmware_info) {
   archive_args += [ "--firmware=${info.partition}:${info.out_path}" ]
-  archive_bootloader_parts += [ [
-        info.partition,
-        info.out_path,
-      ] ]
+  archive_bootloader_parts += [
+    {
+      name = info.partition
+      path = info.out_path
+    },
+  ]
 }
 
 if (fvm_partition != "") {
@@ -1902,10 +1908,12 @@ if (fvm_partition != "") {
     "--fvm-image=" + get_path_info(image_path[0], "file"),
     "--fvm=${fvm_partition}",
   ]
-  archive_parts += [ [
-        fvm_partition,
-        get_path_info(image_path[0], "file"),
-      ] ]
+  archive_parts += [
+    {
+      name = fvm_partition
+      path = get_path_info(image_path[0], "file")
+    },
+  ]
 }
 
 action("flash_script_archive") {
@@ -1932,7 +1940,7 @@ generated_file("fastboot_manifest_archive") {
   deps = [ ":flash_script_archive" ]
   contents = [
     {
-      version = 2
+      version = 3
       manifest = {
         hw_revision = "${board_name}"
         products = [
