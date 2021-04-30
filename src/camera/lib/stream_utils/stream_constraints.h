@@ -64,7 +64,6 @@ struct StreamConstraints {
   uint32_t buffer_count_for_camping_ = 3;
   uint32_t frames_per_second_ = 30;
   bool contiguous_ = false;
-  bool cpu_access_ = true;
   std::vector<fuchsia::sysmem::ImageFormat_2> formats_;
   fuchsia::camera2::CameraStreamType stream_type_ = {};
 };

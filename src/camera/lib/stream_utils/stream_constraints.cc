@@ -73,15 +73,15 @@ fuchsia::sysmem::BufferCollectionConstraints StreamConstraints::MakeBufferCollec
   fuchsia::sysmem::BufferCollectionConstraints constraints;
   constraints.min_buffer_count_for_camping = buffer_count_for_camping_;
   constraints.has_buffer_memory_constraints = true;
+  constraints.buffer_memory_constraints.cpu_domain_supported = false;
   constraints.buffer_memory_constraints.ram_domain_supported = true;
   if (contiguous_) {
     constraints.buffer_memory_constraints.physically_contiguous_required = true;
   }
-  if (cpu_access_) {
-    constraints.usage.cpu = fuchsia::sysmem::cpuUsageWrite | fuchsia::sysmem::cpuUsageRead;
-  } else {
-    constraints.usage.video = fuchsia::sysmem::videoUsageCapture;
-  }
+  // To allow for pinning
+  constraints.usage.cpu = fuchsia::sysmem::cpuUsageWrite;
+  constraints.usage.video = fuchsia::sysmem::videoUsageCapture;
+
   // Just make one constraint that has the biggest width/height for each format type:
   // TODO(fxbug.dev/41321): Map these out. Right now we just use NV12 for everything.
   uint32_t max_width = 0, max_height = 0;

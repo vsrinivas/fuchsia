@@ -217,7 +217,7 @@ void EncoderClient::OnInputBuffersReady(
     std::unique_ptr<CodecBuffer> local_buffer = CodecBuffer::CreateFromVmo(
         i, std::move(buffer_collection_info.buffers[i].vmo),
         buffer_collection_info.buffers[i].vmo_usable_start,
-        buffer_collection_info.settings.buffer_settings.size_bytes, true,
+        buffer_collection_info.settings.buffer_settings.size_bytes, false,
         buffer_collection_info.settings.buffer_settings.is_physically_contiguous);
     if (!local_buffer) {
       FatalError("CodecBuffer::CreateFromVmo() failed");
@@ -269,13 +269,17 @@ void EncoderClient::ConfigurePortBufferCollection(
   settings.set_sysmem_token(std::move(token));
 
   fuchsia::sysmem::BufferCollectionConstraints constraints;
-  constraints.usage.cpu = fuchsia::sysmem::cpuUsageReadOften | fuchsia::sysmem::cpuUsageWriteOften;
   constraints.min_buffer_count_for_camping = packet_count_for_client;
 
   if (is_output) {
+    constraints.usage.cpu = fuchsia::sysmem::cpuUsageReadOften;
     constraints.has_buffer_memory_constraints = true;
     constraints.buffer_memory_constraints.min_size_bytes = kMinOutputBufferSize;
     constraints.min_buffer_count = kMinOutputBufferCount;
+  } else {
+    constraints.usage.cpu = fuchsia::sysmem::cpuUsageRead;
+    constraints.has_buffer_memory_constraints = true;
+    constraints.buffer_memory_constraints.ram_domain_supported = true;
   }
 
   if (is_output) {
@@ -362,7 +366,7 @@ void EncoderClient::OnOutputBuffersReady(
     std::unique_ptr<CodecBuffer> buffer = CodecBuffer::CreateFromVmo(
         i, std::move(buffer_collection_info.buffers[i].vmo),
         buffer_collection_info.buffers[i].vmo_usable_start,
-        buffer_collection_info.settings.buffer_settings.size_bytes, true,
+        buffer_collection_info.settings.buffer_settings.size_bytes, false,
         buffer_collection_info.settings.buffer_settings.is_physically_contiguous);
     if (!buffer) {
       FatalError("CodecBuffer::Allocate() failed (output)");

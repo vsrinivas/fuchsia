@@ -59,6 +59,10 @@ protocol Stream {
     /// Returns when the server or any buffer negotiation participant (including the current client)
     /// requires buffer renegotiation, and the current client is registered as a participant. Frame
     /// callbacks received after receiving this callback apply to the newly negotiated collection.
+    ///
+    /// Because the camera can output directly to these collections, each client should support
+    /// reading from a |fuchsia.sysmem.CoherencyDomain| of RAM, and set |ram_domain_supported| in
+    /// their |fuchsia.sysmem.BufferMemoryConstraints|.
     WatchBufferCollection() -> (fuchsia.sysmem.BufferCollectionToken token);
 
     /// Returns the orientation if it has changed from a previously returned value, or is called by
