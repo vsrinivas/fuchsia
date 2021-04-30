@@ -75,4 +75,9 @@ pub struct SignArgs {
 /// perform the assembly of images
 #[derive(Debug, FromArgs, PartialEq)]
 #[argh(subcommand, name = "image")]
-pub struct ImageArgs {}
+pub struct ImageArgs {
+    /// the configuration file that specifies the packages, binaries, and
+    /// settings used to assemble an image.
+    #[argh(option)]
+    pub config: String,
+}
