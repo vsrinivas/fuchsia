@@ -27,6 +27,7 @@ use {
     anyhow::Error,
     async_trait::async_trait,
     cm_rust::*,
+    cm_rust_testing::*,
     fidl::endpoints::ServerEnd,
     fidl_fidl_examples_echo::{self as echo},
     fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_mem as fmem, fidl_fuchsia_sys2 as fsys,

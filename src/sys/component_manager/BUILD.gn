@@ -78,11 +78,12 @@ template("component_manager") {
     "//third_party/rust_crates:url",
     "//third_party/rust_crates:void",
 
-    # This is a 'logical' test-only dep, in that it's only used in the
+    # These are 'logical' test-only deps, in that they're only used in the
     # model::testing helpers, but that module is currently included in the main
     # library (rather than being guarded with '#[cfg(test)]') to allow use in
     # separate integration test targets.
     "//garnet/examples/fidl/services:echo-rustc",
+    "//src/sys/lib/cm_rust/testing",
   ]
   _non_rust_deps = [
     "//zircon/system/ulib/trace",

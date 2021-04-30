@@ -99,10 +99,9 @@ pub mod tests {
     use {
         crate::{
             model::actions::ShutdownAction,
-            model::testing::test_helpers::{
-                ComponentDeclBuilder, TestEnvironmentBuilder, TestModelResult,
-            },
+            model::testing::test_helpers::{TestEnvironmentBuilder, TestModelResult},
         },
+        cm_rust_testing::ComponentDeclBuilder,
         fidl_fuchsia_sys2 as fsys,
     };
 

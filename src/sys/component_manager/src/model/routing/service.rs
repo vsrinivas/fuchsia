@@ -220,16 +220,11 @@ mod tests {
         super::*,
         crate::{
             capability::{CapabilitySource, ComponentCapability},
-            model::{
-                routing::RoutingError,
-                testing::{
-                    routing_test_helpers::RoutingTestBuilder,
-                    test_helpers::{ChildDeclBuilder, CollectionDeclBuilder, ComponentDeclBuilder},
-                },
-            },
+            model::{routing::RoutingError, testing::routing_test_helpers::RoutingTestBuilder},
         },
         ::routing::component_instance::ComponentInstanceInterface,
         cm_rust::*,
+        cm_rust_testing::{ChildDeclBuilder, CollectionDeclBuilder, ComponentDeclBuilder},
         moniker::{AbsoluteMoniker, PartialMoniker},
         std::{
             collections::{HashMap, HashSet},

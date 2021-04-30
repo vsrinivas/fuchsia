@@ -1299,13 +1299,11 @@ pub mod tests {
             testing::{
                 mocks::{ControlMessage, ControllerActionResponse, MockController},
                 routing_test_helpers::{RoutingTest, RoutingTestBuilder},
-                test_helpers::{
-                    self, component_decl_with_test_runner, ActionsTest, ComponentDeclBuilder,
-                    ComponentInfo,
-                },
+                test_helpers::{self, component_decl_with_test_runner, ActionsTest, ComponentInfo},
             },
         },
         cm_rust::EventMode,
+        cm_rust_testing::ComponentDeclBuilder,
         component_id_index::gen_instance_id,
         fidl::endpoints,
         fuchsia_async as fasync,

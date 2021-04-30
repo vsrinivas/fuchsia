@@ -14,6 +14,7 @@ use {
         },
     },
     cm_rust::*,
+    cm_rust_testing::*,
     component_id_index::gen_instance_id,
     fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys, fuchsia_zircon as zx,
     moniker::{AbsoluteMoniker, ExtendedMoniker, RelativeMoniker},

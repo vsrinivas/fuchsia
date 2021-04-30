@@ -389,10 +389,9 @@ mod tests {
         super::*,
         crate::{
             diagnostics::testing::{FakeDiagnosticsContainer, FakeRuntime, FakeTask},
-            model::testing::{
-                routing_test_helpers::RoutingTest, test_helpers::ComponentDeclBuilder,
-            },
+            model::testing::routing_test_helpers::RoutingTest,
         },
+        cm_rust_testing::ComponentDeclBuilder,
         diagnostics_hierarchy::DiagnosticsHierarchy,
         fuchsia_inspect::testing::{assert_data_tree, AnyProperty},
         fuchsia_zircon::{AsHandleRef, DurationNum},

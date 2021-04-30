@@ -79,12 +79,11 @@ pub mod tests {
         crate::model::{
             actions::{test_utils::is_marked_deleted, ActionSet},
             testing::{
-                test_helpers::{
-                    component_decl_with_test_runner, ActionsTest, ComponentDeclBuilder,
-                },
+                test_helpers::{component_decl_with_test_runner, ActionsTest},
                 test_hook::Lifecycle,
             },
         },
+        cm_rust_testing::ComponentDeclBuilder,
     };
 
     #[fuchsia::test]

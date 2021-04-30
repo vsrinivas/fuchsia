@@ -658,9 +658,7 @@ mod tests {
             testing::{
                 test_helpers::{
                     component_decl_with_test_runner, default_component_decl,
-                    execution_is_shut_down, has_child, ActionsTest, ChildDeclBuilder,
-                    CollectionDeclBuilder, ComponentDeclBuilder, ComponentInfo,
-                    EnvironmentDeclBuilder,
+                    execution_is_shut_down, has_child, ActionsTest, ComponentInfo,
                 },
                 test_hook::Lifecycle,
             },
@@ -671,6 +669,9 @@ mod tests {
             ExposeProtocolDecl, ExposeSource, ExposeTarget, OfferDecl, OfferProtocolDecl,
             OfferResolverDecl, OfferSource, OfferTarget, ProtocolDecl, UseDecl, UseProtocolDecl,
             UseSource,
+        },
+        cm_rust_testing::{
+            ChildDeclBuilder, CollectionDeclBuilder, ComponentDeclBuilder, EnvironmentDeclBuilder,
         },
         fidl_fuchsia_sys2 as fsys,
         moniker::{AbsoluteMoniker, PartialMoniker},

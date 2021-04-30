@@ -10,7 +10,6 @@ use {
             testing::{
                 mocks::{FakeBinder, ManagedNamespace},
                 routing_test_helpers::*,
-                test_helpers::*,
             },
         },
         work_scheduler::WorkScheduler,
@@ -20,6 +19,7 @@ use {
         ExposeSource, ExposeTarget, OfferDecl, OfferProtocolDecl, OfferSource, OfferTarget,
         UseDecl, UseProtocolDecl, UseSource,
     },
+    cm_rust_testing::*,
     fidl::endpoints::Proxy,
     fidl_fuchsia_io::{MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE},
     fidl_fuchsia_sys2 as fsys,

@@ -262,11 +262,12 @@ mod tests {
                 stream::EventStream,
             },
             hooks::{EventError, EventErrorPayload, EventPayload},
-            testing::{routing_test_helpers::*, test_helpers::*},
+            testing::routing_test_helpers::*,
         },
         cm_rust::{
             DirectoryDecl, EventMode, ExposeDecl, ExposeDirectoryDecl, ExposeSource, ExposeTarget,
         },
+        cm_rust_testing::*,
         fidl_fuchsia_io2 as fio,
         fuchsia_component::server::ServiceFs,
         std::iter::FromIterator,

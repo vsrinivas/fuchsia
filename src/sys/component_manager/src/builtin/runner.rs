@@ -131,10 +131,11 @@ mod tests {
             config::{JobPolicyAllowlists, SecurityPolicy},
             model::{
                 hooks::Hooks,
-                testing::{mocks::MockRunner, routing_test_helpers::*, test_helpers::*},
+                testing::{mocks::MockRunner, routing_test_helpers::*},
             },
         },
         anyhow::Error,
+        cm_rust_testing::*,
         futures::{lock::Mutex, prelude::*},
         matches::assert_matches,
         moniker::AbsoluteMoniker,

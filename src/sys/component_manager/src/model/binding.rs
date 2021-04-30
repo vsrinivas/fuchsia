@@ -155,6 +155,7 @@ mod tests {
             CapabilityPath, ComponentDecl, EventMode, RegistrationSource, RunnerDecl,
             RunnerRegistration,
         },
+        cm_rust_testing::*,
         fidl_fuchsia_component_runner as fcrunner, fuchsia_async as fasync,
         futures::{join, lock::Mutex, prelude::*},
         matches::assert_matches,

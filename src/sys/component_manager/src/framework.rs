@@ -389,6 +389,7 @@ mod tests {
             self, CapabilityName, CapabilityPath, ChildDecl, ComponentDecl, EventMode, ExposeDecl,
             ExposeProtocolDecl, ExposeSource, ExposeTarget, NativeIntoFidl,
         },
+        cm_rust_testing::*,
         fidl::endpoints::{self, Proxy},
         fidl_fidl_examples_echo as echo,
         fidl_fuchsia_io::MODE_TYPE_SERVICE,

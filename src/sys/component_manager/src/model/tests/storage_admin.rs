@@ -3,11 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::{
-        rights,
-        testing::{routing_test_helpers::*, test_helpers::*},
-    },
+    crate::model::{rights, testing::routing_test_helpers::*},
     cm_rust::*,
+    cm_rust_testing::*,
     fidl_fuchsia_sys2 as fsys,
     moniker::RelativeMoniker,
     std::{

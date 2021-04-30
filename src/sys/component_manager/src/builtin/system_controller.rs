@@ -172,11 +172,10 @@ mod tests {
             binding::Binder,
             component::BindReason,
             hooks::{EventType, Hook, HooksRegistration},
-            testing::test_helpers::{
-                component_decl_with_test_runner, ActionsTest, ComponentDeclBuilder, ComponentInfo,
-            },
+            testing::test_helpers::{component_decl_with_test_runner, ActionsTest, ComponentInfo},
         },
         async_trait::async_trait,
+        cm_rust_testing::ComponentDeclBuilder,
         fidl::endpoints,
         fidl_fuchsia_sys2 as fsys,
         moniker::AbsoluteMoniker,

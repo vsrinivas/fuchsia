@@ -1,0 +1,32 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/host.gni")
+import("//build/rust/rustc_library.gni")
+
+# This library is intended for use in tests, but is not marked as testonly
+# because it is a dependency of component_manager::model::testing. That
+# module is currently included in the main component_manager library
+# (rather than being guarded with '#[cfg(test)]') to allow use in separate
+# integration test targets.
+rustc_library("testing") {
+  name = "cm_rust_testing"
+
+  deps = [
+    "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
+    "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/sys/lib/cm_rust",
+    "//src/sys/lib/routing",
+  ]
+
+  visibility = [
+    "//src/sys/component_manager/*",
+    "//src/sys/lib/cm_rust/testing:*",
+    "//src/sys/lib/routing/testing/*",
+  ]
+
+  sources = [ "src/lib.rs" ]
+}

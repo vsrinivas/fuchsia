@@ -127,13 +127,13 @@ pub mod tests {
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
             testing::{
                 test_helpers::{
-                    component_decl_with_test_runner, execution_is_shut_down, has_child,
-                    ActionsTest, ComponentDeclBuilder,
+                    component_decl_with_test_runner, execution_is_shut_down, has_child, ActionsTest,
                 },
                 test_hook::Lifecycle,
             },
         },
         cm_rust::EventMode,
+        cm_rust_testing::ComponentDeclBuilder,
         fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::{join, FutureExt},
         moniker::{AbsoluteMoniker, ChildMoniker, PartialMoniker},

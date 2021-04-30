@@ -173,16 +173,13 @@ mod tests {
             component::BindReason,
             error::ModelError,
             model::{Model, ModelParams},
-            testing::{
-                mocks::MockResolver,
-                test_helpers::{
-                    ChildDeclBuilder, CollectionDeclBuilder, ComponentDeclBuilder,
-                    EnvironmentDeclBuilder,
-                },
-            },
+            testing::mocks::MockResolver,
         },
         ::routing::{environment::DebugRegistration, error::ComponentInstanceError},
         cm_rust::{CapabilityName, RegistrationSource, RunnerRegistration},
+        cm_rust_testing::{
+            ChildDeclBuilder, CollectionDeclBuilder, ComponentDeclBuilder, EnvironmentDeclBuilder,
+        },
         maplit::hashmap,
         matches::assert_matches,
         moniker::AbsoluteMoniker,

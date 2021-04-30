@@ -656,9 +656,10 @@ mod tests {
                 model::Model,
                 rights,
                 testing::{
-                    test_helpers::*,
                     test_helpers::{
-                        dir_contains, list_directory, list_directory_recursive, read_file,
+                        component_decl_with_test_runner, dir_contains, list_directory,
+                        list_directory_recursive, read_file, TestEnvironmentBuilder,
+                        TestModelResult,
                     },
                     test_hook::HubInjectionTestHook,
                 },
@@ -670,6 +671,7 @@ mod tests {
             ExposeTarget, ProtocolDecl, UseDecl, UseDirectoryDecl, UseEventDecl,
             UseEventStreamDecl, UseProtocolDecl, UseSource,
         },
+        cm_rust_testing::ComponentDeclBuilder,
         fidl::endpoints::ServerEnd,
         fidl_fuchsia_io::{
             DirectoryMarker, DirectoryProxy, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE,

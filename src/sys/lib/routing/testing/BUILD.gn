@@ -23,6 +23,7 @@ rustc_library("routing_test_helpers") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/zircon/rust:fuchsia-zircon-status",
     "//src/sys/lib/cm_rust",
+    "//src/sys/lib/cm_rust/testing",
     "//src/sys/lib/component_id_index",
     "//src/sys/lib/moniker",
     "//src/sys/lib/routing",
