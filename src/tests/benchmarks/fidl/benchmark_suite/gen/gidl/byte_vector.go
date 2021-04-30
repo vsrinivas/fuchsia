@@ -24,7 +24,9 @@ func init() {
 				Config: config.Config{
 					"size": 16,
 				},
-				Allowlist: []config.Binding{config.LLCPP, config.HLCPP, config.Rust, config.Go, config.Walker, config.Reference, config.Dart},
+				EnableSendEventBenchmark: true,
+				EnableEchoCallBenchmark:  true,
+				Allowlist:                []config.Binding{config.LLCPP, config.HLCPP, config.Rust, config.Go, config.Walker, config.Reference, config.Dart},
 			},
 			{
 				Name:    "ByteVector/256",
@@ -47,13 +49,16 @@ func init() {
 				Allowlist:                []config.Binding{config.LLCPP, config.HLCPP, config.Rust, config.Go, config.Walker, config.Reference, config.Dart},
 			},
 			{
-				Name: "ByteVector/65536",
-				Comment: `65536 byte vector in a struct
-			Disabled on Rust / HLCPP / LLCPP due to clang performance issues`,
+				Name: "ByteVector/65280",
+				Comment: `65280 byte vector in a struct
+			This needs to be at least 16 bytes less than 65536 to account for the buffer header.
+			To make the values repeat in a full 256-element cycle, it needs to be 256 less than
+			65536.
+			Disabled on Rust / HLCPP due to clang performance issues`,
 				Config: config.Config{
-					"size": 65536,
+					"size": 65280,
 				},
-				Denylist: []config.Binding{config.Rust, config.HLCPP, config.LLCPP, config.Walker},
+				Denylist: []config.Binding{config.Rust, config.HLCPP, config.Walker},
 			},
 		},
 	})

@@ -203,8 +203,62 @@ func (a *allocatorBuilder) visitArray(value []interface{}, decl *gidlmixer.Array
 	return fmt.Sprintf("std::move(%s)", array)
 }
 
+// Tries to find a repeating pattern in the value bytes, e.g: 1, 2, 3, 1, 2, 3, 1.
+// This will not always succeed in finding a repeating pattern when one exists as it
+// searches greedily.
+func findRepeatingPeriod(value []uint64) (int, bool) {
+	if len(value) == 0 {
+		return 0, false
+	}
+
+	period := -1
+	for i, v := range value[1:] {
+		if v == value[0] {
+			period = i + 1
+			break
+		}
+	}
+	if period == -1 {
+		return 0, false
+	}
+
+	for i, v := range value {
+		if v != value[i%period] {
+			return 0, false
+		}
+	}
+	return period, true
+}
+
 func (a *allocatorBuilder) visitVector(value []interface{}, decl *gidlmixer.VectorDecl, isPointer bool) string {
 	vector := a.assignNew(typeName(decl), isPointer, "%s, %d", a.allocatorVar, len(value))
+	if len(value) == 0 {
+		return fmt.Sprintf("std::move(%s)", vector)
+	}
+	// Special case unsigned integer vectors, because clang otherwise has issues with large vectors on arm.
+	// This uses pattern matching so only a subset of byte vectors that fit the pattern (repeating sequence) will be optimized.
+	if elemDecl, ok := decl.Elem().(gidlmixer.PrimitiveDeclaration); ok && elemDecl.Subtype() == fidlgen.Uint8 {
+		var uintValues []uint64
+		for _, v := range value {
+			uintValues = append(uintValues, v.(uint64))
+		}
+		// For simplicity, only support sizes that are multiples of the period.
+		if period, ok := findRepeatingPeriod(uintValues); ok && len(value)%period == 0 {
+			for i := 0; i < period; i++ {
+				elem := a.visit(value[i], decl.Elem())
+				a.write("%s[%d] = %s;\n", vector, i, elem)
+			}
+			a.write(
+				`for (size_t offset = 0; offset < %[1]s.count(); offset += %[2]d) {
+memcpy(%[1]s.mutable_data() + offset, %[1]s.data(), %[2]d);
+}
+`, vector, period)
+			return fmt.Sprintf("std::move(%s)", vector)
+		}
+		if len(uintValues) > 1024 {
+			panic("large vectors that are not repeating are not supported, for build performance reasons")
+		}
+	}
 	for i, item := range value {
 		elem := a.visit(item, decl.Elem())
 		a.write("%s[%d] = %s;\n", vector, i, elem)

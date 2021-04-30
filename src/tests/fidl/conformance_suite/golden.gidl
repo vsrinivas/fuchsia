@@ -200,12 +200,13 @@ success("GoldenStructArrayStruct") {
 }
 success("GoldenByteVectorStruct") {
     value = GoldenByteVectorStruct {
-        v: [1, 2, 3, 4],
+        v: [1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4],
     },
     bytes = {
         v1 = [
-            num(4):8,
+            num(12):8,
             repeat(0xff):8,
+            0x01, 0x02, 0x03, 0x04, 0x01, 0x02, 0x03, 0x04,
             0x01, 0x02, 0x03, 0x04, padding:4,
         ],
     },
