@@ -10,7 +10,7 @@
 #include <deque>
 
 #include "command_channel.h"
-#include "src/connectivity/bluetooth/core/bt-host/hci/control_packets.h"
+#include "src/connectivity/bluetooth/core/bt-host/transport/control_packets.h"
 
 namespace bt_intel {
 

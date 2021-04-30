@@ -20,8 +20,8 @@
 #include "src/connectivity/bluetooth/core/bt-host/common/byte_buffer.h"
 #include "src/connectivity/bluetooth/core/bt-host/common/log.h"
 #include "src/connectivity/bluetooth/core/bt-host/hci-spec/protocol.h"
-#include "src/connectivity/bluetooth/core/bt-host/hci/device_wrapper.h"
-#include "src/connectivity/bluetooth/core/bt-host/hci/transport.h"
+#include "src/connectivity/bluetooth/core/bt-host/transport/device_wrapper.h"
+#include "src/connectivity/bluetooth/core/bt-host/transport/transport.h"
 #include "src/connectivity/bluetooth/tools/lib/command_dispatcher.h"
 #include "src/lib/fxl/command_line.h"
 

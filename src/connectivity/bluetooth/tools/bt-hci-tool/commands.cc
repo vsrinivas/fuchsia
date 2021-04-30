@@ -15,7 +15,7 @@
 #include "src/connectivity/bluetooth/core/bt-host/gap/gap.h"
 #include "src/connectivity/bluetooth/core/bt-host/hci-spec/util.h"
 #include "src/connectivity/bluetooth/core/bt-host/hci/advertising_report_parser.h"
-#include "src/connectivity/bluetooth/core/bt-host/hci/control_packets.h"
+#include "src/connectivity/bluetooth/core/bt-host/transport/control_packets.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
 #include "src/lib/fxl/strings/string_printf.h"

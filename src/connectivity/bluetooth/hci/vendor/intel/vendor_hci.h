@@ -12,7 +12,7 @@
 #include "src/connectivity/bluetooth/core/bt-host/common/byte_buffer.h"
 #include "src/connectivity/bluetooth/core/bt-host/common/device_address.h"
 #include "src/connectivity/bluetooth/core/bt-host/hci-spec/protocol.h"
-#include "src/connectivity/bluetooth/core/bt-host/hci/control_packets.h"
+#include "src/connectivity/bluetooth/core/bt-host/transport/control_packets.h"
 
 namespace btintel {
 

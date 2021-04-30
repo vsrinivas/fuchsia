@@ -5,14 +5,15 @@
 #ifndef SRC_CONNECTIVITY_BLUETOOTH_TOOLS_BT_INTEL_TOOL_COMMAND_CHANNEL_H_
 #define SRC_CONNECTIVITY_BLUETOOTH_TOOLS_BT_INTEL_TOOL_COMMAND_CHANNEL_H_
 
-#include <fbl/unique_fd.h>
 #include <fuchsia/hardware/bluetooth/c/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 #include <zircon/types.h>
 
-#include "src/connectivity/bluetooth/core/bt-host/hci/control_packets.h"
+#include <fbl/unique_fd.h>
+
+#include "src/connectivity/bluetooth/core/bt-host/transport/control_packets.h"
 
 // Sends and receives events from a command channel that it retrieves from a
 // Zircon Bluetooth HCI device.  It parses the incoming event packets, only

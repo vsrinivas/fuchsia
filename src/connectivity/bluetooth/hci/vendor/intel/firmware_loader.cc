@@ -5,8 +5,6 @@
 #include "firmware_loader.h"
 
 #include <endian.h>
-#include <fbl/string_printf.h>
-#include <fbl/unique_fd.h>
 #include <fcntl.h>
 #include <string.h>
 #include <sys/mman.h>
@@ -17,8 +15,11 @@
 #include <iostream>
 #include <limits>
 
+#include <fbl/string_printf.h>
+#include <fbl/unique_fd.h>
+
 #include "logging.h"
-#include "src/connectivity/bluetooth/core/bt-host/hci/control_packets.h"
+#include "src/connectivity/bluetooth/core/bt-host/transport/control_packets.h"
 
 namespace btintel {
 
