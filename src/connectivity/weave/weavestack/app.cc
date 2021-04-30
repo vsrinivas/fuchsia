@@ -41,12 +41,16 @@ void App::ClearFds() {
 }
 
 void App::Quit() {
+  if (!initialized_) {
+    return;
+  }
   loop_.Quit();
   loop_.JoinThreads();
   ClearWaiters();
   ClearFds();
   PlatformMgrImpl().ShutdownWeaveStack();
   PlatformMgr().RemoveEventHandler(&App::OnPlatformEvent, reinterpret_cast<intptr_t>(this));
+  initialized_ = false;
 }
 
 void App::OnPlatformEvent(const WeaveDeviceEvent* event, intptr_t arg) {
@@ -108,7 +112,8 @@ zx_status_t App::Init() {
     status = bootstrap_status.value();
     initialized_ = true;
     if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "BootstrapImpl Init() failed with status = " << zx_status_get_string(status);
+      FX_LOGS(ERROR) << "BootstrapImpl Init() failed with status = "
+                     << zx_status_get_string(status);
     }
     return status;
   }

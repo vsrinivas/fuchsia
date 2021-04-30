@@ -4,6 +4,7 @@
 #include "src/connectivity/weave/weavestack/app.h"
 
 #include <lib/async/cpp/time.h>
+#include <lib/fit/defer.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/syslog/cpp/macros.h>
 
@@ -35,13 +36,13 @@ using nl::Weave::DeviceLayer::PlatformMgr;
 using nl::Weave::DeviceLayer::PlatformMgrImpl;
 using nl::Weave::DeviceLayer::ThreadStackManagerDelegateImpl;
 using nl::Weave::DeviceLayer::ThreadStackMgrImpl;
+using nl::Weave::DeviceLayer::TraitUpdater;
+using nl::Weave::DeviceLayer::TraitUpdaterDelegateImpl;
 using nl::Weave::DeviceLayer::WeaveDeviceEvent;
 using nl::Weave::DeviceLayer::WeaveDevicePlatformEventType;
 using nl::Weave::DeviceLayer::Internal::NetworkProvisioningServerDelegateImpl;
 using nl::Weave::DeviceLayer::Internal::NetworkProvisioningServerImpl;
 using nl::Weave::DeviceLayer::Internal::NetworkProvisioningSvrImpl;
-using nl::Weave::DeviceLayer::TraitUpdater;
-using nl::Weave::DeviceLayer::TraitUpdaterDelegateImpl;
 
 class ConnectivityManagerTestDelegate : public ConnectivityManagerImpl::Delegate {
  public:
@@ -52,7 +53,9 @@ class ConnectivityManagerTestDelegate : public ConnectivityManagerImpl::Delegate
   bool IsServiceTunnelRestricted() { return false; }
   void OnPlatformEvent(const WeaveDeviceEvent* event) {}
   std::optional<std::string> GetWiFiInterfaceName() { return std::nullopt; }
-  ConnectivityManager::ThreadMode GetThreadMode() { return ConnectivityManager::kThreadMode_NotSupported; }
+  ConnectivityManager::ThreadMode GetThreadMode() {
+    return ConnectivityManager::kThreadMode_NotSupported;
+  }
 };
 
 // Provide a TSM delegate that overrides InitThreadStack to be an no-op. This is because TSM
@@ -66,10 +69,8 @@ class TestThreadStackManagerDelegate : public ThreadStackManagerDelegateImpl {
 };
 
 class TestTraitUpdaterDelegate : public TraitUpdaterDelegateImpl {
-public:
-  WEAVE_ERROR Init() override {
-    return WEAVE_NO_ERROR;
-  }
+ public:
+  WEAVE_ERROR Init() override { return WEAVE_NO_ERROR; }
   void HandleWeaveDeviceEvent(const WeaveDeviceEvent* event) override {}
 };
 
@@ -97,7 +98,6 @@ void ClearDelegates() {
 }
 
 }  // namespace
-
 
 class AppTest : public ::gtest::RealLoopFixture {
  public:
@@ -148,25 +148,49 @@ class AppTest : public ::gtest::RealLoopFixture {
 
 TEST(App, CanRunApp) {
   auto app = App();
+  auto defer_shutdown = fit::defer([&] {
+    app.Quit();
+    ClearDelegates();
+  });
+
   SetDefaultDelegates();
   EXPECT_EQ(ZX_OK, app.Init());
   EXPECT_EQ(ZX_ERR_TIMED_OUT,
             app.Run(async::Now(app.loop()->dispatcher()) + zx::duration(ZX_SEC(1)), false));
-  app.Quit();
-  ClearDelegates();
 }
 
-TEST(App, CallInitAgain) {
+TEST(App, CallInitTwice) {
   auto app = App();
+  auto defer_shutdown = fit::defer([&] {
+    app.Quit();
+    ClearDelegates();
+  });
+
   SetDefaultDelegates();
   EXPECT_EQ(ZX_OK, app.Init());
   EXPECT_EQ(ZX_ERR_BAD_STATE, app.Init());
+}
+
+TEST(App, CallQuitTwice) {
+  auto app = App();
+  auto defer_shutdown = fit::defer([&] {
+    app.Quit();
+    ClearDelegates();
+  });
+
+  SetDefaultDelegates();
+  EXPECT_EQ(ZX_OK, app.Init());
   app.Quit();
-  ClearDelegates();
+  app.Quit();
 }
 
 TEST(App, RequestShutdown) {
   auto app = App();
+  auto defer_shutdown = fit::defer([&] {
+    app.Quit();
+    ClearDelegates();
+  });
+
   SetDefaultDelegates();
   EXPECT_EQ(ZX_OK, app.Init());
   EXPECT_EQ(ASYNC_LOOP_RUNNABLE, app.loop()->GetState());
@@ -178,7 +202,6 @@ TEST(App, RequestShutdown) {
   EXPECT_EQ(ZX_ERR_CANCELED, app.Run());
 
   EXPECT_EQ(ASYNC_LOOP_QUIT, app.loop()->GetState());
-  ClearDelegates();
 }
 
 TEST_F(AppTest, WakeSelectTest) {
