@@ -680,7 +680,7 @@ impl HostDispatcher {
         self.notify_event_listeners(|listener| {
             let _res = listener
                 .send_on_device_updated(&mut d)
-                .map_err(|e| error!("Failed to send device updated event: {:?}", e));
+                .map_err(|e| info!("Failed to send device updated event: {:?}", e));
         });
 
         let update_peer = peer.clone();
@@ -717,7 +717,7 @@ impl HostDispatcher {
             state.notify_event_listeners(|listener| {
                 let _res = listener
                     .send_on_device_removed(&id.to_string())
-                    .map_err(|e| error!("Failed to send device removed event: {:?}", e));
+                    .map_err(|e| info!("Failed to send device removed event: {:?}", e));
             });
             state.watch_peers_publisher.clone()
         };
