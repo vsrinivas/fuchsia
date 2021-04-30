@@ -39,8 +39,6 @@ rustc_library("component-events") {
   sources = [
     "src/descriptor.rs",
     "src/events.rs",
-    "src/injectors.rs",
-    "src/interposers.rs",
     "src/lib.rs",
     "src/log.rs",
     "src/matcher.rs",

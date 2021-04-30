@@ -4,8 +4,6 @@
 
 pub mod descriptor;
 pub mod events;
-pub mod injectors;
-pub mod interposers;
 pub mod log;
 pub mod matcher;
 pub mod sequence;
