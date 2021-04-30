@@ -31,9 +31,9 @@ pub struct VBMeta {
 }
 
 impl VBMeta {
-    /// Constructs a new VBMeta using the provided `descriptors` and AVB `key`.
+    /// Constructs and signs a new VBMeta image using the provided `descriptors` and AVB `key`.
     /// This can fail if signing with `key` failed.
-    pub fn try_new(descriptors: Vec<HashDescriptor>, key: Key) -> Result<Self, SignFailure> {
+    pub fn sign(descriptors: Vec<HashDescriptor>, key: Key) -> Result<Self, SignFailure> {
         let mut header = Header::default();
 
         // the minimum version in the header must be the minimum version required
@@ -69,6 +69,11 @@ impl VBMeta {
     /// Returns an immutable reference to the header struct for the VBMeta image.
     pub fn header(&self) -> &Header {
         &self.header
+    }
+
+    /// Returns an immutable reference to the key used to sign the VBMeta image.
+    pub fn key(&self) -> &Key {
+        &self.key
     }
 }
 
@@ -204,7 +209,7 @@ mod tests {
         let salt = Salt::try_from(&[0xAA; 32][..]).expect("new salt");
         let descriptor = HashDescriptor::new("image_name", &[0xBB; 32], salt);
         let descriptors = vec![descriptor];
-        let vbmeta_bytes = VBMeta::try_new(descriptors, key).unwrap().bytes;
+        let vbmeta_bytes = VBMeta::sign(descriptors, key).unwrap().bytes;
         assert_eq!(vbmeta_bytes[..expected_header.len()], expected_header);
         test::hash_data_and_expect(
             &vbmeta_bytes,
@@ -287,7 +292,7 @@ mod tests {
             .flags(1)
             .build();
         let descriptors = vec![descriptor, extra_descriptor];
-        let vbmeta = VBMeta::try_new(descriptors, key).unwrap();
+        let vbmeta = VBMeta::sign(descriptors, key).unwrap();
         let vbmeta_bytes = vbmeta.as_bytes();
 
         if vbmeta_bytes[..expected_header_bytes.len()] != expected_header_bytes {

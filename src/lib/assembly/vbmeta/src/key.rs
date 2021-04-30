@@ -101,6 +101,11 @@ impl Key {
         bytes.extend_from_slice(&rr.to_bytes_be());
         bytes
     }
+
+    /// Returns a reference to the public portion of the key.
+    pub fn public_key(&self) -> &ring::signature::RsaSubjectPublicKey {
+        self.rsa.public_key()
+    }
 }
 
 #[cfg(test)]

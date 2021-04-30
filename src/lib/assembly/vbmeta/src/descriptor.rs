@@ -68,6 +68,34 @@ impl HashDescriptor {
         bytes
     }
 
+    /// Accessor for the name of the image described by this Descriptor.
+    pub fn image_name(&self) -> &str {
+        &self.image_name
+    }
+
+    /// Accessor for the size of the image described by this Descriptor.
+    pub fn image_size(&self) -> u64 {
+        self.header.image_size.into()
+    }
+
+    /// Accessor for the salt used in the calculation of the digest.
+    pub fn salt(&self) -> Option<Salt> {
+        self.salt.clone()
+    }
+
+    /// Accessor for the digest of the image described by this Descriptor.
+    pub fn digest(&self) -> Option<&[u8]> {
+        match &self.digest {
+            Some(d) => Some(&d[..]),
+            _ => None,
+        }
+    }
+
+    /// Accessor for the flags that are set on the Descriptor.
+    pub fn flags(&self) -> u32 {
+        self.header.flags.into()
+    }
+
     /// Accessor for the minimum avb version that this HashDescriptor requires.
     pub fn get_min_avb_version(&self) -> Option<[u32; 2]> {
         self.min_avb_version
@@ -188,17 +216,6 @@ impl TryFrom<&[u8]> for Salt {
     }
 }
 
-impl TryFrom<&str> for Salt {
-    type Error = SaltError;
-    fn try_from(string: &str) -> Result<Salt, Self::Error> {
-        if let Ok(byte_vec) = hex::decode(string) {
-            Salt::try_from(byte_vec.as_slice())
-        } else {
-            Err(SaltError::InvalidFormat)
-        }
-    }
-}
-
 impl Salt {
     /// Construct a random Salt.
     pub fn random() -> Result<Salt, SaltError> {
@@ -208,6 +225,15 @@ impl Salt {
             return Err(SaltError::GenerateRandom);
         }
         Ok(Salt { bytes })
+    }
+
+    /// Decode a hex string to use as the value for the Salt.
+    pub fn decode_hex(string: &str) -> Result<Self, SaltError> {
+        if let Ok(byte_vec) = hex::decode(string) {
+            Self::try_from(byte_vec.as_slice())
+        } else {
+            Err(SaltError::InvalidFormat)
+        }
     }
 }
 
@@ -392,7 +418,7 @@ mod tests {
     #[test]
     fn salt_from_str() {
         let salt_str = "0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF";
-        let s = Salt::try_from(salt_str).unwrap();
+        let s = Salt::decode_hex(salt_str).unwrap();
 
         #[rustfmt::skip]
         assert_eq!(
@@ -408,7 +434,7 @@ mod tests {
     #[test]
     fn salt_from_str_invalid_format() {
         let salt_str = "this is not hex";
-        let result = Salt::try_from(salt_str);
+        let result = Salt::decode_hex(salt_str);
         assert_matches!(result, Err(SaltError::InvalidFormat));
     }
 

@@ -23,6 +23,6 @@ fn avbtool_comparison() {
     let descriptor = HashDescriptor::new("zircon", IMAGE, salt);
     let descriptors = vec![descriptor];
 
-    let vbmeta = VBMeta::try_new(descriptors, key).unwrap();
+    let vbmeta = VBMeta::sign(descriptors, key).unwrap();
     assert_eq!(vbmeta.as_bytes(), EXPECTED_VBMETA);
 }

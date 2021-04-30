@@ -5,6 +5,7 @@
 use {anyhow::Result, ffx_assembly_args::*, ffx_core::ffx_plugin};
 
 mod operations;
+pub mod vfs;
 
 #[ffx_plugin("assembly_enabled")]
 pub async fn assembly(cmd: AssemblyCommand) -> Result<()> {
