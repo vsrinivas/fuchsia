@@ -8,7 +8,6 @@ use {
     crate::{input_device, keyboard, media_buttons, mouse, touch},
     fidl_fuchsia_input_report as fidl_input_report, fidl_fuchsia_ui_input as fidl_ui_input,
     fidl_fuchsia_ui_input3 as fidl_ui_input3, fuchsia_zircon as zx,
-    maplit::hashmap,
     std::collections::HashMap,
     std::collections::HashSet,
 };
@@ -48,24 +47,23 @@ pub fn create_keyboard_input_report(
 /// Creates a [`keyboard::KeyboardEvent`] with the provided keys.
 ///
 /// # Parameters
-/// - `pressed_keys`: The input3 keys which are to be included as pressed.
-/// - `released_keys`: The input3 keys which are to be included as released.
+/// - `key`: The input3 key which changed state.
+/// - `event_type`: The input3 key event type (e.g. pressed, released).
 /// - `modifiers`: The input3 modifiers that are to be included as pressed.
+/// - `event_time`: The timestamp in nanoseconds when the event was recorded.
 /// - `device_descriptor`: The device descriptor to add to the event.
 #[cfg(test)]
 pub fn create_keyboard_event(
-    pressed_keys: Vec<fidl_fuchsia_input::Key>,
-    released_keys: Vec<fidl_fuchsia_input::Key>,
+    key: fidl_fuchsia_input::Key,
+    event_type: fidl_fuchsia_ui_input3::KeyEventType,
     modifiers: Option<fidl_ui_input3::Modifiers>,
     event_time: input_device::EventTime,
     device_descriptor: &input_device::InputDeviceDescriptor,
 ) -> input_device::InputEvent {
     input_device::InputEvent {
         device_event: input_device::InputDeviceEvent::Keyboard(keyboard::KeyboardEvent {
-            keys: hashmap! {
-                fidl_ui_input3::KeyEventType::Pressed => pressed_keys,
-                fidl_ui_input3::KeyEventType::Released => released_keys
-            },
+            key,
+            event_type,
             modifiers,
         }),
         device_descriptor: device_descriptor.clone(),

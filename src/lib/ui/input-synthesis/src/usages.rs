@@ -164,7 +164,7 @@ pub(crate) fn hid_usage_to_input3_key(usage_id: u16) -> Option<fidl_fuchsia_inpu
 ///
 /// # Parameters
 /// - `key`: The key to check.
-pub fn is_modifier3(key: fidl_fuchsia_input::Key) -> bool {
+pub fn is_modifier3(key: &fidl_fuchsia_input::Key) -> bool {
     match key {
         fidl_fuchsia_input::Key::NumLock
         | fidl_fuchsia_input::Key::CapsLock
@@ -189,12 +189,12 @@ mod tests {
 
     #[test]
     fn input3_key_is_modifier() {
-        assert!(is_modifier3(fidl_fuchsia_input::Key::NumLock));
-        assert!(is_modifier3(fidl_fuchsia_input::Key::CapsLock));
-        assert!(is_modifier3(fidl_fuchsia_input::Key::ScrollLock));
-        assert!(!is_modifier3(fidl_fuchsia_input::Key::LeftShift));
-        assert!(!is_modifier3(fidl_fuchsia_input::Key::LeftMeta));
-        assert!(!is_modifier3(fidl_fuchsia_input::Key::LeftCtrl));
+        assert!(is_modifier3(&fidl_fuchsia_input::Key::NumLock));
+        assert!(is_modifier3(&fidl_fuchsia_input::Key::CapsLock));
+        assert!(is_modifier3(&fidl_fuchsia_input::Key::ScrollLock));
+        assert!(!is_modifier3(&fidl_fuchsia_input::Key::LeftShift));
+        assert!(!is_modifier3(&fidl_fuchsia_input::Key::LeftMeta));
+        assert!(!is_modifier3(&fidl_fuchsia_input::Key::LeftCtrl));
     }
 
     #[test_case(Usages::HidUsageKeyVolUp => fidl_fuchsia_input::Key::MediaVolumeIncrement; "volume_up")]

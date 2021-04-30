@@ -31,37 +31,15 @@ impl InputHandler for ShortcutHandler {
                     input_device::InputDeviceDescriptor::Keyboard(_keyboard_device_descriptor),
                 event_time,
             } => {
-                let pressed_keys: Vec<KeyEvent> = keyboard_device_event
-                    .get_keys(KeyEventType::Pressed)
-                    .into_iter()
-                    .map(|key| {
-                        create_key_event(
-                            &key,
-                            KeyEventType::Pressed,
-                            keyboard_device_event.modifiers,
-                            *event_time,
-                        )
-                    })
-                    .collect();
-                let mut handled = self.handle_keys(pressed_keys).await;
-
-                let released_keys: Vec<KeyEvent> = keyboard_device_event
-                    .get_keys(KeyEventType::Released)
-                    .into_iter()
-                    .map(|key| {
-                        create_key_event(
-                            &key,
-                            KeyEventType::Released,
-                            keyboard_device_event.modifiers,
-                            *event_time,
-                        )
-                    })
-                    .collect();
-                handled = handled || self.handle_keys(released_keys).await;
-
+                let key_event = create_key_event(
+                    &keyboard_device_event.key,
+                    keyboard_device_event.event_type,
+                    keyboard_device_event.modifiers,
+                    *event_time,
+                );
                 // If either pressed_keys or released_keys
                 // triggered a shortcut, consume the event
-                if handled {
+                if handle_key_event(key_event, &self.manager).await {
                     return vec![];
                 }
             }
@@ -76,22 +54,6 @@ impl ShortcutHandler {
     pub fn new(shortcut_manager_proxy: ui_shortcut::ManagerProxy) -> Result<Self, Error> {
         let handler = ShortcutHandler { manager: shortcut_manager_proxy };
         Ok(handler)
-    }
-
-    /// Handle key events in Shortcut.
-    ///
-    /// # Parameters
-    /// `keys`: The KeyEvents to handle.
-    ///
-    /// # Returns
-    /// A bool that's true if any of the `keys` activated a shortcut.
-    async fn handle_keys(&mut self, keys: Vec<KeyEvent>) -> bool {
-        for key in keys {
-            if handle_key_event(key, &self.manager).await {
-                return true;
-            }
-        }
-        false
     }
 }
 
@@ -182,8 +144,8 @@ mod tests {
                 keys: vec![pressed_key3],
             });
         let input_event = testing_utilities::create_keyboard_event(
-            vec![pressed_key3],
-            vec![],
+            pressed_key3,
+            fidl_fuchsia_ui_input3::KeyEventType::Pressed,
             modifiers,
             event_time,
             &device_descriptor,
@@ -203,8 +165,8 @@ mod tests {
                 keys: vec![released_key3],
             });
         let input_event = testing_utilities::create_keyboard_event(
-            vec![],
-            vec![released_key3],
+            released_key3,
+            fidl_fuchsia_ui_input3::KeyEventType::Released,
             modifiers,
             event_time,
             &device_descriptor,
@@ -228,8 +190,8 @@ mod tests {
                 keys: vec![key3],
             });
         let input_event = testing_utilities::create_keyboard_event(
-            vec![key3],
-            vec![],
+            key3,
+            fidl_fuchsia_ui_input3::KeyEventType::Pressed,
             modifiers,
             event_time,
             &device_descriptor,
@@ -269,8 +231,8 @@ mod tests {
                 keys: vec![key3],
             });
         let input_event = testing_utilities::create_keyboard_event(
-            vec![],
-            vec![key3],
+            key3,
+            fidl_fuchsia_ui_input3::KeyEventType::Released,
             modifiers,
             event_time,
             &device_descriptor,
