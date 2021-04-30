@@ -79,8 +79,8 @@ an RFC proposal for review, see [Creating a RFC](create_rfc.md).
     {% endfor %}
     {% if found %}
       <div class="checkbox-div">
-        <input type="checkbox" id="checkbox-reset-{{ area }}" checked>
-        <label for="checkbox-reset-{{ area }}">{{ area }}</label>
+        <input type="checkbox" id="checkbox-reset-{{ area|replace(" ", "-") }}" checked>
+        <label for="checkbox-reset-{{ area|replace(" ", "-") }}">{{ area }}</label>
       </div>
     {% endif %}
   {% endfor %}
