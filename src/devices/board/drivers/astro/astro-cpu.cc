@@ -91,7 +91,7 @@ constexpr amlogic_cpu::operating_point_t operating_points[] = {
     {.freq_hz = 1'512'000'000, .volt_uv = 791'000, .pd_id = kPdArmA53},
     {.freq_hz = 1'608'000'000, .volt_uv = 831'000, .pd_id = kPdArmA53},
     {.freq_hz = 1'704'000'000, .volt_uv = 861'000, .pd_id = kPdArmA53},
-    {.freq_hz = 1'896'000'000, .volt_uv = 981'000, .pd_id = kPdArmA53},
+    {.freq_hz = 1'896'000'000, .volt_uv = 1'022'000, .pd_id = kPdArmA53},
 };
 
 constexpr amlogic_cpu::perf_domain_t performance_domains[] = {
