@@ -63,43 +63,43 @@
 
 __NONNULL((2))
 static inline void MmioWrite8(uint8_t data, MMIO_PTR volatile uint8_t* buffer) {
-  __asm__ volatile("strb %w1, %0" : "=m"(*(volatile uint8_t*)buffer) : "r"(data));
+  __asm__ volatile("strb %w1, %0" : "=m"(*(volatile uint8_t*)buffer) : "r"(data) : "memory");
 }
 __NONNULL((2))
 static inline void MmioWrite16(uint16_t data, MMIO_PTR volatile uint16_t* buffer) {
-  __asm__ volatile("strh %w1, %0" : "=m"(*(volatile uint16_t*)buffer) : "r"(data));
+  __asm__ volatile("strh %w1, %0" : "=m"(*(volatile uint16_t*)buffer) : "r"(data) : "memory");
 }
 __NONNULL((2))
 static inline void MmioWrite32(uint32_t data, MMIO_PTR volatile uint32_t* buffer) {
-  __asm__ volatile("str %w1, %0" : "=m"(*(volatile uint32_t*)buffer) : "r"(data));
+  __asm__ volatile("str %w1, %0" : "=m"(*(volatile uint32_t*)buffer) : "r"(data) : "memory");
 }
 __NONNULL((2))
 static inline void MmioWrite64(uint64_t data, MMIO_PTR volatile uint64_t* buffer) {
-  __asm__ volatile("str %1, %0" : "=m"(*(volatile uint64_t*)buffer) : "r"(data));
+  __asm__ volatile("str %1, %0" : "=m"(*(volatile uint64_t*)buffer) : "r"(data) : "memory");
 }
 
 __NONNULL((1))
 static inline uint8_t MmioRead8(MMIO_PTR const volatile uint8_t* buffer) {
   uint8_t data;
-  __asm__ volatile("ldrb %w0, %1" : "=r"(data) : "m"(*(volatile uint8_t*)buffer));
+  __asm__ volatile("ldrb %w0, %1" : "=r"(data) : "m"(*(volatile uint8_t*)buffer) : "memory");
   return data;
 }
 __NONNULL((1))
 static inline uint16_t MmioRead16(MMIO_PTR const volatile uint16_t* buffer) {
   uint16_t data;
-  __asm__ volatile("ldrh %w0, %1" : "=r"(data) : "m"(*(volatile uint16_t*)buffer));
+  __asm__ volatile("ldrh %w0, %1" : "=r"(data) : "m"(*(volatile uint16_t*)buffer) : "memory");
   return data;
 }
 __NONNULL((1))
 static inline uint32_t MmioRead32(MMIO_PTR const volatile uint32_t* buffer) {
   uint32_t data;
-  __asm__ volatile("ldr %w0, %1" : "=r"(data) : "m"(*(volatile uint32_t*)buffer));
+  __asm__ volatile("ldr %w0, %1" : "=r"(data) : "m"(*(volatile uint32_t*)buffer) : "memory");
   return data;
 }
 __NONNULL((1))
 static inline uint64_t MmioRead64(MMIO_PTR const volatile uint64_t* buffer) {
   uint64_t data;
-  __asm__ volatile("ldr %0, %1" : "=r"(data) : "m"(*(volatile uint64_t*)buffer));
+  __asm__ volatile("ldr %0, %1" : "=r"(data) : "m"(*(volatile uint64_t*)buffer) : "memory");
   return data;
 }
 
