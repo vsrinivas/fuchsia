@@ -27,7 +27,7 @@ const testserverUrl =
 // 3: Text input field test
 // 4: Audio test
 // 5: Keyboard shortcut test.
-const skipTests = [false, true, true, true, true, true];
+const skipTests = [false, false, true, true, true, true];
 
 void main() {
   Sl4f sl4f;
