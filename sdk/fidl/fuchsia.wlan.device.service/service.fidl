@@ -111,3 +111,20 @@ protocol DeviceService {
     SetCountry(SetCountryRequest req) -> (int32 status);
     ClearCountry(ClearCountryRequest req) -> (int32 status);
 };
+
+[Discoverable]
+protocol DeviceMonitor {
+    // Phy methods
+    ListPhys() -> (vector<uint16> phy_list);
+    GetDevPath(uint16 phy_id) -> (string? dev_path);
+    GetSupportedMacRoles(uint16 phy_id)
+        -> (vector<fuchsia.wlan.device.MacRole>:8? supported_mac_roles);
+    WatchDevices(request<DeviceWatcher> watcher);
+    GetCountry(uint16 phy_id) -> (GetCountryResponse resp) error int32;
+    SetCountry(SetCountryRequest req) -> (int32 status);
+    ClearCountry(ClearCountryRequest req) -> (int32 status);
+
+    // Iface methods
+    CreateIface(CreateIfaceRequest req) -> (int32 status, CreateIfaceResponse? resp);
+    DestroyIface(DestroyIfaceRequest req) -> (int32 status);
+};
