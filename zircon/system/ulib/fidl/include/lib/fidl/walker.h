@@ -666,22 +666,20 @@ void Walk(VisitorImpl& visitor, const fidl_type_t* type, typename VisitorImpl::P
 
 // Infer the size of the primary object, from the coding table in |type|.
 // Ensures that the primary object is of one of the expected types.
+// This outputs both the primary size of the first inline object but also the
+// position of the out of line object (if any) that follows the inline object.
+//
+// This assumes the following properties of the input parameters:
+// - |type|, |out_primary_size|, |out_next_out_of_line| are non-null
+// - |out_err| can optionally be null
 //
 // An error is returned if:
-// - |type| is null
 // - The primary object is neither a struct nor a table.
-zx_status_t PrimaryObjectSize(const fidl_type_t* type, size_t* out_size, const char** out_error);
-
-// Calculate the offset of the first out-of-line object, from the coding table in |type|.
-// Ensures that the primary object is of one of the expected types, and the offset falls within the
-// |buffer_size| constraints.
-//
-// An error is returned if:
-// - |type| is null
-// - The primary object is neither a struct nor a table.
-// - The offset overflows, or is larger than |buffer_size|.
-zx_status_t StartingOutOfLineOffset(const fidl_type_t* type, uint32_t buffer_size,
-                                    uint32_t* out_first_out_of_line, const char** out_error);
+// - The first out-of-line offset is larger than the size of the buffer.
+// - The aligned first out-of-line offset overflows 32 bits.
+zx_status_t PrimaryObjectSize(const fidl_type_t* type, uint32_t buffer_size,
+                              uint32_t* out_primary_size, uint32_t* out_first_out_of_line,
+                              const char** out_error);
 
 }  // namespace fidl
 

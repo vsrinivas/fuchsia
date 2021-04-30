@@ -358,6 +358,10 @@ zx_status_t fidl_encode_impl(const fidl_type_t* type, void* bytes, uint32_t num_
     if (out_error_msg)
       *out_error_msg = msg;
   };
+  if (unlikely(type == nullptr)) {
+    set_error("fidl type cannot be null");
+    return ZX_ERR_INVALID_ARGS;
+  }
   if (unlikely(bytes == nullptr)) {
     set_error("Cannot encode null bytes");
     return ZX_ERR_INVALID_ARGS;
@@ -371,16 +375,12 @@ zx_status_t fidl_encode_impl(const fidl_type_t* type, void* bytes, uint32_t num_
     return ZX_ERR_INVALID_ARGS;
   }
 
-  zx_status_t status;
-  uint32_t next_out_of_line;
-  if (unlikely((status = fidl::StartingOutOfLineOffset(type, num_bytes, &next_out_of_line,
-                                                       out_error_msg)) != ZX_OK)) {
-    return status;
-  }
-
   // Zero region between primary object and next out of line object.
-  size_t primary_size;
-  if (unlikely((status = fidl::PrimaryObjectSize(type, &primary_size, out_error_msg)) != ZX_OK)) {
+  zx_status_t status;
+  uint32_t primary_size;
+  uint32_t next_out_of_line;
+  if (unlikely((status = fidl::PrimaryObjectSize(type, num_bytes, &primary_size, &next_out_of_line,
+                                                 out_error_msg)) != ZX_OK)) {
     return status;
   }
   memset(reinterpret_cast<uint8_t*>(bytes) + primary_size, 0, next_out_of_line - primary_size);
@@ -477,6 +477,10 @@ zx_status_t EncodeIovecEtc(const fidl_type_t* type, void* value, zx_channel_iove
   };
   // TODO(fxbug.dev/66977) Change these to debug asserts after tests expecting these are removed.
   // This is only used in one place and the runtime checks add unnecessary overhead.
+  if (unlikely(type == nullptr)) {
+    set_error("fidl type cannot be null");
+    return ZX_ERR_INVALID_ARGS;
+  }
   if (unlikely(value == nullptr)) {
     set_error("Cannot encode null value");
     return ZX_ERR_INVALID_ARGS;
@@ -516,15 +520,10 @@ zx_status_t EncodeIovecEtc(const fidl_type_t* type, void* value, zx_channel_iove
   }
 
   zx_status_t status;
+  uint32_t primary_size;
   uint32_t next_out_of_line;
-  if (unlikely((status = fidl::StartingOutOfLineOffset(type, num_backing_buffer, &next_out_of_line,
-                                                       out_error_msg)) != ZX_OK)) {
-    return status;
-  }
-
-  // Zero region between primary object and next out of line object.
-  size_t primary_size;
-  if (unlikely((status = fidl::PrimaryObjectSize(type, &primary_size, out_error_msg)) != ZX_OK)) {
+  if (unlikely((status = fidl::PrimaryObjectSize(type, num_backing_buffer, &primary_size,
+                                                 &next_out_of_line, out_error_msg)) != ZX_OK)) {
     return status;
   }
 

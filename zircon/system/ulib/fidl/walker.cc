@@ -9,49 +9,35 @@
 
 namespace fidl {
 
-zx_status_t PrimaryObjectSize(const fidl_type_t* type, size_t* out_size, const char** out_error) {
+zx_status_t PrimaryObjectSize(const fidl_type_t* type, uint32_t buffer_size,
+                              uint32_t* out_primary_size, uint32_t* out_first_out_of_line,
+                              const char** out_error) {
+  ZX_DEBUG_ASSERT(type != nullptr);
+  ZX_DEBUG_ASSERT(out_primary_size != nullptr);
+  ZX_DEBUG_ASSERT(out_first_out_of_line != nullptr);
   auto set_error = [&out_error](const char* msg) {
     if (out_error)
       *out_error = msg;
   };
-  if (type == nullptr) {
-    set_error("fidl type cannot be null");
+
+  // The struct case is "likely" because overhead for tables is less of a relative cost.
+  uint32_t primary_size;
+  if (likely(type->type_tag() == kFidlTypeStruct)) {
+    primary_size = type->coded_struct().size;
+  } else if (likely(type->type_tag() == kFidlTypeTable)) {
+    primary_size = sizeof(fidl_table_t);
+  } else {
+    set_error("Message must be a struct or a table");
     return ZX_ERR_INVALID_ARGS;
   }
-  switch (type->type_tag()) {
-    case kFidlTypeStruct:
-      *out_size = type->coded_struct().size;
-      return ZX_OK;
-    case kFidlTypeTable:
-      *out_size = sizeof(fidl_vector_t);
-      return ZX_OK;
-    default:
-      set_error("Message must be a struct or a table");
-      return ZX_ERR_INVALID_ARGS;
-  }
-}
+  *out_primary_size = static_cast<uint32_t>(primary_size);
 
-zx_status_t StartingOutOfLineOffset(const fidl_type_t* type, uint32_t buffer_size,
-                                    uint32_t* out_first_out_of_line, const char** out_error) {
-  auto set_error = [&out_error](const char* msg) {
-    if (out_error)
-      *out_error = msg;
-  };
-  size_t primary_size;
-  zx_status_t status;
-  if ((status = PrimaryObjectSize(type, &primary_size, out_error)) != ZX_OK) {
-    return status;
-  }
-  if (primary_size > buffer_size) {
-    set_error("Buffer is too small for first inline object");
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
   uint64_t first_out_of_line = FidlAlign(static_cast<uint32_t>(primary_size));
-  if (first_out_of_line > buffer_size) {
+  if (unlikely(first_out_of_line > buffer_size)) {
     set_error("Buffer is too small for first inline object");
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
-  if (first_out_of_line > std::numeric_limits<uint32_t>::max()) {
+  if (unlikely(first_out_of_line > std::numeric_limits<uint32_t>::max())) {
     set_error("Out of line starting offset overflows");
     return ZX_ERR_INVALID_ARGS;
   }

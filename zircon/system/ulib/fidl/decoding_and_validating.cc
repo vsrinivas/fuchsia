@@ -373,6 +373,10 @@ zx_status_t fidl_decode_impl(const fidl_type_t* type, void* bytes, uint32_t num_
     if (out_error_msg)
       *out_error_msg = msg;
   };
+  if (unlikely(type == nullptr)) {
+    set_error("fidl type cannot be null");
+    return ZX_ERR_INVALID_ARGS;
+  }
   if (unlikely(handles == nullptr && num_handles != 0)) {
     set_error("Cannot provide non-zero handle count and null handle pointer");
     return ZX_ERR_INVALID_ARGS;
@@ -389,15 +393,10 @@ zx_status_t fidl_decode_impl(const fidl_type_t* type, void* bytes, uint32_t num_
   }
 
   zx_status_t status;
-  size_t primary_size;
-  if (unlikely((status = fidl::PrimaryObjectSize(type, &primary_size, out_error_msg)) != ZX_OK)) {
-    drop_all_handles();
-    return status;
-  }
-
+  uint32_t primary_size;
   uint32_t next_out_of_line;
-  if (unlikely((status = fidl::StartingOutOfLineOffset(type, num_bytes, &next_out_of_line,
-                                                       out_error_msg)) != ZX_OK)) {
+  if (unlikely((status = fidl::PrimaryObjectSize(type, num_bytes, &primary_size, &next_out_of_line,
+                                                 out_error_msg)) != ZX_OK)) {
     drop_all_handles();
     return status;
   }
@@ -490,6 +489,10 @@ zx_status_t fidl_validate(const fidl_type_t* type, const void* bytes, uint32_t n
     if (out_error_msg)
       *out_error_msg = msg;
   };
+  if (unlikely(type == nullptr)) {
+    set_error("fidl type cannot be null");
+    return ZX_ERR_INVALID_ARGS;
+  }
   if (bytes == nullptr) {
     set_error("Cannot validate null bytes");
     return ZX_ERR_INVALID_ARGS;
@@ -500,14 +503,10 @@ zx_status_t fidl_validate(const fidl_type_t* type, const void* bytes, uint32_t n
   }
 
   zx_status_t status;
-  size_t primary_size;
-  if (unlikely((status = fidl::PrimaryObjectSize(type, &primary_size, out_error_msg)) != ZX_OK)) {
-    return status;
-  }
-
+  uint32_t primary_size;
   uint32_t next_out_of_line;
-  if ((status = fidl::StartingOutOfLineOffset(type, num_bytes, &next_out_of_line, out_error_msg)) !=
-      ZX_OK) {
+  if (unlikely((status = fidl::PrimaryObjectSize(type, num_bytes, &primary_size, &next_out_of_line,
+                                                 out_error_msg)) != ZX_OK)) {
     return status;
   }
 
