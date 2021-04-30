@@ -721,7 +721,7 @@ TEST_F(IntegrationTest, ClampRgb) {
                                         zx::sec(1)));
 }
 
-TEST_F(IntegrationTest, VsyncImagesHiddenIfNotFromActiveClient) {
+TEST_F(IntegrationTest, VsyncImagesHiddenIfNotFromActiveClient_PrimaryToVirtcon) {
   // Create and bind virtcon client.
   TestFidlClient vc_client(sysmem_.get());
   ASSERT_TRUE(vc_client.CreateChannel(display_fidl()->get(), /*is_vc=*/true));
@@ -770,6 +770,58 @@ TEST_F(IntegrationTest, VsyncImagesHiddenIfNotFromActiveClient) {
       },
       zx::sec(1)));
   EXPECT_EQ(0u, primary_client->recent_vsync_images().size());
+}
+
+TEST_F(IntegrationTest, VsyncImagesHiddenIfNotFromActiveClient_PrimaryToPrimary) {
+  {
+    // Create and bind the first primary client.
+    TestFidlClient primary_client1(sysmem_.get());
+    ASSERT_TRUE(primary_client1.CreateChannel(display_fidl()->get(), /*is_vc=*/false));
+    ASSERT_TRUE(primary_client1.Bind(dispatcher()));
+    EXPECT_TRUE(
+        RunLoopWithTimeoutOrUntil([this]() { return primary_client_connected(); }, zx::sec(1)));
+
+    // Present an image from the first primary client
+    EXPECT_OK(primary_client1.PresentImage());
+    EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+        [this, id = primary_client1.display_id()]() {
+          fbl::AutoLock lock(controller()->mtx());
+          auto info = display_info(id);
+          return info->vsync_layer_count == 1;
+        },
+        zx::sec(1)));
+    auto vc_vsync_count = primary_client1.vsync_count();
+    display()->SendVsync();
+    EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+        [p = &primary_client1, vc_vsync_count]() { return p->vsync_count() > vc_vsync_count; },
+        zx::sec(1)));
+    EXPECT_EQ(1u, primary_client1.recent_vsync_images().size());
+  }
+
+  // Wait until the first primary client is disconnected.
+  EXPECT_TRUE(
+      RunLoopWithTimeoutOrUntil([this]() { return !primary_client_connected(); }, zx::sec(1)));
+
+  {
+    // Create and bind the second primary client.
+    auto primary_client2 = std::make_unique<TestFidlClient>(sysmem_.get());
+    ASSERT_TRUE(primary_client2->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
+    ASSERT_TRUE(primary_client2->Bind(dispatcher()));
+    EXPECT_TRUE(
+        RunLoopWithTimeoutOrUntil([this]() { return primary_client_connected(); }, zx::sec(1)));
+
+    // Since at this moment the displayed images are all from virtcon clients,
+    // the Vsync event received by primary client should not contain any image
+    // handles.
+    auto primary_vsync_count = primary_client2->vsync_count();
+    display()->SendVsync();
+    EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+        [p = primary_client2.get(), primary_vsync_count]() {
+          return p->vsync_count() > primary_vsync_count;
+        },
+        zx::sec(1)));
+    EXPECT_EQ(0u, primary_client2->recent_vsync_images().size());
+  }
 }
 
 }  // namespace display

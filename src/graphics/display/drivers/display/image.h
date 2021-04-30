@@ -36,14 +36,15 @@ typedef struct image_node {
 
 class Image : public fbl::RefCounted<Image>, public IdMappable<fbl::RefPtr<Image>> {
  public:
-  Image(Controller* controller, const image_t& info, zx::vmo vmo, bool is_virtcon,
-        uint32_t stride_px, inspect::Node* parent_node);
-  Image(Controller* controller, const image_t& info, bool is_virtcon, inspect::Node* parent_node);
+  Image(Controller* controller, const image_t& info, zx::vmo vmo, uint32_t stride_px,
+        inspect::Node* parent_node, uint32_t client_id);
+  Image(Controller* controller, const image_t& info, inspect::Node* parent_node,
+        uint32_t client_id);
   ~Image();
 
   image_t& info() { return info_; }
-  bool is_virtcon() const { return is_virtcon_; }
   uint32_t stride_px() const { return stride_px_; }
+  uint32_t client_id() const { return client_id_; }
 
   // Marks the image as in use.
   bool Acquire();
@@ -99,12 +100,14 @@ class Image : public fbl::RefCounted<Image>, public IdMappable<fbl::RefPtr<Image
   void InitializeInspect(inspect::Node* parent_node);
 
   image_t info_;
-  bool is_virtcon_ = false;
   uint32_t stride_px_;
   Controller* const controller_;
 
   // z_index is set/read by controller.cpp under its lock
   uint32_t z_index_;
+
+  // |id_| of the client that created the image.
+  const uint32_t client_id_;
 
   // Only ever accessed on loop thread, so no synchronization
   fbl::RefPtr<FenceReference> wait_fence_ = nullptr;

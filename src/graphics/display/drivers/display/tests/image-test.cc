@@ -33,7 +33,7 @@ class ImageTest : public TestBase, public FenceCallback {
       return nullptr;
     }
     auto image = fbl::AdoptRef(new Image(controller(), dc_image, std::move(dup_vmo),
-                                         /*is_virtcon=*/false, /*stride=*/0, nullptr));
+                                         /*stride=*/0, nullptr, /*client_id=*/1u));
     image->id = next_image_id_++;
     return image;
   }

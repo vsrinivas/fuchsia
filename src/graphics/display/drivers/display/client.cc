@@ -94,8 +94,8 @@ void Client::ImportVmoImage(ImportVmoImageRequestView request,
   if (status == ZX_OK) {
     fbl::AllocChecker ac;
     auto image =
-        fbl::AdoptRef(new (&ac) Image(controller_, dc_image, std::move(request->vmo), is_vc_,
-                                      single_buffer_framebuffer_stride_, &proxy_->node()));
+        fbl::AdoptRef(new (&ac) Image(controller_, dc_image, std::move(request->vmo),
+                                      single_buffer_framebuffer_stride_, &proxy_->node(), id_));
     if (!ac.check()) {
       controller_->dc()->ReleaseImage(&dc_image);
       _completer.Reply(ZX_ERR_NO_MEMORY, 0);
@@ -165,7 +165,7 @@ void Client::ImportImage(ImportImageRequestView request, ImportImageCompleter::S
 
   fbl::AllocChecker ac;
   auto image = fbl::AdoptRef(
-      new (&ac) Image(controller_, dc_image, std::move(vmo), is_vc_, stride, &proxy_->node()));
+      new (&ac) Image(controller_, dc_image, std::move(vmo), stride, &proxy_->node(), id_));
   if (!ac.check()) {
     zxlogf(DEBUG, "Alloc checker failed while constructing Image.\n");
     _completer.Reply(ZX_ERR_NO_MEMORY, 0);
@@ -848,8 +848,7 @@ void Client::ImportImageForCapture(ImportImageForCaptureRequestView request,
     });
 
     fbl::AllocChecker ac;
-    auto image =
-        fbl::AdoptRef(new (&ac) Image(controller_, capture_image, is_vc_, &proxy_->node()));
+    auto image = fbl::AdoptRef(new (&ac) Image(controller_, capture_image, &proxy_->node(), id_));
     if (!ac.check()) {
       _completer.ReplyError(ZX_ERR_NO_MEMORY);
       return;

@@ -17,19 +17,19 @@
 
 namespace display {
 
-Image::Image(Controller* controller, const image_t& info, zx::vmo handle, bool is_virtcon,
-             uint32_t stride_px, inspect::Node* parent_node)
+Image::Image(Controller* controller, const image_t& info, zx::vmo handle, uint32_t stride_px,
+             inspect::Node* parent_node, uint32_t client_id)
     : info_(info),
-      is_virtcon_(is_virtcon),
       stride_px_(stride_px),
       controller_(controller),
+      client_id_(client_id),
       capture_image_(false),
       vmo_(std::move(handle)) {
   InitializeInspect(parent_node);
 }
-Image::Image(Controller* controller, const image_t& info, bool is_virtcon,
-             inspect::Node* parent_node)
-    : info_(info), is_virtcon_(is_virtcon), controller_(controller), capture_image_(true) {
+Image::Image(Controller* controller, const image_t& info, inspect::Node* parent_node,
+             uint32_t client_id)
+    : info_(info), controller_(controller), client_id_(client_id), capture_image_(true) {
   InitializeInspect(parent_node);
 }
 

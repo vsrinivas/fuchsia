@@ -32,7 +32,7 @@ class LayerTest : public TestBase {
     EXPECT_OK(display()->ImportVmoImage(&dc_image, zx::vmo(0), 0));
     EXPECT_NE(dc_image.handle, 0);
     auto image = fbl::AdoptRef(
-        new Image(controller(), dc_image, zx::vmo(0), /*is_virtcon=*/false, /*stride=*/0, nullptr));
+        new Image(controller(), dc_image, zx::vmo(0), /*stride=*/0, nullptr, /*client_id=*/1u));
     image->id = next_image_id_++;
     image->Acquire();
     return image;

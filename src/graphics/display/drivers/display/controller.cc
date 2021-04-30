@@ -591,13 +591,18 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
         // NOTE: If changing this flow name or ID, please also do so in the
         // corresponding FLOW_BEGIN in display_swapchain.cc.
         TRACE_FLOW_END("gfx", "present_image", cur->self->id);
-        if (cur->self->is_virtcon()) {
+        bool is_virtcon_image = vc_client_ && cur->self->client_id() == vc_client_->id();
+        bool is_primary_image = primary_client_ && cur->self->client_id() == primary_client_->id();
+        if (is_virtcon_image) {
           virtcon_images.push_back(cur->self->id);
-        } else {
+        }
+        if (is_primary_image) {
           primary_images.push_back(cur->self->id);
         }
-        found_handles++;
-        break;
+        if (is_virtcon_image || is_primary_image) {
+          found_handles++;
+          break;
+        }
       }
     }
   }
