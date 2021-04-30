@@ -17,54 +17,11 @@
 namespace {
 
 constexpr uint64_t kInputBufferConstraintsVersionOrdinal = 1;
-constexpr uint64_t kInputDefaultBufferConstraintsVersionOrdinal =
-    kInputBufferConstraintsVersionOrdinal;
-
-constexpr uint32_t kInputPacketCountForServerMin = 2;
-constexpr uint32_t kInputPacketCountForServerRecommended = 3;
-constexpr uint32_t kInputPacketCountForServerRecommendedMax = 16;
-constexpr uint32_t kInputPacketCountForServerMax = 64;
-constexpr uint32_t kInputDefaultPacketCountForServer = kInputPacketCountForServerRecommended;
-
-constexpr uint32_t kInputPacketCountForClientMin = 2;
-constexpr uint32_t kInputPacketCountForClientMax = std::numeric_limits<uint32_t>::max();
-constexpr uint32_t kInputDefaultPacketCountForClient = 5;
 
 constexpr uint32_t kInputMinBufferCountForCamping = 1;
 constexpr uint32_t kInputMinBufferCountForDedicatedSlack = 2;
 
-constexpr bool kInputSingleBufferModeAllowed = false;
-constexpr bool kInputDefaultSingleBufferMode = false;
-
-// TODO(fxbug.dev/61424): Remove these when possible.
-constexpr uint32_t kInputPerPacketBufferBytesMin = 8 * 1024;
-constexpr uint32_t kInputPerPacketBufferBytesRecommended = 512 * 1024;
-constexpr uint32_t kInputPerPacketBufferBytesMax = 4 * 1024 * 1024;
-constexpr uint32_t kInputDefaultPerPacketBufferBytes = kInputPerPacketBufferBytesRecommended;
-
-// TODO(rjascani): For now, just use identical values as input for the output
-// constraints. These should likely be tweaked once we have E2E tests to validate
-// them.
-constexpr uint32_t kOutputPacketCountForServerMin = 2;
-constexpr uint32_t kOutputPacketCountForServerRecommended = 3;
-constexpr uint32_t kOutputPacketCountForServerRecommendedMax = 16;
-constexpr uint32_t kOutputPacketCountForServerMax = 64;
-constexpr uint32_t kOutputDefaultPacketCountForServer = kOutputPacketCountForServerRecommended;
-
-constexpr uint32_t kOutputPacketCountForClientMin = 2;
-constexpr uint32_t kOutputPacketCountForClientMax = std::numeric_limits<uint32_t>::max();
-constexpr uint32_t kOutputDefaultPacketCountForClient = 5;
-
 constexpr uint32_t kOutputMinBufferCountForCamping = 1;
-
-constexpr bool kOutputSingleBufferModeAllowed = false;
-constexpr bool kOutputDefaultSingleBufferMode = false;
-
-// TODO(fxbug.dev/61424): Remove these when possible.
-constexpr uint32_t kOutputPerPacketBufferBytesMin = 8 * 1024;
-constexpr uint32_t kOutputPerPacketBufferBytesRecommended = 512 * 1024;
-constexpr uint32_t kOutputPerPacketBufferBytesMax = 4 * 1024 * 1024;
-constexpr uint32_t kOutputDefaultPerPacketBufferBytes = kOutputPerPacketBufferBytesRecommended;
 
 }  // namespace
 
@@ -142,9 +99,6 @@ DecryptorAdapter::CoreCodecGetBufferCollectionConstraints(
     const fuchsia::media::StreamBufferPartialSettings& partial_settings) {
   fuchsia::sysmem::BufferCollectionConstraints result;
 
-  // Not supporting single buffer mode
-  ZX_DEBUG_ASSERT(!partial_settings.has_single_buffer_mode() ||
-                  !partial_settings.single_buffer_mode());
   // The CodecImpl won't hand us the sysmem token, so we shouldn't expect to have the token here.
   ZX_DEBUG_ASSERT(!partial_settings.has_sysmem_token());
 
@@ -171,10 +125,6 @@ DecryptorAdapter::CoreCodecGetBufferCollectionConstraints(
     result.buffer_memory_constraints.physically_contiguous_required = false;
     result.buffer_memory_constraints.secure_required = false;
   }
-  result.buffer_memory_constraints.min_size_bytes =
-      stream_buffer_constraints.per_packet_buffer_bytes_min();
-  result.buffer_memory_constraints.max_size_bytes =
-      stream_buffer_constraints.per_packet_buffer_bytes_max();
 
   ZX_DEBUG_ASSERT(result.image_format_constraints_count == 0);
 
@@ -376,28 +326,7 @@ void DecryptorAdapter::CoreCodecEnsureBuffersNotConfigured(CodecPort port) {
 std::unique_ptr<const fuchsia::media::StreamBufferConstraints>
 DecryptorAdapter::CoreCodecBuildNewInputConstraints() {
   auto constraints = std::make_unique<fuchsia::media::StreamBufferConstraints>();
-
   constraints->set_buffer_constraints_version_ordinal(kInputBufferConstraintsVersionOrdinal);
-
-  constraints->mutable_default_settings()
-      ->set_buffer_lifetime_ordinal(0)
-      .set_buffer_constraints_version_ordinal(kInputDefaultBufferConstraintsVersionOrdinal)
-      .set_packet_count_for_server(kInputDefaultPacketCountForServer)
-      .set_packet_count_for_client(kInputDefaultPacketCountForClient)
-      .set_per_packet_buffer_bytes(kInputDefaultPerPacketBufferBytes)
-      .set_single_buffer_mode(kInputDefaultSingleBufferMode);
-
-  constraints->set_per_packet_buffer_bytes_min(kInputPerPacketBufferBytesMin)
-      .set_per_packet_buffer_bytes_recommended(kInputPerPacketBufferBytesRecommended)
-      .set_per_packet_buffer_bytes_max(kInputPerPacketBufferBytesMax)
-      .set_packet_count_for_server_min(kInputPacketCountForServerMin)
-      .set_packet_count_for_server_recommended(kInputPacketCountForServerRecommended)
-      .set_packet_count_for_server_recommended_max(kInputPacketCountForServerRecommendedMax)
-      .set_packet_count_for_server_max(kInputPacketCountForServerMax)
-      .set_packet_count_for_client_min(kInputPacketCountForClientMin)
-      .set_packet_count_for_client_max(kInputPacketCountForClientMax)
-      .set_single_buffer_mode_allowed(kInputSingleBufferModeAllowed);
-
   return constraints;
 }
 
@@ -417,27 +346,6 @@ DecryptorAdapter::CoreCodecBuildNewOutputConstraints(
   config->set_buffer_constraints_action_required(buffer_constraints_action_required);
   constraints->set_buffer_constraints_version_ordinal(
       new_output_buffer_constraints_version_ordinal);
-
-  // 0 is intentionally invalid - the client must fill out the buffer_lifetime_ordinal.
-  constraints->mutable_default_settings()
-      ->set_buffer_lifetime_ordinal(0)
-      .set_buffer_constraints_version_ordinal(new_output_buffer_constraints_version_ordinal)
-      .set_packet_count_for_server(kOutputDefaultPacketCountForServer)
-      .set_packet_count_for_client(kOutputDefaultPacketCountForClient)
-      .set_per_packet_buffer_bytes(kOutputDefaultPerPacketBufferBytes)
-      .set_single_buffer_mode(kOutputDefaultSingleBufferMode);
-
-  constraints->set_per_packet_buffer_bytes_min(kOutputPerPacketBufferBytesMin)
-      .set_per_packet_buffer_bytes_recommended(kOutputPerPacketBufferBytesRecommended)
-      .set_per_packet_buffer_bytes_max(kOutputPerPacketBufferBytesMax)
-      .set_packet_count_for_server_min(kOutputPacketCountForServerMin)
-      .set_packet_count_for_server_recommended(kOutputPacketCountForServerRecommended)
-      .set_packet_count_for_server_recommended_max(kOutputPacketCountForServerRecommendedMax)
-      .set_packet_count_for_server_max(kOutputPacketCountForServerMax)
-      .set_packet_count_for_client_min(kOutputPacketCountForClientMin)
-      .set_packet_count_for_client_max(kOutputPacketCountForClientMax)
-      .set_single_buffer_mode_allowed(kOutputSingleBufferModeAllowed)
-      .set_is_physically_contiguous_required(false);
 
   return config;
 }

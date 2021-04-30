@@ -8,37 +8,35 @@ use fidl_fuchsia_media::{
     Packet, PacketHeader, StreamBufferConstraints, StreamBufferSettings, StreamOutputConstraints,
 };
 
-#[allow(unused)]
-#[derive(ValidFidlTable, Copy, Clone, Debug, PartialEq)]
-#[fidl_table_src(StreamBufferSettings)]
-pub struct ValidStreamBufferSettings {
-    pub buffer_lifetime_ordinal: u64,
-    pub buffer_constraints_version_ordinal: u64,
-    pub packet_count_for_server: u32,
-    pub packet_count_for_client: u32,
-    pub per_packet_buffer_bytes: u32,
-    #[fidl_field_type(default = false)]
-    pub single_buffer_mode: bool,
-}
-
 #[derive(ValidFidlTable)]
 #[fidl_table_src(StreamBufferConstraints)]
 #[fidl_table_validator(StreamBufferConstraintsValidator)]
 pub struct ValidStreamBufferConstraints {
     pub buffer_constraints_version_ordinal: u64,
-    pub default_settings: ValidStreamBufferSettings,
-    pub per_packet_buffer_bytes_min: u32,
-    pub per_packet_buffer_bytes_recommended: u32,
-    pub per_packet_buffer_bytes_max: u32,
-    pub packet_count_for_server_min: u32,
-    pub packet_count_for_server_recommended: u32,
-    pub packet_count_for_server_recommended_max: u32,
-    pub packet_count_for_server_max: u32,
-    pub packet_count_for_client_min: u32,
-    pub packet_count_for_client_max: u32,
-    pub single_buffer_mode_allowed: bool,
-    #[fidl_field_type(default = false)]
-    pub is_physically_contiguous_required: bool,
+    #[fidl_field_type(optional)]
+    pub default_settings: Option<StreamBufferSettings>,
+    #[fidl_field_type(optional)]
+    pub per_packet_buffer_bytes_min: Option<u32>,
+    #[fidl_field_type(optional)]
+    pub per_packet_buffer_bytes_recommended: Option<u32>,
+    #[fidl_field_type(optional)]
+    pub per_packet_buffer_bytes_max: Option<u32>,
+    #[fidl_field_type(optional)]
+    pub packet_count_for_server_min: Option<u32>,
+    #[fidl_field_type(optional)]
+    pub packet_count_for_server_recommended: Option<u32>,
+    #[fidl_field_type(optional)]
+    pub packet_count_for_server_recommended_max: Option<u32>,
+    #[fidl_field_type(optional)]
+    pub packet_count_for_server_max: Option<u32>,
+    #[fidl_field_type(optional)]
+    pub packet_count_for_client_min: Option<u32>,
+    #[fidl_field_type(optional)]
+    pub packet_count_for_client_max: Option<u32>,
+    #[fidl_field_type(optional)]
+    pub single_buffer_mode_allowed: Option<bool>,
+    #[fidl_field_type(optional)]
+    pub is_physically_contiguous_required: Option<bool>,
 }
 
 pub struct StreamBufferConstraintsValidator;
@@ -56,11 +54,6 @@ impl Validate<ValidStreamBufferConstraints> for StreamBufferConstraintsValidator
         if candidate.buffer_constraints_version_ordinal == 0 {
             // An ordinal of 0 in StreamBufferConstraints is not allowed.
             return Err(StreamBufferConstraintsError::VersionOrdinalZero);
-        }
-
-        if candidate.default_settings.single_buffer_mode {
-            // StreamBufferConstraints should never suggest single buffer mode.
-            return Err(StreamBufferConstraintsError::SingleBufferMode);
         }
 
         Ok(())
@@ -107,29 +100,8 @@ mod test {
 
     #[test]
     fn validate_stream_buffer_constraints() {
-        let stream_buffer_settings = ValidStreamBufferSettings {
-            buffer_lifetime_ordinal: 1,
-            buffer_constraints_version_ordinal: 0,
-            packet_count_for_server: 1,
-            packet_count_for_client: 1,
-            per_packet_buffer_bytes: 1,
-            single_buffer_mode: false,
-        };
-
         let invalid_version_ordinal = StreamBufferConstraints {
             buffer_constraints_version_ordinal: Some(0),
-            default_settings: Some(stream_buffer_settings.into()),
-            per_packet_buffer_bytes_min: Some(0),
-            per_packet_buffer_bytes_recommended: Some(1),
-            per_packet_buffer_bytes_max: Some(2),
-            packet_count_for_server_min: Some(0),
-            packet_count_for_server_recommended: Some(1),
-            packet_count_for_server_recommended_max: Some(2),
-            packet_count_for_server_max: Some(3),
-            packet_count_for_client_min: Some(1),
-            packet_count_for_client_max: Some(2),
-            single_buffer_mode_allowed: Some(false),
-            is_physically_contiguous_required: Some(false),
             ..StreamBufferConstraints::EMPTY
         };
 
@@ -137,28 +109,8 @@ mod test {
 
         assert!(err.is_err());
 
-        let stream_buffer_settings_request_single = ValidStreamBufferSettings {
-            buffer_lifetime_ordinal: 1,
-            buffer_constraints_version_ordinal: 0,
-            packet_count_for_server: 1,
-            packet_count_for_client: 1,
-            per_packet_buffer_bytes: 1,
-            single_buffer_mode: true,
-        };
         let invalid_single_buffer = StreamBufferConstraints {
             buffer_constraints_version_ordinal: Some(0),
-            default_settings: Some(stream_buffer_settings_request_single.into()),
-            per_packet_buffer_bytes_min: Some(0),
-            per_packet_buffer_bytes_recommended: Some(1),
-            per_packet_buffer_bytes_max: Some(2),
-            packet_count_for_server_min: Some(0),
-            packet_count_for_server_recommended: Some(1),
-            packet_count_for_server_recommended_max: Some(2),
-            packet_count_for_server_max: Some(3),
-            packet_count_for_client_min: Some(1),
-            packet_count_for_client_max: Some(2),
-            single_buffer_mode_allowed: Some(false),
-            is_physically_contiguous_required: Some(false),
             ..StreamBufferConstraints::EMPTY
         };
 
@@ -168,18 +120,6 @@ mod test {
 
         let invalid_continuous = StreamBufferConstraints {
             buffer_constraints_version_ordinal: Some(0),
-            default_settings: Some(stream_buffer_settings.into()),
-            per_packet_buffer_bytes_min: Some(0),
-            per_packet_buffer_bytes_recommended: Some(1),
-            per_packet_buffer_bytes_max: Some(2),
-            packet_count_for_server_min: Some(0),
-            packet_count_for_server_recommended: Some(1),
-            packet_count_for_server_recommended_max: Some(2),
-            packet_count_for_server_max: Some(3),
-            packet_count_for_client_min: Some(1),
-            packet_count_for_client_max: Some(2),
-            single_buffer_mode_allowed: Some(false),
-            is_physically_contiguous_required: Some(true),
             ..StreamBufferConstraints::EMPTY
         };
 

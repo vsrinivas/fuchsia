@@ -25,13 +25,11 @@ namespace media_player {
 class BufferSet : public fbl::RefCounted<BufferSet> {
  public:
   // Creates a buffer set with the specified settings and lifetime ordinal.
-  // |single_vmo| indicates whether the buffers should be allocated from a
-  // single VMO (true) or a VMO per buffer.
-  static fbl::RefPtr<BufferSet> Create(const fuchsia::media::StreamBufferSettings& settings,
-                                       uint64_t lifetime_ordinal, bool single_vmo);
+  static fbl::RefPtr<BufferSet> Create(uint64_t buffer_lifetime_ordinal,
+                                       uint64_t buffer_constraints_version_ordinal);
 
-  BufferSet(const fuchsia::media::StreamBufferSettings& settings, uint64_t lifetime_ordinal,
-            bool single_vmo);
+  BufferSet(uint64_t buffer_lifetime_ordinal,
+            uint64_t buffer_constraints_version_ordinal);
 
   ~BufferSet();
 
@@ -43,32 +41,10 @@ class BufferSet : public fbl::RefCounted<BufferSet> {
   fuchsia::media::StreamBufferPartialSettings PartialSettings(
       fuchsia::sysmem::BufferCollectionTokenPtr token) const;
 
-  // Sets the value passed into the constructor as |single_vmo|.
-  bool single_vmo() const {
-    std::lock_guard<std::mutex> locker(mutex_);
-    return single_vmo_;
-  }
-
   // Returns the buffer lifetime ordinal passed to the constructor.
   uint64_t lifetime_ordinal() const {
     std::lock_guard<std::mutex> locker(mutex_);
     return lifetime_ordinal_;
-  }
-
-  uint32_t packet_count_for_server() {
-    std::lock_guard<std::mutex> locker(mutex_);
-    return packet_count_for_server_;
-  }
-
-  uint32_t packet_count_for_client() {
-    std::lock_guard<std::mutex> locker(mutex_);
-    return packet_count_for_client_;
-  }
-
-  // Returns the size in bytes of the buffers in this set.
-  uint32_t buffer_size() const {
-    std::lock_guard<std::mutex> locker(mutex_);
-    return buffer_size_;
   }
 
   // Returns the number of buffers in the set.
@@ -130,12 +106,7 @@ class BufferSet : public fbl::RefCounted<BufferSet> {
   mutable std::mutex mutex_;
 
   uint64_t lifetime_ordinal_ FXL_GUARDED_BY(mutex_);
-  bool single_vmo_ FXL_GUARDED_BY(mutex_);
   uint64_t buffer_constraints_version_ordinal_ FXL_GUARDED_BY(mutex_);
-  bool single_buffer_mode_ FXL_GUARDED_BY(mutex_);
-  uint32_t packet_count_for_server_ FXL_GUARDED_BY(mutex_);
-  uint32_t packet_count_for_client_ FXL_GUARDED_BY(mutex_);
-  uint32_t buffer_size_ FXL_GUARDED_BY(mutex_);
 
   std::vector<BufferInfo> buffers_ FXL_GUARDED_BY(mutex_);
 
@@ -179,15 +150,11 @@ class BufferSetManager {
     return *current_set_;
   }
 
-  // Applies the specified constraints, creating a new buffer set. If
-  // |single_vmo_preferred| and |single_buffer_mode_allowed| are true, one vmo
-  // will be used for all the new buffers. Otherwise, each new buffer will have
-  // its own vmo. The resulting set's |single_vmo| method with return true in
-  // former case, false in the latter.
+  // Applies the specified constraints, creating a new buffer set. Each new buffer will have its own
+  // vmo.
   //
   // Returns whether the constraints were successfully applied.
-  bool ApplyConstraints(const fuchsia::media::StreamBufferConstraints& constraints,
-                        bool single_vmo_preferred);
+  bool ApplyConstraints(const fuchsia::media::StreamBufferConstraints& constraints);
 
   // Releases a reference to the payload buffer previously added using
   // |BufferSet::AddRefBufferForProcessor| or

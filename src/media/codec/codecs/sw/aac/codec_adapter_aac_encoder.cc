@@ -15,8 +15,6 @@ namespace {
 
 constexpr char kAacMimeType[] = "audio/aac";
 
-constexpr size_t kServerPacketCount = 1;
-constexpr size_t kClientPacketCount = 1;
 constexpr uint32_t kInputMinBufferCountForCamping = 1;
 constexpr uint32_t kOutputMinBufferCountForCamping = 1;
 
@@ -188,19 +186,6 @@ CodecAdapterAacEncoder::CoreCodecBuildNewOutputConstraints(
     uint64_t stream_lifetime_ordinal, uint64_t new_output_buffer_constraints_version_ordinal,
     bool buffer_constraints_action_required) {
   ZX_DEBUG_ASSERT(output_sink_);
-  // Immediately call a lambda so we can have a const on output_buffer_size.
-  const uint32_t output_buffer_size = [this] {
-    std::lock_guard<std::mutex> lock(lock_);
-    ZX_DEBUG_ASSERT_MSG(format_configuration_,
-                        "The input thread triggered this call to generate output constraints, so "
-                        "it should have prepared the format configuration.");
-    return format_configuration_->recommended_output_buffer_size;
-  }();
-
-  // These ceilings are arbitrary, but prevent the client from using this codec
-  // to request unbounded memory from sysmem.
-  constexpr size_t kMaxPacketCount = 100;
-  const size_t kMaxBufferSize = output_buffer_size * 10;
 
   auto constraints = std::make_unique<fuchsia::media::StreamOutputConstraints>();
 
@@ -208,25 +193,8 @@ CodecAdapterAacEncoder::CoreCodecBuildNewOutputConstraints(
       .set_buffer_constraints_action_required(buffer_constraints_action_required);
 
   auto* buffer_constraints = constraints->mutable_buffer_constraints();
-  buffer_constraints->mutable_default_settings()
-      ->set_packet_count_for_server(kServerPacketCount)
-      .set_per_packet_buffer_bytes(output_buffer_size)
-      .set_packet_count_for_client(kClientPacketCount)
-      // 0 is invalid to force the client to set this field.
-      .set_buffer_lifetime_ordinal(0)
-      .set_buffer_constraints_version_ordinal(new_output_buffer_constraints_version_ordinal);
 
-  buffer_constraints->set_per_packet_buffer_bytes_min(output_buffer_size)
-      .set_per_packet_buffer_bytes_recommended(output_buffer_size)
-      .set_per_packet_buffer_bytes_max(kMaxBufferSize)
-      .set_packet_count_for_server_min(1)
-      .set_packet_count_for_server_recommended(kServerPacketCount)
-      .set_packet_count_for_server_recommended_max(kServerPacketCount)
-      .set_packet_count_for_server_max(kMaxPacketCount)
-      .set_packet_count_for_client_min(1)
-      .set_packet_count_for_client_max(kMaxPacketCount)
-      .set_single_buffer_mode_allowed(false)
-      .set_buffer_constraints_version_ordinal(new_output_buffer_constraints_version_ordinal);
+  buffer_constraints->set_buffer_constraints_version_ordinal(new_output_buffer_constraints_version_ordinal);
 
   return constraints;
 }

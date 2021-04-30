@@ -197,8 +197,6 @@ void FidlProcessor::PutInputPacket(PacketPtr packet, size_t input_index) {
     codec_packet.set_start_access_unit(packet->keyframe());
     codec_packet.set_known_end_access_unit(false);
 
-    FX_DCHECK(packet->size() <= current_set.buffer_size());
-
     outboard_processor_->QueueInputPacket(std::move(codec_packet));
   }
 
@@ -337,14 +335,13 @@ void FidlProcessor::OnInputConstraints(fuchsia::media::StreamBufferConstraints c
   FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
   FX_DCHECK(!input_buffers_.has_current_set()) << "OnInputConstraints received more than once.";
 
-  input_buffers_.ApplyConstraints(constraints, true);
+  input_buffers_.ApplyConstraints(constraints);
   FX_DCHECK(input_buffers_.has_current_set());
   BufferSet& current_set = input_buffers_.current_set();
 
   ConfigureInputToUseSysmemVmos(
       service_provider_, 0,  // max_aggregate_payload_size
-      current_set.packet_count_for_server(), current_set.buffer_size(),
-      current_set.single_vmo() ? VmoAllocation::kSingleVmo : VmoAllocation::kVmoPerBuffer,
+      VmoAllocation::kVmoPerBuffer,
       0,  // map_flags
       [&current_set](uint64_t size, const PayloadVmos& payload_vmos) {
         // This callback runs on an arbitrary thread.
@@ -391,22 +388,16 @@ void FidlProcessor::OnOutputConstraints(fuchsia::media::StreamOutputConstraints 
     output_buffers_.current_set().ReleaseAllProcessorOwnedBuffers();
   }
 
-  // Use a single VMO for audio, VMO per buffer for video.
-  const bool success = output_buffers_.ApplyConstraints(constraints.buffer_constraints(),
-                                                        medium_ == StreamType::Medium::kAudio);
+  const bool success = output_buffers_.ApplyConstraints(constraints.buffer_constraints());
   if (!success) {
     FX_LOGS(ERROR) << "OnOutputConstraints: Failed to apply constraints.";
     InitFailed();
     return;
   }
 
-  FX_DCHECK(output_buffers_.has_current_set());
-  BufferSet& current_set = output_buffers_.current_set();
-
   ConfigureOutputToUseSysmemVmos(
       service_provider_, 0,  // max_aggregate_payload_size
-      current_set.packet_count_for_server(), current_set.buffer_size(),
-      current_set.single_vmo() ? VmoAllocation::kSingleVmo : VmoAllocation::kVmoPerBuffer,
+      VmoAllocation::kVmoPerBuffer,
       0);  // map_flags
 
   // Call |Sync| on the sysmem token before passing it to the outboard processor as part of

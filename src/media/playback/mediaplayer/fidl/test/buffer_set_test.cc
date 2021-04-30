@@ -23,19 +23,10 @@ TEST_F(BufferSetTest, NominalSequence) {
 
   uint64_t buffer_size = 1000;
 
-  // Apply constraints to produce a current set.
-  fuchsia::media::StreamBufferSettings default_settings;
-  default_settings.set_buffer_constraints_version_ordinal(3);
-  default_settings.set_single_buffer_mode(false);
-  default_settings.set_packet_count_for_client(5);
-  default_settings.set_packet_count_for_server(7);
-  default_settings.set_per_packet_buffer_bytes(buffer_size);
-
   fuchsia::media::StreamBufferConstraints constraints;
-  constraints.set_default_settings(fidl::Clone(default_settings));
-  constraints.set_single_buffer_mode_allowed(true);
+  constraints.set_buffer_constraints_version_ordinal(3);
 
-  EXPECT_TRUE(under_test.ApplyConstraints(constraints, false));
+  EXPECT_TRUE(under_test.ApplyConstraints(constraints));
   EXPECT_TRUE(under_test.has_current_set());
 
   auto& current_set = under_test.current_set();
@@ -47,22 +38,12 @@ TEST_F(BufferSetTest, NominalSequence) {
   EXPECT_TRUE(partial_settings.has_buffer_lifetime_ordinal());
   EXPECT_EQ(1u, partial_settings.buffer_lifetime_ordinal());
   EXPECT_TRUE(partial_settings.has_buffer_constraints_version_ordinal());
-  EXPECT_EQ(default_settings.buffer_constraints_version_ordinal(),
+  EXPECT_EQ(constraints.buffer_constraints_version_ordinal(),
             partial_settings.buffer_constraints_version_ordinal());
-  EXPECT_TRUE(partial_settings.has_single_buffer_mode());
-  EXPECT_EQ(default_settings.single_buffer_mode(), partial_settings.single_buffer_mode());
-  EXPECT_TRUE(partial_settings.has_packet_count_for_server());
-  EXPECT_EQ(default_settings.packet_count_for_server(), partial_settings.packet_count_for_server());
-  EXPECT_TRUE(partial_settings.has_packet_count_for_client());
-  EXPECT_EQ(default_settings.packet_count_for_client(), partial_settings.packet_count_for_client());
   EXPECT_TRUE(partial_settings.has_sysmem_token());
   EXPECT_TRUE(!!partial_settings.sysmem_token());
 
-  EXPECT_FALSE(current_set.single_vmo());
   EXPECT_EQ(1u, current_set.lifetime_ordinal());
-  EXPECT_EQ(default_settings.packet_count_for_server(), current_set.packet_count_for_server());
-  EXPECT_EQ(default_settings.packet_count_for_client(), current_set.packet_count_for_client());
-  EXPECT_EQ(default_settings.per_packet_buffer_bytes(), current_set.buffer_size());
   EXPECT_EQ(0u, current_set.buffer_count());
 
   uint32_t buffer_count = 13;
@@ -101,19 +82,10 @@ TEST_F(BufferSetTest, ProcessorOwnedBuffers) {
 
   uint64_t buffer_size = 1000;
 
-  // Apply constraints to produce a current set.
-  fuchsia::media::StreamBufferSettings default_settings;
-  default_settings.set_buffer_constraints_version_ordinal(3);
-  default_settings.set_single_buffer_mode(false);
-  default_settings.set_packet_count_for_client(5);
-  default_settings.set_packet_count_for_server(7);
-  default_settings.set_per_packet_buffer_bytes(buffer_size);
-
   fuchsia::media::StreamBufferConstraints constraints;
-  constraints.set_default_settings(fidl::Clone(default_settings));
-  constraints.set_single_buffer_mode_allowed(true);
+  constraints.set_buffer_constraints_version_ordinal(1);
 
-  EXPECT_TRUE(under_test.ApplyConstraints(constraints, false));
+  EXPECT_TRUE(under_test.ApplyConstraints(constraints));
   EXPECT_TRUE(under_test.has_current_set());
 
   auto& current_set = under_test.current_set();
@@ -170,19 +142,10 @@ TEST_F(BufferSetTest, TwoSets) {
   {
     uint64_t buffer_size = 1000;
 
-    // Apply constraints to produce a current set.
-    fuchsia::media::StreamBufferSettings default_settings;
-    default_settings.set_buffer_constraints_version_ordinal(3);
-    default_settings.set_single_buffer_mode(false);
-    default_settings.set_packet_count_for_client(5);
-    default_settings.set_packet_count_for_server(7);
-    default_settings.set_per_packet_buffer_bytes(buffer_size);
-
     fuchsia::media::StreamBufferConstraints constraints;
-    constraints.set_default_settings(std::move(default_settings));
-    constraints.set_single_buffer_mode_allowed(true);
+    constraints.set_buffer_constraints_version_ordinal(1);
 
-    EXPECT_TRUE(under_test.ApplyConstraints(constraints, false));
+    EXPECT_TRUE(under_test.ApplyConstraints(constraints));
     EXPECT_TRUE(under_test.has_current_set());
 
     auto& current_set = under_test.current_set();
@@ -204,21 +167,10 @@ TEST_F(BufferSetTest, TwoSets) {
   }
 
   {
-    uint64_t buffer_size = 2000;
-
-    // Apply constraints to produce a new current set.
-    fuchsia::media::StreamBufferSettings default_settings;
-    default_settings.set_buffer_constraints_version_ordinal(5);
-    default_settings.set_single_buffer_mode(false);
-    default_settings.set_packet_count_for_client(4);
-    default_settings.set_packet_count_for_server(6);
-    default_settings.set_per_packet_buffer_bytes(buffer_size);
-
     fuchsia::media::StreamBufferConstraints constraints;
-    constraints.set_default_settings(fidl::Clone(default_settings));
-    constraints.set_single_buffer_mode_allowed(true);
+    constraints.set_buffer_constraints_version_ordinal(3);
 
-    EXPECT_TRUE(under_test.ApplyConstraints(constraints, false));
+    EXPECT_TRUE(under_test.ApplyConstraints(constraints));
     EXPECT_TRUE(under_test.has_current_set());
 
     auto& current_set = under_test.current_set();
@@ -230,24 +182,12 @@ TEST_F(BufferSetTest, TwoSets) {
     EXPECT_TRUE(partial_settings.has_buffer_lifetime_ordinal());
     EXPECT_EQ(3u, partial_settings.buffer_lifetime_ordinal());
     EXPECT_TRUE(partial_settings.has_buffer_constraints_version_ordinal());
-    EXPECT_EQ(default_settings.buffer_constraints_version_ordinal(),
+    EXPECT_EQ(constraints.buffer_constraints_version_ordinal(),
               partial_settings.buffer_constraints_version_ordinal());
-    EXPECT_TRUE(partial_settings.has_single_buffer_mode());
-    EXPECT_EQ(default_settings.single_buffer_mode(), partial_settings.single_buffer_mode());
-    EXPECT_TRUE(partial_settings.has_packet_count_for_server());
-    EXPECT_EQ(default_settings.packet_count_for_server(),
-              partial_settings.packet_count_for_server());
-    EXPECT_TRUE(partial_settings.has_packet_count_for_client());
-    EXPECT_EQ(default_settings.packet_count_for_client(),
-              partial_settings.packet_count_for_client());
     EXPECT_TRUE(partial_settings.has_sysmem_token());
     EXPECT_TRUE(!!partial_settings.sysmem_token());
 
-    EXPECT_FALSE(current_set.single_vmo());
     EXPECT_EQ(3u, current_set.lifetime_ordinal());
-    EXPECT_EQ(default_settings.packet_count_for_server(), current_set.packet_count_for_server());
-    EXPECT_EQ(default_settings.packet_count_for_client(), current_set.packet_count_for_client());
-    EXPECT_EQ(default_settings.per_packet_buffer_bytes(), current_set.buffer_size());
     EXPECT_EQ(0u, current_set.buffer_count());
   }
 
