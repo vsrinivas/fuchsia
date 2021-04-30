@@ -11,10 +11,9 @@
 
 namespace hid_input_report_dev {
 
-std::unique_ptr<InputReportsReader> InputReportsReader::Create(InputReportBase* base,
-                                                               uint32_t reader_id,
-                                                               async_dispatcher_t* dispatcher,
-                                                               zx::channel req) {
+std::unique_ptr<InputReportsReader> InputReportsReader::Create(
+    InputReportBase* base, uint32_t reader_id, async_dispatcher_t* dispatcher,
+    fidl::ServerEnd<fuchsia_input_report::InputReportsReader> request) {
   // Invoked when the channel is closed or on any binding-related error.
   fidl::OnUnboundFn<InputReportsReader> unbound_fn(
       [](InputReportsReader* device, fidl::UnbindInfo info,
@@ -32,7 +31,8 @@ std::unique_ptr<InputReportsReader> InputReportsReader::Create(InputReportBase* 
       });
 
   auto reader = std::make_unique<InputReportsReader>(base, reader_id);
-  auto binding = fidl::BindServer(dispatcher, std::move(req), reader.get(), std::move(unbound_fn));
+  auto binding =
+      fidl::BindServer(dispatcher, std::move(request), reader.get(), std::move(unbound_fn));
   fbl::AutoLock lock(&reader->readers_lock_);
   reader->binding_.emplace(std::move(binding));
   return reader;

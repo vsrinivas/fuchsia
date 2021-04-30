@@ -95,7 +95,7 @@ void InputReport::GetInputReportsReader(GetInputReportsReaderRequestView request
   fbl::AutoLock lock(&readers_lock_);
 
   auto reader = InputReportsReader::Create(this, next_reader_id_++, loop_->dispatcher(),
-                                           request->reader.TakeChannel());
+                                           std::move(request->reader));
   if (!reader) {
     return;
   }

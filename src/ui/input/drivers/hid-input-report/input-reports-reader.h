@@ -30,9 +30,9 @@ class InputReportsReader : public fidl::WireServer<fuchsia_input_report::InputRe
   // The InputReportBase has to exist for the lifetime of the InputReportsReader.
   // The pointer to InputReportBase is unowned.
   // InputReportsReader will be freed by InputReportBase.
-  static std::unique_ptr<InputReportsReader> Create(InputReportBase* base, uint32_t reader_id,
-                                                    async_dispatcher_t* dispatcher,
-                                                    zx::channel req);
+  static std::unique_ptr<InputReportsReader> Create(
+      InputReportBase* base, uint32_t reader_id, async_dispatcher_t* dispatcher,
+      fidl::ServerEnd<fuchsia_input_report::InputReportsReader> request);
 
   explicit InputReportsReader(InputReportBase* base, uint32_t reader_id)
       : reader_id_(reader_id), base_(base) {}

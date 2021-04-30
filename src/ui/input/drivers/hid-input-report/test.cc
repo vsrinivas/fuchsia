@@ -137,6 +137,10 @@ class HidDevTest : public zxtest::Test {
   }
 
  protected:
+  fidl::WireSyncClient<fuchsia_input_report::InputDevice> GetSyncClient() {
+    return fidl::BindSyncClient(ddk_.FidlClient<fuchsia_input_report::InputDevice>());
+  }
+
   fake_ddk::Bind ddk_;
   FakeHidDevice fake_hid_;
   InputReport* device_;
@@ -180,8 +184,7 @@ TEST_F(HidDevTest, GetReportDescTest) {
 
   ASSERT_OK(device_->Bind());
 
-  auto sync_client =
-      fidl::WireSyncClient<fuchsia_input_report::InputDevice>(std::move(ddk_.FidlClient()));
+  auto sync_client = GetSyncClient();
   fidl::WireResult<fuchsia_input_report::InputDevice::GetDescriptor> result =
       sync_client.GetDescriptor();
   ASSERT_OK(result.status());
@@ -206,8 +209,7 @@ TEST_F(HidDevTest, ReportDescInfoTest) {
 
   ASSERT_OK(device_->Bind());
 
-  auto sync_client =
-      fidl::WireSyncClient<fuchsia_input_report::InputDevice>(std::move(ddk_.FidlClient()));
+  auto sync_client = GetSyncClient();
   fidl::WireResult<fuchsia_input_report::InputDevice::GetDescriptor> result =
       sync_client.GetDescriptor();
   ASSERT_OK(result.status());
@@ -228,18 +230,18 @@ TEST_F(HidDevTest, ReadInputReportsTest) {
 
   device_->Bind();
 
-  auto sync_client =
-      fidl::WireSyncClient<fuchsia_input_report::InputDevice>(std::move(ddk_.FidlClient()));
+  auto sync_client = GetSyncClient();
 
   // Get an InputReportsReader.
   fidl::WireSyncClient<fuchsia_input_report::InputReportsReader> reader;
   {
-    zx::channel token_server, token_client;
-    ASSERT_OK(zx::channel::create(0, &token_server, &token_client));
-    auto result = sync_client.GetInputReportsReader(std::move(token_server));
+    auto endpoints = fidl::CreateEndpoints<fuchsia_input_report::InputReportsReader>();
+    ASSERT_OK(endpoints.status_value());
+
+    auto result = sync_client.GetInputReportsReader(std::move(endpoints->server));
     ASSERT_OK(result.status());
-    reader =
-        fidl::WireSyncClient<fuchsia_input_report::InputReportsReader>(std::move(token_client));
+    reader = fidl::WireSyncClient<fuchsia_input_report::InputReportsReader>(
+        std::move(endpoints->client));
     ASSERT_OK(device_->WaitForNextReader(zx::duration::infinite()));
   }
 
@@ -279,19 +281,19 @@ TEST_F(HidDevTest, ReadInputReportsHangingGetTest) {
 
   device_->Bind();
 
-  auto sync_client =
-      fidl::WireSyncClient<fuchsia_input_report::InputDevice>(std::move(ddk_.FidlClient()));
+  auto sync_client = GetSyncClient();
 
   // Get an InputReportsReader.
 
   async::Loop loop = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   fidl::Client<fuchsia_input_report::InputReportsReader> reader;
   {
-    zx::channel token_server, token_client;
-    ASSERT_OK(zx::channel::create(0, &token_server, &token_client));
-    auto result = sync_client.GetInputReportsReader(std::move(token_server));
+    auto endpoints = fidl::CreateEndpoints<fuchsia_input_report::InputReportsReader>();
+    ASSERT_OK(endpoints.status_value());
+
+    auto result = sync_client.GetInputReportsReader(std::move(endpoints->server));
     ASSERT_OK(result.status());
-    reader.Bind(std::move(token_client), loop.dispatcher());
+    reader.Bind(std::move(endpoints->client), loop.dispatcher());
     ASSERT_OK(device_->WaitForNextReader(zx::duration::infinite()));
   }
 
@@ -331,19 +333,19 @@ TEST_F(HidDevTest, CloseReaderWithOutstandingRead) {
 
   device_->Bind();
 
-  auto sync_client =
-      fidl::WireSyncClient<fuchsia_input_report::InputDevice>(std::move(ddk_.FidlClient()));
+  auto sync_client = GetSyncClient();
 
   // Get an InputReportsReader.
 
   async::Loop loop = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   fidl::Client<fuchsia_input_report::InputReportsReader> reader;
   {
-    zx::channel token_server, token_client;
-    ASSERT_OK(zx::channel::create(0, &token_server, &token_client));
-    auto result = sync_client.GetInputReportsReader(std::move(token_server));
+    auto endpoints = fidl::CreateEndpoints<fuchsia_input_report::InputReportsReader>();
+    ASSERT_OK(endpoints.status_value());
+
+    auto result = sync_client.GetInputReportsReader(std::move(endpoints->server));
     ASSERT_OK(result.status());
-    reader.Bind(std::move(token_client), loop.dispatcher());
+    reader.Bind(std::move(endpoints->client), loop.dispatcher());
     ASSERT_OK(device_->WaitForNextReader(zx::duration::infinite()));
   }
 
@@ -366,8 +368,7 @@ TEST_F(HidDevTest, SensorTest) {
 
   device_->Bind();
 
-  auto sync_client =
-      fidl::WireSyncClient<fuchsia_input_report::InputDevice>(std::move(ddk_.FidlClient()));
+  auto sync_client = GetSyncClient();
 
   // Get the report descriptor.
   fidl::WireResult<fuchsia_input_report::InputDevice::GetDescriptor> result =
@@ -396,12 +397,13 @@ TEST_F(HidDevTest, SensorTest) {
   // Get an InputReportsReader.
   fidl::WireSyncClient<fuchsia_input_report::InputReportsReader> reader;
   {
-    zx::channel token_server, token_client;
-    ASSERT_OK(zx::channel::create(0, &token_server, &token_client));
-    auto result = sync_client.GetInputReportsReader(std::move(token_server));
+    auto endpoints = fidl::CreateEndpoints<fuchsia_input_report::InputReportsReader>();
+    ASSERT_OK(endpoints.status_value());
+
+    auto result = sync_client.GetInputReportsReader(std::move(endpoints->server));
     ASSERT_OK(result.status());
-    reader =
-        fidl::WireSyncClient<fuchsia_input_report::InputReportsReader>(std::move(token_client));
+    reader = fidl::WireSyncClient<fuchsia_input_report::InputReportsReader>(
+        std::move(endpoints->client));
     ASSERT_OK(device_->WaitForNextReader(zx::duration::infinite()));
   }
 
@@ -452,18 +454,18 @@ TEST_F(HidDevTest, GetTouchInputReportTest) {
 
   device_->Bind();
 
-  auto sync_client =
-      fidl::WireSyncClient<fuchsia_input_report::InputDevice>(std::move(ddk_.FidlClient()));
+  auto sync_client = GetSyncClient();
 
   // Get an InputReportsReader.
   fidl::WireSyncClient<fuchsia_input_report::InputReportsReader> reader;
   {
-    zx::channel token_server, token_client;
-    ASSERT_OK(zx::channel::create(0, &token_server, &token_client));
-    auto result = sync_client.GetInputReportsReader(std::move(token_server));
+    auto endpoints = fidl::CreateEndpoints<fuchsia_input_report::InputReportsReader>();
+    ASSERT_OK(endpoints.status_value());
+
+    auto result = sync_client.GetInputReportsReader(std::move(endpoints->server));
     ASSERT_OK(result.status());
-    reader =
-        fidl::WireSyncClient<fuchsia_input_report::InputReportsReader>(std::move(token_client));
+    reader = fidl::WireSyncClient<fuchsia_input_report::InputReportsReader>(
+        std::move(endpoints->client));
     ASSERT_OK(device_->WaitForNextReader(zx::duration::infinite()));
   }
 
@@ -510,8 +512,7 @@ TEST_F(HidDevTest, GetTouchPadDescTest) {
 
   device_->Bind();
 
-  auto sync_client =
-      fidl::WireSyncClient<fuchsia_input_report::InputDevice>(std::move(ddk_.FidlClient()));
+  auto sync_client = GetSyncClient();
   fidl::WireResult<fuchsia_input_report::InputDevice::GetDescriptor> result =
       sync_client.GetDescriptor();
   ASSERT_OK(result.status());
@@ -530,18 +531,18 @@ TEST_F(HidDevTest, KeyboardTest) {
   fake_hid_.SetReportDesc(desc);
   device_->Bind();
 
-  auto sync_client =
-      fidl::WireSyncClient<fuchsia_input_report::InputDevice>(std::move(ddk_.FidlClient()));
+  auto sync_client = GetSyncClient();
 
   // Get an InputReportsReader.
   fidl::WireSyncClient<fuchsia_input_report::InputReportsReader> reader;
   {
-    zx::channel token_server, token_client;
-    ASSERT_OK(zx::channel::create(0, &token_server, &token_client));
-    auto result = sync_client.GetInputReportsReader(std::move(token_server));
+    auto endpoints = fidl::CreateEndpoints<fuchsia_input_report::InputReportsReader>();
+    ASSERT_OK(endpoints.status_value());
+
+    auto result = sync_client.GetInputReportsReader(std::move(endpoints->server));
     ASSERT_OK(result.status());
-    reader =
-        fidl::WireSyncClient<fuchsia_input_report::InputReportsReader>(std::move(token_client));
+    reader = fidl::WireSyncClient<fuchsia_input_report::InputReportsReader>(
+        std::move(endpoints->client));
     ASSERT_OK(device_->WaitForNextReader(zx::duration::infinite()));
   }
 
@@ -579,8 +580,7 @@ TEST_F(HidDevTest, KeyboardOutputReportTest) {
   fake_hid_.SetReportDesc(desc);
   device_->Bind();
 
-  auto sync_client =
-      fidl::WireSyncClient<fuchsia_input_report::InputDevice>(std::move(ddk_.FidlClient()));
+  auto sync_client = GetSyncClient();
   // Make an output report.
   fidl::FidlAllocator allocator;
   fidl::VectorView<fuchsia_input_report::wire::LedType> led_view(allocator, 2);
@@ -625,8 +625,7 @@ TEST_F(HidDevTest, ConsumerControlTest) {
 
   device_->Bind();
 
-  auto sync_client =
-      fidl::WireSyncClient<fuchsia_input_report::InputDevice>(std::move(ddk_.FidlClient()));
+  auto sync_client = GetSyncClient();
 
   // Get the report descriptor.
   fidl::WireResult<fuchsia_input_report::InputDevice::GetDescriptor> result =
@@ -654,12 +653,13 @@ TEST_F(HidDevTest, ConsumerControlTest) {
   // Get an InputReportsReader.
   fidl::WireSyncClient<fuchsia_input_report::InputReportsReader> reader;
   {
-    zx::channel token_server, token_client;
-    ASSERT_OK(zx::channel::create(0, &token_server, &token_client));
-    auto result = sync_client.GetInputReportsReader(std::move(token_server));
+    auto endpoints = fidl::CreateEndpoints<fuchsia_input_report::InputReportsReader>();
+    ASSERT_OK(endpoints.status_value());
+
+    auto result = sync_client.GetInputReportsReader(std::move(endpoints->server));
     ASSERT_OK(result.status());
-    reader =
-        fidl::WireSyncClient<fuchsia_input_report::InputReportsReader>(std::move(token_client));
+    reader = fidl::WireSyncClient<fuchsia_input_report::InputReportsReader>(
+        std::move(endpoints->client));
     ASSERT_OK(device_->WaitForNextReader(zx::duration::infinite()));
   }
 
@@ -729,20 +729,20 @@ TEST_F(HidDevTest, ConsumerControlTwoClientsTest) {
   device_->Bind();
 
   // Open the device.
-  auto client =
-      fidl::WireSyncClient<fuchsia_input_report::InputDevice>(std::move(ddk_.FidlClient()));
+  auto client = GetSyncClient();
 
   // Get an input reader and check reports.
   {
     // Get an InputReportsReader.
     fidl::WireSyncClient<fuchsia_input_report::InputReportsReader> reader;
     {
-      zx::channel token_server, token_client;
-      ASSERT_OK(zx::channel::create(0, &token_server, &token_client));
-      auto result = client.GetInputReportsReader(std::move(token_server));
+      auto endpoints = fidl::CreateEndpoints<fuchsia_input_report::InputReportsReader>();
+      ASSERT_OK(endpoints.status_value());
+
+      auto result = client.GetInputReportsReader(std::move(endpoints->server));
       ASSERT_OK(result.status());
-      reader =
-          fidl::WireSyncClient<fuchsia_input_report::InputReportsReader>(std::move(token_client));
+      reader = fidl::WireSyncClient<fuchsia_input_report::InputReportsReader>(
+          std::move(endpoints->client));
     }
 
     auto report_result = reader.ReadInputReports();
@@ -761,12 +761,13 @@ TEST_F(HidDevTest, ConsumerControlTwoClientsTest) {
     // Get an InputReportsReader.
     fidl::WireSyncClient<fuchsia_input_report::InputReportsReader> reader;
     {
-      zx::channel token_server, token_client;
-      ASSERT_OK(zx::channel::create(0, &token_server, &token_client));
-      auto result = client.GetInputReportsReader(std::move(token_server));
+      auto endpoints = fidl::CreateEndpoints<fuchsia_input_report::InputReportsReader>();
+      ASSERT_OK(endpoints.status_value());
+
+      auto result = client.GetInputReportsReader(std::move(endpoints->server));
       ASSERT_OK(result.status());
-      reader =
-          fidl::WireSyncClient<fuchsia_input_report::InputReportsReader>(std::move(token_client));
+      reader = fidl::WireSyncClient<fuchsia_input_report::InputReportsReader>(
+          std::move(endpoints->client));
       ASSERT_OK(device_->WaitForNextReader(zx::duration::infinite()));
     }
 
