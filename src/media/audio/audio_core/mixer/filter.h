@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "src/media/audio/audio_core/mixer/coefficient_table.h"
+#include "src/media/audio/audio_core/mixer/coefficient_table_cache.h"
 #include "src/media/audio/audio_core/mixer/constants.h"
 #include "src/media/audio/lib/format/constants.h"
 

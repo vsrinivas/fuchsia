@@ -13,6 +13,7 @@ source_set("mixer") {
   sources = [
     "channel_strip.h",
     "coefficient_table.h",
+    "coefficient_table_cache.h",
     "filter.cc",
     "filter.h",
     "gain.cc",
@@ -85,6 +86,7 @@ executable("mixer_unittest_bin") {
   sources = [
     "bookkeeping_unittest.cc",
     "channel_strip_unittest.cc",
+    "coefficient_table_cache_unittest.cc",
     "coefficient_table_unittest.cc",
     "filter_unittest.cc",
     "gain_unittest.cc",
