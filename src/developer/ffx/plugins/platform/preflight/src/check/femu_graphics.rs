@@ -132,12 +132,20 @@ impl<'a> FemuGraphics<'a> {
             )));
         }
 
-        let driver_version = self.linux_get_nvidia_driver_version()?;
-        Ok(if driver_version >= NVIDIA_REQ_DRIVER_VERSION {
-            Success(format!("Found supported graphics hardware: {}", cards.join(", ")))
-        } else {
-            Warning(format!("Found supported graphics hardware but Nvidia driver version {}.{} is older than required version {}.{}. Download the required version at https://www.nvidia.com/download/driverResults.aspx/160175",
-                driver_version.0, driver_version.1, NVIDIA_REQ_DRIVER_VERSION.0, NVIDIA_REQ_DRIVER_VERSION.1))
+        Ok(match self.linux_get_nvidia_driver_version() {
+            Ok(driver_version) => {
+                if driver_version >= NVIDIA_REQ_DRIVER_VERSION {
+                    Success(format!("Found supported graphics hardware: {}", cards.join(", ")))
+                } else {
+                    Warning(format!("Found supported graphics hardware but nVidia driver version {}.{} is older than required version {}.{}. Download the required version at https://www.nvidia.com/download/driverResults.aspx/160175",
+                        driver_version.0, driver_version.1, NVIDIA_REQ_DRIVER_VERSION.0, NVIDIA_REQ_DRIVER_VERSION.1))
+                }
+            }
+            Err(e) => Warning(format!(
+                "Found supported graphics hardware: {}; nVidia hardware couldn't be detected: {}",
+                cards.join(", "),
+                e
+            )),
         })
     }
 
@@ -183,6 +191,15 @@ mod test {
 18:00.0 VGA compatible controller: NVIDIA Corporation GP107GL [Quadro P1000] (rev a1)
 18:00.1 Audio device: NVIDIA Corporation GP107GL High Definition Audio Controller (rev a1)
 3a:09.0 System peripheral: Intel Corporation Sky Lake-E Integrated Memory Controller (rev 04)";
+
+    // Contains a "VGA compatible controller" line with an Intel HD Graphics chipset and no nVidia.
+    static LSPCI_OUTPUT_GOOD_INTEL: &str =
+        "00:00.0 Host bridge: Intel Corporation Xeon E3-1200 v6/7th Gen Core Processor Host Bridge/DRAM Registers (rev 05)
+00:01.0 PCI bridge: Intel Corporation Xeon E3-1200 v5/E3-1500 v5/6th Gen Core Processor PCIe Controller (x16) (rev 05)
+00:02.0 VGA compatible controller: Intel Corporation HD Graphics 630 (rev 04)
+00:14.0 USB controller: Intel Corporation 200 Series/Z370 Chipset Family USB 3.0 xHCI Controller
+00:14.2 Signal processing controller: Intel Corporation 200 Series PCH Thermal Subsystem
+00:16.0 Communication controller: Intel Corporation 200 Series PCH CSME HECI #1";
 
     // Contains an unsupported chipset.
     static LSPCI_OUTPUT_BAD: &str =
@@ -337,6 +354,27 @@ NVIDIA Quadro K1200:
         let check = FemuGraphics::new(&run_command);
         let response = check.run(&PreflightConfig { system: OperatingSystem::Linux }).await;
         assert!(matches!(response?, PreflightCheckResult::Success(..)));
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_linux_success_intel() -> Result<()> {
+        let run_command: CommandRunner = |args| {
+            if args.to_vec() == vec!["lspci"] {
+                return Ok((ExitStatus(0), LSPCI_OUTPUT_GOOD_INTEL.to_string(), "".to_string()));
+            }
+            assert_eq!(
+                args.to_vec(),
+                vec!["nvidia-smi", "--query-gpu=driver_version", "--format=csv,noheader"]
+            );
+            Err(anyhow!(
+                "Could not run 'nvidia-smi --query-gpu=driver_version --format=csv,noheader'"
+            ))
+        };
+
+        let check = FemuGraphics::new(&run_command);
+        let response = check.run(&PreflightConfig { system: OperatingSystem::Linux }).await;
+        assert!(matches!(response?, PreflightCheckResult::Warning(..)));
         Ok(())
     }
 
