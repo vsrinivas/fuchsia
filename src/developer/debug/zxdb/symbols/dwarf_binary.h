@@ -67,6 +67,9 @@ class DwarfBinary {
 
   // Like UnitForAddress but takes an address relative to the load address of the binary.
   virtual fxl::RefPtr<DwarfUnit> UnitForRelativeAddress(uint64_t relative_address) = 0;
+
+  // Returns the 64-bit value at the byte given offset in the .debug_addr section.
+  virtual std::optional<uint64_t> GetDebugAddrEntry(uint64_t offset) const = 0;
 };
 
 }  // namespace zxdb

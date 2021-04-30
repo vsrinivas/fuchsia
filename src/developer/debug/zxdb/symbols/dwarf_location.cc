@@ -16,7 +16,7 @@ namespace zxdb {
 
 VariableLocation DecodeVariableLocation(const llvm::DWARFUnit* unit,
                                         const llvm::DWARFFormValue& form,
-                                        const LazySymbol& source) {
+                                        const UncachedLazySymbol& source) {
   if (form.isFormClass(llvm::DWARFFormValue::FC_Block) ||
       form.isFormClass(llvm::DWARFFormValue::FC_Exprloc)) {
     // These forms are both a block of data which is interpreted as a DWARF expression. There is no
@@ -56,7 +56,7 @@ VariableLocation DecodeVariableLocation(const llvm::DWARFUnit* unit,
 
 VariableLocation DecodeLocationList(TargetPointer unit_base_addr,
                                     containers::array_view<uint8_t> data,
-                                    const LazySymbol& source) {
+                                    const UncachedLazySymbol& source) {
   DataExtractor ext(data);
   std::vector<VariableLocation::Entry> entries;
 

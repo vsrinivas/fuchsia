@@ -19,7 +19,8 @@ bool VariableLocation::Entry::InRange(const SymbolContext& symbol_context, uint6
 
 VariableLocation::VariableLocation() = default;
 
-VariableLocation::VariableLocation(const uint8_t* data, size_t size, const LazySymbol& source) {
+VariableLocation::VariableLocation(const uint8_t* data, size_t size,
+                                   const UncachedLazySymbol& source) {
   locations_.emplace_back();
   Entry& entry = locations_.back();
 

@@ -327,6 +327,10 @@ LazySymbol ModuleSymbolsImpl::IndexSymbolRefToSymbol(const IndexNode::SymbolRef&
 
 bool ModuleSymbolsImpl::HasBinary() const { return binary_->HasBinary(); }
 
+std::optional<uint64_t> ModuleSymbolsImpl::GetDebugAddrEntry(uint64_t offset) const {
+  return binary_->GetDebugAddrEntry(offset);
+}
+
 void ModuleSymbolsImpl::AppendLocationForFunction(const SymbolContext& symbol_context,
                                                   const ResolveOptions& options,
                                                   const Function* func,

@@ -48,7 +48,7 @@ class VariableLocation {
 
   // Constructs a Location with a single location valid for all address ranges, with the program
   // contained in the given buffer.
-  VariableLocation(const uint8_t* data, size_t size, const LazySymbol& source);
+  VariableLocation(const uint8_t* data, size_t size, const UncachedLazySymbol& source);
 
   // Constructs with an extracted array of Entries.
   VariableLocation(std::vector<Entry> locations);

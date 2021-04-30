@@ -251,7 +251,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(const llvm::DWARFDie& die
   VariableLocation frame_base;
   decoder.AddCustom(llvm::dwarf::DW_AT_frame_base,
                     [unit = die.getDwarfUnit(), &frame_base,
-                     source = MakeLazy(die)](const llvm::DWARFFormValue& value) {
+                     source = MakeUncachedLazy(die)](const llvm::DWARFFormValue& value) {
                       frame_base = DecodeVariableLocation(unit, value, source);
                     });
 
@@ -506,7 +506,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeCompileUnit(const llvm::DWARFDie& 
   decoder.AddUnsignedConstant(llvm::dwarf::DW_AT_language, &language);
 
   llvm::Optional<uint64_t> addr_base;
-  decoder.AddUnsignedConstant(llvm::dwarf::DW_AT_addr_base, &addr_base);
+  decoder.AddSectionOffset(llvm::dwarf::DW_AT_addr_base, &addr_base);
 
   if (!decoder.Decode(die))
     return fxl::MakeRefCounted<Symbol>();
@@ -914,7 +914,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeVariable(const llvm::DWARFDie& die
   VariableLocation location;
   decoder.AddCustom(llvm::dwarf::DW_AT_location,
                     [unit = die.getDwarfUnit(), &location,
-                     source = MakeLazy(die)](const llvm::DWARFFormValue& value) {
+                     source = MakeUncachedLazy(die)](const llvm::DWARFFormValue& value) {
                       location = DecodeVariableLocation(unit, value, source);
                     });
 

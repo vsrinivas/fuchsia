@@ -16,6 +16,7 @@
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/symbols/arch.h"
+#include "src/developer/debug/zxdb/symbols/module_symbols.h"
 #include "src/developer/debug/zxdb/symbols/symbol_data_provider.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -551,11 +552,50 @@ DwarfExprEval::Completion DwarfExprEval::OpBinary(StackEntry (*op)(StackEntry, S
 // result_type == kAddress corresponds to DW_OP_addrx
 // result_type == kValue corresponds to DW_OP_constx.
 DwarfExprEval::Completion DwarfExprEval::OpAddrBase(ResultType result_type, const char* op_name) {
-  // TODO(fxbug.dev/75488) implement this.
-  ReportError("Unimplemented DWARF expression operator.");
+  fxl::WeakPtr<ModuleSymbols> module_symbols = expr_.source().Get()->GetModuleSymbols();
+  if (!module_symbols) {
+    ReportError(std::string("DWARF expression used ") + op_name + "but no symbols are available.");
+    return Completion::kSync;
+  }
+
+  // The offset in the expression is relative to the DW_AT_addr_base of the compilation unit.
+  std::optional<uint64_t> base = expr_.GetAddrBase();
+  if (!base) {
+    ReportError(std::string("DWARF expression used ") + op_name +
+                " but no addr_base is available.");
+    return Completion::kSync;
+  }
+
+  StackEntry offset;
+  if (!ReadLEBUnsigned(&offset))
+    return Completion::kSync;
+
+  if (is_string_output()) {
+    return AppendString(std::string(op_name) + "(" + ToString128(offset) +
+                        ", with addr_base=" + std::to_string(*base) + ")");
+  }
+
+  // The base + offset is a byte index into the .debug_addr ELF section of a machine word.
+  std::optional<uint64_t> result_or =
+      module_symbols->GetDebugAddrEntry(*base + static_cast<uint64_t>(offset));
+  if (!result_or) {
+    ReportError("Unable to read .debug_addr section to evaluate expression.");
+    return Completion::kSync;
+  }
+
+  // Success. Addresses need to be relocated according to the module offset but constants are
+  // ready to use.
+  result_type_ = result_type;
+  if (result_type == ResultType::kPointer) {
+    Push(symbol_context_.RelativeToAbsolute(result_or.value()));
+  } else {
+    Push(static_cast<StackEntry>(result_or.value()));
+  }
   return Completion::kSync;
 }
 
+// 1 parameter: unsigned the size of a pointer. This is relative to the load address of the current
+// module. It is used to for globals and statics.
 DwarfExprEval::Completion DwarfExprEval::OpAddr() {
   StackEntry offset;
   if (!ReadUnsigned(kTargetPointerSize, &offset))

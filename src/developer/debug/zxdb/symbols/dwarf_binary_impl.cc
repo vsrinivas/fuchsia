@@ -6,6 +6,8 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include <limits>
+
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
@@ -138,6 +140,19 @@ fxl::RefPtr<DwarfUnit> DwarfBinaryImpl::FromLLVMUnit(llvm::DWARFUnit* llvm_unit)
     return unit;
   }
   return found->second;
+}
+
+std::optional<uint64_t> DwarfBinaryImpl::GetDebugAddrEntry(uint64_t offset) const {
+  const llvm::DWARFObject& object = context_->getDWARFObj();
+  llvm::StringRef string_ref = object.getAddrSection().Data;
+
+  if (offset > std::numeric_limits<uint64_t>::max() - kTargetPointerSize ||
+      string_ref.size() < offset + kTargetPointerSize)
+    return std::nullopt;  // No room in table data.
+
+  uint64_t result;
+  memcpy(&result, string_ref.bytes_begin() + offset, kTargetPointerSize);
+  return result;
 }
 
 }  // namespace zxdb

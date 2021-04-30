@@ -10,7 +10,11 @@
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
 #include "src/developer/debug/zxdb/symbols/arch.h"
+#include "src/developer/debug/zxdb/symbols/compile_unit.h"
+#include "src/developer/debug/zxdb/symbols/mock_module_symbols.h"
 #include "src/developer/debug/zxdb/symbols/mock_symbol_data_provider.h"
+#include "src/developer/debug/zxdb/symbols/symbol_test_parent_setter.h"
+#include "src/developer/debug/zxdb/symbols/variable.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace zxdb {
@@ -46,6 +50,12 @@ class DwarfExprEvalTest : public TestWithLoop {
                   DwarfExprEval::ResultType expected_result_type, const char* expected_string,
                   const char* expected_message = nullptr);
 
+  // Same as the above but takes a DwarfExpr.
+  void DoEvalTest(DwarfExpr expr, bool expected_success,
+                  DwarfExprEval::Completion expected_completion, uint128_t expected_result,
+                  DwarfExprEval::ResultType expected_result_type, const char* expected_string,
+                  const char* expected_message = nullptr);
+
  private:
   DwarfExprEval eval_;
   fxl::RefPtr<MockSymbolDataProvider> provider_;
@@ -57,16 +67,25 @@ void DwarfExprEvalTest::DoEvalTest(const std::vector<uint8_t> data, bool expecte
                                    uint128_t expected_result,
                                    DwarfExprEval::ResultType expected_result_type,
                                    const char* expected_string, const char* expected_message) {
+  DoEvalTest(DwarfExpr(data), expected_success, expected_completion, expected_result,
+             expected_result_type, expected_string, expected_message);
+}
+
+void DwarfExprEvalTest::DoEvalTest(DwarfExpr expr, bool expected_success,
+                                   DwarfExprEval::Completion expected_completion,
+                                   uint128_t expected_result,
+                                   DwarfExprEval::ResultType expected_result_type,
+                                   const char* expected_string, const char* expected_message) {
   // Check string-ification. Do this first because it won't set up the complete state of the
   // DwarfExprEval and some tests want to validate this after the DoEvalTest call.
   eval_.Clear();
-  std::string stringified = eval_.ToString(provider(), symbol_context_, DwarfExpr(data), false);
+  std::string stringified = eval_.ToString(provider(), symbol_context_, expr, false);
   EXPECT_EQ(expected_string, stringified);
 
   eval_.Clear();
   bool callback_issued = false;
   EXPECT_EQ(expected_completion,
-            eval_.Eval(provider(), symbol_context_, DwarfExpr(data),
+            eval_.Eval(provider(), symbol_context_, expr,
                        [&callback_issued, expected_success, expected_result, expected_result_type,
                         expected_message](DwarfExprEval* eval, const Err& err) {
                          EXPECT_TRUE(eval->is_complete());
@@ -107,8 +126,8 @@ TEST_F(DwarfExprEvalTest, NoResult) {
   const char kNoResults[] = "DWARF expression produced no results.";
 
   // Empty expression.
-  DoEvalTest({}, false, DwarfExprEval::Completion::kSync, 0, DwarfExprEval::ResultType::kPointer,
-             "", kNoResults);
+  DoEvalTest(DwarfExpr(), false, DwarfExprEval::Completion::kSync, 0,
+             DwarfExprEval::ResultType::kPointer, "", kNoResults);
   EXPECT_EQ(RegisterID::kUnknown, eval().current_register_id());
   EXPECT_TRUE(eval().result_is_constant());
 
@@ -259,6 +278,55 @@ TEST_F(DwarfExprEvalTest, Addr) {
   DoEvalTest({llvm::dwarf::DW_OP_addr, 0, 0x40, 0, 0, 0, 0, 0, 0}, true,
              DwarfExprEval::Completion::kSync, kModuleBase + 0x4000,
              DwarfExprEval::ResultType::kPointer, "DW_OP_addr(0x4000)");
+}
+
+TEST_F(DwarfExprEvalTest, AddrxAndConstx) {
+  // These definitions depend on .debug_addr data which is provided by a ModuleSymbols.
+  auto module_symbols = fxl::MakeRefCounted<MockModuleSymbols>("file.exe");
+
+  // This unit has an DW_AT_addr_base which is added to the offsets for the "addrx" and "constx"
+  // operators for expressions inside of it.
+  constexpr uint64_t kAddrBase = 12;
+  auto compile_unit = fxl::MakeRefCounted<CompileUnit>(module_symbols->GetWeakPtr(),
+                                                       DwarfLang::kCpp14, "source.cc", kAddrBase);
+
+  // Offset from kAddrBase of our value.
+  constexpr uint8_t kOffset = 8;
+
+  // The value of the .debug_addr entry referenced by the variable.
+  constexpr uint64_t kAddr = 0x12345678;
+  module_symbols->AddDebugAddrEntry(kAddrBase + kOffset, kAddr);
+
+  // The variable our expression will be associated with. This variable doesn't have to actually
+  // have a type or the location expression we're using, it just needs to reference the compilation
+  // unit which has the addr_base and references the mock module symbols.
+  auto var =
+      fxl::MakeRefCounted<Variable>(DwarfTag::kVariable, "var", LazySymbol(), VariableLocation());
+  SymbolTestParentSetter var_parent_setter(var, compile_unit);  // Link compile unit to the parent.
+
+  // Since the var doesn't actrually reference this expression, we don't need to worry about
+  // reference cycles. If in the future we need to reference the DwarfExpr from the var above,
+  // we'll need to manually clear the DwarfExpr's source to prevent a leak.
+  DwarfExpr addrx_expr({llvm::dwarf::DW_OP_addrx, kOffset}, UncachedLazySymbol::MakeUnsafe(var));
+
+  // The "addrx" expression should read the kAddr value from the .debug_addr table at the location
+  // we set up, and then relocate it relative to the module's base address.
+  DoEvalTest(addrx_expr, true, DwarfExprEval::Completion::kSync, kModuleBase + kAddr,
+             DwarfExprEval::ResultType::kPointer, "DW_OP_addrx(8, with addr_base=12)");
+
+  // Same test with "constx". This is the same except the resulting address is not relocated from
+  // the module base.
+  //
+  // Note: I have not actually seen this operator in use. This expected behavior is based only on my
+  // reading of the spec.
+  DwarfExpr constx_expr({llvm::dwarf::DW_OP_constx, kOffset}, UncachedLazySymbol::MakeUnsafe(var));
+  DoEvalTest(constx_expr, true, DwarfExprEval::Completion::kSync, kAddr,
+             DwarfExprEval::ResultType::kValue, "DW_OP_constx(8, with addr_base=12)");
+
+  // Same test with an invalid address offset.
+  DwarfExpr invalid_expr({llvm::dwarf::DW_OP_constx, 16}, UncachedLazySymbol::MakeUnsafe(var));
+  DoEvalTest(invalid_expr, false, DwarfExprEval::Completion::kSync, 0,
+             DwarfExprEval::ResultType::kPointer, "DW_OP_constx(16, with addr_base=12)");
 }
 
 TEST_F(DwarfExprEvalTest, Breg) {

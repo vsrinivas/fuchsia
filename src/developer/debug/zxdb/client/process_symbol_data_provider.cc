@@ -43,11 +43,6 @@ void ProcessSymbolDataProvider::Disown() { process_ = nullptr; }
 
 debug_ipc::Arch ProcessSymbolDataProvider::GetArch() { return arch_; }
 
-ErrOr<uint64_t> ProcessSymbolDataProvider::GetDebugAddrEntry(uint64_t offset) const {
-  // TODO(fxbug.dev/75488) implement this.
-  return Err("Unimplemented");
-}
-
 void ProcessSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
                                                GetMemoryCallback callback) {
   if (!process_) {

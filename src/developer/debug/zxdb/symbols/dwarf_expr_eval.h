@@ -201,7 +201,9 @@ class DwarfExprEval {
   // first is the next-to-top, the second is the top) and pushing the result on the stack.
   Completion OpBinary(StackEntry (*op)(StackEntry, StackEntry), const char* op_name);
 
-  // Implements DW_OP_addrx and DW_OP_constx (corresponding to the given result types).
+  // Implements DW_OP_addrx and DW_OP_constx (corresponding to the given result types). The type
+  // of the result on the stack will be set to the given result type, and kPointer result types
+  // will be relocated according to the module's address offset.
   Completion OpAddrBase(ResultType result_type, const char* op_name);
 
   // Operations. On call, the expr_index_ will index the byte following the opcode, and on return

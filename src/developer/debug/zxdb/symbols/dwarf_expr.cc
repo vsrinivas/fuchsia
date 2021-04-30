@@ -12,7 +12,7 @@ std::optional<uint64_t> DwarfExpr::GetAddrBase() const {
   if (!source_)
     return std::nullopt;
 
-  const Symbol* symbol = source_.Get();
+  fxl::RefPtr<Symbol> symbol = source_.Get();
   if (!symbol)
     return std::nullopt;
 

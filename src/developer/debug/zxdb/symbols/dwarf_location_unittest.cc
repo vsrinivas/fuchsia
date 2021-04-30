@@ -27,7 +27,7 @@ TEST(DwarfLocation, UnitRelative) {
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
   constexpr TargetPointer kUnitBaseAddress = 0x1000000;
-  VariableLocation result = DecodeLocationList(kUnitBaseAddress, data, LazySymbol());
+  VariableLocation result = DecodeLocationList(kUnitBaseAddress, data, UncachedLazySymbol());
   EXPECT_FALSE(result.is_null());
   ASSERT_EQ(1u, result.locations().size());  // Only the last range was nonempty.
 
@@ -53,7 +53,7 @@ TEST(DwarfLocation, NewBaseAddress) {
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // End of expression marker (0, 0).
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
-  VariableLocation result = DecodeLocationList(0, data, LazySymbol());
+  VariableLocation result = DecodeLocationList(0, data, UncachedLazySymbol());
   EXPECT_FALSE(result.is_null());
   ASSERT_EQ(2u, result.locations().size());
 
@@ -68,7 +68,7 @@ TEST(DwarfLocation, NewBaseAddress) {
 
   // Now test a truncated list.
   result = DecodeLocationList(0, containers::array_view<uint8_t>(&data[0], data.size() - 4),
-                              LazySymbol());
+                              UncachedLazySymbol());
   EXPECT_TRUE(result.is_null());
 }
 
@@ -79,7 +79,7 @@ TEST(DwarfLocation, BadExpr) {
                             0x00, 0x80,         // Expression byte length.
                             0x7f, 0xd8, 0x75};  // Expression (shorter than byte length).
 
-  VariableLocation result = DecodeLocationList(0, data, LazySymbol());
+  VariableLocation result = DecodeLocationList(0, data, UncachedLazySymbol());
   EXPECT_TRUE(result.is_null());
 }
 

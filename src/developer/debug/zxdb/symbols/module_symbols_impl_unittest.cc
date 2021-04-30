@@ -293,11 +293,11 @@ TEST(ModuleSymbols, ResolveGlobalVariable) {
   ASSERT_TRUE(var_type);
   EXPECT_EQ("int", var_type->GetFullName());
 
-  // This number may change if we recompile the symbol test. That's OK, just make sure it agrees
-  // with the relative address from symbol dump.
-  //
-  // TODO(fxbug.dev/75488) The definition of this location uses DW_OP_addrx which is not supported.
-  // EXPECT_EQ(0x3000u, addrs[0].address());
+  // This variable doesn't have an address because in the current checked-in file, it's expressed as
+  // a DWARF expression that the SymbolModule doesn't evaluate. In a normal expression, the
+  // symbol match will trigger the necessary logic in the expression evaluation system. This
+  // expression might change and that's OK.
+  EXPECT_EQ(0u, addrs[0].address());
 
   // Look up the class static.
   addrs = setup.symbols()->ResolveInputLocation(
@@ -312,11 +312,8 @@ TEST(ModuleSymbols, ResolveGlobalVariable) {
   ASSERT_TRUE(var_type);
   EXPECT_EQ("int", var_type->GetFullName());
 
-  // This number may change if we recompile the symbol test. That's OK, just make sure it agrees
-  // with the relative address from symbol dump.
-  //
-  // TODO(fxbug.dev/75488) The definition of this location uses DW_OP_addrx which is not supported.
-  // EXPECT_EQ(0x3004u, addrs[0].address());
+  // As above, there's no address for the current symbol file.
+  EXPECT_EQ(0u, addrs[0].address());
 
   // Annotate the global variable as a register. This lookup should fail since registers can't be
   // looked up in the symbols (this tests that ModuleSymbolsImpl filters out bad special component

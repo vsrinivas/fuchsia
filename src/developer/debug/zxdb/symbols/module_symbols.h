@@ -126,6 +126,9 @@ class ModuleSymbols : public fxl::RefCountedThreadSafe<ModuleSymbols> {
   // itself, such as PLT entries.
   virtual bool HasBinary() const = 0;
 
+  // Returns the 64-bit value at the byte given offset in the .debug_addr section.
+  virtual std::optional<uint64_t> GetDebugAddrEntry(uint64_t offset) const = 0;
+
   // The constructor takes an optional callback that will be executed when this class is destroyed.
   // This allows the SystemSymbols to keep track of all live ModuleSymbols for caching purposes.
   void set_deletion_cb(fit::callback<void(ModuleSymbols*)> cb) { deletion_cb_ = std::move(cb); }

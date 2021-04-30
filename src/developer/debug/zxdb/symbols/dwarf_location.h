@@ -24,7 +24,8 @@ namespace zxdb {
 //
 // On error this will return an empty VariableLocation.
 VariableLocation DecodeVariableLocation(const llvm::DWARFUnit* unit,
-                                        const llvm::DWARFFormValue& form, const LazySymbol& source);
+                                        const llvm::DWARFFormValue& form,
+                                        const UncachedLazySymbol& source);
 
 // Low-level decode for a variable location description. The data should start at the beginning
 // of the location list to parse, and cover as much data as the location list could possibly
@@ -35,7 +36,8 @@ VariableLocation DecodeVariableLocation(const llvm::DWARFUnit* unit,
 //
 // On error this will return an empty VariableLocation.
 VariableLocation DecodeLocationList(TargetPointer unit_base_addr,
-                                    containers::array_view<uint8_t> data, const LazySymbol& source);
+                                    containers::array_view<uint8_t> data,
+                                    const UncachedLazySymbol& source);
 
 }  // namespace zxdb
 

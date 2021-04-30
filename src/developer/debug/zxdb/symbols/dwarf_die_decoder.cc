@@ -117,6 +117,17 @@ void DwarfDieDecoder::AddConstValue(llvm::dwarf::Attribute attribute, ConstValue
   });
 }
 
+void DwarfDieDecoder::AddSectionOffset(llvm::dwarf::Attribute attribute,
+                                       llvm::Optional<uint64_t>* offset) {
+  // The returned section offset will be the raw value. The caller will have to look up the
+  // address of the elf section it references and interpret it accordingly.
+  attrs_.emplace_back(attribute, [offset](const llvm::DWARFFormValue& form) {
+    // The getAsSectionOffset() call will return "None" if the form class doesn't match, so we don't
+    // need to check also.
+    *offset = form.getAsSectionOffset();
+  });
+}
+
 void DwarfDieDecoder::AddReference(llvm::dwarf::Attribute attribute, llvm::DWARFDie* output) {
   attrs_.emplace_back(attribute, [this, output](const llvm::DWARFFormValue& form) {
     *output = DecodeReference(form);

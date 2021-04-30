@@ -72,6 +72,7 @@ class DwarfDieDecoder {
   void AddCString(llvm::dwarf::Attribute attribute, llvm::Optional<const char*>* output);
   void AddLineTableFile(llvm::dwarf::Attribute attribute, llvm::Optional<std::string>* output);
   void AddConstValue(llvm::dwarf::Attribute attribute, ConstValue* const_value);
+  void AddSectionOffset(llvm::dwarf::Attribute attribute, llvm::Optional<uint64_t>* offset);
 
   // For cross-DIE references. Note that the resulting DIE may not be in the same unit. If the
   // attribute doesn't exist or is invalid, this DIE will be !isValid().

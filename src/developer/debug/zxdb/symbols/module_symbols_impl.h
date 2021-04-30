@@ -64,6 +64,7 @@ class ModuleSymbolsImpl final : public ModuleSymbols {
   const Index& GetIndex() const override;
   LazySymbol IndexSymbolRefToSymbol(const IndexNode::SymbolRef&) const override;
   bool HasBinary() const override;
+  std::optional<uint64_t> GetDebugAddrEntry(uint64_t offset) const override;
 
  private:
   FRIEND_MAKE_REF_COUNTED(ModuleSymbolsImpl);
@@ -149,7 +150,7 @@ class ModuleSymbolsImpl final : public ModuleSymbols {
   // Fills the forward and backward indices for ELF symbols.
   void FillElfSymbols();
 
-  std::unique_ptr<DwarfBinary> binary_;
+  std::unique_ptr<DwarfBinary> binary_;  // Guaranteed non-null.
 
   std::string build_dir_;
 
