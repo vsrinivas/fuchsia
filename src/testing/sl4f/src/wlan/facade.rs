@@ -7,7 +7,7 @@ use anyhow::{Context as _, Error};
 use fidl_fuchsia_wlan_device;
 use fidl_fuchsia_wlan_device_service::{DeviceServiceMarker, DeviceServiceProxy};
 use fidl_fuchsia_wlan_internal as fidl_internal;
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use fuchsia_zircon as zx;
 use parking_lot::RwLock;
 use std::collections::HashMap;
@@ -33,7 +33,7 @@ pub struct WlanFacade {
 
 impl WlanFacade {
     pub fn new() -> Result<WlanFacade, Error> {
-        let wlan_svc = connect_to_service::<DeviceServiceMarker>()?;
+        let wlan_svc = connect_to_protocol::<DeviceServiceMarker>()?;
 
         Ok(WlanFacade { wlan_svc, inner: RwLock::new(InnerWlanFacade { scan_results: false }) })
     }

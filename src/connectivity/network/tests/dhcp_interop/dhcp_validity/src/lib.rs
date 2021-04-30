@@ -27,7 +27,7 @@ use {
 pub async fn configure_dhcp_server(guest_name: &str, command_to_run: &str) -> Result<(), Error> {
     // Run a bash script to start the DHCP service on the Debian guest.
     let mut env = vec![];
-    let guest_discovery_service = client::connect_to_service::<GuestDiscoveryMarker>()?;
+    let guest_discovery_service = client::connect_to_protocol::<GuestDiscoveryMarker>()?;
     let (gis, gis_ch) = fidl::endpoints::create_proxy::<GuestInteractionMarker>()?;
     let () = guest_discovery_service.get_guest(None, guest_name, gis_ch)?;
 
@@ -49,7 +49,7 @@ pub async fn verify_v4_addr_present(
     want_addr: fnet::IpAddress,
     timeout: Duration,
 ) -> Result<(), Error> {
-    let interface_state = client::connect_to_service::<finterfaces::StateMarker>()?;
+    let interface_state = client::connect_to_protocol::<finterfaces::StateMarker>()?;
     let mut if_map = std::collections::HashMap::new();
     fidl_fuchsia_net_interfaces_ext::wait_interface(
         fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)?,
@@ -95,7 +95,7 @@ pub async fn verify_v6_dns_servers(
     interface_id: u64,
     want_dns_servers: Vec<fnetname::DnsServer_>,
 ) -> Result<(), Error> {
-    let stack = client::connect_to_service::<fstack::StackMarker>()
+    let stack = client::connect_to_protocol::<fstack::StackMarker>()
         .context("connecting to stack service")?;
     let info = stack
         .get_interface_info(interface_id)
@@ -123,7 +123,7 @@ pub async fn verify_v6_dns_servers(
         })
         .ok_or(format_err!("no addresses found to start DHCPv6 client on"))?;
 
-    let provider = client::connect_to_service::<fdhcpv6::ClientProviderMarker>()
+    let provider = client::connect_to_protocol::<fdhcpv6::ClientProviderMarker>()
         .context("connecting to DHCPv6 client")?;
 
     let (client_end, server_end) = fidl::endpoints::create_endpoints::<fdhcpv6::ClientMarker>()

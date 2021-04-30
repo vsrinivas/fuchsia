@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 use {
     fidl_fuchsia_telephony_snoop::SnooperMarker,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_syslog::{self as syslog, macros::*},
     qmi,
     tel_dev::{component_test::*, snooper_test::*},
@@ -22,7 +22,7 @@ async fn snooper_multi_clients() {
     // Connect to snooper and get the event stream.
     let mut snooper_proxies = Vec::new();
     for _ in 0..SNOOPER_CLIENT_NUM {
-        let snooper_proxy = connect_to_service::<SnooperMarker>().expect("connecting to snooper");
+        let snooper_proxy = connect_to_protocol::<SnooperMarker>().expect("connecting to snooper");
         snooper_proxies.push(snooper_proxy);
     }
     // Wait for snooper to connect to device driver

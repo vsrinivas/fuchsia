@@ -6,14 +6,14 @@ use anyhow::{Context, Error};
 use fidl::endpoints::create_endpoints;
 use fidl_fuchsia_game_tennis::{PaddleRequest, TennisServiceMarker};
 use fuchsia_async as fasync;
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use futures::TryStreamExt;
 use parking_lot::Mutex;
 use std::io::{self, Read};
 use std::sync::Arc;
 fn main() -> Result<(), Error> {
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
-    let tennis_service = connect_to_service::<TennisServiceMarker>()?;
+    let tennis_service = connect_to_protocol::<TennisServiceMarker>()?;
     let (client_end, paddle_controller) = create_endpoints()?;
     let (mut prs, paddle_control_handle) = paddle_controller.into_stream_and_control_handle()?;
     tennis_service.register_paddle("Human", client_end)?;

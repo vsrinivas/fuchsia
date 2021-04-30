@@ -53,7 +53,7 @@ impl TilesFacade {
     pub fn stop_tile(&self) -> Result<Value, Error> {
         if self.tiles.borrow().is_some() {
             let controller_proxy =
-                self.tiles.borrow().as_ref().unwrap().connect_to_service::<ControllerMarker>()?;
+                self.tiles.borrow().as_ref().unwrap().connect_to_protocol::<ControllerMarker>()?;
             controller_proxy.quit()?;
             self.tiles.replace(None);
         }
@@ -77,7 +77,7 @@ impl TilesFacade {
         fx_log_info!("Add tile request received {:?}", add_request);
         self.start_tile()?;
         let controller_proxy =
-            self.tiles.borrow().as_ref().unwrap().connect_to_service::<ControllerMarker>()?;
+            self.tiles.borrow().as_ref().unwrap().connect_to_protocol::<ControllerMarker>()?;
         match add_request {
             AddTileInput { url, allow_focus, args } => {
                 let focus = match allow_focus {
@@ -114,7 +114,7 @@ impl TilesFacade {
         fx_log_info!("Remove tile request received {:?}", remove_request);
         self.start_tile()?;
         let controller_proxy =
-            self.tiles.borrow().as_ref().unwrap().connect_to_service::<ControllerMarker>()?;
+            self.tiles.borrow().as_ref().unwrap().connect_to_protocol::<ControllerMarker>()?;
         let key =
             remove_request.key.parse::<u32>().map_err(|_| anyhow!("key must be an integer"))?;
         match controller_proxy.remove_tile(key) {
@@ -129,7 +129,7 @@ impl TilesFacade {
     pub async fn list(&self) -> Result<Value, Error> {
         self.start_tile()?;
         let controller_proxy =
-            self.tiles.borrow().as_ref().unwrap().connect_to_service::<ControllerMarker>()?;
+            self.tiles.borrow().as_ref().unwrap().connect_to_protocol::<ControllerMarker>()?;
         let (keys, urls, _sizes, focuses) = controller_proxy.list_tiles().await?;
         let return_value = to_value(ListTileOutput::new(&keys, &urls, &focuses))?;
         return Ok(return_value);

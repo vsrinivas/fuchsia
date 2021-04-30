@@ -9,7 +9,7 @@ use {
         EnvironmentOptions, EnvironmentProxy, LauncherProxy,
     },
     fuchsia_async as fasync,
-    fuchsia_component::client::{connect_to_service, launch},
+    fuchsia_component::client::{connect_to_protocol, launch},
     fuchsia_inspect::assert_data_tree,
     fuchsia_zircon::Duration,
     futures::stream::StreamExt,
@@ -27,7 +27,7 @@ lazy_static! {
 // Validates that the realm paths with which the observer queries do not include the current realm.
 #[fasync::run_singlethreaded(test)]
 async fn test_observer_integration() -> Result<(), Error> {
-    let env = connect_to_service::<EnvironmentMarker>().expect("connect to current environment");
+    let env = connect_to_protocol::<EnvironmentMarker>().expect("connect to current environment");
     let (env1, _env1_ctrl, launcher1) = create_nested_environment(&env, "env1").await?;
     let (_env2, _env2_ctrl, launcher2) = create_nested_environment(&env1, "env2").await?;
 

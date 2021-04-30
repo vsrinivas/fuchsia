@@ -13,7 +13,7 @@ use {
 async fn main() {
     fxlog::init().unwrap();
     fx_log_info!("Rendezvous starting");
-    let trigger = component::connect_to_service::<test_protocol::TriggerMarker>()
+    let trigger = component::connect_to_protocol::<test_protocol::TriggerMarker>()
         .expect("failed to connect to Trigger service");
     let _ = trigger.run().await.expect("failed to invoke Trigger");
     fx_log_info!("Rendezvous complete, exiting");

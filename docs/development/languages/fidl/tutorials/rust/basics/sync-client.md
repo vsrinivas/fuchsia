@@ -107,7 +107,7 @@ service. Under the hood, this call triggers a sequence of events that starts on 
   other end of the channel. The name of the service is obtained implicitly using the `SERVICE_NAME`
   of `EchoMarker` template argument, similarly to how the service path is determined on the server
   end.
-* This client object is returned from `connect_to_service`.
+* This client object is returned from `connect_to_protocol`.
 
 In the background, the request to the component framework gets routed to the server:
 

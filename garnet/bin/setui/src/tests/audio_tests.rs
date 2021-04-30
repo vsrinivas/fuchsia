@@ -77,7 +77,7 @@ async fn create_audio_test_env_with_failures(
 ) -> AudioProxy {
     create_test_env_with_failures(storage_factory, ENV_NAME, SettingType::Audio)
         .await
-        .connect_to_service::<AudioMarker>()
+        .connect_to_protocol::<AudioMarker>()
         .unwrap()
 }
 
@@ -162,7 +162,7 @@ async fn test_audio() {
     let (service_registry, fake_services) = create_services().await;
     let (env, store) = create_environment(service_registry).await;
 
-    let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
+    let audio_proxy = env.connect_to_protocol::<AudioMarker>().unwrap();
 
     let settings = audio_proxy.watch().await.expect("watch completed");
     verify_audio_stream(
@@ -189,7 +189,7 @@ async fn test_consecutive_volume_changes() {
     let (service_registry, fake_services) = create_services().await;
     let (env, store) = create_environment(service_registry).await;
 
-    let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
+    let audio_proxy = env.connect_to_protocol::<AudioMarker>().unwrap();
 
     let settings = audio_proxy.watch().await.expect("watch completed");
     verify_audio_stream(
@@ -225,7 +225,7 @@ async fn test_multiple_changes_on_stream() {
     let (service_registry, _) = create_services().await;
     let (env, store) = create_environment(service_registry).await;
 
-    let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
+    let audio_proxy = env.connect_to_protocol::<AudioMarker>().unwrap();
 
     let settings = audio_proxy.watch().await.expect("watch completed");
     verify_audio_stream(
@@ -248,7 +248,7 @@ async fn test_volume_overwritten() {
     let (service_registry, fake_services) = create_services().await;
     let (env, store) = create_environment(service_registry).await;
 
-    let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
+    let audio_proxy = env.connect_to_protocol::<AudioMarker>().unwrap();
 
     let settings = audio_proxy.watch().await.expect("watch completed");
     verify_audio_stream(
@@ -291,7 +291,7 @@ async fn test_volume_rounding() {
 
     let (env, store) = create_environment(service_registry).await;
 
-    let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
+    let audio_proxy = env.connect_to_protocol::<AudioMarker>().unwrap();
 
     let settings = audio_proxy.watch().await.expect("watch completed");
     verify_audio_stream(
@@ -334,7 +334,7 @@ async fn test_audio_input() {
 
     let (env, _) = create_environment(service_registry).await;
 
-    let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
+    let audio_proxy = env.connect_to_protocol::<AudioMarker>().unwrap();
 
     let buttons_event = MediaButtonsEventBuilder::new().set_volume(1).set_mic_mute(true).build();
 
@@ -385,7 +385,7 @@ async fn test_bringup_without_input_registry() {
     let (env, _) = create_environment(service_registry).await;
 
     // At this point we should not crash.
-    assert!(env.connect_to_service::<AudioMarker>().is_ok());
+    assert!(env.connect_to_protocol::<AudioMarker>().is_ok());
 }
 
 // Ensure that we won't crash if audio core fails.
@@ -398,7 +398,7 @@ async fn test_bringup_without_audio_core() {
     let (env, _) = create_environment(service_registry).await;
 
     // At this point we should not crash.
-    let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
+    let audio_proxy = env.connect_to_protocol::<AudioMarker>().unwrap();
 
     let settings = audio_proxy.watch().await.expect("watch completed");
     verify_audio_stream(
@@ -465,7 +465,7 @@ async fn test_persisted_values_applied_at_start() {
         .await
         .unwrap();
 
-    let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
+    let audio_proxy = env.connect_to_protocol::<AudioMarker>().unwrap();
 
     let settings = audio_proxy.watch().await.expect("watch completed");
 
@@ -552,7 +552,7 @@ async fn test_missing_input_returns_failed(setting: AudioStreamSettings) {
     let (service_registry, _) = create_services().await;
     let (env, _) = create_environment(service_registry).await;
 
-    let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
+    let audio_proxy = env.connect_to_protocol::<AudioMarker>().unwrap();
 
     let settings = audio_proxy.watch().await.expect("watch completed");
     verify_audio_stream(

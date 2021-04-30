@@ -8,7 +8,7 @@ use {
     fidl_fuchsia_bluetooth_sys::{AccessMarker, PairingDelegateMarker},
     fuchsia_async as fasync,
     fuchsia_bluetooth::types::io_capabilities::{InputCapability, OutputCapability},
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon as zx,
 };
 
@@ -37,7 +37,7 @@ struct Opt {
 fn run(opt: Opt) -> Result<(), Error> {
     let mut exec = fasync::Executor::new().context("Error creating event loop")?;
 
-    let access = connect_to_service::<AccessMarker>()
+    let access = connect_to_protocol::<AccessMarker>()
         .context("Failed to connect to bluetooth access interface")?;
 
     // Setup pairing delegate

@@ -43,7 +43,7 @@ use fidl_fuchsia_net_stack as fnet_stack;
 use fidl_fuchsia_net_stack_ext as fnet_stack_ext;
 use fidl_fuchsia_netstack as fnetstack;
 use fuchsia_async::DurationExt as _;
-use fuchsia_component::client::{clone_namespace_svc, new_service_connector_in_dir};
+use fuchsia_component::client::{clone_namespace_svc, new_protocol_connector_in_dir};
 use fuchsia_syslog as fsyslog;
 use fuchsia_vfs_watcher as fvfs_watcher;
 use fuchsia_zircon::{self as zx, DurationNum as _};
@@ -405,7 +405,7 @@ async fn svc_connect<S: fidl::endpoints::DiscoverableService>(
 async fn optional_svc_connect<S: fidl::endpoints::DiscoverableService>(
     svc_dir: &fio::DirectoryProxy,
 ) -> Result<Option<S::Proxy>, anyhow::Error> {
-    let req = new_service_connector_in_dir::<S>(&svc_dir);
+    let req = new_protocol_connector_in_dir::<S>(&svc_dir);
     if !req.exists().await.context("error checking for service existence")? {
         Ok(None)
     } else {

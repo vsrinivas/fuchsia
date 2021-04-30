@@ -29,7 +29,7 @@ use {
     fidl_fuchsia_sys2::EventSourceMarker,
     fuchsia_async::{self as fasync, Task},
     fuchsia_component::{
-        client::connect_to_service,
+        client::connect_to_protocol,
         server::{ServiceFs, ServiceObj, ServiceObjTrait},
     },
     fuchsia_inspect::{component, health::Reporter},
@@ -388,7 +388,7 @@ impl ArchivistBuilder {
             });
         if opts.ingest_v2_logs {
             debug!("fuchsia.sys.EventStream connection");
-            let event_source = connect_to_service::<EventSourceMarker>().unwrap();
+            let event_source = connect_to_protocol::<EventSourceMarker>().unwrap();
             match event_source.take_static_event_stream("EventStream").await {
                 Ok(Ok(event_stream)) => {
                     let event_stream = event_stream.into_stream().unwrap();

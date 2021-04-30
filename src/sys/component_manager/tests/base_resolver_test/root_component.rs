@@ -27,7 +27,7 @@ async fn main() -> Result<(), Error> {
     // Bind to the echo_server.
     let mut child_ref = fsys::ChildRef { name: "echo_server".to_string(), collection: None };
     let (_dir_proxy, server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();
-    let realm_proxy = connect_to_service::<fsys::RealmMarker>()?;
+    let realm_proxy = connect_to_protocol::<fsys::RealmMarker>()?;
     realm_proxy.bind_child(&mut child_ref, server_end).await?.expect("could not bind to child");
 
     // Wait indefinitely

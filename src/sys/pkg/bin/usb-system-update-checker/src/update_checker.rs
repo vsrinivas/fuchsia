@@ -14,7 +14,7 @@ use {
         CheckError, CheckSuccess, CheckerRequest, CheckerRequestStream,
         MonitorMarker as UsbMonitorMarker,
     },
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
     fuchsia_url::pkg_url::PkgUrl,
     fuchsia_zircon::Status,
@@ -89,7 +89,7 @@ impl UsbUpdateChecker<'_> {
             })?;
         }
 
-        let proxy = connect_to_service::<InstallerMarker>().map_err(|e| {
+        let proxy = connect_to_protocol::<InstallerMarker>().map_err(|e| {
             fx_log_warn!("Failed to connect to update installer: {:#}", anyhow!(e));
             CheckError::UpdateFailed
         })?;
@@ -212,7 +212,7 @@ impl UsbUpdateChecker<'_> {
     /// Returns a wrapper around the update package and the input 'url' which is now pinned to the
     /// resolved UpdatePackage.
     async fn open_update_package(&self, url: PkgUrl) -> Result<(UpdatePackage, PkgUrl), Error> {
-        let resolver = connect_to_service::<PackageResolverMarker>()
+        let resolver = connect_to_protocol::<PackageResolverMarker>()
             .context("Connecting to package resolver")?;
         self.open_update_package_at(url, resolver).await
     }

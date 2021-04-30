@@ -7,7 +7,7 @@ use {
     fidl_fuchsia_input as input, fidl_fuchsia_ui_focus as ui_focus,
     fidl_fuchsia_ui_input3 as ui_input3, fidl_fuchsia_ui_shortcut as ui_shortcut,
     fidl_fuchsia_ui_views as ui_views,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_scenic as scenic,
     std::sync::Once,
 };
@@ -78,7 +78,7 @@ impl RegistryService {
                 .expect("shortcut syslog init should not fail");
         });
 
-        let registry = connect_to_service::<ui_shortcut::RegistryMarker>()
+        let registry = connect_to_protocol::<ui_shortcut::RegistryMarker>()
             .context("Failed to connect to Shortcut registry service")?;
 
         let (listener_client_end, listener) =
@@ -113,7 +113,7 @@ impl ManagerService {
                 .expect("shortcut syslog init should not fail");
         });
 
-        let manager = connect_to_service::<ui_shortcut::ManagerMarker>()
+        let manager = connect_to_protocol::<ui_shortcut::ManagerMarker>()
             .context("Failed to connect to Shortcut manager service")?;
 
         Ok(Self { manager })

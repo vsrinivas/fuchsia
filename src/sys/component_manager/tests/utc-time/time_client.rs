@@ -23,7 +23,7 @@ async fn main() {
     let backstop = details.backstop.into_nanos();
     let time = time.into_nanos();
 
-    let test_proxy = client::connect_to_service::<ftest::TestOutcomeReportMarker>().unwrap();
+    let test_proxy = client::connect_to_protocol::<ftest::TestOutcomeReportMarker>().unwrap();
 
     test_proxy.report(backstop, time).await.unwrap();
 }

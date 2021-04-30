@@ -7,7 +7,7 @@ use crate::temperature::types;
 use anyhow::Error;
 use fidl_fuchsia_hardware_temperature::{DeviceMarker, DeviceProxy};
 use fidl_fuchsia_thermal_test::{TemperatureLoggerMarker, TemperatureLoggerProxy};
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use fuchsia_syslog::macros::fx_log_err;
 use fuchsia_zircon as zx;
 use serde_json::Value;
@@ -70,7 +70,7 @@ impl TemperatureFacade {
         if let Some(proxy) = &self.logger_proxy {
             Ok(proxy.clone())
         } else {
-            match connect_to_service::<TemperatureLoggerMarker>() {
+            match connect_to_protocol::<TemperatureLoggerMarker>() {
                 Ok(proxy) => Ok(proxy),
                 Err(e) => fx_err_and_bail!(
                     &with_line!(tag),

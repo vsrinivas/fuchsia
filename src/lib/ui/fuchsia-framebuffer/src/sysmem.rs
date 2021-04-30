@@ -10,7 +10,7 @@ use fidl_fuchsia_sysmem::{
     FormatModifier, HeapType, ImageFormatConstraints, PixelFormat as SysmemPixelFormat,
     PixelFormatType,
 };
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use fuchsia_runtime;
 use fuchsia_zircon::{self as zx, AsHandleRef, Status};
 use std::cmp;
@@ -170,7 +170,7 @@ impl BufferCollectionAllocator {
         usage: FrameUsage,
         buffer_count: usize,
     ) -> Result<BufferCollectionAllocator, Error> {
-        let sysmem = connect_to_service::<fidl_fuchsia_sysmem::AllocatorMarker>()?;
+        let sysmem = connect_to_protocol::<fidl_fuchsia_sysmem::AllocatorMarker>()?;
 
         let _ = set_allocator_name(&sysmem);
 

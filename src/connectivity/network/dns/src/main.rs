@@ -1065,7 +1065,7 @@ async fn main() -> Result<(), Error> {
     let () = inspect_runtime::serve(inspector, &mut fs)?;
 
     let routes =
-        fuchsia_component::client::connect_to_service::<fidl_fuchsia_net_routes::StateMarker>()
+        fuchsia_component::client::connect_to_protocol::<fidl_fuchsia_net_routes::StateMarker>()
             .context("failed to connect to fuchsia.net.routes/State")?;
 
     let _: &mut ServiceFsDir<'_, _> = fs

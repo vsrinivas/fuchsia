@@ -10,7 +10,7 @@ use {
     },
     fidl_fuchsia_session_examples::{ElementPingRequest, ElementPingRequestStream},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
-    fuchsia_component::{client::connect_to_service, server::ServiceFs},
+    fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
     fuchsia_syslog::fx_log_info,
     futures::{StreamExt, TryStreamExt},
     legacy_element_management::{
@@ -96,7 +96,7 @@ async fn handle_element_manager_requests(
 ) -> Result<(), Error> {
     let mut uncontrolled_elements = vec![];
     let realm =
-        connect_to_service::<fsys::RealmMarker>().context("Could not connect to Realm service.")?;
+        connect_to_protocol::<fsys::RealmMarker>().context("Could not connect to Realm service.")?;
 
     let element_manager = SimpleElementManager::new(realm);
     while let Some(request) =

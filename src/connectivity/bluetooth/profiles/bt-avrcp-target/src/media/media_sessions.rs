@@ -11,7 +11,7 @@ use {
         SessionsWatcherRequest, SessionsWatcherRequestStream, WatchOptions,
     },
     fuchsia_async::{self as fasync, TimeoutExt},
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon::DurationNum,
     futures::{future, Future, TryStreamExt},
     log::{trace, warn},
@@ -46,7 +46,7 @@ impl MediaSessions {
     pub fn watch(&self) -> impl Future<Output = Result<(), anyhow::Error>> + '_ {
         // MediaSession Service Setup
         // Set up the MediaSession Discovery service. Connect to the session watcher.
-        let discovery = connect_to_service::<DiscoveryMarker>()
+        let discovery = connect_to_protocol::<DiscoveryMarker>()
             .expect("Couldn't connect to discovery service.");
         let (watcher_client, watcher_requests) =
             create_request_stream().expect("Error creating watcher request stream");

@@ -6,7 +6,7 @@ use {
     crate::{input_actor::InputActor, session::Session, session_actor::SessionActor, Args},
     async_trait::async_trait,
     fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys, fidl_fuchsia_ui_scenic as fscenic,
-    fuchsia_component::client::{connect_to_protocol_at_dir_root, connect_to_service},
+    fuchsia_component::client::{connect_to_protocol_at_dir_root, connect_to_protocol},
     futures::lock::Mutex,
     rand::{rngs::SmallRng, Rng, SeedableRng},
     std::sync::Arc,
@@ -25,7 +25,7 @@ impl ScenicEnvironment {
     pub async fn new(args: Args) -> Self {
         // Bind to the scenic component, causing it to start
         let realm_svc =
-            connect_to_service::<fsys::RealmMarker>().expect("Could not connect to Realm service");
+            connect_to_protocol::<fsys::RealmMarker>().expect("Could not connect to Realm service");
         let mut child = fsys::ChildRef { name: "scenic".to_string(), collection: None };
 
         // Create endpoints for the fuchsia.io.Directory protocol.

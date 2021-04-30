@@ -22,8 +22,8 @@ static DATA_FILE_PATH: &'static str = "/pkg/data";
 
 macro_rules! connect_to_factory_store_provider {
     ($t:ty) => {{
-        let provider = fuchsia_component::client::connect_to_service::<$t>()
-            .expect("Failed to connect to service");
+        let provider = fuchsia_component::client::connect_to_protocol::<$t>()
+            .expect("Failed to connect to protocol");
 
         let (dir_proxy, dir_server) = fidl::endpoints::create_proxy::<DirectoryMarker>()?;
         provider.get_factory_store(dir_server).expect("Failed to get factory store");

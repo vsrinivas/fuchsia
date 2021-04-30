@@ -5,7 +5,7 @@
 use {
     anyhow::{Context as _, Error},
     fidl_fuchsia_settings::{ConfigurationInterfaces, LightState, LightValue, Theme},
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     structopt::StructOpt,
 };
 
@@ -374,7 +374,7 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             if let Some(_build_tag_val) = build_tag {
                 panic!("Cannot set device settings");
             }
-            let device_service = connect_to_service::<fidl_fuchsia_settings::DeviceMarker>()
+            let device_service = connect_to_protocol::<fidl_fuchsia_settings::DeviceMarker>()
                 .context("Failed to connect to device service")?;
             utils::print_results("Device", device::command(device_service)).await?;
         }
@@ -387,7 +387,7 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             theme,
             screen_enabled,
         } => {
-            let display_service = connect_to_service::<fidl_fuchsia_settings::DisplayMarker>()
+            let display_service = connect_to_protocol::<fidl_fuchsia_settings::DisplayMarker>()
                 .context("Failed to connect to display service")?;
             utils::handle_mixed_result(
                 "Display",
@@ -406,7 +406,7 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             .await?;
         }
         SettingClient::DoNotDisturb { user_dnd, night_mode_dnd } => {
-            let dnd_service = connect_to_service::<fidl_fuchsia_settings::DoNotDisturbMarker>()
+            let dnd_service = connect_to_protocol::<fidl_fuchsia_settings::DoNotDisturbMarker>()
                 .context("Failed to connect to do_not_disturb service")?;
             utils::handle_mixed_result(
                 "DoNoDisturb",
@@ -416,7 +416,7 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
         }
         SettingClient::FactoryReset { is_local_reset_allowed } => {
             let factory_reset_service =
-                connect_to_service::<fidl_fuchsia_settings::FactoryResetMarker>()
+                connect_to_protocol::<fidl_fuchsia_settings::FactoryResetMarker>()
                     .context("Failed to connect to factory_reset service")?;
             utils::handle_mixed_result(
                 "FactoryReset",
@@ -425,7 +425,7 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             .await?;
         }
         SettingClient::Intl { time_zone, temperature_unit, locales, hour_cycle, clear_locales } => {
-            let intl_service = connect_to_service::<fidl_fuchsia_settings::IntlMarker>()
+            let intl_service = connect_to_protocol::<fidl_fuchsia_settings::IntlMarker>()
                 .context("Failed to connect to intl service")?;
             utils::handle_mixed_result(
                 "Intl",
@@ -442,7 +442,7 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             .await?;
         }
         SettingClient::Light { light_group } => {
-            let light_mode_service = connect_to_service::<fidl_fuchsia_settings::LightMarker>()
+            let light_mode_service = connect_to_protocol::<fidl_fuchsia_settings::LightMarker>()
                 .context("Failed to connect to light service")?;
             utils::handle_mixed_result(
                 "Light",
@@ -451,7 +451,7 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             .await?;
         }
         SettingClient::NightMode { night_mode_enabled } => {
-            let night_mode_service = connect_to_service::<fidl_fuchsia_settings::NightModeMarker>()
+            let night_mode_service = connect_to_protocol::<fidl_fuchsia_settings::NightModeMarker>()
                 .context("Failed to connect to night mode service")?;
             utils::handle_mixed_result(
                 "NightMode",
@@ -461,7 +461,7 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
         }
         SettingClient::Accessibility(accessibility_options) => {
             let accessibility_service =
-                connect_to_service::<fidl_fuchsia_settings::AccessibilityMarker>()
+                connect_to_protocol::<fidl_fuchsia_settings::AccessibilityMarker>()
                     .context("Failed to connect to accessibility service")?;
 
             utils::handle_mixed_result(
@@ -471,7 +471,7 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             .await?;
         }
         SettingClient::Privacy { user_data_sharing_consent } => {
-            let privacy_service = connect_to_service::<fidl_fuchsia_settings::PrivacyMarker>()
+            let privacy_service = connect_to_protocol::<fidl_fuchsia_settings::PrivacyMarker>()
                 .context("Failed to connect to privacy service")?;
             utils::handle_mixed_result(
                 "Privacy",
@@ -480,7 +480,7 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             .await?;
         }
         SettingClient::Audio { streams, input } => {
-            let audio_service = connect_to_service::<fidl_fuchsia_settings::AudioMarker>()
+            let audio_service = connect_to_protocol::<fidl_fuchsia_settings::AudioMarker>()
                 .context("Failed to connect to audio service")?;
             let stream = streams.stream;
             let source = streams.source;
@@ -495,13 +495,13 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             .await?;
         }
         SettingClient::Input { mic_muted } => {
-            let input_service = connect_to_service::<fidl_fuchsia_settings::InputMarker>()
+            let input_service = connect_to_protocol::<fidl_fuchsia_settings::InputMarker>()
                 .context("Failed to connect to input service")?;
             utils::handle_mixed_result("Input", input::command(input_service, mic_muted).await)
                 .await?;
         }
         SettingClient::Input2 { input_device } => {
-            let input_service = connect_to_service::<fidl_fuchsia_settings::InputMarker>()
+            let input_service = connect_to_protocol::<fidl_fuchsia_settings::InputMarker>()
                 .context("Failed to connect to input2 service")?;
             let device_type = input_device.device_type;
             let device_name = input_device.device_name;
@@ -513,7 +513,7 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             .await?;
         }
         SettingClient::Setup { configuration_interfaces } => {
-            let setup_service = connect_to_service::<fidl_fuchsia_settings::SetupMarker>()
+            let setup_service = connect_to_protocol::<fidl_fuchsia_settings::SetupMarker>()
                 .context("Failed to connect to setup service")?;
             utils::handle_mixed_result(
                 "Setup",
@@ -523,7 +523,7 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
         }
         SettingClient::VolumePolicy { add, remove } => {
             let setup_service =
-                connect_to_service::<fidl_fuchsia_settings_policy::VolumePolicyControllerMarker>()
+                connect_to_protocol::<fidl_fuchsia_settings_policy::VolumePolicyControllerMarker>()
                     .context("Failed to connect to volume policy service")?;
             utils::handle_mixed_result(
                 "Volume policy",

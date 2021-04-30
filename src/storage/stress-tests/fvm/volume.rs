@@ -5,7 +5,7 @@
 use {
     fidl_fuchsia_hardware_block_partition::Guid,
     fidl_fuchsia_hardware_block_volume::{VolumeMarker, VolumeProxy},
-    fuchsia_component::client::{connect_channel_to_service_at_path, connect_to_service_at_path},
+    fuchsia_component::client::{connect_channel_to_protocol_at_path, connect_to_protocol_at_path},
     fuchsia_zircon::{Channel, Status},
     remote_block_device::{BlockClient, BufferSlice, MutableBufferSlice, RemoteBlockClient},
     storage_stress_test_utils::fvm::get_volume_path,
@@ -47,11 +47,11 @@ impl VolumeConnection {
         let volume_path = get_volume_path(&volume_guid).await;
         let volume_path = volume_path.to_str().unwrap();
 
-        let volume_proxy = connect_to_service_at_path::<VolumeMarker>(volume_path).unwrap();
+        let volume_proxy = connect_to_protocol_at_path::<VolumeMarker>(volume_path).unwrap();
 
         // Connect to the Block FIDL protocol
         let (client_end, server_end) = Channel::create().unwrap();
-        connect_channel_to_service_at_path(server_end, volume_path).unwrap();
+        connect_channel_to_protocol_at_path(server_end, volume_path).unwrap();
         let block_device = RemoteBlockClient::new(client_end).unwrap();
 
         Self { volume_proxy, block_device, slice_size }

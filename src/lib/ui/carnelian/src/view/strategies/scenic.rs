@@ -24,7 +24,7 @@ use fidl_fuchsia_ui_gfx::{self as gfx};
 use fidl_fuchsia_ui_input::SetHardKeyboardDeliveryCmd;
 use fidl_fuchsia_ui_views::{ViewRef, ViewRefControl, ViewToken};
 use fuchsia_async::{self as fasync, OnSignals};
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use fuchsia_framebuffer::{sysmem::BufferCollectionAllocator, FrameSet, FrameUsage, ImageId};
 use fuchsia_scenic::{EntityNode, Image2, Material, Rectangle, SessionPtr, ShapeNode};
 use fuchsia_trace::{self, duration, instant};
@@ -256,7 +256,7 @@ impl ScenicViewStrategy {
         app_sender: &UnboundedSender<MessageInternal>,
         key: ViewKey,
     ) -> Result<(), Error> {
-        let keyboard = connect_to_service::<fidl_fuchsia_ui_input3::KeyboardMarker>()
+        let keyboard = connect_to_protocol::<fidl_fuchsia_ui_input3::KeyboardMarker>()
             .context("Failed to connect to Keyboard service")?;
 
         let (listener_client_end, mut listener_stream) =

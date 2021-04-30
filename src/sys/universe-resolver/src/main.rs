@@ -13,7 +13,7 @@ use {
         self as fsys, ComponentResolverMarker, ComponentResolverRequest,
         ComponentResolverRequestStream,
     },
-    fuchsia_component::{client::connect_to_service, server::ServiceFs},
+    fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
     fuchsia_url::{errors::ParseError as PkgUrlParseError, pkg_url::PkgUrl},
     fuchsia_zircon::Status,
     futures::prelude::*,
@@ -58,7 +58,7 @@ async fn main() -> anyhow::Result<()> {
 }
 
 async fn forward_to_base(mut stream: ComponentResolverRequestStream) -> anyhow::Result<()> {
-    let base_resolver = connect_to_service::<ComponentResolverMarker>()
+    let base_resolver = connect_to_protocol::<ComponentResolverMarker>()
         .context("failed to connect to base package resolver")?;
 
     while let Some(ComponentResolverRequest::Resolve { component_url, responder }) =
@@ -78,7 +78,7 @@ async fn forward_to_base(mut stream: ComponentResolverRequestStream) -> anyhow::
 }
 
 async fn serve(mut stream: ComponentResolverRequestStream) -> anyhow::Result<()> {
-    let package_resolver = connect_to_service::<PackageResolverMarker>()
+    let package_resolver = connect_to_protocol::<PackageResolverMarker>()
         .context("failed to connect to PackageResolver service")?;
     while let Some(ComponentResolverRequest::Resolve { component_url, responder }) =
         stream.try_next().await.context("failed to read request from FIDL stream")?

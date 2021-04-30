@@ -39,7 +39,7 @@ use rust_icu_ustring as ustring;
 use std::convert::TryFrom;
 
 fn intl_client() -> Result<fsettings::IntlProxy, Error> {
-    client::connect_to_service::<fsettings::IntlMarker>()
+    client::connect_to_protocol::<fsettings::IntlMarker>()
         .context("Failed to connect to fuchsia.settings.Intl")
 }
 
@@ -140,7 +140,7 @@ async fn launch_time_service(
     // This part is only relevant for launching Flutter apps.  Flutter will not
     // start a Dart VM unless a view is requested.
     if get_view {
-        let view_provider = app.connect_to_service::<ViewProviderMarker>();
+        let view_provider = app.connect_to_protocol::<ViewProviderMarker>();
         match view_provider {
             Err(_) => {
                 fx_log_debug!("could not connect to view provider.  This is expected in dart.")
@@ -300,7 +300,7 @@ pub async fn check_reported_time_with_update(
         .context("failed to launch the dart service under test")?;
 
     let echo = app
-        .connect_to_service::<fecho::EchoMarker>()
+        .connect_to_protocol::<fecho::EchoMarker>()
         .context("Failed to connect to echo service")?;
 
     loop_until_matching_time(TIMEZONE_NAME, &formatter, &detailed_format, &echo)

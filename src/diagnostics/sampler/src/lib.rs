@@ -5,7 +5,7 @@ use {
     anyhow::{Context, Error},
     argh::FromArgs,
     fidl_fuchsia_hardware_power_statecontrol as reboot, fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect::{self as inspect, health::Reporter},
     futures::{StreamExt, TryStreamExt},
@@ -52,7 +52,7 @@ pub async fn main(opt: Args) -> Result<(), Error> {
                 // Let the transient connection fall out of scope once we've passed the client
                 // end to our callback server.
                 let reboot_watcher_register =
-                    connect_to_service::<reboot::RebootMethodsWatcherRegisterMarker>()
+                    connect_to_protocol::<reboot::RebootMethodsWatcherRegisterMarker>()
                         .context("Connect to Reboot watcher register")?;
 
                 reboot_watcher_register

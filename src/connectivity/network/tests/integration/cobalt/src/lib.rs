@@ -21,7 +21,7 @@ async fn cobalt_metrics() -> Result<(), anyhow::Error> {
     // netstack is launched here so that watch_logs2(networking_metrics::PROJECT_ID, ...)
     // can be called before the first socket is created.
     let netstack =
-        fuchsia_component::client::connect_to_service::<fidl_fuchsia_net_stack::StackMarker>()
+        fuchsia_component::client::connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
             .context("failed to connect to netstack")?;
     let interfaces = netstack.list_interfaces().await?;
     assert_eq!(
@@ -32,7 +32,7 @@ async fn cobalt_metrics() -> Result<(), anyhow::Error> {
         &[1],
     );
 
-    let logger_querier = fuchsia_component::client::connect_to_service::<
+    let logger_querier = fuchsia_component::client::connect_to_protocol::<
         fidl_fuchsia_cobalt_test::LoggerQuerierMarker,
     >()
     .context("failed to connect to cobalt logger querier")?;

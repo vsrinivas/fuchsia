@@ -6,7 +6,7 @@
 use anyhow::{Context as _, Error};
 use fidl_fuchsia_examples::{EchoEvent, EchoMarker};
 use fuchsia_async as fasync;
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use futures::prelude::*;
 // [END imports]
 
@@ -14,7 +14,7 @@ use futures::prelude::*;
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     // Connect to the Echo protocol, which is assumed to be in the component's environment
-    let echo = connect_to_service::<EchoMarker>().context("Failed to connect to echo service")?;
+    let echo = connect_to_protocol::<EchoMarker>().context("Failed to connect to echo service")?;
 
     // Make an EchoString request and wait for the response
     let res = echo.echo_string("hello").await?;

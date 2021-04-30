@@ -27,7 +27,7 @@ async fn test_setup_default() {
         .await
         .unwrap();
 
-    let setup_service = env.connect_to_service::<SetupMarker>().unwrap();
+    let setup_service = env.connect_to_protocol::<SetupMarker>().unwrap();
 
     // Ensure retrieved value matches default value
     let settings = setup_service.watch().await.expect("watch completed");
@@ -66,7 +66,7 @@ async fn test_setup_with_reboot() {
         .await
         .unwrap();
 
-    let setup_service = env.connect_to_service::<SetupMarker>().unwrap();
+    let setup_service = env.connect_to_protocol::<SetupMarker>().unwrap();
 
     // Ensure retrieved value matches set value
     let settings = setup_service.watch().await.expect("watch completed");
@@ -119,7 +119,7 @@ async fn test_setup_no_reboot() {
         .await
         .unwrap();
 
-    let setup_service = env.connect_to_service::<SetupMarker>().unwrap();
+    let setup_service = env.connect_to_protocol::<SetupMarker>().unwrap();
 
     // Ensure retrieved value matches set value
     let settings = setup_service.watch().await.expect("watch completed");

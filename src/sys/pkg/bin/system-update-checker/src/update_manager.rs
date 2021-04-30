@@ -18,7 +18,7 @@ use fidl_fuchsia_update_ext::{
     InstallationErrorData, InstallationProgress, InstallingData, State, UpdateInfo,
 };
 use fuchsia_async as fasync;
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use fuchsia_hash::Hash;
 use fuchsia_inspect as finspect;
 use fuchsia_syslog::{fx_log_err, fx_log_info};
@@ -631,7 +631,7 @@ pub struct RealCommitQuerier;
 impl CommitQuerier for RealCommitQuerier {
     fn query_commit_status<'a>(&self) -> BoxFuture<'a, Result<CommitStatus, anyhow::Error>> {
         async {
-            let provider = connect_to_service::<CommitStatusProviderMarker>()
+            let provider = connect_to_protocol::<CommitStatusProviderMarker>()
                 .context("while connecting to commit status provider")?;
             query_commit_status(&provider).await
         }

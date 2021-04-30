@@ -97,7 +97,7 @@ impl EnvWithDiagnostics {
 
         let archivist =
             launch_with_options(&launcher, ARCHIVIST_URL.to_string(), None, options).unwrap();
-        let archive = archivist.connect_to_service::<ArchiveAccessorMarker>().unwrap();
+        let archive = archivist.connect_to_protocol::<ArchiveAccessorMarker>().unwrap();
 
         let mut archivist_events = archivist.controller().take_event_stream();
         if let OnTerminated { .. } = archivist_events.next().await.unwrap().unwrap() {
@@ -135,7 +135,7 @@ impl EnvWithDiagnostics {
     /// wire format. Pass this socket to [`fuchsia_syslog::init_with_socket_and_name`] to send
     /// the invoking component's logs to the embedded archivist.
     pub fn legacy_log_socket(&self) -> zx::Socket {
-        let sink = self.archivist.connect_to_service::<LogSinkMarker>().unwrap();
+        let sink = self.archivist.connect_to_protocol::<LogSinkMarker>().unwrap();
         let (tx, rx) = zx::Socket::create(zx::SocketOpts::empty()).unwrap();
         sink.connect(rx).unwrap();
         tx
@@ -144,7 +144,7 @@ impl EnvWithDiagnostics {
     /// Returns a stream of logs for the whole environment.
     pub fn listen_to_logs(&mut self) -> impl Stream<Item = LogMessage> {
         // start listening
-        let log_proxy = self.archivist.connect_to_service::<LogMarker>().unwrap();
+        let log_proxy = self.archivist.connect_to_protocol::<LogMarker>().unwrap();
         let mut options = LogFilterOptions {
             filter_by_pid: false,
             pid: 0,

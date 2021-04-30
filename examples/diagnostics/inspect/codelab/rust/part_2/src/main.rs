@@ -52,7 +52,7 @@ async fn main() -> Result<(), Error> {
     // CODELAB: Instrument our connection to FizzBuzz using Inspect. Is there an error?
     // [START instrument_fizzbuzz]
     let fizzbuzz_fut = async move {
-        let fizzbuzz = client::connect_to_service::<FizzBuzzMarker>()
+        let fizzbuzz = client::connect_to_protocol::<FizzBuzzMarker>()
             .context("failed to connect to fizzbuzz")?;
         match fizzbuzz.execute(30u32).await {
             Ok(result) => {

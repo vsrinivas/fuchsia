@@ -13,7 +13,7 @@ use {
         AccessPointStateUpdatesRequestStream, ConnectivityMode, Credential, NetworkConfig,
         NetworkIdentifier, OperatingBand, OperatingState, SecurityType,
     },
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     futures::TryStreamExt,
     std::{
         cell::Cell,
@@ -43,7 +43,7 @@ impl Debug for WlanApPolicyFacade {
 
 impl WlanApPolicyFacade {
     pub fn new() -> Result<WlanApPolicyFacade, Error> {
-        let policy_provider = connect_to_service::<AccessPointProviderMarker>()?;
+        let policy_provider = connect_to_protocol::<AccessPointProviderMarker>()?;
         let (ap_controller, server_end) = create_proxy::<AccessPointControllerMarker>().unwrap();
 
         let (update_client_end, update_listener) =
@@ -61,7 +61,7 @@ impl WlanApPolicyFacade {
         mode: ConnectivityMode,
         band: OperatingBand,
     ) -> Result<(), Error> {
-        let listener = connect_to_service::<AccessPointListenerMarker>()?;
+        let listener = connect_to_protocol::<AccessPointListenerMarker>()?;
         let (client_end, server_end) = create_endpoints::<AccessPointStateUpdatesMarker>().unwrap();
         listener.get_listener(client_end)?;
         let mut server_stream = server_end.into_stream()?;
@@ -173,7 +173,7 @@ impl WlanApPolicyFacade {
 
     /// Creates a listener update stream for getting status updates.
     fn init_listener() -> Result<AccessPointStateUpdatesRequestStream, Error> {
-        let listener = connect_to_service::<AccessPointListenerMarker>()?;
+        let listener = connect_to_protocol::<AccessPointListenerMarker>()?;
         let (client_end, server_end) =
             fidl::endpoints::create_endpoints::<AccessPointStateUpdatesMarker>().unwrap();
         listener.get_listener(client_end)?;

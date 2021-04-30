@@ -11,7 +11,7 @@ use {
     },
     fuchsia_async::{self as fasync, futures::select},
     fuchsia_bluetooth::types::{HostId, HostInfo, Peer, PeerId},
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     futures::{
         channel::mpsc::{channel, SendError},
         FutureExt, Sink, SinkExt, Stream, StreamExt, TryFutureExt,
@@ -598,10 +598,10 @@ async fn run_repl(
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    let access_svc = connect_to_service::<AccessMarker>()
+    let access_svc = connect_to_protocol::<AccessMarker>()
         .context("failed to connect to bluetooth access interface")?;
     let host_watcher_svc =
-        connect_to_service::<HostWatcherMarker>().context("failed to watch hosts")?;
+        connect_to_protocol::<HostWatcherMarker>().context("failed to watch hosts")?;
     let state = Arc::new(Mutex::new(State::new()));
     let peer_watcher = watch_peers(access_svc.clone(), state.clone());
     let repl = run_repl(access_svc, host_watcher_svc.clone(), state.clone())

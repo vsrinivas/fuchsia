@@ -4,13 +4,13 @@
 
 use {
     fidl::endpoints::ServiceMarker, fidl_fuchsia_debugdata::DebugDataMarker,
-    fuchsia_component::client::connect_to_service, fuchsia_zircon_status as zx_status,
+    fuchsia_component::client::connect_to_protocol, fuchsia_zircon_status as zx_status,
     matches::assert_matches,
 };
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn can_connect_to_debug_data_service() {
-    let debug_data = connect_to_service::<DebugDataMarker>().unwrap();
+    let debug_data = connect_to_protocol::<DebugDataMarker>().unwrap();
     let error = debug_data
         .load_config("non_existent_config")
         .await

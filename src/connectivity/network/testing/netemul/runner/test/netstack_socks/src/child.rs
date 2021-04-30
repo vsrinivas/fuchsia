@@ -81,7 +81,7 @@ pub async fn run_child(opt: ChildOptions) -> Result<(), Error> {
     println!("Running child with endpoint '{}'", opt.endpoint);
 
     // get the network context service:
-    let netctx = client::connect_to_service::<NetworkContextMarker>()?;
+    let netctx = client::connect_to_protocol::<NetworkContextMarker>()?;
     // get the endpoint manager
     let (epm, epmch) = fidl::endpoints::create_proxy::<EndpointManagerMarker>()?;
     netctx.get_endpoint_manager(epmch)?;
@@ -94,7 +94,7 @@ pub async fn run_child(opt: ChildOptions) -> Result<(), Error> {
 
     let if_name = format!("eth-{}", opt.endpoint);
     // connect to netstack:
-    let netstack = client::connect_to_service::<NetstackMarker>()?;
+    let netstack = client::connect_to_protocol::<NetstackMarker>()?;
     let static_ip =
         opt.ip.parse::<fidl_fuchsia_net_ext::Subnet>().expect("must be able to parse ip");
     println!("static ip = {:?}", static_ip);
@@ -125,7 +125,7 @@ pub async fn run_child(opt: ChildOptions) -> Result<(), Error> {
     let fidl_fuchsia_net::Subnet { mut addr, prefix_len } = static_ip.clone().into();
     let _ = netstack.set_interface_address(nicid as u32, &mut addr, prefix_len).await?;
 
-    let interface_state = client::connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()?;
+    let interface_state = client::connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()?;
     let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
         fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)?,
         &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(nicid.into()),

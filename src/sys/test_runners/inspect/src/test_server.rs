@@ -90,7 +90,7 @@ impl TestServer {
         while end_time > Time::get_monotonic() {
             let start_time = Time::get_monotonic();
 
-            let proxy = match client::connect_to_service_at_path::<
+            let proxy = match client::connect_to_protocol_at_path::<
                 fdiagnostics::ArchiveAccessorMarker,
             >(&svc)
             {

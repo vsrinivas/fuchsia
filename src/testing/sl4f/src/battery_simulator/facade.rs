@@ -6,7 +6,7 @@ use crate::common_utils::common::macros::{fx_err_and_bail, with_line};
 use anyhow::Error;
 use fidl_fuchsia_power as fpower;
 use fidl_fuchsia_power_test as spower;
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use fuchsia_syslog::macros::{fx_log_err, fx_log_warn};
 use fuchsia_zircon::Status;
 use parking_lot::RwLock;
@@ -46,7 +46,7 @@ impl BatterySimulatorFacade {
     }
     /// Create proxy to BatterySimulator to perform changes
     pub fn create_proxy(&self) -> Result<spower::BatterySimulatorProxy, Error> {
-        match connect_to_service::<spower::BatterySimulatorMarker>() {
+        match connect_to_protocol::<spower::BatterySimulatorMarker>() {
             Ok(service) => Ok(service),
             Err(err) => fx_err_and_bail!(
                 &with_line!(TAG),
@@ -275,7 +275,7 @@ mod tests {
     async fn test_disconnect() {
         // Launch battery manager
         // Get Proxy and create Facade
-        let proxy = connect_to_service::<spower::BatterySimulatorMarker>().unwrap();
+        let proxy = connect_to_protocol::<spower::BatterySimulatorMarker>().unwrap();
         let facade = BatterySimulatorFacade::new();
         let init_result = facade.init_proxy(Some(proxy));
         assert!(init_result.is_ok(), "Failed to initialize proxy");
@@ -301,7 +301,7 @@ mod tests {
     async fn test_set_battery_percentage() {
         // Launch battery manager
         // Get Proxy and create Facade
-        let proxy = connect_to_service::<spower::BatterySimulatorMarker>().unwrap();
+        let proxy = connect_to_protocol::<spower::BatterySimulatorMarker>().unwrap();
         let facade = BatterySimulatorFacade::new();
         let init_result = facade.init_proxy(Some(proxy));
         assert!(init_result.is_ok(), "Failed to initialize proxy");
@@ -331,7 +331,7 @@ mod tests {
     async fn test_set_charge_source() {
         // Launch battery manager
         // Get Proxy and create Facade
-        let proxy = connect_to_service::<spower::BatterySimulatorMarker>().unwrap();
+        let proxy = connect_to_protocol::<spower::BatterySimulatorMarker>().unwrap();
         let facade = BatterySimulatorFacade::new();
         let init_result = facade.init_proxy(Some(proxy));
         assert!(init_result.is_ok(), "Failed to initialize proxy");

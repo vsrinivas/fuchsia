@@ -107,7 +107,7 @@ async fn retrieve_and_validate_results(
     golden_file: &PathBuf,
     expected_results_count: usize,
 ) {
-    let archive_accessor = archivist.connect_to_service::<ArchiveAccessorMarker>().unwrap();
+    let archive_accessor = archivist.connect_to_protocol::<ArchiveAccessorMarker>().unwrap();
 
     loop {
         let (batch_consumer, batch_server) = create_proxy().unwrap();

@@ -7,7 +7,7 @@ use {
         DeviceServiceMarker, DeviceServiceProxy, SetCountryRequest,
     },
     fidl_fuchsia_wlan_tap::WlantapPhyEvent,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon::DurationNum,
     fuchsia_zircon_sys::ZX_OK,
     futures::channel::oneshot,
@@ -36,7 +36,7 @@ async fn set_country() {
     const ALPHA2: &[u8; 2] = b"RS";
 
     let mut helper = test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;
-    let svc = connect_to_service::<DeviceServiceMarker>()
+    let svc = connect_to_protocol::<DeviceServiceMarker>()
         .expect("Failed to connect to wlanstack_dev_svc");
 
     let resp = svc.list_phys().await.unwrap();

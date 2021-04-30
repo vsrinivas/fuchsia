@@ -133,7 +133,7 @@ impl AccountHandlerConnection for AccountHandlerConnectionImpl {
             .account_manager_error(ApiError::Resource)?;
         fasync::Task::spawn(fs_for_account_handler.collect()).detach();
         let proxy = app
-            .connect_to_service::<AccountHandlerControlMarker>()
+            .connect_to_protocol::<AccountHandlerControlMarker>()
             .context("Failed to connect to AccountHandlerControl")
             .account_manager_error(ApiError::Resource)?;
 

@@ -14,7 +14,7 @@ use {
     fidl_fuchsia_wlan_tap::{
         SetChannelArgs, TxArgs, WlanRxInfo, WlantapPhyConfig, WlantapPhyEvent, WlantapPhyProxy,
     },
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_syslog as syslog,
     fuchsia_zircon::prelude::*,
     log::{debug, error},
@@ -866,7 +866,7 @@ pub fn rx_wlan_data_frame(
 
 pub async fn loop_until_iface_is_found() {
     // Connect to the client policy service and get a client controller.
-    let policy_provider = connect_to_service::<fidl_policy::ClientProviderMarker>()
+    let policy_provider = connect_to_protocol::<fidl_policy::ClientProviderMarker>()
         .expect("connecting to wlan policy");
     let (client_controller, server_end) = create_proxy().expect("creating client controller");
     let (update_client_end, _update_server_end) =

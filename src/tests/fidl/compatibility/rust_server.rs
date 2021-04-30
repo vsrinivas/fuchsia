@@ -24,7 +24,7 @@ fn launch_and_connect_to_echo(
     url: String,
 ) -> Result<(EchoProxy, App), Error> {
     let app = launch(&launcher, url, None)?;
-    let echo = app.connect_to_service::<EchoMarker>()?;
+    let echo = app.connect_to_protocol::<EchoMarker>()?;
     Ok((echo, app))
 }
 

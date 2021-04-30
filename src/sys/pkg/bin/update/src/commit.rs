@@ -6,7 +6,7 @@ use {
     anyhow::{Context, Error},
     fidl_fuchsia_update::{CommitStatusProviderMarker, CommitStatusProviderProxy},
     fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon as zx,
     futures::{future::FusedFuture, prelude::*},
     std::time::Duration,
@@ -16,7 +16,7 @@ const WARNING_DURATION: Duration = Duration::from_secs(30);
 
 /// Connects to the FIDL service, waits for the commit, and prints updates to stdout.
 pub async fn handle_wait_for_commit() -> Result<(), Error> {
-    let proxy = connect_to_service::<CommitStatusProviderMarker>()
+    let proxy = connect_to_protocol::<CommitStatusProviderMarker>()
         .context("while connecting to fuchsia.update/CommitStatusProvider")?;
     handle_wait_for_commit_impl(&proxy, Printer).await
 }

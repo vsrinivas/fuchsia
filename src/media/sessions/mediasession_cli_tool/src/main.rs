@@ -77,7 +77,7 @@ struct Stop {}
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), anyhow::Error> {
     let invocation: Invocation = argh::from_env();
-    let discovery = client::connect_to_service::<DiscoveryMarker>()?;
+    let discovery = client::connect_to_protocol::<DiscoveryMarker>()?;
     let (watcher_client, watcher_server) = create_endpoints()?;
     let mut watcher_requests = watcher_server.into_stream()?;
 

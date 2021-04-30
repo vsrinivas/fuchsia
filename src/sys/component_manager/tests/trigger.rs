@@ -24,7 +24,7 @@ async fn main() {
 }
 
 async fn run_trigger_service(mut stream: ftest::TriggerRequestStream) {
-    let echo = client::connect_to_service::<fecho::EchoMarker>().expect("error connecting to echo");
+    let echo = client::connect_to_protocol::<fecho::EchoMarker>().expect("error connecting to echo");
     while let Some(event) = stream.try_next().await.expect("failed to serve trigger service") {
         let ftest::TriggerRequest::Run { responder } = event;
         let args: Vec<_> = std::env::args().collect();

@@ -99,7 +99,7 @@ pub async fn handle_control_events(harness: ControlHarness) -> Result<(), Error>
 }
 
 pub async fn new_control_harness() -> Result<ControlHarness, Error> {
-    let proxy = fuchsia_component::client::connect_to_service::<ControlMarker>()
+    let proxy = fuchsia_component::client::connect_to_protocol::<ControlMarker>()
         .context("Failed to connect to Control service")?;
 
     let control_harness = ControlHarness(expectable(Default::default(), proxy));

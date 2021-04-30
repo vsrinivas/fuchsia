@@ -32,7 +32,7 @@ async fn setup_env() -> (FactoryResetProxy, RecoveryPolicy) {
         .unwrap();
 
     let factory_reset_proxy =
-        env.connect_to_service::<FactoryResetMarker>().expect("FactoryReset should be available");
+        env.connect_to_protocol::<FactoryResetMarker>().expect("FactoryReset should be available");
     (factory_reset_proxy, recovery_policy_service_handler)
 }
 
@@ -105,7 +105,7 @@ async fn validate_restore(is_local_reset_allowed: bool) {
 
     // Connect to the proxy so we ensure the restore has occurred.
     let factory_reset_proxy = env
-        .connect_to_service::<FactoryResetMarker>()
+        .connect_to_protocol::<FactoryResetMarker>()
         .expect("factory reset service should be available");
 
     // Validate that the recovery policy service received the restored value.

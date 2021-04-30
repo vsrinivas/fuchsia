@@ -4,7 +4,7 @@
 
 use {
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service, fuchsia_component::server::ServiceFs,
+    fuchsia_component::client::connect_to_protocol, fuchsia_component::server::ServiceFs,
     futures::StreamExt,
 };
 
@@ -15,8 +15,8 @@ enum ExposedServices {
 #[fasync::run_singlethreaded]
 async fn main() {
     // Schedule some work (against ourselves)
-    let work_scheduler_control = connect_to_service::<fsys::WorkSchedulerControlMarker>().unwrap();
-    let work_scheduler = connect_to_service::<fsys::WorkSchedulerMarker>().unwrap();
+    let work_scheduler_control = connect_to_protocol::<fsys::WorkSchedulerControlMarker>().unwrap();
+    let work_scheduler = connect_to_protocol::<fsys::WorkSchedulerMarker>().unwrap();
 
     work_scheduler_control
         .set_batch_period(1)

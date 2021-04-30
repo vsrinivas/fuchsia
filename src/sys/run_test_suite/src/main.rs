@@ -72,7 +72,7 @@ async fn main() {
         std::process::exit(1);
     }
 
-    let harness = fuchsia_component::client::connect_to_service::<HarnessMarker>()
+    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
         .expect("connecting to HarnessProxy");
 
     let log_opts = run_test_suite_lib::diagnostics::LogCollectionOptions {

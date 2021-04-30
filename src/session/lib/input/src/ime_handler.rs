@@ -8,7 +8,7 @@ use {
     anyhow::Error,
     async_trait::async_trait,
     fidl_fuchsia_input as fidl_input, fidl_fuchsia_ui_input3 as fidl_ui_input3,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_syslog::{fx_log_debug, fx_log_err},
     input_synthesis::{keymaps, usages},
     std::convert::TryInto,
@@ -59,7 +59,7 @@ impl InputHandler for ImeHandler {
 impl ImeHandler {
     /// Creates a new [`ImeHandler`] by connecting out to the key event injector.
     pub async fn new() -> Result<Self, Error> {
-        let key_event_injector = connect_to_service::<fidl_ui_input3::KeyEventInjectorMarker>()?;
+        let key_event_injector = connect_to_protocol::<fidl_ui_input3::KeyEventInjectorMarker>()?;
 
         Self::new_handler(key_event_injector).await
     }

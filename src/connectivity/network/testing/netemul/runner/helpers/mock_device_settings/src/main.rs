@@ -203,7 +203,7 @@ mod test {
     #[fasync::run_singlethreaded]
     #[test]
     async fn test_string_key() {
-        let manager = client::connect_to_service::<DeviceSettingsManagerMarker>().unwrap();
+        let manager = client::connect_to_protocol::<DeviceSettingsManagerMarker>().unwrap();
         let res = manager
             .set_string("StringKey", "HelloWorld")
             .await
@@ -219,7 +219,7 @@ mod test {
     #[fasync::run_singlethreaded]
     #[test]
     async fn test_int_key() {
-        let manager = client::connect_to_service::<DeviceSettingsManagerMarker>().unwrap();
+        let manager = client::connect_to_protocol::<DeviceSettingsManagerMarker>().unwrap();
         let res = manager.set_integer("IntKey", 1234).await.context("can't set int").unwrap();
         assert_eq!(res, true);
         let (val, status) = manager.get_integer("IntKey").await.context("can't get int").unwrap();
@@ -230,7 +230,7 @@ mod test {
     #[fasync::run_singlethreaded]
     #[test]
     async fn test_watch_key() {
-        let manager = client::connect_to_service::<DeviceSettingsManagerMarker>().unwrap();
+        let manager = client::connect_to_protocol::<DeviceSettingsManagerMarker>().unwrap();
         let (watcher_client_end, watcher_server_end) =
             fidl::endpoints::create_endpoints::<DeviceSettingsWatcherMarker>().unwrap();
         let status =

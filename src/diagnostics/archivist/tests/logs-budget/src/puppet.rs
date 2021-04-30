@@ -7,13 +7,13 @@ use fidl_fuchsia_logger::LogSinkMarker;
 use fidl_test_logs_budget::{
     SocketPuppetControllerMarker, SocketPuppetMarker, SocketPuppetRequest,
 };
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use fuchsia_zircon as zx;
 use futures::StreamExt;
 
 #[fuchsia_async::run_singlethreaded]
 async fn main() {
-    let controller = connect_to_service::<SocketPuppetControllerMarker>().unwrap();
+    let controller = connect_to_protocol::<SocketPuppetControllerMarker>().unwrap();
     let (client, mut requests) = create_request_stream::<SocketPuppetMarker>().unwrap();
     controller.control_puppet(client).unwrap();
 
@@ -22,7 +22,7 @@ async fn main() {
     while let Some(Ok(next)) = requests.next().await {
         match next {
             SocketPuppetRequest::ConnectToLogSink { responder } => {
-                connect_to_service::<LogSinkMarker>()
+                connect_to_protocol::<LogSinkMarker>()
                     .unwrap()
                     .connect(recv.take().unwrap())
                     .unwrap();

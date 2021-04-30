@@ -44,8 +44,8 @@ struct SpawnOptions {
 
 async fn spawn_env(network: &NetworkProxy, options: SpawnOptions) -> Result<Env, Error> {
     // connect to NetworkContext and ManagedEnvironment services
-    let netctx = client::connect_to_service::<NetworkContextMarker>()?;
-    let env = client::connect_to_service::<ManagedEnvironmentMarker>()?;
+    let netctx = client::connect_to_protocol::<NetworkContextMarker>()?;
+    let env = client::connect_to_protocol::<ManagedEnvironmentMarker>()?;
 
     let env_name = options.env_name;
 
@@ -183,7 +183,7 @@ async fn wait_for_component(component: &ComponentControllerProxy) -> Result<(), 
 }
 
 async fn create_network() -> Result<NetworkProxy, Error> {
-    let netctx = client::connect_to_service::<NetworkContextMarker>()?;
+    let netctx = client::connect_to_protocol::<NetworkContextMarker>()?;
     let (netm, netm_server_end) = fidl::endpoints::create_proxy::<NetworkManagerMarker>()?;
     netctx.get_network_manager(netm_server_end)?;
     let config =

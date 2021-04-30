@@ -10,7 +10,7 @@ use fidl_fuchsia_input as input;
 use fidl_fuchsia_ui_input as ui_input;
 use fidl_fuchsia_ui_input3 as ui_input3;
 use fuchsia_async as fasync;
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use fuchsia_zircon as zx;
 use futures::{StreamExt, TryStreamExt};
 use input_synthesis::usages::Usages;
@@ -19,7 +19,7 @@ mod test_helpers;
 
 #[fasync::run_singlethreaded(test)]
 async fn test_visibility_service_sends_initial_update() -> Result<()> {
-    let visibility_service = connect_to_service::<ui_input::ImeVisibilityServiceMarker>()
+    let visibility_service = connect_to_protocol::<ui_input::ImeVisibilityServiceMarker>()
         .context("Failed to connect to ImeVisibilityService")?;
     let mut visiblity_event_stream = visibility_service.take_event_stream();
 
@@ -36,9 +36,9 @@ async fn test_visibility_service_sends_initial_update() -> Result<()> {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_visibility_service_resends_update_after_closing_keyboard() -> Result<()> {
-    let visibility_service = connect_to_service::<ui_input::ImeVisibilityServiceMarker>()
+    let visibility_service = connect_to_protocol::<ui_input::ImeVisibilityServiceMarker>()
         .context("Failed to connect to ImeVisibilityService")?;
-    let ime_service = connect_to_service::<ui_input::ImeServiceMarker>()
+    let ime_service = connect_to_protocol::<ui_input::ImeServiceMarker>()
         .context("Failed to connect to ImeService")?;
 
     let visiblity_event_stream = visibility_service.take_event_stream();
@@ -60,9 +60,9 @@ async fn test_visibility_service_resends_update_after_closing_keyboard() -> Resu
 
 #[fasync::run_singlethreaded(test)]
 async fn test_visibility_service_resends_update_after_opening_keyboard() -> Result<()> {
-    let visibility_service = connect_to_service::<ui_input::ImeVisibilityServiceMarker>()
+    let visibility_service = connect_to_protocol::<ui_input::ImeVisibilityServiceMarker>()
         .context("Failed to connect to ImeVisibilityService")?;
-    let ime_service = connect_to_service::<ui_input::ImeServiceMarker>()
+    let ime_service = connect_to_protocol::<ui_input::ImeServiceMarker>()
         .context("Failed to connect to ImeService")?;
 
     let visiblity_event_stream = visibility_service.take_event_stream();
@@ -87,9 +87,9 @@ async fn test_visibility_service_resends_update_after_opening_keyboard() -> Resu
 
 #[fasync::run_singlethreaded(test)]
 async fn test_open_and_close_from_keyboard() -> Result<()> {
-    let visibility_service = connect_to_service::<ui_input::ImeVisibilityServiceMarker>()
+    let visibility_service = connect_to_protocol::<ui_input::ImeVisibilityServiceMarker>()
         .context("Failed to connect to ImeVisibilityService")?;
-    let ime_service = connect_to_service::<ui_input::ImeServiceMarker>()
+    let ime_service = connect_to_protocol::<ui_input::ImeServiceMarker>()
         .context("Failed to connect to ImeService")?;
 
     // Note that the initial message from the visibility service is skipped.
@@ -124,12 +124,12 @@ async fn test_open_and_close_from_keyboard() -> Result<()> {
 
 /// Connects to a service that provides key injection.
 fn connect_to_key_event_service() -> Result<ui_input3::KeyEventInjectorProxy> {
-    connect_to_service::<ui_input3::KeyEventInjectorMarker>()
+    connect_to_protocol::<ui_input3::KeyEventInjectorMarker>()
         .context("Failed to connect to fuchsia.ui.input3.KeyEventInjector")
 }
 
 fn connect_to_ime_service() -> Result<ui_input::ImeServiceProxy> {
-    connect_to_service::<ui_input::ImeServiceMarker>()
+    connect_to_protocol::<ui_input::ImeServiceMarker>()
         .context("Failed to connect to fuchsia.ui.input.ImeService")
 }
 

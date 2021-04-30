@@ -460,7 +460,7 @@ impl TestSetup {
 
     fn sandbox(&mut self) -> &sandbox::SandboxProxy {
         self.sandbox.get_or_insert_with(|| {
-            client::connect_to_service::<sandbox::SandboxMarker>()
+            client::connect_to_protocol::<sandbox::SandboxMarker>()
                 .expect("Failed to connect to sandbox service")
         })
     }

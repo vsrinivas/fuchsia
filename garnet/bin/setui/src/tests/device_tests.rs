@@ -19,7 +19,7 @@ async fn test_device() {
         .await
         .unwrap();
 
-    let device_proxy = env.connect_to_service::<DeviceMarker>().expect("connected to service");
+    let device_proxy = env.connect_to_protocol::<DeviceMarker>().expect("connected to service");
 
     let settings = device_proxy.watch().await.expect("watch completed");
 

@@ -17,7 +17,7 @@ use {
     },
     fuchsia_bluetooth::types::PeerId,
     fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     futures::{
         channel::mpsc::{channel, SendError},
         select, FutureExt, Sink, SinkExt, Stream, StreamExt, TryStreamExt,
@@ -394,7 +394,7 @@ async fn main() -> Result<(), Error> {
 
     // Connect to test controller service first so we fail early if it's not available.
 
-    let test_avrcp_svc = connect_to_service::<PeerManagerExtMarker>()
+    let test_avrcp_svc = connect_to_protocol::<PeerManagerExtMarker>()
         .context("Failed to connect to Bluetooth Test AVRCP interface")?;
 
     // Create a channel for our Request<TestController> to live
@@ -409,7 +409,7 @@ async fn main() -> Result<(), Error> {
 
     // Connect to avrcp controller service.
 
-    let avrcp_svc = connect_to_service::<PeerManagerMarker>()
+    let avrcp_svc = connect_to_protocol::<PeerManagerMarker>()
         .context("Failed to connect to Bluetooth AVRCP interface")?;
 
     // Create a channel for our Request<Controller> to live

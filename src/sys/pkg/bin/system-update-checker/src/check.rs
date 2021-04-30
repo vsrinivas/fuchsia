@@ -9,7 +9,7 @@ use crate::{
 use anyhow::{anyhow, Context as _};
 use fidl_fuchsia_paver::{Asset, BootManagerMarker, DataSinkMarker, PaverMarker, PaverProxy};
 use fidl_fuchsia_pkg::{PackageResolverMarker, PackageResolverProxyInterface};
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use fuchsia_hash::Hash;
 use fuchsia_syslog::fx_log_warn;
 use fuchsia_zircon as zx;
@@ -30,8 +30,8 @@ pub async fn check_for_system_update(
 ) -> Result<SystemUpdateStatus, Error> {
     let mut file_system = RealFileSystem;
     let package_resolver =
-        connect_to_service::<PackageResolverMarker>().map_err(Error::ConnectPackageResolver)?;
-    let paver = connect_to_service::<PaverMarker>().map_err(Error::ConnectPaver)?;
+        connect_to_protocol::<PackageResolverMarker>().map_err(Error::ConnectPackageResolver)?;
+    let paver = connect_to_protocol::<PaverMarker>().map_err(Error::ConnectPaver)?;
 
     check_for_system_update_impl(
         &mut file_system,

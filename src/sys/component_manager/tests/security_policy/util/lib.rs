@@ -15,7 +15,7 @@ use {
 fn connect_to_root_service<S: DiscoverableService>(test: &OpaqueTest) -> Result<S::Proxy, Error> {
     let mut service_path = test.get_hub_v2_path();
     service_path.extend(&["exec", "expose", S::SERVICE_NAME]);
-    fuchsia_component::client::connect_to_service_at_path::<S>(service_path.to_str().unwrap())
+    fuchsia_component::client::connect_to_protocol_at_path::<S>(service_path.to_str().unwrap())
 }
 
 pub async fn start_policy_test(

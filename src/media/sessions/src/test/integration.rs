@@ -100,17 +100,17 @@ impl TestService {
         .context("Launching archivist")?;
 
         let publisher = mediasession
-            .connect_to_service::<PublisherMarker>()
+            .connect_to_protocol::<PublisherMarker>()
             .context("Connecting to Publisher")?;
         let discovery = mediasession
-            .connect_to_service::<DiscoveryMarker>()
+            .connect_to_protocol::<DiscoveryMarker>()
             .context("Connecting to Discovery")?;
         let observer_discovery = mediasession
-            .connect_to_service::<ObserverDiscoveryMarker>()
+            .connect_to_protocol::<ObserverDiscoveryMarker>()
             .context("Connecting to ObserverDiscovery")?;
 
         let archive = archivist
-            .connect_to_service::<ArchiveAccessorMarker>()
+            .connect_to_protocol::<ArchiveAccessorMarker>()
             .context("Connecting to archivist")?;
 
         Ok(Self {
@@ -938,7 +938,7 @@ async fn active_session_initializes_clients_without_player() -> Result<()> {
     let service = TestService::new()?;
     let active_session_discovery = service
         .app
-        .connect_to_service::<ActiveSessionMarker>()
+        .connect_to_protocol::<ActiveSessionMarker>()
         .context("Connecting to Active Session service")?;
 
     let session = active_session_discovery
@@ -958,7 +958,7 @@ async fn active_session_initializes_clients_with_idle_player() -> Result<()> {
     let mut watcher = service.new_watcher(Decodable::new_empty())?;
     let active_session_discovery = service
         .app
-        .connect_to_service::<ActiveSessionMarker>()
+        .connect_to_protocol::<ActiveSessionMarker>()
         .context("Connecting to Active Session service")?;
 
     player.emit_delta(delta_with_state(PlayerState::Idle)).await?;
@@ -981,7 +981,7 @@ async fn active_session_initializes_clients_with_active_player() -> Result<()> {
     let mut watcher = service.new_watcher(Decodable::new_empty())?;
     let active_session_discovery = service
         .app
-        .connect_to_service::<ActiveSessionMarker>()
+        .connect_to_protocol::<ActiveSessionMarker>()
         .context("Connecting to Active Session service")?;
 
     player.emit_delta(delta_with_state(PlayerState::Playing)).await?;
@@ -1014,7 +1014,7 @@ async fn active_session_falls_back_when_session_removed() -> Result<()> {
     let mut watcher = service.new_watcher(Decodable::new_empty())?;
     let active_session_discovery = service
         .app
-        .connect_to_service::<ActiveSessionMarker>()
+        .connect_to_protocol::<ActiveSessionMarker>()
         .context("Connecting to Active Session service")?;
 
     let mut player1 = TestPlayer::new(&service).await?;

@@ -6,7 +6,7 @@ use {
     anyhow::{anyhow, Context, Error},
     fidl_fuchsia_update_installer::{InstallerMarker, InstallerProxy, RebootControllerMarker},
     fidl_fuchsia_update_installer_ext::{self as installer, start_update, Options, StateId},
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_url::pkg_url::PkgUrl,
     futures::prelude::*,
 };
@@ -16,7 +16,7 @@ pub async fn hande_force_install(
     reboot: bool,
     service_initiated: bool,
 ) -> Result<(), Error> {
-    let installer = connect_to_service::<InstallerMarker>()
+    let installer = connect_to_protocol::<InstallerMarker>()
         .context("connecting to fuchsia.update.installer")?;
     handle_force_install_impl(update_pkg_url, reboot, service_initiated, &installer).await
 }

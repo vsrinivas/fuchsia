@@ -120,10 +120,10 @@ impl TestEnv {
         });
 
         let all_reader = ArchiveReader::new()
-            .with_archive(_archivist.connect_to_service::<ArchiveAccessorMarker>().unwrap());
+            .with_archive(_archivist.connect_to_protocol::<ArchiveAccessorMarker>().unwrap());
         let feedback_reader = ArchiveReader::new().with_archive(
             _archivist
-                .connect_to_named_service::<ArchiveAccessorMarker>(
+                .connect_to_named_protocol::<ArchiveAccessorMarker>(
                     "fuchsia.diagnostics.FeedbackArchiveAccessor",
                 )
                 .unwrap(),

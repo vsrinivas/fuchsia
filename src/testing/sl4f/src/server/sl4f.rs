@@ -6,7 +6,7 @@ use anyhow::Error;
 use fidl_fuchsia_testing_sl4f::{
     FacadeIteratorMarker, FacadeIteratorSynchronousProxy, FacadeProviderMarker, FacadeProviderProxy,
 };
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use fuchsia_syslog::macros::{fx_log_err, fx_log_info, fx_log_warn};
 use fuchsia_zircon as zx;
 use futures::channel::mpsc;
@@ -276,7 +276,7 @@ impl Sl4f {
 
         // Attempt to connect to the single `FacadeProvider` instance.
         let mut proxied_facades = HashSet::<String>::new();
-        let facade_provider = match connect_to_service::<FacadeProviderMarker>() {
+        let facade_provider = match connect_to_protocol::<FacadeProviderMarker>() {
             Ok(proxy) => proxy,
             Err(error) => {
                 fx_log_err!("Failed to connect to FacadeProvider: {}", error);

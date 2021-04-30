@@ -597,19 +597,19 @@ impl Proxies {
     pub fn from_app(app: &App) -> Self {
         Proxies {
             resolver: app
-                .connect_to_service::<PackageResolverMarker>()
+                .connect_to_protocol::<PackageResolverMarker>()
                 .expect("connect to package resolver"),
             resolver_admin: app
-                .connect_to_service::<PackageResolverAdminMarker>()
+                .connect_to_protocol::<PackageResolverAdminMarker>()
                 .expect("connect to package resolver admin"),
             repo_manager: app
-                .connect_to_service::<RepositoryManagerMarker>()
+                .connect_to_protocol::<RepositoryManagerMarker>()
                 .expect("connect to repository manager"),
             rewrite_engine: app
-                .connect_to_service::<RewriteEngineMarker>()
+                .connect_to_protocol::<RewriteEngineMarker>()
                 .expect("connect to rewrite engine"),
             font_resolver: app
-                .connect_to_service::<FontResolverMarker>()
+                .connect_to_protocol::<FontResolverMarker>()
                 .expect("connect to font resolver"),
         }
     }
@@ -858,7 +858,7 @@ impl<P: PkgFs> TestEnv<P> {
     pub fn connect_to_resolver(&self) -> PackageResolverProxy {
         self.apps
             .pkg_resolver
-            .connect_to_service::<PackageResolverMarker>()
+            .connect_to_protocol::<PackageResolverMarker>()
             .expect("connect to package resolver")
     }
 
@@ -876,7 +876,7 @@ impl<P: PkgFs> TestEnv<P> {
     }
 
     pub async fn open_cached_package(&self, hash: BlobId) -> Result<DirectoryProxy, zx::Status> {
-        let cache_service = self.apps.pkg_cache.connect_to_service::<PackageCacheMarker>().unwrap();
+        let cache_service = self.apps.pkg_cache.connect_to_protocol::<PackageCacheMarker>().unwrap();
         let (proxy, server_end) = fidl::endpoints::create_proxy().unwrap();
         let () = cache_service
             .open(&mut hash.into(), &mut std::iter::empty(), server_end)

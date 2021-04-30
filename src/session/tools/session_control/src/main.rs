@@ -11,7 +11,7 @@ use {
         LaunchConfiguration, LauncherMarker, LauncherProxy, RestarterMarker, RestarterProxy,
     },
     fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service_at,
+    fuchsia_component::client::connect_to_protocol_at,
 };
 
 #[derive(FromArgs, Debug, PartialEq)]
@@ -60,7 +60,7 @@ async fn main() -> Result<(), Error> {
 
     match command {
         Command::Launch(LaunchCommand { session_url }) => {
-            let launcher = connect_to_service_at::<LauncherMarker>(HUB_PATH)?;
+            let launcher = connect_to_protocol_at::<LauncherMarker>(HUB_PATH)?;
             match launch_session(&session_url, launcher).await {
                 Ok(_) => {
                     println!("Launched session: {:?}", session_url);
@@ -73,7 +73,7 @@ async fn main() -> Result<(), Error> {
             }
         }
         Command::Restart(RestartCommand {}) => {
-            let restarter = connect_to_service_at::<RestarterMarker>(HUB_PATH)?;
+            let restarter = connect_to_protocol_at::<RestarterMarker>(HUB_PATH)?;
             match restart_session(restarter).await {
                 Ok(_) => {
                     println!("Restarted the session.");
@@ -86,7 +86,7 @@ async fn main() -> Result<(), Error> {
             }
         }
         Command::Add(AddCommand { element_url }) => {
-            let element_manager = connect_to_service_at::<ElementManagerMarker>(HUB_PATH)?;
+            let element_manager = connect_to_protocol_at::<ElementManagerMarker>(HUB_PATH)?;
             match add_element(&element_url, element_manager).await {
                 Ok(_) => {
                     println!("Added element: {:?}", element_url);

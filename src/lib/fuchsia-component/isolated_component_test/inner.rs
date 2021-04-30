@@ -6,7 +6,7 @@ use {
     anyhow::Error,
     fidl_fuchsia_test_echos::{EchoExposedByParentMarker, EchoHiddenByParentMarker},
     fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     std::env,
     std::io::Read,
 };
@@ -18,9 +18,9 @@ async fn main() -> Result<(), Error> {
     // Check that only the service provided by the inner component is available,
     // and that we're connected to its implementation of the service which always
     // returns `42` rather than echoing.
-    let echo = connect_to_service::<EchoExposedByParentMarker>()?;
+    let echo = connect_to_protocol::<EchoExposedByParentMarker>()?;
     assert_eq!(42, echo.echo(1).await?);
-    let echo = connect_to_service::<EchoHiddenByParentMarker>()?;
+    let echo = connect_to_protocol::<EchoHiddenByParentMarker>()?;
     match echo.echo(2).await {
         Err(e) if e.is_closed() => {}
         Ok(_) => panic!("inner nested component successfully echoed through parent"),

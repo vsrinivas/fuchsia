@@ -10,7 +10,7 @@ use {
         VolumeManagerMarker, VolumeManagerProxy, VolumeMarker, VolumeProxy,
     },
     fidl_fuchsia_io::OPEN_RIGHT_READABLE,
-    fuchsia_component::client::connect_to_service_at_path,
+    fuchsia_component::client::connect_to_protocol_at_path,
     fuchsia_zircon::{sys::zx_status_t, AsHandleRef, Rights, Status, Vmo},
     ramdevice_client::{RamdiskClient, VmoRamdiskClientBuilder},
     rand::{rngs::SmallRng, FromEntropy, Rng},
@@ -71,7 +71,7 @@ fn init_fvm(ramdisk_path: &str, fvm_slice_size: u64) {
 }
 
 async fn start_fvm_driver(ramdisk_path: &str) -> VolumeManagerProxy {
-    let controller = connect_to_service_at_path::<ControllerMarker>(ramdisk_path).unwrap();
+    let controller = connect_to_protocol_at_path::<ControllerMarker>(ramdisk_path).unwrap();
     bind_fvm(&controller).await.unwrap();
 
     // Wait until the FVM driver is available
@@ -80,7 +80,7 @@ async fn start_fvm_driver(ramdisk_path: &str) -> VolumeManagerProxy {
     ramdevice_client::wait_for_device(fvm_path, Duration::from_secs(20)).unwrap();
 
     // Connect to the Volume Manager
-    let proxy = connect_to_service_at_path::<VolumeManagerMarker>(fvm_path).unwrap();
+    let proxy = connect_to_protocol_at_path::<VolumeManagerMarker>(fvm_path).unwrap();
     proxy
 }
 
@@ -162,7 +162,7 @@ pub async fn get_volume_path(instance_guid: &Guid) -> PathBuf {
             let volume_path_str = volume_path.to_str().unwrap();
 
             // Connect to the Volume FIDL protocol
-            let volume_proxy = connect_to_service_at_path::<VolumeMarker>(volume_path_str).unwrap();
+            let volume_proxy = connect_to_protocol_at_path::<VolumeMarker>(volume_path_str).unwrap();
             if does_guid_match(&volume_proxy, &instance_guid).await {
                 return volume_path;
             }

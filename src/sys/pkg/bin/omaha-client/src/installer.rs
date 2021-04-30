@@ -16,7 +16,7 @@ use fidl_fuchsia_update_installer_ext::{
     PrepareFailureReason, State, StateId, UpdateAttemptError,
 };
 use fuchsia_async as fasync;
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use fuchsia_zircon as zx;
 use futures::future::BoxFuture;
 use futures::prelude::*;
@@ -223,7 +223,7 @@ impl<C: Connect<Proxy = InstallerProxy> + Send> Installer for FuchsiaInstaller<C
                 }
                 None => {
                     // FIXME Need the direct reboot path anymore?
-                    connect_to_service::<fidl_fuchsia_hardware_power_statecontrol::AdminMarker>()?
+                    connect_to_protocol::<fidl_fuchsia_hardware_power_statecontrol::AdminMarker>()?
                         .reboot(RebootReason::SystemUpdate)
                         .await?
                         .map_err(zx::Status::from_raw)

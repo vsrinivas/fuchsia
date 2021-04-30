@@ -7,7 +7,7 @@ use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_wlan_device::{ConnectorProxy, PhyProxy};
 use fidl_fuchsia_wlan_device_service::{DeviceServiceMarker, DeviceServiceProxy};
 use fuchsia_async as fasync;
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use fuchsia_zircon as zx;
 use std::fs;
 
@@ -18,7 +18,7 @@ pub struct WlanPhyFacade {
 
 impl WlanPhyFacade {
     pub fn new() -> Result<WlanPhyFacade, Error> {
-        Ok(WlanPhyFacade { device_service: connect_to_service::<DeviceServiceMarker>()? })
+        Ok(WlanPhyFacade { device_service: connect_to_protocol::<DeviceServiceMarker>()? })
     }
 
     /// Queries the currently counfigured country from phy `phy_id`.

@@ -213,7 +213,7 @@ pub fn process_events(events: Vec<TestEvent>, exclude_empty_logs: bool) -> Vec<T
 
 // Binds to test manager component and returns the test suite serivce.
 pub async fn connect_to_test_manager() -> Result<ftest_manager::HarnessProxy, Error> {
-    let realm = client::connect_to_service::<fsys::RealmMarker>()
+    let realm = client::connect_to_protocol::<fsys::RealmMarker>()
         .context("could not connect to Realm service")?;
 
     let mut child_ref = fsys::ChildRef { name: "test_manager".to_owned(), collection: None };

@@ -5,7 +5,7 @@
 use {
     anyhow::{format_err, Error},
     eui48, fidl_fuchsia_net, fidl_fuchsia_wlan_product_deprecatedconfiguration as fidl_deprecated,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     parking_lot::RwLock,
     std::fmt::Debug,
 };
@@ -25,7 +25,7 @@ impl WlanDeprecatedConfigurationFacade {
     /// WlanDeprecatedConfigurationFacade instance to enable setting suggested MAC addresses for
     /// soft APs.
     pub fn new() -> Result<WlanDeprecatedConfigurationFacade, Error> {
-        let controller = connect_to_service::<fidl_deprecated::DeprecatedConfiguratorMarker>()?;
+        let controller = connect_to_protocol::<fidl_deprecated::DeprecatedConfiguratorMarker>()?;
         Ok(Self {
             inner: RwLock::new(InnerWlanDeprecatedConfigurationFacade { controller: controller }),
         })

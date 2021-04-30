@@ -6,7 +6,7 @@ use fidl_fuchsia_ui_keyboard_focus as fidl_focus;
 use {
     anyhow::{format_err, Context, Error},
     fidl_fuchsia_ui_focus as focus, fidl_fuchsia_ui_shortcut as fidl_ui_shortcut,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_syslog::fx_log_err,
     futures::StreamExt,
 };
@@ -14,14 +14,14 @@ use {
 /// Registers as a focus chain listener and dispatches focus chain updates to IME
 /// and shortcut manager.
 pub async fn handle_focus_changes() -> Result<(), Error> {
-    let ime = connect_to_service::<fidl_focus::ControllerMarker>()?;
-    let shortcut_manager = connect_to_service::<fidl_ui_shortcut::ManagerMarker>()?;
+    let ime = connect_to_protocol::<fidl_focus::ControllerMarker>()?;
+    let shortcut_manager = connect_to_protocol::<fidl_ui_shortcut::ManagerMarker>()?;
 
     let (focus_chain_listener_client_end, focus_chain_listener) =
         fidl::endpoints::create_request_stream::<focus::FocusChainListenerMarker>()?;
 
     let focus_chain_listener_registry: focus::FocusChainListenerRegistryProxy =
-        connect_to_service::<focus::FocusChainListenerRegistryMarker>()?;
+        connect_to_protocol::<focus::FocusChainListenerRegistryMarker>()?;
     focus_chain_listener_registry
         .register(focus_chain_listener_client_end)
         .context("Failed to register focus chain listener.")?;

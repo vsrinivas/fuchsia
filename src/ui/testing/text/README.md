@@ -15,7 +15,7 @@ let app = fuchsia_component::client::launch(
 )
 .unwrap();
 let tester = app
-    .connect_to_service::<txt_testing::TextFieldTestSuiteMarker>()
+    .connect_to_protocol::<txt_testing::TextFieldTestSuiteMarker>()
     .unwrap();
 let mut passed = true;
 let test_list = await!(tester.list_tests()).unwrap();

@@ -6,7 +6,7 @@ use {
     crate::synthesizer::*,
     anyhow::{format_err, Error},
     fidl_fuchsia_ui_input::{self, Touch},
-    fuchsia_component::client::new_service_connector,
+    fuchsia_component::client::new_protocol_connector,
     std::time::Duration,
 };
 
@@ -240,7 +240,7 @@ pub async fn multi_finger_swipe_command(
 async fn get_backend() -> Result<Box<dyn InputDeviceRegistry>, Error> {
     if cfg!(use_modern_input_injection) {
         let modern_registry =
-            new_service_connector::<fidl_fuchsia_input_injection::InputDeviceRegistryMarker>()?;
+            new_protocol_connector::<fidl_fuchsia_input_injection::InputDeviceRegistryMarker>()?;
         if modern_registry.exists().await? {
             return Ok(Box::new(modern_backend::InputDeviceRegistry::new(
                 modern_registry.connect()?,
@@ -248,7 +248,7 @@ async fn get_backend() -> Result<Box<dyn InputDeviceRegistry>, Error> {
         }
     } else {
         let legacy_registry =
-            new_service_connector::<fidl_fuchsia_ui_input::InputDeviceRegistryMarker>()?;
+            new_protocol_connector::<fidl_fuchsia_ui_input::InputDeviceRegistryMarker>()?;
         if legacy_registry.exists().await? {
             return Ok(Box::new(legacy_backend::InputDeviceRegistry::new()));
         }

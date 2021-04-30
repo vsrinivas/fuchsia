@@ -25,7 +25,7 @@ impl DiagnosticsFacade {
     pub async fn snapshot_inspect(&self, args: SnapshotInspectArgs) -> Result<Value, Error> {
         let service_path = format!("/svc/{}", args.service_name);
         let proxy =
-            client::connect_to_service_at_path::<ArchiveAccessorMarker>(&service_path).unwrap();
+            client::connect_to_protocol_at_path::<ArchiveAccessorMarker>(&service_path).unwrap();
         let value = ArchiveReader::new()
             .retry_if_empty(false)
             .with_archive(proxy)

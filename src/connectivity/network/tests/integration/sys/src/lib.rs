@@ -57,7 +57,7 @@ async fn start_with_cache_no_space() {
     let (client_channel, server_channel) =
         zx::Channel::create().expect("failed to create zircon channel");
     let () =
-        app.pass_to_named_service(".", server_channel).expect("failed to connect to svc directory");
+        app.pass_to_named_protocol(".", server_channel).expect("failed to connect to svc directory");
     let client_channel = fuchsia_async::Channel::from_channel(client_channel)
         .expect("failed to create async channel");
     let proxy = fidl_fuchsia_io::DirectoryProxy::new(client_channel);

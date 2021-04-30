@@ -20,7 +20,7 @@ use {
 
 #[fasync::run_singlethreaded(test)]
 async fn ext4_server_mounts_vmo_one_file() -> Result<(), Error> {
-    let ext4 = fuchsia_component::client::connect_to_service::<Server_Marker>()
+    let ext4 = fuchsia_component::client::connect_to_protocol::<Server_Marker>()
         .expect("Failed to connect to service");
 
     let mut file_buf = io::BufReader::new(fs::File::open("/pkg/data/1file.img")?);
@@ -46,7 +46,7 @@ async fn ext4_server_mounts_vmo_one_file() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn ext4_server_mounts_vmo_nested_dirs() -> Result<(), Error> {
-    let ext4 = fuchsia_component::client::connect_to_service::<Server_Marker>()
+    let ext4 = fuchsia_component::client::connect_to_protocol::<Server_Marker>()
         .expect("Failed to connect to service");
 
     let mut file_buf = io::BufReader::new(fs::File::open("/pkg/data/nest.img")?);

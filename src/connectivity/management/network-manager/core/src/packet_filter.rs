@@ -10,7 +10,7 @@ use {
     crate::servicemgr::NatConfig,
     fidl_fuchsia_net_filter::{self as netfilter, Direction, FilterMarker, FilterProxy, Status},
     fidl_fuchsia_router_config::{self as netconfig},
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     std::convert::{From, TryFrom, TryInto},
     std::net::IpAddr,
 };
@@ -348,7 +348,7 @@ fn parse_aclentry(
 impl PacketFilter {
     /// Starts a new instance of a PacketFilter.
     pub fn start() -> error::Result<Self> {
-        let filter_svc = connect_to_service::<FilterMarker>().map_err(|e| {
+        let filter_svc = connect_to_protocol::<FilterMarker>().map_err(|e| {
             warn!("failed to connect to fuchsia.net.filter/Filter service: {}", e);
             error::Service::PacketFilterServiceConnect
         })?;

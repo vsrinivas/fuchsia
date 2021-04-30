@@ -399,7 +399,7 @@ impl Player {
     /// Communicates with the current default AudioConsumer.
     pub async fn test_playable(config: &MediaCodecConfig) -> Result<(), Error> {
         let audio_consumer_factory =
-            fuchsia_component::client::connect_to_service::<SessionAudioConsumerFactoryMarker>()
+            fuchsia_component::client::connect_to_protocol::<SessionAudioConsumerFactoryMarker>()
                 .context("Failed to connect to audio consumer factory")?;
         let mut player = Self::new(0, config.clone(), audio_consumer_factory)?;
 

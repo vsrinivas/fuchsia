@@ -9,7 +9,7 @@ use {
     fidl::endpoints::create_proxy,
     fidl_fuchsia_io as io, fidl_fuchsia_mem as mem,
     fidl_fuchsia_pkg::FontResolverMarker,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_trace as trace, fuchsia_zircon as zx,
     manifest::v2,
     std::{fs::File, path::Path},
@@ -63,7 +63,7 @@ impl AssetLoader for AssetLoaderImpl {
             "package_url" => &package_url[..]);
 
         // Get directory handle from FontResolver
-        let font_resolver = connect_to_service::<FontResolverMarker>()
+        let font_resolver = connect_to_protocol::<FontResolverMarker>()
             .map_err(|e| AssetCollectionError::ServiceConnectionError(e.into()))?;
         let (dir_proxy, dir_request) = create_proxy::<io::DirectoryMarker>()
             .map_err(|e| AssetCollectionError::ServiceConnectionError(e.into()))?;

@@ -270,11 +270,11 @@ impl TestCallManager {
             let bt_hfp = client::launch(&launcher, HFP_AG_URL.to_string(), None)?;
 
             let hfp_service_proxy = bt_hfp
-                .connect_to_service::<HfpMarker>()
+                .connect_to_protocol::<HfpMarker>()
                 .map_err(|err| format_err!("Failed to create HFP service proxy: {}", err))?;
 
             inner.test_proxy =
-                Some(bt_hfp.connect_to_service::<HfpTestMarker>().map_err(|err| {
+                Some(bt_hfp.connect_to_protocol::<HfpTestMarker>().map_err(|err| {
                     format_err!("Failed to create HFP Test service proxy: {}", err)
                 })?);
 

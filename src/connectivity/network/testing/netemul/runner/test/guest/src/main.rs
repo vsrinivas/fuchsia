@@ -31,7 +31,7 @@ async fn test_file_transfer() -> Result<(), Error> {
     let guest_destination = "/root/input/test_data.txt";
     let verification_copy = "/data/test_data_copy.txt";
 
-    let guest_discovery_service = client::connect_to_service::<GuestDiscoveryMarker>()?;
+    let guest_discovery_service = client::connect_to_protocol::<GuestDiscoveryMarker>()?;
     let (gis, gis_ch) = fidl::endpoints::create_proxy::<GuestInteractionMarker>()?;
     let () = guest_discovery_service.get_guest(None, "debian_guest", gis_ch)?;
 
@@ -85,7 +85,7 @@ async fn test_exec_script() -> Result<(), Error> {
     ];
 
     // Request that the guest interaction service run the command.
-    let guest_discovery_service = client::connect_to_service::<GuestDiscoveryMarker>()?;
+    let guest_discovery_service = client::connect_to_protocol::<GuestDiscoveryMarker>()?;
     let (gis, gis_ch) = fidl::endpoints::create_proxy::<GuestInteractionMarker>()?;
     let () = guest_discovery_service.get_guest(None, "debian_guest", gis_ch)?;
 

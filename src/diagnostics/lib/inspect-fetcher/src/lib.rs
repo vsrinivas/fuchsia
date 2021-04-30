@@ -35,7 +35,7 @@ impl InspectFetcher {
         if selectors.len() == 0 {
             return Ok(InspectFetcher { reader: None });
         }
-        let proxy = match fuchsia_component::client::connect_to_service_at_path::<
+        let proxy = match fuchsia_component::client::connect_to_protocol_at_path::<
             fidl_fuchsia_diagnostics::ArchiveAccessorMarker,
         >(service_path)
         {

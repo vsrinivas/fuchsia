@@ -28,7 +28,7 @@ use fidl::endpoints::{create_proxy, ClientEnd};
 use fidl_fuchsia_net_http::LoaderMarker;
 use fidl_fuchsia_web::{ContextMarker, ContextProviderMarker, CreateContextParams, FrameMarker};
 use fuchsia_async as fasync;
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_zircon as zx;
 use futures::StreamExt;
@@ -41,7 +41,7 @@ fn main() -> Result<(), Error> {
 
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
 
-    let url_loader = connect_to_service::<LoaderMarker>()?;
+    let url_loader = connect_to_protocol::<LoaderMarker>()?;
     let frame_supplier = WebFrameSupplier::new();
     let http_client = UrlLoaderHttpClient::new(url_loader);
 
@@ -104,7 +104,7 @@ impl WebFrameSupplier {
 impl web::WebFrameSupplier for WebFrameSupplier {
     type Frame = DefaultStandaloneWebFrame;
     fn new_standalone_frame(&self) -> Result<DefaultStandaloneWebFrame, anyhow::Error> {
-        let context_provider = connect_to_service::<ContextProviderMarker>()?;
+        let context_provider = connect_to_protocol::<ContextProviderMarker>()?;
         let (context_proxy, context_server_end) = create_proxy::<ContextMarker>()?;
 
         // Get a handle to the incoming service directory to pass to the web browser.

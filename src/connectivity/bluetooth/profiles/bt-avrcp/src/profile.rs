@@ -252,7 +252,7 @@ impl AvrcpService {
 
 pub fn connect_and_advertise(
 ) -> Result<(ProfileProxy, ConnectionReceiverRequestStream, SearchResultsRequestStream), Error> {
-    let profile_svc = fuchsia_component::client::connect_to_service::<ProfileMarker>()
+    let profile_svc = fuchsia_component::client::connect_to_protocol::<ProfileMarker>()
         .context("Failed to connect to Bluetooth profile service")?;
 
     const SEARCH_ATTRIBUTES: [u16; 5] = [

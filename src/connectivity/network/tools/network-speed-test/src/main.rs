@@ -9,7 +9,7 @@ use {
     anyhow::{format_err, Context, Error},
     fidl_fuchsia_net_http::{self as http, LoaderProxy},
     fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon as zx,
     futures::io::{copy, AllowStdIo},
     serde::Serialize,
@@ -48,7 +48,7 @@ fn main() -> Result<(), Error> {
 fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
     let mut exec = fasync::Executor::new().context("error creating event loop")?;
 
-    let http_svc = connect_to_service::<http::LoaderMarker>()
+    let http_svc = connect_to_protocol::<http::LoaderMarker>()
         .context("Unable to connect to fuchsia.net.http.Loader")?;
     test_results.connect_to_http_service = true;
 

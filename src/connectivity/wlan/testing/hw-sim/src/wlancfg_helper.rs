@@ -9,7 +9,7 @@ use {
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_policy as fidl_policy,
     fidl_fuchsia_wlan_policy::SecurityType,
     fuchsia_async::futures::TryStreamExt,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon::prelude::*,
     futures::StreamExt,
     log::{debug, info},
@@ -77,7 +77,7 @@ pub async fn start_ap_and_wait_for_confirmation(network_config: NetworkConfigBui
     let network_config = NetworkConfigBuilder::from(network_config);
 
     // Get a handle to control the AccessPointController.
-    let ap_provider = connect_to_service::<fidl_policy::AccessPointProviderMarker>()
+    let ap_provider = connect_to_protocol::<fidl_policy::AccessPointProviderMarker>()
         .expect("connecting to AP provider");
     let (ap_controller, server_end) =
         create_proxy::<fidl_policy::AccessPointControllerMarker>().expect("creating AP controller");
@@ -149,7 +149,7 @@ pub async fn start_ap_and_wait_for_confirmation(network_config: NetworkConfigBui
 /// Creates a client controller and update stream for getting status updates.
 pub async fn init_client_controller(
 ) -> (fidl_policy::ClientControllerProxy, fidl_policy::ClientStateUpdatesRequestStream) {
-    let provider = connect_to_service::<fidl_policy::ClientProviderMarker>().unwrap();
+    let provider = connect_to_protocol::<fidl_policy::ClientProviderMarker>().unwrap();
     let (controller_client_end, controller_server_end) = fidl::endpoints::create_proxy().unwrap();
     let (listener_client_end, listener_server_end) = fidl::endpoints::create_endpoints().unwrap();
     provider.get_controller(controller_server_end, listener_client_end).unwrap();

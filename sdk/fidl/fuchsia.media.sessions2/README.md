@@ -36,7 +36,7 @@ Players ----> | Publisher                     |
 A client can watch for updates to all sessions using `Discovery.WatchSessions`.
 
 ```rust
-let discovery_proxy = connect_to_service::<DiscoveryMarker>()?;
+let discovery_proxy = connect_to_protocol::<DiscoveryMarker>()?;
 let (session_watcher, session_watcher_request) = create_endpoints()?;
 let session_watcher_proxy = session_watcher.into_proxy()?;
 
@@ -65,7 +65,7 @@ Players must implement `Player` and publish themselves once with
 
 ```rust
 let (player_client_end, player_server_end) = create_endpoints()?;
-let publisher_proxy = connect_to_service::<PublisherMarker>()?;
+let publisher_proxy = connect_to_protocol::<PublisherMarker>()?;
 
 spawn_implementation_to_serve(player_server_end);
 

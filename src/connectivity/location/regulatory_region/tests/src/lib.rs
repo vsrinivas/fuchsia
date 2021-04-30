@@ -11,7 +11,7 @@ use {
     fidl_fuchsia_sys::LauncherProxy,
     fidl_fuchsia_sys_test as systest, fuchsia_async as fasync,
     fuchsia_component::{
-        client::{connect_to_service, launch, launcher, App},
+        client::{connect_to_protocol, launch, launcher, App},
         fuchsia_single_component_package_url,
     },
 };
@@ -182,7 +182,7 @@ struct TestContext {
 async fn new_test_context() -> Result<TestContext, Error> {
     // NOTE: this clears isolated-cache-storage in order to clear the regulatory region cache, but
     // it will also clear everything in cache.
-    let cache_control = connect_to_service::<systest::CacheControlMarker>()?;
+    let cache_control = connect_to_protocol::<systest::CacheControlMarker>()?;
     cache_control.clear().await.context("Failed to clear cache")?;
     new_test_context_without_clear()
 }
@@ -193,10 +193,10 @@ fn new_test_context_without_clear() -> Result<TestContext, Error> {
     let region_service = launch(&launcher, COMPONENT_URL.to_string(), None)
         .context("Failed to launch region service")?;
     let configurator = region_service
-        .connect_to_service::<RegulatoryRegionConfiguratorMarker>()
+        .connect_to_protocol::<RegulatoryRegionConfiguratorMarker>()
         .context("Failed to connect to Configurator protocol")?;
     let watcher = region_service
-        .connect_to_service::<RegulatoryRegionWatcherMarker>()
+        .connect_to_protocol::<RegulatoryRegionWatcherMarker>()
         .context("Failed to connect to Watcher protocol")?;
     Ok(TestContext { _launcher: launcher, _region_service: region_service, configurator, watcher })
 }

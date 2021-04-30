@@ -25,7 +25,7 @@ use crate::profile_registrar::ProfileRegistrar;
 pub async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["bt-rfcomm"]).expect("Can't init logger");
 
-    let profile_svc = fuchsia_component::client::connect_to_service::<ProfileMarker>()
+    let profile_svc = fuchsia_component::client::connect_to_protocol::<ProfileMarker>()
         .context("Failed to connect to Bluetooth Profile service")?;
 
     let (sender, receiver) = mpsc::channel(0);

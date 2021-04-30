@@ -7,7 +7,7 @@ use {
     fidl_fuchsia_io as fio, fidl_test_policy as ftest,
     fidl_test_policy::{AccessRequest, AccessRequestStream},
     fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_component::server::ServiceFs,
     futures::prelude::*,
 };
@@ -29,7 +29,7 @@ async fn main() {
 
 /// Attempts to access the restricted protocol
 async fn check_restricted_protocol() -> bool {
-    match connect_to_service::<ftest::RestrictedMarker>() {
+    match connect_to_protocol::<ftest::RestrictedMarker>() {
         Ok(svc) => match svc.get_restricted().await {
             Ok(result) => result == "restricted",
             Err(_) => false,
@@ -40,7 +40,7 @@ async fn check_restricted_protocol() -> bool {
 
 /// Attempts to access the unrestricted protocol
 async fn check_unrestricted_protocol() -> bool {
-    match connect_to_service::<ftest::UnrestrictedMarker>() {
+    match connect_to_protocol::<ftest::UnrestrictedMarker>() {
         Ok(svc) => match svc.get_unrestricted().await {
             Ok(result) => result == "unrestricted",
             Err(_) => false,

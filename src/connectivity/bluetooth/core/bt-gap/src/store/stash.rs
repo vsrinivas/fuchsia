@@ -388,7 +388,7 @@ pub async fn init_stash(
     component_id: &str,
     inspect: fuchsia_inspect::Node,
 ) -> Result<Stash, Error> {
-    let stash_svc = fuchsia_component::client::connect_to_service::<SecureStoreMarker>()?;
+    let stash_svc = fuchsia_component::client::connect_to_protocol::<SecureStoreMarker>()?;
     stash_svc.identify(component_id)?;
 
     let (proxy, server_end) = create_proxy::<StoreAccessorMarker>()?;
@@ -418,14 +418,14 @@ mod tests {
     use super::*;
     use {
         core::hash::Hash, fidl_fuchsia_bluetooth_sys::Key,
-        fuchsia_component::client::connect_to_service, futures::select, pin_utils::pin_mut,
+        fuchsia_component::client::connect_to_protocol, futures::select, pin_utils::pin_mut,
     };
 
     // create_stash_accessor will create a new accessor to stash scoped under the given test name.
     // All preexisting data in stash under this identity is deleted before the accessor is
     // returned.
     async fn create_stash_accessor(test_name: &str) -> Result<StoreAccessorProxy, Error> {
-        let stashserver = connect_to_service::<SecureStoreMarker>()?;
+        let stashserver = connect_to_protocol::<SecureStoreMarker>()?;
 
         // Identify
         stashserver.identify(&(BONDING_DATA_PREFIX.to_owned() + test_name))?;

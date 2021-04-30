@@ -40,7 +40,7 @@ struct Opt {
 }
 
 async fn simple_increment(expect: u32) -> Result<(), Error> {
-    let counter = client::connect_to_service::<CounterMarker>()?;
+    let counter = client::connect_to_protocol::<CounterMarker>()?;
 
     let value = counter.increment().await?;
     if value != expect {
@@ -114,14 +114,14 @@ async fn run_root() -> Result<(), Error> {
     // it should have access to exactly the same instance of the counter service,
     // hence we're tell it to expect the value "2" on the counter:
 
-    let env = client::connect_to_service::<EnvironmentMarker>()?;
+    let env = client::connect_to_protocol::<EnvironmentMarker>()?;
     let () = spawn_child_and_expect(env, 2).await?;
 
     // finally we can spawn another fidl.sys.Environment from the first one
     // with the option to inherit the parent services.
     // Then, from that nested environment, we can observe that the same instance is there
     // by expecting a new increment of the counter to be "3"
-    let env = client::connect_to_service::<EnvironmentMarker>()?;
+    let env = client::connect_to_protocol::<EnvironmentMarker>()?;
     let (child_env, child_env_req) = fidl::endpoints::create_proxy::<EnvironmentMarker>()?;
     let (_child_ctlr, child_ctlr_req) =
         fidl::endpoints::create_proxy::<EnvironmentControllerMarker>()?;

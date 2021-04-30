@@ -66,7 +66,7 @@ async fn diagnostics_persistence_integration() {
     let mut diagnostics_persistence_app = persistence().await;
 
     let diagnostics_persistence_service = diagnostics_persistence_app
-        .connect_to_named_service::<DataPersistenceMarker>(TEST_PERSISTENCE_SERVICE_NAME)
+        .connect_to_named_protocol::<DataPersistenceMarker>(TEST_PERSISTENCE_SERVICE_NAME)
         .unwrap();
 
     let mut example_app = inspect_source(Some(19i32)).await;
@@ -134,7 +134,7 @@ async fn diagnostics_persistence_integration() {
     verify_diagnostics_persistence_publication(Published::Nothing).await;
     // The "too-big" tag should save a short error string instead of the data.
     let diagnostics_persistence_service = diagnostics_persistence_app
-        .connect_to_named_service::<DataPersistenceMarker>(TEST_PERSISTENCE_SERVICE_NAME)
+        .connect_to_named_protocol::<DataPersistenceMarker>(TEST_PERSISTENCE_SERVICE_NAME)
         .unwrap();
     diagnostics_persistence_service.persist("test-component-too-big").await.unwrap();
     expect_file_change(FileChange {

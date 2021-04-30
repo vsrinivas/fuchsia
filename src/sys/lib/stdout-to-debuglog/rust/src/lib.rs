@@ -10,7 +10,7 @@ use {
 
 pub async fn init() -> Result<(), Error> {
     let write_only_log_proxy =
-        fuchsia_component::client::connect_to_service::<fboot::WriteOnlyLogMarker>()?;
+        fuchsia_component::client::connect_to_protocol::<fboot::WriteOnlyLogMarker>()?;
 
     let debuglog_handle = write_only_log_proxy.get().await?;
 

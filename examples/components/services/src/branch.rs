@@ -19,7 +19,7 @@ const TEST_PACKAGE: &'static str = "fuchsia-pkg://fuchsia.com/service-examples";
 #[fuchsia::test]
 async fn read_and_write_to_multiple_service_instances() {
     // Launch two BankAccount providers into the `account_providers` collection.
-    let realm = fuchsia_component::client::connect_to_service::<fsys2::RealmMarker>()
+    let realm = fuchsia_component::client::connect_to_protocol::<fsys2::RealmMarker>()
         .expect("connect to Realm service");
     start_provider(&realm, "a", &format!("{}#meta/provider-a.cm", TEST_PACKAGE)).await;
     start_provider(&realm, "b", &format!("{}#meta/provider-b.cm", TEST_PACKAGE)).await;

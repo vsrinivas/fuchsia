@@ -7,7 +7,7 @@ use {
     fidl_fuchsia_kernel::{self as fkernel},
     fidl_fuchsia_systemmetrics_test::{self as fsysmetrics, SystemMetricsLoggerRequest},
     fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_zircon as zx,
@@ -142,7 +142,7 @@ impl CpuUsageLogger {
     async fn log_cpu_usage(&mut self, now: fasync::Time) {
         let kernel_stats = match &self.stats_proxy {
             Some(proxy) => proxy.clone(),
-            None => match connect_to_service::<fkernel::StatsMarker>() {
+            None => match connect_to_protocol::<fkernel::StatsMarker>() {
                 Ok(s) => s,
                 Err(e) => {
                     fx_log_err!("Failed to connect to kernel_stats service: {}", e);

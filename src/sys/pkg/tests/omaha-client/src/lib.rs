@@ -294,13 +294,13 @@ impl TestEnvBuilder {
                 _cache: cache,
                 resolver,
                 update_manager: omaha_client
-                    .connect_to_service::<ManagerMarker>()
+                    .connect_to_protocol::<ManagerMarker>()
                     .expect("connect to update manager"),
                 channel_control: omaha_client
-                    .connect_to_service::<ChannelControlMarker>()
+                    .connect_to_protocol::<ChannelControlMarker>()
                     .expect("connect to channel control"),
                 commit_status_provider: system_update_committer
-                    .connect_to_service::<CommitStatusProviderMarker>()
+                    .connect_to_protocol::<CommitStatusProviderMarker>()
                     .expect("connect to commit status provider"),
                 _verifier: verifier,
             },

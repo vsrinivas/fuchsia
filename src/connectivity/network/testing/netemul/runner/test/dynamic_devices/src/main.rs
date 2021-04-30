@@ -78,13 +78,13 @@ fn check_device_present(path: &str) -> Result<(), Error> {
 }
 
 fn remove_device(ep_name: &str) -> Result<(), Error> {
-    let env = client::connect_to_service::<ManagedEnvironmentMarker>()?;
+    let env = client::connect_to_protocol::<ManagedEnvironmentMarker>()?;
     env.remove_device(&format!("class/ethernet/{}", ep_name))?;
     Ok(())
 }
 
 async fn attach_device(ep_name: &str) -> Result<(), Error> {
-    let netctx = client::connect_to_service::<NetworkContextMarker>()?;
+    let netctx = client::connect_to_protocol::<NetworkContextMarker>()?;
     // get the endpoint manager
     let (epm, epm_server_end) = fidl::endpoints::create_proxy::<EndpointManagerMarker>()?;
     netctx.get_endpoint_manager(epm_server_end)?;
@@ -101,7 +101,7 @@ async fn attach_device(ep_name: &str) -> Result<(), Error> {
         fidl::endpoints::create_endpoints::<DeviceProxy_Marker>()?;
     ep.get_proxy_(dev_proxy_server_end)?;
 
-    let env = client::connect_to_service::<ManagedEnvironmentMarker>()?;
+    let env = client::connect_to_protocol::<ManagedEnvironmentMarker>()?;
     env.add_device(&mut VirtualDevice {
         path: format!("class/ethernet/{}", ep_name),
         device: dev_proxy_client_end,
@@ -111,7 +111,7 @@ async fn attach_device(ep_name: &str) -> Result<(), Error> {
 }
 
 async fn create_endpoint(name: &str) -> Result<EndpointProxy, Error> {
-    let netctx = client::connect_to_service::<NetworkContextMarker>()?;
+    let netctx = client::connect_to_protocol::<NetworkContextMarker>()?;
     // get the endpoint manager
     let (epm, epm_server_end) = fidl::endpoints::create_proxy::<EndpointManagerMarker>()?;
     netctx.get_endpoint_manager(epm_server_end)?;

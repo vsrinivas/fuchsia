@@ -4,7 +4,7 @@
 
 use fidl_fuchsia_sys::LauncherMarker;
 use fuchsia_component::{
-    client::{connect_to_service, launch_with_options, LaunchOptions},
+    client::{connect_to_protocol, launch_with_options, LaunchOptions},
     server::ServiceFs,
 };
 use fuchsia_inspect::*;
@@ -24,7 +24,7 @@ async fn main() {
     fs.take_and_serve_directory_handle().unwrap();
 
     info!("launching child");
-    let launcher = connect_to_service::<LauncherMarker>().unwrap();
+    let launcher = connect_to_protocol::<LauncherMarker>().unwrap();
     let _child = launch_with_options(
         &launcher,
         "fuchsia-pkg://fuchsia.com/diagnostics-testing-tests#meta/inspect_test_component.cmx"

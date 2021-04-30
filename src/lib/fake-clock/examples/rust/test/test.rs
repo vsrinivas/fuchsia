@@ -5,7 +5,7 @@
 use fidl_fuchsia_fakeclock_test::ExampleMarker;
 use fidl_fuchsia_testing::{DeadlineEventType, FakeClockControlMarker, Increment};
 use fuchsia_async as fasync;
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use fuchsia_zircon as zx;
 use named_timer::DeadlineId;
 
@@ -17,10 +17,10 @@ const ONE_HOUR: zx::Duration = zx::Duration::from_hours(1);
 
 #[fasync::run_singlethreaded(test)]
 async fn test_pause_advance() {
-    let fake_time = connect_to_service::<FakeClockControlMarker>()
+    let fake_time = connect_to_protocol::<FakeClockControlMarker>()
         .expect("failed to connect to FakeClockControl");
     let example =
-        connect_to_service::<ExampleMarker>().expect("failed to connect to Example service");
+        connect_to_protocol::<ExampleMarker>().expect("failed to connect to Example service");
 
     // When time is paused, querying for time twice should give the same result.
     let () = fake_time.pause().await.expect("failed to pause time");

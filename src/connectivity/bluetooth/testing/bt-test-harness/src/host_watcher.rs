@@ -63,7 +63,7 @@ async fn watch_hosts(harness: HostWatcherHarness) -> Result<(), Error> {
 }
 
 pub async fn new_host_watcher_harness() -> Result<HostWatcherHarness, Error> {
-    let proxy = fuchsia_component::client::connect_to_service::<HostWatcherMarker>()
+    let proxy = fuchsia_component::client::connect_to_protocol::<HostWatcherMarker>()
         .context("Failed to connect to host_watcher service")?;
 
     Ok(HostWatcherHarness(expectable(Default::default(), proxy)))

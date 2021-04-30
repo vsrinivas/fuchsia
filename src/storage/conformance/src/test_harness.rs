@@ -69,7 +69,7 @@ impl TestHarness {
 async fn connect_to_harness() -> io_test::Io1HarnessProxy {
     // Connect to the realm to get acccess to the outgoing directory for the harness.
     let (client, server) = zx::Channel::create().expect("Cannot create channel");
-    fuchsia_component::client::connect_channel_to_service::<fsys::RealmMarker>(server)
+    fuchsia_component::client::connect_channel_to_protocol::<fsys::RealmMarker>(server)
         .expect("Cannot connect to Realm service");
     let realm = fsys::RealmSynchronousProxy::new(client);
     // fs_test is the name of the child component defined in the manifest.

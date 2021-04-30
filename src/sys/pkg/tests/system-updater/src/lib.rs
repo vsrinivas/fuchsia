@@ -393,7 +393,7 @@ impl TestEnv {
 
     /// Opens a connection to the installer fidl service.
     fn installer_proxy(&self) -> InstallerProxy {
-        self.system_updater.connect_to_service::<InstallerMarker>().unwrap()
+        self.system_updater.connect_to_protocol::<InstallerMarker>().unwrap()
     }
 
     async fn get_ota_metrics(&self) -> OtaMetrics {

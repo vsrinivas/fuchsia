@@ -44,7 +44,7 @@ pub async fn publish(port: u16, node_id: NodeId) -> Result<(), Error> {
     let (server, proxy) = zx::Channel::create()?;
     let server = fasync::Channel::from_channel(server)?;
 
-    let publisher = fuchsia_component::client::connect_to_service::<PublisherMarker>()?;
+    let publisher = fuchsia_component::client::connect_to_protocol::<PublisherMarker>()?;
 
     futures::future::try_join(
         connect_to_proxy(node_id, publisher, port, proxy),
@@ -103,7 +103,7 @@ pub async fn subscribe(
     log::info!("Query for overnet services");
 
     let (server, proxy) = zx::Channel::create()?;
-    fuchsia_component::client::connect_to_service::<SubscriberMarker>()?
+    fuchsia_component::client::connect_to_protocol::<SubscriberMarker>()?
         .subscribe_to_service(SERVICE_NAME, fidl::endpoints::ClientEnd::new(proxy))?;
 
     log::info!("Wait for overnet services");

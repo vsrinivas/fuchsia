@@ -413,7 +413,7 @@ impl SimpleElementManager {
     pub fn new(realm: fsys2::RealmProxy) -> SimpleElementManager {
         SimpleElementManager {
             realm,
-            sys_launcher: fuchsia_component::client::connect_to_service::<fsys::LauncherMarker>(),
+            sys_launcher: fuchsia_component::client::connect_to_protocol::<fsys::LauncherMarker>(),
         }
     }
 

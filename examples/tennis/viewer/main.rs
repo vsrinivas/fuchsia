@@ -5,7 +5,7 @@
 use anyhow::{Context, Error};
 use fidl_fuchsia_game_tennis::{GameState, TennisServiceMarker};
 use fuchsia_async::{self as fasync, DurationExt};
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use fuchsia_zircon::DurationNum;
 use std::io;
 use std::io::Write;
@@ -18,7 +18,7 @@ const BOARD_HEIGHT: f64 = 10.0;
 
 fn main() -> Result<(), Error> {
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
-    let tennis_service = connect_to_service::<TennisServiceMarker>()?;
+    let tennis_service = connect_to_protocol::<TennisServiceMarker>()?;
 
     let mut first_print = true;
 

@@ -31,7 +31,7 @@ pub struct Client {
 impl Client {
     /// Returns a client connected to pkg-cache from the current component's namespace.
     pub fn connect_in_namespace() -> Result<Self, anyhow::Error> {
-        let proxy = fuchsia_component::client::connect_to_service::<PackageCacheMarker>()?;
+        let proxy = fuchsia_component::client::connect_to_protocol::<PackageCacheMarker>()?;
         Ok(Self { proxy })
     }
 

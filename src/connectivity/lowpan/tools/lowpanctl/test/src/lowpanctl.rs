@@ -7,7 +7,7 @@ use fasync::Time;
 use fidl_fuchsia_lowpan_device::LookupMarker;
 use fuchsia_async as fasync;
 use fuchsia_async::TimeoutExt;
-use fuchsia_component::client::{connect_to_service, launch, launcher};
+use fuchsia_component::client::{connect_to_protocol, launch, launcher};
 use futures::prelude::*;
 
 const DEFAULT_TIMEOUT: fuchsia_zircon::Duration = fuchsia_zircon::Duration::from_seconds(50);
@@ -199,7 +199,7 @@ pub async fn test_lowpanctl_get_counters() {
 
 pub async fn test_lowpanctl_command(args: Vec<String>) -> Result<(), Error> {
     // Step 1: Get an instance of the Lookup API and make sure there are no devices registered.
-    let lookup = connect_to_service::<LookupMarker>()
+    let lookup = connect_to_protocol::<LookupMarker>()
         .context("Failed to connect to Lowpan Lookup service")?;
 
     let devices = lookup

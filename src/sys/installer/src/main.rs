@@ -151,7 +151,7 @@ fn paver_connect(path: &str) -> Result<(PaverProxy, DynamicDataSinkProxy), Error
     let (data_sink_chan, data_remote) = zx::Channel::create()?;
 
     let paver: PaverProxy =
-        client::connect_to_service::<PaverMarker>().context("Could not connect to paver")?;
+        client::connect_to_protocol::<PaverMarker>().context("Could not connect to paver")?;
     paver.use_block_device(ClientEnd::from(block_device_chan), ServerEnd::from(data_remote))?;
 
     let data_sink =

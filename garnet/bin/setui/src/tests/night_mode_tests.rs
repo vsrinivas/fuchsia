@@ -24,7 +24,7 @@ async fn test_night_mode() {
         .await
         .unwrap();
 
-    let night_mode_service = env.connect_to_service::<NightModeMarker>().unwrap();
+    let night_mode_service = env.connect_to_protocol::<NightModeMarker>().unwrap();
     // Ensure retrieved value matches set value
     let settings = night_mode_service.watch().await.expect("watch completed");
     assert_eq!(settings.night_mode_enabled, initial_value.night_mode_enabled);

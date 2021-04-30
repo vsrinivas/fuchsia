@@ -10,7 +10,7 @@ use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMarker, LogMessag
 use fidl_fuchsia_sys::LauncherMarker;
 use fuchsia_async as fasync;
 use fuchsia_component::{
-    client::{connect_to_service, launch_with_options, App, LaunchOptions},
+    client::{connect_to_protocol, launch_with_options, App, LaunchOptions},
     server::ServiceFs,
 };
 use fuchsia_syslog::levels::{DEBUG, INFO, WARN};
@@ -21,7 +21,7 @@ use futures::{channel::mpsc, StreamExt};
 async fn embedding_stop_api_for_log_listener() {
     let mut archivist = start_archivist();
 
-    let log_proxy = archivist.connect_to_service::<LogMarker>().unwrap();
+    let log_proxy = archivist.connect_to_protocol::<LogMarker>().unwrap();
     let dir_req = archivist.directory_request().clone();
     let mut fs = ServiceFs::new();
 
@@ -61,7 +61,7 @@ async fn embedding_stop_api_for_log_listener() {
     env_proxy.kill().await.unwrap();
 
     // connect to controller and call stop
-    let controller = archivist.connect_to_service::<ControllerMarker>().unwrap();
+    let controller = archivist.connect_to_protocol::<ControllerMarker>().unwrap();
     controller.stop().unwrap();
 
     // collect all logs
@@ -99,7 +99,7 @@ async fn embedding_stop_api_works_for_batch_iterator() {
     }));
 
     let accessor = archivist
-        .connect_to_service::<ArchiveAccessorMarker>()
+        .connect_to_protocol::<ArchiveAccessorMarker>()
         .expect("cannot connect to accessor proxy");
     let subscription = ArchiveReader::new()
         .with_archive(accessor)
@@ -114,7 +114,7 @@ async fn embedding_stop_api_works_for_batch_iterator() {
     env_proxy.kill().await.unwrap();
 
     // connect to controller and call stop
-    let controller = archivist.connect_to_service::<ControllerMarker>().unwrap();
+    let controller = archivist.connect_to_protocol::<ControllerMarker>().unwrap();
     controller.stop().unwrap();
 
     // collect all logs
@@ -139,7 +139,7 @@ async fn embedding_stop_api_works_for_batch_iterator() {
 }
 
 fn start_archivist() -> App {
-    let launcher = connect_to_service::<LauncherMarker>().unwrap();
+    let launcher = connect_to_protocol::<LauncherMarker>().unwrap();
     // launch archivist
     launch_with_options(
         &launcher,

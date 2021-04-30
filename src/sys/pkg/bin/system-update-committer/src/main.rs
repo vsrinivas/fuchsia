@@ -10,7 +10,7 @@ use {
     fidl_fuchsia_paver::PaverMarker,
     fidl_fuchsia_update_verify::BlobfsVerifierMarker,
     fuchsia_async as fasync,
-    fuchsia_component::{client::connect_to_service, server::ServiceFs},
+    fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
     fuchsia_inspect::{self as finspect, health::Reporter},
     fuchsia_syslog::{fx_log_info, fx_log_warn},
     fuchsia_zircon::{self as zx, HandleBased},
@@ -63,7 +63,7 @@ async fn main_inner_async() -> Result<(), Error> {
     let config = Config::load_from_config_data_or_default();
     let reboot_deadline = Instant::now() + MINIMUM_REBOOT_WAIT;
 
-    let paver = connect_to_service::<PaverMarker>().context("while connecting to paver")?;
+    let paver = connect_to_protocol::<PaverMarker>().context("while connecting to paver")?;
     let (boot_manager, boot_manager_server_end) =
         ::fidl::endpoints::create_proxy().context("while creating BootManager endpoints")?;
 
@@ -71,9 +71,9 @@ async fn main_inner_async() -> Result<(), Error> {
         .find_boot_manager(boot_manager_server_end)
         .context("transport error while calling find_boot_manager()")?;
 
-    let reboot_proxy = connect_to_service::<PowerStateControlMarker>()
+    let reboot_proxy = connect_to_protocol::<PowerStateControlMarker>()
         .context("while connecting to power state control")?;
-    let blobfs_verifier = connect_to_service::<BlobfsVerifierMarker>()
+    let blobfs_verifier = connect_to_protocol::<BlobfsVerifierMarker>()
         .context("while connecting to blobfs verifier")?;
 
     let futures = FuturesUnordered::new();

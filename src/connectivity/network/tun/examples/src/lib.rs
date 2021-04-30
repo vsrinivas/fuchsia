@@ -85,7 +85,7 @@ fn new_device_config(
 async fn tap_like_over_network_tun() -> Result<(), Error> {
     // Connect to the ambient fuchsia.net.tun/Control service.
     let tun =
-        fuchsia_component::client::connect_to_service::<fidl_fuchsia_net_tun::ControlMarker>()
+        fuchsia_component::client::connect_to_protocol::<fidl_fuchsia_net_tun::ControlMarker>()
             .context("failed to connect to service")?;
 
     let (tun_device, server_end) =
@@ -120,7 +120,7 @@ async fn tap_like_over_network_tun() -> Result<(), Error> {
 
     // Connect to Netstack and install the device.
     let stack =
-        fuchsia_component::client::connect_to_service::<fidl_fuchsia_net_stack::StackMarker>()
+        fuchsia_component::client::connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
             .context("failed to connect to stack")?;
     let interface_id = stack
         .add_interface(
@@ -245,7 +245,7 @@ async fn tap_like_over_network_tun() -> Result<(), Error> {
 async fn tun_like_over_network_tun() -> Result<(), Error> {
     // Connect to the ambient fuchsia.net.tun/Control service.
     let tun =
-        fuchsia_component::client::connect_to_service::<fidl_fuchsia_net_tun::ControlMarker>()
+        fuchsia_component::client::connect_to_protocol::<fidl_fuchsia_net_tun::ControlMarker>()
             .context("failed to connect to service")?;
 
     let (tun_device, server_end) =
@@ -280,7 +280,7 @@ async fn tun_like_over_network_tun() -> Result<(), Error> {
 
     // Connect to Netstack and install the device.
     let stack =
-        fuchsia_component::client::connect_to_service::<fidl_fuchsia_net_stack::StackMarker>()
+        fuchsia_component::client::connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
             .context("failed to connect to stack")?;
     let interface_id = stack
         .add_interface(
@@ -569,7 +569,7 @@ mod helpers {
 
     /// Waits for interface with ID `interface_id` to come online.
     pub(super) async fn wait_interface_online(interface_id: u64) -> Result<(), Error> {
-        let interface_state = fuchsia_component::client::connect_to_service::<
+        let interface_state = fuchsia_component::client::connect_to_protocol::<
             fidl_fuchsia_net_interfaces::StateMarker,
         >()
         .context("failed to connect to interfaces state service")?;

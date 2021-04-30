@@ -440,7 +440,7 @@ mod tests {
     #[test]
     fn with_system_allocator() {
         let mut exec = fasync::Executor::new().expect("executor creation");
-        let sysmem_client = fuchsia_component::client::connect_to_service::<AllocatorMarker>()
+        let sysmem_client = fuchsia_component::client::connect_to_protocol::<AllocatorMarker>()
             .expect("connect to allocator");
 
         let mut buffer_constraints = BufferCollectionConstraints {

@@ -91,7 +91,7 @@ pub async fn new_inspect_harness() -> Result<(InspectHarness, Emulator, PathBuf)
     let host_dev = emulator.publish_and_wait_for_host(Emulator::default_settings()).await?;
     let host_path = host_dev.path().to_path_buf();
 
-    let proxy = fuchsia_component::client::connect_to_service::<ControlMarker>()
+    let proxy = fuchsia_component::client::connect_to_protocol::<ControlMarker>()
         .context("Failed to connect to Control service")?;
 
     let inspect_harness = InspectHarness(expectable(Default::default(), proxy));

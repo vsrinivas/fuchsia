@@ -92,7 +92,7 @@ async fn main() -> Result<(), Error> {
         device::serve_phys::<wlan_dev::RealDeviceEnv>(phys.clone(), inspect_tree.clone())
             .right_future()
     };
-    let cobalt_1dot1_svc = fuchsia_component::client::connect_to_service::<
+    let cobalt_1dot1_svc = fuchsia_component::client::connect_to_protocol::<
         fidl_fuchsia_metrics::MetricEventLoggerFactoryMarker,
     >()
     .context("failed to connect to metrics service")?;

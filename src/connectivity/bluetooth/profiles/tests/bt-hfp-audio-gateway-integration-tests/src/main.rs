@@ -185,7 +185,7 @@ async fn test_hfp_search_and_connect() {
     let (mut fs, _env, app) = launch_hfp(HFP_AG_URL);
     connect_profile_to_peer(&mut hfp_under_test, &mut fs).await.unwrap();
 
-    let proxy = app.connect_to_service::<HfpMarker>().unwrap();
+    let proxy = app.connect_to_protocol::<HfpMarker>().unwrap();
     let facade = TestCallManager::new();
     facade.register_manager(proxy).await.unwrap();
 
@@ -271,7 +271,7 @@ async fn test_hfp_full_slc_init_procedure() {
     let (mut fs, _env, app) = launch_hfp(HFP_AG_URL);
     connect_profile_to_peer(&mut hfp_under_test, &mut fs).await.unwrap();
 
-    let proxy = app.connect_to_service::<HfpMarker>().unwrap();
+    let proxy = app.connect_to_protocol::<HfpMarker>().unwrap();
     let facade = TestCallManager::new();
     facade.register_manager(proxy).await.unwrap();
 

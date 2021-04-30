@@ -12,7 +12,7 @@ use {
     fidl_fuchsia_paver::{BootManagerProxy, DataSinkProxy},
     fidl_fuchsia_pkg::{PackageCacheProxy, PackageResolverProxy},
     fidl_fuchsia_space::ManagerProxy as SpaceManagerProxy,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     futures::{future::BoxFuture, prelude::*},
 };
 
@@ -67,13 +67,13 @@ impl Environment {
         Ok(Self {
             data_sink,
             boot_manager,
-            pkg_resolver: connect_to_service::<fidl_fuchsia_pkg::PackageResolverMarker>()
+            pkg_resolver: connect_to_protocol::<fidl_fuchsia_pkg::PackageResolverMarker>()
                 .context("connect to fuchsia.pkg.PackageResolver")?,
-            pkg_cache: connect_to_service::<fidl_fuchsia_pkg::PackageCacheMarker>()
+            pkg_cache: connect_to_protocol::<fidl_fuchsia_pkg::PackageCacheMarker>()
                 .context("connect to fuchsia.pkg.PackageCache")?,
-            space_manager: connect_to_service::<fidl_fuchsia_space::ManagerMarker>()
+            space_manager: connect_to_protocol::<fidl_fuchsia_space::ManagerMarker>()
                 .context("connect to fuchsia.space.Manager")?,
-            power_state_control: connect_to_service::<PowerStateControlMarker>()
+            power_state_control: connect_to_protocol::<PowerStateControlMarker>()
                 .context("connect to fuchsia.hardware.power.statecontrol.Admin")?,
             build_info: NamespaceBuildInfo,
             cobalt_connector: NamespaceCobaltConnector,

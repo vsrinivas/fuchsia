@@ -10,7 +10,7 @@ use {
         ComponentRunnerProxy, ComponentStartInfo,
     },
     fidl_fuchsia_data as fdata, fidl_fuchsia_test as ftest,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon as zx,
     futures::{StreamExt, TryStreamExt},
     runner::component::ComponentNamespace,
@@ -37,7 +37,7 @@ pub async fn handle_suite_requests(
                 handle_case_iterator(test_url, stream).await?;
             }
             ftest::SuiteRequest::Run { tests, options: _options, listener, .. } => {
-                let starnix_runner = connect_to_service::<ComponentRunnerMarker>()?;
+                let starnix_runner = connect_to_protocol::<ComponentRunnerMarker>()?;
                 let namespace = namespace.clone()?;
                 let program = program.clone();
                 run_test_cases(tests, test_url, program, listener, namespace, starnix_runner)

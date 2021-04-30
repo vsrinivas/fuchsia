@@ -172,7 +172,7 @@ struct TestEnvironment {
 impl TestEnvironment {
     /// Creates a given environment with `name`.
     fn new(name: impl Into<String>) -> Result<Self> {
-        let sandbox = fuchsia_component::client::connect_to_service::<
+        let sandbox = fuchsia_component::client::connect_to_protocol::<
             fidl_fuchsia_netemul_sandbox::SandboxMarker,
         >()
         .context("failed to connect to sandbox")?;

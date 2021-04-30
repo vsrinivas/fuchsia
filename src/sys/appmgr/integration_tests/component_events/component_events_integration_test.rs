@@ -16,7 +16,7 @@ use {
         ComponentEventListenerRequestStream, ComponentEventProviderMarker, SourceIdentity,
     },
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
-    fuchsia_component::client::{connect_to_service, launch, App},
+    fuchsia_component::client::{connect_to_protocol, launch, App},
     fuchsia_inspect::{assert_data_tree, reader},
     fuchsia_zircon::DurationNum,
     futures::{
@@ -209,7 +209,7 @@ fn get_launcher(env: &EnvironmentProxy) -> Result<LauncherProxy, Error> {
 // out/diagnostics directory: START, STOP, OUT_DIR_READY.
 #[fasync::run_singlethreaded(test)]
 async fn test_with_diagnostics() -> Result<(), Error> {
-    let env = connect_to_service::<EnvironmentMarker>().expect("connect to current environment");
+    let env = connect_to_protocol::<EnvironmentMarker>().expect("connect to current environment");
     let mut test = ComponentEventsTest::new(&env, true).await?;
     let arguments = vec!["with-diagnostics".to_string()];
     let launcher = get_launcher(&test.diagnostics_test_env).context("get launcher")?;
@@ -258,7 +258,7 @@ async fn test_with_diagnostics() -> Result<(), Error> {
 // out/diagnostics directory: START, STOP.
 #[fasync::run_singlethreaded(test)]
 async fn test_without_diagnostics() -> Result<(), Error> {
-    let env = connect_to_service::<EnvironmentMarker>().expect("connect to current environment");
+    let env = connect_to_protocol::<EnvironmentMarker>().expect("connect to current environment");
     let mut test = ComponentEventsTest::new(&env, true).await?;
     let launcher = get_launcher(&test.diagnostics_test_env).context("get launcher")?;
     let mut app = launch(&launcher, TEST_COMPONENT_URL.to_string(), None)?;
@@ -316,7 +316,7 @@ async fn launch_app(
 #[ignore]
 #[fasync::run_singlethreaded(test)]
 async fn test_register_listener_in_subrealm() -> Result<(), Error> {
-    let env = connect_to_service::<EnvironmentMarker>().expect("connect to current environment");
+    let env = connect_to_protocol::<EnvironmentMarker>().expect("connect to current environment");
     let mut test = ComponentEventsTest::new(&env, false).await?;
     let (env_a, _a_ctrl) = create_nested_environment(&env, "a").await?;
     let (env_b, _b_ctrl) = create_nested_environment(&env, "b").await?;

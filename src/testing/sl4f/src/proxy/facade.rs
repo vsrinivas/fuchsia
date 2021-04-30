@@ -85,7 +85,7 @@ impl ProxyFacadeInternal {
     fn new() -> Result<Self, Error> {
         let launcher_proxy = launcher()?;
         let app = launch(&launcher_proxy, PROXY_COMPONENT.to_string(), None)?;
-        let proxy_control = app.connect_to_service::<TcpProxyControlMarker>()?;
+        let proxy_control = app.connect_to_protocol::<TcpProxyControlMarker>()?;
         Ok(Self { _app: app, proxy_control, open_proxies: HashMap::new() })
     }
 

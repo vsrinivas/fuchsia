@@ -15,7 +15,7 @@ use fidl_fuchsia_wlan_sme::{
     self as fidl_sme, ConnectResultCode, ConnectTransactionEvent, ScanTransactionEvent,
 };
 use fuchsia_async as fasync;
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use fuchsia_zircon as zx;
 use futures::prelude::*;
 use hex::{FromHex, ToHex};
@@ -44,7 +44,7 @@ fn main() -> Result<(), Error> {
     println!("{:?}", opt);
 
     let mut exec = fasync::Executor::new().context("error creating event loop")?;
-    let wlan_svc = connect_to_service::<DeviceServiceMarker>()
+    let wlan_svc = connect_to_protocol::<DeviceServiceMarker>()
         .context("failed to `connect` to device service")?;
 
     let fut = async {

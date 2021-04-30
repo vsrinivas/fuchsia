@@ -6,11 +6,11 @@ use {
     crate::args,
     anyhow::{Context, Error},
     fidl_fuchsia_update_channelcontrol::{ChannelControlMarker, ChannelControlProxy},
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
 };
 
 pub async fn handle_channel_control_cmd(cmd: args::channel::Command) -> Result<(), Error> {
-    let channel_control = connect_to_service::<ChannelControlMarker>()
+    let channel_control = connect_to_protocol::<ChannelControlMarker>()
         .context("Failed to connect to channel control service")?;
     handle_channel_control_cmd_impl(cmd, &channel_control).await
 }

@@ -11,7 +11,7 @@ use {
     fidl::endpoints::Proxy as _,
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_policy as fidl_policy,
     fuchsia_async::{self as fasync, DurationExt as _},
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_syslog::macros::*,
     fuchsia_zircon as zx,
     futures::TryStreamExt,
@@ -88,7 +88,7 @@ impl WlanPolicyFacade {
         (fidl_policy::ClientControllerProxy, fidl_policy::ClientStateUpdatesRequestStream),
         Error,
     > {
-        let provider = connect_to_service::<fidl_policy::ClientProviderMarker>()?;
+        let provider = connect_to_protocol::<fidl_policy::ClientProviderMarker>()?;
         let (controller, req) =
             fidl::endpoints::create_proxy::<fidl_policy::ClientControllerMarker>()?;
         let (update_sink, update_stream) =
@@ -117,7 +117,7 @@ impl WlanPolicyFacade {
 
     /// Creates a listener update stream for getting status updates.
     fn init_listener() -> Result<fidl_policy::ClientStateUpdatesRequestStream, Error> {
-        let listener = connect_to_service::<fidl_policy::ClientListenerMarker>()?;
+        let listener = connect_to_protocol::<fidl_policy::ClientListenerMarker>()?;
         let (client_end, server_end) =
             fidl::endpoints::create_endpoints::<fidl_policy::ClientStateUpdatesMarker>().unwrap();
         listener.get_listener(client_end)?;

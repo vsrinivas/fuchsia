@@ -6,7 +6,7 @@ use fidl_fuchsia_boot::WriteOnlyLogMarker;
 use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMessage};
 use fidl_test_log_stdio::StdioPuppetMarker;
 use fuchsia_async as fasync;
-use fuchsia_component::client::{self as fclient, connect_to_service};
+use fuchsia_component::client::{self as fclient, connect_to_protocol};
 use fuchsia_syslog::{self as syslog, fx_log_info};
 use fuchsia_syslog_listener::{self as syslog_listener, LogProcessor};
 use fuchsia_zircon as zx;
@@ -93,7 +93,7 @@ async fn listen_for_klog_routed_stdio() {
         "fuchsia-pkg://fuchsia.com/test-logs-basic-integration#meta/stdio_puppet.cmx",
     );
 
-    let boot_log = connect_to_service::<WriteOnlyLogMarker>().unwrap();
+    let boot_log = connect_to_protocol::<WriteOnlyLogMarker>().unwrap();
     let stdout_debuglog = boot_log.get().await.unwrap();
     let stderr_debuglog = boot_log.get().await.unwrap();
 
@@ -103,7 +103,7 @@ async fn listen_for_klog_routed_stdio() {
         .spawn(&fclient::launcher().unwrap())
         .unwrap();
 
-    let puppet = app.connect_to_service::<StdioPuppetMarker>().unwrap();
+    let puppet = app.connect_to_protocol::<StdioPuppetMarker>().unwrap();
 
     let msg = format!("logger_integration_rust test_klog stdout {}", rand::random::<u64>());
     puppet.writeln_stdout(&msg).unwrap();

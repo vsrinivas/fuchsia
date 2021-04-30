@@ -91,7 +91,7 @@ impl TestHarness for PeripheralHarness {
     fn init() -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>> {
         async {
             let host = ActivatedFakeHost::new("bt-integration-le-peripheral").await?;
-            let peripheral = fuchsia_component::client::connect_to_service::<PeripheralMarker>()
+            let peripheral = fuchsia_component::client::connect_to_protocol::<PeripheralMarker>()
                 .context("Failed to connect to BLE Peripheral service")?;
             let harness = PeripheralHarness(expectable(
                 Default::default(),

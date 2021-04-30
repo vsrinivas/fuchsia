@@ -93,7 +93,7 @@ impl GattServerFacade {
             }
             None => {
                 fx_log_info!(tag: &[tag, &line!().to_string()].join(""), "Setting new server proxy");
-                let service = app::client::connect_to_service::<Server_Marker>();
+                let service = app::client::connect_to_protocol::<Server_Marker>();
                 if let Err(err) = service {
                     fx_log_err!(tag: &[tag, &line!().to_string()].join(""), "Failed to create server proxy: {:?}", err);
                     return Err(format_err!("Failed to create server proxy: {:?}", err));

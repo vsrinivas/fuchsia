@@ -5,7 +5,7 @@
 use {
     anyhow::{Context, Error},
     fidl_test_placeholders as fecho, fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
 };
 
 const TEST_STRING: &str = "test string";
@@ -13,7 +13,7 @@ const TEST_STRING: &str = "test string";
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     let proxy =
-        connect_to_service::<fecho::EchoMarker>().context("Failed to connect to echo service")?;
+        connect_to_protocol::<fecho::EchoMarker>().context("Failed to connect to echo service")?;
     let res = proxy.echo_string(Some(TEST_STRING)).await?;
     assert_eq!(res.as_deref(), Some(TEST_STRING));
     Ok(())

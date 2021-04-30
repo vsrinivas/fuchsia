@@ -13,10 +13,10 @@ use {
 #[fasync::run_singlethreaded(test)]
 async fn listen_for_syslog() {
     let log_proxy =
-        fclient::connect_to_service::<LogMarker>().expect("failed to connect to log server");
+        fclient::connect_to_protocol::<LogMarker>().expect("failed to connect to log server");
 
     let launcher =
-        fclient::connect_to_service::<LauncherMarker>().expect("failed to connect to launcher");
+        fclient::connect_to_protocol::<LauncherMarker>().expect("failed to connect to launcher");
     let mut child_component = fclient::AppBuilder::new(
         "fuchsia-pkg://fuchsia.com/fuchsia-syslog-integration-tests#meta/panicker.cmx",
     )

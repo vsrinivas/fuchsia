@@ -37,7 +37,7 @@ impl TestHarness for BootstrapHarness {
     fn init() -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>> {
         async {
             let fake_host = ActivatedFakeHost::new("bt-hci-integration-bootstrap-0").await?;
-            match fuchsia_component::client::connect_to_service::<BootstrapMarker>() {
+            match fuchsia_component::client::connect_to_protocol::<BootstrapMarker>() {
                 Ok(proxy) => Ok((
                     BootstrapHarness(expectable(Default::default(), proxy)),
                     fake_host,

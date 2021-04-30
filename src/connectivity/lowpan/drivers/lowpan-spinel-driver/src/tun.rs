@@ -17,7 +17,7 @@ use fidl_fuchsia_net_ext as fnetext;
 use fidl_fuchsia_net_stack as fnetstack;
 use fidl_fuchsia_net_stack_ext::FidlReturn as _;
 use fidl_fuchsia_net_tun as ftun;
-use fuchsia_component::client::{connect_channel_to_service, connect_to_service};
+use fuchsia_component::client::{connect_channel_to_protocol, connect_to_protocol};
 use fuchsia_zircon as zx;
 use futures::stream::BoxStream;
 use parking_lot::Mutex;
@@ -34,7 +34,7 @@ pub struct TunNetworkInterface {
 
 impl TunNetworkInterface {
     pub async fn try_new(name: Option<String>) -> Result<TunNetworkInterface, Error> {
-        let tun_control = connect_to_service::<ftun::ControlMarker>()?;
+        let tun_control = connect_to_protocol::<ftun::ControlMarker>()?;
 
         let (tun_dev, req) = create_proxy::<ftun::DeviceMarker>()?;
 
@@ -79,7 +79,7 @@ impl TunNetworkInterface {
             })
             .context("connect protocols failed")?;
 
-        let stack = connect_to_service::<fnetstack::StackMarker>()?;
+        let stack = connect_to_protocol::<fnetstack::StackMarker>()?;
 
         let id = stack
             .add_interface(
@@ -97,7 +97,7 @@ impl TunNetworkInterface {
             .context("Unable to enable TUN interface")?;
 
         let (client, server) = zx::Channel::create()?;
-        connect_channel_to_service::<fnetstack::StackMarker>(server)?;
+        connect_channel_to_protocol::<fnetstack::StackMarker>(server)?;
         let stack_sync = Mutex::new(fnetstack::StackSynchronousProxy::new(client));
 
         Ok(TunNetworkInterface { tun_dev, stack, stack_sync, id })
@@ -225,7 +225,7 @@ impl NetworkInterface for TunNetworkInterface {
         let if_event_stream =
             futures::stream::try_unfold(init_state, move |mut state| async move {
                 if state.watcher.is_none() {
-                    let fnif_state = connect_to_service::<StateMarker>()?;
+                    let fnif_state = connect_to_protocol::<StateMarker>()?;
                     let (watcher, req) = create_proxy::<WatcherMarker>()?;
                     fnif_state.get_watcher(WatcherOptions::EMPTY, req)?;
                     state.watcher = Some(watcher);

@@ -219,7 +219,7 @@ pub mod for_tests {
             let resolver = self
                 .resolver
                 ._pkg_resolver
-                .connect_to_service::<PackageResolverMarker>()
+                .connect_to_protocol::<PackageResolverMarker>()
                 .context("getting resolver")?;
             let selectors: Vec<&str> = vec![];
             let (package, package_remote) =

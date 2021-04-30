@@ -16,7 +16,7 @@ use {
     anyhow::Error,
     element_management::{ElementManager, SimpleElementManager},
     fidl_fuchsia_element as felement, fidl_fuchsia_sys2 as fsys2, fuchsia_async as fasync,
-    fuchsia_component::{client::connect_to_service, server::ServiceFs},
+    fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
     futures::StreamExt,
     std::cell::RefCell,
 };
@@ -38,7 +38,7 @@ async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["element_manager"]).expect("Failed to initialize logger");
 
     let realm =
-        connect_to_service::<fsys2::RealmMarker>().expect("Failed to connect to Realm service");
+        connect_to_protocol::<fsys2::RealmMarker>().expect("Failed to connect to Realm service");
     let element_manager = RefCell::new(SimpleElementManager::new(realm, ELEMENT_COLLECTION_NAME));
 
     let mut fs = ServiceFs::new_local();

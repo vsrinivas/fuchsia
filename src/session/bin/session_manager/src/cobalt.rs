@@ -6,7 +6,7 @@ use {
     anyhow::{format_err, Context, Error},
     fidl_fuchsia_cobalt::{LoggerFactoryMarker, LoggerProxy},
     fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_syslog as syslog, fuchsia_zircon as zx,
     session_framework_metrics_registry::cobalt_registry::{self as metrics},
 };
@@ -21,7 +21,7 @@ use {
 pub fn get_logger() -> Result<LoggerProxy, Error> {
     let (logger_proxy, server_end) =
         fidl::endpoints::create_proxy().context("Failed to create endpoints")?;
-    let logger_factory = connect_to_service::<LoggerFactoryMarker>()
+    let logger_factory = connect_to_protocol::<LoggerFactoryMarker>()
         .context("Failed to connect to the Cobalt LoggerFactory")?;
 
     fasync::Task::spawn(async move {

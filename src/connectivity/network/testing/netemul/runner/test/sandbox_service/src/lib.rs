@@ -130,7 +130,7 @@ mod tests {
     #[fasync::run_singlethreaded]
     #[test]
     async fn can_use_environment_services() {
-        let sandbox = client::connect_to_service::<SandboxMarker>()
+        let sandbox = client::connect_to_protocol::<SandboxMarker>()
             .context("Can't connect to sandbox")
             .unwrap();
         let env = create_env_with_netstack(&sandbox).unwrap();
@@ -151,10 +151,10 @@ mod tests {
     #[test]
     async fn environment_netctx_sandboxing() {
         let sandbox =
-            client::connect_to_service::<SandboxMarker>().expect("Can't connect to sandbox 1");
+            client::connect_to_protocol::<SandboxMarker>().expect("Can't connect to sandbox 1");
 
         let sandbox2 =
-            client::connect_to_service::<SandboxMarker>().expect("Can't connect to sandbox 2");
+            client::connect_to_protocol::<SandboxMarker>().expect("Can't connect to sandbox 2");
 
         let (netctx1, netctx_server_end) = fidl::endpoints::create_proxy::<NetworkContextMarker>()
             .expect("can't create context proxy 1");
@@ -192,10 +192,10 @@ mod tests {
         const BUS_NAME: &'static str = "bus";
 
         let sandbox =
-            client::connect_to_service::<SandboxMarker>().expect("Can't connect to sandbox 1");
+            client::connect_to_protocol::<SandboxMarker>().expect("Can't connect to sandbox 1");
 
         let sandbox2 =
-            client::connect_to_service::<SandboxMarker>().expect("Can't connect to sandbox 2");
+            client::connect_to_protocol::<SandboxMarker>().expect("Can't connect to sandbox 2");
 
         let (sync1, sync_server_end) = fidl::endpoints::create_proxy::<SyncManagerMarker>()
             .expect("can't create sync manager proxy 1");
@@ -229,7 +229,7 @@ mod tests {
     #[test]
     async fn same_environment_name_fails() {
         let sandbox =
-            client::connect_to_service::<SandboxMarker>().expect("Can't connect to sandbox");
+            client::connect_to_protocol::<SandboxMarker>().expect("Can't connect to sandbox");
         let env_name = Some("env_a".to_string());
 
         // environment creation should work for both, but doing anything on
@@ -249,9 +249,9 @@ mod tests {
     #[test]
     async fn same_environment_name_succeeds_in_different_sandboxes() {
         let sandbox =
-            client::connect_to_service::<SandboxMarker>().expect("Can't connect to sandbox");
+            client::connect_to_protocol::<SandboxMarker>().expect("Can't connect to sandbox");
         let sandbox2 =
-            client::connect_to_service::<SandboxMarker>().expect("Can't connect to sandbox 2");
+            client::connect_to_protocol::<SandboxMarker>().expect("Can't connect to sandbox 2");
         let env_name = Some("env_a".to_string());
 
         let env1 =

@@ -143,7 +143,7 @@ struct Connection {
 }
 
 impl Connection {
-    // Note! In v1, the launch() and connect_to_service() functions do not return errors
+    // Note! In v1, the launch() and connect_to_protocol() functions do not return errors
     // when given a bad URL. There's no way to detect bad URLs until we actually make a
     // FIDL call that the server is supposed to serve, in initialize_vmo().
     async fn start_and_connect(server_url: impl Into<String>) -> Result<Self, Error> {
@@ -152,7 +152,7 @@ impl Connection {
         let (controller, controller_server_end) = fidl::endpoints::create_proxy()?;
         let (launcher, launcher_server_end) = fidl::endpoints::create_proxy()?;
 
-        let env = fclient::connect_to_service::<EnvironmentMarker>()?;
+        let env = fclient::connect_to_protocol::<EnvironmentMarker>()?;
         let environment_name = make_environment_name("puppet");
         env.create_nested_environment(
             new_env_server_end,
@@ -173,7 +173,7 @@ impl Connection {
             .context(format!("Failed to launch Validator puppet {}", server_url))?;
 
         let puppet_fidl = app
-            .connect_to_service::<validate::ValidateMarker>()
+            .connect_to_protocol::<validate::ValidateMarker>()
             .context("Failed to connect to validate puppet")?;
 
         Ok(Self::new(puppet_fidl, Some(app), Some(controller), environment_name))

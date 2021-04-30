@@ -10,7 +10,7 @@ use fidl_fuchsia_ui_activity::{
 };
 use fidl_fuchsia_update::{CommitStatusProviderMarker, CommitStatusProviderProxy};
 use fidl_fuchsia_update_ext::{query_commit_status, CommitStatus};
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use futures::{future::BoxFuture, future::FutureExt, lock::Mutex, prelude::*};
 use log::{error, info, warn};
 use omaha_client::{
@@ -417,7 +417,7 @@ where
 }
 /// Watches the UI activity state and updates the value in `ui_activity`.
 async fn watch_ui_activity(ui_activity: &Rc<Cell<UiActivityState>>) -> Result<(), Error> {
-    let provider = connect_to_service::<ProviderMarker>()?;
+    let provider = connect_to_protocol::<ProviderMarker>()?;
     watch_ui_activity_impl(ui_activity, provider).await
 }
 
@@ -478,7 +478,7 @@ impl FuchsiaUpdateCanStartPolicyData {
 
         async move {
             let commit_status = match query_commit_status_and_update_status(
-                || connect_to_service::<CommitStatusProviderMarker>(),
+                || connect_to_protocol::<CommitStatusProviderMarker>(),
                 &mut *engine_commit_status.lock().await,
             )
             .await

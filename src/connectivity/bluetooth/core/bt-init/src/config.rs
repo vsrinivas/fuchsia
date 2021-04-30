@@ -62,7 +62,7 @@ impl Config {
 
     pub async fn set_capabilities(&self, bt_gap: &App) -> Result<(), Error> {
         let bt_svc = bt_gap
-            .connect_to_service::<ControlMarker>()
+            .connect_to_protocol::<ControlMarker>()
             .expect("failed to connect to bluetooth control interface");
         bt_svc.set_io_capabilities(self.io.input, self.io.output).map_err(Into::into)
     }

@@ -53,7 +53,7 @@ impl AvrcpFacade {
                 Ok(avrcp_service_proxy)
             }
             None => {
-                let avrcp_service_proxy = client::connect_to_service::<PeerManagerMarker>();
+                let avrcp_service_proxy = client::connect_to_protocol::<PeerManagerMarker>();
                 if let Err(err) = avrcp_service_proxy {
                     fx_err_and_bail!(
                         &with_line!(tag),

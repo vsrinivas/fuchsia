@@ -8,7 +8,7 @@ use anyhow::{Context as _, Error};
 use fidl_fuchsia_factory_lowpan::{FactoryRegisterMarker, FactoryRegisterProxyInterface};
 use fidl_fuchsia_lowpan_device::{RegisterMarker, RegisterProxyInterface};
 use fuchsia_async as fasync;
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use fuchsia_syslog::macros::*;
 use futures::prelude::*;
 use lowpan_driver_common::{
@@ -81,9 +81,9 @@ async fn main() -> Result<(), Error> {
 
     run_driver(
         name,
-        connect_to_service::<RegisterMarker>()
+        connect_to_protocol::<RegisterMarker>()
             .context("Failed to connect to Lowpan Registry service")?,
-        connect_to_service::<FactoryRegisterMarker>().ok(),
+        connect_to_protocol::<FactoryRegisterMarker>().ok(),
         device,
     )
     .inspect(|_| fx_log_info!("Dummy LoWPAN device {:?} has shutdown.", name))

@@ -106,7 +106,7 @@ impl<'a> KeyDispatcher for KeyEventInjectorDispatcher<'a> {
 /// # Example
 ///
 /// ```ignore
-/// let ime_service = connect_to_service::<ui_input::ImeServiceMarker>()
+/// let ime_service = connect_to_protocol::<ui_input::ImeServiceMarker>()
 ///     .context("Failed to connect to IME Service")?;
 /// let key_dispatcher = test_helpers::ImeServiceKeyDispatcher { ime_service: &ime_service };
 /// let key_simulator = test_helpers::KeySimulator::new(&key_dispatcher);

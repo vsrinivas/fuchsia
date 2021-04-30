@@ -103,7 +103,7 @@ impl BluetoothSysFacade {
             }
             None => {
                 fx_log_info!(tag: &with_line!(tag), "Setting new access proxy");
-                let proxy = component::client::connect_to_service::<AccessMarker>();
+                let proxy = component::client::connect_to_protocol::<AccessMarker>();
                 if let Err(err) = proxy {
                     fx_err_and_bail!(
                         &with_line!(tag),
@@ -120,7 +120,7 @@ impl BluetoothSysFacade {
         inner.peer_watcher_stream =
             Some(HangingGetStream::new(Box::new(move || Some(access_proxy.watch_peers()))));
 
-        let host_watcher_proxy = match component::client::connect_to_service::<HostWatcherMarker>()
+        let host_watcher_proxy = match component::client::connect_to_protocol::<HostWatcherMarker>()
         {
             Ok(proxy) => proxy,
             Err(err) => fx_err_and_bail!(
@@ -133,7 +133,7 @@ impl BluetoothSysFacade {
             Some(HangingGetStream::new(Box::new(move || Some(host_watcher_proxy.watch()))));
 
         let configuration_proxy =
-            match component::client::connect_to_service::<ConfigurationMarker>() {
+            match component::client::connect_to_protocol::<ConfigurationMarker>() {
                 Ok(proxy) => proxy,
                 Err(err) => fx_err_and_bail!(
                     &with_line!(tag),

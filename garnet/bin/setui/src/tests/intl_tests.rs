@@ -74,7 +74,7 @@ async fn create_test_intl_env(storage_factory: Arc<InMemoryStorageFactory>) -> I
         .await
         .unwrap();
 
-    env.connect_to_service::<IntlMarker>().unwrap()
+    env.connect_to_protocol::<IntlMarker>().unwrap()
 }
 
 /// Creates an environment that will fail on a get request.
@@ -83,7 +83,7 @@ async fn create_intl_test_env_with_failures(
 ) -> IntlProxy {
     create_test_env_with_failures(storage_factory, ENV_NAME, SettingType::Intl)
         .await
-        .connect_to_service::<IntlMarker>()
+        .connect_to_protocol::<IntlMarker>()
         .unwrap()
 }
 

@@ -6,7 +6,7 @@ use anyhow::{format_err, Error};
 use fidl_fuchsia_ui_input as uii;
 use fidl_fuchsia_ui_text as txt;
 use fuchsia_async as fasync;
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use fuchsia_syslog::fx_log_err;
 use futures::lock::Mutex;
 use futures::prelude::*;
@@ -334,7 +334,7 @@ async fn main() -> Result<(), Error> {
 }
 
 async fn serve_textfield(ime: DefaultHardwareIme) -> Result<(), Error> {
-    let text_service = connect_to_service::<txt::TextInputContextLegacyMarker>()?;
+    let text_service = connect_to_protocol::<txt::TextInputContextLegacyMarker>()?;
     let mut evt_stream = text_service.take_event_stream();
     while let Some(evt) = evt_stream.next().await {
         match evt {

@@ -15,7 +15,7 @@ use fidl_fuchsia_factory::{
 };
 use fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, OPEN_RIGHT_READABLE};
 use files_async::{readdir_recursive, DirentKind};
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use futures::stream::TryStreamExt;
 use io_util;
 use serde_json::{from_value, to_value, Value};
@@ -92,27 +92,27 @@ impl FactoryStoreFacade {
 
         match provider {
             FactoryStoreProvider::Alpha => {
-                let alpha_svc = connect_to_service::<AlphaFactoryStoreProviderMarker>()?;
+                let alpha_svc = connect_to_protocol::<AlphaFactoryStoreProviderMarker>()?;
                 alpha_svc.get_factory_store(dir_server_end)?;
             }
             FactoryStoreProvider::Cast => {
-                let cast_svc = connect_to_service::<CastCredentialsFactoryStoreProviderMarker>()?;
+                let cast_svc = connect_to_protocol::<CastCredentialsFactoryStoreProviderMarker>()?;
                 cast_svc.get_factory_store(dir_server_end)?;
             }
             FactoryStoreProvider::Misc => {
-                let misc_svc = connect_to_service::<MiscFactoryStoreProviderMarker>()?;
+                let misc_svc = connect_to_protocol::<MiscFactoryStoreProviderMarker>()?;
                 misc_svc.get_factory_store(dir_server_end)?;
             }
             FactoryStoreProvider::Playready => {
-                let playready_svc = connect_to_service::<PlayReadyFactoryStoreProviderMarker>()?;
+                let playready_svc = connect_to_protocol::<PlayReadyFactoryStoreProviderMarker>()?;
                 playready_svc.get_factory_store(dir_server_end)?;
             }
             FactoryStoreProvider::Weave => {
-                let weave_svc = connect_to_service::<WeaveFactoryStoreProviderMarker>()?;
+                let weave_svc = connect_to_protocol::<WeaveFactoryStoreProviderMarker>()?;
                 weave_svc.get_factory_store(dir_server_end)?;
             }
             FactoryStoreProvider::Widevine => {
-                let widevine_svc = connect_to_service::<WidevineFactoryStoreProviderMarker>()?;
+                let widevine_svc = connect_to_protocol::<WidevineFactoryStoreProviderMarker>()?;
                 widevine_svc.get_factory_store(dir_server_end)?;
             }
         }

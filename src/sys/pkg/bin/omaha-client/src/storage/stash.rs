@@ -60,7 +60,7 @@ impl Stash {
     }
 
     async fn new_proxy(identity: &str) -> Result<StoreAccessorProxy> {
-        let stash_svc = fuchsia_component::client::connect_to_service::<Store2Marker>()?;
+        let stash_svc = fuchsia_component::client::connect_to_protocol::<Store2Marker>()?;
         stash_svc.identify(identity)?;
 
         let (proxy, server_end) = create_proxy::<StoreAccessorMarker>()?;

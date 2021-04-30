@@ -7,7 +7,7 @@ use {
     fidl::endpoints::create_proxy,
     fidl_fuchsia_ui_scenic::{ScenicMarker, ScenicProxy},
     fuchsia_async::{self as fasync},
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_scenic, fuchsia_syslog as syslog,
     fuchsia_zircon::{Duration, Time},
     futures::{StreamExt, TryFutureExt},
@@ -42,7 +42,7 @@ impl App {
     /// A new `App` with an active Scenic session, or an error if a `View` cannot be created due to
     /// eiher the Scenic calls failing, or the `View` not being successfully created.
     pub async fn new() -> Result<App, Error> {
-        let scenic = connect_to_service::<ScenicMarker>()?;
+        let scenic = connect_to_protocol::<ScenicMarker>()?;
         let session = App::make_session(&scenic)?;
 
         let display_info = scenic.get_display_info().await?;

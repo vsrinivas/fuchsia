@@ -17,7 +17,7 @@ use {
         assigned_numbers::find_service_uuid,
         types::{le::Peer, Uuid},
     },
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     futures::{StreamExt, TryStreamExt},
     std::convert::TryFrom,
     structopt::StructOpt,
@@ -269,7 +269,7 @@ async fn main() -> Result<(), Error> {
         ..AdvertisingParameters::EMPTY
     };
 
-    let peripheral = connect_to_service::<PeripheralMarker>()
+    let peripheral = connect_to_protocol::<PeripheralMarker>()
         .context("failed to connect to bluetooth peripheral service")?;
     listen(&peripheral, params, &service_names).await
 }

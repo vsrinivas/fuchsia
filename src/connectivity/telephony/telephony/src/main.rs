@@ -68,8 +68,8 @@ pub async fn start_modem(
     let launcher = launcher().context("Failed to open launcher service")?;
     let app = launch(&launcher, RIL_URI.to_string(), None)
         .context("Failed to launch qmi-modem service")?;
-    let setup_ril = app.connect_to_service::<SetupMarker>()?;
-    let ril = app.connect_to_service::<RadioInterfaceLayerMarker>()?;
+    let setup_ril = app.connect_to_protocol::<SetupMarker>()?;
+    let ril = app.connect_to_protocol::<RadioInterfaceLayerMarker>()?;
     match ty {
         ModemType::Qmi => match setup_ril.connect_transport(chan.into()).await? {
             Ok(_) => Ok(Radio::new(app, ril, node, path)),
@@ -95,7 +95,7 @@ pub fn start_service(
                     let radios = mgr.radios.read();
                     match radios.first() {
                         Some(radio) => {
-                            let resp = radio.app.pass_to_service::<RadioInterfaceLayerMarker>(
+                            let resp = radio.app.pass_to_protocol::<RadioInterfaceLayerMarker>(
                                 ril_iface.into_channel(),
                             );
                             responder.send(resp.is_ok())
@@ -266,7 +266,7 @@ mod test {
         let create_app_and_ril_for_test = || -> Result<(App, RadioInterfaceLayerProxy), Error> {
             let app = launch(&launcher, RIL_URI.to_string(), None)
                 .context("Failed to launch ril-qmi service")?;
-            let ril = app.connect_to_service::<RadioInterfaceLayerMarker>()?;
+            let ril = app.connect_to_protocol::<RadioInterfaceLayerMarker>()?;
             Ok((app, ril))
         };
 

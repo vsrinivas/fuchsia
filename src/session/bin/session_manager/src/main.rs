@@ -4,7 +4,7 @@
 
 use {
     anyhow::Error, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service, fuchsia_syslog,
+    fuchsia_component::client::connect_to_protocol, fuchsia_syslog,
     session_manager_lib::session_manager::SessionManager,
 };
 
@@ -12,7 +12,7 @@ use {
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["session_manager"]).expect("Failed to initialize logger.");
 
-    let realm = connect_to_service::<fsys::RealmMarker>()?;
+    let realm = connect_to_protocol::<fsys::RealmMarker>()?;
     // Start the startup session, if any, and serve services exposed by session manager.
     let mut session_manager = SessionManager::new(realm);
     // TODO(fxbug.dev/67789): Using ? here causes errors to not be logged.

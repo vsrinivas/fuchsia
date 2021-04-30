@@ -144,7 +144,7 @@ impl BufferSetFactory {
         let client_token = client_token.into_proxy()?;
 
         let sysmem_client =
-            client::connect_to_service::<AllocatorMarker>().context("Connecting to sysmem")?;
+            client::connect_to_protocol::<AllocatorMarker>().context("Connecting to sysmem")?;
 
         set_allocator_name(&sysmem_client).context("Setting sysmem allocator name")?;
 

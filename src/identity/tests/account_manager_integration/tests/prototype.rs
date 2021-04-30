@@ -84,10 +84,10 @@ fn create_account_manager_transfer(
         Some(ACCOUNT_MANAGER_ARGS.clone()),
     )?;
 
-    let account_manager_proxy = app.connect_to_service::<AccountManagerMarker>()?;
+    let account_manager_proxy = app.connect_to_protocol::<AccountManagerMarker>()?;
 
     let (account_transfer_proxy, server) = create_proxy::<PrototypeAccountTransferControlMarker>()?;
-    app.pass_to_named_service(&PROTOTYPE_INTERFACE_DIR, server.into_channel())?;
+    app.pass_to_named_protocol(&PROTOTYPE_INTERFACE_DIR, server.into_channel())?;
 
     Ok((
         NestedAccountTransferControlProxy {
@@ -112,9 +112,9 @@ async fn test_prototype_interface_not_exposed() -> Result<(), Error> {
         Some(ACCOUNT_MANAGER_ARGS.clone()),
     )?;
 
-    let _account_manager_proxy = app.connect_to_service::<AccountManagerMarker>()?;
+    let _account_manager_proxy = app.connect_to_protocol::<AccountManagerMarker>()?;
     let (transfer_proxy, server) = create_proxy::<PrototypeAccountTransferControlMarker>()?;
-    app.pass_to_named_service(&PROTOTYPE_INTERFACE_DIR, server.into_channel())?;
+    app.pass_to_named_protocol(&PROTOTYPE_INTERFACE_DIR, server.into_channel())?;
 
     let test_fut = async move {
         match transfer_proxy

@@ -8,7 +8,7 @@ use fidl_fuchsia_mem::Buffer;
 use fidl_fuchsia_paver::PaverMarker;
 use fidl_fuchsia_paver::{SysconfigMarker, SysconfigProxy};
 #[cfg(not(test))]
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use fuchsia_zircon::Status;
 use thiserror::Error;
 
@@ -47,7 +47,7 @@ impl From<Status> for SysconfigError {
 #[cfg(not(test))]
 pub fn get_sysconfig_proxy() -> Result<SysconfigProxy, SysconfigError> {
     let paver =
-        connect_to_service::<PaverMarker>().map_err(|_| SysconfigError::ServiceConnection)?;
+        connect_to_protocol::<PaverMarker>().map_err(|_| SysconfigError::ServiceConnection)?;
     let (sysconfig, server_end) = fidl::endpoints::create_proxy::<SysconfigMarker>()
         .map_err(|_| SysconfigError::SysconfigProxy)?;
     let () = paver.find_sysconfig(server_end)?;

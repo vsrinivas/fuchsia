@@ -382,7 +382,7 @@ async fn main() -> Result<(), Error> {
     let bt_a2dp = client::launch(&launcher_url, component, Some(options))?;
 
     let avdtp_svc = bt_a2dp
-        .connect_to_service::<PeerManagerMarker>()
+        .connect_to_protocol::<PeerManagerMarker>()
         .context("Failed to connect to AVDTP Peer Manager")?;
     // Get the list of currently connected peers.
     // Since we are spinning up bt-a2dp locally, there should be no connected peers.

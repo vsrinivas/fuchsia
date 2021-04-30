@@ -19,7 +19,7 @@ use {
 async fn main() {
     syslog::init().expect("could not initialize logging");
     info!("Started collection realm");
-    let realm = client::connect_to_service::<fsys::RealmMarker>()
+    let realm = client::connect_to_protocol::<fsys::RealmMarker>()
         .expect("could not connect to Realm service");
 
     // Create a "trigger realm" child component.

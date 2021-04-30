@@ -53,7 +53,7 @@ async fn test_light_sensor() {
         .await
         .unwrap();
 
-    let display_service = env.connect_to_service::<DisplayMarker>().unwrap();
+    let display_service = env.connect_to_protocol::<DisplayMarker>().unwrap();
     let data = display_service.watch_light_sensor(TEST_DELTA).await.expect("watch completed");
 
     assert_eq!(data.illuminance_lux, Some(light_sensor_testing::TEST_LUX_VAL as f32));
@@ -79,7 +79,7 @@ async fn test_watch_light_sensor_no_service_error() {
         .await
         .unwrap();
 
-    let display_service = env.connect_to_service::<DisplayMarker>().unwrap();
+    let display_service = env.connect_to_protocol::<DisplayMarker>().unwrap();
     let light_sensor_watch_response = display_service.watch_light_sensor(TEST_DELTA).await;
 
     matches::assert_matches!(

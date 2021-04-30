@@ -18,7 +18,7 @@ type Result<T> = std::result::Result<T, Error>;
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<()> {
-    let player_proxy = component::client::connect_to_service::<PlayerMarker>()
+    let player_proxy = component::client::connect_to_protocol::<PlayerMarker>()
         .context("Connecting to fuchsia.media.sounds.Player")?;
 
     // If there are files in the isolated /tmp directory, play them and quit.

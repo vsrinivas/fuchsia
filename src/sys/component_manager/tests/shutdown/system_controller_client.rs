@@ -11,7 +11,7 @@ use {
 async fn main() -> Result<(), anyhow::Error> {
     let _ = fuchsia_syslog::init_with_tags(&["system_controller_consumer"]);
 
-    let shutdown = component_client::connect_to_service::<fuchsia_sys2::SystemControllerMarker>()
+    let shutdown = component_client::connect_to_protocol::<fuchsia_sys2::SystemControllerMarker>()
         .expect("Failed to connect to fuchsia.sys2.SystemController");
     match shutdown.shutdown().await {
         Ok(()) => Ok(()),

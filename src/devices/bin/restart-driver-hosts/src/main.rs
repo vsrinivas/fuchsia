@@ -5,7 +5,7 @@
 use anyhow::{Context as _, Error};
 use fidl_fuchsia_device_manager::DriverHostDevelopmentMarker;
 use fuchsia_async as fasync;
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
@@ -19,9 +19,9 @@ async fn main() -> Result<(), Error> {
     // Get driver path as argument.
     let opt = Opt::from_iter(std::env::args());
 
-    // Connect to the DriverHostDevelopment Protocol service.
-    let service = connect_to_service::<DriverHostDevelopmentMarker>()
-        .context("Failed to connect to development service")?;
+    // Connect to the DriverHostDevelopment Protocol protocol.
+    let service = connect_to_protocol::<DriverHostDevelopmentMarker>()
+        .context("Failed to connect to development protocol")?;
 
     // Make request to devcoordinator to restart driver hosts.
     let res = service.restart_driver_hosts(&opt.driver_path).await?;

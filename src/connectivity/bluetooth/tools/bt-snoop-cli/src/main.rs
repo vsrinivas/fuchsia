@@ -9,7 +9,7 @@ use {
     fidl_fuchsia_bluetooth_snoop::{PacketType, SnoopEvent, SnoopMarker, SnoopPacket},
     fuchsia_async as fasync,
     fuchsia_bluetooth::error::Error as BTError,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     futures::TryStreamExt,
     std::{fmt, fs::File, io, path::Path},
 };
@@ -171,7 +171,7 @@ fn main_res() -> Result<(), Error> {
 
     // create and run the main future
     let main_future = async {
-        let snoop_svc = connect_to_service::<SnoopMarker>()
+        let snoop_svc = connect_to_protocol::<SnoopMarker>()
             .context("failed to connect to bluetooth snoop interface")?;
         let mut evt_stream = snoop_svc.take_event_stream();
         match format {

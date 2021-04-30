@@ -144,12 +144,12 @@ mod tests {
     use super::*;
     use fidl_fuchsia_update_channelcontrol::ChannelControlMarker;
     use fuchsia_async as fasync;
-    use fuchsia_component::client::connect_to_service;
+    use fuchsia_component::client::connect_to_protocol;
     use pretty_assertions::assert_eq;
 
     #[fasync::run_singlethreaded(test)]
     async fn test_fake_channel_control() {
-        let control = connect_to_service::<ChannelControlMarker>().unwrap();
+        let control = connect_to_protocol::<ChannelControlMarker>().unwrap();
 
         control.set_target("test-target-channel").await.unwrap();
         assert_eq!("test-target-channel", control.get_target().await.unwrap());

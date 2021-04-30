@@ -9,7 +9,7 @@ use {
     fidl_fuchsia_input_injection::InputDeviceRegistryRequestStream,
     fidl_fuchsia_ui_policy::PointerCaptureListenerHackProxy,
     fidl_fuchsia_ui_shortcut as ui_shortcut, fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_syslog::fx_log_warn,
     futures::lock::Mutex,
     futures::StreamExt,
@@ -88,7 +88,7 @@ async fn input_handlers(
 }
 
 async fn add_shortcut_handler(handlers: &mut Vec<Box<dyn InputHandler>>) {
-    if let Ok(manager) = connect_to_service::<ui_shortcut::ManagerMarker>() {
+    if let Ok(manager) = connect_to_protocol::<ui_shortcut::ManagerMarker>() {
         if let Ok(shortcut_handler) = ShortcutHandler::new(manager) {
             handlers.push(Box::new(shortcut_handler));
         }

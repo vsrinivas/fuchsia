@@ -82,7 +82,7 @@ impl TracingFacade {
     pub async fn initialize(&self, args: Value) -> Result<Value, Error> {
         let request: InitializeRequest = parse_args(args)?;
 
-        let trace_controller = app::client::connect_to_service::<ControllerMarker>()?;
+        let trace_controller = app::client::connect_to_protocol::<ControllerMarker>()?;
         let (write_socket, read_socket) = zx::Socket::create(zx::SocketOpts::STREAM)?;
         let mut config = TraceConfig::EMPTY;
         match request.categories {
@@ -162,7 +162,7 @@ impl TracingFacade {
 
         let controller = match self.status.write().controller.take() {
             Some(controller) => controller,
-            None => app::client::connect_to_service::<ControllerMarker>()?,
+            None => app::client::connect_to_protocol::<ControllerMarker>()?,
         };
 
         let result = match request.results_destination {

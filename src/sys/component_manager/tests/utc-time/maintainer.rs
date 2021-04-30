@@ -27,7 +27,7 @@ async fn main() {
     fuchsia_syslog::set_severity(fuchsia_syslog::levels::WARN);
 
     debug!("requesting fuchsia.time.Maintenance");
-    let time_maintenance_proxy = client::connect_to_service::<ftime::MaintenanceMarker>().unwrap();
+    let time_maintenance_proxy = client::connect_to_protocol::<ftime::MaintenanceMarker>().unwrap();
 
     debug!("retrieving UTC clock");
     let clock = time_maintenance_proxy.get_writable_utc_clock().await.unwrap();

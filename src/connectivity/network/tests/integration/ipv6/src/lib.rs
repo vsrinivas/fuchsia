@@ -83,7 +83,7 @@ async fn run_netstack_and_get_ipv6_addrs_for_endpoint<N: Netstack>(
         .spawn(launcher)
         .context("failed to spawn netstack")?;
     let netstack = app
-        .connect_to_service::<netstack::NetstackMarker>()
+        .connect_to_protocol::<netstack::NetstackMarker>()
         .context("failed to connect to netstack service")?;
 
     // Add the device and get its interface state from netstack.

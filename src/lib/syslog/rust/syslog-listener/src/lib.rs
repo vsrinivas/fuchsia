@@ -11,7 +11,7 @@ use fidl_fuchsia_logger::{
     LogFilterOptions, LogInterestSelector, LogListenerSafeRequest, LogListenerSafeRequestStream,
     LogMarker, LogMessage, LogProxy,
 };
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use futures::{channel::mpsc, TryStreamExt};
 
 /// This trait is used to pass log message back to client.
@@ -86,7 +86,7 @@ pub async fn run_log_listener<'a>(
     dump_logs: bool,
     selectors: Option<&'a mut Vec<LogInterestSelector>>,
 ) -> Result<(), Error> {
-    let logger = connect_to_service::<LogMarker>()?;
+    let logger = connect_to_protocol::<LogMarker>()?;
     run_log_listener_with_proxy(&logger, processor, options, dump_logs, selectors).await
 }
 

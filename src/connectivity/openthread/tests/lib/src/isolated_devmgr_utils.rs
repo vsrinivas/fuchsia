@@ -4,7 +4,7 @@
 
 use {
     fidl_fuchsia_openthread_devmgr::IsolatedDevmgrMarker,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon as zx,
     std::{fs::File, path::Path},
 };
@@ -12,7 +12,7 @@ use {
 /// Opens a path
 pub fn open_in_isolated_devmgr(path: &str, flags: u32) -> Result<File, zx::Status> {
     let isolated_devmgr =
-        connect_to_service::<IsolatedDevmgrMarker>().expect("connecting to isolated devmgr.");
+        connect_to_protocol::<IsolatedDevmgrMarker>().expect("connecting to isolated devmgr.");
     let (node_proxy, server_end) =
         fidl::endpoints::create_endpoints().expect("creating channel for devfs node");
     println!("isolated_devmgr opening file...");

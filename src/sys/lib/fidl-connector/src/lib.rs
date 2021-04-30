@@ -4,7 +4,7 @@
 
 use {
     fidl::endpoints::{DiscoverableService, Proxy, ServiceMarker},
-    fuchsia_component::client::connect_to_service_at_path,
+    fuchsia_component::client::connect_to_protocol_at_path,
     parking_lot::RwLock,
     std::sync::Arc,
 };
@@ -107,7 +107,7 @@ where
             }
         }
 
-        let p = connect_to_service_at_path::<S>(&self.service_path)?;
+        let p = connect_to_protocol_at_path::<S>(&self.service_path)?;
         *proxy = Some(p.clone());
         Ok(p)
     }

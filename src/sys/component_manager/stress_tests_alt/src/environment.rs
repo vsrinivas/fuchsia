@@ -6,7 +6,7 @@ use {
     crate::tree_actor::TreeActor,
     async_trait::async_trait,
     fidl_fuchsia_sys2 as fsys,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     futures::lock::Mutex,
     rand::{rngs::SmallRng, Rng, SeedableRng},
     std::sync::Arc,
@@ -28,7 +28,7 @@ impl TreeStressorEnvironment {
         num_operations: Option<u64>,
         component_limit: usize,
     ) -> Self {
-        let test_realm_svc = connect_to_service::<fsys::RealmMarker>()
+        let test_realm_svc = connect_to_protocol::<fsys::RealmMarker>()
             .expect("Could not connect to Realm service in test namespace");
 
         let seed = random_seed();

@@ -127,7 +127,7 @@ impl TestInputEnvironmentBuilder {
 
         let env = environment_builder.spawn_and_get_nested_environment(ENV_NAME).await.unwrap();
 
-        let input_service = env.connect_to_service::<InputMarker>().unwrap();
+        let input_service = env.connect_to_protocol::<InputMarker>().unwrap();
         let store = storage_factory.get_device_storage().await;
 
         TestInputEnvironment {

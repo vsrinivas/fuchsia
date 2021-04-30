@@ -20,7 +20,7 @@ async fn test_external_text_field_implementation() {
     )
     .expect("Failed to launch testing service");
     let tester = app
-        .connect_to_service::<txt_testing::TextFieldTestSuiteMarker>()
+        .connect_to_protocol::<txt_testing::TextFieldTestSuiteMarker>()
         .expect("Failed to connect to testing service");
     let mut passed = true;
     let test_list = tester.list_tests().await.expect("Failed to get list of tests");

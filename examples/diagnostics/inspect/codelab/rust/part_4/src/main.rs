@@ -45,7 +45,7 @@ async fn main() -> Result<(), Error> {
 
     // Send a request to the FizzBuzz service and print the response when it arrives.
     let fizzbuzz_fut = async move {
-        let fizzbuzz = client::connect_to_service::<FizzBuzzMarker>()
+        let fizzbuzz = client::connect_to_protocol::<FizzBuzzMarker>()
             .context("failed to connect to fizzbuzz")?;
         match fizzbuzz.execute(30u32).await {
             Ok(result) => {

@@ -16,7 +16,7 @@ use fidl_fuchsia_sys_internal::{
 };
 use fuchsia_async as fasync;
 use fuchsia_component::{
-    client::{connect_to_service, launch_with_options, LaunchOptions},
+    client::{connect_to_protocol, launch_with_options, LaunchOptions},
     server::ServiceFs,
 };
 use fuchsia_syslog::levels::INFO;
@@ -90,7 +90,7 @@ async fn same_log_sink_simultaneously_via_connector() {
     fasync::Task::spawn(fs.collect()).detach();
 
     // launch archivist-for-embedding.cmx
-    let launcher = connect_to_service::<LauncherMarker>().unwrap();
+    let launcher = connect_to_protocol::<LauncherMarker>().unwrap();
     let mut options = LaunchOptions::new();
     options.set_additional_services(vec![LogConnectorMarker::NAME.to_string()], dir_client);
     let mut archivist = launch_with_options(
@@ -103,7 +103,7 @@ async fn same_log_sink_simultaneously_via_connector() {
     .unwrap();
 
     // run log listener
-    let log_proxy = archivist.connect_to_service::<LogMarker>().unwrap();
+    let log_proxy = archivist.connect_to_protocol::<LogMarker>().unwrap();
     let (send_logs, recv_logs) = mpsc::unbounded();
     fasync::Task::spawn(async move {
         let listen = Listener { send_logs };
@@ -123,7 +123,7 @@ async fn same_log_sink_simultaneously_via_connector() {
     .detach();
 
     // connect to controller and call stop
-    let controller = archivist.connect_to_service::<ControllerMarker>().unwrap();
+    let controller = archivist.connect_to_protocol::<ControllerMarker>().unwrap();
     controller.stop().unwrap();
 
     // collect all logs

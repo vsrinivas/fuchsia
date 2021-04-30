@@ -31,7 +31,7 @@ use account_common::{AccountManagerError, LocalAccountId};
 use anyhow::{Context as _, Error};
 use fidl_fuchsia_identity_internal::AccountHandlerContextMarker;
 use fuchsia_async as fasync;
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_inspect::Inspector;
 use futures::StreamExt;
@@ -82,7 +82,7 @@ fn main() -> Result<(), Error> {
     inspect_runtime::serve(&inspector, &mut fs)?;
 
     // TODO(dnordstrom): Find a testable way to inject global capabilities.
-    let context = connect_to_service::<AccountHandlerContextMarker>()
+    let context = connect_to_protocol::<AccountHandlerContextMarker>()
         .expect("Error connecting to the AccountHandlerContext service");
 
     let pre_auth_manager = create_pre_auth_manager(&lifetime, &account_id)?;

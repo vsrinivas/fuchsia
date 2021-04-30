@@ -7,7 +7,7 @@ use {
     cobalt_sw_delivery_registry as metrics,
     fidl_fuchsia_pkg_rewrite_ext::Rule,
     fuchsia_cobalt::CobaltSender,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_inspect::{self as inspect, Property as _, StringProperty},
     fuchsia_syslog::{self, fx_log_info},
     fuchsia_url::pkg_url::RepoUrl,
@@ -150,7 +150,7 @@ fn create_rewrite_rule_for_tuf_config_name(
 
 fn get_tuf_config_name_from_vbmeta() -> BoxFuture<'static, Result<String, Error>> {
     async move {
-        let proxy = connect_to_service::<fidl_fuchsia_boot::ArgumentsMarker>()?;
+        let proxy = connect_to_protocol::<fidl_fuchsia_boot::ArgumentsMarker>()?;
         get_tuf_config_name_from_vbmeta_impl(proxy).await
     }
     .boxed()

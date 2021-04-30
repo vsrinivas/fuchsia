@@ -7,7 +7,7 @@
 
 use fidl_fuchsia_diagnostics_stream::Record;
 use fidl_fuchsia_logger::LogSinkMarker;
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use fuchsia_zircon::{self as zx};
 use std::{any::TypeId, fmt::Debug, future::Future};
 use thiserror::Error;
@@ -74,7 +74,7 @@ impl Publisher {
     /// Construct a new `Publisher` from the provided `LogSink`. Returns a `Publisher` and a future
     /// which must be polled to listen to interest/severity changes from the environment `LogSink`.
     fn new(tag: Option<&str>) -> Result<(Self, impl Future<Output = ()>), PublishError> {
-        let log_sink = connect_to_service::<LogSinkMarker>()
+        let log_sink = connect_to_protocol::<LogSinkMarker>()
             .map_err(|e| e.to_string())
             .map_err(PublishError::LogSinkConnect)?;
 

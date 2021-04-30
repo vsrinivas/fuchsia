@@ -25,7 +25,7 @@ async fn test_do_not_disturb() {
         .await
         .unwrap();
 
-    let dnd_proxy = env.connect_to_service::<DoNotDisturbMarker>().expect("connected to service");
+    let dnd_proxy = env.connect_to_protocol::<DoNotDisturbMarker>().expect("connected to service");
 
     verify_dnd_watch(&dnd_proxy, DoNotDisturbInfo::new(true, false)).await;
 

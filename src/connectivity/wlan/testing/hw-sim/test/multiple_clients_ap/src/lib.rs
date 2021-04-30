@@ -9,7 +9,7 @@ use {
     fidl_fuchsia_wlan_sme::{
         self as fidl_sme, ClientSmeProxy, ConnectRequest, ConnectResultCode, Credential,
     },
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon::DurationNum,
     futures::{channel::oneshot, future, join, stream::TryStreamExt, FutureExt, TryFutureExt},
     pin_utils::pin_mut,
@@ -54,7 +54,7 @@ async fn multiple_clients_ap() {
     init_syslog();
 
     let wlanstack_svc =
-        connect_to_service::<DeviceServiceMarker>().expect("connecting to wlanstack service");
+        connect_to_protocol::<DeviceServiceMarker>().expect("connecting to wlanstack service");
 
     let network_config = NetworkConfigBuilder::open().ssid(&SSID.to_vec());
 

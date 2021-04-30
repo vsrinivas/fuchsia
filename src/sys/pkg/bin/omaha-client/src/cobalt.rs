@@ -5,13 +5,13 @@
 use fidl_fuchsia_cobalt::{
     SoftwareDistributionInfo, SystemDataUpdaterMarker, SystemDataUpdaterProxy,
 };
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use log::{error, info};
 use omaha_client::common::AppSet;
 
 pub async fn notify_cobalt_current_software_distribution(app_set: AppSet) {
     info!("Notifying Cobalt about the current channel and app id.");
-    let proxy = match connect_to_service::<SystemDataUpdaterMarker>() {
+    let proxy = match connect_to_protocol::<SystemDataUpdaterMarker>() {
         Ok(proxy) => proxy,
         Err(e) => {
             error!("Failed to connect to cobalt: {}", e);

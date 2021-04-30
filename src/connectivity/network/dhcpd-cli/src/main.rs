@@ -14,7 +14,7 @@ use crate::args::*;
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    let server = fuchsia_component::client::connect_to_service::<Server_Marker>()
+    let server = fuchsia_component::client::connect_to_protocol::<Server_Marker>()
         .with_context(|| format!("failed to connect to {} service", Server_Marker::DEBUG_NAME))?;
     let () = match argh::from_env() {
         Cli { cmd: Command::Start(Start {}) } => do_start(server).await?,

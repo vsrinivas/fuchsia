@@ -28,7 +28,7 @@ impl SyncManager {
     /// Attach to the SyncManager, subscribing to the bus as the given device. Waits for all other
     /// devices to attach as well before returning a SyncManager object.
     pub async fn attach(device: device::Type) -> Result<Self, Error> {
-        let sync_mgr = component::client::connect_to_service::<nsync::SyncManagerMarker>()
+        let sync_mgr = component::client::connect_to_protocol::<nsync::SyncManagerMarker>()
             .context("unable to connect to sync manager")?;
         let (proxy, server_end) = fidl::endpoints::create_proxy::<nsync::BusMarker>()
             .context("error creating bus endpoints")?;

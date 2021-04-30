@@ -23,7 +23,7 @@ const BLOCK_SIZE: u64 = 512;
 /// Returns the size in bytes of the partition at `path`.
 pub async fn get_partition_size(path: &str) -> Result<usize, Error> {
     let (status, size) =
-        fuchsia_component::client::connect_to_service_at_path::<PartitionMarker>(path)
+        fuchsia_component::client::connect_to_protocol_at_path::<PartitionMarker>(path)
             .context("connecting to partition")?
             .get_info()
             .await
@@ -40,7 +40,7 @@ struct BlockWatcherPauser {
 
 impl BlockWatcherPauser {
     async fn new() -> Result<Self, Error> {
-        let connection = fuchsia_component::client::connect_to_service::<BlockWatcherMarker>()
+        let connection = fuchsia_component::client::connect_to_protocol::<BlockWatcherMarker>()
             .context("connecting to block watcher")?;
         connection.pause().await.context("pausing the block watcher")?;
 
@@ -111,7 +111,7 @@ impl FvmRamdisk {
         fx_log_info!("connecting to the paver");
         let channel = self.ramdisk.open().context("Opening ramdisk")?;
         let paver =
-            fuchsia_component::client::connect_to_service::<fidl_fuchsia_paver::PaverMarker>()?;
+            fuchsia_component::client::connect_to_protocol::<fidl_fuchsia_paver::PaverMarker>()?;
         let (data_sink, remote) =
             fidl::endpoints::create_proxy::<fidl_fuchsia_paver::DynamicDataSinkMarker>()?;
         paver.use_block_device(fidl::endpoints::ClientEnd::new(channel), remote)?;

@@ -13,7 +13,7 @@ use {
     fidl_fuchsia_sys::LauncherMarker,
     fuchsia_async as fasync,
     fuchsia_component::{
-        client::{connect_to_service, AppBuilder},
+        client::{connect_to_protocol, AppBuilder},
         server::{ServiceFs, ServiceObj},
     },
     futures::stream::StreamExt,
@@ -31,7 +31,7 @@ async fn main() {
     if false {
         let mut builder = AppBuilder::new(ARCHIVIST_URL);
         let observer_dir_req = Arc::clone(builder.directory_request().unwrap());
-        let our_launcher = connect_to_service::<LauncherMarker>().unwrap();
+        let our_launcher = connect_to_protocol::<LauncherMarker>().unwrap();
         let observer = builder.spawn(&our_launcher).unwrap();
 
         let mut child_fs = ServiceFs::<ServiceObj<'_, ()>>::new();
@@ -43,7 +43,7 @@ async fn main() {
         }))
         .detach();
 
-        let log_proxy = observer.connect_to_service::<LogMarker>().unwrap();
+        let log_proxy = observer.connect_to_protocol::<LogMarker>().unwrap();
 
         let child = async {
             AppBuilder::new(CHILD_WITH_LOGS_URL)

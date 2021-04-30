@@ -95,7 +95,7 @@ async fn main() -> Result<(), Error> {
 
     info!("retrieving UTC clock handle");
     let time_maintainer =
-        fuchsia_component::client::connect_to_service::<ftime::MaintenanceMarker>().unwrap();
+        fuchsia_component::client::connect_to_protocol::<ftime::MaintenanceMarker>().unwrap();
     let utc_clock = zx::Clock::from(
         time_maintainer
             .get_writable_utc_clock()

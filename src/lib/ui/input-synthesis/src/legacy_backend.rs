@@ -85,9 +85,9 @@ impl InputDeviceRegistry {
         descriptor: UniformDeviceDescriptor,
     ) -> Result<Box<dyn synthesizer::InputDevice>, Error> {
         let registry = if let Some(path) = &self.svc_dir_path {
-            app::client::connect_to_service_at::<InputDeviceRegistryMarker>(path.as_str())?
+            app::client::connect_to_protocol_at::<InputDeviceRegistryMarker>(path.as_str())?
         } else {
-            app::client::connect_to_service::<InputDeviceRegistryMarker>()?
+            app::client::connect_to_protocol::<InputDeviceRegistryMarker>()?
         };
         let mut device = DeviceDescriptor {
             device_info: None,

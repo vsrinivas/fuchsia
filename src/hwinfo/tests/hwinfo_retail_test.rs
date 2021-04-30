@@ -6,13 +6,13 @@
 
 use {
     anyhow::Error, fidl_fuchsia_hwinfo::DeviceMarker, fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
 };
 
 #[fasync::run_singlethreaded(test)]
 async fn request_device_info() -> Result<(), Error> {
     let device_info_provider =
-        connect_to_service::<DeviceMarker>().expect("Failed to connect to device info service");
+        connect_to_protocol::<DeviceMarker>().expect("Failed to connect to device info service");
     let response = device_info_provider.get_info().await?;
     assert_eq!(response.serial_number.unwrap().to_string(), "dummy_serial_number".to_string());
     assert_eq!(response.is_retail_demo.unwrap(), true);

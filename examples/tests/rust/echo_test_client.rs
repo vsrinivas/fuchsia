@@ -5,7 +5,7 @@
 use {
     anyhow::{Context, Error},
     fidl_fidl_examples_routing_echo as fecho, fidl_fuchsia_test as ftest, fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_component::server::ServiceFs,
     futures::prelude::*,
     futures::{StreamExt, TryStreamExt},
@@ -26,7 +26,7 @@ fn main() -> Result<(), Error> {
 }
 
 async fn run_echo(echo_str: &str, result: &mut ftest::Result_) -> Result<(), Error> {
-    let echo = connect_to_service::<fecho::EchoMarker>().context("error connecting to echo")?;
+    let echo = connect_to_protocol::<fecho::EchoMarker>().context("error connecting to echo")?;
     match echo.echo_string(Some(echo_str)).await {
         Ok(reply) => {
             if reply != Some(echo_str.to_string()) {

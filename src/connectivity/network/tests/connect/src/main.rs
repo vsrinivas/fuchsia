@@ -84,7 +84,7 @@ async fn main() -> Result<(), anyhow::Error> {
 
     let () = fuchsia_syslog::init().context("cannot init logger")?;
 
-    let sync_manager = fuchsia_component::client::connect_to_service::<
+    let sync_manager = fuchsia_component::client::connect_to_protocol::<
         fidl_fuchsia_netemul_sync::SyncManagerMarker,
     >()?;
 
@@ -122,7 +122,7 @@ async fn main() -> Result<(), anyhow::Error> {
 
             // Now that we have our connections, partition the network.
             {
-                let network_context = fuchsia_component::client::connect_to_service::<
+                let network_context = fuchsia_component::client::connect_to_protocol::<
                     fidl_fuchsia_netemul_network::NetworkContextMarker,
                 >()?;
 

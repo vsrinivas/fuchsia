@@ -12,7 +12,7 @@ use fidl_fuchsia_kms::{
 };
 use fidl_fuchsia_mem::Buffer;
 use fuchsia_async as fasync;
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use fuchsia_syslog as syslog;
 use fuchsia_zircon as zx;
 use log::info;
@@ -64,7 +64,7 @@ fn get_provider_from_config() -> Result<KeyProvider, anyhow::Error> {
 
 async fn test_asymmetric_key(algorithm: AsymmetricKeyAlgorithm) -> Result<(), anyhow::Error> {
     info!("Begin asymmetric key tests for algorithm: {:?}", algorithm);
-    let key_manager = connect_to_service::<KeyManagerMarker>()
+    let key_manager = connect_to_protocol::<KeyManagerMarker>()
         .context("Failed to connect to key manager service")?;
     let public_key = {
         // Generate a new key.
@@ -117,7 +117,7 @@ async fn test_asymmetric_key(algorithm: AsymmetricKeyAlgorithm) -> Result<(), an
 
     {
         // Generate a new key_manager to simulate another user.
-        let key_manager_2 = connect_to_service::<KeyManagerMarker>()
+        let key_manager_2 = connect_to_protocol::<KeyManagerMarker>()
             .context("Failed to connect to key manager service")?;
         // The first user create a new key.
         let asymmetric_key_proxy =
@@ -191,7 +191,7 @@ async fn test_sign_verify_data(
 
 async fn test_seal_unseal_data() -> Result<(), anyhow::Error> {
     info!("Begin sealing and unsealing data test");
-    let key_manager = connect_to_service::<KeyManagerMarker>()
+    let key_manager = connect_to_protocol::<KeyManagerMarker>()
         .context("Failed to connect to key manager service")?;
     let test_data = generate_test_data();
     let vmo = zx::Vmo::create(test_data.len() as u64)?;

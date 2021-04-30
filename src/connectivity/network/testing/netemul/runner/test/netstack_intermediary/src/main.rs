@@ -36,7 +36,7 @@ const DEFAULT_METRIC: u32 = 100;
 const BUS_NAME: &'static str = "netstack-itm-bus";
 
 fn open_bus(cli_name: &str) -> Result<BusProxy, Error> {
-    let syncm = client::connect_to_service::<SyncManagerMarker>()?;
+    let syncm = client::connect_to_protocol::<SyncManagerMarker>()?;
     let (bus, bus_server_end) = fidl::endpoints::create_proxy::<BusMarker>()?;
     syncm.bus_subscribe(BUS_NAME, cli_name, bus_server_end)?;
     Ok(bus)
@@ -48,7 +48,7 @@ async fn run_mock_guest(
     server_name: String,
 ) -> Result<(), Error> {
     // Create an ethertap client and an associated ethernet device.
-    let ctx = client::connect_to_service::<NetworkContextMarker>()?;
+    let ctx = client::connect_to_protocol::<NetworkContextMarker>()?;
     let (epm, epm_server_end) = fidl::endpoints::create_proxy::<EndpointManagerMarker>()?;
     ctx.get_endpoint_manager(epm_server_end)?;
     let (netm, netm_server_end) = fidl::endpoints::create_proxy::<NetworkManagerMarker>()?;
@@ -59,7 +59,7 @@ async fn run_mock_guest(
     let (fake_ep, fake_ep_server_end) = fidl::endpoints::create_proxy::<FakeEndpointMarker>()?;
     net.create_fake_endpoint(fake_ep_server_end)?;
 
-    let netstack = client::connect_to_service::<NetstackMarker>()?;
+    let netstack = client::connect_to_protocol::<NetstackMarker>()?;
     let mut cfg = InterfaceConfig {
         name: "eth-test".to_string(),
         filepath: "[TBD]".to_string(),
@@ -178,7 +178,7 @@ async fn run_echo_server_ethernet(
 
 async fn run_echo_server(ep_name: String) -> Result<(), Error> {
     // Get the Endpoint that was created in the server's environment.
-    let netctx = client::connect_to_service::<NetworkContextMarker>()?;
+    let netctx = client::connect_to_protocol::<NetworkContextMarker>()?;
     let (epm, epm_server_end) = fidl::endpoints::create_proxy::<EndpointManagerMarker>()?;
     netctx.get_endpoint_manager(epm_server_end)?;
 

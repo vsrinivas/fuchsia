@@ -42,7 +42,7 @@ async fn setup() -> (App, App, MockRebootControllerProxy) {
     }
 
     let reboot_controller =
-        fuchsia_component::client::connect_to_service::<MockRebootControllerMarker>().unwrap();
+        fuchsia_component::client::connect_to_protocol::<MockRebootControllerMarker>().unwrap();
 
     (sampler_app, test_component, reboot_controller)
 }

@@ -75,7 +75,7 @@ where
 
     pub fn start_handling_crash_reports(&mut self) -> LocalBoxFuture<'static, ()> {
         self.start_handling_crash_reports_impl(
-            || fuchsia_component::client::connect_to_service::<CrashReporterMarker>(),
+            || fuchsia_component::client::connect_to_protocol::<CrashReporterMarker>(),
             StandardTimeSource,
         )
     }

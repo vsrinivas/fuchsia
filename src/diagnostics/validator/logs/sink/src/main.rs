@@ -80,7 +80,7 @@ impl Puppet {
         fs.take_and_serve_directory_handle()?;
 
         info!("Connecting to puppet and spawning watchdog.");
-        let proxy = app.connect_to_service::<LogSinkPuppetMarker>()?;
+        let proxy = app.connect_to_protocol::<LogSinkPuppetMarker>()?;
         let _app_watchdog = Task::spawn(async move {
             let status = app.wait().await;
             panic!("puppet should not exit! status: {:?}", status);

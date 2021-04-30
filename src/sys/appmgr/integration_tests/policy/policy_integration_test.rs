@@ -58,7 +58,7 @@ async fn launch_component(component_url: &str) -> Result<String, Error> {
     let app =
         launch(&launcher, component_url.to_string(), None).context("failed to launch service")?;
     let echo = app
-        .connect_to_service::<fidl_echo::EchoMarker>()
+        .connect_to_protocol::<fidl_echo::EchoMarker>()
         .context("Failed to connect to echo service")?;
     let result = echo.echo_string(Some("policy")).await?;
     Ok(result.unwrap())

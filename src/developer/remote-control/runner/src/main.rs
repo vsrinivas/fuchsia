@@ -6,7 +6,7 @@ use {
     anyhow::{Context as _, Error},
     fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
     fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     futures::{future::try_join, prelude::*},
     hoist::{hoist, OvernetInstance},
     std::io::{Read, Write},
@@ -95,7 +95,7 @@ where
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    let rcs_proxy = connect_to_service::<RemoteControlMarker>()?;
+    let rcs_proxy = connect_to_protocol::<RemoteControlMarker>()?;
     send_request(&rcs_proxy, get_id_argument(std::env::args())?).await?;
     let (local_socket, remote_socket) = fidl::Socket::create(fidl::SocketOpts::STREAM)?;
     let local_socket = fidl::AsyncSocket::from_socket(local_socket)?;

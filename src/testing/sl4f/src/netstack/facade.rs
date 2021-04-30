@@ -50,7 +50,7 @@ impl NetstackFacade {
             }
             None => {
                 fx_log_info!(tag: &with_line!(tag), "Setting new netstack proxy");
-                let netstack_proxy = app::client::connect_to_service::<StackMarker>();
+                let netstack_proxy = app::client::connect_to_protocol::<StackMarker>();
                 if let Err(err) = netstack_proxy {
                     fx_err_and_bail!(
                         &with_line!(tag),
@@ -72,7 +72,7 @@ impl NetstackFacade {
             }
             None => {
                 fx_log_info!(tag: &with_line!(tag), "Setting new state proxy");
-                let state_proxy = app::client::connect_to_service::<StateMarker>();
+                let state_proxy = app::client::connect_to_protocol::<StateMarker>();
                 if let Err(err) = state_proxy {
                     fx_err_and_bail!(
                         &with_line!(tag),

@@ -92,7 +92,7 @@ impl Updater {
         let updater = updater.spawn(env.launcher()).context("launching system updater")?;
 
         let proxy = updater
-            .connect_to_service::<InstallerMarker>()
+            .connect_to_protocol::<InstallerMarker>()
             .context("connect to fuchsia.update.installer.Installer")?;
 
         Ok(Self {

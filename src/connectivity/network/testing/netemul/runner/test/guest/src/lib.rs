@@ -40,7 +40,7 @@ pub fn file_to_client(file: &File) -> Result<ClientEnd<FileMarker>, Error> {
 /// # Example
 ///
 /// ```
-/// let guest_discovery_service = client::connect_to_service::<GuestDiscoveryMarker>()?;
+/// let guest_discovery_service = client::connect_to_protocol::<GuestDiscoveryMarker>()?;
 /// let (gis, gis_ch) = fidl::endpoints::create_proxy::<GuestInteractionMarker>()?;
 /// let () = guest_discovery_service.get_guest(None, "debian_guest", gis_ch)?;
 ///

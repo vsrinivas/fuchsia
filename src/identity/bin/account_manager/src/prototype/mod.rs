@@ -20,7 +20,7 @@ use fidl_fuchsia_overnet::{
     ServicePublisherMarker,
 };
 use fuchsia_async as fasync;
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use fuchsia_component::server::{ServiceFs, ServiceObj};
 use futures::prelude::*;
 use log::{error, info};
@@ -43,7 +43,7 @@ pub fn publish_account_transfer_control(fs: &mut ServiceFs<ServiceObj<'_, ()>>) 
 
 /// Publishes the `AccountManagerPeer` interface to public Overnet.
 pub fn publish_account_manager_peer_to_overnet() -> Result<(), Error> {
-    let overnet_service_publisher = connect_to_service::<ServicePublisherMarker>()?;
+    let overnet_service_publisher = connect_to_protocol::<ServicePublisherMarker>()?;
     let (client, stream) = create_request_stream::<ServiceProviderMarker>()?;
     overnet_service_publisher.publish_service(AccountManagerPeerMarker::NAME, client)?;
 

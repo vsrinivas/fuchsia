@@ -950,7 +950,7 @@ fn connect_sys_loader() -> Result<Option<LoaderProxy>, Error> {
         return Ok(None);
     }
 
-    let loader = client::connect_to_service::<LoaderMarker>()
+    let loader = client::connect_to_protocol::<LoaderMarker>()
         .context("error connecting to system loader")?;
     return Ok(Some(loader));
 }

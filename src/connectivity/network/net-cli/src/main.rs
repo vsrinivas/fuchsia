@@ -8,7 +8,7 @@ use fidl_fuchsia_net_neighbor as neighbor;
 use fidl_fuchsia_net_stack::{LogMarker, StackMarker};
 use fidl_fuchsia_netstack::NetstackMarker;
 use fuchsia_async as fasync;
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use log::{Level, Log, Metadata, Record, SetLoggerError};
 
 /// Logger which prints levels at or below info to stdout and levels at or
@@ -44,14 +44,14 @@ fn logger_init() -> Result<(), SetLoggerError> {
 async fn main() -> Result<(), Error> {
     let () = logger_init()?;
     let command: net_cli::Command = argh::from_env();
-    let stack = connect_to_service::<StackMarker>().context("failed to connect to netstack")?;
+    let stack = connect_to_protocol::<StackMarker>().context("failed to connect to netstack")?;
     let netstack =
-        connect_to_service::<NetstackMarker>().context("failed to connect to netstack")?;
-    let filter = connect_to_service::<FilterMarker>().context("failed to connect to netfilter")?;
-    let log = connect_to_service::<LogMarker>().context("failed to connect to netstack log")?;
-    let controller = connect_to_service::<neighbor::ControllerMarker>()
+        connect_to_protocol::<NetstackMarker>().context("failed to connect to netstack")?;
+    let filter = connect_to_protocol::<FilterMarker>().context("failed to connect to netfilter")?;
+    let log = connect_to_protocol::<LogMarker>().context("failed to connect to netstack log")?;
+    let controller = connect_to_protocol::<neighbor::ControllerMarker>()
         .context("failed to connect to neighbor controller")?;
-    let view = connect_to_service::<neighbor::ViewMarker>()
+    let view = connect_to_protocol::<neighbor::ViewMarker>()
         .context("failed to connect to neighbor view")?;
 
     net_cli::do_root(command, stack, netstack, filter, log, controller, view).await

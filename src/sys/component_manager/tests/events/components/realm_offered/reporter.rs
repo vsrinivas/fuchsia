@@ -9,7 +9,7 @@ use {
         sequence::*,
     },
     fidl_fidl_test_components as ftest, fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
 };
 
 #[fasync::run_singlethreaded]
@@ -29,7 +29,7 @@ async fn main() {
     // this component should know about their started events given that it was offered those
     // events.
     let trigger =
-        connect_to_service::<ftest::TriggerMarker>().expect("error connecting to trigger");
+        connect_to_protocol::<ftest::TriggerMarker>().expect("error connecting to trigger");
     trigger.run().await.expect("start trigger failed");
 
     EventSequence::new()

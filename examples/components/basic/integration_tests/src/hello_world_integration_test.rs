@@ -49,7 +49,7 @@ async fn hello_world_integration_test() -> Result<(), Error> {
     // by the observer component. Let's bind to the observer component by connecting to
     // /svc/fuchsia.logger.Log, which will cause the component to start, and begin watching the log
     // stream before starting the hello_world component, so we can see its message
-    let log_proxy = fclient::connect_to_service::<LogMarker>()?;
+    let log_proxy = fclient::connect_to_protocol::<LogMarker>()?;
     let log_stream = run_listener(log_proxy);
 
     // Now that we're connected to the log server, let's use the fuchsia.sys2.Realm protocol to

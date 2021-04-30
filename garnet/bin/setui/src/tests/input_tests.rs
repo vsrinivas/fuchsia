@@ -139,7 +139,7 @@ async fn create_input_test_env_with_failures(
 ) -> InputProxy {
     create_test_env_with_failures(storage_factory, ENV_NAME, SettingType::Input)
         .await
-        .connect_to_service::<InputMarker>()
+        .connect_to_protocol::<InputMarker>()
         .unwrap()
 }
 

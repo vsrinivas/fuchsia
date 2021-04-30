@@ -77,7 +77,7 @@ impl AvrcpRelay {
         peer_id: PeerId,
         player_request_stream: sessions2::PlayerRequestStream,
     ) -> Result<fasync::Task<()>, Error> {
-        let avrcp_svc = fuchsia_component::client::connect_to_service::<avrcp::PeerManagerMarker>()
+        let avrcp_svc = fuchsia_component::client::connect_to_protocol::<avrcp::PeerManagerMarker>()
             .context("Failed to connect to Bluetooth AVRCP interface")?;
         let session_fut = Self::session_relay(avrcp_svc, peer_id, player_request_stream);
         Ok(fasync::Task::spawn(async move {

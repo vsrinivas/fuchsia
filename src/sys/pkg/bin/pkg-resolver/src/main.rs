@@ -8,7 +8,7 @@ use {
     fidl_fuchsia_pkg::{LocalMirrorMarker, LocalMirrorProxy},
     fuchsia_async as fasync,
     fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType},
-    fuchsia_component::{client::connect_to_service, server::ServiceFs},
+    fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
     fuchsia_inspect as inspect,
     fuchsia_syslog::{self, fx_log_err, fx_log_info},
     fuchsia_trace as trace,
@@ -122,7 +122,7 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
         .context("error connecting to package cache")?;
     let local_mirror = if args.allow_local_mirror {
         Some(
-            connect_to_service::<LocalMirrorMarker>()
+            connect_to_protocol::<LocalMirrorMarker>()
                 .context("error connecting to local mirror")?,
         )
     } else {

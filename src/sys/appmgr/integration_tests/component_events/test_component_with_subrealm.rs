@@ -19,7 +19,7 @@ use {
     },
     fuchsia_async as fasync,
     fuchsia_component::{
-        client::{connect_to_service, launch},
+        client::{connect_to_protocol, launch},
         server::ServiceFs,
     },
     futures::prelude::*,
@@ -94,7 +94,7 @@ fn listen_for_component_events(
 async fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new();
 
-    let env = connect_to_service::<EnvironmentMarker>().expect("connect to current environment");
+    let env = connect_to_protocol::<EnvironmentMarker>().expect("connect to current environment");
     let (nested_env, _env_controller) =
         create_nested_environment(&env, "sub").await.context("create env")?;
 

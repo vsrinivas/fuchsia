@@ -21,7 +21,7 @@ use {
     fidl_fuchsia_net_stack_ext::FidlReturn,
     fidl_fuchsia_netstack::{self as netstack, NetstackMarker, NetstackProxy},
     fidl_fuchsia_router_config as netconfig,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon as zx,
     futures::{stream, StreamExt as _, TryStreamExt as _},
     std::convert::TryFrom,
@@ -174,13 +174,13 @@ pub enum InterfaceState {
 
 impl NetCfg {
     pub fn new() -> Result<Self, Error> {
-        let interface_state = connect_to_service::<StateMarker>()
+        let interface_state = connect_to_protocol::<StateMarker>()
             .context("network_manager failed to connect to interface state")?;
-        let stack = connect_to_service::<StackMarker>()
+        let stack = connect_to_protocol::<StackMarker>()
             .context("network_manager failed to connect to stack")?;
-        let netstack = connect_to_service::<NetstackMarker>()
+        let netstack = connect_to_protocol::<NetstackMarker>()
             .context("network_manager failed to connect to netstack")?;
-        let lookup_admin = connect_to_service::<LookupAdminMarker>()
+        let lookup_admin = connect_to_protocol::<LookupAdminMarker>()
             .context("network_manager failed to connect to lookup admin")?;
         Ok(NetCfg { stack, netstack, interface_state, lookup_admin, dhcp_server: None })
     }
@@ -382,7 +382,7 @@ impl NetCfg {
     ///   * failed to enable a new server when no servers are running
     fn get_dhcp_server(&mut self, pid: PortId) -> error::Result<&Server_Proxy> {
         if self.dhcp_server.is_none() {
-            let server_proxy = connect_to_service::<Server_Marker>().map_err(|e| {
+            let server_proxy = connect_to_protocol::<Server_Marker>().map_err(|e| {
                 warn!("failed to launch DHCP server component: {:?}", e);
                 error::NetworkManager::Hal(error::Hal::OperationFailed)
             })?;

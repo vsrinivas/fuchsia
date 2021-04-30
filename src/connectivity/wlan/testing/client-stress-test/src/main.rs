@@ -10,7 +10,7 @@ use {
     anyhow::{bail, format_err, Context as _, Error},
     fidl_fuchsia_wlan_device_service::{DeviceServiceMarker, DeviceServiceProxy},
     fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_syslog::{self as syslog, fx_log_info},
     serde::Serialize,
     std::collections::HashMap,
@@ -68,7 +68,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
     let mut disconnect_test_pass = true;
     let mut exec = fasync::Executor::new().context("Error creating event loop")?;
     let wlan_svc =
-        connect_to_service::<DeviceServiceMarker>().context("Failed to connect to wlan_service")?;
+        connect_to_protocol::<DeviceServiceMarker>().context("Failed to connect to wlan_service")?;
 
     let fut = async {
         let wlan_iface_ids = wlan_service_util::get_iface_list(&wlan_svc)

@@ -15,7 +15,7 @@ use {
     fidl_fuchsia_location_sensor as fidl_location_sensor, fidl_fuchsia_wlan_policy as fidl_policy,
     fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_async::{self as fasync, DurationExt},
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon as zx,
     futures::{lock::Mutex, prelude::*},
     log::{debug, error, info, warn},
@@ -277,7 +277,7 @@ impl ScanResultUpdate for LocationSensorUpdater {
                 fidl::endpoints::create_endpoints::<fidl_policy::ScanResultIteratorMarker>()
                     .map_err(|err| format_err!("failed to create iterator: {:?}", err))?;
             let location_watcher_proxy =
-                connect_to_service::<fidl_location_sensor::WlanBaseStationWatcherMarker>()
+                connect_to_protocol::<fidl_location_sensor::WlanBaseStationWatcherMarker>()
                     .map_err(|err| {
                         format_err!("failed to connect to location sensor service: {:?}", err)
                     })?;

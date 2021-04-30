@@ -6,7 +6,7 @@ use {fidl_fidl_test_components as ftest, fuchsia_async as fasync, fuchsia_compon
 
 #[fasync::run_singlethreaded(test)]
 async fn custom_resolved_component_serves_protocol() {
-    let trigger = client::connect_to_service::<ftest::TriggerMarker>()
+    let trigger = client::connect_to_protocol::<ftest::TriggerMarker>()
         .expect("failed to open trigger service");
     let out = trigger.run().await.expect("trigger failed");
     assert_eq!(out, "Triggered");

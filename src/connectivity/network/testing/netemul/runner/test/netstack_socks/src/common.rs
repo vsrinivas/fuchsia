@@ -17,7 +17,7 @@ pub struct BusConnection {
 
 impl BusConnection {
     pub fn new(client: &str) -> Result<BusConnection, Error> {
-        let busm = client::connect_to_service::<SyncManagerMarker>()
+        let busm = client::connect_to_protocol::<SyncManagerMarker>()
             .context("SyncManager not available")?;
         let (bus, busch) = fidl::endpoints::create_proxy::<BusMarker>()?;
         busm.bus_subscribe(BUS_NAME, client, busch)?;

@@ -25,7 +25,7 @@ async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&[]).unwrap();
     let Opt { puppet_url } = argh::from_env();
     let app = launch(&launcher().unwrap(), puppet_url.to_string(), None)?;
-    let proxy = app.connect_to_service::<EncodingPuppetMarker>()?;
+    let proxy = app.connect_to_protocol::<EncodingPuppetMarker>()?;
 
     info!("Testing encoding.");
     let arr: Vec<&dyn Fn() -> TestCase> = vec![

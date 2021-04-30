@@ -80,7 +80,7 @@ fn mask_with_prefix(mut ip: net::IpAddress, prefix: u8) -> net::IpAddress {
 
 impl Netstack {
     fn new(env: &NestedEnvironment) -> Result<Self, Error> {
-        Ok(Self { stack: env.connect_to_service::<StackMarker>()? })
+        Ok(Self { stack: env.connect_to_protocol::<StackMarker>()? })
     }
 
     async fn add_ethernet(&self, path: String) -> Result<u64, Error> {

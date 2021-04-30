@@ -7,11 +7,11 @@
 use anyhow::Error;
 use fidl_fuchsia_boot::FactoryItemsMarker;
 use fuchsia_async as fasync;
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 
 #[fasync::run_singlethreaded(test)]
 async fn test_get_factory_items() -> Result<(), Error> {
-    let factory_items = connect_to_service::<FactoryItemsMarker>().unwrap();
+    let factory_items = connect_to_protocol::<FactoryItemsMarker>().unwrap();
 
     {
         let (vmo_opt, length) =
@@ -45,7 +45,7 @@ async fn test_get_factory_items() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_get_factory_items_missing() -> Result<(), Error> {
-    let factory_items = connect_to_service::<FactoryItemsMarker>().unwrap();
+    let factory_items = connect_to_protocol::<FactoryItemsMarker>().unwrap();
 
     // No item with extra=10 exists on the service.
     let (vmo_opt, length) = factory_items.get(10).await.unwrap();

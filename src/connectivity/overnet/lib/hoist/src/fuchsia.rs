@@ -23,17 +23,17 @@ impl Hoist {
 
 impl super::OvernetInstance for Hoist {
     fn connect_as_service_consumer(&self) -> Result<ServiceConsumerProxy, Error> {
-        Ok(fuchsia_component::client::connect_to_service::<ServiceConsumerMarker>()
+        Ok(fuchsia_component::client::connect_to_protocol::<ServiceConsumerMarker>()
             .context("Failed to connect to overnet ServiceConsumer service")?)
     }
 
     fn connect_as_service_publisher(&self) -> Result<ServicePublisherProxy, Error> {
-        Ok(fuchsia_component::client::connect_to_service::<ServicePublisherMarker>()
+        Ok(fuchsia_component::client::connect_to_protocol::<ServicePublisherMarker>()
             .context("Failed to connect to overnet ServicePublisher service")?)
     }
 
     fn connect_as_mesh_controller(&self) -> Result<MeshControllerProxy, Error> {
-        Ok(fuchsia_component::client::connect_to_service::<MeshControllerMarker>()
+        Ok(fuchsia_component::client::connect_to_protocol::<MeshControllerMarker>()
             .context("Failed to connect to overnet MeshController service")?)
     }
 }

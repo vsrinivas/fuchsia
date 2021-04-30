@@ -5,7 +5,7 @@
 use {
     fidl_fuchsia_wlan_device::MacRole::Client,
     fidl_fuchsia_wlan_device_service::{CreateIfaceRequest, DeviceServiceMarker},
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon::DurationNum,
     fuchsia_zircon_sys::ZX_OK,
     wlan_common::test_utils::ExpectWithin,
@@ -22,7 +22,7 @@ async fn multiple_interfaces_per_phy() {
     let client_helper = test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;
 
     let wlanstack_svc =
-        connect_to_service::<DeviceServiceMarker>().expect("connecting to wlanstack");
+        connect_to_protocol::<DeviceServiceMarker>().expect("connecting to wlanstack");
     let first_iface_id = get_first_matching_iface_id(&wlanstack_svc, |_iface| true)
         .expect_within(5.seconds(), "getting first iface")
         .await;

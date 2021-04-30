@@ -111,7 +111,7 @@ impl WebdriverFacadeInternal {
         // Walk through creating a frame and navigation controller.  Completion
         // of NavigationController GetVisibleEntry guarantees that the debug
         // service is ready to accept requests.
-        let context_provider = app::client::connect_to_service::<ContextProviderMarker>()?;
+        let context_provider = app::client::connect_to_protocol::<ContextProviderMarker>()?;
         let (context_proxy, context_server_end) = create_proxy::<ContextMarker>()?;
 
         let (client, server) = zx::Channel::create()?;

@@ -11,7 +11,7 @@ use {
     },
     fuchsia_async as fasync,
     fuchsia_component::{
-        client::{connect_to_service, LaunchOptions},
+        client::{connect_to_protocol, LaunchOptions},
         fuchsia_single_component_package_url,
         server::ServiceFs,
     },
@@ -38,11 +38,11 @@ async fn main() -> Result<(), Error> {
     env::set_var("RUST_BACKTRACE", "full");
 
     // Check that all services provided by the parent are available
-    let echo = connect_to_service::<EchoExposedByParentMarker>()?;
+    let echo = connect_to_protocol::<EchoExposedByParentMarker>()?;
     assert_eq!(1, echo.echo(1).await?);
-    let echo = connect_to_service::<EchoExposedBySiblingMarker>()?;
+    let echo = connect_to_protocol::<EchoExposedBySiblingMarker>()?;
     assert_eq!(10, echo.echo(5).await?);
-    let echo = connect_to_service::<EchoHiddenByParentMarker>()?;
+    let echo = connect_to_protocol::<EchoHiddenByParentMarker>()?;
     assert_eq!(2, echo.echo(2).await?);
 
     println!("connecting to {}", CHILD_URL);

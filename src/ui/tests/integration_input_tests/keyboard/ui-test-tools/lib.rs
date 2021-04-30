@@ -7,7 +7,7 @@ use fidl::endpoints::{create_proxy, create_request_stream};
 use fidl_fuchsia_ui_gfx as ui_gfx;
 use fidl_fuchsia_ui_policy as ui_policy;
 use fidl_fuchsia_ui_scenic as ui_scenic;
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use fuchsia_scenic::{EntityNode, Session, SessionPtr, View, ViewTokenPair};
 use fuchsia_zircon::Time;
 use futures::TryStreamExt;
@@ -29,11 +29,11 @@ pub struct Service {
 
 impl Service {
     fn new(_environment: EnvironmentType) -> Result<Service, Error> {
-        let presenter = connect_to_service::<ui_policy::PresenterMarker>()
+        let presenter = connect_to_protocol::<ui_policy::PresenterMarker>()
             .context("connect to Presentation")?;
 
         let scenic =
-            connect_to_service::<ui_scenic::ScenicMarker>().context("connect to Scenic")?;
+            connect_to_protocol::<ui_scenic::ScenicMarker>().context("connect to Scenic")?;
         let (listener_client_end, session_listener_stream) =
             create_request_stream::<ui_scenic::SessionListenerMarker>()
                 .context("create_request_stream")?;

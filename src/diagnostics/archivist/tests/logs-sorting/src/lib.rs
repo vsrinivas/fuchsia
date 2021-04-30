@@ -7,7 +7,7 @@ use fidl_fuchsia_diagnostics_test::ControllerMarker;
 use fidl_fuchsia_logger::{LogLevelFilter, LogMarker, LogMessage, LogSinkMarker};
 use fidl_fuchsia_sys::LauncherMarker;
 use fuchsia_async as fasync;
-use fuchsia_component::client::{connect_to_service, launch_with_options, App, LaunchOptions};
+use fuchsia_component::client::{connect_to_protocol, launch_with_options, App, LaunchOptions};
 use fuchsia_syslog::levels::INFO;
 use fuchsia_syslog_listener::{run_log_listener_with_proxy, LogProcessor};
 use fuchsia_zircon as zx;
@@ -44,7 +44,7 @@ async fn timestamp_sorting_for_batches() {
         .collect::<Vec<_>>();
 
     // launch archivist-for-embedding.cmx
-    let launcher = connect_to_service::<LauncherMarker>().unwrap();
+    let launcher = connect_to_protocol::<LauncherMarker>().unwrap();
     let mut archivist = launch_with_options(
         &launcher,
         "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx"
@@ -66,7 +66,7 @@ async fn timestamp_sorting_for_batches() {
 
         // connect to log_sink and make sure we have a clean slate
         let mut early_listener = listen_to_archivist(&archivist);
-        let log_sink = archivist.connect_to_service::<LogSinkMarker>().unwrap();
+        let log_sink = archivist.connect_to_protocol::<LogSinkMarker>().unwrap();
 
         // connect the tortoise's socket
         log_sink.connect(recv_tort).unwrap();
@@ -118,7 +118,7 @@ async fn timestamp_sorting_for_batches() {
     }
 
     // connect to controller and call stop
-    let controller = archivist.connect_to_service::<ControllerMarker>().unwrap();
+    let controller = archivist.connect_to_protocol::<ControllerMarker>().unwrap();
     controller.stop().unwrap();
 
     assert!(archivist.wait().await.unwrap().success());
@@ -139,7 +139,7 @@ impl LogProcessor for Listener {
 }
 
 async fn dump_from_archivist(archivist: &App) -> Vec<LogMessage> {
-    let log_proxy = archivist.connect_to_service::<LogMarker>().unwrap();
+    let log_proxy = archivist.connect_to_protocol::<LogMarker>().unwrap();
     let (send_logs, recv_logs) = mpsc::unbounded();
     fasync::Task::spawn(async move {
         run_log_listener_with_proxy(&log_proxy, send_logs, None, true, None).await.unwrap();
@@ -149,7 +149,7 @@ async fn dump_from_archivist(archivist: &App) -> Vec<LogMessage> {
 }
 
 fn listen_to_archivist(archivist: &App) -> mpsc::UnboundedReceiver<LogMessage> {
-    let log_proxy = archivist.connect_to_service::<LogMarker>().unwrap();
+    let log_proxy = archivist.connect_to_protocol::<LogMarker>().unwrap();
     let (send_logs, recv_logs) = mpsc::unbounded();
     fasync::Task::spawn(async move {
         run_log_listener_with_proxy(&log_proxy, send_logs, None, false, None).await.unwrap();

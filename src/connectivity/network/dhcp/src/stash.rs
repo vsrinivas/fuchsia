@@ -91,7 +91,7 @@ impl Stash {
         if !invalid_chars.is_empty() {
             return Err(StashError::InvalidPrefix { prefix: prefix.to_string(), invalid_chars });
         }
-        let store_client = fuchsia_component::client::connect_to_service::<
+        let store_client = fuchsia_component::client::connect_to_protocol::<
             fidl_fuchsia_stash::SecureStoreMarker,
         >()
         .map_err(StashError::StashConnect)?;

@@ -9,7 +9,7 @@ use {
 
 #[fasync::run_singlethreaded(test)]
 async fn routing() {
-    let realm = client::connect_to_service::<fsys::RealmMarker>()
+    let realm = client::connect_to_protocol::<fsys::RealmMarker>()
         .expect("could not connect to Realm service");
 
     // Bind to `echo_client`, causing it to execute.

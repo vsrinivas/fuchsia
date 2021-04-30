@@ -24,7 +24,7 @@ use fidl_fuchsia_input_report::ConsumerControlButton;
 use fidl_fuchsia_recovery::FactoryResetMarker;
 use fidl_fuchsia_recovery_policy::FactoryResetMarker as FactoryResetPolicyMarker;
 use fuchsia_async::{self as fasync, Task};
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use fuchsia_zircon::{Duration, Event};
 use futures::StreamExt;
 use std::borrow::{Borrow, Cow};
@@ -348,7 +348,7 @@ impl RecoveryViewAssistant {
     }
 
     async fn execute_reset(view_key: ViewKey, app_context: AppContext) {
-        let factory_reset_service = connect_to_service::<FactoryResetMarker>();
+        let factory_reset_service = connect_to_protocol::<FactoryResetMarker>();
         let proxy = match factory_reset_service {
             Ok(marker) => marker.clone(),
             Err(error) => {
@@ -608,7 +608,7 @@ impl ViewAssistant for RecoveryViewAssistant {
 
 /// Determines whether or not fdr is enabled.
 async fn check_fdr_enabled() -> Result<bool, Error> {
-    let proxy = connect_to_service::<FactoryResetPolicyMarker>()?;
+    let proxy = connect_to_protocol::<FactoryResetPolicyMarker>()?;
     proxy
         .get_enabled()
         .await

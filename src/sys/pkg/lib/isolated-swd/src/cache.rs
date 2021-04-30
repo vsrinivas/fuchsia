@@ -139,7 +139,7 @@ pub mod tests {
         let proxy = cache
             .cache
             ._pkg_cache
-            .connect_to_service::<fidl_fuchsia_pkg::PackageCacheMarker>()
+            .connect_to_protocol::<fidl_fuchsia_pkg::PackageCacheMarker>()
             .expect("connecting to pkg cache service");
 
         assert_eq!(proxy.sync().await.unwrap(), Ok(()));
@@ -152,7 +152,7 @@ pub mod tests {
         let proxy = cache
             .cache
             ._pkg_cache
-            .connect_to_service::<fidl_fuchsia_space::ManagerMarker>()
+            .connect_to_protocol::<fidl_fuchsia_space::ManagerMarker>()
             .expect("connecting to space manager service");
 
         assert_eq!(proxy.gc().await.unwrap(), Ok(()));

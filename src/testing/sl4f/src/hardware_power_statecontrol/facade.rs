@@ -22,7 +22,7 @@ impl HardwarePowerStatecontrolFacade {
 
     fn get_admin_proxy(&self) -> Result<AdminProxy, Error> {
         let tag = "HardwarePowerStatecontrolFacade";
-        match app::client::connect_to_service::<AdminMarker>() {
+        match app::client::connect_to_protocol::<AdminMarker>() {
             Ok(p) => Ok(p),
             Err(err) => fx_err_and_bail!(
                 &with_line!(tag),

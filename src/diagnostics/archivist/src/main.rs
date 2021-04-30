@@ -16,7 +16,7 @@ use {
     fidl_fuchsia_sys2::EventSourceMarker,
     fidl_fuchsia_sys_internal::{ComponentEventProviderMarker, LogConnectorMarker},
     fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_component::server::MissingStartupHandle,
     fuchsia_syslog, fuchsia_zircon as zx,
     std::path::PathBuf,
@@ -118,13 +118,13 @@ fn main() -> Result<(), Error> {
     executor
         .run_singlethreaded(async {
             if !opt.disable_component_event_provider {
-                let legacy_event_provider = connect_to_service::<ComponentEventProviderMarker>()
+                let legacy_event_provider = connect_to_protocol::<ComponentEventProviderMarker>()
                     .context("failed to connect to event provider")?;
                 archivist.add_event_source("v1", Box::new(legacy_event_provider)).await;
             }
 
             if !opt.disable_event_source {
-                let event_source = connect_to_service::<EventSourceMarker>()
+                let event_source = connect_to_protocol::<EventSourceMarker>()
                     .context("failed to connect to event source")?;
                 archivist.add_event_source("v2", Box::new(event_source)).await;
             }
@@ -151,7 +151,7 @@ fn main() -> Result<(), Error> {
     }
 
     if !opt.disable_log_connector {
-        let connector = connect_to_service::<LogConnectorMarker>()?;
+        let connector = connect_to_protocol::<LogConnectorMarker>()?;
         executor.run_singlethreaded(
             archivist.add_event_source(
                 "log_connector",

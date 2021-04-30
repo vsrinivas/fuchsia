@@ -10,13 +10,13 @@ use {
         MonitorRequestStream,
     },
     fidl_fuchsia_update_ext::State,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     futures::prelude::*,
 };
 
 pub async fn handle_check_now_cmd(cmd: args::CheckNow) -> Result<(), Error> {
     let update_manager =
-        connect_to_service::<ManagerMarker>().context("Failed to connect to update manager")?;
+        connect_to_protocol::<ManagerMarker>().context("Failed to connect to update manager")?;
     handle_check_now_cmd_impl(cmd, &update_manager).await
 }
 

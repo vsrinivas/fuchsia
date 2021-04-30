@@ -33,7 +33,7 @@ async fn main() -> Result<(), anyhow::Error> {
         12.millis(),
     )?;
 
-    let svc = fuchsia_component::client::connect_to_service::<AudioDeviceEnumeratorMarker>()
+    let svc = fuchsia_component::client::connect_to_protocol::<AudioDeviceEnumeratorMarker>()
         .context("Failed to connect to AudioDeviceEnumerator")?;
     svc.add_device_by_channel("AudioOutHarness", false, client)?;
 

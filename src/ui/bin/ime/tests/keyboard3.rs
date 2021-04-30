@@ -10,7 +10,7 @@ use {
     anyhow::{Context as _, Result},
     fidl_fuchsia_input as input, fidl_fuchsia_ui_input3 as ui_input3,
     fidl_fuchsia_ui_views as ui_views,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_scenic as scenic,
     futures::{
         future,
@@ -154,7 +154,7 @@ async fn test_disconnecting_keyboard_client_disconnects_listener_with_connection
 }
 
 fn connect_to_focus_controller() -> Result<fidl_focus::ControllerProxy> {
-    connect_to_service::<fidl_focus::ControllerMarker>()
+    connect_to_protocol::<fidl_focus::ControllerMarker>()
         .context("Failed to connect to fuchsia.ui.keyboard.focus.Controller")
 }
 
@@ -164,17 +164,17 @@ async fn test_disconnecting_keyboard_client_disconnects_listener_via_key_event_i
     fuchsia_syslog::init_with_tags(&["keyboard3_integration_test"])
         .expect("syslog init should not fail");
 
-    let key_event_injector = connect_to_service::<ui_input3::KeyEventInjectorMarker>()
+    let key_event_injector = connect_to_protocol::<ui_input3::KeyEventInjectorMarker>()
         .context("Failed to connect to fuchsia.ui.input3.KeyEventInjector")?;
 
     let key_dispatcher =
         test_helpers::KeyEventInjectorDispatcher { key_event_injector: &key_event_injector };
     let key_simulator = test_helpers::KeySimulator::new(&key_dispatcher);
 
-    let keyboard_service_client = connect_to_service::<ui_input3::KeyboardMarker>()
+    let keyboard_service_client = connect_to_protocol::<ui_input3::KeyboardMarker>()
         .context("Failed to connect to input3 Keyboard service")?;
 
-    let keyboard_service_other_client = connect_to_service::<ui_input3::KeyboardMarker>()
+    let keyboard_service_other_client = connect_to_protocol::<ui_input3::KeyboardMarker>()
         .context("Failed to establish another connection to input3 Keyboard service")?;
 
     test_disconnecting_keyboard_client_disconnects_listener_with_connections(
@@ -269,17 +269,17 @@ async fn test_sync_cancel_via_key_event_injector() -> Result<()> {
         .expect("syslog init should not fail");
 
     // This test dispatches keys via KeyEventInjector.
-    let key_event_injector = connect_to_service::<ui_input3::KeyEventInjectorMarker>()
+    let key_event_injector = connect_to_protocol::<ui_input3::KeyEventInjectorMarker>()
         .context("Failed to connect to fuchsia.ui.input3.KeyEventInjector")?;
 
     let key_dispatcher =
         test_helpers::KeyEventInjectorDispatcher { key_event_injector: &key_event_injector };
     let key_simulator = test_helpers::KeySimulator::new(&key_dispatcher);
 
-    let keyboard_service_client = connect_to_service::<ui_input3::KeyboardMarker>()
+    let keyboard_service_client = connect_to_protocol::<ui_input3::KeyboardMarker>()
         .context("Failed to connect to input3 Keyboard service")?;
 
-    let keyboard_service_other_client = connect_to_service::<ui_input3::KeyboardMarker>()
+    let keyboard_service_other_client = connect_to_protocol::<ui_input3::KeyboardMarker>()
         .context("Failed to establish another connection to input3 Keyboard service")?;
 
     test_sync_cancel_with_connections(

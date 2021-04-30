@@ -9,7 +9,7 @@ use {
     fidl_fuchsia_ui_policy::PointerCaptureListenerHackProxy,
     fidl_fuchsia_ui_scenic::ScenicMarker,
     fuchsia_async as fasync,
-    fuchsia_component::{client::connect_to_service, server::ServiceFs},
+    fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
     fuchsia_syslog::fx_log_warn,
     futures::lock::Mutex,
     futures::{StreamExt, TryStreamExt},
@@ -47,7 +47,7 @@ async fn main() -> Result<(), Error> {
         match service_request {
             ExposedServices::Manager(request_stream) => {
                 if let Some(input_receiver) = input_receiver {
-                    let scenic = connect_to_service::<ScenicMarker>()?;
+                    let scenic = connect_to_protocol::<ScenicMarker>()?;
                     let scene_manager =
                         scene_management::FlatSceneManager::new(scenic, None, None).await?;
                     fasync::Task::local(handle_manager_request_stream(

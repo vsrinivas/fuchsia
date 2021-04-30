@@ -66,7 +66,7 @@ mod tests {
         },
         fidl::endpoints::ClientEnd,
         fidl_fuchsia_kernel as fkernel, fuchsia_async as fasync,
-        fuchsia_component::client::connect_to_service,
+        fuchsia_component::client::connect_to_protocol,
         fuchsia_zircon::AsHandleRef,
         fuchsia_zircon_sys as sys,
         futures::lock::Mutex,
@@ -85,7 +85,7 @@ mod tests {
     }
 
     async fn get_mmio_resource() -> Result<Resource, Error> {
-        let mmio_resource_provider = connect_to_service::<fkernel::MmioResourceMarker>()?;
+        let mmio_resource_provider = connect_to_protocol::<fkernel::MmioResourceMarker>()?;
         let mmio_resource_handle = mmio_resource_provider.get().await?;
         Ok(Resource::from(mmio_resource_handle))
     }

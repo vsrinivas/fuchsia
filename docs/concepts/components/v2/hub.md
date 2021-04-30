@@ -458,7 +458,7 @@ Also consider 3 instances, one for each component:
 `foo` can perform various actions that modify the hub:
 
 -   [View the hub](#view-hub)
--   [Connect to the Realm framework service](#connect-to-realm)
+-   [Connect to the Realm framework protocol](#connect-to-realm)
 -   [Create a dynamic child](#create-dynamic-child)
 -   [Start a dynamic child](#start-dynamic-child)
 -   [Destroy a dynamic child](#destroy-dynamic-child)
@@ -493,14 +493,14 @@ the following:
 └── url => "fuchsia-pkg://fuchsia.com/example#meta/A.cm"
 ```
 
-### Connect to the Realm framework service {#connect-to-realm}
+### Connect to the Realm framework protocol {#connect-to-realm}
 
 A component must connect to the
-[Realm framework service](realms.md#realm-framework-service) to manipulate its
+[Realm framework protocol](realms.md#realm-framework-service) to manipulate its
 dynamic children. In Rust, this looks like:
 
 ```
-let realm = connect_to_service::<fsys::RealmMarker>()?;
+let realm = connect_to_protocol::<fsys::RealmMarker>()?;
 ```
 
 ### Create a dynamic child {#create-dynamic-child}

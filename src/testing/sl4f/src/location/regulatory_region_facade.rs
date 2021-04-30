@@ -6,7 +6,7 @@ use anyhow::Error;
 use fidl_fuchsia_location_namedplace::{
     RegulatoryRegionConfiguratorMarker, RegulatoryRegionConfiguratorProxy,
 };
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 
 #[derive(Debug)]
 pub struct RegulatoryRegionFacade {
@@ -16,7 +16,7 @@ pub struct RegulatoryRegionFacade {
 impl RegulatoryRegionFacade {
     pub fn new() -> Result<RegulatoryRegionFacade, Error> {
         Ok(RegulatoryRegionFacade {
-            configurator: connect_to_service::<RegulatoryRegionConfiguratorMarker>()?,
+            configurator: connect_to_protocol::<RegulatoryRegionConfiguratorMarker>()?,
         })
     }
 

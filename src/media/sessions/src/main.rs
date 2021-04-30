@@ -56,7 +56,7 @@ async fn main() {
     let (observer_request_sink, observer_request_stream) = mpsc::channel(CHANNEL_BUFFER_SIZE);
 
     let usage_reporter_proxy =
-        client::connect_to_service::<UsageReporterMarker>().expect("Connecting to UsageReporter");
+        client::connect_to_protocol::<UsageReporterMarker>().expect("Connecting to UsageReporter");
     let discovery = Discovery::new(player_stream, usage_reporter_proxy);
     let sessions_info_stream = discovery.sessions_info_stream(Filter::default());
     spawn_log_error(discovery.serve(discovery_request_stream, observer_request_stream));

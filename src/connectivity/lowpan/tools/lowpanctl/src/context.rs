@@ -12,7 +12,7 @@ use fidl_fuchsia_lowpan_device::{
 };
 use fidl_fuchsia_lowpan_test::{DeviceTestMarker, DeviceTestProxy};
 use fidl_fuchsia_lowpan_thread::{LegacyJoiningMarker, LegacyJoiningProxy};
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use futures::prelude::*;
 
 /// This struct contains all of the transient state that can
@@ -26,7 +26,7 @@ pub struct LowpanCtlContext {
 
 impl LowpanCtlContext {
     pub fn from_invocation(args: &LowpanCtlInvocation) -> Result<LowpanCtlContext, Error> {
-        let lookup = connect_to_service::<LookupMarker>()
+        let lookup = connect_to_protocol::<LookupMarker>()
             .context("Failed to connect to Lowpan Lookup service")?;
 
         Ok(LowpanCtlContext {
@@ -62,7 +62,7 @@ impl LowpanCtlContext {
     }
 
     pub async fn get_default_device_factory(&self) -> Result<FactoryDeviceProxy, Error> {
-        let lookup = connect_to_service::<FactoryLookupMarker>()
+        let lookup = connect_to_protocol::<FactoryLookupMarker>()
             .context("Failed to connect to Lowpan FactoryLookup service")?;
 
         let (client, server) = create_endpoints::<FactoryDeviceMarker>()?;

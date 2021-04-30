@@ -22,7 +22,7 @@ impl StreamProcessorFactory for DecoderFactory {
         format_details_version_ordinal: u64,
     ) -> BoxFuture<'_, Result<StreamProcessorProxy>> {
         let get_decoder = || {
-            let factory = client::connect_to_service::<CodecFactoryMarker>()?;
+            let factory = client::connect_to_protocol::<CodecFactoryMarker>()?;
             let (decoder_client_end, decoder_request) = create_endpoints()?;
             let decoder = decoder_client_end.into_proxy()?;
             // TODO(turnage): Account for all error reporting methods in the

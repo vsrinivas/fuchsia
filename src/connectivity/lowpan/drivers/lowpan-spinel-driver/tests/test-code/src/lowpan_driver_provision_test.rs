@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_net_stack::StackMarker, fuchsia_component::client::connect_to_service,
+    fidl_fuchsia_net_stack::StackMarker, fuchsia_component::client::connect_to_protocol,
     lowpan_test_utils::lowpan_driver_test_utils::*,
 };
 
@@ -13,7 +13,7 @@ pub async fn lowpan_driver_provision_test() {
     call_lowpanctl_cmd(args).await;
 
     // Ensure lowpan0 is created
-    let stack = connect_to_service::<StackMarker>().expect("failed to connect to netstack");
+    let stack = connect_to_protocol::<StackMarker>().expect("failed to connect to netstack");
     let intfs = stack.list_interfaces().await.expect("getting interfaces");
     let _ = get_interface_id("lowpan0", &intfs).expect("getting id of lowpan0");
 }

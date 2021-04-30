@@ -39,7 +39,7 @@ mod tests {
         super::*,
         anyhow::{Context, Error},
         fidl_fuchsia_sys_test as systest, fuchsia_async as fasync,
-        fuchsia_component::client::connect_to_service,
+        fuchsia_component::client::connect_to_protocol,
         std::path::{Path, PathBuf},
     };
 
@@ -59,7 +59,7 @@ mod tests {
         assert_eq!(vec![PathBuf::from(FILE_PATH)], read_dir_paths("/cache")?);
 
         // Connect to CacheControl, clear the cache for the system
-        let cache_control = connect_to_service::<systest::CacheControlMarker>()?;
+        let cache_control = connect_to_protocol::<systest::CacheControlMarker>()?;
         cache_control.clear().await.context("failed to clear cache")?;
 
         // Make sure the contents of /cache match what we expect

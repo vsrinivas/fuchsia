@@ -341,7 +341,7 @@ impl VirtualOutput {
     }
 
     pub fn start_output(&mut self) -> Result<(), Error> {
-        let va_output = app::client::connect_to_service::<OutputMarker>()?;
+        let va_output = app::client::connect_to_protocol::<OutputMarker>()?;
         va_output.clear_format_ranges()?;
         va_output.set_fifo_depth(0)?;
         va_output.set_external_delay(0)?;
@@ -712,7 +712,7 @@ impl VirtualInput {
     }
 
     pub fn start_input(&mut self) -> Result<(), Error> {
-        let va_input = app::client::connect_to_service::<InputMarker>()?;
+        let va_input = app::client::connect_to_protocol::<InputMarker>()?;
         va_input.clear_format_ranges()?;
         va_input.set_fifo_depth(0)?;
         va_input.set_external_delay(0)?;
@@ -790,7 +790,7 @@ struct VirtualAudio {
 
 impl VirtualAudio {
     fn new() -> Result<VirtualAudio, Error> {
-        let va_control = app::client::connect_to_service::<ControlMarker>()?;
+        let va_control = app::client::connect_to_protocol::<ControlMarker>()?;
         Ok(VirtualAudio {
             output_sample_format: AudioSampleFormat::Signed16,
             output_channels: 2,

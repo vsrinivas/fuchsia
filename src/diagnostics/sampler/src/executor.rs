@@ -19,7 +19,7 @@ use {
         MetricEventLoggerFactoryProxy, MetricEventLoggerProxy, MetricEventPayload, ProjectSpec,
     },
     fuchsia_async::{self as fasync, futures::StreamExt},
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_inspect::{self as inspect, NumericProperty},
     fuchsia_inspect_derive::WithInspect,
     fuchsia_zircon as zx,
@@ -185,12 +185,12 @@ impl SamplerExecutor {
     /// to ProjectSampler plans.
     pub async fn new(sampler_config: SamplerConfig) -> Result<Self, Error> {
         let logger_factory: Arc<LoggerFactoryProxy> = Arc::new(
-            connect_to_service::<LoggerFactoryMarker>()
+            connect_to_protocol::<LoggerFactoryMarker>()
                 .context("Failed to connect to the Cobalt LoggerFactory")?,
         );
 
         let metric_logger_factory: Arc<MetricEventLoggerFactoryProxy> = Arc::new(
-            connect_to_service::<MetricEventLoggerFactoryMarker>()
+            connect_to_protocol::<MetricEventLoggerFactoryMarker>()
                 .context("Failed to connect to the Metric LoggerFactory")?,
         );
 

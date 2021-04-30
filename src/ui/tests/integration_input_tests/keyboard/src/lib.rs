@@ -8,7 +8,7 @@ use fidl::endpoints::create_request_stream;
 use fidl_fuchsia_ui_input2 as ui_input;
 use fidl_fuchsia_ui_views as ui_views;
 use fuchsia_async;
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use fuchsia_zircon as zx;
 use futures::StreamExt;
 use input_synthesis;
@@ -27,7 +27,7 @@ async fn keyboard_events() -> Result<(), Error> {
         .await
         .context("ui_test_tools::setup")?;
 
-    let keyboard = connect_to_service::<ui_input::KeyboardMarker>()
+    let keyboard = connect_to_protocol::<ui_input::KeyboardMarker>()
         .context("Failed to connect to Keyboard service")?;
 
     let (listener_client_end, mut listener_stream) =

@@ -83,10 +83,10 @@ impl VolumeRelay {
     /// are propagated to the system Media volume.
     /// This starts the relay.  The relay can be stopped by dropping it.
     pub(crate) fn start() -> Result<Self, Error> {
-        let avrcp_svc = fuchsia_component::client::connect_to_service::<avrcp::PeerManagerMarker>()
+        let avrcp_svc = fuchsia_component::client::connect_to_protocol::<avrcp::PeerManagerMarker>()
             .context("Failed to connect to Bluetooth AVRCP interface")?;
         let audio_settings_svc =
-            fuchsia_component::client::connect_to_service::<settings::AudioMarker>()
+            fuchsia_component::client::connect_to_protocol::<settings::AudioMarker>()
                 .context("Failed to connect to Audio settings interface")?;
 
         let (sender, receiver) = futures::channel::oneshot::channel();

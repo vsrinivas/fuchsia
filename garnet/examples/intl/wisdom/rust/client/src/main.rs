@@ -72,7 +72,7 @@ async fn main() -> Result<(), Error> {
         launch(&launcher, opts.server_url, None).context("Failed to launch intl wisdom service")?;
 
     let wisdom = app
-        .connect_to_service::<fwisdom::IntlWisdomServer_Marker>()
+        .connect_to_protocol::<fwisdom::IntlWisdomServer_Marker>()
         .context("failed to connect to intl wisdom service")?;
 
     let timestamp_ms = parse_timestamp(&opts.timestamp, &opts.timezone)?;

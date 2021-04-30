@@ -7,7 +7,7 @@ use {
     anyhow::{bail, format_err, Context, Error},
     fidl::endpoints::create_proxy,
     fidl_fuchsia_stash as fidl_stash,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_syslog::fx_log_err,
     std::collections::HashMap,
     wlan_stash_constants::{NODE_SEPARATOR, POLICY_DATA_KEY, POLICY_STASH_PREFIX},
@@ -26,7 +26,7 @@ impl PolicyStash {
     /// Initialize new Stash with the ID provided by the Saved Networks Manager. The ID will
     /// identify stored values as being part of the same persistent storage.
     pub fn new_with_id(id: &str) -> Result<Self, Error> {
-        let store_client = connect_to_service::<fidl_stash::SecureStoreMarker>()
+        let store_client = connect_to_protocol::<fidl_stash::SecureStoreMarker>()
             .context("failed to connect to store")?;
         store_client.identify(id).context("failed to identify client to store")?;
         let (store, accessor_server) = create_proxy().context("failed to create accessor proxy")?;

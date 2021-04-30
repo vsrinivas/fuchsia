@@ -26,7 +26,7 @@ use {
     },
     fuchsia_async::{self as fasync, futures::select},
     fuchsia_component::{
-        client::{connect_to_service, launch, launcher},
+        client::{connect_to_protocol, launch, launcher},
         fuchsia_single_component_package_url,
     },
     futures::{FutureExt, TryFutureExt},
@@ -162,8 +162,8 @@ async fn handle_cmd<'a>(
                         // Set up the netstack.
                         // TODO not hardcode to iface 3
                         qmi::set_network_status(file_ref, true).await?;
-                        let netstack = connect_to_service::<StackMarker>()?;
-                        let old_netstack = connect_to_service::<NetstackMarker>()?;
+                        let netstack = connect_to_protocol::<StackMarker>()?;
+                        let old_netstack = connect_to_protocol::<NetstackMarker>()?;
                         let (client, server_end) = fidl::endpoints::create_proxy::<fidl_fuchsia_net_dhcp::ClientMarker>()?;
                         old_netstack.get_dhcp_client(3, server_end).await?.map_err(fuchsia_zircon::Status::from_raw)?;
                         client.stop().await?.map_err(fuchsia_zircon::Status::from_raw)?;
@@ -244,9 +244,9 @@ pub fn main() -> Result<(), Error> {
                 let chan = qmi::connect_transport_device(&file).await?;
                 app = launch(&launcher, RIL_URI.to_string(), None)
                     .context("Failed to launch ril-qmi service")?;
-                let ril_modem_setup = app.connect_to_service::<SetupMarker>()?;
+                let ril_modem_setup = app.connect_to_protocol::<SetupMarker>()?;
                 let resp = ril_modem_setup.connect_transport(chan).await?;
-                let ril_modem = app.connect_to_service::<RadioInterfaceLayerMarker>()?;
+                let ril_modem = app.connect_to_protocol::<RadioInterfaceLayerMarker>()?;
                 if resp.is_err() {
                     return Err(format_err!(
                         "Failed to connect the driver to the RIL (check telephony svc is not running?)"
@@ -256,7 +256,7 @@ pub fn main() -> Result<(), Error> {
             }
             None => {
                 eprintln!("Connecting through telephony service...");
-                telephony_svc = connect_to_service::<ManagerMarker>()?;
+                telephony_svc = connect_to_protocol::<ManagerMarker>()?;
                 let resp = telephony_svc.get_ril_handle(server).await?;
                 if !resp {
                     return Err(format_err!("Failed to get an active RIL"));

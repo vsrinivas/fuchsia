@@ -44,7 +44,7 @@ impl ProcessLauncherConnector {
             .detach();
             proxy
         } else {
-            client::connect_to_service::<fproc::LauncherMarker>()
+            client::connect_to_protocol::<fproc::LauncherMarker>()
                 .context("failed to connect to external launcher service")?
         };
         Ok(proxy)

@@ -91,7 +91,7 @@ impl AvdtpFacade {
                 let component_url = fuchsia_single_component_package_url!("bt-a2dp").to_string();
                 let bt_a2dp = client::launch(&launcher, component_url, Some(options))?;
 
-                let avdtp_service_proxy = bt_a2dp.connect_to_service::<PeerManagerMarker>();
+                let avdtp_service_proxy = bt_a2dp.connect_to_protocol::<PeerManagerMarker>();
                 if let Err(err) = avdtp_service_proxy {
                     fx_err_and_bail!(
                         &with_line!(tag),

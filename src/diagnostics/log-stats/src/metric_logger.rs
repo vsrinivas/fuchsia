@@ -11,7 +11,7 @@ use {
         MetricEventLoggerFactoryMarker, MetricEventLoggerProxy, ProjectSpec, Status,
     },
     fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_syslog::fx_log_warn,
     serde::Deserialize,
     std::collections::{HashMap, HashSet},
@@ -69,7 +69,7 @@ impl MetricLogger {
         specs: MetricSpecs,
         component_map: ComponentEventCodeMap,
     ) -> Result<MetricLogger, anyhow::Error> {
-        let metric_logger_factory = connect_to_service::<MetricEventLoggerFactoryMarker>()?;
+        let metric_logger_factory = connect_to_protocol::<MetricEventLoggerFactoryMarker>()?;
         let mut project_spec = ProjectSpec::EMPTY;
         project_spec.customer_id = Some(specs.customer_id);
         project_spec.project_id = Some(specs.project_id);

@@ -27,7 +27,7 @@ pub struct BusConnection {
 
 impl BusConnection {
     pub fn new(client: &str) -> Result<BusConnection, Error> {
-        let busm = client::connect_to_service::<SyncManagerMarker>()
+        let busm = client::connect_to_protocol::<SyncManagerMarker>()
             .context("SyncManager not available")?;
         let (bus, busch) = fidl::endpoints::create_proxy::<BusMarker>()?;
         busm.bus_subscribe(BUS_NAME, client, busch)?;
@@ -108,7 +108,7 @@ async fn run_client(gateway: Option<String>) -> Result<(), Error> {
 
 async fn test_gateway(gw_addr: fidl_fuchsia_net::IpAddress) -> Result<(), Error> {
     let stack =
-        client::connect_to_service::<StackMarker>().context("failed to connect to netstack")?;
+        client::connect_to_protocol::<StackMarker>().context("failed to connect to netstack")?;
     let response =
         stack.get_forwarding_table().await.context("failed to call get_forwarding_table")?;
     let found = response.iter().any(|entry| {

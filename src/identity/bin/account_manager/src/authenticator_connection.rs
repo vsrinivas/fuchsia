@@ -68,7 +68,7 @@ impl AuthenticatorConnection {
         S: AuthenticatorService,
     {
         let app = self.get_app()?;
-        app.pass_to_service::<S>(server_end.into_channel()).map_err(|err| {
+        app.pass_to_protocol::<S>(server_end.into_channel()).map_err(|err| {
             AccountManagerError::new(ApiError::Unknown)
                 .with_cause(format_err!("Getting auth mechanism failed with {:?}", err))
         })

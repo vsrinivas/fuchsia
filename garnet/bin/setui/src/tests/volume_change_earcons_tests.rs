@@ -258,7 +258,7 @@ async fn verify_earcon(receiver: &mut SoundEventReceiver, id: u32, usage: AudioR
 async fn test_media_sounds() {
     let (service_registry, fake_services) = create_services().await;
     let (env, ..) = create_environment(service_registry, vec![INITIAL_MEDIA_STREAM_SETTINGS]).await;
-    let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
+    let audio_proxy = env.connect_to_protocol::<AudioMarker>().unwrap();
 
     // Create channel to receive notifications for when sounds are played. Used to know when to
     // check the sound player fake that the sound has been played.
@@ -285,7 +285,7 @@ async fn test_interruption_sounds() {
         vec![INITIAL_MEDIA_STREAM_SETTINGS, INITIAL_INTERRUPTION_STREAM_SETTINGS],
     )
     .await;
-    let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
+    let audio_proxy = env.connect_to_protocol::<AudioMarker>().unwrap();
 
     // Create channel to receive notifications for when sounds are played. Used to know when to
     // check the sound player fake that the sound has been played.
@@ -311,7 +311,7 @@ async fn test_max_volume_sound_on_press() {
     let mut sound_event_receiver =
         fake_services.sound_player.lock().await.create_sound_played_listener().await;
 
-    let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
+    let audio_proxy = env.connect_to_protocol::<AudioMarker>().unwrap();
 
     // Set volume to max.
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
@@ -344,7 +344,7 @@ async fn test_max_volume_sound_on_press() {
 async fn test_max_volume_sound_on_sw_change() {
     let (service_registry, fake_services) = create_services().await;
     let (env, ..) = create_environment(service_registry, vec![INITIAL_MEDIA_STREAM_SETTINGS]).await;
-    let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
+    let audio_proxy = env.connect_to_protocol::<AudioMarker>().unwrap();
 
     // Create channel to receive notifications for when sounds are played. Used to know when to
     // check the sound player fake that the sound has been played.
@@ -376,7 +376,7 @@ async fn test_earcons_on_multiple_channel_change() {
     )
     .await;
 
-    let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
+    let audio_proxy = env.connect_to_protocol::<AudioMarker>().unwrap();
 
     let mut sound_event_receiver =
         fake_services.sound_player.lock().await.create_sound_played_listener().await;

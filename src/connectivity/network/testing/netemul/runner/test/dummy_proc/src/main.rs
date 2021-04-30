@@ -41,7 +41,7 @@ pub struct BusConnection {
 
 impl BusConnection {
     pub fn new(client: &str) -> Result<BusConnection, Error> {
-        let busm = client::connect_to_service::<SyncManagerMarker>()
+        let busm = client::connect_to_protocol::<SyncManagerMarker>()
             .context("SyncManager not available")?;
         let (bus, busch) = fidl::endpoints::create_proxy::<BusMarker>()?;
         busm.bus_subscribe(BUS_NAME, client, busch)?;
@@ -117,7 +117,7 @@ async fn main() -> Result<(), Error> {
 
     if let Some(svc) = opt.service {
         println!("Connecting to service [{}]...", svc);
-        let env = client::connect_to_service::<ManagedEnvironmentMarker>()?;
+        let env = client::connect_to_protocol::<ManagedEnvironmentMarker>()?;
         let (_dummy, server) = zx::Channel::create()?;
         env.connect_to_service(&svc, server)?;
     }

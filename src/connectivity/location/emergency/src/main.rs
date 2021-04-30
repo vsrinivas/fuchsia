@@ -28,7 +28,7 @@ use {
     fidl_fuchsia_net_http::LoaderMarker as HttpLoaderMarker,
     fuchsia_async as fasync,
     fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType},
-    fuchsia_component::{client::connect_to_service, server::ServiceFs},
+    fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
     fuchsia_syslog::{self as syslog},
     futures::{lock::Mutex, prelude::*},
     log::info,
@@ -57,7 +57,7 @@ async fn main() -> Result<(), anyhow::Error> {
     let _cobalt_task = fasync::Task::spawn(cobalt_fut);
     let bss_cache = Mutex::new(RealBssCache::new());
     let bss_resolver = RealBssResolver::new(
-        connect_to_service::<HttpLoaderMarker>().context("failed to connect to http loader")?,
+        connect_to_protocol::<HttpLoaderMarker>().context("failed to connect to http loader")?,
         std::fs::read_to_string(API_KEY_FILE)
             .with_context(|| format!("failed to read {}", API_KEY_FILE))?,
     );

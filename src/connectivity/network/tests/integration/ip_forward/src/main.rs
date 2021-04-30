@@ -28,7 +28,7 @@ pub struct BusConnection {
 
 impl BusConnection {
     pub fn new(client: &str) -> Result<BusConnection, Error> {
-        let busm = client::connect_to_service::<SyncManagerMarker>()
+        let busm = client::connect_to_protocol::<SyncManagerMarker>()
             .context("SyncManager not available")?;
         let (bus, busch) = fidl::endpoints::create_proxy::<BusMarker>()?;
         busm.bus_subscribe(BUS_NAME, client, busch)?;
@@ -70,7 +70,7 @@ impl BusConnection {
 
 async fn run_router() -> Result<(), Error> {
     let stack =
-        client::connect_to_service::<StackMarker>().context("failed to connect to netstack")?;
+        client::connect_to_protocol::<StackMarker>().context("failed to connect to netstack")?;
     let () = stack.enable_ip_forwarding().await.context("failed to enable ip forwarding")?;
 
     let bus = BusConnection::new(ROUTER_NAME)?;

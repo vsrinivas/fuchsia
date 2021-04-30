@@ -7,7 +7,7 @@ use bind::encode_bind_program_v1::RawInstruction;
 use bind::instruction::DeviceProperty;
 use fidl_fuchsia_device_manager::{BindDebuggerMarker, BindRulesBytecode};
 use fuchsia_async as fasync;
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use fuchsia_zircon as zx;
 use structopt::StructOpt;
 
@@ -33,7 +33,7 @@ struct Opt {
 async fn main() {
     let opt = Opt::from_iter(std::env::args());
 
-    let service = match connect_to_service::<BindDebuggerMarker>() {
+    let service = match connect_to_protocol::<BindDebuggerMarker>() {
         Ok(service) => service,
         Err(_) => {
             eprintln!("Failed to connect to BindDebugger service.");

@@ -8,7 +8,7 @@ use fidl_fuchsia_diagnostics_test::ControllerMarker;
 use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMarker, LogMessage, LogSinkMarker};
 use fidl_fuchsia_sys::LauncherMarker;
 use fuchsia_async as fasync;
-use fuchsia_component::client::{connect_to_service, launch_with_options, LaunchOptions};
+use fuchsia_component::client::{connect_to_protocol, launch_with_options, LaunchOptions};
 use fuchsia_syslog::levels::INFO;
 use fuchsia_syslog_listener::{run_log_listener_with_proxy, LogProcessor};
 use futures::{channel::mpsc, StreamExt};
@@ -16,7 +16,7 @@ use futures::{channel::mpsc, StreamExt};
 #[fuchsia::test]
 async fn same_log_sink_simultaneously() {
     // launch archivist-for-embedding.cmx
-    let launcher = connect_to_service::<LauncherMarker>().unwrap();
+    let launcher = connect_to_protocol::<LauncherMarker>().unwrap();
     let mut archivist = launch_with_options(
         &launcher,
         "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx"
@@ -29,7 +29,7 @@ async fn same_log_sink_simultaneously() {
     // connect multiple identical log sinks
     for _ in 0..50 {
         let (message_client, message_server) = Socket::create(SocketOpts::DATAGRAM).unwrap();
-        let log_sink = archivist.connect_to_service::<LogSinkMarker>().unwrap();
+        let log_sink = archivist.connect_to_protocol::<LogSinkMarker>().unwrap();
         log_sink.connect(message_server).unwrap();
 
         // each with the same message repeated multiple times
@@ -45,7 +45,7 @@ async fn same_log_sink_simultaneously() {
     }
 
     // run log listener
-    let log_proxy = archivist.connect_to_service::<LogMarker>().unwrap();
+    let log_proxy = archivist.connect_to_protocol::<LogMarker>().unwrap();
     let (send_logs, recv_logs) = mpsc::unbounded();
     fasync::Task::spawn(async move {
         let listen = Listener { send_logs };
@@ -65,7 +65,7 @@ async fn same_log_sink_simultaneously() {
     .detach();
 
     // connect to controller and call stop
-    let controller = archivist.connect_to_service::<ControllerMarker>().unwrap();
+    let controller = archivist.connect_to_protocol::<ControllerMarker>().unwrap();
     controller.stop().unwrap();
 
     // collect all logs

@@ -86,7 +86,7 @@ async fn run_test_once<W: Write + Send>(
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_no_clean_exit() {
     let mut output: Vec<u8> = vec![];
-    let harness = fuchsia_component::client::connect_to_service::<HarnessMarker>()
+    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
         .expect("connecting to HarnessProxy");
     let run_result = run_test_once(
         new_test_params(
@@ -128,7 +128,7 @@ log3 for Example.Test3
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_passing_v2_test() {
     let mut output: Vec<u8> = vec![];
-    let harness = fuchsia_component::client::connect_to_service::<HarnessMarker>()
+    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
         .expect("connecting to HarnessProxy");
 
     let run_result = run_test_once(
@@ -172,7 +172,7 @@ log3 for Example.Test3
 async fn launch_and_test_passing_v2_test_multiple_times() {
     let mut output: Vec<u8> = vec![];
     let mut reporter = output::RunReporter::new_noop();
-    let harness = fuchsia_component::client::connect_to_service::<HarnessMarker>()
+    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
         .expect("connecting to HarnessProxy");
 
     let streams = run_test_suite_lib::run_test(
@@ -201,7 +201,7 @@ async fn launch_and_test_passing_v2_test_multiple_times() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_with_filter() {
     let mut output: Vec<u8> = vec![];
-    let harness = fuchsia_component::client::connect_to_service::<HarnessMarker>()
+    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
         .expect("connecting to HarnessProxy");
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
@@ -234,7 +234,7 @@ log3 for Example.Test3
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_empty_test() {
     let mut output: Vec<u8> = vec![];
-    let harness = fuchsia_component::client::connect_to_service::<HarnessMarker>()
+    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
         .expect("connecting to HarnessProxy");
 
     let run_result = run_test_once(
@@ -256,7 +256,7 @@ async fn launch_and_test_empty_test() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_huge_test() {
     let mut output: Vec<u8> = vec![];
-    let harness = fuchsia_component::client::connect_to_service::<HarnessMarker>()
+    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
         .expect("connecting to HarnessProxy");
 
     let run_result = run_test_once(
@@ -278,7 +278,7 @@ async fn launch_and_test_huge_test() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_disabled_test_exclude_disabled() {
     let mut output: Vec<u8> = vec![];
-    let harness = fuchsia_component::client::connect_to_service::<HarnessMarker>()
+    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
         .expect("connecting to HarnessProxy");
 
     let run_result = run_test_once(
@@ -319,7 +319,7 @@ log3 for Example.Test1
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_disabled_test_include_disabled() {
     let mut output: Vec<u8> = vec![];
-    let harness = fuchsia_component::client::connect_to_service::<HarnessMarker>()
+    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
         .expect("connecting to HarnessProxy");
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/disabled-test-example.cm",
@@ -364,7 +364,7 @@ log3 for Example.Test3
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_failing_test() {
     let mut output: Vec<u8> = vec![];
-    let harness = fuchsia_component::client::connect_to_service::<HarnessMarker>()
+    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
         .expect("connecting to HarnessProxy");
 
     let run_result = run_test_once(
@@ -411,7 +411,7 @@ log3 for Example.Test3
 async fn launch_and_test_failing_v2_test_multiple_times() {
     let mut output: Vec<u8> = vec![];
     let mut reporter = output::RunReporter::new_noop();
-    let harness = fuchsia_component::client::connect_to_service::<HarnessMarker>()
+    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
         .expect("connecting to HarnessProxy");
 
     let streams = run_test_suite_lib::run_test(
@@ -436,7 +436,7 @@ async fn launch_and_test_failing_v2_test_multiple_times() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_incomplete_test() {
     let mut output: Vec<u8> = vec![];
-    let harness = fuchsia_component::client::connect_to_service::<HarnessMarker>()
+    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
         .expect("connecting to HarnessProxy");
 
     let run_result = run_test_once(
@@ -484,7 +484,7 @@ Example.Test3
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_invalid_test() {
     let mut output: Vec<u8> = vec![];
-    let harness = fuchsia_component::client::connect_to_service::<HarnessMarker>()
+    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
         .expect("connecting to HarnessProxy");
 
     let run_result = run_test_once(
@@ -532,7 +532,7 @@ log3 for Example.Test3
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_run_echo_test() {
     let mut output: Vec<u8> = vec![];
-    let harness = fuchsia_component::client::connect_to_service::<HarnessMarker>()
+    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
         .expect("connecting to HarnessProxy");
 
     let run_result = run_test_once(
@@ -561,7 +561,7 @@ async fn launch_and_run_echo_test() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_timeout() {
     let mut output: Vec<u8> = vec![];
-    let harness = fuchsia_component::client::connect_to_service::<HarnessMarker>()
+    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
         .expect("connecting to HarnessProxy");
 
     let mut test_params = new_test_params(
@@ -585,7 +585,7 @@ async fn test_timeout() {
 async fn test_timeout_multiple_times() {
     let mut output: Vec<u8> = vec![];
     let mut reporter = output::RunReporter::new_noop();
-    let harness = fuchsia_component::client::connect_to_service::<HarnessMarker>()
+    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
         .expect("connecting to HarnessProxy");
 
     let mut test_params = new_test_params(
@@ -608,7 +608,7 @@ async fn test_timeout_multiple_times() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_passes_with_large_timeout() {
     let mut output: Vec<u8> = vec![];
-    let harness = fuchsia_component::client::connect_to_service::<HarnessMarker>()
+    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
         .expect("connecting to HarnessProxy");
 
     let mut test_params = new_test_params(
@@ -636,7 +636,7 @@ async fn test_passes_with_large_timeout() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_logging_component() {
     let mut output: Vec<u8> = vec![];
-    let harness = fuchsia_component::client::connect_to_service::<HarnessMarker>()
+    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
         .expect("connecting to HarnessProxy");
 
     let mut test_params = new_test_params(
@@ -663,7 +663,7 @@ async fn test_logging_component() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_logging_component_min_severity() {
     let mut output: Vec<u8> = vec![];
-    let harness = fuchsia_component::client::connect_to_service::<HarnessMarker>()
+    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
         .expect("connecting to HarnessProxy");
 
     let mut test_params = new_test_params(
@@ -692,7 +692,7 @@ async fn test_logging_component_min_severity() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_logging_ansi() {
     let mut output: Vec<u8> = vec![];
-    let harness = fuchsia_component::client::connect_to_service::<HarnessMarker>()
+    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
         .expect("connecting to HarnessProxy");
 
     let mut test_params = new_test_params(
@@ -725,7 +725,7 @@ async fn test_logging_filter_ansi() {
     let mut output: Vec<u8> = vec![];
     let mut ansi_filter = output::AnsiFilterWriter::new(&mut output);
     let mut reporter = output::RunReporter::new_noop();
-    let harness = fuchsia_component::client::connect_to_service::<HarnessMarker>()
+    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
         .expect("connecting to HarnessProxy");
 
     let mut test_params = new_test_params(
@@ -777,7 +777,7 @@ async fn test_logging_component_max_severity_error() {
 
 async fn test_max_severity(max_severity: Severity) {
     let mut output: Vec<u8> = vec![];
-    let harness = fuchsia_component::client::connect_to_service::<HarnessMarker>()
+    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
         .expect("connecting to HarnessProxy");
 
     let mut test_params = new_test_params(

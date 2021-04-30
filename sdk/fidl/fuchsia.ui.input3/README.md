@@ -47,7 +47,7 @@ client was not available.
 ```rust
 use fidl_fuchsia_ui_input3 as ui_input;
 
-let keyboard = connect_to_service::<ui_input::KeyboardMarker>()
+let keyboard = connect_to_protocol::<ui_input::KeyboardMarker>()
     .context("Failed to connect to Keyboard service")?;
 
 let (listener_client_end, mut listener_stream) =

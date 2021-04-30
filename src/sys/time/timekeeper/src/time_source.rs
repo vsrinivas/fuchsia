@@ -125,7 +125,7 @@ impl TimeSource for PushTimeSource {
         info!("Launching PushTimeSource at {}", self.component);
         let app = launch(&launcher, self.component.clone(), None)
             .context(format!("launching push source {}", self.component))?;
-        let proxy = app.connect_to_service::<ftexternal::PushSourceMarker>()?;
+        let proxy = app.connect_to_protocol::<ftexternal::PushSourceMarker>()?;
         Ok(PushTimeSource::events_from_proxy(Some(app), proxy))
     }
 }

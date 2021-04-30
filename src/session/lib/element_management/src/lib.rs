@@ -403,7 +403,7 @@ impl SimpleElementManager {
         SimpleElementManager {
             realm,
             collection: collection.to_string(),
-            sys_launcher: fuchsia_component::client::connect_to_service::<fsys::LauncherMarker>(),
+            sys_launcher: fuchsia_component::client::connect_to_protocol::<fsys::LauncherMarker>(),
             uncontrolled_elements: vec![],
         }
     }

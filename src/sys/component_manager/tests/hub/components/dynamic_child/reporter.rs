@@ -7,7 +7,7 @@ use {
     fidl::endpoints,
     fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_syslog as syslog,
     hub_report::*,
 };
@@ -22,7 +22,7 @@ async fn main() {
         event_source.take_static_event_stream("DynamicChildEventStream").await.unwrap();
 
     // Create a dynamic child component
-    let realm = connect_to_service::<fsys::RealmMarker>().unwrap();
+    let realm = connect_to_protocol::<fsys::RealmMarker>().unwrap();
     let mut collection_ref = fsys::CollectionRef { name: String::from("coll") };
     let child_decl = fsys::ChildDecl {
         name: Some(String::from("simple_instance")),

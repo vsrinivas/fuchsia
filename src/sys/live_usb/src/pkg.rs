@@ -11,7 +11,7 @@ use {
 };
 
 pub async fn disable_updates() -> Result<(), Error> {
-    let engine = fuchsia_component::client::connect_to_service::<EngineMarker>()
+    let engine = fuchsia_component::client::connect_to_protocol::<EngineMarker>()
         .context("connecting to rewrite engine")?;
     disable_updates_at(engine).await
 }

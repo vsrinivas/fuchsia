@@ -4,13 +4,13 @@
 
 use {
     anyhow::format_err, fidl_fidl_examples_routing_echo as fecho, fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service, fuchsia_syslog as syslog, log::*,
+    fuchsia_component::client::connect_to_protocol, fuchsia_syslog as syslog, log::*,
 };
 
 #[fasync::run_singlethreaded]
 async fn main() {
     syslog::init_with_tags(&["indef_echo_client"]).expect("failed to initialize logger");
-    let echo = connect_to_service::<fecho::EchoMarker>().expect("error connecting to echo");
+    let echo = connect_to_protocol::<fecho::EchoMarker>().expect("error connecting to echo");
 
     // This is an infinite loop because it gives cs2 enough time to query
     // the state of the world from the hub.

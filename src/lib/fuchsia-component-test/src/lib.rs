@@ -170,7 +170,7 @@ pub struct Realm {
 
 impl Realm {
     pub async fn new() -> Result<Self, Error> {
-        let realm_proxy = fclient::connect_to_service::<fsys::RealmMarker>()
+        let realm_proxy = fclient::connect_to_protocol::<fsys::RealmMarker>()
             .map_err(RealmError::ConnectToRealmService)?;
         let (exposed_dir_proxy, exposed_dir_server_end) =
             endpoints::create_proxy::<fio::DirectoryMarker>().map_err(RealmError::CreateProxy)?;

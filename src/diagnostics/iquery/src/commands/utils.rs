@@ -25,7 +25,7 @@ pub async fn connect_to_archive_accessor(
     accessor_path: &Option<String>,
 ) -> Result<ArchiveAccessorProxy, Error> {
     match accessor_path {
-        None => client::connect_to_service::<ArchiveAccessorMarker>()
+        None => client::connect_to_protocol::<ArchiveAccessorMarker>()
             .map_err(|e| Error::ConnectToArchivist(e)),
         Some(path) => connect_to_archive_at(path).await,
     }
@@ -46,7 +46,7 @@ async fn connect_to_archive_at(glob_path: &str) -> Result<ArchiveAccessorProxy, 
             if let Ok(node_info) = node.describe().await {
                 match node_info {
                     fio::NodeInfo::Service(_) => {
-                        return client::connect_to_service_at_path::<ArchiveAccessorMarker>(
+                        return client::connect_to_protocol_at_path::<ArchiveAccessorMarker>(
                             &path_str,
                         )
                         .map_err(|e| Error::ConnectToArchivist(e));
@@ -64,7 +64,7 @@ async fn connect_to_archive_at(glob_path: &str) -> Result<ArchiveAccessorProxy, 
                                     && entry.name.ends_with(ArchiveAccessorMarker::SERVICE_NAME)
                                 {
                                     let accessor_path = format!("{}/{}", path_str, entry.name);
-                                    return client::connect_to_service_at_path::<
+                                    return client::connect_to_protocol_at_path::<
                                         ArchiveAccessorMarker,
                                     >(&accessor_path)
                                     .map_err(|e| Error::ConnectToArchivist(e));

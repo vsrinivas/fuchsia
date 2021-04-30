@@ -28,7 +28,7 @@ impl HwinfoFacade {
     pub async fn get_device_info(&self) -> Result<SerializableDeviceInfo, Error> {
         let tag = "HwinfoFacade::get_info";
 
-        let device_info_proxy = app::client::connect_to_service::<DeviceMarker>();
+        let device_info_proxy = app::client::connect_to_protocol::<DeviceMarker>();
 
         match device_info_proxy {
             Ok(p) => {
@@ -48,7 +48,7 @@ impl HwinfoFacade {
     pub async fn get_product_info(&self) -> Result<SerializableProductInfo, Error> {
         let tag = "HwinfoFacade::get_product_info";
 
-        let product_info_proxy = app::client::connect_to_service::<ProductMarker>();
+        let product_info_proxy = app::client::connect_to_protocol::<ProductMarker>();
 
         match product_info_proxy {
             Ok(p) => {
@@ -67,7 +67,7 @@ impl HwinfoFacade {
     /// Returns the board info of the hwinfo proxy service.
     pub async fn get_board_info(&self) -> Result<SerializableBoardInfo, Error> {
         let tag = "HwinfoFacade::get_board_info";
-        let board_info_proxy = app::client::connect_to_service::<BoardMarker>();
+        let board_info_proxy = app::client::connect_to_protocol::<BoardMarker>();
         match board_info_proxy {
             Ok(p) => {
                 let board_info = p.get_info().await?;

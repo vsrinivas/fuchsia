@@ -10,7 +10,7 @@ use {
         self as fasync,
         futures::{try_join, TryStreamExt},
     },
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     parking_lot::Mutex,
     std::collections::HashSet,
 };
@@ -168,8 +168,8 @@ async fn main() -> Result<(), Error> {
         fidl::endpoints::create_request_stream::<gatt::LocalServiceDelegateMarker>()?;
     let (service_proxy, service_server) = fidl::endpoints::create_proxy()?;
 
-    let gatt_server = connect_to_service::<gatt::Server_Marker>()?;
-    let battery_manager_server = connect_to_service::<fpower::BatteryManagerMarker>()?;
+    let gatt_server = connect_to_protocol::<gatt::Server_Marker>()?;
+    let battery_manager_server = connect_to_protocol::<fpower::BatteryManagerMarker>()?;
 
     // Initialize internal state.
     let state = BatteryState::new(service_proxy);

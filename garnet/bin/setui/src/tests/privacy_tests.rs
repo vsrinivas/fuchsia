@@ -23,7 +23,7 @@ async fn create_privacy_test_env_with_failures() -> PrivacyProxy {
     let storage_factory = InMemoryStorageFactory::new();
     create_test_env_with_failures(Arc::new(storage_factory), ENV_NAME, SettingType::Privacy)
         .await
-        .connect_to_service::<PrivacyMarker>()
+        .connect_to_protocol::<PrivacyMarker>()
         .unwrap()
 }
 
@@ -37,7 +37,7 @@ async fn create_test_privacy_env(
         .await
         .unwrap();
 
-    let privacy_service = env.connect_to_service::<PrivacyMarker>().unwrap();
+    let privacy_service = env.connect_to_protocol::<PrivacyMarker>().unwrap();
     let store = storage_factory.get_device_storage().await;
 
     (privacy_service, store)

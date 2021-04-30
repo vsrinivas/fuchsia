@@ -328,7 +328,7 @@ async fn test_dhcp<E: netemul::Endpoint>(
             .context("failed to start dhcpd")?;
 
             let dhcp_server = dhcpd
-                .connect_to_service::<fidl_fuchsia_net_dhcp::Server_Marker>()
+                .connect_to_protocol::<fidl_fuchsia_net_dhcp::Server_Marker>()
                 .context("failed to connect to DHCP server")?;
             let () = set_server_parameters(&dhcp_server, parameters).await?;
 
@@ -757,7 +757,7 @@ fn setup_component_proxy(
     )
     .context("failed to start dhcpd")?;
     let dhcp_server = dhcpd
-        .connect_to_service::<fidl_fuchsia_net_dhcp::Server_Marker>()
+        .connect_to_protocol::<fidl_fuchsia_net_dhcp::Server_Marker>()
         .context("failed to connect to DHCP server")?;
     Ok((dhcpd, dhcp_server))
 }

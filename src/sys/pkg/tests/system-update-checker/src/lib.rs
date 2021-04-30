@@ -156,13 +156,13 @@ impl TestEnvBuilder {
             proxies: Proxies {
                 resolver,
                 channel_provider: system_update_checker
-                    .connect_to_service::<ProviderMarker>()
+                    .connect_to_protocol::<ProviderMarker>()
                     .expect("connect to channel provider"),
                 update_manager: system_update_checker
-                    .connect_to_service::<ManagerMarker>()
+                    .connect_to_protocol::<ManagerMarker>()
                     .expect("connect to update manager"),
                 commit_status_provider: system_update_committer
-                    .connect_to_service::<CommitStatusProviderMarker>()
+                    .connect_to_protocol::<CommitStatusProviderMarker>()
                     .expect("connect to commit status provider"),
                 _verifier: verifier,
             },

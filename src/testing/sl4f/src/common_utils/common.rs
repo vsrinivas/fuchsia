@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::{format_err, Error};
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use fuchsia_zircon::{Status, Vmo};
 use parking_lot::{RwLock, RwLockUpgradableReadGuard};
 use serde_json::Value;
@@ -105,7 +105,7 @@ where
     if let Some(proxy) = lock.as_ref() {
         Ok(proxy.clone())
     } else {
-        let proxy = connect_to_service::<S>()?;
+        let proxy = connect_to_protocol::<S>()?;
         *RwLockUpgradableReadGuard::upgrade(lock) = Some(proxy.clone());
         Ok(proxy)
     }

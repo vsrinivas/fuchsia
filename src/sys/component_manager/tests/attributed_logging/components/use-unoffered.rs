@@ -4,7 +4,7 @@
 
 use {
     fidl_fidl_test_components as ftest, fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
 };
 
 #[fasync::run_singlethreaded]
@@ -12,7 +12,7 @@ use {
 /// to. This should generate an expect log message from copmonent manager that
 /// will be attributed to this component.
 async fn main() {
-    let trigger = match connect_to_service::<ftest::TriggerMarker>() {
+    let trigger = match connect_to_protocol::<ftest::TriggerMarker>() {
         Ok(t) => t,
         Err(_) => return,
     };

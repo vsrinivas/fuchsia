@@ -5,7 +5,7 @@
 use {
     anyhow::Error,
     fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_syslog::{self as syslog, fx_log_info},
     settings::agent::BlueprintHandle as AgentBlueprintHandle,
     settings::base::get_default_setting_types,
@@ -82,7 +82,7 @@ fn main() -> Result<(), Error> {
 
     let storage_factory = StashDeviceStorageFactory::new(
         STASH_IDENTITY,
-        connect_to_service::<fidl_fuchsia_stash::StoreMarker>().unwrap(),
+        connect_to_protocol::<fidl_fuchsia_stash::StoreMarker>().unwrap(),
     );
 
     // EnvironmentBuilder::spawn returns a future that can be awaited for the

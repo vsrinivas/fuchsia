@@ -7,14 +7,14 @@ use {
     fidl::encoding::Decodable,
     fidl_fuchsia_session::{ElementManagerMarker, ElementSpec},
     fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
 };
 
 /// Connect to the `ElementManager` service and propose two elements; the `simple_element` from
 /// these examples and `spinning_cube` from //src/experiences/examples.
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    let element_manager = connect_to_service::<ElementManagerMarker>()
+    let element_manager = connect_to_protocol::<ElementManagerMarker>()
         .context("Could not connect to element manager service.")?;
 
     element_manager

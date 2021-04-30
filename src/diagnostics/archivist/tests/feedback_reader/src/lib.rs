@@ -153,7 +153,7 @@ fn process_results_for_comparison(results: serde_json::Value) -> serde_json::Val
 
 async fn feedback_pipeline_is_filtered(archivist: &App, expected_results_count: usize) -> bool {
     let feedback_archive_accessor = archivist
-        .connect_to_named_service::<ArchiveAccessorMarker>(
+        .connect_to_named_protocol::<ArchiveAccessorMarker>(
             "fuchsia.diagnostics.FeedbackArchiveAccessor",
         )
         .unwrap();
@@ -166,7 +166,7 @@ async fn feedback_pipeline_is_filtered(archivist: &App, expected_results_count: 
         .expect("got result");
 
     let all_archive_accessor = archivist
-        .connect_to_named_service::<ArchiveAccessorMarker>("fuchsia.diagnostics.ArchiveAccessor")
+        .connect_to_named_protocol::<ArchiveAccessorMarker>("fuchsia.diagnostics.ArchiveAccessor")
         .unwrap();
 
     let all_results = ArchiveReader::new()
@@ -189,7 +189,7 @@ async fn retrieve_and_validate_results(
     expected_results_count: usize,
 ) {
     let archive_accessor = archivist
-        .connect_to_named_service::<ArchiveAccessorMarker>(
+        .connect_to_named_protocol::<ArchiveAccessorMarker>(
             "fuchsia.diagnostics.FeedbackArchiveAccessor",
         )
         .unwrap();

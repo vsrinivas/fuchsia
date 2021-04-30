@@ -214,10 +214,10 @@ impl Eq for StashNode {}
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fidl::endpoints::create_proxy, fuchsia_component::client::connect_to_service};
+    use {super::*, fidl::endpoints::create_proxy, fuchsia_component::client::connect_to_protocol};
 
     fn new_stash_store(id: &str) -> fidl_stash::StoreAccessorProxy {
-        let store_client = connect_to_service::<fidl_stash::StoreMarker>()
+        let store_client = connect_to_protocol::<fidl_stash::StoreMarker>()
             .expect("failed connecting to Stash service");
         store_client.identify(id).expect("failed identifying client to store");
         let (proxy, remote) = create_proxy().expect("failed creating accessor proxy");

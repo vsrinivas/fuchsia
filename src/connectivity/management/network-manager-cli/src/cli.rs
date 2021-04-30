@@ -15,7 +15,7 @@ use fidl_fuchsia_router_config::{
     SecurityFeatures, WanConnection, WanProperties,
 };
 use fuchsia_async::{self as fasync};
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use fuchsia_syslog as syslog;
 use fuchsia_zircon::{self as zx};
 use itertools::Itertools;
@@ -59,9 +59,9 @@ fn to_port_ranges(input_ranges: &str) -> Result<Vec<PortRange>, Error> {
 }
 
 pub fn connect() -> Result<(RouterAdminProxy, RouterStateProxy), Error> {
-    let router_admin = connect_to_service::<RouterAdminMarker>()
+    let router_admin = connect_to_protocol::<RouterAdminMarker>()
         .context("failed to connect to network manager admin interface")?;
-    let router_state = connect_to_service::<RouterStateMarker>()
+    let router_state = connect_to_protocol::<RouterStateMarker>()
         .context("failed to connect to network manager interface")?;
     Ok((router_admin, router_state))
 }
@@ -87,7 +87,7 @@ fn supports_network_manager(peer: &Peer) -> bool {
 }
 
 pub async fn connect_overnet() -> Result<(RouterAdminProxy, RouterStateProxy), Error> {
-    let svc = connect_to_service::<ServiceConsumerMarker>()?;
+    let svc = connect_to_protocol::<ServiceConsumerMarker>()?;
     syslog::fx_log_info!("looking for overnet peers...");
     loop {
         for mut peer in svc.list_peers().await? {

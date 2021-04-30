@@ -11,7 +11,7 @@ use {
     fidl_fuchsia_bluetooth_bredr::*,
     fuchsia_async::{self as fasync, futures::select},
     fuchsia_bluetooth::types::{Channel, PeerId, Uuid},
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     futures::{
         channel::{
             mpsc::{channel, SendError},
@@ -517,7 +517,7 @@ async fn run_repl(
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    let profile_svc = connect_to_service::<ProfileMarker>()
+    let profile_svc = connect_to_protocol::<ProfileMarker>()
         .context("failed to connect to bluetooth profile service")?;
 
     let state = Arc::new(RwLock::new(ProfileState::new()));

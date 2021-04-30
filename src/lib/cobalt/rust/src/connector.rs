@@ -10,7 +10,7 @@ use {
     anyhow::{format_err, Context as _, Error},
     fidl,
     fidl_fuchsia_cobalt::{CobaltEvent, LoggerFactoryMarker, LoggerProxy, Status},
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     futures::{channel::mpsc, prelude::*},
     log::error,
 };
@@ -86,7 +86,7 @@ impl CobaltConnector {
     ) -> Result<LoggerProxy, Error> {
         let (logger_proxy, server_end) =
             fidl::endpoints::create_proxy().context("Failed to create endpoints")?;
-        let logger_factory = connect_to_service::<LoggerFactoryMarker>()
+        let logger_factory = connect_to_protocol::<LoggerFactoryMarker>()
             .context("Failed to connect to the Cobalt LoggerFactory")?;
 
         let res = match connection_type {

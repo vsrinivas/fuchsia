@@ -78,11 +78,11 @@ async fn main() -> Result<(), Error> {
     .detach();
 
     // verify sibling is running by connecting directly to its service
-    let multiply_by_two = sibling.connect_to_service::<EchoExposedBySiblingMarker>()?;
+    let multiply_by_two = sibling.connect_to_protocol::<EchoExposedBySiblingMarker>()?;
     assert_eq!(14, multiply_by_two.echo(7).await?);
 
     // verify sibling is running by connecting to its service through the nested environment
-    let multiply_by_two = env.connect_to_service::<EchoExposedBySiblingMarker>()?;
+    let multiply_by_two = env.connect_to_protocol::<EchoExposedBySiblingMarker>()?;
     assert_eq!(14, multiply_by_two.echo(7).await?);
 
     // wait for middle component to exit

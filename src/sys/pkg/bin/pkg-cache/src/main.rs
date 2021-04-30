@@ -110,7 +110,7 @@ async fn main_inner() -> Result<(), Error> {
     }
 
     let commit_status_provider =
-        fuchsia_component::client::connect_to_service::<CommitStatusProviderMarker>()
+        fuchsia_component::client::connect_to_protocol::<CommitStatusProviderMarker>()
             .context("while connecting to commit status provider")?;
 
     enum IncomingService {

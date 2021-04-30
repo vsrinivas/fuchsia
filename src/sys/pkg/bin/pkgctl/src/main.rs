@@ -23,7 +23,7 @@ use {
     fidl_fuchsia_pkg_rewrite_ext::{Rule as RewriteRule, RuleConfig},
     fidl_fuchsia_space::ManagerMarker as SpaceManagerMarker,
     files_async, fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon as zx,
     futures::io::copy,
     futures::stream::TryStreamExt,
@@ -50,7 +50,7 @@ pub fn main() -> Result<(), anyhow::Error> {
 async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
     match command {
         Command::Resolve(ResolveCommand { pkg_url, selectors }) => {
-            let resolver = connect_to_service::<PackageResolverMarker>()
+            let resolver = connect_to_protocol::<PackageResolverMarker>()
                 .context("Failed to connect to resolver service")?;
             println!("resolving {} with the selectors {:?}", pkg_url, selectors);
 
@@ -70,7 +70,7 @@ async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
             Ok(0)
         }
         Command::GetHash(GetHashCommand { pkg_url }) => {
-            let resolver = connect_to_service::<fidl_fuchsia_pkg::PackageResolverMarker>()
+            let resolver = connect_to_protocol::<fidl_fuchsia_pkg::PackageResolverMarker>()
                 .context("Failed to connect to resolver service")?;
             let blob_id =
                 resolver.get_hash(&mut PackageUrl { url: pkg_url }).await?.map_err(|i| {
@@ -83,7 +83,7 @@ async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
             Ok(0)
         }
         Command::PkgStatus(PkgStatusCommand { pkg_url }) => {
-            let resolver = connect_to_service::<fidl_fuchsia_pkg::PackageResolverMarker>()
+            let resolver = connect_to_protocol::<fidl_fuchsia_pkg::PackageResolverMarker>()
                 .context("Failed to connect to resolver service")?;
             let mut blob_id = match resolver.get_hash(&mut PackageUrl { url: pkg_url }).await? {
                 Ok(blob_id) => blob_id,
@@ -102,7 +102,7 @@ async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
             };
             println!("Package in registered TUF repo: yes (merkle={})", BlobId::from(blob_id));
 
-            let cache = connect_to_service::<PackageCacheMarker>()
+            let cache = connect_to_protocol::<PackageCacheMarker>()
                 .context("Failed to connect to cache service")?;
             let (_, dir_server_end) = fidl::endpoints::create_proxy()?;
             let res = cache.open(&mut blob_id, &mut vec![].into_iter(), dir_server_end).await?;
@@ -125,7 +125,7 @@ async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
             Ok(0)
         }
         Command::Open(OpenCommand { meta_far_blob_id, selectors }) => {
-            let cache = connect_to_service::<PackageCacheMarker>()
+            let cache = connect_to_protocol::<PackageCacheMarker>()
                 .context("Failed to connect to cache service")?;
             println!("opening {} with the selectors {:?}", meta_far_blob_id, selectors);
 
@@ -151,7 +151,7 @@ async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
             Ok(0)
         }
         Command::Repo(RepoCommand { verbose, subcommand }) => {
-            let repo_manager = connect_to_service::<RepositoryManagerMarker>()
+            let repo_manager = connect_to_protocol::<RepositoryManagerMarker>()
                 .context("Failed to connect to resolver service")?;
 
             match subcommand {
@@ -234,7 +234,7 @@ async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
             }
         }
         Command::Rule(RuleCommand { subcommand }) => {
-            let engine = connect_to_service::<EngineMarker>()
+            let engine = connect_to_protocol::<EngineMarker>()
                 .context("Failed to connect to rewrite engine service")?;
 
             match subcommand {
@@ -320,7 +320,7 @@ async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
             Ok(0)
         }
         Command::Experiment(ExperimentCommand { subcommand }) => {
-            let admin = connect_to_service::<PackageResolverAdminMarker>()
+            let admin = connect_to_protocol::<PackageResolverAdminMarker>()
                 .context("Failed to connect to package resolver admin service")?;
 
             match subcommand {
@@ -335,7 +335,7 @@ async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
             Ok(0)
         }
         Command::Gc(GcCommand {}) => {
-            let space_manager = connect_to_service::<SpaceManagerMarker>()
+            let space_manager = connect_to_protocol::<SpaceManagerMarker>()
                 .context("Failed to connect to space manager service")?;
             space_manager
                 .gc()
@@ -418,7 +418,7 @@ async fn fetch_repos(
 }
 
 async fn fetch_url<T: Into<String>>(url_string: T) -> Result<Vec<u8>, anyhow::Error> {
-    let http_svc = connect_to_service::<http::LoaderMarker>()
+    let http_svc = connect_to_protocol::<http::LoaderMarker>()
         .context("Unable to connect to fuchsia.net.http.Loader")?;
 
     let url_request = http::Request {

@@ -9,7 +9,7 @@ use {
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_recovery::{FactoryResetMarker, FactoryResetProxy},
     fidl_fuchsia_update_channel::{ProviderMarker, ProviderProxy},
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_syslog::{fx_log_info, fx_log_warn},
     serde::{Deserialize, Serialize},
     std::collections::HashMap,
@@ -44,8 +44,8 @@ struct ForcedFDR {
 
 impl ForcedFDR {
     fn new() -> Result<Self, Error> {
-        let info_proxy = connect_to_service::<ProviderMarker>()?;
-        let factory_reset_proxy = connect_to_service::<FactoryResetMarker>()?;
+        let info_proxy = connect_to_protocol::<ProviderMarker>()?;
+        let factory_reset_proxy = connect_to_protocol::<FactoryResetMarker>()?;
 
         Ok(ForcedFDR {
             data_dir: "/data".into(),

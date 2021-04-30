@@ -9,7 +9,7 @@ use {
         sequence::{EventSequence, Ordering},
     },
     fidl_fidl_examples_routing_echo as fecho, fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_childs_service,
+    fuchsia_component::client::connect_to_childs_protocol,
     fuchsia_component_test::ScopedInstance,
     fuchsia_syslog as syslog,
     futures::future::join_all,
@@ -107,7 +107,7 @@ async fn create_instances() -> Result<Vec<ScopedInstance>, Error> {
             assert_eq!(out, "hippos");
         }
         {
-            let echo_proxy = connect_to_childs_service::<fecho::EchoMarker>(
+            let echo_proxy = connect_to_childs_protocol::<fecho::EchoMarker>(
                 scoped_instance.child_name(),
                 Some("coll".to_string()),
             )

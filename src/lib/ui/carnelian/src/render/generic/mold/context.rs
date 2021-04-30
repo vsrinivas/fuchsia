@@ -17,7 +17,7 @@ use fidl_fuchsia_sysmem::{
     PixelFormat as SysmemPixelFormat, PixelFormatType, CPU_USAGE_WRITE_OFTEN,
     FORMAT_MODIFIER_LINEAR,
 };
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use fuchsia_framebuffer::{sysmem::set_allocator_name, PixelFormat};
 use fuchsia_trace::duration;
 use fuchsia_zircon as zx;
@@ -159,7 +159,7 @@ impl MoldContext {
         size: Size2D<u32>,
         display_rotation: DisplayRotation,
     ) -> Self {
-        let sysmem = connect_to_service::<AllocatorMarker>().expect("failed to connect to sysmem");
+        let sysmem = connect_to_protocol::<AllocatorMarker>().expect("failed to connect to sysmem");
         set_allocator_name(&sysmem).unwrap_or_else(|e| eprintln!("set_allocator_name: {:?}", e));
         let (collection_client, collection_request) =
             zx::Channel::create().expect("failed to create Zircon channel");

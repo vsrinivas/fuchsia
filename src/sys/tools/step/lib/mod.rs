@@ -8,7 +8,7 @@ use {
     crate::events::EventListener,
     component_events::events::EventSource,
     fidl_fuchsia_sys::LoaderMarker,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     rustyline::{Config, Editor},
     structopt::StructOpt,
 };
@@ -259,7 +259,7 @@ impl Shell {
 // Uses the fuchsia.sys.Loader FIDL protocol to verify if the component exists.
 // If a package is returned for the given URL, the component is assumed to exist.
 pub async fn does_component_exist(component_url: &str) -> bool {
-    let loader = connect_to_service::<LoaderMarker>().unwrap();
+    let loader = connect_to_protocol::<LoaderMarker>().unwrap();
     let option = loader.load_url(component_url).await.unwrap();
     option.is_some()
 }

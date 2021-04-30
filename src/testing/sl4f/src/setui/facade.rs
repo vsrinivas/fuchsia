@@ -13,7 +13,7 @@ use fidl_fuchsia_settings::{
     ConfigurationInterfaces, DisplayMarker, DisplaySettings, IntlMarker, SetupMarker,
     SetupSettings, Volume,
 };
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use fuchsia_syslog::macros::fx_log_info;
 
 /// Facade providing access to SetUi interfaces.
@@ -39,7 +39,7 @@ impl SetUiFacade {
     pub async fn set_network(&self, args: Value) -> Result<Value, Error> {
         let network_type: NetworkType = from_value(args)?;
         fx_log_info!("set_network input {:?}", network_type);
-        let setup_service_proxy = match connect_to_service::<SetupMarker>() {
+        let setup_service_proxy = match connect_to_protocol::<SetupMarker>() {
             Ok(proxy) => proxy,
             Err(e) => bail!("Failed to connect to Setup service {:?}.", e),
         };
@@ -67,7 +67,7 @@ impl SetUiFacade {
     ///
     /// Returns either "ethernet", "wifi" or "unknown".
     pub async fn get_network_setting(&self) -> Result<Value, Error> {
-        let setup_service_proxy = match connect_to_service::<SetupMarker>() {
+        let setup_service_proxy = match connect_to_protocol::<SetupMarker>() {
             Ok(proxy) => proxy,
             Err(e) => bail!("Failed to connect to Setup service {:?}.", e),
         };
@@ -93,7 +93,7 @@ impl SetUiFacade {
         let intl_info: IntlInfo = from_value(args)?;
         fx_log_info!("Received Intl Settings Request {:?}", intl_info);
 
-        let intl_service_proxy = match connect_to_service::<IntlMarker>() {
+        let intl_service_proxy = match connect_to_protocol::<IntlMarker>() {
             Ok(proxy) => proxy,
             Err(e) => bail!("Failed to connect to Intl service {:?}.", e),
         };
@@ -107,7 +107,7 @@ impl SetUiFacade {
     ///
     /// Returns IntlInfo in json.
     pub async fn get_intl_setting(&self) -> Result<Value, Error> {
-        let intl_service_proxy = match connect_to_service::<IntlMarker>() {
+        let intl_service_proxy = match connect_to_protocol::<IntlMarker>() {
             Ok(proxy) => proxy,
             Err(e) => bail!("Failed to connect to Intl service {:?}.", e),
         };
@@ -119,7 +119,7 @@ impl SetUiFacade {
     ///
     /// Returns true if mic is muted or false if mic is unmuted.
     pub async fn is_mic_muted(&self) -> Result<Value, Error> {
-        let audio_proxy = match connect_to_service::<AudioMarker>() {
+        let audio_proxy = match connect_to_protocol::<AudioMarker>() {
             Ok(proxy) => proxy,
             Err(e) => bail!("Failed to connect to Setup Audio service {:?}.", e),
         };
@@ -140,7 +140,7 @@ impl SetUiFacade {
         // service.
         let display_proxy = match self.display_proxy.as_ref() {
             Some(proxy) => proxy.clone(),
-            None => match connect_to_service::<DisplayMarker>() {
+            None => match connect_to_protocol::<DisplayMarker>() {
                 Ok(proxy) => proxy,
                 Err(e) => bail!("Failed to connect to Display service {:?}.", e),
             },
@@ -168,7 +168,7 @@ impl SetUiFacade {
         // service.
         let audio_proxy = match self.audio_proxy.as_ref() {
             Some(proxy) => proxy.clone(),
-            None => match connect_to_service::<AudioMarker>() {
+            None => match connect_to_protocol::<AudioMarker>() {
                 Ok(proxy) => proxy,
                 Err(e) => bail!("Failed to connect to Display service {:?}.", e),
             },

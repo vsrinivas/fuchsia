@@ -7,7 +7,7 @@ use {
     async_trait::async_trait,
     fidl::endpoints::{create_endpoints, ClientEnd, ServerEnd, ServiceMarker},
     fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
-    fuchsia_component::client::connect_channel_to_service,
+    fuchsia_component::client::connect_channel_to_protocol,
     fuchsia_zircon as zx,
     futures::StreamExt,
     lazy_static::lazy_static,
@@ -71,7 +71,7 @@ impl EventSource {
     /// The default location is presumably "/svc/fuchsia.sys2.EventSource"
     pub fn new() -> Result<Self, Error> {
         let (proxy, server_end) = fidl::endpoints::create_proxy::<fsys::EventSourceMarker>()?;
-        connect_channel_to_service::<fsys::EventSourceMarker>(server_end.into_channel())
+        connect_channel_to_protocol::<fsys::EventSourceMarker>(server_end.into_channel())
             .context("could not connect to EventSource service")?;
         Ok(EventSource::from_proxy(proxy))
     }

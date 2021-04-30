@@ -80,7 +80,7 @@ impl AuthProviderConnection {
         S: AuthProviderService,
     {
         let app = self.get_app()?;
-        app.pass_to_service::<S>(server_end.into_channel()).map_err(|err| {
+        app.pass_to_protocol::<S>(server_end.into_channel()).map_err(|err| {
             TokenManagerError::new(Status::AuthProviderServiceUnavailable)
                 .with_cause(format_err!("GetAuthProvider method failed with {:?}", err))
         })

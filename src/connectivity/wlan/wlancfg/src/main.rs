@@ -183,7 +183,7 @@ fn run_regulatory_manager(
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     regulatory_sender: oneshot::Sender<()>,
 ) -> BoxFuture<'static, Result<(), Error>> {
-    match fuchsia_component::client::connect_to_service::<RegulatoryRegionWatcherMarker>() {
+    match fuchsia_component::client::connect_to_protocol::<RegulatoryRegionWatcherMarker>() {
         Ok(regulatory_svc) => {
             let regulatory_manager = RegulatoryManager::new(regulatory_svc, iface_manager);
             let regulatory_fut = async move {
@@ -207,7 +207,7 @@ fn main() -> Result<(), Error> {
     util::logger::init();
 
     let mut executor = fasync::Executor::new().context("error create event loop")?;
-    let wlan_svc = fuchsia_component::client::connect_to_service::<DeviceServiceMarker>()
+    let wlan_svc = fuchsia_component::client::connect_to_protocol::<DeviceServiceMarker>()
         .context("failed to connect to device service")?;
     let (cobalt_api, cobalt_fut) =
         CobaltConnector::default().serve(ConnectionType::project_id(metrics::PROJECT_ID));

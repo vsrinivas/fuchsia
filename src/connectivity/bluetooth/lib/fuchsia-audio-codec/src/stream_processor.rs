@@ -474,7 +474,7 @@ impl StreamProcessor {
         input_domain: DomainFormat,
         encoder_settings: EncoderSettings,
     ) -> Result<StreamProcessor, Error> {
-        let sysmem_client = fuchsia_component::client::connect_to_service::<AllocatorMarker>()
+        let sysmem_client = fuchsia_component::client::connect_to_protocol::<AllocatorMarker>()
             .context("Connecting to sysmem")?;
 
         let format_details = FormatDetails {
@@ -494,7 +494,7 @@ impl StreamProcessor {
             ..CreateEncoderParams::EMPTY
         };
 
-        let codec_svc = fuchsia_component::client::connect_to_service::<CodecFactoryMarker>()
+        let codec_svc = fuchsia_component::client::connect_to_protocol::<CodecFactoryMarker>()
             .context("Failed to connect to Codec Factory")?;
 
         let (processor, stream_processor_serverend) = fidl::endpoints::create_proxy()?;
@@ -511,7 +511,7 @@ impl StreamProcessor {
         mime_type: &str,
         oob_bytes: Option<Vec<u8>>,
     ) -> Result<StreamProcessor, Error> {
-        let sysmem_client = fuchsia_component::client::connect_to_service::<AllocatorMarker>()
+        let sysmem_client = fuchsia_component::client::connect_to_protocol::<AllocatorMarker>()
             .context("Connecting to sysmem")?;
 
         let format_details = FormatDetails {
@@ -531,7 +531,7 @@ impl StreamProcessor {
             ..CreateDecoderParams::EMPTY
         };
 
-        let codec_svc = fuchsia_component::client::connect_to_service::<CodecFactoryMarker>()
+        let codec_svc = fuchsia_component::client::connect_to_protocol::<CodecFactoryMarker>()
             .context("Failed to connect to Codec Factory")?;
 
         let (processor, stream_processor_serverend) = fidl::endpoints::create_proxy()?;

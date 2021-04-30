@@ -19,7 +19,7 @@ use zerocopy::{AsBytes, LayoutVerified};
 
 use fuchsia_async as fasync;
 use fuchsia_async::TimeoutExt;
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use fuchsia_zircon as zx;
 
 use fidl::endpoints::create_endpoints;
@@ -202,7 +202,7 @@ fn get_config() -> Result<EchoSocketConfig, Error> {
 
 /// Open an ICMP echo socket.
 async fn open_socket(config: EchoSocketConfig) -> Result<EchoSocketProxy, Error> {
-    let provider = connect_to_service::<ProviderMarker>()
+    let provider = connect_to_protocol::<ProviderMarker>()
         .context("Failed to connect to the ICMP Provider service")?;
 
     debug!("Connected to fuchsia.net.icmp.Provider service");

@@ -4,7 +4,7 @@
 
 use anyhow::Error;
 use fidl::endpoints::DiscoverableService;
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 
 pub trait ServiceConnect: Send + Sync {
     fn connect_to_service<S: DiscoverableService>(&self) -> Result<S::Proxy, Error>;
@@ -15,7 +15,7 @@ pub struct ServiceConnector;
 
 impl ServiceConnect for ServiceConnector {
     fn connect_to_service<S: DiscoverableService>(&self) -> Result<S::Proxy, Error> {
-        connect_to_service::<S>()
+        connect_to_protocol::<S>()
     }
 }
 
@@ -23,7 +23,7 @@ impl ServiceConnect for ServiceConnector {
 mod test {
     use super::*;
     use anyhow::{format_err, Context};
-    use fuchsia_component::client::connect_to_service_at;
+    use fuchsia_component::client::connect_to_protocol_at;
     use fuchsia_zircon as zx;
 
     #[derive(Debug, Clone)]
@@ -43,7 +43,7 @@ mod test {
 
     impl ServiceConnect for NamespacedServiceConnector {
         fn connect_to_service<S: DiscoverableService>(&self) -> Result<S::Proxy, Error> {
-            connect_to_service_at::<S>(self.0.as_str())
+            connect_to_protocol_at::<S>(self.0.as_str())
         }
     }
 

@@ -8,7 +8,7 @@ use {
         matcher::EventMatcher,
     },
     fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_syslog as syslog,
 };
 
@@ -29,7 +29,7 @@ async fn main() {
     event_source.start_component_tree().await;
 
     // This will trigger the resolution of the child.
-    let realm = connect_to_service::<fsys::RealmMarker>().unwrap();
+    let realm = connect_to_protocol::<fsys::RealmMarker>().unwrap();
     let mut child_ref = fsys::ChildRef { name: "child_a".to_string(), collection: None };
 
     let (_, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();

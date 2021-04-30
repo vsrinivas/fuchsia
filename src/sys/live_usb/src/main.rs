@@ -28,7 +28,7 @@ static WORKSTATION_INSTALLER_GPT: [u8; 16] = [
 ];
 
 async fn is_live_usb_enabled() -> Result<bool, Error> {
-    let proxy = fuchsia_component::client::connect_to_service::<ArgumentsMarker>()
+    let proxy = fuchsia_component::client::connect_to_protocol::<ArgumentsMarker>()
         .context("Connecting to service")?;
 
     let mut bools: [BoolPair; 2] = [

@@ -26,7 +26,7 @@ async fn create_test_accessibility_env(
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
         .unwrap()
-        .connect_to_service::<AccessibilityMarker>()
+        .connect_to_protocol::<AccessibilityMarker>()
         .unwrap()
 }
 
@@ -36,7 +36,7 @@ async fn create_a11y_test_env_with_failures(
 ) -> AccessibilityProxy {
     create_test_env_with_failures(storage_factory, ENV_NAME, SettingType::Accessibility)
         .await
-        .connect_to_service::<AccessibilityMarker>()
+        .connect_to_protocol::<AccessibilityMarker>()
         .unwrap()
 }
 

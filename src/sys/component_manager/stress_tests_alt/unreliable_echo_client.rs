@@ -5,7 +5,7 @@
 use {
     fasync::TimeoutExt,
     fidl_fidl_examples_routing_echo as fecho, fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     rand::{thread_rng, Rng},
     std::time::Duration,
 };
@@ -22,7 +22,7 @@ async fn main() {
 
 async fn send_echo() {
     loop {
-        if let Ok(echo) = connect_to_service::<fecho::EchoMarker>() {
+        if let Ok(echo) = connect_to_protocol::<fecho::EchoMarker>() {
             if let Ok(Some(result)) = echo.echo_string(Some("Hippos rule!")).await {
                 assert_eq!(result, "Hippos rule!");
             }

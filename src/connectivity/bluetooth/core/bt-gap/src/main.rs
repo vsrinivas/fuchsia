@@ -14,7 +14,7 @@ use {
     fidl_fuchsia_bluetooth_le::{CentralMarker, PeripheralMarker},
     fidl_fuchsia_device::{NameProviderMarker, DEFAULT_DEVICE_NAME},
     fuchsia_async as fasync,
-    fuchsia_component::{client::connect_to_service, server::ServiceFs},
+    fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
     futures::{
         channel::mpsc,
         future::{try_join5, BoxFuture},
@@ -66,7 +66,7 @@ async fn main() -> Result<(), Error> {
 /// Returns the device host name that we assign as the local Bluetooth device name by default.
 async fn get_host_name() -> Result<String, Error> {
     // Obtain the local device name to assign it as the default Bluetooth name,
-    let name_provider = connect_to_service::<NameProviderMarker>()?;
+    let name_provider = connect_to_protocol::<NameProviderMarker>()?;
     name_provider
         .get_device_name()
         .await?

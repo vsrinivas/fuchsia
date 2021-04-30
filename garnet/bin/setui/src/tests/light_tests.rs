@@ -225,7 +225,7 @@ impl TestLightEnvironmentBuilder {
 
         let env = environment_builder.spawn_and_get_nested_environment(ENV_NAME).await.unwrap();
 
-        let light_service = env.connect_to_service::<LightMarker>().unwrap();
+        let light_service = env.connect_to_protocol::<LightMarker>().unwrap();
         let store = storage_factory.get_device_storage().await;
 
         TestLightEnvironment { light_service, store, input_service: input_service_handle }

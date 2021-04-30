@@ -33,7 +33,7 @@ pub async fn run_serial_link_handlers(
                 let text_desc = format!("{:?}", desc);
                 match desc {
                     Descriptor::Debug => {
-                        fuchsia_component::client::connect_to_service::<NewDeviceProxy_Marker>()?
+                        fuchsia_component::client::connect_to_protocol::<NewDeviceProxy_Marker>()?
                             .get_channel(svr)
                             .context(format!(
                                 "connecting to service {}",

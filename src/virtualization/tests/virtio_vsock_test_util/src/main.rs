@@ -10,7 +10,7 @@ use {
         ConnectorMarker,
     },
     fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon::{self as zx, AsHandleRef},
     futures::{
         io::{AsyncReadExt, AsyncWriteExt},
@@ -80,7 +80,7 @@ fn make_con() -> Result<(fasync::Socket, ConnectionProxy, ConnectionTransport), 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     let vsock =
-        connect_to_service::<ConnectorMarker>().context("failed to connect to vsock service")?;
+        connect_to_protocol::<ConnectorMarker>().context("failed to connect to vsock service")?;
     // Register the listeners early to avoid any race conditions later.
     let (acceptor_client, acceptor) = endpoints::create_endpoints::<AcceptorMarker>()?;
     vsock.listen(8001, acceptor_client).await?;

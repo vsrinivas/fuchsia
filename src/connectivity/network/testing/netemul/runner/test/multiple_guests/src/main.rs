@@ -14,7 +14,7 @@ use {
 
 async fn test_multihop_ping() -> Result<(), Error> {
     // Configure the Debian guest VM acting as a router.
-    let guest_discovery_service = client::connect_to_service::<GuestDiscoveryMarker>()?;
+    let guest_discovery_service = client::connect_to_protocol::<GuestDiscoveryMarker>()?;
     let (router_gis, gis_ch) = fidl::endpoints::create_proxy::<GuestInteractionMarker>()?;
     let () = guest_discovery_service.get_guest(None, "debian_guest_1", gis_ch)?;
 

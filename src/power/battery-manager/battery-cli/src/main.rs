@@ -9,7 +9,7 @@ use {
     fidl_fuchsia_power as fpower, fidl_fuchsia_power_test as spower,
     fidl_fuchsia_power_test::BatterySimulatorProxy,
     fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_syslog as syslog,
     futures::{
         channel::mpsc::{channel, SendError},
@@ -64,7 +64,7 @@ async fn print_battery_info(service: &BatterySimulatorProxy) -> Result<(), Error
         let bi = service.get_battery_info().await?;
         println!("{}", BatteryInfo { info: bi });
     } else {
-        let battery_manager_server = connect_to_service::<fpower::BatteryManagerMarker>()?;
+        let battery_manager_server = connect_to_protocol::<fpower::BatteryManagerMarker>()?;
         let bi = battery_manager_server.get_battery_info().await?;
         println!("{}", BatteryInfo { info: bi });
     }
@@ -346,7 +346,7 @@ async fn run_repl(service: BatterySimulatorProxy) -> Result<(), Error> {
 async fn main() -> Result<(), Error> {
     syslog::init_with_tags(&[LOG_TAG]).expect("Can't init logger - batsim main");
     println!("Welcome to the Battery Simulator. Type help and <Enter> to see all the options!");
-    let battery_simulator = connect_to_service::<spower::BatterySimulatorMarker>()?;
+    let battery_simulator = connect_to_protocol::<spower::BatterySimulatorMarker>()?;
     let repl = run_repl(battery_simulator)
         .unwrap_or_else(|e| eprintln!("REPL failed unexpectedly {:?}", e));
 
@@ -365,7 +365,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_disconnect() {
         // Connect to service
-        let battery_simulator = connect_to_service::<spower::BatterySimulatorMarker>().unwrap();
+        let battery_simulator = connect_to_protocol::<spower::BatterySimulatorMarker>().unwrap();
         // Disconnect battery
         let res = battery_simulator.disconnect_real_battery();
         assert!(res.is_ok(), "Failed to disconnect");
@@ -380,7 +380,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_set_battery_percentage() {
         // Connect to service
-        let battery_simulator = connect_to_service::<spower::BatterySimulatorMarker>().unwrap();
+        let battery_simulator = connect_to_protocol::<spower::BatterySimulatorMarker>().unwrap();
         // Disconnect battery
         let res = battery_simulator.disconnect_real_battery();
         assert!(res.is_ok(), "Failed to disconnect");
@@ -398,7 +398,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_set_battery_status() {
         // Connect to service
-        let battery_simulator = connect_to_service::<spower::BatterySimulatorMarker>().unwrap();
+        let battery_simulator = connect_to_protocol::<spower::BatterySimulatorMarker>().unwrap();
         // Disconnect battery
         let res = battery_simulator.disconnect_real_battery();
         assert!(res.is_ok(), "Failed to disconnect");
@@ -416,7 +416,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_set_charge_status() {
         // Connect to service
-        let battery_simulator = connect_to_service::<spower::BatterySimulatorMarker>().unwrap();
+        let battery_simulator = connect_to_protocol::<spower::BatterySimulatorMarker>().unwrap();
         // Disconnect battery
         let res = battery_simulator.disconnect_real_battery();
         assert!(res.is_ok(), "Failed to disconnect");
@@ -434,7 +434,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_set_charge_source() {
         // Connect to service
-        let battery_simulator = connect_to_service::<spower::BatterySimulatorMarker>().unwrap();
+        let battery_simulator = connect_to_protocol::<spower::BatterySimulatorMarker>().unwrap();
         // Disconnect battery
         let res = battery_simulator.disconnect_real_battery();
         assert!(res.is_ok(), "Failed to disconnect");
@@ -452,7 +452,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_set_level_status() {
         // Connect to service
-        let battery_simulator = connect_to_service::<spower::BatterySimulatorMarker>().unwrap();
+        let battery_simulator = connect_to_protocol::<spower::BatterySimulatorMarker>().unwrap();
         // Disconnect battery
         let res = battery_simulator.disconnect_real_battery();
         assert!(res.is_ok(), "Failed to disconnect");

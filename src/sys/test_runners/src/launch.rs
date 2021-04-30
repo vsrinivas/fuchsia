@@ -9,7 +9,7 @@ use {
     crate::logs::{create_log_stream, LoggerError, LoggerStream},
     anyhow::Error,
     fidl_fuchsia_process as fproc,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_runtime as runtime, fuchsia_zircon as zx,
     runner::component::ComponentNamespace,
     runtime::{HandleInfo, HandleType},
@@ -73,7 +73,7 @@ pub struct LaunchProcessArgs<'a> {
 pub async fn launch_process(
     args: LaunchProcessArgs<'_>,
 ) -> Result<(Process, ScopedJob, LoggerStream), LaunchError> {
-    let launcher = connect_to_service::<fproc::LauncherMarker>().map_err(LaunchError::Launcher)?;
+    let launcher = connect_to_protocol::<fproc::LauncherMarker>().map_err(LaunchError::Launcher)?;
     launch_process_impl(args, launcher).await
 }
 

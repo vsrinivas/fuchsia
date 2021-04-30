@@ -252,7 +252,7 @@ pub struct Proxy<S, O>(PhantomData<(S, fn() -> O)>);
 impl<S: DiscoverableService, O> Service for Proxy<S, O> {
     type Output = O;
     fn connect(&mut self, channel: zx::Channel) -> Option<O> {
-        if let Err(e) = crate::client::connect_channel_to_service::<S>(channel) {
+        if let Err(e) = crate::client::connect_channel_to_protocol::<S>(channel) {
             eprintln!("failed to proxy request to {}: {:?}", S::SERVICE_NAME, e);
         }
         None
@@ -308,7 +308,7 @@ impl<S: DiscoverableService, O> Service for ComponentProxy<S, O> {
                 )?);
             }
             if let Some(app) = self.launched_app.as_ref() {
-                app.pass_to_named_service(S::SERVICE_NAME, channel.into())?;
+                app.pass_to_named_protocol(S::SERVICE_NAME, channel.into())?;
             }
             Ok::<(), Error>(())
         })();
@@ -764,7 +764,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
         ServiceObjTy: From<Proxy<LoaderMarker, O>>,
         ServiceObjTy: ServiceObjTrait<Output = O>,
     {
-        let env = crate::client::connect_to_service::<EnvironmentMarker>()
+        let env = crate::client::connect_to_protocol::<EnvironmentMarker>()
             .context("connecting to current environment")?;
         let services_with_loader = self.add_proxy_service::<LoaderMarker, _>();
 
@@ -871,31 +871,37 @@ impl NestedEnvironment {
         &self.launcher
     }
 
-    /// Connect to a service provided by this environment.
+    /// Connect to a protocol provided by this environment.
     #[inline]
     pub fn connect_to_service<S: DiscoverableService>(&self) -> Result<S::Proxy, Error> {
+        self.connect_to_protocol::<S>()
+    }
+
+    /// Connect to a protocol provided by this environment.
+    #[inline]
+    pub fn connect_to_protocol<S: DiscoverableService>(&self) -> Result<S::Proxy, Error> {
         let (client_channel, server_channel) = zx::Channel::create()?;
-        self.pass_to_service::<S>(server_channel)?;
+        self.pass_to_protocol::<S>(server_channel)?;
         Ok(S::Proxy::from_channel(fasync::Channel::from_channel(client_channel)?))
     }
 
-    /// Connect to a service by passing a channel for the server.
+    /// Connect to a protocol by passing a channel for the server.
     #[inline]
-    pub fn pass_to_service<S: DiscoverableService>(
+    pub fn pass_to_protocol<S: DiscoverableService>(
         &self,
         server_channel: zx::Channel,
     ) -> Result<(), Error> {
-        self.pass_to_named_service(S::SERVICE_NAME, server_channel)
+        self.pass_to_named_protocol(S::SERVICE_NAME, server_channel)
     }
 
-    /// Connect to a service by name.
+    /// Connect to a protocol by name.
     #[inline]
-    pub fn pass_to_named_service(
+    pub fn pass_to_named_protocol(
         &self,
-        service_name: &str,
+        protocol_name: &str,
         server_channel: zx::Channel,
     ) -> Result<(), Error> {
-        fdio::service_connect_at(&self.directory_request, service_name, server_channel)?;
+        fdio::service_connect_at(&self.directory_request, protocol_name, server_channel)?;
         Ok(())
     }
 }

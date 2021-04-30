@@ -418,7 +418,7 @@ async fn validate_intl_set() -> Result<(), Error> {
     });
 
     let intl_service =
-        env.connect_to_service::<IntlMarker>().context("Failed to connect to intl service")?;
+        env.connect_to_protocol::<IntlMarker>().context("Failed to connect to intl service")?;
 
     assert_set!(intl::command(
         intl_service,
@@ -450,7 +450,7 @@ async fn validate_intl_watch() -> Result<(), Error> {
     );
 
     let intl_service =
-        env.connect_to_service::<IntlMarker>().context("Failed to connect to intl service")?;
+        env.connect_to_protocol::<IntlMarker>().context("Failed to connect to intl service")?;
 
     let output = assert_watch!(intl::command(intl_service, None, None, vec![], None, false));
     assert_eq!(
@@ -480,7 +480,7 @@ async fn validate_device() -> Result<(), Error> {
     );
 
     let device_service =
-        env.connect_to_service::<DeviceMarker>().context("Failed to connect to device service")?;
+        env.connect_to_protocol::<DeviceMarker>().context("Failed to connect to device service")?;
 
     device::command(device_service).try_next().await?;
     Ok(())
@@ -539,7 +539,7 @@ async fn validate_display(
     );
 
     let display_service = env
-        .connect_to_service::<DisplayMarker>()
+        .connect_to_protocol::<DisplayMarker>()
         .context("Failed to connect to display service")?;
 
     assert_successful!(display::command(
@@ -578,7 +578,7 @@ async fn validate_factory_reset(expected_local_reset_allowed: bool) -> Result<()
     );
 
     let factory_reset_service = env
-        .connect_to_service::<FactoryResetMarker>()
+        .connect_to_protocol::<FactoryResetMarker>()
         .context("Failed to connect to factory reset service")?;
 
     assert_successful!(factory_reset::command(
@@ -686,7 +686,7 @@ async fn validate_accessibility_set() -> Result<(), Error> {
     );
 
     let accessibility_service = env
-        .connect_to_service::<AccessibilityMarker>()
+        .connect_to_protocol::<AccessibilityMarker>()
         .context("Failed to connect to accessibility service")?;
 
     let output = assert_set!(accessibility::command(accessibility_service, expected_options));
@@ -703,7 +703,7 @@ async fn validate_accessibility_watch() -> Result<(), Error> {
     );
 
     let accessibility_service = env
-        .connect_to_service::<AccessibilityMarker>()
+        .connect_to_protocol::<AccessibilityMarker>()
         .context("Failed to connect to accessibility service")?;
 
     let output = assert_watch!(accessibility::command(
@@ -750,7 +750,7 @@ async fn validate_audio(expected: &'static ExpectedStreamSettingsStruct) -> Resu
     );
 
     let audio_service =
-        env.connect_to_service::<AudioMarker>().context("Failed to connect to audio service")?;
+        env.connect_to_protocol::<AudioMarker>().context("Failed to connect to audio service")?;
 
     assert_successful!(audio::command(
         audio_service,
@@ -783,7 +783,7 @@ async fn validate_input(expected_mic_muted: Option<bool>) -> Result<(), Error> {
     );
 
     let input_service =
-        env.connect_to_service::<InputMarker>().context("Failed to connect to input service")?;
+        env.connect_to_protocol::<InputMarker>().context("Failed to connect to input service")?;
 
     let either = input::command(input_service, expected_mic_muted).await?;
     if expected_mic_muted.is_none() {
@@ -839,7 +839,7 @@ async fn validate_input2_watch() -> Result<(), Error> {
     );
 
     let input_service =
-        env.connect_to_service::<InputMarker>().context("Failed to connect to input service")?;
+        env.connect_to_protocol::<InputMarker>().context("Failed to connect to input service")?;
 
     let output = assert_watch!(input::command2(input_service, None, None, None));
     // Just check that the output contains some key strings that confirms the watch returned.
@@ -870,7 +870,7 @@ async fn validate_input2_set(
     );
 
     let input_service =
-        env.connect_to_service::<InputMarker>().context("Failed to connect to input service")?;
+        env.connect_to_protocol::<InputMarker>().context("Failed to connect to input service")?;
 
     let output = assert_set!(input::command2(
         input_service,
@@ -941,7 +941,7 @@ async fn validate_dnd(
     );
 
     let do_not_disturb_service = env
-        .connect_to_service::<DoNotDisturbMarker>()
+        .connect_to_protocol::<DoNotDisturbMarker>()
         .context("Failed to connect to do not disturb service")?;
 
     assert_successful!(do_not_disturb::command(
@@ -967,7 +967,7 @@ async fn validate_light_set() -> Result<(), Error> {
     );
 
     let light_service =
-        env.connect_to_service::<LightMarker>().context("Failed to connect to light service")?;
+        env.connect_to_protocol::<LightMarker>().context("Failed to connect to light service")?;
 
     assert_set!(light::command(
         light_service,
@@ -1006,7 +1006,7 @@ async fn validate_light_watch() -> Result<(), Error> {
     );
 
     let light_service =
-        env.connect_to_service::<LightMarker>().context("Failed to connect to light service")?;
+        env.connect_to_protocol::<LightMarker>().context("Failed to connect to light service")?;
 
     let output = assert_watch!(light::command(
         light_service,
@@ -1065,7 +1065,7 @@ async fn validate_light_watch_individual() -> Result<(), Error> {
     );
 
     let light_service =
-        env.connect_to_service::<LightMarker>().context("Failed to connect to light service")?;
+        env.connect_to_protocol::<LightMarker>().context("Failed to connect to light service")?;
 
     let output = assert_watch!(light::command(
         light_service,
@@ -1121,7 +1121,7 @@ async fn validate_night_mode(expected_night_mode_enabled: Option<bool>) -> Resul
     );
 
     let night_mode_service = env
-        .connect_to_service::<NightModeMarker>()
+        .connect_to_protocol::<NightModeMarker>()
         .context("Failed to connect to night mode service")?;
 
     assert_successful!(night_mode::command(night_mode_service, expected_night_mode_enabled));
@@ -1142,7 +1142,7 @@ async fn validate_night_mode_set_output(expected_night_mode_enabled: bool) -> Re
     );
 
     let night_mode_service = env
-        .connect_to_service::<NightModeMarker>()
+        .connect_to_protocol::<NightModeMarker>()
         .context("Failed to connect to night mode service")?;
 
     let output =
@@ -1170,7 +1170,7 @@ async fn validate_night_mode_watch_output(
     );
 
     let night_mode_service = env
-        .connect_to_service::<NightModeMarker>()
+        .connect_to_protocol::<NightModeMarker>()
         .context("Failed to connect to night_mode service")?;
 
     let output = assert_watch!(night_mode::command(night_mode_service, None));
@@ -1207,7 +1207,7 @@ async fn validate_privacy(expected_user_data_sharing_consent: Option<bool>) -> R
     );
 
     let privacy_service = env
-        .connect_to_service::<PrivacyMarker>()
+        .connect_to_protocol::<PrivacyMarker>()
         .context("Failed to connect to privacy service")?;
 
     assert_successful!(privacy::command(privacy_service, expected_user_data_sharing_consent));
@@ -1230,7 +1230,7 @@ async fn validate_privacy_set_output(
     );
 
     let privacy_service = env
-        .connect_to_service::<PrivacyMarker>()
+        .connect_to_protocol::<PrivacyMarker>()
         .context("Failed to connect to privacy service")?;
 
     let output =
@@ -1261,7 +1261,7 @@ async fn validate_privacy_watch_output(
     );
 
     let privacy_service = env
-        .connect_to_service::<PrivacyMarker>()
+        .connect_to_protocol::<PrivacyMarker>()
         .context("Failed to connect to privacy service")?;
 
     let output = assert_watch!(privacy::command(privacy_service, None));
@@ -1304,7 +1304,7 @@ async fn validate_setup() -> Result<(), Error> {
     );
 
     let setup_service =
-        env.connect_to_service::<SetupMarker>().context("Failed to connect to setup service")?;
+        env.connect_to_protocol::<SetupMarker>().context("Failed to connect to setup service")?;
 
     assert_set!(setup::command(setup_service.clone(), Some(expected_set_interfaces)));
     let output = assert_watch!(setup::command(setup_service.clone(), None));
@@ -1334,7 +1334,7 @@ async fn validate_volume_policy_get() -> Result<(), Error> {
     );
 
     let volume_policy_service = env
-        .connect_to_service::<VolumePolicyControllerMarker>()
+        .connect_to_protocol::<VolumePolicyControllerMarker>()
         .context("Failed to connect to volume policy service")?;
 
     let output = assert_get!(volume_policy::command(volume_policy_service, None, None));
@@ -1374,7 +1374,7 @@ async fn validate_volume_policy_add() -> Result<(), Error> {
     );
 
     let volume_policy_service = env
-        .connect_to_service::<VolumePolicyControllerMarker>()
+        .connect_to_protocol::<VolumePolicyControllerMarker>()
         .context("Failed to connect to volume policy service")?;
 
     // Make the add call.
@@ -1399,7 +1399,7 @@ async fn validate_volume_policy_remove() -> Result<(), Error> {
     );
 
     let volume_policy_service = env
-        .connect_to_service::<VolumePolicyControllerMarker>()
+        .connect_to_protocol::<VolumePolicyControllerMarker>()
         .context("Failed to connect to volume policy service")?;
 
     // Attempt to remove the given policy ID.

@@ -95,7 +95,7 @@ Second, when starting a component which uses the Flutter runner, the starting pr
 must create a view from the resulting VM.
 ```
     let app = ... ;  // The result of using Launcher service.
-    let view_provider = app.connect_to_service::<ViewProviderMarker>();
+    let view_provider = app.connect_to_protocol::<ViewProviderMarker>();
     match view_provider {
         Err(_) => fx_log_debug!("could not connect to view provider.  This is expected in dart."),
         Ok(ref view_provider) => {

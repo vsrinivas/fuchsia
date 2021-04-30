@@ -7,7 +7,7 @@ use {
     async_trait::async_trait,
     fidl_fuchsia_ui_scenic::ScenicMarker,
     fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_syslog as fsyslog,
     input::{
         input_device, input_handler::InputHandler, input_pipeline::InputPipeline, mouse, Position,
@@ -63,7 +63,7 @@ impl InputHandler for SimpleCursor {
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     fsyslog::init_with_tags(&["scene_manager_session"]).expect("Failed to init syslog");
-    let scenic = connect_to_service::<ScenicMarker>()?;
+    let scenic = connect_to_protocol::<ScenicMarker>()?;
     let scene_manager = scene_management::FlatSceneManager::new(scenic, None, None).await?;
 
     let width = scene_manager.display_metrics.width_in_pixels() as f32;

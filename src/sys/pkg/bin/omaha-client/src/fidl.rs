@@ -21,7 +21,7 @@ use fidl_fuchsia_update_channel::{ProviderRequest, ProviderRequestStream};
 use fidl_fuchsia_update_channelcontrol::{ChannelControlRequest, ChannelControlRequestStream};
 use fuchsia_async as fasync;
 use fuchsia_component::{
-    client::connect_to_service,
+    client::connect_to_protocol,
     server::{ServiceFs, ServiceObjLocal},
 };
 use fuchsia_zircon as zx;
@@ -321,7 +321,7 @@ where
                 if state_machine_state == state_machine::State::WaitingForReboot
                     || previous_out_of_space_failure
                 {
-                    connect_to_service::<fidl_fuchsia_hardware_power_statecontrol::AdminMarker>()?
+                    connect_to_protocol::<fidl_fuchsia_hardware_power_statecontrol::AdminMarker>()?
                         .reboot(RebootReason::SystemUpdate)
                         .await?
                         .map_err(zx::Status::from_raw)

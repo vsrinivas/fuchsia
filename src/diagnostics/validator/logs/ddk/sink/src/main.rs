@@ -43,7 +43,7 @@ impl Puppet {
         let local_launcher = launcher()?;
         let app = launch(&local_launcher, puppet_url.to_string(), None)?;
         info!("Connecting to puppet and spawning watchdog.");
-        let proxy = app.connect_to_service::<LogSinkPuppetMarker>()?;
+        let proxy = app.connect_to_protocol::<LogSinkPuppetMarker>()?;
 
         info!("Requesting info from the puppet.");
         let info = proxy.get_info().await?;

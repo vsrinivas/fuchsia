@@ -24,7 +24,7 @@ impl DeviceFacade {
     /// Returns target's nodename by NameProviderProxy
     pub async fn get_device_name(&self) -> Result<String, Error> {
         let tag = "DeviceFacade::get_device_name";
-        let proxy = match client::connect_to_service::<NameProviderMarker>() {
+        let proxy = match client::connect_to_protocol::<NameProviderMarker>() {
             Ok(p) => p,
             Err(err) => fx_err_and_bail!(
                 &with_line!(tag),

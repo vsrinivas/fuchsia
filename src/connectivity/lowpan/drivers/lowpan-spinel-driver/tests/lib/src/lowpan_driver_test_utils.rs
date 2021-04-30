@@ -8,7 +8,7 @@ use {
     fidl_fuchsia_lowpan_device::LookupMarker,
     fuchsia_async as fasync,
     fuchsia_async::TimeoutExt,
-    fuchsia_component::client::{connect_to_service, launch, launcher, App},
+    fuchsia_component::client::{connect_to_protocol, launch, launcher, App},
     futures::prelude::*,
 };
 
@@ -16,7 +16,7 @@ const DEFAULT_TIMEOUT: fuchsia_zircon::Duration = fuchsia_zircon::Duration::from
 
 pub async fn lowpan_driver_init() -> App {
     let lookup =
-        connect_to_service::<LookupMarker>().expect("Failed to connect to Lowpan Lookup service");
+        connect_to_protocol::<LookupMarker>().expect("Failed to connect to Lowpan Lookup service");
 
     let devices = lookup
         .watch_devices()
@@ -55,7 +55,7 @@ pub async fn lowpan_driver_init() -> App {
 
 pub async fn lowpan_driver_deinit(mut driver: App) {
     let lookup =
-        connect_to_service::<LookupMarker>().expect("Failed to connect to Lowpan Lookup service");
+        connect_to_protocol::<LookupMarker>().expect("Failed to connect to Lowpan Lookup service");
 
     let devices = lookup
         .watch_devices()

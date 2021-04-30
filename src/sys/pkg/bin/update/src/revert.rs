@@ -6,15 +6,15 @@ use {
     anyhow::{Context, Error},
     fidl_fuchsia_hardware_power_statecontrol::{AdminMarker, AdminProxy, RebootReason},
     fidl_fuchsia_paver::{BootManagerMarker, BootManagerProxy, PaverMarker},
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon::Status,
 };
 
 /// Connects to FIDL services and reverts the update.
 pub async fn handle_revert() -> Result<(), Error> {
-    let admin = connect_to_service::<AdminMarker>().context("while connecting to admin")?;
+    let admin = connect_to_protocol::<AdminMarker>().context("while connecting to admin")?;
 
-    let paver = connect_to_service::<PaverMarker>().context("while connecting to paver")?;
+    let paver = connect_to_protocol::<PaverMarker>().context("while connecting to paver")?;
     let (boot_manager, server_end) = fidl::endpoints::create_proxy::<BootManagerMarker>()?;
     let () = paver.find_boot_manager(server_end).context("while connecting to boot manager")?;
 

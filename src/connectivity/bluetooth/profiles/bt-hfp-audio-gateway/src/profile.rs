@@ -71,7 +71,7 @@ impl Profile {
     /// Register as an Audio Gateway using the provided config. Constructing and returning
     /// a `Profile` on success.
     pub fn register_audio_gateway(features: AudioGatewayFeatureSupport) -> anyhow::Result<Self> {
-        let proxy = fuchsia_component::client::connect_to_service::<bredr::ProfileMarker>()
+        let proxy = fuchsia_component::client::connect_to_protocol::<bredr::ProfileMarker>()
             .context("Failed to connect to Bluetooth Profile service")?;
         Self::register(
             proxy,

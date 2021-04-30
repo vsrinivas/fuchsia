@@ -11,7 +11,7 @@ use {
         TargetHandlerRequestStream, TargetPassthroughError,
     },
     fidl_fuchsia_bluetooth_component::LifecycleState,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     futures::TryStreamExt,
     log::{trace, warn},
     std::sync::Arc,
@@ -149,7 +149,7 @@ pub(crate) async fn process_avrcp_requests(
 ) -> Result<(), anyhow::Error> {
     // AVRCP Service Setup
     // Register this target handler with the AVRCP component.
-    let avrcp_svc = connect_to_service::<PeerManagerMarker>()
+    let avrcp_svc = connect_to_protocol::<PeerManagerMarker>()
         .expect("Failed to connect to Bluetooth AVRCP interface");
     let (target_client, request_stream) =
         create_request_stream::<TargetHandlerMarker>().expect("Error creating Controller endpoint");

@@ -25,12 +25,12 @@ async fn setup(
         launch(&launcher().unwrap(), test_component_url.to_string(), None).unwrap();
 
     let test_app_controller =
-        test_component.connect_to_service::<SamplerTestControllerMarker>().unwrap();
+        test_component.connect_to_protocol::<SamplerTestControllerMarker>().unwrap();
 
     let reboot_controller =
-        fuchsia_component::client::connect_to_service::<MockRebootControllerMarker>().unwrap();
+        fuchsia_component::client::connect_to_protocol::<MockRebootControllerMarker>().unwrap();
 
-    let logger_querier = fuchsia_component::client::connect_to_service::<
+    let logger_querier = fuchsia_component::client::connect_to_protocol::<
         fidl_fuchsia_cobalt_test::LoggerQuerierMarker,
     >()
     .unwrap();

@@ -475,7 +475,7 @@ impl GattClientFacade {
                 Some(c)
             }
             None => {
-                let central_svc: CentralProxy = app::client::connect_to_service::<CentralMarker>()
+                let central_svc: CentralProxy = app::client::connect_to_protocol::<CentralMarker>()
                     .context("Failed to connect to BLE Central service.")
                     .unwrap();
                 Some(central_svc)

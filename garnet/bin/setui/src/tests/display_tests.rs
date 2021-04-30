@@ -41,7 +41,7 @@ async fn setup_display_env() -> DisplayProxy {
         .await
         .unwrap();
 
-    env.connect_to_service::<DisplayMarker>().unwrap()
+    env.connect_to_protocol::<DisplayMarker>().unwrap()
 }
 
 async fn setup_brightness_display_env() -> (DisplayProxy, BrightnessService) {
@@ -60,7 +60,7 @@ async fn setup_brightness_display_env() -> (DisplayProxy, BrightnessService) {
         .await
         .unwrap();
 
-    (env.connect_to_service::<DisplayMarker>().unwrap(), brightness_service_handle)
+    (env.connect_to_protocol::<DisplayMarker>().unwrap(), brightness_service_handle)
 }
 
 // Creates an environment that will fail on a get request.
@@ -69,7 +69,7 @@ async fn create_display_test_env_with_failures(
 ) -> DisplayProxy {
     create_test_env_with_failures(storage_factory, ENV_NAME, SettingType::Display)
         .await
-        .connect_to_service::<DisplayMarker>()
+        .connect_to_protocol::<DisplayMarker>()
         .unwrap()
 }
 
@@ -468,7 +468,7 @@ async fn validate_restore_with_storage_controller(
 
     assert!(env.is_some());
 
-    let display_proxy = env.unwrap().connect_to_service::<DisplayMarker>().unwrap();
+    let display_proxy = env.unwrap().connect_to_protocol::<DisplayMarker>().unwrap();
     let settings = display_proxy.watch().await.expect("watch completed");
 
     if auto_brightness {
@@ -606,11 +606,11 @@ async fn test_display_failure() {
         .await
         .unwrap();
 
-    let display_proxy = env.connect_to_service::<DisplayMarker>().expect("connected to service");
+    let display_proxy = env.connect_to_protocol::<DisplayMarker>().expect("connected to service");
 
     let _settings_value = display_proxy.watch().await.expect("watch completed");
 
-    let intl_service = env.connect_to_service::<IntlMarker>().unwrap();
+    let intl_service = env.connect_to_protocol::<IntlMarker>().unwrap();
     let _settings = intl_service.watch().await.expect("watch completed");
 }
 

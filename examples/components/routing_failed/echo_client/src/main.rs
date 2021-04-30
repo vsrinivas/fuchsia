@@ -23,7 +23,7 @@ async fn main() {
     // > realm` declaration was found at `/echo_client:0` for
     // > `/svc/fidl.examples.routing.echo.Echo`, but no matching `offer` declaration was found in
     // > the parent
-    let echo = client::connect_to_service::<fecho::EchoMarker>().expect("error connecting to echo");
+    let echo = client::connect_to_protocol::<fecho::EchoMarker>().expect("error connecting to echo");
     let err =
         echo.echo_string(Some("Hippos rule!")).await.expect_err("echo_string should have failed");
     info!("Connecting to Echo protocol failed with error \"{}\"", err);
@@ -40,7 +40,7 @@ async fn main() {
     // > url "fuchsia-pkg://fuchsia.com/components-routing-failed-example#meta/echo_server_bad.cm":
     // > error loading executable: "reading object at "bin/routing_failed_echo_server_oops" failed:
     // > A FIDL client's channel was closed: PEER_CLOSED"
-    let echo2 = client::connect_to_service_at_path::<fecho::EchoMarker>(
+    let echo2 = client::connect_to_protocol_at_path::<fecho::EchoMarker>(
         "/svc/fidl.examples.routing.echo.Echo2",
     )
     .expect("error connecting to echo");

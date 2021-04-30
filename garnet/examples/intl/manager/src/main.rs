@@ -364,11 +364,11 @@ mod test {
             .context("Failed to launch Intl Property Manager")?;
 
         let property_manager: PropertyManagerProxy = app
-            .connect_to_service::<PropertyManagerMarker>()
+            .connect_to_protocol::<PropertyManagerMarker>()
             .context("Failed to connect to intl PropertyManager service")?;
 
         let property_provider: PropertyProviderProxy = app
-            .connect_to_service::<PropertyProviderMarker>()
+            .connect_to_protocol::<PropertyProviderMarker>()
             .context("Failed to connect to intl PropertyProvider service")?;
 
         let initial_profile = property_provider.get_profile().await?;
@@ -404,7 +404,7 @@ mod test {
             .context("Failed to launch Intl Property Manager")?;
 
         let property_provider: PropertyProviderProxy = app
-            .connect_to_service::<PropertyProviderMarker>()
+            .connect_to_protocol::<PropertyProviderMarker>()
             .context("Failed to connect to intl PropertyProvider service")?;
 
         let initial_profile = property_provider.get_profile().await?;

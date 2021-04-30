@@ -8,7 +8,7 @@ use {
     fidl::endpoints::{Proxy, ServerEnd},
     fidl_fuchsia_hardware_pty::{DeviceMarker, DeviceProxy, WindowSize},
     fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_trace as ftrace,
     fuchsia_zircon::{self as zx, HandleBased, ProcessInfo, ProcessInfoFlags},
     std::{ffi::CStr, fs::File, os::unix::io::AsRawFd},
@@ -105,7 +105,7 @@ impl Pty {
     fn open_server_pty() -> Result<File, Error> {
         ftrace::duration!("pty", "Pty:open_server_pty");
         let server_conn =
-            connect_to_service::<DeviceMarker>().context("could not connect to pty service")?;
+            connect_to_protocol::<DeviceMarker>().context("could not connect to pty service")?;
         let server_chan = server_conn
             .into_channel()
             .or(Err(format_err!("failed to convert pty service into channel")))?;

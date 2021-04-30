@@ -5,12 +5,12 @@
 use {
     anyhow::{Context as _, Result},
     fidl_fuchsia_fonts as fonts, fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
 };
 
 #[fasync::run_singlethreaded(test)]
 async fn test_font_provider_launch() -> Result<()> {
-    let font_provider = connect_to_service::<fonts::ProviderMarker>()
+    let font_provider = connect_to_protocol::<fonts::ProviderMarker>()
         .context("Failed to connect to font server")?;
 
     let request = fonts::TypefaceRequest {

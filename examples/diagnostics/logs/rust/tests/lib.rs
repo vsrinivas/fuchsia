@@ -74,7 +74,7 @@ fn listen_to_logs(
 ) -> (impl Stream<Item = LogMessage>, impl Stream<Item = Data<Logs>>, (Task<()>, Task<()>)) {
     let reader = ArchiveReader::new();
 
-    let log_proxy = fuchsia_component::client::connect_to_service::<LogMarker>().unwrap();
+    let log_proxy = fuchsia_component::client::connect_to_protocol::<LogMarker>().unwrap();
     let mut options = LogFilterOptions {
         filter_by_pid: false,
         pid: 0,

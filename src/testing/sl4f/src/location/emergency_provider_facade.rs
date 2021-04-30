@@ -4,7 +4,7 @@
 
 use anyhow::{Context, Error};
 use fidl_fuchsia_location_position::{EmergencyProviderMarker, EmergencyProviderProxy, Position};
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 
 #[derive(Debug)]
 pub struct EmergencyProviderFacade {
@@ -13,7 +13,7 @@ pub struct EmergencyProviderFacade {
 
 impl EmergencyProviderFacade {
     pub fn new() -> Result<EmergencyProviderFacade, Error> {
-        Ok(EmergencyProviderFacade { provider: connect_to_service::<EmergencyProviderMarker>()? })
+        Ok(EmergencyProviderFacade { provider: connect_to_protocol::<EmergencyProviderMarker>()? })
     }
 
     /// Queries the current `Position`.

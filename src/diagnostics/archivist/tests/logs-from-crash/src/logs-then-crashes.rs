@@ -25,7 +25,7 @@ async fn main() {
         send.write(packet.as_bytes()).unwrap();
     }
 
-    fuchsia_component::client::connect_to_service::<LogSinkMarker>()
+    fuchsia_component::client::connect_to_protocol::<LogSinkMarker>()
         .unwrap()
         .connect(sink)
         .unwrap();

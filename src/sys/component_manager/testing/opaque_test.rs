@@ -211,7 +211,7 @@ impl OpaqueTestBuilder {
 async fn create_isolated_environment(
     label: &str,
 ) -> Result<(EnvironmentControllerProxy, LauncherProxy), Error> {
-    let env = connect_to_service::<EnvironmentMarker>()
+    let env = connect_to_protocol::<EnvironmentMarker>()
         .context("could not connect to current environment")?;
 
     let (new_env, new_env_server_end) =
@@ -304,7 +304,7 @@ async fn launch_component_manager(
 async fn connect_to_event_source(component_manager_path: &PathBuf) -> Result<EventSource, Error> {
     let path_to_svc = component_manager_path.join("out/svc");
     let path_to_svc = path_to_svc.to_str().expect("found invalid chars");
-    let proxy = connect_to_service_at::<fsys::EventSourceMarker>(path_to_svc)
+    let proxy = connect_to_protocol_at::<fsys::EventSourceMarker>(path_to_svc)
         .context("could not connect to EventSource service")?;
     Ok(EventSource::from_proxy(proxy))
 }

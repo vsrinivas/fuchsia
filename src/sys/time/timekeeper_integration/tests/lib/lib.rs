@@ -219,7 +219,7 @@ impl NestedTimekeeper {
         service_fs.add_proxy_service_to::<LoggerFactoryMarker, _>(Arc::clone(
             cobalt_app.directory_request(),
         ));
-        let cobalt_querier = cobalt_app.connect_to_service::<LoggerQuerierMarker>().unwrap();
+        let cobalt_querier = cobalt_app.connect_to_protocol::<LoggerQuerierMarker>().unwrap();
         launched_apps.push(cobalt_app);
 
         // Launch fake clock if needed, again a new instance for each environment.
@@ -230,8 +230,8 @@ impl NestedTimekeeper {
                 fake_clock_app.directory_request(),
             ));
             let control_proxy =
-                fake_clock_app.connect_to_service::<FakeClockControlMarker>().unwrap();
-            let clock_proxy = fake_clock_app.connect_to_service::<FakeClockMarker>().unwrap();
+                fake_clock_app.connect_to_protocol::<FakeClockControlMarker>().unwrap();
+            let clock_proxy = fake_clock_app.connect_to_protocol::<FakeClockMarker>().unwrap();
             launched_apps.push(fake_clock_app);
             Some(FakeClockController { control_proxy, clock_proxy })
         } else {

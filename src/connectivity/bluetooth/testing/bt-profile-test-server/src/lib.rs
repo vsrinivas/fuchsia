@@ -61,7 +61,7 @@ impl ProfileTestHarness {
             .context("failed to launch the profile test server")?;
 
         let profile_test_svc = app
-            .connect_to_service::<ProfileTestMarker>()
+            .connect_to_protocol::<ProfileTestMarker>()
             .context("Failed to connect to Bluetooth ProfileTest service")?;
         Ok(Self { profile_test_svc, _profile_test_server: app })
     }

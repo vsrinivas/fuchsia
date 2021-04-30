@@ -66,7 +66,7 @@ mod tests {
         },
         fidl::endpoints::ClientEnd,
         fidl_fuchsia_kernel as fkernel, fuchsia_async as fasync,
-        fuchsia_component::client::connect_to_service,
+        fuchsia_component::client::connect_to_protocol,
         fuchsia_zircon::AsHandleRef,
         fuchsia_zircon_sys as sys,
         futures::lock::Mutex,
@@ -85,7 +85,7 @@ mod tests {
     }
 
     async fn get_irq_resource() -> Result<Resource, Error> {
-        let irq_resource_provider = connect_to_service::<fkernel::IrqResourceMarker>()?;
+        let irq_resource_provider = connect_to_protocol::<fkernel::IrqResourceMarker>()?;
         let irq_resource_handle = irq_resource_provider.get().await?;
         Ok(Resource::from(irq_resource_handle))
     }

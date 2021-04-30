@@ -110,7 +110,7 @@ impl PuppetEnv {
 
         let messages_allowed_in_cache = config.logs.max_cached_original_bytes / TEST_PACKET_LEN;
 
-        let archive = || _archivist.connect_to_service::<ArchiveAccessorMarker>().unwrap();
+        let archive = || _archivist.connect_to_protocol::<ArchiveAccessorMarker>().unwrap();
         let inspect_reader = ArchiveReader::new()
             .with_archive(archive())
             .with_minimum_schema_count(1) // we only request inspect from our archivist

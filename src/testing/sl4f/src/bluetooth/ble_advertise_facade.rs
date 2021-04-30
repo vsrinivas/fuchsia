@@ -346,7 +346,7 @@ impl BleAdvertiseFacade {
             }
             None => {
                 let peripheral_svc: PeripheralProxy =
-                    app::client::connect_to_service::<PeripheralMarker>()
+                    app::client::connect_to_protocol::<PeripheralMarker>()
                         .context("Failed to connect to BLE Peripheral service.")
                         .unwrap();
                 Some(peripheral_svc)

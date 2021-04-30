@@ -90,7 +90,7 @@ fn parse_bootfs<'a>(vmo: zx::Vmo) -> directory::simple::Simple<'static> {
 }
 
 async fn fetch_new_factory_item() -> Result<zx::Vmo, Error> {
-    let factory_items = fuchsia_component::client::connect_to_service::<FactoryItemsMarker>()?;
+    let factory_items = fuchsia_component::client::connect_to_protocol::<FactoryItemsMarker>()?;
     let (vmo_opt, _) = factory_items.get(DEFAULT_BOOTFS_FACTORY_ITEM_EXTRA).await?;
     vmo_opt.ok_or(format_err!("Failed to get a valid VMO from service"))
 }
@@ -255,7 +255,7 @@ async fn open_factory_source(factory_config: FactoryConfig) -> Result<DirectoryP
             vmo.write(&reader_buf, 0)?;
             let mut buf = Buffer { vmo, size };
 
-            let ext4_server = fuchsia_component::client::connect_to_service::<Server_Marker>()?;
+            let ext4_server = fuchsia_component::client::connect_to_protocol::<Server_Marker>()?;
 
             syslog::fx_log_info!("Mounting EXT4 VMO");
             match ext4_server.mount_vmo(&mut buf, OPEN_RIGHT_READABLE, directory_server_end).await {

@@ -9,7 +9,7 @@ use {
     fidl_fuchsia_netstack::{NetstackMarker, RouteTableEntry, RouteTableTransactionMarker},
     fuchsia_async as fasync,
     fuchsia_component::client,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_syslog::{fx_log_err, fx_log_info},
     futures::TryStreamExt,
     net_declare::fidl_ip,
@@ -39,7 +39,7 @@ pub struct BusConnection {
 
 impl BusConnection {
     pub fn new(client: &str) -> Result<BusConnection, Error> {
-        let busm = client::connect_to_service::<SyncManagerMarker>()
+        let busm = client::connect_to_protocol::<SyncManagerMarker>()
             .context("SyncManager not available")?;
         let (bus, busch) = fidl::endpoints::create_proxy::<BusMarker>()?;
         busm.bus_subscribe(BUS_NAME, client, busch)?;
@@ -126,9 +126,9 @@ async fn add_route_table_entry(
 
 async fn run_fuchsia_node() -> Result<(), Error> {
     let stack =
-        client::connect_to_service::<StackMarker>().context("failed to connect to netstack")?;
+        client::connect_to_protocol::<StackMarker>().context("failed to connect to netstack")?;
     let netstack =
-        connect_to_service::<NetstackMarker>().context("failed to connect to netstack")?;
+        connect_to_protocol::<NetstackMarker>().context("failed to connect to netstack")?;
 
     let intf = stack.list_interfaces().await.context("getting interfaces")?;
     let wlan_if_id = get_interface_id("wlan-f-ep", &intf)?;

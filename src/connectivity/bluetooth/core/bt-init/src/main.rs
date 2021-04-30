@@ -47,7 +47,7 @@ async fn launch_rfcomm(
     rfcomm_fs
         .add_service_at(ProfileMarker::SERVICE_NAME, move |chan| {
             info!("Connecting bt-rfcomm's Profile Service to bt-gap");
-            bt_gap.pass_to_named_service(ProfileMarker::SERVICE_NAME, chan).ok();
+            bt_gap.pass_to_named_protocol(ProfileMarker::SERVICE_NAME, chan).ok();
             None
         })
         .add_proxy_service::<fidl_fuchsia_logger::LogSinkMarker, _>()
@@ -91,7 +91,7 @@ impl AppAdapter for App {
         service_name: &str,
         server_channel: zx::Channel,
     ) -> Result<(), Error> {
-        self.pass_to_named_service(service_name, server_channel)
+        self.pass_to_named_protocol(service_name, server_channel)
     }
 }
 
@@ -127,7 +127,7 @@ fn main() -> Result<(), Error> {
     let snoop_connection;
     if cfg.autostart_snoop() {
         info!("Starting snoop service...");
-        snoop_connection = client::connect_to_service::<SnoopMarker>();
+        snoop_connection = client::connect_to_protocol::<SnoopMarker>();
         if let Err(e) = snoop_connection {
             warn!("Failed to start snoop service: {}", e);
         } else {

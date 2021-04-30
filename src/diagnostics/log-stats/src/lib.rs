@@ -7,7 +7,7 @@ use argh::FromArgs;
 use diagnostics_reader::{ArchiveReader, Logs};
 use fidl_fuchsia_diagnostics::{ArchiveAccessorMarker, ArchiveAccessorProxy};
 use fuchsia_async as fasync;
-use fuchsia_component::{client::connect_to_service, server::ServiceFs};
+use fuchsia_component::{client::connect_to_protocol, server::ServiceFs};
 use fuchsia_inspect::{
     component::{health, inspector},
     health::Reporter,
@@ -48,7 +48,7 @@ pub async fn main() -> Result<(), anyhow::Error> {
     health().set_starting_up();
     let stats = LogManagerStats::default().with_inspect(inspector().root(), "log_stats")?;
 
-    let accessor = connect_to_service::<ArchiveAccessorMarker>()?;
+    let accessor = connect_to_protocol::<ArchiveAccessorMarker>()?;
 
     let metric_logger = create_metric_logger().await;
 

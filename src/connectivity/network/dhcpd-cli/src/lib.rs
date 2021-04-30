@@ -61,7 +61,7 @@ async fn test_cli_with_config(
     let _netstack = netstack_builder.spawn(env.launcher()).expect("failed to launch test netstack");
 
     let dhcp_server = dhcpd
-        .connect_to_service::<fidl_fuchsia_net_dhcp::Server_Marker>()
+        .connect_to_protocol::<fidl_fuchsia_net_dhcp::Server_Marker>()
         .expect("failed to connect to DHCP server");
     let dhcp_server_ref = &dhcp_server;
     let test_fut = async {

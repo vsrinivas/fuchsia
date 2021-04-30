@@ -12,7 +12,7 @@ use {
     fidl::endpoints::create_proxy,
     fidl_fuchsia_wlan_policy as fidl_policy, fidl_fuchsia_wlan_tap as wlantap,
     fuchsia_async::{DurationExt, Time, TimeoutExt, Timer},
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon::{self as zx, prelude::*},
     futures::{channel::oneshot, FutureExt, StreamExt},
     log::{debug, info},
@@ -107,7 +107,7 @@ impl TestHelper {
         // If injected, wlancfg does not start automatically in a test component.
         // Connecting to the service to start wlancfg so that it can create new interfaces.
         let _wlan_proxy =
-            connect_to_service::<fidl_policy::ClientProviderMarker>().expect("starting wlancfg");
+            connect_to_protocol::<fidl_policy::ClientProviderMarker>().expect("starting wlancfg");
 
         let wlantap = Wlantap::open_from_isolated_devmgr().expect("Failed to open wlantapctl");
         let proxy = wlantap.create_phy(config).expect("Failed to create wlantap PHY");

@@ -10,7 +10,7 @@ use fidl_fuchsia_router_config::{
     RouterAdminMarker, RouterAdminProxy, RouterStateMarker, RouterStateProxy,
 };
 use fuchsia_async::{self as fasync, TimeoutExt};
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use fuchsia_syslog as syslog;
 use fuchsia_zircon::{self as zx, prelude::DurationNum};
 use network_manager_cli::{cli::*, opts::*, printer::Printer};
@@ -21,9 +21,9 @@ use structopt::StructOpt;
 static OVERNET_TIMEOUT_SEC: i64 = 30;
 
 fn connect() -> Result<(RouterAdminProxy, RouterStateProxy), Error> {
-    let router_admin = connect_to_service::<RouterAdminMarker>()
+    let router_admin = connect_to_protocol::<RouterAdminMarker>()
         .context("failed to connect to network manager admin interface")?;
-    let router_state = connect_to_service::<RouterStateMarker>()
+    let router_state = connect_to_protocol::<RouterStateMarker>()
         .context("failed to connect to network manager interface")?;
     Ok((router_admin, router_state))
 }
@@ -49,7 +49,7 @@ fn supports_network_manager(peer: &Peer) -> bool {
 }
 
 async fn connect_overnet() -> Result<(RouterAdminProxy, RouterStateProxy), Error> {
-    let svc = connect_to_service::<ServiceConsumerMarker>()?;
+    let svc = connect_to_protocol::<ServiceConsumerMarker>()?;
     syslog::fx_log_info!("looking for overnet peers...");
     loop {
         let peers = svc.list_peers().await?;

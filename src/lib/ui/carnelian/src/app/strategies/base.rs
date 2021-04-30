@@ -22,7 +22,7 @@ use fidl_fuchsia_ui_scenic::ScenicMarker;
 use fidl_fuchsia_ui_scenic::ScenicProxy;
 use fuchsia_async::{self as fasync};
 use fuchsia_component::{
-    client::connect_to_service,
+    client::connect_to_protocol,
     server::{ServiceFs, ServiceObjLocal},
 };
 use fuchsia_framebuffer::{FrameBuffer, FrameUsage, VSyncMessage};
@@ -101,7 +101,7 @@ pub(crate) async fn create_app_strategy(
     let (sender, mut receiver) = unbounded::<VSyncMessage>();
     let fb = FrameBuffer::new(usage, config.virtcon, None, Some(sender)).await;
     if fb.is_err() {
-        let scenic = connect_to_service::<ScenicMarker>()?;
+        let scenic = connect_to_protocol::<ScenicMarker>()?;
         Ok::<AppStrategyPtr, Error>(Box::new(ScenicAppStrategy { scenic }))
     } else {
         let fb = fb.unwrap();

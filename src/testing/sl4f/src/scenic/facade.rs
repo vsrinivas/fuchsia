@@ -30,7 +30,7 @@ impl ScenicFacade {
 
     pub async fn take_screenshot(&self) -> Result<Value, Error> {
         let scenic =
-            app::client::connect_to_service::<ScenicMarker>().expect("failed to connect to Scenic");
+            app::client::connect_to_protocol::<ScenicMarker>().expect("failed to connect to Scenic");
 
         let (screenshot, success) = scenic.take_screenshot().await?;
         if success {
@@ -41,7 +41,7 @@ impl ScenicFacade {
     }
 
     pub async fn present_view(&self, url: String, config: Option<ViewConfig>) -> Result<(), Error> {
-        let presenter = app::client::connect_to_service::<PresenterMarker>()
+        let presenter = app::client::connect_to_protocol::<PresenterMarker>()
             .expect("failed to connect to root presenter");
 
         let launcher = launcher().context("Failed to open launcher service")?;
@@ -53,13 +53,13 @@ impl ScenicFacade {
         match config {
             Some(mut config) => {
                 // v2
-                let view = app.connect_to_service::<ViewMarker>()?;
+                let view = app.connect_to_protocol::<ViewMarker>()?;
                 view.set_config(&mut config)?;
                 view.attach(token_pair.view_token.value)?;
             }
             None => {
                 // v1
-                let view_provider = app.connect_to_service::<ViewProviderMarker>()?;
+                let view_provider = app.connect_to_protocol::<ViewProviderMarker>()?;
                 view_provider.create_view(token_pair.view_token.value, None, None)?;
             }
         }

@@ -123,7 +123,7 @@ impl BuiltinCapability for KernelStats {
 mod tests {
     use {
         super::*, fidl_fuchsia_boot as fboot, fuchsia_async as fasync,
-        fuchsia_component::client::connect_to_service,
+        fuchsia_component::client::connect_to_protocol,
     };
 
     fn root_resource_available() -> bool {
@@ -136,7 +136,7 @@ mod tests {
     }
 
     async fn get_root_resource() -> Result<Resource, Error> {
-        let root_resource_provider = connect_to_service::<fboot::RootResourceMarker>()?;
+        let root_resource_provider = connect_to_protocol::<fboot::RootResourceMarker>()?;
         let root_resource_handle = root_resource_provider.get().await?;
         Ok(Resource::from(root_resource_handle))
     }

@@ -61,7 +61,7 @@ mod tests {
         // We need to request a view from the component because the flutter runner
         // does not start up the vm service until this happens.
         let view_provider = app
-            .connect_to_service::<ViewProviderMarker>()
+            .connect_to_protocol::<ViewProviderMarker>()
             .context("Failed to connect to view_provider service")?;
         let token_pair = scenic::ViewTokenPair::new()?;
         let mut viewref_pair = scenic::ViewRefPair::new()?;

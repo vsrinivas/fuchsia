@@ -14,7 +14,7 @@ use {
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy},
     files_async::{self, DirentKind},
     fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     futures::stream::TryStreamExt,
     io_util,
     nom::HexDisplay,
@@ -111,17 +111,17 @@ async fn main() -> Result<(), Error> {
 
     match opt {
         Opt::Alpha(cmd) => {
-            let proxy = connect_to_service::<AlphaFactoryStoreProviderMarker>()
+            let proxy = connect_to_protocol::<AlphaFactoryStoreProviderMarker>()
                 .expect("Failed to connect to AlphaFactoryStoreProvider service");
             process_cmd(cmd, move |server_end| proxy.get_factory_store(server_end).unwrap()).await
         }
         Opt::Cast(cmd) => {
-            let proxy = connect_to_service::<CastCredentialsFactoryStoreProviderMarker>()
+            let proxy = connect_to_protocol::<CastCredentialsFactoryStoreProviderMarker>()
                 .expect("Failed to connect to CastCredentialsFactoryStoreProvider service");
             process_cmd(cmd, move |server_end| proxy.get_factory_store(server_end).unwrap()).await
         }
         Opt::FactoryItems(cmd) => {
-            let proxy = connect_to_service::<FactoryItemsMarker>()
+            let proxy = connect_to_protocol::<FactoryItemsMarker>()
                 .expect("Failed to connect to FactoryItems service");
 
             match cmd {
@@ -143,22 +143,22 @@ async fn main() -> Result<(), Error> {
             Ok(())
         }
         Opt::Misc(cmd) => {
-            let proxy = connect_to_service::<MiscFactoryStoreProviderMarker>()
+            let proxy = connect_to_protocol::<MiscFactoryStoreProviderMarker>()
                 .expect("Failed to connect to PlayReadyFactoryStoreProvider service");
             process_cmd(cmd, move |server_end| proxy.get_factory_store(server_end).unwrap()).await
         }
         Opt::PlayReady(cmd) => {
-            let proxy = connect_to_service::<PlayReadyFactoryStoreProviderMarker>()
+            let proxy = connect_to_protocol::<PlayReadyFactoryStoreProviderMarker>()
                 .expect("Failed to connect to PlayReadyFactoryStoreProvider service");
             process_cmd(cmd, move |server_end| proxy.get_factory_store(server_end).unwrap()).await
         }
         Opt::Weave(cmd) => {
-            let proxy = connect_to_service::<WeaveFactoryStoreProviderMarker>()
+            let proxy = connect_to_protocol::<WeaveFactoryStoreProviderMarker>()
                 .expect("Failed to connect to WeaveFactoryStoreProvider service");
             process_cmd(cmd, move |server_end| proxy.get_factory_store(server_end).unwrap()).await
         }
         Opt::Widevine(cmd) => {
-            let proxy = connect_to_service::<WidevineFactoryStoreProviderMarker>()
+            let proxy = connect_to_protocol::<WidevineFactoryStoreProviderMarker>()
                 .expect("Failed to connect to WidevineFactoryStoreProvider service");
             process_cmd(cmd, move |server_end| proxy.get_factory_store(server_end).unwrap()).await
         }

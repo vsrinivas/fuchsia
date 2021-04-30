@@ -210,7 +210,7 @@ async fn write_image_buffer(
 }
 
 pub fn connect_in_namespace() -> Result<(DataSinkProxy, BootManagerProxy), Error> {
-    let paver = fuchsia_component::client::connect_to_service::<PaverMarker>()
+    let paver = fuchsia_component::client::connect_to_protocol::<PaverMarker>()
         .context("connect to fuchsia.paver.Paver")?;
 
     let (data_sink, server_end) = fidl::endpoints::create_proxy::<DataSinkMarker>()?;

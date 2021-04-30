@@ -284,9 +284,9 @@ impl StreamsBuilder {
         // Sink streams
         if self.sink_enabled {
             let publisher =
-                fuchsia_component::client::connect_to_service::<sessions2::PublisherMarker>()
+                fuchsia_component::client::connect_to_protocol::<sessions2::PublisherMarker>()
                     .context("Failed to connect to MediaSession interface")?;
-            let audio_consumer_factory = fuchsia_component::client::connect_to_service::<
+            let audio_consumer_factory = fuchsia_component::client::connect_to_protocol::<
                 SessionAudioConsumerFactoryMarker,
             >()
             .context("Failed to connect to AudioConsumerFactory")?;
@@ -543,7 +543,7 @@ async fn main() -> Result<(), Error> {
 
     let stream_builder = StreamsBuilder::system_available(cobalt.clone(), &config).await?;
 
-    let profile_svc = fuchsia_component::client::connect_to_service::<bredr::ProfileMarker>()
+    let profile_svc = fuchsia_component::client::connect_to_protocol::<bredr::ProfileMarker>()
         .context("Failed to connect to Bluetooth Profile service")?;
 
     let mut peers = ConnectedPeers::new(

@@ -73,8 +73,8 @@ async fn wait_for_component(
 // runs in an executor
 async fn run_test() -> Result<(), Error> {
     // connect to NetworkContext and ManagedEnvironment services
-    let netctx = client::connect_to_service::<NetworkContextMarker>()?;
-    let env = client::connect_to_service::<ManagedEnvironmentMarker>()?;
+    let netctx = client::connect_to_protocol::<NetworkContextMarker>()?;
+    let env = client::connect_to_protocol::<ManagedEnvironmentMarker>()?;
 
     // get the endpoint manager
     let (epm, epmch) = fidl::endpoints::create_proxy::<EndpointManagerMarker>()?;
@@ -165,7 +165,7 @@ fn check_virtual_device(vdev: &str) -> Result<(), Error> {
 }
 
 async fn launch_grandchild() -> Result<(), Error> {
-    let env = client::connect_to_service::<ManagedEnvironmentMarker>()?;
+    let env = client::connect_to_protocol::<ManagedEnvironmentMarker>()?;
 
     let env_options = EnvironmentOptions {
         name: Some(String::from("grandchild_env")),

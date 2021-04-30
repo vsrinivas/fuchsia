@@ -44,7 +44,7 @@ fn main() -> Result<(), Error> {
 /// Connects to the http service, sends a url request, and prints the response.
 async fn http_get(url: String) -> Result<(), Error> {
     // Connect to the service.
-    let loader_proxy = component::client::connect_to_service::<http::LoaderMarker>()?;
+    let loader_proxy = component::client::connect_to_protocol::<http::LoaderMarker>()?;
 
     // Send the request.
     let req = http::Request {

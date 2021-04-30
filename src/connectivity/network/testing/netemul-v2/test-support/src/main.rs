@@ -39,7 +39,7 @@ async fn handle_counter(
                 }
                 CounterRequest::ConnectToService { service_name, request, control_handle: _ } => {
                     info!("connecting to service '{}'", service_name);
-                    let () = client::connect_channel_to_service_at_path(
+                    let () = client::connect_channel_to_protocol_at_path(
                         request,
                         &format!("{}/{}", SVC_DIR, service_name),
                     )

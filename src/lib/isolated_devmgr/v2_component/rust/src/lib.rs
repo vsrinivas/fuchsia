@@ -28,7 +28,7 @@ pub fn launch_isolated_driver_manager() -> Result<(), Error> {
 
     // Connect to the realm to get acccess to the isolated driver manager's outgoing directory.
     let (client, server) = zx::Channel::create()?;
-    fuchsia_component::client::connect_channel_to_service::<fsys::RealmMarker>(server)?;
+    fuchsia_component::client::connect_channel_to_protocol::<fsys::RealmMarker>(server)?;
     let realm = fsys::RealmSynchronousProxy::new(client);
     let mut child_ref = fsys::ChildRef { name: "isolated-devmgr".to_string(), collection: None };
     let (client, server) = zx::Channel::create()?;

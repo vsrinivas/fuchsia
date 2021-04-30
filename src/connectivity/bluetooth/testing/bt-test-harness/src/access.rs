@@ -63,7 +63,7 @@ impl TestHarness for AccessHarness {
 
     fn init() -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>> {
         async {
-            let access = fuchsia_component::client::connect_to_service::<AccessMarker>()
+            let access = fuchsia_component::client::connect_to_protocol::<AccessMarker>()
                 .context("Failed to connect to access service")?;
 
             let harness = AccessHarness(expectable(Default::default(), access));

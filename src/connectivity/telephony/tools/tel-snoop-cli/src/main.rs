@@ -10,7 +10,7 @@ use {
         Message as SnoopMessage, SnooperEvent, SnooperMarker, SnooperProxy,
     },
     fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_syslog::{self as syslog, macros::*},
     futures::{self, stream::TryStreamExt},
     itertools::Itertools,
@@ -19,7 +19,7 @@ use {
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     syslog::init_with_tags(&["tel-snoop-cli"]).expect("Can't init logger");
-    let snooper: SnooperProxy = connect_to_service::<SnooperMarker>()?;
+    let snooper: SnooperProxy = connect_to_protocol::<SnooperMarker>()?;
     fx_log_info!("connecting to tel snooper");
     let mut event_stream = snooper.take_event_stream();
     while let Ok(Some(SnooperEvent::OnMessage { msg })) = event_stream.try_next().await {

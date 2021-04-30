@@ -55,7 +55,7 @@ use fidl_fuchsia_lowpan_spinel::{
     DeviceMarker as SpinelDeviceMarker, DeviceProxy as SpinelDeviceProxy,
     DeviceSetupProxy as SpinelDeviceSetupProxy,
 };
-use fuchsia_component::client::{connect_to_service, connect_to_service_at};
+use fuchsia_component::client::{connect_to_protocol, connect_to_protocol_at};
 use fuchsia_component::client::{launch, launcher, App};
 use futures::future::LocalBoxFuture;
 use lowpan_driver_common::{register_and_serve_driver, register_and_serve_driver_factory};
@@ -197,14 +197,14 @@ fn connect_to_spinel_device_proxy() -> Result<(Option<App>, SpinelDeviceProxy), 
     let launcher = launcher().expect("Failed to open launcher service");
     let app = launch(&launcher, server_url, arg).expect("Failed to launch ot-stack service");
     let ot_stack_proxy = app
-        .connect_to_service::<SpinelDeviceMarker>()
+        .connect_to_protocol::<SpinelDeviceMarker>()
         .expect("Failed to connect to ot-stack service");
     Ok((Some(app), ot_stack_proxy))
 }
 
 fn connect_to_spinel_device_proxy_test() -> Result<(Option<App>, SpinelDeviceProxy), Error> {
     let ot_stack_proxy =
-        connect_to_service::<SpinelDeviceMarker>().expect("Failed to connect to ot-stack service");
+        connect_to_protocol::<SpinelDeviceMarker>().expect("Failed to connect to ot-stack service");
     Ok((None, ot_stack_proxy))
 }
 
@@ -228,9 +228,9 @@ async fn prepare_to_run(
 
     let driver_future = run_driver(
         args.name.clone(),
-        connect_to_service_at::<RegisterMarker>(args.service_prefix.as_str())
+        connect_to_protocol_at::<RegisterMarker>(args.service_prefix.as_str())
             .context("Failed to connect to Lowpan Registry service")?,
-        connect_to_service_at::<FactoryRegisterMarker>(args.service_prefix.as_str()).ok(),
+        connect_to_protocol_at::<FactoryRegisterMarker>(args.service_prefix.as_str()).ok(),
         spinel_device,
         network_device_interface,
     );

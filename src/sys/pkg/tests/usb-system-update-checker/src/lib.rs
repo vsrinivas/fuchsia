@@ -234,7 +234,7 @@ impl TestEnv {
     }
 
     pub fn connect(&self) -> CheckerProxy {
-        self.checker.connect_to_service::<CheckerMarker>().expect("Connect to checker succeeds")
+        self.checker.connect_to_protocol::<CheckerMarker>().expect("Connect to checker succeeds")
     }
 
     /// Get the monitor client end that can be passed to fuchsia.update.usb/Check.

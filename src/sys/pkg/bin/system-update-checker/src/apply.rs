@@ -13,7 +13,7 @@ use fidl_fuchsia_update_installer_ext::{
     self as installer, start_update, MonitorUpdateAttemptError, Options, State, StateId,
     UpdateAttemptError,
 };
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use fuchsia_syslog::fx_log_info;
 use fuchsia_url::pkg_url::PkgUrl;
 use futures::{future::BoxFuture, prelude::*, stream::BoxStream};
@@ -26,7 +26,7 @@ pub async fn apply_system_update<'a>(
     target_channel_updater: &'a dyn TargetChannelUpdater,
 ) -> Result<BoxStream<'a, Result<ApplyState, (ApplyProgress, anyhow::Error)>>, anyhow::Error> {
     let installer_proxy =
-        connect_to_service::<InstallerMarker>().context("connecting to component Installer")?;
+        connect_to_protocol::<InstallerMarker>().context("connecting to component Installer")?;
     let mut update_installer = RealUpdateInstaller { installer_proxy };
 
     apply_system_update_impl(&mut update_installer, initiator, target_channel_updater).await

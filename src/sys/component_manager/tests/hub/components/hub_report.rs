@@ -5,7 +5,7 @@
 use {
     fidl_fidl_examples_routing_echo as fecho, fidl_fuchsia_sys2 as fsys,
     files_async::readdir,
-    fuchsia_component::client::connect_to_service_at_path,
+    fuchsia_component::client::connect_to_protocol_at_path,
     io_util::{open_directory_in_namespace, open_file_in_namespace},
     log::info,
 };
@@ -35,7 +35,7 @@ pub async fn expect_file_content(path: &str, expected_file_content: &str) {
 
 pub async fn expect_echo_service(path: &str) {
     info!("{} should be an Echo service", path);
-    let echo_proxy = connect_to_service_at_path::<fecho::EchoMarker>(path).unwrap();
+    let echo_proxy = connect_to_protocol_at_path::<fecho::EchoMarker>(path).unwrap();
     let result = echo_proxy.echo_string(Some("hippos")).await.unwrap().unwrap();
     assert_eq!(&result, "hippos");
 }
@@ -43,7 +43,7 @@ pub async fn expect_echo_service(path: &str) {
 pub async fn resolve_component(path: &str, relative_moniker: &str, expect_success: bool) {
     info!("Attempting to resolve {} from {}", relative_moniker, path);
     let resolve_component_proxy =
-        connect_to_service_at_path::<fsys::ResolveComponentMarker>(path).unwrap();
+        connect_to_protocol_at_path::<fsys::ResolveComponentMarker>(path).unwrap();
     let result = resolve_component_proxy.resolve(relative_moniker).await.unwrap();
     if expect_success {
         result.unwrap();

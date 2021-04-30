@@ -101,7 +101,7 @@ impl TestSandbox {
     /// Creates a new empty sandbox.
     pub fn new() -> Result<TestSandbox> {
         let sandbox =
-            fuchsia_component::client::connect_to_service::<netemul_sandbox::SandboxMarker>()
+            fuchsia_component::client::connect_to_protocol::<netemul_sandbox::SandboxMarker>()
                 .context("failed to connect to sandbox service")?;
         Ok(TestSandbox { sandbox })
     }

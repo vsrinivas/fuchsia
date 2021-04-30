@@ -19,7 +19,7 @@ async fn main() -> Result<(), anyhow::Error> {
     let name = "test";
 
     // Create a network device backed endpoint.
-    let netctx = client::connect_to_service::<NetworkContextMarker>()?;
+    let netctx = client::connect_to_protocol::<NetworkContextMarker>()?;
     let (epm, epm_server_end) = fidl::endpoints::create_proxy::<EndpointManagerMarker>()
         .context("create endpoint manager proxy endpoints")?;
     let () = netctx.get_endpoint_manager(epm_server_end)?;

@@ -17,7 +17,7 @@ pub async fn launch() -> Result<client::App, Error> {
 
     let child = client::launch(&launcher, AVRCP_TARGET_URL.to_string(), None)?;
     let lifecycle = child
-        .connect_to_service::<LifecycleMarker>()
+        .connect_to_protocol::<LifecycleMarker>()
         .expect("failed to connect to component lifecycle protocol");
     loop {
         match lifecycle.get_state().await? {

@@ -18,7 +18,7 @@ async fn main() -> Result<(), Error> {
     .context("Failed to launch echo service")?;
 
     let echo =
-        app.connect_to_service::<EchoMarker>().context("Failed to connect to echo service")?;
+        app.connect_to_protocol::<EchoMarker>().context("Failed to connect to echo service")?;
 
     let res = echo.echo_string(Some("Hello world!")).await?;
     match res.as_ref().map(String::as_str) {

@@ -18,7 +18,7 @@ use fidl_fuchsia_router_config::{
     RouterAdminMarker, RouterAdminProxy, RouterStateMarker, RouterStateProxy,
 };
 use fuchsia_async as fasync;
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use fuchsia_component::fuchsia_single_component_package_url as component_url;
 use network_manager_cli::cli::{make_cmd, run_cmd};
 use network_manager_cli::printer::Printer;
@@ -267,7 +267,7 @@ struct Device {
 }
 
 async fn test_device() -> Device {
-    let sandbox = connect_to_service::<SandboxMarker>().expect("Can't connect to sandbox");
+    let sandbox = connect_to_protocol::<SandboxMarker>().expect("Can't connect to sandbox");
     let network_context = get_network_context(&sandbox).expect("failed to get network context");
     let endpoint_manager =
         get_endpoint_manager(&network_context).expect("failed to get endpoint manager");
@@ -808,7 +808,7 @@ async fn test_filters() {
         ("show filterstate", "2 filters installed\n\\[FilterRule \\{ element: Id \\{ uuid: \\[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, action: Allow, selector: FlowSelector \\{ src_address: Some\\(CidrAddress \\{ address: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[0, 0, 0, 0\\] \\}\\)\\), prefix_length: Some\\(0\\) \\}\\), src_ports: Some\\(\\[PortRange \\{ from: 22, to: 22 \\}\\]\\), dst_address: Some\\(CidrAddress \\{ address: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[0, 0, 0, 0\\] \\}\\)\\), prefix_length: Some\\(0\\) \\}\\), dst_ports: Some\\(\\[PortRange \\{ from: 22, to: 22 \\}\\]\\), protocol: Some\\(Tcp\\) \\} \\}, FilterRule \\{ element: Id \\{ uuid: \\[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, action: Allow, selector: FlowSelector \\{ src_address: Some\\(CidrAddress \\{ address: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[0, 0, 0, 0\\] \\}\\)\\), prefix_length: Some\\(0\\) \\}\\), src_ports: Some\\(\\[PortRange \\{ from: 22, to: 22 \\}\\]\\), dst_address: Some\\(CidrAddress \\{ address: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[0, 0, 0, 0\\] \\}\\)\\), prefix_length: Some\\(0\\) \\}\\), dst_ports: Some\\(\\[PortRange \\{ from: 22, to: 22 \\}\\]\\), protocol: Some\\(Udp\\) \\} \\}\\]\n", "A TCP and a UDP packet filter should be installed for port 22"),
     ];
 
-    let sandbox = connect_to_service::<SandboxMarker>().expect("Can't connect to sandbox");
+    let sandbox = connect_to_protocol::<SandboxMarker>().expect("Can't connect to sandbox");
     let env = create_managed_env(&sandbox).expect("Failed to create environment with services");
     for test in commands.tests {
         let actual_output = exec_cmd(&env, &test.command).await;

@@ -39,7 +39,7 @@ async fn run_locate() -> Result<(), Error> {
     .context("Failed to launch component_index service.")?;
 
     let component_index = app
-        .connect_to_service::<ComponentIndexMarker>()
+        .connect_to_protocol::<ComponentIndexMarker>()
         .context("Failed to connect to component_index service.")?;
 
     match component_index.fuzzy_search(&cfg.search_keyword).await? {

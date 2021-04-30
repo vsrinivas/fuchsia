@@ -41,9 +41,9 @@ async fn at_one_query_test() -> Result<(), Error> {
     let chan = tel_ctl::connect_transport_device(&found_device).await?;
     let app =
         launch(&launcher, RIL_URL.to_string(), None).context("Failed to launch ril-at service")?;
-    let ril_modem_setup = app.connect_to_service::<SetupMarker>()?;
+    let ril_modem_setup = app.connect_to_protocol::<SetupMarker>()?;
     ril_modem_setup.connect_transport(chan).await?.expect("make sure telephony svc is running");
-    let ril_modem = app.connect_to_service::<RadioInterfaceLayerMarker>()?;
+    let ril_modem = app.connect_to_protocol::<RadioInterfaceLayerMarker>()?;
 
     // Test sending and receiving one message.
     fx_log_err!("sending ATD");

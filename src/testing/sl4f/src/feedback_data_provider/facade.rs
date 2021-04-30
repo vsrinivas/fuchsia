@@ -6,7 +6,7 @@ use {
     anyhow::{Context, Error},
     base64,
     fidl_fuchsia_feedback::{DataProviderMarker, GetSnapshotParameters},
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon::DurationNum,
     serde_json,
 };
@@ -22,7 +22,7 @@ impl FeedbackDataProviderFacade {
 
     pub async fn get_snapshot(&self) -> Result<serde_json::Value, Error> {
         let data_provider =
-            connect_to_service::<DataProviderMarker>().context("connect to DataProvider")?;
+            connect_to_protocol::<DataProviderMarker>().context("connect to DataProvider")?;
         let params = GetSnapshotParameters {
             collection_timeout_per_data: Some(2.minutes().into_nanos()),
             ..GetSnapshotParameters::EMPTY

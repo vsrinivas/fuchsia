@@ -67,7 +67,7 @@ mod tests {
         },
         fidl::endpoints::ClientEnd,
         fidl_fuchsia_kernel as fkernel, fuchsia_async as fasync,
-        fuchsia_component::client::connect_to_service,
+        fuchsia_component::client::connect_to_protocol,
         fuchsia_zircon::AsHandleRef,
         fuchsia_zircon_sys as sys,
         futures::lock::Mutex,
@@ -86,7 +86,7 @@ mod tests {
     }
 
     async fn get_vmex_resource() -> Result<Resource, Error> {
-        let vmex_resource_provider = connect_to_service::<fkernel::VmexResourceMarker>()?;
+        let vmex_resource_provider = connect_to_protocol::<fkernel::VmexResourceMarker>()?;
         let vmex_resource_handle = vmex_resource_provider.get().await?;
         Ok(Resource::from(vmex_resource_handle))
     }

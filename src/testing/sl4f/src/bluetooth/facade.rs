@@ -59,7 +59,7 @@ impl BluetoothFacade {
             None => {
                 fx_log_info!(tag: "set_server_proxy", "Setting new server proxy");
                 Some(
-                    app::client::connect_to_service::<Server_Marker>()
+                    app::client::connect_to_protocol::<Server_Marker>()
                         .context("Failed to connect to service.")
                         .unwrap(),
                 )

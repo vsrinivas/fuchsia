@@ -161,7 +161,7 @@ pub fn get_version() -> Result<String, io::Error> {
 }
 
 async fn get_appid_and_channel_from_vbmeta() -> Result<(Option<String>, Option<String>), Error> {
-    let proxy = fuchsia_component::client::connect_to_service::<ArgumentsMarker>()?;
+    let proxy = fuchsia_component::client::connect_to_protocol::<ArgumentsMarker>()?;
     get_appid_and_channel_from_vbmeta_impl(proxy).await
 }
 
@@ -178,7 +178,7 @@ async fn get_appid_and_channel_from_vbmeta_impl(
 }
 
 async fn get_service_url_from_vbmeta() -> Result<Option<String>, Error> {
-    let proxy = fuchsia_component::client::connect_to_service::<ArgumentsMarker>()?;
+    let proxy = fuchsia_component::client::connect_to_protocol::<ArgumentsMarker>()?;
     get_service_url_from_vbmeta_impl(proxy).await
 }
 

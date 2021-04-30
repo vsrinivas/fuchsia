@@ -21,7 +21,7 @@ use {
 /// Returns a `Stream` of [`IncomingFidlRequestStream`]s from overnet.
 pub(super) async fn new_stream(
 ) -> Result<impl Stream<Item = Result<IncomingFidlRequestStream, Error>>, Error> {
-    let overnet_svc = fclient::connect_to_service::<ServicePublisherMarker>()?;
+    let overnet_svc = fclient::connect_to_protocol::<ServicePublisherMarker>()?;
 
     let router_admin_stream = setup_overnet_service::<RouterAdminMarker>(&overnet_svc)
         .await?

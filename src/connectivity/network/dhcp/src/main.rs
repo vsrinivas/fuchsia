@@ -416,7 +416,7 @@ async fn define_msg_handling_loop_future<DS: DataStore>(
     sock: SocketWithId<<Server<DS> as SocketServerDispatcher>::Socket>,
     server: &RefCell<ServerDispatcherRuntime<Server<DS>>>,
 ) -> Result<Void, Error> {
-    let proxy = fuchsia_component::client::connect_to_service::<
+    let proxy = fuchsia_component::client::connect_to_protocol::<
         fidl_fuchsia_net_neighbor::ControllerMarker,
     >()?;
     let SocketWithId { socket, iface_id } = sock;

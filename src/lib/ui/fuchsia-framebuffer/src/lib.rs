@@ -10,7 +10,7 @@ use fidl_fuchsia_hardware_display::{
     VirtconMode,
 };
 use fuchsia_async::{self as fasync, DurationExt, OnSignals, TimeoutExt};
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use fuchsia_zircon::{
     self as zx, sys::ZX_TIME_INFINITE, AsHandleRef, DurationNum, Event, HandleBased, Signals,
     Status, Vmo, VmoOp,
@@ -645,7 +645,7 @@ impl FrameBuffer {
         }
 
         // Connect to sysmem and allocate shared buffer collection.
-        let sysmem = connect_to_service::<fidl_fuchsia_sysmem::AllocatorMarker>()?;
+        let sysmem = connect_to_protocol::<fidl_fuchsia_sysmem::AllocatorMarker>()?;
         sysmem::set_allocator_name(&sysmem)
             .unwrap_or_else(|e| eprintln!("setting sysmem debug info error: {:?}", e));
 

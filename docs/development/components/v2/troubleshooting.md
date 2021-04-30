@@ -19,14 +19,14 @@ use it. For example, consider the following snippet:
 use fuchsia_component::client;
 use log::info;
 ...
-let echo = client::connect_to_service::<fidl_fuchsia_echo::EchoMarker>().expect("error connecting to echo");
+let echo = client::connect_to_protocol::<fidl_fuchsia_echo::EchoMarker>().expect("error connecting to echo");
 if let Some(err) = echo.echo_string(Some("Hippos rule!")).await {
     info!("Echo failed: {}", err);
 }
 ```
 
 In this Rust example, the code connects to the `Echo` protocol in the namespace
-through the usual means, by calling the `connect_to_service` API in the
+through the usual means, by calling the `connect_to_protocol` API in the
 `fuchsia_component` crate. This call should succeed as long as the protocol was
 mapped into the component's namespace by a `use` declaration in the component's
 [manifest][doc-manifests]:
@@ -38,7 +38,7 @@ use: [
 ],
 ```
 
-However, when the `connect_to_service` call returns successfully, it does not
+However, when the `connect_to_protocol` call returns successfully, it does not
 necessarily mean the protocol will be available. If it's not available, the
 usual symptom is that a call to the protocol over the channel fails. The
 snippet above checks for this and logs the error.

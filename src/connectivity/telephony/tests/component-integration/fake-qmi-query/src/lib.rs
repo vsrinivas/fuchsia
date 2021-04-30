@@ -27,9 +27,9 @@ async fn qmi_query_test() -> Result<(), Error> {
     let chan = qmi::connect_transport_device(&found_device).await?;
     let app =
         launch(&launcher, RIL_URL.to_string(), None).context("Failed to launch ril-qmi service")?;
-    let ril_modem_setup = app.connect_to_service::<SetupMarker>()?;
+    let ril_modem_setup = app.connect_to_protocol::<SetupMarker>()?;
     ril_modem_setup.connect_transport(chan).await?.expect("make sure telephony svc is running");
-    let ril_modem = app.connect_to_service::<RadioInterfaceLayerMarker>()?;
+    let ril_modem = app.connect_to_protocol::<RadioInterfaceLayerMarker>()?;
 
     fx_log_info!("sending a IMEI request");
     let imei = ril_modem.get_device_identity().await?.expect("error sending IMEI request");

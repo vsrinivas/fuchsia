@@ -190,10 +190,10 @@ impl TestEnv {
         let pkg_resolver = pkg_resolver.spawn(env.launcher()).expect("package resolver to launch");
 
         let repo_manager_proxy = env
-            .connect_to_service::<RepositoryManagerMarker>()
+            .connect_to_protocol::<RepositoryManagerMarker>()
             .expect("connect to repository manager");
         let rewrite_engine_proxy =
-            env.connect_to_service::<RewriteEngineMarker>().expect("connect to rewrite engine");
+            env.connect_to_protocol::<RewriteEngineMarker>().expect("connect to rewrite engine");
 
         Self {
             _pkg_cache: pkg_cache,

@@ -7,7 +7,7 @@ use crate::system_metrics::types::{
 };
 use anyhow::Error;
 use fidl_fuchsia_systemmetrics_test::SystemMetricsLoggerMarker;
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use serde_json::{from_value, Value};
 
 #[derive(Debug)]
@@ -25,7 +25,7 @@ impl SystemMetricsFacade {
     /// or crashing.
     pub async fn start_logging(&self, args: Value) -> Result<SystemMetricsLoggerResult, Error> {
         let params: StartLoggingRequest = from_value(args)?;
-        connect_to_service::<SystemMetricsLoggerMarker>()?
+        connect_to_protocol::<SystemMetricsLoggerMarker>()?
             .start_logging(params.interval_ms, params.duration_ms)
             .await?
             .map_err(|e| format_err!("Received SystemMetricsLoggerError: {:?}", e))?;
@@ -38,7 +38,7 @@ impl SystemMetricsFacade {
         args: Value,
     ) -> Result<SystemMetricsLoggerResult, Error> {
         let params: StartLoggingForeverRequest = from_value(args)?;
-        connect_to_service::<SystemMetricsLoggerMarker>()?
+        connect_to_protocol::<SystemMetricsLoggerMarker>()?
             .start_logging_forever(params.interval_ms)
             .await?
             .map_err(|e| format_err!("Received SystemMetricsLoggerError: {:?}", e))?;
@@ -51,7 +51,7 @@ impl SystemMetricsFacade {
     /// tests can call this before starting their logging session to clean up in case a prior test
     /// failed without stopping logging.
     pub async fn stop_logging(&self, _args: Value) -> Result<SystemMetricsLoggerResult, Error> {
-        let logger = connect_to_service::<SystemMetricsLoggerMarker>()?;
+        let logger = connect_to_protocol::<SystemMetricsLoggerMarker>()?;
         logger.stop_logging().await?;
         Ok(SystemMetricsLoggerResult::Success)
     }

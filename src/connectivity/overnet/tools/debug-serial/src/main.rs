@@ -66,7 +66,7 @@ async fn main() -> Result<(), Error> {
     fs.take_and_serve_directory_handle()?;
 
     let root_resource =
-        fuchsia_component::client::connect_to_service::<RootResourceMarker>()?.get().await?;
+        fuchsia_component::client::connect_to_protocol::<RootResourceMarker>()?.get().await?;
 
     let (tx_write, rx_write) = mpsc::channel(0);
     let (tx_read, rx_read) = mpsc::channel(0);

@@ -5,14 +5,14 @@
 use {
     anyhow::{Context, Error},
     fidl_test_placeholders as fecho, fuchsia_async as fasync,
-    fuchsia_component::client::new_service_connector,
+    fuchsia_component::client::new_protocol_connector,
 };
 
 const TEST_STRING: &str = "test string";
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    let req = new_service_connector::<fecho::EchoMarker>().context("error probing Echo service")?;
+    let req = new_protocol_connector::<fecho::EchoMarker>().context("error probing Echo service")?;
     if !req.exists().await.context("error checking for service existence")? {
         return Err(anyhow::anyhow!("Echo service does not exist"));
     }

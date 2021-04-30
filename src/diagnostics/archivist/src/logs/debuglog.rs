@@ -17,7 +17,7 @@ use byteorder::{ByteOrder, LittleEndian};
 use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_boot::ReadOnlyLogMarker;
 use fuchsia_async as fasync;
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use fuchsia_zircon as zx;
 use futures::stream::{unfold, Stream, TryStreamExt};
 use lazy_static::lazy_static;
@@ -61,7 +61,7 @@ impl DebugLog for KernelDebugLog {
 impl KernelDebugLog {
     /// Connects to `fuchsia.boot.ReadOnlyLog` to retrieve a handle.
     pub async fn new() -> Result<Self, LogsError> {
-        let boot_log = connect_to_service::<ReadOnlyLogMarker>().map_err(|source| {
+        let boot_log = connect_to_protocol::<ReadOnlyLogMarker>().map_err(|source| {
             LogsError::ConnectingToService { protocol: ReadOnlyLogMarker::NAME, source }
         })?;
         let debuglogger =

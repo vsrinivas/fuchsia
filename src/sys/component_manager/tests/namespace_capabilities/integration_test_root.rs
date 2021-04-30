@@ -14,7 +14,7 @@ use {
 async fn main() {
     syslog::init_with_tags(&[]).expect("could not initialize logging");
     info!("Started");
-    let realm = client::connect_to_service::<fsys::RealmMarker>()
+    let realm = client::connect_to_protocol::<fsys::RealmMarker>()
         .expect("could not connect to Realm service");
 
     // Bind to `trigger`, causing it to execute.

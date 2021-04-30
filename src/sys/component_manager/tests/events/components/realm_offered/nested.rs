@@ -6,7 +6,7 @@ use {
     anyhow::Error,
     fidl_fidl_test_components as ftest, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
     fuchsia_async as fasync,
-    fuchsia_component::{client::connect_to_service, server::ServiceFs},
+    fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
     futures::{StreamExt, TryStreamExt},
 };
 
@@ -20,7 +20,7 @@ async fn run_trigger_service(mut stream: ftest::TriggerRequestStream) {
         // deadlock as component manager would be waiting for the reporter to call resume().
         responder.send("").expect("respond");
 
-        let realm = connect_to_service::<fsys::RealmMarker>().expect("connect to realm");
+        let realm = connect_to_protocol::<fsys::RealmMarker>().expect("connect to realm");
         for id in &["a", "b", "c"] {
             let mut child_ref = fsys::ChildRef { name: format!("child_{}", id), collection: None };
 

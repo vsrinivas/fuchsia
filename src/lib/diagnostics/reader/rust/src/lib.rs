@@ -264,7 +264,7 @@ impl ArchiveReader {
         let mut archive = self.archive.lock();
         if archive.is_none() {
             *archive = Some(
-                client::connect_to_service::<ArchiveAccessorMarker>()
+                client::connect_to_protocol::<ArchiveAccessorMarker>()
                     .map_err(Error::ConnectToArchive)?,
             )
         }

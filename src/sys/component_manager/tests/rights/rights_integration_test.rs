@@ -33,7 +33,7 @@ async fn run_test_with_extra_dirs(
         .expect("failed to start component manager");
     let trigger = test
         .component_manager_app
-        .connect_to_service::<ftest::TriggerMarker>()
+        .connect_to_protocol::<ftest::TriggerMarker>()
         .expect("failed to connect to trigger");
     let result = trigger.run().await.expect("trigger failed");
     assert_eq!(result, expected_result, "Results did not match");

@@ -156,7 +156,7 @@ impl TestEnv {
 
     /// Opens a connection to the fuchsia.update/CommitStatusProvider FIDL service.
     fn commit_status_provider_proxy(&self) -> CommitStatusProviderProxy {
-        self.system_update_committer.connect_to_service::<CommitStatusProviderMarker>().unwrap()
+        self.system_update_committer.connect_to_protocol::<CommitStatusProviderMarker>().unwrap()
     }
 
     async fn system_update_committer_inspect_hierarchy(&self) -> DiagnosticsHierarchy {

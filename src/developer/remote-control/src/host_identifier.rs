@@ -20,16 +20,16 @@ pub struct HostIdentifier {
 impl HostIdentifier {
     pub fn new() -> Result<Self> {
         let netstack_proxy =
-            fuchsia_component::client::connect_to_service::<fnetstack::StackMarker>()
+            fuchsia_component::client::connect_to_protocol::<fnetstack::StackMarker>()
                 .map_err(|s| format_err!("Failed to connect to NetStack service: {}", s))?;
         let name_provider_proxy =
-            fuchsia_component::client::connect_to_service::<fdevice::NameProviderMarker>()
+            fuchsia_component::client::connect_to_protocol::<fdevice::NameProviderMarker>()
                 .map_err(|s| format_err!("Failed to connect to NameProviderService: {}", s))?;
         let device_info_proxy =
-            fuchsia_component::client::connect_to_service::<hwinfo::DeviceMarker>()
+            fuchsia_component::client::connect_to_protocol::<hwinfo::DeviceMarker>()
                 .map_err(|s| format_err!("Failed to connect to DeviceProxy: {}", s))?;
         let build_info_proxy =
-            fuchsia_component::client::connect_to_service::<buildinfo::ProviderMarker>()
+            fuchsia_component::client::connect_to_protocol::<buildinfo::ProviderMarker>()
                 .map_err(|s| format_err!("Failed to connect to BoardProxy: {}", s))?;
         let boot_timestamp_nanos = (fuchsia_runtime::utc_time().into_nanos()
             - zx::Time::get_monotonic().into_nanos()) as u64;

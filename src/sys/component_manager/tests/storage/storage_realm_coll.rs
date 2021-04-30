@@ -6,7 +6,7 @@ use {
     component_events::{events::*, matcher::*},
     fidl::endpoints::create_proxy,
     fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     std::fs::{read_dir, DirEntry},
 };
 
@@ -15,7 +15,7 @@ async fn main() {
     fuchsia_syslog::init().unwrap();
 
     // Create the dynamic child
-    let realm = connect_to_service::<fsys::RealmMarker>().unwrap();
+    let realm = connect_to_protocol::<fsys::RealmMarker>().unwrap();
     let mut collection_ref = fsys::CollectionRef { name: String::from("coll") };
     let child_decl = fsys::ChildDecl {
         name: Some(String::from("storage_user")),

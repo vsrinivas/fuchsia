@@ -10,7 +10,7 @@ use {
     fidl_fuchsia_wlan_common as fidl_wlan_common, fidl_fuchsia_wlan_policy as wlan_policy,
     fidl_fuchsia_wlan_product_deprecatedconfiguration as wlan_deprecated,
     fuchsia_async::{self as fasync, DurationExt},
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon as zx,
     futures::TryStreamExt,
 };
@@ -24,7 +24,7 @@ mod serialize;
 pub async fn get_client_controller(
 ) -> Result<(wlan_policy::ClientControllerProxy, wlan_policy::ClientStateUpdatesRequestStream), Error>
 {
-    let policy_provider = connect_to_service::<wlan_policy::ClientProviderMarker>()?;
+    let policy_provider = connect_to_protocol::<wlan_policy::ClientProviderMarker>()?;
     let (client_controller, server_end) =
         create_proxy::<wlan_policy::ClientControllerMarker>().unwrap();
     let (update_client_end, update_server_end) =
@@ -54,7 +54,7 @@ pub fn get_ap_controller() -> Result<
     (wlan_policy::AccessPointControllerProxy, wlan_policy::AccessPointStateUpdatesRequestStream),
     Error,
 > {
-    let policy_provider = connect_to_service::<wlan_policy::AccessPointProviderMarker>()?;
+    let policy_provider = connect_to_protocol::<wlan_policy::AccessPointProviderMarker>()?;
     let (ap_controller, server_end) =
         create_proxy::<wlan_policy::AccessPointControllerMarker>().unwrap();
     let (update_client_end, update_server_end) =
@@ -67,7 +67,7 @@ pub fn get_ap_controller() -> Result<
 
 /// Communicates with the client listener service to get a stream of client state updates.
 pub fn get_listener_stream() -> Result<wlan_policy::ClientStateUpdatesRequestStream, Error> {
-    let listener = connect_to_service::<wlan_policy::ClientListenerMarker>()?;
+    let listener = connect_to_protocol::<wlan_policy::ClientListenerMarker>()?;
     let (client_end, server_end) =
         create_endpoints::<wlan_policy::ClientStateUpdatesMarker>().unwrap();
     listener.get_listener(client_end)?;
@@ -78,7 +78,7 @@ pub fn get_listener_stream() -> Result<wlan_policy::ClientStateUpdatesRequestStr
 /// Communicates with the AP listener service to get a stream of AP state updates.
 pub fn get_ap_listener_stream() -> Result<wlan_policy::AccessPointStateUpdatesRequestStream, Error>
 {
-    let listener = connect_to_service::<wlan_policy::AccessPointListenerMarker>()?;
+    let listener = connect_to_protocol::<wlan_policy::AccessPointListenerMarker>()?;
     let (client_end, server_end) =
         create_endpoints::<wlan_policy::AccessPointStateUpdatesMarker>().unwrap();
     listener.get_listener(client_end)?;
@@ -89,7 +89,7 @@ pub fn get_ap_listener_stream() -> Result<wlan_policy::AccessPointStateUpdatesRe
 /// Creates a channel to interact with the DeprecatedConfigurator service.
 pub fn get_deprecated_configurator() -> Result<wlan_deprecated::DeprecatedConfiguratorProxy, Error>
 {
-    let configurator = connect_to_service::<wlan_deprecated::DeprecatedConfiguratorMarker>()?;
+    let configurator = connect_to_protocol::<wlan_deprecated::DeprecatedConfiguratorMarker>()?;
     Ok(configurator)
 }
 

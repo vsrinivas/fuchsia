@@ -38,7 +38,7 @@ pub struct BusConnection {
 
 impl BusConnection {
     pub fn new(client: &str) -> Result<BusConnection, Error> {
-        let busm = client::connect_to_service::<SyncManagerMarker>()
+        let busm = client::connect_to_protocol::<SyncManagerMarker>()
             .context("SyncManager not available")?;
         let (bus, busch) = fidl::endpoints::create_proxy::<BusMarker>()?;
         busm.bus_subscribe(BUS_NAME, client, busch)?;
@@ -111,7 +111,7 @@ fn check_netemul_environment() -> Result<(), Error> {
 }
 
 async fn check_network() -> Result<(), Error> {
-    let netctx = client::connect_to_service::<NetworkContextMarker>()?;
+    let netctx = client::connect_to_protocol::<NetworkContextMarker>()?;
     let (epm, epmch) = fidl::endpoints::create_proxy::<EndpointManagerMarker>()?;
     let () = netctx.get_endpoint_manager(epmch)?;
     let (netm, netmch) = fidl::endpoints::create_proxy::<NetworkManagerMarker>()?;

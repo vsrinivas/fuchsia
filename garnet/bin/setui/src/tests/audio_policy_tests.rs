@@ -64,8 +64,8 @@ async fn create_test_environment_with_data(data: Option<&State>) -> TestEnvironm
         .await
         .unwrap();
 
-    let policy_service = env.connect_to_service::<VolumePolicyControllerMarker>().unwrap();
-    let setui_audio_service = env.connect_to_service::<AudioMarker>().unwrap();
+    let policy_service = env.connect_to_protocol::<VolumePolicyControllerMarker>().unwrap();
+    let setui_audio_service = env.connect_to_protocol::<AudioMarker>().unwrap();
 
     TestEnvironment { nested_environment: env, policy_service, setui_audio_service }
 }
@@ -505,7 +505,7 @@ async fn test_policy_min_policy_clamps_sets() {
 
     // Use a new connection to get the value. The original connection won't return the value again
     // since it hasn't changed.
-    let audio_connection = env.nested_environment.connect_to_service::<AudioMarker>().unwrap();
+    let audio_connection = env.nested_environment.connect_to_protocol::<AudioMarker>().unwrap();
 
     // The volume remains at 20% after the policy is removed.
     assert_eq!(

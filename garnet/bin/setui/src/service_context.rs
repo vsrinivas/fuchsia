@@ -11,7 +11,7 @@ use fidl::endpoints::{DiscoverableService, Proxy, ServiceMarker};
 use futures::future::{BoxFuture, OptionFuture};
 
 use fuchsia_async as fasync;
-use fuchsia_component::client::{connect_to_service, connect_to_service_at_path};
+use fuchsia_component::client::{connect_to_protocol, connect_to_protocol_at_path};
 use glob::glob;
 
 use fuchsia_zircon as zx;
@@ -56,7 +56,7 @@ impl ServiceContext {
             ((generate_service)(S::SERVICE_NAME, server)).await?;
             S::Proxy::from_channel(fasync::Channel::from_channel(client)?)
         } else {
-            connect_to_service::<S>()?
+            connect_to_protocol::<S>()?
         };
 
         Ok(ExternalServiceProxy { proxy, publisher: self.make_publisher().await })
@@ -71,7 +71,7 @@ impl ServiceContext {
             ((generate_service)(S::SERVICE_NAME, server)).await?;
             S::Proxy::from_channel(fasync::Channel::from_channel(client)?)
         } else {
-            connect_to_service::<S>()?
+            connect_to_protocol::<S>()?
         };
 
         Ok(ExternalServiceProxy { proxy, publisher: Some(publisher) })
@@ -113,7 +113,7 @@ impl ServiceContext {
             ((generate_service)(S::SERVICE_NAME, server)).await?;
             S::Proxy::from_channel(fasync::Channel::from_channel(client)?)
         } else {
-            connect_to_service_at_path::<S>(path)?
+            connect_to_protocol_at_path::<S>(path)?
         };
 
         Ok(ExternalServiceProxy { proxy, publisher: self.make_publisher().await })
@@ -157,7 +157,7 @@ impl ServiceContext {
             found_path.to_str().ok_or_else(|| format_err!("failed to convert path to str"))?;
 
         Ok(ExternalServiceProxy {
-            proxy: connect_to_service_at_path::<S>(path_str)?,
+            proxy: connect_to_protocol_at_path::<S>(path_str)?,
             publisher: self.make_publisher().await,
         })
     }

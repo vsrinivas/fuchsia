@@ -12,7 +12,7 @@ use {
     fidl_fuchsia_wlan_device_service::{DeviceServiceMarker, DeviceServiceProxy},
     fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_async::{self as fasync, DurationExt as _, Executor, Time, TimeoutExt as _, Timer},
-    fuchsia_component::client::connect_to_service,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_syslog::{self as syslog, fx_log_info, fx_log_warn},
     fuchsia_zircon::{self as zx, DurationNum as _},
     net_stack_util::netstack_did_get_dhcp,
@@ -57,13 +57,13 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
     let mut test_pass = false;
     let mut exec = Executor::new().context("error creating event loop")?;
     let wlan_svc =
-        connect_to_service::<DeviceServiceMarker>().context("Failed to connect to wlan_service")?;
+        connect_to_protocol::<DeviceServiceMarker>().context("Failed to connect to wlan_service")?;
     test_results.connect_to_wlan_service = true;
 
-    let http_svc = connect_to_service::<http::LoaderMarker>()?;
+    let http_svc = connect_to_protocol::<http::LoaderMarker>()?;
     test_results.connect_to_http_service = true;
 
-    let network_svc = connect_to_service::<StackMarker>()?;
+    let network_svc = connect_to_protocol::<StackMarker>()?;
     test_results.connect_to_netstack_service = true;
 
     let fut = async {

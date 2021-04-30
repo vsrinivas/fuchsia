@@ -8,7 +8,7 @@ use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_io::{DirectoryMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE};
 use fidl_fuchsia_paver::{PaverMarker, PaverProxy};
 use fs_management as fs;
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use fuchsia_zircon as zx;
 
 /// Calls the paver service to format the system volume, and returns the path
@@ -60,7 +60,7 @@ impl Storage {
     /// encapsulates the freshly minted blobfs.
     pub async fn new() -> Result<Storage, Error> {
         println!("About to Initialize storage");
-        let paver = connect_to_service::<PaverMarker>()?;
+        let paver = connect_to_protocol::<PaverMarker>()?;
         let (blobfs_path, minfs_path) = format_disk(paver.clone()).await?;
 
         let blobfs = create_blobfs(blobfs_path)?;
@@ -261,7 +261,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_calls_paver_service_with_errors() {
         let env = TestEnv::new(MockPaver::new(Status::NOT_SUPPORTED));
-        let paver = env.env.connect_to_service::<PaverMarker>().unwrap();
+        let paver = env.env.connect_to_protocol::<PaverMarker>().unwrap();
 
         let path = format_disk(paver.clone()).await;
         assert_eq!(
@@ -281,7 +281,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_calls_paver_service() {
         let env = TestEnv::new(MockPaver::new(Status::OK));
-        let paver = env.env.connect_to_service::<PaverMarker>().unwrap();
+        let paver = env.env.connect_to_protocol::<PaverMarker>().unwrap();
 
         let result = format_disk(paver.clone()).await;
         let (blobfs_path, minfs_path) = match result {

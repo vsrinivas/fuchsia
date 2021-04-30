@@ -14,7 +14,7 @@ use fidl::endpoints::create_proxy;
 use fidl_fuchsia_identity_account::Error as ApiError;
 use fidl_fuchsia_mem::Buffer;
 use fidl_fuchsia_stash::{StoreAccessorProxy, StoreMarker, StoreProxy, Value};
-use fuchsia_component::client::connect_to_service;
+use fuchsia_component::client::connect_to_protocol;
 use fuchsia_zircon::Vmo;
 use futures::lock::Mutex;
 use std::sync::Arc;
@@ -64,7 +64,7 @@ impl StashManager {
     /// Create a StashManager using a given store name.
     pub fn create(store_name: &str) -> Result<Self, AccountManagerError> {
         let store_proxy =
-            connect_to_service::<StoreMarker>().account_manager_error(ApiError::Resource)?;
+            connect_to_protocol::<StoreMarker>().account_manager_error(ApiError::Resource)?;
         store_proxy.identify(store_name)?;
         let cached_state = Mutex::new(None);
         Ok(Self { store_proxy, cached_state })
@@ -246,7 +246,7 @@ mod tests {
         let store_name = random_store_id();
         {
             let store_proxy =
-                connect_to_service::<StoreMarker>().account_manager_error(ApiError::Resource)?;
+                connect_to_protocol::<StoreMarker>().account_manager_error(ApiError::Resource)?;
             store_proxy.identify(&store_name)?;
             let (accessor_proxy, server_end) = create_proxy()?;
             store_proxy.create_accessor(false, server_end)?;
@@ -267,7 +267,7 @@ mod tests {
         let store_name = random_store_id();
         {
             let store_proxy =
-                connect_to_service::<StoreMarker>().account_manager_error(ApiError::Resource)?;
+                connect_to_protocol::<StoreMarker>().account_manager_error(ApiError::Resource)?;
             store_proxy.identify(&store_name)?;
             let (accessor_proxy, server_end) = create_proxy()?;
             store_proxy.create_accessor(false, server_end)?;

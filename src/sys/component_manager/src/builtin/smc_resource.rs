@@ -67,7 +67,7 @@ mod tests {
         },
         fidl::endpoints::ClientEnd,
         fidl_fuchsia_kernel as fkernel, fuchsia_async as fasync,
-        fuchsia_component::client::connect_to_service,
+        fuchsia_component::client::connect_to_protocol,
         fuchsia_zircon::AsHandleRef,
         fuchsia_zircon_sys as sys,
         futures::lock::Mutex,
@@ -85,7 +85,7 @@ mod tests {
     }
 
     async fn get_smc_resource() -> Result<Resource, Error> {
-        let smc_resource_provider = connect_to_service::<fkernel::SmcResourceMarker>()?;
+        let smc_resource_provider = connect_to_protocol::<fkernel::SmcResourceMarker>()?;
         let smc_resource_handle = smc_resource_provider.get().await?;
         Ok(Resource::from(smc_resource_handle))
     }
