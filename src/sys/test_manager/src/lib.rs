@@ -7,6 +7,7 @@ use {
     anyhow::Error,
     cm_rust,
     diagnostics_bridge::ArchiveReaderManager,
+    fdiagnostics::ArchiveAccessorProxy,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_diagnostics as fdiagnostics, fidl_fuchsia_io2 as fio2, fidl_fuchsia_test as ftest,
     fidl_fuchsia_test_internal as ftest_internal, fidl_fuchsia_test_manager as ftest_manager,
@@ -27,7 +28,7 @@ use {
     lazy_static::lazy_static,
     regex::Regex,
     std::collections::HashMap,
-    std::sync::{Arc, Mutex},
+    std::sync::{Arc, Mutex, Weak},
     tracing::{error, warn},
 };
 
@@ -233,22 +234,27 @@ pub async fn run_test_manager_info_server(
 struct RunningTest {
     instance: RealmInstance,
     logs_iterator_task: Option<fasync::Task<Result<(), anyhow::Error>>>,
+
+    // safe keep archive accessor which tests might use.
+    archive_accessor: Arc<ArchiveAccessorProxy>,
 }
 
 impl RunningTest {
     async fn destroy(mut self) {
         let destroy_waiter = self.instance.root.take_destroy_waiter();
         drop(self.instance);
-        // When serving logs over ArchiveIteartor in the host, we should also wait for all logs to
+        // When serving logs over ArchiveIterator in the host, we should also wait for all logs to
         // be drained.
+        drop(self.archive_accessor);
         if let Some(task) = self.logs_iterator_task {
             task.await.unwrap_or_else(|err| {
                 error!(?err, "Failed to await for logs streaming task");
             });
         }
+
         destroy_waiter.await.unwrap_or_else(|err| {
             error!(?err, "Failed to destroy instance");
-        })
+        });
     }
 
     /// Serves Suite controller and destroys this test afterwards.
@@ -283,14 +289,14 @@ async fn launch_test(
             .map_err(LaunchTestError::CreateProxyForArchiveAccessor)?;
 
     let archive_accessor_arc = Arc::new(archive_accessor);
-    let mut realm = get_realm(archive_accessor_arc.clone(), test_url)
+    let mut realm = get_realm(Arc::downgrade(&archive_accessor_arc), test_url)
         .await
         .map_err(LaunchTestError::InitializeTestRealm)?;
     realm.set_collection_name("tests");
     let instance = realm.create().await.map_err(LaunchTestError::CreateTestRealm)?;
     let test_name = instance.root.child_name();
     test_map.insert(test_name.clone(), test_url.to_string());
-
+    let archive_accessor_arc_clone = archive_accessor_arc.clone();
     let connect_to_instance_services = async move {
         instance
             .root
@@ -299,7 +305,7 @@ async fn launch_test(
             )
             .map_err(LaunchTestError::ConnectToArchiveAccessor)?;
 
-        let mut isolated_logs_provider = IsolatedLogsProvider::new(archive_accessor_arc);
+        let mut isolated_logs_provider = IsolatedLogsProvider::new(archive_accessor_arc_clone);
         let logs_iterator_task = match options.logs_iterator {
             None => None,
             Some(ftest_manager::LogsIterator::Archive(iterator)) => {
@@ -321,7 +327,7 @@ async fn launch_test(
             .root
             .connect_request_to_protocol_at_exposed_dir(suite_request)
             .map_err(LaunchTestError::ConnectToTestSuite)?;
-        Ok(RunningTest { instance, logs_iterator_task })
+        Ok(RunningTest { instance, logs_iterator_task, archive_accessor: archive_accessor_arc })
     };
 
     let running_test_result = connect_to_instance_services.await;
@@ -332,7 +338,7 @@ async fn launch_test(
 }
 
 async fn get_realm(
-    archive_accessor: Arc<fdiagnostics::ArchiveAccessorProxy>,
+    archive_accessor: Weak<fdiagnostics::ArchiveAccessorProxy>,
     test_url: &str,
 ) -> Result<Realm, RealmBuilderError> {
     let mut builder = RealmBuilder::new().await?;
@@ -529,7 +535,7 @@ async fn get_realm(
 }
 
 async fn serve_mocks(
-    archive_accessor: Arc<fdiagnostics::ArchiveAccessorProxy>,
+    archive_accessor: Weak<fdiagnostics::ArchiveAccessorProxy>,
     mock_handles: MockHandles,
 ) -> Result<(), Error> {
     let mut fs = ServiceFs::new();
