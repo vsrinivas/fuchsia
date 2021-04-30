@@ -67,6 +67,19 @@ zx_library("vm") {
     # "pmm_arena.h" has #include <lib/zx/status.h>.
     "//zircon/system/ulib/zxc:headers",
   ]
+
+  # GCC figures out some cases where we have a global variable that's used as a
+  # RefPtr and so appears like it might be passed to delete.  We always leak
+  # the reference so it will never actually be called, but the compiler can't
+  # figure that out statically so we must disable its warning.
+  configs += [ ":suppress-nonheap-warning" ]
+}
+
+config("suppress-nonheap-warning") {
+  visibility = [ ":*" ]
+  if (is_gcc) {
+    cflags = [ "-Wno-free-nonheap-object" ]
+  }
 }
 
 source_set("tests") {
