@@ -2,6 +2,10 @@
 
 ## General configurations
 
+### Remote workspaces
+
+You may want to configure [remote workspaces](https://code.visualstudio.com/docs/remote/ssh#_connect-to-a-remote-host).
+
 ### Speed up automatic file reloading
 VS Code watches external file changes. It automatically reloads the lastest stored file if it does not have a working copy that conflicts. Watching and detecting changes, however, can take long time. The larger the code base, the longer it takes to detect the file change. Excluding some directories from the search space improves the speed.
 

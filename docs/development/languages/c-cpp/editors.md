@@ -1,5 +1,9 @@
 # C++ Editor/IDE Setup
 
+This page lists various community-contributed plugins for different editors.
+Note that none of these plugins are officially supported, but some users
+have reported good experiences.
+
 ## CLion
 
 Follow the **Compilation Database** instructions below to create the
@@ -15,7 +19,7 @@ are only suggestions, we recommend checking with directly with JetBrains
 at <https://intellij-support.jetbrains.com/hc> to be sure what works
 best for your environment.
 
-##### Exclude Directories
+#### Exclude Directories
 
 To speed up indexing time you can exclude directories you are not
 working with. You can do that in the Project View by
@@ -27,7 +31,7 @@ See
 [Control Source, Library, and Exclude Directories \- Help \| CLion](https://www.jetbrains.com/help/clion/controlling-source-library-and-exclude-directories.html)
 for more information.
 
-##### Unregister Git Repositories
+#### Unregister Git Repositories
 
 The fuchsia source tree has a fair number of git repositories. Scanning
 them can use CPU cycles for CLion. You can unregister the git
@@ -35,7 +39,7 @@ repositories you are not working on under
 *File -> Settings -> Version Control*. They will still be listed there
 so you can add them back later if needed.
 
-##### Tune JVM Options and Platform Properties
+#### Tune JVM Options and Platform Properties
 
 See
 [Tuning CLion \- Help \| CLion](https://www.jetbrains.com/help/clion/tuning-the-ide.html)
@@ -44,14 +48,28 @@ As that link suggests, contact CLion support for instructions
 regarding the options and values that might help you with whatever issue
 you are trying to solve.
 
+### Compilation Database
+
+A [Compilation
+Database](https://clang.llvm.org/docs/JSONCompilationDatabase.html) file,
+`compile_commands.json`, will be created automatically by `fx` within your
+current build directory as well as automatically symlinked to your source root.
+
+Note that this file is only intended to help the IDE find and parse
+the source files. Building should still be done with `fx build`.
+
+Note: There is an ongoing issue where CLion shows compiler errors for a few
+hundred files in the Fuchsia source code. Other files should work
+fine in CLion.
+
 ## Vim
 
 See [Helpful Vim tools for Fuchsia development](/scripts/vim/README.md).
 
 ## Visual Studio Code (VS Code) {#visual-studio-code}
 
-There are multiple VS Code setups known to work to different degrees. The
-sections below describe the different setups (pick one).
+See more
+[VS Code configuration recommendations for Fuchsia contributors](/docs/development/editors/vscode.md).
 
 ### clangd
 
@@ -81,25 +99,3 @@ You may also benefit from enabling background indexing and clang-tidy using the 
 ```
 
 Further details on clangd setup can be found [here](https://clang.llvm.org/extra/clangd/Installation.html).
-
-### Default VS Code C++ extension
-
-Install the default [C/C++ extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cpptools)
-suggested by VS Code.
-
-You can use [tasks](https://code.visualstudio.com/docs/editor/tasks) to
-configure a compilation step.
-
-## Compilation Database
-
-A [Compilation
-Database](https://clang.llvm.org/docs/JSONCompilationDatabase.html) file,
-`compile_commands.json`, will be created automatically by `fx` within your
-current build directory as well as automatically symlinked to your source root.
-
-Note that this file is only intended to help the IDE find and parse
-the source files. Building should still be done with `fx build`.
-
-Note: There is an ongoing issue where CLion shows compiler errors for a few
-hundred files in the Fuchsia source code. Other files should work
-fine in CLion.
