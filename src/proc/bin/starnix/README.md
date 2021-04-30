@@ -7,28 +7,14 @@ experimental and can run only trivial programs.
 
 Currently, we require a x86_64 host Linux system to run starnix.
 
-### Add starnix to core.cml
-
-In order to make starnix available in the system, we need to add starnix to the
-core component by adding the following line to `//src/sys/core/meta/core.cml`,
-directly above the `children` declaration:
-
-```
-    include: [ "src/proc/bin/starnix/meta/core.shard.cml" ],
-```
-
 ### Configure your build
 
 In order to run starnix, we need to build `//src/proc`:
 
 ```sh
-$ fx set core.x64 --with-base //src/proc,//src/proc:tests
+$ fx set core.x64 --with //src/proc,//src/proc:tests
 $ fx build
 ```
-
-> Note: If you use `--with` instead of `--with-base`, the Fuchsia system might
-not boot because adding the `core.shard.cml` to the core component starts
-Starnix during system boot.
 
 ### Run Fuchsia
 
@@ -61,7 +47,8 @@ If everything is working, you should see some log messages like the following:
 
 ### Run a Linux test binary
 
-Linux test binaries can be run using the starnix test runner. This can be done using the standard `fx test` command:
+Linux test binaries can also be run using the Starnix test runner using the
+standard `fx test` command:
 
 ```
 $ fx test hello-starnix-test --output
