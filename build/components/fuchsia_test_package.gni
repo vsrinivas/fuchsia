@@ -82,7 +82,7 @@ template("fuchsia_test_package") {
     manifest_name = get_path_info(manifest_name[0], "file")
     test_spec(test_target) {
       forward_variables_from(test_specs, "*")
-      target = ":$target_name"
+      target = get_label_info(":$target_name", "label_with_toolchain")
       package_label = package_label
       package_url =
           "fuchsia-pkg://fuchsia.com/$package_name#meta/$manifest_name"

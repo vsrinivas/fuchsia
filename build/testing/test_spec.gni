@@ -25,7 +25,8 @@ _max_severity_allowed_val = [
 #     [string]: The path on the target OS at which the test will be installed.
 #
 #   target (required)
-#     [label]: The test target.
+#     [label_with_toolchain]: The test target. This will be used directly as the
+#     `label` field.
 #
 #   package_url (optional)
 #     [string] In the case of a fuchsia test, this describes the packaged test
@@ -299,7 +300,10 @@ template("test_spec") {
                                "package_label",
                                "parallel",
                              ])
-      label = get_label_info(":${invoker.target}", "label_with_toolchain")
+      label = invoker.target
+      assert(label == get_label_info(label, "label_with_toolchain"),
+             "target '${label}' must be a label_with_toolchain.")
+
       if (is_fuchsia) {
         log_settings = _log_settings
       }

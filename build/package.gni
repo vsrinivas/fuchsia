@@ -422,7 +422,8 @@ template("package") {
         pkg.deps += [ ":$test_spec_name" ]
 
         test_spec(test_spec_name) {
-          target = ":${invoker.target_name}"
+          target =
+              get_label_info(":${invoker.target_name}", "label_with_toolchain")
           path = path
           package_url = url
           forward_variables_from(test,

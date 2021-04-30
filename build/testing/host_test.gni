@@ -74,9 +74,9 @@ template("host_test") {
 
   test_spec(target_name) {
     if (defined(invoker.target)) {
-      target = "${invoker.target}"
+      target = invoker.target
     } else {
-      target = "${target_name}"
+      target = get_label_info(":${target_name}", "label_with_toolchain")
     }
     path = _test_path
 

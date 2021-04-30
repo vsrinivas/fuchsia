@@ -67,7 +67,8 @@ if (is_linux || is_mac) {
 
   _test = "$root_out_dir/test_extract_zircon_constants"
   test_spec("test_extract_zircon_constants_spec") {
-    target = ":test_extract_zircon_constants"
+    target =
+        get_label_info(":test_extract_zircon_constants", "label_with_toolchain")
     path = _test
 
     deps = [

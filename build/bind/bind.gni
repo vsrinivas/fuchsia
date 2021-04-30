@@ -183,9 +183,9 @@ template("bind_host_test") {
     host_test(test_target) {
       visibility = [ ":*" ]
       if (defined(invoker.target)) {
-        target = "${invoker.target}"
+        target = invoker.target
       } else {
-        target = "${target_name}"
+        target = get_label_info(":${target_name}", "label_with_toolchain")
       }
       binary_path = "${test_data_dir}/bindc"
 
@@ -260,9 +260,10 @@ template("bind_test") {
   original_target_name = target_name
   bind_host_test(test_target) {
     if (defined(invoker.target)) {
-      target = "${invoker.target}"
+      target = invoker.target
     } else {
-      target = "${original_target_name}"
+      target =
+          get_label_info(":${original_target_name}", "label_with_toolchain")
     }
     rules = invoker.rules
     tests = invoker.tests

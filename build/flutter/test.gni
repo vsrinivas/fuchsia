@@ -361,7 +361,7 @@ if (current_toolchain == dart_toolchain) {
 
     if (is_linux || is_mac) {
       test_spec(_spec_target_name) {
-        target = ":$_main_target_name"
+        target = get_label_info(":$_main_target_name", "label_with_toolchain")
         path = _invocation_file
 
         deps = [ ":$_main_target_name($dart_toolchain)" ]

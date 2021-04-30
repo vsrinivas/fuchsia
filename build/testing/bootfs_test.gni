@@ -44,7 +44,7 @@ template("bootfs_test") {
   assert(_deps == [ _label ], "Deps should contain exactly one label")
 
   test_spec(target_name) {
-    target = _label
+    target = get_label_info(_label, "label_with_toolchain")
     deps = _deps
     path = "/boot/test/${invoker.name}"
     forward_variables_from(invoker, [ "environments" ])

@@ -53,7 +53,7 @@ template("fuchsia_test") {
 
   test_spec(target_name) {
     forward_variables_from(invoker, "*")
-    target = invoker.package
+    target = get_label_info(invoker.package, "label_with_toolchain")
     package_url = "fuchsia-pkg://fuchsia.com/$package_name#meta/$manifest_name"
     if (!defined(deps)) {
       deps = []
