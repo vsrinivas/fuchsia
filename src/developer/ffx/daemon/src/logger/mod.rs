@@ -29,7 +29,7 @@ use {
 pub mod streamer;
 
 const BRIDGE_SELECTOR: &str =
-    "core/remote-diagnostics-bridge:out:fuchsia.developer.remotecontrol.RemoteDiagnosticsBridge";
+    "core/remote-diagnostics-bridge:expose:fuchsia.developer.remotecontrol.RemoteDiagnosticsBridge";
 const ENABLED_CONFIG: &str = "proactive_log.enabled";
 const SYMBOLIZE_ENABLED_CONFIG: &str = "proactive_log.symbolize.enabled";
 const SYMBOLIZE_ARGS_CONFIG: &str = "proactive_log.symbolize.extra_args";
@@ -573,7 +573,7 @@ mod test {
                         setup_fake_archive_iterator(iterator, responses.clone()).unwrap();
                         responder.send(&mut Ok(())).unwrap();
                     }
-                    _ => assert!(false),
+                    _ => panic!("called unexpected diagnostic bridge method"),
                 }
             }
         })

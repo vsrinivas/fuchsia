@@ -49,5 +49,6 @@ protocol RemoteDiagnosticsBridge {
     // This is a workaround to ensure the bridge is started by the framework
     // before the frontend attempts to connect to it.
     // TODO: remove this once fxbug.dev/60910 has been fixed.
+    [Deprecated = "Hack method - will be removed shortly."]
     Hello() -> ();
 };

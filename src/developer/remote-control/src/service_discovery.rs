@@ -3,13 +3,14 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error,
+    anyhow::{Context, Error},
+    fidl::endpoints::{Proxy, ServiceMarker},
     fidl_fuchsia_developer_remotecontrol::ServiceMatch,
     fidl_fuchsia_diagnostics::{Selector, StringSelector, TreeSelector},
-    fidl_fuchsia_io as io,
+    fidl_fuchsia_io as io, fidl_fuchsia_sys2 as fsys,
     selectors::match_selector_against_single_node,
     std::path::{Component, PathBuf},
-    tracing::warn,
+    tracing::{info, warn},
 };
 
 lazy_static::lazy_static! {
@@ -58,6 +59,7 @@ pub struct PathEntry {
     pub moniker: PathBuf,
     pub component_subdir: String,
     pub service: String,
+    pub debug_hub_path: Option<PathBuf>,
 }
 
 impl PathEntry {
@@ -67,6 +69,7 @@ impl PathEntry {
             moniker,
             component_subdir: String::default(),
             service: String::default(),
+            debug_hub_path: None,
         };
     }
 
@@ -82,6 +85,7 @@ impl PathEntry {
             moniker,
             component_subdir: subdir.to_string(),
             service: service.to_string(),
+            debug_hub_path: None,
         };
     }
 
@@ -123,6 +127,10 @@ impl PathEntry {
         self.push_hub_dir(name);
         self.service = name.to_owned();
     }
+
+    fn set_debug_hub_path(&mut self, path: PathBuf) {
+        self.debug_hub_path.replace(path);
+    }
 }
 
 impl Into<ServiceMatch> for &PathEntry {
@@ -150,14 +158,18 @@ impl Into<ServiceMatch> for &PathEntry {
     }
 }
 
+async fn connect_and_read_dir(hub_path: &PathBuf) -> Result<Vec<files_async::DirEntry>, Error> {
+    let path_str = hub_path.to_string_lossy();
+    let proxy = io_util::open_directory_in_namespace(&path_str, io::OPEN_RIGHT_READABLE)?;
+    files_async::readdir(&proxy).await.map_err(Into::into)
+}
+
 pub async fn get_matching_paths(root: &str, selector: &Selector) -> Result<Vec<PathEntry>, Error> {
     let segments = selector.component_selector.as_ref().unwrap().moniker_segments.as_ref().unwrap();
     let mut selectors = segments
         .iter()
         .map(|s| SelectorEntry::new(&s, EntryType::Moniker))
         .collect::<Vec<SelectorEntry<'_>>>();
-
-    selectors.push(SelectorEntry::new(&EXEC_SELECTOR, EntryType::HubPath));
 
     let node_path: StringSelector;
     let prop_path: StringSelector;
@@ -190,24 +202,73 @@ pub async fn get_matching_paths(root: &str, selector: &Selector) -> Result<Vec<P
         for path in paths.clone().iter_mut() {
             if selector.selector_type == EntryType::Moniker {
                 path.push_hub_dir("children");
+            } else if selector.selector_type == EntryType::ComponentSubdir {
+                if match_selector_against_single_node(&"expose".to_string(), selector.selector)? {
+                    let hub_path = path.hub_path.clone();
+                    let mut p = path.clone_push("resolved", EntryType::HubPath);
+                    p.push_subdir("expose");
+                    p.set_debug_hub_path(hub_path.join("debug"));
+                    new_paths.push(p);
+                }
+                if match_selector_against_single_node(&"out".to_string(), selector.selector)? {
+                    let mut p = path.clone_push("exec", EntryType::HubPath);
+                    p.push_subdir("out");
+                    p.push_hub_dir("svc");
+                    new_paths.push(p);
+                }
+                if match_selector_against_single_node(&"in".to_string(), selector.selector)? {
+                    let mut p = path.clone_push("exec", EntryType::HubPath);
+                    p.push_subdir("in");
+                    p.push_hub_dir("svc");
+                    new_paths.push(p);
+                }
+                continue;
             }
 
-            let path_str = path.hub_path.to_string_lossy();
-            let proxy = match io_util::open_directory_in_namespace(
-                &path_str,
-                io::OPEN_RIGHT_READABLE,
-            ) {
-                Ok(p) => p,
-                Err(err) => {
-                    warn!(directory = ?path_str, %err, "got error trying to read directory. Ignoring this directory");
-                    continue;
-                }
-            };
-            let entries = match files_async::readdir(&proxy).await {
-                Ok(p) => p,
-                Err(err) => {
-                    warn!(directory = %path_str, %err, "got error trying to read entries. Inoring this directory");
-                    continue;
+            let entries = match connect_and_read_dir(&path.hub_path).await {
+                Ok(e) => e,
+                Err(_) => {
+                    if path
+                        .hub_path
+                        .file_name()
+                        .context("missing file name")?
+                        .to_string_lossy()
+                        .to_string()
+                        == "expose".to_string()
+                    {
+                        let resolve_path = path
+                            .debug_hub_path
+                            .as_ref()
+                            .context("missing debug path")?
+                            .join(fsys::ResolveComponentMarker::NAME);
+                        let node_proxy = io_util::open_node_in_namespace(
+                            resolve_path.to_str().expect("invalid chars"),
+                            io::OPEN_RIGHT_READABLE,
+                        )?;
+                        let resolve_component_proxy = fsys::ResolveComponentProxy::new(
+                            node_proxy.into_channel().expect("could not get channel from proxy"),
+                        );
+                        match resolve_component_proxy.resolve(".").await {
+                            Ok(_) => {
+                                info!(
+                                    "successfully resolved component {}",
+                                    path.moniker.to_str().unwrap()
+                                )
+                            }
+                            Err(e) => {
+                                warn!(%e, directory=%path.hub_path.to_string_lossy(), "failed to resolve component.");
+                                continue;
+                            }
+                        };
+                    }
+
+                    match connect_and_read_dir(&path.hub_path).await {
+                        Ok(e) => e,
+                        Err(e) => {
+                            warn!(directory = ?path.hub_path, %e, "got error trying to read resolve directory after calling resolve. Ignoring this directory");
+                            continue;
+                        }
+                    }
                 }
             };
 
@@ -367,8 +428,9 @@ mod test {
         let temp = tempfile::tempdir().unwrap().into_path();
         let base = temp.join("children");
         let first_match = base.join("a/children/b/exec/out/svc/myservice");
-        let second_match = base.join("a/children/b/exec/expose/myservice");
-        let third_match = base.join("a/children/b/exec/in/svc/myservice");
+        let second_match = base.join("a/children/b/exec/in/svc/myservice");
+        let third_match = base.join("a/children/b/resolved/expose/myservice");
+
         create_files(vec![
             &base.join("b/children/b/exec/in/svc/myservice"),
             &first_match,
@@ -376,19 +438,19 @@ mod test {
             &third_match,
         ]);
 
+        let debug_hub_path = base.join("a/children/b/debug");
+        let mut expose_entry =
+            PathEntry::new_with_service(third_match, PathBuf::from("/a/b"), "expose", "myservice");
+        expose_entry.set_debug_hub_path(debug_hub_path);
+
         let matches = exec_selector(temp, "a/b:*:myservice").await;
 
         assert_same_paths(
             matches,
             vec![
                 PathEntry::new_with_service(first_match, PathBuf::from("/a/b"), "out", "myservice"),
-                PathEntry::new_with_service(
-                    second_match,
-                    PathBuf::from("/a/b"),
-                    "expose",
-                    "myservice",
-                ),
-                PathEntry::new_with_service(third_match, PathBuf::from("/a/b"), "in", "myservice"),
+                PathEntry::new_with_service(second_match, PathBuf::from("/a/b"), "in", "myservice"),
+                expose_entry,
             ],
         );
     }

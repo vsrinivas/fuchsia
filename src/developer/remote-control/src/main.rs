@@ -8,7 +8,6 @@ use {
     fidl_fuchsia_developer_remotecontrol as rcs,
     fidl_fuchsia_overnet::{ServiceProviderRequest, ServiceProviderRequestStream},
     fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_service,
     fuchsia_component::server::ServiceFs,
     futures::join,
     futures::prelude::*,
@@ -36,12 +35,6 @@ async fn exec_server() -> Result<(), Error> {
     fs.dir("svc").add_fidl_service(move |req| {
         fasync::Task::local(sc1.clone().serve_stream(req).map(|_| ())).detach();
     });
-
-    // This is a workaround to ensure the log reader is started by the framework
-    // before the frontend attempts to connect to it via service introduction.
-    // TODO: remove this once fxbug.dev/60910 has been fixed.
-    let p = connect_to_service::<rcs::RemoteDiagnosticsBridgeMarker>()?;
-    p.hello().await?;
 
     fs.take_and_serve_directory_handle()?;
     let fidl_fut = fs.collect::<()>();

@@ -379,12 +379,14 @@ mod tests {
                 moniker: PathBuf::from("/a/b/c"),
                 component_subdir: "out".to_string(),
                 service: "myservice".to_string(),
+                debug_hub_path: None,
             },
             PathEntry {
                 hub_path: PathBuf::from("/"),
                 moniker: PathBuf::from("/a/b/c"),
                 component_subdir: "out".to_string(),
                 service: "myservice2".to_string(),
+                debug_hub_path: None,
             },
         ])
     }
@@ -395,6 +397,7 @@ mod tests {
             moniker: PathBuf::from("/tmp"),
             component_subdir: "out".to_string(),
             service: "myservice".to_string(),
+            debug_hub_path: None,
         }])
     }
 
