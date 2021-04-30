@@ -13,8 +13,10 @@ use crate::handler::setting_handler::{
 use async_trait::async_trait;
 use fidl_fuchsia_input_report::InputDeviceMarker;
 use fuchsia_async::{self as fasync, DurationExt, Task};
+use fuchsia_syslog::fx_log_err;
 use fuchsia_zircon::Duration;
 use futures::channel::mpsc::{unbounded, UnboundedReceiver};
+use futures::channel::oneshot::{self, Receiver, Sender};
 use futures::future::{AbortHandle, Abortable};
 use futures::lock::Mutex;
 use futures::prelude::*;
@@ -28,7 +30,7 @@ const SCAN_DURATION_MS: i64 = 1000;
 pub struct LightSensorController {
     client: Arc<ClientImpl>,
     sensor: Sensor,
-    sensor_task: Option<Task<()>>,
+    sensor_task: Option<(Task<()>, Sender<()>)>,
     current_value: Arc<Mutex<LightData>>,
     notifier_abort: Option<AbortHandle>,
 }
@@ -85,9 +87,13 @@ impl controller::Handle for LightSensorController {
     async fn change_state(&mut self, state: State) -> Option<ControllerStateResult> {
         match state {
             State::Listen => {
-                let (task, change_receiver) =
-                    start_light_sensor_scanner(self.sensor.clone(), SCAN_DURATION_MS);
-                self.sensor_task = Some(task);
+                let (cancellation_tx, cancellation_rx) = oneshot::channel();
+                let (task, change_receiver) = start_light_sensor_scanner(
+                    self.sensor.clone(),
+                    SCAN_DURATION_MS,
+                    cancellation_rx,
+                );
+                self.sensor_task = Some((task, cancellation_tx));
                 self.notifier_abort = Some(
                     notify_on_change(
                         change_receiver,
@@ -98,14 +104,24 @@ impl controller::Handle for LightSensorController {
                 );
             }
             State::EndListen => {
-                if let Some(task) = self.sensor_task.take() {
-                    task.cancel().await;
+                if let Some((task, cancellation_tx)) = self.sensor_task.take() {
+                    // If this fails to cancel, the task may already be ending since that implies
+                    // the receiving end is already dropped.
+                    cancellation_tx.send(()).ok();
+                    // Wait for the task to cleanly exit. If we don't we could break the proxy to
+                    // the light sensor and prevent any future calls from returning successfully.
+                    task.await;
                 }
 
                 if let Some(abort_handle) = &self.notifier_abort {
                     abort_handle.abort();
                 }
                 self.notifier_abort = None;
+            }
+            State::Teardown => {
+                if self.sensor_task.is_some() {
+                    fx_log_err!("Sensor task is still running when teardown requested!");
+                }
             }
             _ => {}
         };
@@ -168,24 +184,36 @@ async fn notify_on_change(
 fn start_light_sensor_scanner(
     sensor: Sensor,
     scan_duration_ms: i64,
+    cancellation_rx: Receiver<()>,
 ) -> (Task<()>, UnboundedReceiver<LightData>) {
     let (sender, receiver) = unbounded::<LightData>();
 
     (
         fasync::Task::spawn(async move {
-            let mut data = get_sensor_data(&sensor).await;
-
+            let stream = futures::stream::unfold(sensor, |sensor| async move {
+                let light_data = get_sensor_data(&sensor).await;
+                Some((light_data, sensor))
+            });
+            let timer = fasync::Timer::new(Duration::from_millis(0).after_now()).fuse();
+            futures::pin_mut!(timer, stream, cancellation_rx);
+            let mut data = stream.next().await.expect("There should always be a first value");
             loop {
-                let new_data = get_sensor_data(&sensor).await;
-
-                if data != new_data {
-                    data = new_data;
-                    if sender.unbounded_send(data.clone()).is_err() {
-                        break;
+                futures::select! {
+                    _ = timer => {
+                        if let Some(new_data) = stream.next().await {
+                            if data != new_data {
+                                data = new_data;
+                                if sender.unbounded_send(data.clone()).is_err() {
+                                    break;
+                                }
+                            }
+                        }
+                        *timer =
+                            fasync::Timer::new(Duration::from_millis(scan_duration_ms).after_now())
+                                .fuse();
                     }
+                    _ = cancellation_rx => break,
                 }
-
-                fasync::Timer::new(Duration::from_millis(scan_duration_ms).after_now()).await;
             }
         }),
         receiver,
@@ -282,7 +310,8 @@ mod tests {
         let service_context = ServiceContext::new(None, None);
 
         let sensor = Sensor::new(&proxy, &service_context).await.unwrap();
-        let (task, mut receiver) = start_light_sensor_scanner(sensor, 1);
+        let (_cancellation_tx, cancellation_rx) = oneshot::channel();
+        let (task, mut receiver) = start_light_sensor_scanner(sensor, 1, cancellation_rx);
 
         let sleep_duration = zx::Duration::from_millis(5);
         fasync::Timer::new(sleep_duration.after_now()).await;
@@ -347,7 +376,8 @@ mod tests {
         let service_context = ServiceContext::new(None, None);
 
         let sensor = Sensor::new(&proxy, &service_context).await.unwrap();
-        let (task, data_receiver) = start_light_sensor_scanner(sensor, 1);
+        let (_cancellation_tx, cancellation_rx) = oneshot::channel();
+        let (task, data_receiver) = start_light_sensor_scanner(sensor, 1, cancellation_rx);
         *receiver.lock().await = Some(data_receiver);
 
         fasync::Timer::new(zx::Duration::from_millis(5).after_now()).await;
