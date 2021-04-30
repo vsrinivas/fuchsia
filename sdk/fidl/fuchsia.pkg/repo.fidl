@@ -103,11 +103,11 @@ table RepositoryConfig {
     6: uint32 root_threshold;
 
     /// Whether the package resolver should check attached storage for blobs and
-    /// repository metadata.
+    /// repository metadata. Optional, if absent presumed to be false.
     7: bool use_local_mirror;
 
-    /// Controls how repository metadata is persisted across reboots. Default
-    /// value is EPHEMERAL.
+    /// Controls how repository metadata is persisted across reboots. Optional, if absent presumed
+    /// to be EPHEMERAL.
     8: RepositoryStorageType storage_type;
 };
 
@@ -138,10 +138,13 @@ table MirrorConfig {
     /// Whether or not to automatically monitor the mirror for updates. Required.
     2: bool subscribe;
 
+    // TODO(fxbug.dev/75789): Turn comment below into doc-comment.
+    //
+    // Removed. Previously used for `RepositoryBlobKey blob_key`.
     3: reserved;
 
     /// The URL where blobs from this mirror should be fetched.  Optional.
-    /// Defaults to `mirror_url + "/blobs"`.
+    /// If absent presumed to be `mirror_url + "/blobs"`.
     4: string blob_mirror_url;
 };
 

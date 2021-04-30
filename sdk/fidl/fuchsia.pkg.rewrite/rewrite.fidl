@@ -87,6 +87,7 @@ flexible union Rule {
 /// rewrite engine will rewrite the given URL with the first rule that:
 /// * matches the given URL
 /// * produces a valid URL when applied to the given URL
+///
 /// If no rules match, the URL is resolved as-is.
 ///
 /// This is intended to be implemented by package resolver components,
