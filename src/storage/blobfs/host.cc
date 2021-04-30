@@ -460,11 +460,26 @@ zx_status_t blobfs_create(std::unique_ptr<Blobfs>* out, fbl::unique_fd fd) {
 
   fbl::Array<size_t> extent_lengths(new size_t[kExtentCount], kExtentCount);
 
-  extent_lengths[0] = BlockMapStartBlock(info_block.info) * kBlobfsBlockSize;
-  extent_lengths[1] = BlockMapBlocks(info_block.info) * kBlobfsBlockSize;
-  extent_lengths[2] = NodeMapBlocks(info_block.info) * kBlobfsBlockSize;
-  extent_lengths[3] = JournalBlocks(info_block.info) * kBlobfsBlockSize;
-  extent_lengths[4] = DataBlocks(info_block.info) * kBlobfsBlockSize;
+  if (info_block.info.flags & kBlobFlagFVM) {
+    // The image is assumed to be a sparse file containing an FVM-formatted blobfs image with the
+    // various metadata regions at their correct offsets. We just consider the "length" of each
+    // extent to be the maximum possible length (i.e.  the number of blocks up to the offset of the
+    // next region).
+    extent_lengths[0] = BlockMapStartBlock(info_block.info) * kBlobfsBlockSize;
+    extent_lengths[1] = (NodeMapStartBlock(info_block.info) - BlockMapStartBlock(info_block.info)) *
+                        kBlobfsBlockSize;
+    extent_lengths[2] = (JournalStartBlock(info_block.info) - NodeMapStartBlock(info_block.info)) *
+                        kBlobfsBlockSize;
+    extent_lengths[3] =
+        (DataStartBlock(info_block.info) - JournalStartBlock(info_block.info)) * kBlobfsBlockSize;
+    extent_lengths[4] = DataBlocks(info_block.info) * kBlobfsBlockSize;
+  } else {
+    extent_lengths[0] = BlockMapStartBlock(info_block.info) * kBlobfsBlockSize;
+    extent_lengths[1] = BlockMapBlocks(info_block.info) * kBlobfsBlockSize;
+    extent_lengths[2] = NodeMapBlocks(info_block.info) * kBlobfsBlockSize;
+    extent_lengths[3] = JournalBlocks(info_block.info) * kBlobfsBlockSize;
+    extent_lengths[4] = DataBlocks(info_block.info) * kBlobfsBlockSize;
+  }
 
   if ((status = Blobfs::Create(std::move(fd), 0, info_block, extent_lengths, out)) != ZX_OK) {
     FX_LOGS(ERROR) << "mount failed; could not create blobfs";
