@@ -6,7 +6,9 @@
 # See [this document](https://android.googlesource.com/platform/external/avb/+/HEAD/README.md)
 # for more information.
 
+import("//build/testing/verify_files_match.gni")
 import("//build/zircon/tools.gni")
+import("//src/developer/ffx/build/ffx_action.gni")
 
 declare_args() {
   # If true, then a vbmeta image will be generated for provided ZBI
@@ -111,7 +113,10 @@ template("vbmeta") {
     }
   }
 
-  action("${target_name}__vb_desc") {
+  target_name_avbtool = "${target_name}.avbtool"
+  output_file_avbtool = "${output_file}.avbtool"
+
+  action("${target_name_avbtool}__vb_desc") {
     # TODO(fxbug.dev/69047): This is a "stamping" action, figure out how to
     # handle this class of actions.
     hermetic_deps = false
@@ -148,7 +153,7 @@ template("vbmeta") {
     ]
   }
 
-  action(target_name) {
+  action(target_name_avbtool) {
     script = "//third_party/android/platform/external/avb/avbtool.py"
 
     forward_variables_from(invoker,
@@ -156,7 +161,6 @@ template("vbmeta") {
                              "testonly",
                              "visibility",
                              "deps",
-                             "metadata",
                            ])
 
     deps += [ ":${target_name}__vb_desc" ]
@@ -169,7 +173,7 @@ template("vbmeta") {
       avb_atx_metadata,
       output_vbmeta_desc_file,
     ]
-    outputs = [ output_file ]
+    outputs = [ output_file_avbtool ]
     args = [
       "make_vbmeta_image",
       "--output",  # output of VBMETA image
@@ -197,5 +201,151 @@ template("vbmeta") {
         "zbi:" + rebase_path(output_vbmeta_props_zbi_file, root_build_dir),
       ]
     }
+  }
+
+  base_name = "${target_name}.ffx"
+
+  target_name_ffx = "${base_name}.ffx"
+  output_file_ffx = "${output_file}.ffx"
+
+  salt_action = "${target_name_ffx}.salt"
+  salt_file = "$target_out_dir/$salt_action"
+
+  action(salt_action) {
+    script = "//build/images/assembly/extract_descriptor_fields.py"
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+
+    deps = [ ":$target_name_avbtool" ]
+
+    avbtool = "//third_party/android/platform/external/avb/avbtool.py"
+    args = [
+      "--avbtool",
+      rebase_path(avbtool, root_build_dir),
+      "--vbmeta",
+      rebase_path(output_file_avbtool, root_build_dir),
+      "--salt-only",
+      "--output",
+      rebase_path(salt_file, root_build_dir),
+    ]
+    inputs = [
+      avbtool,
+      output_file_avbtool,
+    ]
+    outputs = [ salt_file ]
+  }
+
+  additional_descriptor_labels = []
+  foreach(entry, board_extra_vbmeta_images) {
+    extra_vbmeta_filename = get_path_info(entry, "file")
+    descriptor_output_filename =
+        "$target_name_ffx.additional_descriptor.$extra_vbmeta_filename.json"
+    descriptor_output_file = "$target_out_dir/$descriptor_output_filename"
+    additional_descriptor_labels += [ ":$descriptor_output_filename" ]
+
+    action(descriptor_output_filename) {
+      script = "//build/images/assembly/extract_descriptor_fields.py"
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+
+      avbtool = "//third_party/android/platform/external/avb/avbtool.py"
+      args = [
+        "--avbtool",
+        rebase_path(avbtool, root_build_dir),
+        "--vbmeta",
+        rebase_path(entry, root_build_dir),
+        "--output",
+        rebase_path(descriptor_output_file, root_build_dir),
+      ]
+      inputs = [
+        avbtool,
+        entry,
+      ]
+      outputs = [ descriptor_output_file ]
+    }
+  }
+
+  ffx_action(target_name_ffx) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                             "deps",
+                           ])
+
+    deps += [ ":$salt_action" ]
+
+    args = [
+      "--config",
+      "assembly_enabled=true",
+      "assembly",
+      "vbmeta",
+      "sign",
+      "--key",
+      rebase_path(avb_key, root_build_dir),
+      "--key-metadata",
+      rebase_path(avb_atx_metadata, root_build_dir),
+      "--name",
+      "zircon",
+      "--image-path",
+      rebase_path(zbi[0], root_build_dir),
+      "--salt-file",
+      rebase_path(salt_file, root_build_dir),
+      "--output",
+      rebase_path(output_file_ffx, root_build_dir),
+    ]
+    inputs = [
+      avb_key,
+      avb_atx_metadata,
+      zbi[0],
+      salt_file,
+    ]
+
+    foreach(descriptor_target, additional_descriptor_labels) {
+      descriptor_outputs = get_target_outputs(descriptor_target)
+      descriptor_file = descriptor_outputs[0]
+      args += [
+        "--additional-descriptor",
+        rebase_path(descriptor_file, root_build_dir),
+      ]
+      inputs += [ descriptor_file ]
+      deps += [ descriptor_target ]
+    }
+
+    outputs = [ output_file_ffx ]
+  }
+
+  verify_files_match("$target_name.ffx.matches") {
+    forward_variables_from(invoker, [ "testonly" ])
+    deps = [
+      ":$target_name_avbtool",
+      ":$target_name_ffx",
+    ]
+
+    first = output_file_avbtool
+    second = output_file_ffx
+  }
+
+  # the final copy action
+  copy(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                             "deps",
+                             "metadata",
+                           ])
+    deps += [
+      ":$target_name.ffx.matches",
+      ":$target_name_avbtool",
+    ]
+    sources = [ output_file_avbtool ]
+    outputs = [ output_file ]
   }
 }
