@@ -149,14 +149,11 @@ impl InformationRequesting {
         options_to_request: &[v6::OptionCode],
         rng: &mut R,
     ) -> Transition {
-        let options = if options_to_request.is_empty() {
-            Vec::new()
-        } else {
-            vec![v6::DhcpOption::Oro(options_to_request.to_vec())]
-        };
+        let options_array = [v6::DhcpOption::Oro(options_to_request)];
+        let options = if options_to_request.is_empty() { &[][..] } else { &options_array[..] };
 
         let builder =
-            v6::MessageBuilder::new(v6::MessageType::InformationRequest, transaction_id, &options);
+            v6::MessageBuilder::new(v6::MessageType::InformationRequest, transaction_id, options);
         let mut buf = vec![0; builder.bytes_len()];
         let () = builder.serialize(&mut buf);
 
@@ -190,10 +187,10 @@ impl InformationRequesting {
 
         for opt in msg.options() {
             match opt {
-                v6::DhcpOption::InformationRefreshTime(refresh_time) => {
+                v6::ParsedDhcpOption::InformationRefreshTime(refresh_time) => {
                     information_refresh_time = Duration::from_secs(u64::from(refresh_time))
                 }
-                v6::DhcpOption::DnsServers(server_addrs) => dns_servers = Some(server_addrs),
+                v6::ParsedDhcpOption::DnsServers(server_addrs) => dns_servers = Some(server_addrs),
                 // TODO(https://fxbug.dev/48867): emit more actions for other options received.
                 _ => (),
             }
@@ -436,12 +433,12 @@ mod tests {
 
             // Start of information requesting should send a information request and schedule a
             // retransmission timer.
-            let want_options =
-                if options.is_empty() { Vec::new() } else { vec![v6::DhcpOption::Oro(options)] };
+            let want_options_array = [v6::DhcpOption::Oro(&options)];
+            let want_options = if options.is_empty() { &[][..] } else { &want_options_array[..] };
             let builder = v6::MessageBuilder::new(
                 v6::MessageType::InformationRequest,
                 client.transaction_id,
-                &want_options,
+                want_options,
             );
             let mut want_buf = vec![0; builder.bytes_len()];
             let () = builder.serialize(&mut want_buf);
@@ -453,12 +450,12 @@ mod tests {
                 ]
             );
 
-            let dns_servers = vec![std_ip_v6!("ff01::0102"), std_ip_v6!("ff01::0304")];
+            let dns_servers = [std_ip_v6!("ff01::0102"), std_ip_v6!("ff01::0304")];
 
             let test_dhcp_refresh_time = 42u32;
             let options = [
                 v6::DhcpOption::InformationRefreshTime(test_dhcp_refresh_time),
-                v6::DhcpOption::DnsServers(dns_servers.clone()),
+                v6::DhcpOption::DnsServers(&dns_servers),
             ];
             let builder =
                 v6::MessageBuilder::new(v6::MessageType::Reply, client.transaction_id, &options);
@@ -470,10 +467,11 @@ mod tests {
             let actions = client.handle_message_receive(msg);
 
             {
-                let dns_servers = dns_servers.clone();
                 assert_eq!(
                     client.state,
-                    Some(ClientState::InformationReceived(InformationReceived { dns_servers }))
+                    Some(ClientState::InformationReceived(InformationReceived {
+                        dns_servers: dns_servers.to_vec()
+                    }))
                 );
             }
             // Upon receiving a valid reply, client should set up for refresh based on the reply.
@@ -485,7 +483,7 @@ mod tests {
                         ClientTimerType::Refresh,
                         Duration::from_secs(u64::from(test_dhcp_refresh_time)),
                     ),
-                    Action::UpdateDnsServers(dns_servers)
+                    Action::UpdateDnsServers(dns_servers.to_vec())
                 ]
             );
         }

@@ -328,7 +328,7 @@ async fn test_discovered_dhcpv6_dns<E: netemul::Endpoint>(name: &str) -> Result 
 
                     // We only care about DHCPv6 information requests for DNS servers.
                     for opt in msg.options() {
-                        if let v6::DhcpOption::Oro(codes) = opt {
+                        if let v6::ParsedDhcpOption::Oro(codes) = opt {
                             if !codes.contains(&v6::OptionCode::DnsServers) {
                                 return None;
                             }
@@ -369,10 +369,8 @@ async fn test_discovered_dhcpv6_dns<E: netemul::Endpoint>(name: &str) -> Result 
     );
 
     // Send the DHCPv6 reply.
-    let options = [
-        v6::DhcpOption::ServerId(&[]),
-        v6::DhcpOption::DnsServers(vec![std::net::Ipv6Addr::from(DHCPV6_DNS_SERVER.addr)]),
-    ];
+    let dns_servers = [std::net::Ipv6Addr::from(DHCPV6_DNS_SERVER.addr)];
+    let options = [v6::DhcpOption::ServerId(&[]), v6::DhcpOption::DnsServers(&dns_servers)];
     let builder = v6::MessageBuilder::new(v6::MessageType::Reply, tx_id, &options);
     let ser = builder
         .into_serializer()

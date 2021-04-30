@@ -20,10 +20,11 @@ use {
         mem,
         net::Ipv6Addr,
         slice::Iter,
+        str,
     },
     thiserror::Error,
     uuid::Uuid,
-    zerocopy::{AsBytes, ByteSlice},
+    zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned},
 };
 
 type U16 = zerocopy::U16<NetworkEndian>;
@@ -43,6 +44,8 @@ pub enum ParseError {
     BufferExhausted,
     #[error("failed to parse domain {:?}", _0)]
     DomainParseError(MdnsParseError),
+    #[error("failed to parse UTF8 string: {:?}", _0)]
+    Utf8Error(#[from] str::Utf8Error),
 }
 
 /// A DHCPv6 message type as defined in [RFC 8415, Section 7.3].
@@ -91,15 +94,18 @@ impl TryFrom<u8> for MessageType {
 #[derive(Debug, PartialEq, FromPrimitive, Clone, Copy)]
 #[repr(u8)]
 pub enum OptionCode {
-    // TODO(jayzhuang): add more option codes.
     ClientId = 1,
     ServerId = 2,
+    Iana = 3,
+    IaAddr = 5,
     Oro = 6,
     Preference = 7,
     ElapsedTime = 8,
+    StatusCode = 13,
     DnsServers = 23,
     DomainList = 24,
     InformationRefreshTime = 32,
+    SolMaxRt = 82,
 }
 
 impl From<OptionCode> for u16 {
@@ -122,29 +128,140 @@ impl TryFrom<u16> for OptionCode {
 /// options can be found [here][options].
 ///
 /// [options]: https://www.iana.org/assignments/dhcpv6-parameters/dhcpv6-parameters.xhtml#dhcpv6-parameters-2
+// TODO(https://fxbug.dev/75612): replace `ParsedDhcpOption` and `DhcpOption` with a single type.
 #[allow(missing_docs)]
 #[derive(Debug, PartialEq)]
-pub enum DhcpOption<'a> {
-    // TODO(jayzhuang): add more options.
+pub enum ParsedDhcpOption<'a> {
     // https://tools.ietf.org/html/rfc8415#section-21.2
     ClientId(&'a Duid),
     // https://tools.ietf.org/html/rfc8415#section-21.3
     ServerId(&'a Duid),
+    // https://tools.ietf.org/html/rfc8415#section-21.4
+    // TODO(https://fxbug.dev/74340): add validation; not all option codes can
+    // be present in an IA_NA option.
+    Iana(IanaData<&'a [u8]>),
+    // https://tools.ietf.org/html/rfc8415#section-21.6
+    // TODO(https://fxbug.dev/74340): add validation; not all option codes can
+    // be present in an IA Address option.
+    IaAddr(IaAddrData<&'a [u8]>),
     // https://tools.ietf.org/html/rfc8415#section-21.7
-    // TODO(jayzhuang): add validation, not all option codes can present in ORO.
+    // TODO(https://fxbug.dev/74340): add validation; not all option codes can
+    // be present in an ORO option.
     // See https://www.iana.org/assignments/dhcpv6-parameters/dhcpv6-parameters.xhtml#dhcpv6-parameters-2
     Oro(Vec<OptionCode>),
     // https://tools.ietf.org/html/rfc8415#section-21.8
     Preference(u8),
     // https://tools.ietf.org/html/rfc8415#section-21.9
     ElapsedTime(u16),
+    // https://tools.ietf.org/html/rfc8415#section-21.13
+    StatusCode(U16, &'a str),
     // https://tools.ietf.org/html/rfc8415#section-21.23
     InformationRefreshTime(u32),
+    // https://tools.ietf.org/html/rfc8415#section-21.24
+    SolMaxRt(U32),
     // https://tools.ietf.org/html/rfc3646#section-3
     DnsServers(Vec<Ipv6Addr>),
     // https://tools.ietf.org/html/rfc3646#section-4
     DomainList(Vec<checked::Domain>),
 }
+
+/// An overlay representation of an IA_NA option.
+#[derive(Debug, PartialEq)]
+pub struct IanaData<B: ByteSlice> {
+    header: LayoutVerified<B, IanaHeader>,
+    options: Records<B, ParsedDhcpOptionImpl>,
+}
+
+impl<'a, B: ByteSlice> IanaData<B> {
+    /// Constructs a new `IanaData` from a `ByteSlice`.
+    pub fn new(buf: B) -> Result<Self, ParseError> {
+        let buf_len = buf.len();
+        let (header, options) = LayoutVerified::new_unaligned_from_prefix(buf)
+            .ok_or(ParseError::InvalidOpLen(OptionCode::Iana, buf_len))?;
+        let options = Records::<B, ParsedDhcpOptionImpl>::parse_with_context(options, ())?;
+        Ok(IanaData { header, options })
+    }
+
+    /// Returns the IAID.
+    pub fn iaid(&self) -> u32 {
+        self.header.iaid.get()
+    }
+
+    /// Returns the T1.
+    pub fn t1(&self) -> u32 {
+        self.header.t1.get()
+    }
+
+    /// Returns the T2.
+    pub fn t2(&self) -> u32 {
+        self.header.t2.get()
+    }
+
+    /// Returns an iterator over the options.
+    pub fn iter_options(&'a self) -> impl 'a + Iterator<Item = ParsedDhcpOption<'a>> {
+        self.options.iter()
+    }
+}
+
+/// An overlay for the fixed fields of an IA_NA option.
+#[derive(FromBytes, AsBytes, Unaligned, Debug, PartialEq, Copy, Clone)]
+#[repr(C)]
+pub struct IanaHeader {
+    iaid: U32,
+    t1: U32,
+    t2: U32,
+}
+
+const IANA_HEADER_LEN: usize = 12;
+
+/// An overlay representation of an IA Address option.
+#[derive(Debug, PartialEq)]
+pub struct IaAddrData<B: ByteSlice> {
+    header: LayoutVerified<B, IaAddrHeader>,
+    options: Records<B, ParsedDhcpOptionImpl>,
+}
+
+impl<'a, B: ByteSlice> IaAddrData<B> {
+    /// Constructs a new `IaAddrData` from a `ByteSlice`.
+    pub fn new(buf: B) -> Result<Self, ParseError> {
+        let buf_len = buf.len();
+        let (header, options) = LayoutVerified::new_unaligned_from_prefix(buf)
+            .ok_or(ParseError::InvalidOpLen(OptionCode::IaAddr, buf_len))?;
+        let options = Records::<B, ParsedDhcpOptionImpl>::parse_with_context(options, ())?;
+        Ok(IaAddrData { header, options })
+    }
+
+    /// Returns the address.
+    pub fn addr(&self) -> Ipv6Addr {
+        Ipv6Addr::from(self.header.addr.ipv6_bytes())
+    }
+
+    /// Returns the preferred lifetime.
+    pub fn preferred_lifetime(&self) -> u32 {
+        self.header.preferred_lifetime.get()
+    }
+
+    /// Returns the valid lifetime.
+    pub fn valid_lifetime(&self) -> u32 {
+        self.header.valid_lifetime.get()
+    }
+
+    /// Returns an iterator over the options.
+    pub fn iter_options(&'a self) -> impl 'a + Iterator<Item = ParsedDhcpOption<'a>> {
+        self.options.iter()
+    }
+}
+
+/// An overlay for the fixed fields of an IA Address option.
+#[derive(FromBytes, AsBytes, Unaligned, Debug, PartialEq, Copy, Clone)]
+#[repr(C)]
+pub struct IaAddrHeader {
+    addr: net_types::ip::Ipv6Addr,
+    preferred_lifetime: U32,
+    valid_lifetime: U32,
+}
+
+const IAADDR_HEADER_LEN: usize = 24;
 
 mod checked {
     use std::convert::TryFrom;
@@ -201,56 +318,60 @@ mod checked {
     }
 }
 
+macro_rules! option_to_code {
+    ($option:ident, $($option_name:ident::$variant:tt($($v:tt)*)),*) => {
+        match $option {
+            $($option_name::$variant($($v)*)=>OptionCode::$variant,)*
+        }
+    }
+}
+
+impl ParsedDhcpOption<'_> {
+    /// Returns the corresponding option code for the calling option.
+    pub fn code(&self) -> OptionCode {
+        option_to_code!(
+            self,
+            ParsedDhcpOption::ClientId(_),
+            ParsedDhcpOption::ServerId(_),
+            ParsedDhcpOption::Iana(_),
+            ParsedDhcpOption::IaAddr(_),
+            ParsedDhcpOption::Oro(_),
+            ParsedDhcpOption::Preference(_),
+            ParsedDhcpOption::ElapsedTime(_),
+            ParsedDhcpOption::StatusCode(_, _),
+            ParsedDhcpOption::InformationRefreshTime(_),
+            ParsedDhcpOption::SolMaxRt(_),
+            ParsedDhcpOption::DnsServers(_),
+            ParsedDhcpOption::DomainList(_)
+        )
+    }
+}
+
 /// An ID that uniquely identifies a DHCPv6 client or server, defined in [RFC8415, Section 11].
 ///
 /// [RFC8415, Section 11]: https://tools.ietf.org/html/rfc8415#section-11
 type Duid = [u8];
 
-macro_rules! option_to_code {
-    ($option:ident, $(DhcpOption::$variant:tt($($v:tt)*)),*) => {
-        match $option {
-            $(DhcpOption::$variant($($v)*)=>OptionCode::$variant,)*
-        }
-    }
-}
-
-impl DhcpOption<'_> {
-    /// A helper function that returns the corresponding option code for the calling option.
-    fn code(&self) -> OptionCode {
-        option_to_code!(
-            self,
-            DhcpOption::ClientId(_),
-            DhcpOption::ServerId(_),
-            DhcpOption::Oro(_),
-            DhcpOption::Preference(_),
-            DhcpOption::ElapsedTime(_),
-            DhcpOption::InformationRefreshTime(_),
-            DhcpOption::DnsServers(_),
-            DhcpOption::DomainList(_)
-        )
-    }
-}
-
-/// An implementation of `RecordsImpl` for `DhcpOption`.
+/// An implementation of `RecordsImpl` for `ParsedDhcpOption`.
 ///
-/// Options in DHCPv6 messages are sequential, so they are parsed/serialized
-/// through the APIs provided in [packet::records].
+/// Options in DHCPv6 messages are sequential, so they are parsed through the
+/// APIs provided in [packet::records].
 ///
 /// [packet::records]: https://fuchsia-docs.firebaseapp.com/rust/packet/records/index.html
-#[derive(Debug)]
-struct DhcpOptionsImpl;
+#[derive(Debug, PartialEq)]
+enum ParsedDhcpOptionImpl {}
 
-impl RecordsImplLayout for DhcpOptionsImpl {
+impl RecordsImplLayout for ParsedDhcpOptionImpl {
     type Context = ();
 
     type Error = ParseError;
 }
 
-impl<'a> RecordsImpl<'a> for DhcpOptionsImpl {
-    type Record = DhcpOption<'a>;
+impl<'a> RecordsImpl<'a> for ParsedDhcpOptionImpl {
+    type Record = ParsedDhcpOption<'a>;
 
     /// Tries to parse an option from the beginning of the input buffer. Returns the parsed
-    /// `DhcpOption` and the remaining buffer. If the buffer is malformed, returns a
+    /// `ParsedDhcpOption` and the remaining buffer. If the buffer is malformed, returns a
     /// `ParseError`. Option format as defined in [RFC 8415, Section 21.1]:
     ///
     /// [RFC 8415, Section 21.1]: https://tools.ietf.org/html/rfc8415#section-21.1
@@ -263,10 +384,9 @@ impl<'a> RecordsImpl<'a> for DhcpOptionsImpl {
         }
 
         let opt_code = data.take_obj_front::<U16>().ok_or(ParseError::BufferExhausted)?;
-        let mut opt_val = {
-            let opt_len = data.take_obj_front::<U16>().ok_or(ParseError::BufferExhausted)?;
-            data.take_front(opt_len.get().into()).ok_or(ParseError::BufferExhausted)?
-        };
+        let opt_len = data.take_obj_front::<U16>().ok_or(ParseError::BufferExhausted)?;
+        let opt_len = usize::from(opt_len.get());
+        let mut opt_val = data.take_front(opt_len).ok_or(ParseError::BufferExhausted)?;
 
         let opt_code = match OptionCode::try_from(opt_code.get()) {
             Ok(opt_code) => opt_code,
@@ -282,8 +402,10 @@ impl<'a> RecordsImpl<'a> for DhcpOptionsImpl {
         };
 
         let opt = match opt_code {
-            OptionCode::ClientId => Ok(DhcpOption::ClientId(opt_val)),
-            OptionCode::ServerId => Ok(DhcpOption::ServerId(opt_val)),
+            OptionCode::ClientId => Ok(ParsedDhcpOption::ClientId(opt_val)),
+            OptionCode::ServerId => Ok(ParsedDhcpOption::ServerId(opt_val)),
+            OptionCode::Iana => IanaData::new(opt_val).map(ParsedDhcpOption::Iana),
+            OptionCode::IaAddr => IaAddrData::new(opt_val).map(ParsedDhcpOption::IaAddr),
             OptionCode::Oro => {
                 let options = opt_val
                     // TODO(https://github.com/rust-lang/rust/issues/74985): use slice::as_chunks.
@@ -297,24 +419,41 @@ impl<'a> RecordsImpl<'a> for DhcpOptionsImpl {
                         OptionCode::try_from(u16::from_be_bytes(opt))
                     })
                     .collect::<Result<_, ParseError>>()?;
-                Ok(DhcpOption::Oro(options))
+                Ok(ParsedDhcpOption::Oro(options))
             }
             OptionCode::Preference => match opt_val {
-                &[b] => Ok(DhcpOption::Preference(b)),
+                &[b] => Ok(ParsedDhcpOption::Preference(b)),
                 opt_val => Err(ParseError::InvalidOpLen(OptionCode::Preference, opt_val.len())),
             },
             OptionCode::ElapsedTime => match opt_val {
-                &[b0, b1] => Ok(DhcpOption::ElapsedTime(u16::from_be_bytes([b0, b1]))),
+                &[b0, b1] => Ok(ParsedDhcpOption::ElapsedTime(u16::from_be_bytes([b0, b1]))),
                 opt_val => Err(ParseError::InvalidOpLen(OptionCode::ElapsedTime, opt_val.len())),
             },
+            OptionCode::StatusCode => {
+                let mut opt_val = &mut opt_val;
+                let code = (&mut opt_val)
+                    .take_obj_front::<U16>()
+                    .ok_or(ParseError::InvalidOpLen(OptionCode::StatusCode, opt_val.len()))?;
+                let message = str::from_utf8(opt_val)?;
+                Ok(ParsedDhcpOption::StatusCode(*code, message))
+            }
             OptionCode::InformationRefreshTime => match opt_val {
                 &[b0, b1, b2, b3] => {
-                    Ok(DhcpOption::InformationRefreshTime(u32::from_be_bytes([b0, b1, b2, b3])))
+                    Ok(ParsedDhcpOption::InformationRefreshTime(u32::from_be_bytes([
+                        b0, b1, b2, b3,
+                    ])))
                 }
                 opt_val => {
                     Err(ParseError::InvalidOpLen(OptionCode::InformationRefreshTime, opt_val.len()))
                 }
             },
+            OptionCode::SolMaxRt => {
+                let mut opt_val = &mut opt_val;
+                let sol_max_rt = (&mut opt_val)
+                    .take_obj_front::<U32>()
+                    .ok_or(ParseError::InvalidOpLen(OptionCode::SolMaxRt, opt_val.len()))?;
+                Ok(ParsedDhcpOption::SolMaxRt(*sol_max_rt))
+            }
             OptionCode::DnsServers => {
                 let addresses = opt_val
                     // TODO(https://github.com/rust-lang/rust/issues/74985): use slice::as_chunks.
@@ -328,7 +467,7 @@ impl<'a> RecordsImpl<'a> for DhcpOptionsImpl {
                         Ok(Ipv6Addr::from(opt))
                     })
                     .collect::<Result<_, ParseError>>()?;
-                Ok(DhcpOption::DnsServers(addresses))
+                Ok(ParsedDhcpOption::DnsServers(addresses))
             }
             OptionCode::DomainList => {
                 let mut opt_val = &mut opt_val;
@@ -340,7 +479,7 @@ impl<'a> RecordsImpl<'a> for DhcpOptionsImpl {
                             .to_string(),
                     )?);
                 }
-                Ok(DhcpOption::DomainList(domains))
+                Ok(ParsedDhcpOption::DomainList(domains))
             }
         }?;
 
@@ -362,7 +501,122 @@ fn duid_uuid() -> [u8; 18] {
     duid
 }
 
-impl<'a> RecordsSerializerImpl<'a> for DhcpOptionsImpl {
+/// A serializable DHCPv6 option.
+///
+/// Options that are not found in this type are currently not supported. An exhaustive list of
+/// options can be found [here][options].
+///
+/// [options]: https://www.iana.org/assignments/dhcpv6-parameters/dhcpv6-parameters.xhtml#dhcpv6-parameters-2
+// TODO(https://fxbug.dev/75612): replace `DhcpOption` and `ParsedDhcpOption` with a single type.
+#[allow(missing_docs)]
+#[derive(Debug)]
+pub enum DhcpOption<'a> {
+    // https://tools.ietf.org/html/rfc8415#section-21.2
+    ClientId(&'a Duid),
+    // https://tools.ietf.org/html/rfc8415#section-21.3
+    ServerId(&'a Duid),
+    // https://tools.ietf.org/html/rfc8415#section-21.4
+    // TODO(https://fxbug.dev/74340): add validation; not all option codes can
+    // be present in an IA_NA option.
+    Iana(IanaSerializer<'a>),
+    // https://tools.ietf.org/html/rfc8415#section-21.6
+    // TODO(https://fxbug.dev/74340): add validation; not all option codes can
+    // be present in an IA Address option.
+    IaAddr(IaAddrSerializer<'a>),
+    // https://tools.ietf.org/html/rfc8415#section-21.7
+    // TODO(https://fxbug.dev/74340): add validation; not all option codes can
+    // be present in an ORO option.
+    // See https://www.iana.org/assignments/dhcpv6-parameters/dhcpv6-parameters.xhtml#dhcpv6-parameters-2
+    Oro(&'a [OptionCode]),
+    // https://tools.ietf.org/html/rfc8415#section-21.8
+    Preference(u8),
+    // https://tools.ietf.org/html/rfc8415#section-21.9
+    ElapsedTime(u16),
+    // https://tools.ietf.org/html/rfc8415#section-21.13
+    StatusCode(u16, &'a str),
+    // https://tools.ietf.org/html/rfc8415#section-21.23
+    InformationRefreshTime(u32),
+    // https://tools.ietf.org/html/rfc8415#section-21.24
+    SolMaxRt(u32),
+    // https://tools.ietf.org/html/rfc3646#section-3
+    DnsServers(&'a [Ipv6Addr]),
+    // https://tools.ietf.org/html/rfc3646#section-4
+    DomainList(&'a [checked::Domain]),
+}
+
+/// A serializer for the IA_NA DHCPv6 option.
+#[derive(Debug)]
+pub struct IanaSerializer<'a> {
+    iaid: u32,
+    t1: u32,
+    t2: u32,
+    options: RecordsSerializer<'a, DhcpOptionImpl, DhcpOption<'a>, Iter<'a, DhcpOption<'a>>>,
+}
+
+impl<'a> IanaSerializer<'a> {
+    /// Constructs a new `IanaSerializer`.
+    pub fn new(iaid: u32, t1: u32, t2: u32, options: &'a [DhcpOption<'a>]) -> IanaSerializer<'a> {
+        IanaSerializer { iaid, t1, t2, options: RecordsSerializer::new(options.iter()) }
+    }
+}
+
+/// A serializer for the IA Address DHCPv6 option.
+#[derive(Debug)]
+pub struct IaAddrSerializer<'a> {
+    addr: Ipv6Addr,
+    preferred_lifetime: u32,
+    valid_lifetime: u32,
+    options: RecordsSerializer<'a, DhcpOptionImpl, DhcpOption<'a>, Iter<'a, DhcpOption<'a>>>,
+}
+
+impl<'a> IaAddrSerializer<'a> {
+    /// Constructs a new `IaAddrSerializer`.
+    pub fn new(
+        addr: Ipv6Addr,
+        preferred_lifetime: u32,
+        valid_lifetime: u32,
+        options: &'a [DhcpOption<'a>],
+    ) -> IaAddrSerializer<'a> {
+        IaAddrSerializer {
+            addr,
+            preferred_lifetime,
+            valid_lifetime,
+            options: RecordsSerializer::new(options.iter()),
+        }
+    }
+}
+
+impl DhcpOption<'_> {
+    /// Returns the corresponding option code for the calling option.
+    pub fn code(&self) -> OptionCode {
+        option_to_code!(
+            self,
+            DhcpOption::ClientId(_),
+            DhcpOption::ServerId(_),
+            DhcpOption::Iana(_),
+            DhcpOption::IaAddr(_),
+            DhcpOption::Oro(_),
+            DhcpOption::Preference(_),
+            DhcpOption::ElapsedTime(_),
+            DhcpOption::StatusCode(_, _),
+            DhcpOption::InformationRefreshTime(_),
+            DhcpOption::SolMaxRt(_),
+            DhcpOption::DnsServers(_),
+            DhcpOption::DomainList(_)
+        )
+    }
+}
+
+/// An implementation of `RecordsSerializerImpl` for `DhcpOption`.
+///
+/// Options in DHCPv6 messages are sequential, so they are serialized through
+/// the APIs provided in [packet::records].
+///
+/// [packet::records]: https://fuchsia-docs.firebaseapp.com/rust/packet/records/index.html
+#[derive(Debug)]
+enum DhcpOptionImpl {}
+
+impl<'a> RecordsSerializerImpl<'a> for DhcpOptionImpl {
     type Record = DhcpOption<'a>;
 
     /// Calculates the serialized length of the option based on option format defined in
@@ -377,10 +631,22 @@ impl<'a> RecordsSerializerImpl<'a> for DhcpOptionsImpl {
             DhcpOption::ClientId(duid) | DhcpOption::ServerId(duid) => {
                 u16::try_from(duid.len()).unwrap_or(18).into()
             }
+            DhcpOption::Iana(iana_data) => {
+                u16::try_from(IANA_HEADER_LEN + iana_data.options.records_bytes_len())
+                    .expect("overflows")
+                    .into()
+            }
+            DhcpOption::IaAddr(iaaddr_data) => {
+                u16::try_from(IAADDR_HEADER_LEN + iaaddr_data.options.records_bytes_len())
+                    .expect("overflows")
+                    .into()
+            }
             DhcpOption::Oro(opts) => u16::try_from(2 * opts.len()).unwrap_or(0).into(),
             DhcpOption::Preference(v) => std::mem::size_of_val(v),
             DhcpOption::ElapsedTime(v) => std::mem::size_of_val(v),
+            DhcpOption::StatusCode(v, message) => std::mem::size_of_val(v) + message.len(),
             DhcpOption::InformationRefreshTime(v) => std::mem::size_of_val(v),
+            DhcpOption::SolMaxRt(v) => std::mem::size_of_val(v),
             DhcpOption::DnsServers(recursive_name_servers) => {
                 u16::try_from(16 * recursive_name_servers.len()).unwrap_or(0).into()
             }
@@ -426,15 +692,37 @@ impl<'a> RecordsSerializerImpl<'a> for DhcpOptionsImpl {
                     }
                 }
             }
+            DhcpOption::Iana(IanaSerializer { iaid, t1, t2, options }) => {
+                let len = u16::try_from(IANA_HEADER_LEN + options.records_bytes_len())
+                    .expect("overflows");
+                let () = buf.write_obj_front(&U16::new(len)).expect("buffer is too small");
+                let () = buf.write_obj_front(iaid).expect("buffer is too small");
+                let () = buf.write_obj_front(t1).expect("buffer is too small");
+                let () = buf.write_obj_front(t2).expect("buffer is too small");
+                let () = options.serialize_records(buf);
+            }
+            DhcpOption::IaAddr(IaAddrSerializer {
+                addr,
+                preferred_lifetime,
+                valid_lifetime,
+                options,
+            }) => {
+                let len = u16::try_from(IAADDR_HEADER_LEN + options.records_bytes_len())
+                    .expect("overflows");
+                let () = buf.write_obj_front(&U16::new(len)).expect("buffer is too small");
+                let () = buf.write_obj_front(&addr.octets()).expect("buffer is too small");
+                let () = buf.write_obj_front(preferred_lifetime).expect("buffer is too small");
+                let () = buf.write_obj_front(valid_lifetime).expect("buffer is too small");
+                let () = options.serialize_records(buf);
+            }
             DhcpOption::Oro(requested_opts) => {
-                let empty = Vec::new();
                 let (requested_opts, len) = u16::try_from(2 * requested_opts.len()).map_or_else(
                     |std::num::TryFromIntError { .. }| {
                         // Do not panic, so OROs with size exceeding u16 won't introduce DoS
                         // vulnerability.
-                        (&empty, 0)
+                        (&[][..], 0)
                     },
-                    |len| (requested_opts, len),
+                    |len| (*requested_opts, len),
                 );
                 let () = buf.write_obj_front(&U16::new(len)).expect("buffer is too small");
                 for opt_code in requested_opts.into_iter() {
@@ -448,26 +736,47 @@ impl<'a> RecordsSerializerImpl<'a> for DhcpOptionsImpl {
                 let () = buf.write_obj_front(pref_val).expect("buffer is too small");
             }
             DhcpOption::ElapsedTime(elapsed_time) => {
-                let () = buf.write_obj_front(&U16::new(2)).expect("buffer is too small");
+                let () = buf
+                    .write_obj_front(&U16::new(
+                        mem::size_of_val(elapsed_time).try_into().expect("overflows"),
+                    ))
+                    .expect("buffer is too small");
                 let () =
                     buf.write_obj_front(&U16::new(*elapsed_time)).expect("buffer is too small");
             }
+            DhcpOption::StatusCode(code, message) => {
+                let opt_len = u16::try_from(2 + message.len()).expect("overflows");
+                let () = buf.write_obj_front(&U16::new(opt_len)).expect("buffer is too small");
+                let () = buf.write_obj_front(&U16::new(*code)).expect("buffer is too small");
+                let () = buf.write_obj_front(message.as_bytes()).expect("buffer is too small");
+            }
             DhcpOption::InformationRefreshTime(information_refresh_time) => {
-                let () = buf.write_obj_front(&U16::new(4)).expect("buffer is too small");
+                let () = buf
+                    .write_obj_front(&U16::new(
+                        mem::size_of_val(information_refresh_time).try_into().expect("overflows"),
+                    ))
+                    .expect("buffer is too small");
                 let () = buf
                     .write_obj_front(&U32::new(*information_refresh_time))
-                    .expect("buffer is too smal");
+                    .expect("buffer is too small");
+            }
+            DhcpOption::SolMaxRt(sol_max_rt) => {
+                let () = buf
+                    .write_obj_front(&U16::new(
+                        mem::size_of_val(sol_max_rt).try_into().expect("overflows"),
+                    ))
+                    .expect("buffer is too small");
+                let () = buf.write_obj_front(&U32::new(*sol_max_rt)).expect("buffer is too small");
             }
             DhcpOption::DnsServers(recursive_name_servers) => {
-                let empty = Vec::new();
                 let (recursive_name_servers, len) =
                     u16::try_from(16 * recursive_name_servers.len()).map_or_else(
                         |std::num::TryFromIntError { .. }| {
                             // Do not panic, so DnsServers with size exceeding `u16` won't introduce
                             // DoS vulnerability.
-                            (&empty, 0)
+                            (&[][..], 0)
                         },
-                        |len| (recursive_name_servers, len),
+                        |len| (*recursive_name_servers, len),
                     );
                 let () = buf.write_obj_front(&U16::new(len)).expect("buffer is too small");
                 recursive_name_servers.iter().for_each(|server_addr| {
@@ -476,16 +785,15 @@ impl<'a> RecordsSerializerImpl<'a> for DhcpOptionsImpl {
                 })
             }
             DhcpOption::DomainList(domains) => {
-                let empty = Vec::new();
                 let (domains, len) =
-                    u16::try_from(domains.iter().fold(0, |tot, domain| tot + domain.bytes_len()))
+                    u16::try_from(domains.iter().map(|domain| domain.bytes_len()).sum::<usize>())
                         .map_or_else(
                             |std::num::TryFromIntError { .. }| {
                                 // Do not panic, so DomainList with size exceeding `u16` won't
                                 // introduce DoS vulnerability.
-                                (&empty, 0)
+                                (&[][..], 0)
                             },
-                            |len| (domains, len),
+                            |len| (*domains, len),
                         );
                 let () = buf.write_obj_front(&U16::new(len)).expect("buffer is too small");
                 domains.iter().for_each(|domain| {
@@ -508,7 +816,7 @@ type TransactionId = [u8; 3];
 pub struct Message<'a, B> {
     msg_type: MessageType,
     transaction_id: &'a TransactionId,
-    options: Records<B, DhcpOptionsImpl>,
+    options: Records<B, ParsedDhcpOptionImpl>,
 }
 
 impl<'a, B: ByteSlice> Message<'a, B> {
@@ -523,7 +831,7 @@ impl<'a, B: ByteSlice> Message<'a, B> {
     }
 
     /// Returns an iterator over the options.
-    pub fn options<'b: 'a>(&'b self) -> impl 'b + Iterator<Item = DhcpOption<'a>> {
+    pub fn options<'b: 'a>(&'b self) -> impl 'b + Iterator<Item = ParsedDhcpOption<'a>> {
         self.options.iter()
     }
 }
@@ -545,7 +853,7 @@ impl<'a, B: 'a + ByteSlice> ParsablePacket<B, ()> for Message<'a, B> {
             MessageType::try_from(buf.take_byte_front().ok_or(ParseError::BufferExhausted)?)?;
         let transaction_id =
             buf.take_obj_front::<TransactionId>().ok_or(ParseError::BufferExhausted)?.into_ref();
-        let options = Records::<_, DhcpOptionsImpl>::parse(buf.take_rest_front())?;
+        let options = Records::<_, ParsedDhcpOptionImpl>::parse(buf.take_rest_front())?;
         Ok(Message { msg_type, transaction_id, options })
     }
 }
@@ -559,11 +867,11 @@ impl<'a, B: 'a + ByteSlice> ParsablePacket<B, ()> for Message<'a, B> {
 pub struct MessageBuilder<'a> {
     msg_type: MessageType,
     transaction_id: TransactionId,
-    options: RecordsSerializer<'a, DhcpOptionsImpl, DhcpOption<'a>, Iter<'a, DhcpOption<'a>>>,
+    options: RecordsSerializer<'a, DhcpOptionImpl, DhcpOption<'a>, Iter<'a, DhcpOption<'a>>>,
 }
 
 impl<'a> MessageBuilder<'a> {
-    /// Returns a new `MessageBuilder`.
+    /// Constructs a new `MessageBuilder`.
     pub fn new(
         msg_type: MessageType,
         transaction_id: TransactionId,
@@ -613,29 +921,43 @@ mod tests {
 
     #[test]
     fn test_message_serialization() {
+        let iaaddr_options = [DhcpOption::StatusCode(0, "Success.")];
+        let iana_options = [
+            DhcpOption::Preference(42),
+            DhcpOption::IaAddr(IaAddrSerializer::new(
+                Ipv6Addr::from([0, 1, 2, 3, 4, 5, 6, 107, 108, 109, 110, 111, 212, 213, 214, 215]),
+                0,
+                0,
+                &iaaddr_options,
+            )),
+        ];
+        let dns_servers = [
+            Ipv6Addr::from([0, 1, 2, 3, 4, 5, 6, 107, 108, 109, 110, 111, 212, 213, 214, 215]),
+            Ipv6Addr::from([10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]),
+        ];
+        let domains = [
+            checked::Domain::from_str("fuchsia.dev").expect("failed to construct test domain"),
+            checked::Domain::from_str("www.google.com").expect("failed to construct test domain"),
+        ];
         let options = [
             DhcpOption::ClientId(&[4, 5, 6]),
             DhcpOption::ServerId(&[8]),
-            DhcpOption::Oro(vec![OptionCode::ClientId, OptionCode::ServerId]),
+            DhcpOption::Iana(IanaSerializer::new(0, 0, 0, &iana_options)),
+            DhcpOption::Oro(&[OptionCode::ClientId, OptionCode::ServerId]),
             DhcpOption::Preference(42),
             DhcpOption::ElapsedTime(3600),
+            DhcpOption::StatusCode(0, "Success."),
             DhcpOption::InformationRefreshTime(86400),
-            DhcpOption::DnsServers(vec![
-                Ipv6Addr::from([0, 1, 2, 3, 4, 5, 6, 107, 108, 109, 110, 111, 212, 213, 214, 215]),
-                Ipv6Addr::from([10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]),
-            ]),
-            DhcpOption::DomainList(vec![
-                checked::Domain::from_str("fuchsia.dev").expect("failed to construct test domain"),
-                checked::Domain::from_str("www.google.com")
-                    .expect("failed to construct test domain"),
-            ]),
+            DhcpOption::SolMaxRt(86400),
+            DhcpOption::DnsServers(&dns_servers),
+            DhcpOption::DomainList(&domains),
         ];
         let builder = MessageBuilder::new(MessageType::Solicit, [1, 2, 3], &options);
         let mut buf = vec![0; builder.bytes_len()];
 
         let () = builder.serialize(&mut buf);
 
-        assert_eq!(buf.len(), 112);
+        assert_eq!(buf.len(), 197);
         #[rustfmt::skip]
         assert_eq!(
             buf[..],
@@ -644,10 +966,15 @@ mod tests {
                 1, 2, 3, // transaction id
                 0, 1, 0, 3, 4, 5, 6, // option - client ID
                 0, 2, 0, 1, 8, // option - server ID
+                // option - IA_NA
+                0, 3, 0, 59, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 1, 42,  0, 5, 0, 38, 0, 1, 2, 3, 4, 5, 6, 107, 108, 109, 110, 111, 212, 213, 214, 215, 0, 0, 0, 0, 0, 0, 0, 0, 0, 13, 0, 10, 0, 0, 83, 117, 99, 99, 101, 115, 115, 46,
                 0, 6, 0, 4, 0, 1, 0, 2, // option - ORO
                 0, 7, 0, 1, 42, // option - preference
                 0, 8, 0, 2, 14, 16, // option - elapsed time
-                0, 32, 0, 4, 0, 1, 81, 128, // option - informtion refresh time
+                // option - status code
+                0, 13, 0, 10, 0, 0, 83, 117, 99, 99, 101, 115, 115, 46,
+                0, 32, 0, 4, 0, 1, 81, 128, // option - information refresh time
+                0, 82, 0, 4, 0, 1, 81, 128, // option - SOL_MAX_RT
                 // option - Dns servers
                 0, 23, 0, 32,
                 0, 1, 2, 3, 4, 5, 6, 107, 108, 109, 110, 111, 212, 213, 214, 215,
@@ -662,19 +989,33 @@ mod tests {
 
     #[test]
     fn test_message_serialization_parsing_roundtrip() {
+        let iaaddr_suboptions = [DhcpOption::StatusCode(0, "Success.")];
+        let iana_suboptions = [
+            DhcpOption::Preference(42),
+            DhcpOption::IaAddr(IaAddrSerializer::new(
+                Ipv6Addr::from([0, 1, 2, 3, 4, 5, 6, 107, 108, 109, 110, 111, 212, 213, 214, 215]),
+                0,
+                0,
+                &iaaddr_suboptions,
+            )),
+        ];
+        let dns_servers = [Ipv6Addr::from(0)];
+        let domains = [
+            checked::Domain::from_str("fuchsia.dev").expect("failed to construct test domain"),
+            checked::Domain::from_str("www.google.com").expect("failed to construct test domain"),
+        ];
         let options = [
             DhcpOption::ClientId(&[4, 5, 6]),
             DhcpOption::ServerId(&[8]),
-            DhcpOption::Oro(vec![OptionCode::ClientId, OptionCode::ServerId]),
+            DhcpOption::Iana(IanaSerializer::new(0, 0, 0, &iana_suboptions)),
+            DhcpOption::Oro(&[OptionCode::ClientId, OptionCode::ServerId]),
             DhcpOption::Preference(42),
             DhcpOption::ElapsedTime(3600),
+            DhcpOption::StatusCode(0, "Success."),
             DhcpOption::InformationRefreshTime(86400),
-            DhcpOption::DnsServers(vec![Ipv6Addr::from(0)]),
-            DhcpOption::DomainList(vec![
-                checked::Domain::from_str("fuchsia.dev").expect("failed to construct test domain"),
-                checked::Domain::from_str("www.google.com")
-                    .expect("failed to construct test domain"),
-            ]),
+            DhcpOption::SolMaxRt(86400),
+            DhcpOption::DnsServers(&dns_servers),
+            DhcpOption::DomainList(&domains),
         ];
         let builder = MessageBuilder::new(MessageType::Solicit, [1, 2, 3], &options);
         let mut buf = vec![0; builder.bytes_len()];
@@ -685,6 +1026,29 @@ mod tests {
         assert_eq!(msg.msg_type, MessageType::Solicit);
         assert_eq!(msg.transaction_id, &[1, 2, 3]);
         let got_options: Vec<_> = msg.options.iter().collect();
+
+        let iana_buf = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 1, 42, 0, 5, 0, 38, 0, 1, 2, 3, 4, 5, 6,
+            107, 108, 109, 110, 111, 212, 213, 214, 215, 0, 0, 0, 0, 0, 0, 0, 0, 0, 13, 0, 10, 0,
+            0, 83, 117, 99, 99, 101, 115, 115, 46,
+        ];
+        let options = [
+            ParsedDhcpOption::ClientId(&[4, 5, 6]),
+            ParsedDhcpOption::ServerId(&[8]),
+            ParsedDhcpOption::Iana(IanaData::new(&iana_buf[..]).expect("construction failed")),
+            ParsedDhcpOption::Oro(vec![OptionCode::ClientId, OptionCode::ServerId]),
+            ParsedDhcpOption::Preference(42),
+            ParsedDhcpOption::ElapsedTime(3600),
+            ParsedDhcpOption::StatusCode(U16::new(0), "Success."),
+            ParsedDhcpOption::InformationRefreshTime(86400),
+            ParsedDhcpOption::SolMaxRt(U32::new(86400)),
+            ParsedDhcpOption::DnsServers(vec![Ipv6Addr::from([0; 16])]),
+            ParsedDhcpOption::DomainList(vec![
+                checked::Domain::from_str("fuchsia.dev").expect("failed to construct test domain"),
+                checked::Domain::from_str("www.google.com")
+                    .expect("failed to construct test domain"),
+            ]),
+        ];
         assert_eq!(got_options, options);
     }
 
@@ -715,7 +1079,7 @@ mod tests {
 
     #[test]
     fn test_message_serialization_oro_too_long() {
-        let options = [DhcpOption::Oro(vec![OptionCode::Preference; OVERFLOW_LENGTH])];
+        let options = [DhcpOption::Oro(&[OptionCode::Preference; OVERFLOW_LENGTH][..])];
         let builder = MessageBuilder::new(MessageType::Solicit, [1, 2, 3], &options);
         let mut buf = vec![0; builder.bytes_len()];
         let () = builder.serialize(&mut buf);
@@ -739,13 +1103,13 @@ mod tests {
         let mut buf = [0u8; 6];
         let option = DhcpOption::ElapsedTime(42);
 
-        let () = <DhcpOptionsImpl as RecordsSerializerImpl>::serialize(&mut buf, &option);
+        let () = <DhcpOptionImpl as RecordsSerializerImpl>::serialize(&mut buf, &option);
         assert_eq!(buf, [0, 8, 0, 2, 0, 42]);
 
-        let options = Records::<_, DhcpOptionsImpl>::parse_with_context(&buf[..], ())
+        let options = Records::<_, ParsedDhcpOptionImpl>::parse_with_context(&buf[..], ())
             .expect("parse should succeed");
-        let options: Vec<DhcpOption<'_>> = options.iter().collect();
-        assert_eq!(options[..], [DhcpOption::ElapsedTime(42)]);
+        let options: Vec<ParsedDhcpOption<'_>> = options.iter().collect();
+        assert_eq!(options[..], [ParsedDhcpOption::ElapsedTime(42)]);
     }
 
     #[test]
@@ -805,7 +1169,92 @@ mod tests {
         let mut buf = &buf[..];
         let msg = Message::parse(&mut buf, ()).expect("parse should succeed");
         let got_options: Vec<_> = msg.options.iter().collect();
-        assert_eq!(got_options, [DhcpOption::ClientId(&[4, 5, 6])]);
+        assert_eq!(got_options, [ParsedDhcpOption::ClientId(&[4, 5, 6])]);
+    }
+
+    #[test]
+    fn test_iana_no_suboptions_serialization_parsing_roundtrip() {
+        let mut buf = [0u8; 16];
+        let option = DhcpOption::Iana(IanaSerializer::new(0, 0, 0, &[]));
+
+        let () = <DhcpOptionImpl as RecordsSerializerImpl>::serialize(&mut buf, &option);
+        assert_eq!(buf, [0, 3, 0, 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+
+        let options = Records::<_, ParsedDhcpOptionImpl>::parse_with_context(&buf[..], ())
+            .expect("parse should succeed");
+        let options: Vec<ParsedDhcpOption<'_>> = options.iter().collect();
+        let iana_buf = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        assert_eq!(
+            options[..],
+            [ParsedDhcpOption::Iana(IanaData::new(&iana_buf[..]).expect("construction failed"))]
+        );
+    }
+
+    // IA_NA must have option length >= 12, according to [RFC 8145, Section 21.4].
+    //
+    // [RFC 8145, Section 21.4]: https://tools.ietf.org/html/rfc8415#section-21.4
+    #[test]
+    fn test_iana_invalid_opt_len() {
+        let mut buf = test_buf_with_no_options();
+        buf.extend_from_slice(&[
+            0, 3, // opt code = 3, IA_NA
+            0, 8, // invalid opt length, must be >= 12
+            0, 0, 0, 0, 0, 0, 0, 0,
+        ]);
+        assert_matches!(
+            Message::parse(&mut &buf[..], ()),
+            Err(ParseError::InvalidOpLen(OptionCode::Iana, 8))
+        );
+    }
+
+    #[test]
+    fn test_iaaddr_no_suboptions_serialization_parsing_roundtrip() {
+        let mut buf = [0u8; 28];
+        let option = DhcpOption::IaAddr(IaAddrSerializer::new(
+            Ipv6Addr::from([10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]),
+            0,
+            0,
+            &[],
+        ));
+
+        let () = <DhcpOptionImpl as RecordsSerializerImpl>::serialize(&mut buf, &option);
+        assert_eq!(
+            buf,
+            [
+                0, 5, 0, 24, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 0, 0,
+                0, 0, 0, 0, 0, 0
+            ]
+        );
+
+        let options = Records::<_, ParsedDhcpOptionImpl>::parse_with_context(&buf[..], ())
+            .expect("parse should succeed");
+        let options: Vec<ParsedDhcpOption<'_>> = options.iter().collect();
+        let iaaddr_buf = [
+            10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 0, 0, 0, 0, 0, 0, 0, 0,
+        ];
+        assert_eq!(
+            options[..],
+            [ParsedDhcpOption::IaAddr(
+                IaAddrData::new(&iaaddr_buf[..]).expect("construction failed")
+            )]
+        );
+    }
+
+    // IA Address must have option length >= 24, according to [RFC 8145, Section 21.6].
+    //
+    // [RFC 8145, Section 21.6]: https://tools.ietf.org/html/rfc8415#section-21.6
+    #[test]
+    fn test_iaaddr_invalid_opt_len() {
+        let mut buf = test_buf_with_no_options();
+        buf.extend_from_slice(&[
+            0, 5, // opt code = 5, IA Address
+            0, 8, // invalid opt length, must be >= 24
+            0, 0, 0, 0, 0, 0, 0, 0,
+        ]);
+        assert_matches!(
+            Message::parse(&mut &buf[..], ()),
+            Err(ParseError::InvalidOpLen(OptionCode::IaAddr, 8))
+        );
     }
 
     // Oro must have a even option length, according to [RFC 8415, Section 21.7].
@@ -859,6 +1308,22 @@ mod tests {
         );
     }
 
+    // Status code must have option length >= 2, according to [RFC 8145, Section 21.13].
+    //
+    // [RFC 8145, Section 21.13]: https://tools.ietf.org/html/rfc8415#section-21.13
+    #[test]
+    fn test_status_code_invalid_opt_len() {
+        let mut buf = test_buf_with_no_options();
+        buf.extend_from_slice(&[
+            0, 13, // opt code = 13, status code
+            0, 1, // invalid opt length, must be >= 2
+            0, 0, 0,
+        ]);
+        assert_matches!(
+            Message::parse(&mut &buf[..], ()),
+            Err(ParseError::InvalidOpLen(OptionCode::StatusCode, 1))
+        );
+    }
     // Information refresh time must have option length 4, according to [RFC 8145, Section 21.23].
     //
     // [RFC 8145, Section 21.23]: https://tools.ietf.org/html/rfc8415#section-21.23
@@ -876,6 +1341,22 @@ mod tests {
         );
     }
 
+    // SOL_MAX_RT must have option length 4, according to [RFC 8145, Section 21.24].
+    //
+    // [RFC 8145, Section 21.24]: https://tools.ietf.org/html/rfc8415#section-21.24
+    #[test]
+    fn test_sol_max_rt_invalid_opt_len() {
+        let mut buf = test_buf_with_no_options();
+        buf.extend_from_slice(&[
+            0, 82, // opt code = 82, SOL_MAX_RT
+            0, 3, // invalid opt length, must be 4
+            0, 0, 0,
+        ]);
+        assert_matches!(
+            Message::parse(&mut &buf[..], ()),
+            Err(ParseError::InvalidOpLen(OptionCode::SolMaxRt, 3))
+        );
+    }
     // Option length of Dns servers must be multiples of 16, according to [RFC 3646, Section 3].
     //
     // [RFC 3646, Section 3]: https://tools.ietf.org/html/rfc3646#section-3

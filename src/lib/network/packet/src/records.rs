@@ -65,7 +65,7 @@ impl<T> ParsedRecord<T> {
 ///
 /// `Records` represents a pre-parsed sequence of records whose structure is
 /// enforced by the impl in `R`.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Records<B, R: RecordsImplLayout> {
     bytes: B,
     record_count: usize,

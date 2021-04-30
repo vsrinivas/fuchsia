@@ -816,7 +816,7 @@ mod tests {
                     &server_socket,
                     client_addr,
                     transaction_id,
-                    &[v6::DhcpOption::DnsServers(Vec::new())],
+                    &[v6::DhcpOption::DnsServers(&[])],
                 ))
                 .expect("failed to send test reply");
             assert_matches!(exec.run_until_stalled(&mut test_fut), Poll::Pending);
@@ -825,12 +825,13 @@ mod tests {
             let () = signal_client_to_refresh
                 .try_send(())
                 .expect("failed to signal test client to refresh");
+            let dns_servers = [std_ip_v6!("fe80::1:2")];
             let () = exec
                 .run_singlethreaded(send_reply_with_options(
                     &server_socket,
                     client_addr,
                     transaction_id,
-                    &[v6::DhcpOption::DnsServers(vec![std_ip_v6!("fe80::1:2")])],
+                    &[v6::DhcpOption::DnsServers(&dns_servers)],
                 ))
                 .expect("failed to send test reply");
             let want_servers = vec![create_test_dns_server(
@@ -853,12 +854,13 @@ mod tests {
             let () = signal_client_to_refresh
                 .try_send(())
                 .expect("failed to signal test client to refresh");
+            let dns_servers = [std_ip_v6!("fe80::1:2")];
             let () = exec
                 .run_singlethreaded(send_reply_with_options(
                     &server_socket,
                     client_addr,
                     transaction_id,
-                    &[v6::DhcpOption::DnsServers(vec![std_ip_v6!("fe80::1:2")])],
+                    &[v6::DhcpOption::DnsServers(&dns_servers)],
                 ))
                 .expect("failed to send test reply");
             assert_matches!(exec.run_until_stalled(&mut test_fut), Poll::Pending);
@@ -867,15 +869,13 @@ mod tests {
             let () = signal_client_to_refresh
                 .try_send(())
                 .expect("failed to signal test client to refresh");
+            let dns_servers = [std_ip_v6!("fe80::1:2"), std_ip_v6!("1234::5:6")];
             let () = exec
                 .run_singlethreaded(send_reply_with_options(
                     &server_socket,
                     client_addr,
                     transaction_id,
-                    &[v6::DhcpOption::DnsServers(vec![
-                        std_ip_v6!("fe80::1:2"),
-                        std_ip_v6!("1234::5:6"),
-                    ])],
+                    &[v6::DhcpOption::DnsServers(&dns_servers)],
                 ))
                 .expect("failed to send test reply");
             let want_servers = vec![
@@ -908,7 +908,7 @@ mod tests {
                     &server_socket,
                     client_addr,
                     transaction_id,
-                    &[v6::DhcpOption::DnsServers(Vec::new())],
+                    &[v6::DhcpOption::DnsServers(&[])],
                 ))
                 .expect("failed to send test reply");
             build_test_fut!(test_fut);
@@ -945,11 +945,12 @@ mod tests {
         .await
         .expect("failed to create test client");
 
+        let dns_servers = [std_ip_v6!("fe80::1:2"), std_ip_v6!("1234::5:6")];
         let () = send_reply_with_options(
             &server_socket,
             client_addr,
             transaction_id,
-            &[v6::DhcpOption::DnsServers(vec![std_ip_v6!("fe80::1:2"), std_ip_v6!("1234::5:6")])],
+            &[v6::DhcpOption::DnsServers(&dns_servers)],
         )
         .await
         .expect("failed to send test message");
