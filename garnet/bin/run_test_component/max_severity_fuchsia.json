@@ -278,10 +278,6 @@
         },
         {
             "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/trace_tests#meta/trace_integration_tests.cmx"
-        },
-        {
-            "max_severity": "ERROR",
             "url": "fuchsia-pkg://fuchsia.com/ums-integration-test#meta/ums-integration-test.cmx"
         },
         {

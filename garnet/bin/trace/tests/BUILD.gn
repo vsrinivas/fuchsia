@@ -502,4 +502,9 @@ fuchsia_test_package("trace_tests") {
     ":two_providers_one_engine",
     ":two_providers_two_engines_test_app_component",
   ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
