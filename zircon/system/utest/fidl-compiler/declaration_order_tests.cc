@@ -15,6 +15,7 @@
 #include <fidl/source_file.h>
 #include <zxtest/zxtest.h>
 
+#include "error_test.h"
 #include "test_library.h"
 
 #define DECL_NAME(D) static_cast<const std::string>(D->name.decl_name()).c_str()
@@ -422,7 +423,7 @@ alias #Alias# = uint32;
   }
 }
 
-TEST(DeclarationOrderTest, BitsOrdinalTypeComesFirst) {
+TEST(DeclarationOrderTest, GoodBitsOrdinalTypeComesFirst) {
   for (int i = 0; i < kRepeatTestCount; i++) {
     Namer namer;
     auto source = namer.mangle(R"FIDL(

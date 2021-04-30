@@ -635,7 +635,9 @@ class TypeTemplate {
                            Resource** out_resource) const;
 
  protected:
-  bool Fail(const ErrorDef<const TypeTemplate*>& err, const std::optional<SourceSpan>& span) const;
+  template <typename... Args>
+  bool Fail(const ErrorDef<const TypeTemplate*, Args...>& err,
+            const std::optional<SourceSpan>& span, const Args&... args) const;
   template <typename... Args>
   bool Fail(const ErrorDef<Args...>& err, const Args&... args) const;
 
@@ -962,8 +964,8 @@ class Library {
                                                          types::Nullability nullability,
                                                          fidl::utils::Syntax syntax);
 
-  bool AddConstantDependencies(const Constant* constant, std::set<Decl*>* out_edges);
-  bool DeclDependencies(Decl* decl, std::set<Decl*>* out_edges);
+  bool AddConstantDependencies(const Constant* constant, std::set<const Decl*>* out_edges);
+  bool DeclDependencies(const Decl* decl, std::set<const Decl*>* out_edges);
 
   bool SortDeclarations();
 
@@ -1029,7 +1031,7 @@ class Library {
   template <typename MemberType>
   bool ValidateEnumMembersAndCalcUnknownValue(Enum* enum_decl, MemberType* out_unknown_value);
 
-  void VerifyDeclAttributes(Decl* decl);
+  void VerifyDeclAttributes(const Decl* decl);
   bool VerifyInlineSize(const Struct* decl);
 
  public:
@@ -1068,7 +1070,7 @@ class Library {
 
   // All Decl pointers here are non-null and are owned by the
   // various foo_declarations_.
-  std::vector<Decl*> declaration_order_;
+  std::vector<const Decl*> declaration_order_;
 
  private:
   // TODO(fxbug.dev/7724): Remove when canonicalizing types.
@@ -1207,7 +1209,7 @@ class VerifyAttributesStep : public StepBase {
  public:
   VerifyAttributesStep(Library* library) : StepBase(library) {}
 
-  void ForDecl(Decl* decl) { library_->VerifyDeclAttributes(decl); }
+  void ForDecl(const Decl* decl) { library_->VerifyDeclAttributes(decl); }
 };
 
 // See the comment on Object::Visitor<T> for more details.

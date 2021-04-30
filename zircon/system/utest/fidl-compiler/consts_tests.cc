@@ -791,8 +791,7 @@ library example;
 const FOO uint32 = MAX;
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrFailedConstantLookup);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "MAX");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotResolveConstantValue);
 }
 
 TEST(ConstsTests, BadMaxBoundTestAssignToConstOld) {
@@ -801,8 +800,7 @@ library example;
 
 const uint32 FOO = MAX;
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrFailedConstantLookup);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "MAX");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotResolveConstantValue);
 }
 
 TEST(ConstsTests, BadMaxBoundTestLibraryQualified) {

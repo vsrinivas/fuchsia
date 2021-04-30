@@ -907,9 +907,9 @@ std::ostringstream JSONGenerator::Produce() {
     // transitive dependencies. The backend only needs the declaration order
     // for this specific library.
     std::vector<std::string> declaration_order;
-    for (flat::Decl* decl : library_->declaration_order_) {
+    for (const flat::Decl* decl : library_->declaration_order_) {
       if (decl->kind == flat::Decl::Kind::kStruct) {
-        auto struct_decl = static_cast<flat::Struct*>(decl);
+        auto struct_decl = static_cast<const flat::Struct*>(decl);
         if (struct_decl->is_request_or_response)
           continue;
       }

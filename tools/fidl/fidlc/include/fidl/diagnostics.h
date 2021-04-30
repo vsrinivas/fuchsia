@@ -121,6 +121,12 @@ constexpr ErrorDef ErrNullableUnionMember("Union members cannot be nullable");
 // ---------------------------------------------------------------------------
 // Library::Compile: SortDeclarations
 // ---------------------------------------------------------------------------
+// NOTE: currently, neither of these errors will actually be thrown as part of SortDeclarations,
+// since they will be caught earlier during the compilation process. Specifically,
+// ErrFailedConstantLookup will never be thrown (ErrCannotResolveConstantValue is caught first),
+// and ErrIncludeCycle is thrown as part of the compilation step rather than here.
+// We still keep these errors so that SortDeclarations can work "standalone" and does not depend
+// on whether compilation occurs first. This makes it easier to move/reorder later if needed
 constexpr ErrorDef<flat::Name> ErrFailedConstantLookup("Unable to find the constant named: {}");
 constexpr ErrorDef ErrIncludeCycle("There is an includes-cycle in declarations");
 
@@ -299,8 +305,7 @@ constexpr ErrorDef<const flat::TypeTemplate *> ErrCannotBeParameterized(
     "{} cannot be parametrized");
 constexpr ErrorDef<const flat::TypeTemplate *> ErrCannotHaveSize("{} cannot have size");
 constexpr ErrorDef<const flat::TypeTemplate *> ErrCannotBeNullable("{} cannot be nullable");
-constexpr ErrorDef<flat::Name> ErrHandleSubtypeNotResource(
-    "handle subtype {} is not a defined resource");
+constexpr ErrorDef<> ErrHandleSubtypeNotResource("handle subtype is not a defined resource");
 constexpr ErrorDef<flat::Name> ErrResourceMustBeUint32Derived("resource {} must be uint32");
 constexpr ErrorDef<flat::Name> ErrResourceMissingSubtypeProperty(
     "resource {} expected to have the subtype property, but it was missing");

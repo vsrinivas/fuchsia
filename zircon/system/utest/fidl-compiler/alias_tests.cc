@@ -238,8 +238,7 @@ type Message = struct {
 alias alias_of_vector = vector;
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrMustBeParameterized,
-                                      fidl::ErrCannotParameterizeAlias);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustBeParameterized);
 }
 
 TEST(AliasTests, BadVectorParameterizedOnUseOld) {
@@ -252,8 +251,7 @@ struct Message {
 
 alias alias_of_vector = vector;
 )FIDL");
-  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrMustBeParameterized,
-                                      fidl::ErrCannotParameterizeAlias);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustBeParameterized);
 }
 
 TEST(AliasTests, BadVectorBoundedOnDecl) {
@@ -269,8 +267,7 @@ type Message = struct {
 alias alias_of_vector_max_8 = vector:8;
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrMustBeParameterized,
-                                      fidl::ErrCannotParameterizeAlias);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustBeParameterized);
 }
 
 TEST(AliasTests, BadVectorBoundedOnDeclOld) {
@@ -283,8 +280,7 @@ struct Message {
 
 alias alias_of_vector_max_8 = vector:8;
 )FIDL");
-  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrMustBeParameterized,
-                                      fidl::ErrCannotParameterizeAlias);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustBeParameterized);
 }
 
 TEST(AliasTests, GoodVectorBoundedOnUse) {

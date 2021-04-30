@@ -419,7 +419,7 @@ class TestLibrary final {
 
   const std::vector<std::string>& lints() const { return lints_; }
 
-  const std::vector<fidl::flat::Decl*> declaration_order() const {
+  std::vector<const fidl::flat::Decl*> declaration_order() const {
     return library_->declaration_order_;
   }
 

@@ -5,6 +5,7 @@
 #include <zxtest/zxtest.h>
 
 #include "error_test.h"
+#include "fidl/diagnostics.h"
 #include "test_library.h"
 
 namespace {
@@ -350,6 +351,39 @@ struct MyStruct {
 };
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInlineSizeExceeds64k);
+}
+
+TEST(StructTests, BadMutuallyRecursive) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+type Yin = struct {
+  yang Yang;
+};
+
+type Yang = struct {
+  yin Yin;
+};
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
+}
+
+TEST(StructTests, BadMutuallyRecursiveOld) {
+  TestLibrary library(R"FIDL(
+library example;
+
+struct Yin {
+  Yang yang;
+};
+
+struct Yang {
+  Yin yin;
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
 }
 
 }  // namespace

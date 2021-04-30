@@ -13,6 +13,7 @@ namespace fidl {
 namespace flat {
 
 struct TypeDecl;
+struct Resource;
 
 struct Type : public Object {
   virtual ~Type() {}
@@ -131,13 +132,16 @@ struct StringType final : public Type {
 };
 
 struct HandleType final : public Type {
-  HandleType(const Name& name, uint32_t obj_type, types::HandleSubtype subtype,
-             const HandleRights* rights, types::Nullability nullability)
+  HandleType(const Name& name, Resource* resource_decl, uint32_t obj_type,
+             types::HandleSubtype subtype, const HandleRights* rights,
+             types::Nullability nullability)
       : Type(name, Kind::kHandle, nullability),
+        resource_decl(resource_decl),
         obj_type(obj_type),
         subtype(subtype),
         rights(rights) {}
 
+  Resource* resource_decl;
   const uint32_t obj_type;
   const types::HandleSubtype subtype;
   const HandleRights* rights;

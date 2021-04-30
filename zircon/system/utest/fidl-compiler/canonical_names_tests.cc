@@ -8,6 +8,7 @@
 #include <zxtest/zxtest.h>
 
 #include "error_test.h"
+#include "fidl/diagnostics.h"
 #include "test_library.h"
 
 namespace {
@@ -920,11 +921,7 @@ TEST(CanonicalNamesTests, BadInconsistentConstSpelling) {
       << "const EXAMPLE bool = " << use_name << ";\n";
     const auto fidl = s.str();
     TestLibrary library(fidl, experimental_flags);
-    ASSERT_FALSE(library.Compile(), "%s", fidl.c_str());
-    const auto& errors = library.errors();
-    ASSERT_EQ(errors.size(), 1, "%s", fidl.c_str());
-    ASSERT_ERR(errors[0], fidl::ErrFailedConstantLookup, "%s", fidl.c_str());
-    ASSERT_SUBSTR(errors[0]->msg.c_str(), use_name, "%s", fidl.c_str());
+    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotResolveConstantValue);
   }
 }
 
@@ -942,11 +939,7 @@ TEST(CanonicalNamesTests, BadInconsistentConstSpellingOld) {
       << "const bool EXAMPLE = " << use_name << ";\n";
     const auto fidl = s.str();
     TestLibrary library(fidl);
-    ASSERT_FALSE(library.Compile(), "%s", fidl.c_str());
-    const auto& errors = library.errors();
-    ASSERT_EQ(errors.size(), 1, "%s", fidl.c_str());
-    ASSERT_ERR(errors[0], fidl::ErrFailedConstantLookup, "%s", fidl.c_str());
-    ASSERT_SUBSTR(errors[0]->msg.c_str(), use_name, "%s", fidl.c_str());
+    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotResolveConstantValue);
   }
 }
 

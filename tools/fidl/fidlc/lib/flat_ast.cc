@@ -363,9 +363,10 @@ const TypeTemplate* Typespace::LookupTemplate(const flat::Name& name) const {
   return nullptr;
 }
 
-bool TypeTemplate::Fail(const ErrorDef<const TypeTemplate*>& err,
-                        const std::optional<SourceSpan>& span) const {
-  reporter_->Report(err, span, this);
+template <typename... Args>
+bool TypeTemplate::Fail(const ErrorDef<const TypeTemplate*, Args...>& err,
+                        const std::optional<SourceSpan>& span, const Args&... args) const {
+  reporter_->Report(err, span, this, args...);
   return false;
 }
 
@@ -396,6 +397,13 @@ bool TypeTemplate::ResolveArgs(const LibraryMediator& lib,
   if (unresolved_args.handle_subtype_identifier || unresolved_args.handle_rights) {
     if (!GetResource(lib, unresolved_args.name, &handle_resource_decl))
       return false;
+    // TODO(fxbug.dev/74909): Once bare handles are disallowed we won't need to
+    // throw this error "at use time" anymore and can move it back into
+    // HandleTypeTemplate::GetResource. At that point, we can also add back some
+    // more helpful data to the error (like the offending type constructor's name
+    // and span) which we don't have access to here.
+    if (!handle_resource_decl)
+      return Fail(ErrHandleSubtypeNotResource);
   }
 
   std::optional<uint32_t> obj_type = std::nullopt;
@@ -614,6 +622,10 @@ class HandleTypeTemplate final : public TypeTemplate {
     if (args->size != nullptr)
       return Fail(ErrCannotHaveSize, args->name.span());
 
+    Resource* handle_resource_decl = nullptr;
+    if (!GetResource(lib, unresolved_args.name, &handle_resource_decl))
+      return false;
+
     // TODO(fxbug.dev/64629): When we are ready to create handle types, we
     // should have an object type (and/or subtype) determined and not require
     // these hardcoded defaults.
@@ -625,8 +637,8 @@ class HandleTypeTemplate final : public TypeTemplate {
     if (handle_rights == nullptr)
       handle_rights = &kSameRights;
 
-    *out_type = std::make_unique<HandleType>(name_, obj_type, handle_subtype, handle_rights,
-                                             args->nullability);
+    *out_type = std::make_unique<HandleType>(name_, handle_resource_decl, obj_type, handle_subtype,
+                                             handle_rights, args->nullability);
     return true;
   }
 
@@ -640,11 +652,10 @@ class HandleTypeTemplate final : public TypeTemplate {
   bool GetResource(const LibraryMediator& lib, const Name& name, Resource** out_resource) const {
     Decl* handle_decl = lib.LookupDeclByName(name);
     if (!handle_decl || handle_decl->kind != Decl::Kind::kResource) {
-      // These errors are not TypeTemplate errors, and so there's no support for them
-      // with TypeTemplate::Fail(). Eventually, these errors will be reported elsewhere;
-      // manually report them for now.
-      reporter_->Report(ErrHandleSubtypeNotResource, name);
-      return false;
+      // TODO(fxbug.dev/74909): We can't error yet, because this may be a bare
+      // `handle` with no constraints applied. Leave out_resource as a nullptr
+      // for the caller to handle and break out early.
+      return true;
     }
 
     auto* resource = static_cast<Resource*>(handle_decl);
@@ -779,10 +790,12 @@ class TypeAliasTypeTemplate final : public TypeTemplate {
     assert(!args->handle_rights);
 
     if (!decl_->compiled) {
-      assert(!decl_->compiling && "TODO(fxbug.dev/35218): Improve support for recursive types.");
+      if (decl_->compiling) {
+        return Fail(ErrIncludeCycle);
+      }
 
       if (!lib.CompileDecl(decl_)) {
-        return Fail(ErrMustBeParameterized, args->name.span());
+        return false;
       }
     }
 
@@ -3044,7 +3057,7 @@ bool Library::ParseNumericLiteral(const raw::NumericLiteral* literal,
   return result == utils::ParseNumericResult::kSuccess;
 }
 
-bool Library::AddConstantDependencies(const Constant* constant, std::set<Decl*>* out_edges) {
+bool Library::AddConstantDependencies(const Constant* constant, std::set<const Decl*>* out_edges) {
   switch (constant->kind) {
     case Constant::Kind::kIdentifier: {
       auto identifier = static_cast<const flat::IdentifierConstant*>(constant);
@@ -3086,22 +3099,60 @@ bool Library::AddConstantDependencies(const Constant* constant, std::set<Decl*>*
 // Notes:
 // - Nullable structs do not require dependency edges since they are boxed via a
 // pointer indirection, and their content placed out-of-line.
-bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
-  std::set<Decl*> edges;
-  auto maybe_add_decl = [this, &edges](const TypeConstructor* type_ctor) {
+bool Library::DeclDependencies(const Decl* decl, std::set<const Decl*>* out_edges) {
+  std::set<const Decl*> edges;
+
+  auto maybe_add_decl = [&edges](const TypeConstructor* type_ctor) {
+    const TypeConstructor* current = type_ctor;
     for (;;) {
-      const auto& name = type_ctor->name;
-      if (name.decl_name() == "request") {
+      if (current->from_type_alias) {
+        assert(!current->maybe_arg_type_ctor &&
+               "Compiler bug: partial aliases should be disallowed");
+        edges.insert(current->from_type_alias->decl);
         return;
-      } else if (type_ctor->maybe_arg_type_ctor) {
-        type_ctor = type_ctor->maybe_arg_type_ctor.get();
-      } else if (type_ctor->nullability == types::Nullability::kNullable) {
+      }
+
+      const Type* type = current->type;
+      if (current->nullability == types::Nullability::kNullable)
         return;
-      } else {
-        if (auto decl = LookupDeclByName(name); decl && decl->kind != Decl::Kind::kProtocol) {
-          edges.insert(decl);
+
+      switch (type->kind) {
+        case Type::Kind::kHandle: {
+          auto handle_type = static_cast<const HandleType*>(type);
+          // TODO(fxbug.dev/74909): the only case where resource_decl is nullptr
+          // is when the type constructor is referring to a bare, unconstrained
+          // `handle`, in which case there is no resource definition to depend
+          // on. Once this is disallowed, we can remove this check.
+          if (handle_type->resource_decl) {
+            auto decl = static_cast<const Decl*>(handle_type->resource_decl);
+            edges.insert(decl);
+          }
+          return;
         }
-        return;
+        case Type::Kind::kPrimitive:
+        case Type::Kind::kString:
+        case Type::Kind::kRequestHandle:
+          return;
+        case Type::Kind::kArray:
+        case Type::Kind::kVector: {
+          if (current->maybe_arg_type_ctor) {
+            current = current->maybe_arg_type_ctor.get();
+            break;
+          }
+          // The type_ctor won't have an arg_type_ctor if the type is Bytes.
+          // In that case, just return since there are no edges
+          return;
+        }
+        case Type::Kind::kIdentifier: {
+          // should have been caught above and returned early.
+          assert(type->nullability != types::Nullability::kNullable);
+          auto identifier_type = static_cast<const IdentifierType*>(type);
+          auto decl = static_cast<const Decl*>(identifier_type->type_decl);
+          if (decl->kind != Decl::Kind::kProtocol) {
+            edges.insert(decl);
+          }
+          return;
+        }
       }
     }
   };
@@ -3231,22 +3282,22 @@ struct CmpDeclInLibrary {
 
 bool Library::SortDeclarations() {
   // |degree| is the number of undeclared dependencies for each decl.
-  std::map<Decl*, uint32_t, CmpDeclInLibrary> degrees;
+  std::map<const Decl*, uint32_t, CmpDeclInLibrary> degrees;
   // |inverse_dependencies| records the decls that depend on each decl.
-  std::map<Decl*, std::vector<Decl*>, CmpDeclInLibrary> inverse_dependencies;
-  for (auto& name_and_decl : declarations_) {
-    Decl* decl = name_and_decl.second;
-    std::set<Decl*> deps;
+  std::map<const Decl*, std::vector<const Decl*>, CmpDeclInLibrary> inverse_dependencies;
+  for (const auto& name_and_decl : declarations_) {
+    const Decl* decl = name_and_decl.second;
+    std::set<const Decl*> deps;
     if (!DeclDependencies(decl, &deps))
       return false;
     degrees[decl] = static_cast<uint32_t>(deps.size());
-    for (Decl* dep : deps) {
+    for (const Decl* dep : deps) {
       inverse_dependencies[dep].push_back(decl);
     }
   }
 
   // Start with all decls that have no incoming edges.
-  std::vector<Decl*> decls_without_deps;
+  std::vector<const Decl*> decls_without_deps;
   for (const auto& decl_and_degree : degrees) {
     if (decl_and_degree.second == 0u) {
       decls_without_deps.push_back(decl_and_degree.first);
@@ -3263,7 +3314,7 @@ bool Library::SortDeclarations() {
     // Decrement the incoming degree of all the other decls it
     // points to.
     auto& inverse_deps = inverse_dependencies[decl];
-    for (Decl* inverse_dep : inverse_deps) {
+    for (const Decl* inverse_dep : inverse_deps) {
       uint32_t& degree = degrees[inverse_dep];
       assert(degree != 0u);
       degree -= 1;
@@ -3349,12 +3400,12 @@ bool Library::CompileDecl(Decl* decl) {
   return true;
 }
 
-void Library::VerifyDeclAttributes(Decl* decl) {
+void Library::VerifyDeclAttributes(const Decl* decl) {
   assert(decl->compiled && "verification must happen after compilation of decls");
   auto placement_ok = reporter_->Checkpoint();
   switch (decl->kind) {
     case Decl::Kind::kBits: {
-      auto bits_declaration = static_cast<Bits*>(decl);
+      auto bits_declaration = static_cast<const Bits*>(decl);
       // Attributes: check placement.
       ValidateAttributesPlacement(AttributeSchema::Placement::kBitsDecl,
                                   bits_declaration->attributes.get());
@@ -3369,14 +3420,14 @@ void Library::VerifyDeclAttributes(Decl* decl) {
       break;
     }
     case Decl::Kind::kConst: {
-      auto const_decl = static_cast<Const*>(decl);
+      auto const_decl = static_cast<const Const*>(decl);
       // Attributes: for const declarations, we only check placement.
       ValidateAttributesPlacement(AttributeSchema::Placement::kConstDecl,
                                   const_decl->attributes.get());
       break;
     }
     case Decl::Kind::kEnum: {
-      auto enum_declaration = static_cast<Enum*>(decl);
+      auto enum_declaration = static_cast<const Enum*>(decl);
       // Attributes: check placement.
       ValidateAttributesPlacement(AttributeSchema::Placement::kEnumDecl,
                                   enum_declaration->attributes.get());
@@ -3391,7 +3442,7 @@ void Library::VerifyDeclAttributes(Decl* decl) {
       break;
     }
     case Decl::Kind::kProtocol: {
-      auto protocol_declaration = static_cast<Protocol*>(decl);
+      auto protocol_declaration = static_cast<const Protocol*>(decl);
       // Attributes: check placement.
       ValidateAttributesPlacement(AttributeSchema::Placement::kProtocolDecl,
                                   protocol_declaration->attributes.get());
@@ -3418,7 +3469,7 @@ void Library::VerifyDeclAttributes(Decl* decl) {
       break;
     }
     case Decl::Kind::kResource: {
-      auto resource_declaration = static_cast<Resource*>(decl);
+      auto resource_declaration = static_cast<const Resource*>(decl);
       // Attributes: check placement.
       ValidateAttributesPlacement(AttributeSchema::Placement::kResourceDecl,
                                   resource_declaration->attributes.get());
@@ -3433,7 +3484,7 @@ void Library::VerifyDeclAttributes(Decl* decl) {
       break;
     }
     case Decl::Kind::kService: {
-      auto service_decl = static_cast<Service*>(decl);
+      auto service_decl = static_cast<const Service*>(decl);
       // Attributes: check placement.
       ValidateAttributesPlacement(AttributeSchema::Placement::kServiceDecl,
                                   service_decl->attributes.get());
@@ -3448,7 +3499,7 @@ void Library::VerifyDeclAttributes(Decl* decl) {
       break;
     }
     case Decl::Kind::kStruct: {
-      auto struct_declaration = static_cast<Struct*>(decl);
+      auto struct_declaration = static_cast<const Struct*>(decl);
       // Attributes: check placement.
       ValidateAttributesPlacement(AttributeSchema::Placement::kStructDecl,
                                   struct_declaration->attributes.get());
@@ -3463,7 +3514,7 @@ void Library::VerifyDeclAttributes(Decl* decl) {
       break;
     }
     case Decl::Kind::kTable: {
-      auto table_declaration = static_cast<Table*>(decl);
+      auto table_declaration = static_cast<const Table*>(decl);
       // Attributes: check placement.
       ValidateAttributesPlacement(AttributeSchema::Placement::kTableDecl,
                                   table_declaration->attributes.get());
@@ -3480,7 +3531,7 @@ void Library::VerifyDeclAttributes(Decl* decl) {
       break;
     }
     case Decl::Kind::kUnion: {
-      auto union_declaration = static_cast<Union*>(decl);
+      auto union_declaration = static_cast<const Union*>(decl);
       // Attributes: check placement.
       ValidateAttributesPlacement(AttributeSchema::Placement::kUnionDecl,
                                   union_declaration->attributes.get());
@@ -3497,7 +3548,7 @@ void Library::VerifyDeclAttributes(Decl* decl) {
       break;
     }
     case Decl::Kind::kTypeAlias: {
-      auto type_alias_declaration = static_cast<TypeAlias*>(decl);
+      auto type_alias_declaration = static_cast<const TypeAlias*>(decl);
       // Attributes: check placement.
       ValidateAttributesPlacement(AttributeSchema::Placement::kTypeAliasDecl,
                                   type_alias_declaration->attributes.get());
@@ -3765,7 +3816,7 @@ bool Library::CompileBits(Bits* bits_declaration) {
 bool Library::CompileConst(Const* const_declaration) {
   if (!CompileTypeConstructor(const_declaration->type_ctor.get()))
     return false;
-  const auto* const_type = const_declaration->type_ctor.get()->type;
+  const auto* const_type = const_declaration->type_ctor->type;
   if (!TypeCanBeConst(const_type)) {
     return Fail(ErrInvalidConstantType, *const_declaration, const_type);
   }
@@ -4110,39 +4161,50 @@ bool Library::CompileUnion(Union* union_declaration) {
 }
 
 bool Library::CompileTypeAlias(TypeAlias* type_alias) {
+  if (type_alias->partial_type_ctor->name == type_alias->name)
+    // fidlc's current semantics for cases like `alias foo = foo;` is to
+    // include the LHS in the scope while compiling the RHS. Note that because
+    // of an interaction with a fidlc scoping bug that prevents shadowing builtins,
+    // this means that `alias Recursive = Recursive;` will fail with an includes
+    // cycle error, but e.g. `alias uint32 = uint32;` won't because the user
+    // defined `uint32` fails to shadow the builtin which means that we successfully
+    // resolve the RHS. To avoid inconsistent semantics, we need to manually
+    // catch this case and fail.
+    return Fail(ErrIncludeCycle);
   return CompileTypeConstructor(type_alias->partial_type_ctor.get());
 }
 
 bool Library::Compile() {
-  if (!SortDeclarations()) {
-    return false;
-  }
-
   // We process declarations in topologically sorted order. For
   // example, we process a struct member's type before the entire
   // struct.
   auto compile_step = StartCompileStep();
-  for (Decl* decl : declaration_order_) {
+  for (auto& name_and_decl : declarations_) {
+    Decl* decl = name_and_decl.second;
     compile_step.ForDecl(decl);
   }
   if (!compile_step.Done())
     return false;
 
+  if (!SortDeclarations()) {
+    return false;
+  }
+
   auto verify_resourceness_step = StartVerifyResourcenessStep();
-  for (Decl* decl : declaration_order_) {
+  for (const Decl* decl : declaration_order_) {
     verify_resourceness_step.ForDecl(decl);
   }
   if (!verify_resourceness_step.Done())
     return false;
 
   auto verify_attributes_step = StartVerifyAttributesStep();
-  for (Decl* decl : declaration_order_) {
+  for (const Decl* decl : declaration_order_) {
     verify_attributes_step.ForDecl(decl);
   }
   if (!verify_attributes_step.Done())
     return false;
 
-  for (Decl* decl : declaration_order_) {
+  for (const Decl* decl : declaration_order_) {
     if (decl->kind == Decl::Kind::kStruct) {
       auto struct_decl = static_cast<const Struct*>(decl);
       if (!VerifyInlineSize(struct_decl)) {
@@ -4221,7 +4283,12 @@ bool Library::ResolveHandleRightsConstant(Resource* resource, Constant* constant
     return Fail(ErrResourceRightsPropertyMustReferToBits, resource->name);
   }
 
+  if (!rights_property->type_ctor->type) {
+    if (!CompileTypeConstructor(rights_property->type_ctor.get()))
+      return false;
+  }
   const Type* rights_type = rights_property->type_ctor->type;
+
   if (!ResolveConstant(constant, rights_type))
     return false;
 
@@ -4258,7 +4325,12 @@ bool Library::ResolveHandleSubtypeIdentifier(Resource* resource,
     return Fail(ErrResourceSubtypePropertyMustReferToEnum, resource->name);
   }
 
+  if (!subtype_property->type_ctor->type) {
+    if (!CompileTypeConstructor(subtype_property->type_ctor.get()))
+      return false;
+  }
   const Type* subtype_type = subtype_property->type_ctor->type;
+
   auto* subtype_enum = static_cast<Enum*>(subtype_decl);
   for (const auto& member : subtype_enum->members) {
     if (member.name.data() == handle_subtype_identifier.span()->data()) {
@@ -4306,6 +4378,7 @@ bool Library::ValidateMembers(DeclType* decl, MemberValidator<MemberType> valida
   for (const auto& member : decl->members) {
     assert(member.value != nullptr && "Compiler bug: member value is null!");
 
+    assert(decl->subtype_ctor->type && "Compiler bug: must compile subtype ctor first");
     if (!ResolveConstant(member.value.get(), decl->subtype_ctor->type)) {
       return Fail(ErrCouldNotResolveMember, member.name, std::string(decl_type));
     }
