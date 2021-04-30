@@ -404,7 +404,7 @@ async fn test_dhcp<E: netemul::Endpoint>(
         .map(Ok)
         .try_for_each_concurrent(None, |(_env, dhcpd)| async move {
             let dhcp_server = dhcpd
-                .connect_to_service::<fidl_fuchsia_net_dhcp::Server_Marker>()
+                .connect_to_protocol::<fidl_fuchsia_net_dhcp::Server_Marker>()
                 .context("failed to connect to DHCP server")?;
             dhcp_server
                 .start_serving()

@@ -238,7 +238,7 @@ mod tests {
     use super::*;
     use crate::{Handle, Rights};
     use fidl_fuchsia_kernel as fkernel;
-    use fuchsia_component::client::connect_channel_to_service;
+    use fuchsia_component::client::connect_channel_to_protocol;
 
     #[test]
     fn vmo_deprecated_flags() {
@@ -443,7 +443,7 @@ mod tests {
         assert!(!info.rights.contains(Rights::EXECUTE));
 
         let (client_end, server_end) = Channel::create().unwrap();
-        connect_channel_to_service::<fkernel::VmexResourceMarker>(server_end).unwrap();
+        connect_channel_to_protocol::<fkernel::VmexResourceMarker>(server_end).unwrap();
         let service = fkernel::VmexResourceSynchronousProxy::new(client_end);
         let resource = service.get(Time::INFINITE).expect("couldn't get vmex resource");
         let resource = unsafe { crate::Resource::from(Handle::from_raw(resource.into_raw())) };

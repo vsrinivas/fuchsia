@@ -129,14 +129,6 @@ pub fn new_protocol_connector_in_dir<S: DiscoverableService>(
 }
 
 /// Connect to a FIDL protocol using the provided channel.
-/// Alias to `connect_channel_to_protocol` and exists only to facilitate a soft migration.
-pub fn connect_channel_to_service<S: DiscoverableService>(
-    server_end: zx::Channel,
-) -> Result<(), Error> {
-    connect_channel_to_protocol::<S>(server_end)
-}
-
-/// Connect to a FIDL protocol using the provided channel.
 pub fn connect_channel_to_protocol<S: DiscoverableService>(
     server_end: zx::Channel,
 ) -> Result<(), Error> {
@@ -159,12 +151,6 @@ pub fn connect_channel_to_protocol_at_path(
 ) -> Result<(), Error> {
     fdio::service_connect(&protocol_path, server_end)
         .with_context(|| format!("Error connecting to protocol path: {}", protocol_path))
-}
-
-/// Connect to a FIDL protocol using the application root namespace.
-/// Alias to `connect_to_protocol` and exists only to facilitate a soft migration.
-pub fn connect_to_service<S: DiscoverableService>() -> Result<S::Proxy, Error> {
-    connect_to_protocol::<S>()
 }
 
 /// Connect to a FIDL protocol using the application root namespace.
@@ -471,13 +457,6 @@ impl App {
         let (client_channel, server_channel) = zx::Channel::create()?;
         self.pass_to_protocol::<S>(server_channel)?;
         Ok(S::Proxy::from_channel(fasync::Channel::from_channel(client_channel)?))
-    }
-
-    /// Connect to a protocol provided by the `App`.
-    /// Alias to `connect_to_protocol` and exists only to facilitate a soft migration.
-    #[inline]
-    pub fn connect_to_service<S: DiscoverableService>(&self) -> Result<S::Proxy, Error> {
-        self.connect_to_protocol::<S>()
     }
 
     /// Connect to a protocol provided by the `App`.
