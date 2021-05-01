@@ -271,6 +271,12 @@ template("vbmeta") {
     }
   }
 
+  # TODO(fxbug.dev/75889): Remove these build_args in a separate cleanup pass
+  assert(include_devmgr_config_in_vbmeta == false,
+         "placing the devmgr config in vbmeta is not supported at this time")
+  assert(avb_algorithm == "SHA512_RSA4096",
+         "setting 'avb_algorithm' is not supported at this time")
+
   ffx_action(target_name_ffx) {
     forward_variables_from(invoker,
                            [
@@ -292,7 +298,7 @@ template("vbmeta") {
       "--key-metadata",
       rebase_path(avb_atx_metadata, root_build_dir),
       "--name",
-      "zircon",
+      zvb_partition_name,
       "--image-path",
       rebase_path(zbi[0], root_build_dir),
       "--salt-file",
@@ -321,7 +327,7 @@ template("vbmeta") {
     outputs = [ output_file_ffx ]
   }
 
-  verify_files_match("$target_name.ffx.matches") {
+  verify_files_match("$target_name.avbtool.matches") {
     forward_variables_from(invoker, [ "testonly" ])
     deps = [
       ":$target_name_avbtool",
@@ -342,10 +348,10 @@ template("vbmeta") {
                              "metadata",
                            ])
     deps += [
-      ":$target_name.ffx.matches",
-      ":$target_name_avbtool",
+      ":$target_name.avbtool.matches",
+      ":$target_name_ffx",
     ]
-    sources = [ output_file_avbtool ]
+    sources = [ output_file_ffx ]
     outputs = [ output_file ]
   }
 }
