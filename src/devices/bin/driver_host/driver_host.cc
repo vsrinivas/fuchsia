@@ -675,7 +675,7 @@ void DevhostControllerConnection::HandleRpc(std::unique_ptr<DevhostControllerCon
     // This is expected in test environments where driver_manager has terminated.
     // TODO(fxbug.dev/52627): Support graceful termination.
     LOGF(WARNING, "Disconnected %p from driver_manager", conn.get());
-    exit(1);
+    zx_process_exit(1);
   }
   LOGF(WARNING, "Unexpected signal state %#08x", signal->observed);
   BeginWait(std::move(conn), dispatcher);

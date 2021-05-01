@@ -37,6 +37,7 @@ fuchsia_component("driver-manager-test") {
   deps = [
     "//src/devices/bin/driver_host:driver_host",
     "//src/devices/bin/driver_manager",
+    "//src/devices/bus/drivers/platform",
   ]
 }
 
