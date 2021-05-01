@@ -134,22 +134,34 @@ void Scenic::CreateSessionImmediately(SessionEndpoints endpoints) {
     dispatchers[type_id] = system->CreateCommandDispatcher(session_id, session->event_reporter(),
                                                            session->error_reporter());
   }
-  session->SetCommandDispatchers(std::move(dispatchers));
 
-  FX_CHECK(sessions_.find(session_id) == sessions_.end());
-  sessions_[session_id] = std::move(session);
+  std::vector<fit::function<void(zx_koid_t)>> on_view_created_callbacks;
 
   if (endpoints.has_view_focuser() && endpoints.view_focuser() && view_focuser_registry_) {
     view_focuser_registry_->RegisterViewFocuser(session_id,
                                                 std::move(*endpoints.mutable_view_focuser()));
-  } else if (!endpoints.has_view_focuser() || !endpoints.view_focuser()) {
+  } else if (endpoints.has_view_focuser() && !endpoints.view_focuser()) {
     FX_VLOGS(2) << "Invalid fuchsia.ui.views.Focuser request.";
   } else if (!view_focuser_registry_) {
     FX_LOGS(ERROR) << "Failed to register fuchsia.ui.views.Focuser request.";
   }
 
   // TODO(fxbug.dev/52626): Implement handling for fuchsia.ui.views.ViewRefFocused.
-  // TODO(fxbug.dev/64379): Implement handling for fuchsia.ui.pointer.TouchSource and MouseSource.
+  // TODO(fxbug.dev/64379): Implement handling for fuchsia.ui.pointer.MouseSource.
+  {
+    const auto it = dispatchers.find(System::kGfx);
+    if (it != dispatchers.end()) {
+      it->second->SetOnViewCreated(
+          [callbacks = std::move(on_view_created_callbacks)](zx_koid_t view_ref_koid) {
+            for (auto& callback : callbacks) {
+              callback(view_ref_koid);
+            }
+          });
+    }
+  }
+  session->SetCommandDispatchers(std::move(dispatchers));
+  FX_CHECK(sessions_.find(session_id) == sessions_.end());
+  sessions_[session_id] = std::move(session);
 }
 
 void Scenic::GetDisplayInfo(fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) {

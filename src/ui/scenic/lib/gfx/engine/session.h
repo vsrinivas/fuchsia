@@ -96,6 +96,10 @@ class Session : public CommandDispatcher {
   void EnqueueEvent(::fuchsia::ui::gfx::Event event);
   void EnqueueEvent(::fuchsia::ui::input::InputEvent event);
 
+  void SetOnViewCreated(fit::function<void(zx_koid_t)> on_view_created) override {
+    on_view_created_ = std::move(on_view_created);
+  }
+
   void RegisterBufferCollection(
       uint32_t buffer_collection_id,
       fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token);
@@ -164,6 +168,9 @@ class Session : public CommandDispatcher {
 
   std::unordered_map<uint32_t, BufferCollectionInfo> buffer_collections_;
   std::unordered_map<uint32_t, BufferCollectionInfo> deregistered_buffer_collections_;
+
+  // Should be called with the ViewRef koid when the view is created.
+  fit::function<void(zx_koid_t)> on_view_created_ = nullptr;
 
   fxl::WeakPtrFactory<Session> weak_factory_;  // must be last
 };

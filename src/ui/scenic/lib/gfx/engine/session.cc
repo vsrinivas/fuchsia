@@ -141,6 +141,10 @@ bool Session::SetRootView(fxl::WeakPtr<View> view) {
   }
 
   root_view_ = view;
+  if (on_view_created_) {
+    on_view_created_(root_view_->view_ref_koid());
+  }
+
   return true;
 }
 

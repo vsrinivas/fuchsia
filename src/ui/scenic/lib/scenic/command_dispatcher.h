@@ -22,6 +22,11 @@ class CommandDispatcher {
   virtual void SetDebugName(const std::string& debug_name) = 0;
   virtual void DispatchCommand(fuchsia::ui::scenic::Command command, scheduling::PresentId) = 0;
 
+  // Only implemented by gfx::Session. |on_view_created| should be called with the ViewRef koid
+  // when the View is created.
+  // Does nothing by default.
+  virtual void SetOnViewCreated(fit::function<void(zx_koid_t)> on_view_created) {}
+
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(CommandDispatcher);
 };
