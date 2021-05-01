@@ -9,14 +9,11 @@
 /// match the parse tree defined in command_grammar.rs.
 use {
     crate::{
-        lowlevel::{Command, ExecuteArguments},
+        lowlevel::Command,
         parser::{
             arguments_parser::ArgumentsParser,
             command_grammar::{Grammar, Rule},
-            common::{
-                next_match, next_match_one_of, next_match_option, parse_name, parse_string,
-                ParseError, ParseResult,
-            },
+            common::{next_match, next_match_one_of, parse_name, ParseError, ParseResult},
         },
     },
     pest::{iterators::Pair, Parser},
@@ -24,6 +21,8 @@ use {
 
 static ARGUMENTS_PARSER: ArgumentsParser<Rule> = ArgumentsParser {
     argument: Rule::argument,
+    arguments: Rule::arguments,
+    optional_argument_delimiter: Rule::optional_argument_delimiter,
     argument_list: Rule::argument_list,
     integer: Rule::integer,
     key_value_argument: Rule::key_value_argument,
@@ -71,39 +70,14 @@ fn parse_execute(execute: Pair<'_, Rule>) -> ParseResult<Command, Rule> {
     let name = next_match(&mut execute_elements, Rule::command_name)?;
     let parsed_name = parse_name(name)?;
 
-    let execute_arguments = next_match(&mut execute_elements, Rule::execute_arguments)?;
-    let parsed_execute_arguments = parse_execute_arguments(execute_arguments)?;
+    let delimited_arguments = next_match(&mut execute_elements, Rule::delimited_arguments)?;
+    let parsed_delimited_arguments =
+        ARGUMENTS_PARSER.parse_delimited_arguments(delimited_arguments)?;
 
     Ok(Command::Execute {
         name: parsed_name,
         is_extension: parsed_optional_extension,
-        arguments: parsed_execute_arguments,
-    })
-}
-
-fn parse_execute_arguments(
-    execute_arguments: Pair<'_, Rule>,
-) -> ParseResult<ExecuteArguments, Rule> {
-    let mut execute_arguments_elements = execute_arguments.into_inner();
-
-    let execute_argument_delimiter_option = next_match_option(
-        &mut execute_arguments_elements,
-        Rule::optional_execute_argument_delimiter,
-    )?;
-    let parsed_execute_argument_delimiter_option = match execute_argument_delimiter_option {
-        Some(delimiter) => {
-            let string = parse_string(delimiter)?;
-            (!string.is_empty()).then(|| string)
-        }
-        None => None,
-    };
-
-    let arguments = next_match(&mut execute_arguments_elements, Rule::arguments)?;
-    let parsed_arguments = ARGUMENTS_PARSER.parse_arguments(arguments)?;
-
-    Ok(ExecuteArguments {
-        delimiter: parsed_execute_argument_delimiter_option,
-        arguments: parsed_arguments,
+        arguments: parsed_delimited_arguments,
     })
 }
 

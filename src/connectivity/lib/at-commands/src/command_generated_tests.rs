@@ -111,7 +111,7 @@ fn exec_no_args() {
         lowlevel::Command::Execute {
             name: String::from("TESTEX"),
             is_extension: false,
-            arguments: lowlevel::ExecuteArguments {
+            arguments: lowlevel::DelimitedArguments {
                 delimiter: None,
                 arguments: lowlevel::Arguments::ArgumentList(vec![]),
             },
@@ -128,7 +128,7 @@ fn exec_ext_no_args() {
         lowlevel::Command::Execute {
             name: String::from("TESTEXEXT"),
             is_extension: true,
-            arguments: lowlevel::ExecuteArguments {
+            arguments: lowlevel::DelimitedArguments {
                 delimiter: None,
                 arguments: lowlevel::Arguments::ArgumentList(vec![]),
             },
@@ -145,7 +145,7 @@ fn exec_one_int_arg() {
         lowlevel::Command::Execute {
             name: String::from("TESTEXEXTFI"),
             is_extension: true,
-            arguments: lowlevel::ExecuteArguments {
+            arguments: lowlevel::DelimitedArguments {
                 delimiter: Some(String::from("=")),
                 arguments: lowlevel::Arguments::ArgumentList(vec![
                     lowlevel::Argument::PrimitiveArgument(lowlevel::PrimitiveArgument::Integer(1)),
@@ -164,7 +164,7 @@ fn exec_one_string_arg() {
         lowlevel::Command::Execute {
             name: String::from("TESTEXEXTFS"),
             is_extension: true,
-            arguments: lowlevel::ExecuteArguments {
+            arguments: lowlevel::DelimitedArguments {
                 delimiter: Some(String::from("=")),
                 arguments: lowlevel::Arguments::ArgumentList(vec![
                     lowlevel::Argument::PrimitiveArgument(lowlevel::PrimitiveArgument::String(
@@ -185,7 +185,7 @@ fn exec_nonstandard_delimiter() {
         lowlevel::Command::Execute {
             name: String::from("TESTNSD"),
             is_extension: true,
-            arguments: lowlevel::ExecuteArguments {
+            arguments: lowlevel::DelimitedArguments {
                 delimiter: Some(String::from(">")),
                 arguments: lowlevel::Arguments::ArgumentList(vec![
                     lowlevel::Argument::PrimitiveArgument(lowlevel::PrimitiveArgument::Integer(1)),
@@ -204,7 +204,7 @@ fn exec_no_delimiter() {
         lowlevel::Command::Execute {
             name: String::from("TESTNOD"),
             is_extension: true,
-            arguments: lowlevel::ExecuteArguments {
+            arguments: lowlevel::DelimitedArguments {
                 delimiter: None,
                 arguments: lowlevel::Arguments::ArgumentList(vec![
                     lowlevel::Argument::PrimitiveArgument(lowlevel::PrimitiveArgument::Integer(1)),
@@ -226,7 +226,7 @@ fn exec_one_kv_arg() {
         lowlevel::Command::Execute {
             name: String::from("TESTM"),
             is_extension: true,
-            arguments: lowlevel::ExecuteArguments {
+            arguments: lowlevel::DelimitedArguments {
                 delimiter: Some(String::from("=")),
                 arguments: lowlevel::Arguments::ArgumentList(vec![
                     lowlevel::Argument::KeyValueArgument {
@@ -248,7 +248,7 @@ fn exec_list() {
         lowlevel::Command::Execute {
             name: String::from("TESTL"),
             is_extension: true,
-            arguments: lowlevel::ExecuteArguments {
+            arguments: lowlevel::DelimitedArguments {
                 delimiter: Some(String::from("=")),
                 arguments: lowlevel::Arguments::ArgumentList(vec![
                     lowlevel::Argument::PrimitiveArgument(lowlevel::PrimitiveArgument::Integer(1)),
@@ -268,7 +268,7 @@ fn exec_args() {
         lowlevel::Command::Execute {
             name: String::from("TESTEXEXTFSI"),
             is_extension: true,
-            arguments: lowlevel::ExecuteArguments {
+            arguments: lowlevel::DelimitedArguments {
                 delimiter: Some(String::from("=")),
                 arguments: lowlevel::Arguments::ArgumentList(vec![
                     lowlevel::Argument::PrimitiveArgument(lowlevel::PrimitiveArgument::String(
@@ -290,7 +290,7 @@ fn exec_optional_present() {
         lowlevel::Command::Execute {
             name: String::from("TESTIO"),
             is_extension: true,
-            arguments: lowlevel::ExecuteArguments {
+            arguments: lowlevel::DelimitedArguments {
                 delimiter: Some(String::from("=")),
                 arguments: lowlevel::Arguments::ArgumentList(vec![
                     lowlevel::Argument::PrimitiveArgument(lowlevel::PrimitiveArgument::Integer(1)),
@@ -310,7 +310,7 @@ fn exec_optional_absent() {
         lowlevel::Command::Execute {
             name: String::from("TESTIO"),
             is_extension: true,
-            arguments: lowlevel::ExecuteArguments {
+            arguments: lowlevel::DelimitedArguments {
                 delimiter: Some(String::from("=")),
                 arguments: lowlevel::Arguments::ArgumentList(vec![
                     lowlevel::Argument::PrimitiveArgument(lowlevel::PrimitiveArgument::Integer(1)),
@@ -329,7 +329,7 @@ fn paren_args() {
         lowlevel::Command::Execute {
             name: String::from("TESTP"),
             is_extension: true,
-            arguments: lowlevel::ExecuteArguments {
+            arguments: lowlevel::DelimitedArguments {
                 delimiter: Some(String::from("=")),
                 arguments: lowlevel::Arguments::ParenthesisDelimitedArgumentLists(vec![vec![
                     lowlevel::Argument::PrimitiveArgument(lowlevel::PrimitiveArgument::Integer(1)),
@@ -348,7 +348,7 @@ fn multiple_paren_args() {
         lowlevel::Command::Execute {
             name: String::from("TESTPP"),
             is_extension: true,
-            arguments: lowlevel::ExecuteArguments {
+            arguments: lowlevel::DelimitedArguments {
                 delimiter: Some(String::from("=")),
                 arguments: lowlevel::Arguments::ParenthesisDelimitedArgumentLists(vec![
                     vec![lowlevel::Argument::PrimitiveArgument(
@@ -380,7 +380,7 @@ fn multiple_paren_kv_args() {
         lowlevel::Command::Execute {
             name: String::from("TESTPMPIL"),
             is_extension: true,
-            arguments: lowlevel::ExecuteArguments {
+            arguments: lowlevel::DelimitedArguments {
                 delimiter: Some(String::from("=")),
                 arguments: lowlevel::Arguments::ParenthesisDelimitedArgumentLists(vec![
                     vec![lowlevel::Argument::KeyValueArgument {

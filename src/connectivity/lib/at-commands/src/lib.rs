@@ -10,8 +10,8 @@ mod lowlevel {
 
     pub mod write_to;
 
-    pub use arguments::{Argument, Arguments, PrimitiveArgument};
-    pub use command::{Command, ExecuteArguments};
+    pub use arguments::{Argument, Arguments, DelimitedArguments, PrimitiveArgument};
+    pub use command::Command;
     pub use response::{HardcodedError, Response};
 }
 

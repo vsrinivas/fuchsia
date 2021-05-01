@@ -15,9 +15,10 @@
 /// match the parse tree defined in argument_grammar.rs.
 use {
     crate::{
-        lowlevel::{Argument, Arguments, PrimitiveArgument},
+        lowlevel::{Argument, Arguments, DelimitedArguments, PrimitiveArgument},
         parser::common::{
-            next_match, next_match_one_of, next_match_rep, parse_integer, parse_string, ParseResult,
+            next_match, next_match_one_of, next_match_option, next_match_rep, parse_integer,
+            parse_string, ParseResult,
         },
     },
     pest::{iterators::Pair, RuleType},
@@ -25,6 +26,8 @@ use {
 
 pub struct ArgumentsParser<Rule: RuleType> {
     pub argument: Rule,
+    pub optional_argument_delimiter: Rule,
+    pub arguments: Rule,
     pub argument_list: Rule,
     pub integer: Rule,
     pub key_value_argument: Rule,
@@ -34,13 +37,37 @@ pub struct ArgumentsParser<Rule: RuleType> {
 }
 
 impl<Rule: RuleType> ArgumentsParser<Rule> {
-    pub fn parse_arguments(&self, arguments: Pair<'_, Rule>) -> ParseResult<Arguments, Rule> {
+    pub fn parse_delimited_arguments(
+        &self,
+        delimited_arguments: Pair<'_, Rule>,
+    ) -> ParseResult<DelimitedArguments, Rule> {
+        let mut delimited_arguments_elements = delimited_arguments.into_inner();
+
+        let delimited_argument_delimiter_option =
+            next_match_option(&mut delimited_arguments_elements, self.optional_argument_delimiter)?;
+        let parsed_delimited_argument_delimiter_option = match delimited_argument_delimiter_option {
+            Some(delimiter) => {
+                let string = parse_string(delimiter)?;
+                (!string.is_empty()).then(|| string)
+            }
+            None => None,
+        };
+
+        let arguments = next_match(&mut delimited_arguments_elements, self.arguments)?;
+        let parsed_arguments = self.parse_arguments(arguments)?;
+
+        Ok(DelimitedArguments {
+            delimiter: parsed_delimited_argument_delimiter_option,
+            arguments: parsed_arguments,
+        })
+    }
+
+    fn parse_arguments(&self, arguments: Pair<'_, Rule>) -> ParseResult<Arguments, Rule> {
         let mut arguments_elements = arguments.into_inner();
         let arguments_variant = next_match_one_of(
             &mut arguments_elements,
             vec![self.parenthesized_argument_lists, self.argument_list],
         )?;
-
         let arguments_variant_rule = arguments_variant.as_rule();
         let parsed_arguments = if arguments_variant_rule == self.parenthesized_argument_lists {
             self.parse_parenthesized_argument_lists(arguments_variant)?

@@ -6,8 +6,8 @@
 #![cfg(test)]
 
 use crate::lowlevel::{
-    arguments::{Argument, Arguments, PrimitiveArgument},
-    command::{Command, ExecuteArguments},
+    arguments::{Argument, Arguments, DelimitedArguments, PrimitiveArgument},
+    command::Command,
     write_to::WriteTo,
 };
 
@@ -30,7 +30,7 @@ fn exec_no_args() {
         Command::Execute {
             name: String::from("TEST"),
             is_extension: false,
-            arguments: ExecuteArguments {
+            arguments: DelimitedArguments {
                 delimiter: None,
                 arguments: Arguments::ArgumentList(vec![]),
             },
@@ -46,7 +46,7 @@ fn exec_ext_no_args() {
         Command::Execute {
             name: String::from("TEST"),
             is_extension: true,
-            arguments: ExecuteArguments {
+            arguments: DelimitedArguments {
                 delimiter: None,
                 arguments: Arguments::ArgumentList(vec![]),
             },
@@ -62,7 +62,7 @@ fn exec_one_int_arg() {
         Command::Execute {
             name: String::from("TEST"),
             is_extension: true,
-            arguments: ExecuteArguments {
+            arguments: DelimitedArguments {
                 delimiter: Some(String::from("=")),
                 arguments: Arguments::ArgumentList(vec![Argument::PrimitiveArgument(
                     PrimitiveArgument::Integer(1),
@@ -80,7 +80,7 @@ fn exec_one_int_arg_nonstandard_delimiter() {
         Command::Execute {
             name: String::from("TEST"),
             is_extension: true,
-            arguments: ExecuteArguments {
+            arguments: DelimitedArguments {
                 delimiter: Some(String::from(">")),
                 arguments: Arguments::ArgumentList(vec![Argument::PrimitiveArgument(
                     PrimitiveArgument::Integer(1),
@@ -97,7 +97,7 @@ fn exec_one_string_arg() {
         Command::Execute {
             name: String::from("TEST"),
             is_extension: true,
-            arguments: ExecuteArguments {
+            arguments: DelimitedArguments {
                 delimiter: Some(String::from("=")),
                 arguments: Arguments::ArgumentList(vec![Argument::PrimitiveArgument(
                     PrimitiveArgument::String(String::from("abc")),
@@ -115,7 +115,7 @@ fn exec_one_kv_arg() {
         Command::Execute {
             name: String::from("TEST"),
             is_extension: true,
-            arguments: ExecuteArguments {
+            arguments: DelimitedArguments {
                 delimiter: Some(String::from("=")),
                 arguments: Arguments::ArgumentList(vec![Argument::KeyValueArgument {
                     key: PrimitiveArgument::Integer(1),
@@ -134,7 +134,7 @@ fn exec_args() {
         Command::Execute {
             name: String::from("TEST"),
             is_extension: true,
-            arguments: ExecuteArguments {
+            arguments: DelimitedArguments {
                 delimiter: Some(String::from("=")),
                 arguments: Arguments::ArgumentList(vec![
                     Argument::PrimitiveArgument(PrimitiveArgument::String(String::from("abc"))),
@@ -153,7 +153,7 @@ fn paren_args() {
         Command::Execute {
             name: String::from("TEST"),
             is_extension: true,
-            arguments: ExecuteArguments {
+            arguments: DelimitedArguments {
                 delimiter: Some(String::from("=")),
                 arguments: Arguments::ParenthesisDelimitedArgumentLists(vec![vec![
                     Argument::PrimitiveArgument(PrimitiveArgument::Integer(1)),
@@ -171,7 +171,7 @@ fn multiple_paren_args() {
         Command::Execute {
             name: String::from("TEST"),
             is_extension: true,
-            arguments: ExecuteArguments {
+            arguments: DelimitedArguments {
                 delimiter: Some(String::from("=")),
                 arguments: Arguments::ParenthesisDelimitedArgumentLists(vec![
                     vec![Argument::PrimitiveArgument(PrimitiveArgument::Integer(1))],
@@ -193,7 +193,7 @@ fn multiple_paren_kv_args() {
         Command::Execute {
             name: String::from("TEST"),
             is_extension: true,
-            arguments: ExecuteArguments {
+            arguments: DelimitedArguments {
                 delimiter: Some(String::from("=")),
                 arguments: Arguments::ParenthesisDelimitedArgumentLists(vec![
                     vec![Argument::KeyValueArgument {

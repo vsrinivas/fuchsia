@@ -4,7 +4,7 @@
 
 use codegen_lib::{
     definition::{
-        Argument, Arguments, Command, Definition, ExecuteArguments, PrimitiveType, Type, Variant,
+        Argument, Arguments, Command, Definition, DelimitedArguments, PrimitiveType, Type, Variant,
     },
     parser,
 };
@@ -33,7 +33,7 @@ fn parse_multiple() {
             name: String::from("TESTONE"),
             type_name: None,
             is_extension: true,
-            arguments: ExecuteArguments {
+            arguments: DelimitedArguments {
                 delimiter: None,
                 arguments: Arguments::ArgumentList(vec![]),
             },
@@ -42,7 +42,7 @@ fn parse_multiple() {
             name: String::from("TESTTWO"),
             type_name: None,
             is_extension: true,
-            arguments: ExecuteArguments {
+            arguments: DelimitedArguments {
                 delimiter: None,
                 arguments: Arguments::ArgumentList(vec![]),
             },
@@ -65,7 +65,7 @@ fn exec_no_args() {
             name: String::from("TEST"),
             type_name: None,
             is_extension: false,
-            arguments: ExecuteArguments {
+            arguments: DelimitedArguments {
                 delimiter: None,
                 arguments: Arguments::ArgumentList(vec![]),
             },
@@ -82,7 +82,7 @@ fn exec_with_type_name() {
             name: String::from("TESTN"),
             type_name: Some(String::from("TestName")),
             is_extension: false,
-            arguments: ExecuteArguments {
+            arguments: DelimitedArguments {
                 delimiter: None,
                 arguments: Arguments::ArgumentList(vec![]),
             },
@@ -99,7 +99,7 @@ fn exec_ext_no_args() {
             name: String::from("TEST"),
             type_name: None,
             is_extension: true,
-            arguments: ExecuteArguments {
+            arguments: DelimitedArguments {
                 delimiter: None,
                 arguments: Arguments::ArgumentList(vec![]),
             },
@@ -116,7 +116,7 @@ fn exec_one_arg_no_comma() {
             name: String::from("TEST"),
             type_name: None,
             is_extension: true,
-            arguments: ExecuteArguments {
+            arguments: DelimitedArguments {
                 delimiter: Some(String::from("=")),
                 arguments: Arguments::ArgumentList(vec![Argument {
                     name: String::from("field"),
@@ -136,7 +136,7 @@ fn exec_one_arg_no_with_comma() {
             name: String::from("TEST"),
             type_name: None,
             is_extension: true,
-            arguments: ExecuteArguments {
+            arguments: DelimitedArguments {
                 delimiter: Some(String::from("=")),
                 arguments: Arguments::ArgumentList(vec![Argument {
                     name: String::from("field"),
@@ -156,7 +156,7 @@ fn exec_one_arg_nonstd_delim() {
             name: String::from("TEST"),
             type_name: None,
             is_extension: true,
-            arguments: ExecuteArguments {
+            arguments: DelimitedArguments {
                 delimiter: Some(String::from(">")),
                 arguments: Arguments::ArgumentList(vec![Argument {
                     name: String::from("field"),
@@ -176,7 +176,7 @@ fn exec_one_arg_no_delim() {
             name: String::from("TEST"),
             type_name: None,
             is_extension: true,
-            arguments: ExecuteArguments {
+            arguments: DelimitedArguments {
                 delimiter: None,
                 arguments: Arguments::ArgumentList(vec![Argument {
                     name: String::from("field"),
@@ -196,7 +196,7 @@ fn exec_args_no_comma() {
             name: String::from("TEST"),
             type_name: None,
             is_extension: true,
-            arguments: ExecuteArguments {
+            arguments: DelimitedArguments {
                 delimiter: Some(String::from("=")),
                 arguments: Arguments::ArgumentList(vec![
                     Argument {
@@ -222,7 +222,7 @@ fn exec_args_with_comma() {
             name: String::from("TEST"),
             type_name: None,
             is_extension: true,
-            arguments: ExecuteArguments {
+            arguments: DelimitedArguments {
                 delimiter: Some(String::from("=")),
                 arguments: Arguments::ArgumentList(vec![
                     Argument {
@@ -248,7 +248,7 @@ fn paren_args() {
             name: String::from("TEST"),
             type_name: None,
             is_extension: true,
-            arguments: ExecuteArguments {
+            arguments: DelimitedArguments {
                 delimiter: Some(String::from("=")),
                 arguments: Arguments::ParenthesisDelimitedArgumentLists(vec![vec![Argument {
                     name: String::from("field"),
@@ -268,7 +268,7 @@ fn multiple_paren_args() {
             name: String::from("TEST"),
             type_name: None,
             is_extension: true,
-            arguments: ExecuteArguments {
+            arguments: DelimitedArguments {
                 delimiter: Some(String::from("=")),
                 arguments: Arguments::ParenthesisDelimitedArgumentLists(vec![
                     vec![Argument {
@@ -300,7 +300,7 @@ fn option_type() {
             name: String::from("TEST"),
             type_name: None,
             is_extension: true,
-            arguments: ExecuteArguments {
+            arguments: DelimitedArguments {
                 delimiter: Some(String::from("=")),
                 arguments: Arguments::ArgumentList(vec![Argument {
                     name: String::from("field"),
@@ -319,7 +319,7 @@ fn list_type() {
             name: String::from("TEST"),
             type_name: None,
             is_extension: true,
-            arguments: ExecuteArguments {
+            arguments: DelimitedArguments {
                 delimiter: Some(String::from("=")),
                 arguments: Arguments::ArgumentList(vec![Argument {
                     name: String::from("field"),
@@ -339,7 +339,7 @@ fn map_type() {
             name: String::from("TEST"),
             type_name: None,
             is_extension: true,
-            arguments: ExecuteArguments {
+            arguments: DelimitedArguments {
                 delimiter: Some(String::from("=")),
                 arguments: Arguments::ArgumentList(vec![Argument {
                     name: String::from("field"),
@@ -411,7 +411,10 @@ fn resp_no_args() {
             name: String::from("TEST"),
             type_name: None,
             is_extension: false,
-            arguments: Arguments::ArgumentList(Vec::new()),
+            arguments: DelimitedArguments {
+                delimiter: Some(String::from(":")),
+                arguments: Arguments::ArgumentList(Vec::new()),
+            },
         },
     )
 }
@@ -425,7 +428,10 @@ fn resp_no_args_custom_typename() {
             name: String::from("TESTN"),
             type_name: Some(String::from("TestResponse")),
             is_extension: false,
-            arguments: Arguments::ArgumentList(Vec::new()),
+            arguments: DelimitedArguments {
+                delimiter: Some(String::from(":")),
+                arguments: Arguments::ArgumentList(Vec::new()),
+            },
         },
     )
 }
@@ -439,7 +445,10 @@ fn resp_ext_no_args() {
             name: String::from("TEST"),
             type_name: None,
             is_extension: true,
-            arguments: Arguments::ArgumentList(Vec::new()),
+            arguments: DelimitedArguments {
+                delimiter: Some(String::from(":")),
+                arguments: Arguments::ArgumentList(Vec::new()),
+            },
         },
     )
 }
@@ -453,10 +462,13 @@ fn resp_one_arg_no_comma() {
             name: String::from("TEST"),
             type_name: None,
             is_extension: true,
-            arguments: Arguments::ArgumentList(vec![Argument {
-                name: String::from("field"),
-                typ: Type::PrimitiveType(PrimitiveType::Integer),
-            }]),
+            arguments: DelimitedArguments {
+                delimiter: Some(String::from(":")),
+                arguments: Arguments::ArgumentList(vec![Argument {
+                    name: String::from("field"),
+                    typ: Type::PrimitiveType(PrimitiveType::Integer),
+                }]),
+            },
         },
     )
 }
@@ -470,10 +482,13 @@ fn resp_one_arg_with_comma() {
             name: String::from("TEST"),
             type_name: None,
             is_extension: true,
-            arguments: Arguments::ArgumentList(vec![Argument {
-                name: String::from("field"),
-                typ: Type::PrimitiveType(PrimitiveType::Integer),
-            }]),
+            arguments: DelimitedArguments {
+                delimiter: Some(String::from(":")),
+                arguments: Arguments::ArgumentList(vec![Argument {
+                    name: String::from("field"),
+                    typ: Type::PrimitiveType(PrimitiveType::Integer),
+                }]),
+            },
         },
     )
 }
@@ -487,16 +502,19 @@ fn resp_args_no_comma() {
             name: String::from("TEST"),
             type_name: None,
             is_extension: true,
-            arguments: Arguments::ArgumentList(vec![
-                Argument {
-                    name: String::from("field1"),
-                    typ: Type::PrimitiveType(PrimitiveType::Integer),
-                },
-                Argument {
-                    name: String::from("field2"),
-                    typ: Type::PrimitiveType(PrimitiveType::Integer),
-                },
-            ]),
+            arguments: DelimitedArguments {
+                delimiter: Some(String::from(":")),
+                arguments: Arguments::ArgumentList(vec![
+                    Argument {
+                        name: String::from("field1"),
+                        typ: Type::PrimitiveType(PrimitiveType::Integer),
+                    },
+                    Argument {
+                        name: String::from("field2"),
+                        typ: Type::PrimitiveType(PrimitiveType::Integer),
+                    },
+                ]),
+            },
         },
     )
 }
@@ -510,16 +528,19 @@ fn resp_args_with_comma() {
             name: String::from("TEST"),
             type_name: None,
             is_extension: true,
-            arguments: Arguments::ArgumentList(vec![
-                Argument {
-                    name: String::from("field1"),
-                    typ: Type::PrimitiveType(PrimitiveType::Integer),
-                },
-                Argument {
-                    name: String::from("field2"),
-                    typ: Type::PrimitiveType(PrimitiveType::Integer),
-                },
-            ]),
+            arguments: DelimitedArguments {
+                delimiter: Some(String::from(":")),
+                arguments: Arguments::ArgumentList(vec![
+                    Argument {
+                        name: String::from("field1"),
+                        typ: Type::PrimitiveType(PrimitiveType::Integer),
+                    },
+                    Argument {
+                        name: String::from("field2"),
+                        typ: Type::PrimitiveType(PrimitiveType::Integer),
+                    },
+                ]),
+            },
         },
     )
 }
@@ -533,10 +554,13 @@ fn resp_paren_args() {
             name: String::from("TEST"),
             type_name: None,
             is_extension: true,
-            arguments: Arguments::ParenthesisDelimitedArgumentLists(vec![vec![Argument {
-                name: String::from("field"),
-                typ: Type::PrimitiveType(PrimitiveType::Integer),
-            }]]),
+            arguments: DelimitedArguments {
+                delimiter: Some(String::from(":")),
+                arguments: Arguments::ParenthesisDelimitedArgumentLists(vec![vec![Argument {
+                    name: String::from("field"),
+                    typ: Type::PrimitiveType(PrimitiveType::Integer),
+                }]]),
+            },
         },
     )
 }
@@ -550,22 +574,25 @@ fn resp_paren_multiple_args() {
             name: String::from("TEST"),
             type_name: None,
             is_extension: true,
-            arguments: Arguments::ParenthesisDelimitedArgumentLists(vec![
-                vec![Argument {
-                    name: String::from("field1"),
-                    typ: Type::PrimitiveType(PrimitiveType::Integer),
-                }],
-                vec![
-                    Argument {
-                        name: String::from("field2"),
+            arguments: DelimitedArguments {
+                delimiter: Some(String::from(":")),
+                arguments: Arguments::ParenthesisDelimitedArgumentLists(vec![
+                    vec![Argument {
+                        name: String::from("field1"),
                         typ: Type::PrimitiveType(PrimitiveType::Integer),
-                    },
-                    Argument {
-                        name: String::from("field3"),
-                        typ: Type::PrimitiveType(PrimitiveType::String),
-                    },
-                ],
-            ]),
+                    }],
+                    vec![
+                        Argument {
+                            name: String::from("field2"),
+                            typ: Type::PrimitiveType(PrimitiveType::Integer),
+                        },
+                        Argument {
+                            name: String::from("field3"),
+                            typ: Type::PrimitiveType(PrimitiveType::String),
+                        },
+                    ],
+                ]),
+            },
         },
     )
 }

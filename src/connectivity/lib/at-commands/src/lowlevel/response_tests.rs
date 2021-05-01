@@ -6,7 +6,7 @@
 #![cfg(test)]
 
 use crate::lowlevel::{
-    arguments::{Argument, Arguments, PrimitiveArgument},
+    arguments::{Argument, Arguments, DelimitedArguments, PrimitiveArgument},
     response::{HardcodedError, Response},
     write_to::WriteTo,
 };
@@ -78,7 +78,10 @@ fn no_args() {
         Response::Success {
             name: String::from("TEST"),
             is_extension: false,
-            arguments: Arguments::ArgumentList(vec![]),
+            arguments: DelimitedArguments {
+                delimiter: Some(String::from(":")),
+                arguments: Arguments::ArgumentList(vec![]),
+            },
         },
         cr_lf_delimit("TEST: "),
     )
@@ -91,7 +94,10 @@ fn ext_no_args() {
         Response::Success {
             name: String::from("TEST"),
             is_extension: true,
-            arguments: Arguments::ArgumentList(vec![]),
+            arguments: DelimitedArguments {
+                delimiter: Some(String::from(":")),
+                arguments: Arguments::ArgumentList(vec![]),
+            },
         },
         cr_lf_delimit("+TEST: "),
     )
@@ -104,9 +110,12 @@ fn one_int_arg() {
         Response::Success {
             name: String::from("TEST"),
             is_extension: true,
-            arguments: Arguments::ArgumentList(vec![Argument::PrimitiveArgument(
-                PrimitiveArgument::Integer(1),
-            )]),
+            arguments: DelimitedArguments {
+                delimiter: Some(String::from(":")),
+                arguments: Arguments::ArgumentList(vec![Argument::PrimitiveArgument(
+                    PrimitiveArgument::Integer(1),
+                )]),
+            },
         },
         cr_lf_delimit("+TEST: 1"),
     )
@@ -119,9 +128,12 @@ fn one_string_arg() {
         Response::Success {
             name: String::from("TEST"),
             is_extension: true,
-            arguments: Arguments::ArgumentList(vec![Argument::PrimitiveArgument(
-                PrimitiveArgument::String(String::from("abc")),
-            )]),
+            arguments: DelimitedArguments {
+                delimiter: Some(String::from(":")),
+                arguments: Arguments::ArgumentList(vec![Argument::PrimitiveArgument(
+                    PrimitiveArgument::String(String::from("abc")),
+                )]),
+            },
         },
         cr_lf_delimit("+TEST: abc"),
     )
@@ -134,10 +146,13 @@ fn one_kv_arg() {
         Response::Success {
             name: String::from("TEST"),
             is_extension: true,
-            arguments: Arguments::ArgumentList(vec![Argument::KeyValueArgument {
-                key: PrimitiveArgument::Integer(1),
-                value: PrimitiveArgument::String(String::from("abc")),
-            }]),
+            arguments: DelimitedArguments {
+                delimiter: Some(String::from(":")),
+                arguments: Arguments::ArgumentList(vec![Argument::KeyValueArgument {
+                    key: PrimitiveArgument::Integer(1),
+                    value: PrimitiveArgument::String(String::from("abc")),
+                }]),
+            },
         },
         cr_lf_delimit("+TEST: 1=abc"),
     )
@@ -150,10 +165,13 @@ fn args() {
         Response::Success {
             name: String::from("TEST"),
             is_extension: true,
-            arguments: Arguments::ArgumentList(vec![
-                Argument::PrimitiveArgument(PrimitiveArgument::String(String::from("abc"))),
-                Argument::PrimitiveArgument(PrimitiveArgument::Integer(1)),
-            ]),
+            arguments: DelimitedArguments {
+                delimiter: Some(String::from(":")),
+                arguments: Arguments::ArgumentList(vec![
+                    Argument::PrimitiveArgument(PrimitiveArgument::String(String::from("abc"))),
+                    Argument::PrimitiveArgument(PrimitiveArgument::Integer(1)),
+                ]),
+            },
         },
         cr_lf_delimit("+TEST: abc,1"),
     )
@@ -166,9 +184,12 @@ fn paren_args() {
         Response::Success {
             name: String::from("TEST"),
             is_extension: true,
-            arguments: Arguments::ParenthesisDelimitedArgumentLists(vec![vec![
-                Argument::PrimitiveArgument(PrimitiveArgument::Integer(1)),
-            ]]),
+            arguments: DelimitedArguments {
+                delimiter: Some(String::from(":")),
+                arguments: Arguments::ParenthesisDelimitedArgumentLists(vec![vec![
+                    Argument::PrimitiveArgument(PrimitiveArgument::Integer(1)),
+                ]]),
+            },
         },
         cr_lf_delimit("+TEST: (1)"),
     )
@@ -181,13 +202,16 @@ fn multiple_paren_args() {
         Response::Success {
             name: String::from("TEST"),
             is_extension: true,
-            arguments: Arguments::ParenthesisDelimitedArgumentLists(vec![
-                vec![Argument::PrimitiveArgument(PrimitiveArgument::Integer(1))],
-                vec![
-                    Argument::PrimitiveArgument(PrimitiveArgument::Integer(2)),
-                    Argument::PrimitiveArgument(PrimitiveArgument::String(String::from("abc"))),
-                ],
-            ]),
+            arguments: DelimitedArguments {
+                delimiter: Some(String::from(":")),
+                arguments: Arguments::ParenthesisDelimitedArgumentLists(vec![
+                    vec![Argument::PrimitiveArgument(PrimitiveArgument::Integer(1))],
+                    vec![
+                        Argument::PrimitiveArgument(PrimitiveArgument::Integer(2)),
+                        Argument::PrimitiveArgument(PrimitiveArgument::String(String::from("abc"))),
+                    ],
+                ]),
+            },
         },
         cr_lf_delimit("+TEST: (1)(2,abc)"),
     )
@@ -200,19 +224,22 @@ fn multiple_paren_kv_args() {
         Response::Success {
             name: String::from("TEST"),
             is_extension: true,
-            arguments: Arguments::ParenthesisDelimitedArgumentLists(vec![
-                vec![Argument::KeyValueArgument {
-                    key: PrimitiveArgument::Integer(1),
-                    value: PrimitiveArgument::String(String::from("abc")),
-                }],
-                vec![
-                    Argument::PrimitiveArgument(PrimitiveArgument::Integer(2)),
-                    Argument::KeyValueArgument {
-                        key: PrimitiveArgument::String(String::from("xyz")),
-                        value: PrimitiveArgument::Integer(3),
-                    },
-                ],
-            ]),
+            arguments: DelimitedArguments {
+                delimiter: Some(String::from(":")),
+                arguments: Arguments::ParenthesisDelimitedArgumentLists(vec![
+                    vec![Argument::KeyValueArgument {
+                        key: PrimitiveArgument::Integer(1),
+                        value: PrimitiveArgument::String(String::from("abc")),
+                    }],
+                    vec![
+                        Argument::PrimitiveArgument(PrimitiveArgument::Integer(2)),
+                        Argument::KeyValueArgument {
+                            key: PrimitiveArgument::String(String::from("xyz")),
+                            value: PrimitiveArgument::Integer(3),
+                        },
+                    ],
+                ]),
+            },
         },
         cr_lf_delimit("+TEST: (1=abc)(2,xyz=3)"),
     )

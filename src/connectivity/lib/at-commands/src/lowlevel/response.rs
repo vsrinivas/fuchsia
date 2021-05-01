@@ -26,7 +26,7 @@ pub enum Response {
     /// Error codes used with the +CME ERROR indication.  Described in HFP v1.8 4.34.2
     CmeError(i64),
     /// All other non-error responses.  These are described throughout the HFP v1.8 spec.
-    Success { name: String, is_extension: bool, arguments: arguments::Arguments },
+    Success { name: String, is_extension: bool, arguments: arguments::DelimitedArguments },
     /// Raw bytes to use as a response.  Should only be used for testing and development
     RawBytes(Vec<u8>),
 }
@@ -48,7 +48,6 @@ impl WriteTo for Response {
                     sink.write_all(b"+")?
                 }
                 sink.write_all(name.as_bytes())?;
-                sink.write_all(b": ")?;
                 arguments.write_to(sink)?;
             }
             Response::RawBytes(bytes) => sink.write_all(bytes)?,

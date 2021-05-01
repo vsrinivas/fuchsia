@@ -9,6 +9,31 @@
 
 use {crate::lowlevel::write_to::WriteTo, std::io};
 
+/// An argument list set off from a command or response by a delimiter such as "=" or ":".
+#[derive(Debug, Clone, PartialEq)]
+pub struct DelimitedArguments {
+    /// A string setting off arguments from the command or response.  This is normally `=`
+    /// or ": ", but could be ">" or absent. This latter is currently only in a variants
+    /// of  the `ATD` command, specified in HFP v1.8 4.19.
+    pub delimiter: Option<String>,
+    /// The actual arguments to the execute commmand.
+    pub arguments: Arguments,
+}
+
+impl WriteTo for DelimitedArguments {
+    fn write_to<W: io::Write>(&self, sink: &mut W) -> io::Result<()> {
+        let DelimitedArguments { delimiter, arguments } = self;
+        if let Some(string) = delimiter {
+            if string == ":" {
+                // Hack.  The parser ignores whitespace, but the colon in a response must be followed by a space, so special case this.
+                sink.write_all(": ".as_bytes())?;
+            } else {
+                sink.write_all(string.as_bytes())?;
+            }
+        };
+        arguments.write_to(sink)
+    }
+}
 /// The collection of arguments to a given command or response.
 ///
 /// AT supports multiple different formats, represented here by the different enum

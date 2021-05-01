@@ -14,12 +14,12 @@ command = { read | test | execute }
 
 read =    { "AT" ~ optional_extension ~ command_name ~ "?" }
 test =    { "AT" ~ optional_extension ~ command_name ~ "=?" }
-execute = { "AT" ~ optional_extension ~ command_name ~ execute_arguments? }
-
-execute_arguments = { optional_execute_argument_delimiter ~ arguments }
-optional_execute_argument_delimiter = { ("=" | ">")? }
+execute = { "AT" ~ optional_extension ~ command_name ~ delimited_arguments? }
 
 optional_extension = { "+"? }
+
+delimited_arguments = { optional_argument_delimiter ~ arguments }
+optional_argument_delimiter = { ("=" | ">")? }
 
 arguments = { parenthesized_argument_lists | argument_list }
 parenthesized_argument_lists = { ("(" ~ argument_list ~ ")")+ }

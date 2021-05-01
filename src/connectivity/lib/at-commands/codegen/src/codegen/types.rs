@@ -14,7 +14,7 @@ use {
         error::{Error, Result},
     },
     crate::definition::{
-        Argument, Arguments, Command, Definition, ExecuteArguments, PrimitiveType, Type, Variant,
+        Argument, Arguments, Command, Definition, DelimitedArguments, PrimitiveType, Type, Variant,
     },
     std::collections::HashSet,
     std::io,
@@ -95,14 +95,14 @@ fn codegen_response<W: io::Write>(
     sink: &mut W,
     indent: u64,
     type_name: &str,
-    arguments: &Arguments,
+    arguments: &DelimitedArguments,
 ) -> Result {
     codegen_block(
         sink,
         indent,
         None,
         type_name,
-        |sink, indent| codegen_arguments(sink, indent, arguments),
+        |sink, indent| codegen_delimited_arguments(sink, indent, arguments),
         Some(","),
     )
 }
@@ -152,14 +152,14 @@ fn codegen_execute_command<W: io::Write>(
     sink: &mut W,
     indent: u64,
     type_name: &str,
-    arguments: &ExecuteArguments,
+    arguments: &DelimitedArguments,
 ) -> Result {
     codegen_block(
         sink,
         indent,
         None,
         type_name,
-        |sink, indent| codegen_execute_arguments(sink, indent, arguments),
+        |sink, indent| codegen_delimited_arguments(sink, indent, arguments),
         Some(","),
     )
 }
@@ -172,12 +172,12 @@ fn codegen_test_command<W: io::Write>(sink: &mut W, indent: u64, type_name: &str
     codegen_block(sink, indent, None, type_name, |_sink, _indent| Ok(()), Some(","))
 }
 
-fn codegen_execute_arguments<W: io::Write>(
+fn codegen_delimited_arguments<W: io::Write>(
     sink: &mut W,
     indent: u64,
-    execute_arguments: &ExecuteArguments,
+    execute_arguments: &DelimitedArguments,
 ) -> Result {
-    let ExecuteArguments { delimiter: _, arguments } = execute_arguments;
+    let DelimitedArguments { delimiter: _, arguments } = execute_arguments;
     codegen_arguments(sink, indent, arguments)
 }
 

@@ -22,6 +22,8 @@ use {
 
 static ARGUMENTS_PARSER: ArgumentsParser<Rule> = ArgumentsParser {
     argument: Rule::argument,
+    optional_argument_delimiter: Rule::optional_argument_delimiter,
+    arguments: Rule::arguments,
     argument_list: Rule::argument_list,
     integer: Rule::integer,
     key_value_argument: Rule::key_value_argument,
@@ -100,13 +102,14 @@ fn parse_success(success: Pair<'_, Rule>) -> ParseResult<Response, Rule> {
     let name = next_match(&mut success_elements, Rule::command_name)?;
     let parsed_name = parse_name(name)?;
 
-    let arguments = next_match(&mut success_elements, Rule::arguments)?;
-    let parsed_arguments = ARGUMENTS_PARSER.parse_arguments(arguments)?;
+    let delimited_arguments = next_match(&mut success_elements, Rule::delimited_arguments)?;
+    let parsed_delimited_arguments =
+        ARGUMENTS_PARSER.parse_delimited_arguments(delimited_arguments)?;
 
     Ok(Response::Success {
         name: parsed_name,
         is_extension: parsed_optional_extension,
-        arguments: parsed_arguments,
+        arguments: parsed_delimited_arguments,
     })
 }
 

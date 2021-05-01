@@ -7,8 +7,16 @@ use super::codegen::common::to_initial_capital;
 #[derive(Debug, Clone, PartialEq)]
 pub enum Definition {
     Command(Command),
-    Response { name: String, type_name: Option<String>, is_extension: bool, arguments: Arguments },
-    Enum { name: String, variants: Vec<Variant> },
+    Response {
+        name: String,
+        type_name: Option<String>,
+        is_extension: bool,
+        arguments: DelimitedArguments,
+    },
+    Enum {
+        name: String,
+        variants: Vec<Variant>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -17,7 +25,7 @@ pub enum Command {
         name: String,
         type_name: Option<String>,
         is_extension: bool,
-        arguments: ExecuteArguments,
+        arguments: DelimitedArguments,
     },
     Read {
         name: String,
@@ -48,7 +56,7 @@ impl Command {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct ExecuteArguments {
+pub struct DelimitedArguments {
     pub delimiter: Option<String>,
     pub arguments: Arguments,
 }
@@ -66,6 +74,13 @@ impl Arguments {
             Self::ParenthesisDelimitedArgumentLists(vec) => {
                 vec.is_empty() || vec.into_iter().all(|el| el.is_empty())
             }
+        }
+    }
+
+    pub fn flatten(&self) -> Vec<Argument> {
+        match self {
+            Self::ParenthesisDelimitedArgumentLists(arg_vec_vec) => arg_vec_vec.concat(),
+            Self::ArgumentList(arg_vec) => arg_vec.clone(),
         }
     }
 }

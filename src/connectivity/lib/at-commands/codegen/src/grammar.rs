@@ -15,14 +15,14 @@ command = { "command" ~ optional_type_name ~ "{" ~ ( read | test | execute ) ~ "
 
 read =    { "AT" ~ optional_extension ~ command_name ~ "?" }
 test =    { "AT" ~ optional_extension ~ command_name ~ "=?" }
-execute = { "AT" ~ optional_extension ~ command_name ~ execute_arguments? }
+execute = { "AT" ~ optional_extension ~ command_name ~ delimited_arguments? }
 
-execute_arguments = { optional_execute_argument_delimiter ~ arguments }
-optional_execute_argument_delimiter = { ("=" | ">")? }
+response = { "response" ~ optional_type_name ~ "{" ~ optional_extension ~ command_name ~ delimited_arguments ~ "}" }
 
-response = { "response" ~ optional_type_name ~ "{" ~ optional_extension ~ command_name ~ ":" ~ arguments ~ "}" }
+delimited_arguments = { optional_delimited_argument_delimiter ~ arguments }
+optional_delimited_argument_delimiter = { ("=" | ">" | ":")? }
 
-optional_type_name = { identifier? } 
+optional_type_name = { identifier? }
 
 optional_extension = { "+"? }
 

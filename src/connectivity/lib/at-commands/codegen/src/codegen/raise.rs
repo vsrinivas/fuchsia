@@ -11,7 +11,7 @@ use {
         error::Result,
     },
     crate::definition::{
-        Argument, Arguments, Command, Definition, ExecuteArguments, PrimitiveType, Type,
+        Argument, Arguments, Command, Definition, DelimitedArguments, PrimitiveType, Type,
     },
     std::io,
 };
@@ -81,7 +81,7 @@ fn codegen_command<W: io::Write>(sink: &mut W, indent: u64, command: &Command) -
                 HIGHLEVEL_COMMAND_TYPE,
                 &command.type_name(),
                 *is_extension,
-                None::<&ExecuteArguments>,
+                None::<&DelimitedArguments>,
             )?;
         }
         Command::Test { name, is_extension, .. } => {
@@ -94,7 +94,7 @@ fn codegen_command<W: io::Write>(sink: &mut W, indent: u64, command: &Command) -
                 HIGHLEVEL_COMMAND_TYPE,
                 &command.type_name(),
                 *is_extension,
-                None::<&ExecuteArguments>,
+                None::<&DelimitedArguments>,
             )?;
         }
     };
@@ -156,7 +156,7 @@ fn codegen_responses<W: io::Write>(
     Ok(())
 }
 
-fn codegen_match_branch<W: io::Write, A: CodegenArguments>(
+fn codegen_match_branch<W: io::Write>(
     sink: &mut W,
     indent: u64,
     name: &str,
@@ -165,7 +165,7 @@ fn codegen_match_branch<W: io::Write, A: CodegenArguments>(
     highlevel_type: &str,
     highlevel_variant: &str,
     is_extension: bool,
-    arguments: Option<&A>,
+    arguments: Option<&DelimitedArguments>,
 ) -> Result {
     write_indented!(
         sink,
@@ -177,7 +177,7 @@ fn codegen_match_branch<W: io::Write, A: CodegenArguments>(
     )?;
 
     if let Some(arguments) = arguments {
-        arguments.codegen_arguments_lowlevel_pattern(sink, indent)?;
+        codegen_delimited_arguments_lowlevel_pattern(sink, indent, arguments)?;
     } else {
         write!(sink, ", ..")?;
     }
@@ -188,7 +188,7 @@ fn codegen_match_branch<W: io::Write, A: CodegenArguments>(
         let indent = indent + TABSTOP;
         write_indented!(sink, indent, "name == \"{}\"\n", name)?;
         if let Some(arguments) = arguments {
-            arguments.codegen_arguments_lowlevel_match(sink, indent)?;
+            codegen_delimited_arguments_lowlevel_match(sink, indent, arguments)?;
         }
     }
     write_indented!(sink, indent, "=> {{\n")?;
@@ -198,7 +198,7 @@ fn codegen_match_branch<W: io::Write, A: CodegenArguments>(
         let indent = indent + TABSTOP;
 
         if let Some(arguments) = arguments {
-            arguments.codegen_arguments_extraction(sink, indent)?;
+            codegen_delimited_arguments_extraction(sink, indent, arguments)?;
         }
 
         write_indented!(
@@ -211,7 +211,7 @@ fn codegen_match_branch<W: io::Write, A: CodegenArguments>(
 
         if let Some(arguments) = arguments {
             write_newline(sink)?;
-            arguments.codegen_arguments_highlevel_parameters(sink, indent + TABSTOP)?;
+            codegen_delimited_arguments_highlevel_parameters(sink, indent + TABSTOP, arguments)?;
             write_indent(sink, indent)?;
         }
         write!(sink, "}})\n")?;
@@ -435,138 +435,120 @@ fn codegen_argument_vec_extraction<W: io::Write>(
     Ok(())
 }
 
-/// Specifies how to generate pieces of a match arm for both Arguments and ExecuteArguments.
-trait CodegenArguments {
-    fn codegen_arguments_lowlevel_pattern<W: io::Write>(&self, sink: &mut W, indent: u64)
-        -> Result;
-    fn codegen_arguments_lowlevel_match<W: io::Write>(&self, sink: &mut W, indent: u64) -> Result;
-    fn codegen_arguments_extraction<W: io::Write>(&self, sink: &mut W, indent: u64) -> Result;
-    fn codegen_arguments_highlevel_parameters<W: io::Write>(
-        &self,
-        sink: &mut W,
-        indent: u64,
-    ) -> Result;
+fn codegen_arguments_lowlevel_match<W: io::Write>(
+    sink: &mut W,
+    indent: u64,
+    arguments: &Arguments,
+) -> Result {
+    if !arguments.is_empty() {
+        write_indented!(sink, indent, "&& ")?;
+        match arguments {
+            Arguments::ParenthesisDelimitedArgumentLists(_) => write_no_indent!(
+                sink,
+                " matches!(arguments, lowlevel::Arguments::ParenthesisDelimitedArgumentLists(_))\n"
+            )?,
+            Arguments::ArgumentList(_) => write_no_indent!(
+                sink,
+                " matches!(arguments, lowlevel::Arguments::ArgumentList(_))\n"
+            )?,
+        }
+    };
+
+    Ok(())
 }
 
-impl CodegenArguments for Arguments {
-    fn codegen_arguments_lowlevel_pattern<W: io::Write>(
-        &self,
-        sink: &mut W,
-        _indent: u64,
-    ) -> Result {
-        if !self.is_empty() {
-            write!(sink, ", arguments")?;
-        } else {
-            write!(sink, ", ..")?;
-        }
-        Ok(())
-    }
-
-    fn codegen_arguments_lowlevel_match<W: io::Write>(&self, sink: &mut W, indent: u64) -> Result {
-        if !self.is_empty() {
-            write_indented!(sink, indent, "&& ")?;
-            match self {
-              Arguments::ParenthesisDelimitedArgumentLists(_) =>
-              {
-                  write_no_indent!(sink, " matches!(arguments, lowlevel::Arguments::ParenthesisDelimitedArgumentLists(_))\n")?
-              }
-              Arguments::ArgumentList(_) =>
-              {
-                  write_no_indent!(sink, " matches!(arguments, lowlevel::Arguments::ArgumentList(_))\n")?
-              }
-          }
-        };
-
-        Ok(())
-    }
-
-    fn codegen_arguments_extraction<W: io::Write>(&self, sink: &mut W, indent: u64) -> Result {
-        if !self.is_empty() {
-            match self {
-                Arguments::ParenthesisDelimitedArgumentLists(arg_vec_vec) => {
-                    write_indented!(
-                        sink,
-                        indent,
-                        "let arg_vec_vec = extract_vec_vec_from_args(&arguments)?;\n"
-                    )?;
-                    let mut i = 0;
-                    for arg_vec in arg_vec_vec {
-                        write_indented!(sink, indent,
+fn codegen_arguments_extraction<W: io::Write>(
+    sink: &mut W,
+    indent: u64,
+    arguments: &Arguments,
+) -> Result {
+    if !arguments.is_empty() {
+        match arguments {
+            Arguments::ParenthesisDelimitedArgumentLists(arg_vec_vec) => {
+                write_indented!(
+                    sink,
+                    indent,
+                    "let arg_vec_vec = extract_vec_vec_from_args(&arguments)?;\n"
+                )?;
+                let mut i = 0;
+                for arg_vec in arg_vec_vec {
+                    write_indented!(sink, indent,
                         "let arg_vec = arg_vec_vec.get({}).ok_or(DeserializeError::UnknownArguments(arguments.clone()))?;\n",
                          i
                     )?;
-                        codegen_argument_vec_extraction(sink, indent, arg_vec)?;
-                        i += 1;
-                    }
-                }
-                Arguments::ArgumentList(arg_vec) => {
-                    write_indented!(
-                        sink,
-                        indent,
-                        "let arg_vec = extract_vec_from_args(&arguments)?;\n"
-                    )?;
                     codegen_argument_vec_extraction(sink, indent, arg_vec)?;
+                    i += 1;
                 }
             }
+            Arguments::ArgumentList(arg_vec) => {
+                write_indented!(
+                    sink,
+                    indent,
+                    "let arg_vec = extract_vec_from_args(&arguments)?;\n"
+                )?;
+                codegen_argument_vec_extraction(sink, indent, arg_vec)?;
+            }
         }
-        Ok(())
     }
-
-    fn codegen_arguments_highlevel_parameters<W: io::Write>(
-        &self,
-        sink: &mut W,
-        indent: u64,
-    ) -> Result {
-        let arg_vec = match self {
-            Arguments::ParenthesisDelimitedArgumentLists(arg_vec_vec) => arg_vec_vec.concat(),
-            Arguments::ArgumentList(arg_vec) => arg_vec.clone(),
-        };
-
-        for arg in arg_vec {
-            write_indented!(sink, indent, "{},\n", arg.name)?;
-        }
-
-        Ok(())
-    }
+    Ok(())
 }
 
-impl CodegenArguments for ExecuteArguments {
-    fn codegen_arguments_lowlevel_pattern<W: io::Write>(
-        &self,
-        sink: &mut W,
-        _indent: u64,
-    ) -> Result {
-        let ExecuteArguments { delimiter: _, arguments } = self;
-        if arguments.is_empty() {
-            write!(sink, ", arguments: lowlevel::ExecuteArguments {{ delimiter, .. }}",)?;
-        } else {
-            write!(sink, ", arguments: lowlevel::ExecuteArguments {{ delimiter, arguments }}",)?;
-        }
-
-        Ok(())
+fn codegen_arguments_highlevel_parameters<W: io::Write>(
+    sink: &mut W,
+    indent: u64,
+    arguments: &Arguments,
+) -> Result {
+    let arg_vec = arguments.flatten();
+    for arg in arg_vec {
+        write_indented!(sink, indent, "{},\n", arg.name)?;
     }
 
-    fn codegen_arguments_lowlevel_match<W: io::Write>(&self, sink: &mut W, indent: u64) -> Result {
-        let ExecuteArguments { arguments, delimiter } = self;
-        let delimiter_string = match delimiter {
-            Some(del) => format!("&Some(String::from(\"{}\"))", del),
-            None => String::from("&None"),
-        };
-        write_indented!(sink, indent, "&& delimiter == {}\n", delimiter_string)?;
-        arguments.codegen_arguments_lowlevel_match(sink, indent)
+    Ok(())
+}
+
+fn codegen_delimited_arguments_lowlevel_pattern<W: io::Write>(
+    sink: &mut W,
+    _indent: u64,
+    arguments: &DelimitedArguments,
+) -> Result {
+    let DelimitedArguments { delimiter: _, arguments } = arguments;
+    if arguments.is_empty() {
+        write!(sink, ", arguments: lowlevel::DelimitedArguments {{ delimiter, .. }}",)?;
+    } else {
+        write!(sink, ", arguments: lowlevel::DelimitedArguments {{ delimiter, arguments }}",)?;
     }
 
-    fn codegen_arguments_extraction<W: io::Write>(&self, sink: &mut W, indent: u64) -> Result {
-        let ExecuteArguments { arguments, .. } = self;
-        arguments.codegen_arguments_extraction(sink, indent)
-    }
+    Ok(())
+}
 
-    fn codegen_arguments_highlevel_parameters<W: io::Write>(
-        &self,
-        sink: &mut W,
-        indent: u64,
-    ) -> Result {
-        let ExecuteArguments { arguments, .. } = self;
-        arguments.codegen_arguments_highlevel_parameters(sink, indent)
-    }
+fn codegen_delimited_arguments_lowlevel_match<W: io::Write>(
+    sink: &mut W,
+    indent: u64,
+    arguments: &DelimitedArguments,
+) -> Result {
+    let DelimitedArguments { arguments, delimiter } = arguments;
+    let delimiter_string = match delimiter {
+        Some(del) => format!("&Some(String::from(\"{}\"))", del),
+        None => String::from("&None"),
+    };
+    write_indented!(sink, indent, "&& delimiter == {}\n", delimiter_string)?;
+    codegen_arguments_lowlevel_match(sink, indent, arguments)
+}
+
+fn codegen_delimited_arguments_extraction<W: io::Write>(
+    sink: &mut W,
+    indent: u64,
+    arguments: &DelimitedArguments,
+) -> Result {
+    let DelimitedArguments { arguments, .. } = arguments;
+    codegen_arguments_extraction(sink, indent, arguments)
+}
+
+fn codegen_delimited_arguments_highlevel_parameters<W: io::Write>(
+    sink: &mut W,
+    indent: u64,
+    arguments: &DelimitedArguments,
+) -> Result {
+    let DelimitedArguments { arguments, .. } = arguments;
+    codegen_arguments_highlevel_parameters(sink, indent, arguments)
 }

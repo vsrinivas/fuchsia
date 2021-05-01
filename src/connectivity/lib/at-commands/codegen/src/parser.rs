@@ -13,7 +13,7 @@
 /// match the parse tree defined in grammar.rs.
 use {
     crate::definition::{
-        Argument, Arguments, Command, Definition, ExecuteArguments, PrimitiveType, Type, Variant,
+        Argument, Arguments, Command, Definition, DelimitedArguments, PrimitiveType, Type, Variant,
     },
     crate::grammar::{Grammar, Rule},
     anyhow::{bail, ensure, Context, Result},
@@ -153,25 +153,25 @@ fn parse_execute(execute: Pair<'_>, parsed_optional_type_name: Option<String>) -
     let name = next_match(&mut execute_elements, Rule::command_name)?;
     let parsed_name = parse_name(name)?;
 
-    let execute_arguments = next_match(&mut execute_elements, Rule::execute_arguments)?;
-    let parsed_execute_arguments = parse_execute_arguments(execute_arguments)?;
+    let delimited_arguments = next_match(&mut execute_elements, Rule::delimited_arguments)?;
+    let parsed_delimited_arguments = parse_delimited_arguments(delimited_arguments)?;
 
     Ok(Command::Execute {
         name: parsed_name,
         type_name: parsed_optional_type_name,
         is_extension: parsed_optional_extension,
-        arguments: parsed_execute_arguments,
+        arguments: parsed_delimited_arguments,
     })
 }
 
-fn parse_execute_arguments(execute_arguments: Pair<'_>) -> Result<ExecuteArguments> {
-    let mut execute_arguments_elements = execute_arguments.into_inner();
+fn parse_delimited_arguments(delimited_arguments: Pair<'_>) -> Result<DelimitedArguments> {
+    let mut delimited_arguments_elements = delimited_arguments.into_inner();
 
-    let execute_argument_delimiter_option = next_match_option(
-        &mut execute_arguments_elements,
-        Rule::optional_execute_argument_delimiter,
+    let delimited_argument_delimiter_option = next_match_option(
+        &mut delimited_arguments_elements,
+        Rule::optional_delimited_argument_delimiter,
     )?;
-    let parsed_execute_argument_delimiter_option = match execute_argument_delimiter_option {
+    let parsed_delimited_argument_delimiter_option = match delimited_argument_delimiter_option {
         Some(delimiter) => {
             let string = parse_string(delimiter)?;
             (!string.is_empty()).then(|| string)
@@ -179,11 +179,11 @@ fn parse_execute_arguments(execute_arguments: Pair<'_>) -> Result<ExecuteArgumen
         None => None,
     };
 
-    let arguments = next_match(&mut execute_arguments_elements, Rule::arguments)?;
+    let arguments = next_match(&mut delimited_arguments_elements, Rule::arguments)?;
     let parsed_arguments = parse_arguments(arguments)?;
 
-    Ok(ExecuteArguments {
-        delimiter: parsed_execute_argument_delimiter_option,
+    Ok(DelimitedArguments {
+        delimiter: parsed_delimited_argument_delimiter_option,
         arguments: parsed_arguments,
     })
 }
@@ -238,14 +238,14 @@ fn parse_response(response: Pair<'_>) -> Result<Definition> {
     let name = next_match(&mut response_elements, Rule::command_name)?;
     let parsed_name = parse_name(name)?;
 
-    let arguments = next_match(&mut response_elements, Rule::arguments)?;
-    let parsed_arguments = parse_arguments(arguments)?;
+    let delimited_arguments = next_match(&mut response_elements, Rule::delimited_arguments)?;
+    let parsed_delimited_arguments = parse_delimited_arguments(delimited_arguments)?;
 
     Ok(Definition::Response {
         name: parsed_name,
         type_name: parsed_optional_type_name,
         is_extension: parsed_optional_extension,
-        arguments: parsed_arguments,
+        arguments: parsed_delimited_arguments,
     })
 }
 

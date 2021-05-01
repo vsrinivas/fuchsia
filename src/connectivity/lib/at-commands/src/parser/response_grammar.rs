@@ -26,9 +26,11 @@ hardcoded_error = {
 
 cme_error = { "+CME ERROR:" ~ integer }
 
-success = { optional_extension ~ command_name ~ ":" ~ arguments }
-
+success = { optional_extension ~ command_name ~ delimited_arguments }
 optional_extension = { "+"? }
+
+delimited_arguments = { optional_argument_delimiter ~ arguments }
+optional_argument_delimiter = { ":" ? }
 
 arguments = { parenthesized_argument_lists | argument_list }
 parenthesized_argument_lists = { ("(" ~ argument_list ~ ")")+ }
