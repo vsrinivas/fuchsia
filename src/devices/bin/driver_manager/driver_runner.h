@@ -77,7 +77,7 @@ class DriverBinder {
   virtual ~DriverBinder() = default;
   // Attempt to bind `node` with given `args`.
   // The lifetime of `node` must live until `callback` is called.
-  virtual void Bind(Node* node, fuchsia_driver_framework::wire::NodeAddArgs args,
+  virtual void Bind(Node& node, fuchsia_driver_framework::wire::NodeAddArgs args,
                     fit::callback<void(zx::status<>)> callback) = 0;
 };
 
@@ -88,7 +88,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   using Offers = std::vector<fidl::StringView>;
   using Symbols = std::vector<fuchsia_driver_framework::wire::NodeSymbol>;
 
-  Node(Node* parent, DriverBinder* driver_binder, async_dispatcher_t* dispatcher,
+  Node(Node* parent, DriverBinder& driver_binder, async_dispatcher_t* dispatcher,
        std::string_view name);
   ~Node() override;
 
@@ -115,7 +115,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   void AddChild(AddChildRequestView request, AddChildCompleter::Sync& completer) override;
 
   Node* const parent_;
-  DriverBinder* const driver_binder_;
+  DriverBinder& driver_binder_;
   async_dispatcher_t* const dispatcher_;
 
   const std::string name_;
@@ -132,7 +132,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
 
 struct DriverArgs {
   fidl::ClientEnd<fuchsia_io::Directory> exposed_dir;
-  Node* node;
+  Node& node;
 };
 
 class DriverRunner : public fidl::WireServer<fuchsia_component_runner::ComponentRunner>,
@@ -140,7 +140,7 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
  public:
   DriverRunner(fidl::ClientEnd<fuchsia_sys2::Realm> realm,
                fidl::ClientEnd<fuchsia_driver_framework::DriverIndex> driver_index,
-               inspect::Inspector* inspector, async_dispatcher_t* dispatcher);
+               inspect::Inspector& inspector, async_dispatcher_t* dispatcher);
 
   fit::promise<inspect::Inspector> Inspect();
   zx::status<> PublishComponentRunner(const fbl::RefPtr<fs::PseudoDir>& svc_dir);
@@ -150,10 +150,10 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
   // fidl::WireServer<fuchsia_component_runner::ComponentRunner>
   void Start(StartRequestView request, StartCompleter::Sync& completer) override;
   // DriverBinder
-  void Bind(Node* node, fuchsia_driver_framework::wire::NodeAddArgs args,
+  void Bind(Node& node, fuchsia_driver_framework::wire::NodeAddArgs args,
             fit::callback<void(zx::status<>)> callback) override;
 
-  zx::status<> StartDriver(Node* node, std::string_view url);
+  zx::status<> StartDriver(Node& node, std::string_view url);
 
   zx::status<std::unique_ptr<DriverHostComponent>> StartDriverHost();
   zx::status<fidl::ClientEnd<fuchsia_io::Directory>> CreateComponent(std::string name,

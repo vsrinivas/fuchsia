@@ -181,7 +181,7 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
   }
 
  protected:
-  inspect::Inspector* inspector() { return &inspector_; }
+  inspect::Inspector& inspector() { return inspector_; }
   async::Loop& loop() { return loop_; }
   TestRealm& realm() { return realm_; }
   TestDirectory& driver_host_dir() { return driver_host_dir_; }

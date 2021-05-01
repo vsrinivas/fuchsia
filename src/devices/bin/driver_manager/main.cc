@@ -308,7 +308,7 @@ int main(int argc, char** argv) {
     }
 
     driver_runner.emplace(std::move(realm_result.value()), std::move(driver_index_result.value()),
-                          &inspect_manager.inspector(), loop.dispatcher());
+                          inspect_manager.inspector(), loop.dispatcher());
     auto publish = driver_runner->PublishComponentRunner(outgoing.svc_dir());
     if (publish.is_error()) {
       return publish.error_value();
