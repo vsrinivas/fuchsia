@@ -345,11 +345,8 @@ will work normally.
 
 When `true`, both will work normally.
 
-### kernel.entropy-test.src=\<string>
-
-Can be one of two values:
-- `hw_rng`
-- `jitterentropy`
+### kernel.entropy-test.src=[hw_rng | jitterentropy]
+**Default:** `hw_rng`
 
 When running an entropy collector quality test, use the provided entropy source.
 This option is ignored unless the kernel was built with `ENABLE_ENTROPY_COLLECTOR_TEST=1`.

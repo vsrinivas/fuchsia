@@ -6,6 +6,7 @@
 
 #include <inttypes.h>
 #include <lib/boot-options/boot-options.h>
+#include <lib/boot-options/types.h>
 #include <lib/crypto/entropy/collector.h>
 #include <lib/crypto/entropy/hw_rng_collector.h>
 #include <lib/crypto/entropy/jitterentropy_collector.h>
@@ -68,34 +69,21 @@ static void SetupEntropyVmo(uint level) {
 
 // Run the entropy collector test.
 void EarlyBootTest() {
-  const char* src_name = gBootOptions->entropy_test_src.data();
-  if (!src_name) {
-    src_name = "";
-  }
-
   entropy::Collector* collector = nullptr;
-  entropy::Collector* candidate;
-  char candidate_name[ZX_MAX_NAME_LEN];
-
-  // TODO(andrewkrieger): find a nicer way to enumerate all entropy collectors
-  if (HwRngCollector::GetInstance(&candidate) == ZX_OK) {
-    candidate->get_name(candidate_name, sizeof(candidate_name));
-    if (strncmp(candidate_name, src_name, ZX_MAX_NAME_LEN) == 0) {
-      collector = candidate;
-    }
-  }
-  if (!collector && JitterentropyCollector::GetInstance(&candidate) == ZX_OK) {
-    candidate->get_name(candidate_name, sizeof(candidate_name));
-    if (strncmp(candidate_name, src_name, ZX_MAX_NAME_LEN) == 0) {
-      collector = candidate;
-    }
+  zx_status_t collector_result = ZX_OK;
+  switch (gBootOptions->entropy_test_src) {
+    case EntropyTestSource::kHwRng:
+      collector_result = HwRngCollector::GetInstance(&collector);
+      break;
+    case EntropyTestSource::kJitterEntropy:
+      collector_result = JitterentropyCollector::GetInstance(&collector);
+      break;
   }
 
   // TODO(andrewkrieger): add other entropy collectors.
 
-  if (!collector) {
-    printf("entropy-boot-test: unrecognized source \"%s\"\n", src_name);
-    printf("entropy-boot-test: skipping test.\n");
+  if (collector_result != ZX_OK || collector == nullptr) {
+    printf("entropy-boot-test: Failed to obtain entropy collector. Skipping test.\n");
     return;
   }
 

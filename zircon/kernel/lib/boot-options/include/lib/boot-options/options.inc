@@ -335,11 +335,8 @@ will work normally.
 When `true`, both will work normally.
 )""")
 
-DEFINE_OPTION("kernel.entropy-test.src", SmallString, entropy_test_src, {""}, R"""(
-Can be one of two values:
-- `hw_rng`
-- `jitterentropy`
-
+DEFINE_OPTION("kernel.entropy-test.src", EntropyTestSource, entropy_test_src,
+              {EntropyTestSource::kHwRng}, R"""(
 When running an entropy collector quality test, use the provided entropy source.
 This option is ignored unless the kernel was built with `ENABLE_ENTROPY_COLLECTOR_TEST=1`.
 )""")

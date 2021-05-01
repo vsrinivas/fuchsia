@@ -43,6 +43,13 @@ constexpr auto Enum<PageTableEvictionPolicy> = [](auto&& Switch) {
       .Case("on_request", PageTableEvictionPolicy::kOnRequest);
 };
 
+template <>
+constexpr auto Enum<EntropyTestSource> = [](auto&& Switch) {
+  Switch  //
+      .Case("hw_rng", EntropyTestSource::kHwRng)
+      .Case("jitterentropy", EntropyTestSource::kJitterEntropy);
+};
+
 #if BOOT_OPTIONS_GENERATOR || defined(__x86_64__)
 
 template <>

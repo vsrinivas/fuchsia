@@ -337,6 +337,14 @@ void BootOptions::PrintValue(const OomBehavior& value, FILE* out) {
   Enum<OomBehavior>(EnumPrinter{value, out});
 }
 
+void BootOptions::Parse(std::string_view value, EntropyTestSource BootOptions::*member) {
+  Enum<EntropyTestSource>(EnumParser{value, &(this->*member)});
+}
+
+void BootOptions::PrintValue(const EntropyTestSource& value, FILE* out) {
+  Enum<EntropyTestSource>(EnumPrinter{value, out});
+}
+
 void BootOptions::Parse(std::string_view value, PageTableEvictionPolicy BootOptions::*member) {
   Enum<PageTableEvictionPolicy>(EnumParser{value, &(this->*member)});
 }

@@ -50,6 +50,9 @@ enum class OomBehavior { kReboot, kJobKill };
 // See kernel.entropy-test.len.
 constexpr uint64_t kMaxEntropyLength = 1u << 20;
 
+// See kernel.entropy-test.src.
+enum class EntropyTestSource { kHwRng, kJitterEntropy };
+
 // See kernel.page-scanner.eviction_policy.
 enum class PageTableEvictionPolicy { kOnRequest, kNever, kAlways };
 
