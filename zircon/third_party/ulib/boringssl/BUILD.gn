@@ -101,4 +101,16 @@ zx_library("boringssl") {
 
   # This code doesn't use the annotation attribute.
   configs -= [ "//build/config/zircon:warn-implicit-fallthrough" ]
+
+  configs += [ ":warnings" ]
+}
+
+config("warnings") {
+  visibility = [ ":*" ]
+
+  if (is_gcc) {
+    # The SHA implementation does some dynamic funny business that runs afoul
+    # of GCC's strict checking against stated buffer sizes.
+    cflags = [ "-Wno-stringop-overflow" ]
+  }
 }
