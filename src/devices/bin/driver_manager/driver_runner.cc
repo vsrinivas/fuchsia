@@ -29,6 +29,14 @@ using InspectStack = std::stack<std::pair<inspect::Node*, Node*>>;
 
 namespace {
 
+template <typename T>
+void UnbindAndReset(std::optional<fidl::ServerBindingRef<T>>& ref) {
+  if (ref.has_value()) {
+    ref->Unbind();
+    ref.reset();
+  }
+}
+
 void InspectNode(inspect::Inspector& inspector, InspectStack& stack) {
   std::vector<inspect::Node> roots;
   while (!stack.empty()) {
@@ -54,22 +62,14 @@ void InspectNode(inspect::Inspector& inspector, InspectStack& stack) {
 
     // Push children of this node onto the stack.
     for (auto& child : node->children()) {
-      auto& root_for_child = roots.emplace_back(root->CreateChild(child.name()));
-      stack.emplace(&root_for_child, &child);
+      auto& root_for_child = roots.emplace_back(root->CreateChild(child->name()));
+      stack.emplace(&root_for_child, child.get());
     }
   }
 
   // Store all of the roots in the inspector.
   for (auto& root : roots) {
     inspector.emplace(std::move(root));
-  }
-}
-
-template <typename T>
-void UnbindAndReset(std::optional<fidl::ServerBindingRef<T>>& ref) {
-  if (ref.has_value()) {
-    ref->Unbind();
-    ref.reset();
   }
 }
 
@@ -199,7 +199,7 @@ void Node::set_node_ref(fidl::ServerBindingRef<fdf::Node> node_ref) {
   node_ref_.emplace(std::move(node_ref));
 }
 
-fbl::DoublyLinkedList<std::unique_ptr<Node>>& Node::children() { return children_; }
+const std::vector<std::shared_ptr<Node>>& Node::children() const { return children_; }
 
 std::string Node::TopoName() const {
   std::deque<std::string_view> names;
@@ -223,15 +223,24 @@ void Node::Remove() {
   while (!stack.empty()) {
     auto node = stack.top();
     stack.pop();
-    auto [_, inserted] = unique_nodes.emplace(node);
+    auto [_, inserted] = unique_nodes.insert(node);
     if (!inserted) {
       // Only insert unique nodes from the DAG.
       continue;
     }
-    nodes.emplace_back(node);
+    nodes.push_back(node);
     for (auto& child : node->children_) {
-      stack.emplace(&child);
+      stack.push(child.get());
     }
+  }
+
+  // Remove this node from its parent. If ownership is not transferred
+  // elsewhere, we will delete the node as it goes out of scope.
+  std::shared_ptr<Node> this_node;
+  if (parent_ != nullptr) {
+    this_node = shared_from_this();
+    auto& children = parent_->children_;
+    children.erase(std::remove(children.begin(), children.end(), this_node));
   }
 
   bool is_bound = node_ref_.has_value();
@@ -242,28 +251,23 @@ void Node::Remove() {
   for (auto node = nodes.rbegin(), end = nodes.rend(); node != end; ++node) {
     (*node)->Unbind();
   }
-  if (parent_ != nullptr) {
-    if (is_bound) {
-      // Remove() is only called in response to a FIDL server being unbound.
-      // This can happen implicitly, when the underlying channel is closed, or
-      // explicitly, through a call to Remove() over FIDL (see method below).
-      //
-      // When this occurs, the node that FIDL is operating on contains a valid
-      // server ref, and is therefore the root of a sub-tree being removed.
-      //
-      // To safely remove all of the children of the node, we need to tell all
-      // FIDL servers to unbind themselves. However, this also means we need to
-      // delay erasing of the root node of a sub-tree until all of its children
-      // have erased themselves first, therefore avoiding a use-after-free.
-      //
-      // We can achieve this by delaying the removal of a node by posting it
-      // onto the dispatcher, where all the unbind operations are occuring in
-      // FIFO order.
-      async::PostTask(dispatcher_, [this] { parent_->children_.erase(*this); });
-    } else {
-      // Otherwise, we are free to erase this node from its parent.
-      parent_->children_.erase(*this);
-    }
+  if (is_bound) {
+    // Remove() is only called in response to a FIDL server being unbound.
+    // This can happen implicitly, when the underlying channel is closed, or
+    // explicitly, through a call to Remove() over FIDL (see method below).
+    //
+    // When this occurs, the node that FIDL is operating on contains a valid
+    // server ref, and is therefore the root of a sub-tree being removed.
+    //
+    // To safely remove all of the children of the node, we need to tell all
+    // FIDL servers to unbind themselves. However, this also means we need to
+    // delay deleting the root node of a sub-tree until all of its children have
+    // deleted themselves first, therefore avoiding a use-after-free.
+    //
+    // We can achieve this by delaying the removal of a node by posting it
+    // onto the dispatcher, where all the unbind operations are occurring in
+    // FIFO order.
+    async::PostTask(dispatcher_, [node = std::move(this_node)] {});
   }
 }
 
@@ -290,14 +294,14 @@ void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& comple
     return;
   }
   for (auto& child : children_) {
-    if (child.name() == name) {
+    if (child->name() == name) {
       LOGF(ERROR, "Failed to add Node '%.*s', name already exists among siblings", name.size(),
            name.data());
       completer.ReplyError(fdf::wire::NodeError::kNameAlreadyExists);
       return;
     }
   }
-  auto child = std::make_unique<Node>(this, driver_binder_, dispatcher_, name);
+  auto child = std::make_shared<Node>(this, driver_binder_, dispatcher_, name);
 
   if (request->args.has_offers()) {
     child->offers_.reserve(request->args.offers().count());

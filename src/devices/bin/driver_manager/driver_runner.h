@@ -83,7 +83,7 @@ class DriverBinder {
 
 class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
              public fidl::WireServer<fuchsia_driver_framework::Node>,
-             public fbl::DoublyLinkedListable<std::unique_ptr<Node>> {
+             public std::enable_shared_from_this<Node> {
  public:
   using Offers = std::vector<fidl::StringView>;
   using Symbols = std::vector<fuchsia_driver_framework::wire::NodeSymbol>;
@@ -102,7 +102,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   void set_node_ref(fidl::ServerBindingRef<fuchsia_driver_framework::Node> node_ref);
   void set_controller_ref(
       fidl::ServerBindingRef<fuchsia_driver_framework::NodeController> controller_ref);
-  fbl::DoublyLinkedList<std::unique_ptr<Node>>& children();
+  const std::vector<std::shared_ptr<Node>>& children() const;
 
   std::string TopoName() const;
   void Remove();
@@ -127,7 +127,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   std::optional<fidl::ServerBindingRef<fuchsia_component_runner::ComponentController>> driver_ref_;
   std::optional<fidl::ServerBindingRef<fuchsia_driver_framework::Node>> node_ref_;
   std::optional<fidl::ServerBindingRef<fuchsia_driver_framework::NodeController>> controller_ref_;
-  fbl::DoublyLinkedList<std::unique_ptr<Node>> children_;
+  std::vector<std::shared_ptr<Node>> children_;
 };
 
 struct DriverArgs {
