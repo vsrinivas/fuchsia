@@ -240,6 +240,7 @@ bool test_get_total_capacity() {
 
   user_in_iovec_t user_iovec = make_user_in_iovec(user->user_in<zx_iovec_t>(), 2);
   size_t total_capacity = 97u;
+  ASSERT_TRUE(user_iovec);
   ASSERT_EQ(user_iovec.GetTotalCapacity(&total_capacity), ZX_OK, "");
   ASSERT_EQ(total_capacity, 406u);
 

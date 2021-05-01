@@ -42,6 +42,15 @@ struct UserCopyCaptureFaultsResult {
   ktl::optional<FaultInfo> fault_info;
 };
 
+// Tell the compiler that the destination is fully (and only) written and the
+// source is fully (and only) read.  This helps its analysis about whether a
+// buffer might have been left uninitialized.
+#if __GNUC__ >= 11
+#define ARCH_COPY_ACCESS [[gnu::access(write_only, 1, 3), gnu::access(read_only, 2, 3)]]
+#else
+#define ARCH_COPY_ACCESS  // Clang doesn't support this attribute.
+#endif
+
 /*
  * @brief Copy data from userspace into kernelspace
  *
@@ -54,7 +63,7 @@ struct UserCopyCaptureFaultsResult {
  *
  * @return ZX_OK on success
  */
-zx_status_t arch_copy_from_user(void *dst, const void *src, size_t len);
+ARCH_COPY_ACCESS zx_status_t arch_copy_from_user(void *dst, const void *src, size_t len);
 
 /*
  * @brief Copy data from userspace into kernelspace
@@ -71,9 +80,9 @@ zx_status_t arch_copy_from_user(void *dst, const void *src, size_t len);
  *
  * @return ZX_OK on success
  */
-[[nodiscard]] UserCopyCaptureFaultsResult arch_copy_from_user_capture_faults(void *dst,
-                                                                             const void *src,
-                                                                             size_t len);
+[[nodiscard]] ARCH_COPY_ACCESS UserCopyCaptureFaultsResult
+arch_copy_from_user_capture_faults(void *dst, const void *src, size_t len);
+
 /*
  * @brief Copy data from kernelspace into userspace
  *
@@ -86,7 +95,7 @@ zx_status_t arch_copy_from_user(void *dst, const void *src, size_t len);
  *
  * @return ZX_OK on success
  */
-zx_status_t arch_copy_to_user(void *dst, const void *src, size_t len);
+ARCH_COPY_ACCESS zx_status_t arch_copy_to_user(void *dst, const void *src, size_t len);
 
 /*
  * @brief Copy data from kernelspace into userspace
@@ -103,8 +112,7 @@ zx_status_t arch_copy_to_user(void *dst, const void *src, size_t len);
  *
  * @return ZX_OK on success
  */
-[[nodiscard]] UserCopyCaptureFaultsResult arch_copy_to_user_capture_faults(void *dst,
-                                                                           const void *src,
-                                                                           size_t len);
+[[nodiscard]] ARCH_COPY_ACCESS UserCopyCaptureFaultsResult
+arch_copy_to_user_capture_faults(void *dst, const void *src, size_t len);
 
 #endif  // ZIRCON_KERNEL_INCLUDE_ARCH_USER_COPY_H_
