@@ -353,6 +353,14 @@ void BootOptions::PrintValue(const PageTableEvictionPolicy& value, FILE* out) {
   Enum<PageTableEvictionPolicy>(EnumPrinter{value, out});
 }
 
+void BootOptions::Parse(std::string_view value, GfxConsoleFont BootOptions::*member) {
+  Enum<GfxConsoleFont>(EnumParser{value, &(this->*member)});
+}
+
+void BootOptions::PrintValue(const GfxConsoleFont& value, FILE* out) {
+  Enum<GfxConsoleFont>(EnumPrinter{value, out});
+}
+
 #if BOOT_OPTIONS_TESTONLY_OPTIONS
 
 void BootOptions::Parse(std::string_view value, TestEnum BootOptions::*member) {

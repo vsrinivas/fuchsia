@@ -50,6 +50,13 @@ constexpr auto Enum<EntropyTestSource> = [](auto&& Switch) {
       .Case("jitterentropy", EntropyTestSource::kJitterEntropy);
 };
 
+template <>
+constexpr auto Enum<GfxConsoleFont> = [](auto&& Switch) {
+  Switch  //
+      .Case("9x16", GfxConsoleFont::k9x16)
+      .Case("18x32", GfxConsoleFont::k18x32);
+};
+
 #if BOOT_OPTIONS_GENERATOR || defined(__x86_64__)
 
 template <>

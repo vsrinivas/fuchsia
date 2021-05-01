@@ -56,6 +56,9 @@ enum class EntropyTestSource { kHwRng, kJitterEntropy };
 // See kernel.page-scanner.eviction_policy.
 enum class PageTableEvictionPolicy { kOnRequest, kNever, kAlways };
 
+// See gfxconsole.font.
+enum class GfxConsoleFont { k9x16, k18x32 };
+
 // List of command lines argument names that are explicitly referenced in code.
 // TODO(fxb/74740): remove all usages of this.
 constexpr std::string_view kForceWatchdogDisabledName = "kernel.force-watchdog-disabled";

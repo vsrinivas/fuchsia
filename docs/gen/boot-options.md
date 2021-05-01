@@ -378,12 +378,8 @@ graphics console driver takes over.
 The early kernel console can be slow on some platforms, so if it is not
 needed for debugging it may speed up boot to disable it.
 
-### gfxconsole.font=\<string>
+### gfxconsole.font=[9x16 | 18x32]
 **Default:** `9x16`
-
-Supported fonts:
-- `9x16`
-- `18x32`
 
 This option asks the graphics console to use a specific font.
 
