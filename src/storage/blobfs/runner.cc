@@ -22,6 +22,10 @@ zx::status<std::unique_ptr<Runner>> Runner::Create(async::Loop* loop,
   // The runner owns the blobfs, but the runner needs to be created first because it is the Vfs
   // object that Blobfs uses.
   std::unique_ptr<Runner> runner(new Runner(loop));
+#if ENABLE_BLOBFS_NEW_PAGER
+  if (auto status = runner->Init(); status.is_error())
+    return status.take_error();
+#endif
 
   auto blobfs_or = Blobfs::Create(loop->dispatcher(), std::move(device), runner.get(), options,
                                   std::move(vmex_resource));
