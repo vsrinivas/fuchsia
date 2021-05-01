@@ -12,6 +12,7 @@
 ##
 ##   -l                        list source locations interleaved with assembly
 ##   -S                        list source code lines interleaved with assembly
+##   -r                        list relocations interleaved with assembly
 ##   -n                        do not demangle symbol names
 ##   -L                        use llvm-objdump rather than GNU objdump
 ##
@@ -32,9 +33,9 @@ DEMANGLE=true
 USE_LLVM=false
 OBJDUMP_ARGS=()
 
-while getopts lSLn OPT; do
+while getopts lSrLn OPT; do
   case $OPT in
-  [lS]) OBJDUMP_ARGS+=(-$OPT) ;;
+  [lSr]) OBJDUMP_ARGS+=(-$OPT) ;;
   L) USE_LLVM=true ;;
   n) DEMANGLE=false ;;
   esac
