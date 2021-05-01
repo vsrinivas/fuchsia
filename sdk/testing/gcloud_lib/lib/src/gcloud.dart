@@ -54,5 +54,5 @@ class GCloud {
   Future<void> setClientFromMetadata() async =>
       _cloudClient ??= await auth.clientViaMetadataServer();
 
-  void close() => _cloudClient.close();
+  void close() => _cloudClient?.close();
 }
