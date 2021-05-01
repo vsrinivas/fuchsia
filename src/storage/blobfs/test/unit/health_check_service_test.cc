@@ -13,6 +13,7 @@
 #include "src/storage/blobfs/mkfs.h"
 #include "src/storage/blobfs/mount.h"
 #include "src/storage/blobfs/test/blob_utils.h"
+#include "src/storage/blobfs/test/blobfs_test_setup.h"
 #include "zircon/syscalls.h"
 
 namespace blobfs {
@@ -26,23 +27,8 @@ constexpr uint32_t kNumBlocks = 400 * kBlobfsBlockSize / kBlockSize;
 class HealthCheckServiceTest : public testing::Test {
  protected:
   void SetUp() override {
-    ASSERT_EQ(loop_.StartThread("async-loop"), ZX_OK);
-
-    auto device = std::make_unique<block_client::FakeBlockDevice>(kNumBlocks, kBlockSize);
-    ASSERT_EQ(FormatFilesystem(device.get(), FilesystemOptions{}), ZX_OK);
-
-    auto blobfs_or = Blobfs::Create(loop_.dispatcher(), std::move(device), nullptr, MountOptions{});
-    ASSERT_TRUE(blobfs_or.is_ok());
-    fs_ = std::move(blobfs_or.value());
-
-    svc_ = fbl::MakeRefCounted<HealthCheckService>(loop_.dispatcher(), *fs_);
-  }
-
-  void TearDown() override {
-    sync_completion_t completion;
-    auto cb = [&completion](zx_status_t status) { sync_completion_signal(&completion); };
-    vfs_.Shutdown(cb);
-    ASSERT_EQ(sync_completion_wait(&completion, ZX_TIME_INFINITE), ZX_OK);
+    EXPECT_EQ(ZX_OK, setup_.CreateFormatMount(kNumBlocks, kBlockSize));
+    svc_ = fbl::MakeRefCounted<HealthCheckService>(setup_.dispatcher(), *setup_.blobfs());
   }
 
   void InstallBlob(const BlobInfo& info) {
@@ -53,6 +39,8 @@ class HealthCheckServiceTest : public testing::Test {
     ASSERT_EQ(file->Truncate(info.size_data), ZX_OK);
     ASSERT_EQ(file->Write(info.data.get(), info.size_data, 0, &out_actual), ZX_OK);
     ASSERT_EQ(out_actual, info.size_data);
+
+    file->Close();
   }
 
   void CorruptBlob(const BlobInfo& info) {
@@ -63,11 +51,12 @@ class HealthCheckServiceTest : public testing::Test {
       fbl::RefPtr<fs::Vnode> file;
       ASSERT_EQ(root->Lookup(info.path + 1, &file), ZX_OK);
       auto blob = fbl::RefPtr<Blob>::Downcast(file);
-      block = fs_->GetNode(blob->Ino())->extents[0].Start() + DataStartBlock(fs_->Info());
+      block = setup_.blobfs()->GetNode(blob->Ino())->extents[0].Start() +
+              DataStartBlock(setup_.blobfs()->Info());
     }
 
     // Unmount.
-    std::unique_ptr<block_client::BlockDevice> device = Blobfs::Destroy(std::move(fs_));
+    std::unique_ptr<block_client::BlockDevice> device = setup_.Unmount();
 
     // Read the block that contains the blob.
     storage::VmoBuffer buffer;
@@ -90,33 +79,28 @@ class HealthCheckServiceTest : public testing::Test {
     ASSERT_EQ(device->FifoTransaction(&request, 1), ZX_OK);
 
     // Remount and try and read the blob.
-    auto remounted_blobfs_or =
-        Blobfs::Create(loop_.dispatcher(), std::move(device), nullptr, MountOptions{});
-    ASSERT_TRUE(remounted_blobfs_or.is_ok());
-    fs_ = std::move(remounted_blobfs_or.value());
-    svc_ = fbl::MakeRefCounted<HealthCheckService>(loop_.dispatcher(), *fs_);
+    EXPECT_EQ(ZX_OK, setup_.Mount(std::move(device)));
+    svc_ = fbl::MakeRefCounted<HealthCheckService>(setup_.dispatcher(), *setup_.blobfs());
   }
 
-  fbl::RefPtr<fs::Vnode> OpenRoot() const {
+  fbl::RefPtr<fs::Vnode> OpenRoot() {
     fbl::RefPtr<fs::Vnode> root;
-    EXPECT_EQ(fs_->OpenRootNode(&root), ZX_OK);
+    EXPECT_EQ(setup_.blobfs()->OpenRootNode(&root), ZX_OK);
     return root;
   }
 
   fidl::WireSyncClient<fuv::BlobfsVerifier> Client() {
     auto endpoints = fidl::CreateEndpoints<fuv::BlobfsVerifier>();
     EXPECT_EQ(endpoints.status_value(), ZX_OK);
-    EXPECT_EQ(vfs_.Serve(svc_, fidl::ServerEnd<fuchsia_io::Node>(endpoints->server.TakeChannel()),
-                         fs::VnodeConnectionOptions::ReadWrite()),
+    EXPECT_EQ(setup_.vfs()->Serve(
+                  svc_, fidl::ServerEnd<fuchsia_io::Node>(endpoints->server.TakeChannel()),
+                  fs::VnodeConnectionOptions::ReadWrite()),
               ZX_OK);
     return fidl::BindSyncClient(std::move(endpoints->client));
   }
 
-  async::Loop loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
-  fs::ManagedVfs vfs_{loop_.dispatcher()};
-
-  std::unique_ptr<Blobfs> fs_;
-  fbl::RefPtr<HealthCheckService> svc_;  // References fs_
+  BlobfsTestSetupWithThread setup_;
+  fbl::RefPtr<HealthCheckService> svc_;  // References setup_.blobfs().
 };
 
 TEST_F(HealthCheckServiceTest, EmptyFilesystemPassesChecks) {
@@ -126,24 +110,27 @@ TEST_F(HealthCheckServiceTest, EmptyFilesystemPassesChecks) {
 }
 
 TEST_F(HealthCheckServiceTest, PopulatedFilesystemPassesChecks) {
-  auto files = [&]() -> std::vector<fbl::RefPtr<fs::Vnode>> {
-    std::vector<fbl::RefPtr<fs::Vnode>> files;
-    auto root = OpenRoot();
-    for (int i = 0; i < 10; ++i) {
-      std::unique_ptr<BlobInfo> info = GenerateRandomBlob("", 65536);
-      InstallBlob(*info);
+  // Since only open files are validated, open a bunch of valid files.
+  std::vector<fbl::RefPtr<fs::Vnode>> files;
+  auto root = OpenRoot();
+  for (int i = 0; i < 10; ++i) {
+    std::unique_ptr<BlobInfo> info = GenerateRandomBlob("", 65536);
+    InstallBlob(*info);
 
-      auto& file = files.emplace_back();
-      EXPECT_EQ(root->Lookup(info->path + 1, &file), ZX_OK);
-      EXPECT_EQ(file->OpenValidating(fs::VnodeConnectionOptions(), nullptr), ZX_OK);
-    }
-    return files;
-  }();
+    auto& file = files.emplace_back();
+    EXPECT_EQ(root->Lookup(info->path + 1, &file), ZX_OK);
+    EXPECT_EQ(file->OpenValidating(fs::VnodeConnectionOptions(), nullptr), ZX_OK);
+  }
 
   fidl::WireSyncClient<fuv::BlobfsVerifier> client = Client();
   auto result = client.Verify(fuv::wire::VerifyOptions{});
   ASSERT_TRUE(result.ok()) << result.error_message();
   ASSERT_FALSE(result.value().result.is_err());
+
+  // Balance out the OpenValidating() calls above so the node can clean up properly.
+  for (auto& file : files) {
+    file->Close();
+  }
 }
 
 TEST_F(HealthCheckServiceTest, NullBlobPassesChecks) {
@@ -159,6 +146,9 @@ TEST_F(HealthCheckServiceTest, NullBlobPassesChecks) {
   auto result = client.Verify(fuv::wire::VerifyOptions{});
   ASSERT_TRUE(result.ok()) << result.error_message();
   ASSERT_FALSE(result.value().result.is_err());
+
+  // Balance out the OpenValidating() call above so the node can clean up properly.
+  file->Close();
 }
 
 TEST_F(HealthCheckServiceTest, InvalidFileFailsChecks) {
@@ -175,6 +165,9 @@ TEST_F(HealthCheckServiceTest, InvalidFileFailsChecks) {
   auto result = client.Verify(fuv::wire::VerifyOptions{});
   ASSERT_TRUE(result.ok()) << result.error_message();
   ASSERT_TRUE(result.value().result.is_err());
+
+  // Balance out the OpenValidating() call above so the node can clean up properly.
+  file->Close();
 }
 
 TEST_F(HealthCheckServiceTest, InvalidButClosedFilePassesChecks) {

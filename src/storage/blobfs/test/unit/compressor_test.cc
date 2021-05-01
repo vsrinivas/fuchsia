@@ -26,6 +26,7 @@
 #include "src/storage/blobfs/format.h"
 #include "src/storage/blobfs/mkfs.h"
 #include "src/storage/blobfs/test/blob_utils.h"
+#include "src/storage/blobfs/test/blobfs_test_setup.h"
 
 namespace blobfs {
 namespace {
@@ -409,15 +410,10 @@ class BlobfsTestFixture : public testing::Test {
  protected:
   BlobfsTestFixture() {
     constexpr uint64_t kBlockCount = 1024;
-    auto device = std::make_unique<block_client::FakeBlockDevice>(kBlockCount, kBlobfsBlockSize);
-    EXPECT_EQ(FormatFilesystem(device.get(), FilesystemOptions{}), ZX_OK);
-
-    auto blobfs_or = Blobfs::Create(nullptr, std::move(device));
-    EXPECT_TRUE(blobfs_or.is_ok());
-    blobfs_ = std::move(blobfs_or.value());
+    EXPECT_EQ(ZX_OK, setup_.CreateFormatMount(kBlockCount, kBlobfsBlockSize));
 
     fbl::RefPtr<fs::Vnode> root;
-    EXPECT_EQ(blobfs_->OpenRootNode(&root), ZX_OK);
+    EXPECT_EQ(setup_.blobfs()->OpenRootNode(&root), ZX_OK);
     root_ = fbl::RefPtr<Directory>::Downcast(std::move(root));
   }
 
@@ -456,7 +452,7 @@ class BlobfsTestFixture : public testing::Test {
   }
 
  private:
-  std::unique_ptr<blobfs::Blobfs> blobfs_;
+  BlobfsTestSetup setup_;
   fbl::RefPtr<Directory> root_;
 };
 

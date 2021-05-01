@@ -1299,7 +1299,7 @@ zx_status_t Blob::CloseNode() {
   if (paged_vmo() && !HasReferences())
     SetPagedVmoName(false);
 
-  // Attempt purge in case blob was unlinked prior to close
+  // Attempt purge in case blob was unlinked prior to close.
   return TryPurge();
 }
 
