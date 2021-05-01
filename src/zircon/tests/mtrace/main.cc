@@ -71,4 +71,77 @@ TEST(X86MtraceTestCase, GetProperties) {
   }
 }
 
+// MTRACE_KIND_PERFMON expects MTRACE_PERFMON_INIT to be called before any performance tracing
+// session and MTRACE_PERFMON_FINI to be called after any session. Check that they can be called.
+//
+// Note that MTRACE_KIND_PERFMON is currently single-master; only a single agent needs to or can
+// invoke MTRACE_PERFMON_INIT / MTRACE_PERFMON_FINI at a time.
+TEST(X86MtraceTestCase, InitFini) {
+  zx::status<zx::resource> root_resource_or_error = GetRootResource();
+  ASSERT_TRUE(root_resource_or_error.is_ok(), "failed to get root resource: %s",
+              zx_status_get_string(root_resource_or_error.error_value()));
+  zx::resource root_resource = std::move(root_resource_or_error.value());
+
+  zx_status_t status = zx_mtrace_control(root_resource.get(), MTRACE_KIND_PERFMON,
+                                         MTRACE_PERFMON_INIT, 0, nullptr, 0);
+  if (!IsIntelPMUSupported()) {
+    EXPECT_EQ(status, ZX_ERR_NOT_SUPPORTED);
+    printf("Skipping test, Intel Architectual PMU not supported\n");
+    return;
+  }
+  EXPECT_EQ(status, ZX_OK);
+
+  // Double init doesn't work.
+  status = zx_mtrace_control(root_resource.get(), MTRACE_KIND_PERFMON, MTRACE_PERFMON_INIT, 0,
+                             nullptr, 0);
+  EXPECT_EQ(status, ZX_ERR_BAD_STATE);
+
+  status = zx_mtrace_control(root_resource.get(), MTRACE_KIND_PERFMON, MTRACE_PERFMON_FINI, 0,
+                             nullptr, 0);
+  EXPECT_EQ(status, ZX_OK);
+
+  // Double-fini appears to work.
+  status = zx_mtrace_control(root_resource.get(), MTRACE_KIND_PERFMON, MTRACE_PERFMON_FINI, 0,
+                             nullptr, 0);
+  EXPECT_EQ(status, ZX_OK);
+}
+
+TEST(X86MtraceTestCase, AssignBuffer) {
+  zx::status<zx::resource> root_resource_or_error = GetRootResource();
+  ASSERT_TRUE(root_resource_or_error.is_ok(), "failed to get root resource: %s",
+              zx_status_get_string(root_resource_or_error.error_value()));
+  zx::resource root_resource = std::move(root_resource_or_error.value());
+  zx_status_t status = zx_mtrace_control(root_resource.get(), MTRACE_KIND_PERFMON,
+                                         MTRACE_PERFMON_INIT, 0, nullptr, 0);
+  if (!IsIntelPMUSupported()) {
+    EXPECT_EQ(status, ZX_ERR_NOT_SUPPORTED);
+    printf("Skipping test, Intel Architectual PMU not supported\n");
+    return;
+  }
+  EXPECT_EQ(status, ZX_OK);
+
+  // MTRACE_PERFMON_ASSIGN_BUFFER associates a user VMO with each CPU; the VMO is used as a sink
+  // for PMU records.
+  //
+  // IMPLEMENTATION NOTE: MTRACE_PERFMON_ASSIGN_BUFFER does not currently map the buffer into the
+  // kernel address space; that is deferred until MTRACE_PERFMON_START. This means that some
+  // validation, such as buffer permissions, may be deferred until then, and
+  // MTRACE_PERFMON_ASSIGN_BUFFER may appear to work even with invalid buffers.
+  uint32_t num_cpus = zx_system_get_num_cpus();
+  std::vector<zx_handle_t> vmos(num_cpus);
+  for (uint i = 0; i < num_cpus; i++) {
+    ASSERT_EQ(zx_vmo_create(PAGE_SIZE, 0, &vmos[i]), ZX_OK);
+    int cpu = i;
+    zx_pmu_buffer_t buffer = {.vmo = vmos[i]};
+    status = zx_mtrace_control(root_resource.get(), MTRACE_KIND_PERFMON,
+                               MTRACE_PERFMON_ASSIGN_BUFFER, cpu, &buffer, sizeof(buffer));
+    EXPECT_EQ(status, ZX_OK);
+  }
+
+  // Cleanup.
+  status = zx_mtrace_control(root_resource.get(), MTRACE_KIND_PERFMON, MTRACE_PERFMON_FINI, 0,
+                             nullptr, 0);
+  EXPECT_EQ(status, ZX_OK);
+}
+
 }  // namespace
