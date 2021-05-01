@@ -105,6 +105,10 @@ import("//src/sys/pkg/bin/pm/pm.gni")
 #   check_production_tag (default: false)
 #      [bool] Whether to check there is no non_production_tag dependencies.
 #
+#   include_shell_commands (default: true)
+#      [bool] Whether to include shell commands. Should be set to false for
+#      build without shell access.
+#
 #   testonly (optional)
 #     [bool] Usual GN meanings.
 template("assemble_system") {
@@ -161,6 +165,11 @@ template("assemble_system") {
     devmgr_config = invoker.devmgr_config
   }
 
+  include_shell_commands = true
+  if (defined(invoker.include_shell_commands)) {
+    include_shell_commands = invoker.include_shell_commands
+  }
+
   # Generate the base driver manifest file that lists all available drivers
   # collected from base_driver_packages dependency tree. This manifest file
   # will be included in the driver-manager-base-config package.
@@ -181,11 +190,13 @@ template("assemble_system") {
   }
   base_packages += [ ":${driver_manager_base_config_label}" ]
 
-  shell_commands("${target_name}_shell-commands") {
-    package_name = "shell-commands"
-    forward_variables_from(invoker, [ "testonly" ])
-    visibility = [ ":*" ]
-    deps = base_packages + cache_packages + universe_packages
+  if (include_shell_commands) {
+    shell_commands("${target_name}_shell-commands") {
+      package_name = "shell-commands"
+      forward_variables_from(invoker, [ "testonly" ])
+      visibility = [ ":*" ]
+      deps = base_packages + cache_packages + universe_packages
+    }
   }
 
   # For details, see //docs/development/components/component_id_index.md#system-assembly
@@ -224,9 +235,11 @@ template("assemble_system") {
     visibility = [ ":*" ]
     deps = base_packages + [
              ":${image_name}_config-data",
-             ":${image_name}_shell-commands",
              pkgfs_package_label,
            ] + component_id_index_dep
+    if (include_shell_commands) {
+      deps += [ ":${image_name}_shell-commands" ]
+    }
   }
 
   meta_far_merkle_index = "$target_out_dir/${image_name}_meta_far_merkle_index"
