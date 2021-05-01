@@ -98,13 +98,11 @@ pub async fn launch_session(
     let exposed_dir = set_session(&session_url, realm).await?;
     let end_time = zx::Time::get_monotonic();
 
-    let url = session_url.to_string();
     fasync::Task::local(async move {
         if let Ok(cobalt_logger) = cobalt::get_logger() {
             // The result is disregarded as there is not retry-logic if it fails, and the error is
             // not meant to be fatal.
-            let _ =
-                cobalt::log_session_launch_time(cobalt_logger, &url, start_time, end_time).await;
+            let _ = cobalt::log_session_launch_time(cobalt_logger, start_time, end_time).await;
         }
     })
     .detach();

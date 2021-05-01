@@ -40,7 +40,6 @@ pub fn get_logger() -> Result<LoggerProxy, Error> {
 ///
 /// # Parameters
 /// - `logger_proxy`: The cobalt logger.
-/// - `session_url`: The url of the session.
 /// - `start_time`: The time when session_manager starts launching a session.
 /// - `end_time`: The time when session_manager has bound to a session. This must be strictly after
 ///               `start_time`.
@@ -49,7 +48,6 @@ pub fn get_logger() -> Result<LoggerProxy, Error> {
 /// `Ok` if the time elapsed was logged successfully.
 pub async fn log_session_launch_time(
     logger_proxy: LoggerProxy,
-    session_url: &str,
     start_time: zx::Time,
     end_time: zx::Time,
 ) -> Result<(), Error> {
@@ -62,7 +60,7 @@ pub async fn log_session_launch_time(
         .log_elapsed_time(
             metrics::SESSION_LAUNCH_TIME_METRIC_ID,
             metrics::SessionLaunchTimeMetricDimensionStatus::Success as u32,
-            &session_url,
+            "",
             elapsed_time,
         )
         .await
@@ -85,10 +83,9 @@ mod tests {
             create_proxy_and_stream::<LoggerMarker>().expect("Failed to create Logger FIDL.");
         let start_time = zx::Time::from_nanos(0);
         let end_time = zx::Time::from_nanos(5000);
-        let session_url = "fuchsia-pkg://fuchsia.com/whale_session#meta/whale_session.cm";
 
         fasync::Task::spawn(async move {
-            let _ = log_session_launch_time(logger_proxy, session_url, start_time, end_time).await;
+            let _ = log_session_launch_time(logger_proxy, start_time, end_time).await;
         })
         .detach();
 
@@ -96,7 +93,7 @@ mod tests {
             if let fidl_fuchsia_cobalt::LoggerRequest::LogElapsedTime {
                 metric_id,
                 event_code,
-                component,
+                component: _,
                 elapsed_micros,
                 responder: _,
             } = log_request
@@ -106,7 +103,6 @@ mod tests {
                     event_code,
                     metrics::SessionLaunchTimeMetricDimensionStatus::Success as u32
                 );
-                assert_eq!(component, session_url.to_string());
                 assert_eq!(elapsed_micros, 5);
             } else {
                 assert!(false);
@@ -123,10 +119,7 @@ mod tests {
             create_proxy_and_stream::<LoggerMarker>().expect("Failed to create Logger FIDL.");
         let start_time = zx::Time::from_nanos(0);
         let end_time = zx::Time::from_nanos(5000);
-        let session_url = "fuchsia-pkg://fuchsia.com/whale_session#meta/whale_session.cm";
 
-        assert!(log_session_launch_time(logger_proxy, session_url, end_time, start_time)
-            .await
-            .is_err());
+        assert!(log_session_launch_time(logger_proxy, end_time, start_time).await.is_err());
     }
 }
