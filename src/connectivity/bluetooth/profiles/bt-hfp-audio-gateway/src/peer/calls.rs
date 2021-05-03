@@ -162,8 +162,8 @@ pub(crate) struct Calls {
 
 impl Calls {
     pub fn new(proxy: Option<PeerHandlerProxy>) -> Self {
-        let new_calls =
-            proxy.map(|proxy| HangingGetStream::new(Box::new(move || Some(proxy.wait_for_call()))));
+        let new_calls = proxy
+            .map(|proxy| HangingGetStream::new(Box::new(move || Some(proxy.watch_next_call()))));
         Self {
             new_calls,
             current_calls: CallList::default(),
@@ -681,9 +681,9 @@ mod tests {
         num: &str,
         state: CallState,
     ) -> CallRequestStream {
-        // Get WaitForCall request.
+        // Get WatchNextCall request.
         let responder = match exec.run_until_stalled(&mut stream.next()) {
-            Poll::Ready(Some(Ok(PeerHandlerRequest::WaitForCall { responder, .. }))) => responder,
+            Poll::Ready(Some(Ok(PeerHandlerRequest::WatchNextCall { responder, .. }))) => responder,
             result => panic!("Unexpected result: {:?}", result),
         };
         // Respond with a call.

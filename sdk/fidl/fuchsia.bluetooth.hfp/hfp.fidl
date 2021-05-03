@@ -91,7 +91,7 @@ protocol CallManager {
     PeerConnected(bt.PeerId id, request<PeerHandler> handle) -> ();
 };
 
-/// The Call Service will serve a call handler protocol for each connected
+/// The Call Manager will serve a call handler protocol for each connected
 /// headset that it chooses to manage calls through.
 ///
 /// If the peer handler is closed by either channel endpoint, all protocols
@@ -103,7 +103,7 @@ protocol PeerHandler {
     /// `NetworkInformation`. Any fields in `update` that are not present will
     /// be treated as unmodified by the update.
     ///
-    /// The call service _should_ provide a fully populated `update` when it is
+    /// The call manager _should_ provide a fully populated `update` when it is
     /// called for the first time.
     ///
     /// The most up-to-date `NetworkInformation` is used during the connection
@@ -111,24 +111,27 @@ protocol PeerHandler {
     /// peer if it supports AG Indicators.
     WatchNetworkInformation() -> (NetworkInformation update);
 
-    /// Hanging get which returns when a new call is initiated by the call
-    /// service or an ongoing call is transferred to the headset.
-    /// WaitForCall returns a `Call` client end rather than passing in
-    /// a `request<Call>` server end so that `InitiateOutgoingCall` can be
-    /// called before or after `WaitForCall`.
+    /// Hanging get which returns when a new call Client is initiated by the
+    /// call manager or an ongoing call is transferred to the headset.
+    /// `RequestOutgoingCall` can be called before or after `WatchNextCall`.
     /// `remote` is returned to identify the remote party by Number.
     /// `state` is returned so that the Hands Free device can be notified
     /// immediately without waiting for another FIDL response.
-    WaitForCall() -> (Call call, Number remote, CallState state);
+    WatchNextCall() -> (Call call, Number remote, CallState state);
 
-    /// Used to request an outgoing call be initiated by the call service.
-    /// `InitiateOutgoingCall` will complete after the outgoing call has been
-    /// initiated and the corrisponding `Call` protocol has been provided to the
-    /// client via the `WaitForCall` hanging get.
+    /// Used to request an outgoing call be initiated by the call manager.
+    /// `RequestOutgoingCall` shall complete after the outgoing call has been
+    /// initiated and the corresponding `Call` protocol has been returned via a
+    /// `WatchNextCall` result.
+    ///
     /// An error is returned if the call could not be placed as requested.
-    InitiateOutgoingCall(CallAction action) -> () error zx.status;
+    /// ZX_ERR_NOT_SUPPORTED can be used if the system does not support
+    /// the requested action.
+    /// ZX_ERR_ALREADY_EXISTS can be used if there is already a call in progress
+    /// and the system does not support additional calls.
+    RequestOutgoingCall(CallAction action) -> () error zx.status;
 
-    /// Request the name of the network operator for the call service. A null
+    /// Request the name of the network operator for the call manager. A null
     /// value is returned if there is no operator name available.
     QueryOperator() -> (string:16? operator);
 
@@ -291,11 +294,11 @@ protocol Call {
     /// the call state set to TRANSFERRED_TO_AG.
     RequestTransferAudio();
 
-    /// Send a code that the call service should transmit to its network
+    /// Send a code that the call manager should transmit to its network
     /// connection. The request returns after the code has been transmitted to
     /// the network.
     ///
-    /// Can return an error if the call service failed to transmit the code to
+    /// Can return an error if the call manager failed to transmit the code to
     /// the network.
     SendDtmfCode(DtmfCode code) -> () error zx.status;
 };

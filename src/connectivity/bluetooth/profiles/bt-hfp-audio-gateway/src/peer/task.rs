@@ -287,7 +287,7 @@ impl PeerTask {
             }
             SlcRequest::InitiateCall { call_action, response } => {
                 let result = match &self.handler {
-                    Some(h) => match h.initiate_outgoing_call(&mut call_action.into()).await {
+                    Some(h) => match h.request_outgoing_call(&mut call_action.into()).await {
                         Ok(Ok(())) => Ok(()),
                         err => {
                             warn!("Error initiating outgoing call by number: {:?}", err);
@@ -466,7 +466,7 @@ mod tests {
         fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequestStream},
         fidl_fuchsia_bluetooth_hfp::{
             CallState, PeerHandlerMarker, PeerHandlerRequest, PeerHandlerRequestStream,
-            PeerHandlerWaitForCallResponder, SignalStrength,
+            PeerHandlerWatchNextCallResponder, SignalStrength,
         },
         fuchsia_async as fasync,
         fuchsia_bluetooth::types::Channel,
@@ -785,13 +785,13 @@ mod tests {
         assert!(result.is_ready());
     }
 
-    /// Transform `stream` into a Stream of WaitForCall responders.
+    /// Transform `stream` into a Stream of WatchNextCall responders.
     #[track_caller]
     async fn wait_for_call_stream(
         stream: PeerHandlerRequestStream,
-    ) -> impl Stream<Item = PeerHandlerWaitForCallResponder> {
+    ) -> impl Stream<Item = PeerHandlerWatchNextCallResponder> {
         filtered_stream(stream, |item| match item {
-            PeerHandlerRequest::WaitForCall { responder } => Ok(responder),
+            PeerHandlerRequest::WatchNextCall { responder } => Ok(responder),
             x => Err(x),
         })
         .await

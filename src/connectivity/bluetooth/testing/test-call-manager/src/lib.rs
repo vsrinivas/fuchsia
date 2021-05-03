@@ -10,8 +10,8 @@ use fidl_fuchsia_bluetooth_hfp::{
     CallManagerMarker, CallManagerRequest, CallManagerRequestStream, CallMarker, CallRequest,
     CallRequestStream, CallState as FidlCallState, CallWatchStateResponder, DtmfCode,
     HeadsetGainProxy, HfpMarker, HfpProxy, NetworkInformation, PeerHandlerRequest,
-    PeerHandlerRequestStream, PeerHandlerWaitForCallResponder,
-    PeerHandlerWatchNetworkInformationResponder, SignalStrength,
+    PeerHandlerRequestStream, PeerHandlerWatchNetworkInformationResponder,
+    PeerHandlerWatchNextCallResponder, SignalStrength,
 };
 use fidl_fuchsia_bluetooth_hfp_test::{HfpTestMarker, HfpTestProxy};
 use fuchsia_async as fasync;
@@ -72,7 +72,7 @@ struct PeerState {
     #[derivative(Debug = "ignore")]
     gain_control_watcher: Option<fasync::Task<()>>,
     gain_control: Option<HeadsetGainProxy>,
-    call_responder: Option<PeerHandlerWaitForCallResponder>,
+    call_responder: Option<PeerHandlerWatchNextCallResponder>,
     // The tasks for managing a peer's call actions is owned by the peer.
     // This task is separate from the manager's view of the call's state.
     #[derivative(Debug = "ignore")]
@@ -510,7 +510,7 @@ impl TestCallManager {
                     peer.reported_network = Some(current_network);
                 }
             }
-            PeerHandlerRequest::WaitForCall { responder, .. } => {
+            PeerHandlerRequest::WatchNextCall { responder, .. } => {
                 let this = self.clone();
                 let mut inner = self.inner.lock().await;
                 let peer = inner
@@ -521,13 +521,13 @@ impl TestCallManager {
                     peer.call_responder = Some(responder);
                     this.report_calls(id, inner)?;
                 } else {
-                    let err = format_err!("double hanging get call on PeerHandler::WaitForCall");
+                    let err = format_err!("double hanging get call on PeerHandler::WatchNextCall");
                     fx_log_err!("{}", err);
                     *inner = TestCallManagerInner::default();
                     return Err(err);
                 }
             }
-            PeerHandlerRequest::InitiateOutgoingCall { action: _, responder: _, .. } => {
+            PeerHandlerRequest::RequestOutgoingCall { action: _, responder: _, .. } => {
                 unimplemented!();
             }
             PeerHandlerRequest::QueryOperator { responder, .. } => {
