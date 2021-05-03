@@ -312,6 +312,26 @@ class Uint64Type : public IntegralType<uint64_t> {
   Kind kind_;
 };
 
+// A type that can be used for having actual and requested values.
+class ActualAndRequestedType : public Type {
+ public:
+  ActualAndRequestedType() = default;
+
+  size_t InlineSize() const override { return 2 * sizeof(size_t); }
+
+  std::string Name() const override { return "size"; }
+
+  std::string CppName() const override { return "size_t"; }
+
+  std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override {
+    FX_LOGS(FATAL) << "Not reachable";
+    return nullptr;
+  }
+
+  void PrettyPrint(const Value* value, PrettyPrinter& printer) const override;
+  void Visit(TypeVisitor* visitor) const override;
+};
+
 // A generic type that can be used for any numeric value that corresponds to a
 // C++ arithmetic value.
 template <typename T>

@@ -46,6 +46,13 @@ void ProtoVisitor::VisitIntegerValue(const fidl_codec::IntegerValue* node,
   integer->set_negative(node->negative());
 }
 
+void ProtoVisitor::VisitActualAndRequestedValue(const fidl_codec::ActualAndRequestedValue* node,
+                                                const fidl_codec::Type* for_type) {
+  proto::ActualAndRequested* actual_and_requested = dst_->mutable_actual_and_requested_value();
+  actual_and_requested->set_actual(node->actual());
+  actual_and_requested->set_requested(node->requested());
+}
+
 void ProtoVisitor::VisitDoubleValue(const fidl_codec::DoubleValue* node,
                                     const fidl_codec::Type* for_type) {
   dst_->set_double_value(node->value());
@@ -327,6 +334,10 @@ std::unique_ptr<Value> DecodeValue(LibraryLoader* loader, const proto::Value& pr
       }
       return message;
     }
+    case proto::Value::kActualAndRequestedValue:
+      return std::make_unique<fidl_codec::ActualAndRequestedValue>(
+          proto_value.actual_and_requested_value().actual(),
+          proto_value.actual_and_requested_value().requested());
     default:
       FX_LOGS_OR_CAPTURE(ERROR) << "Unknown value.";
       return nullptr;

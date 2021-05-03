@@ -21,6 +21,7 @@ message Value {
     Vector vector_value = 10;
     Table table_value = 11;
     FidlMessage fidl_message_value = 12;
+    ActualAndRequested actual_and_requested_value = 13;
   }
 }
 
@@ -86,4 +87,10 @@ message FidlMessage {
   bool has_response = 15;
   Struct decoded_response = 16;
   string response_errors = 17;
+}
+
+// Defines a value which is displayed: actual/requested.
+message ActualAndRequested {
+  uint64 actual = 1;
+  uint64 requested = 2;
 }

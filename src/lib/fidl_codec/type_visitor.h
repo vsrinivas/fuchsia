@@ -16,7 +16,7 @@ class TypeVisitor {
   virtual void VisitType(const Type* type) {}
   virtual void VisitInvalidType(const InvalidType* type) { VisitType(type); }
   virtual void VisitBoolType(const BoolType* type) { VisitType(type); }
-  virtual void VisitIntegralType(const Type* type) { VisitNumericType(type); }
+  virtual void VisitIntegralType(const Type* type) { VisitType(type); }
   virtual void VisitUint8Type(const Uint8Type* type) { VisitIntegralType(type); }
   virtual void VisitUint16Type(const Uint16Type* type) { VisitIntegralType(type); }
   virtual void VisitUint32Type(const Uint32Type* type) { VisitIntegralType(type); }
@@ -25,6 +25,7 @@ class TypeVisitor {
   virtual void VisitInt16Type(const Int16Type* type) { VisitIntegralType(type); }
   virtual void VisitInt32Type(const Int32Type* type) { VisitIntegralType(type); }
   virtual void VisitInt64Type(const Int64Type* type) { VisitIntegralType(type); }
+  virtual void VisitActualAndRequestedType(const Type* type) { VisitType(type); }
   virtual void VisitNumericType(const Type* type) { VisitType(type); }
   virtual void VisitFloat32Type(const Float32Type* type) { VisitNumericType(type); }
   virtual void VisitFloat64Type(const Float64Type* type) { VisitNumericType(type); }
@@ -53,6 +54,7 @@ class TypeVisitor {
   friend class Int16Type;
   friend class Int32Type;
   friend class Int64Type;
+  friend class ActualAndRequestedType;
   template <typename T>
   friend class NumericType;
   friend class Float32Type;

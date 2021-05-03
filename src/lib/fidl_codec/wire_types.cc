@@ -683,6 +683,20 @@ void Uint64Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
 
 void Uint64Type::Visit(TypeVisitor* visitor) const { visitor->VisitUint64Type(this); }
 
+void ActualAndRequestedType::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
+  auto actual_and_requested_value = value->AsActualAndRequestedValue();
+  if (value == nullptr) {
+    printer << Red << "invalid" << ResetColor;
+  } else {
+    printer << Blue << actual_and_requested_value->actual() << ResetColor << '/' << Blue
+            << actual_and_requested_value->requested() << ResetColor;
+  }
+}
+
+void ActualAndRequestedType::Visit(TypeVisitor* visitor) const {
+  visitor->VisitActualAndRequestedType(this);
+}
+
 std::string Float32Type::Name() const { return "float32"; }
 
 std::string Float32Type::CppName() const { return "float"; }

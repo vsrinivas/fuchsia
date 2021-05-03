@@ -17,6 +17,7 @@
 
 namespace fidl_codec {
 
+class ActualAndRequestedValue;
 class FidlMessageValue;
 class HandleValue;
 class StringValue;
@@ -46,6 +47,7 @@ class Value {
   virtual bool GetDoubleValue(double* result) const { return false; }
 
   // Methods to downcast a value.
+  virtual const ActualAndRequestedValue* AsActualAndRequestedValue() const { return nullptr; }
   virtual const StringValue* AsStringValue() const { return nullptr; }
   virtual const HandleValue* AsHandleValue() const { return nullptr; }
   virtual StructValue* AsStructValue() { return nullptr; }
@@ -185,6 +187,27 @@ class IntegerValue : public Value {
  private:
   const uint64_t absolute_value_;
   const bool negative_;
+};
+
+class ActualAndRequestedValue : public Value {
+ public:
+  ActualAndRequestedValue(uint64_t actual, uint64_t requested)
+      : actual_(actual), requested_(requested) {}
+
+  uint64_t actual() const { return actual_; }
+  uint64_t requested() const { return requested_; }
+
+  const ActualAndRequestedValue* AsActualAndRequestedValue() const override { return this; }
+
+  size_t DisplaySize(const Type* for_type, size_t remaining_size) const override;
+
+  void PrettyPrint(const Type* for_type, PrettyPrinter& printer) const override;
+
+  void Visit(Visitor* visitor, const Type* for_type) const override;
+
+ private:
+  const uint64_t actual_;
+  const uint64_t requested_;
 };
 
 class DoubleValue : public Value {

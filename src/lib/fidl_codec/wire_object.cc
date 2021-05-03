@@ -97,6 +97,22 @@ void IntegerValue::Visit(Visitor* visitor, const Type* for_type) const {
   visitor->VisitIntegerValue(this, for_type);
 }
 
+size_t ActualAndRequestedValue::DisplaySize(const Type* for_type, size_t /*remaining_size*/) const {
+  std::stringstream dummyStream;
+  auto dummyPrinter = PrettyPrinter(dummyStream, WithoutColors, true, "", INT_MAX, false);
+  for_type->PrettyPrint(this, dummyPrinter);
+  return dummyStream.str().length();
+}
+
+void ActualAndRequestedValue::PrettyPrint(const Type* for_type, PrettyPrinter& printer) const {
+  FX_DCHECK(for_type != nullptr);
+  for_type->PrettyPrint(this, printer);
+}
+
+void ActualAndRequestedValue::Visit(Visitor* visitor, const Type* for_type) const {
+  visitor->VisitActualAndRequestedValue(this, for_type);
+}
+
 size_t DoubleValue::DisplaySize(const Type* for_type, size_t /*remaining_size*/) const {
   return std::to_string(value_).size();
 }

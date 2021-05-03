@@ -30,6 +30,10 @@ class Visitor {
   virtual void VisitIntegerValue(const IntegerValue* node, const Type* for_type) {
     VisitValue(node, for_type);
   }
+  virtual void VisitActualAndRequestedValue(const ActualAndRequestedValue* node,
+                                            const Type* for_type) {
+    VisitValue(node, for_type);
+  }
   virtual void VisitDoubleValue(const DoubleValue* node, const Type* for_type) {
     VisitValue(node, for_type);
   }
@@ -75,6 +79,7 @@ class Visitor {
   friend class RawValue;
   friend class BoolValue;
   friend class IntegerValue;
+  friend class ActualAndRequestedValue;
   friend class DoubleValue;
   friend class StringValue;
   friend class HandleValue;

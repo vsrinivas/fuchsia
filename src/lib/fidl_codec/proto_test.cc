@@ -278,4 +278,10 @@ TEST_F(ProtoValueTest, FidlMessageValue) {
              "    0030: 44, 4c, 00, 00, 00, 00, 00, 00\n");
 }
 
+TEST_F(ProtoValueTest, ActualAndRequestedValue) {
+  ActualAndRequestedType type;
+  auto value = std::make_unique<ActualAndRequestedValue>(10, 20);
+  PROTO_TEST(std::move(value), &type, false, "10/20");
+}
+
 }  // namespace fidl_codec

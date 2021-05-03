@@ -21,6 +21,8 @@ class ProtoVisitor : public fidl_codec::Visitor {
   void VisitBoolValue(const fidl_codec::BoolValue* node, const fidl_codec::Type* for_type) override;
   void VisitIntegerValue(const fidl_codec::IntegerValue* node,
                          const fidl_codec::Type* for_type) override;
+  void VisitActualAndRequestedValue(const fidl_codec::ActualAndRequestedValue* node,
+                                    const fidl_codec::Type* for_type) override;
   void VisitDoubleValue(const fidl_codec::DoubleValue* node,
                         const fidl_codec::Type* for_type) override;
   void VisitStringValue(const fidl_codec::StringValue* node,
