@@ -279,16 +279,17 @@ impl MockRunner {
     /// order.
     pub async fn wait_for_urls(&self, expected_urls: &[&str]) {
         loop {
-            let mut inner = self.inner.lock().unwrap();
-            let expected_urls: HashSet<&str> = expected_urls.iter().map(|s| *s).collect();
-            let urls_run: HashSet<&str> = inner.urls_run.iter().map(|s| s as &str).collect();
             let (sender, receiver) = oneshot::channel();
-            if expected_urls.is_subset(&urls_run) {
-                return;
-            } else {
-                inner.url_waiters.push(sender);
+            {
+                let mut inner = self.inner.lock().unwrap();
+                let expected_urls: HashSet<&str> = expected_urls.iter().map(|s| *s).collect();
+                let urls_run: HashSet<&str> = inner.urls_run.iter().map(|s| s as &str).collect();
+                if expected_urls.is_subset(&urls_run) {
+                    return;
+                } else {
+                    inner.url_waiters.push(sender);
+                }
             }
-            drop(inner);
             receiver.await.expect("failed to receive url notice")
         }
     }

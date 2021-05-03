@@ -4,6 +4,7 @@
 
 use {
     crate::model::{rights, testing::routing_test_helpers::*},
+    ::routing_test_helpers::RoutingTestModel,
     cm_rust::*,
     cm_rust_testing::*,
     fidl_fuchsia_sys2 as fsys,

@@ -21,11 +21,10 @@ use {
     archivist_lib::{
         container::ComponentIdentity, events::types::ComponentIdentifier, logs::Message,
     },
-    cm_rust::{ChildDecl, ComponentDecl, NativeIntoFidl, ProgramDecl},
+    cm_rust::{ChildDecl, ComponentDecl, NativeIntoFidl},
     cm_types::Url,
     fidl::endpoints::{self, Proxy, ServerEnd, ServiceMarker},
     fidl_fidl_examples_echo as echo, fidl_fuchsia_component_runner as fcrunner,
-    fidl_fuchsia_data as fdata,
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_SERVICE,
         OPEN_FLAG_CREATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
@@ -44,6 +43,16 @@ use {
 };
 
 pub const TEST_RUNNER_NAME: &str = cm_rust_testing::TEST_RUNNER_NAME;
+
+// TODO(https://fxbug.dev/61861): remove function wrappers once the routing_test_helpers
+// lib has a stable API.
+pub fn default_component_decl() -> ComponentDecl {
+    ::routing_test_helpers::default_component_decl()
+}
+
+pub fn component_decl_with_test_runner() -> ComponentDecl {
+    ::routing_test_helpers::component_decl_with_test_runner()
+}
 
 pub type MockServiceFs<'a> = ServiceFs<ServiceObjLocal<'a, MockServiceRequest>>;
 
@@ -159,23 +168,6 @@ pub async fn get_live_child<'a>(
         _ => {
             panic!("not resolved")
         }
-    }
-}
-
-/// Returns an empty component decl for an executable component.
-pub fn default_component_decl() -> ComponentDecl {
-    ComponentDecl { ..Default::default() }
-}
-
-/// Returns an empty component decl set up to have a non-empty program and to use the "test_runner"
-/// runner.
-pub fn component_decl_with_test_runner() -> ComponentDecl {
-    ComponentDecl {
-        program: Some(ProgramDecl {
-            runner: Some(TEST_RUNNER_NAME.into()),
-            info: fdata::Dictionary { entries: Some(vec![]), ..fdata::Dictionary::EMPTY },
-        }),
-        ..Default::default()
     }
 }
 

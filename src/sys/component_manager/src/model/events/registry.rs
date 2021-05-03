@@ -36,6 +36,9 @@ use {
     },
 };
 
+// TODO(https://fxbug.dev/61861): remove alias once the routing lib has a stable API.
+pub type EventSubscription = ::routing::event::EventSubscription;
+
 #[derive(Debug)]
 pub struct RoutedEvent {
     pub source_name: CapabilityName,
@@ -104,20 +107,6 @@ pub struct SubscriptionOptions {
     pub subscription_type: SubscriptionType,
     /// Specifies the mode ComponentManager was started in.
     pub execution_mode: ExecutionMode,
-}
-
-#[derive(Debug)]
-pub struct EventSubscription {
-    pub event_name: CapabilityName,
-    /// Determines whether component manager waits for a response from the
-    /// event receiver.
-    pub mode: EventMode,
-}
-
-impl EventSubscription {
-    pub fn new(event_name: CapabilityName, mode: EventMode) -> Self {
-        Self { event_name, mode }
-    }
 }
 
 impl SubscriptionOptions {

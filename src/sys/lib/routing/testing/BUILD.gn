@@ -7,9 +7,9 @@ import("//build/rust/rustc_library.gni")
 
 # The `routing_test_helpers` library provides test harnesses for users of
 # the `routing` library.
+# TODO(https://fxbug.dev/75967): mark this target as test-only.
 rustc_library("routing_test_helpers") {
   edition = "2018"
-  testonly = true
 
   visibility = [
     "//src/sys/component_manager/*",
@@ -19,6 +19,7 @@ rustc_library("routing_test_helpers") {
 
   deps = [
     "//sdk/fidl/fuchsia.component.internal:fuchsia.component.internal-rustc",
+    "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/zircon/rust:fuchsia-zircon-status",
@@ -28,6 +29,8 @@ rustc_library("routing_test_helpers") {
     "//src/sys/lib/moniker",
     "//src/sys/lib/routing",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:tempfile",
   ]

@@ -3,4 +3,4 @@
 // found in the LICENSE file.
 
 // TODO(https://fxbug.dev/71901): remove alias once the routing lib has a stable API.
-pub type EventModeSet = ::routing::mode_set::EventModeSet;
+pub type EventModeSet = ::routing::event::EventModeSet;

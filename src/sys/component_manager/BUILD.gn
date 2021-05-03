@@ -82,8 +82,10 @@ template("component_manager") {
     # model::testing helpers, but that module is currently included in the main
     # library (rather than being guarded with '#[cfg(test)]') to allow use in
     # separate integration test targets.
+    # TODO(https://fxbug.dev/75967): make these true test-only deps.
     "//garnet/examples/fidl/services:echo-rustc",
     "//src/sys/lib/cm_rust/testing",
+    "//src/sys/lib/routing/testing:routing_test_helpers",
   ]
   _non_rust_deps = [
     "//zircon/system/ulib/trace",

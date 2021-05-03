@@ -9,8 +9,7 @@ pub mod component_instance;
 pub mod config;
 pub mod environment;
 pub mod error;
-pub mod filter;
-pub mod mode_set;
+pub mod event;
 pub mod path;
 pub mod policy;
 pub mod rights;
@@ -26,8 +25,7 @@ use {
         component_instance::{ComponentInstanceInterface, ExtendedInstanceInterface},
         environment::DebugRegistration,
         error::RoutingError,
-        filter::EventFilter,
-        mode_set::EventModeSet,
+        event::{EventFilter, EventModeSet},
         path::PathBufExt,
         rights::{Rights, READ_RIGHTS, WRITE_RIGHTS},
         router::{

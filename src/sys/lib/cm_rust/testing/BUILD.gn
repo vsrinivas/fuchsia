@@ -11,6 +11,7 @@ import("//build/rust/rustc_library.gni")
 # module is currently included in the main component_manager library
 # (rather than being guarded with '#[cfg(test)]') to allow use in separate
 # integration test targets.
+# TODO(https://fxbug.dev/75967): mark this target as test-only.
 rustc_library("testing") {
   name = "cm_rust_testing"
 

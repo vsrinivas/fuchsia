@@ -12,12 +12,13 @@ use {
             binding::Binder,
             component::BindReason,
             error::ModelError,
-            events::registry::EventSubscription,
             hooks::HooksRegistration,
             model::Model,
             testing::{echo_service::*, mocks::*, out_dir::OutDir, test_helpers::*},
         },
     },
+    ::routing_test_helpers::{RoutingTestModel, RoutingTestModelBuilder},
+    async_trait::async_trait,
     cm_rust::*,
     cm_types::Url,
     fidl::{
@@ -50,75 +51,10 @@ use {
     vfs::directory::entry::DirectoryEntry,
 };
 
-/// Construct a capability path for the hippo service.
-pub fn default_service_capability() -> CapabilityPath {
-    "/svc/hippo".try_into().unwrap()
-}
-
-/// Construct a capability path for the hippo directory.
-pub fn default_directory_capability() -> CapabilityPath {
-    "/data/hippo".try_into().unwrap()
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub enum ExpectedResult {
-    Ok,
-    Err(zx::Status),
-    ErrWithNoEpitaph,
-}
-
-pub enum CheckUse {
-    Protocol {
-        path: CapabilityPath,
-        expected_res: ExpectedResult,
-    },
-    Service {
-        path: CapabilityPath,
-        instance: String,
-        member: String,
-        expected_res: ExpectedResult,
-    },
-    Directory {
-        path: CapabilityPath,
-        file: PathBuf,
-        expected_res: ExpectedResult,
-    },
-    Storage {
-        path: CapabilityPath,
-        // The relative moniker from the storage declaration to the use declaration. Only
-        // used if `expected_res` is Ok.
-        storage_relation: Option<RelativeMoniker>,
-        // The backing directory for this storage is in component manager's namsepace, not the
-        // test's isolated test directory.
-        from_cm_namespace: bool,
-        storage_subdir: Option<String>,
-        expected_res: ExpectedResult,
-    },
-    StorageAdmin {
-        // The relative moniker from the storage declaration to the use declaration.
-        storage_relation: RelativeMoniker,
-        // The backing directory for this storage is in component manager's namsepace, not the
-        // test's isolated test directory.
-        from_cm_namespace: bool,
-
-        storage_subdir: Option<String>,
-        expected_res: ExpectedResult,
-    },
-    Event {
-        requests: Vec<EventSubscription>,
-        expected_res: ExpectedResult,
-    },
-}
-
-impl CheckUse {
-    pub fn default_directory(expected_res: ExpectedResult) -> Self {
-        Self::Directory {
-            path: default_directory_capability(),
-            file: PathBuf::from("hippo"),
-            expected_res,
-        }
-    }
-}
+// TODO(https://fxbug.dev/61861): remove type aliases once the routing_test_helpers lib has a stable
+// API.
+pub type ExpectedResult = ::routing_test_helpers::ExpectedResult;
+pub type CheckUse = ::routing_test_helpers::CheckUse;
 
 /// Builder for setting up a new `RoutingTest` instance with a non-standard setup.
 ///
@@ -220,6 +156,19 @@ impl RoutingTestBuilder {
 
     pub async fn build(self) -> RoutingTest {
         RoutingTest::from_builder(self).await
+    }
+}
+
+#[async_trait]
+impl RoutingTestModelBuilder for RoutingTestBuilder {
+    type Model = RoutingTest;
+
+    fn new(root_component: &str, components: Vec<(&'static str, ComponentDecl)>) -> Self {
+        Self::new(root_component, components)
+    }
+
+    async fn build(self) -> RoutingTest {
+        self.build().await
     }
 }
 
@@ -388,173 +337,6 @@ impl RoutingTest {
     /// Creates a sub directory in the outgoing dir's /data directory
     pub fn add_subdir_to_data_directory(&self, subdir: &str) {
         fs::create_dir_all(self.test_dir.path().join(subdir)).unwrap()
-    }
-
-    /// Checks a `use` declaration at `moniker` by trying to use `capability`.
-    pub async fn check_use(&self, moniker: AbsoluteMoniker, check: CheckUse) {
-        let component_name = self
-            .bind_instance_and_wait_start(&moniker)
-            .await
-            .expect(&format!("bind instance failed for `{}`", moniker));
-        let component_resolved_url = Self::resolved_url(&component_name);
-        let namespace = self
-            .mock_runner
-            .get_namespace(&component_resolved_url)
-            .expect("could not find child namespace");
-        Self::check_namespace(component_name, &self.mock_runner, self.components.clone()).await;
-        match check {
-            CheckUse::Protocol { path, expected_res } => {
-                capability_util::call_echo_svc_from_namespace(&namespace, path, expected_res).await;
-            }
-            CheckUse::Service { path, instance, member, expected_res } => {
-                capability_util::call_service_instance_echo_svc_from_namespace(
-                    &namespace,
-                    path,
-                    instance,
-                    member,
-                    expected_res,
-                )
-                .await;
-            }
-            CheckUse::Directory { path, file, expected_res } => {
-                capability_util::read_data_from_namespace(&namespace, path, &file, expected_res)
-                    .await
-            }
-            CheckUse::Storage {
-                path,
-                storage_relation,
-                from_cm_namespace,
-                storage_subdir,
-                expected_res,
-            } => {
-                if let ExpectedResult::Ok = &expected_res {
-                    assert!(
-                        storage_relation.is_some(),
-                        "relative moniker required if expected result is ok"
-                    );
-                }
-                capability_util::write_file_to_storage(&namespace, path, expected_res.clone())
-                    .await;
-
-                let instance_id = self
-                    .model
-                    .root
-                    .try_get_component_id_index()
-                    .unwrap()
-                    .look_up_moniker(&moniker)
-                    .cloned();
-
-                if let Some(relative_moniker) = storage_relation {
-                    if from_cm_namespace {
-                        // Check for the file in the /tmp in the test's namespace
-                        let tmp_proxy = io_util::open_directory_in_namespace(
-                            "/tmp",
-                            io_util::OPEN_RIGHT_READABLE,
-                        )
-                        .expect("failed to open /tmp");
-                        let res = capability_util::check_file_in_storage(
-                            storage_subdir,
-                            relative_moniker,
-                            instance_id.as_ref(),
-                            &tmp_proxy,
-                        )
-                        .await;
-                        if let ExpectedResult::Ok = &expected_res {
-                            res.expect("failed to read file");
-                        }
-                    } else {
-                        // Check for the file in the test's isolated test directory
-                        let res = capability_util::check_file_in_storage(
-                            storage_subdir,
-                            relative_moniker,
-                            instance_id.as_ref(),
-                            &self.test_dir_proxy,
-                        )
-                        .await;
-                        if let ExpectedResult::Ok = &expected_res {
-                            res.expect("failed to read file");
-                        }
-                    }
-                }
-            }
-            CheckUse::StorageAdmin {
-                storage_relation,
-                from_cm_namespace,
-                storage_subdir,
-                expected_res,
-            } => {
-                let storage_admin_proxy =
-                    capability_util::connect_to_svc_in_namespace::<fsys::StorageAdminMarker>(
-                        &namespace,
-                        &"/svc/fuchsia.sys2.StorageAdmin".try_into().unwrap(),
-                    )
-                    .await;
-                let (storage_proxy, server_end) = create_proxy().unwrap();
-                let flags = OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE;
-                let relative_moniker_string = format!("{}", storage_relation);
-                let component_abs_moniker =
-                    AbsoluteMoniker::from_relative(&moniker, &storage_relation).unwrap();
-                let component_instance_id = self
-                    .model
-                    .root
-                    .try_get_component_id_index()
-                    .unwrap()
-                    .look_up_moniker(&component_abs_moniker)
-                    .cloned();
-                storage_admin_proxy
-                    .open_component_storage(
-                        relative_moniker_string.as_str(),
-                        flags,
-                        MODE_TYPE_DIRECTORY,
-                        server_end,
-                    )
-                    .expect("failed to open component storage");
-
-                let storage_proxy =
-                    DirectoryProxy::from_channel(storage_proxy.into_channel().unwrap());
-
-                capability_util::write_hippo_file_to_directory(
-                    &storage_proxy,
-                    expected_res.clone(),
-                )
-                .await;
-                if expected_res == ExpectedResult::Ok {
-                    let storage_dir = if from_cm_namespace {
-                        io_util::open_directory_in_namespace("/tmp", io_util::OPEN_RIGHT_READABLE)
-                            .expect("failed to open /tmp")
-                    } else {
-                        io_util::clone_directory(&self.test_dir_proxy, CLONE_FLAG_SAME_RIGHTS)
-                            .expect("failed to clone test_dir_proxy")
-                    };
-                    capability_util::check_file_in_storage(
-                        storage_subdir.clone(),
-                        storage_relation.clone(),
-                        component_instance_id.as_ref(),
-                        &storage_dir,
-                    )
-                    .await
-                    .expect("failed to read file");
-                    storage_admin_proxy
-                        .delete_component_storage(relative_moniker_string.as_str())
-                        .await
-                        .expect("failed to send fidl message")
-                        .expect("error encountered while deleting component storage");
-                    capability_util::confirm_storage_is_deleted_for_component(
-                        storage_subdir,
-                        storage_relation,
-                        component_instance_id.as_ref(),
-                        &storage_dir,
-                    )
-                    .await;
-                }
-            }
-            CheckUse::Event { requests, expected_res } => {
-                // Fails if the component did not use the protocol EventSource or if the event is
-                // not allowed.
-                capability_util::subscribe_to_event_stream(&namespace, expected_res, requests)
-                    .await;
-            }
-        }
     }
 
     pub async fn bind_and_get_namespace(&self, moniker: AbsoluteMoniker) -> Arc<ManagedNamespace> {
@@ -852,6 +634,175 @@ impl RoutingTest {
     }
 }
 
+#[async_trait]
+impl RoutingTestModel for RoutingTest {
+    async fn check_use(&self, moniker: AbsoluteMoniker, check: CheckUse) {
+        let component_name = self
+            .bind_instance_and_wait_start(&moniker)
+            .await
+            .expect(&format!("bind instance failed for `{}`", moniker));
+        let component_resolved_url = Self::resolved_url(&component_name);
+        let namespace = self
+            .mock_runner
+            .get_namespace(&component_resolved_url)
+            .expect("could not find child namespace");
+        Self::check_namespace(component_name, &self.mock_runner, self.components.clone()).await;
+        match check {
+            CheckUse::Protocol { path, expected_res } => {
+                capability_util::call_echo_svc_from_namespace(&namespace, path, expected_res).await;
+            }
+            CheckUse::Service { path, instance, member, expected_res } => {
+                capability_util::call_service_instance_echo_svc_from_namespace(
+                    &namespace,
+                    path,
+                    instance,
+                    member,
+                    expected_res,
+                )
+                .await;
+            }
+            CheckUse::Directory { path, file, expected_res } => {
+                capability_util::read_data_from_namespace(&namespace, path, &file, expected_res)
+                    .await
+            }
+            CheckUse::Storage {
+                path,
+                storage_relation,
+                from_cm_namespace,
+                storage_subdir,
+                expected_res,
+            } => {
+                if let ExpectedResult::Ok = &expected_res {
+                    assert!(
+                        storage_relation.is_some(),
+                        "relative moniker required if expected result is ok"
+                    );
+                }
+                capability_util::write_file_to_storage(&namespace, path, expected_res.clone())
+                    .await;
+
+                let instance_id = self
+                    .model
+                    .root
+                    .try_get_component_id_index()
+                    .unwrap()
+                    .look_up_moniker(&moniker)
+                    .cloned();
+
+                if let Some(relative_moniker) = storage_relation {
+                    if from_cm_namespace {
+                        // Check for the file in the /tmp in the test's namespace
+                        let tmp_proxy = io_util::open_directory_in_namespace(
+                            "/tmp",
+                            io_util::OPEN_RIGHT_READABLE,
+                        )
+                        .expect("failed to open /tmp");
+                        let res = capability_util::check_file_in_storage(
+                            storage_subdir,
+                            relative_moniker,
+                            instance_id.as_ref(),
+                            &tmp_proxy,
+                        )
+                        .await;
+                        if let ExpectedResult::Ok = &expected_res {
+                            res.expect("failed to read file");
+                        }
+                    } else {
+                        // Check for the file in the test's isolated test directory
+                        let res = capability_util::check_file_in_storage(
+                            storage_subdir,
+                            relative_moniker,
+                            instance_id.as_ref(),
+                            &self.test_dir_proxy,
+                        )
+                        .await;
+                        if let ExpectedResult::Ok = &expected_res {
+                            res.expect("failed to read file");
+                        }
+                    }
+                }
+            }
+            CheckUse::StorageAdmin {
+                storage_relation,
+                from_cm_namespace,
+                storage_subdir,
+                expected_res,
+            } => {
+                let storage_admin_proxy =
+                    capability_util::connect_to_svc_in_namespace::<fsys::StorageAdminMarker>(
+                        &namespace,
+                        &"/svc/fuchsia.sys2.StorageAdmin".try_into().unwrap(),
+                    )
+                    .await;
+                let (storage_proxy, server_end) = create_proxy().unwrap();
+                let flags = OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE;
+                let relative_moniker_string = format!("{}", storage_relation);
+                let component_abs_moniker =
+                    AbsoluteMoniker::from_relative(&moniker, &storage_relation).unwrap();
+                let component_instance_id = self
+                    .model
+                    .root
+                    .try_get_component_id_index()
+                    .unwrap()
+                    .look_up_moniker(&component_abs_moniker)
+                    .cloned();
+                storage_admin_proxy
+                    .open_component_storage(
+                        relative_moniker_string.as_str(),
+                        flags,
+                        MODE_TYPE_DIRECTORY,
+                        server_end,
+                    )
+                    .expect("failed to open component storage");
+
+                let storage_proxy =
+                    DirectoryProxy::from_channel(storage_proxy.into_channel().unwrap());
+
+                capability_util::write_hippo_file_to_directory(
+                    &storage_proxy,
+                    expected_res.clone(),
+                )
+                .await;
+                if expected_res == ExpectedResult::Ok {
+                    let storage_dir = if from_cm_namespace {
+                        io_util::open_directory_in_namespace("/tmp", io_util::OPEN_RIGHT_READABLE)
+                            .expect("failed to open /tmp")
+                    } else {
+                        io_util::clone_directory(&self.test_dir_proxy, CLONE_FLAG_SAME_RIGHTS)
+                            .expect("failed to clone test_dir_proxy")
+                    };
+                    capability_util::check_file_in_storage(
+                        storage_subdir.clone(),
+                        storage_relation.clone(),
+                        component_instance_id.as_ref(),
+                        &storage_dir,
+                    )
+                    .await
+                    .expect("failed to read file");
+                    storage_admin_proxy
+                        .delete_component_storage(relative_moniker_string.as_str())
+                        .await
+                        .expect("failed to send fidl message")
+                        .expect("error encountered while deleting component storage");
+                    capability_util::confirm_storage_is_deleted_for_component(
+                        storage_subdir,
+                        storage_relation,
+                        component_instance_id.as_ref(),
+                        &storage_dir,
+                    )
+                    .await;
+                }
+            }
+            CheckUse::Event { requests, expected_res } => {
+                // Fails if the component did not use the protocol EventSource or if the event is
+                // not allowed.
+                capability_util::subscribe_to_event_stream(&namespace, expected_res, requests)
+                    .await;
+            }
+        }
+    }
+}
+
 /// Installs a new directory at `path` in the test's namespace, removing it when this object
 /// goes out of scope.
 pub struct ScopedNamespaceDir<'a> {
@@ -1093,7 +1044,7 @@ pub mod capability_util {
     pub async fn subscribe_to_event_stream(
         namespace: &ManagedNamespace,
         expected_res: ExpectedResult,
-        events: Vec<EventSubscription>,
+        events: Vec<::routing::event::EventSubscription>,
     ) {
         let path: CapabilityPath = "/svc/fuchsia.sys2.EventSource".parse().unwrap();
         let res = subscribe_to_events(namespace, &path, events).await;
@@ -1111,24 +1062,25 @@ pub mod capability_util {
     pub async fn subscribe_to_events(
         namespace: &ManagedNamespace,
         event_source_path: &CapabilityPath,
-        events: Vec<EventSubscription>,
+        events: Vec<::routing::event::EventSubscription>,
     ) -> Result<fsys::EventStreamRequestStream, anyhow::Error> {
         let event_source_proxy =
             connect_to_svc_in_namespace::<EventSourceMarker>(namespace, event_source_path).await;
         let (client_end, stream) =
             fidl::endpoints::create_request_stream::<fsys::EventStreamMarker>()?;
-        event_source_proxy
-            .subscribe(
-                &mut events.into_iter().map(|request| fsys::EventSubscription {
-                    event_name: Some(request.event_name.to_string()),
-                    mode: Some(match request.mode {
-                        EventMode::Sync => fsys::EventMode::Sync,
-                        _ => fsys::EventMode::Async,
-                    }),
-                    ..fsys::EventSubscription::EMPTY
+        // Bind the future to a variable in order to avoid using the `request`s across an await.
+        let subscribe_future = event_source_proxy.subscribe(
+            &mut events.into_iter().map(|request| fsys::EventSubscription {
+                event_name: Some(request.event_name.to_string()),
+                mode: Some(match request.mode {
+                    EventMode::Sync => fsys::EventMode::Sync,
+                    _ => fsys::EventMode::Async,
                 }),
-                client_end,
-            )
+                ..fsys::EventSubscription::EMPTY
+            }),
+            client_end,
+        );
+        subscribe_future
             .await?
             .map_err(|error| format_err!("Unable to subscribe to event stream: {:?}", error))?;
         event_source_proxy
