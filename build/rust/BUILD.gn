@@ -64,7 +64,10 @@ action("cargo_toml_gen") {
   ]
   script = "//scripts/generate_cargo.py"
   sources = []
-  inputs = [ cargo_toml_gen_desc_out ]
+  inputs = [
+    cargo_toml_gen_desc_out,
+    "//third_party/rust_crates/Cargo.toml",
+  ]
 
   outputs = [ "$root_build_dir/cargo/generate_cargo.stamp" ]
   depfile = "$root_build_dir/cargo/generate_cargo.stamp.d"
