@@ -4,6 +4,7 @@
 
 use {
     crate::base::SettingType,
+    crate::handler::base::Payload as HandlerPayload,
     crate::handler::device_storage::testing::InMemoryStorageFactory,
     crate::input::common::MediaButtonsEventBuilder,
     crate::input::input_device_configuration::{
@@ -14,6 +15,10 @@ use {
         DeviceState, DeviceStateSource, InputCategory, InputDeviceType, InputInfoSources,
         InputState,
     },
+    crate::message::base::{filter, MessengerType},
+    crate::message::receptor::Receptor,
+    crate::service::message::Delegate,
+    crate::service::{Address, Payload, Role},
     crate::service_context::ServiceContext,
     crate::tests::fakes::input_device_registry_service::InputDeviceRegistryService,
     crate::tests::fakes::service_registry::ServiceRegistry,
@@ -26,9 +31,12 @@ use {
         ToggleStateFlags,
     },
     fidl_fuchsia_ui_input::MediaButtonsEvent,
+    fuchsia_async::Executor,
     fuchsia_zircon::Status,
     futures::lock::Mutex,
+    futures::pin_mut,
     futures::stream::StreamExt,
+    futures::task::Poll,
     matches::assert_matches,
     std::collections::HashMap,
     std::sync::Arc,
@@ -143,6 +151,34 @@ async fn create_input_test_env_with_failures(
         .unwrap()
 }
 
+// Creates an environment with an executor for moving forward execution and
+// a configuration for the input devices.
+fn create_env_and_executor_with_config(
+    config: InputConfiguration,
+    // The pre-populated data to insert into the store before spawning
+    // the environment.
+    initial_input_info: Option<InputInfoSources>,
+) -> (Executor, TestInputEnvironment) {
+    let mut executor = Executor::new_with_fake_time().expect("Failed to create executor");
+    let env_future = if let Some(initial_info) = initial_input_info {
+        TestInputEnvironmentBuilder::new()
+            .set_input_device_config(config)
+            .set_starting_input_info_sources(initial_info)
+            .build()
+    } else {
+        TestInputEnvironmentBuilder::new().set_input_device_config(config).build()
+    };
+    pin_mut!(env_future);
+    let env = match executor.run_until_stalled(&mut env_future) {
+        Poll::Ready(env) => env,
+        _ => panic!("Failed to create environment"),
+    };
+
+    // Return order matters here. Executor must be in first position to avoid
+    // it being torn down before env.
+    (executor, env)
+}
+
 // Set the software mic mute state to muted = [mic_muted].
 async fn set_mic_mute(proxy: &InputProxy, mic_muted: bool) {
     let mut input_device_settings = InputDeviceSettings::EMPTY;
@@ -206,13 +242,9 @@ async fn switch_hardware_camera_disable(env: &TestInputEnvironment, disabled: bo
 
 // Perform a watch and watch2 and check that the mic mute state matches [expected_muted_state].
 async fn get_and_check_mic_mute(input_proxy: &InputProxy, expected_muted_state: bool) {
-    // TODO(fxb/66313): The following call is a no-op and only meant to delay the following watch
-    // below, giving enough time for any change made before invoking this function to take effect.
-    // This time issue is caused by the number of messages necessary to get a change from the fake
-    // services to the setting service vs a fidl call into the service. The correct fix is to either
-    // wait on the setting service for a completion event or run tests on an executor until idle.
-    input_proxy.set_states(&mut Vec::new().into_iter()).await.ok();
-    let settings = input_proxy.watch().await.expect("watch completed");
+    // TODO(fxb/65686): remove when deprecated watch is removed.
+    let settings = input_proxy.watch().await.expect("watch2 completed");
+
     let settings2 = input_proxy.watch2().await.expect("watch2 completed");
 
     assert_eq!(settings.microphone.unwrap().muted, Some(expected_muted_state));
@@ -224,15 +256,44 @@ async fn get_and_check_camera_disable(
     input_proxy: &InputProxy,
     expected_camera_disabled_state: bool,
 ) {
-    // TODO(fxb/66313): The following call is a no-op and only meant to delay the following watch
-    // below, giving enough time for any change made before invoking this function to take effect.
-    // This time issue is caused by the number of messages necessary to get a change from the fake
-    // services to the setting service vs a fidl call into the service. The correct fix is to either
-    // wait on the setting service for a completion event or run tests on an executor until idle.
-    input_proxy.set_states(&mut Vec::new().into_iter()).await.ok();
-
     let settings2 = input_proxy.watch2().await.expect("watch2 completed");
     verify_muted_state(settings2, expected_camera_disabled_state, DeviceType::Camera);
+}
+
+// Creates a broker to listen in on media buttons events.
+fn create_broker(executor: &mut Executor, delegate: Delegate) -> Receptor<Payload, Address, Role> {
+    let message_hub_future = delegate.create(MessengerType::Broker(Some(filter::Builder::single(
+        filter::Condition::Custom(Arc::new(move |message| {
+            // Only catch changes to input info.
+            matches!(message.payload(), Payload::Setting(HandlerPayload::Response(Ok(None))))
+        })),
+    ))));
+    pin_mut!(message_hub_future);
+    let receptor = match executor.run_until_stalled(&mut message_hub_future) {
+        Poll::Ready(Ok((_, receptor))) => receptor,
+        _ => panic!("Could not create broker on service message hub"),
+    };
+    receptor
+}
+
+// Waits for the media buttons receptor to receive an update, so that
+// following code can be sure that the media buttons event was handled
+// before continuing.
+async fn wait_for_media_button_event(
+    media_buttons_receptor: &mut Receptor<Payload, Address, Role>,
+) {
+    loop {
+        let payload = media_buttons_receptor.next_payload().await.expect("payload should exist");
+        match payload {
+            (Payload::Setting(HandlerPayload::Response(Ok(None))), message_client) => {
+                message_client.propagate(payload.0);
+                break;
+            }
+            (_, message_client) => {
+                message_client.propagate(payload.0);
+            }
+        }
+    }
 }
 
 // Perform a watch2 and check that the mic mute state matches [expected_mic_mute_state]
@@ -276,6 +337,23 @@ fn verify_muted_state(
     );
 }
 
+// Macro to run async calls with an executor, handling the Ready status
+// and panicking with a custom message if it does not succeed.
+#[macro_export]
+macro_rules! run_code_with_executor {
+    (
+        $executor:ident,
+        $async_code:expr,
+        $panic_msg:expr
+    ) => {{
+        let mut future = Box::pin(async { $async_code });
+        match $executor.run_until_stalled(&mut future) {
+            Poll::Ready(res) => res,
+            _ => panic!("{}", $panic_msg),
+        }
+    }};
+}
+
 // Test that a watch is executed correctly.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_watch() {
@@ -289,91 +367,191 @@ async fn test_watch() {
 }
 
 // Test that a set then watch for the mic is executed correctly.
-#[fuchsia_async::run_until_stalled(test)]
-async fn test_set_watch_mic_mute() {
-    let env = TestInputEnvironmentBuilder::new()
-        .set_input_device_config(default_mic_config_muted())
-        .build()
-        .await;
+#[test]
+fn test_set_watch_mic_mute() {
+    let (mut executor, env) = create_env_and_executor_with_config(default_mic_config_muted(), None);
     let input_proxy = env.input_service.clone();
+    let mut media_buttons_receptor = create_broker(&mut executor, env.delegate.clone());
 
     // SW muted, HW unmuted.
-    set_mic_mute_input2(&input_proxy, true).await;
-    get_and_check_mic_mute(&input_proxy, true).await;
+    run_code_with_executor!(
+        executor,
+        Box::pin(async {
+            set_mic_mute_input2(&input_proxy, true).await;
+        }),
+        "Failed to set mic mute"
+    );
+    run_code_with_executor!(
+        executor,
+        Box::pin(async {
+            get_and_check_mic_mute(&input_proxy, true).await;
+        }),
+        "Failed to watch mic mute"
+    );
 
     // SW unmuted, HW muted.
-    switch_hardware_mic_mute(&env, true).await;
-    set_mic_mute_input2(&input_proxy, false).await;
-    get_and_check_mic_mute(&input_proxy, true).await;
+    run_code_with_executor!(
+        executor,
+        Box::pin(async {
+            switch_hardware_mic_mute(&env, true).await;
+            set_mic_mute_input2(&input_proxy, false).await;
+            wait_for_media_button_event(&mut media_buttons_receptor).await;
+        }),
+        "Failed to switch mic mute state"
+    );
+    run_code_with_executor!(
+        executor,
+        Box::pin(async {
+            get_and_check_mic_mute(&input_proxy, true).await;
+        }),
+        "Failed to watch mic mute"
+    );
 
     // SW unmuted, HW unmuted.
-    switch_hardware_mic_mute(&env, false).await;
-    get_and_check_mic_mute(&input_proxy, false).await;
+    run_code_with_executor!(
+        executor,
+        Box::pin(async {
+            switch_hardware_mic_mute(&env, false).await;
+            wait_for_media_button_event(&mut media_buttons_receptor).await;
+        }),
+        "Failed to switch hardware mic mute"
+    );
+    run_code_with_executor!(
+        executor,
+        Box::pin(async {
+            get_and_check_mic_mute(&input_proxy, false).await;
+        }),
+        "Failed to watch mic mute"
+    );
 }
 
 // Test that a set then watch for the camera is executed correctly.
-#[fuchsia_async::run_until_stalled(test)]
-async fn test_set_watch_camera_disable() {
-    let env = TestInputEnvironmentBuilder::new()
-        .set_input_device_config(default_mic_cam_config())
-        .build()
-        .await;
+#[test]
+fn test_set_watch_camera_disable() {
+    let (mut executor, env) = create_env_and_executor_with_config(default_mic_cam_config(), None);
     let input_proxy = env.input_service.clone();
+    let mut media_buttons_receptor = create_broker(&mut executor, env.delegate.clone());
 
     // SW muted, HW unmuted.
-    set_camera_disable(&input_proxy, true).await;
-    get_and_check_camera_disable(&input_proxy, true).await;
+    run_code_with_executor!(
+        executor,
+        Box::pin(async {
+            set_camera_disable(&input_proxy, true).await;
+            get_and_check_camera_disable(&input_proxy, true).await;
+        }),
+        "Failed to switch camera state"
+    );
 
     // SW unmuted, HW muted.
-    switch_hardware_camera_disable(&env, true).await;
-    set_camera_disable(&input_proxy, false).await;
-    get_and_check_camera_disable(&input_proxy, true).await;
+    run_code_with_executor!(
+        executor,
+        Box::pin(async {
+            switch_hardware_camera_disable(&env, true).await;
+            set_camera_disable(&input_proxy, false).await;
+            wait_for_media_button_event(&mut media_buttons_receptor).await;
+        }),
+        "Failed to switch camera state"
+    );
+    run_code_with_executor!(
+        executor,
+        Box::pin(async {
+            get_and_check_camera_disable(&input_proxy, true).await;
+        }),
+        "Failed to get camera mute state"
+    );
 
     // SW unmuted, HW unmuted.
-    switch_hardware_camera_disable(&env, false).await;
-
-    let _ = input_proxy.watch().await.expect("watch completed");
-    get_and_check_camera_disable(&input_proxy, false).await;
+    run_code_with_executor!(
+        executor,
+        Box::pin(async {
+            switch_hardware_camera_disable(&env, false).await;
+            wait_for_media_button_event(&mut media_buttons_receptor).await;
+        }),
+        "Failed to switch camera mute state"
+    );
+    run_code_with_executor!(
+        executor,
+        Box::pin(async {
+            get_and_check_camera_disable(&input_proxy, false).await;
+        }),
+        "Failed to get camera mute state"
+    );
 }
 
 // Test to ensure mic input change events are received.
-#[fuchsia_async::run_until_stalled(test)]
-async fn test_mic_input() {
-    let env = TestInputEnvironmentBuilder::new()
-        .set_input_device_config(default_mic_config())
-        .build()
-        .await;
+#[test]
+fn test_mic_input() {
+    let (mut executor, env) = create_env_and_executor_with_config(default_mic_config(), None);
     let input_proxy = env.input_service.clone();
+    let mut media_buttons_receptor = create_broker(&mut executor, env.delegate.clone());
 
-    switch_hardware_mic_mute(&env, true).await;
-    get_and_check_mic_mute(&input_proxy, true).await;
+    run_code_with_executor!(
+        executor,
+        Box::pin(async {
+            switch_hardware_mic_mute(&env, true).await;
+            wait_for_media_button_event(&mut media_buttons_receptor).await;
+        }),
+        "Failed to switch hardware mic mute"
+    );
+    run_code_with_executor!(
+        executor,
+        Box::pin(async {
+            get_and_check_mic_mute(&input_proxy, true).await;
+        }),
+        "Failed to watch mic mute"
+    );
 }
 
 // Test to ensure camera input change events are received.
-#[fuchsia_async::run_until_stalled(test)]
-async fn test_camera_input() {
-    let env = TestInputEnvironmentBuilder::new()
-        .set_input_device_config(default_mic_cam_config())
-        .build()
-        .await;
+#[test]
+fn test_camera_input() {
+    let (mut executor, env) = create_env_and_executor_with_config(default_mic_cam_config(), None);
     let input_proxy = env.input_service.clone();
+    let mut media_buttons_receptor = create_broker(&mut executor, env.delegate.clone());
 
-    get_and_check_camera_disable(&input_proxy, false).await;
-    switch_hardware_camera_disable(&env, true).await;
-    get_and_check_camera_disable(&input_proxy, true).await;
+    run_code_with_executor!(
+        executor,
+        Box::pin(async {
+            get_and_check_camera_disable(&input_proxy, false).await;
+            switch_hardware_camera_disable(&env, true).await;
+            wait_for_media_button_event(&mut media_buttons_receptor).await;
+        }),
+        "Failed to get and switch hardware camera mute state"
+    );
+
+    run_code_with_executor!(
+        executor,
+        Box::pin(async {
+            get_and_check_camera_disable(&input_proxy, true).await;
+        }),
+        "Failed to get camera mute state"
+    );
 }
 
 // Test to ensure camera sw state is not changed on camera3 api
 // when the hw state is changed.
-#[fuchsia_async::run_until_stalled(test)]
-async fn test_camera3_hw_change() {
-    let env = TestInputEnvironmentBuilder::new()
-        .set_input_device_config(default_mic_cam_config())
-        .build()
-        .await;
+#[test]
+fn test_camera3_hw_change() {
+    let (mut executor, env) = create_env_and_executor_with_config(default_mic_cam_config(), None);
+    let mut media_buttons_receptor = create_broker(&mut executor, env.delegate.clone());
 
-    switch_hardware_camera_disable(&env, true).await;
-    assert_eq!(env.camera3_service.lock().await.camera_sw_muted(), false);
+    run_code_with_executor!(
+        executor,
+        Box::pin(async {
+            switch_hardware_camera_disable(&env, true).await;
+            wait_for_media_button_event(&mut media_buttons_receptor).await;
+        }),
+        "Failed to switch camera hw state"
+    );
+
+    let camera3_service_future = env.camera3_service.lock();
+    pin_mut!(camera3_service_future);
+    let camera3_proxy = match executor.run_until_stalled(&mut camera3_service_future) {
+        Poll::Ready(service) => service,
+        _ => panic!("Could not acquire camera3 service lock"),
+    };
+
+    assert_eq!(camera3_proxy.camera_sw_muted(), false);
 }
 
 // Test to ensure camera sw state is changed on camera3 api
@@ -392,60 +570,146 @@ async fn test_camera3_sw_change() {
 
 // Test that when either hardware or software is muted, the service
 // reports the microphone as muted.
-#[fuchsia_async::run_until_stalled(test)]
-async fn test_mic_mute_combinations() {
-    let env = TestInputEnvironmentBuilder::new()
-        .set_input_device_config(default_mic_config())
-        .build()
-        .await;
+#[test]
+fn test_mic_mute_combinations() {
+    let (mut executor, env) = create_env_and_executor_with_config(default_mic_config(), None);
     let input_proxy = env.input_service.clone();
+    let mut media_buttons_receptor = create_broker(&mut executor, env.delegate.clone());
 
     // Hardware muted, software unmuted.
-    switch_hardware_mic_mute(&env, true).await;
-    set_mic_mute_input2(&input_proxy, false).await;
-    get_and_check_mic_mute(&input_proxy, true).await;
+    run_code_with_executor!(
+        executor,
+        Box::pin(async {
+            switch_hardware_mic_mute(&env, true).await;
+            set_mic_mute_input2(&input_proxy, false).await;
+            wait_for_media_button_event(&mut media_buttons_receptor).await;
+        }),
+        "Failed to switch mic mute state"
+    );
+    run_code_with_executor!(
+        executor,
+        Box::pin(async {
+            get_and_check_mic_mute(&input_proxy, true).await;
+        }),
+        "Failed to get mic mute state"
+    );
 
     // Hardware muted, software muted.
-    set_mic_mute_input2(&input_proxy, true).await;
-    get_and_check_mic_mute(&input_proxy, true).await;
+    run_code_with_executor!(
+        executor,
+        Box::pin(async {
+            set_mic_mute_input2(&input_proxy, true).await;
+            get_and_check_mic_mute(&input_proxy, true).await;
+        }),
+        "Failed to switch and check mic mute state"
+    );
 
     // Hardware unmuted, software muted.
-    switch_hardware_mic_mute(&env, false).await;
-    get_and_check_mic_mute(&input_proxy, true).await;
+    run_code_with_executor!(
+        executor,
+        Box::pin(async {
+            switch_hardware_mic_mute(&env, false).await;
+            wait_for_media_button_event(&mut media_buttons_receptor).await;
+        }),
+        "Failed to switch hardware mic mute state"
+    );
+    run_code_with_executor!(
+        executor,
+        Box::pin(async {
+            get_and_check_mic_mute(&input_proxy, true).await;
+        }),
+        "Failed to watch mic mute state"
+    );
 
     // Hardware unmuted, software unmuted.
-    switch_hardware_mic_mute(&env, false).await;
-    set_mic_mute_input2(&input_proxy, false).await;
-    get_and_check_mic_mute(&input_proxy, false).await;
+    run_code_with_executor!(
+        executor,
+        Box::pin(async {
+            switch_hardware_mic_mute(&env, false).await;
+            set_mic_mute_input2(&input_proxy, false).await;
+            wait_for_media_button_event(&mut media_buttons_receptor).await;
+        }),
+        "Failed to switch mic mute state"
+    );
+    run_code_with_executor!(
+        executor,
+        Box::pin(async {
+            get_and_check_mic_mute(&input_proxy, false).await;
+        }),
+        "Failed to watch mic mute state"
+    );
 }
 
 // Test that when either hardware or software is disabled, the service
 // reports the camera as disabled.
-#[fuchsia_async::run_until_stalled(test)]
-async fn test_camera_disable_combinations() {
-    let env = TestInputEnvironmentBuilder::new()
-        .set_input_device_config(default_mic_cam_config())
-        .build()
-        .await;
+#[test]
+fn test_camera_disable_combinations() {
+    let (mut executor, env) = create_env_and_executor_with_config(default_mic_cam_config(), None);
     let input_proxy = env.input_service.clone();
+    let mut media_buttons_receptor = create_broker(&mut executor, env.delegate.clone());
 
     // Hardware disabled, software enabled.
-    switch_hardware_camera_disable(&env, true).await;
-    set_camera_disable(&input_proxy, false).await;
-    get_and_check_camera_disable(&input_proxy, true).await;
+    run_code_with_executor!(
+        executor,
+        Box::pin(async {
+            switch_hardware_camera_disable(&env, true).await;
+            set_camera_disable(&input_proxy, false).await;
+            wait_for_media_button_event(&mut media_buttons_receptor).await;
+        }),
+        "Failed to switch camera mute state"
+    );
+    run_code_with_executor!(
+        executor,
+        Box::pin(async {
+            get_and_check_camera_disable(&input_proxy, true).await;
+        }),
+        "Failed to get camera mute state"
+    );
 
-    // Hardware disabled, software disabled.
-    set_camera_disable(&input_proxy, true).await;
-    get_and_check_camera_disable(&input_proxy, true).await;
+    // Hardware disabled, software disabled
+    run_code_with_executor!(
+        executor,
+        Box::pin(async {
+            set_camera_disable(&input_proxy, true).await;
+            get_and_check_camera_disable(&input_proxy, true).await;
+        }),
+        "Failed to switch camera mute state"
+    );
 
     // Hardware enabled, software disabled.
-    switch_hardware_camera_disable(&env, false).await;
-    get_and_check_camera_disable(&input_proxy, true).await;
+    run_code_with_executor!(
+        executor,
+        Box::pin(async {
+            switch_hardware_camera_disable(&env, false).await;
+            wait_for_media_button_event(&mut media_buttons_receptor).await;
+        }),
+        "Failed to switch hardware camera mute state"
+    );
+    run_code_with_executor!(
+        executor,
+        Box::pin(async {
+            get_and_check_camera_disable(&input_proxy, true).await;
+        }),
+        "Failed to watch camera mute state"
+    );
 
     // Hardware enabled, software enabled.
-    switch_hardware_camera_disable(&env, false).await;
-    set_camera_disable(&input_proxy, false).await;
-    get_and_check_camera_disable(&input_proxy, false).await;
+    run_code_with_executor!(
+        executor,
+        Box::pin(async {
+            switch_hardware_camera_disable(&env, false).await;
+            set_camera_disable(&input_proxy, false).await;
+            wait_for_media_button_event(&mut media_buttons_receptor).await;
+        }),
+        "Failed to switch camera mute state"
+    );
+    run_code_with_executor!(
+        executor,
+        Box::pin(async {
+            get_and_check_camera_disable(&input_proxy, false).await;
+        }),
+        "Failed to watch camera mute state"
+    );
 }
 
 // Test that the input settings are restored correctly.

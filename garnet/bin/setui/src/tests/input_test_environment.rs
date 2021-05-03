@@ -13,10 +13,12 @@ use crate::handler::setting_handler::{BoxedController, ClientImpl};
 use crate::input::input_controller::InputController;
 use crate::input::input_device_configuration::InputConfiguration;
 use crate::input::types::InputInfoSources;
+use crate::service::message::Delegate;
 use crate::tests::fakes::camera3_service::Camera3Service;
 use crate::tests::fakes::input_device_registry_service::InputDeviceRegistryService;
 use crate::tests::fakes::service_registry::ServiceRegistry;
 
+use crate::Environment;
 use crate::EnvironmentBuilder;
 
 use fidl_fuchsia_settings::{InputMarker, InputProxy};
@@ -37,6 +39,9 @@ pub struct TestInputEnvironment {
 
     /// For storing the InputInfoSources.
     pub store: Arc<DeviceStorage>,
+
+    /// For listening on service messages, particularly media buttons events.
+    pub delegate: Delegate,
 }
 
 pub struct TestInputEnvironmentBuilder {
@@ -125,9 +130,13 @@ impl TestInputEnvironmentBuilder {
             environment_builder = environment_builder.handler(SettingType::Input, generate_handler);
         }
 
-        let env = environment_builder.spawn_and_get_nested_environment(ENV_NAME).await.unwrap();
+        let Environment { nested_environment: env, delegate, .. } =
+            environment_builder.spawn_nested(ENV_NAME).await.unwrap();
 
-        let input_service = env.connect_to_protocol::<InputMarker>().unwrap();
+        let input_service = env
+            .expect("Nested environment should exist")
+            .connect_to_protocol::<InputMarker>()
+            .unwrap();
         let store = storage_factory.get_device_storage().await;
 
         TestInputEnvironment {
@@ -135,6 +144,7 @@ impl TestInputEnvironmentBuilder {
             input_button_service: input_button_service_handle,
             camera3_service: camera3_service_handle,
             store,
+            delegate,
         }
     }
 }
