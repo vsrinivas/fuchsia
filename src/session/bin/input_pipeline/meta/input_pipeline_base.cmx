@@ -1,0 +1,13 @@
+{
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/input_pipeline"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.input.injection.InputDeviceRegistry"
+        ]
+    }
+}

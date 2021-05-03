@@ -5,6 +5,7 @@
 group("all") {
   deps = [
     "//src/session/bin/element_manager",
+    "//src/session/bin/input_pipeline",
     "//src/session/bin/scene_manager",
     "//src/session/bin/session_manager",
   ]
@@ -16,6 +17,7 @@ group("tests") {
   deps = [
     # This is here to make sure the component manager gets built as part of CI/CQ.
     "//src/session/bin/element_manager:element_manager_tests",
+    "//src/session/bin/input_pipeline:input_pipeline_tests",
     "//src/session/bin/scene_manager:scene_manager_tests",
     "//src/session/bin/session_manager:session_manager_tests",
   ]

@@ -1,0 +1,43 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":input_pipeline_tests" ]
+}
+
+rustc_binary("input_pipeline_bin") {
+  name = "input_pipeline"
+  with_unit_tests = true
+  edition = "2018"
+
+  deps = [
+    "//sdk/fidl/fuchsia.input.injection:fuchsia.input.injection-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
+    "//src/session/lib/input",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:futures",
+  ]
+
+  sources = [
+    "src/input_handlers.rs",
+    "src/main.rs",
+  ]
+}
+
+fuchsia_package_with_single_component("input_pipeline") {
+  manifest = "meta/input_pipeline.cmx"
+  deps = [ ":input_pipeline_bin" ]
+}
+
+fuchsia_unittest_package("input_pipeline_tests") {
+  deps = [ ":input_pipeline_bin_test" ]
+}
