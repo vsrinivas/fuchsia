@@ -31,6 +31,7 @@ group("tests") {
     "pci:tests",
     "power:tests",
     "pwm:tests",
+    "radar:tests",
     "ram:tests",
     "registers:tests",
     "rtc:tests",
