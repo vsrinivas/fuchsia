@@ -12,6 +12,7 @@ source_set("constants") {
 source_set("mixer") {
   sources = [
     "channel_strip.h",
+    "coefficient_table.cc",
     "coefficient_table.h",
     "coefficient_table_cache.h",
     "filter.cc",

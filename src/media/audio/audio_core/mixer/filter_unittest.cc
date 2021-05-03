@@ -12,14 +12,14 @@ namespace {
 
 TEST(PointFilterTest, Construction) {
   {
-    auto expected_source_rate = 48000;                               // default
-    auto expected_dest_rate = 48000;                                 // default
+    auto source_rate = 48000;
+    auto dest_rate = 48000;
     int32_t expected_num_frac_bits = Fixed::Format::FractionalBits;  // default
-    PointFilter filter;
+    PointFilter filter(source_rate, dest_rate);
     auto expected_side_length = (1 << (expected_num_frac_bits - 1)) + 1;
 
-    EXPECT_EQ(filter.source_rate(), expected_source_rate);
-    EXPECT_EQ(filter.dest_rate(), expected_dest_rate);
+    EXPECT_EQ(filter.source_rate(), source_rate);
+    EXPECT_EQ(filter.dest_rate(), dest_rate);
     EXPECT_EQ(filter.num_frac_bits(), expected_num_frac_bits);
     EXPECT_EQ(filter.side_length(), expected_side_length);
     EXPECT_FLOAT_EQ(filter.rate_conversion_ratio(), 1.0);
@@ -56,14 +56,14 @@ TEST(PointFilterTest, Construction) {
 
 TEST(LinearFilterTest, Construction) {
   {
-    auto expected_source_rate = 48000;                               // default
-    auto expected_dest_rate = 48000;                                 // default
+    auto source_rate = 48000;
+    auto dest_rate = 48000;
     int32_t expected_num_frac_bits = Fixed::Format::FractionalBits;  // default
-    LinearFilter filter;
+    LinearFilter filter(source_rate, dest_rate);
     auto expected_side_length = 1 << expected_num_frac_bits;
 
-    EXPECT_EQ(filter.source_rate(), expected_source_rate);
-    EXPECT_EQ(filter.dest_rate(), expected_dest_rate);
+    EXPECT_EQ(filter.source_rate(), source_rate);
+    EXPECT_EQ(filter.dest_rate(), dest_rate);
     EXPECT_EQ(filter.num_frac_bits(), expected_num_frac_bits);
     EXPECT_EQ(filter.side_length(), expected_side_length);
     EXPECT_FLOAT_EQ(filter.rate_conversion_ratio(), 1.0);
@@ -100,15 +100,15 @@ TEST(LinearFilterTest, Construction) {
 
 TEST(SincFilterTest, Construction) {
   {
-    auto expected_source_rate = 48000;                               // default
-    auto expected_dest_rate = 48000;                                 // default
+    auto source_rate = 48000;
+    auto dest_rate = 48000;
     int32_t expected_num_frac_bits = Fixed::Format::FractionalBits;  // default
     auto num_taps = SincFilter::kSideTaps;                           // default
     auto side_length = (num_taps + 1) << expected_num_frac_bits;     // default
-    SincFilter filter;
+    SincFilter filter(source_rate, dest_rate);
 
-    EXPECT_EQ(filter.source_rate(), expected_source_rate);
-    EXPECT_EQ(filter.dest_rate(), expected_dest_rate);
+    EXPECT_EQ(filter.source_rate(), source_rate);
+    EXPECT_EQ(filter.dest_rate(), dest_rate);
     EXPECT_EQ(filter.num_frac_bits(), expected_num_frac_bits);
     EXPECT_EQ(filter.side_length(), side_length);
     EXPECT_FLOAT_EQ(filter.rate_conversion_ratio(), 1.0);
