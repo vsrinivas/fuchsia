@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+#### CATEGORY=Other
+### Query and calculate test stats.
+
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+
+source "$SCRIPT_DIR"/../lib/vars.sh || exit $?
+
+fx-config-read
+
+"$SCRIPT_DIR"/test-stats.py "$@"
