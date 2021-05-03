@@ -20,7 +20,7 @@ using DeviceType = ddk::Device<Shtv3Device, ddk::Messageable>;
 namespace temperature_fidl = fuchsia_hardware_temperature;
 
 class Shtv3Device : public DeviceType,
-                    public fidl::WireInterface<temperature_fidl::Device>,
+                    public fidl::WireServer<temperature_fidl::Device>,
                     public ddk::EmptyProtocol<ZX_PROTOCOL_TEMPERATURE> {
  public:
   Shtv3Device(zx_device_t* parent, ddk::I2cChannel i2c) : DeviceType(parent), i2c_(i2c) {}
@@ -30,7 +30,8 @@ class Shtv3Device : public DeviceType,
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease();
 
-  void GetTemperatureCelsius(GetTemperatureCelsiusCompleter::Sync& completer) override;
+  void GetTemperatureCelsius(GetTemperatureCelsiusRequestView request,
+                             GetTemperatureCelsiusCompleter::Sync& completer) override;
 
   // Visible for testing.
   zx_status_t Init();
