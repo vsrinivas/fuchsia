@@ -383,12 +383,16 @@ foreach(variant,
     # non instrumented toolchains like "gcc" or "thinlto"). This avoids
     # conflicts later when creating Fuchsia packages which contains binaries
     # who indirectly depend on the core SDK.
+    #
+    # IMPORTANT: KEEP THIS IN SYNC WITH THE toolchain_variant.libprefix computation
+    # in //build/config/BUILDCONFIG.gni
+    #
     _libprefix = ""
     _libc_target = system_libc_target
     _libc_stripped = system_libc_stripped
     _libc_unstripped = system_libc_unstripped
   } else {
-    _libprefix = "$variant/"
+    _libprefix = string_replace(variant, "-fuzzer", "") + "/"
     _libc_toolchain = "//zircon/system/ulib/c:user.libc_${current_cpu}-$variant"
     _libc_target = "$sysroot_libc_label($_libc_toolchain)"
     _libc_stripped = get_label_info(_libc_target, "root_out_dir") + "/libc.so"

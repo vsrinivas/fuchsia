@@ -113,10 +113,6 @@ if (use_prebuilt_ffmpeg) {
     # NOTE: prebuilt shared libraries for instrumented variants should be
     # installed into lib/<variant>/, and lib/ for non-instrumented ones
     # (e.g. thinlto).
-    _libprefix = ""
-    if (toolchain_variant.instrumented) {
-      _libprefix = string_replace(toolchain_variant.name, "-fuzzer", "") + "/"
-    }
-    outputs = [ "lib/${_libprefix}libffmpeg.so" ]
+    outputs = [ "lib/${toolchain_variant.libprefix}libffmpeg.so" ]
   }
 }

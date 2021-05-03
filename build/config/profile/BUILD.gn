@@ -62,7 +62,7 @@ variant("coverage") {
 # - All final binaries (executables and shared libraries) are linked to the
 #   profiling runtime. Even if none of their code is actually instrumented.
 #
-# - Since this is an instrumented build variant, the libprefix is 'lib/coverage-sdk'
+# - Since this is an instrumented build variant, the libdir is 'lib/coverage-sdk'.
 #
 variant("coverage-sdk") {
   inputs = _coverage_inputs
@@ -75,7 +75,7 @@ variant("coverage-sdk") {
 
   # All instrumented build variants place their dynamic loader and dependency
   # libraries under lib/<variant>/ so ensure generated executables will find
-  # it here.
+  # it here. See toolchain_variant.libprefix definition.
   dynamic_linker_flags = "-dynamic-linker=coverage-sdk/ld.so.1"
   ldflags = [ "-Wl,$dynamic_linker_flags" ]
   rustflags = [ "-Clink-arg=$dynamic_linker_flags" ]

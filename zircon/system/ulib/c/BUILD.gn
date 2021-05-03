@@ -6,6 +6,7 @@ import("//build/components.gni")
 import("//build/config/zircon/standard.gni")
 import("//build/test.gni")
 import("//build/zircon/migrated_targets.gni")
+
 import("libc.gni")
 
 assert(libc == get_path_info(get_path_info(".", "abspath"), "dir"),
@@ -53,9 +54,9 @@ config("llvm-libc-export.config") {
   ]
 }
 
-import("//build/toolchain/zircon/zircon_toolchain_suite.gni")
-
 if (current_toolchain == default_toolchain) {
+  import("//build/toolchain/zircon/zircon_toolchain_suite.gni")
+
   # This introduces a new toolchain suite to mimic the Zircon "user"
   # toolchain. Howver, it will only be used to build the C library, so
   # is named "user.libc" instead.
@@ -143,7 +144,7 @@ if (zircon_toolchain == false) {
 
     metadata = {
       runtime_deps_manifest_lines =
-          [ "lib/${toolchain.libprefix}ld.so.1=" +
+          [ "lib/${toolchain_variant.libprefix}ld.so.1=" +
             rebase_path("$root_out_dir/libc.so", root_build_dir) ]
     }
 

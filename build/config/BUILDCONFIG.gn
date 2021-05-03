@@ -126,6 +126,10 @@ declare_args() {
   #     `toolchain_variant.with_shared`
   #         [boolean] True iff this toolchain() instance has a secondary
   #         toolchain to build ELF shared-library code.
+  #     `toolchain_variant.libprefix`
+  #         [string] Installation prefix for instrumented shared libraries,
+  #         or an empty string for non-instrumented ones. For full details,
+  #         see comment below where toolchain_variant.libprefix is defined.
   #
   # The other fields are the variant's effects as defined in
   # [`known_variants`](#known_variants).
@@ -170,6 +174,41 @@ if (!defined(toolchain_variant.name)) {
     "gcc",
     "kernel-only",
   ]
+}
+
+# Shared libraries built in GN toolchain() instances that implement instrumented
+# build variants should be installed into Fuchsia packages, boot images or system
+# images, as "lib/<variant>/", while non-instrumented ones should simply go to "lib/".
+#
+# Also, as a special case, fuzzing build variants use the non-fuzzing build variant
+# name as the library sub-directory. In other words:
+#
+#   variant name        libdir               libprefix        note
+#
+#   no variant    --->  lib/                 ""               (default target toolchain)
+#   thinlto       --->  lib/                 ""               (uninstrumented)
+#   ubsan-asan    --->  lib/ubsan-asan/      "ubsan-asan/"    (instrumented)
+#   asan-fuzzer   --->  lib/asan/            "asan/"          (instrumented + fuzzing)
+#
+# Note that to run an ELF executable, the system will look its PT_INTERP entry, prepend
+# it with the hard-coded "lib/" prefix, to find the location of the dynamic linker/loader.
+#
+# The default location of the dynamic linker is 'lib/ld.so.1', and thus the default
+# value for PT_INTERP is simply "ld.so.1". However, for instrumented builds, the
+# loader will be in "lib/<variant>/ld.so.1", and the PT_INTERP will be
+# "<variant>/ld.so.1" instead. Which is why instrumented variants typically add
+# a link-time flag like "-Wl,-dynamic-linker=${toolchain_variant.libprefix}ld.so.1"
+# to override the default value (which is 'ld.so.1', hard-coded in the toolchain).
+#
+# Meanwhile "lib/${toolchain_variant.libprefix}" will be used to determine the
+# installation/distirbution destination path of shared libraries.
+#
+# IMPORTANT: KEEP THIS IN SYNC WITH //zircon/system/ulib/c/sysroot_entries.gni
+#
+toolchain_variant.libprefix = ""
+if (toolchain_variant.instrumented) {
+  toolchain_variant.libprefix =
+      string_replace(toolchain_variant.name, "-fuzzer", "") + "/"
 }
 
 is_android = false
@@ -930,11 +969,6 @@ if (toolchain_variant.with_shared || toolchain_variant.is_pic_default) {
         # Note: the manifest-related metadata is added to the builder target as
         # some targets (e.g. drivers) depend on it directly in the builder
         # toolchain.
-        variant_dir = ""
-        if (toolchain_variant.instrumented) {
-          variant_dir =
-              string_replace(toolchain_variant.name, "-fuzzer", "") + "/"
-        }
         metadata = {
           binaries = []
 
@@ -954,15 +988,12 @@ if (toolchain_variant.with_shared || toolchain_variant.is_pic_default) {
             distribution_entries = [
               {
                 source = rebased_output_file
-                destination = "lib/${variant_dir}$install_name"
+                destination = "lib/${toolchain_variant.libprefix}$install_name"
                 label = get_label_info(":$target_name", "label_with_toolchain")
               },
             ]
           } else {
-            not_needed([
-                         "install_name",
-                         "variant_dir",
-                       ])
+            not_needed([ "install_name" ])
           }
 
           # Used by the //:binaries target.

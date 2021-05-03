@@ -269,7 +269,7 @@ template("toolchain_runtime_deps") {
     # is one).  Note that multiple toolchains (variants that aren't that
     # different, e.g. uninstrumented variants) may produce identical
     # manifest entries because they match the same entries in the
-    # clang_runtime and use the same ${toolchain.libprefix} string.  That
+    # clang_runtime and use the same ${toolchain_variant.libprefix} string.  That
     # is less than ideal but it does no harm since the tools like zbi that
     # consume manifests accept redundant entries if they are identical.
     if (toolchain_variant.with_shared && current_toolchain != shlib_toolchain) {
@@ -311,19 +311,8 @@ template("toolchain_runtime_deps") {
 
       _label = get_label_info(":$target_name", "label_with_toolchain")
 
-      # The installation path prefix for runtime libraries depends on the variant.
-      # Note that fuzzer variants use the base variant name, i.e. without the -fuzzer
-      # suffix for this prefix.
-      _libprefix = ""
-      if (toolchain_variant.instrumented) {
-        _libprefix = string_replace(toolchain_variant.name, "-fuzzer", "") + "/"
-      }
-
       # In many cases, the loop below will be empty.
-      not_needed([
-                   "_label",
-                   "_libprefix",
-                 ])
+      not_needed([ "_label" ])
 
       foreach(lib, match.runtime) {
         # For build_api_module("binaries") in //BUILD.gn.
@@ -369,13 +358,13 @@ template("toolchain_runtime_deps") {
 
           # Used by runtime_deps_manifest().
           metadata.runtime_deps_manifest_lines +=
-              [ "lib/${_libprefix}${_soname}=" +
+              [ "lib/${toolchain_variant.libprefix}${_soname}=" +
                 rebase_path(lib.dist, root_build_dir, toolchain_spec.lib_dir) ]
 
           # Used by the distribution_manifest() template.
           metadata.distribution_entries += [
             {
-              destination = "lib/${_libprefix}${_soname}"
+              destination = "lib/${toolchain_variant.libprefix}${_soname}"
               label = _label
               source = _dist_file
             },

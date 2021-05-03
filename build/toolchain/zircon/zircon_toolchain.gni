@@ -714,30 +714,6 @@ template("zircon_toolchain") {
       #     to append the path of libc++.a's directory when gcc is used as
       #     a compiler.
       #
-      # The following variables were used in the Zircon build but ignored here.
-      #
-      #   runtime_deps_cflags: [list of strings]
-      #     Only used in practice to implement linking to static libc++, and
-      #     adding Asan/UBSan-related flags, which are handled differently in
-      #     the Fuchsia build.
-      #
-      #   executable_extension: [string]
-      #     Either the empty string of "exe" for Windows. Handled differently
-      #     in the Fuchsia build.
-      #
-      #   output_name_suffix: [string]
-      #     Suffix for output file names, never used by the Zircon build.
-      #
-      #   breakpad_syms: [boolean]
-      #     Override the value of the output_breakpad_syms build argument
-      #     for a specific toolchain. Never used in the Zircon build.
-      #
-      #   libprefix: [string]
-      #     An optional prefix for shared libraries. Only used by the Zircon
-      #     build to prepend "fuzzer." for fuzzed shared libraries in the
-      #     "user" environment. All this is handled differently by the Fuchsia
-      #     build in the fuchsia toolchains.
-      #
       zircon_toolchain = {
       }
       zircon_toolchain = {

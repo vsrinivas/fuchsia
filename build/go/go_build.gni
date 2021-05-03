@@ -239,9 +239,8 @@ template("go_build") {
 
       # When building with an instrumented variant, ensure the binary embeds a reference
       # to the right dynamic linker path.
-      if (toolchain_variant.name != "" && toolchain_variant.instrumented) {
-        libprefix = string_replace(toolchain_variant.name, "-fuzzer", "") + "/"
-        extldflags += ",--dynamic-linker=${libprefix}ld.so.1"
+      if (toolchain_variant.libprefix != "") {
+        extldflags += ",--dynamic-linker=${toolchain_variant.libprefix}ld.so.1"
       }
       args += [ "--ldflag=-linkmode=external \"-extldflags=$extldflags\"" ]
     }

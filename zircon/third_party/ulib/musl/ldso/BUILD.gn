@@ -19,10 +19,11 @@ source_set("ldso") {
   # This is needed by dynlink-sancov.S and dynlink.c for "sancov-stubs.h".
   include_dirs = [ "//zircon/system/ulib/c/sanitizers" ]
 
-  if (toolchain.libprefix != "") {
+  if (toolchain_variant.libprefix != "") {
     # The libprefix always ends with a / but that's not part of the
     # "config" string in the loader-service protocol.
-    ldsvc_config = get_path_info("${toolchain.libprefix}libfoo.so", "dir")
+    ldsvc_config =
+        get_path_info("${toolchain_variant.libprefix}libfoo.so", "dir")
     assert(ldsvc_config != "" && ldsvc_config != ".")
     defines = [ "DYNLINK_LDSVC_CONFIG=\"$ldsvc_config\"" ]
   }
