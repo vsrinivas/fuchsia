@@ -826,15 +826,6 @@ def main():
     if os.path.basename(script) in ignored_scripts:
         return retval
 
-    # `compiled_action()` programs with known issues
-    ignored_compiled_actions = {
-        # fxbug.dev/61770
-        "banjo_bin",
-    }
-    if os.path.basename(script) == "gn_run_binary.sh":
-        if os.path.basename(command.args[1]) in ignored_compiled_actions:
-            return retval
-
     # Compute constraints from action properties (from args).
     action = Action(
         inputs=args.inputs,
