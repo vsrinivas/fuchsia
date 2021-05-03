@@ -28,6 +28,7 @@ use std::mem;
 use std::sync::Arc;
 
 mod auth;
+mod collections;
 mod fs;
 mod loader;
 mod logging;

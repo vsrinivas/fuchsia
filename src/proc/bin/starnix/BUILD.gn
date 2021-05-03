@@ -54,6 +54,8 @@ if (target_cpu == "x64") {
 
     sources = [
       "auth.rs",
+      "collections/mod.rs",
+      "collections/range_map.rs",
       "fs/fd.rs",
       "fs/fuchsia/mod.rs",
       "fs/fuchsia/pipe.rs",
