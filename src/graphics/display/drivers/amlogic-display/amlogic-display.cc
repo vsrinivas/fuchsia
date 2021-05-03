@@ -629,6 +629,7 @@ zx_status_t AmlogicDisplay::DisplayCaptureImplImportImageForCapture(zx_unowned_h
   // At this point, we have setup a canvas with the BufferCollection-based VMO. Store the
   // capture information
   import_capture->canvas_idx = canvas_idx;
+  import_capture->canvas = canvas_;
   import_capture->image_height = collection_info.settings.image_format_constraints.min_coded_height;
   import_capture->image_width = collection_info.settings.image_format_constraints.min_coded_width;
   *out_capture_handle = reinterpret_cast<uint64_t>(import_capture.get());

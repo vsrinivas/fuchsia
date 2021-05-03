@@ -42,7 +42,7 @@ namespace amlogic_display {
 struct ImageInfo : public fbl::DoublyLinkedListable<std::unique_ptr<ImageInfo>> {
   ~ImageInfo() {
     zxlogf(INFO, "Destroying image on canvas %d", canvas_idx);
-    if (canvas.is_valid() && canvas_idx > 0) {
+    if (canvas.is_valid()) {
       canvas.Free(canvas_idx);
     }
     if (pmt) {
@@ -137,6 +137,8 @@ class AmlogicDisplay
   }
 
   void Dump() { vout_->Dump(); }
+
+  void SetCanvasForTesting(ddk::AmlogicCanvasProtocolClient canvas) { canvas_ = canvas; }
 
  private:
   zx_status_t SetupDisplayInterface();

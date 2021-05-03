@@ -35,12 +35,57 @@ class MockBufferCollection : public mock_sysmem::MockBufferCollection {
     set_name_called_ = true;
   }
 
+  void WaitForBuffersAllocated(WaitForBuffersAllocatedCompleter::Sync& completer) override {
+    sysmem::wire::BufferCollectionInfo2 collection;
+    collection.buffer_count = 1;
+    collection.settings.has_image_format_constraints = true;
+    auto& image_constraints = collection.settings.image_format_constraints;
+    image_constraints.min_bytes_per_row = 4;
+    image_constraints.min_coded_height = 4;
+    image_constraints.pixel_format.type = sysmem::wire::PixelFormatType::kBgr24;
+    EXPECT_EQ(ZX_OK, zx::vmo::create(ZX_PAGE_SIZE, 0u, &collection.buffers[0].vmo));
+    completer.Reply(ZX_OK, std::move(collection));
+  }
+
   bool set_constraints_called() const { return set_constraints_called_; }
   bool set_name_called() const { return set_name_called_; }
 
  private:
   bool set_constraints_called_ = false;
   bool set_name_called_ = false;
+};
+
+class FakeCanvasProtocol : ddk::AmlogicCanvasProtocol<FakeCanvasProtocol> {
+ public:
+  zx_status_t AmlogicCanvasConfig(zx::vmo vmo, size_t offset, const canvas_info_t* info,
+                                  uint8_t* canvas_idx) {
+    for (uint32_t i = 0; i < std::size(in_use_); i++) {
+      if (!in_use_[i]) {
+        in_use_[i] = true;
+        *canvas_idx = i;
+        return ZX_OK;
+      }
+    }
+    return ZX_ERR_NO_MEMORY;
+  }
+  zx_status_t AmlogicCanvasFree(uint8_t canvas_idx) {
+    EXPECT_TRUE(in_use_[canvas_idx]);
+    in_use_[canvas_idx] = false;
+    return ZX_OK;
+  }
+
+  void CheckThatNoEntriesInUse() {
+    for (uint32_t i = 0; i < std::size(in_use_); i++) {
+      EXPECT_FALSE(in_use_[i]);
+    }
+  }
+
+  const amlogic_canvas_protocol_t& get_protocol() { return protocol_; }
+
+ private:
+  static constexpr uint32_t kCanvasEntries = 256;
+  bool in_use_[kCanvasEntries] = {};
+  amlogic_canvas_protocol_t protocol_ = {.ops = &amlogic_canvas_protocol_ops_, .ctx = this};
 };
 
 TEST(AmlogicDisplay, SysmemRequirements) {
@@ -91,4 +136,26 @@ TEST(AmlogicDisplay, FloatToFixed2_10) {
   // Test for minimum negative (>= -2)
   EXPECT_EQ(0x0800, osd.FloatToFixed2_10(-2.0f));
   EXPECT_EQ(0x0800, osd.FloatToFixed2_10(-14.0f));
+}
+
+TEST(AmlogicDisplay, NoLeakCaptureCanvas) {
+  amlogic_display::AmlogicDisplay display(nullptr);
+  zx::channel server_channel, client_channel;
+  ASSERT_OK(zx::channel::create(0u, &server_channel, &client_channel));
+
+  MockBufferCollection collection;
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+
+  ASSERT_OK(
+      fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(server_channel), &collection));
+  loop.StartThread("sysmem-thread");
+  FakeCanvasProtocol canvas;
+  display.SetCanvasForTesting(ddk::AmlogicCanvasProtocolClient(&canvas.get_protocol()));
+
+  uint64_t capture_handle;
+  EXPECT_OK(
+      display.DisplayCaptureImplImportImageForCapture(client_channel.get(), 0, &capture_handle));
+  EXPECT_OK(display.DisplayCaptureImplReleaseCapture(capture_handle));
+
+  canvas.CheckThatNoEntriesInUse();
 }
