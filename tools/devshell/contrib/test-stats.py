@@ -12,6 +12,7 @@ import os
 import subprocess
 import json
 from collections import defaultdict
+import random
 import time
 
 
@@ -88,6 +89,19 @@ def main():
         default=None,
         help='Number of test cases per v2 suite to run in parallel. Uses runner default if not set.',
     )
+    run_group.add_argument(
+        '--shuffle',
+        action='store',
+        type=int,
+        default=None,
+        help='Toggle shuffling input. If set to 0, the current timestamp is used as the seed. If set no a non-zero number, that value will be used as the shuffle seed',
+    )
+    run_group.add_argument(
+        '--count',
+        action='store',
+        type=int,
+        help='If set, only run this number of tests. The first tests in order following any shuffling will be used'
+    )
     args = parser.parse_args()
 
     test_tuples = get_tests_tuples(args)
@@ -146,8 +160,19 @@ def get_tests_tuples(args):
 
         return ret
 
-    return list(
+    test_list = list(
         filter(to_include, map(lambda x: (parse_test(x), x), json_data)))
+
+    if args.shuffle is not None:
+        shuffle = args.shuffle
+        if shuffle == 0:
+            shuffle = None
+        random.seed(shuffle)
+        random.shuffle(test_list)
+    if args.count is not None:
+        test_list = test_list[:args.count]
+
+    return test_list
 
 
 # Wraps a test parsed from `fx test --printtests`
@@ -285,6 +310,7 @@ def run_tests(to_run,
               timeout_seconds=None,
               max_running_tests=None,
               parallel=None):
+
     test_iter = iter(to_run)
     running_tests = []
     outcomes = defaultdict(list)
