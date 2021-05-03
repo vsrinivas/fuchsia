@@ -18,6 +18,7 @@ use std::sync::Arc;
 const INBOUND_WINDOW_SIZE: u32 = 2;
 
 pub const PROP_DEBUG_LOGGING_TEST: Prop = Prop::Unknown(2097151);
+pub const PROP_DEBUG_SAVED_PANID_TEST: Prop = Prop::Unknown(2097152);
 
 #[derive(Debug)]
 struct FakeSpinelDevice {
@@ -263,6 +264,24 @@ impl FakeSpinelDevice {
     ) -> Option<Vec<Vec<u8>>> {
         let mut response: Vec<u8> = vec![];
         match prop {
+            PROP_DEBUG_SAVED_PANID_TEST => {
+                let _panid = u16::try_unpack_from_slice(new_value)
+                    .expect("PROP_DEBUG_SAVED_PANID_TEST: Bad format");
+
+                let mut saved_network = self.saved_network.lock();
+                saved_network.insert(Prop::Mac(PropMac::Panid), new_value.to_vec());
+
+                spinel_write!(
+                    &mut response,
+                    "Ciii",
+                    frame.header,
+                    Cmd::PropValueIs,
+                    Prop::LastStatus,
+                    Status::Ok
+                )
+                .unwrap();
+            }
+
             PROP_DEBUG_LOGGING_TEST => {
                 let mut full_response: Vec<Vec<u8>> = vec![];
                 full_response.push({
@@ -613,12 +632,13 @@ impl FakeSpinelDevice {
             Prop::Caps => {
                 spinel_write!(
                     &mut response,
-                    "Ciiii",
+                    "Ciiiii",
                     frame.header,
                     Cmd::PropValueIs,
                     prop,
                     CapConfig::Ftd,
                     CapNet::Thread(1, 1),
+                    Cap::NetSave,
                 )
                 .unwrap();
             }
@@ -833,7 +853,6 @@ impl FakeSpinelDevice {
                 frame.header = Header::new(frame.header.nli(), None).unwrap();
                 ret.extend(self.handle_get_prop(frame, Prop::Net(PropNet::NetworkName)));
                 ret.extend(self.handle_get_prop(frame, Prop::Net(PropNet::Xpanid)));
-                ret.extend(self.handle_get_prop(frame, Prop::Mac(PropMac::Panid)));
                 ret.extend(self.handle_get_prop(frame, Prop::Phy(PropPhy::Chan)));
                 ret.extend(self.handle_get_prop(frame, Prop::Net(PropNet::MasterKey)));
                 ret

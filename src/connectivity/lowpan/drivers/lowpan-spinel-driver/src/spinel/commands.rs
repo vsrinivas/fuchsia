@@ -252,6 +252,9 @@ impl<V: TryPack + Debug + Send> RequestDesc for CmdPropValueSet<V> {
         let frame = response?;
         match (frame.cmd, SpinelPropValueRef::try_unpack_from_slice(frame.payload)?) {
             (Cmd::PropValueIs, SpinelPropValueRef { prop, .. }) if prop == self.0 => Ok(()),
+            (Cmd::PropValueIs, SpinelPropValueRef { prop: Prop::LastStatus, value: &[0] }) => {
+                Ok(())
+            }
             (Cmd::PropValueIs, SpinelPropValueRef { prop: Prop::LastStatus, value }) => {
                 Err(<Status as TryUnpackAs<SpinelUint>>::try_unpack_as_from_slice(value)?.into())
             }

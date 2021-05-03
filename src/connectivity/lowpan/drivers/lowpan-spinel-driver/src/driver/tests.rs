@@ -8,7 +8,7 @@ use crate::spinel::*;
 use futures::prelude::*;
 use mock::*;
 
-use crate::spinel::mock::PROP_DEBUG_LOGGING_TEST;
+use crate::spinel::mock::{PROP_DEBUG_LOGGING_TEST, PROP_DEBUG_SAVED_PANID_TEST};
 use fidl_fuchsia_lowpan::{Credential, Identity, ProvisioningParams, NET_TYPE_THREAD_1_X};
 use fidl_fuchsia_lowpan_device::{AllCounters, MacCounters};
 use fidl_fuchsia_lowpan_test::NeighborInfo;
@@ -35,9 +35,10 @@ async fn test_spinel_lowpan_driver() {
         driver.wait_for_state(DriverState::is_initialized).await;
 
         // Verify that our capabilities have been set by this point.
-        assert_eq!(driver.get_driver_state_snapshot().caps.len(), 2);
+        assert_eq!(driver.get_driver_state_snapshot().caps.len(), 3);
 
         let mut device_state_stream = driver.watch_device_state();
+        let mut identity_stream = driver.watch_identity();
 
         traceln!("app_task: Checking device state... (Should be Inactive)");
         assert_eq!(
@@ -211,20 +212,21 @@ async fn test_spinel_lowpan_driver() {
             );
 
             traceln!("app_task: Setting identity...");
+            let test_identity = Identity {
+                raw_name: Some("MyNetwork".as_bytes().to_vec()),
+                xpanid: Some([0, 1, 2, 3, 4, 5, 6, 7].to_vec()),
+                net_type: Some(NET_TYPE_THREAD_1_X.to_string()),
+                channel: Some(22),
+                panid: Some(0x1234),
+                ..Identity::EMPTY
+            };
+            let test_credential =
+                Credential::MasterKey(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
             assert_eq!(
                 driver
                     .provision_network(ProvisioningParams {
-                        identity: Identity {
-                            raw_name: Some("MyNetwork".as_bytes().to_vec()),
-                            xpanid: Some([0, 1, 2, 3, 4, 5, 6, 7].to_vec()),
-                            net_type: Some(NET_TYPE_THREAD_1_X.to_string()),
-                            channel: Some(11),
-                            panid: Some(0x1234),
-                            ..Identity::EMPTY
-                        },
-                        credential: Some(Box::new(Credential::MasterKey(vec![
-                            0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
-                        ]))),
+                        identity: test_identity.clone(),
+                        credential: Some(Box::new(test_credential.clone())),
                     })
                     .await,
                 Ok(())
@@ -244,13 +246,21 @@ async fn test_spinel_lowpan_driver() {
                 ConnectivityState::Ready
             );
 
+            traceln!("app_task: Checking identity...");
+            let new_identity = identity_stream
+                .try_next()
+                .await
+                .expect("Error in identity stream")
+                .expect("Identity stream ended unexpectedly");
+            assert_eq!(new_identity.raw_name, test_identity.raw_name);
+            assert_eq!(new_identity.xpanid, test_identity.xpanid);
+            assert_eq!(new_identity.panid, test_identity.panid);
+            assert_eq!(new_identity.channel, test_identity.channel);
+            assert_eq!(new_identity.net_type, test_identity.net_type);
+            traceln!("app_task: Identity is correct!");
+
             traceln!("app_task: Checking credential...");
-            assert_eq!(
-                driver.get_credential().await,
-                Ok(Some(Credential::MasterKey(vec![
-                    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
-                ])))
-            );
+            assert_eq!(driver.get_credential().await, Ok(Some(test_credential)));
             traceln!("app_task: Credential is correct!");
 
             traceln!("app_task: Setting enabled...");
@@ -330,6 +340,31 @@ async fn test_spinel_lowpan_driver() {
                     .unwrap(),
                 ConnectivityState::Ready
             );
+
+            traceln!("app_task: Changing the saved PANID...");
+            driver
+                .frame_handler
+                .send_request(CmdPropValueSet(PROP_DEBUG_SAVED_PANID_TEST, 1337u16))
+                .await
+                .expect("Unable to set PROP_DEBUG_SAVED_PANID_TEST");
+
+            traceln!("app_task: Resetting device...");
+            assert_eq!(driver.reset().await, Ok(()));
+            traceln!("app_task: Did reset!");
+
+            traceln!("app_task: Checking identity...");
+            let new_identity = identity_stream
+                .try_next()
+                .await
+                .expect("Error in identity stream")
+                .expect("Identity stream ended unexpectedly");
+            traceln!("app_task: Identity: {:?}", &new_identity);
+            assert_eq!(new_identity.panid, Some(1337u16));
+            assert_eq!(new_identity.raw_name, test_identity.raw_name);
+            assert_eq!(new_identity.xpanid, test_identity.xpanid);
+            assert_eq!(new_identity.channel, test_identity.channel);
+            assert_eq!(new_identity.net_type, test_identity.net_type);
+            traceln!("app_task: Identity is correct!");
 
             traceln!("app_task: Leaving network...");
             assert_eq!(driver.leave_network().await, Ok(()));

@@ -160,6 +160,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
         // fatal errors. If you need to pre-fetch a property value where any generated
         // error should be considered fatal, you should fetch it explicitly.
         for prop in &[
+            Prop::Mac(PropMac::Panid),
             Prop::Net(PropNet::NetworkName),
             Prop::Net(PropNet::Role),
             Prop::Net(PropNet::Saved),
