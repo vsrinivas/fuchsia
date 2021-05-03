@@ -7,6 +7,7 @@ use {
     anyhow::Error,
     diagnostics_data::{LogsData, Severity},
     futures::{Stream, TryStreamExt},
+    log::error,
 };
 
 // TODO(fxbug.dev/54198, fxbug.dev/70581): deprecate this when implementing metadata selectors for
@@ -71,7 +72,7 @@ where
         let log_repr = format!("{}", log);
 
         if should_display {
-            writer.write_line(&log_repr).expect("Failed to write log");
+            writer.write_line(&log_repr).unwrap_or_else(|e| error!("Failed to write log: {:?}", e));
         }
 
         if is_restricted {

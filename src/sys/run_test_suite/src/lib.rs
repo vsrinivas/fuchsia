@@ -14,6 +14,7 @@ use {
     fidl_fuchsia_test_manager::HarnessProxy,
     fuchsia_async as fasync,
     futures::{channel::mpsc, join, prelude::*, stream::LocalBoxStream},
+    log::error,
     std::collections::{HashMap, HashSet},
     std::fmt,
     std::io,
@@ -158,7 +159,7 @@ async fn run_test_for_invocations<W: WriteLine>(
                                 return Err(anyhow::anyhow!("test case: '{}' started twice", test_case_name));
                             }
                             writer.write_line(&format!("[RUNNING]\t{}", test_case_name))
-                                .expect("Cannot write logs");
+                                .unwrap_or_else(|e| error!("Cannot write logs: {:?}", e));
                             test_cases_in_progress.insert(
                                 test_case_name.clone()
                             );
@@ -203,13 +204,13 @@ async fn run_test_for_invocations<W: WriteLine>(
                                     "test case: '{}' was never started, still got a finish event"))
                             };
                             writer.write_line(&format!("[{}]\t{}", result_str, test_case_name))
-                                .expect("Cannot write logs");
+                                .unwrap_or_else(|e| error!("Cannot write logs: {:?}", e));
                             reporter.case_reporter.outcome(&result.into())?;
                         }
                         TestEvent::ExcessiveDuration { test_case_name, duration } => {
                             writer.write_line(&format!("[duration - {}]:\tStill running after {:?} seconds",
                                 test_case_name, duration.as_secs()))
-                                .expect("Cannot write logs");
+                                .unwrap_or_else(|e| error!("Cannot write logs: {:?}", e));
                         }
                         TestEvent::StdoutMessage { test_case_name, mut msg } => {
                             let mut test_case = match test_cases_executed.get_mut(&test_case_name) {
@@ -225,7 +226,7 @@ async fn run_test_for_invocations<W: WriteLine>(
                                 msg.truncate(msg.len()-1)
                             }
                             writer.write_line(&format!("[output - {}]:\n{}", test_case_name, msg))
-                                .expect("Cannot write logs");
+                                .unwrap_or_else(|e| error!("Cannot write logs: {:?}", e));
                             match test_case.stdout.as_mut() {
                                 None => {
                                     let mut stdout = test_case.case_reporter.new_artifact(&ArtifactType::Stdout)?;
@@ -258,9 +259,13 @@ async fn run_test_for_invocations<W: WriteLine>(
             }
             _ => {}
         }
-        writer.write_line("\nThe following test(s) never completed:").expect("Cannot write logs");
+        writer
+            .write_line("\nThe following test(s) never completed:")
+            .unwrap_or_else(|e| error!("Cannot write logs: {:?}", e));
         for t in test_cases_in_progress {
-            writer.write_line(&format!("{}", t)).expect("Cannot write logs");
+            writer
+                .write_line(&format!("{}", t))
+                .unwrap_or_else(|e| error!("Cannot write logs: {:?}", e));
         }
     }
 
