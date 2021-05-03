@@ -2,34 +2,35 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    anyhow::{anyhow, format_err, Context, Error},
-    fidl::endpoints::{self, ServerEnd},
-    fidl_fuchsia_component as fcomponent,
-    fidl_fuchsia_component_runner::{
-        self as fcrunner, ComponentControllerMarker, ComponentStartInfo,
-    },
-    fidl_fuchsia_io as fio, fidl_fuchsia_starnix_developer as fstardev, fidl_fuchsia_sys2 as fsys,
-    fuchsia_async as fasync,
-    fuchsia_component::client as fclient,
-    fuchsia_component::server::ServiceFs,
-    fuchsia_zircon::{
-        self as zx, sys::zx_exception_info_t, sys::ZX_EXCEPTION_STATE_HANDLED,
-        sys::ZX_EXCEPTION_STATE_TRY_NEXT, sys::ZX_EXCP_POLICY_CODE_BAD_SYSCALL,
-        sys::ZX_EXCP_POLICY_ERROR, AsHandleRef, Task as zxTask,
-    },
-    futures::{StreamExt, TryStreamExt},
-    io_util::directory,
-    log::{error, info},
-    rand::Rng,
-    std::ffi::CString,
-    std::mem,
-    std::sync::Arc,
+use anyhow::{anyhow, format_err, Context, Error};
+use fidl::endpoints::{self, ServerEnd};
+use fidl_fuchsia_component as fcomponent;
+use fidl_fuchsia_component_runner::{
+    self as fcrunner, ComponentControllerMarker, ComponentStartInfo,
 };
+use fidl_fuchsia_io as fio;
+use fidl_fuchsia_starnix_developer as fstardev;
+use fidl_fuchsia_sys2 as fsys;
+use fuchsia_async as fasync;
+use fuchsia_component::client as fclient;
+use fuchsia_component::server::ServiceFs;
+use fuchsia_zircon::{
+    self as zx, sys::zx_exception_info_t, sys::ZX_EXCEPTION_STATE_HANDLED,
+    sys::ZX_EXCEPTION_STATE_TRY_NEXT, sys::ZX_EXCP_POLICY_CODE_BAD_SYSCALL,
+    sys::ZX_EXCP_POLICY_ERROR, AsHandleRef, Task as zxTask,
+};
+use futures::{StreamExt, TryStreamExt};
+use io_util::directory;
+use log::{error, info};
+use rand::Rng;
+use std::ffi::CString;
+use std::mem;
+use std::sync::Arc;
 
 mod auth;
 mod fs;
 mod loader;
+mod logging;
 mod mm;
 mod syscall_table;
 mod syscalls;
@@ -37,12 +38,12 @@ mod task;
 mod uapi;
 mod user_address;
 
-use loader::*;
-use syscall_table::dispatch_syscall;
-use syscalls::SyscallContext;
-use task::*;
-use uapi::SyscallDecl;
-use uapi::SyscallResult;
+use crate::loader::*;
+use crate::syscall_table::dispatch_syscall;
+use crate::syscalls::SyscallContext;
+use crate::task::*;
+use crate::uapi::SyscallDecl;
+use crate::uapi::SyscallResult;
 
 // TODO: Should we move this code into fuchsia_zircon? It seems like part of a better abstraction
 // for exception channels.
@@ -110,20 +111,29 @@ fn run_task(task_owner: TaskOwner, exceptions: zx::Channel) -> Result<i32, Error
 
         let regs = &ctx.registers;
         let args = (regs.rdi, regs.rsi, regs.rdx, regs.r10, regs.r8, regs.r9);
-        info!(target: "strace", "{}({:#x}, {:#x}, {:#x}, {:#x}, {:#x}, {:#x})", SyscallDecl::from_number(syscall_number).name, args.0, args.1, args.2, args.3, args.4, args.5);
+        strace!(
+            "{}({:#x}, {:#x}, {:#x}, {:#x}, {:#x}, {:#x})",
+            SyscallDecl::from_number(syscall_number).name,
+            args.0,
+            args.1,
+            args.2,
+            args.3,
+            args.4,
+            args.5
+        );
         match dispatch_syscall(&mut ctx, syscall_number, args) {
             Ok(SyscallResult::Exit(error_code)) => {
-                info!(target: "strace", "-> exit {:#x}", error_code);
+                strace!("-> exit {:#x}", error_code);
                 // TODO: Set the error_code on the Zircon process object. Currently missing a way
                 //       to do this in Zircon. Might be easier in the new execution model.
                 return Ok(error_code);
             }
             Ok(SyscallResult::Success(return_value)) => {
-                info!(target: "strace", "-> {:#x}", return_value);
+                strace!("-> {:#x}", return_value);
                 ctx.registers.rax = return_value;
             }
             Err(errno) => {
-                info!(target: "strace", "!-> {}", errno);
+                strace!("!-> {}", errno);
                 ctx.registers.rax = (-errno.value()) as u64;
             }
         }
@@ -265,7 +275,7 @@ async fn start_manager(mut request_stream: fstardev::ManagerRequestStream) -> Re
                 responder.send()?;
             }
             fstardev::ManagerRequest::StartShell { .. } => {
-                info!("StartShell not yet implemented.")
+                not_implemented!("StartShell not yet implemented.")
             }
         }
     }

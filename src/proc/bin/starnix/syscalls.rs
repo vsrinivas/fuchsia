@@ -17,6 +17,8 @@ use zerocopy::AsBytes;
 use crate::block_on;
 use crate::fs::*;
 use crate::mm::*;
+use crate::not_implemented;
+use crate::strace;
 use crate::task::*;
 use crate::uapi::*;
 
@@ -73,15 +75,6 @@ pub fn sys_mmap(
     fd: FileDescriptor,
     offset: usize,
 ) -> Result<SyscallResult, Errno> {
-    info!(
-        "mmap({:#x}, {:#x}, {:#x}, {:#x}, {:?}, {:#x})",
-        addr.ptr(),
-        length,
-        prot,
-        flags,
-        fd,
-        offset
-    );
     // These are the flags that are currently supported.
     if prot & !(PROT_READ | PROT_WRITE | PROT_EXEC) != 0 {
         return Err(EINVAL);
@@ -181,7 +174,6 @@ pub fn sys_mprotect(
 }
 
 pub fn sys_brk(ctx: &SyscallContext<'_>, addr: UserAddress) -> Result<SyscallResult, Errno> {
-    // info!("brk: addr={}", addr);
     // TODO(tbodt): explicit error mapping
     Ok(ctx.task.mm.set_program_break(addr).map_err(Errno::from_status_like_fdio)?.into())
 }
@@ -220,10 +212,9 @@ pub fn sys_writev(
 
 pub fn sys_access(
     _ctx: &SyscallContext<'_>,
-    path: UserCString,
-    mode: i32,
+    _path: UserCString,
+    _mode: i32,
 ) -> Result<SyscallResult, Errno> {
-    info!("access: path={} mode={}", path, mode);
     Err(ENOSYS)
 }
 
@@ -253,13 +244,13 @@ pub fn sys_getpgid(ctx: &SyscallContext<'_>, pid: pid_t) -> Result<SyscallResult
     Ok(ctx.task.get_task(pid).ok_or(ESRCH)?.get_pgrp().into())
 }
 
-pub fn sys_exit(_ctx: &SyscallContext<'_>, error_code: i32) -> Result<SyscallResult, Errno> {
-    info!("exit: error_code={}", error_code);
+pub fn sys_exit(ctx: &SyscallContext<'_>, error_code: i32) -> Result<SyscallResult, Errno> {
+    info!(target: "exit", "exit: tid={} error_code={}", ctx.task.get_tid(), error_code);
     Ok(SyscallResult::Exit(error_code))
 }
 
-pub fn sys_exit_group(_ctx: &SyscallContext<'_>, error_code: i32) -> Result<SyscallResult, Errno> {
-    info!("exit_group: error_code={}", error_code);
+pub fn sys_exit_group(ctx: &SyscallContext<'_>, error_code: i32) -> Result<SyscallResult, Errno> {
+    info!(target: "exit", "exit_group: pid={} error_code={}", ctx.task.get_pid(), error_code);
     // TODO: Once we have more than one thread in a thread group, we'll need to exit them as well.
     Ok(SyscallResult::Exit(error_code))
 }
@@ -296,10 +287,6 @@ pub fn sys_readlink(
     _buffer: UserAddress,
     _buffer_size: usize,
 ) -> Result<SyscallResult, Errno> {
-    // info!(
-    //     "readlink: path={} buffer={} buffer_size={}",
-    //     path, buffer, buffer_size
-    // );
     Err(EINVAL)
 }
 
@@ -371,7 +358,7 @@ pub fn sys_arch_prctl(
             Ok(SUCCESS)
         }
         _ => {
-            info!("arch_prctl: Unknown code: code=0x{:x} addr={}", code, addr);
+            not_implemented!("arch_prctl: Unknown code: code=0x{:x} addr={}", code, addr);
             Err(ENOSYS)
         }
     }
@@ -403,14 +390,14 @@ pub fn sys_openat(
     mode: i32,
 ) -> Result<SyscallResult, Errno> {
     if dir_fd != AT_FDCWD {
-        warn!("openat dirfds are unimplemented");
+        not_implemented!("openat dirfds are unimplemented");
         return Err(EINVAL);
     }
     let mut buf = [0u8; PATH_MAX as usize];
     let path = ctx.task.mm.read_c_string(user_path, &mut buf)?;
-    info!("openat({}, {}, {:#x}, {:#o})", dir_fd, String::from_utf8_lossy(path), flags, mode);
+    strace!("openat({}, {}, {:#x}, {:#o})", dir_fd, String::from_utf8_lossy(path), flags, mode);
     if path[0] != b'/' {
-        warn!("non-absolute paths are unimplemented");
+        not_implemented!("non-absolute paths are unimplemented");
         return Err(ENOENT);
     }
     let path = &path[1..];
@@ -468,7 +455,7 @@ pub fn sys_gettimeofday(
         ctx.task.mm.write_object(user_tv, &tv)?;
     }
     if !user_tz.is_null() {
-        warn!("NOT_IMPLEMENTED: gettimeofday does not implement tz argument");
+        not_implemented!("gettimeofday does not implement tz argument");
     }
     return Ok(SUCCESS);
 }
@@ -490,7 +477,7 @@ pub fn sys_getcwd(
 }
 
 pub fn sys_unknown(_ctx: &SyscallContext<'_>, syscall_number: u64) -> Result<SyscallResult, Errno> {
-    info!("UNKNOWN syscall({}): {}", syscall_number, SyscallDecl::from_number(syscall_number).name);
+    warn!(target: "unknown_syscall", "UNKNOWN syscall({}): {}", syscall_number, SyscallDecl::from_number(syscall_number).name);
     // TODO: We should send SIGSYS once we have signals.
     Err(ENOSYS)
 }
