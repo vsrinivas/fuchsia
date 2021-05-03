@@ -68,7 +68,8 @@ pub struct StorageAgent<T>
 where
     T: DeviceStorageFactory + Send + Sync + 'static,
 {
-    receptor: Option<service::message::Receptor>,
+    /// The factory for creating a messenger to receive messages.
+    delegate: service::message::Delegate,
     storage_factory: Arc<T>,
 }
 
@@ -77,12 +78,7 @@ where
     T: DeviceStorageFactory + Send + Sync + 'static,
 {
     async fn create(context: Context, storage_factory: Arc<T>) {
-        let (_, receptor) = context
-            .delegate
-            .create(MessengerType::Addressable(Address::Storage))
-            .await
-            .expect("should acquire messenger");
-        let mut storage_agent = StorageAgent { receptor: Some(receptor), storage_factory };
+        let mut storage_agent = StorageAgent { delegate: context.delegate, storage_factory };
 
         let unordered = FuturesUnordered::new();
         unordered.push(context.receptor.into_future());
@@ -111,12 +107,14 @@ where
                 ) => {
                     // Only initialize the message receptor once during Initialization.
                     if let Lifespan::Initialization = invocation.lifespan {
-                        unordered.push(
-                            self.receptor
-                                .take()
-                                .expect("Can only initialize storage agent once")
-                                .into_future(),
-                        );
+                        let receptor = self
+                            .delegate
+                            .create(MessengerType::Addressable(Address::Storage))
+                            .await
+                            .expect("should acquire messenger")
+                            .1;
+
+                        unordered.push(receptor.into_future());
                     }
 
                     // Always reply with an Ok for invocations.

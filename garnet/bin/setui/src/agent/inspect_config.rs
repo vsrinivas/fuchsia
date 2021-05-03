@@ -25,8 +25,8 @@ const CONFIG_INSPECT_NODE_NAME: &str = "config_loads";
 blueprint_definition!("inspect_config_agent", InspectConfigAgent::create);
 
 pub struct InspectConfigAgent {
-    /// A receptor to receive requests to load configuration files.
-    receptor: Option<service::message::Receptor>,
+    /// The factory for creating a messenger to receive messages.
+    delegate: service::message::Delegate,
 
     /// The saved inspect node for the config loads.
     inspect_node: inspect::Node,
@@ -64,17 +64,8 @@ impl InspectConfigAgent {
     }
 
     pub async fn create_with_node(context: AgentContext, inspect_node: inspect::Node) {
-        // Build a receptor on which load events will be received.
-        let (_, receptor) = context
-            .delegate
-            .messenger_builder(MessengerType::Unbound)
-            .add_role(role::Signature::role(service::Role::Event(event::Role::Sink)))
-            .build()
-            .await
-            .expect("config agent receptor should have been created");
-
         let mut agent = InspectConfigAgent {
-            receptor: Some(receptor),
+            delegate: context.delegate,
             inspect_node,
             config_load_values: HashMap::new(),
         };
@@ -104,17 +95,20 @@ impl InspectConfigAgent {
                     service::Payload::Agent(Payload::Invocation(invocation)),
                     client,
                 ) => {
-                    // TODO(fxbug.dev/75674): Store the messenger_factory and create the messenger
-                    // here rather than holding onto the messenger from creation.
-
                     // Only initialize the message receptor once during Initialization.
                     if let Lifespan::Initialization = invocation.lifespan {
-                        unordered.push(
-                            self.receptor
-                                .take()
-                                .expect("Can only initialize config agent once")
-                                .into_future(),
-                        );
+                        // Build a receptor on which load events will be received.
+                        let (_, receptor) = self
+                            .delegate
+                            .messenger_builder(MessengerType::Unbound)
+                            .add_role(role::Signature::role(service::Role::Event(
+                                event::Role::Sink,
+                            )))
+                            .build()
+                            .await
+                            .expect("config agent receptor should have been created");
+
+                        unordered.push(receptor.into_future());
                     }
                     // Since the agent runs at creation, there is no need to handle state here.
                     client.reply(service::Payload::Agent(Payload::Complete(Ok(())))).send();
