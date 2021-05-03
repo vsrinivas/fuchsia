@@ -45,8 +45,8 @@ use {
             },
             hooks::EventType,
             hub::Hub,
+            lifecycle_controller_factory::LifecycleControllerFactory,
             model::{Model, ModelParams},
-            resolve_component_factory::ResolveComponentFactory,
             resolver::{BuiltinResolver, Resolver, ResolverRegistry},
             storage::admin_protocol::StorageAdmin,
         },
@@ -595,7 +595,7 @@ impl BuiltinEnvironment {
         let hub = if enable_hub {
             let hub = Arc::new(Hub::new(
                 root_component_url.as_str().to_owned(),
-                ResolveComponentFactory::new(Arc::downgrade(&model)),
+                LifecycleControllerFactory::new(Arc::downgrade(&model)),
             )?);
             model.root.hooks.install(hub.hooks()).await;
             Some(hub)

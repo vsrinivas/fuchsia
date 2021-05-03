@@ -42,9 +42,9 @@ pub async fn expect_echo_service(path: &str) {
 
 pub async fn resolve_component(path: &str, relative_moniker: &str, expect_success: bool) {
     info!("Attempting to resolve {} from {}", relative_moniker, path);
-    let resolve_component_proxy =
-        connect_to_protocol_at_path::<fsys::ResolveComponentMarker>(path).unwrap();
-    let result = resolve_component_proxy.resolve(relative_moniker).await.unwrap();
+    let lifecycle_controller_proxy =
+        connect_to_protocol_at_path::<fsys::LifecycleControllerMarker>(path).unwrap();
+    let result = lifecycle_controller_proxy.resolve(relative_moniker).await.unwrap();
     if expect_success {
         result.unwrap();
     } else {

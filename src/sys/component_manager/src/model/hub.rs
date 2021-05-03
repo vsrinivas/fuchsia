@@ -12,8 +12,8 @@ use {
             dir_tree::{DirTree, DirTreeCapability},
             error::ModelError,
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration, RuntimeInfo},
-            resolve_component::ResolveComponent,
-            resolve_component_factory::ResolveComponentFactory,
+            lifecycle_controller::LifecycleController,
+            lifecycle_controller_factory::LifecycleControllerFactory,
             routing_fns::{route_expose_fn, route_use_fn},
         },
     },
@@ -22,7 +22,7 @@ use {
     directory_broker,
     fidl::endpoints::{ServerEnd, ServiceMarker},
     fidl_fuchsia_io::{DirectoryProxy, NodeMarker, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY},
-    fidl_fuchsia_sys2::ResolveComponentMarker,
+    fidl_fuchsia_sys2::LifecycleControllerMarker,
     fuchsia_async as fasync, fuchsia_trace as trace, fuchsia_zircon as zx,
     futures::lock::Mutex,
     moniker::AbsoluteMoniker,
@@ -98,23 +98,23 @@ struct Execution {
 pub struct Hub {
     instances: Mutex<HashMap<AbsoluteMoniker, Instance>>,
     scope: ExecutionScope,
-    resolve_component_factory: ResolveComponentFactory,
+    lifecycle_controller_factory: LifecycleControllerFactory,
 }
 
 impl Hub {
     /// Create a new Hub given a `component_url` for the root component and a
-    /// `resolve_component_factory` which can create scoped ResolveComponent services.
+    /// `lifecycle_controller_factory` which can create scoped LifecycleController services.
     pub fn new(
         component_url: String,
-        resolve_component_factory: ResolveComponentFactory,
+        lifecycle_controller_factory: LifecycleControllerFactory,
     ) -> Result<Self, ModelError> {
         let mut instances_map = HashMap::new();
         let abs_moniker = AbsoluteMoniker::root();
 
-        let resolve_component = resolve_component_factory.create(&abs_moniker);
+        let lifecycle_controller = lifecycle_controller_factory.create(&abs_moniker);
 
         Hub::add_instance_if_necessary(
-            resolve_component,
+            lifecycle_controller,
             &abs_moniker,
             component_url,
             &mut instances_map,
@@ -124,7 +124,7 @@ impl Hub {
         Ok(Hub {
             instances: Mutex::new(instances_map),
             scope: ExecutionScope::new(),
-            resolve_component_factory,
+            lifecycle_controller_factory,
         })
     }
 
@@ -182,7 +182,7 @@ impl Hub {
     }
 
     fn add_instance_if_necessary(
-        resolve_component: ResolveComponent,
+        lifecycle_controller: LifecycleController,
         abs_moniker: &AbsoluteMoniker,
         component_url: String,
         instance_map: &mut HashMap<AbsoluteMoniker, Instance>,
@@ -224,7 +224,7 @@ impl Hub {
         let deleting = pfs::simple();
         instance.add_node("deleting", deleting.clone(), &abs_moniker)?;
 
-        Self::add_debug_directory(resolve_component, instance.clone(), abs_moniker)?;
+        Self::add_debug_directory(lifecycle_controller, instance.clone(), abs_moniker)?;
 
         instance_map.insert(
             abs_moniker.clone(),
@@ -243,13 +243,13 @@ impl Hub {
     }
 
     async fn add_instance_to_parent_if_necessary<'a>(
-        resolve_component: ResolveComponent,
+        lifecycle_controller: LifecycleController,
         abs_moniker: &'a AbsoluteMoniker,
         component_url: String,
         mut instances_map: &'a mut HashMap<AbsoluteMoniker, Instance>,
     ) -> Result<(), ModelError> {
         if let Some(controlled) = Hub::add_instance_if_necessary(
-            resolve_component,
+            lifecycle_controller,
             &abs_moniker,
             component_url,
             &mut instances_map,
@@ -303,7 +303,7 @@ impl Hub {
     }
 
     fn add_debug_directory(
-        resolve_component: ResolveComponent,
+        lifecycle_controller: LifecycleController,
         parent_directory: Directory,
         target_moniker: &AbsoluteMoniker,
     ) -> Result<(), ModelError> {
@@ -311,22 +311,22 @@ impl Hub {
 
         let mut debug_dir = pfs::simple();
 
-        let resolve_component_path =
-            CapabilityPath::try_from(format!("/{}", ResolveComponentMarker::NAME).as_str())
+        let lifecycle_controller_path =
+            CapabilityPath::try_from(format!("/{}", LifecycleControllerMarker::NAME).as_str())
                 .unwrap();
         let capabilities = vec![DirTreeCapability::new(
-            resolve_component_path,
+            lifecycle_controller_path,
             Box::new(
                 move |_flags: u32,
                       _mode: u32,
                       _relative_path: String,
                       server_end: ServerEnd<NodeMarker>| {
-                    let resolve_component = resolve_component.clone();
+                    let lifecycle_controller = lifecycle_controller.clone();
                     let server_end =
-                        ServerEnd::<ResolveComponentMarker>::new(server_end.into_channel());
-                    let resolve_component_stream = server_end.into_stream().unwrap();
+                        ServerEnd::<LifecycleControllerMarker>::new(server_end.into_channel());
+                    let lifecycle_controller_stream = server_end.into_stream().unwrap();
                     fasync::Task::spawn(async move {
-                        resolve_component.serve(resolve_component_stream).await;
+                        lifecycle_controller.serve(lifecycle_controller_stream).await;
                     })
                     .detach();
                 },
@@ -494,12 +494,12 @@ impl Hub {
     ) -> Result<(), ModelError> {
         trace::duration!("component_manager", "hub:on_discovered_async");
 
-        let resolve_component = self.resolve_component_factory.create(&target_moniker);
+        let lifecycle_controller = self.lifecycle_controller_factory.create(&target_moniker);
 
         let mut instances_map = self.instances.lock().await;
 
         Self::add_instance_to_parent_if_necessary(
-            resolve_component,
+            lifecycle_controller,
             target_moniker,
             component_url,
             &mut instances_map,
@@ -1153,7 +1153,7 @@ mod tests {
         .expect("Failed to open directory");
 
         assert_eq!(
-            vec!["fuchsia.sys2.ResolveComponent"],
+            vec!["fuchsia.sys2.LifecycleController"],
             list_directory_recursive(&debug_svc_dir).await
         );
     }

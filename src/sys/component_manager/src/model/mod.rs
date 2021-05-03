@@ -17,10 +17,10 @@ pub mod testing;
 pub(crate) mod context;
 pub(crate) mod environment;
 pub(crate) mod events;
+pub(crate) mod lifecycle_controller_factory;
 pub(crate) mod logging;
 pub(crate) mod namespace;
 pub(crate) mod policy;
-pub(crate) mod resolve_component_factory;
 pub(crate) mod resolver;
 pub(crate) mod rights;
 pub(crate) mod routing;
@@ -32,7 +32,7 @@ mod addable_directory;
 mod component_controller;
 mod dir_tree;
 mod exposed_dir;
-mod resolve_component;
+mod lifecycle_controller;
 
 #[cfg(test)]
 mod tests;

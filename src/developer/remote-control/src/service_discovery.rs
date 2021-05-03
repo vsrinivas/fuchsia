@@ -240,15 +240,15 @@ pub async fn get_matching_paths(root: &str, selector: &Selector) -> Result<Vec<P
                             .debug_hub_path
                             .as_ref()
                             .context("missing debug path")?
-                            .join(fsys::ResolveComponentMarker::NAME);
+                            .join(fsys::LifecycleControllerMarker::NAME);
                         let node_proxy = io_util::open_node_in_namespace(
                             resolve_path.to_str().expect("invalid chars"),
                             io::OPEN_RIGHT_READABLE,
                         )?;
-                        let resolve_component_proxy = fsys::ResolveComponentProxy::new(
+                        let lifecycle_controller_proxy = fsys::LifecycleControllerProxy::new(
                             node_proxy.into_channel().expect("could not get channel from proxy"),
                         );
-                        match resolve_component_proxy.resolve(".").await {
+                        match lifecycle_controller_proxy.resolve(".").await {
                             Ok(_) => {
                                 info!(
                                     "successfully resolved component {}",

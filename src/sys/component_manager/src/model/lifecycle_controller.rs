@@ -11,18 +11,18 @@ use {
 };
 
 #[derive(Clone)]
-pub struct ResolveComponent {
+pub struct LifecycleController {
     model: Weak<Model>,
     prefix: AbsoluteMoniker,
 }
 
-impl ResolveComponent {
+impl LifecycleController {
     pub fn new(model: Weak<Model>, prefix: AbsoluteMoniker) -> Self {
         Self { model, prefix }
     }
 
-    pub async fn serve(&self, mut stream: fsys::ResolveComponentRequestStream) {
-        while let Ok(Some(fsys::ResolveComponentRequest::Resolve { moniker, responder })) =
+    pub async fn serve(&self, mut stream: fsys::LifecycleControllerRequestStream) {
+        while let Ok(Some(fsys::LifecycleControllerRequest::Resolve { moniker, responder })) =
             stream.try_next().await
         {
             let mut res = match (self.model.upgrade(), RelativeMoniker::try_from(moniker.as_str()))

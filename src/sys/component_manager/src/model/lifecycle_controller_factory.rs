@@ -3,21 +3,21 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::{model::Model, resolve_component::ResolveComponent},
+    crate::model::{lifecycle_controller::LifecycleController, model::Model},
     moniker::AbsoluteMoniker,
     std::sync::Weak,
 };
 
-pub struct ResolveComponentFactory {
+pub struct LifecycleControllerFactory {
     model: Weak<Model>,
 }
 
-impl ResolveComponentFactory {
+impl LifecycleControllerFactory {
     pub fn new(model: Weak<Model>) -> Self {
         Self { model }
     }
 
-    pub fn create(&self, root: &AbsoluteMoniker) -> ResolveComponent {
-        ResolveComponent::new(self.model.clone(), root.clone())
+    pub fn create(&self, root: &AbsoluteMoniker) -> LifecycleController {
+        LifecycleController::new(self.model.clone(), root.clone())
     }
 }
