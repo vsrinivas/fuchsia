@@ -7,7 +7,7 @@ Enable debug output in the ACPI library (used by the ACPI bus driver).
 
 **Current value (from the default):** `false`
 
-From [//third_party/acpica/BUILD.gn:9](https://fuchsia.googlesource.com/third_party/acpica/+/15e06b553cd334277b85d8a663ff7b4d8c85b199/BUILD.gn#9)
+From [//third_party/acpica/BUILD.gn:9](https://fuchsia.googlesource.com/third_party/acpica/+/d7bd2596db70275e5f0d0dab6e538c4d46a4cb54/BUILD.gn#9)
 
 ### active_partition
 
@@ -3301,6 +3301,12 @@ Platform portability header for spinel.
 **Current value (from the default):** `"\"spinel_platform.h\""`
 
 From [//third_party/openthread/src/lib/spinel/BUILD.gn:32](https://fuchsia.googlesource.com/third_party/openthread/+/93aebf6671f2aa6e8ed2638b1743791b02e3eeb6/src/lib/spinel/BUILD.gn#32)
+
+### starnix_syscalls_test_label
+
+**Current value (from the default):** `"//prebuilt/starnix/tests/syscalls/linux-amd64/syscalls"`
+
+From //src/proc/bin/android/BUILD.gn:12
 
 ### start_oobe
 Whether or not to launch OOBE workflow on startup.
