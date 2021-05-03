@@ -238,10 +238,12 @@ class StartedTest:
     # Start executing the given command line and wrap it in a StartedTest.
     @staticmethod
     def create(command_line):
-        DEV_NULL = open(os.devnull, 'w')
         return StartedTest(
             command_line, time.time(),
-            subprocess.Popen(command_line, stdout=DEV_NULL, stderr=DEV_NULL))
+            subprocess.Popen(
+                command_line,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL))
 
     def __init__(self, command_line, start_time, running_process):
         self._command_line = command_line
@@ -289,10 +291,13 @@ class StartedTest:
 # Start an individual Test.
 #
 # Returns a StartedTest if the test could be started, and None otherwise.
-def start_test(test_object, parallel=None):
+def start_test(test_object, parallel=None, timeout=None):
     if test_object.test_type == 'v1':
-        return StartedTest.create(
-            ['fx', 'shell', 'run-test-component', test_object.package_url])
+        command_line = ['fx', 'shell', 'run-test-component']
+        if timeout:
+            command_line.append(f'--timeout={int(timeout)}')
+        command_line.append(test_object.package_url)
+        return StartedTest.create(command_line)
     if test_object.test_type == 'v2':
         command_line = [
             'fx', 'shell', 'run-test-suite', test_object.package_url
@@ -300,6 +305,9 @@ def start_test(test_object, parallel=None):
         if parallel:
             command_line.append('--parallel')
             command_line.append(f'{parallel}')
+        if timeout:
+            command_line.append('--timeout')
+            command_line.append(f'{int(timeout)}')
         return StartedTest.create(command_line)
     else:
         return None
@@ -365,7 +373,7 @@ def run_tests(to_run,
         # Continueally start tests so long as there is a test to be
         # started and we have not yet reached the maximum.
         while len(running_tests) < max_running_tests and next_test is not None:
-            started_test = start_test(next_test[0], parallel)
+            started_test = start_test(next_test[0], parallel, timeout_seconds)
 
             if started_test is not None:
                 print(f'Started {next_test[0].key()}')
