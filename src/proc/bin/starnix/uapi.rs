@@ -648,6 +648,7 @@ impl SyscallDecl {
 /// It would be nice to have this also cover errors, but currently there is no stable way
 /// to implement `std::ops::Try` (for the `?` operator) for custom enums, making it difficult
 /// to work with.
+#[derive(Debug, Eq, PartialEq)]
 pub enum SyscallResult {
     /// The process exited as a result of the syscall. The associated `u64` represents the process'
     /// exit code.

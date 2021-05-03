@@ -119,6 +119,7 @@ pub fn dispatch_syscall(
         getuid[0],
         mmap[6],
         mprotect[3],
+        munmap[2],
         openat[4],
         pread64[4],
         readlink[3],
