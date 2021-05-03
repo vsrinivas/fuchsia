@@ -26,6 +26,7 @@
 
 #define BRCMF_FW_ALTPATH_LEN 256
 constexpr uint32_t kMaxAssocRetries = 0;
+constexpr uint32_t kMchanState = 0;
 
 /**
  * struct brcmf_mp_device - Device module paramaters.

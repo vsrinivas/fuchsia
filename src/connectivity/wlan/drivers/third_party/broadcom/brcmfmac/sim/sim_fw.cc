@@ -83,7 +83,6 @@ static const IovarMetadata kIovarInfoTable[] = {
     {"allmulti", sizeof(uint32_t), &SimFirmware::IovarAllmultiSet, &SimFirmware::IovarAllmultiGet},
     {"arp_ol", sizeof(uint32_t), &SimFirmware::IovarArpolSet, &SimFirmware::IovarArpolGet},
     {"arpoe", sizeof(uint32_t), &SimFirmware::IovarArpoeSet, &SimFirmware::IovarArpoeGet},
-    {"ndoe", sizeof(uint32_t), &SimFirmware::IovarNdoeSet, &SimFirmware::IovarNdoeGet},
     {"assoc_info", sizeof(brcmf_cfg80211_assoc_ielen_le), nullptr, &SimFirmware::IovarAssocInfoGet},
     {"assoc_mgr_cmd", sizeof(assoc_mgr_cmd_t), &SimFirmware::IovarAssocMgrCmdSet, nullptr},
     {"assoc_resp_ies", std::nullopt, nullptr, &SimFirmware::IovarAssocRespIesGet},
@@ -103,7 +102,9 @@ static const IovarMetadata kIovarInfoTable[] = {
     {"escan", sizeof(brcmf_escan_params_le), &SimFirmware::IovarEscanSet, nullptr},
     {"interface_remove", 0, &SimFirmware::IovarInterfaceRemoveSet, nullptr},
     {"join", sizeof(brcmf_ext_join_params_le), &SimFirmware::IovarJoinSet, nullptr},
+    {"mchan", sizeof(uint32_t), &SimFirmware::IovarMchanSet, &SimFirmware::IovarMchanGet},
     {"mpc", sizeof(uint32_t), &SimFirmware::IovarMpcSet, &SimFirmware::IovarMpcGet},
+    {"ndoe", sizeof(uint32_t), &SimFirmware::IovarNdoeSet, &SimFirmware::IovarNdoeGet},
     {"nmode", sizeof(uint32_t), nullptr, &SimFirmware::IovarNmodeGet},
     {"pfn_macaddr", ETH_ALEN, &SimFirmware::IovarPfnMacaddrSet, &SimFirmware::IovarPfnMacaddrGet},
     {"rrm", sizeof(uint32_t), nullptr, &SimFirmware::IovarRrmGet},
@@ -2056,6 +2057,22 @@ zx_status_t SimFirmware::IovarChanspecGet(uint16_t ifidx, void* value_out, size_
     return ZX_ERR_BAD_STATE;
   }
   memcpy(value_out, &iface_tbl_[ifidx].chanspec, sizeof(uint16_t));
+  return ZX_OK;
+}
+
+zx_status_t SimFirmware::IovarMchanSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
+                                       size_t value_len) {
+  if (!iface_tbl_[ifidx].allocated) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  mchan_ = *(reinterpret_cast<const uint32_t*>(value));
+  return ZX_OK;
+}
+zx_status_t SimFirmware::IovarMchanGet(uint16_t ifidx, void* value_out, size_t value_len) {
+  if (!iface_tbl_[ifidx].allocated) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  memcpy(value_out, &mchan_, sizeof(uint32_t));
   return ZX_OK;
 }
 

@@ -139,6 +139,28 @@ TEST_F(FirmwareConfigTest, ArpNdOffloadApConfigTestWithSoftApFeat) {
   ArpNdOffloadConfigValidate(WLAN_INFO_MAC_ROLE_AP, kArpNdOffloadDisabled);
 }
 
+TEST_F(FirmwareConfigTest, MchanDisabledClient) {
+  Init();
+  SimInterface ifc;
+  uint32_t iovar;
+
+  EXPECT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &ifc), ZX_OK);
+  struct brcmf_if* ifp = brcmf_get_ifp(device_->GetSim()->drvr, ifc.iface_id_);
+  brcmf_fil_iovar_int_get(ifp, "mchan", &iovar, nullptr);
+  EXPECT_EQ(kMchanState, iovar);
+}
+
+TEST_F(FirmwareConfigTest, MchanDisabledSoftAp) {
+  Init();
+  SimInterface ifc;
+  uint32_t iovar;
+
+  EXPECT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_AP, &ifc), ZX_OK);
+  struct brcmf_if* ifp = brcmf_get_ifp(device_->GetSim()->drvr, ifc.iface_id_);
+  brcmf_fil_iovar_int_get(ifp, "mchan", &iovar, nullptr);
+  EXPECT_EQ(kMchanState, iovar);
+}
+
 }  // namespace
 }  // namespace brcmfmac
 }  // namespace wlan

@@ -248,8 +248,6 @@ class SimFirmware {
   zx_status_t IovarAllmultiSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
                                size_t value_len);
   zx_status_t IovarAllmultiGet(uint16_t ifidx, void* value_out, size_t value_len);
-  zx_status_t IovarNdoeSet(uint16_t ifidx, int32_t bsscfgidx, const void* value, size_t value_len);
-  zx_status_t IovarNdoeGet(uint16_t ifidx, void* value_out, size_t value_len);
   zx_status_t IovarArpoeSet(uint16_t ifidx, int32_t bsscfgidx, const void* value, size_t value_len);
   zx_status_t IovarArpoeGet(uint16_t ifidx, void* value_out, size_t value_len);
   zx_status_t IovarArpolSet(uint16_t ifidx, int32_t bsscfgidx, const void* value, size_t value_len);
@@ -283,8 +281,12 @@ class SimFirmware {
   zx_status_t IovarInterfaceRemoveSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
                                       size_t value_len);
   zx_status_t IovarJoinSet(uint16_t ifidx, int32_t bsscfgidx, const void* value, size_t value_len);
+  zx_status_t IovarMchanSet(uint16_t ifidx, int32_t bsscfgidx, const void* value, size_t value_len);
+  zx_status_t IovarMchanGet(uint16_t ifidx, void* value_out, size_t value_len);
   zx_status_t IovarMpcSet(uint16_t ifidx, int32_t bsscfgidx, const void* value, size_t value_len);
   zx_status_t IovarMpcGet(uint16_t ifidx, void* value_out, size_t value_len);
+  zx_status_t IovarNdoeSet(uint16_t ifidx, int32_t bsscfgidx, const void* value, size_t value_len);
+  zx_status_t IovarNdoeGet(uint16_t ifidx, void* value_out, size_t value_len);
   zx_status_t IovarNmodeGet(uint16_t ifidx, void* value_out, size_t value_len);
   zx_status_t IovarPfnMacaddrSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
                                  size_t value_len);
@@ -560,6 +562,7 @@ class SimFirmware {
   uint32_t arpoe_ = 0;
   uint32_t arp_ol_ = 0;
   uint32_t ndoe_ = 0;
+  uint32_t mchan_ = 1;  // This feature is enabled by default in firmware.
 
   std::unordered_map<std::string, SimIovar> iovar_table_;
 };
