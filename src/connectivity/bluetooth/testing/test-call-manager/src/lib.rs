@@ -48,8 +48,8 @@ impl Dialer {
     /// Performs an outgoing call initiation action, simulating a request to the network.
     /// If the request was a success, the number of the outgoing call is returned.
     /// If the request failed, the failure status is returned.
-    /// Defaults to request failure with `zx::Status::NOT_FOUND` if the number associated with
-    /// the call action has not been explicitly set to return a result.
+    /// Defaults to failure with `zx::Status::NOT_FOUND` if the number associated with the call
+    /// action has not been explicitly set to return a result.
     ///
     /// Panics if `action` is a `CallAction::TransferActive`.
     pub fn dial(&mut self, action: CallAction) -> Result<Number, zx::Status> {
@@ -932,6 +932,40 @@ impl TestCallManager {
                 .collect(),
             calls: inner.calls.iter().map(|(&id, call)| (id, call.into())).collect(),
         }
+    }
+
+    /// Set the simulated "last dialed" number.
+    ///
+    /// Arguments:
+    ///     `number`: Number to be set. To clear the last dialed number, set `number` to `None`.
+    pub async fn set_last_dialed(&self, number: Option<Number>) {
+        self.inner.lock().await.manager.dialer.last_dialed = number;
+    }
+
+    /// Store a number at a specific location in address book memory.
+    ///
+    /// Arguments:
+    ///     `location`: The key used to look up a specific number in address book memory.
+    ///     `number`: Number to be set. To remove the address book entry, set `number` to `None`.
+    pub async fn set_memory_location(&self, location: Memory, number: Option<Number>) {
+        let _ = match number {
+            Some(number) => {
+                self.inner.lock().await.manager.dialer.address_book.insert(location, number)
+            }
+            None => self.inner.lock().await.manager.dialer.address_book.remove(&location),
+        };
+    }
+
+    /// Set the simulated result that will be returned after HFP requests an outgoing call.
+    /// This result is used regardless of whether a number was specified directly through
+    /// CallAction::dial_from_number or indirectly through either CallAction::dial_from_location or
+    /// CallAction::redial_last.
+    ///
+    /// Arguments:
+    ///     `number`: Number that maps to a simulated result.
+    ///     `status`: The simulated result value for `number`.
+    pub async fn set_dial_result(&self, number: Number, status: zx::Status) {
+        let _ = self.inner.lock().await.manager.dialer.dial_result.insert(number, status);
     }
 
     /// Cleanup any HFP related objects.

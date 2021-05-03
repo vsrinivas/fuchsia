@@ -895,6 +895,34 @@ impl Facade for HfpFacade {
                 self.set_battery_level(level).await?;
                 Ok(to_value(())?)
             }
+            "SetLastDialed" => {
+                let number = parse_arg!(args, as_str, "number")?.to_string();
+                self.set_last_dialed(Some(number)).await;
+                Ok(to_value(())?)
+            }
+            "ClearLastDialed" => {
+                self.set_last_dialed(None).await;
+                Ok(to_value(())?)
+            }
+            "SetMemoryLocation" => {
+                let location = parse_arg!(args, as_str, "location")?.to_string();
+                let number = parse_arg!(args, as_str, "number")?.to_string();
+                self.set_memory_location(location, Some(number)).await;
+                Ok(to_value(())?)
+            }
+            "ClearMemoryLocation" => {
+                let location = parse_arg!(args, as_str, "location")?.to_string();
+                self.set_memory_location(location, None).await;
+                Ok(to_value(())?)
+            }
+            "SetDialResult" => {
+                use std::convert::TryInto;
+                let number = parse_arg!(args, as_str, "number")?.to_string();
+                let status = parse_arg!(args, as_i64, "status")?.try_into()?;
+                let status = fuchsia_zircon::Status::from_raw(status);
+                self.set_dial_result(number, status).await;
+                Ok(to_value(())?)
+            }
             "GetState" => {
                 let result = self.get_state().await;
                 Ok(to_value(result)?)
