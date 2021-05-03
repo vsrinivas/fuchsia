@@ -160,6 +160,11 @@ def main():
     for arg in args.cmdline:
         cmd += ['-c', arg]
 
+    # Prevents QEMU from boot-looping, as most ZBI tests do not have a means of
+    # gracefully shutting down.
+    if not args.boot:
+        cmd += ['--', '-no-reboot']
+
     print('+ %s' % ' '.join(map(shlex.quote, cmd)))
     return subprocess.run(cmd).returncode
 
