@@ -24,7 +24,7 @@ protocol CookieMaker {
     Prep(CookieKind cookie) -> (uint64 token);
     /// Asynchonously bakes a cookie.
     /// Must only be called after preping finishes.
-    [Async]
+    [async]
     Bake(uint64 token, zx.time time) -> (zx.status s);
     /// Synchronously deliver a cookie.
     /// Must be called only after Bake finishes.

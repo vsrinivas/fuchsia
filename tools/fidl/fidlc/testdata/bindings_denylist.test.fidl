@@ -6,7 +6,7 @@ library fidl.test.bindingsdenylist;
 // to make this work (e.g. libfuzzer needs to have a protocol, only certain
 // bindings emit anything for an empty service, etc.).
 
-[BindingsDenylist = "there_are_no_bindings_with_this_name"]
+[bindings_deny_list = "there_are_no_bindings_with_this_name"]
 const uint32 AllBindings = 0;
 
 [BindingsDenylist = "cpp, dart, go, hlcpp, libfuzzer, llcpp, rust"]

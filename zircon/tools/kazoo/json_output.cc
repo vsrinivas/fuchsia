@@ -69,10 +69,11 @@ bool JsonOutput(const SyscallLibrary& library, Writer* writer) {
       std::vector<std::string> items;
       items.push_back("*");  // From abigen.
       for (const auto& it : attrib_map) {
-        if (it.first == "Doc" || it.first == "ArgReorder") {
+        const auto& attr_name = CamelToSnake(it.first);
+        if (attr_name == "doc" || attr_name == "arg_reorder") {
           continue;
         }
-        items.push_back(CamelToSnake(it.first));
+        items.push_back(attr_name);
       }
       output_list(items);
     };

@@ -99,6 +99,7 @@ impl MarkdownTemplate<'_> {
             ("sl", crate::templates::source_link),
             ("docLink", crate::templates::doc_link),
             ("oneline", crate::templates::one_line),
+            ("lower_snake_case", crate::templates::lower_snake_case),
             ("pulldown", crate::templates::pulldown),
             ("methodId", crate::templates::method_id),
         ];

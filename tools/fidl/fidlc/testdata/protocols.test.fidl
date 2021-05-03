@@ -55,7 +55,7 @@ protocol Transitional {
     [Transitional]
     Request(int64 x) -> (int64 y);
 
-    [Transitional]
+    [transitional]
     OneWay(int64 x);
 
     [Transitional]

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use heck::SnakeCase;
 use serde::Deserialize;
 use serde::Serialize;
 use serde_json::Map;
@@ -12,6 +13,13 @@ use std::fs::File;
 use std::io;
 use std::io::prelude::*;
 use std::path::PathBuf;
+
+/// Converts an UpperCamelCased name like "FooBar" into a lower_snake_cased one
+/// like "foo_bar."  This is used to normalize attribute names such that names
+/// written in either case are synonyms.
+pub fn to_lower_snake_case(str: &str) -> String {
+    str.to_snake_case().to_lowercase()
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct TableOfContentsItem {
@@ -137,7 +145,7 @@ mod test {
         let mut f = FidlJson {
             name: "fuchsia.test".to_string(),
             version: "0.0.1".to_string(),
-            maybe_attributes: vec![json!({"name": "Doc", "value": "Fuchsia Test API"})],
+            maybe_attributes: vec![json!({"name": "doc", "value": "Fuchsia Test API"})],
             library_dependencies: Vec::new(),
             bits_declarations: serde_json::from_str("[{\"name\": \"ABit\"},{\"name\": \"LastBit\"},{\"name\": \"AnotherBit\"}]").unwrap(),
             const_declarations: serde_json::from_str("[{\"name\": \"fuchsia.test/Const\"},{\"name\": \"fuchsia.test/AConst\"}]").unwrap(),

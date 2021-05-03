@@ -26,16 +26,30 @@ go_library("fidlgen_test_lib") {
     "types_test.go",
   ]
 
-  deps = [ ":fidlgen" ]
+  deps = [
+    ":fidlgen",
+    "//tools/fidl/lib/fidlgentest",
+  ]
 }
 
-go_test("fidlgen_lib_test") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen" ]
+if (is_host) {
+  fidlc_target = "//tools/fidl/fidlc($host_toolchain)"
 
-  deps = [
-    ":fidlgen_test_lib",
-    "//third_party/golibs:github.com/google/go-cmp",
-  ]
+  go_test("fidlgen_lib_test") {
+    gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen" ]
+
+    fidlc_binary = get_label_info(fidlc_target, "root_out_dir") + "/fidlc"
+    args = [
+      "--fidlc",
+      rebase_path(fidlc_binary, root_build_dir),
+    ]
+
+    deps = [
+      ":fidlgen_test_lib",
+      "//third_party/golibs:github.com/google/go-cmp",
+      "//tools/fidl/lib/fidlgentest",
+    ]
+  }
 }
 
 group("tests") {

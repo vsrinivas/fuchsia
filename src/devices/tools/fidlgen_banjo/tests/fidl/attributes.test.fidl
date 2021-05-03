@@ -23,7 +23,7 @@ union none_union {
     3: int32 baz;
 };
 
-[Packed]
+[packed]
 union packed_union {
     1: int32 foo;
     2: int32 bar;

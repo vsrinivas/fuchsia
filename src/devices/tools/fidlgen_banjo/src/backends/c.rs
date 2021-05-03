@@ -117,8 +117,8 @@ fn struct_attrs_to_c_str(maybe_attributes: &Option<Vec<Attribute>>) -> String {
     if let Some(attributes) = maybe_attributes {
         attributes
             .iter()
-            .filter_map(|a| match a.name.as_ref() {
-                "Packed" => Some("__attribute__ ((packed))"),
+            .filter_map(|a| match to_lower_snake_case(a.name.as_ref()).as_str() {
+                "packed" => Some("__attribute__ ((packed))"),
                 _ => None,
             })
             .collect::<Vec<_>>()

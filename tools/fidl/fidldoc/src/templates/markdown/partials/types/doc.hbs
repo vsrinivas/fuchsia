@@ -1,6 +1,6 @@
 {{#if maybe_attributes ~}}
     {{~ #each maybe_attributes ~}}
-        {{~ #if (eq name "Doc") ~}}
+        {{~ #if (eq (lower_snake_case name) "doc") ~}}
             {{~ pulldown (docLink value @root.name) ~}}
         {{~ /if ~}}
     {{~ /each ~}}

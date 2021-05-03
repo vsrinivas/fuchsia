@@ -17,7 +17,7 @@ use serde_json::{json, Value};
 use libdoc::DocCompiler;
 
 mod fidljson;
-use fidljson::{FidlJson, FidlJsonPackageData, TableOfContentsItem};
+use fidljson::{to_lower_snake_case, FidlJson, FidlJsonPackageData, TableOfContentsItem};
 
 use simplelog::{Config, SimpleLogger};
 
@@ -29,6 +29,8 @@ use templates::FidldocTemplate;
 static FIDLDOC_VERSION: &str = "0.0.4";
 static SUPPORTED_FIDLJSON: &str = "0.0.1";
 static FIDLDOC_CONFIG_PATH: &str = "fidldoc.config.json";
+static ATTR_NAME_DOC: &'static str = "doc";
+static ATTR_NAME_NO_DOC: &'static str = "no_doc";
 
 #[derive(Debug)]
 enum TemplateType {
@@ -339,7 +341,7 @@ fn check_declaration_documentation(
     if let serde_json::Value::Object(location) = location {
         for attributes in attributes_value.as_array().iter() {
             for attribute in attributes.iter() {
-                if attribute["name"] == "Doc" {
+                if to_lower_snake_case(attribute["name"].as_str().unwrap_or("")) == ATTR_NAME_DOC {
                     if let serde_json::Value::String(text) = &attribute["value"] {
                         compiler.parse_doc(
                             location["filename"].to_string(),
@@ -467,8 +469,12 @@ fn should_process_fidl_json(fidl_json: &FidlJson) -> bool {
         return false;
     }
 
-    if fidl_json.maybe_attributes.iter().any(|attr| attr["name"] == "NoDoc") {
-        info!("Skipping library with NoDoc attribute: {}", fidl_json.name);
+    if fidl_json
+        .maybe_attributes
+        .iter()
+        .any(|attr| to_lower_snake_case(attr["name"].as_str().unwrap_or("")) == ATTR_NAME_NO_DOC)
+    {
+        info!("Skipping library with @no_doc attribute: {}", fidl_json.name);
         return false;
     }
 
@@ -516,7 +522,7 @@ fn create_toc(fidl_json_map: &HashMap<String, FidlJson>) -> Vec<TableOfContentsI
 
 fn get_library_description(maybe_attributes: &Vec<Value>) -> String {
     for attribute in maybe_attributes {
-        if attribute["name"] == "Doc" {
+        if to_lower_snake_case(attribute["name"].as_str().unwrap_or("")) == ATTR_NAME_DOC {
             return attribute["value"]
                 .as_str()
                 .expect("Unable to retrieve string value for library description")
@@ -598,7 +604,9 @@ mod test {
             FidlJson {
                 name: "fuchsia.auth".to_string(),
                 version: "0.0.1".to_string(),
-                maybe_attributes: vec![json!({"name": "Doc", "value": "Fuchsia Auth API"})],
+                // Note that this ATTR_NAME_DOC is UpperCamelCased - this should still
+                // pass.
+                maybe_attributes: vec![json!({"name": ATTR_NAME_DOC, "value": "Fuchsia Auth API"})],
                 library_dependencies: Vec::new(),
                 bits_declarations: Vec::new(),
                 const_declarations: Vec::new(),
@@ -654,8 +662,8 @@ mod test {
     #[test]
     fn get_library_description_test() {
         let maybe_attributes = vec![
-            json!({"name": "Not Doc", "value": "Not the description"}),
-            json!({"name": "Doc", "value": "Fuchsia Auth API"}),
+            json!({"name": "not doc", "value": "Not the description"}),
+            json!({"name": ATTR_NAME_DOC, "value": "Fuchsia Auth API"}),
         ];
         let description = get_library_description(&maybe_attributes);
         assert_eq!(description, "Fuchsia Auth API".to_string());
@@ -727,7 +735,7 @@ mod test {
         let fidl_json = FidlJson {
             name: "fuchsia.camera.common".to_string(),
             version: SUPPORTED_FIDLJSON.to_string(),
-            maybe_attributes: vec![json!({"name": "not NoDoc", "value": ""})],
+            maybe_attributes: vec![json!({"name": "not no_doc", "value": ""})],
             library_dependencies: Vec::new(),
             bits_declarations: Vec::new(),
             const_declarations: Vec::new(),
@@ -748,7 +756,7 @@ mod test {
         let fidl_json = FidlJson {
             name: "fuchsia.camera.common".to_string(),
             version: "not a valid version string".to_string(),
-            maybe_attributes: vec![json!({"name": "not NoDoc", "value": ""})],
+            maybe_attributes: vec![json!({"name": "not no_doc", "value": ""})],
             library_dependencies: Vec::new(),
             bits_declarations: Vec::new(),
             const_declarations: Vec::new(),
@@ -769,7 +777,7 @@ mod test {
         let fidl_json = FidlJson {
             name: "fuchsia.camera.common".to_string(),
             version: SUPPORTED_FIDLJSON.to_string(),
-            maybe_attributes: vec![json!({"name": "NoDoc", "value": ""})],
+            maybe_attributes: vec![json!({"name": ATTR_NAME_NO_DOC, "value": ""})],
             library_dependencies: Vec::new(),
             bits_declarations: Vec::new(),
             const_declarations: Vec::new(),
@@ -804,7 +812,7 @@ mod test {
             },
             "maybe_attributes": [
               {
-                "name": "Doc",
+                "name": ATTR_NAME_DOC,
                 "value": "Device specific types should have bit 60 set.\n"
               }
             ]})],
@@ -838,7 +846,7 @@ mod test {
             },
             "maybe_attributes": [
               {
-                "name": "Doc",
+                "name": ATTR_NAME_DOC,
                 "value": "Device specific types should have bit '60 set.\n"
               }
             ]})],

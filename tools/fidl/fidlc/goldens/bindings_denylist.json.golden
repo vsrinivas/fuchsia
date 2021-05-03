@@ -57,7 +57,7 @@
       },
       "maybe_attributes": [
         {
-          "name": "BindingsDenylist",
+          "name": "bindings_deny_list",
           "value": "there_are_no_bindings_with_this_name"
         }
       ],

@@ -19,9 +19,9 @@ constexpr std::pair<const char*, std::string_view> kFunctionAttributes[] = {
 };
 
 constexpr std::pair<std::string_view, std::string_view> kHandleAttributes[] = {
-    {"Acquire", "acquire_handle"},
-    {"Release", "release_handle"},
-    {"Use", "use_handle"},
+    {"acquire", "acquire_handle"},
+    {"release", "release_handle"},
+    {"use", "use_handle"},
 };
 
 bool IsHandleType(const Type& type) {

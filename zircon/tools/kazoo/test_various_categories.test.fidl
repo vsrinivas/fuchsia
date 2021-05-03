@@ -4,9 +4,9 @@
 
 library zx;
 
-[Transport="Syscall"]
+[Transport = "Syscall"]
 protocol Categories {
-    [noreturn]
+    [Noreturn]
     NoResponseNoReturn(int32 input);
 
     [blocking]
@@ -15,7 +15,6 @@ protocol Categories {
     [vdsocall]
     Vdsoer(int32 a) -> (int32 b);
 
-    [const, vdsocall]
+    [const, Vdsocall]
     TwoCategories(int32 a) -> (int32 b);
 };
-

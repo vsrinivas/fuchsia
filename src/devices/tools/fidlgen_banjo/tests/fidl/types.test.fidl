@@ -16,7 +16,7 @@ union this_is_a_union {
 
 [Transport = "Banjo"]
 protocol this_is_an_interface {
-    [SomeAttrib, AnotherAttrib="Value containing, a comma"]
+    [SomeAttrib, another_attrib = "Value containing, a comma"]
     Copy(string s, uint32 count) -> (string s);
 };
 
@@ -65,7 +65,7 @@ struct default_values {
     uint16 u16 = 348;
     uint32 u32 = 9038;
     uint64 u64 = 19835;
-    string s = "hello-_/.,'()&*0123456789";
+    string s = "hello-_/., '() &*0123456789";
 };
 
 const uint32 arrays_size = 32;

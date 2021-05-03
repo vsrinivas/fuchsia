@@ -9,6 +9,9 @@ use {
     std::iter,
 };
 
+static ATTR_NAME_DOC: &'static str = "doc";
+static ATTR_NAME_TRANSPORT: &'static str = "transport";
+
 pub enum Decl<'a> {
     Const { data: &'a fidl::Const },
     Enum { data: &'a fidl::Enum },
@@ -94,7 +97,7 @@ pub fn filter_interface<'b>(declaration: &Decl<'b>) -> Option<&'b Interface> {
 pub fn get_doc_comment(maybe_attrs: &Option<Vec<Attribute>>, tabs: usize) -> String {
     if let Some(attrs) = maybe_attrs {
         for attr in attrs.iter() {
-            if attr.name == "Doc" {
+            if to_lower_snake_case(&attr.name) == ATTR_NAME_DOC {
                 if attr.value.is_empty() {
                     continue;
                 }
@@ -114,7 +117,7 @@ pub fn get_doc_comment(maybe_attrs: &Option<Vec<Attribute>>, tabs: usize) -> Str
 pub fn validate_transport(maybe_attrs: &Option<Vec<Attribute>>) -> Result<(), Error> {
     if let Some(attrs) = maybe_attrs {
         for attr in attrs.iter() {
-            if attr.name == "Transport" {
+            if to_lower_snake_case(&attr.name) == ATTR_NAME_TRANSPORT {
                 if attr.value == "Banjo" {
                     return Ok(());
                 } else {

@@ -6,6 +6,7 @@
 
 use {
     anyhow::{anyhow, Error},
+    heck::SnakeCase,
     lazy_static::lazy_static,
     regex::Regex,
     serde::{Deserialize, Deserializer, Serialize},
@@ -703,6 +704,13 @@ impl IntegerType {
     }
 }
 
+/// Converts an UpperCamelCased name like "FooBar" into a lower_snake_cased one
+/// like "foo_bar."  This is used to normalize attribute names such that names
+/// written in either case are synonyms.
+pub fn to_lower_snake_case(str: &str) -> String {
+    str.to_snake_case().to_lowercase()
+}
+
 pub trait AttributeContainer {
     fn has(&self, name: &str) -> bool;
     fn get(&self, name: &str) -> Option<&String>;
@@ -711,7 +719,9 @@ pub trait AttributeContainer {
 impl AttributeContainer for Option<Vec<Attribute>> {
     fn has(&self, name: &str) -> bool {
         match self {
-            Some(attrs) => attrs.iter().any(|a| a.name == name),
+            Some(attrs) => {
+                attrs.iter().any(|a| to_lower_snake_case(&a.name) == to_lower_snake_case(name))
+            }
             None => false,
         }
     }
@@ -720,7 +730,13 @@ impl AttributeContainer for Option<Vec<Attribute>> {
         match self {
             Some(attrs) => attrs
                 .iter()
-                .filter_map(|a| if a.name == name { Some(&a.value) } else { None })
+                .filter_map(|a| {
+                    if to_lower_snake_case(&a.name) == to_lower_snake_case(name) {
+                        Some(&a.value)
+                    } else {
+                        None
+                    }
+                })
                 .next(),
             None => None,
         }

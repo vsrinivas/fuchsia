@@ -531,7 +531,7 @@ type Attributes struct {
 
 func (el Attributes) LookupAttribute(name Identifier) (Attribute, bool) {
 	for _, a := range el.Attributes {
-		if a.Name == name {
+		if ToSnakeCase(string(a.Name)) == ToSnakeCase(string(name)) {
 			return a, true
 		}
 	}

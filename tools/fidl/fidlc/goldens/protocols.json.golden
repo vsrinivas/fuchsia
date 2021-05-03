@@ -1182,7 +1182,7 @@
           "has_request": true,
           "maybe_attributes": [
             {
-              "name": "Transitional",
+              "name": "transitional",
               "value": ""
             }
           ],

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package fidlgen
+package fidlgen_test
 
 import (
 	"encoding/json"
@@ -11,20 +11,95 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgentest"
 )
+
+// toDocComment formats doc comments in a by adding a leading space and a
+// trailing newline.
+func toDocComment(input string) string {
+	return " " + input + "\n"
+}
 
 func TestCanUnmarshalLargeOrdinal(t *testing.T) {
 	input := `{
 		"ordinal": 18446744073709551615
 	}`
 
-	var method Method
+	var method fidlgen.Method
 	err := json.Unmarshal([]byte(input), &method)
 	if err != nil {
 		t.Fatalf("failed to unmarshal: %s", err)
 	}
 	if method.Ordinal != math.MaxUint64 {
 		t.Fatalf("method.Ordinal: expected math.MaxUint64, found %d", method.Ordinal)
+	}
+}
+
+func TestCanUnmarshalAttributeValue(t *testing.T) {
+	root := fidlgentest.EndToEndTest{T: t}.Single(`
+		library example;
+
+		[doc="MyUnion", UpperCamelCase, lower_snake_case, CAPS]
+		flexible union MyUnion {
+			/// my_union_member
+			[Unknown] 1: bool my_union_member;
+		};
+	`)
+
+	// MyUnion
+	unionName := string(root.Unions[0].Name)
+	wantUnionName := "MyUnion"
+	unionAttrs := root.Unions[0].Attributes
+	if len(unionAttrs.Attributes) != 4 {
+		t.Errorf("got %d attributes on '%s', want %d", len(unionAttrs.Attributes), unionName, 4)
+	}
+	if val, found := unionAttrs.LookupAttribute("Doc"); !found || val.Value != wantUnionName {
+		t.Errorf("'%s' 'doc' attribute: got '%s', want '%s'", unionName, val.Value, wantUnionName)
+	}
+	if _, found := unionAttrs.LookupAttribute("UpperCamelCase"); !found {
+		t.Errorf("'%s' 'UpperCamelCase' attribute: not found (using UpperCamelCase search)", unionName)
+	}
+	if _, found := unionAttrs.LookupAttribute("upper_camel_case"); !found {
+		t.Errorf("'%s' 'UpperCamelCase' attribute: not found (using lower-case search)", unionName)
+	}
+	if _, found := unionAttrs.LookupAttribute("LowerSnakeCase"); !found {
+		t.Errorf("'%s' 'lower_snake_case' attribute: not found (using UpperCamelCase search)", unionName)
+	}
+	if _, found := unionAttrs.LookupAttribute("lower_snake_case"); !found {
+		t.Errorf("'%s' 'lower_snake_case' attribute: not found (using lower-case search)", unionName)
+	}
+	if _, found := unionAttrs.LookupAttribute("Caps"); !found {
+		t.Errorf("'%s' 'CAPS' attribute: not found (using UpperCamelCase search)", unionName)
+	}
+	if _, found := unionAttrs.LookupAttribute("caps"); !found {
+		t.Errorf("'%s' 'CAPS' attribute: not found (using lower-snake-case search)", unionName)
+	}
+	if _, found := unionAttrs.LookupAttribute("CAPS"); !found {
+		t.Errorf("'%s' 'CAPS' attribute: not found (using default string for search)", unionName)
+	}
+
+	// my_union_member
+	unionMemName := string(root.Unions[0].Members[0].Name)
+	wantUnionMemName := "my_union_member"
+	unionMemAttrs := root.Unions[0].Members[0].Attributes
+	if unionMemName != wantUnionMemName {
+		t.Errorf("got union with name '%s', want '%s'", unionMemName, wantUnionMemName)
+	}
+	if len(unionMemAttrs.Attributes) != 2 {
+		t.Errorf("got %d attributes on '%s', want %d", len(unionMemAttrs.Attributes), unionMemName, 2)
+	}
+	if val, found := unionMemAttrs.LookupAttribute("Doc"); !found || val.Value != toDocComment(wantUnionMemName) {
+		t.Errorf("'%s' 'doc' attribute: got '%s', want '%s'", unionMemName, val.Value, toDocComment(wantUnionMemName))
+	}
+	if _, found := unionMemAttrs.LookupAttribute("Unknown"); !found {
+		t.Errorf("'%s' 'unknown' attribute: not found", unionMemName)
+	}
+	if _, found := unionMemAttrs.LookupAttribute("Missing"); found {
+		t.Errorf("'%s' 'missing' attribute: found when non-existant", unionMemName)
+	}
+	if _, found := unionMemAttrs.LookupAttribute("missing"); found {
+		t.Errorf("'%s' 'missing' attribute: found when non-existant", unionMemName)
 	}
 }
 
@@ -51,7 +126,7 @@ func TestCanUnmarshalSignedEnumUnknownValue(t *testing.T) {
 		{"-9223372036854775808", math.MinInt64},
 	}
 	for _, ex := range cases {
-		root, err := ReadJSONIrContent([]byte(fmt.Sprintf(inputTmpl, ex.jsonValue)))
+		root, err := fidlgen.ReadJSONIrContent([]byte(fmt.Sprintf(inputTmpl, ex.jsonValue)))
 		if err != nil {
 			t.Fatalf("failed to read JSON IR: %s", err)
 		}
@@ -88,7 +163,7 @@ func TestCanUnmarshalUnsignedEnumUnknownValue(t *testing.T) {
 		{"18446744073709551615", math.MaxUint64},
 	}
 	for _, ex := range cases {
-		root, err := ReadJSONIrContent([]byte(fmt.Sprintf(inputTmpl, ex.jsonValue)))
+		root, err := fidlgen.ReadJSONIrContent([]byte(fmt.Sprintf(inputTmpl, ex.jsonValue)))
 		if err != nil {
 			t.Fatalf("failed to read JSON IR: %s", err)
 		}
@@ -121,13 +196,13 @@ func TestCanUnmarshalBitsStrictness(t *testing.T) {
 
 	cases := []struct {
 		jsonValue     string
-		expectedValue Strictness
+		expectedValue fidlgen.Strictness
 	}{
-		{"false", IsFlexible},
-		{"true", IsStrict},
+		{"false", fidlgen.IsFlexible},
+		{"true", fidlgen.IsStrict},
 	}
 	for _, ex := range cases {
-		root, err := ReadJSONIrContent([]byte(fmt.Sprintf(inputTmpl, ex.jsonValue)))
+		root, err := fidlgen.ReadJSONIrContent([]byte(fmt.Sprintf(inputTmpl, ex.jsonValue)))
 		if err != nil {
 			t.Fatalf("failed to read JSON IR: %s", err)
 		}
@@ -141,8 +216,8 @@ func TestCanUnmarshalBitsStrictness(t *testing.T) {
 
 func TestParseCompoundIdentifier(t *testing.T) {
 	type testCase struct {
-		input          EncodedCompoundIdentifier
-		expectedOutput CompoundIdentifier
+		input          fidlgen.EncodedCompoundIdentifier
+		expectedOutput fidlgen.CompoundIdentifier
 	}
 	tests := []testCase{
 		{
@@ -164,7 +239,7 @@ func TestParseCompoundIdentifier(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		output := ParseCompoundIdentifier(test.input)
+		output := fidlgen.ParseCompoundIdentifier(test.input)
 		diff := cmp.Diff(output, test.expectedOutput)
 		if len(diff) > 0 {
 			t.Errorf("unexpected output for input %q diff: %s", test.input, diff)
@@ -172,14 +247,14 @@ func TestParseCompoundIdentifier(t *testing.T) {
 	}
 }
 
-func compoundIdentifier(library []string, name, member string) CompoundIdentifier {
-	var convertedLibrary LibraryIdentifier
+func compoundIdentifier(library []string, name, member string) fidlgen.CompoundIdentifier {
+	var convertedLibrary fidlgen.LibraryIdentifier
 	for _, part := range library {
-		convertedLibrary = append(convertedLibrary, Identifier(part))
+		convertedLibrary = append(convertedLibrary, fidlgen.Identifier(part))
 	}
-	return CompoundIdentifier{
+	return fidlgen.CompoundIdentifier{
 		Library: convertedLibrary,
-		Name:    Identifier(name),
-		Member:  Identifier(member),
+		Name:    fidlgen.Identifier(name),
+		Member:  fidlgen.Identifier(member),
 	}
 }

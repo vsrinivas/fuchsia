@@ -21,7 +21,7 @@ bool ValidateTransport(const rapidjson::Value& interface) {
     return false;
   }
   for (const auto& attrib : interface["maybe_attributes"].GetArray()) {
-    if (attrib.GetObject()["name"].Get<std::string>() == "Transport") {
+    if (CamelToSnake(attrib.GetObject()["name"].Get<std::string>()) == "transport") {
       if (attrib.GetObject()["value"].Get<std::string>() == "Syscall") {
         return true;
       }
@@ -40,7 +40,7 @@ std::string StripLibraryName(const std::string& full_name) {
 std::string GetCategory(const rapidjson::Value& interface, const std::string& interface_name) {
   if (interface.HasMember("maybe_attributes")) {
     for (const auto& attrib : interface["maybe_attributes"].GetArray()) {
-      if (attrib.GetObject()["name"].Get<std::string>() == "NoProtocolPrefix") {
+      if (CamelToSnake(attrib.GetObject()["name"].Get<std::string>()) == "no_protocol_prefix") {
         return std::string();
       }
     }
@@ -54,7 +54,7 @@ std::string GetDocAttribute(const rapidjson::Value& method) {
     return std::string();
   }
   for (const auto& attrib : method["maybe_attributes"].GetArray()) {
-    if (attrib.GetObject()["name"].Get<std::string>() == "Doc") {
+    if (CamelToSnake(attrib.GetObject()["name"].Get<std::string>()) == "doc") {
       return attrib.GetObject()["value"].GetString();
     }
   }
@@ -66,7 +66,7 @@ Required GetRequiredAttribute(const rapidjson::Value& field) {
     return Required::kNo;
   }
   for (const auto& attrib : field["maybe_attributes"].GetArray()) {
-    if (attrib.GetObject()["name"].Get<std::string>() == "Required") {
+    if (CamelToSnake(attrib.GetObject()["name"].Get<std::string>()) == "required") {
       ZX_ASSERT(attrib.GetObject()["value"].Get<std::string>() == "");
       return Required::kYes;
     }
@@ -191,12 +191,12 @@ Type TypeFromJson(const SyscallLibrary& library, const rapidjson::Value& type,
 }  // namespace
 
 bool Syscall::HasAttribute(const char* attrib_name) const {
-  return attributes_.find(attrib_name) != attributes_.end();
+  return attributes_.find(CamelToSnake(attrib_name)) != attributes_.end();
 }
 
 std::string Syscall::GetAttribute(const char* attrib_name) const {
   ZX_ASSERT(HasAttribute(attrib_name));
-  return attributes_.find(attrib_name)->second;
+  return attributes_.find(CamelToSnake(attrib_name))->second;
 }
 
 // Converts from FIDL style to C/Kernel style:
@@ -252,8 +252,10 @@ bool Syscall::MapRequestResponseToKernelAbi() {
     } else if (type.IsString()) {
       // char*, using the same constness as the string was specified as.
       kernel_arguments_.emplace_back(
-          m.name(), Type(TypePointer(Type(TypeChar{})), default_to_const(type.constness()),
-                         Optionality::kInputArgument), m.attributes());
+          m.name(),
+          Type(TypePointer(Type(TypeChar{})), default_to_const(type.constness()),
+               Optionality::kInputArgument),
+          m.attributes());
       kernel_arguments_.emplace_back(m.name() + "_size", Type(TypeSizeT{}),
                                      std::map<std::string, std::string>{});
     } else if (type.IsStruct()) {
@@ -308,9 +310,10 @@ bool Syscall::MapRequestResponseToKernelAbi() {
           m.attributes());
     } else {
       // Everything else becomes a T* (to make it an out parameter).
-      kernel_arguments_.emplace_back(m.name(), Type(TypePointer(type), Constness::kMutable,
-                                                    output_optionality(type.optionality())),
-                                     m.attributes());
+      kernel_arguments_.emplace_back(
+          m.name(),
+          Type(TypePointer(type), Constness::kMutable, output_optionality(type.optionality())),
+          m.attributes());
     }
   }
 
@@ -568,7 +571,8 @@ bool SyscallLibraryLoader::LoadInterfaces(const rapidjson::Document& document,
       syscall->rights_specs_ = GetRightsSpecsFromDocAttribute(doc_attribute);
       if (method.HasMember("maybe_attributes")) {
         for (const auto& attrib : method["maybe_attributes"].GetArray()) {
-          syscall->attributes_[attrib["name"].GetString()] = attrib["value"].GetString();
+          syscall->attributes_[CamelToSnake(attrib["name"].GetString())] =
+              attrib["value"].GetString();
         }
       }
 
@@ -583,7 +587,7 @@ bool SyscallLibraryLoader::LoadInterfaces(const rapidjson::Document& document,
                                       std::map<std::string, std::string>{});
         if (arg.HasMember("maybe_attributes")) {
           for (const auto& attrib : arg["maybe_attributes"].GetArray()) {
-            strukt->members_.back().attributes_[attrib["name"].GetString()] =
+            strukt->members_.back().attributes_[CamelToSnake(attrib["name"].GetString())] =
                 attrib["value"].GetString();
           }
         }
@@ -670,8 +674,8 @@ bool SyscallLibraryLoader::LoadTables(const rapidjson::Document& document,
     for (const auto& member : json["members"].GetArray()) {
       std::string name = member["name"].GetString();
       const auto* type_alias = member.HasMember("experimental_maybe_from_type_alias")
-                                    ? &member["experimental_maybe_from_type_alias"]
-                                    : nullptr;
+                                   ? &member["experimental_maybe_from_type_alias"]
+                                   : nullptr;
       Type type = TypeFromJson(*library, member["type"], type_alias);
       Required required = GetRequiredAttribute(member);
       std::string doc_attribute = GetDocAttribute(member);

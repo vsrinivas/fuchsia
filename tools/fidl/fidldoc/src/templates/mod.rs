@@ -5,6 +5,7 @@
 pub mod html;
 pub mod markdown;
 
+use crate::fidljson::to_lower_snake_case;
 use anyhow::Error;
 use handlebars::{Context, Handlebars, Helper, JsonRender, Output, RenderContext, RenderError};
 use lazy_static::lazy_static;
@@ -12,6 +13,22 @@ use log::debug;
 use pulldown_cmark::{html as pulldown_html, Parser};
 use regex::{Captures, Regex};
 use serde_json::Value;
+
+pub fn lower_snake_case(
+    h: &Helper<'_, '_>,
+    _: &Handlebars<'_>,
+    _: &Context,
+    _: &mut RenderContext<'_, '_>,
+    out: &mut dyn Output,
+) -> Result<(), RenderError> {
+    // get parameter from helper or throw an error
+    let param = h
+        .param(0)
+        .ok_or_else(|| RenderError::new("Param 0 is required for lower_snake_case helper"))?;
+    debug!("lower_snake_case called on {}", param.value().render());
+    out.write(&to_lower_snake_case(&param.value().render()))?;
+    Ok(())
+}
 
 pub trait FidldocTemplate {
     fn render_main_page(&self, main_fidl_json: &Value) -> Result<(), Error>;

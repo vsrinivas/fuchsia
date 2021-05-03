@@ -5,10 +5,10 @@
 library banjo.examples.buffer;
 
 struct SomeData {
-  [Buffer] vector<uint8> one;
+    [Buffer] vector<uint8> one;
 };
 
 [Transport = "Banjo"]
 protocol SomeMethods {
-  DoSomething([Buffer] vector<uint8> input) -> ();
+    DoSomething([buffer] vector<uint8> input) -> ();
 };
