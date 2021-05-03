@@ -12,11 +12,17 @@ use vbmeta::{HashDescriptor, Key, RawHashDescriptorBuilder, Salt, VBMeta};
 
 pub fn sign(args: SignArgs) -> Result<()> {
     let outfile = args.output.clone();
+    let salt_outfile = args.salt_outfile.clone();
 
-    let vbmeta = sign_impl(args, &RealFilesystemProvider {}, &RealSaltProvider {})?;
+    let (vbmeta, salt) = sign_impl(args, &RealFilesystemProvider {}, &RealSaltProvider {})?;
 
     // Now write the output.
     std::fs::write(outfile, &vbmeta.as_bytes()).context("Unable to write output file")?;
+
+    // And the salt, if requested and available.
+    if let Some(salt_outfile) = salt_outfile {
+        std::fs::write(salt_outfile, hex::encode(salt.bytes))?;
+    }
 
     Ok(())
 }
@@ -25,7 +31,7 @@ fn sign_impl<FSP: FilesystemProvider, SP: SaltProvider>(
     args: SignArgs,
     fs: &FSP,
     salt_provider: &SP,
-) -> Result<VBMeta> {
+) -> Result<(VBMeta, Salt)> {
     // Read the signing key's bytes and metadata.
     let key_pem = fs.read_to_string(args.key)?;
     let key_metadata = fs.read(args.key_metadata)?;
@@ -61,11 +67,11 @@ fn sign_impl<FSP: FilesystemProvider, SP: SaltProvider>(
     let image = fs.read(args.image_path)?;
 
     // Create the descriptor for the image.
-    let descriptor = HashDescriptor::new(&args.name, &image, salt);
+    let descriptor = HashDescriptor::new(&args.name, &image, salt.clone());
     descriptors.push(descriptor);
 
     // And do the signing operation itself.
-    VBMeta::sign(descriptors, key).map_err(Into::into)
+    VBMeta::sign(descriptors, key).map_err(Into::into).map(|vbmeta| (vbmeta, salt))
 }
 
 /// A shim trait so that tests can inject a known salt value, while the "real"
@@ -259,15 +265,16 @@ mod tests {
         vfs.add("image", &[0x00u8; 128]);
         vfs.add("salt", &hex::encode(&[0xAAu8; 32]).as_bytes());
 
-        let vbmeta = sign_impl(
+        let (vbmeta, salt) = sign_impl(
             SignArgs {
                 name: "some_name".to_owned(),
-                image_path: "image".to_owned(),
-                key: "key".to_owned(),
-                key_metadata: "key_metadata".to_owned(),
-                salt_file: Some("salt".to_owned()),
+                image_path: "image".into(),
+                key: "key".into(),
+                key_metadata: "key_metadata".into(),
+                salt_file: Some("salt".into()),
                 additional_descriptor: Vec::new(),
-                output: "output".to_owned(),
+                output: "output".into(),
+                salt_outfile: None,
             },
             &vfs,
             &salt_provider,
@@ -282,7 +289,7 @@ mod tests {
         let descriptors = vbmeta.descriptors();
         assert_eq!(descriptors.len(), 1);
 
-        let salt = descriptors[0].salt().unwrap();
+        assert_eq!(salt, descriptors[0].salt().unwrap());
         let name = descriptors[0].image_name();
         let digest = descriptors[0].digest();
         let expected_digest =
@@ -311,15 +318,16 @@ mod tests {
         vfs.add("key_metadata", &b"TEST_METADATA"[..]);
         vfs.add("image", &[0x00u8; 128]);
 
-        let vbmeta = sign_impl(
+        let (vbmeta, salt) = sign_impl(
             SignArgs {
                 name: "some other name".to_owned(),
-                image_path: "image".to_owned(),
-                key: "key".to_owned(),
-                key_metadata: "key_metadata".to_owned(),
+                image_path: "image".into(),
+                key: "key".into(),
+                key_metadata: "key_metadata".into(),
                 salt_file: None,
                 additional_descriptor: Vec::new(),
-                output: "output".to_owned(),
+                output: "output".into(),
+                salt_outfile: None,
             },
             &vfs,
             &salt_provider,
@@ -334,7 +342,7 @@ mod tests {
         let descriptors = vbmeta.descriptors();
         assert_eq!(descriptors.len(), 1);
 
-        let salt = descriptors[0].salt().unwrap();
+        assert_eq!(salt, descriptors[0].salt().unwrap());
         let name = descriptors[0].image_name();
         let digest = descriptors[0].digest();
         let expected_digest =

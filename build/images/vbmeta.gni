@@ -116,6 +116,12 @@ template("vbmeta") {
   target_name_avbtool = "${target_name}.avbtool"
   output_file_avbtool = "${output_file}.avbtool"
 
+  target_name_ffx = "${target_name}.ffx"
+  output_file_ffx = "${output_file}.ffx"
+
+  salt_action = target_name_ffx
+  salt_file = "$target_out_dir/$salt_action.salt"
+
   action("${target_name_avbtool}__vb_desc") {
     # TODO(fxbug.dev/69047): This is a "stamping" action, figure out how to
     # handle this class of actions.
@@ -129,10 +135,20 @@ template("vbmeta") {
                              "deps",
                            ])
 
-    inputs = [ zbi[0] ]
+    if (!defined(deps)) {
+      deps = []
+    }
+    deps += [ ":$salt_action" ]
+
+    inputs = [
+      zbi[0],
+      salt_file,
+    ]
     outputs = [ output_vbmeta_desc_file ]
     args = [
       "add_hash_footer",
+      "--salt",
+      "@" + rebase_path(salt_file, root_build_dir),
       "--image",
       rebase_path(inputs[0], root_build_dir),
       "--partition_name",
@@ -203,41 +219,6 @@ template("vbmeta") {
     }
   }
 
-  base_name = "${target_name}.ffx"
-
-  target_name_ffx = "${base_name}.ffx"
-  output_file_ffx = "${output_file}.ffx"
-
-  salt_action = "${target_name_ffx}.salt"
-  salt_file = "$target_out_dir/$salt_action"
-
-  action(salt_action) {
-    script = "//build/images/assembly/extract_descriptor_fields.py"
-    forward_variables_from(invoker,
-                           [
-                             "testonly",
-                             "visibility",
-                           ])
-
-    deps = [ ":$target_name_avbtool" ]
-
-    avbtool = "//third_party/android/platform/external/avb/avbtool.py"
-    args = [
-      "--avbtool",
-      rebase_path(avbtool, root_build_dir),
-      "--vbmeta",
-      rebase_path(output_file_avbtool, root_build_dir),
-      "--salt-only",
-      "--output",
-      rebase_path(salt_file, root_build_dir),
-    ]
-    inputs = [
-      avbtool,
-      output_file_avbtool,
-    ]
-    outputs = [ salt_file ]
-  }
-
   additional_descriptor_labels = []
   foreach(entry, board_extra_vbmeta_images) {
     extra_vbmeta_filename = get_path_info(entry, "file")
@@ -285,8 +266,6 @@ template("vbmeta") {
                              "deps",
                            ])
 
-    deps += [ ":$salt_action" ]
-
     args = [
       "--config",
       "assembly_enabled=true",
@@ -301,16 +280,15 @@ template("vbmeta") {
       zvb_partition_name,
       "--image-path",
       rebase_path(zbi[0], root_build_dir),
-      "--salt-file",
-      rebase_path(salt_file, root_build_dir),
       "--output",
       rebase_path(output_file_ffx, root_build_dir),
+      "--salt-outfile",
+      rebase_path(salt_file, root_build_dir),
     ]
     inputs = [
       avb_key,
       avb_atx_metadata,
       zbi[0],
-      salt_file,
     ]
 
     foreach(descriptor_target, additional_descriptor_labels) {
@@ -324,7 +302,10 @@ template("vbmeta") {
       deps += [ descriptor_target ]
     }
 
-    outputs = [ output_file_ffx ]
+    outputs = [
+      output_file_ffx,
+      salt_file,
+    ]
   }
 
   verify_files_match("$target_name.avbtool.matches") {

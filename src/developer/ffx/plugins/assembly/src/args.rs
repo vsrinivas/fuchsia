@@ -48,30 +48,34 @@ pub struct SignArgs {
 
     /// the path to the image to sign
     #[argh(option)]
-    pub image_path: String,
+    pub image_path: PathBuf,
 
     /// the path to the PEM file containing the signing key to use.
     #[argh(option)]
-    pub key: String,
+    pub key: PathBuf,
 
     /// the path to the metadata file for the signing key.
     #[argh(option)]
-    pub key_metadata: String,
+    pub key_metadata: PathBuf,
 
     /// the file containing salt for the vbmeta signing operation.
     ///
     /// This is only to be used as part of testing the vbmeta signing operation,
     /// and must be a path to a file that contains a 64-char hex string of bytes.
     #[argh(option)]
-    pub salt_file: Option<String>,
+    pub salt_file: Option<PathBuf>,
 
     /// descriptors for additional partitions to include, as paths to json files
     #[argh(option)]
-    pub additional_descriptor: Vec<String>,
+    pub additional_descriptor: Vec<PathBuf>,
 
     /// the output file to write the vbmeta image to.
     #[argh(option)]
-    pub output: String,
+    pub output: PathBuf,
+
+    /// the output file to write the salt value used to
+    #[argh(option)]
+    pub salt_outfile: Option<PathBuf>,
 }
 
 /// perform the assembly of images
