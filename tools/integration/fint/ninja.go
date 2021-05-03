@@ -268,3 +268,7 @@ func ninjaCompdb(ctx context.Context, r ninjaRunner) (string, error) {
 	}
 	return compdbFile.Name(), nil
 }
+
+func ninjaCleanDead(ctx context.Context, r ninjaRunner) error {
+	return r.run(ctx, []string{"-t", "cleandead"}, os.Stdout, os.Stderr)
+}

@@ -89,6 +89,14 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 		jobCount:  int(contextSpec.GomaJobCount),
 	}
 
+	if contextSpec.Incremental {
+		// If we're building incrementally, we need to clean out any stale files
+		// in the build directory.
+		if err := ninjaCleanDead(ctx, runner); err != nil {
+			return nil, err
+		}
+	}
+
 	ninjaStartTime := time.Now()
 	var ninjaErr error
 	if contextSpec.ArtifactDir == "" {
