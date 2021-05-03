@@ -121,9 +121,9 @@ const Extent& AllocatedExtentIterator::GetExtent() const {
 zx_status_t AllocatedExtentIterator::NextContainer() {
   ZX_DEBUG_ASSERT(!node_iterator_.Done());
   uint32_t node_index = node_iterator_.NextNodeIndex();
-  // Our implementation uses 0xffffffffu as an end of list indicator to spot
-  // attempts to iterate past the end of the list. This value is technically
-  // valid but not in any existing practical or debugging use cases.
+  // Our implementation uses 0xffffffffu as an end of list indicator to spot attempts to iterate
+  // past the end of the list. This value is technically valid but not in any existing practical or
+  // debugging use cases.
   ZX_DEBUG_ASSERT(node_index != kMaxNodeId);
 
   zx::status<ExtentContainer*> status = node_iterator_.Next();

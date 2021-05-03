@@ -43,7 +43,6 @@ class ChunkedCompressor : public Compressor {
   // representation of a blob of size `input_length`.
   static size_t BufferMax(size_t input_length);
 
-  ////////////////////////////////////////
   // Compressor interface
   size_t Size() const final;
   zx_status_t Update(const void* input_data, size_t input_length) final;
@@ -97,7 +96,7 @@ class SeekableChunkedDecompressor : public SeekableDecompressor {
   zx::status<CompressionMapping> MappingForDecompressedRange(size_t offset, size_t len,
                                                              size_t max_decompressed_len) final;
 
-  CompressionAlgorithm algorithm() const final { return CompressionAlgorithm::CHUNKED; };
+  CompressionAlgorithm algorithm() const final { return CompressionAlgorithm::kChunked; };
 
  private:
   chunked_compression::SeekTable seek_table_;

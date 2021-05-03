@@ -117,10 +117,10 @@ TEST_F(ExternalDecompressorTest, FullDecompression) {
   size_t compressed_size;
   std::unique_ptr<ZSTDCompressor> compressor = nullptr;
   ASSERT_EQ(ZX_OK,
-            ZSTDCompressor::Create({CompressionAlgorithm::ZSTD, kCompressionLevel}, kDataSize,
+            ZSTDCompressor::Create({CompressionAlgorithm::kZstd, kCompressionLevel}, kDataSize,
                                    compressed_mapper_.start(), kMapSize, &compressor));
   CompressData(std::move(compressor), input_data_, &compressed_size);
-  ExternalDecompressor decompressor(client_.get(), CompressionAlgorithm::ZSTD);
+  ExternalDecompressor decompressor(client_.get(), CompressionAlgorithm::kZstd);
   ASSERT_EQ(ZX_OK, decompressor.Decompress(kDataSize, compressed_size));
 
   ASSERT_EQ(0, memcmp(input_data_, decompressed_mapper_.start(), kDataSize));
@@ -148,7 +148,7 @@ zx::status<std::vector<CompressionMapping>> GetMappings(SeekableDecompressor* de
 TEST_F(ExternalDecompressorTest, ChunkedPartialDecompression) {
   size_t compressed_size;
   std::unique_ptr<ChunkedCompressor> compressor = nullptr;
-  ASSERT_EQ(ZX_OK, ChunkedCompressor::Create({CompressionAlgorithm::CHUNKED, kCompressionLevel},
+  ASSERT_EQ(ZX_OK, ChunkedCompressor::Create({CompressionAlgorithm::kChunked, kCompressionLevel},
                                              kDataSize, &compressed_size, &compressor));
   ASSERT_EQ(ZX_OK, compressor->SetOutput(compressed_mapper_.start(), kMapSize));
   CompressData(std::move(compressor), input_data_, &compressed_size);
@@ -180,7 +180,7 @@ class ExternalDecompressorE2ePagedTest : public FdioTest {
     MountOptions options;
     // Chunked files will be paged in.
     options.pager_backed_cache_policy = CachePolicy::EvictImmediately;
-    options.compression_settings = {CompressionAlgorithm::CHUNKED, 14};
+    options.compression_settings = {CompressionAlgorithm::kChunked, 14};
     options.sandbox_decompression = true;
     set_mount_options(options);
   }
@@ -259,7 +259,7 @@ class ExternalDecompressorE2eUnpagedTest : public FdioTest {
   ExternalDecompressorE2eUnpagedTest() {
     MountOptions options;
     // ZSTD files will be done all at once.
-    options.compression_settings = {CompressionAlgorithm::ZSTD, 14};
+    options.compression_settings = {CompressionAlgorithm::kZstd, 14};
     options.sandbox_decompression = true;
     set_mount_options(options);
   }

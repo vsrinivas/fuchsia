@@ -26,8 +26,7 @@ class ExtentIterator {
   // On success, returns the next extent.
   virtual zx::status<const Extent*> Next() = 0;
 
-  // Returns the number of blocks iterated past already. Updated on each
-  // call to |Next|.
+  // Returns the number of blocks iterated past already. Updated on each call to |Next|.
   virtual uint64_t BlockIndex() const = 0;
 };
 

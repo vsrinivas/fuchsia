@@ -19,16 +19,13 @@ namespace blobfs {
 
 // Allows traversing a collection of extents from a not-yet allocated node.
 //
-// This iterator is useful for accessing blocks of blobs which have not yet been
-// committed to disk.
+// This iterator is useful for accessing blocks of blobs which have not yet been committed to disk.
 class VectorExtentIterator : public ExtentIterator {
  public:
   VectorExtentIterator(const fbl::Vector<ReservedExtent>& extents);
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(VectorExtentIterator);
 
-  ////////////////
   // ExtentIterator interface.
-
   bool Done() const final;
   zx::status<const Extent*> Next() final;
   uint64_t BlockIndex() const final;

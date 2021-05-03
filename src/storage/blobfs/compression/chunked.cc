@@ -36,7 +36,7 @@ ChunkedCompressor::ChunkedCompressor(chunked_compression::StreamingChunkedCompre
 zx_status_t ChunkedCompressor::Create(CompressionSettings settings, size_t input_size,
                                       size_t* output_limit_out,
                                       std::unique_ptr<ChunkedCompressor>* out) {
-  ZX_DEBUG_ASSERT(settings.compression_algorithm == CompressionAlgorithm::CHUNKED);
+  ZX_DEBUG_ASSERT(settings.compression_algorithm == CompressionAlgorithm::kChunked);
   CompressionParams params = GetDefaultChunkedCompressionParams(input_size);
   if (settings.compression_level) {
     params.compression_level = *(settings.compression_level);

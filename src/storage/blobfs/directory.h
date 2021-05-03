@@ -39,9 +39,7 @@ class Directory final : public fs::Vnode {
   explicit Directory(Blobfs* bs);
   ~Directory() final;
 
-  ////////////////
   // fs::Vnode interface.
-
   zx_status_t GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::Rights rights,
                                      fs::VnodeRepresentation* info) final;
   fs::VnodeProtocolSet GetProtocols() const final;
@@ -66,10 +64,7 @@ class Directory final : public fs::Vnode {
 #endif
 
  private:
-  ////////////////
-  // Other methods.
-
-  BlobCache& Cache();
+  BlobCache& GetCache();
 
   Blobfs* const blobfs_;
 };

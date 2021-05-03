@@ -19,11 +19,10 @@ enum class CachePolicy {
   // The node is never evicted from memory, unless it has been fully deleted and there are no
   // additional references.
   //
-  // This option costs a significant amount of memory, but it results in high performance.
-  // On systems where kernel page eviction is enabled, if blobfs is in paged mode, this
-  // memory cost is reduced, since the kernel can reclaim data pages as needed. This is the
-  // recommended configuration. (Note that the kernel does not reclaim in-memory metadata
-  // such as merkle trees.)
+  // This option costs a significant amount of memory, but it results in high performance. On
+  // systems where kernel page eviction is enabled, if blobfs is in paged mode, this memory cost is
+  // reduced, since the kernel can reclaim data pages as needed. This is the recommended
+  // configuration. (Note that the kernel does not reclaim in-memory metadata such as merkle trees.)
   NeverEvict,
 };
 

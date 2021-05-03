@@ -26,8 +26,7 @@ class VerificationMetrics {
   VerificationMetrics(const VerificationMetrics&) = delete;
   VerificationMetrics& operator=(const VerificationMetrics&) = delete;
 
-  // Increments aggregate information about Merkle verification of blobs
-  // since mounting.
+  // Increments aggregate information about Merkle verification of blobs since mounting.
   void Increment(uint64_t data_size, uint64_t merkle_size, fs::Duration duration);
 
   struct Snapshot {

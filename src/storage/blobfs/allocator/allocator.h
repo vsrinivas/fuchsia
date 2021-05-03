@@ -56,8 +56,8 @@ class SpaceManager : public storage::VmoidRegistry {
 
 // Allocates and frees both block and node entries.
 //
-// Also maintains reservation mappings, to help in-progress allocations avoid
-// from being persisted too early.
+// Also maintains reservation mappings, to help in-progress allocations avoid from being persisted
+// too early.
 class Allocator : private ExtentReserver, private NodeReserverInterface, public NodeFinder {
  public:
   Allocator(SpaceManager* space_manager, RawBitmap block_map, fzl::ResizeableVmoMapper node_map,
@@ -66,28 +66,22 @@ class Allocator : private ExtentReserver, private NodeReserverInterface, public 
 
   using ExtentReserver::ReservedBlockCount;
 
-  ////////////////
   // blobfs::NodeFinder interface.
   //
   // TODO(smklein): It may be possible to convert NodeFinder from an interface
   // to a concrete base class if we can reconcile the differences with host.
-
   zx::status<InodePtr> GetNode(uint32_t node_index) final;
-
-  ////////////////
-  // Other interfaces.
 
   void SetLogging(bool enable) { log_allocation_failure_ = enable; }
 
   // Returns true if [start_block, end_block) is allocated.
   //
-  // If any blocks are unallocated, will set the optional output parameter
-  // |out_first_unset| to the first unallocated block within this range.
+  // If any blocks are unallocated, will set the optional output parameter |out_first_unset| to the
+  // first unallocated block within this range.
   bool CheckBlocksAllocated(uint64_t start_block, uint64_t end_block,
                             uint64_t* out_first_unset = nullptr) const;
 
-  // Reads the block map and node map from underlying storage, using a
-  // blocking read transaction.
+  // Reads the block map and node map from underlying storage, using a blocking read transaction.
   //
   // It is unsafe to call this method while any nodes or blocks are reserved.
   zx_status_t ResetFromStorage(fs::DeviceTransactionHandler& transaction_handler);
@@ -103,8 +97,7 @@ class Allocator : private ExtentReserver, private NodeReserverInterface, public 
 
   // Reserves space for blocks in memory. Does not update disk.
   //
-  // On success, appends the (possibly non-contiguous) region of allocated
-  // blocks to |out_extents|.
+  // On success, appends the (possibly non-contiguous) region of allocated blocks to |out_extents|.
   // On failure, |out_extents| is cleared.
   zx_status_t ReserveBlocks(uint64_t num_blocks, fbl::Vector<ReservedExtent>* out_extents);
 
@@ -120,33 +113,26 @@ class Allocator : private ExtentReserver, private NodeReserverInterface, public 
 
   // Reserves space for nodes in memory. Does not update disk.
   //
-  // On success, appends the (possibly non-contiguous) nodes to |out_nodes|.
-  // On failure, |out_nodes| is cleared.
+  // On success, appends the (possibly non-contiguous) nodes to |out_nodes|. On failure, |out_nodes|
+  // is cleared.
   zx_status_t ReserveNodes(uint64_t num_nodes, fbl::Vector<ReservedNode>* out_nodes);
 
-  ////////////////
   // blobfs::NodeReserverInterface interface.
-
   zx::status<ReservedNode> ReserveNode() override;
-
   void UnreserveNode(ReservedNode node) override;
-
   uint32_t ReservedNodeCount() const override;
 
-  // Marks a reserved node by updating the node map to indicate it is an
-  // allocated inode.
+  // Marks a reserved node by updating the node map to indicate it is an allocated inode.
   void MarkInodeAllocated(ReservedNode node);
 
-  // Marks a reserved node by updating the node map to indicate it is an
-  // allocated extent container.  Makes |node| follow |previous_node_index| in the extent container
-  // list.
+  // Marks a reserved node by updating the node map to indicate it is an allocated extent container.
+  // Makes |node| follow |previous_node_index| in the extent container list.
   zx_status_t MarkContainerNodeAllocated(ReservedNode node, uint32_t previous_node_index);
 
   // Mark a node allocated. The node may or may not be reserved.
   void MarkNodeAllocated(uint32_t node_index);
 
-  // Frees a node which has already been committed.
-  // Returns an error if the node could not be freed.
+  // Frees a node which has already been committed. Returns an error if the node could not be freed.
   zx_status_t FreeNode(uint32_t node_index);
 
   // Record the location and size of all non-free block regions.
@@ -172,25 +158,22 @@ class Allocator : private ExtentReserver, private NodeReserverInterface, public 
   // Returns true if [start_block, end_block) are unallocated.
   bool CheckBlocksUnallocated(uint64_t start_block, uint64_t end_block) const;
 
-  // Avoids a collision with the committed block map, moving the starting
-  // location / block length to find a region with no collision.
+  // Avoids a collision with the committed block map, moving the starting location / block length to
+  // find a region with no collision.
   //
-  // Returns true if we should restart searching to attempt to maximally munch
-  // from the allocation pool.
+  // Returns true if we should restart searching to attempt to maximally munch from the allocation
+  // pool.
   bool FindUnallocatedExtent(uint64_t start, uint64_t block_length, uint64_t* out_start,
                              uint64_t* out_block_length);
 
-  // Identifies the subset of blocks which don't collide with pending
-  // reservations. If any collisions exist, maximally munches the available
-  // free space into newly reserved extents.
+  // Identifies the subset of blocks which don't collide with pending reservations. If any
+  // collisions exist, maximally munches the available free space into newly reserved extents.
   //
-  // It is assumed that [start, start + block_length) is unallocated;
-  // this is internally asserted. |FindUnallocatedExtent| should be invoked
-  // first to provide this guarantee.
+  // It is assumed that [start, start + block_length) is unallocated; this is internally asserted.
+  // |FindUnallocatedExtent| should be invoked first to provide this guarantee.
   //
-  // Returns true if we should restart searching to attempt to maximally munch
-  // from the allocation pool. Otherwise, no collisions with pending
-  // reservations exist.
+  // Returns true if we should restart searching to attempt to maximally munch from the allocation
+  // pool. Otherwise, no collisions with pending reservations exist.
   bool MunchUnreservedExtents(bitmap::RleBitmap::const_iterator reserved_iterator,
                               uint64_t remaining_blocks, uint64_t start, uint64_t block_length,
                               fbl::Vector<ReservedExtent>* out_extents,
@@ -202,9 +185,9 @@ class Allocator : private ExtentReserver, private NodeReserverInterface, public 
   //
   // Appends the (possibly non-contiguous) region of allocated blocks to |out_extents|.
   //
-  // May fail if not enough blocks can be found. In this case, an error will be returned,
-  // and the number of found blocks will be returned in |out_actual_blocks|. This result
-  // is guaranteed to be less than or equal to |num_blocks|.
+  // May fail if not enough blocks can be found. In this case, an error will be returned, and the
+  // number of found blocks will be returned in |out_actual_blocks|. This result is guaranteed to be
+  // less than or equal to |num_blocks|.
   zx_status_t FindBlocks(uint64_t start, uint64_t num_blocks,
                          fbl::Vector<ReservedExtent>* out_extents, uint64_t* out_actual_blocks);
 

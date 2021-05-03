@@ -20,8 +20,8 @@ namespace blobfs {
 // The |ReadMetrics| class tracks blobfs metrics that are updated on the read path, i.e. metrics
 // related to disk reads and decompression.
 //
-// This class is thread-safe. Two instances of this class are stored in |BlobfsMetrics|,
-// one for each thread.
+// This class is thread-safe. Two instances of this class are stored in |BlobfsMetrics|, one for
+// each thread.
 class ReadMetrics {
  public:
   explicit ReadMetrics(inspect::Node* read_metrics_node);
@@ -29,13 +29,11 @@ class ReadMetrics {
   ReadMetrics(const ReadMetrics&) = delete;
   ReadMetrics& operator=(const ReadMetrics&) = delete;
 
-  // Increments aggregate information about reading blobs
-  // from storage since mounting.
+  // Increments aggregate information about reading blobs from storage since mounting.
   void IncrementDiskRead(CompressionAlgorithm algorithm, uint64_t read_size,
                          fs::Duration read_duration);
 
-  // Increments aggregate information about decompressing blobs from storage
-  // since mounting.
+  // Increments aggregate information about decompressing blobs from storage since mounting.
   void IncrementDecompression(CompressionAlgorithm algorithm, uint64_t decompressed_size,
                               fs::Duration decompress_duration, bool remote);
 

@@ -18,8 +18,7 @@
 
 namespace blobfs {
 
-// A helper class which utilizes the visitor pattern to chain together a group
-// of extents and nodes.
+// A helper class which utilizes the visitor pattern to chain together a group of extents and nodes.
 //
 // Precondition:
 //      nodes.size() >= NodeCountForExtents(extents.size())
@@ -41,8 +40,8 @@ class NodePopulator {
   using OnNodeCallback = fbl::Function<void(uint32_t node_index)>;
   using OnExtentCallback = fbl::Function<IterationCommand(ReservedExtent& extent)>;
 
-  // Utilizes the |allocator| to locate all nodes provided by |nodes|, and allocate each
-  // node the appropriate |extent|.
+  // Utilizes the |allocator| to locate all nodes provided by |nodes|, and allocate each node the
+  // appropriate |extent|.
   //
   // Along the way, this methods sets the following fields on the blob inode: |next_node|,
   // |extents|, |extent_count|. This method sets all fields on the container nodes.

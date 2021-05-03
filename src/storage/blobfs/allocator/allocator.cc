@@ -128,14 +128,13 @@ zx_status_t Allocator::ReserveBlocks(uint64_t num_blocks,
   uint64_t actual_blocks;
 
   // TODO(smklein): If we allocate blocks up to the end of the block map, extend, and continue
-  // allocating, we'll create two extents where one would suffice.
-  // If we knew how many reserved / allocated blocks existed we could resize ahead-of-time and
-  // flatten this case, as an optimization.
+  // allocating, we'll create two extents where one would suffice. If we knew how many reserved /
+  // allocated blocks existed we could resize ahead-of-time and flatten this case, as an
+  // optimization.
 
   if ((status = FindBlocks(0, num_blocks, out_extents, &actual_blocks) != ZX_OK)) {
-    // If we have run out of blocks, attempt to add block slices via FVM.
-    // The new 'hint' is the first location we could try to find blocks
-    // after merely extending the allocation maps.
+    // If we have run out of blocks, attempt to add block slices via FVM. The new 'hint' is the
+    // first location we could try to find blocks after merely extending the allocation maps.
     uint64_t hint = block_map_.size() - std::min(num_blocks, block_map_.size());
 
     ZX_DEBUG_ASSERT(actual_blocks < num_blocks);
@@ -191,16 +190,14 @@ zx_status_t Allocator::Grow() {
 
   auto inode_count = space_manager_->Info().inode_count;
   status = node_bitmap_->Grow(inode_count);
-  // This is awkward situation where we could secure storage but potentially
-  // ran out of [virtual] memory. There is nothing much we can do. The filesystem
-  // might fail soon from other alloc failures. It is better to turn the fs-mount
-  // into read-only instance or panic to safe-guard against any damage rather than
-  // propogating these errors.
+  // This is awkward situation where we could secure storage but potentially ran out of [virtual]
+  // memory. There is nothing much we can do. The filesystem might fail soon from other alloc
+  // failures. It is better to turn the fs-mount into read-only instance or panic to safe-guard
+  // against any damage rather than propogating these errors.
   //
-  // One alternative considered was to reorder memory allocation first and then
-  // allocate disk. Reordering just delays the problem and also to reorder this
-  // layer needs to know details like what is fvm slice size is. We decided
-  // against that route.
+  // One alternative considered was to reorder memory allocation first and then allocate disk.
+  // Reordering just delays the problem and also to reorder this layer needs to know details like
+  // what is fvm slice size is. We decided against that route.
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to grow bitmap for inodes";
   }
@@ -231,9 +228,9 @@ void Allocator::MarkInodeAllocated(ReservedNode node) {
                 mapped_inode.status_string());
   ZX_ASSERT((mapped_inode->header.flags & kBlobFlagAllocated) == 0);
   mapped_inode->header.flags = kBlobFlagAllocated;
-  // This value should not be relied upon as it is not part of the
-  // specification, it is chosen to trigger crashing when used. This will be
-  // updated to a usable value when another node is appended to the list.
+  // This value should not be relied upon as it is not part of the specification, it is chosen to
+  // trigger crashing when used. This will be updated to a usable value when another node is
+  // appended to the list.
   mapped_inode->header.next_node = kMaxNodeId;
   node.Release();
   --reserved_node_count_;
@@ -249,9 +246,9 @@ zx_status_t Allocator::MarkContainerNodeAllocated(ReservedNode node, uint32_t pr
   ExtentContainer* container = GetNode(index)->AsExtentContainer();
   ZX_ASSERT((container->header.flags & kBlobFlagAllocated) == 0);
   container->header.flags = kBlobFlagAllocated | kBlobFlagExtentContainer;
-  // This value should not be relied upon as it is not part of the
-  // specification, it is chosen to trigger crashing when used. This will be
-  // updated to a usable value when another node is appended to the list.
+  // This value should not be relied upon as it is not part of the specification, it is chosen to
+  // trigger crashing when used. This will be updated to a usable value when another node is
+  // appended to the list.
   container->header.next_node = kMaxNodeId;
   container->previous_node = previous_node_index;
   container->extent_count = 0;
@@ -290,9 +287,8 @@ zx_status_t Allocator::ResetBlockMapSize() {
     }
 
     if (new_size < rounded_size) {
-      // In the event that the requested block count is not a multiple
-      // of the nearest block size, shrink down to the actual block
-      // count.
+      // In the event that the requested block count is not a multiple of the nearest block size,
+      // shrink down to the actual block count.
       status = block_map_.Shrink(new_size);
       if (status != ZX_OK) {
         return status;
@@ -341,25 +337,23 @@ bool Allocator::FindUnallocatedExtent(uint64_t start, uint64_t block_length, uin
   if (!block_map_.Scan(start, start + block_length, false, &first_already_allocated)) {
     // Part of [start, start + block_length) is already allocated.
     if (first_already_allocated == start) {
-      // Jump past as much of the allocated region as possible,
-      // and then restart searching for more free blocks.
+      // Jump past as much of the allocated region as possible, and then restart searching for more
+      // free blocks.
       uint64_t first_free;
       if (block_map_.Scan(start, start + block_length, true, &first_free)) {
-        // All bits are allocated; jump past this entire portion
-        // of allocated blocks.
+        // All bits are allocated; jump past this entire portion of allocated blocks.
         start += block_length;
       } else {
         // Not all blocks are allocated; jump to the first free block we can find.
         ZX_DEBUG_ASSERT(first_free > start);
         start = first_free;
       }
-      // We recommend restarting the search in this case because
-      // although there was a prefix collision, the suffix of this
-      // region may be followed by additional free blocks.
+      // We recommend restarting the search in this case because although there was a prefix
+      // collision, the suffix of this region may be followed by additional free blocks.
       restart = true;
     } else {
-      // Since |start| is free, we'll try allocating from as much of this region
-      // as we can until we hit previously-allocated blocks.
+      // Since |start| is free, we'll try allocating from as much of this region as we can until we
+      // hit previously-allocated blocks.
       ZX_DEBUG_ASSERT(first_already_allocated > start);
       block_length = first_already_allocated - start;
     }
@@ -381,8 +375,8 @@ bool Allocator::MunchUnreservedExtents(bitmap::RleBitmap::const_iterator reserve
 
   const uint64_t start_max = start + block_length;
 
-  // There are remaining in-flight reserved blocks we might collide with;
-  // verify this allocation is not being held by another write operation.
+  // There are remaining in-flight reserved blocks we might collide with; verify this allocation is
+  // not being held by another write operation.
   while ((start < start_max) && (block_length != 0) &&
          (reserved_iterator != ReservedBlocksCend())) {
     // We should only be considering blocks which are not allocated.
@@ -394,12 +388,12 @@ bool Allocator::MunchUnreservedExtents(bitmap::RleBitmap::const_iterator reserve
       ZX_DEBUG_ASSERT(reserved_iterator != ReservedBlocksCend());
       reserved_iterator++;
     } else if (start + block_length <= reserved_iterator->start()) {
-      // The remaining reserved blocks occur after this free region;
-      // this allocation doesn't collide.
+      // The remaining reserved blocks occur after this free region; this allocation doesn't
+      // collide.
       break;
     } else {
-      // The reserved region ends at/after the start of the allocation.
-      // The reserved region starts before the end of the allocation.
+      // The reserved region ends at/after the start of the allocation. The reserved region starts
+      // before the end of the allocation.
       //
       // This implies a collision exists.
       collision = true;
@@ -410,9 +404,8 @@ bool Allocator::MunchUnreservedExtents(bitmap::RleBitmap::const_iterator reserve
         break;
       }
       if (start < reserved_iterator->start()) {
-        // Free Prefix: Although the observed range overlaps with a
-        // reservation, it includes a prefix which is free from
-        // overlap.
+        // Free Prefix: Although the observed range overlaps with a reservation, it includes a
+        // prefix which is free from overlap.
         //
         // Take the most of the proposed allocation *before* the reservation.
         Extent extent(start, static_cast<BlockCountType>(reserved_iterator->start() - start));
@@ -430,11 +423,9 @@ bool Allocator::MunchUnreservedExtents(bitmap::RleBitmap::const_iterator reserve
         out_extents->push_back(ExtentReserver::ReserveLocked(std::move(extent)));
         reserved_iterator = ReservedBlocksCbegin();
       } else {
-        // Free Suffix: The observed range overlaps with a
-        // reservation, but not entirely.
+        // Free Suffix: The observed range overlaps with a reservation, but not entirely.
         //
-        // Jump to the end of the reservation, as free space exists
-        // there.
+        // Jump to the end of the reservation, as free space exists there.
         ZX_DEBUG_ASSERT(start + block_length > reserved_iterator->end());
         block_length = (start + block_length) - reserved_iterator->end();
         start = reserved_iterator->end();
@@ -454,11 +445,10 @@ zx_status_t Allocator::FindBlocks(uint64_t start, uint64_t num_blocks,
                                   uint64_t* out_actual_blocks) {
   std::scoped_lock lock(mutex());
 
-  // Using a single iterator over the reserved allocation map lets us
-  // avoid re-scanning portions of the reserved map. This is possible
-  // because the |reserved_blocks_| map should be immutable
-  // for the duration of this method, unless we actually find blocks, at
-  // which point the iterator is reset.
+  // Using a single iterator over the reserved allocation map lets us avoid re-scanning portions of
+  // the reserved map. This is possible because the |reserved_blocks_| map should be immutable for
+  // the duration of this method, unless we actually find blocks, at which point the iterator is
+  // reset.
   auto reserved_iterator = ReservedBlocksCbegin();
 
   uint64_t remaining_blocks = num_blocks;
@@ -468,8 +458,7 @@ zx_status_t Allocator::FindBlocks(uint64_t start, uint64_t num_blocks,
       *out_actual_blocks = num_blocks - remaining_blocks;
       return ZX_ERR_NO_SPACE;
     }
-    // Constraint: No contiguous run longer than the maximum permitted
-    // extent.
+    // Constraint: No contiguous run longer than the maximum permitted extent.
     uint64_t block_length = std::min(remaining_blocks, kBlockCountMax);
 
     bool restart_search = FindUnallocatedExtent(start, block_length, &start, &block_length);
@@ -479,8 +468,8 @@ zx_status_t Allocator::FindBlocks(uint64_t start, uint64_t num_blocks,
 
     // [start, start + block_length) is now a valid region of free blocks.
     //
-    // Take the subset of this range that doesn't intersect with reserved blocks,
-    // and add it to our extent list.
+    // Take the subset of this range that doesn't intersect with reserved blocks, and add it to our
+    // extent list.
     restart_search = MunchUnreservedExtents(reserved_iterator, remaining_blocks, start,
                                             block_length, out_extents, &reserved_iterator,
                                             &remaining_blocks, &start, &block_length);
@@ -489,8 +478,8 @@ zx_status_t Allocator::FindBlocks(uint64_t start, uint64_t num_blocks,
     }
 
     if (block_length != 0) {
-      // The remainder of this window exists and does not collide with either
-      // the reservation map nor the committed blocks.
+      // The remainder of this window exists and does not collide with either the reservation map
+      // nor the committed blocks.
       Extent extent(start, static_cast<BlockCountType>(block_length));
       ZX_DEBUG_ASSERT(block_map_.Scan(extent.Start(), extent.Start() + extent.Length(), false));
       start += extent.Length();

@@ -31,15 +31,15 @@ HealthCheckService::HealthCheckService(async_dispatcher_t* dispatcher, Blobfs& b
 void HealthCheckService::Verify(VerifyRequestView request, VerifyCompleter::Sync& completer) {
   constexpr size_t kMaxBytesToVerify = 1024 * 1024;
   size_t bytes_verified = 0;
-  zx_status_t status = blobfs_.Cache().ForAllOpenNodes([&](fbl::RefPtr<CacheNode> node) {
+  zx_status_t status = blobfs_.GetCache().ForAllOpenNodes([&](fbl::RefPtr<CacheNode> node) {
     auto blob = fbl::RefPtr<Blob>::Downcast(std::move(node));
     if (blob->DeletionQueued()) {
       // Skip blobs that are scheduled for deletion.
       return ZX_OK;
     }
     // If we run multithreaded, the blob cound transition to deleted between the above
-    // DeletionQueued() check and this Verify() call. That should be OK as it only means we
-    // check a blob that we didn't need to. If we need 100% correctness, we'll need to add a
+    // DeletionQueued() check and this Verify() call. That should be OK as it only means we check a
+    // blob that we didn't need to. If we need 100% correctness, we'll need to add a
     // Blob::VerifyIfNotDeleted() function that can atomically check and verify.
     if (zx_status_t status = blob->Verify(); status != ZX_OK) {
       FX_LOGS(ERROR) << "Detected corrupted blob " << blob->digest();

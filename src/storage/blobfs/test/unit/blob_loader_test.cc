@@ -59,12 +59,12 @@ class BlobLoaderTest : public TestWithParam<TestParamType> {
         .blob_layout_format = blob_layout_format_,
     };
     switch (compression_algorithm) {
-      case CompressionAlgorithm::UNCOMPRESSED:
-      case CompressionAlgorithm::CHUNKED:
+      case CompressionAlgorithm::kUncompressed:
+      case CompressionAlgorithm::kChunked:
         break;
-      case CompressionAlgorithm::ZSTD:
-      case CompressionAlgorithm::ZSTD_SEEKABLE:
-      case CompressionAlgorithm::LZ4:
+      case CompressionAlgorithm::kZstd:
+      case CompressionAlgorithm::kZstdSeekable:
+      case CompressionAlgorithm::kLz4:
         fs_options.oldest_minor_version = kBlobfsMinorVersionBackupSuperblock;
         break;
     }
@@ -114,7 +114,7 @@ class BlobLoaderTest : public TestWithParam<TestParamType> {
     Digest digest;
     fbl::RefPtr<CacheNode> node;
     EXPECT_EQ(digest.Parse(info.path), ZX_OK);
-    EXPECT_EQ(setup_.blobfs()->Cache().Lookup(digest, &node), ZX_OK);
+    EXPECT_EQ(setup_.blobfs()->GetCache().Lookup(digest, &node), ZX_OK);
     return fbl::RefPtr<Blob>::Downcast(std::move(node));
   }
 
@@ -156,7 +156,7 @@ class BlobLoaderTest : public TestWithParam<TestParamType> {
     Digest digest;
     fbl::RefPtr<CacheNode> node;
     EXPECT_EQ(digest.Parse(info.path), ZX_OK);
-    EXPECT_EQ(setup_.blobfs()->Cache().Lookup(digest, &node), ZX_OK);
+    EXPECT_EQ(setup_.blobfs()->GetCache().Lookup(digest, &node), ZX_OK);
     auto vnode = fbl::RefPtr<Blob>::Downcast(std::move(node));
     auto algorithm_or = AlgorithmForInode(*setup_.blobfs()->GetNode(vnode->Ino()).value());
     EXPECT_TRUE(algorithm_or.is_ok());
@@ -342,7 +342,7 @@ TEST_P(BlobLoaderTest, NullBlobWithCorruptedMerkleRootFailsToLoad) {
              .dev_offset = NodeMapStartBlock(setup_.blobfs()->Info()) + block,
              .length = 1,
          }});
-    transaction.Commit(*setup_.blobfs()->journal());
+    transaction.Commit(*setup_.blobfs()->GetJournal());
   }
 
   // Remount the filesystem so the node cache will pickup the new name for the blob.
@@ -397,15 +397,15 @@ std::string GetTestParamName(const TestParamInfo<TestParamType>& param) {
 }
 
 constexpr std::array<CompressionAlgorithm, 4> kCompressionAlgorithms = {
-    CompressionAlgorithm::UNCOMPRESSED,
-    CompressionAlgorithm::ZSTD,
-    CompressionAlgorithm::ZSTD_SEEKABLE,
-    CompressionAlgorithm::CHUNKED,
+    CompressionAlgorithm::kUncompressed,
+    CompressionAlgorithm::kZstd,
+    CompressionAlgorithm::kZstdSeekable,
+    CompressionAlgorithm::kChunked,
 };
 
 constexpr std::array<CompressionAlgorithm, 2> kPagingCompressionAlgorithms = {
-    CompressionAlgorithm::UNCOMPRESSED,
-    CompressionAlgorithm::CHUNKED,
+    CompressionAlgorithm::kUncompressed,
+    CompressionAlgorithm::kChunked,
 };
 
 constexpr std::array<BlobLayoutFormat, 2> kBlobLayoutFormats = {

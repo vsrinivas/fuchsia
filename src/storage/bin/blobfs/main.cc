@@ -130,9 +130,9 @@ const struct {
 
 std::optional<blobfs::CompressionAlgorithm> ParseAlgorithm(const char* str) {
   if (!strcmp(str, "UNCOMPRESSED")) {
-    return blobfs::CompressionAlgorithm::UNCOMPRESSED;
+    return blobfs::CompressionAlgorithm::kUncompressed;
   } else if (!strcmp(str, "ZSTD_CHUNKED")) {
-    return blobfs::CompressionAlgorithm::CHUNKED;
+    return blobfs::CompressionAlgorithm::kChunked;
   }
   return std::nullopt;
 }

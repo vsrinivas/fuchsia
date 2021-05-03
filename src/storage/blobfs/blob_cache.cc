@@ -71,8 +71,7 @@ zx_status_t BlobCache::ForAllOpenNodes(NextNodeCallback callback) {
         // Acquire the first node from the front of the cache...
         raw_vnode = &open_hash_.front();
       } else {
-        // ... Acquire all subsequent nodes by iterating from the lower bound
-        // of the current node.
+        // ... Acquire all subsequent nodes by iterating from the lower bound of the current node.
         auto current = open_hash_.lower_bound(old_vnode->digest());
         if (current == open_hash_.end()) {
           return ZX_OK;
@@ -136,21 +135,16 @@ zx_status_t BlobCache::LookupLocked(const digest::Digest& key, fbl::RefPtr<Cache
       *out = fbl::MakeRefPtrUpgradeFromRaw(raw_vnode, hash_lock_);
       if (*out == nullptr) {
         // This condition is only possible if:
-        // - The raw pointer to the Vnode exists in the open map,
-        // with refcount == 0.
-        // - Another thread is fbl_recycling this Vnode, but has not
-        // yet resurrected/evicted it.
-        // - The vnode is being moved to the close cache, and is
-        // not yet purged.
+        // - The raw pointer to the Vnode exists in the open map, with refcount == 0.
+        // - Another thread is fbl_recycling this Vnode, but has not yet resurrected/evicted it.
+        // - The vnode is being moved to the close cache, and is not yet purged.
         //
-        // It is not safe for us to attempt to Resurrect the Vnode. If
-        // we do so, then the caller of Lookup may unlink, purge, and
-        // destroy the Vnode concurrently before the original caller of
-        // "fbl_recycle" completes.
+        // It is not safe for us to attempt to Resurrect the Vnode. If we do so, then the caller of
+        // Lookup may unlink, purge, and destroy the Vnode concurrently before the original caller
+        // of "fbl_recycle" completes.
         //
-        // Since the window of time for this condition is extremely
-        // small (between Release and the resurrection of the Vnode),
-        // and only contains a single flag check, we use a condition
+        // Since the window of time for this condition is extremely small (between Release and the
+        // resurrection of the Vnode), and only contains a single flag check, we use a condition
         // variable to wait until it is released, and try again.
         release_cvar_.Wait(&hash_lock_);
         continue;
@@ -202,9 +196,9 @@ zx_status_t BlobCache::EvictUnsafe(CacheNode* vnode, bool from_recycle) {
   ZX_ASSERT_MSG((closed_hash_.find(vnode->digest()).CopyPointer()) == nullptr,
                 "Vnode present in closed hashmap.");
 
-  // If we successfully evicted the node from a container, we may have been invoked
-  // from fbl_recycle. In this case, a caller to |Lookup| may be blocked waiting until
-  // this "open node" is evicted.
+  // If we successfully evicted the node from a container, we may have been invoked from
+  // fbl_recycle. In this case, a caller to |Lookup| may be blocked waiting until this "open node"
+  // is evicted.
   //
   // For this reason, they should be signalled.
   if (from_recycle) {
@@ -215,9 +209,8 @@ zx_status_t BlobCache::EvictUnsafe(CacheNode* vnode, bool from_recycle) {
 
 void BlobCache::Downgrade(CacheNode* raw_vnode) {
   fbl::AutoLock lock(&hash_lock_);
-  // We must resurrect the vnode while holding the lock to prevent it from being
-  // concurrently accessed in Lookup, and gaining a strong reference before
-  // being erased from open_hash_.
+  // We must resurrect the vnode while holding the lock to prevent it from being concurrently
+  // accessed in Lookup, and gaining a strong reference before being erased from open_hash_.
   raw_vnode->ResurrectRef();
   fbl::RefPtr<CacheNode> vnode = fbl::ImportFromRawPtr(raw_vnode);
 
@@ -234,9 +227,8 @@ void BlobCache::Downgrade(CacheNode* raw_vnode) {
   ZX_ASSERT_MSG(closed_hash_.insert_or_find(vnode.get()), "Vnode absent in closed hashmap.");
 
   CachePolicy policy = vnode->overriden_cache_policy().value_or(cache_policy_);
-  // While in the closed cache, the blob may either be destroyed or in an
-  // inactive state. The toggles here make tradeoffs between memory usage
-  // and performance.
+  // While in the closed cache, the blob may either be destroyed or in an inactive state. The
+  // toggles here make tradeoffs between memory usage and performance.
   switch (policy) {
     case CachePolicy::EvictImmediately:
       vnode->ActivateLowMemory();
@@ -247,8 +239,8 @@ void BlobCache::Downgrade(CacheNode* raw_vnode) {
       ZX_ASSERT_MSG(false, "Unexpected cache policy");
   }
 
-  // To exist in the closed_hash_, this RefPtr must be leaked.
-  // See the complement of this leak in UpgradeLocked.
+  // To exist in the closed_hash_, this RefPtr must be leaked. See the complement of this leak in
+  // UpgradeLocked.
   __UNUSED auto leak = fbl::ExportToRawPtr(&vnode);
 }
 
@@ -259,8 +251,8 @@ fbl::RefPtr<CacheNode> BlobCache::UpgradeLocked(const digest::Digest& key) {
     return nullptr;
   }
   open_hash_.insert(raw_vnode);
-  // To have existed in the closed_hash_, this RefPtr must have been leaked.
-  // See the complement of this adoption in Downgrade.
+  // To have existed in the closed_hash_, this RefPtr must have been leaked. See the complement of
+  // this adoption in Downgrade.
   return fbl::ImportFromRawPtr(raw_vnode);
 }
 

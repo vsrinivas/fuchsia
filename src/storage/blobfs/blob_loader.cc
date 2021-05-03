@@ -44,20 +44,21 @@ constexpr size_t kChunkedHeaderSize = 4 * kBlobfsBlockSize;
 }  // namespace
 
 BlobLoader::BlobLoader(TransactionManager* txn_manager, BlockIteratorProvider* block_iter_provider,
-                       NodeFinder* node_finder, BlobfsMetrics* metrics,
+                       NodeFinder* node_finder, std::shared_ptr<BlobfsMetrics> metrics,
                        fzl::OwnedVmoMapper read_mapper, zx::vmo sandbox_vmo,
                        std::unique_ptr<ExternalDecompressorClient> decompressor_client)
     : txn_manager_(txn_manager),
       block_iter_provider_(block_iter_provider),
       node_finder_(node_finder),
-      metrics_(metrics),
+      metrics_(std::move(metrics)),
       read_mapper_(std::move(read_mapper)),
       sandbox_vmo_(std::move(sandbox_vmo)),
       decompressor_client_(std::move(decompressor_client)) {}
 
 zx::status<BlobLoader> BlobLoader::Create(TransactionManager* txn_manager,
                                           BlockIteratorProvider* block_iter_provider,
-                                          NodeFinder* node_finder, BlobfsMetrics* metrics,
+                                          NodeFinder* node_finder,
+                                          std::shared_ptr<BlobfsMetrics> metrics,
                                           bool sandbox_decompression) {
   fzl::OwnedVmoMapper read_mapper;
   zx_status_t status = read_mapper.CreateAndMap(pager::kTransferBufferSize, "blobfs-loader");
@@ -82,7 +83,7 @@ zx::status<BlobLoader> BlobLoader::Create(TransactionManager* txn_manager,
       decompressor_client = std::move(client_or.value());
     }
   }
-  return zx::ok(BlobLoader(txn_manager, block_iter_provider, node_finder, metrics,
+  return zx::ok(BlobLoader(txn_manager, block_iter_provider, node_finder, std::move(metrics),
                            std::move(read_mapper), std::move(sandbox_vmo),
                            std::move(decompressor_client)));
 }
@@ -262,15 +263,15 @@ zx_status_t BlobLoader::InitForDecompression(
   CompressionAlgorithm algorithm = algorithm_status.value();
 
   switch (algorithm) {
-    case CompressionAlgorithm::UNCOMPRESSED:
+    case CompressionAlgorithm::kUncompressed:
       return ZX_OK;
-    case CompressionAlgorithm::CHUNKED:
+    case CompressionAlgorithm::kChunked:
       break;
-    case CompressionAlgorithm::LZ4:
-    case CompressionAlgorithm::ZSTD:
-    case CompressionAlgorithm::ZSTD_SEEKABLE:
-      // Callers should have guarded against calling this code path with an algorithm that
-      // does not support paging.
+    case CompressionAlgorithm::kLz4:
+    case CompressionAlgorithm::kZstd:
+    case CompressionAlgorithm::kZstdSeekable:
+      // Callers should have guarded against calling this code path with an algorithm that does not
+      // support paging.
       FX_LOGS(ERROR) << "Algorithm " << CompressionAlgorithmToString(algorithm)
                      << " does not support paging; this path should not be called.\n"
                         "This is most likely programmer error.";
@@ -280,8 +281,8 @@ zx_status_t BlobLoader::InitForDecompression(
 
   TRACE_DURATION("blobfs", "BlobLoader::InitDecompressor");
 
-  // The first few blocks of data contain the seek table, which we need to read to initialize
-  // the decompressor. Read these from disk.
+  // The first few blocks of data contain the seek table, which we need to read to initialize the
+  // decompressor. Read these from disk.
 
   uint32_t data_block_count = blob_layout.DataBlockCount();
   // We don't know exactly how long the header is, so we generally overshoot.
@@ -346,7 +347,7 @@ zx_status_t BlobLoader::LoadData(uint32_t node_index, const BlobLayout& blob_lay
   if (bytes_read.is_error()) {
     return bytes_read.error_value();
   }
-  metrics_->unpaged_read_metrics().IncrementDiskRead(CompressionAlgorithm::UNCOMPRESSED,
+  metrics_->unpaged_read_metrics().IncrementDiskRead(CompressionAlgorithm::kUncompressed,
                                                      bytes_read.value(), ticker.End());
 
   ZeroMerkleTreeWithinDataVmo(mapper.start(), mapper.size(), blob_layout);
@@ -362,7 +363,7 @@ zx_status_t BlobLoader::LoadAndDecompressData(uint32_t node_index, const Inode& 
     return algorithm_or.status_value();
   }
   CompressionAlgorithm algorithm = algorithm_or.value();
-  ZX_DEBUG_ASSERT(algorithm != CompressionAlgorithm::UNCOMPRESSED);
+  ZX_DEBUG_ASSERT(algorithm != CompressionAlgorithm::kUncompressed);
 
   TRACE_DURATION("blobfs", "BlobLoader::LoadAndDecompressData", "compressed_size",
                  blob_layout.DataSizeUpperBound(), "blob_size", inode.blob_size);
@@ -395,8 +396,7 @@ zx_status_t BlobLoader::LoadAndDecompressData(uint32_t node_index, const Inode& 
     ExternalDecompressor decompressor(decompressor_client_.get(), algorithm);
     status = decompressor.Decompress(target_size, blob_layout.DataSizeUpperBound());
     if (status == ZX_OK) {
-      // Consider breaking this up into chunked reads and decommits to limit
-      // memory usage.
+      // Consider breaking this up into chunked reads and decommits to limit memory usage.
       zx_status_t read_status = sandbox_vmo_.read(mapped_data, 0, target_size);
       if (read_status != ZX_OK) {
         FX_LOGS(ERROR) << "Failed to transfer data out of the sandbox vmo: "

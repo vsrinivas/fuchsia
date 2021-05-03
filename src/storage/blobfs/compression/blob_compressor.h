@@ -24,9 +24,9 @@ static_assert(false, "Fuchsia only header");
 
 namespace blobfs {
 
-// A BlobCompressor is used to compress a blob transparently before it is written
-// back to disk. This object owns the compression buffer, and abstracts away the
-// differences between compression algorithms.
+// A BlobCompressor is used to compress a blob transparently before it is written back to disk. This
+// object owns the compression buffer, and abstracts away the differences between compression
+// algorithms.
 class BlobCompressor {
  public:
   // Initializes a compression object given the requested |settings| and input

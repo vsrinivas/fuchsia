@@ -32,7 +32,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   // Compress data.
   std::unique_ptr<blobfs::ZSTDSeekableCompressor> compressor;
   blobfs::CompressionSettings settings = {.compression_algorithm =
-                                              blobfs::CompressionAlgorithm::ZSTD_SEEKABLE};
+                                              blobfs::CompressionAlgorithm::kZstdSeekable};
   ZX_ASSERT(blobfs::ZSTDSeekableCompressor::Create(settings, data_size, compressed_buf.data(),
                                                    max_compressed_size, &compressor) == ZX_OK);
   ZX_ASSERT(compressor->Update(data, data_size) == ZX_OK);

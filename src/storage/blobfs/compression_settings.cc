@@ -18,15 +18,15 @@ namespace blobfs {
 
 const char* CompressionAlgorithmToString(CompressionAlgorithm algorithm) {
   switch (algorithm) {
-    case CompressionAlgorithm::LZ4:
+    case CompressionAlgorithm::kLz4:
       return "LZ4";
-    case CompressionAlgorithm::ZSTD:
+    case CompressionAlgorithm::kZstd:
       return "ZSTD";
-    case CompressionAlgorithm::ZSTD_SEEKABLE:
+    case CompressionAlgorithm::kZstdSeekable:
       return "ZSTD_SEEKABLE";
-    case CompressionAlgorithm::CHUNKED:
+    case CompressionAlgorithm::kChunked:
       return "ZSTD_CHUNKED";
-    case CompressionAlgorithm::UNCOMPRESSED:
+    case CompressionAlgorithm::kUncompressed:
       return "UNCOMPRESSED";
   }
 }
@@ -39,33 +39,33 @@ zx::status<CompressionAlgorithm> AlgorithmForInode(const Inode& inode) {
 
   switch (inode.header.flags & kBlobFlagMaskAnyCompression) {
     case 0:
-      return zx::ok(CompressionAlgorithm::UNCOMPRESSED);
+      return zx::ok(CompressionAlgorithm::kUncompressed);
     case kBlobFlagLZ4Compressed:
-      return zx::ok(CompressionAlgorithm::LZ4);
+      return zx::ok(CompressionAlgorithm::kLz4);
     case kBlobFlagZSTDCompressed:
-      return zx::ok(CompressionAlgorithm::ZSTD);
+      return zx::ok(CompressionAlgorithm::kZstd);
     case kBlobFlagZSTDSeekableCompressed:
-      return zx::ok(CompressionAlgorithm::ZSTD_SEEKABLE);
+      return zx::ok(CompressionAlgorithm::kZstdSeekable);
     case kBlobFlagChunkCompressed:
-      return zx::ok(CompressionAlgorithm::CHUNKED);
+      return zx::ok(CompressionAlgorithm::kChunked);
     default:
-      // Multiple flags are set, or these conversion methods have not been
-      // updated to be in sync with kBlobFlagMaskAnyCompression.
+      // Multiple flags are set, or these conversion methods have not been updated to be in sync
+      // with kBlobFlagMaskAnyCompression.
       return zx::error(ZX_ERR_INVALID_ARGS);
   }
 }
 
 uint16_t CompressionInodeHeaderFlags(const CompressionAlgorithm& algorithm) {
   switch (algorithm) {
-    case CompressionAlgorithm::UNCOMPRESSED:
+    case CompressionAlgorithm::kUncompressed:
       return 0;
-    case CompressionAlgorithm::LZ4:
+    case CompressionAlgorithm::kLz4:
       return kBlobFlagLZ4Compressed;
-    case CompressionAlgorithm::ZSTD:
+    case CompressionAlgorithm::kZstd:
       return kBlobFlagZSTDCompressed;
-    case CompressionAlgorithm::ZSTD_SEEKABLE:
+    case CompressionAlgorithm::kZstdSeekable:
       return kBlobFlagZSTDSeekableCompressed;
-    case CompressionAlgorithm::CHUNKED:
+    case CompressionAlgorithm::kChunked:
       return kBlobFlagChunkCompressed;
   }
 }
@@ -81,14 +81,14 @@ bool CompressionSettings::IsValid() const {
     return true;
   }
   switch (compression_algorithm) {
-    case CompressionAlgorithm::LZ4:
-    case CompressionAlgorithm::UNCOMPRESSED:
+    case CompressionAlgorithm::kLz4:
+    case CompressionAlgorithm::kUncompressed:
       // compression_level shouldn't be set in these cases.
       return false;
-    case CompressionAlgorithm::ZSTD:
-    case CompressionAlgorithm::ZSTD_SEEKABLE:
+    case CompressionAlgorithm::kZstd:
+    case CompressionAlgorithm::kZstdSeekable:
       return *compression_level >= ZSTD_minCLevel() && *compression_level <= ZSTD_maxCLevel();
-    case CompressionAlgorithm::CHUNKED:
+    case CompressionAlgorithm::kChunked:
       return *compression_level >= chunked_compression::CompressionParams::MinCompressionLevel() &&
              *compression_level <= chunked_compression::CompressionParams::MaxCompressionLevel();
   }

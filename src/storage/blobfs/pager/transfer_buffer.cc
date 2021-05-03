@@ -102,7 +102,7 @@ zx::status<> StorageBackedTransferBuffer::Populate(uint64_t offset, uint64_t len
 
   // Update read metrics
   if (info.decompressor == nullptr) {
-    metrics_->paged_read_metrics().IncrementDiskRead(CompressionAlgorithm::UNCOMPRESSED,
+    metrics_->paged_read_metrics().IncrementDiskRead(CompressionAlgorithm::kUncompressed,
                                                      block_count * kBlobfsBlockSize, ticker.End());
   } else {
     metrics_->paged_read_metrics().IncrementDiskRead(info.decompressor->algorithm(),

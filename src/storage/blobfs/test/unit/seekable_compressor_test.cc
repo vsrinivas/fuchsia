@@ -187,7 +187,7 @@ void RunCompressDecompressTest(CompressionAlgorithm algorithm, DataType data_typ
   // Decompress the buffer.
   std::unique_ptr<SeekableDecompressor> decompressor;
   switch (algorithm) {
-    case CompressionAlgorithm::CHUNKED: {
+    case CompressionAlgorithm::kChunked: {
       ASSERT_EQ(SeekableChunkedDecompressor::CreateDecompressor(
                     compressor->Data(), compressor->Size(), compressor->Size(), &decompressor),
                 ZX_OK);
@@ -203,35 +203,35 @@ void RunCompressDecompressTest(CompressionAlgorithm algorithm, DataType data_typ
 }
 
 TEST(SeekableCompressorTest, CompressDecompressChunkCompressible1) {
-  RunCompressDecompressTest(CompressionAlgorithm::CHUNKED, DataType::Random, 1 << 0, 1 << 0);
+  RunCompressDecompressTest(CompressionAlgorithm::kChunked, DataType::Random, 1 << 0, 1 << 0);
 }
 
 TEST(SeekableCompressorTest, CompressDecompressChunkCompressible2) {
-  RunCompressDecompressTest(CompressionAlgorithm::CHUNKED, DataType::Random, 1 << 1, 1 << 0);
+  RunCompressDecompressTest(CompressionAlgorithm::kChunked, DataType::Random, 1 << 1, 1 << 0);
 }
 
 TEST(SeekableCompressorTest, CompressDecompressChunkCompressible3) {
-  RunCompressDecompressTest(CompressionAlgorithm::CHUNKED, DataType::Random, 1 << 10, 1 << 5);
+  RunCompressDecompressTest(CompressionAlgorithm::kChunked, DataType::Random, 1 << 10, 1 << 5);
 }
 
 TEST(SeekableCompressorTest, CompressDecompressChunkCompressible4) {
-  RunCompressDecompressTest(CompressionAlgorithm::CHUNKED, DataType::Random, 1 << 15, 1 << 10);
+  RunCompressDecompressTest(CompressionAlgorithm::kChunked, DataType::Random, 1 << 15, 1 << 10);
 }
 
 TEST(SeekableCompressorTest, CompressDecompressChunkRandom1) {
-  RunCompressDecompressTest(CompressionAlgorithm::CHUNKED, DataType::Random, 1 << 0, 1 << 0);
+  RunCompressDecompressTest(CompressionAlgorithm::kChunked, DataType::Random, 1 << 0, 1 << 0);
 }
 
 TEST(SeekableCompressorTest, CompressDecompressChunkRandom2) {
-  RunCompressDecompressTest(CompressionAlgorithm::CHUNKED, DataType::Random, 1 << 1, 1 << 0);
+  RunCompressDecompressTest(CompressionAlgorithm::kChunked, DataType::Random, 1 << 1, 1 << 0);
 }
 
 TEST(SeekableCompressorTest, CompressDecompressChunkRandom3) {
-  RunCompressDecompressTest(CompressionAlgorithm::CHUNKED, DataType::Random, 1 << 10, 1 << 5);
+  RunCompressDecompressTest(CompressionAlgorithm::kChunked, DataType::Random, 1 << 10, 1 << 5);
 }
 
 TEST(SeekableCompressorTest, CompressDecompressChunkRandom4) {
-  RunCompressDecompressTest(CompressionAlgorithm::CHUNKED, DataType::Random, 1 << 15, 1 << 10);
+  RunCompressDecompressTest(CompressionAlgorithm::kChunked, DataType::Random, 1 << 15, 1 << 10);
 }
 
 }  // namespace

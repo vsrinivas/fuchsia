@@ -107,8 +107,8 @@ struct Blob::WriteInfo {
 };
 
 bool SupportsPaging(CompressionAlgorithm algorithm) {
-  return algorithm == CompressionAlgorithm::UNCOMPRESSED ||
-         algorithm == CompressionAlgorithm::CHUNKED;
+  return algorithm == CompressionAlgorithm::kUncompressed ||
+         algorithm == CompressionAlgorithm::kChunked;
 }
 
 bool SupportsPaging(const Inode& inode) {
@@ -120,7 +120,7 @@ zx_status_t Blob::VerifyNullBlob() const {
   ZX_ASSERT_MSG(blob_size_ == 0, "Inode blob size is not zero :%lu", blob_size_);
   std::unique_ptr<BlobVerifier> verifier;
   if (zx_status_t status = BlobVerifier::CreateWithoutTree(
-          digest(), blobfs_->Metrics(), 0, &blobfs_->blob_corruption_notifier(), &verifier);
+          digest(), blobfs_->GetMetrics(), 0, &blobfs_->blob_corruption_notifier(), &verifier);
       status != ZX_OK) {
     return status;
   }
@@ -161,14 +161,14 @@ zx_status_t Blob::WriteNullBlob() {
   }
 
   BlobTransaction transaction;
-  if (zx_status_t status = WriteMetadata(transaction, CompressionAlgorithm::UNCOMPRESSED);
+  if (zx_status_t status = WriteMetadata(transaction, CompressionAlgorithm::kUncompressed);
       status != ZX_OK) {
     return status;
   }
-  transaction.Commit(*blobfs_->journal(), {},
+  transaction.Commit(*blobfs_->GetJournal(), {},
                      [blob = fbl::RefPtr(this)]() { blob->CompleteSync(); });
 
-  return MarkReadable(CompressionAlgorithm::UNCOMPRESSED);
+  return MarkReadable(CompressionAlgorithm::kUncompressed);
 }
 
 zx_status_t Blob::PrepareWrite(uint64_t size_data, bool compress) {
@@ -247,7 +247,7 @@ zx_status_t Blob::SpaceAllocate(uint32_t block_count) {
   TRACE_DURATION("blobfs", "Blobfs::SpaceAllocate", "block_count", block_count);
   ZX_ASSERT_MSG(block_count != 0, "Block count should not be zero.");
 
-  fs::Ticker ticker(blobfs_->Metrics()->Collecting());
+  fs::Ticker ticker(blobfs_->GetMetrics()->Collecting());
 
   fbl::Vector<ReservedExtent> extents;
   fbl::Vector<ReservedNode> nodes;
@@ -274,9 +274,8 @@ zx_status_t Blob::SpaceAllocate(uint32_t block_count) {
   }
   const ExtentCountType extent_count = static_cast<ExtentCountType>(extents.size());
 
-  // Reserve space for all additional nodes necessary to contain this blob.
-  // The inode has already been reserved in Blob::PrepareWrite.
-  // Hence, we need to reserve one less node here.
+  // Reserve space for all additional nodes necessary to contain this blob. The inode has already
+  // been reserved in Blob::PrepareWrite. Hence, we need to reserve one less node here.
   size_t node_count = NodePopulator::NodeCountForExtents(extent_count) - 1;
   status = blobfs_->GetAllocator()->ReserveNodes(node_count, &nodes);
   if (status != ZX_OK) {
@@ -288,7 +287,7 @@ zx_status_t Blob::SpaceAllocate(uint32_t block_count) {
     write_info_->node_indices.push_back(nodes.erase(0));
   }
   block_count_ = block_count;
-  blobfs_->Metrics()->UpdateAllocation(blob_size_, ticker.End());
+  blobfs_->GetMetrics()->UpdateAllocation(blob_size_, ticker.End());
   return ZX_OK;
 }
 
@@ -433,7 +432,7 @@ zx_status_t Blob::Commit() {
     // If we're using the chunked compressor, abort compression if we're not going to get any
     // savings.  We can't easily do it for the other compression formats without changing the
     // decompression API to support streaming.
-    if (write_info_->compressor->algorithm() == CompressionAlgorithm::CHUNKED &&
+    if (write_info_->compressor->algorithm() == CompressionAlgorithm::kChunked &&
         fbl::round_up(write_info_->compressor->Size() + merkle_size, kBlobfsBlockSize) >=
             fbl::round_up(blob_size_ + merkle_size, kBlobfsBlockSize)) {
       compress = false;
@@ -460,7 +459,7 @@ zx_status_t Blob::Commit() {
   std::variant<std::monostate, DecompressBlobDataProducer, SimpleBlobDataProducer> data;
   BlobDataProducer* data_ptr = nullptr;
   fzl::VmoMapper data_mapping;
-  CompressionAlgorithm compression_algorithm = CompressionAlgorithm::UNCOMPRESSED;
+  CompressionAlgorithm compression_algorithm = CompressionAlgorithm::kUncompressed;
 
   if (compress) {
     // The data comes from the compression buffer.
@@ -509,13 +508,13 @@ zx_status_t Blob::Commit() {
     }
   }();
 
-  fs::DataStreamer streamer(blobfs_->journal(), blobfs_->WriteBufferBlockCount());
+  fs::DataStreamer streamer(blobfs_->GetJournal(), blobfs_->WriteBufferBlockCount());
   if (zx_status_t status = WriteData(total_block_count, producer, streamer); status != ZX_OK) {
     return status;
   }
 
   // No more data to write. Flush to disk.
-  fs::Ticker ticker(blobfs_->Metrics()->Collecting());  // Tracking enqueue time.
+  fs::Ticker ticker(blobfs_->GetMetrics()->Collecting());  // Tracking enqueue time.
 
   // Enqueue the blob's final data work. Metadata must be enqueued separately.
   zx_status_t data_status = ZX_ERR_IO;
@@ -546,7 +545,7 @@ zx_status_t Blob::Commit() {
   if (write_info_->old_blob) {
     zx_status_t status = blobfs_->FreeInode(write_info_->old_blob->Ino(), transaction);
     ZX_ASSERT_MSG(status == ZX_OK, "FreeInode failed with error: %s", zx_status_get_string(status));
-    auto& cache = Cache();
+    auto& cache = GetCache();
     status = cache.Evict(write_info_->old_blob);
     ZX_ASSERT_MSG(status == ZX_OK, "Failed to evict old blob with error: %s",
                   zx_status_get_string(status));
@@ -554,7 +553,7 @@ zx_status_t Blob::Commit() {
     ZX_ASSERT_MSG(status == ZX_OK, "Failed to add blob to cache with error: %s",
                   zx_status_get_string(status));
   }
-  transaction.Commit(*blobfs_->journal(), std::move(write_all_data),
+  transaction.Commit(*blobfs_->GetJournal(), std::move(write_all_data),
                      [self = fbl::RefPtr(this)]() {});
 
   // It's not safe to continue until all data has been written because we might need to reload it
@@ -566,8 +565,8 @@ zx_status_t Blob::Commit() {
     return data_status;
   }
 
-  blobfs_->Metrics()->UpdateClientWrite(block_count_ * kBlobfsBlockSize, merkle_size, ticker.End(),
-                                        generation_time);
+  blobfs_->GetMetrics()->UpdateClientWrite(block_count_ * kBlobfsBlockSize, merkle_size,
+                                           ticker.End(), generation_time);
   return MarkReadable(compression_algorithm);
 }
 
@@ -667,8 +666,8 @@ zx_status_t Blob::CloneDataVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out
     return status;
   }
 
-  // Only add exec right to VMO if explictly requested.  (Saves a syscall if
-  // we're just going to drop the right back again in replace() call below.)
+  // Only add exec right to VMO if explictly requested.  (Saves a syscall if we're just going to
+  // drop the right back again in replace() call below.)
   if (rights & ZX_RIGHT_EXECUTE) {
     // Check if the VMEX resource held by Blobfs is valid and fail if it isn't. We do this to make
     // sure that we aren't implicitly relying on the ZX_POL_AMBIENT_MARK_VMO_EXEC job policy.
@@ -693,9 +692,8 @@ zx_status_t Blob::CloneDataVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out
     clone_watcher_.set_object(paged_vmo().get());
     clone_watcher_.set_trigger(ZX_VMO_ZERO_CHILDREN);
 
-    // Keep a reference to "this" alive, preventing the blob
-    // from being closed while someone may still be using the
-    // underlying memory.
+    // Keep a reference to "this" alive, preventing the blob from being closed while someone may
+    // still be using the underlying memory.
     //
     // We'll release it when no client-held VMOs are in use.
     clone_ref_ = fbl::RefPtr<Blob>(this);
@@ -1002,7 +1000,7 @@ void Blob::OnNoPagedVmoClones() {
 }
 #endif
 
-BlobCache& Blob::Cache() { return blobfs_->Cache(); }
+BlobCache& Blob::GetCache() { return blobfs_->GetCache(); }
 
 bool Blob::ShouldCache() const {
   std::lock_guard lock(mutex_);
@@ -1072,7 +1070,7 @@ zx_status_t Blob::GetNodeInfoForProtocol([[maybe_unused]] fs::VnodeProtocol prot
 
 zx_status_t Blob::Read(void* data, size_t len, size_t off, size_t* out_actual) {
   TRACE_DURATION("blobfs", "Blob::Read", "len", len, "off", off);
-  auto event = blobfs_->Metrics()->NewLatencyEvent(fs_metrics::Event::kRead);
+  auto event = blobfs_->GetMetrics()->NewLatencyEvent(fs_metrics::Event::kRead);
 
   return ReadInternal(data, len, off, out_actual);
 }
@@ -1081,12 +1079,12 @@ zx_status_t Blob::Write(const void* data, size_t len, size_t offset, size_t* out
   TRACE_DURATION("blobfs", "Blob::Write", "len", len, "off", offset);
 
   std::lock_guard lock(mutex_);
-  auto event = blobfs_->Metrics()->NewLatencyEvent(fs_metrics::Event::kWrite);
+  auto event = blobfs_->GetMetrics()->NewLatencyEvent(fs_metrics::Event::kWrite);
   return WriteInternal(data, len, {offset}, out_actual);
 }
 
 zx_status_t Blob::Append(const void* data, size_t len, size_t* out_end, size_t* out_actual) {
-  auto event = blobfs_->Metrics()->NewLatencyEvent(fs_metrics::Event::kAppend);
+  auto event = blobfs_->GetMetrics()->NewLatencyEvent(fs_metrics::Event::kAppend);
 
   std::lock_guard lock(mutex_);
 
@@ -1101,7 +1099,7 @@ zx_status_t Blob::Append(const void* data, size_t len, size_t* out_end, size_t* 
 }
 
 zx_status_t Blob::GetAttributes(fs::VnodeAttributes* a) {
-  auto event = blobfs_->Metrics()->NewLatencyEvent(fs_metrics::Event::kGetAttr);
+  auto event = blobfs_->GetMetrics()->NewLatencyEvent(fs_metrics::Event::kGetAttr);
 
   // SizeData() expects to be called outside the lock.
   auto content_size = SizeData();
@@ -1121,7 +1119,7 @@ zx_status_t Blob::GetAttributes(fs::VnodeAttributes* a) {
 
 zx_status_t Blob::Truncate(size_t len) {
   TRACE_DURATION("blobfs", "Blob::Truncate", "len", len);
-  auto event = blobfs_->Metrics()->NewLatencyEvent(fs_metrics::Event::kTruncate);
+  auto event = blobfs_->GetMetrics()->NewLatencyEvent(fs_metrics::Event::kTruncate);
   return PrepareWrite(len, blobfs_->ShouldCompress() && len > kCompressionSizeThresholdBytes);
 }
 
@@ -1154,9 +1152,8 @@ zx_status_t Blob::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
 
   // Let clients map and set the names of their VMOs.
   zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHTS_PROPERTY;
-  // We can ignore fuchsia_io_VMO_FLAG_PRIVATE, since private / shared access
-  // to the underlying VMO can both be satisfied with a clone due to
-  // the immutability of blobfs blobs.
+  // We can ignore fuchsia_io_VMO_FLAG_PRIVATE, since private / shared access to the underlying VMO
+  // can both be satisfied with a clone due to the immutability of blobfs blobs.
   rights |= (flags & fuchsia_io::wire::kVmoFlagRead) ? ZX_RIGHT_READ : 0;
   rights |= (flags & fuchsia_io::wire::kVmoFlagExec) ? ZX_RIGHT_EXECUTE : 0;
   return CloneDataVmo(rights, out_vmo, out_size);
@@ -1168,7 +1165,7 @@ void Blob::Sync(SyncCallback on_complete) {
   // This function will issue its callbacks on either the current thread or the journal thread. The
   // vnode interface says this is OK.
   TRACE_DURATION("blobfs", "Blob::Sync");
-  auto event = blobfs_->Metrics()->NewLatencyEvent(fs_metrics::Event::kSync);
+  auto event = blobfs_->GetMetrics()->NewLatencyEvent(fs_metrics::Event::kSync);
 
   SyncingState state;
   {
@@ -1294,7 +1291,7 @@ zx_status_t Blob::OpenNode([[maybe_unused]] ValidatedOptions options,
 zx_status_t Blob::CloseNode() {
   std::lock_guard lock(mutex_);
 
-  auto event = blobfs_->Metrics()->NewLatencyEvent(fs_metrics::Event::kClose);
+  auto event = blobfs_->GetMetrics()->NewLatencyEvent(fs_metrics::Event::kClose);
 
   if (paged_vmo() && !HasReferences())
     SetPagedVmoName(false);
@@ -1320,9 +1317,9 @@ zx_status_t Blob::Purge() {
     zx_status_t status = blobfs_->FreeInode(map_index_, transaction);
     ZX_ASSERT_MSG(status == ZX_OK, "FreeInode for map_index_:%u failed with error: %s", map_index_,
                   zx_status_get_string(status));
-    transaction.Commit(*blobfs_->journal());
+    transaction.Commit(*blobfs_->GetJournal());
   }
-  zx_status_t status = Cache().Evict(fbl::RefPtr(this));
+  zx_status_t status = GetCache().Evict(fbl::RefPtr(this));
   ZX_ASSERT_MSG(status == ZX_OK, "Cache eviction for blob failed with error: %s",
                 zx_status_get_string(status));
   set_state(BlobState::kPurged);

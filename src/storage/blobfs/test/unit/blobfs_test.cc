@@ -225,7 +225,7 @@ TEST_F(BlobfsTest, BlockIteratorByNodeIndexWithAnInvalidNodeIndexIsAnError) {
 
 TEST_F(BlobfsTest, DeprecatedCompressionAlgorithmsReturnsError) {
   MountOptions options = {.compression_settings = {
-                              .compression_algorithm = CompressionAlgorithm::LZ4,
+                              .compression_algorithm = CompressionAlgorithm::kLz4,
                           }};
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, Remount(options));
 }

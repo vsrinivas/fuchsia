@@ -19,8 +19,7 @@ namespace blobfs {
 
 class WritebackWork;
 
-// EnqueueType describes the classes of data which may be enqueued to the
-// underlying storage medium.
+// EnqueueType describes the classes of data which may be enqueued to the underlying storage medium.
 enum class EnqueueType {
   kJournal,
   kData,
@@ -30,8 +29,11 @@ enum class EnqueueType {
 class TransactionManager : public fs::DeviceTransactionHandler, public SpaceManager {
  public:
   virtual ~TransactionManager() = default;
-  virtual BlobfsMetrics* Metrics() = 0;
-  virtual fs::Journal* journal() = 0;
+
+  virtual std::shared_ptr<BlobfsMetrics>& GetMetrics() = 0;
+
+  // May return null if the journal isn't set up.
+  virtual fs::Journal* GetJournal() = 0;
 };
 
 }  // namespace blobfs

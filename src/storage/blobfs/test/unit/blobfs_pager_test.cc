@@ -101,7 +101,8 @@ class MockBlob {
 
 class MockBlobFactory {
  public:
-  MockBlobFactory(UserPager* pager, BlobfsMetrics* metrics) : pager_(pager), metrics_(metrics) {}
+  MockBlobFactory(UserPager* pager, std::shared_ptr<BlobfsMetrics> metrics)
+      : pager_(pager), metrics_(std::move(metrics)) {}
 
   std::unique_ptr<MockBlob> CreateBlob(char identifier, CompressionAlgorithm algorithm, size_t sz) {
     fbl::Array<uint8_t> data(new uint8_t[sz], sz);
@@ -166,7 +167,7 @@ class MockBlobFactory {
  private:
   fbl::Array<uint8_t> GenerateData(const uint8_t* input, size_t len,
                                    CompressionAlgorithm algorithm) {
-    if (algorithm == CompressionAlgorithm::UNCOMPRESSED) {
+    if (algorithm == CompressionAlgorithm::kUncompressed) {
       fbl::Array<uint8_t> out(new uint8_t[len], len);
       memcpy(out.data(), input, len);
       return out;
@@ -186,9 +187,9 @@ class MockBlobFactory {
 
   std::unique_ptr<SeekableDecompressor> CreateDecompressor(const fbl::Array<uint8_t>& data,
                                                            CompressionAlgorithm algorithm) {
-    if (algorithm == CompressionAlgorithm::UNCOMPRESSED) {
+    if (algorithm == CompressionAlgorithm::kUncompressed) {
       return nullptr;
-    } else if (algorithm != CompressionAlgorithm::CHUNKED) {
+    } else if (algorithm != CompressionAlgorithm::kChunked) {
       // Other compression algorithms do not support paging.
       EXPECT_TRUE(false);
     }
@@ -200,7 +201,7 @@ class MockBlobFactory {
   }
 
   UserPager* pager_ = nullptr;
-  BlobfsMetrics* metrics_ = nullptr;
+  std::shared_ptr<BlobfsMetrics> metrics_;
   bool data_corruption_ = false;
 };
 
@@ -317,10 +318,10 @@ class BlobfsPagerTest : public testing::TestWithParam<std::tuple<CompressionAlgo
     buffer_ = buffer.get();
     compressed_buffer_ = compressed_buffer.get();
     auto status_or_pager = UserPager::Create(std::move(buffer), std::move(compressed_buffer),
-                                             decompression_buffer_size, &metrics_, false);
+                                             decompression_buffer_size, metrics_.get(), false);
     ASSERT_TRUE(status_or_pager.is_ok());
     pager_ = std::move(status_or_pager).value();
-    factory_ = std::make_unique<MockBlobFactory>(pager_.get(), &metrics_);
+    factory_ = std::make_unique<MockBlobFactory>(pager_.get(), metrics_);
   }
 
   CompressionAlgorithm AlgorithmParam() { return std::get<0>(GetParam()); }
@@ -350,7 +351,7 @@ class BlobfsPagerTest : public testing::TestWithParam<std::tuple<CompressionAlgo
     }
   }
 
-  BlobfsMetrics metrics_{false};
+  std::shared_ptr<BlobfsMetrics> metrics_ = std::make_shared<BlobfsMetrics>(false);
   std::unique_ptr<UserPager> pager_;
   BlobRegistry blob_registry_ = {};
   // Owned by |pager_|.
@@ -408,14 +409,14 @@ TEST_P(BlobfsPagerTest, ReadRandom) {
 
 TEST_P(BlobfsPagerTest, CreateMultipleBlobs) {
   CreateBlob('x');
-  CreateBlob('y', CompressionAlgorithm::CHUNKED);
-  CreateBlob('z', CompressionAlgorithm::UNCOMPRESSED);
+  CreateBlob('y', CompressionAlgorithm::kChunked);
+  CreateBlob('z', CompressionAlgorithm::kUncompressed);
 }
 
 TEST_P(BlobfsPagerTest, ReadRandomMultipleBlobs) {
   constexpr int kBlobCount = 3;
-  MockBlob* blobs[3] = {CreateBlob('x'), CreateBlob('y', CompressionAlgorithm::CHUNKED),
-                        CreateBlob('z', CompressionAlgorithm::UNCOMPRESSED)};
+  MockBlob* blobs[3] = {CreateBlob('x'), CreateBlob('y', CompressionAlgorithm::kChunked),
+                        CreateBlob('z', CompressionAlgorithm::kUncompressed)};
   RandomBlobReader reader;
   std::default_random_engine random_engine(testing::UnitTest::GetInstance()->random_seed());
   std::uniform_int_distribution distribution(0, kBlobCount - 1);
@@ -440,8 +441,8 @@ TEST_P(BlobfsPagerTest, ReadRandomMultithreaded) {
 
 TEST_P(BlobfsPagerTest, ReadRandomMultipleBlobsMultithreaded) {
   constexpr int kNumBlobs = 3;
-  MockBlob* blobs[kNumBlobs] = {CreateBlob('x'), CreateBlob('y', CompressionAlgorithm::CHUNKED),
-                                CreateBlob('z', CompressionAlgorithm::UNCOMPRESSED)};
+  MockBlob* blobs[kNumBlobs] = {CreateBlob('x'), CreateBlob('y', CompressionAlgorithm::kChunked),
+                                CreateBlob('z', CompressionAlgorithm::kUncompressed)};
   std::array<std::thread, kNumBlobs> threads;
 
   // Each thread will issue reads on a different blob.
@@ -459,7 +460,7 @@ TEST_P(BlobfsPagerTest, ReadRandomMultipleBlobsMultithreaded) {
 TEST_P(BlobfsPagerTest, SafeShutdownWhileSupplyingPages) {
   MockBlob* blob = CreateBlob('x');
   MockTransferBuffer* buffer;
-  if (AlgorithmParam() == CompressionAlgorithm::UNCOMPRESSED) {
+  if (AlgorithmParam() == CompressionAlgorithm::kUncompressed) {
     buffer = buffer_;
   } else {
     buffer = compressed_buffer_;
@@ -582,7 +583,7 @@ TEST_P(BlobfsPagerTest, PagerErrorCode) {
 
   // This only works for uncompressed blobs, as we never map the vmo that supplies the pages in the
   // compressed path.
-  if (AlgorithmParam() == CompressionAlgorithm::UNCOMPRESSED) {
+  if (AlgorithmParam() == CompressionAlgorithm::kUncompressed) {
     // No failure while populating or verifying. Applies to any other type of failure - simulated
     // here by leaving the transfer buffer mapped before the call to supply_pages() is made.
     SetFailureMode(PagerErrorStatus::kErrBadState);
@@ -615,7 +616,7 @@ TEST_P(BlobfsPagerTest, FailAfterPagerError) {
 }
 
 TEST_P(BlobfsPagerTest, ReadWithMerkleTreeSharingTheLastBlockWithData) {
-  if (AlgorithmParam() != CompressionAlgorithm::UNCOMPRESSED) {
+  if (AlgorithmParam() != CompressionAlgorithm::kUncompressed) {
     GTEST_SKIP() << "Meaningless for compressed blobs where no data needs to be zeroed out. "
                  << "Test skipped.";
   }
@@ -685,7 +686,7 @@ std::string GetTestParamName(
 
 INSTANTIATE_TEST_SUITE_P(
     /*no prefix*/, BlobfsPagerTest,
-    testing::Values(CompressionAlgorithm::UNCOMPRESSED, CompressionAlgorithm::CHUNKED),
+    testing::Values(CompressionAlgorithm::kUncompressed, CompressionAlgorithm::kChunked),
     GetTestParamName);
 
 }  // namespace

@@ -143,8 +143,8 @@ class Blobfs : public fbl::RefCounted<Blobfs>, public NodeFinder {
 
   using BlobVisitor = fit::function<fit::result<void, std::string>(BlobView)>;
 
-  // Creates an instance of Blobfs from the file at |blockfd|.
-  // The blobfs partition is expected to start at |offset| bytes into the file.
+  // Creates an instance of Blobfs from the file at |blockfd|. The blobfs partition is expected to
+  // start at |offset| bytes into the file.
   static zx_status_t Create(fbl::unique_fd blockfd, off_t offset, const info_block_t& info_block,
                             const fbl::Array<size_t>& extent_lengths, std::unique_ptr<Blobfs>* out);
 
@@ -182,8 +182,8 @@ class Blobfs : public fbl::RefCounted<Blobfs>, public NodeFinder {
 
   uint32_t GetBlockSize() const;
 
-  // Calls |visitor| on each of the existing blobs.
-  // Errors on |visitor| will be forwarded to the caller, and will stop the iteration.
+  // Calls |visitor| on each of the existing blobs. Errors on |visitor| will be forwarded to the
+  // caller, and will stop the iteration.
   fit::result<void, std::string> VisitBlobs(BlobVisitor visitor);
 
   zx::status<std::unique_ptr<Superblock>> ReadBackupSuperblock();
@@ -200,9 +200,8 @@ class Blobfs : public fbl::RefCounted<Blobfs>, public NodeFinder {
          const fbl::Array<size_t>& extent_lengths);
   zx_status_t LoadBitmap();
 
-  // Read data from block |bno| into the block cache.
-  // If the block cache already contains data from the specified bno, nothing happens.
-  // Cannot read while a dirty block is pending.
+  // Read data from block |bno| into the block cache. If the block cache already contains data from
+  // the specified bno, nothing happens. Cannot read while a dirty block is pending.
   zx_status_t ReadBlock(size_t bno);
 
   // Write |block_count| blocks of |data| at block number starting at |block_number|.

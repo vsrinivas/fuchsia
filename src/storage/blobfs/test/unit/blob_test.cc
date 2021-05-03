@@ -132,7 +132,7 @@ TEST_P(BlobTest, SyncBehavior) {
 TEST_P(BlobTest, ReadingBlobZerosTail) {
   // Remount without compression so that we can manipulate the data that is loaded.
   MountOptions options = {.compression_settings = {
-                              .compression_algorithm = CompressionAlgorithm::UNCOMPRESSED,
+                              .compression_algorithm = CompressionAlgorithm::kUncompressed,
                           }};
   ASSERT_EQ(ZX_OK, Remount(options));
 
@@ -244,7 +244,7 @@ TEST_P(BlobTestWithOldMinorVersion, ReadWriteAllCompressionFormats) {
 TEST_P(BlobTest, WriteBlobWithSharedBlockInCompactFormat) {
   // Remount without compression so we can force a specific blob size in storage.
   MountOptions options = {.compression_settings = {
-                              .compression_algorithm = CompressionAlgorithm::UNCOMPRESSED,
+                              .compression_algorithm = CompressionAlgorithm::kUncompressed,
                           }};
   Remount(options);
 
@@ -386,7 +386,7 @@ TEST_P(BlobTest, VmoChildDeletedTriggersPurging) {
 TEST_P(BlobTest, BlobPrepareWriteFailure) {
   // Remount without compression so that we can trigger failure.
   MountOptions options = {.compression_settings = {
-                              .compression_algorithm = CompressionAlgorithm::UNCOMPRESSED,
+                              .compression_algorithm = CompressionAlgorithm::kUncompressed,
                           }};
   Remount(options);
 
@@ -655,22 +655,22 @@ INSTANTIATE_TEST_SUITE_P(
     /*no prefix*/, BlobTest,
     testing::Combine(testing::Values(BlobLayoutFormat::kPaddedMerkleTreeAtStart,
                                      BlobLayoutFormat::kCompactMerkleTreeAtEnd),
-                     testing::Values(CompressionAlgorithm::CHUNKED)),
+                     testing::Values(CompressionAlgorithm::kChunked)),
     GetTestParamName);
 
 INSTANTIATE_TEST_SUITE_P(
     /*no prefix*/, BlobTestWithOldMinorVersion,
     testing::Combine(testing::Values(BlobLayoutFormat::kPaddedMerkleTreeAtStart),
-                     testing::Values(CompressionAlgorithm::UNCOMPRESSED, CompressionAlgorithm::LZ4,
-                                     CompressionAlgorithm::ZSTD,
-                                     CompressionAlgorithm::ZSTD_SEEKABLE,
-                                     CompressionAlgorithm::CHUNKED)),
+                     testing::Values(CompressionAlgorithm::kUncompressed,
+                                     CompressionAlgorithm::kLz4, CompressionAlgorithm::kZstd,
+                                     CompressionAlgorithm::kZstdSeekable,
+                                     CompressionAlgorithm::kChunked)),
     GetTestParamName);
 
 INSTANTIATE_TEST_SUITE_P(
     /*no prefix*/, BlobMigrationTest,
     testing::Combine(testing::Values(BlobLayoutFormat::kPaddedMerkleTreeAtStart),
-                     testing::Values(CompressionAlgorithm::ZSTD)),
+                     testing::Values(CompressionAlgorithm::kZstd)),
     GetTestParamName);
 
 }  // namespace

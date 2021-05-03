@@ -23,7 +23,7 @@ namespace blobfs {
 std::optional<BlobCompressor> BlobCompressor::Create(CompressionSettings settings,
                                                      size_t uncompressed_blob_size) {
   switch (settings.compression_algorithm) {
-    case CompressionAlgorithm::LZ4: {
+    case CompressionAlgorithm::kLz4: {
       fzl::OwnedVmoMapper compressed_blob;
       const size_t max =
           fbl::round_up(LZ4Compressor::BufferMax(uncompressed_blob_size), kBlobfsBlockSize);
@@ -41,7 +41,7 @@ std::optional<BlobCompressor> BlobCompressor::Create(CompressionSettings setting
                                    settings.compression_algorithm);
       return std::make_optional(std::move(result));
     }
-    case CompressionAlgorithm::ZSTD: {
+    case CompressionAlgorithm::kZstd: {
       fzl::OwnedVmoMapper compressed_blob;
       const size_t max =
           fbl::round_up(ZSTDCompressor::BufferMax(uncompressed_blob_size), kBlobfsBlockSize);
@@ -59,7 +59,7 @@ std::optional<BlobCompressor> BlobCompressor::Create(CompressionSettings setting
                                    settings.compression_algorithm);
       return std::make_optional(std::move(result));
     }
-    case CompressionAlgorithm::ZSTD_SEEKABLE: {
+    case CompressionAlgorithm::kZstdSeekable: {
       fzl::OwnedVmoMapper compressed_blob;
       const size_t max = fbl::round_up(ZSTDSeekableCompressor::BufferMax(uncompressed_blob_size),
                                        kBlobfsBlockSize);
@@ -78,7 +78,7 @@ std::optional<BlobCompressor> BlobCompressor::Create(CompressionSettings setting
                                    settings.compression_algorithm);
       return std::make_optional(std::move(result));
     }
-    case CompressionAlgorithm::CHUNKED: {
+    case CompressionAlgorithm::kChunked: {
       std::unique_ptr<ChunkedCompressor> compressor;
       size_t max;
       zx_status_t status =
@@ -104,7 +104,7 @@ std::optional<BlobCompressor> BlobCompressor::Create(CompressionSettings setting
       return BlobCompressor(std::move(compressor), std::move(compressed_inmemory_blob),
                             settings.compression_algorithm);
     }
-    case CompressionAlgorithm::UNCOMPRESSED:
+    case CompressionAlgorithm::kUncompressed:
       ZX_DEBUG_ASSERT(false);
       return std::nullopt;
   }
@@ -116,7 +116,7 @@ BlobCompressor::BlobCompressor(std::unique_ptr<Compressor> compressor,
     : compressor_(std::move(compressor)),
       compressed_buffer_(std::move(compressed_buffer)),
       algorithm_(algorithm) {
-  ZX_ASSERT(algorithm_ != CompressionAlgorithm::UNCOMPRESSED);
+  ZX_ASSERT(algorithm_ != CompressionAlgorithm::kUncompressed);
 }
 
 }  // namespace blobfs

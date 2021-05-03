@@ -79,29 +79,29 @@ BlobfsMetrics::~BlobfsMetrics() { Dump(); }
 
 void PrintReadMetrics(ReadMetrics& metrics) {
   constexpr uint64_t mb = 1 << 20;
-  auto snapshot = metrics.GetSnapshot(CompressionAlgorithm::UNCOMPRESSED);
+  auto snapshot = metrics.GetSnapshot(CompressionAlgorithm::kUncompressed);
   FX_LOGS(INFO) << "    Uncompressed: Read " << snapshot.read_bytes / mb << " MB (spent "
                 << TicksToMs(zx::ticks(snapshot.read_ticks)) << " ms)";
 
-  snapshot = metrics.GetSnapshot(CompressionAlgorithm::LZ4);
+  snapshot = metrics.GetSnapshot(CompressionAlgorithm::kLz4);
   FX_LOGS(INFO) << "    LZ4: Read " << snapshot.read_bytes / mb << " MB (spent "
                 << TicksToMs(zx::ticks(snapshot.read_ticks)) << " ms) | Decompressed "
                 << snapshot.decompress_bytes / mb << " MB (spent "
                 << TicksToMs(zx::ticks(snapshot.decompress_ticks)) << " ms)";
 
-  snapshot = metrics.GetSnapshot(CompressionAlgorithm::CHUNKED);
+  snapshot = metrics.GetSnapshot(CompressionAlgorithm::kChunked);
   FX_LOGS(INFO) << "    Chunked: Read " << snapshot.read_bytes / mb << " MB (spent "
                 << TicksToMs(zx::ticks(snapshot.read_ticks)) << " ms) | Decompressed "
                 << snapshot.decompress_bytes / mb << " MB (spent "
                 << TicksToMs(zx::ticks(snapshot.decompress_ticks)) << " ms)";
 
-  snapshot = metrics.GetSnapshot(CompressionAlgorithm::ZSTD);
+  snapshot = metrics.GetSnapshot(CompressionAlgorithm::kZstd);
   FX_LOGS(INFO) << "    ZSTD: Read " << snapshot.read_bytes / mb << " MB (spent "
                 << TicksToMs(zx::ticks(snapshot.read_ticks)) << " ms) | Decompressed "
                 << snapshot.decompress_bytes / mb << " MB (spent "
                 << TicksToMs(zx::ticks(snapshot.decompress_ticks)) << " ms)";
 
-  snapshot = metrics.GetSnapshot(CompressionAlgorithm::ZSTD_SEEKABLE);
+  snapshot = metrics.GetSnapshot(CompressionAlgorithm::kZstdSeekable);
   FX_LOGS(INFO) << "    ZSTD Seekable: Read " << snapshot.read_bytes / mb << " MB (spent "
                 << TicksToMs(zx::ticks(snapshot.read_ticks)) << " ms) | Decompressed "
                 << snapshot.decompress_bytes / mb << " MB (spent "
@@ -142,7 +142,6 @@ void BlobfsMetrics::Dump() {
 
   FX_LOGS(INFO) << "  Opened " << blobs_opened_ << " blobs (" << blobs_opened_total_size_ / mb
                 << " MB)";
-
   auto verify_snapshot = verification_metrics_.Get();
   FX_LOGS(INFO) << "  Verified " << verify_snapshot.blobs_verified << " blobs ("
                 << verify_snapshot.data_size / mb << " MB data, "
@@ -170,10 +169,10 @@ void BlobfsMetrics::ScheduleMetricFlush() {
 }
 
 inspect::Inspector BlobfsMetrics::CreateInspector() {
-  // The maximum size of the VMO is set to 128KiB. In practice, we have not seen this
-  // inspect VMO need more than 128KiB. This gives the VMO enough space to grow if
-  // we add more data in the future.
-  // When recording page-in frequencies, a much larger Inspect VMO is required (>512KB).
+  // The maximum size of the VMO is set to 128KiB. In practice, we have not seen this inspect VMO
+  // need more than 128KiB. This gives the VMO enough space to grow if we add more data in the
+  // future. When recording page-in frequencies, a much larger Inspect VMO is required (>512KB).
+  //
   // TODO(fxbug.dev/59043): Inspect should print warnings about overflowing the maximum size of a
   // VMO.
 #ifdef BLOBFS_ENABLE_LARGE_INSPECT_VMO
@@ -236,9 +235,8 @@ void BlobfsMetrics::IncrementMerkleDiskRead(uint64_t read_size, fs::Duration rea
 
 void BlobfsMetrics::IncrementPageIn(const fbl::String& merkle_hash, uint64_t offset,
                                     uint64_t length) {
-  // Page-in metrics are a developer feature that is not intended to be used
-  // in production. Enabling this feature also requires increasing the size of
-  // the Inspect VMO considerably (>512KB).
+  // Page-in metrics are a developer feature that is not intended to be used in production. Enabling
+  // this feature also requires increasing the size of the Inspect VMO considerably (>512KB).
   if (!should_record_page_in) {
     return;
   }

@@ -63,7 +63,7 @@ using HostCompressor = ChunkedCompressor;
 using HostDecompressor = ChunkedDecompressor;
 
 constexpr CompressionSettings kCompressionSettings = {
-    .compression_algorithm = CompressionAlgorithm::CHUNKED,
+    .compression_algorithm = CompressionAlgorithm::kChunked,
 };
 
 zx_status_t ReadBlockOffset(int fd, uint64_t bno, off_t offset, void* data) {
@@ -99,8 +99,8 @@ zx_status_t WriteBlockOffset(int fd, const void* data, uint64_t block_count, off
 
 // From a buffer, create a merkle tree.
 //
-// Given a mapped blob at |blob_data| of length |length|, compute the
-// Merkle digest and the output merkle tree as a uint8_t array.
+// Given a mapped blob at |blob_data| of length |length|, compute the Merkle digest and the output
+// merkle tree as a uint8_t array.
 zx_status_t buffer_create_merkle(const FileMapping& mapping, bool use_compact_format,
                                  MerkleInfo* out_info) {
   zx_status_t status;
@@ -170,8 +170,7 @@ zx_status_t buffer_compress(const FileMapping& mapping, MerkleInfo* out_info) {
   return ZX_OK;
 }
 
-// Given a buffer (and pre-computed merkle tree), add the buffer as a
-// blob in Blobfs.
+// Given a buffer (and pre-computed merkle tree), add the buffer as a blob in Blobfs.
 zx_status_t blobfs_add_mapped_blob_with_merkle(Blobfs* bs, JsonRecorder* json_recorder,
                                                const FileMapping& mapping, const MerkleInfo& info) {
   ZX_ASSERT(mapping.length() == info.length);
@@ -190,8 +189,8 @@ zx_status_t blobfs_add_mapped_blob_with_merkle(Blobfs* bs, JsonRecorder* json_re
     return blob_layout.status_value();
   }
 
-  // After we've pre-calculated all necessary information, actually add the
-  // blob to the filesystem itself.
+  // After we've pre-calculated all necessary information, actually add the blob to the filesystem
+  // itself.
   static std::mutex add_blob_mutex_;
   std::lock_guard lock(add_blob_mutex_);
   std::unique_ptr<InodeBlock> inode_block;
@@ -211,8 +210,8 @@ zx_status_t blobfs_add_mapped_blob_with_merkle(Blobfs* bs, JsonRecorder* json_re
   inode->header.flags |=
       kBlobFlagAllocated | (info.compressed ? HostCompressor::InodeHeaderCompressionFlags() : 0);
 
-  // TODO(fxbug.rev/74008) Currently, host-side tools can only generate single-extent
-  // blobs. This should be fixed.
+  // TODO(fxbug.rev/74008) Currently, host-side tools can only generate single-extent blobs. This
+  // should be fixed.
   if (inode->block_count > kBlockCountMax) {
     FX_LOGS(ERROR) << "error: Blobs larger than " << kBlockCountMax
                    << " blocks not yet implemented";
@@ -676,8 +675,7 @@ zx_status_t Blobfs::NewBlob(const Digest& digest, std::unique_ptr<InodeBlock>* o
         return ZX_ERR_ALREADY_EXISTS;
       }
     } else if (ino >= info_.inode_count) {
-      // If |ino| has not already been set to a valid value, set it to the
-      // first free value we find.
+      // If |ino| has not already been set to a valid value, set it to the first free value we find.
       // We still check all the remaining inodes to avoid adding a duplicate blob.
       ino = i;
     }

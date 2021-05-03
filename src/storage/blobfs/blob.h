@@ -127,17 +127,16 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
 
   void CompleteSync() __TA_EXCLUDES(mutex_);
 
-  // When blob VMOs are cloned and returned to clients, blobfs watches
-  // the original VMO handle for the signal |ZX_VMO_ZERO_CHILDREN|.
-  // While this signal is not set, the blob's Vnode keeps an extra
-  // reference to itself to prevent teardown while clients are using
-  // this Vmo. This reference is internally called the "clone watcher".
+  // When blob VMOs are cloned and returned to clients, blobfs watches the original VMO handle for
+  // the signal |ZX_VMO_ZERO_CHILDREN|. While this signal is not set, the blob's Vnode keeps an
+  // extra reference to itself to prevent teardown while clients are using this Vmo. This reference
+  // is internally called the "clone watcher".
   //
-  // This function may be called on a blob to tell it to forcefully release
-  // the "reference to itself" that is kept when the blob is mapped.
+  // This function may be called on a blob to tell it to forcefully release the "reference to
+  // itself" that is kept when the blob is mapped.
   //
-  // Returns this reference, if it exists, to provide control over
-  // when the Vnode destructor is executed.
+  // Returns this reference, if it exists, to provide control over when the Vnode destructor is
+  // executed.
   //
   // TODO(fxbug.dev/51111) This is not used with the new pager. Remove this code when the transition
   // is complete.
@@ -157,8 +156,7 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // *must* not be currently in use.  It is designed to be used for mount time migrations.
   void SetOldBlob(Blob& blob) __TA_EXCLUDES(mutex_);
 
-  // Sets the target_compression_size in write_info to |size|.
-  // Setter made public for testing.
+  // Sets the target_compression_size in write_info to |size|. Setter made public for testing.
   void SetTargetCompressionSize(uint64_t size) __TA_EXCLUDES(mutex_);
 
   // Reads in and verifies the contents of this Blob.
@@ -197,7 +195,7 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
 #endif
 
   // blobfs::CacheNode implementation:
-  BlobCache& Cache() final;
+  BlobCache& GetCache() final;
   bool ShouldCache() const final __TA_EXCLUDES(mutex_);
   void ActivateLowMemory() final __TA_EXCLUDES(mutex_);
 
@@ -211,17 +209,15 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   [[nodiscard]] zx_status_t MarkReadable(CompressionAlgorithm compression_algorithm)
       __TA_REQUIRES(mutex_);
 
-  // Returns a handle to an event which will be signalled when
-  // the blob is readable.
+  // Returns a handle to an event which will be signalled when the blob is readable.
   //
-  // Returns "ZX_OK" if successful, otherwise the error code
-  // will indicate the failure status.
+  // Returns "ZX_OK" if successful, otherwise the error code will indicate the failure status.
   zx_status_t GetReadableEvent(zx::event* out) __TA_REQUIRES(mutex_);
 
   // Returns a clone of the blobfs VMO.
   //
-  // Monitors the current VMO, keeping a reference to the Vnode
-  // alive while the |out| VMO (and any clones it may have) are open.
+  // Monitors the current VMO, keeping a reference to the Vnode alive while the |out| VMO (and any
+  // clones it may have) are open.
   zx_status_t CloneDataVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out_size)
       __TA_REQUIRES(mutex_);
 
@@ -235,36 +231,32 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // Invokes |Purge()| if the vnode is purgeable.
   zx_status_t TryPurge() __TA_REQUIRES(mutex_);
 
-  // Removes all traces of the vnode from blobfs.
-  // The blob is not expected to be accessed again after this is called.
+  // Removes all traces of the vnode from blobfs. The blob is not expected to be accessed again
+  // after this is called.
   zx_status_t Purge() __TA_REQUIRES(mutex_);
 
-  // Schedules journal transaction prepared by PrepareWrite for the null blob.
-  // Null blob doesn't have any data to write. They don't go through regular
-  // Write()/WriteInternal path so we explicitly issue journaled write that
-  // commits inode allocation and creation.
+  // Schedules journal transaction prepared by PrepareWrite for the null blob. Null blob doesn't
+  // have any data to write. They don't go through regular Write()/WriteInternal path so we
+  // explicitly issue journaled write that commits inode allocation and creation.
   zx_status_t WriteNullBlob() __TA_REQUIRES(mutex_);
 
   // If successful, allocates Blob Node and Blocks (in-memory)
   // kBlobStateEmpty --> kBlobStateDataWrite
   zx_status_t SpaceAllocate(uint32_t block_count) __TA_REQUIRES(mutex_);
 
-  // Writes to either the Merkle Tree or the Data section,
-  // depending on the state.
+  // Writes to either the Merkle Tree or the Data section, depending on the state.
   zx_status_t WriteInternal(const void* data, size_t len, std::optional<size_t> offset,
                             size_t* actual) __TA_REQUIRES(mutex_);
 
-  // Reads from a blob.
-  // Requires: kBlobStateReadable
+  // Reads from a blob. Requires: kBlobStateReadable
   zx_status_t ReadInternal(void* data, size_t len, size_t off, size_t* actual)
       __TA_EXCLUDES(mutex_);
 
-  // Loads the blob's data and merkle from disk, and initializes the data/merkle VMOs.
-  // If paging is enabled, the data VMO will be pager-backed and lazily loaded and verified as the
-  // client accesses the pages.
-  // If paging is disabled, the entire data VMO is loaded in and verified.
+  // Loads the blob's data and merkle from disk, and initializes the data/merkle VMOs. If paging is
+  // enabled, the data VMO will be pager-backed and lazily loaded and verified as the client
+  // accesses the pages.
   //
-  // Idempotent.
+  // If paging is disabled, the entire data VMO is loaded in and verified. Idempotent.
   zx_status_t LoadPagedVmosFromDisk() __TA_REQUIRES(mutex_);
   zx_status_t LoadUnpagedVmosFromDisk() __TA_REQUIRES(mutex_);
   zx_status_t LoadVmosFromDisk() __TA_REQUIRES(mutex_);
@@ -276,8 +268,7 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // the null blob and will assert otherwise.
   zx_status_t VerifyNullBlob() const __TA_REQUIRES_SHARED(mutex_);
 
-  // Called by the Vnode once the last write has completed, updating the
-  // on-disk metadata.
+  // Called by the Vnode once the last write has completed, updating the on-disk metadata.
   zx_status_t WriteMetadata(BlobTransaction& transaction,
                             CompressionAlgorithm compression_algorithm) __TA_REQUIRES(mutex_);
 

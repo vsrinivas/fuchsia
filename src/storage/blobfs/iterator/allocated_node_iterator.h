@@ -15,8 +15,7 @@
 
 namespace blobfs {
 
-// Allows traversing a linked list of nodes for a single blob that has already
-// been written to disk.
+// Allows traversing a linked list of nodes for a single blob that has already been written to disk.
 class AllocatedNodeIterator {
  public:
   AllocatedNodeIterator& operator=(const AllocatedNodeIterator&) = delete;

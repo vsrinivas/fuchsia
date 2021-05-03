@@ -66,9 +66,9 @@ class MockTransactionManager : public TransactionManager, public block_client::B
 
   zx_status_t BlockDetachVmo(storage::Vmoid vmoid) final;
 
-  BlobfsMetrics* Metrics() final { return &metrics_; }
+  std::shared_ptr<BlobfsMetrics>& GetMetrics() final { return metrics_; }
 
-  fs::Journal* journal() final {
+  fs::Journal* GetJournal() final {
     ZX_ASSERT(false);
     return nullptr;
   }
@@ -101,7 +101,7 @@ class MockTransactionManager : public TransactionManager, public block_client::B
   zx_status_t VolumeShrink(uint64_t offset, uint64_t length) final { return ZX_ERR_NOT_SUPPORTED; }
 
  private:
-  BlobfsMetrics metrics_{false};
+  std::shared_ptr<BlobfsMetrics> metrics_ = std::make_shared<BlobfsMetrics>(false);
   Superblock superblock_{};
   fbl::Vector<std::optional<zx::vmo>> attached_vmos_ __TA_GUARDED(lock_);
   TransactionCallback transaction_callback_ __TA_GUARDED(lock_);

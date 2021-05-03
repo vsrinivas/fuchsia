@@ -104,8 +104,8 @@ zx_status_t LZ4Decompressor::Decompress(void* uncompressed_buf_, size_t* uncompr
   size_t target_drained = 0;
   size_t src_drained = 0;
 
-  // Decompress the first four bytes of the source without consuming the
-  // destination buffer to determine the size of the frame header.
+  // Decompress the first four bytes of the source without consuming the destination buffer to
+  // determine the size of the frame header.
   size_t dst_sz_next = 0;
   size_t src_sz_next = 4;
 

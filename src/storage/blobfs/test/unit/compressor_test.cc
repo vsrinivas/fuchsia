@@ -114,133 +114,133 @@ void RunCompressDecompressTest(CompressionAlgorithm algorithm, DataType data_typ
 }
 
 TEST(CompressorTests, CompressDecompressLZ4Random1) {
-  RunCompressDecompressTest(CompressionAlgorithm::LZ4, DataType::Random, 1 << 0, 1 << 0);
+  RunCompressDecompressTest(CompressionAlgorithm::kLz4, DataType::Random, 1 << 0, 1 << 0);
 }
 
 TEST(CompressorTests, CompressDecompressLZ4Random2) {
-  RunCompressDecompressTest(CompressionAlgorithm::LZ4, DataType::Random, 1 << 1, 1 << 0);
+  RunCompressDecompressTest(CompressionAlgorithm::kLz4, DataType::Random, 1 << 1, 1 << 0);
 }
 
 TEST(CompressorTests, CompressDecompressLZ4Random3) {
-  RunCompressDecompressTest(CompressionAlgorithm::LZ4, DataType::Random, 1 << 10, 1 << 5);
+  RunCompressDecompressTest(CompressionAlgorithm::kLz4, DataType::Random, 1 << 10, 1 << 5);
 }
 
 TEST(CompressorTests, CompressDecompressLZ4Random4) {
-  RunCompressDecompressTest(CompressionAlgorithm::LZ4, DataType::Random, 1 << 15, 1 << 10);
+  RunCompressDecompressTest(CompressionAlgorithm::kLz4, DataType::Random, 1 << 15, 1 << 10);
 }
 
 TEST(CompressorTests, CompressDecompressLZ4Compressible1) {
-  RunCompressDecompressTest(CompressionAlgorithm::LZ4, DataType::Random, 1 << 0, 1 << 0);
+  RunCompressDecompressTest(CompressionAlgorithm::kLz4, DataType::Random, 1 << 0, 1 << 0);
 }
 
 TEST(CompressorTests, CompressDecompressLZ4Compressible2) {
-  RunCompressDecompressTest(CompressionAlgorithm::LZ4, DataType::Random, 1 << 1, 1 << 0);
+  RunCompressDecompressTest(CompressionAlgorithm::kLz4, DataType::Random, 1 << 1, 1 << 0);
 }
 
 TEST(CompressorTests, CompressDecompressLZ4Compressible3) {
-  RunCompressDecompressTest(CompressionAlgorithm::LZ4, DataType::Random, 1 << 10, 1 << 5);
+  RunCompressDecompressTest(CompressionAlgorithm::kLz4, DataType::Random, 1 << 10, 1 << 5);
 }
 
 TEST(CompressorTests, CompressDecompressLZ4Compressible4) {
-  RunCompressDecompressTest(CompressionAlgorithm::LZ4, DataType::Random, 1 << 15, 1 << 10);
+  RunCompressDecompressTest(CompressionAlgorithm::kLz4, DataType::Random, 1 << 15, 1 << 10);
 }
 
 TEST(CompressorTests, CompressDecompressZSTDRandom1) {
-  RunCompressDecompressTest(CompressionAlgorithm::ZSTD, DataType::Random, 1 << 0, 1 << 0);
+  RunCompressDecompressTest(CompressionAlgorithm::kZstd, DataType::Random, 1 << 0, 1 << 0);
 }
 
 TEST(CompressorTests, CompressDecompressZSTDRandom2) {
-  RunCompressDecompressTest(CompressionAlgorithm::ZSTD, DataType::Random, 1 << 1, 1 << 0);
+  RunCompressDecompressTest(CompressionAlgorithm::kZstd, DataType::Random, 1 << 1, 1 << 0);
 }
 
 TEST(CompressorTests, CompressDecompressZSTDRandom3) {
-  RunCompressDecompressTest(CompressionAlgorithm::ZSTD, DataType::Random, 1 << 10, 1 << 5);
+  RunCompressDecompressTest(CompressionAlgorithm::kZstd, DataType::Random, 1 << 10, 1 << 5);
 }
 
 TEST(CompressorTests, CompressDecompressZSTDRandom4) {
-  RunCompressDecompressTest(CompressionAlgorithm::ZSTD, DataType::Random, 1 << 15, 1 << 10);
+  RunCompressDecompressTest(CompressionAlgorithm::kZstd, DataType::Random, 1 << 15, 1 << 10);
 }
 
 TEST(CompressorTests, CompressDecompressZSTDCompressible1) {
-  RunCompressDecompressTest(CompressionAlgorithm::ZSTD, DataType::Random, 1 << 0, 1 << 0);
+  RunCompressDecompressTest(CompressionAlgorithm::kZstd, DataType::Random, 1 << 0, 1 << 0);
 }
 
 TEST(CompressorTests, CompressDecompressZSTDCompressible2) {
-  RunCompressDecompressTest(CompressionAlgorithm::ZSTD, DataType::Random, 1 << 1, 1 << 0);
+  RunCompressDecompressTest(CompressionAlgorithm::kZstd, DataType::Random, 1 << 1, 1 << 0);
 }
 
 TEST(CompressorTests, CompressDecompressZSTDCompressible3) {
-  RunCompressDecompressTest(CompressionAlgorithm::ZSTD, DataType::Random, 1 << 10, 1 << 5);
+  RunCompressDecompressTest(CompressionAlgorithm::kZstd, DataType::Random, 1 << 10, 1 << 5);
 }
 
 TEST(CompressorTests, CompressDecompressZSTDCompressible4) {
-  RunCompressDecompressTest(CompressionAlgorithm::ZSTD, DataType::Random, 1 << 15, 1 << 10);
+  RunCompressDecompressTest(CompressionAlgorithm::kZstd, DataType::Random, 1 << 15, 1 << 10);
 }
 
 TEST(CompressorTests, CompressDecompressZSTDSeekableRandom1) {
-  RunCompressDecompressTest(CompressionAlgorithm::ZSTD_SEEKABLE, DataType::Random, 1 << 0, 1 << 0);
+  RunCompressDecompressTest(CompressionAlgorithm::kZstdSeekable, DataType::Random, 1 << 0, 1 << 0);
 }
 
 TEST(CompressorTests, CompressDecompressZSTDSeekableRandom2) {
-  RunCompressDecompressTest(CompressionAlgorithm::ZSTD_SEEKABLE, DataType::Random, 1 << 1, 1 << 0);
+  RunCompressDecompressTest(CompressionAlgorithm::kZstdSeekable, DataType::Random, 1 << 1, 1 << 0);
 }
 
 TEST(CompressorTests, CompressDecompressZSTDSeekableRandom3) {
-  RunCompressDecompressTest(CompressionAlgorithm::ZSTD_SEEKABLE, DataType::Random, 1 << 10, 1 << 5);
+  RunCompressDecompressTest(CompressionAlgorithm::kZstdSeekable, DataType::Random, 1 << 10, 1 << 5);
 }
 
 TEST(CompressorTests, CompressDecompressZSTDSeekableRandom4) {
-  RunCompressDecompressTest(CompressionAlgorithm::ZSTD_SEEKABLE, DataType::Random, 1 << 15,
+  RunCompressDecompressTest(CompressionAlgorithm::kZstdSeekable, DataType::Random, 1 << 15,
                             1 << 10);
 }
 
 TEST(CompressorTests, CompressDecompressZSTDSeekableCompressible1) {
-  RunCompressDecompressTest(CompressionAlgorithm::ZSTD_SEEKABLE, DataType::Random, 1 << 0, 1 << 0);
+  RunCompressDecompressTest(CompressionAlgorithm::kZstdSeekable, DataType::Random, 1 << 0, 1 << 0);
 }
 
 TEST(CompressorTests, CompressDecompressZSTDSeekableCompressible2) {
-  RunCompressDecompressTest(CompressionAlgorithm::ZSTD_SEEKABLE, DataType::Random, 1 << 1, 1 << 0);
+  RunCompressDecompressTest(CompressionAlgorithm::kZstdSeekable, DataType::Random, 1 << 1, 1 << 0);
 }
 
 TEST(CompressorTests, CompressDecompressZSTDSeekableCompressible3) {
-  RunCompressDecompressTest(CompressionAlgorithm::ZSTD_SEEKABLE, DataType::Random, 1 << 10, 1 << 5);
+  RunCompressDecompressTest(CompressionAlgorithm::kZstdSeekable, DataType::Random, 1 << 10, 1 << 5);
 }
 
 TEST(CompressorTests, CompressDecompressZSTDSeekableCompressible4) {
-  RunCompressDecompressTest(CompressionAlgorithm::ZSTD_SEEKABLE, DataType::Random, 1 << 15,
+  RunCompressDecompressTest(CompressionAlgorithm::kZstdSeekable, DataType::Random, 1 << 15,
                             1 << 10);
 }
 
 TEST(CompressorTests, CompressDecompressChunkRandom1) {
-  RunCompressDecompressTest(CompressionAlgorithm::CHUNKED, DataType::Random, 1 << 0, 1 << 0);
+  RunCompressDecompressTest(CompressionAlgorithm::kChunked, DataType::Random, 1 << 0, 1 << 0);
 }
 
 TEST(CompressorTests, CompressDecompressChunkRandom2) {
-  RunCompressDecompressTest(CompressionAlgorithm::CHUNKED, DataType::Random, 1 << 1, 1 << 0);
+  RunCompressDecompressTest(CompressionAlgorithm::kChunked, DataType::Random, 1 << 1, 1 << 0);
 }
 
 TEST(CompressorTests, CompressDecompressChunkRandom3) {
-  RunCompressDecompressTest(CompressionAlgorithm::CHUNKED, DataType::Random, 1 << 10, 1 << 5);
+  RunCompressDecompressTest(CompressionAlgorithm::kChunked, DataType::Random, 1 << 10, 1 << 5);
 }
 
 TEST(CompressorTests, CompressDecompressChunkRandom4) {
-  RunCompressDecompressTest(CompressionAlgorithm::CHUNKED, DataType::Random, 1 << 15, 1 << 10);
+  RunCompressDecompressTest(CompressionAlgorithm::kChunked, DataType::Random, 1 << 15, 1 << 10);
 }
 
 TEST(CompressorTests, CompressDecompressChunkCompressible1) {
-  RunCompressDecompressTest(CompressionAlgorithm::CHUNKED, DataType::Random, 1 << 0, 1 << 0);
+  RunCompressDecompressTest(CompressionAlgorithm::kChunked, DataType::Random, 1 << 0, 1 << 0);
 }
 
 TEST(CompressorTests, CompressDecompressChunkCompressible2) {
-  RunCompressDecompressTest(CompressionAlgorithm::CHUNKED, DataType::Random, 1 << 1, 1 << 0);
+  RunCompressDecompressTest(CompressionAlgorithm::kChunked, DataType::Random, 1 << 1, 1 << 0);
 }
 
 TEST(CompressorTests, CompressDecompressChunkCompressible3) {
-  RunCompressDecompressTest(CompressionAlgorithm::CHUNKED, DataType::Random, 1 << 10, 1 << 5);
+  RunCompressDecompressTest(CompressionAlgorithm::kChunked, DataType::Random, 1 << 10, 1 << 5);
 }
 
 TEST(CompressorTests, CompressDecompressChunkCompressible4) {
-  RunCompressDecompressTest(CompressionAlgorithm::CHUNKED, DataType::Random, 1 << 15, 1 << 10);
+  RunCompressDecompressTest(CompressionAlgorithm::kChunked, DataType::Random, 1 << 15, 1 << 10);
 }
 
 void RunUpdateNoDataTest(CompressionAlgorithm algorithm) {
@@ -262,12 +262,12 @@ void RunUpdateNoDataTest(CompressionAlgorithm algorithm) {
   DecompressionHelper(algorithm, compressor->Data(), compressor->Size(), input.get(), input_size);
 }
 
-TEST(CompressorTests, UpdateNoDataLZ4) { RunUpdateNoDataTest(CompressionAlgorithm::LZ4); }
+TEST(CompressorTests, UpdateNoDataLZ4) { RunUpdateNoDataTest(CompressionAlgorithm::kLz4); }
 
-TEST(CompressorTests, UpdateNoDataZSTD) { RunUpdateNoDataTest(CompressionAlgorithm::ZSTD); }
+TEST(CompressorTests, UpdateNoDataZSTD) { RunUpdateNoDataTest(CompressionAlgorithm::kZstd); }
 
 TEST(CompressorTests, UpdateNoDataZSTDSeekable) {
-  RunUpdateNoDataTest(CompressionAlgorithm::ZSTD_SEEKABLE);
+  RunUpdateNoDataTest(CompressionAlgorithm::kZstdSeekable);
 }
 
 void DecompressionRoundHelper(CompressionAlgorithm algorithm, const void* compressed_buf,
@@ -312,54 +312,54 @@ void RunCompressRoundDecompressTest(CompressionAlgorithm algorithm, DataType dat
 }
 
 TEST(CompressorTests, CompressRoundDecompressLZ4Random1) {
-  RunCompressRoundDecompressTest(CompressionAlgorithm::LZ4, DataType::Random, 1 << 0, 1 << 0);
+  RunCompressRoundDecompressTest(CompressionAlgorithm::kLz4, DataType::Random, 1 << 0, 1 << 0);
 }
 
 TEST(CompressorTests, CompressRoundDecompressLZ4Random2) {
-  RunCompressRoundDecompressTest(CompressionAlgorithm::LZ4, DataType::Random, 1 << 1, 1 << 0);
+  RunCompressRoundDecompressTest(CompressionAlgorithm::kLz4, DataType::Random, 1 << 1, 1 << 0);
 }
 
 TEST(CompressorTests, CompressRoundDecompressLZ4Random3) {
-  RunCompressRoundDecompressTest(CompressionAlgorithm::LZ4, DataType::Random, 1 << 10, 1 << 5);
+  RunCompressRoundDecompressTest(CompressionAlgorithm::kLz4, DataType::Random, 1 << 10, 1 << 5);
 }
 
 TEST(CompressorTests, CompressRoundDecompressLZ4Random4) {
-  RunCompressRoundDecompressTest(CompressionAlgorithm::LZ4, DataType::Random, 1 << 15, 1 << 10);
+  RunCompressRoundDecompressTest(CompressionAlgorithm::kLz4, DataType::Random, 1 << 15, 1 << 10);
 }
 
 TEST(CompressorTests, CompressRoundDecompressZSTDRandom1) {
-  RunCompressRoundDecompressTest(CompressionAlgorithm::ZSTD, DataType::Random, 1 << 0, 1 << 0);
+  RunCompressRoundDecompressTest(CompressionAlgorithm::kZstd, DataType::Random, 1 << 0, 1 << 0);
 }
 
 TEST(CompressorTests, CompressRoundDecompressZSTDRandom2) {
-  RunCompressRoundDecompressTest(CompressionAlgorithm::ZSTD, DataType::Random, 1 << 1, 1 << 0);
+  RunCompressRoundDecompressTest(CompressionAlgorithm::kZstd, DataType::Random, 1 << 1, 1 << 0);
 }
 
 TEST(CompressorTests, CompressRoundDecompressZSTDRandom3) {
-  RunCompressRoundDecompressTest(CompressionAlgorithm::ZSTD, DataType::Random, 1 << 10, 1 << 5);
+  RunCompressRoundDecompressTest(CompressionAlgorithm::kZstd, DataType::Random, 1 << 10, 1 << 5);
 }
 
 TEST(CompressorTests, CompressRoundDecompressZSTDRandom4) {
-  RunCompressRoundDecompressTest(CompressionAlgorithm::ZSTD, DataType::Random, 1 << 15, 1 << 10);
+  RunCompressRoundDecompressTest(CompressionAlgorithm::kZstd, DataType::Random, 1 << 15, 1 << 10);
 }
 
 TEST(CompressorTests, CompressRoundDecompressZSTDSeekableRandom1) {
-  RunCompressRoundDecompressTest(CompressionAlgorithm::ZSTD_SEEKABLE, DataType::Random, 1 << 0,
+  RunCompressRoundDecompressTest(CompressionAlgorithm::kZstdSeekable, DataType::Random, 1 << 0,
                                  1 << 0);
 }
 
 TEST(CompressorTests, CompressRoundDecompressZSTDSeekableRandom2) {
-  RunCompressRoundDecompressTest(CompressionAlgorithm::ZSTD_SEEKABLE, DataType::Random, 1 << 1,
+  RunCompressRoundDecompressTest(CompressionAlgorithm::kZstdSeekable, DataType::Random, 1 << 1,
                                  1 << 0);
 }
 
 TEST(CompressorTests, CompressRoundDecompressZSTDSeekableRandom3) {
-  RunCompressRoundDecompressTest(CompressionAlgorithm::ZSTD_SEEKABLE, DataType::Random, 1 << 10,
+  RunCompressRoundDecompressTest(CompressionAlgorithm::kZstdSeekable, DataType::Random, 1 << 10,
                                  1 << 5);
 }
 
 TEST(CompressorTests, CompressRoundDecompressZSTDSeekableRandom4) {
-  RunCompressRoundDecompressTest(CompressionAlgorithm::ZSTD_SEEKABLE, DataType::Random, 1 << 15,
+  RunCompressRoundDecompressTest(CompressionAlgorithm::kZstdSeekable, DataType::Random, 1 << 15,
                                  1 << 10);
 }
 

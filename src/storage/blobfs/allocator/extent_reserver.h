@@ -44,8 +44,7 @@ class ExtentReserver {
 
   // Returns an iterator to the underlying reserved blocks.
   //
-  // This iterator becomes invalid on the next call to either |ReserveExtent| or
-  // |UnreserveExtent|.
+  // This iterator becomes invalid on the next call to either |ReserveExtent| or |UnreserveExtent|.
   bitmap::RleBitmap::const_iterator ReservedBlocksCbegin() const __TA_REQUIRES(mutex()) {
     return reserved_blocks_.cbegin();
   }

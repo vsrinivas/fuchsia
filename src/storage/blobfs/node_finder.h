@@ -18,6 +18,7 @@ class NodeFinder;
 struct InodePtrDeleter {
   InodePtrDeleter() = default;
   explicit InodePtrDeleter(NodeFinder* finder) : finder_(finder) {}
+
   void operator()(Inode* inode);
   NodeFinder* finder_ = nullptr;
 };

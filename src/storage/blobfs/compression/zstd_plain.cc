@@ -83,7 +83,7 @@ ZSTDCompressor::~ZSTDCompressor() { ZSTD_freeCStream(stream_); }
 zx_status_t ZSTDCompressor::Create(CompressionSettings settings, size_t input_size,
                                    void* compression_buffer, size_t compression_buffer_length,
                                    std::unique_ptr<ZSTDCompressor>* out) {
-  ZX_DEBUG_ASSERT(settings.compression_algorithm == CompressionAlgorithm::ZSTD);
+  ZX_DEBUG_ASSERT(settings.compression_algorithm == CompressionAlgorithm::kZstd);
   if (BufferMax(input_size) > compression_buffer_length) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
@@ -126,9 +126,9 @@ zx_status_t ZSTDCompressor::Update(const void* input_data, size_t input_length) 
     //   Note that the function may not consume the entire input, for example, because the
     //   output buffer is already full, in which case `input.pos < input.size`.
     //
-    // If this is the case, a client must have not supplied an honest value for
-    // |input_size| when creating the ZSTDCompressor object, which requires that the
-    // output compression buffer be large enough to hold the "worst case" input size.
+    // If this is the case, a client must have not supplied an honest value for |input_size| when
+    // creating the ZSTDCompressor object, which requires that the output compression buffer be
+    // large enough to hold the "worst case" input size.
     FX_LOGS(ERROR) << "[zstd] Could not compress all input";
     return ZX_ERR_INVALID_ARGS;
   }

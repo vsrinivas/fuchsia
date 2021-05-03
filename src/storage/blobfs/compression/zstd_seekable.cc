@@ -45,7 +45,7 @@ zx_status_t ZSTDSeekableCompressor::Create(CompressionSettings settings, size_t 
                                            void* compression_buffer,
                                            size_t compression_buffer_length,
                                            std::unique_ptr<ZSTDSeekableCompressor>* out) {
-  ZX_DEBUG_ASSERT(settings.compression_algorithm == CompressionAlgorithm::ZSTD_SEEKABLE);
+  ZX_DEBUG_ASSERT(settings.compression_algorithm == CompressionAlgorithm::kZstdSeekable);
   if (BufferMax(input_size) > compression_buffer_length)
     return ZX_ERR_BUFFER_TOO_SMALL;
 
@@ -99,10 +99,9 @@ zx_status_t ZSTDSeekableCompressor::Update(const void* input_data, size_t input_
   // Invoke ZSTD_seekable_compressStream repeatedly to consume entire input buffer.
   //
   // From the ZSTD seekable format documentation:
-  //   Use ZSTD_seekable_compressStream() repetitively to consume input stream.
-  //   The function will automatically update both `pos` fields.
-  //   Note that it may not consume the entire input, in which case `pos < size`,
-  //   and it's up to the caller to present again remaining data.
+  //   Use ZSTD_seekable_compressStream() repetitively to consume input stream. The function will
+  //   automatically update both `pos` fields. Note that it may not consume the entire input, in
+  //   which case `pos < size`, and it's up to the caller to present again remaining data.
   size_t zstd_return = 0;
   while (input.pos != input_length) {
     zstd_return = ZSTD_seekable_compressStream(stream_, &output_, &input);

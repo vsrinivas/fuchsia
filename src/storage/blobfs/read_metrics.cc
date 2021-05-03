@@ -26,15 +26,15 @@ ReadMetrics::PerCompressionMetrics::PerCompressionMetrics(inspect::Node node)
 
 ReadMetrics::PerCompressionMetrics* ReadMetrics::GetMetrics(CompressionAlgorithm algorithm) {
   switch (algorithm) {
-    case CompressionAlgorithm::UNCOMPRESSED:
+    case CompressionAlgorithm::kUncompressed:
       return &uncompressed_metrics_;
-    case CompressionAlgorithm::LZ4:
+    case CompressionAlgorithm::kLz4:
       return &lz4_metrics_;
-    case CompressionAlgorithm::ZSTD:
+    case CompressionAlgorithm::kZstd:
       return &zstd_metrics_;
-    case CompressionAlgorithm::CHUNKED:
+    case CompressionAlgorithm::kChunked:
       return &chunked_metrics_;
-    case CompressionAlgorithm::ZSTD_SEEKABLE:
+    case CompressionAlgorithm::kZstdSeekable:
       return &zstd_seekable_metrics_;
   }
 }

@@ -148,8 +148,8 @@ zx::status<Superblock> FormatSuperblockFVM(BlockDevice* device,
   return zx::ok(superblock);
 }
 
-// Take the contents of the filesystem, generated in-memory, and transfer
-// them to the underlying device.
+// Take the contents of the filesystem, generated in-memory, and transfer them to the underlying
+// device.
 zx_status_t WriteFilesystemToDisk(BlockDevice* device, const Superblock& superblock,
                                   const RawBitmap& block_bitmap, uint64_t block_size) {
   uint64_t blockmap_blocks = BlockMapBlocks(superblock);

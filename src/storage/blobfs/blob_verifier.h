@@ -21,26 +21,24 @@ namespace blobfs {
 // BlobVerifier verifies the contents of a blob against a merkle tree.
 class BlobVerifier {
  public:
-  // Creates an instance of BlobVerifier for blobs named |digest|, using the provided merkle
-  // tree which is at most |merkle_size| bytes.
-  //
-  // The passed-in BlobfsMetrics will be updated when this class runs. The pointer must outlive this
-  // class.
+  // Creates an instance of BlobVerifier for blobs named |digest|, using the provided merkle tree
+  // which is at most |merkle_size| bytes. The passed-in BlobfsMetrics will be updated when this
+  // class runs.
   //
   // Returns an error if the merkle tree's root does not match |digest|, or if the required tree
   // size for |data_size| bytes is bigger than |merkle_size|.
-  [[nodiscard]] static zx_status_t Create(digest::Digest digest, BlobfsMetrics* metrics,
+  [[nodiscard]] static zx_status_t Create(digest::Digest digest,
+                                          std::shared_ptr<BlobfsMetrics> metrics,
                                           const void* merkle, size_t merkle_size,
                                           BlobLayoutFormat blob_layout_format, size_t data_size,
                                           const BlobCorruptionNotifier* notifier,
                                           std::unique_ptr<BlobVerifier>* out);
 
   // Creates an instance of BlobVerifier for blobs named |digest|, which are small enough to not
-  // have a stored merkle tree (i.e. MerkleTreeBytes(data_size) == 0).
-  //
-  // The passed-in BlobfsMetrics will be updated when this class runs. The pointer must outlive this
-  // class.
-  [[nodiscard]] static zx_status_t CreateWithoutTree(digest::Digest digest, BlobfsMetrics* metrics,
+  // have a stored merkle tree (i.e. MerkleTreeBytes(data_size) == 0). The passed-in BlobfsMetrics
+  // will be updated when this class runs.
+  [[nodiscard]] static zx_status_t CreateWithoutTree(digest::Digest digest,
+                                                     std::shared_ptr<BlobfsMetrics> metrics,
                                                      size_t data_size,
                                                      const BlobCorruptionNotifier* notifier,
                                                      std::unique_ptr<BlobVerifier>* out);
@@ -71,7 +69,7 @@ class BlobVerifier {
 
  private:
   // Use |Create| or |CreateWithoutTree| to construct.
-  explicit BlobVerifier(BlobfsMetrics* metrics);
+  explicit BlobVerifier(std::shared_ptr<BlobfsMetrics> metrics);
 
   BlobVerifier(const BlobVerifier&) = delete;
   BlobVerifier& operator=(const BlobVerifier&) = delete;
@@ -83,7 +81,7 @@ class BlobVerifier {
   const BlobCorruptionNotifier* corruption_notifier_;
   digest::Digest digest_;
   digest::MerkleTreeVerifier tree_verifier_;
-  BlobfsMetrics* metrics_;
+  std::shared_ptr<BlobfsMetrics> metrics_;
 };
 
 }  // namespace blobfs

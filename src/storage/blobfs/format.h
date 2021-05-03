@@ -339,8 +339,7 @@ constexpr uint16_t kBlobFlagZSTDSeekableCompressed = 1 << 4;
 
 // Identifies that the on-disk storage of the blob is chunk-compression compressed.
 constexpr uint16_t kBlobFlagChunkCompressed = 1 << 5;
-// When adding another compression flag, it must be added to
-// kBlobFlagMaskAnyCompression below.
+// When adding another compression flag, it must be added to kBlobFlagMaskAnyCompression below.
 
 // Bitmask of all compression flags.
 constexpr uint16_t kBlobFlagMaskAnyCompression =
@@ -411,10 +410,13 @@ inline std::ostream& operator<<(std::ostream& stream, const Inode& inode) {
 
 struct __PACKED alignas(8) ExtentContainer {
   NodePrelude header;
+
   // The map index of the previous node.
   uint32_t previous_node;
+
   // The number of extents within this container.
   ExtentCountType extent_count;
+
   uint16_t reserved;
   Extent extents[kContainerMaxExtents];
 };

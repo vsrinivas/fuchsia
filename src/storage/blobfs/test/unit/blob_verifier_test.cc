@@ -30,7 +30,7 @@ class TestCorruptionNotifier : public BlobCorruptionNotifier {
 
 class BlobVerifierTest : public testing::TestWithParam<BlobLayoutFormat> {
  public:
-  BlobfsMetrics* Metrics() { return &metrics_; }
+  std::shared_ptr<BlobfsMetrics> GetMetrics() { return metrics_; }
 
   void SetUp() override { srand(testing::UnitTest::GetInstance()->random_seed()); }
 
@@ -39,7 +39,7 @@ class BlobVerifierTest : public testing::TestWithParam<BlobLayoutFormat> {
   }
 
  private:
-  BlobfsMetrics metrics_{false};
+  std::shared_ptr<BlobfsMetrics> metrics_ = std::make_shared<BlobfsMetrics>(false);
 };
 
 void FillWithRandom(uint8_t* buf, size_t len) {
@@ -52,8 +52,9 @@ TEST_P(BlobVerifierTest, CreateAndVerify_NullBlob) {
   auto merkle_tree = GenerateTree(nullptr, 0);
 
   std::unique_ptr<BlobVerifier> verifier;
-  ASSERT_EQ(BlobVerifier::CreateWithoutTree(merkle_tree->root, Metrics(), 0ul, nullptr, &verifier),
-            ZX_OK);
+  ASSERT_EQ(
+      BlobVerifier::CreateWithoutTree(merkle_tree->root, GetMetrics(), 0ul, nullptr, &verifier),
+      ZX_OK);
   EXPECT_EQ(verifier->Verify(nullptr, 0ul, 0ul), ZX_OK);
   EXPECT_EQ(verifier->VerifyPartial(nullptr, 0ul, 0ul, 0ul), ZX_OK);
 }
@@ -65,7 +66,7 @@ TEST_P(BlobVerifierTest, CreateAndVerify_SmallBlob) {
   auto merkle_tree = GenerateTree(buf, sizeof(buf));
 
   std::unique_ptr<BlobVerifier> verifier;
-  ASSERT_EQ(BlobVerifier::CreateWithoutTree(merkle_tree->root, Metrics(), sizeof(buf), nullptr,
+  ASSERT_EQ(BlobVerifier::CreateWithoutTree(merkle_tree->root, GetMetrics(), sizeof(buf), nullptr,
                                             &verifier),
             ZX_OK);
 
@@ -92,7 +93,7 @@ TEST_P(BlobVerifierTest, CreateAndVerify_SmallBlob_DataCorrupted) {
   buf[42] = ~(buf[42]);
 
   std::unique_ptr<BlobVerifier> verifier;
-  ASSERT_EQ(BlobVerifier::CreateWithoutTree(merkle_tree->root, Metrics(), sizeof(buf), &notifier,
+  ASSERT_EQ(BlobVerifier::CreateWithoutTree(merkle_tree->root, GetMetrics(), sizeof(buf), &notifier,
                                             &verifier),
             ZX_OK);
 
@@ -114,7 +115,7 @@ TEST_P(BlobVerifierTest, CreateAndVerify_BigBlob) {
 
   std::unique_ptr<BlobVerifier> verifier;
   ASSERT_EQ(
-      BlobVerifier::Create(merkle_tree->root, Metrics(), merkle_tree->merkle_tree.get(),
+      BlobVerifier::Create(merkle_tree->root, GetMetrics(), merkle_tree->merkle_tree.get(),
                            merkle_tree->merkle_tree_size, GetParam(), sz, &notifier, &verifier),
       ZX_OK);
 
@@ -152,7 +153,7 @@ TEST_P(BlobVerifierTest, CreateAndVerify_BigBlob_DataCorrupted) {
 
   std::unique_ptr<BlobVerifier> verifier;
   ASSERT_EQ(
-      BlobVerifier::Create(merkle_tree->root, Metrics(), merkle_tree->merkle_tree.get(),
+      BlobVerifier::Create(merkle_tree->root, GetMetrics(), merkle_tree->merkle_tree.get(),
                            merkle_tree->merkle_tree_size, GetParam(), sz, &notifier, &verifier),
       ZX_OK);
 
@@ -191,7 +192,7 @@ TEST_P(BlobVerifierTest, CreateAndVerify_BigBlob_MerkleCorrupted) {
 
   std::unique_ptr<BlobVerifier> verifier;
   ASSERT_EQ(
-      BlobVerifier::Create(merkle_tree->root, Metrics(), merkle_tree->merkle_tree.get(),
+      BlobVerifier::Create(merkle_tree->root, GetMetrics(), merkle_tree->merkle_tree.get(),
                            merkle_tree->merkle_tree_size, GetParam(), sz, &notifier, &verifier),
       ZX_OK);
 
@@ -219,9 +220,9 @@ TEST_P(BlobVerifierTest, NonZeroTailCausesVerifyToFail) {
   auto merkle_tree = GenerateTree(buf, kBlobSize);
 
   std::unique_ptr<BlobVerifier> verifier;
-  EXPECT_EQ(
-      BlobVerifier::CreateWithoutTree(merkle_tree->root, Metrics(), kBlobSize, nullptr, &verifier),
-      ZX_OK);
+  EXPECT_EQ(BlobVerifier::CreateWithoutTree(merkle_tree->root, GetMetrics(), kBlobSize, nullptr,
+                                            &verifier),
+            ZX_OK);
 
   EXPECT_EQ(verifier->Verify(buf, kBlobSize, sizeof(buf)), ZX_OK);
 
@@ -237,7 +238,7 @@ TEST_P(BlobVerifierTest, NonZeroTailCausesVerifyPartialToFail) {
   auto merkle_tree = GenerateTree(buf.data(), kBlobSize);
 
   std::unique_ptr<BlobVerifier> verifier;
-  ASSERT_EQ(BlobVerifier::Create(merkle_tree->root, Metrics(), merkle_tree->merkle_tree.get(),
+  ASSERT_EQ(BlobVerifier::Create(merkle_tree->root, GetMetrics(), merkle_tree->merkle_tree.get(),
                                  merkle_tree->merkle_tree_size, GetParam(), kBlobSize, nullptr,
                                  &verifier),
             ZX_OK);

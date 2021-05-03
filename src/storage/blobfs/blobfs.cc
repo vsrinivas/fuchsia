@@ -150,20 +150,20 @@ zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatche
 
   auto fs_ptr = fs.get();
   auto uncompressed_buffer_or = pager::StorageBackedTransferBuffer::Create(
-      pager::kTransferBufferSize, fs_ptr, fs_ptr, fs_ptr->Metrics());
+      pager::kTransferBufferSize, fs_ptr, fs_ptr, fs_ptr->GetMetrics().get());
   if (!uncompressed_buffer_or.is_ok()) {
     FX_LOGS(ERROR) << "Could not initialize uncompressed pager transfer buffer";
     return uncompressed_buffer_or.take_error();
   }
   auto compressed_buffer_or = pager::StorageBackedTransferBuffer::Create(
-      pager::kTransferBufferSize, fs_ptr, fs_ptr, fs_ptr->Metrics());
+      pager::kTransferBufferSize, fs_ptr, fs_ptr, fs_ptr->GetMetrics().get());
   if (compressed_buffer_or.is_error()) {
     FX_LOGS(ERROR) << "Could not initialize compressed pager transfer buffer";
     return compressed_buffer_or.take_error();
   }
   auto pager_or = pager::UserPager::Create(
       std::move(uncompressed_buffer_or).value(), std::move(compressed_buffer_or).value(),
-      pager::kDecompressionBufferSize, fs_ptr->Metrics(), options.sandbox_decompression);
+      pager::kDecompressionBufferSize, fs_ptr->GetMetrics().get(), options.sandbox_decompression);
   if (pager_or.is_error()) {
     FX_LOGS(ERROR) << "Could not initialize user pager";
     return pager_or.take_error();
@@ -192,8 +192,8 @@ zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatche
     }
     if ((fs->Info().major_version >= kBlobfsCompactMerkleTreeVersion ||
          fs->Info().oldest_minor_version >= kBlobfsMinorVersionNoOldCompressionFormats) &&
-        options.compression_settings.compression_algorithm != CompressionAlgorithm::CHUNKED &&
-        options.compression_settings.compression_algorithm != CompressionAlgorithm::UNCOMPRESSED) {
+        options.compression_settings.compression_algorithm != CompressionAlgorithm::kChunked &&
+        options.compression_settings.compression_algorithm != CompressionAlgorithm::kUncompressed) {
       FX_LOGS(ERROR) << "Unsupported compression algorithm";
       return zx::error(ZX_ERR_INVALID_ARGS);
     }
@@ -243,7 +243,7 @@ zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatche
     FX_LOGS(INFO) << "Using overridden pager eviction policy "
                   << CachePolicyToString(*options.pager_backed_cache_policy);
   }
-  fs->Cache().SetCachePolicy(options.cache_policy);
+  fs->GetCache().SetCachePolicy(options.cache_policy);
 
   RawBitmap block_map;
   // Keep the block_map aligned to a block multiple
@@ -292,7 +292,7 @@ zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatche
     return zx::error(status);
   }
   zx::status<BlobLoader> loader_or = BlobLoader::Create(
-      fs_ptr, fs_ptr, fs->GetNodeFinder(), fs->Metrics(), options.sandbox_decompression);
+      fs_ptr, fs_ptr, fs->GetNodeFinder(), fs->GetMetrics(), options.sandbox_decompression);
   if (loader_or.is_error()) {
     FX_LOGS(ERROR) << "Failed to initialize loader: " << loader_or.status_string();
     return loader_or.take_error();
@@ -327,7 +327,7 @@ zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatche
       fs->info_.oldest_minor_version = kBlobfsMinorVersionBackupSuperblock;
     }
     fs->WriteInfo(transaction, write_backup);
-    transaction.Commit(*fs->journal());
+    transaction.Commit(*fs->GetJournal());
   }
 
   FX_LOGS(INFO) << "Using compression "
@@ -349,7 +349,7 @@ zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatche
 
   // Here we deliberately use a '/' separator rather than '.' to avoid looking like a conventional
   // version number, since they are not --- format version and revision can increment independently.
-  fs->Metrics()->cobalt_metrics().RecordOldestVersionMounted(
+  fs->GetMetrics()->cobalt_metrics().RecordOldestVersionMounted(
       std::to_string(fs->Info().major_version) + "/" +
       std::to_string(fs->Info().oldest_minor_version));
 
@@ -588,7 +588,7 @@ zx_status_t Blobfs::Readdir(fs::VdirCookie* cookie, void* dirents, size_t len, s
       Digest digest(GetNode(node_index)->merkle_root_hash);
 
       fbl::RefPtr<CacheNode> cache_node;
-      if (Cache().Lookup(digest, &cache_node) != ZX_OK) {
+      if (GetCache().Lookup(digest, &cache_node) != ZX_OK) {
         // Skip blobs that can't be found in the cache.
         continue;
       }
@@ -718,8 +718,7 @@ zx_status_t Blobfs::AddBlocks(size_t nblocks, RawBitmap* block_map) {
   if (block_map->Grow(fbl::round_up(blocks, kBlobfsBlockBits)) != ZX_OK) {
     return ZX_ERR_NO_SPACE;
   }
-  // Grow before shrinking to ensure the underlying storage is a multiple
-  // of kBlobfsBlockSize.
+  // Grow before shrinking to ensure the underlying storage is a multiple of kBlobfsBlockSize.
   block_map->Shrink(blocks);
 
   info_.dat_slices += static_cast<uint32_t>(length);
@@ -728,8 +727,8 @@ zx_status_t Blobfs::AddBlocks(size_t nblocks, RawBitmap* block_map) {
   BlobTransaction transaction;
   WriteInfo(transaction);
   uint64_t zeroed_bitmap_blocks = abmblks - abmblks_old;
-  // Since we are extending the bitmap, we need to fill the expanded
-  // portion of the allocation block bitmap with zeroes.
+  // Since we are extending the bitmap, we need to fill the expanded portion of the allocation block
+  // bitmap with zeroes.
   if (zeroed_bitmap_blocks > 0) {
     storage::UnbufferedOperation operation = {
         .vmo = zx::unowned_vmo(block_map->StorageUnsafe()->GetVmo().get()),
@@ -840,7 +839,7 @@ std::unique_ptr<BlockDevice> Blobfs::Reset() {
   FX_LOGS(INFO) << "Shutting down";
 
   // Shutdown all internal connections to blobfs.
-  Cache().ForAllOpenNodes([](fbl::RefPtr<CacheNode> cache_node) {
+  GetCache().ForAllOpenNodes([](fbl::RefPtr<CacheNode> cache_node) {
     auto vnode = fbl::RefPtr<Blob>::Downcast(std::move(cache_node));
     vnode->CloneWatcherTeardown();
     return ZX_OK;
@@ -848,11 +847,10 @@ std::unique_ptr<BlockDevice> Blobfs::Reset() {
 
   // Write the clean bit.
   if (writability_ == Writability::Writable) {
-    // TODO(fxbug.dev/42174): If blobfs initialization failed, it is possible that the
-    // info_mapping_ vmo that we use to send writes to the underlying block device
-    // has not been initialized yet. Change Blobfs::Create ordering to try and get
-    // the object into a valid state as soon as possible and reassess what is needed
-    // in the destructor.
+    // TODO(fxbug.dev/42174): If blobfs initialization failed, it is possible that the info_mapping_
+    // vmo that we use to send writes to the underlying block device has not been initialized yet.
+    // Change Blobfs::Create ordering to try and get the object into a valid state as soon as
+    // possible and reassess what is needed in the destructor.
     if (info_mapping_.start() == nullptr) {
       FX_LOGS(ERROR) << "Cannot write journal clean bit";
     } else {
@@ -883,7 +881,7 @@ std::unique_ptr<BlockDevice> Blobfs::Reset() {
 }
 
 zx_status_t Blobfs::InitializeVnodes() {
-  Cache().Reset();
+  GetCache().Reset();
   uint32_t total_allocated = 0;
 
   for (uint32_t node_index = 0; node_index < info_.inode_count; node_index++) {
@@ -905,19 +903,19 @@ zx_status_t Blobfs::InitializeVnodes() {
     zx_status_t validation_status =
         AllocatedExtentIterator::VerifyIteration(GetNodeFinder(), node_index, inode.value().get());
     if (validation_status != ZX_OK) {
-      // Whatever the more differentiated error is here, the real root issue is
-      // the integrity of the data that was just mirrored from the disk.
+      // Whatever the more differentiated error is here, the real root issue is the integrity of the
+      // data that was just mirrored from the disk.
       FX_LOGS(ERROR) << "failed to validate node @ index " << node_index;
       return ZX_ERR_IO_DATA_INTEGRITY;
     }
 
     fbl::RefPtr<Blob> vnode = fbl::MakeRefCounted<Blob>(this, node_index, *inode.value());
 
-    // This blob is added to the cache, where it will quickly be relocated into the "closed
-    // set" once we drop our reference to |vnode|. Although we delay reading any of the
-    // contents of the blob from disk until requested, this pre-caching scheme allows us to
-    // quickly verify or deny the presence of a blob during blob lookup and creation.
-    zx_status_t status = Cache().Add(vnode);
+    // This blob is added to the cache, where it will quickly be relocated into the "closed set"
+    // once we drop our reference to |vnode|. Although we delay reading any of the contents of the
+    // blob from disk until requested, this pre-caching scheme allows us to quickly verify or deny
+    // the presence of a blob during blob lookup and creation.
+    zx_status_t status = GetCache().Add(vnode);
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "CORRUPTED FILESYSTEM: Duplicate node: " << vnode->digest() << " @ index "
                      << node_index - 1;
@@ -1049,8 +1047,6 @@ zx_status_t Blobfs::OpenRootNode(fbl::RefPtr<fs::Vnode>* out) {
   return ZX_OK;
 }
 
-Journal* Blobfs::journal() { return journal_.get(); }
-
 void Blobfs::FsckAtEndOfTransaction() {
   std::scoped_lock lock(fsck_at_end_of_transaction_mutex_);
   auto device = std::make_unique<block_client::PassThroughReadOnlyBlockDevice>(block_device_.get());
@@ -1068,7 +1064,7 @@ zx_status_t Blobfs::Migrate() {
 
 zx_status_t Blobfs::MigrateToRev3() {
   if (writability_ != Writability::Writable ||
-      write_compression_settings_.compression_algorithm != CompressionAlgorithm::CHUNKED ||
+      write_compression_settings_.compression_algorithm != CompressionAlgorithm::kChunked ||
       info_.oldest_minor_version != kBlobfsMinorVersionNoOldCompressionFormats - 1) {
     return ZX_OK;
   }
@@ -1088,7 +1084,7 @@ zx_status_t Blobfs::MigrateToRev3() {
     // Make a copy of the blob.
     fbl::RefPtr<CacheNode> cache_node;
     Digest digest(inode->merkle_root_hash);
-    if (zx_status_t status = Cache().Lookup(digest, &cache_node); status != ZX_OK) {
+    if (zx_status_t status = GetCache().Lookup(digest, &cache_node); status != ZX_OK) {
       FX_LOGS(ERROR) << "Unexpectedly not in cache: " << zx_status_get_string(status);
       return status;
     }

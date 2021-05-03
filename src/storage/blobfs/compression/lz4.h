@@ -21,15 +21,14 @@ class LZ4Compressor : public Compressor {
  public:
   static uint32_t InodeHeaderCompressionFlags() { return kBlobFlagLZ4Compressed; }
 
-  // Returns the maximum possible size a buffer would need to be
-  // in order to compress data of size |input_length|.
+  // Returns the maximum possible size a buffer would need to be in order to compress data of size
+  // |input_length|.
   static size_t BufferMax(size_t input_length);
 
   static zx_status_t Create(size_t input_size, void* compression_buffer,
                             size_t compression_buffer_length, std::unique_ptr<LZ4Compressor>* out);
   ~LZ4Compressor();
 
-  ////////////////////////////////////////
   // Compressor interface
   size_t Size() const final;
   zx_status_t Update(const void* input_data, size_t input_length) final;

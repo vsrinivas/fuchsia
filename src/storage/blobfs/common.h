@@ -33,21 +33,18 @@ struct FilesystemOptions {
   // Which layout to use to store blobs.
   BlobLayoutFormat blob_layout_format = BlobLayoutFormat::kPaddedMerkleTreeAtStart;
 
-  // The oldest minor version to mark the filesystem as formatted by.
-  // This should be left unset (to the default value of kBlobfsCurrentMinorVersion); it is exposed
-  // for overriding during tests.
+  // The oldest minor version to mark the filesystem as formatted by. This should be left unset (to
+  // the default value of kBlobfsCurrentMinorVersion); it is exposed for overriding during tests.
   uint64_t oldest_minor_version = kBlobfsCurrentMinorVersion;
 
   // The number of inodes to allocate capacity for. This value will be rounded up to fill a complete
-  // block (or slice, if within FVM).
-  // When blobfs is within FVM, this is used to determine the initial node table size, which can
-  // grow when used.
+  // block (or slice, if within FVM). When blobfs is within FVM, this is used to determine the
+  // initial node table size, which can grow when used.
   uint64_t num_inodes = kBlobfsDefaultInodeCount;
 };
 
-// The minimum size of a blob that we will consider for compression. Attempting
-// to compress a blob smaller than this will not result in any size savings, so
-// we can just skip it and save some work.
+// The minimum size of a blob that we will consider for compression. Attempting to compress a blob
+// smaller than this will not result in any size savings, so we can just skip it and save some work.
 constexpr uint64_t kCompressionSizeThresholdBytes = kBlobfsBlockSize;
 
 #ifdef __Fuchsia__
@@ -74,10 +71,9 @@ uint32_t BlocksRequiredForBits(uint64_t bit_count);
 // |available|: An additional number of blocks available which may be used by the journal.
 uint32_t SuggestJournalBlocks(uint32_t current, uint32_t available);
 
-// Creates a superblock, formatted for |block_count| disk blocks on a non-FVM volume.
-// This method should also be invoked to create FVM-based superblocks, but it is the responsibility
-// of the caller to update |info->flags| to include |kBlobFlagFVM|, and fill in all
-// FVM-specific fields.
+// Creates a superblock, formatted for |block_count| disk blocks on a non-FVM volume. This method
+// should also be invoked to create FVM-based superblocks, but it is the responsibility of the
+// caller to update |info->flags| to include |kBlobFlagFVM|, and fill in all FVM-specific fields.
 void InitializeSuperblock(uint64_t block_count, const FilesystemOptions& options, Superblock* info);
 
 // Get a pointer to the nth block of the bitmap.
@@ -92,9 +88,8 @@ inline void* GetRawBitmapData(const RawBitmap& bm, uint64_t n) {
 // format.
 BlobLayoutFormat GetBlobLayoutFormat(const Superblock& info);
 
-// Fills |out| with the VMO names for the blob at |node|.
-// Name collisions are possible, but rare; the name is based on a prefix of the merkle root
-// hash of |node|.
+// Fills |out| with the VMO names for the blob at |node|. Name collisions are possible, but rare;
+// the name is based on a prefix of the merkle root hash of |node|.
 void FormatBlobDataVmoName(const digest::Digest& digest, fbl::StringBuffer<ZX_MAX_NAME_LEN>* out);
 void FormatInactiveBlobDataVmoName(const digest::Digest& digest,
                                    fbl::StringBuffer<ZX_MAX_NAME_LEN>* out);

@@ -64,13 +64,12 @@ uint64_t BlobfsInspector::GetJournalEntryCount() {
 zx::status<std::vector<Inode>> BlobfsInspector::InspectInodeRange(uint64_t start_index,
                                                                   uint64_t end_index) {
   ZX_ASSERT(end_index > start_index);
-  // Since there are multiple inodes in a block, we first perform calculations
-  // to find the block range of only the desired inode range to load.
+  // Since there are multiple inodes in a block, we first perform calculations to find the block
+  // range of only the desired inode range to load.
   uint64_t start_block_offset = start_index / kBlobfsInodesPerBlock;
   uint64_t start_block = NodeMapStartBlock(superblock_) + start_block_offset;
-  // Because the end index is exclusive, we calculate the length based on
-  // end index - 1 to get the last inclusive value, and add 1 to the length
-  // to prevent off-by-one.
+  // Because the end index is exclusive, we calculate the length based on end index - 1 to get the
+  // last inclusive value, and add 1 to the length to prevent off-by-one.
   uint64_t block_length = (end_index - 1) / kBlobfsInodesPerBlock - start_block_offset + 1;
 
   auto result = buffer_factory_->CreateBuffer(block_length);
@@ -85,9 +84,8 @@ zx::status<std::vector<Inode>> BlobfsInspector::InspectInodeRange(uint64_t start
     return zx::error(status);
   }
 
-  // Once loaded, we treat the buffer as the entire inode table and find the
-  // new start index relative to it being in the first block. The element count
-  // can be calculated normally.
+  // Once loaded, we treat the buffer as the entire inode table and find the new start index
+  // relative to it being in the first block. The element count can be calculated normally.
   uint64_t buffer_offset = start_index % kBlobfsInodesPerBlock;
   uint64_t count = end_index - start_index;
   std::vector<Inode> inodes;
@@ -97,8 +95,8 @@ zx::status<std::vector<Inode>> BlobfsInspector::InspectInodeRange(uint64_t start
   return zx::ok(inodes);
 }
 
-// Since the scratch buffer is only a single block long, we check that the
-// JournalSuperblock is small enough to load into the buffer.
+// Since the scratch buffer is only a single block long, we check that the JournalSuperblock is
+// small enough to load into the buffer.
 static_assert(fs::kJournalMetadataBlocks == 1);
 
 zx::status<fs::JournalInfo> BlobfsInspector::InspectJournalSuperblock() {
@@ -141,13 +139,12 @@ zx::status<fs::JournalCommitBlock> BlobfsInspector::InspectJournalEntryAs(uint64
 zx::status<std::vector<uint64_t>> BlobfsInspector::InspectDataBlockAllocatedInRange(
     uint64_t start_index, uint64_t end_index) {
   ZX_ASSERT(end_index > start_index);
-  // Since there are multiple bits in a block, we first perform calculations
-  // to find the block range of only the desired bit range to load.
+  // Since there are multiple bits in a block, we first perform calculations to find the block range
+  // of only the desired bit range to load.
   uint64_t start_block_offset = start_index / kBlobfsBlockBits;
   uint64_t start_block = BlockMapStartBlock(superblock_) + start_block_offset;
-  // Because the end index is exclusive, we calculate the length based on
-  // end index - 1 to get the last inclusive value, and add 1 to the length
-  // to prevent off-by-one.
+  // Because the end index is exclusive, we calculate the length based on end index - 1 to get the
+  // last inclusive value, and add 1 to the length to prevent off-by-one.
   uint64_t block_length = (end_index - 1) / kBlobfsBlockBits - start_block_offset + 1;
 
   auto result = buffer_factory_->CreateBuffer(block_length);
@@ -162,9 +159,8 @@ zx::status<std::vector<uint64_t>> BlobfsInspector::InspectDataBlockAllocatedInRa
     return zx::error(status);
   }
 
-  // Once loaded, we treat the buffer as the entire inode bitmap and find the
-  // new start index relative to it being in the first block. The element count
-  // can be calculated normally.
+  // Once loaded, we treat the buffer as the entire inode bitmap and find the new start index
+  // relative to it being in the first block. The element count can be calculated normally.
   uint64_t buffer_offset = start_index % kBlobfsBlockBits;
   uint64_t count = end_index - start_index;
   std::vector<uint64_t> allocated_indices;
@@ -189,13 +185,12 @@ zx::status<> BlobfsInspector::WriteSuperblock(Superblock superblock) {
 
 zx::status<> BlobfsInspector::WriteInodes(std::vector<Inode> inodes, uint64_t start_index) {
   uint64_t end_index = start_index + inodes.size();
-  // Since there are multiple inodes in a block, we first perform calculations
-  // to find the block range of only the desired inode range to load.
+  // Since there are multiple inodes in a block, we first perform calculations to find the block
+  // range of only the desired inode range to load.
   uint64_t start_block_offset = start_index / kBlobfsInodesPerBlock;
   uint64_t start_block = NodeMapStartBlock(superblock_) + start_block_offset;
-  // Because the end index is exclusive, we calculate the length based on
-  // end index - 1 to get the last inclusive value, and add 1 to the length
-  // to prevent off-by-one.
+  // Because the end index is exclusive, we calculate the length based on end index - 1 to get the
+  // last inclusive value, and add 1 to the length to prevent off-by-one.
   uint64_t block_length = (end_index - 1) / kBlobfsInodesPerBlock - start_block_offset + 1;
 
   auto result = buffer_factory_->CreateBuffer(block_length);
@@ -204,17 +199,16 @@ zx::status<> BlobfsInspector::WriteInodes(std::vector<Inode> inodes, uint64_t st
   }
   std::unique_ptr<storage::BlockBuffer> inode_buffer = result.take_value();
 
-  // We still need to perform a read in case the inode range to write is not
-  // aligned on block boundaries.
+  // We still need to perform a read in case the inode range to write is not aligned on block
+  // boundaries.
   zx_status_t status = loader_.RunReadOperation(inode_buffer.get(), 0, start_block, block_length);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Cannot load inodes. Error: " << zx_status_get_string(status);
     return zx::error(status);
   }
 
-  // Once loaded, we treat the buffer as the entire inode table and find the
-  // new start index relative to it being in the first block. The element count
-  // can be calculated normally.
+  // Once loaded, we treat the buffer as the entire inode table and find the new start index
+  // relative to it being in the first block. The element count can be calculated normally.
   uint64_t buffer_offset = start_index % kBlobfsInodesPerBlock;
   uint64_t count = end_index - start_index;
   for (uint64_t i = 0; i < count; ++i) {
@@ -254,13 +248,12 @@ zx::status<> BlobfsInspector::WriteJournalEntryBlocks(storage::BlockBuffer* buff
 zx::status<> BlobfsInspector::WriteDataBlockAllocationBits(bool value, uint64_t start_index,
                                                            uint64_t end_index) {
   ZX_ASSERT(end_index > start_index);
-  // Since there are multiple bits in a block, we first perform calculations
-  // to find the block range of only the desired bit range to load.
+  // Since there are multiple bits in a block, we first perform calculations to find the block range
+  // of only the desired bit range to load.
   uint64_t start_block_offset = start_index / kBlobfsBlockBits;
   uint64_t start_block = BlockMapBlocks(superblock_) + start_block_offset;
-  // Because the end index is exclusive, we calculate the length based on
-  // end index - 1 to get the last inclusive value, and add 1 to the length
-  // to prevent off-by-one.
+  // Because the end index is exclusive, we calculate the length based on end index - 1 to get the
+  // last inclusive value, and add 1 to the length to prevent off-by-one.
   uint64_t block_length = (end_index - 1) / kBlobfsBlockBits - start_block_offset + 1;
 
   auto result = buffer_factory_->CreateBuffer(block_length);
@@ -269,17 +262,16 @@ zx::status<> BlobfsInspector::WriteDataBlockAllocationBits(bool value, uint64_t 
   }
   std::unique_ptr<storage::BlockBuffer> bit_buffer = result.take_value();
 
-  // We still need to perform a read in case the bit range to write is not
-  // aligned on block boundaries.
+  // We still need to perform a read in case the bit range to write is not aligned on block
+  // boundaries.
   zx_status_t status = loader_.RunReadOperation(bit_buffer.get(), 0, start_block, block_length);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Cannot load allocation bits. Error: " << zx_status_get_string(status);
     return zx::error(status);
   }
 
-  // Once loaded, we treat the buffer as the entire bit bitmap and find the
-  // new start index relative to it being in the first block. The element count
-  // can be calculated normally.
+  // Once loaded, we treat the buffer as the entire bit bitmap and find the new start index relative
+  // to it being in the first block. The element count can be calculated normally.
   uint64_t buffer_offset = start_index % kBlobfsBlockBits;
   uint64_t count = end_index - start_index;
   std::vector<uint64_t> allocated_indices;

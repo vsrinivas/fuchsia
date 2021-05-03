@@ -47,9 +47,8 @@ void Runner::Shutdown(fs::Vfs::ShutdownCallback cb) {
   // Shutdown all external connections to blobfs.
   ManagedVfs::Shutdown([this, cb = std::move(cb)](zx_status_t status) mutable {
     async::PostTask(dispatcher(), [this, status, cb = std::move(cb)]() mutable {
-      // Manually destroy the filesystem. The promise of Shutdown is that no
-      // connections are active, and destroying the Runner object
-      // should terminate all background workers.
+      // Manually destroy the filesystem. The promise of Shutdown is that no connections are active,
+      // and destroying the Runner object should terminate all background workers.
       blobfs_ = nullptr;
 
       // Tell the mounting thread that the filesystem has terminated.
@@ -74,7 +73,7 @@ zx_status_t Runner::ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root, Serve
   // consistency from servers.
   auto inspect_tree = fbl::MakeRefCounted<fs::Service>(
       [connector =
-           inspect::MakeTreeHandler(blobfs_->Metrics()->inspector(), loop_->dispatcher(),
+           inspect::MakeTreeHandler(blobfs_->GetMetrics()->inspector(), loop_->dispatcher(),
                                     inspect::TreeHandlerSettings{.force_private_snapshot = true})](
           zx::channel chan) mutable {
         connector(fidl::InterfaceRequest<fuchsia::inspect::Tree>(std::move(chan)));

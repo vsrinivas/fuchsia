@@ -24,12 +24,10 @@ namespace blobfs {
 
 class QueryService;
 
-// A wrapper class around a "Blobfs" object which additionally manages
-// external IPC connections.
+// A wrapper class around a "Blobfs" object which additionally manages external IPC connections.
 //
-// Using this interface, a caller can initialize a Blobfs object and access
-// the filesystem hierarchy through the ulib/fs Vnode classes, but not modify
-// the internal structure of the filesystem.
+// Using this interface, a caller can initialize a Blobfs object and access the filesystem hierarchy
+// through the ulib/fs Vnode classes, but not modify the internal structure of the filesystem.
 class Runner : public VfsType {
  public:
   DISALLOW_COPY_ASSIGN_AND_MOVE(Runner);
@@ -44,8 +42,8 @@ class Runner : public VfsType {
   // fs::ManagedVfs interface.
   void Shutdown(fs::Vfs::ShutdownCallback closure) final;
 
-  // Serves the root directory of the filesystem using |root| as the server-end
-  // of an IPC connection.
+  // Serves the root directory of the filesystem using |root| as the server-end of an IPC
+  // connection.
   zx_status_t ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root, ServeLayout layout);
 
  private:

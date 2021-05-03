@@ -16,11 +16,10 @@
 
 namespace blobfs {
 
-// Allows traversing a collection of extents from an already-allocated node.
-// Partially validates containers as they are traversed.
+// Allows traversing a collection of extents from an already-allocated node. Partially validates
+// containers as they are traversed.
 //
-// This iterator is useful for accessing blobs which have already been written
-// to disk.
+// This iterator is useful for accessing blobs which have already been written to disk.
 class AllocatedExtentIterator : public ExtentIterator {
  public:
   AllocatedExtentIterator& operator=(const AllocatedExtentIterator&) = delete;
@@ -32,15 +31,10 @@ class AllocatedExtentIterator : public ExtentIterator {
   // |finder|.
   static zx::status<AllocatedExtentIterator> Create(NodeFinder* finder, uint32_t node_index);
 
-  ////////////////
   // ExtentIterator interface.
-
   bool Done() const final;
   zx::status<const Extent*> Next() final;
   uint64_t BlockIndex() const final;
-
-  ////////////////
-  // Other methods.
 
   // Returns the number of extents we've iterated past already.
   uint32_t ExtentIndex() const;

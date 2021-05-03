@@ -34,9 +34,9 @@ class BlobfsChecker {
   BlobfsChecker(const BlobfsChecker&) = delete;
   BlobfsChecker& operator=(const BlobfsChecker&) = delete;
 
-  // Check validates the blobfs filesystem provided when the Checker was
-  // constructed. It walks each of the inode and block allocation bitmaps
-  // only once.
+  // Check validates the blobfs filesystem provided when the Checker was constructed. It walks each
+  // of the inode and block allocation bitmaps only once.
+  //
   // Returns true if the filesystem is valid.
   bool Check();
 

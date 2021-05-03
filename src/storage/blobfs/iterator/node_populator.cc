@@ -58,8 +58,7 @@ zx_status_t NodePopulator::Walk(OnNodeCallback on_node, OnExtentCallback on_exte
     }
 
     if (next_container) {
-      // Acquire the next container node, and connect it to the
-      // previous node.
+      // Acquire the next container node, and connect it to the previous node.
       ReservedNode& node = nodes_[node_count + 1];
       uint32_t next = node.index();
       allocator_->MarkContainerNodeAllocated(std::move(node), node_index);

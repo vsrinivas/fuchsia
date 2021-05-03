@@ -39,7 +39,7 @@ TEST(ReadMetricsTest, UncompressedDiskRead) {
   inspect::Node metrics_node;
   ReadMetrics read_metrics(&metrics_node);
 
-  auto stats = read_metrics.GetSnapshot(CompressionAlgorithm::UNCOMPRESSED);
+  auto stats = read_metrics.GetSnapshot(CompressionAlgorithm::kUncompressed);
   EXPECT_EQ(stats.read_bytes, 0u);
   EXPECT_EQ(stats.read_ticks, 0);
 
@@ -47,11 +47,11 @@ TEST(ReadMetricsTest, UncompressedDiskRead) {
   const zx_ticks_t kReadDuration = 10 * ms;
 
   for (int i = 0; i < kNumOperations; i++) {
-    read_metrics.IncrementDiskRead(CompressionAlgorithm::UNCOMPRESSED, kReadBytes,
+    read_metrics.IncrementDiskRead(CompressionAlgorithm::kUncompressed, kReadBytes,
                                    zx::ticks(kReadDuration));
   }
 
-  stats = read_metrics.GetSnapshot(CompressionAlgorithm::UNCOMPRESSED);
+  stats = read_metrics.GetSnapshot(CompressionAlgorithm::kUncompressed);
   EXPECT_EQ(stats.read_bytes, kReadBytes * kNumOperations);
   EXPECT_EQ(stats.read_ticks, kReadDuration * kNumOperations);
 }
@@ -60,7 +60,7 @@ TEST(ReadMetricsTest, ChunkedDecompression) {
   inspect::Node metrics_node;
   ReadMetrics read_metrics(&metrics_node);
 
-  auto stats = read_metrics.GetSnapshot(CompressionAlgorithm::CHUNKED);
+  auto stats = read_metrics.GetSnapshot(CompressionAlgorithm::kChunked);
   EXPECT_EQ(stats.decompress_bytes, 0u);
   EXPECT_EQ(stats.decompress_ticks, 0);
 
@@ -68,11 +68,11 @@ TEST(ReadMetricsTest, ChunkedDecompression) {
   const zx_ticks_t kDecompressDuration = 10 * ms;
 
   for (int i = 0; i < kNumOperations; i++) {
-    read_metrics.IncrementDecompression(CompressionAlgorithm::CHUNKED, kDecompressBytes,
+    read_metrics.IncrementDecompression(CompressionAlgorithm::kChunked, kDecompressBytes,
                                         zx::ticks(kDecompressDuration), i % 2 == 1);
   }
 
-  stats = read_metrics.GetSnapshot(CompressionAlgorithm::CHUNKED);
+  stats = read_metrics.GetSnapshot(CompressionAlgorithm::kChunked);
   EXPECT_EQ(stats.decompress_bytes, kDecompressBytes * kNumOperations);
   EXPECT_EQ(stats.decompress_ticks, kDecompressDuration * kNumOperations);
   EXPECT_EQ(read_metrics.remote_decompressions(), kNumOperations / 2ul);

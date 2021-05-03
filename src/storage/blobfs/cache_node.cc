@@ -7,8 +7,6 @@
 #include "src/lib/digest/digest.h"
 #include "src/storage/blobfs/blob_cache.h"
 
-using digest::Digest;
-
 namespace blobfs {
 
 void CacheNode::fbl_recycle() {
@@ -16,18 +14,18 @@ void CacheNode::fbl_recycle() {
     // Migrate from the open cache to the closed cache, keeping the Vnode alive.
     //
     // If the node has already been evicted, it is destroyed.
-    Cache().Downgrade(this);
+    GetCache().Downgrade(this);
   } else {
     // Destroy blobs which don't want to be cached.
     //
     // If we're deleting this node, it must not exist in either hash.
-    Cache().EvictUnsafe(this, true);
+    GetCache().EvictUnsafe(this, true);
     ZX_DEBUG_ASSERT(!InContainer());
     delete this;
   }
 }
 
-CacheNode::CacheNode(VfsType* vfs, const Digest& digest,
+CacheNode::CacheNode(VfsType* vfs, const digest::Digest& digest,
                      std::optional<CachePolicy> override_cache_policy)
     : VnodeType(
 #if defined(ENABLE_BLOBFS_NEW_PAGER)

@@ -182,15 +182,15 @@ std::string GetCompressionAlgorithmName(CompressionAlgorithm compression_algorit
   // CompressionAlgorithmToString can't be used because it contains underscores which aren't
   // allowed in test names.
   switch (compression_algorithm) {
-    case CompressionAlgorithm::UNCOMPRESSED:
+    case CompressionAlgorithm::kUncompressed:
       return "Uncompressed";
-    case CompressionAlgorithm::LZ4:
+    case CompressionAlgorithm::kLz4:
       return "Lz4";
-    case CompressionAlgorithm::ZSTD:
+    case CompressionAlgorithm::kZstd:
       return "Zstd";
-    case CompressionAlgorithm::ZSTD_SEEKABLE:
+    case CompressionAlgorithm::kZstdSeekable:
       return "ZstdSeekable";
-    case CompressionAlgorithm::CHUNKED:
+    case CompressionAlgorithm::kChunked:
       return "Chunked";
   }
 }

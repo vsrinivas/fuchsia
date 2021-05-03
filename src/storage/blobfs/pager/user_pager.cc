@@ -448,7 +448,7 @@ PagerErrorStatus UserPager::Worker::TransferChunkedPages(UserPager::PageSupplier
                      << ": " << zx_status_get_string(decompress_status);
       return ToPagerErrorStatus(decompress_status);
     }
-    metrics_->paged_read_metrics().IncrementDecompression(CompressionAlgorithm::CHUNKED,
+    metrics_->paged_read_metrics().IncrementDecompression(CompressionAlgorithm::kChunked,
                                                           decompressed_size, ticker.End(),
                                                           decompressor_client_ != nullptr);
 

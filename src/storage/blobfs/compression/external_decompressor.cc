@@ -171,16 +171,16 @@ CompressionAlgorithm ExternalDecompressorClient::CompressionAlgorithmFidlToLocal
   using Fidl = fuchsia_blobfs_internal::wire::CompressionAlgorithm;
   switch (algorithm) {
     case Fidl::kUncompressed:
-      return CompressionAlgorithm::UNCOMPRESSED;
+      return CompressionAlgorithm::kUncompressed;
     case Fidl::kLz4:
-      return CompressionAlgorithm::LZ4;
+      return CompressionAlgorithm::kLz4;
     case Fidl::kZstd:
-      return CompressionAlgorithm::ZSTD;
+      return CompressionAlgorithm::kZstd;
     case Fidl::kZstdSeekable:
-      return CompressionAlgorithm::ZSTD_SEEKABLE;
+      return CompressionAlgorithm::kZstdSeekable;
     case Fidl::kChunked:
     case Fidl::kChunkedPartial:
-      return CompressionAlgorithm::CHUNKED;
+      return CompressionAlgorithm::kChunked;
   }
 }
 
@@ -188,15 +188,15 @@ fuchsia_blobfs_internal::wire::CompressionAlgorithm
 ExternalDecompressorClient::CompressionAlgorithmLocalToFidl(CompressionAlgorithm algorithm) {
   using Fidl = fuchsia_blobfs_internal::wire::CompressionAlgorithm;
   switch (algorithm) {
-    case CompressionAlgorithm::UNCOMPRESSED:
+    case CompressionAlgorithm::kUncompressed:
       return Fidl::kUncompressed;
-    case CompressionAlgorithm::LZ4:
+    case CompressionAlgorithm::kLz4:
       return Fidl::kLz4;
-    case CompressionAlgorithm::ZSTD:
+    case CompressionAlgorithm::kZstd:
       return Fidl::kZstd;
-    case CompressionAlgorithm::ZSTD_SEEKABLE:
+    case CompressionAlgorithm::kZstdSeekable:
       return Fidl::kZstdSeekable;
-    case CompressionAlgorithm::CHUNKED:
+    case CompressionAlgorithm::kChunked:
       return Fidl::kChunked;
   }
 }
@@ -205,12 +205,12 @@ zx::status<fuchsia_blobfs_internal::wire::CompressionAlgorithm>
 ExternalDecompressorClient::CompressionAlgorithmLocalToFidlForPartial(
     CompressionAlgorithm algorithm) {
   switch (algorithm) {
-    case CompressionAlgorithm::CHUNKED:
+    case CompressionAlgorithm::kChunked:
       return zx::ok(fuchsia_blobfs_internal::wire::CompressionAlgorithm::kChunkedPartial);
-    case CompressionAlgorithm::UNCOMPRESSED:
-    case CompressionAlgorithm::LZ4:
-    case CompressionAlgorithm::ZSTD:
-    case CompressionAlgorithm::ZSTD_SEEKABLE:
+    case CompressionAlgorithm::kUncompressed:
+    case CompressionAlgorithm::kLz4:
+    case CompressionAlgorithm::kZstd:
+    case CompressionAlgorithm::kZstdSeekable:
       return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 }

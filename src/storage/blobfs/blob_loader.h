@@ -53,7 +53,8 @@ class BlobLoader {
   // Creates a BlobLoader.
   static zx::status<BlobLoader> Create(TransactionManager* txn_manager,
                                        BlockIteratorProvider* block_iter_provider,
-                                       NodeFinder* node_finder, BlobfsMetrics* metrics,
+                                       NodeFinder* node_finder,
+                                       std::shared_ptr<BlobfsMetrics> metrics,
                                        bool sandbox_decompression);
 
   // Loads the merkle tree and data for the blob with index |node_index|.
@@ -84,8 +85,9 @@ class BlobLoader {
 
  private:
   BlobLoader(TransactionManager* txn_manager, BlockIteratorProvider* block_iter_provider,
-             NodeFinder* node_finder, BlobfsMetrics* metrics, fzl::OwnedVmoMapper read_mapper,
-             zx::vmo sandbox_vmo, std::unique_ptr<ExternalDecompressorClient> decompressor_client);
+             NodeFinder* node_finder, std::shared_ptr<BlobfsMetrics> metrics,
+             fzl::OwnedVmoMapper read_mapper, zx::vmo sandbox_vmo,
+             std::unique_ptr<ExternalDecompressorClient> decompressor_client);
 
   // Loads the merkle tree from disk and initializes a VMO mapping and BlobVerifier with the
   // contents. (Small blobs may have no stored tree, in which case |vmo_out| is not mapped but
@@ -133,7 +135,7 @@ class BlobLoader {
   TransactionManager* txn_manager_ = nullptr;
   BlockIteratorProvider* block_iter_provider_ = nullptr;
   NodeFinder* node_finder_ = nullptr;
-  BlobfsMetrics* metrics_ = nullptr;
+  std::shared_ptr<BlobfsMetrics> metrics_;
   fzl::OwnedVmoMapper read_mapper_;
   zx::vmo sandbox_vmo_;
   std::unique_ptr<ExternalDecompressorClient> decompressor_client_ = nullptr;

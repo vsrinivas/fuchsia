@@ -48,25 +48,22 @@ class BlobfsMetrics : public fs::MetricsTrait {
 
   // Print information about metrics to stdout.
   //
-  // TODO(fxbug.dev/31862): This is a stop-gap solution; long-term, this information
-  // should be extracted from devices.
+  // TODO(fxbug.dev/31862): This is a stop-gap solution; long-term, this information should be
+  // extracted from devices.
   void Dump();
 
-  // Begin collecting blobfs metrics. Metrics collection is not implicitly enabled
-  // with the creation of a "BlobfsMetrics" object.
+  // Begin collecting blobfs metrics. Metrics collection is not implicitly enabled with the creation
+  // of a "BlobfsMetrics" object.
   void Collect();
   bool Collecting() const { return cobalt_metrics_.IsEnabled(); }
 
-  // Updates aggregate information about the total number of created
-  // blobs since mounting.
+  // Updates aggregate information about the total number of created blobs since mounting.
   void UpdateAllocation(uint64_t size_data, const fs::Duration& duration);
 
-  // Updates aggregate information about the number of blobs opened
-  // since mounting.
+  // Updates aggregate information about the number of blobs opened since mounting.
   void UpdateLookup(uint64_t size);
 
-  // Updates aggregates information about blobs being written back
-  // to blobfs since mounting.
+  // Updates aggregates information about blobs being written back to blobfs since mounting.
   void UpdateClientWrite(uint64_t data_size, uint64_t merkle_size,
                          const fs::Duration& enqueue_duration,
                          const fs::Duration& generate_duration);
@@ -87,20 +84,20 @@ class BlobfsMetrics : public fs::MetricsTrait {
   // This method must only be called from the blobfs main thread.
   void IncrementMerkleDiskRead(uint64_t read_size, fs::Duration read_duration);
 
-  // Increments the frequency count for blocks in the range [|offset|, |offset| + |length|).
-  // This method must only be called from the pager thread.
+  // Increments the frequency count for blocks in the range [|offset|, |offset| + |length|). This
+  // method must only be called from the pager thread.
   // NOTE: This method is a NOP unless |BLOBFS_ENABLE_PAGE_IN_METRICS| compiler flag
   // has been set in the BUILD.gn
   void IncrementPageIn(const fbl::String& merkle_hash, uint64_t offset, uint64_t length);
 
-  // Accessors for ReadMetrics. The metrics objects returned are NOT thread-safe.
-  // The metrics objects are to be used by exactly one thread (main or pager).
-  // Used to increment relevant metrics from the blobfs main thread and the user pager thread.
+  // Accessors for ReadMetrics. The metrics objects returned are NOT thread-safe. The metrics
+  // objects are to be used by exactly one thread (main or pager). Used to increment relevant
+  // metrics from the blobfs main thread and the user pager thread.
   ReadMetrics& paged_read_metrics() { return paged_read_metrics_; }
   ReadMetrics& unpaged_read_metrics() { return unpaged_read_metrics_; }
 
-  // Accessor for VerificationMetrics. This metrics object is thread-safe.
-  // Used to increment relevant metrics from the blobfs main thread and the user pager thread.
+  // Accessor for VerificationMetrics. This metrics object is thread-safe. Used to increment
+  // relevant metrics from the blobfs main thread and the user pager thread.
   // The |BlobfsMetrics| class is not thread-safe except for this accessor.
   VerificationMetrics& verification_metrics() { return verification_metrics_; }
 

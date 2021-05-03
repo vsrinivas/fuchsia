@@ -17,13 +17,14 @@
 
 namespace blobfs {
 
-BlobVerifier::BlobVerifier(BlobfsMetrics* metrics) : metrics_(metrics) {}
+BlobVerifier::BlobVerifier(std::shared_ptr<BlobfsMetrics> metrics) : metrics_(std::move(metrics)) {}
 
-zx_status_t BlobVerifier::Create(digest::Digest digest, BlobfsMetrics* metrics, const void* merkle,
-                                 size_t merkle_size, BlobLayoutFormat blob_layout_format,
-                                 size_t data_size, const BlobCorruptionNotifier* notifier,
+zx_status_t BlobVerifier::Create(digest::Digest digest, std::shared_ptr<BlobfsMetrics> metrics,
+                                 const void* merkle, size_t merkle_size,
+                                 BlobLayoutFormat blob_layout_format, size_t data_size,
+                                 const BlobCorruptionNotifier* notifier,
                                  std::unique_ptr<BlobVerifier>* out) {
-  std::unique_ptr<BlobVerifier> verifier(new BlobVerifier(metrics));
+  std::unique_ptr<BlobVerifier> verifier(new BlobVerifier(std::move(metrics)));
   verifier->digest_ = std::move(digest);
   verifier->corruption_notifier_ = notifier;
   verifier->tree_verifier_.SetUseCompactFormat(
@@ -48,11 +49,12 @@ zx_status_t BlobVerifier::Create(digest::Digest digest, BlobfsMetrics* metrics, 
   return ZX_OK;
 }
 
-zx_status_t BlobVerifier::CreateWithoutTree(digest::Digest digest, BlobfsMetrics* metrics,
+zx_status_t BlobVerifier::CreateWithoutTree(digest::Digest digest,
+                                            std::shared_ptr<BlobfsMetrics> metrics,
                                             size_t data_size,
                                             const BlobCorruptionNotifier* notifier,
                                             std::unique_ptr<BlobVerifier>* out) {
-  std::unique_ptr<BlobVerifier> verifier(new BlobVerifier(metrics));
+  std::unique_ptr<BlobVerifier> verifier(new BlobVerifier(std::move(metrics)));
   verifier->digest_ = std::move(digest);
   verifier->corruption_notifier_ = notifier;
   zx_status_t status = verifier->tree_verifier_.SetDataLength(data_size);

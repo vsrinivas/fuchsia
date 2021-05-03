@@ -18,19 +18,19 @@ namespace blobfs {
 zx_status_t Decompressor::Create(CompressionAlgorithm algorithm,
                                  std::unique_ptr<Decompressor>* out) {
   switch (algorithm) {
-    case CompressionAlgorithm::LZ4:
+    case CompressionAlgorithm::kLz4:
       *out = std::make_unique<LZ4Decompressor>();
       break;
-    case CompressionAlgorithm::ZSTD:
+    case CompressionAlgorithm::kZstd:
       *out = std::make_unique<ZSTDDecompressor>();
       break;
-    case CompressionAlgorithm::ZSTD_SEEKABLE:
+    case CompressionAlgorithm::kZstdSeekable:
       *out = std::make_unique<ZSTDSeekableDecompressor>();
       break;
-    case CompressionAlgorithm::CHUNKED:
+    case CompressionAlgorithm::kChunked:
       *out = std::make_unique<ChunkedDecompressor>();
       break;
-    case CompressionAlgorithm::UNCOMPRESSED:
+    case CompressionAlgorithm::kUncompressed:
       ZX_DEBUG_ASSERT(false);
       return ZX_ERR_NOT_SUPPORTED;
   }

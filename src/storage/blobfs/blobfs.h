@@ -72,11 +72,9 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
 
   // Creates a blobfs object with the default compression algorithm.
   //
-  // The dispatcher should be for the current thread that blobfs is running on.
-  //
-  // The vfs is required for paging but can be null in host configurations.
-  //
-  // The optional root VM resource is needed to create executable blobs. See vmex_resource() getter.
+  // The dispatcher should be for the current thread that blobfs is running on. The vfs is required
+  // for paging but can be null in host configurations. The optional root VM resource is needed to
+  // create executable blobs. See vmex_resource() getter.
   static zx::status<std::unique_ptr<Blobfs>> Create(async_dispatcher_t* dispatcher,
                                                     std::unique_ptr<BlockDevice> device,
                                                     VfsType* vfs = nullptr,
@@ -93,21 +91,17 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
 
   pager::UserPager* pager() const { return pager_.get(); }
 
-  ////////////////
   // TransactionManager's fs::TransactionHandler interface.
   //
   // Allows transmitting read and write transactions directly to the underlying storage.
-
   uint64_t BlockNumberToDevice(uint64_t block_num) const final {
     return block_num * kBlobfsBlockSize / block_info_.block_size;
   }
-
   block_client::BlockDevice* GetDevice() final { return block_device_.get(); }
-  ////////////////
+
   // TransactionManager's SpaceManager interface.
   //
   // Allows viewing and controlling the size of the underlying volume.
-
   const Superblock& Info() const final { return info_; }
   zx_status_t BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out) final;
   zx_status_t BlockDetachVmo(storage::Vmoid vmoid) final;
@@ -117,31 +111,25 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   // Returns filesystem specific information.
   void GetFilesystemInfo(FilesystemInfo* info) const;
 
-  ////////////////
   // TransactionManager interface.
   //
   // Allows attaching VMOs, controlling the underlying volume, and sending transactions to the
   // underlying storage (optionally through the journal).
+  std::shared_ptr<BlobfsMetrics>& GetMetrics() final { return metrics_; }
+  fs::Journal* GetJournal() final { return journal_.get(); }
 
-  BlobfsMetrics* Metrics() final { return metrics_.get(); }
-  fs::Journal* journal() final;
-  Writability writability() const { return writability_; }
-
-  ////////////////
   // BlockIteratorProvider interface.
   //
   // Allows clients to acquire a block iterator for a given node index.
-
   zx::status<BlockIterator> BlockIteratorByNodeIndex(uint32_t node_index) final;
-
-  ////////////////
-  // Other methods.
 
   static constexpr size_t WriteBufferBlockCount() {
     // Hardcoded to 10 MB; may be replaced by a more device-specific option
     // in the future.
     return 10 * (1 << 20) / kBlobfsBlockSize;
   }
+
+  Writability writability() const { return writability_; }
 
   // Returns the dispatcher for the current thread that blobfs uses.
   async_dispatcher_t* dispatcher() { return dispatcher_; }
@@ -163,7 +151,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   // Acts as a special-case to bootstrap filesystem mounting.
   zx_status_t OpenRootNode(fbl::RefPtr<fs::Vnode>* out);
 
-  BlobCache& Cache() { return blob_cache_; }
+  BlobCache& GetCache() { return blob_cache_; }
 
   zx_status_t Readdir(fs::VdirCookie* cookie, void* dirents, size_t len, size_t* out_actual);
 
@@ -193,7 +181,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   void PersistBlocks(const ReservedExtent& reserved_extent, BlobTransaction& transaction);
 
   bool ShouldCompress() const {
-    return write_compression_settings_.compression_algorithm != CompressionAlgorithm::UNCOMPRESSED;
+    return write_compression_settings_.compression_algorithm != CompressionAlgorithm::kUncompressed;
   }
 
   // Optional root VM resource. This is necessary to allow executable blobs to be created. It will
@@ -350,7 +338,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   // by inspecting its koid.
   uint64_t fs_id_legacy_ = 0;
 
-  std::shared_ptr<BlobfsMetrics> metrics_;
+  std::shared_ptr<BlobfsMetrics> metrics_;  // Guaranteed non-null.
 
   std::unique_ptr<pager::UserPager> pager_;
   std::optional<CachePolicy> pager_backed_cache_policy_;

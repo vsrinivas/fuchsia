@@ -22,8 +22,8 @@ class ZSTDCompressor : public Compressor {
  public:
   static uint32_t InodeHeaderCompressionFlags() { return kBlobFlagZSTDCompressed; }
 
-  // Returns the maximum possible size a buffer would need to be
-  // in order to compress data of size |input_length|.
+  // Returns the maximum possible size a buffer would need to be in order to compress data of size
+  // |input_length|.
   static size_t BufferMax(size_t input_length);
 
   static zx_status_t Create(CompressionSettings settings, size_t input_size,
@@ -31,7 +31,6 @@ class ZSTDCompressor : public Compressor {
                             std::unique_ptr<ZSTDCompressor>* out);
   ~ZSTDCompressor();
 
-  ////////////////////////////////////////
   // Compressor interface
   size_t Size() const final;
   zx_status_t Update(const void* input_data, size_t input_length) final;

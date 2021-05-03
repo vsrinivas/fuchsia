@@ -29,7 +29,7 @@ class TestNode : public CacheNode, fbl::Recyclable<TestNode> {
 
   void fbl_recycle() final { CacheNode::fbl_recycle(); }
 
-  BlobCache& Cache() final { return *cache_; }
+  BlobCache& GetCache() final { return *cache_; }
 
   bool ShouldCache() const final { return should_cache_; }
 

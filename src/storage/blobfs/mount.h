@@ -37,16 +37,15 @@ enum class ServeLayout {
 enum class Writability {
   // Do not write to persistent storage under any circumstances whatsoever.
   ReadOnlyDisk,
-  // Do not allow users of the filesystem to mutate filesystem state. This
-  // state allows the journal to replay while initializing writeback.
+  // Do not allow users of the filesystem to mutate filesystem state. This state allows the journal
+  // to replay while initializing writeback.
   ReadOnlyFilesystem,
   // Permit all operations.
   Writable,
 };
 
-// Time between each Cobalt flush.
-// Flushing data too frequently leads to collecting large amount of data in
-// cobalt.
+// Time between each Cobalt flush. Flushing data too frequently leads to collecting large amount of
+// data in cobalt.
 constexpr uint32_t kMetricsFlushTimeMinutes = 5;
 constexpr zx::duration kMetricsFlushTime = zx::min(kMetricsFlushTimeMinutes);
 
@@ -55,10 +54,11 @@ struct MountOptions {
   Writability writability = Writability::Writable;
   bool verbose = false;
   bool metrics = false;
-  // Default cache policy.
   CachePolicy cache_policy = CachePolicy::EvictImmediately;
+
   // Optional overriden cache policy for pager-backed blobs.
   std::optional<CachePolicy> pager_backed_cache_policy = std::nullopt;
+
   CompressionSettings compression_settings{};
   bool sandbox_decompression = false;
 #ifndef NDEBUG
