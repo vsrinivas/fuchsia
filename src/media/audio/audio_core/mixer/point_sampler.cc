@@ -29,6 +29,38 @@ class PointSamplerImpl : public PointSampler {
            bool accumulate) override;
 
  private:
+  // Although selected by enum Resampler::SampleAndHold, the PointSampler implementation is actually
+  // "nearest neighbor", and specifically "forward nearest neighbor" because for a sampling position
+  // exactly midway between two source frames, we choose the newer one. Thus pos_width and neg_width
+  // are both approximately kHalfFrame, but pos_width > neg_width.
+  //
+  // If this implementation were actually "sample and hold", pos_width would be 0 and neg_width
+  // would be kOneFrame.raw_value() - 1.
+  //
+  // Why isn't this a truly "zero-phase" implementation? Here's why:
+  // For zero-phase, both filter widths are kHalfFrame.raw_value(), and to sample exactly midway
+  // between two source frames we return their AVERAGE. This makes a nearest-neighbor resampler
+  // truly zero-phase at ALL rate-conversion ratios, even though at that one particular position
+  // (exactly halfway bewtween frames) it behaves differently than it does for other positions:
+  // at that position it actually behaves like a linear-interpolation resampler by returning a
+  // "blur" of two neighbors. As with a linear resampler, this decreases output response at higher
+  // frequencies, but only to the extent that this resampler encounters that exact position. For
+  // arbitrary rate-conversion ratios, this effect is negligible, thus zero-phase point samplers are
+  // generally preferred to other implementation types such as strict "sample and hold".
+  // HOWEVER, in our system we use PointSampler only for UNITY rate-conversion. Thus if it needs to
+  // output a frame from a position exactly halfway between two source frames, it will likely need
+  // to do so for EVERY frame in that stream, leading to that stream sounding muffled or indistinct
+  // (from reduced high frequency content). This might be more frequently triggered by certain
+  // circumstances, but in (arguably) the worst-case scenario this would occur perhaps once out of
+  // every 8192 times (our fractional position precision).
+  //
+  // For this reason, we arbitrarily choose the forward source frame rather than averaging.
+  // Assuming that we continue limiting PointSampler to only UNITY rate-conversion scenarios, one
+  // could reasonably argue that "sample and hold" would actually be optimal: phase is moot for 1:1
+  // sampling so we receive no benefit from the additional half-frame of latency.
+  //
+
+  //
   // As an optimization, we work with raw fixed-point values internally, but we pass Fixed types
   // through our public interfaces (to MixStage etc.) for source position/filter width/step size.
   static constexpr int64_t kFracPositiveFilterWidth = kHalfFrame.raw_value();

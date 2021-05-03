@@ -16,62 +16,65 @@
 namespace media::audio::mixer {
 namespace {
 
-std::unique_ptr<Mixer> SelectSincSampler(
-    int32_t source_channels, int32_t dest_channels, int32_t source_frame_rate,
-    int32_t dest_frame_rate, fuchsia::media::AudioSampleFormat source_format,
-    fuchsia::media::AudioSampleFormat dest_format = fuchsia::media::AudioSampleFormat::FLOAT) {
-  fuchsia::media::AudioStreamType source_stream_type;
-  source_stream_type.channels = source_channels;
-  source_stream_type.frames_per_second = source_frame_rate;
-  source_stream_type.sample_format = source_format;
+class SincSamplerTest : public testing::Test {
+ protected:
+  std::unique_ptr<Mixer> SelectSincSampler(
+      int32_t source_channels, int32_t dest_channels, int32_t source_frame_rate,
+      int32_t dest_frame_rate, fuchsia::media::AudioSampleFormat source_format,
+      fuchsia::media::AudioSampleFormat dest_format = fuchsia::media::AudioSampleFormat::FLOAT) {
+    fuchsia::media::AudioStreamType source_stream_type;
+    source_stream_type.channels = source_channels;
+    source_stream_type.frames_per_second = source_frame_rate;
+    source_stream_type.sample_format = source_format;
 
-  fuchsia::media::AudioStreamType dest_stream_type;
-  dest_stream_type.channels = dest_channels;
-  dest_stream_type.frames_per_second = dest_frame_rate;
-  dest_stream_type.sample_format = dest_format;
+    fuchsia::media::AudioStreamType dest_stream_type;
+    dest_stream_type.channels = dest_channels;
+    dest_stream_type.frames_per_second = dest_frame_rate;
+    dest_stream_type.sample_format = dest_format;
 
-  return Mixer::Select(source_stream_type, dest_stream_type, Mixer::Resampler::WindowedSinc);
-}
+    return Mixer::Select(source_stream_type, dest_stream_type, Mixer::Resampler::WindowedSinc);
+  }
 
-// These are common frame rates, not the only supported rates
-const int32_t kFrameRates[] = {
-    8000,  11025, 16000, 22050, 24000,  32000,
-    44100, 48000, 88200, 96000, 176400, fuchsia::media::MAX_PCM_FRAMES_PER_SECOND,
+  // These are common frame rates, not the only supported rates
+  static constexpr int32_t kFrameRates[] = {
+      8000,  11025, 16000, 22050, 24000,  32000,
+      44100, 48000, 88200, 96000, 176400, fuchsia::media::MAX_PCM_FRAMES_PER_SECOND,
+  };
+
+  static constexpr int32_t kUnsupportedFrameRates[] = {
+      fuchsia::media::MIN_PCM_FRAMES_PER_SECOND - 1, fuchsia::media::MAX_PCM_FRAMES_PER_SECOND + 1};
+
+  static constexpr std::pair<int32_t, int32_t> kChannelConfigs[] = {
+      {1, 1}, {1, 2}, {1, 3}, {1, 4},  // Valid channel
+      {2, 1}, {2, 2}, {2, 3}, {2, 4},  // configurations
+      {3, 1}, {3, 2}, {3, 3},          // for SincSampler
+      {4, 1}, {4, 2}, {4, 4},
+  };
+
+  static constexpr std::pair<int32_t, int32_t> kUnsupportedChannelConfigs[] = {
+      {0, 0},                          //
+      {1, 0}, {1, 5}, {1, 8}, {1, 9},  // Unsupported channel
+      {2, 0}, {2, 5}, {2, 8}, {2, 9},  // channel
+      {3, 4}, {3, 5}, {3, 8}, {3, 9},  // configurations --
+      {4, 3}, {4, 5}, {4, 7}, {4, 9},  // maximum number of
+      {5, 1}, {5, 5},                  // channels is 8.
+      {9, 0}, {9, 1}, {9, 9},
+  };
+
+  static constexpr fuchsia::media::AudioSampleFormat kFormats[] = {
+      fuchsia::media::AudioSampleFormat::UNSIGNED_8,
+      fuchsia::media::AudioSampleFormat::SIGNED_16,
+      fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32,
+      fuchsia::media::AudioSampleFormat::FLOAT,
+  };
+
+  static constexpr fuchsia::media::AudioSampleFormat kInvalidFormat =
+      static_cast<fuchsia::media::AudioSampleFormat>(
+          static_cast<int64_t>(kFormats[std::size(kFormats) - 1]) + 1);
 };
-
-const int32_t kUnsupportedFrameRates[] = {fuchsia::media::MIN_PCM_FRAMES_PER_SECOND - 1,
-                                          fuchsia::media::MAX_PCM_FRAMES_PER_SECOND + 1};
-
-const std::pair<int32_t, int32_t> kChannelConfigs[] = {
-    {1, 1}, {1, 2}, {1, 3}, {1, 4},  // Valid channel
-    {2, 1}, {2, 2}, {2, 3}, {2, 4},  // configurations
-    {3, 1}, {3, 2}, {3, 3},          // for SincSampler
-    {4, 1}, {4, 2}, {4, 4},
-};
-
-const std::pair<int32_t, int32_t> kUnsupportedChannelConfigs[] = {
-    {0, 0},                          //
-    {1, 0}, {1, 5}, {1, 8}, {1, 9},  // Unsupported channel
-    {2, 0}, {2, 5}, {2, 8}, {2, 9},  // channel
-    {3, 4}, {3, 5}, {3, 8}, {3, 9},  // configurations --
-    {4, 3}, {4, 5}, {4, 7}, {4, 9},  // maximum number of
-    {5, 1}, {5, 5},                  // channels is 8.
-    {9, 0}, {9, 1}, {9, 9},
-};
-
-const fuchsia::media::AudioSampleFormat kFormats[] = {
-    fuchsia::media::AudioSampleFormat::UNSIGNED_8,
-    fuchsia::media::AudioSampleFormat::SIGNED_16,
-    fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32,
-    fuchsia::media::AudioSampleFormat::FLOAT,
-};
-
-const fuchsia::media::AudioSampleFormat kInvalidFormat =
-    static_cast<fuchsia::media::AudioSampleFormat>(
-        static_cast<int64_t>(kFormats[std::size(kFormats) - 1]) + 1);
 
 // These formats are supported
-TEST(SincSamplerTest, Construction) {
+TEST_F(SincSamplerTest, Construction) {
   // Try every combination of the above
   for (auto channel_config : kChannelConfigs) {
     for (auto source_rate : kFrameRates) {
@@ -87,7 +90,7 @@ TEST(SincSamplerTest, Construction) {
 }
 
 // These formats are unsupported
-TEST(SincSamplerTest, Construction_UnsupportedRates) {
+TEST_F(SincSamplerTest, Construction_UnsupportedRates) {
   for (auto good_rate : kFrameRates) {
     for (auto bad_rate : kUnsupportedFrameRates) {
       // Use channel configs and formats that are known-good.
@@ -124,7 +127,7 @@ TEST(SincSamplerTest, Construction_UnsupportedRates) {
   }
 }
 
-TEST(SincSamplerTest, Construction_UnsupportedChannelConfig) {
+TEST_F(SincSamplerTest, Construction_UnsupportedChannelConfig) {
   for (auto bad_channel_config : kUnsupportedChannelConfigs) {
     // Use rates and formats that are known-good.
     auto source_rate = kFrameRates[0];
@@ -149,7 +152,7 @@ TEST(SincSamplerTest, Construction_UnsupportedChannelConfig) {
   }
 }
 
-TEST(SincSamplerTest, Construction_UnsupportedFormat) {
+TEST_F(SincSamplerTest, Construction_UnsupportedFormat) {
   // Use channel configs and rates that are known-good.
   auto channel_config = kChannelConfigs[0];
   auto source_rate = kFrameRates[0];
@@ -164,38 +167,36 @@ TEST(SincSamplerTest, Construction_UnsupportedFormat) {
                                        dest_rate, bad_format));
 }
 
-// Test that position advances as it should
-TEST(SincSamplerTest, SamplingPosition_Basic) {
-  auto mixer = SelectSincSampler(1, 1, 48000, 48000, fuchsia::media::AudioSampleFormat::FLOAT);
+class SincSamplerOutputTest : public SincSamplerTest {
+ protected:
+  // Based on an arbitrary near-zero source position (-1/128), with a sinc curve for unity rate
+  // conversion, we use data values calculated so that if these first 13 values (the filter's
+  // negative wing) are ignored, we expect a generated output value of kValueWithoutPreviousFrames.
+  // If they are NOT ignored, then we expect the result kValueWithPreviousFrames.
+  static constexpr float kSource[] = {
+      1330.10897, -1330.10897, 1330.10897, -1330.10897, 1330.10897, -1330.10897,
+      1330.10897, -1330.10897, 1330.10897, -1330.10897, 1330.10897, -1330.10897,
+      1330.10897,  // ... source frames to satisfy negative filter width.
+      -10.001010,  // Center source frame
+      268.88298,   // Source frames to satisfy positive filter width ...
+      -268.88298, 268.88298,   -268.88298, 268.88298,   -268.88298, 268.88298,
+      -268.88298, 268.88298,   -268.88298, 268.88298,   -268.88298, 268.88298,
+  };
+  static constexpr Fixed kMixOneFrameSourceOffset = ffl::FromRatio(1, 128);
+  // The center frame should contribute -10.0, the positive wing -5.0, and the negative wing +25.0.
+  static constexpr float kValueWithoutPreviousFrames = -15.0;
+  static constexpr float kValueWithPreviousFrames = 10.0;
 
-  EXPECT_EQ(mixer->pos_filter_width().raw_value(), SincFilter::kFracSideLength - 1);
-  EXPECT_EQ(mixer->neg_filter_width().raw_value(), SincFilter::kFracSideLength - 1);
-
-  bool do_not_accum = false;
-  bool source_is_consumed;
-  float source[] = {1.0f,  2.0f,  3.0f,  4.0f,  5.0f,  6.0f,  7.0f,  8.0f,  9.0f,  10.0f,
-                    11.0f, 12.0f, 13.0f, 14.0f, 15.0f, 16.0f, 17.0f, 18.0f, 19.0f, 20.0f};
-  const int64_t source_frames = std::size(source);
-  Fixed source_offset = ffl::FromRatio(3, 4);
-
-  float dest[40];
-  const int64_t dest_frames = std::size(dest);
-  int64_t dest_offset = 0;
-
-  // Pass in 20 frames
-  source_is_consumed = mixer->Mix(dest, dest_frames, &dest_offset, source, source_frames,
-                                  &source_offset, do_not_accum);
-  EXPECT_TRUE(source_is_consumed);
-  EXPECT_GE(source_offset + mixer->pos_filter_width(), Fixed(source_frames));
-  EXPECT_EQ(dest_offset, source_offset.Floor());
-}
+  float MixOneFrame(std::unique_ptr<Mixer>& mixer, Fixed source_offset);
+};
 
 // Validate the "seam" between buffers, at unity rate-conversion
-TEST(SincSamplerTest, SamplingValues_DC_Unity) {
+TEST_F(SincSamplerOutputTest, UnityConstant) {
   constexpr int32_t kSourceRate = 44100;
   constexpr int32_t kDestRate = 44100;
   auto mixer =
       SelectSincSampler(1, 1, kSourceRate, kDestRate, fuchsia::media::AudioSampleFormat::FLOAT);
+  ASSERT_NE(mixer, nullptr);
 
   bool do_not_accum = false;
   bool source_is_consumed;
@@ -236,11 +237,12 @@ TEST(SincSamplerTest, SamplingValues_DC_Unity) {
 }
 
 // Validate the "seam" between buffers, while down-sampling
-TEST(SincSamplerTest, SamplingValues_DC_DownSample) {
+TEST_F(SincSamplerOutputTest, DownSampleConstant) {
   constexpr int32_t kSourceRate = 48000;
   constexpr int32_t kDestRate = 44100;
   auto mixer =
       SelectSincSampler(1, 1, kSourceRate, kDestRate, fuchsia::media::AudioSampleFormat::FLOAT);
+  ASSERT_NE(mixer, nullptr);
 
   bool do_not_accum = false;
   bool source_is_consumed;
@@ -283,11 +285,12 @@ TEST(SincSamplerTest, SamplingValues_DC_DownSample) {
 }
 
 // Validate the "seam" between buffers, while up-sampling
-TEST(SincSamplerTest, SamplingValues_DC_UpSample) {
+TEST_F(SincSamplerOutputTest, UpSampleConstant) {
   constexpr int32_t kSourceRate = 12000;
   constexpr int32_t kDestRate = 48000;
   auto mixer =
       SelectSincSampler(1, 1, kSourceRate, kDestRate, fuchsia::media::AudioSampleFormat::FLOAT);
+  ASSERT_NE(mixer, nullptr);
 
   bool do_not_accum = false;
   bool source_is_consumed;
@@ -330,29 +333,10 @@ TEST(SincSamplerTest, SamplingValues_DC_UpSample) {
   }
 }
 
-// Based on an arbitrary near-zero source position (-1/128), with a sinc curve for unity rate
-// conversion, we use data values calculated so that if these first 13 values (the filter's negative
-// wing) are ignored, we expect a generated output value of kValueWithoutPreviousFrames.
-// If they are NOT ignored, then we expect the result kValueWithPreviousFrames.
-constexpr float kSource[] = {
-    // clang-format off
-     1330.10897, -1330.10897, 1330.10897, -1330.10897, 1330.10897, -1330.10897,
-     1330.10897, -1330.10897, 1330.10897, -1330.10897, 1330.10897, -1330.10897,
-     1330.10897,  // ... source frames to satisfy negative filter width.
-    -10.001010,   // Center source frame
-     268.88298,   // Source frames to satisfy positive filter width ...
-    -268.88298,    268.88298, -268.88298,   268.88298, -268.88298,   268.88298,
-    -268.88298,    268.88298, -268.88298,   268.88298, -268.88298,   268.88298,
-    //clang-format on
-};
-constexpr Fixed kMixOneFrameSourceOffset = ffl::FromRatio(1, 128);
-// The center frame should contribute -10.0, the positive wing -5.0, and the negative wing +25.0.
-constexpr float kValueWithoutPreviousFrames = -15.0;
-constexpr float kValueWithPreviousFrames = 10.0;
-
 // Mix a single frame of output based on kSource[0]. Producing a frame for position 0 requires
 // neg_width previous frames, kSource[0] itself, and pos_width frames beyond kSource[0].
-float MixOneFrame(std::unique_ptr<Mixer>& mixer, Fixed source_offset) {
+// Used by tests that do simple mixing and need not inspect the returned position values.
+float SincSamplerOutputTest::MixOneFrame(std::unique_ptr<Mixer>& mixer, Fixed source_offset) {
   auto neg_width = mixer->neg_filter_width().Floor();
   auto pos_width = mixer->pos_filter_width().Floor();
   EXPECT_NE(Fixed(pos_width).raw_value() + 1, mixer->neg_filter_width().raw_value())
@@ -369,14 +353,15 @@ float MixOneFrame(std::unique_ptr<Mixer>& mixer, Fixed source_offset) {
   EXPECT_EQ(dest_offset, 1u) << "No output frame was produced";
 
   FX_LOGS(INFO) << "Coefficients " << std::setprecision(12) << kSource[12] << " " << kSource[13]
-      << " " << kSource[14] << ", value " << dest;
+                << " " << kSource[14] << ", value " << dest;
 
   return dest;
 }
 
 // Mix a single frame, without any previously-cached data.
-TEST(SincSamplerTest, SamplingValues_MixOne_NoCache) {
+TEST_F(SincSamplerOutputTest, MixOneNoCache) {
   auto mixer = SelectSincSampler(1, 1, 44100, 44100, fuchsia::media::AudioSampleFormat::FLOAT);
+  ASSERT_NE(mixer, nullptr);
 
   // Mix a single frame. We use a slightly non-zero position because at true 0, only the sample
   // (not the positive or negative wings) are used. In this case we not provided previous frames.
@@ -387,8 +372,9 @@ TEST(SincSamplerTest, SamplingValues_MixOne_NoCache) {
 }
 
 // Mix a single frame, with previously-cached data.
-TEST(SincSamplerTest, SamplingValues_MixOne_WithCache) {
+TEST_F(SincSamplerOutputTest, MixOneWithCache) {
   auto mixer = SelectSincSampler(1, 1, 44100, 44100, fuchsia::media::AudioSampleFormat::FLOAT);
+  ASSERT_NE(mixer, nullptr);
   auto neg_width = mixer->neg_filter_width().Floor();
 
   // Now, populate the cache with previous frames, instead of using default (silence) values.
@@ -416,8 +402,9 @@ TEST(SincSamplerTest, SamplingValues_MixOne_WithCache) {
 // Mix a single frame, after feeding the cache with previous data, one frame at a time.
 // Specifying source_offset >= 0 guarantees that the cached source data will be shifted
 // appropriately, so that subsequent Mix() calls can correctly use that data.
-TEST(SincSamplerTest, SamplingValues_MixOne_CachedFrameByFrame) {
+TEST_F(SincSamplerOutputTest, MixFrameByFrameCached) {
   auto mixer = SelectSincSampler(1, 1, 44100, 44100, fuchsia::media::AudioSampleFormat::FLOAT);
+  ASSERT_NE(mixer, nullptr);
   auto neg_width = mixer->neg_filter_width().Floor();
 
   // Now, populate the cache with previous data, one frame at a time.
@@ -440,6 +427,386 @@ TEST(SincSamplerTest, SamplingValues_MixOne_CachedFrameByFrame) {
 
   // If we incorrectly shifted/retained even a single frame of the above data, this won't match.
   EXPECT_FLOAT_EQ(dest, kValueWithPreviousFrames) << std::setprecision(12) << dest;
+}
+
+// Tests of the SincSampler's advancing of source and dest position. These tests do not use
+// meaningful source data values, nor check the values of the data returned from Mix. Only the
+// change in source_offset and dest_offset (and the Mix() return value) are evaluated.
+class SincSamplerPositionTest : public SincSamplerTest {
+ protected:
+  void TestFractionalPositionAtFrameBoundary(bool mute);
+  void TestFractionalPositionJustBeforeFrameBoundary(bool mute);
+  void TestSourceOffsetAtEnd(bool mute);
+  void TestRateModulo(bool include_rate_modulo, bool mute);
+  void TestPositionModuloFromZeroNoRollover(bool mute);
+  void TestPositionModuloFromNonZeroNoRollover(bool mute);
+  void TestPositionModuloFromZeroRollover(bool mute);
+  void TestPositionModuloFromNonZeroRollover(bool mute);
+  void TestSourcePosModuloExactRolloverForCompletion(bool mute);
+};
+
+TEST_F(SincSamplerPositionTest, FilterWidth) {
+  auto mixer = SelectSincSampler(1, 1, 48000, 48000, fuchsia::media::AudioSampleFormat::FLOAT);
+  ASSERT_NE(mixer, nullptr);
+
+  EXPECT_EQ(mixer->pos_filter_width().raw_value(), SincFilter::kFracSideLength - 1);
+  EXPECT_EQ(mixer->neg_filter_width().raw_value(), SincFilter::kFracSideLength - 1);
+}
+
+// Test basic position advancing, for integer rate and same-sized source and dest buffers.
+TEST_F(SincSamplerPositionTest, SameFrameRate) {
+  auto mixer = SelectSincSampler(1, 1, 48000, 48000, fuchsia::media::AudioSampleFormat::FLOAT);
+  ASSERT_NE(mixer, nullptr);
+
+  std::array<float, 50> source{0.0f};
+  const int64_t source_frames = 20;
+  Fixed source_offset = ffl::FromRatio(3, 4);
+
+  std::array<float, 50> accum{0.0f};
+  const int64_t dest_frames = accum.size();
+  int64_t dest_offset = 0;
+
+  int64_t expect_advance =
+      Fixed(Fixed(source_frames) - mixer->pos_filter_width() - source_offset).Ceiling();
+  Fixed expect_source_offset = source_offset + Fixed(expect_advance);
+  int64_t expect_dest_offset = dest_offset + expect_advance;
+
+  // Pass in 20 frames
+  bool source_is_consumed = mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(),
+                                       source_frames, &source_offset, false);
+  EXPECT_TRUE(source_is_consumed);
+  EXPECT_EQ(dest_offset, expect_dest_offset);
+  EXPECT_EQ(source_offset, expect_source_offset);
+}
+
+// When talking about amounts of supply and demand ("has" and "wants"), we automatically include
+// pos_filter_width for clarity, rather than explicitly mentioning this each time. Thus if setting
+// source_offset to "Fixed(source_frames - 4) - mixer->pos_filter_width()", we consider this exactly
+// 4 frames before the end of the source buffer, so we say "Source (offset 46.00 of 50) has 4."
+// Also, for purposes of comparing supply and demand, fractional source amounts can be rounded up:
+// something like "Source (offset 0.3 of 3) has 2.7(3)" means we can sample at 0.3, 1.3 and 2.3.
+
+// For SincSampler, test sample placement when given fractional position offsets. We test on both
+// sides of the boundary between "do we have enough source data to produce the next frame?"
+// These tests use fractional offsets, still with a step_size of ONE.
+//
+// Check: factoring in positive filter width, source position is exactly at a frame boundary.
+//
+// Position accounting uses different code when muted, so also run these position tests when muted.
+void SincSamplerPositionTest::TestFractionalPositionAtFrameBoundary(bool mute) {
+  auto mixer = SelectSincSampler(1, 1, 44100, 44100, fuchsia::media::AudioSampleFormat::SIGNED_16);
+  ASSERT_NE(mixer, nullptr);
+
+  // Source (offset 46.00 of 50) has 4. Dest (offset 1 of 10) wants 9. Expect to advance by 4.
+  std::array<float, 50> source{0.0f};
+  int64_t source_frames = source.size();
+  Fixed source_offset = Fixed(source_frames - 4) - mixer->pos_filter_width();
+
+  std::array<float, 10> accum{0.0f};
+  int64_t dest_frames = accum.size();
+  int64_t dest_offset = 1;
+
+  int64_t expect_advance = 4;
+  Fixed expect_source_offset = source_offset + Fixed(expect_advance);
+  int64_t expect_dest_offset = dest_offset + expect_advance;
+
+  auto& info = mixer->bookkeeping();
+  info.gain.SetSourceGain(mute ? Gain::kMinGainDb : Gain::kUnityGainDb);
+  bool mix_result = mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(),
+                               source_frames, &source_offset, true);
+
+  EXPECT_TRUE(mix_result);
+  EXPECT_EQ(dest_offset, expect_dest_offset);
+  EXPECT_EQ(source_offset, expect_source_offset) << ffl::String::DecRational << source_offset;
+}
+TEST_F(SincSamplerPositionTest, FractionalPositionAtFrameBoundary) {
+  TestFractionalPositionAtFrameBoundary(false);
+}
+TEST_F(SincSamplerPositionTest, FractionalPositionAtFrameBoundaryMute) {
+  TestFractionalPositionAtFrameBoundary(true);
+}
+
+// Check: factoring in positive filter width, source position is just short of a frame boundary.
+// Thus we should consume an additional frame, compared to the previous testcase.
+//
+// Position accounting uses different code when muted, so also run these position tests when muted.
+void SincSamplerPositionTest::TestFractionalPositionJustBeforeFrameBoundary(bool mute) {
+  auto mixer = SelectSincSampler(1, 1, 44100, 44100, fuchsia::media::AudioSampleFormat::SIGNED_16);
+  ASSERT_NE(mixer, nullptr);
+
+  // Source (offset 45.99 of 50) has 4.01(5). Dest (offset 1 of 10) wants 9. Expect to advance by 5.
+  std::array<float, 50> source{0.0f};
+  int64_t source_frames = source.size();
+  Fixed source_offset = Fixed(source_frames - 4) - mixer->pos_filter_width() - Fixed::FromRaw(1);
+
+  std::array<float, 10> accum{0.0f};
+  int64_t dest_frames = accum.size();
+  int64_t dest_offset = 1;
+
+  int64_t expect_advance = 5;
+  Fixed expect_source_offset = source_offset + Fixed(expect_advance);
+  int64_t expect_dest_offset = dest_offset + expect_advance;
+
+  auto& info = mixer->bookkeeping();
+  info.gain.SetSourceMute(mute);
+  bool mix_result = mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(),
+                               source_frames, &source_offset, true);
+
+  EXPECT_TRUE(mix_result);
+  EXPECT_EQ(dest_offset, expect_dest_offset);
+  EXPECT_EQ(source_offset, expect_source_offset) << ffl::String::DecRational << source_offset;
+}
+TEST_F(SincSamplerPositionTest, FractionalPositionJustBeforeFrameBoundary) {
+  TestFractionalPositionJustBeforeFrameBoundary(false);
+}
+TEST_F(SincSamplerPositionTest, FractionalPositionJustBeforeFrameBoundaryMute) {
+  TestFractionalPositionJustBeforeFrameBoundary(true);
+}
+
+// When frac_source_pos is at the end (or within pos_filter_width) of the source buffer, the sampler
+// should not mix additional frames (neither dest_offset nor source_offset should be advanced).
+//
+// Position accounting uses different code when muted, so also run these position tests when muted.
+void SincSamplerPositionTest::TestSourceOffsetAtEnd(bool mute) {
+  auto mixer = SelectSincSampler(1, 1, 44100, 44100, fuchsia::media::AudioSampleFormat::FLOAT);
+  ASSERT_NE(mixer, nullptr);
+
+  std::array<float, 50> source{0.0f};
+  int64_t source_frames = source.size();
+  Fixed source_offset = Fixed(source.size()) - mixer->pos_filter_width();
+  const auto initial_source_offset = source_offset;
+
+  std::array<float, 50> accum{0.0f};
+  int64_t dest_frames = accum.size();
+  int64_t dest_offset = 0;
+
+  auto& info = mixer->bookkeeping();
+  info.step_size = kOneFrame;
+
+  info.gain.SetSourceGain(mute ? Gain::kMinGainDb : Gain::kUnityGainDb);
+  EXPECT_TRUE(mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames,
+                         &source_offset, false));
+  EXPECT_EQ(dest_offset, 0);
+  EXPECT_EQ(source_offset, initial_source_offset);
+  EXPECT_EQ(accum[0], 0.0f);
+}
+TEST_F(SincSamplerPositionTest, SourceOffsetAtEnd) { TestSourceOffsetAtEnd(false); }
+TEST_F(SincSamplerPositionTest, SourceOffsetAtEndMute) { TestSourceOffsetAtEnd(true); }
+
+// Validate that RateModulo is taken into account, in position calculations.
+//
+// Position accounting uses different code when muted, so also run these position tests when muted.
+void SincSamplerPositionTest::TestRateModulo(bool include_rate_modulo, bool mute) {
+  auto mixer = SelectSincSampler(1, 1, 32000, 48000, fuchsia::media::AudioSampleFormat::SIGNED_16);
+  ASSERT_NE(mixer, nullptr);
+
+  // Provide the entire large source buffer, so that Mix will be limited by the dest amount.
+  std::array<float, 50> source{0.0f};
+  int64_t source_frames = source.size();
+  auto source_offset = Fixed(0);
+  auto expect_source_offset = Fixed(2);
+
+  std::array<float, 3> accum{0.0f};
+  int64_t dest_frames = accum.size();
+  int64_t dest_offset = 0;
+
+  auto& info = mixer->bookkeeping();
+  info.step_size = (kOneFrame * 2) / 3;
+
+  if (include_rate_modulo) {
+    info.SetRateModuloAndDenominator(Fixed(2).raw_value() - info.step_size.raw_value() * 3, 3);
+    info.source_pos_modulo = 0;
+    ASSERT_EQ(info.rate_modulo(),
+              static_cast<uint64_t>(Fixed(Fixed(2) - (info.step_size * 3)).raw_value()));
+  }
+
+  info.gain.SetSourceMute(mute);
+  mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames, &source_offset,
+             false);
+
+  EXPECT_EQ(dest_offset, dest_frames);
+  if (include_rate_modulo) {
+    EXPECT_EQ(source_offset, expect_source_offset);
+  } else {
+    EXPECT_LT(source_offset, expect_source_offset);
+  }
+}
+// We run the above check without, and then with, rate_modulo.
+TEST_F(SincSamplerPositionTest, WithoutRateModulo) { TestRateModulo(false, false); }
+TEST_F(SincSamplerPositionTest, WithoutRateModuloMute) { TestRateModulo(false, true); }
+TEST_F(SincSamplerPositionTest, RateModulo) { TestRateModulo(true, false); }
+TEST_F(SincSamplerPositionTest, RateModuloMute) { TestRateModulo(true, true); }
+
+// For "almost-but-not-rollover" cases, we generate 3 output samples, leaving source and dest at pos
+// 3 and source_pos_modulo at 9999/10000.
+
+// Case: source_pos_modulo starts at zero, extending to almost-but-not-quite-rollover.
+//
+// Position accounting uses different code when muted, so also run these position tests when muted.
+void SincSamplerPositionTest::TestPositionModuloFromZeroNoRollover(bool mute) {
+  auto mixer = SelectSincSampler(1, 1, 44100, 44100, fuchsia::media::AudioSampleFormat::FLOAT);
+  ASSERT_NE(mixer, nullptr);
+
+  std::array<float, 50> source{0.0f};
+  int64_t source_frames = source.size();
+  Fixed source_offset = Fixed(0);
+
+  std::array<float, 3> accum{0.0f};
+  int64_t dest_frames = accum.size();
+  int64_t dest_offset = 0;
+
+  auto& info = mixer->bookkeeping();
+  info.step_size = kOneFrame;
+  info.SetRateModuloAndDenominator(3333, 10000);
+  info.source_pos_modulo = 0;
+
+  info.gain.SetSourceGain(mute ? Gain::kMinGainDb : Gain::kUnityGainDb);
+  mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames, &source_offset,
+             false);
+  EXPECT_EQ(dest_offset, dest_frames);
+  EXPECT_EQ(source_offset, Fixed(3)) << ffl::String::DecRational << source_offset;
+  EXPECT_EQ(info.source_pos_modulo, 9999u);
+}
+TEST_F(SincSamplerPositionTest, SourcePosModuloFromZeroAlmostRollover) {
+  TestPositionModuloFromZeroNoRollover(false);
+}
+TEST_F(SincSamplerPositionTest, SourcePosModuloFromZeroAlmostRolloverMute) {
+  TestPositionModuloFromZeroNoRollover(true);
+}
+
+// Same as above (ending at one less than rollover), starting source_pos_modulo at a non-zero value.
+void SincSamplerPositionTest::TestPositionModuloFromNonZeroNoRollover(bool mute) {
+  auto mixer = SelectSincSampler(1, 1, 44100, 44100, fuchsia::media::AudioSampleFormat::FLOAT);
+  ASSERT_NE(mixer, nullptr);
+
+  std::array<float, 50> source{0.0f};
+  int64_t source_frames = source.size();  // mix amount is constrained by dest availability
+  Fixed source_offset = Fixed(0);
+
+  std::array<float, 3> accum{0.0f};
+  int64_t dest_frames = accum.size();
+  int64_t dest_offset = 0;
+
+  auto& info = mixer->bookkeeping();
+  info.step_size = kOneFrame;
+  info.SetRateModuloAndDenominator(3332, 10000);
+  info.source_pos_modulo = 3;
+
+  info.gain.SetSourceMute(mute);
+  mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames, &source_offset,
+             false);
+  EXPECT_EQ(dest_offset, dest_frames);
+  EXPECT_EQ(source_offset, Fixed(3)) << ffl::String::DecRational << source_offset;
+  EXPECT_EQ(info.source_pos_modulo, 9999u);
+}
+TEST_F(SincSamplerPositionTest, SourcePosModuloFromNonZeroAlmostRollover) {
+  TestPositionModuloFromNonZeroNoRollover(false);
+}
+TEST_F(SincSamplerPositionTest, SourcePosModuloFromNonZeroAlmostRolloverMute) {
+  TestPositionModuloFromNonZeroNoRollover(true);
+}
+
+// These "exact-rollover" cases generate 2 frames, ending at source pos 3, source_pos_mod 0/10000.
+//
+// Position accounting uses different code when muted, so also run these position tests when muted.
+void SincSamplerPositionTest::TestPositionModuloFromZeroRollover(bool mute) {
+  auto mixer = SelectSincSampler(1, 1, 44100, 44100, fuchsia::media::AudioSampleFormat::FLOAT);
+  ASSERT_NE(mixer, nullptr);
+
+  std::array<float, 50> source{0.0f};
+  int64_t source_frames = source.size();  // mix amount is constrained by dest availability
+  Fixed source_offset = Fixed(1) - Fixed::FromRaw(1);
+
+  std::array<float, 3> accum{0.0f};
+  int64_t dest_frames = accum.size();
+  int64_t dest_offset = 1;
+
+  auto& info = mixer->bookkeeping();
+  info.step_size = kOneFrame;
+  info.SetRateModuloAndDenominator(5000, 10000);
+  info.source_pos_modulo = 0;
+
+  info.gain.SetSourceGain(mute ? Gain::kMinGainDb : Gain::kUnityGainDb);
+  mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames, &source_offset,
+             false);
+  EXPECT_EQ(dest_offset, static_cast<int64_t>(dest_frames));
+  EXPECT_EQ(source_offset, Fixed(3)) << ffl::String::DecRational << source_offset;
+  EXPECT_EQ(info.source_pos_modulo, 0u);
+}
+TEST_F(SincSamplerPositionTest, SourcePosModuloFromZeroExactRollover) {
+  TestPositionModuloFromZeroRollover(false);
+}
+TEST_F(SincSamplerPositionTest, SourcePosModuloFromZeroExactRolloverMute) {
+  TestPositionModuloFromZeroRollover(true);
+}
+
+// Same as above (ending at exactly the rollover point), starting source_pos_modulo at non-zero.
+void SincSamplerPositionTest::TestPositionModuloFromNonZeroRollover(bool mute) {
+  auto mixer = SelectSincSampler(1, 1, 44100, 44100, fuchsia::media::AudioSampleFormat::FLOAT);
+  ASSERT_NE(mixer, nullptr);
+
+  std::array<float, 50> source{0.0f};
+  int64_t source_frames = source.size();  // mix amount is constrained by dest availability
+  Fixed source_offset = Fixed(1) - Fixed::FromRaw(1);
+
+  std::array<float, 3> accum{0.0f};
+  int64_t dest_frames = accum.size();
+  int64_t dest_offset = 1;
+
+  auto& info = mixer->bookkeeping();
+  info.step_size = kOneFrame;
+  info.SetRateModuloAndDenominator(3332, 10000);
+  info.source_pos_modulo = 3336;
+
+  info.gain.SetSourceMute(mute);
+  mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames, &source_offset,
+             false);
+  EXPECT_EQ(dest_offset, dest_frames);
+  EXPECT_EQ(source_offset, Fixed(3)) << ffl::String::DecRational << source_offset;
+  EXPECT_EQ(info.source_pos_modulo, 0u);
+}
+TEST_F(SincSamplerPositionTest, SourcePosModuloFromNonZeroExactRollover) {
+  TestPositionModuloFromNonZeroRollover(false);
+}
+TEST_F(SincSamplerPositionTest, SourcePosModuloFromNonZeroExactRolloverMute) {
+  TestPositionModuloFromNonZeroRollover(true);
+}
+
+// For SincSampler, validate a source_pos_modulo rollover precisely before the source buffer's end.
+// Example: source_offset starts at 8.000+2/3 (of 10), with rate 0.999+2/3. After two dest frames,
+// source_offset is 9.998+6/3 == exactly 10, so we cannot consume an additional frame.
+//
+// Position accounting uses different code when muted, so also run these position tests when muted.
+void SincSamplerPositionTest::TestSourcePosModuloExactRolloverForCompletion(bool mute) {
+  auto mixer = SelectSincSampler(1, 1, 44100, 44100, fuchsia::media::AudioSampleFormat::FLOAT);
+  ASSERT_NE(mixer, nullptr);
+
+  std::array<float, 10> source{0.0f};
+  int64_t source_frames = source.size();
+  Fixed source_offset = Fixed(source_frames) - Fixed(2) - mixer->pos_filter_width();
+
+  std::array<float, 3> accum{0.0f};
+  int64_t dest_frames = accum.size();
+  int64_t dest_offset = 0;
+
+  auto& info = mixer->bookkeeping();
+  info.step_size = kOneFrame - Fixed::FromRaw(1);
+  info.SetRateModuloAndDenominator(2, 3);
+  info.source_pos_modulo = 2;
+
+  info.gain.SetSourceGain(mute ? Gain::kMinGainDb : Gain::kUnityGainDb);
+  mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames, &source_offset,
+             false);
+  EXPECT_EQ(dest_offset, 2);
+  EXPECT_EQ(source_offset, Fixed(Fixed(source_frames) - mixer->pos_filter_width()))
+      << ffl::String::DecRational << source_offset;
+  EXPECT_EQ(info.source_pos_modulo, 0u);
+}
+TEST_F(SincSamplerPositionTest, SourcePosModuloExactRolloverCausesEarlyComplete) {
+  TestSourcePosModuloExactRolloverForCompletion(false);
+}
+TEST_F(SincSamplerPositionTest, SourcePosModuloExactRolloverCausesEarlyCompleteMute) {
+  TestSourcePosModuloExactRolloverForCompletion(true);
 }
 
 }  // namespace

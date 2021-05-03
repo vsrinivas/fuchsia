@@ -65,6 +65,7 @@ class PointSamplerTest : public testing::Test {
   }
 
   // Use the supplied mixer to mix without SRC. Assumes no accumulation, but can be overridden.
+  // Used by tests that do simple mixing and need not inspect the returned position values.
   void DoMix(Mixer* mixer, const void* source_buf, float* accum_buf, bool accumulate,
              int64_t num_frames, float gain_db = Gain::kUnityGainDb) {
     ASSERT_NE(mixer, nullptr);
@@ -678,6 +679,230 @@ TEST_F(PointSamplerScalingTest, Precision) {
   DoMix(mixer.get(), max_source.data(), accum.data(), true, accum.size(), kMaxGainDbMute);
 
   EXPECT_THAT(accum, Pointwise(FloatEq(), min_expect));
+}
+
+//
+// Timing (Resampling) tests
+//
+// Sync/timing correctness, to the sample level
+// Verify correct FROM and TO locations, and quantity.
+//
+// Each test contains cases that exercise different code paths within the
+// samplers.  A mix job's length is limited by the quantities of source data and
+// output needed -- whichever is smaller. For this reason, we explicitly note
+// places where we check "supply > demand", vs. "demand > supply", vs. "supply
+// == demand". We used the PointSampler in earlier tests, so we already know
+// "Supply == Demand" works there. When setting up each case, the so-called
+// "supply" is determined by source_frames, and source_offset (into those frames).
+// Likewise "demand" is determined by dest_frames and dest_offset into
+// dest_frames.
+
+// Verify that the samplers mix to/from correct buffer locations. Also ensure
+// that they don't touch other buffer sections, regardless of 'accumulate'.
+// This first test uses integer lengths/offsets, and a step_size of ONE.
+class PointSamplerPositionTest : public PointSamplerTest {};
+
+// Check: source supply equals destination demand.
+TEST_F(PointSamplerPositionTest, BasicEqualSourceDest) {
+  bool mix_result;
+
+  auto mixer = SelectPointSampler(1, 1, 48000, 48000, fuchsia::media::AudioSampleFormat::SIGNED_16);
+  ASSERT_NE(mixer, nullptr);
+
+  std::array<int16_t, 5> source{-0x00AA, 0x00BB, -0x00CC, 0x00DD, -0x00EE};
+  int64_t source_frames = source.size();
+  auto source_offset = Fixed(2);
+
+  int64_t dest_frames = 4;
+  int64_t dest_offset = 1;
+
+  // Source (offset 2 of 5) has 3. Destination (offset 1 of 4) wants 3.
+  // Mix will sum source[2,3,4] to accum[1,2,3]
+  std::vector<float> accum{0x1100, -0x2200, 0x3300, -0x4400, 0x5500};
+  std::vector<float> expect{0x1100, -0x22CC, 0x33DD, -0x44EE, 0x5500};
+  ShiftRightBy(accum, 15);
+  ShiftRightBy(expect, 15);
+
+  mix_result = mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames,
+                          &source_offset, true);
+
+  EXPECT_TRUE(mix_result);
+  EXPECT_EQ(dest_offset, dest_frames);
+  EXPECT_EQ(source_offset, Fixed(source_frames)) << std::hex << source_offset.raw_value();
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
+}
+
+// Check: source supply exceeds destination demand.
+TEST_F(PointSamplerPositionTest, BasicSourceExceedsDemand) {
+  bool mix_result;
+
+  auto mixer = SelectPointSampler(1, 1, 48000, 48000, fuchsia::media::AudioSampleFormat::SIGNED_16);
+  ASSERT_NE(mixer, nullptr);
+
+  std::array<int16_t, 5> source{-0x00AA, 0x00BB, -0x00CC, 0x00DD, -0x00EE};
+  int64_t source_frames = source.size();
+  auto source_offset = Fixed(0);
+
+  int64_t dest_frames = 3;
+  int64_t dest_offset = 1;
+
+  // Source (offset 0 of 5) has 5. Destination (offset 1 of 3) wants 2.
+  // Mix will sum source[0,1] to accum[1,2]
+  std::vector<float> accum{0x1100, -0x2200, 0x3300, -0x4400, 0x5500};
+  std::vector<float> expect{0x1100, -0x22AA, 0x33BB, -0x4400, 0x5500};
+  ShiftRightBy(accum, 15);
+  ShiftRightBy(expect, 15);
+
+  mix_result = mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames,
+                          &source_offset, true);
+
+  EXPECT_FALSE(mix_result);
+  EXPECT_EQ(dest_offset, dest_frames);
+  EXPECT_EQ(source_offset, Fixed(2)) << std::hex << source_offset.raw_value();
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
+}
+
+// Check: destination demand exceeds source supply.
+TEST_F(PointSamplerPositionTest, BasicDestExceedsSource) {
+  bool mix_result;
+
+  auto mixer = SelectPointSampler(1, 1, 48000, 48000, fuchsia::media::AudioSampleFormat::SIGNED_16);
+  ASSERT_NE(mixer, nullptr);
+
+  std::array<int16_t, 5> source{-0x00AA, 0x00BB, -0x00CC, 0x00DD, -0x00EE};
+  int64_t source_frames = 4;
+  auto source_offset = Fixed(3);
+
+  int64_t dest_frames = 5;
+  int64_t dest_offset = 0;
+
+  // Source (offset 3 of 4) has 1. Destination (offset 0 of 5) wants 5.
+  // Mix will sum source[3] to accum[0]
+  std::vector<float> accum{0x1100, -0x2200, 0x3300, -0x4400, 0x5500};
+  std::vector<float> expect{0x11DD, -0x2200, 0x3300, -0x4400, 0x5500};
+  ShiftRightBy(accum, 15);
+  ShiftRightBy(expect, 15);
+
+  mix_result = mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames,
+                          &source_offset, true);
+
+  EXPECT_TRUE(mix_result);
+  EXPECT_EQ(dest_offset, 1);
+  EXPECT_EQ(source_offset, Fixed(source_frames)) << std::hex << source_offset.raw_value();
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
+}
+
+// Validate basic (frame-level) position for SampleAndHold resampler.
+
+// For PointSampler, test sample placement when given fractional position.
+// Ensure it doesn't touch other buffer sections, regardless of 'accumulate'
+// flag. Check when supply > demand and vice versa (we already know = works).
+// These tests use fractional lengths/offsets, still with a step_size of ONE.
+//
+// Check: after factoring-in positive filter width, source position is exactly at a frame boundary.
+TEST_F(PointSamplerPositionTest, FractionalPositionAtFrameBoundary) {
+  auto mixer = SelectPointSampler(1, 1, 44100, 44100, fuchsia::media::AudioSampleFormat::SIGNED_16);
+
+  ASSERT_NE(mixer, nullptr);
+
+  // To accommodate "sample-and-hold" or "nearest-neighbor" implementations without changing this
+  // test, we expressly factor-in positive width. Our starting position is in the range (1.0, 2.0],
+  // where this guarantees that Source has 3. Destination (offset 1 of 3) wants 2.
+  Fixed source_offset = Fixed(2) - mixer->pos_filter_width();
+  Fixed expect_source_offset = source_offset + Fixed(2);
+  std::array<int16_t, 5> source{-0x00AA, 0x00BB, -0x00CC, 0x00DD, -0x00EE};
+  int64_t source_frames = source.size();
+
+  int64_t dest_frames = 3;
+  int64_t dest_offset = 1;
+  // We set position so that for fractional source[1:2, 2:3], PointSampler will choose source[2,3].
+  // Thus Mix will sum source[2,3] into accum[1,2].
+  std::vector<float> accum{0x1100, -0x2200, 0x3300, -0x4400, 0x5500};
+  std::vector<float> expect{0x1100, -0x22CC, 0x33DD, -0x4400, 0x5500};
+  ShiftRightBy(accum, 15);
+  ShiftRightBy(expect, 15);
+
+  bool mix_result = mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(),
+                               source_frames, &source_offset, true);
+
+  EXPECT_FALSE(mix_result);
+  EXPECT_EQ(dest_offset, dest_frames);
+  EXPECT_EQ(source_offset, expect_source_offset) << std::hex << source_offset.raw_value();
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
+}
+
+// Check: factoring-in positive filter width, source position is just short of a frame boundary.
+TEST_F(PointSamplerPositionTest, FractionalPositionJustBeforeFrameBoundary) {
+  auto mixer = SelectPointSampler(1, 1, 44100, 44100, fuchsia::media::AudioSampleFormat::SIGNED_16);
+
+  ASSERT_NE(mixer, nullptr);
+
+  // To accommodate "sample-and-hold" or "nearest-neighbor" implementations without changing this
+  // test, we expressly factor-in positive width. Our starting position is in the range [1.0, 2.0),
+  // where this guarantees that Source has 4. Destination (offset 2 of 4) wants 2.
+  Fixed source_offset = Fixed(2) - mixer->pos_filter_width() - Fixed::FromRaw(1);
+  Fixed expect_source_offset = source_offset + Fixed(2);
+  std::array<int16_t, 5> source{-0x00AA, 0x00BB, -0x00CC, 0x00DD, -0x00EE};
+  int64_t source_frames = source.size();
+
+  int64_t dest_frames = 4;
+  int64_t dest_offset = 2;
+  // We set position so that for fractional source[1:2, 2:3], PointSampler will choose source[1,2].
+  // Thus Mix will sum source[1,2] into accum[2,3].
+  std::vector<float> accum{0x1100, -0x2200, 0x3300, -0x4400, 0x5500};
+  std::vector<float> expect{0x1100, -0x2200, 0x33BB, -0x44CC, 0x5500};
+  ShiftRightBy(accum, 15);
+  ShiftRightBy(expect, 15);
+
+  bool mix_result = mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(),
+                               source_frames, &source_offset, true);
+
+  EXPECT_FALSE(mix_result);
+  EXPECT_EQ(dest_offset, dest_frames);
+  EXPECT_EQ(source_offset, expect_source_offset) << std::hex << source_offset.raw_value();
+  EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
+}
+
+// When setting the frac_source_pos to a value that is at the end (or within pos_filter_width) of
+// the source buffer, the sampler should not mix additional frames (neither dest_offset nor
+// source_offset should be advanced).
+TEST_F(PointSamplerPositionTest, SourceOffsetAtEnd) {
+  auto mixer = SelectPointSampler(1, 1, 44100, 44100, fuchsia::media::AudioSampleFormat::FLOAT);
+  ASSERT_NE(mixer, nullptr);
+
+  std::array<float, 4> source{1.0f, 1.0f, 1.0f, 1.0f};
+  Fixed source_offset = Fixed(std::size(source)) - mixer->pos_filter_width();
+  const auto initial_source_offset = source_offset;
+
+  std::array<float, 4> accum{0.0f};
+  int64_t dest_offset = 0;
+
+  auto& info = mixer->bookkeeping();
+  info.step_size = kOneFrame;
+
+  EXPECT_TRUE(mixer->Mix(accum.data(), accum.size(), &dest_offset, source.data(), source.size(),
+                         &source_offset, false));
+  EXPECT_EQ(dest_offset, 0);
+  EXPECT_EQ(source_offset, initial_source_offset);
+  EXPECT_EQ(accum[0], 0.0f);
+}
+
+// Verify PointSampler filter width. Current implementation is "FORWARD nearest neighbor".
+// In other words, when exactly midway between two source frames, we sample the NEWER one.
+TEST_F(PointSamplerPositionTest, FilterWidth) {
+  int64_t expect_pos_width = kHalfFrame.raw_value();
+  int64_t expect_neg_width = kHalfFrame.raw_value() - 1;
+
+  auto mixer =
+      SelectPointSampler(1, 1, 48000, 48000, fuchsia::media::AudioSampleFormat::UNSIGNED_8);
+
+  EXPECT_EQ(mixer->pos_filter_width().raw_value(), expect_pos_width);
+  EXPECT_EQ(mixer->neg_filter_width().raw_value(), expect_neg_width);
+
+  mixer->Reset();
+
+  EXPECT_EQ(mixer->pos_filter_width().raw_value(), expect_pos_width);
+  EXPECT_EQ(mixer->neg_filter_width().raw_value(), expect_neg_width);
 }
 
 }  // namespace

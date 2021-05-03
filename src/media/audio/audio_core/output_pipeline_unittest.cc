@@ -509,7 +509,6 @@ TEST_F(OutputPipelineTest, UpdateEffect) {
 // SampleAndHold resampler. Because we compare actual duration to expected duration down to the
 // nanosec, the amount of delay in our test effects is carefully chosen and may be brittle.
 TEST_F(OutputPipelineTest, ReportPresentationDelay) {
-  constexpr int64_t kMixLeadTimeFrames = 1;
   constexpr int64_t kEffects1LeadTimeFrames = 300;
   constexpr int64_t kEffects2LeadTimeFrames = 900;
 
@@ -572,8 +571,11 @@ TEST_F(OutputPipelineTest, ReportPresentationDelay) {
   // different lead times since they have different effects (with different latencies) applied.
   auto default_stream =
       std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_manager());
-  pipeline->AddInput(default_stream, StreamUsage::WithRenderUsage(RenderUsage::MEDIA), std::nullopt,
-                     Mixer::Resampler::SampleAndHold);
+  auto default_mixer =
+      pipeline->AddInput(default_stream, StreamUsage::WithRenderUsage(RenderUsage::MEDIA),
+                         std::nullopt, Mixer::Resampler::SampleAndHold);
+  const int64_t kMixLeadTimeFrames = default_mixer->pos_filter_width().Ceiling();
+
   auto communications_stream =
       std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_manager());
   pipeline->AddInput(communications_stream,

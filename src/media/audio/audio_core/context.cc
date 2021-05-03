@@ -23,7 +23,7 @@ namespace media::audio {
 namespace {
 
 // All audio renderer buffers will need to fit within this VMAR. We want to choose a size here large
-// enough that will accomodate all the mappings required by all clients while also being small
+// enough that will accommodate all the mappings required by all clients while also being small
 // enough to avoid unnecessary page table fragmentation.
 constexpr size_t kAudioRendererVmarSize = 16ull * 1024 * 1024 * 1024;
 constexpr zx_vm_option_t kAudioRendererVmarFlags =

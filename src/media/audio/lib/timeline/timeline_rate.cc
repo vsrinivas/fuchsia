@@ -152,7 +152,7 @@ TimelineRate TimelineRate::Product(TimelineRate a, TimelineRate b, bool exact) {
 // static
 // Scales a reference value by a given rate, returning kOverflow if the result exceeds an int64_t.
 //
-// Internally, our int128_t can accomodate all possible [int64 * uint64] values (and then some).
+// Internally, our int128_t can accommodate all possible [int64 * uint64] values (and then some).
 // INT64_MIN * UINT64_MAX == INT128MIN     + INT64_MIN                 : plenty of room to spare
 // INT64_MAX * UINT64_MAX == UINT128_MAX   - (UINT64_MAX + INT64_MAX)  : even more extra space
 //

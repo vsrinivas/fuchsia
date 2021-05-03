@@ -505,12 +505,8 @@ class MicroSrcPipelineTest : public ClockSyncPipelineTest {
   }
 
   double NumFramesOutput(int32_t clock_slew_ppm, int64_t num_frames_input) override {
-    auto num_frames_output =
-        static_cast<double>(num_frames_input) * (1e6 / (1e6 + static_cast<double>(clock_slew_ppm)));
-
-    FX_LOGS(INFO) << "Returning " << num_frames_output << " NumFramesOutput for " << clock_slew_ppm
-                  << " ppm and " << num_frames_input << " NumFramesInput";
-    return num_frames_output;
+    return static_cast<double>(num_frames_input) *
+           (1e6 / (1e6 + static_cast<double>(clock_slew_ppm)));
   }
 };
 
@@ -539,9 +535,6 @@ class AdjustableClockPipelineTest : public ClockSyncPipelineTest {
   }
 
   double NumFramesOutput(int32_t clock_slew_ppm, int64_t num_frames_input) override {
-    FX_LOGS(INFO) << "Returning " << static_cast<double>(num_frames_input)
-                  << " NumFramesOutput for " << clock_slew_ppm << " ppm and " << num_frames_input
-                  << " NumFramesInput";
     return static_cast<double>(num_frames_input);
   }
 };

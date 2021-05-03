@@ -29,24 +29,6 @@ std::unique_ptr<Mixer> SelectMixer(fuchsia::media::AudioSampleFormat source_form
 std::unique_ptr<OutputProducer> SelectOutputProducer(fuchsia::media::AudioSampleFormat dest_format,
                                                      int32_t num_channels);
 
-// When doing direct bit-for-bit comparisons in our tests, we must factor in the
-// conversion that occurs, from non-float inputs into our internal accumulator's
-// float format. For this reason, tests that previously simply input a 16-bit
-// value at unity SRC and gain, expecting that same 16-bit value to be deposited
-// into the accumulator, should now expect that value to be converted to a float
-// value in the range of [-1.0, +1.0). With this in mind, and to remain flexible
-// amidst other changes in pipeline width, our tests now specify any expected
-// values at the higher-than-needed precision of 28-bit. (They also specify
-// values in hexadecimal format in most cases, to make bit-shifted values more
-// clear.)  A __28__bit__ precision for test data was specifically chosen to
-// accommodate the transition we have now made to a float32 internal pipeline,
-// with its 25 effective bits of [precision+sign].
-//
-// This shared function, then, normalizes data arrays into our float32 pipeline.
-// Because inputs must be in the range of [-2^27 , 2^27 ], for all practical
-// purposes it wants "int28" inputs, hence this function's unexpected name.
-void NormalizeInt28ToPipelineBitwidth(float* source, int32_t source_len);
-
 // Related to the conversions discussed above, these constants are the expected
 // amplitudes in the accumulator of full-scale signals in various input types.
 // "int24", int16 and int8 have more negative values than positive ones. Note
