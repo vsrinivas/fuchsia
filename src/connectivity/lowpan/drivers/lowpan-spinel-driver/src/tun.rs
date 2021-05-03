@@ -115,11 +115,18 @@ impl NetworkInterface for TunNetworkInterface {
             .map_err(fuchsia_zircon::Status::from_raw)
             .context("Error calling read_frame")?;
 
+        if let Some(packet) = frame.data.as_ref() {
+            fx_log_info!(
+                "TunNetworkInterface: Packet arrived from stack: {:?}",
+                Ipv6PacketDebug(packet)
+            );
+        }
+
         Ok(frame.data.ok_or(format_err!("data field was absent"))?)
     }
 
     async fn inbound_packet_to_stack(&self, packet: &[u8]) -> Result<(), Error> {
-        traceln!("Packet to stack: {}", hex::encode(packet));
+        fx_log_info!("TunNetworkInterface: Packet sent to stack: {:?}", Ipv6PacketDebug(packet));
 
         Ok(self
             .tun_dev
@@ -134,7 +141,7 @@ impl NetworkInterface for TunNetworkInterface {
     }
 
     async fn set_online(&self, online: bool) -> Result<(), Error> {
-        fx_log_info!("Interface online: {:?}", online);
+        fx_log_info!("TunNetworkInterface: Interface online: {:?}", online);
 
         if online {
             self.tun_dev.set_online(true).await?;
@@ -147,7 +154,7 @@ impl NetworkInterface for TunNetworkInterface {
     }
 
     async fn set_enabled(&self, enabled: bool) -> Result<(), Error> {
-        fx_log_info!("Interface enabled: {:?}", enabled);
+        fx_log_info!("TunNetworkInterface: Interface enabled: {:?}", enabled);
         if enabled {
             self.stack.enable_interface(self.id).await.squash_result()?;
         } else {

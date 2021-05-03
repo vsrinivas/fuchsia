@@ -207,6 +207,7 @@ impl FakeSpinelDevice {
             )
             .unwrap();
         }
+        assert!(!response.is_empty());
         Some(vec![response])
     }
 
@@ -222,7 +223,7 @@ impl FakeSpinelDevice {
         if let Some(value) = properties.get(&prop) {
             // Dumb remove.
             let value = Vec::<Vec<u8>>::try_unpack_from_slice(&value)
-                .expect("bad list encoding")
+                .expect(&format!("bad list encoding for {:?}: {:?}", prop, &value))
                 .into_iter()
                 .filter(|x| !x.starts_with(new_value))
                 .collect::<Vec<Vec<u8>>>()
@@ -250,6 +251,7 @@ impl FakeSpinelDevice {
             )
             .unwrap();
         }
+        assert!(!response.is_empty());
         Some(vec![response])
     }
 
@@ -578,6 +580,7 @@ impl FakeSpinelDevice {
                 }
             }
         }
+        assert!(!response.is_empty());
         Some(vec![response])
     }
 
@@ -754,6 +757,7 @@ impl FakeSpinelDevice {
                 }
             }
         }
+        assert!(!response.is_empty());
         Some(response)
     }
 

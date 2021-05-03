@@ -143,9 +143,11 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
         fx_log_info!("init_task: Capabilities: {:?}", caps);
 
         if let Err(err) = self.frame_handler.send_request(CmdNetRecall).await {
-            // This is normally OK, it just means the NCP
-            // hasn't been configured for a network yet.
-            fx_log_info!("init_task: Unable to recall network: {:?}", err);
+            if caps.contains(&Cap::NetSave) {
+                // This is normally OK, it just means the NCP
+                // hasn't been configured for a network yet.
+                fx_log_info!("init_task: Unable to recall network: {:?}", err);
+            }
         }
 
         // Properties to fetch/prime, letting their values be processed asynchronously.

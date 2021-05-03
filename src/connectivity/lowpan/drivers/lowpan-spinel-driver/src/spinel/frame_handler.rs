@@ -304,7 +304,7 @@ where
         // Now that we have a TID, set the header byte
         buffer[0] = Header::new(0, Some(tid)).expect("Invalid NLI/TID").into();
 
-        traceln!("FrameHandler::send_request: Sending frame: {:?}", buffer);
+        traceln!("FrameHandler::send_request: Sending frame: {:02x?}", buffer);
 
         // Actually send our request.
         self.spinel_sink.lock().await.send(&buffer).await?;
@@ -327,7 +327,7 @@ where
         // Append the actual request to the rest of the buffer.
         request.write_request(&mut buffer)?;
 
-        traceln!("FrameHandler::send_request_ignore_response: Sending frame: {:?}", buffer);
+        traceln!("FrameHandler::send_request_ignore_response: Sending frame: {:02x?}", buffer);
 
         // Actually send our request.
         self.spinel_sink.lock().await.send(&buffer).await?;

@@ -424,7 +424,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
                 .await
                 .context("Setting PropNet::StackUp to False")
             {
-                fx_log_err!("Unable to set `PropNet::StackUp`: {:?}", err);
+                fx_log_warn!("Unable to set `PropNet::StackUp`: {:?}", err);
             }
 
             // Bring down the network interface.
@@ -434,7 +434,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
                 .await
                 .context("Setting PropNet::InterfaceUp to False")
             {
-                fx_log_err!("Unable to set `PropNet::InterfaceUp`: {:?}", err);
+                fx_log_warn!("Unable to set `PropNet::InterfaceUp`: {:?}", err);
             }
         } // API task lock goes out of scope here
 

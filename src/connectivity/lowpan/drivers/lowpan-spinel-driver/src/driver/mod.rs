@@ -23,7 +23,7 @@ use error_adapter::*;
 use fidl_fuchsia_lowpan::{ConnectivityState, Role};
 use fuchsia_syslog::macros::*;
 use fuchsia_zircon::Duration;
-use ipv6_packet_matcher::*;
+pub use ipv6_packet_matcher::*;
 use lowpan_driver_common::AsyncCondition;
 
 const DEFAULT_SCAN_DWELL_TIME_MS: u16 = 100;

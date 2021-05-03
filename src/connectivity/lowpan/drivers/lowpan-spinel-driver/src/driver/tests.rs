@@ -203,10 +203,10 @@ async fn test_spinel_lowpan_driver() {
                     .watch_device_state()
                     .try_next()
                     .await
-                    .unwrap()
-                    .unwrap()
+                    .expect("Error in device state stream")
+                    .expect("Device state stream ended unexpectedly")
                     .connectivity_state
-                    .unwrap(),
+                    .expect("Connectivity state missing from device state"),
                 ConnectivityState::Inactive
             );
 
@@ -237,10 +237,10 @@ async fn test_spinel_lowpan_driver() {
                     .watch_device_state()
                     .try_next()
                     .await
-                    .unwrap()
-                    .unwrap()
+                    .expect("Error in device state stream")
+                    .expect("Device state stream ended unexpectedly")
                     .connectivity_state
-                    .unwrap(),
+                    .expect("Connectivity state missing from device state"),
                 ConnectivityState::Ready
             );
 
@@ -305,7 +305,13 @@ async fn test_spinel_lowpan_driver() {
 
             traceln!("app_task: Checking device state... (Should be Attaching)");
             assert_eq!(
-                device_state_stream.try_next().await.unwrap().unwrap().connectivity_state.unwrap(),
+                device_state_stream
+                    .try_next()
+                    .await
+                    .expect("Error in device state stream")
+                    .expect("Device state stream ended unexpectedly")
+                    .connectivity_state
+                    .unwrap(),
                 ConnectivityState::Attaching
             );
 
@@ -315,7 +321,13 @@ async fn test_spinel_lowpan_driver() {
 
             traceln!("app_task: Checking device state... (Should be Ready)");
             assert_eq!(
-                device_state_stream.try_next().await.unwrap().unwrap().connectivity_state.unwrap(),
+                device_state_stream
+                    .try_next()
+                    .await
+                    .expect("Error in device state stream")
+                    .expect("Device state stream ended unexpectedly")
+                    .connectivity_state
+                    .unwrap(),
                 ConnectivityState::Ready
             );
 

@@ -56,6 +56,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
         <F as TryFuture>::Ok: Send,
     {
         future
+            .inspect_err(|e| fx_log_err!("apply_standard_combinators: {:?}", e))
             .map_err(|e| ZxStatus::from(ErrorAdapter(e)))
             .cancel_upon(self.ncp_did_reset.wait(), Err(ZxStatus::CANCELED))
             .on_timeout(Time::after(DEFAULT_TIMEOUT), ncp_cmd_timeout!(self))
@@ -89,7 +90,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
     /// Handler for keeping track of property value changes
     /// so that local state stays in sync with the device.
     pub(super) fn on_prop_value_is(&self, prop: Prop, mut value: &[u8]) -> Result<(), Error> {
-        traceln!("on_prop_value_is: {:?} {:02x?}", prop, value);
+        fx_log_debug!("on_prop_value_is: {:?} {:02x?}", prop, value);
         match prop {
             Prop::Mac(PropMac::LongAddr) => {
                 let mac_addr = EUI64::try_unpack_from_slice(value)?;
@@ -258,7 +259,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
                 if Some(value) != driver_state.identity.panid {
                     fx_log_info!(
                         "PANID changed from {:?} to {:?}",
-                        driver_state.identity.channel,
+                        driver_state.identity.panid,
                         value
                     );
                     driver_state.identity.panid = Some(value);
