@@ -20,7 +20,7 @@ namespace component {
 
 namespace {
 constexpr char kSandboxDocUrl[] =
-    "https://fuchsia.dev/fuchsia-src/concepts/framework/sandboxing#services";
+    "https://fuchsia.dev/fuchsia-src/concepts/process/sandboxing#services-components-v1";
 
 std::string ServiceNotInSandbox(const std::string& component_moniker,
                                 const std::string& service_name) {
