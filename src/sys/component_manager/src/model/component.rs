@@ -51,6 +51,7 @@ use {
         },
         lock::{MappedMutexGuard, Mutex, MutexGuard},
     },
+    log::warn,
     moniker::{AbsoluteMoniker, ChildMoniker, ExtendedMoniker, InstanceId, PartialMoniker},
     std::iter::Iterator,
     std::{
@@ -481,15 +482,24 @@ impl ComponentInstance {
                         )));
                         timer.await;
                     });
-                    runtime
-                        .stop_component(stop_timer, kill_timer)
-                        .await
-                        .map_err(|e| ModelError::RunnerCommunicationError {
-                            moniker: self.abs_moniker.clone(),
-                            operation: "stop".to_string(),
-                            err: ClonableError::from(anyhow::Error::from(e)),
-                        })?
-                        .component_exit_status
+                    let ret =
+                        runtime.stop_component(stop_timer, kill_timer).await.map_err(|e| {
+                            ModelError::RunnerCommunicationError {
+                                moniker: self.abs_moniker.clone(),
+                                operation: "stop".to_string(),
+                                err: ClonableError::from(anyhow::Error::from(e)),
+                            }
+                        })?;
+                    if ret.request == StopRequestSuccess::KilledAfterTimeout
+                        || ret.request == StopRequestSuccess::Killed
+                    {
+                        warn!(
+                            "component {} did not stop in {:?}. Killed it.",
+                            self.abs_moniker,
+                            self.environment.stop_timeout()
+                        );
+                    }
+                    ret.component_exit_status
                 } else {
                     zx::Status::PEER_CLOSED
                 }
