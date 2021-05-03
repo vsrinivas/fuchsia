@@ -159,6 +159,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
 
                 self.online_task_cleanup()
                     .boxed()
+                    .cancel_upon(self.wait_for_state(DriverState::is_initializing).boxed(), Ok(()))
                     .map(|x| match x {
                         Err(err) if err.is::<Canceled>() => Ok(()),
                         other => other,

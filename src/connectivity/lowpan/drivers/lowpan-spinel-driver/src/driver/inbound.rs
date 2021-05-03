@@ -22,6 +22,17 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
     /// Resets are a special case and are handled directly.
     /// Everything else is delegated as described above.
     async fn on_inbound_frame(&self, frame: &[u8]) -> Result<(), Error> {
+        const RESET_RESPONSE_PREFIX: &[u8] = &[0x80, 0x06, 0x00];
+
+        // If we are waiting for a reset and this frame doesn't
+        // look like it might be a reset indication then we drop the frame.
+        if self.driver_state.lock().init_state == InitState::WaitingForReset
+            && !frame.starts_with(RESET_RESPONSE_PREFIX)
+        {
+            fx_log_info!("on_inbound_frame: Waiting for reset, dropping {:02x?}", frame);
+            return Ok(());
+        }
+
         // Parse the header.
         let frame = SpinelFrameRef::try_unpack_from_slice(frame).context("on_inbound_frame")?;
 

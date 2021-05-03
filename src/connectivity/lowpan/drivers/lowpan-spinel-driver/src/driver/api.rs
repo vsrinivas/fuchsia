@@ -353,6 +353,9 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
                         // Set up the condition for the next iteration.
                         condition = self.driver_state_change.wait();
 
+                        // Wait until we are ready.
+                        self.wait_for_state(DriverState::is_initialized).await;
+
                         snapshot = self.device_state_snapshot();
                         if snapshot != last_state {
                             break;
@@ -404,6 +407,9 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
 
                         // Set up the condition for the next iteration.
                         condition = self.driver_state_change.wait();
+
+                        // Wait until we are ready.
+                        self.wait_for_state(DriverState::is_initialized).await;
 
                         // Grab our identity snapshot and make sure it is actually different.
                         snapshot = self.identity_snapshot();
@@ -702,18 +708,12 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
     }
 
     async fn reset(&self) -> ZxResult<()> {
-        fx_log_info!("Got reset command");
-
-        // Cancel everyone with an outstanding command.
-        self.frame_handler.clear();
-
-        // Wait for our turn.
-        let _lock = self.wait_for_api_task_lock("reset").await?;
+        fx_log_info!("Got API request to reset");
 
         // Clear the frame handler one more time and prepare for (re)initialization.
-        self.frame_handler.clear();
         self.driver_state.lock().prepare_for_init();
         self.driver_state_change.trigger();
+        self.frame_handler.clear();
 
         // Wait for initialization to complete.
         // The reset will happen during initialization.
