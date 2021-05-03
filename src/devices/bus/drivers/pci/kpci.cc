@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/pci/c/banjo.h>
 #include <fuchsia/hardware/pci/cpp/banjo.h>
-#include <fuchsia/hardware/pciroot/c/banjo.h>
-#include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <fuchsia/hardware/pciroot/cpp/banjo.h>
+#include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
@@ -23,6 +22,8 @@
 #include <zircon/syscalls/pci.h>
 #include <zircon/syscalls/resource.h>
 #include <zircon/types.h>
+
+#include <memory>
 
 #include <ddktl/device.h>
 
@@ -44,224 +45,79 @@ struct kpci_device {
 };
 
 namespace pci {
-// Convenience reply methods.
-static zx_status_t pci_rpc_reply(zx_handle_t& ch, zx_status_t status, zx_handle_t* handle,
-                                 PciRpcMsg* req, PciRpcMsg* resp) {
-  uint32_t handle_cnt = 0;
-  if (handle && *handle != ZX_HANDLE_INVALID) {
-    handle_cnt++;
+
+class KernelPci;
+using KernelPciType = ddk::Device<pci::KernelPci, ddk::Rxrpcable>;
+class KernelPci : public KernelPciType {
+ public:
+  zx_status_t DdkRxrpc(zx_handle_t ch);
+  void DdkRelease();
+
+  static zx_status_t Create(zx_device_t* parent, kpci_device device);
+  zx_status_t RpcReply(zx_handle_t ch, zx_status_t status, zx_handle_t* handle, PciRpcMsg* req,
+                       PciRpcMsg* resp);
+
+  zx_status_t RpcEnableBusMaster(zx_handle_t ch, PciRpcMsg* req, PciRpcMsg* resp);
+  zx_status_t RpcResetDevice(zx_handle_t ch, PciRpcMsg* req, PciRpcMsg* resp);
+  zx_status_t RpcConfigRead(zx_handle_t ch, PciRpcMsg* req, PciRpcMsg* resp);
+  zx_status_t RpcConfigWrite(zx_handle_t ch, PciRpcMsg* req, PciRpcMsg* resp);
+  zx_status_t RpcSetIrqMode(zx_handle_t ch, PciRpcMsg* req, PciRpcMsg* resp);
+  zx_status_t RpcQueryIrqMode(zx_handle_t ch, PciRpcMsg* req, PciRpcMsg* resp);
+  zx_status_t RpcConfigureIrqMode(zx_handle_t ch, PciRpcMsg* req, PciRpcMsg* resp);
+  zx_status_t RpcMapInterrupt(zx_handle_t ch, PciRpcMsg* req, PciRpcMsg* resp);
+  zx_status_t RpcAckInterrupt(zx_handle_t ch, PciRpcMsg* req, PciRpcMsg* resp);
+  zx_status_t RpcGetBar(zx_handle_t ch, PciRpcMsg* req, PciRpcMsg* resp);
+  zx_status_t RpcGetBti(zx_handle_t ch, PciRpcMsg* req, PciRpcMsg* resp);
+  zx_status_t RpcGetDeviceInfo(zx_handle_t ch, PciRpcMsg* req, PciRpcMsg* resp);
+  zx_status_t RpcGetNextCapability(zx_handle_t ch, PciRpcMsg* req, PciRpcMsg* resp);
+  zx_status_t RpcConnectSysmem(zx_handle_t ch, zx_handle_t handle, PciRpcMsg* req, PciRpcMsg* resp);
+
+ private:
+  KernelPci(zx_device_t* parent, kpci_device device) : KernelPciType(parent), device_(device) {}
+  kpci_device device_;
+};
+
+zx_status_t KernelPci::Create(zx_device_t* parent, kpci_device device) {
+  char name[ZX_DEVICE_NAME_MAX];
+  snprintf(name, sizeof(name), "%02x:%02x.%1x", device.info.bus_id, device.info.dev_id,
+           device.info.func_id);
+  zx_device_prop_t props[] = {
+      {BIND_PROTOCOL, 0, ZX_PROTOCOL_PCI},
+      {BIND_PCI_VID, 0, device.info.vendor_id},
+      {BIND_PCI_DID, 0, device.info.device_id},
+      {BIND_PCI_CLASS, 0, device.info.base_class},
+      {BIND_PCI_SUBCLASS, 0, device.info.sub_class},
+      {BIND_PCI_INTERFACE, 0, device.info.program_interface},
+      {BIND_PCI_REVISION, 0, device.info.revision_id},
+      {BIND_TOPO_PCI, 0,
+       static_cast<uint32_t>(
+           BIND_TOPO_PCI_PACK(device.info.bus_id, device.info.dev_id, device.info.func_id))},
+  };
+
+  char argstr[ZX_DEVICE_NAME_MAX];
+  snprintf(argstr, sizeof(argstr), "pci#%04x:%04x,%s", device.info.vendor_id, device.info.device_id,
+           name);
+
+  auto kpci = std::unique_ptr<KernelPci>(new KernelPci(parent, device));
+  zx_status_t status = kpci->DdkAdd(ddk::DeviceAddArgs(name)
+                                        .set_props(props)
+                                        .set_proto_id(ZX_PROTOCOL_PCI)
+                                        .set_proxy_args(argstr)
+                                        .set_flags(DEVICE_ADD_MUST_ISOLATE));
+  if (status == ZX_OK) {
+    static_cast<void>(kpci.release());
   }
 
-  resp->op = req->op;
-  resp->txid = req->txid;
-  resp->ret = status;
-  zxlogf(TRACE, "[%#x] --> op %u txid %#x = %s", ch, resp->op, resp->txid,
-         zx_status_get_string(resp->ret));
-  return zx_channel_write(ch, 0, resp, sizeof(PciRpcMsg), handle, handle_cnt);
+  return status;
 }
 
-// kpci is a driver that communicates with the kernel to publish a list of pci devices.
-static zx_status_t kpci_enable_bus_master(zx_handle_t ch, kpci_device* device, PciRpcMsg* req,
-                                          PciRpcMsg* resp) {
-  zx_status_t st = zx_pci_enable_bus_master(device->handle, req->enable);
-  return pci_rpc_reply(ch, st, nullptr, req, resp);
-}
-
-static zx_status_t kpci_reset_device(zx_handle_t ch, kpci_device* device, PciRpcMsg* req,
-                                     PciRpcMsg* resp) {
-  zx_status_t st = zx_pci_reset_device(device->handle);
-  return pci_rpc_reply(ch, st, nullptr, req, resp);
-}
-
-// Reads from a config space address for a given device handle. Most of the
-// heavy lifting is offloaded to the zx_pci_config_read syscall itself, and the
-// rpc client that formats the arguments.
-static zx_status_t kpci_config_read(zx_handle_t ch, kpci_device* device, PciRpcMsg* req,
-                                    PciRpcMsg* resp) {
-  uint32_t value = 0;
-  zx_status_t st = zx_pci_config_read(device->handle, req->cfg.offset, req->cfg.width, &value);
-  if (st == ZX_OK) {
-    resp->cfg.offset = req->cfg.offset;
-    resp->cfg.width = req->cfg.width;
-    resp->cfg.value = value;
+void KernelPci::DdkRelease() {
+  if (device_.handle != ZX_HANDLE_INVALID) {
+    zx_handle_close(device_.handle);
   }
-  return pci_rpc_reply(ch, st, nullptr, req, resp);
 }
 
-static zx_status_t kpci_config_write(zx_handle_t ch, kpci_device* device, PciRpcMsg* req,
-                                     PciRpcMsg* resp) {
-  zx_status_t st =
-      zx_pci_config_write(device->handle, req->cfg.offset, req->cfg.width, req->cfg.value);
-  if (st == ZX_OK) {
-    resp->cfg = req->cfg;
-  }
-  return pci_rpc_reply(ch, st, nullptr, req, resp);
-}
-
-// Retrieves either address information for PIO or a VMO corresponding to a
-// device's bar to pass back to the devhost making the call.
-static zx_status_t kpci_get_bar(zx_handle_t ch, kpci_device* device, PciRpcMsg* req,
-                                PciRpcMsg* resp) {
-  if (req->bar.id >= ZX_PCI_MAX_BAR_REGS) {
-    return pci_rpc_reply(ch, ZX_ERR_INVALID_ARGS, nullptr, req, resp);
-  }
-
-  zx_handle_t handle = ZX_HANDLE_INVALID;
-  zx_pci_bar_t bar{};
-  zx_status_t st = zx_pci_get_bar(device->handle, req->bar.id, &bar, &handle);
-  if (st == ZX_OK) {
-    resp->bar = {
-        .id = bar.id,
-        .is_mmio = (bar.type == ZX_PCI_BAR_TYPE_MMIO),
-        .size = bar.size,
-        .io_addr = bar.addr,
-    };
-
-    if (!resp->bar.is_mmio) {
-      const char name[] = "kPCI IO";
-      st = zx_resource_create(get_root_resource(), ZX_RSRC_KIND_IOPORT, resp->bar.io_addr,
-                              resp->bar.size, name, sizeof(name), &handle);
-      if (st != ZX_OK) {
-        return pci_rpc_reply(ch, st, nullptr, req, resp);
-      }
-    }
-  }
-  return pci_rpc_reply(ch, st, &handle, req, resp);
-}
-
-static zx_status_t kpci_query_irq_mode(zx_handle_t ch, kpci_device* device, PciRpcMsg* req,
-                                       PciRpcMsg* resp) {
-  uint32_t max_irqs;
-  zx_status_t st = zx_pci_query_irq_mode(device->handle, req->irq.mode, &max_irqs);
-  if (st == ZX_OK) {
-    resp->irq.mode = req->irq.mode;
-    resp->irq.max_irqs = max_irqs;
-  }
-  return pci_rpc_reply(ch, st, nullptr, req, resp);
-}
-
-static zx_status_t kpci_set_irq_mode(zx_handle_t ch, kpci_device* device, PciRpcMsg* req,
-                                     PciRpcMsg* resp) {
-  zx_status_t st = zx_pci_set_irq_mode(device->handle, req->irq.mode, req->irq.requested_irqs);
-  return pci_rpc_reply(ch, st, nullptr, req, resp);
-}
-
-static zx_status_t kpci_configure_irq_mode(zx_handle_t ch, kpci_device* device, PciRpcMsg* req,
-                                           PciRpcMsg* resp) {
-  // Walk the available IRQ mdoes from best to worst (from a system
-  // perspective): MSI -> Legacy. Enable the mode that can provide the number of
-  // interrupts requested. This enables drivers that don't care about how they
-  // get their interrupt to call one method rather than doing the
-  // QueryIrqMode/SetIrqMode dance. TODO(fxbug.dev/32978): This method only
-  // covers MSI/Legacy because the transition to MSI-X requires the userspace
-  // driver. When that happens, this code will go away.
-  zx_pci_irq_mode_t mode = ZX_PCIE_IRQ_MODE_MSI;
-  zx_status_t st = zx_pci_set_irq_mode(device->handle, mode, req->irq.requested_irqs);
-  if (st != ZX_OK) {
-    mode = ZX_PCIE_IRQ_MODE_LEGACY;
-    st = zx_pci_set_irq_mode(device->handle, mode, req->irq.requested_irqs);
-  }
-
-  if (st == ZX_OK) {
-    resp->irq.mode = mode;
-  }
-  return pci_rpc_reply(ch, st, nullptr, req, resp);
-}
-
-static zx_status_t kpci_get_next_capability(zx_handle_t ch, kpci_device* device, PciRpcMsg* req,
-                                            PciRpcMsg* resp) {
-  uint32_t starting_offset = (req->cap.is_first) ? PCI_CFG_CAPABILITIES_PTR : req->cap.offset + 1;
-  uint32_t cap_offset;
-  uint8_t limit = 64;
-  zx_status_t st;
-
-  // Walk the capability list looking for the type requested, starting at the offset
-  // passed in. limit acts as a barrier in case of an invalid capability pointer list
-  // that causes us to iterate forever otherwise.
-  zx_pci_config_read(device->handle, starting_offset, sizeof(uint8_t), &cap_offset);
-  while (cap_offset != 0 && limit--) {
-    uint32_t type_id = 0;
-    if ((st = zx_pci_config_read(device->handle, static_cast<uint16_t>(cap_offset), sizeof(uint8_t),
-                                 &type_id)) != ZX_OK) {
-      zxlogf(ERROR, "%s: error reading type from cap offset %#x: %d", __func__, cap_offset, st);
-      return pci_rpc_reply(ch, st, nullptr, req, resp);
-    }
-
-    if (type_id == req->cap.id) {
-      resp->cap.offset = static_cast<uint8_t>(cap_offset);
-      return pci_rpc_reply(ch, ZX_OK, nullptr, req, resp);
-    }
-
-    // We didn't find the right type, move on, but ensure we're still within the
-    // first 256 bytes of standard config space.
-    if (cap_offset >= UINT8_MAX) {
-      zxlogf(ERROR, "%s: %#x is an invalid capability offset!", __func__, cap_offset);
-      break;
-    }
-    if ((st = zx_pci_config_read(device->handle, static_cast<uint16_t>(cap_offset + 1),
-                                 sizeof(uint8_t), &cap_offset)) != ZX_OK) {
-      zxlogf(ERROR, "%s: error reading next cap from cap offset %#x: %d", __func__, cap_offset + 1,
-             st);
-      break;
-    }
-  }
-  return pci_rpc_reply(ch, ZX_ERR_BAD_STATE, nullptr, req, resp);
-}
-
-static zx_status_t kpci_map_interrupt(zx_handle_t ch, kpci_device* device, PciRpcMsg* req,
-                                      PciRpcMsg* resp) {
-  zx_handle_t handle = ZX_HANDLE_INVALID;
-  zx_status_t st = zx_pci_map_interrupt(device->handle, req->irq.which_irq, &handle);
-  return pci_rpc_reply(ch, st, &handle, req, resp);
-}
-
-static zx_status_t kpci_ack_interrupt(zx_handle_t ch, kpci_device* device, PciRpcMsg* req,
-                                      PciRpcMsg* resp) {
-  zx_status_t st = ZX_OK;
-  return pci_rpc_reply(ch, st, nullptr, req, resp);
-}
-
-static zx_status_t kpci_get_device_info(zx_handle_t ch, kpci_device* device, PciRpcMsg* req,
-                                        PciRpcMsg* resp) {
-  memcpy(&resp->info, &device->info, sizeof(resp->info));
-  return pci_rpc_reply(ch, ZX_OK, nullptr, req, resp);
-}
-
-static zx_status_t kpci_get_bti(zx_handle_t ch, kpci_device* device, PciRpcMsg* req,
-                                PciRpcMsg* resp) {
-  uint32_t bdf = (static_cast<uint32_t>(device->info.bus_id) << 8) |
-                 (static_cast<uint32_t>(device->info.dev_id) << 3) | device->info.func_id;
-  zx_handle_t bti;
-  if (device->pciroot.ops) {
-    zx_status_t status = pciroot_get_bti(&device->pciroot, bdf, req->bti_index, &bti);
-    if (status != ZX_OK) {
-      return status;
-    }
-  } else if (device->pdev.ops) {
-    // TODO(teisenbe): This isn't quite right. We need to develop a way to
-    // resolve which BTI should go to downstream. However, we don't currently
-    // support any SMMUs for ARM, so this will work for now.
-    zx_status_t status = pdev_get_bti(&device->pdev, 0, &bti);
-    if (status != ZX_OK) {
-      return status;
-    }
-  } else {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  return pci_rpc_reply(ch, ZX_OK, &bti, req, resp);
-}
-
-static zx_status_t kpci_connect_sysmem(zx_handle_t& ch, kpci_device* device, zx_handle_t handle,
-                                       PciRpcMsg* req, PciRpcMsg* resp) {
-  zx_status_t status = ZX_ERR_NOT_SUPPORTED;
-  if (device->pciroot.ops) {
-    status = pciroot_connect_sysmem(&device->pciroot, handle);
-  }
-  return pci_rpc_reply(ch, status, nullptr, req, resp);
-}
-
-static zx_status_t kpci_rxrpc(void* ctx, zx_handle_t ch) {
+zx_status_t KernelPci::DdkRxrpc(zx_handle_t ch) {
   PciRpcMsg request{};
   PciRpcMsg response{};
   if (ch == ZX_HANDLE_INVALID) {
@@ -284,54 +140,242 @@ static zx_status_t kpci_rxrpc(void* ctx, zx_handle_t ch) {
   }
 
   zxlogf(TRACE, "[%#x] <-- op %u txid %#x", ch, request.op, request.txid);
-  auto* device = static_cast<kpci_device*>(ctx);
   switch (request.op) {
     case PCI_OP_CONFIG_READ:
-      return kpci_config_read(ch, device, &request, &response);
+      return RpcConfigRead(ch, &request, &response);
     case PCI_OP_CONFIG_WRITE:
-      return kpci_config_write(ch, device, &request, &response);
+      return RpcConfigWrite(ch, &request, &response);
     case PCI_OP_CONFIGURE_IRQ_MODE:
-      return kpci_configure_irq_mode(ch, device, &request, &response);
+      return RpcConfigureIrqMode(ch, &request, &response);
     case PCI_OP_CONNECT_SYSMEM:
-      return kpci_connect_sysmem(ch, device, handle, &request, &response);
+      return RpcConnectSysmem(ch, handle, &request, &response);
     case PCI_OP_ENABLE_BUS_MASTER:
-      return kpci_enable_bus_master(ch, device, &request, &response);
+      return RpcEnableBusMaster(ch, &request, &response);
     case PCI_OP_GET_BAR:
-      return kpci_get_bar(ch, device, &request, &response);
+      return RpcGetBar(ch, &request, &response);
     case PCI_OP_GET_BTI:
-      return kpci_get_bti(ch, device, &request, &response);
+      return RpcGetBti(ch, &request, &response);
     case PCI_OP_GET_DEVICE_INFO:
-      return kpci_get_device_info(ch, device, &request, &response);
+      return RpcGetDeviceInfo(ch, &request, &response);
     case PCI_OP_GET_NEXT_CAPABILITY:
-      return kpci_get_next_capability(ch, device, &request, &response);
+      return RpcGetNextCapability(ch, &request, &response);
     case PCI_OP_MAP_INTERRUPT:
-      return kpci_map_interrupt(ch, device, &request, &response);
+      return RpcMapInterrupt(ch, &request, &response);
     case PCI_OP_QUERY_IRQ_MODE:
-      return kpci_query_irq_mode(ch, device, &request, &response);
+      return RpcQueryIrqMode(ch, &request, &response);
     case PCI_OP_RESET_DEVICE:
-      return kpci_reset_device(ch, device, &request, &response);
+      return RpcResetDevice(ch, &request, &response);
     case PCI_OP_SET_IRQ_MODE:
-      return kpci_set_irq_mode(ch, device, &request, &response);
+      return RpcSetIrqMode(ch, &request, &response);
     case PCI_OP_ACK_INTERRUPT:
-      return kpci_ack_interrupt(ch, device, &request, &response);
+      return RpcAckInterrupt(ch, &request, &response);
     default:
-      return pci_rpc_reply(ch, ZX_ERR_INVALID_ARGS, nullptr, &request, &response);
+      return RpcReply(ch, ZX_ERR_INVALID_ARGS, nullptr, &request, &response);
   };
 }
 
-static void kpci_release(void* ctx) {
-  auto* device = static_cast<kpci_device*>(ctx);
-  if (device->handle != ZX_HANDLE_INVALID) {
-    zx_handle_close(device->handle);
+zx_status_t KernelPci::RpcReply(zx_handle_t ch, zx_status_t status, zx_handle_t* handle,
+                                PciRpcMsg* req, PciRpcMsg* resp) {
+  uint32_t handle_cnt = 0;
+  if (handle && *handle != ZX_HANDLE_INVALID) {
+    handle_cnt++;
   }
-  free(device);
+
+  resp->op = req->op;
+  resp->txid = req->txid;
+  resp->ret = status;
+  zxlogf(TRACE, "[%#x] --> op %u txid %#x = %s", ch, resp->op, resp->txid,
+         zx_status_get_string(resp->ret));
+  return zx_channel_write(ch, 0, resp, sizeof(PciRpcMsg), handle, handle_cnt);
 }
 
-static zx_protocol_device_t pci_device_proto = {
-    .version = DEVICE_OPS_VERSION,
-    .release = kpci_release,
-    .rxrpc = kpci_rxrpc,
-};
+// kpci is a driver that communicates with the kernel to publish a list of pci devices.
+zx_status_t KernelPci::RpcEnableBusMaster(zx_handle_t ch, PciRpcMsg* req, PciRpcMsg* resp) {
+  zx_status_t st = zx_pci_enable_bus_master(device_.handle, req->enable);
+  return RpcReply(ch, st, nullptr, req, resp);
+}
+
+zx_status_t KernelPci::RpcResetDevice(zx_handle_t ch, PciRpcMsg* req, PciRpcMsg* resp) {
+  zx_status_t st = zx_pci_reset_device(device_.handle);
+  return RpcReply(ch, st, nullptr, req, resp);
+}
+
+// Reads from a config space address for a given device handle. Most of the
+// heavy lifting is offloaded to the zx_pci_config_read syscall itself, and the
+// rpc client that formats the arguments.
+zx_status_t KernelPci::RpcConfigRead(zx_handle_t ch, PciRpcMsg* req, PciRpcMsg* resp) {
+  uint32_t value = 0;
+  zx_status_t st = zx_pci_config_read(device_.handle, req->cfg.offset, req->cfg.width, &value);
+  if (st == ZX_OK) {
+    resp->cfg.offset = req->cfg.offset;
+    resp->cfg.width = req->cfg.width;
+    resp->cfg.value = value;
+  }
+  return RpcReply(ch, st, nullptr, req, resp);
+}
+
+zx_status_t KernelPci::RpcConfigWrite(zx_handle_t ch, PciRpcMsg* req, PciRpcMsg* resp) {
+  zx_status_t st =
+      zx_pci_config_write(device_.handle, req->cfg.offset, req->cfg.width, req->cfg.value);
+  if (st == ZX_OK) {
+    resp->cfg = req->cfg;
+  }
+  return RpcReply(ch, st, nullptr, req, resp);
+}
+
+// Retrieves either address information for PIO or a VMO corresponding to a
+// device's bar to pass back to the devhost making the call.
+zx_status_t KernelPci::RpcGetBar(zx_handle_t ch, PciRpcMsg* req, PciRpcMsg* resp) {
+  if (req->bar.id >= ZX_PCI_MAX_BAR_REGS) {
+    return RpcReply(ch, ZX_ERR_INVALID_ARGS, nullptr, req, resp);
+  }
+
+  zx_handle_t handle = ZX_HANDLE_INVALID;
+  zx_pci_bar_t bar{};
+  zx_status_t st = zx_pci_get_bar(device_.handle, req->bar.id, &bar, &handle);
+  if (st == ZX_OK) {
+    resp->bar = {
+        .id = bar.id,
+        .is_mmio = (bar.type == ZX_PCI_BAR_TYPE_MMIO),
+        .size = bar.size,
+        .io_addr = bar.addr,
+    };
+
+    if (!resp->bar.is_mmio) {
+      const char name[] = "kPCI IO";
+      st = zx_resource_create(get_root_resource(), ZX_RSRC_KIND_IOPORT, resp->bar.io_addr,
+                              resp->bar.size, name, sizeof(name), &handle);
+      if (st != ZX_OK) {
+        return RpcReply(ch, st, nullptr, req, resp);
+      }
+    }
+  }
+  return RpcReply(ch, st, &handle, req, resp);
+}
+
+zx_status_t KernelPci::RpcQueryIrqMode(zx_handle_t ch, PciRpcMsg* req, PciRpcMsg* resp) {
+  uint32_t max_irqs;
+  zx_status_t st = zx_pci_query_irq_mode(device_.handle, req->irq.mode, &max_irqs);
+  if (st == ZX_OK) {
+    resp->irq.mode = req->irq.mode;
+    resp->irq.max_irqs = max_irqs;
+  }
+  return RpcReply(ch, st, nullptr, req, resp);
+}
+
+zx_status_t KernelPci::RpcSetIrqMode(zx_handle_t ch, PciRpcMsg* req, PciRpcMsg* resp) {
+  zx_status_t st = zx_pci_set_irq_mode(device_.handle, req->irq.mode, req->irq.requested_irqs);
+  return RpcReply(ch, st, nullptr, req, resp);
+}
+
+zx_status_t KernelPci::RpcConfigureIrqMode(zx_handle_t ch, PciRpcMsg* req, PciRpcMsg* resp) {
+  // Walk the available IRQ modes from best to worst (from a system
+  // perspective): MSI -> Legacy. Enable the mode that can provide the number of
+  // interrupts requested. This enables drivers that don't care about how they
+  // get their interrupt to call one method rather than doing the
+  // QueryIrqMode/SetIrqMode dance. TODO(fxbug.dev/32978): This method only
+  // covers MSI/Legacy because the transition to MSI-X requires the userspace
+  // driver. When that happens, this code will go away.
+  zx_pci_irq_mode_t mode = ZX_PCIE_IRQ_MODE_MSI;
+  zx_status_t st = zx_pci_set_irq_mode(device_.handle, mode, req->irq.requested_irqs);
+  if (st != ZX_OK) {
+    mode = ZX_PCIE_IRQ_MODE_LEGACY;
+    st = zx_pci_set_irq_mode(device_.handle, mode, req->irq.requested_irqs);
+  }
+
+  if (st == ZX_OK) {
+    resp->irq.mode = mode;
+  }
+  return RpcReply(ch, st, nullptr, req, resp);
+}
+
+zx_status_t KernelPci::RpcGetNextCapability(zx_handle_t ch, PciRpcMsg* req, PciRpcMsg* resp) {
+  uint32_t starting_offset = (req->cap.is_first) ? PCI_CFG_CAPABILITIES_PTR : req->cap.offset + 1;
+  uint32_t cap_offset;
+  uint8_t limit = 64;
+  zx_status_t st;
+
+  // Walk the capability list looking for the type requested, starting at the offset
+  // passed in. limit acts as a barrier in case of an invalid capability pointer list
+  // that causes us to iterate forever otherwise.
+  zx_pci_config_read(device_.handle, starting_offset, sizeof(uint8_t), &cap_offset);
+  while (cap_offset != 0 && limit--) {
+    uint32_t type_id = 0;
+    if ((st = zx_pci_config_read(device_.handle, static_cast<uint16_t>(cap_offset), sizeof(uint8_t),
+                                 &type_id)) != ZX_OK) {
+      zxlogf(ERROR, "%s: error reading type from cap offset %#x: %d", __func__, cap_offset, st);
+      return RpcReply(ch, st, nullptr, req, resp);
+    }
+
+    if (type_id == req->cap.id) {
+      resp->cap.offset = static_cast<uint8_t>(cap_offset);
+      return RpcReply(ch, ZX_OK, nullptr, req, resp);
+    }
+
+    // We didn't find the right type, move on, but ensure we're still within the
+    // first 256 bytes of standard config space.
+    if (cap_offset >= UINT8_MAX) {
+      zxlogf(ERROR, "%s: %#x is an invalid capability offset!", __func__, cap_offset);
+      break;
+    }
+    if ((st = zx_pci_config_read(device_.handle, static_cast<uint16_t>(cap_offset + 1),
+                                 sizeof(uint8_t), &cap_offset)) != ZX_OK) {
+      zxlogf(ERROR, "%s: error reading next cap from cap offset %#x: %d", __func__, cap_offset + 1,
+             st);
+      break;
+    }
+  }
+  return RpcReply(ch, ZX_ERR_BAD_STATE, nullptr, req, resp);
+}
+
+zx_status_t KernelPci::RpcMapInterrupt(zx_handle_t ch, PciRpcMsg* req, PciRpcMsg* resp) {
+  zx_handle_t handle = ZX_HANDLE_INVALID;
+  zx_status_t st = zx_pci_map_interrupt(device_.handle, req->irq.which_irq, &handle);
+  return RpcReply(ch, st, &handle, req, resp);
+}
+
+zx_status_t KernelPci::RpcAckInterrupt(zx_handle_t ch, PciRpcMsg* req, PciRpcMsg* resp) {
+  zx_status_t st = ZX_OK;
+  return RpcReply(ch, st, nullptr, req, resp);
+}
+
+zx_status_t KernelPci::RpcGetDeviceInfo(zx_handle_t ch, PciRpcMsg* req, PciRpcMsg* resp) {
+  memcpy(&resp->info, &device_.info, sizeof(resp->info));
+  return RpcReply(ch, ZX_OK, nullptr, req, resp);
+}
+
+zx_status_t KernelPci::RpcGetBti(zx_handle_t ch, PciRpcMsg* req, PciRpcMsg* resp) {
+  uint32_t bdf = (static_cast<uint32_t>(device_.info.bus_id) << 8) |
+                 (static_cast<uint32_t>(device_.info.dev_id) << 3) | device_.info.func_id;
+  zx_handle_t bti;
+  if (device_.pciroot.ops) {
+    zx_status_t status = pciroot_get_bti(&device_.pciroot, bdf, req->bti_index, &bti);
+    if (status != ZX_OK) {
+      return status;
+    }
+  } else if (device_.pdev.ops) {
+    // TODO(teisenbe): This isn't quite right. We need to develop a way to
+    // resolve which BTI should go to downstream. However, we don't currently
+    // support any SMMUs for ARM, so this will work for now.
+    zx_status_t status = pdev_get_bti(&device_.pdev, 0, &bti);
+    if (status != ZX_OK) {
+      return status;
+    }
+  } else {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  return RpcReply(ch, ZX_OK, &bti, req, resp);
+}
+
+zx_status_t KernelPci::RpcConnectSysmem(zx_handle_t ch, zx_handle_t handle, PciRpcMsg* req,
+                                        PciRpcMsg* resp) {
+  zx_status_t status = ZX_ERR_NOT_SUPPORTED;
+  if (device_.pciroot.ops) {
+    status = pciroot_connect_sysmem(&device_.pciroot, handle);
+  }
+  return RpcReply(ch, status, nullptr, req, resp);
+}
 
 // Initializes the upper half of a pci / pci.proxy devhost pair.
 static zx_status_t pci_init_child(zx_device_t* parent, uint32_t index) {
@@ -349,59 +393,17 @@ static zx_status_t pci_init_child(zx_device_t* parent, uint32_t index) {
     return status;
   }
 
-  auto* device = static_cast<kpci_device*>(calloc(1, sizeof(kpci_device)));
-  if (!device) {
-    zx_handle_close(handle);
-    return ZX_ERR_NO_MEMORY;
-  }
-  memcpy(&device->info, &info, sizeof(info));
-  device->info = info;
-  device->handle = handle;
-  device->index = index;
+  kpci_device device{};
+  device.info = info;
+  device.handle = handle;
+  device.index = index;
 
   // Store the PCIROOT protocol for use with get_bti in the pci protocol It is
   // not fatal if this fails, but bti protocol methods will not work.
-  device_get_protocol(parent, ZX_PROTOCOL_PCIROOT, &device->pciroot);
-  device_get_protocol(parent, ZX_PROTOCOL_PDEV, &device->pdev);
+  device_get_protocol(parent, ZX_PROTOCOL_PCIROOT, &device.pciroot);
+  device_get_protocol(parent, ZX_PROTOCOL_PDEV, &device.pdev);
 
-  char name[20];
-  snprintf(name, sizeof(name), "%02x:%02x.%1x", info.bus_id, info.dev_id, info.func_id);
-  zx_device_prop_t device_props[] = {
-      {BIND_PROTOCOL, 0, ZX_PROTOCOL_PCI},
-      {BIND_PCI_VID, 0, info.vendor_id},
-      {BIND_PCI_DID, 0, info.device_id},
-      {BIND_PCI_CLASS, 0, info.base_class},
-      {BIND_PCI_SUBCLASS, 0, info.sub_class},
-      {BIND_PCI_INTERFACE, 0, info.program_interface},
-      {BIND_PCI_REVISION, 0, info.revision_id},
-      {BIND_TOPO_PCI, 0,
-       static_cast<uint32_t>(BIND_TOPO_PCI_PACK(info.bus_id, info.dev_id, info.func_id))},
-  };
-
-  // Spawn the PCI proxy driver with a handle to the PciDeviceDispatcher of the given device
-  // for the Ddk context argument.
-  char argstr[64];
-  snprintf(argstr, sizeof(argstr), "pci#%u:%04x:%04x,%u", index, info.vendor_id, info.device_id,
-           index);
-  device_add_args_t args = {
-      .version = DEVICE_ADD_ARGS_VERSION,
-      .name = name,
-      .ctx = device,
-      .ops = &pci_device_proto,
-      .props = device_props,
-      .prop_count = countof(device_props),
-      .proto_id = ZX_PROTOCOL_PCI,
-      .proxy_args = argstr,
-      .flags = DEVICE_ADD_MUST_ISOLATE,
-  };
-
-  status = device_add(parent, &args, &device->zxdev);
-  if (status != ZX_OK) {
-    zx_handle_close(handle);
-    free(device);
-  }
-
-  return status;
+  return KernelPci::Create(parent, device);
 }  // namespace pci
 
 static zx_status_t pci_drv_bind(void* ctx, zx_device_t* parent) {
