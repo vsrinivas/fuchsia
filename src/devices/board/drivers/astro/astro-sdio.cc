@@ -69,7 +69,7 @@ static const pbus_mmio_t sd_emmc_mmios[] = {
 static const pbus_irq_t sd_emmc_irqs[] = {
     {
         .irq = S905D2_EMMC_B_SDIO_IRQ,
-        .mode = 0,
+        .mode = ZX_INTERRUPT_MODE_LEVEL_HIGH,
     },
 };
 
