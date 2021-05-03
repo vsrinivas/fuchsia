@@ -531,6 +531,7 @@ TEST_F(InterceptionWorkflowTestX64, ValuesOK) {
       "zx_cprng_add_entropy",
       "zx_cprng_draw",
       "zx_deadline_after",
+      "zx_debug_read",
       "zx_debug_send_command",
       "zx_debug_write",
       "zx_debuglog_create",
@@ -541,6 +542,8 @@ TEST_F(InterceptionWorkflowTestX64, ValuesOK) {
       "zx_exception_get_process",
       "zx_exception_get_thread",
       "zx_fifo_create",
+      "zx_fifo_read",
+      "zx_fifo_write",
       "zx_framebuffer_get_info",
       "zx_framebuffer_set_range",
       "zx_futex_get_owner",
@@ -567,6 +570,7 @@ TEST_F(InterceptionWorkflowTestX64, ValuesOK) {
       "zx_ioports_release",
       "zx_ioports_request",
       "zx_job_create",
+      "zx_ktrace_read",
       "zx_ktrace_write",
       "zx_mtrace_control",
       "zx_nanosleep",
@@ -609,7 +613,9 @@ TEST_F(InterceptionWorkflowTestX64, ValuesOK) {
       "zx_resource_create",
       "zx_smc_call",
       "zx_socket_create",
+      "zx_socket_read",
       "zx_socket_shutdown",
+      "zx_socket_write",
       "zx_system_get_dcache_line_size",
       "zx_system_get_event",
       "zx_system_get_features",
@@ -670,9 +676,8 @@ TEST_F(InterceptionWorkflowTestX64, ValuesNotImplemented) {
   }
 
   std::set<std::string> expected = {
-      "zx_debug_read",     "zx_fifo_read",    "zx_fifo_write",        "zx_job_set_policy",
-      "zx_ktrace_control", "zx_ktrace_read",  "zx_object_get_info",   "zx_object_wait_many",
-      "zx_socket_read",    "zx_socket_write", "zx_thread_read_state", "zx_thread_write_state",
+      "zx_job_set_policy",   "zx_ktrace_control",    "zx_object_get_info",
+      "zx_object_wait_many", "zx_thread_read_state", "zx_thread_write_state",
   };
 
   ASSERT_EQ(expected, actual);

@@ -941,21 +941,44 @@ class SyscallInputOutput : public SyscallInputOutputBase {
   const std::unique_ptr<Access<Type>> access_;
 };
 
-// An input/output which displays actual/asked. This is always displayed inline.
+// An input/output which displays actual/requested. This is always displayed inline.
 template <typename Type>
 class SyscallInputOutputActualAndRequested : public SyscallInputOutputBase {
  public:
   SyscallInputOutputActualAndRequested(int64_t error_code, std::string_view name,
                                        std::unique_ptr<Access<Type>> actual,
-                                       std::unique_ptr<Access<Type>> asked)
+                                       std::unique_ptr<Access<Type>> requested)
       : SyscallInputOutputBase(error_code, name),
         actual_(std::move(actual)),
-        asked_(std::move(asked)) {}
+        requested_(std::move(requested)) {}
+
+  std::unique_ptr<fidl_codec::Type> ComputeType() const override {
+    return std::make_unique<fidl_codec::ActualAndRequestedType>();
+  }
 
   void Load(SyscallDecoderInterface* decoder, Stage stage) const override {
     SyscallInputOutputBase::Load(decoder, stage);
     actual_->Load(decoder, stage);
-    asked_->Load(decoder, stage);
+    requested_->Load(decoder, stage);
+  }
+
+  std::unique_ptr<fidl_codec::Value> GenerateValue(SyscallDecoderInterface* decoder,
+                                                   Stage stage) const override {
+    auto actual = actual_->GenerateValue(decoder, stage);
+    uint64_t actual_absolute;
+    bool actual_negative;
+    if (!actual->GetIntegerValue(&actual_absolute, &actual_negative) || actual_negative) {
+      return nullptr;
+    }
+    auto requested = requested_->GenerateValue(decoder, stage);
+    uint64_t requested_absolute;
+    bool requested_negative;
+    if (!requested->GetIntegerValue(&requested_absolute, &requested_negative) ||
+        requested_negative) {
+      return nullptr;
+    }
+    return std::make_unique<fidl_codec::ActualAndRequestedValue>(actual_absolute,
+                                                                 requested_absolute);
   }
 
   const char* DisplayInline(SyscallDecoderInterface* decoder, Stage stage, const char* separator,
@@ -964,8 +987,8 @@ class SyscallInputOutputActualAndRequested : public SyscallInputOutputBase {
  private:
   // Current value.
   const std::unique_ptr<Access<Type>> actual_;
-  // Value which has been asked or value that should have been asked.
-  const std::unique_ptr<Access<Type>> asked_;
+  // Value which has been requested or value that should have been requested.
+  const std::unique_ptr<Access<Type>> requested_;
 };
 
 // An input/output which is one indirect value (access via a pointer).
@@ -1641,13 +1664,13 @@ class Syscall {
     return result;
   }
 
-  // Adds an inline output to display which is displayed like: actual/asked.
+  // Adds an inline output to display which is displayed like: actual/requested.
   template <typename Type>
   SyscallInputOutputActualAndRequested<Type>* OutputActualAndRequested(
       int64_t error_code, std::string_view name, std::unique_ptr<Access<Type>> actual,
-      std::unique_ptr<Access<Type>> asked) {
+      std::unique_ptr<Access<Type>> requested) {
     auto object = std::make_unique<SyscallInputOutputActualAndRequested<Type>>(
-        error_code, name, std::move(actual), std::move(asked));
+        error_code, name, std::move(actual), std::move(requested));
     auto result = object.get();
     outputs_.push_back(std::move(object));
     return result;
@@ -2782,8 +2805,8 @@ const char* SyscallInputOutputActualAndRequested<Type>::DisplayInline(
   printer << separator;
   actual_->Display(decoder, stage, name(), printer);
   printer << "/";
-  if (asked_->ValueValid(decoder, stage)) {
-    DisplayValue<Type>(asked_->GetSyscallType(), asked_->Value(decoder, stage), printer);
+  if (requested_->ValueValid(decoder, stage)) {
+    DisplayValue<Type>(requested_->GetSyscallType(), requested_->Value(decoder, stage), printer);
   } else {
     printer << fidl_codec::Red << "(nullptr)" << fidl_codec::ResetColor;
   }

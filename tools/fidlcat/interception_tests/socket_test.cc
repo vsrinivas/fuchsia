@@ -81,12 +81,12 @@ SOCKET_WRITE_DISPLAY_TEST(
     "zx_socket_write("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
-    "  buffer: \x1B[32muint8\x1B[0m = "
-    "\x1B[34m16\x1B[0m, \x1B[34m1\x1B[0m, \x1B[34m32\x1B[0m, \x1B[34m2\x1B[0m, "
-    "\x1B[34m48\x1B[0m, \x1B[34m3\x1B[0m, \x1B[34m64\x1B[0m, \x1B[34m4\x1B[0m\n"
+    "  buffer: \x1B[32mvector<uint8>\x1B[0m = [ "
+    "\x1B[34m10\x1B[0m, \x1B[34m01\x1B[0m, \x1B[34m20\x1B[0m, \x1B[34m02\x1B[0m, "
+    "\x1B[34m30\x1B[0m, \x1B[34m03\x1B[0m, \x1B[34m40\x1B[0m, \x1B[34m04\x1B[0m ]\n"
     "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m ("
-    "actual: \x1B[32msize_t\x1B[0m = \x1B[34m8\x1B[0m/\x1B[34m8\x1B[0m)\n");
+    "actual: \x1B[32msize\x1B[0m = \x1B[34m8\x1B[0m/\x1B[34m8\x1B[0m)\n");
 
 #define SOCKET_WRITE_STRING_DISPLAY_TEST_CONTENT(result, expected)                       \
   std::vector<uint8_t> buffer = {'h', 'e', 'l', 'l', 'o'};                               \
@@ -112,10 +112,10 @@ SOCKET_WRITE_STRING_DISPLAY_TEST(
     "zx_socket_write("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
-    "  buffer: \x1B[32muint8\x1B[0m = \x1B[31m\"hello\"\x1B[0m\n"
+    "  buffer: \x1B[32mvector<uint8>\x1B[0m = \x1B[31m\"hello\"\x1B[0m\n"
     "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m ("
-    "actual: \x1B[32msize_t\x1B[0m = \x1B[34m5\x1B[0m/\x1B[34m5\x1B[0m)\n");
+    "actual: \x1B[32msize\x1B[0m = \x1B[34m5\x1B[0m/\x1B[34m5\x1B[0m)\n");
 
 // zx_socket_read tests.
 
@@ -154,14 +154,14 @@ SOCKET_READ_DISPLAY_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_socket_read("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
-    "options: \x1B[32mzx_socket_read_options_t\x1B[0m = \x1B[34m0\x1B[0m, "
-    "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m1024\x1B[0m)\n"
+    "options: \x1B[32mzx.socket_read_options\x1B[0m = \x1B[34m0\x1B[0m, "
+    "buffer_size: \x1B[32msize\x1B[0m = \x1B[34m1024\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m ("
-    "actual: \x1B[32msize_t\x1B[0m = \x1B[34m8\x1B[0m/\x1B[34m1024\x1B[0m)\n"
-    "    buffer: \x1B[32muint8\x1B[0m = "
-    "\x1B[34m16\x1B[0m, \x1B[34m1\x1B[0m, \x1B[34m32\x1B[0m, \x1B[34m2\x1B[0m, "
-    "\x1B[34m48\x1B[0m, \x1B[34m3\x1B[0m, \x1B[34m64\x1B[0m, \x1B[34m4\x1B[0m\n");
+    "actual: \x1B[32msize\x1B[0m = \x1B[34m8\x1B[0m/\x1B[34m1024\x1B[0m)\n"
+    "    buffer: \x1B[32mvector<uint8>\x1B[0m = [ "
+    "\x1B[34m10\x1B[0m, \x1B[34m01\x1B[0m, \x1B[34m20\x1B[0m, \x1B[34m02\x1B[0m, "
+    "\x1B[34m30\x1B[0m, \x1B[34m03\x1B[0m, \x1B[34m40\x1B[0m, \x1B[34m04\x1B[0m ]\n");
 
 SOCKET_READ_DISPLAY_TEST(
     ZxSocketReadPeek, ZX_OK, ZX_SOCKET_PEEK,
@@ -170,14 +170,14 @@ SOCKET_READ_DISPLAY_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_socket_read("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
-    "options: \x1B[32mzx_socket_read_options_t\x1B[0m = \x1B[34mZX_SOCKET_PEEK\x1B[0m, "
-    "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m1024\x1B[0m)\n"
+    "options: \x1B[32mzx.socket_read_options\x1B[0m = \x1B[34mZX_SOCKET_PEEK\x1B[0m, "
+    "buffer_size: \x1B[32msize\x1B[0m = \x1B[34m1024\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m ("
-    "actual: \x1B[32msize_t\x1B[0m = \x1B[34m8\x1B[0m/\x1B[34m1024\x1B[0m)\n"
-    "    buffer: \x1B[32muint8\x1B[0m = "
-    "\x1B[34m16\x1B[0m, \x1B[34m1\x1B[0m, \x1B[34m32\x1B[0m, \x1B[34m2\x1B[0m, "
-    "\x1B[34m48\x1B[0m, \x1B[34m3\x1B[0m, \x1B[34m64\x1B[0m, \x1B[34m4\x1B[0m\n");
+    "actual: \x1B[32msize\x1B[0m = \x1B[34m8\x1B[0m/\x1B[34m1024\x1B[0m)\n"
+    "    buffer: \x1B[32mvector<uint8>\x1B[0m = [ "
+    "\x1B[34m10\x1B[0m, \x1B[34m01\x1B[0m, \x1B[34m20\x1B[0m, \x1B[34m02\x1B[0m, "
+    "\x1B[34m30\x1B[0m, \x1B[34m03\x1B[0m, \x1B[34m40\x1B[0m, \x1B[34m04\x1B[0m ]\n");
 
 #define SOCKET_READ_STRING_DISPLAY_TEST_CONTENT(result, expected)                             \
   std::vector<uint8_t> buffer = {'h', 'e', 'l', 'l', 'o'};                                    \
@@ -201,12 +201,12 @@ SOCKET_READ_STRING_DISPLAY_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_socket_read("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
-    "options: \x1B[32mzx_socket_read_options_t\x1B[0m = \x1B[34m0\x1B[0m, "
-    "buffer_size: \x1B[32msize_t\x1B[0m = \x1B[34m1024\x1B[0m)\n"
+    "options: \x1B[32mzx.socket_read_options\x1B[0m = \x1B[34m0\x1B[0m, "
+    "buffer_size: \x1B[32msize\x1B[0m = \x1B[34m1024\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m ("
-    "actual: \x1B[32msize_t\x1B[0m = \x1B[34m5\x1B[0m/\x1B[34m1024\x1B[0m)\n"
-    "    buffer: \x1B[32muint8\x1B[0m = \x1B[31m\"hello\"\x1B[0m\n");
+    "actual: \x1B[32msize\x1B[0m = \x1B[34m5\x1B[0m/\x1B[34m1024\x1B[0m)\n"
+    "    buffer: \x1B[32mvector<uint8>\x1B[0m = \x1B[31m\"hello\"\x1B[0m\n");
 
 // zx_socket_shutdown tests.
 
