@@ -7,6 +7,7 @@ use {
     argh::FromArgs,
     carnelian::{
         color::Color,
+        drawing::DisplayRotation,
         input::{self},
         make_app_assistant,
         render::{rive::load_rive, Context as RenderContext},
@@ -31,12 +32,16 @@ struct Args {
     #[argh(switch, short = 's')]
     use_spinel: bool,
 
+    /// display rotatation
+    #[argh(option, from_str_fn(display_rotation_from_str))]
+    rotation: Option<DisplayRotation>,
+
     /// rive file to load (default is juice.riv)
     #[argh(option, default = "String::from(\"juice.riv\")")]
     file: String,
 
     /// background color (default is white)
-    #[argh(option, from_str_fn(parse_color))]
+    #[argh(option, from_str_fn(color_from_str))]
     background: Option<Color>,
 
     /// artboard name (default is first artboard found)
@@ -44,38 +49,60 @@ struct Args {
     artboard: Option<String>,
 }
 
-fn parse_color(value: &str) -> Result<Color, String> {
+fn display_rotation_from_str(s: &str) -> Result<DisplayRotation, String> {
+    match s {
+        "0" => Ok(DisplayRotation::Deg0),
+        "90" => Ok(DisplayRotation::Deg90),
+        "180" => Ok(DisplayRotation::Deg180),
+        "270" => Ok(DisplayRotation::Deg270),
+        _ => Err(format!("Invalid DisplayRotation {}", s)),
+    }
+}
+
+fn color_from_str(value: &str) -> Result<Color, String> {
     Color::from_hash_code(value).map_err(|err| err.to_string())
 }
 
-#[derive(Default)]
 struct RiveAppAssistant {
     use_spinel: bool,
+    display_rotation: DisplayRotation,
     filename: String,
-    background: Option<Color>,
+    background: Color,
     artboard: Option<String>,
+}
+
+impl Default for RiveAppAssistant {
+    fn default() -> Self {
+        let args: Args = argh::from_env();
+        let use_spinel = args.use_spinel;
+        let display_rotation = args.rotation.unwrap_or(DisplayRotation::Deg0);
+        let filename = args.file;
+        let background = args.background.unwrap_or(Color::white());
+        let artboard = args.artboard;
+
+        Self { use_spinel, display_rotation, filename, background, artboard }
+    }
 }
 
 impl AppAssistant for RiveAppAssistant {
     fn setup(&mut self) -> Result<(), Error> {
-        let args: Args = argh::from_env();
-        self.use_spinel = args.use_spinel;
-        self.filename = args.file;
-        self.background = args.background;
-        self.artboard = args.artboard;
         Ok(())
     }
 
     fn create_view_assistant(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
-        Ok(Box::new(RiveViewAssistant::new(
-            load_rive(Path::new("/pkg/data/static").join(self.filename.clone()))?,
-            self.background.take().unwrap_or(Color::white()),
-            self.artboard.take(),
-        )))
+        let file = load_rive(Path::new("/pkg/data/static").join(self.filename.clone()))?;
+        let background = self.background;
+        let artboard = self.artboard.clone();
+
+        Ok(Box::new(RiveViewAssistant::new(file, background, artboard)))
     }
 
     fn get_render_options(&self) -> RenderOptions {
         RenderOptions { use_spinel: self.use_spinel, ..RenderOptions::default() }
+    }
+
+    fn get_display_rotation(&self) -> DisplayRotation {
+        self.display_rotation
     }
 }
 
