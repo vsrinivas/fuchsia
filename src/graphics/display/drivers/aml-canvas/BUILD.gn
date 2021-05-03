@@ -37,6 +37,7 @@ source_set("common_srcs") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/inspect",
   ]
 }
 

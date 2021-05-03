@@ -16,6 +16,8 @@
 #include <unistd.h>
 #include <zircon/pixelformat.h>
 
+#include <string>
+
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
@@ -54,7 +56,7 @@ zx_status_t AmlCanvas::AmlogicCanvasConfig(zx::vmo vmo, size_t offset, const can
 
   // find an unused canvas index
   for (index = 0; index < kNumCanvasEntries; index++) {
-    if (!pmts_[index].is_valid()) {
+    if (!entries_[index].pmt.is_valid()) {
       break;
     }
   }
@@ -86,7 +88,15 @@ zx_status_t AmlCanvas::AmlogicCanvasConfig(zx::vmo vmo, size_t offset, const can
     pmt.unpin();
     return ZX_ERR_INVALID_ARGS;
   }
-  pmts_[index].swap(pmt);
+  CanvasEntry entry;
+  entry.pmt = std::move(pmt);
+  entry.vmo = std::move(vmo);
+  entry.node = inspect_root_.CreateChild(std::to_string(index));
+  entry.node.CreateUint("width", width, &entry.properties);
+  entry.node.CreateUint("height", height, &entry.properties);
+  entry.node.CreateUint("pin_flags", pin_flags, &entry.properties);
+
+  entries_[index] = std::move(entry);
 
   zx_paddr_t start_addr = paddr + (offset % PAGE_SIZE);
 
@@ -120,13 +130,13 @@ zx_status_t AmlCanvas::AmlogicCanvasConfig(zx::vmo vmo, size_t offset, const can
 
 zx_status_t AmlCanvas::AmlogicCanvasFree(uint8_t canvas_idx) {
   fbl::AutoLock al(&lock_);
+  auto& entry = entries_[canvas_idx];
 
-  if (!pmts_[canvas_idx].is_valid()) {
+  if (!entry.pmt.is_valid()) {
     CANVAS_ERROR("Freeing invalid canvas index: %d\n", canvas_idx);
     return ZX_ERR_INVALID_ARGS;
   } else {
-    pmts_[canvas_idx].unpin();
-    pmts_[canvas_idx].reset();
+    entry = CanvasEntry();
   }
 
   return ZX_OK;
@@ -135,9 +145,7 @@ zx_status_t AmlCanvas::AmlogicCanvasFree(uint8_t canvas_idx) {
 void AmlCanvas::DdkRelease() {
   lock_.Acquire();
   for (uint32_t index = 0; index < kNumCanvasEntries; index++) {
-    if (pmts_[index].is_valid()) {
-      pmts_[index].unpin();
-    }
+    entries_[index] = CanvasEntry();
   }
   lock_.Release();
   delete this;
@@ -177,7 +185,11 @@ zx_status_t AmlCanvas::Setup(zx_device_t* parent) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  status = canvas->DdkAdd("aml-canvas", DEVICE_ADD_ALLOW_MULTI_COMPOSITE);
+  canvas->inspect_root_ = canvas->inspector_.GetRoot().CreateChild("aml-canvas");
+
+  status = canvas->DdkAdd(ddk::DeviceAddArgs("aml-canvas")
+                              .set_flags(DEVICE_ADD_ALLOW_MULTI_COMPOSITE)
+                              .set_inspect_vmo(canvas->inspector_.DuplicateVmo()));
   if (status != ZX_OK) {
     CANVAS_ERROR("Could not add aml canvas device: %d\n", status);
     return status;

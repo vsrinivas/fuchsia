@@ -10,6 +10,7 @@
 #include <lib/ddk/mmio-buffer.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/mmio/mmio.h>
 
 #include <array>
@@ -28,6 +29,35 @@ constexpr size_t kNumCanvasEntries = 256;
 
 class AmlCanvas;
 using DeviceType = ddk::Device<AmlCanvas, ddk::Unbindable>;
+
+struct CanvasEntry {
+  CanvasEntry(CanvasEntry&&) = default;
+  CanvasEntry() = default;
+
+  CanvasEntry& operator=(CanvasEntry&& right) {
+    if (this == &right)
+      return *this;
+    if (pmt)
+      pmt.unpin();
+    pmt = std::move(right.pmt);
+    vmo = std::move(right.vmo);
+    node = std::move(right.node);
+    properties = std::move(right.properties);
+    return *this;
+  }
+
+  ~CanvasEntry() {
+    if (pmt)
+      pmt.unpin();
+  }
+
+  zx::pmt pmt;
+  // Hold a handle to the VMO so the memory diagnostic tools can realize that it's in use by this
+  // process.  See fxbug.dev/75877.
+  zx::vmo vmo;
+  inspect::Node node;
+  inspect::ValueList properties;
+};
 
 class AmlCanvas : public DeviceType,
                   public ddk::AmlogicCanvasProtocol<AmlCanvas, ddk::base_protocol> {
@@ -48,10 +78,12 @@ class AmlCanvas : public DeviceType,
   void DdkUnbind(ddk::UnbindTxn txn);
 
  private:
+  inspect::Inspector inspector_;
+  inspect::Node inspect_root_;
   fbl::Mutex lock_;
   ddk::MmioBuffer dmc_regs_ __TA_GUARDED(lock_);
   zx::bti bti_ __TA_GUARDED(lock_);
-  std::array<zx::pmt, kNumCanvasEntries> pmts_ __TA_GUARDED(lock_);
+  std::array<CanvasEntry, kNumCanvasEntries> entries_ __TA_GUARDED(lock_);
 
 };  // class AmlCanvas
 
