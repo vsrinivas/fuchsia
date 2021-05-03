@@ -189,6 +189,54 @@ TEST_F(AmlSdmmcTest, DdkLifecycle) {
   EXPECT_TRUE(ddk.Ok());
 }
 
+TEST_F(AmlSdmmcTest, InitV3) {
+  dut_->set_board_config({
+      .supports_dma = false,
+      .min_freq = 400000,
+      .max_freq = 120000000,
+      .version_3 = true,
+      .prefs = 0,
+  });
+
+  AmlSdmmcClock::Get().FromValue(0).WriteTo(&mmio_);
+
+  ASSERT_OK(dut_->Init());
+
+  EXPECT_EQ(AmlSdmmcClock::Get().ReadFrom(&mmio_).reg_value(), AmlSdmmcClockV3::Get()
+                                                                   .FromValue(0)
+                                                                   .set_cfg_div(60)
+                                                                   .set_cfg_src(0)
+                                                                   .set_cfg_co_phase(2)
+                                                                   .set_cfg_tx_phase(0)
+                                                                   .set_cfg_rx_phase(0)
+                                                                   .set_cfg_always_on(1)
+                                                                   .reg_value());
+}
+
+TEST_F(AmlSdmmcTest, InitV2) {
+  dut_->set_board_config({
+      .supports_dma = false,
+      .min_freq = 400000,
+      .max_freq = 120000000,
+      .version_3 = false,
+      .prefs = 0,
+  });
+
+  AmlSdmmcClock::Get().FromValue(0).WriteTo(&mmio_);
+
+  ASSERT_OK(dut_->Init());
+
+  EXPECT_EQ(AmlSdmmcClock::Get().ReadFrom(&mmio_).reg_value(), AmlSdmmcClockV2::Get()
+                                                                   .FromValue(0)
+                                                                   .set_cfg_div(60)
+                                                                   .set_cfg_src(0)
+                                                                   .set_cfg_co_phase(2)
+                                                                   .set_cfg_tx_phase(0)
+                                                                   .set_cfg_rx_phase(0)
+                                                                   .set_cfg_always_on(1)
+                                                                   .reg_value());
+}
+
 TEST_F(AmlSdmmcTest, TuningV3) {
   dut_->set_board_config({
       .supports_dma = false,

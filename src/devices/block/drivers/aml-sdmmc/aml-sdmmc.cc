@@ -340,16 +340,30 @@ zx_status_t AmlSdmmc::SdmmcSetBusFreq(uint32_t freq) {
 }
 
 void AmlSdmmc::ConfigureDefaultRegs() {
-  uint32_t clk_val = AmlSdmmcClock::Get()
-                         .FromValue(0)
-                         .set_cfg_div(AmlSdmmcClock::kDefaultClkDiv)
-                         .set_cfg_src(AmlSdmmcClock::kDefaultClkSrc)
-                         .set_cfg_co_phase(AmlSdmmcClock::kDefaultClkCorePhase)
-                         .set_cfg_tx_phase(AmlSdmmcClock::kDefaultClkTxPhase)
-                         .set_cfg_rx_phase(AmlSdmmcClock::kDefaultClkRxPhase)
-                         .set_cfg_always_on(1)
-                         .reg_value();
-  AmlSdmmcClock::Get().ReadFrom(&mmio_).set_reg_value(clk_val).WriteTo(&mmio_);
+  if (board_config_.version_3) {
+    uint32_t clk_val = AmlSdmmcClockV3::Get()
+                           .FromValue(0)
+                           .set_cfg_div(AmlSdmmcClock::kDefaultClkDiv)
+                           .set_cfg_src(AmlSdmmcClock::kDefaultClkSrc)
+                           .set_cfg_co_phase(AmlSdmmcClock::kDefaultClkCorePhase)
+                           .set_cfg_tx_phase(AmlSdmmcClock::kDefaultClkTxPhase)
+                           .set_cfg_rx_phase(AmlSdmmcClock::kDefaultClkRxPhase)
+                           .set_cfg_always_on(1)
+                           .reg_value();
+    AmlSdmmcClockV3::Get().ReadFrom(&mmio_).set_reg_value(clk_val).WriteTo(&mmio_);
+  } else {
+    uint32_t clk_val = AmlSdmmcClockV2::Get()
+                           .FromValue(0)
+                           .set_cfg_div(AmlSdmmcClock::kDefaultClkDiv)
+                           .set_cfg_src(AmlSdmmcClock::kDefaultClkSrc)
+                           .set_cfg_co_phase(AmlSdmmcClock::kDefaultClkCorePhase)
+                           .set_cfg_tx_phase(AmlSdmmcClock::kDefaultClkTxPhase)
+                           .set_cfg_rx_phase(AmlSdmmcClock::kDefaultClkRxPhase)
+                           .set_cfg_always_on(1)
+                           .reg_value();
+    AmlSdmmcClockV2::Get().ReadFrom(&mmio_).set_reg_value(clk_val).WriteTo(&mmio_);
+  }
+
   uint32_t config_val = AmlSdmmcCfg::Get()
                             .FromValue(0)
                             .set_blk_len(AmlSdmmcCfg::kDefaultBlkLen)

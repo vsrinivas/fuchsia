@@ -44,6 +44,7 @@ constexpr uint32_t kAmlSdmmcSramDescOffset = 0x200;
 constexpr uint32_t kAmlSdmmcPingOffset = 0x400;
 constexpr uint32_t kAmlSdmmcPongOffset = 0x600;
 
+// Safe to use with V3 or V2 -- bits that are not common have been removed.
 class AmlSdmmcClock : public hwreg::RegisterBase<AmlSdmmcClock, uint32_t> {
  public:
   static constexpr uint32_t kCtsOscinClkFreq = 24000000;  // 24MHz
@@ -73,6 +74,17 @@ class AmlSdmmcClock : public hwreg::RegisterBase<AmlSdmmcClock, uint32_t> {
   DEF_FIELD(9, 8, cfg_co_phase);
   DEF_FIELD(11, 10, cfg_tx_phase);
   DEF_FIELD(13, 12, cfg_rx_phase);
+};
+
+class AmlSdmmcClockV3 : public hwreg::RegisterBase<AmlSdmmcClockV3, uint32_t> {
+ public:
+  static auto Get() { return hwreg::RegisterAddr<AmlSdmmcClockV3>(kAmlSdmmcClockOffset); }
+
+  DEF_FIELD(5, 0, cfg_div);
+  DEF_FIELD(7, 6, cfg_src);
+  DEF_FIELD(9, 8, cfg_co_phase);
+  DEF_FIELD(11, 10, cfg_tx_phase);
+  DEF_FIELD(13, 12, cfg_rx_phase);
   DEF_FIELD(15, 14, cfg_sram_pd);
   DEF_FIELD(21, 16, cfg_tx_delay);
   DEF_FIELD(27, 22, cfg_rx_delay);
@@ -80,6 +92,22 @@ class AmlSdmmcClock : public hwreg::RegisterBase<AmlSdmmcClock, uint32_t> {
   DEF_BIT(29, cfg_irq_sdio_sleep);
   DEF_BIT(30, cfg_irq_sdio_sleep_ds);
   DEF_BIT(31, cfg_nand);
+};
+
+class AmlSdmmcClockV2 : public hwreg::RegisterBase<AmlSdmmcClockV2, uint32_t> {
+ public:
+  static auto Get() { return hwreg::RegisterAddr<AmlSdmmcClockV2>(kAmlSdmmcClockOffset); }
+
+  DEF_FIELD(5, 0, cfg_div);
+  DEF_FIELD(7, 6, cfg_src);
+  DEF_FIELD(9, 8, cfg_co_phase);
+  DEF_FIELD(11, 10, cfg_tx_phase);
+  DEF_FIELD(13, 12, cfg_rx_phase);
+  DEF_FIELD(19, 16, cfg_tx_delay);
+  DEF_FIELD(23, 20, cfg_rx_delay);
+  DEF_BIT(24, cfg_always_on);
+  DEF_BIT(25, cfg_irq_sdio_sleep);
+  DEF_BIT(26, cfg_irq_sdio_sleep_ds);
 };
 
 class AmlSdmmcCfg : public hwreg::RegisterBase<AmlSdmmcCfg, uint32_t> {
