@@ -420,6 +420,19 @@ static void x86_perfmon_init_lbr(uint32_t lbr_stack_size) {
   perfmon_lbr_stack_size = lbr_stack_size;
 }
 
+static void x86_perfmon_lbr_clear() {
+  switch (lbr_format) {
+    case LBR_FORMAT_INFO:
+      for (int i = 0; i < perfmon_lbr_stack_size; i++) {
+        write_msr(SKL_LAST_BRANCH_FROM_0 + i, 0);
+        write_msr(SKL_LAST_BRANCH_TO_0 + i, 0);
+        write_msr(SKL_LAST_BRANCH_INFO_0 + i, 0);
+      }
+      write_msr(SKL_LAST_BRANCH_TOS, 0);
+      break;
+  }
+}
+
 static void x86_perfmon_init_once(uint level) {
   if (!arch::BootCpuidSupports<arch::CpuidPerformanceMonitoringA>()) {
     return;
@@ -1423,6 +1436,8 @@ static void x86_perfmon_start_cpu_task(void* raw_context) {
     write_msr(IA32_PERFEVTSEL_FIRST + i, state->programmable_hw_events[i]);
   }
 
+  x86_perfmon_lbr_clear();
+
   write_msr(IA32_DEBUGCTL, state->debug_ctrl);
 
   apic_pmi_unmask();
@@ -1592,6 +1607,7 @@ static void x86_perfmon_stop_cpu_task(void* raw_context) {
   }
 
   x86_perfmon_clear_overflow_indicators();
+  x86_perfmon_lbr_clear();
 }
 
 void arch_perfmon_stop_locked() TA_REQ(PerfmonLock::Get()) {
