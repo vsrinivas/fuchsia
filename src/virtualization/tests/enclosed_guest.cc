@@ -371,6 +371,36 @@ grpc::Status TerminaEnclosedGuest::VmReady(grpc::ServerContext* context,
   return grpc::Status::OK;
 }
 
+// Use Maitred to mount the given block device at the given location.
+//
+// The destination directory will be created if required.
+zx_status_t MountDeviceInGuest(vm_tools::Maitred::Stub& maitred, std::string_view block_device,
+                               std::string_view mount_point, std::string_view fs_type,
+                               uint64_t mount_flags) {
+  grpc::ClientContext context;
+  vm_tools::MountRequest request;
+  vm_tools::MountResponse response;
+
+  request.mutable_source()->assign(block_device);
+  request.mutable_target()->assign(mount_point);
+  request.mutable_fstype()->assign(fs_type);
+  request.set_mountflags(mount_flags);
+  request.set_create_target(true);
+
+  auto grpc_status = maitred.Mount(&context, request, &response);
+  if (!grpc_status.ok()) {
+    FX_LOGS(ERROR) << "Request to mount block device '" << block_device
+                   << "' failed: " << grpc_status.error_message();
+    return ZX_ERR_IO;
+  }
+  if (response.error() != 0) {
+    FX_LOGS(ERROR) << "Mounting block device '" << block_device << "' failed: " << response.error();
+    return ZX_ERR_IO;
+  }
+
+  return ZX_OK;
+}
+
 zx_status_t TerminaEnclosedGuest::WaitForSystemReady() {
   // The VM will connect to the StartupListener port when it's ready and we'll
   // create the maitred stub in |VmReady|.
@@ -390,62 +420,14 @@ zx_status_t TerminaEnclosedGuest::WaitForSystemReady() {
 
   // Create mountpoints for test utils and extras. The root filesystem is read only so we
   // put these under /tmp.
-  {
-    for (auto dir : {"/tmp/test_utils", "/tmp/extras"}) {
-      auto command_result = command_runner_->Execute({
-          {"mkdir", "-p", dir},
-          {},
-      });
-      if (!command_result.is_ok()) {
-        FX_LOGS(ERROR) << "Command fails with error "
-                       << zx_status_get_string(command_result.error());
-        return command_result.error();
-      }
-    }
+  zx_status_t status;
+  status = MountDeviceInGuest(*maitred_, "/dev/vdb", "/tmp/test_utils", "ext2", MS_RDONLY);
+  if (status != ZX_OK) {
+    return status;
   }
-
-  // Mount the test_utils disk image.
-  {
-    grpc::ClientContext context;
-    vm_tools::MountRequest request;
-    vm_tools::MountResponse response;
-
-    request.mutable_source()->assign("/dev/vdb");
-    request.mutable_target()->assign("/tmp/test_utils");
-    request.mutable_fstype()->assign("ext2");
-    request.set_mountflags(MS_RDONLY);
-
-    auto grpc_status = maitred_->Mount(&context, request, &response);
-    if (!grpc_status.ok()) {
-      FX_LOGS(ERROR) << "Failed to mount test_utils filesystem: " << grpc_status.error_message();
-      return ZX_ERR_IO;
-    }
-    if (response.error() != 0) {
-      FX_LOGS(ERROR) << "test_utils mount failed: " << response.error();
-      return ZX_ERR_IO;
-    }
-  }
-
-  // Mount the extras disk image.
-  {
-    grpc::ClientContext context;
-    vm_tools::MountRequest request;
-    vm_tools::MountResponse response;
-
-    request.mutable_source()->assign("/dev/vdc");
-    request.mutable_target()->assign("/tmp/extras");
-    request.mutable_fstype()->assign("romfs");
-    request.set_mountflags(MS_RDONLY);
-
-    auto grpc_status = maitred_->Mount(&context, request, &response);
-    if (!grpc_status.ok()) {
-      FX_LOGS(ERROR) << "Failed to mount extras filesystem: " << grpc_status.error_message();
-      return ZX_ERR_IO;
-    }
-    if (response.error() != 0) {
-      FX_LOGS(ERROR) << "extras mount failed: " << response.error();
-      return ZX_ERR_IO;
-    }
+  status = MountDeviceInGuest(*maitred_, "/dev/vdc", "/tmp/extras", "romfs", MS_RDONLY);
+  if (status != ZX_OK) {
+    return status;
   }
 
   return ZX_OK;
