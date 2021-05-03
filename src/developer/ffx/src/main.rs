@@ -91,6 +91,9 @@ rebooting the device or flashing the device into a running state.";
 const DAEMON_CONNECTION_ISSUE: &str = "\
 Timed out waiting on the Daemon.\nRun `ffx doctor` for further diagnostics";
 
+const DOCTOR_HELP_MSG: &str = "\
+\nRun `ffx doctor` for further diagnostics";
+
 struct Injection {
     daemon_once: Once<DaemonProxy>,
     remote_once: Once<RemoteControlProxy>,
@@ -113,8 +116,9 @@ impl Injection {
             daemon_proxy.get_remote_control(target.as_ref().map(|s| s.as_str()), remote_server_end),
         )
         .await
-        .context("timeout")?
-        .context("connecting to target via daemon")?;
+        .context("timeout connecting to RCS via daemon")
+        .map_err(|_| ffx_error!("{}", DAEMON_CONNECTION_ISSUE))?
+        .context(ffx_error!("Failed to connect to target via daemon. {}", DOCTOR_HELP_MSG))?;
 
         match result {
             Ok(_) => Ok(remote_proxy),
@@ -145,7 +149,7 @@ impl Injector for Injection {
             daemon_proxy.get_fastboot(target.as_ref().map(|s| s.as_str()), fastboot_server_end),
         )
         .await
-        .context("timeout")?
+        .context("Timed out connecting to fastboot")?
         .context("connecting to Fastboot")?;
 
         match result {
@@ -168,8 +172,11 @@ impl Injector for Injection {
             daemon_proxy.get_target(target.as_ref().map(|s| s.as_str()), target_server_end),
         )
         .await
-        .context("timeout")?
-        .context("connecting to Target")?;
+        .context(ffx_error!(
+            "Timed out getting a TargetControl from the daemon. {}",
+            DOCTOR_HELP_MSG
+        ))?
+        .context(ffx_error!("Timed out connecting to TargetControl. {}", DOCTOR_HELP_MSG))?;
 
         match result {
             Ok(_) => Ok(target_proxy),
