@@ -443,6 +443,7 @@ resource("static_sheds") {
 
 resource("static_rives") {
   sources = [
+    "examples/static/fuchsia.riv",
     "examples/static/juice.riv",
     "examples/static/knight.riv",
   ]
