@@ -876,6 +876,8 @@ def main():
         # TODO(jayzhuang): Figure out whether `.dart_tool/package_config.json`
         # should be included in inputs.
         ".dart_tool/package_config.json",
+        # Allow Flutter to read and write tool states.
+        ".config/flutter/tool_state",
     }
     ignored_path_parts = {
         # Python creates these directories with bytecode caches

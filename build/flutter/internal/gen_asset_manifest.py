@@ -47,8 +47,6 @@ def main():
         required=True,
         help='The directory where to put intermediate files')
     parser.add_argument(
-        '--app-dir', type=str, required=True, help='The root of the app')
-    parser.add_argument(
         '--packages', type=str, required=True, help='The package map to use')
     parser.add_argument(
         '--manifest', type=str, help='The application manifest', required=True)
@@ -81,10 +79,11 @@ def main():
         '--component-name=%s' % args.component_name
     ]
 
-    result = subprocess.call(call_args, env=env, cwd=args.app_dir)
+    result = subprocess.call(call_args, env=env)
 
     if result == 0:
         fini_to_json(intermediate, args.output)
+        os.remove(intermediate)
 
     return result
 

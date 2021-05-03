@@ -44,37 +44,50 @@ template("_flutter_asset_manifest") {
     _flutter_asset_tools_bin =
         "$_flutter_asset_tools_out_dir/dart-tools/fuchsia_asset_builder"
 
+    _flutter_asset_tools_snapshot_label = "$_flutter_base/packages/flutter_tools:fuchsia_asset_builder_snapshot($host_toolchain)"
+    _flutter_asset_tools_target_gen_dir =
+        get_label_info(_flutter_asset_tools_snapshot_label, "target_gen_dir")
+    _flutter_asset_tools_snapshot =
+        "$_flutter_asset_tools_target_gen_dir/fuchsia_asset_builder.snapshot"
+
     _asset_manifest =
         "$target_gen_dir/build/${invoker.component_name}_pkgassets"
 
     hermetic_deps = false
     script = "//build/flutter/internal/gen_asset_manifest.py"
 
+    inputs = [
+      invoker.pubspec,
+      _flutter_asset_tools_bin,
+      _flutter_asset_tools_snapshot,
+    ]
+
+    outputs = [ _asset_manifest ]
+
     args = [
       "--flutter-root",
-      rebase_path(_flutter_base),
+      rebase_path(_flutter_base, root_build_dir),
       "--flutter-tools",
-      rebase_path(_flutter_asset_tools_bin),
+      rebase_path(_flutter_asset_tools_bin, root_build_dir),
       "--asset-dir",
-      rebase_path("$target_gen_dir/build"),
-      "--app-dir",
-      rebase_path("."),
+      rebase_path("$target_gen_dir/build", root_build_dir),
       "--packages",
-      rebase_path(invoker.package_config),
+      rebase_path(invoker.package_config, root_build_dir),
       "--output",
-      rebase_path(_asset_manifest),
+      rebase_path(_asset_manifest, root_build_dir),
       "--component-name",
       invoker.component_name,
       "--manifest",
-      rebase_path(invoker.pubspec),
+      rebase_path(invoker.pubspec, root_build_dir),
     ]
 
     if (!defined(deps)) {
       deps = []
     }
-    deps += [ _flutter_asset_tools_label ]
-
-    outputs = [ _asset_manifest ]
+    deps += [
+      _flutter_asset_tools_label,
+      _flutter_asset_tools_snapshot_label,
+    ]
 
     metadata = {
       distribution_entries = [
