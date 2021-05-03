@@ -243,7 +243,7 @@ async fn switch_hardware_camera_disable(env: &TestInputEnvironment, disabled: bo
 // Perform a watch and watch2 and check that the mic mute state matches [expected_muted_state].
 async fn get_and_check_mic_mute(input_proxy: &InputProxy, expected_muted_state: bool) {
     // TODO(fxb/65686): remove when deprecated watch is removed.
-    let settings = input_proxy.watch().await.expect("watch2 completed");
+    let settings = input_proxy.watch().await.expect("watch completed");
 
     let settings2 = input_proxy.watch2().await.expect("watch2 completed");
 
