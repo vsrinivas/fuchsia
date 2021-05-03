@@ -16,7 +16,9 @@ import (
 	"strconv"
 	"sync"
 	"testing"
+	"time"
 
+	"cloud.google.com/go/storage"
 	"go.fuchsia.dev/fuchsia/tools/artifactory"
 )
 
@@ -36,13 +38,14 @@ func newMemSink() *memSink {
 	}
 }
 
-func (s *memSink) objectExistsAt(ctx context.Context, name string) (bool, error) {
+func (s *memSink) objectExistsAt(ctx context.Context, name string) (bool, *storage.ObjectAttrs, error) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 	if _, ok := s.contents[name]; !ok {
-		return false, nil
+		return false, nil, nil
 	}
-	return true, nil
+	attrs := &storage.ObjectAttrs{Updated: time.Now().AddDate(0, 0, -(daysSinceCustomTime + 1))}
+	return true, attrs, nil
 }
 
 func (s *memSink) write(ctx context.Context, upload *artifactory.Upload) error {

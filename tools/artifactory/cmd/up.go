@@ -71,6 +71,12 @@ const (
 	// A list of the objects that need their TTL refreshed.
 	objsToRefreshTTLTxt = "objs_to_refresh_ttl.txt"
 
+	// The number of days since the CustomTime of an object after which the
+	// TTL should be refreshed. This is an arbitrary value chosen to avoid
+	// refreshing the TTL of frequently deduplicated objects repeatedly over
+	// a short time period.
+	daysSinceCustomTime = 10
+
 	// The ELF sizes manifest.
 	elfSizesManifestName = "elf_sizes.json"
 
@@ -354,7 +360,7 @@ func createBuildIDManifest(buildIDs []string) (string, error) {
 type dataSink interface {
 
 	// ObjectExistsAt returns whether an object of that name exists within the sink.
-	objectExistsAt(ctx context.Context, name string) (bool, error)
+	objectExistsAt(ctx context.Context, name string) (bool, *storage.ObjectAttrs, error)
 
 	// Write writes the content of a reader to a sink object at the given name.
 	// If an object at that name does not exists, it will be created; else it
@@ -379,16 +385,16 @@ func newCloudSink(ctx context.Context, bucket string) (*cloudSink, error) {
 	}, nil
 }
 
-func (s *cloudSink) objectExistsAt(ctx context.Context, name string) (bool, error) {
+func (s *cloudSink) objectExistsAt(ctx context.Context, name string) (bool, *storage.ObjectAttrs, error) {
 	a, err := s.bucket.Object(name).Attrs(ctx)
 	if err == storage.ErrObjectNotExist {
-		return false, nil
+		return false, nil, nil
 	} else if err != nil {
-		return false, fmt.Errorf("object %q: possibly exists remotely, but is in an unknown state: %w", name, err)
+		return false, nil, fmt.Errorf("object %q: possibly exists remotely, but is in an unknown state: %w", name, err)
 	}
 	// Check if MD5 is not set, mark this as a miss, then write() function will
 	// handle the race.
-	return len(a.MD5) != 0, nil
+	return len(a.MD5) != 0, a, nil
 }
 
 // hasher is a io.Writer that calculates the MD5.
@@ -613,7 +619,7 @@ func uploadFiles(ctx context.Context, files []artifactory.Upload, dest dataSink,
 	upload := func() {
 		defer wg.Done()
 		for upload := range uploads {
-			exists, err := dest.objectExistsAt(ctx, upload.Destination)
+			exists, attrs, err := dest.objectExistsAt(ctx, upload.Destination)
 			if err != nil {
 				errs <- err
 				return
@@ -624,7 +630,10 @@ func uploadFiles(ctx context.Context, files []artifactory.Upload, dest dataSink,
 					errs <- fmt.Errorf("object %q: collided", upload.Destination)
 					return
 				}
-				objsToRefreshTTL <- upload.Destination
+				// Add objects to update timestamps for that are older than daysSinceCustomTime.
+				if attrs != nil && time.Now().AddDate(0, 0, -daysSinceCustomTime).After(attrs.Updated) {
+					objsToRefreshTTL <- upload.Destination
+				}
 				continue
 			}
 
