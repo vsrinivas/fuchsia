@@ -16,7 +16,7 @@ enum IncomingServices {
 async fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(IncomingServices::ChannelControl);
-    fs.take_and_serve_directory_handle()?;
+    fs.take_and_serve_directory_handle().context("while serving directory handle")?;
 
     let mut target_channel = String::new();
     while let Some(service) = fs.next().await {

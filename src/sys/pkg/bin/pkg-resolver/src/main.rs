@@ -279,7 +279,7 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
 
     inspect_runtime::serve(&inspector, &mut fs)?;
 
-    fs.take_and_serve_directory_handle()?;
+    fs.take_and_serve_directory_handle().context("while serving directory handle")?;
 
     futures.push(fs.collect().boxed_local());
 

@@ -64,7 +64,7 @@ async fn main_inner() -> Result<(), Error> {
     futures.push(cobalt_fut.boxed_local());
 
     let mut fs = ServiceFs::new_local();
-    fs.take_and_serve_directory_handle()?;
+    fs.take_and_serve_directory_handle().context("while serving directory handle")?;
 
     // Inspect
     let inspector = fuchsia_inspect::Inspector::new();
