@@ -12,6 +12,7 @@ import (
 	"crypto/ed25519"
 	"crypto/md5"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"hash"
@@ -31,9 +32,14 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/build"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
+	"google.golang.org/api/googleapi"
 )
 
 const (
+	// The exit code emitted by the `up` command when it fails due to a
+	// transient GCS error.
+	exitTransientError = 3
+
 	// The size in bytes at which files will be read and written to GCS.
 	chunkSize = 100 * 1024 * 1024
 
@@ -177,6 +183,13 @@ func (cmd upCommand) Execute(ctx context.Context, f *flag.FlagSet, _ ...interfac
 
 	if err := cmd.execute(ctx, args[0]); err != nil {
 		logger.Errorf(ctx, "%v", err)
+		var apiErr *googleapi.Error
+		// Use a different exit code if the failure is a (likely transient)
+		// server error so the infrastructure knows to consider it as an infra
+		// failure.
+		if errors.As(err, &apiErr) && apiErr.Code >= 500 {
+			return exitTransientError
+		}
 		return subcommands.ExitFailure
 	}
 	return subcommands.ExitSuccess
