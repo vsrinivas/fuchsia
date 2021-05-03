@@ -48,17 +48,17 @@ impl RemoteNode {
 }
 
 impl RemoteFile {
-    pub fn from_node(node: fio::NodeSynchronousProxy) -> Result<FileHandle, Errno> {
-        let node = match node.describe(zx::Time::INFINITE).map_err(fidl_error)? {
-            fio::NodeInfo::Directory(_) => {
-                RemoteNode::Directory(fio::DirectorySynchronousProxy::new(node.into_channel()))
-            }
+    pub fn from_description(description: syncio::DescribedNode) -> FileHandle {
+        let node = match description.info {
+            fio::NodeInfo::Directory(_) => RemoteNode::Directory(
+                fio::DirectorySynchronousProxy::new(description.node.into_channel()),
+            ),
             fio::NodeInfo::File(_) => {
-                RemoteNode::File(fio::FileSynchronousProxy::new(node.into_channel()))
+                RemoteNode::File(fio::FileSynchronousProxy::new(description.node.into_channel()))
             }
-            _ => RemoteNode::Other(node),
+            _ => RemoteNode::Other(description.node),
         };
-        Ok(Arc::new(RemoteFile { common: FileCommon::default(), node }))
+        Arc::new(RemoteFile { common: FileCommon::default(), node })
     }
 }
 

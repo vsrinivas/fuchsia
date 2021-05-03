@@ -112,15 +112,13 @@ fn load_elf(vmo: &zx::Vmo, vmar: &zx::Vmar) -> Result<LoadedElf, Error> {
 }
 
 // TODO(tbodt): change to return an errno when it's time to implement execve
-// TODO(tbodt): passing the root to this function doesn't make any sense
-pub async fn load_executable(
+pub fn load_executable(
     kernel: &Arc<Kernel>,
     executable: zx::Vmo,
     params: &ProcessParameters,
-    root: fio::DirectoryProxy,
+    fs: Arc<FileSystem>,
 ) -> Result<TaskOwner, Error> {
     let creds = Credentials { uid: 3, gid: 3, euid: 3, egid: 3 };
-    let fs = Arc::new(FileSystem::new(root));
     let task_owner = Task::new(&kernel, &params.name, fs.clone(), creds)?;
     let task = &task_owner.task;
 
@@ -135,7 +133,12 @@ pub async fn load_executable(
         if interp.starts_with('/') {
             interp = &interp[1..];
         }
-        let interp_vmo = library_loader::load_vmo(&fs.root, interp).await?;
+        let interp_vmo = syncio::directory_open_vmo(
+            &fs.root,
+            interp,
+            fio::VMO_FLAG_READ | fio::VMO_FLAG_EXEC,
+            zx::Time::INFINITE,
+        )?;
         Some(load_elf(&interp_vmo, &task.mm.root_vmar).context("Interpreter ELF failed to load")?)
     } else {
         None

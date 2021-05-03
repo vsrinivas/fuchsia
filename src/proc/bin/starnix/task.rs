@@ -249,17 +249,14 @@ impl Task {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::fs::test::create_test_file_system;
     use fuchsia_async as fasync;
-    use io_util::directory;
 
     #[fasync::run_singlethreaded(test)]
     async fn test_tid_allocation() {
         let kernel =
             Kernel::new(&CString::new("test-kernel").unwrap()).expect("failed to create kernel");
-
-        let root = directory::open_in_namespace("/pkg", fidl_fuchsia_io::OPEN_RIGHT_READABLE)
-            .expect("failed to open /pkg");
-        let fs = Arc::new(FileSystem::new(root));
+        let fs = create_test_file_system();
 
         let task_owner = Task::new_mock(&kernel, fs.clone()).expect("failed to create first task");
         let task = &task_owner.task;

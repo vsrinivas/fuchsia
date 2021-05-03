@@ -20,7 +20,6 @@ use fuchsia_zircon::{
     sys::ZX_EXCP_POLICY_ERROR, AsHandleRef, Task as zxTask,
 };
 use futures::{StreamExt, TryStreamExt};
-use io_util::directory;
 use log::{error, info};
 use rand::Rng;
 use std::ffi::CString;
@@ -39,6 +38,7 @@ mod task;
 mod uapi;
 mod user_address;
 
+use crate::fs::FileSystem;
 use crate::loader::*;
 use crate::syscall_table::dispatch_syscall;
 use crate::syscalls::SyscallContext;
@@ -162,25 +162,30 @@ async fn start_component(
     let binary_path = runner::get_program_binary(&start_info)?;
     let ns = start_info.ns.ok_or_else(|| anyhow!("Missing namespace"))?;
 
-    let pkg_proxy = ns
-        .into_iter()
-        .find(|entry| entry.path == Some("/pkg".to_string()))
-        .ok_or_else(|| anyhow!("Missing /pkg entry in namespace"))?
-        .directory
-        .ok_or_else(|| anyhow!("Missing directory handlee in pkg namespace entry"))?
-        .into_proxy()
-        .context("failed to open /pkg")?;
-    let root_proxy = directory::open_directory(
-        &pkg_proxy,
+    let pkg = fio::DirectorySynchronousProxy::new(
+        ns.into_iter()
+            .find(|entry| entry.path == Some("/pkg".to_string()))
+            .ok_or_else(|| anyhow!("Missing /pkg entry in namespace"))?
+            .directory
+            .ok_or_else(|| anyhow!("Missing directory handlee in pkg namespace entry"))?
+            .into_channel(),
+    );
+    let root = syncio::directory_open_directory_async(
+        &pkg,
         &root_path,
         fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
     )
-    .await
-    .context("failed to open root")?;
+    .map_err(|e| anyhow!("Failed to open root: {}", e))?;
 
-    let executable_vmo = library_loader::load_vmo(&root_proxy, &binary_path)
-        .await
-        .context("failed to load executable")?;
+    let executable_vmo = syncio::directory_open_vmo(
+        &root,
+        &binary_path,
+        fio::VMO_FLAG_READ | fio::VMO_FLAG_EXEC,
+        zx::Time::INFINITE,
+    )
+    .map_err(|e| anyhow!("Failed to load executable: {}", e))?;
+
+    let fs = Arc::new(FileSystem::new(root));
 
     let params = ProcessParameters {
         name: CString::new(binary_path.clone())?,
@@ -190,8 +195,7 @@ async fn start_component(
 
     std::thread::spawn(move || {
         let err = (|| -> Result<(), Error> {
-            let task_owner =
-                block_on(load_executable(&kernel, executable_vmo, &params, root_proxy))?;
+            let task_owner = load_executable(&kernel, executable_vmo, &params, fs)?;
             let exceptions = task_owner.task.thread.create_exception_channel()?;
             let exit_code = run_task(task_owner, exceptions)?;
 
@@ -308,8 +312,4 @@ async fn main() -> Result<(), Error> {
     fs.take_and_serve_directory_handle()?;
     fs.collect::<()>().await;
     Ok(())
-}
-
-pub fn block_on<F: std::future::Future>(fut: F) -> F::Output {
-    fuchsia_async::Executor::new().unwrap().run_singlethreaded(fut)
 }

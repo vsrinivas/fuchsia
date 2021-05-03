@@ -2,19 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl::endpoints::Proxy;
 use fidl_fuchsia_io as fio;
 use fuchsia_runtime::utc_time;
 use fuchsia_zircon::{self as zx, sys::zx_thread_state_general_regs_t, AsHandleRef};
-use io_util::directory;
-use io_util::node::OpenError;
 use log::{info, warn};
 use std::convert::TryInto;
 use std::ffi::{CStr, CString};
 use std::sync::Arc;
 use zerocopy::AsBytes;
 
-use crate::block_on;
 use crate::fs::*;
 use crate::mm::*;
 use crate::not_implemented;
@@ -418,16 +414,6 @@ pub fn sys_set_tid_address(
     Ok(ctx.task.get_tid().into())
 }
 
-async fn async_openat(
-    parent: &fio::DirectoryProxy,
-    path: &str,
-    flags: u32,
-    mode: u32,
-) -> Result<fio::NodeSynchronousProxy, OpenError> {
-    let node = directory::open_node(parent, path, flags, mode).await?;
-    Ok(fio::NodeSynchronousProxy::new(node.into_channel().unwrap().into_zx_channel()))
-}
-
 pub fn sys_openat(
     ctx: &SyscallContext<'_>,
     dir_fd: i32,
@@ -449,15 +435,21 @@ pub fn sys_openat(
     let path = &path[1..];
     // TODO(tbodt): Need to switch to filesystem APIs that do not require UTF-8
     let path = std::str::from_utf8(path).expect("bad UTF-8 in filename");
-    let node = block_on(async_openat(&ctx.task.fs.root, path, fio::OPEN_RIGHT_READABLE, 0))
-        .map_err(|e| match e {
-            OpenError::OpenError(zx::Status::NOT_FOUND) => ENOENT,
-            _ => {
-                warn!("open failed: {:?}", e);
-                EIO
-            }
-        })?;
-    Ok(ctx.task.files.install_fd(RemoteFile::from_node(node)?)?.into())
+    let description = syncio::directory_open(
+        &ctx.task.fs.root,
+        path,
+        fio::OPEN_RIGHT_READABLE,
+        0,
+        zx::Time::INFINITE,
+    )
+    .map_err(|e| match e {
+        zx::Status::NOT_FOUND => ENOENT,
+        _ => {
+            warn!("open failed: {:?}", e);
+            EIO
+        }
+    })?;
+    Ok(ctx.task.files.install_fd(RemoteFile::from_description(description))?.into())
 }
 
 pub fn sys_getrandom(
@@ -539,6 +531,7 @@ pub fn impossible_error(status: zx::Status) -> Errno {
 mod tests {
     use super::*;
     use crate::auth::Credentials;
+    use crate::fs::test::create_test_file_system;
     use fuchsia_async as fasync;
 
     /// Creates a `Kernel` and `Task` for testing purposes.
@@ -547,14 +540,11 @@ mod tests {
     fn create_kernel_and_task() -> (Arc<Kernel>, TaskOwner) {
         let kernel =
             Kernel::new(&CString::new("test-kernel").unwrap()).expect("failed to create kernel");
-        let root = directory::open_in_namespace("/pkg", fidl_fuchsia_io::OPEN_RIGHT_READABLE)
-            .expect("failed to open /pkg");
-        let fs = Arc::new(FileSystem::new(root));
 
         let task = Task::new(
             &kernel,
             &CString::new("test-task").unwrap(),
-            fs.clone(),
+            create_test_file_system(),
             Credentials::default(),
         )
         .expect("failed to create first task");
