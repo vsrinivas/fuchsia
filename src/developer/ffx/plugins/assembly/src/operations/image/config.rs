@@ -10,6 +10,7 @@ use {
 
 #[derive(Deserialize, Serialize)]
 pub(crate) struct Config {
+    pub extra_packages_for_base_package: Vec<String>,
     pub base_packages: Vec<String>,
     pub cache_packages: Vec<String>,
     pub meta_packages: Vec<String>,
@@ -63,6 +64,7 @@ mod tests {
     fn from_json_file() {
         let json = r#"
             {
+              extra_packages_for_base_package: ["package0"],
               base_packages: ["package1", "package2"],
               cache_packages: ["package3", "package4"],
               meta_packages: ["package5", "package6"],
