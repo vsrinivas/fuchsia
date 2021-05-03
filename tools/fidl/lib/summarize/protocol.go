@@ -17,9 +17,17 @@ const protocolKind Kind = "protocol"
 func (s *summarizer) addProtocols(protocols []fidlgen.Protocol) {
 	for _, p := range protocols {
 		for _, m := range p.Methods {
-			s.addElement(newMethod(p.Name, m))
+			s.addElement(newMethod(&s.symbols, p.Name, m))
 		}
 		s.addElement(protocol{named: named{name: Name(p.Name)}})
+	}
+}
+
+// registerProtocolNames registers the names of all protocols in the FIDL IR.
+func (s *summarizer) registerProtocolNames(protocols []fidlgen.Protocol) {
+	for _, p := range protocols {
+		// This will become useful when deliberating channel syntax.
+		s.symbols.addProtocol(p.Name)
 	}
 }
 
@@ -47,9 +55,9 @@ type method struct {
 }
 
 // newMethod creates a new protocol method element.
-func newMethod(parent fidlgen.EncodedCompoundIdentifier, m fidlgen.Method) method {
+func newMethod(s *symbolTable, parent fidlgen.EncodedCompoundIdentifier, m fidlgen.Method) method {
 	return method{
-		membership: newIsMember(parent, m.Name, fidlgen.ProtocolDeclType /* default value */, nil),
+		membership: newIsMember(s, parent, m.Name, fidlgen.ProtocolDeclType /* default value */, nil),
 		method:     m,
 	}
 }
@@ -76,11 +84,11 @@ func (m method) Member() bool {
 // this method.  E.g. "(int32 a) -> (Foo b)"
 func (m method) getTypeSignature() Decl {
 	var parlist []string
-	request := getParamList(m.method.HasRequest, m.method.Request)
+	request := m.getParamList(m.method.HasRequest, m.method.Request)
 	if request != "" {
 		parlist = append(parlist, request)
 	}
-	response := getParamList(m.method.HasResponse, m.method.Response)
+	response := m.getParamList(m.method.HasResponse, m.method.Response)
 	if response != "" {
 		if request == "" {
 			// -> Method(T a)
@@ -99,13 +107,13 @@ func (m method) Serialize() ElementStr {
 }
 
 // getParamList formats a parameter list, as in Foo(ty1 a, ty2b)
-func getParamList(hasParams bool, params []fidlgen.Parameter) string {
+func (m method) getParamList(hasParams bool, params []fidlgen.Parameter) string {
 	if !hasParams {
 		return ""
 	}
 	var ps []string
 	for _, p := range params {
-		ps = append(ps, fmt.Sprintf("%v %v", fidlTypeString(p.Type), p.Name))
+		ps = append(ps, fmt.Sprintf("%v %v", m.membership.symbolTable.fidlTypeString(p.Type), p.Name))
 	}
 	return fmt.Sprintf("(%v)", strings.Join(ps, ","))
 }

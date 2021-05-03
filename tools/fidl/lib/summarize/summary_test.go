@@ -231,6 +231,27 @@ library l
 `,
 		},
 		{
+			name: "struct with an element with default value",
+			fidl: `
+library l;
+const string VALUE = "booyah!";
+struct S {
+  float32 x = 0.314159;
+  string foo = "huzzah";
+  bool bar = true;
+  string baz = VALUE;
+};
+`,
+			expected: `struct/member l/S.bar bool true
+struct/member l/S.baz string "booyah!"
+struct/member l/S.foo string "huzzah"
+struct/member l/S.x float32 0.314159
+struct l/S
+const l/VALUE string "booyah!"
+library l
+`,
+		},
+		{
 			name: "arrays",
 			fidl: `
 library l;
@@ -239,8 +260,8 @@ struct Arrays {
     array<array<string>:4>:10 matrix;
 };
 `,
-			expected: `struct/member l/Arrays.form array<float32>:16
-struct/member l/Arrays.matrix array<array<string>:4>:10
+			expected: `struct/member l/Arrays.form array<float32,16>
+struct/member l/Arrays.matrix array<array<string,4>,10>
 struct l/Arrays
 library l
 `,
@@ -254,7 +275,7 @@ struct Document {
     string? description;
 };
 `,
-			expected: `struct/member l/Document.description string?
+			expected: `struct/member l/Document.description string:optional
 struct/member l/Document.title string:40
 struct l/Document
 library l
@@ -273,10 +294,10 @@ struct Vectors {
 };
 `,
 			expected: `struct/member l/Vectors.blob vector<uint8>
-struct/member l/Vectors.complex vector<vector<array<float32>:16>>
-struct/member l/Vectors.nullable_vector_of_strings vector<string>:24?
+struct/member l/Vectors.complex vector<vector<array<float32,16>>>
+struct/member l/Vectors.nullable_vector_of_strings vector<string>:<24,optional>
 struct/member l/Vectors.params vector<int32>:10
-struct/member l/Vectors.vector_of_nullable_strings vector<string?>
+struct/member l/Vectors.vector_of_nullable_strings vector<string:optional>
 struct l/Vectors
 library l
 `,
@@ -293,8 +314,8 @@ resource struct Handles {
     zx.handle:CHANNEL? c;
 };
 `,
-			expected: `struct/member l/Handles.c zx/handle:zx/obj_type.CHANNEL?
-struct/member l/Handles.h handle
+			expected: `struct/member l/Handles.c zx/handle:<CHANNEL,optional>
+struct/member l/Handles.h zx/handle
 resource struct l/Handles
 library l
 `,
@@ -336,7 +357,7 @@ struct Circle {
 };
 `,
 			expected: `struct/member l/Circle.center l/CirclePoint
-struct/member l/Circle.color l/Color?
+struct/member l/Circle.color box<l/Color>
 struct/member l/Circle.dashed bool
 struct/member l/Circle.filled bool
 struct/member l/Circle.radius float32
@@ -412,7 +433,7 @@ protocol P {
 `,
 			expected: `struct l/Bar
 struct l/Foo
-protocol/member l/P.M(l/Bar? b) -> (l/Foo c)
+protocol/member l/P.M(box<l/Bar> b) -> (l/Foo c)
 protocol l/P
 library l
 `,
@@ -432,10 +453,10 @@ protocol P2 {
 `,
 			expected: `struct l/Bar
 protocol l/P
-protocol/member l/P2.M1(l/P a)
-protocol/member l/P2.M2(l/P? a)
-protocol/member l/P2.M3(request<l/P> a)
-protocol/member l/P2.M4(request<l/P>? a)
+protocol/member l/P2.M1(client_end:l/P a)
+protocol/member l/P2.M2(client_end:<l/P,optional> a)
+protocol/member l/P2.M3(server_end:l/P a)
+protocol/member l/P2.M4(server_end:<l/P,optional> a)
 protocol l/P2
 library l
 `,
@@ -475,7 +496,7 @@ struct S {
 `,
 			expected: `struct/member l/S.f1 string
 struct/member l/S.f2 string:4
-struct/member l/S.f3 string:4?
+struct/member l/S.f3 string:<4,optional>
 struct l/S
 library l
 `,
@@ -887,12 +908,12 @@ struct Arrays {
   {
     "name": "l/Arrays.form",
     "kind": "struct/member",
-    "declaration": "array<float32>:16"
+    "declaration": "array<float32,16>"
   },
   {
     "name": "l/Arrays.matrix",
     "kind": "struct/member",
-    "declaration": "array<array<string>:4>:10"
+    "declaration": "array<array<string,4>,10>"
   },
   {
     "name": "l/Arrays",
@@ -918,7 +939,7 @@ struct Document {
   {
     "name": "l/Document.description",
     "kind": "struct/member",
-    "declaration": "string?"
+    "declaration": "string:optional"
   },
   {
     "name": "l/Document.title",
@@ -957,12 +978,12 @@ struct Vectors {
   {
     "name": "l/Vectors.complex",
     "kind": "struct/member",
-    "declaration": "vector<vector<array<float32>:16>>"
+    "declaration": "vector<vector<array<float32,16>>>"
   },
   {
     "name": "l/Vectors.nullable_vector_of_strings",
     "kind": "struct/member",
-    "declaration": "vector<string>:24?"
+    "declaration": "vector<string>:<24,optional>"
   },
   {
     "name": "l/Vectors.params",
@@ -972,7 +993,7 @@ struct Vectors {
   {
     "name": "l/Vectors.vector_of_nullable_strings",
     "kind": "struct/member",
-    "declaration": "vector<string?>"
+    "declaration": "vector<string:optional>"
   },
   {
     "name": "l/Vectors",
@@ -1001,12 +1022,12 @@ resource struct Handles {
   {
     "name": "l/Handles.c",
     "kind": "struct/member",
-    "declaration": "zx/handle:zx/obj_type.CHANNEL?"
+    "declaration": "zx/handle:<CHANNEL,optional>"
   },
   {
     "name": "l/Handles.h",
     "kind": "struct/member",
-    "declaration": "handle"
+    "declaration": "zx/handle"
   },
   {
     "name": "l/Handles",
@@ -1080,7 +1101,7 @@ struct Circle {
   {
     "name": "l/Circle.color",
     "kind": "struct/member",
-    "declaration": "l/Color?"
+    "declaration": "box<l/Color>"
   },
   {
     "name": "l/Circle.dashed",
@@ -1267,7 +1288,7 @@ protocol P {
   {
     "name": "l/P.M",
     "kind": "protocol/member",
-    "declaration": "(l/Bar? b) -> (l/Foo c)"
+    "declaration": "(box<l/Bar> b) -> (l/Foo c)"
   },
   {
     "name": "l/P",
@@ -1305,22 +1326,22 @@ protocol P2 {
   {
     "name": "l/P2.M1",
     "kind": "protocol/member",
-    "declaration": "(l/P a)"
+    "declaration": "(client_end:l/P a)"
   },
   {
     "name": "l/P2.M2",
     "kind": "protocol/member",
-    "declaration": "(l/P? a)"
+    "declaration": "(client_end:<l/P,optional> a)"
   },
   {
     "name": "l/P2.M3",
     "kind": "protocol/member",
-    "declaration": "(request<l/P> a)"
+    "declaration": "(server_end:l/P a)"
   },
   {
     "name": "l/P2.M4",
     "kind": "protocol/member",
-    "declaration": "(request<l/P>? a)"
+    "declaration": "(server_end:<l/P,optional> a)"
   },
   {
     "name": "l/P2",
@@ -1419,7 +1440,7 @@ struct S {
   {
     "name": "l/S.f3",
     "kind": "struct/member",
-    "declaration": "string:4?"
+    "declaration": "string:<4,optional>"
   },
   {
     "name": "l/S",

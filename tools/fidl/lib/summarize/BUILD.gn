@@ -12,6 +12,7 @@ if (is_host) {
     sources = [
       "elementslice_test.go",
       "summary_test.go",
+      "symboltable_test.go",
       "wraparoundtype_test.go",
     ]
     deps = [ ":gopkg" ]
@@ -52,6 +53,7 @@ if (is_host) {
       "properties.go",
       "protocol.go",
       "summary.go",
+      "symboltable.go",
       "wraparoundtype.go",
     ]
     deps = [ "//tools/fidl/lib/fidlgen" ]

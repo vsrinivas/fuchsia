@@ -17,7 +17,9 @@ func (s *summarizer) addConsts(consts []fidlgen.Const) {
 		v := c.Value
 		s.addElement(
 			aConst{
-				named:             named{name: Name(c.Name)},
+				named: named{
+					symbolTable: &s.symbols,
+					name:        Name(c.Name)},
 				aType:             c.Type,
 				maybeDefaultValue: &v,
 			})
@@ -40,7 +42,7 @@ func (c aConst) String() string {
 func (c aConst) Serialize() ElementStr {
 	e := c.named.Serialize()
 	e.Kind = Kind(aConstType)
-	e.Decl = Decl(fidlTypeString(c.aType))
+	e.Decl = Decl(c.symbolTable.fidlTypeString(c.aType))
 	e.Value = fidlConstToValue(c.maybeDefaultValue)
 	return e
 }

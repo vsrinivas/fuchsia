@@ -20,12 +20,12 @@ func (s *summarizer) addEnums(enums []fidlgen.Enum) {
 		for _, m := range e.Members {
 			// Avoid pointer aliasing on m.
 			v := m.Value
-			s.addElement(newIsMember(e.Name, m.Name, fidlgen.EnumDeclType, &v))
+			s.addElement(newIsMember(&s.symbols, e.Name, m.Name, fidlgen.EnumDeclType, &v))
 		}
 		s.addElement(
 			enum{
 				wraparoundType: wraparoundType{
-					named:      newNamed(e.Name),
+					named:      newNamed(&s.symbols, e.Name),
 					subtype:    e.Type,
 					strictness: e.Strictness,
 					parentType: fidlgen.EnumDeclType,

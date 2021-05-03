@@ -18,6 +18,7 @@ an example, see below how isMember embeds named.
 
 // named is something that has a name.
 type named struct {
+	symbolTable *symbolTable
 	// name is a fully qualified name. It is generic, as sometimes it is a
 	// compound identifier and sometimes "just" an identifier.
 	name Name
@@ -25,8 +26,9 @@ type named struct {
 	parent fidlgen.EncodedCompoundIdentifier
 }
 
-func newNamed(name fidlgen.EncodedCompoundIdentifier) named {
-	return named{name: Name(name)}
+func newNamed(s *symbolTable,
+	name fidlgen.EncodedCompoundIdentifier) named {
+	return named{symbolTable: s, name: Name(name)}
 }
 
 func (l named) Serialize() ElementStr {
@@ -51,12 +53,16 @@ type isMember struct {
 
 // newIsMember creates a new element that represents a member.
 func newIsMember(
+	st *symbolTable,
 	parentName fidlgen.EncodedCompoundIdentifier,
 	name fidlgen.Identifier,
 	parentType fidlgen.DeclType,
 	maybeDefaultValue *fidlgen.Constant) isMember {
 	return isMember{
-		named:      named{parent: parentName, name: Name(name)},
+		named: named{
+			symbolTable: st,
+			parent:      parentName,
+			name:        Name(name)},
 		parentType: parentType,
 		maybeValue: maybeDefaultValue,
 	}
@@ -146,13 +152,14 @@ type member struct {
 
 // newMember creates a new aggregate member element.
 func newMember(
+	st *symbolTable,
 	parentName fidlgen.EncodedCompoundIdentifier,
 	name fidlgen.Identifier,
 	memberType fidlgen.Type,
 	declType fidlgen.DeclType,
 	maybeDefaultValue *fidlgen.Constant) member {
 	return member{
-		m:          newIsMember(parentName, name, declType, maybeDefaultValue),
+		m:          newIsMember(st, parentName, name, declType, maybeDefaultValue),
 		memberType: memberType,
 	}
 }
@@ -174,6 +181,6 @@ func (s member) Name() Name {
 
 func (s member) Serialize() ElementStr {
 	e := s.m.Serialize()
-	e.Decl = fidlTypeString(s.memberType)
+	e.Decl = s.m.symbolTable.fidlTypeString(s.memberType)
 	return e
 }

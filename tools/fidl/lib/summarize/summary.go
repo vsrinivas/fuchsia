@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"io"
 	"sort"
-	"strings"
 
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
@@ -43,6 +42,7 @@ var _ = []Element{
 
 type summarizer struct {
 	elements elementSlice
+	symbols  symbolTable
 }
 
 // addElement adds an element for summarization.
@@ -66,7 +66,7 @@ func (s *summarizer) addUnions(unions []fidlgen.Union) {
 				continue
 			}
 			s.addElement(newMember(
-				st.Name, m.Name, m.Type, fidlgen.UnionDeclType, nil))
+				&s.symbols, st.Name, m.Name, m.Type, fidlgen.UnionDeclType, nil))
 		}
 		s.addElement(
 			newAggregateWithStrictness(
@@ -82,7 +82,7 @@ func (s *summarizer) addTables(tables []fidlgen.Table) {
 				// Disregard reserved members
 				continue
 			}
-			s.addElement(newMember(st.Name, m.Name, m.Type, fidlgen.TableDeclType, nil))
+			s.addElement(newMember(&s.symbols, st.Name, m.Name, m.Type, fidlgen.TableDeclType, nil))
 		}
 		s.addElement(newAggregate(st.Name, st.Resourceness, fidlgen.TableDeclType))
 	}
@@ -97,9 +97,16 @@ func (s *summarizer) addStructs(structs []fidlgen.Struct) {
 		}
 		for _, m := range st.Members {
 			s.addElement(newMember(
-				st.Name, m.Name, m.Type, fidlgen.StructDeclType, m.MaybeDefaultValue))
+				&s.symbols, st.Name, m.Name, m.Type, fidlgen.StructDeclType, m.MaybeDefaultValue))
 		}
 		s.addElement(newAggregate(st.Name, st.Resourceness, fidlgen.StructDeclType))
+	}
+}
+
+// registerStructNames registers names of all the structs in the FIDL IR.
+func (s *summarizer) registerStructNames(structs []fidlgen.Struct) {
+	for _, st := range structs {
+		s.symbols.addStruct(st.Name)
 	}
 }
 
@@ -133,6 +140,10 @@ func serialize(e []Element) []ElementStr {
 // canonical ordering.
 func Elements(root fidlgen.Root) []Element {
 	var s summarizer
+
+	s.registerStructNames(root.Structs)
+	s.registerProtocolNames(root.Protocols)
+
 	s.addConsts(root.Consts)
 	s.addBits(root.Bits)
 	s.addEnums(root.Enums)
@@ -142,59 +153,4 @@ func Elements(root fidlgen.Root) []Element {
 	s.addProtocols(root.Protocols)
 	s.addElement(library{r: root})
 	return s.Elements()
-}
-
-func elementCountToString(ec *int) string {
-	if ec != nil {
-		return fmt.Sprintf(":%d", *ec)
-	} else {
-		return ""
-	}
-}
-
-func nullableToString(n bool) string {
-	if n {
-		return "?"
-	} else {
-		return ""
-	}
-}
-
-// fidlNestedToString prints the FIDL type of a sequence or aggregate, assuming
-// that t is indeed such a type.
-func fidlNestedToString(t fidlgen.Type) Decl {
-	return Decl(fmt.Sprintf("%v<%v>%v%v",
-		// Assumes t.Kind is one of the sequential types.
-		t.Kind,
-		fidlTypeString(*t.ElementType),
-		elementCountToString(t.ElementCount),
-		nullableToString(t.Nullable)))
-}
-
-// fidlTypeString converts the FIDL type declaration into a string.
-func fidlTypeString(t fidlgen.Type) Decl {
-	n := nullableToString(t.Nullable)
-	switch t.Kind {
-	case fidlgen.PrimitiveType:
-		return Decl(t.PrimitiveSubtype)
-	case fidlgen.StringType:
-		return Decl(fmt.Sprintf("%s%s%s",
-			t.Kind, elementCountToString(t.ElementCount), n))
-	case fidlgen.ArrayType, fidlgen.VectorType:
-		return fidlNestedToString(t)
-	case fidlgen.HandleType:
-		switch t.HandleSubtype {
-		case fidlgen.Handle:
-			return Decl(fmt.Sprintf("handle%v", n))
-		default:
-			return Decl(fmt.Sprintf(
-				"zx/handle:zx/obj_type.%v%v", strings.ToUpper(string(t.HandleSubtype)), n))
-		}
-	case fidlgen.IdentifierType:
-		return Decl(fmt.Sprintf("%v%v", string(t.Identifier), n))
-	case fidlgen.RequestType:
-		return Decl(fmt.Sprintf("request<%v>%v", string(t.RequestSubtype), n))
-	default:
-		return "<not implemented>"
-	}
 }
