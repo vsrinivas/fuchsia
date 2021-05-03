@@ -421,11 +421,11 @@ zx_status_t TerminaEnclosedGuest::WaitForSystemReady() {
   // Create mountpoints for test utils and extras. The root filesystem is read only so we
   // put these under /tmp.
   zx_status_t status;
-  status = MountDeviceInGuest(*maitred_, "/dev/vdb", "/tmp/test_utils", "ext2", MS_RDONLY);
+  status = MountDeviceInGuest(*maitred_, "/dev/vdc", "/tmp/test_utils", "ext2", MS_RDONLY);
   if (status != ZX_OK) {
     return status;
   }
-  status = MountDeviceInGuest(*maitred_, "/dev/vdc", "/tmp/extras", "romfs", MS_RDONLY);
+  status = MountDeviceInGuest(*maitred_, "/dev/vdd", "/tmp/extras", "romfs", MS_RDONLY);
   if (status != ZX_OK) {
     return status;
   }
