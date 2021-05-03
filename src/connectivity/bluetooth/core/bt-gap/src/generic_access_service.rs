@@ -261,7 +261,10 @@ mod tests {
         let (expected_device_name, _err) =
             delegate_client.on_read_value(GENERIC_ACCESS_DEVICE_NAME_ID, 0).await.unwrap();
         assert_eq!(expected_device_name.unwrap(), TEST_DEVICE_NAME.as_bytes());
-        host_dispatcher.set_name("test-generic-access-service-1".to_string()).await.unwrap_err();
+        let _ = host_dispatcher
+            .set_name("test-generic-access-service-1".to_string())
+            .await
+            .unwrap_err();
         let (expected_device_name, _err) =
             delegate_client.on_read_value(GENERIC_ACCESS_DEVICE_NAME_ID, 0).await.unwrap();
         assert_eq!(

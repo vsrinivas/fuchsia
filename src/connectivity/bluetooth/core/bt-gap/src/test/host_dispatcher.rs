@@ -6,6 +6,7 @@ use crate::{
     build_config::{BrEdrConfig, Config},
     host_dispatcher::{test as hd_test, HostDispatcher},
     store::stash::Stash,
+    types,
 };
 use {
     anyhow::{format_err, Error},
@@ -115,7 +116,10 @@ async fn test_change_name_no_deadlock() {
     // in the dispatcher - we don't need to go through the trouble of setting up an emulated
     // host to test whether or not we can send messages to the GAS task. We just want to make
     // sure that the function actually returns and doesn't deadlock.
-    dispatcher.set_name("test-change".to_string()).await.unwrap_err();
+    assert_matches!(
+        dispatcher.set_name("test-change".to_string()).await.unwrap_err(),
+        types::Error::SysError(sys::Error::Failed)
+    );
 }
 
 async fn host_is_in_dispatcher(id: &HostId, dispatcher: &HostDispatcher) -> bool {

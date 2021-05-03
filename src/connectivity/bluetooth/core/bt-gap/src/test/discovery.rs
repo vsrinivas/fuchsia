@@ -128,8 +128,8 @@ proptest! {
                                 &mut access_proxy.start_discovery(discovery_session_server),
                             );
 
-                            discovery_sessions.insert(client_num, discovery_session);
-                            access_proxies.insert(client_num, access_proxy);
+                            assert!(discovery_sessions.insert(client_num, discovery_session).is_none());
+                            let _ = access_proxies.insert(client_num, access_proxy);
                         }
 
                         // drop existing discovery session

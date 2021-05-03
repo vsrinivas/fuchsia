@@ -106,7 +106,11 @@ async fn test_discovery_over_adapter_change() -> Result<(), Error> {
         assert_matches!(response, Ok(Ok(())));
 
         // Assert that Host #1 is now marked as discovering
-        host_1.clone().refresh_test_host_info().await.expect("did not receive Host #1 info update");
+        let _ = host_1
+            .clone()
+            .refresh_test_host_info()
+            .await
+            .expect("did not receive Host #1 info update");
         let is_discovering = host_1.info().discovering.clone();
         assert!(is_discovering);
 
@@ -114,7 +118,11 @@ async fn test_discovery_over_adapter_change() -> Result<(), Error> {
         hd.rm_device(active_host_path).await;
 
         // Assert that Host #2 is now marked as discovering
-        host_2.clone().refresh_test_host_info().await.expect("did not receive Host #2 info update");
+        let _ = host_2
+            .clone()
+            .refresh_test_host_info()
+            .await
+            .expect("did not receive Host #2 info update");
         let is_discovering = host_2.info().discovering.clone();
         assert!(is_discovering);
 
@@ -123,8 +131,16 @@ async fn test_discovery_over_adapter_change() -> Result<(), Error> {
         drop(discovery_session);
 
         // TODO(fxbug.dev/59420): Remove the double refresh once the cause is understood and fixed
-        host_2.clone().refresh_test_host_info().await.expect("did not receive Host #2 info update");
-        host_2.clone().refresh_test_host_info().await.expect("did not receive Host #2 info update");
+        let _ = host_2
+            .clone()
+            .refresh_test_host_info()
+            .await
+            .expect("did not receive Host #2 info update");
+        let _ = host_2
+            .clone()
+            .refresh_test_host_info()
+            .await
+            .expect("did not receive Host #2 info update");
         let is_discovering = host_2.info().discovering.clone();
         assert!(!is_discovering);
 

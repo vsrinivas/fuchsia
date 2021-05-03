@@ -219,7 +219,8 @@ async fn serve_fidl(hd: HostDispatcher, inspect: fuchsia_inspect::Inspector) -> 
     // serve bt-gap inspect VMO
     inspect_runtime::serve(&inspect, &mut fs)?;
 
-    fs.dir("svc")
+    let _ = fs
+        .dir("svc")
         .add_fidl_service(|request_stream| {
             let hd = hd.clone();
             info!("Spawning Control Service");
@@ -287,7 +288,7 @@ async fn serve_fidl(hd: HostDispatcher, inspect: fuchsia_inspect::Inspector) -> 
             )
             .detach();
         });
-    fs.take_and_serve_directory_handle()?;
+    let _ = fs.take_and_serve_directory_handle()?;
     fs.collect::<()>().await;
     Ok(())
 }

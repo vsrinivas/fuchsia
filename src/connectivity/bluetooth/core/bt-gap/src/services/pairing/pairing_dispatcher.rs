@@ -109,7 +109,9 @@ impl PairingDispatcher {
         host_proxy.set_pairing_delegate(self.input, self.output, client)?;
         // Historically we spawned a task to handle these requests
         // Instead, store a value that can be polled directly
-        self.hosts.insert(id, requests.tagged(id).with_epitaph(id));
+        if self.hosts.insert(id, requests.tagged(id).with_epitaph(id)).is_some() {
+            warn!("Replaced host {} in handling", id);
+        }
         Ok(())
     }
 
@@ -130,7 +132,7 @@ impl PairingDispatcher {
                         match req {
                             Ok(req) => self.handle_host_request(req, host),
                             Err(_) => {
-                                self.hosts.remove(&host);
+                                drop(self.hosts.remove(&host));
                                 false
                             }
                         }
@@ -345,7 +347,8 @@ mod test {
         );
         // We directly insert the proxy to avoid the indirection of having to provide an
         // implementation of Host.SetPairingDelegate
-        dispatcher.hosts.insert(HostId(0), requests.tagged(HostId(0)).with_epitaph(HostId(0)));
+        let _ =
+            dispatcher.hosts.insert(HostId(0), requests.tagged(HostId(0)).with_epitaph(HostId(0)));
 
         // Handle the request message
         let terminate = dispatcher.handle_next().await;
@@ -376,7 +379,8 @@ mod test {
         let (mut dispatcher, handle, run_upstream) =
             dispatcher_from_handler(|_req| future::ok(()))?;
         // Forcibly insert the proxy
-        dispatcher.hosts.insert(HostId(0), requests.tagged(HostId(0)).with_epitaph(HostId(0)));
+        let _ =
+            dispatcher.hosts.insert(HostId(0), requests.tagged(HostId(0)).with_epitaph(HostId(0)));
 
         let make_request = async move {
             let result =
@@ -442,7 +446,8 @@ mod test {
             })?;
 
         // Forcibly insert the proxy
-        dispatcher.hosts.insert(HostId(0), requests.tagged(HostId(0)).with_epitaph(HostId(0)));
+        let _ =
+            dispatcher.hosts.insert(HostId(0), requests.tagged(HostId(0)).with_epitaph(HostId(0)));
 
         let make_request = async move {
             let result =

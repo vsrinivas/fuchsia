@@ -5,7 +5,7 @@
 use {
     fidl_fuchsia_bluetooth as btfidl, fidl_fuchsia_bluetooth_sys as sys,
     fuchsia_bluetooth::types::{Peer, PeerId},
-    log::warn,
+    log::{info, warn},
     parking_lot::Mutex,
     std::collections::{HashMap, HashSet},
     std::sync::Arc,
@@ -64,10 +64,12 @@ impl PeerWatcher {
             // Apply only the truncated updates to our cache of the client's state; Updates that we
             // didn't send will need to be sent in the next update
             for peer in raw_updated {
-                last_seen.insert(peer.id, peer.clone());
+                let _ = last_seen.insert(peer.id, peer.clone());
             }
             for peer in raw_removed {
-                last_seen.remove(&peer);
+                if last_seen.remove(&peer).is_none() {
+                    info!("Sent already-removed peer removal (not in tracked state)");
+                }
             }
         }
         consumed
@@ -156,7 +158,7 @@ mod test {
         let watcher = PeerWatcher::new(last_seen, responder);
         assert!(futures::poll!(&mut result_fut).is_pending());
         let new = HashMap::new();
-        PeerWatcher::observe(&new, watcher);
+        assert!(PeerWatcher::observe(&new, watcher));
         assert!(result_fut.await.is_ok());
         Ok(())
     }

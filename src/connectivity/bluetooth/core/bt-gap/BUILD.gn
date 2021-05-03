@@ -81,6 +81,8 @@ rustc_binary("bin") {
     "src/types.rs",
     "src/watch_peers.rs",
   ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 resource("default-config") {

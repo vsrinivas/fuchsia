@@ -19,7 +19,7 @@ pub(crate) struct InMemoryStore {
 
 impl InMemoryStore {
     fn store_host(&mut self, address: Address, host: HostData) {
-        self.host_data.insert(address, host);
+        let _ = self.host_data.insert(address, host);
     }
     fn get_host(&self, address: Address) -> Option<HostData> {
         self.host_data.get(&address).cloned()

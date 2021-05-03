@@ -20,10 +20,9 @@ use {
         future::{Future, FutureExt},
         stream::StreamExt,
     },
-    log::{error, info},
+    log::{error, info, warn},
     serde_json,
     std::collections::HashMap,
-    std::ops::Deref,
 };
 
 #[cfg(test)]
@@ -233,35 +232,37 @@ struct StashInner {
     inspect: fuchsia_inspect::Node,
 }
 
+fn insert_inspectable_bonds(
+    data: &mut HashMap<Address, HashMap<PeerId, Inspectable<BondingData>>>,
+    inspect: &fuchsia_inspect::Node,
+    bonds: Vec<BondingData>,
+) {
+    for bond in bonds {
+        let (local_address, identifier) = (bond.local_address, bond.identifier);
+        let node = inspect.create_child(format!("bond {}", identifier));
+        let bond = Inspectable::new(bond, node);
+        // Update the in memory cache.
+        let host_bonds = data.entry(local_address).or_insert(HashMap::new());
+        if host_bonds.insert(identifier, bond).is_some() {
+            warn!("Replaced bond data for {} peer id {}", local_address, identifier);
+        }
+    }
+}
+
 impl StashInner {
     /// Updates the bonding data for a given device. Creates a new entry if one matching this
     /// device does not exist.
     async fn store_bonds(&mut self, bonds: Vec<BondingData>) -> Result<(), Error> {
-        let bonds: Vec<_> = bonds
-            .into_iter()
-            .map(|bond| {
-                let node = self.inspect.create_child(format!("bond {}", bond.identifier));
-                let bond = Inspectable::new(bond, node);
-                info!("storing bond (id: {})", bond.identifier);
-                bond
-            })
-            .collect();
-
         for bond in bonds.iter() {
+            info!("storing bond (id: {})", bond.identifier);
             // Persist the serialized blob.
-            let serialized =
-                serde_json::to_string(&BondingDataSerializer::new(&bond.deref().clone()))?;
+            let serialized = serde_json::to_string(&BondingDataSerializer::new(&bond))?;
             self.proxy
                 .set_value(&bonding_data_key(bond.identifier), &mut Value::Stringval(serialized))?;
         }
         self.proxy.flush().await?.map_err(|e| format_err!("Failed to flush to stash: {:?}", e))?;
 
-        for bond in bonds {
-            // Update the in memory cache.
-            let host_bonds =
-                self.bonding_data.entry(bond.local_address.clone()).or_insert(HashMap::new());
-            host_bonds.insert(bond.identifier.clone(), bond);
-        }
+        insert_inspectable_bonds(&mut self.bonding_data, &self.inspect, bonds);
         Ok(())
     }
 
@@ -307,7 +308,7 @@ impl StashInner {
         self.proxy.flush().await?.map_err(|e| format_err!("Failed to flush to stash: {:?}", e))?;
 
         // Update the in memory cache.
-        self.host_data.insert(local_addr.clone(), data);
+        let _ = self.host_data.insert(local_addr.clone(), data);
         Ok(())
     }
 
@@ -336,19 +337,19 @@ impl StashInner {
             if next.is_empty() {
                 break;
             }
-            for key_value in next {
-                if let Value::Stringval(json) = key_value.val {
-                    let bonding_data = BondingDataDeserializer::from_json(&json)?;
-                    let node = inspect.create_child(format!("bond {}", bonding_data.identifier));
-                    let bonding_data = Inspectable::new(bonding_data, node);
-                    let local_address_entries =
-                        bonding_map.entry(bonding_data.local_address).or_insert(HashMap::new());
-                    local_address_entries.insert(bonding_data.identifier.clone(), bonding_data);
-                } else {
-                    error!("stash malformed: bonding data should be a string");
-                    return Err(format_err!("failed to initialize stash"));
-                }
-            }
+            let bonds = next
+                .into_iter()
+                .map(|key_value| {
+                    if let Value::Stringval(json) = key_value.val {
+                        BondingDataDeserializer::from_json(&json)
+                    } else {
+                        error!("stash malformed: bonding data should be a string");
+                        Err(format_err!("failed to initialize stash"))
+                    }
+                })
+                .collect::<Result<Vec<_>, Error>>()?;
+
+            insert_inspectable_bonds(&mut bonding_map, &inspect, bonds);
         }
         Ok(bonding_map)
     }
@@ -371,7 +372,9 @@ impl StashInner {
                 let host_address = Address::public_from_str(&host_address)?;
                 if let Value::Stringval(json) = key_value.val {
                     let host_data = HostDataDeserializer::from_json(&json)?;
-                    host_data_map.insert(host_address, host_data.into());
+                    if host_data_map.insert(host_address, host_data.into()).is_some() {
+                        warn!("Replaced host data for {} while loading", host_address);
+                    }
                 } else {
                     error!("stash malformed: host data should be a string");
                     return Err(BtError::new("failed to initialize stash").into());

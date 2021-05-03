@@ -161,10 +161,10 @@ mod tests {
         };
         let run_host = async {
             let mut expected_reqs = HashSet::<String>::new();
-            expected_reqs.insert("enable_privacy".into());
-            expected_reqs.insert("enable_background_scan".into());
-            expected_reqs.insert("set_connectable".into());
-            expected_reqs.insert("set_le_security_mode".into());
+            let _ = expected_reqs.insert("enable_privacy".into());
+            let _ = expected_reqs.insert("enable_background_scan".into());
+            let _ = expected_reqs.insert("set_connectable".into());
+            let _ = expected_reqs.insert("set_le_security_mode".into());
             host_server
                 .try_for_each(|req| {
                     match req {

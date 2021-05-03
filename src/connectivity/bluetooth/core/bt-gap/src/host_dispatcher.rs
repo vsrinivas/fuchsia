@@ -280,8 +280,11 @@ impl HostDispatcherState {
     }
 
     fn add_host(&mut self, id: HostId, host: HostDevice) {
-        info!("Host added: {}", id.to_string());
-        self.host_devices.insert(id, host.clone());
+        if self.host_devices.insert(id, host.clone()).is_some() {
+            warn!("Host replaced: {}:", id.to_string())
+        } else {
+            info!("Host added: {}", id.to_string());
+        }
 
         // If this is the only host, mark it as active.
         let _ = self.get_active_id();
@@ -701,7 +704,7 @@ impl HostDispatcher {
         async move {
             publisher
                 .update(move |peers| {
-                    peers.insert(update_peer.id, update_peer);
+                    let _ = peers.insert(update_peer.id, update_peer);
                     true
                 })
                 .await
@@ -712,7 +715,7 @@ impl HostDispatcher {
     pub fn on_device_removed(&self, id: PeerId) -> impl Future<Output = ()> {
         let mut publisher = {
             let mut state = self.state.write();
-            state.peers.remove(&id);
+            drop(state.peers.remove(&id));
             state.inspect.peer_count.set(state.peers.len() as u64);
             state.notify_event_listeners(|listener| {
                 let _res = listener
@@ -726,8 +729,8 @@ impl HostDispatcher {
         async move {
             publisher
                 .update(move |peers| {
-                    peers.remove(&id);
-                    true
+                    // Updated if we actually removed something.
+                    peers.remove(&id).is_some()
                 })
                 .await
                 .expect("Fatal error: Peer Watcher HangingGet unreachable")
@@ -878,7 +881,7 @@ impl HostDispatcher {
             info!("Host removed: {} (path: {:?})", id_strs.join(","), host_path);
 
             for id in &ids {
-                hd.host_devices.remove(id);
+                drop(hd.host_devices.remove(id));
                 hd.notify_event_listeners(|listener| {
                     let _ = listener.send_on_adapter_removed(&id.to_string());
                 })
@@ -979,7 +982,7 @@ impl WhenHostsFound {
 
     fn remove_waker(&mut self) {
         if let Some(key) = self.waker_key {
-            self.hd.state.write().host_requests.remove(key);
+            drop(self.hd.state.write().host_requests.remove(key));
         }
         self.waker_key = None;
     }
@@ -1059,7 +1062,10 @@ async fn try_restore_bonds(
 
 fn generate_irk() -> Result<sys::Key, zx::Status> {
     let mut buf: [u8; 16] = [0; 16];
-    zx::cprng_draw(&mut buf)?;
+    // Do not allow us to generate an insecure IRK.
+    if buf.len() != zx::cprng_draw(&mut buf)? {
+        return Err(zx::Status::UNAVAILABLE);
+    }
     Ok(sys::Key { value: buf })
 }
 
