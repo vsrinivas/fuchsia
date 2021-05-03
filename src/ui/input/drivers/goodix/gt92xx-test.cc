@@ -81,12 +81,57 @@ TEST(GoodixTest, Init) {
 
   Gt92xxTest device(i2c, intr, reset);
 
-  mock_i2c.ExpectWriteStop(Gt92xxDevice::GetConfData())
+  mock_i2c
+      .ExpectWrite({static_cast<uint8_t>(GT_REG_CONFIG_DATA >> 8),
+                    static_cast<uint8_t>(GT_REG_CONFIG_DATA & 0xff)})
+      .ExpectReadStop({0x00})
+      .ExpectWriteStop(Gt92xxDevice::GetConfData())
       .ExpectWriteStop({static_cast<uint8_t>(GT_REG_TOUCH_STATUS >> 8),
                         static_cast<uint8_t>(GT_REG_TOUCH_STATUS & 0xff), 0x00})
       .ExpectWrite({static_cast<uint8_t>(GT_REG_CONFIG_DATA >> 8),
                     static_cast<uint8_t>(GT_REG_CONFIG_DATA & 0xff)})
       .ExpectReadStop({0x00})
+      .ExpectWrite({static_cast<uint8_t>(GT_REG_FW_VERSION >> 8),
+                    static_cast<uint8_t>(GT_REG_FW_VERSION & 0xff)})
+      .ExpectReadStop({0x05, 0x61});
+
+  EXPECT_OK(device.Init());
+  ASSERT_NO_FATAL_FAILURES(reset_mock.VerifyAndClear());
+  ASSERT_NO_FATAL_FAILURES(intr_mock.VerifyAndClear());
+}
+
+TEST(GoodixTest, InitForceConfig) {
+  ddk::MockGpio reset_mock;
+  ddk::MockGpio intr_mock;
+  mock_i2c::MockI2c mock_i2c;
+  zx::interrupt irq;
+
+  reset_mock.ExpectConfigOut(ZX_OK, 0).ExpectWrite(ZX_OK, 1);
+
+  intr_mock.ExpectConfigOut(ZX_OK, 0).ExpectConfigIn(ZX_OK, 0).ExpectGetInterrupt(
+      ZX_OK, ZX_INTERRUPT_MODE_EDGE_LOW, std::move(irq));
+
+  const gpio_protocol_t* reset = reset_mock.GetProto();
+  const gpio_protocol_t* intr = intr_mock.GetProto();
+
+  ddk::I2cChannel i2c(mock_i2c.GetProto());
+
+  Gt92xxTest device(i2c, intr, reset);
+
+  fbl::Vector conf_data = Gt92xxDevice::GetConfData();
+  EXPECT_NE(conf_data[sizeof(uint16_t)], 0x00);
+  conf_data[sizeof(uint16_t)] = 0x00;
+
+  mock_i2c
+      .ExpectWrite({static_cast<uint8_t>(GT_REG_CONFIG_DATA >> 8),
+                    static_cast<uint8_t>(GT_REG_CONFIG_DATA & 0xff)})
+      .ExpectReadStop({0x60})
+      .ExpectWriteStop(std::move(conf_data))
+      .ExpectWriteStop({static_cast<uint8_t>(GT_REG_TOUCH_STATUS >> 8),
+                        static_cast<uint8_t>(GT_REG_TOUCH_STATUS & 0xff), 0x00})
+      .ExpectWrite({static_cast<uint8_t>(GT_REG_CONFIG_DATA >> 8),
+                    static_cast<uint8_t>(GT_REG_CONFIG_DATA & 0xff)})
+      .ExpectReadStop({0x60})
       .ExpectWrite({static_cast<uint8_t>(GT_REG_FW_VERSION >> 8),
                     static_cast<uint8_t>(GT_REG_FW_VERSION & 0xff)})
       .ExpectReadStop({0x05, 0x61});

@@ -224,6 +224,12 @@ zx_status_t Gt92xxDevice::Init() {
   ZX_DEBUG_ASSERT((Conf.size() - sizeof(uint16_t)) ==
                   (GT_REG_CONFIG_REFRESH - GT_REG_CONFIG_DATA + 1));
 
+  zx::status<uint8_t> version = Read(GT_REG_CONFIG_DATA);
+  if (version.is_ok() && version.value() > Conf.data()[sizeof(uint16_t)]) {
+    // Force the controller to take the config.
+    Conf[sizeof(uint16_t)] = 0x00;
+  }
+
   // Write conf data to registers
   status = Write(Conf.data(), Conf.size());
   if (status != ZX_OK) {
