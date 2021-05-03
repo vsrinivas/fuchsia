@@ -50,6 +50,16 @@ pub trait FileObject: Deref<Target = FileCommon> {
     // you open a device file, fstat will go to the filesystem, not to the device. It's only here
     // because we don't have such a thing yet. Will need to be moved.
     fn fstat(&self, task: &Task) -> Result<stat_t, Errno>;
+
+    /// Get the async owner of this file.
+    ///
+    /// See fcntl(F_GETOWN)
+    fn get_async_owner(&self) -> pid_t;
+
+    /// Set the async owner of this file.
+    ///
+    /// See fcntl(F_SETOWN)
+    fn set_async_owner(&self, owner: pid_t);
 }
 
 /// Implements FileDesc methods in a way that makes sense for nonseekable files. You must implement
@@ -67,6 +77,12 @@ macro_rules! fd_impl_nonseekable {
             _data: &[iovec_t],
         ) -> Result<usize, Errno> {
             Err(ESPIPE)
+        }
+        fn get_async_owner(&self) -> pid_t {
+            self.common.get_async_owner()
+        }
+        fn set_async_owner(&self, owner: pid_t) {
+            self.common.set_async_owner(owner)
         }
     };
 }
@@ -88,6 +104,12 @@ macro_rules! fd_impl_seekable {
             *offset += size;
             Ok(size)
         }
+        fn get_async_owner(&self) -> pid_t {
+            self.common.get_async_owner()
+        }
+        fn set_async_owner(&self, owner: pid_t) {
+            self.common.set_async_owner(owner)
+        }
     };
 }
 
@@ -95,6 +117,17 @@ macro_rules! fd_impl_seekable {
 #[derive(Default)]
 pub struct FileCommon {
     pub offset: Mutex<usize>,
+    pub async_owner: Mutex<pid_t>,
+}
+
+impl FileCommon {
+    pub fn get_async_owner(&self) -> pid_t {
+        *self.async_owner.lock()
+    }
+
+    pub fn set_async_owner(&self, owner: pid_t) {
+        *self.async_owner.lock() = owner;
+    }
 }
 
 pub type FileHandle = Arc<dyn FileObject + Send + Sync>;
@@ -118,9 +151,9 @@ impl FdTable {
         Ok(n)
     }
 
-    pub fn get(&self, n: FileDescriptor) -> Result<FileHandle, Errno> {
+    pub fn get(&self, fd: FileDescriptor) -> Result<FileHandle, Errno> {
         let table = self.table.read();
-        table.get(&n).map(|handle| handle.clone()).ok_or_else(|| EBADF)
+        table.get(&fd).map(|handle| handle.clone()).ok_or_else(|| EBADF)
     }
 }
 

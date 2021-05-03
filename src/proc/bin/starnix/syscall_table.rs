@@ -102,6 +102,7 @@ pub fn dispatch_syscall(
         clock_gettime[2],
         exit[1],
         exit_group[1],
+        fcntl[3],
         fstat[2],
         fstatfs[2],
         getcwd[2],

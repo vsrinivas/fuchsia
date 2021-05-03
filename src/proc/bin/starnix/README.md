@@ -75,3 +75,26 @@ In the device logs you should see output like:
 [starnix, starnix_runner::syscalls] INFO: exit: error_code=0
 [starnix, strace] INFO: -> 0x0
 ```
+
+## Testing
+
+### Using a locally built syscalls test binary
+
+The `syscalls_test` test runs a prebuilt binary that has been built with the
+Android NDK. You can substitute your own prebuilt binary using the
+`starnix_syscalls_test_label` GN argument:
+
+```sh
+$ fx set core.x64 --args 'starnix_syscalls_test_label="//local/starnix/syscalls"' --with //src/proc,//src/proc:tests
+```
+
+Build your `syscalls` binary and put the file in `//local/starnix/syscalls`.
+(If you are building using the Google-internal build system, be sure to
+specific the `--config=android_x86_64` build flag to build an NDK binary.)
+
+You can then build and run your test as usual:
+
+```sh
+$ fx build
+$ fx test syscalls_test
+```

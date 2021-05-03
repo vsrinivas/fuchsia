@@ -4,6 +4,14 @@
 
 import("//build/components.gni")
 
+declare_args() {
+  # Which binary to use for //src/proc/bin/android:syscalls_test
+  #
+  # For example, set to "//local/starnix/syscalls" to use a locally built binary.
+  starnix_syscalls_test_label =
+      "//prebuilt/starnix/tests/syscalls/linux-amd64/syscalls"
+}
+
 group("android") {
   deps = [ ":android_system_image" ]
 }
@@ -77,7 +85,7 @@ resource("system_bin") {
 }
 
 resource("syscalls_test_bin") {
-  sources = [ "//prebuilt/starnix/tests/syscalls/linux-amd64/syscalls" ]
+  sources = [ starnix_syscalls_test_label ]
   outputs = [ "root/system/bin/syscalls_test" ]
 }
 

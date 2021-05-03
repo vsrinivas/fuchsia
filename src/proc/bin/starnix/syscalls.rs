@@ -37,8 +37,34 @@ pub fn sys_write(
     buffer: UserAddress,
     count: usize,
 ) -> Result<SyscallResult, Errno> {
-    let fd = ctx.task.files.get(fd)?;
-    Ok(fd.write(&ctx.task, &[iovec_t { iov_base: buffer, iov_len: count }])?.into())
+    let file = ctx.task.files.get(fd)?;
+    Ok(file.write(&ctx.task, &[iovec_t { iov_base: buffer, iov_len: count }])?.into())
+}
+
+pub fn sys_fcntl(
+    ctx: &SyscallContext<'_>,
+    fd: FileDescriptor,
+    cmd: u32,
+    arg: u64,
+) -> Result<SyscallResult, Errno> {
+    let file = ctx.task.files.get(fd)?;
+    match cmd {
+        F_GETOWN => Ok(file.get_async_owner().into()),
+        F_SETOWN => {
+            if arg > std::i32::MAX as u64 {
+                // Negative values are process groups.
+                not_implemented!("fcntl(F_SETOWN) does not support process groups");
+                return Err(EINVAL);
+            }
+            let task = ctx.task.get_task(arg.try_into().map_err(|_| EINVAL)?);
+            file.set_async_owner(task.map_or(0, |task| task.id));
+            Ok(SUCCESS)
+        }
+        _ => {
+            not_implemented!("fcntl command {} not implemented", cmd);
+            Err(ENOSYS)
+        }
+    }
 }
 
 pub fn sys_fstat(
@@ -46,8 +72,8 @@ pub fn sys_fstat(
     fd: FileDescriptor,
     buffer: UserRef<stat_t>,
 ) -> Result<SyscallResult, Errno> {
-    let fd = ctx.task.files.get(fd)?;
-    let result = fd.fstat(&ctx.task)?;
+    let file = ctx.task.files.get(fd)?;
+    let result = file.fstat(&ctx.task)?;
     ctx.task.mm.write_object(buffer, &result)?;
     return Ok(SUCCESS);
 }
@@ -123,11 +149,11 @@ pub fn sys_mmap(
         vmo
     } else {
         // TODO(tbodt): maximize protection flags so that mprotect works
-        let fd = ctx.task.files.get(fd)?;
+        let file = ctx.task.files.get(fd)?;
         let zx_prot = mmap_prot_to_vm_opt(prot);
         if flags & MAP_PRIVATE != 0 {
             // TODO(tbodt): Use VMO_FLAG_PRIVATE to have the filesystem server do the clone for us.
-            let vmo = fd.get_vmo(&ctx.task, zx_prot - zx::VmarFlags::PERM_WRITE, flags)?;
+            let vmo = file.get_vmo(&ctx.task, zx_prot - zx::VmarFlags::PERM_WRITE, flags)?;
             let mut clone_flags = zx::VmoChildOptions::COPY_ON_WRITE;
             if !zx_prot.contains(zx::VmarFlags::PERM_WRITE) {
                 clone_flags |= zx::VmoChildOptions::NO_WRITE;
@@ -135,7 +161,7 @@ pub fn sys_mmap(
             vmo.create_child(clone_flags, 0, vmo.get_size().map_err(impossible_error)?)
                 .map_err(impossible_error)?
         } else {
-            fd.get_vmo(&ctx.task, zx_prot, flags)?
+            file.get_vmo(&ctx.task, zx_prot, flags)?
         }
     };
     let vmo_offset = if flags & MAP_ANONYMOUS != 0 { 0 } else { offset };
@@ -185,8 +211,8 @@ pub fn sys_pread64(
     count: usize,
     offset: usize,
 ) -> Result<SyscallResult, Errno> {
-    let fd = ctx.task.files.get(fd)?;
-    let bytes = fd.read_at(&ctx.task, offset, &[iovec_t { iov_base: buf, iov_len: count }])?;
+    let file = ctx.task.files.get(fd)?;
+    let bytes = file.read_at(&ctx.task, offset, &[iovec_t { iov_base: buf, iov_len: count }])?;
     Ok(bytes.into())
 }
 
@@ -206,8 +232,8 @@ pub fn sys_writev(
     iovecs.resize(iovec_count, iovec_t::default());
 
     ctx.task.mm.read_memory(iovec_addr, iovecs.as_mut_slice().as_bytes_mut())?;
-    let fd = ctx.task.files.get(fd)?;
-    Ok(fd.write(&ctx.task, &iovecs)?.into())
+    let file = ctx.task.files.get(fd)?;
+    Ok(file.write(&ctx.task, &iovecs)?.into())
 }
 
 pub fn sys_access(
