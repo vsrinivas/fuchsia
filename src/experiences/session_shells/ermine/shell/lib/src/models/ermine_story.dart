@@ -12,7 +12,6 @@ import 'package:fuchsia_scenic_flutter/child_view_connection.dart';
 import 'package:fuchsia_services/services.dart';
 import 'package:internationalization/strings.dart';
 import 'package:uuid/uuid.dart';
-import 'package:zircon/zircon.dart';
 
 import '../utils/presenter.dart';
 import '../utils/suggestion.dart';
@@ -123,12 +122,9 @@ class ErmineStory {
   ///
   /// Also invokes [onChange] callback and request scenic to transfer input
   /// focus to the associated [viewRef].
-  ///
-  /// Takes an optional [ViewRefInstalledProxy] to allow passing in a mocked
-  /// instance during test.
-  void focus([ViewRefInstalledProxy viewRefInstalled]) {
+  void focus() {
     onChange?.call(this..focused = true);
-    requestFocus(viewRefInstalled);
+    requestFocus();
   }
 
   void maximize() => onChange?.call(this..fullscreen = true);
@@ -209,14 +205,10 @@ class ErmineStory {
   }
 
   /// Requests focus to be transfered to this view given it's [viewRef].
-  Future<void> requestFocus([ViewRefInstalledProxy viewRefInstalled]) async {
+  Future<void> requestFocus() async {
     // [requestFocus] is called for 'every' post render of ChildView widget,
     // even when that child view is not focused. Skip focusing those views here.
     if (childViewConnection == null || !focused) {
-      return;
-    }
-
-    if (!await _isInstalled(viewRefInstalled)) {
       return;
     }
 
@@ -233,24 +225,6 @@ class ErmineStory {
     } on Error catch (e) {
       log.shout('Failed to request focus for $url: $e');
     }
-  }
-
-  // Uses [ViewRefInstalled] service to check if child view is attached to the
-  // scene graph.
-  Future<bool> _isInstalled([ViewRefInstalledProxy viewRefInstalled]) async {
-    try {
-      final viewRefService = viewRefInstalled ?? ViewRefInstalledProxy();
-      if (viewRefInstalled == null) {
-        Incoming.fromSvcPath().connectToService(viewRefService);
-      }
-      final eventPair = viewRef.reference.duplicate(ZX.RIGHT_SAME_RIGHTS);
-      assert(eventPair.isValid);
-      await viewRefService.watch(ViewRef(reference: eventPair));
-      return true;
-    } on Exception catch (e) {
-      log.shout('Failed to check if viewRef for $url is installed: $e');
-    }
-    return false;
   }
 
   // Returns true if child view is connected to the scene graph and rendering.

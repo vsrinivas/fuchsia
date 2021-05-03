@@ -61,7 +61,6 @@ void main() {
     final eventPair = MockEventPair();
     final eventPairDup = MockEventPair();
     final viewRef = MockViewRef();
-    final viewRefInstalled = MockViewRefInstalled();
     final childViewConnection = MockChildViewConnection();
     final viewController = MockViewControllerImpl();
 
@@ -79,12 +78,11 @@ void main() {
       ..viewRef = viewRef
       ..childViewConnectionNotifier.value = childViewConnection
       ..viewController = viewController
-      ..focus(viewRefInstalled);
+      ..focus();
 
     expect(onChangeCalled, true);
     await completer.future;
 
-    verify(viewRefInstalled.watch(ViewRef(reference: eventPairDup))).called(1);
     verify(childViewConnection.requestFocus()).called(1);
   });
 
@@ -134,8 +132,8 @@ class TestErmineStory extends ErmineStory {
   }) : super(id: 'id', onChange: onChange);
 
   @override
-  Future<void> requestFocus([ViewRefInstalledProxy viewRefInstalled]) async {
-    final result = await super.requestFocus(viewRefInstalled);
+  Future<void> requestFocus() async {
+    final result = await super.requestFocus();
     requestFocusCompleter.complete(true);
     return result;
   }
@@ -144,8 +142,6 @@ class TestErmineStory extends ErmineStory {
 class MockViewControllerImpl extends Mock implements ViewControllerImpl {}
 
 class MockChildViewConnection extends Mock implements ChildViewConnection {}
-
-class MockViewRefInstalled extends Mock implements ViewRefInstalledProxy {}
 
 class MockViewRef extends Mock implements ViewRef {}
 

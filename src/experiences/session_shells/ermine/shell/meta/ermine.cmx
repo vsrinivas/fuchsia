@@ -36,7 +36,6 @@
             "fuchsia.ui.policy.Presenter",
             "fuchsia.ui.scenic.Scenic",
             "fuchsia.ui.shortcut.Registry",
-            "fuchsia.ui.views.ViewRefInstalled",
             "fuchsia.update.channelcontrol.ChannelControl"
         ]
     }
