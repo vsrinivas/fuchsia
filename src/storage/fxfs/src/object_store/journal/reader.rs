@@ -133,8 +133,12 @@ impl<OH: ObjectHandle> JournalReader<OH> {
     // deserialize records.
     async fn fill_buf(&mut self) -> Result<(), Error> {
         let bs = self.block_size as usize;
+        let min_required = bs - std::mem::size_of::<Checksum>();
 
-        if self.found_reset || self.bad_checksum || self.buf_range.end - self.buf_range.start > bs {
+        if self.found_reset
+            || self.bad_checksum
+            || self.buf_range.end - self.buf_range.start >= min_required
+        {
             return Ok(());
         }
 
@@ -142,9 +146,8 @@ impl<OH: ObjectHandle> JournalReader<OH> {
         self.buf.copy_within(self.buf_range.clone(), 0);
         self.buf_range = 0..self.buf_range.end - self.buf_range.start;
 
-        while self.buf_range.end - self.buf_range.start < bs {
+        while self.buf_range.end - self.buf_range.start < min_required {
             self.buf.resize(self.buf_range.end + bs, 0);
-            assert!(self.buf_range.end <= bs);
             let last_read_checksum = self.last_read_checksum();
 
             // Read the next block's worth, verify its checksum, and append it to |buf|.
@@ -232,12 +235,12 @@ mod tests {
         super::{JournalReader, ReadResult},
         crate::{
             object_handle::{ObjectHandle, ObjectHandleExt},
-            object_store::journal::{writer::JournalWriter, JournalCheckpoint},
+            object_store::journal::{writer::JournalWriter, Checksum, JournalCheckpoint},
             testing::fake_object::{FakeObject, FakeObjectHandle},
         },
         fuchsia_async as fasync,
         serde::Serialize,
-        std::sync::Arc,
+        std::{io::Write, sync::Arc},
     };
 
     const TEST_BLOCK_SIZE: u64 = 512;
@@ -447,5 +450,41 @@ mod tests {
             reader.deserialize().await.expect("deserialize failed"),
             ReadResult::Some(13u32)
         );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_reader_starting_near_end_of_block() {
+        let object = Arc::new(FakeObject::new());
+        // Make the journal file a minimum of two blocks since reading to EOF is an error.
+        let handle = FakeObjectHandle::new(object.clone());
+        let len = TEST_BLOCK_SIZE as usize * 3;
+        let mut buf = handle.allocate_buffer(len);
+        buf.as_mut_slice().fill(0u8);
+        handle.write(0, buf.as_ref()).await.expect("write failed");
+        let mut writer = JournalWriter::new(
+            Some(FakeObjectHandle::new(object.clone())),
+            TEST_BLOCK_SIZE as usize,
+            0,
+        );
+        let len = 2 * (TEST_BLOCK_SIZE as usize - std::mem::size_of::<Checksum>());
+        assert_eq!(writer.write(&vec![78u8; len]).expect("write failed"), len);
+        writer.maybe_flush_buffer().await.expect("flush_buffer failed");
+
+        let checkpoint = JournalCheckpoint {
+            file_offset: TEST_BLOCK_SIZE - std::mem::size_of::<Checksum>() as u64 - 1,
+            checksum: 0,
+        };
+        let mut reader =
+            JournalReader::new(FakeObjectHandle::new(object.clone()), TEST_BLOCK_SIZE, &checkpoint);
+        let mut offset = checkpoint.file_offset as usize;
+        while offset < len {
+            reader.fill_buf().await.expect("fill_buf failed");
+            let mut buf = reader.buffer();
+            let amount = std::cmp::min(buf.len(), len - offset);
+            buf = &buf[..amount];
+            assert_eq!(&buf[..amount], vec![78; amount]);
+            offset += amount;
+            reader.consume(amount);
+        }
     }
 }
