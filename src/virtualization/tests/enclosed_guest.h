@@ -194,12 +194,12 @@ class TerminaEnclosedGuest : public EnclosedGuest, public vm_tools::StartupListe
   fuchsia::virtualization::HostVsockEndpointPtr vsock_;
 };
 
-// Termina guests should be added here once they're stable in CQ.
 using AllGuestTypes =
     ::testing::Types<ZirconEnclosedGuest, SingleCpuEnclosedGuest<ZirconEnclosedGuest>
 #if __x86_64__
                      ,
-                     DebianEnclosedGuest, SingleCpuEnclosedGuest<DebianEnclosedGuest>
+                     DebianEnclosedGuest, SingleCpuEnclosedGuest<DebianEnclosedGuest>,
+                     TerminaEnclosedGuest
 #endif  // __x86_64__
                      >;
 
