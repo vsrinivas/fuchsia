@@ -7,8 +7,8 @@ use async_utils::hanging_get::client::HangingGetStream;
 use derivative::Derivative;
 use fidl_fuchsia_bluetooth::PeerId;
 use fidl_fuchsia_bluetooth_hfp::{
-    CallManagerMarker, CallManagerRequest, CallManagerRequestStream, CallMarker, CallRequest,
-    CallRequestStream, CallState as FidlCallState, CallWatchStateResponder, DtmfCode,
+    CallAction, CallManagerMarker, CallManagerRequest, CallManagerRequestStream, CallMarker,
+    CallRequest, CallRequestStream, CallState as FidlCallState, CallWatchStateResponder, DtmfCode,
     HeadsetGainProxy, HfpMarker, HfpProxy, NetworkInformation, PeerHandlerRequest,
     PeerHandlerRequestStream, PeerHandlerWatchNetworkInformationResponder,
     PeerHandlerWatchNextCallResponder, SignalStrength,
@@ -30,6 +30,48 @@ pub const HFP_AG_URL: &str =
     "fuchsia-pkg://fuchsia.com/bt-hfp-audio-gateway-default#meta/bt-hfp-audio-gateway.cmx";
 
 type CallId = u64;
+type Number = String;
+type Memory = String;
+
+/// Handles call actions initiated by the Hands Free.
+#[derive(Debug, Default)]
+struct Dialer {
+    /// The last dialed Number if one exists.
+    last_dialed: Option<Number>,
+    /// A map of Memory locations to Numbers.
+    address_book: HashMap<Memory, Number>,
+    /// The result that should be returned from a request to dial a Number.
+    dial_result: HashMap<Number, zx::Status>,
+}
+
+impl Dialer {
+    /// Performs an outgoing call initiation action, simulating a request to the network.
+    /// If the request was a success, the number of the outgoing call is returned.
+    /// If the request failed, the failure status is returned.
+    /// Defaults to request failure with `zx::Status::NOT_FOUND` if the number associated with
+    /// the call action has not been explicitly set to return a result.
+    ///
+    /// Panics if `action` is a `CallAction::TransferActive`.
+    pub fn dial(&mut self, action: CallAction) -> Result<Number, zx::Status> {
+        let number = match &action {
+            CallAction::TransferActive(_) => panic!("TransferActive action passed to dial"),
+            CallAction::DialFromNumber(number) => Ok(number),
+            CallAction::DialFromLocation(location) => {
+                self.address_book.get(location).ok_or(zx::Status::NOT_FOUND)
+            }
+            CallAction::RedialLast(_) => self.last_dialed.as_ref().ok_or(zx::Status::NOT_FOUND),
+        }?
+        .to_owned();
+
+        let result = self.dial_result.get(&number).cloned().unwrap_or(zx::Status::NOT_FOUND);
+        if result == zx::Status::OK {
+            self.last_dialed = Some(number.clone());
+            Ok(number)
+        } else {
+            Err(result)
+        }
+    }
+}
 
 #[derive(Derivative)]
 #[derivative(Debug)]
@@ -42,6 +84,7 @@ struct ManagerState {
     subscriber_numbers: Vec<String>,
     nrec_support: bool,
     battery_level: Option<u8>,
+    dialer: Dialer,
 }
 
 impl Default for ManagerState {
@@ -53,6 +96,7 @@ impl Default for ManagerState {
             subscriber_numbers: vec![],
             nrec_support: true,
             battery_level: None,
+            dialer: Dialer::default(),
         }
     }
 }
@@ -527,8 +571,46 @@ impl TestCallManager {
                     return Err(err);
                 }
             }
-            PeerHandlerRequest::RequestOutgoingCall { action: _, responder: _, .. } => {
-                unimplemented!();
+            PeerHandlerRequest::RequestOutgoingCall { action, responder } => {
+                if let CallAction::TransferActive(_) = action {
+                    let inner = self.inner.lock().await;
+                    match inner
+                        .calls
+                        .iter()
+                        .find(|(_, call)| call.state == FidlCallState::OngoingActive)
+                    {
+                        Some((&id, _)) => {
+                            drop(inner);
+                            // result can be ignored because id was just found in the call map.
+                            let _ = self.update_call(id, FidlCallState::TransferredToAg).await;
+                        }
+                        None => drop(responder.send(&mut Err(zx::Status::NOT_FOUND.into_raw()))),
+                    };
+                } else {
+                    let mut inner = self.inner.lock().await;
+                    // Simulate dialing action and then respond to any outstanding WatchForCall
+                    // requests.
+                    let mut result = match inner.manager.dialer.dial(action) {
+                        Ok(number) => match self.outgoing_call(&number).await {
+                            Ok(id) => {
+                                fx_log_info!(
+                                    "Initiated outgoing call to {}. CallId: {}",
+                                    number,
+                                    id
+                                );
+                                Ok(())
+                            }
+                            Err(e) => {
+                                fx_log_err!("Could not initiate outgoing call action: {}", e);
+                                Err(zx::Status::INTERNAL.into_raw())
+                            }
+                        },
+                        Err(status) => Err(status.into_raw()),
+                    };
+
+                    // Once dialing and hanging gets have been handled, send response.
+                    let _ = responder.send(&mut result);
+                }
             }
             PeerHandlerRequest::QueryOperator { responder, .. } => {
                 responder.send(Some(&self.inner.lock().await.manager.operator))?;
