@@ -15,7 +15,7 @@
         "src/lib/fuchsia-hyper/hyper.shard.cmx"
     ],
     "program": {
-        "binary": "test/pkg-resolve-inspect"
+        "binary": "bin/pkg_resolve_inspect"
     },
     "sandbox": {
         "features": [

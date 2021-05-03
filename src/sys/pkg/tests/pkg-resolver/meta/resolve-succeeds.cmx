@@ -15,7 +15,7 @@
         "src/lib/fuchsia-hyper/hyper.shard.cmx"
     ],
     "program": {
-        "binary": "test/resolve-succeeds"
+        "binary": "bin/resolve_succeeds"
     },
     "sandbox": {
         "features": [

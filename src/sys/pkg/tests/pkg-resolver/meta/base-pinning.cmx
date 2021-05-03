@@ -14,7 +14,7 @@
         "src/lib/fuchsia-hyper/hyper.shard.cmx"
     ],
     "program": {
-        "binary": "test/base-pinning"
+        "binary": "bin/base_pinning"
     },
     "sandbox": {
         "features": [

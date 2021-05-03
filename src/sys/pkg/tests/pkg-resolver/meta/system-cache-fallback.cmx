@@ -15,7 +15,7 @@
         "src/lib/fuchsia-hyper/hyper.shard.cmx"
     ],
     "program": {
-        "binary": "test/system-cache-fallback"
+        "binary": "bin/system_cache_fallback"
     },
     "sandbox": {
         "features": [

@@ -12,7 +12,7 @@
         "src/lib/fuchsia-hyper/hyper.shard.cmx"
     ],
     "program": {
-        "binary": "test/dynamic-repositories-disabled"
+        "binary": "bin/dynamic_repositories_disabled"
     },
     "sandbox": {
         "features": [

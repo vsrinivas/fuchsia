@@ -2,10 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/dist/resource.gni")
+import("//build/components.gni")
+import("//build/dist/renamed_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
 
 rustc_library("lib") {
   name = "lib"
@@ -554,142 +554,153 @@ rustc_test("metrics") {
   sources = [ "src/metrics.rs" ]
 }
 
-test_package("pkg-resolver-integration-tests") {
+fuchsia_test_component("dynamic_repositories_disabled-component") {
+  component_name = "dynamic-repositories-disabled"
+  manifest = "meta/dynamic-repositories-disabled.cmx"
+  deps = [ ":dynamic_repositories_disabled" ]
+}
+
+fuchsia_test_component("dynamic_rewrite_disabled-component") {
+  component_name = "dynamic-rewrite-disabled"
+  manifest = "meta/dynamic-rewrite-disabled.cmx"
+  deps = [ ":dynamic_rewrite_disabled" ]
+}
+
+fuchsia_test_component("get_hash-component") {
+  component_name = "get-hash"
+  manifest = "meta/get-hash.cmx"
+  deps = [ ":get_hash" ]
+}
+
+fuchsia_test_component("pkg_resolve_inspect-component") {
+  component_name = "pkg-resolve-inspect"
+  manifest = "meta/pkg-resolve-inspect.cmx"
+  deps = [ ":pkg_resolve_inspect" ]
+}
+
+fuchsia_test_component("resolve_propagates_pkgfs_failure-component") {
+  component_name = "resolve-propagates-pkgfs-failure"
+  manifest = "meta/resolve-propagates-pkgfs-failure.cmx"
+  deps = [ ":resolve_propagates_pkgfs_failure" ]
+}
+
+fuchsia_test_component("resolve_recovers_from_http_errors-component") {
+  component_name = "resolve-recovers-from-http-errors"
+  manifest = "meta/resolve-recovers-from-http-errors.cmx"
+  deps = [ ":resolve_recovers_from_http_errors" ]
+}
+
+fuchsia_test_component("resolve_resumes_blob_gets-component") {
+  component_name = "resolve-resumes-blob-gets"
+  manifest = "meta/resolve-resumes-blob-gets.cmx"
+  deps = [ ":resolve_resumes_blob_gets" ]
+}
+
+fuchsia_test_component("resolve_fails-component") {
+  component_name = "resolve-fails"
+  manifest = "meta/resolve-fails.cmx"
+  deps = [ ":resolve_fails" ]
+}
+
+fuchsia_test_component("resolve_succeeds-component") {
+  component_name = "resolve-succeeds"
+  manifest = "meta/resolve-succeeds.cmx"
+  deps = [ ":resolve_succeeds" ]
+}
+
+fuchsia_test_component("resolve_succeeds_with_broken_minfs-component") {
+  component_name = "resolve-succeeds-with-broken-minfs"
+  manifest = "meta/resolve-succeeds-with-broken-minfs.cmx"
+  deps = [ ":resolve_succeeds_with_broken_minfs" ]
+}
+
+fuchsia_test_component("system_cache_fallback-component") {
+  component_name = "system-cache-fallback"
+  manifest = "meta/system-cache-fallback.cmx"
+  deps = [ ":system_cache_fallback" ]
+}
+
+fuchsia_test_component("base_pinning-component") {
+  component_name = "base-pinning"
+  manifest = "meta/base-pinning.cmx"
+  deps = [ ":base_pinning" ]
+}
+
+fuchsia_test_component("metrics-component") {
+  component_name = "metrics"
+  manifest = "meta/metrics.cmx"
+  deps = [ ":metrics" ]
+}
+
+renamed_binary("pkgsvr-binary") {
+  dest = "bin/pkgsvr"
+  source = "$root_out_dir/grand_unified_binary"
+  source_deps = [ "//src/go/grand_unified_binary" ]
+}
+
+renamed_binary("pkg_resolver-binary") {
+  dest = "bin/pkg_resolver"
+  source = "$root_out_dir/grand_swd_binary"
+  source_deps = [ "//src/sys/pkg/bin/grand-swd-binary" ]
+}
+
+fuchsia_component("pkg_resolver-component") {
+  component_name = "pkg-resolver"
+  deps = [ ":pkg_resolver-binary" ]
+  manifest = "//src/sys/pkg/bin/pkg-resolver/meta/pkg-resolver-isolated.cmx"
+}
+
+fuchsia_component("pkg_local_mirror-component") {
+  component_name = "pkg-local-mirror"
+  manifest = "//src/sys/pkg/bin/pkg-local-mirror/meta/pkg-local-mirror.cmx"
+  deps = [ "//src/sys/pkg/bin/pkg-local-mirror:bin" ]
+}
+
+fuchsia_component("pkg_cache-component") {
+  component_name = "pkg-cache"
+  manifest = "//src/sys/pkg/bin/pkg-cache/meta/pkg-cache-isolated.cmx"
+  deps = [ "//src/sys/pkg/bin/pkg-cache:bin" ]
+}
+
+resource("ca.cert-resource") {
+  sources = [ "//src/sys/pkg/lib/fuchsia-pkg-testing/certs/ca.cert" ]
+  outputs = [ "data/ssl/cert.pem" ]
+}
+
+fuchsia_test_package("pkg-resolver-integration-tests") {
+  test_components = [
+    ":base_pinning-component",
+    ":dynamic_repositories_disabled-component",
+    ":dynamic_rewrite_disabled-component",
+    ":get_hash-component",
+    ":metrics-component",
+    ":pkg_resolve_inspect-component",
+    ":resolve_fails-component",
+    ":resolve_propagates_pkgfs_failure-component",
+    ":resolve_recovers_from_http_errors-component",
+    ":resolve_resumes_blob_gets-component",
+    ":resolve_succeeds-component",
+    ":resolve_succeeds_with_broken_minfs-component",
+    ":system_cache_fallback-component",
+  ]
   deps = [
-    ":base_pinning",
-    ":dynamic_repositories_disabled",
-    ":dynamic_rewrite_disabled",
-    ":get_hash",
-    ":lib",
-    ":metrics",
-    ":pkg_resolve_inspect",
-    ":resolve_fails",
-    ":resolve_propagates_pkgfs_failure",
-    ":resolve_recovers_from_http_errors",
-    ":resolve_resumes_blob_gets",
-    ":resolve_succeeds",
-    ":resolve_succeeds_with_broken_minfs",
-    ":system_cache_fallback",
-    "//src/go/grand_unified_binary",
+    ":ca.cert-resource",
+    ":empty-repo",
+    ":pkg_cache-component",
+    ":pkg_local_mirror-component",
+    ":pkg_resolver-component",
+
+    # binaries that are used at runtime.
+    ":pkgsvr-binary",
     "//src/storage/bin/blobfs",
-    "//src/sys/pkg/bin/grand-swd-binary",
-    "//src/sys/pkg/bin/pkg-cache:bin",
-    "//src/sys/pkg/bin/pkg-local-mirror:bin",
     "//src/sys/pkg/bin/pm:pm_bin",
   ]
 
-  binaries = [
-    {
-      name = "blobfs"
-    },
-    {
-      name = "pkg_cache"
-      source = "pkg_cache"
-    },
-    {
-      name = "pkg_local_mirror"
-      source = "pkg_local_mirror"
-    },
-    {
-      name = "pkg_resolver"
-      source = "grand_swd_binary"
-    },
-    {
-      name = "pkgsvr"
-      source = "grand_unified_binary"
-    },
-    {
-      name = "pm"
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path("//src/sys/pkg/lib/fuchsia-pkg-testing/certs/ca.cert")
-      dest = "ssl/cert.pem"
-    },
-  ]
-
-  resource_deps = [ ":empty-repo" ]
-
-  meta = [
-    {
-      path =
-          rebase_path("//src/sys/pkg/bin/pkg-cache/meta/pkg-cache-isolated.cmx")
-      dest = "pkg-cache.cmx"
-    },
-    {
-      path = rebase_path(
-              "//src/sys/pkg/bin/pkg-local-mirror/meta/pkg-local-mirror.cmx")
-      dest = "pkg-local-mirror.cmx"
-    },
-    {
-      path = rebase_path(
-              "//src/sys/pkg/bin/pkg-resolver/meta/pkg-resolver-isolated.cmx")
-      dest = "pkg-resolver.cmx"
-    },
-  ]
-
-  tests = [
-    {
-      name = "dynamic_repositories_disabled"
-      dest = "dynamic-repositories-disabled"
-    },
-    {
-      name = "dynamic_rewrite_disabled"
-      dest = "dynamic-rewrite-disabled"
-    },
-    {
-      name = "get_hash"
-      dest = "get-hash"
-    },
-    {
-      name = "pkg_resolve_inspect"
-      dest = "pkg-resolve-inspect"
-    },
-    {
-      name = "resolve_propagates_pkgfs_failure"
-      dest = "resolve-propagates-pkgfs-failure"
-    },
-    {
-      name = "resolve_recovers_from_http_errors"
-      dest = "resolve-recovers-from-http-errors"
-    },
-    {
-      log_settings = {
-        max_severity = "ERROR"
-      }
-      name = "resolve_resumes_blob_gets"
-      dest = "resolve-resumes-blob-gets"
-    },
-    {
-      log_settings = {
-        max_severity = "ERROR"
-      }
-      name = "resolve_fails"
-      dest = "resolve-fails"
-    },
-    {
-      name = "resolve_succeeds"
-      dest = "resolve-succeeds"
-    },
-    {
-      name = "resolve_succeeds_with_broken_minfs"
-      dest = "resolve-succeeds-with-broken-minfs"
-    },
-    {
-      name = "system_cache_fallback"
-      dest = "system-cache-fallback"
-    },
-    {
-      name = "base_pinning"
-      dest = "base-pinning"
-    },
-    {
-      name = "metrics"
-      dest = "metrics"
-    },
-  ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 group("tests") {
