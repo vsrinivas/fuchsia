@@ -272,21 +272,28 @@ impl<'a, K: OrdUpperBound, V> SkipListLayerIter<'a, K, V> {
             Bound::Excluded(key) => (false, key),
         };
         let mut last_pointers = &skip_list.pointers;
+
+        // Some care needs to be taken here because new elements can be inserted atomically, so it
+        // is important that the node we return in the iterator is the same node that we performed
+        // the last comparison on.
+        let mut node = None;
         for index in (0..skip_list.pointers.len()).rev() {
-            // We could optimise for == if we could be bothered (via a different method
-            // maybe).
-            while let Some(node) = last_pointers.get(index) {
-                // Keep iterating along this level until we encounter a key that's >= our
-                // search key.
-                match &node.item.key.cmp_upper_bound(key) {
-                    Ordering::Equal if included => break,
-                    Ordering::Greater => break,
-                    _ => {}
+            // Keep iterating along this level until we encounter a key that's >= our search key.
+            loop {
+                node = last_pointers.get(index);
+                if let Some(node) = node {
+                    match &node.item.key.cmp_upper_bound(key) {
+                        Ordering::Equal if included => break,
+                        Ordering::Greater => break,
+                        _ => {}
+                    }
+                    last_pointers = &node.pointers;
+                } else {
+                    break;
                 }
-                last_pointers = &node.pointers;
             }
         }
-        SkipListLayerIter { skip_list, epoch, node: last_pointers.get(0) }
+        SkipListLayerIter { skip_list, epoch, node }
     }
 }
 
@@ -391,8 +398,6 @@ impl<K: OrdUpperBound, V> SkipListLayerIterMut<'_, K, V> {
             Bound::Included(key) => {
                 let pointers = &mut prev_pointers;
                 for index in (0..len).rev() {
-                    // We could optimise for == if we could be bothered (via a different method
-                    // maybe).
                     while let Some(node) = pointers[index].get(index) {
                         // Keep iterating along this level until we encounter a key that's >= our
                         // search key.
@@ -571,6 +576,7 @@ mod tests {
             },
         },
         fuchsia_async as fasync,
+        futures::join,
         std::ops::Bound,
         std::time::{Duration, Instant},
     };
@@ -925,7 +931,7 @@ mod tests {
         let ItemRef { key, value } = iter.get().expect("missing item");
         assert_eq!((key, value), (&items[1].key, &items[1].value));
 
-        futures::join!(skip_list.insert(items[0].clone()), async {
+        join!(skip_list.insert(items[0].clone()), async {
             loop {
                 let iter = skip_list.seek(Bound::Unbounded).await.unwrap();
                 let ItemRef { key, .. } = iter.get().expect("missing item");
@@ -1007,5 +1013,28 @@ mod tests {
         let iter = skip_list.seek(Bound::Excluded(&items[0].key)).await.expect("seek failed");
         let ItemRef { key, value } = iter.get().expect("missing item");
         assert_eq!((key, value), (&items[1].key, &items[1].value));
+    }
+
+    #[fasync::run(10, test)]
+    async fn test_insert_race() {
+        for _ in 0..1000 {
+            let skip_list = SkipListLayer::new(100);
+            skip_list.insert(Item::new(TestKey(2), 2)).await;
+
+            let skip_list_clone = skip_list.clone();
+            join!(
+                fasync::Task::spawn(async move {
+                    skip_list_clone.insert(Item::new(TestKey(1), 1)).await;
+                }),
+                fasync::Task::spawn(async move {
+                    let iter =
+                        skip_list.seek(Bound::Included(&TestKey(2))).await.expect("seek failed");
+                    match iter.get() {
+                        Some(ItemRef { key: TestKey(2), .. }) => {}
+                        result => assert!(false, "{:?}", result),
+                    }
+                })
+            );
+        }
     }
 }
