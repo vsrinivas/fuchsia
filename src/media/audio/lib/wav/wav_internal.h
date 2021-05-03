@@ -21,6 +21,12 @@ inline constexpr uint32_t make_fourcc(uint8_t a, uint8_t b, uint8_t c, uint8_t d
          (static_cast<uint32_t>(b) << 8) | static_cast<uint32_t>(a);
 }
 
+// Return a displayable string of the fourcc
+inline std::string fourcc_to_string(uint32_t fourcc) {
+  return std::string() + char(fourcc & 0x0FF) + char(fourcc >> 8 & 0x0FF) +
+         char(fourcc >> 16 & 0x0FF) + char(fourcc >> 24 & 0x0FF);
+}
+
 // clang-format off
 constexpr uint32_t RIFF_FOUR_CC = make_fourcc('R', 'I', 'F', 'F');
 constexpr uint32_t WAVE_FOUR_CC = make_fourcc('W', 'A', 'V', 'E');
@@ -54,10 +60,10 @@ constexpr uint16_t FORMAT_FLOAT = 0x0003;
 //
 // ** Note, lest our RiffChunkHeader struct definition mislead the uninformed **
 // These struct definitions actually conceptually relocate the final 32-bit
-// value of the initial RIFF chunk into the subsequent 'fmt ' subchunk instead.
-// Because the sequence of fields is maintained, this does not create a problem.
-// We do this so that we can reuse our RIFF struct definition for the 'data'
-// subchunk as well.
+// value of the initial RIFF chunk (the RIFF format-type) into the subsequent
+// 'fmt ' subchunk instead. Because the sequence of fields is maintained, this
+// does not create a problem. We do this so that we can reuse our RIFF struct
+// definition for the 'data' subchunk as well.
 struct __PACKED RiffChunkHeader {
   uint32_t four_cc;
   uint32_t length = 0;

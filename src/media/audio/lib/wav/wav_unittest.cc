@@ -54,28 +54,67 @@ TEST(WavWriterTest, NonEmptyFileRiffChunkSize) {
 TEST(WavReaderTest, CanReadWrittenFile) {
   const char kWant[] = "abcdefghij";
 
-  WavWriter w;
+  WavWriter writer;
   files::DeletePath(kFileName, false);
-  w.Initialize(kFileName, fuchsia::media::AudioSampleFormat::UNSIGNED_8, 2, 12, 8);
-  w.Write((void*)kWant, strlen(kWant));
-  w.Close();
+  writer.Initialize(kFileName, fuchsia::media::AudioSampleFormat::UNSIGNED_8, 2, 12, 8);
+  writer.Write((void*)kWant, strlen(kWant));
+  writer.Close();
 
   // Read WAV header
   auto open_result = WavReader::Open(kFileName);
   ASSERT_TRUE(open_result.is_ok());
-  auto r = std::move(open_result.value());
-  EXPECT_EQ(fuchsia::media::AudioSampleFormat::UNSIGNED_8, r->sample_format());
-  EXPECT_EQ(2u, r->channel_count());
-  EXPECT_EQ(12u, r->frame_rate());
-  EXPECT_EQ(8u, r->bits_per_sample());
+  auto reader = std::move(open_result.value());
+  EXPECT_EQ(fuchsia::media::AudioSampleFormat::UNSIGNED_8, reader->sample_format());
+  EXPECT_EQ(2u, reader->channel_count());
+  EXPECT_EQ(12u, reader->frame_rate());
+  EXPECT_EQ(8u, reader->bits_per_sample());
 
   char buf[128];
-  auto read_bytes = r->Read(static_cast<void*>(buf), sizeof(buf));
+  auto read_bytes = reader->Read(static_cast<void*>(buf), sizeof(buf));
   ASSERT_TRUE(read_bytes.is_ok()) << read_bytes.error();
   EXPECT_EQ(static_cast<size_t>(strlen(kWant)), read_bytes.value());
 
   std::string got(buf, read_bytes.value());
   EXPECT_STREQ(kWant, got.c_str());
+}
+
+TEST(WavReaderTest, CanResetAndRereadWrittenFile) {
+  const char kWant[] = "abcdefghijkl";
+  char buf[128];
+
+  // Create the test file
+  WavWriter writer;
+  files::DeletePath(kFileName, false);
+  writer.Initialize(kFileName, fuchsia::media::AudioSampleFormat::UNSIGNED_8, 1, 32, 8);
+  writer.Write((void*)kWant, strlen(kWant));
+  writer.Close();
+
+  // Read WAV header and the entire contents
+  auto open_result = WavReader::Open(kFileName);
+  ASSERT_TRUE(open_result.is_ok());
+  auto reader = std::move(open_result.value());
+  auto read_bytes = reader->Read(static_cast<void*>(buf), sizeof(buf));
+  ASSERT_TRUE(read_bytes.is_ok()) << read_bytes.error();
+  ASSERT_EQ(static_cast<size_t>(strlen(kWant)), read_bytes.value());
+  std::string got(buf, read_bytes.value());
+  ASSERT_STREQ(kWant, got.c_str());
+
+  // Ensure that once we reach the end of the file, Read returns 0 and no error.
+  auto end_of_file = reader->Read(static_cast<void*>(buf), sizeof(buf));
+  ASSERT_TRUE(end_of_file.is_ok()) << end_of_file.error();
+  EXPECT_EQ(0u, end_of_file.value());
+
+  // Reset should not fail.
+  auto status = reader->Reset();
+  EXPECT_EQ(status, 0);
+
+  // Reset should seek the file read position to right after the header (same as first time).
+  read_bytes = reader->Read(static_cast<void*>(buf), sizeof(buf));
+  ASSERT_TRUE(read_bytes.is_ok()) << read_bytes.error();
+  EXPECT_EQ(static_cast<size_t>(strlen(kWant)), read_bytes.value());
+
+  std::string got2(buf, read_bytes.value());
+  EXPECT_STREQ(kWant, got2.c_str());
 }
 
 }  // namespace

@@ -42,6 +42,7 @@ class WavReader {
   // Reads up to num_bytes of audio data into buffer, returning the number of bytes read,
   // or an errno on failure.
   fit::result<size_t, int> Read(void* buffer, size_t num_bytes);
+  int Reset();
 
  private:
   WavReader() = default;
@@ -51,6 +52,7 @@ class WavReader {
   uint32_t frame_rate_ = 0;
   uint32_t bits_per_sample_ = 0;
   uint32_t length_ = 0;
+  uint32_t header_size_ = 0;
 
   fbl::unique_fd file_;
 };
