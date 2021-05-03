@@ -203,14 +203,6 @@ impl<'a, K, V> MergeLayerIterator<'a, K, V> {
             panic!("No iterator!");
         }
     }
-
-    async fn commit(&mut self) {
-        if let RawIterator::Mut(iter) = &mut self.iter {
-            iter.commit().await;
-        } else {
-            panic!("No iterator!");
-        }
-    }
 }
 
 // -- Ord and friends --
@@ -552,7 +544,6 @@ pub(super) async fn merge_into<K: Debug + OrdLowerBound, V: Debug>(
     if let Some(item) = mut_merge_iter.take_item() {
         mut_merge_iter.insert(item);
     }
-    mut_merge_iter.commit().await;
     Ok(())
 }
 

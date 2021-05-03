@@ -197,6 +197,9 @@ pub trait MutableLayer<K, V>: Layer<K, V> {
 
     /// Inserts or replaces an item.
     async fn replace_or_insert(&self, item: Item<K, V>);
+
+    /// Locks the layer, blocking writes but not reads.
+    async fn lock(&self) -> futures::lock::MutexGuard<'_, ()>;
 }
 
 /// Something that implements LayerIterator is returned by the seek function.
@@ -226,10 +229,6 @@ pub(super) trait LayerIteratorMut<K, V>: LayerIterator<K, V> {
 
     /// Inserts the given item immediately prior to the item the iterator is currently pointing at.
     fn insert(&mut self, item: Item<K, V>);
-
-    /// Commits the changes. This must be called before the iteratore is dropped if there
-    /// have been any changes.
-    async fn commit(&mut self);
 }
 
 /// Trait for writing new layers.
