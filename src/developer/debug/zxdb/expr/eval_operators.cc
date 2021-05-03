@@ -205,6 +205,13 @@ fxl::RefPtr<BaseType> MakeBoolType() {
   return fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeBoolean, 1, "bool");
 }
 
+bool IsComparison(ExprTokenType op) {
+  return op == ExprTokenType::kEquality || op == ExprTokenType::kInequality ||
+         op == ExprTokenType::kLessEqual || op == ExprTokenType::kGreaterEqual ||
+         op == ExprTokenType::kSpaceship || op == ExprTokenType::kLess ||
+         op == ExprTokenType::kGreater;
+}
+
 // The "math realm" is the type of operation being done, since operators in these different spaces
 // have very different behaviors.
 enum class MathRealm { kSigned, kUnsigned, kFloat, kPointer };
@@ -268,16 +275,18 @@ Err FillOpValue(EvalContext* context, const ExprValue& in, OpValue* out) {
 // Given a binary operation of the two parameters, computes the realm that the operation should be
 // done in, and computes which of the types is larger. This larger type does not take into account
 // integral promotion described at the top of this file, it will always be one of the two inputs.
-Err GetOpRealm(const fxl::RefPtr<EvalContext>& context, const OpValue& left, const OpValue& right,
-               MathRealm* op_realm, fxl::RefPtr<Type>* larger_type) {
-  // Pointer always takes precedence.
+Err GetOpRealm(const fxl::RefPtr<EvalContext>& context, const OpValue& left, const ExprToken& op,
+               const OpValue& right, MathRealm* op_realm, fxl::RefPtr<Type>* larger_type) {
+  // Pointer always takes precedence. Pointer comparisons use the unsigned realm since they just do
+  // integer comparisons of the pointer value. Everything else falls into the pointer realm.
+  bool is_comparison = IsComparison(op.type());
   if (left.realm == MathRealm::kPointer) {
-    *op_realm = left.realm;
+    *op_realm = is_comparison ? MathRealm::kUnsigned : MathRealm::kPointer;
     *larger_type = left.concrete_type;
     return Err();
   }
   if (right.realm == MathRealm::kPointer) {
-    *op_realm = right.realm;
+    *op_realm = is_comparison ? MathRealm::kUnsigned : MathRealm::kPointer;
     *larger_type = right.concrete_type;
     return Err();
   }
@@ -597,7 +606,7 @@ void EvalBinaryOperator(const fxl::RefPtr<EvalContext>& context, const ExprValue
   // Operation info.
   MathRealm realm;
   fxl::RefPtr<Type> larger_type;
-  if (Err err = GetOpRealm(context, left_op_value, right_op_value, &realm, &larger_type);
+  if (Err err = GetOpRealm(context, left_op_value, op, right_op_value, &realm, &larger_type);
       err.has_error())
     return cb(err);
 
@@ -800,9 +809,9 @@ void EvalBinaryOperator(const fxl::RefPtr<EvalContext>& context, const fxl::RefP
 }
 
 // UBSan complains about the overflow of -INT32_MAX but our tests cover that.
-[[clang::no_sanitize("signed-integer-overflow")]]
-void EvalUnaryOperator(const fxl::RefPtr<EvalContext>& context, const ExprToken& op_token,
-                       const ExprValue& value, EvalCallback cb) {
+[[clang::no_sanitize("signed-integer-overflow")]] void EvalUnaryOperator(
+    const fxl::RefPtr<EvalContext>& context, const ExprToken& op_token, const ExprValue& value,
+    EvalCallback cb) {
   if (!value.type())
     return cb(Err("No type information."));
 

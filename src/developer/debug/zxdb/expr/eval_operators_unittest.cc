@@ -45,7 +45,8 @@ class EvalOperators : public TestWithLoop {
 
   template <typename T>
   [[clang::no_sanitize("signed-integer-overflow")]]  // Allows -INT32_MAX overflow.
-  void DoUnaryMinusTest(T in) {
+  void
+  DoUnaryMinusTest(T in) {
     ExprValue original(in);
 
     ErrOrValue out = SyncEvalUnaryOperator(ExprTokenType::kMinus, original);
@@ -437,6 +438,24 @@ TEST_F(EvalOperators, PointerArithmetic) {
   // Try | which should fail on pointers.
   out = SyncEvalBinaryOperator(large_ptr1, ExprTokenType::kBitwiseOr, eight);
   ASSERT_TRUE(out.has_error());
+
+  // Pointer/pointer comparison
+  out = SyncEvalBinaryOperator(large_ptr1, ExprTokenType::kEquality, large_ptr2);
+  ASSERT_FALSE(out.has_error()) << out.err().msg();
+  ASSERT_EQ(1u, out.value().data().size());
+  EXPECT_EQ(0, out.value().GetAs<uint8_t>());
+  EXPECT_EQ("bool", out.value().type()->GetFullName());
+
+  // Pointer/integer comparison.
+  ExprValue int_one(int32_type, {1, 0, 0, 0});
+  out = SyncEvalBinaryOperator(int_one, ExprTokenType::kLess, large_ptr2);
+  ASSERT_FALSE(out.has_error()) << out.err().msg();
+  EXPECT_EQ(1, out.value().GetAs<uint8_t>());
+
+  // Integer/pointer comparison.
+  out = SyncEvalBinaryOperator(large_ptr2, ExprTokenType::kLessEqual, int_one);
+  ASSERT_FALSE(out.has_error()) << out.err().msg();
+  EXPECT_EQ(0, out.value().GetAs<uint8_t>());
 }
 
 TEST_F(EvalOperators, UnaryMinus) {
