@@ -46,14 +46,18 @@ macro_rules! ffx_error {
     ($error_message: expr) => {{
         $crate::FfxError::Error(anyhow::anyhow!($error_message), 1)
     }};
-    ($error_message: expr, $error_code: literal) => {{
-        $crate::FfxError::Error(anyhow::anyhow!($error_message), $error_code)
-    }};
     ($fmt:expr, $($arg:tt)*) => {
         $crate::ffx_error!(format!($fmt, $($arg)*));
     };
-    ($fmt:expr, $($arg:tt)*, $error_code: literal) => {
-        $crate::ffx_error!(format!($fmt, $($arg)*), $error_code);
+}
+
+#[macro_export]
+macro_rules! ffx_error_with_code {
+    ($error_code:expr, $error_message:expr $(,)?) => {{
+        $crate::FfxError::Error(anyhow::anyhow!($error_message), $error_code)
+    }};
+    ($error_code:expr, $fmt:expr, $($arg:tt)*) => {
+        $crate::ffx_error_with_code!($error_code, format!($fmt, $($arg)*));
     };
 }
 
@@ -62,14 +66,18 @@ macro_rules! ffx_bail {
     ($msg:literal $(,)?) => {
         anyhow::bail!($crate::ffx_error!($msg))
     };
-    ($msg:literal, $code:literal $(,)?) => {
-        anyhow::bail!($crate::ffx_error!($msg, $code))
-    };
     ($fmt:expr, $($arg:tt)*) => {
         anyhow::bail!($crate::ffx_error!($fmt, $($arg)*));
     };
-    ($fmt:expr, $($arg:tt)*, $code: literal) => {
-        anyhow::bail!($crate::ffx_error!($fmt, $($arg)*, $code));
+}
+
+#[macro_export]
+macro_rules! ffx_bail_with_code {
+    ($code:literal, $msg:literal $(,)?) => {
+        anyhow::bail!($crate::ffx_error_with_code!($code, $msg))
+    };
+    ($code:expr, $fmt:expr, $($arg:tt)*) => {
+        anyhow::bail!($crate::ffx_error_with_code!($code, $fmt, $($arg)*));
     };
 }
 

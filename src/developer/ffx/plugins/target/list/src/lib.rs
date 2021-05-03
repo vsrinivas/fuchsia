@@ -5,7 +5,7 @@
 use {
     crate::target_formatter::TargetFormatter,
     anyhow::{anyhow, Result},
-    ffx_core::{ffx_bail, ffx_plugin},
+    ffx_core::{ffx_bail_with_code, ffx_plugin},
     ffx_list_args::ListCommand,
     fidl_fuchsia_developer_bridge as bridge,
     std::convert::TryFrom,
@@ -38,8 +38,8 @@ async fn list_impl<W: Write>(
                     // output, that the message is not consumed. A stronger future strategy would
                     // have richer behavior dependent upon whether the user has a controlling
                     // terminal, which would require passing in more and richer IO delegates.
-                    if cmd.nodename.is_some() {
-                        ffx_bail!("No devices found.", 2);
+                    if let Some(n) = cmd.nodename {
+                        ffx_bail_with_code!(2, "Device {} not found.", n);
                     } else {
                         eprintln!("No devices found.");
                     }

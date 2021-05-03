@@ -12,7 +12,7 @@ use {
         AddCommand, AnalyticsCommand, AnalyticsControlCommand, ConfigCommand, EnvAccessCommand,
         EnvCommand, EnvSetCommand, GetCommand, MappingMode, RemoveCommand, SetCommand, SubCommand,
     },
-    ffx_core::{ffx_bail, ffx_plugin},
+    ffx_core::{ffx_bail, ffx_bail_with_code, ffx_plugin},
     serde_json::Value,
     std::collections::HashMap,
     std::fs::File,
@@ -38,7 +38,7 @@ fn output<W: Write + Sync>(mut writer: W, value: Option<Value>) -> Result<()> {
         Some(v) => writeln!(writer, "{}", v).map_err(|e| anyhow!("{}", e)),
         // Use 2 error code so wrapper scripts don't need check for the string to differentiate
         // errors.
-        None => ffx_bail!("Value not found", 2),
+        None => ffx_bail_with_code!(2, "Value not found"),
     }
 }
 
@@ -56,7 +56,7 @@ fn output_array<W: Write + Sync>(
         }
         // Use 2 error code so wrapper scripts don't need check for the string to differentiate
         // errors.
-        Err(_) => ffx_bail!("Value not found", 2),
+        Err(_) => ffx_bail_with_code!(2, "Value not found"),
     }
 }
 
