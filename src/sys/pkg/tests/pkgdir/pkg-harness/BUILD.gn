@@ -1,0 +1,45 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/fidl/fidl.gni")
+import("//build/rust/rustc_binary.gni")
+
+fidl("test.fidl.pkg") {
+  public_deps = [ "//sdk/fidl/fuchsia.io" ]
+  sources = [ "test.fidl.pkg" ]
+}
+
+rustc_binary("bin") {
+  name = "pkg_harness"
+  with_unit_tests = true
+  edition = "2018"
+
+  deps = [
+    ":test.fidl.pkg-rustc",
+    "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
+    "//src/sys/pkg/lib/fuchsia-pkg-testing",
+    "//src/sys/pkg/testing/blobfs-ramdisk",
+    "//src/sys/pkg/testing/pkgfs-ramdisk",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+
+  sources = [ "src/main.rs" ]
+}
+
+fuchsia_component("pkg-harness") {
+  manifest = "meta/pkg-harness.cml"
+  deps = [
+    ":bin",
+    "//src/storage/bin/blobfs",
+    "//src/sys/pkg/bin/pkgfs:pkgsvr",
+    "//src/sys/pkg/bin/pm:pm_bin",
+  ]
+}

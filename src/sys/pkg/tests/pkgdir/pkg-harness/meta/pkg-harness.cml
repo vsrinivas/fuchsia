@@ -1,0 +1,40 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "sdk/lib/diagnostics/inspect/client.shard.cml",
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "sdk/lib/diagnostics/syslog/elf_stdio.shard.cml",
+        "src/sys/test_runners/tmp_storage.shard.cml",
+    ],
+    program: {
+        binary: "bin/pkg_harness",
+    },
+    capabilities: [
+        {
+            protocol: [ "test.fidl.pkg.Harness" ],
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.process.Launcher",
+                "fuchsia.sys.Launcher",
+            ],
+            from: "parent",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            rights: [ "rw*" ],
+            path: "/dev",
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "test.fidl.pkg.Harness" ],
+            from: "self",
+        },
+    ],
+}

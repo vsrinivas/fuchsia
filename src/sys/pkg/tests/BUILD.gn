@@ -13,6 +13,7 @@ group("tests") {
     "pkg-local-mirror:tests",
     "pkg-resolver:tests",
     "pkgctl:tests",
+    "pkgdir:tests",
     "system-update-checker:tests",
     "system-update-committer:tests",
     "system-updater:tests",

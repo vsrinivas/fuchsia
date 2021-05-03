@@ -1,0 +1,61 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "isolated_devmgr",
+            url: "fuchsia-pkg://fuchsia.com/pkgdir-integration-tests#meta/isolated-devmgr.cm",
+        },
+        {
+            name: "pkg_harness",
+            url: "fuchsia-pkg://fuchsia.com/pkgdir-integration-tests#meta/pkg-harness.cm",
+        },
+        {
+            name: "pkgdir_integration_test",
+            url: "fuchsia-pkg://fuchsia.com/pkgdir-integration-tests#meta/pkgdir-integration-test.cm",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#pkg_harness",
+                "#pkgdir_integration_test",
+            ],
+        },
+        {
+            protocol: [
+                "fuchsia.process.Launcher",
+                "fuchsia.sys.Launcher",
+            ],
+            from: "parent",
+            to: [
+                "#isolated_devmgr",
+                "#pkg_harness",
+            ],
+        },
+        {
+            storage: "temp",
+            from: "parent",
+            to: [ "#pkg_harness" ],
+        },
+        {
+            directory: "dev",
+            from: "#isolated_devmgr",
+            to: [ "#pkg_harness" ],
+        },
+        {
+            protocol: [ "test.fidl.pkg.Harness" ],
+            from: "#pkg_harness",
+            to: [ "#pkgdir_integration_test" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "#pkgdir_integration_test",
+        },
+    ],
+}
