@@ -209,23 +209,15 @@ TEST(DynamicRange, StereoToMono) {
 
 // Test mix level and noise floor, when accumulating sources.
 //
-// Mix 2 full-scale streams with gain exactly 50% (source gain 100%, sink gain
-// 50%), then measure level and sinad. On systems with robust gain processing, a
-// post-SUM master gain stage reduces noise along with level, for the same noise
-// floor as a single FS signal with 100% gain (98,49 dB for 16,8 respectively).
+// Mix 2 full-scale streams with gain exactly 50% (source gain 100%, sink gain 50%),
+// then measure level and sinad. On systems with robust gain processing, a post-SUM
+// group "submix" or final gain stage reduces noise along with level, for the same
+// noise floor as a single FS signal with 100% gain (98,49 dB for 16,8 respectively).
 //
-// When summing two full-scale streams, signal should be approx +6dBFS, and
-// noise floor should be related to the bitwidth of source and accumulator
-// (whichever is more narrow). Because our accumulator is still normalized to
-// 16 bits, we expect the single-stream noise floor to be approx. 98 dB. This
-// test emulates the mixing of two streams, along with the application of a
-// master gain which reduces the mixed result to 50%, which should result in a
-// signal which is exactly full-scale. Summing the two streams will sum the
-// inherent noise as well, leading to a noise floor of 91-92 dB before taking
-// gain into account. Once our architecture contains a post-SUM master gain,
-// after applying a 0.5 master gain scaling we would expect this 91-92 dB
-// SINAD to be reduced to perhaps 98 dB. Today master gain is combined with
-// AudioRenderer (stream) gain, so it is pre-Sum.
+// When summing two full-scale streams, signal should be approx +6 dBFS, and noise
+// floor should be related to the bitwidth of source and accumulator (whichever is
+// more narrow). Note: summing 2 streams also doubles the inherent noise. For 8-bit
+// and 16-bit sources (with float32 accumuator), the source limits the noise floor.
 template <ASF SampleFormat>
 void MeasureMixFloor(double* level_mix_db, double* sinad_mix_db) {
   auto mixer = SelectMixer(SampleFormat, 1, 48000, 1, 48000, Resampler::SampleAndHold);

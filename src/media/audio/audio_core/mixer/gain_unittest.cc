@@ -238,13 +238,13 @@ void GainBase::GainCachingChecks() {
   expect_gain.SetSourceGain(-6.0f);
   expect_amplitude_scale = expect_gain.GetGainScale();
 
-  // If Render gain defaults to 0.0, this represents -6.0 dB too.
+  // Source gain defaults to 0.0, so this represents -6.0 dB too.
   SetGain(0.0f);
   SetOtherGain(-6.0f);
   amplitude_scale = gain_.GetGainScale();
   EXPECT_FLOAT_EQ(expect_amplitude_scale, amplitude_scale);
 
-  // Now set a different renderer gain that will be cached (+3.0).
+  // Now set a different source gain that will be cached (+3.0).
   SetGain(3.0f);
   SetOtherGain(-3.0f);
   amplitude_scale = gain_.GetGainScale();
@@ -255,17 +255,17 @@ void GainBase::GainCachingChecks() {
   SetOtherGain(-1.0f);
   EXPECT_EQ(GetOtherPartialGainDb(), -1.0f);
 
-  // If Render gain is cached val of +3, then combo should be greater than Unity.
+  // If source gain is cached val of +3, then combo should be greater than Unity.
   amplitude_scale = gain_.GetGainScale();
   EXPECT_GT(amplitude_scale, Gain::kUnityScale);
   // And now the previous SetOtherGain call has been incorporated into the cache.
   EXPECT_EQ(GetOtherPartialGainDb(), -1.0f);
 
-  // Try another Output gain; with cached +3 this should equate to -6dB.
+  // Try another dest gain; with cached +3 this should equate to -6dB.
   SetOtherGain(-9.0f);
   EXPECT_FLOAT_EQ(expect_amplitude_scale, gain_.GetGainScale());
 
-  // Render gain cached +3 and Output gain non-cached -3 should lead to Unity.
+  // source gain cached +3 and dest gain non-cached -3 should lead to Unity.
   SetOtherGain(-3.0f);
   EXPECT_FLOAT_EQ(Gain::kUnityScale, gain_.GetGainScale());
 }
@@ -290,14 +290,14 @@ void GainBase::VerifyMinGain(float first_gain_db, float second_gain_db) {
 }
 void GainBase::MinGainChecks() {
   // First, test for source/dest interactions.
-  // if OutputGain <= kMinGainDb, scale must be 0, regardless of renderer gain.
+  // if dest gain <= kMinGainDb, scale must be 0, regardless of source gain.
   VerifyMinGain(-2 * Gain::kMinGainDb, Gain::kMinGainDb);
 
-  // if renderer gain <= kMinGainDb, scale must be 0, regardless of Output gain.
+  // if source gain <= kMinGainDb, scale must be 0, regardless of dest gain.
   VerifyMinGain(Gain::kMinGainDb, Gain::kMaxGainDb * 1.2);
 
-  // if sum of renderer gain and Output gain <= kMinGainDb, scale should be 0.
-  // Output gain is just slightly above MinGain; renderer takes us below it.
+  // if sum of source gain and dest gain <= kMinGainDb, scale should be 0.
+  // dest gain is just slightly above MinGain; source gain takes us below it.
   VerifyMinGain(-2.0f, Gain::kMinGainDb + 1.0f);
 
   // Next, test for source/dest interactions.
@@ -311,8 +311,8 @@ void GainBase::MinGainChecks() {
   // Check if the combination mutes.
   VerifyMinGain(Gain::kMinGainDb / 2, Gain::kMinGainDb / 2);
 }
-// System independently limits stream and master/device Gains to kMinGainDb
-// (-160dB). Assert scale is zero, if either (or combo) are kMinGainDb or less.
+// System independently limits source gain and dest gain to kMinGainDb (-160dB).
+// Assert scale is zero, if either (or combo) are kMinGainDb or less.
 TEST_F(SourceGainTest, GainIsLimitedToMin) { MinGainChecks(); }
 TEST_F(DestGainTest, GainIsLimitedToMin) { MinGainChecks(); }
 
@@ -332,20 +332,21 @@ void GainBase::VerifyMaxGain(float first_gain_db, float second_gain_db) {
   EXPECT_FALSE(gain_.IsSilent());
 }
 void GainBase::MaxGainChecks() {
-  // Check if source or dest alone mutes.
+  // Check if source or dest alone leads to max scale.
   VerifyMaxGain(Gain::kMaxGainDb, Gain::kUnityGainDb);
 
-  // Check if the combination mutes.
+  // Check if the combination leads to max scale.
   VerifyMinGain(Gain::kMinGainDb / 2, Gain::kMinGainDb / 2);
 
   // One gain is just slightly below MaxGain; the other will take us above it.
   VerifyMaxGain(Gain::kMaxGainDb - 1.0f, 2.0f);
 
   // Stages are not clamped until they are combined
+  // otherwise, the first would be clamped and the combination would be kMaxGainDb-1.0
   VerifyMaxGain(Gain::kMaxGainDb + 1.0f, -1.0f);
 }
-// System independently limits stream and master/device Gains to kMinGainDb
-// (-160dB). Assert scale is zero, if either (or combo) are kMinGainDb or less.
+// System only limits source gain and dest gain to kMaxGainDb (+24dB) when they are combined.
+// Assert scale is max, if either (or combo) are kMaxGainDb or more.
 TEST_F(SourceGainTest, GainIsLimitedToMax) { MaxGainChecks(); }
 TEST_F(DestGainTest, GainIsLimitedToMax) { MaxGainChecks(); }
 
