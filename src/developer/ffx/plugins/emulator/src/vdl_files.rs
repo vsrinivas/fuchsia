@@ -140,6 +140,8 @@ impl VDLFiles {
     }
 
     fn generate_fvd(&self, window_width: &usize, window_height: &usize) -> Result<PathBuf> {
+        // Note the value for ram should match the defaults used in `fx emu` (//tools/devshell/emu)
+        // and in `fx qemu` (//zircon/scripts/run-zircon).
         let data = format!(
             "device_spec {{
   horizontal_resolution: {}

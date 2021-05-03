@@ -44,8 +44,10 @@ DEVSHELL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 source "${DEVSHELL_DIR}"/lib/image_build_vars.sh || exit $?
 source "${DEVSHELL_DIR}"/lib/fvm.sh || exit $?
 
-# Note these match the defaults in Botanist (//tools/botanist/cmd/qemu.go)
-# and in `fx qemu` (//zircon/scripts/run-zircon).
+# Note these match the defaults in `fx qemu` (//zircon/scripts/run-zircon) and the ram value in
+# `fx vdl` (//src/developer/ffx/plugins/emulator/src/vdl_files.rs). This can be overriden by the
+# emulator configs in the infra/recipe repo
+# (https://fuchsia.googlesource.com/infra/recipes/+/refs/heads/main/recipe_modules/emu/api.py).
 readonly MEMSIZE_DEFAULT=8192
 readonly SMP_DEFAULT=4
 
