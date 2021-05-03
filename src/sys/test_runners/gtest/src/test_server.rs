@@ -21,7 +21,7 @@ use {
         TryStreamExt,
     },
     lazy_static::lazy_static,
-    log::{debug, error, info},
+    log::{debug, error, info, warn},
     serde::{Deserialize, Serialize},
     std::{
         num::NonZeroUsize,
@@ -404,7 +404,19 @@ impl TestServer {
         // run test.
         // Load bearing to hold job guard.
         let (process, _job, stdlogger) =
-            launch_component_process::<RunTestError>(&component, names, args).await?;
+            match launch_component_process::<RunTestError>(&component, names, args).await {
+                Ok(s) => s,
+                Err(e) => {
+                    warn!("failed to launch component process for {}: {}", component.url, e);
+                    test_logger
+                        .write_str(&format!("failed to launch component process: {}", e))
+                        .await?;
+                    case_listener_proxy
+                        .finished(TestResult { status: Some(Status::Failed), ..TestResult::EMPTY })
+                        .map_err(RunTestError::SendFinish)?;
+                    return Ok(());
+                }
+            };
 
         let mut last_line_excluded = false;
         let mut socket_buf = vec![0u8; SOCKET_BUFFER_SIZE];
