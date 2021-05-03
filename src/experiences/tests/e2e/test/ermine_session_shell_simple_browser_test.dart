@@ -15,6 +15,7 @@ import 'package:test/test.dart';
 import 'package:webdriver/sync_io.dart';
 
 const _timeoutOneSec = Duration(seconds: 1);
+const _timeoutThreeSec = Duration(seconds: 3);
 const _timeoutTenSec = Duration(seconds: 10);
 const _sampleViewRect = Rectangle(100, 200, 100, 100);
 const testserverUrl =
@@ -148,17 +149,25 @@ void main() {
   /// Keeps calling `waitFor(finder)` until the timeout expires. Returns true
   /// if it locates one. Otherwise, returns false.
   Future<bool> _repeatActionWaitingFor(
-      FlutterDriver browser, void action(), SerializableFinder finder) async {
+    FlutterDriver browser,
+    void action(),
+    SerializableFinder finder, {
+    Duration waitForTimeout = _timeoutOneSec,
+  }) async {
     return await _repeatActionUntilGetResult(
-        action, () => browser.waitFor(finder, timeout: _timeoutOneSec));
+        action, () => browser.waitFor(finder, timeout: waitForTimeout));
   }
 
   /// Keeps calling `waitForAbsent(finder)` until the timeout expires. Returns
   /// true if it locates one. Otherwise, returns false.
   Future<bool> _repeatActionWaitingForAbsent(
-      FlutterDriver browser, void action(), SerializableFinder finder) async {
-    return await _repeatActionUntilGetResult(
-        action, () => browser.waitForAbsent(finder, timeout: _timeoutOneSec));
+    FlutterDriver browser,
+    void action(),
+    SerializableFinder finder, {
+    Duration waitForAbsentTimeout = _timeoutOneSec,
+  }) async {
+    return await _repeatActionUntilGetResult(action,
+        () => browser.waitForAbsent(finder, timeout: waitForAbsentTimeout));
   }
 
   Future<void> _invokeShortcut(List<Key> keys) async {
@@ -288,7 +297,8 @@ void main() {
 
     // Clicks the text link that opens popup.html (popup page navigation)
     expect(
-        await _repeatActionWaitingFor(browser, popupLink.click, popupTabFinder),
+        await _repeatActionWaitingFor(browser, popupLink.click, popupTabFinder,
+            waitForTimeout: _timeoutThreeSec),
         isTrue,
         reason: 'Failed to click the Popup link.');
     expect(await browser.getText(newTabFinder), isNotNull);
