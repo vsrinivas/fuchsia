@@ -843,11 +843,15 @@ TEST_F(AssocTest, ApRefusedRequest) {
   zx_status_t status = brcmf_fil_iovar_int_get(ifp, "assoc_retry_max", &max_assoc_retries, nullptr);
   EXPECT_EQ(status, ZX_OK);
   ASSERT_EQ(max_assoc_retries, kMaxAssocRetries);
-  // We should have gotten a refusal from the fake AP
+
+  // We should have gotten a refusal from the fake AP.
   EXPECT_EQ(assoc_responses_.size(), max_assoc_retries + 1);
   EXPECT_EQ(assoc_responses_.front().status,
             wlan_ieee80211::StatusCode::REFUSED_REASON_UNSPECIFIED);
 
+  // The AP should have received 1 deauth, no matter there were how many firmware assoc retries.
+  EXPECT_EQ(deauth_frames_.size(), 1U);
+  EXPECT_EQ(deauth_frames_.front(), wlan_ieee80211::ReasonCode::STA_LEAVING);
   // Make sure we got our response from the driver
   EXPECT_EQ(context_.assoc_resp_count, 1U);
 }
@@ -1306,6 +1310,9 @@ TEST_F(AssocTest, AssocMaxRetries) {
   EXPECT_EQ(assoc_responses_.front().status,
             wlan_ieee80211::StatusCode::REFUSED_REASON_UNSPECIFIED);
 
+  // The AP should have received 1 deauth, no matter there were how many firmware assoc retries.
+  EXPECT_EQ(deauth_frames_.size(), 1U);
+  EXPECT_EQ(deauth_frames_.front(), wlan_ieee80211::ReasonCode::STA_LEAVING);
   // Make sure we got our response from the driver
   EXPECT_EQ(context_.assoc_resp_count, 1U);
 }
@@ -1363,13 +1370,13 @@ TEST_F(AssocTest, AssocNoRetries) {
   status = brcmf_fil_iovar_int_get(ifp, "assoc_retry_max", &assoc_retries, nullptr);
   EXPECT_EQ(status, ZX_OK);
   ASSERT_EQ(max_assoc_retries, assoc_retries);
-  // We should have gotten a refusal from the fake AP
+
+  // We should have gotten a refusal from the fake AP.
   EXPECT_EQ(assoc_responses_.size(), 1U);
   EXPECT_EQ(assoc_responses_.front().status,
             wlan_ieee80211::StatusCode::REFUSED_REASON_UNSPECIFIED);
 
-  // The AP should have received as many deauths as number of its refusals. These are sent by driver
-  // to clean
+  // The AP should have received 1 deauth, no matter there were how many firmware assoc retries.
   EXPECT_EQ(deauth_frames_.size(), 1U);
   EXPECT_EQ(deauth_frames_.front(), wlan_ieee80211::ReasonCode::STA_LEAVING);
 
