@@ -426,6 +426,14 @@ void x86_feature_debug(void) {
 #ifdef X64_KERNEL_JCC_WORKAROUND
   print_property("jcc_fix");
 #endif
+  if (arch::BootCpuidSupports<arch::CpuidPerformanceMonitoringA>()) {
+    const arch::CpuidPerformanceMonitoringA eax = io.Read<arch::CpuidPerformanceMonitoringA>();
+    const arch::CpuidPerformanceMonitoringD edx = io.Read<arch::CpuidPerformanceMonitoringD>();
+    if (eax.version() > 0) {
+      printf("\narch_pmu version %u general purpose counters %u fixed counters %u\n", eax.version(),
+             eax.num_general_counters(), edx.num_fixed_counters());
+    }
+  }
   Printf("\n\n");
 }
 
