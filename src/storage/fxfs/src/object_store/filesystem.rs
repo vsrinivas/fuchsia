@@ -358,14 +358,10 @@ impl TransactionHandler for FxFilesystem {
         self: Arc<Self>,
         locks: &[LockKey],
     ) -> Result<Transaction<'a>, Error> {
-        let mut locks: Vec<_> = locks.iter().cloned().collect();
-        locks.sort_unstable();
-        locks.dedup();
-        self.lock_manager.lock(&locks).await;
-        Ok(Transaction::new(self, locks))
+        Ok(Transaction::new(self, &[], locks).await)
     }
 
-    async fn commit_transaction(&self, transaction: Transaction<'_>) {
+    async fn commit_transaction(self: Arc<Self>, transaction: Transaction<'_>) {
         self.lock_manager.commit_prepare(&transaction).await;
         self.journal.commit(transaction).await;
     }
@@ -377,6 +373,12 @@ impl TransactionHandler for FxFilesystem {
 
     async fn read_lock<'a>(&'a self, lock_keys: &[LockKey]) -> ReadGuard<'a> {
         self.lock_manager.read_lock(lock_keys).await
+    }
+}
+
+impl AsRef<LockManager> for FxFilesystem {
+    fn as_ref(&self) -> &LockManager {
+        &self.lock_manager
     }
 }
 

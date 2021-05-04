@@ -62,14 +62,10 @@ impl TransactionHandler for FakeObject {
         self: Arc<Self>,
         locks: &[LockKey],
     ) -> Result<Transaction<'a>, Error> {
-        let mut locks: Vec<_> = locks.iter().cloned().collect();
-        locks.sort_unstable();
-        locks.dedup();
-        self.lock_manager.lock(&locks).await;
-        Ok(Transaction::new(self, locks))
+        Ok(Transaction::new(self, &[], locks).await)
     }
 
-    async fn commit_transaction(&self, mut transaction: Transaction<'_>) {
+    async fn commit_transaction(self: Arc<Self>, mut transaction: Transaction<'_>) {
         std::mem::take(&mut transaction.mutations);
     }
 

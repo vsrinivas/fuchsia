@@ -66,14 +66,10 @@ impl TransactionHandler for FakeFilesystem {
         self: Arc<Self>,
         locks: &[LockKey],
     ) -> Result<Transaction<'a>, Error> {
-        let mut locks: Vec<_> = locks.iter().cloned().collect();
-        locks.sort_unstable();
-        locks.dedup();
-        self.lock_manager.lock(&locks).await;
-        Ok(Transaction::new(self, locks))
+        Ok(Transaction::new(self, &[], locks).await)
     }
 
-    async fn commit_transaction(&self, mut transaction: Transaction<'_>) {
+    async fn commit_transaction(self: Arc<Self>, mut transaction: Transaction<'_>) {
         self.lock_manager.commit_prepare(&transaction).await;
         for TxnMutation { object_id, mutation, associated_object } in
             std::mem::take(&mut transaction.mutations)
@@ -97,5 +93,11 @@ impl TransactionHandler for FakeFilesystem {
 
     async fn read_lock<'a>(&'a self, lock_keys: &[LockKey]) -> ReadGuard<'a> {
         self.lock_manager.read_lock(lock_keys).await
+    }
+}
+
+impl AsRef<LockManager> for FakeFilesystem {
+    fn as_ref(&self) -> &LockManager {
+        &self.lock_manager
     }
 }
