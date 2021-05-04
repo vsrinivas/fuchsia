@@ -317,10 +317,16 @@ mod test {
         let mono_avg = mono_before + mono_radius;
 
         let clock_time = time_at_monotonic(&clock, mono_avg + TIME_DIFF);
-        let expected_clock_time =
-            BACKSTOP + TIME_DIFF * (ONE_MILLION + SLEW_RATE_PPM) / ONE_MILLION;
-        assert_geq!(clock_time, expected_clock_time - mono_radius);
-        assert_leq!(clock_time, expected_clock_time + mono_radius);
+        // min occurs if update occurred at exactly mono_after
+        assert_geq!(
+            clock_time,
+            BACKSTOP + (TIME_DIFF - mono_radius) * (ONE_MILLION + SLEW_RATE_PPM) / ONE_MILLION
+        );
+        // max occurs if update occurred at exactly mono_before
+        assert_leq!(
+            clock_time,
+            BACKSTOP + (mono_radius + TIME_DIFF) * (ONE_MILLION + SLEW_RATE_PPM) / ONE_MILLION
+        );
     }
 
     #[fuchsia::test]
@@ -335,9 +341,15 @@ mod test {
         let mono_avg = mono_before + mono_radius;
 
         let clock_time = time_at_monotonic(&clock, mono_avg + TIME_DIFF);
-        let expected_clock_time =
-            BACKSTOP + TIME_DIFF * (ONE_MILLION - SLEW_RATE_PPM) / ONE_MILLION;
-        assert_geq!(clock_time, expected_clock_time - mono_radius);
-        assert_leq!(clock_time, expected_clock_time + mono_radius);
+        // min occurs if update occurred at exactly mono_after
+        assert_geq!(
+            clock_time,
+            BACKSTOP + (TIME_DIFF - mono_radius) * (ONE_MILLION - SLEW_RATE_PPM) / ONE_MILLION
+        );
+        // max occurs if update occurred at exactly mono_before
+        assert_leq!(
+            clock_time,
+            BACKSTOP + (mono_radius + TIME_DIFF) * (ONE_MILLION - SLEW_RATE_PPM) / ONE_MILLION
+        );
     }
 }
