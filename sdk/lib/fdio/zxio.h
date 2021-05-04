@@ -27,7 +27,7 @@ struct zxio : public base {
   zx_status_t dirent_iterator_next(zxio_dirent_iterator_t* iterator,
                                    zxio_dirent_t** out_entry) override;
   void dirent_iterator_destroy(zxio_dirent_iterator_t* iterator) override;
-  zx_status_t unlink(const char* path, size_t len) override;
+  zx_status_t unlink(const char* name, size_t len, int flags) override;
   zx_status_t truncate(off_t off) override;
   zx_status_t rename(const char* src, size_t srclen, zx_handle_t dst_token, const char* dst,
                      size_t dstlen) override;

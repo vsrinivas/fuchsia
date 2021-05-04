@@ -8,6 +8,7 @@
 use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{self as fio, DirectoryMarker, DirectoryProxy, MAX_BUF, MODE_TYPE_DIRECTORY},
+    fidl_fuchsia_io2::{UnlinkFlags, UnlinkOptions},
     fuchsia_zircon_status as zx_status,
     futures::future::BoxFuture,
     std::{mem, str::Utf8Error},
@@ -336,9 +337,14 @@ pub async fn remove_dir_recursive(root_dir: &DirectoryProxy, name: &str) -> Resu
         .open(DIR_FLAGS, MODE_TYPE_DIRECTORY, name, ServerEnd::new(dir_server.into_channel()))
         .map_err(|e| Error::Fidl("open", e))?;
     remove_dir_contents(dir).await?;
-    let s = root_dir.unlink(name).await.map_err(|e| Error::Fidl("unlink", e))?;
-    zx_status::Status::ok(s).map_err(Error::Unlink)?;
-    Ok(())
+    root_dir
+        .unlink2(
+            name,
+            UnlinkOptions { flags: Some(UnlinkFlags::MustBeDirectory), ..UnlinkOptions::EMPTY },
+        )
+        .await
+        .map_err(|e| Error::Fidl("unlink", e))?
+        .map_err(|s| Error::Unlink(zx_status::Status::from_raw(s)))
 }
 
 // Returns a `BoxFuture` instead of being async because async doesn't support recursion.
@@ -361,8 +367,10 @@ fn remove_dir_contents(dir: DirectoryProxy) -> BoxFuture<'static, Result<(), Err
                 }
                 _ => {}
             }
-            let s = dir.unlink(&dirent.name).await.map_err(|e| Error::Fidl("unlink", e))?;
-            zx_status::Status::ok(s).map_err(Error::Unlink)?;
+            dir.unlink2(&dirent.name, UnlinkOptions::EMPTY)
+                .await
+                .map_err(|e| Error::Fidl("unlink", e))?
+                .map_err(|s| Error::Unlink(zx_status::Status::from_raw(s)))?;
         }
         Ok(())
     };
@@ -733,7 +741,7 @@ mod tests {
             let tempdir = TempDir::new().expect("failed to create tmp dir");
             let dir = create_nested_dir(&tempdir).await;
             let res = remove_dir_recursive(&dir, ".").await;
-            let expected: Result<(), Error> = Err(Error::Unlink(zx_status::Status::UNAVAILABLE));
+            let expected: Result<(), Error> = Err(Error::Unlink(zx_status::Status::INVALID_ARGS));
             assert_eq!(format!("{:?}", res), format!("{:?}", expected));
         }
     }

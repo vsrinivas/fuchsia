@@ -116,8 +116,8 @@ void zxio::dirent_iterator_destroy(zxio_dirent_iterator_t* iterator) {
   return zxio_dirent_iterator_destroy(iterator);
 }
 
-zx_status_t zxio::unlink(const char* path, size_t len) {
-  return zxio_unlink(&zxio_storage().io, path);
+zx_status_t zxio::unlink(const char* name, size_t len, int flags) {
+  return zxio_unlink(&zxio_storage().io, name, flags);
 }
 
 zx_status_t zxio::truncate(off_t off) { return zxio_truncate(&zxio_storage().io, off); }

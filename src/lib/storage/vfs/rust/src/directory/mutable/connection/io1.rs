@@ -222,8 +222,8 @@ impl MutableConnection {
             return responder(Status::BAD_HANDLE);
         }
 
-        if name == "/" || name == "" || name == "." || name == "./" {
-            return responder(Status::BAD_PATH);
+        if name == "/" || name.is_empty() || name == "." || name == ".." || name == "./" {
+            return responder(Status::INVALID_ARGS);
         }
 
         let path = match Path::validate_and_split(name) {
@@ -243,7 +243,7 @@ impl MutableConnection {
             None => path.is_dir(),
             Some(options) => {
                 if path.as_ref().contains('/') {
-                    return responder(Status::BAD_PATH);
+                    return responder(Status::INVALID_ARGS);
                 }
                 options.flags.map(|f| f.contains(UnlinkFlags::MustBeDirectory)).unwrap_or(false)
             }
@@ -636,8 +636,11 @@ mod tests {
         let events = Events::new();
         let fs = Arc::new(MockFilesystem::new(&events));
         let (_dir, proxy) = fs.clone().make_connection(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE);
-        let status = proxy.unlink("test").await.unwrap();
-        assert_eq!(Status::from_raw(status), Status::OK);
+        proxy
+            .unlink2("test", UnlinkOptions::EMPTY)
+            .await
+            .expect("fidl call failed")
+            .expect("unlink failed");
         let events = events.0.lock().unwrap();
         assert_eq!(
             *events,

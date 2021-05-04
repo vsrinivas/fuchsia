@@ -262,8 +262,9 @@ zx_status_t zxio_open_async(zxio_t* directory, uint32_t flags, uint32_t mode, co
 zx_status_t zxio_add_inotify_filter(zxio_t* io, const char* path, size_t path_len, uint32_t mask,
                                     uint32_t watch_descriptor, zx_handle_t socket);
 
-// Remove an file relative to the given directory.
-zx_status_t zxio_unlink(zxio_t* directory, const char* path);
+// Remove a file relative to the given directory.  |flags| has the same values and semantics as
+// POSIX's unlinkat |flags| argument.
+zx_status_t zxio_unlink(zxio_t* directory, const char* name, int flags);
 
 // Attempts to rename |old_path| relative to |old_directory| to |new_path|
 // relative to the directory represented by |new_directory_token|.

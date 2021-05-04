@@ -53,7 +53,7 @@ zx_status_t fdio::dirent_iterator_next(zxio_dirent_iterator_t* iterator,
 
 void fdio::dirent_iterator_destroy(zxio_dirent_iterator_t* iterator) {}
 
-zx_status_t fdio::unlink(const char* path, size_t len) { return ZX_ERR_NOT_SUPPORTED; }
+zx_status_t fdio::unlink(const char* name, size_t len, int flags) { return ZX_ERR_NOT_SUPPORTED; }
 
 zx_status_t fdio::truncate(off_t off) { return ZX_ERR_NOT_SUPPORTED; }
 

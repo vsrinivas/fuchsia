@@ -214,8 +214,8 @@ void DirectoryConnection::Unlink2(Unlink2RequestView request, Unlink2Completer::
     return;
   }
   std::string_view name_str(request->name.data(), request->name.size());
-  if (name_str.find('/') != std::string_view::npos) {
-    completer.ReplyError(ZX_ERR_BAD_PATH);
+  if (!vfs_valid_name(name_str)) {
+    completer.ReplyError(ZX_ERR_INVALID_ARGS);
     return;
   }
   zx_status_t status =

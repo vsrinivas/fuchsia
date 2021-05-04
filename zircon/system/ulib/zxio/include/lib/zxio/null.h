@@ -51,7 +51,7 @@ zx_status_t zxio_default_open_async(zxio_t* io, uint32_t flags, uint32_t mode, c
 zx_status_t zxio_default_add_inotify_filter(zxio_t* io, const char* path, size_t path_len,
                                             uint32_t mask, uint32_t watch_descriptor,
                                             zx_handle_t socket);
-zx_status_t zxio_default_unlink(zxio_t* io, const char* path);
+zx_status_t zxio_default_unlink(zxio_t* io, const char* name, int flags);
 zx_status_t zxio_default_token_get(zxio_t* io, zx_handle_t* out_token);
 zx_status_t zxio_default_rename(zxio_t* io, const char* src_path, zx_handle_t dst_token,
                                 const char* dst_path);

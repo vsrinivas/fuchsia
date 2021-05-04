@@ -889,9 +889,11 @@ async fn unlink_file_with_sufficient_rights() {
         let test_dir = harness.get_directory(root, harness.all_rights);
         let src_dir = open_dir_with_flags(&test_dir, dir_flags, "src").await;
 
-        // Unlink should work.
-        let status = src_dir.unlink("file.txt").await.expect("unlink failed");
-        assert_eq!(Status::from_raw(status), Status::OK);
+        src_dir
+            .unlink2("file.txt", UnlinkOptions::EMPTY)
+            .await
+            .expect("unlink fidl failed")
+            .expect("unlink failed");
 
         // Check file is gone.
         assert_file_not_found(&test_dir, "src/file.txt").await;
@@ -912,9 +914,14 @@ async fn unlink_file_with_insufficient_rights() {
         let test_dir = harness.get_directory(root, harness.all_rights);
         let src_dir = open_dir_with_flags(&test_dir, dir_flags, "src").await;
 
-        // Unlink should fail.
-        let status = src_dir.unlink("file.txt").await.expect("unlink failed");
-        assert_eq!(Status::from_raw(status), Status::BAD_HANDLE);
+        assert_eq!(
+            src_dir
+                .unlink2("file.txt", UnlinkOptions::EMPTY)
+                .await
+                .expect("unlink fidl failed")
+                .expect_err("unlink succeeded"),
+            zx::sys::ZX_ERR_BAD_HANDLE
+        );
 
         // Check file still exists.
         assert_eq!(read_file(&test_dir, "src/file.txt").await, contents);
@@ -934,9 +941,10 @@ async fn unlink_directory_with_sufficient_rights() {
         // Re-open dir with flags being tested.
         let dir = open_dir_with_flags(&test_dir, dir_flags, ".").await;
 
-        // Unlink should work.
-        let status = dir.unlink("src").await.expect("unlink failed");
-        assert_eq!(Status::from_raw(status), Status::OK);
+        dir.unlink2("src", UnlinkOptions::EMPTY)
+            .await
+            .expect("unlink fidl failed")
+            .expect("unlink failed");
     }
 }
 
@@ -953,9 +961,13 @@ async fn unlink_directory_with_insufficient_rights() {
         // Re-open dir with flags being tested.
         let dir = open_dir_with_flags(&test_dir, dir_flags, ".").await;
 
-        // Unlink should fail.
-        let status = dir.unlink("src").await.expect("unlink failed");
-        assert_eq!(Status::from_raw(status), Status::BAD_HANDLE);
+        assert_eq!(
+            dir.unlink2("src", UnlinkOptions::EMPTY)
+                .await
+                .expect("unlink fidl failed")
+                .expect_err("unlink succeeded"),
+            zx::sys::ZX_ERR_BAD_HANDLE
+        );
     }
 }
 

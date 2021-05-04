@@ -260,7 +260,12 @@ func (d *directoryWrapper) Unlink(_ fidl.Context, path string) (int32, error) {
 }
 
 func (d *directoryWrapper) Unlink2(_ fidl.Context, name string, _ io2.UnlinkOptions) (io.DirectoryUnlink2Result, error) {
-	return io.DirectoryUnlink2ResultWithErr(int32(errorToZx(d.dir.Unlink(name)))), nil
+	status := int32(errorToZx(d.dir.Unlink(name)))
+	if status == 0 {
+		return io.DirectoryUnlink2ResultWithResponse(io.DirectoryUnlink2Response{}), nil
+	} else {
+		return io.DirectoryUnlink2ResultWithErr(status), nil
+	}
 }
 
 const direntSize = int(unsafe.Offsetof(syscall.Dirent{}.Name))

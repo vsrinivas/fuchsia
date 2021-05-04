@@ -6,6 +6,7 @@
 
 use {
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, DirectoryRequestStream},
+    fidl_fuchsia_io2::UnlinkOptions,
     fuchsia_zircon::Status,
     thiserror::Error,
 };
@@ -74,11 +75,11 @@ impl Client {
 
     /// Performs a garbage collection
     pub async fn gc(&self) -> Result<(), GcError> {
-        match self.proxy.unlink("garbage").await.map(Status::from_raw) {
-            Ok(Status::OK) => Ok(()),
-            Ok(status) => Err(GcError::UnlinkError(status)),
-            Err(err) => Err(GcError::Fidl(err)),
-        }
+        self.proxy
+            .unlink2("garbage", UnlinkOptions::EMPTY)
+            .await
+            .map_err(GcError::Fidl)?
+            .map_err(|s| GcError::UnlinkError(Status::from_raw(s)))
     }
 
     /// Performs a sync
@@ -107,9 +108,9 @@ mod tests {
         let (proxy, mut stream) = create_proxy_and_stream::<DirectoryMarker>().unwrap();
         fasync::Task::spawn(async move {
             match stream.try_next().await.unwrap().unwrap() {
-                DirectoryRequest::Unlink { path, responder } => {
-                    assert_eq!(path, "garbage");
-                    responder.send(Status::OK.into_raw()).unwrap();
+                DirectoryRequest::Unlink2 { name, options: _, responder } => {
+                    assert_eq!(name, "garbage");
+                    responder.send(&mut Ok(())).unwrap();
                 }
                 other => panic!("unexpected request: {:?}", other),
             }

@@ -4,6 +4,7 @@
 
 #include <dirent.h>
 #include <fuchsia/io/llcpp/fidl.h>
+#include <fuchsia/io2/llcpp/fidl.h>
 #include <lib/zx/channel.h>
 #include <lib/zxio/inception.h>
 #include <lib/zxio/null.h>
@@ -762,11 +763,21 @@ zx_status_t zxio_remote_add_inotify_filter(zxio_t* io, const char* path, size_t 
   return result.status();
 }
 
-zx_status_t zxio_remote_unlink(zxio_t* io, const char* path) {
+zx_status_t zxio_remote_unlink(zxio_t* io, const char* name, int flags) {
   Remote rio(io);
-  auto result =
-      fidl::WireCall<fio::Directory>(rio.control()).Unlink(fidl::StringView::FromExternal(path));
-  return result.ok() ? result.Unwrap()->s : result.status();
+  fidl::FidlAllocator allocator;
+  fuchsia_io2::wire::UnlinkOptions options(allocator);
+  auto io_flags = fuchsia_io2::wire::UnlinkFlags::kMustBeDirectory;
+  if (flags & AT_REMOVEDIR) {
+    options.set_flags(fidl::ObjectView<decltype(io_flags)>::FromExternal(&io_flags));
+  }
+  auto result = fidl::WireCall<fio::Directory>(rio.control())
+                    .Unlink2(fidl::StringView::FromExternal(name), options);
+  if (result.status() != ZX_OK) {
+    return result.status();
+  }
+  const auto& unwrapped_result = result.Unwrap()->result;
+  return unwrapped_result.is_err() ? unwrapped_result.err() : ZX_OK;
 }
 
 zx_status_t zxio_remote_token_get(zxio_t* io, zx_handle_t* out_token) {

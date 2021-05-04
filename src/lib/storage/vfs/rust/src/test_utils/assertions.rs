@@ -739,11 +739,11 @@ macro_rules! assert_get_buffer_err {
 #[macro_export]
 macro_rules! assert_unlink {
     ($proxy:expr, $path:expr) => {{
-        use $crate::test_utils::assertions::reexport::Status;
-
-        let status = $proxy.unlink($path).await.expect("unlink failed");
-
-        assert_eq!(Status::from_raw(status), Status::OK);
+        $proxy
+            .unlink2($path, fidl_fuchsia_io2::UnlinkOptions::EMPTY)
+            .await
+            .expect("fidl failed")
+            .expect("unlink failed");
     }};
 }
 
@@ -753,9 +753,16 @@ macro_rules! assert_unlink_err {
     ($proxy:expr, $path:expr, $expected_status:expr) => {{
         use $crate::test_utils::assertions::reexport::Status;
 
-        let status = $proxy.unlink($path).await.expect("unlink failed");
-
-        assert_eq!(Status::from_raw(status), $expected_status);
+        assert_eq!(
+            Status::from_raw(
+                $proxy
+                    .unlink2($path, fidl_fuchsia_io2::UnlinkOptions::EMPTY)
+                    .await
+                    .expect("fidl failed")
+                    .expect_err("unlink succeeded")
+            ),
+            $expected_status
+        );
     }};
 }
 

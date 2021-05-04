@@ -904,7 +904,11 @@ mod tests {
             file_proxy.close().await?;
         }
 
-        dir_proxy.unlink("foo").await.expect("unlink failed");
+        dir_proxy
+            .unlink2("foo", UnlinkOptions::EMPTY)
+            .await
+            .expect("fidl call failed")
+            .expect("unlink failed");
 
         assert_eq!(
             open_file_validating(&dir_proxy, OPEN_RIGHT_READABLE, MODE_TYPE_FILE, "foo")
@@ -961,7 +965,10 @@ mod tests {
         .expect("Create file failed");
         file_proxy.close().await.expect("close failed");
 
-        Status::ok(dir_proxy.unlink("foo").await.expect("FIDL call failed"))
+        dir_proxy
+            .unlink2("foo", UnlinkOptions::EMPTY)
+            .await
+            .expect("FIDL call failed")
             .expect("unlink failed");
 
         assert_eq!(
@@ -1009,7 +1016,10 @@ mod tests {
         let buf = vec![0xaa as u8; 512];
         write_file_bytes(&file_proxy, buf.as_slice()).await.expect("write failed");
 
-        Status::ok(dir_proxy.unlink("foo").await.expect("FIDL call failed"))
+        dir_proxy
+            .unlink2("foo", UnlinkOptions::EMPTY)
+            .await
+            .expect("FIDL call failed")
             .expect("unlink failed");
 
         // The child should immediately appear unlinked...
@@ -1069,13 +1079,23 @@ mod tests {
         .expect("Create file failed");
 
         assert_eq!(
-            Status::from_raw(dir_proxy.unlink("foo").await.expect("FIDL call failed")),
-            Status::NOT_EMPTY
+            dir_proxy
+                .unlink2("foo", UnlinkOptions::EMPTY)
+                .await
+                .expect("FIDL call failed")
+                .map_err(Status::from_raw),
+            Err(Status::NOT_EMPTY)
         );
 
-        Status::ok(subdir_proxy.unlink("bar").await.expect("FIDL call failed"))
+        subdir_proxy
+            .unlink2("bar", UnlinkOptions::EMPTY)
+            .await
+            .expect("FIDL call failed")
             .expect("unlink failed");
-        Status::ok(dir_proxy.unlink("foo").await.expect("FIDL call failed"))
+        dir_proxy
+            .unlink2("foo", UnlinkOptions::EMPTY)
+            .await
+            .expect("FIDL call failed")
             .expect("unlink failed");
 
         Ok(())
@@ -1110,7 +1130,10 @@ mod tests {
         .await
         .expect("Create directory failed");
 
-        Status::ok(dir_proxy.unlink("foo").await.expect("FIDL call failed"))
+        dir_proxy
+            .unlink2("foo", UnlinkOptions::EMPTY)
+            .await
+            .expect("FIDL call failed")
             .expect("unlink failed");
 
         assert_eq!(
@@ -1194,10 +1217,15 @@ mod tests {
             let deleter = fasync::Task::spawn(async move {
                 let wait_time = rand::thread_rng().gen_range(0, 5);
                 fasync::Timer::new(Duration::from_millis(wait_time)).await;
-                match Status::from_raw(parent.unlink(CHILD).await.expect("FIDL call failed")) {
-                    Status::OK => {}
-                    Status::NOT_EMPTY => {}
-                    s => panic!("Unexpected status from unlink: {:?}", s),
+                match parent
+                    .unlink2(CHILD, UnlinkOptions::EMPTY)
+                    .await
+                    .expect("FIDL call failed")
+                    .map_err(Status::from_raw)
+                {
+                    Ok(()) => {}
+                    Err(Status::NOT_EMPTY) => {}
+                    Err(e) => panic!("Unexpected status from unlink: {:?}", e),
                 };
             });
 
@@ -1231,7 +1259,10 @@ mod tests {
                         // We added the child before the directory was deleted; go ahead and
                         // clean up.
                         grandchild.close().await.expect("close failed");
-                        Status::ok(child.unlink(GRANDCHILD).await.expect("FIDL call failed"))
+                        child
+                            .unlink2(GRANDCHILD, UnlinkOptions::EMPTY)
+                            .await
+                            .expect("FIDL call failed")
                             .expect("unlink failed");
                     }
                     Err(e) => {

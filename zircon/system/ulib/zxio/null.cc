@@ -83,7 +83,9 @@ zx_status_t zxio_default_add_inotify_filter(zxio_t* io, const char* path, size_t
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t zxio_default_unlink(zxio_t* io, const char* path) { return ZX_ERR_NOT_SUPPORTED; }
+zx_status_t zxio_default_unlink(zxio_t* io, const char* name, int flags) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
 
 zx_status_t zxio_default_token_get(zxio_t* io, zx_handle_t* out_token) {
   return ZX_ERR_NOT_SUPPORTED;

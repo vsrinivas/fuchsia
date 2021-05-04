@@ -10,6 +10,7 @@ use {
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, DirectoryRequestStream, FileObject, FileProxy, NodeInfo,
     },
+    fidl_fuchsia_io2::UnlinkOptions,
     fuchsia_hash::{Hash, ParseHashError},
     fuchsia_syslog::fx_log_warn,
     fuchsia_zircon::{self as zx, AsHandleRef as _, Status},
@@ -85,8 +86,10 @@ impl Client {
 
     /// Delete the blob with the given merkle hash.
     pub async fn delete_blob(&self, blob: &Hash) -> Result<(), BlobfsError> {
-        let status = self.proxy.unlink(&blob.to_string()).await?;
-        Status::ok(status).map_err(BlobfsError::Unlink)
+        self.proxy
+            .unlink2(&blob.to_string(), UnlinkOptions::EMPTY)
+            .await?
+            .map_err(|s| BlobfsError::Unlink(Status::from_raw(s)))
     }
 
     /// Open the blob for reading.
@@ -213,9 +216,9 @@ mod tests {
         let blob_merkle = Hash::from([1; 32]);
         fasync::Task::spawn(async move {
             match stream.try_next().await.unwrap().unwrap() {
-                DirectoryRequest::Unlink { path, responder } => {
-                    assert_eq!(path, blob_merkle.to_string());
-                    responder.send(Status::OK.into_raw()).unwrap();
+                DirectoryRequest::Unlink2 { name, responder, .. } => {
+                    assert_eq!(name, blob_merkle.to_string());
+                    responder.send(&mut Ok(())).unwrap();
                 }
                 other => panic!("unexpected request: {:?}", other),
             }
