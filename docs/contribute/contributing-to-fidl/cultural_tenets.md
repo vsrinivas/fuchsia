@@ -67,7 +67,9 @@ base, and complain about the state of things, we can choose to turn this into
 something concrete, even if it is just raising awareness to all, and naming the
 problem and desired end state.
 
-## We start small[^2]
+<!-- Due to a parsing bug in the fuchsia.dev infrastructure, we have to set the
+     heading for the TOC to show properly. -->
+## We start small[^2] {:data-text='We start small'}
 
 > We execute on a big vision in steps, break down the work, and start with small
 > proof-of-concepts. We are comfortable with taking temporary shortcuts, and
