@@ -1284,6 +1284,11 @@ class SyscallInputOutputObjectArray : public SyscallInputOutputBase {
 
   bool InlineValue() const override { return false; }
 
+  std::unique_ptr<fidl_codec::Type> ComputeType() const override {
+    std::unique_ptr<fidl_codec::Type> elem_type = class_definition_->ComputeType();
+    return std::make_unique<fidl_codec::VectorType>(std::move(elem_type));
+  }
+
   void Load(SyscallDecoderInterface* decoder, Stage stage) const override {
     SyscallInputOutputBase::Load(decoder, stage);
     buffer_size_->Load(decoder, stage);
@@ -1295,6 +1300,9 @@ class SyscallInputOutputObjectArray : public SyscallInputOutputBase {
       }
     }
   }
+
+  std::unique_ptr<fidl_codec::Value> GenerateValue(SyscallDecoderInterface* decoder,
+                                                   Stage stage) const override;
 
   void DisplayOutline(SyscallDecoderInterface* decoder, Stage stage,
                       fidl_codec::PrettyPrinter& printer) const override;
@@ -2717,10 +2725,15 @@ std::unique_ptr<fidl_codec::Value> ArrayField<ClassType, Type>::GenerateValue(
 template <typename ClassType, typename Type, typename SizeType>
 std::unique_ptr<fidl_codec::Value> DynamicArrayField<ClassType, Type, SizeType>::GenerateValue(
     const ClassType* object, debug_ipc::Arch arch) const {
-  auto vector_value = std::make_unique<fidl_codec::VectorValue>();
   std::pair<const Type*, SizeType> vector = get_(object);
   auto syscall_type_ = this->syscall_type();
+  if (syscall_type_ == SyscallType::kChar) {
+    size_t size = strnlen(reinterpret_cast<const char*>(vector.first), vector.second);
+    return std::make_unique<fidl_codec::StringValue>(
+        std::string_view(reinterpret_cast<const char*>(vector.first), size));
+  }
 
+  auto vector_value = std::make_unique<fidl_codec::VectorValue>();
   for (SizeType i = 0; i < vector.second; ++i) {
     if (syscall_type_ == SyscallType::kHandle) {
       vector_value->AddValue(fidlcat::GenerateHandleValue<Type>(vector.first[i]));
@@ -2985,6 +2998,22 @@ void SyscallInputOutputObject<ClassType, SizeType>::DisplayOutline(
     class_definition_->DisplayObject(object, decoder->arch(), printer);
   }
   printer << '\n';
+}
+
+template <typename ClassType, typename SizeType>
+std::unique_ptr<fidl_codec::Value>
+SyscallInputOutputObjectArray<ClassType, SizeType>::GenerateValue(SyscallDecoderInterface* decoder,
+                                                                  Stage stage) const {
+  auto object = reinterpret_cast<const ClassType*>(buffer_->Uint8Content(decoder, stage));
+  if (object == nullptr) {
+    return std::make_unique<fidl_codec::NullValue>();
+  }
+  auto vector_value = std::make_unique<fidl_codec::VectorValue>();
+  SizeType count = buffer_size_->Value(decoder, stage);
+  for (SizeType i = 0; i < count; ++i) {
+    vector_value->AddValue(class_definition_->GenerateValue(object + i, decoder->arch()));
+  }
+  return vector_value;
 }
 
 template <typename ClassType, typename SizeType>

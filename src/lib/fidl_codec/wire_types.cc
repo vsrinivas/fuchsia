@@ -443,11 +443,11 @@ std::string Uint32Type::Name() const {
     case Kind::kPciBarType:
       return "zx.pci_bar_type";
     case Kind::kPolicyAction:
-      return "uint32";
+      return "zx.policy_action";
     case Kind::kPolicyCondition:
-      return "uint32";
+      return "zx.policy_condition";
     case Kind::kPolicyTopic:
-      return "uint32";
+      return "zx.policy_topic";
     case Kind::kPortPacketType:
       return "zx.port_packet::type";
     case Kind::kProfileInfoFlags:
@@ -473,9 +473,9 @@ std::string Uint32Type::Name() const {
     case Kind::kSystemPowerctl:
       return "zx.system_powerctl";
     case Kind::kThreadState:
-      return "uint32";
+      return "zx.thread_state";
     case Kind::kTimerOption:
-      return "uint32";
+      return "zx.timer_option";
     case Kind::kVcpu:
       return "zx.vcpu";
     case Kind::kVmOption:
@@ -487,7 +487,7 @@ std::string Uint32Type::Name() const {
     case Kind::kVmoOption:
       return "zx.vmo_option";
     case Kind::kVmoType:
-      return "uint32";
+      return "zx.info_vmo_type";
   }
 }
 

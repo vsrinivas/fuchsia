@@ -570,12 +570,14 @@ TEST_F(InterceptionWorkflowTestX64, ValuesOK) {
       "zx_ioports_release",
       "zx_ioports_request",
       "zx_job_create",
+      "zx_job_set_policy",
       "zx_ktrace_control",
       "zx_ktrace_read",
       "zx_ktrace_write",
       "zx_mtrace_control",
       "zx_nanosleep",
       "zx_object_get_child",
+      "zx_object_get_info",
       "zx_object_get_property",
       "zx_object_set_profile",
       "zx_object_set_property",
@@ -583,6 +585,7 @@ TEST_F(InterceptionWorkflowTestX64, ValuesOK) {
       "zx_object_signal_peer",
       "zx_object_wait_async",
       "zx_object_wait_one",
+      "zx_object_wait_many",
       "zx_pager_create",
       "zx_pager_create_vmo",
       "zx_pager_detach_vmo",
@@ -677,8 +680,8 @@ TEST_F(InterceptionWorkflowTestX64, ValuesNotImplemented) {
   }
 
   std::set<std::string> expected = {
-      "zx_job_set_policy",    "zx_object_get_info",    "zx_object_wait_many",
-      "zx_thread_read_state", "zx_thread_write_state",
+      "zx_thread_read_state",
+      "zx_thread_write_state",
   };
 
   ASSERT_EQ(expected, actual);
