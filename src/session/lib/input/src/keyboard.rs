@@ -38,6 +38,10 @@ pub struct KeyboardEvent {
 
     /// The [`fidl_ui_input3::Modifiers`] associated with the pressed keys.
     pub modifiers: Option<fidl_ui_input3::Modifiers>,
+
+    /// If set, contains the unique identifier of the keymap to be used when or
+    /// if remapping the keypresses.
+    pub keymap: Option<String>,
 }
 
 /// A [`KeyboardDeviceDescriptor`] contains information about a specific keyboard device.
@@ -268,6 +272,8 @@ impl KeyboardBinding {
 
                                 key,
                                 modifiers,
+                                // At this point in the pipeline the keymap is unknown.
+                                keymap: None,
                             }),
                             device_descriptor: device_descriptor.clone(),
                             event_time: event_time_ns,
@@ -354,6 +360,7 @@ mod tests {
             None,
             event_time_u64,
             &descriptor,
+            /* keymap= */ None,
         )];
 
         assert_input_report_sequence_generates_events!(
@@ -388,6 +395,7 @@ mod tests {
                 None,
                 event_time_u64,
                 &descriptor,
+                /* keymap= */ None,
             ),
             testing_utilities::create_keyboard_event(
                 fidl_fuchsia_input::Key::A,
@@ -395,6 +403,7 @@ mod tests {
                 None,
                 event_time_u64,
                 &descriptor,
+                /* keymap= */ None,
             ),
         ];
 
@@ -432,6 +441,7 @@ mod tests {
             None,
             event_time_u64,
             &descriptor,
+            /* keymap= */ None,
         )];
 
         assert_input_report_sequence_generates_events!(
@@ -468,6 +478,7 @@ mod tests {
                 None,
                 event_time_u64,
                 &descriptor,
+                /* keymap= */ None,
             ),
             testing_utilities::create_keyboard_event(
                 fidl_fuchsia_input::Key::A,
@@ -475,6 +486,7 @@ mod tests {
                 None,
                 event_time_u64,
                 &descriptor,
+                /* keymap= */ None,
             ),
             testing_utilities::create_keyboard_event(
                 fidl_fuchsia_input::Key::B,
@@ -484,6 +496,7 @@ mod tests {
                 // on purpose.
                 event_time_u64 + 1,
                 &descriptor,
+                /* keymap= */ None,
             ),
         ];
 
@@ -514,6 +527,7 @@ mod tests {
             Some(fidl_ui_input3::Modifiers::CapsLock),
             event_time_u64,
             &descriptor,
+            /* keymap= */ None,
         )];
 
         assert_input_report_sequence_generates_events!(
@@ -555,6 +569,7 @@ mod tests {
                 Some(fidl_ui_input3::Modifiers::CapsLock),
                 event_time_u64,
                 &descriptor,
+                /* keymap= */ None,
             ),
             testing_utilities::create_keyboard_event(
                 fidl_fuchsia_input::Key::A,
@@ -562,6 +577,7 @@ mod tests {
                 Some(fidl_ui_input3::Modifiers::CapsLock),
                 event_time_u64,
                 &descriptor,
+                /* keymap= */ None,
             ),
             testing_utilities::create_keyboard_event(
                 fidl_fuchsia_input::Key::CapsLock,
@@ -569,6 +585,7 @@ mod tests {
                 None,
                 event_time_u64,
                 &descriptor,
+                /* keymap= */ None,
             ),
         ];
 

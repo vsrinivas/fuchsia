@@ -222,6 +222,7 @@ mod tests {
             None,
             event_time_u64,
             &device_descriptor,
+            /* keymap= */ None,
         )];
 
         let expected_events = vec![fidl_ui_input3::KeyEvent {
@@ -256,6 +257,7 @@ mod tests {
             None,
             event_time_u64,
             &device_descriptor,
+            /* keymap= */ None,
         )];
 
         let expected_events = vec![fidl_ui_input3::KeyEvent {
@@ -290,6 +292,7 @@ mod tests {
                 None,
                 event_time_u64,
                 &device_descriptor,
+                /* keymap= */ None,
             ),
             testing_utilities::create_keyboard_event(
                 fidl_input::Key::A,
@@ -297,6 +300,7 @@ mod tests {
                 None,
                 event_time_u64,
                 &device_descriptor,
+                /* keymap= */ None,
             ),
             testing_utilities::create_keyboard_event(
                 fidl_input::Key::B,
@@ -304,6 +308,7 @@ mod tests {
                 None,
                 event_time_u64,
                 &device_descriptor,
+                /* keymap= */ None,
             ),
         ];
 
@@ -356,6 +361,7 @@ mod tests {
                 Some(fidl_ui_input3::Modifiers::CapsLock),
                 event_time_u64,
                 &device_descriptor,
+                /* keymap= */ None,
             ),
             testing_utilities::create_keyboard_event(
                 fidl_input::Key::A,
@@ -363,6 +369,7 @@ mod tests {
                 Some(fidl_ui_input3::Modifiers::CapsLock),
                 event_time_u64,
                 &device_descriptor,
+                /* keymap= */ None,
             ),
             testing_utilities::create_keyboard_event(
                 fidl_input::Key::CapsLock,
@@ -370,6 +377,7 @@ mod tests {
                 None,
                 event_time_u64,
                 &device_descriptor,
+                /* keymap= */ None,
             ),
         ];
 
@@ -426,6 +434,7 @@ mod tests {
                 None,
                 event_time_u64,
                 &device_descriptor,
+                /* keymap= */ None,
             ),
             testing_utilities::create_keyboard_event(
                 fidl_input::Key::Tab,
@@ -433,6 +442,7 @@ mod tests {
                 None,
                 event_time_u64,
                 &device_descriptor,
+                /* keymap= */ None,
             ),
             testing_utilities::create_keyboard_event(
                 fidl_input::Key::Backspace,
@@ -440,6 +450,7 @@ mod tests {
                 None,
                 event_time_u64,
                 &device_descriptor,
+                /* keymap= */ None,
             ),
         ];
 
@@ -503,6 +514,7 @@ mod tests {
                 None,
                 event_time_u64,
                 &device_descriptor,
+                /* keymap= */ None,
             )];
 
         let expected_events = vec![fidl_ui_input3::KeyEvent {
@@ -538,6 +550,7 @@ mod tests {
                 None,
                 event_time_u64,
                 &device_descriptor,
+                /* keymap= */ None,
             ),
             testing_utilities::create_keyboard_event(
                 fidl_input::Key::RightShift,
@@ -545,6 +558,7 @@ mod tests {
                 None,
                 event_time_u64,
                 &device_descriptor,
+                /* keymap= */ None,
             ),
             testing_utilities::create_keyboard_event(
                 fidl_input::Key::A,
@@ -552,6 +566,7 @@ mod tests {
                 None,
                 event_time_u64,
                 &device_descriptor,
+                /* keymap= */ None,
             ),
         ];
 
@@ -604,6 +619,7 @@ mod tests {
                 None,
                 event_time_u64,
                 &device_descriptor,
+                /* keymap= */ None,
             ),
             testing_utilities::create_keyboard_event(
                 fidl_input::Key::Tab,
@@ -611,6 +627,7 @@ mod tests {
                 None,
                 event_time_u64,
                 &device_descriptor,
+                /* keymap= */ None,
             ),
         ];
 

@@ -59,12 +59,14 @@ pub fn create_keyboard_event(
     modifiers: Option<fidl_ui_input3::Modifiers>,
     event_time: input_device::EventTime,
     device_descriptor: &input_device::InputDeviceDescriptor,
+    keymap: Option<String>,
 ) -> input_device::InputEvent {
     input_device::InputEvent {
         device_event: input_device::InputDeviceEvent::Keyboard(keyboard::KeyboardEvent {
             key,
             event_type,
             modifiers,
+            keymap,
         }),
         device_descriptor: device_descriptor.clone(),
         event_time,

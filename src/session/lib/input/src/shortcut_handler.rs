@@ -149,6 +149,7 @@ mod tests {
             modifiers,
             event_time,
             &device_descriptor,
+            /* keymap= */ None,
         );
         shortcut_handler.handle_input_event(input_event).await
     }
@@ -170,6 +171,7 @@ mod tests {
             modifiers,
             event_time,
             &device_descriptor,
+            /* keymap= */ None,
         );
         shortcut_handler.handle_input_event(input_event).await
     }
@@ -195,6 +197,7 @@ mod tests {
             modifiers,
             event_time,
             &device_descriptor,
+            /* keymap= */ None,
         );
 
         assert_eq!(input_event, was_handled[0]);
@@ -236,6 +239,7 @@ mod tests {
             modifiers,
             event_time,
             &device_descriptor,
+            /* keymap= */ None,
         );
 
         assert_eq!(input_event, was_handled[0]);
