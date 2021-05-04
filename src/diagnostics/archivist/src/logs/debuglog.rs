@@ -9,11 +9,12 @@ use crate::{
     events::types::ComponentIdentifier,
     logs::{
         error::LogsError,
-        message::{LogsField, LogsHierarchy, LogsProperty, Message, Severity, METADATA_SIZE},
+        message::{LogsField, Message, Severity, METADATA_SIZE},
     },
 };
 use async_trait::async_trait;
 use byteorder::{ByteOrder, LittleEndian};
+use diagnostics_hierarchy::hierarchy;
 use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_boot::ReadOnlyLogMarker;
 use fuchsia_async as fasync;
@@ -175,16 +176,14 @@ pub fn convert_debuglog_to_log_message(buf: &[u8]) -> Option<Message> {
         size,
         0, // TODO(fxbug.dev/48548) dropped_logs
         &*KERNEL_IDENTITY,
-        LogsHierarchy::new(
-            "root",
-            vec![
-                LogsProperty::Uint(LogsField::ProcessId, pid),
-                LogsProperty::Uint(LogsField::ThreadId, tid),
-                LogsProperty::String(LogsField::Tag, "klog".to_string()),
-                LogsProperty::String(LogsField::Msg, contents),
-            ],
-            vec![],
-        ),
+        hierarchy! {
+            root: {
+                LogsField::ProcessId => pid,
+                LogsField::ThreadId => tid,
+                LogsField::Tag => "klog",
+                LogsField::Msg => contents,
+            }
+        },
     ))
 }
 
@@ -208,16 +207,14 @@ mod tests {
                 METADATA_SIZE + 6 + "test log".len(),
                 0, // dropped logs
                 &*KERNEL_IDENTITY,
-                LogsHierarchy::new(
-                    "root",
-                    vec![
-                        LogsProperty::Uint(LogsField::ProcessId, klog.pid),
-                        LogsProperty::Uint(LogsField::ThreadId, klog.tid),
-                        LogsProperty::String(LogsField::Tag, "klog".to_string()),
-                        LogsProperty::String(LogsField::Msg, "test log".to_string())
-                    ],
-                    vec![]
-                ),
+                hierarchy! {
+                    root: {
+                        LogsField::ProcessId => klog.pid,
+                        LogsField::ThreadId => klog.tid,
+                        LogsField::Tag => "klog",
+                        LogsField::Msg => "test log",
+                    }
+                },
             )
         );
         // make sure the `klog` tag still shows up for legacy listeners
@@ -245,20 +242,15 @@ mod tests {
                 METADATA_SIZE + 6 + zx::sys::ZX_LOG_RECORD_MAX - 32,
                 0, // dropped logs
                 &*KERNEL_IDENTITY,
-                LogsHierarchy::new(
-                    "root",
-                    vec![
-                        LogsProperty::Uint(LogsField::ProcessId, klog.pid),
-                        LogsProperty::Uint(LogsField::ThreadId, klog.tid),
-                        LogsProperty::String(LogsField::Tag, "klog".to_string()),
-                        LogsProperty::String(
-                            LogsField::Msg,
-                            String::from_utf8(vec!['a' as u8; zx::sys::ZX_LOG_RECORD_MAX - 32])
-                                .unwrap()
-                        )
-                    ],
-                    vec![]
-                ),
+                hierarchy! {
+                    root: {
+                        LogsField::ProcessId => klog.pid,
+                        LogsField::ThreadId => klog.tid,
+                        LogsField::Tag => "klog",
+                        LogsField::Msg => String::from_utf8(
+                            vec!['a' as u8; zx::sys::ZX_LOG_RECORD_MAX - 32]).unwrap()
+                    }
+                },
             ),
         );
 
@@ -273,16 +265,14 @@ mod tests {
                 METADATA_SIZE + 6,
                 0, // dropped logs
                 &*KERNEL_IDENTITY,
-                LogsHierarchy::new(
-                    "root",
-                    vec![
-                        LogsProperty::Uint(LogsField::ProcessId, klog.pid),
-                        LogsProperty::Uint(LogsField::ThreadId, klog.tid),
-                        LogsProperty::String(LogsField::Tag, "klog".to_string()),
-                        LogsProperty::String(LogsField::Msg, "".to_string())
-                    ],
-                    vec![]
-                ),
+                hierarchy! {
+                    root: {
+                        LogsField::ProcessId => klog.pid,
+                        LogsField::ThreadId => klog.tid,
+                        LogsField::Tag => "klog",
+                        LogsField::Msg => "",
+                    }
+                },
             ),
         );
 
@@ -315,16 +305,14 @@ mod tests {
                 METADATA_SIZE + 6 + "test log".len(),
                 0, // dropped logs
                 &*KERNEL_IDENTITY,
-                LogsHierarchy::new(
-                    "root",
-                    vec![
-                        LogsProperty::Uint(LogsField::ProcessId, klog.pid),
-                        LogsProperty::Uint(LogsField::ThreadId, klog.tid),
-                        LogsProperty::String(LogsField::Tag, "klog".to_string()),
-                        LogsProperty::String(LogsField::Msg, "test log".to_string())
-                    ],
-                    vec![]
-                ),
+                hierarchy! {
+                    root: {
+                        LogsField::ProcessId => klog.pid,
+                        LogsField::ThreadId => klog.tid,
+                        LogsField::Tag => "klog".to_string(),
+                        LogsField::Msg => "test log".to_string(),
+                    }
+                },
             )]
         );
 

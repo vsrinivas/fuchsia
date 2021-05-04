@@ -715,14 +715,9 @@ mod tests {
             .expect("creating node hierarchy")
             .into();
 
-        assert_eq!(
-            hierarchy,
-            DiagnosticsHierarchy::new(
-                "root",
-                vec![Property::String("property".to_string(), "\u{FFFD}ello world".to_string())],
-                vec![],
-            ),
-        );
+        assert_data_tree!(hierarchy, root: {
+            property: "\u{FFFD}ello world",
+        });
     }
 
     #[test]

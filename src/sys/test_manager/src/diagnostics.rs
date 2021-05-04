@@ -239,7 +239,7 @@ mod tests {
     use {
         super::*,
         diagnostics_data::Data,
-        diagnostics_hierarchy::{DiagnosticsHierarchy, Property},
+        diagnostics_hierarchy::hierarchy,
         fidl_fuchsia_diagnostics::ArchiveAccessorMarker,
         futures::{channel::mpsc, SinkExt, StreamExt},
     };
@@ -361,11 +361,11 @@ mod tests {
     fn make_result(moniker: &str) -> FormattedContent {
         let result = Data::for_inspect(
             moniker,
-            Some(DiagnosticsHierarchy::new(
-                "root",
-                vec![Property::Uint("x".to_string(), 1)],
-                vec![],
-            )),
+            Some(hierarchy! {
+                root: {
+                    x: 1u64,
+                }
+            }),
             0,
             "http://component",
             "fuchsia.inspect.Tree",

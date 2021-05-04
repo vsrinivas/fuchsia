@@ -22,7 +22,9 @@ use std::{
     time::Duration,
 };
 
-pub use diagnostics_hierarchy::{assert_data_tree, tree_assertion, DiagnosticsHierarchy, Property};
+pub use diagnostics_hierarchy::{
+    assert_data_tree, hierarchy, tree_assertion, DiagnosticsHierarchy, Property,
+};
 
 const SCHEMA_VERSION: u64 = 1;
 const MICROS_IN_SEC: u128 = 1000000;
@@ -872,7 +874,7 @@ impl Metadata {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use diagnostics_hierarchy::Property;
+    use diagnostics_hierarchy::hierarchy;
     use pretty_assertions;
     use serde_json::json;
 
@@ -880,11 +882,11 @@ mod tests {
 
     #[test]
     fn test_canonical_json_inspect_formatting() {
-        let mut hierarchy = DiagnosticsHierarchy::new(
-            "root",
-            vec![Property::String("x".to_string(), "foo".to_string())],
-            vec![],
-        );
+        let mut hierarchy = hierarchy! {
+            root: {
+                x: "foo",
+            }
+        };
 
         hierarchy.sort();
         let json_schema = Data::for_inspect(
@@ -1011,20 +1013,18 @@ mod tests {
 
     #[test]
     fn display_for_logs() {
-        let hierarchy = DiagnosticsHierarchy::new(
-            "root",
-            vec![
-                Property::Uint(LogsField::ProcessId, 123),
-                Property::Uint(LogsField::ThreadId, 456),
-                Property::String(LogsField::Tag, "foo".to_string()),
-                Property::String(LogsField::Tag, "bar".to_string()),
-                Property::String(LogsField::Msg, "some message".to_string()),
-                Property::String(LogsField::FilePath, "some_file.cc".to_string()),
-                Property::Uint(LogsField::LineNumber, 420),
-                Property::String(LogsField::Other("test".to_string()), "property".to_string()),
-            ],
-            vec![],
-        );
+        let hierarchy = hierarchy! {
+            root: {
+                LogsField::ProcessId => 123u64,
+                LogsField::ThreadId => 456u64,
+                LogsField::Tag => "foo",
+                LogsField::Tag => "bar",
+                LogsField::Msg => "some message",
+                LogsField::FilePath => "some_file.cc",
+                LogsField::LineNumber => 420u64,
+                LogsField::Other("test".to_string()) => "property",
+            }
+        };
         let data = LogsData::for_logs(
             String::from("moniker"),
             Some(hierarchy),
@@ -1043,15 +1043,13 @@ mod tests {
 
     #[test]
     fn display_for_logs_no_tags() {
-        let hierarchy = DiagnosticsHierarchy::new(
-            "root",
-            vec![
-                Property::Uint(LogsField::ProcessId, 123),
-                Property::Uint(LogsField::ThreadId, 456),
-                Property::String(LogsField::Msg, "some message".to_string()),
-            ],
-            vec![],
-        );
+        let hierarchy = hierarchy! {
+            root: {
+                LogsField::ProcessId => 123u64,
+                LogsField::ThreadId => 456u64,
+                LogsField::Msg => "some message",
+            }
+        };
         let data = LogsData::for_logs(
             String::from("moniker"),
             Some(hierarchy),

@@ -26,7 +26,7 @@ use parking_lot::Mutex;
 
 pub use diagnostics_data::{Data, Inspect, Lifecycle, Logs, Severity};
 pub use diagnostics_hierarchy::{
-    assert_data_tree, testing::*, tree_assertion, DiagnosticsHierarchy, Property,
+    assert_data_tree, hierarchy, testing::*, tree_assertion, DiagnosticsHierarchy, Property,
 };
 
 const RETRY_DELAY_MS: i64 = 300;
@@ -643,11 +643,11 @@ mod tests {
                                         called = true;
                                         let result = Data::for_inspect(
                                             "moniker",
-                                            Some(DiagnosticsHierarchy::new(
-                                                "root",
-                                                vec![Property::Uint("x".to_string(), 1)],
-                                                vec![],
-                                            )),
+                                            Some(hierarchy! {
+                                                root: {
+                                                    x: 1u64,
+                                                }
+                                            }),
                                             0i64,
                                             "component-url",
                                             "filename",

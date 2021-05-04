@@ -5,7 +5,7 @@
 use {
     crate::{container::ComponentIdentity, inspect::container::InspectArtifactsContainer},
     diagnostics_data::{self as schema, LifecycleType},
-    diagnostics_hierarchy::{DiagnosticsHierarchy, Property},
+    diagnostics_hierarchy::{hierarchy, DiagnosticsHierarchy},
     fuchsia_zircon as zx,
     std::sync::Arc,
 };
@@ -49,14 +49,11 @@ impl LifecycleDataContainer {
         identity: Arc<ComponentIdentity>,
     ) -> Self {
         if let Some(component_start_time) = artifact.component_start_time {
-            let payload = DiagnosticsHierarchy::new(
-                "root",
-                vec![Property::Int(
-                    "component_start_time".to_string(),
-                    component_start_time.into_nanos(),
-                )],
-                vec![],
-            );
+            let payload = hierarchy! {
+                root: {
+                    component_start_time: component_start_time.into_nanos(),
+                }
+            };
 
             LifecycleDataContainer {
                 identity,

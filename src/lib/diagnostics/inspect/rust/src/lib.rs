@@ -1285,7 +1285,7 @@ mod tests {
     use {
         super::*,
         crate::{assert_data_tree, heap::Heap, reader},
-        diagnostics_hierarchy::{DiagnosticsHierarchy, Property as DProperty},
+        diagnostics_hierarchy::DiagnosticsHierarchy,
         fuchsia_zircon::{AsHandleRef, Peered},
         inspect_format::{constants, BlockType, LinkNodeDisposition},
         mapped_vmo::Mapping,
@@ -2054,21 +2054,15 @@ mod tests {
             }};
             // After atomic update
             wait_and_notify_writer! {{
-                let expected_hierarchy = DiagnosticsHierarchy::new(
-                    "root".to_string(),
-                    vec![DProperty::Int("value".to_string(), 2)],
-                    vec![DiagnosticsHierarchy::new(
-                        "child".to_string(),
-                        vec![
-                            DProperty::Int("a".to_string(), 1),
-                            DProperty::Int("b".to_string(), 2),
-                        ],
-                        vec![],
-                    )],
-                );
                 let hierarchy: DiagnosticsHierarchy<String> =
                     reader::PartialNodeHierarchy::try_from(&vmo).unwrap().into();
-                assert_eq!(hierarchy, expected_hierarchy);
+                assert_data_tree!(hierarchy, root: {
+                   value: 2i64,
+                   child: {
+                       a: 1i64,
+                       b: 2i64,
+                   }
+                });
             }};
         });
 

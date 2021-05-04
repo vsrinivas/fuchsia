@@ -316,9 +316,9 @@ pub enum LogSource {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, archivist_lib::logs::message::*, fuchsia_async as fasync,
-        fuchsia_inspect::testing::*, fuchsia_inspect::*, fuchsia_zircon as zx, futures::Future,
-        proptest::prelude::*, std::panic,
+        super::*, archivist_lib::logs::message::*, diagnostics_data::hierarchy,
+        fuchsia_async as fasync, fuchsia_inspect::testing::*, fuchsia_inspect::*,
+        fuchsia_zircon as zx, futures::Future, proptest::prelude::*, std::panic,
     };
 
     struct GranularTestState {
@@ -757,15 +757,13 @@ mod tests {
             0, // size
             0, // dropped
             &*TEST_IDENTITY,
-            LogsHierarchy::new(
-                "root",
-                vec![
-                    LogsProperty::String(LogsField::Msg, "[irrelevant_tag(32)] Hello".to_string()),
-                    LogsProperty::String(LogsField::FilePath, "path/to/file.cc".to_string()),
-                    LogsProperty::Uint(LogsField::LineNumber, 123),
-                ],
-                vec![],
-            ),
+            hierarchy! {
+                root: {
+                    LogsField::Msg => "[irrelevant_tag(32)] Hello",
+                    LogsField::FilePath => "path/to/file.cc",
+                    LogsField::LineNumber => 123u64,
+                }
+            },
         );
 
         state.granular_stats.record_log(&msg);
@@ -791,14 +789,12 @@ mod tests {
             0, // size
             0, // dropped
             &*TEST_IDENTITY,
-            LogsHierarchy::new(
-                "root",
-                vec![
-                    LogsProperty::String(LogsField::Msg, "[tag(1)] Msg".to_string()),
-                    LogsProperty::String(LogsField::FilePath, "some/other/file.cc".to_string()),
-                ],
-                vec![],
-            ),
+            hierarchy! {
+                root: {
+                    LogsField::Msg => "[tag(1)] Msg",
+                    LogsField::FilePath => "some/other/file.cc",
+                }
+            },
         );
         state.granular_stats.record_log(&msg);
         assert_data_tree!(state.inspector,
@@ -828,14 +824,12 @@ mod tests {
             0, // size
             0, // dropped
             &*TEST_IDENTITY,
-            LogsHierarchy::new(
-                "root",
-                vec![
-                    LogsProperty::String(LogsField::Msg, "[file.rs(99)] Testing 1 2 3".to_string()),
-                    LogsProperty::Uint(LogsField::LineNumber, 931),
-                ],
-                vec![],
-            ),
+            hierarchy! {
+                root: {
+                    LogsField::Msg => "[file.rs(99)] Testing 1 2 3",
+                    LogsField::LineNumber => 931u64,
+                }
+            },
         );
         state.granular_stats.record_log(&msg);
         assert_data_tree!(state.inspector,
@@ -1077,11 +1071,11 @@ mod tests {
             METADATA_SIZE + 1 + msg.len(),
             0, // dropped
             &*TEST_IDENTITY,
-            LogsHierarchy::new(
-                "root",
-                vec![LogsProperty::String(LogsField::Msg, msg.to_string())],
-                vec![],
-            ),
+            hierarchy! {
+                root: {
+                    LogsField::Msg => msg,
+                }
+            },
         )
     }
 

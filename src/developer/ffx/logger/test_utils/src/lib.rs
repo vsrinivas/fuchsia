@@ -5,7 +5,7 @@
 use {
     anyhow::Result,
     diagnostics_data::{LogsData, LogsField, Severity, Timestamp},
-    diagnostics_hierarchy::{DiagnosticsHierarchy, Property},
+    diagnostics_hierarchy::hierarchy,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_developer_remotecontrol::{
         ArchiveIteratorEntry, ArchiveIteratorError, ArchiveIteratorMarker, ArchiveIteratorRequest,
@@ -124,11 +124,11 @@ impl LogsDataBuilder {
     }
 
     pub fn build(&self) -> LogsData {
-        let hierarchy = DiagnosticsHierarchy::new(
-            "root",
-            vec![Property::String(LogsField::Msg, self.message.clone())],
-            vec![],
-        );
+        let hierarchy = hierarchy! {
+            root: {
+                LogsField::Msg => self.message.clone(),
+            }
+        };
         LogsData::for_logs(
             self.moniker.clone(),
             Some(hierarchy),

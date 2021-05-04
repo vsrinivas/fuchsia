@@ -102,8 +102,9 @@ mod tests {
     use crate::{
         container::ComponentIdentity,
         events::types::ComponentIdentifier,
-        logs::message::{LegacySeverity, LogsHierarchy, Severity},
+        logs::message::{LegacySeverity, Severity},
     };
+    use diagnostics_hierarchy::hierarchy;
 
     fn test_message() -> Message {
         let identity = ComponentIdentity::from_identifier_and_url(
@@ -119,7 +120,7 @@ mod tests {
             1, // size
             0, // dropped logs
             &identity,
-            LogsHierarchy::new("root", vec![], vec![]),
+            hierarchy! {root: {}},
         )
     }
 

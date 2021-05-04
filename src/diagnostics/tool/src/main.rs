@@ -4,7 +4,7 @@
 use {
     anyhow::Error,
     diagnostics_data::InspectData,
-    diagnostics_hierarchy::{self, DiagnosticsHierarchy, InspectHierarchyMatcher, Property},
+    diagnostics_hierarchy::{self, hierarchy, DiagnosticsHierarchy, InspectHierarchyMatcher},
     difference::{
         self,
         Difference::{Add, Rem, Same},
@@ -188,14 +188,11 @@ fn filter_json_schema_by_selectors(
         .expect("Snapshot contained an unparsable path.");
 
     if schema.payload.is_none() {
-        schema.payload = Some(DiagnosticsHierarchy::new(
-            "root",
-            vec![Property::String(
-                "filter error".to_string(),
-                format!("Node hierarchy was missing for {}", schema.moniker),
-            )],
-            vec![],
-        ));
+        schema.payload = Some(hierarchy! {
+            root: {
+                "filter error": format!("Node hierarchy was missing for {}", schema.moniker),
+            }
+        });
         return Some(schema);
     }
     let hierarchy = schema.payload.unwrap();
@@ -219,33 +216,27 @@ fn filter_json_schema_by_selectors(
                     None
                 }
                 Err(e) => {
-                    schema.payload = Some(DiagnosticsHierarchy::new(
-                        "root",
-                        vec![Property::String(
-                            "filter error".to_string(),
-                            format!(
+                    schema.payload = Some(hierarchy! {
+                        root: {
+                            "filter error": format!(
                                 "Filtering the hierarchy of {}, an error occurred: {:?}",
                                 schema.moniker, e
                             ),
-                        )],
-                        vec![],
-                    ));
+                        }
+                    });
                     Some(schema)
                 }
             }
         }
         Err(e) => {
-            schema.payload = Some(DiagnosticsHierarchy::new(
-                "root",
-                vec![Property::String(
-                    "filter error".to_string(),
-                    format!(
+            schema.payload = Some(hierarchy! {
+                root: {
+                    "filter error": format!(
                         "Evaulating selectors for {} met an unexpected error condition: {:?}",
                         schema.moniker, e
                     ),
-                )],
-                vec![],
-            ));
+                }
+            });
             Some(schema)
         }
     }

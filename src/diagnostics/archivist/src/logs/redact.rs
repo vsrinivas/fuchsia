@@ -256,7 +256,7 @@ impl Redactor {
 mod test {
     use super::*;
     use crate::logs::message::{Message, Severity, TEST_IDENTITY};
-    use diagnostics_data::{LogsField, LogsHierarchy, LogsProperty};
+    use diagnostics_data::{hierarchy, LogsField};
     use futures::stream::iter as iter2stream;
     use pretty_assertions::assert_eq;
     use std::sync::Arc;
@@ -268,11 +268,11 @@ mod test {
             0, // size
             0, // dropped_logs
             &*TEST_IDENTITY,
-            LogsHierarchy::new(
-                "root",
-                vec![LogsProperty::String(LogsField::Msg, contents.to_string())],
-                vec![],
-            ),
+            hierarchy! {
+                root: {
+                    LogsField::Msg => contents.to_string(),
+                }
+            },
         )
     }
 

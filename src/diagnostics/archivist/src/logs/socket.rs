@@ -104,10 +104,10 @@ where
 #[cfg(test)]
 mod tests {
     use super::super::message::{
-        fx_log_packet_t, LogsField, LogsHierarchy, LogsProperty, Message, Severity, METADATA_SIZE,
-        TEST_IDENTITY,
+        fx_log_packet_t, LogsField, Message, Severity, METADATA_SIZE, TEST_IDENTITY,
     };
     use super::*;
+    use diagnostics_hierarchy::hierarchy;
     use diagnostics_log_encoding::{
         encode::Encoder, Argument, Record, Severity as StreamSeverity, Value,
     };
@@ -132,16 +132,14 @@ mod tests {
             METADATA_SIZE + 6 /* tag */+ 6, /* msg */
             packet.metadata.dropped_logs as u64,
             &*TEST_IDENTITY,
-            LogsHierarchy::new(
-                "root",
-                vec![
-                    LogsProperty::Uint(LogsField::ProcessId, packet.metadata.pid),
-                    LogsProperty::Uint(LogsField::ThreadId, packet.metadata.tid),
-                    LogsProperty::String(LogsField::Tag, "AAAAA".to_string()),
-                    LogsProperty::String(LogsField::Msg, "BBBBB".to_string()),
-                ],
-                vec![],
-            ),
+            hierarchy! {
+                root: {
+                    LogsField::ProcessId => packet.metadata.pid,
+                    LogsField::ThreadId => packet.metadata.tid,
+                    LogsField::Tag => "AAAAA",
+                    LogsField::Msg => "BBBBB",
+                }
+            },
         );
 
         let result_message = ls.next().await.unwrap();
@@ -177,14 +175,12 @@ mod tests {
             encoded.len(),
             0, // dropped logs
             &*TEST_IDENTITY,
-            LogsHierarchy::new(
-                "root",
-                vec![
-                    LogsProperty::String(LogsField::Other("key".to_string()), "value".to_string()),
-                    LogsProperty::String(LogsField::Tag, "tag-a".to_string()),
-                ],
-                vec![],
-            ),
+            hierarchy! {
+                root: {
+                    LogsField::Other("key".to_string()) => "value",
+                    LogsField::Tag => "tag-a",
+                }
+            },
         );
 
         let mut stream =

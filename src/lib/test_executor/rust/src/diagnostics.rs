@@ -204,9 +204,7 @@ impl Stream for ArchiveLogStream {
 mod tests {
     use {
         super::*,
-        diagnostics_data::{
-            DiagnosticsHierarchy, LogsData, LogsField, Property, Severity, Timestamp,
-        },
+        diagnostics_data::{hierarchy, LogsData, LogsField, Severity, Timestamp},
         fidl::endpoints::ServerEnd,
         fuchsia_async as fasync,
         futures::TryStreamExt,
@@ -408,11 +406,11 @@ mod tests {
     }
 
     fn get_json_data(value: i64) -> String {
-        let hierarchy = DiagnosticsHierarchy::new(
-            "root",
-            vec![Property::String(LogsField::Msg, format!("{}", value))],
-            vec![],
-        );
+        let hierarchy = hierarchy! {
+            root: {
+                LogsField::Msg => format!("{}", value),
+            }
+        };
         let data = LogsData::for_logs(
             String::from("test/moniker"),
             Some(hierarchy),

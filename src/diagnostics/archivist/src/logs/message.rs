@@ -7,7 +7,7 @@ use crate::{
     logs::{error::StreamError, stats::LogStreamStats},
 };
 use byteorder::{ByteOrder, LittleEndian};
-use diagnostics_data::{LogError, Timestamp};
+use diagnostics_data::{LogError, LogsHierarchy, Timestamp};
 use diagnostics_hierarchy::DiagnosticsHierarchy;
 use diagnostics_log_encoding::{Severity as StreamSeverity, Value, ValueUnknown};
 use fidl_fuchsia_logger::{LogLevelFilter, LogMessage, MAX_DATAGRAM_LEN_BYTES};
@@ -27,9 +27,7 @@ use std::{
     sync::Arc,
 };
 
-pub use diagnostics_data::{
-    LogsData, LogsField, LogsHierarchy, LogsMetadata, LogsProperty, Severity,
-};
+pub use diagnostics_data::{hierarchy, LogsData, LogsField, LogsMetadata, LogsProperty, Severity};
 
 const UNKNOWN_COMPONENT_NAME: &str = "UNKNOWN";
 
@@ -129,11 +127,11 @@ impl Message {
             stats: Default::default(),
             data: LogsData::for_logs(
                 source.to_string(),
-                Some(LogsHierarchy::new(
-                    "root",
-                    vec![LogsProperty::String(LogsField::Msg, message)],
-                    vec![],
-                )),
+                Some(hierarchy! {
+                    root: {
+                        LogsField::Msg => message,
+                    }
+                }),
                 timestamp,
                 &source.url,
                 Severity::Warn,
@@ -210,15 +208,13 @@ impl Message {
             if bytes[msg_end] == 0 {
                 let message = str::from_utf8(&bytes[msg_start..msg_end])?.to_owned();
                 let message_len = message.len();
-                let mut contents = LogsHierarchy::new(
-                    "root",
-                    vec![
-                        LogsProperty::Uint(LogsField::ProcessId, pid),
-                        LogsProperty::Uint(LogsField::ThreadId, tid),
-                        LogsProperty::String(LogsField::Msg, message),
-                    ],
-                    vec![],
-                );
+                let mut contents = hierarchy! {
+                    root: {
+                        LogsField::ProcessId => pid,
+                        LogsField::ThreadId => tid,
+                        LogsField::Msg => message,
+                    }
+                };
                 for tag in tags {
                     contents.add_property(LogsProperty::String(LogsField::Tag, tag));
                 }
@@ -821,16 +817,14 @@ mod tests {
             METADATA_SIZE + data_size,
             packet.metadata.dropped_logs as _,
             &*TEST_IDENTITY,
-            LogsHierarchy::new(
-                "root",
-                vec![
-                    LogsProperty::Uint(LogsField::ProcessId, packet.metadata.pid),
-                    LogsProperty::Uint(LogsField::ThreadId, packet.metadata.tid),
-                    LogsProperty::String(LogsField::Tag, "AAAAAAAAAAA".into()),
-                    LogsProperty::String(LogsField::Msg, "BBBBB".into()),
-                ],
-                vec![],
-            ),
+            hierarchy! {
+                root: {
+                    LogsField::ProcessId => packet.metadata.pid,
+                    LogsField::ThreadId => packet.metadata.tid,
+                    LogsField::Tag => "AAAAAAAAAAA",
+                    LogsField::Msg => "BBBBB",
+                }
+            },
         );
 
         assert_eq!(parsed, expected);
@@ -866,17 +860,15 @@ mod tests {
             METADATA_SIZE + b_end,
             packet.metadata.dropped_logs as _,
             &*TEST_IDENTITY,
-            LogsHierarchy::new(
-                "root",
-                vec![
-                    LogsProperty::Uint(LogsField::ProcessId, packet.metadata.pid),
-                    LogsProperty::Uint(LogsField::ThreadId, packet.metadata.tid),
-                    LogsProperty::String(LogsField::Tag, TEST_IDENTITY.to_string()),
-                    LogsProperty::String(LogsField::Tag, "AAAAA".into()),
-                    LogsProperty::String(LogsField::Msg, "BBBBB".into()),
-                ],
-                vec![],
-            ),
+            hierarchy! {
+                root: {
+                    LogsField::ProcessId => packet.metadata.pid,
+                    LogsField::ThreadId => packet.metadata.tid,
+                    LogsField::Tag => TEST_IDENTITY.to_string(),
+                    LogsField::Tag => "AAAAA",
+                    LogsField::Msg => "BBBBB",
+                }
+            },
         );
         assert_eq!(parsed, expected);
     }
@@ -889,7 +881,7 @@ mod tests {
             0usize, // size
             0u64,   // dropped
             &*TEST_IDENTITY,
-            LogsHierarchy::new("root", vec![], vec![]),
+            hierarchy! {root: {}},
         );
         assert_eq!(&test_message.moniker, &TEST_IDENTITY.relative_moniker.join("/"));
         assert_eq!(&test_message.metadata.component_url, &TEST_IDENTITY.url);
@@ -950,17 +942,15 @@ mod tests {
             METADATA_SIZE + data_size,
             packet.metadata.dropped_logs as u64,
             &*TEST_IDENTITY,
-            LogsHierarchy::new(
-                "root",
-                vec![
-                    LogsProperty::Uint(LogsField::ProcessId, packet.metadata.pid),
-                    LogsProperty::Uint(LogsField::ThreadId, packet.metadata.tid),
-                    LogsProperty::String(LogsField::Tag, "AAAAAAAAAAA".to_string()),
-                    LogsProperty::String(LogsField::Tag, "BBBBB".to_string()),
-                    LogsProperty::String(LogsField::Msg, "CCCCC".to_string()),
-                ],
-                vec![],
-            ),
+            hierarchy! {
+                root: {
+                    LogsField::ProcessId => packet.metadata.pid,
+                    LogsField::ThreadId => packet.metadata.tid,
+                    LogsField::Tag => "AAAAAAAAAAA",
+                    LogsField::Tag => "BBBBB",
+                    LogsField::Msg => "CCCCC",
+                }
+            },
         );
 
         assert_eq!(parsed, expected);
@@ -1056,15 +1046,11 @@ mod tests {
         let buffer = &packet.as_bytes()[..METADATA_SIZE + msg_start + 1]; // null-terminated
         let parsed = Message::from_logger(&*TEST_IDENTITY, buffer).unwrap();
 
-        let mut expected_contents = LogsHierarchy::new(
-            "root",
-            vec![
-                LogsProperty::Uint(LogsField::ProcessId, packet.metadata.pid),
-                LogsProperty::Uint(LogsField::ThreadId, packet.metadata.tid),
-                LogsProperty::String(LogsField::Msg, "".to_string()),
-            ],
-            vec![],
-        );
+        let mut expected_contents = hierarchy! {root: {
+            LogsField::ProcessId => packet.metadata.pid,
+            LogsField::ThreadId => packet.metadata.tid,
+            LogsField::Msg => "",
+        }};
         for tag_num in 0..MAX_TAGS as _ {
             expected_contents.add_property(LogsProperty::String(
                 LogsField::Tag,
@@ -1105,15 +1091,13 @@ mod tests {
                 METADATA_SIZE + 3,
                 packet.metadata.dropped_logs as u64,
                 &*TEST_IDENTITY,
-                LogsHierarchy::new(
-                    "root",
-                    vec![
-                        LogsProperty::Uint(LogsField::ProcessId, packet.metadata.pid),
-                        LogsProperty::Uint(LogsField::ThreadId, packet.metadata.tid),
-                        LogsProperty::String(LogsField::Msg, "AA".to_string())
-                    ],
-                    vec![],
-                ),
+                hierarchy! {
+                    root: {
+                        LogsField::ProcessId => packet.metadata.pid,
+                        LogsField::ThreadId => packet.metadata.tid,
+                        LogsField::Msg => "AA",
+                    }
+                },
             )
         );
     }
@@ -1133,15 +1117,13 @@ mod tests {
             METADATA_SIZE + 1,
             packet.metadata.dropped_logs as u64,
             &*TEST_IDENTITY,
-            LogsHierarchy::new(
-                "root",
-                vec![
-                    LogsProperty::Uint(LogsField::ProcessId, packet.metadata.pid),
-                    LogsProperty::Uint(LogsField::ThreadId, packet.metadata.tid),
-                    LogsProperty::String(LogsField::Msg, "".to_string()),
-                ],
-                vec![],
-            ),
+            hierarchy! {
+                root: {
+                    LogsField::ProcessId => packet.metadata.pid,
+                    LogsField::ThreadId => packet.metadata.tid,
+                    LogsField::Msg => "",
+                }
+            },
         );
 
         assert_eq!(parsed, expected_message);
@@ -1191,15 +1173,11 @@ mod tests {
             METADATA_SIZE + 1,
             packet.metadata.dropped_logs as u64,
             &*TEST_IDENTITY,
-            LogsHierarchy::new(
-                "root",
-                vec![
-                    LogsProperty::Uint(LogsField::ProcessId, packet.metadata.pid),
-                    LogsProperty::Uint(LogsField::ThreadId, packet.metadata.tid),
-                    LogsProperty::String(LogsField::Msg, "".to_string()),
-                ],
-                vec![],
-            ),
+            hierarchy! {root: {
+                LogsField::ProcessId => packet.metadata.pid,
+                LogsField::ThreadId => packet.metadata.tid,
+                LogsField::Msg => "",
+            }},
         );
         expected_message.clear_legacy_verbosity();
         expected_message.set_legacy_verbosity(10);
@@ -1287,19 +1265,17 @@ mod tests {
                 encoded.len(),
                 2, // dropped
                 &*TEST_IDENTITY,
-                LogsHierarchy::new(
-                    "root",
-                    vec![
-                        LogsProperty::String(LogsField::FilePath, "some_file.cc".to_string()),
-                        LogsProperty::Uint(LogsField::LineNumber, 420),
-                        LogsProperty::Int(LogsField::Other("arg1".to_string()), -23),
-                        LogsProperty::Uint(LogsField::ProcessId, 43),
-                        LogsProperty::Uint(LogsField::ThreadId, 912),
-                        LogsProperty::String(LogsField::Tag, "tag".to_string()),
-                        LogsProperty::String(LogsField::Msg, "msg".to_string()),
-                    ],
-                    vec![],
-                )
+                hierarchy! {
+                    root: {
+                        LogsField::FilePath => "some_file.cc",
+                        LogsField::LineNumber => 420u64,
+                        LogsField::Other("arg1".to_string()) => -23i64,
+                        LogsField::ProcessId => 43u64,
+                        LogsField::ThreadId => 912u64,
+                        LogsField::Tag => "tag",
+                        LogsField::Msg => "msg",
+                    }
+                },
             )
         );
         assert_eq!(
@@ -1338,15 +1314,11 @@ mod tests {
                 encoded.len(),
                 0, // dropped
                 &*TEST_IDENTITY,
-                LogsHierarchy::new(
-                    "root",
-                    vec![
-                        LogsProperty::String(LogsField::Tag, "tag1".to_string()),
-                        LogsProperty::String(LogsField::Tag, "tag2".to_string()),
-                        LogsProperty::String(LogsField::Tag, "tag3".to_string()),
-                    ],
-                    vec![],
-                )
+                hierarchy! { root: {
+                    LogsField::Tag => "tag1",
+                    LogsField::Tag => "tag2",
+                    LogsField::Tag => "tag3",
+                }},
             )
         );
 
@@ -1365,7 +1337,7 @@ mod tests {
                 encoded.len(),
                 0, // dropped
                 &*TEST_IDENTITY,
-                LogsHierarchy::new("root", vec![], vec![],)
+                hierarchy! {root:{}},
             )
         );
 
@@ -1386,7 +1358,7 @@ mod tests {
                 1, // size
                 0, // dropped logs
                 &*TEST_IDENTITY,
-                LogsHierarchy::new("root", vec![], vec![]),
+                hierarchy! {root: {}},
             );
             if let Some(v) = verbosity {
                 msg.set_legacy_verbosity(v);

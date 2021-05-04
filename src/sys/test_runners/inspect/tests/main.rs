@@ -4,7 +4,7 @@
 
 use {
     anyhow::{Context as _, Error},
-    diagnostics_data::{Data, DiagnosticsHierarchy, Property},
+    diagnostics_data::{hierarchy, Data, DiagnosticsHierarchy, Property},
     fake_archive_accessor::FakeArchiveAccessor,
     fidl_fuchsia_test_manager::HarnessMarker,
     fuchsia_component::server::ServiceFs,
@@ -147,11 +147,11 @@ async fn launch_and_test_sample_test() {
     let fake_data = vec![
         Data::for_inspect(
             "bootstrap/archivist",
-            Some(DiagnosticsHierarchy::new(
-                "root",
-                vec![Property::String("version".to_string(), "1.0".to_string())],
-                vec![],
-            )),
+            Some(hierarchy! {
+                root: {
+                    version: "1.0",
+                }
+            }),
             0,
             "no-url",
             "fake-file-name",
@@ -159,23 +159,17 @@ async fn launch_and_test_sample_test() {
         ),
         Data::for_inspect(
             "bootstrap/archivist",
-            Some(DiagnosticsHierarchy::new(
-                "root",
-                vec![],
-                vec![DiagnosticsHierarchy::new(
-                    "event_stats",
-                    vec![],
-                    vec![DiagnosticsHierarchy::new(
-                        "recent_events",
-                        vec![],
-                        vec![DiagnosticsHierarchy::new(
-                            "0",
-                            vec![Property::String("event".to_string(), "START".to_string())],
-                            vec![],
-                        )],
-                    )],
-                )],
-            )),
+            Some(hierarchy! {
+                root: {
+                    event_stats: {
+                        recent_events: {
+                            "0": {
+                                event: "START",
+                            }
+                        }
+                    }
+                }
+            }),
             0,
             "no-url",
             "fake-file-name",
@@ -184,7 +178,7 @@ async fn launch_and_test_sample_test() {
         // Inject one that is missing data to ensure we retry correctly.
         Data::for_inspect(
             "bootstrap/archivist",
-            Some(DiagnosticsHierarchy::new("root", vec![], vec![])),
+            Some(hierarchy! {root: {}}),
             0,
             "no-url",
             "fake-file-name",
@@ -192,15 +186,11 @@ async fn launch_and_test_sample_test() {
         ),
         Data::for_inspect(
             "bootstrap/archivist",
-            Some(DiagnosticsHierarchy::new(
-                "root",
-                vec![],
-                vec![DiagnosticsHierarchy::new(
-                    "event_stats",
-                    vec![Property::Int("components_seen_running".to_string(), 2)],
-                    vec![],
-                )],
-            )),
+            Some(hierarchy! { root: {
+                event_stats: {
+                    components_seen_running: 2i64,
+                }
+            }}),
             0,
             "no-url",
             "fake-file-name",
