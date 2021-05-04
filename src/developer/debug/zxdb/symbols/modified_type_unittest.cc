@@ -22,6 +22,42 @@ fxl::RefPtr<BaseType> MakeBaseType(const char* name, int base_type, uint32_t byt
 
 }  // namespace
 
+TEST(ModifiedType, Strip) {
+  constexpr uint32_t kIntSize = 4u;
+  auto int_type = MakeBaseType("int", BaseType::kBaseTypeSigned, kIntSize);
+
+  // Construct an insane modified type.
+  auto volatile_int = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kVolatileType, int_type);
+  auto atomic_volatile_int = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kAtomicType, volatile_int);
+  auto const_atomic_volatile_int =
+      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kConstType, atomic_volatile_int);
+
+  // This puts the "const" at the right which is a little weird (following the pointer rule) but
+  // this is still OK.
+  EXPECT_EQ("_Atomic volatile int const", const_atomic_volatile_int->GetFullName());
+
+  // Stripping (both types) should remove all qualifiers we just added.
+  auto stripped_cv = const_atomic_volatile_int->StripCV();
+  EXPECT_EQ(stripped_cv, int_type.get());
+  auto stripped_cvt = const_atomic_volatile_int->StripCVT();
+  EXPECT_EQ(stripped_cvt, int_type.get());
+
+  // Construct a typedef of the insane type.
+  auto insane = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kTypedef, const_atomic_volatile_int);
+  insane->set_assigned_name("Insane");
+  EXPECT_EQ("Insane", insane->GetFullName());
+
+  auto const_insane = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kConstType, insane);
+
+  // StripCV() should only strip the const, not the typedef.
+  stripped_cv = const_insane->StripCV();
+  EXPECT_EQ(stripped_cv, insane.get());
+
+  // StripCVT() should get rid of everything.
+  stripped_cvt = const_insane->StripCVT();
+  EXPECT_EQ(stripped_cvt, int_type.get());
+}
+
 TEST(ModifiedType, GetFullName) {
   // int
   constexpr uint32_t kIntSize = 4u;
@@ -103,6 +139,11 @@ TEST(ModifiedType, GetFullName) {
   EXPECT_EQ("const void*", const_void_ptr->GetFullName());
   auto const_void_ptr2 = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, const_void2);
   EXPECT_EQ("const void*", const_void_ptr2->GetFullName());
+
+  // Atomic int.
+  auto atomic_int_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kAtomicType, int_type);
+  EXPECT_EQ("_Atomic int", atomic_int_type->GetFullName());
+  EXPECT_EQ(kIntSize, atomic_int_type->byte_size());
 }
 
 }  // namespace zxdb

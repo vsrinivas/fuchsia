@@ -80,6 +80,14 @@ const char* kDwarfTagNames[] = {
     "DW_TAG_type_unit",                 // 0x41
     "DW_TAG_rvalue_reference_type",     // 0x42
     "DW_TAG_template_alias",            // 0x43
+    "DW_TAG_coarray_type",              // 0x44
+    "DW_TAG_generic_subrange",          // 0x45
+    "DW_TAG_dynamic_type",              // 0x46
+    "DW_TAG_atomic_type",               // 0x47
+    "DW_TAG_call_site",                 // 0x48
+    "DW_TAG_call_site_parameter",       // 0x49
+    "DW_TAG_skeleton_unit",             // 0x4a
+    "DW_TAG_immutable_type",            // 0x4b
 };
 
 constexpr size_t kDwarfTagNameCount = static_cast<size_t>(DwarfTag::kLastDefined);
@@ -107,12 +115,13 @@ bool DwarfTagIsTypeModifier(DwarfTag tag) {
   return tag == DwarfTag::kConstType || tag == DwarfTag::kPointerType ||
          tag == DwarfTag::kReferenceType || tag == DwarfTag::kRestrictType ||
          tag == DwarfTag::kRvalueReferenceType || tag == DwarfTag::kTypedef ||
-         tag == DwarfTag::kVolatileType || tag == DwarfTag::kImportedDeclaration;
+         tag == DwarfTag::kVolatileType || tag == DwarfTag::kImportedDeclaration ||
+         tag == DwarfTag::kAtomicType;
 }
 
 bool DwarfTagIsCVQualifier(DwarfTag tag) {
   return tag == DwarfTag::kConstType || tag == DwarfTag::kVolatileType ||
-         tag == DwarfTag::kRestrictType;
+         tag == DwarfTag::kRestrictType || tag == DwarfTag::kAtomicType;
 }
 
 bool DwarfTagIsEitherReference(DwarfTag tag) {

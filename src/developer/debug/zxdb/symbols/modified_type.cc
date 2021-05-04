@@ -15,7 +15,7 @@ namespace {
 // Returns true if this tag is a modified type that is transparent with respect to the data stored
 // in it.
 bool IsTransparentTag(DwarfTag tag) {
-  return DwarfTagIsCVQualifier(tag) || tag == DwarfTag::kTypedef ||
+  return DwarfTagIsCVQualifier(tag) || tag == DwarfTag::kTypedef || tag == DwarfTag::kAtomicType ||
          tag == DwarfTag::kImportedDeclaration;
 }
 
@@ -130,6 +130,9 @@ std::string ModifiedType::ComputeFullName() const {
       // these as Clang follows the using statement when defining types of variables so we only see
       // the underlying type. When we support type lookup by name, these will matter.
       return modified_name;
+    case DwarfTag::kAtomicType:
+      // Use the C11 _Atomic qualifier since C++ lacks such an annotation. Clang uses this in C++.
+      return "_Atomic " + modified_name;
     default:
       return kUnknown;
   }

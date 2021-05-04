@@ -18,14 +18,14 @@ class Type : public Symbol {
   const Type* AsType() const final;
   const std::string& GetAssignedName() const { return assigned_name_; }
 
-  // Strips "const" and "volatile" qualifiers, as well as the uncommon "restrict" C qualifier.
-  // See StripCVT() for why most callers will want a "concrete" type. This function does the
-  // maximum, qualifier stripping that doesn't change the name of the type.
+  // Strips "const" and "volatile", and "atomic" qualifiers, as well as the uncommon "restrict" C
+  // qualifier. See StripCVT() for why most callers will want a "concrete" type. This function does
+  // the maximum, qualifier stripping that doesn't change the name of the type.
   virtual const Type* StripCV() const;
 
-  // Strips "const", "volatile", and follows typedefs to get the underlying type. This also strips
-  // "restrict" for C (unusual), and handles C++ "using" statements for defining types (which are
-  // encoded in DWARF as typedefs).
+  // Strips "const", "volatile", "atomic", and follows typedefs to get the underlying type. This
+  // also strips "restrict" for C (unusual), and handles C++ "using" statements for defining types
+  // (which are encoded in DWARF as typedefs).
   //
   // Prefer ExprValue::GetConcreteType() or EvalContext::GetConcreteType() when possible. That
   // version will also expand forward definitions which is almost always the right thing to do. This

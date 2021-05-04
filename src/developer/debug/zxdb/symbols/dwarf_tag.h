@@ -183,6 +183,27 @@ enum class DwarfTag : int {
   kRvalueReferenceType = 0x42,
   kTemplateAlias = 0x43,
 
+  // For FORTRAN arrays.
+  kCoarrayType = 0x44,
+  kGenericSubrange = 0x45,
+
+  // Not used in C/C++.
+  kDynamicType = 0x46,
+
+  // Atomic types like C11 _Atomic annotations.
+  kAtomicType = 0x47,
+
+  // Describes call site information. Clang doesn't currently generate these very often so they're
+  // not very useful.
+  kCallSite = 0x48,
+  kCallSiteParameter = 0x49,
+
+  // Used for split DWARF files.
+  kSkeletonUnit = 0x4a,
+
+  // Used in some languages like D, not in C/C++.
+  kImmutableType = 0x4b,
+
   // -----------------------------------------------------------------------------------------------
 
   // Identifies one-past-the-end of the tags where we define constants. For range checking.
@@ -197,10 +218,12 @@ enum class DwarfTag : int {
 bool DwarfTagIsType(DwarfTag tag);
 
 // Returns true if the tag is one of the type modified variants (pointers, references, typedefs,
-// const, volatile, etc.). See also "...Qualifier() variant below.
+// const, volatile, etc.). See also "DwarfTagIsCVQualifier() variant below.
 bool DwarfTagIsTypeModifier(DwarfTag tag);
 
-// Returns true for C-V qualifiers. Also includes "restrict" for C99.
+// Returns true for C-V qualifiers. Also includes "restrict" for C99 and "_Atomic" for C11. This
+// is basically anything that should be ignored to get an underlying type name, but does not invlude
+// typdefs (since these have a different name).
 bool DwarfTagIsCVQualifier(DwarfTag tag);
 
 // Returns true if the dwarf tag is a reference or rvalue reference.
