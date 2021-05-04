@@ -279,14 +279,22 @@ template("zircon_toolchain") {
         tool_dir = gcc_tool_dir
         tool_prefix = "${tc_cpu}-elf-"
         version_string = gcc_version_string
-        include_dirs = [ rebase_path(
-                exec_script(
-                    "/usr/bin/env",
-                    clangxx_args + [ "-print-file-name=include/c++/v1" ],
-                    "trim string",
-                    clangxx_exec_inputs),
+        include_dirs = rebase_path(
+                [
+                  exec_script(
+                      "/usr/bin/env",
+                      clangxx_args +
+                          [ "-print-file-name=include/${clang_target}/c++/v1" ],
+                      "trim string",
+                      clangxx_exec_inputs),
+                  exec_script(
+                      "/usr/bin/env",
+                      clangxx_args + [ "-print-file-name=include/c++/v1" ],
+                      "trim string",
+                      clangxx_exec_inputs),
+                ],
                 "",
-                root_build_dir) ]
+                root_build_dir)
         lib_dirs = [ rebase_path(
                 get_path_info(
                     exec_script("/usr/bin/env",
@@ -307,14 +315,22 @@ template("zircon_toolchain") {
       # TODO(fxbug.dev/27328): The MSVC target in the clang driver never uses the
       # -stdlib=libc++ switch or the toolchain's own libc++ include path.
       if (invoker.os == "win") {
-        include_dirs = [ rebase_path(
-                exec_script(
-                    "/usr/bin/env",
-                    clangxx_args + [ "-print-file-name=include/c++/v1" ],
-                    "trim string",
-                    clangxx_exec_inputs),
+        include_dirs = rebase_path(
+                [
+                  exec_script(
+                      "/usr/bin/env",
+                      clangxx_args +
+                          [ "-print-file-name=include/${clang_target}/c++/v1" ],
+                      "trim string",
+                      clangxx_exec_inputs),
+                  exec_script(
+                      "/usr/bin/env",
+                      clangxx_args + [ "-print-file-name=include/c++/v1" ],
+                      "trim string",
+                      clangxx_exec_inputs),
+                ],
                 "",
-                root_build_dir) ]
+                root_build_dir)
       }
     }
   }
