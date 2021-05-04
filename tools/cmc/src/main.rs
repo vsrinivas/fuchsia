@@ -49,7 +49,9 @@ fn run_cmc() -> Result<(), Error> {
         opts::Commands::ValidateReferences { component_manifest, package_manifest, gn_label } => {
             reference::validate(&component_manifest, &package_manifest, gn_label.as_ref())?
         }
-        opts::Commands::Merge { files, output, fromfile } => merge::merge(files, output, fromfile)?,
+        opts::Commands::Merge { files, output, fromfile, depfile } => {
+            merge::merge(files, output, fromfile, depfile)?
+        }
         opts::Commands::Include { file, output, depfile, includepath, includeroot } => {
             path_exists(&file)?;
             include::merge_includes(

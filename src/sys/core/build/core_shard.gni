@@ -1,0 +1,21 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+template("core_shard") {
+  assert(
+      defined(invoker.shard_file),
+      "The `shard_file` argument was missing when calling core_shard($target_name)")
+
+  if ("cml" != get_path_info(invoker.shard_file, "extension")) {
+    assert(
+        false,
+        "Unknown manifest format for \"${invoker.shard_file)\", must be \".cml\"")
+  }
+
+  group(target_name) {
+    metadata = {
+      shard_files = [ rebase_path(invoker.shard_file, root_build_dir) ]
+    }
+  }
+}

@@ -3,10 +3,25 @@
 # found in the LICENSE file.
 
 import("//build/images/assemble_system.gni")
+import("//src/sys/core/build/core.gni")
+import("//src/sys/root/build/root.gni")
+
+core_name = "core-guest"
+
+core_realm("core") {
+  package_name = core_name
+  testonly = true
+}
+
+root_realm("root") {
+  core_package_name = core_name
+  testonly = true
+}
 
 assemble_system("guest") {
   testonly = true
   base_packages = [
+    ":core",
     "//garnet/bin/run",
     "//garnet/bin/sysmgr",
     "//garnet/bin/trace",
@@ -15,13 +30,13 @@ assemble_system("guest") {
     "//src/sys/appmgr:appmgr_scheme_config",
     "//src/sys/appmgr:component_id_index_no_restrict_storage",
     "//src/sys/appmgr",
-    "//src/sys/core",
     "//src/sys/pkg/bin/system-update-committer",
     "//src/virtualization/packages/zircon_guest:services_config",
     "//src/virtualization/tests:virtualization_test_utils_pkg",
   ]
 
   bootfs_labels = [
+    ":root",
     "//build/info:bootfs",
     "//src/power/power-manager:base_config",
     "//src/bringup/bin/bootsvc:bin",

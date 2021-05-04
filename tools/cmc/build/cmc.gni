@@ -29,8 +29,11 @@ template("cmc") {
 #
 # Parameters
 #
-#   sources (required)
+#   sources (optional)
 #     [list of files] A list of files that are to be merged.
+#
+#   from_file (optional)
+#     [path] A file containing line-delimited paths of files to be merged.
 #
 #   output_name (optional)
 #     [path] Name for the output.
@@ -47,25 +50,43 @@ template("cmc_merge") {
                              "deps",
                              "output_name",
                              "sources",
+                             "from_file",
                              "testonly",
                              "visibility",
                            ])
     if (!defined(output_name)) {
       output_name = target_name
     }
+    if (!defined(sources) && !defined(from_file)) {
+      assert(
+          false,
+          "At least one of \"sources\" or \"from_file\" must be specified when calling cmc_merge($target_name)")
+    }
 
     merged_output = "${target_out_dir}/${output_name}"
-    inputs = invoker.sources
+    inputs = []
     outputs = [ merged_output ]
 
+    depfile = "${target_out_dir}/${target_name}.d"
     args = [
       "merge",
       "--output",
       rebase_path(merged_output, root_build_dir),
+      "--depfile",
+      rebase_path(depfile, root_build_dir),
     ]
 
-    foreach(source, sources) {
-      args += [ rebase_path(source, root_build_dir) ]
+    if (defined(sources)) {
+      inputs += sources
+      args += rebase_path(sources, root_build_dir)
+    }
+
+    if (defined(from_file)) {
+      inputs += [ from_file ]
+      args += [
+        "--fromfile",
+        rebase_path(from_file, root_build_dir),
+      ]
     }
   }
 }

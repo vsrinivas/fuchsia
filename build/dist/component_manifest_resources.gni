@@ -11,7 +11,10 @@ import("resource.gni")
 #
 #   sources
 #     Required: List of paths to .cml meta files
-
+#
+#    deps
+#    testonly
+#    visibility
 template("component_manifest_resources") {
   assert(defined(invoker.sources), "Must set some sources")
 
@@ -23,11 +26,19 @@ template("component_manifest_resources") {
     assert(extension == "cml", "Only .cml files are supported: $source")
 
     name = get_path_info(source, "name")
-    compile_target = "${name}_compile.cm"
+    compile_target = "${name}.cm"
 
     cm(compile_target) {
+      forward_variables_from(invoker,
+                             [
+                               "deps",
+                               "public_deps",
+                               "data_deps",
+                               "testonly",
+                             ])
       manifest = source
       output_name = "$name.cm"
+      visibility = [ ":*" ]
     }
 
     compile_deps += [ ":$compile_target" ]
@@ -35,6 +46,11 @@ template("component_manifest_resources") {
   }
 
   resource(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
     sources = compile_outputs
     outputs = [ "meta/{{source_file_part}}" ]
     deps = compile_deps

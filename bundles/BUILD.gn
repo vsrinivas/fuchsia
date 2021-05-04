@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//src/sys/root/build/root.gni")
+
 group("tools") {
   testonly = true
   public_deps = [
@@ -135,7 +137,28 @@ group("amlogic_hw_dependent_tests") {
 }
 
 # Binaries that form the base of every single product.
+root_realm("root") {
+  core_package_name = "core-generic"
+}
 group("bootstrap") {
+  deps = [
+    ":root",
+    "//src/bringup/bundles:bootstrap",
+    "//src/devices/bundles:bootstrap-bin",
+    "//src/diagnostics/bundles:bootstrap",
+    "//src/power/bundles:bootstrap",
+    "//src/storage/bundles:bootstrap",
+    "//src/sys/bundles:bootstrap",
+  ]
+}
+
+# TODO(RFC-0089): the 'root.cm' from file in `//src/sys/bundles:bootstrap` is
+# being removed, and each ZBI being assembled is required to include their own
+# version of it to select the appropriate core package name. However until we
+# can update all dependencies on the `bootstrap` target to do this, we must
+# provide a version of `bootstrap` without `root.cm` in a different target, so
+# that each usage can be moved over to the new approach in a soft migration.
+group("bootstrap-without-root") {
   deps = [
     "//src/bringup/bundles:bootstrap",
     "//src/devices/bundles:bootstrap-bin",

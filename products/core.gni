@@ -30,6 +30,9 @@ product_system_image_deps = [
   "//src/sys/pkg:pkgfs-disable-executability-restrictions",
 ]
 
+core_realm_package_name = "core"
+core_realm_shards = []
+
 base_package_labels += [
   "//build/info:build-info",
   "//garnet/bin/log_listener:log_listener",
@@ -80,7 +83,7 @@ base_package_labels += [
   # they're not in the component ID index.
   "//src/sys/appmgr:component_id_index_no_restrict_storage",
   "//src/sys/appmgr:core_component_id_index",
-  "//src/sys/core",
+
   "//src/sys/device_settings:device_settings_manager",
   "//src/sys/pkg:core",
   "//src/sys/pkg:system-update-checker",

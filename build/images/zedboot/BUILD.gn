@@ -12,10 +12,16 @@ import("//build/images/zedboot/zedboot_args.gni")
 import("//build/unification/future/images/devmgr_config.gni")
 import("//build/zbi/kernel_cmdline.gni")
 import("//build/zbi/zbi.gni")
+import("//src/sys/root/build/root.gni")
+
+root_realm("root") {
+  core_package_name = "core-invalid"
+}
 
 # Base system.
 zedboot_labels = []
 zedboot_labels += [
+  ":root",
   "//build/info:bootfs",
   "//bundles:bootstrap-zedboot",
   "//bundles/drivers:bootstrap",

@@ -4,6 +4,8 @@
 
 import("//build/components.gni")
 
+# TODO(RFC-0089): a soft migration is being performed to remove this. Please do
+# not add any new dependencies on it.
 fuchsia_package_with_single_component("core") {
   manifest = "meta/core.cml"
 }

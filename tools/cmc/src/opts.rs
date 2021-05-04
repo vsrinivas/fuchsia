@@ -75,6 +75,12 @@ pub enum Commands {
         /// If specified, additional files to merge will be read from the path provided.
         /// The input format is delimited by newlines.
         fromfile: Option<PathBuf>,
+
+        #[structopt(short = "d", long = "depfile", parse(from_os_str))]
+        /// depfile for includes
+        ///
+        /// If specified, include paths will be listed here, delimited by newlines.
+        depfile: Option<PathBuf>,
     },
 
     #[structopt(name = "include")]

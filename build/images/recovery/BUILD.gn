@@ -6,6 +6,8 @@ import("//build/board.gni")
 import("//build/images/assemble_system.gni")
 import("//build/images/zedboot/zedboot_args.gni")
 import("//build/testing/host_test_data.gni")
+import("//src/sys/core/build/core.gni")
+import("//src/sys/root/build/root.gni")
 
 group("recovery") {
   testonly = true
@@ -15,7 +17,18 @@ group("recovery") {
   ]
 }
 
+core_name = "core-recovery"
+
+core_realm("core") {
+  package_name = core_name
+}
+
+root_realm("root") {
+  core_package_name = core_name
+}
+
 recovery_packages = board_recovery_package_labels + [
+                      ":core",
                       "//build/info:build-info",
                       "//garnet/bin/sysmgr",
                       "//src/connectivity/management:network_config_default",
@@ -82,9 +95,10 @@ assemble_system("recovery-eng") {
   ]
 
   bootfs_labels = [
+    ":root",
     "//build/info:bootfs",
     "//build/input:recovery_bootfs",
-    "//bundles:bootstrap",
+    "//bundles:bootstrap-without-root",
     "//bundles:debugging",
     "//bundles/bringup:manual_testing",
     "//bundles/drivers:bootstrap",
@@ -126,7 +140,7 @@ assemble_system("recovery-fdr") {
   bootfs_labels = [
     "//build/info:bootfs",
     "//build/input:recovery_bootfs",
-    "//bundles:bootstrap",
+    "//bundles:bootstrap-without-root",
     "//bundles/drivers:bootstrap",
     "//bundles/drivers:usb-host-stack",
     "//bundles/drivers:usb-peripheral-stack",

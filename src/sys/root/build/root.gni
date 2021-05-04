@@ -1,0 +1,65 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dist/component_manifest_resources.gni")
+import("//tools/cmc/build/cmc.gni")
+
+# Defines a new root realm.
+#
+# The core realm on Fuchsia is a packaged non-executable component that holds
+# most of the interesting packaged CFv2 components. It can vary per-product to
+# encode product specific differences in the component instance tree. Since
+# there are different versions of it, the root component needs to change its
+# child declaration for the core realm to contain the correct URL.
+#
+# This template generates a new root realm containing a custom child declaration
+# for core.
+#
+# Parameters
+#
+#   core_package_name (required)
+#     The name of the package holding the core realm on this product. This
+#     package name should be unique across all products, and thus usually is set
+#     to "core-$PRODUCT_NAME", for example "core-workstation" or "core-core".
+#
+#   testonly
+#   visibility
+template("root_realm") {
+  assert(
+      defined(invoker.core_package_name),
+      "The `core_package_name` argument was missing when calling root_realm($target_name)")
+
+  core_child_shard_path =
+      "${target_out_dir}/${target_name}-${invoker.core_package_name}.cml"
+  write_file(
+      core_child_shard_path,
+      [
+        "{",
+        "    children: [",
+        "        {",
+        "            name: \"core\",",
+        "            url: \"fuchsia-pkg://fuchsia.com/${invoker.core_package_name}#meta/core.cm\",",
+        "            environment: \"#core-env\",",
+        "        },",
+        "    ],",
+        "}",
+      ])
+
+  merged_manifest_target = "${target_name}_merged_manifest"
+  cmc_merge(merged_manifest_target) {
+    forward_variables_from(invoker, [ "testonly" ])
+    visibility = [ ":*" ]
+    output_name = "root.cml"
+    sources = [
+      "//src/sys/root/root-base.shard.cml",
+      core_child_shard_path,
+    ]
+  }
+
+  component_manifest_resources(target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+    sources = get_target_outputs(":${merged_manifest_target}")
+    deps = [ ":${merged_manifest_target}" ]
+  }
+}

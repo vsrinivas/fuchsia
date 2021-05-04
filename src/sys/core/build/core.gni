@@ -1,0 +1,76 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//tools/cmc/build/cmc.gni")
+
+# Defines a new core realm.
+#
+# The core realm on Fuchsia is a packaged non-executable component that holds
+# most of the interesting packaged CFv2 components. This realm is configurable
+# on a per-product basis to allow product owners to control which features and
+# functionality the component instance tree is capable of on their product.
+#
+# For typical product definitions, the arguments to this template are set
+# through GN arguments, declared in //build/product.gni.
+#
+# Parameters
+#
+#   package_name (required)
+#     The name of the package holding the core realm on this product. This
+#     package name should be unique across all products, and thus usually is set
+#     to "core-$PRODUCT_NAME", for example "core-workstation" or "core-core".
+#
+#   deps
+#   testonly
+#   visibility
+template("core_realm") {
+  assert(defined(invoker.package_name),
+         "The `package_name` argument is missing")
+
+  generated_file_target = "${target_name}_shard_list"
+  generated_file(generated_file_target) {
+    forward_variables_from(invoker, [ "deps" ])
+    data_keys = [ "shard_files" ]
+    outputs = [ "$target_out_dir/core_shard_list" ]
+  }
+
+  merged_manifest_target = "${target_name}_merged_manifest"
+  cmc_merge(merged_manifest_target) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                           ])
+    visibility = [ ":*" ]
+    if (!defined(deps)) {
+      deps = []
+    }
+    deps += [ ":${generated_file_target}" ]
+    sources = [ "//src/sys/core/meta/core.cml" ]
+    from_file = "$target_out_dir/core_shard_list"
+
+    output_name = "core.cml"
+  }
+
+  merge_outputs = get_target_outputs(":${merged_manifest_target}")
+  component_target = "${target_name}_component"
+  fuchsia_component(component_target) {
+    forward_variables_from(invoker, [ "testonly" ])
+    visibility = [ ":*" ]
+    manifest = merge_outputs[0]
+    component_name = "core"
+    deps = [ ":${merged_manifest_target}" ]
+  }
+
+  fuchsia_package(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "package_name",
+                             "testonly",
+                             "visibility",
+                           ])
+    deps = [ ":${component_target}" ]
+  }
+}

@@ -5,7 +5,7 @@
 use {
     crate::error::Error,
     crate::util,
-    crate::util::json_or_json5_from_file,
+    crate::util::{json_or_json5_from_file, write_depfile},
     serde_json::{json, Value},
     std::fs,
     std::io::{BufRead, BufReader, Write},
@@ -18,11 +18,13 @@ use {
 /// or both.
 /// JSON objects are merged recursively, and if two blobs set the same key an error is returned.
 /// JSON arrays are appended together, with duplicate items being removed.
+/// If a depfile is provided, also writes the files encountered to the depfile.
 pub fn merge(
     mut files: Vec<PathBuf>,
     output: Option<PathBuf>,
     // If specified, this is a path to newline-delimited `files`
     fromfile: Option<PathBuf>,
+    depfile: Option<PathBuf>,
 ) -> Result<(), Error> {
     if let Some(path) = fromfile {
         let reader = BufReader::new(fs::File::open(path)?);
@@ -37,8 +39,8 @@ pub fn merge(
         return Err(Error::invalid_args(format!("no files provided")));
     }
     let mut res = json!({});
-    for filename in files {
-        let v: Value = json_or_json5_from_file(&filename)?;
+    for filename in &files {
+        let v: Value = json_or_json5_from_file(filename)?;
         merge_json(&mut res, &v).map_err(|e| {
             Error::parse(
                 format!("Multiple manifests set the same key: {}", e),
@@ -47,8 +49,8 @@ pub fn merge(
             )
         })?;
     }
-    if let Some(output_path) = output {
-        util::ensure_directory_exists(&output_path)?;
+    if let Some(output_path) = &output {
+        util::ensure_directory_exists(output_path)?;
         fs::OpenOptions::new()
             .create(true)
             .truncate(true)
@@ -57,6 +59,11 @@ pub fn merge(
             .write_all(format!("{:#}", res).as_bytes())?;
     } else {
         println!("{:#}", res);
+    }
+
+    // Write files to depfile
+    if let Some(depfile_path) = depfile {
+        write_depfile(&depfile_path, output.as_ref(), &files)?;
     }
     Ok(())
 }
@@ -173,7 +180,7 @@ mod tests {
 
             let output_file_path = tmp_dir.path().join("output.json");
 
-            let result = merge(filenames, Some(output_file_path.clone()), None);
+            let result = merge(filenames, Some(output_file_path.clone()), None, None);
 
             if result.is_ok() != expected_results.is_some() {
                 println!("example failed:");
@@ -207,7 +214,7 @@ mod tests {
         }
 
         let output_file_path = tmp_dir.path().join("output.json");
-        merge(filenames, Some(output_file_path.clone()), None).expect("failed to merge");
+        merge(filenames, Some(output_file_path.clone()), None, None).expect("failed to merge");
 
         let mut buffer = String::new();
         File::open(&output_file_path).unwrap().read_to_string(&mut buffer).unwrap();
@@ -229,7 +236,7 @@ mod tests {
             filenames.push(fname.clone());
         }
 
-        let result = merge(filenames, None, None);
+        let result = merge(filenames, None, None, None);
         assert!(result.is_err());
     }
 
@@ -257,7 +264,7 @@ mod tests {
             .unwrap();
 
         let output_file_path = tmp_dir.path().join("output.json");
-        merge(filenames, Some(output_file_path.clone()), Some(fromfile_path))
+        merge(filenames, Some(output_file_path.clone()), Some(fromfile_path), None)
             .expect("failed to merge");
 
         let mut buffer = String::new();

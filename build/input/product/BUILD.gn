@@ -4,10 +4,15 @@
 
 import("//build/product.gni")
 import("//build/security.gni")
+import("//src/sys/root/build/root.gni")
+
+root_realm("root") {
+  core_package_name = core_realm_package_name
+}
 
 group("bootfs_labels") {
   testonly = fuchsia_zbi_testonly
-  deps = product_bootfs_labels
+  deps = product_bootfs_labels + [ ":root" ]
 }
 
 group("system_image_deps") {

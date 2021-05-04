@@ -33,10 +33,6 @@
             url: "fuchsia-pkg://fuchsia.com/activity#meta/activity.cm",
         },
         {
-            name: "battery_manager",
-            url: "fuchsia-pkg://fuchsia.com/battery-manager#meta/battery_manager.cm",
-        },
-        {
             name: "brightness_manager",
             url: "fuchsia-pkg://fuchsia.com/brightness_manager#meta/brightness_manager.cm",
             environment: "#universe-resolver-env",
@@ -212,14 +208,6 @@
                 "fuchsia.ui.activity.Tracker",
             ],
             from: "#activity",
-            to: "#appmgr",
-        },
-        {
-            protocol: [
-                "fuchsia.power.BatteryManager",
-                "fuchsia.power.test.BatterySimulator",
-            ],
-            from: "#battery_manager",
             to: "#appmgr",
         },
         {
@@ -407,7 +395,6 @@
             to: [
                 "#activity",
                 "#appmgr",
-                "#battery_manager",
                 "#brightness_manager",
                 "#debug_serial",
                 "#detect",
@@ -645,13 +632,6 @@
             as: "dev-input",
             to: "#brightness_manager",
             subdir: "class/input",
-        },
-        {
-            directory: "dev",
-            from: "parent",
-            as: "dev-power",
-            to: "#battery_manager",
-            subdir: "class/power",
         },
         {
             directory: "dev",

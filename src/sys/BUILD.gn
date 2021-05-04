@@ -8,7 +8,6 @@ group("sys") {
     "activity",
     "component_manager:component-manager",
     "component_test_runner",
-    "core",
     "pkg",
     "time/timekeeper",
   ]

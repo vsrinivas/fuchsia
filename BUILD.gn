@@ -8,12 +8,14 @@ import("//build/config/compiler.gni")
 import("//build/fidl/args.gni")
 import("//build/images/args.gni")
 import("//build/info/info.gni")
+import("//build/product.gni")
 import("//build/rust/config.gni")
 import("//build/security.gni")
 import("//build/testing/platforms.gni")
 import("//build/toolchain/goma.gni")
 import("//build/toolchain/zircon/clang.gni")
 import("//build/zbi/zbi.gni")
+import("//src/sys/core/build/core.gni")
 
 declare_args() {
   # If you add fuchsia_driver_package labels to this variable, any drivers in these packages will
@@ -915,6 +917,11 @@ group("default") {
   }
 }
 
+core_realm("core") {
+  package_name = core_realm_package_name
+  deps = core_realm_shards
+}
+
 # These groups exist at the root of the build so relative labels specified
 # through GN args are interpreted as if they were absolute.
 group("additional_base_driver_packages") {
@@ -926,7 +933,7 @@ group("additional_base_driver_packages") {
 group("additional_base_packages") {
   testonly = base_cache_packages_testonly
   visibility = [ "//build/images:base_packages" ]
-  public_deps = base_package_labels + board_package_labels
+  public_deps = base_package_labels + board_package_labels + [ ":core" ]
 }
 
 group("additional_cache_packages") {

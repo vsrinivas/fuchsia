@@ -4,17 +4,32 @@
 
 import("//build/images/assemble_system.gni")
 import("//build/testing/host_test_data.gni")
+import("//src/sys/core/build/core.gni")
+import("//src/sys/root/build/root.gni")
+
+core_name = "core-overnet"
+
+core_realm("core") {
+  package_name = core_name
+  testonly = true
+}
+
+root_realm("root") {
+  core_package_name = core_name
+  testonly = true
+}
 
 assemble_system("overnet") {
   testonly = true
+
   base_packages = [
+    ":core",
     "//garnet/bin/run",
     "//garnet/bin/trace",
     "//garnet/bin/vsock_service:vsock_service",
     "//src/sys/appmgr",
     "//src/sys/appmgr:appmgr_scheme_config",
     "//src/sys/appmgr:component_id_index_no_restrict_storage",
-    "//src/sys/core",
     "//src/sys/sysmgr",
     "//src/sys/sysmgr:services_config",
     "//src/connectivity/overnet/overnetstack",
@@ -23,8 +38,9 @@ assemble_system("overnet") {
     "//src/sys/pkg/bin/system-update-committer",
   ]
   bootfs_labels = [
+    ":root",
     "//build/info:bootfs",
-    "//bundles:bootstrap",
+    "//bundles:bootstrap-without-root",
     "//bundles:debugging",
     "//bundles/bringup:manual_testing",
     "//bundles/drivers:bootstrap",
