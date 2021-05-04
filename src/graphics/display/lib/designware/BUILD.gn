@@ -1,0 +1,20 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/cpp/library_headers.gni")
+
+library_headers("hdmi-dw-headers") {
+  headers = [ "lib/hdmi-dw/hdmi-dw.h" ]
+}
+
+source_set("hdmi-dw") {
+  sources = [ "hdmi-dw.cc" ]
+  public_deps = [ ":hdmi-dw-headers" ]
+  deps = [
+    "//sdk/banjo/fuchsia.hardware.i2cimpl:fuchsia.hardware.i2cimpl_banjo_cpp",
+    "//sdk/fidl/fuchsia.hardware.hdmi:fuchsia.hardware.hdmi_llcpp",
+    "//src/graphics/display/lib/hdmi",
+    "//src/lib/ddk",
+  ]
+}
