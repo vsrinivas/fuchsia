@@ -6,7 +6,9 @@
 
 use {
     crate::{error::*, mock, Moniker, Realm},
-    anyhow, cm_rust, fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2 as fsys,
+    anyhow, cm_rust,
+    fidl::endpoints::DiscoverableService,
+    fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2 as fsys,
     futures::future::BoxFuture,
     maplit::hashmap,
     std::{collections::HashMap, convert::TryInto},
@@ -315,6 +317,20 @@ impl RealmBuilder {
             self.realm.mark_as_eager(&ancestor)?;
         }
         Ok(self)
+    }
+
+    /// Adds a protocol capability route between the `source` endpoint and
+    /// the provided `targets`.
+    pub fn add_protocol_route<S: DiscoverableService>(
+        &mut self,
+        source: RouteEndpoint,
+        targets: Vec<RouteEndpoint>,
+    ) -> Result<&mut Self, Error> {
+        self.add_route(CapabilityRoute {
+            capability: Capability::protocol(S::SERVICE_NAME),
+            source,
+            targets,
+        })
     }
 
     /// Adds a capability route between two points in the realm. Does nothing if the route
@@ -1677,11 +1693,10 @@ mod tests {
             .add_eager_component("a/b", ComponentSource::url("fuchsia-pkg://b"))
             .await
             .unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fidl.examples.routing.echo.Echo"),
-                source: RouteEndpoint::component("a"),
-                targets: vec![RouteEndpoint::component("a/b")],
-            })
+            .add_protocol_route::<fidl_fidl_examples_routing_echo::EchoMarker>(
+                RouteEndpoint::component("a"),
+                vec![RouteEndpoint::component("a/b")],
+            )
             .unwrap();
 
         build_and_check_results(
@@ -1757,11 +1772,10 @@ mod tests {
             .add_eager_component("c", ComponentSource::url("fuchsia-pkg://c"))
             .await
             .unwrap()
-            .add_route(CapabilityRoute {
-                capability: Capability::protocol("fidl.examples.routing.echo.Echo"),
-                source: RouteEndpoint::component("a"),
-                targets: vec![RouteEndpoint::component("b")],
-            })
+            .add_protocol_route::<fidl_fidl_examples_routing_echo::EchoMarker>(
+                RouteEndpoint::component("a"),
+                vec![RouteEndpoint::component("b")],
+            )
             .unwrap()
             .add_route(CapabilityRoute {
                 capability: Capability::directory(
