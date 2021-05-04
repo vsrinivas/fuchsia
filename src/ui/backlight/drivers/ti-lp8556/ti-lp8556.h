@@ -35,8 +35,8 @@ constexpr uint8_t kCfgReg = 0xA1;
 constexpr uint8_t kCfg2Reg = 0xA2;
 constexpr uint32_t kAOBrightnessStickyReg = (0x04e << 2);
 
-constexpr uint8_t kBacklightOn = 0x85;
-constexpr uint8_t kBacklightOff = 0x84;
+constexpr uint8_t kBacklightOn = 1;
+constexpr uint8_t kDeviceControlDefaultValue = 0x84;
 constexpr uint8_t kCfg2Default = 0x30;
 
 constexpr uint16_t kBrightnessRegMask = 0xFFF;
@@ -149,6 +149,7 @@ class Lp8556Device : public DeviceType,
 
  private:
   zx_status_t SetCurrentScale(uint16_t scale);
+  zx_status_t ReadInitialState();
 
   inspect::Inspector inspector_;
   inspect::Node root_;

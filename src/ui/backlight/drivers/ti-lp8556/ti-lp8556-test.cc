@@ -94,7 +94,8 @@ class Lp8556DeviceTest : public zxtest::Test, public inspect::InspectTestHelper 
     }
 
     if (power != dev_->GetDevicePower()) {
-      mock_i2c_.ExpectWriteStop({kDeviceControlReg, power ? kBacklightOn : kBacklightOff});
+      const uint8_t control_value = kDeviceControlDefaultValue | (power ? kBacklightOn : 0);
+      mock_i2c_.ExpectWriteStop({kDeviceControlReg, control_value});
       if (power) {
         mock_i2c_.ExpectWriteStop({kCfg2Reg, dev_->GetCfg2()});
       }
@@ -176,6 +177,10 @@ TEST_F(Lp8556DeviceTest, InitRegisters) {
       .ExpectReadStop({kCfg2Default})
       .ExpectWrite({kCurrentLsbReg})
       .ExpectReadStop({0x05, 0x4e})
+      .ExpectWrite({kBacklightBrightnessLsbReg})
+      .ExpectReadStop({0xab, 0x05})
+      .ExpectWrite({kDeviceControlReg})
+      .ExpectReadStop({0x85})
       .ExpectWrite({kCfgReg})
       .ExpectReadStop({0x01});
   mock_regs_[BrightnessStickyReg::Get().addr()].ExpectRead();
@@ -193,6 +198,10 @@ TEST_F(Lp8556DeviceTest, InitNoRegisters) {
       .ExpectReadStop({kCfg2Default})
       .ExpectWrite({kCurrentLsbReg})
       .ExpectReadStop({0x05, 0x4e})
+      .ExpectWrite({kBacklightBrightnessLsbReg})
+      .ExpectReadStop({0xab, 0x05})
+      .ExpectWrite({kDeviceControlReg})
+      .ExpectReadStop({0x85})
       .ExpectWrite({kCfgReg})
       .ExpectReadStop({0x01});
   mock_regs_[BrightnessStickyReg::Get().addr()].ExpectRead();
@@ -229,7 +238,7 @@ TEST_F(Lp8556DeviceTest, InitTooManyRegisters) {
   ASSERT_NO_FATAL_FAILURES(mock_i2c_.VerifyAndClear());
 }
 
-TEST_F(Lp8556DeviceTest, InitOverwriteBrightnessRegisters) {
+TEST_F(Lp8556DeviceTest, OverwriteStickyRegister) {
   // constexpr uint8_t kInitialRegisterValues[] = {
   //     kBacklightBrightnessLsbReg,
   //     0xab,
@@ -250,22 +259,36 @@ TEST_F(Lp8556DeviceTest, InitOverwriteBrightnessRegisters) {
 
   mock_i2c_.ExpectWriteStop({kBacklightBrightnessLsbReg, 0xab})
       .ExpectWriteStop({kBacklightBrightnessMsbReg, 0xcd})
-      .ExpectWriteStop({kBacklightBrightnessLsbReg, 0x00})
-      .ExpectWrite({kBacklightBrightnessMsbReg})
-      .ExpectReadStop({0xcd})
-      .ExpectWriteStop({kBacklightBrightnessMsbReg, 0xc4})
       .ExpectWrite({kCfg2Reg})
       .ExpectReadStop({kCfg2Default})
       .ExpectWrite({kCurrentLsbReg})
       .ExpectReadStop({0x05, 0x4e})
+      .ExpectWrite({kBacklightBrightnessLsbReg})
+      .ExpectReadStop({0xab, 0xcd})
+      .ExpectWrite({kDeviceControlReg})
+      .ExpectReadStop({0x85})
       .ExpectWrite({kCfgReg})
       .ExpectReadStop({0x01});
+  mock_regs_[BrightnessStickyReg::Get().addr()].ExpectRead();
+
+  EXPECT_OK(dev_->Init());
 
   const uint32_t kStickyRegValue =
       BrightnessStickyReg::Get().FromValue(0).set_is_valid(1).set_brightness(0x400).reg_value();
-  mock_regs_[BrightnessStickyReg::Get().addr()].ExpectRead(kStickyRegValue);
+  mock_regs_[BrightnessStickyReg::Get().addr()].ExpectWrite(kStickyRegValue);
 
-  EXPECT_OK(dev_->Init());
+  // The DUT should set the brightness to 0.25 by writing 0x0400, starting with the LSB. The MSB
+  // register needs to be RMW, so check that the upper four bits are preserved (0xab -> 0xa4).
+  mock_i2c_.ExpectWriteStop({kBacklightBrightnessLsbReg, 0x00})
+      .ExpectWrite({kBacklightBrightnessMsbReg})
+      .ExpectReadStop({0xab})
+      .ExpectWriteStop({kBacklightBrightnessMsbReg, 0xa4});
+
+  fidl::WireSyncClient<fuchsia_hardware_backlight::Device> backlight_client(client());
+
+  auto result = backlight_client.SetStateNormalized({true, 0.25});
+  EXPECT_TRUE(result.ok());
+  EXPECT_FALSE(result.value().result.is_err());
 
   ASSERT_NO_FATAL_FAILURES(mock_regs_[BrightnessStickyReg::Get().addr()].VerifyAndClear());
   ASSERT_NO_FATAL_FAILURES(mock_i2c_.VerifyAndClear());
@@ -285,6 +308,10 @@ TEST_F(Lp8556DeviceTest, ReadDefaultCurrentScale) {
       .ExpectReadStop({kCfg2Default})
       .ExpectWrite({kCurrentLsbReg})
       .ExpectReadStop({0x05, 0x4e})
+      .ExpectWrite({kBacklightBrightnessLsbReg})
+      .ExpectReadStop({0xab, 0x05})
+      .ExpectWrite({kDeviceControlReg})
+      .ExpectReadStop({0x85})
       .ExpectWrite({kCfgReg})
       .ExpectReadStop({0x01});
   mock_regs_[BrightnessStickyReg::Get().addr()].ExpectRead();
@@ -316,6 +343,10 @@ TEST_F(Lp8556DeviceTest, SetCurrentScale) {
       .ExpectReadStop({kCfg2Default})
       .ExpectWrite({kCurrentLsbReg})
       .ExpectReadStop({0x05, 0x4e})
+      .ExpectWrite({kBacklightBrightnessLsbReg})
+      .ExpectReadStop({0xab, 0x05})
+      .ExpectWrite({kDeviceControlReg})
+      .ExpectReadStop({0x85})
       .ExpectWrite({kCfgReg})
       .ExpectReadStop({0x01});
   mock_regs_[BrightnessStickyReg::Get().addr()].ExpectRead();
@@ -360,6 +391,10 @@ TEST_F(Lp8556DeviceTest, SetAbsoluteBrightnessScaleReset) {
       .ExpectReadStop({kCfg2Default})
       .ExpectWrite({kCurrentLsbReg})
       .ExpectReadStop({0x05, 0x4e})
+      .ExpectWrite({kBacklightBrightnessLsbReg})
+      .ExpectReadStop({0xab, 0x05})
+      .ExpectWrite({kDeviceControlReg})
+      .ExpectReadStop({0x85})
       .ExpectWrite({kCfgReg})
       .ExpectReadStop({0x01});
   mock_regs_[BrightnessStickyReg::Get().addr()].ExpectRead();
@@ -407,6 +442,10 @@ TEST_F(Lp8556DeviceTest, Inspect) {
       .ExpectReadStop({kCfg2Default})
       .ExpectWrite({kCurrentLsbReg})
       .ExpectReadStop({0x05, 0x4e})
+      .ExpectWrite({kBacklightBrightnessLsbReg})
+      .ExpectReadStop({0xff, 0x0f})
+      .ExpectWrite({kDeviceControlReg})
+      .ExpectReadStop({0x85})
       .ExpectWrite({kCfgReg})
       .ExpectReadStop({0x01});
   mock_regs_[BrightnessStickyReg::Get().addr()].ExpectRead();
@@ -432,6 +471,10 @@ TEST_F(Lp8556DeviceTest, GetBackLightPower) {
       .ExpectReadStop({kCfg2Default})
       .ExpectWrite({kCurrentLsbReg})
       .ExpectReadStop({0x05, 0x4e})
+      .ExpectWrite({kBacklightBrightnessLsbReg})
+      .ExpectReadStop({0xab, 0x05})
+      .ExpectWrite({kDeviceControlReg})
+      .ExpectReadStop({0x85})
       .ExpectWrite({kCfgReg})
       .ExpectReadStop({0x01});
   mock_regs_[BrightnessStickyReg::Get().addr()].ExpectRead();
@@ -452,6 +495,10 @@ TEST_F(Lp8556DeviceTest, GetPowerWatts) {
       .ExpectReadStop({kCfg2Default})
       .ExpectWrite({kCurrentLsbReg})
       .ExpectReadStop({0x05, 0x4e})
+      .ExpectWrite({kBacklightBrightnessLsbReg})
+      .ExpectReadStop({0xab, 0x05})
+      .ExpectWrite({kDeviceControlReg})
+      .ExpectReadStop({0x85})
       .ExpectWrite({kCfgReg})
       .ExpectReadStop({0x01});
   mock_regs_[BrightnessStickyReg::Get().addr()].ExpectRead();

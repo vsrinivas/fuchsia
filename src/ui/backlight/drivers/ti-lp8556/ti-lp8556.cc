@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 #include "ti-lp8556.h"
 
+#include <endian.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
@@ -125,7 +126,7 @@ zx_status_t Lp8556Device::SetBacklightState(bool power, double brightness) {
   if (power != power_) {
     uint8_t buf[2];
     buf[0] = kDeviceControlReg;
-    buf[1] = power ? kBacklightOn : kBacklightOff;
+    buf[1] = kDeviceControlDefaultValue | (power ? kBacklightOn : 0);
     zx_status_t status = i2c_.WriteSync(buf, sizeof(buf));
     if (status != ZX_OK) {
       LOG_ERROR("Failed to set device control register\n");
@@ -309,41 +310,19 @@ zx_status_t Lp8556Device::Init() {
   }
 
   auto persistent_brightness = BrightnessStickyReg::Get().ReadFrom(&mmio_);
-
   if (persistent_brightness.is_valid()) {
-    double brightness =
-        static_cast<double>(persistent_brightness.brightness()) / kBrightnessRegMaxValue;
-
-    if ((status = SetBacklightState(brightness > 0, brightness)) != ZX_OK) {
-      LOG_ERROR("Could not set persistent brightness value: %f\n", brightness);
-    } else {
-      LOG_INFO("Successfully set persistent brightness value: %f\n", brightness);
-    }
     persistent_brightness_property_ =
         root_.CreateUint("persistent_brightness", persistent_brightness.brightness());
   }
 
-  if ((i2c_.ReadSync(kCfg2Reg, &cfg2_, 1) != ZX_OK) || (cfg2_ == 0)) {
-    cfg2_ = kCfg2Default;
-  }
-
-  uint8_t buf[2];
-  if ((i2c_.ReadSync(kCurrentLsbReg, buf, sizeof(buf))) != ZX_OK) {
-    LOG_ERROR("Could not read current scale value: %d\n", status);
+  if ((status = ReadInitialState()) != ZX_OK) {
     return status;
   }
-  scale_ = static_cast<uint16_t>(buf[0] | (buf[1] << kBrightnessMsbShift)) & kBrightnessRegMask;
-  calibrated_scale_ = scale_;
 
   brightness_property_ = root_.CreateDouble("brightness", brightness_);
   scale_property_ = root_.CreateUint("scale", scale_);
   calibrated_scale_property_ = root_.CreateUint("calibrated_scale", calibrated_scale_);
   power_property_ = root_.CreateBool("power", power_);
-  // max_absolute_brightness_nits will be initialized in SetMaxAbsoluteBrightnessNits.
-  uint8_t max_current_idx;
-  i2c_.ReadSync(kCfgReg, &max_current_idx, sizeof(max_current_idx));
-  max_current_idx = (max_current_idx >> 4) & 0b111;
-  max_current_ = kMaxCurrentTable[max_current_idx];
 
   return ZX_OK;
 }
@@ -462,6 +441,48 @@ Lp8556Device::PanelType Lp8556Device::GetPanelType() {
     return Lp8556Device::PanelType::kKd;
   }
   return Lp8556Device::PanelType::kBoe;
+}
+
+zx_status_t Lp8556Device::ReadInitialState() {
+  if ((i2c_.ReadSync(kCfg2Reg, &cfg2_, 1) != ZX_OK) || (cfg2_ == 0)) {
+    cfg2_ = kCfg2Default;
+  }
+
+  uint8_t buf[2];
+  zx_status_t status = i2c_.ReadSync(kCurrentLsbReg, buf, sizeof(buf));
+  if (status != ZX_OK) {
+    LOG_ERROR("Could not read current scale value: %d\n", status);
+    return status;
+  }
+  scale_ = static_cast<uint16_t>(buf[0] | (buf[1] << kBrightnessMsbShift)) & kBrightnessRegMask;
+  calibrated_scale_ = scale_;
+
+  if ((status = i2c_.ReadSync(kBacklightBrightnessLsbReg, buf, sizeof(buf))) == ZX_OK) {
+    uint16_t brightness_reg;
+    memcpy(&brightness_reg, buf, sizeof(brightness_reg));
+    brightness_reg = le16toh(brightness_reg) & kBrightnessRegMask;
+    brightness_ = static_cast<double>(brightness_reg) / kBrightnessRegMaxValue;
+  } else {
+    LOG_ERROR("Could not read backlight brightness: %d\n", status);
+    brightness_ = 1.0;
+  }
+
+  uint8_t device_control;
+  status = i2c_.ReadSync(kDeviceControlReg, &device_control, sizeof(device_control));
+  if (status == ZX_OK) {
+    power_ = device_control & kBacklightOn;
+  } else {
+    LOG_ERROR("Could not read backlight power: %d\n", status);
+    power_ = true;
+  }
+
+  // max_absolute_brightness_nits will be initialized in SetMaxAbsoluteBrightnessNits.
+  uint8_t max_current_idx;
+  i2c_.ReadSync(kCfgReg, &max_current_idx, sizeof(max_current_idx));
+  max_current_idx = (max_current_idx >> 4) & 0b111;
+  max_current_ = kMaxCurrentTable[max_current_idx];
+
+  return ZX_OK;
 }
 
 zx_status_t ti_lp8556_bind(void* ctx, zx_device_t* parent) {
