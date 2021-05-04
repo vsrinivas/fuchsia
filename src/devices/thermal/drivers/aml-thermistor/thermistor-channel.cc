@@ -8,7 +8,8 @@
 
 namespace thermal {
 
-void ThermistorChannel::GetTemperatureCelsius(GetTemperatureCelsiusCompleter::Sync& completer) {
+void ThermistorChannel::GetTemperatureCelsius(GetTemperatureCelsiusRequestView request,
+                                              GetTemperatureCelsiusCompleter::Sync& completer) {
   uint32_t sample;
   zx_status_t status = adc_->GetSample(adc_channel_, &sample);
   if (status != ZX_OK) {
@@ -33,7 +34,7 @@ zx_status_t RawChannel::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   return transaction.Status();
 }
 
-void RawChannel::GetSample(GetSampleCompleter::Sync& completer) {
+void RawChannel::GetSample(GetSampleRequestView request, GetSampleCompleter::Sync& completer) {
   uint32_t sample;
   zx_status_t status = adc_->GetSample(adc_channel_, &sample);
   if (status == ZX_OK) {
@@ -43,7 +44,8 @@ void RawChannel::GetSample(GetSampleCompleter::Sync& completer) {
   }
 }
 
-void RawChannel::GetNormalizedSample(GetNormalizedSampleCompleter::Sync& completer) {
+void RawChannel::GetNormalizedSample(GetNormalizedSampleRequestView request,
+                                     GetNormalizedSampleCompleter::Sync& completer) {
   uint32_t sample;
   zx_status_t status = adc_->GetSample(adc_channel_, &sample);
   if (status == ZX_OK) {
@@ -55,7 +57,8 @@ void RawChannel::GetNormalizedSample(GetNormalizedSampleCompleter::Sync& complet
   }
 }
 
-void RawChannel::GetResolution(GetResolutionCompleter::Sync& completer) {
+void RawChannel::GetResolution(GetResolutionRequestView request,
+                               GetResolutionCompleter::Sync& completer) {
   completer.ReplySuccess(adc_->Resolution());
 }
 }  // namespace thermal

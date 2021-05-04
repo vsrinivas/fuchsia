@@ -97,25 +97,28 @@ zx_status_t As370Thermal::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) 
   return transaction.Status();
 }
 
-void As370Thermal::GetInfo(GetInfoCompleter::Sync& completer) {
+void As370Thermal::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) {
   completer.Reply(ZX_ERR_NOT_SUPPORTED, nullptr);
 }
 
-void As370Thermal::GetDeviceInfo(GetDeviceInfoCompleter::Sync& completer) {
+void As370Thermal::GetDeviceInfo(GetDeviceInfoRequestView request,
+                                 GetDeviceInfoCompleter::Sync& completer) {
   ThermalDeviceInfo device_info_copy = device_info_;
   completer.Reply(ZX_OK, fidl::ObjectView<ThermalDeviceInfo>::FromExternal(&device_info_copy));
 }
 
-void As370Thermal::GetDvfsInfo(PowerDomain power_domain, GetDvfsInfoCompleter::Sync& completer) {
-  if (power_domain != PowerDomain::kBigClusterPowerDomain) {
+void As370Thermal::GetDvfsInfo(GetDvfsInfoRequestView request,
+                               GetDvfsInfoCompleter::Sync& completer) {
+  if (request->power_domain != PowerDomain::kBigClusterPowerDomain) {
     completer.Reply(ZX_ERR_NOT_SUPPORTED, nullptr);
   } else {
-    OperatingPoint dvfs_info_copy = device_info_.opps[static_cast<uint32_t>(power_domain)];
+    OperatingPoint dvfs_info_copy = device_info_.opps[static_cast<uint32_t>(request->power_domain)];
     completer.Reply(ZX_OK, fidl::ObjectView<OperatingPoint>::FromExternal(&dvfs_info_copy));
   }
 }
 
-void As370Thermal::GetTemperatureCelsius(GetTemperatureCelsiusCompleter::Sync& completer) {
+void As370Thermal::GetTemperatureCelsius(GetTemperatureCelsiusRequestView request,
+                                         GetTemperatureCelsiusCompleter::Sync& completer) {
   PvtCtrl::Get()
       .ReadFrom(&mmio_)
       .set_pmos_sel(0)
@@ -142,44 +145,49 @@ void As370Thermal::GetTemperatureCelsius(GetTemperatureCelsiusCompleter::Sync& c
   }
 }
 
-void As370Thermal::GetStateChangeEvent(GetStateChangeEventCompleter::Sync& completer) {
+void As370Thermal::GetStateChangeEvent(GetStateChangeEventRequestView request,
+                                       GetStateChangeEventCompleter::Sync& completer) {
   completer.Reply(ZX_ERR_NOT_SUPPORTED, {});
 }
 
-void As370Thermal::GetStateChangePort(GetStateChangePortCompleter::Sync& completer) {
+void As370Thermal::GetStateChangePort(GetStateChangePortRequestView request,
+                                      GetStateChangePortCompleter::Sync& completer) {
   completer.Reply(ZX_ERR_NOT_SUPPORTED, {});
 }
 
-void As370Thermal::SetTripCelsius(uint32_t id, float temp,
+void As370Thermal::SetTripCelsius(SetTripCelsiusRequestView request,
                                   SetTripCelsiusCompleter::Sync& completer) {
   completer.Reply(ZX_ERR_NOT_SUPPORTED);
 }
 
-void As370Thermal::GetDvfsOperatingPoint(PowerDomain power_domain,
+void As370Thermal::GetDvfsOperatingPoint(GetDvfsOperatingPointRequestView request,
                                          GetDvfsOperatingPointCompleter::Sync& completer) {
-  if (power_domain != PowerDomain::kBigClusterPowerDomain) {
+  if (request->power_domain != PowerDomain::kBigClusterPowerDomain) {
     completer.Reply(ZX_ERR_NOT_SUPPORTED, 0);
   } else {
     completer.Reply(ZX_OK, operating_point_);
   }
 }
 
-void As370Thermal::SetDvfsOperatingPoint(uint16_t op_idx, PowerDomain power_domain,
+void As370Thermal::SetDvfsOperatingPoint(SetDvfsOperatingPointRequestView request,
                                          SetDvfsOperatingPointCompleter::Sync& completer) {
-  if (power_domain != PowerDomain::kBigClusterPowerDomain) {
+  if (request->power_domain != PowerDomain::kBigClusterPowerDomain) {
     completer.Reply(ZX_ERR_NOT_SUPPORTED);
-  } else if (op_idx >= device_info_.opps[static_cast<uint32_t>(power_domain)].count) {
+  } else if (request->op_idx >=
+             device_info_.opps[static_cast<uint32_t>(request->power_domain)].count) {
     completer.Reply(ZX_ERR_INVALID_ARGS);
   } else {
-    completer.Reply(SetOperatingPoint(op_idx));
+    completer.Reply(SetOperatingPoint(request->op_idx));
   }
 }
 
-void As370Thermal::GetFanLevel(GetFanLevelCompleter::Sync& completer) {
+void As370Thermal::GetFanLevel(GetFanLevelRequestView request,
+                               GetFanLevelCompleter::Sync& completer) {
   completer.Reply(ZX_ERR_NOT_SUPPORTED, 0);
 }
 
-void As370Thermal::SetFanLevel(uint32_t fan_level, SetFanLevelCompleter::Sync& completer) {
+void As370Thermal::SetFanLevel(SetFanLevelRequestView request,
+                               SetFanLevelCompleter::Sync& completer) {
   completer.Reply(ZX_ERR_NOT_SUPPORTED);
 }
 

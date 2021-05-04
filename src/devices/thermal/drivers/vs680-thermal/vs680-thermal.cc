@@ -134,17 +134,19 @@ zx_status_t Vs680Thermal::Init() {
   return ZX_OK;
 }
 
-void Vs680Thermal::GetInfo(GetInfoCompleter::Sync& completer) {
+void Vs680Thermal::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) {
   completer.Reply(ZX_ERR_NOT_SUPPORTED, {});
 }
 
-void Vs680Thermal::GetDeviceInfo(GetDeviceInfoCompleter::Sync& completer) {
+void Vs680Thermal::GetDeviceInfo(GetDeviceInfoRequestView request,
+                                 GetDeviceInfoCompleter::Sync& completer) {
   // TODO(bradenkell): Implement GetDeviceInfo.
   completer.Reply(ZX_ERR_NOT_SUPPORTED, {});
 }
 
-void Vs680Thermal::GetDvfsInfo(PowerDomain power_domain, GetDvfsInfoCompleter::Sync& completer) {
-  if (power_domain == PowerDomain::kBigClusterPowerDomain) {
+void Vs680Thermal::GetDvfsInfo(GetDvfsInfoRequestView request,
+                               GetDvfsInfoCompleter::Sync& completer) {
+  if (request->power_domain == PowerDomain::kBigClusterPowerDomain) {
     OperatingPoint operating_points_copy = kOperatingPoints;
     completer.Reply(ZX_OK, fidl::ObjectView<OperatingPoint>::FromExternal(&operating_points_copy));
   } else {
@@ -152,48 +154,53 @@ void Vs680Thermal::GetDvfsInfo(PowerDomain power_domain, GetDvfsInfoCompleter::S
   }
 }
 
-void Vs680Thermal::GetTemperatureCelsius(GetTemperatureCelsiusCompleter::Sync& completer) {
+void Vs680Thermal::GetTemperatureCelsius(GetTemperatureCelsiusRequestView request,
+                                         GetTemperatureCelsiusCompleter::Sync& completer) {
   completer.Reply(ZX_OK, static_cast<float>(temperature_millicelsius_) / 1000.0f);
 }
 
-void Vs680Thermal::GetStateChangeEvent(GetStateChangeEventCompleter::Sync& completer) {
+void Vs680Thermal::GetStateChangeEvent(GetStateChangeEventRequestView request,
+                                       GetStateChangeEventCompleter::Sync& completer) {
   completer.Reply(ZX_ERR_NOT_SUPPORTED, {});
 }
 
-void Vs680Thermal::GetStateChangePort(GetStateChangePortCompleter::Sync& completer) {
+void Vs680Thermal::GetStateChangePort(GetStateChangePortRequestView request,
+                                      GetStateChangePortCompleter::Sync& completer) {
   // TODO(bradenkell): Implement GetStateChangePort.
   completer.Reply(ZX_ERR_NOT_SUPPORTED, {});
 }
 
-void Vs680Thermal::SetTripCelsius(uint32_t id, float temp,
+void Vs680Thermal::SetTripCelsius(SetTripCelsiusRequestView request,
                                   SetTripCelsiusCompleter::Sync& completer) {
   // TODO(bradenkell): Implement SetTripCelsius.
   completer.Reply(ZX_ERR_NOT_SUPPORTED);
 }
 
-void Vs680Thermal::GetDvfsOperatingPoint(PowerDomain power_domain,
+void Vs680Thermal::GetDvfsOperatingPoint(GetDvfsOperatingPointRequestView request,
                                          GetDvfsOperatingPointCompleter::Sync& completer) {
-  if (power_domain == PowerDomain::kBigClusterPowerDomain) {
+  if (request->power_domain == PowerDomain::kBigClusterPowerDomain) {
     completer.Reply(ZX_OK, operating_point_);
   } else {
     completer.Reply(ZX_ERR_NOT_SUPPORTED, 0);
   }
 }
 
-void Vs680Thermal::SetDvfsOperatingPoint(uint16_t op_idx, PowerDomain power_domain,
+void Vs680Thermal::SetDvfsOperatingPoint(SetDvfsOperatingPointRequestView request,
                                          SetDvfsOperatingPointCompleter::Sync& completer) {
-  if (power_domain == PowerDomain::kBigClusterPowerDomain) {
-    completer.Reply(SetOperatingPoint(op_idx));
+  if (request->power_domain == PowerDomain::kBigClusterPowerDomain) {
+    completer.Reply(SetOperatingPoint(request->op_idx));
   } else {
     completer.Reply(ZX_ERR_NOT_SUPPORTED);
   }
 }
 
-void Vs680Thermal::GetFanLevel(GetFanLevelCompleter::Sync& completer) {
+void Vs680Thermal::GetFanLevel(GetFanLevelRequestView request,
+                               GetFanLevelCompleter::Sync& completer) {
   completer.Reply(ZX_ERR_NOT_SUPPORTED, 0);
 }
 
-void Vs680Thermal::SetFanLevel(uint32_t fan_level, SetFanLevelCompleter::Sync& completer) {
+void Vs680Thermal::SetFanLevel(SetFanLevelRequestView request,
+                               SetFanLevelCompleter::Sync& completer) {
   completer.Reply(ZX_ERR_NOT_SUPPORTED);
 }
 
