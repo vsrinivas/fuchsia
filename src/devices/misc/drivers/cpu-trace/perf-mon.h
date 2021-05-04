@@ -120,7 +120,7 @@ struct PmuPerTraceState {
 class PerfmonDevice;
 using DeviceType = ddk::Device<PerfmonDevice, ddk::Openable, ddk::Closable, ddk::Messageable>;
 
-class PerfmonDevice : public DeviceType, public fidl::WireInterface<fidl_perfmon::Controller> {
+class PerfmonDevice : public DeviceType, public fidl::WireServer<fidl_perfmon::Controller> {
  public:
   // The page size we use.
   static constexpr uint32_t kLog2PageSize = 12;
@@ -156,15 +156,18 @@ class PerfmonDevice : public DeviceType, public fidl::WireInterface<fidl_perfmon
   void PmuStop();
 
   // FIDL server methods
-  void GetProperties(GetPropertiesCompleter::Sync& completer) override;
-  void Initialize(FidlPerfmonAllocation allocation, InitializeCompleter::Sync& completer) override;
-  void Terminate(TerminateCompleter::Sync& completer) override;
-  void GetAllocation(GetAllocationCompleter::Sync& completer) override;
-  void StageConfig(FidlPerfmonConfig config, StageConfigCompleter::Sync& completer) override;
-  void GetConfig(GetConfigCompleter::Sync& completer) override;
-  void GetBufferHandle(uint32_t descriptor, GetBufferHandleCompleter::Sync& completer) override;
-  void Start(StartCompleter::Sync& completer) override;
-  void Stop(StopCompleter::Sync& completer) override;
+  void GetProperties(GetPropertiesRequestView request,
+                     GetPropertiesCompleter::Sync& completer) override;
+  void Initialize(InitializeRequestView request, InitializeCompleter::Sync& completer) override;
+  void Terminate(TerminateRequestView request, TerminateCompleter::Sync& completer) override;
+  void GetAllocation(GetAllocationRequestView request,
+                     GetAllocationCompleter::Sync& completer) override;
+  void StageConfig(StageConfigRequestView request, StageConfigCompleter::Sync& completer) override;
+  void GetConfig(GetConfigRequestView request, GetConfigCompleter::Sync& completer) override;
+  void GetBufferHandle(GetBufferHandleRequestView request,
+                       GetBufferHandleCompleter::Sync& completer) override;
+  void Start(StartRequestView request, StartCompleter::Sync& completer) override;
+  void Stop(StopRequestView request, StopCompleter::Sync& completer) override;
 
   // Device protocol implementation
   zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);

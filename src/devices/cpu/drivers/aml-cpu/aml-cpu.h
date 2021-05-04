@@ -27,7 +27,7 @@ using DeviceType =
 
 class AmlCpu : public DeviceType,
                public ddk::EmptyProtocol<ZX_PROTOCOL_CPU_CTRL>,
-               fidl::WireInterface<fuchsia_cpuctrl::Device> {
+               fidl::WireServer<fuchsia_cpuctrl::Device> {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlCpu);
   explicit AmlCpu(zx_device_t* parent, const ddk::ClockProtocolClient& plldiv16,
@@ -60,9 +60,12 @@ class AmlCpu : public DeviceType,
   zx_status_t DdkConfigureAutoSuspend(bool enable, uint8_t requested_sleep_state);
 
   // Fidl server interface implementation.
-  void GetPerformanceStateInfo(uint32_t state, GetPerformanceStateInfoCompleter::Sync& completer);
-  void GetNumLogicalCores(GetNumLogicalCoresCompleter::Sync& completer);
-  void GetLogicalCoreId(uint64_t index, GetLogicalCoreIdCompleter::Sync& completer);
+  void GetPerformanceStateInfo(GetPerformanceStateInfoRequestView request,
+                               GetPerformanceStateInfoCompleter::Sync& completer) override;
+  void GetNumLogicalCores(GetNumLogicalCoresRequestView request,
+                          GetNumLogicalCoresCompleter::Sync& completer) override;
+  void GetLogicalCoreId(GetLogicalCoreIdRequestView request,
+                        GetLogicalCoreIdCompleter::Sync& completer) override;
 
   // Set CpuInfo in inspect.
   void SetCpuInfo(uint32_t cpu_version_packed);

@@ -193,10 +193,10 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
       perf_states[j].restore_latency = 0;
     }
 
-    auto device = std::make_unique<AmlCpu>(
-        parent, std::move(pll_div16_client), std::move(cpu_div16_client),
-        std::move(cpu_scaler_client), std::move(power_client), std::move(pd_op_points),
-        perf_domain.core_count);
+    auto device =
+        std::make_unique<AmlCpu>(parent, std::move(pll_div16_client), std::move(cpu_div16_client),
+                                 std::move(cpu_scaler_client), std::move(power_client),
+                                 std::move(pd_op_points), perf_domain.core_count);
 
     st = device->Init();
     if (st != ZX_OK) {
@@ -351,26 +351,29 @@ zx_status_t AmlCpu::DdkConfigureAutoSuspend(bool enable, uint8_t requested_sleep
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-void AmlCpu::GetPerformanceStateInfo(uint32_t state,
+void AmlCpu::GetPerformanceStateInfo(GetPerformanceStateInfoRequestView request,
                                      GetPerformanceStateInfoCompleter::Sync& completer) {
-  if (state >= operating_points_.size()) {
-    zxlogf(INFO, "%s: Requested an operating point that's out of bounds, %u\n", __func__, state);
+  if (request->state >= operating_points_.size()) {
+    zxlogf(INFO, "%s: Requested an operating point that's out of bounds, %u\n", __func__,
+           request->state);
     completer.ReplyError(ZX_ERR_OUT_OF_RANGE);
     return;
   }
 
   fuchsia_hardware_cpu_ctrl::wire::CpuPerformanceStateInfo result;
-  result.frequency_hz = operating_points_[state].freq_hz;
-  result.voltage_uv = operating_points_[state].volt_uv;
+  result.frequency_hz = operating_points_[request->state].freq_hz;
+  result.voltage_uv = operating_points_[request->state].volt_uv;
 
   completer.ReplySuccess(result);
 }
 
-void AmlCpu::GetNumLogicalCores(GetNumLogicalCoresCompleter::Sync& completer) {
+void AmlCpu::GetNumLogicalCores(GetNumLogicalCoresRequestView request,
+                                GetNumLogicalCoresCompleter::Sync& completer) {
   completer.Reply(core_count_);
 }
 
-void AmlCpu::GetLogicalCoreId(uint64_t index, GetLogicalCoreIdCompleter::Sync& completer) {
+void AmlCpu::GetLogicalCoreId(GetLogicalCoreIdRequestView request,
+                              GetLogicalCoreIdCompleter::Sync& completer) {
   // Placeholder.
   completer.Reply(0);
 }

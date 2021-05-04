@@ -88,7 +88,7 @@ typedef struct ipt_per_trace_state {
 class InsntraceDevice;
 using DeviceType = ddk::Device<InsntraceDevice, ddk::Openable, ddk::Closable, ddk::Messageable>;
 
-class InsntraceDevice : public DeviceType, fidl::WireInterface<fuchsia_insntrace::Controller> {
+class InsntraceDevice : public DeviceType, fidl::WireServer<fuchsia_insntrace::Controller> {
  public:
   explicit InsntraceDevice(zx_device_t* parent, zx::bti bti)
       : DeviceType(parent), bti_(std::move(bti)) {}
@@ -112,24 +112,25 @@ class InsntraceDevice : public DeviceType, fidl::WireInterface<fuchsia_insntrace
   zx_status_t IptStop();
 
   // Fidl server interface implementation
-  void Initialize(fuchsia_insntrace::wire::Allocation allocation,
-                  InitializeCompleter::Sync& completer) override;
-  void Terminate(TerminateCompleter::Sync& completer) override;
-  void GetAllocation(GetAllocationCompleter::Sync& completer) override;
-  void AllocateBuffer(BufferConfig config, AllocateBufferCompleter::Sync& completer) override;
-  void AssignThreadBuffer(BufferDescriptor descriptor, zx::thread thread,
+  void Initialize(InitializeRequestView request, InitializeCompleter::Sync& completer) override;
+  void Terminate(TerminateRequestView request, TerminateCompleter::Sync& completer) override;
+  void GetAllocation(GetAllocationRequestView request,
+                     GetAllocationCompleter::Sync& completer) override;
+  void AllocateBuffer(AllocateBufferRequestView request,
+                      AllocateBufferCompleter::Sync& completer) override;
+  void AssignThreadBuffer(AssignThreadBufferRequestView request,
                           AssignThreadBufferCompleter::Sync& completer) override;
-  void ReleaseThreadBuffer(BufferDescriptor descriptor, zx::thread thread,
+  void ReleaseThreadBuffer(ReleaseThreadBufferRequestView request,
                            ReleaseThreadBufferCompleter::Sync& completer) override;
-  void GetBufferConfig(BufferDescriptor descriptor,
+  void GetBufferConfig(GetBufferConfigRequestView request,
                        GetBufferConfigCompleter::Sync& completer) override;
-  void GetBufferState(BufferDescriptor descriptor,
+  void GetBufferState(GetBufferStateRequestView request,
                       GetBufferStateCompleter::Sync& completer) override;
-  void GetChunkHandle(BufferDescriptor descriptor, uint32_t chunk_num,
+  void GetChunkHandle(GetChunkHandleRequestView request,
                       GetChunkHandleCompleter::Sync& completer) override;
-  void FreeBuffer(BufferDescriptor descriptor, FreeBufferCompleter::Sync& completer) override;
-  void Start(StartCompleter::Sync& completer) override;
-  void Stop(StopCompleter::Sync& completer) override;
+  void FreeBuffer(FreeBufferRequestView request, FreeBufferCompleter::Sync& completer) override;
+  void Start(StartRequestView request, StartCompleter::Sync& completer) override;
+  void Stop(StopRequestView request, StopCompleter::Sync& completer) override;
 
   // Device protocol implementation
   zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
@@ -993,9 +994,9 @@ zx_status_t InsntraceDevice::IptStop() {
 
 // Fidl interface.
 
-void InsntraceDevice::Initialize(fuchsia_insntrace::wire::Allocation allocation,
+void InsntraceDevice::Initialize(InitializeRequestView request,
                                  InitializeCompleter::Sync& completer) {
-  zx_status_t status = IptInitialize(&allocation);
+  zx_status_t status = IptInitialize(&request->allocation);
   if (status == ZX_OK) {
     completer.ReplySuccess();
   } else {
@@ -1003,7 +1004,7 @@ void InsntraceDevice::Initialize(fuchsia_insntrace::wire::Allocation allocation,
   }
 }
 
-void InsntraceDevice::Terminate(TerminateCompleter::Sync& completer) {
+void InsntraceDevice::Terminate(TerminateRequestView request, TerminateCompleter::Sync& completer) {
   zx_status_t status = IptTerminate();
   if (status == ZX_OK) {
     completer.ReplySuccess();
@@ -1012,7 +1013,8 @@ void InsntraceDevice::Terminate(TerminateCompleter::Sync& completer) {
   }
 }
 
-void InsntraceDevice::GetAllocation(GetAllocationCompleter::Sync& completer) {
+void InsntraceDevice::GetAllocation(GetAllocationRequestView request,
+                                    GetAllocationCompleter::Sync& completer) {
   fuchsia_insntrace::wire::Allocation config{};
   zx_status_t status = IptGetAllocation(&config);
   completer.Reply(status == ZX_OK
@@ -1020,10 +1022,10 @@ void InsntraceDevice::GetAllocation(GetAllocationCompleter::Sync& completer) {
                       : nullptr);
 }
 
-void InsntraceDevice::AllocateBuffer(BufferConfig config,
+void InsntraceDevice::AllocateBuffer(AllocateBufferRequestView request,
                                      AllocateBufferCompleter::Sync& completer) {
   BufferDescriptor descriptor;
-  zx_status_t status = IptAllocateBuffer(&config, &descriptor);
+  zx_status_t status = IptAllocateBuffer(&request->config, &descriptor);
   if (status == ZX_OK) {
     completer.ReplySuccess(descriptor);
   } else {
@@ -1031,9 +1033,9 @@ void InsntraceDevice::AllocateBuffer(BufferConfig config,
   }
 }
 
-void InsntraceDevice::AssignThreadBuffer(BufferDescriptor descriptor, zx::thread thread,
+void InsntraceDevice::AssignThreadBuffer(AssignThreadBufferRequestView request,
                                          AssignThreadBufferCompleter::Sync& completer) {
-  zx_status_t status = IptAssignThreadBuffer(thread.release(), descriptor);
+  zx_status_t status = IptAssignThreadBuffer(request->thread.release(), request->descriptor);
   if (status == ZX_OK) {
     completer.ReplySuccess();
   } else {
@@ -1041,9 +1043,9 @@ void InsntraceDevice::AssignThreadBuffer(BufferDescriptor descriptor, zx::thread
   }
 }
 
-void InsntraceDevice::ReleaseThreadBuffer(BufferDescriptor descriptor, zx::thread thread,
+void InsntraceDevice::ReleaseThreadBuffer(ReleaseThreadBufferRequestView request,
                                           ReleaseThreadBufferCompleter::Sync& completer) {
-  zx_status_t status = IptReleaseThreadBuffer(thread.release(), descriptor);
+  zx_status_t status = IptReleaseThreadBuffer(request->thread.release(), request->descriptor);
   if (status == ZX_OK) {
     completer.ReplySuccess();
   } else {
@@ -1051,44 +1053,44 @@ void InsntraceDevice::ReleaseThreadBuffer(BufferDescriptor descriptor, zx::threa
   }
 }
 
-void InsntraceDevice::GetBufferConfig(BufferDescriptor descriptor,
+void InsntraceDevice::GetBufferConfig(GetBufferConfigRequestView request,
                                       GetBufferConfigCompleter::Sync& completer) {
   BufferConfig config;
-  zx_status_t status = IptGetBufferConfig(descriptor, &config);
+  zx_status_t status = IptGetBufferConfig(request->descriptor, &config);
   completer.Reply(status == ZX_OK ? fidl::ObjectView<BufferConfig>::FromExternal(&config)
                                   : nullptr);
 }
 
-void InsntraceDevice::GetBufferState(BufferDescriptor descriptor,
+void InsntraceDevice::GetBufferState(GetBufferStateRequestView request,
                                      GetBufferStateCompleter::Sync& completer) {
   BufferState state;
-  zx_status_t status = IptGetBufferState(descriptor, &state);
+  zx_status_t status = IptGetBufferState(request->descriptor, &state);
   completer.Reply(status == ZX_OK ? fidl::ObjectView<BufferState>::FromExternal(&state) : nullptr);
 }
 
-void InsntraceDevice::GetChunkHandle(BufferDescriptor descriptor, uint32_t chunk_num,
+void InsntraceDevice::GetChunkHandle(GetChunkHandleRequestView request,
                                      GetChunkHandleCompleter::Sync& completer) {
   zx_handle_t handle;
-  zx_status_t status = IptGetChunkHandle(descriptor, chunk_num, &handle);
+  zx_status_t status = IptGetChunkHandle(request->descriptor, request->chunk_num, &handle);
   completer.Reply(zx::vmo(status == ZX_OK ? handle : ZX_HANDLE_INVALID));
 }
 
-void InsntraceDevice::FreeBuffer(BufferDescriptor descriptor,
+void InsntraceDevice::FreeBuffer(FreeBufferRequestView request,
                                  FreeBufferCompleter::Sync& completer) {
-  zx_status_t status = IptFreeBuffer(descriptor);
+  zx_status_t status = IptFreeBuffer(request->descriptor);
   if (status == ZX_OK) {
     completer.Reply();
   }
 }
 
-void InsntraceDevice::Start(StartCompleter::Sync& completer) {
+void InsntraceDevice::Start(StartRequestView request, StartCompleter::Sync& completer) {
   zx_status_t status = IptStart();
   if (status == ZX_OK) {
     completer.Reply();
   }
 }
 
-void InsntraceDevice::Stop(StopCompleter::Sync& completer) {
+void InsntraceDevice::Stop(StopRequestView request, StopCompleter::Sync& completer) {
   zx_status_t status = IptStop();
   if (status == ZX_OK) {
     completer.Reply();

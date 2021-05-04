@@ -31,8 +31,8 @@ class FakeCpuDevice;
 using TestDeviceType = ddk::Device<FakeCpuDevice, ddk::Messageable, ddk::PerformanceTunable>;
 
 class FakeCpuDevice : TestDeviceType,
-                      fidl::WireInterface<cpuctrl::Device>,
-                      fidl::WireInterface<fuchsia_device::Controller> {
+                      fidl::WireServer<cpuctrl::Device>,
+                      fidl::WireServer<fuchsia_device::Controller> {
  public:
   FakeCpuDevice() : TestDeviceType(nullptr) {}
   ~FakeCpuDevice() {}
@@ -52,42 +52,53 @@ class FakeCpuDevice : TestDeviceType,
     return ZX_OK;
   }
 
-  // fidl::WireInterface<fuchsia_device::Controller> methods
+  // fidl::WireServer<fuchsia_device::Controller> methods
   // We only implement the following methods for now
-  void SetPerformanceState(uint32_t requested_state,
+  void SetPerformanceState(SetPerformanceStateRequestView request,
                            SetPerformanceStateCompleter::Sync& _completer) override;
-  void GetDevicePerformanceStates(GetDevicePerformanceStatesCompleter::Sync& completer) override;
-  void GetCurrentPerformanceState(GetCurrentPerformanceStateCompleter::Sync& completer) override;
+  void GetDevicePerformanceStates(GetDevicePerformanceStatesRequestView request,
+                                  GetDevicePerformanceStatesCompleter::Sync& completer) override;
+  void GetCurrentPerformanceState(GetCurrentPerformanceStateRequestView request,
+                                  GetCurrentPerformanceStateCompleter::Sync& completer) override;
 
   // The following methods are left unimplemented and it's an error to call them.
-  void Bind(::fidl::StringView driver, BindCompleter::Sync& _completer) override {}
-  void Rebind(::fidl::StringView driver, RebindCompleter::Sync& _completer) override {}
-  void UnbindChildren(UnbindChildrenCompleter::Sync& completer) override {}
-  void ScheduleUnbind(ScheduleUnbindCompleter::Sync& _completer) override {}
-  void GetDriverName(GetDriverNameCompleter::Sync& _completer) override {}
-  void GetDeviceName(GetDeviceNameCompleter::Sync& _completer) override {}
-  void GetTopologicalPath(GetTopologicalPathCompleter::Sync& _completer) override {}
-  void GetEventHandle(GetEventHandleCompleter::Sync& _completer) override {}
-  void GetDriverLogFlags(GetDriverLogFlagsCompleter::Sync& _completer) override {}
-  void SetDriverLogFlags(uint32_t clear_flags, uint32_t set_flags,
+  void Bind(BindRequestView request, BindCompleter::Sync& _completer) override {}
+  void Rebind(RebindRequestView request, RebindCompleter::Sync& _completer) override {}
+  void UnbindChildren(UnbindChildrenRequestView request,
+                      UnbindChildrenCompleter::Sync& completer) override {}
+  void ScheduleUnbind(ScheduleUnbindRequestView request,
+                      ScheduleUnbindCompleter::Sync& _completer) override {}
+  void GetDriverName(GetDriverNameRequestView request,
+                     GetDriverNameCompleter::Sync& _completer) override {}
+  void GetDeviceName(GetDeviceNameRequestView request,
+                     GetDeviceNameCompleter::Sync& _completer) override {}
+  void GetTopologicalPath(GetTopologicalPathRequestView request,
+                          GetTopologicalPathCompleter::Sync& _completer) override {}
+  void GetEventHandle(GetEventHandleRequestView request,
+                      GetEventHandleCompleter::Sync& _completer) override {}
+  void GetDriverLogFlags(GetDriverLogFlagsRequestView request,
+                         GetDriverLogFlagsCompleter::Sync& _completer) override {}
+  void SetDriverLogFlags(SetDriverLogFlagsRequestView request,
                          SetDriverLogFlagsCompleter::Sync& _completer) override {}
-  void RunCompatibilityTests(int64_t hook_wait_time,
+  void RunCompatibilityTests(RunCompatibilityTestsRequestView request,
                              RunCompatibilityTestsCompleter::Sync& _completer) override {}
-  void GetDevicePowerCaps(GetDevicePowerCapsCompleter::Sync& _completer) override {}
-  void ConfigureAutoSuspend(bool enable, fuchsia_device::wire::DevicePowerState requested_state,
+  void GetDevicePowerCaps(GetDevicePowerCapsRequestView request,
+                          GetDevicePowerCapsCompleter::Sync& _completer) override {}
+  void ConfigureAutoSuspend(ConfigureAutoSuspendRequestView request,
                             ConfigureAutoSuspendCompleter::Sync& _completer) override {}
-  void UpdatePowerStateMapping(::fidl::Array<fuchsia_device::wire::SystemPowerStateInfo, 7> mapping,
+  void UpdatePowerStateMapping(UpdatePowerStateMappingRequestView request,
                                UpdatePowerStateMappingCompleter::Sync& _completer) override {}
-  void GetPowerStateMapping(GetPowerStateMappingCompleter::Sync& _completer) override {}
-  void Suspend(fuchsia_device::wire::DevicePowerState requested_state,
-               SuspendCompleter::Sync& _completer) override {}
-  void Resume(ResumeCompleter::Sync& _complete) override {}
+  void GetPowerStateMapping(GetPowerStateMappingRequestView request,
+                            GetPowerStateMappingCompleter::Sync& _completer) override {}
+  void Suspend(SuspendRequestView request, SuspendCompleter::Sync& _completer) override {}
+  void Resume(ResumeRequestView request, ResumeCompleter::Sync& _complete) override {}
 
  private:
-  virtual void GetPerformanceStateInfo(uint32_t state,
+  virtual void GetPerformanceStateInfo(GetPerformanceStateInfoRequestView request,
                                        GetPerformanceStateInfoCompleter::Sync& completer) override;
-  virtual void GetNumLogicalCores(GetNumLogicalCoresCompleter::Sync& completer) override;
-  virtual void GetLogicalCoreId(uint64_t index,
+  virtual void GetNumLogicalCores(GetNumLogicalCoresRequestView request,
+                                  GetNumLogicalCoresCompleter::Sync& completer) override;
+  virtual void GetLogicalCoreId(GetLogicalCoreIdRequestView request,
                                 GetLogicalCoreIdCompleter::Sync& completer) override;
 
   fake_ddk::FidlMessenger messenger_;
@@ -115,39 +126,42 @@ zx_status_t FakeCpuDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn)
   return transaction.Status();
 }
 
-void FakeCpuDevice::GetPerformanceStateInfo(uint32_t state,
+void FakeCpuDevice::GetPerformanceStateInfo(GetPerformanceStateInfoRequestView request,
                                             GetPerformanceStateInfoCompleter::Sync& completer) {
-  if (state >= countof(kTestPstates)) {
+  if (request->state >= countof(kTestPstates)) {
     completer.ReplyError(ZX_ERR_OUT_OF_RANGE);
   } else {
-    completer.ReplySuccess(kTestPstates[state]);
+    completer.ReplySuccess(kTestPstates[request->state]);
   }
 }
 
-void FakeCpuDevice::GetNumLogicalCores(GetNumLogicalCoresCompleter::Sync& completer) {
+void FakeCpuDevice::GetNumLogicalCores(GetNumLogicalCoresRequestView request,
+                                       GetNumLogicalCoresCompleter::Sync& completer) {
   completer.Reply(kNumLogicalCores);
 }
 
-void FakeCpuDevice::GetLogicalCoreId(uint64_t index, GetLogicalCoreIdCompleter::Sync& completer) {
-  if (index >= countof(kLogicalCoreIds)) {
+void FakeCpuDevice::GetLogicalCoreId(GetLogicalCoreIdRequestView request,
+                                     GetLogicalCoreIdCompleter::Sync& completer) {
+  if (request->index >= countof(kLogicalCoreIds)) {
     completer.Reply(UINT64_MAX);
   }
-  completer.Reply(kLogicalCoreIds[index]);
+  completer.Reply(kLogicalCoreIds[request->index]);
 }
 
-void FakeCpuDevice::SetPerformanceState(uint32_t requested_state,
+void FakeCpuDevice::SetPerformanceState(SetPerformanceStateRequestView request,
                                         SetPerformanceStateCompleter::Sync& completer) {
-  if (requested_state > countof(kTestPstates)) {
-    completer.Reply(ZX_ERR_NOT_SUPPORTED, requested_state);
+  if (request->requested_state > countof(kTestPstates)) {
+    completer.Reply(ZX_ERR_NOT_SUPPORTED, request->requested_state);
     return;
   }
 
   pstate_set_count_++;
-  current_pstate_ = requested_state;
-  completer.Reply(ZX_OK, requested_state);
+  current_pstate_ = request->requested_state;
+  completer.Reply(ZX_OK, request->requested_state);
 }
 
 void FakeCpuDevice::GetDevicePerformanceStates(
+    GetDevicePerformanceStatesRequestView request,
     GetDevicePerformanceStatesCompleter::Sync& completer) {
   ::fidl::Array<fuchsia_device::wire::DevicePerformanceStateInfo,
                 fuchsia_device::wire::kMaxDevicePerformanceStates>
@@ -161,6 +175,7 @@ void FakeCpuDevice::GetDevicePerformanceStates(
 }
 
 void FakeCpuDevice::GetCurrentPerformanceState(
+    GetCurrentPerformanceStateRequestView request,
     GetCurrentPerformanceStateCompleter::Sync& completer) {
   completer.Reply(current_pstate_);
 }

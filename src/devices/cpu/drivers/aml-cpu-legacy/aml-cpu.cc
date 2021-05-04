@@ -266,7 +266,7 @@ zx_status_t AmlCpu::DdkConfigureAutoSuspend(bool enable, uint8_t requested_sleep
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-void AmlCpu::GetPerformanceStateInfo(uint32_t state,
+void AmlCpu::GetPerformanceStateInfo(GetPerformanceStateInfoRequestView request,
                                      GetPerformanceStateInfoCompleter::Sync& completer) {
   // Get all performance states.
   zx_status_t status;
@@ -279,14 +279,14 @@ void AmlCpu::GetPerformanceStateInfo(uint32_t state,
   }
 
   // Make sure that the state is in bounds?
-  if (state >= opps.count) {
+  if (request->state >= opps.count) {
     zxlogf(ERROR, "%s: requested pstate index out of bounds, requested = %u, count = %u", __func__,
-           state, opps.count);
+           request->state, opps.count);
     completer.ReplyError(ZX_ERR_OUT_OF_RANGE);
     return;
   }
 
-  const uint16_t pstate = PstateToOperatingPoint(state, opps.count);
+  const uint16_t pstate = PstateToOperatingPoint(request->state, opps.count);
 
   fuchsia_hardware_cpu_ctrl::wire::CpuPerformanceStateInfo result;
   result.frequency_hz = opps.opp[pstate].freq_hz;
@@ -307,11 +307,13 @@ zx_status_t AmlCpu::GetThermalOperatingPoints(fuchsia_thermal::wire::OperatingPo
   return ZX_OK;
 }
 
-void AmlCpu::GetNumLogicalCores(GetNumLogicalCoresCompleter::Sync& completer) {
+void AmlCpu::GetNumLogicalCores(GetNumLogicalCoresRequestView request,
+                                GetNumLogicalCoresCompleter::Sync& completer) {
   completer.Reply(ClusterCoreCount());
 }
 
-void AmlCpu::GetLogicalCoreId(uint64_t index, GetLogicalCoreIdCompleter::Sync& completer) {
+void AmlCpu::GetLogicalCoreId(GetLogicalCoreIdRequestView request,
+                              GetLogicalCoreIdCompleter::Sync& completer) {
   // Placeholder.
   completer.Reply(0);
 }
