@@ -61,16 +61,10 @@ impl RenderCache {
     }
 
     fn reset(&mut self) {
-        let cached_rasters = self
-            .cached_rasters
-            .drain()
-            .filter(|(_, cached_raster)| !cached_raster.was_used)
-            .collect();
-        self.cached_rasters = cached_rasters;
+        // Retain rasters used last frame and reset `was_used` field.
+        self.cached_rasters
+            .retain(|_, cached_raster| std::mem::replace(&mut cached_raster.was_used, false));
 
-        for cached_raster in &mut self.cached_rasters.values_mut() {
-            cached_raster.was_used = false;
-        }
 
         self.rasters.clear();
     }
