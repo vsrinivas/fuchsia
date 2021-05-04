@@ -48,11 +48,12 @@ class BootfsService : public fbl::RefCounted<BootfsService> {
 
   // Publishes the given |vmo| range into the bootfs at |path|.  |path| should
   // not begin with a slash and be relative to the root of the bootfs.
-  zx_status_t PublishVmo(const char* path, zx::vmo vmo, zx_off_t off, size_t len);
+  zx_status_t PublishVmo(std::string_view path, zx::vmo vmo, zx_off_t off, size_t len);
 
   // Same as PublishVmo, but the caller must ensure that |vmo| outlives the
   // bootfs service.
-  zx_status_t PublishUnownedVmo(const char* path, const zx::vmo& vmo, zx_off_t off, size_t len);
+  zx_status_t PublishUnownedVmo(std::string_view path, const zx::vmo& vmo, zx_off_t off,
+                                size_t len);
 
   // owned_vmos contains all VMOs that are claimed by the underlying VFS
   fbl::Vector<zx::vmo> owned_vmos_;

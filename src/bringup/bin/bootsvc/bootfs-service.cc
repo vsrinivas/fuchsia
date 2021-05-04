@@ -34,28 +34,34 @@ namespace {
 // 'Packages' in bootfs can contain executable files but we need to account for the package name
 // path component, which can be anything. For example, 'pkg/my_package/bin' should be executable but
 // 'pkg/my_package/foo' should not.
-static constexpr const char* kBootfsPackagePrefix = "pkg/";
-static constexpr const char* kExecutablePackageDirectories[] = {
+static constexpr std::string_view kBootfsPackagePrefix = "pkg/";
+static constexpr std::string_view kExecutablePackageDirectories[] = {
     "bin/",
     "lib/",
 };
 
-static bool PathInExecutablePackageDirectory(const char* path) {
+// TODO(joshuaseaton): use cpp20::starts_with().
+constexpr bool StartsWith(std::string_view s, std::string_view prefix) {
+  if (prefix.size() > s.size()) {
+    return false;
+  }
+  return s.substr(0, prefix.size()).compare(prefix) == 0;
+}
+
+static bool PathInExecutablePackageDirectory(std::string_view path) {
   // All packages in bootfs are located under a single directory.
-  if (strncmp(kBootfsPackagePrefix, path, strlen(kBootfsPackagePrefix)) != 0) {
+  if (!StartsWith(path, kBootfsPackagePrefix)) {
     return false;
   }
 
   // Advance past the path separator separating the package name and path inside the package.
-  const char* inside_pkg = strchr(path + strlen(kBootfsPackagePrefix), '/');
-  if (inside_pkg == nullptr) {
-    return false;
-  }
-  inside_pkg++;
+  path.remove_prefix(kBootfsPackagePrefix.size());
+  std::string_view pkg_name = path.substr(0, path.find('/'));
+  path.remove_prefix(std::min(pkg_name.size() + 1, path.size()));
 
   // Finally, check if the path inside the package is one of the allowlisted paths.
-  for (const char* prefix : kExecutablePackageDirectories) {
-    if (strncmp(prefix, inside_pkg, strlen(prefix)) == 0) {
+  for (std::string_view prefix : kExecutablePackageDirectories) {
+    if (StartsWith(path, prefix)) {
       return true;
     }
   }
@@ -64,20 +70,20 @@ static bool PathInExecutablePackageDirectory(const char* path) {
 
 // Other top-level directories in bootfs that are allowed to contain executable files (i.e. files
 // for which bootfs should allow opening with OPEN_RIGHT_EXECUTABLE).
-static constexpr const char* kExecutableDirectories[] = {
+static constexpr std::string_view kExecutableDirectories[] = {
     "bin/",
     "driver/",
     "lib/",
     "test/",
 };
 
-static bool PathInExecutableDirectory(const char* path) {
+static bool PathInExecutableDirectory(std::string_view path) {
   if (PathInExecutablePackageDirectory(path)) {
     return true;
   }
 
-  for (const char* prefix : kExecutableDirectories) {
-    if (strncmp(prefix, path, strlen(prefix)) == 0) {
+  for (std::string_view prefix : kExecutableDirectories) {
+    if (StartsWith(path, prefix)) {
       return true;
     }
   }
@@ -198,7 +204,8 @@ zx_status_t BootfsService::DuplicateAsExecutable(const zx::vmo& vmo, zx::vmo* ou
   return ZX_OK;
 }
 
-zx_status_t BootfsService::PublishVmo(const char* path, zx::vmo vmo, zx_off_t off, size_t len) {
+zx_status_t BootfsService::PublishVmo(std::string_view path, zx::vmo vmo, zx_off_t off,
+                                      size_t len) {
   zx_status_t status = PublishUnownedVmo(path, vmo, off, len);
   if (status != ZX_OK) {
     return status;
@@ -207,39 +214,43 @@ zx_status_t BootfsService::PublishVmo(const char* path, zx::vmo vmo, zx_off_t of
   return ZX_OK;
 }
 
-zx_status_t BootfsService::PublishUnownedVmo(const char* path, const zx::vmo& vmo, zx_off_t off,
-                                             size_t len) {
+zx_status_t BootfsService::PublishUnownedVmo(std::string_view path, const zx::vmo& vmo,
+                                             zx_off_t off, size_t len) {
   ZX_ASSERT(root_ != nullptr);
-  if ((path[0] == '/') || (path[0] == 0)) {
+  if (path.empty() || path.front() == '/' || path.front() == '\0') {
     return ZX_ERR_INVALID_ARGS;
   }
 
   fbl::RefPtr<memfs::VnodeDir> vnb(root_);
-  while (true) {
-    const char* nextpath = strchr(path, '/');
-    if (nextpath == nullptr) {
-      if (path[0] == 0) {
-        return ZX_ERR_INVALID_ARGS;
-      }
-      return vfs_->CreateFromVmo(vnb.get(), std::string_view(path, strlen(path)), vmo.get(), off,
-                                 len);
+  while (!path.empty()) {
+    std::string_view dir = path.substr(0, path.find('/'));
+    if (dir.size() == path.size()) {
+      dir = {};
     } else {
-      if (nextpath == path) {
+      path.remove_prefix(dir.size() + 1);
+    }
+
+    if (dir.empty()) {
+      if (path.empty() || path.front() == '/' || path.front() == '\0') {
         return ZX_ERR_INVALID_ARGS;
       }
-
-      fbl::RefPtr<fs::Vnode> out;
-      zx_status_t status = vnb->Lookup(std::string_view(path, nextpath - path), &out);
-      if (status == ZX_ERR_NOT_FOUND) {
-        status = vnb->Create(std::string_view(path, nextpath - path), S_IFDIR, &out);
-      }
-      if (status != ZX_OK) {
-        return status;
-      }
-      vnb = fbl::RefPtr<memfs::VnodeDir>::Downcast(std::move(out));
-      path = nextpath + 1;
+      return vfs_->CreateFromVmo(vnb.get(), path, vmo.get(), off, len);
     }
+
+    fbl::RefPtr<fs::Vnode> out;
+    zx_status_t status = vnb->Lookup(dir, &out);
+    if (status == ZX_ERR_NOT_FOUND) {
+      status = vnb->Create(dir, S_IFDIR, &out);
+    }
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    vnb = fbl::RefPtr<memfs::VnodeDir>::Downcast(std::move(out));
   }
+
+  // Should not be reached.
+  return ZX_ERR_INTERNAL;
 }
 
 void BootfsService::PublishStartupVmos(uint8_t type, const char* debug_type_name) {
