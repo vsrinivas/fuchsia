@@ -52,7 +52,13 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
                 if prop_value.prop == Prop::Stream(PropStream::Net) {
                     let network_packet = NetworkPacket::try_unpack_from_slice(prop_value.value)
                         .context("on_inbound_frame:parsing_net_packet")?;
+
                     self.net_if.inbound_packet_to_stack(network_packet.packet).await?;
+
+                    let mut driver_state = self.driver_state.lock();
+                    if driver_state.assisting_state.update_from_secure(network_packet.packet) {
+                        fx_log_info!("on_inbound_frame: Commissioning session successfully migrated to mesh network: {:?}", Ipv6PacketDebug(network_packet.packet));
+                    }
                 } else if prop_value.prop == Prop::Stream(PropStream::NetInsecure) {
                     let network_packet = NetworkPacket::try_unpack_from_slice(prop_value.value)
                         .context("on_inbound_frame:parsing_insecure_net_packet")?;

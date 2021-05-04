@@ -210,6 +210,20 @@ impl Ipv6PacketMatcher {
         Ok(())
     }
 
+    /// If there is a matching rule in the set for this inbound packet, remove it.
+    pub fn clear_with_inbound_packet(&mut self, packet: &[u8]) -> bool {
+        let mut did_match = false;
+        self.0.retain(|rule| {
+            if rule.match_inbound_packet(packet) {
+                did_match = true;
+                false
+            } else {
+                true
+            }
+        });
+        did_match
+    }
+
     /// Determines if an inbound packet matches at least one of the rules in the set.
     pub fn match_inbound_packet(&self, packet: &[u8]) -> bool {
         for rule in self.0.iter() {

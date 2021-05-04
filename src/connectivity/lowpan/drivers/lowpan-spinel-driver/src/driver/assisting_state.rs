@@ -43,6 +43,13 @@ impl AssistingState {
         false
     }
 
+    pub fn update_from_secure(&mut self, packet: &[u8]) -> bool {
+        if self.is_assisting() {
+            return self.active_sessions.clear_with_inbound_packet(packet);
+        }
+        return false;
+    }
+
     pub fn is_assisting(&self) -> bool {
         self.expiration > Instant::now()
     }
