@@ -3,59 +3,160 @@
 // found in the LICENSE file.
 
 use {
+    crate::{
+        device::DeviceHolder,
+        object_store::{fsck::fsck, FxFilesystem},
+        server::volume::FxVolumeAndRoot,
+        testing::fake_device::FakeDevice,
+        volume::root_volume,
+    },
     anyhow::Error,
     fidl::endpoints::{create_proxy, ServerEnd},
-    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, FileMarker, FileProxy},
+    fidl_fuchsia_io::{
+        DirectoryMarker, DirectoryProxy, FileMarker, FileProxy, MODE_TYPE_DIRECTORY,
+        OPEN_FLAG_DIRECTORY, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+    },
+    fuchsia_zircon::Status,
+    std::sync::Arc,
+    vfs::{
+        directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path,
+        registry::token_registry,
+    },
 };
 
+struct State {
+    filesystem: Arc<FxFilesystem>,
+    volume: FxVolumeAndRoot,
+    root: DirectoryProxy,
+}
+
+impl From<State> for (Arc<FxFilesystem>, FxVolumeAndRoot) {
+    fn from(state: State) -> (Arc<FxFilesystem>, FxVolumeAndRoot) {
+        (state.filesystem, state.volume)
+    }
+}
+
+pub struct TestFixture {
+    scope: ExecutionScope,
+    state: Option<State>,
+}
+
+impl TestFixture {
+    pub async fn new() -> Self {
+        Self::open(DeviceHolder::new(FakeDevice::new(2048, 512)), true).await
+    }
+
+    pub async fn open(device: DeviceHolder, format: bool) -> Self {
+        let (filesystem, volume) = if format {
+            let filesystem = FxFilesystem::new_empty(device).await.unwrap();
+            let root_volume = root_volume(&filesystem).await.unwrap();
+            let vol =
+                FxVolumeAndRoot::new(root_volume.new_volume("vol").await.unwrap()).await.unwrap();
+            (filesystem, vol)
+        } else {
+            let filesystem = FxFilesystem::open(device).await.unwrap();
+            let root_volume = root_volume(&filesystem).await.unwrap();
+            let vol = FxVolumeAndRoot::new(root_volume.volume("vol").await.unwrap()).await.unwrap();
+            (filesystem, vol)
+        };
+        let scope = ExecutionScope::build().token_registry(token_registry::Simple::new()).new();
+        let (root, server_end) = create_proxy::<DirectoryMarker>().expect("create_proxy failed");
+        volume.root().clone().open(
+            scope.clone(),
+            OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            MODE_TYPE_DIRECTORY,
+            Path::empty(),
+            ServerEnd::new(server_end.into_channel()),
+        );
+        Self { scope, state: Some(State { filesystem, volume, root }) }
+    }
+
+    /// Closes the test fixture, shutting down the filesystem. Returns the device, which can be
+    /// reused for another TestFixture.
+    ///
+    /// Ensures that:
+    ///   * The filesystem shuts down cleanly.
+    ///   * fsck passes.
+    ///   * There are no dangling references to the device or the volume.
+    pub async fn close(mut self) -> DeviceHolder {
+        let state = std::mem::take(&mut self.state).unwrap();
+        // Close the root node and ensure that there's no remaining references to |vol|, which would
+        // indicate a reference cycle or other leak.
+        Status::ok(state.root.close().await.expect("FIDL call failed")).expect("close root failed");
+        let (filesystem, volume) = state.into();
+        Arc::try_unwrap(volume.into_volume())
+            .map_err(|_| "References to volume still exist")
+            .unwrap();
+        filesystem.close().await.expect("close filesystem failed");
+        fsck(filesystem.as_ref()).await.expect("fsck failed");
+        self.scope.shutdown();
+        let device = filesystem.take_device().await;
+        device.ensure_unique();
+        device.reopen();
+        device
+    }
+
+    pub fn root(&self) -> &DirectoryProxy {
+        &self.state.as_ref().unwrap().root
+    }
+}
+
+impl Drop for TestFixture {
+    fn drop(&mut self) {
+        assert!(self.state.is_none(), "Did you forget to call TestFixture::close?");
+    }
+}
+
+pub async fn close_file_checked(file: FileProxy) {
+    Status::ok(file.close().await.expect("FIDL call failed")).expect("close failed");
+}
+
+pub async fn close_dir_checked(dir: DirectoryProxy) {
+    Status::ok(dir.close().await.expect("FIDL call failed")).expect("close failed");
+}
+
 // Utility function to open a new node connection under |dir|.
-// Does not validate the node connection after opening.
-pub fn open_file(
+pub async fn open_file(
     dir: &DirectoryProxy,
     flags: u32,
     mode: u32,
     path: &str,
 ) -> Result<FileProxy, Error> {
-    let (client_end, server_end) = create_proxy::<FileMarker>().expect("create_proxy failed");
+    let (proxy, server_end) = create_proxy::<FileMarker>().expect("create_proxy failed");
     dir.open(flags, mode, path, ServerEnd::new(server_end.into_channel()))?;
-    Ok(client_end)
+    proxy.describe().await?;
+    Ok(proxy)
 }
 
-// Utility function to open a new node connection under |dir|.
-// Validates the node connection after opening by calling |describe|.
-pub async fn open_file_validating(
+// Like |open_file|, but asserts if the open call fails.
+pub async fn open_file_checked(
     dir: &DirectoryProxy,
     flags: u32,
     mode: u32,
     path: &str,
-) -> Result<FileProxy, Error> {
-    let client_end = open_file(dir, flags, mode, path)?;
-    client_end.describe().await?;
-    Ok(client_end)
+) -> FileProxy {
+    open_file(dir, flags, mode, path).await.expect("open_file failed")
 }
 
 // Utility function to open a new node connection under |dir|.
-// Does not validate the node connection after opening.
-pub fn open_dir(
+pub async fn open_dir(
     dir: &DirectoryProxy,
     flags: u32,
     mode: u32,
     path: &str,
 ) -> Result<DirectoryProxy, Error> {
-    let (client_end, server_end) = create_proxy::<DirectoryMarker>().expect("create_proxy failed");
+    let (proxy, server_end) = create_proxy::<DirectoryMarker>().expect("create_proxy failed");
     dir.open(flags, mode, path, ServerEnd::new(server_end.into_channel()))?;
-    Ok(client_end)
+    proxy.describe().await?;
+    Ok(proxy)
 }
 
-// Utility function to open a new node connection under |dir|.
-// Validates the node connection after opening by calling |describe|.
-pub async fn open_dir_validating(
+// Like |open_dir|, but asserts if the open call fails.
+pub async fn open_dir_checked(
     dir: &DirectoryProxy,
     flags: u32,
     mode: u32,
     path: &str,
-) -> Result<DirectoryProxy, Error> {
-    let client_end = open_dir(dir, flags, mode, path)?;
-    client_end.describe().await?;
-    Ok(client_end)
+) -> DirectoryProxy {
+    open_dir(dir, flags, mode, path).await.expect("open_dir failed")
 }

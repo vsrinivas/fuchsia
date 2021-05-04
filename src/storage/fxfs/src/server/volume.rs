@@ -236,71 +236,42 @@ impl FxVolumeAndRoot {
 #[cfg(test)]
 mod tests {
     use {
-        crate::{
-            device::DeviceHolder,
-            object_store::FxFilesystem,
-            server::{
-                testing::{open_dir_validating, open_file_validating},
-                volume::FxVolumeAndRoot,
-            },
-            testing::fake_device::FakeDevice,
-            volume::root_volume,
+        crate::server::testing::{
+            close_dir_checked, close_file_checked, open_dir, open_dir_checked, open_file,
+            open_file_checked, TestFixture,
         },
-        fidl::endpoints::ServerEnd,
         fidl_fuchsia_io::{
-            DirectoryMarker, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_CREATE,
-            OPEN_FLAG_DIRECTORY, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+            MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_CREATE, OPEN_FLAG_DIRECTORY,
+            OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
         },
         fuchsia_async as fasync,
         fuchsia_zircon::Status,
         io_util::{read_file_bytes, write_file_bytes},
-        vfs::{
-            directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path,
-            registry::token_registry,
-        },
     };
 
     #[fasync::run_singlethreaded(test)]
     async fn test_rename_different_dirs() {
-        let registry = token_registry::Simple::new();
-        let scope = ExecutionScope::build().token_registry(registry).new();
-        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
-        let filesystem = FxFilesystem::new_empty(device).await.unwrap();
-        let root_volume = root_volume(&filesystem).await.unwrap();
-        let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await.unwrap())
-            .await
-            .expect("new failed");
-        let (dir_proxy, dir_server_end) =
-            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
-        vol.root().clone().open(
-            scope.clone(),
-            OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_DIRECTORY,
-            Path::empty(),
-            ServerEnd::new(dir_server_end.into_channel()),
-        );
+        let fixture = TestFixture::new().await;
+        let root = fixture.root();
 
-        let src = open_dir_validating(
-            &dir_proxy,
+        let src = open_dir_checked(
+            &root,
             OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             MODE_TYPE_DIRECTORY,
             "foo",
         )
-        .await
-        .expect("Create dir failed");
+        .await;
 
-        let dst = open_dir_validating(
-            &dir_proxy,
+        let dst = open_dir_checked(
+            &root,
             OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DIRECTORY,
             MODE_TYPE_DIRECTORY,
             "bar",
         )
-        .await
-        .expect("Create dir failed");
+        .await;
 
-        open_file_validating(&dir_proxy, OPEN_FLAG_CREATE, MODE_TYPE_FILE, "foo/a")
-            .await
-            .expect("Create file failed");
+        let f = open_file_checked(&root, OPEN_FLAG_CREATE, MODE_TYPE_FILE, "foo/a").await;
+        close_file_checked(f).await;
 
         let (status, dst_token) = dst.get_token().await.expect("FIDL call failed");
         Status::ok(status).expect("get_token failed");
@@ -308,7 +279,7 @@ mod tests {
             .expect("rename failed");
 
         assert_eq!(
-            open_file_validating(&dir_proxy, 0, MODE_TYPE_FILE, "foo/a")
+            open_file(&root, 0, MODE_TYPE_FILE, "foo/a")
                 .await
                 .expect_err("Open succeeded")
                 .root_cause()
@@ -316,43 +287,29 @@ mod tests {
                 .expect("No status"),
             &Status::NOT_FOUND,
         );
-        open_file_validating(&dir_proxy, 0, MODE_TYPE_FILE, "bar/b")
-            .await
-            .expect("Open file failed");
+        let f = open_file_checked(&root, 0, MODE_TYPE_FILE, "bar/b").await;
+        close_file_checked(f).await;
+
+        close_dir_checked(dst).await;
+        close_dir_checked(src).await;
+        fixture.close().await;
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_rename_same_dir() {
-        let registry = token_registry::Simple::new();
-        let scope = ExecutionScope::build().token_registry(registry).new();
-        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
-        let filesystem = FxFilesystem::new_empty(device).await.unwrap();
-        let root_volume = root_volume(&filesystem).await.unwrap();
-        let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await.unwrap())
-            .await
-            .expect("new failed");
-        let (dir_proxy, dir_server_end) =
-            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
-        vol.root().clone().open(
-            scope.clone(),
-            OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_DIRECTORY,
-            Path::empty(),
-            ServerEnd::new(dir_server_end.into_channel()),
-        );
+        let fixture = TestFixture::new().await;
+        let root = fixture.root();
 
-        let src = open_dir_validating(
-            &dir_proxy,
+        let src = open_dir_checked(
+            &root,
             OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             MODE_TYPE_DIRECTORY,
             "foo",
         )
-        .await
-        .expect("Create dir failed");
+        .await;
 
-        open_file_validating(&dir_proxy, OPEN_FLAG_CREATE, MODE_TYPE_FILE, "foo/a")
-            .await
-            .expect("Create file failed");
+        let f = open_file_checked(&root, OPEN_FLAG_CREATE, MODE_TYPE_FILE, "foo/a").await;
+        close_file_checked(f).await;
 
         let (status, src_token) = src.get_token().await.expect("FIDL call failed");
         Status::ok(status).expect("get_token failed");
@@ -360,7 +317,7 @@ mod tests {
             .expect("rename failed");
 
         assert_eq!(
-            open_file_validating(&dir_proxy, 0, MODE_TYPE_FILE, "foo/a")
+            open_file(&root, 0, MODE_TYPE_FILE, "foo/a")
                 .await
                 .expect_err("Open succeeded")
                 .root_cause()
@@ -368,66 +325,49 @@ mod tests {
                 .expect("No status"),
             &Status::NOT_FOUND,
         );
-        open_file_validating(&dir_proxy, 0, MODE_TYPE_FILE, "foo/b")
-            .await
-            .expect("Open file failed");
+        let f = open_file_checked(&root, 0, MODE_TYPE_FILE, "foo/b").await;
+        close_file_checked(f).await;
+
+        close_dir_checked(src).await;
+        fixture.close().await;
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_rename_overwrites_file() {
-        let registry = token_registry::Simple::new();
-        let scope = ExecutionScope::build().token_registry(registry).new();
-        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
-        let filesystem = FxFilesystem::new_empty(device).await.unwrap();
-        let root_volume = root_volume(&filesystem).await.unwrap();
-        let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await.unwrap())
-            .await
-            .expect("new failed");
-        let (dir_proxy, dir_server_end) =
-            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
-        vol.root().clone().open(
-            scope.clone(),
-            OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_DIRECTORY,
-            Path::empty(),
-            ServerEnd::new(dir_server_end.into_channel()),
-        );
+        let fixture = TestFixture::new().await;
+        let root = fixture.root();
 
-        let src = open_dir_validating(
-            &dir_proxy,
+        let src = open_dir_checked(
+            &root,
             OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             MODE_TYPE_DIRECTORY,
             "foo",
         )
-        .await
-        .expect("Create dir failed");
+        .await;
 
-        let dst = open_dir_validating(
-            &dir_proxy,
+        let dst = open_dir_checked(
+            &root,
             OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DIRECTORY,
             MODE_TYPE_DIRECTORY,
             "bar",
         )
-        .await
-        .expect("Create dir failed");
+        .await;
 
         // The src file is non-empty.
-        let src_file = open_file_validating(
-            &dir_proxy,
+        let src_file = open_file_checked(
+            &root,
             OPEN_FLAG_CREATE | OPEN_RIGHT_WRITABLE,
             MODE_TYPE_FILE,
             "foo/a",
         )
-        .await
-        .expect("Create file failed");
+        .await;
         let buf = vec![0xaa as u8; 8192];
         write_file_bytes(&src_file, buf.as_slice()).await.expect("Failed to write to file");
-        Status::ok(src_file.close().await.expect("FIDL call failed")).expect("close failed");
+        close_file_checked(src_file).await;
 
         // The dst file is empty (so we can distinguish it).
-        open_file_validating(&dir_proxy, OPEN_FLAG_CREATE, MODE_TYPE_FILE, "bar/b")
-            .await
-            .expect("Create file failed");
+        let f = open_file_checked(&root, OPEN_FLAG_CREATE, MODE_TYPE_FILE, "bar/b").await;
+        close_file_checked(f).await;
 
         let (status, dst_token) = dst.get_token().await.expect("FIDL call failed");
         Status::ok(status).expect("get_token failed");
@@ -435,7 +375,7 @@ mod tests {
             .expect("rename failed");
 
         assert_eq!(
-            open_file_validating(&dir_proxy, 0, MODE_TYPE_FILE, "foo/a")
+            open_file(&root, 0, MODE_TYPE_FILE, "foo/a")
                 .await
                 .expect_err("Open succeeded")
                 .root_cause()
@@ -443,67 +383,47 @@ mod tests {
                 .expect("No status"),
             &Status::NOT_FOUND,
         );
-        let file = open_file_validating(&dir_proxy, OPEN_RIGHT_READABLE, MODE_TYPE_FILE, "bar/b")
-            .await
-            .expect("Open file failed");
+        let file = open_file_checked(&root, OPEN_RIGHT_READABLE, MODE_TYPE_FILE, "bar/b").await;
         let buf = read_file_bytes(&file).await.expect("read file failed");
         assert_eq!(buf, vec![0xaa as u8; 8192]);
+        close_file_checked(file).await;
+
+        close_dir_checked(dst).await;
+        close_dir_checked(src).await;
+        fixture.close().await;
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_rename_overwrites_dir() {
-        let registry = token_registry::Simple::new();
-        let scope = ExecutionScope::build().token_registry(registry).new();
-        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
-        let filesystem = FxFilesystem::new_empty(device).await.unwrap();
-        let root_volume = root_volume(&filesystem).await.unwrap();
-        let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await.unwrap())
-            .await
-            .expect("new failed");
-        let (dir_proxy, dir_server_end) =
-            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
-        vol.root().clone().open(
-            scope.clone(),
-            OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_DIRECTORY,
-            Path::empty(),
-            ServerEnd::new(dir_server_end.into_channel()),
-        );
+        let fixture = TestFixture::new().await;
+        let root = fixture.root();
 
-        let src = open_dir_validating(
-            &dir_proxy,
+        let src = open_dir_checked(
+            &root,
             OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             MODE_TYPE_DIRECTORY,
             "foo",
         )
-        .await
-        .expect("Create dir failed");
+        .await;
 
-        let dst = open_dir_validating(
-            &dir_proxy,
+        let dst = open_dir_checked(
+            &root,
             OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DIRECTORY,
             MODE_TYPE_DIRECTORY,
             "bar",
         )
-        .await
-        .expect("Create dir failed");
+        .await;
 
         // The src dir is non-empty.
-        open_dir_validating(
-            &dir_proxy,
+        open_dir_checked(
+            &root,
             OPEN_FLAG_CREATE | OPEN_RIGHT_WRITABLE,
             MODE_TYPE_DIRECTORY,
             "foo/a",
         )
-        .await
-        .expect("Create dir failed");
-        open_file_validating(&dir_proxy, OPEN_FLAG_CREATE, MODE_TYPE_FILE, "foo/a/file")
-            .await
-            .expect("Create file failed");
-
-        open_dir_validating(&dir_proxy, OPEN_FLAG_CREATE, MODE_TYPE_DIRECTORY, "bar/b")
-            .await
-            .expect("Create file failed");
+        .await;
+        open_file_checked(&root, OPEN_FLAG_CREATE, MODE_TYPE_FILE, "foo/a/file").await;
+        open_dir_checked(&root, OPEN_FLAG_CREATE, MODE_TYPE_DIRECTORY, "bar/b").await;
 
         let (status, dst_token) = dst.get_token().await.expect("FIDL call failed");
         Status::ok(status).expect("get_token failed");
@@ -511,7 +431,7 @@ mod tests {
             .expect("rename failed");
 
         assert_eq!(
-            open_dir_validating(&dir_proxy, 0, MODE_TYPE_DIRECTORY, "foo/a")
+            open_dir(&root, 0, MODE_TYPE_DIRECTORY, "foo/a")
                 .await
                 .expect_err("Open succeeded")
                 .root_cause()
@@ -519,8 +439,12 @@ mod tests {
                 .expect("No status"),
             &Status::NOT_FOUND,
         );
-        open_file_validating(&dir_proxy, 0, MODE_TYPE_FILE, "bar/b/file")
-            .await
-            .expect("Open file failed");
+        let f = open_file_checked(&root, 0, MODE_TYPE_FILE, "bar/b/file").await;
+        close_file_checked(f).await;
+
+        close_dir_checked(dst).await;
+        close_dir_checked(src).await;
+
+        fixture.close().await;
     }
 }

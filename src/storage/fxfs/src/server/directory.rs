@@ -136,9 +136,8 @@ impl FxDirectory {
     fn ensure_writable(&self) -> Result<(), Error> {
         if self.is_deleted.load(Ordering::Relaxed) {
             bail!(FxfsError::Deleted)
-        } else {
-            Ok(())
         }
+        Ok(())
     }
 
     async fn lookup(
@@ -532,386 +531,180 @@ mod tests {
     use {
         crate::{
             device::DeviceHolder,
-            object_store::{filesystem::SyncOptions, FxFilesystem},
-            server::{
-                testing::{open_dir_validating, open_file, open_file_validating},
-                volume::FxVolumeAndRoot,
+            server::testing::{
+                close_dir_checked, close_file_checked, open_dir, open_dir_checked, open_file,
+                open_file_checked, TestFixture,
             },
             testing::fake_device::FakeDevice,
-            volume::root_volume,
         },
-        anyhow::Error,
-        fidl::endpoints::ServerEnd,
         fidl_fuchsia_io::{
-            DirectoryMarker, DirectoryProxy, SeekOrigin, MAX_BUF, MODE_TYPE_DIRECTORY,
-            MODE_TYPE_FILE, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DIRECTORY,
-            OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+            DirectoryProxy, SeekOrigin, MAX_BUF, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE,
+            OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
         },
         fidl_fuchsia_io2::UnlinkOptions,
         files_async::{DirEntry, DirentKind},
         fuchsia_async as fasync,
         fuchsia_zircon::Status,
         io_util::{read_file_bytes, write_file_bytes},
-        matches::assert_matches,
         rand::Rng,
         std::{sync::Arc, time::Duration},
-        vfs::{directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path},
     };
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_lifecycle() -> Result<(), Error> {
-        let (device, device_clone) = DeviceHolder::new_and_clone(FakeDevice::new(2048, 512));
-        let filesystem = FxFilesystem::new_empty(device).await?;
-        let root_volume = root_volume(&filesystem).await?;
-        let vol =
-            FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
-        {
-            let (dir_proxy, dir_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>()
-                .expect("Create proxy to succeed");
-
-            vol.root().clone().open(
-                ExecutionScope::new(),
-                OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-                MODE_TYPE_DIRECTORY,
-                Path::empty(),
-                ServerEnd::new(dir_server_end.into_channel()),
-            );
-
-            open_dir_validating(
-                &dir_proxy,
-                OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE,
-                MODE_TYPE_DIRECTORY,
-                "foo",
-            )
-            .await
-            .expect("Create dir failed");
-
-            open_file_validating(
-                &dir_proxy,
-                OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE,
-                MODE_TYPE_FILE,
-                "bar",
-            )
-            .await
-            .expect("Create file failed");
-
-            dir_proxy
-                .unlink2("foo", UnlinkOptions::EMPTY)
-                .await
-                .expect("fidl failed")
-                .expect("unlink failed");
-
-            dir_proxy.close().await?;
-        }
-
-        // Ensure that there's no remaining references to |vol|, which would indicate a reference
-        // cycle or other leak.
-        let volume = Arc::try_unwrap(vol.into_volume())
-            .map_err(|_| "References to vol still exist")
-            .unwrap();
-
-        std::mem::drop(root_volume);
-        filesystem.take_device().await;
-
-        Arc::try_unwrap(volume.into_store())
-            .map_err(|_| "References to store still exist")
-            .unwrap();
-        Arc::try_unwrap(device_clone).map_err(|_| "References to device still exist").unwrap();
-
-        Ok(())
+    async fn test_open_root_dir() {
+        let fixture = TestFixture::new().await;
+        let root = fixture.root();
+        root.describe().await.expect("Describe failed");
+        fixture.close().await;
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_open_root_dir() -> Result<(), Error> {
-        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
-        let filesystem = FxFilesystem::new_empty(device).await?;
-        let root_volume = root_volume(&filesystem).await?;
-        let vol =
-            FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
-        let dir = vol.root().clone();
-
-        let (dir_proxy, dir_server_end) =
-            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
-
-        dir.open(
-            ExecutionScope::new(),
-            OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE,
-            MODE_TYPE_DIRECTORY,
-            Path::empty(),
-            ServerEnd::new(dir_server_end.into_channel()),
-        );
-
-        dir_proxy.describe().await.expect("Describe to succeed");
-
-        Ok(())
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_create_dir_persists() -> Result<(), Error> {
+    async fn test_create_dir_persists() {
         let mut device = DeviceHolder::new(FakeDevice::new(2048, 512));
         for i in 0..2 {
-            let (filesystem, vol) = if i == 0 {
-                let filesystem = FxFilesystem::new_empty(device).await?;
-                let root_volume = root_volume(&filesystem).await?;
-                let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await?)
-                    .await
-                    .expect("new failed");
-                (filesystem, vol)
-            } else {
-                let filesystem = FxFilesystem::open(device).await?;
-                let root_volume = root_volume(&filesystem).await?;
-                let vol = FxVolumeAndRoot::new(root_volume.volume("vol").await?)
-                    .await
-                    .expect("new failed");
-                (filesystem, vol)
-            };
-            let dir = vol.root().clone();
-            let (dir_proxy, dir_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>()
-                .expect("Create proxy to succeed");
-
-            dir.open(
-                ExecutionScope::new(),
-                OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-                MODE_TYPE_DIRECTORY,
-                Path::empty(),
-                ServerEnd::new(dir_server_end.into_channel()),
-            );
+            let fixture = TestFixture::open(device, /*format=*/ i == 0).await;
+            let root = fixture.root();
 
             let flags =
                 if i == 0 { OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE } else { OPEN_RIGHT_READABLE };
-            open_dir_validating(&dir_proxy, flags, MODE_TYPE_DIRECTORY, "foo")
-                .await
-                .expect(&format!("Open dir iter {} failed", i));
+            let dir = open_dir_checked(&root, flags, MODE_TYPE_DIRECTORY, "foo").await;
+            close_dir_checked(dir).await;
 
-            filesystem.sync(SyncOptions::default()).await?;
-            device = filesystem.take_device().await;
+            device = fixture.close().await;
         }
-
-        Ok(())
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_open_nonexistent_file() -> Result<(), Error> {
-        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
-        let filesystem = FxFilesystem::new_empty(device).await?;
-        let root_volume = root_volume(&filesystem).await?;
-        let vol =
-            FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
-        let dir = vol.root().clone();
+    async fn test_open_nonexistent_file() {
+        let fixture = TestFixture::new().await;
+        let root = fixture.root();
 
-        let (dir_proxy, dir_server_end) =
-            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
-
-        dir.open(
-            ExecutionScope::new(),
-            OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE,
-            MODE_TYPE_DIRECTORY,
-            Path::empty(),
-            ServerEnd::new(dir_server_end.into_channel()),
+        assert_eq!(
+            open_file(&root, OPEN_RIGHT_READABLE, MODE_TYPE_FILE, "foo")
+                .await
+                .expect_err("Open succeeded")
+                .root_cause()
+                .downcast_ref::<Status>()
+                .expect("No status"),
+            &Status::NOT_FOUND,
         );
 
-        let child_proxy = open_file(&dir_proxy, OPEN_RIGHT_READABLE, MODE_TYPE_FILE, "foo")
-            .expect("Create proxy failed");
-
-        // The channel also be closed with a NOT_FOUND epitaph.
-        assert_matches!(
-            child_proxy.describe().await,
-            Err(fidl::Error::ClientChannelClosed {
-                status: Status::NOT_FOUND,
-                service_name: "(anonymous) File",
-            })
-        );
-
-        Ok(())
+        fixture.close().await;
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_create_file() -> Result<(), Error> {
-        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
-        let filesystem = FxFilesystem::new_empty(device).await?;
-        let root_volume = root_volume(&filesystem).await?;
-        let vol =
-            FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
-        let dir = vol.root().clone();
+    async fn test_create_file() {
+        let fixture = TestFixture::new().await;
+        let root = fixture.root();
 
-        let (dir_proxy, dir_server_end) =
-            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
+        let f =
+            open_file_checked(&root, OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE, MODE_TYPE_FILE, "foo")
+                .await;
+        close_file_checked(f).await;
 
-        dir.open(
-            ExecutionScope::new(),
-            OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_DIRECTORY,
-            Path::empty(),
-            ServerEnd::new(dir_server_end.into_channel()),
-        );
+        let f = open_file_checked(&root, OPEN_RIGHT_READABLE, MODE_TYPE_FILE, "foo").await;
+        close_file_checked(f).await;
 
-        open_file_validating(
-            &dir_proxy,
-            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE,
-            MODE_TYPE_FILE,
-            "foo",
-        )
-        .await
-        .expect("Create file failed");
-
-        open_file_validating(&dir_proxy, OPEN_RIGHT_READABLE, MODE_TYPE_FILE, "foo")
-            .await
-            .expect("Open file failed");
-
-        Ok(())
+        fixture.close().await;
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_create_dir_nested() -> Result<(), Error> {
-        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
-        let filesystem = FxFilesystem::new_empty(device).await?;
-        let root_volume = root_volume(&filesystem).await?;
-        let vol =
-            FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
-        let dir = vol.root().clone();
+    async fn test_create_dir_nested() {
+        let fixture = TestFixture::new().await;
+        let root = fixture.root();
 
-        let (dir_proxy, dir_server_end) =
-            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
-
-        dir.open(
-            ExecutionScope::new(),
-            OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_DIRECTORY,
-            Path::empty(),
-            ServerEnd::new(dir_server_end.into_channel()),
-        );
-
-        open_dir_validating(
-            &dir_proxy,
+        let d = open_dir_checked(
+            &root,
             OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             MODE_TYPE_DIRECTORY,
             "foo",
         )
-        .await
-        .expect("Create dir failed");
+        .await;
+        close_dir_checked(d).await;
 
-        open_dir_validating(
-            &dir_proxy,
+        let d = open_dir_checked(
+            &root,
             OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE,
             MODE_TYPE_DIRECTORY,
             "foo/bar",
         )
-        .await
-        .expect("Create nested dir failed");
+        .await;
+        close_dir_checked(d).await;
 
-        open_dir_validating(&dir_proxy, OPEN_RIGHT_READABLE, MODE_TYPE_DIRECTORY, "foo/bar")
-            .await
-            .expect("Open nested dir failed");
+        let d = open_dir_checked(&root, OPEN_RIGHT_READABLE, MODE_TYPE_DIRECTORY, "foo/bar").await;
+        close_dir_checked(d).await;
 
-        Ok(())
+        fixture.close().await;
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_strict_create_file_fails_if_present() -> Result<(), Error> {
-        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
-        let filesystem = FxFilesystem::new_empty(device).await?;
-        let root_volume = root_volume(&filesystem).await?;
-        let vol =
-            FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
-        let dir = vol.root().clone();
+    async fn test_strict_create_file_fails_if_present() {
+        let fixture = TestFixture::new().await;
+        let root = fixture.root();
 
-        let (dir_proxy, dir_server_end) =
-            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
-
-        dir.open(
-            ExecutionScope::new(),
-            OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_DIRECTORY,
-            Path::empty(),
-            ServerEnd::new(dir_server_end.into_channel()),
-        );
-
-        open_file_validating(
-            &dir_proxy,
+        let f = open_file_checked(
+            &root,
             OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_IF_ABSENT | OPEN_RIGHT_READABLE,
             MODE_TYPE_FILE,
             "foo",
         )
-        .await
-        .expect("Create file failed");
+        .await;
+        close_file_checked(f).await;
 
-        let file_proxy = open_file(
-            &dir_proxy,
-            OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_IF_ABSENT | OPEN_RIGHT_READABLE,
-            MODE_TYPE_FILE,
-            "foo",
-        )
-        .expect("Open proxy failed");
-
-        assert_matches!(
-            file_proxy.describe().await,
-            Err(fidl::Error::ClientChannelClosed {
-                status: Status::ALREADY_EXISTS,
-                service_name: "(anonymous) File",
-            })
-        );
-
-        Ok(())
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    #[ignore] // TODO(jfsulliv): Re-enable when we don't defer deleting files with 0 references.
-    async fn test_unlink_file_with_no_refs_immediately_freed() -> Result<(), Error> {
-        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
-        let filesystem = FxFilesystem::new_empty(device).await?;
-        let root_volume = root_volume(&filesystem).await?;
-        let vol =
-            FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
-        let dir = vol.root().clone();
-
-        let (dir_proxy, dir_server_end) =
-            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
-
-        dir.open(
-            ExecutionScope::new(),
-            OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_DIRECTORY,
-            Path::empty(),
-            ServerEnd::new(dir_server_end.into_channel()),
-        );
-
-        {
-            let file_proxy = open_file_validating(
-                &dir_proxy,
-                OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+        assert_eq!(
+            open_file(
+                &root,
+                OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_IF_ABSENT | OPEN_RIGHT_READABLE,
                 MODE_TYPE_FILE,
                 "foo",
             )
             .await
-            .expect("Create file failed");
+            .expect_err("Open succeeded")
+            .root_cause()
+            .downcast_ref::<Status>()
+            .expect("No status"),
+            &Status::ALREADY_EXISTS,
+        );
 
-            // Fill up the file with a lot of data, so we can verify that the extents are freed.
-            let buf = vec![0xaa as u8; 512];
-            loop {
-                match write_file_bytes(&file_proxy, buf.as_slice()).await {
-                    Ok(_) => {}
-                    Err(e) => {
-                        if let Some(status) = e.root_cause().downcast_ref::<Status>() {
-                            if status == &Status::NO_SPACE {
-                                break;
-                            }
+        fixture.close().await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    #[ignore] // TODO(jfsulliv): Re-enable when we don't defer deleting files with 0 references.
+    async fn test_unlink_file_with_no_refs_immediately_freed() {
+        let fixture = TestFixture::new().await;
+        let root = fixture.root();
+
+        let file = open_file_checked(
+            &root,
+            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            MODE_TYPE_FILE,
+            "foo",
+        )
+        .await;
+
+        // Fill up the file with a lot of data, so we can verify that the extents are freed.
+        let buf = vec![0xaa as u8; 512];
+        loop {
+            match write_file_bytes(&file, buf.as_slice()).await {
+                Ok(_) => {}
+                Err(e) => {
+                    if let Some(status) = e.root_cause().downcast_ref::<Status>() {
+                        if status == &Status::NO_SPACE {
+                            break;
                         }
-                        return Err(e);
                     }
+                    panic!("Unexpected write error {:?}", e);
                 }
             }
-
-            file_proxy.close().await?;
         }
 
-        dir_proxy
-            .unlink2("foo", UnlinkOptions::EMPTY)
-            .await
-            .expect("fidl call failed")
-            .expect("unlink failed");
+        close_file_checked(file).await;
+
+        root.unlink("foo").await.expect("unlink failed");
 
         assert_eq!(
-            open_file_validating(&dir_proxy, OPEN_RIGHT_READABLE, MODE_TYPE_FILE, "foo")
+            open_file(&root, OPEN_RIGHT_READABLE, MODE_TYPE_FILE, "foo")
                 .await
                 .expect_err("Open succeeded")
                 .root_cause()
@@ -921,58 +714,38 @@ mod tests {
         );
 
         // Create another file so we can verify that the extents were actually freed.
-        let file_proxy = open_file_validating(
-            &dir_proxy,
+        let file = open_file_checked(
+            &root,
             OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             MODE_TYPE_FILE,
             "bar",
         )
-        .await
-        .expect("Create file failed");
+        .await;
         let buf = vec![0xaa as u8; 8192];
-        write_file_bytes(&file_proxy, buf.as_slice()).await.expect("Failed to write new file");
+        write_file_bytes(&file, buf.as_slice()).await.expect("Failed to write new file");
+        close_file_checked(file).await;
 
-        Ok(())
+        fixture.close().await;
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_unlink_file() -> Result<(), Error> {
-        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
-        let filesystem = FxFilesystem::new_empty(device).await?;
-        let root_volume = root_volume(&filesystem).await?;
-        let vol =
-            FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
-        let dir = vol.root().clone();
+    async fn test_unlink_file() {
+        let fixture = TestFixture::new().await;
+        let root = fixture.root();
 
-        let (dir_proxy, dir_server_end) =
-            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
-
-        dir.open(
-            ExecutionScope::new(),
-            OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_DIRECTORY,
-            Path::empty(),
-            ServerEnd::new(dir_server_end.into_channel()),
-        );
-
-        let file_proxy = open_file_validating(
-            &dir_proxy,
+        let file = open_file_checked(
+            &root,
             OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             MODE_TYPE_FILE,
             "foo",
         )
-        .await
-        .expect("Create file failed");
-        file_proxy.close().await.expect("close failed");
+        .await;
+        close_file_checked(file).await;
 
-        dir_proxy
-            .unlink2("foo", UnlinkOptions::EMPTY)
-            .await
-            .expect("FIDL call failed")
-            .expect("unlink failed");
+        Status::ok(root.unlink("foo").await.expect("FIDL call failed")).expect("unlink failed");
 
         assert_eq!(
-            open_file_validating(&dir_proxy, OPEN_RIGHT_READABLE, MODE_TYPE_FILE, "foo")
+            open_file(&root, OPEN_RIGHT_READABLE, MODE_TYPE_FILE, "foo")
                 .await
                 .expect_err("Open succeeded")
                 .root_cause()
@@ -981,50 +754,30 @@ mod tests {
             &Status::NOT_FOUND,
         );
 
-        Ok(())
+        fixture.close().await;
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_unlink_file_with_active_references() -> Result<(), Error> {
-        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
-        let filesystem = FxFilesystem::new_empty(device).await?;
-        let root_volume = root_volume(&filesystem).await?;
-        let vol =
-            FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
-        let dir = vol.root().clone();
+    async fn test_unlink_file_with_active_references() {
+        let fixture = TestFixture::new().await;
+        let root = fixture.root();
 
-        let (dir_proxy, dir_server_end) =
-            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
-
-        dir.open(
-            ExecutionScope::new(),
-            OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_DIRECTORY,
-            Path::empty(),
-            ServerEnd::new(dir_server_end.into_channel()),
-        );
-
-        let file_proxy = open_file_validating(
-            &dir_proxy,
+        let file = open_file_checked(
+            &root,
             OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             MODE_TYPE_FILE,
             "foo",
         )
-        .await
-        .expect("Create file failed");
+        .await;
 
         let buf = vec![0xaa as u8; 512];
-        write_file_bytes(&file_proxy, buf.as_slice()).await.expect("write failed");
+        write_file_bytes(&file, buf.as_slice()).await.expect("write failed");
 
-        dir_proxy
-            .unlink2("foo", UnlinkOptions::EMPTY)
-            .await
-            .expect("FIDL call failed")
-            .expect("unlink failed");
+        Status::ok(root.unlink("foo").await.expect("FIDL call failed")).expect("unlink failed");
 
         // The child should immediately appear unlinked...
         assert_eq!(
-            open_file_validating(&dir_proxy, OPEN_RIGHT_READABLE, MODE_TYPE_FILE, "foo")
+            open_file(&root, OPEN_RIGHT_READABLE, MODE_TYPE_FILE, "foo")
                 .await
                 .expect_err("Open succeeded")
                 .root_cause()
@@ -1034,184 +787,115 @@ mod tests {
         );
 
         // But its contents should still be readable from the other handle.
-        file_proxy.seek(0, SeekOrigin::Start).await.expect("seek failed");
-        let rbuf = read_file_bytes(&file_proxy).await.expect("read failed");
+        file.seek(0, SeekOrigin::Start).await.expect("seek failed");
+        let rbuf = read_file_bytes(&file).await.expect("read failed");
         assert_eq!(rbuf, buf);
+        close_file_checked(file).await;
 
-        Ok(())
+        fixture.close().await;
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_unlink_dir_with_children_fails() -> Result<(), Error> {
-        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
-        let filesystem = FxFilesystem::new_empty(device).await?;
-        let root_volume = root_volume(&filesystem).await?;
-        let vol =
-            FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
-        let dir = vol.root().clone();
+    async fn test_unlink_dir_with_children_fails() {
+        let fixture = TestFixture::new().await;
+        let root = fixture.root();
 
-        let (dir_proxy, dir_server_end) =
-            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
-
-        dir.open(
-            ExecutionScope::new(),
-            OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_DIRECTORY,
-            Path::empty(),
-            ServerEnd::new(dir_server_end.into_channel()),
-        );
-
-        let subdir_proxy = open_dir_validating(
-            &dir_proxy,
+        let dir = open_dir_checked(
+            &root,
             OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             MODE_TYPE_DIRECTORY,
             "foo",
         )
-        .await
-        .expect("Create directory failed");
-        open_file_validating(
-            &subdir_proxy,
-            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE,
-            MODE_TYPE_FILE,
-            "bar",
-        )
-        .await
-        .expect("Create file failed");
+        .await;
+        let f =
+            open_file_checked(&dir, OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE, MODE_TYPE_FILE, "bar")
+                .await;
+        close_file_checked(f).await;
 
         assert_eq!(
-            dir_proxy
-                .unlink2("foo", UnlinkOptions::EMPTY)
+            Status::from_raw(root.unlink("foo").await.expect("FIDL call failed")),
+            Status::NOT_EMPTY
+        );
+
+        Status::ok(dir.unlink("bar").await.expect("FIDL call failed")).expect("unlink failed");
+        Status::ok(root.unlink("foo").await.expect("FIDL call failed")).expect("unlink failed");
+
+        close_dir_checked(dir).await;
+
+        fixture.close().await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_unlink_dir_makes_directory_immutable() {
+        let fixture = TestFixture::new().await;
+        let root = fixture.root();
+
+        let dir = open_dir_checked(
+            &root,
+            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            MODE_TYPE_DIRECTORY,
+            "foo",
+        )
+        .await;
+
+        Status::ok(root.unlink("foo").await.expect("FIDL call failed")).expect("unlink failed");
+
+        assert_eq!(
+            open_file(&dir, OPEN_RIGHT_READABLE | OPEN_FLAG_CREATE, MODE_TYPE_FILE, "bar")
                 .await
-                .expect("FIDL call failed")
-                .map_err(Status::from_raw),
-            Err(Status::NOT_EMPTY)
-        );
-
-        subdir_proxy
-            .unlink2("bar", UnlinkOptions::EMPTY)
-            .await
-            .expect("FIDL call failed")
-            .expect("unlink failed");
-        dir_proxy
-            .unlink2("foo", UnlinkOptions::EMPTY)
-            .await
-            .expect("FIDL call failed")
-            .expect("unlink failed");
-
-        Ok(())
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_unlink_dir_makes_directory_immutable() -> Result<(), Error> {
-        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
-        let filesystem = FxFilesystem::new_empty(device).await?;
-        let root_volume = root_volume(&filesystem).await?;
-        let vol =
-            FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
-        let dir = vol.root().clone();
-
-        let (dir_proxy, dir_server_end) =
-            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
-
-        dir.open(
-            ExecutionScope::new(),
-            OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_DIRECTORY,
-            Path::empty(),
-            ServerEnd::new(dir_server_end.into_channel()),
-        );
-
-        let subdir_proxy = open_dir_validating(
-            &dir_proxy,
-            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_DIRECTORY,
-            "foo",
-        )
-        .await
-        .expect("Create directory failed");
-
-        dir_proxy
-            .unlink2("foo", UnlinkOptions::EMPTY)
-            .await
-            .expect("FIDL call failed")
-            .expect("unlink failed");
-
-        assert_eq!(
-            open_file_validating(
-                &subdir_proxy,
-                OPEN_RIGHT_READABLE | OPEN_FLAG_CREATE,
-                MODE_TYPE_FILE,
-                "bar"
-            )
-            .await
-            .expect_err("Create file succeeded")
-            .root_cause()
-            .downcast_ref::<Status>()
-            .expect("No status"),
+                .expect_err("Create file succeeded")
+                .root_cause()
+                .downcast_ref::<Status>()
+                .expect("No status"),
             &Status::ACCESS_DENIED,
         );
 
-        Ok(())
+        close_dir_checked(dir).await;
+
+        fixture.close().await;
     }
 
     #[fasync::run(10, test)]
-    async fn test_unlink_directory_with_children_race() -> Result<(), Error> {
-        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
-        let filesystem = FxFilesystem::new_empty(device).await?;
-        let root_volume = root_volume(&filesystem).await?;
-        let vol =
-            FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
-        let dir = vol.root().clone();
-
-        let (dir_proxy, dir_server_end) =
-            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
-
-        dir.open(
-            ExecutionScope::new(),
-            OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_DIRECTORY,
-            Path::empty(),
-            ServerEnd::new(dir_server_end.into_channel()),
-        );
+    async fn test_unlink_directory_with_children_race() {
+        let fixture = TestFixture::new().await;
+        let root = fixture.root();
 
         const PARENT: &str = "foo";
         const CHILD: &str = "bar";
         const GRANDCHILD: &str = "baz";
-        open_dir_validating(
-            &dir_proxy,
+        open_dir_checked(
+            &root,
             OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             MODE_TYPE_DIRECTORY,
             PARENT,
         )
-        .await
-        .expect("Create dir failed");
+        .await;
 
         let open_parent = || async {
-            open_dir_validating(
-                &dir_proxy,
+            open_dir_checked(
+                &root,
                 OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
                 MODE_TYPE_DIRECTORY,
                 PARENT,
             )
             .await
-            .expect("open dir failed")
         };
         let parent = open_parent().await;
 
         // Each iteration proceeds as follows:
         //  - Initialize a directory foo/bar/. (This might still be around from the previous
         //    iteration, which is fine.)
-        //  - In one thread, try to unlink foo/bar/.
-        //  - In another thread, try to add a file foo/bar/baz.
+        //  - In one task, try to unlink foo/bar/.
+        //  - In another task, try to add a file foo/bar/baz.
         for _ in 0..100 {
-            open_dir_validating(
+            let d = open_dir_checked(
                 &parent,
                 OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
                 MODE_TYPE_DIRECTORY,
                 CHILD,
             )
-            .await
-            .expect("Create dir failed");
+            .await;
+            close_dir_checked(d).await;
 
             let parent = open_parent().await;
             let deleter = fasync::Task::spawn(async move {
@@ -1227,11 +911,12 @@ mod tests {
                     Err(Status::NOT_EMPTY) => {}
                     Err(e) => panic!("Unexpected status from unlink: {:?}", e),
                 };
+                close_dir_checked(parent).await;
             });
 
             let parent = open_parent().await;
             let writer = fasync::Task::spawn(async move {
-                let child_or = open_dir_validating(
+                let child_or = open_dir(
                     &parent,
                     OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
                     MODE_TYPE_DIRECTORY,
@@ -1244,10 +929,12 @@ mod tests {
                         e.root_cause().downcast_ref::<Status>().expect("No status"),
                         &Status::NOT_FOUND
                     );
+                    close_dir_checked(parent).await;
                     return;
                 }
                 let child = child_or.unwrap();
-                match open_file_validating(
+                child.describe().await.expect("describe failed");
+                match open_file(
                     &child,
                     OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE,
                     MODE_TYPE_FILE,
@@ -1256,13 +943,11 @@ mod tests {
                 .await
                 {
                     Ok(grandchild) => {
+                        grandchild.describe().await.expect("describe failed");
+                        close_file_checked(grandchild).await;
                         // We added the child before the directory was deleted; go ahead and
                         // clean up.
-                        grandchild.close().await.expect("close failed");
-                        child
-                            .unlink2(GRANDCHILD, UnlinkOptions::EMPTY)
-                            .await
-                            .expect("FIDL call failed")
+                        Status::ok(child.unlink(GRANDCHILD).await.expect("FIDL call failed"))
                             .expect("unlink failed");
                     }
                     Err(e) => {
@@ -1274,60 +959,46 @@ mod tests {
                         );
                     }
                 };
+                close_dir_checked(child).await;
+                close_dir_checked(parent).await;
             });
             writer.await;
             deleter.await;
         }
 
-        Ok(())
+        close_dir_checked(parent).await;
+        fixture.close().await;
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_readdir() -> Result<(), Error> {
-        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
-        let filesystem = FxFilesystem::new_empty(device).await?;
-        let root_volume = root_volume(&filesystem).await?;
-        let vol =
-            FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
-        let dir = vol.root().clone();
-
-        let (root_proxy, dir_server_end) =
-            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
-        dir.open(
-            ExecutionScope::new(),
-            OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_DIRECTORY,
-            Path::empty(),
-            ServerEnd::new(dir_server_end.into_channel()),
-        );
+    async fn test_readdir() {
+        let fixture = TestFixture::new().await;
+        let root = fixture.root();
 
         let open_dir = || {
-            open_dir_validating(
-                &root_proxy,
+            open_dir_checked(
+                &root,
                 OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
                 MODE_TYPE_DIRECTORY,
                 "foo",
             )
         };
-        let dir_proxy = open_dir().await.expect("Open dir failed");
+        let parent = Arc::new(open_dir().await);
 
         let files = ["eenie", "meenie", "minie", "moe"];
         for file in &files {
-            let file_proxy =
-                open_file_validating(&dir_proxy, OPEN_FLAG_CREATE, MODE_TYPE_FILE, file)
-                    .await
-                    .expect("Create file failed");
-            file_proxy.close().await.expect("close failed");
+            let file =
+                open_file_checked(parent.as_ref(), OPEN_FLAG_CREATE, MODE_TYPE_FILE, file).await;
+            close_file_checked(file).await;
         }
         let dirs = ["fee", "fi", "fo", "fum"];
         for dir in &dirs {
-            let proxy = open_dir_validating(&dir_proxy, OPEN_FLAG_CREATE, MODE_TYPE_DIRECTORY, dir)
-                .await
-                .expect("Create dir failed");
-            proxy.close().await.expect("close failed");
+            let dir =
+                open_dir_checked(parent.as_ref(), OPEN_FLAG_CREATE, MODE_TYPE_DIRECTORY, dir).await;
+            close_dir_checked(dir).await;
         }
 
-        let readdir = |dir: DirectoryProxy| async move {
+        let readdir = |dir: Arc<DirectoryProxy>| async move {
             let status = dir.rewind().await.expect("FIDL call failed");
             Status::ok(status).expect("rewind failed");
             let (status, buf) = dir.read_dirents(MAX_BUF).await.expect("FIDL call failed");
@@ -1349,58 +1020,37 @@ mod tests {
                 .map(|&name| DirEntry { name: name.to_owned(), kind: DirentKind::Directory }),
         );
         expected_entries.sort_unstable();
-        assert_eq!(expected_entries, readdir(dir_proxy).await);
+        assert_eq!(expected_entries, readdir(Arc::clone(&parent)).await);
 
         // Remove an entry.
-        let dir_proxy = open_dir().await.expect("Open dir failed");
         Status::ok(
-            dir_proxy
-                .unlink(&expected_entries.pop().unwrap().name)
-                .await
-                .expect("FIDL call failed"),
+            parent.unlink(&expected_entries.pop().unwrap().name).await.expect("FIDL call failed"),
         )
         .expect("unlink failed");
 
-        assert_eq!(expected_entries, readdir(dir_proxy).await);
+        assert_eq!(expected_entries, readdir(Arc::clone(&parent)).await);
 
-        Ok(())
+        close_dir_checked(Arc::try_unwrap(parent).unwrap()).await;
+        fixture.close().await;
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_readdir_multiple_calls() -> Result<(), Error> {
-        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
-        let filesystem = FxFilesystem::new_empty(device).await?;
-        let root_volume = root_volume(&filesystem).await?;
-        let vol =
-            FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
-        let dir = vol.root().clone();
+    async fn test_readdir_multiple_calls() {
+        let fixture = TestFixture::new().await;
+        let root = fixture.root();
 
-        let (root_proxy, dir_server_end) =
-            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
-        dir.open(
-            ExecutionScope::new(),
-            OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_DIRECTORY,
-            Path::empty(),
-            ServerEnd::new(dir_server_end.into_channel()),
-        );
-
-        let dir_proxy = open_dir_validating(
-            &root_proxy,
+        let parent = open_dir_checked(
+            &root,
             OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             MODE_TYPE_DIRECTORY,
             "foo",
         )
-        .await
-        .expect("Create dir failed");
+        .await;
 
         let files = ["a", "b"];
         for file in &files {
-            let file_proxy =
-                open_file_validating(&dir_proxy, OPEN_FLAG_CREATE, MODE_TYPE_FILE, file)
-                    .await
-                    .expect("Create file failed");
-            file_proxy.close().await.expect("close failed");
+            let file = open_file_checked(&parent, OPEN_FLAG_CREATE, MODE_TYPE_FILE, file).await;
+            close_file_checked(file).await;
         }
 
         // TODO(jfsulliv): Magic number; can we get this from io.fidl?
@@ -1419,24 +1069,22 @@ mod tests {
             DirEntry { name: ".".to_owned(), kind: DirentKind::Directory },
             DirEntry { name: "a".to_owned(), kind: DirentKind::File },
         ];
-        let (status, buf) =
-            dir_proxy.read_dirents(2 * BUFFER_SIZE).await.expect("FIDL call failed");
+        let (status, buf) = parent.read_dirents(2 * BUFFER_SIZE).await.expect("FIDL call failed");
         Status::ok(status).expect("read_dirents failed");
         assert_eq!(expected_entries, parse_entries(&buf));
 
         let expected_entries = vec![DirEntry { name: "b".to_owned(), kind: DirentKind::File }];
-        let (status, buf) =
-            dir_proxy.read_dirents(2 * BUFFER_SIZE).await.expect("FIDL call failed");
+        let (status, buf) = parent.read_dirents(2 * BUFFER_SIZE).await.expect("FIDL call failed");
         Status::ok(status).expect("read_dirents failed");
         assert_eq!(expected_entries, parse_entries(&buf));
 
         // Subsequent calls yield nothing.
         let expected_entries: Vec<DirEntry> = vec![];
-        let (status, buf) =
-            dir_proxy.read_dirents(2 * BUFFER_SIZE).await.expect("FIDL call failed");
+        let (status, buf) = parent.read_dirents(2 * BUFFER_SIZE).await.expect("FIDL call failed");
         Status::ok(status).expect("read_dirents failed");
         assert_eq!(expected_entries, parse_entries(&buf));
 
-        Ok(())
+        close_dir_checked(parent).await;
+        fixture.close().await;
     }
 }

@@ -130,7 +130,7 @@ impl File for FxFile {
         // TODO(jfsulliv): this needs to be made atomic. We already lock at the Device::write level
         // but we need to lift a lock higher.
         let offset = self.handle.get_size();
-        let bytes_written = self.write_at(offset, content).await?;
+        let bytes_written = self.write_at(offset, content).await.expect("FIDL call failed");
         Ok((bytes_written, offset + bytes_written))
     }
 
@@ -176,325 +176,214 @@ mod tests {
     use {
         crate::{
             device::DeviceHolder,
-            object_store::{filesystem::SyncOptions, FxFilesystem},
-            server::{testing::open_file_validating, volume::FxVolumeAndRoot},
+            server::testing::{close_file_checked, open_file_checked, TestFixture},
             testing::fake_device::FakeDevice,
-            volume::root_volume,
         },
-        anyhow::Error,
-        fidl::endpoints::ServerEnd,
         fidl_fuchsia_io::{
-            self as fio, DirectoryMarker, SeekOrigin, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE,
-            OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_DIRECTORY, OPEN_RIGHT_READABLE,
-            OPEN_RIGHT_WRITABLE,
+            self as fio, SeekOrigin, MODE_TYPE_FILE, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE,
+            OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
         },
         fuchsia_async as fasync,
         fuchsia_zircon::Status,
         io_util::{read_file_bytes, write_file_bytes},
-        vfs::{directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path},
     };
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_empty_file() -> Result<(), Error> {
-        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
-        let filesystem = FxFilesystem::new_empty(device).await?;
-        let root_volume = root_volume(&filesystem).await?;
-        let vol =
-            FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
-        let dir = vol.root().clone();
+    async fn test_empty_file() {
+        let fixture = TestFixture::new().await;
+        let root = fixture.root();
 
-        let (dir_proxy, dir_server_end) =
-            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
+        let file =
+            open_file_checked(&root, OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE, MODE_TYPE_FILE, "foo")
+                .await;
 
-        dir.open(
-            ExecutionScope::new(),
-            OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_DIRECTORY,
-            Path::empty(),
-            ServerEnd::new(dir_server_end.into_channel()),
-        );
-
-        let file_proxy = open_file_validating(
-            &dir_proxy,
-            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE,
-            MODE_TYPE_FILE,
-            "foo",
-        )
-        .await
-        .expect("File open failed");
-
-        let (status, buf) = file_proxy.read(fio::MAX_BUF).await?;
+        let (status, buf) = file.read(fio::MAX_BUF).await.expect("FIDL call failed");
         Status::ok(status).expect("File read was successful");
         assert!(buf.is_empty());
 
-        Ok(())
+        close_file_checked(file).await;
+        fixture.close().await;
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_write_read() -> Result<(), Error> {
-        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
-        let filesystem = FxFilesystem::new_empty(device).await?;
-        let root_volume = root_volume(&filesystem).await?;
-        let vol =
-            FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
-        let dir = vol.root().clone();
+    async fn test_write_read() {
+        let fixture = TestFixture::new().await;
+        let root = fixture.root();
 
-        let (dir_proxy, dir_server_end) =
-            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
-
-        dir.open(
-            ExecutionScope::new(),
-            OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_DIRECTORY,
-            Path::empty(),
-            ServerEnd::new(dir_server_end.into_channel()),
-        );
-
-        let file_proxy = open_file_validating(
-            &dir_proxy,
+        let file = open_file_checked(
+            &root,
             OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             MODE_TYPE_FILE,
             "foo",
         )
-        .await
-        .expect("file open failed");
+        .await;
 
         let inputs = vec!["hello, ", "world!"];
         let expected_output = "hello, world!";
         for input in inputs {
-            let (status, bytes_written) = file_proxy.write(input.as_bytes()).await?;
+            let (status, bytes_written) = file.write(input.as_bytes()).await.expect("write failed");
             Status::ok(status).expect("File write was successful");
             assert_eq!(bytes_written as usize, input.as_bytes().len());
         }
 
-        let (status, buf) = file_proxy.read_at(fio::MAX_BUF, 0).await?;
+        let (status, buf) = file.read_at(fio::MAX_BUF, 0).await.expect("read_at failed");
         Status::ok(status).expect("File read was successful");
         assert_eq!(buf.len(), expected_output.as_bytes().len());
         assert!(buf.iter().eq(expected_output.as_bytes().iter()));
 
-        Ok(())
+        close_file_checked(file).await;
+        fixture.close().await;
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_writes_persist() -> Result<(), Error> {
+    async fn test_writes_persist() {
         let mut device = DeviceHolder::new(FakeDevice::new(2048, 512));
         for i in 0..2 {
-            let (filesystem, vol) = if i == 0 {
-                let filesystem = FxFilesystem::new_empty(device).await?;
-                let root_volume = root_volume(&filesystem).await?;
-                let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await?)
-                    .await
-                    .expect("new failed");
-                (filesystem, vol)
-            } else {
-                let filesystem = FxFilesystem::open(device).await?;
-                let root_volume = root_volume(&filesystem).await?;
-                let vol = FxVolumeAndRoot::new(root_volume.volume("vol").await?)
-                    .await
-                    .expect("new failed");
-                (filesystem, vol)
-            };
-            let dir = vol.root().clone();
-            let (dir_proxy, dir_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>()
-                .expect("Create proxy to succeed");
-
-            dir.open(
-                ExecutionScope::new(),
-                OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-                MODE_TYPE_DIRECTORY,
-                Path::empty(),
-                ServerEnd::new(dir_server_end.into_channel()),
-            );
+            let fixture = TestFixture::open(device, /*format=*/ i == 0).await;
+            let root = fixture.root();
 
             let flags = if i == 0 {
                 OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE
             } else {
                 OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE
             };
-            let file_proxy = open_file_validating(&dir_proxy, flags, MODE_TYPE_FILE, "foo")
-                .await
-                .expect(&format!("Open file iter {} failed", i));
+            let file = open_file_checked(&root, flags, MODE_TYPE_FILE, "foo").await;
 
             if i == 0 {
-                let (status, _) = file_proxy.write(&vec![0xaa as u8; 8192]).await?;
+                let (status, _) =
+                    file.write(&vec![0xaa as u8; 8192]).await.expect("FIDL call failed");
                 Status::ok(status).expect("File write was successful");
             } else {
-                let (status, buf) = file_proxy.read(8192).await?;
+                let (status, buf) = file.read(8192).await.expect("FIDL call failed");
                 Status::ok(status).expect("File read was successful");
                 assert_eq!(buf, vec![0xaa as u8; 8192]);
             }
 
-            filesystem.sync(SyncOptions::default()).await?;
-            device = filesystem.take_device().await;
+            close_file_checked(file).await;
+            device = fixture.close().await;
         }
-
-        Ok(())
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_append() -> Result<(), Error> {
-        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
-        let filesystem = FxFilesystem::new_empty(device).await?;
-        let root_volume = root_volume(&filesystem).await?;
-        let vol =
-            FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
-        let dir = vol.root().clone();
-
-        let (dir_proxy, dir_server_end) =
-            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
-
-        dir.open(
-            ExecutionScope::new(),
-            OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_DIRECTORY,
-            Path::empty(),
-            ServerEnd::new(dir_server_end.into_channel()),
-        );
+    async fn test_append() {
+        let fixture = TestFixture::new().await;
+        let root = fixture.root();
 
         let inputs = vec!["hello, ", "world!"];
         let expected_output = "hello, world!";
         for input in inputs {
-            let file_proxy = open_file_validating(
-                &dir_proxy,
+            let file = open_file_checked(
+                &root,
                 OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_APPEND,
                 MODE_TYPE_FILE,
                 "foo",
             )
-            .await
-            .expect("file open failed");
+            .await;
 
-            let (status, bytes_written) = file_proxy.write(input.as_bytes()).await?;
+            let (status, bytes_written) =
+                file.write(input.as_bytes()).await.expect("FIDL call failed");
             Status::ok(status).expect("File write was successful");
             assert_eq!(bytes_written as usize, input.as_bytes().len());
         }
 
-        let file_proxy =
-            open_file_validating(&dir_proxy, OPEN_RIGHT_READABLE, MODE_TYPE_FILE, "foo")
-                .await
-                .expect("file open failed");
-        let (status, buf) = file_proxy.read_at(fio::MAX_BUF, 0).await?;
+        let file = open_file_checked(&root, OPEN_RIGHT_READABLE, MODE_TYPE_FILE, "foo").await;
+        let (status, buf) = file.read_at(fio::MAX_BUF, 0).await.expect("FIDL call failed");
         Status::ok(status).expect("File read was successful");
         assert_eq!(buf.len(), expected_output.as_bytes().len());
         assert!(buf.iter().eq(expected_output.as_bytes().iter()));
 
-        Ok(())
+        close_file_checked(file).await;
+        fixture.close().await;
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_seek() -> Result<(), Error> {
-        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
-        let filesystem = FxFilesystem::new_empty(device).await?;
-        let root_volume = root_volume(&filesystem).await?;
-        let vol =
-            FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
-        let dir = vol.root().clone();
+    async fn test_seek() {
+        let fixture = TestFixture::new().await;
+        let root = fixture.root();
 
-        let (dir_proxy, dir_server_end) =
-            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
-
-        dir.open(
-            ExecutionScope::new(),
-            OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_DIRECTORY,
-            Path::empty(),
-            ServerEnd::new(dir_server_end.into_channel()),
-        );
-
-        let file_proxy = open_file_validating(
-            &dir_proxy,
+        let file = open_file_checked(
+            &root,
             OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             MODE_TYPE_FILE,
             "foo",
         )
-        .await
-        .expect("file open failed");
+        .await;
 
         let input = "hello, world!";
-        let (status, _bytes_written) = file_proxy.write(input.as_bytes()).await?;
+        let (status, _bytes_written) =
+            file.write(input.as_bytes()).await.expect("FIDL call failed");
         Status::ok(status).expect("File write was successful");
 
         {
-            let (status, offset) = file_proxy.seek(0, SeekOrigin::Start).await?;
+            let (status, offset) = file.seek(0, SeekOrigin::Start).await.expect("FIDL call failed");
             assert_eq!(offset, 0);
             Status::ok(status).expect("seek was successful");
-            let (status, buf) = file_proxy.read(5).await?;
+            let (status, buf) = file.read(5).await.expect("FIDL call failed");
             Status::ok(status).expect("File read was successful");
             assert!(buf.iter().eq("hello".as_bytes().into_iter()));
         }
         {
-            let (status, offset) = file_proxy.seek(2, SeekOrigin::Current).await?;
+            let (status, offset) =
+                file.seek(2, SeekOrigin::Current).await.expect("FIDL call failed");
             assert_eq!(offset, 7);
             Status::ok(status).expect("seek was successful");
-            let (status, buf) = file_proxy.read(5).await?;
+            let (status, buf) = file.read(5).await.expect("FIDL call failed");
             Status::ok(status).expect("File read was successful");
             assert!(buf.iter().eq("world".as_bytes().into_iter()));
         }
         {
-            let (status, offset) = file_proxy.seek(-5, SeekOrigin::Current).await?;
+            let (status, offset) =
+                file.seek(-5, SeekOrigin::Current).await.expect("FIDL call failed");
             assert_eq!(offset, 7);
             Status::ok(status).expect("seek was successful");
-            let (status, buf) = file_proxy.read(5).await?;
+            let (status, buf) = file.read(5).await.expect("FIDL call failed");
             Status::ok(status).expect("File read was successful");
             assert!(buf.iter().eq("world".as_bytes().into_iter()));
         }
         {
-            let (status, offset) = file_proxy.seek(-1, SeekOrigin::End).await?;
+            let (status, offset) = file.seek(-1, SeekOrigin::End).await.expect("FIDL call failed");
             assert_eq!(offset, 12);
             Status::ok(status).expect("seek was successful");
-            let (status, buf) = file_proxy.read(1).await?;
+            let (status, buf) = file.read(1).await.expect("FIDL call failed");
             Status::ok(status).expect("File read was successful");
             assert!(buf.iter().eq("!".as_bytes().into_iter()));
         }
 
-        Ok(())
+        close_file_checked(file).await;
+        fixture.close().await;
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_truncate_extend() -> Result<(), Error> {
-        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
-        let filesystem = FxFilesystem::new_empty(device).await?;
-        let root_volume = root_volume(&filesystem).await?;
-        let vol =
-            FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
-        let dir = vol.root().clone();
+    async fn test_truncate_extend() {
+        let fixture = TestFixture::new().await;
+        let root = fixture.root();
 
-        let (dir_proxy, dir_server_end) =
-            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
-
-        dir.open(
-            ExecutionScope::new(),
-            OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_DIRECTORY,
-            Path::empty(),
-            ServerEnd::new(dir_server_end.into_channel()),
-        );
-
-        let file_proxy = open_file_validating(
-            &dir_proxy,
+        let file = open_file_checked(
+            &root,
             OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             MODE_TYPE_FILE,
             "foo",
         )
-        .await
-        .expect("file open failed");
+        .await;
 
         let input = "hello, world!";
         let len: usize = 16 * 1024;
 
-        let (status, _bytes_written) = file_proxy.write(input.as_bytes()).await?;
+        let (status, _bytes_written) =
+            file.write(input.as_bytes()).await.expect("FIDL call failed");
         Status::ok(status).expect("File write was successful");
 
-        let (status, offset) = file_proxy.seek(0, SeekOrigin::Start).await?;
+        let (status, offset) = file.seek(0, SeekOrigin::Start).await.expect("FIDL call failed");
         assert_eq!(offset, 0);
         Status::ok(status).expect("Seek was successful");
 
-        let status = file_proxy.truncate(len as u64).await?;
+        let status = file.truncate(len as u64).await.expect("FIDL call failed");
         Status::ok(status).expect("File truncate was successful");
 
         let mut expected_buf = vec![0 as u8; len];
         expected_buf[..input.as_bytes().len()].copy_from_slice(input.as_bytes());
 
-        let buf = read_file_bytes(&file_proxy).await.expect("File read was successful");
+        let buf = read_file_bytes(&file).await.expect("File read was successful");
         assert_eq!(buf.len(), len);
         assert_eq!(buf, expected_buf);
 
@@ -502,48 +391,33 @@ mod tests {
         expected_buf[len - 1..].copy_from_slice("a".as_bytes());
 
         let (status, _bytes_written) =
-            file_proxy.write_at("a".as_bytes(), (len - 1) as u64).await?;
+            file.write_at("a".as_bytes(), (len - 1) as u64).await.expect("FIDL call failed");
         Status::ok(status).expect("File write was successful");
 
-        let (status, offset) = file_proxy.seek(0, SeekOrigin::Start).await?;
+        let (status, offset) = file.seek(0, SeekOrigin::Start).await.expect("FIDL call failed");
         assert_eq!(offset, 0);
         Status::ok(status).expect("Seek was successful");
 
-        let buf = read_file_bytes(&file_proxy).await.expect("File read was successful");
+        let buf = read_file_bytes(&file).await.expect("File read was successful");
         assert_eq!(buf.len(), len);
         assert_eq!(buf, expected_buf);
 
-        Ok(())
+        close_file_checked(file).await;
+        fixture.close().await;
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_truncate_shrink() -> Result<(), Error> {
-        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
-        let filesystem = FxFilesystem::new_empty(device).await?;
-        let root_volume = root_volume(&filesystem).await?;
-        let vol =
-            FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
-        let dir = vol.root().clone();
+    async fn test_truncate_shrink() {
+        let fixture = TestFixture::new().await;
+        let root = fixture.root();
 
-        let (dir_proxy, dir_server_end) =
-            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
-
-        dir.open(
-            ExecutionScope::new(),
-            OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_DIRECTORY,
-            Path::empty(),
-            ServerEnd::new(dir_server_end.into_channel()),
-        );
-
-        let file_proxy = open_file_validating(
-            &dir_proxy,
+        let file = open_file_checked(
+            &root,
             OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             MODE_TYPE_FILE,
             "foo",
         )
-        .await
-        .expect("file open failed");
+        .await;
 
         let len: usize = 2 * 1024;
         let input = {
@@ -555,21 +429,21 @@ mod tests {
         };
         let short_len: usize = 513;
 
-        write_file_bytes(&file_proxy, &input).await.expect("File write was successful");
+        write_file_bytes(&file, &input).await.expect("File write was successful");
 
-        let status = file_proxy.truncate(short_len as u64).await?;
+        let status = file.truncate(short_len as u64).await.expect("truncate failed");
         Status::ok(status).expect("File truncate was successful");
 
-        let (status, offset) = file_proxy.seek(0, SeekOrigin::Start).await?;
+        let (status, offset) = file.seek(0, SeekOrigin::Start).await.expect("FIDL call failed");
         assert_eq!(offset, 0);
         Status::ok(status).expect("Seek was successful");
 
-        let buf = read_file_bytes(&file_proxy).await.expect("File read was successful");
+        let buf = read_file_bytes(&file).await.expect("File read was successful");
         assert_eq!(buf.len(), short_len);
         assert_eq!(buf, input[..short_len]);
 
         // Re-truncate to the original length and verify the data's zeroed.
-        let status = file_proxy.truncate(len as u64).await?;
+        let status = file.truncate(len as u64).await.expect("FIDL call failed");
         Status::ok(status).expect("File truncate was successful");
 
         let expected_buf = {
@@ -578,45 +452,30 @@ mod tests {
             v
         };
 
-        let (status, offset) = file_proxy.seek(0, SeekOrigin::Start).await?;
+        let (status, offset) = file.seek(0, SeekOrigin::Start).await.expect("seek failed");
         assert_eq!(offset, 0);
         Status::ok(status).expect("Seek was successful");
 
-        let buf = read_file_bytes(&file_proxy).await.expect("File read was successful");
+        let buf = read_file_bytes(&file).await.expect("File read was successful");
         assert_eq!(buf.len(), len);
         assert_eq!(buf, expected_buf);
 
-        Ok(())
+        close_file_checked(file).await;
+        fixture.close().await;
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_truncate_shrink_repeated() -> Result<(), Error> {
-        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
-        let filesystem = FxFilesystem::new_empty(device).await?;
-        let root_volume = root_volume(&filesystem).await?;
-        let vol =
-            FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
-        let dir = vol.root().clone();
+    async fn test_truncate_shrink_repeated() {
+        let fixture = TestFixture::new().await;
+        let root = fixture.root();
 
-        let (dir_proxy, dir_server_end) =
-            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("Create proxy to succeed");
-
-        dir.open(
-            ExecutionScope::new(),
-            OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            MODE_TYPE_DIRECTORY,
-            Path::empty(),
-            ServerEnd::new(dir_server_end.into_channel()),
-        );
-
-        let file_proxy = open_file_validating(
-            &dir_proxy,
+        let file = open_file_checked(
+            &root,
             OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             MODE_TYPE_FILE,
             "foo",
         )
-        .await
-        .expect("file open failed");
+        .await;
 
         let orig_len: usize = 4 * 1024;
         let mut len = orig_len;
@@ -629,26 +488,26 @@ mod tests {
         };
         let short_len: usize = 513;
 
-        write_file_bytes(&file_proxy, &input).await.expect("File write was successful");
+        write_file_bytes(&file, &input).await.expect("File write was successful");
 
         while len > short_len {
             let to_truncate = std::cmp::min(len - short_len, 512);
             len -= to_truncate;
-            let status = file_proxy.truncate(len as u64).await?;
+            let status = file.truncate(len as u64).await.expect("FIDL call failed");
             Status::ok(status).expect("File truncate was successful");
             len -= to_truncate;
         }
 
-        let (status, offset) = file_proxy.seek(0, SeekOrigin::Start).await?;
+        let (status, offset) = file.seek(0, SeekOrigin::Start).await.expect("truncate failed");
         assert_eq!(offset, 0);
         Status::ok(status).expect("Seek was successful");
 
-        let buf = read_file_bytes(&file_proxy).await.expect("File read was successful");
+        let buf = read_file_bytes(&file).await.expect("File read was successful");
         assert_eq!(buf.len(), short_len);
         assert_eq!(buf, input[..short_len]);
 
         // Re-truncate to the original length and verify the data's zeroed.
-        let status = file_proxy.truncate(orig_len as u64).await?;
+        let status = file.truncate(orig_len as u64).await.expect("FIDL call failed");
         Status::ok(status).expect("File truncate was successful");
 
         let expected_buf = {
@@ -657,14 +516,15 @@ mod tests {
             v
         };
 
-        let (status, offset) = file_proxy.seek(0, SeekOrigin::Start).await?;
+        let (status, offset) = file.seek(0, SeekOrigin::Start).await.expect("seek failed");
         assert_eq!(offset, 0);
         Status::ok(status).expect("Seek was successful");
 
-        let buf = read_file_bytes(&file_proxy).await.expect("File read was successful");
+        let buf = read_file_bytes(&file).await.expect("File read was successful");
         assert_eq!(buf.len(), orig_len);
         assert_eq!(buf, expected_buf);
 
-        Ok(())
+        close_file_checked(file).await;
+        fixture.close().await;
     }
 }

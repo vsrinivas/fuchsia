@@ -42,6 +42,11 @@ pub trait Device: Send + Sync {
     async fn close(&self) -> Result<(), Error>;
     /// Flush the device.
     async fn flush(&self) -> Result<(), Error>;
+    /// Reopens the device, making it usable again. (Only implemented for testing devices.)
+    #[cfg(test)]
+    fn reopen(&self) {
+        unreachable!();
+    }
 }
 
 // Arc<dyn Device> can easily be cloned and supports concurrent access, but sometimes exclusive
@@ -57,14 +62,11 @@ impl DeviceHolder {
         DeviceHolder(Arc::new(device))
     }
 
-    // Returns a new instance but also a clone which is Arc<impl Device> rather than Arc<dyn
-    // Device>.  This is useful in lifecycle tests where we might want to verify there are no stray
-    // device references after shutting everything else down i.e. it's possible to call
-    // Arc::try_unwrap on it.
+    // Ensures there are no dangling references to the device. Useful for tests to ensure orderly
+    // shutdown.
     #[cfg(test)]
-    pub fn new_and_clone(device: impl Device + 'static) -> (Self, Arc<impl Device>) {
-        let device = Arc::new(device);
-        (DeviceHolder(device.clone()), device)
+    pub fn ensure_unique(&self) {
+        assert_eq!(Arc::strong_count(&self.0), 1);
     }
 }
 
