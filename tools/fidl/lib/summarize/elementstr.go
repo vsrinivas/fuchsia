@@ -56,19 +56,8 @@ func fidlConstToValue(fc *fidlgen.Constant) Value {
 	if fc == nil {
 		return Value("")
 	}
-	switch fc.Kind {
-	case fidlgen.IdentifierConstant:
-		return Value(fc.Value)
-	case fidlgen.LiteralConstant:
-		switch fc.Literal.Kind {
-		case fidlgen.NumericLiteral, fidlgen.TrueLiteral, fidlgen.FalseLiteral, fidlgen.StringLiteral:
-			return Value(fc.Literal.Value)
-		default:
-			panic(fmt.Sprintf("unhandled default value: %+v", fc))
-		}
-	default:
-		panic(fmt.Sprintf("unhandled default value kind: %+v:", fc))
-	}
+	// It looks like any value type has its value in fc.Value.
+	return Value(fc.Value)
 }
 
 // ElementStr is a generic stringly-typed view of an Element. The aim is to

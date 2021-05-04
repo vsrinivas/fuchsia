@@ -71,7 +71,6 @@ func TestSymboltable(t *testing.T) {
 				ElementType: &fidlgen.Type{
 					Kind: fidlgen.StringType,
 				},
-				Identifier: "foo/bar",
 			},
 			expected: "array<string,10>",
 		},

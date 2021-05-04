@@ -62,7 +62,8 @@ func newIsMember(
 		named: named{
 			symbolTable: st,
 			parent:      parentName,
-			name:        Name(name)},
+			name:        Name(name),
+		},
 		parentType: parentType,
 		maybeValue: maybeDefaultValue,
 	}

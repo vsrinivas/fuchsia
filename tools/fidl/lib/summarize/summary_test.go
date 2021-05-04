@@ -113,6 +113,20 @@ library l
 `,
 		},
 		{
+			name: "primitives 5, binary operator",
+			fidl: `
+library l;
+const uint8 FOO = 1;
+const uint8 BAR = 2;
+const uint8 BAZ = FOO | BAR;
+`,
+			expected: `const l/BAR uint8 2
+const l/BAZ uint8 3
+const l/FOO uint8 1
+library l
+`,
+		},
+		{
 			name: "bits",
 			fidl: `
 library l;
