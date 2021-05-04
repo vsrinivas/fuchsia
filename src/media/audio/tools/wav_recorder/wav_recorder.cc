@@ -24,7 +24,7 @@ constexpr char kPacked24FormatOption[] = "packed24";
 constexpr char kInt16FormatOption[] = "int16";
 constexpr char kGainOption[] = "gain";
 constexpr char kMuteOption[] = "mute";
-constexpr char kAsyncModeOption[] = "async";
+constexpr char kSyncModeOption[] = "sync";
 constexpr char kFlexibleClockOption[] = "flexible-clock";
 constexpr char kMonotonicClockOption[] = "monotonic-clock";
 constexpr char kCustomClockOption[] = "custom-clock";
@@ -73,7 +73,7 @@ void WavRecorder::Run(sys::ComponentContext* app_context) {
       }
     }
   } else {
-    // If user erroneously specifies float AND 24-in-32, prefer float.
+    // If user erroneously specifies 24-bit AND 16-bit, prefer 24-bit.
     if (cmd_line_.HasOption(kPacked24FormatOption)) {
       pack_24bit_samples_ = true;
       sample_format_ = fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32;
@@ -153,14 +153,16 @@ void WavRecorder::Run(sys::ComponentContext* app_context) {
     audio->CreateAudioCapturer(audio_capturer_.NewRequest(), loopback_);
     audio_capturer_->BindGainControl(gain_control_.NewRequest());
     gain_control_.set_error_handler([this](zx_status_t status) {
-      CLI_CHECK(Shutdown(), "Client connection to fuchsia.media.GainControl failed");
+      CLI_CHECK(Shutdown(),
+                "Client connection to fuchsia.media.GainControl failed: " + std::to_string(status));
     });
 
     EstablishReferenceClock();
   }
 
   audio_capturer_.set_error_handler([this](zx_status_t status) {
-    CLI_CHECK(Shutdown(), "Client connection to fuchsia.media.AudioCapturer failed");
+    CLI_CHECK(Shutdown(),
+              "Client connection to fuchsia.media.AudioCapturer failed: " + std::to_string(status));
   });
 
   // Quit if someone hits a key.
@@ -197,8 +199,8 @@ void WavRecorder::Usage() {
   printf("  --%s[=<0|1>]\tSet stream mute (0=Unmute or 1=Mute; Mute if only '--%s' is provided)\n",
          kMuteOption, kMuteOption);
 
-  printf("\n    By default, use packet-by-packet ('synchronous') mode\n");
-  printf("  --%s\t\tCapture using sequential-buffer ('asynchronous') mode\n", kAsyncModeOption);
+  printf("\n    By default, use sequential-buffer ('asynchronous') mode\n");
+  printf("  --%s\t\tCapture using packet-by-packet ('synchronous')) mode\n", kSyncModeOption);
 
   printf("\n    Use the default reference clock unless specified otherwise\n");
   printf("  --%s\tUse the 'flexible' reference clock provided by the Audio service\n",
@@ -437,10 +439,12 @@ void WavRecorder::OnDefaultFormatFetched(const fuchsia::media::AudioStreamType& 
     bits_per_sample = 24;
   }
 
-  audio_capturer_->SetPcmStreamType(
-      media::CreateAudioStreamType(sample_format_, channel_count_, frames_per_second_));
+  if (!ultrasound_) {
+    audio_capturer_->SetPcmStreamType(
+        media::CreateAudioStreamType(sample_format_, channel_count_, frames_per_second_));
+  }
 
-  // Set the specified gain (if specified) for the recording.
+  // If specified, set the gain/mute for the recording.
   if (change_gain) {
     gain_control_->SetGain(stream_gain_db_);
   }
@@ -479,7 +483,7 @@ void WavRecorder::OnDefaultFormatFetched(const fuchsia::media::AudioStreamType& 
     }
   }
 
-  if (cmd_line_.HasOption(kAsyncModeOption)) {
+  if (!cmd_line_.HasOption(kSyncModeOption)) {
     CLI_CHECK(
         payload_buf_frames_ && frames_per_packet_ && !(payload_buf_frames_ % frames_per_packet_),
         "payload_buf_frames must be a multiple of frames_per_packet; both must be non-zero");
@@ -494,7 +498,7 @@ void WavRecorder::OnDefaultFormatFetched(const fuchsia::media::AudioStreamType& 
   // Will we operate in synchronous or asynchronous mode?  If synchronous, queue
   // all our capture buffers to get the ball rolling. If asynchronous, set an
   // event handler for position notification, and start operating in async mode.
-  if (!cmd_line_.HasOption(kAsyncModeOption)) {
+  if (cmd_line_.HasOption(kSyncModeOption)) {
     for (size_t i = 0; i < packets_per_payload_buf_; ++i) {
       SendCaptureJob();
     }
@@ -652,6 +656,9 @@ void WavRecorder::OnPacketProduced(fuchsia::media::StreamPacket pkt) {
     else if (outstanding_capture_jobs_ == 0) {
       Shutdown();
     }
+  } else {
+    // In async-mode, each packet must be released, or eventually the capturer stops emitting.
+    audio_capturer_->ReleasePacket(pkt);
   }
 }
 
