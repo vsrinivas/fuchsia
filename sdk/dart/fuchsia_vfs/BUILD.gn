@@ -61,9 +61,8 @@ dart_test_component("unittests-component") {
   ]
 }
 
-group("tests") {
-  testonly = true
-  deps = [ ":unit_tests" ]
+fuchsia_test_package("fuchsia-vfs-unittests") {
+  test_components = [ ":unittests-component" ]
 }
 
 group("unit_tests") {
@@ -71,7 +70,7 @@ group("unit_tests") {
   deps = [ ":fuchsia-vfs-unittests" ]
 }
 
-# TODO(fxb/66291): Plug this test into //sdk/dart:tests.
-fuchsia_test_package("fuchsia-vfs-unittests") {
-  test_components = [ ":unittests-component" ]
+group("tests") {
+  testonly = true
+  deps = [ ":unit_tests" ]
 }
