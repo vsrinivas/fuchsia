@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/lowpan/device/cpp/fidl_test_base.h>
 #include <fuchsia/net/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl_test_base.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -32,6 +33,13 @@ namespace Platform {
 namespace testing {
 
 namespace {
+using fuchsia::lowpan::device::DeviceRoute;
+using fuchsia::lowpan::device::Lookup_LookupDevice_Response;
+using fuchsia::lowpan::device::Lookup_LookupDevice_Result;
+using fuchsia::lowpan::device::OnMeshPrefix;
+using fuchsia::lowpan::device::Protocols;
+using fuchsia::lowpan::device::ServiceError;
+
 using fuchsia::netstack::NetInterface;
 using fuchsia::netstack::RouteTableEntry;
 using fuchsia::netstack::Status;
@@ -66,6 +74,84 @@ bool CompareIpAddress(const ::nl::Inet::IPAddress& right, const ::fuchsia::net::
 }
 
 }  // namespace
+
+class FakeLowpanDeviceRoute final : public fuchsia::lowpan::device::testing::DeviceRoute_TestBase {
+ public:
+  void NotImplemented_(const std::string& name) override { FAIL() << "Not implemented: " << name; }
+
+  void RegisterOnMeshPrefix(fuchsia::lowpan::device::OnMeshPrefix prefix,
+                            RegisterOnMeshPrefixCallback callback) override {
+    EXPECT_EQ(prefix.default_route_preference(), fuchsia::lowpan::device::RoutePreference::MEDIUM);
+    EXPECT_TRUE(prefix.stable());
+    EXPECT_TRUE(prefix.slaac_preferred());
+    EXPECT_TRUE(prefix.slaac_valid());
+    on_mesh_prefixes_.push_back(std::move(prefix));
+    callback();
+  }
+
+  void UnregisterOnMeshPrefix(fuchsia::lowpan::Ipv6Subnet subnet,
+                              RegisterOnMeshPrefixCallback callback) override {
+    auto it = std::remove_if(
+        on_mesh_prefixes_.begin(), on_mesh_prefixes_.end(), [&](const OnMeshPrefix& prefix) {
+          return std::memcmp(subnet.addr.addr.data(), prefix.subnet().addr.addr.data(),
+                             subnet.addr.addr.size()) == 0;
+        });
+    on_mesh_prefixes_.erase(it);
+    callback();
+  }
+
+  bool ContainsSubnetForAddress(Inet::IPAddress address) {
+    auto it = std::find_if(
+        on_mesh_prefixes_.begin(), on_mesh_prefixes_.end(), [&](const OnMeshPrefix& prefix) {
+          return std::memcmp(prefix.subnet().addr.addr.data(), (uint8_t*)address.Addr,
+                             prefix.subnet().addr.addr.size()) == 0;
+        });
+    return it != on_mesh_prefixes_.end();
+  }
+
+ private:
+  std::vector<OnMeshPrefix> on_mesh_prefixes_;
+};
+
+class FakeLowpanLookup final : public fuchsia::lowpan::device::testing::Lookup_TestBase {
+ public:
+  void NotImplemented_(const std::string& name) override { FAIL() << "Not implemented: " << name; }
+
+  void GetDevices(GetDevicesCallback callback) override { callback({kThreadInterfaceName}); }
+
+  void LookupDevice(std::string name, Protocols protocols, LookupDeviceCallback callback) override {
+    Lookup_LookupDevice_Result result;
+    if (name != kThreadInterfaceName) {
+      result.set_err(ServiceError::DEVICE_NOT_FOUND);
+      callback(std::move(result));
+      return;
+    }
+
+    Lookup_LookupDevice_Response response;
+    if (protocols.has_device_route()) {
+      device_route_bindings_.AddBinding(&device_route_,
+                                        std::move(*protocols.mutable_device_route()), dispatcher_);
+    }
+
+    result.set_response(response);
+    callback(std::move(result));
+  }
+
+  fidl::InterfaceRequestHandler<Lookup> GetHandler(async_dispatcher_t* dispatcher) {
+    dispatcher_ = dispatcher;
+    return [this](fidl::InterfaceRequest<Lookup> request) {
+      binding_.Bind(std::move(request), dispatcher_);
+    };
+  }
+
+  FakeLowpanDeviceRoute& device_route() { return device_route_; }
+
+ private:
+  FakeLowpanDeviceRoute device_route_;
+  fidl::BindingSet<DeviceRoute> device_route_bindings_;
+  async_dispatcher_t* dispatcher_;
+  fidl::Binding<Lookup> binding_{this};
+};
 
 // Fake implementation of TSM delegate, only provides an interface name.
 class FakeThreadStackManagerDelegate : public DeviceLayer::ThreadStackManagerDelegateImpl {
@@ -236,7 +322,10 @@ class WarmTest : public testing::WeaveTestFixture<> {
 
     // Initialize everything needed for the test.
     context_provider_.service_directory_provider()->AddService(
+        fake_lowpan_lookup_.GetHandler(dispatcher()));
+    context_provider_.service_directory_provider()->AddService(
         fake_net_stack_.GetHandler(dispatcher()));
+
     PlatformMgrImpl().SetComponentContextForProcess(context_provider_.TakeContext());
     ThreadStackMgrImpl().SetDelegate(std::make_unique<FakeThreadStackManagerDelegate>());
     ThreadStackMgrImpl().InitThreadStack();
@@ -256,6 +345,7 @@ class WarmTest : public testing::WeaveTestFixture<> {
   }
 
  protected:
+  FakeLowpanLookup& fake_lowpan_lookup() { return fake_lowpan_lookup_; }
   FakeNetstack& fake_net_stack() { return fake_net_stack_; }
 
   NetInterface& GetThreadInterface(NetInterface& interface) {
@@ -279,6 +369,7 @@ class WarmTest : public testing::WeaveTestFixture<> {
   }
 
  private:
+  FakeLowpanLookup fake_lowpan_lookup_;
   FakeNetstack fake_net_stack_;
   sys::testing::ComponentContextProvider context_provider_;
 };
@@ -302,6 +393,7 @@ TEST_F(WarmTest, AddRemoveAddressThread) {
   GetThreadInterface(lowpan);
   ASSERT_EQ(lowpan.ipv6addrs.size(), 1u);
   EXPECT_TRUE(CompareIpAddress(addr, lowpan.ipv6addrs[0].addr));
+  EXPECT_TRUE(fake_lowpan_lookup().device_route().ContainsSubnetForAddress(addr));
 
   // Attempt to remove the address.
   result = AddRemoveHostAddress(kInterfaceTypeThread, addr, kPrefixLength, /*add*/ false);
@@ -310,6 +402,7 @@ TEST_F(WarmTest, AddRemoveAddressThread) {
   // Confirm that it worked.
   GetThreadInterface(lowpan);
   EXPECT_EQ(lowpan.ipv6addrs.size(), 0u);
+  EXPECT_FALSE(fake_lowpan_lookup().device_route().ContainsSubnetForAddress(addr));
 }
 
 TEST_F(WarmTest, AddRemoveAddressTunnel) {
@@ -359,6 +452,7 @@ TEST_F(WarmTest, RemoveAddressThreadNotFound) {
   // Sanity check - still no addresses assigned.
   GetThreadInterface(lowpan);
   EXPECT_EQ(lowpan.ipv6addrs.size(), 0u);
+  EXPECT_FALSE(fake_lowpan_lookup().device_route().ContainsSubnetForAddress(addr));
 }
 
 TEST_F(WarmTest, RemoveAddressTunnelNotFound) {
@@ -392,6 +486,7 @@ TEST_F(WarmTest, AddAddressThreadNoInterface) {
   ASSERT_TRUE(Inet::IPAddress::FromString(kSubnetIp, addr));
   auto result = AddRemoveHostAddress(kInterfaceTypeThread, addr, kPrefixLength, /*add*/ true);
   EXPECT_EQ(result, kPlatformResultFailure);
+  EXPECT_FALSE(fake_lowpan_lookup().device_route().ContainsSubnetForAddress(addr));
 }
 
 TEST_F(WarmTest, RemoveAddressThreadNoInterface) {
@@ -405,6 +500,7 @@ TEST_F(WarmTest, RemoveAddressThreadNoInterface) {
   ASSERT_TRUE(Inet::IPAddress::FromString(kSubnetIp, addr));
   auto result = AddRemoveHostAddress(kInterfaceTypeThread, addr, kPrefixLength, /*add*/ false);
   EXPECT_EQ(result, kPlatformResultSuccess);
+  EXPECT_FALSE(fake_lowpan_lookup().device_route().ContainsSubnetForAddress(addr));
 }
 
 TEST_F(WarmTest, AddAddressTunnelNoInterface) {
