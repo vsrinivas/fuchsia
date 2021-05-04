@@ -54,12 +54,17 @@ std::optional<AddressSpaceBuilder> AddressSpaceBuilder::Create(MemoryManager& al
 }
 
 zx_status_t AddressSpaceBuilder::MapRegion(Vaddr virt_start, Paddr phys_start, uint64_t size) {
+  // Zero-sized regions are trivially mapped.
+  if (size == 0) {
+    return ZX_OK;
+  }
+
   // Ensure neither the physical or virtual address ranges overflow.
   uint64_t unused;
-  if (add_overflow(virt_start.value(), size, /*result=*/&unused)) {
+  if (add_overflow(virt_start.value(), size - 1, /*result=*/&unused)) {
     return ZX_ERR_INVALID_ARGS;
   }
-  if (add_overflow(phys_start.value(), size, /*result=*/&unused)) {
+  if (add_overflow(phys_start.value(), size - 1, /*result=*/&unused)) {
     return ZX_ERR_INVALID_ARGS;
   }
 

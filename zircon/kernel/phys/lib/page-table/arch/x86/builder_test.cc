@@ -92,6 +92,19 @@ TEST(Builder, MultiplePages) {
   EXPECT_EQ(LookupPage(allocator, builder->root_node(), Vaddr(0xd000)), std::nullopt);
 }
 
+TEST(Builder, LastPage) {
+  TestMemoryManager allocator;
+  constexpr Vaddr kLastPage = Vaddr(-kPageSize4KiB);
+
+  // Create a builder, and map a single page.
+  std::optional builder = AddressSpaceBuilder::Create(allocator, FullFeatureCpuid());
+  ASSERT_TRUE(builder.has_value());
+  EXPECT_EQ(builder->MapRegion(kLastPage, Paddr(0xaaaa'0000), kPageSize4KiB), ZX_OK);
+
+  // Ensure we can lookup the page.
+  EXPECT_EQ(LookupPage(allocator, builder->root_node(), kLastPage)->phys_addr, Paddr(0xaaaa'0000u));
+}
+
 TEST(Builder, LargePage) {
   TestMemoryManager allocator;
 
