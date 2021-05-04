@@ -59,8 +59,8 @@ const BLOCK_SIZE: u64 = 8192;
 const CHUNK_SIZE: u64 = 131_072;
 
 // After replaying the journal, it's possible that the stream doesn't end cleanly, in which case the
-// next journal block needs to indicate this.  This is done by setting its checksum to what it
-// should be xored with this value.
+// next journal block needs to indicate this.  This is done by pretending the previous block's
+// checksum is xored with this value, and using that as the seed for the next journal block.
 const RESET_XOR: u64 = 0xffffffffffffffff;
 
 type Checksum = u64;
@@ -246,12 +246,15 @@ impl Journal {
         }
         // Configure the journal writer so that we can continue.
         {
-            let checkpoint =
+            let mut checkpoint =
                 JournalCheckpoint::new(reader.read_offset(), reader.last_read_checksum());
             let mut writer = self.writer.lock().await;
             writer.set_handle(reader.take_handle());
             // If the last entry wasn't an end_block, then we need to reset the stream.
-            writer.seek_to_checkpoint(checkpoint, !end_block);
+            if !end_block {
+                checkpoint.checksum ^= RESET_XOR;
+            }
+            writer.seek_to_checkpoint(checkpoint);
         }
         log::info!("replay done");
         Ok(())

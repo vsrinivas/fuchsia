@@ -46,6 +46,9 @@ pub struct JournalReader<OH: ObjectHandle> {
 
     // Indicates a reset checksum has been detected.
     found_reset: bool,
+
+    // Indicates whether the next read is the first read.
+    first_read: bool,
 }
 
 impl<OH: ObjectHandle> JournalReader<OH> {
@@ -60,6 +63,7 @@ impl<OH: ObjectHandle> JournalReader<OH> {
             checksums: vec![checkpoint.checksum],
             bad_checksum: false,
             found_reset: false,
+            first_read: true,
         }
     }
 
@@ -165,22 +169,26 @@ impl<OH: ObjectHandle> JournalReader<OH> {
             let stored_checksum = LittleEndian::read_u64(checksum_slice);
             let computed_checksum = fletcher64(contents_slice, last_read_checksum);
             if stored_checksum != computed_checksum {
-                if stored_checksum ^ RESET_XOR == computed_checksum
-                    && self.buf_file_offset <= self.read_offset
-                {
-                    // Record that we've encountered a reset in the stream (a point where the
-                    // journal wasn't cleanly closed in the past) and it starts afresh in this
-                    // block.  We don't adjust buf_range until the reset has been processed, but we
-                    // do push the checksum.
-                    self.found_reset = true;
-                    self.checksums.push(stored_checksum);
-                    self.read_offset += bs as u64;
-                } else {
-                    self.bad_checksum = true;
+                // If this is the first read, the checksum should be correct.
+                if !self.first_read {
+                    let computed_checksum =
+                        fletcher64(contents_slice, last_read_checksum ^ RESET_XOR);
+                    if stored_checksum == computed_checksum {
+                        // Record that we've encountered a reset in the stream (a point where the
+                        // journal wasn't cleanly closed in the past) and it starts afresh in this
+                        // block.  We don't adjust buf_range until the reset has been processed, but
+                        // we do push the checksum.
+                        self.found_reset = true;
+                        self.checksums.push(stored_checksum);
+                        self.read_offset += bs as u64;
+                        return Ok(());
+                    }
                 }
+                self.bad_checksum = true;
                 return Ok(());
             }
 
+            self.first_read = false;
             self.checksums.push(stored_checksum);
 
             // If this was our first read, our buffer offset might be somewhere within the middle of
@@ -235,7 +243,9 @@ mod tests {
         super::{JournalReader, ReadResult},
         crate::{
             object_handle::{ObjectHandle, ObjectHandleExt},
-            object_store::journal::{writer::JournalWriter, Checksum, JournalCheckpoint},
+            object_store::journal::{
+                writer::JournalWriter, Checksum, JournalCheckpoint, RESET_XOR,
+            },
             testing::fake_object::{FakeObject, FakeObjectHandle},
         },
         fuchsia_async as fasync,
@@ -432,16 +442,24 @@ mod tests {
 
         let mut writer = JournalWriter::new(None, TEST_BLOCK_SIZE as usize, 0);
         writer.set_handle(FakeObjectHandle::new(object.clone()));
-        writer.seek_to_checkpoint(
-            JournalCheckpoint::new(TEST_BLOCK_SIZE, reader.last_read_checksum()),
-            true,
-        );
+        writer.seek_to_checkpoint(JournalCheckpoint::new(
+            TEST_BLOCK_SIZE,
+            reader.last_read_checksum() ^ RESET_XOR,
+        ));
         writer.write_record(&13u32);
+        let checkpoint = writer.journal_file_checkpoint();
+        writer.write_record(&78u32);
         writer.pad_to_block().expect("pad_to_block failed");
         writer.maybe_flush_buffer().await.expect("flush_buffer failed");
 
-        let checkpoint = reader.journal_file_checkpoint();
-        let mut reader = JournalReader::new(reader.take_handle(), TEST_BLOCK_SIZE, &checkpoint);
+        let mut reader = JournalReader::new(
+            reader.take_handle(),
+            TEST_BLOCK_SIZE,
+            &JournalCheckpoint::default(),
+        );
+        assert_eq!(reader.deserialize().await.expect("deserialize failed"), ReadResult::Some(4u32));
+        assert_eq!(reader.deserialize().await.expect("deserialize failed"), ReadResult::Some(7u32));
+        reader.skip_to_end_of_block();
         assert_eq!(
             reader.deserialize::<u32>().await.expect("deserialize failed"),
             ReadResult::Reset
@@ -449,6 +467,17 @@ mod tests {
         assert_eq!(
             reader.deserialize().await.expect("deserialize failed"),
             ReadResult::Some(13u32)
+        );
+        assert_eq!(
+            reader.deserialize().await.expect("deserialize failed"),
+            ReadResult::Some(78u32)
+        );
+
+        // Make sure a reader can start from the middle of a reset block.
+        let mut reader = JournalReader::new(reader.take_handle(), TEST_BLOCK_SIZE, &checkpoint);
+        assert_eq!(
+            reader.deserialize().await.expect("deserialize failed"),
+            ReadResult::Some(78u32)
         );
     }
 

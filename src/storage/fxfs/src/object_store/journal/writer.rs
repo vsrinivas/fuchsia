@@ -5,7 +5,7 @@
 use {
     crate::{
         object_handle::{ObjectHandle, ObjectHandleExt},
-        object_store::journal::{fletcher64, Checksum, JournalCheckpoint, RESET_XOR},
+        object_store::journal::{fletcher64, Checksum, JournalCheckpoint},
     },
     anyhow::Error,
     bincode::serialize_into,
@@ -33,21 +33,11 @@ pub struct JournalWriter<OH> {
 
     // The buffered data for the current block.
     buf: Vec<u8>,
-
-    // If true, the next block we write should indicate the stream was reset.
-    reset: bool,
 }
 
 impl<OH> JournalWriter<OH> {
     pub fn new(handle: Option<OH>, block_size: usize, last_checksum: u64) -> Self {
-        JournalWriter {
-            handle,
-            block_size,
-            offset: 0,
-            last_checksum,
-            buf: Vec::new(),
-            reset: false,
-        }
+        JournalWriter { handle, block_size, offset: 0, last_checksum, buf: Vec::new() }
     }
 
     /// Serializes a new journal record to the journal stream.
@@ -104,11 +94,10 @@ impl<OH> JournalWriter<OH> {
     }
 
     /// Seeks to the given offset in the journal file, to be used once replay has finished.
-    pub fn seek_to_checkpoint(&mut self, checkpoint: JournalCheckpoint, reset: bool) {
+    pub fn seek_to_checkpoint(&mut self, checkpoint: JournalCheckpoint) {
         assert!(self.buf.is_empty());
         self.offset = checkpoint.file_offset;
         self.last_checksum = checkpoint.checksum;
-        self.reset = reset;
     }
 }
 
@@ -125,10 +114,6 @@ impl<OH> std::io::Write for JournalWriter<OH> {
                 let end = self.buf.len();
                 let start = end + std::mem::size_of::<Checksum>() - self.block_size;
                 self.last_checksum = fletcher64(&self.buf[start..end], self.last_checksum);
-                if self.reset {
-                    self.last_checksum ^= RESET_XOR;
-                    self.reset = false;
-                }
                 self.buf.write_u64::<LittleEndian>(self.last_checksum)?;
             }
             offset += to_copy;
@@ -159,7 +144,7 @@ mod tests {
         super::JournalWriter,
         crate::{
             object_handle::ObjectHandle,
-            object_store::journal::{fletcher64, Checksum, JournalCheckpoint, RESET_XOR},
+            object_store::journal::{fletcher64, Checksum, JournalCheckpoint},
             testing::fake_object::{FakeObject, FakeObjectHandle},
         },
         bincode::deserialize_from,
@@ -221,7 +206,7 @@ mod tests {
         let object = Arc::new(FakeObject::new());
         let mut writer = JournalWriter::new(None, TEST_BLOCK_SIZE, 0);
         writer.set_handle(FakeObjectHandle::new(object.clone()));
-        writer.seek_to_checkpoint(JournalCheckpoint::new(TEST_BLOCK_SIZE as u64 * 5, 12345), false);
+        writer.seek_to_checkpoint(JournalCheckpoint::new(TEST_BLOCK_SIZE as u64 * 5, 12345));
         writer.write_record(&12);
         writer.pad_to_block().expect("pad_to_block failed");
         writer.maybe_flush_buffer().await.expect("flush_buffer failed");
@@ -239,35 +224,6 @@ mod tests {
             last_block.split_at(last_block.len() - std::mem::size_of::<Checksum>());
         let checksum = LittleEndian::read_u64(checksum_slice);
         assert_eq!(checksum, fletcher64(payload, 12345));
-        assert_eq!(
-            writer.journal_file_checkpoint(),
-            JournalCheckpoint { file_offset: TEST_BLOCK_SIZE as u64 * 6, checksum }
-        );
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_set_reset() {
-        let object = Arc::new(FakeObject::new());
-        let mut writer = JournalWriter::new(None, TEST_BLOCK_SIZE, 0);
-        writer.set_handle(FakeObjectHandle::new(object.clone()));
-        writer.seek_to_checkpoint(JournalCheckpoint::new(TEST_BLOCK_SIZE as u64 * 5, 12345), true);
-        writer.write_record(&12);
-        writer.pad_to_block().expect("pad_to_block failed");
-        writer.maybe_flush_buffer().await.expect("flush_buffer failed");
-
-        let handle = FakeObjectHandle::new(object.clone());
-        let mut buf = handle.allocate_buffer(object.get_size() as usize);
-        assert_eq!(buf.len(), TEST_BLOCK_SIZE * 6);
-        handle.read(0, buf.as_mut()).await.expect("read failed");
-        let (first_5_blocks, last_block) = buf.as_slice().split_at(TEST_BLOCK_SIZE * 5);
-        assert_eq!(first_5_blocks, &vec![0u8; TEST_BLOCK_SIZE * 5]);
-        let value: u64 =
-            deserialize_from(&last_block[..TEST_BLOCK_SIZE]).expect("deserialize_from failed");
-        assert_eq!(value, 12);
-        let (payload, checksum_slice) =
-            last_block.split_at(last_block.len() - std::mem::size_of::<Checksum>());
-        let checksum = LittleEndian::read_u64(checksum_slice);
-        assert_eq!(checksum, fletcher64(payload, 12345) ^ RESET_XOR);
         assert_eq!(
             writer.journal_file_checkpoint(),
             JournalCheckpoint { file_offset: TEST_BLOCK_SIZE as u64 * 6, checksum }
