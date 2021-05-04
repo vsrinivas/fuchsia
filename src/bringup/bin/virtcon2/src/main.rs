@@ -5,6 +5,7 @@
 use {
     anyhow::Error,
     carnelian::{App, AppAssistantPtr, AppContext, AssistantCreatorFunc, LocalBoxFuture},
+    fuchsia_trace_provider,
     virtual_console_lib::VirtualConsoleAppAssistant,
 };
 
@@ -23,5 +24,6 @@ pub fn make_app_assistant() -> AssistantCreatorFunc {
 }
 
 fn main() -> Result<(), Error> {
+    fuchsia_trace_provider::trace_provider_create_with_fdio();
     App::run(make_app_assistant())
 }

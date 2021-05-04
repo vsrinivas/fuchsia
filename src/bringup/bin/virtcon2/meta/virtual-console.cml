@@ -25,6 +25,7 @@
                 "fuchsia.boot.WriteOnlyLog",
                 "fuchsia.hardware.pty.Device",
                 "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
             ],
         },
     ],

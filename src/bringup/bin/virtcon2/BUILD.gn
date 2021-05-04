@@ -73,6 +73,7 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
   deps = [
     ":lib",
+    "//src/lib/trace/rust:trace-provider",
     "//src/lib/ui/carnelian",
     "//src/lib/ui/carnelian:virtcon_config",
     "//third_party/rust_crates:anyhow",
