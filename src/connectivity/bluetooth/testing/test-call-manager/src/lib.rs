@@ -34,7 +34,7 @@ type Number = String;
 type Memory = String;
 
 /// Handles call actions initiated by the Hands Free.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 struct Dialer {
     /// The last dialed Number if one exists.
     last_dialed: Option<Number>,
@@ -164,6 +164,7 @@ pub struct ManagerStateSer {
     subscriber_numbers: Vec<String>,
     nrec_support: bool,
     battery_level: Option<u8>,
+    dialer: DialerSer,
 }
 
 #[derive(Serialize)]
@@ -195,6 +196,7 @@ impl From<&ManagerState> for ManagerStateSer {
             subscriber_numbers: state.subscriber_numbers.clone(),
             nrec_support: state.nrec_support.clone(),
             battery_level: state.battery_level.clone(),
+            dialer: state.dialer.clone().into(),
         }
     }
 }
@@ -239,6 +241,30 @@ impl From<&CallState> for CallStateSer {
             state: format!("{:?}", state.state),
             reported_state: state.reported_state.clone().map(|s| format!("{:?}", s)),
             dtmf_codes: state.dtmf_codes.iter().map(|code| format!("{:?}", code)).collect(),
+        }
+    }
+}
+
+#[derive(Serialize)]
+struct DialerSer {
+    /// The last dialed Number if one exists.
+    last_dialed: Option<Number>,
+    /// A map of Memory locations to Numbers.
+    address_book: HashMap<Memory, Number>,
+    /// The result that should be returned from a request to dial a Number.
+    dial_result: HashMap<Number, String>,
+}
+
+impl From<Dialer> for DialerSer {
+    fn from(dialer: Dialer) -> Self {
+        Self {
+            last_dialed: dialer.last_dialed,
+            address_book: dialer.address_book,
+            dial_result: dialer
+                .dial_result
+                .into_iter()
+                .map(|(k, v)| (k, format!("{:?}", v)))
+                .collect(),
         }
     }
 }
