@@ -12,6 +12,7 @@ use std::sync::Arc;
 use zerocopy::AsBytes;
 
 use crate::fs::*;
+use crate::logging::*;
 use crate::mm::*;
 use crate::not_implemented;
 use crate::strace;
@@ -169,18 +170,7 @@ pub fn sys_mmap(
     };
     let vmo_offset = if flags & MAP_ANONYMOUS != 0 { 0 } else { offset };
 
-    let root_base = ctx.task.mm.root_vmar.info().unwrap().base;
-    let ptr = if addr.ptr() == 0 { 0 } else { addr.ptr() - root_base };
-    let addr =
-        ctx.task.mm.root_vmar.map(ptr, &vmo, vmo_offset as u64, length, zx_flags).map_err(|s| {
-            match s {
-                zx::Status::INVALID_ARGS => EINVAL,
-                zx::Status::ACCESS_DENIED => EACCES, // or EPERM?
-                zx::Status::NOT_SUPPORTED => ENODEV,
-                zx::Status::NO_MEMORY => ENOMEM,
-                _ => impossible_error(s),
-            }
-        })?;
+    let addr = ctx.task.mm.map(addr, vmo, vmo_offset as u64, length, zx_flags)?;
     Ok(addr.into())
 }
 
@@ -207,12 +197,8 @@ pub fn sys_munmap(
     addr: UserAddress,
     length: usize,
 ) -> Result<SyscallResult, Errno> {
-    match unsafe { ctx.task.mm.root_vmar.unmap(addr.ptr(), length) } {
-        Ok(_) => Ok(SUCCESS),
-        Err(zx::Status::NOT_FOUND) => Ok(SUCCESS),
-        Err(zx::Status::INVALID_ARGS) => Err(EINVAL),
-        Err(status) => Err(impossible_error(status)),
-    }
+    ctx.task.mm.unmap(addr, length)?;
+    Ok(SUCCESS)
 }
 
 pub fn sys_brk(ctx: &SyscallContext<'_>, addr: UserAddress) -> Result<SyscallResult, Errno> {
@@ -389,6 +375,36 @@ pub fn sys_sched_setaffinity(
     Ok(SUCCESS)
 }
 
+pub fn sys_prctl(
+    ctx: &SyscallContext<'_>,
+    option: u32,
+    arg2: u64,
+    arg3: u64,
+    arg4: u64,
+    arg5: u64,
+) -> Result<SyscallResult, Errno> {
+    match option {
+        PR_SET_VMA => {
+            if arg2 != PR_SET_VMA_ANON_NAME as u64 {
+                not_implemented!("prctl: PR_SET_VMA: Unknown arg2: 0x{:x}", arg2);
+                return Err(ENOSYS);
+            }
+            let addr = UserAddress::from(arg3);
+            let length = arg4 as usize;
+            let name = UserCString::new(UserAddress::from(arg5));
+            let mut buf = [0u8; PATH_MAX as usize]; // TODO: How large can these names be?
+            let name = ctx.task.mm.read_c_string(name, &mut buf)?;
+            let name = CString::new(name).map_err(|_| EINVAL)?;
+            ctx.task.mm.set_mapping_name(addr, length, name)?;
+            Ok(SUCCESS)
+        }
+        _ => {
+            not_implemented!("prctl: Unknown option: 0x{:x}", option);
+            Err(ENOSYS)
+        }
+    }
+}
+
 pub fn sys_arch_prctl(
     ctx: &mut SyscallContext<'_>,
     code: u32,
@@ -520,13 +536,6 @@ pub fn sys_unknown(_ctx: &SyscallContext<'_>, syscall_number: u64) -> Result<Sys
     Err(ENOSYS)
 }
 
-// Call this when you get an error that should "never" happen, i.e. if it does that means the
-// kernel was updated to produce some other error after this match was written.
-// TODO(tbodt): find a better way to handle this than a panic.
-pub fn impossible_error(status: zx::Status) -> Errno {
-    panic!("encountered impossible error: {}", status);
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -618,7 +627,7 @@ mod tests {
         let context = SyscallContext::new(&task_owner.task);
 
         let mapped_address = map_memory(&context, UserAddress::default(), *PAGE_SIZE);
-        assert_eq!(sys_munmap(&context, mapped_address + 1, *PAGE_SIZE as usize), Err(EINVAL));
+        assert_eq!(sys_munmap(&context, mapped_address + 1u64, *PAGE_SIZE as usize), Err(EINVAL));
 
         // Verify that the memory is still readable.
         let mut data: [u8; 5] = [0; 5];
@@ -656,7 +665,7 @@ mod tests {
         let mut data: [u8; 5] = [0; 5];
         assert_eq!(context.task.mm.read_memory(mapped_address, &mut data), Err(EFAULT));
         assert_eq!(
-            context.task.mm.read_memory(mapped_address + *PAGE_SIZE + 1, &mut data),
+            context.task.mm.read_memory(mapped_address + *PAGE_SIZE + 1u64, &mut data),
             Err(EFAULT)
         );
     }
@@ -673,6 +682,36 @@ mod tests {
         // Verify that the second page is still readable.
         let mut data: [u8; 5] = [0; 5];
         assert_eq!(context.task.mm.read_memory(mapped_address, &mut data), Err(EFAULT));
-        assert_eq!(context.task.mm.read_memory(mapped_address + *PAGE_SIZE + 1, &mut data), Ok(()));
+        assert_eq!(
+            context.task.mm.read_memory(mapped_address + *PAGE_SIZE + 1u64, &mut data),
+            Ok(())
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_prctl_set_vma_anon_name() {
+        let (_kernel, task_owner) = create_kernel_and_task();
+        let ctx = SyscallContext::new(&task_owner.task);
+
+        let mapped_address = map_memory(&ctx, UserAddress::default(), *PAGE_SIZE);
+        let name_addr = mapped_address + 128u64;
+        let name = "test-name\0";
+        ctx.task.mm.write_memory(name_addr, name.as_bytes()).expect("failed to write name");
+        sys_prctl(
+            &ctx,
+            PR_SET_VMA,
+            PR_SET_VMA_ANON_NAME as u64,
+            mapped_address.ptr() as u64,
+            32,
+            name_addr.ptr() as u64,
+        )
+        .expect("failed to set name");
+        assert_eq!(
+            CString::new("test-name").unwrap(),
+            ctx.task.mm.get_mapping_name(mapped_address + 24u64).expect("failed to get address")
+        );
+
+        sys_munmap(&ctx, mapped_address, *PAGE_SIZE as usize).expect("failed to unmap memory");
+        assert_eq!(Err(EFAULT), ctx.task.mm.get_mapping_name(mapped_address + 24u64));
     }
 }

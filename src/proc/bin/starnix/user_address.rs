@@ -15,6 +15,14 @@ pub struct UserAddress(u64);
 impl UserAddress {
     const NULL_PTR: u64 = 0;
 
+    pub fn from(value: u64) -> Self {
+        UserAddress(value)
+    }
+
+    pub fn from_ptr(ptr: zx_vaddr_t) -> Self {
+        UserAddress(ptr as u64)
+    }
+
     pub fn ptr(&self) -> zx_vaddr_t {
         self.0 as zx_vaddr_t
     }
@@ -34,15 +42,11 @@ impl Default for UserAddress {
     }
 }
 
-impl From<u64> for UserAddress {
-    fn from(value: u64) -> Self {
-        UserAddress(value)
-    }
-}
+impl ops::Add<u32> for UserAddress {
+    type Output = UserAddress;
 
-impl From<usize> for UserAddress {
-    fn from(value: usize) -> Self {
-        UserAddress(value as u64)
+    fn add(self, rhs: u32) -> UserAddress {
+        UserAddress(self.0 + (rhs as u64))
     }
 }
 
@@ -51,6 +55,14 @@ impl ops::Add<u64> for UserAddress {
 
     fn add(self, rhs: u64) -> UserAddress {
         UserAddress(self.0 + rhs)
+    }
+}
+
+impl ops::Add<usize> for UserAddress {
+    type Output = UserAddress;
+
+    fn add(self, rhs: usize) -> UserAddress {
+        UserAddress(self.0 + (rhs as u64))
     }
 }
 

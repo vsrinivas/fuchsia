@@ -13,6 +13,7 @@
 #include <linux/fcntl.h>
 #include <linux/limits.h>
 #include <linux/mman.h>
+#include <linux/prctl.h>
 #include <linux/sched.h>
 #include <linux/time.h>
 #include <linux/uio.h>

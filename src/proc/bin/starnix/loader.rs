@@ -122,6 +122,7 @@ pub fn load_executable(
     let task_owner = Task::new(&kernel, &params.name, fs.clone(), creds)?;
     let task = &task_owner.task;
 
+    // TODO: We don't keep track of the mappings created by load_elf in the MemoryManager.
     let main_elf = load_elf(&executable, &task.mm.root_vmar).context("Main ELF failed to load")?;
     let interp_elf = if let Some(interp_hdr) =
         main_elf.headers.program_header_with_type(elf_parse::SegmentType::Interp)?

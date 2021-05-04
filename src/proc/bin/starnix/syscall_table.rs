@@ -121,6 +121,7 @@ pub fn dispatch_syscall(
         mprotect[3],
         munmap[2],
         openat[4],
+        prctl[5],
         pread64[4],
         readlink[3],
         sched_getaffinity[3],

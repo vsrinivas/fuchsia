@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fuchsia_zircon as zx;
+
+use crate::uapi::Errno;
+
 #[macro_export]
 macro_rules! not_implemented {
     ($($arg:tt)+) => (
@@ -14,4 +18,11 @@ macro_rules! strace {
     ($($arg:tt)+) => (
         log::info!(target: "strace", $($arg)+);
     )
+}
+
+// Call this when you get an error that should "never" happen, i.e. if it does that means the
+// kernel was updated to produce some other error after this match was written.
+// TODO(tbodt): find a better way to handle this than a panic.
+pub fn impossible_error(status: zx::Status) -> Errno {
+    panic!("encountered impossible error: {}", status);
 }
