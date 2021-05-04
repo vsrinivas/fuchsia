@@ -102,3 +102,78 @@ using `zx_mbo_read()`.
 The cycle can now repeat.  The caller can now write a new request
 message into the MBO and send it on a channel as above, potentially to
 a different callee.
+
+## Operations
+
+*   `zx_mbo_create() -> mbo`: Creates a new MBO.  The MBO starts off
+    in the `owned_by_caller` state.
+
+*   `zx_mbo_read(mbo_or_cmh) -> (data, handles)`: Reads an MBO.  This
+    reads the entire contents of the MBO.  (Operations for partial
+    reads will be defined later.)  This takes either an MBO handle (in
+    the `owned_by_caller` state) or a CMH handle (for a CMH pointing
+    to an MBO in the `owned_by_callee` state).
+
+*   `zx_mbo_write(mbo_or_cmh, data, handles)`: Writes an MBO.  This
+    replaces the MBO's existing contents.  (Operations for
+    partial/incremental writes will be defined later.)  This takes
+    either an MBO handle (in the `owned_by_caller` state) or a CMH
+    handle (for a CMH pointing to an MBO in the `owned_by_callee`
+    state).
+
+*   `zx_channel_write_mbo(channel, mbo)`: Sends an MBO as a request on
+    a channel.  The MBO must be in the `owned_by_caller` state.  Its
+    state will be changed to `enqueued_as_request`.
+
+    If the channel has an associated destination MsgQueue, as set by
+    `zx_channel_redirect()`, the MBO will be enqueued onto that
+    MsgQueue and its `key` field will be set to the key value that was
+    set by `zx_channel_redirect()`.  Otherwise, the MBO will be
+    enqueued on the channel so that it is readable from the channel's
+    opposite endpoint.
+
+*   `zx_msgqueue_create() -> msgqueue`: Creates a new MsgQueue.
+
+*   `zx_msgqueue_read(msgqueue, cmh) -> key`: Reads an MBO from a
+    MsgQueue.  If the MsgQueue is empty, this first blocks until the
+    MsgQueue is non-empty.
+
+    This takes a CMH as an argument.  The CMH must not currently hold
+    a reference to an MBO, otherwise an error is returned.
+
+    This removes the first MBO from the message queue.  If the MBO was
+    in the `enqueued_as_request` state, this sets the CMH to point to
+    the MBO, and changes the MBO's state to `owned_by_callee`.
+
+    If the MBO was in the `enqueued_as_reply` state, this changes the
+    MBO's state to `owned_by_caller` and does not modify the CMH.
+
+    This returns the `key` field from the MBO, which allows the
+    process to determine which channel the message was sent on (for
+    requests) or which request this is a reply to (for replies).
+
+*   `zx_channel_redirect(channel_or_mbo, msgqueue, key)`: Sets the
+    associated destination MsgQueue for a channel or an MBO.
+
+    For channels: When given channel endpoint 1 of a pair, this sets
+    the associated MsgQueue for endpoint 2 of the pair so that calls
+    to `zx_channel_write_mbo()` on endpoint 2 will enqueue messages
+    onto the given MsgQueue with the given key value.  If the channel
+    had any existing messages queued on it (previously written to
+    endpoint 2 and currently readable from endpoint 1), they are moved
+    onto the given MsgQueue.
+
+    For MBOs: When given an MBO, this sets the associated MsgQueue for
+    the MBO, onto which `zx_cmh_send_reply()` will enqueue the MBO
+    with the given key value.  The MBO must be in the
+    `owned_by_caller` state.
+
+*   `zx_cmh_create() -> cmh`: Creates a new CMH.  The CMH starts off
+    not holding a reference to any MBO.
+
+*   `zx_cmh_send_reply(cmh)`: Returns a reply message to the caller.
+    The given CMH must have a reference to an MBO (which will be in
+    the state `owned_by_callee`).  This operation drops the CMH's
+    reference to the MBO, and enqueues the MBO onto its associated
+    MsgQueue, setting the MBO's `key` field to its reply key.  The
+    MBO's state is set to `enqueued_as_reply`.
