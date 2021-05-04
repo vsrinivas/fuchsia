@@ -208,7 +208,7 @@ There are some examples available:
 
 * **spinning_cube**
   - An example written in Dart and Flutter, showing how to create a Flutter app in Fuchsia.
-  - **Source:** [`//src/experiences/examples/spinning_cube`](https://fuchsia.googlesource.com/experiences/+/master/examples/spinning_cube)
+  - **Source:** [`//src/experiences/examples/spinning_cube`](https://fuchsia.googlesource.com/experiences/+/main/examples/spinning_cube)
   - **Build dependency:** `//src/experiences/examples/spinning_cube:spinning-cube`
   - **Package URI:** `fuchsia-pkg://fuchsia.com/spinning-cube#meta/spinning_cube.cmx`
 

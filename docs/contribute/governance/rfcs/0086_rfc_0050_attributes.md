@@ -516,8 +516,8 @@ the syntax proposed in this document.
 [fidl-attributes-transport]: /docs/reference/fidl/language/attributes.md#transport
 [fidl-grammar]: /docs/reference/fidl/language/grammar.md
 [fidl-json-ir]: /docs/reference/fidl/language/json-ir.md
-[fidl-json-schema]: https://cs.opensource.google/fuchsia/fuchsia/+/master:tools/fidl/fidlc/schema.json;drc=ed2a2cddbd2257595ff9fd8e9c4d151b291edec1
-[fidl-json-schema-attribute]: https://cs.opensource.google/fuchsia/fuchsia/+/master:tools/fidl/fidlc/schema.json;l=1183;drc=ed2a2cddbd2257595ff9fd8e9c4d151b291edec1
+[fidl-json-schema]: https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/schema.json;drc=ed2a2cddbd2257595ff9fd8e9c4d151b291edec1
+[fidl-json-schema-attribute]: https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/schema.json;l=1183;drc=ed2a2cddbd2257595ff9fd8e9c4d151b291edec1
 [fidl-style-guide]: /docs/development/languages/fidl/guides/style.md#usage
 [python-decorator-syntax]: https://docs.python.org/3/reference/expressions.html#calls
 [python-keyword-syntax]: https://www.python.org/dev/peps/pep-0318/

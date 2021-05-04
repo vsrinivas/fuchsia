@@ -142,11 +142,11 @@ In order to land the change, we need to:
 * Add `epoch_history` to //src/sys/pkg/bin/system-updater.
   * Also, make a script that converts `epoch_history` to `epoch.json`.
   * Have the build system use this script to add `epoch.json` to the system-updater's out directory.
-* Modify the [BUILD](https://cs.opensource.google/fuchsia/fuchsia/+/master:build/resources/BUILD.gn;l=2
+* Modify the [BUILD](https://cs.opensource.google/fuchsia/fuchsia/+/main:build/resources/BUILD.gn;l=2
   074;drc=2f584c4a62374f37361ac04875e60b5459fcc3b5) so that `epoch.json` also gets put into
   the update package.
 * The system-updater should examine `epoch.json` at the end of the [Prepare](https://cs.opensource.g
-  oogle/fuchsia/fuchsia/+/master:src/sys/pkg/bin/system-updater/src/update.rs;l=373;drc=91f4bd84db87
+  oogle/fuchsia/fuchsia/+/main:src/sys/pkg/bin/system-updater/src/update.rs;l=373;drc=91f4bd84db87
   4b5693f4f8040e4f5a39facc701b) phase.
   * If there is no `epoch.json` in the update package or there is a problem with deserializing it,
     assume epoch is 0. We deliberately ignore errors so that we can still OTA if the `epoch.json`
@@ -156,7 +156,7 @@ In order to land the change, we need to:
     (https://doc.rust-lang.org/std/macro.include_str.html) macro to read from the out directory.
   * If epoch in update package < epoch in system-updater, fail prepare with reason
     `UNSUPPORTED_DOWNGRADE`. We'll need to create a new [PrepareFailureReason](https://cs.opensource
-    .google/fuchsia/fuchsia/+/master:src/sys/pkg/fidl/fuchsia.update.installer/progress.fidl;l=221;d
+    .google/fuchsia/fuchsia/+/main:src/sys/pkg/fidl/fuchsia.update.installer/progress.fidl;l=221;d
     rc=02b3415cbc6b0bc446bbd03571e17b823941faed) for `UNSUPPORTED_DOWNGRADE`.
 
 ## Security

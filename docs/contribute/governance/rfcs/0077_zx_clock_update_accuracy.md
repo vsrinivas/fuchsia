@@ -69,7 +69,7 @@ this line.
 
 We introduce a new `zx_clock_update_args_v2_t` struct containing all the fields
 currently in
-[`zx_clock_update_args_v1_t`](https://cs.opensource.google/fuchsia/fuchsia/+/master:zircon/system/public/zircon/syscalls/clock.h;drc=0e009aa7aba824273eddb42f0e526f98afa6c692;l=83)
+[`zx_clock_update_args_v1_t`](https://cs.opensource.google/fuchsia/fuchsia/+/main:zircon/system/public/zircon/syscalls/clock.h;drc=0e009aa7aba824273eddb42f0e526f98afa6c692;l=83)
 plus an additional `reference_value` field. We also add a new
 `ZX_CLOCK_UPDATE_OPTION_REFERENCE_VALUE_VALID` option.
 
@@ -166,7 +166,7 @@ This change will be implemented in four stages:
 1. Define `zx_clock_update_args_v2_t`,
    `ZX_CLOCK_UPDATE_OPTION_REFERENCE_VALUE_VALID`, and
    `ZX_CLOCK_UPDATE_OPTION_BOTH_VALUES_VALID`;
-2. Update [`clock.cc`](https://cs.opensource.google/fuchsia/fuchsia/+/master:zircon/kernel/lib/syscalls/clock.cc)
+2. Update [`clock.cc`](https://cs.opensource.google/fuchsia/fuchsia/+/main:zircon/kernel/lib/syscalls/clock.cc)
    and the associated unit tests to accept `zx_clock_update_args_v2_t`;
 3. Update language-specific wrappers such as Rust's `fuchsia-zircon` to use
    `zx_clock_update_args_v2_t` and expose the new functionality.
@@ -195,7 +195,7 @@ users and therefore does not impact privacy.
 ## Testing
 
 Unit tests in
-[`kernel-clocks.cc`](https://cs.opensource.google/fuchsia/fuchsia/+/master:src/zircon/tests/kernel-clocks/kernel-clocks.cc)
+[`kernel-clocks.cc`](https://cs.opensource.google/fuchsia/fuchsia/+/main:src/zircon/tests/kernel-clocks/kernel-clocks.cc)
 will be expanded to cover this new behavior. Timekeeper will be updated to set
 UTC using an explicit monotonic time so the existing UTC unit and integration
 tests will provide additional test coverage.

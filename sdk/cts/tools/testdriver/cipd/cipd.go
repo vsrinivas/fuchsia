@@ -52,7 +52,7 @@ type PkgInstance struct {
 // the correct instance of the CIPD package.
 //
 // More info:
-//   https://chromium.googlesource.com/infra/luci/luci-go/+/master/cipd/README.md#tags
+//   https://chromium.googlesource.com/infra/luci/luci-go/+/main/cipd/README.md#tags
 type Tag struct {
 	key string
 	val string
@@ -76,7 +76,7 @@ func (t *Tag) String() string {
 // instance of the CIPD package.
 //
 // More info:
-//   https://chromium.googlesource.com/infra/luci/luci-go/+/master/cipd/README.md#refs
+//   https://chromium.googlesource.com/infra/luci/luci-go/+/main/cipd/README.md#refs
 type Ref struct {
 	ref string
 }

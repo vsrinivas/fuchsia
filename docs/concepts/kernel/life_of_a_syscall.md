@@ -4,7 +4,7 @@
 
 When a syscall is invoked by an application, execution passes through several stages.
 In order to reduce boilerplate code, syscall-specific logic is generated with the
-[kazoo](https://cs.opensource.google/fuchsia/fuchsia/+/master:zircon/tools/kazoo/)
+[kazoo](https://cs.opensource.google/fuchsia/fuchsia/+/main:zircon/tools/kazoo/)
 tool. Before diving into how each of the above stages works, it is best to understand
 how this code is generated.
 

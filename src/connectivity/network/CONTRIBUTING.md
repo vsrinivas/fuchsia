@@ -328,4 +328,4 @@ If you're working on changes that affect `fdio` and `third_party/go`, add:
 [fake-clock]: https://fuchsia.googlesource.com/fuchsia/+/a874276/src/lib/fake-clock
 [rust_test_result]: https://doc.rust-lang.org/edition-guide/rust-2018/error-handling-and-panics/question-mark-in-main-and-tests.html
 [rust_backtrace_stabilize]: https://github.com/rust-lang/rust/pull/72981
-[rust_backtrace_disabled]: https://cs.opensource.google/fuchsia/fuchsia/+/master:third_party/rust_crates/Cargo.toml;l=308-309;drc=fb9288396656bf5c9174d39238acc183fa0c4882
+[rust_backtrace_disabled]: https://cs.opensource.google/fuchsia/fuchsia/+/main:third_party/rust_crates/Cargo.toml;l=308-309;drc=fb9288396656bf5c9174d39238acc183fa0c4882

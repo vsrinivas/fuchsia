@@ -386,4 +386,4 @@ flexibility.
   negative values; while system success codes and application success
   codes would be the positive values. 0 would remain `ZX_OK`.
 
-[status_def]: https://cs.opensource.google/fuchsia/fuchsia/+/master:zircon/system/public/zircon/errors.h;l=8-13;drc=c26ad0985e3c06356a157d1eabc38c2c13c40b96
+[status_def]: https://cs.opensource.google/fuchsia/fuchsia/+/main:zircon/system/public/zircon/errors.h;l=8-13;drc=c26ad0985e3c06356a157d1eabc38c2c13c40b96

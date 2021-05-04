@@ -63,7 +63,7 @@ shared line the Bus driver is responsible for notifying the correct device.
 Similar to the kPCI driver, the Bus will disable a device's legacy interrupt
 when signaling to the driver that an interrupt is available to be serviced,
 effectively masking it. We will add a new [PCI protocol
-method](https://cs.opensource.google/fuchsia/fuchsia/+/master:sdk/banjo/fuchsia.hardware.pci/pci.banjo)
+method](https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/banjo/fuchsia.hardware.pci/pci.banjo)
 to allow for the device driver to request that its interrupt be re-enabled /
 unmasked. This call will be necessary for drivers that may interact with
 devices that use a legacy interrupt in some configurations, but will require

@@ -123,7 +123,7 @@ A **Code Review Label +2** score can only be applied by a directory owner.
 A change can be submitted after a repository owner applies the
 **Code Review Label +2** to your change. When a change is submitted, the change
 is submitted to the Commit Queue (CQ). The Commit Queue verifies and
-merges changes to the `master` branch.
+merges changes to the `main` branch.
 
 **Only contributors with [commit access](/docs/contribute/community/contributor-roles.md#committer)** can submit code directly
 through the Gerrit interface. Regular members need to ask a Committer to submit code for them.

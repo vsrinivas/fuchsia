@@ -1,8 +1,8 @@
 {# This file is used to define the objects and css style for RFC pages #}
 {% set gerrit_profile = "https://fuchsia-review.googlesource.com/q/owner:" %}
 {% set gerrit_change_url = "https://fuchsia-review.googlesource.com/c/fuchsia/+/" %}
-{% set fuchsia_source_tree = "https://fuchsia.googlesource.com/fuchsia/+/master/" %}
-{% set fuchsia_editor = "https://ci.android.com/edit?repo=fuchsia/fuchsia/master&file=" %}
+{% set fuchsia_source_tree = "https://fuchsia.googlesource.com/fuchsia/+/main/" %}
+{% set fuchsia_editor = "https://ci.android.com/edit?repo=fuchsia/fuchsia/main&file=" %}
 {% set issue_url = "https://fxbug.dev/" %}
 {% set rfcs_dir = "docs/contribute/governance/rfcs/" %}
 {% set rfcs_metadata_file = "_rfcs.yaml" %}

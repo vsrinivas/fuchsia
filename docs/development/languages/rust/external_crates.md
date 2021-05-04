@@ -340,5 +340,5 @@ This issue is being tracked [upstream](https://github.com/rust-lang/cargo/issues
 [external-vendor]: /third_party/rust_crates/vendor
 [cargo-gnaw-readme]: /tools/cargo-gnaw/README.md
 [osrb-process]: /docs/contribute/governance/policy/osrb-process.md#process_for_adding_external_code_to_new_repositories
-[jiri-manifest]: https://fuchsia.googlesource.com/manifest/+/master/runtimes/rust "Jiri manifest"
+[jiri-manifest]: https://fuchsia.googlesource.com/manifest/+/main/runtimes/rust "Jiri manifest"
 [owners-file]: /third_party/rust_crates/OWNERS

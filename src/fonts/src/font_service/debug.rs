@@ -53,7 +53,7 @@ impl BuildType {
     ///
     /// The file must be supplied using a [`build_type_config_data` GN target][config-gni].
     ///
-    /// [config-gni]: https://cs.opensource.google/fuchsia/fuchsia/+/master:build/type/config.gni
+    /// [config-gni]: https://cs.opensource.google/fuchsia/fuchsia/+/main:build/type/config.gni
     pub fn load_from_config_data() -> Result<BuildType, Error> {
         fs::read_to_string(BUILD_TYPE_PATH)?.trim().parse()
     }

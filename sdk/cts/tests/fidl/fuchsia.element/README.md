@@ -132,9 +132,9 @@ topology.
 [glossary-element]: /docs/glossary.md#element
 [glossary-session]: /docs/glossary.md#session
 [glossary-session-manager]: /docs/glossary.md#session-manager
-[source-element-management]: https://cs.opensource.google/fuchsia/fuchsia/+/master:src/session/lib/element_management
-[source-element-manager-fidl]: https://cs.opensource.google/fuchsia/fuchsia/+/master:sdk/fidl/fuchsia.element/element_manager.fidl
-[source-element-manager]: https://cs.opensource.google/fuchsia/fuchsia/+/master:src/session/bin/element_manager
-[source-gtest-runner]: https://cs.opensource.google/fuchsia/fuchsia/+/master:src/sys/test_runners/gtest
-[source-session-config]: https://cs.opensource.google/fuchsia/fuchsia/+/master:src/session/build/session_config.gni
-[source-test-runners]: https://cs.opensource.google/fuchsia/fuchsia/+/master:src/sys/test_runners
+[source-element-management]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/session/lib/element_management
+[source-element-manager-fidl]: https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.element/element_manager.fidl
+[source-element-manager]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/session/bin/element_manager
+[source-gtest-runner]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/sys/test_runners/gtest
+[source-session-config]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/session/build/session_config.gni
+[source-test-runners]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/sys/test_runners

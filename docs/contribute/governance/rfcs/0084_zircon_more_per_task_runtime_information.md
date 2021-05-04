@@ -111,7 +111,7 @@ and churn as the set of kernel primitives changes over time.
 Stepping back, what we really want is to fetch traces from devices in the wild.
 Ideally we'd continuously record a trace into a circular buffer and upload that
 buffer after hitting a
-[`TRACE_ALERT`](https://cs.opensource.google/fuchsia/fuchsia/+/master:zircon/system/ulib/trace/include/lib/trace/internal/event_common.h;drc=cda406c8b5fc88d434183b1009010ba6f2c3c7b6;l=406).
+[`TRACE_ALERT`](https://cs.opensource.google/fuchsia/fuchsia/+/main:zircon/system/ulib/trace/include/lib/trace/internal/event_common.h;drc=cda406c8b5fc88d434183b1009010ba6f2c3c7b6;l=406).
 
 ## Design
 
@@ -246,7 +246,7 @@ To avoid this side channel entirely, we'd need to separate metric _reporting_
 and metric _inspection_ into separate capabilities. For example, if we
 continuously record a trace into a circular buffer and upload that buffer to a
 special channel or port after hitting a
-[`TRACE_ALERT`](https://cs.opensource.google/fuchsia/fuchsia/+/master:zircon/system/ulib/trace/include/lib/trace/internal/event_common.h;drc=cda406c8b5fc88d434183b1009010ba6f2c3c7b6;l=406),
+[`TRACE_ALERT`](https://cs.opensource.google/fuchsia/fuchsia/+/main:zircon/system/ulib/trace/include/lib/trace/internal/event_common.h;drc=cda406c8b5fc88d434183b1009010ba6f2c3c7b6;l=406),
 then the task which triggered the `TRACE_ALERT` would not need to be given
 access to the trace, which eliminates the side channel. As mentioned earlier,
 such a solution will take a long time to design and build, while we have an
@@ -279,7 +279,7 @@ fxrev.dev/469819).
 We will update existing tests for `cpu_time` and `queue_time` to test the old
 version of `zx_info_task_runtime_t`, which will be named
 `zx_info_task_runtime_v1_t`. Additionally, Zircon's
-[abi_type_validator.h](https://cs.opensource.google/fuchsia/fuchsia/+/master:zircon/kernel/lib/abi_type_validator/include/lib/abi_type_validator.h;bpv=1;bpt=0;drc=bce936b9b16d91dba88d5372bb10361ff2e7645a)
+[abi_type_validator.h](https://cs.opensource.google/fuchsia/fuchsia/+/main:zircon/kernel/lib/abi_type_validator/include/lib/abi_type_validator.h;bpv=1;bpt=0;drc=bce936b9b16d91dba88d5372bb10361ff2e7645a)
 will be updated to validate the old and new ABIs. This will ensure that ABI
 backwards compatibility is preserved.
 

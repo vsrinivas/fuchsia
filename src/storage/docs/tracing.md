@@ -43,7 +43,7 @@ long a given operation takes (measured both by wall time and CPU time).
 Both blobfs and minfs have instrumentation for a variety of common filesystem
 operations. For example, in blobfs, every block transaction is instrumented to
 record the duration (
-[source](https://cs.opensource.google/fuchsia/fuchsia/+/master:src/storage/blobfs/blobfs.h;l=97;drc=f14ae2556f5c35bf9f33f4cd7f1b6fb5a53dd80d)):
+[source](https://cs.opensource.google/fuchsia/fuchsia/+/main:src/storage/blobfs/blobfs.h;l=97;drc=f14ae2556f5c35bf9f33f4cd7f1b6fb5a53dd80d)):
 
 ```
   zx_status_t Transaction(block_fifo_request_t* requests, size_t count) final {

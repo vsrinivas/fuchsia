@@ -52,7 +52,7 @@ struct Opt {
     #[argh(option, short = 'c')]
     /// path to a configuration file to provide additional options
     config: Option<PathBuf>,
-    #[argh(option, default = "\"master\".to_string()")]
+    #[argh(option, default = "\"main\".to_string()")]
     /// current commit hash, useful to coordinate doc generation with a specific source code revision
     tag: String,
     #[argh(positional)]

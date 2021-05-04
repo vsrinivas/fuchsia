@@ -44,7 +44,7 @@ Send an email using this template:
 To: announce@fuchsia.dev
 Cc: pkg-dev@fuchsia.dev
 Subject: Bumping the OTA backstop
-Content: Following the playbook at https://cs.opensource.google/fuchsia/fuchsia/+/master:src/sys/pkg/bin/system-updater/epoch/playbook.md, I wanted to share I bumped the OTA backstop. This means you won't be able to OTA backwards across {link}. If you try and OTA backwards across this change, the OTA will fail and you may observe a log like: "downgrades from epoch {src} to {target} are not allowed." If you need to downgrade a device across this change, consider flashing. For more details, please see [RFC-0071](https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0071_ota_backstop).
+Content: Following the playbook at https://cs.opensource.google/fuchsia/fuchsia/+/main:src/sys/pkg/bin/system-updater/epoch/playbook.md, I wanted to share I bumped the OTA backstop. This means you won't be able to OTA backwards across {link}. If you try and OTA backwards across this change, the OTA will fail and you may observe a log like: "downgrades from epoch {src} to {target} are not allowed." If you need to downgrade a device across this change, consider flashing. For more details, please see [RFC-0071](https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0071_ota_backstop).
 ```
 
 where `link` is a link to the CL, `src` is the epoch you bumped to, and `target` is a lower epoch.

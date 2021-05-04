@@ -13,7 +13,7 @@ def do_remap(build_id):
     """
     build_id = build_id.upper()
     # See https://crashpad.chromium.org/bug/229 and
-    # https://source.chromium.org/chromium/chromium/src/+/master:third_party/crashpad/crashpad/snapshot/elf/module_snapshot_elf.cc;l=157-167;drc=81cc8267d3a069163708f3ac140d0d940487c137
+    # https://source.chromium.org/chromium/chromium/src/+/main:third_party/crashpad/crashpad/snapshot/elf/module_snapshot_elf.cc;l=157-167;drc=81cc8267d3a069163708f3ac140d0d940487c137
     return (
         build_id[6:8]
         + build_id[4:6]

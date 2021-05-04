@@ -226,7 +226,7 @@ errors.
 
 To remedy this, it is required to write type assertions for all interfaces a
 type implements (yes, those in the standard library
-[too](https://cs.opensource.google/fuchsia/fuchsia/+/master:tools/fidl/lib/fidlgen/formatter.go;drc=e67febe6dbde880bf9632fbe0540cf9251dcfd0a;l=55)):
+[too](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/lib/fidlgen/formatter.go;drc=e67febe6dbde880bf9632fbe0540cf9251dcfd0a;l=55)):
 
 ```go
 var _ MyInterface = (*myImplementation)(nil)
@@ -253,11 +253,11 @@ follows:
 
 * Prefer having a single type assertion below the implementation when each
   implementation stands on its own, e.g.
-  [here](https://cs.opensource.google/fuchsia/fuchsia/+/master:tools/mdlint/rules/bad_lists.go;drc=b9496c021b59ccfed5eeeaeacee5fb9dc14005a7;l=26);
+  [here](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/mdlint/rules/bad_lists.go;drc=b9496c021b59ccfed5eeeaeacee5fb9dc14005a7;l=26);
 * Prefer a grouped type assertion below the interface when all implementations
   are meant to be used in concert (e.g. expression nodes of an `Expression`
   interface representing an AST), e.g.
-  [here](https://cs.opensource.google/fuchsia/fuchsia/+/master:tools/fidl/lib/summarize/summary.go;drc=41966aa0f0d465f663b1b9928e5c57cf80fe38ef;l=35).
+  [here](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/lib/summarize/summary.go;drc=41966aa0f0d465f663b1b9928e5c57cf80fe38ef;l=35).
 
 ### Embedding
 
@@ -301,7 +301,7 @@ receiver is appropriate:
   [`sort.Interface`](https://golang.org/pkg/sort/#Interface) on `mySlice`. The
   type `*mySlice` would never be used because `[]myElement` is already a
   reference. Example
-  [here](https://cs.opensource.google/fuchsia/fuchsia/+/master:tools/mdlint/core/reporter.go?q=%22type%20sortableMessages%20%5B%5Dmessage%22).
+  [here](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/mdlint/core/reporter.go?q=%22type%20sortableMessages%20%5B%5Dmessage%22).
 * When it is never expected to use a type assertion or type switch on values of
   the interface type. For example,
   [`Stringer`](https://golang.org/pkg/fmt/#Stringer) is often implemented on

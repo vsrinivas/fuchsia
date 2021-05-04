@@ -11,7 +11,7 @@ Fuchsia is subject to multiple licenses:
 
   *   The Fuchsia kernel is released under the following MIT-style license: [/zircon/kernel/LICENSE](/zircon/kernel/LICENSE).
   *   All Fuchsia user space components are released under a BSD-style license: [/LICENSE](/LICENSE)
-      or an Apache 2.0 license: [https://fuchsia.googlesource.com/infra/+/master/LICENSE](https://fuchsia.googlesource.com/infra/+/master/LICENSE).
+      or an Apache 2.0 license: [https://fuchsia.googlesource.com/infra/+/main/LICENSE](https://fuchsia.googlesource.com/infra/+/main/LICENSE).
   *   All code that is BSD-licensed has an additional IP grant: [/PATENTS](/PATENTS).
 
 Any code that has a different copyright holder or that is released under a
@@ -103,25 +103,25 @@ The following are the approved licenses for production target devices:
 
   *   MIT license, specifically the text at [/zircon/kernel/LICENSE](/zircon/kernel/LICENSE)
 
-  *   Zlib license, specifically the text at [https://fuchsia.googlesource.com/third\_party/zlib/+/master/README#85](https://fuchsia.googlesource.com/third\_party/zlib/+/master/README#85)
+  *   Zlib license, specifically the text at [https://fuchsia.googlesource.com/third\_party/zlib/+/main/README#85](https://fuchsia.googlesource.com/third\_party/zlib/+/main/README#85)
 
-  *   Libpng license, specifically the text at [https://fuchsia.googlesource.com/third\_party/libpng/+/master/LICENSE](https://fuchsia.googlesource.com/third\_party/libpng/+/master/LICENSE)
+  *   Libpng license, specifically the text at [https://fuchsia.googlesource.com/third\_party/libpng/+/main/LICENSE](https://fuchsia.googlesource.com/third\_party/libpng/+/main/LICENSE)
 
-  *   Boost license 1.0, specifically the text at [https://fuchsia.googlesource.com/third\_party/asio/+/master/asio/LICENSE\_1\_0.txt](https://fuchsia.googlesource.com/third\_party/asio/+/master/asio/LICENSE\_1\_0.txt )
+  *   Boost license 1.0, specifically the text at [https://fuchsia.googlesource.com/third\_party/asio/+/main/asio/LICENSE\_1\_0.txt](https://fuchsia.googlesource.com/third\_party/asio/+/main/asio/LICENSE\_1\_0.txt )
 
   *   OpenSSL license, specifically the text at [https://fuchsia.googlesource.com/third\_party/boringssl/+/upstream/master/LICENSE](https://fuchsia.googlesource.com/third\_party/boringssl/+/upstream/master/LICENSE)
 
-  *   FreeType project license, specifically the text at [https://fuchsia.googlesource.com/third\_party/freetype2/+/master/docs/FTL.TXT](https://fuchsia.googlesource.com/third\_party/freetype2/+/master/docs/FTL.TXT)
+  *   FreeType project license, specifically the text at [https://fuchsia.googlesource.com/third\_party/freetype2/+/main/docs/FTL.TXT](https://fuchsia.googlesource.com/third\_party/freetype2/+/main/docs/FTL.TXT)
 
-  *   Apache 2.0 license, specifically the text at [https://fuchsia.googlesource.com/third\_party/flatbuffers/+/master/LICENSE.txt](https://fuchsia.googlesource.com/third\_party/flatbuffers/+/master/LICENSE.txt)
+  *   Apache 2.0 license, specifically the text at [https://fuchsia.googlesource.com/third\_party/flatbuffers/+/main/LICENSE.txt](https://fuchsia.googlesource.com/third\_party/flatbuffers/+/main/LICENSE.txt)
 
-  *   Independent JPEG Group License (IJG), specifically the text at [https://fuchsia.googlesource.com/third\_party/iccjpeg/+/master/LICENSE](https://fuchsia.googlesource.com/third\_party/iccjpeg/+/master/LICENSE)
+  *   Independent JPEG Group License (IJG), specifically the text at [https://fuchsia.googlesource.com/third\_party/iccjpeg/+/main/LICENSE](https://fuchsia.googlesource.com/third\_party/iccjpeg/+/main/LICENSE)
 
-  *   ICU license, specifically the text at [https://fuchsia.googlesource.com/third\_party/icu/+/master/LICENSE](https://fuchsia.googlesource.com/third\_party/icu/+/master/LICENSE)
+  *   ICU license, specifically the text at [https://fuchsia.googlesource.com/third\_party/icu/+/main/LICENSE](https://fuchsia.googlesource.com/third\_party/icu/+/main/LICENSE)
 
-  *   Curl license, specifically the text at [https://fuchsia.googlesource.com/third\_party/curl/+/master/COPYING](https://fuchsia.googlesource.com/third\_party/curl/+/master/COPYING)
+  *   Curl license, specifically the text at [https://fuchsia.googlesource.com/third\_party/curl/+/main/COPYING](https://fuchsia.googlesource.com/third\_party/curl/+/main/COPYING)
 
-  *   University of Illinois / NCSA Open Source License (NCSA), specifically the text at [https://fuchsia.googlesource.com/third\_party/clang/+/master/LICENSE.TXT](https://fuchsia.googlesource.com/third\_party/clang/+/master/LICENSE.TXT)
+  *   University of Illinois / NCSA Open Source License (NCSA), specifically the text at [https://fuchsia.googlesource.com/third\_party/clang/+/main/LICENSE.TXT](https://fuchsia.googlesource.com/third\_party/clang/+/main/LICENSE.TXT)
 
   *   ISC license, specifically the text at [https://fuchsia.googlesource.com/third\_party/boringssl/+/upstream/master/LICENSE#143](https://fuchsia.googlesource.com/third\_party/boringssl/+/upstream/master/LICENSE#143)
 
@@ -166,7 +166,7 @@ Fuchsia-based device in use by a Fuchsia developer and not an end user.
 
 Additionally, the following licenses are permitted for the development target:
 
-  * GNU General Public License v2.0 (GPL 2.0), specifically the text at [https://fuchsia.googlesource.com/third\_party/gdb/+/master/COPYING](https://fuchsia.googlesource.com/third\_party/gdb/+/master/COPYING)
+  * GNU General Public License v2.0 (GPL 2.0), specifically the text at [https://fuchsia.googlesource.com/third\_party/gdb/+/main/COPYING](https://fuchsia.googlesource.com/third\_party/gdb/+/main/COPYING)
 
   * GNU Library General Public License 2.0 (LGPL 2.0), specifically the text at [https://spdx.org/licenses/LGPL-2.0.html#licenseText](https://spdx.org/licenses/LGPL-2.0.html#licenseText)
 

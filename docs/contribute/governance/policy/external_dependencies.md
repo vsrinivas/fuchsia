@@ -36,14 +36,14 @@ Source code dependencies operates in one of two modes:
 
    When tracking upstream, we typically create a mirror of the repository in the
    `third_party` directory with the *same name as the upstream project* in order
-   to ensure the availability of the code for the Fuchsia build. The `master`
+   to ensure the availability of the code for the Fuchsia build. The `main`
    branch should point at the ref used by Fuchsia -- typically a version tag.
    Branches that exist in the upstream repo are present in our mirror, prefixed
    with `upstream/` (e.g., `foo` becomes `upstream/foo`).
 
    Any local modifications to the code (e.g., to integrate with the build or the
-   platform) should be landed in the `master` branch. When we fetch upstream
-   changes, we merge our `master` branch with upstream so that the `master`
+   platform) should be landed in the `main` branch. When we fetch upstream
+   changes, we merge our `main` branch with upstream so that the `main`
    branch contains both the updated upstream code and our local modifications.
 
    In the Fuchsia parlance, third party repos that are _tracking upstream_ are

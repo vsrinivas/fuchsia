@@ -39,5 +39,5 @@ through the following procedure:
 7. Merge your change to the `//topaz/manifest/dart` manifest file to master.
 
 [pub]: https://pub.dartlang.org/ "Pub"
-[dart-3p]: https://fuchsia.googlesource.com/third_party/dart-pkg/+/master "Third-party dependencies"
+[dart-3p]: https://fuchsia.googlesource.com/third_party/dart-pkg/+/main "Third-party dependencies"
 [dart-3p-script]: /scripts/dart/update_3p_packages.py "Dependencies script"

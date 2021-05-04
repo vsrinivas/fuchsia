@@ -30,6 +30,6 @@ better fit for your needs.
     however, has more dependencies than this library, such as locking
     libraries and memory allocation.
 
-[cmpctmalloc]: https://cs.opensource.google/fuchsia/fuchsia/+/master:zircon/kernel/lib/heap/cmpctmalloc/cmpctmalloc.cc
-[scudo]: https://cs.opensource.google/fuchsia/fuchsia/+/master:zircon/third_party/scudo/README.fuchsia.md
-[region-alloc]: https://cs.opensource.google/fuchsia/fuchsia/+/master:zircon/system/ulib/region-alloc/
+[cmpctmalloc]: https://cs.opensource.google/fuchsia/fuchsia/+/main:zircon/kernel/lib/heap/cmpctmalloc/cmpctmalloc.cc
+[scudo]: https://cs.opensource.google/fuchsia/fuchsia/+/main:zircon/third_party/scudo/README.fuchsia.md
+[region-alloc]: https://cs.opensource.google/fuchsia/fuchsia/+/main:zircon/system/ulib/region-alloc/

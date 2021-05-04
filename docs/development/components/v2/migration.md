@@ -1753,7 +1753,7 @@ using the directory capability `build-info` and path `/config/build-info`.
 [components-topology]: /docs/concepts/components/v2/topology.md
 [components-migration-status]: /docs/concepts/components/v2/migration.md
 [cs-appmgr-cml]: /src/sys/appmgr/meta/appmgr.cml
-[cs-appmgr-allowlist]: https://cs.opensource.google/fuchsia/fuchsia/+/master:src/sys/appmgr/main.cc;l=125;drc=ddf6d10ce8cf63268e21620638ea02e9b2b7cd20
+[cs-appmgr-allowlist]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/sys/appmgr/main.cc;l=125;drc=ddf6d10ce8cf63268e21620638ea02e9b2b7cd20
 [cs-core-cml]: /src/sys/core/meta/core.cml
 [debug-log]: /docs/development/diagnostics/logs/recording.md#debuglog_handles
 [debug-log-cpp]: /src/sys/lib/stdout-to-debuglog/cpp
