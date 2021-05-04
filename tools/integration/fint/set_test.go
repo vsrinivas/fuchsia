@@ -441,7 +441,7 @@ func TestGenArgs(t *testing.T) {
 			},
 		},
 		{
-			name: "profile variant with changed files and collect_coverage=true",
+			name: "changed files and collect_coverage=true",
 			contextSpec: &fintpb.Context{
 				ChangedFiles: []*fintpb.Context_ChangedFile{
 					{Path: "src/foo.cc"},
@@ -449,23 +449,17 @@ func TestGenArgs(t *testing.T) {
 				},
 				CollectCoverage: true,
 			},
-			staticSpec: &fintpb.Static{
-				Variants: []string{`profile`},
-			},
 			expectedArgs: []string{
 				`profile_source_files=["//src/foo.cc","//src/bar.cc"]`,
 			},
 		},
 		{
-			name: "profile variant with changed files and collect_coverage=false",
+			name: "changed files and collect_coverage=false",
 			contextSpec: &fintpb.Context{
 				ChangedFiles: []*fintpb.Context_ChangedFile{
 					{Path: "src/foo.cc"},
 					{Path: "src/bar.cc"},
 				},
-			},
-			staticSpec: &fintpb.Static{
-				Variants: []string{`profile`},
 			},
 			unexpectedArgs: []string{
 				`profile_source_files=["//src/foo.cc","//src/bar.cc"]`,

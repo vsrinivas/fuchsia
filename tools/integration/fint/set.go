@@ -271,13 +271,13 @@ func genArgs(staticSpec *fintpb.Static, contextSpec *fintpb.Context) ([]string, 
 		if contains(staticSpec.Variants, "thinlto") {
 			vars["thinlto_cache_dir"] = filepath.Join(contextSpec.CacheDir, "thinlto")
 		}
-		if contains(staticSpec.Variants, "profile") && contextSpec.CollectCoverage && len(contextSpec.ChangedFiles) > 0 {
-			var profileSourceFiles []string
-			for _, file := range contextSpec.ChangedFiles {
-				profileSourceFiles = append(profileSourceFiles, fmt.Sprintf("//%s", file.Path))
-			}
-			vars["profile_source_files"] = profileSourceFiles
+	}
+	if contextSpec.CollectCoverage && len(contextSpec.ChangedFiles) > 0 {
+		var profileSourceFiles []string
+		for _, file := range contextSpec.ChangedFiles {
+			profileSourceFiles = append(profileSourceFiles, fmt.Sprintf("//%s", file.Path))
 		}
+		vars["profile_source_files"] = profileSourceFiles
 	}
 
 	if staticSpec.EnableGoCache {
