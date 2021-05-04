@@ -220,7 +220,12 @@ VK_TEST_F(VkMemoryTest, ImportUsingVkMemoryAllocateInfo) {
   zx_status_t status = device_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &clone_vmo);
   ASSERT_EQ(ZX_OK, status);
   auto import_info = vk::ImportMemoryZirconHandleInfoFUCHSIA(
-      vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA, clone_vmo.release());
+#if VK_HEADER_VERSION > 173
+      vk::ExternalMemoryHandleTypeFlagBits::eZirconVmoFUCHSIA,
+#else
+      vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA,
+#endif
+      clone_vmo.release());
 
   // Here we get the memory type we set in function VkSessionTest::
   // AllocateExportableMemoryDedicatedToImageIfRequired.

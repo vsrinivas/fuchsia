@@ -64,7 +64,7 @@ loadable_module("compact_image") {
     "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp:cpp",
     "//src/lib/vulkan:headers",
-    "//src/lib/vulkan:micro_layer_common",
+    "//third_party/Vulkan-ValidationLayers:micro_layer_common",
     "//zircon/public/lib/fbl",
   ]
   ldflags = [ "-static-libstdc++" ]

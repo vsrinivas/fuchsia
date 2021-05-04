@@ -320,7 +320,12 @@ escher::GpuMemPtr ImportMemoryFromVmo(vk::Device vk_device, const zx::vmo& vmo,
   FX_CHECK(status == ZX_OK);
 
   auto memory_import_info = vk::ImportMemoryZirconHandleInfoFUCHSIA(
-      vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA, duplicated_vmo.release());
+#if VK_HEADER_VERSION > 173
+      vk::ExternalMemoryHandleTypeFlagBits::eZirconVmoFUCHSIA,
+#else
+      vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA,
+#endif
+      duplicated_vmo.release());
 
   vk::MemoryAllocateInfo allocation_info;
   allocation_info.setPNext(&memory_import_info);
@@ -333,8 +338,12 @@ escher::GpuMemPtr ImportMemoryFromVmo(vk::Device vk_device, const zx::vmo& vmo,
 escher::BufferPtr CreateBufferFromMemory(escher::Escher* escher, vk::DeviceSize size,
                                          zx::vmo& image_vmo) {
   vk::ExternalMemoryBufferCreateInfo external_buffer_create_info;
+#if VK_HEADER_VERSION > 173
+  external_buffer_create_info.handleTypes = vk::ExternalMemoryHandleTypeFlagBits::eZirconVmoFUCHSIA;
+#else
   external_buffer_create_info.handleTypes =
       vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA;
+#endif
 
   vk::BufferCreateInfo buffer_create_info;
   buffer_create_info.pNext = &external_buffer_create_info;
@@ -523,8 +532,13 @@ ComputeView::ComputeView(scenic::ViewContext context, escher::EscherWeakPtr weak
     //
 
     vk::ExternalMemoryImageCreateInfo external_image_create_info;
+#if VK_HEADER_VERSION > 173
+    external_image_create_info.handleTypes =
+        vk::ExternalMemoryHandleTypeFlagBits::eZirconVmoFUCHSIA;
+#else
     external_image_create_info.handleTypes =
         vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA;
+#endif
 
     vk::ImageCreateInfo image_create_info;
     image_create_info.pNext = &external_image_create_info;

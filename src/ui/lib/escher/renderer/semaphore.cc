@@ -14,7 +14,11 @@ Semaphore::Semaphore(vk::Device device, bool exportable) : device_(device) {
   vk::SemaphoreCreateInfo info;
 #ifdef __Fuchsia__
   vk::ExternalSemaphoreHandleTypeFlags flags(
+#if VK_HEADER_VERSION > 173
+      vk::ExternalSemaphoreHandleTypeFlagBits::eZirconEventFUCHSIA);
+#else
       vk::ExternalSemaphoreHandleTypeFlagBits::eTempZirconEventFUCHSIA);
+#endif
   vk::ExportSemaphoreCreateInfoKHR export_info(flags);
   if (exportable) {
     info.pNext = &export_info;

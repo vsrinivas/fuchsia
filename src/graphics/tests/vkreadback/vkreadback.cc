@@ -177,9 +177,12 @@ bool VkReadbackTest::InitVulkan(uint32_t vk_api_version) {
   builder.set_validation_layers_enabled(false);
 #endif
   // TODO(fxbug.dev/73025): remove this temp logic when it's time.
-  if (!use_temp_external_memory_) {
+  if (use_temp_external_memory_) {
     builder.set_validation_layers_enabled(false);
   }
+#if VK_HEADER_VERSION < 174
+  builder.set_validation_layers_enabled(false);
+#endif
   ctx_ = builder.Unique();
 
 #ifdef __Fuchsia__
@@ -356,10 +359,9 @@ bool VkReadbackTest::AllocateFuchsiaImportedMemory(uint32_t exported_memory_hand
   zx_vmo_get_size(exported_memory_handle, &vmo_size);
 
   VkMemoryZirconHandlePropertiesFUCHSIA zircon_handle_props{
-      .sType = (use_temp_external_memory_
-                    ? VK_STRUCTURE_TYPE_TEMP_MEMORY_ZIRCON_HANDLE_PROPERTIES_FUCHSIA
-                    : static_cast<VkStructureType>(
-                          VK_STRUCTURE_TYPE_MEMORY_ZIRCON_HANDLE_PROPERTIES_FUCHSIA)),
+      .sType = static_cast<VkStructureType>(
+          use_temp_external_memory_ ? VK_STRUCTURE_TYPE_TEMP_MEMORY_ZIRCON_HANDLE_PROPERTIES_FUCHSIA
+                                    : VK_STRUCTURE_TYPE_MEMORY_ZIRCON_HANDLE_PROPERTIES_FUCHSIA),
       .pNext = nullptr,
   };
   VkResult result = vkGetMemoryZirconHandlePropertiesFUCHSIA_(
@@ -396,10 +398,9 @@ bool VkReadbackTest::AllocateFuchsiaImportedMemory(uint32_t exported_memory_hand
 bool VkReadbackTest::AssignExportedMemoryHandle() {
   const auto& device = ctx_->device();
   VkMemoryGetZirconHandleInfoFUCHSIA get_handle_info = {
-      .sType = (use_temp_external_memory_
-                    ? VK_STRUCTURE_TYPE_TEMP_MEMORY_GET_ZIRCON_HANDLE_INFO_FUCHSIA
-                    : static_cast<VkStructureType>(
-                          VK_STRUCTURE_TYPE_MEMORY_GET_ZIRCON_HANDLE_INFO_FUCHSIA)),
+      .sType = static_cast<VkStructureType>(
+          use_temp_external_memory_ ? VK_STRUCTURE_TYPE_TEMP_MEMORY_GET_ZIRCON_HANDLE_INFO_FUCHSIA
+                                    : VK_STRUCTURE_TYPE_MEMORY_GET_ZIRCON_HANDLE_INFO_FUCHSIA),
       .pNext = nullptr,
       .memory = device_memory_,
       .handleType = external_memory_handle_type_};
@@ -408,10 +409,9 @@ bool VkReadbackTest::AssignExportedMemoryHandle() {
   RTN_IF_VK_ERR(false, result, "vkGetMemoryZirconHandleFUCHSIA.\n");
 
   VkMemoryZirconHandlePropertiesFUCHSIA zircon_handle_props{
-      .sType = (use_temp_external_memory_
-                    ? VK_STRUCTURE_TYPE_TEMP_MEMORY_ZIRCON_HANDLE_PROPERTIES_FUCHSIA
-                    : static_cast<VkStructureType>(
-                          VK_STRUCTURE_TYPE_MEMORY_ZIRCON_HANDLE_PROPERTIES_FUCHSIA)),
+      .sType = static_cast<VkStructureType>(
+          use_temp_external_memory_ ? VK_STRUCTURE_TYPE_TEMP_MEMORY_ZIRCON_HANDLE_PROPERTIES_FUCHSIA
+                                    : VK_STRUCTURE_TYPE_MEMORY_ZIRCON_HANDLE_PROPERTIES_FUCHSIA),
       .pNext = nullptr,
   };
   result = vkGetMemoryZirconHandlePropertiesFUCHSIA_(*device, external_memory_handle_type_,

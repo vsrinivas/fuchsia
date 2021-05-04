@@ -646,14 +646,14 @@ void VulkanExtensionTest::CheckLinearImage(vk::DeviceMemory memory, bool is_cohe
 class VulkanImageExtensionTest : public VulkanExtensionTest,
                                  public ::testing::WithParamInterface<bool> {};
 
-TEST_P(VulkanImageExtensionTest, BufferCollectionNV12_1025) {
+TEST_P(VulkanImageExtensionTest, BufferCollectionNV12_1026) {
   ASSERT_TRUE(Initialize());
   // TODO(fxbug.dev/59804): Enable the test when YUV sysmem images are
   // supported on emulators.
   if (UseVirtualGpu())
     GTEST_SKIP();
 
-  ASSERT_TRUE(Exec(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, 1025, 64, GetParam(), false));
+  ASSERT_TRUE(Exec(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, 1026, 64, GetParam(), false));
 }
 
 TEST_P(VulkanImageExtensionTest, BufferCollectionRGBA) {
@@ -661,9 +661,9 @@ TEST_P(VulkanImageExtensionTest, BufferCollectionRGBA) {
   ASSERT_TRUE(Exec(VK_FORMAT_R8G8B8A8_UNORM, 64, 64, GetParam(), false));
 }
 
-TEST_P(VulkanImageExtensionTest, BufferCollectionRGBA_1025) {
+TEST_P(VulkanImageExtensionTest, BufferCollectionRGBA_1026) {
   ASSERT_TRUE(Initialize());
-  ASSERT_TRUE(Exec(VK_FORMAT_R8G8B8A8_UNORM, 1025, 64, GetParam(), false));
+  ASSERT_TRUE(Exec(VK_FORMAT_R8G8B8A8_UNORM, 1026, 64, GetParam(), false));
 }
 
 TEST_P(VulkanImageExtensionTest, BufferCollectionNV12) {

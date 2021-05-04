@@ -51,11 +51,6 @@ group("headers") {
   public_deps = [ "//third_party/Vulkan-Headers:vulkan_headers" ]
 }
 
-# Support code for building layers without bloat.
-group("micro_layer_common") {
-  public_deps = [ "//third_party/Vulkan-ValidationLayers:micro_layer_common" ]
-}
-
 # Tests for the Vulkan loader and validation layers.
 group("loader_and_validation_tests") {
   testonly = true

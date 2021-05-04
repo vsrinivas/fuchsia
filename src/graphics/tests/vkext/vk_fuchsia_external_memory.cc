@@ -48,13 +48,12 @@ TEST(VulkanExtension, GetMemoryZirconHandlePropertiesFUCHSIA) {
   // Send the amended |device_info| back into the builder's
   // set_device_info() during unique context construction.
   VulkanContext::Builder builder;
-
-  // TODO(fxbug.dev/73025): remove this disable when it's time.
-  builder.set_validation_layers_enabled(false);
-
   vk::DeviceCreateInfo device_info = builder.DeviceInfo();
   device_info.enabledExtensionCount = enabled_extension_names.size();
   device_info.ppEnabledExtensionNames = enabled_extension_names.data();
+#if VK_HEADER_VERSION < 173
+  builder.set_validation_layers_enabled(false);
+#endif
 
   auto vulkan_context =
       builder.set_instance_info(instance_info).set_device_info(device_info).Unique();
@@ -128,6 +127,9 @@ TEST(VulkanExtension, GetMemoryZirconHandlePropertiesFUCHSIATemp) {
   vk::DeviceCreateInfo device_info = builder.DeviceInfo();
   device_info.enabledExtensionCount = enabled_extension_names.size();
   device_info.ppEnabledExtensionNames = enabled_extension_names.data();
+
+  // TODO(fxbug.dev/73025): remove this disable when it's time.
+  builder.set_validation_layers_enabled(false);
 
   auto vulkan_context =
       builder.set_instance_info(instance_info).set_device_info(device_info).Unique();

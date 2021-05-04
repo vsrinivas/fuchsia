@@ -119,7 +119,8 @@ bool VulkanTest::InitVulkan() {
   result = vkEnumerateInstanceLayerProperties(&layer_count, layer_properties.data());
 
   std::vector<const char*> layers;
-  if (use_temp_external_semaphore_) {
+#if VK_HEADER_VERSION > 173
+  if (!use_temp_external_semaphore_) {
     bool found_khr_validation = false;
     bool found_lunarg_validation = false;
 
@@ -138,6 +139,7 @@ bool VulkanTest::InitVulkan() {
       layers.push_back("VK_LAYER_LUNARG_standard_validation");
     }
   }
+#endif
 
   VkInstanceCreateInfo create_info{
       VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,  // VkStructureType             sType;
@@ -335,10 +337,10 @@ bool VulkanTest::Exec(VulkanTest* t1, VulkanTest* t2, bool temporary) {
   // Export semaphores
   for (uint32_t i = 0; i < kSemaphoreCount; i++) {
     VkSemaphoreGetZirconHandleInfoFUCHSIA info{
-        .sType = (t1->use_temp_external_semaphore_
-                      ? VK_STRUCTURE_TYPE_TEMP_SEMAPHORE_GET_ZIRCON_HANDLE_INFO_FUCHSIA
-                      : static_cast<VkStructureType>(
-                            VK_STRUCTURE_TYPE_SEMAPHORE_GET_ZIRCON_HANDLE_INFO_FUCHSIA)),
+        .sType = static_cast<VkStructureType>(
+            t1->use_temp_external_semaphore_
+                ? VK_STRUCTURE_TYPE_TEMP_SEMAPHORE_GET_ZIRCON_HANDLE_INFO_FUCHSIA
+                : VK_STRUCTURE_TYPE_SEMAPHORE_GET_ZIRCON_HANDLE_INFO_FUCHSIA),
         .pNext = nullptr,
         .semaphore = t1->vk_semaphore_[i],
         .handleType = t1->external_handle_type_,
@@ -359,15 +361,21 @@ bool VulkanTest::Exec(VulkanTest* t1, VulkanTest* t2, bool temporary) {
     uint32_t import_handle;
     EXPECT_TRUE(exported.back()->duplicate_handle(&import_handle));
     VkImportSemaphoreZirconHandleInfoFUCHSIA import_info = {
-        .sType = (t2->use_temp_external_semaphore_
-                      ? VK_STRUCTURE_TYPE_TEMP_IMPORT_SEMAPHORE_ZIRCON_HANDLE_INFO_FUCHSIA
-                      : static_cast<VkStructureType>(
-                            VK_STRUCTURE_TYPE_IMPORT_SEMAPHORE_ZIRCON_HANDLE_INFO_FUCHSIA)),
-        .pNext = nullptr,
-        .semaphore = t2->vk_semaphore_[i],
-        .flags = flags,
-        .handleType = t2->external_handle_type_,
-        .handle = import_handle};
+      .sType = static_cast<VkStructureType>(
+          t2->use_temp_external_semaphore_
+              ? VK_STRUCTURE_TYPE_TEMP_IMPORT_SEMAPHORE_ZIRCON_HANDLE_INFO_FUCHSIA
+              : VK_STRUCTURE_TYPE_IMPORT_SEMAPHORE_ZIRCON_HANDLE_INFO_FUCHSIA),
+      .pNext = nullptr,
+      .semaphore = t2->vk_semaphore_[i],
+      .flags = flags,
+      .handleType = t2->external_handle_type_,
+#if VK_HEADER_VERSION > 173
+      .zirconHandle = import_handle
+    };
+#else
+      .handle = import_handle
+    };
+#endif
 
     result = t1->vkImportSemaphoreZirconHandleFUCHSIA_(t2->vk_device_, &import_info);
     if (result != VK_SUCCESS) {
@@ -382,10 +390,10 @@ bool VulkanTest::Exec(VulkanTest* t1, VulkanTest* t2, bool temporary) {
 
     // Export the imported semaphores
     VkSemaphoreGetZirconHandleInfoFUCHSIA info{
-        .sType = (t2->use_temp_external_semaphore_
-                      ? VK_STRUCTURE_TYPE_TEMP_SEMAPHORE_GET_ZIRCON_HANDLE_INFO_FUCHSIA
-                      : static_cast<VkStructureType>(
-                            VK_STRUCTURE_TYPE_SEMAPHORE_GET_ZIRCON_HANDLE_INFO_FUCHSIA)),
+        .sType = static_cast<VkStructureType>(
+            t2->use_temp_external_semaphore_
+                ? VK_STRUCTURE_TYPE_TEMP_SEMAPHORE_GET_ZIRCON_HANDLE_INFO_FUCHSIA
+                : VK_STRUCTURE_TYPE_SEMAPHORE_GET_ZIRCON_HANDLE_INFO_FUCHSIA),
         .pNext = nullptr,
         .semaphore = t2->vk_semaphore_[i],
         .handleType = t2->external_handle_type_,
@@ -427,10 +435,10 @@ bool VulkanTest::ExecUsingQueue(VulkanTest* t1, VulkanTest* t2, bool temporary) 
   // Export semaphores
   for (uint32_t i = 0; i < kSemaphoreCount; i++) {
     VkSemaphoreGetZirconHandleInfoFUCHSIA info{
-        .sType = (t1->use_temp_external_semaphore_
-                      ? VK_STRUCTURE_TYPE_TEMP_SEMAPHORE_GET_ZIRCON_HANDLE_INFO_FUCHSIA
-                      : static_cast<VkStructureType>(
-                            VK_STRUCTURE_TYPE_SEMAPHORE_GET_ZIRCON_HANDLE_INFO_FUCHSIA)),
+        .sType = static_cast<VkStructureType>(
+            t1->use_temp_external_semaphore_
+                ? VK_STRUCTURE_TYPE_TEMP_SEMAPHORE_GET_ZIRCON_HANDLE_INFO_FUCHSIA
+                : VK_STRUCTURE_TYPE_SEMAPHORE_GET_ZIRCON_HANDLE_INFO_FUCHSIA),
         .pNext = nullptr,
         .semaphore = t1->vk_semaphore_[i],
         .handleType = t1->external_handle_type_,
@@ -446,15 +454,21 @@ bool VulkanTest::ExecUsingQueue(VulkanTest* t1, VulkanTest* t2, bool temporary) 
   for (uint32_t i = 0; i < kSemaphoreCount; i++) {
     uint32_t flags = temporary ? VK_SEMAPHORE_IMPORT_TEMPORARY_BIT_KHR : 0;
     VkImportSemaphoreZirconHandleInfoFUCHSIA import_info = {
-        .sType = (t2->use_temp_external_semaphore_
-                      ? VK_STRUCTURE_TYPE_TEMP_IMPORT_SEMAPHORE_ZIRCON_HANDLE_INFO_FUCHSIA
-                      : static_cast<VkStructureType>(
-                            VK_STRUCTURE_TYPE_IMPORT_SEMAPHORE_ZIRCON_HANDLE_INFO_FUCHSIA)),
-        .pNext = nullptr,
-        .semaphore = t2->vk_semaphore_[i],
-        .flags = flags,
-        .handleType = t2->external_handle_type_,
-        .handle = handle[i]};
+      .sType = static_cast<VkStructureType>(
+          t2->use_temp_external_semaphore_
+              ? VK_STRUCTURE_TYPE_TEMP_IMPORT_SEMAPHORE_ZIRCON_HANDLE_INFO_FUCHSIA
+              : VK_STRUCTURE_TYPE_IMPORT_SEMAPHORE_ZIRCON_HANDLE_INFO_FUCHSIA),
+      .pNext = nullptr,
+      .semaphore = t2->vk_semaphore_[i],
+      .flags = flags,
+      .handleType = t2->external_handle_type_,
+#if VK_HEADER_VERSION > 173
+      .zirconHandle = handle[i]
+    };
+#else
+      .handle = handle[i]
+    };
+#endif
 
     result = t1->vkImportSemaphoreZirconHandleFUCHSIA_(t2->vk_device_, &import_info);
     if (result != VK_SUCCESS) {

@@ -118,7 +118,11 @@ bool InitializeMemoryAllocateInfo(const scenic_impl::gfx::ResourceContext& resou
   // uncover the bug.
   vk::MemoryZirconHandlePropertiesFUCHSIA handle_properties;
   vk::Result err = vk_device.getMemoryZirconHandlePropertiesFUCHSIA(
+#if VK_HEADER_VERSION > 173
+      vk::ExternalMemoryHandleTypeFlagBits::eZirconVmoFUCHSIA, vmo->get(), &handle_properties,
+#else
       vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA, vmo->get(), &handle_properties,
+#endif
       resource_context.vk_loader);
   if (err != vk::Result::eSuccess) {
     reporter->ERROR() << "scenic_impl::gfx::Memory::ImportGpuMemory(): "
@@ -192,7 +196,11 @@ bool InitializeMemoryAllocateInfo(const scenic_impl::gfx::ResourceContext& resou
     return false;
   }
   *memory_import_info = vk::ImportMemoryZirconHandleInfoFUCHSIA(
+#if VK_HEADER_VERSION > 173
+      vk::ExternalMemoryHandleTypeFlagBits::eZirconVmoFUCHSIA, duplicated_vmo.release());
+#else
       vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA, duplicated_vmo.release());
+#endif
   *alloc_info = vk::MemoryAllocateInfo(size, memory_type_index);
   alloc_info->setPNext(memory_import_info);
   return true;

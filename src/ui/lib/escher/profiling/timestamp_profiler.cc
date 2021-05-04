@@ -39,10 +39,9 @@ std::vector<TimestampProfiler::Result> TimestampProfiler::GetQueryResults() {
   for (auto& range : ranges_) {
     // We don't wait for results.  Crash if results aren't immediately
     // available.
-    vk::Result status =
-        device_.getQueryPoolResults(range.pool, range.start_index, range.count,
-                                    vk::ArrayProxy<Result>(range.count, &results_[result_index]),
-                                    sizeof(Result), vk::QueryResultFlagBits::e64);
+    vk::Result status = device_.getQueryPoolResults(
+        range.pool, range.start_index, range.count, range.count * sizeof(Result),
+        &results_[result_index], sizeof(Result), vk::QueryResultFlagBits::e64);
     FX_DCHECK(status == vk::Result::eSuccess);
 
     result_index += range.count;

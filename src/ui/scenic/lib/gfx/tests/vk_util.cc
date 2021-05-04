@@ -27,7 +27,11 @@ vk::DeviceMemory AllocateExportableMemory(vk::Device device, vk::PhysicalDevice 
   }
 
   vk::ExportMemoryAllocateInfoKHR export_info;
+#if VK_HEADER_VERSION > 173
+  export_info.handleTypes = vk::ExternalMemoryHandleTypeFlagBits::eZirconVmoFUCHSIA;
+#else
   export_info.handleTypes = vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA;
+#endif
 
   vk::MemoryAllocateInfo info;
   info.pNext = &export_info;
@@ -67,10 +71,16 @@ MemoryAllocationResult AllocateExportableMemoryDedicatedToImageIfRequired(
 
     vk::StructureChain<vk::MemoryAllocateInfo, vk::ExportMemoryAllocateInfoKHR,
                        vk::MemoryDedicatedAllocateInfoKHR>
-        allocate_info_chain = {vk::MemoryAllocateInfo(size, type),
-                               vk::ExportMemoryAllocateInfoKHR(
-                                   vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA),
-                               vk::MemoryDedicatedAllocateInfoKHR(dedicated_image, vk::Buffer())};
+        allocate_info_chain = {
+          vk::MemoryAllocateInfo(size, type),
+          vk::ExportMemoryAllocateInfoKHR(
+#if VK_HEADER_VERSION > 173
+              vk::ExternalMemoryHandleTypeFlagBits::eZirconVmoFUCHSIA),
+#else
+              vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA),
+#endif
+          vk::MemoryDedicatedAllocateInfoKHR(dedicated_image, vk::Buffer())
+        };
     auto result = device.allocateMemory(allocate_info_chain.get<vk::MemoryAllocateInfo>());
     FX_DCHECK(result.result == vk::Result::eSuccess);
     return MemoryAllocationResult{result.value, size, true};
@@ -92,7 +102,11 @@ MemoryAllocationResult AllocateExportableMemoryDedicatedToImageIfRequired(
 zx::vmo ExportMemoryAsVmo(vk::Device device, vk::DispatchLoaderDynamic dispatch_loader,
                           vk::DeviceMemory memory) {
   vk::MemoryGetZirconHandleInfoFUCHSIA export_memory_info(
+#if VK_HEADER_VERSION > 173
+      memory, vk::ExternalMemoryHandleTypeFlagBits::eZirconVmoFUCHSIA);
+#else
       memory, vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA);
+#endif
   auto result = device.getMemoryZirconHandleFUCHSIA(export_memory_info, dispatch_loader);
   if (result.result != vk::Result::eSuccess) {
     FX_LOGS(ERROR) << "Failed to export vk::DeviceMemory as zx::vmo";
