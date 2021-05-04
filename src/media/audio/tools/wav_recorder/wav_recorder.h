@@ -91,14 +91,15 @@ class WavRecorder {
   uint32_t bytes_per_frame_ = 0;
   zx_duration_t packet_duration_ = kDefaultPacketDuration;
 
-  bool file_duration_specifed_ = false;
-  zx::duration file_duration_;
+  std::optional<zx::duration> file_duration_;
+  std::optional<int64_t> frames_to_record_;
 
   uint32_t frames_per_packet_ = 0;
   uint32_t packets_per_payload_buf_ = 0;
   uint32_t payload_buf_frame_offset_ = 0;
   bool clean_shutdown_ = false;
   uint32_t outstanding_capture_jobs_ = 0;
+  int64_t frames_received_ = 0;
 
   bool ultrasound_ = false;
   fuchsia::ultrasound::FactoryPtr ultrasound_factory_;
