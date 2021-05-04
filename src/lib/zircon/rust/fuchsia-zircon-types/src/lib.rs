@@ -1218,6 +1218,7 @@ multiconst!(zx_guest_trap_t, [
 ]);
 
 pub const ZX_LOG_RECORD_MAX: usize = 256;
+pub const ZX_LOG_RECORD_DATA_MAX: usize = 224;
 
 multiconst!(u32, [
     ZX_LOG_FLAG_READABLE = 0x40000000;

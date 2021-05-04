@@ -16,10 +16,8 @@
 
 static zx_handle_t log_handle;
 
-#define LOGBUF_MAX (ZX_LOG_RECORD_MAX - sizeof(zx_log_record_t))
-
 static mtx_t linebuffer_lock = MTX_INIT;
-static char linebuffer[LOGBUF_MAX] __TA_GUARDED(linebuffer_lock);
+static char linebuffer[ZX_LOG_RECORD_DATA_MAX] __TA_GUARDED(linebuffer_lock);
 static size_t linebuffer_size __TA_GUARDED(linebuffer_lock);
 
 // Flushes and resets linebuffer.

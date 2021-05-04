@@ -14,8 +14,6 @@
 
 #include "private.h"
 
-#define LOGBUF_MAX (ZX_LOG_RECORD_MAX - sizeof(zx_log_record_t))
-
 namespace {
 
 // A |zxio_t| backend that uses a debuglog.
@@ -35,7 +33,7 @@ class Debuglog : public HasIo {
   static const zxio_ops_t kOps;
 
   struct Buffer {
-    std::array<char, LOGBUF_MAX> pending;
+    std::array<char, ZX_LOG_RECORD_DATA_MAX> pending;
     decltype(pending)::iterator it;
   };
 

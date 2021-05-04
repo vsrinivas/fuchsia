@@ -49,4 +49,33 @@ TEST(DebugLogTest, InvalidOptions) {
   EXPECT_EQ(log_handle, 0);
 }
 
+TEST(DebugLogTest, MaxMessageSize) {
+  zx_handle_t log_handle = ZX_HANDLE_INVALID;
+  ASSERT_OK(zx_debuglog_create(get_root_resource(), ZX_LOG_FLAG_READABLE, &log_handle));
+
+  // msg is too large and should be truncated.
+  char msg[ZX_LOG_RECORD_DATA_MAX + 1];
+  memset(msg, 'A', sizeof(msg));
+  ASSERT_OK(zx_debuglog_write(log_handle, 0, msg, sizeof(msg)));
+
+  // Use an oversized buffer to ensure that trunction is not caused by our buffer size.
+  alignas(zx_log_record_t) char buf[2 * ZX_LOG_RECORD_MAX]{0};
+  zx_log_record_t* const record = reinterpret_cast<zx_log_record_t*>(buf);
+
+  // Read until we find our message.
+  do {
+    zx_status_t status_or_size = zx_debuglog_read(log_handle, 0, buf, sizeof(buf));
+    if (status_or_size < 0) {
+      ASSERT_EQ(ZX_ERR_SHOULD_WAIT, status_or_size);
+      continue;
+    }
+    ASSERT_GT(status_or_size, 0);
+    const size_t size = status_or_size;
+    ASSERT_LE(size, ZX_LOG_RECORD_MAX);
+    ASSERT_LE(record->datalen, ZX_LOG_RECORD_DATA_MAX);
+  } while (memcmp(record->data, msg, record->datalen) != 0);
+
+  ASSERT_OK(zx_handle_close(log_handle));
+}
+
 }  // namespace

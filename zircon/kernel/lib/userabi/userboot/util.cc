@@ -63,7 +63,7 @@ static char* i64string(char* s, size_t len, int64_t n) {
 }
 
 void vprintl(const zx::debuglog& log, const char* fmt, va_list ap) {
-  char buffer[ZX_LOG_RECORD_MAX - sizeof(zx_log_record_t)];
+  char buffer[ZX_LOG_RECORD_DATA_MAX];
   static_assert(sizeof(LOG_PREFIX) < sizeof(buffer), "buffer too small");
 
   memcpy(buffer, LOG_PREFIX, sizeof(LOG_PREFIX) - 1);

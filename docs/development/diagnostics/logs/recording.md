@@ -33,8 +33,8 @@ information:
 ## debuglog handles
 
 The kernel allows programs to create debuglog handles from the root resource, each handle allowing
-its owner to write messages into the [kernel's shared ring buffer]. Each message has a limit of 224
-bytes, with content in excess being truncated.
+its owner to write messages into the [kernel's shared ring buffer]. Each message has a limit of
+`ZX_LOG_RECORD_DATA_MAX` bytes, with content in excess being truncated.
 
 In addition to being [bindable to file descriptors], debuglog handles can be passed to the
 [`debuglog_write`] and [`debuglog_read`] syscalls. The read syscall is used to transfer from the

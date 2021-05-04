@@ -21,10 +21,15 @@ typedef struct zx_log_record {
   char data[];
 } zx_log_record_t;
 
+// The maximum size of zx_log_record_t.
+#define ZX_LOG_RECORD_MAX ((size_t)256)
+
+// The maximum size of zx_log_record_t::data. Records containing more than this
+// amount of data may be truncated to this value or less.
+#define ZX_LOG_RECORD_DATA_MAX (ZX_LOG_RECORD_MAX - sizeof(zx_log_record_t))
+
 // ask clang format not to mess up the indentation:
 // clang-format off
-
-#define ZX_LOG_RECORD_MAX     256
 
 // Log Levels
 #define ZX_LOG_TRACE          (0x10)
@@ -45,6 +50,8 @@ typedef struct zx_log_record {
 // Options
 
 #define ZX_LOG_FLAG_READABLE  0x40000000
+
+// clang-format on
 
 __END_CDECLS
 
