@@ -2,9 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# This file lives at //build/gn/dotfile.gn for maintenance purposes.
-# It's actually used by GN via a symlink at //.gn, which is installed
-# by a jiri hook.  This file directs GN to all the other key files.
+# This file directs GN to all the other key files.
 
 # The location of the build configuration file.
 buildconfig = "//build/config/BUILDCONFIG.gn"
@@ -19,20 +17,6 @@ script_executable = "/usr/bin/env"
 
 # Require Ninja 1.10.0 to support multiple outputs from a rule with a depfile.
 ninja_required_version = "1.10.0"
-
-# These arguments override the default values for items in a declare_args
-# block. "gn args" in turn can override these.
-default_args = {
-  # Disable Skia settings not needed for host builds.
-  skia_enable_flutter_defines = true
-  skia_enable_pdf = false
-  skia_use_dng_sdk = false
-  skia_use_expat = false
-  skia_use_fontconfig = false
-  skia_use_libwebp = false
-  skia_use_sfntly = false
-  skia_use_x11 = false
-}
 
 # Enable checking for all source code we control.
 no_check_targets = [ "//third_party/*" ]
