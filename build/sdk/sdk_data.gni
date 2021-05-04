@@ -21,6 +21,9 @@ import("//build/sdk/sdk_atom.gni")
 #   type (required)
 #     Type of the data set in the SDK.
 #     Currently only "license" and "config" data types are supported.
+#
+#   non_sdk_deps (optional)
+#     List of GN labels which this target needs built.
 
 template("sdk_data") {
   assert(defined(invoker.category), "Must define an SDK category")
@@ -50,7 +53,11 @@ template("sdk_data") {
   meta_dest = file_base + "meta.json"
 
   sdk_atom(target_name) {
-    forward_variables_from(invoker, [ "category" ])
+    forward_variables_from(invoker,
+                           [
+                             "category",
+                             "non_sdk_deps",
+                           ])
 
     id = "sdk://data/${invoker.name}"
 

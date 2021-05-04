@@ -77,7 +77,6 @@ template("modular_config") {
                              "testonly",
                              "visibility",
                            ])
-
     config = invoker.config
   }
 
@@ -112,6 +111,11 @@ template("modular_config") {
       name = invoker.target_name
       type = "config"
       file = invoker.config
+
+      non_sdk_deps = []
+      if (defined(invoker.deps)) {
+        non_sdk_deps += invoker.deps
+      }
     }
   }
 }
