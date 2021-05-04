@@ -29,6 +29,7 @@ use {
     thiserror::Error,
 };
 
+pub mod macros;
 pub mod serialization;
 pub mod testing;
 pub mod trie;
@@ -210,6 +211,11 @@ where
         curr_node
     }
 
+    /// Inserts a new Property into this hierarchy.
+    pub fn add_property(&mut self, property: Property<Key>) {
+        self.properties.push(property);
+    }
+
     /// Inserts a new Property into a Node whose location in a hierarchy
     /// rooted at `self` is defined by node_path.
     ///
@@ -219,7 +225,7 @@ where
     ///
     /// NOTE: Inspect VMOs may allow multiple nodes of the same name. In this case,
     ///       the property is added to the first node found.
-    pub fn add_property<T>(&mut self, node_path: &[T], property: Property<Key>)
+    pub fn add_property_at_path<T>(&mut self, node_path: &[T], property: Property<Key>)
     where
         T: AsRef<str>,
     {
@@ -1278,9 +1284,9 @@ mod tests {
         let prop_2 = Property::Uint("c".to_string(), 3);
         let path_2 = vec!["root", "two"];
         let prop_2_prime = Property::Int("z".to_string(), -4);
-        hierarchy.add_property(&path_1, prop_1.clone());
-        hierarchy.add_property(&path_2.clone(), prop_2.clone());
-        hierarchy.add_property(&path_2, prop_2_prime.clone());
+        hierarchy.add_property_at_path(&path_1, prop_1.clone());
+        hierarchy.add_property_at_path(&path_2.clone(), prop_2.clone());
+        hierarchy.add_property_at_path(&path_2, prop_2_prime.clone());
 
         assert_eq!(
             hierarchy,
@@ -1312,7 +1318,7 @@ mod tests {
         let prop_1 =
             Property::StringList("x".to_string(), vec!["foo".to_string(), "bar".to_string()]);
         let path_1 = vec!["root", "one"];
-        hierarchy.add_property(&path_1, prop_1.clone());
+        hierarchy.add_property_at_path(&path_1, prop_1.clone());
 
         assert_eq!(
             hierarchy,

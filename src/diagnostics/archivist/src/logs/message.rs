@@ -220,7 +220,7 @@ impl Message {
                     vec![],
                 );
                 for tag in tags {
-                    contents.add_property(&["root"], LogsProperty::String(LogsField::Tag, tag));
+                    contents.add_property(LogsProperty::String(LogsField::Tag, tag));
                 }
 
                 let (severity, verbosity) = severity.for_structured();
@@ -1066,13 +1066,10 @@ mod tests {
             vec![],
         );
         for tag_num in 0..MAX_TAGS as _ {
-            expected_contents.add_property(
-                &["root"],
-                LogsProperty::String(
-                    LogsField::Tag,
-                    String::from_utf8(vec![('A' as c_char + tag_num) as u8; 2]).unwrap(),
-                ),
-            );
+            expected_contents.add_property(LogsProperty::String(
+                LogsField::Tag,
+                String::from_utf8(vec![('A' as c_char + tag_num) as u8; 2]).unwrap(),
+            ));
         }
         expected_contents.sort();
 
