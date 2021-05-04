@@ -2133,7 +2133,7 @@ func (s *streamSocketImpl) GetTcpInfo(fidl.Context) (socket.StreamSocketGetTcpIn
 		return socket.StreamSocketGetTcpInfoResultWithErr(tcpipErrorToCode(err)), nil
 	}
 	var info socket.TcpInfo
-	switch value.CcState {
+	switch state := value.CcState; state {
 	case tcpip.Open:
 		info.CaState = socket.TcpCongestionControlStateOpen
 	case tcpip.RTORecovery:
@@ -2142,6 +2142,8 @@ func (s *streamSocketImpl) GetTcpInfo(fidl.Context) (socket.StreamSocketGetTcpIn
 		info.CaState = socket.TcpCongestionControlStateRecovery
 	case tcpip.Disorder:
 		info.CaState = socket.TcpCongestionControlStateDisorder
+	default:
+		panic(fmt.Sprintf("unknown congestion control state: %d", state))
 	}
 	info.SetRtoUsec(uint32(value.RTO.Microseconds()))
 	info.SetRttUsec(uint32(value.RTT.Microseconds()))

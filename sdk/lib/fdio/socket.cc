@@ -298,23 +298,20 @@ SockOptResult GetSockOptProcessor::StoreOption(const fsocket::wire::TcpInfo& val
   memset(&info, 0xff, sizeof(info));
 
   if (value.has_ca_state()) {
-    switch (value.ca_state()) {
-      case fsocket::wire::TcpCongestionControlState::kOpen:
-        info.tcpi_ca_state = TCP_CA_Open;
-        break;
-      case fsocket::wire::TcpCongestionControlState::kDisorder:
-        info.tcpi_ca_state = TCP_CA_Disorder;
-        break;
-      case fsocket::wire::TcpCongestionControlState::kCongestionWindowReduced:
-        info.tcpi_ca_state = TCP_CA_CWR;
-        break;
-      case fsocket::wire::TcpCongestionControlState::kRecovery:
-        info.tcpi_ca_state = TCP_CA_Recovery;
-        break;
-      case fsocket::wire::TcpCongestionControlState::kLoss:
-        info.tcpi_ca_state = TCP_CA_Loss;
-        break;
-    }
+    info.tcpi_ca_state = [](fsocket::wire::TcpCongestionControlState ca_state) {
+      switch (ca_state) {
+        case fsocket::wire::TcpCongestionControlState::kOpen:
+          return TCP_CA_Open;
+        case fsocket::wire::TcpCongestionControlState::kDisorder:
+          return TCP_CA_Disorder;
+        case fsocket::wire::TcpCongestionControlState::kCongestionWindowReduced:
+          return TCP_CA_CWR;
+        case fsocket::wire::TcpCongestionControlState::kRecovery:
+          return TCP_CA_Recovery;
+        case fsocket::wire::TcpCongestionControlState::kLoss:
+          return TCP_CA_Loss;
+      }
+    }(value.ca_state());
   }
   if (value.has_rto_usec()) {
     info.tcpi_rto = value.rto_usec();

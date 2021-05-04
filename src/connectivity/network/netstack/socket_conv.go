@@ -338,7 +338,7 @@ func getSockOptTCP(ep tcpip.Endpoint, name int16) (interface{}, tcpip.Error) {
 		info.tcpi_rttvar = C.uint(v.RTTVar.Microseconds())
 		info.tcpi_snd_ssthresh = C.uint(v.SndSsthresh)
 		info.tcpi_snd_cwnd = C.uint(v.SndCwnd)
-		switch v.CcState {
+		switch state := v.CcState; state {
 		case tcpip.Open:
 			info.tcpi_ca_state = C.TCP_CA_Open
 		case tcpip.RTORecovery:
@@ -347,9 +347,13 @@ func getSockOptTCP(ep tcpip.Endpoint, name int16) (interface{}, tcpip.Error) {
 			info.tcpi_ca_state = C.TCP_CA_Recovery
 		case tcpip.Disorder:
 			info.tcpi_ca_state = C.TCP_CA_Disorder
+		default:
+			panic(fmt.Sprintf("unknown congestion control state: %d", state))
 		}
 		if v.ReorderSeen {
 			info.tcpi_reord_seen = 1
+		} else {
+			info.tcpi_reord_seen = 0
 		}
 		return info, nil
 

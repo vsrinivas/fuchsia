@@ -3327,11 +3327,13 @@ TEST(NetStreamTest, GetTcpInfo) {
     uint32_t initialization;
     memset(&initialization, 0xff, sizeof(initialization));
 
+    ASSERT_NE(info.tcpi_ca_state, initialization);
     ASSERT_NE(info.tcpi_rto, initialization);
     ASSERT_NE(info.tcpi_rtt, initialization);
     ASSERT_NE(info.tcpi_rttvar, initialization);
     ASSERT_NE(info.tcpi_snd_ssthresh, initialization);
     ASSERT_NE(info.tcpi_snd_cwnd, initialization);
+    ASSERT_NE(info.tcpi_reord_seen, initialization);
 
     tcp_info expected;
     memset(&expected, initialization, sizeof(expected));
