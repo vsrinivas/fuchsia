@@ -125,16 +125,12 @@ void PressureObserver::WaitOnLevelChange() {
 }
 
 void PressureObserver::OnLevelChanged(zx_handle_t handle) {
-  Level old_level = level_;
   for (size_t i = 0; i < Level::kNumLevels; i++) {
     if (events_[i].get() == handle) {
       level_ = Level(i);
       break;
     }
   }
-
-  FX_LOGS(INFO) << "Memory pressure level changed from " << kLevelNames[old_level] << " to "
-                << kLevelNames[level_];
 
   if (unlikely(!level_initialized_)) {
     // Record that the level has been initialized if this is the first time. Before this, the

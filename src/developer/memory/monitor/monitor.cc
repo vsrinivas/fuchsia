@@ -139,7 +139,8 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
       delay_(zx::sec(1)),
       dispatcher_(dispatcher),
       component_context_(std::move(context)),
-      inspector_(component_context_.get()) {
+      inspector_(component_context_.get()),
+      level_(Level::kNumLevels) {
   auto bucket_matches = CreateBucketMatchesFromConfigData();
   digester_ = std::make_unique<Digester>(Digester(bucket_matches));
   high_water_ = std::make_unique<HighWater>(
@@ -218,10 +219,9 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
                   << " Total Heap: " << kmem.total_heap_bytes;
   }
 
-  pressure_notifier_ = std::make_unique<PressureNotifier>(watch_memory_pressure,
-                                                          send_critical_pressure_crash_reports,
-                                                          component_context_.get(), dispatcher);
-
+  pressure_notifier_ = std::make_unique<PressureNotifier>(
+      watch_memory_pressure, send_critical_pressure_crash_reports, component_context_.get(),
+      dispatcher, [this](Level l) { PressureLevelChanged(l); });
   memory_debugger_ =
       std::make_unique<MemoryDebugger>(component_context_.get(), pressure_notifier_.get());
 
@@ -532,6 +532,32 @@ zx_status_t Monitor::GetCapture(memory::Capture* capture) {
 
 void Monitor::GetDigest(const memory::Capture& capture, memory::Digest* digest) {
   digester_->Digest(capture, digest);
+}
+
+void Monitor::PressureLevelChanged(Level level) {
+  if (level == level_) {
+    return;
+  }
+  Capture c;
+  auto s = GetCapture(&c);
+  if (s != ZX_OK) {
+    FX_LOGS(ERROR) << "Error getting Capture: " << s;
+    return;
+  }
+  Digest d;
+  GetDigest(c, &d);
+  std::ostringstream oss;
+  Printer p(oss);
+
+  p.PrintDigest(d);
+  auto str = oss.str();
+  std::replace(str.begin(), str.end(), '\n', ' ');
+  FX_LOGS(INFO) << "Memory pressure level changed from "
+                << kLevelNames[level_]
+                << " to "
+                << kLevelNames[level];
+  FX_LOGS(INFO) << str;
+  level_ = level;
 }
 
 }  // namespace monitor

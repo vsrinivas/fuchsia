@@ -68,6 +68,7 @@ class Monitor : public fuchsia::memory::Monitor {
 
   zx_status_t GetCapture(memory::Capture* capture);
   void GetDigest(const memory::Capture& capture, memory::Digest* digest);
+  void PressureLevelChanged(Level level);
 
   memory::CaptureState capture_state_;
   std::unique_ptr<HighWater> high_water_;
@@ -90,6 +91,7 @@ class Monitor : public fuchsia::memory::Monitor {
   std::unique_ptr<memory::Digester> digester_;
   fuchsia::hardware::ram::metrics::DevicePtr ram_device_;
   uint64_t pending_bandwidth_measurements_ = 0;
+  Level level_;
 
   friend class test::MonitorUnitTest;
   friend class test::MemoryBandwidthInspectTest;

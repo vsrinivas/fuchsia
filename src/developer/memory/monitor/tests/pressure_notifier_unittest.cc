@@ -13,6 +13,7 @@
 #include <lib/zx/clock.h>
 
 #include <gtest/gtest.h>
+#include "src/developer/memory/monitor/pressure_observer.h"
 
 namespace monitor {
 namespace test {
@@ -54,13 +55,15 @@ class PressureNotifierUnitTest : public fuchsia::memory::Debugger, public gtest:
         std::make_unique<sys::testing::ComponentContextProvider>(async_get_default_dispatcher());
     context_provider_->service_directory_provider()->AddService(crash_reporter_.GetHandler());
     SetUpNewPressureNotifier(true /*notify_crash_reproter*/);
+    last_level_ = Level::kNormal;
   }
 
  protected:
   void SetUpNewPressureNotifier(bool send_critical_pressure_crash_reports) {
     notifier_ = std::make_unique<PressureNotifier>(false, send_critical_pressure_crash_reports,
                                                    context_provider_->context(),
-                                                   async_get_default_dispatcher());
+                                                   async_get_default_dispatcher(),
+                                                   [this](Level l) { last_level_ = l; });
     // Set up initial pressure level.
     notifier_->observer_.WaitOnLevelChange();
   }
@@ -103,6 +106,8 @@ class PressureNotifierUnitTest : public fuchsia::memory::Debugger, public gtest:
 
   size_t num_crash_reports() const { return crash_reporter_.num_crash_reports(); }
 
+  Level last_level() const { return last_level_; }
+
  private:
   void SignalMemoryPressure(fmp::Level level) override { notifier_->DebugNotify(level); }
 
@@ -110,6 +115,7 @@ class PressureNotifierUnitTest : public fuchsia::memory::Debugger, public gtest:
   std::unique_ptr<PressureNotifier> notifier_;
   fidl::BindingSet<fuchsia::memory::Debugger> memdebug_bindings_;
   CrashReporterForTest crash_reporter_;
+  Level last_level_;
 };
 
 class PressureWatcherForTest : public fmp::Watcher {
@@ -160,6 +166,13 @@ TEST_F(PressureNotifierUnitTest, Watcher) {
 
   RunLoopUntilIdle();
   ASSERT_EQ(GetWatcherCount(), 0);
+}
+
+TEST_F(PressureNotifierUnitTest, NotifyCb) {
+  ASSERT_EQ(last_level(), Level::kNormal);
+  TriggerLevelChange(Level::kCritical);
+  RunLoopUntilIdle();
+  ASSERT_EQ(last_level(), Level::kCritical);
 }
 
 TEST_F(PressureNotifierUnitTest, NoResponse) {

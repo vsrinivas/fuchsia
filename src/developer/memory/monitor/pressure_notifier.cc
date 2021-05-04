@@ -45,9 +45,11 @@ Level ConvertFromMemoryPressureServiceLevel(fuchsia::memorypressure::Level level
 // on this thread.
 PressureNotifier::PressureNotifier(bool watch_for_changes,
                                    bool send_critical_pressure_crash_reports,
-                                   sys::ComponentContext* context, async_dispatcher_t* dispatcher)
+                                   sys::ComponentContext* context, async_dispatcher_t* dispatcher,
+                                   NotifyCb notify_cb)
     : provider_dispatcher_(dispatcher),
       context_(context),
+      notify_cb_(std::move(notify_cb)),
       observer_(watch_for_changes, this),
       send_critical_pressure_crash_reports_(send_critical_pressure_crash_reports) {
   if (context) {
@@ -63,6 +65,9 @@ void PressureNotifier::Notify() {
 
 void PressureNotifier::PostLevelChange() {
   Level level_to_send = observer_.GetCurrentLevel();
+  if (notify_cb_) {
+    notify_cb_(level_to_send);
+  }
 
   if (level_to_send == Level::kNormal) {
     // See comments about |observed_normal_level_| in the definition of |FileCrashReport()|.

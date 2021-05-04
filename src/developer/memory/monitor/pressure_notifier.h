@@ -25,9 +25,12 @@ struct WatcherState {
 
 class PressureNotifier : public fuchsia::memorypressure::Provider {
  public:
+  using NotifyCb = fit::function<void(Level)>;
+
   explicit PressureNotifier(bool watch_for_changes, bool send_critical_pressure_crash_reports,
                             sys::ComponentContext* context = nullptr,
-                            async_dispatcher_t* dispatcher = nullptr);
+                            async_dispatcher_t* dispatcher = nullptr, NotifyCb notify_cb = nullptr);
+  
   PressureNotifier(const PressureNotifier&) = delete;
   PressureNotifier& operator=(const PressureNotifier&) = delete;
 
@@ -52,6 +55,7 @@ class PressureNotifier : public fuchsia::memorypressure::Provider {
   async::TaskClosureMethod<PressureNotifier, &PressureNotifier::PostLevelChange> post_task_{this};
   async_dispatcher_t* const provider_dispatcher_;
   sys::ComponentContext* const context_;
+  NotifyCb notify_cb_;
   fidl::BindingSet<fuchsia::memorypressure::Provider> bindings_;
   std::vector<std::unique_ptr<WatcherState>> watchers_;
   PressureObserver observer_;
