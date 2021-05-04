@@ -195,7 +195,7 @@ KTRACE_CONTROL_DISPLAY_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_ktrace_control("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
-    "action: \x1B[32mzx_ktrace_control_action_t\x1B[0m = \x1B[34mKTRACE_ACTION_START\x1B[0m, "
+    "action: \x1B[32mzx.ktrace_control_action\x1B[0m = \x1B[34mKTRACE_ACTION_START\x1B[0m, "
     "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n");
@@ -207,7 +207,7 @@ KTRACE_CONTROL_DISPLAY_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "zx_ktrace_control("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
-    "action: \x1B[32mzx_ktrace_control_action_t\x1B[0m = \x1B[34mKTRACE_ACTION_NEW_PROBE\x1B[0m, "
+    "action: \x1B[32mzx.ktrace_control_action\x1B[0m = \x1B[34mKTRACE_ACTION_NEW_PROBE\x1B[0m, "
     "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m, "
     "ptr: \x1B[32mstring\x1B[0m = \x1B[31m\"My_name\"\x1B[0m)\n"
     "\x1B[32m0.000000\x1B[0m "

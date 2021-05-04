@@ -1191,9 +1191,24 @@ class SyscallInputOutputFixedSizeString : public SyscallInputOutputBase {
         string_(std::move(string)),
         string_size_(string_size) {}
 
+  std::unique_ptr<fidl_codec::Type> ComputeType() const override {
+    return std::make_unique<fidl_codec::StringType>();
+  }
+
   void Load(SyscallDecoderInterface* decoder, Stage stage) const override {
     SyscallInputOutputBase::Load(decoder, stage);
     string_->LoadArray(decoder, stage, string_size_);
+  }
+
+  std::unique_ptr<fidl_codec::Value> GenerateValue(SyscallDecoderInterface* decoder,
+                                                   Stage stage) const override {
+    const char* string = reinterpret_cast<const char*>(string_->Content(decoder, stage));
+    if (string == nullptr) {
+      return std::make_unique<fidl_codec::NullValue>();
+    }
+    size_t size = strnlen(string, string_size_);
+    return std::make_unique<fidl_codec::StringValue>(
+        fidl_codec::StringValue(std::string_view(string, size)));
   }
 
   const char* DisplayInline(SyscallDecoderInterface* decoder, Stage stage, const char* separator,

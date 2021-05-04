@@ -570,6 +570,7 @@ TEST_F(InterceptionWorkflowTestX64, ValuesOK) {
       "zx_ioports_release",
       "zx_ioports_request",
       "zx_job_create",
+      "zx_ktrace_control",
       "zx_ktrace_read",
       "zx_ktrace_write",
       "zx_mtrace_control",
@@ -676,8 +677,8 @@ TEST_F(InterceptionWorkflowTestX64, ValuesNotImplemented) {
   }
 
   std::set<std::string> expected = {
-      "zx_job_set_policy",   "zx_ktrace_control",    "zx_object_get_info",
-      "zx_object_wait_many", "zx_thread_read_state", "zx_thread_write_state",
+      "zx_job_set_policy",    "zx_object_get_info",    "zx_object_wait_many",
+      "zx_thread_read_state", "zx_thread_write_state",
   };
 
   ASSERT_EQ(expected, actual);

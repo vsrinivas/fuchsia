@@ -435,7 +435,7 @@ std::string Uint32Type::Name() const {
     case Kind::kIommuType:
       return "zx.iommu_type";
     case Kind::kKtraceControlAction:
-      return "uint32";
+      return "zx.ktrace_control_action";
     case Kind::kObjectInfoTopic:
       return "zx.object_info_topic";
     case Kind::kObjType:
