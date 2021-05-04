@@ -59,17 +59,9 @@ pub trait FileObject: Deref<Target = FileCommon> {
         request: u32,
         in_addr: UserAddress,
         out_addr: UserAddress,
-    ) -> Result<SyscallResult, Errno>;
-
-    /// Get the async owner of this file.
-    ///
-    /// See fcntl(F_GETOWN)
-    fn get_async_owner(&self) -> pid_t;
-
-    /// Set the async owner of this file.
-    ///
-    /// See fcntl(F_SETOWN)
-    fn set_async_owner(&self, owner: pid_t);
+    ) -> Result<SyscallResult, Errno> {
+        self.deref().ioctl(task, request, in_addr, out_addr)
+    }
 }
 
 /// Implements FileDesc methods in a way that makes sense for nonseekable files. You must implement
@@ -87,12 +79,6 @@ macro_rules! fd_impl_nonseekable {
             _data: &[iovec_t],
         ) -> Result<usize, Errno> {
             Err(ESPIPE)
-        }
-        fn get_async_owner(&self) -> pid_t {
-            self.common.get_async_owner()
-        }
-        fn set_async_owner(&self, owner: pid_t) {
-            self.common.set_async_owner(owner)
         }
     };
 }
@@ -114,12 +100,6 @@ macro_rules! fd_impl_seekable {
             *offset += size;
             Ok(size)
         }
-        fn get_async_owner(&self) -> pid_t {
-            self.common.get_async_owner()
-        }
-        fn set_async_owner(&self, owner: pid_t) {
-            self.common.set_async_owner(owner)
-        }
     };
 }
 
@@ -131,10 +111,16 @@ pub struct FileCommon {
 }
 
 impl FileCommon {
+    /// Get the async owner of this file.
+    ///
+    /// See fcntl(F_GETOWN)
     pub fn get_async_owner(&self) -> pid_t {
         *self.async_owner.lock()
     }
 
+    /// Set the async owner of this file.
+    ///
+    /// See fcntl(F_SETOWN)
     pub fn set_async_owner(&self, owner: pid_t) {
         *self.async_owner.lock() = owner;
     }

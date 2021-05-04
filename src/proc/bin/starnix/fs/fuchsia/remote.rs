@@ -135,16 +135,6 @@ impl FileObject for RemoteFile {
             ..stat_t::default()
         })
     }
-
-    fn ioctl(
-        &self,
-        task: &Task,
-        request: u32,
-        in_addr: UserAddress,
-        out_addr: UserAddress,
-    ) -> Result<SyscallResult, Errno> {
-        self.common.ioctl(task, request, in_addr, out_addr)
-    }
 }
 
 fn fidl_error(err: fidl::Error) -> Errno {
