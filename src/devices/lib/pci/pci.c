@@ -21,6 +21,5 @@ void zx_pci_bar_to_banjo(const zx_pci_bar_t src, pci_bar_t* dest) {
   dest->id = src.id;
   dest->type = src.type;
   dest->size = src.size;
-  dest->u.addr = src.addr;
-  dest->u.handle = src.handle;
+  dest->handle = src.handle;
 }

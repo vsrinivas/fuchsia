@@ -172,12 +172,12 @@ class AddressSpaceDeviceTest : public zxtest::Test {
                       pci_bar_t{.id = 0,
                                 .type = ZX_PCI_BAR_TYPE_MMIO,
                                 .size = kCtrlSize,
-                                .u.handle = vmo_control.release()})
+                                .handle = vmo_control.release()})
         .ExpectGetBar(ZX_OK, PCI_AREA_BAR_ID,
                       pci_bar_t{.id = 1,
                                 .type = ZX_PCI_BAR_TYPE_MMIO,
                                 .size = kAreaSize,
-                                .u.handle = vmo_area.release()});
+                                .handle = vmo_area.release()});
 
     ddk_.SetProtocol(ZX_PROTOCOL_PCI, mock_pci_.GetProto());
     dut_ = std::make_unique<AddressSpaceDevice>(fake_ddk::FakeParent());

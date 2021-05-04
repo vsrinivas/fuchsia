@@ -40,7 +40,7 @@ struct PciMsgBar {
   uint32_t id;
   bool is_mmio;
   size_t size;
-  zx_paddr_t io_addr;
+  zx_paddr_t address;
 };
 
 // For use with QUERY_IRQ_MODE, SET_IRQ_MODE, and MAP_INTERRUPT

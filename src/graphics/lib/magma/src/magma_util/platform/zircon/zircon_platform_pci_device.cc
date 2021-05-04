@@ -27,7 +27,7 @@ std::unique_ptr<PlatformMmio> ZirconPlatformPciDevice::CpuMapPciMmio(
 
   DASSERT(bar.type == ZX_PCI_BAR_TYPE_MMIO);
   mmio_buffer_t mmio_buffer;
-  mmio_buffer_init(&mmio_buffer, 0, bar.size, bar.u.handle, cache_policy);
+  mmio_buffer_init(&mmio_buffer, 0, bar.size, bar.handle, cache_policy);
 
   std::unique_ptr<ZirconPlatformMmio> mmio(new ZirconPlatformMmio(mmio_buffer));
 

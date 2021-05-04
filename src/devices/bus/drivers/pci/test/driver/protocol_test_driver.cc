@@ -209,7 +209,7 @@ TEST_F(PciProtocolTests, GetBar0) {
   ASSERT_OK(pci().GetBar(0, &info));
   ASSERT_EQ(info.id, 0);
   ASSERT_EQ(info.type, ZX_PCI_BAR_TYPE_MMIO);
-  vmo.reset(info.u.handle);
+  vmo.reset(info.handle);
   vmo.get_size(&size);
   ASSERT_EQ(size, kTestDeviceBars[0].size);
 }
@@ -223,7 +223,7 @@ TEST_F(PciProtocolTests, GetBar1) {
   ASSERT_OK(pci().GetBar(1, &info));
   ASSERT_EQ(info.id, 1);
   ASSERT_EQ(info.type, ZX_PCI_BAR_TYPE_MMIO);
-  vmo.reset(info.u.handle);
+  vmo.reset(info.handle);
   vmo.get_size(&size);
   ASSERT_EQ(size, kTestDeviceBars[1].size);
 }
@@ -243,7 +243,7 @@ TEST_F(PciProtocolTests, GetBar3) {
   ASSERT_OK(pci().GetBar(3, &info));
   ASSERT_EQ(info.id, 3);
   ASSERT_EQ(info.type, ZX_PCI_BAR_TYPE_MMIO);
-  vmo.reset(info.u.handle);
+  vmo.reset(info.handle);
   vmo.get_size(&size);
   ASSERT_EQ(size, kTestDeviceBars[3].size);
 }

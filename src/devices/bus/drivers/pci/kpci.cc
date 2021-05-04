@@ -162,11 +162,13 @@ zx_status_t KernelPci::PciGetBar(uint32_t bar_id, pci_bar_t* out_res) {
     out_res->id = bar_id;
     out_res->size = bar.size;
     out_res->type = bar.type;
-    if (out_res->type == ZX_PCI_BAR_TYPE_MMIO) {
-      out_res->u.handle = handle;
-    } else {
-      out_res->u.addr = bar.addr;
+    out_res->address = bar.addr;
+    if (out_res->type == ZX_PCI_BAR_TYPE_PIO) {
+      char name[] = "kPCI IO";
+      st = zx_resource_create(get_root_resource(), ZX_RSRC_KIND_IOPORT, bar.addr, bar.size, name,
+                              sizeof(name), &handle);
     }
+    out_res->handle = handle;
   }
 
   return st;
@@ -403,16 +405,10 @@ zx_status_t KernelPci::RpcGetBar(zx_handle_t ch, PciRpcMsg* req, PciRpcMsg* resp
         .id = bar.id,
         .is_mmio = (bar.type == ZX_PCI_BAR_TYPE_MMIO),
         .size = bar.size,
-        .io_addr = bar.u.addr,
+        .address = bar.address,
     };
 
-    if (resp->bar.is_mmio) {
-      handle = bar.u.handle;
-    } else {
-      const char name[] = "kPCI IO";
-      st = zx_resource_create(get_root_resource(), ZX_RSRC_KIND_IOPORT, resp->bar.io_addr,
-                              resp->bar.size, name, sizeof(name), &handle);
-    }
+    handle = bar.handle;
   }
   return RpcReply(ch, st, &handle, req, resp);
 }

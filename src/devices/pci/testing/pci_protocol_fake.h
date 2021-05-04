@@ -64,7 +64,7 @@ class FakePciProtocol : public ddk::PciProtocol<FakePciProtocol> {
     out_res->id = bar_id;
     out_res->size = bar.size;
     out_res->type = ZX_PCI_BAR_TYPE_MMIO;
-    out_res->u.handle = bar_vmo.release();
+    out_res->handle = bar_vmo.release();
     return ZX_OK;
   }
 

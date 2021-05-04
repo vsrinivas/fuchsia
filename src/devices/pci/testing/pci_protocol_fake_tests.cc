@@ -428,7 +428,7 @@ TEST_F(FakePciProtocolTests, GetBar) {
   ASSERT_OK(pci().GetBar(valid_bar, &bar));
   // Verify that the VMO we got back wit hthe protocol method matches the setup
   // and that the other fields are correct.
-  ASSERT_TRUE(MatchKoids(borrowed, *zx::unowned_vmo(bar.u.handle)));
+  ASSERT_TRUE(MatchKoids(borrowed, *zx::unowned_vmo(bar.handle)));
   ASSERT_EQ(valid_bar, bar.id);
   ASSERT_EQ(bar_size, bar.size);
 }

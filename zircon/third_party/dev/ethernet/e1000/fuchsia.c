@@ -594,7 +594,7 @@ static zx_status_t e1000_allocate_pci_resources(struct adapter* adapter) {
       zxlogf(ERROR, "Unable to allocate bus resource: ioport (%d)", status);
     }
 
-    adapter->osdep.iobase = bar.u.addr;
+    adapter->osdep.iobase = bar.address;
     adapter->hw.io_base = 0;
   }
 

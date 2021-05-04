@@ -113,27 +113,21 @@ zx_status_t PciProxy::PciGetBar(uint32_t bar_id, pci_bar_t* out_bar) {
 
   out_bar->id = resp.bar.id;
   out_bar->size = resp.bar.size;
+  out_bar->type = (resp.bar.is_mmio) ? ZX_PCI_BAR_TYPE_MMIO : ZX_PCI_BAR_TYPE_PIO;
+  out_bar->address = resp.bar.address;
   if (!resp.bar.is_mmio) {
-    out_bar->type = ZX_PCI_BAR_TYPE_PIO;
-    out_bar->u.addr = resp.bar.io_addr;
-    // x86 PIO space access requires permission in the I/O bitmap. If an IO BAR
+    // x86 PIO space access requires permission in the I/O bitmap.  If an IO BAR
     // is used then the handle returned corresponds to a resource with access to
-    // this range of IO space.
-    //
-    // In a test environment we are not passed a handle back. We can still verify
-    // the I/O address and size.
-    if (handle != ZX_HANDLE_INVALID) {
-      st = zx_ioports_request(handle, static_cast<uint16_t>(out_bar->u.addr),
-                              static_cast<uint32_t>(out_bar->size));
-      if (st != ZX_OK) {
-        zxlogf(ERROR, "Failed to map IO window for bar into process: %d", st);
-        return st;
-      }
+    // this range of IO space.  On other platforms, like ARM, IO bars are still
+    // handled in MMIO space so this type will be unused.
+    st = zx_ioports_request(handle, static_cast<uint16_t>(resp.bar.address),
+                            static_cast<uint32_t>(resp.bar.size));
+    if (st != ZX_OK) {
+      zxlogf(ERROR, "Failed to map IO window for bar into process: %d", st);
+      return st;
     }
-  } else {
-    out_bar->type = ZX_PCI_BAR_TYPE_MMIO;
-    out_bar->u.handle = handle;
   }
+  out_bar->handle = handle;
 
   return ZX_OK;
 }

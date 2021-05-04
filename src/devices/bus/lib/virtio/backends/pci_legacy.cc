@@ -5,6 +5,7 @@
 #include <inttypes.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/hw/inout.h>
+#include <zircon/syscalls/types.h>
 
 #include <fbl/auto_lock.h>
 
@@ -52,7 +53,7 @@ zx_status_t PciLegacyBackend::Init() {
     return ZX_ERR_WRONG_TYPE;
   }
 
-  bar0_base_ = static_cast<uint16_t>(bar0.u.addr & 0xffff);
+  bar0_base_ = static_cast<uint16_t>(bar0.address & std::numeric_limits<uint16_t>::max());
   // TODO(cja): When MSI support is added we need to dynamically add
   // the extra two fields here that offset the device config.
   // Virtio 1.0 section 4.1.4.8

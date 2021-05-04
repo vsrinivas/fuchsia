@@ -219,7 +219,7 @@ zx_status_t Device::RpcGetBar(const zx::unowned_channel& ch) {
     if (bar.allocation->resource() &&
         (status = bar.allocation->resource().duplicate(ZX_RIGHT_SAME_RIGHTS, &res)) == ZX_OK) {
       response_.bar.is_mmio = false;
-      response_.bar.io_addr = static_cast<uint16_t>(bar.address);
+      response_.bar.address = static_cast<uint16_t>(bar.address);
       response_.bar.size = static_cast<uint16_t>(bar.size);
       handle = res.release();
       handle_cnt++;

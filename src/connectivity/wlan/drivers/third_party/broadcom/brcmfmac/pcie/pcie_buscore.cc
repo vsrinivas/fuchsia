@@ -199,8 +199,8 @@ zx_status_t PcieBuscore::Create(zx_device_t* device, std::unique_ptr<PcieBuscore
     BRCMF_ERR("Failed to get BAR2: %s", zx_status_get_string(status));
     return status;
   }
-  if (bar2_info.size == 0 || bar2_info.u.handle == ZX_HANDLE_INVALID) {
-    BRCMF_ERR("BAR2 invalid: size=%zu, handle=%u", bar2_info.size, bar2_info.u.handle);
+  if (bar2_info.size == 0 || bar2_info.handle == ZX_HANDLE_INVALID) {
+    BRCMF_ERR("BAR2 invalid: size=%zu, handle=%u", bar2_info.size, bar2_info.handle);
     return ZX_ERR_NO_RESOURCES;
   }
 
@@ -208,12 +208,12 @@ zx_status_t PcieBuscore::Create(zx_device_t* device, std::unique_ptr<PcieBuscore
   std::unique_ptr<ddk::MmioBuffer> regs_mmio;
   {
     size_t vmo_size = 0;
-    if ((status = zx_vmo_get_size(bar0_info.u.handle, &vmo_size)) != ZX_OK) {
+    if ((status = zx_vmo_get_size(bar0_info.handle, &vmo_size)) != ZX_OK) {
       BRCMF_ERR("Failed to get BAR0 VMO size: %s", zx_status_get_string(status));
       return status;
     }
     std::optional<ddk::MmioBuffer> mmio;
-    if ((status = ddk::MmioBuffer::Create(0, vmo_size, zx::vmo(bar0_info.u.handle),
+    if ((status = ddk::MmioBuffer::Create(0, vmo_size, zx::vmo(bar0_info.handle),
                                           ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio)) != ZX_OK) {
       BRCMF_ERR("Failed to create BAR0 MmioBuffer: %s", zx_status_get_string(status));
       return status;
@@ -227,12 +227,12 @@ zx_status_t PcieBuscore::Create(zx_device_t* device, std::unique_ptr<PcieBuscore
   std::unique_ptr<ddk::MmioBuffer> tcm_mmio;
   {
     size_t vmo_size = 0;
-    if ((status = zx_vmo_get_size(bar2_info.u.handle, &vmo_size)) != ZX_OK) {
+    if ((status = zx_vmo_get_size(bar2_info.handle, &vmo_size)) != ZX_OK) {
       BRCMF_ERR("Failed to get BAR2 VMO size: %s", zx_status_get_string(status));
       return status;
     }
     std::optional<ddk::MmioBuffer> mmio;
-    if ((status = ddk::MmioBuffer::Create(0, vmo_size, zx::vmo(bar2_info.u.handle),
+    if ((status = ddk::MmioBuffer::Create(0, vmo_size, zx::vmo(bar2_info.handle),
                                           ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio)) != ZX_OK) {
       BRCMF_ERR("Failed to create BAR2 MmioBuffer: %s", zx_status_get_string(status));
       return status;

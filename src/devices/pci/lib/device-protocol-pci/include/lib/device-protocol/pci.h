@@ -20,18 +20,18 @@ static inline zx_status_t pci_map_bar_buffer(const pci_protocol_t* pci, uint32_t
     return st;
   }
   // TODO(cja): PIO may be mappable on non-x86 architectures
-  if (bar.type == ZX_PCI_BAR_TYPE_PIO || bar.u.handle == ZX_HANDLE_INVALID) {
+  if (bar.type == ZX_PCI_BAR_TYPE_PIO || bar.handle == ZX_HANDLE_INVALID) {
     return ZX_ERR_WRONG_TYPE;
   }
 
   size_t vmo_size;
-  st = zx_vmo_get_size(bar.u.handle, &vmo_size);
+  st = zx_vmo_get_size(bar.handle, &vmo_size);
   if (st != ZX_OK) {
-    zx_handle_close(bar.u.handle);
+    zx_handle_close(bar.handle);
     return st;
   }
 
-  return mmio_buffer_init(buffer, 0, vmo_size, bar.u.handle, cache_policy);
+  return mmio_buffer_init(buffer, 0, vmo_size, bar.handle, cache_policy);
 }
 
 __END_CDECLS
