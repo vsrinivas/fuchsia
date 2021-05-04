@@ -6,7 +6,6 @@
         {
             name: "isolated_devmgr",
             url: "fuchsia-pkg://fuchsia.com/pkg-cache-integration-tests#meta/isolated-devmgr.cm",
-            startup: "eager",
         },
         {
             name: "pkg_cache_integration_test",
