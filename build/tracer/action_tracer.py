@@ -808,7 +808,7 @@ def main():
     retval = subprocess.call(
         [
             args.fsatrace_path,
-            "erwmdt",
+            "rwmdt",
             args.trace_output,
             "--",
         ] + command.tokens)
