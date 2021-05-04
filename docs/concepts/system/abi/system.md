@@ -93,7 +93,7 @@ the package from which the component was run.
 
 A component can serve an outgoing directory that lets the system and other
 components interact with the component. For example, the component exposes
-services for other components using the `public` entry in this namespace.
+services for other components using the `svc` entry in this namespace.
 Similarly, the component exposes debugging interfaces through the `debug` entry
 in this namespace.
 
