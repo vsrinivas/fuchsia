@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1563
+From //build/config/BUILDCONFIG.gn:1594
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -566,7 +566,7 @@ An action that accesses undeclared inputs or outputs will fail the build.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:527
+From //build/config/BUILDCONFIG.gn:566
 
 ### build_uefi_disk
 Generate a UEFI disk image
@@ -640,7 +640,7 @@ and compare the outputs' contents for reproducibility.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:531
+From //build/config/BUILDCONFIG.gn:570
 
 ### chromium_build_dir
 This variable specifies a chromium build output directory, such as `~/chromium/src/out/fuchsia`,
@@ -1055,7 +1055,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1320
+From //build/config/BUILDCONFIG.gn:1351
 
 ### extract_minfs_metadata_on_corruption
 If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
@@ -1828,7 +1828,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1171
+From //build/config/BUILDCONFIG.gn:1202
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -3161,7 +3161,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1553
+From //build/config/BUILDCONFIG.gn:1584
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -3170,7 +3170,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1558
+From //build/config/BUILDCONFIG.gn:1589
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3214,7 +3214,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1366
+From //build/config/BUILDCONFIG.gn:1397
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -3475,6 +3475,10 @@ This variable is a scope giving details about the current toolchain:
     `toolchain_variant.with_shared`
         [boolean] True iff this toolchain() instance has a secondary
         toolchain to build ELF shared-library code.
+    `toolchain_variant.libprefix`
+        [string] Installation prefix for instrumented shared libraries,
+        or an empty string for non-instrumented ones. For full details,
+        see comment below where toolchain_variant.libprefix is defined.
 
 The other fields are the variant's effects as defined in
 [`known_variants`](#known_variants).
@@ -3486,7 +3490,7 @@ The other fields are the variant's effects as defined in
 }
 ```
 
-From //build/config/BUILDCONFIG.gn:132
+From //build/config/BUILDCONFIG.gn:136
 
 ### ubsan_default_options
 Default [UndefinedBehaviorSanitizer](https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html)
@@ -3517,7 +3521,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1350
+From //build/config/BUILDCONFIG.gn:1381
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -3973,7 +3977,7 @@ This allows testing for a Zircon-specific toolchain with:
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:149
+From //build/config/BUILDCONFIG.gn:153
 
 ### zircon_tracelog
 Where to emit a tracelog from Zircon's GN run. No trace will be produced if
