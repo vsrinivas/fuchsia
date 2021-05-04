@@ -44,8 +44,8 @@ void Server::CreateClient(async_dispatcher* dispatcher,
 }
 
 void Server::GetString(GetStringRequestView request, GetStringCompleter::Sync& completer) {
-  auto ret = arguments.find(std::string{request->key.data(), request->key.size()});
-  if (ret == arguments.end()) {
+  auto ret = arguments_.find(std::string{request->key.data(), request->key.size()});
+  if (ret == arguments_.end()) {
     completer.Reply(fidl::StringView{});
   } else {
     completer.Reply(fidl::StringView::FromExternal(ret->second));
@@ -55,8 +55,8 @@ void Server::GetString(GetStringRequestView request, GetStringCompleter::Sync& c
 void Server::GetStrings(GetStringsRequestView request, GetStringsCompleter::Sync& completer) {
   std::vector<fidl::StringView> result;
   for (uint64_t i = 0; i < request->keys.count(); i++) {
-    auto ret = arguments.find(std::string{request->keys[i].data(), request->keys[i].size()});
-    if (ret == arguments.end()) {
+    auto ret = arguments_.find(std::string{request->keys[i].data(), request->keys[i].size()});
+    if (ret == arguments_.end()) {
       result.emplace_back(fidl::StringView{});
     } else {
       result.emplace_back(fidl::StringView::FromExternal(ret->second));
@@ -81,7 +81,7 @@ void Server::GetBools(GetBoolsRequestView request, GetBoolsCompleter::Sync& comp
 void Server::Collect(CollectRequestView request, CollectCompleter::Sync& completer) {
   std::string match{request->prefix.data(), request->prefix.size()};
   std::vector<fbl::String> result;
-  for (auto entry : arguments) {
+  for (auto entry : arguments_) {
     if (entry.first.find_first_of(match) == 0) {
       auto pair = fbl::StringPrintf("%s=%s", entry.first.data(), entry.second.data());
       result.emplace_back(std::move(pair));
@@ -95,9 +95,9 @@ void Server::Collect(CollectRequestView request, CollectCompleter::Sync& complet
 }
 
 bool Server::StrToBool(const fidl::StringView& key, bool defaultval) {
-  auto ret = arguments.find(std::string{key.data(), key.size()});
+  auto ret = arguments_.find(std::string{key.data(), key.size()});
 
-  if (ret == arguments.end()) {
+  if (ret == arguments_.end()) {
     return defaultval;
   }
   if (ret->second == "off" || ret->second == "0" || ret->second == "false") {

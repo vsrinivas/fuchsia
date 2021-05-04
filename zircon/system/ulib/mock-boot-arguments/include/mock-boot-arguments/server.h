@@ -14,8 +14,8 @@ namespace mock_boot_arguments {
 
 class Server final : public fidl::WireServer<fuchsia_boot::Arguments> {
  public:
-  explicit Server(std::map<std::string, std::string>&& args) : arguments{args} {}
-  explicit Server() : arguments{} {}
+  explicit Server(std::map<std::string, std::string>&& args) : arguments_{args} {}
+  explicit Server() = default;
 
   void CreateClient(async_dispatcher* dispatcher,
                     fidl::WireSyncClient<fuchsia_boot::Arguments>* argclient);
@@ -26,8 +26,10 @@ class Server final : public fidl::WireServer<fuchsia_boot::Arguments> {
   void GetBools(GetBoolsRequestView request, GetBoolsCompleter::Sync& completer) override;
   void Collect(CollectRequestView request, CollectCompleter::Sync& completer) override;
 
+  std::map<std::string, std::string>& GetArgumentsMap() { return arguments_; }
+
  private:
-  std::map<std::string, std::string> arguments;
+  std::map<std::string, std::string> arguments_;
   bool StrToBool(const fidl::StringView& key, bool defaultval);
 };
 
