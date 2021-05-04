@@ -81,6 +81,9 @@ impl DirectoryEntry for FxFile {
             send_on_open_with_error(flags, server_end, Status::NOT_FILE);
             return;
         }
+        // Since close decrements open_count, we need to increment it here as we create OpenFile
+        // since it will call close when dropped.
+        self.open_count.fetch_add(1, Ordering::Relaxed);
         FileConnection::<FxFile>::create_connection(
             // Note readable/writable do not override what's set in flags, they merely tell the
             // FileConnection that it's valid to open the file readable/writable.
@@ -106,7 +109,6 @@ impl DirectoryEntry for FxFile {
 #[async_trait]
 impl File for FxFile {
     async fn open(&self, _flags: u32) -> Result<(), Status> {
-        self.open_count.fetch_add(1, Ordering::Relaxed);
         Ok(())
     }
 
