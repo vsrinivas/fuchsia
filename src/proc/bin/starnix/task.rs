@@ -168,6 +168,10 @@ pub struct Task {
 
     // See https://man7.org/linux/man-pages/man2/sigaltstack.2.html
     pub signal_stack: Mutex<Option<sigaltstack_t>>,
+
+    /// The signal mask of the task.
+    // See https://man7.org/linux/man-pages/man2/rt_sigprocmask.2.html
+    pub signal_mask: Mutex<sigset_t>,
 }
 
 impl Task {
@@ -221,6 +225,7 @@ impl Task {
             set_child_tid: Mutex::new(UserAddress::default()),
             clear_child_tid: Mutex::new(UserAddress::default()),
             signal_stack: Mutex::new(None),
+            signal_mask: Mutex::new(sigset_t::default()),
         });
         pids.add_task(&task);
 

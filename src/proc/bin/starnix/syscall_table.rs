@@ -125,6 +125,7 @@ pub fn dispatch_syscall(
         prctl[5],
         pread64[4],
         readlink[3],
+        rt_sigprocmask[4],
         sched_getaffinity[3],
         sched_getscheduler[1],
         sched_setaffinity[3],
