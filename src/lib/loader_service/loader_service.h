@@ -73,17 +73,15 @@ class LoaderServiceBase : public std::enable_shared_from_this<LoaderServiceBase>
 //
 // Connections have a strong reference to the server object (through std::shared_ptr), which keeps
 // the loader service alive as long as any open client connections exist.
-class LoaderConnection : public fidl::WireInterface<fuchsia_ldsvc::Loader> {
+class LoaderConnection : public fidl::WireServer<fuchsia_ldsvc::Loader> {
  public:
   LoaderConnection(std::shared_ptr<LoaderServiceBase> server) : server_(server) {}
 
-  // fidl::WireInterface<fuchsia_ldsvc::Loader> implementation
-  virtual void Done(DoneCompleter::Sync& completer) override;
-  virtual void LoadObject(fidl::StringView object_name,
-                          LoadObjectCompleter::Sync& completer) override;
-  virtual void Config(fidl::StringView config, ConfigCompleter::Sync& completer) override;
-  virtual void Clone(fidl::ServerEnd<fuchsia_ldsvc::Loader> loader,
-                     CloneCompleter::Sync& completer) override;
+  // fidl::WireServer<fuchsia_ldsvc::Loader> implementation
+  void Done(DoneRequestView request, DoneCompleter::Sync& completer) override;
+  void LoadObject(LoadObjectRequestView request, LoadObjectCompleter::Sync& completer) override;
+  void Config(ConfigRequestView request, ConfigCompleter::Sync& completer) override;
+  void Clone(CloneRequestView request, CloneCompleter::Sync& completer) override;
 
  private:
   const std::string& log_prefix() { return server_->log_prefix(); }

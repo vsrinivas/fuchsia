@@ -47,11 +47,13 @@ void LoaderServiceBase::Bind(fidl::ServerEnd<fuchsia_ldsvc::Loader> channel) {
   auto _ = fidl::BindServer(dispatcher_, std::move(channel), std::move(conn));
 }
 
-void LoaderConnection::Done(DoneCompleter::Sync& completer) { completer.Close(ZX_OK); }
+void LoaderConnection::Done(DoneRequestView request, DoneCompleter::Sync& completer) {
+  completer.Close(ZX_OK);
+}
 
-void LoaderConnection::LoadObject(fidl::StringView object_name,
+void LoaderConnection::LoadObject(LoadObjectRequestView request,
                                   LoadObjectCompleter::Sync& completer) {
-  std::string name(object_name.data(), object_name.size());
+  std::string name(request->object_name.data(), request->object_name.size());
 
   auto reply = [this, &name, &completer](zx::status<zx::vmo> status) {
     // Generally we wouldn't want to log in a library, but these logs have proven to be useful in
@@ -83,9 +85,9 @@ void LoaderConnection::LoadObject(fidl::StringView object_name,
   reply(std::move(status));
 }
 
-void LoaderConnection::Config(fidl::StringView config, ConfigCompleter::Sync& completer) {
+void LoaderConnection::Config(ConfigRequestView request, ConfigCompleter::Sync& completer) {
   // fidl::StringView is not null-terminated so must pass size to std::string constructor.
-  std::string config_str(config.data(), config.size());
+  std::string config_str(request->config.data(), request->config.size());
 
   auto reply = [this, &config_str, &completer](zx_status_t status) {
     auto result = completer.Reply(status);
@@ -118,9 +120,8 @@ void LoaderConnection::Config(fidl::StringView config, ConfigCompleter::Sync& co
   reply(ZX_OK);
 }
 
-void LoaderConnection::Clone(fidl::ServerEnd<fuchsia_ldsvc::Loader> loader,
-                             CloneCompleter::Sync& completer) {
-  server_->Bind(std::move(loader));
+void LoaderConnection::Clone(CloneRequestView request, CloneCompleter::Sync& completer) {
+  server_->Bind(std::move(request->loader));
   completer.Reply(ZX_OK);
 }
 
