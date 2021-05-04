@@ -290,6 +290,13 @@ pub async fn replace_child<'a, S: AsRef<ObjectStore> + Send + Sync + 'static>(
     Ok(deleted_id_and_descriptor)
 }
 
+pub fn remove(transaction: &mut Transaction<'_>, store: &ObjectStore, object_id: u64) {
+    transaction.add(
+        store.store_object_id(),
+        Mutation::merge_object(ObjectKey::tombstone(object_id), ObjectValue::None),
+    );
+}
+
 #[cfg(test)]
 mod tests {
     use {

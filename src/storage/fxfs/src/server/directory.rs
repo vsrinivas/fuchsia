@@ -304,7 +304,7 @@ impl FxDirectory {
                         descriptor,
                     );
             } else {
-                // TODO(csuter): We need to delete the directory.
+                directory::remove(transaction, &store, existing_oid);
             }
         }
         Ok(dir)
