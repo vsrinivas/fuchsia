@@ -467,6 +467,13 @@ impl Facet for RiveFacet {
                 .rasters
                 .iter()
                 .rev()
+                .filter(|(_, style)|
+                    // Skip transparent fills. This optimization is especially useful for
+                    // artboards with transparent backgrounds.
+                    match &style.fill {
+                        Fill::Solid(color) => color.a != 0 || style.blend_mode != BlendMode::Over,
+                        _ => true
+                    })
                 .map(|(raster, style)| Layer { raster: raster.clone(), style: style.clone() }),
         );
 
