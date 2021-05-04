@@ -8,10 +8,7 @@ import("//build/rust/rustc_binary.gni")
 group("component_manager_config") {
   testonly = true
 
-  public_deps = [
-    ":install",
-    ":tests",
-  ]
+  public_deps = [ ":install" ]
 }
 
 group("tests") {
