@@ -804,6 +804,8 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
     }
 
     async fn register_on_mesh_prefix(&self, net: OnMeshPrefix) -> ZxResult<()> {
+        fx_log_info!("Got register_on_mesh_prefix command");
+
         // Wait until we are ready.
         self.wait_for_state(DriverState::is_initialized).await;
 
@@ -811,13 +813,44 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
             return Err(ZxStatus::INVALID_ARGS);
         }
 
+        let lock_future = self
+            .frame_handler
+            .send_request(CmdPropValueSet(PropThread::AllowLocalNetDataChange.into(), true))
+            // It is acceptable to get the error `Already` here.
+            .map(|r| match r {
+                Err(e) if e.downcast_ref::<Status>() == Some(&Status::Already) => Ok(()),
+                other => other,
+            })
+            .inspect_err(|e| fx_log_err!("Unable to lock AllowLocalNetDataChange: {:?}", e));
+
+        let cleanup_future = self
+            .frame_handler
+            .send_request(CmdPropValueSet(PropThread::AllowLocalNetDataChange.into(), false))
+            .inspect_err(|e| fx_log_err!("Unable to unlock AllowLocalNetDataChange: {:?}", e));
+
+        let future = self
+            .frame_handler
+            .send_request(CmdPropValueInsert(PropThread::OnMeshNets.into(), OnMeshNet::from(net)))
+            .inspect_err(|e| fx_log_err!("register_on_mesh_prefix: Failed insert: {:?}", e));
+
+        // Wait for our turn.
+        let _lock = match self.wait_for_api_task_lock("register_on_mesh_prefix").await {
+            Ok(x) => x,
+            Err(x) => {
+                fx_log_warn!("Failed waiting for API task lock: {:?}", x);
+                return Err(ZxStatus::INTERNAL);
+            }
+        };
+
         self.apply_standard_combinators(
-            self.frame_handler
-                .send_request(CmdPropValueInsert(
-                    PropThread::OnMeshNets.into(),
-                    OnMeshNet::from(net),
-                ))
-                .boxed(),
+            async move {
+                lock_future.await?;
+                let ret = future.await;
+                // This next line makes sure that we always run the cleanup
+                // future, even if our primary future fails.
+                ret.and(cleanup_future.await)
+            }
+            .boxed(),
         )
         .await
     }
@@ -826,21 +859,59 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
         &self,
         subnet: fidl_fuchsia_lowpan::Ipv6Subnet,
     ) -> ZxResult<()> {
+        fx_log_info!("Got unregister_on_mesh_prefix command");
+
         // Wait until we are ready.
         self.wait_for_state(DriverState::is_initialized).await;
 
+        let lock_future = self
+            .frame_handler
+            .send_request(CmdPropValueSet(PropThread::AllowLocalNetDataChange.into(), true))
+            // It is acceptable to get the error `Already` here.
+            .map(|r| match r {
+                Err(e) if e.downcast_ref::<Status>() == Some(&Status::Already) => Ok(()),
+                other => other,
+            })
+            .inspect_err(|e| fx_log_err!("Unable to lock AllowLocalNetDataChange: {:?}", e));
+
+        let cleanup_future = self
+            .frame_handler
+            .send_request(CmdPropValueSet(PropThread::AllowLocalNetDataChange.into(), false))
+            .inspect_err(|e| fx_log_err!("Unable to unlock AllowLocalNetDataChange: {:?}", e));
+
+        let future = self
+            .frame_handler
+            .send_request(CmdPropValueRemove(
+                PropThread::OnMeshNets.into(),
+                crate::spinel::Subnet::from(subnet),
+            ))
+            .inspect_err(|e| fx_log_err!("unregister_on_mesh_prefix: Failed remove: {:?}", e));
+
+        // Wait for our turn.
+        let _lock = match self.wait_for_api_task_lock("unregister_on_mesh_prefix").await {
+            Ok(x) => x,
+            Err(x) => {
+                fx_log_warn!("Failed waiting for API task lock: {:?}", x);
+                return Err(ZxStatus::INTERNAL);
+            }
+        };
+
         self.apply_standard_combinators(
-            self.frame_handler
-                .send_request(CmdPropValueRemove(
-                    PropThread::OnMeshNets.into(),
-                    crate::spinel::Subnet::from(subnet),
-                ))
-                .boxed(),
+            async move {
+                lock_future.await?;
+                let ret = future.await;
+                // This next line makes sure that we always run the cleanup
+                // future, even if our primary future fails.
+                ret.and(cleanup_future.await)
+            }
+            .boxed(),
         )
         .await
     }
 
     async fn register_external_route(&self, net: ExternalRoute) -> ZxResult<()> {
+        fx_log_info!("Got register_external_route command");
+
         // Wait until we are ready.
         self.wait_for_state(DriverState::is_initialized).await;
 
@@ -848,13 +919,47 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
             return Err(ZxStatus::INVALID_ARGS);
         }
 
+        let lock_future = self
+            .frame_handler
+            .send_request(CmdPropValueSet(PropThread::AllowLocalNetDataChange.into(), true))
+            // It is acceptable to get the error `Already` here.
+            .map(|r| match r {
+                Err(e) if e.downcast_ref::<Status>() == Some(&Status::Already) => Ok(()),
+                other => other,
+            })
+            .inspect_err(|e| fx_log_err!("Unable to lock AllowLocalNetDataChange: {:?}", e));
+
+        let cleanup_future = self
+            .frame_handler
+            .send_request(CmdPropValueSet(PropThread::AllowLocalNetDataChange.into(), false))
+            .inspect_err(|e| fx_log_err!("Unable to unlock AllowLocalNetDataChange: {:?}", e));
+
+        let future = self
+            .frame_handler
+            .send_request(CmdPropValueInsert(
+                PropThread::OffMeshRoutes.into(),
+                crate::spinel::ExternalRoute::from(net),
+            ))
+            .inspect_err(|e| fx_log_err!("register_external_route: Failed insert: {:?}", e));
+
+        // Wait for our turn.
+        let _lock = match self.wait_for_api_task_lock("register_external_router").await {
+            Ok(x) => x,
+            Err(x) => {
+                fx_log_warn!("Failed waiting for API task lock: {:?}", x);
+                return Err(ZxStatus::INTERNAL);
+            }
+        };
+
         self.apply_standard_combinators(
-            self.frame_handler
-                .send_request(CmdPropValueInsert(
-                    PropThread::OffMeshRoutes.into(),
-                    crate::spinel::ExternalRoute::from(net),
-                ))
-                .boxed(),
+            async move {
+                lock_future.await?;
+                let ret = future.await;
+                // This next line makes sure that we always run the cleanup
+                // future, even if our primary future fails.
+                ret.and(cleanup_future.await)
+            }
+            .boxed(),
         )
         .await
     }
@@ -863,16 +968,52 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
         &self,
         subnet: fidl_fuchsia_lowpan::Ipv6Subnet,
     ) -> ZxResult<()> {
+        fx_log_info!("Got unregister_external_route command");
+
         // Wait until we are ready.
         self.wait_for_state(DriverState::is_initialized).await;
 
+        let lock_future = self
+            .frame_handler
+            .send_request(CmdPropValueSet(PropThread::AllowLocalNetDataChange.into(), true))
+            // It is acceptable to get the error `Already` here.
+            .map(|r| match r {
+                Err(e) if e.downcast_ref::<Status>() == Some(&Status::Already) => Ok(()),
+                other => other,
+            })
+            .inspect_err(|e| fx_log_err!("Unable to lock AllowLocalNetDataChange: {:?}", e));
+
+        let cleanup_future = self
+            .frame_handler
+            .send_request(CmdPropValueSet(PropThread::AllowLocalNetDataChange.into(), false))
+            .inspect_err(|e| fx_log_err!("Unable to unlock AllowLocalNetDataChange: {:?}", e));
+
+        let future = self
+            .frame_handler
+            .send_request(CmdPropValueRemove(
+                PropThread::OffMeshRoutes.into(),
+                crate::spinel::Subnet::from(subnet),
+            ))
+            .inspect_err(|e| fx_log_err!("unregister_external_route: Failed remove: {:?}", e));
+
+        // Wait for our turn.
+        let _lock = match self.wait_for_api_task_lock("unregister_external_router").await {
+            Ok(x) => x,
+            Err(x) => {
+                fx_log_warn!("Failed waiting for API task lock: {:?}", x);
+                return Err(ZxStatus::INTERNAL);
+            }
+        };
+
         self.apply_standard_combinators(
-            self.frame_handler
-                .send_request(CmdPropValueRemove(
-                    PropThread::OffMeshRoutes.into(),
-                    crate::spinel::Subnet::from(subnet),
-                ))
-                .boxed(),
+            async move {
+                lock_future.await?;
+                let ret = future.await;
+                // This next line makes sure that we always run the cleanup
+                // future, even if our primary future fails.
+                ret.and(cleanup_future.await)
+            }
+            .boxed(),
         )
         .await
     }

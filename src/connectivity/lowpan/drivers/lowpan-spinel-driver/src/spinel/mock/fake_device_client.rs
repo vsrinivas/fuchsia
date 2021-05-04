@@ -20,6 +20,9 @@ const INBOUND_WINDOW_SIZE: u32 = 2;
 pub const PROP_DEBUG_LOGGING_TEST: Prop = Prop::Unknown(2097151);
 pub const PROP_DEBUG_SAVED_PANID_TEST: Prop = Prop::Unknown(2097152);
 
+const NETWORK_DATA_PROPS: &[Prop] =
+    &[Prop::Thread(PropThread::OnMeshNets), Prop::Thread(PropThread::OffMeshRoutes)];
+
 #[derive(Debug)]
 struct FakeSpinelDevice {
     properties: Arc<Mutex<HashMap<Prop, Vec<u8>>>>,
@@ -46,6 +49,7 @@ impl Default for FakeSpinelDevice {
         properties.insert(Prop::Mac(PropMac::ScanPeriod), vec![100]);
         properties.insert(Prop::Mac(PropMac::ScanState), vec![0]);
 
+        properties.insert(Prop::Thread(PropThread::AllowLocalNetDataChange), vec![0]);
         properties.insert(Prop::Thread(PropThread::OnMeshNets), vec![]);
         properties.insert(Prop::Thread(PropThread::OffMeshRoutes), vec![]);
         properties.insert(
@@ -100,6 +104,7 @@ impl FakeSpinelDevice {
         properties.insert(Prop::Mac(PropMac::ScanMask), vec![11, 12, 13]);
         properties.insert(Prop::Mac(PropMac::ScanPeriod), vec![100]);
         properties.insert(Prop::Mac(PropMac::ScanState), vec![0]);
+        properties.insert(Prop::Thread(PropThread::AllowLocalNetDataChange), vec![0]);
         properties.insert(
             Prop::Mac(PropMac::LongAddr),
             vec![0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01],
@@ -182,7 +187,19 @@ impl FakeSpinelDevice {
         let mut response: Vec<u8> = vec![];
 
         let mut properties = self.properties.lock();
-        if let Some(value) = properties.get(&prop) {
+        if NETWORK_DATA_PROPS.contains(&prop)
+            && properties.get(&Prop::Thread(PropThread::AllowLocalNetDataChange)).unwrap() != &[1u8]
+        {
+            spinel_write!(
+                &mut response,
+                "Ciii",
+                frame.header,
+                Cmd::PropValueIs,
+                Prop::LastStatus,
+                Status::InvalidState
+            )
+            .unwrap();
+        } else if let Some(value) = properties.get(&prop) {
             // Dumb insert.
             let mut value =
                 HashSet::<Vec<u8>>::try_unpack_from_slice(&value).expect("bad list encoding");
@@ -561,6 +578,7 @@ impl FakeSpinelDevice {
                 }
             }
             prop => {
+                let mut properties = self.properties.lock();
                 if prop == Prop::Net(PropNet::NetworkName) && new_value.last() != Some(&0) {
                     spinel_write!(
                         &mut response,
@@ -571,8 +589,34 @@ impl FakeSpinelDevice {
                         Status::ParseError
                     )
                     .unwrap();
+                } else if NETWORK_DATA_PROPS.contains(&prop)
+                    && properties.get(&Prop::Thread(PropThread::AllowLocalNetDataChange)).unwrap()
+                        != &[1u8]
+                {
+                    spinel_write!(
+                        &mut response,
+                        "Ciii",
+                        frame.header,
+                        Cmd::PropValueIs,
+                        Prop::LastStatus,
+                        Status::InvalidState
+                    )
+                    .unwrap();
+                } else if prop == Prop::Thread(PropThread::AllowLocalNetDataChange)
+                    && new_value != &[0u8]
+                    && properties.get(&Prop::Thread(PropThread::AllowLocalNetDataChange)).unwrap()
+                        != &[0u8]
+                {
+                    spinel_write!(
+                        &mut response,
+                        "Ciii",
+                        frame.header,
+                        Cmd::PropValueIs,
+                        Prop::LastStatus,
+                        Status::Already
+                    )
+                    .unwrap();
                 } else {
-                    let mut properties = self.properties.lock();
                     if let Some(value) = properties.get_mut(&prop) {
                         value.clear();
                         value.extend_from_slice(new_value);
