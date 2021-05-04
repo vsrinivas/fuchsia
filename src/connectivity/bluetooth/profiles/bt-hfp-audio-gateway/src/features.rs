@@ -7,7 +7,7 @@ use bitflags::bitflags;
 use crate::config::AudioGatewayFeatureSupport;
 
 bitflags! {
-    /// Bitmap defined in HFP v1.8, 4.35.1 for use with the "+BRSF" AT result code.
+    /// Bitmap defined in HFP v1.8, Section 4.35.1 for use with the "+BRSF" AT result code.
     #[derive(Default)]
     pub struct AgFeatures: u32 {
         const THREE_WAY_CALLING            = 0b00_0000_0000_0001;
@@ -28,7 +28,7 @@ bitflags! {
 }
 
 bitflags! {
-    /// Bitmap defined in HFP v1.8, 4.35.1 for use with the "AT+BRSF" AT command.
+    /// Bitmap defined in HFP v1.8, Section 4.35.1 for use with the "AT+BRSF" AT command.
     #[derive(Default)]
     pub struct HfFeatures: u32 {
         const NR_EC                        = 0b00_0000_0000_0001;
@@ -60,7 +60,7 @@ impl From<&AudioGatewayFeatureSupport> for AgFeatures {
         this.set(Self::ENHANCED_CALL_CONTROL, value.enhanced_call_controls);
         // Not configurable in Sapphire HFP Audio Gateway implementation.
         this.set(Self::EXTENDED_ERROR_RESULT_CODES, true);
-        // Mnadatory if Wide Band Speech is supported. See HFP v1.8, Table 3.1, Note 4.
+        // Mandatory if Wide Band Speech is supported. See HFP v1.8, Table 3.1, Note 4.
         this.set(Self::CODEC_NEGOTIATION, value.wide_band_speech);
         // Not configurable in Sapphire HFP Audio Gateway implementation.
         this.set(Self::HF_INDICATORS, true);
