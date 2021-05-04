@@ -21,6 +21,7 @@ pub use crate::make_joinable_command::*;
 pub use crate::mfg_command::*;
 pub use crate::network_scan_command::*;
 pub use crate::provision_command::*;
+pub use crate::register_on_mesh_net_command::*;
 pub use crate::repeat_command::*;
 pub use crate::replace_mac_filter_settings_command::*;
 pub use crate::reset_command::*;
@@ -78,6 +79,7 @@ pub enum CommandEnumWithRepeat {
     GetNeighborTable(GetNeighborTableCommand),
     GetCounters(GetCountersCommand),
     MakeJoinable(MakeJoinableCommand),
+    RegisterOnMeshNet(RegisterOnMeshNetCommand),
 }
 
 impl CommandEnumWithRepeat {
@@ -103,6 +105,7 @@ impl CommandEnumWithRepeat {
             CommandEnumWithRepeat::GetNeighborTable(x) => x.exec(context).await,
             CommandEnumWithRepeat::GetCounters(x) => x.exec(context).await,
             CommandEnumWithRepeat::MakeJoinable(x) => x.exec(context).await,
+            CommandEnumWithRepeat::RegisterOnMeshNet(x) => x.exec(context).await,
         }
     }
 }
@@ -131,6 +134,7 @@ pub enum CommandEnum {
     GetMacFilterSettings(GetMacFilterSettingsCommand),
     GetNeighborTable(GetNeighborTableCommand),
     GetCounters(GetCountersCommand),
+    RegisterOnMeshNet(RegisterOnMeshNetCommand),
 }
 
 impl CommandEnum {
@@ -154,6 +158,7 @@ impl CommandEnum {
             CommandEnum::GetMacFilterSettings(x) => x.exec(context).await,
             CommandEnum::GetNeighborTable(x) => x.exec(context).await,
             CommandEnum::GetCounters(x) => x.exec(context).await,
+            CommandEnum::RegisterOnMeshNet(x) => x.exec(context).await,
         }
     }
 }

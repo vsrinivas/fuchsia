@@ -8,7 +8,7 @@ use fidl::endpoints::create_endpoints;
 use fidl_fuchsia_factory_lowpan::{FactoryDeviceMarker, FactoryDeviceProxy, FactoryLookupMarker};
 use fidl_fuchsia_lowpan_device::{
     CountersMarker, CountersProxy, DeviceExtraMarker, DeviceExtraProxy, DeviceMarker, DeviceProxy,
-    LookupMarker, LookupProxy, Protocols,
+    DeviceRouteMarker, DeviceRouteProxy, LookupMarker, LookupProxy, Protocols,
 };
 use fidl_fuchsia_lowpan_test::{DeviceTestMarker, DeviceTestProxy};
 use fidl_fuchsia_lowpan_thread::{LegacyJoiningMarker, LegacyJoiningProxy};
@@ -112,6 +112,27 @@ impl LowpanCtlContext {
             client_extra.into_proxy().context("into_proxy() failed")?,
             client_test.into_proxy().context("into_proxy() failed")?,
         ))
+    }
+
+    pub async fn get_default_device_route_proxy(&self) -> Result<DeviceRouteProxy, Error> {
+        let lookup = &self.lookup;
+
+        let (client, server) = create_endpoints::<DeviceRouteMarker>()?;
+
+        lookup
+            .lookup_device(
+                &self.device_name,
+                Protocols { device_route: Some(server), ..Protocols::EMPTY },
+            )
+            .map(|x| match x {
+                Ok(Ok(())) => Ok(()),
+                Ok(Err(x)) => Err(format_err!("Service Error: {:?}", x)),
+                Err(x) => Err(x.into()),
+            })
+            .await
+            .context(format!("Unable to get device route interface for {:?}", &self.device_name))?;
+
+        client.into_proxy().context("into_proxy() failed")
     }
 
     pub async fn get_default_legacy_joining_proxy(&self) -> Result<LegacyJoiningProxy, Error> {

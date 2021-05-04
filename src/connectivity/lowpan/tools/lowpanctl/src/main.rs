@@ -22,6 +22,7 @@ pub mod make_joinable_command;
 pub mod mfg_command;
 pub mod network_scan_command;
 pub mod provision_command;
+pub mod register_on_mesh_net_command;
 pub mod repeat_command;
 pub mod replace_mac_filter_settings_command;
 pub mod reset_command;
