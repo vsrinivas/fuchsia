@@ -6,6 +6,7 @@
 #ifndef SRC_FIRMWARE_LIB_ABR_INCLUDE_LIB_ABR_OPS_H_
 #define SRC_FIRMWARE_LIB_ABR_INCLUDE_LIB_ABR_OPS_H_
 
+#include "data.h"
 #include "sysdeps.h"
 
 #ifdef __cplusplus
@@ -23,16 +24,43 @@ typedef struct AbrOps {
   /* Reads |size| bytes of A/B/R metadata from persistent storage into |buffer|.
    *
    * On success, populates |buffer| and returns true. This function must fail if fewer than |size|
-   * bytes are read. Setting this function to NULL will cause libabr to return I/O errors.
+   * bytes are read.
+   *
+   * Either read_abr_metadata or read_abr_metadata_custom must be provided, and the other must be
+   * NULL.
    */
   bool (*read_abr_metadata)(void* context, size_t size, uint8_t* buffer);
 
   /* Writes |size| bytes of A/B/R metadata from |buffer| to persistent storage.
    *
    * Returns true on success. This function must fail if fewer than |size| bytes are written.
-   * Setting this function to NULL is appropriate in environments where metadata is read-only.
+   *
+   * Either write_abr_metadata or write_abr_metadata_custom may be provided, but not both. In
+   * read-only environments, they may both be NULL.
    */
   bool (*write_abr_metadata)(void* context, const uint8_t* buffer, size_t size);
+
+  /* Reads ABR data into |a_slot_data|, |b_slot_data|, and |one_shot_recovery|.
+   *
+   * Returns true on success. This function must fail if any metadata fails to read.
+   * The client is responsible for ensuring the integrity of the data.
+   *
+   * Either read_abr_metadata or read_abr_metadata_custom must be provided, and the other must be
+   * NULL.
+   */
+  bool (*read_abr_metadata_custom)(void* context, AbrSlotData* a_slot_data,
+                                   AbrSlotData* b_slot_data, uint8_t* one_shot_recovery);
+
+  /* Writes ABR data from |a_slot_data|, |b_slot_data|, and |one_shot_recovery| to disk.
+   *
+   * Returns true on success. This function must fail if any metadata fails to write.
+   * The client is responsible for ensuring the integrity of the data.
+   *
+   * Either write_abr_metadata or write_abr_metadata_custom may be provided, but not both. In
+   * read-only environments, they may both be NULL.
+   */
+  bool (*write_abr_metadata_custom)(void* context, const AbrSlotData* a_slot_data,
+                                    const AbrSlotData* b_slot_data, uint8_t one_shot_recovery);
 } AbrOps;
 
 #ifdef __cplusplus

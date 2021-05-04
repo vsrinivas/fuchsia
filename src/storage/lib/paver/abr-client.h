@@ -64,7 +64,9 @@ class Client {
 
   void InitializeAbrOps();
 
-  Client() { abr_ops_ = {this, Client::ReadAbrMetaData, Client::WriteAbrMetaData}; }
+  Client() {
+    abr_ops_ = {this, Client::ReadAbrMetaData, Client::WriteAbrMetaData, nullptr, nullptr};
+  }
 
   // No copy, move, assign.
   // This is to ensure that |abr_ops_| is always valid. |abr_ops_.context| shall always be

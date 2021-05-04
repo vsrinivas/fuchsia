@@ -117,17 +117,25 @@ static AbrResult save_metadata(const AbrOps* abr_ops, AbrData* abr_data) {
   uint8_t serialized[sizeof(*abr_data)];
 
   ABR_DEBUG("Writing A/B metadata to disk.\n");
+  if (abr_ops->write_abr_metadata_custom) {
+    if (!abr_ops->write_abr_metadata_custom(abr_ops->context, &abr_data->slot_data[0],
+                                            &abr_data->slot_data[1],
+                                            abr_data->one_shot_recovery_boot)) {
+      ABR_ERROR("Failed to write metadata.\n");
+      return kAbrResultErrorIo;
+    }
+  } else {
+    abr_data_serialize(abr_data, serialized);
 
-  abr_data_serialize(abr_data, serialized);
+    if (abr_ops->write_abr_metadata == NULL) {
+      ABR_ERROR("Failed to write metadata (not implemented).\n");
+      return kAbrResultErrorIo;
+    }
 
-  if (abr_ops->write_abr_metadata == NULL) {
-    ABR_ERROR("Failed to write metadata (not implemented).\n");
-    return kAbrResultErrorIo;
-  }
-
-  if (!abr_ops->write_abr_metadata(abr_ops->context, serialized, sizeof(serialized))) {
-    ABR_ERROR("Failed to write metadata.\n");
-    return kAbrResultErrorIo;
+    if (!abr_ops->write_abr_metadata(abr_ops->context, serialized, sizeof(serialized))) {
+      ABR_ERROR("Failed to write metadata.\n");
+      return kAbrResultErrorIo;
+    }
   }
 
   return kAbrResultOk;
@@ -146,27 +154,37 @@ static AbrResult load_metadata(const AbrOps* abr_ops, AbrData* abr_data, AbrData
   AbrResult result = kAbrResultOk;
   uint8_t serialized[sizeof(*abr_data)];
 
-  if (abr_ops->read_abr_metadata == NULL) {
+  if (abr_ops->read_abr_metadata == NULL && abr_ops->read_abr_metadata_custom == NULL) {
     ABR_ERROR("Failed to read metadata (not implemented).\n");
     return kAbrResultErrorIo;
   }
 
-  if (!abr_ops->read_abr_metadata(abr_ops->context, sizeof(serialized), serialized)) {
-    ABR_ERROR("Failed to read metadata.\n");
-    return kAbrResultErrorIo;
-  }
+  if (abr_ops->read_abr_metadata != NULL) {
+    if (!abr_ops->read_abr_metadata(abr_ops->context, sizeof(serialized), serialized)) {
+      ABR_ERROR("Failed to read metadata.\n");
+      return kAbrResultErrorIo;
+    }
 
-  result = abr_data_deserialize(serialized, sizeof(serialized), abr_data);
-  if (result == kAbrResultErrorUnsupportedVersion) {
-    /* We don't want to clobber valid data in persistent storage, but we can't use this data, so
-     * bail out.
-     */
-    return result;
-  } else if (result != kAbrResultOk) {
-    /* No valid data exists. Use default data and set original data to trigger update. */
+    result = abr_data_deserialize(serialized, sizeof(serialized), abr_data);
+    if (result == kAbrResultErrorUnsupportedVersion) {
+      /* We don't want to clobber valid data in persistent storage, but we can't use this data, so
+       * bail out.
+       */
+      return result;
+    } else if (result != kAbrResultOk) {
+      /* No valid data exists. Use default data and set original data to trigger update. */
+      abr_data_init(abr_data);
+      AbrMemset(abr_data_orig, 0, sizeof(*abr_data_orig));
+      return kAbrResultOk;
+    }
+  } else {
     abr_data_init(abr_data);
-    AbrMemset(abr_data_orig, 0, sizeof(*abr_data_orig));
-    return kAbrResultOk;
+    if (!abr_ops->read_abr_metadata_custom(abr_ops->context, &abr_data->slot_data[kAbrSlotIndexA],
+                                           &abr_data->slot_data[kAbrSlotIndexB],
+                                           &abr_data->one_shot_recovery_boot)) {
+      ABR_ERROR("Failed to read metadata.\n");
+      return kAbrResultErrorIo;
+    }
   }
 
   *abr_data_orig = *abr_data;

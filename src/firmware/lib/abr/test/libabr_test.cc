@@ -22,6 +22,10 @@ uint32_t AbrCrc32(const void* buf, size_t buf_size) {
 // AVBOps implementations which forward to a LibabrTest instance.
 bool FakeReadAbrMetadata(void* context, size_t size, uint8_t* buffer);
 bool FakeWriteAbrMetadata(void* context, const uint8_t* buffer, size_t size);
+bool FakeReadAbrMetadataCustom(void* context, AbrSlotData* a, AbrSlotData* b,
+                               uint8_t* one_shot_recovery);
+bool FakeWriteAbrMetadataCustom(void* context, const AbrSlotData* a, const AbrSlotData* b,
+                                uint8_t one_shot_recovery);
 }  // extern "C"
 
 // Call this after messing with metadata (if you want the CRC to match).
@@ -92,21 +96,48 @@ struct FakeOps {
     return write_metadata_result_;
   }
 
+  bool ReadMetadataCustom(AbrSlotData* a, AbrSlotData* b, uint8_t* one_shot_recovery) {
+    *a = metadata_.slot_data[0];
+    *b = metadata_.slot_data[1];
+    *one_shot_recovery = metadata_.one_shot_recovery_boot;
+    read_metadata_custom_count_++;
+    return read_metadata_result_;
+  }
+
+  bool WriteMetadataCustom(const AbrSlotData* a, const AbrSlotData* b, uint8_t one_shot_recovery) {
+    metadata_.slot_data[0] = *a;
+    metadata_.slot_data[1] = *b;
+    metadata_.one_shot_recovery_boot = one_shot_recovery;
+    write_metadata_custom_count_++;
+    return write_metadata_result_;
+  }
+
   // Set these to false in a test to induce I/O errors.
   bool read_metadata_result_ = true;
   bool write_metadata_result_ = true;
   // These will be incremented on every AbrOps call from libabr.
   int read_metadata_count_ = 0;
   int write_metadata_count_ = 0;
+  int read_metadata_custom_count_ = 0;
+  int write_metadata_custom_count_ = 0;
   // This will be used as the 'stored' metadata for all AbrOps callbacks.
   AbrData metadata_{};
   // This will be used as the AbrOps argument for libabr calls.
-  AbrOps ops_ = {this, FakeReadAbrMetadata, FakeWriteAbrMetadata};
+  AbrOps ops_ = {this, FakeReadAbrMetadata, FakeWriteAbrMetadata, nullptr, nullptr};
 };
 
 FakeOps FakeOpsWithInitializedMetadata() {
   FakeOps ops;
   InitializeMetadata(&ops.metadata_);
+  return ops;
+}
+
+FakeOps FakeOpsCustom() {
+  FakeOps ops;
+  ops.ops_.read_abr_metadata = nullptr;
+  ops.ops_.write_abr_metadata = nullptr;
+  ops.ops_.read_abr_metadata_custom = FakeReadAbrMetadataCustom;
+  ops.ops_.write_abr_metadata_custom = FakeWriteAbrMetadataCustom;
   return ops;
 }
 
@@ -122,6 +153,16 @@ bool FakeReadAbrMetadata(void* context, size_t size, uint8_t* buffer) {
 
 bool FakeWriteAbrMetadata(void* context, const uint8_t* buffer, size_t size) {
   return reinterpret_cast<FakeOps*>(context)->WriteMetadata(buffer, size);
+}
+
+bool FakeReadAbrMetadataCustom(void* context, AbrSlotData* a, AbrSlotData* b,
+                               uint8_t* one_shot_recovery) {
+  return reinterpret_cast<FakeOps*>(context)->ReadMetadataCustom(a, b, one_shot_recovery);
+}
+
+bool FakeWriteAbrMetadataCustom(void* context, const AbrSlotData* a, const AbrSlotData* b,
+                                uint8_t one_shot_recovery) {
+  return reinterpret_cast<FakeOps*>(context)->WriteMetadataCustom(a, b, one_shot_recovery);
 }
 
 TEST(LibabrTest, GetBootSlotNotInitialized) {
@@ -932,4 +973,16 @@ TEST(LibabrTest, SetOneShotRecoveryNoExtraneousWrites) {
   EXPECT_EQ(0, ops.write_metadata_count_);
 }
 
+TEST(LibabrTest, UsesCustomMetadata) {
+  FakeOps ops = FakeOpsCustom();
+  EXPECT_EQ(kAbrResultOk, AbrSetOneShotRecovery(ops, true));
+  EXPECT_EQ(1, ops.write_metadata_custom_count_);
+  EXPECT_EQ(1, ops.read_metadata_custom_count_);
+  ops.read_metadata_custom_count_ = 0;
+  ops.write_metadata_custom_count_ = 0;
+  AbrSlotInfo info;
+  EXPECT_EQ(kAbrResultOk, AbrGetSlotInfo(ops, kAbrSlotIndexA, &info));
+  EXPECT_EQ(0, ops.write_metadata_custom_count_);
+  EXPECT_EQ(1, ops.read_metadata_custom_count_);
+}
 }  // namespace
