@@ -67,6 +67,7 @@ pub fn create_keyboard_event(
             event_type,
             modifiers,
             keymap,
+            key_meaning: None,
         }),
         device_descriptor: device_descriptor.clone(),
         event_time,

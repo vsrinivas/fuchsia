@@ -5,6 +5,7 @@
 use {
     crate::input_device,
     crate::input_handler::InputHandler,
+    crate::keyboard,
     anyhow::Error,
     async_trait::async_trait,
     fidl_fuchsia_input as fidl_input, fidl_fuchsia_ui_input3 as fidl_ui_input3,
@@ -39,13 +40,8 @@ impl InputHandler for ImeHandler {
             } => {
                 self.modifier_tracker
                     .update(keyboard_device_event.event_type, keyboard_device_event.key);
-                let key_event = create_key_event(
-                    &keyboard_device_event.key,
-                    keyboard_device_event.event_type,
-                    keyboard_device_event.modifiers,
-                    event_time,
-                    &self.modifier_tracker,
-                );
+                let key_event =
+                    create_key_event(&keyboard_device_event, event_time, &self.modifier_tracker);
                 self.dispatch_key(key_event).await;
                 // Consume the input event.
                 vec![]
@@ -93,19 +89,16 @@ impl ImeHandler {
 /// Returns a KeyEvent with the given parameters.
 ///
 /// # Parameters
-/// * `key`: The key associated with the KeyEvent.
-/// * `event_type`: The type of key, either pressed or released.
-/// * `modifiers`: The modifiers associated the KeyEvent.
+/// * `event`: The keyboard event to process.
 /// * `event_time`: The time in nanoseconds when the event was first recorded.
 /// * `modifier_state`: The state of the monitored modifier keys (e.g. Shift, or CapsLock).
 ///   Used to determine, for example, whether a key press results in an `a` or an `A`.
 fn create_key_event(
-    key: &fidl_input::Key,
-    event_type: fidl_ui_input3::KeyEventType,
-    modifiers: Option<fidl_ui_input3::Modifiers>,
+    event: &keyboard::KeyboardEvent,
     event_time: input_device::EventTime,
     modifier_state: &keymaps::ModifierState,
 ) -> fidl_ui_input3::KeyEvent {
+    let (key, event_type, modifiers) = (&event.key, event.event_type, event.modifiers);
     fx_log_debug!(
         "ImeHandler::create_key_event: key:{:?}, modifier_state:{:?}, event_type: {:?}",
         key,

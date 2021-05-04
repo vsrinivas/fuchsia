@@ -42,6 +42,12 @@ pub struct KeyboardEvent {
     /// If set, contains the unique identifier of the keymap to be used when or
     /// if remapping the keypresses.
     pub keymap: Option<String>,
+
+    /// If set, denotes the meaning of `key` in terms of the key effect.
+    /// A `KeyboardEvent` starts off with `key_meaning` unset, and the key
+    /// meaning is added in the input pipeline by the appropriate
+    /// keymap-aware input handlers.
+    pub key_meaning: Option<fidl_fuchsia_ui_input3::KeyMeaning>,
 }
 
 /// A [`KeyboardDeviceDescriptor`] contains information about a specific keyboard device.
@@ -272,8 +278,10 @@ impl KeyboardBinding {
 
                                 key,
                                 modifiers,
-                                // At this point in the pipeline the keymap is unknown.
+                                // At this point in the pipeline, the keymap is always unknown.
                                 keymap: None,
+                                // At this point in the pipeline, the key meaning is always unknown.
+                                key_meaning: None,
                             }),
                             device_descriptor: device_descriptor.clone(),
                             event_time: event_time_ns,
@@ -327,13 +335,7 @@ impl KeyboardBinding {
         // a closure.
         let all_keys = released_keys.chain(pressed_keys).collect::<Vec<_>>();
 
-        dispatch_events(
-            modifiers,
-            all_keys,
-            device_descriptor,
-            event_time_ns,
-            input_event_sender,
-        );
+        dispatch_events(modifiers, all_keys, device_descriptor, event_time_ns, input_event_sender);
     }
 }
 
