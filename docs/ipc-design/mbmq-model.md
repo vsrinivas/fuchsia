@@ -87,12 +87,18 @@ reply to the caller by passing the CMH handle to
 `zx_cmh_send_reply()`.  This enqueues the MBO on its associated
 MsgQueue, drops the CMH's reference to the MBO (putting the CMH back
 in the "unused" state), and sets the MBO's state to
-`enqueued_as_reply`.
+`enqueued_as_reply`.  The callee can now reuse this CMH object in
+later calls to `zx_msgqueue_read()`.
 
 The caller process can then read the MBO from its MsgQueue using
 `zx_msgqueue_read()`.  The caller supplies a CMH object but in this
-case the CMH is not used.  The caller can use the key value returned
-by `zx_msgqueue_read()` to determine which MBO was returned, if
-necessary.  The syscall removes the MBO from the MsgQueue and sets the
-MBO's state back to `owned_by_callee`.  The caller can now read the
-reply message from the MBO using `zx_mbo_read()`.
+case the CMH is not used.  The `zx_msgqueue_read()` syscall removes
+the MBO from the MsgQueue and sets the MBO's state back to
+`owned_by_callee`.  The caller can use the key value returned by
+`zx_msgqueue_read()` to determine which MBO was returned, if
+necessary.  The caller can now read the reply message from the MBO
+using `zx_mbo_read()`.
+
+The cycle can now repeat.  The caller can now write a new request
+message into the MBO and send it on a channel as above, potentially to
+a different callee.
