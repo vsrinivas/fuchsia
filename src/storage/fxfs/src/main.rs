@@ -10,11 +10,12 @@ use {
     fuchsia_runtime::HandleType,
     fuchsia_syslog, fuchsia_zircon as zx,
     fxfs::{
-        device::block_device::BlockDevice, mkfs, mount, object_store::fsck::fsck,
+        device::{block_device::BlockDevice, DeviceHolder},
+        mkfs, mount,
+        object_store::fsck::fsck,
         server::FxfsServer,
     },
     remote_block_device::RemoteBlockClient,
-    std::sync::Arc,
 };
 
 #[derive(FromArgs, PartialEq, Debug)]
@@ -63,11 +64,12 @@ async fn main() -> Result<(), Error> {
 
     match args {
         TopLevel { nested: SubCommand::Format(_) } => {
-            mkfs::mkfs(Arc::new(BlockDevice::new(Box::new(client), false))).await?;
+            mkfs::mkfs(DeviceHolder::new(BlockDevice::new(Box::new(client), false))).await?;
             Ok(())
         }
         TopLevel { nested: SubCommand::Mount(_) } => {
-            let fs = mount::mount(Arc::new(BlockDevice::new(Box::new(client), false))).await?;
+            let fs =
+                mount::mount(DeviceHolder::new(BlockDevice::new(Box::new(client), false))).await?;
             let mut server = FxfsServer::new(fs, "default").await?;
             let startup_handle =
                 fuchsia_runtime::take_startup_handle(HandleType::DirectoryRequest.into())
@@ -75,7 +77,8 @@ async fn main() -> Result<(), Error> {
             server.run(zx::Channel::from(startup_handle)).await
         }
         TopLevel { nested: SubCommand::Fsck(_) } => {
-            let fs = mount::mount(Arc::new(BlockDevice::new(Box::new(client), true))).await?;
+            let fs =
+                mount::mount(DeviceHolder::new(BlockDevice::new(Box::new(client), true))).await?;
             fsck(fs.as_ref()).await
         }
     }
