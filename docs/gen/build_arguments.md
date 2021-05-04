@@ -137,7 +137,7 @@ From //products/bringup.gni:51
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:22
+From //BUILD.gn:24
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
@@ -145,7 +145,7 @@ From //products/bringup.gni:51
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:22
+From //BUILD.gn:24
 
 ### base_package_labels
 If you add package labels to this variable, the packages will be included in
@@ -160,7 +160,7 @@ From //out/not-default/args.gn:3
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:29
+From //BUILD.gn:31
 
 **Current value for `target_cpu = "x64"`:** `["//bundles:kitchen_sink"]`
 
@@ -168,7 +168,7 @@ From //out/not-default/args.gn:3
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:29
+From //BUILD.gn:31
 
 ### basic_env_names
 The list of environment names to include in "basic_envs".
@@ -589,7 +589,7 @@ From //products/bringup.gni:55
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:37
+From //BUILD.gn:39
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
@@ -597,7 +597,7 @@ From //products/bringup.gni:55
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:37
+From //BUILD.gn:39
 
 ### camera_debug
 
@@ -732,6 +732,22 @@ If true, uses a netstack tailored for network conformance testing.
 **Current value (from the default):** `false`
 
 From //src/connectivity/network/BUILD.gn:13
+
+### core_realm_package_name
+The following arguments are all used to configure the contents of the core
+component realm. See //src/sys/core/build/core.gni for documentation on what
+each field means.
+TODO: redo comments
+
+**Current value (from the default):** `"core-generic"`
+
+From //build/product.gni:21
+
+### core_realm_shards
+
+**Current value (from the default):** `[]`
+
+From //build/product.gni:22
 
 ### crash_diagnostics_dir
 Clang crash reports directory path. Use empty path to disable altogether.
@@ -1453,7 +1469,7 @@ From //products/bringup.gni:64
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:56
+From //BUILD.gn:58
 
 **Current value for `target_cpu = "x64"`:** `["//tools/devshell:fx", "//tools/bindc:host"]`
 
@@ -1461,7 +1477,7 @@ From //products/bringup.gni:64
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:56
+From //BUILD.gn:58
 
 ### host_os
 
@@ -2784,7 +2800,7 @@ From //src/graphics/lib/magma/gnbuild/magma.gni:32
 ### product_bootfs_labels
 A list of binary labels to include in ZBIs built for this product.
 
-**Current value for `target_cpu = "arm64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles:diagnostics-eng", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/diagnostics/archivist:default-service-config", "//products/kernel_cmdline:blobfs.cache-eviction-policy--NEVER_EVICT", "//products/kernel_cmdline:console.shell--true", "//products/kernel_cmdline:devmgr.log-to-debuglog--true", "//products/kernel_cmdline:kernel.enable-debugging-syscalls--true", "//products/kernel_cmdline:kernel.enable-serial-syscalls--true", "//products/kernel_cmdline:kernel.oom.behavior--jobkill", "//products/kernel_cmdline:netsvc.all-features--true", "//products/kernel_cmdline:netsvc.disable--false", "//src/testing/runtests", "//src/sys/component_manager:component_manager_bootfs_config", "//build/images:component_id_index_config"]`
+**Current value for `target_cpu = "arm64"`:** `["//build/info:bootfs", "//bundles:bootstrap-without-root", "//bundles:debugging", "//bundles:diagnostics-eng", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/diagnostics/archivist:default-service-config", "//products/kernel_cmdline:blobfs.cache-eviction-policy--NEVER_EVICT", "//products/kernel_cmdline:console.shell--true", "//products/kernel_cmdline:devmgr.log-to-debuglog--true", "//products/kernel_cmdline:kernel.enable-debugging-syscalls--true", "//products/kernel_cmdline:kernel.enable-serial-syscalls--true", "//products/kernel_cmdline:kernel.oom.behavior--jobkill", "//products/kernel_cmdline:netsvc.all-features--true", "//products/kernel_cmdline:netsvc.disable--false", "//src/testing/runtests", "//src/sys/component_manager:component_manager_bootfs_config", "//build/images:component_id_index_config"]`
 
 From //products/bringup.gni:41
 
@@ -2792,7 +2808,7 @@ From //products/bringup.gni:41
 
 From //build/product.gni:7
 
-**Current value for `target_cpu = "x64"`:** `["//build/info:bootfs", "//bundles:bootstrap", "//bundles:debugging", "//bundles:diagnostics-eng", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/diagnostics/archivist:default-service-config", "//products/kernel_cmdline:blobfs.cache-eviction-policy--NEVER_EVICT", "//products/kernel_cmdline:console.shell--true", "//products/kernel_cmdline:devmgr.log-to-debuglog--true", "//products/kernel_cmdline:kernel.enable-debugging-syscalls--true", "//products/kernel_cmdline:kernel.enable-serial-syscalls--true", "//products/kernel_cmdline:kernel.oom.behavior--jobkill", "//products/kernel_cmdline:netsvc.all-features--true", "//products/kernel_cmdline:netsvc.disable--false", "//src/testing/runtests", "//src/sys/component_manager:component_manager_bootfs_config", "//build/images:component_id_index_config"]`
+**Current value for `target_cpu = "x64"`:** `["//build/info:bootfs", "//bundles:bootstrap-without-root", "//bundles:debugging", "//bundles:diagnostics-eng", "//bundles/bringup:manual_testing", "//bundles/drivers:bootstrap", "//bundles/drivers:bootstrap-eng", "//bundles/drivers:usb-host-stack", "//bundles/drivers:usb-peripheral-stack", "//bundles/drivers:utils", "//src/diagnostics/archivist:default-service-config", "//products/kernel_cmdline:blobfs.cache-eviction-policy--NEVER_EVICT", "//products/kernel_cmdline:console.shell--true", "//products/kernel_cmdline:devmgr.log-to-debuglog--true", "//products/kernel_cmdline:kernel.enable-debugging-syscalls--true", "//products/kernel_cmdline:kernel.enable-serial-syscalls--true", "//products/kernel_cmdline:kernel.oom.behavior--jobkill", "//products/kernel_cmdline:netsvc.all-features--true", "//products/kernel_cmdline:netsvc.disable--false", "//src/testing/runtests", "//src/sys/component_manager:component_manager_bootfs_config", "//build/images:component_id_index_config"]`
 
 From //products/bringup.gni:41
 
@@ -3387,7 +3403,7 @@ afterwards.
 
 **Current value (from the default):** `""`
 
-From //BUILD.gn:43
+From //BUILD.gn:45
 
 ### testonly_in_containers
 Whether to allow testonly=true targets in fuchsia ZBI or base/cache packages.
@@ -3537,7 +3553,7 @@ From //products/bringup.gni:57
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:51
+From //BUILD.gn:53
 
 **Current value for `target_cpu = "x64"`:** `["//tools/net/device-finder:host", "//build/images:fastboot"]`
 
@@ -3545,7 +3561,7 @@ From //products/bringup.gni:57
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:51
+From //BUILD.gn:53
 
 ### unpack_debug_archives
 To ensure that everything can be built without debug symbols present we
