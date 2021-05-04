@@ -51,17 +51,25 @@ pub fn sys_fcntl(
     cmd: u32,
     arg: u64,
 ) -> Result<SyscallResult, Errno> {
-    let file = ctx.task.files.get(fd)?;
     match cmd {
-        F_GETOWN => Ok(file.get_async_owner().into()),
+        F_GETOWN => {
+            let file = ctx.task.files.get(fd)?;
+            Ok(file.get_async_owner().into())
+        }
         F_SETOWN => {
             if arg > std::i32::MAX as u64 {
                 // Negative values are process groups.
                 not_implemented!("fcntl(F_SETOWN) does not support process groups");
                 return Err(EINVAL);
             }
+            let file = ctx.task.files.get(fd)?;
             let task = ctx.task.get_task(arg.try_into().map_err(|_| EINVAL)?);
             file.set_async_owner(task.map_or(0, |task| task.id));
+            Ok(SUCCESS)
+        }
+        F_GETFD => Ok(ctx.task.files.get_flags(fd)?.bits().into()),
+        F_SETFD => {
+            ctx.task.files.set_flags(fd, FdFlags::from_bits_truncate(arg as u32))?;
             Ok(SUCCESS)
         }
         _ => {

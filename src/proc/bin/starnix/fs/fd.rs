@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use bitflags::bitflags;
 use fuchsia_zircon as zx;
 use parking_lot::{Mutex, RwLock};
 use std::collections::HashMap;
@@ -132,8 +133,23 @@ impl FileCommon {
 
 pub type FileHandle = Arc<dyn FileObject + Send + Sync>;
 
+bitflags! {
+    pub struct FdFlags: u32 {
+        const CLOEXEC = FD_CLOEXEC;
+    }
+}
+
+struct FdTableEntry {
+    file: FileHandle,
+
+    // Rather than using a separate "flags" field, we could maintain this data
+    // as a bitfield over the file descriptors because there is only one flag
+    // currently (CLOEXEC) and file descriptor numbers tend to cluster near 0.
+    flags: FdFlags,
+}
+
 pub struct FdTable {
-    table: RwLock<HashMap<FileDescriptor, FileHandle>>,
+    table: RwLock<HashMap<FileDescriptor, FdTableEntry>>,
 }
 
 impl FdTable {
@@ -141,19 +157,34 @@ impl FdTable {
         FdTable { table: RwLock::new(HashMap::new()) }
     }
 
-    pub fn install_fd(&self, fd: FileHandle) -> Result<FileDescriptor, Errno> {
+    pub fn install_fd(&self, file: FileHandle) -> Result<FileDescriptor, Errno> {
         let mut table = self.table.write();
-        let mut n = FileDescriptor::from_raw(0);
-        while table.contains_key(&n) {
-            n = FileDescriptor::from_raw(n.raw() + 1);
+        let mut fd = FileDescriptor::from_raw(0);
+        while table.contains_key(&fd) {
+            fd = FileDescriptor::from_raw(fd.raw() + 1);
         }
-        table.insert(n, fd);
-        Ok(n)
+        table.insert(fd, FdTableEntry { file, flags: FdFlags::empty() });
+        Ok(fd)
     }
 
     pub fn get(&self, fd: FileDescriptor) -> Result<FileHandle, Errno> {
         let table = self.table.read();
-        table.get(&fd).map(|handle| handle.clone()).ok_or_else(|| EBADF)
+        table.get(&fd).map(|entry| entry.file.clone()).ok_or_else(|| EBADF)
+    }
+
+    pub fn get_flags(&self, fd: FileDescriptor) -> Result<FdFlags, Errno> {
+        let table = self.table.read();
+        table.get(&fd).map(|entry| entry.flags).ok_or_else(|| EBADF)
+    }
+
+    pub fn set_flags(&self, fd: FileDescriptor, flags: FdFlags) -> Result<(), Errno> {
+        let mut table = self.table.write();
+        table
+            .get_mut(&fd)
+            .map(|entry| {
+                entry.flags = flags;
+            })
+            .ok_or_else(|| EBADF)
     }
 }
 
