@@ -12,9 +12,12 @@
 namespace zxdb {
 
 TEST(FindLine, GetAllLineTableMatchesInUnit) {
+  // The same file name can appear more than once as a line table "file" (they could be duplicates,
+  // or they could be encoded with a different directory that still resolves to the same file).
   MockLineTable::FileNameVector files;
   files.push_back("file1.cc");  // Name for file ID #1.
   files.push_back("file2.cc");  // Name for file ID #2.
+  files.push_back("file1.cc");  // Name for file ID #3 (duplicate of #1).
 
   MockLineTable::RowVector rows;
   rows.push_back(MockLineTable::MakeStatementRow(0x1000, 1, 1));  // File #1, line 1.
@@ -23,8 +26,8 @@ TEST(FindLine, GetAllLineTableMatchesInUnit) {
   rows.push_back(MockLineTable::MakeStatementRow(0x1003, 1, 1));  // Dupe for File 1, line 1.
   rows.push_back(MockLineTable::MakeStatementRow(0x1004, 1, 90));
   rows.push_back(MockLineTable::MakeStatementRow(0x1005, 1, 100));
-  rows.push_back(MockLineTable::MakeStatementRow(0x1006, 1, 95));
-  rows.push_back(MockLineTable::MakeStatementRow(0x1007, 1, 100));
+  rows.push_back(MockLineTable::MakeStatementRow(0x1006, 3, 95));
+  rows.push_back(MockLineTable::MakeStatementRow(0x1007, 3, 100));
   rows.push_back(MockLineTable::MakeStatementRow(0x1008, 1, 98));
   rows.push_back(MockLineTable::MakeEndSequenceRow(0x1009, 1, 98));
 

@@ -31,10 +31,6 @@ std::vector<LineMatch> GetAllLineTableMatchesInUnit(const LineTable& line_table,
   std::vector<FileChecked> checked;
   checked.resize(line_table.GetNumFileNames() + 1, FileChecked::kUnchecked);
 
-  // Once we find a file match, assume there aren't any others so we don't need to keep looking up
-  // file names.
-  bool file_match_found = false;
-
   // The |best_line| is the line number of the smallest line in the file we've found >= to the
   // search line. The |result| contains all lines we've encountered in the unit so far that match
   // this.
@@ -55,11 +51,12 @@ std::vector<LineMatch> GetAllLineTableMatchesInUnit(const LineTable& line_table,
       if (file_id >= checked.size())
         continue;  // Symbols are corrupt.
 
-      if (!file_match_found && checked[file_id] == FileChecked::kUnchecked) {
+      // Note: sometimes the same file can be encoded multiple times or in different ways in the
+      // same line table, so don't assume just because we found it that no other files match.
+      if (checked[file_id] == FileChecked::kUnchecked) {
         // Look up effective file name and see if it's a match.
         if (auto file_name = line_table.GetFileNameByIndex(file_id)) {
           if (full_path == *file_name) {
-            file_match_found = true;
             checked[file_id] = FileChecked::kMatch;
           } else {
             checked[file_id] = FileChecked::kNoMatch;
