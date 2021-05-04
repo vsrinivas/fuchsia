@@ -1,3 +1,7 @@
+{% set toc2021 | yamlloads %}
+{% include "fuchsia-src/contribute/roadmap/2021/_toc.yaml" %}
+{% endset %}
+
 # Fuchsia roadmap
 
 The Fuchsia project values transparency with our community. We are sharing our
@@ -11,10 +15,16 @@ While these lists of projects are not exhaustive, they provide high-level overvi
 of active projects that inform the way that we're currently thinking about
 Fuchsia.
 
-**2021**
+## 2021
 
-* [Defining a Stable Driver Runtime](/docs/contribute/roadmap/2021/stable_driver_runtime.md)
+<ul>
+{% for item in toc2021.toc %}
+  {% if item.path and item.title %}
+    <li><a href="{{ item.path }}">{{ item.title }}</a></li>
+  {% endif %}
+{% endfor %}
+</ul>
 
-**2020**
+## 2020
 
 * [Fuchsia 2020 roadmap overview](/docs/contribute/roadmap/2020/overview.md)
