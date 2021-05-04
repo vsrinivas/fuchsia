@@ -137,7 +137,10 @@ driver_module("iwlwifi_driver") {
   deps = [ ":pcie" ]
 }
 
-all_fw_files = [ "iwlwifi-7265D-29.ucode" ]
+all_fw_files = [
+  "iwlwifi-7265D-29.ucode",
+  "iwlwifi-8265-36.ucode",
+]
 
 foreach(fw_file, all_fw_files) {
   resource("iwlwifi-firmware-" + fw_file) {
