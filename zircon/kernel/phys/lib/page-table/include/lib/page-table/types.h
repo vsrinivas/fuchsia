@@ -37,6 +37,28 @@ class MemoryManager {
   virtual std::byte* Allocate(size_t size, size_t alignment) = 0;
 };
 
+// Allow addition / subtraction of offsets with type `size_t`, so expressions
+// such as the following work as expected:
+//
+//     Vaddr x = ...;
+//     x += sizeof(int);
+//
+#define DEFINE_OP(type, op)                                                            \
+  /* NOLINTNEXTLINE(bugprone-macro-parentheses) */                                     \
+  constexpr type& operator op##=(type& self, size_t offset) {                          \
+    self op## = type(offset);                                                          \
+    return self;                                                                       \
+  }                                                                                    \
+  /* NOLINTNEXTLINE(bugprone-macro-parentheses) */                                     \
+  constexpr type operator op(const type& lhs, size_t rhs) { return lhs op type(rhs); } \
+  /* NOLINTNEXTLINE(bugprone-macro-parentheses) */                                     \
+  constexpr type operator op(size_t lhs, const type& rhs) { return type(lhs) op rhs; }
+DEFINE_OP(Vaddr, +)
+DEFINE_OP(Vaddr, -)
+DEFINE_OP(Paddr, +)
+DEFINE_OP(Paddr, -)
+#undef DEFINE_OP
+
 }  // namespace page_table
 
 #endif  // ZIRCON_KERNEL_PHYS_LIB_PAGE_TABLE_INCLUDE_LIB_PAGE_TABLE_TYPES_H_

@@ -99,9 +99,10 @@ zx_status_t AddressSpaceBuilder::MapRegion(Vaddr virt_start, Paddr phys_start, u
       return result;
     }
 
-    virt_start += Vaddr(PageBytes(page_size));
-    phys_start += Paddr(PageBytes(page_size));
-    size -= PageBytes(page_size);
+    size_t page_bytes = PageBytes(page_size);
+    virt_start += page_bytes;
+    phys_start += page_bytes;
+    size -= page_bytes;
   }
 
   return ZX_OK;
