@@ -78,6 +78,8 @@ class LoaderImpl final : public fuchsia::vulkan::loader::Loader, public LoaderAp
     callback(std::move(vmo));
   }
 
+  void ConnectToDeviceFs(zx::channel channel) override { app_->ServeDeviceFs(std::move(channel)); }
+
   void AddCallback(std::string name, fit::function<void(zx::vmo)> callback) {
     std::optional<zx::vmo> vmo = app_->GetMatchingIcd(name);
     if (vmo) {
@@ -132,6 +134,13 @@ int main(int argc, const char* const* argv) {
 
   if (status != ZX_OK) {
     FX_LOGS(INFO) << "Failed to initialize device watcher " << status;
+    return -1;
+  }
+
+  status = app.InitDeviceFs();
+
+  if (status != ZX_OK) {
+    FX_LOGS(INFO) << "Failed to initialize device fs " << status;
     return -1;
   }
 

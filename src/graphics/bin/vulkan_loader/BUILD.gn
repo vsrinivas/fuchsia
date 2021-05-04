@@ -33,6 +33,7 @@ source_set("app") {
     "//sdk/fidl/fuchsia.sys2",
     "//sdk/lib/sys/inspect/cpp",
     "//src/lib/json_parser",
+    "//src/lib/storage/vfs/cpp",
   ]
   deps = [
     "//sdk/fidl/fuchsia.io",
@@ -42,7 +43,6 @@ source_set("app") {
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",
-    "//src/lib/storage/vfs/cpp",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

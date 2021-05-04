@@ -6,15 +6,20 @@
 
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/io.h>
 
 #include "src/graphics/bin/vulkan_loader/goldfish_device.h"
 #include "src/graphics/bin/vulkan_loader/icd_component.h"
 #include "src/graphics/bin/vulkan_loader/magma_device.h"
+#include "src/lib/storage/vfs/cpp/remote_dir.h"
+#include "src/lib/storage/vfs/cpp/service.h"
 
 LoaderApp::LoaderApp(sys::ComponentContext* context, async_dispatcher_t* dispatcher)
     : context_(context),
       dispatcher_(dispatcher),
       inspector_(context),
+      device_fs_(dispatcher),
       fdio_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
   fdio_loop_.StartThread("fdio_loop");
   inspector_.Health().StartingUp();
@@ -22,6 +27,39 @@ LoaderApp::LoaderApp(sys::ComponentContext* context, async_dispatcher_t* dispatc
   icds_node_ = inspector_.root().CreateChild("icds");
 }
 LoaderApp::~LoaderApp() {}
+
+zx_status_t LoaderApp::InitDeviceFs() {
+  device_root_node_ = fbl::MakeRefCounted<fs::PseudoDir>();
+
+  const char* kDevClassList[] = {"gpu", "goldfish-pipe", "goldfish-control",
+                                 "goldfish-address-space"};
+
+  auto class_node = fbl::MakeRefCounted<fs::PseudoDir>();
+  device_root_node_->AddEntry("class", class_node);
+
+  for (const char* dev_class : kDevClassList) {
+    fidl::InterfaceHandle<fuchsia::io::Directory> gpu_dir;
+    std::string input_path = std::string("/dev/class/") + dev_class;
+    zx_status_t status = fdio_open(
+        input_path.c_str(), fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
+        gpu_dir.NewRequest().TakeChannel().release());
+    if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Failed to open " << input_path;
+      return status;
+    }
+
+    class_node->AddEntry(dev_class,
+                         fbl::MakeRefCounted<fs::RemoteDir>(
+                             fidl::ClientEnd<fuchsia_io::Directory>(gpu_dir.TakeChannel())));
+  }
+  return ZX_OK;
+}
+
+zx_status_t LoaderApp::ServeDeviceFs(zx::channel dir_request) {
+  auto options = fs::VnodeConnectionOptions::ReadWrite();
+  return device_fs_.Serve(device_root_node_,
+                          fidl::ServerEnd<fuchsia_io::Node>(std::move(dir_request)), options);
+}
 
 zx_status_t LoaderApp::InitDeviceWatcher() {
   FIT_DCHECK_IS_THREAD_VALID(main_thread_);

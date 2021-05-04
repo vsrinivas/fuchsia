@@ -39,6 +39,14 @@ class FakeMagmaDevice : public fuchsia::gpu::magma::testing::Device_TestBase {
     callback(std::move(vec));
   }
 
+  void Query2(uint64_t id, Query2Callback callback) override {
+    fuchsia::gpu::magma::Device_Query2_Result result;
+    fuchsia::gpu::magma::Device_Query2_Response response;
+    response.result = 5;
+    result.set_response(response);
+    callback(std::move(result));
+  }
+
   fidl::InterfaceRequestHandler<fuchsia::gpu::magma::Device> GetHandler() {
     return bindings_.GetHandler(this);
   }

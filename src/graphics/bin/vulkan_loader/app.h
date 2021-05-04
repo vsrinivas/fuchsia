@@ -18,6 +18,10 @@
 #include "src/lib/fsl/io/device_watcher.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/observer_list.h"
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
+#include "src/lib/storage/vfs/cpp/vfs.h"
+#include "src/lib/storage/vfs/cpp/vfs_types.h"
 
 class MagmaDevice;
 class IcdComponent;
@@ -52,6 +56,9 @@ class LoaderApp {
   ~LoaderApp();
 
   zx_status_t InitDeviceWatcher();
+
+  zx_status_t InitDeviceFs();
+  zx_status_t ServeDeviceFs(zx::channel dir_request);
 
   std::shared_ptr<IcdComponent> CreateIcdComponent(std::string component_url);
 
@@ -90,6 +97,10 @@ class LoaderApp {
 
   // Keep track of the number of pending operations that have to potential to modify the tree.
   std::atomic<uint64_t> pending_action_count_{};
+
+  fs::SynchronousVfs device_fs_;
+  fbl::RefPtr<fs::PseudoDir> device_root_node_;
+
   std::unique_ptr<fsl::DeviceWatcher> gpu_watcher_;
   std::unique_ptr<fsl::DeviceWatcher> goldfish_watcher_;
 
