@@ -8,6 +8,7 @@
 #include <stdint.h>
 
 #include <iosfwd>
+#include <optional>
 #include <string>
 
 namespace uuid {
@@ -69,6 +70,10 @@ class Uuid {
   // provided by the kernel. The algorithm is described in RFC 4122,
   // section 4.4.
   static Uuid Generate();
+
+  // Parse a UUID of the format returned by ToString.
+  // Returns std::nullopt if the string was invalid.
+  static std::optional<Uuid> FromString(std::string_view uuid);
 
   // Generate a string representation of this UUID. The returned string will
   // be of the form:

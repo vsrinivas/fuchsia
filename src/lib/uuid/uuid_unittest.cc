@@ -24,6 +24,10 @@ TEST(Uuid, Empty) {
   Uuid empty;
   EXPECT_EQ(empty.ToString(), kExpectedEmpty);
 
+  std::optional<Uuid> parsed_empty = Uuid::FromString(std::string_view(kExpectedEmpty));
+  EXPECT_NE(parsed_empty, std::nullopt);
+  EXPECT_EQ(*parsed_empty, empty);
+
   std::ostringstream out;
   out << empty;
   EXPECT_EQ(out.str(), kExpectedEmpty);
@@ -117,6 +121,65 @@ TEST(Uuid, ToStringLittleEndian) {
     out << uuid;
     EXPECT_EQ(kExpected, out.str());
   }
+}
+
+TEST(Uuid, FromStringLittleEndian) {
+  if constexpr (BYTE_ORDER != LITTLE_ENDIAN) {
+    printf("Skipped.\n");
+    return;
+  }
+
+  // GPT EFI GUID.
+  {
+    const Uuid kExpected = {0x28, 0x73, 0x2a, 0xc1, 0x1f, 0xf8, 0xd2, 0x11,
+                            0xba, 0x4b, 0x00, 0xa0, 0xc9, 0x3e, 0xc9, 0x3b};
+    const char kString[] = "c12a7328-f81f-11d2-ba4b-00a0c93ec93b";
+
+    auto parsed = Uuid::FromString(kString);
+    EXPECT_NE(parsed, std::nullopt);
+    EXPECT_EQ(*parsed, kExpected);
+  }
+
+  // Chrome OS.
+  {
+    const Uuid kExpected = {0x5d, 0x2a, 0x3a, 0xfe, 0x32, 0x4f, 0xa7, 0x41,
+                            0xb7, 0x25, 0xac, 0xcc, 0x32, 0x85, 0xa3, 0x09};
+    const char kString[] = "fe3a2a5d-4f32-41a7-b725-accc3285a309";
+
+    auto parsed = Uuid::FromString(kString);
+    EXPECT_NE(parsed, std::nullopt);
+    EXPECT_EQ(*parsed, kExpected);
+  }
+}
+
+TEST(Uuid, FromStringTooShort) {
+  const char kString[] = "12345678-";
+  EXPECT_EQ(Uuid::FromString(kString), std::nullopt);
+}
+
+TEST(Uuid, FromStringFieldsWrongSize) {
+  const char kString[] = "123456-789123-1234-1234-123456789abc";
+  EXPECT_EQ(Uuid::FromString(kString), std::nullopt);
+}
+
+TEST(Uuid, FromStringNotEnoughFields) {
+  const char kString[] = "fe3a2a5d-4f32-41a7-b725aaccc3285a309";
+  EXPECT_EQ(Uuid::FromString(kString), std::nullopt);
+}
+
+TEST(Uuid, FromStringTooManyFields) {
+  const char kString[] = "fe3a2a5d-4f32-41a7-b725-accc38-5a309";
+  EXPECT_EQ(Uuid::FromString(kString), std::nullopt);
+}
+
+TEST(Uuid, FromStringLeadingJunkRejected) {
+  const char kString[] = "not a uuidfe3a2a5d-4f32-41a7-b725aaccc3285a309";
+  EXPECT_EQ(Uuid::FromString(kString), std::nullopt);
+}
+
+TEST(Uuid, FromStringTrailingJunkRejected) {
+  const char kString[] = "fe3a2a5d-4f32-41a7-b725aaccc3285a309trailing data";
+  EXPECT_EQ(Uuid::FromString(kString), std::nullopt);
 }
 
 // Ensure that UUIDs produced by Generate() pass IsValid() and IsValidOutputString().

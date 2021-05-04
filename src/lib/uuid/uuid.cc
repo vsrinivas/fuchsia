@@ -6,6 +6,7 @@
 
 #include <stddef.h>
 
+#include <optional>
 #include <ostream>
 
 #include "src/lib/fxl/strings/string_printf.h"
@@ -73,6 +74,37 @@ Uuid Uuid::Generate() {
 
   // Return the UUID.
   return result;
+}
+
+std::optional<uuid::Uuid> Uuid::FromString(std::string_view uuid) {
+  RawUuid guid;
+  static constexpr int kUuidStringSize = 36;
+  if (uuid.size() != kUuidStringSize) {
+    // String can't be a valid UUID.
+    return std::nullopt;
+  }
+  // sscanf() will parse extra dashes as negative numbers (e.g. -ab => "negative 0xab").
+  // Check there's the expected number of dashes.
+  int num_dashes = 0;
+  for (char i : uuid) {
+    if (i == '-') {
+      num_dashes++;
+    }
+  }
+  if (num_dashes != 4) {
+    // We expect exactly 4 dashes.
+    return std::nullopt;
+  }
+  int matched = sscanf(uuid.data(), "%8x-%4hx-%4hx-%2hhx%2hhx-%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx",
+                       &guid.time_low, &guid.time_mid, &guid.time_hi_and_version,
+                       &guid.clock_seq_hi_and_reserved, &guid.clock_seq_low, &guid.node[0],
+                       &guid.node[1], &guid.node[2], &guid.node[3], &guid.node[4], &guid.node[5]);
+  if (matched != 11) {
+    // Didn't match all the fields in sscanf() above.
+    return std::nullopt;
+  }
+
+  return uuid::Uuid(guid);
 }
 
 std::string Uuid::ToString() const {
