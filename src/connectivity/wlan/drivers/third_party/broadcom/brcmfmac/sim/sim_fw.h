@@ -248,6 +248,9 @@ class SimFirmware {
   zx_status_t IovarAllmultiSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
                                size_t value_len);
   zx_status_t IovarAllmultiGet(uint16_t ifidx, void* value_out, size_t value_len);
+  zx_status_t IovarAmpduBaWsizeSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
+                                   size_t value_len);
+  zx_status_t IovarAmpduBaWsizeGet(uint16_t ifidx, void* value_out, size_t value_len);
   zx_status_t IovarArpoeSet(uint16_t ifidx, int32_t bsscfgidx, const void* value, size_t value_len);
   zx_status_t IovarArpoeGet(uint16_t ifidx, void* value_out, size_t value_len);
   zx_status_t IovarArpolSet(uint16_t ifidx, int32_t bsscfgidx, const void* value, size_t value_len);
@@ -351,8 +354,6 @@ class SimFirmware {
    * wsec_key_list - Storing keys for this iface
    * ap_mode - is the iface in SoftAP(true) or Client(false) mode
    * ap_config - SoftAP specific config (set when interface is configured as SoftAP)
-   * arpoe - is ARP offloading enabled on this interface
-   * arp_ol - in what mode is ARP offloading operating (see BRCMF_ARP_OL_* flags)
    */
 
   typedef struct sim_iface_entry {
@@ -563,6 +564,8 @@ class SimFirmware {
   uint32_t arp_ol_ = 0;
   uint32_t ndoe_ = 0;
   uint32_t mchan_ = 1;  // This feature is enabled by default in firmware.
+  uint32_t ampdu_ba_wsize_ = 64;
+  uint32_t fakefrag_ = 0;
 
   std::unordered_map<std::string, SimIovar> iovar_table_;
 };

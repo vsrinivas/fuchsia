@@ -81,6 +81,8 @@ struct IovarMetadata {
 // third or the fourth field means that the handler is not supported.
 static const IovarMetadata kIovarInfoTable[] = {
     {"allmulti", sizeof(uint32_t), &SimFirmware::IovarAllmultiSet, &SimFirmware::IovarAllmultiGet},
+    {"ampdu_ba_wsize", sizeof(uint32_t), &SimFirmware::IovarAmpduBaWsizeSet,
+     &SimFirmware::IovarAmpduBaWsizeGet},
     {"arp_ol", sizeof(uint32_t), &SimFirmware::IovarArpolSet, &SimFirmware::IovarArpolGet},
     {"arpoe", sizeof(uint32_t), &SimFirmware::IovarArpoeSet, &SimFirmware::IovarArpoeGet},
     {"assoc_info", sizeof(brcmf_cfg80211_assoc_ielen_le), nullptr, &SimFirmware::IovarAssocInfoGet},
@@ -366,6 +368,11 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
         power_mode_ = *(reinterpret_cast<int32_t*>(data));
       }
       break;
+    case BRCMF_C_GET_PM:
+      if ((status = SIM_FW_CHK_CMD_LEN(dcmd->len, sizeof(power_mode_))) == ZX_OK) {
+        std::memcpy(data, &power_mode_, sizeof(power_mode_));
+      }
+      break;
     case BRCMF_C_SET_SCAN_CHANNEL_TIME:
     case BRCMF_C_SET_SCAN_UNASSOC_TIME:
       BRCMF_DBG(SIM, "Ignoring firmware message %d", dcmd->cmd);
@@ -468,6 +475,18 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
       if ((status = SIM_FW_CHK_CMD_LEN(dcmd->len, sizeof(uint32_t))) == ZX_OK) {
         // DTIM
         iface_tbl_[ifidx].ap_config.dtim_period = *(reinterpret_cast<uint32_t*>(data));
+      }
+      break;
+    case BRCMF_C_SET_FAKEFRAG:
+      if ((status = SIM_FW_CHK_CMD_LEN(dcmd->len, sizeof(uint32_t))) == ZX_OK) {
+        // fakefrag
+        fakefrag_ = *(reinterpret_cast<uint32_t*>(data));
+      }
+      break;
+    case BRCMF_C_GET_FAKEFRAG:
+      if ((status = SIM_FW_CHK_CMD_LEN(dcmd->len, sizeof(uint32_t))) == ZX_OK) {
+        // fakefrag
+        std::memcpy(data, &fakefrag_, sizeof(uint32_t));
       }
       break;
     case BRCMF_C_SET_SSID: {
@@ -1878,12 +1897,28 @@ zx_status_t SimFirmware::IovarAllmultiSet(uint16_t ifidx, int32_t bsscfgidx, con
   iface_tbl_[ifidx].allmulti = *allmulti;
   return ZX_OK;
 }
+
 zx_status_t SimFirmware::IovarAllmultiGet(uint16_t ifidx, void* value_out, size_t value_len) {
   if (!iface_tbl_[ifidx].allocated) {
     return ZX_ERR_BAD_STATE;
   }
   uint32_t* result_ptr = static_cast<uint32_t*>(value_out);
   *result_ptr = iface_tbl_[ifidx].allmulti;
+  return ZX_OK;
+}
+
+zx_status_t SimFirmware::IovarAmpduBaWsizeSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
+                                              size_t value_len) {
+  auto ampdu_ba_wsize = reinterpret_cast<const uint32_t*>(value);
+  ampdu_ba_wsize_ = *ampdu_ba_wsize;
+  return ZX_OK;
+}
+zx_status_t SimFirmware::IovarAmpduBaWsizeGet(uint16_t ifidx, void* value_out, size_t value_len) {
+  if (!iface_tbl_[ifidx].allocated) {
+    return ZX_ERR_BAD_STATE;
+  }
+  uint32_t* result_ptr = static_cast<uint32_t*>(value_out);
+  *result_ptr = ampdu_ba_wsize_;
   return ZX_OK;
 }
 

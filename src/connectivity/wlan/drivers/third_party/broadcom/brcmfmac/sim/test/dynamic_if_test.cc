@@ -32,6 +32,16 @@ const common::MacAddr kDefaultBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
 const common::MacAddr kFakeMac({0xde, 0xad, 0xbe, 0xef, 0x00, 0x02});
 const char kFakeClientName[] = "fake-client-iface";
 const char kFakeApName[] = "fake-ap-iface";
+// Iovar get/set command pairs used in metadata. The set command is in the metadata and the
+// corresponding get command is used to verify if the set was issued.
+struct iovar_get_set_cmd_t {
+  uint32_t get_cmd;
+  uint32_t set_cmd;
+};
+const iovar_get_set_cmd_t kIovarCmds[2] = {
+    {BRCMF_C_GET_PM, BRCMF_C_SET_PM},
+    {BRCMF_C_GET_FAKEFRAG, BRCMF_C_SET_FAKEFRAG},
+};
 
 class DynamicIfTest : public SimTest {
  public:
@@ -169,6 +179,33 @@ uint16_t DynamicIfTest::GetChanspec(bool is_ap_iface, zx_status_t expect_result)
   return chanspec;
 }
 
+// This function is used to override the default. The iovar list is made up
+// of global iovars (not meant for a specific IF) and is arbitrary and is meant
+// for test purposes only.
+static zx_status_t modified_get_metadata(brcmf_bus* bus, void* data, size_t exp_size,
+                                         size_t* actual) {
+  wifi_config_t wifi_config = {
+      .oob_irq_mode = ZX_INTERRUPT_MODE_LEVEL_HIGH,
+      .iovar_table =
+          {
+              {IOVAR_STR_TYPE, {"ampdu_ba_wsize"}, 32},
+              {IOVAR_CMD_TYPE, {.iovar_cmd = kIovarCmds[0].set_cmd}, 0},
+              {IOVAR_CMD_TYPE, {.iovar_cmd = kIovarCmds[1].set_cmd}, 1},
+              {IOVAR_STR_TYPE, {"mpc"}, 0},
+              {IOVAR_LIST_END_TYPE, {{0}}, 0},
+          },
+      .cc_table =
+          {
+              {"US", 842},
+              {"WW", 999},
+              {"", 0},
+          },
+  };
+  memcpy(data, &wifi_config, sizeof(wifi_config));
+  *actual = sizeof(wifi_config);
+  return ZX_OK;
+}
+
 TEST_F(DynamicIfTest, CreateDestroy) {
   Init();
 
@@ -191,6 +228,87 @@ TEST_F(DynamicIfTest, CreateDestroy) {
   EXPECT_EQ(soft_ap_mac, kDefaultBssid);
 
   EXPECT_EQ(DeleteInterface(&softap_ifc_), ZX_OK);
+  EXPECT_EQ(DeviceCount(), 1U);
+}
+
+// Verify if all iovars in metadata were set.
+static void verify_metadata_iovars(brcmf_simdev* sim, brcmf_if* ifp) {
+  // Get the meta data to check if all iovars were set
+  wifi_config_t config;
+  size_t actual;
+
+  ASSERT_EQ(brcmf_bus_get_wifi_metadata(sim->drvr->bus_if, &config, sizeof(wifi_config_t), &actual),
+            ZX_OK);
+  // Check to see if all IOVARs in metadata are being set during init.
+  // Go through the iovar table and check if all iovars were set correctly.
+  for (int i = 0; i < MAX_IOVAR_ENTRIES; ++i) {
+    zx_status_t err;
+    uint32_t cur_val;
+    switch (config.iovar_table[i].iovar_type) {
+      case IOVAR_STR_TYPE: {
+        // Get the current value
+        err = brcmf_fil_iovar_int_get(ifp, config.iovar_table[i].iovar_str, &cur_val, nullptr);
+        ASSERT_EQ(err, ZX_OK);
+        BRCMF_DBG(SIM, "iovar %s get: %d new: %d", config.iovar_table[i].iovar_str, cur_val,
+                  config.iovar_table[i].val);
+        ASSERT_EQ(config.iovar_table[i].val, cur_val);
+        break;
+      }
+      case IOVAR_CMD_TYPE: {
+        // Get the corresponding IOVAR Get command for the Set command in the table.
+        uint32_t get_cmd = 0;
+        bool cmd_found = false;
+        for (size_t j = 0; j < sizeof(kIovarCmds) / sizeof(iovar_get_set_cmd_t); ++j) {
+          if (kIovarCmds[j].set_cmd == config.iovar_table[i].iovar_cmd) {
+            get_cmd = kIovarCmds[j].get_cmd;
+            cmd_found = true;
+            break;
+          }
+        }
+        ASSERT_EQ(cmd_found, true);
+        // Get the current value
+        err = brcmf_fil_cmd_data_get(ifp, get_cmd, &cur_val, sizeof(cur_val), nullptr);
+        ASSERT_EQ(err, ZX_OK);
+        ASSERT_EQ(config.iovar_table[i].val, cur_val);
+        break;
+      }
+      case IOVAR_LIST_END_TYPE: {
+        // End of list, done checking iovars
+        return;
+      }
+      default: {
+        // Should never get here.
+        ZX_ASSERT(0);
+      }
+    }
+  }
+}
+
+// Check to see if all IOVARs in metadata are being set during init.
+TEST_F(DynamicIfTest, CheckClientInitParams) {
+  // Call Preinit to create the sim device (initialization is done in Init()).
+  PreInit();
+  brcmf_simdev* sim = device_->GetSim();
+  // Replace get_wifi_metadata with the local function
+  brcmf_bus_ops modified_bus_ops = *(sim->drvr->bus_if->ops);
+  modified_bus_ops.get_wifi_metadata = &modified_get_metadata;
+  const brcmf_bus_ops* original_bus_ops = sim->drvr->bus_if->ops;
+  sim->drvr->bus_if->ops = &modified_bus_ops;
+
+  // Complete initialization.
+  Init();
+  ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_, std::nullopt, kFakeMac), ZX_OK);
+
+  // Get the client ifp to check iovars
+  struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, client_ifc_.iface_id_);
+  ASSERT_NE(ifp, nullptr);
+
+  // Verify if all iovars in metadata were set to FW.
+  verify_metadata_iovars(sim, ifp);
+
+  // Set sim->drvr->bus_if->ops back to the original set of brcmf_bus_ops
+  sim->drvr->bus_if->ops = original_bus_ops;
+  EXPECT_EQ(DeleteInterface(&client_ifc_), ZX_OK);
   EXPECT_EQ(DeviceCount(), 1U);
 }
 

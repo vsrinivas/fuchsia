@@ -350,8 +350,8 @@ static void brcmf_set_init_cfg_params(brcmf_if* ifp) {
           BRCMF_ERR("iovar get error: %s, fw err %s", config.iovar_table[i].iovar_str,
                     brcmf_fil_get_errstr(fw_err));
         } else {
-          BRCMF_INFO("iovar %s get: %d new: %d", config.iovar_table[i].iovar_str, cur_val,
-                     config.iovar_table[i].val);
+          BRCMF_DBG(INFO, "iovar %s get: %d new: %d", config.iovar_table[i].iovar_str, cur_val,
+                    config.iovar_table[i].val);
           err = brcmf_fil_iovar_int_set(ifp, config.iovar_table[i].iovar_str,
                                         config.iovar_table[i].val, &fw_err);
           if (err != ZX_OK) {
@@ -362,6 +362,8 @@ static void brcmf_set_init_cfg_params(brcmf_if* ifp) {
         break;
       }
       case IOVAR_CMD_TYPE: {
+        BRCMF_DBG(INFO, "set iovar cmd %d new: %d", config.iovar_table[i].iovar_cmd,
+                  config.iovar_table[i].val);
         err =
             brcmf_fil_cmd_data_set(ifp, config.iovar_table[i].iovar_cmd, &config.iovar_table[i].val,
                                    sizeof(config.iovar_table[i].val), &fw_err);
@@ -369,10 +371,15 @@ static void brcmf_set_init_cfg_params(brcmf_if* ifp) {
           BRCMF_ERR("iovar cmd set error: %d, fw err %s", config.iovar_table[i].iovar_cmd,
                     brcmf_fil_get_errstr(fw_err));
         }
+        break;
       }
-      case IOVAR_LIST_END_TYPE:
+      case IOVAR_LIST_END_TYPE: {
         // End of list, done setting iovars
         return;
+      }
+      default:
+        // Should never get here.
+        ZX_DEBUG_ASSERT(0);
     }
   }
 }
