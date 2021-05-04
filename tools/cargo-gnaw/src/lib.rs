@@ -147,10 +147,16 @@ pub struct CrateOutputMetadata {
     pub version: String,
 
     /// Full GN target for depending on the crate.
-    pub versioned_target: String,
+    ///
+    /// For example, Rust targets all have a canonical target like
+    /// `//third_party/rust_crates:foo-v1_0_0`.
+    pub canonical_target: String,
 
-    /// Shorthand GN target for depending on the crate without a version.
-    pub top_level_target: Option<String>,
+    /// Shorthand GN target for depending on the crate.
+    ///
+    /// For example, Rust targets listed in `third_party/rust_crates/Cargo.toml` have a
+    /// shortcut target like `//third_party/rust_crates:foo`.
+    pub shortcut_target: Option<String>,
 
     /// Filesystem path to the directory containing `Cargo.toml`.
     pub path: PathBuf,
@@ -351,12 +357,12 @@ pub fn generate_from_manifest<W: io::Write>(
             emitted_metadata.push(CrateOutputMetadata {
                 name: bin_name.to_string(),
                 version: target.version(),
-                versioned_target: format!(
+                canonical_target: format!(
                     "//{}:{}",
                     path_from_root_to_generated.display(),
                     target.gn_target_name()
                 ),
-                top_level_target: Some(format!(
+                shortcut_target: Some(format!(
                     "//{}:{}",
                     path_from_root_to_generated.display(),
                     bin_name
@@ -407,7 +413,7 @@ pub fn generate_from_manifest<W: io::Write>(
         }
 
         let package_root = target.package_root(&project_root);
-        let top_level_target = if top_level_metadata.contains(target.pkg_name) {
+        let shortcut_target = if top_level_metadata.contains(target.pkg_name) {
             Some(format!("//{}:{}", path_from_root_to_generated.display(), target.pkg_name))
         } else {
             None
@@ -416,12 +422,12 @@ pub fn generate_from_manifest<W: io::Write>(
         emitted_metadata.push(CrateOutputMetadata {
             name: target.name(),
             version: target.version(),
-            versioned_target: format!(
+            canonical_target: format!(
                 "//{}:{}",
                 path_from_root_to_generated.display(),
                 target.gn_target_name()
             ),
-            top_level_target,
+            shortcut_target,
             path: package_root.to_owned(),
         });
 

@@ -80,12 +80,12 @@ impl OwnersDb {
             serde_json::from_reader(File::open(&metadata_path)?)?;
         let crates_by_versioned_gn_target = external_crates
             .iter()
-            .map(|metadata| (metadata.versioned_target.clone(), metadata.clone()))
+            .map(|metadata| (metadata.canonical_target.clone(), metadata.clone()))
             .collect::<BTreeMap<_, _>>();
         let crates_by_top_level_gn_target = external_crates
             .iter()
             .filter_map(|metadata| {
-                metadata.top_level_target.as_ref().map(|t| (t.clone(), metadata.clone()))
+                metadata.shortcut_target.as_ref().map(|t| (t.clone(), metadata.clone()))
             })
             .collect::<BTreeMap<_, _>>();
         Ok(Self {
@@ -152,8 +152,8 @@ impl OwnersDb {
         metadata: &CrateOutputMetadata,
     ) -> anyhow::Result<OwnersFile> {
         let targets = Self::toolchain_suffixed_targets(
-            &metadata.versioned_target,
-            metadata.top_level_target.as_ref().map(String::as_str),
+            &metadata.canonical_target,
+            metadata.shortcut_target.as_ref().map(String::as_str),
         );
         let deps = targets
             .par_iter()
