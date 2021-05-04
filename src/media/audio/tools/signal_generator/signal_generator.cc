@@ -65,14 +65,18 @@ MediaApp::MediaApp(fit::closure quit_callback) : quit_callback_(std::move(quit_c
 
 // Prepare for playback, submit initial data, start the presentation timeline.
 void MediaApp::Run(sys::ComponentContext* app_context) {
+  AcquireRenderer(app_context);
+
   // Calculate the frame size, number of packets, and shared-buffer size.
   SetupPayloadCoefficients();
 
   // Check the cmdline flags; exit if any are invalid or out-of-range.
   ParameterRangeChecks();
 
-  SetAudioCoreSettings(app_context);
-  AcquireAudioRenderer(app_context);
+  ConfigureRenderer();
+  // Set loudness levels. We include app_context so we can interact with AudioCore interface if
+  // needed (SetRenderUsageGain, BindVolumeControl)
+  SetLoudnessLevels(app_context);
 
   // Show a summary of all our settings: exactly what we are about to do.
   DisplayConfigurationSettings();
@@ -85,6 +89,33 @@ void MediaApp::Run(sys::ComponentContext* app_context) {
 
   // Retrieve the default reference clock for this renderer; once a device is ready, start playback.
   GetClockAndStart();
+}
+
+// Use ComponentContext to acquire AudioPtr; use that to acquire AudioRendererPtr in turn. Set
+// AudioRenderer error handler, in case of channel closure.
+void MediaApp::AcquireRenderer(sys::ComponentContext* app_context) {
+  if (ultrasound_) {
+    fuchsia::ultrasound::FactorySyncPtr ultrasound_factory;
+    app_context->svc()->Connect(ultrasound_factory.NewRequest());
+
+    zx::clock reference_clock;
+    fuchsia::media::AudioStreamType stream_type;
+    ultrasound_factory->CreateRenderer(audio_renderer_.NewRequest(), &reference_clock,
+                                       &stream_type);
+    frame_rate_ = stream_type.frames_per_second;
+    num_channels_ = stream_type.channels;
+    sample_format_ = stream_type.sample_format;
+  } else {
+    // Audio interface is needed to create AudioRenderer and set routing policy.
+    fuchsia::media::AudioPtr audio;
+    app_context->svc()->Connect(audio.NewRequest());
+
+    audio->CreateAudioRenderer(audio_renderer_.NewRequest());
+  }
+
+  audio_renderer_.set_error_handler([this](zx_status_t status) {
+    CLI_CHECK(Shutdown(), "Client connection to fuchsia.media.AudioRenderer failed: " << status);
+  });
 }
 
 // Based on the user-specified values for signal frequency and milliseconds per payload, calculate
@@ -220,17 +251,17 @@ void MediaApp::ParameterRangeChecks() {
     }
   }
 
-  if (stream_gain_db_) {
+  if (stream_gain_db_.has_value()) {
     stream_gain_db_ =
         std::clamp<float>(stream_gain_db_.value(), fuchsia::media::audio::MUTED_GAIN_DB,
                           fuchsia::media::audio::MAX_GAIN_DB);
   }
 
-  if (usage_gain_db_) {
+  if (usage_gain_db_.has_value()) {
     usage_gain_db_ = std::clamp<float>(usage_gain_db_.value(), fuchsia::media::audio::MUTED_GAIN_DB,
                                        kUnityGainDb);
   }
-  if (usage_volume_) {
+  if (usage_volume_.has_value()) {
     usage_volume_ = std::clamp<float>(usage_volume_.value(), fuchsia::media::audio::MIN_VOLUME,
                                       fuchsia::media::audio::MAX_VOLUME);
   }
@@ -238,159 +269,10 @@ void MediaApp::ParameterRangeChecks() {
   CLI_CHECK(success, "Exiting.");
 }
 
-void MediaApp::DisplayConfigurationSettings() {
-  auto it = std::find_if(kRenderUsageOptions.cbegin(), kRenderUsageOptions.cend(),
-                         [usage = usage_](auto usage_string_and_usage) {
-                           return usage == usage_string_and_usage.second;
-                         });
-  CLI_CHECK(it != kRenderUsageOptions.cend(), "no RenderUsage found");
-  auto usage_str = it->first;
-
-  printf("\nAudioRenderer configured for %d-channel %s at %u Hz with the %s usage.", num_channels_,
-         SampleFormatToString(sample_format_), frame_rate_, usage_str);
-
-  printf("\nContent is ");
-  if (output_signal_type_ == kOutputTypeNoise) {
-    printf("white noise");
-  } else if (output_signal_type_ == kOutputTypePinkNoise) {
-    printf("pink noise");
-  } else {
-    printf("a %.3f Hz ", frequency_);
-    if (output_signal_type_ == kOutputTypeSquare) {
-      printf("square wave");
-    } else if (output_signal_type_ == kOutputTypeSine) {
-      printf("sine wave");
-    } else if (output_signal_type_ == kOutputTypeSawtooth) {
-      printf("rising sawtooth wave");
-    } else if (output_signal_type_ == kOutputTypeTriangle) {
-      printf("isosceles triangle wave");
-    }
-  }
-  printf(" with amplitude %.4f", amplitude_);
-
-  if (ramp_target_gain_db_) {
-    printf(",\nramping stream gain from %.3f dB to %.3f dB over %.6lf seconds (%ld nanoseconds)",
-           stream_gain_db_.value(), ramp_target_gain_db_.value(),
-           static_cast<double>(ramp_duration_nsec_) / 1000000000, ramp_duration_nsec_);
-  } else if (stream_gain_db_) {
-    printf(",\nsetting stream gain to %.3f dB", stream_gain_db_.value());
-  }
-  if (stream_mute_) {
-    printf(",\n after explicitly %s this stream", stream_mute_.value() ? "muting" : "unmuting");
-  }
-
-  if (usage_gain_db_ || usage_volume_) {
-    printf(",\nafter setting ");
-    if (usage_gain_db_) {
-      printf("%s gain to %.3f dB%s", usage_str, usage_gain_db_.value(),
-             (usage_volume_ ? " and " : ""));
-    }
-    if (usage_volume_) {
-      printf("%s volume to %.1f", usage_str, usage_volume_.value());
-    }
-  }
-
-  printf(".\nThe generated signal will play for %.3f seconds", duration_secs_);
-
-  if (file_name_) {
-    printf(" and will be saved to '%s'", file_name_.value().c_str());
-  }
-
-  printf(".\nThe stream's reference clock will be ");
-  switch (clock_type_) {
-    case ClockType::Default:
-      printf("the default clock");
-      break;
-    case ClockType::Flexible:
-      printf("the AudioCore-provided 'flexible' clock");
-      break;
-    case ClockType::Monotonic:
-      printf("a clone of the MONOTONIC clock");
-      if (clock_rate_adjustment_) {
-        printf(", rate-adjusted by %i ppm", clock_rate_adjustment_.value());
-      }
-      break;
-    case ClockType::Custom:
-      printf("a custom clock");
-      if (clock_rate_adjustment_) {
-        printf(", rate-adjusted by %i ppm", clock_rate_adjustment_.value());
-      }
-      break;
-  }
-
-  printf(".\nThe renderer will transport data using %u %stimestamped buffer sections of %u frames",
-         total_mappable_packets_, (timestamp_packets_ ? "" : "non-"), frames_per_packet_);
-
-  if (pts_continuity_threshold_secs_) {
-    printf(",\nhaving set the PTS continuity threshold to %f seconds",
-           pts_continuity_threshold_secs_.value());
-  }
-
-  if (online_) {
-    printf(",\nusing strict timing for flow control (online mode)");
-  } else {
-    printf(",\nusing previous packet completions for flow control (contiguous mode)");
-  }
-
-  printf(".\n\n");
-}
-
-// AudioCore interface is used to change the gain/volume of usages.
-void MediaApp::SetAudioCoreSettings(sys::ComponentContext* app_context) {
-  if (usage_gain_db_ || usage_volume_) {
-    fuchsia::media::AudioCorePtr audio_core;
-    app_context->svc()->Connect(audio_core.NewRequest());
-
-    if (usage_gain_db_) {
-      audio_core->SetRenderUsageGain(usage_, usage_gain_db_.value());
-    }
-
-    if (usage_volume_) {
-      audio_core->BindUsageVolumeControl(
-          fuchsia::media::Usage::WithRenderUsage(fidl::Clone(usage_)),
-          usage_volume_control_.NewRequest());
-
-      usage_volume_control_.set_error_handler([this](zx_status_t status) {
-        CLI_CHECK(Shutdown(),
-                  "Client connection to fuchsia.media.audio.VolumeControl failed: " << status);
-      });
-    }
-
-    // ... now just let the instance of audio_core go out of scope.
-  }
-}
-
-// Use ComponentContext to acquire AudioPtr; use that to acquire AudioRendererPtr in turn. Set
-// AudioRenderer error handler, in case of channel closure.
-void MediaApp::AcquireAudioRenderer(sys::ComponentContext* app_context) {
-  if (ultrasound_) {
-    fuchsia::ultrasound::FactorySyncPtr ultrasound_factory;
-    app_context->svc()->Connect(ultrasound_factory.NewRequest());
-
-    zx::clock reference_clock;
-    fuchsia::media::AudioStreamType stream_type;
-    ultrasound_factory->CreateRenderer(audio_renderer_.NewRequest(), &reference_clock,
-                                       &stream_type);
-    frame_rate_ = stream_type.frames_per_second;
-    num_channels_ = stream_type.channels;
-    sample_format_ = stream_type.sample_format;
-  } else {
-    // Audio interface is needed to create AudioRenderer and set routing policy.
-    fuchsia::media::AudioPtr audio;
-    app_context->svc()->Connect(audio.NewRequest());
-
-    audio->CreateAudioRenderer(audio_renderer_.NewRequest());
-
-    if (stream_mute_ || stream_gain_db_ || ramp_target_gain_db_) {
-      audio_renderer_->BindGainControl(gain_control_.NewRequest());
-      gain_control_.set_error_handler([this](zx_status_t status) {
-        CLI_CHECK(Shutdown(),
-                  "Client connection to fuchsia.media.audio.GainControl failed: " << status);
-      });
-    }
-
-    // Set our render stream format, plus other settings as needed: gain, clock, continuity
-    // threshold
+// Configure the renderer as specified (ultrasound renderers must use the provided clock/format).
+void MediaApp::ConfigureRenderer() {
+  if (!ultrasound_) {
+    // Set our render stream format, plus other settings as needed: gain, clock
     InitializeAudibleRenderer();
 
     // ... now just let the instance of audio go out of scope.
@@ -405,16 +287,8 @@ void MediaApp::AcquireAudioRenderer(sys::ComponentContext* app_context) {
   }
 
   SetAudioRendererEvents();
+  // Set the PTS units and continuity threshold, if specified.
   ConfigureAudioRendererPts();
-}
-
-void MediaApp::ConfigureAudioRendererPts() {
-  if (timestamp_packets_) {
-    audio_renderer_->SetPtsUnits(frame_rate_, 1);
-  }
-  if (pts_continuity_threshold_secs_) {
-    audio_renderer_->SetPtsContinuityThreshold(pts_continuity_threshold_secs_.value());
-  }
 }
 
 // Set the AudioRenderer's audio format, plus other settings requested by command line
@@ -477,23 +351,180 @@ void MediaApp::InitializeAudibleRenderer() {
   audio_renderer_->SetUsage(usage_);
 
   audio_renderer_->SetPcmStreamType(format);
+}
 
-  // Set usage volume, if specified.
-  if (usage_volume_) {
-    usage_volume_control_->SetVolume(usage_volume_.value());
+// Enable audio renderer callbacks
+void MediaApp::SetAudioRendererEvents() {
+  audio_renderer_.events().OnMinLeadTimeChanged = [this](int64_t min_lead_time_nsec) {
+    min_lead_time_ = zx::duration(min_lead_time_nsec);
+
+    if (verbose_) {
+      printf("- OnMinLeadTimeChanged: %lu at %lu: %s to start playback  (%s ref clock)\n",
+             min_lead_time_nsec, zx::clock::get_monotonic().get(),
+             (min_lead_time_ >= kRealDeviceMinLeadTime ? "sufficient" : "insufficient"),
+             (reference_clock_.is_valid() ? "Received" : "Awaiting"));
+    }
+
+    if (min_lead_time_ >= kRealDeviceMinLeadTime && reference_clock_.is_valid() && !playing()) {
+      Play();
+    }
+  };
+
+  audio_renderer_->EnableMinLeadTimeEvents(true);
+}
+
+void MediaApp::ConfigureAudioRendererPts() {
+  if (timestamp_packets_) {
+    audio_renderer_->SetPtsUnits(frame_rate_, 1);
+  }
+  if (pts_continuity_threshold_secs_.has_value()) {
+    audio_renderer_->SetPtsContinuityThreshold(pts_continuity_threshold_secs_.value());
+  }
+}
+
+// AudioCore interface is used to change the gain/volume of usages.
+void MediaApp::SetLoudnessLevels(sys::ComponentContext* app_context) {
+  if (usage_gain_db_.has_value() || usage_volume_.has_value()) {
+    fuchsia::media::AudioCorePtr audio_core;
+    app_context->svc()->Connect(audio_core.NewRequest());
+
+    if (usage_gain_db_.has_value()) {
+      audio_core->SetRenderUsageGain(usage_, usage_gain_db_.value());
+    }
+
+    if (usage_volume_.has_value()) {
+      audio_core->BindUsageVolumeControl(
+          fuchsia::media::Usage::WithRenderUsage(fidl::Clone(usage_)),
+          usage_volume_control_.NewRequest());
+
+      usage_volume_control_.set_error_handler([this](zx_status_t status) {
+        CLI_CHECK(Shutdown(),
+                  "Client connection to fuchsia.media.audio.VolumeControl failed: " << status);
+      });
+
+      // Set usage volume, if specified.
+      usage_volume_control_->SetVolume(usage_volume_.value());
+    }
+
+    // ... now just let the instance of audio_core go out of scope.
   }
 
-  // Set stream gain and mute, if specified.
-  if (stream_mute_) {
-    gain_control_->SetMute(stream_mute_.value());
+  if (stream_mute_.has_value() || stream_gain_db_.has_value() || ramp_target_gain_db_.has_value()) {
+    audio_renderer_->BindGainControl(gain_control_.NewRequest());
+    gain_control_.set_error_handler([this](zx_status_t status) {
+      CLI_CHECK(Shutdown(),
+                "Client connection to fuchsia.media.audio.GainControl failed: " << status);
+    });
+
+    // Set stream gain and mute, if specified.
+    if (stream_mute_.has_value()) {
+      gain_control_->SetMute(stream_mute_.value());
+    }
+    if (stream_gain_db_.has_value()) {
+      gain_control_->SetGain(stream_gain_db_.value());
+    }
+    if (ramp_target_gain_db_.has_value()) {
+      gain_control_->SetGainWithRamp(ramp_target_gain_db_.value(), ramp_duration_nsec_,
+                                     fuchsia::media::audio::RampType::SCALE_LINEAR);
+    }
   }
-  if (stream_gain_db_) {
-    gain_control_->SetGain(stream_gain_db_.value());
+}
+
+void MediaApp::DisplayConfigurationSettings() {
+  auto it = std::find_if(kRenderUsageOptions.cbegin(), kRenderUsageOptions.cend(),
+                         [usage = usage_](auto usage_string_and_usage) {
+                           return usage == usage_string_and_usage.second;
+                         });
+  CLI_CHECK(it != kRenderUsageOptions.cend(), "no RenderUsage found");
+  auto usage_str = it->first;
+
+  printf("\nAudioRenderer configured for %d-channel %s at %u Hz with the %s usage.", num_channels_,
+         SampleFormatToString(sample_format_), frame_rate_, usage_str);
+
+  printf("\nContent is ");
+  if (output_signal_type_ == kOutputTypeNoise) {
+    printf("white noise");
+  } else if (output_signal_type_ == kOutputTypePinkNoise) {
+    printf("pink noise");
+  } else {
+    printf("a %.3f Hz ", frequency_);
+    if (output_signal_type_ == kOutputTypeSquare) {
+      printf("square wave");
+    } else if (output_signal_type_ == kOutputTypeSine) {
+      printf("sine wave");
+    } else if (output_signal_type_ == kOutputTypeSawtooth) {
+      printf("rising sawtooth wave");
+    } else if (output_signal_type_ == kOutputTypeTriangle) {
+      printf("isosceles triangle wave");
+    }
   }
-  if (ramp_target_gain_db_) {
-    gain_control_->SetGainWithRamp(ramp_target_gain_db_.value(), ramp_duration_nsec_,
-                                   fuchsia::media::audio::RampType::SCALE_LINEAR);
+  printf(" with amplitude %.4f", amplitude_);
+
+  if (ramp_target_gain_db_.has_value()) {
+    printf(",\nramping stream gain from %.3f dB to %.3f dB over %.6lf seconds (%ld nanoseconds)",
+           stream_gain_db_.value(), ramp_target_gain_db_.value(),
+           static_cast<double>(ramp_duration_nsec_) / 1000000000, ramp_duration_nsec_);
+  } else if (stream_gain_db_.has_value()) {
+    printf(",\nsetting stream gain to %.3f dB", stream_gain_db_.value());
   }
+  if (stream_mute_.has_value()) {
+    printf(",\n after explicitly %s this stream", stream_mute_.value() ? "muting" : "unmuting");
+  }
+
+  if (usage_gain_db_.has_value() || usage_volume_.has_value()) {
+    printf(",\nafter setting ");
+    if (usage_gain_db_.has_value()) {
+      printf("%s gain to %.3f dB%s", usage_str, usage_gain_db_.value(),
+             (usage_volume_.has_value() ? " and " : ""));
+    }
+    if (usage_volume_.has_value()) {
+      printf("%s volume to %.1f", usage_str, usage_volume_.value());
+    }
+  }
+
+  printf(".\nThe generated signal will play for %.3f seconds", duration_secs_);
+
+  if (file_name_) {
+    printf(" and will be saved to '%s'", file_name_.value().c_str());
+  }
+
+  printf(".\nThe stream's reference clock will be ");
+  switch (clock_type_) {
+    case ClockType::Default:
+      printf("the default clock");
+      break;
+    case ClockType::Flexible:
+      printf("the AudioCore-provided 'flexible' clock");
+      break;
+    case ClockType::Monotonic:
+      printf("a clone of the MONOTONIC clock");
+      if (clock_rate_adjustment_) {
+        printf(", rate-adjusted by %i ppm", clock_rate_adjustment_.value());
+      }
+      break;
+    case ClockType::Custom:
+      printf("a custom clock");
+      if (clock_rate_adjustment_) {
+        printf(", rate-adjusted by %i ppm", clock_rate_adjustment_.value());
+      }
+      break;
+  }
+
+  printf(".\nThe renderer will transport data using %u %stimestamped buffer sections of %u frames",
+         total_mappable_packets_, (timestamp_packets_ ? "" : "non-"), frames_per_packet_);
+
+  if (pts_continuity_threshold_secs_.has_value()) {
+    printf(",\nhaving set the PTS continuity threshold to %f seconds",
+           pts_continuity_threshold_secs_.value());
+  }
+
+  if (online_) {
+    printf(",\nusing strict timing for flow control (online mode)");
+  } else {
+    printf(",\nusing previous packet completions for flow control (contiguous mode)");
+  }
+
+  printf(".\n\n");
 }
 
 void MediaApp::InitializeWavWriter() {
@@ -1007,30 +1038,6 @@ void MediaApp::OnSendPacketComplete(uint64_t frames_completed) {
   } else if (num_packets_sent_ < num_packets_to_send_ && !online_) {
     SendPacket();
   }
-}
-
-// Enable audio renderer callbacks
-void MediaApp::SetAudioRendererEvents() {
-  audio_renderer_.set_error_handler([this](zx_status_t status) {
-    CLI_CHECK(Shutdown(), "Client connection to fuchsia.media.AudioRenderer failed: " << status);
-  });
-
-  audio_renderer_.events().OnMinLeadTimeChanged = [this](int64_t min_lead_time_nsec) {
-    min_lead_time_ = zx::duration(min_lead_time_nsec);
-
-    if (verbose_) {
-      printf("- OnMinLeadTimeChanged: %lu at %lu: %s to start playback  (%s ref clock)\n",
-             min_lead_time_nsec, zx::clock::get_monotonic().get(),
-             (min_lead_time_ >= kRealDeviceMinLeadTime ? "sufficient" : "insufficient"),
-             (reference_clock_.is_valid() ? "Received" : "Awaiting"));
-    }
-
-    if (min_lead_time_ >= kRealDeviceMinLeadTime && reference_clock_.is_valid() && !playing()) {
-      Play();
-    }
-  };
-
-  audio_renderer_->EnableMinLeadTimeEvents(true);
 }
 
 // Unmap memory, quit message loop (FIDL interfaces auto-delete upon ~MediaApp).

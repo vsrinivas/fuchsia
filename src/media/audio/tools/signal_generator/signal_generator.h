@@ -105,15 +105,17 @@ class MediaApp {
   void Run(sys::ComponentContext* app_context);
 
  private:
-  void ParameterRangeChecks();
+  void AcquireRenderer(sys::ComponentContext* app_context);
   void SetupPayloadCoefficients();
-  void DisplayConfigurationSettings();
+  void ParameterRangeChecks();
 
-  void SetAudioCoreSettings(sys::ComponentContext* app_context);
-  void AcquireAudioRenderer(sys::ComponentContext* app_context);
+  void ConfigureRenderer();
+  void SetLoudnessLevels(sys::ComponentContext* app_context);
   void SetAudioRendererEvents();
   void InitializeAudibleRenderer();
   void ConfigureAudioRendererPts();
+
+  void DisplayConfigurationSettings();
   void InitializeWavWriter();
   void CreateMemoryMapping();
 
