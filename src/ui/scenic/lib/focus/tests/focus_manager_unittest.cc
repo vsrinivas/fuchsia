@@ -44,7 +44,7 @@ std::shared_ptr<const view_tree::Snapshot> TwoNodeSnapshot() {
 
   snapshot->root = kNodeA;
   auto& view_tree = snapshot->view_tree;
-  view_tree[kNodeA] = ViewNode{.parent = ZX_KOID_INVALID, .children = {kNodeA}};
+  view_tree[kNodeA] = ViewNode{.parent = ZX_KOID_INVALID, .children = {kNodeB}};
   view_tree[kNodeB] = ViewNode{.parent = kNodeA};
 
   return snapshot;
