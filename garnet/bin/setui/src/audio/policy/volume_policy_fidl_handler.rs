@@ -42,6 +42,11 @@ impl Sender<Vec<Property>> for VolumePolicyControllerGetPropertiesResponder {
     }
 
     fn on_error(self, error: &anyhow::Error) {
+        fx_log_err!(
+            "error occurred watching for service: {:?}. Error is: {:?}",
+            VolumePolicyControllerMarker::DEBUG_NAME,
+            error
+        );
         shutdown_responder_with_error!(self, error);
     }
 }

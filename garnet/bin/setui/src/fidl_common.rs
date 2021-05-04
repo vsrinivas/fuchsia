@@ -248,8 +248,9 @@ macro_rules! fidl_hanging_get_responder {
 
             fn on_error(self, error: &anyhow::Error) {
                 ::fuchsia_syslog::fx_log_err!(
-                    "error occurred watching for service: {:?}",
-                    <$marker_type as ::fidl::endpoints::ServiceMarker>::DEBUG_NAME
+                    "error occurred watching for service: {:?}. Error is: {:?}",
+                    <$marker_type as ::fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+                    error
                 );
                 crate::shutdown_responder_with_error!(self, error);
             }
@@ -271,8 +272,9 @@ macro_rules! fidl_result_sender_for_responder {
 
             fn on_error(self, error:&anyhow::Error) {
                 ::fuchsia_syslog::fx_log_err!(
-                    "error occurred watching for service: {:?}",
-                    <$marker_type as ::fidl::endpoints::ServiceMarker>::DEBUG_NAME
+                    "error occurred watching for service: {:?}. Error is: {:?}",
+                    <$marker_type as ::fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+                    error
                 );
                 crate::shutdown_responder_with_error!(self, error);
             }

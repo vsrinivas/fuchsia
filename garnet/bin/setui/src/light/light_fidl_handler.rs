@@ -26,7 +26,11 @@ impl Sender<Vec<LightGroup>> for LightWatchLightGroupsResponder {
     }
 
     fn on_error(self, error: &anyhow::Error) {
-        fx_log_err!("error occurred watching for service: {:?}", LightMarker::DEBUG_NAME);
+        fx_log_err!(
+            "error occurred watching for service: {:?}. Error is: {:?}",
+            LightMarker::DEBUG_NAME,
+            error
+        );
         shutdown_responder_with_error!(self, error);
     }
 }
