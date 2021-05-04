@@ -60,6 +60,13 @@ TEST(ScreenReaderUtilTest, NodeIsDescribableLink) {
   EXPECT_TRUE(a11y::NodeIsDescribable(&node));
 }
 
+TEST(ScreenReaderUtilTest, NodeIsDescribableImage) {
+  fuchsia::accessibility::semantics::Node node;
+  node.set_node_id(0u);
+  node.set_role(fuchsia::accessibility::semantics::Role::IMAGE);
+  EXPECT_TRUE(a11y::NodeIsDescribable(&node));
+}
+
 TEST(ScreenReaderUtilTest, NodeIsDescribableLabelled) {
   fuchsia::accessibility::semantics::Node node;
   node.set_node_id(0u);
