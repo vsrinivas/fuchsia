@@ -673,6 +673,12 @@ impl From<FileDescriptor> for SyscallResult {
     }
 }
 
+impl From<bool> for SyscallResult {
+    fn from(value: bool) -> Self {
+        SyscallResult::Success(if value { 1 } else { 0 })
+    }
+}
+
 impl From<i32> for SyscallResult {
     fn from(value: i32) -> Self {
         SyscallResult::Success(value as u64)

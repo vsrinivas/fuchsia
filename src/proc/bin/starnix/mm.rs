@@ -4,7 +4,7 @@
 
 use fuchsia_zircon::{self as zx, AsHandleRef, HandleBased, Status};
 use lazy_static::lazy_static;
-use parking_lot::RwLock;
+use parking_lot::{Mutex, RwLock};
 use std::ffi::CString;
 use std::sync::Arc;
 use zerocopy::{AsBytes, FromBytes};
@@ -65,12 +65,7 @@ struct Mapping {
 }
 
 impl Mapping {
-    fn new(
-        base: UserAddress,
-        vmo: zx::Vmo,
-        vmo_offset: u64,
-        flags: zx::VmarFlags,
-    ) -> Mapping {
+    fn new(base: UserAddress, vmo: zx::Vmo, vmo_offset: u64, flags: zx::VmarFlags) -> Mapping {
         Mapping {
             base,
             vmo: Arc::new(vmo),
@@ -85,6 +80,19 @@ impl Mapping {
 }
 
 const PROGRAM_BREAK_LIMIT: u64 = 64 * 1024 * 1024;
+
+/// The policy about whether the address space can be dumped.
+pub enum DumpPolicy {
+    /// The address space cannot be dumped.
+    ///
+    /// Corresponds to SUID_DUMP_DISABLE.
+    DISABLE,
+
+    /// The address space can be dumped.
+    ///
+    /// Corresponds to SUID_DUMP_USER.
+    USER,
+}
 
 pub struct MemoryManager {
     /// A handle to the underlying Zircon process object.
@@ -107,6 +115,9 @@ pub struct MemoryManager {
     ///
     /// The mappings record which VMO backs each address.
     mappings: RwLock<RangeMap<UserAddress, Mapping>>,
+
+    /// Whether this address space is dumpable.
+    pub dumpable: Mutex<DumpPolicy>,
 }
 
 impl MemoryManager {
@@ -116,6 +127,7 @@ impl MemoryManager {
             root_vmar,
             program_break: RwLock::new(ProgramBreak::default()),
             mappings: RwLock::new(RangeMap::<UserAddress, Mapping>::new()),
+            dumpable: Mutex::new(DumpPolicy::DISABLE),
         }
     }
 
