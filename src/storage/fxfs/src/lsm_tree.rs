@@ -8,10 +8,12 @@ pub mod skip_list_layer;
 pub mod types;
 
 use {
-    crate::object_handle::ObjectHandle,
+    crate::object_handle::{ObjectHandle, INVALID_OBJECT_ID},
     anyhow::Error,
+    async_utils::event::Event,
     simple_persistent_layer::SimplePersistentLayerWriter,
     std::{
+        fmt,
         ops::Bound,
         sync::{Arc, RwLock},
     },
@@ -25,7 +27,9 @@ const SKIP_LIST_LAYER_ITEMS: usize = 512;
 const SIMPLE_PERSISTENT_LAYER_BLOCK_SIZE: u32 = 512;
 
 struct Inner<K, V> {
-    mutable_layer: Arc<dyn MutableLayer<K, V>>,
+    // The Event allows us to wait for any impending mutations to complete.  See the seal method
+    // below.
+    mutable_layer: (Event, Arc<dyn MutableLayer<K, V>>),
     layers: Vec<Arc<dyn Layer<K, V>>>,
 }
 
@@ -42,7 +46,10 @@ impl<'tree, K: Eq + Key + NextKey + OrdLowerBound, V: Value> LSMTree<K, V> {
     pub fn new(merge_fn: merge::MergeFn<K, V>) -> Self {
         LSMTree {
             data: RwLock::new(Inner {
-                mutable_layer: skip_list_layer::SkipListLayer::new(SKIP_LIST_LAYER_ITEMS),
+                mutable_layer: (
+                    Event::new(),
+                    skip_list_layer::SkipListLayer::new(SKIP_LIST_LAYER_ITEMS),
+                ),
                 layers: Vec::new(),
             }),
             merge_fn,
@@ -56,7 +63,10 @@ impl<'tree, K: Eq + Key + NextKey + OrdLowerBound, V: Value> LSMTree<K, V> {
     ) -> Result<Self, Error> {
         Ok(LSMTree {
             data: RwLock::new(Inner {
-                mutable_layer: skip_list_layer::SkipListLayer::new(SKIP_LIST_LAYER_ITEMS),
+                mutable_layer: (
+                    Event::new(),
+                    skip_list_layer::SkipListLayer::new(SKIP_LIST_LAYER_ITEMS),
+                ),
                 layers: Self::layers_from_handles(handles).await?,
             }),
             merge_fn,
@@ -80,64 +90,73 @@ impl<'tree, K: Eq + Key + NextKey + OrdLowerBound, V: Value> LSMTree<K, V> {
 
     // TODO(csuter): We need to handle the case where the mutable layer is empty.
     /// Seals the current mutable layer and creates a new one.
-    pub fn seal(&self) {
-        let mut data = self.data.write().unwrap();
-        let layer = data.mutable_layer.clone().as_layer();
-        data.layers.insert(0, layer);
-        data.mutable_layer = skip_list_layer::SkipListLayer::new(SKIP_LIST_LAYER_ITEMS);
+    pub async fn seal(&self) {
+        {
+            let mut data = self.data.write().unwrap();
+            let (event, layer) = std::mem::replace(
+                &mut data.mutable_layer,
+                (Event::new(), skip_list_layer::SkipListLayer::new(SKIP_LIST_LAYER_ITEMS)),
+            );
+            data.layers.insert(0, layer.as_layer());
+            // Before we return, we must wait for any mutations to the old mutable layer to complete
+            // and that's done by waiting for the event to be dropped and ensuring that the event is
+            // cloned whenever we plan to mutate the layer.
+            event.wait_or_dropped()
+        }
+        .await
+        .unwrap_err(); // wait_or_dropped returns Result<(), Dropped>
     }
 
     pub fn new_writer(object_handle: &dyn ObjectHandle) -> impl LayerWriter + '_ {
         SimplePersistentLayerWriter::new(object_handle, SIMPLE_PERSISTENT_LAYER_BLOCK_SIZE)
     }
 
-    // TODO(csuter): This should run as a different task.
     // TODO(csuter): We should provide a way for the caller to skip compactions if there's nothing
     // to compact.
-    /// Writes the items yielded by the iterator into the supplied object and then switches the tree
-    /// to use the new layer.
+    /// Writes the items yielded by the iterator into the supplied object.
     pub async fn compact_with_iterator(
         &self,
         mut iterator: impl LayerIterator<K, V>,
-        mut object_handle: impl ObjectHandle + 'static,
+        object_handle: &impl ObjectHandle,
     ) -> Result<(), Error> {
-        {
-            let mut writer = SimplePersistentLayerWriter::new(
-                &mut object_handle,
-                SIMPLE_PERSISTENT_LAYER_BLOCK_SIZE,
-            );
-            while let Some(item_ref) = iterator.get() {
-                log::debug!("compact: writing {:?}", item_ref);
-                writer.write(item_ref).await?;
-                iterator.advance().await?;
-            }
-            writer.flush().await?;
+        let mut writer =
+            SimplePersistentLayerWriter::new(object_handle, SIMPLE_PERSISTENT_LAYER_BLOCK_SIZE);
+        while let Some(item_ref) = iterator.get() {
+            log::debug!("compact: writing {:?}", item_ref);
+            writer.write(item_ref).await?;
+            iterator.advance().await?;
         }
-
-        self.set_layers(Box::new([object_handle])).await
+        writer.flush().await
     }
 
     /// Compacts all the immutable layers.
-    pub async fn compact(&self, object_handle: impl ObjectHandle + 'static) -> Result<(), Error> {
+    pub async fn compact(&self, object_handle: &impl ObjectHandle) -> Result<(), Error> {
         let layer_set = self.immutable_layer_set();
         let mut merger = layer_set.merger();
         let iter = merger.seek(Bound::Unbounded).await?;
         self.compact_with_iterator(iter, object_handle).await
     }
 
-    /// Returns a clone of the current set of layers (including the mutable layer), after which one
-    /// can get an iterator, although care should be taken because writes will blocked to the
-    /// mutable layer until the iterator is dropped.
-    pub fn layer_set(&self) -> LayerSet<K, V> {
-        let mut layers = Vec::new();
-        {
-            let data = self.data.read().unwrap();
-            layers.push(data.mutable_layer.clone().as_layer().into());
-            for layer in &data.layers {
-                layers.push(layer.clone().into());
-            }
+    /// Returns an empty layer-set for this tree.
+    pub fn empty_layer_set(&self) -> LayerSet<K, V> {
+        LayerSet { layers: Vec::new(), merge_fn: self.merge_fn }
+    }
+
+    /// Adds all the layers (including the mutable layer) to `layer_set`.
+    pub fn add_all_layers_to_layer_set(&self, layer_set: &mut LayerSet<K, V>) {
+        let data = self.data.read().unwrap();
+        layer_set.add_layer(data.mutable_layer.1.clone().as_layer().into());
+        for layer in &data.layers {
+            layer_set.add_layer(layer.clone().into());
         }
-        LayerSet { layers, merge_fn: self.merge_fn }
+    }
+
+    /// Returns a clone of the current set of layers (including the mutable layer), after which one
+    /// can get an iterator.
+    pub fn layer_set(&self) -> LayerSet<K, V> {
+        let mut layer_set = self.empty_layer_set();
+        self.add_all_layers_to_layer_set(&mut layer_set);
+        layer_set
     }
 
     /// Returns the current set of immutable layers after which one can get an iterator (for e.g.
@@ -156,19 +175,19 @@ impl<'tree, K: Eq + Key + NextKey + OrdLowerBound, V: Value> LSMTree<K, V> {
 
     /// Inserts an item into the mutable layer. Behaviour is undefined if the item already exists.
     pub async fn insert(&self, item: Item<K, V>) {
-        let mutable_layer = self.data.read().unwrap().mutable_layer.clone();
+        let (_event, mutable_layer) = self.data.read().unwrap().mutable_layer.clone();
         mutable_layer.insert(item).await;
     }
 
     /// Replaces or inserts an item into the mutable layer.
     pub async fn replace_or_insert(&self, item: Item<K, V>) {
-        let mutable_layer = self.data.read().unwrap().mutable_layer.clone();
+        let (_event, mutable_layer) = self.data.read().unwrap().mutable_layer.clone();
         mutable_layer.replace_or_insert(item).await;
     }
 
     /// Merges the given item into the mutable layer.
     pub async fn merge_into(&self, item: Item<K, V>, lower_bound: &K) {
-        let mutable_layer = self.data.read().unwrap().mutable_layer.clone();
+        let (_event, mutable_layer) = self.data.read().unwrap().mutable_layer.clone();
         mutable_layer.merge_into(item, lower_bound, self.merge_fn).await
     }
 
@@ -203,6 +222,10 @@ impl<'tree, K: Eq + Key + NextKey + OrdLowerBound, V: Value> LSMTree<K, V> {
         }
         Ok(layers)
     }
+
+    pub fn mutable_layer(&self) -> Arc<dyn MutableLayer<K, V>> {
+        self.data.read().unwrap().mutable_layer.1.clone()
+    }
 }
 
 /// A LayerSet provides a snapshot of the layers at a particular point in time, and allows you to
@@ -219,6 +242,20 @@ impl<K: Key + NextKey + OrdLowerBound, V: Value> LayerSet<K, V> {
 
     pub fn merger(&self) -> merge::Merger<'_, K, V> {
         merge::Merger::new(&self.layers.as_slice().into_layer_refs(), self.merge_fn)
+    }
+}
+
+impl<K, V> fmt::Debug for LayerSet<K, V> {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt.debug_list()
+            .entries(self.layers.iter().map(|l| {
+                if l.object_id() == INVALID_OBJECT_ID {
+                    format!("{:?}", Arc::as_ptr(l))
+                } else {
+                    format!("{}", l.object_id())
+                }
+            }))
+            .finish()
     }
 }
 
@@ -290,13 +327,14 @@ mod tests {
         ];
         tree.insert(items[0].clone()).await;
         tree.insert(items[1].clone()).await;
-        tree.seal();
+        tree.seal().await;
         tree.insert(items[2].clone()).await;
         tree.insert(items[3].clone()).await;
-        tree.seal();
+        tree.seal().await;
         let object = Arc::new(FakeObject::new());
         let handle = FakeObjectHandle::new(object.clone());
-        tree.compact(handle).await.expect("compact failed");
+        tree.compact(&handle).await.expect("compact failed");
+        tree.set_layers(Box::new([handle])).await.expect("set_layers failed");
         let handle = FakeObjectHandle::new(object.clone());
         let tree = LSMTree::open(emit_left_merge_fn, [handle].into()).await.expect("open failed");
 
@@ -322,7 +360,7 @@ mod tests {
         let tree = LSMTree::new(emit_left_merge_fn);
         tree.insert(items[0].clone()).await;
         tree.insert(items[1].clone()).await;
-        tree.seal();
+        tree.seal().await;
         tree.insert(items[2].clone()).await;
         tree.insert(items[3].clone()).await;
 

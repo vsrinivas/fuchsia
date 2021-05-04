@@ -25,10 +25,10 @@ pub struct JournalWriter<OH> {
     // The block size used for this journal file.
     block_size: usize,
 
-    // The offset in the file.
-    offset: u64,
+    // The checkpoint of the last write.
+    checkpoint: JournalCheckpoint,
 
-    // The last checksum we wrote.
+    // The last checksum we wrote to the buffer.
     last_checksum: Checksum,
 
     // The buffered data for the current block.
@@ -37,7 +37,13 @@ pub struct JournalWriter<OH> {
 
 impl<OH> JournalWriter<OH> {
     pub fn new(handle: Option<OH>, block_size: usize, last_checksum: u64) -> Self {
-        JournalWriter { handle, block_size, offset: 0, last_checksum, buf: Vec::new() }
+        JournalWriter {
+            handle,
+            block_size,
+            checkpoint: JournalCheckpoint::default(),
+            last_checksum,
+            buf: Vec::new(),
+        }
     }
 
     /// Serializes a new journal record to the journal stream.
@@ -58,7 +64,10 @@ impl<OH> JournalWriter<OH> {
     /// Returns the checkpoint that corresponds to the current location in the journal stream
     /// assuming that it has been flushed.
     pub(super) fn journal_file_checkpoint(&self) -> JournalCheckpoint {
-        JournalCheckpoint::new(self.offset + self.buf.len() as u64, self.last_checksum)
+        JournalCheckpoint::new(
+            self.checkpoint.file_offset + self.buf.len() as u64,
+            self.last_checksum,
+        )
     }
 
     /// Flushes any outstanding complete blocks to the journal object.  Part blocks can be flushed
@@ -76,8 +85,9 @@ impl<OH> JournalWriter<OH> {
                 let mut buf = handle.allocate_buffer(to_do);
                 buf.as_mut_slice()[..to_do].copy_from_slice(self.buf.drain(..to_do).as_slice());
                 buf.as_mut_slice()[to_do..].fill(0u8);
-                handle.write(self.offset, buf.as_ref()).await?;
-                self.offset += to_do as u64;
+                handle.write(self.checkpoint.file_offset, buf.as_ref()).await?;
+                self.checkpoint.file_offset += to_do as u64;
+                self.checkpoint.checksum = self.last_checksum;
             }
         }
         Ok(())
@@ -96,8 +106,8 @@ impl<OH> JournalWriter<OH> {
     /// Seeks to the given offset in the journal file, to be used once replay has finished.
     pub fn seek_to_checkpoint(&mut self, checkpoint: JournalCheckpoint) {
         assert!(self.buf.is_empty());
-        self.offset = checkpoint.file_offset;
-        self.last_checksum = checkpoint.checksum;
+        self.checkpoint = checkpoint;
+        self.last_checksum = self.checkpoint.checksum;
     }
 }
 

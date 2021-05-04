@@ -5,9 +5,9 @@
 use {
     crate::{
         lsm_tree::types::Item,
+        object_handle::INVALID_OBJECT_ID,
         object_store::{
             allocator::AllocatorItem,
-            constants::INVALID_OBJECT_ID,
             record::{ObjectItem, ObjectKey, ObjectValue},
             StoreInfo,
         },
@@ -657,21 +657,17 @@ mod tests {
     use {
         super::{LockKey, LockManager, LockState, Mutation, TransactionHandler},
         crate::{
-            object_store::testing::fake_filesystem::FakeFilesystem,
+            device::DeviceHolder, object_store::testing::fake_filesystem::FakeFilesystem,
             testing::fake_device::FakeDevice,
         },
         fuchsia_async as fasync,
         futures::{channel::oneshot::channel, future::FutureExt, join},
-        std::{
-            sync::{Arc, Mutex},
-            task::Poll,
-            time::Duration,
-        },
+        std::{sync::Mutex, task::Poll, time::Duration},
     };
 
     #[fasync::run_singlethreaded(test)]
     async fn test_simple() {
-        let device = Arc::new(FakeDevice::new(1024, 1024));
+        let device = DeviceHolder::new(FakeDevice::new(1024, 1024));
         let fs = FakeFilesystem::new(device);
         let mut t = fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
         t.add(1, Mutation::TreeSeal);
@@ -680,7 +676,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_locks() {
-        let device = Arc::new(FakeDevice::new(1024, 1024));
+        let device = DeviceHolder::new(FakeDevice::new(1024, 1024));
         let fs = FakeFilesystem::new(device);
         let (send1, recv1) = channel();
         let (send2, recv2) = channel();
@@ -722,7 +718,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_read_lock_after_write_lock() {
-        let device = Arc::new(FakeDevice::new(1024, 1024));
+        let device = DeviceHolder::new(FakeDevice::new(1024, 1024));
         let fs = FakeFilesystem::new(device);
         let (send1, recv1) = channel();
         let (send2, recv2) = channel();
@@ -755,7 +751,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_write_lock_after_read_lock() {
-        let device = Arc::new(FakeDevice::new(1024, 1024));
+        let device = DeviceHolder::new(FakeDevice::new(1024, 1024));
         let fs = FakeFilesystem::new(device);
         let (send1, recv1) = channel();
         let (send2, recv2) = channel();
@@ -788,7 +784,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_drop_uncommitted_transaction() {
-        let device = Arc::new(FakeDevice::new(1024, 1024));
+        let device = DeviceHolder::new(FakeDevice::new(1024, 1024));
         let fs = FakeFilesystem::new(device);
         let key = LockKey::object(1, 1);
 

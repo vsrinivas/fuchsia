@@ -126,18 +126,20 @@ impl FxfsServer {
 #[cfg(test)]
 mod tests {
     use {
-        crate::{object_store::FxFilesystem, server::FxfsServer, testing::fake_device::FakeDevice},
+        crate::{
+            device::DeviceHolder, object_store::FxFilesystem, server::FxfsServer,
+            testing::fake_device::FakeDevice,
+        },
         anyhow::Error,
         fidl_fuchsia_fs::AdminMarker,
         fidl_fuchsia_io::DirectoryMarker,
         fuchsia_async as fasync,
-        std::sync::Arc,
     };
 
     #[fasync::run(2, test)]
     async fn test_lifecycle() -> Result<(), Error> {
-        let device = Arc::new(FakeDevice::new(2048, 512));
-        let filesystem = FxFilesystem::new_empty(device.clone()).await?;
+        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
+        let filesystem = FxFilesystem::new_empty(device).await?;
         let mut server = FxfsServer::new(filesystem, "root").await.expect("Create server failed");
 
         let (client_end, server_end) = fidl::endpoints::create_endpoints::<DirectoryMarker>()?;

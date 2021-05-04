@@ -9,7 +9,9 @@ use {
     anyhow::Error,
     async_trait::async_trait,
     futures::try_join,
-    std::{cmp::Ordering, collections::BinaryHeap, convert::From, fmt::Debug, ops::Bound},
+    std::{
+        cmp::Ordering, collections::BinaryHeap, convert::From, fmt::Debug, fmt::Write, ops::Bound,
+    },
 };
 
 #[derive(Debug, Eq, PartialEq)]
@@ -267,6 +269,9 @@ pub struct Merger<'a, K, V> {
 
     // The function to be used for merging items.
     merge_fn: MergeFn<K, V>,
+
+    // If true, additional logging is enabled.
+    trace: bool,
 }
 
 impl<'a, K: Key + NextKey + OrdLowerBound, V: Value> Merger<'a, K, V> {
@@ -278,6 +283,7 @@ impl<'a, K: Key + NextKey + OrdLowerBound, V: Value> Merger<'a, K, V> {
                 .map(|(index, layer)| MergeLayerIterator::new(index as u16, *layer))
                 .collect(),
             merge_fn: merge_fn,
+            trace: false,
         }
     }
 
@@ -292,9 +298,15 @@ impl<'a, K: Key + NextKey + OrdLowerBound, V: Value> Merger<'a, K, V> {
             pending_iterators,
             heap: BinaryHeap::new(),
             item: CurrentItem::None,
+            trace: self.trace,
+            history: String::new(),
         };
         merger_iter.seek(bound).await?;
         Ok(merger_iter)
+    }
+
+    pub fn set_trace(&mut self, v: bool) {
+        self.trace = v;
     }
 }
 
@@ -311,6 +323,12 @@ pub struct MergerIterator<'a, 'b, K, V> {
 
     // The current item.
     item: CurrentItem<'a, 'b, K, V>,
+
+    // If true, logs regarding merger behaviour are appended to history.
+    trace: bool,
+
+    // Holds trace information if trace is true.
+    pub history: String,
 }
 
 impl<'a, 'b, K: Key + NextKey + OrdLowerBound, V: Value> MergerIterator<'a, 'b, K, V> {
@@ -347,12 +365,19 @@ impl<'a, 'b, K: Key + NextKey + OrdLowerBound, V: Value> MergerIterator<'a, 'b, 
                     == Ordering::Greater)
         {
             let iter = self.pending_iterators.pop().unwrap();
-            // eprintln!("searching for {:?}", next_key_bound);
-            iter.iter =
-                RawIterator::Const(iter.layer.as_ref().unwrap().seek(next_key_bound).await?);
+            let sub_iter = iter.layer.as_ref().unwrap().seek(next_key_bound).await?;
+            if self.trace {
+                writeln!(
+                    self.history,
+                    "merger: search for {:?}, found {:?}",
+                    next_key_bound,
+                    sub_iter.get()
+                )
+                .unwrap();
+            }
+            iter.iter = RawIterator::Const(sub_iter);
             iter.set_item_from_iter();
             if iter.is_some() {
-                // eprintln!("found {:?}", iter.item());
                 self.heap.push(iter);
             }
         }
@@ -361,6 +386,16 @@ impl<'a, 'b, K: Key + NextKey + OrdLowerBound, V: Value> MergerIterator<'a, 'b, 
             let maybe_second_lowest = self.heap.pop();
             if let Some(second_lowest) = maybe_second_lowest {
                 let result = (self.merge_fn)(&lowest, &second_lowest);
+                if self.trace {
+                    writeln!(
+                        self.history,
+                        "merge {:?}, {:?} -> {:?}",
+                        lowest.item(),
+                        second_lowest.item(),
+                        result
+                    )
+                    .unwrap();
+                }
                 match result {
                     MergeResult::EmitLeft => {
                         self.heap.push(second_lowest);

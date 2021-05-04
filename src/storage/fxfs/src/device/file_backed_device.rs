@@ -15,6 +15,8 @@ use {
     std::os::unix::fs::FileExt,
 };
 
+// TODO(csuter): Consider using an async file interface.
+
 /// FileBackedDevice is an implementation of Device backed by a std::fs::File. It is intended to be
 /// used for host tooling (to create or verify fxfs images), although it could also be used on
 /// Fuchsia builds if we wanted to do that for whatever reason.
@@ -82,6 +84,10 @@ impl Device for FileBackedDevice {
         // This isn't actually async, but that probably doesn't matter for host usage.
         self.file.sync_all()?;
         Ok(())
+    }
+
+    async fn flush(&self) -> Result<(), Error> {
+        self.file.sync_data().map_err(Into::into)
     }
 }
 

@@ -152,6 +152,7 @@ mod tests {
     use {
         super::root_volume,
         crate::{
+            device::DeviceHolder,
             object_store::{
                 directory::Directory,
                 filesystem::{FxFilesystem, SyncOptions},
@@ -161,13 +162,12 @@ mod tests {
         },
         anyhow::Error,
         fuchsia_async as fasync,
-        std::sync::Arc,
     };
 
     #[fasync::run_singlethreaded(test)]
     async fn test_lookup_nonexistent_volume() -> Result<(), Error> {
-        let device = Arc::new(FakeDevice::new(2048, 512));
-        let filesystem = FxFilesystem::new_empty(device.clone()).await?;
+        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
+        let filesystem = FxFilesystem::new_empty(device).await?;
         let root_volume = root_volume(&filesystem).await.expect("root_volume failed");
         root_volume.volume("vol").await.err().expect("Volume shouldn't exist");
         Ok(())
@@ -175,10 +175,9 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_add_volume() {
-        let device = Arc::new(FakeDevice::new(2048, 512));
+        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
+        let filesystem = FxFilesystem::new_empty(device).await.expect("new_empty failed");
         {
-            let filesystem =
-                FxFilesystem::new_empty(device.clone()).await.expect("new_empty failed");
             let root_volume = root_volume(&filesystem).await.expect("root_volume failed");
             let store = root_volume.new_volume("vol").await.expect("new_volume failed");
             let mut transaction =
@@ -194,7 +193,8 @@ mod tests {
             filesystem.sync(SyncOptions::default()).await.expect("sync failed");
         };
         {
-            let filesystem = FxFilesystem::open(device.clone()).await.expect("open failed");
+            let filesystem =
+                FxFilesystem::open(filesystem.take_device().await).await.expect("open failed");
             let root_volume = root_volume(&filesystem).await.expect("root_volume failed");
             let volume = root_volume.volume("vol").await.expect("volume failed");
             let root_directory = Directory::open(&volume, volume.root_directory_object_id())

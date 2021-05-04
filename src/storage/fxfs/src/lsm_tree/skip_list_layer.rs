@@ -104,9 +104,9 @@ pub struct SkipListLayer<K, V> {
 }
 
 struct ReadCounts<K, V> {
-    // Readers can be in one of two epochs.  After a write, the epoch changes and new readers will
-    // be in a new epoch.  When all the old readers finish in the previous epoch, the write can
-    // continue and memory can be freed.
+    // Readers can be in one of two epochs.  After a write, if there are nodes that need to be
+    // freed, and existing readers, the epoch changes and new readers will be in a new epoch.  When
+    // all the old readers finish, the nodes can be freed.
     epoch: u8,
 
     // These are the counts of active readers for each epoch.
@@ -215,6 +215,11 @@ impl<K: Eq + Key + OrdLowerBound, V: Value> MutableLayer<K, V> for SkipListLayer
     // Inserts the given item.
     async fn insert(&self, item: Item<K, V>) {
         let mut iter = SkipListLayerIterMut::new(self, Bound::Included(&item.key)).await;
+        if let Some(found_item) = iter.get() {
+            // TODO(csuter): This assertion will eventually have to go since it would be possible to
+            // trip this when replaying a malformed journal.
+            assert_ne!(found_item.key, &item.key);
+        }
         iter.insert(item);
     }
 
@@ -576,7 +581,7 @@ mod tests {
             },
         },
         fuchsia_async as fasync,
-        futures::join,
+        futures::{future::join_all, join},
         std::ops::Bound,
         std::time::{Duration, Instant},
     };
@@ -951,35 +956,35 @@ mod tests {
     #[fasync::run(20, test)]
     async fn test_many_readers_and_writers() {
         let skip_list = SkipListLayer::new(100);
-        let mut tasks = Vec::new();
-        for i in 0..10 {
-            let skip_list_clone = skip_list.clone();
-            tasks.push(fasync::Task::spawn(async move {
-                for j in 0..10 {
-                    skip_list_clone.insert(Item::new(TestKey(i * 100 + j), i)).await;
-                }
-            }));
-        }
-        for _ in 0..10 {
-            let skip_list_clone = skip_list.clone();
-            tasks.push(fasync::Task::spawn(async move {
-                for _ in 0..300 {
-                    let mut iter =
-                        skip_list_clone.seek(Bound::Unbounded).await.expect("seek failed");
-                    let mut last_item: Option<TestKey> = None;
-                    while let Some(item) = iter.get() {
-                        if let Some(last) = last_item {
-                            assert!(item.key > &last);
+        join_all(
+            (0..10)
+                .map(|i| {
+                    let skip_list_clone = skip_list.clone();
+                    fasync::Task::spawn(async move {
+                        for j in 0..10 {
+                            skip_list_clone.insert(Item::new(TestKey(i * 100 + j), i)).await;
                         }
-                        last_item = Some(item.key.clone());
-                        iter.advance().await.expect("advance failed");
-                    }
-                }
-            }));
-        }
-        for task in &mut tasks {
-            task.await;
-        }
+                    })
+                })
+                .chain((0..10).map(|_| {
+                    let skip_list_clone = skip_list.clone();
+                    fasync::Task::spawn(async move {
+                        for _ in 0..300 {
+                            let mut iter =
+                                skip_list_clone.seek(Bound::Unbounded).await.expect("seek failed");
+                            let mut last_item: Option<TestKey> = None;
+                            while let Some(item) = iter.get() {
+                                if let Some(last) = last_item {
+                                    assert!(item.key > &last);
+                                }
+                                last_item = Some(item.key.clone());
+                                iter.advance().await.expect("advance failed");
+                            }
+                        }
+                    })
+                })),
+        )
+        .await;
     }
 
     #[fasync::run_singlethreaded(test)]

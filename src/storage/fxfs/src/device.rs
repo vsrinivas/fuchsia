@@ -6,6 +6,7 @@ use {
     crate::device::buffer::{Buffer, BufferRef, MutableBufferRef},
     anyhow::Error,
     async_trait::async_trait,
+    std::{ops::Deref, sync::Arc},
 };
 
 pub mod buffer;
@@ -39,4 +40,38 @@ pub trait Device: Send + Sync {
     /// Closes the block device. It is an error to continue using the device after this, but close
     /// itself is idempotent.
     async fn close(&self) -> Result<(), Error>;
+    /// Flush the device.
+    async fn flush(&self) -> Result<(), Error>;
+}
+
+// Arc<dyn Device> can easily be cloned and supports concurrent access, but sometimes exclusive
+// access is required, in which case APIs should accept DeviceHolder.  It doesn't guarantee there
+// aren't some users that hold an Arc<dyn Device> somewhere, but it does mean that something that
+// accepts a DeviceHolder won't be sharing the device with something else that accepts a
+// DeviceHolder.  For example, FxFilesystem accepts a DeviceHolder which means that you cannot
+// create two FxFilesystem instances that are both sharing the same device.
+pub struct DeviceHolder(Arc<dyn Device>);
+
+impl DeviceHolder {
+    pub fn new(device: impl Device + 'static) -> Self {
+        DeviceHolder(Arc::new(device))
+    }
+
+    // Returns a new instance but also a clone which is Arc<impl Device> rather than Arc<dyn
+    // Device>.  This is useful in lifecycle tests where we might want to verify there are no stray
+    // device references after shutting everything else down i.e. it's possible to call
+    // Arc::try_unwrap on it.
+    #[cfg(test)]
+    pub fn new_and_clone(device: impl Device + 'static) -> (Self, Arc<impl Device>) {
+        let device = Arc::new(device);
+        (DeviceHolder(device.clone()), device)
+    }
+}
+
+impl Deref for DeviceHolder {
+    type Target = Arc<dyn Device>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }

@@ -216,7 +216,7 @@ mod tests {
         for item in layer1 {
             tree.insert(item.clone()).await;
         }
-        tree.seal();
+        tree.seal().await;
         for item in layer0 {
             tree.insert(item.clone()).await;
         }
@@ -241,7 +241,7 @@ mod tests {
             ObjectValue::extent(0),
         ))
         .await;
-        tree.seal();
+        tree.seal().await;
 
         tree.insert(Item::new(
             ObjectKey::extent(object_id, attr_id, 512..1024),
@@ -271,7 +271,7 @@ mod tests {
             ObjectValue::extent(0),
         ))
         .await;
-        tree.seal();
+        tree.seal().await;
 
         tree.insert(Item::new(
             ObjectKey::extent(object_id, attr_id, 512..1024),
@@ -303,7 +303,7 @@ mod tests {
             ObjectValue::extent(0),
         ))
         .await;
-        tree.seal();
+        tree.seal().await;
 
         tree.insert(Item::new(
             ObjectKey::extent(object_id, attr_id, 0..512),
@@ -335,7 +335,7 @@ mod tests {
             ObjectValue::extent(0),
         ))
         .await;
-        tree.seal();
+        tree.seal().await;
 
         tree.insert(Item::new(
             ObjectKey::extent(object_id, attr_id, 1024..1536),
@@ -370,7 +370,7 @@ mod tests {
             ObjectValue::extent(0),
         ))
         .await;
-        tree.seal();
+        tree.seal().await;
 
         tree.insert(Item::new(
             ObjectKey::extent(object_id, attr_id, 0..2048),
@@ -399,7 +399,7 @@ mod tests {
             ObjectValue::extent(0),
         ))
         .await;
-        tree.seal();
+        tree.seal().await;
 
         tree.insert(Item::new(
             ObjectKey::extent(object_id, attr_id, 0..512),
@@ -431,7 +431,7 @@ mod tests {
             ObjectValue::extent(0),
         ))
         .await;
-        tree.seal();
+        tree.seal().await;
 
         tree.insert(Item::new(
             ObjectKey::extent(object_id, attr_id, 512..1024),
@@ -463,7 +463,7 @@ mod tests {
             ObjectValue::extent(0),
         ))
         .await;
-        tree.seal();
+        tree.seal().await;
 
         tree.insert(Item::new(
             ObjectKey::extent(object_id, attr_id, 1024..1536),
@@ -498,7 +498,7 @@ mod tests {
             ObjectValue::extent(0),
         ))
         .await;
-        tree.seal();
+        tree.seal().await;
 
         tree.insert(Item::new(
             ObjectKey::extent(object_id, attr_id, 0..2048),
@@ -535,14 +535,14 @@ mod tests {
             ObjectValue::deleted_extent(),
         ))
         .await;
-        tree.seal();
+        tree.seal().await;
 
         tree.insert(Item::new(
             ObjectKey::extent(object_id, attr_id, 512..1024),
             ObjectValue::deleted_extent(),
         ))
         .await;
-        tree.seal();
+        tree.seal().await;
 
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
@@ -568,7 +568,7 @@ mod tests {
             ObjectValue::deleted_extent(),
         ))
         .await;
-        tree.seal();
+        tree.seal().await;
 
         tree.insert(Item::new(
             ObjectKey::extent(object_id, attr_id, 0..512),
@@ -580,7 +580,7 @@ mod tests {
             ObjectValue::deleted_extent(),
         ))
         .await;
-        tree.seal();
+        tree.seal().await;
 
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
@@ -603,7 +603,7 @@ mod tests {
             ObjectValue::deleted_extent(),
         ))
         .await;
-        tree.seal();
+        tree.seal().await;
 
         tree.insert(Item::new(
             ObjectKey::extent(object_id, attr_id, 512..1536),
@@ -632,7 +632,7 @@ mod tests {
             ObjectValue::deleted_extent(),
         ))
         .await;
-        tree.seal();
+        tree.seal().await;
         tree.insert(Item::new(
             ObjectKey::extent(object_id, attr_id, 0..1024),
             ObjectValue::deleted_extent(),
@@ -663,14 +663,14 @@ mod tests {
             ObjectValue::deleted_extent(),
         ))
         .await;
-        tree.seal();
+        tree.seal().await;
 
         tree.insert(Item::new(
             ObjectKey::extent(object_id, attr_id, 512..1024),
             ObjectValue::deleted_extent(),
         ))
         .await;
-        tree.seal();
+        tree.seal().await;
 
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
@@ -696,14 +696,14 @@ mod tests {
             ObjectValue::deleted_extent(),
         ))
         .await;
-        tree.seal();
+        tree.seal().await;
 
         tree.insert(Item::new(
             ObjectKey::extent(object_id, attr_id, 0..1536),
             ObjectValue::deleted_extent(),
         ))
         .await;
-        tree.seal();
+        tree.seal().await;
 
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
@@ -731,14 +731,14 @@ mod tests {
             ObjectValue::deleted_extent(),
         ))
         .await;
-        tree.seal();
+        tree.seal().await;
 
         tree.insert(Item::new(
             ObjectKey::extent(object_id, attr_id, 0..1024),
             ObjectValue::extent(0),
         ))
         .await;
-        tree.seal();
+        tree.seal().await;
 
         tree.insert(Item::new(
             ObjectKey::extent(object_id, attr_id, 0..512),
@@ -774,7 +774,7 @@ mod tests {
             ObjectValue::extent(0),
         ))
         .await;
-        tree.seal();
+        tree.seal().await;
 
         tree.insert(Item::new(
             ObjectKey::extent(object_id, attr_id, 0..512),

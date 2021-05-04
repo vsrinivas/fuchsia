@@ -162,7 +162,7 @@ mod tests {
             AllocatorValue { delta: right.1 },
         ))
         .await;
-        tree.seal();
+        tree.seal().await;
         tree.insert(Item::new(
             AllocatorKey { device_range: left.0 },
             AllocatorValue { delta: left.1 },

@@ -5,11 +5,12 @@
 use {
     crate::{
         errors::FxfsError,
+        object_handle::INVALID_OBJECT_ID,
         object_store::{
             self,
             directory::{self, ObjectDescriptor},
             transaction::{LockKey, Transaction},
-            ObjectStore, INVALID_OBJECT_ID,
+            ObjectStore,
         },
         server::{
             errors::map_to_status,
@@ -530,6 +531,7 @@ impl Directory for FxDirectory {
 mod tests {
     use {
         crate::{
+            device::DeviceHolder,
             object_store::{filesystem::SyncOptions, FxFilesystem},
             server::{
                 testing::{open_dir_validating, open_file, open_file_validating},
@@ -558,8 +560,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_lifecycle() -> Result<(), Error> {
-        let device = Arc::new(FakeDevice::new(2048, 512));
-        let filesystem = FxFilesystem::new_empty(device.clone()).await?;
+        let (device, device_clone) = DeviceHolder::new_and_clone(FakeDevice::new(2048, 512));
+        let filesystem = FxFilesystem::new_empty(device).await?;
         let root_volume = root_volume(&filesystem).await?;
         let vol =
             FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
@@ -609,20 +611,20 @@ mod tests {
             .unwrap();
 
         std::mem::drop(root_volume);
-        std::mem::drop(filesystem);
+        filesystem.take_device().await;
 
         Arc::try_unwrap(volume.into_store())
             .map_err(|_| "References to store still exist")
             .unwrap();
-        Arc::try_unwrap(device).map_err(|_| "References to device still exist").unwrap();
+        Arc::try_unwrap(device_clone).map_err(|_| "References to device still exist").unwrap();
 
         Ok(())
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_open_root_dir() -> Result<(), Error> {
-        let device = Arc::new(FakeDevice::new(2048, 512));
-        let filesystem = FxFilesystem::new_empty(device.clone()).await?;
+        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
+        let filesystem = FxFilesystem::new_empty(device).await?;
         let root_volume = root_volume(&filesystem).await?;
         let vol =
             FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
@@ -646,17 +648,17 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_create_dir_persists() -> Result<(), Error> {
-        let device = Arc::new(FakeDevice::new(2048, 512));
+        let mut device = DeviceHolder::new(FakeDevice::new(2048, 512));
         for i in 0..2 {
             let (filesystem, vol) = if i == 0 {
-                let filesystem = FxFilesystem::new_empty(device.clone()).await?;
+                let filesystem = FxFilesystem::new_empty(device).await?;
                 let root_volume = root_volume(&filesystem).await?;
                 let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await?)
                     .await
                     .expect("new failed");
                 (filesystem, vol)
             } else {
-                let filesystem = FxFilesystem::open(device.clone()).await?;
+                let filesystem = FxFilesystem::open(device).await?;
                 let root_volume = root_volume(&filesystem).await?;
                 let vol = FxVolumeAndRoot::new(root_volume.volume("vol").await?)
                     .await
@@ -682,6 +684,7 @@ mod tests {
                 .expect(&format!("Open dir iter {} failed", i));
 
             filesystem.sync(SyncOptions::default()).await?;
+            device = filesystem.take_device().await;
         }
 
         Ok(())
@@ -689,8 +692,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_open_nonexistent_file() -> Result<(), Error> {
-        let device = Arc::new(FakeDevice::new(2048, 512));
-        let filesystem = FxFilesystem::new_empty(device.clone()).await?;
+        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
+        let filesystem = FxFilesystem::new_empty(device).await?;
         let root_volume = root_volume(&filesystem).await?;
         let vol =
             FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
@@ -724,8 +727,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_create_file() -> Result<(), Error> {
-        let device = Arc::new(FakeDevice::new(2048, 512));
-        let filesystem = FxFilesystem::new_empty(device.clone()).await?;
+        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
+        let filesystem = FxFilesystem::new_empty(device).await?;
         let root_volume = root_volume(&filesystem).await?;
         let vol =
             FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
@@ -760,8 +763,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_create_dir_nested() -> Result<(), Error> {
-        let device = Arc::new(FakeDevice::new(2048, 512));
-        let filesystem = FxFilesystem::new_empty(device.clone()).await?;
+        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
+        let filesystem = FxFilesystem::new_empty(device).await?;
         let root_volume = root_volume(&filesystem).await?;
         let vol =
             FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
@@ -805,8 +808,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_strict_create_file_fails_if_present() -> Result<(), Error> {
-        let device = Arc::new(FakeDevice::new(2048, 512));
-        let filesystem = FxFilesystem::new_empty(device.clone()).await?;
+        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
+        let filesystem = FxFilesystem::new_empty(device).await?;
         let root_volume = root_volume(&filesystem).await?;
         let vol =
             FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
@@ -854,8 +857,8 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     #[ignore] // TODO(jfsulliv): Re-enable when we don't defer deleting files with 0 references.
     async fn test_unlink_file_with_no_refs_immediately_freed() -> Result<(), Error> {
-        let device = Arc::new(FakeDevice::new(2048, 512));
-        let filesystem = FxFilesystem::new_empty(device.clone()).await?;
+        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
+        let filesystem = FxFilesystem::new_empty(device).await?;
         let root_volume = root_volume(&filesystem).await?;
         let vol =
             FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
@@ -930,8 +933,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_unlink_file() -> Result<(), Error> {
-        let device = Arc::new(FakeDevice::new(2048, 512));
-        let filesystem = FxFilesystem::new_empty(device.clone()).await?;
+        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
+        let filesystem = FxFilesystem::new_empty(device).await?;
         let root_volume = root_volume(&filesystem).await?;
         let vol =
             FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
@@ -976,8 +979,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_unlink_file_with_active_references() -> Result<(), Error> {
-        let device = Arc::new(FakeDevice::new(2048, 512));
-        let filesystem = FxFilesystem::new_empty(device.clone()).await?;
+        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
+        let filesystem = FxFilesystem::new_empty(device).await?;
         let root_volume = root_volume(&filesystem).await?;
         let vol =
             FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
@@ -1030,8 +1033,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_unlink_dir_with_children_fails() -> Result<(), Error> {
-        let device = Arc::new(FakeDevice::new(2048, 512));
-        let filesystem = FxFilesystem::new_empty(device.clone()).await?;
+        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
+        let filesystem = FxFilesystem::new_empty(device).await?;
         let root_volume = root_volume(&filesystem).await?;
         let vol =
             FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
@@ -1080,8 +1083,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_unlink_dir_makes_directory_immutable() -> Result<(), Error> {
-        let device = Arc::new(FakeDevice::new(2048, 512));
-        let filesystem = FxFilesystem::new_empty(device.clone()).await?;
+        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
+        let filesystem = FxFilesystem::new_empty(device).await?;
         let root_volume = root_volume(&filesystem).await?;
         let vol =
             FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
@@ -1130,8 +1133,8 @@ mod tests {
 
     #[fasync::run(10, test)]
     async fn test_unlink_directory_with_children_race() -> Result<(), Error> {
-        let device = Arc::new(FakeDevice::new(2048, 512));
-        let filesystem = FxFilesystem::new_empty(device.clone()).await?;
+        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
+        let filesystem = FxFilesystem::new_empty(device).await?;
         let root_volume = root_volume(&filesystem).await?;
         let vol =
             FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
@@ -1250,8 +1253,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_readdir() -> Result<(), Error> {
-        let device = Arc::new(FakeDevice::new(2048, 512));
-        let filesystem = FxFilesystem::new_empty(device.clone()).await?;
+        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
+        let filesystem = FxFilesystem::new_empty(device).await?;
         let root_volume = root_volume(&filesystem).await?;
         let vol =
             FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");
@@ -1334,8 +1337,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_readdir_multiple_calls() -> Result<(), Error> {
-        let device = Arc::new(FakeDevice::new(2048, 512));
-        let filesystem = FxFilesystem::new_empty(device.clone()).await?;
+        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
+        let filesystem = FxFilesystem::new_empty(device).await?;
         let root_volume = root_volume(&filesystem).await?;
         let vol =
             FxVolumeAndRoot::new(root_volume.new_volume("vol").await?).await.expect("new failed");

@@ -62,7 +62,9 @@ pub(super) struct SuperBlock {
     // Start checkpoint for the journal file.
     pub journal_checkpoint: JournalCheckpoint,
 
-    // Offset of the journal file when the super-block was written.
+    // Offset of the journal file when the super-block was written.  If no entry is present in
+    // journal_file_offsets for a particular object, then an object might have dependencies on the
+    // journal from super_block_journal_file_offset onwards, but not earlier.
     pub super_block_journal_file_offset: u64,
 
     // object id -> journal file offset. Indicates where each object has been flushed to.
@@ -276,6 +278,7 @@ mod tests {
     use {
         super::{SuperBlock, MIN_SUPER_BLOCK_SIZE},
         crate::{
+            device::DeviceHolder,
             lsm_tree::types::LayerIterator,
             object_handle::ObjectHandle,
             object_store::{
@@ -297,8 +300,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_read_written_super_block() {
-        let device = Arc::new(FakeDevice::new(2048, TEST_DEVICE_BLOCK_SIZE));
-        let fs = FakeFilesystem::new(device.clone());
+        let device = DeviceHolder::new(FakeDevice::new(2048, TEST_DEVICE_BLOCK_SIZE));
+        let fs = FakeFilesystem::new(device);
         let allocator = Arc::new(FakeAllocator::new());
         fs.object_manager().set_allocator(allocator.clone());
         let root_parent_store = ObjectStore::new_empty(None, 2, fs.clone());
@@ -361,7 +364,7 @@ mod tests {
                 .expect("open_object failed");
         assert!(handle.get_size() > MIN_SUPER_BLOCK_SIZE);
 
-        let mut written_super_block = SuperBlock::read(device).await.expect("read failed");
+        let mut written_super_block = SuperBlock::read(fs.device()).await.expect("read failed");
 
         assert_eq!(written_super_block.0, super_block);
 

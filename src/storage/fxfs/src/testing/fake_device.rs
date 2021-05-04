@@ -91,4 +91,8 @@ impl Device for FakeDevice {
         self.closed.store(true, Ordering::Relaxed);
         Ok(())
     }
+
+    async fn flush(&self) -> Result<(), Error> {
+        Ok(())
+    }
 }

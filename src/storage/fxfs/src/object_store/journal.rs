@@ -21,12 +21,13 @@ mod writer;
 
 use {
     crate::{
+        errors::FxfsError,
         object_handle::ObjectHandle,
         object_store::{
             allocator::{Allocator, SimpleAllocator},
             constants::SUPER_BLOCK_OBJECT_ID,
             directory::Directory,
-            filesystem::{Filesystem, Mutations, ObjectManager, SyncOptions},
+            filesystem::{Filesystem, Mutations, ObjectFlush, ObjectManager, SyncOptions},
             journal::{
                 reader::{JournalReader, ReadResult},
                 super_block::SuperBlock,
@@ -39,7 +40,7 @@ use {
             HandleOptions, ObjectStore, StoreObjectHandle,
         },
     },
-    anyhow::{Context, Error},
+    anyhow::{anyhow, Context, Error},
     bincode::serialize_into,
     byteorder::{ByteOrder, LittleEndian},
     rand::Rng,
@@ -57,6 +58,11 @@ const BLOCK_SIZE: u64 = 8192;
 
 // The journal file is extended by this amount when necessary.
 const CHUNK_SIZE: u64 = 131_072;
+
+// In the steady state, the journal should fluctuate between being approximately half of this number
+// and this number.  New super-blocks will be written every time about half of this amount is
+// written to the journal.
+const RECLAIM_SIZE: u64 = 262_144;
 
 // After replaying the journal, it's possible that the stream doesn't end cleanly, in which case the
 // next journal block needs to indicate this.  This is done by pretending the previous block's
@@ -110,6 +116,18 @@ fn journal_handle_options() -> HandleOptions {
     HandleOptions { overwrite: true, ..Default::default() }
 }
 
+fn clone_mutations<'a>(transaction: &Transaction<'_>) -> Vec<TxnMutation<'a>> {
+    transaction
+        .mutations
+        .iter()
+        .map(|m| TxnMutation {
+            object_id: m.object_id,
+            mutation: m.mutation.clone(),
+            associated_object: None,
+        })
+        .collect()
+}
+
 /// The journal records a stream of mutations that are to be applied to other objects.  At mount
 /// time, these records can be replayed into memory.  It provides a way to quickly persist changes
 /// without having to make a large number of writes; they can be deferred to a later time (e.g.
@@ -123,6 +141,7 @@ pub struct Journal {
 
 struct Inner {
     needs_super_block: bool,
+    should_flush: bool,
     super_block: SuperBlock,
 }
 
@@ -139,6 +158,7 @@ impl Journal {
             inner: Mutex::new(Inner {
                 needs_super_block: true,
                 super_block: SuperBlock::default(),
+                should_flush: false,
             }),
         }
     }
@@ -248,6 +268,13 @@ impl Journal {
         {
             let mut checkpoint =
                 JournalCheckpoint::new(reader.read_offset(), reader.last_read_checksum());
+            if checkpoint.file_offset < super_block.super_block_journal_file_offset {
+                return Err(anyhow!(FxfsError::Inconsistent).context(format!(
+                    "journal replay cut short; journal finishes at {}, but super-block was \
+                     written at {}",
+                    checkpoint.file_offset, super_block.super_block_journal_file_offset
+                )));
+            }
             let mut writer = self.writer.lock().await;
             writer.set_handle(reader.take_handle());
             // If the last entry wasn't an end_block, then we need to reset the stream.
@@ -361,6 +388,13 @@ impl Journal {
         }
         self.apply_mutations(std::mem::take(&mut transaction.mutations), journal_file_checkpoint)
             .await;
+        let mut inner = self.inner.lock().unwrap();
+        // The / 2 is here because after compacting, we cannot reclaim the space until the
+        // _next_ time we flush the device since the super-block is not guaranteed to persist
+        // until then.
+        inner.should_flush = writer.journal_file_checkpoint().file_offset
+            - inner.super_block.journal_checkpoint.file_offset
+            > RECLAIM_SIZE / 2;
     }
 
     async fn maybe_extend_journal_file(
@@ -384,15 +418,7 @@ impl Journal {
         // We have to apply the mutations before writing them because we borrowed the writer for the
         // transaction.  First we clone the mutations without the associated objects since that's
         // where the handle is borrowed.
-        let cloned_mutations: Vec<_> = transaction
-            .mutations
-            .iter()
-            .map(|m| TxnMutation {
-                object_id: m.object_id,
-                mutation: m.mutation.clone(),
-                associated_object: None,
-            })
-            .collect();
+        let cloned_mutations = clone_mutations(&transaction);
 
         self.apply_mutations(std::mem::take(&mut transaction.mutations), journal_file_checkpoint)
             .await;
@@ -462,16 +488,42 @@ impl Journal {
         }
     }
 
-    async fn write_super_block(
-        &self,
-        journal_file_checkpoint: JournalCheckpoint,
-    ) -> Result<(), Error> {
+    pub async fn write_super_block(&self) -> Result<(), Error> {
         let root_parent_store = self.objects.root_parent_store();
-        let sync = self.objects.begin_object_sync(root_parent_store.store_object_id());
-        let super_block = self.inner.lock().unwrap().super_block.clone();
+
+        // First we must lock the root parent store so that no new entries are written to it.
+        let sync = ObjectFlush::new(self.objects.clone(), root_parent_store.store_object_id());
+        let mutable_layer = root_parent_store.tree().mutable_layer();
+        let guard = mutable_layer.lock();
+
+        // After locking, we need to flush the journal because it might have records that a new
+        // super-block would refer to.
+        let journal_file_checkpoint = {
+            let mut writer = self.writer.lock().await;
+
+            // We are holding the appropriate locks now (no new transaction can be applied whilst we
+            // are holding the writer lock, so we can call ObjectFlush::begin for the root parent
+            // object store.
+            sync.begin();
+
+            serialize_into(&mut *writer, &JournalRecord::EndBlock)?;
+            writer.pad_to_block()?;
+            writer.maybe_flush_buffer().await?;
+            writer.journal_file_checkpoint()
+        };
+
+        // We need to flush previous writes to the device since the new super-block we are writing
+        // relies on written data being observable.
+        root_parent_store.device().flush().await?;
+
+        // TODO(csuter): Here is the point where we should notify the allocator that it can now use
+        // pending deallocations so long as they've been written to the journal.
+
+        let mut new_super_block = self.inner.lock().unwrap().super_block.clone();
+        let old_checkpoint_offset = new_super_block.journal_checkpoint.file_offset;
+
         let (journal_file_offsets, min_checkpoint) = self.objects.journal_file_offsets();
 
-        let mut new_super_block = super_block.clone();
         new_super_block.super_block_journal_file_offset = journal_file_checkpoint.file_offset;
         new_super_block.journal_checkpoint = min_checkpoint.unwrap_or(journal_file_checkpoint);
         new_super_block.journal_file_offsets = journal_file_offsets;
@@ -488,8 +540,37 @@ impl Journal {
             )
             .await?;
 
-        self.inner.lock().unwrap().super_block = new_super_block;
+        {
+            let mut inner = self.inner.lock().unwrap();
+            inner.super_block = new_super_block;
+            inner.needs_super_block = false;
+        }
+
         sync.commit();
+        std::mem::drop(guard);
+
+        // The previous super-block is now guaranteed to be persisted (because we flushed the device
+        // above), so we can free all journal space that it doesn't need.
+        {
+            let mut writer = self.writer.lock().await;
+
+            if old_checkpoint_offset >= BLOCK_SIZE {
+                let handle = writer.handle().unwrap();
+                let mut transaction = handle.new_transaction().await?;
+                let mut offset = old_checkpoint_offset;
+                offset -= offset % BLOCK_SIZE;
+                handle.zero(&mut transaction, 0..offset).await?;
+                let cloned_mutations = clone_mutations(&transaction);
+                self.apply_mutations(
+                    std::mem::take(&mut transaction.mutations),
+                    writer.journal_file_checkpoint(),
+                )
+                .await;
+                std::mem::drop(transaction);
+                writer.write_mutations(cloned_mutations);
+            }
+        }
+
         Ok(())
     }
 
@@ -497,15 +578,19 @@ impl Journal {
         // TODO(csuter): There needs to be some kind of locking here.
         let needs_super_block = self.inner.lock().unwrap().needs_super_block;
         if needs_super_block {
-            let checkpoint = self.writer.lock().await.journal_file_checkpoint();
-            self.write_super_block(checkpoint).await?;
-            self.inner.lock().unwrap().needs_super_block = false;
+            self.write_super_block().await?;
         }
         let mut writer = self.writer.lock().await;
         serialize_into(&mut *writer, &JournalRecord::EndBlock)?;
         writer.pad_to_block()?;
         writer.maybe_flush_buffer().await?;
         Ok(())
+    }
+
+    /// Returns whether or not a flush should be performed.  This is only updated after committing a
+    /// transaction.
+    pub fn should_flush(&self) -> bool {
+        self.inner.lock().unwrap().should_flush
     }
 
     fn block_size(&self) -> u64 {
@@ -531,6 +616,7 @@ impl<OH> JournalWriter<OH> {
 mod tests {
     use {
         crate::{
+            device::DeviceHolder,
             object_handle::{ObjectHandle, ObjectHandleExt},
             object_store::{
                 filesystem::{FxFilesystem, SyncOptions},
@@ -541,7 +627,6 @@ mod tests {
             testing::fake_device::FakeDevice,
         },
         fuchsia_async as fasync,
-        std::sync::Arc,
     };
 
     const TEST_DEVICE_BLOCK_SIZE: u32 = 512;
@@ -550,10 +635,10 @@ mod tests {
     async fn test_replay() {
         const TEST_DATA: &[u8] = b"hello";
 
-        let device = Arc::new(FakeDevice::new(2048, TEST_DEVICE_BLOCK_SIZE));
+        let device = DeviceHolder::new(FakeDevice::new(2048, TEST_DEVICE_BLOCK_SIZE));
 
+        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
         let object_id = {
-            let fs = FxFilesystem::new_empty(device.clone()).await.expect("new_empty failed");
             let mut transaction =
                 fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
             let handle = ObjectStore::create_object(
@@ -574,7 +659,7 @@ mod tests {
         };
 
         {
-            let fs = FxFilesystem::open(device).await.expect("open failed");
+            let fs = FxFilesystem::open(fs.take_device().await).await.expect("open failed");
             let handle =
                 ObjectStore::open_object(&fs.root_store(), object_id, HandleOptions::default())
                     .await
@@ -582,7 +667,7 @@ mod tests {
             let mut buf = handle.allocate_buffer(TEST_DEVICE_BLOCK_SIZE as usize);
             assert_eq!(handle.read(0, buf.as_mut()).await.expect("read failed"), TEST_DATA.len());
             assert_eq!(&buf.as_slice()[..TEST_DATA.len()], TEST_DATA);
-            fsck(fs.as_ref()).await.expect("fsck failed");
+            fsck(&fs).await.expect("fsck failed");
         }
     }
 
@@ -590,12 +675,12 @@ mod tests {
     async fn test_reset() {
         const TEST_DATA: &[u8] = b"hello";
 
-        let device = Arc::new(FakeDevice::new(4096, TEST_DEVICE_BLOCK_SIZE));
+        let device = DeviceHolder::new(FakeDevice::new(4096, TEST_DEVICE_BLOCK_SIZE));
 
         let mut object_ids = Vec::new();
 
+        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
         {
-            let fs = FxFilesystem::new_empty(device.clone()).await.expect("new_empty failed");
             let mut transaction =
                 fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
             let handle = ObjectStore::create_object(
@@ -632,9 +717,9 @@ mod tests {
             }
         }
 
+        let fs = FxFilesystem::open(fs.take_device().await).await.expect("open failed");
+        fsck(&fs).await.expect("fsck failed");
         {
-            let fs = FxFilesystem::open(device.clone()).await.expect("open failed");
-
             // Check the first two objects which should exist.
             for &object_id in &object_ids[0..1] {
                 let handle =
@@ -667,9 +752,8 @@ mod tests {
             object_ids.push(handle.object_id());
         }
 
+        let fs = FxFilesystem::open(fs.take_device().await).await.expect("open failed");
         {
-            let fs = FxFilesystem::open(device).await.expect("open failed");
-
             // Check the first two and the last objects.
             for &object_id in object_ids[0..1].iter().chain(object_ids.last().cloned().iter()) {
                 let handle =
@@ -684,7 +768,7 @@ mod tests {
                 assert_eq!(&buf.as_slice()[..TEST_DATA.len()], TEST_DATA);
             }
 
-            fsck(fs.as_ref()).await.expect("fsck failed");
+            fsck(&fs).await.expect("fsck failed");
         }
     }
 }

@@ -9,7 +9,7 @@ use {
         },
         object_handle::{ObjectHandle, ObjectHandleExt},
     },
-    anyhow::{bail, Error},
+    anyhow::{bail, Context, Error},
     async_trait::async_trait,
     byteorder::{ByteOrder, LittleEndian, ReadBytesExt},
     serde::Serialize,
@@ -66,25 +66,29 @@ impl<'iter, K: Key, V: Value> LayerIterator<K, V> for Iterator<'iter, K, V> {
             // TODO(jfsulliv): Reuse this transfer buffer.
             let bs = self.layer.block_size as usize;
             let mut buf = self.layer.object_handle.allocate_buffer(bs);
-            self.layer.object_handle.read(self.pos, buf.as_mut()).await?;
-            let mut vec = vec![0u8; bs];
-            vec.copy_from_slice(&buf.as_slice()[..bs]);
+            let len = self.layer.object_handle.read(self.pos, buf.as_mut()).await?;
             log::debug!(
                 "pos={}, object size={}, object id={}",
                 self.pos,
                 self.layer.size,
                 self.layer.object_handle.object_id()
             );
-            let mut reader = std::io::Cursor::new(vec.into());
+            let mut reader = std::io::Cursor::new(buf.as_slice()[..len].to_vec().into());
             self.item_count = reader.read_u16::<LittleEndian>()?;
             if self.item_count == 0 {
-                bail!("Read block with zero item count");
+                bail!(
+                    "Read block with zero item count (object: {}, offset: {})",
+                    self.layer.object_handle.object_id(),
+                    self.pos
+                );
             }
             self.reader = Some(reader);
             self.pos += self.layer.block_size as u64;
             self.item_index = 0;
         }
-        self.item = Some(bincode::deserialize_from(self.reader.as_mut().unwrap())?);
+        self.item = Some(
+            bincode::deserialize_from(self.reader.as_mut().unwrap()).context("Corrupt layer")?,
+        );
         self.item_index += 1;
         Ok(())
     }
@@ -121,6 +125,10 @@ impl SimplePersistentLayer {
 
 #[async_trait]
 impl<K: Key, V: Value> Layer<K, V> for SimplePersistentLayer {
+    fn object_id(&self) -> u64 {
+        self.object_handle.object_id()
+    }
+
     async fn seek<'a>(&'a self, bound: Bound<&K>) -> Result<BoxedLayerIterator<'a, K, V>, Error> {
         let (key, excluded) = match bound {
             Bound::Unbounded => {

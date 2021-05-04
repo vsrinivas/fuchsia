@@ -68,10 +68,6 @@ impl Allocator for FakeAllocator {
         assert!(inner.dealloc_bytes <= inner.alloc_bytes);
     }
 
-    async fn flush(&self, _force: bool) -> Result<(), Error> {
-        Ok(())
-    }
-
     async fn reserve(&self, _transaction: &mut Transaction<'_>, device_range: Range<u64>) {
         let mut inner = self.0.lock().unwrap();
         inner.next_offset = std::cmp::max(device_range.end, inner.next_offset);
@@ -91,4 +87,8 @@ impl Mutations for FakeAllocator {
     async fn apply_mutation(&self, _mutation: Mutation, _replay: bool) {}
 
     fn drop_mutation(&self, _mutation: Mutation) {}
+
+    async fn flush(&self) -> Result<(), Error> {
+        Ok(())
+    }
 }

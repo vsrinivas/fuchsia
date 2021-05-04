@@ -14,7 +14,6 @@ mod record;
 mod testing;
 pub mod transaction;
 
-pub use constants::INVALID_OBJECT_ID;
 pub use directory::Directory;
 pub use filesystem::FxFilesystem;
 pub use record::ObjectDescriptor;
@@ -29,7 +28,7 @@ use {
         lsm_tree::{types::LayerIterator, LSMTree},
         object_handle::{ObjectHandle, ObjectHandleExt},
         object_store::{
-            filesystem::{Filesystem, Mutations},
+            filesystem::{Filesystem, Mutations, ObjectFlush},
             record::{
                 ExtentKey, ExtentValue, ObjectItem, ObjectKey, ObjectKind, ObjectValue,
                 DEFAULT_DATA_ATTRIBUTE_ID,
@@ -41,7 +40,7 @@ use {
         },
     },
     allocator::Allocator,
-    anyhow::{anyhow, bail, Error},
+    anyhow::{anyhow, bail, Context, Error},
     async_trait::async_trait,
     bincode::{deserialize_from, serialize_into},
     futures::{future::BoxFuture, FutureExt},
@@ -50,7 +49,10 @@ use {
     std::{
         cmp::min,
         ops::{Bound, Range},
-        sync::{Arc, Mutex, Weak},
+        sync::{
+            atomic::{self, AtomicBool},
+            Arc, Mutex, Weak,
+        },
     },
 };
 
@@ -115,7 +117,7 @@ impl ObjectStore {
         let store = Arc::new(ObjectStore {
             parent_store,
             store_object_id,
-            device: device,
+            device,
             block_size,
             filesystem: Arc::downgrade(&filesystem),
             store_info: Mutex::new(store_info),
@@ -138,6 +140,10 @@ impl ObjectStore {
             StoreInfo::default(),
             LSMTree::new(merge::merge),
         )
+    }
+
+    pub fn device(&self) -> Arc<dyn Device> {
+        self.device.clone()
     }
 
     pub fn filesystem(&self) -> Arc<dyn Filesystem> {
@@ -254,6 +260,7 @@ impl ObjectStore {
                 block_size: store.block_size.into(),
                 size: Mutex::new(size),
                 options,
+                trace: AtomicBool::new(false),
             })
         } else {
             bail!(FxfsError::Inconsistent);
@@ -286,6 +293,7 @@ impl ObjectStore {
             attribute_id: DEFAULT_DATA_ATTRIBUTE_ID,
             size: Mutex::new(0),
             options,
+            trace: AtomicBool::new(false),
         })
     }
 
@@ -296,51 +304,6 @@ impl ObjectStore {
     ) -> Result<StoreObjectHandle<S>, Error> {
         let object_id = owner.as_ref().as_ref().get_next_object_id();
         ObjectStore::create_object_with_id(owner, &mut transaction, object_id, options).await
-    }
-
-    /// Push all in-memory structures to the device. This is not necessary for sync since the
-    /// journal will take care of it.  This will panic if called on the root parent store, which is
-    /// in-memory only.  This is supposed to be called when there is either memory or space pressure
-    /// (flushing the store will persist in-memory data and allow the journal file to be trimmed).
-    pub async fn flush(&self, force: bool) -> Result<(), Error> {
-        self.ensure_open().await?;
-        // TODO(csuter): This whole process needs to be within a transaction, or otherwise safe in
-        // the event of power loss.
-        let filesystem = self.filesystem();
-        let object_sync = filesystem.begin_object_sync(self.store_object_id);
-        if !force && !object_sync.needs_sync() {
-            return Ok(());
-        }
-        let parent_store = self.parent_store.as_ref().unwrap();
-        let mut transaction = filesystem.clone().new_transaction(&[]).await?;
-        let object_handle =
-            ObjectStore::create_object(parent_store, &mut transaction, HandleOptions::default())
-                .await?;
-        transaction.add(self.store_object_id(), Mutation::TreeSeal);
-        transaction.commit().await;
-
-        let object_id = object_handle.object_id();
-        self.tree.compact(object_handle).await?;
-        let mut serialized_info = Vec::new();
-        {
-            let mut store_info = self.store_info.lock().unwrap();
-            store_info.layers = vec![object_id];
-            serialize_into(&mut serialized_info, &*store_info)?;
-        }
-        let mut buf = self.device.allocate_buffer(serialized_info.len());
-        buf.as_mut_slice().copy_from_slice(&serialized_info[..]);
-        let mut transaction = filesystem.clone().new_transaction(&[]).await?;
-        self.store_info_handle
-            .get()
-            .unwrap()
-            .txn_write(&mut transaction, 0u64, buf.as_ref())
-            .await?;
-
-        transaction.add(self.store_object_id(), Mutation::TreeCompact);
-        transaction.commit().await;
-
-        object_sync.commit();
-        Ok(())
     }
 
     /// Adjusts the reference count for a given object.  If the reference count reaches zero, the
@@ -386,12 +349,8 @@ impl ObjectStore {
                     ExtentValue { device_offset: Some(device_offset) },
                 )) = item.into()
                 {
-                    allocator
-                        .deallocate(
-                            transaction,
-                            *device_offset..*device_offset + (range.end - range.start),
-                        )
-                        .await;
+                    let range = *device_offset..*device_offset + (range.end - range.start);
+                    allocator.deallocate(transaction, range).await;
                 }
                 iter.advance().await?;
             }
@@ -446,10 +405,7 @@ impl ObjectStore {
                     );
                 }
                 self.tree.set_layers(handles.into()).await?;
-                let mut current_store_info = self.store_info.lock().unwrap();
-                if store_info.last_object_id > current_store_info.last_object_id {
-                    current_store_info.last_object_id = store_info.last_object_id
-                }
+                self.update_store_info(store_info);
             }
             let _ = self.store_info_handle.set(handle);
             Ok(())
@@ -472,6 +428,16 @@ impl ObjectStore {
             None => self.store_info.lock().unwrap().clone(),
             Some(store_info) => store_info.clone(),
         }
+    }
+
+    // The last object ID is updated as we create new objects, so we need to always take the maximum
+    // rather than blindly overwriting the last_object_id field.
+    fn update_store_info(&self, mut new_store_info: StoreInfo) {
+        let mut store_info = self.store_info.lock().unwrap();
+        if store_info.last_object_id > new_store_info.last_object_id {
+            new_store_info.last_object_id = store_info.last_object_id;
+        }
+        *store_info = new_store_info;
     }
 }
 
@@ -509,7 +475,7 @@ impl Mutations for ObjectStore {
                 }
                 *info = store_info;
             }
-            Mutation::TreeSeal => self.tree.seal(),
+            Mutation::TreeSeal => self.tree.seal().await,
             Mutation::TreeCompact => {
                 if replay {
                     self.tree.reset_immutable_layers();
@@ -520,6 +486,57 @@ impl Mutations for ObjectStore {
     }
 
     fn drop_mutation(&self, _mutation: Mutation) {}
+
+    /// Push all in-memory structures to the device. This is not necessary for sync since the
+    /// journal will take care of it.  This is supposed to be called when there is either memory or
+    /// space pressure (flushing the store will persist in-memory data and allow the journal file to
+    /// be trimmed).
+    async fn flush(&self) -> Result<(), Error> {
+        if self.parent_store.is_none() {
+            return Ok(());
+        }
+        self.ensure_open().await?;
+        // TODO(csuter): This whole process needs to be within a transaction, or otherwise safe in
+        // the event of power loss.
+        let filesystem = self.filesystem();
+        let object_manager = filesystem.object_manager();
+        if !object_manager.needs_flush(self.store_object_id) {
+            return Ok(());
+        }
+        let object_sync = ObjectFlush::new(object_manager, self.store_object_id);
+        let parent_store = self.parent_store.as_ref().unwrap();
+        let mut transaction = filesystem.clone().new_transaction(&[]).await?;
+        let object_handle =
+            ObjectStore::create_object(parent_store, &mut transaction, HandleOptions::default())
+                .await?;
+        transaction.add_with_object(self.store_object_id(), Mutation::TreeSeal, &object_sync);
+        transaction.commit().await;
+
+        let object_id = object_handle.object_id();
+        self.tree.compact(&object_handle).await?;
+
+        let mut serialized_info = Vec::new();
+        let mut new_store_info = self.store_info.lock().unwrap().clone();
+        new_store_info.layers = vec![object_id];
+        serialize_into(&mut serialized_info, &new_store_info)?;
+        let mut buf = self.device.allocate_buffer(serialized_info.len());
+        buf.as_mut_slice().copy_from_slice(&serialized_info[..]);
+
+        let mut transaction = filesystem.clone().new_transaction(&[]).await?;
+        self.store_info_handle
+            .get()
+            .unwrap()
+            .txn_write(&mut transaction, 0u64, buf.as_ref())
+            .await?;
+        transaction.add(self.store_object_id(), Mutation::TreeCompact);
+        self.update_store_info(new_store_info);
+        transaction.commit().await;
+
+        self.tree.set_layers(Box::new([object_handle])).await.expect("set_layers failed");
+
+        object_sync.commit();
+        Ok(())
+    }
 }
 
 impl AsRef<ObjectStore> for ObjectStore {
@@ -532,10 +549,7 @@ impl AssociatedObject for ObjectStore {
     fn will_apply_mutation(&self, mutation: &Mutation) {
         match mutation {
             Mutation::ObjectStoreInfo(StoreInfoMutation(store_info)) => {
-                let mut info = self.store_info.lock().unwrap();
-                let last_object_id = std::cmp::max(info.last_object_id, store_info.last_object_id);
-                *info = store_info.clone();
-                info.last_object_id = last_object_id;
+                self.update_store_info(store_info.clone());
             }
             _ => {}
         }
@@ -551,6 +565,7 @@ pub struct StoreObjectHandle<S> {
     attribute_id: u64,
     size: Mutex<u64>,
     options: HandleOptions,
+    trace: AtomicBool,
 }
 
 impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
@@ -609,12 +624,23 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
                 self,
             );
         }
-        let deallocated =
-            self.deallocate_old_extents(transaction, &ExtentKey::new(aligned.clone())).await?;
+        let deallocated = self.deallocate_old_extents(transaction, aligned.clone()).await?;
         let mut allocated = 0;
         let allocator = self.store().allocator();
+        let trace = self.trace.load(atomic::Ordering::Relaxed);
         while buf_offset < buf.len() {
-            let device_range = allocator.allocate(transaction, aligned.end - aligned.start).await?;
+            let device_range = allocator
+                .allocate(transaction, aligned.end - aligned.start)
+                .await
+                .context("allocation failed")?;
+            if trace {
+                log::info!(
+                    "{}.{} A {:?}",
+                    self.store().store_object_id,
+                    self.object_id,
+                    device_range
+                );
+            }
             allocated += device_range.end - device_range.start;
             let extent_len = device_range.end - device_range.start;
             let end = aligned.start + extent_len;
@@ -691,6 +717,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
         // Deal with alignment.
         let start_align = (offset % self.block_size) as usize;
         let start_offset = offset - start_align as u64;
+        let trace = self.trace.load(atomic::Ordering::Relaxed);
         let remainder = if start_align > 0 {
             let (head, remainder) =
                 buf.split_at(min(self.block_size as usize - start_align, buf.len()));
@@ -700,6 +727,14 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
             align_buf.as_mut_slice()[start_align..(start_align + head.len())]
                 .copy_from_slice(head.as_slice());
             device_offset -= start_align as u64;
+            if trace {
+                log::info!(
+                    "{}.{} WH {:?}",
+                    self.store().store_object_id(),
+                    self.object_id,
+                    device_offset..device_offset + align_buf.len() as u64
+                );
+            }
             self.store().device.write(device_offset, align_buf.as_ref()).await?;
             device_offset += self.block_size;
             remainder
@@ -710,13 +745,31 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
             let end = offset + buf.len() as u64;
             let end_align = (end % self.block_size) as usize;
             let (whole_blocks, tail) = remainder.split_at(remainder.len() - end_align);
-            self.store().device.write(device_offset, whole_blocks).await?;
-            device_offset += whole_blocks.len() as u64;
+            if whole_blocks.len() > 0 {
+                if trace {
+                    log::info!(
+                        "{}.{} W {:?}",
+                        self.store().store_object_id(),
+                        self.object_id,
+                        device_offset..device_offset + whole_blocks.len() as u64
+                    );
+                }
+                self.store().device.write(device_offset, whole_blocks).await?;
+                device_offset += whole_blocks.len() as u64;
+            }
             if tail.len() > 0 {
                 let mut align_buf = self.store().device.allocate_buffer(self.block_size as usize);
                 let read = self.read(end - end_align as u64, align_buf.as_mut()).await?;
                 align_buf.as_mut_slice()[read..].fill(0);
                 &align_buf.as_mut_slice()[..tail.len()].copy_from_slice(tail.as_slice());
+                if trace {
+                    log::info!(
+                        "{}.{} WT {:?}",
+                        self.store().store_object_id(),
+                        self.object_id,
+                        device_offset..device_offset + align_buf.len() as u64
+                    );
+                }
                 self.store().device.write(device_offset, align_buf.as_ref()).await?;
             }
         }
@@ -727,16 +780,20 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
     async fn deallocate_old_extents(
         &self,
         transaction: &mut Transaction<'_>,
-        key: &ExtentKey,
+        range: Range<u64>,
     ) -> Result<u64, Error> {
+        assert_eq!(range.start % self.block_size as u64, 0);
+        assert_eq!(range.end % self.block_size as u64, 0);
         let tree = &self.store().tree;
         let layer_set = tree.layer_set();
+        let key = ExtentKey::new(range);
         let lower_bound =
             ObjectKey::with_extent_key(self.object_id, self.attribute_id, key.search_key());
         let mut merger = layer_set.merger();
         let mut iter = merger.seek(Bound::Included(&lower_bound)).await?;
         let allocator = self.store().allocator();
         let mut deallocated = 0;
+        let trace = self.trace.load(atomic::Ordering::Relaxed);
         loop {
             let (extent_key, extent_value) = match iter.get().and_then(Into::into) {
                 Some((oid, attribute_id, extent_key, extent_value))
@@ -748,13 +805,17 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
             };
             if let ExtentValue { device_offset: Some(device_offset) } = extent_value {
                 if let Some(overlap) = key.overlap(extent_key) {
-                    allocator
-                        .deallocate(
-                            transaction,
-                            device_offset + overlap.start - extent_key.range.start
-                                ..device_offset + overlap.end - extent_key.range.start,
-                        )
-                        .await;
+                    let range = device_offset + overlap.start - extent_key.range.start
+                        ..device_offset + overlap.end - extent_key.range.start;
+                    if trace {
+                        log::info!(
+                            "{}.{} D {:?}",
+                            self.store().store_object_id(),
+                            self.object_id,
+                            range
+                        );
+                    }
+                    allocator.deallocate(transaction, range).await;
                     deallocated += overlap.end - overlap.start;
                 } else {
                     break;
@@ -763,6 +824,26 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
             iter.advance().await?;
         }
         Ok(deallocated)
+    }
+
+    /// Zeroes the given range.  The range must be aligned.  Returns the amount of data deallocated.
+    pub async fn zero(
+        &self,
+        transaction: &mut Transaction<'_>,
+        range: Range<u64>,
+    ) -> Result<(), Error> {
+        let deallocated = self.deallocate_old_extents(transaction, range.clone()).await?;
+        if deallocated > 0 {
+            self.update_allocated_size(transaction, 0, deallocated).await?;
+            transaction.add(
+                self.store().store_object_id,
+                Mutation::merge_object(
+                    ObjectKey::extent(self.object_id, self.attribute_id, range),
+                    ObjectValue::deleted_extent(),
+                ),
+            );
+        }
+        Ok(())
     }
 
     // Within a transaction, the size of the object might have changed, so get the size from there
@@ -867,6 +948,11 @@ fn round_up<T: Into<u64>>(offset: u64, block_size: T) -> u64 {
 
 #[async_trait]
 impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObjectHandle<S> {
+    fn set_trace(&self, v: bool) {
+        log::info!("{}.{} tracing: {}", self.store().store_object_id, self.object_id(), v);
+        self.trace.store(v, atomic::Ordering::Relaxed);
+    }
+
     fn object_id(&self) -> u64 {
         return self.object_id;
     }
@@ -905,6 +991,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObject
         buf = buf.subslice_mut(0..to_do);
         let mut start_align = (offset % self.block_size) as usize;
         let end_align = ((offset + to_do as u64) % self.block_size) as usize;
+        let trace = self.trace.load(atomic::Ordering::Relaxed);
         while let Some((object_id, attribute_id, extent_key, extent_value)) =
             iter.get().and_then(Into::into)
         {
@@ -934,6 +1021,14 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObject
                 if start_align > 0 {
                     let mut align_buf =
                         self.store().device.allocate_buffer(self.block_size as usize);
+                    if trace {
+                        log::info!(
+                            "{}.{} RH {:?}",
+                            self.store().store_object_id(),
+                            self.object_id,
+                            device_offset..device_offset + align_buf.len() as u64
+                        );
+                    }
                     self.store().device.read(device_offset, align_buf.as_mut()).await?;
                     let to_copy = min(self.block_size as usize - start_align, buf.len());
                     buf.as_mut_slice()[..to_copy].copy_from_slice(
@@ -950,6 +1045,14 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObject
 
                 let to_copy = min(buf.len() - end_align, (extent_key.range.end - offset) as usize);
                 if to_copy > 0 {
+                    if trace {
+                        log::info!(
+                            "{}.{} R {:?}",
+                            self.store().store_object_id(),
+                            self.object_id,
+                            device_offset..device_offset + to_copy as u64
+                        );
+                    }
                     self.store()
                         .device
                         .read(device_offset, buf.reborrow().subslice_mut(..to_copy))
@@ -967,6 +1070,14 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObject
                 if offset < extent_key.range.end && end_align > 0 {
                     let mut align_buf =
                         self.store().device.allocate_buffer(self.block_size as usize);
+                    if trace {
+                        log::info!(
+                            "{}.{} RT {:?}",
+                            self.store().store_object_id(),
+                            self.object_id,
+                            device_offset..device_offset + align_buf.len() as u64
+                        );
+                    }
                     self.store().device.read(device_offset, align_buf.as_mut()).await?;
                     buf.as_mut_slice().copy_from_slice(&align_buf.as_slice()[..end_align]);
                     buf = buf.subslice_mut(0..0);
@@ -1009,18 +1120,11 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObject
     ) -> Result<(), Error> {
         let old_size = self.txn_get_size(transaction);
         if size < old_size {
-            let deleted_range =
-                round_up(size, self.block_size)..round_up(old_size, self.block_size);
-            transaction.add(
-                self.store().store_object_id,
-                Mutation::merge_object(
-                    ObjectKey::extent(self.object_id, self.attribute_id, deleted_range.clone()),
-                    ObjectValue::deleted_extent(),
-                ),
-            );
-            let deallocated =
-                self.deallocate_old_extents(transaction, &ExtentKey::new(deleted_range)).await?;
-            self.update_allocated_size(transaction, 0, deallocated).await?;
+            self.zero(
+                transaction,
+                round_up(size, self.block_size)..round_up(old_size, self.block_size),
+            )
+            .await?;
             let to_zero = round_up(size, self.block_size) - size;
             if to_zero > 0 {
                 assert!(to_zero < self.block_size);
@@ -1112,7 +1216,8 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObject
                 .store()
                 .allocator()
                 .allocate(transaction, allocate_end - file_range.start)
-                .await?;
+                .await
+                .context("allocation failed")?;
             allocated += device_range.end - device_range.start;
             let this_file_range =
                 file_range.start..file_range.start + device_range.end - device_range.start;
@@ -1159,10 +1264,11 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObject
 mod tests {
     use {
         crate::{
+            device::DeviceHolder,
             lsm_tree::types::{ItemRef, LayerIterator},
             object_handle::{ObjectHandle, ObjectHandleExt},
             object_store::{
-                filesystem::Filesystem,
+                filesystem::{Filesystem, Mutations},
                 record::{ObjectKey, ObjectKeyData},
                 round_up,
                 testing::{fake_allocator::FakeAllocator, fake_filesystem::FakeFilesystem},
@@ -1191,7 +1297,7 @@ mod tests {
 
     async fn test_filesystem_and_store(
     ) -> (Arc<FakeFilesystem>, Arc<FakeAllocator>, Arc<ObjectStore>) {
-        let device = Arc::new(FakeDevice::new(1024, TEST_DEVICE_BLOCK_SIZE));
+        let device = DeviceHolder::new(FakeDevice::new(1024, TEST_DEVICE_BLOCK_SIZE));
         let fs = FakeFilesystem::new(device);
         let allocator = Arc::new(FakeAllocator::new());
         fs.object_manager().set_allocator(allocator.clone());
@@ -1263,7 +1369,7 @@ mod tests {
     async fn test_read_after_writes_interspersed_with_flush() {
         let (_fs, _, object) = test_filesystem_and_object().await;
 
-        object.owner().flush(false).await.expect("flush failed");
+        object.owner().flush().await.expect("flush failed");
 
         // Write more test data to the first block fo the file.
         let mut buf = object.allocate_buffer(TEST_DATA.len());
@@ -1412,7 +1518,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_preallocate_suceeds_when_extents_are_in_different_layers() {
         let (_fs, allocator, object) = test_filesystem_and_object().await;
-        object.owner().flush(false).await.expect("flush failed");
+        object.owner().flush().await.expect("flush failed");
         test_preallocate_common(&allocator, object).await;
     }
 
@@ -1673,9 +1779,26 @@ mod tests {
         let after = object.get_allocated_size().await.expect("get_allocated_size failed");
         assert_eq!(after, before + TEST_DEVICE_BLOCK_SIZE as u64);
     }
+
+    #[fasync::run(10, test)]
+    async fn test_zero() {
+        let (_fs, _allocator, object) = test_filesystem_and_object().await;
+        let expected_size = object.get_size();
+        let mut transaction = object.new_transaction().await.expect("new_transaction failed");
+        object
+            .zero(&mut transaction, 0..TEST_DEVICE_BLOCK_SIZE as u64 * 10)
+            .await
+            .expect("zero failed");
+        transaction.commit().await;
+        assert_eq!(object.get_size(), expected_size);
+        let mut buf = object.allocate_buffer(TEST_DEVICE_BLOCK_SIZE as usize * 10);
+        assert_eq!(object.read(0, buf.as_mut()).await.expect("read failed") as u64, expected_size);
+        assert_eq!(
+            &buf.as_slice()[0..expected_size as usize],
+            vec![0u8; expected_size as usize].as_slice()
+        );
+    }
 }
 
 // TODO(csuter): validation of all deserialized structs.
-// TODO(csuter): test ObjectStore::flush.
 // TODO(csuter): check all panic! calls.
-// TODO(csuter): test allocation and deallocation.

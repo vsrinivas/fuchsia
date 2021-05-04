@@ -12,8 +12,12 @@ use {
     std::ops::Range,
 };
 
+// Some places use Default and assume that zero is an invalid object ID, so this cannot be changed
+// easily.
+pub const INVALID_OBJECT_ID: u64 = 0;
+
 #[async_trait]
-pub trait ObjectHandle: Send + Sync {
+pub trait ObjectHandle: Send + Sync + 'static {
     /// Returns the object identifier for this object which will be unique for the store that the
     /// object is contained in, but not necessarily unique within the entire system.
     fn object_id(&self) -> u64;
@@ -59,6 +63,9 @@ pub trait ObjectHandle: Send + Sync {
 
     /// Returns a new transaction including a lock for this handle.
     async fn new_transaction<'a>(&self) -> Result<Transaction<'a>, Error>;
+
+    /// Sets tracing for this object.
+    fn set_trace(&self, _v: bool) {}
 }
 
 #[async_trait]

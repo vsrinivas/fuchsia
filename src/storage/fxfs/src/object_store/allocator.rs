@@ -17,7 +17,7 @@ use {
         },
         object_handle::{ObjectHandle, ObjectHandleExt},
         object_store::{
-            filesystem::{Filesystem, Mutations},
+            filesystem::{Filesystem, Mutations, ObjectFlush},
             transaction::{AllocatorMutation, Mutation, Transaction},
             HandleOptions, ObjectStore,
         },
@@ -55,10 +55,6 @@ pub trait Allocator: Send + Sync {
 
     /// Deallocates the given device range for the specified object.
     async fn deallocate(&self, transaction: &mut Transaction<'_>, device_range: Range<u64>);
-
-    /// Push all in-memory structures to the device.  This is not necessary for sync since the
-    /// journal will take care of it.
-    async fn flush(&self, force: bool) -> Result<(), Error>;
 
     /// Reserve the given device range.  The main use case for this at this time is for the
     /// super-block which needs to be at a fixed location on the device.
@@ -139,6 +135,7 @@ pub struct SimpleAllocator {
     tree: LSMTree<AllocatorKey, AllocatorValue>,
     reserved_allocations: Arc<SkipListLayer<AllocatorKey, AllocatorValue>>,
     inner: Mutex<Inner>,
+    allocation_lock: futures::lock::Mutex<()>,
 }
 
 struct Inner {
@@ -168,18 +165,28 @@ impl SimpleAllocator {
                 opened: false,
                 dropped_allocations: Vec::new(),
             }),
+            allocation_lock: futures::lock::Mutex::new(()),
         }
     }
 
     pub fn tree(&self) -> &LSMTree<AllocatorKey, AllocatorValue> {
+        assert!(self.inner.lock().unwrap().opened);
         &self.tree
     }
 
     // Ensures the allocator is open.  If empty, create the object in the root object store,
     // otherwise load and initialise the LSM tree.
-    async fn ensure_open(&self) -> Result<(), Error> {
+    pub async fn ensure_open(&self) -> Result<(), Error> {
         {
             if self.inner.lock().unwrap().opened {
+                return Ok(());
+            }
+        }
+
+        let _guard = self.allocation_lock.lock().await;
+        {
+            if self.inner.lock().unwrap().opened {
+                // We lost a race.
                 return Ok(());
             }
         }
@@ -237,6 +244,8 @@ impl Allocator for SimpleAllocator {
 
         self.ensure_open().await?;
 
+        let _guard = self.allocation_lock.lock().await;
+
         // Update reserved_allocations using dropped_allocations.
         let dropped_allocations =
             std::mem::take(&mut self.inner.lock().unwrap().dropped_allocations);
@@ -244,10 +253,11 @@ impl Allocator for SimpleAllocator {
             self.reserved_allocations.erase(item.as_item_ref()).await;
         }
 
-        let tree = &self.tree;
         let result = {
-            let mut layer_set = tree.layer_set();
+            let tree = &self.tree;
+            let mut layer_set = tree.empty_layer_set();
             layer_set.add_layer(self.reserved_allocations.clone());
+            tree.add_all_layers_to_layer_set(&mut layer_set);
             let mut merger = layer_set.merger();
             let mut iter = merger.seek(Bound::Unbounded).await?;
             let mut last_offset = 0;
@@ -282,7 +292,6 @@ impl Allocator for SimpleAllocator {
 
     async fn deallocate(&self, transaction: &mut Transaction<'_>, device_range: Range<u64>) {
         log::debug!("deallocate {:?}", device_range);
-
         transaction.add(
             self.object_id(),
             Mutation::allocation(Item::new(
@@ -290,62 +299,6 @@ impl Allocator for SimpleAllocator {
                 AllocatorValue { delta: -1 },
             )),
         );
-    }
-
-    async fn flush(&self, force: bool) -> Result<(), Error> {
-        self.ensure_open().await?;
-
-        let filesystem = self.filesystem.upgrade().unwrap();
-        let object_sync = filesystem.begin_object_sync(self.object_id());
-        if !force && !object_sync.needs_sync() {
-            return Ok(());
-        }
-
-        // TODO(csuter): This all needs to be atomic somehow. We'll need to use different
-        // transactions for each stage, but we need make sure objects are cleaned up if there's a
-        // failure.
-        let mut transaction = filesystem.clone().new_transaction(&[]).await?;
-
-        let root_store = self.filesystem.upgrade().unwrap().root_store();
-        let layer_object_handle =
-            ObjectStore::create_object(&root_store, &mut transaction, HandleOptions::default())
-                .await?;
-
-        transaction.add(self.object_id(), Mutation::TreeSeal);
-        transaction.commit().await;
-
-        let object_id = layer_object_handle.object_id();
-        let layer_set = self.tree.immutable_layer_set();
-        let mut merger = layer_set.merger();
-        self.tree
-            .compact_with_iterator(
-                CoalescingIterator::new(Box::new(merger.seek(Bound::Unbounded).await?)).await?,
-                layer_object_handle,
-            )
-            .await?;
-
-        log::debug!("using {} for allocator layer file", object_id);
-        let object_handle =
-            ObjectStore::open_object(&root_store, self.object_id(), HandleOptions::default())
-                .await?;
-        // TODO(jfsulliv): Can we preallocate the buffer instead of doing a bounce? Do we know the
-        // size up front?
-        let mut serialized_info = Vec::new();
-        {
-            let mut inner = self.inner.lock().unwrap();
-            inner.info.layers.push(object_id);
-            serialize_into(&mut serialized_info, &inner.info)?;
-        }
-        let mut buf = object_handle.allocate_buffer(serialized_info.len());
-        buf.as_mut_slice()[..serialized_info.len()].copy_from_slice(&serialized_info[..]);
-        let mut transaction = filesystem.clone().new_transaction(&[]).await?;
-        object_handle.txn_write(&mut transaction, 0u64, buf.as_ref()).await?;
-
-        transaction.add(self.object_id(), Mutation::TreeCompact);
-        transaction.commit().await;
-
-        object_sync.commit();
-        Ok(())
     }
 
     fn as_mutations(self: Arc<Self>) -> Arc<dyn Mutations> {
@@ -362,11 +315,19 @@ impl Mutations for SimpleAllocator {
     async fn apply_mutation(&self, mutation: Mutation, replay: bool) {
         match mutation {
             Mutation::Allocator(AllocatorMutation(item)) => {
-                self.reserved_allocations.erase(item.as_item_ref()).await;
                 let lower_bound = item.key.lower_bound_for_merge_into();
-                self.tree.merge_into(item, &lower_bound).await;
+                self.tree.merge_into(item.clone(), &lower_bound).await;
+                // Whilst it might be tempting to just remove the item from reserved_allocations
+                // directly here, it's not safe to do so since there is no synchronisation with
+                // allocate that ensures it will definitely see the insertion if we've removed the
+                // item from reserved_allocations.  If we use dropped_allocations, then it is
+                // guaranteed because the merge_into above is observable when a new merger is
+                // created.
+                if item.value.delta > 0 {
+                    self.inner.lock().unwrap().dropped_allocations.push(item);
+                }
             }
-            Mutation::TreeSeal => self.tree.seal(),
+            Mutation::TreeSeal => self.tree.seal().await,
             Mutation::TreeCompact => {
                 if replay {
                     self.tree.reset_immutable_layers();
@@ -383,6 +344,65 @@ impl Mutations for SimpleAllocator {
             }
             _ => {}
         }
+    }
+
+    async fn flush(&self) -> Result<(), Error> {
+        self.ensure_open().await?;
+
+        let filesystem = self.filesystem.upgrade().unwrap();
+        let object_manager = filesystem.object_manager();
+        if !object_manager.needs_flush(self.object_id()) {
+            return Ok(());
+        }
+        let object_sync = ObjectFlush::new(object_manager, self.object_id());
+        // TODO(csuter): This all needs to be atomic somehow. We'll need to use different
+        // transactions for each stage, but we need make sure objects are cleaned up if there's a
+        // failure.
+        let mut transaction = filesystem.clone().new_transaction(&[]).await?;
+
+        let root_store = self.filesystem.upgrade().unwrap().root_store();
+        let layer_object_handle =
+            ObjectStore::create_object(&root_store, &mut transaction, HandleOptions::default())
+                .await?;
+
+        transaction.add_with_object(self.object_id(), Mutation::TreeSeal, &object_sync);
+        transaction.commit().await;
+
+        let object_id = layer_object_handle.object_id();
+        let layer_set = self.tree.immutable_layer_set();
+        let mut merger = layer_set.merger();
+        self.tree
+            .compact_with_iterator(
+                CoalescingIterator::new(Box::new(merger.seek(Bound::Unbounded).await?)).await?,
+                &layer_object_handle,
+            )
+            .await?;
+
+        log::debug!("using {} for allocator layer file", object_id);
+        let object_handle =
+            ObjectStore::open_object(&root_store, self.object_id(), HandleOptions::default())
+                .await?;
+        // TODO(jfsulliv): Can we preallocate the buffer instead of doing a bounce? Do we know the
+        // size up front?
+        let mut serialized_info = Vec::new();
+        {
+            let mut inner = self.inner.lock().unwrap();
+            inner.info.layers = vec![object_id];
+            serialize_into(&mut serialized_info, &inner.info)?;
+        }
+        let mut buf = object_handle.allocate_buffer(serialized_info.len());
+        buf.as_mut_slice()[..serialized_info.len()].copy_from_slice(&serialized_info[..]);
+        let mut transaction = filesystem.clone().new_transaction(&[]).await?;
+        object_handle.txn_write(&mut transaction, 0u64, buf.as_ref()).await?;
+
+        transaction.add(self.object_id(), Mutation::TreeCompact);
+        transaction.commit().await;
+
+        // TODO(csuter): what if this fails.
+        self.tree.set_layers(Box::new([layer_object_handle])).await?;
+
+        object_sync.commit();
+        Ok(())
     }
 }
 
@@ -450,6 +470,7 @@ impl LayerIterator<AllocatorKey, AllocatorValue> for CoalescingIterator<'_> {
 mod tests {
     use {
         crate::{
+            device::DeviceHolder,
             lsm_tree::{
                 skip_list_layer::SkipListLayer,
                 types::{Item, ItemRef, Layer, LayerIterator, MutableLayer},
@@ -460,7 +481,7 @@ mod tests {
                     merge::merge, Allocator, AllocatorKey, AllocatorValue, CoalescingIterator,
                     SimpleAllocator,
                 },
-                filesystem::Filesystem,
+                filesystem::{Filesystem, Mutations},
                 testing::fake_filesystem::FakeFilesystem,
                 transaction::TransactionHandler,
                 ObjectStore,
@@ -508,14 +529,14 @@ mod tests {
         lsm_tree
             .insert(Item::new(AllocatorKey { device_range: 100..200 }, AllocatorValue { delta: 2 }))
             .await;
-        lsm_tree.seal();
+        lsm_tree.seal().await;
         lsm_tree
             .insert(Item::new(
                 AllocatorKey { device_range: 100..200 },
                 AllocatorValue { delta: -1 },
             ))
             .await;
-        lsm_tree.seal();
+        lsm_tree.seal().await;
         lsm_tree
             .insert(Item::new(AllocatorKey { device_range: 0..100 }, AllocatorValue { delta: 1 }))
             .await;
@@ -569,7 +590,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_allocations() {
-        let device = Arc::new(FakeDevice::new(1024, 512));
+        let device = DeviceHolder::new(FakeDevice::new(1024, 512));
         let fs = FakeFilesystem::new(device);
         let allocator = Arc::new(SimpleAllocator::new(fs.clone(), 1, true));
         fs.object_manager().set_allocator(allocator.clone());
@@ -598,7 +619,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_deallocations() {
-        let device = Arc::new(FakeDevice::new(1024, 512));
+        let device = DeviceHolder::new(FakeDevice::new(1024, 512));
         let fs = FakeFilesystem::new(device);
         let allocator = Arc::new(SimpleAllocator::new(fs.clone(), 1, true));
         fs.object_manager().set_allocator(allocator.clone());
@@ -619,7 +640,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_reserve() {
-        let device = Arc::new(FakeDevice::new(1024, 512));
+        let device = DeviceHolder::new(FakeDevice::new(1024, 512));
         let fs = FakeFilesystem::new(device);
         let allocator = Arc::new(SimpleAllocator::new(fs.clone(), 1, true));
         fs.object_manager().set_allocator(allocator.clone());
@@ -640,7 +661,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_flush() {
-        let device = Arc::new(FakeDevice::new(1024, 512));
+        let device = DeviceHolder::new(FakeDevice::new(1024, 512));
         let fs = FakeFilesystem::new(device);
         let allocator = Arc::new(SimpleAllocator::new(fs.clone(), 1, true));
         fs.object_manager().set_allocator(allocator.clone());
@@ -656,7 +677,7 @@ mod tests {
             .push(allocator.allocate(&mut transaction, 512).await.expect("allocate failed"));
         transaction.commit().await;
 
-        allocator.flush(false).await.expect("flush failed");
+        allocator.flush().await.expect("flush failed");
 
         let allocator = Arc::new(SimpleAllocator::new(fs.clone(), 1, false));
         fs.object_manager().set_allocator(allocator.clone());
@@ -676,7 +697,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_dropped_transaction() {
-        let device = Arc::new(FakeDevice::new(1024, 512));
+        let device = DeviceHolder::new(FakeDevice::new(1024, 512));
         let fs = FakeFilesystem::new(device);
         let allocator = Arc::new(SimpleAllocator::new(fs.clone(), 1, true));
         fs.object_manager().set_allocator(allocator.clone());
@@ -700,6 +721,3 @@ mod tests {
 
 // TODO(csuter): deallocations can't be used until mutations have been written to the device and the
 // device has been flushed.
-
-// TODO(csuter): the locking needs to be investigated and fixed here.  There are likely problems
-// with ensure_open, and allocate.

@@ -3,12 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::{device::Device, object_store::FxFilesystem, volume::root_volume},
+    crate::{device::DeviceHolder, object_store::FxFilesystem, volume::root_volume},
     anyhow::Error,
-    std::sync::Arc,
 };
 
-pub async fn mkfs(device: Arc<dyn Device>) -> Result<(), Error> {
+pub async fn mkfs(device: DeviceHolder) -> Result<(), Error> {
     let fs = FxFilesystem::new_empty(device).await?;
     {
         // expect instead of propagating errors here, since otherwise we could drop |fs| before

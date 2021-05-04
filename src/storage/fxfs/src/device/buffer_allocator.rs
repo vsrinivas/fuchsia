@@ -263,6 +263,7 @@ mod tests {
             buffer_allocator::{order, BufferAllocator, MemBufferSource},
         },
         fuchsia_async as fasync,
+        futures::future::join_all,
         rand::{prelude::SliceRandom, thread_rng, Rng},
         std::sync::Arc,
     };
@@ -373,10 +374,9 @@ mod tests {
         let bs = 512;
         let allocator = Arc::new(BufferAllocator::new(bs, source));
 
-        let mut alloc_tasks = vec![];
-        for _ in 0..10 {
+        join_all((0..10).map(|_| {
             let allocator = allocator.clone();
-            alloc_tasks.push(fasync::Task::spawn(async move {
+            fasync::Task::spawn(async move {
                 let mut rng = thread_rng();
                 enum Op {
                     Alloc,
@@ -412,11 +412,9 @@ mod tests {
                         _ => {}
                     };
                 }
-            }));
-        }
-        for task in &mut alloc_tasks {
-            task.await;
-        }
+            })
+        }))
+        .await;
     }
 
     #[fasync::run_singlethreaded(test)]

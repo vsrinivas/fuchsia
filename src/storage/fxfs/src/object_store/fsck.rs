@@ -10,8 +10,9 @@ use {
         },
         object_store::{
             allocator::{self, AllocatorKey, AllocatorValue, CoalescingIterator, SimpleAllocator},
-            filesystem::Filesystem,
+            filesystem::{Filesystem, FxFilesystem},
             record::ExtentValue,
+            transaction::LockKey,
         },
     },
     anyhow::{bail, Error},
@@ -33,15 +34,19 @@ use {
 //  + The root parent object store ID and root object store ID must not conflict with any other
 //    stores or the allocator.
 //
-// TODO(csuter): This currently assumes no other mutations are taking place.  It would be nice if we
-// could take a snapshot or somehow lock the filesystem.
-pub async fn fsck(filesystem: &impl Filesystem) -> Result<(), Error> {
+// TODO(csuter): This currently takes a write lock on the filesystem.  It would be nice if we could
+// take a snapshot.
+pub async fn fsck(filesystem: &FxFilesystem) -> Result<(), Error> {
+    log::info!("Starting fsck");
+    let _guard = filesystem.write_lock(&[LockKey::Filesystem]).await;
+
     let object_manager = filesystem.object_manager();
     let skip_list = SkipListLayer::new(2048); // TODO(csuter): fix magic number
 
     // TODO(csuter): We could maybe iterate over stores concurrently.
     for store_id in object_manager.store_object_ids() {
         let store = object_manager.store(store_id).expect("store disappeared!");
+        store.ensure_open().await?;
         let layer_set = store.tree.layer_set();
         let mut merger = layer_set.merger();
         let mut iter = merger.seek(Bound::Unbounded).await?;
@@ -67,6 +72,7 @@ pub async fn fsck(filesystem: &impl Filesystem) -> Result<(), Error> {
     // TODO(csuter): It's a bit crude how details of SimpleAllocator are leaking here. Is there
     // a better way?
     let allocator = filesystem.allocator().as_any().downcast::<SimpleAllocator>().unwrap();
+    allocator.ensure_open().await?;
     let layer_set = allocator.tree().layer_set();
     let mut merger = layer_set.merger();
     let iter = merger.seek(Bound::Unbounded).await?;
@@ -94,6 +100,7 @@ mod tests {
     use {
         super::fsck,
         crate::{
+            device::DeviceHolder,
             lsm_tree::types::{Item, ItemRef, LayerIterator},
             object_store::{
                 allocator::{
@@ -105,16 +112,19 @@ mod tests {
             testing::fake_device::FakeDevice,
         },
         fuchsia_async as fasync,
-        std::{ops::Bound, sync::Arc},
+        std::ops::Bound,
     };
 
     const TEST_DEVICE_BLOCK_SIZE: u32 = 512;
 
     #[fasync::run_singlethreaded(test)]
     async fn test_extra_allocation() {
-        let fs = FxFilesystem::new_empty(Arc::new(FakeDevice::new(2048, TEST_DEVICE_BLOCK_SIZE)))
-            .await
-            .expect("new_empty failed");
+        let fs = FxFilesystem::new_empty(DeviceHolder::new(FakeDevice::new(
+            2048,
+            TEST_DEVICE_BLOCK_SIZE,
+        )))
+        .await
+        .expect("new_empty failed");
         let mut transaction =
             fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
         let offset = 2047 * TEST_DEVICE_BLOCK_SIZE as u64;
@@ -122,15 +132,18 @@ mod tests {
             .reserve(&mut transaction, offset..offset + TEST_DEVICE_BLOCK_SIZE as u64)
             .await;
         transaction.commit().await;
-        let error = format!("{}", fsck(fs.as_ref()).await.expect_err("fsck succeeded"));
+        let error = format!("{}", fsck(&fs).await.expect_err("fsck succeeded"));
         assert!(error.contains("found extra allocation"), "{}", error);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_allocation_mismatch() {
-        let fs = FxFilesystem::new_empty(Arc::new(FakeDevice::new(2048, TEST_DEVICE_BLOCK_SIZE)))
-            .await
-            .expect("new_empty failed");
+        let fs = FxFilesystem::new_empty(DeviceHolder::new(FakeDevice::new(
+            2048,
+            TEST_DEVICE_BLOCK_SIZE,
+        )))
+        .await
+        .expect("new_empty failed");
         let allocator = fs.allocator().as_any().downcast::<SimpleAllocator>().unwrap();
         let range = {
             let layer_set = allocator.tree().layer_set();
@@ -145,15 +158,18 @@ mod tests {
             fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
         allocator.reserve(&mut transaction, range).await;
         transaction.commit().await;
-        let error = format!("{}", fsck(fs.as_ref()).await.expect_err("fsck succeeded"));
+        let error = format!("{}", fsck(&fs).await.expect_err("fsck succeeded"));
         assert!(error.contains("mismatch"), "{}", error);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_missing_allocation() {
-        let fs = FxFilesystem::new_empty(Arc::new(FakeDevice::new(2048, TEST_DEVICE_BLOCK_SIZE)))
-            .await
-            .expect("new_empty failed");
+        let fs = FxFilesystem::new_empty(DeviceHolder::new(FakeDevice::new(
+            2048,
+            TEST_DEVICE_BLOCK_SIZE,
+        )))
+        .await
+        .expect("new_empty failed");
         let allocator = fs.allocator().as_any().downcast::<SimpleAllocator>().unwrap();
         let key = {
             let layer_set = allocator.tree().layer_set();
@@ -171,7 +187,7 @@ mod tests {
             .tree()
             .merge_into(Item::new(key, AllocatorValue { delta: -1 }), &lower_bound)
             .await;
-        let error = format!("{}", fsck(fs.as_ref()).await.expect_err("fsck succeeded"));
+        let error = format!("{}", fsck(&fs).await.expect_err("fsck succeeded"));
         assert!(error.contains("missing allocation"), "{}", error);
     }
 }

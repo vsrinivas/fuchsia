@@ -237,6 +237,7 @@ impl FxVolumeAndRoot {
 mod tests {
     use {
         crate::{
+            device::DeviceHolder,
             object_store::FxFilesystem,
             server::{
                 testing::{open_dir_validating, open_file_validating},
@@ -253,7 +254,6 @@ mod tests {
         fuchsia_async as fasync,
         fuchsia_zircon::Status,
         io_util::{read_file_bytes, write_file_bytes},
-        std::sync::Arc,
         vfs::{
             directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path,
             registry::token_registry,
@@ -264,8 +264,8 @@ mod tests {
     async fn test_rename_different_dirs() {
         let registry = token_registry::Simple::new();
         let scope = ExecutionScope::build().token_registry(registry).new();
-        let device = Arc::new(FakeDevice::new(2048, 512));
-        let filesystem = FxFilesystem::new_empty(device.clone()).await.unwrap();
+        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
+        let filesystem = FxFilesystem::new_empty(device).await.unwrap();
         let root_volume = root_volume(&filesystem).await.unwrap();
         let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await.unwrap())
             .await
@@ -325,8 +325,8 @@ mod tests {
     async fn test_rename_same_dir() {
         let registry = token_registry::Simple::new();
         let scope = ExecutionScope::build().token_registry(registry).new();
-        let device = Arc::new(FakeDevice::new(2048, 512));
-        let filesystem = FxFilesystem::new_empty(device.clone()).await.unwrap();
+        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
+        let filesystem = FxFilesystem::new_empty(device).await.unwrap();
         let root_volume = root_volume(&filesystem).await.unwrap();
         let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await.unwrap())
             .await
@@ -377,8 +377,8 @@ mod tests {
     async fn test_rename_overwrites_file() {
         let registry = token_registry::Simple::new();
         let scope = ExecutionScope::build().token_registry(registry).new();
-        let device = Arc::new(FakeDevice::new(2048, 512));
-        let filesystem = FxFilesystem::new_empty(device.clone()).await.unwrap();
+        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
+        let filesystem = FxFilesystem::new_empty(device).await.unwrap();
         let root_volume = root_volume(&filesystem).await.unwrap();
         let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await.unwrap())
             .await
@@ -454,8 +454,8 @@ mod tests {
     async fn test_rename_overwrites_dir() {
         let registry = token_registry::Simple::new();
         let scope = ExecutionScope::build().token_registry(registry).new();
-        let device = Arc::new(FakeDevice::new(2048, 512));
-        let filesystem = FxFilesystem::new_empty(device.clone()).await.unwrap();
+        let device = DeviceHolder::new(FakeDevice::new(2048, 512));
+        let filesystem = FxFilesystem::new_empty(device).await.unwrap();
         let root_volume = root_volume(&filesystem).await.unwrap();
         let vol = FxVolumeAndRoot::new(root_volume.new_volume("vol").await.unwrap())
             .await

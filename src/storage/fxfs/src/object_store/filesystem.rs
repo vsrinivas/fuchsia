@@ -4,24 +4,27 @@
 
 use {
     crate::{
-        device::Device,
+        device::{Device, DeviceHolder},
+        object_handle::INVALID_OBJECT_ID,
         object_store::{
             allocator::Allocator,
-            constants::INVALID_OBJECT_ID,
             directory::Directory,
             journal::{Journal, JournalCheckpoint},
             transaction::{
                 AssociatedObject, LockKey, LockManager, Mutation, ReadGuard, Transaction,
-                TransactionHandler, TxnMutation,
+                TransactionHandler, TxnMutation, WriteGuard,
             },
             ObjectStore,
         },
     },
     anyhow::Error,
     async_trait::async_trait,
+    fuchsia_async as fasync,
+    futures::channel::oneshot::{channel, Sender},
+    once_cell::sync::OnceCell,
     std::{
         collections::HashMap,
-        sync::{Arc, RwLock},
+        sync::{Arc, Mutex, RwLock},
     },
 };
 
@@ -30,11 +33,6 @@ pub trait Filesystem: TransactionHandler {
     /// Informs the journaling system that a new store has been created so that when a transaction
     /// is committed or replayed, mutations can be routed to the correct store.
     fn register_store(&self, store: &Arc<ObjectStore>);
-
-    /// Informs the journaling system that the given object ID is about to flush in-memory data.  If
-    /// successful, all mutations pertinent to this object can be discarded, but any mutations that
-    /// follow will still be kept.
-    fn begin_object_sync(&self, object_id: u64) -> ObjectSync;
 
     /// Returns access to the undeyling device.
     fn device(&self) -> Arc<dyn Device>;
@@ -141,12 +139,9 @@ impl ObjectManager {
         mutation: Mutation,
         replay: bool,
         checkpoint: &JournalCheckpoint,
-        object: Option<&dyn AssociatedObject>,
+        associated_object: Option<&dyn AssociatedObject>,
     ) {
-        if let Some(object) = object {
-            object.will_apply_mutation(&mutation);
-        }
-        {
+        let object = {
             let mut objects = self.objects.write().unwrap();
             objects.journal_file_checkpoints.entry(object_id).or_insert_with(|| checkpoint.clone());
             if object_id == objects.allocator_object_id {
@@ -155,9 +150,14 @@ impl ObjectManager {
                 objects.stores.get(&object_id).map(|x| x.clone() as Arc<dyn Mutations>)
             }
         }
-        .unwrap_or_else(|| self.root_store().lazy_open_store(object_id))
-        .apply_mutation(mutation, replay)
-        .await;
+        .unwrap_or_else(|| self.root_store().lazy_open_store(object_id));
+        // It is intentional that we call will_apply_mutation _after_ we updated the
+        // journal_file_checkpoints above, because ObjectFlush::will_apply_mutation might reset
+        // journal_file_checkpoints.
+        if let Some(associated_object) = associated_object {
+            associated_object.will_apply_mutation(&mutation);
+        }
+        object.apply_mutation(mutation, replay).await;
     }
 
     // Drops a transaction.  This is called automatically when a transaction is dropped.  If the
@@ -166,15 +166,7 @@ impl ObjectManager {
     // will unreserve allocations).
     pub fn drop_transaction(&self, transaction: &mut Transaction<'_>) {
         for TxnMutation { object_id, mutation, .. } in std::mem::take(&mut transaction.mutations) {
-            {
-                let objects = self.objects.read().unwrap();
-                if object_id == objects.allocator_object_id {
-                    Some(objects.allocator.clone().unwrap().as_mutations())
-                } else {
-                    objects.stores.get(&object_id).map(|x| x.clone() as Arc<dyn Mutations>)
-                }
-            }
-            .map(|o| o.drop_mutation(mutation));
+            self.object(object_id).map(|o| o.drop_mutation(mutation));
         }
     }
 
@@ -198,10 +190,10 @@ impl ObjectManager {
         (offsets, min_checkpoint.cloned())
     }
 
-    pub fn begin_object_sync(self: &Arc<Self>, object_id: u64) -> ObjectSync {
-        let old_journal_file_checkpoint =
-            self.objects.write().unwrap().journal_file_checkpoints.remove(&object_id);
-        ObjectSync { object_manager: self.clone(), object_id, old_journal_file_checkpoint }
+    /// Returns true if the object identified by `object_id` is known to have updates recorded in
+    /// the journal that the object depends upon.
+    pub fn needs_flush(&self, object_id: u64) -> bool {
+        self.objects.read().unwrap().journal_file_checkpoints.contains_key(&object_id)
     }
 
     pub fn graveyard(&self, store_object_id: u64) -> Option<Arc<Directory<ObjectStore>>> {
@@ -211,31 +203,69 @@ impl ObjectManager {
     pub fn register_graveyard(&self, store_object_id: u64, directory: Arc<Directory<ObjectStore>>) {
         self.objects.write().unwrap().graveyards.insert(store_object_id, directory);
     }
+
+    /// Flushes all known objects.  This will then allow the journal space to be freed.
+    pub async fn flush(&self) -> Result<(), Error> {
+        let object_ids: Vec<_> =
+            self.objects.read().unwrap().journal_file_checkpoints.keys().cloned().collect();
+        for object_id in object_ids {
+            self.object(object_id).unwrap().flush().await?;
+        }
+        Ok(())
+    }
+
+    fn object(&self, object_id: u64) -> Option<Arc<dyn Mutations>> {
+        let objects = self.objects.read().unwrap();
+        if object_id == objects.allocator_object_id {
+            Some(objects.allocator.clone().unwrap().as_mutations())
+        } else {
+            objects.stores.get(&object_id).map(|x| x.clone() as Arc<dyn Mutations>)
+        }
+    }
 }
 
-/// ObjectSync is used by objects to indicate some kind of event such that if successful, existing
+/// ObjectFlush is used by objects to indicate some kind of event such that if successful, existing
 /// mutation records are no longer required from the journal.  For example, for object stores, it is
 /// used when the in-memory layer is persisted since once that is done the records in the journal
 /// are no longer required.  Clients must make sure to call the commit function upon success; the
 /// default is to roll back.
 #[must_use]
-pub struct ObjectSync {
+pub struct ObjectFlush {
     object_manager: Arc<ObjectManager>,
     object_id: u64,
-    old_journal_file_checkpoint: Option<JournalCheckpoint>,
+    old_journal_file_checkpoint: OnceCell<JournalCheckpoint>,
 }
 
-impl ObjectSync {
-    pub fn needs_sync(&self) -> bool {
-        self.old_journal_file_checkpoint.is_some()
+impl ObjectFlush {
+    pub fn new(object_manager: Arc<ObjectManager>, object_id: u64) -> Self {
+        Self { object_manager, object_id, old_journal_file_checkpoint: OnceCell::new() }
+    }
+
+    /// This marks the point at which the flush is beginning.  This begins a commitment (in the
+    /// absence of errors) to flush _all_ mutations that were made to the object prior to this point
+    /// and should therefore be called when appropriate locks are held (see the AssociatedObject
+    /// implementation below).  Mutations that come after this will be preserved in the journal
+    /// until the next flush.  This can panic if called more than once; it shouldn't be called
+    /// directly if being used as an AssociatedObject since will_apply_mutation will call it below.
+    pub fn begin(&self) {
+        if let Some(checkpoint) = self
+            .object_manager
+            .objects
+            .write()
+            .unwrap()
+            .journal_file_checkpoints
+            .remove(&self.object_id)
+        {
+            self.old_journal_file_checkpoint.set(checkpoint).unwrap();
+        }
     }
 
     pub fn commit(mut self) {
-        self.old_journal_file_checkpoint = None;
+        self.old_journal_file_checkpoint.take();
     }
 }
 
-impl Drop for ObjectSync {
+impl Drop for ObjectFlush {
     fn drop(&mut self) {
         if let Some(checkpoint) = self.old_journal_file_checkpoint.take() {
             self.object_manager
@@ -245,6 +275,14 @@ impl Drop for ObjectSync {
                 .journal_file_checkpoints
                 .insert(self.object_id, checkpoint);
         }
+    }
+}
+
+/// ObjectFlush can be used as an associated object in a transaction such that we begin the flush at
+/// the appropriate time (whilst a lock is held on the journal).
+impl AssociatedObject for ObjectFlush {
+    fn will_apply_mutation(&self, _: &Mutation) {
+        self.begin();
     }
 }
 
@@ -258,41 +296,52 @@ pub trait Mutations: Send + Sync {
 
     /// Called when a transaction fails to commit.
     fn drop_mutation(&self, mutation: Mutation);
+
+    /// Flushes in-memory changes to the device (to allow journal space to be freed).
+    async fn flush(&self) -> Result<(), Error>;
 }
 
 #[derive(Default)]
 pub struct SyncOptions {}
 
 pub struct FxFilesystem {
-    device: Arc<dyn Device>,
+    device: OnceCell<DeviceHolder>,
     objects: Arc<ObjectManager>,
     journal: Journal,
     lock_manager: LockManager,
+    compaction_task: Mutex<Option<fasync::Task<()>>>,
+    device_sender: OnceCell<Sender<DeviceHolder>>,
 }
 
 impl FxFilesystem {
-    pub async fn new_empty(device: Arc<dyn Device>) -> Result<Arc<FxFilesystem>, Error> {
+    pub async fn new_empty(device: DeviceHolder) -> Result<Arc<FxFilesystem>, Error> {
         let objects = Arc::new(ObjectManager::new());
         let journal = Journal::new(objects.clone());
         let filesystem = Arc::new(FxFilesystem {
-            device: device.clone(),
+            device: OnceCell::new(),
             objects: objects.clone(),
             journal,
             lock_manager: LockManager::new(),
+            compaction_task: Mutex::new(None),
+            device_sender: OnceCell::new(),
         });
+        filesystem.device.set(device).unwrap_or_else(|_| unreachable!());
         filesystem.journal.init_empty(filesystem.clone()).await?;
         Ok(filesystem)
     }
 
-    pub async fn open(device: Arc<dyn Device>) -> Result<Arc<FxFilesystem>, Error> {
+    pub async fn open(device: DeviceHolder) -> Result<Arc<FxFilesystem>, Error> {
         let objects = Arc::new(ObjectManager::new());
         let journal = Journal::new(objects.clone());
         let filesystem = Arc::new(FxFilesystem {
-            device: device.clone(),
+            device: OnceCell::new(),
             objects: objects.clone(),
             journal,
             lock_manager: LockManager::new(),
+            compaction_task: Mutex::new(None),
+            device_sender: OnceCell::new(),
         });
+        filesystem.device.set(device).unwrap_or_else(|_| unreachable!());
         filesystem.journal.replay(filesystem.clone()).await?;
         Ok(filesystem)
     }
@@ -314,14 +363,60 @@ impl FxFilesystem {
     }
 
     pub async fn close(&self) -> Result<(), Error> {
+        self.wait_for_compaction_to_finish().await;
         // Regardless of whether sync succeeds, we should close the device, since otherwise we will
         // crash instead of exiting gracefully.
         let sync_status = self.journal.sync(SyncOptions::default()).await;
         if sync_status.is_err() {
             log::error!("Failed to sync filesystem; data may be lost: {:?}", sync_status);
         }
-        self.device.close().await.expect("Failed to close device");
+        self.device().close().await.expect("Failed to close device");
         sync_status
+    }
+
+    async fn compact(self: Arc<Self>) {
+        log::debug!("Compaction starting");
+        if let Err(e) = self.objects.flush().await {
+            log::error!("Compaction ecnountered error: {}", e);
+            return;
+        }
+        if let Err(e) = self.journal.write_super_block().await {
+            log::error!("Error writing journal super-block: {}", e);
+            return;
+        }
+        *self.compaction_task.lock().unwrap() = None;
+    }
+
+    /// Acquires a write lock for the given keys.
+    pub async fn write_lock(&self, lock_keys: &[LockKey]) -> WriteGuard<'_> {
+        self.lock_manager.write_lock(lock_keys).await
+    }
+
+    /// Waits for filesystem to be dropped (so callers should ensure all direct and indirect
+    /// references are dropped) and returns the device.  No attempt is made at a graceful shutdown.
+    pub async fn take_device(self: Arc<FxFilesystem>) -> DeviceHolder {
+        let (sender, receiver) = channel::<DeviceHolder>();
+        self.device_sender
+            .set(sender)
+            .unwrap_or_else(|_| panic!("take_device should only be called once"));
+        std::mem::drop(self);
+        receiver.await.unwrap()
+    }
+
+    async fn wait_for_compaction_to_finish(&self) {
+        let compaction_task = self.compaction_task.lock().unwrap().take();
+        if let Some(compaction_task) = compaction_task {
+            compaction_task.await;
+        }
+    }
+}
+
+impl Drop for FxFilesystem {
+    fn drop(&mut self) {
+        if let Some(sender) = self.device_sender.take() {
+            // We don't care if this fails to send.
+            let _ = sender.send(self.device.take().unwrap());
+        }
     }
 }
 
@@ -331,12 +426,8 @@ impl Filesystem for FxFilesystem {
         self.objects.register_store(store);
     }
 
-    fn begin_object_sync(&self, object_id: u64) -> ObjectSync {
-        self.objects.begin_object_sync(object_id)
-    }
-
     fn device(&self) -> Arc<dyn Device> {
-        self.device.clone()
+        Arc::clone(self.device.get().unwrap())
     }
 
     fn root_store(&self) -> Arc<ObjectStore> {
@@ -358,12 +449,16 @@ impl TransactionHandler for FxFilesystem {
         self: Arc<Self>,
         locks: &[LockKey],
     ) -> Result<Transaction<'a>, Error> {
-        Ok(Transaction::new(self, &[], locks).await)
+        Ok(Transaction::new(self, &[LockKey::Filesystem], locks).await)
     }
 
     async fn commit_transaction(self: Arc<Self>, transaction: Transaction<'_>) {
         self.lock_manager.commit_prepare(&transaction).await;
         self.journal.commit(transaction).await;
+        let mut compaction_task = self.compaction_task.lock().unwrap();
+        if compaction_task.is_none() && self.journal.should_flush() {
+            *compaction_task = Some(fasync::Task::spawn(self.clone().compact()));
+        }
     }
 
     fn drop_transaction(&self, transaction: &mut Transaction<'_>) {
@@ -383,3 +478,57 @@ impl AsRef<LockManager> for FxFilesystem {
 }
 
 // TODO(csuter): How do we ensure sync prior to drop?
+
+#[cfg(test)]
+mod tests {
+    use {
+        crate::{
+            device::DeviceHolder,
+            object_handle::{ObjectHandle, ObjectHandleExt},
+            object_store::{
+                filesystem::{FxFilesystem, SyncOptions},
+                fsck::fsck,
+                transaction::TransactionHandler,
+                HandleOptions, ObjectStore,
+            },
+            testing::fake_device::FakeDevice,
+        },
+        fuchsia_async as fasync,
+        futures::future::join_all,
+    };
+
+    const TEST_DEVICE_BLOCK_SIZE: u32 = 512;
+
+    #[fasync::run(10, test)]
+    async fn test_compaction() {
+        let device = DeviceHolder::new(FakeDevice::new(4096, TEST_DEVICE_BLOCK_SIZE));
+
+        // If compaction is not working correctly, this test will run out of space.
+        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
+        let mut tasks = Vec::new();
+        for _ in 0..2 {
+            let mut transaction =
+                fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
+            let handle = ObjectStore::create_object(
+                &fs.root_store(),
+                &mut transaction,
+                HandleOptions::default(),
+            )
+            .await
+            .expect("create_object failed");
+            transaction.commit().await;
+            tasks.push(fasync::Task::spawn(async move {
+                const TEST_DATA: &[u8] = b"hello";
+                let mut buf = handle.allocate_buffer(TEST_DATA.len());
+                buf.as_mut_slice().copy_from_slice(TEST_DATA);
+                for _ in 0..5000 {
+                    handle.write(0, buf.as_ref()).await.expect("write failed");
+                }
+            }));
+        }
+        join_all(tasks).await;
+        fs.sync(SyncOptions::default()).await.expect("sync failed");
+
+        fsck(&fs).await.expect("fsck failed");
+    }
+}

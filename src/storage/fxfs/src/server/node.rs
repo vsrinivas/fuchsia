@@ -154,6 +154,7 @@ mod tests {
             node::{FxNode, GetResult, NodeCache},
         },
         fuchsia_async as fasync,
+        futures::future::join_all,
         std::{
             any::Any,
             sync::{
@@ -229,14 +230,13 @@ mod tests {
         let writes_to_cache = Arc::new(AtomicU64::new(0));
         let reads_from_cache = Arc::new(AtomicU64::new(0));
         let node = Arc::new(FakeNode(object_id, cache.clone()));
-        let mut tasks = vec![];
-        for _ in 0..10 {
+        join_all((0..10).map(|_| {
             let node = node.clone();
             let cache = cache.clone();
             let object_id = object_id.clone();
             let writes_to_cache = writes_to_cache.clone();
             let reads_from_cache = reads_from_cache.clone();
-            tasks.push(async move {
+            async move {
                 match cache.get_or_reserve(object_id).await {
                     GetResult::Node(node) => {
                         reads_from_cache.fetch_add(1, Ordering::SeqCst);
@@ -249,11 +249,9 @@ mod tests {
                         p.commit(&(node as Arc<dyn FxNode>));
                     }
                 }
-            });
-        }
-        for t in tasks {
-            t.await;
-        }
+            }
+        }))
+        .await;
         assert_eq!(writes_to_cache.load(Ordering::SeqCst), 1);
         assert_eq!(reads_from_cache.load(Ordering::SeqCst), 9);
     }
@@ -266,19 +264,16 @@ mod tests {
         let cache = Arc::new(NodeCache::new());
         let writes = Arc::new(Mutex::new(vec![0u64; NUM_OBJECTS]));
         let reads = Arc::new(Mutex::new(vec![0u64; NUM_OBJECTS]));
-        let mut tasks = vec![];
-        let mut nodes = vec![];
-        for object_id in 0..NUM_OBJECTS as u64 {
-            nodes.push(Arc::new(FakeNode(object_id, cache.clone())));
-        }
+        let nodes: Vec<_> = (0..NUM_OBJECTS as u64)
+            .map(|object_id| Arc::new(FakeNode(object_id, cache.clone())))
+            .collect();
 
-        for _ in 0..TASKS_PER_OBJECT {
-            for node in &nodes {
-                let node = node.clone();
+        join_all((0..TASKS_PER_OBJECT).flat_map(|_| {
+            nodes.iter().cloned().map(|node| {
                 let cache = cache.clone();
                 let writes = writes.clone();
                 let reads = reads.clone();
-                tasks.push(async move {
+                async move {
                     match cache.get_or_reserve(node.object_id()).await {
                         GetResult::Node(result) => {
                             assert_eq!(node.object_id(), result.object_id());
@@ -291,12 +286,10 @@ mod tests {
                             p.commit(&(node as Arc<dyn FxNode>));
                         }
                     }
-                });
-            }
-        }
-        for t in tasks {
-            t.await;
-        }
+                }
+            })
+        }))
+        .await;
         assert_eq!(*writes.lock().unwrap(), vec![1u64; NUM_OBJECTS]);
         assert_eq!(*reads.lock().unwrap(), vec![TASKS_PER_OBJECT as u64 - 1; NUM_OBJECTS]);
     }

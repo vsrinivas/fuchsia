@@ -4,10 +4,10 @@
 
 use {
     crate::{
-        device::Device,
+        device::{Device, DeviceHolder},
         object_store::{
             allocator::Allocator,
-            filesystem::{Filesystem, ObjectManager, ObjectSync},
+            filesystem::{Filesystem, ObjectManager},
             journal::JournalCheckpoint,
             transaction::{
                 LockKey, LockManager, ReadGuard, Transaction, TransactionHandler, TxnMutation,
@@ -21,13 +21,13 @@ use {
 };
 
 pub struct FakeFilesystem {
-    device: Arc<dyn Device>,
+    device: DeviceHolder,
     object_manager: Arc<ObjectManager>,
     lock_manager: LockManager,
 }
 
 impl FakeFilesystem {
-    pub fn new(device: Arc<dyn Device>) -> Arc<Self> {
+    pub fn new(device: DeviceHolder) -> Arc<Self> {
         let object_manager = Arc::new(ObjectManager::new());
         Arc::new(FakeFilesystem { device, object_manager, lock_manager: LockManager::new() })
     }
@@ -37,10 +37,6 @@ impl FakeFilesystem {
 impl Filesystem for FakeFilesystem {
     fn register_store(&self, store: &Arc<ObjectStore>) {
         self.object_manager.register_store(store);
-    }
-
-    fn begin_object_sync(&self, object_id: u64) -> ObjectSync {
-        self.object_manager.begin_object_sync(object_id)
     }
 
     fn device(&self) -> Arc<dyn Device> {

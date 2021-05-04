@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::lsm_tree::merge,
+    crate::{lsm_tree::merge, object_handle::INVALID_OBJECT_ID},
     anyhow::Error,
     async_trait::async_trait,
     serde::{Deserialize, Serialize},
-    std::sync::Arc,
+    std::{fmt::Debug, sync::Arc},
 };
 
 // Keys and values need to implement the following traits. For merging, they also need to implement
@@ -20,7 +20,7 @@ pub trait Key:
     + Sync
     + serde::de::DeserializeOwned
     + serde::Serialize
-    + std::fmt::Debug
+    + Debug
     + std::marker::Unpin
     + 'static
 {
@@ -32,7 +32,7 @@ impl<K> Key for K where
         + Sync
         + serde::de::DeserializeOwned
         + serde::Serialize
-        + std::fmt::Debug
+        + Debug
         + std::marker::Unpin
         + 'static
 {
@@ -44,7 +44,7 @@ pub trait Value:
     + Sync
     + serde::de::DeserializeOwned
     + serde::Serialize
-    + std::fmt::Debug
+    + Debug
     + std::marker::Unpin
     + 'static
 {
@@ -55,7 +55,7 @@ impl<V> Value for V where
         + Sync
         + serde::de::DeserializeOwned
         + serde::Serialize
-        + std::fmt::Debug
+        + Debug
         + std::marker::Unpin
         + 'static
 {
@@ -177,6 +177,10 @@ pub trait NextKey: Clone {
 /// Layer is a trait that all layers need to implement (mutable and immutable).
 #[async_trait]
 pub trait Layer<K, V>: Send + Sync {
+    fn object_id(&self) -> u64 {
+        INVALID_OBJECT_ID
+    }
+
     /// Searches for a key. Bound::Excluded is not supported. Bound::Unbounded positions the
     /// iterator on the first item in the layer.
     async fn seek(&self, bound: std::ops::Bound<&K>)
@@ -235,7 +239,7 @@ pub(super) trait LayerIteratorMut<K, V>: LayerIterator<K, V> {
 #[async_trait]
 pub trait LayerWriter {
     /// Writes the given item to this layer.
-    async fn write<K: Send + Serialize + Sync, V: Send + Serialize + Sync>(
+    async fn write<K: Debug + Send + Serialize + Sync, V: Debug + Send + Serialize + Sync>(
         &mut self,
         item: ItemRef<'_, K, V>,
     ) -> Result<(), Error>;

@@ -169,6 +169,10 @@ impl Device for BlockDevice {
     async fn close(&self) -> Result<(), Error> {
         self.remote.detach_vmo(self.buffer_source().take_vmoid()).await
     }
+
+    async fn flush(&self) -> Result<(), Error> {
+        self.remote.flush().await
+    }
 }
 
 impl Drop for BlockDevice {
