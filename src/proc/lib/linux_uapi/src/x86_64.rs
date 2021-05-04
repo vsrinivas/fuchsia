@@ -141,6 +141,98 @@ pub const EOWNERDEAD: u32 = 130;
 pub const ENOTRECOVERABLE: u32 = 131;
 pub const ERFKILL: u32 = 132;
 pub const EHWPOISON: u32 = 133;
+pub const _IOC_NRBITS: u32 = 8;
+pub const _IOC_TYPEBITS: u32 = 8;
+pub const _IOC_SIZEBITS: u32 = 14;
+pub const _IOC_DIRBITS: u32 = 2;
+pub const _IOC_NRMASK: u32 = 255;
+pub const _IOC_TYPEMASK: u32 = 255;
+pub const _IOC_SIZEMASK: u32 = 16383;
+pub const _IOC_DIRMASK: u32 = 3;
+pub const _IOC_NRSHIFT: u32 = 0;
+pub const _IOC_TYPESHIFT: u32 = 8;
+pub const _IOC_SIZESHIFT: u32 = 16;
+pub const _IOC_DIRSHIFT: u32 = 30;
+pub const _IOC_NONE: u32 = 0;
+pub const _IOC_WRITE: u32 = 1;
+pub const _IOC_READ: u32 = 2;
+pub const IOC_IN: u32 = 1073741824;
+pub const IOC_OUT: u32 = 2147483648;
+pub const IOC_INOUT: u32 = 3221225472;
+pub const IOCSIZE_MASK: u32 = 1073676288;
+pub const IOCSIZE_SHIFT: u32 = 16;
+pub const TCGETS: u32 = 21505;
+pub const TCSETS: u32 = 21506;
+pub const TCSETSW: u32 = 21507;
+pub const TCSETSF: u32 = 21508;
+pub const TCGETA: u32 = 21509;
+pub const TCSETA: u32 = 21510;
+pub const TCSETAW: u32 = 21511;
+pub const TCSETAF: u32 = 21512;
+pub const TCSBRK: u32 = 21513;
+pub const TCXONC: u32 = 21514;
+pub const TCFLSH: u32 = 21515;
+pub const TIOCEXCL: u32 = 21516;
+pub const TIOCNXCL: u32 = 21517;
+pub const TIOCSCTTY: u32 = 21518;
+pub const TIOCGPGRP: u32 = 21519;
+pub const TIOCSPGRP: u32 = 21520;
+pub const TIOCOUTQ: u32 = 21521;
+pub const TIOCSTI: u32 = 21522;
+pub const TIOCGWINSZ: u32 = 21523;
+pub const TIOCSWINSZ: u32 = 21524;
+pub const TIOCMGET: u32 = 21525;
+pub const TIOCMBIS: u32 = 21526;
+pub const TIOCMBIC: u32 = 21527;
+pub const TIOCMSET: u32 = 21528;
+pub const TIOCGSOFTCAR: u32 = 21529;
+pub const TIOCSSOFTCAR: u32 = 21530;
+pub const FIONREAD: u32 = 21531;
+pub const TIOCINQ: u32 = 21531;
+pub const TIOCLINUX: u32 = 21532;
+pub const TIOCCONS: u32 = 21533;
+pub const TIOCGSERIAL: u32 = 21534;
+pub const TIOCSSERIAL: u32 = 21535;
+pub const TIOCPKT: u32 = 21536;
+pub const FIONBIO: u32 = 21537;
+pub const TIOCNOTTY: u32 = 21538;
+pub const TIOCSETD: u32 = 21539;
+pub const TIOCGETD: u32 = 21540;
+pub const TCSBRKP: u32 = 21541;
+pub const TIOCSBRK: u32 = 21543;
+pub const TIOCCBRK: u32 = 21544;
+pub const TIOCGSID: u32 = 21545;
+pub const TIOCGRS485: u32 = 21550;
+pub const TIOCSRS485: u32 = 21551;
+pub const TCGETX: u32 = 21554;
+pub const TCSETX: u32 = 21555;
+pub const TCSETXF: u32 = 21556;
+pub const TCSETXW: u32 = 21557;
+pub const TIOCVHANGUP: u32 = 21559;
+pub const FIONCLEX: u32 = 21584;
+pub const FIOCLEX: u32 = 21585;
+pub const FIOASYNC: u32 = 21586;
+pub const TIOCSERCONFIG: u32 = 21587;
+pub const TIOCSERGWILD: u32 = 21588;
+pub const TIOCSERSWILD: u32 = 21589;
+pub const TIOCGLCKTRMIOS: u32 = 21590;
+pub const TIOCSLCKTRMIOS: u32 = 21591;
+pub const TIOCSERGSTRUCT: u32 = 21592;
+pub const TIOCSERGETLSR: u32 = 21593;
+pub const TIOCSERGETMULTI: u32 = 21594;
+pub const TIOCSERSETMULTI: u32 = 21595;
+pub const TIOCMIWAIT: u32 = 21596;
+pub const TIOCGICOUNT: u32 = 21597;
+pub const FIOQSIZE: u32 = 21600;
+pub const TIOCPKT_DATA: u32 = 0;
+pub const TIOCPKT_FLUSHREAD: u32 = 1;
+pub const TIOCPKT_FLUSHWRITE: u32 = 2;
+pub const TIOCPKT_STOP: u32 = 4;
+pub const TIOCPKT_START: u32 = 8;
+pub const TIOCPKT_NOSTOP: u32 = 16;
+pub const TIOCPKT_DOSTOP: u32 = 32;
+pub const TIOCPKT_IOCTL: u32 = 64;
+pub const TIOCSER_TEMT: u32 = 1;
 pub const PROT_READ: u32 = 1;
 pub const PROT_WRITE: u32 = 2;
 pub const PROT_EXEC: u32 = 4;
@@ -187,6 +279,149 @@ pub const MAP_FILE: u32 = 0;
 pub const PKEY_DISABLE_ACCESS: u32 = 1;
 pub const PKEY_DISABLE_WRITE: u32 = 2;
 pub const PKEY_ACCESS_MASK: u32 = 3;
+pub const __FD_SETSIZE: u32 = 1024;
+pub const __BITS_PER_LONG: u32 = 64;
+pub const NCCS: u32 = 19;
+pub const VINTR: u32 = 0;
+pub const VQUIT: u32 = 1;
+pub const VERASE: u32 = 2;
+pub const VKILL: u32 = 3;
+pub const VEOF: u32 = 4;
+pub const VTIME: u32 = 5;
+pub const VMIN: u32 = 6;
+pub const VSWTC: u32 = 7;
+pub const VSTART: u32 = 8;
+pub const VSTOP: u32 = 9;
+pub const VSUSP: u32 = 10;
+pub const VEOL: u32 = 11;
+pub const VREPRINT: u32 = 12;
+pub const VDISCARD: u32 = 13;
+pub const VWERASE: u32 = 14;
+pub const VLNEXT: u32 = 15;
+pub const VEOL2: u32 = 16;
+pub const IGNBRK: u32 = 1;
+pub const BRKINT: u32 = 2;
+pub const IGNPAR: u32 = 4;
+pub const PARMRK: u32 = 8;
+pub const INPCK: u32 = 16;
+pub const ISTRIP: u32 = 32;
+pub const INLCR: u32 = 64;
+pub const IGNCR: u32 = 128;
+pub const ICRNL: u32 = 256;
+pub const IUCLC: u32 = 512;
+pub const IXON: u32 = 1024;
+pub const IXANY: u32 = 2048;
+pub const IXOFF: u32 = 4096;
+pub const IMAXBEL: u32 = 8192;
+pub const IUTF8: u32 = 16384;
+pub const OPOST: u32 = 1;
+pub const OLCUC: u32 = 2;
+pub const ONLCR: u32 = 4;
+pub const OCRNL: u32 = 8;
+pub const ONOCR: u32 = 16;
+pub const ONLRET: u32 = 32;
+pub const OFILL: u32 = 64;
+pub const OFDEL: u32 = 128;
+pub const NLDLY: u32 = 256;
+pub const NL0: u32 = 0;
+pub const NL1: u32 = 256;
+pub const CRDLY: u32 = 1536;
+pub const CR0: u32 = 0;
+pub const CR1: u32 = 512;
+pub const CR2: u32 = 1024;
+pub const CR3: u32 = 1536;
+pub const TABDLY: u32 = 6144;
+pub const TAB0: u32 = 0;
+pub const TAB1: u32 = 2048;
+pub const TAB2: u32 = 4096;
+pub const TAB3: u32 = 6144;
+pub const XTABS: u32 = 6144;
+pub const BSDLY: u32 = 8192;
+pub const BS0: u32 = 0;
+pub const BS1: u32 = 8192;
+pub const VTDLY: u32 = 16384;
+pub const VT0: u32 = 0;
+pub const VT1: u32 = 16384;
+pub const FFDLY: u32 = 32768;
+pub const FF0: u32 = 0;
+pub const FF1: u32 = 32768;
+pub const CBAUD: u32 = 4111;
+pub const B0: u32 = 0;
+pub const B50: u32 = 1;
+pub const B75: u32 = 2;
+pub const B110: u32 = 3;
+pub const B134: u32 = 4;
+pub const B150: u32 = 5;
+pub const B200: u32 = 6;
+pub const B300: u32 = 7;
+pub const B600: u32 = 8;
+pub const B1200: u32 = 9;
+pub const B1800: u32 = 10;
+pub const B2400: u32 = 11;
+pub const B4800: u32 = 12;
+pub const B9600: u32 = 13;
+pub const B19200: u32 = 14;
+pub const B38400: u32 = 15;
+pub const EXTA: u32 = 14;
+pub const EXTB: u32 = 15;
+pub const CSIZE: u32 = 48;
+pub const CS5: u32 = 0;
+pub const CS6: u32 = 16;
+pub const CS7: u32 = 32;
+pub const CS8: u32 = 48;
+pub const CSTOPB: u32 = 64;
+pub const CREAD: u32 = 128;
+pub const PARENB: u32 = 256;
+pub const PARODD: u32 = 512;
+pub const HUPCL: u32 = 1024;
+pub const CLOCAL: u32 = 2048;
+pub const CBAUDEX: u32 = 4096;
+pub const BOTHER: u32 = 4096;
+pub const B57600: u32 = 4097;
+pub const B115200: u32 = 4098;
+pub const B230400: u32 = 4099;
+pub const B460800: u32 = 4100;
+pub const B500000: u32 = 4101;
+pub const B576000: u32 = 4102;
+pub const B921600: u32 = 4103;
+pub const B1000000: u32 = 4104;
+pub const B1152000: u32 = 4105;
+pub const B1500000: u32 = 4106;
+pub const B2000000: u32 = 4107;
+pub const B2500000: u32 = 4108;
+pub const B3000000: u32 = 4109;
+pub const B3500000: u32 = 4110;
+pub const B4000000: u32 = 4111;
+pub const CIBAUD: u32 = 269418496;
+pub const CMSPAR: u32 = 1073741824;
+pub const CRTSCTS: u32 = 2147483648;
+pub const IBSHIFT: u32 = 16;
+pub const ISIG: u32 = 1;
+pub const ICANON: u32 = 2;
+pub const XCASE: u32 = 4;
+pub const ECHO: u32 = 8;
+pub const ECHOE: u32 = 16;
+pub const ECHOK: u32 = 32;
+pub const ECHONL: u32 = 64;
+pub const NOFLSH: u32 = 128;
+pub const TOSTOP: u32 = 256;
+pub const ECHOCTL: u32 = 512;
+pub const ECHOPRT: u32 = 1024;
+pub const ECHOKE: u32 = 2048;
+pub const FLUSHO: u32 = 4096;
+pub const PENDIN: u32 = 16384;
+pub const IEXTEN: u32 = 32768;
+pub const EXTPROC: u32 = 65536;
+pub const TCOOFF: u32 = 0;
+pub const TCOON: u32 = 1;
+pub const TCIOFF: u32 = 2;
+pub const TCION: u32 = 3;
+pub const TCIFLUSH: u32 = 0;
+pub const TCOFLUSH: u32 = 1;
+pub const TCIOFLUSH: u32 = 2;
+pub const TCSANOW: u32 = 0;
+pub const TCSADRAIN: u32 = 1;
+pub const TCSAFLUSH: u32 = 2;
 pub const ARCH_SET_GS: u32 = 4097;
 pub const ARCH_SET_FS: u32 = 4098;
 pub const ARCH_GET_FS: u32 = 4099;
@@ -574,8 +809,6 @@ pub const AT_BASE_PLATFORM: u32 = 24;
 pub const AT_RANDOM: u32 = 25;
 pub const AT_HWCAP2: u32 = 26;
 pub const AT_EXECFN: u32 = 31;
-pub const __BITS_PER_LONG: u32 = 64;
-pub const __FD_SETSIZE: u32 = 1024;
 pub const O_ACCMODE: u32 = 3;
 pub const O_RDONLY: u32 = 0;
 pub const O_WRONLY: u32 = 1;
@@ -944,14 +1177,6 @@ pub const CLOCKS_MONO: u32 = 1;
 pub const TIMER_ABSTIME: u32 = 1;
 pub const UIO_FASTIOV: u32 = 8;
 pub const UIO_MAXIOV: u32 = 1024;
-pub type __s8 = crate::x86_64_types::c_schar;
-pub type __u8 = crate::x86_64_types::c_uchar;
-pub type __s16 = crate::x86_64_types::c_short;
-pub type __u16 = crate::x86_64_types::c_ushort;
-pub type __s32 = crate::x86_64_types::c_int;
-pub type __u32 = crate::x86_64_types::c_uint;
-pub type __s64 = crate::x86_64_types::c_longlong;
-pub type __u64 = crate::x86_64_types::c_ulonglong;
 #[repr(C)]
 #[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 pub struct __kernel_fd_set {
@@ -995,6 +1220,51 @@ pub type __kernel_clockid_t = crate::x86_64_types::c_int;
 pub type __kernel_caddr_t = *mut crate::x86_64_types::c_char;
 pub type __kernel_uid16_t = crate::x86_64_types::c_ushort;
 pub type __kernel_gid16_t = crate::x86_64_types::c_ushort;
+pub type cc_t = crate::x86_64_types::c_uchar;
+pub type speed_t = crate::x86_64_types::c_uint;
+pub type tcflag_t = crate::x86_64_types::c_uint;
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct termios {
+    pub c_iflag: tcflag_t,
+    pub c_oflag: tcflag_t,
+    pub c_cflag: tcflag_t,
+    pub c_lflag: tcflag_t,
+    pub c_line: cc_t,
+    pub c_cc: [cc_t; 19usize],
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct termios2 {
+    pub c_iflag: tcflag_t,
+    pub c_oflag: tcflag_t,
+    pub c_cflag: tcflag_t,
+    pub c_lflag: tcflag_t,
+    pub c_line: cc_t,
+    pub c_cc: [cc_t; 19usize],
+    pub c_ispeed: speed_t,
+    pub c_ospeed: speed_t,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct ktermios {
+    pub c_iflag: tcflag_t,
+    pub c_oflag: tcflag_t,
+    pub c_cflag: tcflag_t,
+    pub c_lflag: tcflag_t,
+    pub c_line: cc_t,
+    pub c_cc: [cc_t; 19usize],
+    pub c_ispeed: speed_t,
+    pub c_ospeed: speed_t,
+}
+pub type __s8 = crate::x86_64_types::c_schar;
+pub type __u8 = crate::x86_64_types::c_uchar;
+pub type __s16 = crate::x86_64_types::c_short;
+pub type __u16 = crate::x86_64_types::c_ushort;
+pub type __s32 = crate::x86_64_types::c_int;
+pub type __u32 = crate::x86_64_types::c_uint;
+pub type __s64 = crate::x86_64_types::c_longlong;
+pub type __u64 = crate::x86_64_types::c_ulonglong;
 pub type __le16 = __u16;
 pub type __be16 = __u16;
 pub type __le32 = __u32;

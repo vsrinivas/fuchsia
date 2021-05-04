@@ -538,6 +538,17 @@ pub fn sys_getcwd(
     return Ok(bytes.len().into());
 }
 
+pub fn sys_ioctl(
+    ctx: &SyscallContext<'_>,
+    fd: FileDescriptor,
+    request: u32,
+    in_addr: UserAddress,
+    out_addr: UserAddress,
+) -> Result<SyscallResult, Errno> {
+    let file = ctx.task.files.get(fd)?;
+    file.ioctl(&ctx.task, request, in_addr, out_addr)
+}
+
 pub fn sys_unknown(_ctx: &SyscallContext<'_>, syscall_number: u64) -> Result<SyscallResult, Errno> {
     warn!(target: "unknown_syscall", "UNKNOWN syscall({}): {}", syscall_number, SyscallDecl::from_number(syscall_number).name);
     // TODO: We should send SIGSYS once we have signals.

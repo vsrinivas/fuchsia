@@ -9,6 +9,7 @@ use std::collections::HashMap;
 use std::ops::Deref;
 use std::sync::Arc;
 
+use crate::not_implemented;
 use crate::task::*;
 use crate::uapi::*;
 
@@ -51,6 +52,14 @@ pub trait FileObject: Deref<Target = FileCommon> {
     // you open a device file, fstat will go to the filesystem, not to the device. It's only here
     // because we don't have such a thing yet. Will need to be moved.
     fn fstat(&self, task: &Task) -> Result<stat_t, Errno>;
+
+    fn ioctl(
+        &self,
+        task: &Task,
+        request: u32,
+        in_addr: UserAddress,
+        out_addr: UserAddress,
+    ) -> Result<SyscallResult, Errno>;
 
     /// Get the async owner of this file.
     ///
@@ -128,6 +137,17 @@ impl FileCommon {
 
     pub fn set_async_owner(&self, owner: pid_t) {
         *self.async_owner.lock() = owner;
+    }
+
+    pub fn ioctl(
+        &self,
+        _task: &Task,
+        request: u32,
+        _in_addr: UserAddress,
+        _out_addr: UserAddress,
+    ) -> Result<SyscallResult, Errno> {
+        not_implemented!("ioctl: request=0x{:x}", request);
+        Err(ENOTTY)
     }
 }
 

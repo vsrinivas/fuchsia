@@ -6,7 +6,9 @@
 #define SRC_PROC_LIB_LINUX_UAPI_WRAPPER_H_
 
 #include <asm-generic/errno.h>
+#include <asm-generic/ioctls.h>
 #include <asm-generic/mman-common.h>
+#include <asm-generic/termbits.h>
 #include <asm-x86/asm/prctl.h>
 #include <asm-x86/asm/unistd_64.h>
 #include <linux/auxvec.h>

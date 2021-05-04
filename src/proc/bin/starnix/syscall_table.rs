@@ -117,6 +117,7 @@ pub fn dispatch_syscall(
         gettid[0],
         gettimeofday[2],
         getuid[0],
+        ioctl[4],
         mmap[6],
         mprotect[3],
         munmap[2],
