@@ -98,9 +98,8 @@ func (c *Client) MTU() uint32 {
 	return mtu
 }
 
-func (c *Client) Capabilities() stack.LinkEndpointCapabilities {
-	// TODO(tamird/brunodalbo): expose hardware offloading capabilities.
-	return stack.CapabilitySoftwareGSO
+func (*Client) Capabilities() stack.LinkEndpointCapabilities {
+	return 0
 }
 
 func (c *Client) MaxHeaderLength() uint16 {
@@ -290,10 +289,16 @@ func (*Client) ARPHardwareType() header.ARPHardwareType {
 func (*Client) AddHeader(_, _ tcpip.LinkAddress, _ tcpip.NetworkProtocolNumber, _ *stack.PacketBuffer) {
 }
 
-func (c *Client) GSOMaxSize() uint32 {
-	// There's no limit on how much data we can take in a single software GSO
-	// write.
+// GSOMaxSize implements stack.GSOEndpoint.
+func (*Client) GSOMaxSize() uint32 {
+	// There's no limit on how much data we can take in a single software GSO write.
 	return math.MaxUint32
+}
+
+// SupportedGSO implements stack.GSOEndpoint.
+func (*Client) SupportedGSO() stack.SupportedGSO {
+	// TODO(https://fxbug.dev/76010): expose hardware offloading capabilities.
+	return stack.SWGSOSupported
 }
 
 func (c *Client) Up() error {
