@@ -19,16 +19,32 @@ to the channel, the message is enqueued onto the MsgQueue.
 A MsgQueue is a queue of messages, potentially from multiple sources
 -- a MsgQueue may be set as the destination for multiple channels.
 
-MBOs have two roles.  An MBO stores a message, and it also acts as a
-path by which a reply message is returned from a callee to a caller.
+MBOs have multiple roles:
 
-When a process (the caller) sends a request, this involves writing a
-request message into an MBO and sending the MBO on a channel.  The
-receiving process (the callee) receives a limited-access reference to
-the MBO through a CMH object, from which it can read the request
-message.  To return a reply, the callee writes the reply message into
-the MBO and tells the MBO to return itself to the caller, which then
-allows the caller to read the reply from the MBO.
+*   An MBO stores a message.  A message consists of an array of bytes
+    (data) and an array of Zircon handles (object-capabilities).  This
+    message can be a request or a reply.
+
+*   MBOs are passed back and forth between caller and callee
+    processes, which will read or write the MBO.  The caller writes a
+    request message into the MBO, which the callee reads.  The callee
+    replaces the request with a reply message, which the caller reads.
+    Ownership of the MBO is transferred so that, at any given point in
+    time, only the caller or the callee can read or write the MBO's
+    contents.
+
+*   An MBO acts as a reply path for a request, by which the reply is
+    returned from a callee to a caller.  Each MBO may have an
+    associated reply-path MsgQueue, which is the queue that the MBO
+    will be enqueued on when a callee returns it via
+    `zx_cmh_send_reply()`.  This means a callee does not have to
+    specify a channel for returning a reply message on.
+
+A CMH is a callee process's limited-access reference to an MBO.  A
+callee process can use a CMH to read and write an MBO until it returns
+ownership of the MBO back to the caller.  The callee's access to the
+MBO is revoked when it sends the reply, so the caller can then reuse
+the MBO with a different callee.
 
 ## Overview of the request-reply lifecycle
 
