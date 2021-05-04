@@ -80,7 +80,7 @@ impl fmt::Display for UserAddress {
     }
 }
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd)]
+#[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd)]
 #[repr(transparent)]
 pub struct UserRef<T: AsBytes + FromBytes> {
     addr: UserAddress,
@@ -111,7 +111,7 @@ impl<T: AsBytes + FromBytes> fmt::Display for UserRef<T> {
     }
 }
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd)]
+#[derive(Debug, Default, Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd)]
 #[repr(transparent)]
 pub struct UserCString(UserAddress);
 

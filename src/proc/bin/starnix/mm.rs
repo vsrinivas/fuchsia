@@ -270,7 +270,6 @@ impl MemoryManager {
         Ok(())
     }
 
-    #[allow(dead_code)] // Not used yet.
     pub fn read_object<T: AsBytes + FromBytes>(
         &self,
         user: UserRef<T>,

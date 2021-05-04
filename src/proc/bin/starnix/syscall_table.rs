@@ -129,6 +129,7 @@ pub fn dispatch_syscall(
         sched_getscheduler[1],
         sched_setaffinity[3],
         set_tid_address[1],
+        sigaltstack[2],
         uname[1],
         write[3],
         writev[3],

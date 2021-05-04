@@ -23,6 +23,8 @@ bindgen \
   --size_t-is-usize \
   --ignore-functions \
   --with-derive-default \
+  --opaque-type=__sighandler_t \
+  --opaque-type=__sigrestore_t \
   --ctypes-prefix="crate::x86_64_types" \
   --raw-line "${RAW_LINES}" \
   -o src/proc/lib/linux_uapi/src/x86_64.rs \

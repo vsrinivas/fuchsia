@@ -5,6 +5,12 @@
 #ifndef SRC_PROC_LIB_LINUX_UAPI_WRAPPER_H_
 #define SRC_PROC_LIB_LINUX_UAPI_WRAPPER_H_
 
+// Skip this header for now. There are some tricky unions in here that we'll
+// need to deal with later.
+#define _UAPI_ASM_GENERIC_SIGINFO_H
+
+#include <stddef.h>
+
 #include <asm-generic/errno.h>
 #include <asm-generic/ioctls.h>
 #include <asm-generic/mman-common.h>
@@ -17,6 +23,7 @@
 #include <linux/mman.h>
 #include <linux/prctl.h>
 #include <linux/sched.h>
+#include <linux/signal.h>
 #include <linux/time.h>
 #include <linux/uio.h>
 

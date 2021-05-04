@@ -740,7 +740,7 @@ pub struct iovec_t {
     pub iov_len: usize,
 }
 
-#[derive(Debug, Default, AsBytes, FromBytes)]
+#[derive(Debug, Default, Clone, Copy, AsBytes, FromBytes)]
 #[repr(C)]
 pub struct statfs {
     f_type: i64,
@@ -755,4 +755,13 @@ pub struct statfs {
     f_frsize: i64,
     f_flags: i64,
     f_spare: [i64; 4],
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, AsBytes, FromBytes)]
+#[repr(C)]
+pub struct sigaltstack_t {
+    pub ss_sp: UserAddress,
+    pub ss_flags: u32,
+    pub _pad0: u32,
+    pub ss_size: usize,
 }

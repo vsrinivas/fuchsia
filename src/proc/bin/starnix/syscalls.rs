@@ -451,6 +451,43 @@ pub fn sys_set_tid_address(
     Ok(ctx.task.get_tid().into())
 }
 
+pub fn sys_sigaltstack(
+    ctx: &SyscallContext<'_>,
+    user_ss: UserRef<sigaltstack_t>,
+    user_old_ss: UserRef<sigaltstack_t>,
+) -> Result<SyscallResult, Errno> {
+    let mut ss = sigaltstack_t::default();
+    if !user_ss.is_null() {
+        ctx.task.mm.read_object(user_ss, &mut ss)?;
+        if (ss.ss_flags & !(SS_AUTODISARM | SS_DISABLE)) != 0 {
+            return Err(EINVAL);
+        }
+    }
+
+    let mut signal_stack = ctx.task.signal_stack.lock();
+
+    if !user_old_ss.is_null() {
+        // TODO: Implement SS_ONSTACK when we actually call the signal handler.
+        ctx.task.mm.write_object(
+            user_old_ss,
+            &match *signal_stack {
+                Some(old_ss) => old_ss,
+                None => sigaltstack_t { ss_flags: SS_DISABLE, ..sigaltstack_t::default() },
+            },
+        )?;
+    }
+
+    if !user_ss.is_null() {
+        if ss.ss_flags & SS_DISABLE != 0 {
+            *signal_stack = None;
+        } else {
+            *signal_stack = Some(ss);
+        }
+    }
+
+    Ok(SUCCESS)
+}
+
 pub fn sys_openat(
     ctx: &SyscallContext<'_>,
     dir_fd: i32,
@@ -766,5 +803,48 @@ mod tests {
             SyscallResult::Success(0),
             sys_prctl(&ctx, PR_GET_DUMPABLE, 0, 0, 0, 0).expect("failed to get dumpable")
         );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_sigaltstack() {
+        let (_kernel, task_owner) = create_kernel_and_task();
+        let ctx = SyscallContext::new(&task_owner.task);
+        let addr = map_memory(&ctx, UserAddress::default(), *PAGE_SIZE);
+
+        let user_ss = UserRef::<sigaltstack_t>::new(addr);
+        let nullptr = UserRef::<sigaltstack_t>::default();
+
+        // Check that the initial state is disabled.
+        sys_sigaltstack(&ctx, nullptr, user_ss).expect("failed to call sigaltstack");
+        let mut ss = sigaltstack_t::default();
+        ctx.task.mm.read_object(user_ss, &mut ss).expect("failed to read struct");
+        assert!(ss.ss_flags & SS_DISABLE != 0);
+
+        // Install a sigaltstack and read it back out.
+        ss.ss_sp = UserAddress::from(0x7FFFF);
+        ss.ss_size = 0x1000;
+        ss.ss_flags = SS_AUTODISARM;
+        ctx.task.mm.write_object(user_ss, &ss).expect("failed to write struct");
+        sys_sigaltstack(&ctx, user_ss, nullptr).expect("failed to call sigaltstack");
+        ctx.task
+            .mm
+            .write_memory(addr, &[0u8; std::mem::size_of::<sigaltstack_t>()])
+            .expect("failed to clear struct");
+        sys_sigaltstack(&ctx, nullptr, user_ss).expect("failed to call sigaltstack");
+        let mut another_ss = sigaltstack_t::default();
+        ctx.task.mm.read_object(user_ss, &mut another_ss).expect("failed to read struct");
+        assert_eq!(ss, another_ss);
+
+        // Disable the sigaltstack and read it back out.
+        ss.ss_flags = SS_DISABLE;
+        ctx.task.mm.write_object(user_ss, &ss).expect("failed to write struct");
+        sys_sigaltstack(&ctx, user_ss, nullptr).expect("failed to call sigaltstack");
+        ctx.task
+            .mm
+            .write_memory(addr, &[0u8; std::mem::size_of::<sigaltstack_t>()])
+            .expect("failed to clear struct");
+        sys_sigaltstack(&ctx, nullptr, user_ss).expect("failed to call sigaltstack");
+        ctx.task.mm.read_object(user_ss, &mut ss).expect("failed to read struct");
+        assert!(ss.ss_flags & SS_DISABLE != 0);
     }
 }
