@@ -624,6 +624,34 @@ be able to get this from the config mapping).
 }
 ```
 
+#### Learn your component moniker {#component-moniker}
+
+If you added your component to `core.cml` as explained here, then it's easy to
+infer your component [moniker][moniker] as `/core/component_name` where `component_name` is
+the name of the child you added to `core.cml`.
+
+You can see this hierarchy using `ffx component list` as well:
+
+```
+.
+  bootstrap
+    archivist
+    ...
+  core
+    ...
+    appmgr
+      app
+        sysmgr.cmx
+        sys
+          build-info.cmx
+          cobalt.cmx
+          ...
+    battery_manager
+    font_provider
+    ...
+  startup
+```
+
 ### Expose services to sys environment {#expose-services}
 
 Declare each of these services in [`appmgr.cml`][cs-appmgr-cml] to make them
@@ -834,7 +862,7 @@ features to Components v2.
 Note: If your component shares Inspect data in product feedback reports, you may
 also need to update the approved selectors to reference the new component moniker.
 For more details on updating feedback selectors, see
-[go/tq-feedback-privacy](http://go/tq-feedback-privacy)
+[go/tq-feedback-privacy](http://go/tq-feedback-privacy).
 
 {% dynamic endif %}
 
@@ -869,6 +897,14 @@ shard:
     ...
 }
 ```
+
+#### Component moniker for selectors
+
+As [explained previously][component-moniker], it's possible to infer the
+component moniker using `ffx component list`. Alternatively you can
+use `fx iquery list` to see available components for querying inspect data. Your
+component moniker should appear in the `iquery` output up after adding the
+`client.shard.cml` above.
 
 #### Inspect data in tests {#inspect-tests}
 
