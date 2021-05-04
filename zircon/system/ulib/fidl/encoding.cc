@@ -32,27 +32,27 @@ template <>
 struct EncodingPosition<Mode::EncodeOnly> {
   // |dest| is an address in the destination buffer.
   uint8_t* dest;
-  static EncodingPosition<Mode::EncodeOnly> Create(void* source_object, uint8_t* dest) {
+  __ALWAYS_INLINE static EncodingPosition<Mode::EncodeOnly> Create(void* source_object, uint8_t* dest) {
     return {
         .dest = dest,
     };
   }
-  EncodingPosition operator+(uint32_t size) const {
+  __ALWAYS_INLINE EncodingPosition operator+(uint32_t size) const {
     return {
         .dest = dest + size,
     };
   }
-  EncodingPosition& operator+=(uint32_t size) {
+  __ALWAYS_INLINE EncodingPosition& operator+=(uint32_t size) {
     *this = *this + size;
     return *this;
   }
   // By default, return the pointer to the destination buffer
   template <typename T>
-  constexpr T* Get() const {
+  __ALWAYS_INLINE constexpr T* Get() const {
     return reinterpret_cast<T*>(dest);
   }
   template <typename T>
-  constexpr T* GetFromSource() const {
+  __ALWAYS_INLINE constexpr T* GetFromSource() const {
     ZX_PANIC("GetFromSource should not be used when encoding without linearizing");
   }
 };
@@ -63,30 +63,30 @@ struct EncodingPosition<Mode::LinearizeAndEncode> {
   void* source_object;
   // |dest| is an address in the destination buffer.
   uint8_t* dest;
-  static EncodingPosition<Mode::LinearizeAndEncode> Create(void* source_object, uint8_t* dest) {
+  __ALWAYS_INLINE static EncodingPosition<Mode::LinearizeAndEncode> Create(void* source_object, uint8_t* dest) {
     return {
         .source_object = source_object,
         .dest = dest,
     };
   }
-  EncodingPosition operator+(uint32_t size) const {
+  __ALWAYS_INLINE EncodingPosition operator+(uint32_t size) const {
     return {
         .source_object = reinterpret_cast<void*>(reinterpret_cast<uint8_t*>(source_object) + size),
         .dest = dest + size,
     };
   }
-  EncodingPosition& operator+=(uint32_t size) {
+  __ALWAYS_INLINE EncodingPosition& operator+=(uint32_t size) {
     *this = *this + size;
     return *this;
   }
   // By default, return the pointer to the destination buffer
   template <typename T>
-  constexpr T* Get() const {
+  __ALWAYS_INLINE constexpr T* Get() const {
     return reinterpret_cast<T*>(dest);
   }
   // Additional method to get a pointer to one of the source objects
   template <typename T>
-  constexpr T* GetFromSource() const {
+  __ALWAYS_INLINE constexpr T* GetFromSource() const {
     return reinterpret_cast<T*>(source_object);
   }
 };
