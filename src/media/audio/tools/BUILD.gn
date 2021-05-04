@@ -10,6 +10,7 @@ group("tools") {
     "signal_generator",
     "virtual_audio_util",
     "vol",
+    "wav_player",
     "wav_recorder",
   ]
 }

@@ -1,0 +1,33 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
+
+import("//build/components.gni")
+
+executable("wav_player_bin") {
+  output_name = "wav_player"
+
+  sources = [
+    "main.cc",
+    "wav_player.cc",
+    "wav_player.h",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.ultrasound",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fsl",
+    "//src/lib/fxl",
+    "//src/media/audio/lib/clock:clone_mono",
+    "//src/media/audio/lib/clock:utils",
+    "//src/media/audio/lib/logging:cli",
+    "//src/media/audio/lib/wav",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fzl",
+  ]
+}
+
+fuchsia_shell_package("wav_player") {
+  deps = [ ":wav_player_bin" ]
+}
