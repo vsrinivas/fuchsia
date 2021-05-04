@@ -5,21 +5,36 @@
 use {
     crate::session_manager::SessionManager,
     crate::view::VirtualConsoleViewAssistant,
-    anyhow::Error,
-    carnelian::{AppAssistant, ViewAssistantPtr, ViewKey},
+    anyhow::{anyhow, Error},
+    carnelian::{drawing::DisplayRotation, AppAssistant, ViewAssistantPtr, ViewKey},
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_virtualconsole::SessionManagerMarker,
     fuchsia_async as fasync,
 };
 
+// TODO(reveman): Read from boot arguments.
+const DISPLAY_ROTATION: &'static str = "90";
+
+fn display_rotation_from_str(s: &str) -> Result<DisplayRotation, Error> {
+    match s {
+        "0" => Ok(DisplayRotation::Deg0),
+        "90" => Ok(DisplayRotation::Deg90),
+        "180" => Ok(DisplayRotation::Deg180),
+        "270" => Ok(DisplayRotation::Deg270),
+        _ => Err(anyhow!("Invalid DisplayRotation {}", s)),
+    }
+}
+
 pub struct VirtualConsoleAppAssistant {
     session_manager: SessionManager,
+    display_rotation: DisplayRotation,
 }
 
 impl VirtualConsoleAppAssistant {
-    pub fn new() -> VirtualConsoleAppAssistant {
+    pub fn new() -> Result<VirtualConsoleAppAssistant, Error> {
         let session_manager = SessionManager::new();
-        VirtualConsoleAppAssistant { session_manager }
+        let display_rotation = display_rotation_from_str(DISPLAY_ROTATION)?;
+        Ok(VirtualConsoleAppAssistant { session_manager, display_rotation })
     }
 }
 
@@ -35,6 +50,10 @@ impl AppAssistant for VirtualConsoleAppAssistant {
 
     fn create_view_assistant(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
         VirtualConsoleViewAssistant::new()
+    }
+
+    fn get_display_rotation(&self) -> DisplayRotation {
+        self.display_rotation
     }
 
     /// Return the list of names of services this app wants to provide.
@@ -58,8 +77,14 @@ mod tests {
     use {super::*, fuchsia_async as fasync};
 
     #[fasync::run_singlethreaded(test)]
+    async fn can_create_app() -> Result<(), Error> {
+        let _ = VirtualConsoleAppAssistant::new()?;
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
     async fn can_create_virtual_console_view() -> Result<(), Error> {
-        let mut app = VirtualConsoleAppAssistant::new();
+        let mut app = VirtualConsoleAppAssistant::new()?;
         app.create_view_assistant(1)?;
         Ok(())
     }
