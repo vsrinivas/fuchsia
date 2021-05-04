@@ -23,13 +23,13 @@
 
 namespace debugdata {
 
-class DebugData : public fidl::WireInterface<fuchsia_debugdata::DebugData> {
+class DebugData : public fidl::WireServer<fuchsia_debugdata::DebugData> {
  public:
   explicit DebugData(fbl::unique_fd root_dir_fd);
   ~DebugData() = default;
 
-  void Publish(fidl::StringView data_sink, zx::vmo vmo, PublishCompleter::Sync& completer) override;
-  void LoadConfig(fidl::StringView config_name, LoadConfigCompleter::Sync& completer) override;
+  void Publish(PublishRequestView request, PublishCompleter::Sync& completer) override;
+  void LoadConfig(LoadConfigRequestView request, LoadConfigCompleter::Sync& completer) override;
 
   const auto& data() const { return data_; }
 

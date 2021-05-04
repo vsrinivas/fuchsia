@@ -24,10 +24,10 @@ namespace debugdata {
 
 DebugData::DebugData(fbl::unique_fd root_dir_fd) : root_dir_fd_(std::move(root_dir_fd)) {}
 
-void DebugData::Publish(fidl::StringView data_sink, zx::vmo vmo, PublishCompleter::Sync&) {
+void DebugData::Publish(PublishRequestView request, PublishCompleter::Sync&) {
   std::lock_guard<std::mutex> lock(lock_);
-  std::string name(data_sink.data(), data_sink.size());
-  data_[name].push_back(std::move(vmo));
+  std::string name(request->data_sink.data(), request->data_sink.size());
+  data_[name].push_back(std::move(request->data));
 }
 
 std::unordered_map<std::string, std::vector<zx::vmo>> DebugData::TakeData() {
@@ -37,8 +37,9 @@ std::unordered_map<std::string, std::vector<zx::vmo>> DebugData::TakeData() {
   return temp;
 }
 
-void DebugData::LoadConfig(fidl::StringView config_name, LoadConfigCompleter::Sync& completer) {
+void DebugData::LoadConfig(LoadConfigRequestView request, LoadConfigCompleter::Sync& completer) {
   // When loading debug configuration file, we expect an absolute path.
+  const fidl::StringView& config_name = request->config_name;
   if (config_name[0] != '/') {
     // TODO(phosek): Use proper logging mechanism.
     fprintf(stderr, "debugdata: error: LoadConfig: '%.*s' is not an absolute path\n",

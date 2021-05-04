@@ -40,17 +40,17 @@ namespace {
 
 const char kTestHelper[] = "/bin/debugdata-test-helper";
 
-struct DebugData : public fidl::WireInterface<fuchsia_debugdata::DebugData> {
+struct DebugData : public fidl::WireServer<fuchsia_debugdata::DebugData> {
   std::unordered_map<std::string, zx::vmo> data;
   std::unordered_map<std::string, zx::vmo> configs;
 
-  void Publish(fidl::StringView data_sink, zx::vmo vmo, PublishCompleter::Sync&) {
-    std::string name(data_sink.data(), data_sink.size());
-    data.emplace(name, std::move(vmo));
+  void Publish(PublishRequestView request, PublishCompleter::Sync&) override {
+    std::string name(request->data_sink.data(), request->data_sink.size());
+    data.emplace(name, std::move(request->data));
   }
 
-  void LoadConfig(fidl::StringView config_name, LoadConfigCompleter::Sync& completer) {
-    std::string name(config_name.data(), config_name.size());
+  void LoadConfig(LoadConfigRequestView request, LoadConfigCompleter::Sync& completer) override {
+    std::string name(request->config_name.data(), request->config_name.size());
     if (auto it = configs.find(name); it != configs.end()) {
       completer.Reply(std::move(it->second));
     } else {
