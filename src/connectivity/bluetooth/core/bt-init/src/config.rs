@@ -4,8 +4,6 @@
 
 use {
     anyhow::{Context, Error},
-    fidl_fuchsia_bluetooth_control::{ControlMarker, InputCapabilityType, OutputCapabilityType},
-    fuchsia_component::client::App,
     serde::{Deserialize, Serialize},
     serde_json,
     std::{fs::OpenOptions, io::Read},
@@ -15,35 +13,8 @@ static CONFIG_FILE_PATH: &'static str = "/pkg/data/bt-init-default.json";
 
 #[derive(Serialize, Deserialize)]
 pub struct Config {
-    #[serde(rename = "io-capability")]
-    io: IoConfig,
     #[serde(rename = "autostart-snoop")]
     autostart_snoop: bool,
-}
-
-#[derive(Serialize, Deserialize)]
-struct IoConfig {
-    #[serde(with = "InputCapabilityTypeDef")]
-    input: InputCapabilityType,
-    #[serde(with = "OutputCapabilityTypeDef")]
-    output: OutputCapabilityType,
-}
-
-#[derive(Serialize, Deserialize)]
-#[serde(remote = "InputCapabilityType")]
-#[allow(dead_code)]
-pub enum InputCapabilityTypeDef {
-    None = 0,
-    Confirmation = 1,
-    Keyboard = 2,
-}
-
-#[derive(Serialize, Deserialize)]
-#[serde(remote = "OutputCapabilityType")]
-#[allow(dead_code)]
-pub enum OutputCapabilityTypeDef {
-    None = 0,
-    Display = 1,
 }
 
 impl Config {
@@ -58,12 +29,5 @@ impl Config {
 
     pub fn autostart_snoop(&self) -> bool {
         self.autostart_snoop
-    }
-
-    pub async fn set_capabilities(&self, bt_gap: &App) -> Result<(), Error> {
-        let bt_svc = bt_gap
-            .connect_to_protocol::<ControlMarker>()
-            .expect("failed to connect to bluetooth control interface");
-        bt_svc.set_io_capabilities(self.io.input, self.io.output).map_err(Into::into)
     }
 }

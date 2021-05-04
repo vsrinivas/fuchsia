@@ -158,12 +158,8 @@ fn main() -> Result<(), Error> {
                 (None, None, future::ready(()).boxed())
             }
         };
-        info!("Configuring BT-GAP");
-        // First, configure bt-gap
-        cfg.set_capabilities(bt_gap).await.context("Error configuring BT-GAP")?;
-        info!("BT-GAP configuration sent successfully");
 
-        // Then, we can begin serving its services
+        // Now that the child components are launched, we can begin serving bt-init services.
         let mut fs = server::ServiceFs::new();
         fs.dir("svc")
             .add_service_at(AccessMarker::NAME, |chan| Some((AccessMarker::NAME, chan)))
