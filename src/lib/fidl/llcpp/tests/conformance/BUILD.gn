@@ -29,7 +29,10 @@ foreach(gidl_file, conformance_suite_gidl_files) {
     testonly = true
     inputs = [ gidl_file ]
     fidl = conformance_suite_fidl_target
-    deps = [ "//third_party/googletest:gtest" ]
+    deps = [
+      ":conformance_utils",
+      "//third_party/googletest:gtest",
+    ]
     if (is_fuchsia) {
       deps += [ "//sdk/cts/tests/pkg/fidl/cpp:handle_util" ]
     }
@@ -39,9 +42,9 @@ foreach(gidl_file, conformance_suite_gidl_files) {
 test("fidl_llcpp_conformance_tests_bin") {
   output_name = "fidl_llcpp_conformance_tests"
   deps = [
+           ":conformance_utils",
            "//src/lib/fxl/test:gtest_main",
            "//src/tests/fidl/conformance_suite:conformance_fidl_llcpp",
-           "//src/lib/fidl/llcpp/tests/conformance:conformance_utils",
            "//third_party/googletest:gtest",
          ] + gidl_deps
 }
@@ -82,4 +85,8 @@ fuchsia_unittest_package("fidl_llcpp_request_response_tests") {
 source_set("conformance_utils") {
   testonly = true
   public = [ "conformance_utils.h" ]
+  public_deps = [
+    "//zircon/system/public",
+    "//zircon/system/ulib/fidl:fidl-llcpp",
+  ]
 }
