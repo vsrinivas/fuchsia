@@ -395,7 +395,7 @@ fit::promise<inspect::Inspector> DriverRunner::Inspect() {
 }
 
 zx::status<> DriverRunner::PublishComponentRunner(const fbl::RefPtr<fs::PseudoDir>& svc_dir) {
-  const auto service = [this](zx::channel request) {
+  const auto service = [this](fidl::ServerEnd<frunner::ComponentRunner> request) {
     fidl::BindServer(dispatcher_, std::move(request), this);
     return ZX_OK;
   };

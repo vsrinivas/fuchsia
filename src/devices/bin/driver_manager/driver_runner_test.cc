@@ -188,10 +188,10 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
   TestDriverHost& driver_host() { return driver_host_; }
   fidl::Binding<fio::Directory>& driver_dir_binding() { return driver_dir_binding_; }
 
-  zx::channel ConnectToRealm() {
+  fidl::ClientEnd<fuchsia_sys2::Realm> ConnectToRealm() {
     fsys::RealmPtr realm;
     provider_.ConnectToPublicService(realm.NewRequest(loop_.dispatcher()));
-    return realm.Unbind().TakeChannel();
+    return fidl::ClientEnd<fuchsia_sys2::Realm>(realm.Unbind().TakeChannel());
   }
 
   FakeDriverIndex CreateDriverIndex() {
@@ -227,7 +227,8 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
     });
   }
 
-  zx::channel StartDriver(DriverRunner* driver_runner, Driver driver) {
+  fidl::ClientEnd<frunner::ComponentController> StartDriver(DriverRunner* driver_runner,
+                                                            Driver driver) {
     fidl::FidlAllocator allocator;
 
     fidl::VectorView<fdata::wire::DictionaryEntry> program_entries(allocator, 2);
@@ -248,21 +249,22 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
         .set_ns(allocator)
         .set_outgoing_dir(allocator, std::move(outgoing_endpoints->server));
 
-    zx::channel controller_client_end, controller_server_end;
-    EXPECT_EQ(ZX_OK, zx::channel::create(0, &controller_client_end, &controller_server_end));
+    auto controller_endpoints = fidl::CreateEndpoints<frunner::ComponentController>();
+    EXPECT_EQ(ZX_OK, controller_endpoints.status_value());
     TestTransaction transaction(driver.close);
     {
       fidl::WireServer<frunner::ComponentRunner>::StartCompleter::Sync completer(&transaction);
-      fidl::WireRequest<frunner::ComponentRunner::Start> request(0, start_info,
-                                                                 std::move(controller_server_end));
+      fidl::WireRequest<frunner::ComponentRunner::Start> request(
+          0, start_info, std::move(controller_endpoints->server));
       static_cast<fidl::WireServer<frunner::ComponentRunner>*>(driver_runner)
           ->Start(&request, completer);
     }
     loop().RunUntilIdle();
-    return controller_client_end;
+    return std::move(controller_endpoints->client);
   }
 
-  zx::status<zx::channel> StartRootDriver(std::string url, DriverRunner* driver_runner) {
+  zx::status<fidl::ClientEnd<frunner::ComponentController>> StartRootDriver(
+      std::string url, DriverRunner* driver_runner) {
     realm().SetCreateChildHandler([](fsys::CollectionRef collection, fsys::ChildDecl decl) {
       EXPECT_EQ("boot-drivers", collection.name);
       EXPECT_EQ("root", decl.name());
@@ -280,11 +282,10 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
     loop().RunUntilIdle();
 
     StartDriverHost("driver_hosts", "driver_host-0");
-    zx::channel controller =
-        StartDriver(driver_runner, {
-                                       .url = "fuchsia-boot:///#meta/root-driver.cm",
-                                       .binary = "driver/root-driver.so",
-                                   });
+    auto controller = StartDriver(driver_runner, {
+                                                     .url = "fuchsia-boot:///#meta/root-driver.cm",
+                                                     .binary = "driver/root-driver.so",
+                                                 });
     return zx::ok(std::move(controller));
   }
 
@@ -835,7 +836,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_UnbindSecondNode) {
   });
 
   StartDriverHost("driver_hosts", "driver_host-1");
-  zx::channel second_driver =
+  auto second_driver =
       StartDriver(&driver_runner, {
                                       .url = "fuchsia-boot:///#meta/second-driver.cm",
                                       .binary = "driver/second-driver.so",
@@ -849,7 +850,8 @@ TEST_F(DriverRunnerTest, StartSecondDriver_UnbindSecondNode) {
   });
   loop().RunUntilIdle();
   zx_signals_t signals = 0;
-  ASSERT_EQ(ZX_OK, second_driver.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &signals));
+  ASSERT_EQ(ZX_OK, second_driver.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(),
+                                                    &signals));
   ASSERT_TRUE(signals & ZX_CHANNEL_PEER_CLOSED);
 
   // On destruction, we unbind the root node, which stops the root driver.
@@ -896,7 +898,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_CloseSecondDriver) {
   });
 
   StartDriverHost("driver_hosts", "driver_host-1");
-  zx::channel second_driver =
+  auto second_driver =
       StartDriver(&driver_runner, {
                                       .url = "fuchsia-boot:///#meta/second-driver.cm",
                                       .binary = "driver/second-driver.so",
@@ -907,7 +909,8 @@ TEST_F(DriverRunnerTest, StartSecondDriver_CloseSecondDriver) {
   second_request.TakeChannel();
   loop().RunUntilIdle();
   zx_signals_t signals = 0;
-  ASSERT_EQ(ZX_OK, second_driver.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &signals));
+  ASSERT_EQ(ZX_OK, second_driver.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(),
+                                                    &signals));
   ASSERT_TRUE(signals & ZX_CHANNEL_PEER_CLOSED);
 }
 
@@ -947,7 +950,7 @@ TEST_F(DriverRunnerTest, StartDriverChain_UnbindSecondNode) {
 
   constexpr size_t kMaxNodes = 10;
   std::vector<fdf::NodePtr> nodes;
-  std::vector<zx::channel> drivers;
+  std::vector<fidl::ClientEnd<frunner::ComponentController>> drivers;
   for (size_t i = 1; i <= kMaxNodes; i++) {
     driver_host().SetStartHandler([this, &nodes, i](fdf::DriverStartArgs start_args, auto request) {
       Emplace(std::move(request));
@@ -1025,7 +1028,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_UnbindRootNode) {
   });
 
   StartDriverHost("driver_hosts", "driver_host-1");
-  zx::channel second_driver =
+  auto second_driver =
       StartDriver(&driver_runner, {
                                       .url = "fuchsia-boot:///#meta/second-driver.cm",
                                       .binary = "driver/second-driver.so",
@@ -1069,13 +1072,12 @@ TEST_F(DriverRunnerTest, StartSecondDriver_StopRootDriver) {
   });
   auto root_driver = StartRootDriver("fuchsia-boot:///#meta/root-driver.cm", &driver_runner);
   ASSERT_TRUE(root_driver.is_ok());
-  zx::unowned_channel unowned_root_driver(root_driver.value());
 
   driver_host().SetStartHandler(
       [this](fdf::DriverStartArgs start_args, auto request) { Emplace(std::move(request)); });
 
   StartDriverHost("driver_hosts", "driver_host-1");
-  zx::channel second_driver =
+  auto second_driver =
       StartDriver(&driver_runner, {
                                       .url = "fuchsia-boot:///#meta/second-driver.cm",
                                       .binary = "driver/second-driver.so",
