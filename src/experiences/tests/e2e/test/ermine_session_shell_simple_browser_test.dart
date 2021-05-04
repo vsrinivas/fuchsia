@@ -28,7 +28,7 @@ const testserverUrl =
 // 3: Text input field test
 // 4: Audio test
 // 5: Keyboard shortcut test.
-const skipTests = [false, false, true, true, true, true];
+const skipTests = [false, false, true, true, false, true];
 
 void main() {
   Sl4f sl4f;
@@ -509,8 +509,7 @@ void main() {
     browser = await ermine.launchAndWaitForSimpleBrowser();
 
     final record = Audio(sl4f);
-    // TODO(fxb/74647): Need a way to avoid hardcoding api key.
-    final gcloud = GCloud.withClientViaApiKey('key');
+    final gcloud = GCloud();
 
     // Access to audio.html where the following audio is played:
     // experiences/bin/ermine_testserver/public/simple_browser_test/sample_audio.mp3
@@ -533,16 +532,27 @@ void main() {
     expect(playButton, isNotNull);
     print('The PLAY button is found.');
 
+    // Note that it doesn't work locally. You should create GCloud using
+    // `GCloud.withClientViaApiKey()` with an API key for local testing.
+    await gcloud.setClientFromMetadata();
+    print('Set an authenticated gcloud client');
+
+    // Plays the audio, records it, sends it to gcloud for speech-to-text, and
+    // verifies if the text result is what we expect.
+    // Retries this process for a few more times if it fails since the audio
+    // sometimes sounds janky.
     final ttsResult = await ermine.waitFor(() async {
-      // Starts recording.
+      print('Start recording audio.');
       await record.startOutputSave();
       await Future.delayed(_timeoutOneSec);
       playButton.click();
-      // The audio play time.
+
+      // Waits for the audio being played to the end.
       await Future.delayed(Duration(seconds: 5));
-      // Finishes recording.
+
       await record.stopOutputSave();
       final audioOutput = await record.getOutputAudio();
+      print('Stopped recording audio.');
 
       final ttsList =
           await speechToText(gcloud.speech, audioOutput.audioData, 'en-us');
