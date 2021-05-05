@@ -98,14 +98,14 @@ class DeviceInterface : public fidl::WireServer<netdev::Device>,
   fbl::RefPtr<RefCountedFifo> primary_rx_fifo();
 
   // Commits all pending rx buffers in all active sessions.
-  void CommitAllSessions() __TA_REQUIRES_SHARED(control_lock_);
+  void CommitAllSessions() __TA_REQUIRES_SHARED(control_lock_) __TA_REQUIRES(rx_lock_);
   // Copies the received data described by `buff` to all sessions other than `owner`.
   void CopySessionData(const Session& owner, uint16_t owner_index, const rx_buffer_t* buff)
-      __TA_REQUIRES_SHARED(control_lock_);
+      __TA_REQUIRES_SHARED(control_lock_) __TA_REQUIRES(rx_lock_);
   // Notifies all listening sessions of a new tx transaction from session `owner` and descriptor
-  // `owner_index`. Returns true if any listening sessions copied the data.
-  bool ListenSessionData(const Session& owner, uint16_t owner_index)
-      __TA_REQUIRES_SHARED(control_lock_);
+  // `owner_index`.
+  void ListenSessionData(const Session& owner, fbl::Span<const uint16_t> descriptors)
+      __TA_REQUIRES(tx_lock_) __TA_EXCLUDES(control_lock_, rx_lock_);
 
   // Notifies that a batch of Tx frames has been returned.
   //

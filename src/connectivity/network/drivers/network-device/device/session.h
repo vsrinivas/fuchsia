@@ -116,8 +116,11 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
     ZX_DEBUG_ASSERT(parent_ == &parent);
   }
   void AssertParentControlLockShared(DeviceInterface& parent)
-      __TA_ASSERT_SHARED(parent_->control_lock(), parent.control_lock())
-          __TA_REQUIRES_SHARED(parent.control_lock()) {
+      __TA_ASSERT_SHARED(parent_->control_lock()) __TA_REQUIRES_SHARED(parent.control_lock()) {
+    ZX_DEBUG_ASSERT(parent_ == &parent);
+  }
+  void AssertParentRxLock(DeviceInterface& parent) __TA_ASSERT(parent_->rx_lock())
+      __TA_REQUIRES(parent.rx_lock()) {
     ZX_DEBUG_ASSERT(parent_ == &parent);
   }
 
@@ -146,16 +149,16 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   zx_status_t FillRxSpace(uint16_t descriptor_index, rx_space_buffer_t* buff);
   // Completes rx for `descriptor_index`. Returns true if the buffer can be immediately reused.
   bool CompleteRx(uint16_t descriptor_index, const rx_buffer_t* buff)
-      __TA_REQUIRES_SHARED(parent_->control_lock());
+      __TA_REQUIRES_SHARED(parent_->control_lock()) __TA_REQUIRES(parent_->rx_lock());
   // Completes rx by copying the data from another session into one of this session's available rx
   // buffers.
   void CompleteRxWith(const Session& owner, uint16_t owner_index, const rx_buffer_t* buff)
-      __TA_REQUIRES_SHARED(parent_->control_lock());
+      __TA_REQUIRES_SHARED(parent_->control_lock()) __TA_REQUIRES(parent_->rx_lock());
   // Copies data from a tx frame from another session into one of this session's available rx
   // buffers.
-  bool ListenFromTx(const Session& owner, uint16_t owner_index);
+  bool ListenFromTx(const Session& owner, uint16_t owner_index) __TA_REQUIRES(parent_->rx_lock());
   // Commits pending rx buffers, sending them back to the session client.
-  void CommitRx();
+  void CommitRx() __TA_REQUIRES(parent_->rx_lock());
   // Returns true iff the session is subscribed to frame_type on port.
   bool IsSubscribedToFrameType(uint8_t port, uint8_t frame_type)
       __TA_REQUIRES_SHARED(parent_->control_lock());
@@ -215,17 +218,19 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   zx::status<bool> DetachPortLocked(uint8_t port_id) __TA_REQUIRES(parent_->control_lock());
 
   // Fetch tx descriptors from the FIFO and queue them in the parent `DeviceInterface`'s TxQueue.
-  zx_status_t FetchTx();
+  zx_status_t FetchTx()
+      __TA_EXCLUDES(parent_->control_lock(), parent_->rx_lock(), parent_->tx_lock());
   buffer_descriptor_t* descriptor(uint16_t index);
 
   const buffer_descriptor_t* descriptor(uint16_t index) const;
   fbl::Span<uint8_t> data_at(uint64_t offset, uint64_t len) const;
   // Loads a completed rx buffer information back into the descriptor with the provided index.
-  zx_status_t LoadRxInfo(uint16_t descriptor_index, const rx_buffer_t* buff);
+  zx_status_t LoadRxInfo(uint16_t descriptor_index, const rx_buffer_t* buff)
+      __TA_REQUIRES(parent_->rx_lock());
   // Loads all rx descriptors that are already available into the given transaction.
   bool LoadAvailableRxDescriptors(RxQueue::SessionTransaction& transact);
   // Fetches rx descriptors from the rx FIFO.
-  zx_status_t FetchRxDescriptors();
+  zx_status_t FetchRxDescriptors() __TA_REQUIRES(parent_->rx_lock());
 
   async_dispatcher_t* const dispatcher_;
   const std::array<char, netdev::wire::kMaxSessionName + 1> name_;
@@ -260,10 +265,10 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   // Pointer to parent network device, not owned.
   DeviceInterface* const parent_;
   std::optional<thrd_t> thread_;
-  std::unique_ptr<uint16_t[]> rx_return_queue_;
-  size_t rx_return_queue_count_ = 0;
-  std::unique_ptr<uint16_t[]> rx_avail_queue_;
-  size_t rx_avail_queue_count_ = 0;
+  std::unique_ptr<uint16_t[]> rx_return_queue_ __TA_GUARDED(parent_->rx_lock());
+  size_t rx_return_queue_count_ __TA_GUARDED(parent_->rx_lock()) = 0;
+  std::unique_ptr<uint16_t[]> rx_avail_queue_ __TA_GUARDED(parent_->rx_lock());
+  size_t rx_avail_queue_count_ __TA_GUARDED(parent_->rx_lock()) = 0;
 
   std::atomic<size_t> in_flight_tx_ = 0;
   std::atomic<size_t> in_flight_rx_ = 0;

@@ -163,19 +163,30 @@ zx::status<netdev::wire::Fifos> Session::Init() {
     return zx::error(status);
   }
 
-  rx_return_queue_.reset(new (&ac) uint16_t[parent_->rx_fifo_depth()]);
-  if (!ac.check()) {
-    LOGF_ERROR("network-device(%s): failed to create return queue", name());
-    return zx::error(ZX_ERR_NO_MEMORY);
-  }
-  rx_return_queue_count_ = 0;
+  {
+    zx_status_t status = [this, &ac]() {
+      // Lie about holding the parent receive lock. This is an initialization function we can't be
+      // racing with anything.
+      []() __TA_ASSERT(parent_->rx_lock()) {}();
+      rx_return_queue_.reset(new (&ac) uint16_t[parent_->rx_fifo_depth()]);
+      if (!ac.check()) {
+        LOGF_ERROR("network-device(%s): failed to create return queue", name());
+        ZX_ERR_NO_MEMORY;
+      }
+      rx_return_queue_count_ = 0;
 
-  rx_avail_queue_.reset(new (&ac) uint16_t[parent_->rx_fifo_depth()]);
-  if (!ac.check()) {
-    LOGF_ERROR("network-device(%s): failed to create return queue", name());
-    return zx::error(ZX_ERR_NO_MEMORY);
+      rx_avail_queue_.reset(new (&ac) uint16_t[parent_->rx_fifo_depth()]);
+      if (!ac.check()) {
+        LOGF_ERROR("network-device(%s): failed to create return queue", name());
+        return ZX_ERR_NO_MEMORY;
+      }
+      rx_avail_queue_count_ = 0;
+      return ZX_OK;
+    }();
+    if (status != ZX_OK) {
+      return zx::error(status);
+    }
   }
-  rx_avail_queue_count_ = 0;
 
   thrd_t thread;
   if (thrd_create_with_name(
@@ -352,18 +363,20 @@ zx_status_t Session::FetchTx() {
     return status;
   }
 
-  uint16_t* desc_idx = fetch_buffer;
-  auto req_header_length = parent_->info().tx_head_length;
-  auto req_tail_length = parent_->info().tx_tail_length;
+  fbl::Span descriptors(fetch_buffer, read);
+  // Let other sessions know of tx data.
+  transaction.AssertParentTxLock(*parent_);
+  parent_->ListenSessionData(*this, descriptors);
 
-  bool notify_listeners = false;
+  uint32_t req_header_length = parent_->info().tx_head_length;
+  uint32_t req_tail_length = parent_->info().tx_tail_length;
 
   uint32_t total_length = 0;
   SharedAutoLock lock(&parent_->control_lock());
-  while (read > 0) {
-    auto* desc = descriptor(*desc_idx);
+  for (uint16_t desc_idx : descriptors) {
+    auto* desc = descriptor(desc_idx);
     if (!desc) {
-      LOGF_ERROR("network-device(%s): received out of bounds descriptor: %d", name(), *desc_idx);
+      LOGF_ERROR("network-device(%s): received out of bounds descriptor: %d", name(), desc_idx);
       return ZX_ERR_IO_INVALID;
     }
 
@@ -380,7 +393,7 @@ zx_status_t Session::FetchTx() {
       // fine to return one of these buffers at a time.
       desc->return_flags = static_cast<uint32_t>(netdev::wire::TxReturnFlags::kTxRetError |
                                                  netdev::wire::TxReturnFlags::kTxRetNotAvailable);
-      zx_status_t status = fifo_tx_.write(sizeof(*desc_idx), desc_idx, 1, nullptr);
+      zx_status_t status = fifo_tx_.write(sizeof(desc_idx), &desc_idx, 1, nullptr);
       switch (status) {
         case ZX_OK:
           break;
@@ -392,8 +405,6 @@ zx_status_t Session::FetchTx() {
                      name(), desc->port_id, zx_status_get_string(status));
           return ZX_ERR_IO_INVALID;
       }
-      desc_idx++;
-      read--;
       continue;
     }
     AttachedPort& port = slot.value();
@@ -482,16 +493,7 @@ zx_status_t Session::FetchTx() {
                  total_length, parent_->info().min_tx_buffer_length);
       return ZX_ERR_IO_INVALID;
     }
-
-    // notify parent so we can copy this to any listening sessions
-    notify_listeners |= parent_->ListenSessionData(*this, *desc_idx);
-    transaction.Push(*desc_idx);
-    desc_idx++;
-    read--;
-  }
-
-  if (notify_listeners) {
-    parent_->CommitAllSessions();
+    transaction.Push(desc_idx);
   }
 
   return transaction.overrun() ? ZX_ERR_IO_OVERRUN : ZX_OK;
@@ -676,6 +678,7 @@ void Session::ReturnTxDescriptors(const uint16_t* descriptors, uint32_t count) {
 }
 
 bool Session::LoadAvailableRxDescriptors(RxQueue::SessionTransaction& transact) {
+  transact.AssertLock(*parent_);
   if (rx_avail_queue_count_ == 0) {
     return false;
   }
@@ -703,6 +706,7 @@ zx_status_t Session::FetchRxDescriptors() {
 }
 
 zx_status_t Session::LoadRxDescriptors(RxQueue::SessionTransaction& transact) {
+  transact.AssertLock(*parent_);
   if (rx_avail_queue_count_ == 0) {
     zx_status_t status = FetchRxDescriptors();
     if (status != ZX_OK) {
@@ -869,24 +873,24 @@ void Session::CompleteRxWith(const Session& owner, uint16_t owner_index, const r
 bool Session::ListenFromTx(const Session& owner, uint16_t owner_index) {
   ZX_ASSERT(&owner != this);
   if (IsPaused()) {
-    // do nothing if we're paused
+    // Do nothing if we're paused.
     return false;
   }
 
   if (rx_avail_queue_count_ == 0) {
-    // can't do much if we can't fetch more descriptors
+    // Can't do much if we can't fetch more descriptors.
     if (FetchRxDescriptors() != ZX_OK) {
       LOGF_TRACE("network-device(%s): Failed to fetch rx descriptors for Tx listening", name());
       return false;
     }
   }
-  // shouldn't get here without available descriptors
+  // Shouldn't get here without available descriptors.
   ZX_ASSERT(rx_avail_queue_count_ > 0);
   rx_avail_queue_count_--;
   auto target_desc = rx_avail_queue_[rx_avail_queue_count_];
 
-  auto* owner_desc = owner.descriptor(owner_index);
-  auto* desc = descriptor(target_desc);
+  const buffer_descriptor_t* owner_desc = owner.descriptor(owner_index);
+  buffer_descriptor_t* desc = descriptor(target_desc);
   // NOTE(brunodalbo) Do we want to listen on info as well?
   desc->info_type = static_cast<uint32_t>(netdev::wire::InfoType::kNoInfo);
   desc->frame_type = owner_desc->frame_type;
@@ -894,18 +898,19 @@ bool Session::ListenFromTx(const Session& owner, uint16_t owner_index) {
 
   uint64_t my_offset = 0;
   uint64_t owner_offset = 0;
-  // start copying the data over:
+  // Start copying the data over:
   while (owner_desc) {
     if (!desc) {
-      // not enough space to put data
+      // Not enough space to put data.
       break;
     }
-    auto me_avail = desc->data_length - my_offset;
-    auto owner_avail = owner_desc->data_length - owner_offset;
-    auto copy = me_avail < owner_avail ? me_avail : owner_avail;
+    uint64_t me_avail = desc->data_length - my_offset;
+    uint64_t owner_avail = owner_desc->data_length - owner_offset;
+    uint64_t copy = me_avail < owner_avail ? me_avail : owner_avail;
 
-    auto target = data_at(desc->offset + desc->head_length + my_offset, copy);
-    auto src = owner.data_at(owner_desc->offset + owner_desc->head_length + owner_offset, copy);
+    fbl::Span target = data_at(desc->offset + desc->head_length + my_offset, copy);
+    fbl::Span src =
+        owner.data_at(owner_desc->offset + owner_desc->head_length + owner_offset, copy);
     std::copy_n(src.begin(), std::min(target.size(), src.size()), target.begin());
 
     my_offset += copy;
@@ -929,17 +934,17 @@ bool Session::ListenFromTx(const Session& owner, uint16_t owner_index) {
   }
   if (owner_desc) {
     LOGF_TRACE("network-device(%s): Failed to copy data from tx listen", name());
-    // did not reach end of data, just return descriptor to queue.
+    // Did not reach end of data, just return descriptor to queue.
     rx_avail_queue_[rx_avail_queue_count_] = target_desc;
     rx_avail_queue_count_++;
     return false;
   }
   if (desc) {
-    // set length in last buffer
+    // Set length in last buffer.
     desc->data_length = static_cast<uint32_t>(my_offset);
   }
 
-  // add the descriptor to the return queue.
+  // Add the descriptor to the return queue.
   rx_return_queue_[rx_return_queue_count_] = target_desc;
   rx_return_queue_count_++;
 

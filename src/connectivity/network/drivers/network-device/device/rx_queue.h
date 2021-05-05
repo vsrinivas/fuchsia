@@ -60,6 +60,9 @@ class RxQueue {
     ~SessionTransaction() __TA_REQUIRES(queue_->parent_->rx_lock()) = default;
     uint32_t remaining();
     void Push(Session* session, uint16_t descriptor);
+    void AssertLock(DeviceInterface& parent) __TA_ASSERT(parent.rx_lock()) {
+      ZX_DEBUG_ASSERT(queue_->parent_ == &parent);
+    }
 
    private:
     // Pointer to parent queue, not owned.

@@ -992,9 +992,11 @@ zx::status<std::pair<uint8_t, DataVmoStore::StoredVmo*>> DeviceInterface::Regist
 
 void DeviceInterface::CommitAllSessions() {
   if (primary_session_) {
+    primary_session_->AssertParentRxLock(*this);
     primary_session_->CommitRx();
   }
   for (auto& session : sessions_) {
+    session.AssertParentRxLock(*this);
     session.CommitRx();
   }
   PruneDeadSessions();
@@ -1003,34 +1005,46 @@ void DeviceInterface::CommitAllSessions() {
 void DeviceInterface::CopySessionData(const Session& owner, uint16_t owner_index,
                                       const rx_buffer_t* buff) {
   if (primary_session_ && primary_session_.get() != &owner) {
+    primary_session_->AssertParentRxLock(*this);
     primary_session_->AssertParentControlLockShared(*this);
     primary_session_->CompleteRxWith(owner, owner_index, buff);
   }
 
   for (auto& session : sessions_) {
     if (&session != &owner) {
+      session.AssertParentRxLock(*this);
       session.AssertParentControlLockShared(*this);
       session.CompleteRxWith(owner, owner_index, buff);
     }
   }
 }
 
-bool DeviceInterface::ListenSessionData(const Session& owner, uint16_t owner_index) {
+void DeviceInterface::ListenSessionData(const Session& owner,
+                                        fbl::Span<const uint16_t> descriptors) {
   if ((device_info_.device_features & FEATURE_NO_AUTO_SNOOP) ||
       !has_listen_sessions_.load(std::memory_order_relaxed)) {
-    // Avoid walking through sessions if we know no listen sessions are attached.
-    return false;
+    // Avoid walking through sessions and acquiring Rx lock if we know no listen sessions are
+    // attached.
+    return;
   }
+  fbl::AutoLock rx_lock(&rx_lock_);
+  SharedAutoLock control(&control_lock_);
   bool copied = false;
-  if (primary_session_ && primary_session_.get() != &owner && primary_session_->IsListen()) {
-    copied |= primary_session_->ListenFromTx(owner, owner_index);
-  }
-  for (auto& s : sessions_) {
-    if (&s != &owner && s.IsListen()) {
-      copied |= s.ListenFromTx(owner, owner_index);
+  for (const uint16_t& descriptor : descriptors) {
+    if (primary_session_ && primary_session_.get() != &owner && primary_session_->IsListen()) {
+      primary_session_->AssertParentRxLock(*this);
+      copied |= primary_session_->ListenFromTx(owner, descriptor);
+    }
+    for (auto& s : sessions_) {
+      if (&s != &owner && s.IsListen()) {
+        s.AssertParentRxLock(*this);
+        copied |= s.ListenFromTx(owner, descriptor);
+      }
     }
   }
-  return copied;
+  if (copied) {
+    CommitAllSessions();
+  }
 }
 
 zx_status_t DeviceInterface::LoadRxDescriptors(RxSessionTransaction& transact) {

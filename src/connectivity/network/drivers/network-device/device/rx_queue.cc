@@ -215,6 +215,7 @@ void RxQueue::CompleteRxList(const rx_buffer_t* rx, size_t count) {
     // Mark that the buffer does not belong to device anymore:
     session_buffer.flags &= static_cast<uint16_t>(~kDeviceHasBuffer);
     session_buffer.session->AssertParentControlLockShared(*parent_);
+    session_buffer.session->AssertParentRxLock(*parent_);
     if (session_buffer.session->CompleteRx(session_buffer.descriptor_index, rx)) {
       // We can reuse the descriptor.
       available_queue_->Push(rx->id);

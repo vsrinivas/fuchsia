@@ -58,6 +58,10 @@ class TxQueue {
     void Push(uint16_t descriptor)
         __TA_REQUIRES(queue_->parent_->tx_lock(), queue_->parent_->tx_buffers_lock());
 
+    void AssertParentTxLock(DeviceInterface& parent) __TA_ASSERT(parent.tx_lock()) {
+      ZX_DEBUG_ASSERT(&parent == queue_->parent_);
+    }
+
    private:
     // Pointer to queue over which transaction is opened, not owned.
     TxQueue* const queue_;
