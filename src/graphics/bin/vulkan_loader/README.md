@@ -30,9 +30,8 @@ doesn't enforce this layout, however.
 ### ICD shared libraries
 
 ICD shared libraries should match the [Vulkan ICD ABI][ICD]. ICDs are
-executable shared libraries so they must be in the `lib` directory of a
-package, since other directories are not allow to serve executable
-[VMOs][VMO].
+executable shared libraries and can be placed in most subdirectories (not `/bin`)
+of the package.
 
 ### Component manifest
 
