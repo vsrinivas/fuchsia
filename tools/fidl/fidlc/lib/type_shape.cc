@@ -164,11 +164,11 @@ class UnalignedSizeVisitor final : public TypeShapeVisitor<DataSize> {
   std::any Visit(const flat::RequestHandleType& object) override { return DataSize(kHandleSize); }
 
   std::any Visit(const flat::Enum& object) override {
-    return UnalignedSize(object.subtype_ctor->type);
+    return UnalignedSize(GetType(object.subtype_ctor));
   }
 
   std::any Visit(const flat::Bits& object) override {
-    return UnalignedSize(object.subtype_ctor->type);
+    return UnalignedSize(GetType(object.subtype_ctor));
   }
 
   std::any Visit(const flat::Service& object) override { return DataSize(kHandleSize); }
@@ -198,7 +198,7 @@ class UnalignedSizeVisitor final : public TypeShapeVisitor<DataSize> {
   }
 
   std::any Visit(const flat::Struct::Member& object) override {
-    return UnalignedSize(object.type_ctor->type);
+    return UnalignedSize(flat::GetType(object.type_ctor));
   }
 
   std::any Visit(const flat::Table& object) override { return DataSize(16); }
@@ -208,7 +208,7 @@ class UnalignedSizeVisitor final : public TypeShapeVisitor<DataSize> {
   }
 
   std::any Visit(const flat::Table::Member::Used& object) override {
-    return UnalignedSize(object.type_ctor->type);
+    return UnalignedSize(GetType(object.type_ctor));
   }
 
   std::any Visit(const flat::Union& object) override { return DataSize(24); }
@@ -218,7 +218,7 @@ class UnalignedSizeVisitor final : public TypeShapeVisitor<DataSize> {
   }
 
   std::any Visit(const flat::Union::Member::Used& object) override {
-    return UnalignedSize(object.type_ctor->type);
+    return UnalignedSize(GetType(object.type_ctor));
   }
 
   std::any Visit(const flat::Protocol& object) override { return DataSize(kHandleSize); }
@@ -271,9 +271,13 @@ class AlignmentVisitor final : public TypeShapeVisitor<DataSize> {
 
   std::any Visit(const flat::RequestHandleType& object) override { return DataSize(kHandleSize); }
 
-  std::any Visit(const flat::Enum& object) override { return Alignment(object.subtype_ctor->type); }
+  std::any Visit(const flat::Enum& object) override {
+    return Alignment(GetType(object.subtype_ctor));
+  }
 
-  std::any Visit(const flat::Bits& object) override { return Alignment(object.subtype_ctor->type); }
+  std::any Visit(const flat::Bits& object) override {
+    return Alignment(GetType(object.subtype_ctor));
+  }
 
   std::any Visit(const flat::Service& object) override { return DataSize(kHandleSize); }
 
@@ -308,7 +312,7 @@ class AlignmentVisitor final : public TypeShapeVisitor<DataSize> {
   }
 
   std::any Visit(const flat::Struct::Member& object) override {
-    return Alignment(object.type_ctor->type);
+    return Alignment(flat::GetType(object.type_ctor));
   }
 
   std::any Visit(const flat::Table& object) override { return DataSize(8); }
@@ -318,7 +322,7 @@ class AlignmentVisitor final : public TypeShapeVisitor<DataSize> {
   }
 
   std::any Visit(const flat::Table::Member::Used& object) override {
-    return Alignment(object.type_ctor->type);
+    return Alignment(GetType(object.type_ctor));
   }
 
   std::any Visit(const flat::Union& object) override { return DataSize(8); }
@@ -328,7 +332,7 @@ class AlignmentVisitor final : public TypeShapeVisitor<DataSize> {
   }
 
   std::any Visit(const flat::UnionMember::Used& object) override {
-    return Alignment(object.type_ctor->type);
+    return Alignment(GetType(object.type_ctor));
   }
 
   std::any Visit(const flat::Protocol& object) override { return DataSize(kHandleSize); }
@@ -402,9 +406,9 @@ class DepthVisitor : public TypeShapeVisitor<DataSize> {
 
   std::any Visit(const flat::RequestHandleType& object) override { return DataSize(0); }
 
-  std::any Visit(const flat::Enum& object) override { return Depth(object.subtype_ctor->type); }
+  std::any Visit(const flat::Enum& object) override { return Depth(GetType(object.subtype_ctor)); }
 
-  std::any Visit(const flat::Bits& object) override { return Depth(object.subtype_ctor->type); }
+  std::any Visit(const flat::Bits& object) override { return Depth(GetType(object.subtype_ctor)); }
 
   std::any Visit(const flat::Service& object) override { return DataSize(0); }
 
@@ -423,7 +427,7 @@ class DepthVisitor : public TypeShapeVisitor<DataSize> {
   }
 
   std::any Visit(const flat::Struct::Member& object) override {
-    return Depth(object.type_ctor->type);
+    return Depth(flat::GetType(object.type_ctor));
   }
 
   std::any Visit(const flat::Table& object) override {
@@ -441,7 +445,7 @@ class DepthVisitor : public TypeShapeVisitor<DataSize> {
   }
 
   std::any Visit(const flat::Table::Member::Used& object) override {
-    return DataSize(1) + Depth(object.type_ctor->type);
+    return DataSize(1) + Depth(GetType(object.type_ctor));
   }
 
   std::any Visit(const flat::Union& object) override {
@@ -459,7 +463,7 @@ class DepthVisitor : public TypeShapeVisitor<DataSize> {
   }
 
   std::any Visit(const flat::Union::Member::Used& object) override {
-    return Depth(object.type_ctor->type);
+    return Depth(GetType(object.type_ctor));
   }
 
   std::any Visit(const flat::Protocol& object) override { return DataSize(0); }
@@ -537,11 +541,11 @@ class MaxHandlesVisitor final : public flat::Object::Visitor<DataSize> {
   std::any Visit(const flat::RequestHandleType& object) override { return DataSize(1); }
 
   std::any Visit(const flat::Enum& object) override {
-    return MaxHandles(object.subtype_ctor->type);
+    return MaxHandles(GetType(object.subtype_ctor));
   }
 
   std::any Visit(const flat::Bits& object) override {
-    return MaxHandles(object.subtype_ctor->type);
+    return MaxHandles(GetType(object.subtype_ctor));
   }
 
   std::any Visit(const flat::Service& object) override { return DataSize(1); }
@@ -553,7 +557,7 @@ class MaxHandlesVisitor final : public flat::Object::Visitor<DataSize> {
     // all current tests and Fuchsia compilation, so fixing it isn't super-urgent.
     if (object.recursive) {
       for (const auto& member : object.members) {
-        switch (member.type_ctor->type->kind) {
+        switch (flat::GetType(member.type_ctor)->kind) {
           case flat::Type::Kind::kHandle:
           case flat::Type::Kind::kRequestHandle:
             return std::numeric_limits<DataSize>::max();
@@ -579,7 +583,7 @@ class MaxHandlesVisitor final : public flat::Object::Visitor<DataSize> {
   }
 
   std::any Visit(const flat::Struct::Member& object) override {
-    return MaxHandles(object.type_ctor->type);
+    return MaxHandles(flat::GetType(object.type_ctor));
   }
 
   std::any Visit(const flat::Table& object) override {
@@ -597,7 +601,7 @@ class MaxHandlesVisitor final : public flat::Object::Visitor<DataSize> {
   }
 
   std::any Visit(const flat::Table::Member::Used& object) override {
-    return MaxHandles(object.type_ctor->type);
+    return MaxHandles(GetType(object.type_ctor));
   }
 
   std::any Visit(const flat::Union& object) override {
@@ -615,7 +619,7 @@ class MaxHandlesVisitor final : public flat::Object::Visitor<DataSize> {
   }
 
   std::any Visit(const flat::Union::Member::Used& object) override {
-    return MaxHandles(object.type_ctor->type);
+    return MaxHandles(GetType(object.type_ctor));
   }
 
   std::any Visit(const flat::Protocol& object) override { return DataSize(1); }
@@ -678,11 +682,11 @@ class MaxOutOfLineVisitor final : public TypeShapeVisitor<DataSize> {
   std::any Visit(const flat::RequestHandleType& object) override { return DataSize(0); }
 
   std::any Visit(const flat::Enum& object) override {
-    return MaxOutOfLine(object.subtype_ctor->type);
+    return MaxOutOfLine(GetType(object.subtype_ctor));
   }
 
   std::any Visit(const flat::Bits& object) override {
-    return MaxOutOfLine(object.subtype_ctor->type);
+    return MaxOutOfLine(GetType(object.subtype_ctor));
   }
 
   std::any Visit(const flat::Service& object) override { return DataSize(0); }
@@ -698,7 +702,7 @@ class MaxOutOfLineVisitor final : public TypeShapeVisitor<DataSize> {
   }
 
   std::any Visit(const flat::Struct::Member& object) override {
-    return MaxOutOfLine(object.type_ctor->type);
+    return MaxOutOfLine(flat::GetType(object.type_ctor));
   }
 
   std::any Visit(const flat::Table& object) override {
@@ -733,7 +737,7 @@ class MaxOutOfLineVisitor final : public TypeShapeVisitor<DataSize> {
   }
 
   std::any Visit(const flat::Table::Member::Used& object) override {
-    return ObjectAlign(MaxOutOfLine(object.type_ctor->type));
+    return ObjectAlign(MaxOutOfLine(GetType(object.type_ctor)));
   }
 
   std::any Visit(const flat::Union& object) override {
@@ -753,7 +757,7 @@ class MaxOutOfLineVisitor final : public TypeShapeVisitor<DataSize> {
   }
 
   std::any Visit(const flat::Union::Member::Used& object) override {
-    return MaxOutOfLine(object.type_ctor->type);
+    return MaxOutOfLine(GetType(object.type_ctor));
   }
 
   std::any Visit(const flat::Protocol& object) override { return DataSize(0); }
@@ -827,11 +831,11 @@ class HasPaddingVisitor final : public TypeShapeVisitor<bool> {
   std::any Visit(const flat::RequestHandleType& object) override { return false; }
 
   std::any Visit(const flat::Enum& object) override {
-    return HasPadding(object.subtype_ctor->type);
+    return HasPadding(GetType(object.subtype_ctor));
   }
 
   std::any Visit(const flat::Bits& object) override {
-    return HasPadding(object.subtype_ctor->type);
+    return HasPadding(GetType(object.subtype_ctor));
   }
 
   std::any Visit(const flat::Service& object) override { return false; }
@@ -847,7 +851,8 @@ class HasPaddingVisitor final : public TypeShapeVisitor<bool> {
   }
 
   std::any Visit(const flat::Struct::Member& object) override {
-    return object.fieldshape(wire_format()).Padding() > 0 || HasPadding(object.type_ctor->type);
+    return object.fieldshape(wire_format()).Padding() > 0 ||
+           HasPadding(flat::GetType(object.type_ctor));
   }
 
   std::any Visit(const flat::Table& object) override {
@@ -865,8 +870,8 @@ class HasPaddingVisitor final : public TypeShapeVisitor<bool> {
   }
 
   std::any Visit(const flat::Table::Member::Used& object) override {
-    return Padding(UnalignedSize(object.type_ctor->type, wire_format()), 8) > 0 ||
-           HasPadding(object.type_ctor->type) || object.fieldshape(wire_format()).Padding() > 0;
+    return Padding(UnalignedSize(GetType(object.type_ctor), wire_format()), 8) > 0 ||
+           HasPadding(GetType(object.type_ctor)) || object.fieldshape(wire_format()).Padding() > 0;
   }
 
   std::any Visit(const flat::Union& object) override {
@@ -925,11 +930,11 @@ class HasFlexibleEnvelopeVisitor final : public TypeShapeVisitor<bool> {
   std::any Visit(const flat::RequestHandleType& object) override { return false; }
 
   std::any Visit(const flat::Enum& object) override {
-    return HasFlexibleEnvelope(object.subtype_ctor->type, wire_format());
+    return HasFlexibleEnvelope(GetType(object.subtype_ctor), wire_format());
   }
 
   std::any Visit(const flat::Bits& object) override {
-    return HasFlexibleEnvelope(object.subtype_ctor->type, wire_format());
+    return HasFlexibleEnvelope(GetType(object.subtype_ctor), wire_format());
   }
 
   std::any Visit(const flat::Service& object) override { return false; }
@@ -945,7 +950,7 @@ class HasFlexibleEnvelopeVisitor final : public TypeShapeVisitor<bool> {
   }
 
   std::any Visit(const flat::Struct::Member& object) override {
-    return HasFlexibleEnvelope(object.type_ctor->type, wire_format());
+    return HasFlexibleEnvelope(flat::GetType(object.type_ctor), wire_format());
   }
 
   std::any Visit(const flat::Table& object) override {
@@ -967,7 +972,7 @@ class HasFlexibleEnvelopeVisitor final : public TypeShapeVisitor<bool> {
   }
 
   std::any Visit(const flat::Table::Member::Used& object) override {
-    return HasFlexibleEnvelope(object.type_ctor->type, wire_format());
+    return HasFlexibleEnvelope(GetType(object.type_ctor), wire_format());
   }
 
   std::any Visit(const flat::Union& object) override {
@@ -989,7 +994,7 @@ class HasFlexibleEnvelopeVisitor final : public TypeShapeVisitor<bool> {
   }
 
   std::any Visit(const flat::Union::Member::Used& object) override {
-    return HasFlexibleEnvelope(object.type_ctor->type, wire_format());
+    return HasFlexibleEnvelope(GetType(object.type_ctor), wire_format());
   }
 
   std::any Visit(const flat::Protocol& object) override { return false; }

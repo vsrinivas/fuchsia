@@ -17,10 +17,11 @@ void CheckPrimitiveType(Library* library, Typespace* typespace, const char* name
 
   auto the_type_name = Name::CreateDerived(library, SourceSpan(), std::string(name));
   const Type* the_type;
+  LayoutInvocation invocation;
   ASSERT_TRUE(typespace->Create(
       LibraryMediator(library), the_type_name, nullptr /* maybe_arg_type */,
       std::optional<Name>() /* handle_subtype_identifier */, nullptr /* handle_rights */,
-      nullptr /* maybe_size */, types::Nullability::kNonnullable, &the_type, nullptr));
+      nullptr /* maybe_size */, types::Nullability::kNonnullable, &the_type, &invocation));
   ASSERT_NOT_NULL(the_type, "%s", name);
   auto the_type_p = static_cast<const PrimitiveType*>(the_type);
   ASSERT_EQ(the_type_p->subtype, subtype, "%s", name);

@@ -9,6 +9,7 @@
 
 #include "error_test.h"
 #include "fidl/diagnostics.h"
+#include "fidl/experimental_flags.h"
 #include "test_library.h"
 
 namespace {

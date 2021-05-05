@@ -288,7 +288,7 @@ bits Life {
   EXPECT_EQ(bits->mask, 42);
 }
 
-TEST(EnumsTests, BadBitsShantBeNullable) {
+TEST(BitsTests, BadBitsShantBeNullable) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
@@ -304,10 +304,9 @@ type Struct = struct {
 )FIDL",
                       experimental_flags);
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeNullable);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "NotNullable");
 }
 
-TEST(EnumsTests, BadBitsShantBeNullableOld) {
+TEST(BitsTests, BadBitsShantBeNullableOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -321,6 +320,24 @@ struct Struct {
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeNullable);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "NotNullable");
+}
+
+TEST(BitsTests, BadBitsMultipleConstraints) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+type NotNullable = bits {
+    MEMBER = 1;
+};
+
+type Struct = struct {
+    not_nullable NotNullable:<optional, foo, bar>;
+};
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrTooManyConstraints);
 }
 
 }  // namespace

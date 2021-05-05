@@ -427,8 +427,7 @@ type Foo = strict union {
 
 )FIDL",
                       std::move(experimental_flags));
-  // NOTE(fxbug.dev/72924): we get a more general error in the new syntax
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNullableOrdinaledMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNullableUnionMember);
 }
 
 TEST(UnionTests, BadNoDirectlyRecursiveUnionsOld) {

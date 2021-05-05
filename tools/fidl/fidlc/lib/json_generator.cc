@@ -4,6 +4,9 @@
 
 #include "fidl/json_generator.h"
 
+#include "fidl/diagnostic_types.h"
+#include "fidl/flat/types.h"
+#include "fidl/flat_ast.h"
 #include "fidl/names.h"
 #include "fidl/types.h"
 
@@ -230,7 +233,7 @@ void JSONGenerator::Generate(const flat::Bits& value) {
     GenerateObjectMember("location", NameSpan(value.name));
     if (value.attributes)
       GenerateObjectMember("maybe_attributes", value.attributes);
-    GenerateTypeAndFromTypeAlias(*value.subtype_ctor);
+    GenerateTypeAndFromTypeAlias(value.subtype_ctor);
     // TODO(fxbug.dev/7660): When all numbers are wrapped as string, we can simply
     // call GenerateObjectMember directly.
     GenerateObjectPunctuation(Position::kSubsequent);
@@ -257,7 +260,7 @@ void JSONGenerator::Generate(const flat::Const& value) {
     GenerateObjectMember("location", NameSpan(value.name));
     if (value.attributes)
       GenerateObjectMember("maybe_attributes", value.attributes);
-    GenerateTypeAndFromTypeAlias(*value.type_ctor);
+    GenerateTypeAndFromTypeAlias(value.type_ctor);
     GenerateObjectMember("value", value.value);
   });
 }
@@ -272,8 +275,7 @@ void JSONGenerator::Generate(const flat::Enum& value) {
     // the primitive subtype, and therefore cannot use
     // GenerateTypeAndFromTypeAlias here.
     GenerateObjectMember("type", value.type->name);
-    if (value.subtype_ctor->from_type_alias)
-      GenerateExperimentalMaybeFromTypeAlias(*value.subtype_ctor);
+    GenerateExperimentalMaybeFromTypeAlias(flat::GetLayoutInvocation(value.subtype_ctor));
     GenerateObjectMember("members", value.members);
     GenerateObjectMember("strict", value.strictness == types::Strictness::kStrict);
     if (value.strictness == types::Strictness::kFlexible) {
@@ -327,9 +329,9 @@ void JSONGenerator::Generate(const flat::Protocol::MethodWithInfo& method_with_i
   });
 }
 
-void JSONGenerator::GenerateTypeAndFromTypeAlias(const flat::TypeConstructorOld& value,
+void JSONGenerator::GenerateTypeAndFromTypeAlias(const flat::TypeConstructor& value,
                                                  Position position) {
-  GenerateTypeAndFromTypeAlias(TypeKind::kConcrete, value, position);
+  GenerateTypeAndFromTypeAlias(TypeKind::kConcrete, flat::GetTypeCtorAsPtr(value), position);
 }
 
 bool ShouldExposeTypeAliasOfParametrizedType(const flat::Type& type) {
@@ -340,39 +342,43 @@ bool ShouldExposeTypeAliasOfParametrizedType(const flat::Type& type) {
 }
 
 void JSONGenerator::GenerateTypeAndFromTypeAlias(TypeKind parent_type_kind,
-                                                 const flat::TypeConstructorOld& value,
+                                                 flat::TypeConstructorPtr value,
                                                  Position position) {
-  if (fidl::ShouldExposeTypeAliasOfParametrizedType(*value.type)) {
-    if (value.from_type_alias) {
-      auto alias_decl = value.from_type_alias.value().decl;
-      auto type_alias = static_cast<const flat::TypeAlias*>(alias_decl);
-      GenerateParameterizedType(parent_type_kind, value.type, *type_alias->partial_type_ctor,
-                                position);
+  const auto* type = flat::GetType(value);
+  const auto& invocation = flat::GetLayoutInvocation(value);
+  if (fidl::ShouldExposeTypeAliasOfParametrizedType(*type)) {
+    const auto& invocation = flat::GetLayoutInvocation(value);
+    if (invocation.from_type_alias) {
+      GenerateParameterizedType(
+          parent_type_kind, type,
+          flat::GetTypeCtorAsPtr(invocation.from_type_alias->partial_type_ctor), position);
     } else {
-      GenerateParameterizedType(parent_type_kind, value.type, value, position);
+      GenerateParameterizedType(parent_type_kind, type, value, position);
     }
-    GenerateExperimentalMaybeFromTypeAlias(value);
+    GenerateExperimentalMaybeFromTypeAlias(invocation);
     return;
   }
 
   std::string key = parent_type_kind == TypeKind::kConcrete ? "type" : "element_type";
-  GenerateObjectMember(key, value.type, position);
-  GenerateExperimentalMaybeFromTypeAlias(value);
+  GenerateObjectMember(key, type, position);
+  GenerateExperimentalMaybeFromTypeAlias(invocation);
 }
 
-void JSONGenerator::GenerateExperimentalMaybeFromTypeAlias(const flat::TypeConstructorOld& value) {
-  if (value.from_type_alias)
-    GenerateObjectMember("experimental_maybe_from_type_alias", value.from_type_alias.value());
+void JSONGenerator::GenerateExperimentalMaybeFromTypeAlias(
+    const flat::LayoutInvocation& invocation) {
+  if (invocation.from_type_alias)
+    GenerateObjectMember("experimental_maybe_from_type_alias", invocation);
 }
 
 void JSONGenerator::GenerateParameterizedType(TypeKind parent_type_kind, const flat::Type* type,
-                                              const flat::TypeConstructorOld& type_ctor,
+                                              flat::TypeConstructorPtr type_ctor,
                                               Position position) {
+  const auto& invocation = flat::GetLayoutInvocation(type_ctor);
   std::string key = parent_type_kind == TypeKind::kConcrete ? "type" : "element_type";
 
   // Special case: type "bytes" is a builtin alias, so it will have no
   // user-specified arg type.
-  if (!type_ctor.maybe_arg_type_ctor) {
+  if (!flat::IsTypeConstructorDefined(invocation.element_type_raw)) {
     GenerateObjectMember(key, type, position);
     return;
   }
@@ -385,13 +391,13 @@ void JSONGenerator::GenerateParameterizedType(TypeKind parent_type_kind, const f
     switch (type->kind) {
       case flat::Type::Kind::kArray: {
         auto array_type = static_cast<const flat::ArrayType*>(type);
-        GenerateTypeAndFromTypeAlias(TypeKind::kParameterized, *type_ctor.maybe_arg_type_ctor);
+        GenerateTypeAndFromTypeAlias(TypeKind::kParameterized, invocation.element_type_raw);
         GenerateObjectMember("element_count", array_type->element_count->value);
         break;
       }
       case flat::Type::Kind::kVector: {
         auto vector_type = static_cast<const flat::VectorType*>(type);
-        GenerateTypeAndFromTypeAlias(TypeKind::kParameterized, *type_ctor.maybe_arg_type_ctor);
+        GenerateTypeAndFromTypeAlias(TypeKind::kParameterized, invocation.element_type_raw);
         if (*vector_type->element_count < flat::Size::Max())
           GenerateObjectMember("maybe_element_count", vector_type->element_count->value);
         GenerateObjectMember("nullable", vector_type->nullability);
@@ -400,8 +406,9 @@ void JSONGenerator::GenerateParameterizedType(TypeKind parent_type_kind, const f
       case flat::Type::Kind::kRequestHandle: {
         auto request_type = static_cast<const flat::RequestHandleType*>(type);
         GenerateObjectMember("subtype", request_type->protocol_type->name);
-        if (type_ctor.maybe_arg_type_ctor != nullptr) {
-          GenerateExperimentalMaybeFromTypeAlias(*type_ctor.maybe_arg_type_ctor);
+        if (flat::IsTypeConstructorDefined(invocation.element_type_raw)) {
+          GenerateExperimentalMaybeFromTypeAlias(
+              flat::GetLayoutInvocation(invocation.element_type_raw));
         }
         // TODO(fxbug.dev/43803): Add required and optional rights.
         GenerateObjectMember("nullable", request_type->nullability);
@@ -448,7 +455,7 @@ void JSONGenerator::Generate(const flat::Resource::Property& value) {
   GenerateObject([&]() {
     GenerateObjectMember("name", value.name, Position::kFirst);
     GenerateObjectMember("location", NameSpan(value.name));
-    GenerateTypeAndFromTypeAlias(*value.type_ctor);
+    GenerateTypeAndFromTypeAlias(value.type_ctor);
     if (value.attributes)
       GenerateObjectMember("maybe_attributes", value.attributes);
   });
@@ -460,7 +467,7 @@ void JSONGenerator::Generate(const flat::Resource& value) {
     GenerateObjectMember("location", NameSpan(value.name));
     if (value.attributes)
       GenerateObjectMember("maybe_attributes", value.attributes);
-    GenerateTypeAndFromTypeAlias(*value.subtype_ctor);
+    GenerateTypeAndFromTypeAlias(value.subtype_ctor);
     GenerateObjectMember("properties", value.properties);
   });
 }
@@ -477,7 +484,7 @@ void JSONGenerator::Generate(const flat::Service& value) {
 
 void JSONGenerator::Generate(const flat::Service::Member& value) {
   GenerateObject([&]() {
-    GenerateTypeAndFromTypeAlias(*value.type_ctor, Position::kFirst);
+    GenerateTypeAndFromTypeAlias(value.type_ctor, Position::kFirst);
     GenerateObjectMember("name", value.name);
     GenerateObjectMember("location", NameSpan(value.name));
     if (value.attributes)
@@ -502,7 +509,7 @@ void JSONGenerator::Generate(const flat::Struct* value) { Generate(*value); }
 
 void JSONGenerator::Generate(const flat::Struct::Member& value, bool is_request_or_response) {
   GenerateObject([&]() {
-    GenerateTypeAndFromTypeAlias(*value.type_ctor, Position::kFirst);
+    GenerateTypeAndFromTypeAlias(value.type_ctor, Position::kFirst);
     GenerateObjectMember("name", value.name);
     GenerateObjectMember("location", NameSpan(value.name));
     if (value.attributes)
@@ -532,7 +539,7 @@ void JSONGenerator::Generate(const flat::Table::Member& value) {
     if (value.maybe_used) {
       assert(!value.span);
       GenerateObjectMember("reserved", false);
-      GenerateTypeAndFromTypeAlias(*value.maybe_used->type_ctor);
+      GenerateTypeAndFromTypeAlias(value.maybe_used->type_ctor);
       GenerateObjectMember("name", value.maybe_used->name);
       GenerateObjectMember("location", NameSpan(value.maybe_used->name));
       if (value.maybe_used->attributes)
@@ -585,7 +592,7 @@ void JSONGenerator::Generate(const flat::Union::Member& value) {
       assert(!value.span);
       GenerateObjectMember("reserved", false);
       GenerateObjectMember("name", value.maybe_used->name);
-      GenerateTypeAndFromTypeAlias(*value.maybe_used->type_ctor);
+      GenerateTypeAndFromTypeAlias(value.maybe_used->type_ctor);
       GenerateObjectMember("location", NameSpan(value.maybe_used->name));
       if (value.maybe_used->attributes)
         GenerateObjectMember("maybe_attributes", value.maybe_used->attributes);
@@ -596,20 +603,20 @@ void JSONGenerator::Generate(const flat::Union::Member& value) {
   });
 }
 
-void JSONGenerator::Generate(const flat::TypeConstructorOld::FromTypeAlias& value) {
+void JSONGenerator::Generate(const flat::LayoutInvocation& value) {
   GenerateObject([&]() {
-    GenerateObjectMember("name", value.decl->name, Position::kFirst);
+    GenerateObjectMember("name", value.from_type_alias->name, Position::kFirst);
     GenerateObjectPunctuation(Position::kSubsequent);
     EmitObjectKey("args");
 
     // In preparation of template support, it is better to expose a
-    // heterogenous argument list to backends, rather than the currently
+    // heterogeneous argument list to backends, rather than the currently
     // limited internal view.
     EmitArrayBegin();
-    if (value.maybe_arg_type) {
+    if (value.element_type_resolved) {
       Indent();
       EmitNewlineWithIndent();
-      Generate(value.maybe_arg_type->name);
+      Generate(flat::GetName(value.element_type_raw));
       Outdent();
       EmitNewlineWithIndent();
     }
@@ -617,36 +624,42 @@ void JSONGenerator::Generate(const flat::TypeConstructorOld::FromTypeAlias& valu
 
     GenerateObjectMember("nullable", value.nullability);
 
-    if (value.maybe_size)
-      GenerateObjectMember("maybe_size", *value.maybe_size);
+    if (value.size_resolved)
+      GenerateObjectMember("maybe_size", *value.size_resolved);
   });
 }
 
-void JSONGenerator::Generate(const flat::TypeConstructorOld& value) {
+void JSONGenerator::Generate(const flat::TypeConstructor& value) {
+  GenerateTypeCtor(GetTypeCtorAsPtr(value));
+}
+
+void JSONGenerator::GenerateTypeCtor(const flat::TypeConstructorPtr& value) {
   GenerateObject([&]() {
-    GenerateObjectMember("name", value.type ? value.type->name : value.name, Position::kFirst);
+    GenerateObjectMember("name", GetType(value) ? GetType(value)->name : GetName(value),
+                         Position::kFirst);
     GenerateObjectPunctuation(Position::kSubsequent);
     EmitObjectKey("args");
+    const auto& invocation = flat::GetLayoutInvocation(value);
 
     // In preparation of template support, it is better to expose a
     // heterogenous argument list to backends, rather than the currently
     // limited internal view.
     EmitArrayBegin();
-    if (value.maybe_arg_type_ctor) {
+    if (invocation.element_type_resolved) {
       Indent();
       EmitNewlineWithIndent();
-      Generate(*value.maybe_arg_type_ctor);
+      GenerateTypeCtor(invocation.element_type_raw);
       Outdent();
       EmitNewlineWithIndent();
     }
     EmitArrayEnd();
 
-    GenerateObjectMember("nullable", value.nullability);
+    GenerateObjectMember("nullable", invocation.nullability);
 
-    if (value.maybe_size)
-      GenerateObjectMember("maybe_size", value.maybe_size);
-    if (value.handle_rights)
-      GenerateObjectMember("handle_rights", value.handle_rights);
+    if (invocation.size_raw)
+      GenerateObjectMember("maybe_size", *invocation.size_raw);
+    if (invocation.rights_raw)
+      GenerateObjectMember("handle_rights", *invocation.rights_raw);
   });
 }
 
@@ -656,7 +669,7 @@ void JSONGenerator::Generate(const flat::TypeAlias& value) {
     GenerateObjectMember("location", NameSpan(value.name));
     if (value.attributes)
       GenerateObjectMember("maybe_attributes", value.attributes);
-    GenerateObjectMember("partial_type_ctor", *value.partial_type_ctor);
+    GenerateObjectMember("partial_type_ctor", value.partial_type_ctor);
   });
 }
 
@@ -824,14 +837,14 @@ std::set<const flat::Library*, LibraryComparator> TransitiveDependencies(
     for (const auto method_with_info : protocol->all_methods) {
       if (auto request = method_with_info.method->maybe_request) {
         for (const auto& member : request->members) {
-          if (auto dep_library = member.type_ctor->name.library()) {
+          if (auto dep_library = flat::GetName(member.type_ctor).library()) {
             add_dependency(dep_library);
           }
         }
       }
       if (auto response = method_with_info.method->maybe_response) {
         for (const auto& member : response->members) {
-          if (auto dep_library = member.type_ctor->name.library()) {
+          if (auto dep_library = flat::GetName(member.type_ctor).library()) {
             add_dependency(dep_library);
           }
         }

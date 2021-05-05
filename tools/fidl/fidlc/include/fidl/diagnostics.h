@@ -144,18 +144,16 @@ constexpr ErrorDef ErrOrOperatorOnNonPrimitiveValue(
 constexpr ErrorDef<std::string_view> ErrUnknownEnumMember("unknown enum member '{}'");
 constexpr ErrorDef<std::string_view> ErrUnknownBitsMember("unknown bits member '{}'");
 constexpr ErrorDef<flat::Name, std::string_view> ErrNewTypesNotAllowed(
-    "newtypes not allowed: type declaration {} defines a new type of the existing {} type, wh is "
-    "not yet supported");
-constexpr ErrorDef<flat::IdentifierConstant *> ErrExpectedValueButGotType(
-    "{} is a type, but a value was expected");
+    "newtypes not allowed: type declaration {} defines a new type of the existing {} type, which "
+    "is not yet supported");
+constexpr ErrorDef<> ErrAnonymousTypesNotAllowed(
+    "anonymous layouts are not yet supported: layouts must be specified in a `type MyLayout = ...` "
+    "layout introduction statement.");
+constexpr ErrorDef<flat::Name> ErrExpectedValueButGotType("{} is a type, but a value was expected");
 constexpr ErrorDef<flat::Name, flat::Name> ErrMismatchedNameTypeAssignment(
     "mismatched named type assignment: cannot define a constant or default value of type {} "
     "using a value of type {}");
-constexpr ErrorDef<flat::Name, size_t, size_t> ErrConstraintsOverflow(
-    "{} is of a type that may only carry {} constraints, but {} were found");
-constexpr ErrorDef<flat::Name, std::string_view> ErrConstraintOptionalMisspelled(
-    "the final constraint on {} was expected to be optional, not {}");
-constexpr ErrorDef<flat::IdentifierConstant *, const flat::TypeConstructorOld *, const flat::Type *>
+constexpr ErrorDef<flat::IdentifierConstant *, const flat::Type *, const flat::Type *>
     ErrCannotConvertConstantToType("{}, of type {}, cannot be converted to type {}");
 constexpr ErrorDef<flat::LiteralConstant *, uint64_t, const flat::Type *>
     ErrStringConstantExceedsSizeBound("{} (string:{}) exceeds the size bound of type {}");
@@ -292,6 +290,7 @@ constexpr WarningDef<std::string, std::string> WarnAttributeTypo(
 // Type Templates
 // ---------------------------------------------------------------------------
 constexpr ErrorDef<flat::Name> ErrUnknownType("unknown type {}");
+// old style
 constexpr ErrorDef<const flat::TypeTemplate *> ErrMustBeAProtocol("{} must be a protocol");
 constexpr ErrorDef<const flat::TypeTemplate *> ErrCannotParameterizeAlias(
     "{}: aliases cannot be parameterized");
@@ -303,8 +302,30 @@ constexpr ErrorDef<const flat::TypeTemplate *> ErrMustHaveSize("{} must have siz
 constexpr ErrorDef<const flat::TypeTemplate *> ErrMustHaveNonZeroSize("{} must have non-zero size");
 constexpr ErrorDef<const flat::TypeTemplate *> ErrCannotBeParameterized(
     "{} cannot be parametrized");
+// TODO(fxbug.dev/74683): This is a copy of ErrCannotBeParameterized that is thrown earlier in the
+// compilation process (if we see an anonymous layout that has arguments `foo { ... }<T>`, we know
+// that this is invalid without needing to compile `foo` because no user-defined layouts support
+// arguments). Once we fully implement anonymous layouts, we should probably have the layout go
+// through the same compilation process as any other type, thereby removing the need to have this
+// separate error.
+constexpr ErrorDef<flat::Name> ErrLayoutCannotBeParameterized("{} cannot be parametrized");
+// TODO(fxbug.dev/74683): Support for anonymous layouts should include support for this as well.
+constexpr ErrorDef<> ErrCannotConstrainInLayoutDecl(
+    "cannot add constraints in this position; constraints must be added at the use-site");
 constexpr ErrorDef<const flat::TypeTemplate *> ErrCannotHaveSize("{} cannot have size");
 constexpr ErrorDef<const flat::TypeTemplate *> ErrCannotBeNullable("{} cannot be nullable");
+// new style
+constexpr ErrorDef<const flat::TypeTemplate *, size_t, size_t> ErrWrongNumberOfLayoutParameters(
+    "{} expected {} layout parameter(s), but got {}");
+constexpr ErrorDef<const flat::TypeTemplate *, size_t, size_t> ErrTooManyConstraints(
+    "{} expected at most {} constraints, but got {}");
+constexpr ErrorDef<> ErrExpectedType("expected type but got a literal or constant");
+constexpr ErrorDef<const flat::TypeTemplate *> ErrUnexpectedConstraint(
+    "{} failed to resolve constraint");
+// TODO(fxbug.dev/74193): Remove this error and allow re-constraining.
+constexpr ErrorDef<const flat::TypeTemplate *> ErrCannotConstrainTwice(
+    "{} cannot add additional constraint");
+// other
 constexpr ErrorDef<> ErrHandleSubtypeNotResource("handle subtype is not a defined resource");
 constexpr ErrorDef<flat::Name> ErrResourceMustBeUint32Derived("resource {} must be uint32");
 constexpr ErrorDef<flat::Name> ErrResourceMissingSubtypeProperty(

@@ -256,6 +256,24 @@ type OptionalTableContainer = struct {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeNullable);
 }
 
+TEST(TableTests, BadMultipleConstraints) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library fidl.test.tables;
+
+type Foo = table {
+    1: t int64;
+};
+
+type OptionalTableContainer = struct {
+    foo Foo:<optional, foo, bar>;
+};
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrTooManyConstraints);
+}
+
 TEST(TableTests, BadOptionalInUnionOld) {
   TestLibrary library(R"FIDL(
 library fidl.test.tables;
@@ -286,8 +304,7 @@ type OptionalTableContainer = union {
 };
 )FIDL",
                       std::move(experimental_flags));
-  // NOTE(fxbug.dev/72924): same error is used for tables and unions
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNullableOrdinaledMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeNullable);
 }
 
 TEST(TableTests, GoodTableInTable) {
@@ -327,7 +344,7 @@ TEST(TableTests, BadOptionalTableMemberOld) {
 library fidl.test.tables;
 
 table Foo {
-    1: int64? t;
+    1: string? t;
 };
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNullableTableMember);
@@ -340,12 +357,41 @@ TEST(TableTests, BadOptionalTableMember) {
 library fidl.test.tables;
 
 type Foo = table {
+    1: t string:optional;
+};
+)FIDL",
+                      std::move(experimental_flags));
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNullableTableMember);
+}
+
+// NOTE(fxbug.dev/72924): this pair of tests aims to document a behavior
+// difference between the old and new syntaxes: in the old, we check for
+// ErrNullableTableMember first before determining if the type itself can be
+// nullable. This is not the case in the new syntax (we need to compile the
+// type first to determine if it is nullable).
+TEST(TableTests, BadOptionalNonNullableTableMemberOld) {
+  TestLibrary library(R"FIDL(
+library fidl.test.tables;
+
+table Foo {
+    1: int64? t;
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNullableTableMember);
+}
+
+TEST(TableTests, BadOptionalNonNullableTableMember) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library fidl.test.tables;
+
+type Foo = table {
     1: t int64:optional;
 };
 )FIDL",
                       std::move(experimental_flags));
-  // NOTE(fxbug.dev/72924): we lose the default specific error in the new syntax.
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNullableOrdinaledMember);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeNullable);
 }
 
 TEST(TableTests, BadDefaultNotAllowedOld) {

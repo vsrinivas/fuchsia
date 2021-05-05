@@ -22,7 +22,7 @@ coded::MemcpyCompatibility ComputeMemcpyCompatibility(const flat::Type* type) {
 
 CodedTypesGenerator::FlattenedStructMember::FlattenedStructMember(const flat::StructMember& member,
                                                                   const WireFormat wire_format)
-    : type(member.type_ctor->type),
+    : type(flat::GetType(member.type_ctor)),
       name(member.name),
       inline_size(member.typeshape(wire_format).InlineSize()),
       offset(member.fieldshape(wire_format).Offset()),
@@ -31,10 +31,10 @@ CodedTypesGenerator::FlattenedStructMember::FlattenedStructMember(const flat::St
 std::vector<CodedTypesGenerator::FlattenedStructMember> CodedTypesGenerator::FlattenedStructMembers(
     const flat::Struct& input, const WireFormat wire_format) {
   auto get_struct_decl = [](const flat::StructMember& member) -> const flat::Struct* {
-    if (member.type_ctor->nullability == types::Nullability::kNullable) {
+    if (flat::GetType(member.type_ctor)->nullability == types::Nullability::kNullable) {
       return nullptr;
     }
-    const flat::Type* type = member.type_ctor->type;
+    const flat::Type* type = flat::GetType(member.type_ctor);
     if (type->kind != flat::Type::Kind::kIdentifier) {
       return nullptr;
     }
@@ -354,7 +354,7 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl, const WireFormat
             }
             if (member.maybe_used) {
               const auto* coded_member_type =
-                  CompileType(member.maybe_used->type_ctor->type,
+                  CompileType(flat::GetType(member.maybe_used->type_ctor),
                               coded::CodingContext::kInsideEnvelope, wire_format);
               coded_xunion->fields.emplace_back(coded_member_type);
               nullable_coded_xunion->fields.emplace_back(coded_member_type);
@@ -385,7 +385,7 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl, const WireFormat
           continue;
         std::string member_name =
             coded_table->coded_name + "_" + std::string(member.maybe_used->name.data());
-        auto coded_member_type = CompileType(member.maybe_used->type_ctor->type,
+        auto coded_member_type = CompileType(flat::GetType(member.maybe_used->type_ctor),
                                              coded::CodingContext::kInsideEnvelope, wire_format);
         table_fields.emplace_back(coded_member_type, member.ordinal->value);
       }
@@ -402,7 +402,8 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl, const WireFormat w
     case flat::Decl::Kind::kBits: {
       auto bits_decl = static_cast<const flat::Bits*>(decl);
       std::string bits_name = NameCodedName(bits_decl->name);
-      auto primitive_type = static_cast<const flat::PrimitiveType*>(bits_decl->subtype_ctor->type);
+      auto primitive_type =
+          static_cast<const flat::PrimitiveType*>(flat::GetType(bits_decl->subtype_ctor));
       named_coded_types_.emplace(
           bits_decl->name, std::make_unique<coded::BitsType>(
                                std::move(bits_name), primitive_type->subtype,

@@ -59,11 +59,11 @@ std::optional<UnderlyingType> resolve_as_user_defined_type(const flat::Name& nam
 
   auto type_alias_ptr = static_cast<const flat::TypeAlias*>(decl_ptr);
   auto underlying_type =
-      resolve_as_user_defined_type(type_alias_ptr->partial_type_ctor->name, true);
+      resolve_as_user_defined_type(flat::GetName(type_alias_ptr->partial_type_ctor), true);
   if (underlying_type != std::nullopt) {
     return underlying_type;
   }
-  return UnderlyingType(type_alias_ptr->partial_type_ctor->type->kind, true);
+  return UnderlyingType(flat::GetType(type_alias_ptr->partial_type_ctor)->kind, true);
 }
 
 // Matches a string keyword to the "builtin" representing the FIDL-native type

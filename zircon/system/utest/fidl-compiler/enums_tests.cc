@@ -5,6 +5,7 @@
 #include <zxtest/zxtest.h>
 
 #include "error_test.h"
+#include "fidl/diagnostics.h"
 #include "test_library.h"
 
 namespace {
@@ -288,8 +289,7 @@ type Struct = struct {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeNullable);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "NotNullable");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeNullable)
 }
 
 TEST(EnumsTests, BadEnumShantBeNullableOld) {
@@ -306,6 +306,24 @@ struct Struct {
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeNullable);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "NotNullable");
+}
+
+TEST(EnumsTests, BadEnumMultipleConstraints) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+type NotNullable = enum {
+    MEMBER = 1;
+};
+
+type Struct = struct {
+    not_nullable NotNullable:<optional, foo, bar>;
+};
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrTooManyConstraints)
 }
 
 }  // namespace

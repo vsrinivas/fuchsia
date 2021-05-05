@@ -141,7 +141,7 @@ bool MessageStructAllowed(const flat::Library* library, const flat::Struct* args
     return true;
   }
   for (const auto& member : args->members) {
-    if (!TypeAllowed(library, member.type_ctor->type)) {
+    if (!TypeAllowed(library, flat::GetType(member.type_ctor))) {
       return false;
     }
   }
@@ -689,7 +689,7 @@ template <typename T>
 CGenerator::Member CreateMember(const flat::Library* library, const T& decl,
                                 bool* out_allowed = nullptr) {
   std::string name = NameIdentifier(decl.name);
-  const flat::Type* type = decl.type_ctor->type;
+  const flat::Type* type = flat::GetType(decl.type_ctor);
   auto decl_kind = GetDeclKind(library, type);
   auto type_name = NameFlatCType(type, decl_kind);
   std::string element_type_name;
@@ -1008,7 +1008,8 @@ std::map<const flat::Decl*, CGenerator::NamedStruct> CGenerator::NameStructs(
 
 void CGenerator::ProduceBitsForwardDeclaration(const NamedBits& named_bits) {
   auto subtype =
-      static_cast<const flat::PrimitiveType*>(named_bits.bits_info.subtype_ctor->type)->subtype;
+      static_cast<const flat::PrimitiveType*>(flat::GetType(named_bits.bits_info.subtype_ctor))
+          ->subtype;
   GenerateIntegerTypedef(subtype, named_bits.name);
   for (const auto& member : named_bits.bits_info.members) {
     std::string member_name = named_bits.name + "_" + NameIdentifier(member.name);
@@ -1078,10 +1079,11 @@ void CGenerator::ProduceConstDeclaration(const NamedConst& named_const) {
     return;
   }
 
-  switch (ci.type_ctor->type->kind) {
+  switch (flat::GetType(ci.type_ctor)->kind) {
     case flat::Type::Kind::kPrimitive:
       GeneratePrimitiveDefine(
-          named_const.name, static_cast<const flat::PrimitiveType*>(ci.type_ctor->type)->subtype,
+          named_const.name,
+          static_cast<const flat::PrimitiveType*>(flat::GetType(ci.type_ctor))->subtype,
           static_cast<flat::LiteralConstant*>(ci.value.get())->literal->span().data());
       break;
     case flat::Type::Kind::kString:

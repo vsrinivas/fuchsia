@@ -51,13 +51,16 @@ service SomeService {
   EXPECT_EQ(service->members.size(), 3);
   const auto& member0 = service->members[0];
   EXPECT_STR_EQ(std::string(member0.name.data()).c_str(), "some_protocol_first_first");
-  EXPECT_STR_EQ(fidl::NameFlatName(member0.type_ctor->name).c_str(), "example/SomeProtocol1");
+  EXPECT_STR_EQ(fidl::NameFlatName(fidl::flat::GetName(member0.type_ctor)).c_str(),
+                "example/SomeProtocol1");
   const auto& member1 = service->members[1];
   EXPECT_STR_EQ(std::string(member1.name.data()).c_str(), "some_protocol_first_second");
-  EXPECT_STR_EQ(fidl::NameFlatName(member1.type_ctor->name).c_str(), "example/SomeProtocol1");
+  EXPECT_STR_EQ(fidl::NameFlatName(fidl::flat::GetName(member1.type_ctor)).c_str(),
+                "example/SomeProtocol1");
   const auto& member2 = service->members[2];
   EXPECT_STR_EQ(std::string(member2.name.data()).c_str(), "some_protocol_second");
-  EXPECT_STR_EQ(fidl::NameFlatName(member2.type_ctor->name).c_str(), "example/SomeProtocol2");
+  EXPECT_STR_EQ(fidl::NameFlatName(fidl::flat::GetName(member2.type_ctor)).c_str(),
+                "example/SomeProtocol2");
 }
 
 TEST(ServiceTests, BadCannotHaveConflictingMembers) {

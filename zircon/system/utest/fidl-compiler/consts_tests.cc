@@ -7,6 +7,7 @@
 #include <zxtest/zxtest.h>
 
 #include "error_test.h"
+#include "fidl/diagnostics.h"
 #include "test_library.h"
 
 namespace {
@@ -354,18 +355,18 @@ const string:4 EXPLICIT = "four";
   ASSERT_COMPILED_AND_CONVERT(library);
 
   auto inferred_const = library.LookupConstant("INFERRED");
-  ASSERT_NOT_NULL(inferred_const->type_ctor->type);
-  ASSERT_EQ(inferred_const->type_ctor->type->kind, fidl::flat::Type::Kind::kString);
-  auto inferred_string_type =
-      static_cast<const fidl::flat::StringType*>(inferred_const->type_ctor->type);
+  auto inferred_const_type = fidl::flat::GetType(inferred_const->type_ctor);
+  ASSERT_NOT_NULL(inferred_const_type);
+  ASSERT_EQ(inferred_const_type->kind, fidl::flat::Type::Kind::kString);
+  auto inferred_string_type = static_cast<const fidl::flat::StringType*>(inferred_const_type);
   ASSERT_NOT_NULL(inferred_string_type->max_size);
   ASSERT_EQ(static_cast<uint32_t>(*inferred_string_type->max_size), 4294967295u);
 
   auto explicit_const = library.LookupConstant("EXPLICIT");
-  ASSERT_NOT_NULL(explicit_const->type_ctor->type);
-  ASSERT_EQ(explicit_const->type_ctor->type->kind, fidl::flat::Type::Kind::kString);
-  auto explicit_string_type =
-      static_cast<const fidl::flat::StringType*>(explicit_const->type_ctor->type);
+  auto explicit_const_type = fidl::flat::GetType(explicit_const->type_ctor);
+  ASSERT_NOT_NULL(explicit_const_type);
+  ASSERT_EQ(explicit_const_type->kind, fidl::flat::Type::Kind::kString);
+  auto explicit_string_type = static_cast<const fidl::flat::StringType*>(explicit_const_type);
   ASSERT_NOT_NULL(explicit_string_type->max_size);
   ASSERT_EQ(static_cast<uint32_t>(*explicit_string_type->max_size), 4u);
 }
@@ -825,7 +826,9 @@ type Example = struct { s string:dependency.MAX; };
 )FIDL",
                       &shared, experimental_flags);
   ASSERT_TRUE(library.AddDependentLibrary(std::move(converted_dependency)));
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCouldNotParseSizeBound);
+  // NOTE(fxbug.dev/72924): we provide a more general error because there are multiple
+  // possible interpretations.
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedConstraint);
 }
 
 TEST(ConstsTests, BadMaxBoundTestLibraryQualifiedWithOldDep) {
@@ -849,7 +852,9 @@ type Example = struct { s string:dependency.MAX; };
 )FIDL",
                       &shared, experimental_flags);
   ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCouldNotParseSizeBound);
+  // NOTE(fxbug.dev/72924): we provide a more general error because there are multiple
+  // possible interpretations.
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedConstraint);
 }
 
 TEST(ConstsTests, BadMaxBoundTestLibraryQualifiedOld) {
@@ -882,7 +887,8 @@ library example;
 const u uint8<string> = 0;
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeParameterized);
+  // NOTE(fxbug.dev/72924): we provide a more general error in the new syntax
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrWrongNumberOfLayoutParameters);
 }
 
 TEST(ConstsTests, BadParameterizePrimitiveOld) {

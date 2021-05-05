@@ -69,7 +69,8 @@ type S = struct {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustHaveSize);
+  // NOTE(fxbug.dev/72924): A more general error is thrown in the new syntax
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrWrongNumberOfLayoutParameters);
 }
 
 TEST(ArrayTests, BadNonParameterizedArrayOld) {
@@ -94,7 +95,47 @@ type S = struct {
 };
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustBeParameterized);
+  // NOTE(fxbug.dev/72924): A more general error is thrown in the new syntax
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrWrongNumberOfLayoutParameters);
+}
+
+TEST(ArrayTests, BadOptionalArrayOld) {
+  TestLibrary library(R"FIDL(
+library example;
+
+struct S {
+    array<uint8>:10? arr;
+};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeNullable);
+}
+
+TEST(ArrayTests, BadOptionalArray) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+type S = struct {
+    arr array<uint8, 10>:optional;
+};
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeNullable);
+}
+
+TEST(ArrayTest, BadMultipleConstraintsOnArray) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+type S = struct {
+    arr array<uint8, 10>:<optional, foo, bar>;
+};
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrTooManyConstraints);
 }
 
 }  // namespace

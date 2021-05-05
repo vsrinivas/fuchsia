@@ -97,7 +97,7 @@ protocol #Protocol# {
 
 )FIDL");
     TestLibrary library(source);
-    ASSERT_TRUE(library.Compile());
+    ASSERT_COMPILED_AND_CONVERT(library);
     auto decl_order = library.declaration_order();
     ASSERT_EQ(4, decl_order.size());
     ASSERT_DECL_NAME(decl_order[0], namer.of("Element"));
@@ -127,7 +127,7 @@ protocol #Protocol# {
 
 )FIDL");
     TestLibrary library(source);
-    ASSERT_TRUE(library.Compile());
+    ASSERT_COMPILED(library);
     auto decl_order = library.declaration_order();
     ASSERT_EQ(4, decl_order.size());
 
@@ -170,7 +170,7 @@ protocol #Protocol# {
 
 )FIDL");
     TestLibrary library(source);
-    ASSERT_TRUE(library.Compile());
+    ASSERT_COMPILED(library);
     auto decl_order = library.declaration_order();
     ASSERT_EQ(3, decl_order.size());
     ASSERT_DECL_NAME(decl_order[0], namer.of("Request"));
@@ -200,7 +200,7 @@ struct #Payload# {
 
 )FIDL");
     TestLibrary library(source);
-    ASSERT_TRUE(library.Compile());
+    ASSERT_COMPILED(library);
     auto decl_order = library.declaration_order();
     ASSERT_EQ(4, decl_order.size());
     ASSERT_DECL_NAME(decl_order[0], namer.of("Payload"));
@@ -231,7 +231,7 @@ struct #Payload# {
 
 )FIDL");
     TestLibrary library(source);
-    ASSERT_TRUE(library.Compile());
+    ASSERT_COMPILED(library);
     auto decl_order = library.declaration_order();
     ASSERT_EQ(4, decl_order.size());
 
@@ -281,7 +281,7 @@ union #Xunion# {
 
 )FIDL");
     TestLibrary library(source);
-    ASSERT_TRUE(library.Compile());
+    ASSERT_COMPILED_AND_CONVERT(library);
     auto decl_order = library.declaration_order();
     ASSERT_EQ(5, decl_order.size());
     ASSERT_DECL_NAME(decl_order[0], namer.of("Payload"));
@@ -316,7 +316,7 @@ union #Xunion# {
 
 )FIDL");
     TestLibrary library(source);
-    ASSERT_TRUE(library.Compile());
+    ASSERT_COMPILED_AND_CONVERT(library);
     auto decl_order = library.declaration_order();
     ASSERT_EQ(5, decl_order.size());
 
@@ -371,7 +371,7 @@ protocol ExampleDecl1 {
 )FIDL",
                         &shared);
     ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
-    ASSERT_TRUE(library.Compile());
+    ASSERT_COMPILED(library);
 
     auto decl_order = library.declaration_order();
     ASSERT_EQ(5, decl_order.size());
@@ -395,7 +395,7 @@ alias #Alias# = uint32;
 
 )FIDL");
     TestLibrary library(source);
-    ASSERT_TRUE(library.Compile());
+    ASSERT_COMPILED_AND_CONVERT(library);
     auto decl_order = library.declaration_order();
     ASSERT_EQ(2, decl_order.size());
     ASSERT_DECL_NAME(decl_order[0], namer.of("Alias"));
@@ -415,7 +415,7 @@ alias #Alias# = uint32;
 
 )FIDL");
     TestLibrary library(source);
-    ASSERT_TRUE(library.Compile());
+    ASSERT_COMPILED_AND_CONVERT(library);
     auto decl_order = library.declaration_order();
     ASSERT_EQ(2, decl_order.size());
     ASSERT_DECL_NAME(decl_order[0], namer.of("Alias"));
@@ -435,7 +435,7 @@ alias #Alias# = uint32;
 
 )FIDL");
     TestLibrary library(source);
-    ASSERT_TRUE(library.Compile());
+    ASSERT_COMPILED_AND_CONVERT(library);
     auto decl_order = library.declaration_order();
     ASSERT_EQ(2, decl_order.size());
     ASSERT_DECL_NAME(decl_order[0], namer.of("Alias"));
