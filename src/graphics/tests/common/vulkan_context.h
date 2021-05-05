@@ -53,7 +53,7 @@ class VulkanContext {
   static vk::DebugUtilsMessengerCreateInfoEXT default_debug_info_s_;
   static ContextWithUserData default_debug_callback_user_data_s_;
 
-  VulkanContext(const vk::InstanceCreateInfo &instance_info, size_t physical_device_index,
+  VulkanContext(const vk::InstanceCreateInfo &instance_info, uint32_t physical_device_index,
                 const vk::DeviceCreateInfo &device_info,
                 const vk::DeviceQueueCreateInfo &queue_info,
                 const vk::QueueFlags &queue_flags = vk::QueueFlagBits::eGraphics,
@@ -62,7 +62,7 @@ class VulkanContext {
                 vk::Optional<const vk::AllocationCallbacks> allocator = nullptr,
                 bool validation_layers_enabled = true, bool validation_layers_ignored_ = false);
 
-  explicit VulkanContext(size_t physical_device_index,
+  explicit VulkanContext(uint32_t physical_device_index,
                          const vk::QueueFlags &queue_flags = vk::QueueFlagBits::eGraphics,
                          vk::Optional<const vk::AllocationCallbacks> allocator = nullptr);
 
@@ -126,7 +126,7 @@ class VulkanContext {
   vk::InstanceCreateInfo instance_info_;
 
   vk::PhysicalDevice physical_device_;
-  size_t physical_device_index_;
+  uint32_t physical_device_index_;
 
   float queue_priority_ = 0.0f;
   int queue_family_index_;
@@ -186,7 +186,7 @@ class VulkanContext::Builder {
   //   auto ctx = VulkanContext::Builder{}.(optional set* calls).Unique();
   //
   Builder &set_instance_info(const vk::InstanceCreateInfo &v);
-  Builder &set_physical_device_index(size_t v);
+  Builder &set_physical_device_index(uint32_t v);
   Builder &set_queue_info(const vk::DeviceQueueCreateInfo &v);
   Builder &set_device_info(const vk::DeviceCreateInfo &v);
   Builder &set_queue_flags(const vk::QueueFlags &v);
@@ -197,7 +197,7 @@ class VulkanContext::Builder {
 
  private:
   vk::InstanceCreateInfo instance_info_;
-  size_t physical_device_index_;
+  uint32_t physical_device_index_;
   float queue_priority_;
   vk::DeviceQueueCreateInfo queue_info_;
   vk::DeviceCreateInfo device_info_;

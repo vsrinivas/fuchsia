@@ -3,14 +3,21 @@
 // found in the LICENSE file.
 #include "vulkan_context.h"
 
+#include <assert.h>
 #include <stddef.h>
 
+#include <limits>
 #include <memory>
 #include <utility>
 
 #include "src/graphics/tests/common/utils.h"
 
 #include "vulkan/vulkan.hpp"
+
+static inline uint32_t to_uint32(uint64_t val) {
+  assert(val <= std::numeric_limits<uint32_t>::max());
+  return static_cast<uint32_t>(val);
+}
 
 vk::DebugUtilsMessengerCreateInfoEXT VulkanContext::default_debug_info_s_(
     {} /* create flags */, vk::DebugUtilsMessageSeverityFlagBitsEXT::eError,
@@ -21,7 +28,7 @@ vk::DebugUtilsMessengerCreateInfoEXT VulkanContext::default_debug_info_s_(
 VulkanContext::ContextWithUserData VulkanContext::default_debug_callback_user_data_s_;
 
 VulkanContext::VulkanContext(const vk::InstanceCreateInfo &instance_info,
-                             size_t physical_device_index, const vk::DeviceCreateInfo &device_info,
+                             uint32_t physical_device_index, const vk::DeviceCreateInfo &device_info,
                              const vk::DeviceQueueCreateInfo &queue_info,
                              const vk::QueueFlags &queue_flags,
                              const vk::DebugUtilsMessengerCreateInfoEXT &debug_info,
@@ -43,7 +50,7 @@ VulkanContext::VulkanContext(const vk::InstanceCreateInfo &instance_info,
          "Debug callback user data must be only set in |debug_callback_user_data|.");
 }
 
-VulkanContext::VulkanContext(size_t physical_device_index, const vk::QueueFlags &queue_flags,
+VulkanContext::VulkanContext(uint32_t physical_device_index, const vk::QueueFlags &queue_flags,
                              vk::Optional<const vk::AllocationCallbacks> allocator)
     : physical_device_index_(physical_device_index),
       queue_family_index_(kInvalidQueueFamily),
@@ -77,9 +84,9 @@ bool VulkanContext::InitInstance() {
   }
 
   instance_info_.ppEnabledLayerNames = layers_.data();
-  instance_info_.enabledLayerCount = layers_.size();
+  instance_info_.enabledLayerCount = to_uint32(layers_.size());
   instance_info_.ppEnabledExtensionNames = extensions_.data();
-  instance_info_.enabledExtensionCount = extensions_.size();
+  instance_info_.enabledExtensionCount = to_uint32(extensions_.size());
 
   vk::ResultValue<vk::UniqueInstance> rv_instance(vk::Result::eNotReady, vk::UniqueInstance{});
   if (allocator_) {
@@ -135,10 +142,10 @@ bool VulkanContext::InitQueueFamily() {
   physical_device_ = physical_devices[physical_device_index_];
 
   const auto queue_families = physical_device_.getQueueFamilyProperties();
-  queue_family_index_ = queue_families.size();
+  queue_family_index_ = to_uint32(queue_families.size());
   for (size_t i = 0; i < queue_families.size(); ++i) {
     if (queue_families[i].queueFlags & queue_flags_) {
-      queue_family_index_ = i;
+      queue_family_index_ = to_uint32(i);
       break;
     }
   }
@@ -292,7 +299,7 @@ VulkanContext::Builder &VulkanContext::Builder::set_instance_info(const vk::Inst
   return *this;
 }
 
-VulkanContext::Builder &VulkanContext::Builder::set_physical_device_index(const size_t v) {
+VulkanContext::Builder &VulkanContext::Builder::set_physical_device_index(const uint32_t v) {
   physical_device_index_ = v;
   return *this;
 }

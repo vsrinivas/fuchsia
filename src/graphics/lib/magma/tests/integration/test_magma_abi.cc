@@ -39,6 +39,12 @@ namespace {
 inline uint64_t page_size() { return sysconf(_SC_PAGESIZE); }
 
 inline constexpr int64_t ms_to_ns(int64_t ms) { return ms * 1000000ull; }
+
+static inline uint32_t to_uint32(uint64_t val) {
+  assert(val <= std::numeric_limits<uint32_t>::max());
+  return static_cast<uint32_t>(val);
+}
+
 }  // namespace
 
 #if defined(__Fuchsia__)
@@ -359,7 +365,7 @@ class TestConnection {
     // Wait for one
     start = std::chrono::steady_clock::now();
     EXPECT_EQ(MAGMA_STATUS_TIMED_OUT,
-              magma_poll(items.data(), items.size(), kNsPerMs * kTimeoutMs));
+              magma_poll(items.data(), to_uint32(items.size()), kNsPerMs * kTimeoutMs));
 
     // Subtract to allow for rounding errors in magma_wait_semaphores time calculations
     EXPECT_LE(kTimeoutMs - count, std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -368,11 +374,11 @@ class TestConnection {
 
     magma_signal_semaphore(items.back().semaphore);
 
-    EXPECT_EQ(MAGMA_STATUS_OK, magma_poll(items.data(), items.size(), 0));
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_poll(items.data(), to_uint32(items.size()), 0));
 
     magma_reset_semaphore(items.back().semaphore);
 
-    EXPECT_EQ(MAGMA_STATUS_TIMED_OUT, magma_poll(items.data(), items.size(), 0));
+    EXPECT_EQ(MAGMA_STATUS_TIMED_OUT, magma_poll(items.data(), to_uint32(items.size()), 0));
 
     for (auto& item : items) {
       magma_release_semaphore(connection_, item.semaphore);
@@ -401,21 +407,21 @@ class TestConnection {
 
     constexpr int64_t kTimeoutNs = ms_to_ns(100);
     auto start = std::chrono::steady_clock::now();
-    EXPECT_EQ(MAGMA_STATUS_TIMED_OUT, magma_poll(items.data(), items.size(), kTimeoutNs));
+    EXPECT_EQ(MAGMA_STATUS_TIMED_OUT, magma_poll(items.data(), to_uint32(items.size()), kTimeoutNs));
     EXPECT_LE(kTimeoutNs, std::chrono::duration_cast<std::chrono::nanoseconds>(
                               std::chrono::steady_clock::now() - start)
                               .count());
 
     magma_signal_semaphore(items[0].semaphore);
 
-    EXPECT_EQ(MAGMA_STATUS_OK, magma_poll(items.data(), items.size(), 0));
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_poll(items.data(), to_uint32(items.size()), 0));
     EXPECT_EQ(items[0].result, items[0].condition);
     EXPECT_EQ(items[1].result, 0u);
 
     magma_reset_semaphore(items[0].semaphore);
 
     start = std::chrono::steady_clock::now();
-    EXPECT_EQ(MAGMA_STATUS_TIMED_OUT, magma_poll(items.data(), items.size(), kTimeoutNs));
+    EXPECT_EQ(MAGMA_STATUS_TIMED_OUT, magma_poll(items.data(), to_uint32(items.size()), kTimeoutNs));
     EXPECT_LE(kTimeoutNs, std::chrono::duration_cast<std::chrono::nanoseconds>(
                               std::chrono::steady_clock::now() - start)
                               .count());
@@ -424,7 +430,7 @@ class TestConnection {
       magma_signal_semaphore(items[i].semaphore);
     }
 
-    EXPECT_EQ(MAGMA_STATUS_OK, magma_poll(items.data(), items.size(), 0));
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_poll(items.data(), to_uint32(items.size()), 0));
 
     for (uint32_t i = 0; i < items.size(); i++) {
       if (i < items.size() - 1) {

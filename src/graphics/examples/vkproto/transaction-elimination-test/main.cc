@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <assert.h>
 #include <unistd.h>
 
+#include <limits>
 #include <memory>
 #include <vector>
 
@@ -24,6 +26,11 @@
 #include "src/graphics/examples/vkproto/common/utils.h"
 
 #include <vulkan/vulkan.hpp>
+
+static inline uint32_t to_uint32(uint64_t val) {
+  assert(val <= std::numeric_limits<uint32_t>::max());
+  return static_cast<uint32_t>(val);
+}
 
 uint32_t GetCounterValue(const hwcpipe::GpuMeasurements* gpu, hwcpipe::GpuCounter counter) {
   auto it = gpu->find(counter);
@@ -185,7 +192,7 @@ TEST(TransactionElimination, ForeignQueue) {
 
 bool DrawAllFrames(const vkp::Device& vkp_device, const vkp::CommandBuffers& vkp_command_buffers) {
   vk::SubmitInfo submit_info;
-  submit_info.commandBufferCount = vkp_command_buffers.command_buffers().size();
+  submit_info.commandBufferCount = to_uint32(vkp_command_buffers.command_buffers().size());
   std::vector<vk::CommandBuffer> command_buffer(submit_info.commandBufferCount);
   for (uint32_t i = 0; i < submit_info.commandBufferCount; i++) {
     command_buffer[i] = vkp_command_buffers.command_buffers()[i].get();

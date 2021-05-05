@@ -18,7 +18,7 @@ class TestPlatformPciDevice {
     g_instance = platform_device;
   }
 
-  static bool is_intel_gen(uint16_t device_id) {
+  static bool is_intel_gen(uint32_t device_id) {
     switch (device_id) {
       case 0x1916:  // Intel(R) HD Graphics 520 (Skylake GT2)
       case 0x191E:  // Intel(R) HD Graphics 515 (Skylake GT2)

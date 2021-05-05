@@ -170,7 +170,7 @@ TEST(PlatformDevice, BusMapperPhysical) {
     auto mapper = magma::PlatformBusMapper::Create(platform_device->GetBusTransactionInitiator());
     ASSERT_TRUE(mapper);
 
-    uint32_t page_count = buffer->size() / magma::page_size();
+    uint64_t page_count = buffer->size() / magma::page_size();
 
     auto bus_mapping = mapper->MapPageRangeBus(buffer.get(), 0, page_count);
     ASSERT_TRUE(bus_mapping);

@@ -22,7 +22,7 @@ constexpr size_t kPageSize = 4096;
 
 // Note, alignment must be a power of 2
 template <class T>
-static inline T round_up(T val, uint32_t alignment) {
+static inline T round_up(T val, uint64_t alignment) {
   return ((val - 1) | (alignment - 1)) + 1;
 }
 
@@ -163,7 +163,7 @@ bool VkReadbackTest::InitVulkan(uint32_t vk_api_version) {
   // set_device_info() during unique context construction.
   VulkanContext::Builder builder;
   vk::DeviceCreateInfo device_info = builder.DeviceInfo();
-  device_info.enabledExtensionCount = enabled_extension_names.size();
+  device_info.enabledExtensionCount = static_cast<uint32_t>(enabled_extension_names.size());
   device_info.ppEnabledExtensionNames = enabled_extension_names.data();
 
   auto features = vk::PhysicalDeviceVulkan12Features().setTimelineSemaphore(true);
