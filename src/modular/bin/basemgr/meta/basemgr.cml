@@ -1,3 +1,6 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 {
     include: [
         "sdk/lib/diagnostics/inspect/client.shard.cml",
@@ -7,6 +10,15 @@
         runner: "elf",
         binary: "bin/basemgr",
     },
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.modular.Lifecycle",
+                "fuchsia.modular.session.Launcher",
+                "fuchsia.process.lifecycle.Lifecycle",
+            ],
+        },
+    ],
     use: [
         {
             protocol: "fuchsia.sys2.Realm",
@@ -35,6 +47,12 @@
             from: "parent",
             rights: [ "r*" ],
             path: "/config/data",
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "fuchsia.modular.session.Launcher" ],
+            from: "self",
         },
     ],
 }

@@ -39,9 +39,9 @@ class LauncherImpl : public fuchsia::modular::session::Launcher {
   // |Launcher|
   void LaunchSessionmgrWithServices(fuchsia::mem::Buffer config,
                                     fuchsia::sys::ServiceList additional_services) override {
-    if (additional_services.names.size() > 0 && !additional_services.host_directory) {
+    if (!additional_services.names.empty() && !additional_services.host_directory) {
       FX_LOGS(ERROR)
-          << "LaunchSessionmgrWithServices() requires additional_servicces.host_directory";
+          << "LaunchSessionmgrWithServices() requires additional_services.host_directory";
       binding_->Close(ZX_ERR_INVALID_ARGS);
       return;
     }
@@ -103,19 +103,12 @@ BasemgrImpl::BasemgrImpl(modular::ModularConfigAccessor config_accessor,
       lifecycle_bindings_.GetHandler(this));
   outgoing_services_->AddPublicService(process_lifecycle_bindings_.GetHandler(this),
                                        "fuchsia.process.lifecycle.Lifecycle");
+  outgoing_services_->AddPublicService(GetLauncherHandler(),
+                                       fuchsia::modular::session::Launcher::Name_);
 
-  // Bind the |Launcher| protocol to a client-specific implementation that delegates back to |this|.
-  fidl::InterfaceRequestHandler<fuchsia::modular::session::Launcher> launcher_handler =
-      [this](fidl::InterfaceRequest<fuchsia::modular::session::Launcher> request) {
-        auto impl = std::make_unique<LauncherImpl>(this);
-        session_launcher_bindings_.AddBinding(std::move(impl), std::move(request),
-                                              /*dispatcher=*/nullptr);
-        const auto& binding = session_launcher_bindings_.bindings().back().get();
-        binding->impl()->set_binding(binding);
-      };
   session_launcher_component_service_dir_.AddEntry(
       fuchsia::modular::session::Launcher::Name_,
-      std::make_unique<vfs::Service>(std::move(launcher_handler)));
+      std::make_unique<vfs::Service>(GetLauncherHandler()));
 
   Start();
 }
@@ -330,6 +323,17 @@ fuchsia::sys::ServiceListPtr BasemgrImpl::CreateAndServeSessionLauncherComponent
   services->host_directory = dir_handle.TakeChannel();
 
   return services;
+}
+
+fidl::InterfaceRequestHandler<fuchsia::modular::session::Launcher>
+BasemgrImpl::GetLauncherHandler() {
+  return [this](fidl::InterfaceRequest<fuchsia::modular::session::Launcher> request) {
+    auto impl = std::make_unique<LauncherImpl>(this);
+    session_launcher_bindings_.AddBinding(std::move(impl), std::move(request),
+                                          /*dispatcher=*/nullptr);
+    const auto& binding = session_launcher_bindings_.bindings().back().get();
+    binding->impl()->set_binding(binding);
+  };
 }
 
 }  // namespace modular

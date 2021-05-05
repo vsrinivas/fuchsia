@@ -127,6 +127,11 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   // launcher component, served from |session_launcher_component_service_dir_|.
   fuchsia::sys::ServiceListPtr CreateAndServeSessionLauncherComponentServices();
 
+  // Returns a function that connects the request for the |Launcher| protocol.
+  //
+  // The |Launcher| implementation delegates all calls back to this instance of |BasemgrImpl|.
+  fidl::InterfaceRequestHandler<fuchsia::modular::session::Launcher> GetLauncherHandler();
+
   // Contains initial basemgr and sessionmgr configuration.
   modular::ModularConfigAccessor config_accessor_;
 
