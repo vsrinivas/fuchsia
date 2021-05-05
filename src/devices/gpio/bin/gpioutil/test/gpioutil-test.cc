@@ -16,7 +16,7 @@ namespace {
 
 using fuchsia_hardware_gpio::Gpio;
 
-class FakeGpio : public fidl::WireInterface<Gpio> {
+class FakeGpio : public fidl::WireServer<Gpio> {
  public:
   explicit FakeGpio() {}
 
@@ -24,36 +24,37 @@ class FakeGpio : public fidl::WireInterface<Gpio> {
     return fidl::BindSingleInFlightOnly(dispatcher, std::move(request), this);
   }
 
-  void ConfigIn(fuchsia_hardware_gpio::wire::GpioFlags flags, ConfigInCompleter::Sync& completer) {
-    if (flags != fuchsia_hardware_gpio::wire::GpioFlags::kNoPull) {
+  void ConfigIn(ConfigInRequestView request, ConfigInCompleter::Sync& completer) override {
+    if (request->flags != fuchsia_hardware_gpio::wire::GpioFlags::kNoPull) {
       completer.ReplyError(ZX_ERR_INVALID_ARGS);
       return;
     }
     mock_config_in_.Call();
     completer.ReplySuccess();
   }
-  void ConfigOut(uint8_t initial_value, ConfigOutCompleter::Sync& completer) {
-    if (initial_value != 3) {
+  void ConfigOut(ConfigOutRequestView request, ConfigOutCompleter::Sync& completer) override {
+    if (request->initial_value != 3) {
       completer.ReplyError(ZX_ERR_INVALID_ARGS);
       return;
     }
     mock_config_out_.Call();
     completer.ReplySuccess();
   }
-  void Read(ReadCompleter::Sync& completer) {
+  void Read(ReadRequestView request, ReadCompleter::Sync& completer) override {
     mock_read_.Call();
     completer.ReplySuccess(5);
   }
-  void Write(uint8_t value, WriteCompleter::Sync& completer) {
-    if (value != 7) {
+  void Write(WriteRequestView request, WriteCompleter::Sync& completer) override {
+    if (request->value != 7) {
       completer.ReplyError(ZX_ERR_INVALID_ARGS);
       return;
     }
     mock_write_.Call();
     completer.ReplySuccess();
   }
-  void SetDriveStrength(uint64_t ds_ua, SetDriveStrengthCompleter::Sync& completer) {
-    if (ds_ua != 2000) {
+  void SetDriveStrength(SetDriveStrengthRequestView request,
+                        SetDriveStrengthCompleter::Sync& completer) override {
+    if (request->ds_ua != 2000) {
       completer.ReplyError(ZX_ERR_INVALID_ARGS);
       return;
     }

@@ -32,7 +32,7 @@ static_assert(GPIO_PULL_MASK == static_cast<uint32_t>(GpioFlags::kPullMask),
               "ConfigIn PULL_MASK flag doesn't match.");
 
 class GpioDevice : public GpioDeviceType,
-                   public fidl::WireInterface<Gpio>,
+                   public fidl::WireServer<Gpio>,
                    public ddk::GpioProtocol<GpioDevice, ddk::base_protocol> {
  public:
   GpioDevice(zx_device_t* parent, gpio_impl_protocol_t* gpio, uint32_t pin)
@@ -59,23 +59,23 @@ class GpioDevice : public GpioDeviceType,
   zx_status_t GpioSetDriveStrength(uint64_t ds_ua, uint64_t* out_actual_ds_ua);
 
   // FIDL
-  void ConfigIn(GpioFlags flags, ConfigInCompleter::Sync& completer) {
-    zx_status_t status = GpioConfigIn(static_cast<uint32_t>(flags));
+  void ConfigIn(ConfigInRequestView request, ConfigInCompleter::Sync& completer) override {
+    zx_status_t status = GpioConfigIn(static_cast<uint32_t>(request->flags));
     if (status == ZX_OK) {
       completer.ReplySuccess();
     } else {
       completer.ReplyError(status);
     }
   }
-  void ConfigOut(uint8_t initial_value, ConfigOutCompleter::Sync& completer) {
-    zx_status_t status = GpioConfigOut(initial_value);
+  void ConfigOut(ConfigOutRequestView request, ConfigOutCompleter::Sync& completer) override {
+    zx_status_t status = GpioConfigOut(request->initial_value);
     if (status == ZX_OK) {
       completer.ReplySuccess();
     } else {
       completer.ReplyError(status);
     }
   }
-  void Read(ReadCompleter::Sync& completer) {
+  void Read(ReadRequestView request, ReadCompleter::Sync& completer) override {
     uint8_t value = 0;
     zx_status_t status = GpioRead(&value);
     if (status == ZX_OK) {
@@ -84,17 +84,18 @@ class GpioDevice : public GpioDeviceType,
       completer.ReplyError(status);
     }
   }
-  void Write(uint8_t value, WriteCompleter::Sync& completer) {
-    zx_status_t status = GpioWrite(value);
+  void Write(WriteRequestView request, WriteCompleter::Sync& completer) override {
+    zx_status_t status = GpioWrite(request->value);
     if (status == ZX_OK) {
       completer.ReplySuccess();
     } else {
       completer.ReplyError(status);
     }
   }
-  void SetDriveStrength(uint64_t ds_ua, SetDriveStrengthCompleter::Sync& completer) {
+  void SetDriveStrength(SetDriveStrengthRequestView request,
+                        SetDriveStrengthCompleter::Sync& completer) override {
     uint64_t actual = 0;
-    zx_status_t status = GpioSetDriveStrength(ds_ua, &actual);
+    zx_status_t status = GpioSetDriveStrength(request->ds_ua, &actual);
     if (status == ZX_OK) {
       completer.ReplySuccess(actual);
     } else {
