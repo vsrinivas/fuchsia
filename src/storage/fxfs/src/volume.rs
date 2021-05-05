@@ -7,7 +7,7 @@ use {
         errors::FxfsError,
         object_store::{
             directory::Directory,
-            filesystem::{Filesystem, FxFilesystem},
+            filesystem::FxFilesystem,
             transaction::{LockKey, TransactionHandler},
             ObjectDescriptor, ObjectStore,
         },
@@ -44,9 +44,6 @@ impl RootVolume {
         let mut transaction = self.filesystem.clone().new_transaction(&[]).await?;
         store = root_store.create_child_store(&mut transaction).await?;
 
-        let graveyard = Arc::new(Directory::create(&mut transaction, &store).await?);
-        store.set_graveyard_directory_object_id(&mut transaction, graveyard.object_id());
-
         let root_directory = Directory::create(&mut transaction, &store).await?;
         store.set_root_directory_object_id(&mut transaction, root_directory.object_id());
 
@@ -56,7 +53,6 @@ impl RootVolume {
             store.store_object_id(),
         );
         transaction.commit().await;
-        self.filesystem.object_manager().register_graveyard(store.store_object_id(), graveyard);
 
         Ok(store)
     }
@@ -71,17 +67,7 @@ impl RootVolume {
         Ok(if let Some(volume_store) = self.filesystem.store(object_id) {
             volume_store
         } else {
-            let store = self.filesystem.root_store().open_store(object_id).await?;
-
-            // Make sure the graveyard is registered.
-            if self.filesystem.object_manager().graveyard(object_id).is_none() {
-                self.filesystem.object_manager().register_graveyard(
-                    object_id,
-                    Arc::new(Directory::open(&store, store.graveyard_directory_object_id()).await?),
-                );
-            }
-
-            store
+            self.filesystem.root_store().open_store(object_id).await?
         })
     }
 

@@ -7,6 +7,7 @@ mod constants;
 pub mod directory;
 pub mod filesystem;
 pub mod fsck;
+mod graveyard;
 mod journal;
 mod merge;
 mod record;
@@ -26,7 +27,7 @@ use {
         },
         errors::FxfsError,
         lsm_tree::{types::LayerIterator, LSMTree},
-        object_handle::{ObjectHandle, ObjectHandleExt},
+        object_handle::{ObjectHandle, ObjectHandleExt, INVALID_OBJECT_ID},
         object_store::{
             filesystem::{Filesystem, Mutations, ObjectFlush},
             record::{
@@ -50,7 +51,7 @@ use {
         cmp::min,
         ops::{Bound, Range},
         sync::{
-            atomic::{self, AtomicBool},
+            atomic::{self, AtomicBool, AtomicU64},
             Arc, Mutex, Weak,
         },
     },
@@ -60,7 +61,8 @@ use {
 // store, and is used, for example, to get the persistent layer objects.
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct StoreInfo {
-    // The last used object ID.
+    // The last used object ID.  Note that this field is not accurate in memory; ObjectStore's
+    // last_object_id field is the one to use in that case.
     last_object_id: u64,
 
     // Object ids for layers.  TODO(csuter): need a layer of indirection here so we can
@@ -71,6 +73,7 @@ pub struct StoreInfo {
     root_directory_object_id: u64,
 
     // The object ID for the graveyard.
+    // TODO(csuter): Move this out of here.  This can probably be a child of the root directory.
     graveyard_directory_object_id: u64,
 }
 
@@ -94,7 +97,8 @@ pub struct ObjectStore {
     device: Arc<dyn Device>,
     block_size: u32,
     filesystem: Weak<dyn Filesystem>,
-    store_info: Mutex<StoreInfo>,
+    last_object_id: AtomicU64,
+    store_info: Mutex<Option<StoreInfo>>,
     tree: LSMTree<ObjectKey, ObjectValue>,
 
     // When replaying the journal, the store cannot read StoreInfo until the whole journal
@@ -109,7 +113,7 @@ impl ObjectStore {
         parent_store: Option<Arc<ObjectStore>>,
         store_object_id: u64,
         filesystem: Arc<dyn Filesystem>,
-        store_info: StoreInfo,
+        store_info: Option<StoreInfo>,
         tree: LSMTree<ObjectKey, ObjectValue>,
     ) -> Arc<ObjectStore> {
         let device = filesystem.device();
@@ -120,6 +124,7 @@ impl ObjectStore {
             device,
             block_size,
             filesystem: Arc::downgrade(&filesystem),
+            last_object_id: AtomicU64::new(0),
             store_info: Mutex::new(store_info),
             tree,
             store_info_handle: OnceCell::new(),
@@ -137,7 +142,7 @@ impl ObjectStore {
             parent_store,
             store_object_id,
             filesystem,
-            StoreInfo::default(),
+            Some(StoreInfo::default()),
             LSMTree::new(merge::merge),
         )
     }
@@ -159,7 +164,7 @@ impl ObjectStore {
     }
 
     pub fn root_directory_object_id(&self) -> u64 {
-        self.store_info.lock().unwrap().root_directory_object_id
+        self.store_info.lock().unwrap().as_ref().unwrap().root_directory_object_id
     }
 
     pub fn set_root_directory_object_id<'a>(&'a self, transaction: &mut Transaction<'a>, oid: u64) {
@@ -169,7 +174,7 @@ impl ObjectStore {
     }
 
     pub fn graveyard_directory_object_id(&self) -> u64 {
-        self.store_info.lock().unwrap().graveyard_directory_object_id
+        self.store_info.lock().unwrap().as_ref().unwrap().graveyard_directory_object_id
     }
 
     pub fn set_graveyard_directory_object_id<'a>(
@@ -226,7 +231,7 @@ impl ObjectStore {
             Some(self.clone()),
             store_object_id,
             self.filesystem.upgrade().unwrap(),
-            StoreInfo::default(),
+            None,
             LSMTree::new(merge::merge),
         )
     }
@@ -275,6 +280,10 @@ impl ObjectStore {
     ) -> Result<StoreObjectHandle<S>, Error> {
         let store = owner.as_ref().as_ref();
         store.ensure_open().await?;
+        // If the object ID was specified i.e. this hasn't come via create_object, then we
+        // should update last_object_id in case the caller wants to create more objects in
+        // the same transaction.
+        store.update_last_object_id(object_id);
         transaction.add(
             store.store_object_id(),
             Mutation::insert_object(ObjectKey::object(object_id), ObjectValue::file(1, 0)),
@@ -370,6 +379,33 @@ impl ObjectStore {
         Ok(())
     }
 
+    /// Returns all objects that exist in the parent store that pertain to this object store.
+    pub fn parent_objects(&self) -> Vec<u64> {
+        assert!(self.store_info_handle.get().is_some());
+        let mut objects = Vec::new();
+        // We should not include the ID of the store itself, since that should be referred to in the
+        // volume directory.
+        objects.extend_from_slice(&self.store_info.lock().unwrap().as_ref().unwrap().layers);
+        objects
+    }
+
+    /// Returns root objects for this store.
+    pub fn root_objects(&self) -> Vec<u64> {
+        let mut objects = Vec::new();
+        let store_info = self.store_info.lock().unwrap();
+        if store_info.as_ref().unwrap().root_directory_object_id != INVALID_OBJECT_ID {
+            objects.push(store_info.as_ref().unwrap().root_directory_object_id);
+        }
+        if store_info.as_ref().unwrap().graveyard_directory_object_id != INVALID_OBJECT_ID {
+            objects.push(store_info.as_ref().unwrap().graveyard_directory_object_id);
+        }
+        objects
+    }
+
+    pub fn store_info(&self) -> StoreInfo {
+        self.store_info.lock().unwrap().as_ref().unwrap().clone()
+    }
+
     async fn ensure_open(&self) -> Result<(), Error> {
         if self.parent_store.is_none() || self.store_info_handle.get().is_some() {
             return Ok(());
@@ -390,23 +426,25 @@ impl ObjectStore {
                 HandleOptions::default(),
             )
             .await?;
-            if handle.get_size() > 0 {
+            let need_store_info = self.store_info.lock().unwrap().is_none();
+            let layer_object_ids = if need_store_info && handle.get_size() > 0 {
                 let serialized_info = handle.contents(MAX_STORE_INFO_SERIALIZED_SIZE).await?;
                 let store_info: StoreInfo = deserialize_from(&serialized_info[..])?;
-                let mut handles = Vec::new();
-                for object_id in &store_info.layers {
-                    handles.push(
-                        ObjectStore::open_object(
-                            &parent_store,
-                            *object_id,
-                            HandleOptions::default(),
-                        )
+                let layer_object_ids = store_info.layers.clone();
+                self.update_last_object_id(store_info.last_object_id);
+                *self.store_info.lock().unwrap() = Some(store_info);
+                layer_object_ids
+            } else {
+                self.store_info.lock().unwrap().as_ref().unwrap().layers.clone()
+            };
+            let mut handles = Vec::new();
+            for object_id in layer_object_ids {
+                handles.push(
+                    ObjectStore::open_object(&parent_store, object_id, HandleOptions::default())
                         .await?,
-                    );
-                }
-                self.tree.set_layers(handles.into()).await?;
-                self.update_store_info(store_info);
+                );
             }
+            self.tree.append_layers(handles.into()).await?;
             let _ = self.store_info_handle.set(handle);
             Ok(())
         }
@@ -414,9 +452,7 @@ impl ObjectStore {
     }
 
     fn get_next_object_id(&self) -> u64 {
-        let mut store_info = self.store_info.lock().unwrap();
-        store_info.last_object_id += 1;
-        store_info.last_object_id
+        self.last_object_id.fetch_add(1, atomic::Ordering::Relaxed) + 1
     }
 
     fn allocator(&self) -> Arc<dyn Allocator> {
@@ -425,19 +461,17 @@ impl ObjectStore {
 
     fn txn_get_store_info(&self, transaction: &Transaction<'_>) -> StoreInfo {
         match transaction.get_store_info(self.store_object_id) {
-            None => self.store_info.lock().unwrap().clone(),
+            None => self.store_info(),
             Some(store_info) => store_info.clone(),
         }
     }
 
-    // The last object ID is updated as we create new objects, so we need to always take the maximum
-    // rather than blindly overwriting the last_object_id field.
-    fn update_store_info(&self, mut new_store_info: StoreInfo) {
-        let mut store_info = self.store_info.lock().unwrap();
-        if store_info.last_object_id > new_store_info.last_object_id {
-            new_store_info.last_object_id = store_info.last_object_id;
-        }
-        *store_info = new_store_info;
+    fn update_last_object_id(&self, object_id: u64) {
+        let _ = self.last_object_id.fetch_update(
+            atomic::Ordering::Relaxed,
+            atomic::Ordering::Relaxed,
+            |oid| if object_id > oid { Some(object_id) } else { None },
+        );
     }
 }
 
@@ -453,12 +487,7 @@ impl Mutations for ObjectStore {
 
         match mutation {
             Mutation::ObjectStore(ObjectStoreMutation { item, op }) => {
-                {
-                    let mut store_info = self.store_info.lock().unwrap();
-                    if item.key.object_id > store_info.last_object_id {
-                        store_info.last_object_id = item.key.object_id;
-                    }
-                }
+                self.update_last_object_id(item.key.object_id);
                 match op {
                     Operation::Insert => self.tree.insert(item).await,
                     Operation::ReplaceOrInsert => self.tree.replace_or_insert(item).await,
@@ -468,12 +497,8 @@ impl Mutations for ObjectStore {
                     }
                 }
             }
-            Mutation::ObjectStoreInfo(StoreInfoMutation(mut store_info)) => {
-                let mut info = self.store_info.lock().unwrap();
-                if info.last_object_id > store_info.last_object_id {
-                    store_info.last_object_id = info.last_object_id;
-                }
-                *info = store_info;
+            Mutation::ObjectStoreInfo(StoreInfoMutation(store_info)) => {
+                *self.store_info.lock().unwrap() = Some(store_info);
             }
             Mutation::TreeSeal => self.tree.seal().await,
             Mutation::TreeCompact => {
@@ -503,33 +528,47 @@ impl Mutations for ObjectStore {
         if !object_manager.needs_flush(self.store_object_id) {
             return Ok(());
         }
-        let object_sync = ObjectFlush::new(object_manager, self.store_object_id);
+
         let parent_store = self.parent_store.as_ref().unwrap();
+        let graveyard = object_manager.graveyard().ok_or(anyhow!("Missing graveyard!"))?;
+
+        let object_sync = ObjectFlush::new(object_manager, self.store_object_id);
         let mut transaction = filesystem.clone().new_transaction(&[]).await?;
         let object_handle =
             ObjectStore::create_object(parent_store, &mut transaction, HandleOptions::default())
                 .await?;
+        let object_id = object_handle.object_id();
+        graveyard.add(&mut transaction, parent_store.store_object_id(), object_id);
         transaction.add_with_object(self.store_object_id(), Mutation::TreeSeal, &object_sync);
         transaction.commit().await;
 
-        let object_id = object_handle.object_id();
         self.tree.compact(&object_handle).await?;
 
         let mut serialized_info = Vec::new();
-        let mut new_store_info = self.store_info.lock().unwrap().clone();
+        let mut new_store_info = self.store_info();
+
+        let mut transaction = filesystem.clone().new_transaction(&[]).await?;
+
+        // Move all the existing layers to the graveyard.
+        for object_id in new_store_info.layers {
+            graveyard.add(&mut transaction, parent_store.store_object_id(), object_id);
+        }
+
+        new_store_info.last_object_id = self.last_object_id.load(atomic::Ordering::Relaxed);
         new_store_info.layers = vec![object_id];
         serialize_into(&mut serialized_info, &new_store_info)?;
         let mut buf = self.device.allocate_buffer(serialized_info.len());
         buf.as_mut_slice().copy_from_slice(&serialized_info[..]);
 
-        let mut transaction = filesystem.clone().new_transaction(&[]).await?;
         self.store_info_handle
             .get()
             .unwrap()
             .txn_write(&mut transaction, 0u64, buf.as_ref())
             .await?;
         transaction.add(self.store_object_id(), Mutation::TreeCompact);
-        self.update_store_info(new_store_info);
+        graveyard.remove(&mut transaction, parent_store.store_object_id(), object_id);
+        // TODO(csuter): This isn't thread-safe.
+        *self.store_info.lock().unwrap() = Some(new_store_info);
         transaction.commit().await;
 
         self.tree.set_layers(Box::new([object_handle])).await.expect("set_layers failed");
@@ -549,7 +588,7 @@ impl AssociatedObject for ObjectStore {
     fn will_apply_mutation(&self, mutation: &Mutation) {
         match mutation {
             Mutation::ObjectStoreInfo(StoreInfoMutation(store_info)) => {
-                self.update_store_info(store_info.clone());
+                *self.store_info.lock().unwrap() = Some(store_info.clone());
             }
             _ => {}
         }
@@ -1269,6 +1308,7 @@ mod tests {
             object_handle::{ObjectHandle, ObjectHandleExt},
             object_store::{
                 filesystem::{Filesystem, Mutations},
+                graveyard::Graveyard,
                 record::{ObjectKey, ObjectKeyData},
                 round_up,
                 testing::{fake_allocator::FakeAllocator, fake_filesystem::FakeFilesystem},
@@ -1308,6 +1348,9 @@ mod tests {
             .create_child_store_with_id(&mut transaction, 3)
             .await
             .expect("create_child_store failed");
+        let graveyard =
+            Arc::new(Graveyard::create(&mut transaction, &store).await.expect("create failed"));
+        fs.object_manager().register_graveyard(graveyard);
         transaction.commit().await;
         (fs.clone(), allocator, store)
     }

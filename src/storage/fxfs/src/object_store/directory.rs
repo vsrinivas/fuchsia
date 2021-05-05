@@ -65,6 +65,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> Directory<S> {
 
     pub async fn open(owner: &Arc<S>, object_id: u64) -> Result<Directory<S>, Error> {
         let store = owner.as_ref().as_ref();
+        store.ensure_open().await?;
         if let ObjectItem { value: ObjectValue::Object { kind: ObjectKind::Directory }, .. } =
             store.tree.find(&ObjectKey::object(object_id)).await?.ok_or(FxfsError::NotFound)?
         {

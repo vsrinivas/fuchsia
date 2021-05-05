@@ -22,7 +22,7 @@ use {
             HandleOptions, ObjectStore,
         },
     },
-    anyhow::{bail, ensure, Error},
+    anyhow::{anyhow, bail, ensure, Error},
     async_trait::async_trait,
     bincode::{deserialize_from, serialize_into},
     merge::merge,
@@ -220,12 +220,19 @@ impl SimpleAllocator {
                     );
                 }
                 self.inner.lock().unwrap().info = info;
-                self.tree.set_layers(handles.into_boxed_slice()).await?;
+                self.tree.append_layers(handles.into_boxed_slice()).await?;
             }
         }
 
         self.inner.lock().unwrap().opened = true;
         Ok(())
+    }
+
+    /// Returns all objects that exist in the parent store that pertain to this allocator.
+    pub fn parent_objects(&self) -> Vec<u64> {
+        // The allocator tree needs to store a file for each of the layers in the tree, so we return
+        // those, since nothing else references them.
+        self.inner.lock().unwrap().info.layers.clone()
     }
 }
 
@@ -354,6 +361,7 @@ impl Mutations for SimpleAllocator {
         if !object_manager.needs_flush(self.object_id()) {
             return Ok(());
         }
+        let graveyard = object_manager.graveyard().ok_or(anyhow!("Missing graveyard!"))?;
         let object_sync = ObjectFlush::new(object_manager, self.object_id());
         // TODO(csuter): This all needs to be atomic somehow. We'll need to use different
         // transactions for each stage, but we need make sure objects are cleaned up if there's a
@@ -364,11 +372,11 @@ impl Mutations for SimpleAllocator {
         let layer_object_handle =
             ObjectStore::create_object(&root_store, &mut transaction, HandleOptions::default())
                 .await?;
-
+        let object_id = layer_object_handle.object_id();
+        graveyard.add(&mut transaction, root_store.store_object_id(), object_id);
         transaction.add_with_object(self.object_id(), Mutation::TreeSeal, &object_sync);
         transaction.commit().await;
 
-        let object_id = layer_object_handle.object_id();
         let layer_set = self.tree.immutable_layer_set();
         let mut merger = layer_set.merger();
         self.tree
@@ -382,20 +390,28 @@ impl Mutations for SimpleAllocator {
         let object_handle =
             ObjectStore::open_object(&root_store, self.object_id(), HandleOptions::default())
                 .await?;
+
         // TODO(jfsulliv): Can we preallocate the buffer instead of doing a bounce? Do we know the
         // size up front?
+        let mut transaction = filesystem.clone().new_transaction(&[]).await?;
         let mut serialized_info = Vec::new();
         {
             let mut inner = self.inner.lock().unwrap();
+
+            // Move all the existing layers to the graveyard.
+            for object_id in &inner.info.layers {
+                graveyard.add(&mut transaction, root_store.store_object_id(), *object_id);
+            }
+
             inner.info.layers = vec![object_id];
             serialize_into(&mut serialized_info, &inner.info)?;
         }
         let mut buf = object_handle.allocate_buffer(serialized_info.len());
         buf.as_mut_slice()[..serialized_info.len()].copy_from_slice(&serialized_info[..]);
-        let mut transaction = filesystem.clone().new_transaction(&[]).await?;
         object_handle.txn_write(&mut transaction, 0u64, buf.as_ref()).await?;
 
         transaction.add(self.object_id(), Mutation::TreeCompact);
+        graveyard.remove(&mut transaction, root_store.store_object_id(), object_id);
         transaction.commit().await;
 
         // TODO(csuter): what if this fails.
@@ -482,6 +498,7 @@ mod tests {
                     SimpleAllocator,
                 },
                 filesystem::{Filesystem, Mutations},
+                graveyard::Graveyard,
                 testing::fake_filesystem::FakeFilesystem,
                 transaction::TransactionHandler,
                 ObjectStore,
@@ -665,9 +682,13 @@ mod tests {
         let fs = FakeFilesystem::new(device);
         let allocator = Arc::new(SimpleAllocator::new(fs.clone(), 1, true));
         fs.object_manager().set_allocator(allocator.clone());
-        let _store = ObjectStore::new_empty(None, 2, fs.clone());
+        let store = ObjectStore::new_empty(None, 2, fs.clone());
         fs.object_manager().set_root_store_object_id(2);
+        allocator.ensure_open().await.expect("ensure_open failed");
         let mut transaction = fs.clone().new_transaction(&[]).await.expect("new failed");
+        let graveyard =
+            Arc::new(Graveyard::create(&mut transaction, &store).await.expect("create failed"));
+        fs.object_manager().register_graveyard(graveyard);
         let mut device_ranges = Vec::new();
         device_ranges
             .push(allocator.allocate(&mut transaction, 512).await.expect("allocate failed"));

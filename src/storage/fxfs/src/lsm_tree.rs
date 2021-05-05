@@ -83,6 +83,17 @@ impl<'tree, K: Eq + Key + NextKey + OrdLowerBound, V: Value> LSMTree<K, V> {
         Ok(())
     }
 
+    /// Appends to the given layers at the end i.e. they should be base layers.  This is supposed
+    /// to be used after replay when we are opening a tree and we have discovered the base layers.
+    pub async fn append_layers(
+        &self,
+        handles: Box<[impl ObjectHandle + 'static]>,
+    ) -> Result<(), Error> {
+        let mut layers = Self::layers_from_handles(handles).await?;
+        self.data.write().unwrap().layers.append(&mut layers);
+        Ok(())
+    }
+
     /// Resets the immutable layers.
     pub fn reset_immutable_layers(&self) {
         self.data.write().unwrap().layers = Vec::new();

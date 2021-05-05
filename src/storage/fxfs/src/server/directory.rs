@@ -291,17 +291,11 @@ impl FxDirectory {
         {
             let store = self.store();
             if let ObjectDescriptor::File = descriptor {
-                store
-                    .filesystem()
-                    .object_manager()
-                    .graveyard(store.store_object_id())
-                    .unwrap()
-                    .insert_child(
-                        transaction,
-                        &format!("{}", existing_oid),
-                        existing_oid,
-                        descriptor,
-                    );
+                store.filesystem().object_manager().graveyard().unwrap().add(
+                    transaction,
+                    self.store().store_object_id(),
+                    existing_oid,
+                );
             } else {
                 directory::remove(transaction, &store, existing_oid);
             }

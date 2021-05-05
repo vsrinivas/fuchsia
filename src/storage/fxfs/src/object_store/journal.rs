@@ -16,7 +16,7 @@
 // same per-block checksum that is used for the journal file.
 
 mod reader;
-mod super_block;
+pub mod super_block;
 mod writer;
 
 use {
@@ -28,6 +28,7 @@ use {
             constants::SUPER_BLOCK_OBJECT_ID,
             directory::Directory,
             filesystem::{Filesystem, Mutations, ObjectFlush, ObjectManager, SyncOptions},
+            graveyard::Graveyard,
             journal::{
                 reader::{JournalReader, ReadResult},
                 super_block::SuperBlock,
@@ -48,7 +49,10 @@ use {
     std::{
         clone::Clone,
         iter::IntoIterator,
-        sync::{Arc, Mutex},
+        sync::{
+            atomic::{self, AtomicBool},
+            Arc, Mutex,
+        },
         vec::Vec,
     },
 };
@@ -137,6 +141,7 @@ pub struct Journal {
     objects: Arc<ObjectManager>,
     writer: futures::lock::Mutex<JournalWriter<StoreObjectHandle<ObjectStore>>>,
     inner: Mutex<Inner>,
+    trace: AtomicBool,
 }
 
 struct Inner {
@@ -160,7 +165,12 @@ impl Journal {
                 super_block: SuperBlock::default(),
                 should_flush: false,
             }),
+            trace: AtomicBool::new(false),
         }
+    }
+
+    pub fn set_trace(&self, v: bool) {
+        self.trace.store(v, atomic::Ordering::Relaxed);
     }
 
     /// Reads a super-block and then replays journaled records.
@@ -223,7 +233,9 @@ impl Journal {
                         }
                         JournalRecord::Commit => {
                             if let Some(checkpoint) = journal_file_checkpoint.take() {
-                                log::debug!("REPLAY {}", checkpoint.file_offset);
+                                if self.trace.load(atomic::Ordering::Relaxed) {
+                                    log::info!("REPLAY {}", checkpoint.file_offset);
+                                }
                                 for (object_id, mutation) in mutations {
                                     // Snoop the mutations for any that might apply to the journal
                                     // file to ensure that we accurately track changes in size.
@@ -283,6 +295,18 @@ impl Journal {
             }
             writer.seek_to_checkpoint(checkpoint);
         }
+
+        let root_store = self.objects.root_store();
+        root_store.ensure_open().await?;
+        self.objects.register_graveyard(Arc::new(
+            Graveyard::open(&self.objects.root_store(), root_store.graveyard_directory_object_id())
+                .await
+                .context(format!(
+                    "failed to open graveyard (object_id: {})",
+                    root_store.graveyard_directory_object_id()
+                ))?,
+        ));
+
         log::info!("replay done");
         Ok(())
     }
@@ -345,9 +369,9 @@ impl Journal {
             .context("preallocate journal")?;
 
         // the root store's graveyard and root directory...
-        let graveyard = Arc::new(Directory::create(&mut transaction, &root_store).await?);
+        let graveyard = Arc::new(Graveyard::create(&mut transaction, &root_store).await?);
         root_store.set_graveyard_directory_object_id(&mut transaction, graveyard.object_id());
-        self.objects.register_graveyard(root_store.store_object_id(), graveyard);
+        self.objects.register_graveyard(graveyard);
 
         let root_directory = Directory::create(&mut transaction, &root_store)
             .await
@@ -442,7 +466,9 @@ impl Journal {
         mutations: impl IntoIterator<Item = TxnMutation<'_>>,
         journal_file_checkpoint: JournalCheckpoint,
     ) {
-        log::debug!("BEGIN TXN {}", journal_file_checkpoint.file_offset);
+        if self.trace.load(atomic::Ordering::Relaxed) {
+            log::info!("BEGIN TXN {}", journal_file_checkpoint.file_offset);
+        }
         for TxnMutation { object_id, mutation, associated_object } in mutations {
             self.apply_mutation(
                 object_id,
@@ -453,7 +479,9 @@ impl Journal {
             )
             .await;
         }
-        log::debug!("END TXN");
+        if self.trace.load(atomic::Ordering::Relaxed) {
+            log::info!("END TXN");
+        }
     }
 
     // Determines whether a mutation at the given checkpoint should be applied.  During replay, not
@@ -479,12 +507,16 @@ impl Journal {
         object: Option<&dyn AssociatedObject>,
     ) {
         if !filter || self.should_apply(object_id, journal_file_checkpoint) {
-            log::debug!("applying mutation: {}: {:?}, filter: {}", object_id, mutation, filter);
+            if self.trace.load(atomic::Ordering::Relaxed) {
+                log::info!("applying mutation: {}: {:?}, filter: {}", object_id, mutation, filter);
+            }
             self.objects
                 .apply_mutation(object_id, mutation, filter, journal_file_checkpoint, object)
                 .await;
         } else {
-            log::debug!("ignoring mutation: {}, {:?}", object_id, mutation);
+            if self.trace.load(atomic::Ordering::Relaxed) {
+                log::info!("ignoring mutation: {}, {:?}", object_id, mutation);
+            }
         }
     }
 
@@ -574,6 +606,8 @@ impl Journal {
         Ok(())
     }
 
+    /// Flushes any buffered journal data to the device.  Note that this does not flush the device
+    /// so it still does not guarantee data will have been persisted to lower layers.
     pub async fn sync(&self, _options: SyncOptions) -> Result<(), Error> {
         // TODO(csuter): There needs to be some kind of locking here.
         let needs_super_block = self.inner.lock().unwrap().needs_super_block;
@@ -585,6 +619,11 @@ impl Journal {
         writer.pad_to_block()?;
         writer.maybe_flush_buffer().await?;
         Ok(())
+    }
+
+    /// Returns a copy of the super-block.
+    pub fn super_block(&self) -> SuperBlock {
+        self.inner.lock().unwrap().super_block.clone()
     }
 
     /// Returns whether or not a flush should be performed.  This is only updated after committing a
@@ -619,6 +658,7 @@ mod tests {
             device::DeviceHolder,
             object_handle::{ObjectHandle, ObjectHandleExt},
             object_store::{
+                directory::Directory,
                 filesystem::{FxFilesystem, SyncOptions},
                 fsck::fsck,
                 transaction::TransactionHandler,
@@ -638,16 +678,20 @@ mod tests {
         let device = DeviceHolder::new(FakeDevice::new(2048, TEST_DEVICE_BLOCK_SIZE));
 
         let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
+
         let object_id = {
+            let root_store = fs.root_store();
+            let root_directory =
+                Directory::open(&root_store, root_store.root_directory_object_id())
+                    .await
+                    .expect("open failed");
             let mut transaction =
                 fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-            let handle = ObjectStore::create_object(
-                &fs.root_store(),
-                &mut transaction,
-                HandleOptions::default(),
-            )
-            .await
-            .expect("create_object failed");
+            let handle = root_directory
+                .create_child_file(&mut transaction, "test")
+                .await
+                .expect("create_child_file failed");
+
             transaction.commit().await;
             let mut buf = handle.allocate_buffer(TEST_DATA.len());
             buf.as_mut_slice().copy_from_slice(TEST_DATA);
@@ -663,7 +707,7 @@ mod tests {
             let handle =
                 ObjectStore::open_object(&fs.root_store(), object_id, HandleOptions::default())
                     .await
-                    .expect("create_object failed");
+                    .expect("open_object failed");
             let mut buf = handle.allocate_buffer(TEST_DEVICE_BLOCK_SIZE as usize);
             assert_eq!(handle.read(0, buf.as_mut()).await.expect("read failed"), TEST_DATA.len());
             assert_eq!(&buf.as_slice()[..TEST_DATA.len()], TEST_DATA);
@@ -675,21 +719,23 @@ mod tests {
     async fn test_reset() {
         const TEST_DATA: &[u8] = b"hello";
 
-        let device = DeviceHolder::new(FakeDevice::new(4096, TEST_DEVICE_BLOCK_SIZE));
+        let device = DeviceHolder::new(FakeDevice::new(6144, TEST_DEVICE_BLOCK_SIZE));
 
         let mut object_ids = Vec::new();
 
         let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
         {
+            let root_store = fs.root_store();
+            let root_directory =
+                Directory::open(&root_store, root_store.root_directory_object_id())
+                    .await
+                    .expect("open failed");
             let mut transaction =
                 fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-            let handle = ObjectStore::create_object(
-                &fs.root_store(),
-                &mut transaction,
-                HandleOptions::default(),
-            )
-            .await
-            .expect("create_object failed");
+            let handle = root_directory
+                .create_child_file(&mut transaction, "test")
+                .await
+                .expect("create_child_file failed");
             transaction.commit().await;
             let mut buf = handle.allocate_buffer(TEST_DATA.len());
             buf.as_mut_slice().copy_from_slice(TEST_DATA);
@@ -699,16 +745,13 @@ mod tests {
 
             // Create a lot of objects but don't sync at the end. This should leave the filesystem
             // with a half finished transaction that cannot be replayed.
-            for _ in 0..1000 {
+            for i in 0..1000 {
                 let mut transaction =
                     fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-                let handle = ObjectStore::create_object(
-                    &fs.root_store(),
-                    &mut transaction,
-                    HandleOptions::default(),
-                )
-                .await
-                .expect("create_object failed");
+                let handle = root_directory
+                    .create_child_file(&mut transaction, &format!("{}", i))
+                    .await
+                    .expect("create_child_file failed");
                 transaction.commit().await;
                 let mut buf = handle.allocate_buffer(TEST_DATA.len());
                 buf.as_mut_slice().copy_from_slice(TEST_DATA);
@@ -720,12 +763,13 @@ mod tests {
         let fs = FxFilesystem::open(fs.take_device().await).await.expect("open failed");
         fsck(&fs).await.expect("fsck failed");
         {
+            let root_store = fs.root_store();
             // Check the first two objects which should exist.
             for &object_id in &object_ids[0..1] {
                 let handle =
-                    ObjectStore::open_object(&fs.root_store(), object_id, HandleOptions::default())
+                    ObjectStore::open_object(&root_store, object_id, HandleOptions::default())
                         .await
-                        .expect("create_object failed");
+                        .expect("open_object failed");
                 let mut buf = handle.allocate_buffer(TEST_DEVICE_BLOCK_SIZE as usize);
                 assert_eq!(
                     handle.read(0, buf.as_mut()).await.expect("read failed"),
@@ -735,15 +779,16 @@ mod tests {
             }
 
             // Write one more object and sync.
+            let root_directory =
+                Directory::open(&root_store, root_store.root_directory_object_id())
+                    .await
+                    .expect("open failed");
             let mut transaction =
                 fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-            let handle = ObjectStore::create_object(
-                &fs.root_store(),
-                &mut transaction,
-                HandleOptions::default(),
-            )
-            .await
-            .expect("create_object failed");
+            let handle = root_directory
+                .create_child_file(&mut transaction, "test2")
+                .await
+                .expect("create_child_file failed");
             transaction.commit().await;
             let mut buf = handle.allocate_buffer(TEST_DATA.len());
             buf.as_mut_slice().copy_from_slice(TEST_DATA);
@@ -752,14 +797,18 @@ mod tests {
             object_ids.push(handle.object_id());
         }
 
-        let fs = FxFilesystem::open(fs.take_device().await).await.expect("open failed");
+        let fs = FxFilesystem::open_with_trace(fs.take_device().await, false)
+            .await
+            .expect("open failed");
         {
+            fsck(&fs).await.expect("fsck failed");
+
             // Check the first two and the last objects.
             for &object_id in object_ids[0..1].iter().chain(object_ids.last().cloned().iter()) {
                 let handle =
                     ObjectStore::open_object(&fs.root_store(), object_id, HandleOptions::default())
                         .await
-                        .expect("create_object failed");
+                        .expect(&format!("open_object failed (object_id: {})", object_id));
                 let mut buf = handle.allocate_buffer(TEST_DEVICE_BLOCK_SIZE as usize);
                 assert_eq!(
                     handle.read(0, buf.as_mut()).await.expect("read failed"),
@@ -767,8 +816,6 @@ mod tests {
                 );
                 assert_eq!(&buf.as_slice()[..TEST_DATA.len()], TEST_DATA);
             }
-
-            fsck(&fs).await.expect("fsck failed");
         }
     }
 }

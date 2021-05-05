@@ -40,7 +40,7 @@ const MIN_SUPER_BLOCK_SIZE: u64 = 524_288;
 // A super-block consists of this header followed by records that are to be replayed into the root
 // parent object store.
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
-pub(super) struct SuperBlock {
+pub struct SuperBlock {
     // TODO(csuter): version stuff
     // TODO(csuter): UUID
 

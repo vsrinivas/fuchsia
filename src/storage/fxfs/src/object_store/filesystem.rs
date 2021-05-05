@@ -8,8 +8,8 @@ use {
         object_handle::INVALID_OBJECT_ID,
         object_store::{
             allocator::Allocator,
-            directory::Directory,
-            journal::{Journal, JournalCheckpoint},
+            graveyard::Graveyard,
+            journal::{super_block::SuperBlock, Journal, JournalCheckpoint},
             transaction::{
                 AssociatedObject, LockKey, LockManager, Mutation, ReadGuard, Transaction,
                 TransactionHandler, TxnMutation, WriteGuard,
@@ -64,7 +64,7 @@ struct Objects {
     // has a dependency on journal records from that offset.
     journal_file_checkpoints: HashMap<u64, JournalCheckpoint>,
 
-    graveyards: HashMap<u64, Arc<Directory<ObjectStore>>>,
+    graveyard: Option<Arc<Graveyard>>,
 }
 
 impl ObjectManager {
@@ -77,7 +77,7 @@ impl ObjectManager {
                 allocator_object_id: INVALID_OBJECT_ID,
                 allocator: None,
                 journal_file_checkpoints: HashMap::new(),
-                graveyards: HashMap::new(),
+                graveyard: None,
             }),
         }
     }
@@ -196,12 +196,12 @@ impl ObjectManager {
         self.objects.read().unwrap().journal_file_checkpoints.contains_key(&object_id)
     }
 
-    pub fn graveyard(&self, store_object_id: u64) -> Option<Arc<Directory<ObjectStore>>> {
-        self.objects.read().unwrap().graveyards.get(&store_object_id).cloned()
+    pub fn graveyard(&self) -> Option<Arc<Graveyard>> {
+        self.objects.read().unwrap().graveyard.clone()
     }
 
-    pub fn register_graveyard(&self, store_object_id: u64, directory: Arc<Directory<ObjectStore>>) {
-        self.objects.write().unwrap().graveyards.insert(store_object_id, directory);
+    pub fn register_graveyard(&self, graveyard: Arc<Graveyard>) {
+        self.objects.write().unwrap().graveyard = Some(graveyard);
     }
 
     /// Flushes all known objects.  This will then allow the journal space to be freed.
@@ -330,9 +330,13 @@ impl FxFilesystem {
         Ok(filesystem)
     }
 
-    pub async fn open(device: DeviceHolder) -> Result<Arc<FxFilesystem>, Error> {
+    pub async fn open_with_trace(
+        device: DeviceHolder,
+        trace: bool,
+    ) -> Result<Arc<FxFilesystem>, Error> {
         let objects = Arc::new(ObjectManager::new());
         let journal = Journal::new(objects.clone());
+        journal.set_trace(trace);
         let filesystem = Arc::new(FxFilesystem {
             device: OnceCell::new(),
             objects: objects.clone(),
@@ -344,6 +348,14 @@ impl FxFilesystem {
         filesystem.device.set(device).unwrap_or_else(|_| unreachable!());
         filesystem.journal.replay(filesystem.clone()).await?;
         Ok(filesystem)
+    }
+
+    pub fn set_trace(&self, v: bool) {
+        self.journal.set_trace(v);
+    }
+
+    pub async fn open(device: DeviceHolder) -> Result<Arc<FxFilesystem>, Error> {
+        Self::open_with_trace(device, false).await
     }
 
     pub fn root_parent_store(&self) -> Arc<ObjectStore> {
@@ -401,6 +413,10 @@ impl FxFilesystem {
             .unwrap_or_else(|_| panic!("take_device should only be called once"));
         std::mem::drop(self);
         receiver.await.unwrap()
+    }
+
+    pub fn super_block(&self) -> SuperBlock {
+        self.journal.super_block()
     }
 
     async fn wait_for_compaction_to_finish(&self) {
@@ -486,10 +502,10 @@ mod tests {
             device::DeviceHolder,
             object_handle::{ObjectHandle, ObjectHandleExt},
             object_store::{
+                directory::Directory,
                 filesystem::{FxFilesystem, SyncOptions},
                 fsck::fsck,
                 transaction::TransactionHandler,
-                HandleOptions, ObjectStore,
             },
             testing::fake_device::FakeDevice,
         },
@@ -505,17 +521,19 @@ mod tests {
 
         // If compaction is not working correctly, this test will run out of space.
         let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
+        let root_store = fs.root_store();
+        let root_directory = Directory::open(&root_store, root_store.root_directory_object_id())
+            .await
+            .expect("open failed");
+
         let mut tasks = Vec::new();
-        for _ in 0..2 {
+        for i in 0..2 {
             let mut transaction =
                 fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
-            let handle = ObjectStore::create_object(
-                &fs.root_store(),
-                &mut transaction,
-                HandleOptions::default(),
-            )
-            .await
-            .expect("create_object failed");
+            let handle = root_directory
+                .create_child_file(&mut transaction, &format!("{}", i))
+                .await
+                .expect("create_child_file failed");
             transaction.commit().await;
             tasks.push(fasync::Task::spawn(async move {
                 const TEST_DATA: &[u8] = b"hello";

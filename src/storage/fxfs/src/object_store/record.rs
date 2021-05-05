@@ -36,6 +36,8 @@ pub enum ObjectKeyData {
     Attribute(u64, AttributeKey),
     /// A child of a directory.
     Child { name: String }, // TODO(jfsulliv): Should this be a string or array of bytes?
+    /// A graveyard entry.
+    GraveyardEntry { store_object_id: u64, object_id: u64 },
 }
 
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
@@ -169,6 +171,14 @@ impl ObjectKey {
         Self { object_id, data: ObjectKeyData::Child { name: name.to_owned() } }
     }
 
+    /// Creates a graveyard entry.
+    pub fn graveyard_entry(graveyard_object_id: u64, store_object_id: u64, object_id: u64) -> Self {
+        Self {
+            object_id: graveyard_object_id,
+            data: ObjectKeyData::GraveyardEntry { store_object_id, object_id },
+        }
+    }
+
     pub fn tombstone(object_id: u64) -> Self {
         Self { object_id, data: ObjectKeyData::Tombstone }
     }
@@ -274,6 +284,7 @@ pub enum ObjectKind {
         allocated_size: u64,
     },
     Directory,
+    Graveyard,
 }
 
 /// ObjectValue is the value of an item in the object store.
@@ -283,6 +294,9 @@ pub enum ObjectKind {
 pub enum ObjectValue {
     /// Some keys (e.g. tombstones) have no value.
     None,
+    /// Some keys have no value but need to differentiate between a present value and no value
+    /// (None) i.e. their value is really a boolean: None => false, Some => true.
+    Some,
     /// The value for an ObjectKey::Object record.
     Object { kind: ObjectKind },
     /// An attribute associated with a file object. |size| is the size of the attribute in bytes.
