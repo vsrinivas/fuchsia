@@ -15,8 +15,7 @@
 #include "src/ui/scenic/lib/input/helper.h"
 #include "src/ui/scenic/lib/input/internal_pointer_event.h"
 
-namespace scenic_impl {
-namespace input {
+namespace scenic_impl::input {
 
 // Non-FIDL-type struct for keeping client defined settings.
 struct InjectorSettings {
@@ -111,7 +110,6 @@ class Injector : public fuchsia::ui::pointerinjector::Device {
   const fit::function<void()> on_channel_closed_;
 };
 
-}  // namespace input
-}  // namespace scenic_impl
+}  // namespace scenic_impl::input
 
 #endif  // SRC_UI_SCENIC_LIB_INPUT_INJECTOR_H_

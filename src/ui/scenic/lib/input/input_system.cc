@@ -19,6 +19,7 @@
 #include "src/ui/scenic/lib/input/helper.h"
 #include "src/ui/scenic/lib/input/internal_pointer_event.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
+#include "src/ui/scenic/lib/utils/math.h"
 
 namespace scenic_impl {
 namespace input {
@@ -191,7 +192,8 @@ fuchsia::ui::input::accessibility::PointerEvent InputSystem::CreateAccessibility
 
     const glm::mat4 view_from_viewport =
         view_from_context.value() * event.viewport.context_from_viewport_transform;
-    top_hit_view_local = TransformPointerCoords(event.position_in_viewport, view_from_viewport);
+    top_hit_view_local =
+        utils::TransformPointerCoords(event.position_in_viewport, view_from_viewport);
   }
   const glm::vec2 ndc = GetViewportNDCPoint(event);
 
@@ -278,7 +280,7 @@ std::vector<zx_koid_t> InputSystem::HitTest(const InternalPointerEvent& event,
   const auto world_from_viewport_transform =
       world_from_context_transform.value() * event.viewport.context_from_viewport_transform;
   const auto world_space_point =
-      TransformPointerCoords(event.position_in_viewport, world_from_viewport_transform);
+      utils::TransformPointerCoords(event.position_in_viewport, world_from_viewport_transform);
   return view_tree_snapshot_->HitTest(event.target, world_space_point, semantic_hit_test);
 }
 

@@ -6,25 +6,9 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include "src/ui/scenic/lib/utils/math.h"
+
 namespace view_tree {
-
-namespace {
-
-inline glm::vec4 Homogenize(const glm::vec4& vector) {
-  if (vector.w == 0.f) {
-    return vector;
-  }
-  return vector / vector.w;
-}
-
-glm::vec2 TransformPointerCoords(const glm::vec2& pointer, const glm::mat4& transform) {
-  const glm::vec4 homogenous_pointer{pointer.x, pointer.y, 0, 1};
-  const glm::vec4 transformed_pointer = transform * homogenous_pointer;
-  const glm::vec2 homogenized_transformed_pointer{Homogenize(transformed_pointer)};
-  return homogenized_transformed_pointer;
-}
-
-}  // namespace
 
 std::vector<zx_koid_t> Snapshot::HitTest(zx_koid_t start_node, glm::vec2 world_space_point,
                                          bool is_semantic) const {
@@ -34,7 +18,7 @@ std::vector<zx_koid_t> Snapshot::HitTest(zx_koid_t start_node, glm::vec2 world_s
   }
 
   SubtreeHitTestResult result;
-  const auto view_local_point = TransformPointerCoords(
+  const auto view_local_point = utils::TransformPointerCoords(
       world_space_point, view_tree.at(start_node).local_from_world_transform);
   for (const auto& hit_tester : hit_testers) {
     result = hit_tester(start_node, view_local_point, is_semantic);

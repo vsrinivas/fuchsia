@@ -11,9 +11,9 @@
 #include "lib/async/default.h"
 #include "src/ui/lib/glm_workaround/glm_workaround.h"
 #include "src/ui/scenic/lib/input/constants.h"
+#include "src/ui/scenic/lib/utils/math.h"
 
-namespace scenic_impl {
-namespace input {
+namespace scenic_impl::input {
 
 using fuchsia::ui::pointerinjector::EventPhase;
 
@@ -174,8 +174,8 @@ void Injector::Inject(std::vector<fuchsia::ui::pointerinjector::Event> events,
         }
       }
       viewport_ = {.extents = {new_viewport.extents()},
-                   .context_from_viewport_transform =
-                       ColumnMajorMat3VectorToMat4(new_viewport.viewport_to_context_transform())};
+                   .context_from_viewport_transform = utils::ColumnMajorMat3VectorToMat4(
+                       new_viewport.viewport_to_context_transform())};
       continue;
     } else if (event.data().is_pointer_sample()) {
       const auto& pointer_sample = event.data().pointer_sample();
@@ -309,7 +309,7 @@ zx_status_t Injector::IsValidViewport(const fuchsia::ui::pointerinjector::Viewpo
 
   // Must be invertible, i.e. determinant must be non-zero.
   const glm::mat4 viewport_to_context_transform =
-      ColumnMajorMat3VectorToMat4(viewport.viewport_to_context_transform());
+      utils::ColumnMajorMat3VectorToMat4(viewport.viewport_to_context_transform());
   if (fabs(glm::determinant(viewport_to_context_transform)) <=
       std::numeric_limits<float>::epsilon()) {
     FX_LOGS(ERROR) << "Provided fuchsia::ui::pointerinjector::Viewport had a non-invertible matrix";
@@ -319,5 +319,4 @@ zx_status_t Injector::IsValidViewport(const fuchsia::ui::pointerinjector::Viewpo
   return ZX_OK;
 }
 
-}  // namespace input
-}  // namespace scenic_impl
+}  // namespace scenic_impl::input

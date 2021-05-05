@@ -12,8 +12,7 @@
 #include "src/ui/scenic/lib/gfx/gfx_system.h"
 #include "src/ui/scenic/lib/input/internal_pointer_event.h"
 
-namespace scenic_impl {
-namespace input {
+namespace scenic_impl::input {
 
 // Clone |event| and set its coordinates to |coords|.
 fuchsia::ui::input::PointerEvent ClonePointerWithCoords(
@@ -21,9 +20,6 @@ fuchsia::ui::input::PointerEvent ClonePointerWithCoords(
 
 // Extracts the coordinates from |event|.
 glm::vec2 PointerCoords(const fuchsia::ui::input::PointerEvent& event);
-
-// Applies |transform| to |pointer|.
-glm::vec2 TransformPointerCoords(const glm::vec2& pointer, const glm::mat4 transform);
 
 // TODO(fxbug.dev/24476): Remove this.
 // Turn two floats (high bits, low bits) into a 64-bit uint.
@@ -64,9 +60,6 @@ fuchsia::ui::input::PointerEvent InternalPointerEventToGfxPointerEvent(
     const InternalPointerEvent& event, const glm::mat4& view_from_context_transform,
     fuchsia::ui::input::PointerEventType type, uint64_t trace_id);
 
-glm::mat4 ColumnMajorMat3VectorToMat4(const std::array<float, 9>& matrix_array);
-
-}  // namespace input
-}  // namespace scenic_impl
+}  // namespace scenic_impl::input
 
 #endif  // SRC_UI_SCENIC_LIB_INPUT_HELPER_H_

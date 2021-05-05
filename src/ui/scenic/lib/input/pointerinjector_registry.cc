@@ -7,6 +7,7 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/ui/scenic/lib/utils/helpers.h"
+#include "src/ui/scenic/lib/utils/math.h"
 
 namespace scenic_impl::input {
 
@@ -96,7 +97,7 @@ void PointerinjectorRegistry::Register(
   Viewport viewport{
       .extents = {config.viewport().extents()},
       .context_from_viewport_transform =
-          ColumnMajorMat3VectorToMat4(config.viewport().viewport_to_context_transform()),
+          utils::ColumnMajorMat3VectorToMat4(config.viewport().viewport_to_context_transform()),
   };
 
   fit::function<void(const InternalPointerEvent&, StreamId)> inject_func;

@@ -19,6 +19,7 @@
 #include "src/ui/scenic/lib/input/helper.h"
 #include "src/ui/scenic/lib/input/input_system.h"
 #include "src/ui/scenic/lib/input/tests/util.h"
+#include "src/ui/scenic/lib/utils/math.h"
 
 using fuchsia::ui::views::ViewRef;
 using Phase = fuchsia::ui::pointerinjector::EventPhase;
@@ -137,8 +138,7 @@ scenic_impl::input::InjectorSettings InjectorSettingsTemplate() {
 scenic_impl::input::Viewport ViewportTemplate() {
   return {
       .extents = std::array<std::array<float, 2>, 2>{{{0, 0}, {1000, 1000}}},
-      .context_from_viewport_transform =
-          scenic_impl::input::ColumnMajorMat3VectorToMat4(kIdentityMatrix),
+      .context_from_viewport_transform = utils::ColumnMajorMat3VectorToMat4(kIdentityMatrix),
   };
 }
 

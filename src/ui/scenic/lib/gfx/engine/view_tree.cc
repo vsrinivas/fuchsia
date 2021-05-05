@@ -12,6 +12,7 @@
 
 #include "src/ui/scenic/lib/gfx/resources/view_holder.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
+#include "src/ui/scenic/lib/utils/math.h"
 
 namespace scenic_impl::gfx {
 
@@ -31,21 +32,6 @@ void OrphanSubgraph(std::unordered_map<zx_koid_t, view_tree::ViewNode>& nodes, z
     OrphanSubgraph(nodes, child);
   }
   // No need to clear children, since this is only used to mark unconnected nodes.
-}
-
-// TODO(fxbug.dev/74453): Move these into a src/ui/scenic/lib/utils
-glm::vec4 Homogenize(const glm::vec4& vector) {
-  if (vector.w == 0.f) {
-    return vector;
-  }
-  return vector / vector.w;
-}
-
-glm::vec2 TransformPointerCoords(const glm::vec2& pointer, const glm::mat4 transform) {
-  const glm::vec4 homogenous_pointer{pointer.x, pointer.y, 0, 1};
-  const glm::vec4 transformed_pointer = transform * homogenous_pointer;
-  const glm::vec2 homogenized_transformed_pointer{Homogenize(transformed_pointer)};
-  return homogenized_transformed_pointer;
 }
 
 }  // namespace
@@ -541,7 +527,7 @@ view_tree::SubtreeSnapshot ViewTree::Snapshot() const {
     }
 
     const auto world_point =
-        TransformPointerCoords(view_local_point, world_from_view_transform.value());
+        utils::TransformPointerCoords(view_local_point, world_from_view_transform.value());
     const auto world_z_ray = escher::ray4{
         .origin = {world_point.x, world_point.y, -1000, 1},
         .direction = {0, 0, 1, 0},

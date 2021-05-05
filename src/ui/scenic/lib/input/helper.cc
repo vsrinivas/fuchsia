@@ -7,9 +7,9 @@
 #include "src/ui/lib/escher/util/type_utils.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer_stack.h"
+#include "src/ui/scenic/lib/utils/math.h"
 
-namespace scenic_impl {
-namespace input {
+namespace scenic_impl::input {
 
 using PointerEventPhase = fuchsia::ui::input::PointerEventPhase;
 using GfxPointerEvent = fuchsia::ui::input::PointerEvent;
@@ -24,18 +24,6 @@ GfxPointerEvent ClonePointerWithCoords(const GfxPointerEvent& event, const glm::
 }
 
 glm::vec2 PointerCoords(const GfxPointerEvent& event) { return {event.x, event.y}; }
-
-glm::vec2 TransformPointerCoords(const glm::vec2& pointer, const glm::mat4 transform) {
-  const glm::vec4 homogenous_pointer{pointer.x, pointer.y, 0, 1};
-  const glm::vec4 transformed_pointer = transform * homogenous_pointer;
-  const glm::vec2 homogenized_transformed_pointer{escher::homogenize(transformed_pointer)};
-
-  FX_VLOGS(2) << "Coordinate transform (device->view): (" << pointer.x << ", " << pointer.y
-              << ")->(" << homogenized_transformed_pointer.x << ", "
-              << homogenized_transformed_pointer.y << ")";
-
-  return homogenized_transformed_pointer;
-}
 
 trace_flow_id_t PointerTraceHACK(float fa, float fb) {
   uint32_t ia, ib;
@@ -183,8 +171,8 @@ GfxPointerEvent InternalPointerEventToGfxPointerEvent(const InternalPointerEvent
   // Convert to view-local coordinates.
   const glm::mat4 view_from_viewport_transform =
       view_from_context_transform * internal_event.viewport.context_from_viewport_transform;
-  const glm::vec2 local_position =
-      TransformPointerCoords(internal_event.position_in_viewport, view_from_viewport_transform);
+  const glm::vec2 local_position = utils::TransformPointerCoords(
+      internal_event.position_in_viewport, view_from_viewport_transform);
   event.x = local_position.x;
   event.y = local_position.y;
 
@@ -197,14 +185,4 @@ GfxPointerEvent InternalPointerEventToGfxPointerEvent(const InternalPointerEvent
   return event;
 }
 
-glm::mat4 ColumnMajorMat3VectorToMat4(const std::array<float, 9>& matrix_array) {
-  // clang-format off
-  return glm::mat4(matrix_array[0], matrix_array[1], 0.f, matrix_array[2],  // first column
-                   matrix_array[3], matrix_array[4], 0.f, matrix_array[5],  // second column
-                               0.f,             0.f, 1.f,             0.f,  // third column
-                   matrix_array[6], matrix_array[7], 0.f,             1.f); // fourth column
-  // clang-format on
-}
-
-}  // namespace input
-}  // namespace scenic_impl
+}  // namespace scenic_impl::input
