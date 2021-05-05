@@ -86,9 +86,9 @@ zx::status<> Driver::Start(fidl::OutgoingMessage& start_args, async_dispatcher_t
   return zx::make_status(status);
 }
 
-DriverHost::DriverHost(inspect::Inspector* inspector, async::Loop* loop) : loop_(loop) {
-  inspector->GetRoot().CreateLazyNode(
-      "drivers", [this] { return Inspect(); }, inspector);
+DriverHost::DriverHost(inspect::Inspector& inspector, async::Loop& loop) : loop_(loop) {
+  inspector.GetRoot().CreateLazyNode(
+      "drivers", [this] { return Inspect(); }, &inspector);
 }
 
 fit::promise<inspect::Inspector> DriverHost::Inspect() {
@@ -106,7 +106,7 @@ fit::promise<inspect::Inspector> DriverHost::Inspect() {
 
 zx::status<> DriverHost::PublishDriverHost(const fbl::RefPtr<fs::PseudoDir>& svc_dir) {
   const auto service = [this](zx::channel request) {
-    fidl::BindServer(loop_->dispatcher(), std::move(request), this);
+    fidl::BindServer(loop_.dispatcher(), std::move(request), this);
     return ZX_OK;
   };
   zx_status_t status = svc_dir->AddEntry(fidl::DiscoverableProtocolName<fdf::DriverHost>,
@@ -172,7 +172,7 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
   // Once we receive the VMO from the call to GetBuffer, we can load the driver
   // into this driver host. We move the storage and encoded for start_args into
   // this callback to extend its lifetime.
-  fidl::Client<fio::File> file(std::move(endpoints->client), loop_->dispatcher(),
+  fidl::Client<fio::File> file(std::move(endpoints->client), loop_.dispatcher(),
                                std::make_shared<FileEventHandler>(binary.value()));
   auto callback = [this, request = std::move(request->driver), completer = completer.ToAsync(),
                    url = std::move(url), binary = std::move(binary.value()),
@@ -198,18 +198,18 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
       return;
     }
     auto driver_ptr = driver.value().get();
-    auto bind = fidl::BindServer<Driver>(loop_->dispatcher(), std::move(request), driver_ptr,
+    auto bind = fidl::BindServer<Driver>(loop_.dispatcher(), std::move(request), driver_ptr,
                                          [this](Driver* driver, auto, auto) {
                                            drivers_.erase(*driver);
                                            // If this is the last driver, shutdown the driver host.
                                            if (drivers_.is_empty()) {
-                                             loop_->Quit();
+                                             loop_.Quit();
                                            }
                                          });
     driver->set_binding(std::move(bind));
     drivers_.push_back(std::move(driver.value()));
 
-    auto start = driver_ptr->Start(message->GetOutgoingMessage(), loop_->dispatcher());
+    auto start = driver_ptr->Start(message->GetOutgoingMessage(), loop_.dispatcher());
     if (start.is_error()) {
       LOGF(ERROR, "Failed to start driver '/pkg/%s': %s", binary.data(), start.status_string());
       completer.Close(start.error_value());

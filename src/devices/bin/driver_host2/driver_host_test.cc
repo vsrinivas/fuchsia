@@ -210,7 +210,7 @@ class DriverHostTest : public gtest::TestLoopFixture {
  private:
   inspect::Inspector inspector_;
   async::Loop loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
-  DriverHost driver_host_{&inspector_, &loop_};
+  DriverHost driver_host_{inspector_, loop_};
   fs::SynchronousVfs vfs_{loop_.dispatcher()};
   fbl::RefPtr<fs::PseudoDir> svc_dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
 };

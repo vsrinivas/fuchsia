@@ -43,8 +43,9 @@ class Driver : public fidl::WireServer<fuchsia_driver_framework::Driver>,
 
 class DriverHost : public fidl::WireServer<fuchsia_driver_framework::DriverHost> {
  public:
-  // DriverHost does not take ownership of |loop|.
-  DriverHost(inspect::Inspector* inspector, async::Loop* loop);
+  // DriverHost does not take ownership of |loop|, and |loop| must outlive
+  // DriverHost.
+  DriverHost(inspect::Inspector& inspector, async::Loop& loop);
 
   zx::status<> PublishDriverHost(const fbl::RefPtr<fs::PseudoDir>& svc_dir);
   fit::promise<inspect::Inspector> Inspect();
@@ -53,7 +54,7 @@ class DriverHost : public fidl::WireServer<fuchsia_driver_framework::DriverHost>
   // fidl::WireServer<fuchsia_driver_framework::DriverHost>
   void Start(StartRequestView request, StartCompleter::Sync& completer) override;
 
-  async::Loop* const loop_;
+  async::Loop& loop_;
   fbl::DoublyLinkedList<std::unique_ptr<Driver>> drivers_;
 };
 

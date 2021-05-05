@@ -60,7 +60,7 @@ int main(int argc, char** argv) {
     return status;
   }
 
-  DriverHost driver_host(&inspector, &loop);
+  DriverHost driver_host(inspector, loop);
   auto init = driver_host.PublishDriverHost(outgoing.svc_dir());
   if (init.is_error()) {
     return init.error_value();
