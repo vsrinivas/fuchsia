@@ -12,7 +12,7 @@ pub const FAILED_WITH_ERROR: &str = "FAILED. Error was:";
 pub const DAEMON_CHECK_INTRO: &str = "First, bringing up a working daemon...";
 pub const DAEMON_RUNNING_CHECK: &str = "Checking for a running daemon...";
 pub const FORCE_DAEMON_RESTART_MESSAGE: &str =
-    "force-daemon-restart is true; killing any running daemons...";
+    "restart-daemon is true; killing any running daemons...";
 pub const NONE_RUNNING: &str = "none running.";
 pub const KILLING_ZOMBIE_DAEMONS: &str = "Attempting to kill any zombie daemons...";
 pub const ZOMBIE_KILLED: &str = "killed at least one daemon.";
@@ -24,7 +24,7 @@ pub const DAEMON_CHECKS_FAILED: &str =
     "✗ Failed to spawn and connect to a daemon. Please file a bug to the
 ffx team using the link below and include all above output.";
 pub const LISTING_TARGETS_NO_FILTER: &str = "Attempting to list all targets...";
-pub const NO_TARGETS_FOUND_SHORT: &str = "No targets found. ";
+pub const NO_TARGETS_FOUND_SHORT: &str = "No targets found. Killing the daemon and trying again...";
 pub const NO_TARGETS_FOUND_EXTENDED: &str =
     "No targets found. Make sure your devices are connected and running and
 try again in a few seconds. If this persists after verifying your device's

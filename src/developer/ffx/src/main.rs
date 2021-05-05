@@ -254,9 +254,9 @@ async fn init_daemon_proxy() -> Result<DaemonProxy> {
 
     if !quit_result.is_ok() {
         ffx_bail!(
-            "FFX daemon upgrade failed unexpectedly with {:?}. \n\
-            Try running `ffx doctor --force-daemon-restart` and then retrying your \
-            command",
+            "FFX daemon upgrade failed unexpectedly. \n\
+            Try running `ffx doctor --restart-daemon` and then retrying your \
+            command.\n\nError was: {:?}",
             quit_result
         )
     }

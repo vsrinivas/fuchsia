@@ -560,7 +560,7 @@ __Options:__
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
-Usage: ffx doctor [--retry-count <retry-count>] [--retry-delay <retry-delay>] [--force-daemon-restart] [--record] [--record-output <record-output>]
+Usage: ffx doctor [--retry-count <retry-count>] [--retry-delay <retry-delay>] [--restart-daemon] [--record] [--record-output <record-output>]
 Run common checks for the ffx tool and host environment
 ```
 
@@ -571,7 +571,7 @@ __Options:__
   --retry-count     number of times to retry failed connection attempts.
   --retry-delay     timeout delay when attempting to connect to the daemon or
                     RCS
-  --force-daemon-restart
+  --restart-daemon
                     if true, forces a daemon restart, even if the connection
                     appears to be working
   --record          if true, generates an output zip file that can be attached
