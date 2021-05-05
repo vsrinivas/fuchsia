@@ -25,16 +25,6 @@ component_manifest_resources("meta") {
   sources = [ "meta/virtual-console.cml" ]
 }
 
-resource("logo") {
-  sources = [ virtcon_logo_path ]
-  outputs = [ "data/logo.riv" ]
-}
-
-resource("robotoslab") {
-  sources = [ "//prebuilt/third_party/fonts/robotoslab/RobotoSlab-Regular.ttf" ]
-  outputs = [ "data/fonts/{{source_file_part}}" ]
-}
-
 rustc_library("lib") {
   name = "virtual_console_lib"
   edition = "2018"
@@ -46,8 +36,6 @@ rustc_library("lib") {
     "src/view.rs",
   ]
   deps = [
-    ":logo",
-    ":robotoslab",
     "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty-rustc",
     "//sdk/fidl/fuchsia.virtualconsole:fuchsia.virtualconsole-rustc",
     "//src/graphics/lib/compute/rive-rs",
@@ -66,6 +54,11 @@ rustc_library("lib") {
   ]
 }
 
+resource("logo") {
+  sources = [ virtcon_logo_path ]
+  outputs = [ "data/logo.riv" ]
+}
+
 rustc_binary("bin") {
   name = "virtual_console"
   edition = "2018"
@@ -73,6 +66,7 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
   deps = [
     ":lib",
+    ":logo",
     "//src/lib/trace/rust:trace-provider",
     "//src/lib/ui/carnelian",
     "//src/lib/ui/carnelian:virtcon_config",
@@ -80,8 +74,16 @@ rustc_binary("bin") {
   ]
 }
 
+resource("logo_test") {
+  sources = [ "data/test.riv" ]
+  outputs = [ "data/logo.riv" ]
+}
+
 fuchsia_test_component("virtual_console_tests_component") {
-  deps = [ ":lib_test" ]
+  deps = [
+    ":lib_test",
+    ":logo_test",
+  ]
   manifest = "meta/virtual-console-tests.cmx"
 }
 

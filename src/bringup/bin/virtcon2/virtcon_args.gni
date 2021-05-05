@@ -4,5 +4,5 @@
 
 declare_args() {
   # Path to file to use for logo
-  virtcon_logo_path = "//src/bringup/bin/virtcon2/data/square-logo.riv"
+  virtcon_logo_path = "//src/bringup/bin/virtcon2/data/fuchsia.riv"
 }
