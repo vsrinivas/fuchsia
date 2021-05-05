@@ -53,6 +53,7 @@ zx_status_t ShutdownBasemgr(async::Loop* loop) {
     std::cerr << "basemgr does not appear to be running.";
     return ZX_OK;
   }
+
   fuchsia::modular::internal::BasemgrDebugPtr basemgr_debug;
   auto request = basemgr_debug.NewRequest().TakeChannel();
   auto service_connect_result = fdio_service_connect(service_path.c_str(), request.get());
@@ -63,6 +64,7 @@ zx_status_t ShutdownBasemgr(async::Loop* loop) {
   }
 
   basemgr_debug->Shutdown();
+
   // Wait for basemgr to shutdown.
   zx_status_t channel_close_status;
   basemgr_debug.set_error_handler([&channel_close_status, loop](zx_status_t status) {
@@ -75,6 +77,7 @@ zx_status_t ShutdownBasemgr(async::Loop* loop) {
     std::cerr << "basemgr did not tear down cleanly. Expected ZX_OK, got "
               << zx_status_get_string(channel_close_status);
   }
+
   return ZX_OK;
 }
 
@@ -114,6 +117,27 @@ zx_status_t ClearPersistedConfig(async::Loop* loop) {
   return ZX_OK;
 }
 
+// Reads and parses a |ModularConfig| from stdin.
+fit::result<fuchsia::modular::session::ModularConfig, zx_status_t> ReadConfig() {
+  // Read the configuration in from stdin.
+  std::string config_str;
+  std::string line;
+  while (getline(std::cin, line)) {
+    config_str += line;
+  }
+
+  if (config_str.empty()) {
+    return fit::ok(modular::DefaultConfig());
+  }
+
+  auto parse_result = modular::ParseConfig(config_str);
+  if (parse_result.is_error()) {
+    std::cerr << "Could not parse ModularConfig: " << parse_result.error();
+    return fit::error(ZX_ERR_INVALID_ARGS);
+  }
+  return parse_result.take_ok_result();
+}
+
 std::unique_ptr<vfs::PseudoDir> CreateConfigPseudoDir(std::string config_str) {
   auto dir = std::make_unique<vfs::PseudoDir>();
   dir->AddEntry(modular_config::kStartupConfigFilePath,
@@ -126,7 +150,7 @@ std::unique_ptr<vfs::PseudoDir> CreateConfigPseudoDir(std::string config_str) {
   return dir;
 }
 
-zx_status_t LaunchBasemgr(async::Loop* loop, bool disable_agent_restart_on_crash) {
+zx_status_t LaunchBasemgr(async::Loop* loop, fuchsia::modular::session::ModularConfig config) {
   // If basemgr is already running, shut it down first.
   if (files::Glob(kBasemgrHubPath).size() != 0) {
     auto result = ShutdownBasemgr(loop);
@@ -137,35 +161,12 @@ zx_status_t LaunchBasemgr(async::Loop* loop, bool disable_agent_restart_on_crash
     }
   }
 
-  // Read the configuration file in from stdin.
-  std::string config_str;
-  std::string line;
-  while (getline(std::cin, line)) {
-    config_str += line;
-  }
-
-  auto config = modular::DefaultConfig();
-  if (!config_str.empty()) {
-    auto parse_result = modular::ParseConfig(config_str);
-    if (parse_result.is_error()) {
-      std::cerr << "Could not parse ModularConfig: " << parse_result.error();
-      return ZX_ERR_INVALID_ARGS;
-    }
-    config = parse_result.take_ok_result().value;
-  }
-
-  if (disable_agent_restart_on_crash) {
-    config.mutable_sessionmgr_config()->set_disable_agent_restart_on_crash(true);
-  }
-
-  // Create the pseudo directory with our config "file" mapped to
-  // kConfigFilename.
+  // Create the pseudo directory with our config "file" mapped to kConfigFilename.
   auto config_dir = CreateConfigPseudoDir(modular::ConfigToJsonString(config));
   fidl::InterfaceHandle<fuchsia::io::Directory> dir_handle;
   config_dir->Serve(fuchsia::io::OPEN_RIGHT_READABLE, dir_handle.NewRequest().TakeChannel());
 
-  // Build a LaunchInfo with the config directory above mapped to
-  // /config_override/data.
+  // Build a LaunchInfo with the config directory above mapped to /config_override/data.
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = kBasemgrUrl;
   launch_info.flat_namespace = fuchsia::sys::FlatNamespace::New();
@@ -242,7 +243,17 @@ int main(int argc, const char** argv) {
     return ClearPersistedConfig(&loop);
   }
   if (cmd == kLaunchCommandString) {
-    return LaunchBasemgr(&loop, command_line.HasOption(kDisableRestartAgentOnCrashFlagString));
+    auto config_result = ReadConfig();
+    if (config_result.is_error()) {
+      return config_result.take_error();
+    }
+
+    auto config = config_result.take_value();
+    if (command_line.HasOption(kDisableRestartAgentOnCrashFlagString)) {
+      config.mutable_sessionmgr_config()->set_disable_agent_restart_on_crash(true);
+    }
+
+    return LaunchBasemgr(&loop, std::move(config));
   }
 
   std::cerr << GetUsage() << std::endl;
