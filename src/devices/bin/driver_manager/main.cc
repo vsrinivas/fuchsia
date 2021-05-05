@@ -54,7 +54,6 @@ namespace {
 // These are helpers for getting sets of parameters over FIDL
 struct DriverManagerParams {
   bool driver_host_asan;
-  bool driver_host_strict_linking;
   bool enable_ephemeral;
   bool log_to_debuglog;
   bool require_system;
@@ -67,7 +66,6 @@ DriverManagerParams GetDriverManagerParams(fidl::WireSyncClient<fuchsia_boot::Ar
   fuchsia_boot::wire::BoolPair bool_req[]{
       // TODO(bwb): remove this or figure out how to make it work
       {"devmgr.devhost.asan", false},
-      {"devmgr.devhost.strict-linking", false},
       {"devmgr.enable-ephemeral", false},
       {"devmgr.log-to-debuglog", false},
       {"devmgr.require-system", false},
@@ -94,12 +92,11 @@ DriverManagerParams GetDriverManagerParams(fidl::WireSyncClient<fuchsia_boot::Ar
   }
   return {
       .driver_host_asan = bool_resp->values[0],
-      .driver_host_strict_linking = bool_resp->values[1],
-      .enable_ephemeral = bool_resp->values[2],
-      .log_to_debuglog = bool_resp->values[3],
-      .require_system = bool_resp->values[4],
-      .suspend_timeout_fallback = bool_resp->values[5],
-      .verbose = bool_resp->values[6],
+      .enable_ephemeral = bool_resp->values[1],
+      .log_to_debuglog = bool_resp->values[2],
+      .require_system = bool_resp->values[3],
+      .suspend_timeout_fallback = bool_resp->values[4],
+      .verbose = bool_resp->values[5],
       .eager_fallback_drivers = std::move(eager_fallback_drivers),
   };
 }
@@ -150,8 +147,6 @@ struct DriverManagerArgs {
   // Use this driver as the sys_device driver.  If nullptr, the default will
   // be used.
   std::string sys_device_driver;
-  // Use the default loader rather than the one provided by fshost.
-  bool use_default_loader = false;
   // If this exists, use the driver runner and launch this driver URL as the root driver.
   std::string driver_runner_root_driver_url;
 };
@@ -164,7 +159,6 @@ DriverManagerArgs ParseDriverManagerArgs(int argc, char** argv) {
     kNoExitAfterSuspend,
     kPathPrefix,
     kSysDeviceDriver,
-    kUseDefaultLoader,
     kDriverRunnerRootDriverUrl,
   };
   option options[] = {
@@ -174,7 +168,6 @@ DriverManagerArgs ParseDriverManagerArgs(int argc, char** argv) {
       {"no-exit-after-suspend", no_argument, nullptr, kNoExitAfterSuspend},
       {"path-prefix", required_argument, nullptr, kPathPrefix},
       {"sys-device-driver", required_argument, nullptr, kSysDeviceDriver},
-      {"use-default-loader", no_argument, nullptr, kUseDefaultLoader},
       {"driver-runner-root-driver-url", required_argument, nullptr, kDriverRunnerRootDriverUrl},
       {0, 0, 0, 0},
   };
@@ -215,9 +208,6 @@ DriverManagerArgs ParseDriverManagerArgs(int argc, char** argv) {
       case kSysDeviceDriver:
         check_not_duplicated(args.sys_device_driver);
         args.sys_device_driver = optarg;
-        break;
-      case kUseDefaultLoader:
-        args.use_default_loader = true;
         break;
       case kDriverRunnerRootDriverUrl:
         args.driver_runner_root_driver_url = optarg;
@@ -421,36 +411,33 @@ int main(int argc, char** argv) {
   system_instance.InstallDevFsIntoNamespace();
   system_instance.ServiceStarter(&coordinator);
 
-  if (driver_manager_params.driver_host_strict_linking) {
-    fbl::unique_fd lib_fd;
-    status = fdio_open_fd("/pkg/lib",
+  fbl::unique_fd lib_fd;
+  {
+    std::string library_path = driver_manager_args.path_prefix + "lib";
+    status = fdio_open_fd(library_path.c_str(),
                           ZX_FS_FLAG_DIRECTORY | ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_EXECUTABLE,
                           lib_fd.reset_and_get_address());
     if (status != ZX_OK) {
-      LOGF(ERROR, "Failed to open /pkg/lib: %s", zx_status_get_string(status));
+      LOGF(ERROR, "Failed to open %s: %s", library_path.c_str(), zx_status_get_string(status));
       return status;
     }
-
-    auto loader_service = DriverHostLoaderService::Create(loop.dispatcher(), std::move(lib_fd));
-    coordinator.set_loader_service_connector([ls = std::move(loader_service)](zx::channel* c) {
-      auto conn = ls->Connect();
-      if (conn.is_error()) {
-        LOGF(ERROR, "Failed to add driver_host loader connection: %s", conn.status_string());
-      } else {
-        *c = conn->TakeChannel();
-      }
-      return conn.status_value();
-    });
-  } else if (!driver_manager_args.use_default_loader) {
-    coordinator.set_loader_service_connector([&system_instance](zx::channel* c) {
-      zx_status_t status = system_instance.clone_fshost_ldsvc(c);
-      if (status != ZX_OK) {
-        LOGF(ERROR, "Failed to clone fshost loader for driver_host: %s",
-             zx_status_get_string(status));
-      }
-      return status;
-    });
   }
+
+  // The loader needs its own thread because DriverManager makes synchronous calls to the
+  // DriverHosts, which make synchronous calls to load their shared libraries.
+  async::Loop loader_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  auto loader_service =
+      DriverHostLoaderService::Create(loader_loop.dispatcher(), std::move(lib_fd));
+  coordinator.set_loader_service_connector([ls = std::move(loader_service)](zx::channel* c) {
+    auto conn = ls->Connect();
+    if (conn.is_error()) {
+      LOGF(ERROR, "Failed to add driver_host loader connection: %s", conn.status_string());
+    } else {
+      *c = conn->TakeChannel();
+    }
+    return conn.status_value();
+  });
+  loader_loop.StartThread();
 
   for (const std::string& path : driver_manager_args.driver_search_paths) {
     find_loadable_drivers(coordinator.boot_args(), path,

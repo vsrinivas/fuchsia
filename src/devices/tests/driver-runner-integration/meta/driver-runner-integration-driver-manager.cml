@@ -12,7 +12,6 @@
         args: [
             "--path-prefix",
             "/pkg/",
-            "--use-default-loader",
             "--driver-runner-root-driver-url",
             "fuchsia-boot:///#meta/packaged_driver.cm",
         ],

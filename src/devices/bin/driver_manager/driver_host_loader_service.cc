@@ -6,14 +6,19 @@
 
 #include <zircon/errors.h>
 
+#include "src/devices/lib/log/log.h"
 #include "src/lib/files/path.h"
 
 namespace {
 
-static constexpr std::array<const char*, 3> kDriverAllowlist{
-    "libasync-default.so",
-    "libdriver.so",
-    "libfdio.so",
+// TODO(fxbug.dev/75983): Read this list from a config file instead of having an array.
+constexpr std::array kDriverAllowlist{
+    "libsyslog-compat.so", "libdriver.so",         "libasync-default.so",
+    "libclang_rt.asan.so", "libcrypto.so",         "libc.so",
+    "libdriver.so",        "libfdio.so",           "libssl.so",
+    "libsyslog.so",        "libtrace-engine.so",   "libbackend_fuchsia_globals.so",
+    "libzircon.so",        "libtee-client-api.so", "ld.so.1",
+    "libc++.so.2",         "libc++abi.so.1",       "libunwind.so.1",
 };
 
 // Check if the driver is in the allowlist.
@@ -26,6 +31,8 @@ bool InAllowlist(std::string path) {
       return true;
     }
   }
+
+  LOGF(ERROR, "Driver-Loader: %s: Not in allowlist", path.c_str());
   return false;
 }
 

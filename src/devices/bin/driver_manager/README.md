@@ -45,10 +45,6 @@ The path prefix for binaries, drivers, libraries, etc. This defaults to `/boot/`
 
 Use this driver as the sys_device driver.  If nullptr, the default will be used.
 
-### --use-default-loader=\<bool\>
-
-Use the default loader rather than the one provided by fshost.
-
 ### --driver-runner-root-driver-url=\<string\>
 
 Use the Driver Runner and launch this driver URL as the root driver.

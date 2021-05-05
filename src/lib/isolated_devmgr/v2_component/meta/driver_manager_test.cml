@@ -9,7 +9,6 @@
         args: [
             "--path-prefix",
             "/pkg/",
-            "--use-default-loader",
         ],
     },
     capabilities: [
