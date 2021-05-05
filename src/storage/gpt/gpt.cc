@@ -18,7 +18,9 @@
 #include <zircon/syscalls.h>  // for zx_cprng_draw
 
 #include <algorithm>
+#include <limits>
 #include <memory>
+#include <optional>
 
 #include <fbl/algorithm.h>
 #include <fbl/vector.h>
@@ -26,7 +28,9 @@
 #include <gpt/guid.h>
 #include <mbr/mbr.h>
 #include <range/range.h>
+#include <safemath/checked_math.h>
 #include <src/lib/uuid/uuid.h>
+#include <utf_conversion/utf_conversion.h>
 
 #include "gpt.h"
 
@@ -141,6 +145,29 @@ std::string HexToUpper(std::string str) {
   return str;
 }
 
+// Converts a GPT inclusive range [start, end] to an end-exclusive range::Range [start, end).
+// Returns std::nullopt if the range conflicts with GPT headers or exceeds the device's block size.
+std::optional<BlockRange> ConvertBlockRange(uint64_t start_block, uint64_t end_block,
+                                            uint64_t block_count) {
+  if (block_count == 0)
+    return std::nullopt;
+
+  if (start_block > end_block)
+    return std::nullopt;
+
+  if (start_block < kPrimaryEntriesStartBlock)
+    return std::nullopt;
+
+  const uint64_t backup_header_block = block_count - 1;
+
+  // Backup GPT header should be in the last block in the device.
+  if (start_block >= backup_header_block || end_block >= backup_header_block)
+    return std::nullopt;
+
+  // Overflow shouldn't be possible due to validating against backup_header_block.
+  return BlockRange{start_block, safemath::CheckAdd(end_block, 1).ValueOrDie()};
+}
+
 }  // namespace
 
 __BEGIN_CDECLS
@@ -213,6 +240,25 @@ void uint8_to_guid_string(char* dst, const uint8_t* src) {
 
 __END_CDECLS
 
+zx::status<> GetPartitionName(const gpt_entry_t& entry, char* name, size_t capacity) {
+  size_t len = capacity;
+  const uint16_t* utf16_name = reinterpret_cast<const uint16_t*>(entry.name);
+  const uint16_t* utf16_name_end = utf16_name + (sizeof(entry.name) / sizeof(uint16_t));
+  const size_t utf16_name_len = std::distance(
+    utf16_name, std::find(utf16_name, utf16_name_end, 0));
+  if (zx_status_t status =
+          utf16_to_utf8(utf16_name, utf16_name_len, reinterpret_cast<uint8_t*>(name), &len,
+                        UTF_CONVERT_FLAG_FORCE_LITTLE_ENDIAN);
+      status != ZX_OK) {
+    return zx::error(status);
+  }
+  if (len >= capacity) {
+    return zx::error(ZX_ERR_BUFFER_TOO_SMALL);
+  }
+  name[len] = 0;
+  return zx::ok();
+}
+
 fit::result<gpt_header_t, zx_status_t> InitializePrimaryHeader(uint64_t block_size,
                                                                uint64_t block_count) {
   gpt_header_t header = {};
@@ -266,7 +312,7 @@ const char* HeaderStatusToCString(zx_status_t status) {
     case ZX_ERR_INVALID_ARGS:
       return "invalid header size";
     case ZX_ERR_IO_DATA_INTEGRITY:
-      return "invalid header crc";
+      return "invalid header (CRC or invalid range)";
     case ZX_ERR_IO_OVERRUN:
       return "too many partitions";
     case ZX_ERR_FILE_BIG:
@@ -281,37 +327,32 @@ const char* HeaderStatusToCString(zx_status_t status) {
 }
 
 zx_status_t ValidateHeader(const gpt_header_t* header, uint64_t block_count) {
-  if (header->magic != kMagicNumber) {
-    return ZX_ERR_BAD_STATE;
-  }
+  ZX_ASSERT(header != nullptr);
 
-  if (header->size != sizeof(gpt_header_t)) {
+  if (header->magic != kMagicNumber)
+    return ZX_ERR_BAD_STATE;
+
+  if (header->size != sizeof(gpt_header_t) || block_count < kPrimaryEntriesStartBlock)
     return ZX_ERR_INVALID_ARGS;
-  }
 
   gpt_header_t copy;
   memcpy(&copy, header, sizeof(gpt_header_t));
   copy.crc32 = 0;
   uint32_t crc = crc32(0, reinterpret_cast<uint8_t*>(&copy), copy.size);
-  if (crc != header->crc32) {
+  if (crc != header->crc32)
     return ZX_ERR_IO_DATA_INTEGRITY;
-  }
 
-  if (header->entries_count > kPartitionCount) {
+  if (header->entries_count > kPartitionCount)
     return ZX_ERR_IO_OVERRUN;
-  }
 
-  if (header->entries_size != kEntrySize) {
+  if (header->entries_size != kEntrySize)
     return ZX_ERR_FILE_BIG;
-  }
 
-  if (header->current >= block_count || header->backup >= block_count) {
+  if (header->current >= block_count || header->backup >= block_count)
     return ZX_ERR_BUFFER_TOO_SMALL;
-  }
 
-  if (header->first > header->last) {
-    return ZX_ERR_OUT_OF_RANGE;
-  }
+  if (!ConvertBlockRange(header->first, header->last, block_count))
+    return ZX_ERR_IO_DATA_INTEGRITY;
 
   return ZX_OK;
 }
@@ -485,19 +526,18 @@ bool RangesOverlapsWithOtherRanges(const fbl::Vector<BlockRange>& ranges, const 
                      [&range](const BlockRange& r) { return Overlap(r, range); });
 }
 
-zx_status_t GptDevice::ValidateEntries(const uint8_t* buffer) const {
+zx_status_t GptDevice::ValidateEntries(const uint8_t* buffer, uint64_t block_count) const {
   ZX_DEBUG_ASSERT(buffer != nullptr);
   ZX_DEBUG_ASSERT(!valid_);
 
   const gpt_partition_t* partitions = reinterpret_cast<const gpt_partition_t*>(buffer);
 
   fbl::Vector<BlockRange> ranges;
-  // Range is half-open and gpt is close range. Add 1 to last.
-  BlockRange usable_range(header_.first, header_.last + 1);
+  std::optional<BlockRange> usable_range =
+      ConvertBlockRange(header_.first, header_.last, block_count);
 
-  // We should be here after we have validated the header. Length should be
-  // greater than zero.
-  ZX_ASSERT(usable_range.Length() > 0);
+  // We should be here after we have validated the header.
+  ZX_ASSERT(usable_range);
 
   // Verify crc before we process entries.
   if (header_.entries_crc != crc32(0, buffer, EntryArraySize())) {
@@ -518,25 +558,29 @@ zx_status_t GptDevice::ValidateEntries(const uint8_t* buffer) const {
       continue;
     }
 
-    // Range is half-open and gpt is close range. Add 1 to last.
-    BlockRange range(entry->first, entry->last + 1);
+    // Ensure partition range doesn't conflict with device size or GPT headers.
+    std::optional<BlockRange> partition_range =
+        ConvertBlockRange(entry->first, entry->last, block_count);
+    if (!partition_range)
+      return ZX_ERR_IO_DATA_INTEGRITY;
 
     // Entry's first block should be greater than or equal to GPT's first usable block.
     // Entry's last block should be less than or equal to GPT's last usable block.
-    if (!Contains(usable_range, range)) {
+    if (!Contains(*usable_range, *partition_range)) {
       return ZX_ERR_ALREADY_EXISTS;
     }
 
-    if (RangesOverlapsWithOtherRanges(ranges, range)) {
+    if (RangesOverlapsWithOtherRanges(ranges, *partition_range)) {
       return ZX_ERR_OUT_OF_RANGE;
     }
-    ranges.push_back(range);
+    ranges.push_back(*partition_range);
   }
 
   return ZX_OK;
 }
 
-zx_status_t GptDevice::LoadEntries(const uint8_t* buffer, uint64_t buffer_size) {
+zx_status_t GptDevice::LoadEntries(const uint8_t* buffer, uint64_t buffer_size,
+                                   uint64_t block_count) {
   zx_status_t status;
   size_t entries_size = static_cast<size_t>(header_.entries_count) * kEntrySize;
 
@@ -546,7 +590,7 @@ zx_status_t GptDevice::LoadEntries(const uint8_t* buffer, uint64_t buffer_size) 
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
 
-  if ((status = ValidateEntries(buffer)) != ZX_OK) {
+  if ((status = ValidateEntries(buffer, block_count)) != ZX_OK) {
     return status;
   }
 
@@ -687,7 +731,7 @@ zx_status_t GptDevice::Load(const uint8_t* buffer, uint64_t buffer_size, uint32_
   std::unique_ptr<GptDevice> dev(new GptDevice());
   memcpy(&dev->header_, buffer, sizeof(gpt_header_t));
 
-  if ((status = dev->LoadEntries(&buffer[blocksize], buffer_size - blocksize)) != ZX_OK) {
+  if ((status = dev->LoadEntries(&buffer[blocksize], buffer_size - blocksize, blocks)) != ZX_OK) {
     return status;
   }
 

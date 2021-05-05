@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 #include <endian.h>
-#include <utf_conversion/utf_conversion.h>
 #include <zircon/assert.h>
+
+#include <utf_conversion/utf_conversion.h>
 
 namespace {
 
@@ -30,7 +31,7 @@ struct CodeUnit<Endianness::HOST> {
 };
 template <>
 struct CodeUnit<Endianness::INVERT> {
-  static inline uint16_t Read(uint16_t val) { return __bswap16(val); }
+  static inline uint16_t Read(uint16_t val) { return static_cast<uint16_t>(val << 8 | val >> 8); }
 };
 
 static constexpr bool IsHighSurrogate(uint16_t val) { return ((val >= 0xD800) && (val <= 0xDBFF)); }

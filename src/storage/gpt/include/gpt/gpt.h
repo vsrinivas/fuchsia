@@ -65,6 +65,10 @@ static_assert(kGuidStrLength == GPT_GUID_STRLEN, "Guid print format changed");
 
 // Size of null terminated char array to store non-utf16 GUID partition name.
 constexpr uint64_t kGuidCNameLength = (GPT_NAME_LEN / 2) + 1;
+// Maximum size, including null terminator, of a partition's name in UTF-8.
+// It's at most 3 UTF-8 code units for every UTF-16 code unit.  Code points > 0x10000 (which
+// require 4 UTF-8 code units) get encoded as surrogate pairs in UTF-16.
+constexpr size_t kMaxUtf8NameLen = ((GPT_NAME_LEN / sizeof(char16_t)) * 3) + 1;
 
 constexpr uint32_t kGptDiffType = 0x01;
 constexpr uint32_t kGptDiffGuid = 0x02;
@@ -113,6 +117,9 @@ void SetPartitionVisibility(gpt_partition_t* partition, bool visible);
 // Returns true if partition's kHiddenFlag is not set i.e. partition
 // is visible
 bool IsPartitionVisible(const gpt_partition_t* partition);
+
+// Returns a null terminated UTF-8 representation of the partition name.
+zx::status<> GetPartitionName(const gpt_entry_t& entry, char* name, size_t capacity);
 
 class GptDevice {
  public:
@@ -233,10 +240,10 @@ class GptDevice {
   static zx_status_t Init(int fd, uint32_t blocksize, uint64_t block_count,
                           std::unique_ptr<GptDevice>* out_dev);
 
-  zx_status_t LoadEntries(const uint8_t* buffer, uint64_t buffer_size);
+  zx_status_t LoadEntries(const uint8_t* buffer, uint64_t buffer_size, uint64_t block_count);
 
   // Walks entries array and returns error if crc doesn't match or ValidateEntry returns error.
-  zx_status_t ValidateEntries(const uint8_t* buffer) const;
+  zx_status_t ValidateEntries(const uint8_t* buffer, uint64_t block_count) const;
 
   zx::status<gpt_partition_t*> GetPartitionPtr(uint32_t partition_index) const;
 

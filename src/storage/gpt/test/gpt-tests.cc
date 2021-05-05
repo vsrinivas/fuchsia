@@ -10,6 +10,7 @@
 #include <lib/fdio/cpp/caller.h>
 #include <zircon/assert.h>
 
+#include <algorithm>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -60,10 +61,15 @@ uint64_t random_length(uint64_t max) { return (rand_r(&gRandSeed) % max); }
 
 constexpr uint64_t partition_size(const gpt_partition_t* p) { return p->last - p->first + 1; }
 
+uint32_t CalculateCrc(const gpt_header_t& header) {
+  gpt_header_t new_header = header;
+  new_header.crc32 = 0;
+  return crc32(0, reinterpret_cast<const uint8_t*>(&new_header), kHeaderSize);
+}
+
 void UpdateHeaderCrcs(gpt_header_t* header, uint8_t* entries_array, size_t size) {
   header->entries_crc = crc32(0, entries_array, size);
-  header->crc32 = 0;
-  header->crc32 = crc32(0, reinterpret_cast<uint8_t*>(header), sizeof(*header));
+  header->crc32 = CalculateCrc(*header);
 }
 
 void destroy_gpt(int fd, uint64_t block_size, uint64_t offset, uint64_t block_count) {
@@ -1120,7 +1126,7 @@ TEST(GptDeviceLoadEntries, EntryFirstSmallerThanFirstUsable) {
   uint8_t* blocks = buffer.get();
   gpt_entry_t* entry = reinterpret_cast<gpt_entry_t*>(&blocks[kBlockSize]);
 
-  // last is greater than last usable block.
+  // first is less than first usable block.
   entry->guid[0] = 1;
   entry->type[0] = 1;
   entry->first = header.first - 1;
@@ -1537,9 +1543,7 @@ TEST(InitializePrimaryHeader, CheckFields) {
   ASSERT_EQ(header.entries_size, kEntrySize);
   ASSERT_EQ(header.entries_crc, 0);
 
-  uint32_t crc = header.crc32;
-  header.crc32 = 0;
-  ASSERT_EQ(crc, crc32(0, reinterpret_cast<uint8_t*>(&header), kHeaderSize));
+  ASSERT_EQ(header.crc32, CalculateCrc(header));
 }
 
 TEST(ValidateHeaderTest, ValidHeader) {
@@ -1571,8 +1575,7 @@ TEST(ValidateHeaderTest, BadCrc) {
 TEST(ValidateHeaderTest, TooManyPartitions) {
   gpt_header_t header = InitializePrimaryHeader(kBlockSize, kBlockCount).value();
   header.entries_count = kPartitionCount + 1;
-  header.crc32 = 0;
-  header.crc32 = crc32(0, reinterpret_cast<const uint8_t*>(&header), kHeaderSize);
+  header.crc32 = CalculateCrc(header);
 
   ASSERT_EQ(ValidateHeader(&header, kBlockCount), ZX_ERR_IO_OVERRUN);
 }
@@ -1580,13 +1583,11 @@ TEST(ValidateHeaderTest, TooManyPartitions) {
 TEST(ValidateHeaderTest, EntrySizeMismatch) {
   gpt_header_t header = InitializePrimaryHeader(kBlockSize, kBlockCount).value();
   header.entries_size = kEntrySize - 1;
-  header.crc32 = 0;
-  header.crc32 = crc32(0, reinterpret_cast<const uint8_t*>(&header), kHeaderSize);
+  header.crc32 = CalculateCrc(header);
   ASSERT_EQ(ValidateHeader(&header, kBlockCount), ZX_ERR_FILE_BIG);
 
   header.entries_size = kEntrySize + 1;
-  header.crc32 = 0;
-  header.crc32 = crc32(0, reinterpret_cast<const uint8_t*>(&header), kHeaderSize);
+  header.crc32 = CalculateCrc(header);
   ASSERT_EQ(ValidateHeader(&header, kBlockCount), ZX_ERR_FILE_BIG);
 }
 
@@ -1598,11 +1599,38 @@ TEST(ValidateHeaderTest, BlockDeviceShrunk) {
 
 TEST(ValidateHeaderTest, FirstUsableBlockLargerThanLast) {
   gpt_header_t header = InitializePrimaryHeader(kBlockSize, kBlockCount).value();
-  header.first = header.last + 1;
-  header.crc32 = 0;
-  header.crc32 = crc32(0, reinterpret_cast<const uint8_t*>(&header), kHeaderSize);
 
-  ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, ValidateHeader(&header, kBlockCount));
+  header.first = header.last + 1;
+  header.crc32 = CalculateCrc(header);
+  ASSERT_EQ(ZX_ERR_IO_DATA_INTEGRITY, ValidateHeader(&header, kBlockCount));
+
+  header.first = header.last;
+  header.crc32 = CalculateCrc(header);
+  ASSERT_EQ(ZX_OK, ValidateHeader(&header, kBlockCount));
+}
+
+TEST(ValidateHeaderTest, UsableRangeIntersectsPrimaryHeader) {
+  gpt_header_t header = InitializePrimaryHeader(kBlockSize, kBlockCount).value();
+
+  header.first = kPrimaryEntriesStartBlock - 1;
+  header.crc32 = CalculateCrc(header);
+  ASSERT_EQ(ZX_ERR_IO_DATA_INTEGRITY, ValidateHeader(&header, kBlockCount));
+
+  header.first = 0;
+  header.last = kPrimaryEntriesStartBlock - 1;
+  header.crc32 = CalculateCrc(header);
+  ASSERT_EQ(ZX_ERR_IO_DATA_INTEGRITY, ValidateHeader(&header, kBlockCount));
+}
+
+TEST(ValidateHeaderTest, UsableRangeIntersectsBackupHeader) {
+  gpt_header_t header = InitializePrimaryHeader(kBlockSize, kBlockCount).value();
+  header.last = kBlockCount - 1;
+  header.crc32 = CalculateCrc(header);
+  ASSERT_EQ(ZX_ERR_IO_DATA_INTEGRITY, ValidateHeader(&header, kBlockCount));
+
+  header.last = kBlockCount - 2;
+  header.crc32 = CalculateCrc(header);
+  ASSERT_EQ(ZX_OK, ValidateHeader(&header, kBlockCount));
 }
 
 TEST(ValidateEntryTest, UninitializedEntry) {
@@ -1644,6 +1672,31 @@ TEST(ValidateEntryTest, BadRange) {
   entry.first = 20;
   entry.last = 10;
   ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, ValidateEntry(&entry).error());
+}
+
+TEST(GetPartitionNameTest, BufferTooSmall) {
+  std::array<char, kMaxUtf8NameLen> partition_name{};
+  gpt_entry_t partition_entry = {};
+  std::fill(std::begin(partition_entry.name), std::end(partition_entry.name), 0xFF);
+  ASSERT_EQ(ZX_ERR_BUFFER_TOO_SMALL,
+            gpt::GetPartitionName(partition_entry, partition_name.data(), partition_name.size() - 1)
+                .status_value());
+}
+
+TEST(GetPartitionNameTest, LongName) {
+  // Result of converting 36 0xFFFF's in UTF-16 to UTF-8 is a pattern
+  // of 0xEF, 0xBF, 0xBF repeated.
+  std::array<char, kMaxUtf8NameLen> expected_result{};
+  for (size_t i = 0; i < expected_result.size() - 1; ++i)
+    expected_result[i] = (i % 3) ? 0xBF : 0xEF;
+
+  std::array<char, kMaxUtf8NameLen> partition_name{};
+  gpt_entry_t partition_entry = {};
+  std::fill(std::begin(partition_entry.name), std::end(partition_entry.name), 0xFF);
+  ASSERT_EQ(ZX_OK,
+            gpt::GetPartitionName(partition_entry, partition_name.data(), partition_name.size())
+                .status_value());
+  ASSERT_EQ(partition_name, expected_result);
 }
 
 }  // namespace gpt

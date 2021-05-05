@@ -41,7 +41,6 @@ driver_module("gpt") {
     "//src/storage/gpt",
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/sync",
-    "//zircon/system/ulib/utf_conversion",
   ]
 }
 
@@ -66,7 +65,6 @@ test("gpt-device-test-bin") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/utf_conversion",
   ]
 }
 

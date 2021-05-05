@@ -30,7 +30,9 @@ zx_library("gpt") {
       "//sdk/lib/fit",
       "//zircon/system/ulib/mbr",
       "//zircon/system/ulib/range",
+      "//zircon/system/ulib/utf_conversion",
       "//zircon/third_party/ulib/cksum",
+      "//zircon/third_party/ulib/safemath",
     ]
   }
 }
