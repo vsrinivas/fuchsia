@@ -10,6 +10,8 @@
 #include <gpt/cros.h>
 
 #include "src/lib/uuid/uuid.h"
+#include "src/storage/lib/paver/abr-client-vboot.h"
+#include "src/storage/lib/paver/abr-client.h"
 #include "src/storage/lib/paver/pave-logging.h"
 #include "src/storage/lib/paver/utils.h"
 #include "src/storage/lib/paver/validation.h"
@@ -86,7 +88,12 @@ zx::status<std::unique_ptr<DevicePartitioner>> CrosDevicePartitioner::Initialize
         RebindGptDriver(gpt_partitioner->svc_root(), gpt_partitioner->Channel()).status_value();
   }
 
-  auto partitioner = WrapUnique(new CrosDevicePartitioner(std::move(gpt_partitioner)));
+  // Determine if the firmware supports A/B in Zircon.
+  auto active_slot = abr::QueryBootConfig(svc_root);
+  bool supports_abr = active_slot.is_ok();
+
+  auto partitioner =
+      WrapUnique(new CrosDevicePartitioner(std::move(gpt_partitioner), supports_abr));
   if (status_or_gpt->initialize_partition_tables) {
     if (auto status = partitioner->InitPartitionTables(); status.is_error()) {
       return status.take_error();
@@ -191,8 +198,9 @@ zx::status<> CrosDevicePartitioner::FinalizePartition(const PartitionSpec& spec)
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
-  // Special partition finalization is only necessary for Zircon partitions.
-  if (spec.partition != Partition::kZirconA) {
+  // Special partition finalization is only necessary for Zircon partitions, and only when we don't
+  // support A/B.
+  if (spec.partition != Partition::kZirconA || supports_abr_) {
     return zx::ok();
   }
 
@@ -243,9 +251,6 @@ zx::status<> CrosDevicePartitioner::FinalizePartition(const PartitionSpec& spec)
     ERROR("Cannot set CrOS partition priority for ZIRCON-A\n");
     return zx::error(ZX_ERR_OUT_OF_RANGE);
   }
-
-  // TODO(raggi): when other (B/R) partitions are paved, set their priority
-  // appropriately as well.
 
   // Successful set to 'true' to encourage the bootloader to
   // use this partition.
@@ -335,6 +340,21 @@ zx::status<std::unique_ptr<DevicePartitioner>> ChromebookX64PartitionerFactory::
     fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root, Arch arch,
     std::shared_ptr<Context> context, const fbl::unique_fd& block_device) {
   return CrosDevicePartitioner::Initialize(std::move(devfs_root), svc_root, arch, block_device);
+}
+
+zx::status<std::unique_ptr<abr::Client>> ChromebookX64AbrClientFactory::New(
+    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
+    std::shared_ptr<paver::Context> context) {
+  fbl::unique_fd none;
+  auto partitioner = CrosDevicePartitioner::Initialize(std::move(devfs_root), std::move(svc_root),
+                                                       paver::Arch::kX64, none);
+
+  if (partitioner.is_error()) {
+    return partitioner.take_error();
+  }
+
+  return abr::VbootClient::Create(std::unique_ptr<CrosDevicePartitioner>(
+      static_cast<CrosDevicePartitioner*>(partitioner.value().release())));
 }
 
 }  // namespace paver

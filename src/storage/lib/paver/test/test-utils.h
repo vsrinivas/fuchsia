@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 #ifndef SRC_STORAGE_LIB_PAVER_TEST_TEST_UTILS_H_
 #define SRC_STORAGE_LIB_PAVER_TEST_TEST_UTILS_H_
+#include <fuchsia/boot/llcpp/fidl.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/service/llcpp/service.h>
 
 #include <memory>
 
@@ -14,6 +16,11 @@
 #include <ramdevice-client/ramnand.h>
 #include <zxtest/zxtest.h>
 
+#include "lib/fdio/directory.h"
+#include "lib/fidl-async/cpp/bind.h"
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/service.h"
+#include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 #include "src/storage/lib/paver/device-partitioner.h"
 
 constexpr uint64_t kBlockSize = 0x1000;
@@ -132,6 +139,47 @@ class FakePartitionClient : public paver::BlockDevicePartitionClient {
   zx::vmo partition_;
   size_t block_size_;
   size_t partition_size_;
+};
+
+template <typename T>
+class FakeSvc {
+ public:
+  explicit FakeSvc(async_dispatcher_t* dispatcher, T args)
+      : dispatcher_(dispatcher), vfs_(dispatcher), fake_boot_args_(std::move(args)) {
+    root_dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
+    root_dir_->AddEntry(
+        fidl::DiscoverableProtocolName<fuchsia_boot::Arguments>,
+        fbl::MakeRefCounted<fs::Service>([this](zx::channel request) {
+          return fidl::BindSingleInFlightOnly<fidl::WireServer<fuchsia_boot::Arguments>>(
+              dispatcher_, std::move(request), &fake_boot_args_);
+        }));
+
+    auto svc_remote = fidl::CreateEndpoints(&svc_local_);
+    ASSERT_OK(svc_remote.status_value());
+
+    vfs_.ServeDirectory(root_dir_, std::move(*svc_remote));
+  }
+
+  void ForwardServiceTo(const char* name, fidl::UnownedClientEnd<fuchsia_io::Directory> root) {
+    auto cloned = service::Clone(root);
+    ASSERT_OK(cloned.status_value());
+    root_dir_->AddEntry(
+        name,
+        fbl::MakeRefCounted<fs::Service>([name, cloned = std::move(*cloned)](zx::channel request) {
+          return fdio_service_connect_at(
+              cloned.channel().get(), fbl::StringPrintf("/svc/%s", name).data(), request.release());
+        }));
+  }
+
+  T& fake_boot_args() { return fake_boot_args_; }
+  fidl::ClientEnd<fuchsia_io::Directory>& svc_chan() { return svc_local_; }
+
+ private:
+  async_dispatcher_t* dispatcher_;
+  fbl::RefPtr<fs::PseudoDir> root_dir_;
+  fs::SynchronousVfs vfs_;
+  T fake_boot_args_;
+  fidl::ClientEnd<fuchsia_io::Directory> svc_local_;
 };
 
 #endif  // SRC_STORAGE_LIB_PAVER_TEST_TEST_UTILS_H_

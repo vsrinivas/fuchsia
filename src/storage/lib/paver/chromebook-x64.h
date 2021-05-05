@@ -4,6 +4,7 @@
 #ifndef SRC_STORAGE_LIB_PAVER_CHROMEBOOK_X64_H_
 #define SRC_STORAGE_LIB_PAVER_CHROMEBOOK_X64_H_
 
+#include "src/storage/lib/paver/abr-client.h"
 #include "src/storage/lib/paver/gpt.h"
 
 namespace paver {
@@ -38,10 +39,14 @@ class CrosDevicePartitioner : public DevicePartitioner {
 
   zx::status<> Flush() const override { return zx::ok(); }
 
+  GptDevice* GetGpt() const { return gpt_->GetGpt(); }
+
  private:
-  CrosDevicePartitioner(std::unique_ptr<GptDevicePartitioner> gpt) : gpt_(std::move(gpt)) {}
+  CrosDevicePartitioner(std::unique_ptr<GptDevicePartitioner> gpt, bool supports_abr)
+      : gpt_(std::move(gpt)), supports_abr_(supports_abr) {}
 
   std::unique_ptr<GptDevicePartitioner> gpt_;
+  bool supports_abr_;
 };
 
 class ChromebookX64PartitionerFactory : public DevicePartitionerFactory {
@@ -49,6 +54,13 @@ class ChromebookX64PartitionerFactory : public DevicePartitionerFactory {
   zx::status<std::unique_ptr<DevicePartitioner>> New(
       fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root, Arch arch,
       std::shared_ptr<Context> context, const fbl::unique_fd& block_device) final;
+};
+
+class ChromebookX64AbrClientFactory : public abr::ClientFactory {
+ public:
+  zx::status<std::unique_ptr<abr::Client>> New(
+      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
+      std::shared_ptr<paver::Context> context) final;
 };
 
 }  // namespace paver

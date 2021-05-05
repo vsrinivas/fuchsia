@@ -156,6 +156,26 @@ bool Client::WriteAbrMetaData(void* context, const uint8_t* buffer, size_t size)
   return true;
 }
 
+bool Client::ReadAbrMetadataCustom(void* context, AbrSlotData* a, AbrSlotData* b,
+                                   uint8_t* one_shot_recovery) {
+  if (auto res = static_cast<Client*>(context)->ReadCustom(a, b, one_shot_recovery);
+      res.is_error()) {
+    ERROR("Failed to read abr data from storage. %s\n", res.status_string());
+    return false;
+  }
+  return true;
+}
+
+bool Client::WriteAbrMetadataCustom(void* context, const AbrSlotData* a, const AbrSlotData* b,
+                                    uint8_t one_shot_recovery) {
+  if (auto res = static_cast<Client*>(context)->WriteCustom(a, b, one_shot_recovery);
+      res.is_error()) {
+    ERROR("Failed to read abr data from storage. %s\n", res.status_string());
+    return false;
+  }
+  return true;
+}
+
 zx::status<> Client::AbrResultToZxStatus(AbrResult status) {
   switch (status) {
     case kAbrResultOk:

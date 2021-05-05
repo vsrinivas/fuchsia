@@ -18,6 +18,7 @@
 
 #include "src/storage/lib/paver/partition-client.h"
 #include "src/storage/lib/paver/paver-context.h"
+#include "zircon/errors.h"
 
 namespace abr {
 
@@ -64,8 +65,13 @@ class Client {
 
   void InitializeAbrOps();
 
-  Client() {
-    abr_ops_ = {this, Client::ReadAbrMetaData, Client::WriteAbrMetaData, nullptr, nullptr};
+  explicit Client(bool custom = false) {
+    if (custom) {
+      abr_ops_ = {this, nullptr, nullptr, Client::ReadAbrMetadataCustom,
+                  Client::WriteAbrMetadataCustom};
+    } else {
+      abr_ops_ = {this, Client::ReadAbrMetaData, Client::WriteAbrMetaData, nullptr, nullptr};
+    }
   }
 
   // No copy, move, assign.
@@ -85,10 +91,19 @@ class Client {
   static bool ReadAbrMetaData(void* context, size_t size, uint8_t* buffer);
 
   static bool WriteAbrMetaData(void* context, const uint8_t* buffer, size_t size);
+  static bool ReadAbrMetadataCustom(void* context, AbrSlotData* a, AbrSlotData* b,
+                                    uint8_t* one_shot_recovery);
+  static bool WriteAbrMetadataCustom(void* context, const AbrSlotData* a, const AbrSlotData* b,
+                                     uint8_t one_shot_recovery);
 
   virtual zx::status<> Read(uint8_t* buffer, size_t size) = 0;
 
   virtual zx::status<> Write(const uint8_t* buffer, size_t size) = 0;
+
+  virtual zx::status<> ReadCustom(AbrSlotData* a, AbrSlotData* b, uint8_t* one_shot_recovery) = 0;
+
+  virtual zx::status<> WriteCustom(const AbrSlotData* a, const AbrSlotData* b,
+                                   uint8_t one_shot_recovery) = 0;
 };
 
 class ClientFactory {
@@ -125,6 +140,15 @@ class AbrPartitionClient : public Client {
   zx::status<> Read(uint8_t* buffer, size_t size) override;
 
   zx::status<> Write(const uint8_t* buffer, size_t size) override;
+
+  zx::status<> ReadCustom(AbrSlotData* a, AbrSlotData* b, uint8_t* one_shot_recovery) override {
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  zx::status<> WriteCustom(const AbrSlotData* a, const AbrSlotData* b,
+                           uint8_t one_shot_recovery) override {
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
+  }
 
   zx::status<> Flush() const override { return partition_->Flush(); }
 

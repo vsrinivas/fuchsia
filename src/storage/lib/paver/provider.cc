@@ -52,6 +52,7 @@ zx_status_t Init(void** out_ctx) {
   abr::ClientFactory::Register(std::make_unique<paver::SherlockAbrClientFactory>());
   abr::ClientFactory::Register(std::make_unique<paver::LuisAbrClientFactory>());
   abr::ClientFactory::Register(std::make_unique<paver::Vim3AbrClientFactory>());
+  abr::ClientFactory::Register(std::make_unique<paver::ChromebookX64AbrClientFactory>());
   abr::ClientFactory::Register(std::make_unique<paver::X64AbrClientFactory>());
   return ZX_OK;
 }

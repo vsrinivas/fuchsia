@@ -15,6 +15,7 @@ group("tests") {
 # Core paver implementation shared between all implementations.
 source_set("paver-core") {
   sources = [
+    "abr-client-vboot.cc",
     "abr-client.cc",
     "abr.cc",
     "device-partitioner.cc",

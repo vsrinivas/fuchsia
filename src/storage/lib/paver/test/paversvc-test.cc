@@ -181,10 +181,6 @@ constexpr fuchsia_hardware_nand_RamNandInfo
 
 class FakeBootArgs : public fidl::WireServer<fuchsia_boot::Arguments> {
  public:
-  zx_status_t Connect(async_dispatcher_t* dispatcher, zx::channel request) {
-    return fidl::BindSingleInFlightOnly(dispatcher, std::move(request), this);
-  }
-
   void GetString(GetStringRequestView request, GetStringCompleter::Sync& completer) override {
     completer.Reply(fidl::StringView::FromExternal(arg_response_));
   }
@@ -209,43 +205,6 @@ class FakeBootArgs : public fidl::WireServer<fuchsia_boot::Arguments> {
  private:
   bool astro_sysconfig_abr_wear_leveling_ = false;
   std::string arg_response_ = "-a";
-};
-
-class FakeSvc {
- public:
-  explicit FakeSvc(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher), vfs_(dispatcher) {
-    root_dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
-    root_dir_->AddEntry(fidl::DiscoverableProtocolName<fuchsia_boot::Arguments>,
-                        fbl::MakeRefCounted<fs::Service>([this](zx::channel request) {
-                          return fake_boot_args_.Connect(dispatcher_, std::move(request));
-                        }));
-
-    auto svc_remote = fidl::CreateEndpoints(&svc_local_);
-    ASSERT_OK(svc_remote.status_value());
-
-    vfs_.ServeDirectory(root_dir_, std::move(*svc_remote));
-  }
-
-  void ForwardServiceTo(const char* name, fidl::UnownedClientEnd<fuchsia_io::Directory> root) {
-    auto cloned = service::Clone(root);
-    ASSERT_OK(cloned.status_value());
-    root_dir_->AddEntry(
-        name,
-        fbl::MakeRefCounted<fs::Service>([name, cloned = std::move(*cloned)](zx::channel request) {
-          return fdio_service_connect_at(
-              cloned.channel().get(), fbl::StringPrintf("/svc/%s", name).data(), request.release());
-        }));
-  }
-
-  FakeBootArgs& fake_boot_args() { return fake_boot_args_; }
-  fidl::ClientEnd<fuchsia_io::Directory>& svc_chan() { return svc_local_; }
-
- private:
-  async_dispatcher_t* dispatcher_;
-  fbl::RefPtr<fs::PseudoDir> root_dir_;
-  fs::SynchronousVfs vfs_;
-  FakeBootArgs fake_boot_args_;
-  fidl::ClientEnd<fuchsia_io::Directory> svc_local_;
 };
 
 class PaverServiceTest : public zxtest::Test {
@@ -277,13 +236,13 @@ class PaverServiceTest : public zxtest::Test {
   // The paver makes synchronous calls into /svc, so it must run in a separate loop to not
   // deadlock.
   async::Loop loop2_;
-  FakeSvc fake_svc_;
+  FakeSvc<FakeBootArgs> fake_svc_;
 };
 
 PaverServiceTest::PaverServiceTest()
     : loop_(&kAsyncLoopConfigAttachToCurrentThread),
       loop2_(&kAsyncLoopConfigNoAttachToCurrentThread),
-      fake_svc_(loop2_.dispatcher()) {
+      fake_svc_(loop2_.dispatcher(), FakeBootArgs()) {
   zx::channel client, server;
   ASSERT_OK(zx::channel::create(0, &client, &server));
 
