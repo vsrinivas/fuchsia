@@ -13,7 +13,9 @@ import (
 	"math/rand"
 	"sync"
 	"testing"
-	"time"
+	stdtime "time"
+
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/time"
 
 	"github.com/google/go-cmp/cmp"
 	"gvisor.dev/gvisor/pkg/tcpip"
@@ -1793,7 +1795,7 @@ func TestClientRestartIPHeader(t *testing.T) {
 func TestDecline(t *testing.T) {
 	dadConfigs := stack.DADConfigurations{
 		DupAddrDetectTransmits: 1,
-		RetransmitTimer:        time.Second,
+		RetransmitTimer:        stdtime.Second,
 	}
 
 	var wg sync.WaitGroup
@@ -1922,7 +1924,7 @@ func TestClientRestartLeaseTime(t *testing.T) {
 
 	clientStack, _, clientEP, _, c := setupTestEnv(ctx, t, defaultServerCfg)
 	// Always return the same arbitrary time.
-	c.now = func() time.Time { return time.Unix(1234, 5678) }
+	c.now = func() time.Time { return time.Monotonic((1234 * time.Second.Nanoseconds()) + 5678) }
 
 	acquiredDone := make(chan struct{})
 	c.acquiredFunc = func(lost, acquired tcpip.AddressWithPrefix, _ Config) {

@@ -10,7 +10,8 @@ import (
 	"encoding/binary"
 	"fmt"
 	"strings"
-	"time"
+
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/time"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
 )

@@ -1,0 +1,17 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/go/go_test.gni")
+
+go_test("netstack_time_test") {
+  gopackages =
+      [ "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/time" ]
+
+  deps = [ "../:netstack_lib" ]
+}
+
+fuchsia_unittest_package("netstack-time-gotests") {
+  deps = [ ":netstack_time_test" ]
+}

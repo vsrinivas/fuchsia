@@ -226,6 +226,8 @@ go_library("netstack_lib") {
     "socket_conv.go",
     "socket_encode.go",
     "testutil/packet_buffer.go",
+    "time/time.go",
+    "time/time_test.go",
     "util/circular_logs.go",
     "util/circular_logs_test.go",
     "util/parse.go",
@@ -305,6 +307,7 @@ group("tests") {
     "inspect/validator:tests",
     "routes:netstack-routes-gotests",
     "tests",
+    "time:netstack-time-gotests",
     "util:tests",
   ]
 }

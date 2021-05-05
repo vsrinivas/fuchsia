@@ -23,7 +23,9 @@ import (
 	"io"
 	"log"
 	"sync"
-	"time"
+	stdtime "time"
+
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/time"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/buffer"
@@ -159,10 +161,12 @@ func NewServer(ctx context.Context, c conn, addrs []tcpip.Address, cfg Config) (
 }
 
 func (s *Server) expirer(ctx context.Context) {
-	t := time.NewTicker(1 * time.Minute)
+	t := stdtime.NewTicker(1 * stdtime.Minute)
 	defer t.Stop()
 	for {
 		select {
+		// stdtime.Time values produced by stdtime.NewTicker are not comparable with
+		// time.Time values so we must ignore the received value from t.C.
 		case <-t.C:
 			s.mu.Lock()
 			for linkAddr, lease := range s.leases {

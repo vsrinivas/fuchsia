@@ -13,8 +13,8 @@ import (
 	"math/rand"
 	"net"
 	"sync/atomic"
-	"time"
 
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/time"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/util"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
@@ -170,7 +170,7 @@ func NewClient(
 		networkEndpoint:    ep,
 		acquiredFunc:       acquiredFunc,
 		sem:                make(chan struct{}, 1),
-		rand:               rand.New(rand.NewSource(time.Now().UnixNano())),
+		rand:               rand.New(rand.NewSource(time.Now().MonotonicNano())),
 		retransTimeout:     time.After,
 		acquire:            acquire,
 		now:                time.Now,
@@ -264,7 +264,7 @@ func (c *Client) Run(ctx context.Context) {
 				panic(fmt.Sprintf("unexpected state before acquire: %s", s))
 			}
 
-			ctx, cancel := context.WithTimeout(ctx, acquisitionTimeout)
+			ctx, cancel := time.ContextWithTimeout(ctx, acquisitionTimeout)
 			defer cancel()
 
 			cfg, err := c.acquire(ctx, c, nicName, &info)

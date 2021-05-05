@@ -22,6 +22,7 @@ import (
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/bridge"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/eth"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/routes"
+	zxtime "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/time"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/util"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
@@ -52,9 +53,9 @@ const (
 	ipv4Loopback tcpip.Address = "\x7f\x00\x00\x01"
 	ipv6Loopback tcpip.Address = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"
 
-	dhcpAcquisition    = 60 * time.Second
-	dhcpBackoff        = 1 * time.Second
-	dhcpRetransmission = 4 * time.Second
+	dhcpAcquisition    = 60 * zxtime.Second
+	dhcpBackoff        = 1 * zxtime.Second
+	dhcpRetransmission = 4 * zxtime.Second
 )
 
 func ipv6LinkLocalOnLinkRoute(nicID tcpip.NICID) tcpip.Route {
