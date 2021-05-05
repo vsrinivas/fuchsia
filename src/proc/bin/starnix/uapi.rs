@@ -11,7 +11,7 @@ use paste::paste;
 use std::fmt;
 use zerocopy::{AsBytes, FromBytes};
 
-use crate::fs::FileDescriptor;
+use crate::fs::FdNumber;
 pub use crate::user_address::*;
 
 #[cfg(target_arch = "x86_64")]
@@ -667,8 +667,8 @@ impl From<UserAddress> for SyscallResult {
     }
 }
 
-impl From<FileDescriptor> for SyscallResult {
-    fn from(value: FileDescriptor) -> Self {
+impl From<FdNumber> for SyscallResult {
+    fn from(value: FdNumber) -> Self {
         SyscallResult::Success(value.raw() as u64)
     }
 }

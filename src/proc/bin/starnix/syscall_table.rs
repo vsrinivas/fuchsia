@@ -5,7 +5,7 @@
 use paste::paste;
 use zerocopy::{AsBytes, FromBytes};
 
-use crate::fs::FileDescriptor;
+use crate::fs::FdNumber;
 use crate::syscalls::*;
 use crate::uapi::*;
 
@@ -50,9 +50,9 @@ impl FromSyscallArg for UserCString {
     }
 }
 
-impl FromSyscallArg for FileDescriptor {
-    fn from_arg(arg: u64) -> FileDescriptor {
-        FileDescriptor::from_raw(arg as i32)
+impl FromSyscallArg for FdNumber {
+    fn from_arg(arg: u64) -> FdNumber {
+        FdNumber::from_raw(arg as i32)
     }
 }
 trait IntoSyscallArg<T> {

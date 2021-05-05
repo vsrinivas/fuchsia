@@ -37,7 +37,7 @@ impl SyscallContext<'_> {
 
 pub fn sys_write(
     ctx: &SyscallContext<'_>,
-    fd: FileDescriptor,
+    fd: FdNumber,
     buffer: UserAddress,
     count: usize,
 ) -> Result<SyscallResult, Errno> {
@@ -47,7 +47,7 @@ pub fn sys_write(
 
 pub fn sys_fcntl(
     ctx: &SyscallContext<'_>,
-    fd: FileDescriptor,
+    fd: FdNumber,
     cmd: u32,
     arg: u64,
 ) -> Result<SyscallResult, Errno> {
@@ -81,7 +81,7 @@ pub fn sys_fcntl(
 
 pub fn sys_fstat(
     ctx: &SyscallContext<'_>,
-    fd: FileDescriptor,
+    fd: FdNumber,
     buffer: UserRef<stat_t>,
 ) -> Result<SyscallResult, Errno> {
     let file = ctx.task.files.get(fd)?;
@@ -110,7 +110,7 @@ pub fn sys_mmap(
     length: usize,
     prot: u32,
     flags: u32,
-    fd: FileDescriptor,
+    fd: FdNumber,
     offset: usize,
 ) -> Result<SyscallResult, Errno> {
     // These are the flags that are currently supported.
@@ -260,7 +260,7 @@ pub fn sys_rt_sigprocmask(
 
 pub fn sys_pread64(
     ctx: &SyscallContext<'_>,
-    fd: FileDescriptor,
+    fd: FdNumber,
     buf: UserAddress,
     count: usize,
     offset: usize,
@@ -272,7 +272,7 @@ pub fn sys_pread64(
 
 pub fn sys_writev(
     ctx: &SyscallContext<'_>,
-    fd: FileDescriptor,
+    fd: FdNumber,
     iovec_addr: UserAddress,
     iovec_count: i32,
 ) -> Result<SyscallResult, Errno> {
@@ -388,7 +388,7 @@ pub fn sys_getegid(ctx: &SyscallContext<'_>) -> Result<SyscallResult, Errno> {
 
 pub fn sys_fstatfs(
     ctx: &SyscallContext<'_>,
-    _fd: FileDescriptor,
+    _fd: FdNumber,
     user_buf: UserRef<statfs>,
 ) -> Result<SyscallResult, Errno> {
     let result = statfs::default();
@@ -634,7 +634,7 @@ pub fn sys_getcwd(
 
 pub fn sys_ioctl(
     ctx: &SyscallContext<'_>,
-    fd: FileDescriptor,
+    fd: FdNumber,
     request: u32,
     in_addr: UserAddress,
     out_addr: UserAddress,
@@ -684,7 +684,7 @@ mod tests {
             length.try_into().unwrap(),
             PROT_READ | PROT_WRITE,
             MAP_ANONYMOUS | MAP_PRIVATE,
-            FileDescriptor::from_raw(-1),
+            FdNumber::from_raw(-1),
             0,
         )
         .unwrap()

@@ -16,10 +16,10 @@ use crate::uapi::*;
 pub use starnix_macros::FileObject;
 
 #[derive(Hash, PartialEq, Eq, Debug, Copy, Clone)]
-pub struct FileDescriptor(i32);
-impl FileDescriptor {
-    pub fn from_raw(n: i32) -> FileDescriptor {
-        FileDescriptor(n)
+pub struct FdNumber(i32);
+impl FdNumber {
+    pub fn from_raw(n: i32) -> FdNumber {
+        FdNumber(n)
     }
     pub fn raw(&self) -> i32 {
         self.0
@@ -155,7 +155,7 @@ struct FdTableEntry {
 }
 
 pub struct FdTable {
-    table: RwLock<HashMap<FileDescriptor, FdTableEntry>>,
+    table: RwLock<HashMap<FdNumber, FdTableEntry>>,
 }
 
 impl FdTable {
@@ -163,27 +163,27 @@ impl FdTable {
         FdTable { table: RwLock::new(HashMap::new()) }
     }
 
-    pub fn install_fd(&self, file: FileHandle) -> Result<FileDescriptor, Errno> {
+    pub fn install_fd(&self, file: FileHandle) -> Result<FdNumber, Errno> {
         let mut table = self.table.write();
-        let mut fd = FileDescriptor::from_raw(0);
+        let mut fd = FdNumber::from_raw(0);
         while table.contains_key(&fd) {
-            fd = FileDescriptor::from_raw(fd.raw() + 1);
+            fd = FdNumber::from_raw(fd.raw() + 1);
         }
         table.insert(fd, FdTableEntry { file, flags: FdFlags::empty() });
         Ok(fd)
     }
 
-    pub fn get(&self, fd: FileDescriptor) -> Result<FileHandle, Errno> {
+    pub fn get(&self, fd: FdNumber) -> Result<FileHandle, Errno> {
         let table = self.table.read();
         table.get(&fd).map(|entry| entry.file.clone()).ok_or_else(|| EBADF)
     }
 
-    pub fn get_flags(&self, fd: FileDescriptor) -> Result<FdFlags, Errno> {
+    pub fn get_flags(&self, fd: FdNumber) -> Result<FdFlags, Errno> {
         let table = self.table.read();
         table.get(&fd).map(|entry| entry.flags).ok_or_else(|| EBADF)
     }
 
-    pub fn set_flags(&self, fd: FileDescriptor, flags: FdFlags) -> Result<(), Errno> {
+    pub fn set_flags(&self, fd: FdNumber, flags: FdFlags) -> Result<(), Errno> {
         let mut table = self.table.write();
         table
             .get_mut(&fd)
@@ -211,6 +211,6 @@ mod test {
 
         assert!(Arc::ptr_eq(&table.get(fd_num).unwrap(), &test_file));
         assert!(Arc::ptr_eq(&table.get(fd_num2).unwrap(), &test_file));
-        assert_eq!(table.get(FileDescriptor::from_raw(fd_num2.raw() + 1)).map(|_| ()), Err(EBADF));
+        assert_eq!(table.get(FdNumber::from_raw(fd_num2.raw() + 1)).map(|_| ()), Err(EBADF));
     }
 }
