@@ -102,9 +102,11 @@ class FuchsiaViewConnection extends FuchsiaViewController {
   static Future<void> _handlePointerEvent(
       FuchsiaViewController controller, PointerEvent pointer) async {
     FuchsiaViewConnection connection = controller as FuchsiaViewConnection;
-    return connection.pointerInjector.dispatchEvent(
-      pointer: pointer,
-      viewport: connection.viewport,
-    );
+    if (connection.usePointerInjection) {
+      return connection.pointerInjector.dispatchEvent(
+        pointer: pointer,
+        viewport: connection.viewport,
+      );
+    }
   }
 }

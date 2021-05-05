@@ -89,7 +89,9 @@ class FuchsiaViewController implements PlatformViewController {
           onViewDisconnected?.call(this);
           break;
         case 'View.viewStateChanged':
-          onViewStateChanged?.call(this, call.arguments['state'] ?? false);
+          final state =
+              call.arguments['state'] == 1 || call.arguments['state'] == true;
+          onViewStateChanged?.call(this, state);
           break;
         default:
           print('Unknown method call from platform view channel: $call');
