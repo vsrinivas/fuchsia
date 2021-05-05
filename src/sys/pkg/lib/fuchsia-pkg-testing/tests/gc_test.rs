@@ -79,7 +79,7 @@ async fn test_pkgfs_install_update_after_gc() {
         assert_eq!(sorted(ls_simple(blobfs_dir.list_dir(".").unwrap()).unwrap()), expected_blobs);
 
         // Trigger GC
-        d.remove_dir("ctl/garbage").unwrap();
+        d.remove_dir("ctl/do-not-use-this-garbage").unwrap();
 
         // pkg blobs are in blobfs no longer
         let expected_blobs = sorted(
@@ -168,7 +168,7 @@ async fn test_pkgfs_shadowed_cache_package() {
         assert_eq!(sorted(ls_simple(blobfs_dir.list_dir(".").unwrap()).unwrap()), expected_blobs);
 
         // Trigger GC
-        d.remove_dir("ctl/garbage").unwrap();
+        d.remove_dir("ctl/do-not-use-this-garbage").unwrap();
 
         // cached pkg blobs are in blobfs no longer
         let expected_blobs = sorted(

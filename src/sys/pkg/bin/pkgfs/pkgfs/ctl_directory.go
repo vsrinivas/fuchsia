@@ -70,7 +70,7 @@ func (d *ctlDirectory) Stat() (int64, time.Time, time.Time, error) {
 func (d *ctlDirectory) Unlink(path string) error {
 	// the "garbage" file is a special control file. When it is unlinked,
 	// we trigger garbage collection.
-	if path == "garbage" {
+	if path == "do-not-use-this-garbage" {
 		if err := d.fs.GC(); err != nil {
 			log.Printf("unlink garbage: %s", err)
 		}

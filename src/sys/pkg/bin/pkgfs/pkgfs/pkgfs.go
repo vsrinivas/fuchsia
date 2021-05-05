@@ -70,7 +70,7 @@ func New(blobDir *fdio.Directory, enforcePkgfsPackagesNonStaticAllowlist bool, e
 				unsupportedDirectory: unsupportedDirectory("/ctl"),
 				fs:                   f,
 				dirs: map[string]fs.Directory{
-					"garbage": unsupportedDirectory("/ctl/garbage"),
+					"do-not-use-this-garbage": unsupportedDirectory("/ctl/do-not-use-this-garbage"),
 					"validation": &validationDir{
 						unsupportedDirectory: unsupportedDirectory("/ctl/validation"),
 						fs:                   f,

@@ -522,7 +522,7 @@ func TestListCtl(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"garbage", "validation"}
+	want := []string{"do-not-use-this-garbage", "validation"}
 	sort.Strings(names)
 	sort.Strings(want)
 
@@ -760,16 +760,16 @@ func TestTriggerGC(t *testing.T) {
 		return d.Unlink(path)
 	}
 
-	// /pkgfs/garbage no longer exists
-	if err := unlink("garbage"); err == nil {
+	// /pkgfs/do-not-use-this-garbage no longer exists
+	if err := unlink("do-not-use-this-garbage"); err == nil {
 		t.Fatal("expected error, got nil")
 	}
 
-	// unlinking garbage triggers a GC but doesn't remove the file.
-	if err := unlink("ctl/garbage"); err != nil {
+	// unlinking do-not-use-this-garbage triggers a GC but doesn't remove the file.
+	if err := unlink("ctl/do-not-use-this-garbage"); err != nil {
 		t.Fatal(err)
 	}
-	if err := unlink("ctl/garbage"); err != nil {
+	if err := unlink("ctl/do-not-use-this-garbage"); err != nil {
 		t.Fatal(err)
 	}
 }

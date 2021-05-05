@@ -80,7 +80,7 @@ impl TempDirPkgFs {
     }
 
     fn garbage_path(&self) -> PathBuf {
-        self.root.path().join("ctl/garbage")
+        self.root.path().join("ctl/do-not-use-this-garbage")
     }
 
     fn create_garbage(&self) {
