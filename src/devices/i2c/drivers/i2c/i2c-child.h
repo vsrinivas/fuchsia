@@ -28,7 +28,7 @@ namespace fidl_i2c = fuchsia_hardware_i2c;
 
 class I2cChild : public I2cChildType,
                  public ddk::I2cProtocol<I2cChild, ddk::base_protocol>,
-                 public fidl::WireInterface<fidl_i2c::Device2> {
+                 public fidl::WireServer<fidl_i2c::Device2> {
  public:
   I2cChild(zx_device_t* parent, fbl::RefPtr<I2cBus> bus, uint16_t address)
       : I2cChildType(parent), bus_(bus), address_(address) {}
@@ -44,10 +44,7 @@ class I2cChild : public I2cChildType,
   }
 
   // FIDL methods.
-  void Transfer(fidl::VectorView<bool> input_segments,
-                fidl::VectorView<fidl::VectorView<uint8_t>> input_segments_data,
-                fidl::VectorView<uint8_t> output_segments_length,
-                TransferCompleter::Sync& completer) override;
+  void Transfer(TransferRequestView request, TransferCompleter::Sync& completer) override;
 
   void I2cTransact(const i2c_op_t* op_list, size_t op_count, i2c_transact_callback callback,
                    void* cookie);

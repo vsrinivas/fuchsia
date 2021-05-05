@@ -17,48 +17,45 @@
 
 namespace i2c {
 
-void I2cChild::Transfer(fidl::VectorView<bool> segments_is_write,
-                        fidl::VectorView<fidl::VectorView<uint8_t>> write_segments_data,
-                        fidl::VectorView<uint8_t> read_segments_length,
-                        TransferCompleter::Sync& completer) {
-  if (segments_is_write.count() < 1) {
+void I2cChild::Transfer(TransferRequestView request, TransferCompleter::Sync& completer) {
+  if (request->segments_is_write.count() < 1) {
     completer.ReplyError(ZX_ERR_INVALID_ARGS);
     return;
   }
 
-  auto op_list = std::make_unique<i2c_op_t[]>(segments_is_write.count());
+  auto op_list = std::make_unique<i2c_op_t[]>(request->segments_is_write.count());
   size_t write_cnt = 0;
   size_t read_cnt = 0;
-  for (size_t i = 0; i < segments_is_write.count(); ++i) {
-    if (segments_is_write[i]) {
-      if (write_cnt >= write_segments_data.count()) {
+  for (size_t i = 0; i < request->segments_is_write.count(); ++i) {
+    if (request->segments_is_write[i]) {
+      if (write_cnt >= request->write_segments_data.count()) {
         completer.ReplyError(ZX_ERR_INVALID_ARGS);
         return;
       }
-      op_list[i].data_buffer = write_segments_data[write_cnt].data();
-      op_list[i].data_size = write_segments_data[write_cnt].count();
+      op_list[i].data_buffer = request->write_segments_data[write_cnt].data();
+      op_list[i].data_size = request->write_segments_data[write_cnt].count();
       op_list[i].is_read = false;
       op_list[i].stop = false;
       write_cnt++;
     } else {
-      if (read_cnt >= read_segments_length.count()) {
+      if (read_cnt >= request->read_segments_length.count()) {
         completer.ReplyError(ZX_ERR_INVALID_ARGS);
         return;
       }
       op_list[i].data_buffer = nullptr;  // unused.
-      op_list[i].data_size = read_segments_length[read_cnt];
+      op_list[i].data_size = request->read_segments_length[read_cnt];
       op_list[i].is_read = true;
       op_list[i].stop = false;
       read_cnt++;
     }
   }
-  op_list[segments_is_write.count() - 1].stop = true;
+  op_list[request->segments_is_write.count() - 1].stop = true;
 
-  if (write_segments_data.count() != write_cnt) {
+  if (request->write_segments_data.count() != write_cnt) {
     completer.ReplyError(ZX_ERR_INVALID_ARGS);
     return;
   }
-  if (read_segments_length.count() != read_cnt) {
+  if (request->read_segments_length.count() != read_cnt) {
     completer.ReplyError(ZX_ERR_INVALID_ARGS);
     return;
   }
@@ -84,7 +81,7 @@ void I2cChild::Transfer(fidl::VectorView<bool> segments_is_write,
     }
     sync_completion_signal(&ctx2->done);
   };
-  bus_->Transact(address_, op_list.get(), segments_is_write.count(), callback, &ctx);
+  bus_->Transact(address_, op_list.get(), request->segments_is_write.count(), callback, &ctx);
   sync_completion_wait(&ctx.done, zx::duration::infinite().get());
 }
 
