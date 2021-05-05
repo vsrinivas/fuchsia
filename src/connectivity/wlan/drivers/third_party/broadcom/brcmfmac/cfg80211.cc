@@ -4840,8 +4840,6 @@ zx_status_t brcmf_notify_channel_switch(struct brcmf_if* ifp, const struct brcmf
   struct brcmf_cfg80211_info* cfg = nullptr;
   struct wireless_dev* wdev = nullptr;
 
-  // TODO(b/155092471): This if can be removed once brcmf_notify_channel_switch() is no longer
-  // called out-of-band by brcmf_bss_connect_done().
   if (e != nullptr) {
     BRCMF_DBG_EVENT(ifp, e, "%d", [](uint32_t reason) { return reason; });
   }
@@ -5014,30 +5012,6 @@ static zx_status_t brcmf_bss_connect_done(brcmf_if* ifp, brcmf_connect_status_t 
           // Indicate the rssi soon after connection
           cfg80211_signal_ind(ndev);
         }
-        // Workaround to update SoftAP channel to SME once client has associated. FW automatically
-        // switches the SoftAP's channel (if running) to that of the client IF.
-        // TODO(b/155092471): This check can be removed once the issue is fixed in FW.
-        if (cfg->ap_started) {
-          for (const auto& iface : cfg->pub->iflist) {
-            if (!iface ||
-                !brcmf_test_bit_in_array(BRCMF_VIF_STATUS_AP_CREATED, &iface->vif->sme_state)) {
-              continue;
-            }
-            BRCMF_INFO("Sending SoftAP channel update to SME after client association");
-            (void)brcmf_notify_channel_switch(iface, nullptr, nullptr);
-          }
-        }
-        if (BRCMF_IS_ON(CONN)) {
-          // Get channel information from firmware.
-          uint16_t chanspec = 0;
-          uint8_t ctl_chan;
-          zx_status_t err = brcmf_get_ctrl_channel(ifp, &chanspec, &ctl_chan);
-          if (err == ZX_OK) {
-            BRCMF_DBG(CONN, "Client IF Channel info: chanspec: 0x%x control channel: %d", chanspec,
-                      ctl_chan);
-          }
-        }
-
         brcmf_return_assoc_result(ndev, WLAN_ASSOC_RESULT_SUCCESS);
         break;
       }
@@ -5392,8 +5366,6 @@ static zx_status_t brcmf_process_link_event(struct brcmf_if* ifp, const struct b
       brcmf_if_start_conf(ndev, WLAN_START_RESULT_SUCCESS);
       // Set AP_CREATED
       brcmf_set_bit_in_array(BRCMF_VIF_STATUS_AP_CREATED, &ifp->vif->sme_state);
-      // Update channel (in case it changed because of client IF).
-      brcmf_notify_channel_switch(ifp, e, data);
     }
   } else {
     BRCMF_DBG(CONN, "Client mode link event.");

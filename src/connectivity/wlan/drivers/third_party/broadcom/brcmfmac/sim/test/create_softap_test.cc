@@ -398,11 +398,8 @@ TEST_F(CreateSoftAPTest, CreateSoftAP) {
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
   zx::duration delay = zx::msec(10);
   env_->ScheduleNotification(std::bind(&CreateSoftAPTest::StartSoftAP, this), delay);
-  delay += kStartAPConfDelay + zx::msec(10);
+  delay += kStartAPLinkEventDelay + kApStartedEventDelay + zx::msec(10);
   env_->ScheduleNotification(std::bind(&CreateSoftAPTest::StopSoftAP, this), delay);
-  // Wait until SoftAP start conf is received
-  // env_->ScheduleNotification(
-  //     std::bind(&CreateSoftAPTest::VerifyStartAPConf, this, WLAN_START_RESULT_SUCCESS), delay);
   env_->Run(kSimulatedClockDuration);
   VerifyStartAPConf(WLAN_START_RESULT_SUCCESS);
 }

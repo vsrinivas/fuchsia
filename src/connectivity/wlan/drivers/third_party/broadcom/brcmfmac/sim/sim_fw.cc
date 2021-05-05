@@ -499,7 +499,7 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
             ZX_ASSERT(iface_tbl_[ifidx].ap_config.ap_started == false);
             // Schedule a Link Event to be sent to driver (simulating behviour
             // in real HW).
-            ScheduleLinkEvent(kStartAPConfDelay, ifidx);
+            ScheduleLinkEvent(kStartAPLinkEventDelay, ifidx);
             iface_tbl_[ifidx].ap_config.ap_started = true;
             softap_ifidx_ = ifidx;
 
@@ -513,6 +513,9 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
 
             // And Enable Rx
             hw_.EnableRx();
+            // Send the AP_STARTED event after a delay
+            SendEventToDriver(0, nullptr, BRCMF_E_AP_STARTED, BRCMF_E_STATUS_SUCCESS,
+                              softap_ifidx_.value(), nullptr, 0, 0, kZeroMac, kApStartedEventDelay);
           } else {
             // AP stop
             // Note that SoftAP may have been only partially started (maybe one
@@ -1539,6 +1542,12 @@ void SimFirmware::RxAssocResp(std::shared_ptr<const simulation::SimAssocRespFram
     // Set the Assoc state only after E_ASSOC is sent to the driver.
     hw_.RequestCallback(std::bind(&SimFirmware::SetAssocState, this, AssocState::ASSOCIATED),
                         kAssocEventDelay);
+    if (softap_ifidx_ != std::nullopt) {
+      // Send the AP_STARTED event to the SoftAp IF after a delay. This event is sent to the
+      // SoftAP IF in case its channel changed (to sync up to the client's channel).
+      SendEventToDriver(0, nullptr, BRCMF_E_AP_STARTED, BRCMF_E_STATUS_SUCCESS,
+                        softap_ifidx_.value(), nullptr, 0, 0, kZeroMac, kApStartedEventDelay);
+    }
   } else {
     BRCMF_DBG(SIM, "Assoc refused, Handle failure");
     AssocHandleFailure(frame->status_);

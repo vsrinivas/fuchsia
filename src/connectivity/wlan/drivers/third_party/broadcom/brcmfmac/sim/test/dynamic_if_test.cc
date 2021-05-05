@@ -126,7 +126,7 @@ void DynamicIfTest::ChannelCheck() {
   brcmf_simdev* sim = device_->GetSim();
   wlan_channel_t chan;
   sim->sim_fw->convert_chanspec_to_channel(softap_chanspec, &chan);
-  EXPECT_EQ(softap_ifc_.stats_.csa_indications.size(), 1U);
+  EXPECT_GE(softap_ifc_.stats_.csa_indications.size(), 1U);
   EXPECT_EQ(chan.primary, softap_ifc_.stats_.csa_indications.front().new_channel);
 }
 
@@ -741,9 +741,10 @@ TEST_F(DynamicIfTest, CheckSoftAPChannel) {
                                        SimInterface::kDefaultSoftApSsid, kDefaultChannel, 100, 100),
                              delay);
 
-  // Wait until SIM FW sends AP Start confirmation. This is set as a scheduled event to ensure test
-  // runs until AP Start confirmation is received.
-  delay += kStartAPConfDelay + zx::msec(10);
+  // Wait until SIM FW sends AP Start confirmation. This is set as a
+  // scheduled event to ensure test runs until AP Start confirmation is
+  // received.
+  delay += kStartAPLinkEventDelay + kApStartedEventDelay + zx::msec(10);
   env_->ScheduleNotification(std::bind(&DynamicIfTest::ChannelCheck, this), delay);
   env_->Run(kTestDuration);
 

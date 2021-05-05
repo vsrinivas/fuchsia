@@ -53,7 +53,7 @@ constexpr zx::duration kAuthTimeout = zx::sec(1);
 // Timing based off broadcom firmware default value
 constexpr uint32_t kBeaconTimeoutSeconds = 8;
 // Delay between receiving start AP request and sending E_LINK event
-constexpr zx::duration kStartAPConfDelay = zx::msec(10);
+constexpr zx::duration kStartAPLinkEventDelay = zx::msec(10);
 // Delay before sending ASSOC event after client association
 constexpr zx::duration kAssocEventDelay = zx::msec(10);
 // Delay between events E_LINK and E_SSID.
@@ -64,7 +64,8 @@ constexpr zx::duration kLinkEventDelay = zx::msec(5);
 constexpr zx::duration kDisassocEventDelay = zx::msec(1);
 // Delay between cancelling a scan and receiving an abort event
 constexpr zx::duration kAbortScanDelay = zx::msec(10);
-
+// Delay before sending AP_STARTED event after client association
+constexpr zx::duration kApStartedEventDelay = zx::msec(1);
 // Size allocated to hold association frame IEs in SIM FW
 #define ASSOC_IES_MAX_LEN 1000
 
