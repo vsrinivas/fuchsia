@@ -3778,7 +3778,7 @@ From //build/fidl/fidl_library.gni:13
 ### virtcon_logo_path
 Path to file to use for logo
 
-**Current value (from the default):** `"//src/bringup/bin/virtcon2/data/square-logo.riv"`
+**Current value (from the default):** `"//src/bringup/bin/virtcon2/data/fuchsia.riv"`
 
 From //src/bringup/bin/virtcon2/virtcon_args.gni:7
 
