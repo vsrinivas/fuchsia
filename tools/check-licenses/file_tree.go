@@ -84,53 +84,60 @@ func NewFileTree(ctx context.Context, root string, parent *FileTree, config *Con
 		}
 	}
 
-	err = filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, entry := range entries {
+		path := filepath.Join(root, entry.Name())
+
+		skippable, err := isSkippable(config, path, entry)
 		if err != nil {
 			if strings.Contains(err.Error(), "no such file or directory") {
 				log.Printf("skipping non-existing file: %s", path)
-				return nil
+				continue
 			}
-			return err
+			return nil, err
 		}
-		if skippable, err := isSkippable(config, path, info); skippable {
+		if skippable {
 			log.Printf("skipping: %s", path)
-			return err
+			continue
 		}
-		if info.IsDir() {
-			if path != root {
-				child, err := NewFileTree(ctx, path, &ft, config, metrics)
-				if err != nil {
-					return err
-				}
-				ft.Children = append(ft.Children, child)
-				return filepath.SkipDir
+
+		if entry.IsDir() {
+			child, err := NewFileTree(ctx, path, &ft, config, metrics)
+			if err != nil {
+				return nil, err
 			}
-			return nil
+			ft.Children = append(ft.Children, child)
+			continue
 		}
+
 		newFile, err := NewFile(path, &ft)
 		if err != nil {
 			log.Printf("Warning: error creating file %v: %v\n", path, err)
-			return nil
+			continue
 		}
 
 		// TODO(jcecil): a file named LICENSE in the fuchsia tree will be
 		// entirely skipped when running in strict analysis mode, since it
 		// doesn't have a valid text extension. We should still analyze
 		// these files, even if we don't add them as SingleLicenseFiles.
-		if hasLowerPrefix(info.Name(), config.SingleLicenseFiles) && !ft.StrictAnalysis {
+		if hasLowerPrefix(entry.Name(), config.SingleLicenseFiles) && !ft.StrictAnalysis {
 			metrics.increment("num_single_license_files")
 			ft.SingleLicenseFiles[path] = []*License{}
-			return nil
+			continue
 		}
 
 		// StrictAnalysis means don't rely on a project-level license. Verify that all source files
 		// include license information in their headers.
 		if !ft.StrictAnalysis {
 			// Add project-level license files (e.g. LICENSE.txt, NOTICE.txt) to the SingleLicenseFiles map.
-			if hasLowerPrefix(info.Name(), config.SingleLicenseFiles) {
+			if hasLowerPrefix(entry.Name(), config.SingleLicenseFiles) {
 				metrics.increment("num_single_license_files")
 				ft.SingleLicenseFiles[path] = []*License{}
-				return nil
+				continue
 			}
 		}
 
@@ -141,10 +148,6 @@ func NewFileTree(ctx context.Context, root string, parent *FileTree, config *Con
 			log.Printf("ignoring: %s", path)
 			metrics.increment("num_extensions_excluded")
 		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
 	}
 
 	sort.Sort(fileByPath(ft.Files))
@@ -241,19 +244,25 @@ func (ft *FileTree) getFileIterator() <-chan *File {
 	}()
 	return ch
 }
-func isSkippable(config *Config, path string, info os.FileInfo) (bool, error) {
-	if info.Size() == 0 {
-		// An empty file has no content to copyright. Skip.
-		return true, nil
-	}
+
+func isSkippable(config *Config, path string, entry os.DirEntry) (bool, error) {
 	for _, skipFile := range config.SkipFiles {
-		if strings.ToLower(info.Name()) == skipFile || strings.ToLower(path) == skipFile {
+		if strings.ToLower(entry.Name()) == skipFile || strings.ToLower(path) == skipFile {
 			return true, nil
 		}
 	}
 
-	if info.IsDir() && len(info.Name()) > 1 && (strings.HasPrefix(info.Name(), ".") || strings.HasPrefix(info.Name(), "__")) {
-		return true, filepath.SkipDir
+	if entry.IsDir() && len(entry.Name()) > 1 && (strings.HasPrefix(entry.Name(), ".") || strings.HasPrefix(entry.Name(), "__")) {
+		return true, nil
+	}
+
+	info, err := entry.Info()
+	if err != nil {
+		return true, err
+	}
+	if info.Size() == 0 {
+		// An empty file has no content to copyright. Skip.
+		return true, nil
 	}
 
 	sep := string(filepath.Separator)
@@ -274,9 +283,6 @@ func isSkippable(config *Config, path string, info os.FileInfo) (bool, error) {
 			strings.HasPrefix(keepDir, path+sep) {
 			return false, nil
 		}
-	}
-	if info.IsDir() {
-		return true, filepath.SkipDir
 	}
 	return true, nil
 }
