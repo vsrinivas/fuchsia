@@ -44,7 +44,7 @@ func (s *memSink) objectExistsAt(ctx context.Context, name string) (bool, *stora
 	if _, ok := s.contents[name]; !ok {
 		return false, nil, nil
 	}
-	attrs := &storage.ObjectAttrs{Updated: time.Now().AddDate(0, 0, -(daysSinceCustomTime + 1))}
+	attrs := &storage.ObjectAttrs{CustomTime: time.Now().AddDate(0, 0, -(daysSinceCustomTime + 1))}
 	return true, attrs, nil
 }
 

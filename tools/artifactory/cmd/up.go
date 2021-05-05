@@ -644,7 +644,7 @@ func uploadFiles(ctx context.Context, files []artifactory.Upload, dest dataSink,
 					return
 				}
 				// Add objects to update timestamps for that are older than daysSinceCustomTime.
-				if attrs != nil && time.Now().AddDate(0, 0, -daysSinceCustomTime).After(attrs.Updated) {
+				if attrs != nil && time.Now().AddDate(0, 0, -daysSinceCustomTime).After(attrs.CustomTime) {
 					objsToRefreshTTL <- upload.Destination
 				}
 				continue
