@@ -8,7 +8,7 @@ import 'package:fidl_fuchsia_session/fidl_async.dart' as fidl;
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
 import 'package:fidl/fidl.dart';
 import 'package:flutter/foundation.dart';
-import 'package:fuchsia_scenic_flutter/child_view_connection.dart';
+import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
 import 'package:internationalization/strings.dart';
 
 import 'suggestion.dart';
@@ -19,7 +19,7 @@ import 'suggestion.dart';
 /// requesting source did not provide a channel. The methods will still be safe
 /// to call even if it is not bound.
 typedef PresentViewCallback = void Function(
-    ChildViewConnection, ViewRef, ViewControllerImpl, String, String, String);
+    FuchsiaViewConnection, ViewRef, ViewControllerImpl, String, String, String);
 
 /// A callback which is invoked when the element is dismissed by the session.
 ///
@@ -68,11 +68,10 @@ class PresenterService extends fidl.GraphicalPresenter {
 
     final viewHolderToken = viewSpec.viewHolderToken;
     if (viewHolderToken != null) {
-      final connection = ChildViewConnection(
+      final connection = FuchsiaViewConnection(
         viewHolderToken,
         viewRef: viewSpec.viewRef,
-        usePlatformView: true,
-        onStateChanged: (_, state) {
+        onViewStateChanged: (_, state) {
           viewController.stateChanged.value = state;
           if (state == true) {
             viewController.viewRendered.value = true;

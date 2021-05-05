@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
-import 'package:fuchsia_scenic_flutter/child_view_connection.dart';
+import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
 import 'package:mockito/mockito.dart';
 import 'package:test/test.dart';
 import 'package:zircon/zircon.dart';
@@ -33,7 +33,7 @@ void main() {
     when(eventPair.isValid).thenReturn(false);
 
     clustersModel.presentStory(
-      MockChildViewConnection(),
+      MockFuchsiaViewConnection(),
       ViewRef(reference: eventPair),
       ViewControllerImpl((_) {}),
       'id',
@@ -54,7 +54,7 @@ void main() {
 
     final viewController = ViewControllerImpl((_) {});
     clustersModel.presentStory(
-      MockChildViewConnection(),
+      MockFuchsiaViewConnection(),
       ViewRef(reference: eventPair),
       viewController,
       'id',
@@ -136,6 +136,6 @@ void main() {
   });
 }
 
-class MockChildViewConnection extends Mock implements ChildViewConnection {}
+class MockFuchsiaViewConnection extends Mock implements FuchsiaViewConnection {}
 
 class MockEventPair extends Mock implements EventPair {}

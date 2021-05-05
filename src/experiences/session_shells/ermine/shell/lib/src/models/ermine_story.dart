@@ -8,7 +8,7 @@ import 'package:fidl_fuchsia_session/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
 import 'package:flutter/material.dart';
 import 'package:fuchsia_logger/logger.dart';
-import 'package:fuchsia_scenic_flutter/child_view_connection.dart';
+import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
 import 'package:fuchsia_services/services.dart';
 import 'package:internationalization/strings.dart';
 import 'package:uuid/uuid.dart';
@@ -48,7 +48,7 @@ class ErmineStory {
     this.onChange,
     String title,
   })  : nameNotifier = ValueNotifier(title),
-        childViewConnectionNotifier = ValueNotifier(null),
+        fuchsiaViewConnectionNotifier = ValueNotifier(null),
         childViewAvailableNotifier = ValueNotifier(false);
 
   factory ErmineStory.fromSuggestion({
@@ -98,10 +98,10 @@ class ErmineStory {
   bool get focused => focusedNotifier.value;
   set focused(bool value) => focusedNotifier.value = value;
 
-  final ValueNotifier<ChildViewConnection> childViewConnectionNotifier;
+  final ValueNotifier<FuchsiaViewConnection> fuchsiaViewConnectionNotifier;
   final ValueNotifier<bool> childViewAvailableNotifier;
-  ChildViewConnection get childViewConnection =>
-      childViewConnectionNotifier.value;
+  FuchsiaViewConnection get fuchsiaViewConnection =>
+      fuchsiaViewConnectionNotifier.value;
 
   ValueNotifier<bool> fullscreenNotifier = ValueNotifier(false);
   bool get fullscreen => fullscreenNotifier.value;
@@ -109,8 +109,8 @@ class ErmineStory {
   bool get isImmersive => fullscreenNotifier.value == true;
 
   void delete() {
-    childViewConnectionNotifier.value?.dispose();
-    childViewConnectionNotifier.value = null;
+    fuchsiaViewConnectionNotifier.value?.dispose();
+    fuchsiaViewConnectionNotifier.value = null;
     childViewAvailableNotifier.value = null;
     viewController?.viewRendered?.removeListener(onViewAvailable);
     viewController?.close();
@@ -190,9 +190,9 @@ class ErmineStory {
     onAlert?.call(title, header, description);
   }
 
-  void presentView(
-      ChildViewConnection connection, ViewRef viewRef, ViewControllerImpl vc) {
-    childViewConnectionNotifier.value = connection;
+  void presentView(FuchsiaViewConnection connection, ViewRef viewRef,
+      ViewControllerImpl vc) {
+    fuchsiaViewConnectionNotifier.value = connection;
     this.viewRef = viewRef;
     viewController = vc;
     viewController.viewRendered.addListener(onViewAvailable);
@@ -208,7 +208,7 @@ class ErmineStory {
   Future<void> requestFocus() async {
     // [requestFocus] is called for 'every' post render of ChildView widget,
     // even when that child view is not focused. Skip focusing those views here.
-    if (childViewConnection == null || !focused) {
+    if (fuchsiaViewConnection == null || !focused) {
       return;
     }
 
@@ -217,8 +217,8 @@ class ErmineStory {
     }
 
     try {
-      if (childViewConnection != null) {
-        await childViewConnection.requestFocus();
+      if (fuchsiaViewConnection != null) {
+        await fuchsiaViewConnection.requestFocus(0);
       }
     } on Exception catch (e) {
       log.shout('Failed to request focus for $url: $e');

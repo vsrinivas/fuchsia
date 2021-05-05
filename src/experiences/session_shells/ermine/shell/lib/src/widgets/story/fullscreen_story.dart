@@ -3,11 +3,10 @@
 // found in the LICENSE file.
 
 import 'package:flutter/material.dart';
-import 'package:fuchsia_scenic_flutter/child_view.dart' show ChildView;
+import 'package:fuchsia_scenic_flutter/fuchsia_view.dart' show FuchsiaView;
 
 import '../../models/app_model.dart';
 import '../../utils/styles.dart';
-import 'post_render.dart';
 import 'tile_chrome.dart';
 
 /// Defines a widget to display a story fullscreen.
@@ -36,9 +35,8 @@ class FullscreenStory extends StatelessWidget {
                       name: story.name,
                       focused: story.focused,
                       fullscreen: true,
-                      child: PostRender(
-                        child: ChildView(connection: story.childViewConnection),
-                      ),
+                      child:
+                          FuchsiaView(controller: story.fuchsiaViewConnection),
                       onDelete: story.delete,
                       onMinimize: story.restore,
                       onFullscreen: story.maximize,

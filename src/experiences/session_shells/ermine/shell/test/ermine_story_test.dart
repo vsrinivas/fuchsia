@@ -10,7 +10,7 @@ import 'package:ermine/src/utils/presenter.dart';
 import 'package:ermine/src/utils/suggestion.dart';
 import 'package:fidl_fuchsia_session/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
-import 'package:fuchsia_scenic_flutter/child_view_connection.dart';
+import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
 import 'package:flutter/foundation.dart';
 import 'package:mockito/mockito.dart';
 import 'package:test/test.dart';
@@ -61,7 +61,7 @@ void main() {
     final eventPair = MockEventPair();
     final eventPairDup = MockEventPair();
     final viewRef = MockViewRef();
-    final childViewConnection = MockChildViewConnection();
+    final fuchsiaViewConnection = MockFuchsiaViewConnection();
     final viewController = MockViewControllerImpl();
 
     when(viewRef.reference).thenReturn(eventPair);
@@ -76,14 +76,14 @@ void main() {
       requestFocusCompleter: completer,
     )
       ..viewRef = viewRef
-      ..childViewConnectionNotifier.value = childViewConnection
+      ..fuchsiaViewConnectionNotifier.value = fuchsiaViewConnection
       ..viewController = viewController
       ..focus();
 
     expect(onChangeCalled, true);
     await completer.future;
 
-    verify(childViewConnection.requestFocus()).called(1);
+    verify(fuchsiaViewConnection.requestFocus(0)).called(1);
   });
 
   test('ErmineStory should handle errors caught while proposing an element',
@@ -141,7 +141,7 @@ class TestErmineStory extends ErmineStory {
 
 class MockViewControllerImpl extends Mock implements ViewControllerImpl {}
 
-class MockChildViewConnection extends Mock implements ChildViewConnection {}
+class MockFuchsiaViewConnection extends Mock implements FuchsiaViewConnection {}
 
 class MockViewRef extends Mock implements ViewRef {}
 

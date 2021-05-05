@@ -8,7 +8,7 @@ import 'package:flutter/rendering.dart';
 
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
 import 'package:fuchsia_inspect/inspect.dart';
-import 'package:fuchsia_scenic_flutter/child_view_connection.dart';
+import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
 import 'package:tiler/tiler.dart' show TilerModel, TileModel;
 
 import '../utils/presenter.dart';
@@ -86,7 +86,7 @@ class ClustersModel extends ChangeNotifier implements ErmineShell, Inspectable {
 
   @override
   void presentStory(
-    ChildViewConnection connection,
+    FuchsiaViewConnection connection,
     ViewRef viewRef,
     ViewControllerImpl viewController,
     String id,
@@ -249,7 +249,7 @@ class ClustersModel extends ChangeNotifier implements ErmineShell, Inspectable {
     final childViewRenderBox = hitTests.path.first.target;
     return currentCluster.value?.stories?.firstWhere(
       (story) {
-        final key = GlobalObjectKey(story.childViewConnection);
+        final key = GlobalObjectKey(story.fuchsiaViewConnection);
         final renderObject = key.currentContext?.findRenderObject();
         return renderObject == childViewRenderBox;
       },
@@ -293,7 +293,7 @@ class ClustersModel extends ChangeNotifier implements ErmineShell, Inspectable {
           storyNode.stringProperty('id').setValue(story.id);
           storyNode.boolProperty('focused').setValue(story.focused);
           Rect rect =
-              rectFromGlobalKey(GlobalObjectKey(story.childViewConnection));
+              rectFromGlobalKey(GlobalObjectKey(story.fuchsiaViewConnection));
           rect ??= Rect.zero;
           storyNode.stringProperty('viewport').setValue(
               '${rect.left},${rect.top},${rect.width},${rect.height}');

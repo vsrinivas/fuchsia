@@ -6,7 +6,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:tiler/tiler.dart' show Tiler, TileModel;
-import 'package:fuchsia_scenic_flutter/child_view.dart' show ChildView;
+import 'package:fuchsia_scenic_flutter/fuchsia_view.dart' show FuchsiaView;
 import 'package:ermine_ui/ermine_ui.dart' as ermine_ui;
 
 import '../../models/cluster_model.dart';
@@ -58,11 +58,11 @@ class Cluster extends StatelessWidget {
 
     return AnimatedBuilder(
       animation: Listenable.merge([
-        story.childViewConnectionNotifier,
+        story.fuchsiaViewConnectionNotifier,
         story.fullscreenNotifier,
       ]),
       builder: (context, child) {
-        return story.childViewConnection == null || story.isImmersive
+        return story.fuchsiaViewConnection == null || story.isImmersive
             ? Offstage()
             : AnimatedBuilder(
                 animation: Listenable.merge([
@@ -77,7 +77,7 @@ class Cluster extends StatelessWidget {
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
-                        ChildView(connection: story.childViewConnection),
+                        FuchsiaView(controller: story.fuchsiaViewConnection),
                         AnimatedBuilder(
                             animation: Listenable.merge([
                               story.childViewAvailableNotifier,
