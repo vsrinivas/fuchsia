@@ -12,7 +12,13 @@ use {argh::FromArgs, ffx_core::ffx_command};
     description = "Launch the scrutiny shell",
     example = "To start an interactive shell session:
 
-    $ ffx scrutiny shell",
+    $ ffx scrutiny shell
+
+To run commands directly:
+
+    $ ffx scrutiny shell components
+    $ ffx scrutiny shell \"search.packages --files fdio\"
+    ",
     note = "Launches an interactive scrutiny shell where scrutiny specific
 commands can be run. This will also launch a server on port 127.0.0.1:8080
 by default that provides visual auditing tools.
