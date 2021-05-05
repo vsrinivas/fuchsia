@@ -291,6 +291,23 @@ TEST(UsbAudioTest, GetStreamProperties) {
   fake_device.DdkRelease();
 }
 
+TEST(UsbAudioTest, MultipleStreamConfigClients) {
+  Binder tester;
+  FakeDevice fake_device(fake_ddk::kFakeParent);
+  ASSERT_OK(fake_device.Bind());
+  ASSERT_OK(UsbAudioDevice::DriverBind(fake_device.dev()));
+
+  fidl::WireSyncClient<audio_fidl::Device> client(std::move(tester.FidlClient()));
+  fidl::WireResult<audio_fidl::Device::GetChannel> ch1 = client.GetChannel();
+  fidl::WireResult<audio_fidl::Device::GetChannel> ch2 = client.GetChannel();
+  ASSERT_OK(ch1.status());
+  ASSERT_OK(ch2.status());
+
+  fake_device.DdkAsyncRemove();
+  EXPECT_TRUE(tester.Ok());
+  fake_device.DdkRelease();
+}
+
 TEST(UsbAudioTest, SetAndGetGain) {
   Binder tester;
   FakeDevice fake_device(fake_ddk::kFakeParent);

@@ -1078,9 +1078,11 @@ void UsbAudioStream::CompleteRequestLocked(usb_request_t* req) {
 }
 
 void UsbAudioStream::DeactivateStreamChannelLocked(StreamChannel* channel) {
-  ZX_DEBUG_ASSERT(stream_channel_.get() == channel);
   ZX_DEBUG_ASSERT(rb_channel_.get() != channel);
-  stream_channel_.reset();
+  if (stream_channel_.get() == channel) {
+    stream_channel_ = nullptr;
+  }
+  stream_channels_.erase(*channel);
 }
 
 void UsbAudioStream::DeactivateRingBufferChannelLocked(const Channel* channel) {
