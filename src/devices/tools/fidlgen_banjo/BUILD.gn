@@ -4,6 +4,7 @@
 
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
+import("//build/sdk/sdk_host_tool.gni")
 
 group("fidlgen_banjo") {
   deps = [ ":bin($host_toolchain)" ]
@@ -87,4 +88,10 @@ rustc_library("lib") {
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:serde",
   ]
+}
+
+sdk_host_tool("fidlgen_banjo_bin_sdk") {
+  category = "partner"
+  output_name = "fidlgen_banjo"
+  deps = [ ":bin" ]
 }

@@ -5,6 +5,7 @@
 import("//build/compiled_action.gni")
 import("//build/fidl/toolchain.gni")
 import("//build/rust/rustc_library.gni")
+import("//build/sdk/sdk_atom_alias.gni")
 
 template("_fidl_banjo_c") {
   c_target_name = "${target_name}_banjo_c"
@@ -231,6 +232,19 @@ template("_fidl_banjo_cpp") {
       }
     }
   }
+
+  if (current_toolchain != fidl_toolchain) {
+    # Set up an SDK item for this library
+    if (defined(invoker.sdk_category) && invoker.sdk_category != "excluded") {
+      # Instead of depending on the generated bindings, set up a dependency on
+      # the original library.
+      sdk_target_name = "${cpp_target_name}_sdk"
+      original_library_name = "${target_name}_sdk"
+      sdk_atom_alias(sdk_target_name) {
+        atom = ":$original_library_name($fidl_toolchain)"
+      }
+    }
+  }
 }
 
 template("_fidl_banjo_rust") {
@@ -311,6 +325,7 @@ template("fidl_banjo") {
                            [
                              "deps",
                              "public_deps",
+                             "sdk_category",
                              "testonly",
                            ])
   }
@@ -319,7 +334,9 @@ template("fidl_banjo") {
   if (defined(invoker.name)) {
     params.library_name = invoker.name
   }
-
+  if (defined(invoker.sdk_category)) {
+    params.sdk_category = invoker.sdk_category
+  }
   _fidl_banjo_c(target_name) {
     forward_variables_from(params, "*")
   }

@@ -552,7 +552,10 @@ sdk("fuchsia_dart") {
 sdk_molecule("ddk_host_tools") {
   visibility = [ ":*" ]
 
-  cross_compiled = [ "//tools/bindc:bindc_sdk" ]
+  cross_compiled = [
+    "//src/devices/tools/fidlgen_banjo:fidlgen_banjo_bin_sdk",
+    "//tools/bindc:bindc_sdk",
+  ]
 
   toolchains = []
   if (host_os == "linux") {
