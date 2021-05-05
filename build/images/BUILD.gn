@@ -2163,8 +2163,8 @@ group("archives") {
 ### Amber updates.
 ###
 
-# update_packages.manifest contains the same entries as the pkgsvr_index but
-# additionally includes the system_image package.
+# update_packages.manifest.json contains the same entries as the pkgsvr_index
+# but additionally includes the system_image package.
 
 update_meta_far_merkle_index = "$target_out_dir/update_meta_far_merkle_index"
 generate_package_metadata("update_meta_far_merkle_index") {
@@ -2186,23 +2186,6 @@ generated_file("recovery_images_list") {
   output_conversion = "list lines"
   data_keys = [ "update_target" ]
   deps = [ recovery_label ]
-}
-
-action("update_packages.manifest") {
-  visibility = [ ":update.manifest" ]
-  testonly = true
-
-  outputs = [ "$target_out_dir/$target_name" ]
-  deps = [ ":update_meta_far_merkle_index" ]
-  inputs = [ update_meta_far_merkle_index ]
-
-  script = "//build/images/manifest_content_expand.sh"
-  depfile = "${target_out_dir}/${target_name}.d"
-  args = [
-    rebase_path(update_meta_far_merkle_index, root_build_dir),
-    rebase_path(outputs[0], root_build_dir),
-    rebase_path(depfile, root_build_dir),
-  ]
 }
 
 action("update_packages.manifest.json") {
@@ -2237,10 +2220,6 @@ action("update.manifest") {
   testonly = true
 
   additional_update_manifest_entries = [
-    {
-      target = "packages"
-      dep = ":update_packages.manifest"
-    },
     {
       target = "packages.json"
       dep = ":update_packages.manifest.json"
