@@ -46,7 +46,7 @@ using PlatformBusType =
 class PlatformBus : public PlatformBusType,
                     public ddk::PBusProtocol<PlatformBus, ddk::base_protocol>,
                     public ddk::IommuProtocol<PlatformBus>,
-                    public fidl::WireInterface<fuchsia_sysinfo::SysInfo> {
+                    public fidl::WireServer<fuchsia_sysinfo::SysInfo> {
  public:
   static zx_status_t Create(zx_device_t* parent, const char* name, zx::channel items_svc);
 
@@ -73,10 +73,14 @@ class PlatformBus : public PlatformBusType,
   zx_status_t PBusRegisterSysSuspendCallback(const pbus_sys_suspend_t* suspend_cbin);
 
   // SysInfo protocol implementation.
-  void GetBoardName(GetBoardNameCompleter::Sync& completer);
-  void GetBoardRevision(GetBoardRevisionCompleter::Sync& completer);
-  void GetBootloaderVendor(GetBootloaderVendorCompleter::Sync& completer);
-  void GetInterruptControllerInfo(GetInterruptControllerInfoCompleter::Sync& completer);
+  void GetBoardName(GetBoardNameRequestView request,
+                    GetBoardNameCompleter::Sync& completer) override;
+  void GetBoardRevision(GetBoardRevisionRequestView request,
+                        GetBoardRevisionCompleter::Sync& completer) override;
+  void GetBootloaderVendor(GetBootloaderVendorRequestView request,
+                           GetBootloaderVendorCompleter::Sync& completer) override;
+  void GetInterruptControllerInfo(GetInterruptControllerInfoRequestView request,
+                                  GetInterruptControllerInfoCompleter::Sync& completer) override;
 
   // IOMMU protocol implementation.
   zx_status_t IommuGetBti(uint32_t iommu_index, uint32_t bti_id, zx::bti* out_bti);

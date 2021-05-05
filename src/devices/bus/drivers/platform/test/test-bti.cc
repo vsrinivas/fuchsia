@@ -18,7 +18,7 @@
 namespace {
 
 class TestBti : public ddk::Device<TestBti, ddk::Messageable>,
-                public fidl::WireInterface<fuchsia_hardware_btitest::BtiDevice> {
+                public fidl::WireServer<fuchsia_hardware_btitest::BtiDevice> {
  public:
   explicit TestBti(zx_device_t* parent) : ddk::Device<TestBti, ddk::Messageable>(parent) {}
 
@@ -27,8 +27,8 @@ class TestBti : public ddk::Device<TestBti, ddk::Messageable>,
   void DdkRelease() { delete this; }
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
-  void GetKoid(GetKoidCompleter::Sync& completer);
-  void Crash(CrashCompleter::Sync&) { __builtin_abort(); }
+  void GetKoid(GetKoidRequestView request, GetKoidCompleter::Sync& completer) override;
+  void Crash(CrashRequestView request, CrashCompleter::Sync&) override { __builtin_abort(); }
 };
 
 zx_status_t TestBti::Create(void*, zx_device_t* parent) {
@@ -50,7 +50,7 @@ zx_status_t TestBti::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   return transaction.Status();
 }
 
-void TestBti::GetKoid(GetKoidCompleter::Sync& completer) {
+void TestBti::GetKoid(GetKoidRequestView request, GetKoidCompleter::Sync& completer) {
   ddk::PDev pdev(parent());
   if (!pdev.is_valid()) {
     completer.Close(ZX_ERR_INTERNAL);

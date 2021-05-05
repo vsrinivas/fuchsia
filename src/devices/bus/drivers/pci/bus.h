@@ -68,7 +68,7 @@ class Bus;
 using PciBusType = ddk::Device<Bus, ddk::Messageable>;
 class Bus : public PciBusType,
             public ddk::EmptyProtocol<ZX_PROTOCOL_PCI>,
-            public fidl::WireInterface<PciFidl::Bus>,
+            public fidl::WireServer<PciFidl::Bus>,
             public BusDeviceInterface {
  public:
   static zx_status_t Create(zx_device_t* parent);
@@ -98,8 +98,9 @@ class Bus : public PciBusType,
   // All methods related to the fuchsia.hardware.pci service and the DDK.
   void DdkRelease() { delete this; }
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
-  void GetDevices(GetDevicesCompleter::Sync& completer) final;
-  void GetHostBridgeInfo(GetHostBridgeInfoCompleter::Sync& completer) final;
+  void GetDevices(GetDevicesRequestView request, GetDevicesCompleter::Sync& completer) final;
+  void GetHostBridgeInfo(GetHostBridgeInfoRequestView request,
+                         GetHostBridgeInfoCompleter::Sync& completer) final;
 
   zx::vmo GetInspectVmo() { return inspector_.DuplicateVmo(); }
 
