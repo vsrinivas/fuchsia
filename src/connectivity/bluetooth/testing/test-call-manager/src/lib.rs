@@ -294,6 +294,21 @@ struct TestCallManagerInner {
 }
 
 impl TestCallManagerInner {
+    /// Remove a peer by `id` and all references to that peer.
+    pub fn remove_peer(&mut self, id: PeerId) {
+        let _ = self.peers.remove(&id);
+
+        for call in self.calls.values_mut() {
+            if call.peer_id == Some(id) {
+                call.peer_id = None;
+            }
+        }
+
+        if self.active_peer == Some(id) {
+            self.active_peer = None;
+        }
+    }
+
     pub fn active_peer_mut(&mut self) -> Option<&mut PeerState> {
         if let Some(id) = &self.active_peer {
             Some(self.peers.get_mut(id).expect("Active peer must exist in peers map"))
@@ -741,7 +756,7 @@ impl TestCallManager {
                 break;
             };
         }
-        self.inner.lock().await.peers.remove(&id);
+        self.inner.lock().await.remove_peer(id);
     }
 
     /// Watch for new Hands Free peer devices that connect to the DUT.
