@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/board.gni")
 import("//build/images/assemble_system.gni")
 import("//build/images/zedboot/zedboot_args.gni")
 import("//build/testing/host_test_data.gni")
@@ -27,27 +26,27 @@ root_realm("root") {
   core_package_name = core_name
 }
 
-recovery_packages = board_recovery_package_labels + [
-                      ":core",
-                      "//build/info:build-info",
-                      "//garnet/bin/sysmgr",
-                      "//src/connectivity/management:network_config_default",
-                      "//src/connectivity/network:config",
-                      "//src/connectivity/wlan/config:default",
-                      "//src/connectivity/wlan/wlancfg",
-                      "//src/connectivity/wlan/wlanstack",
-                      "//src/devices/sysmem/bin/sysmem_connector",
-                      "//src/recovery/system:system_recovery",
-                      "//src/recovery/system:config",
-                      "//src/security/root_ssl_certificates",
-                      "//src/sys/appmgr",
-                      "//src/sys/appmgr:appmgr_scheme_config",
-                      "//src/sys/appmgr:component_id_index_no_restrict_storage",
-                      "//src/sys/core",
-                      "//src/sys/pkg:recovery",
-                      "//src/sys/stash:pkg",
-                      "//src/sys/time:recovery",
-                    ]
+recovery_packages = [
+  ":core",
+  "//build/info:build-info",
+  "//garnet/bin/sysmgr",
+  "//src/connectivity/management:network_config_default",
+  "//src/connectivity/network:config",
+  "//src/connectivity/wlan/config:default",
+  "//src/connectivity/wlan/wlancfg",
+  "//src/connectivity/wlan/wlanstack",
+  "//src/devices/sysmem/bin/sysmem_connector",
+  "//src/recovery/system:system_recovery",
+  "//src/recovery/system:config",
+  "//src/security/root_ssl_certificates",
+  "//src/sys/appmgr",
+  "//src/sys/appmgr:appmgr_scheme_config",
+  "//src/sys/appmgr:component_id_index_no_restrict_storage",
+  "//src/sys/core",
+  "//src/sys/pkg:recovery",
+  "//src/sys/stash:pkg",
+  "//src/sys/time:recovery",
+]
 
 recovery_system_image_deps = [ "//garnet/packages/prod:broadcom" ]
 
