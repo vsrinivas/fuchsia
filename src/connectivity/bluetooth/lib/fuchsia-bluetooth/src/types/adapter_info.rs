@@ -147,7 +147,7 @@ impl AdapterInfo {
 /// Update the `dst` value if the `src` value is `Some` value.
 fn update_if_specified<T>(dst: &mut Option<T>, src: Option<T>) {
     if let Some(value) = src {
-        dst.replace(value);
+        *dst = Some(value);
     }
 }
 

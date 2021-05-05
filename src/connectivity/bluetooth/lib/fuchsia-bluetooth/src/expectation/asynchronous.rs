@@ -187,7 +187,7 @@ impl<S: Clone + 'static, A> ExpectableState for Expectable<S, A> {
     fn remove_task(&mut self, key: usize) {
         let mut harness = self.write();
         if harness.tasks.contains(key) {
-            harness.tasks.remove(key);
+            drop(harness.tasks.remove(key));
         }
     }
 

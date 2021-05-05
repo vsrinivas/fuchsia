@@ -62,21 +62,21 @@ pub struct Peer {
 impl ImmutableDataInspect<Peer> for ImmutableDataInspectManager {
     fn new(data: &Peer, mut manager: ManagedNode) -> ImmutableDataInspectManager {
         let mut writer = manager.writer();
-        writer.create_string("technology", &data.technology.debug());
-        writer.create_string("appearance", &data.appearance.debug());
+        let _ = writer.create_string("technology", &data.technology.debug());
+        let _ = writer.create_string("appearance", &data.appearance.debug());
         if let Some(rssi) = data.rssi {
-            writer.create_int("rssi", rssi as i64);
+            let _ = writer.create_int("rssi", rssi as i64);
         }
         if let Some(tx_power) = data.tx_power {
-            writer.create_int("tx_power", tx_power as i64);
+            let _ = writer.create_int("tx_power", tx_power as i64);
         }
-        writer.create_uint("connected", data.connected.to_property());
-        writer.create_uint("bonded", data.bonded.to_property());
+        let _ = writer.create_uint("connected", data.connected.to_property());
+        let _ = writer.create_uint("bonded", data.bonded.to_property());
         if !data.le_services.is_empty() {
-            writer.create_string("le_services", &data.le_services.to_property());
+            let _ = writer.create_string("le_services", &data.le_services.to_property());
         }
         if !data.bredr_services.is_empty() {
-            writer.create_string("bredr_services", &data.bredr_services.to_property());
+            let _ = writer.create_string("bredr_services", &data.bredr_services.to_property());
         }
         Self { _manager: manager }
     }

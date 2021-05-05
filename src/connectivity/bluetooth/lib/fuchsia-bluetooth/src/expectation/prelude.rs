@@ -48,6 +48,6 @@ macro_rules! expect_eq {
 
 #[test]
 fn expect_eq_works() {
-    expect_eq!("abc", "abc").unwrap();
-    expect_eq!("abc", "def").unwrap_err();
+    assert!(expect_eq!("abc", "abc").is_ok());
+    assert!(expect_eq!("abc", "def").is_err());
 }

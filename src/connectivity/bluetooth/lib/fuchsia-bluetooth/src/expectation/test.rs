@@ -152,8 +152,8 @@ fn vec_all_predicate_succeeds() {
 #[test]
 fn map_keys_iter_all_predicate_succeeds() {
     let mut strings: HashMap<String, String> = HashMap::new();
-    strings.insert("Hello".to_string(), "World".to_string());
-    strings.insert("Goodnight".to_string(), "Moon".to_string());
+    let _ = strings.insert("Hello".to_string(), "World".to_string());
+    let _ = strings.insert("Goodnight".to_string(), "Moon".to_string());
 
     let predicate = P::iter_all(P::not_equal("goodbye".to_string()));
 
@@ -163,8 +163,8 @@ fn map_keys_iter_all_predicate_succeeds() {
 #[test]
 fn map_over_keys_all_predicate_succeeds() {
     let mut strings: HashMap<String, String> = HashMap::new();
-    strings.insert("Hello".to_string(), "World".to_string());
-    strings.insert("Goodnight".to_string(), "Moon".to_string());
+    let _ = strings.insert("Hello".to_string(), "World".to_string());
+    let _ = strings.insert("Goodnight".to_string(), "Moon".to_string());
 
     let predicate = P::all(P::not_equal("goodbye".to_string())).over_value(
         |m: &HashMap<String, String>| m.keys().cloned().collect::<Vec<String>>(),

@@ -430,7 +430,9 @@ impl ServiceDefinition {
     /// case the returned set will be empty.
     pub fn psm_set(&self) -> HashSet<Psm> {
         let mut psms = self.additional_psms();
-        self.primary_psm().map(|psm| psms.insert(psm));
+        if let Some(psm) = self.primary_psm() {
+            let _ = psms.insert(psm);
+        }
         psms
     }
 }
@@ -853,7 +855,7 @@ mod tests {
         }];
 
         let mut expected_psms = HashSet::new();
-        expected_psms.insert(psm1);
+        let _ = expected_psms.insert(psm1);
         assert_eq!(def.primary_psm(), Some(psm1));
         assert_eq!(def.additional_psms(), HashSet::new());
         assert_eq!(def.psm_set(), expected_psms);
@@ -870,10 +872,10 @@ mod tests {
         ];
 
         let mut expected_psms = HashSet::new();
-        expected_psms.insert(psm2);
+        let _ = expected_psms.insert(psm2);
         assert_eq!(def.primary_psm(), Some(psm1));
         assert_eq!(def.additional_psms(), expected_psms);
-        expected_psms.insert(psm1);
+        let _ = expected_psms.insert(psm1);
         assert_eq!(def.psm_set(), expected_psms);
     }
 

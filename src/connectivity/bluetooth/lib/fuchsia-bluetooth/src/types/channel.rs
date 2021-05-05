@@ -315,7 +315,7 @@ mod tests {
         let datagram_fut = recv.read_datagram(&mut vec);
 
         let heart: &[u8] = &[0xF0, 0x9F, 0x92, 0x96];
-        send.as_ref().write(heart).expect("should write successfully");
+        assert_eq!(heart.len(), send.as_ref().write(heart).expect("should write successfully"));
 
         assert_eq!(Some(Ok(4)), datagram_fut.now_or_never());
         assert_eq!(heart, vec.as_slice());
