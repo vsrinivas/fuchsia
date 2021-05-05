@@ -2,15 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// [START part_1_add_connection_count]
 use {
+    // [START_EXCLUDE]
     fidl_fuchsia_examples_inspect::{ReverserRequest, ReverserRequestStream},
     fuchsia_async as fasync,
-    fuchsia_inspect::{self as inspect, NumericProperty},
+    fuchsia_inspect as inspect,
+    // [END_EXCLUDE]
+    fuchsia_inspect::NumericProperty,
+    // [START_EXCLUDE]
     futures::TryStreamExt,
     std::sync::Arc,
+    // [END_EXCLUDE]
 };
 
-// [START part_1_add_connection_count]
 pub struct ReverserServerFactory {
     node: inspect::Node,
     // [START_EXCLUDE]

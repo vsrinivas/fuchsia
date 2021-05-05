@@ -653,7 +653,10 @@ is even being handled by your component.
      deleted from the output.
 
      Note: `node` is kept in ReverserServerFactory so that it is not dropped and deleted from the
-     output.
+     output together with all the nodes and properties nested under it. If the compiler shows an
+     error about dead code, try renaming `node` to `_node`, since the node needs to continue
+     existing despite not being read. In the following steps, the example calls `self.node`, so the compiler
+     will stop complaining!
 
    * {Dart}
 
