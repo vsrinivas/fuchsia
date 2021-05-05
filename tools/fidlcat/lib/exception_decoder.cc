@@ -13,13 +13,6 @@
 
 namespace fidlcat {
 
-void ExceptionUse::ExceptionDecoded(ExceptionDecoder* decoder) { decoder->Destroy(); }
-
-void ExceptionUse::DecodingError(const DecoderError& error, ExceptionDecoder* decoder) {
-  FX_LOGS(ERROR) << error.message();
-  decoder->Destroy();
-}
-
 void ExceptionDecoder::Decode() {
   zxdb::Thread* thread = get_thread();
   if (thread == nullptr) {
@@ -27,29 +20,45 @@ void ExceptionDecoder::Decode() {
     return;
   }
   if (thread->GetStack().has_all_frames()) {
-    Display();
+    Decoded();
   } else {
-    thread->GetStack().SyncFrames([this](const zxdb::Err& /*err*/) { Display(); });
+    thread->GetStack().SyncFrames([this](const zxdb::Err& /*err*/) { Decoded(); });
   }
 }
 
-void ExceptionDecoder::Display() {
+void ExceptionDecoder::Decoded() {
   zxdb::Thread* thread = get_thread();
   if (thread == nullptr) {
     Destroy();
     return;
   }
+
+  std::vector<zxdb::Location> caller_locations;
   const zxdb::Stack& stack = thread->GetStack();
   if (stack.size() > 0) {
     for (size_t i = stack.size() - 1;; --i) {
       const zxdb::Frame* caller = stack[i];
-      caller_locations_.push_back(caller->GetLocation());
+      caller_locations.push_back(caller->GetLocation());
       if (i == 0) {
         break;
       }
     }
   }
-  use_->ExceptionDecoded(this);
+
+  Thread* fidlcat_thread = dispatcher_->SearchThread(thread_id());
+  if (fidlcat_thread == nullptr) {
+    Process* process = dispatcher_->SearchProcess(process_id());
+    if (process == nullptr) {
+      process = dispatcher_->CreateProcess(process_name(), process_id(),
+                                           thread->GetProcess()->GetWeakPtr());
+    }
+    fidlcat_thread = dispatcher_->CreateThread(thread_id(), process);
+  }
+  auto event = std::make_shared<ExceptionEvent>(timestamp(), fidlcat_thread);
+  CopyStackFrame(caller_locations, &event->stack_frame());
+  dispatcher_->AddExceptionEvent(std::move(event));
+
+  Destroy();
 }
 
 void ExceptionDecoder::Destroy() {
@@ -58,47 +67,6 @@ void ExceptionDecoder::Destroy() {
   uint64_t timestamp = timestamp_;
   dispatcher_->DeleteDecoder(this);
   workflow->ProcessDetached(process_id, timestamp);
-}
-
-void ExceptionDisplay::ExceptionDecoded(ExceptionDecoder* decoder) {
-  Thread* thread = dispatcher_->SearchThread(decoder->thread_id());
-  if (thread == nullptr) {
-    Process* process = dispatcher_->SearchProcess(decoder->process_id());
-    if (process == nullptr) {
-      zxdb::Thread* zxdb_thread = decoder->get_thread();
-      if (zxdb_thread == nullptr) {
-        decoder->Destroy();
-        return;
-      }
-      process = dispatcher_->CreateProcess(decoder->process_name(), decoder->process_id(),
-                                           zxdb_thread->GetProcess()->GetWeakPtr());
-    }
-    thread = dispatcher_->CreateThread(decoder->thread_id(), process);
-  }
-  auto event = std::make_shared<ExceptionEvent>(decoder->timestamp(), thread);
-  CopyStackFrame(decoder->caller_locations(), &event->stack_frame());
-  dispatcher_->AddExceptionEvent(std::move(event));
-
-  // Now our job is done, we can destroy the object.
-  decoder->Destroy();
-}
-
-void ExceptionDisplay::DecodingError(const DecoderError& error, ExceptionDecoder* decoder) {
-  std::string message = error.message();
-  size_t pos = 0;
-  for (;;) {
-    size_t end = message.find('\n', pos);
-    const fidl_codec::Colors& colors = dispatcher_->colors();
-    os_ << decoder->process_name() << ' ' << colors.red << decoder->process_id() << colors.reset
-        << ':' << colors.red << decoder->thread_id() << colors.reset << ": " << colors.red
-        << error.message().substr(pos, end) << colors.reset << '\n';
-    if (end == std::string::npos) {
-      break;
-    }
-    pos = end + 1;
-  }
-  os_ << '\n';
-  decoder->Destroy();
 }
 
 }  // namespace fidlcat

@@ -13,19 +13,8 @@
 
 namespace fidlcat {
 
-class ExceptionDecoder;
 class InterceptionWorkflow;
 class SyscallDecoderDispatcher;
-class SyscallDisplayDispatcher;
-
-class ExceptionUse {
- public:
-  ExceptionUse() = default;
-  virtual ~ExceptionUse() = default;
-
-  virtual void ExceptionDecoded(ExceptionDecoder* decoder);
-  virtual void DecodingError(const DecoderError& error, ExceptionDecoder* decoder);
-};
 
 // Handles the decoding of an exception.
 // The decoding starts when ExceptionDecoder::Decode is called. Then all the decoding steps are
@@ -33,14 +22,13 @@ class ExceptionUse {
 class ExceptionDecoder {
  public:
   ExceptionDecoder(InterceptionWorkflow* workflow, SyscallDecoderDispatcher* dispatcher,
-                   zxdb::Thread* thread, std::unique_ptr<ExceptionUse> use, int64_t timestamp)
+                   zxdb::Thread* thread, int64_t timestamp)
       : workflow_(workflow),
         dispatcher_(dispatcher),
         weak_thread_(thread->GetWeakPtr()),
         process_name_(thread->GetProcess()->GetName()),
         process_id_(thread->GetProcess()->GetKoid()),
         thread_id_(thread->GetKoid()),
-        use_(std::move(use)),
         timestamp_(timestamp) {}
 
   SyscallDecoderDispatcher* dispatcher() const { return dispatcher_; }
@@ -49,20 +37,18 @@ class ExceptionDecoder {
   uint64_t process_id() const { return process_id_; }
   uint64_t thread_id() const { return thread_id_; }
   int64_t timestamp() const { return timestamp_; }
-  const std::vector<zxdb::Location>& caller_locations() const { return caller_locations_; }
 
   std::stringstream& Error(DecoderError::Type type) { return error_.Set(type); }
 
   // Asks for the full statck then display the exception.
   void Decode();
 
-  // Displays the exception then destroy it.
-  void Display();
+  // Creates an event, uses it and then destroys the decoder..
+  void Decoded();
 
   // Destroys this object and remove it from the |syscall_decoders_| list in the
-  // SyscallDecoderDispatcher. This function is called when the syscall display
-  // has been done or if we had an error and no request is pending (|has_error_|
-  // is true and |pending_request_count_| is zero).
+  // SyscallDecoderDispatcher. This function is called when the event has been created or if we had
+  // an error and no request is pending (|has_error_| is true and |pending_request_count_| is zero).
   void Destroy();
 
  private:
@@ -72,23 +58,8 @@ class ExceptionDecoder {
   const std::string process_name_;
   const uint64_t process_id_;
   const uint64_t thread_id_;
-  std::unique_ptr<ExceptionUse> use_;
   const int64_t timestamp_;
-  std::vector<zxdb::Location> caller_locations_;
   DecoderError error_;
-};
-
-class ExceptionDisplay : public ExceptionUse {
- public:
-  ExceptionDisplay(SyscallDisplayDispatcher* dispatcher, std::ostream& os)
-      : dispatcher_(dispatcher), os_(os) {}
-
-  void ExceptionDecoded(ExceptionDecoder* decoder) override;
-  void DecodingError(const DecoderError& error, ExceptionDecoder* decoder) override;
-
- private:
-  SyscallDisplayDispatcher* const dispatcher_;
-  std::ostream& os_;
 };
 
 }  // namespace fidlcat

@@ -373,9 +373,6 @@ class InterceptionWorkflowTest : public zxdb::RemoteAPITest {
 
   void AddThread(zxdb::Thread* thread) { threads_[thread->GetKoid()] = thread; }
 
-  void PerformCheckTest(const char* syscall_name, std::unique_ptr<SystemCallTest> syscall1,
-                        std::unique_ptr<SystemCallTest> syscall2);
-
   void PerformDisplayTest(const char* syscall_name, std::unique_ptr<SystemCallTest> syscall,
                           const char* expected, fidl_codec::LibraryLoader* loader = nullptr);
   void PerformDisplayTest(ProcessController* controller, const char* syscall_name,
@@ -522,104 +519,6 @@ void AppendElements(std::string& result, const T* a, const T* b, size_t num) {
   result.append(os.str());
 }
 
-class SyscallCheck : public SyscallUse {
- public:
-  explicit SyscallCheck(ProcessController* controller) : controller_(controller) {}
-
-  void SyscallOutputsDecoded(SyscallDecoder* decoder) override {
-    if (decoder->syscall()->name() == "zx_channel_write") {
-      DataForSyscallTest& data = controller_->remote_api()->data();
-      FX_DCHECK(decoder->ArgumentValue(0) == kHandle);  // handle
-      FX_DCHECK(decoder->ArgumentValue(1) == 0);        // options
-      FX_DCHECK(decoder->ArgumentLoaded(Stage::kEntry, 2, data.num_bytes()));
-      uint8_t* bytes = decoder->ArgumentContent(Stage::kEntry, 2);
-      if (memcmp(bytes, data.bytes(), data.num_bytes()) != 0) {
-        std::string result = "bytes not equivalent\n";
-        AppendElements(result, bytes, data.bytes(), data.num_bytes());
-        FAIL() << result;
-      }
-      FX_DCHECK(decoder->ArgumentValue(3) == data.num_bytes());  // num_bytes
-      FX_DCHECK(
-          decoder->ArgumentLoaded(Stage::kEntry, 4, data.num_handles() * sizeof(zx_handle_t)));
-      zx_handle_t* handles =
-          reinterpret_cast<zx_handle_t*>(decoder->ArgumentContent(Stage::kEntry, 4));
-      if (memcmp(handles, data.handles(), data.num_handles()) != 0) {
-        std::string result = "handles not equivalent";
-        AppendElements(result, handles, data.handles(), data.num_handles());
-        FAIL() << result;
-      }
-      FX_DCHECK(decoder->ArgumentValue(5) == data.num_handles());  // num_handles
-    } else if (decoder->syscall()->name() == "zx_channel_call") {
-      DataForSyscallTest& data = controller_->remote_api()->data();
-      FX_DCHECK(decoder->ArgumentValue(0) == kHandle);           // handle
-      FX_DCHECK(decoder->ArgumentValue(1) == 0);                 // options
-      FX_DCHECK(decoder->ArgumentValue(2) == ZX_TIME_INFINITE);  // deadline
-      FX_DCHECK(decoder->ArgumentLoaded(Stage::kEntry, 3, sizeof(zx_channel_call_args_t)));
-      const zx_channel_call_args_t* args = reinterpret_cast<const zx_channel_call_args_t*>(
-          decoder->ArgumentContent(Stage::kEntry, 3));
-      uint8_t* ref_bytes;
-      uint32_t ref_num_bytes;
-      if (data.use_alternate_data()) {
-        ref_bytes = data.bytes2();
-        ref_num_bytes = data.num_bytes2();
-      } else {
-        ref_bytes = data.bytes();
-        ref_num_bytes = data.num_bytes();
-      }
-      FX_DCHECK(args->wr_num_bytes == ref_num_bytes);
-      FX_DCHECK(decoder->BufferLoaded(Stage::kExit, uint64_t(args->wr_bytes), args->wr_num_bytes));
-      uint8_t* bytes = decoder->BufferContent(Stage::kExit, uint64_t(args->wr_bytes));
-      if (memcmp(bytes, ref_bytes, ref_num_bytes) != 0) {
-        std::string result = "bytes not equivalent\n";
-        AppendElements(result, bytes, ref_bytes, ref_num_bytes);
-        FAIL() << result;
-      }
-    } else {
-      FAIL() << "can't check " << decoder->syscall()->name();
-    }
-  }
-
-  void SyscallDecodingError(const DecoderError& error, SyscallDecoder* decoder) override {
-    SyscallUse::SyscallDecodingError(error, decoder);
-    FAIL();
-  }
-
- private:
-  ProcessController* controller_;
-};
-
-class SyscallDecoderDispatcherTest : public SyscallDecoderDispatcher {
- public:
-  SyscallDecoderDispatcherTest(const DecodeOptions& decode_options, ProcessController* controller)
-      : SyscallDecoderDispatcher(decode_options), controller_(controller) {}
-
-  std::unique_ptr<SyscallDecoder> CreateDecoder(InterceptingThreadObserver* thread_observer,
-                                                zxdb::Thread* thread, const Syscall* syscall,
-                                                uint64_t timestamp) override {
-    return std::make_unique<SyscallDecoder>(this, thread_observer, thread, syscall,
-                                            std::make_unique<SyscallCheck>(controller_), 0);
-  }
-
-  std::unique_ptr<ExceptionDecoder> CreateDecoder(InterceptionWorkflow* workflow,
-                                                  zxdb::Thread* thread,
-                                                  uint64_t timestamp) override {
-    return nullptr;
-  }
-
-  void DeleteDecoder(SyscallDecoder* decoder) override {
-    SyscallDecoderDispatcher::DeleteDecoder(decoder);
-    AlwaysQuit aq(controller_);
-  }
-
-  void DeleteDecoder(ExceptionDecoder* decoder) override {
-    SyscallDecoderDispatcher::DeleteDecoder(decoder);
-    AlwaysQuit aq(controller_);
-  }
-
- private:
-  ProcessController* controller_;
-};
-
 class SyscallDisplayDispatcherTest : public SyscallDisplayDispatcher {
  public:
   SyscallDisplayDispatcherTest(fidl_codec::LibraryLoader* loader,
@@ -634,20 +533,6 @@ class SyscallDisplayDispatcherTest : public SyscallDisplayDispatcher {
         replay_(replay_dispatcher_.get()) {}
 
   ProcessController* controller() const { return controller_; }
-
-  std::unique_ptr<SyscallDecoder> CreateDecoder(InterceptingThreadObserver* thread_observer,
-                                                zxdb::Thread* thread, const Syscall* syscall,
-                                                uint64_t timestamp) override {
-    return std::make_unique<SyscallDecoder>(this, thread_observer, thread, syscall,
-                                            std::make_unique<SyscallDisplay>(this, os()), 0);
-  }
-
-  std::unique_ptr<ExceptionDecoder> CreateDecoder(InterceptionWorkflow* workflow,
-                                                  zxdb::Thread* thread,
-                                                  uint64_t timestamp) override {
-    return std::make_unique<ExceptionDecoder>(workflow, this, thread,
-                                              std::make_unique<ExceptionDisplay>(this, os()), 0);
-  }
 
   void DeleteDecoder(SyscallDecoder* decoder) override {
     SyscallDisplayDispatcher::DeleteDecoder(decoder);

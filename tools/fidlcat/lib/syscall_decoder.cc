@@ -58,24 +58,13 @@ void MemoryDumpToVector(const zxdb::MemoryDump& dump, std::vector<uint8_t>* outp
   }
 }
 
-void SyscallUse::SyscallInputsDecoded(SyscallDecoder* decoder) {}
-
-void SyscallUse::SyscallOutputsDecoded(SyscallDecoder* decoder) {}
-
-void SyscallUse::SyscallDecodingError(const DecoderError& error, SyscallDecoder* decoder) {
-  FX_LOGS(ERROR) << error.message();
-  decoder->Destroy();
-}
-
 SyscallDecoder::SyscallDecoder(SyscallDecoderDispatcher* dispatcher,
                                InterceptingThreadObserver* thread_observer, zxdb::Thread* thread,
-                               const Syscall* syscall, std::unique_ptr<SyscallUse> use,
-                               int64_t timestamp)
+                               const Syscall* syscall, int64_t timestamp)
     : SyscallDecoderInterface(dispatcher, thread),
       thread_observer_(thread_observer),
       weak_thread_(thread->GetWeakPtr()),
       syscall_(syscall),
-      use_(std::move(use)),
       timestamp_(timestamp) {
   if (fidlcat_thread_ == nullptr) {
     Process* fidlcat_process = dispatcher_->SearchProcess(thread->GetProcess()->GetKoid());
@@ -86,6 +75,11 @@ SyscallDecoder::SyscallDecoder(SyscallDecoderDispatcher* dispatcher,
     }
     fidlcat_thread_ = dispatcher_->CreateThread(thread->GetKoid(), fidlcat_process);
   }
+}
+
+void SyscallDecoder::SyscallDecodingError() {
+  dispatcher_->SyscallDecodingError(fidlcat_thread_, syscall_, error_);
+  Destroy();
 }
 
 void SyscallDecoder::LoadMemory(uint64_t address, size_t size, std::vector<uint8_t>* destination) {
@@ -202,7 +196,7 @@ void SyscallDecoder::DoDecode() {
   } else {
     Error(DecoderError::Type::kUnknownArchitecture) << "Unknown architecture";
     if (pending_request_count_ == 0) {
-      use_->SyscallDecodingError(error_, this);
+      SyscallDecodingError();
     }
     return;
   }
@@ -268,7 +262,7 @@ void SyscallDecoder::LoadStack() {
 void SyscallDecoder::LoadInputs() {
   if (error_.type() != DecoderError::Type::kNone) {
     if (pending_request_count_ == 0) {
-      use_->SyscallDecodingError(error_, this);
+      SyscallDecodingError();
     }
     return;
   }
@@ -282,7 +276,7 @@ void SyscallDecoder::LoadInputs() {
   }
   input_arguments_loaded_ = true;
   if (error_.type() != DecoderError::Type::kNone) {
-    use_->SyscallDecodingError(error_, this);
+    SyscallDecodingError();
   } else {
     if (StepToReturnAddress()) {
       DecodeInputs();
@@ -310,49 +304,40 @@ bool SyscallDecoder::StepToReturnAddress() {
 }
 
 void SyscallDecoder::DecodeInputs() {
-  if (syscall_->fidl_codec_values_ready()) {
-    // We are able to create values from the syscall => create the values.
-    //
-    invoked_event_ = std::make_shared<InvokedEvent>(timestamp(), fidlcat_thread_, syscall_);
-    auto inline_member = syscall_->input_inline_members().begin();
-    auto outline_member = syscall_->input_outline_members().begin();
-    for (const auto& input : syscall_->inputs()) {
-      if (input->InlineValue()) {
-        if (input->ConditionsAreTrue(this, Stage::kEntry)) {
-          FX_DCHECK(inline_member != syscall_->input_inline_members().end());
-          std::unique_ptr<fidl_codec::Value> value = input->GenerateValue(this, Stage::kEntry);
-          FX_DCHECK(value != nullptr);
-          invoked_event_->AddInlineField(inline_member->get(), std::move(value));
-        }
-        ++inline_member;
-      } else {
-        if (input->ConditionsAreTrue(this, Stage::kEntry)) {
-          FX_DCHECK(outline_member != syscall_->input_outline_members().end());
-          std::unique_ptr<fidl_codec::Value> value = input->GenerateValue(this, Stage::kEntry);
-          FX_DCHECK(value != nullptr);
-          invoked_event_->AddOutlineField(outline_member->get(), std::move(value));
-        }
-        ++outline_member;
+  // Creates the invoked event.
+  invoked_event_ = std::make_shared<InvokedEvent>(timestamp(), fidlcat_thread_, syscall_);
+  auto inline_member = syscall_->input_inline_members().begin();
+  auto outline_member = syscall_->input_outline_members().begin();
+  for (const auto& input : syscall_->inputs()) {
+    if (input->InlineValue()) {
+      if (input->ConditionsAreTrue(this, Stage::kEntry)) {
+        FX_DCHECK(inline_member != syscall_->input_inline_members().end());
+        std::unique_ptr<fidl_codec::Value> value = input->GenerateValue(this, Stage::kEntry);
+        FX_DCHECK(value != nullptr);
+        invoked_event_->AddInlineField(inline_member->get(), std::move(value));
       }
+      ++inline_member;
+    } else {
+      if (input->ConditionsAreTrue(this, Stage::kEntry)) {
+        FX_DCHECK(outline_member != syscall_->input_outline_members().end());
+        std::unique_ptr<fidl_codec::Value> value = input->GenerateValue(this, Stage::kEntry);
+        FX_DCHECK(value != nullptr);
+        invoked_event_->AddOutlineField(outline_member->get(), std::move(value));
+      }
+      ++outline_member;
     }
-    if (dispatcher_->needs_stack_frame()) {
-      CopyStackFrame(caller_locations(), &invoked_event_->stack_frame());
-    }
-    if (invoked_event_->NeedsToLoadHandleInfo(&dispatcher_->inference())) {
-      fidlcat_thread_->process()->LoadHandleInfo(&dispatcher_->inference());
-    }
+  }
+  if (dispatcher_->needs_stack_frame()) {
+    CopyStackFrame(caller_locations(), &invoked_event_->stack_frame());
+  }
+  if (invoked_event_->NeedsToLoadHandleInfo(&dispatcher_->inference())) {
+    fidlcat_thread_->process()->LoadHandleInfo(&dispatcher_->inference());
   }
   // Eventually calls the code before displaying the input (which may invalidate
   // the display).
   if ((syscall_->inputs_decoded_action() == nullptr) ||
       (dispatcher_->*(syscall_->inputs_decoded_action()))(timestamp(), this)) {
-    if (invoked_event_ != nullptr) {
-      // If we have been able to generate an invoked event, directly call the dispatcher.
-      dispatcher_->AddInvokedEvent(invoked_event_);
-    } else {
-      // Invoked event is not yet available for this syscall.
-      use_->SyscallInputsDecoded(this);
-    }
+    dispatcher_->AddInvokedEvent(invoked_event_);
   }
 
   if (syscall_->return_type() == SyscallReturnType::kNoReturn) {
@@ -387,7 +372,7 @@ void SyscallDecoder::LoadSyscallReturnValue() {
 void SyscallDecoder::LoadOutputs() {
   if (error_.type() != DecoderError::Type::kNone) {
     if (pending_request_count_ == 0) {
-      use_->SyscallDecodingError(error_, this);
+      SyscallDecodingError();
     }
     return;
   }
@@ -401,7 +386,7 @@ void SyscallDecoder::LoadOutputs() {
     return;
   }
   if (error_.type() != DecoderError::Type::kNone) {
-    use_->SyscallDecodingError(error_, this);
+    SyscallDecodingError();
   } else {
     DecodeOutputs();
   }
@@ -411,49 +396,43 @@ void SyscallDecoder::DecodeOutputs() {
   if (pending_request_count_ > 0) {
     return;
   }
-  if (syscall_->fidl_codec_values_ready()) {
-    output_event_ = std::make_shared<OutputEvent>(timestamp(), fidlcat_thread_, syscall_,
-                                                  syscall_return_value_, invoked_event_);
-    auto inline_member = syscall_->output_inline_members().begin();
-    auto outline_member = syscall_->output_outline_members().begin();
-    for (const auto& output : syscall_->outputs()) {
-      if (output->InlineValue()) {
-        if ((output->error_code() == static_cast<zx_status_t>(syscall_return_value_)) &&
-            (output->ConditionsAreTrue(this, Stage::kExit))) {
-          FX_DCHECK(inline_member != syscall_->output_inline_members().end());
-          std::unique_ptr<fidl_codec::Value> value = output->GenerateValue(this, Stage::kExit);
-          FX_DCHECK(value != nullptr);
-          output_event_->AddInlineField(inline_member->get(), std::move(value));
-        }
-        ++inline_member;
-      } else {
-        if ((output->error_code() == static_cast<zx_status_t>(syscall_return_value_)) &&
-            (output->ConditionsAreTrue(this, Stage::kExit))) {
-          FX_DCHECK(outline_member != syscall_->output_outline_members().end());
-          std::unique_ptr<fidl_codec::Value> value = output->GenerateValue(this, Stage::kExit);
-          FX_DCHECK(value != nullptr);
-          output_event_->AddOutlineField(outline_member->get(), std::move(value));
-        }
-        ++outline_member;
+  // Creates the output event.
+  output_event_ = std::make_shared<OutputEvent>(timestamp(), fidlcat_thread_, syscall_,
+                                                syscall_return_value_, invoked_event_);
+  auto inline_member = syscall_->output_inline_members().begin();
+  auto outline_member = syscall_->output_outline_members().begin();
+  for (const auto& output : syscall_->outputs()) {
+    if (output->InlineValue()) {
+      if ((output->error_code() == static_cast<zx_status_t>(syscall_return_value_)) &&
+          (output->ConditionsAreTrue(this, Stage::kExit))) {
+        FX_DCHECK(inline_member != syscall_->output_inline_members().end());
+        std::unique_ptr<fidl_codec::Value> value = output->GenerateValue(this, Stage::kExit);
+        FX_DCHECK(value != nullptr);
+        output_event_->AddInlineField(inline_member->get(), std::move(value));
       }
-    }
-    if (output_event_->NeedsToLoadHandleInfo(&dispatcher_->inference())) {
-      fidlcat_thread_->process()->LoadHandleInfo(&dispatcher_->inference());
+      ++inline_member;
+    } else {
+      if ((output->error_code() == static_cast<zx_status_t>(syscall_return_value_)) &&
+          (output->ConditionsAreTrue(this, Stage::kExit))) {
+        FX_DCHECK(outline_member != syscall_->output_outline_members().end());
+        std::unique_ptr<fidl_codec::Value> value = output->GenerateValue(this, Stage::kExit);
+        FX_DCHECK(value != nullptr);
+        output_event_->AddOutlineField(outline_member->get(), std::move(value));
+      }
+      ++outline_member;
     }
   }
-  if (output_event_ != nullptr) {
-    if (syscall_->inference() != nullptr) {
-      // Executes the inference associated with the syscall.
-      // This is used to infer semantic about handles.
-      (dispatcher_->*(syscall_->inference()))(output_event_.get(), semantic());
-    }
+  if (output_event_->NeedsToLoadHandleInfo(&dispatcher_->inference())) {
+    fidlcat_thread_->process()->LoadHandleInfo(&dispatcher_->inference());
+  }
+  if (syscall_->inference() != nullptr) {
+    // Executes the inference associated with the syscall.
+    // This is used to infer semantic about handles.
+    (dispatcher_->*(syscall_->inference()))(output_event_.get(), semantic());
+  }
 
-    // If we have been able to generate an invoked event, directly call the dispatcher.
-    dispatcher_->AddOutputEvent(output_event_);
-  } else {
-    // Output event is not yet available for this syscall.
-    use_->SyscallOutputsDecoded(this);
-  }
+  // If we have been able to generate an invoked event, directly call the dispatcher.
+  dispatcher_->AddOutputEvent(output_event_);
 
   // Now our job is done, we can destroy the object.
   Destroy();
@@ -463,185 +442,6 @@ void SyscallDecoder::Destroy() {
   if (pending_request_count_ == 0) {
     dispatcher_->DeleteDecoder(this);
   }
-}
-
-void SyscallDisplay::SyscallInputsDecoded(SyscallDecoder* decoder) {
-  if (!dispatcher_->display_started()) {
-    // The display is not started. Only events can trigger it. We don't have an event so, we have
-    // nothing to display.
-    return;
-  }
-  displayed_ = true;
-  if (dispatcher_->decode_options().output_mode == OutputMode::kStandard) {
-    DisplayInputs(decoder);
-  }
-}
-
-void SyscallDisplay::DisplayInputs(SyscallDecoder* decoder) {
-  // This code will be deleted when we will be able to generate events for all the syscalls.
-  const fidl_codec::Colors& colors = dispatcher_->colors();
-  std::string line_header =
-      colors.green + std::to_string(dispatcher_->GetTime(decoder->timestamp())) + colors.reset +
-      ' ' + decoder->fidlcat_thread()->process()->name() + ' ' + colors.red +
-      std::to_string(decoder->fidlcat_thread()->process()->koid()) + colors.reset + ':' +
-      colors.red + std::to_string(decoder->fidlcat_thread()->koid()) + colors.reset + ' ';
-  if (dispatcher_->with_process_info()) {
-    os_ << line_header;
-  }
-  os_ << '\n';
-
-  FidlcatPrinter printer(dispatcher_, decoder->fidlcat_thread()->process(), os_, line_header);
-
-  if (dispatcher_->decode_options().stack_level != kNoStack) {
-    // Display caller locations.
-    DisplayStackFrame(decoder->caller_locations(), printer);
-  }
-
-  // Displays the header and the inline input arguments.
-  printer << decoder->syscall()->name() << '(';
-  const char* separator = "";
-  for (const auto& input : decoder->syscall()->inputs()) {
-    if (input->ConditionsAreTrue(decoder, Stage::kEntry)) {
-      separator = input->DisplayInline(decoder, Stage::kEntry, separator, printer);
-    }
-  }
-  printer << ")\n";
-
-  {
-    // Displays the outline input arguments.
-    for (const auto& input : decoder->syscall()->inputs()) {
-      if (input->ConditionsAreTrue(decoder, Stage::kEntry)) {
-        input->DisplayOutline(decoder, Stage::kEntry, printer);
-      }
-    }
-  }
-  dispatcher_->set_last_displayed_syscall(this);
-  dispatcher_->clear_last_displayed_event();
-}
-
-void SyscallDisplay::SyscallOutputsDecoded(SyscallDecoder* decoder) {
-  // This code will be deleted when we will be able to generate events for all the syscalls.
-  if (!displayed_ || (dispatcher_->decode_options().output_mode != OutputMode::kStandard)) {
-    return;
-  }
-  if (decoder->syscall()->return_type() != SyscallReturnType::kNoReturn) {
-    if (dispatcher_->last_displayed_syscall() != this) {
-      // Add a blank line to tell the user that this display is not linked to the
-      // previous displayed lines.
-      os_ << "\n";
-    }
-    std::string line_header;
-    const fidl_codec::Colors& colors = dispatcher_->colors();
-    if (dispatcher_->with_process_info() || (dispatcher_->last_displayed_syscall() != this)) {
-      line_header = colors.green + std::to_string(dispatcher_->GetTime(decoder->timestamp())) +
-                    colors.reset + ' ' + decoder->fidlcat_thread()->process()->name() + ' ' +
-                    colors.red + std::to_string(decoder->fidlcat_thread()->process()->koid()) +
-                    colors.reset + ':' + colors.red +
-                    std::to_string(decoder->fidlcat_thread()->koid()) + colors.reset + ' ';
-    } else {
-      line_header = colors.green + std::to_string(dispatcher_->GetTime(decoder->timestamp())) +
-                    colors.reset + ' ';
-    }
-    FidlcatPrinter printer(dispatcher_, decoder->fidlcat_thread()->process(), os_, line_header);
-    // Displays the returned value.
-    printer << "  -> ";
-    switch (decoder->syscall()->return_type()) {
-      case SyscallReturnType::kNoReturn:
-      case SyscallReturnType::kVoid:
-        break;
-      case SyscallReturnType::kStatus:
-        printer.DisplayStatus(static_cast<zx_status_t>(decoder->syscall_return_value()));
-        break;
-      case SyscallReturnType::kTicks:
-        printer << fidl_codec::Green << "ticks" << fidl_codec::ResetColor << ": "
-                << fidl_codec::Blue << static_cast<uint64_t>(decoder->syscall_return_value())
-                << fidl_codec::ResetColor;
-        break;
-      case SyscallReturnType::kTime:
-        printer << fidl_codec::Green << "time" << fidl_codec::ResetColor << ": "
-                << DisplayTime(static_cast<zx_time_t>(decoder->syscall_return_value()));
-        break;
-      case SyscallReturnType::kUint32:
-        printer << fidl_codec::Blue << static_cast<uint32_t>(decoder->syscall_return_value())
-                << fidl_codec::ResetColor;
-        break;
-      case SyscallReturnType::kUint64:
-        printer << fidl_codec::Blue << static_cast<uint64_t>(decoder->syscall_return_value())
-                << fidl_codec::ResetColor;
-        break;
-    }
-    // And the inline output arguments (if any).
-    const char* separator = " (";
-    for (const auto& output : decoder->syscall()->outputs()) {
-      if ((output->error_code() == static_cast<zx_status_t>(decoder->syscall_return_value())) &&
-          output->ConditionsAreTrue(decoder, Stage::kExit)) {
-        separator = output->DisplayInline(decoder, Stage::kExit, separator, printer);
-      }
-    }
-    if (std::string(" (") != separator) {
-      printer << ')';
-    }
-    printer << '\n';
-    {
-      fidl_codec::Indent indent(printer);
-      // Displays the outline output arguments.
-      for (const auto& output : decoder->syscall()->outputs()) {
-        if ((output->error_code() == static_cast<zx_status_t>(decoder->syscall_return_value())) &&
-            output->ConditionsAreTrue(decoder, Stage::kExit)) {
-          output->DisplayOutline(decoder, Stage::kExit, printer);
-        }
-      }
-    }
-
-    dispatcher_->set_last_displayed_syscall(this);
-    dispatcher_->clear_last_displayed_event();
-  }
-}
-
-void SyscallDisplay::SyscallDecodingError(const DecoderError& error, SyscallDecoder* decoder) {
-  std::string message = error.message();
-  size_t pos = 0;
-  for (;;) {
-    size_t end = message.find('\n', pos);
-    const fidl_codec::Colors& colors = dispatcher_->colors();
-    os_ << decoder->fidlcat_thread()->process()->name() << ' ' << colors.red
-        << decoder->fidlcat_thread()->process()->koid() << colors.reset << ':' << colors.red
-        << decoder->fidlcat_thread()->koid() << colors.reset << ' ' << decoder->syscall()->name()
-        << ": " << colors.red << error.message().substr(pos, end) << colors.reset << '\n';
-    if (end == std::string::npos) {
-      break;
-    }
-    pos = end + 1;
-  }
-  os_ << '\n';
-  decoder->Destroy();
-}
-
-void SyscallCompare::SyscallInputsDecoded(SyscallDecoder* decoder) {
-  os_.clear();
-  os_.str("");
-  SyscallDisplay::SyscallInputsDecoded(decoder);
-  comparator_->CompareInput(os_.str(), decoder->fidlcat_thread()->process()->name(),
-                            decoder->fidlcat_thread()->process()->koid(),
-                            decoder->fidlcat_thread()->koid());
-}
-
-void SyscallCompare::SyscallOutputsDecoded(SyscallDecoder* decoder) {
-  os_.clear();
-  os_.str("");
-  SyscallDisplay::SyscallOutputsDecoded(decoder);
-  if (decoder->syscall()->return_type() != SyscallReturnType::kNoReturn) {
-    comparator_->CompareOutput(os_.str(), decoder->fidlcat_thread()->process()->name(),
-                               decoder->fidlcat_thread()->process()->koid(),
-                               decoder->fidlcat_thread()->koid());
-  }
-}
-
-void SyscallCompare::SyscallDecodingError(const DecoderError& error, SyscallDecoder* decoder) {
-  os_.clear();
-  os_.str("");
-  SyscallDisplay::SyscallDecodingError(error, decoder);
-  comparator_->DecodingError(os_.str());
 }
 
 }  // namespace fidlcat

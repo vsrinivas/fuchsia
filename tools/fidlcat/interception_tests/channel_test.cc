@@ -147,20 +147,6 @@ std::unique_ptr<SystemCallTest> ZxChannelWrite(int64_t result, std::string_view 
   return value;
 }
 
-#define WRITE_CHECK_TEST_CONTENT(errno)                                                          \
-  data().set_check_bytes();                                                                      \
-  data().set_check_handles();                                                                    \
-  PerformCheckTest("$plt(zx_channel_write)",                                                     \
-                   ZxChannelWrite(errno, #errno, kHandle, 0, data().bytes(), data().num_bytes(), \
-                                  data().handles(), data().num_handles()),                       \
-                   nullptr)
-
-#define WRITE_CHECK_TEST(name, errno)                                            \
-  TEST_F(InterceptionWorkflowTestX64, name) { WRITE_CHECK_TEST_CONTENT(errno); } \
-  TEST_F(InterceptionWorkflowTestArm, name) { WRITE_CHECK_TEST_CONTENT(errno); }
-
-WRITE_CHECK_TEST(ZxChannelWriteCheck, ZX_OK);
-
 #define WRITE_DISPLAY_TEST_CONTENT(errno, expected)                                                \
   data().set_check_bytes();                                                                        \
   data().set_check_handles();                                                                      \
@@ -542,43 +528,6 @@ std::unique_ptr<SystemCallTest> ZxChannelCall(int64_t result, std::string_view r
   value->AddInput(reinterpret_cast<uint64_t>(actual_handles));
   return value;
 }
-
-#define CALL_CHECK_TEST_CONTENT(errno)                                                \
-  data().set_check_bytes();                                                           \
-  data().set_check_handles();                                                         \
-  zx_channel_call_args_t args;                                                        \
-  args.wr_bytes = data().bytes();                                                     \
-  args.wr_handles = data().handles();                                                 \
-  args.rd_bytes = data().bytes();                                                     \
-  args.rd_handles = data().handles();                                                 \
-  args.wr_num_bytes = data().num_bytes();                                             \
-  args.wr_num_handles = data().num_handles();                                         \
-  args.rd_num_bytes = 100;                                                            \
-  args.rd_num_handles = 64;                                                           \
-  uint32_t actual_bytes = data().num_bytes();                                         \
-  uint32_t actual_handles = data().num_handles();                                     \
-  zx_channel_call_args_t args2;                                                       \
-  args2.wr_bytes = data().bytes2();                                                   \
-  args2.wr_handles = data().handles2();                                               \
-  args2.rd_bytes = data().bytes2();                                                   \
-  args2.rd_handles = data().handles2();                                               \
-  args2.wr_num_bytes = data().num_bytes2();                                           \
-  args2.wr_num_handles = data().num_handles2();                                       \
-  args2.rd_num_bytes = 100;                                                           \
-  args2.rd_num_handles = 64;                                                          \
-  uint32_t actual_bytes2 = data().num_bytes2();                                       \
-  uint32_t actual_handles2 = data().num_handles2();                                   \
-  PerformCheckTest("$plt(zx_channel_call)",                                           \
-                   ZxChannelCall(errno, #errno, kHandle, 0, ZX_TIME_INFINITE, &args,  \
-                                 &actual_bytes, &actual_handles),                     \
-                   ZxChannelCall(errno, #errno, kHandle, 0, ZX_TIME_INFINITE, &args2, \
-                                 &actual_bytes2, &actual_handles2));
-
-#define CALL_CHECK_TEST(name, errno)                                            \
-  TEST_F(InterceptionWorkflowTestX64, name) { CALL_CHECK_TEST_CONTENT(errno); } \
-  TEST_F(InterceptionWorkflowTestArm, name) { CALL_CHECK_TEST_CONTENT(errno); }
-
-CALL_CHECK_TEST(ZxChannelCallCheck, ZX_OK);
 
 #define CALL_DISPLAY_TEST_CONTENT(errno, check_bytes, check_handles, expected)         \
   if (check_bytes) {                                                                   \

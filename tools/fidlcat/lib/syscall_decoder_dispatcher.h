@@ -149,9 +149,6 @@ class ClassFieldBase {
     return true;
   }
 
-  virtual void Display(const ClassType* object, debug_ipc::Arch arch,
-                       fidl_codec::PrettyPrinter& printer) const = 0;
-
   virtual std::unique_ptr<fidl_codec::Type> ComputeType() const {
     return std::make_unique<fidl_codec::InvalidType>();
   }
@@ -182,9 +179,6 @@ class ClassField : public ClassFieldBase<ClassType> {
 
   Type (*get() const)(const ClassType* from) { return get_; }
 
-  void Display(const ClassType* object, debug_ipc::Arch arch,
-               fidl_codec::PrettyPrinter& printer) const override;
-
   std::unique_ptr<fidl_codec::Type> ComputeType() const override;
 
   std::unique_ptr<fidl_codec::Value> GenerateValue(const ClassType* object,
@@ -211,9 +205,6 @@ class ArrayField : public ClassFieldBase<ClassType> {
     return std::make_unique<fidl_codec::ArrayType>(std::move(type), fixed_size);
   }
 
-  void Display(const ClassType* object, debug_ipc::Arch arch,
-               fidl_codec::PrettyPrinter& printer) const override;
-
   std::unique_ptr<fidl_codec::Value> GenerateValue(const ClassType* object,
                                                    debug_ipc::Arch arch) const override;
 
@@ -235,9 +226,6 @@ class DynamicArrayField : public ClassFieldBase<ClassType> {
     return std::make_unique<fidl_codec::VectorType>(std::move(type));
   }
 
-  void Display(const ClassType* object, debug_ipc::Arch arch,
-               fidl_codec::PrettyPrinter& printer) const override;
-
   std::unique_ptr<fidl_codec::Value> GenerateValue(const ClassType* object,
                                                    debug_ipc::Arch arch) const override;
 
@@ -255,9 +243,6 @@ class ClassClassField : public ClassFieldBase<ClassType> {
       : ClassFieldBase<ClassType>(name, SyscallType::kStruct),
         get_(get),
         field_class_(field_class) {}
-
-  void Display(const ClassType* object, debug_ipc::Arch arch,
-               fidl_codec::PrettyPrinter& printer) const override;
 
   std::unique_ptr<fidl_codec::Type> ComputeType() const override {
     return field_class_->ComputeType();
@@ -291,9 +276,6 @@ class ArrayClassField : public ClassFieldBase<ClassType> {
     return std::make_unique<fidl_codec::ArrayType>(std::move(type), fixed_size);
   }
 
-  void Display(const ClassType* object, debug_ipc::Arch arch,
-               fidl_codec::PrettyPrinter& printer) const override;
-
   std::unique_ptr<fidl_codec::Value> GenerateValue(const ClassType* object,
                                                    debug_ipc::Arch arch) const override;
 
@@ -320,9 +302,6 @@ class DynamicArrayClassField : public ClassFieldBase<ClassType> {
     return std::make_unique<fidl_codec::VectorType>(std::move(type));
   }
 
-  void Display(const ClassType* object, debug_ipc::Arch arch,
-               fidl_codec::PrettyPrinter& printer) const override;
-
   std::unique_ptr<fidl_codec::Value> GenerateValue(const ClassType* object,
                                                    debug_ipc::Arch arch) const override;
 
@@ -342,20 +321,6 @@ class Class {
   const std::string& name() const { return name_; }
 
   const std::vector<std::unique_ptr<ClassFieldBase<ClassType>>>& fields() const { return fields_; }
-
-  void DisplayObject(const ClassType* object, debug_ipc::Arch arch,
-                     fidl_codec::PrettyPrinter& printer) const {
-    printer << "{\n";
-    {
-      fidl_codec::Indent indent(printer);
-      for (const auto& field : fields_) {
-        if (field->ConditionsAreTrue(object, arch)) {
-          field->Display(object, arch, printer);
-        }
-      }
-    }
-    printer << '}';
-  }
 
   std::unique_ptr<fidl_codec::Type> ComputeType() const {
     return std::make_unique<fidl_codec::StructType>(struct_definition_, true);
@@ -626,10 +591,6 @@ class Access : public AccessBase {
   // Generates the fidl codec value for this access.
   std::unique_ptr<fidl_codec::Value> GenerateValue(SyscallDecoderInterface* decoder,
                                                    Stage stage) const;
-
-  // Display the data on a stream (with name and type).
-  void Display(SyscallDecoderInterface* decoder, Stage stage, std::string_view name,
-               fidl_codec::PrettyPrinter& printer) const;
 };
 
 // Access to a system call argument. There is a direct access to the value
@@ -887,17 +848,6 @@ class SyscallInputOutputBase {
   virtual std::unique_ptr<fidl_codec::Value> GenerateValue(SyscallDecoderInterface* decoder,
                                                            Stage stage) const;
 
-  // Displays small inputs or outputs.
-  virtual const char* DisplayInline(SyscallDecoderInterface* /*decoder*/, Stage /*stage*/,
-                                    const char* separator,
-                                    fidl_codec::PrettyPrinter& /*printer*/) const {
-    return separator;
-  }
-
-  // Displays large (multi lines) inputs or outputs.
-  virtual void DisplayOutline(SyscallDecoderInterface* /*decoder*/, Stage /*stage*/,
-                              fidl_codec::PrettyPrinter& /*printer*/) const {}
-
   // True if all the conditions are met.
   bool ConditionsAreTrue(SyscallDecoderInterface* decoder, Stage stage) {
     for (const auto& condition : conditions_) {
@@ -938,13 +888,6 @@ class SyscallInputOutput : public SyscallInputOutputBase {
   std::unique_ptr<fidl_codec::Value> GenerateValue(SyscallDecoderInterface* decoder,
                                                    Stage stage) const override {
     return access_->GenerateValue(decoder, stage);
-  }
-
-  const char* DisplayInline(SyscallDecoderInterface* decoder, Stage stage, const char* separator,
-                            fidl_codec::PrettyPrinter& printer) const override {
-    printer << separator;
-    access_->Display(decoder, stage, name(), printer);
-    return ", ";
   }
 
  private:
@@ -991,9 +934,6 @@ class SyscallInputOutputActualAndRequested : public SyscallInputOutputBase {
                                                                  requested_absolute);
   }
 
-  const char* DisplayInline(SyscallDecoderInterface* decoder, Stage stage, const char* separator,
-                            fidl_codec::PrettyPrinter& printer) const override;
-
  private:
   // Current value.
   const std::unique_ptr<Access<Type>> actual_;
@@ -1023,9 +963,6 @@ class SyscallInputOutputIndirect : public SyscallInputOutputBase {
 
   std::unique_ptr<fidl_codec::Value> GenerateValue(SyscallDecoderInterface* decoder,
                                                    Stage stage) const override;
-
-  const char* DisplayInline(SyscallDecoderInterface* decoder, Stage stage, const char* separator,
-                            fidl_codec::PrettyPrinter& printer) const override;
 
  private:
   // Type of the value.
@@ -1080,9 +1017,6 @@ class SyscallInputOutputBuffer : public SyscallInputOutputBase {
     }
   }
 
-  void DisplayOutline(SyscallDecoderInterface* decoder, Stage stage,
-                      fidl_codec::PrettyPrinter& printer) const override;
-
  private:
   // Type of one buffer item.
   SyscallType syscall_type_;
@@ -1133,9 +1067,6 @@ class SyscallInputOutputStringBuffer : public SyscallInputOutputBase {
     }
   }
 
-  void DisplayOutline(SyscallDecoderInterface* decoder, Stage stage,
-                      fidl_codec::PrettyPrinter& printer) const override;
-
  private:
   // Access to the buffer which contains all the items.
   const std::unique_ptr<Access<char*>> buffer_;
@@ -1184,9 +1115,6 @@ class SyscallInputOutputString : public SyscallInputOutputBase {
     }
   }
 
-  const char* DisplayInline(SyscallDecoderInterface* decoder, Stage stage, const char* separator,
-                            fidl_codec::PrettyPrinter& printer) const override;
-
  private:
   const std::unique_ptr<Access<FromType>> string_;
   const std::unique_ptr<Access<size_t>> string_size_;
@@ -1220,9 +1148,6 @@ class SyscallInputOutputFixedSizeString : public SyscallInputOutputBase {
     return std::make_unique<fidl_codec::StringValue>(
         fidl_codec::StringValue(std::string_view(string, size)));
   }
-
-  const char* DisplayInline(SyscallDecoderInterface* decoder, Stage stage, const char* separator,
-                            fidl_codec::PrettyPrinter& printer) const override;
 
  private:
   const std::unique_ptr<Access<char>> string_;
@@ -1267,9 +1192,6 @@ class SyscallInputOutputObject : public SyscallInputOutputBase {
     }
   }
 
-  void DisplayOutline(SyscallDecoderInterface* decoder, Stage stage,
-                      fidl_codec::PrettyPrinter& printer) const override;
-
  private:
   // Access to the buffer (raw data) which contains the object.
   const std::unique_ptr<AccessBase> buffer_;
@@ -1313,9 +1235,6 @@ class SyscallInputOutputObjectArray : public SyscallInputOutputBase {
 
   std::unique_ptr<fidl_codec::Value> GenerateValue(SyscallDecoderInterface* decoder,
                                                    Stage stage) const override;
-
-  void DisplayOutline(SyscallDecoderInterface* decoder, Stage stage,
-                      fidl_codec::PrettyPrinter& printer) const override;
 
  private:
   // Access to the buffer (raw data) which contains the object.
@@ -1511,7 +1430,6 @@ class Syscall {
     return outputs_;
   }
 
-  bool fidl_codec_values_ready() const { return fidl_codec_values_ready_; }
   const std::vector<std::unique_ptr<fidl_codec::StructMember>>& input_inline_members() const {
     return input_inline_members_;
   }
@@ -1813,7 +1731,6 @@ class Syscall {
   std::vector<std::unique_ptr<SyscallArgumentBase>> arguments_;
   std::vector<std::unique_ptr<SyscallInputOutputBase>> inputs_;
   std::vector<std::unique_ptr<SyscallInputOutputBase>> outputs_;
-  bool fidl_codec_values_ready_ = false;
   std::vector<std::unique_ptr<fidl_codec::StructMember>> input_inline_members_;
   std::vector<std::unique_ptr<fidl_codec::StructMember>> input_outline_members_;
   std::vector<std::unique_ptr<fidl_codec::StructMember>> output_inline_members_;
@@ -1937,20 +1854,9 @@ class SyscallDecoderDispatcher {
   // Called when we are watching a process we launched.
   virtual void AddLaunchedProcess(uint64_t process_koid) {}
 
-  // Create the object which will decode the syscall.
-  virtual std::unique_ptr<SyscallDecoder> CreateDecoder(InterceptingThreadObserver* thread_observer,
-                                                        zxdb::Thread* thread,
-                                                        const Syscall* syscall,
-                                                        uint64_t timestamp) = 0;
-
   // Delete a decoder created by DecodeSyscall. Called when the syscall is
   // fully decoded and displayed or the syscalls had an error.
   virtual void DeleteDecoder(SyscallDecoder* decoder);
-
-  // Create the object which will decode the exception.
-  virtual std::unique_ptr<ExceptionDecoder> CreateDecoder(InterceptionWorkflow* workflow,
-                                                          zxdb::Thread* thread,
-                                                          uint64_t timestamp) = 0;
 
   // Delete a decoder created by DecodeException. Called when the exception is fully decoded and
   // displayed or the exception had an error.
@@ -1966,6 +1872,12 @@ class SyscallDecoderDispatcher {
 
   // Called when a process is no longer monitored.
   virtual void AddStopMonitoringEvent(std::shared_ptr<StopMonitoringEvent> event);
+
+  // Called when the decoder failed.
+  virtual void SyscallDecodingError(const fidlcat::Thread* fidlcat_thread, const Syscall* syscall,
+                                    const DecoderError& error) {
+    FX_LOGS(ERROR) << error.message();
+  }
 
   // Adds an invoked event.
   virtual void AddInvokedEvent(std::shared_ptr<InvokedEvent> invoked_event) {}
@@ -2133,11 +2045,6 @@ class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
 
   fidl_codec::LibraryLoader* loader() const { return message_decoder_dispatcher_.loader(); }
 
-  const SyscallDisplay* last_displayed_syscall() const { return last_displayed_syscall_; }
-  void set_last_displayed_syscall(const SyscallDisplay* last_displayed_syscall) {
-    last_displayed_syscall_ = last_displayed_syscall;
-  }
-
   const Event* last_displayed_event() const { return last_displayed_event_; }
   void clear_last_displayed_event() { last_displayed_event_ = nullptr; }
 
@@ -2155,14 +2062,6 @@ class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
     message_decoder_dispatcher_.AddLaunchedProcess(process_koid);
   }
 
-  std::unique_ptr<SyscallDecoder> CreateDecoder(InterceptingThreadObserver* thread_observer,
-                                                zxdb::Thread* thread, const Syscall* syscall,
-                                                uint64_t timestamp) override;
-
-  std::unique_ptr<ExceptionDecoder> CreateDecoder(InterceptionWorkflow* workflow,
-                                                  zxdb::Thread* thread,
-                                                  uint64_t timestamp) override;
-
   double GetTime(int64_t timestamp);
 
   void AddProcessLaunchedEvent(std::shared_ptr<ProcessLaunchedEvent> event) override;
@@ -2171,16 +2070,25 @@ class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
 
   void AddStopMonitoringEvent(std::shared_ptr<StopMonitoringEvent> event) override;
 
-  void AddInvokedEvent(std::shared_ptr<InvokedEvent> invoked_event) override;
+  void SyscallDecodingError(const fidlcat::Thread* fidlcat_thread, const Syscall* syscall,
+                            const DecoderError& error) override;
 
-  // Displays an invoked event.
-  void DisplayInvokedEvent(const InvokedEvent* invoked_event);
+  void AddInvokedEvent(std::shared_ptr<InvokedEvent> invoked_event) override;
 
   void AddOutputEvent(std::shared_ptr<OutputEvent> output_event) override;
 
   void AddExceptionEvent(std::shared_ptr<ExceptionEvent> exception_event) override;
 
   void SessionEnded() override;
+
+  // Displays an invoked event.
+  virtual void DisplayInvokedEvent(const InvokedEvent* invoked_event);
+
+  // Displays an output event.
+  virtual void DisplayOutputEvent(const OutputEvent* output_event);
+
+  // Displays an exception event.
+  virtual void DisplayExceptionEvent(const ExceptionEvent* exception_event);
 
   void DisplaySummary(std::ostream& os);
 
@@ -2193,8 +2101,6 @@ class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
  private:
   // Class which can decode a FIDL message.
   fidl_codec::MessageDecoderDispatcher message_decoder_dispatcher_;
-  // The last syscall we displayed the inputs on the stream.
-  const SyscallDisplay* last_displayed_syscall_ = nullptr;
   // The last event we displayed.
   const Event* last_displayed_event_ = nullptr;
   // The stream which will receive the syscall decodings.
@@ -2212,9 +2118,12 @@ class SyscallCompareDispatcher : public SyscallDisplayDispatcher {
       : SyscallDisplayDispatcher(loader, decode_options, display_options, os_),
         comparator_(comparator) {}
 
-  std::unique_ptr<SyscallDecoder> CreateDecoder(InterceptingThreadObserver* thread_observer,
-                                                zxdb::Thread* thread, const Syscall* syscall,
-                                                uint64_t timestamp) override;
+  void SyscallDecodingError(const fidlcat::Thread* fidlcat_thread, const Syscall* syscall,
+                            const DecoderError& error) override;
+
+  void DisplayInvokedEvent(const InvokedEvent* invoked_event) override;
+
+  void DisplayOutputEvent(const OutputEvent* output_event) override;
 
  private:
   std::shared_ptr<Comparator> comparator_;
@@ -2299,334 +2208,6 @@ inline std::unique_ptr<fidl_codec::Value> GenerateHandleValue(zx_handle_t handle
   return std::make_unique<fidl_codec::HandleValue>(result);
 }
 
-// Display a value on a stream.
-template <typename ValueType>
-void DisplayValue(SyscallType type, ValueType /*value*/, fidl_codec::PrettyPrinter& printer) {
-  printer << "unimplemented generic value " << static_cast<uint32_t>(type);
-}
-
-template <>
-inline void DisplayValue<bool>(SyscallType type, bool value, fidl_codec::PrettyPrinter& printer) {
-  switch (type) {
-    case SyscallType::kBool:
-      printer << fidl_codec::Blue << (value ? "true" : "false") << fidl_codec::ResetColor;
-      break;
-    default:
-      printer << "unimplemented bool value " << static_cast<uint32_t>(type);
-      break;
-  }
-}
-
-template <>
-inline void DisplayValue<int32_t>(SyscallType type, int32_t value,
-                                  fidl_codec::PrettyPrinter& printer) {
-  switch (type) {
-    case SyscallType::kInt32:
-      printer << fidl_codec::Blue << value << fidl_codec::ResetColor;
-      break;
-    case SyscallType::kFutex:
-      printer << fidl_codec::Red << value << fidl_codec::ResetColor;
-      break;
-    case SyscallType::kStatus:
-      printer.DisplayStatus(value);
-      break;
-    default:
-      printer << "unimplemented int32_t value " << static_cast<uint32_t>(type);
-      break;
-  }
-}
-
-template <>
-inline void DisplayValue<int64_t>(SyscallType type, int64_t value,
-                                  fidl_codec::PrettyPrinter& printer) {
-  switch (type) {
-    case SyscallType::kInt64:
-      printer << fidl_codec::Blue << value << fidl_codec::ResetColor;
-      break;
-    case SyscallType::kDuration:
-      printer << DisplayDuration(value);
-      break;
-    case SyscallType::kFutex:
-      printer << fidl_codec::Red << value << fidl_codec::ResetColor;
-      break;
-    case SyscallType::kMonotonicTime:
-      printer << DisplayDuration(value);
-      break;
-    case SyscallType::kTime:
-      printer << DisplayTime(value);
-      break;
-    default:
-      printer << "unimplemented int64_t value " << static_cast<uint32_t>(type);
-      break;
-  }
-}
-
-template <>
-inline void DisplayValue<uint8_t>(SyscallType type, uint8_t value,
-                                  fidl_codec::PrettyPrinter& printer) {
-  switch (type) {
-    case SyscallType::kUint8:
-      printer << fidl_codec::Blue << static_cast<uint32_t>(value) << fidl_codec::ResetColor;
-      break;
-    case SyscallType::kUint8Hexa:
-      printer.DisplayHexa8(value);
-      break;
-    case SyscallType::kPacketGuestVcpuType:
-      printer.DisplayPacketGuestVcpuType(value);
-      break;
-    default:
-      printer << "unimplemented uint8_t value " << static_cast<uint32_t>(type);
-      break;
-  }
-}
-
-template <>
-inline void DisplayValue<uint16_t>(SyscallType type, uint16_t value,
-                                   fidl_codec::PrettyPrinter& printer) {
-  switch (type) {
-    case SyscallType::kUint16:
-      printer << fidl_codec::Blue << value << fidl_codec::ResetColor;
-      break;
-    case SyscallType::kUint16Hexa:
-      printer.DisplayHexa16(value);
-      break;
-    case SyscallType::kPacketPageRequestCommand:
-      printer.DisplayPacketPageRequestCommand(value);
-      break;
-    default:
-      printer << "unimplemented uint16_t value " << static_cast<uint32_t>(type);
-      break;
-  }
-}
-
-template <>
-inline void DisplayValue<uint32_t>(SyscallType type, uint32_t value,
-                                   fidl_codec::PrettyPrinter& printer) {
-  switch (type) {
-    case SyscallType::kUint32:
-      printer << fidl_codec::Blue << value << fidl_codec::ResetColor;
-      break;
-    case SyscallType::kUint32Hexa:
-      printer.DisplayHexa32(value);
-      break;
-    case SyscallType::kBtiPerm:
-      printer.DisplayBtiPerm(value);
-      break;
-    case SyscallType::kCachePolicy:
-      printer.DisplayCachePolicy(value);
-      break;
-    case SyscallType::kChannelOption:
-      printer.DisplayChannelOption(value);
-      break;
-    case SyscallType::kClock:
-      printer.DisplayClock(value);
-      break;
-    case SyscallType::kExceptionChannelType:
-      printer.DisplayExceptionChannelType(value);
-      break;
-    case SyscallType::kExceptionState:
-      printer.DisplayExceptionState(value);
-      break;
-    case SyscallType::kFeatureKind:
-      printer.DisplayFeatureKind(value);
-      break;
-    case SyscallType::kGuestTrap:
-      printer.DisplayGuestTrap(value);
-      break;
-    case SyscallType::kHandle: {
-      zx_handle_disposition_t handle_disposition;
-      handle_disposition.operation = fidl_codec::kNoHandleDisposition;
-      handle_disposition.handle = value;
-      handle_disposition.type = ZX_OBJ_TYPE_NONE;
-      handle_disposition.rights = 0;
-      handle_disposition.result = ZX_OK;
-      printer.DisplayHandle(handle_disposition);
-      break;
-    }
-    case SyscallType::kInfoMapsType:
-      printer.DisplayInfoMapsType(value);
-      break;
-    case SyscallType::kInterruptFlags:
-      printer.DisplayInterruptFlags(value);
-      break;
-    case SyscallType::kIommuType:
-      printer.DisplayIommuType(value);
-      break;
-    case SyscallType::kKtraceControlAction:
-      printer.DisplayKtraceControlAction(value);
-      break;
-    case SyscallType::kObjectInfoTopic:
-      printer.DisplayObjectInfoTopic(value);
-      break;
-    case SyscallType::kObjType:
-      printer.DisplayObjType(value);
-      break;
-    case SyscallType::kPciBarType:
-      printer.DisplayPciBarType(value);
-      break;
-    case SyscallType::kPolicyAction:
-      printer.DisplayPolicyAction(value);
-      break;
-    case SyscallType::kPolicyCondition:
-      printer.DisplayPolicyCondition(value);
-      break;
-    case SyscallType::kPolicyTopic:
-      printer.DisplayPolicyTopic(value);
-      break;
-    case SyscallType::kPortPacketType:
-      printer.DisplayPortPacketType(value);
-      break;
-    case SyscallType::kProfileInfoFlags:
-      printer.DisplayProfileInfoFlags(value);
-      break;
-    case SyscallType::kPropType:
-      printer.DisplayPropType(value);
-      break;
-    case SyscallType::kRights:
-      printer.DisplayRights(value);
-      break;
-    case SyscallType::kRsrcKind:
-      printer.DisplayRsrcKind(value);
-      break;
-    case SyscallType::kSignals:
-      printer.DisplaySignals(value);
-      break;
-    case SyscallType::kSocketCreateOptions:
-      printer.DisplaySocketCreateOptions(value);
-      break;
-    case SyscallType::kSocketReadOptions:
-      printer.DisplaySocketReadOptions(value);
-      break;
-    case SyscallType::kSocketShutdownOptions:
-      printer.DisplaySocketShutdownOptions(value);
-      break;
-    case SyscallType::kSystemEventType:
-      printer.DisplaySystemEventType(value);
-      break;
-    case SyscallType::kSystemPowerctl:
-      printer.DisplaySystemPowerctl(value);
-      break;
-    case SyscallType::kThreadState:
-      printer.DisplayThreadState(value);
-      break;
-    case SyscallType::kThreadStateTopic:
-      printer.DisplayThreadStateTopic(value);
-      break;
-    case SyscallType::kTimerOption:
-      printer.DisplayTimerOption(value);
-      break;
-    case SyscallType::kVcpu:
-      printer.DisplayVcpu(value);
-      break;
-    case SyscallType::kVmOption:
-      printer.DisplayVmOption(value);
-      break;
-    case SyscallType::kVmoCreationOption:
-      printer.DisplayVmoCreationOption(value);
-      break;
-    case SyscallType::kVmoOp:
-      printer.DisplayVmoOp(value);
-      break;
-    case SyscallType::kVmoOption:
-      printer.DisplayVmoOption(value);
-      break;
-    case SyscallType::kVmoType:
-      printer.DisplayVmoType(value);
-      break;
-    default:
-      printer << "unimplemented uint32_t value " << static_cast<uint32_t>(type);
-      break;
-  }
-}
-
-template <>
-inline void DisplayValue<uint64_t>(SyscallType type, uint64_t value,
-                                   fidl_codec::PrettyPrinter& printer) {
-  switch (type) {
-    case SyscallType::kUint64:
-      printer << fidl_codec::Blue << value << fidl_codec::ResetColor;
-      break;
-    case SyscallType::kUint64Hexa:
-      printer.DisplayHexa64(value);
-      break;
-#ifndef __MACH__
-    case SyscallType::kGpAddr:
-      printer.DisplayGpAddr(value);
-      break;
-#endif
-    case SyscallType::kKoid:
-      printer << fidl_codec::Red << value << fidl_codec::ResetColor;
-      break;
-#ifndef __MACH__
-    case SyscallType::kSize:
-      printer << fidl_codec::Blue << value << fidl_codec::ResetColor;
-      break;
-#endif
-    case SyscallType::kTime:
-      printer << DisplayTime(value);
-      break;
-    case SyscallType::kPaddr:
-      printer.DisplayPaddr(value);
-      break;
-#ifndef __MACH__
-    case SyscallType::kUintptr:
-      printer.DisplayUintptr(value);
-      break;
-    case SyscallType::kVaddr:
-      printer.DisplayVaddr(value);
-      break;
-#endif
-    default:
-      printer << "unimplemented uint64_t value " << static_cast<uint32_t>(type);
-      break;
-  }
-}
-
-#ifdef __MACH__
-template <>
-inline void DisplayValue<uintptr_t>(SyscallType type, uintptr_t value,
-                                    fidl_codec::PrettyPrinter& printer) {
-  switch (type) {
-    case SyscallType::kGpAddr:
-      printer.DisplayGpAddr(value);
-      break;
-    case SyscallType::kSize:
-      printer << fidl_codec::Blue << value << fidl_codec::ResetColor;
-      break;
-    case SyscallType::kPaddr:
-      printer.DisplayPaddr(value);
-      break;
-    case SyscallType::kUintptr:
-      printer.DisplayUintptr(value);
-      break;
-    case SyscallType::kVaddr:
-      printer.DisplayVaddr(value);
-      break;
-    default:
-      printer << "unimplemented uintptr_t value " << static_cast<uint32_t>(type);
-      break;
-  }
-}
-#endif
-
-template <>
-inline void DisplayValue<zx_uint128_t>(SyscallType type, zx_uint128_t value,
-                                       fidl_codec::PrettyPrinter& printer) {
-  switch (type) {
-    case SyscallType::kUint128Hexa: {
-      std::vector<char> buffer(sizeof(uint64_t) * kCharactersPerByte + 1);
-      snprintf(buffer.data(), buffer.size(), "%016" PRIx64, value.low);
-      printer << fidl_codec::Blue << "{ low = " << buffer.data();
-      snprintf(buffer.data(), buffer.size(), "%016" PRIx64, value.high);
-      printer << ", high = " << buffer.data() << " }" << fidl_codec::ResetColor;
-      break;
-    }
-    default:
-      printer << "unimplemented zx_uint128_t value " << static_cast<uint32_t>(type);
-      break;
-  }
-}
-
 template <typename ClassType, typename Type>
 bool ClassFieldCondition<ClassType, Type>::True(const ClassType* object, debug_ipc::Arch /*arch*/) {
   return field_->get()(object) == value_;
@@ -2641,15 +2222,6 @@ bool ClassFieldMaskedCondition<ClassType, Type>::True(const ClassType* object,
 template <typename ClassType, typename Type>
 bool ArchCondition<ClassType, Type>::True(const ClassType* /*object*/, debug_ipc::Arch arch) {
   return arch_ == arch;
-}
-
-template <typename ClassType, typename Type>
-void ClassField<ClassType, Type>::Display(const ClassType* object, debug_ipc::Arch /*arch*/,
-                                          fidl_codec::PrettyPrinter& printer) const {
-  printer << ClassFieldBase<ClassType>::name();
-  DisplayType(ClassFieldBase<ClassType>::syscall_type(), printer);
-  DisplayValue<Type>(ClassFieldBase<ClassType>::syscall_type(), get_(object), printer);
-  printer << '\n';
 }
 
 template <typename ClassType, typename Type>
@@ -2669,57 +2241,6 @@ std::unique_ptr<fidl_codec::Type> ClassField<ClassType, Type>::ComputeType() con
     type = std::make_unique<fidl_codec::InvalidType>();
   }
   return type;
-}
-
-template <typename ClassType, typename Type>
-void ArrayField<ClassType, Type>::Display(const ClassType* object, debug_ipc::Arch /*arch*/,
-                                          fidl_codec::PrettyPrinter& printer) const {
-  printer << ClassFieldBase<ClassType>::name() << ": array<" << fidl_codec::Green
-          << TypeName(ClassFieldBase<ClassType>::syscall_type()) << fidl_codec::ResetColor
-          << "> = [";
-  const char* separator = " ";
-  std::pair<const Type*, int> array = get_(object);
-  for (int i = 0; i < array.second; ++i) {
-    printer << separator;
-    DisplayValue<Type>(ClassFieldBase<ClassType>::syscall_type(), array.first[i], printer);
-    separator = ", ";
-  }
-  printer << " ]\n";
-}
-
-template <typename Type, typename SizeType>
-inline void DisplayArrayValue(fidl_codec::PrettyPrinter& printer, SyscallType syscall_type,
-                              const Type* vector, const SizeType size) {
-  printer << "[";
-  const char* separator = " ";
-  for (SizeType i = 0; i < size; ++i) {
-    printer << separator;
-    DisplayValue<Type>(syscall_type, vector[i], printer);
-    separator = ", ";
-  }
-  printer << " ]\n";
-}
-
-template <>
-inline void DisplayArrayValue<char, size_t>(fidl_codec::PrettyPrinter& printer,
-                                            SyscallType syscall_type, const char* vector,
-                                            const size_t size) {
-  printer.DisplayString(std::string_view(vector, size));
-  printer << "\n";
-}
-
-template <typename ClassType, typename Type, typename SizeType>
-void DynamicArrayField<ClassType, Type, SizeType>::Display(
-    const ClassType* object, debug_ipc::Arch /*arch*/, fidl_codec::PrettyPrinter& printer) const {
-  printer << ClassFieldBase<ClassType>::name() << ": ";
-  printer << "vector<";
-  printer << fidl_codec::Green;
-  printer << TypeName(ClassFieldBase<ClassType>::syscall_type());
-  printer << fidl_codec::ResetColor << "> = ";
-
-  std::pair<const Type*, SizeType> vector_and_size = get_(object);
-  DisplayArrayValue<Type, SizeType>(printer, ClassFieldBase<ClassType>::syscall_type(),
-                                    vector_and_size.first, vector_and_size.second);
 }
 
 template <typename ClassType, typename Type>
@@ -2764,32 +2285,6 @@ std::unique_ptr<fidl_codec::Value> DynamicArrayField<ClassType, Type, SizeType>:
 }
 
 template <typename ClassType, typename Type>
-void ClassClassField<ClassType, Type>::Display(const ClassType* object, debug_ipc::Arch arch,
-                                               fidl_codec::PrettyPrinter& printer) const {
-  printer << ClassFieldBase<ClassType>::name() << ": " << fidl_codec::Green << field_class_->name()
-          << fidl_codec::ResetColor << " = ";
-  const Type* sub_object = get_(object);
-  field_class_->DisplayObject(sub_object, arch, printer);
-  printer << '\n';
-}
-
-template <typename ClassType, typename Type>
-void ArrayClassField<ClassType, Type>::Display(const ClassType* object, debug_ipc::Arch arch,
-                                               fidl_codec::PrettyPrinter& printer) const {
-  printer << ClassFieldBase<ClassType>::name() << ": array<" << fidl_codec::Green
-          << sub_class_->name() << fidl_codec::ResetColor << "> = [\n";
-  {
-    fidl_codec::Indent indent(printer);
-    std::pair<const Type*, int> array = get_(object);
-    for (int i = 0; i < array.second; ++i) {
-      sub_class_->DisplayObject(array.first + i, arch, printer);
-      printer << '\n';
-    }
-  }
-  printer << "]\n";
-}
-
-template <typename ClassType, typename Type>
 std::unique_ptr<fidl_codec::Value> ArrayClassField<ClassType, Type>::GenerateValue(
     const ClassType* object, debug_ipc::Arch arch) const {
   auto vector_value = std::make_unique<fidl_codec::VectorValue>();
@@ -2800,23 +2295,6 @@ std::unique_ptr<fidl_codec::Value> ArrayClassField<ClassType, Type>::GenerateVal
   }
 
   return vector_value;
-}
-
-template <typename ClassType, typename Type>
-void DynamicArrayClassField<ClassType, Type>::Display(const ClassType* object, debug_ipc::Arch arch,
-                                                      fidl_codec::PrettyPrinter& printer) const {
-  printer << ClassFieldBase<ClassType>::name() << ": vector<" << fidl_codec::Green
-          << sub_class_->name() << fidl_codec::ResetColor << "> = [\n";
-  {
-    fidl_codec::Indent indent(printer);
-    const Type* array = get_(object);
-    uint32_t size = get_size_(object);
-    for (uint32_t i = 0; i < size; ++i) {
-      sub_class_->DisplayObject(array + i, arch, printer);
-      printer << '\n';
-    }
-  }
-  printer << "]\n";
 }
 
 template <typename ClassType, typename Type>
@@ -2845,138 +2323,11 @@ std::unique_ptr<fidl_codec::Value> Access<Type>::GenerateValue(SyscallDecoderInt
   return std::make_unique<fidl_codec::NullValue>();
 }
 
-template <typename Type>
-void Access<Type>::Display(SyscallDecoderInterface* decoder, Stage stage, std::string_view name,
-                           fidl_codec::PrettyPrinter& printer) const {
-  printer << name;
-  DisplayType(GetSyscallType(), printer);
-  if (ValueValid(decoder, stage)) {
-    DisplayValue<Type>(GetSyscallType(), Value(decoder, stage), printer);
-  } else {
-    printer << fidl_codec::Red << "(nullptr)" << fidl_codec::ResetColor;
-  }
-}
-
-template <typename Type>
-const char* SyscallInputOutputActualAndRequested<Type>::DisplayInline(
-    SyscallDecoderInterface* decoder, Stage stage, const char* separator,
-    fidl_codec::PrettyPrinter& printer) const {
-  printer << separator;
-  actual_->Display(decoder, stage, name(), printer);
-  printer << "/";
-  if (requested_->ValueValid(decoder, stage)) {
-    DisplayValue<Type>(requested_->GetSyscallType(), requested_->Value(decoder, stage), printer);
-  } else {
-    printer << fidl_codec::Red << "(nullptr)" << fidl_codec::ResetColor;
-  }
-  return ", ";
-}
-
-template <typename Type, typename FromType>
-const char* SyscallInputOutputIndirect<Type, FromType>::DisplayInline(
-    SyscallDecoderInterface* decoder, Stage stage, const char* separator,
-    fidl_codec::PrettyPrinter& printer) const {
-  printer << separator << name();
-  DisplayType(syscall_type_, printer);
-  const FromType* buffer = buffer_->Content(decoder, stage);
-  if (buffer == nullptr) {
-    printer << fidl_codec::Red << "nullptr" << fidl_codec::ResetColor;
-  } else {
-    DisplayValue<Type>(syscall_type_, *reinterpret_cast<const Type*>(buffer), printer);
-  }
-  return ", ";
-}
-
 template <typename Type, typename FromType>
 std::unique_ptr<fidl_codec::Value> SyscallInputOutputIndirect<Type, FromType>::GenerateValue(
     SyscallDecoderInterface* decoder, Stage stage) const {
   const FromType* buffer = buffer_->Content(decoder, stage);
   return fidlcat::GenerateValue<Type>(*reinterpret_cast<const Type*>(buffer));
-}
-
-template <typename Type, typename FromType, typename SizeType>
-void SyscallInputOutputBuffer<Type, FromType, SizeType>::DisplayOutline(
-    SyscallDecoderInterface* decoder, Stage stage, fidl_codec::PrettyPrinter& printer) const {
-  fidl_codec::Indent indent(printer);
-  printer << name();
-  DisplayType(syscall_type_, printer);
-  const FromType* buffer = buffer_->Content(decoder, stage);
-  if (buffer == nullptr) {
-    printer << fidl_codec::Red << "nullptr" << fidl_codec::ResetColor;
-  } else {
-    size_t buffer_size = elem_size_->Value(decoder, stage);
-    if (elem_count_ != nullptr) {
-      buffer_size *= elem_count_->Value(decoder, stage);
-    }
-    if (buffer_size == 0) {
-      printer << "empty\n";
-      return;
-    }
-    const char* separator = "";
-    for (size_t i = 0; i < buffer_size; ++i) {
-      printer << separator;
-      DisplayValue<Type>(syscall_type_, reinterpret_cast<const Type*>(buffer)[i], printer);
-      separator = ", ";
-    }
-  }
-  printer << '\n';
-}
-
-template <>
-inline void SyscallInputOutputBuffer<uint8_t, uint8_t, size_t>::DisplayOutline(
-    SyscallDecoderInterface* decoder, Stage stage, fidl_codec::PrettyPrinter& printer) const {
-  fidl_codec::Indent indent(printer);
-  printer << name();
-  DisplayType(syscall_type_, printer);
-  const uint8_t* buffer = buffer_->Content(decoder, stage);
-  if (buffer == nullptr) {
-    printer << fidl_codec::Red << "nullptr" << fidl_codec::ResetColor;
-  } else {
-    size_t buffer_size = elem_size_->Value(decoder, stage);
-    if (elem_count_ != nullptr) {
-      buffer_size *= elem_count_->Value(decoder, stage);
-    }
-    if (buffer_size == 0) {
-      printer << "empty\n";
-      return;
-    }
-    for (size_t i = 0;; ++i) {
-      if (i == buffer_size) {
-        printer << fidl_codec::Red << '"';
-        for (size_t i = 0; i < buffer_size; ++i) {
-          char value = reinterpret_cast<const char*>(buffer)[i];
-          switch (value) {
-            case 0:
-              break;
-            case '\\':
-              printer << "\\\\";
-              break;
-            case '\n':
-              printer << "\\n";
-              break;
-            default:
-              printer << value;
-              break;
-          }
-        }
-        printer << '"' << fidl_codec::ResetColor << '\n';
-        return;
-      }
-      if ((buffer[i] == 0) && (i != buffer_size - 1)) {
-        break;
-      }
-      if (!std::isprint(buffer[i]) && (buffer[i] != '\n')) {
-        break;
-      }
-    }
-    const char* separator = "";
-    for (size_t i = 0; i < buffer_size; ++i) {
-      printer << separator;
-      DisplayValue<uint8_t>(buffer_->GetSyscallType(), buffer[i], printer);
-      separator = ", ";
-    }
-  }
-  printer << '\n';
 }
 
 template <typename Type, typename FromType, typename SizeType>
@@ -3004,33 +2355,6 @@ SyscallInputOutputBuffer<Type, FromType, SizeType>::GenerateValue(SyscallDecoder
   return vector_value;
 }
 
-template <typename FromType>
-const char* SyscallInputOutputString<FromType>::DisplayInline(
-    SyscallDecoderInterface* decoder, Stage stage, const char* separator,
-    fidl_codec::PrettyPrinter& printer) const {
-  printer << separator;
-  printer << name() << ": " << fidl_codec::Green << "string" << fidl_codec::ResetColor << " = ";
-  const char* string = reinterpret_cast<const char*>(string_->Content(decoder, stage));
-  size_t string_size = string_size_->Value(decoder, stage);
-  printer.DisplayString(std::string_view(string, string_size));
-  return ", ";
-}
-
-template <typename ClassType, typename SizeType>
-void SyscallInputOutputObject<ClassType, SizeType>::DisplayOutline(
-    SyscallDecoderInterface* decoder, Stage stage, fidl_codec::PrettyPrinter& printer) const {
-  fidl_codec::Indent indent(printer);
-  printer << name() << ": " << fidl_codec::Green << class_definition_->name()
-          << fidl_codec::ResetColor << " = ";
-  auto object = reinterpret_cast<const ClassType*>(buffer_->Uint8Content(decoder, stage));
-  if (object == nullptr) {
-    printer << fidl_codec::Red << "nullptr" << fidl_codec::ResetColor;
-  } else {
-    class_definition_->DisplayObject(object, decoder->arch(), printer);
-  }
-  printer << '\n';
-}
-
 template <typename ClassType, typename SizeType>
 std::unique_ptr<fidl_codec::Value>
 SyscallInputOutputObjectArray<ClassType, SizeType>::GenerateValue(SyscallDecoderInterface* decoder,
@@ -3045,31 +2369,6 @@ SyscallInputOutputObjectArray<ClassType, SizeType>::GenerateValue(SyscallDecoder
     vector_value->AddValue(class_definition_->GenerateValue(object + i, decoder->arch()));
   }
   return vector_value;
-}
-
-template <typename ClassType, typename SizeType>
-void SyscallInputOutputObjectArray<ClassType, SizeType>::DisplayOutline(
-    SyscallDecoderInterface* decoder, Stage stage, fidl_codec::PrettyPrinter& printer) const {
-  fidl_codec::Indent indent(printer);
-  printer << name() << ": vector<" << fidl_codec::Green << class_definition_->name()
-          << fidl_codec::ResetColor << "> = ";
-  auto object = reinterpret_cast<const ClassType*>(buffer_->Uint8Content(decoder, stage));
-  if (object == nullptr) {
-    printer << fidl_codec::Red << "nullptr" << fidl_codec::ResetColor;
-  } else {
-    printer << " [";
-    SizeType count = buffer_size_->Value(decoder, stage);
-    const char* separator = "\n";
-    for (SizeType i = 0; i < count; ++i) {
-      printer << separator;
-      fidl_codec::Indent indent(printer);
-      class_definition_->DisplayObject(object + i, decoder->arch(), printer);
-      separator = ",\n";
-    }
-    printer << '\n';
-    printer << ']';
-  }
-  printer << '\n';
 }
 
 }  // namespace fidlcat

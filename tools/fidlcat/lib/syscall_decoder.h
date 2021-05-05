@@ -36,16 +36,6 @@ class SyscallDecoder;
 class SyscallDecoderDispatcher;
 class SyscallDisplayDispatcher;
 
-class SyscallUse {
- public:
-  SyscallUse() = default;
-  virtual ~SyscallUse() = default;
-
-  virtual void SyscallInputsDecoded(SyscallDecoder* decoder);
-  virtual void SyscallOutputsDecoded(SyscallDecoder* decoder);
-  virtual void SyscallDecodingError(const DecoderError& error, SyscallDecoder* decoder);
-};
-
 // Handles the decoding of a syscall argument. At the end, it holds the value
 // of the argument in |value_| for basic types or in |loaded_values_| for
 // buffers and structs.
@@ -117,8 +107,7 @@ class SyscallDecoderBuffer {
 class SyscallDecoder : public SyscallDecoderInterface {
  public:
   SyscallDecoder(SyscallDecoderDispatcher* dispatcher, InterceptingThreadObserver* thread_observer,
-                 zxdb::Thread* thread, const Syscall* syscall, std::unique_ptr<SyscallUse> use,
-                 int64_t timestamp);
+                 zxdb::Thread* thread, const Syscall* syscall, int64_t timestamp);
 
   zxdb::Thread* get_thread() const { return weak_thread_.get(); }
   const Syscall* syscall() const { return syscall_; }
@@ -137,6 +126,8 @@ class SyscallDecoder : public SyscallDecoderInterface {
     aborted_ = true;
     return error_.Set(type);
   }
+
+  void SyscallDecodingError();
 
   // Load the value for a buffer or a struct (field or argument).
   void LoadMemory(uint64_t address, size_t size, std::vector<uint8_t>* destination);
@@ -239,7 +230,6 @@ class SyscallDecoder : public SyscallDecoderInterface {
   InterceptingThreadObserver* const thread_observer_;
   const fxl::WeakPtr<zxdb::Thread> weak_thread_;
   const Syscall* const syscall_;
-  std::unique_ptr<SyscallUse> use_;
   const int64_t timestamp_;
   std::vector<zxdb::Location> caller_locations_;
   uint64_t entry_sp_ = 0;
@@ -254,38 +244,6 @@ class SyscallDecoder : public SyscallDecoderInterface {
   // Keeps a reference on the events.
   std::shared_ptr<InvokedEvent> invoked_event_;
   std::shared_ptr<OutputEvent> output_event_;
-};
-
-class SyscallDisplay : public SyscallUse {
- public:
-  SyscallDisplay(SyscallDisplayDispatcher* dispatcher, std::ostream& os)
-      : dispatcher_(dispatcher), os_(os) {}
-
-  void SyscallInputsDecoded(SyscallDecoder* decoder) override;
-  void DisplayInputs(SyscallDecoder* decoder);
-  void SyscallOutputsDecoded(SyscallDecoder* decoder) override;
-  void SyscallDecodingError(const DecoderError& error, SyscallDecoder* decoder) override;
-
- private:
-  SyscallDisplayDispatcher* const dispatcher_;
-  std::ostream& os_;
-  // True if the syscall is displayed (from the inputs' point of view).
-  bool displayed_ = false;
-};
-
-class SyscallCompare : public SyscallDisplay {
- public:
-  SyscallCompare(SyscallDisplayDispatcher* dispatcher, std::shared_ptr<Comparator> comparator,
-                 std::ostringstream& os)
-      : SyscallDisplay(dispatcher, os), comparator_(comparator), os_(os) {}
-
-  void SyscallInputsDecoded(SyscallDecoder* decoder) override;
-  void SyscallOutputsDecoded(SyscallDecoder* decoder) override;
-  void SyscallDecodingError(const DecoderError& error, SyscallDecoder* decoder) override;
-
- private:
-  std::shared_ptr<Comparator> comparator_;
-  std::ostringstream& os_;
 };
 
 }  // namespace fidlcat
