@@ -45,6 +45,11 @@ pub fn sys_write(
     Ok(file.write(&ctx.task, &[iovec_t { iov_base: buffer, iov_len: count }])?.into())
 }
 
+pub fn sys_close(ctx: &SyscallContext<'_>, fd: FdNumber) -> Result<SyscallResult, Errno> {
+    ctx.task.files.close(fd)?;
+    Ok(SUCCESS)
+}
+
 pub fn sys_fcntl(
     ctx: &SyscallContext<'_>,
     fd: FdNumber,
