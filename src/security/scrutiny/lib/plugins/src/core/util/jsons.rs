@@ -82,8 +82,6 @@ pub struct ServicePackageDefinition {
     pub services: Option<HashMap<String, Value>>,
     /// List of component Urls started on sys realm launch
     pub apps: Option<Vec<String>>,
-    // FIXME: Other json structs are built such that unused fields are present but commented out.
-    // This one omits the completely.
 }
 
 /// JSON structure that contains the sandbox definition defined for builtin packages.

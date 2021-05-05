@@ -137,8 +137,10 @@ impl PackageDataCollector {
 
         for pkg_def in served {
             if pkg_def.url == CONFIG_DATA_PKG_URL {
+                info!("Extracting config data");
                 for (name, data) in &pkg_def.meta {
                     if SERVICE_CONFIG_RE.is_match(&name) {
+                        info!("Reading service definition: {}", name);
                         let service_pkg =
                             package_reader.read_service_package_definition(data.to_string())?;
                         if let Some(apps) = service_pkg.apps {
@@ -510,7 +512,9 @@ impl PackageDataCollector {
 
         // Iterate through all served packages, for each cmx they define, create a node.
         let mut component_id = 0;
+        info!("Found {} package", fuchsia_packages.len());
         for pkg in fuchsia_packages.iter() {
+            info!("Extracting package: {}", pkg.url);
             let package = Package {
                 url: pkg.url.clone(),
                 merkle: pkg.merkle.clone(),

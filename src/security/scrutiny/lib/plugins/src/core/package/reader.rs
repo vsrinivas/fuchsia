@@ -6,6 +6,7 @@ use {
     crate::core::{package::getter::*, util, util::jsons::*, util::types::*},
     anyhow::Result,
     fuchsia_archive::Reader as FarReader,
+    serde_json::Value,
     std::collections::HashMap,
     std::io::Cursor,
     std::str,
@@ -120,8 +121,35 @@ impl PackageReader for PackageServerReader {
         Ok(pkg_def)
     }
 
+    /// Reads the raw config-data package definition and converts it into a
+    /// ServicePackageDefinition.
     fn read_service_package_definition(&self, data: String) -> Result<ServicePackageDefinition> {
-        Ok(serde_json::from_str(&data)?)
+        let json: Value = serde_json::from_str(&data)?;
+        let mut service_def = ServicePackageDefinition { services: None, apps: None };
+        if let Some(json_services) = json.get("services") {
+            service_def.services = Some(serde_json::from_value(json_services.clone()).unwrap());
+        }
+        // App entries can be a composite of strings and vectors which serde doesn't handle
+        // by default. So this checks each entry for its underlying type and flattens the
+        // structure to extract just the app(the first entry in the array) or the
+        // string if it is not part of an inner array.
+        if let Some(json_apps) = json.get("apps") {
+            if json_apps.is_array() {
+                let mut apps = Vec::new();
+                for e in json_apps.as_array().unwrap() {
+                    if e.is_string() {
+                        apps.push(String::from(e.as_str().unwrap()));
+                    } else if e.is_array() {
+                        let inner = e.as_array().unwrap();
+                        if inner.len() > 0 {
+                            apps.push(String::from(inner[0].as_str().unwrap()));
+                        }
+                    }
+                }
+                service_def.apps = Some(apps);
+            }
+        }
+        Ok(service_def)
     }
 }
 
@@ -134,6 +162,32 @@ mod tests {
         std::collections::BTreeMap,
         std::io::{Cursor, Read},
     };
+
+    #[test]
+    fn read_package_service_definition() {
+        let mock_getter = MockPackageGetter::new();
+
+        let service_def = "{
+            \"apps\": [
+                       \"fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx\",
+                       [\"fuchsia-pkg://fuchsia.com/bar#meta/bar.cmx\", \"--test\"]
+            ],
+            \"services\": {
+                \"fuchsia.foo.Foo\": \"fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx\",
+                \"fuchsia.bar.Bar\": \"fuchsia-pkg://fuchsia.com/bar#meta/bar.cmx\"
+            }
+        }";
+        let pkg_reader = PackageServerReader::new(Box::new(mock_getter));
+        let result = pkg_reader.read_service_package_definition(service_def.to_string()).unwrap();
+        assert_eq!(
+            result.apps.unwrap(),
+            vec![
+                "fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx".to_string(),
+                "fuchsia-pkg://fuchsia.com/bar#meta/bar.cmx".to_string()
+            ]
+        );
+        assert_eq!(result.services.unwrap().len(), 2);
+    }
 
     #[test]
     fn read_package_definition_ignores_invalid_files() {
