@@ -25,7 +25,7 @@
 
 #include <zxtest/zxtest.h>
 
-class PhyServer : public fidl::WireInterface<fuchsia_hardware_registers::Device> {
+class PhyServer : public fidl::WireServer<fuchsia_hardware_registers::Device> {
  public:
   PhyServer() : loop_(&kAsyncLoopConfigNeverAttachToThread) {
     zx::channel channels[2];
@@ -34,38 +34,38 @@ class PhyServer : public fidl::WireInterface<fuchsia_hardware_registers::Device>
     fidl::BindServer(loop_.dispatcher(), std::move(channels[0]), this);
     loop_.StartThread();
   }
-  void ReadRegister8(uint64_t address, uint8_t mask,
+  void ReadRegister8(ReadRegister8RequestView request,
                      ReadRegister8Completer::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
-  void ReadRegister16(uint64_t address, uint16_t mask,
+  void ReadRegister16(ReadRegister16RequestView request,
                       ReadRegister16Completer::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
-  void ReadRegister32(uint64_t address, uint32_t mask,
+  void ReadRegister32(ReadRegister32RequestView request,
                       ReadRegister32Completer::Sync& completer) override {
-    address_ = address;
+    address_ = request->offset;
     completer.ReplySuccess(value_);
   }
-  void ReadRegister64(uint64_t address, uint64_t mask,
+  void ReadRegister64(ReadRegister64RequestView request,
                       ReadRegister64Completer::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
-  void WriteRegister8(uint64_t address, uint8_t mask, uint8_t value,
+  void WriteRegister8(WriteRegister8RequestView request,
                       WriteRegister8Completer::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
-  void WriteRegister16(uint64_t address, uint16_t mask, uint16_t value,
+  void WriteRegister16(WriteRegister16RequestView request,
                        WriteRegister16Completer::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
-  void WriteRegister32(uint64_t address, uint32_t mask, uint32_t value,
+  void WriteRegister32(WriteRegister32RequestView request,
                        WriteRegister32Completer::Sync& completer) override {
-    address_ = address;
-    value_ = value;
+    address_ = request->offset;
+    value_ = request->value;
     completer.ReplySuccess();
   }
-  void WriteRegister64(uint64_t address, uint64_t mask, uint64_t value,
+  void WriteRegister64(WriteRegister64RequestView request,
                        WriteRegister64Completer::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }

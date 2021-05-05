@@ -14,7 +14,7 @@
 namespace mock_registers {
 
 // Mock Registers. FIDL implementation.
-class MockRegisters : public fidl::WireInterface<fuchsia_hardware_registers::Device> {
+class MockRegisters : public fidl::WireServer<fuchsia_hardware_registers::Device> {
  public:
   explicit MockRegisters(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
   ~MockRegisters() {}
@@ -43,33 +43,37 @@ class MockRegisters : public fidl::WireInterface<fuchsia_hardware_registers::Dev
 
  private:
   // Implement Registers FIDL Protocol.
-  void ReadRegister8(uint64_t offset, uint8_t mask, ReadRegister8Completer::Sync& completer) {
-    ReadRegister(offset, mask, completer);
+  void ReadRegister8(ReadRegister8RequestView request,
+                     ReadRegister8Completer::Sync& completer) override {
+    ReadRegister(request->offset, request->mask, completer);
   }
-  void ReadRegister16(uint64_t offset, uint16_t mask, ReadRegister16Completer::Sync& completer) {
-    ReadRegister(offset, mask, completer);
+  void ReadRegister16(ReadRegister16RequestView request,
+                      ReadRegister16Completer::Sync& completer) override {
+    ReadRegister(request->offset, request->mask, completer);
   }
-  void ReadRegister32(uint64_t offset, uint32_t mask, ReadRegister32Completer::Sync& completer) {
-    ReadRegister(offset, mask, completer);
+  void ReadRegister32(ReadRegister32RequestView request,
+                      ReadRegister32Completer::Sync& completer) override {
+    ReadRegister(request->offset, request->mask, completer);
   }
-  void ReadRegister64(uint64_t offset, uint64_t mask, ReadRegister64Completer::Sync& completer) {
-    ReadRegister(offset, mask, completer);
+  void ReadRegister64(ReadRegister64RequestView request,
+                      ReadRegister64Completer::Sync& completer) override {
+    ReadRegister(request->offset, request->mask, completer);
   }
-  void WriteRegister8(uint64_t offset, uint8_t mask, uint8_t value,
-                      WriteRegister8Completer::Sync& completer) {
-    WriteRegister(offset, mask, value, completer);
+  void WriteRegister8(WriteRegister8RequestView request,
+                      WriteRegister8Completer::Sync& completer) override {
+    WriteRegister(request->offset, request->mask, request->value, completer);
   }
-  void WriteRegister16(uint64_t offset, uint16_t mask, uint16_t value,
-                       WriteRegister16Completer::Sync& completer) {
-    WriteRegister(offset, mask, value, completer);
+  void WriteRegister16(WriteRegister16RequestView request,
+                       WriteRegister16Completer::Sync& completer) override {
+    WriteRegister(request->offset, request->mask, request->value, completer);
   }
-  void WriteRegister32(uint64_t offset, uint32_t mask, uint32_t value,
-                       WriteRegister32Completer::Sync& completer) {
-    WriteRegister(offset, mask, value, completer);
+  void WriteRegister32(WriteRegister32RequestView request,
+                       WriteRegister32Completer::Sync& completer) override {
+    WriteRegister(request->offset, request->mask, request->value, completer);
   }
-  void WriteRegister64(uint64_t offset, uint64_t mask, uint64_t value,
-                       WriteRegister64Completer::Sync& completer) {
-    WriteRegister(offset, mask, value, completer);
+  void WriteRegister64(WriteRegister64RequestView request,
+                       WriteRegister64Completer::Sync& completer) override {
+    WriteRegister(request->offset, request->mask, request->value, completer);
   }
 
   // Helper functions for FIDL
