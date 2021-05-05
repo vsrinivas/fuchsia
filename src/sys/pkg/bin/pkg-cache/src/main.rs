@@ -60,6 +60,7 @@ async fn main_inner() -> Result<(), Error> {
     let Args { ignore_system_image } = argh::from_env();
 
     let inspector = finspect::Inspector::new();
+    let index_node = inspector.root().create_child("index");
 
     let (cobalt_sender, cobalt_fut) = CobaltConnector { buffer_size: COBALT_CONNECTOR_BUFFER_SIZE }
         .serve(ConnectionType::project_id(metrics::PROJECT_ID));
@@ -77,7 +78,7 @@ async fn main_inner() -> Result<(), Error> {
         pkgfs::needs::Client::open_from_namespace().context("error opening /pkgfs/needs")?;
     let blobfs = blobfs::Client::open_from_namespace().context("error opening blobfs")?;
 
-    let mut dynamic_index = DynamicIndex::new();
+    let mut dynamic_index = DynamicIndex::new(index_node.create_child("dynamic"));
     let (static_packages, _pkgfs_inspect, blob_location, _load_cache_packages) = {
         let static_packages_fut = get_static_packages(&pkgfs_system);
 

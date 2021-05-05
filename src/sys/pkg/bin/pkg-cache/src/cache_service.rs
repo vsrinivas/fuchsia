@@ -1144,6 +1144,7 @@ mod serve_needed_blobs_tests {
         fidl_fuchsia_io::FileMarker,
         fidl_fuchsia_pkg::{BlobInfoIteratorMarker, BlobInfoIteratorProxy, NeededBlobsProxy},
         fuchsia_hash::HashRangeFull,
+        fuchsia_inspect as finspect,
         matches::assert_matches,
         std::collections::BTreeSet,
     };
@@ -1157,8 +1158,10 @@ mod serve_needed_blobs_tests {
         let (pkgfs_install, _) = pkgfs::install::Client::new_test();
         let (pkgfs_needs, _) = pkgfs::needs::Client::new_test();
         let (blobfs, _) = blobfs::Client::new_test();
-
-        let dynamic_index = Arc::new(Mutex::new(DynamicIndex::new()));
+        let inspector = finspect::Inspector::new();
+        let dynamic_index = Arc::new(Mutex::new(DynamicIndex::new(
+            inspector.root().create_child("test_does_not_use_inspect "),
+        )));
 
         assert_matches!(
             serve_needed_blobs(
@@ -1189,8 +1192,10 @@ mod serve_needed_blobs_tests {
         let (pkgfs_install, pkgfs_install_mock) = pkgfs::install::Client::new_mock();
         let (pkgfs_needs, pkgfs_needs_mock) = pkgfs::needs::Client::new_mock();
         let (blobfs_fake, blobfs) = fuchsia_pkg_testing::blobfs::Fake::new();
-
-        let dynamic_index = Arc::new(Mutex::new(DynamicIndex::new()));
+        let inspector = finspect::Inspector::new();
+        let dynamic_index = Arc::new(Mutex::new(DynamicIndex::new(
+            inspector.root().create_child("test_does_not_use_inspect "),
+        )));
 
         (
             Task::spawn(async move {
@@ -2148,6 +2153,7 @@ mod get_handler_tests {
     use super::*;
     use fidl_fuchsia_pkg::NeededBlobsProxy;
     use fuchsia_cobalt::{CobaltConnector, ConnectionType};
+    use fuchsia_inspect as finspect;
     use matches::assert_matches;
 
     fn spawn_get_with_mocks(
@@ -2167,8 +2173,10 @@ mod get_handler_tests {
         let (pkgfs_install, pkgfs_install_mock) = pkgfs::install::Client::new_mock();
         let (pkgfs_needs, pkgfs_needs_mock) = pkgfs::needs::Client::new_mock();
         let (blobfs_fake, blobfs) = fuchsia_pkg_testing::blobfs::Fake::new();
-
-        let dynamic_index = Arc::new(Mutex::new(DynamicIndex::new()));
+        let inspector = finspect::Inspector::new();
+        let dynamic_index = Arc::new(Mutex::new(DynamicIndex::new(
+            inspector.root().create_child("test_does_not_use_inspect "),
+        )));
 
         let (cobalt_sender, _) =
             CobaltConnector::default().serve(ConnectionType::project_id(metrics::PROJECT_ID));
@@ -2207,8 +2215,10 @@ mod get_handler_tests {
         let (pkgfs_install, _) = pkgfs::install::Client::new_test();
         let (pkgfs_needs, _) = pkgfs::needs::Client::new_test();
         let (blobfs, _) = blobfs::Client::new_test();
-
-        let dynamic_index = Arc::new(Mutex::new(DynamicIndex::new()));
+        let inspector = finspect::Inspector::new();
+        let dynamic_index = Arc::new(Mutex::new(DynamicIndex::new(
+            inspector.root().create_child("test_does_not_use_inspect "),
+        )));
 
         let (cobalt_sender, _) =
             CobaltConnector::default().serve(ConnectionType::project_id(metrics::PROJECT_ID));

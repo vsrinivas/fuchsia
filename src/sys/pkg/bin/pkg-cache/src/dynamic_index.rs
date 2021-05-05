@@ -6,6 +6,7 @@
 
 use {
     anyhow::{Context as _, Error},
+    fuchsia_inspect as finspect,
     fuchsia_merkle::Hash,
     fuchsia_pkg::{MetaContents, MetaPackage, PackagePath},
     fuchsia_syslog::{fx_log_err, fx_log_warn},
@@ -25,6 +26,8 @@ pub struct DynamicIndex {
     packages: HashMap<Hash, Package>,
     /// map of package path to most recently activated package hash.
     active_packages: HashMap<PackagePath, Hash>,
+    /// The index's root node.
+    node: finspect::Node,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -52,8 +55,8 @@ pub enum DynamicIndexError {
 }
 
 impl DynamicIndex {
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new(node: finspect::Node) -> Self {
+        DynamicIndex { node, ..Default::default() }
     }
 
     // Add the given package to the dynamic index.
@@ -266,7 +269,8 @@ mod tests {
 
     #[test]
     fn test_all_blobs() {
-        let mut dynamic_index = DynamicIndex::new();
+        let inspector = finspect::Inspector::new();
+        let mut dynamic_index = DynamicIndex::new(inspector.root().create_child("index"));
         assert_eq!(dynamic_index.all_blobs(), HashSet::new());
 
         dynamic_index.add_package(Hash::from([1; 32]), Package::Pending);
@@ -300,7 +304,8 @@ mod tests {
 
     #[test]
     fn test_complete_install() {
-        let mut dynamic_index = DynamicIndex::new();
+        let inspector = finspect::Inspector::new();
+        let mut dynamic_index = DynamicIndex::new(inspector.root().create_child("index"));
 
         let hash = Hash::from([2; 32]);
         let path = PackagePath::from_name_and_variant("fake-package", "0").unwrap();
@@ -338,7 +343,8 @@ mod tests {
 
     #[test]
     fn complete_install_unknown_package() {
-        let mut dynamic_index = DynamicIndex::new();
+        let inspector = finspect::Inspector::new();
+        let mut dynamic_index = DynamicIndex::new(inspector.root().create_child("index"));
 
         assert_matches!(
             dynamic_index.complete_install(Hash::from([2; 32])),
@@ -348,7 +354,8 @@ mod tests {
 
     #[test]
     fn complete_install_pending_package() {
-        let mut dynamic_index = DynamicIndex::new();
+        let inspector = finspect::Inspector::new();
+        let mut dynamic_index = DynamicIndex::new(inspector.root().create_child("index"));
 
         let hash = Hash::from([2; 32]);
         dynamic_index.add_package(hash, Package::Pending);
@@ -360,7 +367,8 @@ mod tests {
 
     #[test]
     fn complete_install_active_package() {
-        let mut dynamic_index = DynamicIndex::new();
+        let inspector = finspect::Inspector::new();
+        let mut dynamic_index = DynamicIndex::new(inspector.root().create_child("index"));
 
         let hash = Hash::from([2; 32]);
         let package = Package::Active {
@@ -376,7 +384,8 @@ mod tests {
 
     #[test]
     fn start_install() {
-        let mut dynamic_index = DynamicIndex::new();
+        let inspector = finspect::Inspector::new();
+        let mut dynamic_index = DynamicIndex::new(inspector.root().create_child("index"));
 
         let hash = Hash::from([2; 32]);
         dynamic_index.start_install(hash);
@@ -386,7 +395,8 @@ mod tests {
 
     #[test]
     fn start_install_do_not_overwrite() {
-        let mut dynamic_index = DynamicIndex::new();
+        let inspector = finspect::Inspector::new();
+        let mut dynamic_index = DynamicIndex::new(inspector.root().create_child("index"));
 
         let hash = Hash::from([2; 32]);
         let package = Package::WithMetaFar {
@@ -403,7 +413,8 @@ mod tests {
 
     #[test]
     fn cancel_install() {
-        let mut dynamic_index = DynamicIndex::new();
+        let inspector = finspect::Inspector::new();
+        let mut dynamic_index = DynamicIndex::new(inspector.root().create_child("index"));
 
         let hash = Hash::from([2; 32]);
         dynamic_index.start_install(hash);
@@ -414,7 +425,8 @@ mod tests {
 
     #[test]
     fn cancel_install_with_meta_far() {
-        let mut dynamic_index = DynamicIndex::new();
+        let inspector = finspect::Inspector::new();
+        let mut dynamic_index = DynamicIndex::new(inspector.root().create_child("index"));
 
         let hash = Hash::from([2; 32]);
         dynamic_index.add_package(
@@ -431,7 +443,8 @@ mod tests {
 
     #[test]
     fn cancel_install_active() {
-        let mut dynamic_index = DynamicIndex::new();
+        let inspector = finspect::Inspector::new();
+        let mut dynamic_index = DynamicIndex::new(inspector.root().create_child("index"));
 
         let hash = Hash::from([2; 32]);
         let path = PackagePath::from_name_and_variant("fake-package", "0").unwrap();
@@ -447,7 +460,8 @@ mod tests {
 
     #[test]
     fn cancel_install_unknown() {
-        let mut dynamic_index = DynamicIndex::new();
+        let inspector = finspect::Inspector::new();
+        let mut dynamic_index = DynamicIndex::new(inspector.root().create_child("index"));
 
         dynamic_index.start_install(Hash::from([2; 32]));
         dynamic_index.cancel_install(&Hash::from([4; 32]));
@@ -534,8 +548,8 @@ mod tests {
                 ).unwrap()
         };
         let pkgfs = TestPkgfs::new(&cache_packages, &versions_contents);
-
-        let mut dynamic_index = DynamicIndex::new();
+        let inspector = finspect::Inspector::new();
+        let mut dynamic_index = DynamicIndex::new(inspector.root().create_child("index"));
         load_cache_packages(&mut dynamic_index, &pkgfs.system_image(), &pkgfs.versions())
             .await
             .unwrap();
@@ -577,7 +591,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn fulfill_meta_far_blob_with_missing_blobs() {
-        let mut dynamic_index = DynamicIndex::new();
+        let inspector = finspect::Inspector::new();
+        let mut dynamic_index = DynamicIndex::new(inspector.root().create_child("index"));
 
         let hash = Hash::from([2; 32]);
         let path = PackagePath::from_name_and_variant("fake-package", "0").unwrap();
@@ -608,7 +623,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn fulfill_meta_far_blob_no_missing_blobs() {
-        let mut dynamic_index = DynamicIndex::new();
+        let inspector = finspect::Inspector::new();
+        let mut dynamic_index = DynamicIndex::new(inspector.root().create_child("index"));
         let (mut blobfs_mock, blobfs) = fuchsia_pkg_testing::blobfs::Mock::new();
 
         let blob_hash = Hash::from([3; 32]);
@@ -657,7 +673,9 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn fulfill_meta_far_blob_not_needed() {
-        let dynamic_index = Arc::new(Mutex::new(DynamicIndex::new()));
+        let inspector = finspect::Inspector::new();
+        let dynamic_index =
+            Arc::new(Mutex::new(DynamicIndex::new(inspector.root().create_child("index"))));
 
         let (blobfs, _) = blobfs::Client::new_test();
 
