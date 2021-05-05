@@ -7,6 +7,5 @@ in the development of async code on Fuchsia.
 
 * Higher level abstractions over futures and concurrency primitives.
 * Generalized FIDL functionality
-  * Such as tools for implementing server and client side hanging get methods.
 * Async-specific test helpers
 * Anything else you deem fitting!

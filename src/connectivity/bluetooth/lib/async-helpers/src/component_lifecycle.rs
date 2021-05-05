@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::hanging_get::{
-    asynchronous::{HangingGetBroker, Publisher, SubscriptionRegistrar, DEFAULT_CHANNEL_SIZE},
-    error::HangingGetServerError,
-};
 use {
+    crate::hanging_get::asynchronous::{
+        HangingGetBroker, Publisher, SubscriptionRegistrar, DEFAULT_CHANNEL_SIZE,
+    },
+    async_utils::hanging_get::error::HangingGetServerError,
     fidl_fuchsia_bluetooth_component::{
         LifecycleGetStateResponder, LifecycleRequest, LifecycleRequestStream, LifecycleState,
     },

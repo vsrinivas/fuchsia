@@ -3,8 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::{hanging_get::error::HangingGetServerError, responding_channel as responding},
-    async_utils::stream::{StreamItem, WithEpitaph},
+    crate::responding_channel as responding,
+    async_utils::{
+        hanging_get::error::HangingGetServerError,
+        stream::{StreamItem, WithEpitaph},
+    },
     core::hash::Hash,
     futures::{channel::mpsc, select, SinkExt, StreamExt},
     std::collections::HashMap,
@@ -420,7 +423,7 @@ mod subscriber_key {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::hanging_get::test_util::TestObserver, fuchsia_async as fasync,
+        super::*, async_utils::hanging_get::test_util::TestObserver, fuchsia_async as fasync,
         futures::channel::oneshot, std::task::Poll,
     };
 

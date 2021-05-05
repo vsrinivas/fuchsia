@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    async_helpers::hanging_get::server::{HangingGet, Subscriber},
+    async_utils::hanging_get::server::{HangingGet, Subscriber},
     core::{
         convert::{TryFrom, TryInto},
         pin::Pin,

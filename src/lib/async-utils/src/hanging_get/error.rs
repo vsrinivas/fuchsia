@@ -8,14 +8,22 @@ use {
     thiserror::Error,
 };
 
+/// Error types that may be used by the async hanging-get server.
 #[derive(Error, Debug)]
 pub enum HangingGetServerError {
+    /// An existing observer was already present for the client.
     #[error("Cannot have multiple concurrent observers for a single client")]
     MultipleObservers,
+
+    /// The HangingGetBroker associated with this handle has been dropped.
     #[error("The HangingGetBroker associated with this handle has been dropped.")]
     NoBroker,
+
+    /// This handle is sending messages faster than the broker can process them.
     #[error("This handle is sending messages faster than the broker can process them.")]
     RateLimit,
+
+    /// Generic hanging-get server error.
     #[error("Error: {}", .0)]
     Generic(anyhow::Error),
 }

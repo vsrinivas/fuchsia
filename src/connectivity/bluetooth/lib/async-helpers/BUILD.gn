@@ -11,24 +11,16 @@ rustc_library("async-helpers") {
   deps = [
     "//src/connectivity/bluetooth/fidl:component-rustc",
     "//src/lib/async-utils",
-    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
-    "//third_party/rust_crates:parking_lot",
-    "//third_party/rust_crates:thiserror",
   ]
-
-  test_deps = [ "//third_party/rust_crates:futures-test" ]
 
   sources = [
     "src/component_lifecycle.rs",
     "src/hanging_get/async_server.rs",
-    "src/hanging_get/error.rs",
     "src/hanging_get/mod.rs",
-    "src/hanging_get/server.rs",
-    "src/hanging_get/test_util.rs",
     "src/lib.rs",
     "src/responding_channel.rs",
   ]

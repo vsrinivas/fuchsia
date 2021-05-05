@@ -10,7 +10,7 @@ use std::{cell::RefCell, fmt::Debug, rc::Rc};
 /// observation. This prevents overwriting observations without checking
 /// them and simplifies the logic and API surface of this fake.
 #[derive(Clone, Debug)]
-pub(crate) struct TestObserver<V: Debug + PartialEq> {
+pub struct TestObserver<V: Debug + PartialEq> {
     value: Rc<RefCell<Option<V>>>,
     expected: Option<V>,
 }

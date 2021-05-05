@@ -254,8 +254,10 @@ mod subscriber_key {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::hanging_get::test_util::TestObserver, async_utils::PollExt,
-        fuchsia_async as fasync, futures::channel::oneshot,
+        super::*,
+        crate::{hanging_get::test_util::TestObserver, PollExt},
+        fuchsia_async as fasync,
+        futures::channel::oneshot,
     };
 
     #[test]
