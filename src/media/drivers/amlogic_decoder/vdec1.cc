@@ -474,6 +474,12 @@ zx_status_t Vdec1::RestoreInputContext(InputContext* context) {
 
   auto temp = PowerCtlVld::Get().ReadFrom(mmio()->dosbus);
   temp.set_reg_value(temp.reg_value() | (1 << 4));
+  // Power on various parts of the VLD hardware. This needs to be done before
+  // swapping in or else some state will remain uninitialized. Bit 9 holds
+  // information related to the escape sequence status.
+  const bool kH264Video = true;
+  if (kH264Video)
+    temp.set_reg_value(temp.reg_value() | (1 << 6) | (1 << 9));
   temp.WriteTo(mmio()->dosbus);
 
   VldMemVififoControl::Get().FromValue(0).WriteTo(mmio()->dosbus);
