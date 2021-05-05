@@ -75,6 +75,12 @@ struct DecoderEncoderStatus {
 using DecoderEncoder = DecoderEncoderStatus (*)(uint8_t* bytes, uint32_t num_bytes,
                                                 zx_handle_info_t* handles, uint32_t handle_actual);
 
+struct DecoderEncoderForType {
+  const char* const fidl_type_name;
+  const bool has_flexible_envelope;
+  const DecoderEncoder decoder_encoder;
+};
+
 }  // namespace fuzzing
 }  // namespace fidl
 

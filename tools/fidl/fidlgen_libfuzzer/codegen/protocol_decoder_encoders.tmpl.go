@@ -10,11 +10,19 @@ const tmplProtocolDecoderEncoders = `
 {{- range .Methods -}}
 
 {{- if .HasRequest }}
-::fidl::fuzzing::DecoderEncoderImpl<{{ .WireRequest }}>,
+::fidl::fuzzing::DecoderEncoderForType{
+	.fidl_type_name = "{{ .WireRequest }}",
+	.has_flexible_envelope = {{ .Request.HasFlexibleEnvelope }},
+	.decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<{{ .WireRequest }}>,
+},
 {{- end -}}
 
 {{- if .HasResponse }}
-::fidl::fuzzing::DecoderEncoderImpl<{{ .WireResponse }}>,
+::fidl::fuzzing::DecoderEncoderForType{
+	.fidl_type_name = "{{ .WireResponse }}",
+	.has_flexible_envelope = {{ .Response.HasFlexibleEnvelope }},
+	.decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<{{ .WireResponse }}>,
+},
 {{- end -}}
 
 {{- end -}}

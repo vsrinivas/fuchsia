@@ -9,14 +9,30 @@
 
 namespace fuzzing {
 
-inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoder, 3>
+inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 3>
     fidl_test_placementofattributes_decoder_encoders = {
-        ::fidl::fuzzing::DecoderEncoderImpl<
-            ::fidl_test_placementofattributes::wire::ExampleTable>,
-        ::fidl::fuzzing::DecoderEncoderImpl<
-            ::fidl_test_placementofattributes::wire::ExampleStruct>,
-        ::fidl::fuzzing::DecoderEncoderImpl<::fidl::WireRequest<
-            ::fidl_test_placementofattributes::ExampleProtocol::Method>>,
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name =
+                "::fidl_test_placementofattributes::wire::ExampleTable",
+            .has_flexible_envelope = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
+                ::fidl_test_placementofattributes::wire::ExampleTable>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name =
+                "::fidl_test_placementofattributes::wire::ExampleStruct",
+            .has_flexible_envelope = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
+                ::fidl_test_placementofattributes::wire::ExampleStruct>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::fidl::WireRequest<::fidl_test_"
+                              "placementofattributes::ExampleProtocol::Method>",
+            .has_flexible_envelope = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
+                ::fidl::WireRequest<::fidl_test_placementofattributes::
+                                        ExampleProtocol::Method>>,
+        },
 };
 
 }  // namespace fuzzing

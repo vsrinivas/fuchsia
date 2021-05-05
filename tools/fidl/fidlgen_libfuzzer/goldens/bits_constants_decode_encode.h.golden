@@ -9,7 +9,7 @@
 
 namespace fuzzing {
 
-inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoder, 0>
+inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 0>
     fidl_test_bitsconstants_decoder_encoders = {
 
 };

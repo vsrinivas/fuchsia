@@ -53,6 +53,8 @@ success("UnionMigration_SingleVariant") {
 }
 
 success("ReverseOrdinalUnion") {
+    // TODO(fxbug.dev/72895): Fix C/C++ bindings.
+    bindings_denylist = [fuzzer_corpus],
     value = ReverseOrdinalUnionStruct {
         u: ReverseOrdinalUnion {
             x: 42,

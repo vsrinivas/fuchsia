@@ -9,16 +9,36 @@
 
 namespace fuzzing {
 
-inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoder, 4>
+inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 4>
     fidl_test_doccomments_decoder_encoders = {
-        ::fidl::fuzzing::DecoderEncoderImpl<
-            ::fidl_test_doccomments::wire::Table>,
-        ::fidl::fuzzing::DecoderEncoderImpl<
-            ::fidl_test_doccomments::wire::Struct>,
-        ::fidl::fuzzing::DecoderEncoderImpl<
-            ::fidl::WireRequest<::fidl_test_doccomments::Interface::Method>>,
-        ::fidl::fuzzing::DecoderEncoderImpl<
-            ::fidl::WireResponse<::fidl_test_doccomments::Interface::OnEvent>>,
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::fidl_test_doccomments::wire::Table",
+            .has_flexible_envelope = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
+                ::fidl_test_doccomments::wire::Table>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::fidl_test_doccomments::wire::Struct",
+            .has_flexible_envelope = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
+                ::fidl_test_doccomments::wire::Struct>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::fidl::WireRequest<::fidl_test_doccomments::"
+                              "Interface::Method>",
+            .has_flexible_envelope = false,
+            .decoder_encoder =
+                ::fidl::fuzzing::DecoderEncoderImpl<::fidl::WireRequest<
+                    ::fidl_test_doccomments::Interface::Method>>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::fidl::WireResponse<::fidl_test_doccomments::"
+                              "Interface::OnEvent>",
+            .has_flexible_envelope = false,
+            .decoder_encoder =
+                ::fidl::fuzzing::DecoderEncoderImpl<::fidl::WireResponse<
+                    ::fidl_test_doccomments::Interface::OnEvent>>,
+        },
 };
 
 }  // namespace fuzzing

@@ -6,6 +6,10 @@ package codegen
 
 const tmplDecoderEncoder = `
 {{- define "DecoderEncoder" -}}
-::fidl::fuzzing::DecoderEncoderImpl<{{ .Wire }}>,
+::fidl::fuzzing::DecoderEncoderForType{
+	.fidl_type_name = "{{ .Wire }}",
+	.has_flexible_envelope = {{ .HasFlexibleEnvelope }},
+	.decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<{{ .Wire }}>,
+},
 {{- end -}}
 `

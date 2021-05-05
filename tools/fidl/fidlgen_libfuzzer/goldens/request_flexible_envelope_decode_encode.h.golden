@@ -9,21 +9,49 @@
 
 namespace fuzzing {
 
-inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoder, 4>
+inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 4>
     fidl_test_requestflexibleenvelope_decoder_encoders = {
 
-        ::fidl::fuzzing::DecoderEncoderImpl<
-            ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
-                                    RequestStrictResponseFlexible>>,
-        ::fidl::fuzzing::DecoderEncoderImpl<
-            ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                                     RequestStrictResponseFlexible>>,
-        ::fidl::fuzzing::DecoderEncoderImpl<
-            ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
-                                    RequestFlexibleResponseStrict>>,
-        ::fidl::fuzzing::DecoderEncoderImpl<
-            ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                                     RequestFlexibleResponseStrict>>,
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name =
+                "::fidl::WireRequest<::fidl_test_requestflexibleenvelope::"
+                "Protocol::RequestStrictResponseFlexible>",
+            .has_flexible_envelope = false,
+            .decoder_encoder =
+                ::fidl::fuzzing::DecoderEncoderImpl<::fidl::WireRequest<
+                    ::fidl_test_requestflexibleenvelope::Protocol::
+                        RequestStrictResponseFlexible>>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name =
+                "::fidl::WireResponse<::fidl_test_requestflexibleenvelope::"
+                "Protocol::RequestStrictResponseFlexible>",
+            .has_flexible_envelope = true,
+            .decoder_encoder =
+                ::fidl::fuzzing::DecoderEncoderImpl<::fidl::WireResponse<
+                    ::fidl_test_requestflexibleenvelope::Protocol::
+                        RequestStrictResponseFlexible>>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name =
+                "::fidl::WireRequest<::fidl_test_requestflexibleenvelope::"
+                "Protocol::RequestFlexibleResponseStrict>",
+            .has_flexible_envelope = true,
+            .decoder_encoder =
+                ::fidl::fuzzing::DecoderEncoderImpl<::fidl::WireRequest<
+                    ::fidl_test_requestflexibleenvelope::Protocol::
+                        RequestFlexibleResponseStrict>>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name =
+                "::fidl::WireResponse<::fidl_test_requestflexibleenvelope::"
+                "Protocol::RequestFlexibleResponseStrict>",
+            .has_flexible_envelope = false,
+            .decoder_encoder =
+                ::fidl::fuzzing::DecoderEncoderImpl<::fidl::WireResponse<
+                    ::fidl_test_requestflexibleenvelope::Protocol::
+                        RequestFlexibleResponseStrict>>,
+        },
 };
 
 }  // namespace fuzzing

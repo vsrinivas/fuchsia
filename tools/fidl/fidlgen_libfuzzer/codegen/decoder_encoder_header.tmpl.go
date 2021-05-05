@@ -20,7 +20,7 @@ const tmplDecoderEncoderHeader = `
 
 namespace fuzzing {
 
-inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoder, {{ CountDecoderEncoders .Decls }}>
+inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, {{ CountDecoderEncoders .Decls }}>
 {{ range .Library }}{{ . }}_{{ end }}decoder_encoders = {
 {{ range .Decls }}
 {{- if Eq .Kind Kinds.Protocol -}}{{ template "ProtocolDecoderEncoders" . }}{{- end -}}
