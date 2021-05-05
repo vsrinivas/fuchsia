@@ -193,3 +193,5 @@ toc:
   path: /docs/contribute/governance/rfcs/0089_core_realm_variations.md
 - title: "RFC-0090: Driver shared libraries allowlist"
   path: /docs/contribute/governance/rfcs/0090_drivers_shared_library_allowlist.md
+- title: "RFC-0091: zx_system_get_event ZX_SYSTEM_EVENT_IMMINENT_OUT_OF_MEMORY"
+  path: /docs/contribute/governance/rfcs/0091_getevent_imminent_oom.md
