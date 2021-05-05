@@ -135,6 +135,137 @@ union ExampleUnion {
   EXPECT_TRUE(example_union->members.front().maybe_used->attributes->HasAttribute("OnUnionMember"));
 }
 
+// Tests that all of the official attributes, plus the oft-used "Deprecated,"
+// work as intended.
+TEST(AttributesTests, GoodOfficialAttributes) {
+  TestLibrary library("example.fidl", R"FIDL(
+[NoDoc]
+library example;
+
+/// For EXAMPLE_CONSTANT
+[NoDoc, Deprecated = "Note"]
+const string EXAMPLE_CONSTANT = "foo";
+
+/// For ExampleEnum
+[Deprecated = "Reason", Transitional]
+enum ExampleEnum {
+    A = 1;
+    /// For EnumMember
+    [Unknown] B = 2;
+};
+
+/// For ExampleStruct
+[MaxBytes = "1234", MaxHandles = "5678"]
+resource struct ExampleStruct {};
+
+/// For ExampleProtocol
+[Discoverable, ForDeprecatedCBindings, Transport = "Syscall"]
+protocol ExampleProtocol {
+    /// For ExampleMethod
+    [Internal, Selector = "Bar", Transitional] ExampleMethod();
+};
+
+/// For ExampleService
+[Foo = "ExampleService", NoDoc]
+service ExampleService {
+    /// For ExampleProtocol
+    [Foo = "ExampleProtocol", NoDoc]
+    ExampleProtocol p;
+};
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+
+  EXPECT_TRUE(library.library()->HasAttribute("NoDoc"));
+
+  auto example_const = library.LookupConstant("EXAMPLE_CONSTANT");
+  ASSERT_NOT_NULL(example_const);
+  EXPECT_TRUE(example_const->attributes->HasAttribute("NoDoc"));
+  EXPECT_TRUE(example_const->HasAttributeArg("Doc"));
+  auto const_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
+      example_const->GetAttributeArg("Doc").value().get());
+  EXPECT_STR_EQ(const_doc_value.MakeContents(), " For EXAMPLE_CONSTANT\n");
+  EXPECT_TRUE(example_const->HasAttributeArg("Deprecated"));
+  auto const_str_value = static_cast<const fidl::flat::StringConstantValue&>(
+      example_const->GetAttributeArg("Deprecated").value().get());
+  EXPECT_STR_EQ(const_str_value.MakeContents(), "Note");
+
+  auto example_enum = library.LookupEnum("ExampleEnum");
+  ASSERT_NOT_NULL(example_enum);
+  EXPECT_TRUE(example_enum->attributes->HasAttribute("Transitional"));
+  EXPECT_TRUE(example_enum->HasAttributeArg("Doc"));
+  auto enum_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
+      example_enum->GetAttributeArg("Doc").value().get());
+  EXPECT_STR_EQ(enum_doc_value.MakeContents(), " For ExampleEnum\n");
+  EXPECT_TRUE(example_enum->HasAttributeArg("Deprecated"));
+  auto enum_str_value = static_cast<const fidl::flat::StringConstantValue&>(
+      example_enum->GetAttributeArg("Deprecated").value().get());
+  EXPECT_STR_EQ(enum_str_value.MakeContents(), "Reason");
+  EXPECT_TRUE(example_enum->members.back().attributes->HasAttribute("Unknown"));
+
+  auto example_struct = library.LookupStruct("ExampleStruct");
+  ASSERT_NOT_NULL(example_struct);
+  EXPECT_TRUE(example_struct->HasAttributeArg("Doc"));
+  auto struct_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
+      example_struct->GetAttributeArg("Doc").value().get());
+  EXPECT_STR_EQ(struct_doc_value.MakeContents(), " For ExampleStruct\n");
+  EXPECT_TRUE(example_struct->HasAttributeArg("MaxBytes"));
+  auto struct_str_value1 = static_cast<const fidl::flat::StringConstantValue&>(
+      example_struct->GetAttributeArg("MaxBytes").value().get());
+  EXPECT_STR_EQ(struct_str_value1.MakeContents(), "1234");
+  EXPECT_TRUE(example_struct->HasAttributeArg("MaxHandles"));
+  auto struct_str_value2 = static_cast<const fidl::flat::StringConstantValue&>(
+      example_struct->GetAttributeArg("MaxHandles").value().get());
+  EXPECT_STR_EQ(struct_str_value2.MakeContents(), "5678");
+
+  auto example_protocol = library.LookupProtocol("ExampleProtocol");
+  ASSERT_NOT_NULL(example_protocol);
+  EXPECT_TRUE(example_protocol->attributes->HasAttribute("Discoverable"));
+  EXPECT_TRUE(example_protocol->attributes->HasAttribute("ForDeprecatedCBindings"));
+  EXPECT_TRUE(example_protocol->HasAttributeArg("Doc"));
+  auto protocol_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
+      example_protocol->GetAttributeArg("Doc").value().get());
+  EXPECT_STR_EQ(protocol_doc_value.MakeContents(), " For ExampleProtocol\n");
+  EXPECT_TRUE(example_protocol->HasAttributeArg("Transport"));
+  auto protocol_str_value = static_cast<const fidl::flat::StringConstantValue&>(
+      example_protocol->GetAttributeArg("Transport").value().get());
+  EXPECT_STR_EQ(protocol_str_value.MakeContents(), "Syscall");
+
+  auto& example_method = example_protocol->methods.front();
+  EXPECT_TRUE(example_method.attributes->HasAttribute("Internal"));
+  EXPECT_TRUE(example_method.attributes->HasAttribute("Transitional"));
+  EXPECT_TRUE(example_method.attributes->HasAttributeArg("Doc"));
+  auto method_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
+      example_method.attributes->GetAttributeArg("Doc").value().get());
+  EXPECT_STR_EQ(method_doc_value.MakeContents(), " For ExampleMethod\n");
+  EXPECT_TRUE(example_method.attributes->HasAttributeArg("Selector"));
+  auto method_str_value = static_cast<const fidl::flat::StringConstantValue&>(
+      example_method.attributes->GetAttributeArg("Selector").value().get());
+  EXPECT_STR_EQ(method_str_value.MakeContents(), "Bar");
+
+  auto example_service = library.LookupService("ExampleService");
+  ASSERT_NOT_NULL(example_service);
+  EXPECT_TRUE(example_service->attributes->HasAttribute("NoDoc"));
+  EXPECT_TRUE(example_service->HasAttributeArg("Doc"));
+  auto service_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
+      example_service->GetAttributeArg("Doc").value().get());
+  EXPECT_STR_EQ(service_doc_value.MakeContents(), " For ExampleService\n");
+  EXPECT_TRUE(example_service->HasAttributeArg("Foo"));
+  auto service_str_value = static_cast<const fidl::flat::StringConstantValue&>(
+      example_service->GetAttributeArg("Foo").value().get());
+  EXPECT_STR_EQ(service_str_value.MakeContents(), "ExampleService");
+
+  auto& example_service_member = example_service->members.front();
+  EXPECT_TRUE(example_service_member.attributes->HasAttribute("NoDoc"));
+  EXPECT_TRUE(example_service_member.attributes->HasAttributeArg("Doc"));
+  auto service_member_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
+      example_service_member.attributes->GetAttributeArg("Doc").value().get());
+  EXPECT_STR_EQ(service_member_doc_value.MakeContents(), " For ExampleProtocol\n");
+  EXPECT_TRUE(example_service_member.attributes->HasAttributeArg("Foo"));
+  auto service_member_str_value = static_cast<const fidl::flat::StringConstantValue&>(
+      example_service_member.attributes->GetAttributeArg("Foo").value().get());
+  EXPECT_STR_EQ(service_member_str_value.MakeContents(), "ExampleProtocol");
+}
+
 TEST(AttributesTests, BadNoAttributeOnUsingNotEventDoc) {
   TestLibrary library(R"FIDL(
 library example;
@@ -155,7 +286,7 @@ TEST(AttributesTests, BadNoTwoSameAttributeTest) {
   TestLibrary library("dup_attributes.fidl", R"FIDL(
 library fidl.test.dupattributes;
 
-[dup = "first", dup = "second"]
+[dup = "first", Dup = "second"]
 protocol A {
     MethodA();
 };
@@ -178,7 +309,7 @@ protocol A {
 
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateAttribute);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "Doc");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "doc");
 }
 
 // Test that TODO
@@ -473,7 +604,8 @@ protocol P {
                                       fidl::ErrMemberMustBeSimple);
 }
 
-bool MustHaveThreeMembers(fidl::Reporter* reporter, const fidl::raw::Attribute& attribute,
+bool MustHaveThreeMembers(fidl::Reporter* reporter,
+                          const std::unique_ptr<fidl::flat::Attribute>& attribute,
                           const fidl::flat::Decl* decl) {
   switch (decl->kind) {
     case fidl::flat::Decl::Kind::kStruct: {

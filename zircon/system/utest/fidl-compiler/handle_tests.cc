@@ -4,7 +4,6 @@
 
 #include <locale.h>
 
-#include <fidl/attributes.h>
 #include <fidl/flat_ast.h>
 #include <fidl/lexer.h>
 #include <fidl/parser.h>

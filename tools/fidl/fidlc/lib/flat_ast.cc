@@ -20,7 +20,6 @@
 #include "fidl/lexer.h"
 #include "fidl/names.h"
 #include "fidl/ordinals.h"
-#include "fidl/parser.h"
 #include "fidl/raw_ast.h"
 #include "fidl/types.h"
 #include "fidl/utils.h"
@@ -214,26 +213,81 @@ uint32_t PrimitiveType::SubtypeSize(types::PrimitiveSubtype subtype) {
   }
 }
 
-bool Decl::HasAttribute(std::string_view name) const {
-  if (!attributes)
-    return false;
-  return attributes->HasAttribute(std::string(name));
+bool Attribute::HasArg(std::string_view arg_name) const {
+  // TODO(fxbug.dev/74955): ensure that argument names are canonicalized.
+  for (const auto& arg : args) {
+    if (arg->name == arg_name)
+      return true;
+  }
+  return false;
 }
 
-std::string_view Decl::GetAttribute(std::string_view name) const {
-  if (!attributes)
-    return std::string_view();
-  for (const auto& attribute : attributes->attributes) {
-    if (attribute.name == name) {
-      if (attribute.value != "") {
-        const auto& value = attribute.value;
-        return std::string_view(value.data(), value.size());
-      }
-      // Don't search for another attribute with the same name.
-      break;
+MaybeConstantValue Attribute::GetArg(std::string_view arg_name) const {
+  // TODO(fxbug.dev/74955): ensure that argument names are canonicalized.
+  for (const auto& arg : args) {
+    if (arg->name == arg_name) {
+      return arg->value->Value();
     }
   }
-  return std::string_view();
+  return std::nullopt;
+}
+
+bool AttributeList::HasAttribute(std::string_view attribute_name) const {
+  for (const auto& attribute : attributes) {
+    if (attribute->name == attribute_name)
+      return true;
+  }
+  return false;
+}
+
+MaybeAttribute AttributeList::GetAttribute(std::string_view attribute_name) const {
+  for (const auto& attribute : attributes) {
+    if (attribute->name == attribute_name) {
+      return *attribute;
+    }
+  }
+  return std::nullopt;
+}
+
+bool AttributeList::HasAttributeArg(std::string_view attribute_name,
+                                    std::string_view arg_name) const {
+  auto attribute = GetAttribute(attribute_name);
+  if (!attribute)
+    return false;
+  return attribute.value().get().HasArg(arg_name);
+}
+
+MaybeConstantValue AttributeList::GetAttributeArg(std::string_view attribute_name,
+                                                  std::string_view arg_name) const {
+  auto attribute = GetAttribute(attribute_name);
+  if (!attribute)
+    return std::nullopt;
+  return attribute.value().get().GetArg(arg_name);
+}
+
+bool Decl::HasAttribute(std::string_view attribute_name) const {
+  if (!attributes)
+    return false;
+  return attributes->HasAttribute(attribute_name);
+}
+
+MaybeAttribute Decl::GetAttribute(std::string_view attribute_name) const {
+  if (!attributes)
+    return std::nullopt;
+  return attributes->GetAttribute(attribute_name);
+}
+
+bool Decl::HasAttributeArg(std::string_view attribute_name, std::string_view arg_name) const {
+  if (!attributes)
+    return false;
+  return attributes->HasAttributeArg(attribute_name, arg_name);
+}
+
+MaybeConstantValue Decl::GetAttributeArg(std::string_view attribute_name,
+                                         std::string_view arg_name) const {
+  if (!attributes)
+    return std::nullopt;
+  return attributes->GetAttributeArg(attribute_name, arg_name);
 }
 
 std::string Decl::GetName() const { return std::string(name.decl_name()); }
@@ -1502,33 +1556,49 @@ AttributeSchema AttributeSchema::Deprecated() {
   return AttributeSchema({Placement::kDeprecated}, {});
 }
 
-void AttributeSchema::ValidatePlacement(Reporter* reporter, const raw::Attribute& attribute,
+void AttributeSchema::ValidatePlacement(Reporter* reporter,
+                                        const std::unique_ptr<Attribute>& attribute,
                                         Placement placement) const {
   if (allowed_placements_.size() == 0)
     return;
 
   if (allowed_placements_.size() == 1 && *allowed_placements_.cbegin() == Placement::kDeprecated) {
-    reporter->Report(ErrDeprecatedAttribute, attribute.span(), attribute);
+    reporter->Report(ErrDeprecatedAttribute, attribute->span(), attribute.get());
     return;
   }
 
   auto iter = allowed_placements_.find(placement);
   if (iter != allowed_placements_.end())
     return;
-  reporter->Report(ErrInvalidAttributePlacement, attribute.span(), attribute);
+  reporter->Report(ErrInvalidAttributePlacement, attribute->span(), attribute.get());
 }
 
-void AttributeSchema::ValidateValue(Reporter* reporter, const raw::Attribute& attribute) const {
+void AttributeSchema::ValidateValue(Reporter* reporter,
+                                    const std::unique_ptr<Attribute>& attribute) const {
   if (allowed_values_.size() == 0)
     return;
-  auto iter = allowed_values_.find(attribute.value);
+
+  // TODO(fxbug.dev/74955): this currently assumes a single string argument, as
+  //  is the case in the old syntax. This error reporting will need to be
+  //  changed to handle other cases (multiple args, different arg types, etc).
+  std::string attribute_value;
+  auto arg_constant = attribute->GetArg();
+  if (arg_constant.has_value()) {
+    if (arg_constant.value().get().kind != flat::ConstantValue::Kind::kString)
+      assert(false && "non-string attribute arguments not yet supported");
+    auto arg_value = static_cast<const flat::StringConstantValue&>(arg_constant.value().get());
+    attribute_value = arg_value.MakeContents();
+  }
+
+  auto iter = allowed_values_.find(attribute_value);
   if (iter != allowed_values_.end())
     return;
-  reporter->Report(ErrInvalidAttributeValue, attribute.span(), attribute, attribute.value,
+  reporter->Report(ErrInvalidAttributeValue, attribute->span(), attribute.get(), attribute_value,
                    allowed_values_);
 }
 
-void AttributeSchema::ValidateConstraint(Reporter* reporter, const raw::Attribute& attribute,
+void AttributeSchema::ValidateConstraint(Reporter* reporter,
+                                         const std::unique_ptr<Attribute>& attribute,
                                          const Decl* decl) const {
   auto check = reporter->Checkpoint();
   auto passed = constraint_(reporter, attribute, decl);
@@ -1537,12 +1607,26 @@ void AttributeSchema::ValidateConstraint(Reporter* reporter, const raw::Attribut
   } else if (check.NoNewErrors()) {
     // TODO(pascallouis): It would be nicer to use the span of
     // the declaration, however we do not keep it around today.
-    reporter->Report(ErrAttributeConstraintNotSatisfied, attribute.span(), attribute,
-                     attribute.value);
+
+    // TODO(fxbug.dev/74955): this currently assumes a single string argument, as
+    //  is the case in the old syntax. This error reporting will need to be
+    //  changed to handle other cases (multiple args, different arg types, etc).
+    std::string attribute_value;
+    auto arg_constant = attribute->GetArg();
+    if (arg_constant.has_value()) {
+      if (arg_constant.value().get().kind != flat::ConstantValue::Kind::kString)
+        assert(false && "non-string attribute arguments not yet supported");
+      auto arg_value = static_cast<const flat::StringConstantValue&>(arg_constant.value().get());
+      attribute_value = arg_value.MakeContents();
+    }
+
+    reporter->Report(ErrAttributeConstraintNotSatisfied, attribute->span(), attribute.get(),
+                     attribute_value);
   }
 }
 
-bool SimpleLayoutConstraint(Reporter* reporter, const raw::Attribute& attribute, const Decl* decl) {
+bool SimpleLayoutConstraint(Reporter* reporter, const std::unique_ptr<Attribute>&,
+                            const Decl* decl) {
   assert(decl->kind == Decl::Kind::kStruct);
   auto struct_decl = static_cast<const Struct*>(decl);
   bool ok = true;
@@ -1555,15 +1639,15 @@ bool SimpleLayoutConstraint(Reporter* reporter, const raw::Attribute& attribute,
   return ok;
 }
 
-bool ParseBound(Reporter* reporter, const SourceSpan& span, const std::string& input,
-                uint32_t* out_value) {
+bool ParseBound(Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
+                const std::string& input, uint32_t* out_value) {
   auto result = utils::ParseNumeric(input, out_value, 10);
   switch (result) {
     case utils::ParseNumericResult::kOutOfBounds:
-      reporter->Report(ErrBoundIsTooBig, span);
+      reporter->Report(ErrBoundIsTooBig, attribute->span(), attribute.get(), input);
       return false;
     case utils::ParseNumericResult::kMalformed: {
-      reporter->Report(ErrUnableToParseBound, span, input);
+      reporter->Report(ErrUnableToParseBound, attribute->span(), attribute.get(), input);
       return false;
     }
     case utils::ParseNumericResult::kSuccess:
@@ -1578,9 +1662,17 @@ bool Library::VerifyInlineSize(const Struct* struct_decl) {
   return true;
 }
 
-bool MaxBytesConstraint(Reporter* reporter, const raw::Attribute& attribute, const Decl* decl) {
+bool MaxBytesConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
+                        const Decl* decl) {
+  auto arg_constant = attribute->GetArg();
+  if (!arg_constant.has_value() ||
+      arg_constant.value().get().kind != flat::ConstantValue::Kind::kString) {
+    assert(false && "non-string attribute arguments not yet supported");
+  }
+  auto arg_value = static_cast<const flat::StringConstantValue&>(arg_constant.value().get());
+
   uint32_t bound;
-  if (!ParseBound(reporter, attribute.span(), attribute.value, &bound))
+  if (!ParseBound(reporter, attribute, std::string(arg_value.MakeContents()), &bound))
     return false;
   uint32_t max_bytes = std::numeric_limits<uint32_t>::max();
   switch (decl->kind) {
@@ -1607,15 +1699,24 @@ bool MaxBytesConstraint(Reporter* reporter, const raw::Attribute& attribute, con
       return false;
   }
   if (max_bytes > bound) {
-    reporter->Report(ErrTooManyBytes, attribute.span(), bound, max_bytes);
+    reporter->Report(ErrTooManyBytes, attribute->span(), bound, max_bytes);
     return false;
   }
   return true;
 }
 
-bool MaxHandlesConstraint(Reporter* reporter, const raw::Attribute& attribute, const Decl* decl) {
+bool MaxHandlesConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
+                          const Decl* decl) {
+  auto arg_constant = attribute->GetArg();
+  if (!arg_constant.has_value() ||
+      arg_constant.value().get().kind != flat::ConstantValue::Kind::kString) {
+    reporter->Report(ErrInvalidAttributeType, attribute->span(), attribute.get());
+    assert(false && "non-string attribute arguments not yet supported");
+  }
+  auto arg_value = static_cast<const flat::StringConstantValue&>(arg_constant.value().get());
+
   uint32_t bound;
-  if (!ParseBound(reporter, attribute.span(), attribute.value, &bound))
+  if (!ParseBound(reporter, attribute, std::string(arg_value.MakeContents()), &bound))
     return false;
   uint32_t max_handles = std::numeric_limits<uint32_t>::max();
   switch (decl->kind) {
@@ -1639,13 +1740,14 @@ bool MaxHandlesConstraint(Reporter* reporter, const raw::Attribute& attribute, c
       return false;
   }
   if (max_handles > bound) {
-    reporter->Report(ErrTooManyHandles, attribute.span(), bound, max_handles);
+    reporter->Report(ErrTooManyHandles, attribute->span(), bound, max_handles);
     return false;
   }
   return true;
 }
 
-bool ResultShapeConstraint(Reporter* reporter, const raw::Attribute& attribute, const Decl* decl) {
+bool ResultShapeConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
+                           const Decl* decl) {
   assert(decl->kind == Decl::Kind::kUnion);
   auto union_decl = static_cast<const Union*>(decl);
   assert(union_decl->members.size() == 2);
@@ -1685,9 +1787,27 @@ static std::string Trim(std::string s) {
   return s;
 }
 
-bool TransportConstraint(Reporter* reporter, const raw::Attribute& attribute, const Decl* decl) {
+bool TransportConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
+                         const Decl* decl) {
+  // function-local static pointer to non-trivially-destructible type
+  // is allowed by styleguide
+  static const auto kValidTransports = new std::set<std::string>{
+      "Banjo",
+      "Channel",
+      "Syscall",
+  };
+
+  auto arg_constant = attribute->GetArg();
+  if (!arg_constant.has_value()) {
+    reporter->Report(ErrInvalidTransportType, decl->name.span(), std::string(), *kValidTransports);
+    return false;
+  }
+  if (arg_constant.value().get().kind != flat::ConstantValue::Kind::kString)
+    assert(false && "non-string attribute arguments not yet supported");
+  auto arg_value = static_cast<const flat::StringConstantValue&>(arg_constant.value().get());
+
   // Parse comma separated transports
-  const std::string& value = attribute.value;
+  const std::string& value = arg_value.MakeContents();
   std::string::size_type prev_pos = 0;
   std::string::size_type pos;
   std::vector<std::string> transports;
@@ -1698,14 +1818,6 @@ bool TransportConstraint(Reporter* reporter, const raw::Attribute& attribute, co
   transports.emplace_back(Trim(value.substr(prev_pos)));
 
   // Validate that they're ok
-
-  // function-local static pointer to non-trivially-destructible type
-  // is allowed by styleguide
-  static const auto kValidTransports = new std::set<std::string>{
-      "Banjo",
-      "Channel",
-      "Syscall",
-  };
   for (auto transport : transports) {
     if (kValidTransports->count(transport) == 0) {
       reporter->Report(ErrInvalidTransportType, decl->name.span(), transport, *kValidTransports);
@@ -1854,9 +1966,9 @@ size_t EditDistance(const std::string& sequence1, const std::string& sequence2) 
   return last_row[s1_length];
 }
 
-const AttributeSchema* Libraries::RetrieveAttributeSchema(Reporter* reporter,
-                                                          const raw::Attribute& attribute) const {
-  const auto& attribute_name = fidl::utils::to_upper_camel_case(attribute.name);
+const AttributeSchema* Libraries::RetrieveAttributeSchema(
+    Reporter* reporter, const std::unique_ptr<Attribute>& attribute) const {
+  const auto& attribute_name = fidl::utils::to_upper_camel_case(attribute->name);
   auto iter = attribute_schemas_.find(attribute_name);
   if (iter != attribute_schemas_.end()) {
     const auto& schema = iter->second;
@@ -1871,7 +1983,7 @@ const AttributeSchema* Libraries::RetrieveAttributeSchema(Reporter* reporter,
   for (const auto& name_and_schema : attribute_schemas_) {
     auto edit_distance = EditDistance(name_and_schema.first, attribute_name);
     if (0 < edit_distance && edit_distance < 2) {
-      reporter->Report(WarnAttributeTypo, attribute.span(), attribute_name, name_and_schema.first);
+      reporter->Report(WarnAttributeTypo, attribute->span(), attribute_name, name_and_schema.first);
       return nullptr;
     }
   }
@@ -1994,7 +2106,7 @@ bool Library::Fail(const ErrorDef<Args...>& err, const std::optional<SourceSpan>
 }
 
 void Library::ValidateAttributesPlacement(AttributeSchema::Placement placement,
-                                          const raw::AttributeList* attributes) {
+                                          const AttributeList* attributes) {
   if (attributes == nullptr)
     return;
   for (const auto& attribute : attributes->attributes) {
@@ -2006,8 +2118,7 @@ void Library::ValidateAttributesPlacement(AttributeSchema::Placement placement,
   }
 }
 
-void Library::ValidateAttributesConstraints(const Decl* decl,
-                                            const raw::AttributeList* attributes) {
+void Library::ValidateAttributesConstraints(const Decl* decl, const AttributeList* attributes) {
   if (attributes == nullptr)
     return;
   for (const auto& attribute : attributes->attributes) {
@@ -2199,6 +2310,28 @@ VerifyResourcenessStep Library::StartVerifyResourcenessStep() {
 }
 VerifyAttributesStep Library::StartVerifyAttributesStep() { return VerifyAttributesStep(this); }
 
+bool Library::ConsumeAttributeList(std::unique_ptr<raw::AttributeList> raw_attribute_list,
+                                   std::unique_ptr<AttributeList>* out_attribute_list) {
+  AttributesBuilder<Attribute> attributes_builder(reporter_);
+  if (raw_attribute_list) {
+    for (auto& raw_attribute : raw_attribute_list->attributes) {
+      std::vector<std::unique_ptr<AttributeArg>> args;
+      if (raw_attribute.value) {
+        auto constant = std::make_unique<LiteralConstant>(std::move(raw_attribute.value));
+        args.emplace_back(
+            std::make_unique<AttributeArg>(kDefaultAttributeArg, std::move(constant)));
+      }
+      auto attribute =
+          std::make_unique<Attribute>(raw_attribute.name, raw_attribute.span(), std::move(args));
+      attributes_builder.Insert(std::move(attribute));
+    }
+  }
+
+  auto attributes = attributes_builder.Done();
+  *out_attribute_list = std::make_unique<AttributeList>(std::move(attributes));
+  return true;
+}
+
 bool Library::ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant,
                               std::unique_ptr<Constant>* out_constant) {
   switch (raw_constant->kind) {
@@ -2287,7 +2420,7 @@ bool Library::ConsumeTypeConstructorOld(std::unique_ptr<raw::TypeConstructorOld>
 void Library::ConsumeUsing(std::unique_ptr<raw::Using> using_directive) {
   if (using_directive->attributes && using_directive->attributes->attributes.size() != 0) {
     Fail(ErrAttributesNotAllowedOnLibraryImport, using_directive->span(),
-         *(using_directive->attributes));
+         using_directive->attributes.get());
     return;
   }
 
@@ -2317,27 +2450,41 @@ void Library::ConsumeUsing(std::unique_ptr<raw::Using> using_directive) {
 bool Library::ConsumeTypeAlias(std::unique_ptr<raw::AliasDeclaration> alias_declaration) {
   assert(alias_declaration->alias && IsTypeConstructorDefined(alias_declaration->type_ctor));
 
+  std::unique_ptr<AttributeList> attributes;
+  if (!ConsumeAttributeList(std::move(alias_declaration->attributes), &attributes)) {
+    return false;
+  }
+
   auto alias_name = Name::CreateSourced(this, alias_declaration->alias->span());
   TypeConstructor type_ctor_;
 
   if (!ConsumeTypeConstructor(std::move(alias_declaration->type_ctor), alias_name, &type_ctor_))
     return false;
 
-  return RegisterDecl(std::make_unique<TypeAlias>(std::move(alias_declaration->attributes),
-                                                  std::move(alias_name), std::move(type_ctor_)));
+  return RegisterDecl(std::make_unique<TypeAlias>(std::move(attributes), std::move(alias_name),
+                                                  std::move(type_ctor_)));
 }
 
 void Library::ConsumeBitsDeclaration(std::unique_ptr<raw::BitsDeclaration> bits_declaration) {
   std::vector<Bits::Member> members;
   for (auto& member : bits_declaration->members) {
+    std::unique_ptr<AttributeList> attributes;
+    if (!ConsumeAttributeList(std::move(member->attributes), &attributes)) {
+      return;
+    }
     auto span = member->identifier->span();
     std::unique_ptr<Constant> value;
     if (!ConsumeConstant(std::move(member->value), &value))
       return;
-    members.emplace_back(span, std::move(value), std::move(member->attributes));
+    members.emplace_back(span, std::move(value), std::move(attributes));
     // TODO(pascallouis): right now, members are not registered. Look into
     // registering them, potentially under the bits name qualifier such as
     // <name_of_bits>.<name_of_member>.
+  }
+
+  std::unique_ptr<AttributeList> attributes;
+  if (!ConsumeAttributeList(std::move(bits_declaration->attributes), &attributes)) {
+    return;
   }
 
   std::unique_ptr<TypeConstructorOld> type_ctor;
@@ -2349,15 +2496,18 @@ void Library::ConsumeBitsDeclaration(std::unique_ptr<raw::BitsDeclaration> bits_
   }
 
   RegisterDecl(std::make_unique<Bits>(
-      std::move(bits_declaration->attributes),
-      Name::CreateSourced(this, bits_declaration->identifier->span()), std::move(type_ctor),
-      std::move(members), bits_declaration->strictness));
+      std::move(attributes), Name::CreateSourced(this, bits_declaration->identifier->span()),
+      std::move(type_ctor), std::move(members), bits_declaration->strictness));
 }
 
 void Library::ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> const_declaration) {
-  auto attributes = std::move(const_declaration->attributes);
   auto span = const_declaration->identifier->span();
   auto name = Name::CreateSourced(this, span);
+  std::unique_ptr<AttributeList> attributes;
+  if (!ConsumeAttributeList(std::move(const_declaration->attributes), &attributes)) {
+    return;
+  }
+
   TypeConstructor type_ctor;
   // TODO(fxbug.dev/73285): shouldn't need to care about context here
   if (!ConsumeTypeConstructor(std::move(const_declaration->type_ctor), name, &type_ctor))
@@ -2374,14 +2524,24 @@ void Library::ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> con
 void Library::ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_declaration) {
   std::vector<Enum::Member> members;
   for (auto& member : enum_declaration->members) {
+    std::unique_ptr<AttributeList> attributes;
+    if (!ConsumeAttributeList(std::move(member->attributes), &attributes)) {
+      return;
+    }
+
     auto span = member->identifier->span();
     std::unique_ptr<Constant> value;
     if (!ConsumeConstant(std::move(member->value), &value))
       return;
-    members.emplace_back(span, std::move(value), std::move(member->attributes));
+    members.emplace_back(span, std::move(value), std::move(attributes));
     // TODO(pascallouis): right now, members are not registered. Look into
     // registering them, potentially under the enum name qualifier such as
     // <name_of_enum>.<name_of_member>.
+  }
+
+  std::unique_ptr<AttributeList> attributes;
+  if (!ConsumeAttributeList(std::move(enum_declaration->attributes), &attributes)) {
+    return;
   }
 
   std::unique_ptr<TypeConstructorOld> type_ctor;
@@ -2393,9 +2553,8 @@ void Library::ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_
   }
 
   RegisterDecl(std::make_unique<Enum>(
-      std::move(enum_declaration->attributes),
-      Name::CreateSourced(this, enum_declaration->identifier->span()), std::move(type_ctor),
-      std::move(members), enum_declaration->strictness));
+      std::move(attributes), Name::CreateSourced(this, enum_declaration->identifier->span()),
+      std::move(type_ctor), std::move(members), enum_declaration->strictness));
 }
 
 bool Library::CreateMethodResult(const Name& protocol_name, SourceSpan response_span,
@@ -2427,13 +2586,11 @@ bool Library::CreateMethodResult(const Name& protocol_name, SourceSpan response_
   std::vector<Union::Member> result_members;
   result_members.push_back(std::move(response_member));
   result_members.push_back(std::move(error_member));
-  std::vector<raw::Attribute> result_attributes;
-  result_attributes.emplace_back(*method, raw::Attribute::Provenance::kDefault, "Result", "");
-  auto result_attributelist =
-      std::make_unique<raw::AttributeList>(*method, std::move(result_attributes));
-  auto union_decl = std::make_unique<Union>(std::move(result_attributelist), std::move(result_name),
-                                            std::move(result_members), types::Strictness::kStrict,
-                                            std::nullopt /* resourceness */);
+  std::vector<std::unique_ptr<Attribute>> result_attributes;
+  result_attributes.emplace_back(std::make_unique<Attribute>("Result"));
+  auto union_decl = std::make_unique<Union>(
+      std::make_unique<AttributeList>(std::move(result_attributes)), std::move(result_name),
+      std::move(result_members), types::Strictness::kStrict, std::nullopt /* resourceness */);
   auto result_decl = union_decl.get();
   if (!RegisterDecl(std::move(union_decl)))
     return false;
@@ -2458,7 +2615,6 @@ bool Library::CreateMethodResult(const Name& protocol_name, SourceSpan response_
 
 void Library::ConsumeProtocolDeclaration(
     std::unique_ptr<raw::ProtocolDeclaration> protocol_declaration) {
-  auto attributes = std::move(protocol_declaration->attributes);
   auto name = Name::CreateSourced(this, protocol_declaration->identifier->span());
 
   std::set<Name> composed_protocols;
@@ -2475,17 +2631,12 @@ void Library::ConsumeProtocolDeclaration(
 
   std::vector<Protocol::Method> methods;
   for (auto& method : protocol_declaration->methods) {
-    auto selector =
-        fidl::ordinals::GetSelector(method->attributes.get(), method->identifier->span());
-    if (!utils::IsValidIdentifierComponent(selector) &&
-        !utils::IsValidFullyQualifiedMethodIdentifier(selector)) {
-      Fail(ErrInvalidSelectorValue, method->identifier->span());
+    std::unique_ptr<AttributeList> attributes;
+    if (!ConsumeAttributeList(std::move(method->attributes), &attributes)) {
+      return;
     }
-    auto generated_ordinal64 = std::make_unique<raw::Ordinal64>(
-        method_hasher_(library_name_, name.decl_name(), selector, *method->identifier));
-    auto attributes = std::move(method->attributes);
-    SourceSpan method_name = method->identifier->span();
 
+    SourceSpan method_name = method->identifier->span();
     Struct* maybe_request = nullptr;
     if (method->maybe_request != nullptr) {
       auto request_span = method->maybe_request->span();
@@ -2515,9 +2666,14 @@ void Library::ConsumeProtocolDeclaration(
     }
 
     assert(maybe_request != nullptr || maybe_response != nullptr);
-    methods.emplace_back(std::move(attributes), std::move(generated_ordinal64),
+    methods.emplace_back(std::move(attributes), std::move(method->identifier),
                          std::move(method_name), std::move(maybe_request),
                          std::move(maybe_response));
+  }
+
+  std::unique_ptr<AttributeList> attributes;
+  if (!ConsumeAttributeList(std::move(protocol_declaration->attributes), &attributes)) {
+    return;
   }
 
   RegisterDecl(std::make_unique<Protocol>(std::move(attributes), std::move(name),
@@ -2529,6 +2685,11 @@ bool Library::ConsumeResourceDeclaration(
   auto name = Name::CreateSourced(this, resource_declaration->identifier->span());
   std::vector<Resource::Property> properties;
   for (auto& property : resource_declaration->properties) {
+    std::unique_ptr<AttributeList> attributes;
+    if (!ConsumeAttributeList(std::move(property->attributes), &attributes)) {
+      return false;
+    }
+
     TypeConstructor type_ctor;
     auto anonymous_resource_name = Name::CreateDerived(
         this, property->span(),
@@ -2536,9 +2697,13 @@ bool Library::ConsumeResourceDeclaration(
     if (!ConsumeTypeConstructor(std::move(property->type_ctor), anonymous_resource_name,
                                 &type_ctor))
       return false;
-    auto attributes = std::move(property->attributes);
     properties.emplace_back(std::move(type_ctor), property->identifier->span(),
                             std::move(attributes));
+  }
+
+  std::unique_ptr<AttributeList> attributes;
+  if (!ConsumeAttributeList(std::move(resource_declaration->attributes), &attributes)) {
+    return false;
   }
 
   TypeConstructor type_ctor;
@@ -2550,9 +2715,8 @@ bool Library::ConsumeResourceDeclaration(
     type_ctor = TypeConstructorOld::CreateSizeType();
   }
 
-  return RegisterDecl(std::make_unique<Resource>(std::move(resource_declaration->attributes),
-                                                 std::move(name), std::move(type_ctor),
-                                                 std::move(properties)));
+  return RegisterDecl(std::make_unique<Resource>(std::move(attributes), std::move(name),
+                                                 std::move(type_ctor), std::move(properties)));
 }
 
 std::unique_ptr<TypeConstructorOld> Library::IdentifierTypeForDecl(const Decl* decl,
@@ -2567,6 +2731,11 @@ bool Library::ConsumeParameterList(Name name, std::unique_ptr<raw::ParameterList
                                    bool is_request_or_response, Struct** out_struct_decl) {
   std::vector<Struct::Member> members;
   for (auto& parameter : parameter_list->parameter_list) {
+    std::unique_ptr<AttributeList> attributes;
+    if (!ConsumeAttributeList(std::move(parameter->attributes), &attributes)) {
+      return false;
+    }
+
     TypeConstructor type_ctor;
     // TODO(fxbug.dev/73285): finalize layout naming
     auto param_name = Name::CreateDerived(
@@ -2575,10 +2744,9 @@ bool Library::ConsumeParameterList(Name name, std::unique_ptr<raw::ParameterList
             utils::to_upper_camel_case(std::string(parameter->identifier->span().data())));
     if (!ConsumeTypeConstructor(std::move(parameter->type_ctor), param_name, &type_ctor))
       return false;
-    ValidateAttributesPlacement(AttributeSchema::Placement::kStructMember,
-                                parameter->attributes.get());
+    ValidateAttributesPlacement(AttributeSchema::Placement::kStructMember, attributes.get());
     members.emplace_back(std::move(type_ctor), parameter->identifier->span(),
-                         nullptr /* maybe_default_value */, std::move(parameter->attributes));
+                         nullptr /* maybe_default_value */, std::move(attributes));
   }
 
   if (!RegisterDecl(std::make_unique<Struct>(nullptr /* attributes */, std::move(name),
@@ -2590,17 +2758,25 @@ bool Library::ConsumeParameterList(Name name, std::unique_ptr<raw::ParameterList
 }
 
 void Library::ConsumeServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration> service_decl) {
-  auto attributes = std::move(service_decl->attributes);
   auto name = Name::CreateSourced(this, service_decl->identifier->span());
 
   std::vector<Service::Member> members;
   for (auto& member : service_decl->members) {
+    std::unique_ptr<AttributeList> attributes;
+    if (!ConsumeAttributeList(std::move(member->attributes), &attributes)) {
+      return;
+    }
+
     TypeConstructor type_ctor;
     // TODO(fxbug.dev/73285): shouldn't need to care about naming context here.
     if (!ConsumeTypeConstructor(std::move(member->type_ctor), name, &type_ctor))
       return;
-    members.emplace_back(std::move(type_ctor), member->identifier->span(),
-                         std::move(member->attributes));
+    members.emplace_back(std::move(type_ctor), member->identifier->span(), std::move(attributes));
+  }
+
+  std::unique_ptr<AttributeList> attributes;
+  if (!ConsumeAttributeList(std::move(service_decl->attributes), &attributes)) {
+    return;
   }
 
   RegisterDecl(
@@ -2608,11 +2784,15 @@ void Library::ConsumeServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration>
 }
 
 void Library::ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> struct_declaration) {
-  auto attributes = std::move(struct_declaration->attributes);
   auto name = Name::CreateSourced(this, struct_declaration->identifier->span());
 
   std::vector<Struct::Member> members;
   for (auto& member : struct_declaration->members) {
+    std::unique_ptr<AttributeList> attributes;
+    if (!ConsumeAttributeList(std::move(member->attributes), &attributes)) {
+      return;
+    }
+
     std::unique_ptr<TypeConstructorOld> type_ctor;
     if (!ConsumeTypeConstructorOld(std::move(member->type_ctor), &type_ctor))
       return;
@@ -2621,9 +2801,13 @@ void Library::ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> s
       if (!ConsumeConstant(std::move(member->maybe_default_value), &maybe_default_value))
         return;
     }
-    auto attributes = std::move(member->attributes);
     members.emplace_back(std::move(type_ctor), member->identifier->span(),
                          std::move(maybe_default_value), std::move(attributes));
+  }
+
+  std::unique_ptr<AttributeList> attributes;
+  if (!ConsumeAttributeList(std::move(struct_declaration->attributes), &attributes)) {
+    return;
   }
 
   RegisterDecl(std::make_unique<Struct>(std::move(attributes), std::move(name), std::move(members),
@@ -2631,7 +2815,6 @@ void Library::ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> s
 }
 
 void Library::ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> table_declaration) {
-  auto attributes = std::move(table_declaration->attributes);
   auto name = Name::CreateSourced(this, table_declaration->identifier->span());
 
   std::vector<Table::Member> members;
@@ -2639,6 +2822,11 @@ void Library::ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> tab
     auto ordinal_literal = std::move(member->ordinal);
 
     if (member->maybe_used) {
+      std::unique_ptr<AttributeList> attributes;
+      if (!ConsumeAttributeList(std::move(member->maybe_used->attributes), &attributes)) {
+        return;
+      }
+
       std::unique_ptr<TypeConstructorOld> type_ctor;
       if (!ConsumeTypeConstructorOld(std::move(member->maybe_used->type_ctor), &type_ctor))
         return;
@@ -2652,13 +2840,17 @@ void Library::ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> tab
         Fail(ErrNullableTableMember, member->span());
         return;
       }
-      auto attributes = std::move(member->maybe_used->attributes);
       members.emplace_back(std::move(ordinal_literal), std::move(type_ctor),
                            member->maybe_used->identifier->span(), std::move(maybe_default_value),
                            std::move(attributes));
     } else {
       members.emplace_back(std::move(ordinal_literal), member->span());
     }
+  }
+
+  std::unique_ptr<AttributeList> attributes;
+  if (!ConsumeAttributeList(std::move(table_declaration->attributes), &attributes)) {
+    return;
   }
 
   RegisterDecl(std::make_unique<Table>(std::move(attributes), std::move(name), std::move(members),
@@ -2677,6 +2869,11 @@ void Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
     auto explicit_ordinal = std::move(member->ordinal);
 
     if (member->maybe_used) {
+      std::unique_ptr<AttributeList> attributes;
+      if (!ConsumeAttributeList(std::move(member->maybe_used->attributes), &attributes)) {
+        return;
+      }
+
       std::unique_ptr<TypeConstructorOld> type_ctor;
       if (!ConsumeTypeConstructorOld(std::move(member->maybe_used->type_ctor), &type_ctor))
         return;
@@ -2690,15 +2887,19 @@ void Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
       }
 
       members.emplace_back(std::move(explicit_ordinal), std::move(type_ctor),
-                           member->maybe_used->identifier->span(),
-                           std::move(member->maybe_used->attributes));
+                           member->maybe_used->identifier->span(), std::move(attributes));
     } else {
       members.emplace_back(std::move(explicit_ordinal), member->span());
     }
   }
 
-  RegisterDecl(std::make_unique<Union>(std::move(union_declaration->attributes), std::move(name),
-                                       std::move(members), union_declaration->strictness,
+  std::unique_ptr<AttributeList> attributes;
+  if (!ConsumeAttributeList(std::move(union_declaration->attributes), &attributes)) {
+    return;
+  }
+
+  RegisterDecl(std::make_unique<Union>(std::move(attributes), std::move(name), std::move(members),
+                                       union_declaration->strictness,
                                        union_declaration->resourceness));
 }
 
@@ -2944,18 +3145,20 @@ void Library::ConsumeTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl) {
 
 bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
   if (file->attributes) {
-    ValidateAttributesPlacement(AttributeSchema::Placement::kLibrary, file->attributes.get());
+    std::unique_ptr<AttributeList> attributes;
+    if (!ConsumeAttributeList(std::move(file->attributes), &attributes)) {
+      return false;
+    }
+    ValidateAttributesPlacement(AttributeSchema::Placement::kLibrary, attributes.get());
     if (!attributes_) {
-      attributes_ = std::move(file->attributes);
+      attributes_ = std::move(attributes);
     } else {
       AttributesBuilder attributes_builder(reporter_, std::move(attributes_->attributes));
-      for (auto& attribute : file->attributes->attributes) {
+      for (auto& attribute : attributes->attributes) {
         if (!attributes_builder.Insert(std::move(attribute)))
           return false;
       }
-      attributes_ = std::make_unique<raw::AttributeList>(
-          raw::SourceElement(file->attributes->start_, file->attributes->end_),
-          attributes_builder.Done());
+      attributes_ = std::make_unique<AttributeList>(attributes_builder.Done());
     }
   }
 
@@ -3280,6 +3483,14 @@ fail_cannot_convert:
 
 bool Library::ResolveLiteralConstant(LiteralConstant* literal_constant, const Type* type) {
   switch (literal_constant->literal->kind) {
+    case raw::Literal::Kind::kDocComment: {
+      auto doc_comment_literal =
+          static_cast<raw::DocCommentLiteral*>(literal_constant->literal.get());
+
+      literal_constant->ResolveTo(
+          std::make_unique<DocCommentConstantValue>(doc_comment_literal->span().data()));
+      return true;
+    }
     case raw::Literal::Kind::kString: {
       if (type->kind != Type::Kind::kString)
         goto return_fail;
@@ -3432,6 +3643,37 @@ bool Library::ResolveAsOptional(Constant* constant) const {
     return false;
 
   return identifier_constant->name.decl_name() == "optional";
+}
+
+bool Library::CompileAttribute(Attribute* attribute) {
+  if (!attribute->args.empty()) {
+    for (auto& arg : attribute->args) {
+      // TODO(fxbug.dev/74955): this is a hack to hold us over until we can do
+      //  proper type resolution on attribute args.  For now, we assume that the
+      //  values are always strings, and resolve them as such.  When we fix
+      //  this, we should make sure not create the type inline like we do now.
+      // function-local static pointer to non-trivially-destructible type
+      // is allowed by styleguide
+      static const auto max_size = Size::Max();
+      static const StringType kUnboundedStringType =
+          StringType(Name::CreateIntrinsic("string"), &max_size, types::Nullability::kNonnullable);
+      if (arg->value && !ResolveConstant(arg->value.get(), &kUnboundedStringType)) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+bool Library::CompileAttributeList(AttributeList* attributes) {
+  if (attributes && !attributes->attributes.empty()) {
+    for (auto& attribute : attributes->attributes) {
+      if (!CompileAttribute(attribute.get())) {
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
 const Type* Library::TypeResolve(const Type* type) {
@@ -3819,6 +4061,8 @@ bool Library::SortDeclarations() {
 bool Library::CompileDecl(Decl* decl) {
   if (decl->compiled)
     return true;
+  if (decl->compiling)
+    return Fail(ErrIncludeCycle);
   Compiling guard(decl);
   switch (decl->kind) {
     case Decl::Kind::kBits: {
@@ -4235,6 +4479,15 @@ types::Resourceness VerifyResourcenessStep::EffectiveResourceness(const Type* ty
 }
 
 bool Library::CompileBits(Bits* bits_declaration) {
+  if (!CompileAttributeList(bits_declaration->attributes.get())) {
+    return false;
+  }
+  for (auto& member : bits_declaration->members) {
+    if (!CompileAttributeList(member.attributes.get())) {
+      return false;
+    }
+  }
+
   if (!CompileTypeConstructor(&bits_declaration->subtype_ctor))
     return false;
 
@@ -4299,6 +4552,10 @@ bool Library::CompileBits(Bits* bits_declaration) {
 }
 
 bool Library::CompileConst(Const* const_declaration) {
+  if (!CompileAttributeList(const_declaration->attributes.get())) {
+    return false;
+  }
+
   if (!CompileTypeConstructor(&const_declaration->type_ctor))
     return false;
   const auto* const_type = GetType(const_declaration->type_ctor);
@@ -4312,6 +4569,15 @@ bool Library::CompileConst(Const* const_declaration) {
 }
 
 bool Library::CompileEnum(Enum* enum_declaration) {
+  if (!CompileAttributeList(enum_declaration->attributes.get())) {
+    return false;
+  }
+  for (auto& member : enum_declaration->members) {
+    if (!CompileAttributeList(member.attributes.get())) {
+      return false;
+    }
+  }
+
   if (!CompileTypeConstructor(&enum_declaration->subtype_ctor))
     return false;
 
@@ -4394,6 +4660,11 @@ bool HasSimpleLayout(const Decl* decl) { return decl->HasAttribute("ForDeprecate
 
 bool Library::CompileResource(Resource* resource_declaration) {
   Scope<std::string_view> scope;
+
+  if (!CompileAttributeList(resource_declaration->attributes.get())) {
+    return false;
+  }
+
   if (!CompileTypeConstructor(&resource_declaration->subtype_ctor))
     return false;
 
@@ -4403,6 +4674,10 @@ bool Library::CompileResource(Resource* resource_declaration) {
   }
 
   for (auto& property : resource_declaration->properties) {
+    if (!CompileAttributeList(property.attributes.get())) {
+      return false;
+    }
+
     auto name_result = scope.Insert(property.name.data(), property.name);
     if (!name_result.ok())
       return Fail(ErrDuplicateResourcePropertyName, property.name,
@@ -4415,6 +4690,10 @@ bool Library::CompileResource(Resource* resource_declaration) {
 }
 
 bool Library::CompileProtocol(Protocol* protocol_declaration) {
+  if (!CompileAttributeList(protocol_declaration->attributes.get())) {
+    return false;
+  }
+
   MethodScope method_scope;
   auto CheckScopes = [this, &protocol_declaration, &method_scope](const Protocol* protocol,
                                                                   auto Visitor) -> bool {
@@ -4470,6 +4749,37 @@ bool Library::CompileProtocol(Protocol* protocol_declaration) {
     }
     return true;
   };
+
+  // Before scope checking can occur, ordinals must be generated for each of the
+  // protocol's methods, including those that were composed from transitive
+  // child protocols.  This means that child protocols must be compiled prior to
+  // this one, or they will not have generated_ordinal64s on their methods, and
+  // will fail the scope check.
+  for (const auto& name : protocol_declaration->composed_protocols) {
+    auto decl = LookupDeclByName(name);
+    if (!decl) {
+      return Fail(ErrUnknownType, name, name);
+    }
+    if (decl->kind != Decl::Kind::kProtocol)
+      return Fail(ErrComposingNonProtocol, name);
+    if (!CompileDecl(decl)) {
+      return false;
+    }
+  }
+  for (auto& method : protocol_declaration->methods) {
+    if (!CompileAttributeList(method.attributes.get())) {
+      return false;
+    }
+
+    auto selector = fidl::ordinals::GetSelector(method.attributes.get(), method.name);
+    if (!utils::IsValidIdentifierComponent(selector) &&
+        !utils::IsValidFullyQualifiedMethodIdentifier(selector)) {
+      Fail(ErrInvalidSelectorValue, method.name);
+    }
+    method.generated_ordinal64 = std::make_unique<raw::Ordinal64>(method_hasher_(
+        library_name_, protocol_declaration->name.decl_name(), selector, *method.identifier));
+  }
+
   if (!CheckScopes(protocol_declaration, CheckScopes))
     return false;
 
@@ -4489,7 +4799,15 @@ bool Library::CompileProtocol(Protocol* protocol_declaration) {
 
 bool Library::CompileService(Service* service_decl) {
   Scope<std::string> scope;
+  if (!CompileAttributeList(service_decl->attributes.get())) {
+    return false;
+  }
+
   for (auto& member : service_decl->members) {
+    if (!CompileAttributeList(member.attributes.get())) {
+      return false;
+    }
+
     const auto original_name = member.name.data();
     const auto canonical_name = utils::canonicalize(original_name);
     const auto name_result = scope.Insert(canonical_name, member.name);
@@ -4526,7 +4844,16 @@ bool Library::CompileService(Service* service_decl) {
 bool Library::CompileStruct(Struct* struct_declaration) {
   Scope<std::string> scope;
   DeriveResourceness derive_resourceness(&struct_declaration->resourceness);
+
+  if (!CompileAttributeList(struct_declaration->attributes.get())) {
+    return false;
+  }
+
   for (auto& member : struct_declaration->members) {
+    if (!CompileAttributeList(member.attributes.get())) {
+      return false;
+    }
+
     const auto original_name = member.name.data();
     const auto canonical_name = utils::canonicalize(original_name);
     const auto name_result = scope.Insert(canonical_name, member.name);
@@ -4567,6 +4894,10 @@ bool Library::CompileTable(Table* table_declaration) {
   Scope<std::string> name_scope;
   Ordinal64Scope ordinal_scope;
 
+  if (!CompileAttributeList(table_declaration->attributes.get())) {
+    return false;
+  }
+
   for (auto& member : table_declaration->members) {
     const auto ordinal_result = ordinal_scope.Insert(member.ordinal->value, member.ordinal->span());
     if (!ordinal_result.ok()) {
@@ -4574,6 +4905,10 @@ bool Library::CompileTable(Table* table_declaration) {
                   ordinal_result.previous_occurrence());
     }
     if (member.maybe_used) {
+      if (!CompileAttributeList(member.maybe_used->attributes.get())) {
+        return false;
+      }
+
       auto& member_used = *member.maybe_used;
       const auto original_name = member_used.name.data();
       const auto canonical_name = utils::canonicalize(original_name);
@@ -4608,6 +4943,10 @@ bool Library::CompileUnion(Union* union_declaration) {
   Ordinal64Scope ordinal_scope;
   DeriveResourceness derive_resourceness(&union_declaration->resourceness);
 
+  if (!CompileAttributeList(union_declaration->attributes.get())) {
+    return false;
+  }
+
   for (const auto& member : union_declaration->members) {
     const auto ordinal_result = ordinal_scope.Insert(member.ordinal->value, member.ordinal->span());
     if (!ordinal_result.ok()) {
@@ -4615,6 +4954,10 @@ bool Library::CompileUnion(Union* union_declaration) {
                   ordinal_result.previous_occurrence());
     }
     if (member.maybe_used) {
+      if (!CompileAttributeList(member.maybe_used->attributes.get())) {
+        return false;
+      }
+
       const auto& member_used = *member.maybe_used;
       const auto original_name = member_used.name.data();
       const auto canonical_name = utils::canonicalize(original_name);
@@ -4661,6 +5004,10 @@ bool Library::CompileUnion(Union* union_declaration) {
 }
 
 bool Library::CompileTypeAlias(TypeAlias* type_alias) {
+  if (!CompileAttributeList(type_alias->attributes.get())) {
+    return false;
+  }
+
   if (GetName(type_alias->partial_type_ctor) == type_alias->name)
     // fidlc's current semantics for cases like `alias foo = foo;` is to
     // include the LHS in the scope while compiling the RHS. Note that because
@@ -4675,6 +5022,10 @@ bool Library::CompileTypeAlias(TypeAlias* type_alias) {
 }
 
 bool Library::Compile() {
+  if (!CompileAttributeList(attributes_.get())) {
+    return false;
+  }
+
   // We process declarations in topologically sorted order. For
   // example, we process a struct member's type before the entire
   // struct.
@@ -4952,8 +5303,7 @@ bool Library::ValidateBitsMembersAndCalcMask(Bits* bits_decl, MemberType* out_ma
                 "Bits members must be an unsigned integral type!");
   // Each bits member must be a power of two.
   MemberType mask = 0u;
-  auto validator = [&mask](MemberType member,
-                           const raw::AttributeList*) -> std::unique_ptr<Diagnostic> {
+  auto validator = [&mask](MemberType member, const AttributeList*) -> std::unique_ptr<Diagnostic> {
     if (!IsPowerOfTwo(member)) {
       return Reporter::MakeError(ErrBitsMemberMustBePowerOfTwo);
     }
@@ -4988,7 +5338,7 @@ bool Library::ValidateEnumMembersAndCalcUnknownValue(Enum* enum_decl,
 
   auto validator = [enum_decl, unknown_value](
                        MemberType member,
-                       const raw::AttributeList* attributes) -> std::unique_ptr<Diagnostic> {
+                       const AttributeList* attributes) -> std::unique_ptr<Diagnostic> {
     switch (enum_decl->strictness) {
       case types::Strictness::kFlexible:
         break;

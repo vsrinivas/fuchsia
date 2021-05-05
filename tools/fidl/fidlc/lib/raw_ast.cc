@@ -40,6 +40,10 @@ void CompoundIdentifier::Accept(TreeVisitor* visitor) const {
   }
 }
 
+void DocCommentLiteral::Accept(TreeVisitor* visitor) const {
+  SourceElementMark sem(visitor, *this);
+}
+
 void StringLiteral::Accept(TreeVisitor* visitor) const { SourceElementMark sem(visitor, *this); }
 
 void NumericLiteral::Accept(TreeVisitor* visitor) const { SourceElementMark sem(visitor, *this); }
@@ -67,7 +71,12 @@ void BinaryOperatorConstant::Accept(TreeVisitor* visitor) const {
 
 void Ordinal64::Accept(TreeVisitor* visitor) const { SourceElementMark sem(visitor, *this); }
 
-void Attribute::Accept(TreeVisitor* visitor) const { SourceElementMark sem(visitor, *this); }
+void Attribute::Accept(TreeVisitor* visitor) const {
+  SourceElementMark sem(visitor, *this);
+  if (value) {
+    visitor->OnLiteral(value);
+  }
+}
 
 void AttributeList::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);

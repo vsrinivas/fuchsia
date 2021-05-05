@@ -5,6 +5,7 @@
 #ifndef TOOLS_FIDL_FIDLC_INCLUDE_FIDL_ORDINALS_H_
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_ORDINALS_H_
 
+#include "flat_ast.h"
 #include "raw_ast.h"
 
 namespace fidl {
@@ -12,7 +13,7 @@ namespace ordinals {
 
 // Returns the Selector. If the Selector attribute is present, the
 // function returns its value; otherwise, it returns the name parameter.
-std::string GetSelector(const raw::AttributeList* attributes, SourceSpan name);
+std::string GetSelector(const flat::AttributeList* attributes, SourceSpan name);
 
 // Computes the 64bits ordinal for this |method|.
 //

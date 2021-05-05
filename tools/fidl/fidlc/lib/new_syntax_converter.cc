@@ -158,8 +158,11 @@ void ConvertingTreeVisitor::OnAttribute(const raw::Attribute& element) {
   // This branching ensures that we do not attempt any conversion on doc comment
   // attributes.
   if (element.provenance == raw::Attribute::Provenance::kDefault) {
-    std::unique_ptr<Conversion> conv =
-        std::make_unique<AttributeConversion>(element.name, element.value);
+    std::optional<std::reference_wrapper<const raw::StringLiteral>> value = std::nullopt;
+    if (element.value) {
+      value = static_cast<const raw::StringLiteral&>(*element.value);
+    }
+    std::unique_ptr<Conversion> conv = std::make_unique<AttributeConversion>(element.name, value);
     Converting converting(this, std::move(conv), element.start_, element.end_);
   } else {
     std::unique_ptr<Conversion> conv =

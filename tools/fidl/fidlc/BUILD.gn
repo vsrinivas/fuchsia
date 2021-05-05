@@ -28,7 +28,6 @@ zx_library("fidl") {
   sdk_headers = []
   sdk_migrated = true
   sources = [
-    "lib/attributes.cc",
     "lib/c_generator.cc",
     "lib/check.cc",
     "lib/coded_types_generator.cc",

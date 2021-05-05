@@ -125,6 +125,7 @@ class CompoundIdentifier final : public SourceElement {
 class Literal : public SourceElement {
  public:
   enum struct Kind {
+    kDocComment,
     kString,
     kNumeric,
     // TODO(pascallouis): should have kBool instead.
@@ -139,11 +140,32 @@ class Literal : public SourceElement {
   const Kind kind;
 };
 
+class DocCommentLiteral final : public Literal {
+ public:
+  explicit DocCommentLiteral(SourceElement const& element) : Literal(element, Kind::kDocComment) {}
+
+  void Accept(TreeVisitor* visitor) const;
+
+  std::string MakeContents() const {
+    if (!has_span() || span().data().empty()) {
+      return "";
+    }
+    return fidl::utils::strip_doc_comment_slashes(span().data());
+  }
+};
+
 class StringLiteral final : public Literal {
  public:
   explicit StringLiteral(SourceElement const& element) : Literal(element, Kind::kString) {}
 
   void Accept(TreeVisitor* visitor) const;
+
+  std::string MakeContents() const {
+    if (!has_span() || span().data().empty()) {
+      return "";
+    }
+    return fidl::utils::strip_string_literal_quotes(span().data());
+  }
 };
 
 class NumericLiteral final : public Literal {
@@ -234,7 +256,7 @@ class Attribute final : public SourceElement {
   };
 
   Attribute(SourceElement const& element, Provenance provenance, std::string name,
-            std::string value)
+            std::unique_ptr<Literal> value)
       : SourceElement(element),
         provenance(provenance),
         name(std::move(name)),
@@ -244,21 +266,13 @@ class Attribute final : public SourceElement {
 
   Provenance provenance;
   const std::string name;
-  const std::string value;
+  std::unique_ptr<Literal> value;
 };
 
 class AttributeList final : public SourceElement {
  public:
   AttributeList(SourceElement const& element, std::vector<Attribute> attributes)
       : SourceElement(element), attributes(std::move(attributes)) {}
-
-  bool HasAttribute(std::string name) const {
-    for (const auto& attribute : attributes) {
-      if (attribute.name == name)
-        return true;
-    }
-    return false;
-  }
 
   void Accept(TreeVisitor* visitor) const;
 

@@ -13,19 +13,19 @@ namespace fidl::conv {
 std::string AttributeConversion::Write(fidl::utils::Syntax syntax) {
   if (syntax == fidl::utils::Syntax::kOld) {
     std::string out = prefix() + name_;
-    if (!value_.empty()) {
-      out += " = \"" + value_ + "\"";
+    if (value_.has_value()) {
+      out += " = \"" + value_.value().get().MakeContents() + "\"";
     }
     return out;
   }
 
   std::string out = prefix() + "@" + utils::to_lower_snake_case(name_);
-  if (!value_.empty()) {
+  if (value_.has_value() && !value_.value().get().MakeContents().empty()) {
     // Special case: convert MaxBytes and MaxHandles from string to uint.
     if (name_ == "MaxBytes" || name_ == "MaxHandles") {
-      out += "(" + value_ + ")";
+      out += "(" + value_.value().get().MakeContents() + ")";
     } else {
-      out += "(\"" + value_ + "\")";
+      out += "(\"" + value_.value().get().MakeContents() + "\")";
     }
   }
   return out;

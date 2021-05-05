@@ -6,6 +6,7 @@
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_VALUES_H_
 
 #include "../types.h"
+#include "../utils.h"
 
 namespace fidl {
 namespace flat {
@@ -29,6 +30,7 @@ struct ConstantValue {
     kFloat64,
     kBool,
     kString,
+    kDocComment,
   };
 
   virtual bool Convert(Kind kind, std::unique_ptr<ConstantValue>* out_value) const = 0;
@@ -94,7 +96,7 @@ struct NumericConstantValue final : ConstantValue {
     return os;
   }
 
-  virtual bool Convert(Kind kind, std::unique_ptr<ConstantValue>* out_value) const override {
+  bool Convert(Kind kind, std::unique_ptr<ConstantValue>* out_value) const override {
     assert(out_value != nullptr);
 
     auto checked_value = safemath::CheckedNumeric<ValueType>(value);
@@ -180,6 +182,7 @@ struct NumericConstantValue final : ConstantValue {
         *out_value = std::make_unique<NumericConstantValue<double>>(casted_value);
         return true;
       }
+      case Kind::kDocComment:
       case Kind::kString:
       case Kind::kBool:
         return false;
@@ -242,7 +245,7 @@ struct BoolConstantValue final : ConstantValue {
     return os;
   }
 
-  virtual bool Convert(Kind kind, std::unique_ptr<ConstantValue>* out_value) const override {
+  bool Convert(Kind kind, std::unique_ptr<ConstantValue>* out_value) const override {
     assert(out_value != nullptr);
     switch (kind) {
       case Kind::kBool:
@@ -256,6 +259,36 @@ struct BoolConstantValue final : ConstantValue {
   bool value;
 };
 
+struct DocCommentConstantValue final : ConstantValue {
+  explicit DocCommentConstantValue(std::string_view value)
+      : ConstantValue(ConstantValue::Kind::kDocComment), value(value) {}
+
+  friend std::ostream& operator<<(std::ostream& os, const DocCommentConstantValue& v) {
+    os << v.value.data();
+    return os;
+  }
+
+  bool Convert(Kind kind, std::unique_ptr<ConstantValue>* out_value) const override {
+    assert(out_value != nullptr);
+    switch (kind) {
+      case Kind::kDocComment:
+        *out_value = std::make_unique<DocCommentConstantValue>(std::string_view(value));
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  std::string_view value;
+
+  std::string MakeContents() const {
+    if (value.empty()) {
+      return "";
+    }
+    return fidl::utils::strip_doc_comment_slashes(value);
+  }
+};
+
 struct StringConstantValue final : ConstantValue {
   explicit StringConstantValue(std::string_view value)
       : ConstantValue(ConstantValue::Kind::kString), value(value) {}
@@ -265,7 +298,7 @@ struct StringConstantValue final : ConstantValue {
     return os;
   }
 
-  virtual bool Convert(Kind kind, std::unique_ptr<ConstantValue>* out_value) const override {
+  bool Convert(Kind kind, std::unique_ptr<ConstantValue>* out_value) const override {
     assert(out_value != nullptr);
     switch (kind) {
       case Kind::kString:
@@ -277,6 +310,13 @@ struct StringConstantValue final : ConstantValue {
   }
 
   std::string_view value;
+
+  std::string MakeContents() const {
+    if (value.empty()) {
+      return "";
+    }
+    return fidl::utils::strip_string_literal_quotes(value);
+  }
 };
 
 // Constant represents the _use_ of a constant. (For the _declaration_, see

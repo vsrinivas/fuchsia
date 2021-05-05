@@ -97,8 +97,8 @@ class JSONGenerator : public utils::JsonWriter<JSONGenerator> {
   void Generate(types::Nullability value);
 
   void Generate(const raw::Identifier& value);
-  void Generate(const raw::Attribute& value);
-  void Generate(const raw::AttributeList& value);
+  void Generate(const flat::Attribute& value);
+  void Generate(const flat::AttributeList& value);
   void Generate(const raw::Ordinal64& value);
 
   void Generate(const TypeShape& type_shape);

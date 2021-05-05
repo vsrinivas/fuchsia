@@ -107,7 +107,7 @@ constexpr ErrorDef ErrFilesDisagreeOnLibraryName(
     "Two files in the library disagree about the name of the library");
 constexpr ErrorDef<std::vector<std::string_view>> ErrDuplicateLibraryImport(
     "Library {} already imported. Did you require it twice?");
-constexpr ErrorDef<raw::AttributeList> ErrAttributesNotAllowedOnLibraryImport(
+constexpr ErrorDef<raw::AttributeList *> ErrAttributesNotAllowedOnLibraryImport(
     "no attributes allowed on library import, found: {}");
 constexpr ErrorDef<std::vector<std::string_view>> ErrUnknownLibrary(
     "Could not find library named {}. Did you include its sources with --files?");
@@ -264,12 +264,12 @@ constexpr ErrorDef<> ErrCannotUseType("cannot use type in this context");
 // ---------------------------------------------------------------------------
 // Attribute Validation: Placement, Values, Constraints
 // ---------------------------------------------------------------------------
-constexpr ErrorDef<raw::Attribute> ErrInvalidAttributePlacement(
+constexpr ErrorDef<flat::Attribute *> ErrInvalidAttributePlacement(
     "placement of attribute '{}' disallowed here");
-constexpr ErrorDef<raw::Attribute> ErrDeprecatedAttribute("attribute '{}' is deprecated");
-constexpr ErrorDef<raw::Attribute, std::string, std::set<std::string>> ErrInvalidAttributeValue(
+constexpr ErrorDef<flat::Attribute *> ErrDeprecatedAttribute("attribute '{}' is deprecated");
+constexpr ErrorDef<flat::Attribute *, std::string, std::set<std::string>> ErrInvalidAttributeValue(
     "attribute '{}' has invalid value '{}', should be one of '{}'");
-constexpr ErrorDef<raw::Attribute, std::string> ErrAttributeConstraintNotSatisfied(
+constexpr ErrorDef<flat::Attribute *, std::string> ErrAttributeConstraintNotSatisfied(
     "declaration did not satisfy constraint of attribute '{}' with value '{}'");
 constexpr ErrorDef<flat::Name> ErrUnionCannotBeSimple("union '{}' is not allowed to be simple");
 constexpr ErrorDef<std::string_view> ErrMemberMustBeSimple("member '{}' is not simple");
@@ -281,8 +281,11 @@ constexpr ErrorDef ErrInvalidErrorType(
     "invalid error type: must be int32, uint32 or an enum therof");
 constexpr ErrorDef<std::string, std::set<std::string>> ErrInvalidTransportType(
     "invalid transport type: got {} expected one of {}");
-constexpr ErrorDef ErrBoundIsTooBig("bound is too big");
-constexpr ErrorDef<std::string> ErrUnableToParseBound("unable to parse bound '{}'");
+constexpr ErrorDef<flat::Attribute *> ErrInvalidAttributeType("attribute '{}' has an invalid type");
+constexpr ErrorDef<flat::Attribute *, std::string> ErrBoundIsTooBig(
+    "'{}' bound of '{}' is too big");
+constexpr ErrorDef<flat::Attribute *, std::string> ErrUnableToParseBound(
+    "unable to parse '{}' bound of '{}'");
 constexpr WarningDef<std::string, std::string> WarnAttributeTypo(
     "suspect attribute with name '{}'; did you mean '{}'?");
 

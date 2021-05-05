@@ -4,8 +4,6 @@
 
 #include <locale.h>
 
-#include <fidl/attributes.h>
-#include <fidl/flat_ast.h>
 #include <fidl/lexer.h>
 #include <fidl/parser.h>
 #include <fidl/raw_ast.h>
@@ -376,7 +374,25 @@ struct UseDependent {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrLibraryImportsMustBeGroupedAtTopOfFile);
 }
 
-TEST(ParsingTests, GoodMultilineCommentHasCorrectSourceSpan) {
+TEST(ParsingTests, GoodAttributeValueHasCorrectContents) {
+  TestLibrary library("example.fidl", R"FIDL(
+  library example;
+
+  [Foo="Bar"]
+  struct Empty{};
+  )FIDL");
+
+  std::unique_ptr<fidl::raw::File> ast;
+  ASSERT_TRUE(library.Parse(&ast));
+
+  fidl::raw::Attribute attribute =
+      std::move(ast->struct_declaration_list.front()->attributes->attributes.front());
+  ASSERT_STR_EQ(attribute.name.c_str(), "Foo");
+  ASSERT_STR_EQ(static_cast<fidl::raw::StringLiteral*>(attribute.value.get())->MakeContents(),
+                "Bar");
+}
+
+TEST(ParsingTests, GoodMultilineCommentHasCorrectContents) {
   TestLibrary library("example.fidl", R"FIDL(
   library example;
 
@@ -390,12 +406,10 @@ TEST(ParsingTests, GoodMultilineCommentHasCorrectSourceSpan) {
   ASSERT_TRUE(library.Parse(&ast));
 
   fidl::raw::Attribute attribute =
-      ast->struct_declaration_list.front()->attributes->attributes.front();
+      std::move(ast->struct_declaration_list.front()->attributes->attributes.front());
   ASSERT_STR_EQ(attribute.name.c_str(), "Doc");
-  ASSERT_STR_EQ(std::string(attribute.span().data()).c_str(),
-                R"EXPECTED(/// A
-  /// multiline
-  /// comment!)EXPECTED");
+  ASSERT_STR_EQ(static_cast<fidl::raw::DocCommentLiteral*>(attribute.value.get())->MakeContents(),
+                " A\n multiline\n comment!\n");
 }
 
 TEST(ParsingTests, WarnDocCommentBlankLineTest) {

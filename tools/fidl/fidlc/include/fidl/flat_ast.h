@@ -49,6 +49,8 @@ using diagnostics::Diagnostic;
 using diagnostics::ErrorDef;
 using reporter::Reporter;
 
+constexpr auto kDefaultAttributeArg = "value";
+
 template <typename T>
 struct PtrCompare {
   bool operator()(const T* left, const T* right) const { return *left < *right; }
@@ -62,6 +64,52 @@ bool HasSimpleLayout(const Decl* decl);
 
 // This is needed (for now) to work around declaration order issues.
 std::string LibraryName(const Library* library, std::string_view separator);
+
+struct AttributeArg final {
+  AttributeArg(std::string name, std::unique_ptr<Constant> value)
+      : name(std::move(name)), value(std::move(value)) {}
+
+  std::string name;
+  std::unique_ptr<Constant> value;
+};
+
+using MaybeConstantValue = std::optional<std::reference_wrapper<const ConstantValue>>;
+
+struct Attribute final {
+  // A constructor for synthetic attributes like "Result."
+  explicit Attribute(std::string name) : name(std::move(name)) {}
+
+  Attribute(std::string name, SourceSpan span) : name(std::move(name)), span_(span) {}
+
+  Attribute(std::string name, SourceSpan span, std::vector<std::unique_ptr<AttributeArg>> args)
+      : name(std::move(name)), args(std::move(args)), span_(span) {}
+
+  bool HasArg(std::string_view arg_name) const;
+  MaybeConstantValue GetArg(std::string_view arg_name = kDefaultAttributeArg) const;
+  SourceSpan span() const { return span_; }
+
+  const std::string name;
+  std::vector<std::unique_ptr<AttributeArg>> args;
+
+  // The span is retained for error reporting purposes.
+  SourceSpan span_;
+};
+
+using MaybeAttribute = std::optional<std::reference_wrapper<const Attribute>>;
+
+struct AttributeList final {
+  explicit AttributeList(std::vector<std::unique_ptr<Attribute>> attributes)
+      : attributes(std::move(attributes)) {}
+
+  bool HasAttribute(std::string_view attribute_name) const;
+  MaybeAttribute GetAttribute(std::string_view attribute_name) const;
+  bool HasAttributeArg(std::string_view attribute_name,
+                       std::string_view arg_name = kDefaultAttributeArg) const;
+  MaybeConstantValue GetAttributeArg(std::string_view attribute_name,
+                                     std::string_view arg_name = kDefaultAttributeArg) const;
+
+  std::vector<std::unique_ptr<Attribute>> attributes;
+};
 
 struct Decl {
   virtual ~Decl() {}
@@ -79,16 +127,19 @@ struct Decl {
     kTypeAlias,
   };
 
-  Decl(Kind kind, std::unique_ptr<raw::AttributeList> attributes, Name name)
+  Decl(Kind kind, std::unique_ptr<AttributeList> attributes, Name name)
       : kind(kind), attributes(std::move(attributes)), name(std::move(name)) {}
 
   const Kind kind;
 
-  std::unique_ptr<raw::AttributeList> attributes;
+  std::unique_ptr<AttributeList> attributes;
   const Name name;
 
-  bool HasAttribute(std::string_view name) const;
-  std::string_view GetAttribute(std::string_view name) const;
+  bool HasAttribute(std::string_view attribute_name) const;
+  MaybeAttribute GetAttribute(std::string_view attribute_name) const;
+  bool HasAttributeArg(std::string_view attribute_name, std::string_view arg_name = "value") const;
+  MaybeConstantValue GetAttributeArg(std::string_view attribute_name,
+                                     std::string_view arg_name = "value") const;
   std::string GetName() const;
 
   bool compiling = false;
@@ -96,7 +147,7 @@ struct Decl {
 };
 
 struct TypeDecl : public Decl, public Object {
-  TypeDecl(Kind kind, std::unique_ptr<raw::AttributeList> attributes, Name name)
+  TypeDecl(Kind kind, std::unique_ptr<AttributeList> attributes, Name name)
       : Decl(kind, std::move(attributes), std::move(name)) {}
 
   bool recursive = false;
@@ -350,7 +401,7 @@ struct Using final {
 // Constant. For the _value_, see ConstantValue.) A Const consists of a
 // left-hand-side Name (found in Decl) and a right-hand-side Constant.
 struct Const final : public Decl {
-  Const(std::unique_ptr<raw::AttributeList> attributes, Name name, TypeConstructor type_ctor,
+  Const(std::unique_ptr<AttributeList> attributes, Name name, TypeConstructor type_ctor,
         std::unique_ptr<Constant> value)
       : Decl(Kind::kConst, std::move(attributes), std::move(name)),
         type_ctor(std::move(type_ctor)),
@@ -362,14 +413,14 @@ struct Const final : public Decl {
 struct Enum final : public TypeDecl {
   struct Member {
     Member(SourceSpan name, std::unique_ptr<Constant> value,
-           std::unique_ptr<raw::AttributeList> attributes)
+           std::unique_ptr<AttributeList> attributes)
         : name(name), value(std::move(value)), attributes(std::move(attributes)) {}
     SourceSpan name;
     std::unique_ptr<Constant> value;
-    std::unique_ptr<raw::AttributeList> attributes;
+    std::unique_ptr<AttributeList> attributes;
   };
 
-  Enum(std::unique_ptr<raw::AttributeList> attributes, Name name, TypeConstructor subtype_ctor,
+  Enum(std::unique_ptr<AttributeList> attributes, Name name, TypeConstructor subtype_ctor,
        std::vector<Member> members, types::Strictness strictness)
       : TypeDecl(Kind::kEnum, std::move(attributes), std::move(name)),
         subtype_ctor(std::move(subtype_ctor)),
@@ -394,14 +445,14 @@ struct Enum final : public TypeDecl {
 struct Bits final : public TypeDecl {
   struct Member {
     Member(SourceSpan name, std::unique_ptr<Constant> value,
-           std::unique_ptr<raw::AttributeList> attributes)
+           std::unique_ptr<AttributeList> attributes)
         : name(name), value(std::move(value)), attributes(std::move(attributes)) {}
     SourceSpan name;
     std::unique_ptr<Constant> value;
-    std::unique_ptr<raw::AttributeList> attributes;
+    std::unique_ptr<AttributeList> attributes;
   };
 
-  Bits(std::unique_ptr<raw::AttributeList> attributes, Name name, TypeConstructor subtype_ctor,
+  Bits(std::unique_ptr<AttributeList> attributes, Name name, TypeConstructor subtype_ctor,
        std::vector<Member> members, types::Strictness strictness)
       : TypeDecl(Kind::kBits, std::move(attributes), std::move(name)),
         subtype_ctor(std::move(subtype_ctor)),
@@ -421,18 +472,17 @@ struct Bits final : public TypeDecl {
 
 struct Service final : public TypeDecl {
   struct Member {
-    Member(TypeConstructor type_ctor, SourceSpan name,
-           std::unique_ptr<raw::AttributeList> attributes)
+    Member(TypeConstructor type_ctor, SourceSpan name, std::unique_ptr<AttributeList> attributes)
         : type_ctor(std::move(type_ctor)),
           name(std::move(name)),
           attributes(std::move(attributes)) {}
 
     TypeConstructor type_ctor;
     SourceSpan name;
-    std::unique_ptr<raw::AttributeList> attributes;
+    std::unique_ptr<AttributeList> attributes;
   };
 
-  Service(std::unique_ptr<raw::AttributeList> attributes, Name name, std::vector<Member> members)
+  Service(std::unique_ptr<AttributeList> attributes, Name name, std::vector<Member> members)
       : TypeDecl(Kind::kService, std::move(attributes), std::move(name)),
         members(std::move(members)) {}
 
@@ -450,7 +500,7 @@ struct Struct;
 struct StructMember : public Object {
   StructMember(TypeConstructor type_ctor, SourceSpan name,
                std::unique_ptr<Constant> maybe_default_value,
-               std::unique_ptr<raw::AttributeList> attributes)
+               std::unique_ptr<AttributeList> attributes)
       : type_ctor(std::move(type_ctor)),
         name(std::move(name)),
         maybe_default_value(std::move(maybe_default_value)),
@@ -458,7 +508,7 @@ struct StructMember : public Object {
   TypeConstructor type_ctor;
   SourceSpan name;
   std::unique_ptr<Constant> maybe_default_value;
-  std::unique_ptr<raw::AttributeList> attributes;
+  std::unique_ptr<AttributeList> attributes;
 
   std::any AcceptAny(VisitorAny* visitor) const override;
 
@@ -470,7 +520,7 @@ struct StructMember : public Object {
 struct Struct final : public TypeDecl {
   using Member = StructMember;
 
-  Struct(std::unique_ptr<raw::AttributeList> attributes, Name name,
+  Struct(std::unique_ptr<AttributeList> attributes, Name name,
          std::vector<Member> unparented_members, std::optional<types::Resourceness> resourceness,
          bool is_request_or_response = false)
       : TypeDecl(Kind::kStruct, std::move(attributes), std::move(name)),
@@ -502,7 +552,7 @@ struct Table;
 struct TableMemberUsed : public Object {
   TableMemberUsed(TypeConstructor type_ctor, SourceSpan name,
                   std::unique_ptr<Constant> maybe_default_value,
-                  std::unique_ptr<raw::AttributeList> attributes)
+                  std::unique_ptr<AttributeList> attributes)
       : type_ctor(std::move(type_ctor)),
         name(std::move(name)),
         maybe_default_value(std::move(maybe_default_value)),
@@ -510,7 +560,7 @@ struct TableMemberUsed : public Object {
   TypeConstructor type_ctor;
   SourceSpan name;
   std::unique_ptr<Constant> maybe_default_value;
-  std::unique_ptr<raw::AttributeList> attributes;
+  std::unique_ptr<AttributeList> attributes;
 
   std::any AcceptAny(VisitorAny* visitor) const override;
 
@@ -524,12 +574,12 @@ struct TableMember : public Object {
 
   TableMember(std::unique_ptr<raw::Ordinal64> ordinal, TypeConstructor type, SourceSpan name,
               std::unique_ptr<Constant> maybe_default_value,
-              std::unique_ptr<raw::AttributeList> attributes)
+              std::unique_ptr<AttributeList> attributes)
       : ordinal(std::move(ordinal)),
         maybe_used(std::make_unique<Used>(std::move(type), name, std::move(maybe_default_value),
                                           std::move(attributes))) {}
   TableMember(std::unique_ptr<raw::Ordinal64> ordinal, TypeConstructor type, SourceSpan name,
-              std::unique_ptr<raw::AttributeList> attributes)
+              std::unique_ptr<AttributeList> attributes)
       : ordinal(std::move(ordinal)),
         maybe_used(std::make_unique<Used>(std::move(type), name, nullptr, std::move(attributes))) {}
   TableMember(std::unique_ptr<raw::Ordinal64> ordinal, SourceSpan span)
@@ -548,7 +598,7 @@ struct TableMember : public Object {
 struct Table final : public TypeDecl {
   using Member = TableMember;
 
-  Table(std::unique_ptr<raw::AttributeList> attributes, Name name, std::vector<Member> members,
+  Table(std::unique_ptr<AttributeList> attributes, Name name, std::vector<Member> members,
         types::Strictness strictness, types::Resourceness resourceness)
       : TypeDecl(Kind::kTable, std::move(attributes), std::move(name)),
         members(std::move(members)),
@@ -568,11 +618,11 @@ struct Union;
 // TODO(fxbug.dev/37535): Move this to a nested class inside Union.
 struct UnionMemberUsed : public Object {
   UnionMemberUsed(TypeConstructor type_ctor, SourceSpan name,
-                  std::unique_ptr<raw::AttributeList> attributes)
+                  std::unique_ptr<AttributeList> attributes)
       : type_ctor(std::move(type_ctor)), name(name), attributes(std::move(attributes)) {}
   TypeConstructor type_ctor;
   SourceSpan name;
-  std::unique_ptr<raw::AttributeList> attributes;
+  std::unique_ptr<AttributeList> attributes;
 
   std::any AcceptAny(VisitorAny* visitor) const override;
 
@@ -587,7 +637,7 @@ struct UnionMember : public Object {
   using Used = UnionMemberUsed;
 
   UnionMember(std::unique_ptr<raw::Ordinal64> ordinal, TypeConstructor type_ctor, SourceSpan name,
-              std::unique_ptr<raw::AttributeList> attributes)
+              std::unique_ptr<AttributeList> attributes)
       : ordinal(std::move(ordinal)),
         maybe_used(std::make_unique<Used>(std::move(type_ctor), name, std::move(attributes))) {}
   UnionMember(std::unique_ptr<raw::Ordinal64> ordinal, SourceSpan span)
@@ -606,7 +656,7 @@ struct UnionMember : public Object {
 struct Union final : public TypeDecl {
   using Member = UnionMember;
 
-  Union(std::unique_ptr<raw::AttributeList> attributes, Name name,
+  Union(std::unique_ptr<AttributeList> attributes, Name name,
         std::vector<Member> unparented_members, types::Strictness strictness,
         std::optional<types::Resourceness> resourceness)
       : TypeDecl(Kind::kUnion, std::move(attributes), std::move(name)),
@@ -638,25 +688,28 @@ struct Protocol final : public TypeDecl {
     Method(Method&&) = default;
     Method& operator=(Method&&) = default;
 
-    Method(std::unique_ptr<raw::AttributeList> attributes,
-           std::unique_ptr<raw::Ordinal64> generated_ordinal64, SourceSpan name,
-           Struct* maybe_request, Struct* maybe_response)
+    Method(std::unique_ptr<AttributeList> attributes, std::unique_ptr<raw::Identifier> identifier,
+           SourceSpan name, Struct* maybe_request, Struct* maybe_response)
         : attributes(std::move(attributes)),
-          generated_ordinal64(std::move(generated_ordinal64)),
-          name(std::move(name)),
+          identifier(std::move(identifier)),
+          name(name),
           maybe_request(maybe_request),
-          maybe_response(maybe_response) {
+          maybe_response(maybe_response),
+          generated_ordinal64(nullptr) {
       assert(this->maybe_request != nullptr || this->maybe_response != nullptr);
     }
 
-    std::unique_ptr<raw::AttributeList> attributes;
-    std::unique_ptr<raw::Ordinal64> generated_ordinal64;
+    std::unique_ptr<AttributeList> attributes;
+    std::unique_ptr<raw::Identifier> identifier;
     SourceSpan name;
     Struct* maybe_request;
     Struct* maybe_response;
     // This is set to the |Protocol| instance that owns this |Method|,
     // when the |Protocol| is constructed.
     Protocol* owning_protocol = nullptr;
+
+    // Set during compilation
+    std::unique_ptr<raw::Ordinal64> generated_ordinal64;
   };
 
   // Used to keep track of a all methods (i.e. including composed methods).
@@ -669,8 +722,8 @@ struct Protocol final : public TypeDecl {
     const bool is_composed;
   };
 
-  Protocol(std::unique_ptr<raw::AttributeList> attributes, Name name,
-           std::set<Name> composed_protocols, std::vector<Method> methods)
+  Protocol(std::unique_ptr<AttributeList> attributes, Name name, std::set<Name> composed_protocols,
+           std::vector<Method> methods)
       : TypeDecl(Kind::kProtocol, std::move(attributes), std::move(name)),
         composed_protocols(std::move(composed_protocols)),
         methods(std::move(methods)) {
@@ -688,17 +741,16 @@ struct Protocol final : public TypeDecl {
 
 struct Resource final : public Decl {
   struct Property {
-    Property(TypeConstructor type_ctor, SourceSpan name,
-             std::unique_ptr<raw::AttributeList> attributes)
+    Property(TypeConstructor type_ctor, SourceSpan name, std::unique_ptr<AttributeList> attributes)
         : type_ctor(std::move(type_ctor)),
           name(std::move(name)),
           attributes(std::move(attributes)) {}
     TypeConstructor type_ctor;
     SourceSpan name;
-    std::unique_ptr<raw::AttributeList> attributes;
+    std::unique_ptr<AttributeList> attributes;
   };
 
-  Resource(std::unique_ptr<raw::AttributeList> attributes, Name name, TypeConstructor subtype_ctor,
+  Resource(std::unique_ptr<AttributeList> attributes, Name name, TypeConstructor subtype_ctor,
            std::vector<Property> properties)
       : Decl(Kind::kResource, std::move(attributes), std::move(name)),
         subtype_ctor(std::move(subtype_ctor)),
@@ -712,8 +764,7 @@ struct Resource final : public Decl {
 };
 
 struct TypeAlias final : public Decl {
-  TypeAlias(std::unique_ptr<raw::AttributeList> attributes, Name name,
-            TypeConstructor partial_type_ctor)
+  TypeAlias(std::unique_ptr<AttributeList> attributes, Name name, TypeConstructor partial_type_ctor)
       : Decl(Kind::kTypeAlias, std::move(attributes), std::move(name)),
         partial_type_ctor(std::move(partial_type_ctor)) {}
 
@@ -949,8 +1000,8 @@ class Typespace {
 // - A constraint which must be met by the declaration.
 class AttributeSchema {
  public:
-  using Constraint =
-      fit::function<bool(Reporter* reporter, const raw::Attribute& attribute, const Decl* decl)>;
+  using Constraint = fit::function<bool(
+      Reporter* reporter, const std::unique_ptr<Attribute>& attribute, const Decl* decl)>;
 
   // Placement indicates the placement of an attribute, e.g. whether an
   // attribute is placed on an enum declaration, method, or union
@@ -986,16 +1037,16 @@ class AttributeSchema {
 
   static AttributeSchema Deprecated();
 
-  void ValidatePlacement(Reporter* reporter, const raw::Attribute& attribute,
+  void ValidatePlacement(Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
                          Placement placement) const;
 
-  void ValidateValue(Reporter* reporter, const raw::Attribute& attribute) const;
+  void ValidateValue(Reporter* reporter, const std::unique_ptr<Attribute>& attribute) const;
 
-  void ValidateConstraint(Reporter* reporter, const raw::Attribute& attribute,
+  void ValidateConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
                           const Decl* decl) const;
 
  private:
-  static bool NoOpConstraint(Reporter* reporter, const raw::Attribute& attribute,
+  static bool NoOpConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
                              const Decl* decl) {
     return true;
   }
@@ -1021,7 +1072,7 @@ class Libraries {
   }
 
   const AttributeSchema* RetrieveAttributeSchema(Reporter* reporter,
-                                                 const raw::Attribute& attribute) const;
+                                                 const std::unique_ptr<Attribute>& attribute) const;
 
   std::set<std::vector<std::string_view>> Unused(const Library* target_library) const;
 
@@ -1109,7 +1160,7 @@ class Library {
   bool Compile();
 
   const std::vector<std::string_view>& name() const { return library_name_; }
-  const raw::AttributeList* attributes() const { return attributes_.get(); }
+  const AttributeList* attributes() const { return attributes_.get(); }
 
  private:
   bool Fail(std::unique_ptr<Diagnostic> err);
@@ -1128,8 +1179,8 @@ class Library {
   }
 
   void ValidateAttributesPlacement(AttributeSchema::Placement placement,
-                                   const raw::AttributeList* attributes);
-  void ValidateAttributesConstraints(const Decl* decl, const raw::AttributeList* attributes);
+                                   const AttributeList* attributes);
+  void ValidateAttributesConstraints(const Decl* decl, const AttributeList* attributes);
 
   // TODO(fxbug.dev/7920): Rationalize the use of names. Here, a simple name is
   // one that is not scoped, it is just text. An anonymous name is one that
@@ -1151,6 +1202,8 @@ class Library {
   VerifyResourcenessStep StartVerifyResourcenessStep();
   VerifyAttributesStep StartVerifyAttributesStep();
 
+  bool ConsumeAttributeList(std::unique_ptr<raw::AttributeList> raw_attribute_list,
+                            std::unique_ptr<AttributeList>* out_attribute_list);
   bool ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant,
                        std::unique_ptr<Constant>* out_constant);
   void ConsumeLiteralConstant(raw::LiteralConstant* raw_constant,
@@ -1239,6 +1292,9 @@ class Library {
   bool VerifyTypeCategory(const Type* type, std::optional<SourceSpan> span,
                           AllowedCategories category);
 
+  bool CompileAttributeList(AttributeList* attributes);
+  bool CompileAttribute(Attribute* attribute);
+
   ConstantValue::Kind ConstantValuePrimitiveKind(const types::PrimitiveSubtype primitive_subtype);
   bool ResolveHandleRightsConstant(Resource* resource, Constant* constant,
                                    const HandleRights** out_rights);
@@ -1256,7 +1312,7 @@ class Library {
   // and on failure returns an error.
   template <typename MemberType>
   using MemberValidator = fit::function<std::unique_ptr<Diagnostic>(
-      const MemberType& member, const raw::AttributeList* attributes)>;
+      const MemberType& member, const AttributeList* attributes)>;
   template <typename DeclType, typename MemberType>
   bool ValidateMembers(DeclType* decl, MemberValidator<MemberType> validator);
   template <typename MemberType>
@@ -1310,7 +1366,7 @@ class Library {
   const Name kSizeTypeName = Name::CreateIntrinsic("uint32");
   const PrimitiveType kSizeType = PrimitiveType(kSizeTypeName, types::PrimitiveSubtype::kUint32);
 
-  std::unique_ptr<raw::AttributeList> attributes_;
+  std::unique_ptr<AttributeList> attributes_;
 
   Dependencies dependencies_;
   const Libraries* all_libraries_;

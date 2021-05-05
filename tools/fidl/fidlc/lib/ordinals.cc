@@ -6,20 +6,21 @@
 
 #include <optional>
 
+#include "fidl/flat_ast.h"
+
 #define BORINGSSL_NO_CXX
 #include <openssl/sha.h>
 
 namespace fidl {
 namespace ordinals {
 
-std::string GetSelector(const raw::AttributeList* attributes, SourceSpan name) {
-  if (attributes != nullptr) {
-    const size_t size = attributes->attributes.size();
-    for (size_t i = 0; i < size; i++) {
-      if (attributes->attributes[i].name == "Selector") {
-        return attributes->attributes[i].value;
-      }
-    }
+std::string GetSelector(const flat::AttributeList* attributes, SourceSpan name) {
+  auto selector_constant = attributes->GetAttributeArg("Selector");
+  if (selector_constant.has_value() &&
+      selector_constant.value().get().kind == flat::ConstantValue::Kind::kString) {
+    auto selector_string_constant =
+        static_cast<const flat::StringConstantValue&>(selector_constant.value().get());
+    return selector_string_constant.MakeContents();
   }
   return std::string(name.data().data(), name.data().size());
 }

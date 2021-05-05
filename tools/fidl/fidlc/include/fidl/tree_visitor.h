@@ -27,6 +27,11 @@ class TreeVisitor {
   virtual void OnLiteral(std::unique_ptr<fidl::raw::Literal> const& element) {
     fidl::raw::Literal::Kind kind = element->kind;
     switch (kind) {
+      case Literal::Kind::kDocComment: {
+        DocCommentLiteral* literal = static_cast<DocCommentLiteral*>(element.get());
+        OnDocCommentLiteral(*literal);
+        break;
+      }
       case Literal::Kind::kString: {
         StringLiteral* literal = static_cast<StringLiteral*>(element.get());
         OnStringLiteral(*literal);
@@ -52,6 +57,8 @@ class TreeVisitor {
         break;
     }
   }
+  virtual void OnDocCommentLiteral(DocCommentLiteral& element) { element.Accept(this); }
+
   virtual void OnStringLiteral(StringLiteral& element) { element.Accept(this); }
 
   virtual void OnNumericLiteral(NumericLiteral& element) { element.Accept(this); }

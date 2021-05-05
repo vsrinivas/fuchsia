@@ -178,10 +178,6 @@ CGenerator::Member EmptyStructMember() {
   };
 }
 
-CGenerator::Transport ParseTransport(std::string_view view) {
-  return CGenerator::Transport::Channel;
-}
-
 // Can encode and decode functions be generated for these members?
 bool CanGenerateCodecFunctions(const std::vector<CGenerator::Member>& members) {
   for (const auto& m : members) {
@@ -591,6 +587,7 @@ void BitsValue(const flat::Constant* constant, std::string* out_value) {
     case flat::ConstantValue::Kind::kBool:
     case flat::ConstantValue::Kind::kFloat32:
     case flat::ConstantValue::Kind::kFloat64:
+    case flat::ConstantValue::Kind::kDocComment:
     case flat::ConstantValue::Kind::kString:
       assert(false && "bad primitive type for a bits declaration");
       break;
@@ -647,6 +644,7 @@ void EnumValue(const flat::Constant* constant, std::string* out_value) {
     case flat::ConstantValue::Kind::kBool:
     case flat::ConstantValue::Kind::kFloat32:
     case flat::ConstantValue::Kind::kFloat64:
+    case flat::ConstantValue::Kind::kDocComment:
     case flat::ConstantValue::Kind::kString:
       assert(false && "bad primitive type for an enum");
       break;
@@ -954,7 +952,7 @@ std::map<const flat::Decl*, CGenerator::NamedProtocol> CGenerator::NameProtocols
     if (protocol_info->HasAttribute("Discoverable")) {
       named_protocol.discoverable_name = NameDiscoverable(*protocol_info);
     }
-    named_protocol.transport = ParseTransport(protocol_info->GetAttribute("Transport"));
+    named_protocol.transport = CGenerator::Transport::Channel;
     for (const auto& method_with_info : protocol_info->all_methods) {
       assert(method_with_info.method != nullptr);
       const auto& method = *method_with_info.method;

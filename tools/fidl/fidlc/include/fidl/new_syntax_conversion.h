@@ -107,12 +107,13 @@ class NoopConversion : public Conversion {
 // Converts a single attribute, one of potentially several in an AttributeList.
 class AttributeConversion : public Conversion {
  public:
-  AttributeConversion(const std::string& name, const std::string& value)
+  AttributeConversion(const std::string& name,
+                      const std::optional<std::reference_wrapper<const raw::StringLiteral>> value)
       : name_(name), value_(value) {}
   ~AttributeConversion() override = default;
 
   const std::string& name_;
-  const std::string& value_;
+  const std::optional<std::reference_wrapper<const raw::StringLiteral>> value_;
 
   void AddChildText(std::string child) override {}
 

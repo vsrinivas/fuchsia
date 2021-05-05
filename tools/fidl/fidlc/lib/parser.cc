@@ -7,7 +7,6 @@
 #include <errno.h>
 #include <lib/fit/function.h>
 
-#include "fidl/attributes.h"
 #include "fidl/diagnostics.h"
 #include "fidl/experimental_flags.h"
 #include "fidl/types.h"
@@ -291,26 +290,19 @@ std::unique_ptr<raw::Attribute> Parser::ParseAttribute() {
   }
 
   std::string str_name("");
-  std::string str_value("");
   if (name)
     str_name = std::string(name->span().data().data(), name->span().data().size());
-  if (value) {
-    auto data = value->span().data();
-    if (data.size() >= 2 && data[0] == '"' && data[data.size() - 1] == '"') {
-      str_value = std::string(value->span().data().data() + 1, value->span().data().size() - 2);
-    }
-  }
+
   return std::make_unique<raw::Attribute>(
-      scope.GetSourceElement(), raw::Attribute::Provenance::kDefault, str_name, str_value);
+      scope.GetSourceElement(), raw::Attribute::Provenance::kDefault, str_name, std::move(value));
 }
 
 std::unique_ptr<raw::AttributeList> Parser::ParseAttributeList(
     std::unique_ptr<raw::Attribute> doc_comment, ASTScope& scope) {
-  AttributesBuilder attributes_builder(reporter_);
-  if (doc_comment) {
-    if (!attributes_builder.Insert(std::move(*doc_comment.get())))
-      return Fail();
-  }
+  std::vector<raw::Attribute> attributes;
+  if (doc_comment)
+    attributes.emplace_back(std::move(*doc_comment));
+
   ConsumeToken(OfKind(Token::Kind::kLeftSquare));
   if (!Ok())
     return Fail();
@@ -318,29 +310,25 @@ std::unique_ptr<raw::AttributeList> Parser::ParseAttributeList(
     auto attribute = ParseAttribute();
     if (!Ok())
       return Fail();
-    if (!attributes_builder.Insert(std::move(*attribute.get())))
-      return Fail();
+    attributes.emplace_back(std::move(*attribute));
     if (!MaybeConsumeToken(OfKind(Token::Kind::kComma)))
       break;
   }
   ConsumeToken(OfKind(Token::Kind::kRightSquare));
   if (!Ok())
     return Fail();
+
   auto attribute_list =
-      std::make_unique<raw::AttributeList>(scope.GetSourceElement(), attributes_builder.Done());
+      std::make_unique<raw::AttributeList>(scope.GetSourceElement(), std::move(attributes));
   return attribute_list;
 }
 
 std::unique_ptr<raw::Attribute> Parser::ParseDocComment() {
   ASTScope scope(this);
-  std::string str_value("");
-
   std::optional<Token> doc_line;
-  bool is_first_doc_comment = true;
+  std::optional<Token> first_doc_line;
   while (Peek().kind() == Token::Kind::kDocComment) {
-    if (is_first_doc_comment) {
-      is_first_doc_comment = false;
-    } else {
+    if (first_doc_line) {
       // disallow any blank lines between this doc comment and the previous one
       std::string_view trailing_whitespace = last_token_.previous_end().data();
       if (std::count(trailing_whitespace.cbegin(), trailing_whitespace.cend(), '\n') > 1)
@@ -350,16 +338,17 @@ std::unique_ptr<raw::Attribute> Parser::ParseDocComment() {
     doc_line = ConsumeToken(OfKind(Token::Kind::kDocComment));
     if (!Ok() || !doc_line)
       return Fail();
-    // NOTE: we currently explicitly only support UNIX line endings
-    str_value +=
-        std::string(doc_line->span().data().data() + 3, doc_line->span().data().size() - 2);
+    if (!first_doc_line) {
+      first_doc_line = doc_line;
+    }
   }
 
+  auto literal = std::make_unique<raw::DocCommentLiteral>(scope.GetSourceElement());
   if (Peek().kind() == Token::Kind::kEndOfFile)
     reporter_->Report(WarnDocCommentMustBeFollowedByDeclaration, previous_token_);
 
   return std::make_unique<raw::Attribute>(
-      scope.GetSourceElement(), raw::Attribute::Provenance::kDocComment, "Doc", str_value);
+      scope.GetSourceElement(), raw::Attribute::Provenance::kDocComment, "Doc", std::move(literal));
 }
 
 std::unique_ptr<raw::AttributeList> Parser::MaybeParseAttributeList(bool for_parameter) {
@@ -378,11 +367,11 @@ std::unique_ptr<raw::AttributeList> Parser::MaybeParseAttributeList(bool for_par
   }
   // no generic attributes, start the attribute list
   if (doc_comment) {
-    AttributesBuilder attributes_builder(reporter_);
-    if (!attributes_builder.Insert(std::move(*doc_comment.get())))
-      return Fail();
-    return std::make_unique<raw::AttributeList>(scope.GetSourceElement(),
-                                                attributes_builder.Done());
+    std::vector<raw::Attribute> attributes;
+    if (doc_comment)
+      attributes.emplace_back(std::move(*doc_comment));
+
+    return std::make_unique<raw::AttributeList>(scope.GetSourceElement(), std::move(attributes));
   }
   return nullptr;
 }

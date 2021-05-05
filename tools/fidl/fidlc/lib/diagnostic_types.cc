@@ -33,12 +33,10 @@ std::string Display(const SourceSpan& s) { return s.position_str(); }
 
 std::string Display(const Token::KindAndSubkind& t) { return std::string(Token::Name(t)); }
 
-std::string Display(const raw::Attribute& a) { return a.name; }
-
-std::string Display(const raw::AttributeList& a) {
+std::string Display(const raw::AttributeList* a) {
   std::stringstream attributes_found;
-  for (auto it = a.attributes.begin(); it != a.attributes.end(); it++) {
-    if (it != a.attributes.cbegin()) {
+  for (auto it = a->attributes.begin(); it != a->attributes.end(); it++) {
+    if (it != a->attributes.cbegin()) {
       attributes_found << ", ";
     }
     attributes_found << it->name;
@@ -49,6 +47,8 @@ std::string Display(const raw::AttributeList& a) {
 std::string Display(const std::vector<std::string_view>& library_name) {
   return NameLibrary(library_name);
 }
+
+std::string Display(const flat::Attribute* a) { return a->name; }
 
 std::string Display(const flat::Constant* c) { return NameFlatConstant(c); }
 

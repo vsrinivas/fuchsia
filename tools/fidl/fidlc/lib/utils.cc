@@ -52,6 +52,25 @@ bool has_konstant_k(const std::string& str) {
   return str.size() >= 2 && str[0] == 'k' && isupper(str[1]);
 }
 
+std::string strip_string_literal_quotes(std::string_view str) {
+  assert(str.size() >= 2 && str[0] == '"' && str[str.size() - 1] == '"' &&
+         "string must start and end with '\"' style quotes");
+  return std::string(str.data() + 1, str.size() - 2);
+}
+
+// NOTE: we currently explicitly only support UNIX line endings
+std::string strip_doc_comment_slashes(std::string_view str) {
+  // In English, this regex says: "any number of tabs/spaces, followed by three
+  // slashes is group 1, the remainder of the line is group 2.  Keep only group
+  // 2."
+  std::string no_slashes =
+      regex_replace(std::string(str), std::regex{"([\\t ]*\\/\\/\\/)(.*)"}, "$2");
+  if (no_slashes[no_slashes.size() - 1] != '\n') {
+    return no_slashes + '\n';
+  }
+  return no_slashes;
+}
+
 std::string strip_konstant_k(const std::string& str) {
   if (has_konstant_k(str)) {
     return str.substr(1);

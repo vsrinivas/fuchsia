@@ -53,7 +53,7 @@
       for (const auto& error : errors) {                              \
         EXPECT_STR_EQ("", error->err.msg.data());                     \
       }                                                               \
-      FAIL("stopping test, compilation failed");                      \
+      FAIL("stopping test, compilation and conversion failed");       \
     }                                                                 \
   }
 

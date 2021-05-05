@@ -557,7 +557,8 @@ Linter::Linter()
       //
       (const raw::Attribute& element) {
         if (element.name == linter.kDocAttribute) {
-          if (std::regex_search(element.value, regex)) {
+          auto doc_comment = static_cast<raw::DocCommentLiteral*>(element.value.get());
+          if (std::regex_search(doc_comment->MakeContents(), regex)) {
             linter.AddFinding(element, todo_check, {}, "change '///' to '//'", "//");
           }
         }
@@ -570,8 +571,11 @@ Linter::Linter()
        regex = std::regex(R"REGEX(^[ \t]*Copyright \d\d\d\d\W)REGEX", std::regex_constants::icase)]
       //
       (const raw::Attribute& element) {
-        if (element.name == linter.kDocAttribute && std::regex_search(element.value, regex)) {
-          linter.AddFinding(element, check, {}, "change '///' to '//'", "//");
+        if (element.name == linter.kDocAttribute) {
+          auto doc_comment = static_cast<raw::DocCommentLiteral*>(element.value.get());
+          if (std::regex_search(doc_comment->MakeContents(), regex)) {
+            linter.AddFinding(element, check, {}, "change '///' to '//'", "//");
+          }
         }
       });
 

@@ -569,6 +569,61 @@ TEST(UtilsTests, CanonicalForm) {
   EXPECT_STRING_EQ(canonicalize("__a__"), "a_");
 }
 
+TEST(UtilsTests, StringStripping) {
+  EXPECT_STRING_EQ(strip_konstant_k("kFoobar"), "Foobar");
+  EXPECT_STRING_EQ(strip_konstant_k("KFoobar"), "KFoobar");
+
+  EXPECT_STRING_EQ(strip_string_literal_quotes("\"\""), "");
+  EXPECT_STRING_EQ(strip_string_literal_quotes("\"foobar\""), "foobar");
+
+  EXPECT_STRING_EQ(strip_doc_comment_slashes(R"FIDL(
+  /// A
+  /// multiline
+  /// comment!
+)FIDL"),
+                   "\n A\n multiline\n comment!\n");
+
+  EXPECT_STRING_EQ(strip_doc_comment_slashes(R"FIDL(
+  ///
+  /// With
+  ///
+  /// empty
+  ///
+  /// lines
+  ///
+)FIDL"),
+                   "\n\n With\n\n empty\n\n lines\n\n");
+
+  EXPECT_STRING_EQ(strip_doc_comment_slashes(R"FIDL(
+  /// With
+
+  /// blank
+
+
+  /// lines
+)FIDL"),
+                   "\n With\n\n blank\n\n\n lines\n");
+
+  EXPECT_STRING_EQ(strip_doc_comment_slashes(R"FIDL(
+	/// With
+		/// tabs
+	 /// in
+ 	/// addition
+ 	 /// to
+	 	/// spaces
+)FIDL"),
+                   "\n With\n tabs\n in\n addition\n to\n spaces\n");
+
+  EXPECT_STRING_EQ(strip_doc_comment_slashes(R"FIDL(
+  /// Weird
+/// Offsets
+  /// Slash///
+  ///Placement ///
+       /// And
+  ///   Spacing   )FIDL"),
+                   "\n Weird\n Offsets\n Slash///\nPlacement ///\n And\n   Spacing   \n");
+}
+
 }  // namespace
 
 }  // namespace utils

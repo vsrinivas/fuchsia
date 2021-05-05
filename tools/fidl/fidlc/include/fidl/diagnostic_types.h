@@ -17,11 +17,11 @@ namespace fidl {
 
 // Forward decls
 namespace raw {
-class Attribute;
 class AttributeList;
 }  // namespace raw
 
 namespace flat {
+struct Attribute;
 struct Constant;
 struct IdentifierConstant;
 struct LiteralConstant;
@@ -41,9 +41,9 @@ std::string Display(std::string_view s);
 std::string Display(const std::set<std::string>& s);
 std::string Display(const SourceSpan& s);
 std::string Display(const Token::KindAndSubkind& t);
-std::string Display(const raw::Attribute& a);
-std::string Display(const raw::AttributeList& a);
+std::string Display(const raw::AttributeList* a);
 std::string Display(const std::vector<std::string_view>& library_name);
+std::string Display(const flat::Attribute* a);
 std::string Display(const flat::Constant* c);
 std::string Display(const flat::TypeConstructorOld* tc);
 std::string Display(const flat::Type* t);

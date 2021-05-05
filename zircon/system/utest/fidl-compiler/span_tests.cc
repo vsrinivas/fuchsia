@@ -410,6 +410,7 @@ const std::vector<TestCase> test_cases = {
     {ElementType::StringLiteral,
      {
          R"FIDL(library x; const string x = «"hello"»;)FIDL",
+         R"FIDL(library x; [attr=«"foo"»]const string x = «"goodbye"»;)FIDL",
      }},
     {ElementType::NumericLiteral,
      {
