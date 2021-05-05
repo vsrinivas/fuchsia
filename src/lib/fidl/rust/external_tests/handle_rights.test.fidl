@@ -25,3 +25,7 @@ protocol PushEventProtocol {
     -> PushEventReducedRights(zx.handle:<EVENT, zx.rights.TRANSFER> h);
     -> PushEventSameRights(zx.handle:<EVENT> h);
 };
+
+protocol ErrorSyntaxProtocol {
+    TestErrorSyntax() -> (zx.handle:<EVENT, zx.rights.TRANSFER> h) error uint32;
+};

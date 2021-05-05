@@ -17,9 +17,11 @@ use {
     fidl::{endpoints::ServerEnd, AsHandleRef, Channel, Event},
     fidl_fidl_rust_test_external::{
         EchoHandleProtocolMarker, EchoHandleProtocolProxy, EchoHandleProtocolRequest,
-        EchoHandleProtocolSynchronousProxy, PushEventProtocolControlHandle, PushEventProtocolEvent,
-        PushEventProtocolMarker, PushEventProtocolProxy, SendHandleProtocolMarker,
-        SendHandleProtocolProxy, SendHandleProtocolRequest, SendHandleProtocolSynchronousProxy,
+        EchoHandleProtocolSynchronousProxy, ErrorSyntaxProtocolMarker, ErrorSyntaxProtocolProxy,
+        ErrorSyntaxProtocolRequest, ErrorSyntaxProtocolSynchronousProxy,
+        PushEventProtocolControlHandle, PushEventProtocolEvent, PushEventProtocolMarker,
+        PushEventProtocolProxy, SendHandleProtocolMarker, SendHandleProtocolProxy,
+        SendHandleProtocolRequest, SendHandleProtocolSynchronousProxy,
     },
     fuchsia_async as fasync,
     fuchsia_async::futures::{future, stream::StreamExt},
@@ -629,4 +631,55 @@ async fn push_event_receive() {
         ),
     )
     .await;
+}
+
+async fn error_syntax_receiver_thread(server_end: Channel) {
+    let stream = ServerEnd::<ErrorSyntaxProtocolMarker>::new(server_end).into_stream().unwrap();
+    stream
+        .for_each(|request| {
+            match request {
+                Ok(ErrorSyntaxProtocolRequest::TestErrorSyntax { responder }) => {
+                    let h = Event::create().unwrap();
+                    responder.send(&mut Ok(h)).unwrap();
+                }
+                Err(_) => panic!("unexpected err"),
+            }
+            future::ready(())
+        })
+        .await;
+}
+
+#[test]
+fn error_syntax_sync_end_to_end() {
+    let (client_end, server_end) = Channel::create().unwrap();
+    std::thread::spawn(|| {
+        fasync::Executor::new().unwrap().run_singlethreaded(async move {
+            error_syntax_receiver_thread(server_end).await;
+        });
+    });
+
+    let proxy = ErrorSyntaxProtocolSynchronousProxy::new(client_end);
+    let h_response = proxy.test_error_syntax(Time::INFINITE).unwrap();
+
+    let info = h_response.unwrap().as_handle_ref().basic_info().unwrap();
+    assert_eq!(ObjectType::EVENT, info.object_type);
+    assert_eq!(Rights::TRANSFER, info.rights);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn error_syntax_async_end_to_end() {
+    let (client_end, server_end) = Channel::create().unwrap();
+    std::thread::spawn(|| {
+        fasync::Executor::new().unwrap().run_singlethreaded(async move {
+            error_syntax_receiver_thread(server_end).await;
+        });
+    });
+
+    let async_client_end = fasync::Channel::from_channel(client_end).unwrap();
+    let proxy = ErrorSyntaxProtocolProxy::new(async_client_end);
+    let h_response = proxy.test_error_syntax().await.unwrap();
+
+    let info = h_response.unwrap().as_handle_ref().basic_info().unwrap();
+    assert_eq!(ObjectType::EVENT, info.object_type);
+    assert_eq!(Rights::TRANSFER, info.rights);
 }
