@@ -1255,7 +1255,7 @@ size_t EditDistance(const std::string& sequence1, const std::string& sequence2) 
 
 const AttributeSchema* Libraries::RetrieveAttributeSchema(Reporter* reporter,
                                                           const raw::Attribute& attribute) const {
-  const auto& attribute_name = attribute.name;
+  const auto& attribute_name = fidl::utils::to_upper_camel_case(attribute.name);
   auto iter = attribute_schemas_.find(attribute_name);
   if (iter != attribute_schemas_.end()) {
     const auto& schema = iter->second;
