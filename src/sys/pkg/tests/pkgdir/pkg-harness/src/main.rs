@@ -10,10 +10,11 @@ use {
     fidl_test_fidl_pkg::{Backing, ConnectError, HarnessRequest, HarnessRequestStream},
     fuchsia_async::Task,
     fuchsia_component::server::ServiceFs,
-    fuchsia_pkg_testing::SystemImageBuilder,
+    fuchsia_pkg_testing::{Package, PackageBuilder, SystemImageBuilder},
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
     futures::prelude::*,
     pkgfs_ramdisk::PkgfsRamdisk,
+    std::convert::TryInto,
 };
 
 #[fuchsia_async::run_singlethreaded]
@@ -31,23 +32,26 @@ async fn main() -> Result<(), Error> {
 async fn main_inner() -> Result<(), Error> {
     fx_log_info!("starting pkg-harness");
 
-    // Spin up a blobfs and pkgfs.
+    // Spin up a blobfs and install the test package.
+    let test_package = make_test_package().await;
+    let system_image_package =
+        SystemImageBuilder::new().static_packages(&[&test_package]).build().await;
     let blobfs = BlobfsRamdisk::start().expect("started blobfs");
+    let blobfs_root_dir = blobfs.root_dir().expect("getting blobfs root dir");
+    test_package.write_to_blobfs_dir(&blobfs_root_dir);
+    system_image_package.write_to_blobfs_dir(&blobfs_root_dir);
 
-    let system_image_package = SystemImageBuilder::new().build().await;
-    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().expect("getting root dir"));
-
+    // Spin up a pkgfs.
     let pkgfs = PkgfsRamdisk::builder()
         .blobfs(blobfs)
         .system_image_merkle(system_image_package.meta_far_merkle_root())
         .start()
         .expect("started pkgfs");
 
-    // For now, we open the system_image package. In a future CL, we'll create a test package with
-    // all the elements described in fxbug.dev/75208, and then open that test package.
+    // Open the test package.
     let pkgfs_backed_package = io_util::directory::open_directory(
         &pkgfs.root_dir_proxy().unwrap(),
-        "packages/system_image/0",
+        &format!("packages/{}/0", test_package.name()),
         fidl_fuchsia_io::OPEN_FLAG_DIRECTORY,
     )
     .await
@@ -105,4 +109,67 @@ async fn serve_harness(
         responder.send(&mut Ok(())).context("while sending success response")?;
     }
     Ok(())
+}
+
+/// Constructs a test package to be used in the integration tests.
+async fn make_test_package() -> Package {
+    let hello_world_contents = "hello world".as_bytes();
+    let tmp = repeat_by_n('a', (fidl_fuchsia_io::MAX_BUF + 1).try_into().unwrap());
+    let exceeds_max_buf_contents = tmp.as_bytes();
+    let empty_contents = "".as_bytes();
+
+    let mut builder = PackageBuilder::new("test-package");
+
+    // Populate each kind of directory node with various files.
+    for base in ["", "dir/", "dir/dir/", "meta/", "meta/dir/"] {
+        builder = builder
+            .add_resource_at(format!("{}hello_world", base), hello_world_contents)
+            .add_resource_at(format!("{}exceeds_max_buf", base), exceeds_max_buf_contents);
+
+        // In the integration tests, we'll want to be able to test calling ReadDirents on a
+        // directory. Since ReadDirents returns `MAX_BUF` bytes worth of directory entries, we need
+        // to have test coverage for the "overflow" case where the directory has more than
+        // `MAX_BUF` bytes worth of directory entries.
+        //
+        // Through math, we determine that we can achieve this overflow with 31 files whose names
+        // are length at *least* `MAX_FILENAME`. Here is this math:
+        /*
+           ReadDirents -> vector<uint8>:MAX_BUF
+
+           MAX_BUF = 8192
+
+           struct dirent {
+            // Describes the inode of the entry.
+            uint64 ino;
+            // Describes the length of the dirent name in bytes.
+            uint8 size;
+            // Describes the type of the entry. Aligned with the
+            // POSIX d_type values. Use `DIRENT_TYPE_*` constants.
+            uint8 type;
+            // Unterminated name of entry.
+            char name[0];
+           }
+
+           sizeof(dirent) if name is MAX_FILENAME = 255 bytes long = 8 + 1 + 1 + 255 = 265 bytes
+
+           8192 / 265 ~= 30.9
+
+           => 31 directory entries of maximum size will trigger overflow
+        */
+        for seed in ('a'..='z').chain('A'..='E') {
+            builder = builder.add_resource_at(
+                format!(
+                    "{}{}",
+                    base,
+                    repeat_by_n(seed, fidl_fuchsia_io::MAX_FILENAME.try_into().unwrap())
+                ),
+                empty_contents,
+            )
+        }
+    }
+    builder.build().await.expect("build package")
+}
+
+fn repeat_by_n(seed: char, n: usize) -> String {
+    std::iter::repeat(seed).take(n).collect()
 }

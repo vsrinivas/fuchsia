@@ -3,38 +3,44 @@
 // found in the LICENSE file.
 
 use {
-    fidl::endpoints::create_endpoints,
+    fidl::endpoints::create_proxy,
     fidl_fuchsia_io::DirectoryMarker,
     fidl_test_fidl_pkg::{Backing, ConnectError, HarnessMarker},
     fuchsia_component::client::connect_to_protocol,
+    fuchsia_zircon as zx,
 };
 
-fn ls_simple(d: openat::DirIter) -> Result<Vec<String>, std::io::Error> {
-    Ok(d.map(|i| i.map(|entry| entry.file_name().to_string_lossy().into()))
-        .collect::<Result<Vec<_>, _>>()?)
-}
-
+/// Verify the overflow case is being hit on ReadDirents.
+/// Note: we considered making this a unit test for pkg-harness, but opted to include this in the
+/// integration tests so all the test cases are in one place.
 #[fuchsia::test]
-async fn success() {
-    let proxy = connect_to_protocol::<HarnessMarker>().unwrap();
-    let (client, server) = create_endpoints::<DirectoryMarker>().unwrap();
+async fn overflow() {
+    let harness = connect_to_protocol::<HarnessMarker>().unwrap();
+    let (dir, server) = create_proxy::<DirectoryMarker>().unwrap();
 
-    let () = proxy.connect_package(Backing::Pkgfs, server).await.unwrap().unwrap();
+    let () = harness.connect_package(Backing::Pkgfs, server).await.unwrap().unwrap();
 
-    let d: openat::Dir = fdio::create_fd(client.into()).expect("while creating fd");
-    assert_eq!(
-        ls_simple(d.list_dir(".").expect("list dir")).unwrap(),
-        vec!["meta".to_string(), "data".to_string()]
-    );
+    // Verify it takes three ReadDirents calls to read the directory entries.
+    let (status, buf) = dir.read_dirents(fidl_fuchsia_io::MAX_BUF).await.unwrap();
+    zx::Status::ok(status).expect("status ok");
+    assert!(!buf.is_empty(), "first call should yield non-empty buffer");
+
+    let (status, buf) = dir.read_dirents(fidl_fuchsia_io::MAX_BUF).await.unwrap();
+    zx::Status::ok(status).expect("status ok");
+    assert!(!buf.is_empty(), "second call should yield non-empty buffer");
+
+    let (status, buf) = dir.read_dirents(fidl_fuchsia_io::MAX_BUF).await.unwrap();
+    zx::Status::ok(status).expect("status ok");
+    assert!(buf.is_empty(), "third call should yield empty buffer");
 }
 
 // TODO(fxbug.dev/75481): support pkgdir-backed packages and delete this test.
 #[fuchsia::test]
 async fn unsupported_backing() {
-    let proxy = connect_to_protocol::<HarnessMarker>().unwrap();
-    let (_client, server) = create_endpoints::<DirectoryMarker>().unwrap();
+    let harness = connect_to_protocol::<HarnessMarker>().unwrap();
+    let (_dir, server) = create_proxy::<DirectoryMarker>().unwrap();
 
-    let res = proxy.connect_package(Backing::Pkgdir, server).await.unwrap();
+    let res = harness.connect_package(Backing::Pkgdir, server).await.unwrap();
 
     assert_eq!(res, Err(ConnectError::UnsupportedBacking));
 }
