@@ -197,3 +197,5 @@ toc:
   path: /docs/contribute/governance/rfcs/0091_getevent_imminent_oom.md
 - title: "RFC-0092: Sessions"
   path: /docs/contribute/governance/rfcs/0092_sessions.md
+- title: "RFC-0093: Component manifest design principles"
+  path: /docs/contribute/governance/rfcs/0093_component_manifest_design_principles.md

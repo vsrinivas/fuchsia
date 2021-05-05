@@ -1197,3 +1197,16 @@
   reviewers: [ 'aaronwood@google.com', 'bryanhenry@google.com', 'dgonyeo@google.com', 'geb@google.com', 'hjfreyer@google.com', 'jsankey@google.com', 'thatguy@google.com' ]
   submitted: '2021-04-08'
   reviewed: '2021-05-05'
+
+- name: 'RFC-0093'
+  title: 'Design principles of component manifests'
+  short_description: 'Design notes on the `.cml` and `.cm` formats used for component manifests.'
+  authors: ['geb@google.com', 'shayba@google.com']
+  file: '0093_component_manifest_design_principles.md'
+  area: ['Component Framework']
+  issue: ['75514']
+  gerrit_change_id: ['521303']
+  status: 'Accepted'
+  reviewers: ['jjosh@google.com', 'geb@google.com', 'pascallouis@google.com', 'abarth@google.com', 'mesch@google.com', 'thatguy@google.com', 'shrike@google.com', 'brunodalbo@google.com']
+  submitted: '2021-04-26'
+  reviewed: '2021-05-05'
