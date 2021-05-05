@@ -7,7 +7,8 @@ mod controller;
 use {
     crate::search::controller::{
         components::ComponentSearchController, manifests::ManifestSearchController,
-        packages::PackageSearchController, routes::RouteSearchController,
+        package_list::PackageListController, packages::PackageSearchController,
+        routes::RouteSearchController,
     },
     scrutiny::prelude::*,
     std::sync::Arc,
@@ -21,6 +22,7 @@ plugin!(
             "/search/components" => ComponentSearchController::default(),
             "/search/manifests" => ManifestSearchController::default(),
             "/search/packages" => PackageSearchController::default(),
+            "/search/package/list" => PackageListController::default(),
             "/search/routes" => RouteSearchController::default(),
         }
     ),

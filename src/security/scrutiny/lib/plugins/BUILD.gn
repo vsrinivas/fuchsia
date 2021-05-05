@@ -78,6 +78,7 @@ if (is_host) {
       "src/search/controller/components.rs",
       "src/search/controller/manifests.rs",
       "src/search/controller/mod.rs",
+      "src/search/controller/package_list.rs",
       "src/search/controller/packages.rs",
       "src/search/controller/routes.rs",
       "src/search/mod.rs",
