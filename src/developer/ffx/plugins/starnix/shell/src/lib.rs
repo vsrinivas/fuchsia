@@ -19,7 +19,10 @@ use {
     "starnix_enabled",
     ManagerProxy = "core/starnix_manager:expose:fuchsia.starnix.developer.Manager"
 )]
-pub async fn shell_starnix(manager_proxy: ManagerProxy, _shell: ShellStarnixCommand) -> Result<()> {
+pub async fn shell_starnix(
+    manager_proxy: ManagerProxy,
+    _shell: ShellStarnixCommand,
+) -> Result<i32> {
     let (controller_proxy, controller_server_end) = create_proxy::<ShellControllerMarker>()?;
     let (sin, cin) =
         fidl::Socket::create(fidl::SocketOpts::STREAM).context("failed to create stdin socket")?;
@@ -83,11 +86,9 @@ pub async fn shell_starnix(manager_proxy: ManagerProxy, _shell: ShellStarnixComm
     let (copy_result, return_code) = futures::join!(copy_futures, term_event_future);
     copy_result?;
 
-    println!("(Shell exited with code: {})", return_code?);
-
     // Shut down the signal thread.
     handle.close();
     thread.join().expect("thread to shutdown without panic");
 
-    Ok(())
+    return_code
 }
