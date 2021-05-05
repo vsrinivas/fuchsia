@@ -11,6 +11,7 @@
 #include "src/developer/debug/zxdb/client/target.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/console/command.h"
+#include "src/developer/debug/zxdb/console/format_location.h"
 #include "src/developer/debug/zxdb/console/format_name.h"
 #include "src/developer/debug/zxdb/console/format_table.h"
 #include "src/developer/debug/zxdb/expr/find_name.h"
@@ -319,6 +320,7 @@ OutputBuffer FormatFunction(const SymbolContext& symbol_context, const Function*
                             const FormatSymbolOptions& opts) {
   OutputBuffer out;
 
+  // Type and name.
   if (function->is_inline())
     out.Append(Syntax::kHeading, "Inline function: ");
   else
@@ -330,6 +332,27 @@ OutputBuffer FormatFunction(const SymbolContext& symbol_context, const Function*
 
   out.Append(FormatFunctionName(function, name_opts));
   out.Append("\n");
+
+  // Linkage name.
+  if (!function->linkage_name().empty()) {
+    out.Append(Syntax::kHeading, "  Linkage name: ");
+    out.Append(function->linkage_name());
+    out.Append("\n");
+  }
+
+  // Declaration.
+  if (function->decl_line().is_valid()) {
+    out.Append(Syntax::kHeading, "  Declaration: ");
+    out.Append(FormatFileLine(function->decl_line()));
+    out.Append("\n");
+  }
+
+  // Call location.
+  if (function->call_line().is_valid()) {
+    out.Append(Syntax::kHeading, "  Inline call location: ");
+    out.Append(FormatFileLine(function->call_line()));
+    out.Append("\n");
+  }
 
   // Code ranges.
   AddressRanges ranges = function->GetAbsoluteCodeRanges(symbol_context);
