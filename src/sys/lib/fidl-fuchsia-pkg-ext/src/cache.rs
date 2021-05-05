@@ -14,7 +14,7 @@ use fidl_fuchsia_pkg::{
     PackageCacheMarker, PackageCacheProxy,
 };
 use fuchsia_pkg::PackageDirectory;
-use fuchsia_zircon::Status;
+use fuchsia_zircon_status::Status;
 use futures::prelude::*;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -148,8 +148,7 @@ impl DeferredOpenBlob {
         open_blob(&self.needed_blobs, self.kind, self.pkg_present.as_ref()).await
     }
     fn proxy_cmp_key(&self) -> u32 {
-        use fidl::endpoints::Proxy;
-        use fuchsia_zircon::AsHandleRef;
+        use fidl::{endpoints::Proxy, AsHandleRef};
         self.needed_blobs.as_channel().raw_handle()
     }
 }
