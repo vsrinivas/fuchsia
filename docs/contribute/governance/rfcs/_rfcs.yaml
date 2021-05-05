@@ -1184,3 +1184,16 @@
   reviewers: ['adanis@google.com', 'davemoore@google.com', 'jsankey@google.com', 'maniscalco@google.com', 'pascallouis@google.com']
   submitted: '2021-04-12'
   reviewed: '2021-05-04'
+
+- name: 'RFC-0092'
+  title: 'Sessions'
+  short_description: 'Defines the role of the session component.'
+  authors: ['lindkvist@google.com']
+  file: '0092_sessions.md'
+  area: ['Session']
+  issue: ['']
+  gerrit_change_id: ['513028']
+  status: 'Accepted'
+  reviewers: [ 'aaronwood@google.com', 'bryanhenry@google.com', 'dgonyeo@google.com', 'geb@google.com', 'hjfreyer@google.com', 'jsankey@google.com', 'thatguy@google.com' ]
+  submitted: '2021-04-08'
+  reviewed: '2021-05-05'
