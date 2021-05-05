@@ -7,5 +7,6 @@ group("tests") {
   deps = [
     "base_package:tests",
     "vbmeta:tests",
+    "zbi:tests",
   ]
 }

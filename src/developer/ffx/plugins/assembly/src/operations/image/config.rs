@@ -16,11 +16,17 @@ pub(crate) struct Config {
     pub meta_packages: Vec<String>,
     pub kernel_image: String,
     pub kernel_cmdline: Vec<String>,
-    pub bootfs_files: Vec<String>,
+    pub bootfs_files: Vec<BootFsEntry>,
     pub vbmeta_key: String,
     pub vbmeta_key_metadata: String,
     pub version: String,
     pub board: BoardConfig,
+}
+
+#[derive(Deserialize, Serialize)]
+pub(crate) struct BootFsEntry {
+    pub source: String,
+    pub destination: String,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -70,7 +76,12 @@ mod tests {
               meta_packages: ["package5", "package6"],
               kernel_image: "path/to/kernel",
               kernel_cmdline: ["arg1", "arg2"],
-              bootfs_files: ["file1", "file2"],
+              bootfs_files: [
+                {
+                    source: "path/to/source",
+                    destination: "path/to/destination",
+                },
+              ],
               vbmeta_key: "key",
               vbmeta_key_metadata: "metadata",
               version: "0.1.2",
