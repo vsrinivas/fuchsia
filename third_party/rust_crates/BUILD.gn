@@ -152,10 +152,8 @@ group("data-encoding") {
   deps = [ ":data-encoding-v2_1_2" ]
 }
 
-if (current_os == "fuchsia") {
-  group("derivative") {
-    deps = [ ":derivative-v2_1_1($host_toolchain)" ]
-  }
+group("derivative") {
+  deps = [ ":derivative-v2_1_1($host_toolchain)" ]
 }
 
 group("derp") {

@@ -48,6 +48,7 @@ cxx = "0.3.5"
 cxxbridge-cmd = "0.3.5"
 darling = "0.12.0"
 data-encoding = "2.1.2"
+derivative = "2.1.1"
 derp = "0.0.13"
 difference = "2.0.0"
 event-listener = "2.5.1"
@@ -171,7 +172,6 @@ features = ["chrono", "registry", "tracing-log"]
 ansi_term = "0.11.0"
 # do not add back without verifying certificate transparency is ready to use - see fxbug.dev/25100
 # ct-logs = "0.6"
-derivative = "2.1.1"
 euclid = "0.22.1"
 eui48 = { version = "0.4.6", features = ["serde", "disp_hexstring"] }
 getopts = "0.2"
