@@ -65,10 +65,11 @@ Err RunVerbBacktrace(ConsoleContext* context, const Command& cmd) {
     opts.pretty_stack = context->pretty_stack_manager();
 
   opts.frame.loc = FormatLocationOptions(cmd.target());
-  opts.frame.loc.show_params = cmd.HasSwitch(kForceAllTypes);
   opts.frame.loc.func.name.elide_templates = true;
   opts.frame.loc.func.name.bold_last = true;
-  opts.frame.loc.func.params = FormatFunctionNameOptions::kElideParams;
+  opts.frame.loc.func.params = cmd.HasSwitch(kForceAllTypes)
+                                   ? FormatFunctionNameOptions::kParamTypes
+                                   : FormatFunctionNameOptions::kElideParams;
 
   opts.frame.detail = FormatFrameOptions::kParameters;
   if (cmd.HasSwitch(kVerboseBacktrace)) {

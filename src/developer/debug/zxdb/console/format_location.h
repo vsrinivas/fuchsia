@@ -32,10 +32,6 @@ struct FormatLocationOptions {
   // function name present.
   bool always_show_addresses = false;
 
-  // Show function parameter types. Otherwise, it will have "()" (if there are no arguments), or
-  // "(...)" if there are some.
-  bool show_params = false;
-
   // Shows file/line information if present.
   bool show_file_line = true;
 

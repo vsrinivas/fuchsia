@@ -335,7 +335,6 @@ OutputBuffer MemoryAnalysis::GetPointedToAnnotation(uint64_t data) const {
   opts.func.name.bold_last = true;
   opts.func.params = FormatFunctionNameOptions::kNoParams;
   opts.always_show_addresses = false;
-  opts.show_params = false;
   opts.show_file_line = false;
   opts.show_file_path = false;
 

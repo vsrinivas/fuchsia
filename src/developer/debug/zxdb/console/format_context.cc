@@ -238,7 +238,6 @@ OutputBuffer DescribeAsmCallDest(Process* process, uint64_t call_dest) {
   if (process)
     opts = FormatLocationOptions(process->GetTarget());
   opts.always_show_addresses = false;
-  opts.show_params = false;
   opts.show_file_line = false;
 
   result.Append(FormatLocation(resolved[0], opts));

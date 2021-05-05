@@ -113,10 +113,10 @@ bool HandleFrameNoun(ConsoleContext* context, const Command& cmd, Err* err) {
     opts.pretty_stack = context->pretty_stack_manager();
 
   opts.frame.loc = FormatLocationOptions(cmd.target());
-  opts.frame.loc.show_params = cmd.HasSwitch(kForceTypes);
   opts.frame.loc.func.name.elide_templates = true;
   opts.frame.loc.func.name.bold_last = true;
-  opts.frame.loc.func.params = FormatFunctionNameOptions::kElideParams;
+  opts.frame.loc.func.params = cmd.HasSwitch(kForceTypes) ? FormatFunctionNameOptions::kParamTypes
+                                                          : FormatFunctionNameOptions::kElideParams;
 
   opts.frame.variable.verbosity = cmd.HasSwitch(kForceTypes)
                                       ? ConsoleFormatOptions::Verbosity::kAllTypes

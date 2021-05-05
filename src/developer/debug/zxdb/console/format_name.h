@@ -58,11 +58,6 @@ struct FormatFunctionNameOptions {
 //
 // If optional_target_symbols is provided it can provide extra cleanup for some generated lambda
 // names by using the shortest possible unique file name.
-//
-// If show_params is true, the types of the function parameters will be output. Otherwise the
-// function name will end with "()" if there are no parameters, or "(...)" if there are some. The
-// goal is to be as short as possible without being misleading (showing "()" when there are
-// parameters may be misleading, and no parens at all don't look like a function).
 OutputBuffer FormatFunctionName(const Function* function, const FormatFunctionNameOptions& options);
 
 }  // namespace zxdb

@@ -21,7 +21,6 @@ TEST(FormatLocation, FormatLocation_Function) {
 
   FormatLocationOptions no_addrs_no_params;
   no_addrs_no_params.always_show_addresses = false;
-  no_addrs_no_params.show_params = false;
   no_addrs_no_params.show_file_line = true;
   EXPECT_EQ("<invalid address>", FormatLocation(Location(), no_addrs_no_params).AsString());
 
@@ -48,7 +47,6 @@ TEST(FormatLocation, FormatLocation_Function) {
   // File/line present but not shown.
   FormatLocationOptions no_file_line;
   no_file_line.always_show_addresses = false;
-  no_file_line.show_params = false;
   no_file_line.show_file_line = false;
   Location loc(0x1234, FileLine("/path/foo.cc", 21), 0, symbol_context, function);
   EXPECT_EQ("Func() + 0x34", FormatLocation(loc, no_file_line).AsString());
@@ -66,7 +64,6 @@ TEST(FormatLocation, FormatLocation_Function) {
   // Full location.
   FormatLocationOptions always_addr;
   always_addr.always_show_addresses = true;
-  always_addr.show_params = false;
   always_addr.show_file_line = true;
   EXPECT_EQ("0x1234, Func() • /path/foo.cc:21", FormatLocation(loc, always_addr).AsString());
   EXPECT_EQ("Func() • /path/foo.cc:21", FormatLocation(loc, no_addrs_no_params).AsString());
@@ -89,7 +86,6 @@ TEST(FormatLocation, FormatLocation_ELF) {
 
   FormatLocationOptions options;
   options.always_show_addresses = false;
-  options.show_params = false;
 
   // Address exactly at the beginning of the ELF symbol.
   constexpr uint64_t kFunctionAddress = 0x1000;

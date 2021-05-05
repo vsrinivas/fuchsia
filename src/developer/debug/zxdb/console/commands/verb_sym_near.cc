@@ -62,7 +62,6 @@ Err RunVerbSymNear(ConsoleContext* context, const Command& cmd) {
 
         FormatLocationOptions opts(weak_process->GetTarget());
         opts.always_show_addresses = true;
-        opts.show_params = true;
         opts.show_file_line = true;
 
         console->Output(FormatLocation(locations[0], opts));
