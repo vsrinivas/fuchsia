@@ -28,16 +28,16 @@ struct Pl031Regs {
   uint32_t icr;
 };
 
-class Pl031 : public fidl::WireInterface<FidlRtc::Device>, public RtcDeviceType {
+class Pl031 : public fidl::WireServer<FidlRtc::Device>, public RtcDeviceType {
  public:
   static zx_status_t Bind(void*, zx_device_t* dev);
 
   Pl031(zx_device_t* parent, ddk::MmioBuffer mmio);
   ~Pl031() = default;
 
-  // fidl::WireInterface<FidlRtc::Device>:
-  void Get(GetCompleter::Sync& completer) override;
-  void Set(FidlRtc::wire::Time rtc, SetCompleter::Sync& completer) override;
+  // fidl::WireServer<FidlRtc::Device>:
+  void Get(GetRequestView request, GetCompleter::Sync& completer) override;
+  void Set(SetRequestView request, SetCompleter::Sync& completer) override;
 
   // DDK bindings.
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);

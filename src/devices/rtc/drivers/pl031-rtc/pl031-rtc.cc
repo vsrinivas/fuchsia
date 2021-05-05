@@ -64,13 +64,13 @@ Pl031::Pl031(zx_device_t* parent, ddk::MmioBuffer mmio)
       mmio_(std::move(mmio)),
       regs_(reinterpret_cast<MMIO_PTR Pl031Regs*>(mmio_.get())) {}
 
-void Pl031::Get(GetCompleter::Sync& completer) {
+void Pl031::Get(GetRequestView request, GetCompleter::Sync& completer) {
   FidlRtc::wire::Time rtc = SecondsToRtc(MmioRead32(&regs_->dr));
   completer.Reply(rtc);
 }
 
-void Pl031::Set(FidlRtc::wire::Time rtc, SetCompleter::Sync& completer) {
-  completer.Reply(SetRtc(rtc));
+void Pl031::Set(SetRequestView request, SetCompleter::Sync& completer) {
+  completer.Reply(SetRtc(request->rtc));
 }
 
 zx_status_t Pl031::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
