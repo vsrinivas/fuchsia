@@ -45,7 +45,7 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
     void OnSourceElementEnd(const raw::SourceElement& element) override {
       ProcessGapText(element.end_);
     }
-    void OnAttribute(const raw::Attribute& element) override {
+    void OnAttributeOld(const raw::AttributeOld& element) override {
       for (auto& callback : callbacks_.attribute_callbacks_) {
         callback(element);
       }

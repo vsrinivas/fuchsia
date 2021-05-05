@@ -145,7 +145,7 @@ std::unique_ptr<Diagnostic> ValidateUnknownConstraints(const Decl& decl,
   if (!members)
     return nullptr;
 
-  const bool is_transitional = decl.HasAttribute("Transitional");
+  const bool is_transitional = decl.HasAttribute("transitional");
 
   const bool is_strict = [&] {
     switch (decl_strictness) {
@@ -158,7 +158,7 @@ std::unique_ptr<Diagnostic> ValidateUnknownConstraints(const Decl& decl,
 
   bool found_member = false;
   for (const auto* member : *members) {
-    const bool has_unknown = member->attributes && member->attributes->HasAttribute("Unknown");
+    const bool has_unknown = member->attributes && member->attributes->HasAttribute("unknown");
     if (!has_unknown)
       continue;
 
@@ -234,7 +234,11 @@ MaybeConstantValue Attribute::GetArg(std::string_view arg_name) const {
 
 bool AttributeList::HasAttribute(std::string_view attribute_name) const {
   for (const auto& attribute : attributes) {
-    if (attribute->name == attribute_name)
+    // TODO(fxbug.dev/70247): once the migration is complete, we no longer
+    //  need to do the the casting to lower_snake_case, so this check should
+    //  be removed.
+    if (attribute->name == attribute_name ||
+        fidl::utils::to_lower_snake_case(attribute->name) == attribute_name)
       return true;
   }
   return false;
@@ -242,9 +246,12 @@ bool AttributeList::HasAttribute(std::string_view attribute_name) const {
 
 MaybeAttribute AttributeList::GetAttribute(std::string_view attribute_name) const {
   for (const auto& attribute : attributes) {
-    if (attribute->name == attribute_name) {
+    // TODO(fxbug.dev/70247): once the migration is complete, we no longer
+    //  need to do the the casting to lower_snake_case, so this check should
+    //  be removed.
+    if (attribute->name == attribute_name ||
+        fidl::utils::to_lower_snake_case(attribute->name) == attribute_name)
       return *attribute;
-    }
   }
   return std::nullopt;
 }
@@ -1838,25 +1845,25 @@ Resource::Property* Resource::LookupProperty(std::string_view name) {
 
 Libraries::Libraries() {
   // clang-format off
-  AddAttributeSchema("Discoverable", AttributeSchema({
+  AddAttributeSchema("discoverable", AttributeSchema({
     AttributeSchema::Placement::kProtocolDecl,
   }, {
     "",
   }));
-  AddAttributeSchema("Doc", AttributeSchema({
+  AddAttributeSchema("doc", AttributeSchema({
     /* any placement */
   }, {
     /* any value */
   }));
-  AddAttributeSchema("Layout", AttributeSchema::Deprecated()),
-  AddAttributeSchema("ForDeprecatedCBindings", AttributeSchema({
+  AddAttributeSchema("layout", AttributeSchema::Deprecated()),
+  AddAttributeSchema("for_deprecated_c_bindings", AttributeSchema({
     AttributeSchema::Placement::kProtocolDecl,
     AttributeSchema::Placement::kStructDecl,
   }, {
     "",
   },
   SimpleLayoutConstraint));
-  AddAttributeSchema("MaxBytes", AttributeSchema({
+  AddAttributeSchema("max_bytes", AttributeSchema({
     AttributeSchema::Placement::kProtocolDecl,
     AttributeSchema::Placement::kMethod,
     AttributeSchema::Placement::kStructDecl,
@@ -1866,7 +1873,7 @@ Libraries::Libraries() {
       /* any value */
   },
   MaxBytesConstraint));
-  AddAttributeSchema("MaxHandles", AttributeSchema({
+  AddAttributeSchema("max_handles", AttributeSchema({
     AttributeSchema::Placement::kProtocolDecl,
     AttributeSchema::Placement::kMethod,
     AttributeSchema::Placement::kStructDecl,
@@ -1876,18 +1883,18 @@ Libraries::Libraries() {
     /* any value */
   },
   MaxHandlesConstraint));
-  AddAttributeSchema("Result", AttributeSchema({
+  AddAttributeSchema("result", AttributeSchema({
     AttributeSchema::Placement::kUnionDecl,
   }, {
       "",
   },
   ResultShapeConstraint));
-  AddAttributeSchema("Selector", AttributeSchema({
+  AddAttributeSchema("selector", AttributeSchema({
     AttributeSchema::Placement::kMethod,
   }, {
       /* any value */
   }));
-  AddAttributeSchema("Transitional", AttributeSchema({
+  AddAttributeSchema("transitional", AttributeSchema({
     AttributeSchema::Placement::kMethod,
     AttributeSchema::Placement::kBitsDecl,
     AttributeSchema::Placement::kEnumDecl,
@@ -1895,12 +1902,12 @@ Libraries::Libraries() {
   }, {
     /* any value */
   }));
-  AddAttributeSchema("Transport", AttributeSchema({
+  AddAttributeSchema("transport", AttributeSchema({
     AttributeSchema::Placement::kProtocolDecl,
   }, {
     /* any value */
   }, TransportConstraint));
-  AddAttributeSchema("Unknown", AttributeSchema({
+  AddAttributeSchema("unknown", AttributeSchema({
     AttributeSchema::Placement::kEnumMember,
     AttributeSchema::Placement::kUnionMember,
   }, {
@@ -1967,8 +1974,16 @@ size_t EditDistance(const std::string& sequence1, const std::string& sequence2) 
 }
 
 const AttributeSchema* Libraries::RetrieveAttributeSchema(
-    Reporter* reporter, const std::unique_ptr<Attribute>& attribute) const {
-  const auto& attribute_name = fidl::utils::to_upper_camel_case(attribute->name);
+    Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
+    fidl::utils::Syntax syntax) const {
+  auto attribute_name = attribute->name;
+
+  // TODO(fxbug.dev/70247): once the migration is complete, we no longer need to
+  //  do the the casting to lower_snake_case, so this check should be removed.
+  if (syntax == fidl::utils::Syntax::kOld) {
+    attribute_name = fidl::utils::to_lower_snake_case(attribute->name);
+  }
+
   auto iter = attribute_schemas_.find(attribute_name);
   if (iter != attribute_schemas_.end()) {
     const auto& schema = iter->second;
@@ -1981,9 +1996,20 @@ const AttributeSchema* Libraries::RetrieveAttributeSchema(
 
   // Match against all known attributes.
   for (const auto& name_and_schema : attribute_schemas_) {
-    auto edit_distance = EditDistance(name_and_schema.first, attribute_name);
+    std::string schema_name = attribute_name;
+    std::string supplied_name = name_and_schema.first;
+
+    // TODO(fxbug.dev/70247): once the migration is complete, we no longer need
+    //  to do the the casting to lower_snake_case, so this check should be
+    //  removed.
+    if (syntax == fidl::utils::Syntax::kOld) {
+      schema_name = fidl::utils::to_upper_camel_case(name_and_schema.first);
+      supplied_name = attribute->name;
+    }
+
+    auto edit_distance = EditDistance(schema_name, supplied_name);
     if (0 < edit_distance && edit_distance < 2) {
-      reporter->Report(WarnAttributeTypo, attribute->span(), attribute_name, name_and_schema.first);
+      reporter->Report(WarnAttributeTypo, attribute->span(), supplied_name, schema_name);
       return nullptr;
     }
   }
@@ -2110,7 +2136,7 @@ void Library::ValidateAttributesPlacement(AttributeSchema::Placement placement,
   if (attributes == nullptr)
     return;
   for (const auto& attribute : attributes->attributes) {
-    auto schema = all_libraries_->RetrieveAttributeSchema(reporter_, attribute);
+    auto schema = all_libraries_->RetrieveAttributeSchema(reporter_, attribute, attribute->syntax);
     if (schema != nullptr) {
       schema->ValidatePlacement(reporter_, attribute, placement);
       schema->ValidateValue(reporter_, attribute);
@@ -2122,7 +2148,7 @@ void Library::ValidateAttributesConstraints(const Decl* decl, const AttributeLis
   if (attributes == nullptr)
     return;
   for (const auto& attribute : attributes->attributes) {
-    auto schema = all_libraries_->RetrieveAttributeSchema(nullptr, attribute);
+    auto schema = all_libraries_->RetrieveAttributeSchema(nullptr, attribute, attribute->syntax);
     if (schema != nullptr)
       schema->ValidateConstraint(reporter_, attribute, decl);
   }
@@ -2310,8 +2336,8 @@ VerifyResourcenessStep Library::StartVerifyResourcenessStep() {
 }
 VerifyAttributesStep Library::StartVerifyAttributesStep() { return VerifyAttributesStep(this); }
 
-bool Library::ConsumeAttributeList(std::unique_ptr<raw::AttributeList> raw_attribute_list,
-                                   std::unique_ptr<AttributeList>* out_attribute_list) {
+bool Library::ConsumeAttributeListOld(std::unique_ptr<raw::AttributeListOld> raw_attribute_list,
+                                      std::unique_ptr<AttributeList>* out_attribute_list) {
   AttributesBuilder<Attribute> attributes_builder(reporter_);
   if (raw_attribute_list) {
     for (auto& raw_attribute : raw_attribute_list->attributes) {
@@ -2321,8 +2347,8 @@ bool Library::ConsumeAttributeList(std::unique_ptr<raw::AttributeList> raw_attri
         args.emplace_back(
             std::make_unique<AttributeArg>(kDefaultAttributeArg, std::move(constant)));
       }
-      auto attribute =
-          std::make_unique<Attribute>(raw_attribute.name, raw_attribute.span(), std::move(args));
+      auto attribute = std::make_unique<Attribute>(raw_attribute.name, fidl::utils::Syntax::kOld,
+                                                   raw_attribute.span(), std::move(args));
       attributes_builder.Insert(std::move(attribute));
     }
   }
@@ -2330,6 +2356,45 @@ bool Library::ConsumeAttributeList(std::unique_ptr<raw::AttributeList> raw_attri
   auto attributes = attributes_builder.Done();
   *out_attribute_list = std::make_unique<AttributeList>(std::move(attributes));
   return true;
+}
+
+bool Library::ConsumeAttributeListNew(std::unique_ptr<raw::AttributeListNew> raw_attribute_list,
+                                      std::unique_ptr<AttributeList>* out_attribute_list) {
+  AttributesBuilder<Attribute> attributes_builder(reporter_);
+  if (raw_attribute_list != nullptr) {
+    for (auto& raw_attribute : raw_attribute_list->attributes) {
+      // TODO(fxbug.dev/74955): use AttributesBuilder (renamed) here instead of
+      //  a regular vector, to check for duplicates, when enabling multiple
+      //  arguments.
+      std::vector<std::unique_ptr<AttributeArg>> args;
+      for (auto& raw_arg : raw_attribute.args) {
+        std::unique_ptr<LiteralConstant> constant;
+        constant = std::make_unique<LiteralConstant>(std::move(raw_arg.value));
+        args.emplace_back(
+            std::make_unique<AttributeArg>(kDefaultAttributeArg, std::move(constant)));
+      }
+      auto attribute = std::make_unique<Attribute>(raw_attribute.name, fidl::utils::Syntax::kNew,
+                                                   raw_attribute.span(), std::move(args));
+      attributes_builder.Insert(std::move(attribute));
+    }
+  }
+
+  auto attributes = attributes_builder.Done();
+  *out_attribute_list = std::make_unique<AttributeList>(std::move(attributes));
+  return true;
+}
+
+bool Library::ConsumeAttributeList(raw::AttributeList raw_attribute_list,
+                                   std::unique_ptr<AttributeList>* out_attribute_list) {
+  return std::visit(fidl::utils::matchers{
+                        [&, this](std::unique_ptr<raw::AttributeListOld> e) -> bool {
+                          return ConsumeAttributeListOld(std::move(e), out_attribute_list);
+                        },
+                        [&, this](std::unique_ptr<raw::AttributeListNew> e) -> bool {
+                          return ConsumeAttributeListNew(std::move(e), out_attribute_list);
+                        },
+                    },
+                    std::move(raw_attribute_list));
 }
 
 bool Library::ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant,
@@ -2418,9 +2483,18 @@ bool Library::ConsumeTypeConstructorOld(std::unique_ptr<raw::TypeConstructorOld>
 }
 
 void Library::ConsumeUsing(std::unique_ptr<raw::Using> using_directive) {
-  if (using_directive->attributes && using_directive->attributes->attributes.size() != 0) {
-    Fail(ErrAttributesNotAllowedOnLibraryImport, using_directive->span(),
-         using_directive->attributes.get());
+  if (raw::IsAttributeListNotEmpty(using_directive->attributes)) {
+    std::visit(fidl::utils::matchers{
+                   [&](const std::unique_ptr<raw::AttributeListOld>& attributes) -> void {
+                     Fail(ErrAttributesOldNotAllowedOnLibraryImport, using_directive->span(),
+                          attributes.get());
+                   },
+                   [&](const std::unique_ptr<raw::AttributeListNew>& attributes) -> void {
+                     Fail(ErrAttributesNewNotAllowedOnLibraryImport, using_directive->span(),
+                          attributes.get());
+                   },
+               },
+               using_directive->attributes);
     return;
   }
 
@@ -2587,7 +2661,7 @@ bool Library::CreateMethodResult(const Name& protocol_name, SourceSpan response_
   result_members.push_back(std::move(response_member));
   result_members.push_back(std::move(error_member));
   std::vector<std::unique_ptr<Attribute>> result_attributes;
-  result_attributes.emplace_back(std::make_unique<Attribute>("Result"));
+  result_attributes.emplace_back(std::make_unique<Attribute>("result", fidl::utils::Syntax::kNew));
   auto union_decl = std::make_unique<Union>(
       std::make_unique<AttributeList>(std::move(result_attributes)), std::move(result_name),
       std::move(result_members), types::Strictness::kStrict, std::nullopt /* resourceness */);
@@ -2906,36 +2980,50 @@ void Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
 // TODO(fxbug.dev/71536): these conversion methods may need to be refactored
 //  once the new flat AST lands, and such coercion  is no longer needed.
 template <typename T, typename M>
-bool Library::ConsumeValueLayout(std::unique_ptr<raw::Layout> layout, const Name& context) {
+bool Library::ConsumeValueLayout(std::unique_ptr<raw::Layout> layout, const Name& context,
+                                 std::unique_ptr<raw::AttributeListNew> raw_attribute_list) {
   std::vector<M> members;
   size_t index = 0;
   for (auto& mem : layout->members) {
     auto member = static_cast<raw::ValueLayoutMember*>(mem.get());
     auto span = member->identifier->span();
+
+    std::unique_ptr<AttributeList> attributes;
+    if (!ConsumeAttributeList(std::move(member->attributes), &attributes)) {
+      return false;
+    }
+
     std::unique_ptr<Constant> value;
     if (!ConsumeConstant(std::move(member->value), &value))
       return false;
 
-    members.emplace_back(span, std::move(value), /*attributes=*/nullptr);
+    members.emplace_back(span, std::move(value), std::move(attributes));
     index++;
   }
 
   std::unique_ptr<TypeConstructorNew> subtype_ctor;
   if (layout->subtype_ctor != nullptr) {
-    if (!ConsumeTypeConstructorNew(std::move(layout->subtype_ctor), context, &subtype_ctor))
+    if (!ConsumeTypeConstructorNew(std::move(layout->subtype_ctor), context,
+                                   /*raw_attribute_list=*/nullptr, &subtype_ctor))
       return false;
   } else {
     subtype_ctor = TypeConstructorNew::CreateSizeType();
   }
 
-  RegisterDecl(std::make_unique<T>(
-      /*attributes=*/nullptr, context, std::move(subtype_ctor), std::move(members),
-      layout->strictness.value_or(types::Strictness::kFlexible)));
+  std::unique_ptr<AttributeList> attributes;
+  if (!ConsumeAttributeList(std::move(raw_attribute_list), &attributes)) {
+    return false;
+  }
+
+  RegisterDecl(std::make_unique<T>(std::move(attributes), context, std::move(subtype_ctor),
+                                   std::move(members),
+                                   layout->strictness.value_or(types::Strictness::kFlexible)));
   return true;
 }
 
 template <typename T, typename M>
-bool Library::ConsumeOrdinaledLayout(std::unique_ptr<raw::Layout> layout, const Name& context) {
+bool Library::ConsumeOrdinaledLayout(std::unique_ptr<raw::Layout> layout, const Name& context,
+                                     std::unique_ptr<raw::AttributeListNew> raw_attribute_list) {
   std::vector<M> members;
   for (auto& mem : layout->members) {
     auto member = static_cast<raw::OrdinaledLayoutMember*>(mem.get());
@@ -2944,26 +3032,37 @@ bool Library::ConsumeOrdinaledLayout(std::unique_ptr<raw::Layout> layout, const 
       continue;
     }
 
+    std::unique_ptr<AttributeList> attributes;
+    if (!ConsumeAttributeList(std::move(member->attributes), &attributes)) {
+      return false;
+    }
+
     auto name_of_anonymous_layout = Name::CreateDerived(
         this, member->span(),
         std::string(context.decl_name()) +
             utils::to_upper_camel_case(std::string(member->identifier->span().data())));
     std::unique_ptr<TypeConstructorNew> type_ctor;
     if (!ConsumeTypeConstructorNew(std::move(member->type_ctor), name_of_anonymous_layout,
-                                   &type_ctor))
+                                   /*raw_attribute_list=*/nullptr, &type_ctor))
       return false;
 
     members.emplace_back(std::move(member->ordinal), std::move(type_ctor),
-                         member->identifier->span(), /*attributes=*/nullptr);
+                         member->identifier->span(), std::move(attributes));
   }
 
-  RegisterDecl(std::make_unique<T>(
-      /*attributes=*/nullptr, context, std::move(members),
-      layout->strictness.value_or(types::Strictness::kFlexible), layout->resourceness));
+  std::unique_ptr<AttributeList> attributes;
+  if (!ConsumeAttributeList(std::move(raw_attribute_list), &attributes)) {
+    return false;
+  }
+
+  RegisterDecl(std::make_unique<T>(std::move(attributes), context, std::move(members),
+                                   layout->strictness.value_or(types::Strictness::kFlexible),
+                                   layout->resourceness));
   return true;
 }
 
-bool Library::ConsumeStructLayout(std::unique_ptr<raw::Layout> layout, const Name& context) {
+bool Library::ConsumeStructLayout(std::unique_ptr<raw::Layout> layout, const Name& context,
+                                  std::unique_ptr<raw::AttributeListNew> raw_attribute_list) {
   std::vector<Struct::Member> members;
   for (auto& mem : layout->members) {
     auto member = static_cast<raw::StructLayoutMember*>(mem.get());
@@ -2972,9 +3071,14 @@ bool Library::ConsumeStructLayout(std::unique_ptr<raw::Layout> layout, const Nam
         std::string(context.decl_name()) +
             utils::to_upper_camel_case(std::string(member->identifier->span().data())));
 
+    std::unique_ptr<AttributeList> attributes;
+    if (!ConsumeAttributeList(std::move(member->attributes), &attributes)) {
+      return false;
+    }
+
     std::unique_ptr<TypeConstructorNew> type_ctor;
     if (!ConsumeTypeConstructorNew(std::move(member->type_ctor), name_of_anonymous_layout,
-                                   &type_ctor))
+                                   /*raw_attribute_list=*/nullptr, &type_ctor))
       return false;
 
     std::unique_ptr<Constant> default_value;
@@ -2983,30 +3087,40 @@ bool Library::ConsumeStructLayout(std::unique_ptr<raw::Layout> layout, const Nam
     }
 
     members.emplace_back(std::move(type_ctor), member->identifier->span(), std::move(default_value),
-                         /*attributes=*/nullptr);
+                         std::move(attributes));
   }
 
-  RegisterDecl(std::make_unique<Struct>(/*attributes=*/nullptr, context, std::move(members),
+  std::unique_ptr<AttributeList> attributes;
+  if (!ConsumeAttributeList(std::move(raw_attribute_list), &attributes)) {
+    return false;
+  }
+
+  RegisterDecl(std::make_unique<Struct>(std::move(attributes), context, std::move(members),
                                         layout->resourceness));
   return true;
 }
 
-bool Library::ConsumeLayout(std::unique_ptr<raw::Layout> layout, const Name& context) {
+bool Library::ConsumeLayout(std::unique_ptr<raw::Layout> layout, const Name& context,
+                            std::unique_ptr<raw::AttributeListNew> raw_attribute_list) {
   switch (layout->kind) {
     case raw::Layout::Kind::kBits: {
-      return ConsumeValueLayout<Bits, Bits::Member>(std::move(layout), context);
+      return ConsumeValueLayout<Bits, Bits::Member>(std::move(layout), context,
+                                                    std::move(raw_attribute_list));
     }
     case raw::Layout::Kind::kEnum: {
-      return ConsumeValueLayout<Enum, Enum::Member>(std::move(layout), context);
+      return ConsumeValueLayout<Enum, Enum::Member>(std::move(layout), context,
+                                                    std::move(raw_attribute_list));
     }
     case raw::Layout::Kind::kStruct: {
-      return ConsumeStructLayout(std::move(layout), context);
+      return ConsumeStructLayout(std::move(layout), context, std::move(raw_attribute_list));
     }
     case raw::Layout::Kind::kTable: {
-      return ConsumeOrdinaledLayout<Table, Table::Member>(std::move(layout), context);
+      return ConsumeOrdinaledLayout<Table, Table::Member>(std::move(layout), context,
+                                                          std::move(raw_attribute_list));
     }
     case raw::Layout::Kind::kUnion: {
-      return ConsumeOrdinaledLayout<Union, Union::Member>(std::move(layout), context);
+      return ConsumeOrdinaledLayout<Union, Union::Member>(std::move(layout), context,
+                                                          std::move(raw_attribute_list));
     }
   }
   assert(false && "layouts must be of type bits, enum, struct, table, or union");
@@ -3015,6 +3129,7 @@ bool Library::ConsumeLayout(std::unique_ptr<raw::Layout> layout, const Name& con
 
 bool Library::ConsumeTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew> raw_type_ctor,
                                         const Name& context,
+                                        std::unique_ptr<raw::AttributeListNew> raw_attribute_list,
                                         std::unique_ptr<TypeConstructorNew>* out_type_ctor) {
   if (raw_type_ctor->layout_ref->kind == raw::LayoutReference::Kind::kInline) {
     // TODO(fxbug.dev/74683): If we don't want users to be able to refer to anonymous
@@ -3028,7 +3143,7 @@ bool Library::ConsumeTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew>
       return Fail(ErrCannotConstrainInLayoutDecl, constraints->span());
     }
     auto inline_ref = static_cast<raw::InlineLayoutReference*>(raw_type_ctor->layout_ref.get());
-    if (!ConsumeLayout(std::move(inline_ref->layout), context))
+    if (!ConsumeLayout(std::move(inline_ref->layout), context, std::move(raw_attribute_list)))
       return false;
 
     std::vector<std::unique_ptr<LayoutParameter>> no_params;
@@ -3068,7 +3183,8 @@ bool Library::ConsumeTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew>
           auto type_param = static_cast<raw::TypeLayoutParameter*>(param.get());
           std::unique_ptr<TypeConstructorNew> type_ctor;
           auto nested_name = Name::CreateDerived(this, name_span, context.full_name());
-          if (!ConsumeTypeConstructorNew(std::move(type_param->type_ctor), nested_name, &type_ctor))
+          if (!ConsumeTypeConstructorNew(std::move(type_param->type_ctor), nested_name,
+                                         /*raw_attribute_list=*/nullptr, &type_ctor))
             return false;
 
           std::unique_ptr<LayoutParameter> consumed =
@@ -3122,7 +3238,8 @@ bool Library::ConsumeTypeConstructor(raw::TypeConstructor raw_type_ctor, const N
                         },
                         [&, this](std::unique_ptr<raw::TypeConstructorNew> e) -> bool {
                           std::unique_ptr<TypeConstructorNew> out;
-                          bool result = ConsumeTypeConstructorNew(std::move(e), context, &out);
+                          bool result = ConsumeTypeConstructorNew(
+                              std::move(e), context, /*raw_attribute_list=*/nullptr, &out);
                           *out_type = std::move(out);
                           return result;
                         },
@@ -3140,11 +3257,12 @@ void Library::ConsumeTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl) {
     return;
   }
 
-  ConsumeTypeConstructorNew(std::move(type_decl->type_ctor), name, nullptr);
+  ConsumeTypeConstructorNew(std::move(type_decl->type_ctor), name, std::move(type_decl->attributes),
+                            /*out_type=*/nullptr);
 }
 
 bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
-  if (file->attributes) {
+  if (raw::IsAttributeListDefined(file->attributes)) {
     std::unique_ptr<AttributeList> attributes;
     if (!ConsumeAttributeList(std::move(file->attributes), &attributes)) {
       return false;
@@ -3502,7 +3620,7 @@ bool Library::ResolveLiteralConstant(LiteralConstant* literal_constant, const Ty
       // with the two " to identify strings, we need to take this
       // into account. We should expose the actual size of string
       // literals properly, and take into account escaping.
-      uint64_t string_size = string_data.size() - 2;
+      uint64_t string_size = string_data.size() < 2 ? 0 : string_data.size() - 2;
       if (string_type->max_size->value < string_size) {
         return Fail(ErrStringConstantExceedsSizeBound, literal_constant->literal->span(),
                     literal_constant, string_size, type);
@@ -4656,7 +4774,7 @@ bool Library::CompileEnum(Enum* enum_declaration) {
   return true;
 }
 
-bool HasSimpleLayout(const Decl* decl) { return decl->HasAttribute("ForDeprecatedCBindings"); }
+bool HasSimpleLayout(const Decl* decl) { return decl->HasAttribute("for_deprecated_c_bindings"); }
 
 bool Library::CompileResource(Resource* resource_declaration) {
   Scope<std::string_view> scope;
@@ -5329,7 +5447,7 @@ bool Library::ValidateEnumMembersAndCalcUnknownValue(Enum* enum_decl,
       return Fail(ErrCouldNotResolveMember, member.name, std::string("enum"));
     }
     auto attributes = member.attributes.get();
-    if (attributes && attributes->HasAttribute("Unknown")) {
+    if (attributes && attributes->HasAttribute("unknown")) {
       unknown_value =
           static_cast<const NumericConstantValue<MemberType>&>(member.value->Value()).value;
     }
@@ -5351,7 +5469,7 @@ bool Library::ValidateEnumMembersAndCalcUnknownValue(Enum* enum_decl,
     if (member != unknown_value)
       return nullptr;
 
-    if (attributes && attributes->HasAttribute("Unknown"))
+    if (attributes && attributes->HasAttribute("unknown"))
       return nullptr;
 
     return Reporter::MakeError(ErrFlexibleEnumMemberWithMaxValue, std::to_string(unknown_value),

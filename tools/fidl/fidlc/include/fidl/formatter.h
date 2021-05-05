@@ -65,14 +65,14 @@ class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
     OnSourceElementShared(element.end_);
   }
 
-  void OnAttribute(const Attribute& element) override {
+  void OnAttributeOld(const AttributeOld& element) override {
     // Remove leading whitespace from the element.
     remove_leading_ws_ = true;
-    TreeVisitor::OnAttribute(element);
+    TreeVisitor::OnAttributeOld(element);
     // Remove leading whitespace from the closing square bracket after the element.
     remove_leading_ws_ = true;
   }
-  void OnAttributeList(std::unique_ptr<AttributeList> const& element) override {
+  void OnAttributeListOld(std::unique_ptr<AttributeListOld> const& element) override {
     // Disabling these in case we're in a protocol method and it thinks
     // the next line needs to be indented more.  We don't want an indent
     // after a newline following an attribute list.  It will be reenabled by
@@ -83,7 +83,7 @@ class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
     // AttributeList
     {
       ScopedBool suppress(is_member_decl_, false);
-      TreeVisitor::OnAttributeList(element);
+      TreeVisitor::OnAttributeListOld(element);
     }
 
     // After parameter attributes we need a whitespace.

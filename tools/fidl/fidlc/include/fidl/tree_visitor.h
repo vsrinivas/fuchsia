@@ -110,9 +110,25 @@ class TreeVisitor {
     element->Accept(this);
   }
 
-  virtual void OnAttribute(const Attribute& element) { element.Accept(this); }
+  virtual void OnAttributeArg(const AttributeArg& element) { element.Accept(this); }
 
-  virtual void OnAttributeList(std::unique_ptr<AttributeList> const& element) {
+  virtual void OnAttributeOld(const AttributeOld& element) { element.Accept(this); }
+
+  virtual void OnAttributeNew(const AttributeNew& element) { element.Accept(this); }
+
+  void OnAttributeList(AttributeList const& element) {
+    std::visit(fidl::utils::matchers{
+                   [this](const std::unique_ptr<AttributeListOld>& e) { OnAttributeListOld(e); },
+                   [this](const std::unique_ptr<AttributeListNew>& e) { OnAttributeListNew(e); },
+               },
+               element);
+  }
+
+  virtual void OnAttributeListOld(std::unique_ptr<AttributeListOld> const& element) {
+    element->Accept(this);
+  }
+
+  virtual void OnAttributeListNew(std::unique_ptr<AttributeListNew> const& element) {
     element->Accept(this);
   }
 

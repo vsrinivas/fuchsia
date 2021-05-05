@@ -233,7 +233,7 @@ union InUnion {
   EXPECT_TRUE(library.Compile());
 }
 
-// Test that otherwise reserved words can be appropriarely parsed when context
+// Test that otherwise reserved words can be appropriately parsed when context
 // is clear.
 TEST(ParsingTests, GoodParsingReservedWordsInProtocolTest) {
   TestLibrary library(R"FIDL(
@@ -277,16 +277,16 @@ protocol InProtocol {
   EXPECT_TRUE(library.Compile());
 }
 
-TEST(ParsingTests, BadCharAtSignTest) {
+TEST(ParsingTests, BadCharPoundSignTest) {
   TestLibrary library(R"FIDL(
 library test;
 
 struct Test {
-    uint8 @uint8;
+    uint8 #uint8;
 };
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidCharacter);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "@");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "#");
 }
 
 TEST(ParsingTests, BadCharSlashTest) {
@@ -385,7 +385,7 @@ TEST(ParsingTests, GoodAttributeValueHasCorrectContents) {
   std::unique_ptr<fidl::raw::File> ast;
   ASSERT_TRUE(library.Parse(&ast));
 
-  fidl::raw::Attribute attribute =
+  fidl::raw::AttributeOld attribute =
       std::move(ast->struct_declaration_list.front()->attributes->attributes.front());
   ASSERT_STR_EQ(attribute.name.c_str(), "Foo");
   ASSERT_STR_EQ(static_cast<fidl::raw::StringLiteral*>(attribute.value.get())->MakeContents(),
@@ -405,7 +405,7 @@ TEST(ParsingTests, GoodMultilineCommentHasCorrectContents) {
   std::unique_ptr<fidl::raw::File> ast;
   ASSERT_TRUE(library.Parse(&ast));
 
-  fidl::raw::Attribute attribute =
+  fidl::raw::AttributeOld attribute =
       std::move(ast->struct_declaration_list.front()->attributes->attributes.front());
   ASSERT_STR_EQ(attribute.name.c_str(), "Doc");
   ASSERT_STR_EQ(static_cast<fidl::raw::DocCommentLiteral*>(attribute.value.get())->MakeContents(),

@@ -14,7 +14,7 @@ namespace raw {
 void DeclarationOrderTreeVisitor::OnFile(std::unique_ptr<File> const& element) {
   OnSourceElementStart(*element);
 
-  if (element->attributes != nullptr) {
+  if (IsAttributeListDefined(element->attributes)) {
     OnAttributeList(element->attributes);
   }
   OnCompoundIdentifier(element->library_name);
@@ -159,7 +159,7 @@ void DeclarationOrderTreeVisitor::OnFile(std::unique_ptr<File> const& element) {
 void DeclarationOrderTreeVisitor::OnProtocolDeclaration(
     std::unique_ptr<ProtocolDeclaration> const& element) {
   SourceElementMark sem(this, *element);
-  if (element->attributes != nullptr) {
+  if (IsAttributeListDefined(element->attributes)) {
     OnAttributeList(element->attributes);
   }
   OnIdentifier(element->identifier);

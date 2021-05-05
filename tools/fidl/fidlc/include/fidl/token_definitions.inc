@@ -34,6 +34,7 @@ TOKEN(RightCurly)
 TOKEN(LeftAngle)
 TOKEN(RightAngle)
 
+TOKEN(At)
 TOKEN(Dot)
 TOKEN(Comma)
 TOKEN(Semicolon)

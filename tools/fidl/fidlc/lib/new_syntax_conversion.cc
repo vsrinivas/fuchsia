@@ -21,12 +21,7 @@ std::string AttributeConversion::Write(fidl::utils::Syntax syntax) {
 
   std::string out = prefix() + "@" + utils::to_lower_snake_case(name_);
   if (value_.has_value() && !value_.value().get().MakeContents().empty()) {
-    // Special case: convert MaxBytes and MaxHandles from string to uint.
-    if (name_ == "MaxBytes" || name_ == "MaxHandles") {
-      out += "(" + value_.value().get().MakeContents() + ")";
-    } else {
-      out += "(\"" + value_.value().get().MakeContents() + "\")";
-    }
+    out += "(\"" + value_.value().get().MakeContents() + "\")";
   }
   return out;
 };

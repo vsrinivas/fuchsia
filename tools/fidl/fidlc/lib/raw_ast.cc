@@ -15,6 +15,27 @@
 namespace fidl {
 namespace raw {
 
+bool IsAttributeListDefined(const raw::AttributeList& attributes) {
+  return std::visit(
+      fidl::utils::matchers{
+          [](const std::unique_ptr<raw::AttributeListOld>& e) -> bool { return e != nullptr; },
+          [](const std::unique_ptr<raw::AttributeListNew>& e) -> bool { return e != nullptr; },
+      },
+      attributes);
+}
+
+bool IsAttributeListNotEmpty(const raw::AttributeList& attributes) {
+  return std::visit(fidl::utils::matchers{
+                        [](const std::unique_ptr<raw::AttributeListOld>& e) -> bool {
+                          return e && !e->attributes.empty();
+                        },
+                        [](const std::unique_ptr<raw::AttributeListNew>& e) -> bool {
+                          return e && !e->attributes.empty();
+                        },
+                    },
+                    attributes);
+}
+
 bool IsTypeConstructorDefined(const raw::TypeConstructor& maybe_type_ctor) {
   return std::visit(
       fidl::utils::matchers{
@@ -71,17 +92,38 @@ void BinaryOperatorConstant::Accept(TreeVisitor* visitor) const {
 
 void Ordinal64::Accept(TreeVisitor* visitor) const { SourceElementMark sem(visitor, *this); }
 
-void Attribute::Accept(TreeVisitor* visitor) const {
+void AttributeArg::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
   if (value) {
     visitor->OnLiteral(value);
   }
 }
 
-void AttributeList::Accept(TreeVisitor* visitor) const {
+void AttributeOld::Accept(TreeVisitor* visitor) const {
+  SourceElementMark sem(visitor, *this);
+  if (value) {
+    visitor->OnLiteral(value);
+  }
+}
+
+void AttributeNew::Accept(TreeVisitor* visitor) const {
+  SourceElementMark sem(visitor, *this);
+  for (auto& i : args) {
+    visitor->OnAttributeArg(i);
+  }
+}
+
+void AttributeListOld::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
   for (auto& i : attributes) {
-    visitor->OnAttribute(i);
+    visitor->OnAttributeOld(i);
+  }
+}
+
+void AttributeListNew::Accept(TreeVisitor* visitor) const {
+  SourceElementMark sem(visitor, *this);
+  for (auto& i : attributes) {
+    visitor->OnAttributeNew(i);
   }
 }
 
@@ -101,7 +143,7 @@ void TypeConstructorOld::Accept(TreeVisitor* visitor) const {
 
 void Using::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
-  if (attributes != nullptr) {
+  if (IsAttributeListDefined(attributes)) {
     visitor->OnAttributeList(attributes);
   }
   visitor->OnCompoundIdentifier(using_path);
@@ -112,7 +154,7 @@ void Using::Accept(TreeVisitor* visitor) const {
 
 void AliasDeclaration::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
-  if (attributes != nullptr) {
+  if (IsAttributeListDefined(attributes)) {
     visitor->OnAttributeList(attributes);
   }
   visitor->OnIdentifier(alias);
@@ -122,7 +164,7 @@ void AliasDeclaration::Accept(TreeVisitor* visitor) const {
 void BitsMember::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
   if (attributes != nullptr) {
-    visitor->OnAttributeList(attributes);
+    visitor->OnAttributeListOld(attributes);
   }
   visitor->OnIdentifier(identifier);
   visitor->OnConstant(value);
@@ -131,7 +173,7 @@ void BitsMember::Accept(TreeVisitor* visitor) const {
 void BitsDeclaration::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
   if (attributes != nullptr) {
-    visitor->OnAttributeList(attributes);
+    visitor->OnAttributeListOld(attributes);
   }
   visitor->OnIdentifier(identifier);
   if (maybe_type_ctor != nullptr) {
@@ -144,7 +186,7 @@ void BitsDeclaration::Accept(TreeVisitor* visitor) const {
 
 void ConstDeclaration::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
-  if (attributes != nullptr) {
+  if (IsAttributeListDefined(attributes)) {
     visitor->OnAttributeList(attributes);
   }
   visitor->OnTypeConstructor(type_ctor);
@@ -155,7 +197,7 @@ void ConstDeclaration::Accept(TreeVisitor* visitor) const {
 void EnumMember::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
   if (attributes != nullptr) {
-    visitor->OnAttributeList(attributes);
+    visitor->OnAttributeListOld(attributes);
   }
   visitor->OnIdentifier(identifier);
   visitor->OnConstant(value);
@@ -164,7 +206,7 @@ void EnumMember::Accept(TreeVisitor* visitor) const {
 void EnumDeclaration::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
   if (attributes != nullptr) {
-    visitor->OnAttributeList(attributes);
+    visitor->OnAttributeListOld(attributes);
   }
   visitor->OnIdentifier(identifier);
   if (maybe_type_ctor != nullptr) {
@@ -177,7 +219,7 @@ void EnumDeclaration::Accept(TreeVisitor* visitor) const {
 
 void Parameter::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
-  if (attributes != nullptr) {
+  if (IsAttributeListDefined(attributes)) {
     visitor->OnAttributeList(attributes);
   }
   visitor->OnTypeConstructor(type_ctor);
@@ -193,7 +235,7 @@ void ParameterList::Accept(TreeVisitor* visitor) const {
 
 void ProtocolMethod::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
-  if (attributes != nullptr) {
+  if (IsAttributeListDefined(attributes)) {
     visitor->OnAttributeList(attributes);
   }
   visitor->OnIdentifier(identifier);
@@ -215,7 +257,7 @@ void ComposeProtocol::Accept(TreeVisitor* visitor) const {
 
 void ProtocolDeclaration::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
-  if (attributes != nullptr) {
+  if (IsAttributeListDefined(attributes)) {
     visitor->OnAttributeList(attributes);
   }
   visitor->OnIdentifier(identifier);
@@ -230,7 +272,7 @@ void ProtocolDeclaration::Accept(TreeVisitor* visitor) const {
 
 void ResourceProperty::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
-  if (attributes != nullptr) {
+  if (IsAttributeListDefined(attributes)) {
     visitor->OnAttributeList(attributes);
   }
   visitor->OnTypeConstructor(type_ctor);
@@ -239,7 +281,7 @@ void ResourceProperty::Accept(TreeVisitor* visitor) const {
 
 void ResourceDeclaration::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
-  if (attributes != nullptr) {
+  if (IsAttributeListDefined(attributes)) {
     visitor->OnAttributeList(attributes);
   }
   visitor->OnIdentifier(identifier);
@@ -253,7 +295,7 @@ void ResourceDeclaration::Accept(TreeVisitor* visitor) const {
 
 void ServiceMember::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
-  if (attributes != nullptr) {
+  if (IsAttributeListDefined(attributes)) {
     visitor->OnAttributeList(attributes);
   }
   visitor->OnTypeConstructor(type_ctor);
@@ -262,7 +304,7 @@ void ServiceMember::Accept(TreeVisitor* visitor) const {
 
 void ServiceDeclaration::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
-  if (attributes != nullptr) {
+  if (IsAttributeListDefined(attributes)) {
     visitor->OnAttributeList(attributes);
   }
   visitor->OnIdentifier(identifier);
@@ -274,7 +316,7 @@ void ServiceDeclaration::Accept(TreeVisitor* visitor) const {
 void StructMember::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
   if (attributes != nullptr) {
-    visitor->OnAttributeList(attributes);
+    visitor->OnAttributeListOld(attributes);
   }
   visitor->OnTypeConstructorOld(type_ctor);
   visitor->OnIdentifier(identifier);
@@ -286,7 +328,7 @@ void StructMember::Accept(TreeVisitor* visitor) const {
 void StructDeclaration::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
   if (attributes != nullptr) {
-    visitor->OnAttributeList(attributes);
+    visitor->OnAttributeListOld(attributes);
   }
   visitor->OnIdentifier(identifier);
   for (auto member = members.begin(); member != members.end(); ++member) {
@@ -298,7 +340,7 @@ void TableMember::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
   if (maybe_used != nullptr) {
     if (maybe_used->attributes != nullptr) {
-      visitor->OnAttributeList(maybe_used->attributes);
+      visitor->OnAttributeListOld(maybe_used->attributes);
     }
   }
   visitor->OnOrdinal64(*ordinal);
@@ -314,7 +356,7 @@ void TableMember::Accept(TreeVisitor* visitor) const {
 void TableDeclaration::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
   if (attributes != nullptr) {
-    visitor->OnAttributeList(attributes);
+    visitor->OnAttributeListOld(attributes);
   }
   visitor->OnIdentifier(identifier);
   for (auto member = members.begin(); member != members.end(); ++member) {
@@ -326,7 +368,7 @@ void UnionMember::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
   if (maybe_used != nullptr) {
     if (maybe_used->attributes != nullptr) {
-      visitor->OnAttributeList(maybe_used->attributes);
+      visitor->OnAttributeListOld(maybe_used->attributes);
     }
   }
   visitor->OnOrdinal64(*ordinal);
@@ -342,7 +384,7 @@ void UnionMember::Accept(TreeVisitor* visitor) const {
 void UnionDeclaration::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
   if (attributes != nullptr) {
-    visitor->OnAttributeList(attributes);
+    visitor->OnAttributeListOld(attributes);
   }
   visitor->OnIdentifier(identifier);
   for (auto member = members.begin(); member != members.end(); ++member) {
@@ -376,7 +418,9 @@ void LayoutParameterList::Accept(TreeVisitor* visitor) const {
 
 void OrdinaledLayoutMember::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
-  // TODO(fxbug.dev/68792): Parse attributes.
+  if (attributes != nullptr) {
+    visitor->OnAttributeListNew(attributes);
+  }
 
   visitor->OnOrdinal64(*ordinal);
   if (type_ctor != nullptr) {
@@ -386,7 +430,9 @@ void OrdinaledLayoutMember::Accept(TreeVisitor* visitor) const {
 
 void StructLayoutMember::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
-  // TODO(fxbug.dev/68792): Parse attributes.
+  if (attributes != nullptr) {
+    visitor->OnAttributeListNew(attributes);
+  }
 
   visitor->OnTypeConstructorNew(type_ctor);
   if (default_value != nullptr) {
@@ -396,7 +442,9 @@ void StructLayoutMember::Accept(TreeVisitor* visitor) const {
 
 void ValueLayoutMember::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
-  // TODO(fxbug.dev/68792): Parse attributes.
+  if (attributes != nullptr) {
+    visitor->OnAttributeListNew(attributes);
+  }
 
   visitor->OnConstant(value);
 }
@@ -442,6 +490,10 @@ void TypeConstructorNew::Accept(TreeVisitor* visitor) const {
 }
 
 void TypeDecl::Accept(TreeVisitor* visitor) const {
+  if (attributes != nullptr) {
+    visitor->OnAttributeListNew(attributes);
+  }
+
   visitor->OnIdentifier(identifier);
   visitor->OnTypeConstructorNew(type_ctor);
 }
@@ -449,7 +501,7 @@ void TypeDecl::Accept(TreeVisitor* visitor) const {
 
 void File::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
-  if (attributes != nullptr) {
+  if (IsAttributeListDefined(attributes)) {
     visitor->OnAttributeList(attributes);
   }
   visitor->OnCompoundIdentifier(library_name);

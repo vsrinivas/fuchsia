@@ -213,7 +213,11 @@ void JSONGenerator::Generate(const flat::Type* value) {
 void JSONGenerator::Generate(const flat::Attribute& value) {
   GenerateObject([&]() {
     // TODO(fxbug.dev/74955): force lower_snake_case in a subsequent CL.
-    GenerateObjectMember("name", value.name, Position::kFirst);
+    auto name = value.name;
+    if (value.syntax == utils::Syntax::kNew) {
+      name = fidl::utils::to_upper_camel_case(name);
+    }
+    GenerateObjectMember("name", name, Position::kFirst);
 
     // TODO(fxbug.dev/74955): the rest of this block currently assumes a single
     //  string argument, as is the case in the old syntax. This should be

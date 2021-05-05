@@ -276,68 +276,74 @@ class Parser {
 
   std::unique_ptr<raw::Constant> ParseConstant();
 
-  std::unique_ptr<raw::Attribute> ParseAttribute();
-  std::unique_ptr<raw::Attribute> ParseDocComment();
-  std::unique_ptr<raw::AttributeList> ParseAttributeList(
-      std::unique_ptr<raw::Attribute> doc_comment, ASTScope& scope);
-  std::unique_ptr<raw::AttributeList> MaybeParseAttributeList(bool for_parameter = false);
+  std::unique_ptr<raw::AttributeOld> ParseAttributeOld();
+  std::unique_ptr<raw::AttributeOld> ParseDocCommentOld();
+  std::unique_ptr<raw::AttributeListOld> ParseAttributeListOld(
+      std::unique_ptr<raw::AttributeOld> doc_comment, ASTScope& scope);
+  std::unique_ptr<raw::AttributeListOld> MaybeParseAttributeListOld(bool for_parameter = false);
 
-  std::unique_ptr<raw::AliasDeclaration> ParseAliasDeclaration(
-      std::unique_ptr<raw::AttributeList> attributes, ASTScope&, const Modifiers&);
-  std::unique_ptr<raw::Using> ParseUsing(std::unique_ptr<raw::AttributeList> attributes, ASTScope&,
+  std::unique_ptr<raw::AliasDeclaration> ParseAliasDeclaration(raw::AttributeList attributes,
+                                                               ASTScope&, const Modifiers&);
+  std::unique_ptr<raw::Using> ParseUsing(raw::AttributeList attributes, ASTScope&,
                                          const Modifiers&);
 
   std::unique_ptr<raw::TypeConstructorOld> ParseTypeConstructorOld();
 
   std::unique_ptr<raw::BitsMember> ParseBitsMember();
   std::unique_ptr<raw::BitsDeclaration> ParseBitsDeclaration(
-      std::unique_ptr<raw::AttributeList> attributes, ASTScope&, const Modifiers&);
+      std::unique_ptr<raw::AttributeListOld> attributes, ASTScope&, const Modifiers&);
 
-  std::unique_ptr<raw::ConstDeclaration> ParseConstDeclaration(
-      std::unique_ptr<raw::AttributeList> attributes, ASTScope&, const Modifiers&);
+  std::unique_ptr<raw::ConstDeclaration> ParseConstDeclaration(raw::AttributeList attributes,
+                                                               ASTScope&, const Modifiers&);
 
   std::unique_ptr<raw::EnumMember> ParseEnumMember();
   std::unique_ptr<raw::EnumDeclaration> ParseEnumDeclaration(
-      std::unique_ptr<raw::AttributeList> attributes, ASTScope&, const Modifiers&);
+      std::unique_ptr<raw::AttributeListOld> attributes, ASTScope&, const Modifiers&);
 
   std::unique_ptr<raw::Parameter> ParseParameter();
   std::unique_ptr<raw::ParameterList> ParseParameterList();
   std::unique_ptr<raw::ProtocolMethod> ParseProtocolEvent(
-      std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope);
+      std::unique_ptr<raw::AttributeListOld> attributes, ASTScope& scope);
   std::unique_ptr<raw::ProtocolMethod> ParseProtocolMethod(
-      std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope,
+      std::unique_ptr<raw::AttributeListOld> attributes, ASTScope& scope,
       std::unique_ptr<raw::Identifier> method_name);
   // ParseProtocolMember parses any one protocol member, i.e. an event,
   // a method, or a compose stanza.
   void ParseProtocolMember(std::vector<std::unique_ptr<raw::ComposeProtocol>>* composed_protocols,
                            std::vector<std::unique_ptr<raw::ProtocolMethod>>* methods);
-  std::unique_ptr<raw::ProtocolDeclaration> ParseProtocolDeclaration(
-      std::unique_ptr<raw::AttributeList> attributes, ASTScope&, const Modifiers&);
+  std::unique_ptr<raw::ProtocolDeclaration> ParseProtocolDeclaration(raw::AttributeList, ASTScope&,
+                                                                     const Modifiers&);
 
   std::unique_ptr<raw::ResourceProperty> ParseResourcePropertyDeclaration();
-  std::unique_ptr<raw::ResourceDeclaration> ParseResourceDeclaration(
-      std::unique_ptr<raw::AttributeList> attributes, ASTScope&, const Modifiers&);
+  std::unique_ptr<raw::ResourceDeclaration> ParseResourceDeclaration(raw::AttributeList, ASTScope&,
+                                                                     const Modifiers&);
 
   std::unique_ptr<raw::ServiceMember> ParseServiceMember();
-  std::unique_ptr<raw::ServiceDeclaration> ParseServiceDeclaration(
-      std::unique_ptr<raw::AttributeList> attributes, ASTScope&, const Modifiers&);
+  std::unique_ptr<raw::ServiceDeclaration> ParseServiceDeclaration(raw::AttributeList, ASTScope&,
+                                                                   const Modifiers&);
 
   std::unique_ptr<raw::StructMember> ParseStructMember();
   std::unique_ptr<raw::StructDeclaration> ParseStructDeclaration(
-      std::unique_ptr<raw::AttributeList> attributes, ASTScope&, const Modifiers&);
+      std::unique_ptr<raw::AttributeListOld> attributes, ASTScope&, const Modifiers&);
 
   std::unique_ptr<raw::TableMember> ParseTableMember();
   std::unique_ptr<raw::TableDeclaration> ParseTableDeclaration(
-      std::unique_ptr<raw::AttributeList> attributes, ASTScope&, const Modifiers&);
+      std::unique_ptr<raw::AttributeListOld> attributes, ASTScope&, const Modifiers&);
 
   std::unique_ptr<raw::UnionMember> ParseUnionMember();
   std::unique_ptr<raw::UnionDeclaration> ParseUnionDeclaration(
-      std::unique_ptr<raw::AttributeList> attributes, ASTScope&, const Modifiers&);
+      std::unique_ptr<raw::AttributeListOld> attributes, ASTScope&, const Modifiers&);
 
   std::unique_ptr<raw::File> ParseFile();
 
   // TODO(fxbug.dev/70247): Consolidate the ParseFoo methods.
   // --- start new syntax ---
+  std::unique_ptr<raw::AttributeNew> ParseAttributeNew();
+  std::unique_ptr<raw::AttributeNew> ParseDocCommentNew();
+  std::unique_ptr<raw::AttributeListNew> ParseAttributeListNew(
+      std::unique_ptr<raw::AttributeNew> doc_comment, ASTScope& scope);
+  std::unique_ptr<raw::AttributeListNew> MaybeParseAttributeListNew(bool for_parameter = false);
+  raw::AttributeList MaybeParseAttributeList();
   std::unique_ptr<raw::LayoutParameter> ParseLayoutParameter();
   std::unique_ptr<raw::LayoutParameterList> MaybeParseLayoutParameterList();
   std::unique_ptr<raw::LayoutMember> ParseLayoutMember(raw::LayoutMember::Kind);
@@ -346,11 +352,22 @@ class Parser {
                                            std::unique_ptr<raw::TypeConstructorNew>);
   std::unique_ptr<raw::TypeConstraints> ParseTypeConstraints();
   raw::ConstraintOrSubtype ParseTokenAfterColon();
+
+  // TODO(fxbug.dev/74955): We should pass a "is_in_anonymous_context" boolean
+  //  to this method, so that it can deduce whether or not it is being used to
+  //  define an anonymous layout. If that is the case, we can then parse the
+  //  attributes attached to that layout. This enables attribute parsing on
+  //  anonymous layouts, like:
+  //  [ParseableToday]
+  //  type S = struct { // <- attributes before the "struct" still not allowed
+  //    [ParseableToday] foo [ShouldAlsoBeParseable] struct{};
+  //  };
   std::unique_ptr<raw::TypeConstructorNew> ParseTypeConstructorNew();
   raw::TypeConstructor ParseTypeConstructor();
-  std::unique_ptr<raw::TypeDecl> ParseTypeDecl(ASTScope&);
+  std::unique_ptr<raw::TypeDecl> ParseTypeDecl(std::unique_ptr<raw::AttributeListNew> attributes,
+                                               ASTScope&);
   std::unique_ptr<raw::File> ParseFileNewSyntax(
-      ASTScope&, std::unique_ptr<raw::AttributeList> library_attributes,
+      ASTScope&, raw::AttributeList library_attributes,
       std::unique_ptr<raw::CompoundIdentifier> library_name);
   // --- end new syntax ---
 

@@ -77,18 +77,21 @@ using MaybeConstantValue = std::optional<std::reference_wrapper<const ConstantVa
 
 struct Attribute final {
   // A constructor for synthetic attributes like "Result."
-  explicit Attribute(std::string name) : name(std::move(name)) {}
+  Attribute(std::string name, fidl::utils::Syntax syntax) : name(std::move(name)), syntax(syntax) {}
 
-  Attribute(std::string name, SourceSpan span) : name(std::move(name)), span_(span) {}
+  Attribute(std::string name, fidl::utils::Syntax syntax, SourceSpan span)
+      : name(std::move(name)), syntax(syntax), span_(span) {}
 
-  Attribute(std::string name, SourceSpan span, std::vector<std::unique_ptr<AttributeArg>> args)
-      : name(std::move(name)), args(std::move(args)), span_(span) {}
+  Attribute(std::string name, fidl::utils::Syntax syntax, SourceSpan span,
+            std::vector<std::unique_ptr<AttributeArg>> args)
+      : name(std::move(name)), syntax(syntax), args(std::move(args)), span_(span) {}
 
   bool HasArg(std::string_view arg_name) const;
   MaybeConstantValue GetArg(std::string_view arg_name = kDefaultAttributeArg) const;
   SourceSpan span() const { return span_; }
 
   const std::string name;
+  const fidl::utils::Syntax syntax;
   std::vector<std::unique_ptr<AttributeArg>> args;
 
   // The span is retained for error reporting purposes.
@@ -1072,7 +1075,8 @@ class Libraries {
   }
 
   const AttributeSchema* RetrieveAttributeSchema(Reporter* reporter,
-                                                 const std::unique_ptr<Attribute>& attribute) const;
+                                                 const std::unique_ptr<Attribute>& attribute,
+                                                 fidl::utils::Syntax syntax) const;
 
   std::set<std::vector<std::string_view>> Unused(const Library* target_library) const;
 
@@ -1202,8 +1206,8 @@ class Library {
   VerifyResourcenessStep StartVerifyResourcenessStep();
   VerifyAttributesStep StartVerifyAttributesStep();
 
-  bool ConsumeAttributeList(std::unique_ptr<raw::AttributeList> raw_attribute_list,
-                            std::unique_ptr<AttributeList>* out_attribute_list);
+  bool ConsumeAttributeListOld(std::unique_ptr<raw::AttributeListOld> raw_attribute_list,
+                               std::unique_ptr<AttributeList>* out_attribute_list);
   bool ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant,
                        std::unique_ptr<Constant>* out_constant);
   void ConsumeLiteralConstant(raw::LiteralConstant* raw_constant,
@@ -1228,11 +1232,16 @@ class Library {
   void ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> union_declaration);
 
   // start new syntax
+  bool ConsumeAttributeListNew(std::unique_ptr<raw::AttributeListNew> raw_attribute_list,
+                               std::unique_ptr<AttributeList>* out_attribute_list);
+  bool ConsumeAttributeList(raw::AttributeList raw_attribute_list,
+                            std::unique_ptr<AttributeList>* out_attribute_list);
   void ConsumeTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl);
   // TODO(fxbug.dev/74683): The context parameter is currently unused, but exists
   // to help generate a name when implementing anonymous layouts
   bool ConsumeTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew> raw_type_ctor,
                                  const Name& context,
+                                 std::unique_ptr<raw::AttributeListNew> raw_attribute_list,
                                  std::unique_ptr<TypeConstructorNew>* out_type);
   bool ConsumeTypeConstructor(raw::TypeConstructor raw_type_ctor, const Name& context,
                               TypeConstructor* out_type);
@@ -1240,14 +1249,18 @@ class Library {
   // Here, T is expected to be an ordinal-carrying flat AST class (ie, Table or
   // Union), while M is its "Member" sub-class.
   template <typename T, typename M>
-  bool ConsumeOrdinaledLayout(std::unique_ptr<raw::Layout>, const Name&);
-  bool ConsumeStructLayout(std::unique_ptr<raw::Layout>, const Name&);
+  bool ConsumeOrdinaledLayout(std::unique_ptr<raw::Layout>, const Name&,
+                              std::unique_ptr<raw::AttributeListNew> raw_attribute_list);
+  bool ConsumeStructLayout(std::unique_ptr<raw::Layout>, const Name&,
+                           std::unique_ptr<raw::AttributeListNew> raw_attribute_list);
 
   // Here, T is expected to be an value-carrying flat AST class (ie, Bits or
   // Enum), while M is its "Member" sub-class.
   template <typename T, typename M>
-  bool ConsumeValueLayout(std::unique_ptr<raw::Layout>, const Name&);
-  bool ConsumeLayout(std::unique_ptr<raw::Layout>, const Name&);
+  bool ConsumeValueLayout(std::unique_ptr<raw::Layout>, const Name&,
+                          std::unique_ptr<raw::AttributeListNew> raw_attribute_list);
+  bool ConsumeLayout(std::unique_ptr<raw::Layout>, const Name&,
+                     std::unique_ptr<raw::AttributeListNew> raw_attribute_list);
   // end new syntax
 
   bool TypeCanBeConst(const Type* type);

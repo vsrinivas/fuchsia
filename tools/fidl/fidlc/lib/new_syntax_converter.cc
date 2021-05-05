@@ -154,10 +154,10 @@ std::optional<UnderlyingType> ConvertingTreeVisitor::resolve(
   return resolve_type(type_ctor, library_);
 }
 
-void ConvertingTreeVisitor::OnAttribute(const raw::Attribute& element) {
+void ConvertingTreeVisitor::OnAttributeOld(const raw::AttributeOld& element) {
   // This branching ensures that we do not attempt any conversion on doc comment
   // attributes.
-  if (element.provenance == raw::Attribute::Provenance::kDefault) {
+  if (element.provenance == raw::AttributeOld::Provenance::kDefault) {
     std::optional<std::reference_wrapper<const raw::StringLiteral>> value = std::nullopt;
     if (element.value) {
       value = static_cast<const raw::StringLiteral&>(*element.value);
@@ -169,30 +169,31 @@ void ConvertingTreeVisitor::OnAttribute(const raw::Attribute& element) {
         std::make_unique<NoopConversion>(element.start_, element.end_);
     Converting converting(this, std::move(conv), element.start_, element.end_);
   }
-  TreeVisitor::OnAttribute(element);
+  TreeVisitor::OnAttributeOld(element);
 }
 
-void ConvertingTreeVisitor::OnAttributeList(const std::unique_ptr<raw::AttributeList>& element) {
+void ConvertingTreeVisitor::OnAttributeListOld(
+    const std::unique_ptr<raw::AttributeListOld>& element) {
   if (attribute_lists_seen_.insert(element.get()).second) {
     bool has_doc_comment = false;
 
     // If there is a "doc comment" attached to this attribute list, it will
     // always be the first element of that list.
     if (!element->attributes.empty() &&
-        element->attributes[0].provenance == raw::Attribute::Provenance::kDocComment) {
+        element->attributes[0].provenance == raw::AttributeOld::Provenance::kDocComment) {
       has_doc_comment = true;
     }
 
     std::unique_ptr<Conversion> conv = std::make_unique<AttributeListConversion>(has_doc_comment);
     Converting converting(this, std::move(conv), element->start_, element->end_);
-    TreeVisitor::OnAttributeList(element);
+    TreeVisitor::OnAttributeListOld(element);
   }
 }
 
 void ConvertingTreeVisitor::OnBitsDeclaration(
     const std::unique_ptr<raw::BitsDeclaration>& element) {
   if (element->attributes != nullptr) {
-    ConvertingTreeVisitor::OnAttributeList(element->attributes);
+    ConvertingTreeVisitor::OnAttributeListOld(element->attributes);
   }
 
   Token& end = element->identifier->end_;
@@ -213,7 +214,7 @@ void ConvertingTreeVisitor::OnBitsDeclaration(
 
 void ConvertingTreeVisitor::OnBitsMember(const std::unique_ptr<raw::BitsMember>& element) {
   if (element->attributes != nullptr) {
-    ConvertingTreeVisitor::OnAttributeList(element->attributes);
+    ConvertingTreeVisitor::OnAttributeListOld(element->attributes);
   }
 
   std::unique_ptr<Conversion> conv =
@@ -224,6 +225,10 @@ void ConvertingTreeVisitor::OnBitsMember(const std::unique_ptr<raw::BitsMember>&
 
 void ConvertingTreeVisitor::OnConstDeclaration(
     const std::unique_ptr<raw::ConstDeclaration>& element) {
+  if (raw::IsAttributeListDefined(element->attributes)) {
+    ConvertingTreeVisitor::OnAttributeList(element->attributes);
+  }
+
   const auto& type_ctor = std::get<std::unique_ptr<raw::TypeConstructorOld>>(element->type_ctor);
   std::unique_ptr<Conversion> conv =
       std::make_unique<NameAndTypeConversion>(element->identifier, type_ctor);
@@ -234,7 +239,7 @@ void ConvertingTreeVisitor::OnConstDeclaration(
 void ConvertingTreeVisitor::OnEnumDeclaration(
     const std::unique_ptr<raw::EnumDeclaration>& element) {
   if (element->attributes != nullptr) {
-    ConvertingTreeVisitor::OnAttributeList(element->attributes);
+    ConvertingTreeVisitor::OnAttributeListOld(element->attributes);
   }
 
   Token& end = element->identifier->end_;
@@ -255,7 +260,7 @@ void ConvertingTreeVisitor::OnEnumDeclaration(
 
 void ConvertingTreeVisitor::OnEnumMember(const std::unique_ptr<raw::EnumMember>& element) {
   if (element->attributes != nullptr) {
-    ConvertingTreeVisitor::OnAttributeList(element->attributes);
+    ConvertingTreeVisitor::OnAttributeListOld(element->attributes);
   }
 
   std::unique_ptr<Conversion> conv =
@@ -289,7 +294,7 @@ void ConvertingTreeVisitor::OnResourceProperty(
 }
 
 void ConvertingTreeVisitor::OnServiceMember(const std::unique_ptr<raw::ServiceMember>& element) {
-  if (element->attributes != nullptr) {
+  if (raw::IsAttributeListDefined(element->attributes)) {
     ConvertingTreeVisitor::OnAttributeList(element->attributes);
   }
 
@@ -303,7 +308,7 @@ void ConvertingTreeVisitor::OnServiceMember(const std::unique_ptr<raw::ServiceMe
 void ConvertingTreeVisitor::OnStructDeclaration(
     const std::unique_ptr<raw::StructDeclaration>& element) {
   if (element->attributes != nullptr) {
-    ConvertingTreeVisitor::OnAttributeList(element->attributes);
+    ConvertingTreeVisitor::OnAttributeListOld(element->attributes);
   }
 
   std::unique_ptr<Conversion> conv =
@@ -315,7 +320,7 @@ void ConvertingTreeVisitor::OnStructDeclaration(
 
 void ConvertingTreeVisitor::OnStructMember(const std::unique_ptr<raw::StructMember>& element) {
   if (element->attributes != nullptr) {
-    ConvertingTreeVisitor::OnAttributeList(element->attributes);
+    ConvertingTreeVisitor::OnAttributeListOld(element->attributes);
   }
 
   std::unique_ptr<Conversion> conv =
@@ -328,7 +333,7 @@ void ConvertingTreeVisitor::OnStructMember(const std::unique_ptr<raw::StructMemb
 void ConvertingTreeVisitor::OnTableDeclaration(
     const std::unique_ptr<raw::TableDeclaration>& element) {
   if (element->attributes != nullptr) {
-    ConvertingTreeVisitor::OnAttributeList(element->attributes);
+    ConvertingTreeVisitor::OnAttributeListOld(element->attributes);
   }
 
   std::unique_ptr<Conversion> conv =
@@ -341,7 +346,7 @@ void ConvertingTreeVisitor::OnTableDeclaration(
 void ConvertingTreeVisitor::OnTableMember(const std::unique_ptr<raw::TableMember>& element) {
   if (element->maybe_used != nullptr) {
     if (element->maybe_used->attributes != nullptr) {
-      ConvertingTreeVisitor::OnAttributeList(element->maybe_used->attributes);
+      ConvertingTreeVisitor::OnAttributeListOld(element->maybe_used->attributes);
     }
 
     std::unique_ptr<Conversion> conv = std::make_unique<NameAndTypeConversion>(
@@ -373,7 +378,7 @@ void ConvertingTreeVisitor::OnTypeConstructorOld(
 void ConvertingTreeVisitor::OnUnionDeclaration(
     const std::unique_ptr<raw::UnionDeclaration>& element) {
   if (element->attributes != nullptr) {
-    ConvertingTreeVisitor::OnAttributeList(element->attributes);
+    ConvertingTreeVisitor::OnAttributeListOld(element->attributes);
   }
 
   std::unique_ptr<Conversion> conv = std::make_unique<UnionDeclarationConversion>(
@@ -387,7 +392,7 @@ void ConvertingTreeVisitor::OnUnionDeclaration(
 void ConvertingTreeVisitor::OnUnionMember(const std::unique_ptr<raw::UnionMember>& element) {
   if (element->maybe_used != nullptr) {
     if (element->maybe_used->attributes != nullptr) {
-      ConvertingTreeVisitor::OnAttributeList(element->maybe_used->attributes);
+      ConvertingTreeVisitor::OnAttributeListOld(element->maybe_used->attributes);
     }
 
     std::unique_ptr<Conversion> conv = std::make_unique<NameAndTypeConversion>(

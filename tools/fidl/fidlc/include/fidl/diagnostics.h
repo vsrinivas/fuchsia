@@ -107,7 +107,9 @@ constexpr ErrorDef ErrFilesDisagreeOnLibraryName(
     "Two files in the library disagree about the name of the library");
 constexpr ErrorDef<std::vector<std::string_view>> ErrDuplicateLibraryImport(
     "Library {} already imported. Did you require it twice?");
-constexpr ErrorDef<raw::AttributeList *> ErrAttributesNotAllowedOnLibraryImport(
+constexpr ErrorDef<raw::AttributeListOld *> ErrAttributesOldNotAllowedOnLibraryImport(
+    "no attributes allowed on library import, found: {}");
+constexpr ErrorDef<raw::AttributeListNew *> ErrAttributesNewNotAllowedOnLibraryImport(
     "no attributes allowed on library import, found: {}");
 constexpr ErrorDef<std::vector<std::string_view>> ErrUnknownLibrary(
     "Could not find library named {}. Did you include its sources with --files?");

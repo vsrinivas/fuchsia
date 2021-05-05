@@ -69,6 +69,9 @@ namespace {
   DO(TableDeclaration)          \
   DO(UnionMember)               \
   DO(UnionDeclaration)          \
+  DO(AttributeArg)              \
+  DO(AttributeNew)              \
+  DO(AttributeListNew)          \
   DO(IdentifierLayoutParameter) \
   DO(LiteralLayoutParameter)    \
   DO(TypeLayoutParameter)       \
@@ -144,13 +147,13 @@ class SourceSpanVisitor : public fidl::raw::TreeVisitor {
     CheckSpanOfType(ElementType::BinaryOperatorConstant, *element);
     TreeVisitor::OnBinaryOperatorConstant(element);
   }
-  void OnAttribute(const fidl::raw::Attribute& element) override {
+  void OnAttributeOld(const fidl::raw::AttributeOld& element) override {
     CheckSpanOfType(ElementType::Attribute, element);
-    TreeVisitor::OnAttribute(element);
+    TreeVisitor::OnAttributeOld(element);
   }
-  void OnAttributeList(std::unique_ptr<fidl::raw::AttributeList> const& element) override {
+  void OnAttributeListOld(std::unique_ptr<fidl::raw::AttributeListOld> const& element) override {
     CheckSpanOfType(ElementType::AttributeList, *element);
-    TreeVisitor::OnAttributeList(element);
+    TreeVisitor::OnAttributeListOld(element);
   }
   void OnTypeConstructorOld(
       std::unique_ptr<fidl::raw::TypeConstructorOld> const& element) override {
@@ -247,6 +250,18 @@ class SourceSpanVisitor : public fidl::raw::TreeVisitor {
 
   // TODO(fxbug.dev/70247): Remove these guards and old syntax visitors.
   // --- start new syntax ---
+  void OnAttributeArg(fidl::raw::AttributeArg const& element) override {
+    CheckSpanOfType(ElementType::AttributeArg, element);
+    TreeVisitor::OnAttributeArg(element);
+  }
+  void OnAttributeNew(fidl::raw::AttributeNew const& element) override {
+    CheckSpanOfType(ElementType::AttributeNew, element);
+    TreeVisitor::OnAttributeNew(element);
+  }
+  void OnAttributeListNew(std::unique_ptr<fidl::raw::AttributeListNew> const& element) override {
+    CheckSpanOfType(ElementType::AttributeListNew, *element);
+    TreeVisitor::OnAttributeListNew(element);
+  }
   void OnIdentifierLayoutParameter(
       std::unique_ptr<fidl::raw::IdentifierLayoutParameter> const& element) override {
     CheckSpanOfType(ElementType::IdentifierLayoutParameter, *element);
@@ -587,6 +602,28 @@ const uint16 two_fifty_seven = «one | two_fifty_six»;
 // TODO(fxbug.dev/70247): Remove these guards and old syntax visitors.
 // --- start new syntax ---
 const std::vector<TestCase> new_syntax_test_cases = {
+    {ElementType::AttributeArg,
+     {
+         R"FIDL(library x; @attr(«"foo"») const bool MY_BOOL = false;)FIDL",
+     }},
+    {ElementType::AttributeNew,
+     {
+         R"FIDL(library x; «@foo("foo")» «@bar» const bool MY_BOOL = false;)FIDL",
+         R"FIDL(library x;
+          «@foo("foo")»
+          «@bar»
+          const bool MY_BOOL = false;
+        )FIDL",
+     }},
+    {ElementType::AttributeListNew,
+     {
+         R"FIDL(library x; «@foo("foo") @bar» const bool MY_BOOL = false;)FIDL",
+         R"FIDL(library x;
+          «@foo("foo")
+          @bar»
+          const bool MY_BOOL = false;
+        )FIDL",
+     }},
     {ElementType::IdentifierLayoutParameter,
      {
          R"FIDL(library x; type a = bool; const b uint8 = 4; type y = array<«a»,«b»>;)FIDL",

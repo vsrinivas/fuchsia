@@ -78,6 +78,9 @@ TEST(ConverterTests, AttributesSingletons) {
 [NoDoc]
 library example;
 
+[NoDoc]
+const string C = "foo";
+
 [Deprecated = "Reason"]
 flexible enum E {
   A = 1;
@@ -89,7 +92,7 @@ struct S {
   [Doc = "Foo"] bool foo = false;
 };
 
-[MaxHandles = "1"]
+[MaxHandles = "2"]
 union U {
   [Doc = "Foo"]
   1: bool foo;
@@ -122,18 +125,21 @@ service X {
 @no_doc
 library example;
 
+@no_doc
+const C string = "foo";
+
 @deprecated("Reason")
 type E = flexible enum {
   A = 1;
   @unknown B = 2;
 };
 
-@max_bytes(1)
+@max_bytes("1")
 type S = struct {
   @doc("Foo") foo bool = false;
 };
 
-@max_handles(1)
+@max_handles("2")
 type U = strict union {
   @doc("Foo")
   1: foo bool;
@@ -166,15 +172,13 @@ service X {
   ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
 }
 
-// Note the subtle difference with the previous test: where as MaxBytes and
-// MaxHandles were both converted from strings in the old syntax to uints in the
-// new one, the unofficial MaxBytes2 and MaxHandles2 were not.  This is because
-// the former two attributes in particular are special-cased in the converter
-// to ensure such a casting always occurs.
 TEST(ConverterTests, AttributesSingletonsUnofficial) {
   std::string old_version = R"FIDL(
 [NoDoc2]
 library example;
+
+[NoDoc2]
+const string C = "foo";
 
 [Deprecated2 = "Reason"]
 strict bits B {
@@ -186,7 +190,7 @@ struct S {
   [Doc2 = "Foo"] bool foo = false;
 };
 
-[MaxHandles2 = "1"]
+[MaxHandles2 = "2"]
 union U {
   [Doc2 = "Foo"]
   1: bool foo;
@@ -219,6 +223,9 @@ service X {
 @no_doc2
 library example;
 
+@no_doc2
+const C string = "foo";
+
 @deprecated2("Reason")
 type B = strict bits {
   @doc2("Foo") A = 1;
@@ -229,7 +236,7 @@ type S = struct {
   @doc2("Foo") foo bool = false;
 };
 
-@max_handles2("1")
+@max_handles2("2")
 type U = strict union {
   @doc2("Foo")
   1: foo bool;
@@ -273,6 +280,10 @@ TEST(ConverterTests, AttributesSingletonsWithDocComments) {
 [NoDoc]
 library example;
 
+/// For C
+[NoDoc]
+const string C = "foo";
+
 /// For E
 [Deprecated = "Reason"]
 flexible enum E {
@@ -288,7 +299,7 @@ struct S {
 };
 
 /// For T
-[MaxHandles = "1"]
+[MaxHandles = "2"]
 table T {
 [Doc = "Foo"]
   1: bool foo;
@@ -330,6 +341,10 @@ service X {
 @no_doc
 library example;
 
+/// For C
+@no_doc
+const C string = "foo";
+
 /// For E
 @deprecated("Reason")
 type E = flexible enum {
@@ -339,13 +354,13 @@ type E = flexible enum {
 };
 
 /// For S
-@max_bytes(1)
+@max_bytes("1")
 type S = struct {
 @doc("Foo") foo bool = false;
 };
 
 /// For T
-@max_handles(1)
+@max_handles("2")
 type T = table {
 @doc("Foo")
   1: foo bool;
@@ -390,13 +405,16 @@ TEST(ConverterTests, AttributesLists) {
   std::string old_version = R"FIDL(
 library example;
 
+[NoDoc, Deprecated = "Note"]
+const string C = "foo";
+
 [Deprecated = "Reason", Transitional]
 enum E {
   A = 1;
   [Doc = "Foo", Unknown] B = 2;
 };
 
-[MaxBytes = "1", MaxHandles = "1"]
+[MaxBytes = "1", MaxHandles = "2"]
 resource struct S {};
 
 [Discoverable, ForDeprecatedCBindings, Transport = "Syscall"]
@@ -414,13 +432,16 @@ service X {
   std::string new_version = R"FIDL(
 library example;
 
+@no_doc @deprecated("Note")
+const C string = "foo";
+
 @deprecated("Reason") @transitional
 type E = strict enum {
   A = 1;
   @doc("Foo") @unknown B = 2;
 };
 
-@max_bytes(1) @max_handles(1)
+@max_bytes("1") @max_handles("2")
 type S = resource struct {};
 
 @discoverable @for_deprecated_c_bindings @transport("Syscall")
@@ -443,13 +464,16 @@ TEST(ConverterTests, AttributesListsUnofficial) {
   std::string old_version = R"FIDL(
 library example;
 
+[NoDoc2, Deprecated2 = "Note"]
+const string C = "foo";
+
 [Deprecated2 = "Reason", Transitional2]
 enum E {
   A = 1;
   [Doc2 = "Foo", Unknown2] B = 2;
 };
 
-[MaxBytes2 = "1", MaxHandles2 = "1"]
+[MaxBytes2 = "1", MaxHandles2 = "2"]
 resource struct S {};
 
 [Discoverable2, ForDeprecatedCBindings2, Transport2 = "Syscall"]
@@ -467,13 +491,16 @@ service X {
   std::string new_version = R"FIDL(
 library example;
 
+@no_doc2 @deprecated2("Note")
+const C string = "foo";
+
 @deprecated2("Reason") @transitional2
 type E = strict enum {
   A = 1;
   @doc2("Foo") @unknown2 B = 2;
 };
 
-@max_bytes2("1") @max_handles2("1")
+@max_bytes2("1") @max_handles2("2")
 type S = resource struct {};
 
 @discoverable2 @for_deprecated_c_bindings2 @transport2("Syscall")
@@ -496,6 +523,10 @@ TEST(ConverterTests, AttributesListsWithDocComments) {
   std::string old_version = R"FIDL(
 library example;
 
+/// For C
+[NoDoc, Deprecated = "Note"]
+const string C = "foo";
+
 /// For E
 [Deprecated = "Reason", Transitional]
 enum E {
@@ -505,7 +536,7 @@ enum E {
 };
 
 /// For S
-[MaxBytes = "1", MaxHandles = "1"]
+[MaxBytes = "1", MaxHandles = "2"]
 resource struct S {};
 
 /// For P
@@ -527,6 +558,10 @@ service X {
   std::string new_version = R"FIDL(
 library example;
 
+/// For C
+@no_doc @deprecated("Note")
+const C string = "foo";
+
 /// For E
 @deprecated("Reason") @transitional
 type E = strict enum {
@@ -536,7 +571,7 @@ type E = strict enum {
 };
 
 /// For S
-@max_bytes(1) @max_handles(1)
+@max_bytes("1") @max_handles("2")
 type S = resource struct {};
 
 /// For P

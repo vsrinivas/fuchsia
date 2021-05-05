@@ -555,7 +555,7 @@ Linter::Linter()
                                 "TODO comment should use a non-flow-through comment marker"),
        regex = std::regex(R"REGEX(^[ \t]*TODO\W)REGEX")]
       //
-      (const raw::Attribute& element) {
+      (const raw::AttributeOld& element) {
         if (element.name == linter.kDocAttribute) {
           auto doc_comment = static_cast<raw::DocCommentLiteral*>(element.value.get());
           if (std::regex_search(doc_comment->MakeContents(), regex)) {
@@ -570,7 +570,7 @@ Linter::Linter()
                            "Copyright notice should use non-flow-through comment markers"),
        regex = std::regex(R"REGEX(^[ \t]*Copyright \d\d\d\d\W)REGEX", std::regex_constants::icase)]
       //
-      (const raw::Attribute& element) {
+      (const raw::AttributeOld& element) {
         if (element.name == linter.kDocAttribute) {
           auto doc_comment = static_cast<raw::DocCommentLiteral*>(element.value.get());
           if (std::regex_search(doc_comment->MakeContents(), regex)) {

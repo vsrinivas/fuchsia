@@ -364,6 +364,8 @@ Token Lexer::Lex() {
       case '>':
         return Finish(Token::Kind::kRightAngle);
 
+      case '@':
+        return Finish(Token::Kind::kAt);
       case '.':
         return Finish(Token::Kind::kDot);
       case ',':

@@ -102,8 +102,8 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   // must be overwritten by the implementation.
 
   // Attributes.
-  void OnAttribute(const raw::Attribute& element) override;
-  void OnAttributeList(std::unique_ptr<raw::AttributeList> const& element) override;
+  void OnAttributeOld(const raw::AttributeOld& element) override;
+  void OnAttributeListOld(std::unique_ptr<raw::AttributeListOld> const& element) override;
 
   // Bits.
   void OnBitsDeclaration(std::unique_ptr<raw::BitsDeclaration> const& element) override;
@@ -211,7 +211,7 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   // to this set if it is not already present.  If it is already present
   // (meaning this is the second visit), then the visit is a noop, resulting in
   // only one conversion in the correct place.
-  std::set<raw::AttributeList*> attribute_lists_seen_;
+  std::set<raw::AttributeListOld*> attribute_lists_seen_;
 
   // Keeps track of the last comment in the comments_ list to have been "tested"
   // for being inside a conversion span.  The char pointer at the vector index

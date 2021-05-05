@@ -45,7 +45,7 @@ class LintingTreeCallbacks {
   // removed. The first line of the Doc Comment is consumed without triggering
   // OnLineComment(), but follow-on consecutive Doc Comment lines do trigger
   // OnLineComment().
-  void OnAttribute(fit::function<void(const raw::Attribute&)> callback) {
+  void OnAttribute(fit::function<void(const raw::AttributeOld&)> callback) {
     attribute_callbacks_.push_back(std::move(callback));
   }
 
@@ -160,7 +160,7 @@ class LintingTreeCallbacks {
 
   std::vector<fit::function<void(const raw::File&)>> file_callbacks_;
   std::vector<fit::function<void(const raw::File&)>> exit_file_callbacks_;
-  std::vector<fit::function<void(const raw::Attribute&)>> attribute_callbacks_;
+  std::vector<fit::function<void(const raw::AttributeOld&)>> attribute_callbacks_;
   std::vector<fit::function<void(const raw::SourceElement&)>> source_element_callbacks_;
   std::vector<fit::function<void(const SourceSpan&, std::string_view)>> line_comment_callbacks_;
   std::vector<fit::function<void(const SourceSpan&, std::string_view)>>
