@@ -157,7 +157,7 @@ class ServerInterpreter : public Interpreter {
 };
 
 // Defines a connection from a client to the interpreter.
-class Service final : public fidl::WireInterface<fuchsia_shell::Shell> {
+class Service final : public fidl::WireServer<fuchsia_shell::Shell> {
  public:
   explicit Service(Server* server)
       : server_(server), interpreter_(std::make_unique<ServerInterpreter>(this)) {}
@@ -179,15 +179,14 @@ class Service final : public fidl::WireInterface<fuchsia_shell::Shell> {
   // The service should close its connection and schedule its destruction too.
   void OnServerShutdown();
 
-  void CreateExecutionContext(uint64_t context_id,
+  void CreateExecutionContext(CreateExecutionContextRequestView request,
                               CreateExecutionContextCompleter::Sync& completer) override;
-  void AddNodes(uint64_t context_id, ::fidl::VectorView<fuchsia_shell::wire::NodeDefinition> nodes,
-                AddNodesCompleter::Sync& _completer) override;
-  void DumpExecutionContext(uint64_t context_id,
+  void AddNodes(AddNodesRequestView request, AddNodesCompleter::Sync& _completer) override;
+  void DumpExecutionContext(DumpExecutionContextRequestView request,
                             DumpExecutionContextCompleter::Sync& completer) override;
-  void ExecuteExecutionContext(uint64_t context_id,
+  void ExecuteExecutionContext(ExecuteExecutionContextRequestView request,
                                ExecuteExecutionContextCompleter::Sync& completer) override;
-  void Shutdown(ShutdownCompleter::Sync& completer) override;
+  void Shutdown(ShutdownRequestView request, ShutdownCompleter::Sync& completer) override;
 
   // Helpers to be able to send events to the client.
   zx_status_t OnError(uint64_t context_id,

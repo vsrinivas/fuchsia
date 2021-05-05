@@ -389,23 +389,21 @@ void Service::OnServerShutdown() {
   binding_.value().Unbind();
 }
 
-void Service::CreateExecutionContext(uint64_t context_id,
+void Service::CreateExecutionContext(CreateExecutionContextRequestView request,
                                      CreateExecutionContextCompleter::Sync& completer) {
-  auto context = interpreter_->AddContext(context_id);
+  auto context = interpreter_->AddContext(request->context_id);
   if (context != nullptr) {
     interpreter_->CreateServerContext(context);
   }
 }
 
-void Service::AddNodes(uint64_t context_id,
-                       ::fidl::VectorView<fuchsia_shell::wire::NodeDefinition> nodes,
-                       AddNodesCompleter::Sync& _completer) {
-  auto context = interpreter_->GetServerContext(context_id);
+void Service::AddNodes(AddNodesRequestView request, AddNodesCompleter::Sync& _completer) {
+  auto context = interpreter_->GetServerContext(request->context_id);
   if (context == nullptr) {
-    interpreter_->EmitError(nullptr,
-                            "Execution context " + std::to_string(context_id) + " not defined.");
+    interpreter_->EmitError(
+        nullptr, "Execution context " + std::to_string(request->context_id) + " not defined.");
   } else {
-    for (const auto& node : nodes) {
+    for (const auto& node : request->nodes) {
       if (node.node.is_integer_literal()) {
         AddIntegerLiteral(context, node.node_id.file_id, node.node_id.node_id,
                           node.node.integer_literal(), node.root_node);
@@ -448,35 +446,35 @@ void Service::AddNodes(uint64_t context_id,
   }
 }
 
-void Service::DumpExecutionContext(uint64_t context_id,
+void Service::DumpExecutionContext(DumpExecutionContextRequestView request,
                                    ExecuteExecutionContextCompleter::Sync& completer) {
-  auto context = interpreter_->GetServerContext(context_id);
+  auto context = interpreter_->GetServerContext(request->context_id);
   if (context == nullptr) {
-    interpreter_->EmitError(nullptr,
-                            "Execution context " + std::to_string(context_id) + " not defined.");
+    interpreter_->EmitError(
+        nullptr, "Execution context " + std::to_string(request->context_id) + " not defined.");
   } else {
     context->execution_context()->Dump();
   }
 }
 
-void Service::ExecuteExecutionContext(uint64_t context_id,
+void Service::ExecuteExecutionContext(ExecuteExecutionContextRequestView request,
                                       ExecuteExecutionContextCompleter::Sync& completer) {
-  auto context = interpreter_->GetServerContext(context_id);
+  auto context = interpreter_->GetServerContext(request->context_id);
   if (context == nullptr) {
-    interpreter_->EmitError(nullptr,
-                            "Execution context " + std::to_string(context_id) + " not defined.");
+    interpreter_->EmitError(
+        nullptr, "Execution context " + std::to_string(request->context_id) + " not defined.");
   } else {
     if (context->PendingNodes()) {
       interpreter_->EmitError(
           context->execution_context(),
-          "Pending AST nodes for execution context " + std::to_string(context_id) + ".");
+          "Pending AST nodes for execution context " + std::to_string(request->context_id) + ".");
     }
     context->execution_context()->Execute();
-    interpreter_->EraseServerContext(context_id);
+    interpreter_->EraseServerContext(request->context_id);
   }
 }
 
-void Service::Shutdown(ShutdownCompleter::Sync& completer) {
+void Service::Shutdown(ShutdownRequestView request, ShutdownCompleter::Sync& completer) {
   // Shutdown the interpreter. If we have some memory leaks, this will generate errors.
   std::vector<std::string> errors;
   interpreter_->Shutdown(&errors);
