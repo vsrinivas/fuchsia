@@ -6,12 +6,13 @@
 
 use std::fmt::{self, Debug};
 use std::hash::{Hash, Hasher};
+use std::sync::atomic::AtomicI32;
 
 pub type zx_addr_t = usize;
 pub type zx_stream_seek_origin_t = u32;
 pub type zx_clock_t = u32;
 pub type zx_duration_t = i64;
-pub type zx_futex_t = i32;
+pub type zx_futex_t = AtomicI32;
 pub type zx_gpaddr_t = usize;
 pub type zx_guest_trap_t = u32;
 pub type zx_handle_t = u32;
