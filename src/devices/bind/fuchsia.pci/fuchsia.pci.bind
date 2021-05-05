@@ -64,3 +64,11 @@ extend uint fuchsia.BIND_PCI_CLASS {
   COPROCESSOR = 0x40,
   UNASSIGNED = 0xff,
 };
+
+// TODO(fxb.dev/74834): Necessary to migrate PCI drivers from Simple device
+// drivers to Composite device drivers.
+extend uint fuchsia.BIND_PCI_COMPONENT {
+  NOT_MIGRATED = 0, // Old style simple device.
+  COMPONENT = 1, // Device for fragment to bind to.
+  COMPOSITE = 2, // Composite device, child of device with COMPONENT.
+};

@@ -3,49 +3,55 @@
     "name": "Protocol",
     "expected": "abort",
     "device": {
-      "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE"
+      "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE",
+      "fuchsia.BIND_PCI_COMPONENT": "fuchsia.pci.BIND_PCI_COMPONENT.NOT_MIGRATED"
     }
   },
   {
     "name": "BLOCK",
     "expected": "match",
     "device": {
-        "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
-        "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.VIRTIO",
-        "fuchsia.BIND_PCI_DID": "fuchsia.pci.BIND_PCI_DID.VIRTIO_DEV_TYPE_BLOCK"
+      "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
+      "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.VIRTIO",
+      "fuchsia.BIND_PCI_DID": "fuchsia.pci.BIND_PCI_DID.VIRTIO_DEV_TYPE_BLOCK",
+      "fuchsia.BIND_PCI_COMPONENT": "fuchsia.pci.BIND_PCI_COMPONENT.NOT_MIGRATED"
     }
   },
   {
     "name": "T_BLOCK",
     "expected": "match",
     "device": {
-        "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
-        "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.VIRTIO",
-        "fuchsia.BIND_PCI_DID": "fuchsia.pci.BIND_PCI_DID.VIRTIO_DEV_TYPE_T_BLOCK"
+      "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
+      "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.VIRTIO",
+      "fuchsia.BIND_PCI_DID": "fuchsia.pci.BIND_PCI_DID.VIRTIO_DEV_TYPE_T_BLOCK",
+      "fuchsia.BIND_PCI_COMPONENT": "fuchsia.pci.BIND_PCI_COMPONENT.NOT_MIGRATED"
     }
   },
   {
     "name": "Missing Protocol",
     "expected": "abort",
     "device": {
-        "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.VIRTIO",
-        "fuchsia.BIND_PCI_DID": "fuchsia.pci.BIND_PCI_DID.VIRTIO_DEV_TYPE_BLOCK"
+      "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.VIRTIO",
+      "fuchsia.BIND_PCI_DID": "fuchsia.pci.BIND_PCI_DID.VIRTIO_DEV_TYPE_BLOCK",
+      "fuchsia.BIND_PCI_COMPONENT": "fuchsia.pci.BIND_PCI_COMPONENT.NOT_MIGRATED"
     }
   },
   {
     "name": "Missing PCI VID",
     "expected": "abort",
     "device": {
-        "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
-        "fuchsia.BIND_PCI_DID": "fuchsia.pci.BIND_PCI_DID.VIRTIO_DEV_TYPE_BLOCK"
+      "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
+      "fuchsia.BIND_PCI_DID": "fuchsia.pci.BIND_PCI_DID.VIRTIO_DEV_TYPE_BLOCK",
+      "fuchsia.BIND_PCI_COMPONENT": "fuchsia.pci.BIND_PCI_COMPONENT.NOT_MIGRATED"
     }
   },
   {
     "name": "Missing PCI DID",
     "expected": "abort",
     "device": {
-        "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
-        "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.VIRTIO"
+      "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
+      "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.VIRTIO",
+      "fuchsia.BIND_PCI_COMPONENT": "fuchsia.pci.BIND_PCI_COMPONENT.NOT_MIGRATED"
     }
   }
 ]

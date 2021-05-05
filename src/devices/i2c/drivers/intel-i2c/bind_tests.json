@@ -10,7 +10,8 @@
         "device": {
             "fuchsia.BIND_PCI_DID": "fuchsia.intel.pci.BIND_PCI_DID.SUNRISE_POINT_SERIALIO_I2C0",
             "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.INTEL",
-            "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE"
+            "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_PCI_COMPONENT": "fuchsia.pci.BIND_PCI_COMPONENT.NOT_MIGRATED"
         },
         "expected": "match",
         "name": "Sunrise_I2C0"
@@ -19,7 +20,8 @@
         "device": {
             "fuchsia.BIND_PCI_DID": "fuchsia.intel.pci.BIND_PCI_DID.SUNRISE_POINT_SERIALIO_I2C1",
             "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.INTEL",
-            "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE"
+            "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_PCI_COMPONENT": "fuchsia.pci.BIND_PCI_COMPONENT.NOT_MIGRATED"
         },
         "expected": "match",
         "name": "Sunrise_I2C1"
@@ -28,7 +30,8 @@
         "device": {
             "fuchsia.BIND_PCI_DID": "fuchsia.intel.pci.BIND_PCI_DID.WILDCAT_POINT_SERIALIO_I2C0",
             "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.INTEL",
-            "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE"
+            "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_PCI_COMPONENT": "fuchsia.pci.BIND_PCI_COMPONENT.NOT_MIGRATED"
         },
         "expected": "match",
         "name": "Wildcat_I2C0"
@@ -37,7 +40,8 @@
         "device": {
             "fuchsia.BIND_PCI_DID": "fuchsia.intel.pci.BIND_PCI_DID.WILDCAT_POINT_SERIALIO_I2C1",
             "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.INTEL",
-            "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE"
+            "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_PCI_COMPONENT": "fuchsia.pci.BIND_PCI_COMPONENT.NOT_MIGRATED"
         },
         "expected": "match",
         "name": "Wildcat_I2C1"
@@ -46,7 +50,8 @@
         "device": {
             "fuchsia.BIND_PCI_DID": "fuchsia.intel.pci.BIND_PCI_DID.SUNRISE_POINT_SERIALIO_I2C2",
             "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.INTEL",
-            "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE"
+            "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_PCI_COMPONENT": "fuchsia.pci.BIND_PCI_COMPONENT.NOT_MIGRATED"
         },
         "expected": "match",
         "name": "Sunrise_I2C2"
@@ -55,7 +60,8 @@
         "device": {
             "fuchsia.BIND_PCI_DID": "fuchsia.intel.pci.BIND_PCI_DID.SUNRISE_POINT_SERIALIO_I2C3",
             "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.INTEL",
-            "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE"
+            "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_PCI_COMPONENT": "fuchsia.pci.BIND_PCI_COMPONENT.NOT_MIGRATED"
         },
         "expected": "match",
         "name": "Sunrise_I2C3"
@@ -64,7 +70,8 @@
         "device": {
             "fuchsia.BIND_PCI_DID": "fuchsia.intel.pci.BIND_PCI_DID.SUNRISE_POINT_SERIALIO_I2C4",
             "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.INTEL",
-            "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE"
+            "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_PCI_COMPONENT": "fuchsia.pci.BIND_PCI_COMPONENT.NOT_MIGRATED"
         },
         "expected": "match",
         "name": "Sunrise_I2C4"

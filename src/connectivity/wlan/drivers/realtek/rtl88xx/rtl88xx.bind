@@ -8,6 +8,7 @@ using fuchsia.usb;
 if fuchsia.BIND_PROTOCOL == fuchsia.pci.BIND_PROTOCOL.DEVICE {
   fuchsia.BIND_PCI_VID == fuchsia.pci.BIND_PCI_VID.REALTEK;
   fuchsia.BIND_PCI_DID == 0x0000;
+  fuchsia.BIND_PCI_COMPONENT == fuchsia.pci.BIND_PCI_COMPONENT.NOT_MIGRATED;
 } else {
   fuchsia.BIND_PROTOCOL == fuchsia.usb.BIND_PROTOCOL.INTERFACE;
   fuchsia.BIND_USB_VID == fuchsia.usb.BIND_USB_VID.REALTEK;

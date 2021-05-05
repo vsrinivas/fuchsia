@@ -7,3 +7,4 @@ using fuchsia.pci;
 fuchsia.BIND_PROTOCOL == fuchsia.pci.BIND_PROTOCOL.DEVICE;
 fuchsia.BIND_PCI_VID == fuchsia.pci.BIND_PCI_VID.VIRTIO;
 fuchsia.BIND_PCI_DID == fuchsia.pci.BIND_PCI_DID.VIRTIO_DEV_TYPE_SOCKET;
+fuchsia.BIND_PCI_COMPONENT == fuchsia.pci.BIND_PCI_COMPONENT.NOT_MIGRATED;
