@@ -178,6 +178,34 @@ a different callee.
     MsgQueue, setting the MBO's `key` field to its reply key.  The
     MBO's state is set to `enqueued_as_reply`.
 
+*   `zx_object_wait_async_mbo(handle, mbo, signals, options)`: This is
+    a replacement for `zx_object_wait_async()`.  Like that syscall, it
+    waits until one or more of the given signals is asserted on the
+    object specified by `handle`.  The difference is that rather than
+    returning the notification by sending a port packet to a port, the
+    new syscall returns the notification as a reply on the given MBO.
+    The notification is returned as if by an invocation of
+    `zx_cmd_send_reply()`, enqueuing the MBO onto its associated reply
+    queue.
+
+    This means that waiting for a signal on an object is like making a
+    call to the object.
+
+    The given MBO must be in the `owned_by_caller` state.
+
+    Note that `zx_object_wait_async_mbo()` does not need to allocate
+    memory.  We can ensure that every MBO preallocates enough memory
+    for the bookkeeping for waiting for a signal.  In contrast,
+    `zx_object_wait_async()` must allocate memory each time it is
+    called.
+
+    Note that while `zx_object_wait_async()` is commonly used for
+    waiting for messages on channels in Fuchsia today, this is not
+    necessary in the MBMQ model where messages (MBOs) are enqueued
+    directly onto MsgQueues.
+
+    We might need to define an equivalent to `zx_port_cancel()`.
+
 ## State for each object type
 
 This section gives a summary of the state that is stored by each of
