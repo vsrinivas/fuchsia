@@ -35,6 +35,7 @@
 #include <soc/aml-common/aml-guid.h>
 #include <zxtest/zxtest.h>
 
+#include "lib/fidl/llcpp/vector_view.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/service.h"
 #include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
@@ -181,12 +182,16 @@ constexpr fuchsia_hardware_nand_RamNandInfo
 
 class FakeBootArgs : public fidl::WireServer<fuchsia_boot::Arguments> {
  public:
-  void GetString(GetStringRequestView request, GetStringCompleter::Sync& completer) override {
-    completer.Reply(fidl::StringView::FromExternal(arg_response_));
-  }
+  void GetString(GetStringRequestView request, GetStringCompleter::Sync& completer) override {}
 
   // Stubs
-  void GetStrings(GetStringsRequestView request, GetStringsCompleter::Sync& completer) override {}
+  void GetStrings(GetStringsRequestView request, GetStringsCompleter::Sync& completer) override {
+    std::vector<fidl::StringView> response = {
+        fidl::StringView::FromExternal(arg_response_),
+        fidl::StringView(),
+    };
+    completer.Reply(fidl::VectorView<fidl::StringView>::FromExternal(response));
+  }
   void GetBool(GetBoolRequestView request, GetBoolCompleter::Sync& completer) override {
     if (strncmp(request->key.data(), "astro.sysconfig.abr-wear-leveling",
                 sizeof("astro.sysconfig.abr-wear-leveling")) == 0) {

@@ -16,14 +16,21 @@
 
 #include <fbl/unique_fd.h>
 
+#include "src/lib/uuid/uuid.h"
 #include "src/storage/lib/paver/partition-client.h"
 #include "src/storage/lib/paver/paver-context.h"
 #include "zircon/errors.h"
 
 namespace abr {
 
+// For testing only.
+zx::status<fuchsia_paver::wire::Configuration> PartitionUuidToConfiguration(
+    const fbl::unique_fd& devfs_root, uuid::Uuid uuid);
+// For testing only.
+zx::status<fuchsia_paver::wire::Configuration> CurrentSlotToConfiguration(std::string_view slot);
+
 zx::status<fuchsia_paver::wire::Configuration> QueryBootConfig(
-    fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root);
+    const fbl::unique_fd& devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root);
 
 // Interface for interacting with ABR data.
 class Client {

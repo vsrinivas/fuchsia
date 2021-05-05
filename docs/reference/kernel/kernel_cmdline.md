@@ -627,6 +627,13 @@ Makes Fuchsia aware of the slot booted by the bootloader. Setting this also
 informs the paver that ABR is supported, and that it should update the ABR
 metadata.
 
+## zvb.boot-partition-uuid=\<UUID>
+
+An alternative to zvb.current_slot - makes Fuchsia aware of the slot booted by
+the bootloader by passing the UUID of the partition containing the Zircon kernel
+that was booted. Setting this also informs the paver that ABR is supported, and
+that it should update the ABR metadata.
+
 ## console.path=\<path>
 
 Specify console device path. If not specified device manager will open

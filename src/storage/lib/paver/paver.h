@@ -200,9 +200,11 @@ class DynamicDataSink : public fidl::WireServer<fuchsia_paver::DynamicDataSink> 
 
 class BootManager : public fidl::WireServer<fuchsia_paver::BootManager> {
  public:
-  BootManager(std::unique_ptr<abr::Client> abr_client,
+  BootManager(std::unique_ptr<abr::Client> abr_client, fbl::unique_fd devfs_root,
               fidl::ClientEnd<fuchsia_io::Directory> svc_root)
-      : abr_client_(std::move(abr_client)), svc_root_(std::move(svc_root)) {}
+      : abr_client_(std::move(abr_client)),
+        devfs_root_(std::move(devfs_root)),
+        svc_root_(std::move(svc_root)) {}
 
   static void Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root,
                    fidl::ClientEnd<fuchsia_io::Directory> svc_root,
@@ -232,6 +234,7 @@ class BootManager : public fidl::WireServer<fuchsia_paver::BootManager> {
 
  private:
   std::unique_ptr<abr::Client> abr_client_;
+  fbl::unique_fd devfs_root_;
   fidl::ClientEnd<fuchsia_io::Directory> svc_root_;
 };
 

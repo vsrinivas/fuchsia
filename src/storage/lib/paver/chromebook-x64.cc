@@ -89,7 +89,7 @@ zx::status<std::unique_ptr<DevicePartitioner>> CrosDevicePartitioner::Initialize
   }
 
   // Determine if the firmware supports A/B in Zircon.
-  auto active_slot = abr::QueryBootConfig(svc_root);
+  auto active_slot = abr::QueryBootConfig(gpt_partitioner->devfs_root(), svc_root);
   bool supports_abr = active_slot.is_ok();
 
   auto partitioner =

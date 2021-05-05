@@ -25,6 +25,7 @@
 #include "gpt/cros.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
+#include "src/lib/uuid/uuid.h"
 #include "src/storage/lib/paver/abr-client-vboot.h"
 #include "src/storage/lib/paver/abr-client.h"
 #include "src/storage/lib/paver/astro.h"
@@ -32,6 +33,7 @@
 #include "src/storage/lib/paver/luis.h"
 #include "src/storage/lib/paver/sherlock.h"
 #include "src/storage/lib/paver/test/test-utils.h"
+#include "src/storage/lib/paver/utils.h"
 #include "src/storage/lib/paver/x64.h"
 
 namespace {
@@ -234,4 +236,128 @@ TEST_F(ChromebookX64AbrTests, GetSlotInfoSucceeds) {
   ASSERT_TRUE(info->is_marked_successful);
   ASSERT_EQ(info->num_tries_remaining, 0);
 }
+
+class CurrentSlotUuidTest : public zxtest::Test {
+ protected:
+  static constexpr int kBlockSize = 512;
+  static constexpr int kDiskBlocks = 1024;
+  static constexpr uint8_t kEmptyType[GPT_GUID_LEN] = GUID_EMPTY_VALUE;
+  static constexpr uint8_t kZirconType[GPT_GUID_LEN] = GPT_ZIRCON_ABR_TYPE_GUID;
+  static constexpr uint8_t kTestUuid[GPT_GUID_LEN] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55,
+                                                      0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb,
+                                                      0xcc, 0xdd, 0xee, 0xff};
+  CurrentSlotUuidTest() {
+    IsolatedDevmgr::Args args;
+    args.driver_search_paths.push_back("/boot/driver");
+    args.disable_block_watcher = true;
+
+    ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr_));
+    fbl::unique_fd fd;
+    ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "misc/ramctl", &fd));
+    ASSERT_NO_FATAL_FAILURES(
+        BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, kDiskBlocks, kBlockSize, &disk_));
+  }
+
+  void CreateDiskWithPartition(const char* partition) {
+    ASSERT_OK(gpt::GptDevice::Create(disk_->fd(), /*blocksize=*/disk_->block_size(),
+                                     /*blocks=*/disk_->block_count(), &gpt_));
+    ASSERT_OK(gpt_->Sync());
+    ASSERT_OK(gpt_->AddPartition(partition, kZirconType, kTestUuid,
+                                 2 + gpt_->EntryArrayBlockCount(), 10, 0));
+    ASSERT_OK(gpt_->Sync());
+
+    fdio_cpp::UnownedFdioCaller caller(disk_->fd());
+    auto result = fidl::WireCall<fuchsia_device::Controller>(caller.channel())
+                      .Rebind(fidl::StringView("/boot/driver/gpt.so"));
+    ASSERT_TRUE(result.ok());
+    ASSERT_FALSE(result->result.is_err());
+  }
+
+  fidl::ClientEnd<fuchsia_io::Directory> GetSvcRoot() {
+    auto fshost_root = devmgr_.fshost_outgoing_dir();
+    auto local = service::ConnectAt<fuchsia_io::Directory>(fshost_root, "svc");
+    if (!local.is_ok()) {
+      std::cout << "Failed to connect to fshost svc dir: " << local.status_string() << std::endl;
+      return fidl::ClientEnd<fuchsia_io::Directory>();
+    }
+    return std::move(*local);
+  }
+
+  IsolatedDevmgr devmgr_;
+  std::unique_ptr<BlockDevice> disk_;
+  std::unique_ptr<gpt::GptDevice> gpt_;
+};
+
+TEST_F(CurrentSlotUuidTest, TestZirconAIsSlotA) {
+  ASSERT_NO_FATAL_FAILURES(CreateDiskWithPartition("zircon-a"));
+
+  auto result = abr::PartitionUuidToConfiguration(devmgr_.devfs_root(), uuid::Uuid(kTestUuid));
+  ASSERT_TRUE(result.is_ok());
+  ASSERT_EQ(result.value(), fuchsia_paver::wire::Configuration::kA);
+}
+
+TEST_F(CurrentSlotUuidTest, TestZirconAWithUnderscore) {
+  ASSERT_NO_FATAL_FAILURES(CreateDiskWithPartition("zircon_a"));
+
+  auto result = abr::PartitionUuidToConfiguration(devmgr_.devfs_root(), uuid::Uuid(kTestUuid));
+  ASSERT_TRUE(result.is_ok());
+  ASSERT_EQ(result.value(), fuchsia_paver::wire::Configuration::kA);
+}
+
+TEST_F(CurrentSlotUuidTest, TestZirconAMixedCase) {
+  ASSERT_NO_FATAL_FAILURES(CreateDiskWithPartition("ZiRcOn-A"));
+
+  auto result = abr::PartitionUuidToConfiguration(devmgr_.devfs_root(), uuid::Uuid(kTestUuid));
+  ASSERT_TRUE(result.is_ok());
+  ASSERT_EQ(result.value(), fuchsia_paver::wire::Configuration::kA);
+}
+
+TEST_F(CurrentSlotUuidTest, TestZirconB) {
+  ASSERT_NO_FATAL_FAILURES(CreateDiskWithPartition("zircon_b"));
+
+  auto result = abr::PartitionUuidToConfiguration(devmgr_.devfs_root(), uuid::Uuid(kTestUuid));
+  ASSERT_TRUE(result.is_ok());
+  ASSERT_EQ(result.value(), fuchsia_paver::wire::Configuration::kB);
+}
+
+TEST_F(CurrentSlotUuidTest, TestZirconR) {
+  ASSERT_NO_FATAL_FAILURES(CreateDiskWithPartition("ZIRCON-R"));
+
+  auto result = abr::PartitionUuidToConfiguration(devmgr_.devfs_root(), uuid::Uuid(kTestUuid));
+  ASSERT_TRUE(result.is_ok());
+  ASSERT_EQ(result.value(), fuchsia_paver::wire::Configuration::kRecovery);
+}
+
+TEST_F(CurrentSlotUuidTest, TestInvalid) {
+  ASSERT_NO_FATAL_FAILURES(CreateDiskWithPartition("ZERCON-R"));
+
+  auto result = abr::PartitionUuidToConfiguration(devmgr_.devfs_root(), uuid::Uuid(kTestUuid));
+  ASSERT_TRUE(result.is_error());
+  ASSERT_EQ(result.error_value(), ZX_ERR_NOT_SUPPORTED);
+}
+
+TEST(CurrentSlotTest, TestA) {
+  auto result = abr::CurrentSlotToConfiguration("_a");
+  ASSERT_TRUE(result.is_ok());
+  ASSERT_EQ(result.value(), fuchsia_paver::wire::Configuration::kA);
+}
+
+TEST(CurrentSlotTest, TestB) {
+  auto result = abr::CurrentSlotToConfiguration("_b");
+  ASSERT_TRUE(result.is_ok());
+  ASSERT_EQ(result.value(), fuchsia_paver::wire::Configuration::kB);
+}
+
+TEST(CurrentSlotTest, TestR) {
+  auto result = abr::CurrentSlotToConfiguration("_r");
+  ASSERT_TRUE(result.is_ok());
+  ASSERT_EQ(result.value(), fuchsia_paver::wire::Configuration::kRecovery);
+}
+
+TEST(CurrentSlotTest, TestInvalid) {
+  auto result = abr::CurrentSlotToConfiguration("_x");
+  ASSERT_TRUE(result.is_error());
+  ASSERT_EQ(result.error_value(), ZX_ERR_NOT_SUPPORTED);
+}
+
 }  // namespace
