@@ -6,6 +6,7 @@ group("integration_input_tests") {
   testonly = true
 
   deps = [
+    "factory-reset:tests",
     "keyboard:tests",
     "scenic:tests",
     "shortcut:tests",

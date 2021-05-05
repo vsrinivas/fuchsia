@@ -1,0 +1,20 @@
+{
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/factory_reset_test"
+    },
+    "sandbox": {
+        "features": [
+            "config-data"
+        ],
+        "services": [
+            "fuchsia.media.sounds.Player",
+            "fuchsia.recovery.FactoryReset",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Loader",
+            "fuchsia.ui.input.InputDeviceRegistry"
+        ]
+    }
+}
