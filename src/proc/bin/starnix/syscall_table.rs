@@ -125,6 +125,7 @@ pub fn dispatch_syscall(
         openat[4],
         prctl[5],
         pread64[4],
+        read[3],
         readlink[3],
         rt_sigprocmask[4],
         sched_getaffinity[3],

@@ -35,6 +35,16 @@ impl SyscallContext<'_> {
     }
 }
 
+pub fn sys_read(
+    ctx: &SyscallContext<'_>,
+    fd: FdNumber,
+    buffer: UserAddress,
+    count: usize,
+) -> Result<SyscallResult, Errno> {
+    let file = ctx.task.files.get(fd)?;
+    Ok(file.read(&ctx.task, &[iovec_t { iov_base: buffer, iov_len: count }])?.into())
+}
+
 pub fn sys_write(
     ctx: &SyscallContext<'_>,
     fd: FdNumber,
