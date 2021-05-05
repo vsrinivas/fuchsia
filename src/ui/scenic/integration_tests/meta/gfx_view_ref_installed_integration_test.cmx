@@ -1,24 +1,8 @@
 {
-    "facets": {
-        "fuchsia.test": {
-            "system-services": [
-                "fuchsia.sysmem.Allocator",
-                "fuchsia.vulkan.loader.Loader"
-            ]
-        }
-    },
     "include": [
-        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+        "src/ui/scenic/integration_tests/meta/scenic_integration_test_base.cmx"
     ],
     "program": {
         "binary": "bin/gfx_view_ref_installed_integration_test_bin"
-    },
-    "sandbox": {
-        "services": [
-            "fuchsia.sys.Environment",
-            "fuchsia.sys.Loader",
-            "fuchsia.sysmem.Allocator",
-            "fuchsia.vulkan.loader.Loader"
-        ]
     }
 }
