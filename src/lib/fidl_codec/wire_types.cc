@@ -474,6 +474,8 @@ std::string Uint32Type::Name() const {
       return "zx.system_powerctl";
     case Kind::kThreadState:
       return "zx.thread_state";
+    case Kind::kThreadStateTopic:
+      return "zx.thread_state_topic";
     case Kind::kTimerOption:
       return "zx.timer_option";
     case Kind::kVcpu:
@@ -597,6 +599,9 @@ void Uint32Type::PrettyPrint(const Value* value, PrettyPrinter& printer) const {
         break;
       case Kind::kThreadState:
         printer.DisplayThreadState(static_cast<uint32_t>(absolute));
+        break;
+      case Kind::kThreadStateTopic:
+        printer.DisplayThreadStateTopic(static_cast<uint32_t>(absolute));
         break;
       case Kind::kTimerOption:
         printer.DisplayTimerOption(static_cast<uint32_t>(absolute));

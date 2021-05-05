@@ -40,6 +40,7 @@
 
 namespace fidlcat {
 
+const fidl_codec::Struct& GetUint128StructDefinition();
 std::unique_ptr<fidl_codec::Type> SyscallTypeToFidlCodecType(fidlcat::SyscallType);
 
 template <typename ClassType, typename Type>
@@ -156,9 +157,7 @@ class ClassFieldBase {
   }
 
   virtual std::unique_ptr<fidl_codec::Value> GenerateValue(const ClassType* object,
-                                                           debug_ipc::Arch arch) const {
-    return std::make_unique<fidl_codec::InvalidValue>();
-  }
+                                                           debug_ipc::Arch arch) const = 0;
 
   uint8_t id() const { return id_; }
 
@@ -284,8 +283,19 @@ class ArrayClassField : public ClassFieldBase<ClassType> {
                   const Class<Type>* sub_class)
       : ClassFieldBase<ClassType>(name, SyscallType::kStruct), get_(get), sub_class_(sub_class) {}
 
+  std::unique_ptr<fidl_codec::Type> ComputeType() const override {
+    auto type = sub_class_->ComputeType();
+    ClassType dummy;
+    std::pair<const Type*, int> result = (*get_)(&dummy);
+    int fixed_size = result.second;
+    return std::make_unique<fidl_codec::ArrayType>(std::move(type), fixed_size);
+  }
+
   void Display(const ClassType* object, debug_ipc::Arch arch,
                fidl_codec::PrettyPrinter& printer) const override;
+
+  std::unique_ptr<fidl_codec::Value> GenerateValue(const ClassType* object,
+                                                   debug_ipc::Arch arch) const override;
 
  private:
   // Function which can extract the address of the field for a given object.
@@ -2265,6 +2275,14 @@ inline std::unique_ptr<fidl_codec::Value> GenerateValue(uintptr_t value) {
 }
 #endif
 
+template <>
+inline std::unique_ptr<fidl_codec::Value> GenerateValue(zx_uint128_t value) {
+  auto struct_value = std::make_unique<fidl_codec::StructValue>(GetUint128StructDefinition());
+  struct_value->AddField("low", 0, std::make_unique<fidl_codec::IntegerValue>(value.low, false));
+  struct_value->AddField("high", 0, std::make_unique<fidl_codec::IntegerValue>(value.high, false));
+  return struct_value;
+}
+
 template <typename Type>
 inline std::unique_ptr<fidl_codec::Value> GenerateHandleValue(Type handle) {
   return std::make_unique<fidl_codec::InvalidValue>();
@@ -2769,6 +2787,19 @@ void ArrayClassField<ClassType, Type>::Display(const ClassType* object, debug_ip
     }
   }
   printer << "]\n";
+}
+
+template <typename ClassType, typename Type>
+std::unique_ptr<fidl_codec::Value> ArrayClassField<ClassType, Type>::GenerateValue(
+    const ClassType* object, debug_ipc::Arch arch) const {
+  auto vector_value = std::make_unique<fidl_codec::VectorValue>();
+  std::pair<const Type*, int> array = get_(object);
+
+  for (int i = 0; i < array.second; ++i) {
+    vector_value->AddValue(sub_class_->GenerateValue(array.first + i, arch));
+  }
+
+  return vector_value;
 }
 
 template <typename ClassType, typename Type>

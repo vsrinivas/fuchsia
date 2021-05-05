@@ -635,7 +635,9 @@ TEST_F(InterceptionWorkflowTestX64, ValuesOK) {
       "zx_task_suspend_token",
       "zx_thread_create",
       "zx_thread_exit",
+      "zx_thread_read_state",
       "zx_thread_start",
+      "zx_thread_write_state",
       "zx_ticks_get",
       "zx_ticks_per_second",
       "zx_timer_cancel",
@@ -679,10 +681,7 @@ TEST_F(InterceptionWorkflowTestX64, ValuesNotImplemented) {
     }
   }
 
-  std::set<std::string> expected = {
-      "zx_thread_read_state",
-      "zx_thread_write_state",
-  };
+  std::set<std::string> expected = {};
 
   ASSERT_EQ(expected, actual);
 }

@@ -279,6 +279,7 @@ class Uint32Type : public IntegralType<uint32_t> {
     kSystemEventType,
     kSystemPowerctl,
     kThreadState,
+    kThreadStateTopic,
     kTimerOption,
     kVcpu,
     kVmOption,
