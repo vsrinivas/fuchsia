@@ -235,7 +235,8 @@ zx_status_t X86::GetAcpiTableEntries(fbl::Vector<TableInfo>* entries) {
   return ZX_OK;
 }
 
-void X86::ListTableEntries(ListTableEntriesCompleter::Sync& completer) {
+void X86::ListTableEntries(ListTableEntriesRequestView request,
+                           ListTableEntriesCompleter::Sync& completer) {
   ZX_DEBUG_ASSERT(acpica_initialized_);
 
   // Fetch the entries.
@@ -250,11 +251,12 @@ void X86::ListTableEntries(ListTableEntriesCompleter::Sync& completer) {
   completer.ReplySuccess(fidl::VectorView<TableInfo>::FromExternal(entries.data(), entries.size()));
 }
 
-void X86::ReadNamedTable(fidl::Array<uint8_t, 4> name, uint32_t instance, ::zx::vmo result,
+void X86::ReadNamedTable(ReadNamedTableRequestView request,
                          ReadNamedTableCompleter::Sync& completer) {
   // Fetch the requested table.
   ACPI_TABLE_HEADER* table;
-  if (ACPI_STATUS status = AcpiGetTable(reinterpret_cast<char*>(name.data()), instance, &table);
+  if (ACPI_STATUS status =
+          AcpiGetTable(reinterpret_cast<char*>(request->name.data()), request->instance, &table);
       status != AE_OK) {
     completer.ReplyError(status == AE_NOT_FOUND ? ZX_ERR_NOT_FOUND : ZX_ERR_INTERNAL);
     return;
@@ -262,7 +264,7 @@ void X86::ReadNamedTable(fidl::Array<uint8_t, 4> name, uint32_t instance, ::zx::
 
   // Copy it into the VMO.
   if (zx_status_t status =
-          result.write(reinterpret_cast<uint8_t*>(table), /*offset=*/0, table->Length);
+          request->result.write(reinterpret_cast<uint8_t*>(table), /*offset=*/0, table->Length);
       status != ZX_OK) {
     completer.ReplyError(status);
     return;

@@ -23,7 +23,7 @@ namespace x86 {
 
 // This is the main class for the X86 platform bus driver.
 class X86 : public ddk::Device<X86, ddk::Messageable>,
-            public fidl::WireInterface<fuchsia_hardware_acpi::Acpi> {
+            public fidl::WireServer<fuchsia_hardware_acpi::Acpi> {
  public:
   explicit X86(zx_device_t* parent, pbus_protocol_t* pbus, zx_device_t* sys_root)
       : ddk::Device<X86, ddk::Messageable>(parent), pbus_(pbus), sys_root_(sys_root) {}
@@ -38,8 +38,9 @@ class X86 : public ddk::Device<X86, ddk::Messageable>,
   zx_status_t DdkMessage(fidl_incoming_msg*, fidl_txn*);
 
   // ACPI protocol FIDL interface implementation.
-  void ListTableEntries(ListTableEntriesCompleter::Sync& completer) override;
-  void ReadNamedTable(fidl::Array<uint8_t, 4> name, uint32_t instance, ::zx::vmo result,
+  void ListTableEntries(ListTableEntriesRequestView request,
+                        ListTableEntriesCompleter::Sync& completer) override;
+  void ReadNamedTable(ReadNamedTableRequestView request,
                       ReadNamedTableCompleter::Sync& completer) override;
 
   // Performs ACPICA initialization.
