@@ -7,24 +7,23 @@
 
 #include <fuchsia/ui/input/accessibility/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
-#include <fuchsia/ui/pointerinjector/cpp/fidl.h>
-#include <fuchsia/ui/policy/accessibility/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 
 #include <map>
 #include <optional>
 
 #include "src/ui/scenic/lib/input/a11y_legacy_contender.h"
+#include "src/ui/scenic/lib/input/a11y_registry.h"
 #include "src/ui/scenic/lib/input/gesture_arena.h"
 #include "src/ui/scenic/lib/input/gfx_legacy_contender.h"
 #include "src/ui/scenic/lib/input/injector.h"
 #include "src/ui/scenic/lib/input/input_command_dispatcher.h"
+#include "src/ui/scenic/lib/input/pointerinjector_registry.h"
 #include "src/ui/scenic/lib/scenic/system.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
 #include "src/ui/scenic/lib/view_tree/snapshot_types.h"
 
-namespace scenic_impl {
-namespace input {
+namespace scenic_impl::input {
 
 // RequestFocusFunc should attempt to move focus to the passed in zx_koid_t.
 // If the passed in koid is ZX_KOID_INVALID, then focus should be moved to
@@ -32,40 +31,8 @@ namespace input {
 // silently fail.
 using RequestFocusFunc = fit::function<void(zx_koid_t)>;
 
-// Implementation of PointerEventRegistry API.
-class A11yPointerEventRegistry : public fuchsia::ui::policy::accessibility::PointerEventRegistry {
- public:
-  A11yPointerEventRegistry(SystemContext* context, fit::function<void()> on_register,
-                           fit::function<void()> on_disconnect);
-
-  // |fuchsia.ui.policy.accessibility.PointerEventRegistry|
-  void Register(fidl::InterfaceHandle<fuchsia::ui::input::accessibility::PointerEventListener>
-                    pointer_event_listener,
-                RegisterCallback callback) override;
-
-  fuchsia::ui::input::accessibility::PointerEventListenerPtr&
-  accessibility_pointer_event_listener() {
-    return accessibility_pointer_event_listener_;
-  }
-
- private:
-  fidl::BindingSet<fuchsia::ui::policy::accessibility::PointerEventRegistry>
-      accessibility_pointer_event_registry_;
-  // We honor the first accessibility listener to register. A call to Register()
-  // above will fail if there is already a registered listener.
-  fuchsia::ui::input::accessibility::PointerEventListenerPtr accessibility_pointer_event_listener_;
-
-  // Function called when a new listener successfully registers.
-  fit::function<void()> on_register_;
-
-  // Function called when an active listener disconnects.
-  fit::function<void()> on_disconnect_;
-};
-
 // Tracks input APIs.
-class InputSystem : public System,
-                    public fuchsia::ui::pointerinjector::Registry,
-                    public fuchsia::ui::input::PointerCaptureListenerRegistry {
+class InputSystem : public System, public fuchsia::ui::input::PointerCaptureListenerRegistry {
  public:
   struct PointerCaptureListener {
     fuchsia::ui::input::PointerCaptureListenerPtr listener_ptr;
@@ -83,17 +50,13 @@ class InputSystem : public System,
       scheduling::SessionId session_id, std::shared_ptr<EventReporter> event_reporter,
       std::shared_ptr<ErrorReporter> error_reporter) override;
 
-  // |fuchsia.ui.pointerinjector.Registry|
-  void Register(fuchsia::ui::pointerinjector::Config config,
-                fidl::InterfaceRequest<fuchsia::ui::pointerinjector::Device> injector,
-                RegisterCallback callback) override;
-
   fuchsia::ui::input::accessibility::PointerEventListenerPtr& accessibility_pointer_event_listener()
       const {
-    return pointer_event_registry_->accessibility_pointer_event_listener();
+    return a11y_pointer_event_registry_->accessibility_pointer_event_listener();
   }
 
   void OnNewViewTreeSnapshot(std::shared_ptr<const view_tree::Snapshot> snapshot) {
+    pointerinjector_registry_->OnNewViewTreeSnapshot(snapshot);
     view_tree_snapshot_ = std::move(snapshot);
   }
 
@@ -106,10 +69,20 @@ class InputSystem : public System,
                               scheduling::SessionId session_id);
 
   // For tests.
+  // TODO(fxbug.dev/72919): Remove when integration tests are properly separated out.
   void RegisterA11yListener(
       fidl::InterfaceHandle<fuchsia::ui::input::accessibility::PointerEventListener> listener,
       A11yPointerEventRegistry::RegisterCallback callback) {
-    pointer_event_registry_->Register(std::move(listener), std::move(callback));
+    a11y_pointer_event_registry_->Register(std::move(listener), std::move(callback));
+  }
+  // For tests.
+  // TODO(fxbug.dev/72919): Remove when integration tests are properly separated out.
+  void RegisterPointerinjector(
+      fuchsia::ui::pointerinjector::Config config,
+      fidl::InterfaceRequest<fuchsia::ui::pointerinjector::Device> injector,
+      fuchsia::ui::pointerinjector::Registry::RegisterCallback callback) {
+    pointerinjector_registry_->Register(std::move(config), std::move(injector),
+                                        std::move(callback));
   }
 
  private:
@@ -164,18 +137,13 @@ class InputSystem : public System,
   std::optional<glm::mat4> GetDestinationViewFromSourceViewTransform(zx_koid_t source,
                                                                      zx_koid_t destination) const;
 
-  using InjectorId = uint64_t;
-  InjectorId last_injector_id_ = 0;
-  std::map<InjectorId, Injector> injectors_;
-
   // TODO(fxbug.dev/64206): Remove when we no longer have any legacy clients.
   fxl::WeakPtr<gfx::SceneGraph> scene_graph_;
 
   const RequestFocusFunc request_focus_;
 
-  std::unique_ptr<A11yPointerEventRegistry> pointer_event_registry_;
-
-  fidl::BindingSet<fuchsia::ui::pointerinjector::Registry> injector_registry_;
+  std::unique_ptr<A11yPointerEventRegistry> a11y_pointer_event_registry_;
+  std::unique_ptr<PointerinjectorRegistry> pointerinjector_registry_;
 
   fidl::BindingSet<fuchsia::ui::input::PointerCaptureListenerRegistry> pointer_capture_registry_;
   // A singleton listener who wants to be notified when pointer events happen.
@@ -209,7 +177,6 @@ class InputSystem : public System,
       std::make_shared<const view_tree::Snapshot>();
 };
 
-}  // namespace input
-}  // namespace scenic_impl
+}  // namespace scenic_impl::input
 
 #endif  // SRC_UI_SCENIC_LIB_INPUT_INPUT_SYSTEM_H_

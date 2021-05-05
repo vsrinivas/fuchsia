@@ -92,8 +92,9 @@ class CoordinateTransformTest2 : public InputSystemTest {
       error_callback_fired = true;
     });
     bool register_callback_fired = false;
-    input_system()->Register(std::move(config), injector_.NewRequest(),
-                             [&register_callback_fired] { register_callback_fired = true; });
+    input_system()->RegisterPointerinjector(
+        std::move(config), injector_.NewRequest(),
+        [&register_callback_fired] { register_callback_fired = true; });
     RunLoopUntilIdle();
     ASSERT_TRUE(register_callback_fired);
     ASSERT_FALSE(error_callback_fired);

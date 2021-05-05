@@ -6,6 +6,8 @@ source_set("input") {
   sources = [
     "a11y_legacy_contender.cc",
     "a11y_legacy_contender.h",
+    "a11y_registry.cc",
+    "a11y_registry.h",
     "constants.cc",
     "constants.h",
     "gesture_arena.cc",
@@ -23,6 +25,8 @@ source_set("input") {
     "input_system.cc",
     "input_system.h",
     "internal_pointer_event.h",
+    "pointerinjector_registry.cc",
+    "pointerinjector_registry.h",
     "touch_source.cc",
     "touch_source.h",
   ]

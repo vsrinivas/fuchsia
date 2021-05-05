@@ -169,8 +169,9 @@ TEST_F(InputInjectionTest, RegisterAttemptWithCorrectArguments_ShouldSucceed) {
   });
   {
     fuchsia::ui::pointerinjector::Config config = ConfigTemplate(parent_view_ref, child_view_ref);
-    input_system()->Register(std::move(config), injector.NewRequest(),
-                             [&register_callback_fired] { register_callback_fired = true; });
+    input_system()->RegisterPointerinjector(
+        std::move(config), injector.NewRequest(),
+        [&register_callback_fired] { register_callback_fired = true; });
   }
 
   RunLoopUntilIdle();
@@ -195,8 +196,9 @@ TEST_F(InputInjectionTest, RegisterAttemptWithBadDeviceConfig_ShouldFail) {
     fidl::Clone(base_config, &config);
     config.clear_device_id();
 
-    input_system()->Register(std::move(config), injector.NewRequest(),
-                             [&register_callback_fired] { register_callback_fired = true; });
+    input_system()->RegisterPointerinjector(
+        std::move(config), injector.NewRequest(),
+        [&register_callback_fired] { register_callback_fired = true; });
 
     RunLoopUntilIdle();
 
@@ -215,8 +217,9 @@ TEST_F(InputInjectionTest, RegisterAttemptWithBadDeviceConfig_ShouldFail) {
     fidl::Clone(base_config, &config);
     config.clear_device_type();
 
-    input_system()->Register(std::move(config), injector.NewRequest(),
-                             [&register_callback_fired] { register_callback_fired = true; });
+    input_system()->RegisterPointerinjector(
+        std::move(config), injector.NewRequest(),
+        [&register_callback_fired] { register_callback_fired = true; });
 
     RunLoopUntilIdle();
 
@@ -236,8 +239,9 @@ TEST_F(InputInjectionTest, RegisterAttemptWithBadDeviceConfig_ShouldFail) {
     // Set to not TOUCH.
     config.set_device_type(static_cast<DeviceType>(static_cast<uint32_t>(12421)));
 
-    input_system()->Register(std::move(config), injector.NewRequest(),
-                             [&register_callback_fired] { register_callback_fired = true; });
+    input_system()->RegisterPointerinjector(
+        std::move(config), injector.NewRequest(),
+        [&register_callback_fired] { register_callback_fired = true; });
 
     RunLoopUntilIdle();
 
@@ -262,8 +266,9 @@ TEST_F(InputInjectionTest, RegisterAttemptWithBadContextOrTarget_ShouldFail) {
     fidl::Clone(base_config, &config);
     config.clear_context();
 
-    input_system()->Register(std::move(config), injector.NewRequest(),
-                             [&register_callback_fired] { register_callback_fired = true; });
+    input_system()->RegisterPointerinjector(
+        std::move(config), injector.NewRequest(),
+        [&register_callback_fired] { register_callback_fired = true; });
 
     RunLoopUntilIdle();
 
@@ -282,8 +287,9 @@ TEST_F(InputInjectionTest, RegisterAttemptWithBadContextOrTarget_ShouldFail) {
     fidl::Clone(base_config, &config);
     config.clear_target();
 
-    input_system()->Register(std::move(config), injector.NewRequest(),
-                             [&register_callback_fired] { register_callback_fired = true; });
+    input_system()->RegisterPointerinjector(
+        std::move(config), injector.NewRequest(),
+        [&register_callback_fired] { register_callback_fired = true; });
 
     RunLoopUntilIdle();
 
@@ -314,8 +320,9 @@ TEST_F(InputInjectionTest, RegisterAttemptWithBadContextOrTarget_ShouldFail) {
       config.set_target(std::move(target));
     }
 
-    input_system()->Register(std::move(config), injector.NewRequest(),
-                             [&register_callback_fired] { register_callback_fired = true; });
+    input_system()->RegisterPointerinjector(
+        std::move(config), injector.NewRequest(),
+        [&register_callback_fired] { register_callback_fired = true; });
 
     RunLoopUntilIdle();
 
@@ -348,8 +355,9 @@ TEST_F(InputInjectionTest, RegisterAttemptWithBadContextOrTarget_ShouldFail) {
       config.set_target(std::move(target));
     }
 
-    input_system()->Register(std::move(config), injector.NewRequest(),
-                             [&register_callback_fired] { register_callback_fired = true; });
+    input_system()->RegisterPointerinjector(
+        std::move(config), injector.NewRequest(),
+        [&register_callback_fired] { register_callback_fired = true; });
 
     RunLoopUntilIdle();
 
@@ -380,8 +388,9 @@ TEST_F(InputInjectionTest, RegisterAttemptWithBadContextOrTarget_ShouldFail) {
       config.set_target(std::move(target));
     }
 
-    input_system()->Register(std::move(config), injector.NewRequest(),
-                             [&register_callback_fired] { register_callback_fired = true; });
+    input_system()->RegisterPointerinjector(
+        std::move(config), injector.NewRequest(),
+        [&register_callback_fired] { register_callback_fired = true; });
 
     RunLoopUntilIdle();
 
@@ -412,8 +421,9 @@ TEST_F(InputInjectionTest, RegisterAttemptWithBadContextOrTarget_ShouldFail) {
       config.set_target(std::move(target));
     }
 
-    input_system()->Register(std::move(config), injector.NewRequest(),
-                             [&register_callback_fired] { register_callback_fired = true; });
+    input_system()->RegisterPointerinjector(
+        std::move(config), injector.NewRequest(),
+        [&register_callback_fired] { register_callback_fired = true; });
 
     RunLoopUntilIdle();
 
@@ -449,8 +459,9 @@ TEST_F(InputInjectionTest, RegisterAttemptWithBadContextOrTarget_ShouldFail) {
     root_resources_->scene.DetachChildren();
     RequestToPresent(root_session_->session());
 
-    input_system()->Register(std::move(config), injector.NewRequest(),
-                             [&register_callback_fired] { register_callback_fired = true; });
+    input_system()->RegisterPointerinjector(
+        std::move(config), injector.NewRequest(),
+        [&register_callback_fired] { register_callback_fired = true; });
 
     RunLoopUntilIdle();
 
@@ -475,8 +486,9 @@ TEST_F(InputInjectionTest, RegisterAttemptWithBadDispatchPolicy_ShouldFail) {
     fidl::Clone(base_config, &config);
     config.clear_dispatch_policy();
 
-    input_system()->Register(std::move(config), injector.NewRequest(),
-                             [&register_callback_fired] { register_callback_fired = true; });
+    input_system()->RegisterPointerinjector(
+        std::move(config), injector.NewRequest(),
+        [&register_callback_fired] { register_callback_fired = true; });
 
     RunLoopUntilIdle();
 
@@ -495,8 +507,9 @@ TEST_F(InputInjectionTest, RegisterAttemptWithBadDispatchPolicy_ShouldFail) {
     fidl::Clone(base_config, &config);
     config.set_dispatch_policy(static_cast<fuchsia::ui::pointerinjector::DispatchPolicy>(6323));
 
-    input_system()->Register(std::move(config), injector.NewRequest(),
-                             [&register_callback_fired] { register_callback_fired = true; });
+    input_system()->RegisterPointerinjector(
+        std::move(config), injector.NewRequest(),
+        [&register_callback_fired] { register_callback_fired = true; });
 
     RunLoopUntilIdle();
 
@@ -516,8 +529,9 @@ TEST_F(InputInjectionTest, ChannelDying_ShouldNotCrash) {
         [&error_callback_fired](zx_status_t status) { error_callback_fired = true; });
 
     fuchsia::ui::pointerinjector::Config config = ConfigTemplate(parent_view_ref, child_view_ref);
-    input_system()->Register(std::move(config), injector.NewRequest(),
-                             [&register_callback_fired] { register_callback_fired = true; });
+    input_system()->RegisterPointerinjector(
+        std::move(config), injector.NewRequest(),
+        [&register_callback_fired] { register_callback_fired = true; });
 
     RunLoopUntilIdle();
 
@@ -538,8 +552,9 @@ TEST_F(InputInjectionTest, MultipleRegistrations_ShouldSucceed) {
     injector.set_error_handler(
         [&error_callback_fired](zx_status_t status) { error_callback_fired = true; });
     fuchsia::ui::pointerinjector::Config config = ConfigTemplate(parent_view_ref, child_view_ref);
-    input_system()->Register(std::move(config), injector.NewRequest(),
-                             [&register_callback_fired] { register_callback_fired = true; });
+    input_system()->RegisterPointerinjector(
+        std::move(config), injector.NewRequest(),
+        [&register_callback_fired] { register_callback_fired = true; });
     RunLoopUntilIdle();
     EXPECT_TRUE(register_callback_fired);
     EXPECT_FALSE(error_callback_fired);
@@ -553,8 +568,9 @@ TEST_F(InputInjectionTest, MultipleRegistrations_ShouldSucceed) {
         [&error_callback_fired](zx_status_t status) { error_callback_fired = true; });
 
     fuchsia::ui::pointerinjector::Config config = ConfigTemplate(parent_view_ref, child_view_ref);
-    input_system()->Register(std::move(config), injector2.NewRequest(),
-                             [&register_callback_fired] { register_callback_fired = true; });
+    input_system()->RegisterPointerinjector(
+        std::move(config), injector2.NewRequest(),
+        [&register_callback_fired] { register_callback_fired = true; });
     RunLoopUntilIdle();
     EXPECT_TRUE(register_callback_fired);
     EXPECT_FALSE(error_callback_fired);
@@ -1493,8 +1509,9 @@ TEST_P(ParameterizedInputInjectionTest, RegisterAttemptWithBadViewport_ShouldFai
     config.set_viewport(std::move(viewport));
   }
 
-  input_system()->Register(std::move(config), injector.NewRequest(),
-                           [&register_callback_fired] { register_callback_fired = true; });
+  input_system()->RegisterPointerinjector(
+      std::move(config), injector.NewRequest(),
+      [&register_callback_fired] { register_callback_fired = true; });
 
   RunLoopUntilIdle();
 

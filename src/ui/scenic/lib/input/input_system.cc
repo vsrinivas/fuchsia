@@ -107,8 +107,8 @@ InputSystem::InputSystem(SystemContext context, fxl::WeakPtr<gfx::SceneGraph> sc
       request_focus_(std::move(request_focus)) {
   FX_CHECK(scene_graph);
 
-  pointer_event_registry_ = std::make_unique<A11yPointerEventRegistry>(
-      this->context(),
+  a11y_pointer_event_registry_ = std::make_unique<A11yPointerEventRegistry>(
+      this->context()->app_context(),
       /*on_register=*/
       [this] {
         FX_CHECK(!a11y_legacy_contender_)
@@ -145,7 +145,16 @@ InputSystem::InputSystem(SystemContext context, fxl::WeakPtr<gfx::SceneGraph> sc
         FX_LOGS(INFO) << "A11yLegacyContender destroyed";
       });
 
-  this->context()->app_context()->outgoing()->AddPublicService(injector_registry_.GetHandler(this));
+  pointerinjector_registry_ = std::make_unique<PointerinjectorRegistry>(
+      this->context()->app_context(),
+      /*inject_touch_exclusive*/
+      [this](const InternalPointerEvent& event, StreamId stream_id) {
+        InjectTouchEventExclusive(event);
+      },
+      /*inject_touch_hit_tested*/
+      [this](const InternalPointerEvent& event, StreamId stream_id) {
+        InjectTouchEventHitTested(event, stream_id);
+      });
 
   this->context()->app_context()->outgoing()->AddPublicService(
       pointer_capture_registry_.GetHandler(this));
@@ -159,32 +168,6 @@ CommandDispatcherUniquePtr InputSystem::CreateCommandDispatcher(
   return CommandDispatcherUniquePtr(new InputCommandDispatcher(session_id, this),
                                     // Custom deleter.
                                     [](CommandDispatcher* cd) { delete cd; });
-}
-
-A11yPointerEventRegistry::A11yPointerEventRegistry(SystemContext* context,
-                                                   fit::function<void()> on_register,
-                                                   fit::function<void()> on_disconnect)
-    : on_register_(std::move(on_register)), on_disconnect_(std::move(on_disconnect)) {
-  FX_DCHECK(on_register_);
-  FX_DCHECK(on_disconnect_);
-  context->app_context()->outgoing()->AddPublicService(
-      accessibility_pointer_event_registry_.GetHandler(this));
-}
-
-void A11yPointerEventRegistry::Register(
-    fidl::InterfaceHandle<fuchsia::ui::input::accessibility::PointerEventListener>
-        pointer_event_listener,
-    RegisterCallback callback) {
-  if (!accessibility_pointer_event_listener()) {
-    accessibility_pointer_event_listener_.Bind(std::move(pointer_event_listener));
-    accessibility_pointer_event_listener_.set_error_handler(
-        [this](zx_status_t) { on_disconnect_(); });
-    on_register_();
-    callback(/*success=*/true);
-  } else {
-    // An accessibility listener is already registered.
-    callback(/*success=*/false);
-  }
 }
 
 fuchsia::ui::input::accessibility::PointerEvent InputSystem::CreateAccessibilityEvent(
@@ -213,75 +196,6 @@ fuchsia::ui::input::accessibility::PointerEvent InputSystem::CreateAccessibility
   const glm::vec2 ndc = GetViewportNDCPoint(event);
 
   return BuildAccessibilityPointerEvent(event, ndc, top_hit_view_local, view_ref_koid);
-}
-
-void InputSystem::Register(fuchsia::ui::pointerinjector::Config config,
-                           fidl::InterfaceRequest<fuchsia::ui::pointerinjector::Device> injector,
-                           RegisterCallback callback) {
-  if (!Injector::IsValidConfig(config)) {
-    // Errors printed inside IsValidConfig. Just return here.
-    return;
-  }
-
-  // Check connectivity here, since injector doesn't have access to it.
-  const zx_koid_t context_koid = utils::ExtractKoid(config.context().view());
-  const zx_koid_t target_koid = utils::ExtractKoid(config.target().view());
-  if (context_koid == ZX_KOID_INVALID || target_koid == ZX_KOID_INVALID) {
-    FX_LOGS(ERROR) << "InjectorRegistry::Register : Argument |config.context| or |config.target| "
-                      "was invalid.";
-    return;
-  }
-  if (!view_tree_snapshot_->IsDescendant(target_koid, context_koid)) {
-    FX_LOGS(ERROR) << "InjectorRegistry::Register : Argument |config.context| must be connected to "
-                      "the Scene, and |config.target| must be a descendant of |config.context|";
-    return;
-  }
-
-  // TODO(fxbug.dev/50348): Add a callback to kill the channel immediately if connectivity breaks.
-
-  const InjectorId id = ++last_injector_id_;
-  InjectorSettings settings{.dispatch_policy = config.dispatch_policy(),
-                            .device_id = config.device_id(),
-                            .device_type = config.device_type(),
-                            .context_koid = context_koid,
-                            .target_koid = target_koid};
-  Viewport viewport{
-      .extents = {config.viewport().extents()},
-      .context_from_viewport_transform =
-          ColumnMajorMat3VectorToMat4(config.viewport().viewport_to_context_transform()),
-  };
-
-  fit::function<void(const InternalPointerEvent&, StreamId)> inject_func;
-  switch (settings.dispatch_policy) {
-    case fuchsia::ui::pointerinjector::DispatchPolicy::EXCLUSIVE_TARGET:
-      inject_func = [this](const InternalPointerEvent& event, StreamId stream_id) {
-        InjectTouchEventExclusive(event);
-      };
-      break;
-    case fuchsia::ui::pointerinjector::DispatchPolicy::TOP_HIT_AND_ANCESTORS_IN_TARGET:
-      inject_func = [this](const InternalPointerEvent& event, StreamId stream_id) {
-        InjectTouchEventHitTested(event, stream_id);
-      };
-      break;
-    default:
-      FX_CHECK(false) << "Should never be reached.";
-      break;
-  }
-
-  const auto [it, success] = injectors_.try_emplace(
-      id,
-      context()->inspect_node()->CreateChild(context()->inspect_node()->UniqueName("injector-")),
-      std::move(settings), std::move(viewport), std::move(injector),
-      /*is_descendant_and_connected*/
-      [this](zx_koid_t descendant, zx_koid_t ancestor) {
-        return view_tree_snapshot_->IsDescendant(descendant, ancestor);
-      },
-      std::move(inject_func),
-      /*on_channel_closed*/
-      [this, id] { injectors_.erase(id); });
-  FX_CHECK(success) << "Injector already exists.";
-
-  callback();
 }
 
 ContenderId InputSystem::AddGfxLegacyContender(StreamId stream_id, zx_koid_t view_ref_koid) {

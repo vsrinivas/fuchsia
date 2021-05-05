@@ -55,7 +55,9 @@ class Injector : public fuchsia::ui::pointerinjector::Device {
            fit::function<void(const InternalPointerEvent&, StreamId stream_id)> inject,
            fit::function<void()> on_channel_closed);
 
-  static bool IsValidConfig(const fuchsia::ui::pointerinjector::Config& config);
+  // Check the validity of a Viewport.
+  // Returns ZX_OK if valid, otherwise logs an error message and return appropriate error code.
+  static zx_status_t IsValidViewport(const fuchsia::ui::pointerinjector::Viewport& viewport);
 
   // |fuchsia::ui::pointerinjector::Device|
   void Inject(std::vector<fuchsia::ui::pointerinjector::Event> events,

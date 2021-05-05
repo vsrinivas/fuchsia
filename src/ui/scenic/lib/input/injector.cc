@@ -95,40 +95,6 @@ bool AreValidExtents(const std::array<std::array<float, 2>, 2>& extents) {
   return std::isless(min_x, max_x) && std::isless(min_y, max_y);
 }
 
-zx_status_t IsValidViewport(const fuchsia::ui::pointerinjector::Viewport& viewport) {
-  if (!viewport.has_extents() || !viewport.has_viewport_to_context_transform()) {
-    FX_LOGS(ERROR) << "Provided fuchsia::ui::pointerinjector::Viewport had missing fields";
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  if (!AreValidExtents(viewport.extents())) {
-    FX_LOGS(ERROR)
-        << "Provided fuchsia::ui::pointerinjector::Viewport had invalid extents. Extents min: {"
-        << viewport.extents()[0][0] << ", " << viewport.extents()[0][1] << "} max: {"
-        << viewport.extents()[1][0] << ", " << viewport.extents()[1][1] << "}";
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  if (std::any_of(viewport.viewport_to_context_transform().begin(),
-                  viewport.viewport_to_context_transform().end(),
-                  [](float f) { return !std::isfinite(f); })) {
-    FX_LOGS(ERROR) << "Provided fuchsia::ui::pointerinjector::Viewport "
-                      "viewport_to_context_transform contained a NaN or infinity";
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  // Must be invertible, i.e. determinant must be non-zero.
-  const glm::mat4 viewport_to_context_transform =
-      ColumnMajorMat3VectorToMat4(viewport.viewport_to_context_transform());
-  if (fabs(glm::determinant(viewport_to_context_transform)) <=
-      std::numeric_limits<float>::epsilon()) {
-    FX_LOGS(ERROR) << "Provided fuchsia::ui::pointerinjector::Viewport had a non-invertible matrix";
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  return ZX_OK;
-}
-
 void ChattyLog(const fuchsia::ui::pointerinjector::Event& event) {
   static uint32_t chatty = 0;
   if (chatty++ < ChattyMax()) {
@@ -137,40 +103,6 @@ void ChattyLog(const fuchsia::ui::pointerinjector::Event& event) {
 }
 
 }  // namespace
-
-bool Injector::IsValidConfig(const fuchsia::ui::pointerinjector::Config& config) {
-  if (!config.has_device_id() || !config.has_device_type() || !config.has_context() ||
-      !config.has_target() || !config.has_viewport() || !config.has_dispatch_policy()) {
-    FX_LOGS(ERROR) << "InjectorRegistry::Register : Argument |config| is incomplete.";
-    return false;
-  }
-
-  if (config.dispatch_policy() != fuchsia::ui::pointerinjector::DispatchPolicy::EXCLUSIVE_TARGET &&
-      config.dispatch_policy() !=
-          fuchsia::ui::pointerinjector::DispatchPolicy::TOP_HIT_AND_ANCESTORS_IN_TARGET) {
-    FX_LOGS(ERROR) << "InjectorRegistry::Register : Only EXCLUSIVE_TARGET and "
-                      "TOP_HIT_AND_ANCESTORS_IN_TARGET DispatchPolicy is supported.";
-    return false;
-  }
-
-  if (config.device_type() != fuchsia::ui::pointerinjector::DeviceType::TOUCH) {
-    FX_LOGS(ERROR) << "InjectorRegistry::Register : Only DeviceType TOUCH is supported.";
-    return false;
-  }
-
-  if (!config.context().is_view() || !config.target().is_view()) {
-    FX_LOGS(ERROR) << "InjectorRegistry::Register : Argument |config.context| or |config.target| "
-                      "is not a view. Only views are supported.";
-    return false;
-  }
-
-  if (IsValidViewport(config.viewport()) != ZX_OK) {
-    // Errors printed in IsValidViewport. Just return result here.
-    return false;
-  }
-
-  return true;
-}
 
 Injector::Injector(inspect::Node inspect_node, InjectorSettings settings, Viewport viewport,
                    fidl::InterfaceRequest<fuchsia::ui::pointerinjector::Device> device,
@@ -351,6 +283,40 @@ void Injector::CloseChannel(zx_status_t epitaph) {
   binding_.Close(epitaph);
   // NOTE: Triggers destruction of this object.
   on_channel_closed_();
+}
+
+zx_status_t Injector::IsValidViewport(const fuchsia::ui::pointerinjector::Viewport& viewport) {
+  if (!viewport.has_extents() || !viewport.has_viewport_to_context_transform()) {
+    FX_LOGS(ERROR) << "Provided fuchsia::ui::pointerinjector::Viewport had missing fields";
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (!AreValidExtents(viewport.extents())) {
+    FX_LOGS(ERROR)
+        << "Provided fuchsia::ui::pointerinjector::Viewport had invalid extents. Extents min: {"
+        << viewport.extents()[0][0] << ", " << viewport.extents()[0][1] << "} max: {"
+        << viewport.extents()[1][0] << ", " << viewport.extents()[1][1] << "}";
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (std::any_of(viewport.viewport_to_context_transform().begin(),
+                  viewport.viewport_to_context_transform().end(),
+                  [](float f) { return !std::isfinite(f); })) {
+    FX_LOGS(ERROR) << "Provided fuchsia::ui::pointerinjector::Viewport "
+                      "viewport_to_context_transform contained a NaN or infinity";
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  // Must be invertible, i.e. determinant must be non-zero.
+  const glm::mat4 viewport_to_context_transform =
+      ColumnMajorMat3VectorToMat4(viewport.viewport_to_context_transform());
+  if (fabs(glm::determinant(viewport_to_context_transform)) <=
+      std::numeric_limits<float>::epsilon()) {
+    FX_LOGS(ERROR) << "Provided fuchsia::ui::pointerinjector::Viewport had a non-invertible matrix";
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  return ZX_OK;
 }
 
 }  // namespace input
