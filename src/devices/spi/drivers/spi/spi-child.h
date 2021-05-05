@@ -23,7 +23,7 @@ using SpiChildType = ddk::Device<SpiChild, ddk::Messageable>;
 
 class SpiChild : public SpiChildType,
                  public fbl::RefCounted<SpiChild>,
-                 public fidl::WireInterface<fuchsia_hardware_spi::Device>,
+                 public fidl::WireServer<fuchsia_hardware_spi::Device>,
                  public ddk::SpiProtocol<SpiChild, ddk::base_protocol> {
  public:
   SpiChild(zx_device_t* parent, ddk::SpiImplProtocolClient spi, const spi_channel_t* channel,
@@ -34,24 +34,20 @@ class SpiChild : public SpiChildType,
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
-  void TransmitVector(::fidl::VectorView<uint8_t> data,
+  void TransmitVector(TransmitVectorRequestView request,
                       TransmitVectorCompleter::Sync& completer) override;
-  void ReceiveVector(uint32_t size, ReceiveVectorCompleter::Sync& completer) override;
-  void ExchangeVector(::fidl::VectorView<uint8_t> txdata,
+  void ReceiveVector(ReceiveVectorRequestView request,
+                     ReceiveVectorCompleter::Sync& completer) override;
+  void ExchangeVector(ExchangeVectorRequestView request,
                       ExchangeVectorCompleter::Sync& completer) override;
 
-  void RegisterVmo(uint32_t vmo_id, fuchsia_mem::wire::Range vmo,
-                   fuchsia_hardware_sharedmemory::wire::SharedVmoRight rights,
-                   RegisterVmoCompleter::Sync& completer) override;
-  void UnregisterVmo(uint32_t vmo_id, UnregisterVmoCompleter::Sync& completer) override;
+  void RegisterVmo(RegisterVmoRequestView request, RegisterVmoCompleter::Sync& completer) override;
+  void UnregisterVmo(UnregisterVmoRequestView request,
+                     UnregisterVmoCompleter::Sync& completer) override;
 
-  void Transmit(fuchsia_hardware_sharedmemory::wire::SharedVmoBuffer buffer,
-                TransmitCompleter::Sync& completer) override;
-  void Receive(fuchsia_hardware_sharedmemory::wire::SharedVmoBuffer buffer,
-               ReceiveCompleter::Sync& completer) override;
-  void Exchange(fuchsia_hardware_sharedmemory::wire::SharedVmoBuffer tx_buffer,
-                fuchsia_hardware_sharedmemory::wire::SharedVmoBuffer rx_buffer,
-                ExchangeCompleter::Sync& completer) override;
+  void Transmit(TransmitRequestView request, TransmitCompleter::Sync& completer) override;
+  void Receive(ReceiveRequestView request, ReceiveCompleter::Sync& completer) override;
+  void Exchange(ExchangeRequestView request, ExchangeCompleter::Sync& completer) override;
 
   zx_status_t SpiTransmit(const uint8_t* txdata_list, size_t txdata_count);
   zx_status_t SpiReceive(uint32_t size, uint8_t* out_rxdata_list, size_t rxdata_count,
