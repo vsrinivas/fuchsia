@@ -342,7 +342,7 @@ if (current_toolchain == dart_toolchain) {
                "--source_lists",
                "@" + rebase_path(_all_deps_sources_list_file, root_build_dir),
                "--sources",
-             ] + rebased_sources
+             ] + rebase_path(rebased_sources, root_build_dir)
 
       inputs = [ _all_deps_sources_list_file ]
       deps = [ ":${_all_deps_sources_list_target}" ]
@@ -443,21 +443,21 @@ if (current_toolchain == dart_toolchain) {
 
         args = [
           "--source-file",
-          rebase_path(source_file),
+          rebase_path(source_file, root_build_dir),
           "--dot-packages",
-          rebase_path(_packages_path),
+          rebase_path(_packages_path, root_build_dir),
           "--dartanalyzer",
-          rebase_path(dart_analyzer_binary),
+          rebase_path(dart_analyzer_binary, root_build_dir),
           "--dart-sdk",
-          rebase_path(dart_sdk),
+          rebase_path(dart_sdk, root_build_dir),
           "--options",
-          rebase_path(options_file),
+          rebase_path(options_file, root_build_dir),
           "--stamp",
-          rebase_path(output_file),
+          rebase_path(output_file, root_build_dir),
           "--depname",
           rebase_path(output_file, root_build_dir),
           "--depfile",
-          rebase_path(depfile),
+          rebase_path(depfile, root_build_dir),
           "--all-deps-sources-file",
           rebase_path(_all_deps_sources_file, root_build_dir),
         ]

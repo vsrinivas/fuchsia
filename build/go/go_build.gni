@@ -170,7 +170,7 @@ template("go_build") {
       "--root-out-dir",
       rebase_path(root_out_dir, root_build_dir),
       "--depfile",
-      rebase_path(depfile),
+      rebase_path(depfile, root_build_dir),
       "--current-cpu",
       current_cpu,
       "--current-os",

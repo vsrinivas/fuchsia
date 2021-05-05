@@ -383,7 +383,7 @@ def main():
         output = subprocess.check_output(
             go_list_args, env=env, cwd=gopath_src, text=True)
         with open(args.depfile, 'w') as into:
-            into.write(dist)
+            into.write(os.path.relpath(dist))
             into.write(':')
             while output:
                 try:
@@ -419,6 +419,7 @@ def main():
                         src_dir = t + src_dir[len(f):]
                         break
 
+                src_dir = os.path.relpath(src_dir)
                 for field in files_fields:
                     files = package.get(field)
                     if files:

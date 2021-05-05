@@ -57,9 +57,6 @@ def main():
 
     options = args.options
     while True:
-        if not os.path.isabs(options):
-            print('Expected absolute path, got {}'.format(options))
-            return 1
         if not os.path.exists(options):
             print('Could not find options file: {}'.format(options))
             return 1

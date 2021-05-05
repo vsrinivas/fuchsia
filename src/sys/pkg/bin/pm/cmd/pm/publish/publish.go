@@ -21,7 +21,7 @@ import (
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/build"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/pkg"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/repo"
-	"go.fuchsia.dev/fuchsia/src/sys/pkg/lib/far/go"
+	far "go.fuchsia.dev/fuchsia/src/sys/pkg/lib/far/go"
 )
 
 const (
@@ -312,6 +312,19 @@ func Run(cfg *build.Config, args []string) error {
 	if *depfilePath != "" {
 		timestampPath := filepath.Join(config.RepoDir, "repository", "timestamp.json")
 		for i, str := range deps {
+			// Avoid absolute paths in depfiles.
+			if filepath.IsAbs(str) {
+				wd, err := os.Getwd()
+				if err != nil {
+					return fmt.Errorf("getting current working directory: %s", err)
+				}
+				rel, err := filepath.Rel(wd, str)
+				if err != nil {
+					return fmt.Errorf("rebasing %q to current working directory %q: %s", str, rel, err)
+				}
+				str = rel
+			}
+
 			// It is not clear if this is appropriate input for the depfile, which is
 			// underspecified - it's a "make format file". For the most part this should
 			// not affect Fuchsia builds, as we do not use "interesting" characters in

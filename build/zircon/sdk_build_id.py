@@ -81,7 +81,7 @@ def main():
     deps = []
     for dest, source in manifest.items():
         mappings.append(f'{dest}={source}')
-        deps.append(source)
+        deps.append(os.path.relpath(source))
     args.manifest.write('\n'.join(mappings))
     args.depfile.write(
         '{} {}: {}\n'.format(

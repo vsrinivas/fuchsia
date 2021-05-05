@@ -60,8 +60,8 @@ func TestPublishArchive(t *testing.T) {
 		t.Fatalf("got %#v, wanted one input", inputPaths)
 	}
 
-	if inputPaths[0] != archivePath {
-		t.Errorf("depfile inputs: %#v != %#v", inputPaths[0], archivePath)
+	if got, want := inputPaths[0], mustRelativePath(t, archivePath); got != want {
+		t.Errorf("depfile inputs: got %s, want %s", got, want)
 	}
 }
 
@@ -75,7 +75,7 @@ func TestPublishListOfPackages(t *testing.T) {
 	outputManifestPath := filepath.Join(cfg.OutputDir, "package_manifest.json")
 	packagesListPath := filepath.Join(cfg.OutputDir, "packages.list")
 
-	if err := ioutil.WriteFile(packagesListPath, []byte(outputManifestPath+"\n"), 0o600); err != nil {
+	if err := ioutil.WriteFile(packagesListPath, []byte(outputManifestPath+"\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -91,11 +91,11 @@ func TestPublishListOfPackages(t *testing.T) {
 		t.Errorf("depfile output: got %q, want %q", outName, ex)
 	}
 
-	if inputPaths[0] != packagesListPath {
-		t.Errorf("depfile inputs: %q != %q", inputPaths[0], packagesListPath)
+	if got, want := inputPaths[0], mustRelativePath(t, packagesListPath); got != want {
+		t.Errorf("depfile inputs: got %q, want %q", got, want)
 	}
-	if inputPaths[1] != outputManifestPath {
-		t.Errorf("depfile inputs: %q != %q", inputPaths[1], outputManifestPath)
+	if got, want := inputPaths[1], mustRelativePath(t, outputManifestPath); got != want {
+		t.Errorf("depfile inputs: got %q, want %q", got, want)
 	}
 
 	inputPaths = inputPaths[2:]
@@ -110,15 +110,35 @@ func TestPublishListOfPackages(t *testing.T) {
 	}
 	sourcePaths := []string{}
 	for _, blob := range blobs {
-		sourcePaths = append(sourcePaths, blob.SourcePath)
+		sourcePaths = append(sourcePaths, mustRelativePath(t, blob.SourcePath))
 	}
 	sort.Strings(sourcePaths)
 
 	for i := range sourcePaths {
 		if inputPaths[i] != sourcePaths[i] {
-			t.Errorf("deps entry: %q != %q", inputPaths[i], sourcePaths[i])
+			t.Errorf("deps entry: got %q, want %q", inputPaths[i], sourcePaths[i])
 		}
 	}
+}
+
+// mustRelativePath converts the input path relative to the current working
+// directory. Input path is unchanged if it's not an absolute path.
+func mustRelativePath(t *testing.T, p string) string {
+	t.Helper()
+
+	if !filepath.IsAbs(p) {
+		return p
+	}
+
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get current working directory: %v", err)
+	}
+	rel, err := filepath.Rel(wd, p)
+	if err != nil {
+		t.Fatalf("Failed to rebase %s to %s: %v", p, wd, err)
+	}
+	return rel
 }
 
 func readDepfile(t *testing.T, depfilePath string) (string, []string) {
