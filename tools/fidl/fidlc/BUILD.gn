@@ -72,6 +72,14 @@ zx_library("fidl") {
   deps += [ "//third_party/boringssl" ]
 
   configs += [ ":fidlc_config" ]
+
+  visibility = [
+    ":fidl-format",
+    ":fidl-lint",
+    ":fidlc",
+    "//src/tests/benchmarks/fidl/fidlc:*",
+    "//zircon/system/utest/fidl-compiler:*",
+  ]
 }
 
 source_set("json_schema") {
