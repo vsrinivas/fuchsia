@@ -415,6 +415,7 @@ pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error
     } else {
         quote! {}
     };
+    let return_type = input.sig.output.clone();
 
     let GeneratedCodeParts {
         args,
@@ -448,7 +449,7 @@ pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error
                 #implementation
             } else {
                 println!("This is an experimental subcommand.  To enable this subcommand run 'ffx config set {} true'", #key);
-                Ok(())
+                ffx_core::PluginResult::from(Ok(())).into()
             }
         }
     } else {
@@ -457,7 +458,7 @@ pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error
 
     let res = quote! {
         #input
-        pub async fn ffx_plugin_impl<I: ffx_core::Injector>(#outer_args) -> anyhow::Result<()> {
+        pub async fn ffx_plugin_impl<I: ffx_core::Injector>(#outer_args) #return_type {
             #gated_impl
         }
 
@@ -1287,5 +1288,14 @@ mod test {
                 _cmd: EchoCommand) -> anyhow::Result<()> { Ok(()) }
         };
         ffx_plugin(original.clone(), proxies).map(|_| ())
+    }
+
+    #[test]
+    fn test_known_proxy_works_with_custom_return_type() -> Result<(), Error> {
+        let proxies = Default::default();
+        let input: ItemFn = parse_quote! {
+            fn test_fn(cmd: OptionCommand) -> Result<i32> {}
+        };
+        ffx_plugin(input, proxies).map(|_| ())
     }
 }

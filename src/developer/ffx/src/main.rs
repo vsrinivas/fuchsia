@@ -344,7 +344,7 @@ fn sha256_digest<R: Read>(mut reader: R) -> Result<Digest> {
     Ok(context.finish())
 }
 
-async fn run() -> Result<()> {
+async fn run() -> Result<i32> {
     hoist::disable_autoconnect();
     let app: Ffx = from_env();
 
@@ -403,9 +403,9 @@ async fn run() -> Result<()> {
 #[fuchsia_async::run_singlethreaded]
 async fn main() {
     match run().await {
-        Ok(_) => {
+        Ok(return_code) => {
             // TODO add event for timing here at end
-            std::process::exit(0)
+            std::process::exit(return_code)
         }
         Err(err) => {
             let error_code = if let Some(ffx_err) = err.downcast_ref::<FfxError>() {

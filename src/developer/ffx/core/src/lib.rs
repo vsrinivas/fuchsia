@@ -31,6 +31,32 @@ pub trait Injector {
     async fn is_experiment(&self, key: &str) -> bool;
 }
 
+pub struct PluginResult(Result<i32>);
+
+impl From<Result<()>> for PluginResult {
+    fn from(res: Result<()>) -> Self {
+        PluginResult(res.map(|_| 0))
+    }
+}
+
+impl From<Result<i32>> for PluginResult {
+    fn from(res: Result<i32>) -> Self {
+        PluginResult(res)
+    }
+}
+
+impl From<PluginResult> for Result<i32> {
+    fn from(res: PluginResult) -> Self {
+        res.0
+    }
+}
+
+impl From<PluginResult> for Result<()> {
+    fn from(_res: PluginResult) -> Self {
+        Ok(())
+    }
+}
+
 // Error type for wrapping errors known to an `ffx` command and whose occurrence should
 // not a priori be considered a bug in ffx.
 // TODO(fxbug.dev/57592): consider extending this to allow custom types from plugins.
