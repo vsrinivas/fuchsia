@@ -18,6 +18,9 @@
 
 set -eu
 
+export LANG=C
+export LC_ALL=C
+
 readonly input="$1"
 readonly output="$2"
 readonly depfile="$3"
@@ -32,7 +35,7 @@ for line in $merkles; do
     merkle_root="$(cat "${merkle_path}")"
     printf "%s=%s\n" "${pkg}" "${merkle_root}"
   fi
-done > "${output}"
+done | sort > "${output}"
 
 {
   printf "%s:" "${output}"
