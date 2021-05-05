@@ -34,13 +34,13 @@ impl BatteryState {
     /// Add a new peer to the set of peers interested in notifications
     /// on changes to the battery level.
     pub fn add_peer(&self, peer_id: String) {
-        self.inner.lock().peers.insert(peer_id);
+        let _ = self.inner.lock().peers.insert(peer_id);
     }
 
     /// Remove a peer from the set of peers interested in notifications
     /// on changes to the battery level.
     pub fn remove_peer(&self, peer_id: &str) {
-        self.inner.lock().peers.remove(peer_id);
+        let _ = self.inner.lock().peers.remove(peer_id);
     }
 
     /// Get the last reported level of the battery as a percentage.
