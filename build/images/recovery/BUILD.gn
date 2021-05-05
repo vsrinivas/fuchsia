@@ -97,7 +97,7 @@ assemble_system("recovery-eng") {
     ":root",
     "//build/info:bootfs",
     "//build/input:recovery_bootfs",
-    "//bundles:bootstrap-without-root",
+    "//bundles:bootstrap",
     "//bundles:debugging",
     "//bundles/bringup:manual_testing",
     "//bundles/drivers:bootstrap",
@@ -139,7 +139,7 @@ assemble_system("recovery-fdr") {
   bootfs_labels = [
     "//build/info:bootfs",
     "//build/input:recovery_bootfs",
-    "//bundles:bootstrap-without-root",
+    "//bundles:bootstrap",
     "//bundles/drivers:bootstrap",
     "//bundles/drivers:usb-host-stack",
     "//bundles/drivers:usb-peripheral-stack",

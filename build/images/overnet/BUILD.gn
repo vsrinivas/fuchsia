@@ -40,7 +40,7 @@ assemble_system("overnet") {
   bootfs_labels = [
     ":root",
     "//build/info:bootfs",
-    "//bundles:bootstrap-without-root",
+    "//bundles:bootstrap",
     "//bundles:debugging",
     "//bundles/bringup:manual_testing",
     "//bundles/drivers:bootstrap",

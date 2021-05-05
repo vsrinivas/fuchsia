@@ -6,7 +6,7 @@ bootfs_only = true
 
 product_bootfs_labels = [
   "//build/info:bootfs",
-  "//bundles:bootstrap-without-root",
+  "//bundles:bootstrap",
   "//bundles:debugging",
   "//bundles:diagnostics-eng",
   "//bundles/bringup:manual_testing",
