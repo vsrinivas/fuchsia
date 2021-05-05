@@ -35,6 +35,7 @@ void SimErrorInjector::AddErrInjCmd(uint32_t cmd, zx_status_t status, bcme_statu
                 ifidx.value_or(-1), status);
       existing_cmd.ifidx = ifidx;
       existing_cmd.ret_status = status;
+      existing_cmd.ret_fw_err = fw_err;
       return;
     }
   }
@@ -66,6 +67,7 @@ void SimErrorInjector::AddErrInjIovar(const char* iovar, zx_status_t status, bcm
                 ifidx.value_or(-1), status);
       existing_iovar.ifidx = ifidx;
       existing_iovar.ret_status = status;
+      existing_iovar.ret_fw_err = fw_err;
       return;
     }
   }
@@ -94,10 +96,10 @@ bool SimErrorInjector::CheckIfErrInjCmdEnabled(uint32_t cmd, zx_status_t* ret_st
         existing_cmd.cmd == cmd) {
       BRCMF_DBG(SIMERRINJ, "Err Inj entry found if:%d status:%d cmd:%d", ifidx,
                 existing_cmd.ret_status, cmd);
-      if (ret_status) {
+      if (ret_status != nullptr) {
         *ret_status = existing_cmd.ret_status;
       }
-      if (ret_fw_err) {
+      if (ret_fw_err != nullptr) {
         *ret_fw_err = existing_cmd.ret_fw_err;
       }
       return true;
@@ -118,13 +120,13 @@ bool SimErrorInjector::CheckIfErrInjIovarEnabled(const char* iovar, zx_status_t*
         !std::memcmp(existing_iovar.iovar.data(), iovar, existing_iovar.iovar.size())) {
       BRCMF_DBG(SIMERRINJ, "Err Inj entry found if:%d status:%d iovar:%s", ifidx,
                 existing_iovar.ret_status, iovar);
-      if (alt_value_out) {
+      if (alt_value_out != nullptr) {
         *alt_value_out = existing_iovar.alt_data;
       }
-      if (ret_status) {
+      if (ret_status != nullptr) {
         *ret_status = existing_iovar.ret_status;
       }
-      if (ret_fw_err) {
+      if (ret_fw_err != nullptr) {
         *ret_fw_err = existing_iovar.ret_fw_err;
       }
       return true;

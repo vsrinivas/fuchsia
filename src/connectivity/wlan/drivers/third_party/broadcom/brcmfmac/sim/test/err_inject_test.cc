@@ -8,14 +8,19 @@
 #include <vector>
 
 #include <ddk/hw/wlan/wlaninfo/c/banjo.h>
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <wifi/wifi-config.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil_types.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"
 #include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/macaddr.h"
 
 namespace wlan::brcmfmac {
+
+using ::testing::Eq;
+using ::testing::NotNull;
 
 class ErrInjTest : public SimTest {
  public:
@@ -65,7 +70,50 @@ TEST_F(ErrInjTest, ErrInjectorReplacementValues) {
   RunCountryTest({'A', 'B', 'C', 'D', 'E'}, {'A', 'B'});
 }
 
-TEST_F(ErrInjTest, ErrInjectorFirmwareError) {
+TEST_F(ErrInjTest, CheckIfErrInjCmdEnabledWorks) {
+  ASSERT_EQ(Init(), ZX_OK);
+  ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
+
+  brcmf_simdev* sim = device_->GetSim();
+  struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, client_ifc_.iface_id_);
+
+  const auto expected_status = ZX_ERR_SHOULD_WAIT;
+  const auto expected_fw_err = BCME_BUSY;
+  sim->sim_fw->err_inj_.AddErrInjCmd(BRCMF_C_GET_RATE, expected_status, expected_fw_err);
+
+  zx_status_t status;
+  bcme_status_t fw_err;
+  ASSERT_TRUE(sim->sim_fw->err_inj_.CheckIfErrInjCmdEnabled(BRCMF_C_GET_RATE, &status, &fw_err,
+                                                            ifp->ifidx));
+  EXPECT_EQ(status, expected_status);
+  EXPECT_EQ(fw_err, expected_fw_err);
+}
+
+TEST_F(ErrInjTest, CheckIfErrInjIovarEnabledWorks) {
+  ASSERT_EQ(Init(), ZX_OK);
+  ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
+
+  brcmf_simdev* sim = device_->GetSim();
+  struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, client_ifc_.iface_id_);
+
+  const auto expected_status = ZX_ERR_SHOULD_WAIT;
+  const auto expected_fw_err = BCME_BUSY;
+  const std::vector<uint8_t> expected_inj_data = {0};
+  sim->sim_fw->err_inj_.AddErrInjIovar("mchan", expected_status, expected_fw_err, ifp->ifidx,
+                                       &expected_inj_data);
+
+  zx_status_t status;
+  bcme_status_t fw_err;
+  const std::vector<uint8_t>* inj_data;
+  ASSERT_TRUE(sim->sim_fw->err_inj_.CheckIfErrInjIovarEnabled("mchan", &status, &fw_err, &inj_data,
+                                                              ifp->ifidx));
+  EXPECT_EQ(status, expected_status);
+  EXPECT_EQ(fw_err, expected_fw_err);
+  ASSERT_THAT(inj_data, NotNull());
+  EXPECT_THAT(*inj_data, Eq(expected_inj_data));
+}
+
+TEST_F(ErrInjTest, CmdFirmwareErrorLifecycle) {
   const common::MacAddr kDefaultBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
   constexpr uint16_t kDefaultChanspec = 53397;
 
@@ -75,18 +123,9 @@ TEST_F(ErrInjTest, ErrInjectorFirmwareError) {
   // Initialize variables
   zx_status_t status = ZX_OK;
   bcme_status_t fw_err = BCME_OK;
-  struct brcmf_fil_country_le ccreq;
   struct brcmf_join_params join_params;
   brcmf_simdev* sim = device_->GetSim();
   struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, client_ifc_.iface_id_);
-
-  // Initialize parameter for "country" iovar.
-  ccreq.ccode[0] = 'W';
-  ccreq.ccode[1] = 'W';
-  ccreq.ccode[2] = 0;
-  ccreq.country_abbrev[0] = 'W';
-  ccreq.country_abbrev[1] = 'W';
-  ccreq.country_abbrev[2] = 0;
 
   // Initialize parameter for BRCMF_C_SET_SSID, here we use kDefaultSoftApSsid as the fake
   // association target, the content doesn't really affect the result.
@@ -99,13 +138,7 @@ TEST_F(ErrInjTest, ErrInjectorFirmwareError) {
   join_params.params_le.chanspec_list[0] = kDefaultChanspec;
 
   // Inject firmware error.
-  sim->sim_fw->err_inj_.AddErrInjIovar("country", ZX_OK, BCME_ERROR);
   sim->sim_fw->err_inj_.AddErrInjCmd(BRCMF_C_SET_SSID, ZX_OK, BCME_BADARG);
-
-  status = brcmf_fil_iovar_data_set(ifp, "country", &ccreq, sizeof(ccreq), &fw_err);
-  // status code will be adjusted to ZX_ERR_IO_REFUSED even when no error was injected to it.
-  EXPECT_EQ(status, ZX_ERR_IO_REFUSED);
-  EXPECT_EQ(fw_err, BCME_ERROR);
 
   status =
       brcmf_fil_cmd_data_set(ifp, BRCMF_C_SET_SSID, &join_params, sizeof(join_params), &fw_err);
@@ -113,16 +146,65 @@ TEST_F(ErrInjTest, ErrInjectorFirmwareError) {
   EXPECT_EQ(status, ZX_ERR_IO_REFUSED);
   EXPECT_EQ(fw_err, BCME_BADARG);
 
-  // Delete the error injections to verify the deletion logic.
-  sim->sim_fw->err_inj_.DelErrInjIovar("country");
-  sim->sim_fw->err_inj_.DelErrInjCmd(BRCMF_C_SET_SSID);
-
-  status = brcmf_fil_iovar_data_set(ifp, "country", &ccreq, sizeof(ccreq), &fw_err);
-  EXPECT_EQ(status, ZX_OK);
-  EXPECT_EQ(fw_err, BCME_OK);
+  // Inject a different firmware error.
+  sim->sim_fw->err_inj_.AddErrInjCmd(BRCMF_C_SET_SSID, ZX_OK, BCME_BUSY);
 
   status =
       brcmf_fil_cmd_data_set(ifp, BRCMF_C_SET_SSID, &join_params, sizeof(join_params), &fw_err);
+  // Firmware error BCME_BUSY will cause status code will be adjusted to ZX_ERR_SHOULD_WAIT.
+  EXPECT_EQ(status, ZX_ERR_SHOULD_WAIT);
+  EXPECT_EQ(fw_err, BCME_BUSY);
+
+  // Delete the error injections to verify the deletion logic.
+  sim->sim_fw->err_inj_.DelErrInjCmd(BRCMF_C_SET_SSID);
+
+  status =
+      brcmf_fil_cmd_data_set(ifp, BRCMF_C_SET_SSID, &join_params, sizeof(join_params), &fw_err);
+  EXPECT_EQ(status, ZX_OK);
+  EXPECT_EQ(fw_err, BCME_OK);
+}
+
+TEST_F(ErrInjTest, IovarFirmwareErrorLifecycle) {
+  const common::MacAddr kDefaultBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
+
+  ASSERT_EQ(Init(), ZX_OK);
+  ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
+
+  // Initialize variables
+  zx_status_t status = ZX_OK;
+  bcme_status_t fw_err = BCME_OK;
+  struct brcmf_fil_country_le ccreq;
+  brcmf_simdev* sim = device_->GetSim();
+  struct brcmf_if* ifp = brcmf_get_ifp(sim->drvr, client_ifc_.iface_id_);
+
+  // Initialize parameter for "country" iovar.
+  ccreq.ccode[0] = 'W';
+  ccreq.ccode[1] = 'W';
+  ccreq.ccode[2] = 0;
+  ccreq.country_abbrev[0] = 'W';
+  ccreq.country_abbrev[1] = 'W';
+  ccreq.country_abbrev[2] = 0;
+
+  // Inject firmware error.
+  sim->sim_fw->err_inj_.AddErrInjIovar("country", ZX_OK, BCME_ERROR);
+
+  status = brcmf_fil_iovar_data_set(ifp, "country", &ccreq, sizeof(ccreq), &fw_err);
+  // status code will be adjusted to ZX_ERR_IO_REFUSED even when no error was injected to it.
+  EXPECT_EQ(status, ZX_ERR_IO_REFUSED);
+  EXPECT_EQ(fw_err, BCME_ERROR);
+
+  // Inject a different firmware error.
+  sim->sim_fw->err_inj_.AddErrInjIovar("country", ZX_OK, BCME_BUSY);
+
+  status = brcmf_fil_iovar_data_set(ifp, "country", &ccreq, sizeof(ccreq), &fw_err);
+  // Firmware error BCME_BUSY will cause status code to be adjusted to ZX_ERR_SHOULD_WAIT.
+  EXPECT_EQ(status, ZX_ERR_SHOULD_WAIT);
+  EXPECT_EQ(fw_err, BCME_BUSY);
+
+  // Delete the error injection to verify the deletion logic.
+  sim->sim_fw->err_inj_.DelErrInjIovar("country");
+
+  status = brcmf_fil_iovar_data_set(ifp, "country", &ccreq, sizeof(ccreq), &fw_err);
   EXPECT_EQ(status, ZX_OK);
   EXPECT_EQ(fw_err, BCME_OK);
 }
