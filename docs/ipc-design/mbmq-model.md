@@ -177,3 +177,49 @@ a different callee.
     reference to the MBO, and enqueues the MBO onto its associated
     MsgQueue, setting the MBO's `key` field to its reply key.  The
     MBO's state is set to `enqueued_as_reply`.
+
+## State for each object type
+
+This section gives a summary of the state that is stored by each of
+the object types.
+
+MBO:
+
+*   Message contents.  This consists of two resizable arrays:
+    *   An array of bytes (data).
+    *   An array of Zircon handles.
+*   `key`: 64-bit integer.  This is set when the MBO is enqueued onto
+    a MsgQueue by either `zx_channel_write_mbo()` or
+    `zx_cmh_send_reply()`.  Its value is returned by
+    `zx_msgqueue_read()`.
+*   `reply_queue`: This is the MsgQueue that `zx_cmh_send_reply()`
+    will enqueue the MBO onto when it is sent as a reply.
+*   `reply_key`: 64-bit integer.  `zx_cmh_send_reply()` will set the
+    MBO's `key` field to this value when the MBO is sent as a reply.
+*   State: one of the four MBO states listed above (`owned_by_caller`,
+    `owned_by_callee`, `enqueued_as_request`, `enqueued_as_reply`).
+    Note that in practice we do not need to distinguish between
+    `enqueued_as_request` and `owned_by_callee`.  Operations on MBO
+    handles need to check for `owned_by_caller`, whereas
+    `zx_msgqueue_read()` needs to check for `enqueued_as_request`
+    versus `enqueued_as_reply`.
+
+CMH:
+
+*   Reference to an MBO.  This reference may be null.  If the
+    reference is non-null, the MBO is in the `owned_by_callee` state.
+
+MsgQueue:
+
+*   List of MBOs, all of which will be in the state
+    `enqueued_as_request` or `enqueued_as_reply`.
+
+Channel endpoint:
+
+*   Reference to a MsgQueue.  This reference may be null.
+*   `channel_key`: 64-bit integer.  When an MBO is sent through this
+    channel endpoint, its `key` field will be set to this
+    `channel_key` value.
+*   List of MBOs, all of which will be in the state
+    `enqueued_as_request`.  This will be empty if the endpoint has an
+    associated MsgQueue.
