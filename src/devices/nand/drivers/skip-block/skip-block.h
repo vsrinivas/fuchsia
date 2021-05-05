@@ -40,7 +40,7 @@ class SkipBlockDevice;
 using DeviceType = ddk::Device<SkipBlockDevice, ddk::GetSizable, ddk::Unbindable, ddk::Messageable>;
 
 class SkipBlockDevice : public DeviceType,
-                        public fidl::WireInterface<fuchsia_hardware_skipblock::SkipBlock>,
+                        public fidl::WireServer<fuchsia_hardware_skipblock::SkipBlock>,
                         public ddk::EmptyProtocol<ZX_PROTOCOL_SKIP_BLOCK> {
  public:
   // Spawns device node based on parent node.
@@ -55,12 +55,13 @@ class SkipBlockDevice : public DeviceType,
   void DdkRelease() { delete this; }
 
   // skip-block fidl implementation.
-  void GetPartitionInfo(GetPartitionInfoCompleter::Sync& completer);
-  void Read(ReadWriteOperation op, ReadCompleter::Sync& completer);
-  void Write(ReadWriteOperation op, WriteCompleter::Sync& completer);
-  void WriteBytes(WriteBytesOperation op, WriteBytesCompleter::Sync& completer);
-  void WriteBytesWithoutErase(WriteBytesOperation op,
-                              WriteBytesWithoutEraseCompleter::Sync& completer);
+  void GetPartitionInfo(GetPartitionInfoRequestView request,
+                        GetPartitionInfoCompleter::Sync& completer) override;
+  void Read(ReadRequestView request, ReadCompleter::Sync& completer) override;
+  void Write(WriteRequestView request, WriteCompleter::Sync& completer) override;
+  void WriteBytes(WriteBytesRequestView request, WriteBytesCompleter::Sync& completer) override;
+  void WriteBytesWithoutErase(WriteBytesWithoutEraseRequestView request,
+                              WriteBytesWithoutEraseCompleter::Sync& completer) override;
 
  private:
   explicit SkipBlockDevice(zx_device_t* parent, ddk::NandProtocolClient nand,

@@ -263,7 +263,8 @@ zx_status_t SkipBlockDevice::Bind() {
   return DdkAdd("skip-block");
 }
 
-void SkipBlockDevice::GetPartitionInfo(GetPartitionInfoCompleter::Sync& completer) {
+void SkipBlockDevice::GetPartitionInfo(GetPartitionInfoRequestView request,
+                                       GetPartitionInfoCompleter::Sync& completer) {
   fbl::AutoLock al(&lock_);
 
   PartitionInfo info;
@@ -368,15 +369,15 @@ zx_status_t SkipBlockDevice::ReadLocked(ReadWriteOperation op) {
   return ZX_ERR_IO;
 }
 
-void SkipBlockDevice::Read(ReadWriteOperation op, ReadCompleter::Sync& completer) {
+void SkipBlockDevice::Read(ReadRequestView request, ReadCompleter::Sync& completer) {
   fbl::AutoLock al(&lock_);
 
-  zx_status_t status = ValidateOperationLocked(op);
+  zx_status_t status = ValidateOperationLocked(request->op);
   if (status != ZX_OK) {
     completer.Reply(status);
     return;
   }
-  completer.Reply(ReadLocked(std::move(op)));
+  completer.Reply(ReadLocked(std::move(request->op)));
 }
 
 zx_status_t SkipBlockDevice::WriteLocked(ReadWriteOperation op, bool* bad_block_grown,
@@ -451,17 +452,17 @@ zx_status_t SkipBlockDevice::WriteLocked(ReadWriteOperation op, bool* bad_block_
   return ZX_OK;
 }
 
-void SkipBlockDevice::Write(ReadWriteOperation op, WriteCompleter::Sync& completer) {
+void SkipBlockDevice::Write(WriteRequestView request, WriteCompleter::Sync& completer) {
   fbl::AutoLock al(&lock_);
 
   bool bad_block_grown = false;
-  zx_status_t status = ValidateOperationLocked(op);
+  zx_status_t status = ValidateOperationLocked(request->op);
   if (status != ZX_OK) {
     completer.Reply(status, bad_block_grown);
     return;
   }
 
-  status = WriteLocked(std::move(op), &bad_block_grown, std::nullopt);
+  status = WriteLocked(std::move(request->op), &bad_block_grown, std::nullopt);
   completer.Reply(status, bad_block_grown);
 }
 
@@ -530,29 +531,31 @@ zx_status_t SkipBlockDevice::ReadPartialBlocksLocked(WriteBytesOperation op, uin
   return ZX_OK;
 }
 
-void SkipBlockDevice::WriteBytes(WriteBytesOperation op, WriteBytesCompleter::Sync& completer) {
+void SkipBlockDevice::WriteBytes(WriteBytesRequestView request,
+                                 WriteBytesCompleter::Sync& completer) {
   fbl::AutoLock al(&lock_);
 
   bool bad_block_grown = false;
-  zx_status_t status = ValidateOperationLocked(op);
+  zx_status_t status = ValidateOperationLocked(request->op);
   if (status != ZX_OK) {
     completer.Reply(status, bad_block_grown);
     return;
   }
 
   const uint64_t block_size = GetBlockSize();
-  const uint64_t first_block = op.offset / block_size;
-  const uint64_t last_block = fbl::round_up(op.offset + op.size, block_size) / block_size - 1;
+  const uint64_t first_block = request->op.offset / block_size;
+  const uint64_t last_block =
+      fbl::round_up(request->op.offset + request->op.size, block_size) / block_size - 1;
   const uint64_t op_size = (last_block - first_block + 1) * block_size;
 
-  if (op.mode == WriteBytesMode::kReadModifyEraseWrite) {
+  if (request->op.mode == WriteBytesMode::kReadModifyEraseWrite) {
     zx::vmo vmo;
-    if (op_size == op.size) {
+    if (op_size == request->op.size) {
       // No copies are necessary as offset and size are block aligned.
-      vmo = std::move(op.vmo);
+      vmo = std::move(request->op.vmo);
     } else {
-      status = ReadPartialBlocksLocked(std::move(op), block_size, first_block, last_block, op_size,
-                                       &vmo);
+      status = ReadPartialBlocksLocked(std::move(request->op), block_size, first_block, last_block,
+                                       op_size, &vmo);
       if (status != ZX_OK) {
         completer.Reply(status, bad_block_grown);
         return;
@@ -567,46 +570,47 @@ void SkipBlockDevice::WriteBytes(WriteBytesOperation op, WriteBytesCompleter::Sy
         .block_count = static_cast<uint32_t>(last_block - first_block + 1),
     };
     status = WriteLocked(std::move(rw_op), &bad_block_grown, {});
-  } else if (op.mode == WriteBytesMode::kEraseWrite) {
+  } else if (request->op.mode == WriteBytesMode::kEraseWrite) {
     // No partial read is necessary
     ReadWriteOperation rw_op = {
-        .vmo = std::move(op.vmo),
+        .vmo = std::move(request->op.vmo),
         .vmo_offset = 0,
         .block = static_cast<uint32_t>(first_block),
         .block_count = static_cast<uint32_t>(last_block - first_block + 1),
     };
     auto page_size = nand_info_.page_size;
-    PageRange page_range{op.offset / page_size, op.size / page_size};
+    PageRange page_range{request->op.offset / page_size, request->op.size / page_size};
     status = WriteLocked(std::move(rw_op), &bad_block_grown, page_range);
   }
 
   completer.Reply(status, bad_block_grown);
 }
 
-void SkipBlockDevice::WriteBytesWithoutErase(WriteBytesOperation op,
+void SkipBlockDevice::WriteBytesWithoutErase(WriteBytesWithoutEraseRequestView request,
                                              WriteBytesWithoutEraseCompleter::Sync& completer) {
   fbl::AutoLock al(&lock_);
 
-  if (auto status = ValidateOperationLocked(op); status != ZX_OK) {
+  if (auto status = ValidateOperationLocked(request->op); status != ZX_OK) {
     zxlogf(INFO, "skipblock: Operation param is invalid.\n");
     completer.Reply(status);
     return;
   }
 
-  if (op.vmo_offset % nand_info_.page_size) {
+  if (request->op.vmo_offset % nand_info_.page_size) {
     zxlogf(INFO, "skipblock: vmo_offset has to be page aligned for writing without erase");
     completer.Reply(ZX_ERR_INVALID_ARGS);
     return;
   }
 
-  const size_t page_offset = op.offset / nand_info_.page_size;
-  const size_t page_count = op.size / nand_info_.page_size;
+  const size_t page_offset = request->op.offset / nand_info_.page_size;
+  const size_t page_count = request->op.size / nand_info_.page_size;
   const uint64_t block_size = GetBlockSize();
-  const uint64_t first_block = op.offset / block_size;
-  const uint64_t last_block = fbl::round_up(op.offset + op.size, block_size) / block_size - 1;
+  const uint64_t first_block = request->op.offset / block_size;
+  const uint64_t last_block =
+      fbl::round_up(request->op.offset + request->op.size, block_size) / block_size - 1;
   ReadWriteOperation rw_op = {
-      .vmo = std::move(op.vmo),
-      .vmo_offset = op.vmo_offset / nand_info_.page_size,
+      .vmo = std::move(request->op.vmo),
+      .vmo_offset = request->op.vmo_offset / nand_info_.page_size,
       .block = static_cast<uint32_t>(first_block),
       .block_count = static_cast<uint32_t>(last_block - first_block + 1),
   };
