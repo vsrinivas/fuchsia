@@ -83,6 +83,9 @@ static bool test_in_timer_callback() {
   timer.Set(Deadline::no_slack(0), timer_callback_func, &event);
   ASSERT_EQ(event.Wait(), ZX_OK);
 
+  // Make sure the timer has fully completed prior to letting it go out of scope.
+  timer.Cancel();
+
   END_TEST;
 }
 
@@ -250,6 +253,9 @@ static bool test_interrupt_with_preempt_disable() {
   }
   EXPECT_EQ(preemption_state.preempts_pending(), cpu_num_to_mask(arch_curr_cpu_num()));
   preemption_state.PreemptReenable();
+
+  // Make sure the timer has fully completed prior to letting it go out of scope.
+  timer.Cancel();
 
   END_TEST;
 }

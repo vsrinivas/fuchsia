@@ -46,6 +46,9 @@ static int timer_do_one_thread(void* arg) {
 
   printf("got timer on cpu %u\n", arch_curr_cpu_num());
 
+  // Make sure the timer has fully completed before going out of scope.
+  timer.Cancel();
+
   return 0;
 }
 
@@ -104,6 +107,11 @@ static void timer_diag_coalescing(TimerSlack slack, const zx_time_t* deadline,
   // Wait for the timers to fire.
   while (timer_count.load() != count) {
     Thread::Current::Sleep(current_time() + ZX_MSEC(5));
+  }
+
+  // Cancel all the timers prior to going out of scope
+  for (size_t i = 0; i < count; i++) {
+    timers[i].Cancel();
   }
 }
 
@@ -341,8 +349,8 @@ static bool cancel_from_callback() {
   t.Set(deadline, timer_cancel_cb, &arg);
   while (!arg.timer_fired.load()) {
   }
-  ASSERT_FALSE(arg.result);
   ASSERT_FALSE(t.Cancel());
+  ASSERT_FALSE(arg.result);
   END_TEST;
 }
 
