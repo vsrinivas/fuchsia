@@ -12,7 +12,7 @@ using zx;
 struct PresentationTimeline {
     /// Initial presentation time of this piece of the piecewise-
     /// linear presentation timeline.
-    zx.time initial_presentation_time = 0;
+    zx.duration initial_presentation_time = 0;
 
     /// Initial reference time of this piece of the piecewise-
     /// linear presentation timeline.
@@ -34,16 +34,7 @@ struct PresentationTimeline {
 /// Expresses the relationship between the timeline represented by
 /// the timestamps in a stream and the presentation timeline.
 ///
-/// The `stream_interval` and `presentation_interval` establish the
-/// units of the `Timestamp` values in packets in a stream. For
-/// example, if the timestamps are in nanosecond units, the two
-/// intervals are equal. If the timestamps are frame indices in a
-/// 44.1k frames/second audio stream, `stream_interval` would be
-/// 44,100, and `presentation_interval` would be 1,000,000,000.
-/// The intervals constitute a ratio, so the values 441 and
-/// 10,000,000 would do just as well for the second example.
-///
-/// `initial_stream_time` and `initial_presentation_time` specify the
+/// `initial_timestamp` and `initial_presentation_time` specify the
 /// start of the desired segment of the stream. In most cases, the
 /// initial stream time is just the first timestamp in the stream,
 /// often zero.
@@ -54,21 +45,30 @@ struct PresentationTimeline {
 /// the stream at an I-framee. Based on the initial stream time given
 /// to the decoder, it knows what output frames to discard.
 struct StreamTimeline {
-    /// Stream time of the start of the desired segment of the stream.
-    int64 initial_stream_time = 0;
+    /// Timestamp of the start of the desired segment of the stream.
+    int64 initial_timestamp = 0;
 
     /// Presentation time of the start of the desired segment of the
     /// stream.
-    zx.time initial_presentation_time = 0;
-
-    /// Duration in the stream timeline corresponding to
-    /// `presentation_interval`.
-    uint64 stream_interval = 1000000000;
-
-    /// Duration in the presentation timeline corresponding to
-    /// `stream_interval`.
-    zx.duration presentation_interval = 1000000000;
+    zx.duration initial_presentation_time = 0;
 };
 
-/// Placeholder value for unspecified times.
-const zx.time TIME_UNSPECIFIED = 0x7fffffffffffffff;
+/// Describes units used in packet timestamps.
+///
+/// The `timestamp_interval` and `presentation_interval` establish the
+/// units of the `Timestamp` values in packets in a stream. For
+/// example, if the timestamps are in nanosecond units, the two
+/// intervals are equal. If the timestamps are frame indices in a
+/// 44.1k frames/second audio stream, `timestamp_interval` would be
+/// 44,100, and `presentation_interval` would be 1,000,000,000.
+/// The intervals constitute a ratio, so the values 441 and
+/// 10,000,000 would do just as well for the second example.
+struct TimestampUnits {
+    /// Duration in the stream timeline corresponding to
+    /// `presentation_interval`.
+    uint64 timestamp_interval = 1000000000;
+
+    /// Duration in the presentation timeline corresponding to
+    /// `timestamp_interval`.
+    zx.duration presentation_interval = 1000000000;
+};

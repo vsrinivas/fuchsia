@@ -38,7 +38,7 @@ protocol StreamSink {
     /// well as any pending `End` indications, and that this process
     /// should continue downstream. For example, a decoder that
     /// receives a call to this method on the `StreamSink` it
-    /// implements (the docoder’s input), the decoder should release
+    /// implements (the decoder’s input), the decoder should release
     /// all unreleased packets and `End` indications previously
     /// received on the input and call `Clear` on its output
     /// `StreamSink`.

@@ -30,6 +30,6 @@ enum ConnectionError {
     /// to call `GetBuffers` with a matching participant token.
     TIMED_OUT_WAITING_FOR_PARTICPANT = 6;
 
-    /// One or more buffers VMOs could not be mapped.
+    /// One or more buffer VMOs could not be mapped.
     FAILED_TO_MAP_BUFFER = 7;
 };

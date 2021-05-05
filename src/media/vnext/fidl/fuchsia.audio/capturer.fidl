@@ -10,13 +10,21 @@ using zx;
 
 /// Represents an audio capturer.
 protocol Capturer {
-    /// Connects a stream sink for the capturer with the indicate properties. Multiple stream sinks
-    /// may be used sequentially for a given capturer. This method responds when the connection is
-    /// ready or the connect attempt fails.
+    /// Connects a stream sink for the capturer with the indicate properties.
+    ///
+    /// + request `buffer_collection_token` a participant token for the buffer collection to be
+    ///   used for this connection.
+    /// + request `format` the format to be used for the is connection.
+    /// + request `timestamp_units` the units used for timestamps on packets in this stream.
+    /// + request `stream_sink` the client end of the `StreamSink` channel for this connection.
+    /// * error reason for connection failiure.
+    ///
+    /// Multiple stream sinks may be used sequentially for a given capturer. This method responds
+    /// when the connection is ready or the connect attempt fails.
     ConnectOutputStream(
         zx.handle:EVENTPAIR buffer_collection_token,
         fuchsia.mediastreams.AudioFormat format,
-        fuchsia.media2.StreamTimeline stream_timeline,
+        fuchsia.media2.TimestampUnits timestamp_units,
         fuchsia.media2.StreamSink stream_sink)
         -> () error fuchsia.media2.ConnectionError;
 
@@ -31,53 +39,42 @@ protocol Capturer {
     /// continue sending packets.
     -> OnOutputStreamSinkInvalid();
 
-    /// Starts the capturer's presentation timeline.
+    /// Starts the capturer.
     ///
-    /// + request `reference_time` the reference time at which the presentation timeline should
-    ///   start. A value of `fuchsia.media2.TIME_UNSPECIFIED` indicates it should start as soon as
-    ///   possible.
-    /// + request `presentation_time` the value of the capturer's presentation clock when
-    ///   presentation timeline starts. A value of `fuchsia.media2.TIME_UNSPECIFIED` indicates the\
-    ///   presentation timeline should start at its current value.
-    /// * response `reference_time` the reference time at which the presentation timeline actually
-    ///   started.
-    /// * response `presentation_time` the value of the capturer's presentation clock when the
-    ///   presentation timeline actually started.
+    /// + request `reference_time` the reference time at which capture should start. A value less
+    ///   than the current reference time (such as 0) indicates capture should start as soon
+    ///   as possible.
+    /// - response `reference_time` the reference time at which capture actually started.
     ///
-    /// If the capturer is currently running, this method does nothing except return the same values
+    /// If the capturer is currently running, this method does nothing except return the same value
     /// returned by the previous `Start` call. If a start or stop transition is currently scheduled
     /// when this method is called, that scheduled transition is first cancelled.
-    // TODO: flags? LOW_LATENCY, SUPPLY_DRIVEN
-    Start(zx.time reference_time, zx.time presentation_time)
-        -> (zx.time reference_time, zx.time presentation_time);
+    Start(zx.time reference_time) -> (zx.time reference_time);
 
-    /// Stops the capturer's presentation timeline.
+    /// Stops the capturer.
     ///
-    /// + request `presentation_time` the value of the capturer's presentation clock when
-    ///   presentation timeline should stop. A value of `fuchsia.media2.TIME_UNSPECIFIED` indicates
-    ///   the presentation timeline should stop as soon as possible.
-    /// * response `reference_time` the reference time at which the presentation timeline actually
-    ///   stopped.
-    /// * response `presentation_time` the value of the capturer's presentation clock when the
-    ///   presentation timeline actually stopped. This is the current presentation time until
-    ///   a subsequent call to `Start`.
+    /// + request `reference_time` the reference time at which capture should stop. A value less
+    ///   than the current reference time (such as 0) indicates capture should stop as soon
+    ///   as possible.
+    /// - response `reference_time` the reference time at which capture actually stopped.
     ///
     /// If the capturer is currently stopped, this method does nothing except return the same values
     /// returned by the previous `Stop` call or 0,0 if this capturer has never been started. If a
     /// start or stop transition is currently scheduled when this method is called, that scheduled
     /// transition is first cancelled.
-    Stop(zx.time presentation_time)
-        -> (zx.time reference_time, zx.time presentation_time);
+    Stop(zx.time reference_time) -> (zx.time reference_time);
 
-    /// Sets the reference clock to use for this capturer. All
-    /// ‘reference time’ values for this capturer are interpreted
-    /// with respect to this clock. If this method is never called,
-    /// the reference clock is the system’s monotonic clock.
+    /// Sets the reference clock to use for this capturer. All ‘reference time’ values for this
+    /// capturer are interprete with respect to this clock. If this method is never called, the
+    /// reference clock is the system’s monotonic clock.
+    // TODO: Does this belong in the factory method?
     SetReferenceClock(zx.handle:CLOCK reference_clock);
 
     // Binds the volume control for the capturer.
+    // TODO: Does this belong in the factory method?
     //BindVolumeControl(request<VolumeControl> request);
 
     // Binds the gain control for the capturer.
+    // TODO: Does this belong in the factory method?
     //BindGainControl(request<GainControl> request);
 };
