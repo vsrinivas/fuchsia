@@ -179,43 +179,44 @@ void DisplaySwapchain::InitializeFrameRecords() {
   }
 }
 
-void DisplaySwapchain::ResetFrameRecord(std::unique_ptr<FrameRecord>& frame_record) {
-  if (frame_record) {
-    // Were timings finalized?
-    if (auto timings = frame_record->frame_timings) {
-      FX_CHECK(timings->finalized());
-      frame_record->frame_timings.reset();
-    }
+void DisplaySwapchain::ResetFrameRecord(const std::unique_ptr<FrameRecord>& frame_record) {
+  if (!frame_record)
+    return;
 
-    // We expect the retired event to already have been signaled.  Verify this without waiting.
-    if (frame_record->retired_event.wait_one(ZX_EVENT_SIGNALED, zx::time(), nullptr) != ZX_OK) {
-      FX_LOGS(ERROR) << "DisplaySwapchain::DrawAndPresentFrame rendering into in-use backbuffer";
-    }
-
-    // Reset .render_finished_event and .retired_event
-    //
-    // As noted below in ::DrawAndPresentFrame(), there must not already exist a
-    // pending record.  If there is, it indicates an error in the FrameScheduler
-    // logic.
-    frame_record->render_finished_event.signal(ZX_EVENT_SIGNALED, 0);
-    frame_record->retired_event.signal(ZX_EVENT_SIGNALED, 0);
-
-    // Return buffer to the pool
-    if (frame_record->buffer) {
-      if (frame_record->use_protected_memory) {
-        protected_swapchain_buffers_.Put(frame_record->buffer);
-      } else {
-        swapchain_buffers_.Put(frame_record->buffer);
-      }
-      frame_record->buffer = nullptr;
-    }
-
-    // Reset presented flag
-    frame_record->presented = false;
+  // Were timings finalized?
+  if (auto timings = frame_record->frame_timings) {
+    FX_CHECK(timings->finalized());
+    frame_record->frame_timings.reset();
   }
+
+  // We expect the retired event to already have been signaled.  Verify this without waiting.
+  if (frame_record->retired_event.wait_one(ZX_EVENT_SIGNALED, zx::time(), nullptr) != ZX_OK) {
+    FX_LOGS(ERROR) << "DisplaySwapchain::DrawAndPresentFrame rendering into in-use backbuffer";
+  }
+
+  // Reset .render_finished_event and .retired_event
+  //
+  // As noted below in ::DrawAndPresentFrame(), there must not already exist a
+  // pending record.  If there is, it indicates an error in the FrameScheduler
+  // logic.
+  frame_record->render_finished_event.signal(ZX_EVENT_SIGNALED, 0);
+  frame_record->retired_event.signal(ZX_EVENT_SIGNALED, 0);
+
+  // Return buffer to the pool
+  if (frame_record->buffer) {
+    if (frame_record->use_protected_memory) {
+      protected_swapchain_buffers_.Put(frame_record->buffer);
+    } else {
+      swapchain_buffers_.Put(frame_record->buffer);
+    }
+    frame_record->buffer = nullptr;
+  }
+
+  // Reset presented flag
+  frame_record->presented = false;
 }
 
-void DisplaySwapchain::UpdateFrameRecord(std::unique_ptr<FrameRecord>& frame_record,
+void DisplaySwapchain::UpdateFrameRecord(const std::unique_ptr<FrameRecord>& frame_record,
                                          const std::shared_ptr<FrameTimings>& frame_timings,
                                          size_t swapchain_index) {
   FX_DCHECK(frame_timings);
@@ -248,6 +249,7 @@ bool DisplaySwapchain::DrawAndPresentFrame(const std::shared_ptr<FrameTimings>& 
   // an error in the FrameScheduler logic (or somewhere similar), which should
   // not have scheduled another frame when there are no framebuffers available.
   auto& frame_record = frame_records_[next_frame_index_];
+  FX_DCHECK(frame_record->presented);
 
   // Reset frame record.
   ResetFrameRecord(frame_record);
@@ -392,7 +394,9 @@ void DisplaySwapchain::OnVsync(zx::time timestamp, std::vector<uint64_t> image_i
   uint64_t image_id = image_ids[0];
 
   bool match = false;
+  size_t matches_checked = 0;
   while (outstanding_frame_count_ && !match) {
+    ++matches_checked;
     auto& record = frame_records_[presented_frame_idx_];
     match = record->buffer->id == image_id;
 
@@ -424,7 +428,9 @@ void DisplaySwapchain::OnVsync(zx::time timestamp, std::vector<uint64_t> image_i
       outstanding_frame_count_--;
     }
   }
-  FX_DCHECK(match) << "Unhandled vsync image_id=" << image_id;
+  FX_DCHECK(match) << "Unhandled vsync image_id=" << image_id
+                   << " matches_checked=" << matches_checked
+                   << " presented_frame_idx_=" << presented_frame_idx_;
 }
 
 void DisplaySwapchain::Flip(uint64_t layer_id, uint64_t buffer, uint64_t render_finished_event_id,

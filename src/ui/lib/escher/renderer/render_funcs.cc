@@ -100,7 +100,6 @@ void RenderFuncs::ObtainDepthAndMsaaTextures(
   if (!realloc_textures) {
     return;
   }
-
   vk::ImageUsageFlags image_usage = use_transient_attachment
                                         ? vk::ImageUsageFlagBits::eTransientAttachment
                                         : vk::ImageUsageFlags();
@@ -112,12 +111,23 @@ void RenderFuncs::ObtainDepthAndMsaaTextures(
     memory_properties |= vk::MemoryPropertyFlagBits::eProtected;
   }
 
+  // Most times, we shouldn't need to reallocate.  If this becomes logspam, it is indicative of
+  // other problems.
+  FX_LOGS(INFO) << "RenderFuncs::ObtainDepthAndMsaaTextures() width=" << width
+                << " height=" << height << " sample_count=" << sample_count
+                << " mem_props=" << vk::to_string(memory_properties)
+                << " depth_stencil_format=" << vk::to_string(depth_stencil_format)
+                << " msaa_format=" << vk::to_string(msaa_format);
+
   // Need to generate a new depth buffer.
   {
     TRACE_DURATION("gfx", "RenderFuncs::ObtainDepthAndMsaaTextures (new depth)");
     depth_texture_inout = escher->NewAttachmentTexture(
         depth_stencil_format, width, height, sample_count, vk::Filter::eLinear, image_usage,
         /*use_unnormalized_coordinates=*/false, memory_properties);
+    if (!depth_texture_inout) {
+      FX_LOGS(ERROR) << "Failed to allocate depth texture.";
+    }
   }
   if (sample_count == 1) {
     msaa_texture_inout = nullptr;
@@ -126,6 +136,9 @@ void RenderFuncs::ObtainDepthAndMsaaTextures(
     msaa_texture_inout = escher->NewAttachmentTexture(
         msaa_format, width, height, sample_count, vk::Filter::eLinear, image_usage,
         /*use_unnormalized_coordinates=*/false, memory_properties);
+    if (!msaa_texture_inout) {
+      FX_LOGS(ERROR) << "Failed to allocate msaa texture.";
+    }
 
     // Don't transition layout for transient attachment images.
     if (!use_transient_attachment) {

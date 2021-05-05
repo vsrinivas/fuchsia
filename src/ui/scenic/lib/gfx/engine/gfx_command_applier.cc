@@ -1601,9 +1601,8 @@ ResourcePtr GfxCommandApplier::CreateDisplayCompositor(
       swapchain_image_count = val.GetInt();
       FX_CHECK(swapchain_image_count > 0);
     }
-
-    FX_LOGS(INFO) << "Scenic swapchain_image_count: " << swapchain_image_count;
   }
+  FX_LOGS(INFO) << "Scenic swapchain_image_count: " << swapchain_image_count;
 
   auto swapchain = SwapchainFactory::CreateDisplaySwapchain(
       swapchain_image_count, display, command_context->sysmem, command_context->display_manager,

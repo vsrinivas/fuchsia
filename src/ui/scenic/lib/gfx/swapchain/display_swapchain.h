@@ -80,7 +80,11 @@ class DisplaySwapchain : public Swapchain {
 
     std::unique_ptr<async::Wait> render_finished_wait;
 
-    bool presented = false;
+    // When we "recycle" frame records, we expect them to have already been presented.  This allows
+    // us to detect whether we are attempting to recycle an "in-flight" record, i.e. one which has
+    // not yet been presented.  In order to maintain this invariant, we initialize new records to be
+    // "already presented".
+    bool presented = true;
     BufferPool::Framebuffer* buffer = nullptr;
     bool use_protected_memory = false;
     // clang-format on
@@ -93,10 +97,10 @@ class DisplaySwapchain : public Swapchain {
   void InitializeFrameRecords();
 
   // Resets next retired frame record
-  void ResetFrameRecord(std::unique_ptr<FrameRecord>& frame_record);
+  void ResetFrameRecord(const std::unique_ptr<FrameRecord>& frame_record);
 
   // Updates the previously retired frame record
-  void UpdateFrameRecord(std::unique_ptr<FrameRecord>& frame_record,
+  void UpdateFrameRecord(const std::unique_ptr<FrameRecord>& frame_record,
                          const std::shared_ptr<FrameTimings>& frame_timings,
                          size_t swapchain_index);
 
