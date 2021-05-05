@@ -27,7 +27,7 @@ const OSCILLATOR_ERROR_STD_DEV_PPM: u64 = 15;
 /// The maximum allowed frequency error away from the nominal 1ns UTC == 1ns monotonic.
 // TODO(jsankey): This should shortly be increased to a ppm of 2*OSCILLATOR_ERROR, but we start off
 //                more conservative to limit potential impact of any frequency algorithm problems.
-const MAX_FREQUENCY_ERROR: f64 = 5f64 /*value in ppm*/ / 1_000_000f64;
+const MAX_FREQUENCY_ERROR: f64 = 10f64 /*value in ppm*/ / 1_000_000f64;
 
 /// The maximum change in Kalman filter estimate that can occur before we discard any previous
 /// samples being used as part of a long term frequency assessment. This is similar to the value
@@ -190,10 +190,10 @@ mod test {
 
     #[fuchsia::test]
     fn clamp_frequency_test() {
-        assert_near!(clamp_frequency(-452.0), 0.999995, 1e-9);
-        assert_near!(clamp_frequency(0.99), 0.999995, 1e-9);
+        assert_near!(clamp_frequency(-452.0), 0.99999, 1e-9);
+        assert_near!(clamp_frequency(0.99), 0.99999, 1e-9);
         assert_near!(clamp_frequency(1.0000001), 1.0000001, 1e-9);
-        assert_near!(clamp_frequency(1.01), 1.000005, 1e-9);
+        assert_near!(clamp_frequency(1.01), 1.00001, 1e-9);
     }
 
     #[fuchsia::test]
