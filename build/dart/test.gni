@@ -37,6 +37,9 @@ import("//build/testing/test_spec.gni")
 #       arguments are inserted ahead of any arguments given to the invocation,
 #       like the program/args entry in a component manifest.
 #
+#   null_safe
+#     Optional: A flag that enables null safety check in dart libraries.
+#
 template("dart_test") {
   assert(defined(invoker.sources), "dart_test() must specify sources")
 
@@ -62,6 +65,7 @@ template("dart_test") {
                              "deps",
                              "sources",
                              "hermetic_deps",
+                             "null_safe",
                            ])
 
     # We want to mimic the package_root being in place of the source_dir. Dart

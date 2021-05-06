@@ -25,6 +25,9 @@ import("//build/testing/test_spec.gni")
 #   disable_analysis (optional)
 #     Prevents analysis from being run on this target.
 #
+#   null_safe (optional)
+#     A flag that enables null safety check in dart libraries.
+#
 # Example of usage:
 #
 #   flutter_test("baz_test") {
@@ -58,7 +61,11 @@ if (current_toolchain == dart_toolchain) {
     }
 
     dart_library(_library_target_name) {
-      forward_variables_from(invoker, [ "disable_analysis" ])
+      forward_variables_from(invoker,
+                             [
+                               "disable_analysis",
+                               "null_safe",
+                             ])
 
       package_name = _main_target_name
 

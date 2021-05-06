@@ -40,6 +40,9 @@ import("//build/flutter/flutter_component.gni")
 #   resources (optional)
 #     An optional list of resources.
 #
+#   null_safe (optional)
+#     A flag that enables null safety check in dart libraries.
+#
 #   deps (optional)
 #     List of labels for Dart libraries this library depends on.
 #
@@ -92,6 +95,10 @@ template("flutter_app") {
   if (defined(invoker.non_dart_deps)) {
     _deps += invoker.non_dart_deps
   }
+  _null_safe = false
+  if (defined(invoker.null_safe) && invoker.null_safe) {
+    _null_safe = true
+  }
 
   resource_gn_labels = []
   if (defined(invoker.resources)) {
@@ -113,6 +120,7 @@ template("flutter_app") {
     sources = _sources
     source_dir = _source_dir
     deps = _deps + resource_gn_labels
+    null_safe = _null_safe
   }
 
   flutter_component_gn_label = target_name + "_flutter_component"
