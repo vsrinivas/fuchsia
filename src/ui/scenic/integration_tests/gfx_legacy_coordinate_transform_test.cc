@@ -10,7 +10,10 @@
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <zircon/status.h>
 
+#include <map>
 #include <memory>
+#include <string>
+#include <vector>
 
 #include <gtest/gtest.h>
 
@@ -35,16 +38,19 @@ using fuchsia::ui::input::PointerEventPhase;
 using fuchsia::ui::input::PointerEventType;
 static constexpr fuchsia::ui::gfx::ViewProperties k5x5x1 = {.bounding_box = {.max = {5, 5, 1}}};
 
-const std::map<std::string, std::string> kServices = {
-    {"fuchsia.scenic.allocation.Allocator", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
-    {"fuchsia.ui.scenic.Scenic", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
-    {"fuchsia.ui.views.ViewRefInstalled", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
-    {"fuchsia.hardware.display.Provider",
-     "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx"},
-};
+const std::map<std::string, std::string> LocalServices() {
+  return {
+      {"fuchsia.scenic.allocation.Allocator", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
+      {"fuchsia.ui.scenic.Scenic", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
+      {"fuchsia.ui.views.ViewRefInstalled", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
+      {"fuchsia.hardware.display.Provider",
+       "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx"}};
+}
 
 // Allow these global services.
-const std::string kParentServices[] = {"fuchsia.vulkan.loader.Loader", "fuchsia.sysmem.Allocator"};
+const std::vector<std::string> GlobalServices() {
+  return {"fuchsia.vulkan.loader.Loader", "fuchsia.sysmem.Allocator"};
+}
 
 using fuchsia::ui::views::ViewRef;
 using WatchResult = fuchsia::ui::views::ViewRefInstalled_Watch_Result;
@@ -139,12 +145,12 @@ class GfxLegacyCoordinateTransformTest : public sys::testing::TestWithEnvironmen
   // shadows but calls |TestWithEnvironment::CreateServices()|.
   std::unique_ptr<sys::testing::EnvironmentServices> CreateServices() {
     auto services = TestWithEnvironment::CreateServices();
-    for (const auto& [name, url] : kServices) {
+    for (const auto& [name, url] : LocalServices()) {
       const zx_status_t is_ok = services->AddServiceWithLaunchInfo({.url = url}, name);
       FX_CHECK(is_ok == ZX_OK) << "Failed to add service " << name;
     }
 
-    for (const auto& service : kParentServices) {
+    for (const auto& service : GlobalServices()) {
       const zx_status_t is_ok = services->AllowParentService(service);
       FX_CHECK(is_ok == ZX_OK) << "Failed to add service " << service;
     }

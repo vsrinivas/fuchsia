@@ -57,7 +57,7 @@ class SceneGraph final : public ViewFocuserRegistry {
   // Returns the compositor requested, or nullptr if it does not exist.
   CompositorWeakPtr GetCompositor(GlobalId compositor_id) const;
 
-  void OnNewFocusedView(zx_koid_t newly_focused_koid);
+  void OnNewFocusedView(zx_koid_t old_focus, zx_koid_t new_focus);
 
   //
   // View tree functions
@@ -129,8 +129,6 @@ class SceneGraph final : public ViewFocuserRegistry {
   // Lifetime of ViewFocuserEndpoint is tied to owning Session's lifetime.
   // An early disconnect of ViewFocuserEndpoint is okay.
   std::unordered_map<SessionId, ViewFocuserEndpoint> view_focuser_endpoints_;
-
-  zx_koid_t currently_focused_koid_ = ZX_KOID_INVALID;
 
   fxl::WeakPtrFactory<SceneGraph> weak_factory_;  // Must be last.
 };

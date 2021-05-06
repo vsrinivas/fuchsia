@@ -8,6 +8,23 @@
 
 namespace focus {
 
+namespace {
+std::string ToString(const std::vector<zx_koid_t>& chain) {
+  std::string value;
+  for (zx_koid_t koid : chain) {
+    value += std::to_string(koid);
+    value += ", ";
+  }
+  return value;
+}
+zx_koid_t FocusKoidOf(const std::vector<zx_koid_t>& chain) {
+  if (chain.empty()) {
+    return ZX_KOID_INVALID;
+  }
+  return chain.back();
+}
+}  // namespace
+
 FocusManager::FocusManager(inspect::Node inspect_node, LegacyFocusListener legacy_focus_listener)
     : focus_chain_listener_registry_(this),
       legacy_focus_listener_(std::move(legacy_focus_listener)),
@@ -70,6 +87,8 @@ void FocusManager::OnNewViewTreeSnapshot(std::shared_ptr<const view_tree::Snapsh
   FX_DCHECK(snapshot);
   snapshot_ = std::move(snapshot);
   RepairFocus();
+  // TODO(fxbug.dev/76138): This has linear cost. Look at making it cheaper.
+  view_ref_focused_registry_.Unregister(*snapshot_.get());
 }
 
 void FocusManager::Register(
@@ -85,15 +104,28 @@ void FocusManager::Register(
   DispatchFocusChainTo(focus_chain_listeners_.at(id));
 }
 
-void FocusManager::DispatchFocusChainTo(const fuchsia::ui::focus::FocusChainListenerPtr& listener) {
+void FocusManager::RegisterViewRefFocused(
+    zx_koid_t koid, fidl::InterfaceRequest<fuchsia::ui::views::ViewRefFocused> vrf) {
+  view_ref_focused_registry_.Register(koid, std::move(vrf));
+}
+
+void FocusManager::DispatchFocusChainTo(
+    const fuchsia::ui::focus::FocusChainListenerPtr& listener) const {
   listener->OnFocusChange(CloneFocusChain(), [] { /* No flow control yet. */ });
 }
 
-void FocusManager::DispatchFocusChain() {
+void FocusManager::DispatchFocusChain() const {
   for (auto& [_, listener] : focus_chain_listeners_) {
     DispatchFocusChainTo(listener);
   }
-  legacy_focus_listener_(focus_chain_.empty() ? ZX_KOID_INVALID : focus_chain_.back());
+}
+
+void FocusManager::DispatchFocusEvents(zx_koid_t old_focus, zx_koid_t new_focus) {
+  // Send over fuchsia.ui.scenic.SessionListener ("GFX").
+  legacy_focus_listener_(old_focus, new_focus);
+
+  // Send over fuchsia.ui.views.ViewRefFocused.
+  view_ref_focused_registry_.UpdateFocus(old_focus, new_focus);
 }
 
 fuchsia::ui::views::ViewRef FocusManager::CloneViewRefOf(zx_koid_t koid) const {
@@ -155,10 +187,16 @@ void FocusManager::SetFocus(zx_koid_t koid) {
   SetFocusChain(std::move(new_focus_chain));
 }
 
-void FocusManager::SetFocusChain(std::vector<zx_koid_t> new_focus_chain) {
-  if (new_focus_chain != focus_chain_) {
-    focus_chain_ = std::move(new_focus_chain);
+void FocusManager::SetFocusChain(std::vector<zx_koid_t> update) {
+  if (update != focus_chain_) {
+    FX_VLOGS(1) << "Focus chain update: " <<  ToString(update);
+    const zx_koid_t old_focus = FocusKoidOf(focus_chain_);
+    const zx_koid_t new_focus = FocusKoidOf(update);
+
+    focus_chain_ = std::move(update);
+
     DispatchFocusChain();
+    DispatchFocusEvents(old_focus, new_focus);
   }
 }
 

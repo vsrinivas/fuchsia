@@ -32,6 +32,12 @@ void Scenic::SetViewFocuserRegistry(fxl::WeakPtr<gfx::ViewFocuserRegistry> view_
   view_focuser_registry_ = view_focuser_registry;
 }
 
+void Scenic::SetViewRefFocusedRegisterFunction(
+    fit::function<void(zx_koid_t, fidl::InterfaceRequest<fuchsia::ui::views::ViewRefFocused>)>
+        vrf_register_function) {
+  view_ref_focused_register_ = std::move(vrf_register_function);
+}
+
 void Scenic::SetFrameScheduler(const std::shared_ptr<scheduling::FrameScheduler>& frame_scheduler) {
   FX_DCHECK(!frame_scheduler_) << "Error: FrameScheduler already set";
   FX_DCHECK(frame_scheduler) << "Error: No FrameScheduler provided";
@@ -137,17 +143,34 @@ void Scenic::CreateSessionImmediately(SessionEndpoints endpoints) {
 
   std::vector<fit::function<void(zx_koid_t)>> on_view_created_callbacks;
 
-  if (endpoints.has_view_focuser() && endpoints.view_focuser() && view_focuser_registry_) {
-    view_focuser_registry_->RegisterViewFocuser(session_id,
-                                                std::move(*endpoints.mutable_view_focuser()));
-  } else if (endpoints.has_view_focuser() && !endpoints.view_focuser()) {
-    FX_VLOGS(2) << "Invalid fuchsia.ui.views.Focuser request.";
-  } else if (!view_focuser_registry_) {
-    FX_LOGS(ERROR) << "Failed to register fuchsia.ui.views.Focuser request.";
+  if (endpoints.has_view_focuser()) {
+    if (endpoints.view_focuser() && view_focuser_registry_) {
+      view_focuser_registry_->RegisterViewFocuser(session_id,
+                                                  std::move(*endpoints.mutable_view_focuser()));
+    } else if (!endpoints.view_focuser()) {
+      FX_VLOGS(2) << "Invalid fuchsia.ui.views.Focuser request.";
+    } else if (!view_focuser_registry_) {
+      FX_LOGS(ERROR) << "Failed to register fuchsia.ui.views.Focuser request.";
+    }
   }
 
-  // TODO(fxbug.dev/52626): Implement handling for fuchsia.ui.views.ViewRefFocused.
-  // TODO(fxbug.dev/64379): Implement handling for fuchsia.ui.pointer.MouseSource.
+  if (endpoints.has_view_ref_focused()) {
+    if (endpoints.view_ref_focused() && view_ref_focused_register_) {
+      on_view_created_callbacks.emplace_back(
+          [this, vrf = std::move(*endpoints.mutable_view_ref_focused())](
+              zx_koid_t view_ref_koid) mutable {
+            FX_DCHECK(view_ref_focused_register_);
+            view_ref_focused_register_(view_ref_koid, std::move(vrf));
+          });
+    } else if (!endpoints.view_ref_focused()) {
+      FX_VLOGS(2) << "Invalid fuchsia.ui.views.ViewRefFocused request.";
+    } else if (!view_ref_focused_register_) {
+      FX_LOGS(ERROR) << "Failed to register fuchsia.ui.views.ViewRefFocused request.";
+    }
+  }
+
+  // TODO(fxbug.dev/64379): Implement handling for fuchsia.ui.pointer.TouchSource and MouseSource.
+
   {
     const auto it = dispatchers.find(System::kGfx);
     if (it != dispatchers.end()) {

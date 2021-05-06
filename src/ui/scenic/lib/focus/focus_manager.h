@@ -13,6 +13,7 @@
 #include <unordered_map>
 
 #include "lib/inspect/cpp/inspect.h"
+#include "src/ui/scenic/lib/focus/view_ref_focused_registry.h"
 #include "src/ui/scenic/lib/view_tree/snapshot_types.h"
 
 namespace focus {
@@ -32,14 +33,14 @@ enum class FocusChangeStatus {
 // Callback that should receive either the focused koid or ZX_KOID_INVALID every time the focus
 // chain updates. Used by GFX to send focus events over the SessionListener.
 // TODO(fxbug.dev/64376): Remove when we remove GFX input.
-using LegacyFocusListener = fit::function<void(zx_koid_t)>;
+using LegacyFocusListener = fit::function<void(zx_koid_t, zx_koid_t)>;
 
 // Class for tracking focus state.
 class FocusManager final : public fuchsia::ui::focus::FocusChainListenerRegistry {
  public:
   explicit FocusManager(
       inspect::Node inspect_node = inspect::Node(),
-      LegacyFocusListener legacy_focus_listener = [](auto) {});
+      LegacyFocusListener legacy_focus_listener = [](auto, auto) {});
   FocusManager(FocusManager&& other) = delete;  // Disallow moving.
 
   void Publish(sys::ComponentContext& component_context);
@@ -60,6 +61,9 @@ class FocusManager final : public fuchsia::ui::focus::FocusChainListenerRegistry
 
   const std::vector<zx_koid_t>& focus_chain() { return focus_chain_; }
 
+  void RegisterViewRefFocused(zx_koid_t koid,
+                              fidl::InterfaceRequest<fuchsia::ui::views::ViewRefFocused> vrf);
+
  private:
   // Ensure the focus chain is valid; preserve as much of the existing focus chain as possible.
   // - If the focus chain is still valid, do nothing.
@@ -72,17 +76,22 @@ class FocusManager final : public fuchsia::ui::focus::FocusChainListenerRegistry
   // Transfers focus to |koid| and generates the new focus chain.
   //  - |koid| must be allowed to receive focus and must exist in the current view tree snapshot.
   //  - If the |snapshot_| is empty, then |koid| is allowed to be ZX_KOID_INVALID and will generate
-  // an empty focus_chain_.
+  //    an empty focus_chain_.
   void SetFocus(zx_koid_t koid);
 
-  // Replaces the focus chain with a new one. And if the new focus chain is different from the old
-  // one it also sends it out to all listeners.
-  void SetFocusChain(std::vector<zx_koid_t> new_focus_chain);
+  // Replaces the focus chain with a new one. Additionally, if the new focus chain is different from
+  // the old one:
+  // - send new focus chain to all FocusChainListeners.
+  // - send focus gained/lost to all ViewRefFocused-type listeners.
+  void SetFocusChain(std::vector<zx_koid_t> update);
 
   // Dispatches the current focus chain to all registered listeners.
-  void DispatchFocusChain();
+  void DispatchFocusChain() const;
   // Dispatches the current focus chain to |listener|.
-  void DispatchFocusChainTo(const fuchsia::ui::focus::FocusChainListenerPtr& listener);
+  void DispatchFocusChainTo(const fuchsia::ui::focus::FocusChainListenerPtr& listener) const;
+
+  // Dispatches focus events to view clients.
+  void DispatchFocusEvents(zx_koid_t old_focus, zx_koid_t new_focus);
 
   fuchsia::ui::views::ViewRef CloneViewRefOf(zx_koid_t koid) const;
   fuchsia::ui::focus::FocusChain CloneFocusChain() const;
@@ -98,6 +107,9 @@ class FocusManager final : public fuchsia::ui::focus::FocusChainListenerRegistry
 
   // TODO(fxbug.dev/64376): Remove when we remove GFX input.
   const LegacyFocusListener legacy_focus_listener_;
+
+  // Manages endpoints for fuchsia.ui.views.ViewRefFocused.
+  ViewRefFocusedRegistry view_ref_focused_registry_;
 
   inspect::Node inspect_node_;
   inspect::LazyNode lazy_;

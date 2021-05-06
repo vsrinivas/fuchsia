@@ -24,10 +24,10 @@
 #define EXPECT_VIEW_REF_MATCH(view_ref1, view_ref2) \
   EXPECT_EQ(utils::ExtractKoid(view_ref1), utils::ExtractKoid(view_ref2))
 
-// This test exercises the focus protocols implemented by Scenic (fuchsia.ui.focus.FocusChain and
-// fuchsia.ui.views.Focuser) in the context of the GFX compositor interface.
-// The geometry is not important in this test, so we use the following two-node (plus a scene node)
-// tree topology:
+// This test exercises the focus protocols implemented by Scenic (fuchsia.ui.focus.FocusChain,
+// fuchsia.ui.views.Focuser, fuchsia.ui.views.ViewRefFocused) in the context of the GFX compositor
+// interface.  The geometry is not important in this test, so we use the following two-node (plus a
+// scene node) tree topology:
 //   (scene)
 //      |
 //    parent
@@ -35,17 +35,20 @@
 //    child
 namespace integration_tests {
 
-const std::map<std::string, std::string> kServices = {
-    {"fuchsia.scenic.allocation.Allocator", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
-    {"fuchsia.ui.scenic.Scenic", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
-    {"fuchsia.ui.focus.FocusChainListenerRegistry",
-     "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
-    {"fuchsia.hardware.display.Provider",
-     "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx"},
-};
+const std::map<std::string, std::string> LocalServices() {
+  return {
+      {"fuchsia.scenic.allocation.Allocator", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
+      {"fuchsia.ui.scenic.Scenic", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
+      {"fuchsia.ui.focus.FocusChainListenerRegistry",
+       "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
+      {"fuchsia.hardware.display.Provider",
+       "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx"}};
+}
 
-// Allow these global services.
-const std::string kParentServices[] = {"fuchsia.vulkan.loader.Loader", "fuchsia.sysmem.Allocator"};
+// Allow these global services from outside the test environment.
+const std::vector<std::string> GlobalServices() {
+  return {"fuchsia.vulkan.loader.Loader", "fuchsia.sysmem.Allocator"};
+}
 
 // "Long enough" time to wait before assuming focus chain updates won't arrive.
 // Should not be used when actually expecting an update to occur.
@@ -123,8 +126,11 @@ class GfxFocusIntegrationTest : public sys::testing::TestWithEnvironment,
     // Set up root view.
     fuchsia::ui::scenic::SessionEndpoints endpoints;
     endpoints.set_view_focuser(root_focuser_.NewRequest());
+    endpoints.set_view_ref_focused(root_focused_.NewRequest());
     root_session_ = std::make_unique<RootSession>(scenic(), std::move(endpoints));
-    root_session_->session.set_error_handler([](auto) { FAIL() << "Root session terminated."; });
+    root_session_->session.set_error_handler([](zx_status_t status) {
+      FAIL() << "Root session terminated: " << zx_status_get_string(status);
+    });
     BlockingPresent(root_session_->session);
 
     // Set up focus chain listener.
@@ -160,12 +166,12 @@ class GfxFocusIntegrationTest : public sys::testing::TestWithEnvironment,
   // shadows but calls |TestWithEnvironment::CreateServices()|.
   std::unique_ptr<sys::testing::EnvironmentServices> CreateServices() {
     auto services = TestWithEnvironment::CreateServices();
-    for (const auto& [name, url] : kServices) {
+    for (const auto& [name, url] : LocalServices()) {
       const zx_status_t is_ok = services->AddServiceWithLaunchInfo({.url = url}, name);
       FX_CHECK(is_ok == ZX_OK) << "Failed to add service " << name;
     }
 
-    for (const auto& service : kParentServices) {
+    for (const auto& service : GlobalServices()) {
       const zx_status_t is_ok = services->AllowParentService(service);
       FX_CHECK(is_ok == ZX_OK) << "Failed to add service " << service;
     }
@@ -174,6 +180,7 @@ class GfxFocusIntegrationTest : public sys::testing::TestWithEnvironment,
   }
 
   fuchsia::ui::views::FocuserPtr root_focuser_;
+  fuchsia::ui::views::ViewRefFocusedPtr root_focused_;
   std::unique_ptr<RootSession> root_session_;
 
   bool RequestFocusChange(fuchsia::ui::views::FocuserPtr& view_focuser_ptr, const ViewRef& target) {
@@ -352,6 +359,50 @@ TEST_F(GfxFocusIntegrationTest, ViewFocuserDisconnectDoesNotKillSession) {
       [](zx_status_t) { FAIL() << "Client shut down unexpectedly."; });
 
   root_focuser_.Unbind();
+
+  // Wait "long enough" and observe that the session channel doesn't close.
+  RunLoopWithTimeout(kWaitTime);
+}
+
+TEST_F(GfxFocusIntegrationTest, ViewRefFocused_HappyCase) {
+  std::optional<bool> root_focused;
+  root_focused_->Watch([&root_focused](auto update) {
+      ASSERT_TRUE(update.has_focused());
+      root_focused = update.focused();
+  });
+
+  RunLoopUntilIdle();
+  EXPECT_FALSE(root_focused.has_value());
+
+  // Create the root View.
+  auto [root_view_token, root_view_holder_token] = scenic::ViewTokenPair::New();
+  auto [root_control_ref, root_view_ref] = scenic::ViewRefPair::New();
+  ViewRef root_view_ref_copy;
+  fidl::Clone(root_view_ref, &root_view_ref_copy);
+  scenic::View root_view(&root_session_->session, std::move(root_view_token),
+                         std::move(root_control_ref), std::move(root_view_ref_copy), "root_view");
+  AttachToScene(std::move(root_view_holder_token));
+  BlockingPresent(root_session_->session);
+
+  ASSERT_TRUE(RequestFocusChange(root_focuser_, root_view_ref));
+
+  RunLoopUntil([&root_focused] { return root_focused.has_value(); });
+  EXPECT_TRUE(root_focused.value());
+  EXPECT_TRUE(root_focused_);
+}
+
+TEST_F(GfxFocusIntegrationTest, ViewRefFocusedDisconnectedWhenSessionDies) {
+  EXPECT_TRUE(root_focused_);
+  root_session_.reset();
+  RunLoopUntil([this] { return !root_focused_; });  // Succeeds or times out.
+  EXPECT_FALSE(root_focused_);
+}
+
+TEST_F(GfxFocusIntegrationTest, ViewRefFocusedDisconnectDoesNotKillSession) {
+  root_session_->session.set_error_handler(
+      [](zx_status_t) { FAIL() << "Client shut down unexpectedly."; });
+
+  root_focused_.Unbind();
 
   // Wait "long enough" and observe that the session channel doesn't close.
   RunLoopWithTimeout(kWaitTime);

@@ -105,6 +105,10 @@ class Scenic final : public fuchsia::ui::scenic::Scenic, public scheduling::Sess
 
   void SetViewFocuserRegistry(fxl::WeakPtr<gfx::ViewFocuserRegistry> view_focuser_registry);
 
+  void SetViewRefFocusedRegisterFunction(
+      fit::function<void(zx_koid_t, fidl::InterfaceRequest<fuchsia::ui::views::ViewRefFocused>)>
+          vrf_register_function);
+
   void SetFrameScheduler(const std::shared_ptr<scheduling::FrameScheduler>& frame_scheduler);
 
   void InitializeSnapshotService(std::unique_ptr<fuchsia::ui::scenic::internal::Snapshot> snapshot);
@@ -136,6 +140,8 @@ class Scenic final : public fuchsia::ui::scenic::Scenic, public scheduling::Sess
   TakeScreenshotDelegateDeprecated* screenshot_delegate_ = nullptr;
 
   fxl::WeakPtr<gfx::ViewFocuserRegistry> view_focuser_registry_;
+  fit::function<void(zx_koid_t, fidl::InterfaceRequest<fuchsia::ui::views::ViewRefFocused>)>
+      view_ref_focused_register_;
 
  protected:
   std::unique_ptr<fuchsia::ui::scenic::internal::Snapshot> snapshot_;

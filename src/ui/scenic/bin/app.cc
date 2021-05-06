@@ -338,11 +338,15 @@ void App::InitializeInput() {
       });
   FX_DCHECK(input_);
 
-  focus_manager_ =
-      std::make_unique<focus::FocusManager>(scenic_->inspect_node()->CreateChild("FocusManager"),
-                                            /*legacy_focus_listener*/ [this](zx_koid_t koid) {
-                                              engine_->scene_graph()->OnNewFocusedView(koid);
-                                            });
+  focus_manager_ = std::make_unique<focus::FocusManager>(
+      scenic_->inspect_node()->CreateChild("FocusManager"),
+      /*legacy_focus_listener*/ [this](zx_koid_t old_focus, zx_koid_t new_focus) {
+        engine_->scene_graph()->OnNewFocusedView(old_focus, new_focus);
+      });
+  scenic_->SetViewRefFocusedRegisterFunction(
+      [this](zx_koid_t koid, fidl::InterfaceRequest<fuchsia::ui::views::ViewRefFocused> vrf) {
+        focus_manager_->RegisterViewRefFocused(koid, std::move(vrf));
+      });
   focus_manager_->Publish(*app_context_);
 }
 

@@ -11,6 +11,8 @@
 #include <zircon/status.h>
 
 #include <map>
+#include <string>
+#include <vector>
 
 #include <gtest/gtest.h>
 
@@ -33,21 +35,25 @@ constexpr zx::duration kScreenshotTimeout = zx::sec(15), kPresentTimeout = zx::s
 // disadvantage that it uses one instance of those services across all tests in
 // the binary, making each test not hermetic wrt. the others. A trade-off is
 // that the |sys::testing::TestWithEnvironment| method is more verbose.
-const std::map<std::string, std::string> kServices = {
-    {"fuchsia.hardware.display.Provider",
-     "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx"},
-    {"fuchsia.scenic.allocation.Allocator", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
-    {"fuchsia.tracing.provider.Registry",
-     "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx"},
-    {"fuchsia.ui.policy.Presenter",
-     "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx"},
-    {"fuchsia.ui.scenic.Scenic", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
-    {"fuchsia.ui.annotation.Registry", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
-    {"fuchsia.ui.shortcut.Manager",
-     "fuchsia-pkg://fuchsia.com/shortcut#meta/shortcut_manager.cmx"}};
+const std::map<std::string, std::string> LocalServices() {
+  return {
+      {"fuchsia.hardware.display.Provider",
+       "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx"},
+      {"fuchsia.scenic.allocation.Allocator", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
+      {"fuchsia.tracing.provider.Registry",
+       "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx"},
+      {"fuchsia.ui.policy.Presenter",
+       "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx"},
+      {"fuchsia.ui.scenic.Scenic", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
+      {"fuchsia.ui.annotation.Registry", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
+      {"fuchsia.ui.shortcut.Manager",
+       "fuchsia-pkg://fuchsia.com/shortcut#meta/shortcut_manager.cmx"}};
+}
 
 // Allow these global services.
-const std::string kParentServices[] = {"fuchsia.vulkan.loader.Loader", "fuchsia.sysmem.Allocator"};
+const std::vector<std::string> GlobalServices() {
+  return {"fuchsia.vulkan.loader.Loader", "fuchsia.sysmem.Allocator"};
+}
 
 }  // namespace
 
@@ -91,11 +97,11 @@ void PixelTest::SetUp() {
 std::unique_ptr<sys::testing::EnvironmentServices> PixelTest::CreateServices() {
   auto services = TestWithEnvironment::CreateServices();
 
-  for (const auto& entry : kServices) {
+  for (const auto& entry : LocalServices()) {
     services->AddServiceWithLaunchInfo({.url = entry.second}, entry.first);
   }
 
-  for (const auto& entry : kParentServices) {
+  for (const auto& entry : GlobalServices()) {
     services->AllowParentService(entry);
   }
 

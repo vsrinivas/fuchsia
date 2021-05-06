@@ -103,37 +103,33 @@ void SceneGraph::UnregisterViewFocuser(SessionId session_id) {
   view_focuser_endpoints_.erase(session_id);
 }
 
-void SceneGraph::OnNewFocusedView(const zx_koid_t newly_focused_koid) {
-  if (currently_focused_koid_ == newly_focused_koid) {
-    return;
-  }
+void SceneGraph::OnNewFocusedView(const zx_koid_t old_focus, const zx_koid_t new_focus) {
+  FX_DCHECK(old_focus != new_focus);
 
-  const zx_koid_t old_focused_koid = currently_focused_koid_;
-  currently_focused_koid_ = newly_focused_koid;
   const zx_time_t focus_time = dispatcher_clock_now();
-  if (old_focused_koid != ZX_KOID_INVALID) {
+  if (old_focus != ZX_KOID_INVALID) {
     fuchsia::ui::input::FocusEvent focus;
     focus.event_time = focus_time;
     focus.focused = false;
 
-    if (view_tree_.EventReporterOf(old_focused_koid)) {
+    if (view_tree_.EventReporterOf(old_focus)) {
       fuchsia::ui::input::InputEvent input;
       input.set_focus(std::move(focus));
-      view_tree_.EventReporterOf(old_focused_koid)->EnqueueEvent(std::move(input));
+      view_tree_.EventReporterOf(old_focus)->EnqueueEvent(std::move(input));
     } else {
       FX_VLOGS(1) << "Old focus event; could not enqueue. No reporter. Event was: " << focus;
     }
   }
 
-  if (currently_focused_koid_ != ZX_KOID_INVALID) {
+  if (new_focus != ZX_KOID_INVALID) {
     fuchsia::ui::input::FocusEvent focus;
     focus.event_time = focus_time;
     focus.focused = true;
 
-    if (view_tree_.EventReporterOf(currently_focused_koid_)) {
+    if (view_tree_.EventReporterOf(new_focus)) {
       fuchsia::ui::input::InputEvent input;
       input.set_focus(std::move(focus));
-      view_tree_.EventReporterOf(currently_focused_koid_)->EnqueueEvent(std::move(input));
+      view_tree_.EventReporterOf(new_focus)->EnqueueEvent(std::move(input));
     } else {
       FX_VLOGS(1) << "New focus event; could not enqueue. No reporter. Event was: " << focus;
     }

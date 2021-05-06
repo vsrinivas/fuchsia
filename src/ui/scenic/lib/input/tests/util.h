@@ -101,8 +101,8 @@ class InputSystemTest : public scenic_impl::test::ScenicTest {
   // clang-format on
 
   InputSystemTest()
-      : focus_manager_(inspect::Node(), [this](zx_koid_t koid) {
-          engine()->scene_graph()->OnNewFocusedView(koid);
+      : focus_manager_(inspect::Node(), [this](zx_koid_t old_focus, zx_koid_t new_focus) {
+          engine()->scene_graph()->OnNewFocusedView(old_focus, new_focus);
         }) {}
 
   // Convenience function; triggers scene operations by scheduling the next
