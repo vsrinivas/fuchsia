@@ -129,8 +129,9 @@ void AmlogicSecureMemDevice::DdkSuspend(ddk::SuspendTxn txn) {
 }
 
 void AmlogicSecureMemDevice::GetSecureMemoryPhysicalAddress(
-    zx::vmo secure_mem, GetSecureMemoryPhysicalAddressCompleter::Sync& completer) {
-  auto result = GetSecureMemoryPhysicalAddress(std::move(secure_mem));
+    GetSecureMemoryPhysicalAddressRequestView request,
+    GetSecureMemoryPhysicalAddressCompleter::Sync& completer) {
+  auto result = GetSecureMemoryPhysicalAddress(std::move(request->secure_mem));
   if (result.is_error()) {
     completer.Reply(result.error(), static_cast<zx_paddr_t>(0));
   }

@@ -33,7 +33,7 @@ using AmlogicSecureMemDeviceBase =
     ddk::Device<AmlogicSecureMemDevice, ddk::Messageable, ddk::Suspendable>;
 
 class AmlogicSecureMemDevice : public AmlogicSecureMemDeviceBase,
-                               public fidl::WireInterface<fuchsia_hardware_securemem::Device>,
+                               public fidl::WireServer<fuchsia_hardware_securemem::Device>,
                                public ddk::EmptyProtocol<ZX_PROTOCOL_SECURE_MEM> {
  public:
   static zx_status_t Create(void* ctx, zx_device_t* device);
@@ -47,7 +47,8 @@ class AmlogicSecureMemDevice : public AmlogicSecureMemDeviceBase,
 
   // LLCPP interface implementations
   void GetSecureMemoryPhysicalAddress(
-      zx::vmo secure_mem, GetSecureMemoryPhysicalAddressCompleter::Sync& completer) override;
+      GetSecureMemoryPhysicalAddressRequestView request,
+      GetSecureMemoryPhysicalAddressCompleter::Sync& completer) override;
 
   fit::result<zx_paddr_t, zx_status_t> GetSecureMemoryPhysicalAddress(zx::vmo secure_mem);
 
