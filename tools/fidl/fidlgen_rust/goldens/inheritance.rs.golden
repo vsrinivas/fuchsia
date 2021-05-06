@@ -382,7 +382,7 @@ impl Super_Encoder {
         mut in_s: &str,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(tx_id, 0x45602cf3b581d6ab);
-        let mut body = (in_s,);
+        let mut body = ((in_s),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
         fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.inheritance/superFooRequest");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -397,7 +397,7 @@ impl Super_Encoder {
         mut in_y: i64,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(tx_id, 0x45602cf3b581d6ab);
-        let mut body = (in_y,);
+        let mut body = ((in_y),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 
         fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.inheritance/superFooResponse");
@@ -859,7 +859,7 @@ impl SubEncoder {
         mut in_s: &str,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(tx_id, 0x45602cf3b581d6ab);
-        let mut body = (in_s,);
+        let mut body = ((in_s),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
         fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.inheritance/subFooRequest");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -874,7 +874,7 @@ impl SubEncoder {
         mut in_y: i64,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(tx_id, 0x45602cf3b581d6ab);
-        let mut body = (in_y,);
+        let mut body = ((in_y),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 
         fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.inheritance/subFooResponse");

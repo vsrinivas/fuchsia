@@ -11,6 +11,12 @@ const static rights rightsMask = ::fidl::test::protocols::rightsMask;
 
 using obj_type = ::fidl::test::protocols::obj_type;
 
+using WithErrorSyntax_HandleInResult_Response =
+    ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Response;
+
+using WithErrorSyntax_HandleInResult_Result =
+    ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Result;
+
 using WithErrorSyntax_ResponseAsStruct_Response =
     ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response;
 
@@ -26,7 +32,7 @@ using WithErrorSyntax_ErrorAsPrimitive_Result =
 using WithErrorSyntax_ErrorAsEnum_Response =
     ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response;
 
-using ErrorEnun = ::fidl::test::protocols::ErrorEnun;
+using ErrorEnum = ::fidl::test::protocols::ErrorEnum;
 
 using WithErrorSyntax_ErrorAsEnum_Result =
     ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result;

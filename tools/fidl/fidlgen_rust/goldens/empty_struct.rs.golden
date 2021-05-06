@@ -72,7 +72,7 @@ impl EmptyProtocolSynchronousProxy {
         EmptyProtocolEvent::decode(self.client.wait_for_event(deadline)?)
     }
     pub fn r#send_(&self, mut e: &mut Empty) -> Result<(), fidl::Error> {
-        self.client.send(&mut (e), 0x1e4e78d0556b6f28)
+        self.client.send(&mut (e,), 0x1e4e78d0556b6f28)
     }
     pub fn r#send_and_receive(
         &self,
@@ -481,7 +481,7 @@ impl EmptyProtocolEncoder {
         mut in_e: &mut Empty,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(0, 0x1e4e78d0556b6f28);
-        let mut body = (in_e,);
+        let mut body = ((in_e),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
         fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.emptystruct/EmptyProtocolSend_Request");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -495,7 +495,7 @@ impl EmptyProtocolEncoder {
         mut in_e: &mut Empty,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(0, 0x45bd261c537791e0);
-        let mut body = (in_e,);
+        let mut body = ((in_e),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 
         fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.emptystruct/EmptyProtocolReceiveResponse");
@@ -512,7 +512,7 @@ impl EmptyProtocolEncoder {
         mut in_e: &mut Empty,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(tx_id, 0x56ca6bd78bac3571);
-        let mut body = (in_e,);
+        let mut body = ((in_e),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
         fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.emptystruct/EmptyProtocolSendAndReceiveRequest");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -527,7 +527,7 @@ impl EmptyProtocolEncoder {
         mut in_e: &mut Empty,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(tx_id, 0x56ca6bd78bac3571);
-        let mut body = (in_e,);
+        let mut body = ((in_e),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 
         fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.emptystruct/EmptyProtocolSendAndReceiveResponse");

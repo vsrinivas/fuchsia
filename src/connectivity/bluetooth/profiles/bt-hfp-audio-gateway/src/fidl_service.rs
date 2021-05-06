@@ -87,12 +87,8 @@ pub async fn run_services(
 #[cfg(test)]
 mod tests {
     use {
-        super::*,
-        fidl::endpoints::{ClientEnd, RequestStream},
-        fidl_fuchsia_bluetooth_bredr as bredr,
-        fidl_fuchsia_bluetooth_hfp::*,
-        fuchsia_async as fasync, fuchsia_zircon as zx,
-        futures::channel::mpsc,
+        super::*, fidl::endpoints::RequestStream, fidl_fuchsia_bluetooth_bredr as bredr,
+        fidl_fuchsia_bluetooth_hfp::*, fuchsia_async as fasync, futures::channel::mpsc,
         matches::assert_matches,
     };
 
@@ -147,23 +143,5 @@ mod tests {
         let result = handle_hfp_client_connection_result(stream, sender).await;
 
         assert!(result.is_ok());
-    }
-
-    #[fasync::run_until_stalled(test)]
-    async fn error_on_bad_registration_parameter() {
-        let (sender, _receiver) = mpsc::channel(0);
-        let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<HfpMarker>().unwrap();
-
-        // Create an Event that we will cast to a Channel and send to the hfp server.
-        // This invalid handle type is expected to cause the hfp server to return an error.
-        let event = zx::Event::create().unwrap();
-        let invalid_channel: zx::Channel = zx::Channel::from(zx::Handle::from(event));
-        let invalid_client_end = ClientEnd::new(invalid_channel);
-
-        proxy.register(invalid_client_end).expect("request to be sent");
-
-        let result = handle_hfp_client_connection_result(stream, sender).await;
-
-        assert_matches!(result, Err(_));
     }
 }

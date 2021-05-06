@@ -386,13 +386,23 @@ impl ParentSynchronousProxy {
         &self,
         mut c: fidl::endpoints::ClientEnd<ChildMarker>,
     ) -> Result<(), fidl::Error> {
-        self.client.send(&mut (c), 0x5311bd7214c0f6e)
+        self.client.send(
+            &mut (HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT::<
+                fidl::endpoints::ClientEnd<ChildMarker>,
+            >(c),),
+            0x5311bd7214c0f6e,
+        )
     }
     pub fn r#take_child_request(
         &self,
         mut r: fidl::endpoints::ServerEnd<ChildMarker>,
     ) -> Result<(), fidl::Error> {
-        self.client.send(&mut (r), 0x15dae312bad5a9cc)
+        self.client.send(
+            &mut (HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT::<
+                fidl::endpoints::ServerEnd<ChildMarker>,
+            >(r),),
+            0x15dae312bad5a9cc,
+        )
     }
 }
 
@@ -507,13 +517,23 @@ impl ParentProxyInterface for ParentProxy {
         &self,
         mut c: fidl::endpoints::ClientEnd<ChildMarker>,
     ) -> Result<(), fidl::Error> {
-        self.client.send(&mut (c), 0x5311bd7214c0f6e)
+        self.client.send(
+            &mut (HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT::<
+                fidl::endpoints::ClientEnd<ChildMarker>,
+            >(c)),
+            0x5311bd7214c0f6e,
+        )
     }
     fn r#take_child_request(
         &self,
         mut r: fidl::endpoints::ServerEnd<ChildMarker>,
     ) -> Result<(), fidl::Error> {
-        self.client.send(&mut (r), 0x15dae312bad5a9cc)
+        self.client.send(
+            &mut (HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT::<
+                fidl::endpoints::ServerEnd<ChildMarker>,
+            >(r)),
+            0x15dae312bad5a9cc,
+        )
     }
 }
 
@@ -948,7 +968,9 @@ impl ParentEncoder {
         mut in_c: fidl::endpoints::ClientEnd<ChildMarker>,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(tx_id, 0x6e0c789be8dbb77e);
-        let mut body = (in_c,);
+        let mut body = (HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT::<
+            fidl::endpoints::ClientEnd<ChildMarker>,
+        >(in_c),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 
         fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocolrequest/ParentGetChildResponse");
@@ -979,7 +1001,9 @@ impl ParentEncoder {
         mut in_r: fidl::endpoints::ServerEnd<ChildMarker>,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(tx_id, 0x193e7d6949a9df98);
-        let mut body = (in_r,);
+        let mut body = (HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT::<
+            fidl::endpoints::ServerEnd<ChildMarker>,
+        >(in_r),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 
         fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocolrequest/ParentGetChildRequestResponse");
@@ -995,7 +1019,9 @@ impl ParentEncoder {
         mut in_c: fidl::endpoints::ClientEnd<ChildMarker>,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(0, 0x5311bd7214c0f6e);
-        let mut body = (in_c,);
+        let mut body = (HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT::<
+            fidl::endpoints::ClientEnd<ChildMarker>,
+        >(in_c),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
         fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocolrequest/ParentTakeChildRequest");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -1009,7 +1035,9 @@ impl ParentEncoder {
         mut in_r: fidl::endpoints::ServerEnd<ChildMarker>,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(0, 0x15dae312bad5a9cc);
-        let mut body = (in_r,);
+        let mut body = (HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT::<
+            fidl::endpoints::ServerEnd<ChildMarker>,
+        >(in_r),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
         fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.protocolrequest/ParentTakeChildRequestRequest");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -1094,7 +1122,9 @@ impl ParentGetChildResponder {
     }
 
     fn send_raw(&self, mut c: fidl::endpoints::ClientEnd<ChildMarker>) -> Result<(), fidl::Error> {
-        let mut response = (c);
+        let mut response = (HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT::<
+            fidl::endpoints::ClientEnd<ChildMarker>,
+        >(c));
 
         let mut msg = fidl::encoding::TransactionMessage {
             header: fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal),
@@ -1175,7 +1205,9 @@ impl ParentGetChildRequestResponder {
     }
 
     fn send_raw(&self, mut r: fidl::endpoints::ServerEnd<ChildMarker>) -> Result<(), fidl::Error> {
-        let mut response = (r);
+        let mut response = (HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT::<
+            fidl::endpoints::ServerEnd<ChildMarker>,
+        >(r));
 
         let mut msg = fidl::encoding::TransactionMessage {
             header: fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal),

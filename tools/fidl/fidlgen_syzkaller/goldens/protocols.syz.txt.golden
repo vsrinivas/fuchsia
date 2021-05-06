@@ -5,7 +5,7 @@
 
 include <fidl/test/protocols/c/fidl.h>
 fidl_test_protocols_obj_type = fidl_test_protocols_obj_type_NONE, fidl_test_protocols_obj_type_SOCKET
-fidl_test_protocols_ErrorEnun = fidl_test_protocols_ErrorEnun_ERR_FOO, fidl_test_protocols_ErrorEnun_ERR_BAR
+fidl_test_protocols_ErrorEnum = fidl_test_protocols_ErrorEnum_ERR_FOO, fidl_test_protocols_ErrorEnum_ERR_BAR
 fidl_test_protocols_rights = fidl_test_protocols_rights_TRANSFER, fidl_test_protocols_rights_DUPLICATE
 fidl_test_protocols_WithErrorSyntax_ResponseAsStruct_ResponseInLine {
        a int64
@@ -36,6 +36,15 @@ fidl_test_protocols_WithErrorSyntax_ErrorAsEnum_ResponseOutOfLine {
 fidl_test_protocols_WithErrorSyntax_ErrorAsEnum_ResponseHandles {
        void void
 } [packed]
+fidl_test_protocols_WithErrorSyntax_HandleInResult_ResponseInLine {
+       h flags[fidl_handle_presence, int32]
+} [packed]
+fidl_test_protocols_WithErrorSyntax_HandleInResult_ResponseOutOfLine {
+       void void
+} [packed]
+fidl_test_protocols_WithErrorSyntax_HandleInResult_ResponseHandles {
+       h zx_handle
+} [packed]
 fidl_test_protocols_WithErrorSyntax_ResponseAsStruct_ResultInLine [
        responseInLine fidl_union_member[1, fidl_test_protocols_WithErrorSyntax_ResponseAsStruct_ResponseInLine]
        err fidl_union_member[2, int32]
@@ -58,13 +67,23 @@ fidl_test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResultHandles [
 ][varlen]
 fidl_test_protocols_WithErrorSyntax_ErrorAsEnum_ResultInLine [
        responseInLine fidl_union_member[1, fidl_test_protocols_WithErrorSyntax_ErrorAsEnum_ResponseInLine]
-       err fidl_union_member[2, flags[fidl_test_protocols_ErrorEnun, int32]]
+       err fidl_union_member[2, flags[fidl_test_protocols_ErrorEnum, int32]]
 ]
 fidl_test_protocols_WithErrorSyntax_ErrorAsEnum_ResultOutOfLine [
        responseOutOfLine fidl_test_protocols_WithErrorSyntax_ErrorAsEnum_ResponseOutOfLine
 ][varlen]
 fidl_test_protocols_WithErrorSyntax_ErrorAsEnum_ResultHandles [
        response fidl_test_protocols_WithErrorSyntax_ErrorAsEnum_ResponseHandles
+][varlen]
+fidl_test_protocols_WithErrorSyntax_HandleInResult_ResultInLine [
+       responseInLine fidl_union_member[1, fidl_test_protocols_WithErrorSyntax_HandleInResult_ResponseInLine]
+       err fidl_union_member[2, int32]
+]
+fidl_test_protocols_WithErrorSyntax_HandleInResult_ResultOutOfLine [
+       responseOutOfLine fidl_test_protocols_WithErrorSyntax_HandleInResult_ResponseOutOfLine
+][varlen]
+fidl_test_protocols_WithErrorSyntax_HandleInResult_ResultHandles [
+       response fidl_test_protocols_WithErrorSyntax_HandleInResult_ResponseHandles
 ][varlen]
 
 
@@ -210,6 +229,20 @@ fidl_test_protocols_WithErrorSyntaxErrorAsEnumResponse {
 fidl_test_protocols_WithErrorSyntaxErrorAsEnumResponseHandles {
        result fidl_test_protocols_WithErrorSyntax_ErrorAsEnum_ResultHandles
 } [packed]
+fidl_test_protocols_WithErrorSyntaxHandleInResultRequest {
+       hdr fidl_message_header[2147949819621101463]
+} [packed]
+fidl_test_protocols_WithErrorSyntaxHandleInResultRequestHandles {
+       void void
+} [packed]
+fidl_test_protocols_WithErrorSyntaxHandleInResultResponse {
+       hdr fidl_message_header[2147949819621101463]
+       resultInLine fidl_test_protocols_WithErrorSyntax_HandleInResult_ResultInLine
+       resultOutOfLine fidl_test_protocols_WithErrorSyntax_HandleInResult_ResultOutOfLine
+} [packed]
+fidl_test_protocols_WithErrorSyntaxHandleInResultResponseHandles {
+       result fidl_test_protocols_WithErrorSyntax_HandleInResult_ResultHandles
+} [packed]
 
 resource zx_chan_fidl_test_protocols_WithErrorSyntax_client[zx_chan]
 resource zx_chan_fidl_test_protocols_WithErrorSyntax_server[zx_chan]
@@ -219,6 +252,7 @@ fdio_service_connect$fidl_test_protocols_WithErrorSyntax(path ptr[in, string["/s
 zx_channel_call$fidl_test_protocols_WithErrorSyntaxResponseAsStruct(handle zx_chan_fidl_test_protocols_WithErrorSyntax_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[fidl_test_protocols_WithErrorSyntaxResponseAsStructRequest, fidl_test_protocols_WithErrorSyntaxResponseAsStructRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], fidl_test_protocols_WithErrorSyntaxResponseAsStructResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 zx_channel_call$fidl_test_protocols_WithErrorSyntaxErrorAsPrimitive(handle zx_chan_fidl_test_protocols_WithErrorSyntax_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveRequest, fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 zx_channel_call$fidl_test_protocols_WithErrorSyntaxErrorAsEnum(handle zx_chan_fidl_test_protocols_WithErrorSyntax_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[fidl_test_protocols_WithErrorSyntaxErrorAsEnumRequest, fidl_test_protocols_WithErrorSyntaxErrorAsEnumRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], fidl_test_protocols_WithErrorSyntaxErrorAsEnumResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$fidl_test_protocols_WithErrorSyntaxHandleInResult(handle zx_chan_fidl_test_protocols_WithErrorSyntax_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[fidl_test_protocols_WithErrorSyntaxHandleInResultRequest, fidl_test_protocols_WithErrorSyntaxHandleInResultRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], fidl_test_protocols_WithErrorSyntaxHandleInResultResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 
 
 fidl_test_protocols_ChannelProtocolMethodARequest {

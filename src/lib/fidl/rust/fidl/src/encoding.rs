@@ -2069,11 +2069,12 @@ impl Encodable for Handle {
     ) -> Result<()> {
         encoder.debug_check_bounds::<Self>(offset);
         ALLOC_PRESENT_U32.clone().encode(encoder, offset, recursion_depth)?;
-        // TODO(fxbug.dev/41920) Add object type and rights from FIDL here.
+        // fidlc forbids handle types with empty rights.
+        debug_assert_ne!(encoder.next_handle_rights, Rights::empty());
         Ok(encoder.handles.push(HandleDisposition {
             handle_op: HandleOp::Move(take_handle(self)),
-            object_type: ObjectType::NONE,
-            rights: Rights::SAME_RIGHTS,
+            object_type: encoder.next_handle_subtype,
+            rights: encoder.next_handle_rights,
             result: Status::OK,
         }))
     }
@@ -5939,14 +5940,15 @@ mod zx_test {
             let mut handle = Handle::from(zx::Port::create().expect("Port creation failed"));
             let raw_handle = handle.raw_handle();
 
+            wrap_handle_metadata!(HandleWrapper, ObjectType::NONE, Rights::SAME_RIGHTS);
+
             let buf = &mut Vec::new();
             let handle_buf = &mut Vec::new();
-            Encoder::encode_with_context(ctx, buf, handle_buf, &mut handle)
+            Encoder::encode_with_context(ctx, buf, handle_buf, &mut HandleWrapper(&mut handle))
                 .expect("Encoding failed");
 
             assert!(handle.is_invalid());
 
-            wrap_handle_metadata!(HandleWrapper, ObjectType::NONE, Rights::SAME_RIGHTS);
             let mut handle_out = HandleWrapper(Handle::new_empty());
             Decoder::decode_with_context(
                 ctx,

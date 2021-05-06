@@ -574,7 +574,7 @@ impl SimpleProtocolEncoder {
         mut in_b: i32,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(tx_id, 0x113010d7832f175d);
-        let mut body = (in_a, in_b);
+        let mut body = ((in_a), (in_b));
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
         fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.nullable/SimpleProtocolAddRequest");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -589,7 +589,7 @@ impl SimpleProtocolEncoder {
         mut in_sum: i32,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(tx_id, 0x113010d7832f175d);
-        let mut body = (in_sum,);
+        let mut body = ((in_sum),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 
         fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.nullable/SimpleProtocolAddResponse");

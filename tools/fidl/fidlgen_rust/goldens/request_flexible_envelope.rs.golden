@@ -577,7 +577,7 @@ impl ProtocolEncoder {
         mut in_s: &mut StrictFoo,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(tx_id, 0x3c5330c58686011a);
-        let mut body = (in_s,);
+        let mut body = ((in_s),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
         fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleRequest");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -592,7 +592,7 @@ impl ProtocolEncoder {
         mut in_f: &mut FlexibleFoo,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(tx_id, 0x3c5330c58686011a);
-        let mut body = (in_f,);
+        let mut body = ((in_f),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 
         fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleResponse");
@@ -609,7 +609,7 @@ impl ProtocolEncoder {
         mut in_s: &mut FlexibleFoo,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(tx_id, 0x3cb49d8f6e204f76);
-        let mut body = (in_s,);
+        let mut body = ((in_s),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
         fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictRequest");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -624,7 +624,7 @@ impl ProtocolEncoder {
         mut in_f: &mut StrictFoo,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(tx_id, 0x3cb49d8f6e204f76);
-        let mut body = (in_f,);
+        let mut body = ((in_f),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 
         fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictResponse");

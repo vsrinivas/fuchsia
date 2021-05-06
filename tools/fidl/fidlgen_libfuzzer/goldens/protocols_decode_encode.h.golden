@@ -9,9 +9,16 @@
 
 namespace fuzzing {
 
-inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 38>
+inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 41>
     fidl_test_protocols_decoder_encoders = {
-
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::fidl_test_protocols::wire::"
+                              "WithErrorSyntaxHandleInResultResponse",
+            .has_flexible_envelope = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
+                ::fidl_test_protocols::wire::
+                    WithErrorSyntaxHandleInResultResponse>,
+        },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::fidl::WireRequest<::fidl_test_protocols::"
                               "HandleRightsProtocol::NoResponseMethod>",
@@ -338,6 +345,22 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 38>
             .decoder_encoder =
                 ::fidl::fuzzing::DecoderEncoderImpl<::fidl::WireResponse<
                     ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::fidl::WireRequest<::fidl_test_protocols::"
+                              "WithErrorSyntax::HandleInResult>",
+            .has_flexible_envelope = false,
+            .decoder_encoder =
+                ::fidl::fuzzing::DecoderEncoderImpl<::fidl::WireRequest<
+                    ::fidl_test_protocols::WithErrorSyntax::HandleInResult>>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::fidl::WireResponse<::fidl_test_protocols::"
+                              "WithErrorSyntax::HandleInResult>",
+            .has_flexible_envelope = false,
+            .decoder_encoder =
+                ::fidl::fuzzing::DecoderEncoderImpl<::fidl::WireResponse<
+                    ::fidl_test_protocols::WithErrorSyntax::HandleInResult>>,
         },
 };
 

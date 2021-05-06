@@ -415,7 +415,7 @@ impl ExampleEncoder {
         mut in_s: &str,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(tx_id, 0x57e41804562237ae);
-        let mut body = (in_s,);
+        let mut body = ((in_s),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
         fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.error/ExampleFooRequest");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -430,7 +430,7 @@ impl ExampleEncoder {
         mut in_result: &mut ExampleFooResult,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(tx_id, 0x57e41804562237ae);
-        let mut body = (in_result,);
+        let mut body = ((in_result),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 
         fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.error/ExampleFooResponse");
@@ -516,8 +516,8 @@ impl ExampleFooResponder {
         r
     }
 
-    fn send_raw(&self, mut result: &mut ExampleFooResult) -> Result<(), fidl::Error> {
-        let mut response = (result);
+    fn send_raw(&self, mut _result: &mut ExampleFooResult) -> Result<(), fidl::Error> {
+        let mut response = (_result);
 
         let mut msg = fidl::encoding::TransactionMessage {
             header: fidl::encoding::TransactionHeader::new(self.tx_id, self.ordinal),

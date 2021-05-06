@@ -173,7 +173,7 @@ impl ExampleProtocolSynchronousProxy {
         ExampleProtocolEvent::decode(self.client.wait_for_event(deadline)?)
     }
     pub fn r#method(&self, mut arg: &mut fidl_exampleusing::Empty) -> Result<(), fidl::Error> {
-        self.client.send(&mut (arg), 0x207d2f81c0ddb184)
+        self.client.send(&mut (arg,), 0x207d2f81c0ddb184)
     }
 }
 
@@ -462,7 +462,7 @@ impl ExampleProtocolEncoder {
         mut in_arg: &mut fidl_exampleusing::Empty,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(0, 0x207d2f81c0ddb184);
-        let mut body = (in_arg,);
+        let mut body = ((in_arg),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
         fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.placementofattributes/ExampleProtocolMethodRequest");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;

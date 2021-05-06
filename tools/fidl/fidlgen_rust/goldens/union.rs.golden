@@ -1118,7 +1118,7 @@ impl TestProtocolEncoder {
         mut in_xu: &mut StrictBoundedXUnion,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(tx_id, 0x747b084a44f0dc3e);
-        let mut body = (in_xu,);
+        let mut body = ((in_xu),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 
         fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.union/TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse");
@@ -1149,7 +1149,7 @@ impl TestProtocolEncoder {
         mut in_xu: &mut OlderSimpleUnion,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(tx_id, 0x57615a25c2a785d2);
-        let mut body = (in_xu,);
+        let mut body = ((in_xu),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 
         fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.union/TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse");

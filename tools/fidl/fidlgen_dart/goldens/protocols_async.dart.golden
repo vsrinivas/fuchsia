@@ -95,8 +95,8 @@ const $fidl.EnumType<ObjType> kobj_type_Type = $fidl.EnumType<ObjType>(
     values: {0x0: null, 0xe: null},
     ctor: ObjType._ctor);
 
-class ErrorEnun extends $fidl.Enum {
-  factory ErrorEnun(int _v) {
+class ErrorEnum extends $fidl.Enum {
+  factory ErrorEnum(int _v) {
     switch (_v) {
       case 0x1:
         return errFoo;
@@ -107,25 +107,25 @@ class ErrorEnun extends $fidl.Enum {
             $fidl.FidlErrorCode.fidlInvalidEnumValue);
     }
   }
-  static const ErrorEnun errFoo = ErrorEnun._(0x1);
-  static const ErrorEnun errBar = ErrorEnun._(0x2);
+  static const ErrorEnum errFoo = ErrorEnum._(0x1);
+  static const ErrorEnum errBar = ErrorEnum._(0x2);
 
-  const ErrorEnun._(this.$value);
+  const ErrorEnum._(this.$value);
 
   @override
   final int $value;
 
-  static const Map<String, ErrorEnun> $valuesMap = {
+  static const Map<String, ErrorEnum> $valuesMap = {
     r'errFoo': errFoo,
     r'errBar': errBar,
   };
 
-  static const List<ErrorEnun> $values = [
+  static const List<ErrorEnum> $values = [
     errFoo,
     errBar,
   ];
 
-  static ErrorEnun? $valueOf(String name) => $valuesMap[name];
+  static ErrorEnum? $valueOf(String name) => $valuesMap[name];
 
   @override
   bool isUnknown() {
@@ -136,21 +136,21 @@ class ErrorEnun extends $fidl.Enum {
   String toString() {
     switch ($value) {
       case 0x1:
-        return r'ErrorEnun.errFoo';
+        return r'ErrorEnum.errFoo';
       case 0x2:
-        return r'ErrorEnun.errBar';
+        return r'ErrorEnum.errBar';
       default:
-        return r'ErrorEnun.' '${$value}';
+        return r'ErrorEnum.' '${$value}';
     }
   }
 
-  static ErrorEnun _ctor(int v) => ErrorEnun(v);
+  static ErrorEnum _ctor(int v) => ErrorEnum(v);
 }
 
-const $fidl.EnumType<ErrorEnun> kErrorEnun_Type = $fidl.EnumType<ErrorEnun>(
+const $fidl.EnumType<ErrorEnum> kErrorEnum_Type = $fidl.EnumType<ErrorEnum>(
     type: $fidl.Uint32Type(),
     values: {0x1: null, 0x2: null},
-    ctor: ErrorEnun._ctor);
+    ctor: ErrorEnum._ctor);
 
 class Rights extends $fidl.Bits {
   factory Rights(int _v) {
@@ -449,7 +449,7 @@ class WithErrorSyntaxErrorAsEnumResult extends $fidl.XUnion {
       : _ordinal = 1,
         _data = value;
 
-  const WithErrorSyntaxErrorAsEnumResult.withErr(ErrorEnun value)
+  const WithErrorSyntaxErrorAsEnumResult.withErr(ErrorEnum value)
       : _ordinal = 2,
         _data = value;
 
@@ -470,7 +470,7 @@ class WithErrorSyntaxErrorAsEnumResult extends $fidl.XUnion {
     return _data;
   }
 
-  ErrorEnun? get err {
+  ErrorEnum? get err {
     if (_ordinal != 2) {
       return null;
     }
@@ -519,7 +519,7 @@ const $fidl.UnionType<WithErrorSyntaxErrorAsEnumResult>
     $fidl.UnionType<WithErrorSyntaxErrorAsEnumResult>(
   members: <int, $fidl.FidlType>{
     1: kWithErrorSyntax_ErrorAsEnum_Response_Type,
-    2: kErrorEnun_Type,
+    2: kErrorEnum_Type,
   },
   ctor: WithErrorSyntaxErrorAsEnumResult._ctor,
   flexible: false,
@@ -532,11 +532,120 @@ const $fidl.NullableUnionType<WithErrorSyntaxErrorAsEnumResult>
     $fidl.NullableUnionType<WithErrorSyntaxErrorAsEnumResult>(
   members: <int, $fidl.FidlType>{
     1: kWithErrorSyntax_ErrorAsEnum_Response_Type,
-    2: kErrorEnun_Type,
+    2: kErrorEnum_Type,
   },
   ctor: WithErrorSyntaxErrorAsEnumResult._ctor,
   flexible: false,
   resource: false,
+);
+
+enum WithErrorSyntaxHandleInResultResultTag {
+  response, // 0x1
+  err, // 0x2
+}
+
+const Map<int, WithErrorSyntaxHandleInResultResultTag>
+    _WithErrorSyntaxHandleInResultResultTag_map = {
+  1: WithErrorSyntaxHandleInResultResultTag.response,
+  2: WithErrorSyntaxHandleInResultResultTag.err,
+};
+
+class WithErrorSyntaxHandleInResultResult extends $fidl.XUnion {
+  const WithErrorSyntaxHandleInResultResult.withResponse(
+      WithErrorSyntaxHandleInResultResponse value)
+      : _ordinal = 1,
+        _data = value;
+
+  const WithErrorSyntaxHandleInResultResult.withErr(int value)
+      : _ordinal = 2,
+        _data = value;
+
+  WithErrorSyntaxHandleInResultResult._(int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  WithErrorSyntaxHandleInResultResultTag get $tag =>
+      _WithErrorSyntaxHandleInResultResultTag_map[_ordinal]!;
+
+  WithErrorSyntaxHandleInResultResponse? get response {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  int? get err {
+    if (_ordinal != 2) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+      case 2:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  String toString() {
+    switch (_ordinal) {
+      case 1:
+        return r'WithErrorSyntaxHandleInResultResult.response(' +
+            response.toString() +
+            ')';
+      case 2:
+        return r'WithErrorSyntaxHandleInResultResult.err(' +
+            err.toString() +
+            ')';
+      default:
+        return r'WithErrorSyntaxHandleInResultResult.<UNKNOWN>';
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static WithErrorSyntaxHandleInResultResult _ctor(int ordinal, Object data) {
+    return WithErrorSyntaxHandleInResultResult._(ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<WithErrorSyntaxHandleInResultResult>
+    kWithErrorSyntax_HandleInResult_Result_Type =
+    $fidl.UnionType<WithErrorSyntaxHandleInResultResult>(
+  members: <int, $fidl.FidlType>{
+    1: kWithErrorSyntax_HandleInResult_Response_Type,
+    2: $fidl.Uint32Type(),
+  },
+  ctor: WithErrorSyntaxHandleInResultResult._ctor,
+  flexible: false,
+  resource: true,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<WithErrorSyntaxHandleInResultResult>
+    kWithErrorSyntax_HandleInResult_Result_OptType =
+    $fidl.NullableUnionType<WithErrorSyntaxHandleInResultResult>(
+  members: <int, $fidl.FidlType>{
+    1: kWithErrorSyntax_HandleInResult_Response_Type,
+    2: $fidl.Uint32Type(),
+  },
+  ctor: WithErrorSyntaxHandleInResultResult._ctor,
+  flexible: false,
+  resource: true,
 );
 
 class WithErrorSyntaxResponseAsStructResponse extends $fidl.Struct {
@@ -707,6 +816,57 @@ const $fidl.StructType<WithErrorSyntaxErrorAsEnumResponse>
     $fidl.StructType<WithErrorSyntaxErrorAsEnumResponse>(
   inlineSize: 1,
   structDecode: WithErrorSyntaxErrorAsEnumResponse._structDecode,
+);
+
+class WithErrorSyntaxHandleInResultResponse extends $fidl.Struct {
+  const WithErrorSyntaxHandleInResultResponse({
+    required this.h,
+  });
+  WithErrorSyntaxHandleInResultResponse.clone(
+    WithErrorSyntaxHandleInResultResponse $orig, {
+    $zircon.Handle? h,
+  }) : this(
+          h: h ?? $orig.h,
+        );
+
+  final $zircon.Handle h;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      h,
+    ];
+  }
+
+  static const $fieldType0 =
+      $fidl.HandleType(objectType: 0, rights: 2147483648);
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    $fieldType0.encode($encoder, h, $offset + 0, $depth);
+  }
+
+  @override
+  String toString() {
+    return r'WithErrorSyntaxHandleInResultResponse' r'(h: ' +
+        h.toString() +
+        r')';
+  }
+
+  static WithErrorSyntaxHandleInResultResponse _structDecode(
+      $fidl.Decoder $decoder, int $offset, int $depth) {
+    return WithErrorSyntaxHandleInResultResponse(
+        h: $fieldType0.decode($decoder, $offset + 0, $depth));
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<WithErrorSyntaxHandleInResultResponse>
+    kWithErrorSyntax_HandleInResult_Response_Type =
+    $fidl.StructType<WithErrorSyntaxHandleInResultResponse>(
+  inlineSize: 4,
+  structDecode: WithErrorSyntaxHandleInResultResponse._structDecode,
 );
 
 // ignore: unused_element, avoid_private_typedef_functions
@@ -1471,6 +1631,18 @@ const $fidl.MethodType _kWithErrorSyntax_ErrorAsEnum_Type = $fidl.MethodType(
   requestInlineSize: 0,
   responseInlineSize: 24,
 );
+// handleInResult: () -> ($zircon.Handle h)
+const int _kWithErrorSyntax_HandleInResult_Ordinal = 0x1dcf0cfb09e14f97;
+const $fidl.MethodType _kWithErrorSyntax_HandleInResult_Type = $fidl.MethodType(
+  request: [],
+  response: <$fidl.MemberType>[
+    $fidl.MemberType<WithErrorSyntaxHandleInResultResult>(
+        type: kWithErrorSyntax_HandleInResult_Result_Type, offset: 0),
+  ],
+  name: r"WithErrorSyntax.HandleInResult",
+  requestInlineSize: 0,
+  responseInlineSize: 24,
+);
 
 class WithErrorSyntax$ResponseAsStruct$Response {
   final int a;
@@ -1488,6 +1660,7 @@ abstract class WithErrorSyntax {
   $async.Future<WithErrorSyntax$ResponseAsStruct$Response> responseAsStruct();
   $async.Future<void> errorAsPrimitive();
   $async.Future<void> errorAsEnum();
+  $async.Future<$zircon.Handle> handleInResult();
 }
 
 // TODO: Remove ServiceData for non-service
@@ -1623,6 +1796,33 @@ class WithErrorSyntaxProxy extends $fidl.AsyncProxy<WithErrorSyntax>
           Timeline.finishSync();
         }
         break;
+      case _kWithErrorSyntax_HandleInResult_Ordinal:
+        final String _name = _kWithErrorSyntax_HandleInResult_Type.name;
+        try {
+          Timeline.startSync(_name);
+          final List<$fidl.MemberType> $types =
+              _kWithErrorSyntax_HandleInResult_Type.response!;
+          // ignore: prefer_const_declarations
+          final $response = $fidl.decodeMessage(
+              $message,
+              _kWithErrorSyntax_HandleInResult_Type.decodeResponseInlineSize(),
+              $types[0]);
+
+          if ($response.$tag ==
+              WithErrorSyntaxHandleInResultResultTag.response) {
+            $completer.complete($response.response.h);
+          } else {
+            $completer.completeError($fidl.MethodException($response.err));
+          }
+        } catch (_e) {
+          ctrl.proxyError($fidl.FidlError(
+              'Exception handling method response $_name: $_e'));
+          ctrl.close();
+          rethrow;
+        } finally {
+          Timeline.finishSync();
+        }
+        break;
       default:
         ctrl.proxyError(
             $fidl.FidlError('Unexpected message ordinal: ${$message.ordinal}'));
@@ -1674,6 +1874,21 @@ class WithErrorSyntaxProxy extends $fidl.AsyncProxy<WithErrorSyntax>
     final $fidl.Encoder $encoder = $fidl.Encoder();
     $encoder.encodeMessageHeader(_kWithErrorSyntax_ErrorAsEnum_Ordinal, 0);
     final $completer = $async.Completer<void>();
+    ctrl.sendMessageWithResponse($encoder.message, $completer);
+    return $completer.future;
+  }
+
+  @override
+  $async.Future<$zircon.Handle> handleInResult() async {
+    if (!ctrl.isBound) {
+      return $async.Future.error(
+          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
+          StackTrace.current);
+    }
+
+    final $fidl.Encoder $encoder = $fidl.Encoder();
+    $encoder.encodeMessageHeader(_kWithErrorSyntax_HandleInResult_Ordinal, 0);
+    final $completer = $async.Completer<$zircon.Handle>();
     ctrl.sendMessageWithResponse($encoder.message, $completer);
     return $completer.future;
   }
@@ -1823,6 +2038,55 @@ class WithErrorSyntaxBinding extends $fidl.AsyncBinding<WithErrorSyntax> {
             $fidl.encodeMessage(
                 $encoder,
                 _kWithErrorSyntax_ErrorAsEnum_Type.encodingResponseInlineSize(),
+                $types[0],
+                $response);
+            $respond($encoder.message);
+          }, onError: (_e) {
+            close();
+            print('Exception handling method call $_name: $_e');
+          });
+        } catch (_e) {
+          close();
+          print('Exception handling method call $_name: $_e');
+          rethrow;
+        } finally {
+          Timeline.finishSync();
+        }
+        break;
+      case _kWithErrorSyntax_HandleInResult_Ordinal:
+        final String _name = _kWithErrorSyntax_HandleInResult_Type.name;
+        try {
+          Timeline.startSync(_name);
+          final List<$fidl.MemberType> $types =
+              _kWithErrorSyntax_HandleInResult_Type.request!;
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<$zircon.Handle> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<$zircon.Handle>>(
+                  $message,
+                  _kWithErrorSyntax_HandleInResult_Type
+                      .decodeRequestInlineSize(), ($fidl.Decoder decoder) {
+            return _impl.handleInResult();
+          });
+          $future.then(($responseValue) {
+            return WithErrorSyntaxHandleInResultResult.withResponse(
+                WithErrorSyntaxHandleInResultResponse(h: $responseValue));
+          }, onError: ($error) {
+            if ($error is $fidl.MethodException) {
+              return WithErrorSyntaxHandleInResultResult.withErr($error.value);
+            } else {
+              return Future.error($error, StackTrace.current);
+            }
+          }).then(($response) {
+            final $fidl.Encoder $encoder = $fidl.Encoder();
+            $encoder.encodeMessageHeader(
+                _kWithErrorSyntax_HandleInResult_Ordinal, $message.txid);
+            final List<$fidl.MemberType> $types =
+                _kWithErrorSyntax_HandleInResult_Type.response!;
+            $fidl.encodeMessage(
+                $encoder,
+                _kWithErrorSyntax_HandleInResult_Type
+                    .encodingResponseInlineSize(),
                 $types[0],
                 $response);
             $respond($encoder.message);

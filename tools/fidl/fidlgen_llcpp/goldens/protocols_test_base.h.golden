@@ -171,6 +171,11 @@ class WithErrorSyntax_TestBase
           ErrorAsEnumCompleter::Sync& completer) override {
     NotImplemented_("ErrorAsEnum", completer);
   }
+  virtual void HandleInResult(
+      ::fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::
+          HandleInResultCompleter::Sync& completer) override {
+    NotImplemented_("HandleInResult", completer);
+  }
 };
 }  // namespace testing
 }  // namespace fidl_test_protocols

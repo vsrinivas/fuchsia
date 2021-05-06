@@ -19,6 +19,14 @@ const protocolTmpl = `
 {{- end -}}
 {{- end -}}{{/* ResponseType */}}
 
+{{- define "WrappedName" -}}
+{{- if .HasHandleMetadata -}}
+{{ .HandleWrapperName }}::<{{- .BorrowedType -}}>({{ .Name }})
+{{- else -}}
+{{ .Name }}
+{{- end -}}
+{{- end -}}
+
 
 {{- define "RemoveHandleWrappers" -}}
 {{- if (eq (len .) 1) -}}
@@ -154,8 +162,8 @@ impl {{ $protocol.Name }}SynchronousProxy {
 				{{ template "ResponseType" $method }}
 			) = self.client.send_query(&mut (
 				{{- range $index, $request := $method.Request -}}
-				{{- if (eq $index 0) -}} {{ $request.Name }}
-				{{- else -}}, {{ $request.Name }} {{- end -}}
+				{{- if ne $index 0 }}, {{ end -}}
+				{{- template "WrappedName" $request -}}
 				{{- end -}}
 				),
 				{{ $method.Ordinal | printf "%#x" }},
@@ -165,8 +173,7 @@ impl {{ $protocol.Name }}SynchronousProxy {
 		{{- else -}}
 			self.client.send(&mut (
 				{{- range $index, $request := $method.Request -}}
-				{{- if (eq $index 0) -}} {{ $request.Name }}
-				{{- else -}}, {{ $request.Name }} {{- end -}}
+				{{- template "WrappedName" $request -}},
 				{{- end -}}
 				),
 				{{ $method.Ordinal | printf "%#x" }},
@@ -276,8 +283,8 @@ impl {{ $protocol.Name}}ProxyInterface for {{ $protocol.Name}}Proxy {
 		}
 		let send_result = self.client.call_send_raw_query(&mut (
 		{{- range $index, $request := $method.Request -}}
-		{{- if (eq $index 0) -}} {{ $request.Name }}
-		{{- else -}}, {{ $request.Name }} {{- end -}}
+			{{- if (ne $index 0) -}}, {{ end -}}
+			{{- template "WrappedName" $request -}}
 		{{- end -}}
 		), {{ $method.Ordinal | printf "%#x" }});
 		QueryResponseFut(match send_result {
@@ -295,8 +302,8 @@ impl {{ $protocol.Name}}ProxyInterface for {{ $protocol.Name}}Proxy {
 	) -> Result<(), fidl::Error> {
 		self.client.send(&mut (
 		{{- range $index, $request := $method.Request -}}
-		{{- if (eq $index 0) -}} {{ $request.Name }}
-		{{- else -}}, {{ $request.Name }} {{- end -}}
+		{{- if ne $index 0 }}, {{ end -}}
+		{{- template "WrappedName" $request -}}
 		{{- end -}}
 	), {{ $method.Ordinal | printf "%#x" }})
 	}
@@ -779,7 +786,11 @@ impl {{ $protocol.Name }}Encoder {
 			{{ $method.Ordinal | printf "%#x" }});
 		let mut body = (
 			{{- range $index, $param := $method.Request -}}
-			in_{{ $param.Name -}},
+			{{- if .HasHandleMetadata -}}
+			{{ .HandleWrapperName }}::<{{- $param.BorrowedType -}}>(in_{{ $param.Name }}),
+			{{- else -}}
+			(in_{{ $param.Name }}),
+			{{- end -}}
 			{{- end -}}
 		);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
@@ -810,7 +821,11 @@ impl {{ $protocol.Name }}Encoder {
 			{{ $method.Ordinal | printf "%#x" }});
 		let mut body = (
 			{{- range $index, $param := $method.Response -}}
-			in_{{ $param.Name -}},
+			{{- if .HasHandleMetadata -}}
+			{{ .HandleWrapperName }}::<{{- $param.BorrowedType -}}>(in_{{ $param.Name }}),
+			{{- else -}}
+			(in_{{ $param.Name }}),
+			{{- end -}}
 			{{- end -}}
 		);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
@@ -851,9 +866,8 @@ impl {{ $protocol.Name }}ControlHandle {
 	) -> Result<(), fidl::Error> {
 		let mut response = (
 			{{- range $index, $param := $method.Response -}}
-				{{- if ne 0 $index -}}, {{ $param.Name -}}
-				{{- else -}} {{ $param.Name -}}
-				{{- end -}}
+				{{- if ne 0 $index -}}, {{ end -}}
+				{{- template "WrappedName" $param -}}
 			{{- end -}}
 		);
 
@@ -948,14 +962,44 @@ impl {{ $protocol.Name }}{{ $method.CamelName }}Responder {
 
 	fn send_raw(&self,
 		{{- range $param := $method.Response -}}
+		{{- if $method.Result -}}
+		mut _result: {{ $param.BorrowedType -}},
+		{{- else -}}
 		mut {{ $param.Name -}}: {{ $param.BorrowedType -}},
+		{{- end -}}
 		{{- end -}}
 	) -> Result<(), fidl::Error> {
 		let mut response = (
-			{{- range $index, $param := $method.Response -}}
-			{{- if ne 0 $index -}}, {{ $param.Name -}}
-			{{- else -}} {{ $param.Name -}}
-			{{- end -}}
+			{{- if $method.Result -}}
+				(
+				{{- if eq 1 (len $method.Result.Ok )}}
+					{{- $first := (index $method.Result.Ok 0 ) -}}
+					{{- if $first.HasHandleMetadata -}}
+					{{ $first.HandleWrapperName }}(_result)
+					{{- else -}}
+					_result
+					{{- end -}}
+				{{- else -}}
+				match _result {
+					Ok(_result_val) => Ok((
+					{{- range $index, $param := $method.Result.Ok -}}
+						{{- if ne 0 $index -}}, {{ end -}}
+						{{- if $param.HasHandleMetadata -}}
+						{{ $param.HandleWrapperName }}(&mut _result_val.{{ $index }})
+						{{- else -}}
+						&mut _result_val.{{ $index }}
+						{{- end -}}
+					{{- end -}}
+					)),
+					Err(e) => Err(e),
+				}
+				{{- end -}}
+				)
+			{{- else -}}
+				{{- range $index, $param := $method.Response -}}
+				{{- if ne 0 $index -}}, {{ end -}}
+				{{- template "WrappedName" $param -}}
+				{{- end -}}
 			{{- end -}}
 		);
 

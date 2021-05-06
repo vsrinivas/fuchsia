@@ -15,6 +15,10 @@ namespace fuzzing {
 
 using rights = ::fidl::test::protocols::rights;
 using obj_type = ::fidl::test::protocols::obj_type;
+using WithErrorSyntax_HandleInResult_Response =
+    ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Response;
+using WithErrorSyntax_HandleInResult_Result =
+    ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Result;
 using WithErrorSyntax_ResponseAsStruct_Response =
     ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response;
 using WithErrorSyntax_ResponseAsStruct_Result =
@@ -25,7 +29,7 @@ using WithErrorSyntax_ErrorAsPrimitive_Result =
     ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result;
 using WithErrorSyntax_ErrorAsEnum_Response =
     ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response;
-using ErrorEnun = ::fidl::test::protocols::ErrorEnun;
+using ErrorEnum = ::fidl::test::protocols::ErrorEnum;
 using WithErrorSyntax_ErrorAsEnum_Result =
     ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result;
 
@@ -63,6 +67,64 @@ struct Allocate<obj_type> {
       case 1:
         out = obj_type::SOCKET;
         break;
+    }
+
+    return out;
+  }
+};
+template <>
+struct MinSize<WithErrorSyntax_HandleInResult_Response> {
+  operator size_t() { return MinSize<::zx::handle>(); }
+};
+template <>
+struct Allocate<WithErrorSyntax_HandleInResult_Response> {
+  WithErrorSyntax_HandleInResult_Response operator()(FuzzInput* src,
+                                                     size_t* size) {
+    ZX_ASSERT(*size >= MinSize<WithErrorSyntax_HandleInResult_Response>());
+    WithErrorSyntax_HandleInResult_Response out;
+    const size_t slack_per_member =
+        (*size - MinSize<WithErrorSyntax_HandleInResult_Response>()) / 1;
+    size_t out_size;
+    out_size = MinSize<::zx::handle>() + slack_per_member;
+    out.h = Allocate<::zx::handle>{}(src, &out_size);
+    return out;
+  }
+};
+template <>
+struct MinSize<WithErrorSyntax_HandleInResult_Result> {
+  operator size_t() {
+    size_t sizes[] = {
+        0,
+        MinSize<
+            ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Response>(),
+        MinSize<uint32_t>()};
+    return 1 + *std::max_element(sizes, sizes + 2 + 1);
+  }
+};
+template <>
+struct Allocate<WithErrorSyntax_HandleInResult_Result> {
+  static_assert(2 > 0, "xunion must have at least one member");
+
+  WithErrorSyntax_HandleInResult_Result operator()(FuzzInput* src,
+                                                   size_t* size) {
+    ZX_ASSERT(*size >= MinSize<WithErrorSyntax_HandleInResult_Result>());
+
+    uint8_t selector;
+    ZX_ASSERT(src->CopyBytes(&selector, 1));
+    (*size)++;
+
+    WithErrorSyntax_HandleInResult_Result out;
+    switch (selector % 2) {
+      case 0: {
+        out.set_response(
+            Allocate<::fidl::test::protocols::
+                         WithErrorSyntax_HandleInResult_Response>{}(src, size));
+        break;
+      }
+      case 1: {
+        out.set_err(Allocate<uint32_t>{}(src, size));
+        break;
+      }
     }
 
     return out;
@@ -209,13 +271,13 @@ struct Allocate<WithErrorSyntax_ErrorAsEnum_Response> {
   }
 };
 template <>
-struct MinSize<ErrorEnun> {
+struct MinSize<ErrorEnum> {
   operator size_t() { return sizeof(uint64_t); }
 };
 template <>
-struct Allocate<ErrorEnun> {
-  ErrorEnun operator()(FuzzInput* src, size_t* size) {
-    ErrorEnun out;
+struct Allocate<ErrorEnum> {
+  ErrorEnum operator()(FuzzInput* src, size_t* size) {
+    ErrorEnum out;
     uint64_t selector;
     ZX_ASSERT(*size >= sizeof(uint64_t));
     ZX_ASSERT(src->CopyObject(&selector));
@@ -223,10 +285,10 @@ struct Allocate<ErrorEnun> {
 
     switch (selector % 2) {
       case 0:
-        out = ErrorEnun::ERR_FOO;
+        out = ErrorEnum::ERR_FOO;
         break;
       case 1:
-        out = ErrorEnun::ERR_BAR;
+        out = ErrorEnum::ERR_BAR;
         break;
     }
 
@@ -240,7 +302,7 @@ struct MinSize<WithErrorSyntax_ErrorAsEnum_Result> {
         0,
         MinSize<
             ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response>(),
-        MinSize<::fidl::test::protocols::ErrorEnun>()};
+        MinSize<::fidl::test::protocols::ErrorEnum>()};
     return 1 + *std::max_element(sizes, sizes + 2 + 1);
   }
 };
@@ -264,7 +326,7 @@ struct Allocate<WithErrorSyntax_ErrorAsEnum_Result> {
         break;
       }
       case 1: {
-        out.set_err(Allocate<::fidl::test::protocols::ErrorEnun>{}(src, size));
+        out.set_err(Allocate<::fidl::test::protocols::ErrorEnum>{}(src, size));
         break;
       }
     }

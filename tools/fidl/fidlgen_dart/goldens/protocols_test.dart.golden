@@ -112,6 +112,14 @@ class WithErrorSyntax$TestBase extends WithErrorSyntax {
             r'errorAsEnum not implemented on WithErrorSyntax test base. Please implement.'),
         StackTrace.current);
   }
+
+  @override
+  $async.Future<$zircon.Handle> handleInResult() {
+    return $async.Future.error(
+        UnimplementedError(
+            r'handleInResult not implemented on WithErrorSyntax test base. Please implement.'),
+        StackTrace.current);
+  }
 }
 
 class ChannelProtocol$TestBase extends ChannelProtocol {

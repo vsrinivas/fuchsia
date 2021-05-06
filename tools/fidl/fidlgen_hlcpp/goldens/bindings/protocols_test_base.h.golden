@@ -98,6 +98,9 @@ class WithErrorSyntax_TestBase
   void ErrorAsEnum(ErrorAsEnumCallback callback) override {
     NotImplemented_("ErrorAsEnum");
   }
+  void HandleInResult(HandleInResultCallback callback) override {
+    NotImplemented_("HandleInResult");
+  }
 };
 }  // namespace testing
 }  // namespace protocols

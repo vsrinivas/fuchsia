@@ -399,7 +399,7 @@ impl TopEncoder {
         mut in_foo: &mut fidl_bottom::Foo,
     ) -> Result<(), fidl::Error> {
         let header = fidl::encoding::TransactionHeader::new(tx_id, 0x2c8ccb022c3c571f);
-        let mut body = (in_foo,);
+        let mut body = ((in_foo),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 
         fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.transitivedependenciescompose/TopGetFooResponse");

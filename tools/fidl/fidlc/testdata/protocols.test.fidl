@@ -31,7 +31,7 @@ protocol WithAndWithoutRequestResponse {
     -> OnWithResponse(string ret);
 };
 
-enum ErrorEnun {
+enum ErrorEnum {
     ERR_FOO = 1;
     ERR_BAR = 2;
 };
@@ -39,7 +39,8 @@ enum ErrorEnun {
 protocol WithErrorSyntax {
     ResponseAsStruct() -> (int64 a, int64 b, int64 c) error uint32;
     ErrorAsPrimitive() -> () error uint32;
-    ErrorAsEnum() -> () error ErrorEnun;
+    ErrorAsEnum() -> () error ErrorEnum;
+    HandleInResult() -> (handle h) error uint32;
 };
 
 [Transport = "Channel"]
