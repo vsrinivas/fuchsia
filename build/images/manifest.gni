@@ -19,55 +19,6 @@ declare_args() {
   extra_manifest_args = []
 }
 
-# Action target that generates a response file in GN's "shlex" format.
-#
-# Parameters
-#
-#   output_name (optional, default: target_name)
-#     [path] Response file to write (if relative, relative to target_out_dir).
-#
-#   response_file_contents (required)
-#   data_deps (optional)
-#   deps (optional)
-#   metadata (optional)
-#   public_deps (optional)
-#   testonly (optional)
-#   visibility (optional)
-#     Same as for any GN `action()` target.
-#
-template("generate_response_file") {
-  action(target_name) {
-    forward_variables_from(invoker,
-                           [
-                             "data_deps",
-                             "deps",
-                             "metadata",
-                             "output_name",
-                             "public_deps",
-                             "response_file_contents",
-                             "testonly",
-                             "visibility",
-                           ])
-    if (!defined(output_name)) {
-      output_name = target_name
-    }
-    outputs = [ "$target_out_dir/$output_name" ]
-    assert(
-        defined(response_file_contents),
-        "generate_response_file(\"${target_name}\") must define response_file_contents")
-
-    script = "/bin/cp"
-    args = [ "-f" ]
-    if (response_file_contents == []) {
-      # GN doesn't allow an empty response file.
-      args += [ "/dev/null" ]
-    } else {
-      args += [ "{{response_file_name}}" ]
-    }
-    args += rebase_path(outputs, root_build_dir)
-  }
-}
-
 # Action target that generates a manifest file in the `target=/abs/file`
 # format used by `zbi`, `blobfs`, etc.  ELF files in the manifest have
 # their dynamic linking details examined and other necessary ELF files
