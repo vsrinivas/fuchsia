@@ -55,6 +55,7 @@ group("tools") {
     "//third_party/openssh-portable:openssh-tools",
     "//tools",
     "//tools/check-licenses:host($host_toolchain)",
+    "//tools/sys-realm-analyzer:host($host_toolchain)",
     "//tools/whereiscl:host($host_toolchain)",
   ]
   deps = [ "//build/validate:non_production_tag" ]

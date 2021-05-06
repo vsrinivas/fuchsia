@@ -42,6 +42,10 @@ struct Options {
     /// path for the `fx` command
     fx_path: String,
 
+    #[argh(option, default = "\"ffx\".to_string()")]
+    /// path for the `ffx` command
+    ffx_path: String,
+
     #[argh(option)]
     /// the architectures to compose products from, if specified, '--boards' must also be provided
     arches: Option<String>,
@@ -53,6 +57,10 @@ struct Options {
     #[argh(option)]
     /// the products to inspect,
     products: Option<String>,
+
+    #[argh(option)]
+    /// the build dir to use
+    dir: Option<String>,
 }
 
 fn main() -> Result<(), u8> {
@@ -74,17 +82,17 @@ fn main() -> Result<(), u8> {
     }
 
     let fx_path = &args.fx_path;
+    let ffx_path = &args.ffx_path;
     for t in targets {
         println!("{}.{}", t.board, t.arch);
-        let out_dir = format!("out/{}-{}", t.board, t.arch);
-        let cmd_out = Command::new(fx_path)
-            .arg("--dir")
-            .arg(out_dir.clone())
+        let mut cmd = Command::new(fx_path);
+        if let Some(dir) = &args.dir {
+            cmd.arg("--dir").arg(dir);
+        }
+        let cmd_out = cmd
             .arg("set")
             .arg(format!("{}.{}", t.board, t.arch))
             .arg("--release")
-            .arg("--with")
-            .arg("//src/security/scrutiny")
             .output()
             .expect("Snap! `fx set` failed");
 
@@ -103,18 +111,14 @@ fn main() -> Result<(), u8> {
             }
         }
 
-        let build_cmd = Command::new(fx_path)
-            .arg("build")
-            .arg("build/images:config-data")
-            .output()
-            .expect("build failed");
+        let build_cmd = Command::new(fx_path).arg("build").output().expect("build failed");
 
         if build_cmd.status.code().unwrap() != 0 {
             println!("Build failed! {}", build_cmd.status.code().unwrap());
         }
 
-        let mut scrutiny_cmd = Command::new(fx_path);
-        scrutiny_cmd.arg("scrutiny").arg("-c").arg("sys.realm");
+        let mut scrutiny_cmd = Command::new(ffx_path);
+        scrutiny_cmd.arg("scrutiny").arg("shell").arg("sys.realm");
 
         let scrutiny_result = scrutiny_cmd.output().expect("getting command output failed");
         let out_str = String::from_utf8_lossy(&scrutiny_result.stdout);
