@@ -18,13 +18,15 @@ use std::path::Path;
 use zbi::ZbiBuilder;
 
 pub fn assemble(args: ImageArgs) -> Result<()> {
-    let config = read_config(args.config)?;
-    let base_package = construct_base_package(&args.gendir, &config)?;
+    let ImageArgs { config, outdir, gendir } = args;
+    let config = read_config(config)?;
+    let gendir = gendir.unwrap_or(outdir.clone());
+    let base_package = construct_base_package(&outdir, &gendir, &config)?;
     let base_merkle = MerkleTree::from_reader(&base_package)
         .context("Failed to calculate the base merkle")?
         .root();
     println!("Base merkle: {}", base_merkle);
-    let _zbi = construct_zbi(&args.gendir, &config, Some(base_merkle))?;
+    let _zbi = construct_zbi(&outdir, &gendir, &config, Some(base_merkle))?;
 
     Ok(())
 }
@@ -32,11 +34,14 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
 fn read_config(config_path: impl AsRef<Path>) -> Result<Config> {
     let mut config = File::open(config_path)?;
     let config = Config::from_reader(&mut config).context("Failed to read the image config")?;
-    println!("Config indicated version: {}", config.version);
     Ok(config)
 }
 
-fn construct_base_package(gendir: impl AsRef<Path>, config: &Config) -> Result<File> {
+fn construct_base_package(
+    outdir: impl AsRef<Path>,
+    gendir: impl AsRef<Path>,
+    config: &Config,
+) -> Result<File> {
     let mut base_pkg_builder = BasePackageBuilder::default();
     for pkg_manifest_path in &config.extra_packages_for_base_package {
         let pkg_manifest = pkg_manifest_from_path(pkg_manifest_path);
@@ -50,16 +55,17 @@ fn construct_base_package(gendir: impl AsRef<Path>, config: &Config) -> Result<F
         let pkg_manifest = pkg_manifest_from_path(pkg_manifest_path);
         base_pkg_builder.add_cache_package(pkg_manifest);
     }
+
+    let base_package_path = outdir.as_ref().join("base.far");
     let mut base_package = OpenOptions::new()
         .read(true)
         .write(true)
         .create(true)
-        .open("base.far")
+        .open(base_package_path)
         .or_else(|e| ffx_bail!("Failed to create the base package file: {}", e))?;
     base_pkg_builder
         .build(gendir, &mut base_package)
         .or_else(|e| ffx_bail!("Failed to build the base package: {}", e))?;
-    println!("Base package: base.far");
     Ok(base_package)
 }
 
@@ -70,6 +76,7 @@ fn pkg_manifest_from_path(path: impl AsRef<Path>) -> PackageManifest {
 }
 
 fn construct_zbi(
+    outdir: impl AsRef<Path>,
     gendir: impl AsRef<Path>,
     config: &Config,
     base_merkle: Option<Hash>,
@@ -113,11 +120,11 @@ fn construct_zbi(
     }
 
     // Build and return the ZBI.
-    zbi_builder.build(gendir, Path::new("myfuchsia.zbi"))?;
+    let zbi_path = outdir.as_ref().join("fuchsia.zbi");
+    zbi_builder.build(gendir, zbi_path.as_path())?;
     let zbi = OpenOptions::new()
         .read(true)
-        .open("myfuchsia.zbi")
+        .open(zbi_path)
         .or_else(|e| ffx_bail!("Failed to open the zbi: {}", e))?;
-    println!("ZBI: myfuchsia.zbi");
     Ok(zbi)
 }

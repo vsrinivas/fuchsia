@@ -86,7 +86,10 @@ pub struct ImageArgs {
     /// settings used to assemble an image.
     #[argh(option)]
     pub config: PathBuf,
+    /// the directory to write assembled outputs to.
+    #[argh(option)]
+    pub outdir: PathBuf,
     /// the directory to write generated intermediate files to.
     #[argh(option)]
-    pub gendir: PathBuf,
+    pub gendir: Option<PathBuf>,
 }
