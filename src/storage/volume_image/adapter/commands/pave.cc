@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 
 #include <cstdint>
+#include <cstdio>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -45,6 +46,26 @@ fit::result<struct stat, std::string> GetBlockInfo(std::string_view path) {
   return fit::ok(st);
 }
 
+fit::result<uint64_t, std::string> GetSize(std::string_view path) {
+  std::string str_path(path);
+  fbl::unique_fd device(open(str_path.c_str(), O_RDONLY));
+
+  if (!device.is_valid()) {
+    auto err = std::string(strerror(errno));
+    return fit::error("Failed to obtain FD for device at " + str_path +
+                      ". More specifically: " + err + ".");
+  }
+
+  off_t ret = lseek(device.get(), 0, SEEK_END);
+  if (ret < 0) {
+    auto err = std::string(strerror(errno));
+    return fit::error("Failed to seek to end of stream at " + str_path +
+                      ". More specifically: " + err + ".");
+  }
+
+  return fit::ok(static_cast<uint64_t>(ret));
+}
+
 }  // namespace
 
 fit::result<void, std::string> Pave(const PaveParams& params) {
@@ -69,7 +90,8 @@ fit::result<void, std::string> Pave(const PaveParams& params) {
   }
 
   std::unique_ptr<Writer> writer = nullptr;
-  std::optional<uint64_t> overriden_target_length;
+  // Depending on target device we may use a different default value.
+  std::optional<uint64_t> default_target_length;
 
   switch (params.type) {
     case TargetType::kBlockDevice: {
@@ -88,11 +110,21 @@ fit::result<void, std::string> Pave(const PaveParams& params) {
       if (block_info_or.is_error()) {
         return block_info_or.take_error_result();
       }
-      overriden_target_length = block_info_or.value().st_blocks * block_info_or.value().st_blksize -
-                                params.offset.value_or(0);
-      writer = std::make_unique<BlockWriter>(block_info_or.value().st_blksize,
-                                             block_info_or.value().st_blocks, std::move(fd_reader),
-                                             std::move(fd_writer));
+
+      if (params.offset.has_value() &&
+          params.offset.value() % block_info_or.value().st_blksize != 0) {
+        return fit::error("Offset must be aligned to block boundary for paving a block device.");
+      }
+
+      auto size_or = GetSize(params.output_path);
+      if (size_or.is_error()) {
+        return size_or.take_error_result();
+      }
+      default_target_length = size_or.take_value() - params.offset.value_or(0);
+      uint64_t block_count =
+          params.length.value_or(default_target_length.value()) / block_info_or.value().st_blksize;
+      writer = std::make_unique<BlockWriter>(block_info_or.value().st_blksize, block_count,
+                                             std::move(fd_reader), std::move(fd_writer));
       break;
     }
 
@@ -109,15 +141,21 @@ fit::result<void, std::string> Pave(const PaveParams& params) {
       if (mtd_writer_or.is_error()) {
         return mtd_writer_or.take_error_result();
       }
-      overriden_target_length = handle.instance().page_count() * handle.instance().page_size();
+      default_target_length = handle.instance().page_count() * handle.instance().page_size();
       writer = mtd_writer_or.take_value();
       break;
     }
+
     case TargetType::kFile: {
       auto writer_or = FdWriter::Create(params.output_path);
       if (writer_or.is_error()) {
         return writer_or.take_error_result();
       }
+      auto size_or = GetSize(params.output_path);
+      if (size_or.is_error()) {
+        return size_or.take_error_result();
+      }
+      default_target_length = size_or.value() - params.offset.value_or(0);
       writer = std::make_unique<FdWriter>(writer_or.take_value());
       break;
     }
@@ -128,13 +166,12 @@ fit::result<void, std::string> Pave(const PaveParams& params) {
     return reader_or.take_error_result();
   }
   std::unique_ptr<Reader> reader = std::make_unique<FdReader>(reader_or.take_value());
+  auto length = params.length.value_or(default_target_length.value());
 
   if (params.is_output_embedded) {
     // The MTD Writer handles the offset internally.
-    auto& length = overriden_target_length.has_value() ? overriden_target_length : params.length;
     writer = std::make_unique<BoundedWriter>(
-        std::move(writer), (params.type == TargetType::kMtd) ? 0 : params.offset.value(),
-        length.value());
+        std::move(writer), (params.type == TargetType::kMtd) ? 0 : params.offset.value(), length);
   }
 
   auto descriptor_or = FvmSparseReadImage(0, std::move(reader));
@@ -145,10 +182,8 @@ fit::result<void, std::string> Pave(const PaveParams& params) {
   // So we can update the options.
   auto updated_options = descriptor_or.value().options();
 
-  updated_options.target_volume_size = overriden_target_length.has_value()
-                                           ? overriden_target_length
-                                           : params.fvm_options.target_volume_size;
-  if (updated_options.target_volume_size.value_or(0) <
+  updated_options.target_volume_size = length;
+  if (updated_options.max_volume_size.value_or(0) <
       params.fvm_options.max_volume_size.value_or(0)) {
     updated_options.max_volume_size = params.fvm_options.max_volume_size;
   }

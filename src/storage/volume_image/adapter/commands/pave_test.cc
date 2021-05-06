@@ -4,6 +4,7 @@
 
 #include <fcntl.h>
 #include <stdio.h>
+#include <unistd.h>
 #include <zircon/assert.h>
 
 #include <array>
@@ -41,9 +42,69 @@ PaveParams MakeParams() {
 TEST(PaveCommandTest, CompressedSparseImageIsOk) {
   auto output_or = TempFile::Create();
   ASSERT_TRUE(output_or.is_ok()) << output_or.error();
+  // Truncate file to a size, since we are not providing length.
+  ASSERT_EQ(truncate(output_or.value().path().data(), kInitialImageSize), 0) << strerror(errno);
 
   auto pave_params = MakeParams();
   pave_params.output_path = output_or.value().path();
+
+  auto pave_result = Pave(pave_params);
+  ASSERT_TRUE(pave_result.is_ok()) << pave_result.error();
+
+  fbl::unique_fd fvm_fd(open(output_or.value().path().data(), O_RDONLY));
+  ASSERT_TRUE(fvm_fd.is_valid());
+
+  fvm::Checker fvm_checker(std::move(fvm_fd), 8 * (1 << 10), true);
+  ASSERT_TRUE(fvm_checker.Validate());
+}
+
+TEST(PaveCommandTest, CompressedSparseImageWithLengthIsOk) {
+  auto output_or = TempFile::Create();
+  ASSERT_TRUE(output_or.is_ok()) << output_or.error();
+
+  auto pave_params = MakeParams();
+  pave_params.output_path = output_or.value().path();
+  pave_params.length = kInitialImageSize;
+
+  auto pave_result = Pave(pave_params);
+  ASSERT_TRUE(pave_result.is_ok()) << pave_result.error();
+
+  fbl::unique_fd fvm_fd(open(output_or.value().path().data(), O_RDONLY));
+  ASSERT_TRUE(fvm_fd.is_valid());
+
+  fvm::Checker fvm_checker(std::move(fvm_fd), 8 * (1 << 10), true);
+  ASSERT_TRUE(fvm_checker.Validate());
+}
+
+TEST(PaveCommandTest, CompressedSparseImageToBlockDeviceIsOk) {
+  auto output_or = TempFile::Create();
+  ASSERT_TRUE(output_or.is_ok()) << output_or.error();
+
+  // Truncate file to a size, since we are not providing length.
+  ASSERT_EQ(truncate(output_or.value().path().data(), kInitialImageSize), 0) << strerror(errno);
+
+  auto pave_params = MakeParams();
+  pave_params.output_path = output_or.value().path();
+  pave_params.type = TargetType::kBlockDevice;
+
+  auto pave_result = Pave(pave_params);
+  ASSERT_TRUE(pave_result.is_ok()) << pave_result.error();
+
+  fbl::unique_fd fvm_fd(open(output_or.value().path().data(), O_RDONLY));
+  ASSERT_TRUE(fvm_fd.is_valid());
+
+  fvm::Checker fvm_checker(std::move(fvm_fd), 8 * (1 << 10), true);
+  ASSERT_TRUE(fvm_checker.Validate());
+}
+
+TEST(PaveCommandTest, CompressedSparseImageToBlockDeviceWithLengthIsOk) {
+  auto output_or = TempFile::Create();
+  ASSERT_TRUE(output_or.is_ok()) << output_or.error();
+
+  auto pave_params = MakeParams();
+  pave_params.output_path = output_or.value().path();
+  pave_params.type = TargetType::kBlockDevice;
+  pave_params.length = kInitialImageSize;
 
   auto pave_result = Pave(pave_params);
   ASSERT_TRUE(pave_result.is_ok()) << pave_result.error();
@@ -144,14 +205,13 @@ TEST(PaveCommandTest, MtdWriterIsOk) {
   pave_params.output_path = kTestMtdDevicePath;
   pave_params.type = TargetType::kMtd;
   pave_params.is_output_embedded = true;
-  pave_params.offset = 0 * (1u << 20);
+  pave_params.offset = 0;
   pave_params.max_bad_blocks = 41;
-  pave_params.length.reset();
+  pave_params.length = kInitialImageSize;
 
-  pave_params.fvm_options.max_volume_size = 420 * (1u << 20);
+  pave_params.fvm_options.max_volume_size = 2 * kInitialImageSize;
   pave_params.fvm_options.compression.schema = CompressionSchema::kNone;
 
-  // Add poison values before the offset and after the length to verify afterwards.
   auto pave_result = Pave(pave_params);
   ASSERT_TRUE(pave_result.is_ok()) << pave_result.error();
 }
