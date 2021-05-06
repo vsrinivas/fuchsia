@@ -11,7 +11,7 @@ use {
         RuleCommand, RuleDumpDynamicCommand, RuleListCommand, RuleReplaceCommand,
         RuleReplaceFileCommand, RuleReplaceJsonCommand, RuleReplaceSubCommand, RuleSubCommand,
     },
-    crate::v1repoconf::SourceConfig,
+    crate::v1repoconf::{validate_host, SourceConfig},
     anyhow::{bail, format_err, Context as _},
     fidl_fuchsia_net_http::{self as http},
     fidl_fuchsia_pkg::{
@@ -184,6 +184,7 @@ async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
                                     // automatically derived name.
                                     if let Some(n) = name {
                                         repo.set_id(&n);
+                                        validate_host(&repo.get_id())?;
                                     }
                                     let r = repo_manager.add(repo.into()).await?;
                                     r
@@ -208,6 +209,7 @@ async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
                                     // automatically derived name.
                                     if let Some(n) = name {
                                         repo.set_id(&n);
+                                        validate_host(&repo.get_id())?;
                                     }
                                     let r = repo_manager.add(repo.into()).await?;
                                     r

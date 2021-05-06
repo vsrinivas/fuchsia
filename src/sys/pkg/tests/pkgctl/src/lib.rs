@@ -494,7 +494,7 @@ fn make_test_repo_config() -> RepositoryConfig {
 // This builds a v2 RepositoryConfig that is expected to be in the repository manager add request
 // when pkgctl is provided with the V1_LEGACY_TEST_REPO_JSON structure below as input.
 fn make_v1_legacy_expected_test_repo_config() -> RepositoryConfig {
-    RepositoryConfigBuilder::new(RepoUrl::new("legacy_repo".to_string()).expect("valid url"))
+    RepositoryConfigBuilder::new(RepoUrl::new("legacy-repo".to_string()).expect("valid url"))
         .add_root_key(RepositoryKey::Ed25519(vec![0u8]))
         .add_mirror(
             MirrorConfigBuilder::new("http://legacy.org".parse::<Uri>().unwrap())
@@ -615,7 +615,7 @@ async fn test_dump_dynamic() {
 }
 
 macro_rules! repo_add_tests {
-    ($($test_name:ident: $source:expr, $version:expr,)*) => {
+    ($($test_name:ident: $source:expr, $version:expr, $name:expr,)*) => {
         $(
             #[fasync::run_singlethreaded(test)]
             async fn $test_name() {
@@ -634,7 +634,12 @@ macro_rules! repo_add_tests {
                             "1" => { f.write_all(V1_LEGACY_TEST_REPO_JSON.as_bytes()).expect("write v1 SourceConfig json"); },
                             _ => { serde_json::to_writer(f, &repo_config).expect("write RepositoryConfig json"); }
                         };
-                        env.run_pkgctl(vec!["repo", "add", $source, "-f", $version, "/repo-configs/the-config"]).await
+                        let args = if $name == "" {
+                            vec!["repo", "add", $source, "-f", $version, "/repo-configs/the-config"]
+                        } else {
+                            vec!["repo", "add", $source, "-f", $version, "-n", $name, "/repo-configs/the-config"]
+                        };
+                        env.run_pkgctl(args).await
                     },
                     "url" => {
                         let response = match $version {
@@ -642,7 +647,13 @@ macro_rules! repo_add_tests {
                             _ => StaticResponse::ok_body(serde_json::to_string(&repo_config).unwrap()),
                         };
                         let server = TestServer::builder().handler(response).start();
-                        env.run_pkgctl(vec!["repo", "add", $source, "-f", $version, server.local_url_for_path("some/path").as_str()]).await
+                        let local_url = server.local_url_for_path("some/path").to_owned();
+                        let args = if $name == "" {
+                            vec!["repo", "add", $source, "-f", $version, &local_url]
+                        } else {
+                            vec!["repo", "add", $source, "-f", $version, "-n", $name, &local_url]
+                        };
+                        env.run_pkgctl(args).await
                     },
                     // Unsupported source
                     _ => env.run_pkgctl(vec!["repo", "add", $source, "-f", $version]).await,
@@ -658,10 +669,14 @@ macro_rules! repo_add_tests {
 }
 
 repo_add_tests! {
-    test_repo_add_v1_file: "file", "1",
-    test_repo_add_v2_file: "file", "2",
-    test_repo_add_v1_url: "url", "1",
-    test_repo_add_v2_url: "url", "2",
+    test_repo_add_v1_file: "file", "1", "",
+    test_repo_add_v1_file_with_name: "file", "1", "legacy-repo",
+    test_repo_add_v2_file: "file", "2", "",
+    test_repo_add_v2_file_with_name: "file", "2", "fuchsia.com",
+    test_repo_add_v1_url: "url", "1", "",
+    test_repo_add_v1_url_with_name: "url", "1", "legacy-repo",
+    test_repo_add_v2_url: "url", "2", "",
+    test_repo_add_v2_url_with_name: "url", "2", "fuchsia.com",
 }
 
 #[fasync::run_singlethreaded(test)]

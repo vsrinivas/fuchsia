@@ -6,6 +6,7 @@
 // until there is no longer a need to accept v1 repository configs.
 
 use {
+    anyhow::bail,
     fidl_fuchsia_pkg as fidl,
     serde::{Deserialize, Serialize},
     std::borrow::Cow,
@@ -50,6 +51,9 @@ pub struct SourceConfig {
 }
 
 impl SourceConfig {
+    pub fn get_id(&self) -> String {
+        return self.ID.to_string();
+    }
     pub fn set_id(&mut self, id: &str) {
         self.ID = id.to_string();
     }
@@ -100,13 +104,27 @@ fn format_repo_url<'a>(url: &'a str) -> String {
 }
 
 fn sanitize_id<'a>(id: &'a str) -> Cow<'a, str> {
+    // The sanitized ID is used for the hostname part which can only contain lowercase letters,
+    // digits and hyphens: https://fuchsia.dev/fuchsia-src/concepts/packages/package_url
     return id
         .chars()
         .map(|c| match c {
-            'A'..='Z' | 'a'..='z' | '0'..='9' | '-' => c,
-            _ => '_',
+            'a'..='z' | '0'..='9' | '-' | '.' => c,
+            'A'..='Z' => c.to_ascii_lowercase(),
+            _ => '-',
         })
         .collect();
+}
+
+pub fn validate_host(host: &str) -> Result<(), anyhow::Error> {
+    // Allow only [a-z0-9-] groups delimited by dots, according to the spec:
+    // https://fuchsia.dev/fuchsia-src/concepts/packages/package_url
+    if !host.chars().all(|c| {
+        (c.is_ascii_alphabetic() && c.is_lowercase()) || c.is_numeric() || c == '-' || c == '.'
+    }) {
+        bail!("repo hostname {} contains invalid characters, only [a-z0-9-.] are allowed.", host);
+    }
+    Ok(())
 }
 
 mod hex_serde {
@@ -127,5 +145,55 @@ mod hex_serde {
         let value = String::deserialize(deserializer)?;
         hex::decode(value.as_bytes())
             .map_err(|e| serde::de::Error::custom(format!("bad hex value: {:?}: {}", value, e)))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_valid_hosts() {
+        let valid_hosts =
+            &["fuchsia.com", "fuchsia-1.com", "riscv.fuchsia.com", "rv64.fuchsia.com"];
+        let invalid_hosts = &[
+            "FuChSiA.CoM",
+            "FUCHSIA_1.com",
+            "FUCHSIA_1.COM",
+            "RISCV.fuchsia.com",
+            "RV64.fuchsia.com",
+        ];
+        for host in valid_hosts {
+            assert!(validate_host(&host).is_ok());
+        }
+        for host in invalid_hosts {
+            assert!(validate_host(&host).is_err());
+        }
+    }
+
+    #[test]
+    fn test_sanitize_id() {
+        let test_cases = [
+            ("fuchsia.com", "fuchsia.com"),
+            ("fuchsia.com", "FUCHSIA.COM"),
+            ("fuchsia-1.com", "fuchsia_1.com"),
+            ("http---fuchsia.com-", "http://fuchsia.com/"),
+        ];
+        for (want, input) in test_cases {
+            assert_eq!(want, sanitize_id(input));
+        }
+    }
+
+    #[test]
+    fn test_format_repo_url() {
+        let test_cases = [
+            ("fuchsia-pkg://fuchsia.com", "fuchsia.com"),
+            ("fuchsia-pkg://fuchsia.com", "FUCHSIA.COM"),
+            ("fuchsia-pkg://fuchsia-1.com", "fuchsia_1.com"),
+            ("fuchsia-pkg://http---fuchsia.com-", "http://fuchsia.com/"),
+        ];
+        for (want, input) in test_cases {
+            assert_eq!(want, format_repo_url(input));
+        }
     }
 }
