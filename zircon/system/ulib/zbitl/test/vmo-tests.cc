@@ -8,6 +8,8 @@
 
 #include <algorithm>
 
+#include "tests.h"
+
 namespace {
 
 // Convert a zbi_header_t into a std::tuple.

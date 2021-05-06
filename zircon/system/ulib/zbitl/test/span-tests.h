@@ -2,13 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_ZBITL_TEST_VIEW_TESTS_H_
-#define ZIRCON_SYSTEM_ULIB_ZBITL_TEST_VIEW_TESTS_H_
+#ifndef ZIRCON_SYSTEM_ULIB_ZBITL_TEST_SPAN_TESTS_H_
+#define ZIRCON_SYSTEM_ULIB_ZBITL_TEST_SPAN_TESTS_H_
+
+#include <lib/stdcompat/span.h>
 
 #include <memory>
+#include <string>
 #include <string_view>
 
-#include "tests.h"
+#include <fbl/unique_fd.h>
+#include <gtest/gtest.h>
 
 template <typename T>
 struct BasicStringViewTestTraits {
@@ -17,7 +21,7 @@ struct BasicStringViewTestTraits {
 
   static constexpr bool kDefaultConstructedViewHasStorageError = false;
   static constexpr bool kExpectExtensibility = false;
-  static constexpr bool kExpectOneshotReads = true;
+  static constexpr bool kExpectOneShotReads = true;
   static constexpr bool kExpectUnbufferedReads = true;
   static constexpr bool kExpectUnbufferedWrites = false;
 
@@ -38,7 +42,7 @@ struct BasicStringViewTestTraits {
     *context = {std::move(buff), n};
   }
 
-  static void Read(storage_type storage, payload_type payload, size_t size, Bytes* contents) {
+  static void Read(storage_type storage, payload_type payload, size_t size, std::string* contents) {
     *contents = {reinterpret_cast<const char*>(payload.data()), payload.size() * sizeof(T)};
   }
 };
@@ -52,7 +56,7 @@ struct SpanTestTraits {
 
   static constexpr bool kDefaultConstructedViewHasStorageError = false;
   static constexpr bool kExpectExtensibility = false;
-  static constexpr bool kExpectOneshotReads = true;
+  static constexpr bool kExpectOneShotReads = true;
   static constexpr bool kExpectUnbufferedReads = true;
   static constexpr bool kExpectUnbufferedWrites = !std::is_const_v<T>;
 
@@ -79,14 +83,14 @@ struct SpanTestTraits {
   }
 
   static void Read(const storage_type& storage, payload_type payload, size_t size,
-                   Bytes* contents) {
+                   std::string* contents) {
     contents->resize(size);
     auto bytes = cpp20::as_bytes(payload);
     ASSERT_LE(size, bytes.size());
     memcpy(contents->data(), bytes.data(), size);
   }
 
-  static void Write(storage_type& storage, uint32_t offset, const Bytes& data) {
+  static void Write(storage_type& storage, uint32_t offset, const std::string& data) {
     ASSERT_LT(offset, storage.size());
     ASSERT_LE(offset, storage.size() - data.size());
     memcpy(storage.data() + offset, data.data(), data.size());
@@ -100,4 +104,4 @@ struct SpanTestTraits {
 
 using ByteSpanTestTraits = SpanTestTraits<std::byte>;
 
-#endif  // ZIRCON_SYSTEM_ULIB_ZBITL_TEST_VIEW_TESTS_H_
+#endif  // ZIRCON_SYSTEM_ULIB_ZBITL_TEST_SPAN_TESTS_H_

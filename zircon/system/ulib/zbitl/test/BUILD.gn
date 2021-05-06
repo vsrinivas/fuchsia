@@ -84,14 +84,14 @@ foreach(src, src_storage_types) {
 
 test("zbitl-unittests") {
   sources = [
+    "array-tests.cc",
     "checking-tests.cc",
     "fd-tests.cc",
     "json-tests.cc",
     "mem_config_test.cc",
-    "memory-tests.cc",
+    "span-tests.cc",
     "stdio-tests.cc",
     "tests.cc",
-    "view-tests.cc",
   ]
   deps = [
     "//src/lib/files",

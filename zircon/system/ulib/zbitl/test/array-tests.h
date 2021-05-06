@@ -2,13 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_ZBITL_TEST_MEMORY_TESTS_H_
-#define ZIRCON_SYSTEM_ULIB_ZBITL_TEST_MEMORY_TESTS_H_
+#ifndef ZIRCON_SYSTEM_ULIB_ZBITL_TEST_ARRAY_TESTS_H_
+#define ZIRCON_SYSTEM_ULIB_ZBITL_TEST_ARRAY_TESTS_H_
 
 #include <lib/zbitl/memory.h>
 
-#include "tests.h"
-#include "view-tests.h"
+#include <string>
+
+#include <fbl/unique_fd.h>
+#include <gtest/gtest.h>
+
+#include "span-tests.h"
 
 template <typename T>
 struct FblArrayTestTraits {
@@ -19,7 +23,7 @@ struct FblArrayTestTraits {
 
   static constexpr bool kDefaultConstructedViewHasStorageError = false;
   static constexpr bool kExpectExtensibility = true;
-  static constexpr bool kExpectOneshotReads = true;
+  static constexpr bool kExpectOneShotReads = true;
   static constexpr bool kExpectUnbufferedReads = true;
   static constexpr bool kExpectUnbufferedWrites = !std::is_const_v<T>;
 
@@ -42,12 +46,12 @@ struct FblArrayTestTraits {
   }
 
   static void Read(const storage_type& storage, payload_type payload, size_t size,
-                   Bytes* contents) {
+                   std::string* contents) {
     auto span = zbitl::AsSpan<T>(storage);
     ASSERT_NO_FATAL_FAILURE(SpanTraits::Read(span, payload, size, contents));
   }
 
-  static void Write(storage_type& storage, uint32_t offset, const Bytes& data) {
+  static void Write(storage_type& storage, uint32_t offset, const std::string& data) {
     auto span = zbitl::AsSpan<T>(storage);
     ASSERT_NO_FATAL_FAILURE(SpanTraits::Write(span, offset, data));
   }
@@ -60,4 +64,4 @@ struct FblArrayTestTraits {
 
 using FblByteArrayTestTraits = FblArrayTestTraits<std::byte>;
 
-#endif  // ZIRCON_SYSTEM_ULIB_ZBITL_TEST_MEMORY_TESTS_H_
+#endif  // ZIRCON_SYSTEM_ULIB_ZBITL_TEST_ARRAY_TESTS_H_

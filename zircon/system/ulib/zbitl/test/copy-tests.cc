@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "array-tests.h"
 #include "fd-tests.h"
-#include "memory-tests.h"
+#include "span-tests.h"
 #include "stdio-tests.h"
 #include "tests.h"
-#include "view-tests.h"
 
 #ifdef __Fuchsia__
 #include "vmo-tests.h"

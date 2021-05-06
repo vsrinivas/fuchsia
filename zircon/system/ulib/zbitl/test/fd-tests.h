@@ -8,7 +8,11 @@
 #include <fcntl.h>
 #include <lib/zbitl/fd.h>
 
-#include "tests.h"
+#include <string>
+
+#include <gtest/gtest.h>
+
+#include "src/lib/files/scoped_temp_dir.h"
 
 struct FdTestTraits {
   using storage_type = fbl::unique_fd;
@@ -16,7 +20,7 @@ struct FdTestTraits {
 
   static constexpr bool kDefaultConstructedViewHasStorageError = true;
   static constexpr bool kExpectExtensibility = true;
-  static constexpr bool kExpectOneshotReads = false;
+  static constexpr bool kExpectOneShotReads = false;
   static constexpr bool kExpectUnbufferedReads = true;
   static constexpr bool kExpectUnbufferedWrites = false;
 
@@ -52,14 +56,14 @@ struct FdTestTraits {
   }
 
   static void Read(const storage_type& storage, payload_type payload, size_t size,
-                   Bytes* contents) {
+                   std::string* contents) {
     contents->resize(size);
     ssize_t n = pread(storage.get(), contents->data(), size, payload);
     ASSERT_GE(n, 0) << "pread: " << strerror(errno);
     ASSERT_EQ(size, static_cast<uint32_t>(n)) << "did not fully read payload";
   }
 
-  static void Write(storage_type& storage, uint32_t offset, const Bytes& data) {
+  static void Write(storage_type& storage, uint32_t offset, const std::string& data) {
     ssize_t n = pwrite(storage.get(), data.data(), data.size(), offset);
     ASSERT_GE(n, 0) << "write: " << strerror(errno);
     ASSERT_EQ(data.size(), static_cast<size_t>(n)) << "did not fully write data";

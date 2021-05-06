@@ -8,8 +8,10 @@
 #include <lib/zbitl/vmo.h>
 
 #include <memory>
+#include <string>
 
-#include "tests.h"
+#include <fbl/unique_fd.h>
+#include <gtest/gtest.h>
 
 struct VmoTestTraits {
   using storage_type = zx::vmo;
@@ -18,7 +20,7 @@ struct VmoTestTraits {
 
   static constexpr bool kDefaultConstructedViewHasStorageError = true;
   static constexpr bool kExpectExtensibility = true;
-  static constexpr bool kExpectOneshotReads = false;
+  static constexpr bool kExpectOneShotReads = false;
   static constexpr bool kExpectUnbufferedReads = true;
   static constexpr bool kExpectUnbufferedWrites = false;
 
@@ -43,12 +45,12 @@ struct VmoTestTraits {
   }
 
   static void Read(const storage_type& storage, payload_type payload, size_t size,
-                   Bytes* contents) {
+                   std::string* contents) {
     contents->resize(size);
     ASSERT_EQ(ZX_OK, storage.read(contents->data(), payload, size));
   }
 
-  static void Write(const storage_type& storage, uint32_t offset, const Bytes& data) {
+  static void Write(const storage_type& storage, uint32_t offset, const std::string& data) {
     ASSERT_EQ(ZX_OK, storage.write(data.data(), offset, data.size()));
   }
 
@@ -66,7 +68,7 @@ struct UnownedVmoTestTraits {
 
   static constexpr bool kDefaultConstructedViewHasStorageError = true;
   static constexpr bool kExpectExtensibility = true;
-  static constexpr bool kExpectOneshotReads = false;
+  static constexpr bool kExpectOneShotReads = false;
   static constexpr bool kExpectUnbufferedReads = true;
   static constexpr bool kExpectUnbufferedWrites = false;
 
@@ -92,11 +94,11 @@ struct UnownedVmoTestTraits {
   }
 
   static void Read(const storage_type& storage, payload_type payload, size_t size,
-                   Bytes* contents) {
+                   std::string* contents) {
     ASSERT_NO_FATAL_FAILURE(VmoTestTraits::Read(*storage, payload, size, contents));
   }
 
-  static void Write(const storage_type& storage, uint32_t offset, const Bytes& data) {
+  static void Write(const storage_type& storage, uint32_t offset, const std::string& data) {
     ASSERT_NO_FATAL_FAILURE(VmoTestTraits::Write(*storage, offset, data));
   }
 
@@ -114,7 +116,7 @@ struct MapOwnedVmoTestTraits {
 
   static constexpr bool kDefaultConstructedViewHasStorageError = true;
   static constexpr bool kExpectExtensibility = true;
-  static constexpr bool kExpectOneshotReads = true;
+  static constexpr bool kExpectOneShotReads = true;
   static constexpr bool kExpectUnbufferedReads = true;
   static constexpr bool kExpectUnbufferedWrites = true;
 
@@ -137,11 +139,11 @@ struct MapOwnedVmoTestTraits {
   }
 
   static void Read(const storage_type& storage, payload_type payload, size_t size,
-                   Bytes* contents) {
+                   std::string* contents) {
     ASSERT_NO_FATAL_FAILURE(VmoTestTraits::Read(storage.vmo(), payload, size, contents));
   }
 
-  static void Write(const storage_type& storage, uint32_t offset, const Bytes& data) {
+  static void Write(const storage_type& storage, uint32_t offset, const std::string& data) {
     ASSERT_NO_FATAL_FAILURE(VmoTestTraits::Write(storage.vmo(), offset, data));
   }
 
@@ -159,7 +161,7 @@ struct MapUnownedVmoTestTraits {
 
   static constexpr bool kDefaultConstructedViewHasStorageError = true;
   static constexpr bool kExpectExtensibility = true;
-  static constexpr bool kExpectOneshotReads = true;
+  static constexpr bool kExpectOneShotReads = true;
   static constexpr bool kExpectUnbufferedReads = true;
   static constexpr bool kExpectUnbufferedWrites = true;
 
@@ -186,11 +188,11 @@ struct MapUnownedVmoTestTraits {
   }
 
   static void Read(const storage_type& storage, payload_type payload, size_t size,
-                   Bytes* contents) {
+                   std::string* contents) {
     ASSERT_NO_FATAL_FAILURE(VmoTestTraits::Read(storage.vmo(), payload, size, contents));
   }
 
-  static void Write(const storage_type& storage, uint32_t offset, const Bytes& data) {
+  static void Write(const storage_type& storage, uint32_t offset, const std::string& data) {
     ASSERT_NO_FATAL_FAILURE(VmoTestTraits::Write(storage.vmo(), offset, data));
   }
 

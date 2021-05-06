@@ -94,7 +94,7 @@ struct TestAllocator {
 //     `zbitl::StorageTraits<storage_type>::payload_type`.
 //   * a static constexpr bool `kExpectExtensibility` giving the expectation of
 //     whether storage capacity can be extended.
-//   * a static constexpr bool `kExpectOneshotReads` giving the expectation of
+//   * a static constexpr bool `kExpectOneShotReads` giving the expectation of
 //     whether whole payloads can be accessed in memory directly.
 //   * a static constexpr bool `kExpectUnbufferedReads` giving the expectation of
 //     whether whole payloads can be access in memory directly or read into a
@@ -273,10 +273,10 @@ void TestMutation(TestDataZbiType type) {
 
 template <typename SrcTestTraits, typename DestTestTraits>
 constexpr bool kExpectOneShotDecompression =
-    SrcTestTraits::kExpectOneshotReads&& DestTestTraits::kExpectUnbufferedWrites;
+    SrcTestTraits::kExpectOneShotReads&& DestTestTraits::kExpectUnbufferedWrites;
 
 template <typename SrcTestTraits, typename DestTestTraits>
-constexpr bool kExpectZeroCopying = SrcTestTraits::kExpectOneshotReads ||
+constexpr bool kExpectZeroCopying = SrcTestTraits::kExpectOneShotReads ||
                                     (SrcTestTraits::kExpectUnbufferedReads &&
                                      DestTestTraits::kExpectUnbufferedWrites);
 
