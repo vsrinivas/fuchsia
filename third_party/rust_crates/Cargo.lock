@@ -1165,7 +1165,7 @@ dependencies = [
  "signal-hook 0.3.8",
  "simplelog",
  "slab",
- "smallvec 0.6.13",
+ "smallvec 1.6.1",
  "socket2",
  "splines",
  "static_assertions",

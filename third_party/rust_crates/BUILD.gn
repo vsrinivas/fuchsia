@@ -684,7 +684,7 @@ group("slab") {
 
 if (current_os == "fuchsia") {
   group("smallvec") {
-    deps = [ ":smallvec-v0_6_13" ]
+    deps = [ ":smallvec-v1_6_1" ]
   }
 }
 
