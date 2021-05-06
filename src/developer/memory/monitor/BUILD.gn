@@ -12,6 +12,8 @@ source_set("lib") {
     "debugger.h",
     "high_water.cc",
     "high_water.h",
+    "logger.cc",
+    "logger.h",
     "metrics.cc",
     "metrics.h",
     "monitor.cc",

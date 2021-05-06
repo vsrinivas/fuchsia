@@ -100,13 +100,6 @@ void Metrics::CollectMetrics() {
   capture_cb_(&capture);
   Digest digest;
   digest_cb_(capture, &digest);
-  std::ostringstream oss;
-  Printer p(oss);
-
-  p.PrintDigest(digest);
-  auto str = oss.str();
-  std::replace(str.begin(), str.end(), '\n', ' ');
-  FX_LOGS(INFO) << str;
 
   WriteDigestToInspect(digest);
 

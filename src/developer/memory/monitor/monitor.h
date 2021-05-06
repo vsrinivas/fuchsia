@@ -21,6 +21,7 @@
 #include "src/developer/memory/metrics/digest.h"
 #include "src/developer/memory/monitor/debugger.h"
 #include "src/developer/memory/monitor/high_water.h"
+#include "src/developer/memory/monitor/logger.h"
 #include "src/developer/memory/monitor/metrics.h"
 #include "src/developer/memory/monitor/pressure_notifier.h"
 #include "src/lib/fxl/command_line.h"
@@ -80,11 +81,12 @@ class Monitor : public fuchsia::memory::Monitor {
   zx_handle_t root_;
   async_dispatcher_t* dispatcher_;
   std::unique_ptr<sys::ComponentContext> component_context_;
-  fuchsia::cobalt::LoggerSyncPtr logger_;
+  fuchsia::cobalt::LoggerSyncPtr cobalt_logger_;
   fidl::BindingSet<fuchsia::memory::Monitor> bindings_;
   std::vector<fuchsia::memory::WatcherPtr> watchers_;
   trace::TraceObserver trace_observer_;
   sys::ComponentInspector inspector_;
+  Logger logger_;
   std::unique_ptr<Metrics> metrics_;
   std::unique_ptr<PressureNotifier> pressure_notifier_;
   std::unique_ptr<MemoryDebugger> memory_debugger_;

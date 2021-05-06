@@ -140,6 +140,9 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
       dispatcher_(dispatcher),
       component_context_(std::move(context)),
       inspector_(component_context_.get()),
+      logger_(dispatcher_,
+              [this](Capture* c) { return GetCapture(c); },
+              [this](const Capture& c, Digest* d) { GetDigest(c, d); }),
       level_(Level::kNumLevels) {
   auto bucket_matches = CreateBucketMatchesFromConfigData();
   digester_ = std::make_unique<Digester>(Digester(bucket_matches));
@@ -250,14 +253,15 @@ void Monitor::CreateMetrics(const std::vector<memory::BucketMatch>& bucket_match
   // Create a Cobalt Logger. The ID name is the one we specified in the
   // Cobalt metrics registry.
   fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
-  factory->CreateLoggerFromProjectId(cobalt_registry::kProjectId, logger_.NewRequest(), &status);
+  factory->CreateLoggerFromProjectId(cobalt_registry::kProjectId,
+                                     cobalt_logger_.NewRequest(), &status);
   if (status != fuchsia::cobalt::Status::OK) {
     FX_LOGS(ERROR) << "Unable to get cobalt.Logger from factory.";
     return;
   }
 
   metrics_ = std::make_unique<Metrics>(
-      bucket_matches, kMetricsPollFrequency, dispatcher_, &inspector_, logger_.get(),
+      bucket_matches, kMetricsPollFrequency, dispatcher_, &inspector_, cobalt_logger_.get(),
       [this](Capture* c) { return GetCapture(c); },
       [this](const Capture& c, Digest* d) { GetDigest(c, d); });
 }
@@ -541,26 +545,12 @@ void Monitor::PressureLevelChanged(Level level) {
   if (level == level_) {
     return;
   }
-  Capture c;
-  auto s = GetCapture(&c);
-  if (s != ZX_OK) {
-    FX_LOGS(ERROR) << "Error getting Capture: " << s;
-    return;
-  }
-  Digest d;
-  GetDigest(c, &d);
-  std::ostringstream oss;
-  Printer p(oss);
-
-  p.PrintDigest(d);
-  auto str = oss.str();
-  std::replace(str.begin(), str.end(), '\n', ' ');
   FX_LOGS(INFO) << "Memory pressure level changed from "
                 << kLevelNames[level_]
                 << " to "
                 << kLevelNames[level];
-  FX_LOGS(INFO) << str;
   level_ = level;
+  logger_.SetPressureLevel(level_);
 }
 
 }  // namespace monitor
