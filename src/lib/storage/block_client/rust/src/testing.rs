@@ -7,7 +7,13 @@ use {
     anyhow::{anyhow, ensure, Error},
     async_trait::async_trait,
     fuchsia_zircon as zx,
-    std::{collections::BTreeMap, sync::Mutex},
+    std::{
+        collections::BTreeMap,
+        sync::{
+            atomic::{self, AtomicU32},
+            Mutex,
+        },
+    },
 };
 
 type VmoRegistry = BTreeMap<u16, zx::Vmo>;
@@ -21,6 +27,7 @@ struct Inner {
 pub struct FakeBlockClient {
     inner: Mutex<Inner>,
     block_size: u32,
+    flush_count: AtomicU32,
 }
 
 impl FakeBlockClient {
@@ -31,7 +38,12 @@ impl FakeBlockClient {
                 vmo_registry: BTreeMap::new(),
             }),
             block_size,
+            flush_count: AtomicU32::new(0),
         }
+    }
+
+    pub fn flush_count(&self) -> u32 {
+        self.flush_count.load(atomic::Ordering::Relaxed)
     }
 }
 
@@ -118,6 +130,7 @@ impl BlockClient for FakeBlockClient {
     }
 
     async fn flush(&self) -> Result<(), Error> {
+        self.flush_count.fetch_add(1, atomic::Ordering::Relaxed);
         Ok(())
     }
 

@@ -199,6 +199,10 @@ impl<T: BlockClient> AbstractCache<T> {
     pub fn device(&self) -> &T {
         &self.device
     }
+
+    pub fn flush_device(&self) -> Result<(), Error> {
+        futures::executor::block_on(self.device.flush())
+    }
 }
 
 impl<T: BlockClient> Drop for AbstractCache<T> {
