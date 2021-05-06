@@ -42,7 +42,7 @@ pub fn sys_read(
     count: usize,
 ) -> Result<SyscallResult, Errno> {
     let file = ctx.task.files.get(fd)?;
-    Ok(file.read(&ctx.task, &[iovec_t { iov_base: buffer, iov_len: count }])?.into())
+    Ok(file.ops().read(&file, &ctx.task, &[iovec_t { iov_base: buffer, iov_len: count }])?.into())
 }
 
 pub fn sys_write(
@@ -52,7 +52,7 @@ pub fn sys_write(
     count: usize,
 ) -> Result<SyscallResult, Errno> {
     let file = ctx.task.files.get(fd)?;
-    Ok(file.write(&ctx.task, &[iovec_t { iov_base: buffer, iov_len: count }])?.into())
+    Ok(file.ops().write(&file, &ctx.task, &[iovec_t { iov_base: buffer, iov_len: count }])?.into())
 }
 
 pub fn sys_close(ctx: &SyscallContext<'_>, fd: FdNumber) -> Result<SyscallResult, Errno> {
@@ -100,7 +100,7 @@ pub fn sys_fstat(
     buffer: UserRef<stat_t>,
 ) -> Result<SyscallResult, Errno> {
     let file = ctx.task.files.get(fd)?;
-    let result = file.fstat(&ctx.task)?;
+    let result = file.ops().fstat(&file, &ctx.task)?;
     ctx.task.mm.write_object(buffer, &result)?;
     return Ok(SUCCESS);
 }
@@ -180,7 +180,8 @@ pub fn sys_mmap(
         let zx_prot = mmap_prot_to_vm_opt(prot);
         if flags & MAP_PRIVATE != 0 {
             // TODO(tbodt): Use VMO_FLAG_PRIVATE to have the filesystem server do the clone for us.
-            let vmo = file.get_vmo(&ctx.task, zx_prot - zx::VmarFlags::PERM_WRITE, flags)?;
+            let vmo =
+                file.ops().get_vmo(&file, &ctx.task, zx_prot - zx::VmarFlags::PERM_WRITE, flags)?;
             let mut clone_flags = zx::VmoChildOptions::COPY_ON_WRITE;
             if !zx_prot.contains(zx::VmarFlags::PERM_WRITE) {
                 clone_flags |= zx::VmoChildOptions::NO_WRITE;
@@ -188,7 +189,7 @@ pub fn sys_mmap(
             vmo.create_child(clone_flags, 0, vmo.get_size().map_err(impossible_error)?)
                 .map_err(impossible_error)?
         } else {
-            file.get_vmo(&ctx.task, zx_prot, flags)?
+            file.ops().get_vmo(&file, &ctx.task, zx_prot, flags)?
         }
     };
     let vmo_offset = if flags & MAP_ANONYMOUS != 0 { 0 } else { offset };
@@ -281,7 +282,12 @@ pub fn sys_pread64(
     offset: usize,
 ) -> Result<SyscallResult, Errno> {
     let file = ctx.task.files.get(fd)?;
-    let bytes = file.read_at(&ctx.task, offset, &[iovec_t { iov_base: buf, iov_len: count }])?;
+    let bytes = file.ops().read_at(
+        &file,
+        &ctx.task,
+        offset,
+        &[iovec_t { iov_base: buf, iov_len: count }],
+    )?;
     Ok(bytes.into())
 }
 
@@ -302,7 +308,7 @@ pub fn sys_writev(
 
     ctx.task.mm.read_memory(iovec_addr, iovecs.as_mut_slice().as_bytes_mut())?;
     let file = ctx.task.files.get(fd)?;
-    Ok(file.write(&ctx.task, &iovecs)?.into())
+    Ok(file.ops().write(&file, &ctx.task, &iovecs)?.into())
 }
 
 pub fn sys_access(
@@ -655,7 +661,7 @@ pub fn sys_ioctl(
     out_addr: UserAddress,
 ) -> Result<SyscallResult, Errno> {
     let file = ctx.task.files.get(fd)?;
-    file.ioctl(&ctx.task, request, in_addr, out_addr)
+    file.ops().ioctl(&file, &ctx.task, request, in_addr, out_addr)
 }
 
 pub fn sys_unknown(_ctx: &SyscallContext<'_>, syscall_number: u64) -> Result<SyscallResult, Errno> {

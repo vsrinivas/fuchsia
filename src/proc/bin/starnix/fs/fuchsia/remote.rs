@@ -8,7 +8,6 @@ use fuchsia_component::client::connect_channel_to_protocol;
 use fuchsia_zircon as zx;
 use lazy_static::lazy_static;
 use log::info;
-use std::sync::Arc;
 
 use crate::fd_impl_seekable;
 use crate::fs::*;
@@ -25,9 +24,7 @@ lazy_static! {
     };
 }
 
-#[derive(FileObject)]
 pub struct RemoteFile {
-    common: FileCommon,
     node: RemoteNode,
 }
 
@@ -58,16 +55,22 @@ impl RemoteFile {
             }
             _ => RemoteNode::Other(description.node),
         };
-        Arc::new(RemoteFile { common: FileCommon::default(), node })
+        FileObject::new(RemoteFile { node })
     }
 }
 
 const BYTES_PER_BLOCK: i64 = 512;
 
-impl FileObject for RemoteFile {
+impl FileOps for RemoteFile {
     fd_impl_seekable!();
 
-    fn read_at(&self, task: &Task, offset: usize, buf: &[iovec_t]) -> Result<usize, Errno> {
+    fn read_at(
+        &self,
+        _fd: &FileObject,
+        task: &Task,
+        offset: usize,
+        buf: &[iovec_t],
+    ) -> Result<usize, Errno> {
         let mut total = 0;
         for vec in buf {
             total += vec.iov_len;
@@ -93,12 +96,19 @@ impl FileObject for RemoteFile {
         Ok(data.len())
     }
 
-    fn write_at(&self, _task: &Task, _offset: usize, _data: &[iovec_t]) -> Result<usize, Errno> {
+    fn write_at(
+        &self,
+        _fd: &FileObject,
+        _task: &Task,
+        _offset: usize,
+        _data: &[iovec_t],
+    ) -> Result<usize, Errno> {
         Err(ENOSYS)
     }
 
     fn get_vmo(
         &self,
+        _fd: &FileObject,
         _task: &Task,
         mut prot: zx::VmarFlags,
         _flags: u32,
@@ -120,7 +130,7 @@ impl FileObject for RemoteFile {
         Ok(vmo)
     }
 
-    fn fstat(&self, task: &Task) -> Result<stat_t, Errno> {
+    fn fstat(&self, _fd: &FileObject, task: &Task) -> Result<stat_t, Errno> {
         // TODO: log FIDL error
         let (status, attrs) = self.node.get_attr().map_err(fidl_error)?;
         zx::Status::ok(status).map_err(fio_error)?;

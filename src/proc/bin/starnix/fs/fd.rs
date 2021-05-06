@@ -6,7 +6,6 @@ use bitflags::bitflags;
 use fuchsia_zircon as zx;
 use parking_lot::{Mutex, RwLock};
 use std::collections::HashMap;
-use std::ops::Deref;
 use std::sync::Arc;
 
 use crate::not_implemented;
@@ -27,40 +26,59 @@ impl FdNumber {
 }
 
 /// Corresponds to struct file_operations in Linux, plus any filesystem-specific data.
-pub trait FileObject: Deref<Target = FileCommon> {
+pub trait FileOps {
     /// Read from the file without an offset. If your file is seekable, consider implementing this
     /// with fd_impl_seekable.
-    fn read(&self, task: &Task, data: &[iovec_t]) -> Result<usize, Errno>;
+    fn read(&self, fd: &FileObject, task: &Task, data: &[iovec_t]) -> Result<usize, Errno>;
     /// Read from the file at an offset. If your file is seekable, consider implementing this with
     /// fd_impl_nonseekable!.
-    fn read_at(&self, _task: &Task, _offset: usize, _data: &[iovec_t]) -> Result<usize, Errno>;
+    fn read_at(
+        &self,
+        fd: &FileObject,
+        _task: &Task,
+        _offset: usize,
+        _data: &[iovec_t],
+    ) -> Result<usize, Errno>;
     /// Write to the file without an offset. If your file is seekable, consider implementing this
     /// with fd_impl_seekable!.
-    fn write(&self, task: &Task, data: &[iovec_t]) -> Result<usize, Errno>;
+    fn write(&self, fd: &FileObject, task: &Task, data: &[iovec_t]) -> Result<usize, Errno>;
     /// Write to the file at a offset. If your file is nonseekable, consider implementing this with
     /// fd_impl_nonseekable!.
-    fn write_at(&self, _task: &Task, _offset: usize, data: &[iovec_t]) -> Result<usize, Errno>;
+    fn write_at(
+        &self,
+        fd: &FileObject,
+        _task: &Task,
+        _offset: usize,
+        data: &[iovec_t],
+    ) -> Result<usize, Errno>;
 
     /// Responds to an mmap call by returning a VMO. At least the requested protection flags must
     /// be set on the VMO. Reading or writing the VMO must read or write the file. If this is not
     /// possible given the requested protection, an error must be returned.
-    fn get_vmo(&self, _task: &Task, _prot: zx::VmarFlags, _flags: u32) -> Result<zx::Vmo, Errno> {
+    fn get_vmo(
+        &self,
+        _fd: &FileObject,
+        _task: &Task,
+        _prot: zx::VmarFlags,
+        _flags: u32,
+    ) -> Result<zx::Vmo, Errno> {
         Err(ENODEV)
     }
 
     // TODO(tbodt): This is actually an operation of the filesystem and not the file descriptor: if
     // you open a device file, fstat will go to the filesystem, not to the device. It's only here
     // because we don't have such a thing yet. Will need to be moved.
-    fn fstat(&self, task: &Task) -> Result<stat_t, Errno>;
+    fn fstat(&self, fd: &FileObject, task: &Task) -> Result<stat_t, Errno>;
 
     fn ioctl(
         &self,
-        task: &Task,
+        _fd: &FileObject,
+        _task: &Task,
         request: u32,
-        in_addr: UserAddress,
-        out_addr: UserAddress,
+        _in_addr: UserAddress,
+        _out_addr: UserAddress,
     ) -> Result<SyscallResult, Errno> {
-        self.deref().ioctl(task, request, in_addr, out_addr)
+        default_ioctl(request)
     }
 }
 
@@ -69,11 +87,18 @@ pub trait FileObject: Deref<Target = FileCommon> {
 #[macro_export]
 macro_rules! fd_impl_nonseekable {
     () => {
-        fn read_at(&self, _task: &Task, _offset: usize, _data: &[iovec_t]) -> Result<usize, Errno> {
+        fn read_at(
+            &self,
+            _fd: &FileObject,
+            _task: &Task,
+            _offset: usize,
+            _data: &[iovec_t],
+        ) -> Result<usize, Errno> {
             Err(ESPIPE)
         }
         fn write_at(
             &self,
+            _fd: &FileObject,
             _task: &Task,
             _offset: usize,
             _data: &[iovec_t],
@@ -88,29 +113,42 @@ macro_rules! fd_impl_nonseekable {
 #[macro_export]
 macro_rules! fd_impl_seekable {
     () => {
-        fn read(&self, task: &Task, data: &[iovec_t]) -> Result<usize, Errno> {
-            let mut offset = self.offset.lock();
-            let size = self.read_at(task, *offset, data)?;
+        fn read(&self, fd: &FileObject, task: &Task, data: &[iovec_t]) -> Result<usize, Errno> {
+            let mut offset = fd.offset.lock();
+            let size = self.read_at(fd, task, *offset, data)?;
             *offset += size;
             Ok(size)
         }
-        fn write(&self, task: &Task, data: &[iovec_t]) -> Result<usize, Errno> {
-            let mut offset = self.offset.lock();
-            let size = self.write_at(task, *offset, data)?;
+        fn write(&self, fd: &FileObject, task: &Task, data: &[iovec_t]) -> Result<usize, Errno> {
+            let mut offset = fd.offset.lock();
+            let size = self.write_at(fd, task, *offset, data)?;
             *offset += size;
             Ok(size)
         }
     };
 }
 
-/// Corresponds to struct file in Linux.
-#[derive(Default)]
-pub struct FileCommon {
-    pub offset: Mutex<usize>,
-    pub async_owner: Mutex<pid_t>,
+pub fn default_ioctl(request: u32) -> Result<SyscallResult, Errno> {
+    not_implemented!("ioctl: request=0x{:x}", request);
+    Err(ENOTTY)
 }
 
-impl FileCommon {
+/// Corresponds to struct file in Linux.
+pub struct FileObject {
+    pub offset: Mutex<usize>,
+    pub async_owner: Mutex<pid_t>,
+    ops: Box<dyn FileOps + Send + Sync>,
+}
+
+impl FileObject {
+    pub fn new<T: FileOps + Send + Sync + 'static>(ops: T) -> FileHandle {
+        Arc::new(Self { ops: Box::new(ops), offset: Mutex::new(0), async_owner: Mutex::new(0) })
+    }
+
+    pub fn ops(&self) -> &dyn FileOps {
+        &*self.ops
+    }
+
     /// Get the async owner of this file.
     ///
     /// See fcntl(F_GETOWN)
@@ -124,20 +162,9 @@ impl FileCommon {
     pub fn set_async_owner(&self, owner: pid_t) {
         *self.async_owner.lock() = owner;
     }
-
-    pub fn ioctl(
-        &self,
-        _task: &Task,
-        request: u32,
-        _in_addr: UserAddress,
-        _out_addr: UserAddress,
-    ) -> Result<SyscallResult, Errno> {
-        not_implemented!("ioctl: request=0x{:x}", request);
-        Err(ENOTTY)
-    }
 }
 
-pub type FileHandle = Arc<dyn FileObject + Send + Sync>;
+pub type FileHandle = Arc<FileObject>;
 
 bitflags! {
     pub struct FdFlags: u32 {

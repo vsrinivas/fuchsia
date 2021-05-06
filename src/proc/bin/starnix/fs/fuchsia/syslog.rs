@@ -3,28 +3,24 @@
 // found in the LICENSE file.
 
 use log::info;
-use std::sync::Arc;
 
 use crate::fd_impl_nonseekable;
 use crate::fs::*;
 use crate::task::*;
 use crate::uapi::*;
 
-#[derive(FileObject)]
-pub struct SyslogFile {
-    common: FileCommon,
-}
+pub struct SyslogFile;
 
 impl SyslogFile {
     pub fn new() -> FileHandle {
-        Arc::new(SyslogFile { common: FileCommon::default() })
+        FileObject::new(SyslogFile)
     }
 }
 
-impl FileObject for SyslogFile {
+impl FileOps for SyslogFile {
     fd_impl_nonseekable!();
 
-    fn write(&self, task: &Task, data: &[iovec_t]) -> Result<usize, Errno> {
+    fn write(&self, _fd: &FileObject, task: &Task, data: &[iovec_t]) -> Result<usize, Errno> {
         let mut size = 0;
         for vec in data {
             let mut local = vec![0; vec.iov_len];
@@ -35,11 +31,11 @@ impl FileObject for SyslogFile {
         Ok(size)
     }
 
-    fn read(&self, _task: &Task, _data: &[iovec_t]) -> Result<usize, Errno> {
+    fn read(&self, _fd: &FileObject, _task: &Task, _data: &[iovec_t]) -> Result<usize, Errno> {
         Ok(0)
     }
 
-    fn fstat(&self, task: &Task) -> Result<stat_t, Errno> {
+    fn fstat(&self, _fd: &FileObject, task: &Task) -> Result<stat_t, Errno> {
         // TODO(tbodt): Replace these random numbers with an anonymous inode
         Ok(stat_t {
             st_dev: 0x16,
@@ -55,14 +51,15 @@ impl FileObject for SyslogFile {
 
     fn ioctl(
         &self,
-        task: &Task,
+        _fd: &FileObject,
+        _task: &Task,
         request: u32,
-        in_addr: UserAddress,
-        out_addr: UserAddress,
+        _in_addr: UserAddress,
+        _out_addr: UserAddress,
     ) -> Result<SyscallResult, Errno> {
         match request {
             TCGETS => Err(ENOTTY),
-            _ => self.common.ioctl(task, request, in_addr, out_addr),
+            _ => default_ioctl(request),
         }
     }
 }
