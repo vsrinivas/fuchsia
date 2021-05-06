@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"runtime"
 	"runtime/trace"
 	"sort"
 	"strings"
@@ -30,6 +31,9 @@ const exampleHeader = "# Copyright %d The Fuchsia Authors. All rights reserved.\
 func Run(ctx context.Context, config *Config) error {
 	var eg errgroup.Group
 	var err error
+	// Blocked goroutines do not count against GOMAXPROCS. Limit
+	// ourselves to at most doubling the thread count.
+	var workSem = make(chan int, runtime.GOMAXPROCS(0))
 	metrics := NewMetrics()
 
 	file_tree, err := NewFileTree(ctx, config.BaseDir, nil, config, metrics)
@@ -48,12 +52,14 @@ func Run(ctx context.Context, config *Config) error {
 		tree := tree
 		for licenseFile := range tree.SingleLicenseFiles {
 			licenseFile := licenseFile
+			workSem <- 1
 			eg.Go(func() error {
 				if err := processLicenseFile(licenseFile, metrics, licenses, config, tree); err != nil {
 					// error safe to ignore because eg. io.EOF means symlink hasn't been handled yet
 					// TODO(jcecil): Correctly skip symlink.
 					log.Printf("warning: %s. Skipping file: %s.\n", err, licenseFile)
 				}
+				<-workSem
 				return nil
 			})
 		}
@@ -78,11 +84,13 @@ func Run(ctx context.Context, config *Config) error {
 	r = trace.StartRegion(ctx, "regular file walk")
 	for file := range file_tree.getFileIterator() {
 		file := file
+		workSem <- 1
 		eg.Go(func() error {
 			if err := processFile(file, metrics, licenses, unlicensedFiles, config); err != nil {
 				// TODO(jcecil): Correctly skip symlink and return errors.
 				log.Printf("warning: %s. Skipping file: %s.\n", err, file.Path)
 			}
+			<-workSem
 			return nil
 		})
 	}
