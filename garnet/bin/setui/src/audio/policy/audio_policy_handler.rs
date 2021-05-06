@@ -72,7 +72,7 @@ use crate::policy::policy_handler::{
     ClientProxy, Create, PolicyHandler, RequestTransform, ResponseTransform,
 };
 use crate::policy::response::Error as PolicyError;
-use crate::policy::{self as policy_base, PolicyInfo};
+use crate::policy::{self as policy_base, PolicyInfo, PolicyType};
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fuchsia_syslog::fx_log_err;
@@ -323,7 +323,7 @@ impl AudioPolicyHandler {
         // TODO(fxbug.dev/60925): once policy targets are configurable, test this error case.
         let policy_id =
             self.state.add_transform(target, transform).ok_or(PolicyError::InvalidArgument(
-                self.client_proxy.policy_type(),
+                PolicyType::Audio,
                 "target".into(),
                 format!("{:?}", target).into(),
             ))?;
@@ -345,7 +345,7 @@ impl AudioPolicyHandler {
         // Find the target this policy ID is on.
         let target =
             self.state.find_policy_target(policy_id).ok_or(PolicyError::InvalidArgument(
-                self.client_proxy.policy_type(),
+                PolicyType::Audio,
                 ARG_POLICY_ID.into(),
                 format!("{:?}", policy_id).into(),
             ))?;
@@ -364,7 +364,7 @@ impl AudioPolicyHandler {
 
         // Attempt to remove the policy.
         self.state.remove_policy(policy_id).ok_or(PolicyError::InvalidArgument(
-            self.client_proxy.policy_type(),
+            PolicyType::Audio,
             ARG_POLICY_ID.into(),
             format!("{:?}", policy_id).into(),
         ))?;

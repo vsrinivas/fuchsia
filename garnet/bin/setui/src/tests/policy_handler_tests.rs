@@ -10,7 +10,7 @@ use crate::policy::policy_handler::{
     ClientProxy, Create, PolicyHandler, RequestTransform, ResponseTransform,
 };
 use crate::policy::response::{Payload, Response};
-use crate::policy::{PolicyType, Request as PolicyRequest, UnknownInfo};
+use crate::policy::{Request as PolicyRequest, UnknownInfo};
 use crate::EnvironmentBuilder;
 use anyhow::Error;
 use async_trait::async_trait;
@@ -75,7 +75,7 @@ async fn test_write() {
         .await
         .expect("env should be created");
     let (messenger, _) = env.delegate.create(MessengerType::Unbound).await.unwrap();
-    let client_proxy = ClientProxy::new(messenger, PolicyType::Unknown);
+    let client_proxy = ClientProxy::new(messenger);
 
     // Create a handler that writes a value through the client proxy when handle_policy_request is
     // called.

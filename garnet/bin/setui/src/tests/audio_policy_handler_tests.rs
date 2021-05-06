@@ -76,14 +76,13 @@ impl TestEnvironment {
         let delegate = service::message::create_hub();
         let (messenger, _) =
             delegate.create(MessengerType::Unbound).await.expect("core messenger created");
-        let policy_type = PolicyType::Audio;
 
         let test_delegate = message::create_hub();
 
         let handler_signature =
             TestEnvironment::spawn_setting_handler(&delegate, &test_delegate).await;
 
-        let client_proxy = ClientProxy::new(messenger, policy_type);
+        let client_proxy = ClientProxy::new(messenger);
 
         let mut components = HashSet::new();
         components.insert(SettingType::Audio);

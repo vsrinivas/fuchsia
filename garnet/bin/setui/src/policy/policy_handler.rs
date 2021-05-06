@@ -103,7 +103,7 @@ where
     C: Create + PolicyHandler + Send + Sync + 'static,
 {
     Box::pin(async move {
-        let proxy = ClientProxy::new(context.service_messenger, context.policy_type);
+        let proxy = ClientProxy::new(context.service_messenger);
         C::create(proxy).await.map(|handler| Box::new(handler) as BoxedHandler)
     })
 }
@@ -112,7 +112,6 @@ where
 #[derive(Clone)]
 pub struct ClientProxy {
     service_messenger: service::message::Messenger,
-    policy_type: PolicyType,
 }
 
 impl ClientProxy {
@@ -142,12 +141,8 @@ impl ClientProxy {
 }
 
 impl ClientProxy {
-    pub fn new(service_messenger: service::message::Messenger, policy_type: PolicyType) -> Self {
-        Self { service_messenger, policy_type }
-    }
-
-    pub fn policy_type(&self) -> PolicyType {
-        self.policy_type
+    pub fn new(service_messenger: service::message::Messenger) -> Self {
+        Self { service_messenger }
     }
 
     /// The type `T` is any type that has a [`PolicyType`] associated with it and that can be
@@ -259,7 +254,6 @@ mod tests {
                 .await
                 .expect("messenger should be created")
                 .0,
-            policy_type,
         };
 
         client_proxy.send_setting_request(target_setting_type, setting_request.clone());
@@ -274,7 +268,6 @@ mod tests {
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_client_proxy_request_rebroadcast() {
-        let policy_type = PolicyType::Unknown;
         let setting_type = SettingType::Unknown;
 
         let service_delegate = service::message::create_hub();
@@ -290,7 +283,6 @@ mod tests {
                 .await
                 .expect("messenger should be created")
                 .0,
-            policy_type,
         };
 
         client_proxy.request_rebroadcast(setting_type);
