@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::{anyhow, Error, Result};
+use fuchsia_hash::Hash;
 use fuchsia_pkg::{CreationManifest, MetaPackage, PackageManifest};
 use std::collections::BTreeMap;
 use std::fs::File;
@@ -87,7 +88,7 @@ fn add_package_to(list: &mut PackageList, package: PackageManifest) {
     let meta_blob = package.into_blobs().into_iter().find(|blob| blob.path == "meta/");
     match meta_blob {
         Some(meta_blob) => {
-            list.insert(name, meta_blob.merkle.to_string());
+            list.insert(name, meta_blob.merkle);
         }
         _ => {
             println!("Failed to add package {} to the list", name);
@@ -100,13 +101,13 @@ fn add_package_to(list: &mut PackageList, package: PackageManifest) {
 #[derive(Default)]
 struct PackageList {
     // Map between package name and merkle.
-    packages: BTreeMap<String, String>,
+    packages: BTreeMap<String, Hash>,
 }
 
 impl PackageList {
     /// Add a new package with `name` and `merkle`.
-    fn insert(&mut self, name: impl AsRef<str>, merkle: impl AsRef<str>) {
-        self.packages.insert(name.as_ref().to_string(), merkle.as_ref().to_string());
+    fn insert(&mut self, name: impl AsRef<str>, merkle: Hash) {
+        self.packages.insert(name.as_ref().to_string(), merkle);
     }
 
     /// Generate the file to be placed in the Base Package.
@@ -131,10 +132,8 @@ mod tests {
     fn package_list() {
         let mut out: Vec<u8> = Vec::new();
         let mut packages = PackageList::default();
-        packages
-            .insert("package0", "0000000000000000000000000000000000000000000000000000000000000000");
-        packages
-            .insert("package1", "1111111111111111111111111111111111111111111111111111111111111111");
+        packages.insert("package0", Hash::from([0u8; 32]));
+        packages.insert("package1", Hash::from([17u8; 32]));
         packages.write(&mut out).unwrap();
         assert_eq!(
             out,
