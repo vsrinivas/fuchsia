@@ -20,7 +20,7 @@ namespace tun {
 // `TunPair` uses `DeviceAdapter` to fulfill the `fuchsia.net.tun.DevicePair` protocol. All FIDL
 // requests are served over its own internally held async dispatcher.
 class TunPair : public fbl::DoublyLinkedListable<std::unique_ptr<TunPair>>,
-                public fidl::WireInterface<fuchsia_net_tun::DevicePair>,
+                public fidl::WireServer<fuchsia_net_tun::DevicePair>,
                 public DeviceAdapterParent {
  public:
   // Creates a new `TunPair` with `config`.
@@ -30,7 +30,7 @@ class TunPair : public fbl::DoublyLinkedListable<std::unique_ptr<TunPair>>,
   ~TunPair() override;
 
   // fuchsia.net.tun.DevicePair implementation:
-  void ConnectProtocols(fuchsia_net_tun::wire::DevicePairEnds requests,
+  void ConnectProtocols(ConnectProtocolsRequestView request,
                         ConnectProtocolsCompleter::Sync& completer) override;
 
   // DeviceAdapterParent implementation:

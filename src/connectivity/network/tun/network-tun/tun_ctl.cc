@@ -13,9 +13,7 @@
 namespace network {
 namespace tun {
 
-void TunCtl::CreateDevice(fuchsia_net_tun::wire::DeviceConfig config,
-                          fidl::ServerEnd<fuchsia_net_tun::Device> device,
-                          CreateDeviceCompleter::Sync& completer) {
+void TunCtl::CreateDevice(CreateDeviceRequestView request, CreateDeviceCompleter::Sync& completer) {
   zx::status tun_device = TunDevice::Create(
       [this](TunDevice* dev) {
         async::PostTask(dispatcher_, [this, dev]() {
@@ -23,22 +21,20 @@ void TunCtl::CreateDevice(fuchsia_net_tun::wire::DeviceConfig config,
           TryFireShutdownCallback();
         });
       },
-      std::move(config));
+      std::move(request->config));
 
   if (tun_device.is_error()) {
     FX_LOGF(ERROR, "tun", "TunCtl: TunDevice creation failed: %s", tun_device.status_string());
-    device.Close(tun_device.error_value());
+    request->device.Close(tun_device.error_value());
     return;
   }
   auto& value = tun_device.value();
-  value->Bind(std::move(device));
+  value->Bind(std::move(request->device));
   devices_.push_back(std::move(value));
   FX_LOG(INFO, "tun", "TunCtl: Created TunDevice");
 }
 
-void TunCtl::CreatePair(fuchsia_net_tun::wire::DevicePairConfig config,
-                        fidl::ServerEnd<fuchsia_net_tun::DevicePair> device_pair,
-                        CreatePairCompleter::Sync& completer) {
+void TunCtl::CreatePair(CreatePairRequestView request, CreatePairCompleter::Sync& completer) {
   zx::status tun_pair = TunPair::Create(
       [this](TunPair* pair) {
         async::PostTask(dispatcher_, [this, pair]() {
@@ -46,15 +42,15 @@ void TunCtl::CreatePair(fuchsia_net_tun::wire::DevicePairConfig config,
           TryFireShutdownCallback();
         });
       },
-      std::move(config));
+      std::move(request->config));
 
   if (tun_pair.is_error()) {
     FX_LOGF(ERROR, "tun", "TunCtl: TunPair creation failed: %s", tun_pair.status_string());
-    device_pair.Close(tun_pair.status_value());
+    request->device_pair.Close(tun_pair.status_value());
     return;
   }
   auto& value = tun_pair.value();
-  value->Bind(std::move(device_pair));
+  value->Bind(std::move(request->device_pair));
   device_pairs_.push_back(std::move(value));
   FX_LOG(INFO, "tun", "TunCtl: Created TunPair");
 }

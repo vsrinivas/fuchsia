@@ -17,7 +17,7 @@ namespace tun {
 //
 // `TunCtl` is created with a `dispatcher`, over which it serves the `fuchsia.net.tun.Control`
 // protocol. It retains lists of created `TunDevice`s and `TunPair`s.
-class TunCtl : public fidl::WireInterface<fuchsia_net_tun::Control> {
+class TunCtl : public fidl::WireServer<fuchsia_net_tun::Control> {
  public:
   TunCtl(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 
@@ -25,12 +25,9 @@ class TunCtl : public fidl::WireInterface<fuchsia_net_tun::Control> {
     fidl::BindServer(dispatcher_, std::move(req), this);
   }
 
-  void CreateDevice(fuchsia_net_tun::wire::DeviceConfig config,
-                    fidl::ServerEnd<fuchsia_net_tun::Device> device,
+  void CreateDevice(CreateDeviceRequestView request,
                     CreateDeviceCompleter::Sync& completer) override;
-  void CreatePair(fuchsia_net_tun::wire::DevicePairConfig config,
-                  fidl::ServerEnd<fuchsia_net_tun::DevicePair> device_pair,
-                  CreatePairCompleter::Sync& completer) override;
+  void CreatePair(CreatePairRequestView request, CreatePairCompleter::Sync& completer) override;
 
   // Schedules `shutdown_callback` to be called once all devices and device pairs are torn down and
   // destroyed.

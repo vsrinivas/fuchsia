@@ -223,24 +223,24 @@ void TunDevice::RunStateChange() {
   last_state_ = std::move(state);
 }
 
-void TunDevice::WriteFrame(fuchsia_net_tun::wire::Frame frame,
-                           WriteFrameCompleter::Sync& completer) {
+void TunDevice::WriteFrame(WriteFrameRequestView request, WriteFrameCompleter::Sync& completer) {
   if (pending_write_frame_.size() >= kMaxPendingOps) {
     completer.ReplyError(ZX_ERR_NO_RESOURCES);
     return;
   }
-  if (!(frame.has_frame_type() && frame.has_data() && !frame.data().empty())) {
+  if (!(request->frame.has_frame_type() && request->frame.has_data() &&
+        !request->frame.data().empty())) {
     completer.ReplyError(ZX_ERR_INVALID_ARGS);
     return;
   }
   bool ready = RunWriteFrame();
   if (ready) {
     std::optional<fuchsia_net_tun::wire::FrameMetadata> meta;
-    if (frame.has_meta()) {
-      meta = frame.meta();
+    if (request->frame.has_meta()) {
+      meta = request->frame.meta();
     }
     bool handled = WriteWith(
-        [this, &frame, &meta]() {
+        [this, &frame = request->frame, &meta]() {
           return device_->WriteRxFrame(frame.frame_type(), frame.data(), meta);
         },
         completer);
@@ -248,10 +248,10 @@ void TunDevice::WriteFrame(fuchsia_net_tun::wire::Frame frame,
       return;
     }
   }
-  pending_write_frame_.emplace(frame, completer.ToAsync());
+  pending_write_frame_.emplace(request->frame, completer.ToAsync());
 }
 
-void TunDevice::ReadFrame(ReadFrameCompleter::Sync& completer) {
+void TunDevice::ReadFrame(ReadFrameRequestView request, ReadFrameCompleter::Sync& completer) {
   if (pending_read_frame_.size() >= kMaxPendingOps) {
     completer.ReplyError(ZX_ERR_NO_RESOURCES);
     return;
@@ -260,13 +260,13 @@ void TunDevice::ReadFrame(ReadFrameCompleter::Sync& completer) {
   RunReadFrame();
 }
 
-void TunDevice::GetSignals(GetSignalsCompleter::Sync& completer) {
+void TunDevice::GetSignals(GetSignalsRequestView request, GetSignalsCompleter::Sync& completer) {
   zx::eventpair dup;
   signals_peer_.duplicate(ZX_RIGHTS_BASIC, &dup);
   completer.Reply(std::move(dup));
 }
 
-void TunDevice::GetState(GetStateCompleter::Sync& completer) {
+void TunDevice::GetState(GetStateRequestView request, GetStateCompleter::Sync& completer) {
   InternalState state = State();
   WithWireState(
       [&completer](fuchsia_net_tun::wire::InternalState state) {
@@ -275,7 +275,7 @@ void TunDevice::GetState(GetStateCompleter::Sync& completer) {
       state);
 }
 
-void TunDevice::WatchState(WatchStateCompleter::Sync& completer) {
+void TunDevice::WatchState(WatchStateRequestView request, WatchStateCompleter::Sync& completer) {
   if (pending_watch_state_) {
     // this is a programming error, we enforce that clients don't do this by closing their channel.
     binding_.value().Close(ZX_ERR_INTERNAL);
@@ -286,19 +286,19 @@ void TunDevice::WatchState(WatchStateCompleter::Sync& completer) {
   RunStateChange();
 }
 
-void TunDevice::SetOnline(bool online, SetOnlineCompleter::Sync& completer) {
-  device_->SetOnline(online);
-  if (!online) {
+void TunDevice::SetOnline(SetOnlineRequestView request, SetOnlineCompleter::Sync& completer) {
+  device_->SetOnline(request->online);
+  if (!request->online) {
     // if we just went offline, we need to complete all pending writes.
     RunWriteFrame();
   }
   completer.Reply();
 }
 
-void TunDevice::ConnectProtocols(fuchsia_net_tun::wire::Protocols protos,
+void TunDevice::ConnectProtocols(ConnectProtocolsRequestView request,
                                  ConnectProtocolsCompleter::Sync& completer) {
-  if (protos.has_network_device()) {
-    fidl::ServerEnd device = std::move(protos.network_device());
+  if (request->protos.has_network_device()) {
+    fidl::ServerEnd device = std::move(request->protos.network_device());
     if (device_) {
       zx_status_t status = device_->Bind(std::move(device));
       if (status != ZX_OK) {
@@ -306,8 +306,8 @@ void TunDevice::ConnectProtocols(fuchsia_net_tun::wire::Protocols protos,
       }
     }
   }
-  if (protos.has_mac_addressing()) {
-    fidl::ServerEnd mac = std::move(protos.mac_addressing());
+  if (request->protos.has_mac_addressing()) {
+    fidl::ServerEnd mac = std::move(request->protos.mac_addressing());
     if (device_->mac()) {
       zx_status_t status = device_->mac()->Bind(loop_.dispatcher(), std::move(mac));
       if (status != ZX_OK) {

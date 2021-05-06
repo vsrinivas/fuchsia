@@ -98,13 +98,13 @@ void TunPair::Bind(fidl::ServerEnd<fuchsia_net_tun::DevicePair> req) {
                           fidl::ServerEnd<fuchsia_net_tun::DevicePair>) { impl->Teardown(); });
 }
 
-void TunPair::ConnectProtocols(fuchsia_net_tun::wire::DevicePairEnds requests,
+void TunPair::ConnectProtocols(ConnectProtocolsRequestView request,
                                ConnectProtocolsCompleter::Sync& completer) {
-  if (requests.has_left()) {
-    ConnectProtocols(*left_, std::move(requests.left()));
+  if (request->requests.has_left()) {
+    ConnectProtocols(*left_, std::move(request->requests.left()));
   }
-  if (requests.has_right()) {
-    ConnectProtocols(*right_, std::move(requests.right()));
+  if (request->requests.has_right()) {
+    ConnectProtocols(*right_, std::move(request->requests.right()));
   }
 }
 

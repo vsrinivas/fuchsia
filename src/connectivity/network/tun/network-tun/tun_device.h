@@ -25,7 +25,7 @@ namespace tun {
 // `TunDevice` uses `DeviceAdapter` to fulfill the `fuchsia.net.tun.Device` protocol. All FIDL
 // requests are served over its own internally held async dispatcher.
 class TunDevice : public fbl::DoublyLinkedListable<std::unique_ptr<TunDevice>>,
-                  public fidl::WireInterface<fuchsia_net_tun::Device>,
+                  public fidl::WireServer<fuchsia_net_tun::Device>,
                   public DeviceAdapterParent {
  public:
   static constexpr size_t kMaxPendingOps = fuchsia_net_tun::wire::kMaxPendingOperations;
@@ -37,15 +37,14 @@ class TunDevice : public fbl::DoublyLinkedListable<std::unique_ptr<TunDevice>>,
   ~TunDevice() override;
 
   // fuchsia.net.tun.Device implementation:
-  void WriteFrame(fuchsia_net_tun::wire::Frame frame,
-                  WriteFrameCompleter::Sync& completer) override;
-  void ReadFrame(ReadFrameCompleter::Sync& completer) override;
-  void GetState(GetStateCompleter::Sync& completer) override;
-  void WatchState(WatchStateCompleter::Sync& completer) override;
-  void SetOnline(bool online, SetOnlineCompleter::Sync& completer) override;
-  void ConnectProtocols(fuchsia_net_tun::wire::Protocols protos,
+  void WriteFrame(WriteFrameRequestView request, WriteFrameCompleter::Sync& completer) override;
+  void ReadFrame(ReadFrameRequestView request, ReadFrameCompleter::Sync& completer) override;
+  void GetState(GetStateRequestView request, GetStateCompleter::Sync& completer) override;
+  void WatchState(WatchStateRequestView request, WatchStateCompleter::Sync& completer) override;
+  void SetOnline(SetOnlineRequestView request, SetOnlineCompleter::Sync& completer) override;
+  void ConnectProtocols(ConnectProtocolsRequestView request,
                         ConnectProtocolsCompleter::Sync& completer) override;
-  void GetSignals(GetSignalsCompleter::Sync& completer) override;
+  void GetSignals(GetSignalsRequestView request, GetSignalsCompleter::Sync& completer) override;
 
   InternalState State() const;
 
