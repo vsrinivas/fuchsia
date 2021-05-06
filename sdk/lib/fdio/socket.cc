@@ -1434,6 +1434,10 @@ using zxio_datagram_socket_t = struct zxio_datagram_socket {
 static_assert(sizeof(zxio_datagram_socket_t) <= sizeof(zxio_storage_t),
               "zxio_datagram_socket_t must fit inside zxio_storage_t.");
 
+static zxio_datagram_socket_t& zxio_datagram_socket(zxio_t* io) {
+  return *reinterpret_cast<zxio_datagram_socket_t*>(io);
+}
+
 namespace fdio_internal {
 
 struct datagram_socket : public zxio {
@@ -1701,7 +1705,7 @@ struct datagram_socket : public zxio {
 
  private:
   zxio_datagram_socket_t& zxio_datagram_socket() {
-    return *reinterpret_cast<zxio_datagram_socket_t*>(&zxio_storage().io);
+    return ::zxio_datagram_socket(&zxio_storage().io);
   }
 };
 
@@ -1710,19 +1714,17 @@ struct datagram_socket : public zxio {
 static constexpr zxio_ops_t zxio_datagram_socket_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
   ops.close = [](zxio_t* io) {
-    auto zs = reinterpret_cast<zxio_datagram_socket_t*>(io);
-    zx_status_t channel_status = BaseSocket(zs->client).close();
-    zs->~zxio_datagram_socket_t();
+    zxio_datagram_socket_t& zs = zxio_datagram_socket(io);
+    zx_status_t channel_status = BaseSocket(zs.client).close();
+    zs.~zxio_datagram_socket_t();
     return channel_status;
   };
   ops.release = [](zxio_t* io, zx_handle_t* out_handle) {
-    auto zs = reinterpret_cast<zxio_datagram_socket_t*>(io);
-    *out_handle = zs->client.mutable_channel()->release();
+    *out_handle = zxio_datagram_socket(io).client.mutable_channel()->release();
     return ZX_OK;
   };
   ops.clone = [](zxio_t* io, zx_handle_t* out_handle) {
-    auto zs = reinterpret_cast<zxio_datagram_socket_t*>(io);
-    return BaseSocket(zs->client).clone(out_handle);
+    return BaseSocket(zxio_datagram_socket(io).client).clone(out_handle);
   };
   return ops;
 }();
@@ -1754,6 +1756,10 @@ using zxio_stream_socket_t = struct zxio_stream_socket {
 
 static_assert(sizeof(zxio_stream_socket_t) <= sizeof(zxio_storage_t),
               "zxio_stream_socket_t must fit inside zxio_storage_t.");
+
+static zxio_stream_socket_t& zxio_stream_socket(zxio_t* io) {
+  return *reinterpret_cast<zxio_stream_socket_t*>(io);
+}
 
 namespace fdio_internal {
 
@@ -2035,9 +2041,7 @@ struct stream_socket : public pipe {
   }
 
  private:
-  zxio_stream_socket_t& zxio_stream_socket() {
-    return *reinterpret_cast<zxio_stream_socket_t*>(&zxio_storage().io);
-  }
+  zxio_stream_socket_t& zxio_stream_socket() { return ::zxio_stream_socket(&zxio_storage().io); }
 
   // TODO(https://fxbug.dev/67465): This field should be synchronized.
   StreamSocketState state_;
@@ -2078,40 +2082,34 @@ struct stream_socket : public pipe {
 static constexpr zxio_ops_t zxio_stream_socket_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
   ops.close = [](zxio_t* io) {
-    auto zs = reinterpret_cast<zxio_stream_socket_t*>(io);
-    zx_status_t channel_status = BaseSocket(zs->client).close();
-    zx_status_t aux_status = zxio_close(&zs->pipe.io);
-    zxio_close(&zs->pipe.io);
-    zs->~zxio_stream_socket_t();
+    zxio_stream_socket_t& zs = zxio_stream_socket(io);
+    zx_status_t channel_status = BaseSocket(zs.client).close();
+    zx_status_t aux_status = zxio_close(&zs.pipe.io);
+    zxio_close(&zs.pipe.io);
+    zs.~zxio_stream_socket_t();
     return channel_status != ZX_OK ? channel_status : aux_status;
   };
   ops.release = [](zxio_t* io, zx_handle_t* out_handle) {
-    auto zs = reinterpret_cast<zxio_stream_socket_t*>(io);
-    *out_handle = zs->client.mutable_channel()->release();
+    *out_handle = zxio_stream_socket(io).client.mutable_channel()->release();
     return ZX_OK;
   };
   ops.clone = [](zxio_t* io, zx_handle_t* out_handle) {
-    auto zs = reinterpret_cast<zxio_stream_socket_t*>(io);
-    return BaseSocket(zs->client).clone(out_handle);
+    return BaseSocket(zxio_stream_socket(io).client).clone(out_handle);
   };
   ops.wait_begin = [](zxio_t* io, zxio_signals_t zxio_signals, zx_handle_t* out_handle,
                       zx_signals_t* out_zx_signals) {
-    auto zs = reinterpret_cast<zxio_stream_socket_t*>(io);
-    zxio_wait_begin(&zs->pipe.io, zxio_signals, out_handle, out_zx_signals);
+    zxio_wait_begin(&zxio_stream_socket(io).pipe.io, zxio_signals, out_handle, out_zx_signals);
   };
   ops.wait_end = [](zxio_t* io, zx_signals_t zx_signals, zxio_signals_t* out_zxio_signals) {
-    auto zs = reinterpret_cast<zxio_stream_socket_t*>(io);
-    zxio_wait_end(&zs->pipe.io, zx_signals, out_zxio_signals);
+    zxio_wait_end(&zxio_stream_socket(io).pipe.io, zx_signals, out_zxio_signals);
   };
   ops.readv = [](zxio_t* io, const zx_iovec_t* vector, size_t vector_count, zxio_flags_t flags,
                  size_t* out_actual) {
-    auto zs = reinterpret_cast<zxio_stream_socket_t*>(io);
-    return zxio_readv(&zs->pipe.io, vector, vector_count, flags, out_actual);
+    return zxio_readv(&zxio_stream_socket(io).pipe.io, vector, vector_count, flags, out_actual);
   };
   ops.writev = [](zxio_t* io, const zx_iovec_t* vector, size_t vector_count, zxio_flags_t flags,
                   size_t* out_actual) {
-    auto zs = reinterpret_cast<zxio_stream_socket_t*>(io);
-    return zxio_writev(&zs->pipe.io, vector, vector_count, flags, out_actual);
+    return zxio_writev(&zxio_stream_socket(io).pipe.io, vector, vector_count, flags, out_actual);
   };
   return ops;
 }();
