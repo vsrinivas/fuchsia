@@ -6,6 +6,7 @@ import("//build/board.gni")
 import("//build/compiled_action.gni")
 import("//build/component/component_id_index.gni")
 import("//build/config.gni")
+import("//build/config/clang/clang.gni")
 import("//build/dist/fini_manifest.gni")
 import("//build/drivers/driver_manifest.gni")
 import("//build/images/args.gni")
@@ -752,6 +753,39 @@ action("elf_sizes.json") {
     rebase_path(fuchsia_zbi_json, root_build_dir),
     "--bootfs-dir",
     rebase_path(fuchsia_zbi_bootfs_dir, root_build_dir),
+  ]
+}
+
+# This action runs a script that checks all vtables in fuchsia binaries are
+# in readonly data.
+action("check_vtables_in_rodata") {
+  testonly = true
+  hermetic_deps = false
+  script = "//scripts/clang/check-vtable-rodata.py"
+  outputs = [ "$root_build_dir/$target_name" ]
+
+  # Ensure that all fuchsia binaries listed in `binaries.json` are created
+  # first.
+  deps = [ ":fuchsia" ]
+
+  args = [
+    # Ignore these specific libunwind symbols for now because these are from
+    # the libwundind prebuilts used by rust which we do not currently build
+    # with relative vtables.
+    "--exclude",
+    "vtable for libunwind::UnwindCursor<libunwind::LocalAddressSpace, libunwind::Registers_x86_64>",
+    "--exclude",
+    "vtable for libunwind::UnwindCursor<libunwind::LocalAddressSpace, libunwind::Registers_arm64>",
+
+    "--readelf",
+    rebase_path("$clang_prefix/llvm-readelf", root_build_dir),
+
+    # Run in `fuchsia` mode, which looks for `binaries.json` in the provided
+    # output directory.
+    "fuchsia",
+
+    # Point to the output directory.
+    rebase_path("$root_build_dir", root_build_dir),
   ]
 }
 
@@ -2777,6 +2811,10 @@ group("default-images") {
       ":root_component_index_metadata",
       ":updates",
     ]
+  }
+
+  if (check_vtables_in_rodata) {
+    deps += [ ":check_vtables_in_rodata" ]
   }
 }
 

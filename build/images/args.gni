@@ -54,6 +54,12 @@ declare_args() {
   # You can still build //build/images:netboot explicitly even if enable_netboot is false.
   enable_netboot = false
 
+  # Check that all vtables in fuchsia binaries listed in binaries.json are in
+  # readonly data sections. This check will be run at the end of a full build.
+  #
+  # This is primarily meant to be used by the clang canary builders.
+  check_vtables_in_rodata = false
+
   # A list of labels for meta packages to be included in the monolith.
   meta_package_labels = []
 
