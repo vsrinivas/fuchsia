@@ -249,7 +249,6 @@ protocol Frame {
     ///
     /// - `sink`: The [`fuchsia.logger/LogSink`] to use to emit logs. Passing a `null` handle
     ///   resets logging to use the default [`fuchsia.logger/LogSink`].
-    [Transitional]
     SetConsoleLogSink(fuchsia.logger.LogSink? sink);
 
     /// Enables or disables the processing of the specified `types` of user inputs.
@@ -319,7 +318,6 @@ protocol Frame {
     ///
     /// Should be called before `GetNavigationController` to ensure that it is applied to all
     /// navigations including the first [`NavigationController.LoadURL`] request.
-    [Transitional]
     SetNavigationPolicyProvider(NavigationPolicyProviderParams params,
                                 NavigationPolicyProvider provider);
 
@@ -330,7 +328,6 @@ protocol Frame {
     /// `ZX_ERR_INVALID_ARGS`.
     /// Valid themes are `LIGHT`, `DARK`, and `AUTO`. The default color scheme is `LIGHT`.
     /// If `DEFAULT` is specified, the [`Frame`] will disconnect with `ZX_ERR_INVALID_ARGS`.
-    [Transitional]
     SetPreferredTheme(fuchsia.settings.ThemeType theme);
 };
 
