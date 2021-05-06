@@ -68,6 +68,7 @@ pub struct State {
 }
 
 impl State {
+    #[cfg(test)]
     pub fn get_properties(&self) -> Vec<Property> {
         self.properties.values().cloned().collect::<Vec<Property>>()
     }

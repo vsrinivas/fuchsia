@@ -175,6 +175,9 @@ pub enum Request {
     /// Fetches the current policy state.
     Get,
 
+    /// Restore saved state from disk.
+    Restore,
+
     /// Request targeted to the Audio policy.
     Audio(audio::Request),
 }
@@ -189,6 +192,7 @@ pub mod response {
     #[derive(PartialEq, Debug, Clone)]
     pub enum Payload {
         PolicyInfo(PolicyInfo),
+        Restore,
         Audio(audio::Response),
     }
 

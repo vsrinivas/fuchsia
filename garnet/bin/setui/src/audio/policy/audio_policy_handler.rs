@@ -126,6 +126,12 @@ impl PolicyHandler for AudioPolicyHandler {
             policy_base::Request::Get => Ok(policy_base::response::Payload::PolicyInfo(
                 PolicyInfo::Audio(self.state.clone()),
             )),
+            policy_base::Request::Restore => {
+                self.state = AudioPolicyHandler::restore_policy_state(
+                    self.client_proxy.read_policy::<State>().await,
+                );
+                Ok(policy_base::response::Payload::Restore)
+            }
             policy_base::Request::Audio(audio_request) => match audio_request {
                 PolicyRequest::AddPolicy(target, transform) => {
                     self.add_policy_transform(target, transform).await
