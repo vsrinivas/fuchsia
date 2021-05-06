@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# Definitions to build each of the Fuchsia SDKs.
+
 import("//build/config/build_api_module.gni")
 import("//build/dart/fidl_move.gni")
 import("//build/dart/toolchain.gni")
@@ -30,7 +32,7 @@ group("sdk") {
 
 # This file contains the list of all source files used in sdk_source_set()
 # targets reachable from //sdk:sdk. The schema is simply a JSON list, where
-# each iteam is the path to a single source file, relative to the source
+# each item is the path to a single source file, relative to the source
 # directory. Path are not sorted and appear in order of metadata walk, which
 # is unstable.
 build_api_module("sdk_source_set_list") {
@@ -72,6 +74,7 @@ group("tests") {
   ]
 }
 
+# License/rights related information for the SDK.
 sdk_documentation("open_source") {
   name = "open_source"
 
@@ -93,6 +96,7 @@ sdk_documentation("open_source") {
   }
 }
 
+# Licensing information for the 'libc'-style musl library.
 sdk_documentation("musl_license") {
   name = "musl_license"
 
@@ -106,6 +110,7 @@ sdk_documentation("musl_license") {
   ]
 }
 
+# License/copyright files for the SDK.
 sdk_molecule("license") {
   visibility = [ ":*" ]
   deps = [
@@ -140,6 +145,7 @@ sdk_molecule("e2e_testing_tools") {
   deps = [ "//garnet/bin/trace2json:bin_sdk($host_toolchain)" ]
 }
 
+# Fuchsia IDL (FIDL) files defining much of the API for the SDK.
 sdk_molecule("fidl") {
   visibility = [ ":*" ]
   deps = [
@@ -248,6 +254,8 @@ sdk_molecule("fidl") {
   ]
 }
 
+# Tools and data used on a 'host' development machine; where host is often
+# Linux or Mac OS.
 sdk_molecule("host_tools") {
   visibility = [ ":*" ]
 
@@ -345,6 +353,7 @@ sdk_molecule("core_lib") {
   ]
 }
 
+# Pieces of the IDK sans host tools (which are in ":host_tools").
 sdk_molecule("core_idk") {
   visibility = [ ":*" ]
   testonly = true
@@ -438,6 +447,8 @@ if (is_host) {
   }
 }
 
+# This SDK is much smaller than the "core" SDK and is useful for bringing up new
+# libc implementations.
 sdk("bootstrap") {
   id = sdk_id
 
@@ -549,6 +560,8 @@ sdk("fuchsia_dart") {
   ]
 }
 
+# Tools Fuchsia driver developers used on the host platform; where host is often
+# Linux or Mac OS.
 sdk_molecule("ddk_host_tools") {
   visibility = [ ":*" ]
 
@@ -598,6 +611,7 @@ sdk_molecule("bind") {
   ]
 }
 
+# An experimental SDK for developing drivers.
 sdk("ddk") {
   id = sdk_id
 
