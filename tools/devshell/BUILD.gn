@@ -23,6 +23,7 @@ if (!is_host) {
       "//tools/symbolizer",
 
       # For `fx format-code`.
+      "//build/tools/formatjson5",
       "//tools/cmc",
       "//tools/fidl/fidlc:fidl-format",
 
