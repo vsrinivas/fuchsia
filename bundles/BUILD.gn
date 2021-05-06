@@ -148,16 +148,6 @@ group("bootstrap") {
   ]
 }
 
-# TODO(RFC-0089): the 'root.cm' from file in `//src/sys/bundles:bootstrap` is
-# being removed, and each ZBI being assembled is required to include their own
-# version of it to select the appropriate core package name. However until we
-# can update all dependencies on the `bootstrap` target to do this, we must
-# provide a version of `bootstrap` without `root.cm` in a different target, so
-# that each usage can be moved over to the new approach in a soft migration.
-group("bootstrap-without-root") {
-  deps = [ ":bootstrap" ]
-}
-
 # Binaries that form the base of every single zedboot image.
 group("bootstrap-zedboot") {
   deps = [
