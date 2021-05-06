@@ -1,0 +1,28 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.wlan.devmgr.IsolatedDevmgr": [
+                    "fuchsia-pkg://fuchsia.com/wlan-hw-sim-test#meta/wlan-devmgr.cmx"
+                ]
+            }
+        }
+    },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/wlandevicemonitor_bin_test"
+    },
+    "sandbox": {
+        "dev": [
+            "class/wlanphy",
+            "null",
+            "test/wlantapctl",
+            "zero"
+        ],
+        "services": [
+            "fuchsia.wlan.devmgr.IsolatedDevmgr"
+        ]
+    }
+}
