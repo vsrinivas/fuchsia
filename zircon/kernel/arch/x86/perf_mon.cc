@@ -392,11 +392,13 @@ static void x86_perfmon_init_mchbar() {
 
 // Return the size of the LBR stack, or zero if not supported.
 static unsigned x86_perfmon_lbr_stack_size() {
+  // See [intel/vol3]: Table 17-4. LBR Stack Size and TOS Pointer Range
   static const struct {
     x86_microarch_list microarch;
     uint8_t stack_size;
   } supported_chips[] = {
       {X86_MICROARCH_INTEL_SKYLAKE, 32},
+      {X86_MICROARCH_INTEL_CANNONLAKE, 32},
   };
 
   unsigned lbr_format = perfmon_capabilities & ((1u << IA32_PERF_CAPABILITIES_LBR_FORMAT_LEN) - 1);
