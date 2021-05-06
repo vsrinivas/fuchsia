@@ -21,7 +21,7 @@ use {
     futures::{channel::mpsc, FutureExt as _, SinkExt as _, StreamExt as _, TryStreamExt as _},
     log::{debug, error, info},
     pin_utils::pin_mut,
-    std::collections::HashMap,
+    std::collections::{HashMap, HashSet},
     std::sync::{
         atomic::{AtomicU64, Ordering},
         Arc,
@@ -40,8 +40,12 @@ enum CreateRealmError {
     UrlNotProvided,
     #[error("name not provided")]
     NameNotProvided,
-    #[error("duplicate capability {0:?} exposed by component '{1}'")]
-    DuplicateCapabilityUse(fnetemul::Capability, String),
+    #[error("capability source not provided")]
+    CapabilitySourceNotProvided,
+    #[error("capability name not provided")]
+    CapabilityNameNotProvided,
+    #[error("duplicate capability '{0}' used by component '{1}'")]
+    DuplicateCapabilityUse(String, String),
     #[error("realm builder error: {0:?}")]
     RealmBuilderError(#[from] fcomponent::error::Error),
 }
@@ -51,7 +55,12 @@ impl Into<zx::Status> for CreateRealmError {
         match self {
             CreateRealmError::UrlNotProvided
             | CreateRealmError::NameNotProvided
-            | CreateRealmError::DuplicateCapabilityUse(_, _) => zx::Status::INVALID_ARGS,
+            | CreateRealmError::CapabilitySourceNotProvided
+            | CreateRealmError::CapabilityNameNotProvided
+            | CreateRealmError::DuplicateCapabilityUse(_, _)
+            | CreateRealmError::RealmBuilderError(fcomponent::error::Error::Builder(
+                fcomponent::error::BuilderError::MissingRouteSource(_),
+            )) => zx::Status::INVALID_ARGS,
             CreateRealmError::RealmBuilderError(_) => zx::Status::INTERNAL,
         }
     }
@@ -62,8 +71,16 @@ async fn create_realm_instance(
     prefix: &str,
     network_realm: Arc<fcomponent::RealmInstance>,
 ) -> Result<fcomponent::RealmInstance, CreateRealmError> {
+    // Keep track of all the services exposed by components in the test realm, as well as components
+    // requesting that all available capabilities be routed to them, so that we can wait until we've
+    // seen all the child component definitions to route those capabilities.
     let mut exposed_services = HashMap::new();
     let mut components_using_all = Vec::new();
+    // Keep track of dependencies between child components in the test realm in order to create the
+    // relevant routes at the end. RealmBuilder doesn't allow creating routes between components if
+    // the components haven't both been created yet, so we wait until all components have been
+    // created to add routes between them.
+    let mut child_dep_routes = Vec::new();
     let mut builder = RealmBuilder::new().await?;
     let _: &mut RealmBuilder = builder
         .add_component(
@@ -117,21 +134,46 @@ async fn create_realm_instance(
                     let () = components_using_all.push(name);
                 }
                 ChildUses::Capabilities(caps) => {
-                    let mut used = std::collections::HashSet::new();
+                    let mut unique_caps = HashSet::new();
                     for cap in caps {
-                        if !used.insert(cap) {
-                            return Err(CreateRealmError::DuplicateCapabilityUse(cap, name));
-                        }
-                        match cap {
+                        let service_name = match cap {
                             fnetemul::Capability::LogSink(fnetemul::Empty {}) => {
                                 let () = route_log_sink_to_component(&mut builder, &name)?;
+                                flogger::LogSinkMarker::SERVICE_NAME.to_string()
                             }
                             fnetemul::Capability::NetemulNetworkContext(fnetemul::Empty {}) => {
                                 let () = route_network_context_to_component(&mut builder, &name)?;
+                                fnetemul_network::NetworkContextMarker::SERVICE_NAME.to_string()
                             }
                             fnetemul::Capability::NetemulSyncManager(fnetemul::Empty {}) => todo!(),
                             fnetemul::Capability::NetemulDevfs(fnetemul::Empty {}) => todo!(),
-                            fnetemul::Capability::ChildDep(fnetemul::ChildDep {}) => todo!(),
+                            fnetemul::Capability::ChildDep(fnetemul::ChildDep {
+                                name: source,
+                                capability,
+                                ..
+                            }) => {
+                                let source =
+                                    source.ok_or(CreateRealmError::CapabilitySourceNotProvided)?;
+                                let fnetemul::ExposedCapability::Service(capability) =
+                                    capability
+                                        .ok_or(CreateRealmError::CapabilityNameNotProvided)?;
+                                debug!(
+                                    "routing capability '{}' from component '{}' to '{}'",
+                                    capability, source, name
+                                );
+                                let () = child_dep_routes.push(CapabilityRoute {
+                                    capability: Capability::protocol(&capability),
+                                    source: RouteEndpoint::component(source),
+                                    targets: vec![RouteEndpoint::component(&name)],
+                                });
+                                capability
+                            }
+                        };
+                        if !unique_caps.insert(service_name.clone()) {
+                            return Err(CreateRealmError::DuplicateCapabilityUse(
+                                service_name,
+                                name,
+                            ));
                         }
                     }
                 }
@@ -150,6 +192,9 @@ async fn create_realm_instance(
                 targets: vec![RouteEndpoint::component(&component)],
             })?;
         }
+    }
+    for route in child_dep_routes {
+        let _: &mut RealmBuilder = builder.add_route(route)?;
     }
     let mut realm = builder.build();
     // Mark all dependencies between components in the test realm as weak, to allow for dependency
@@ -1156,6 +1201,53 @@ mod tests {
                     epitaph: zx::Status::INVALID_ARGS,
                 },
                 TestCase {
+                    name: "child manually depends on a duplicate of a netemul-provided service",
+                    options: fnetemul::RealmOptions {
+                        children: Some(vec![fnetemul::ChildDef {
+                            name: Some(COUNTER_COMPONENT_NAME.to_string()),
+                            url: Some(COUNTER_PACKAGE_URL.to_string()),
+                            uses: Some(fnetemul::ChildUses::Capabilities(vec![
+                                fnetemul::Capability::LogSink(fnetemul::Empty {}),
+                                fnetemul::Capability::ChildDep(fnetemul::ChildDep {
+                                    name: Some("root".to_string()),
+                                    capability: Some(fnetemul::ExposedCapability::Service(
+                                        flogger::LogSinkMarker::SERVICE_NAME.to_string(),
+                                    )),
+                                    ..fnetemul::ChildDep::EMPTY
+                                }),
+                            ])),
+                            ..fnetemul::ChildDef::EMPTY
+                        }]),
+                        ..fnetemul::RealmOptions::EMPTY
+                    },
+                    epitaph: zx::Status::INVALID_ARGS,
+                },
+                TestCase {
+                    name: "child depends on nonexistent child",
+                    options: fnetemul::RealmOptions {
+                        children: Some(vec![
+                            counter_component(),
+                            fnetemul::ChildDef {
+                                name: Some("counter-b".to_string()),
+                                url: Some(COUNTER_PACKAGE_URL.to_string()),
+                                uses: Some(fnetemul::ChildUses::Capabilities(vec![
+                                    fnetemul::Capability::ChildDep(fnetemul::ChildDep {
+                                        // counter-a does not exist.
+                                        name: Some("counter-a".to_string()),
+                                        capability: Some(fnetemul::ExposedCapability::Service(
+                                            CounterMarker::SERVICE_NAME.to_string(),
+                                        )),
+                                        ..fnetemul::ChildDep::EMPTY
+                                    }),
+                                ])),
+                                ..fnetemul::ChildDef::EMPTY
+                            },
+                        ]),
+                        ..fnetemul::RealmOptions::EMPTY
+                    },
+                    epitaph: zx::Status::INVALID_ARGS,
+                },
+                TestCase {
                     name: "duplicate components",
                     options: fnetemul::RealmOptions {
                         children: Some(vec![
@@ -1200,6 +1292,88 @@ mod tests {
                     ),
                 }
             }
+        })
+        .await
+    }
+
+    #[fuchsia::test]
+    async fn child_dep() {
+        with_sandbox("child_dep", |sandbox| async move {
+            const COUNTER_A_SERVICE_NAME: &str = "fuchsia.netemul.test.CounterA";
+            const COUNTER_B_SERVICE_NAME: &str = "fuchsia.netemul.test.CounterB";
+            let TestRealm { realm } = TestRealm::new(
+                &sandbox,
+                fnetemul::RealmOptions {
+                    children: Some(vec![
+                        fnetemul::ChildDef {
+                            url: Some(COUNTER_PACKAGE_URL.to_string()),
+                            name: Some("counter-a".to_string()),
+                            exposes: Some(vec![COUNTER_A_SERVICE_NAME.to_string()]),
+                            uses: Some(fnetemul::ChildUses::Capabilities(vec![
+                                fnetemul::Capability::LogSink(fnetemul::Empty {}),
+                                fnetemul::Capability::ChildDep(fnetemul::ChildDep {
+                                    name: Some("counter-b".to_string()),
+                                    capability: Some(fnetemul::ExposedCapability::Service(
+                                        COUNTER_B_SERVICE_NAME.to_string(),
+                                    )),
+                                    ..fnetemul::ChildDep::EMPTY
+                                }),
+                            ])),
+                            ..fnetemul::ChildDef::EMPTY
+                        },
+                        fnetemul::ChildDef {
+                            url: Some(COUNTER_PACKAGE_URL.to_string()),
+                            name: Some("counter-b".to_string()),
+                            exposes: Some(vec![COUNTER_B_SERVICE_NAME.to_string()]),
+                            uses: Some(fnetemul::ChildUses::Capabilities(vec![
+                                fnetemul::Capability::LogSink(fnetemul::Empty {}),
+                            ])),
+                            ..fnetemul::ChildDef::EMPTY
+                        },
+                    ]),
+                    ..fnetemul::RealmOptions::EMPTY
+                },
+            );
+            let counter_a = {
+                let (counter_a, server_end) = fidl::endpoints::create_proxy::<CounterMarker>()
+                    .expect("failed to create CounterA proxy");
+                let () = realm
+                    .connect_to_service(COUNTER_A_SERVICE_NAME, None, server_end.into_channel())
+                    .expect("failed to connect to CounterA service");
+                counter_a
+            };
+            // counter-a should have access to counter-b's exposed service.
+            let (counter_b, server_end) = fidl::endpoints::create_proxy::<CounterMarker>()
+                .expect("failed to create CounterB proxy");
+            let () = counter_a
+                .connect_to_service(COUNTER_B_SERVICE_NAME, server_end.into_channel())
+                .expect("fuchsia.netemul.test/CounterA.connect_to_service call failed");
+            assert_eq!(
+                counter_b
+                    .increment()
+                    .await
+                    .expect("fuchsia.netemul.test/CounterB.increment call failed"),
+                1,
+            );
+            // The counter-b service that counter-a has access to should be the same one accessible
+            // through the test realm.
+            let counter_b = {
+                let (counter_b, server_end) = fidl::endpoints::create_proxy::<CounterMarker>()
+                    .expect("failed to create CounterB proxy");
+                let () = realm
+                    .connect_to_service(COUNTER_B_SERVICE_NAME, None, server_end.into_channel())
+                    .expect("failed to connect to CounterB service");
+                counter_b
+            };
+            assert_eq!(
+                counter_b
+                    .increment()
+                    .await
+                    .expect("fuchsia.netemul.test/CounterB.increment call failed"),
+                2,
+            );
+            // TODO(https://fxbug.dev/74868): once we can allow the ERROR logs that result from the
+            // routing failure, verify that counter-b does *not* have access to counter-a's service.
         })
         .await
     }

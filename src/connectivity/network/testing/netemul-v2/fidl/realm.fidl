@@ -12,10 +12,19 @@ using zx;
 struct Empty {
 };
 
+/// A capability exposed by a component in a [`ManagedRealm`].
+union ExposedCapability {
+    /// The name of the exposed service.
+    1: string:fuchsia.component.MAX_PATH_LENGTH service;
+};
+
 /// A dependency of one child component on a capability exposed by another in
 /// the same realm.
-// TODO(https://fxbug.dev/72368): define this struct.
-struct ChildDep {
+table ChildDep {
+    /// The name of the child exposing the needed capability. Required.
+    1: fuchsia.component.name name;
+    /// The exposed capability. Required.
+    2: ExposedCapability capability;
 };
 
 /// A capability to be offered to a child component in a [`ManagedRealm`].
@@ -58,7 +67,7 @@ table ChildDef {
     /// The name of this child local to its containing realm. Required.
     2: fuchsia.component.name name;
     /// Services that this child exposes to the realm. Defaults to empty.
-    3: vector<string:MAX>:MAX exposes;
+    3: vector<string:fuchsia.component.MAX_PATH_LENGTH>:MAX exposes;
     /// Services that this child uses. Defaults to
     /// [`fuchsia.netemul/ChildUses.all`].
     4: ChildUses uses;
