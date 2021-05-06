@@ -17,7 +17,7 @@ use fuchsia_component::server::ServiceFs;
 use fuchsia_zircon::{
     self as zx, sys::zx_exception_info_t, sys::ZX_EXCEPTION_STATE_HANDLED,
     sys::ZX_EXCEPTION_STATE_TRY_NEXT, sys::ZX_EXCP_POLICY_CODE_BAD_SYSCALL,
-    sys::ZX_EXCP_POLICY_ERROR, AsHandleRef, Task as zxTask,
+    sys::ZX_EXCP_POLICY_ERROR, AsHandleRef,
 };
 use futures::{StreamExt, TryStreamExt};
 use log::{error, info};
@@ -195,8 +195,7 @@ async fn start_component(
 
     std::thread::spawn(move || {
         let err = (|| -> Result<(), Error> {
-            let task_owner = load_executable(&kernel, executable_vmo, &params, fs)?;
-            let exceptions = task_owner.task.thread.create_exception_channel()?;
+            let (task_owner, exceptions) = load_executable(&kernel, executable_vmo, &params, fs)?;
             let exit_code = run_task(task_owner, exceptions)?;
 
             // TODO(fxb/74803): Using the component controller's epitaph may not be the best way to

@@ -4,7 +4,7 @@
 
 use anyhow::{Context, Error};
 use fidl_fuchsia_io as fio;
-use fuchsia_zircon::{self as zx, AsHandleRef, Status};
+use fuchsia_zircon::{self as zx, AsHandleRef, Status, Task as zxTask};
 use process_builder::{elf_load, elf_parse};
 use std::ffi::{CStr, CString};
 use std::sync::Arc;
@@ -117,7 +117,7 @@ pub fn load_executable(
     executable: zx::Vmo,
     params: &ProcessParameters,
     fs: Arc<FileSystem>,
-) -> Result<TaskOwner, Error> {
+) -> Result<(TaskOwner, zx::Channel), Error> {
     let creds = Credentials { uid: 3, gid: 3, euid: 3, egid: 3 };
     let task_owner = Task::new(&kernel, &params.name, fs.clone(), creds)?;
     let task = &task_owner.task;
@@ -180,9 +180,10 @@ pub fn load_executable(
     ];
     let stack = populate_initial_stack(&stack_vmo, &params, auxv, stack_base, stack)?;
 
+    let exceptions = task.thread.create_exception_channel()?;
     task.thread_group.process.start(&task.thread, entry, stack, zx::Handle::invalid(), 0)?;
 
-    Ok(task_owner)
+    Ok((task_owner, exceptions))
 }
 
 #[cfg(test)]
