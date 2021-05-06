@@ -20,7 +20,7 @@ using BurstReaderProvider = fuchsia_hardware_radar::RadarBurstReaderProvider;
 using BurstReader = fuchsia_hardware_radar::RadarBurstReader;
 using StatusCode = fuchsia_hardware_radar::wire::StatusCode;
 
-class FakeRadarDevice : public fidl::WireInterface<BurstReader> {
+class FakeRadarDevice : public fidl::WireServer<BurstReader> {
  public:
   FakeRadarDevice() : loop_(&kAsyncLoopConfigNeverAttachToThread), provider_(*this) {
     EXPECT_OK(loop_.StartThread("radarutil-test-thread"));
@@ -54,43 +54,44 @@ class FakeRadarDevice : public fidl::WireInterface<BurstReader> {
 
   void SetErrorOnBurst(size_t burst) { error_burst_ = burst; }
 
-  void GetBurstSize(GetBurstSizeCompleter::Sync& completer) override {
+  void GetBurstSize(GetBurstSizeRequestView request,
+                    GetBurstSizeCompleter::Sync& completer) override {
     completer.Reply(kBurstSize);
   }
 
-  void RegisterVmos(fidl::VectorView<uint32_t> vmo_ids, fidl::VectorView<zx::vmo> vmos,
+  void RegisterVmos(RegisterVmosRequestView request,
                     RegisterVmosCompleter::Sync& completer) override {
-    if (vmo_ids.count() != vmos.count()) {
+    if (request->vmo_ids.count() != request->vmos.count()) {
       completer.ReplyError(StatusCode::kInvalidArgs);
       return;
     }
 
     fbl::AutoLock lock(&lock_);
-    for (size_t i = 0; i < vmo_ids.count(); i++) {
-      if (registered_vmos_.count(vmo_ids[i]) != 0) {
+    for (size_t i = 0; i < request->vmo_ids.count(); i++) {
+      if (registered_vmos_.count(request->vmo_ids[i]) != 0) {
         completer.ReplyError(StatusCode::kVmoAlreadyRegistered);
         return;
       }
 
-      registered_vmos_.emplace(vmo_ids[i], RegisteredVmo{
-                                               .vmo = std::move(vmos[i]),
-                                               .locked = false,
-                                           });
+      registered_vmos_.emplace(request->vmo_ids[i], RegisteredVmo{
+                                                        .vmo = std::move(request->vmos[i]),
+                                                        .locked = false,
+                                                    });
     }
 
-    registered_vmo_count_ += vmo_ids.count();
+    registered_vmo_count_ += request->vmo_ids.count();
 
     completer.ReplySuccess();
   }
 
-  void UnregisterVmos(fidl::VectorView<uint32_t> vmo_ids,
+  void UnregisterVmos(UnregisterVmosRequestView request,
                       UnregisterVmosCompleter::Sync& completer) override {
     fidl::FidlAllocator allocator;
-    fidl::VectorView<zx::vmo> vmos(allocator, vmo_ids.count());
+    fidl::VectorView<zx::vmo> vmos(allocator, request->vmo_ids.count());
 
     fbl::AutoLock lock(&lock_);
-    for (size_t i = 0; i < vmo_ids.count(); i++) {
-      auto it = registered_vmos_.find(vmo_ids[i]);
+    for (size_t i = 0; i < request->vmo_ids.count(); i++) {
+      auto it = registered_vmos_.find(request->vmo_ids[i]);
       if (it == registered_vmos_.end()) {
         completer.ReplyError(StatusCode::kVmoNotFound);
         return;
@@ -99,25 +100,25 @@ class FakeRadarDevice : public fidl::WireInterface<BurstReader> {
       vmos[i] = std::move(it->second.vmo);
     }
 
-    unregistered_vmo_count_ += vmo_ids.count();
+    unregistered_vmo_count_ += request->vmo_ids.count();
 
     completer.ReplySuccess(vmos);
   }
 
-  void StartBursts(StartBurstsCompleter::Sync& completer) override {
+  void StartBursts(StartBurstsRequestView request, StartBurstsCompleter::Sync& completer) override {
     send_bursts_ = true;
     bursts_started_ = true;
   }
 
-  void StopBursts(StopBurstsCompleter::Sync& completer) override {
+  void StopBursts(StopBurstsRequestView request, StopBurstsCompleter::Sync& completer) override {
     send_bursts_ = false;
     bursts_stopped_ = true;
     completer.Reply();
   }
 
-  void UnlockVmo(uint32_t vmo_id, UnlockVmoCompleter::Sync& completer) override {
+  void UnlockVmo(UnlockVmoRequestView request, UnlockVmoCompleter::Sync& completer) override {
     fbl::AutoLock lock(&lock_);
-    auto it = registered_vmos_.find(vmo_id);
+    auto it = registered_vmos_.find(request->vmo_id);
     if (it != registered_vmos_.end()) {
       it->second.locked = false;
     }
@@ -127,12 +128,13 @@ class FakeRadarDevice : public fidl::WireInterface<BurstReader> {
   // The burst size of our only existing radar driver.
   static constexpr size_t kBurstSize = 23247;
 
-  class FakeBurstReaderProvider : public fidl::WireInterface<BurstReaderProvider> {
+  class FakeBurstReaderProvider : public fidl::WireServer<BurstReaderProvider> {
    public:
     explicit FakeBurstReaderProvider(FakeRadarDevice& parent) : parent_(parent) {}
 
-    void Connect(fidl::ServerEnd<BurstReader> server, ConnectCompleter::Sync& completer) override {
-      parent_.Connect(std::move(server), completer);
+    void Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) override {
+      fidl::WireRequest<BurstReaderProvider::Connect> outgoing(0, std::move(request->server));
+      parent_.Connect(&outgoing, completer);
     };
 
    private:
@@ -144,9 +146,9 @@ class FakeRadarDevice : public fidl::WireInterface<BurstReader> {
     bool locked;
   };
 
-  void Connect(fidl::ServerEnd<BurstReader> server,
+  void Connect(FakeBurstReaderProvider::ConnectRequestView request,
                FakeBurstReaderProvider::ConnectCompleter::Sync& completer) {
-    server_.emplace(fidl::BindServer(loop_.dispatcher(), std::move(server), this));
+    server_.emplace(fidl::BindServer(loop_.dispatcher(), std::move(request->server), this));
     completer.ReplySuccess();
   }
 
