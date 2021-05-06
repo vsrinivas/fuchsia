@@ -241,7 +241,7 @@ void Monitor::CreateMetrics(const std::vector<memory::BucketMatch>& bucket_match
   fuchsia::cobalt::LoggerFactorySyncPtr factory;
   component_context_->svc()->Connect(factory.NewRequest());
   if (!factory) {
-    FX_LOGS(ERROR) << "Unable to get LoggerFactory.";
+    FX_LOGS(ERROR) << "Unable to get cobalt.LoggerFactory.";
     return;
   }
   // Create a Cobalt Logger. The ID name is the one we specified in the
@@ -249,7 +249,7 @@ void Monitor::CreateMetrics(const std::vector<memory::BucketMatch>& bucket_match
   fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
   factory->CreateLoggerFromProjectId(cobalt_registry::kProjectId, logger_.NewRequest(), &status);
   if (status != fuchsia::cobalt::Status::OK) {
-    FX_LOGS(ERROR) << "Unable to get Logger from factory";
+    FX_LOGS(ERROR) << "Unable to get cobalt.Logger from factory.";
     return;
   }
 
