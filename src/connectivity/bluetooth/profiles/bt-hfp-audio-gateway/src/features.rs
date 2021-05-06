@@ -72,3 +72,39 @@ impl From<&AudioGatewayFeatureSupport> for AgFeatures {
         this
     }
 }
+
+/// Codec IDs. See HFP 1.8, Section 10 / Appendix B.
+#[derive(PartialEq, Debug, Clone, Copy)]
+pub struct CodecId(u8);
+
+impl CodecId {
+    #[cfg(test)]
+    pub const CVSD: CodecId = CodecId(0x01);
+    pub const _MSBC: CodecId = CodecId(0x02);
+}
+
+impl From<u8> for CodecId {
+    fn from(x: u8) -> Self {
+        Self(x)
+    }
+}
+
+impl Into<u8> for CodecId {
+    fn into(self) -> u8 {
+        self.0
+    }
+}
+
+// Convenience conversions for interacting with AT library.
+// TODO(fxbug.dev/71403): Remove this once AT library supports specifying correct widths.
+impl Into<i64> for CodecId {
+    fn into(self) -> i64 {
+        self.0 as i64
+    }
+}
+
+impl PartialEq<i64> for CodecId {
+    fn eq(&self, other: &i64) -> bool {
+        self.0 as i64 == *other
+    }
+}

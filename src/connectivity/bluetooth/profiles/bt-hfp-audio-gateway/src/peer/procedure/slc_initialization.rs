@@ -14,7 +14,7 @@ use crate::{
     },
 };
 
-use {at_commands as at, num_traits::FromPrimitive};
+use {at_commands as at, num_traits::FromPrimitive, std::convert::TryFrom};
 
 /// A singular state within the SLC Initialization Procedure.
 pub trait SlcProcedureState {
@@ -168,7 +168,12 @@ impl SlcProcedureState for AgFeaturesReceived {
         // availability specified in the feature flags of the HF and AG.
         match (update, state.codec_negotiation()) {
             (at::Command::Bac { codecs }, true) => {
-                state.hf_supported_codecs = Some(codecs.into_iter().map(|x| x as u32).collect());
+                state.hf_supported_codecs = Some(
+                    codecs
+                        .into_iter()
+                        .filter_map(|x| u8::try_from(x).ok().map(Into::into))
+                        .collect(),
+                );
                 Box::new(AvailableCodecsReceived)
             }
             (at::Command::CindTest {}, false) => Box::new(AgSupportedIndicatorsRequested),
@@ -437,6 +442,8 @@ impl SlcProcedureState for SlcErrorState {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use crate::features::{CodecId, HfFeatures};
     use matches::assert_matches;
 
     #[test]
@@ -448,12 +455,16 @@ mod tests {
         };
         let mut procedure =
             SlcInitProcedure::new_at_state(AgFeaturesReceived { state: state.clone() });
-        let update = at::Command::Bac { codecs: Vec::new() };
+        let codecs = vec![CodecId::CVSD.into(), 0xf09f9296, 0x04];
+        let update = at::Command::Bac { codecs };
         // Both parties support codec negotiation, so upon receiving the Codec HF message, we
         // expect to successfully transition to the codec state and the resulting event
         // should be an Ack to the codecs.
         let event = procedure.hf_update(update, &mut state);
         assert_matches!(event, ProcedureRequest::SendMessages(msgs) if msgs == vec![at::Response::Ok]);
+
+        // At this point, the codecs received should be a filtered into allowed of the above.
+        assert_eq!(Some(vec![CodecId::CVSD, (0x04).into()]), state.hf_supported_codecs);
     }
 
     #[test]

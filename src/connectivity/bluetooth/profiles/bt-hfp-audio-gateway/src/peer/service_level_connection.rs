@@ -26,7 +26,8 @@ use super::{
     slc_request::SlcRequest,
     update::AgUpdate,
 };
-use crate::features::{AgFeatures, HfFeatures};
+
+use crate::features::{AgFeatures, CodecId, HfFeatures};
 
 /// The maximum number of concurrent procedures currently supported by this SLC.
 /// This value is chosen as a number significantly more than the total number of procedures
@@ -63,8 +64,8 @@ pub struct SlcState {
     pub ag_features: AgFeatures,
     /// The features of the HF.
     pub hf_features: HfFeatures,
-    /// The codecs supported by the HF.
-    pub hf_supported_codecs: Option<Vec<u32>>,
+    /// The codecs supported by the HF. If initialized, None if Codec Negotiation is not supported.
+    pub hf_supported_codecs: Option<Vec<CodecId>>,
     /// The indicators supported by the HF and its current status.
     pub hf_indicators: HfIndicators,
     /// The current AG indicator events reporting state.
@@ -98,6 +99,15 @@ impl SlcState {
     pub fn hf_indicators(&self) -> bool {
         self.hf_features.contains(HfFeatures::HF_INDICATORS)
             && self.ag_features.contains(AgFeatures::HF_INDICATORS)
+    }
+
+    /// Returns the codecs that are known to be supported by the peer.
+    /// May be inaccurate if initialization has not completed.
+    #[cfg(test)]
+    pub fn codecs_supported(&self) -> Vec<CodecId> {
+        // All HFs are required to support CVSD, even if they don't support Codec Negotiation.
+        // See HFP v1.8, Sec 5.7 for more information.
+        self.hf_supported_codecs.clone().unwrap_or(vec![CodecId::CVSD])
     }
 }
 
@@ -281,6 +291,12 @@ impl ServiceLevelConnection {
     /// or in testing scenarios.
     fn set_initialized(&mut self) {
         self.state.initialized = true;
+    }
+
+    /// Returns the codecs supported by the by the peer.
+    #[cfg(test)]
+    pub fn codecs_supported(&self) -> Vec<CodecId> {
+        self.state.codecs_supported()
     }
 
     pub fn network_operator_name_format(&self) -> &Option<at::NetworkOperatorNameFormat> {
@@ -699,6 +715,12 @@ pub(crate) mod tests {
         assert_matches!(exec.run_until_stalled(&mut remote_fut), Poll::Pending);
     }
 
+    /// Expects the service level connection to be pending, and polls to check that it is.
+    #[track_caller]
+    fn expect_slc_pending(exec: &mut fasync::Executor, slc: &mut ServiceLevelConnection) {
+        assert_matches!(exec.run_until_stalled(&mut slc.next()), Poll::Pending);
+    }
+
     /// Serializes the AT Response into a byte buffer.
     #[track_caller]
     pub fn serialize_at_response(response: at::Response) -> Vec<u8> {
@@ -765,7 +787,7 @@ pub(crate) mod tests {
         let _ = remote.as_ref().write(&unexpected);
 
         // No requests should be received on the stream.
-        assert_matches!(exec.run_until_stalled(&mut slc.next()), Poll::Pending);
+        expect_slc_pending(&mut exec, &mut slc);
 
         // Channel should be disconnected now.
         assert!(!slc.connected());
@@ -829,13 +851,13 @@ pub(crate) mod tests {
         do_ag_update(&mut exec, &mut slc, slci_marker, response_fn1(features));
         expect_peer_ready(&mut exec, &mut remote, None);
         // No further requests - waiting on peer response.
-        assert_matches!(exec.run_until_stalled(&mut slc.next()), Poll::Pending);
+        expect_slc_pending(&mut exec, &mut slc);
 
         // Peer sends us an HF supported indicators request - since the SLC can handle the request,
         // we expect no item in the SLC stream. The response should directly be sent to the peer.
         let command2 = format!("AT+CIND=?\r").into_bytes();
         let _ = remote.as_ref().write(&command2);
-        assert_matches!(exec.run_until_stalled(&mut slc.next()), Poll::Pending);
+        expect_slc_pending(&mut exec, &mut slc);
         expect_peer_ready(&mut exec, &mut remote, None);
 
         // Peer requests the indicator status. Since this status is not managed by the SLC, we
@@ -853,19 +875,36 @@ pub(crate) mod tests {
         do_ag_update(&mut exec, &mut slc, slci_marker, response_fn2(AgIndicators::default()));
         expect_peer_ready(&mut exec, &mut remote, None);
         // No further requests - waiting on peer response.
-        assert_matches!(exec.run_until_stalled(&mut slc.next()), Poll::Pending);
+        expect_slc_pending(&mut exec, &mut slc);
 
         // Peer requests to enable the Indicator Status update in the AG - since the SLC can
         // handle the request, we expect no item in the SLC stream, and the response should directly
         // be sent to the peer.
         let command4 = format!("AT+CMER=3,0,0,1\r").into_bytes();
         let _ = remote.as_ref().write(&command4);
-        assert_matches!(exec.run_until_stalled(&mut slc.next()), Poll::Pending);
+        expect_slc_pending(&mut exec, &mut slc);
         expect_peer_ready(&mut exec, &mut remote, None);
 
         // The SLC should be considered initialized and the SLCI Procedure is done.
         assert!(slc.initialized());
+
+        // Without Codec Negotiation, only CVSD is supported.
+        assert_eq!(vec![CodecId::CVSD], slc.codecs_supported());
+
         assert!(!slc.is_active(&slci_marker));
+    }
+
+    #[test]
+    fn slc_state_codecs_supported() {
+        let mut state = SlcState::default();
+        // Without any codecs supported, only CVSD is returned.
+        assert_eq!(vec![CodecId::CVSD], state.codecs_supported());
+
+        // When codec negotiation is done, and we have a list, the list is returned.
+        let codecs_raw: [u8; 4] = [0xf0, 0x9f, 0x92, 0x96];
+        let codecs: Vec<CodecId> = codecs_raw.iter().cloned().map(Into::into).collect();
+        state.hf_supported_codecs = Some(codecs.clone());
+        assert_eq!(codecs, state.codecs_supported());
     }
 
     #[test]
@@ -930,7 +969,7 @@ pub(crate) mod tests {
             value: 0i64,
         });
         do_ag_update(&mut exec, &mut slc, ProcedureMarker::PhoneStatus, status1.into());
-        assert_matches!(exec.run_until_stalled(&mut slc.next()), Poll::Pending);
+        expect_slc_pending(&mut exec, &mut slc);
         expect_peer_pending(&mut exec, &mut remote);
 
         // Peer sends us HF features - we expect a request for the AG features on the
@@ -958,13 +997,13 @@ pub(crate) mod tests {
             value: 1i64,
         });
         do_ag_update(&mut exec, &mut slc, ProcedureMarker::PhoneStatus, status2.into());
-        assert_matches!(exec.run_until_stalled(&mut slc.next()), Poll::Pending);
+        expect_slc_pending(&mut exec, &mut slc);
         expect_peer_pending(&mut exec, &mut remote);
 
         // Peer continues the SLCI procedure.
         let command2 = format!("AT+CIND=?\r").into_bytes();
         let _ = remote.as_ref().write(&command2);
-        assert_matches!(exec.run_until_stalled(&mut slc.next()), Poll::Pending);
+        expect_slc_pending(&mut exec, &mut slc);
         expect_peer_ready(&mut exec, &mut remote, None);
         let command3 = format!("AT+CIND?\r").into_bytes();
         let _ = remote.as_ref().write(&command3);
@@ -980,12 +1019,12 @@ pub(crate) mod tests {
         // Simulate local response with AG indicators status - expect this to go to the peer.
         do_ag_update(&mut exec, &mut slc, ProcedureMarker::SlcInitialization, ag_indicators);
         expect_peer_ready(&mut exec, &mut remote, None);
-        assert_matches!(exec.run_until_stalled(&mut slc.next()), Poll::Pending);
+        expect_slc_pending(&mut exec, &mut slc);
 
         // Peer requests to enable the Indicator Status update in the AG.
         let command4 = format!("AT+CMER=3,0,0,1\r").into_bytes();
         let _ = remote.as_ref().write(&command4);
-        assert_matches!(exec.run_until_stalled(&mut slc.next()), Poll::Pending);
+        expect_slc_pending(&mut exec, &mut slc);
         expect_peer_ready(&mut exec, &mut remote, None);
 
         // At this point, the mandatory portion of the SLCI procedure is complete. There are no optional
@@ -1004,7 +1043,7 @@ pub(crate) mod tests {
         // The next time the SLC stream is polled, we expect the updates to be processed.
         // Since these are phone status updates, we expect the one-shot procedures to send data
         // to the peer and therefore no SLC stream items.
-        assert_matches!(exec.run_until_stalled(&mut slc.next()), Poll::Pending);
+        expect_slc_pending(&mut exec, &mut slc);
         expect_peer_ready(&mut exec, &mut remote, Some(serialize_at_response(expected1)));
         expect_peer_ready(&mut exec, &mut remote, Some(serialize_at_response(expected2)));
         expect_peer_ready(&mut exec, &mut remote, Some(serialize_at_response(expected3)));
