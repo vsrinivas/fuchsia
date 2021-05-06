@@ -31,7 +31,7 @@ class TestDeviceDump : public TestCommandBuffer {
 
   // Creates the buffer and command buffer from |buffer_desc| and |sequence_number|.
   void CreateCommandBuffer(std::shared_ptr<MsdVsiContext> context, const BufferDesc& buffer_desc,
-                           uint64_t sequence_number, std::shared_ptr<MsdVsiBuffer>* out_buffer,
+                           uint32_t sequence_number, std::shared_ptr<MsdVsiBuffer>* out_buffer,
                            std::unique_ptr<CommandBuffer>* out_batch);
 
   // Returns whether |match_strings| are present in the same order in |dump_string|.
@@ -57,7 +57,7 @@ class TestDeviceDump : public TestCommandBuffer {
 };
 
 void TestDeviceDump::CreateCommandBuffer(std::shared_ptr<MsdVsiContext> context,
-                                         const BufferDesc& buffer_desc, uint64_t sequence_number,
+                                         const BufferDesc& buffer_desc, uint32_t sequence_number,
                                          std::shared_ptr<MsdVsiBuffer>* out_buffer,
                                          std::unique_ptr<CommandBuffer>* out_batch) {
   std::shared_ptr<MsdVsiBuffer> buffer;
@@ -121,7 +121,7 @@ TEST_F(TestDeviceDump, DumpCommandBuffer) {
                      .data_size = 0x1000,
                      .batch_offset = 0x0,
                      .gpu_addr = 0x10000};
-  constexpr uint64_t seq_num = 1;
+  constexpr uint32_t seq_num = 1;
 
   std::shared_ptr<MsdVsiBuffer> buf;
   std::unique_ptr<CommandBuffer> batch;
@@ -165,8 +165,8 @@ TEST_F(TestDeviceDump, DumpCommandBufferWithFault) {
                       .batch_offset = 0x1000,
                       .gpu_addr = 0x20000};
 
-  constexpr uint64_t seq_num1 = 10;
-  constexpr uint64_t seq_num2 = 11;
+  constexpr uint32_t seq_num1 = 10;
+  constexpr uint32_t seq_num2 = 11;
 
   std::shared_ptr<MsdVsiBuffer> buf1;
   std::unique_ptr<CommandBuffer> batch1;

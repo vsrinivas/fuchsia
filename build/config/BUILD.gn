@@ -622,8 +622,6 @@ config("Wno-conversion") {
     "//src/graphics/display/testing/*",
     "//src/graphics/drivers/misc/goldfish/*",
     "//src/graphics/drivers/misc/goldfish_address_space/*",
-    "//src/graphics/drivers/msd-vsi-vip/tests/integration:*",
-    "//src/graphics/drivers/msd-vsi-vip/tests/unit_tests:*",
     "//src/graphics/lib/compute/common/*",
     "//src/graphics/lib/compute/hotsort/hotsort_gen/*",
     "//src/graphics/lib/compute/hotsort/platforms/vk/*",

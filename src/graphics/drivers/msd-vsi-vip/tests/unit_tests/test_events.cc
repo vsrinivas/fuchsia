@@ -2,12 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <assert.h>
+#include <limits>
 #include <gtest/gtest.h>
 
 #include "helper/platform_device_helper.h"
 #include "src/graphics/drivers/msd-vsi-vip/src/instructions.h"
 #include "src/graphics/drivers/msd-vsi-vip/src/msd_vsi_device.h"
 #include "src/graphics/drivers/msd-vsi-vip/tests/mock/mock_mapped_batch.h"
+
+static inline uint32_t to_uint32(uint64_t val) {
+  assert(val <= std::numeric_limits<uint32_t>::max());
+  return static_cast<uint32_t>(val);
+}
 
 class TestEvents : public ::testing::Test {
  public:
@@ -132,7 +139,7 @@ TEST_F(TestEvents, WriteUnorderedEventIds) {
 
   uint32_t prev_wait_link = ringbuffer->SubtractOffset(kWaitLinkDwords * sizeof(uint32_t));
   // We will link to the end of the ringbuffer, where we are adding new events.
-  uint32_t rb_link_addr = rb_gpu_addr + ringbuffer->tail();
+  uint32_t rb_link_addr = to_uint32(rb_gpu_addr) + ringbuffer->tail();
 
   // Write event ids in reverse order, so we can test when it does not match batch sequence order.
   for (unsigned i = MsdVsiDevice::kNumEvents; i-- > 0;) {

@@ -36,11 +36,11 @@ class TestAddressSpace : public ::testing::Test {
   MockAddressSpaceOwner owner_;
   std::shared_ptr<AddressSpace> address_space_;
 
-  void CheckPteEntriesClear(uint64_t gpu_addr, uint64_t page_count) {
+  void CheckPteEntriesClear(uint32_t gpu_addr, uint64_t page_count) {
     for (unsigned int i = 0; i < page_count; i++) {
-      uint64_t addr = gpu_addr + i * PAGE_SIZE;
-      uint64_t page_table_index = (addr >>= PAGE_SHIFT) & AddressSpace::kPageTableMask;
-      uint64_t page_directory_index =
+      uint32_t addr = gpu_addr + i * PAGE_SIZE;
+      uint32_t page_table_index = (addr >>= PAGE_SHIFT) & AddressSpace::kPageTableMask;
+      uint32_t page_directory_index =
           (addr >>= AddressSpace::kPageTableShift) & AddressSpace::kPageDirectoryMask;
 
       auto page_table = address_space_->root_->GetPageTable(page_directory_index, false);
@@ -56,15 +56,15 @@ class TestAddressSpace : public ::testing::Test {
     }
   }
 
-  void CheckPteEntries(magma::PlatformBusMapper::BusMapping* bus_mapping, uint64_t gpu_addr,
+  void CheckPteEntries(magma::PlatformBusMapper::BusMapping* bus_mapping, uint32_t gpu_addr,
                        uint64_t mapping_page_count) {
     std::vector<uint64_t>& bus_addr = bus_mapping->Get();
     ASSERT_LE(mapping_page_count, bus_addr.size());
 
     for (unsigned int i = 0; i < mapping_page_count; i++) {
-      uint64_t addr = gpu_addr + i * PAGE_SIZE;
-      uint64_t page_table_index = (addr >>= PAGE_SHIFT) & AddressSpace::kPageTableMask;
-      uint64_t page_directory_index =
+      uint32_t addr = gpu_addr + i * PAGE_SIZE;
+      uint32_t page_table_index = (addr >>= PAGE_SHIFT) & AddressSpace::kPageTableMask;
+      uint32_t page_directory_index =
           (addr >>= AddressSpace::kPageTableShift) & AddressSpace::kPageDirectoryMask;
 
       auto page_table = address_space_->root_->GetPageTable(page_directory_index, false);
@@ -80,21 +80,21 @@ class TestAddressSpace : public ::testing::Test {
     }
   }
 
-  void Insert(uint64_t gpu_addr, uint32_t size_in_pages, uint32_t mapping_page_count) {
+  void Insert(uint32_t gpu_addr, uint32_t size_in_pages, uint32_t mapping_page_count) {
     auto buffer = magma::PlatformBuffer::Create(size_in_pages * PAGE_SIZE, "test");
     auto bus_mapping = owner_.GetBusMapper()->MapPageRangeBus(buffer.get(), 0, mapping_page_count);
     EXPECT_TRUE(address_space_->Insert(gpu_addr, bus_mapping.get()));
     CheckPteEntries(bus_mapping.get(), gpu_addr, mapping_page_count);
   }
 
-  void Clear(uint64_t gpu_addr, uint32_t size_in_pages) {
+  void Clear(uint32_t gpu_addr, uint32_t size_in_pages) {
     auto buffer = magma::PlatformBuffer::Create(size_in_pages * PAGE_SIZE, "test");
     auto bus_mapping = owner_.GetBusMapper()->MapPageRangeBus(buffer.get(), 0, size_in_pages);
     EXPECT_TRUE(address_space_->Clear(gpu_addr, bus_mapping.get()));
     CheckPteEntriesClear(gpu_addr, size_in_pages);
   }
 
-  void InsertAndClear(uint64_t gpu_addr, uint32_t size_in_pages, uint32_t mapping_page_count) {
+  void InsertAndClear(uint32_t gpu_addr, uint32_t size_in_pages, uint32_t mapping_page_count) {
     auto buffer = magma::PlatformBuffer::Create(size_in_pages * PAGE_SIZE, "test");
     auto bus_mapping = owner_.GetBusMapper()->MapPageRangeBus(buffer.get(), 0, mapping_page_count);
     EXPECT_TRUE(address_space_->Insert(gpu_addr, bus_mapping.get()));
@@ -124,8 +124,8 @@ TEST_F(TestAddressSpace, InsertShort) { Insert(0, 10, 5); }
 TEST_F(TestAddressSpace, InsertShortAndClear) { InsertAndClear(0, 10, 5); }
 
 TEST_F(TestAddressSpace, GarbageCollect) {
-  uint64_t gpu_addr = 0x1000000;
-  uint64_t page_directory_index =
+  uint32_t gpu_addr = 0x1000000;
+  uint32_t page_directory_index =
       (gpu_addr >> (PAGE_SHIFT + AddressSpace::kPageTableShift)) & AddressSpace::kPageDirectoryMask;
 
   EXPECT_EQ(0u, address_space_->root_->valid_count(page_directory_index));

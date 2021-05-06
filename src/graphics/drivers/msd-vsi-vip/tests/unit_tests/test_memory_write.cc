@@ -7,7 +7,9 @@ extern "C" {
 int etnaviv_cl_test_gc7000(int argc, char* argv[]);
 }
 
+#include <assert.h>
 #include <chrono>
+#include <limits>
 #include <thread>
 
 #include <gtest/gtest.h>
@@ -20,6 +22,11 @@ int etnaviv_cl_test_gc7000(int argc, char* argv[]);
 #include "src/graphics/drivers/msd-vsi-vip/src/instructions.h"
 #include "src/graphics/drivers/msd-vsi-vip/src/msd_vsi_device.h"
 #include "src/graphics/drivers/msd-vsi-vip/tests/mock/mock_mapped_batch.h"
+
+static inline uint32_t to_uint32(uint64_t val) {
+  assert(val <= std::numeric_limits<uint32_t>::max());
+  return static_cast<uint32_t>(val);
+}
 
 TEST(MsdVsiDevice, MemoryWrite) {
   {
@@ -254,9 +261,9 @@ struct etna_bo* etna_bo_new(void* dev, uint32_t size, uint32_t flags) {
     buffer->SetCachePolicy(MAGMA_CACHE_POLICY_WRITE_COMBINING);
 
   auto etna_device = static_cast<TestMsdVsiDevice::EtnaDevice*>(dev);
-  uint32_t page_count = buffer->size() / PAGE_SIZE;
+  uint64_t page_count = buffer->size() / PAGE_SIZE;
 
-  etna_buffer->gpu_addr = etna_device->test->next_gpu_addr(buffer->size());
+  etna_buffer->gpu_addr = etna_device->test->next_gpu_addr(to_uint32(buffer->size()));
 
   etna_buffer->msd_buffer = std::make_unique<MsdVsiBuffer>(std::move(buffer));
 

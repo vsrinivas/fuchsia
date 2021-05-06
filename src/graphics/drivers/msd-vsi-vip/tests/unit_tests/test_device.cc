@@ -118,7 +118,7 @@ TEST_F(MsdVsiDeviceTest, FetchEngineDma) {
   uint16_t prefetch = 0;
 
   EXPECT_TRUE(device_->SubmitCommandBufferNoMmu(bus_mapping->Get()[0], length, &prefetch));
-  EXPECT_EQ(magma::round_up(length, sizeof(uint64_t)) / sizeof(uint64_t), prefetch);
+  EXPECT_EQ(magma::round_up(length, static_cast<uint32_t>(sizeof(uint64_t))) / sizeof(uint64_t), prefetch);
 
   constexpr uint32_t kTimeoutMs = 100;
   EXPECT_TRUE(device_->WaitUntilIdle(kTimeoutMs));
@@ -192,7 +192,7 @@ TEST_F(MsdVsiDeviceTest, LoadAddressSpace) {
     uint16_t prefetch = 0;
 
     EXPECT_TRUE(device->SubmitCommandBufferNoMmu(bus_mapping->Get()[0], length, &prefetch));
-    EXPECT_EQ(magma::round_up(length, sizeof(uint64_t)) / sizeof(uint64_t), prefetch);
+    EXPECT_EQ(magma::round_up(length, static_cast<uint32_t>(sizeof(uint64_t))) / sizeof(uint64_t), prefetch);
 
     constexpr uint32_t kTimeoutMs = 100;
     EXPECT_TRUE(device->WaitUntilIdle(kTimeoutMs));

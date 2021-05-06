@@ -51,8 +51,8 @@ class MagmaExecuteMsdVsi : public testing::Test {
 
    private:
     magma_buffer_t magma_buffer_;
-    uint32_t size_;
-    uint64_t gpu_address_;
+    uint64_t size_;
+    uint32_t gpu_address_;
     magma_system_exec_resource resource_;
     void* cpu_address_ = nullptr;
   };
@@ -269,7 +269,7 @@ class MagmaExecuteMsdVsi : public testing::Test {
  private:
   MagmaVsi magma_vsi_;
 
-  uint64_t next_gpu_addr_ = 0x10000;
+  uint32_t next_gpu_addr_ = 0x10000;
 };
 
 }  // namespace

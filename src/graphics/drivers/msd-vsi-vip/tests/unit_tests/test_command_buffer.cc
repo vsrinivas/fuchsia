@@ -4,12 +4,19 @@
 
 #include "test_command_buffer.h"
 
+#include <assert.h>
+#include <limits>
 #include <gtest/gtest.h>
 
 #include "helper/platform_device_helper.h"
 #include "src/graphics/drivers/msd-vsi-vip/src/command_buffer.h"
 #include "src/graphics/drivers/msd-vsi-vip/src/instructions.h"
 #include "src/graphics/drivers/msd-vsi-vip/src/msd_vsi_device.h"
+
+static inline uint32_t to_uint32(uint64_t val) {
+  assert(val <= std::numeric_limits<uint32_t>::max());
+  return static_cast<uint32_t>(val);
+}
 
 void TestCommandBuffer::CreateMsdBuffer(uint32_t buffer_size,
                                         std::shared_ptr<MsdVsiBuffer>* out_buffer) {
@@ -126,16 +133,16 @@ void TestCommandBuffer::CreateAndSubmitBufferWaitCompletion(
 void TestCommandBuffer::WriteWaitCommand(std::shared_ptr<MsdVsiBuffer> buffer, uint32_t offset) {
   uint32_t* cmd_ptr;
   ASSERT_TRUE(buffer->platform_buffer()->MapCpu(reinterpret_cast<void**>(&cmd_ptr)));
-  BufferWriter buf_writer(cmd_ptr, buffer->platform_buffer()->size(), offset);
+  BufferWriter buf_writer(cmd_ptr, to_uint32(buffer->platform_buffer()->size()), offset);
   MiWait::write(&buf_writer);
   ASSERT_TRUE(buffer->platform_buffer()->UnmapCpu());
 }
 
 void TestCommandBuffer::WriteLinkCommand(std::shared_ptr<MsdVsiBuffer> buffer, uint32_t offset,
-                                         uint32_t prefetch, uint32_t gpu_addr) {
+                                         uint16_t prefetch, uint32_t gpu_addr) {
   uint32_t* cmd_ptr;
   ASSERT_TRUE(buffer->platform_buffer()->MapCpu(reinterpret_cast<void**>(&cmd_ptr)));
-  BufferWriter buf_writer(cmd_ptr, buffer->platform_buffer()->size(), offset);
+  BufferWriter buf_writer(cmd_ptr, to_uint32(buffer->platform_buffer()->size()), offset);
   MiLink::write(&buf_writer, prefetch, gpu_addr);
   ASSERT_TRUE(buffer->platform_buffer()->UnmapCpu());
 }
@@ -162,7 +169,7 @@ void TestCommandBuffer::WriteEventCommand(
 
   uint32_t* buf_cpu_addr;
   ASSERT_TRUE(buf->platform_buffer()->MapCpu(reinterpret_cast<void**>(&buf_cpu_addr)));
-  BufferWriter buf_writer(buf_cpu_addr, buf->platform_buffer()->size(), offset);
+  BufferWriter buf_writer(buf_cpu_addr, to_uint32(buf->platform_buffer()->size()), offset);
   MiEvent::write(&buf_writer, event_id);
   ASSERT_TRUE(buf->platform_buffer()->UnmapCpu());
 

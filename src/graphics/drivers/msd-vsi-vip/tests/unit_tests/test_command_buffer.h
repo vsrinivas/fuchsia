@@ -161,7 +161,7 @@ class TestCommandBuffer : public ::testing::Test {
   void WriteWaitCommand(std::shared_ptr<MsdVsiBuffer> buf, uint32_t offset);
 
   // Writes a single LINK command in |buf| at |offset|.
-  void WriteLinkCommand(std::shared_ptr<MsdVsiBuffer> buffer, uint32_t offset, uint32_t prefetch,
+  void WriteLinkCommand(std::shared_ptr<MsdVsiBuffer> buffer, uint32_t offset, uint16_t prefetch,
                         uint32_t gpu_addr);
 
   // Writes an EVENT command in |buf| at |offset|. |out_semaphore| will be populated with the
