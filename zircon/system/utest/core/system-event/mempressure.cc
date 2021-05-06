@@ -64,6 +64,14 @@ TEST(SystemEvent, CannotSignalOomFromUserspace) {
   signal_mem_event_from_userspace(ZX_SYSTEM_EVENT_OUT_OF_MEMORY);
 }
 
+TEST(SystemEvent, RetrieveImminentOom) {
+  retrieve_mem_event(ZX_SYSTEM_EVENT_IMMINENT_OUT_OF_MEMORY);
+}
+
+TEST(SystemEvent, CannotSignalImminentOomFromUserspace) {
+  signal_mem_event_from_userspace(ZX_SYSTEM_EVENT_IMMINENT_OUT_OF_MEMORY);
+}
+
 TEST(SystemEvent, RetrieveMempressureCritical) {
   retrieve_mem_event(ZX_SYSTEM_EVENT_MEMORY_PRESSURE_CRITICAL);
 }
@@ -95,12 +103,13 @@ TEST(SystemEvent, ExactlyOneMemoryEventSignaled) {
     return;
   }
 
-  const int kNumEvents = 4;
+  const int kNumEvents = 5;
   zx::event mem_events[kNumEvents];
   zx_wait_item_t wait_items[kNumEvents];
   zx_system_event_type_t types[kNumEvents] = {
-      ZX_SYSTEM_EVENT_OUT_OF_MEMORY, ZX_SYSTEM_EVENT_MEMORY_PRESSURE_CRITICAL,
-      ZX_SYSTEM_EVENT_MEMORY_PRESSURE_WARNING, ZX_SYSTEM_EVENT_MEMORY_PRESSURE_NORMAL};
+      ZX_SYSTEM_EVENT_OUT_OF_MEMORY, ZX_SYSTEM_EVENT_IMMINENT_OUT_OF_MEMORY,
+      ZX_SYSTEM_EVENT_MEMORY_PRESSURE_CRITICAL, ZX_SYSTEM_EVENT_MEMORY_PRESSURE_WARNING,
+      ZX_SYSTEM_EVENT_MEMORY_PRESSURE_NORMAL};
 
   for (int i = 0; i < kNumEvents; i++) {
     ASSERT_EQ(zx_system_get_event(root_job->get(), types[i], mem_events[i].reset_and_get_address()),

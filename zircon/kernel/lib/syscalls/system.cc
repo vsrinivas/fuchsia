@@ -554,6 +554,7 @@ zx_status_t sys_system_get_event(zx_handle_t root_job, uint32_t kind, user_out_h
 
   switch (kind) {
     case ZX_SYSTEM_EVENT_OUT_OF_MEMORY:
+    case ZX_SYSTEM_EVENT_IMMINENT_OUT_OF_MEMORY:
     case ZX_SYSTEM_EVENT_MEMORY_PRESSURE_CRITICAL:
     case ZX_SYSTEM_EVENT_MEMORY_PRESSURE_WARNING:
     case ZX_SYSTEM_EVENT_MEMORY_PRESSURE_NORMAL:

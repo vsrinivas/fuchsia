@@ -26,6 +26,7 @@ class MemoryWatchdog {
  public:
   enum PressureLevel : uint8_t {
     kOutOfMemory = 0,
+    kImminentOutOfMemory,
     kCritical,
     kWarning,
     kNormal,

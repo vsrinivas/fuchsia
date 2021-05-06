@@ -12,10 +12,14 @@
 #include <object/memory_watchdog.h>
 #include <vm/scanner.h>
 
-static const char* PressureLevelToString(MemoryWatchdog::PressureLevel level) {
+namespace {
+
+const char* PressureLevelToString(MemoryWatchdog::PressureLevel level) {
   switch (level) {
     case MemoryWatchdog::PressureLevel::kOutOfMemory:
       return "OutOfMemory";
+    case MemoryWatchdog::PressureLevel::kImminentOutOfMemory:
+      return "ImminentOutOfMemory";
     case MemoryWatchdog::PressureLevel::kCritical:
       return "Critical";
     case MemoryWatchdog::PressureLevel::kWarning:
@@ -27,10 +31,18 @@ static const char* PressureLevelToString(MemoryWatchdog::PressureLevel level) {
   }
 }
 
+bool IsDiagnosticLevel(MemoryWatchdog::PressureLevel level) {
+  return level == MemoryWatchdog::PressureLevel::kImminentOutOfMemory;
+}
+
+}  // namespace
+
 fbl::RefPtr<EventDispatcher> MemoryWatchdog::GetMemPressureEvent(uint32_t kind) {
   switch (kind) {
     case ZX_SYSTEM_EVENT_OUT_OF_MEMORY:
       return mem_pressure_events_[PressureLevel::kOutOfMemory];
+    case ZX_SYSTEM_EVENT_IMMINENT_OUT_OF_MEMORY:
+      return mem_pressure_events_[PressureLevel::kImminentOutOfMemory];
     case ZX_SYSTEM_EVENT_MEMORY_PRESSURE_CRITICAL:
       return mem_pressure_events_[PressureLevel::kCritical];
     case ZX_SYSTEM_EVENT_MEMORY_PRESSURE_WARNING:
@@ -143,12 +155,14 @@ bool MemoryWatchdog::IsEvictionRequired(PressureLevel idx) const {
   // AND
   // 2) we're configured to evict at that level.
   //
-  // Do not trigger asynchronous eviction at OOM level, since we perform synchronous eviction in
-  // that case in order to attempt a quick recovery. Also, we're about to signal filesystems to shut
-  // down on OOM, after which eviction will be a no-op anyway, since there will no longer be any
-  // pager-backed memory to evict.
+  // Do not trigger asynchronous eviction at:
+  // 1) OOM level, since we perform synchronous eviction in that case in order to attempt a quick
+  // recovery. Also, we're about to signal filesystems to shut down on OOM, after which eviction
+  // will be a no-op anyway, since there will no longer be any pager-backed memory to evict.
+  // 2) a diagnostic level, i.e. a level which does not trigger any memory reclamation and is only
+  // intended for diagnostic purposes.
   return idx < prev_mem_event_idx_ && idx <= max_eviction_level_ &&
-         idx != PressureLevel::kOutOfMemory;
+         idx != PressureLevel::kOutOfMemory && !IsDiagnosticLevel(idx);
 }
 
 void MemoryWatchdog::WorkerThread() {
@@ -272,6 +286,9 @@ void MemoryWatchdog::Init(Executor* executor) {
     // be easier to maintain across platforms.
     mem_watermarks[PressureLevel::kOutOfMemory] =
         (gBootOptions->oom_out_of_memory_threshold_mb) * MB;
+    mem_watermarks[PressureLevel::kImminentOutOfMemory] =
+        mem_watermarks[PressureLevel::kOutOfMemory] +
+        (gBootOptions->oom_imminent_oom_delta_mb) * MB;
     mem_watermarks[PressureLevel::kCritical] = (gBootOptions->oom_critical_threshold_mb) * MB;
     mem_watermarks[PressureLevel::kWarning] = (gBootOptions->oom_warning_threshold_mb) * MB;
 
@@ -303,6 +320,9 @@ void MemoryWatchdog::Init(Executor* executor) {
            PressureLevelToString(max_eviction_level_));
 
     printf("memory-pressure: hysteresis interval - %ld seconds\n", hysteresis_seconds_ / ZX_SEC(1));
+
+    printf("memory-pressure: ImminentOutOfMemory watermark - %zuMB\n",
+           mem_watermarks[PressureLevel::kImminentOutOfMemory] / MB);
 
     auto memory_worker_thread = [](void* arg) -> int {
       MemoryWatchdog* watchdog = reinterpret_cast<MemoryWatchdog*>(arg);

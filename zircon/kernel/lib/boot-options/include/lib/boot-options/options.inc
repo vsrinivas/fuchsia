@@ -250,6 +250,17 @@ transitions from a state with less free memory to a state with more free memory;
 transitions in the opposite direction are not delayed.
 )""")
 
+DEFINE_OPTION("kernel.oom.imminent-oom-delta-mb", uint64_t, oom_imminent_oom_delta_mb, {10}, R"""(
+This option specifies the delta (in MB) above the out-of-memory threshold at which an
+imminent-out-of-memory event will be signaled. This signal is intended to be used for
+capturing diagnostic memory information close to the OOM, since capturing state exactly
+at the OOM might not be possible.
+
+For example, if `kernel.oom.outofmemory-mb` is set to 50 and `kernel.oom.imminent-oom-delta-mb`
+is set to 20, an imminent-out-of-memory event will be signaled at 70MB (i.e. 50MB + 20MB)
+free memory, while out-of-memory will be signaled at 50MB free memory.
+)""")
+
 DEFINE_OPTION("kernel.serial", uart::all::Driver, serial, {}, R"""(
 TODO(53594)
 )""")

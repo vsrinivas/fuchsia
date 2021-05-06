@@ -448,6 +448,7 @@ typedef uint32_t zx_system_event_type_t;
 #define ZX_SYSTEM_EVENT_MEMORY_PRESSURE_CRITICAL    ((zx_system_event_type_t)2u)
 #define ZX_SYSTEM_EVENT_MEMORY_PRESSURE_WARNING     ((zx_system_event_type_t)3u)
 #define ZX_SYSTEM_EVENT_MEMORY_PRESSURE_NORMAL      ((zx_system_event_type_t)4u)
+#define ZX_SYSTEM_EVENT_IMMINENT_OUT_OF_MEMORY      ((zx_system_event_type_t)5u)
 
 // Used in channel_read_etc.
 typedef struct zx_handle_info {

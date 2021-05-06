@@ -253,6 +253,18 @@ pressure state transitions. Note that hysteresis is only applicable for
 transitions from a state with less free memory to a state with more free memory;
 transitions in the opposite direction are not delayed.
 
+### kernel.oom.imminent-oom-delta-mb=\<uint64_t>
+**Default:** `0xa`
+
+This option specifies the delta (in MB) above the out-of-memory threshold at which an
+imminent-out-of-memory event will be signaled. This signal is intended to be used for
+capturing diagnostic memory information close to the OOM, since capturing state exactly
+at the OOM might not be possible.
+
+For example, if `kernel.oom.outofmemory-mb` is set to 50 and `kernel.oom.imminent-oom-delta-mb`
+is set to 20, an imminent-out-of-memory event will be signaled at 70MB (i.e. 50MB + 20MB)
+free memory, while out-of-memory will be signaled at 50MB free memory.
+
 ### kernel.serial=[none | legacy | qemu | \<type>,\<base>,\<irq>]
 **Default:** `none`
 
