@@ -13,7 +13,13 @@
     {{#each members ~}}
         <tr id="{{rpn ../name}}.{{~ name ~}}">
             <td>{{~ ordinal ~}}</td>
-            <td><code>{{~ name ~}}</code></td>
+            <td><code>
+                {{~ #if reserved ~}}
+                    RESERVED
+                {{~ else ~}}
+                    {{~ name ~}}
+                {{~ /if ~}}
+            </code></td>
             <td>
                 <code>
                     {{~> type ~}}
