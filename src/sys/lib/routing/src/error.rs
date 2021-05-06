@@ -31,6 +31,10 @@ pub enum ComponentInstanceError {
 }
 
 impl ComponentInstanceError {
+    pub fn as_zx_status(&self) -> zx::Status {
+        zx::Status::UNAVAILABLE
+    }
+
     pub fn instance_not_found(moniker: AbsoluteMoniker) -> ComponentInstanceError {
         ComponentInstanceError::InstanceNotFound { moniker }
     }
@@ -384,6 +388,7 @@ impl RoutingError {
     pub fn as_zx_status(&self) -> zx::Status {
         match self {
             RoutingError::PolicyError(_) => zx::Status::ACCESS_DENIED,
+            RoutingError::ComponentInstanceError(err) => err.as_zx_status(),
             _ => zx::Status::UNAVAILABLE,
         }
     }

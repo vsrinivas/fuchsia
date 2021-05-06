@@ -1,13 +1,15 @@
-# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 import("//build/host.gni")
-import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_test.gni")
 
-rustc_library("cm_fidl_analyzer") {
-  with_unit_tests = true
+rustc_test("tests") {
+  name = "cm_fidl_analyzer_tests"
   edition = "2018"
+  testonly = true
+
   deps = [
     "//sdk/fidl/fuchsia.component.internal:fuchsia.component.internal-rustc",
     "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
@@ -18,31 +20,16 @@ rustc_library("cm_fidl_analyzer") {
     "//src/sys/lib/cm_rust",
     "//src/sys/lib/moniker",
     "//src/sys/lib/routing",
+    "//src/sys/lib/routing/testing:routing_test_helpers",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:thiserror",
+    "//tools/lib/cm_fidl_analyzer",
   ]
   sources = [
-    "src/capability_routing/directory.rs",
-    "src/capability_routing/error.rs",
-    "src/capability_routing/mod.rs",
-    "src/capability_routing/protocol.rs",
-    "src/capability_routing/route.rs",
-    "src/capability_routing/source.rs",
-    "src/capability_routing/testing.rs",
-    "src/capability_routing/verifier.rs",
-    "src/component_model.rs",
-    "src/component_tree.rs",
     "src/lib.rs",
-  ]
-}
-
-group("tests") {
-  testonly = true
-  public_deps = [
-    ":cm_fidl_analyzer_test($host_toolchain)",
-    "//tools/lib/cm_fidl_analyzer/tests($host_toolchain)",
+    "src/routing.rs",
   ]
 }

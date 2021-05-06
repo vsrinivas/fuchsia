@@ -5,10 +5,11 @@
 use {
     crate::component_tree::{ComponentNode, ComponentTree, NodeEnvironment, NodePath},
     async_trait::async_trait,
-    cm_rust::ComponentDecl,
+    cm_rust::{ComponentDecl, UseDecl},
+    fuchsia_zircon_status as zx_status,
     moniker::{AbsoluteMoniker, ChildMoniker, PartialMoniker},
     routing::{
-        capability_source::NamespaceCapabilities,
+        capability_source::{CapabilitySourceInterface, NamespaceCapabilities},
         component_id_index::ComponentIdIndex,
         component_instance::{
             ComponentInstanceInterface, ExtendedInstanceInterface, TopInstanceInterface,
@@ -16,14 +17,38 @@ use {
         },
         config::RuntimeConfig,
         environment::{DebugRegistry, EnvironmentExtends, EnvironmentInterface, RunnerRegistry},
-        error::ComponentInstanceError,
+        error::{ComponentInstanceError, RoutingError},
         policy::GlobalPolicyChecker,
+        route_capability, RouteRequest, RouteSource,
     },
     std::{
         collections::HashMap,
         sync::{Arc, RwLock},
     },
+    thiserror::Error,
 };
+
+#[derive(Debug, Error)]
+pub enum AnalyzerModelError {
+    #[error("the source instance `{0}` is not executable")]
+    SourceInstanceNotExecutable(String),
+
+    #[error(transparent)]
+    ComponentInstanceError(#[from] ComponentInstanceError),
+
+    #[error(transparent)]
+    RoutingError(#[from] RoutingError),
+}
+
+impl AnalyzerModelError {
+    pub fn as_zx_status(&self) -> zx_status::Status {
+        match self {
+            Self::SourceInstanceNotExecutable(_) => zx_status::Status::UNAVAILABLE,
+            Self::ComponentInstanceError(err) => err.as_zx_status(),
+            Self::RoutingError(err) => err.as_zx_status(),
+        }
+    }
+}
 
 /// Builds a `ComponentModelForAnalyzer` from a `ComponentTree` and a `RuntimeConfig`.
 pub struct ModelBuilderForAnalyzer {}
@@ -140,6 +165,81 @@ impl ComponentModelForAnalyzer {
         match self.instances.get(id) {
             Some(instance) => Ok(Arc::clone(instance)),
             None => Err(ComponentInstanceError::instance_not_found(abs_moniker)),
+        }
+    }
+
+    /// Given a `UseDecl` for a capability at an instance `target`, first routes the capability
+    /// to its source and then validates the source.
+    pub async fn check_use_capability(
+        self: &Arc<Self>,
+        use_decl: &UseDecl,
+        target: &Arc<ComponentInstanceForAnalyzer>,
+    ) -> Result<(), AnalyzerModelError> {
+        let request = match use_decl.clone() {
+            UseDecl::Directory(use_directory_decl) => {
+                RouteRequest::UseDirectory(use_directory_decl)
+            }
+            UseDecl::Event(use_event_decl) => RouteRequest::UseEvent(use_event_decl),
+            UseDecl::Protocol(use_protocol_decl) => RouteRequest::UseProtocol(use_protocol_decl),
+            UseDecl::Service(use_service_decl) => RouteRequest::UseService(use_service_decl),
+            UseDecl::Storage(use_storage_decl) => RouteRequest::UseStorage(use_storage_decl),
+            _ => unimplemented![],
+        };
+        let source = route_capability(request, target).await?;
+        self.check_use_source(&source).await
+    }
+
+    /// Checks properties of a capability source that are necessary to use the capability
+    /// and that are possible to verify statically.
+    async fn check_use_source(
+        &self,
+        route_source: &RouteSource<ComponentInstanceForAnalyzer>,
+    ) -> Result<(), AnalyzerModelError> {
+        match route_source {
+            RouteSource::Directory(source, _) => self.check_directory_source(source).await,
+            RouteSource::Protocol(source) => self.check_protocol_source(source).await,
+            _ => unimplemented![],
+        }
+    }
+
+    /// If the source of a directory capability is a component instance, checks that that
+    /// instance is executable.
+    async fn check_directory_source(
+        &self,
+        source: &CapabilitySourceInterface<ComponentInstanceForAnalyzer>,
+    ) -> Result<(), AnalyzerModelError> {
+        match source {
+            CapabilitySourceInterface::Component { component: weak, .. } => {
+                self.check_executable(&weak.upgrade()?).await
+            }
+            _ => unimplemented![],
+        }
+    }
+
+    /// If the source of a protocol capability is a component instance, checks that that
+    /// instance is executable.
+    async fn check_protocol_source(
+        &self,
+        source: &CapabilitySourceInterface<ComponentInstanceForAnalyzer>,
+    ) -> Result<(), AnalyzerModelError> {
+        match source {
+            CapabilitySourceInterface::Component { component: weak, .. } => {
+                self.check_executable(&weak.upgrade()?).await
+            }
+            _ => unimplemented![],
+        }
+    }
+
+    // A helper function checking whether a component instance is executable.
+    async fn check_executable(
+        &self,
+        component: &Arc<ComponentInstanceForAnalyzer>,
+    ) -> Result<(), AnalyzerModelError> {
+        match component.decl().await?.program {
+            Some(_) => Ok(()),
+            None => Err(AnalyzerModelError::SourceInstanceNotExecutable(
+                component.abs_moniker().to_string(),
+            )),
         }
     }
 }
