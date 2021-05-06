@@ -5,7 +5,7 @@
 use {
     anyhow::{format_err, Context, Error},
     async_trait::async_trait,
-    fidl::endpoints::{create_endpoints, ClientEnd, ServerEnd, ServiceMarker},
+    fidl::endpoints::{create_endpoints, ServerEnd, ServiceMarker},
     fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
     fuchsia_component::client::connect_channel_to_protocol,
     fuchsia_zircon as zx,
@@ -198,23 +198,6 @@ impl Handler for fsys::Event {
         } else {
             None
         }
-    }
-}
-
-/// A protocol that allows routing capabilities over FIDL.
-#[async_trait]
-pub trait RoutingProtocol {
-    fn protocol_proxy(&self) -> Option<fsys::RoutingProtocolProxy>;
-
-    #[must_use = "futures do nothing unless you await on them!"]
-    async fn set_provider(
-        &self,
-        client_end: ClientEnd<fsys::CapabilityProviderMarker>,
-    ) -> Result<(), fidl::Error> {
-        if let Some(proxy) = self.protocol_proxy() {
-            return proxy.set_provider(client_end).await;
-        }
-        Ok(())
     }
 }
 
@@ -591,20 +574,11 @@ create_event!(
     payload: {
         data: {
             {
-                name: source,
-                ty: fsys::CapabilitySource,
-            }
-            {
                 name: name,
                 ty: String,
             }
         },
-        client_protocols: {
-            {
-                name: routing_protocol,
-                ty: fsys::RoutingProtocolProxy,
-            }
-        },
+        client_protocols: {},
         server_protocols: {},
     },
     error_payload: {
@@ -614,9 +588,3 @@ create_event!(
         }
     }
 );
-
-impl RoutingProtocol for CapabilityRouted {
-    fn protocol_proxy(&self) -> Option<fsys::RoutingProtocolProxy> {
-        self.result.as_ref().ok().map(|payload| payload.routing_protocol.clone())
-    }
-}

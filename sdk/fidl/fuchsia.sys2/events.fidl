@@ -73,36 +73,6 @@ enum EventType {
     RUNNING = 10;
 };
 
-/// Describes the source of a routed capability.
-flexible union CapabilitySource {
-    /// The capability is provided by another component.
-    1: ComponentCapability component;
-
-    /// The capability is provided by the framework and is scoped to a
-    /// realm.
-    2: FrameworkCapability framework;
-
-    /// The capability is provided by realm above the root, which is component manager itself.
-    3: AboveRootCapability above_root;
-};
-
-/// Describes a capability provided by the framework, scoped to a realm.
-table FrameworkCapability {
-    /// The moniker of the instance that this capability is scoped to.
-    1: string:fuchsia.component.MAX_MONIKER_LENGTH scope_moniker;
-};
-
-/// Describes a capability provided by a component
-table ComponentCapability {
-    /// The moniker of the instance that is providing this capability.
-    1: string:fuchsia.component.MAX_MONIKER_LENGTH source_moniker;
-};
-
-/// Describes a capability provided by component manager at the realm above the
-/// root.
-table AboveRootCapability {
-};
-
 /// Describes the result of a state transition.
 flexible resource union EventResult {
     /// The payload of the event if the state transition described by the event
@@ -260,16 +230,8 @@ resource table CapabilityRequestedPayload {
 
 /// Payload for CapabilityRouted events
 resource table CapabilityRoutedPayload {
-    /// Allows setting a capability provider for
-    /// CapabilityRouted events
-    /// This will not be available with an async event.
-    1: RoutingProtocol routing_protocol;
-
     /// Name of capability being requested.
-    2: fuchsia.component.name name;
-
-    /// Source of the capability that needs to be routed.
-    3: CapabilitySource source;
+    1: fuchsia.component.name name;
 };
 
 /// Payload for Destroyed events.
@@ -379,33 +341,4 @@ protocol EventStream {
 protocol Handler {
     /// Resumes/unblocks from an event.
     Resume() -> ();
-};
-
-/// Allows injecting capabilities over FIDL.
-/// Used by RouteFrameworkCapability and RouteBuiltinCapability
-protocol RoutingProtocol {
-    /// Set a CapabilityProvider. Invoking this method will replace
-    /// any existing provider.
-    ///
-    /// When a component attempts to connect to a capability,
-    /// this method can be used to mock/inject that capability.
-    SetProvider(CapabilityProvider client_end) -> ();
-
-    /// Replace the existing provider with the given client_end and
-    /// open the existing provider with given server end.
-    ///
-    /// This method is used to interpose between a client and service:
-    /// Client <---> Interposer <---> Server
-    ///
-    /// Opening the existing provider sets up Interposer <---> Server
-    /// Replacing the existing provider sets up Client <---> Interposer
-    ReplaceAndOpen(CapabilityProvider client_end, zx.handle:CHANNEL server_end) -> ();
-};
-
-/// A FIDL-based version of a CapabilityProvider
-protocol CapabilityProvider {
-    /// Called to bind a server end of a channel to the provided capability.
-    /// The flags, mode and path specified here are passed on from the fuchsia.io.Directory.Open
-    /// FIDL call that caused this capability routing to occur.
-    Open(zx.handle:CHANNEL server_end, uint32 flags, uint32 mode, string:fuchsia.io.MAX_PATH path) -> ();
 };

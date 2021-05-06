@@ -4,10 +4,8 @@
 
 use {
     crate::{
-        capability::{CapabilityProvider, CapabilitySource, OptionalTask},
-        channel,
+        capability::CapabilitySource,
         model::{
-            error::ModelError,
             events::{
                 event::Event, registry::EventSubscription, source::EventSource, stream::EventStream,
             },
@@ -16,20 +14,18 @@ use {
             },
         },
     },
-    async_trait::async_trait,
     cm_rust::{CapabilityName, EventMode},
     fidl::endpoints::{create_request_stream, ClientEnd, Proxy},
     fidl_fuchsia_component as fcomponent,
     fidl_fuchsia_io::{self as fio, NodeProxy},
-    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_trace as trace,
-    fuchsia_zircon as zx,
+    fidl_fuchsia_sys2 as fsys, fuchsia_trace as trace, fuchsia_zircon as zx,
     futures::{
         future::BoxFuture, lock::Mutex, select, stream::FuturesUnordered, FutureExt, StreamExt,
         TryStreamExt,
     },
     log::{debug, error, info, warn},
     moniker::{AbsoluteMoniker, ExtendedMoniker, RelativeMoniker},
-    std::{path::PathBuf, sync::Arc},
+    std::sync::Arc,
 };
 
 pub async fn serve_event_source_sync(
@@ -138,7 +134,6 @@ pub async fn serve_event_stream(
 }
 
 async fn maybe_create_event_result(
-    scope: &ExtendedMoniker,
     event_result: &EventResult,
 ) -> Result<Option<fsys::EventResult>, fidl::Error> {
     match event_result {
@@ -148,16 +143,8 @@ async fn maybe_create_event_result(
         Ok(EventPayload::CapabilityRequested { name, capability, .. }) => Ok(Some(
             create_capability_requested_payload(name.to_string(), capability.clone()).await,
         )),
-        Ok(EventPayload::CapabilityRouted { source, capability_provider, .. }) => {
-            let scope_moniker = match scope {
-                ExtendedMoniker::ComponentInstance(moniker) => moniker,
-                _ => unreachable!(),
-            };
-            Ok(maybe_create_capability_routed_payload(
-                scope_moniker,
-                source,
-                capability_provider.clone(),
-            ))
+        Ok(EventPayload::CapabilityRouted { source, .. }) => {
+            Ok(Some(create_capability_routed_payload(source)))
         }
         Ok(EventPayload::Running { started_timestamp }) => Ok(Some(fsys::EventResult::Payload(
             fsys::EventPayload::Running(fsys::RunningPayload {
@@ -266,55 +253,10 @@ async fn create_capability_requested_payload(
     }
 }
 
-fn maybe_create_capability_routed_payload(
-    scope: &AbsoluteMoniker,
-    source: &CapabilitySource,
-    capability_provider: Arc<Mutex<Option<Box<dyn CapabilityProvider>>>>,
-) -> Option<fsys::EventResult> {
-    let routing_protocol = Some(serve_routing_protocol_async(capability_provider));
-
+fn create_capability_routed_payload(source: &CapabilitySource) -> fsys::EventResult {
     let name = source.source_name().map(|n| n.to_string());
-    let source = Some(match source {
-        CapabilitySource::Component { component, .. } => {
-            let component = component.upgrade().ok()?;
-            let source_moniker = RelativeMoniker::from_absolute(scope, &component.abs_moniker);
-            fsys::CapabilitySource::Component(fsys::ComponentCapability {
-                source_moniker: Some(source_moniker.to_string()),
-                ..fsys::ComponentCapability::EMPTY
-            })
-        }
-        CapabilitySource::Capability { component, .. } => {
-            let component = component.upgrade().ok()?;
-            let source_moniker = RelativeMoniker::from_absolute(scope, &component.abs_moniker);
-            fsys::CapabilitySource::Framework(fsys::FrameworkCapability {
-                scope_moniker: Some(source_moniker.to_string()),
-                ..fsys::FrameworkCapability::EMPTY
-            })
-        }
-        CapabilitySource::Framework { component, .. } => {
-            let scope_moniker = RelativeMoniker::from_absolute(scope, &component.moniker);
-            fsys::CapabilitySource::Framework(fsys::FrameworkCapability {
-                scope_moniker: Some(scope_moniker.to_string()),
-                ..fsys::FrameworkCapability::EMPTY
-            })
-        }
-        CapabilitySource::Builtin { .. } | CapabilitySource::Namespace { .. } => {
-            fsys::CapabilitySource::AboveRoot(fsys::AboveRootCapability {
-                ..fsys::AboveRootCapability::EMPTY
-            })
-        }
-        CapabilitySource::Collection { .. } => {
-            return None;
-        }
-    });
-
-    let payload = fsys::CapabilityRoutedPayload {
-        routing_protocol,
-        name,
-        source,
-        ..fsys::CapabilityRoutedPayload::EMPTY
-    };
-    Some(fsys::EventResult::Payload(fsys::EventPayload::CapabilityRouted(payload)))
+    let payload = fsys::CapabilityRoutedPayload { name, ..fsys::CapabilityRoutedPayload::EMPTY };
+    fsys::EventResult::Payload(fsys::EventPayload::CapabilityRouted(payload))
 }
 
 fn maybe_create_empty_payload(event_type: EventType) -> Option<fsys::EventResult> {
@@ -380,108 +322,9 @@ async fn create_event_fidl_object(
         timestamp: Some(event.event.timestamp.into_nanos()),
         ..fsys::EventHeader::EMPTY
     });
-    let event_result = maybe_create_event_result(&event.scope_moniker, &event.event.result).await?;
+    let event_result = maybe_create_event_result(&event.event.result).await?;
     let (opt_fut, handler) = maybe_serve_handler_async(event);
     Ok((opt_fut, fsys::Event { header, handler, event_result, ..fsys::Event::EMPTY }))
-}
-
-/// Serves the server end of the RoutingProtocol FIDL protocol asynchronously.
-fn serve_routing_protocol_async(
-    capability_provider: Arc<Mutex<Option<Box<dyn CapabilityProvider>>>>,
-) -> ClientEnd<fsys::RoutingProtocolMarker> {
-    let (client_end, stream) = create_request_stream::<fsys::RoutingProtocolMarker>()
-        .expect("failed to create request stream for RoutingProtocol");
-    fasync::Task::spawn(async move {
-        serve_routing_protocol(capability_provider, stream).await;
-    })
-    .detach();
-    client_end
-}
-
-/// Connects the component manager capability provider to
-/// an external provider over FIDL
-struct ExternalCapabilityProvider {
-    proxy: fsys::CapabilityProviderProxy,
-}
-
-impl ExternalCapabilityProvider {
-    pub fn new(client_end: ClientEnd<fsys::CapabilityProviderMarker>) -> Self {
-        Self { proxy: client_end.into_proxy().expect("cannot create proxy from client_end") }
-    }
-}
-
-#[async_trait]
-impl CapabilityProvider for ExternalCapabilityProvider {
-    async fn open(
-        self: Box<Self>,
-        flags: u32,
-        open_mode: u32,
-        relative_path: PathBuf,
-        server_end: &mut zx::Channel,
-    ) -> Result<OptionalTask, ModelError> {
-        let server_end = channel::take_channel(server_end);
-        let path_str = relative_path.to_str().expect("Relative path must be valid unicode");
-        self.proxy
-            .open(server_end, flags, open_mode, path_str)
-            .await
-            .expect("failed to invoke CapabilityProvider::Open over FIDL");
-        Ok(None.into())
-    }
-}
-
-/// Serves RoutingProtocol FIDL requests received over the provided stream.
-async fn serve_routing_protocol(
-    capability_provider: Arc<Mutex<Option<Box<dyn CapabilityProvider>>>>,
-    mut stream: fsys::RoutingProtocolRequestStream,
-) {
-    while let Some(Ok(request)) = stream.next().await {
-        match request {
-            fsys::RoutingProtocolRequest::SetProvider { client_end, responder } => {
-                // Lock on the provider
-                let mut capability_provider = capability_provider.lock().await;
-
-                // Create an external provider and set it
-                let external_provider = ExternalCapabilityProvider::new(client_end);
-                *capability_provider = Some(Box::new(external_provider));
-
-                responder.send().unwrap();
-            }
-            fsys::RoutingProtocolRequest::ReplaceAndOpen {
-                client_end,
-                mut server_end,
-                responder,
-            } => {
-                // Lock on the provider
-                let mut capability_provider = capability_provider.lock().await;
-
-                // Take out the existing provider
-                let existing_provider = capability_provider.take();
-
-                // Create an external provider and set it
-                let external_provider = ExternalCapabilityProvider::new(client_end);
-                *capability_provider = Some(Box::new(external_provider));
-
-                // Unblock the interposer before opening the existing provider as the
-                // existing provider may generate additional events which cannot be processed
-                // until the interposer is unblocked.
-                responder.send().unwrap();
-
-                // Open the existing provider
-                if let Some(existing_provider) = existing_provider {
-                    // TODO(xbhatnag): We should be passing in the flags, mode and path
-                    // to open the existing provider with. For a service, it doesn't matter
-                    // but it would for other kinds of capabilities.
-                    if let Err(e) =
-                        existing_provider.open(0, 0, PathBuf::new(), &mut server_end).await
-                    {
-                        panic!("Could not open existing provider -> {}", e);
-                    }
-                } else {
-                    panic!("No provider set!");
-                }
-            }
-        }
-    }
 }
 
 /// Serves the server end of Handler FIDL protocol asynchronously
