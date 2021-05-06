@@ -6,33 +6,34 @@ use {
     ffx_core::{ffx_error, FfxError},
     serde::{Deserialize, Serialize},
     std::io::Read,
+    std::path::PathBuf,
 };
 
 #[derive(Deserialize, Serialize)]
 pub(crate) struct Config {
-    pub extra_packages_for_base_package: Vec<String>,
-    pub base_packages: Vec<String>,
-    pub cache_packages: Vec<String>,
-    pub meta_packages: Vec<String>,
-    pub kernel_image: String,
+    pub extra_packages_for_base_package: Vec<PathBuf>,
+    pub base_packages: Vec<PathBuf>,
+    pub cache_packages: Vec<PathBuf>,
+    pub meta_packages: Vec<PathBuf>,
+    pub kernel_image: PathBuf,
     pub kernel_cmdline: Vec<String>,
     pub bootfs_files: Vec<BootFsEntry>,
-    pub vbmeta_key: String,
-    pub vbmeta_key_metadata: String,
+    pub vbmeta_key: PathBuf,
+    pub vbmeta_key_metadata: PathBuf,
     pub version: String,
     pub board: BoardConfig,
 }
 
 #[derive(Deserialize, Serialize)]
 pub(crate) struct BootFsEntry {
-    pub source: String,
+    pub source: PathBuf,
     pub destination: String,
 }
 
 #[derive(Deserialize, Serialize)]
 pub(crate) struct BoardConfig {
     pub name: String,
-    pub bootloader: String,
+    pub bootloader: PathBuf,
     pub fvm: FvmConfig,
 }
 

@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{Error, Result};
+use anyhow::{anyhow, Error, Result};
 use fuchsia_pkg::{CreationManifest, MetaPackage, PackageManifest};
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::Path;
 
 /// A builder that constructs base packages.
 #[derive(Default)]
@@ -39,12 +39,10 @@ impl BasePackageBuilder {
     }
 
     /// Build the base package and write the bytes to `out`.
-    pub fn build(self, gendir: &PathBuf, out: &mut impl Write) -> Result<()> {
+    pub fn build(self, gendir: impl AsRef<Path>, out: &mut impl Write) -> Result<()> {
         // Generate the base and cache package lists.
-        let mut base_packages_path = gendir.clone();
-        let mut cache_packages_path = gendir.clone();
-        base_packages_path.push("base_packages.list");
-        cache_packages_path.push("cache_packages.list");
+        let base_packages_path = gendir.as_ref().join("base_packages.list");
+        let cache_packages_path = gendir.as_ref().join("cache_packages.list");
         let mut base_packages = File::create(&base_packages_path)
             .map_err(|e| Error::new(e).context("failed to create the base packages list"))?;
         let mut cache_packages = File::create(&cache_packages_path)
@@ -52,16 +50,22 @@ impl BasePackageBuilder {
         self.base_packages.write(&mut base_packages)?;
         self.cache_packages.write(&mut cache_packages)?;
 
+        // Ensure the base/cache file paths are valid UTF-8.
+        let base_packages_path = base_packages_path.to_str().ok_or(anyhow!(format!(
+            "Base package list is not valid UTF-8: {}",
+            base_packages_path.display()
+        )))?;
+        let cache_packages_path = cache_packages_path.to_str().ok_or(anyhow!(format!(
+            "Cache package list is not valid UTF-8: {}",
+            cache_packages_path.display()
+        )))?;
+
         // Construct the list of blobs in the base package that lives outside of the meta.far.
         let mut external_contents = self.contents;
-        external_contents.insert(
-            "data/static_packages".to_string(),
-            base_packages_path.to_string_lossy().into_owned(),
-        );
-        external_contents.insert(
-            "data/cache_packages".to_string(),
-            cache_packages_path.to_string_lossy().into_owned(),
-        );
+        external_contents
+            .insert("data/static_packages".to_string(), base_packages_path.to_string());
+        external_contents
+            .insert("data/cache_packages".to_string(), cache_packages_path.to_string());
 
         // The base package does not have any files inside the meta.far.
         let far_contents = BTreeMap::new();
@@ -150,7 +154,7 @@ mod tests {
         builder.add_cache_package(generate_test_manifest("cache_package", None));
 
         let gen_dir = TempDir::new().unwrap();
-        builder.build(&gen_dir.path().to_path_buf(), &mut far_bytes).unwrap();
+        builder.build(&gen_dir.path(), &mut far_bytes).unwrap();
 
         // Read the output and ensure it contains the right files.
         let mut far_reader = Reader::new(Cursor::new(far_bytes)).unwrap();

@@ -14,11 +14,11 @@ use fuchsia_merkle::MerkleTree;
 use fuchsia_pkg::PackageManifest;
 use std::fs::{File, OpenOptions};
 use std::io::BufReader;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use zbi::ZbiBuilder;
 
 pub fn assemble(args: ImageArgs) -> Result<()> {
-    let config = read_config(&args.config)?;
+    let config = read_config(args.config)?;
     let base_package = construct_base_package(&args.gendir, &config)?;
     let base_merkle = MerkleTree::from_reader(&base_package)
         .context("Failed to calculate the base merkle")?
@@ -29,14 +29,14 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
     Ok(())
 }
 
-fn read_config(config_path: &String) -> Result<Config> {
+fn read_config(config_path: impl AsRef<Path>) -> Result<Config> {
     let mut config = File::open(config_path)?;
     let config = Config::from_reader(&mut config).context("Failed to read the image config")?;
     println!("Config indicated version: {}", config.version);
     Ok(config)
 }
 
-fn construct_base_package(gendir: &PathBuf, config: &Config) -> Result<File> {
+fn construct_base_package(gendir: impl AsRef<Path>, config: &Config) -> Result<File> {
     let mut base_pkg_builder = BasePackageBuilder::default();
     for pkg_manifest_path in &config.extra_packages_for_base_package {
         let pkg_manifest = pkg_manifest_from_path(pkg_manifest_path);
@@ -63,13 +63,17 @@ fn construct_base_package(gendir: &PathBuf, config: &Config) -> Result<File> {
     Ok(base_package)
 }
 
-fn pkg_manifest_from_path(path: &str) -> PackageManifest {
+fn pkg_manifest_from_path(path: impl AsRef<Path>) -> PackageManifest {
     let manifest_file = File::open(path).unwrap();
     let pkg_manifest_reader = BufReader::new(manifest_file);
     serde_json::from_reader(pkg_manifest_reader).unwrap()
 }
 
-fn construct_zbi(gendir: &PathBuf, config: &Config, base_merkle: Option<Hash>) -> Result<File> {
+fn construct_zbi(
+    gendir: impl AsRef<Path>,
+    config: &Config,
+    base_merkle: Option<Hash>,
+) -> Result<File> {
     let mut zbi_builder = ZbiBuilder::default();
 
     // Add the kernel image.
@@ -89,7 +93,6 @@ fn construct_zbi(gendir: &PathBuf, config: &Config, base_merkle: Option<Hash>) -
         let pkgfs_manifest: PackageManifest = config
             .base_packages
             .iter()
-            .map(String::as_str)
             .map(pkg_manifest_from_path)
             .find(|m| m.name() == "pkgfs")
             .ok_or_else(|| ffx_error!("Failed to find pkgfs in the base packages"))?;

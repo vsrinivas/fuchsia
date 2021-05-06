@@ -85,7 +85,7 @@ pub struct ImageArgs {
     /// the configuration file that specifies the packages, binaries, and
     /// settings used to assemble an image.
     #[argh(option)]
-    pub config: String,
+    pub config: PathBuf,
     /// the directory to write generated intermediate files to.
     #[argh(option)]
     pub gendir: PathBuf,
