@@ -34,12 +34,15 @@ using fuchsia::lowpan::Credential;
 using fuchsia::lowpan::Identity;
 using fuchsia::lowpan::ProvisioningParams;
 using fuchsia::lowpan::Role;
+using fuchsia::lowpan::device::AllCounters;
+using fuchsia::lowpan::device::Counters;
 using fuchsia::lowpan::device::Device;
 using fuchsia::lowpan::device::DeviceExtra;
 using fuchsia::lowpan::device::DeviceState;
 using fuchsia::lowpan::device::Lookup;
 using fuchsia::lowpan::device::Lookup_LookupDevice_Response;
 using fuchsia::lowpan::device::Lookup_LookupDevice_Result;
+using fuchsia::lowpan::device::MacCounters;
 using fuchsia::lowpan::device::Protocols;
 using fuchsia::lowpan::device::ServiceError;
 using fuchsia::lowpan::thread::LegacyJoining;
@@ -55,6 +58,8 @@ using ThreadDeviceType = ConnectivityManager::ThreadDeviceType;
 using nl::Inet::IPAddress;
 using nl::Weave::DeviceLayer::ThreadStackManagerDelegateImpl;
 using nl::Weave::Profiles::NetworkProvisioning::kNetworkType_Thread;
+
+using Schema::Nest::Trait::Network::TelemetryNetworkWpanTrait::NetworkWpanStatsEvent;
 
 namespace routes = fuchsia::net::routes;
 
@@ -259,9 +264,36 @@ class FakeThreadLegacy : public fuchsia::lowpan::thread::testing::LegacyJoining_
   fidl::BindingSet<LegacyJoining>* bindings_ = nullptr;
 };
 
+class FakeCounters : public fuchsia::lowpan::device::testing::Counters_TestBase {
+ public:
+  void NotImplemented_(const std::string& name) override { FAIL() << "Not implemented: " << name; }
+
+  void Get(GetCallback callback) override {
+    if (return_status_ != ZX_OK) {
+      bindings_->CloseBinding(this, return_status_);
+    } else {
+      callback(std::move(counters_));
+    }
+  }
+
+  void SetReturnStatus(zx_status_t return_status) { return_status_ = return_status; }
+
+  void SetCounters(AllCounters counters) { counters_ = std::move(counters); }
+
+  void SetBindingSet(fidl::BindingSet<Counters>* bindings) { bindings_ = bindings; }
+
+ private:
+  zx_status_t return_status_ = ZX_OK;
+  AllCounters counters_;
+  fidl::BindingSet<Counters>* bindings_ = nullptr;
+};
+
 class FakeLowpanLookup final : public fuchsia::lowpan::device::testing::Lookup_TestBase {
  public:
-  FakeLowpanLookup() { thread_legacy_.SetBindingSet(&thread_legacy_bindings_); }
+  FakeLowpanLookup() {
+    thread_legacy_.SetBindingSet(&thread_legacy_bindings_);
+    counters_.SetBindingSet(&counters_bindings_);
+  }
 
   void NotImplemented_(const std::string& name) override { FAIL() << "Not implemented: " << name; }
 
@@ -290,6 +322,11 @@ class FakeLowpanLookup final : public fuchsia::lowpan::device::testing::Lookup_T
           &thread_legacy_, std::move(*protocols.mutable_thread_legacy_joining()), dispatcher_);
     }
 
+    if (protocols.has_counters()) {
+      counters_bindings_.AddBinding(&counters_, std::move(*protocols.mutable_counters()),
+                                    dispatcher_);
+    }
+
     result.set_response(response);
     callback(std::move(result));
   }
@@ -304,13 +341,16 @@ class FakeLowpanLookup final : public fuchsia::lowpan::device::testing::Lookup_T
 
   FakeLowpanDevice& device() { return device_; }
   FakeThreadLegacy& thread_legacy() { return thread_legacy_; }
+  FakeCounters& counters() { return counters_; }
 
  private:
   FakeLowpanDevice device_;
   FakeThreadLegacy thread_legacy_;
+  FakeCounters counters_;
   fidl::BindingSet<Device> device_bindings_;
   fidl::BindingSet<DeviceExtra> device_extra_bindings_;
   fidl::BindingSet<LegacyJoining> thread_legacy_bindings_;
+  fidl::BindingSet<Counters> counters_bindings_;
   async_dispatcher_t* dispatcher_;
   fidl::Binding<Lookup> binding_{this};
 };
@@ -354,6 +394,13 @@ class FakeNetRoutes : public fuchsia::net::routes::testing::State_TestBase {
 };
 
 class OverridableThreadConfigurationManagerDelegate : public ConfigurationManagerDelegateImpl {
+ public:
+  void SetThreadEnabled(bool value) { is_thread_enabled_ = value; }
+
+  void SetThreadJoinableDuration(std::optional<uint32_t> duration) {
+    join_duration_ = std::move(duration);
+  }
+
  private:
   bool is_thread_enabled_ = true;
   std::optional<uint32_t> join_duration_ = std::nullopt;
@@ -367,12 +414,26 @@ class OverridableThreadConfigurationManagerDelegate : public ConfigurationManage
     *duration = *join_duration_;
     return WEAVE_NO_ERROR;
   }
+};
 
+class MockedEventLoggingThreadStackManagerDelegateImpl : public ThreadStackManagerDelegateImpl {
  public:
-  void SetThreadEnabled(bool value) { is_thread_enabled_ = value; }
-  void SetThreadJoinableDuration(std::optional<uint32_t> duration) {
-    join_duration_ = std::move(duration);
+  static constexpr nl::Weave::Profiles::DataManagement::event_id_t kFakeEventId = 42;
+
+  const NetworkWpanStatsEvent& network_wpan_stats_event() { return network_wpan_stats_event_; }
+
+  size_t CountLogNetworkWpanStatsEvent() { return count_log_network_wpan_stats_event_; }
+
+ private:
+  nl::Weave::Profiles::DataManagement::event_id_t LogNetworkWpanStatsEvent(
+      NetworkWpanStatsEvent* event) override {
+    ++count_log_network_wpan_stats_event_;
+    network_wpan_stats_event_ = *event;
+    return kFakeEventId;
   }
+
+  NetworkWpanStatsEvent network_wpan_stats_event_ = {};
+  size_t count_log_network_wpan_stats_event_ = 0;
 };
 
 class ThreadStackManagerTest : public WeaveTestFixture<> {
@@ -391,7 +452,9 @@ class ThreadStackManagerTest : public WeaveTestFixture<> {
     auto config_delegate = std::make_unique<OverridableThreadConfigurationManagerDelegate>();
     config_delegate_ = config_delegate.get();
     ConfigurationMgrImpl().SetDelegate(std::move(config_delegate));
-    ThreadStackMgrImpl().SetDelegate(std::make_unique<ThreadStackManagerDelegateImpl>());
+    auto tsm_delegate = std::make_unique<MockedEventLoggingThreadStackManagerDelegateImpl>();
+    tsm_delegate_ = tsm_delegate.get();
+    ThreadStackMgrImpl().SetDelegate(std::move(tsm_delegate));
     ASSERT_EQ(ThreadStackMgr().InitThreadStack(), WEAVE_NO_ERROR);
   }
 
@@ -406,6 +469,7 @@ class ThreadStackManagerTest : public WeaveTestFixture<> {
   FakeLowpanLookup fake_lookup_;
   FakeNetRoutes fake_routes_;
   OverridableThreadConfigurationManagerDelegate* config_delegate_;
+  MockedEventLoggingThreadStackManagerDelegateImpl* tsm_delegate_;
 
  private:
   sys::testing::ComponentContextProvider context_provider_;
@@ -810,6 +874,132 @@ TEST_F(ThreadStackManagerTest, SetThreadJoinableFail) {
     EXPECT_EQ(calls[1].first, 0);
     EXPECT_EQ(calls[1].second, WEAVE_UNSECURED_PORT);
   }
+}
+
+TEST_F(ThreadStackManagerTest, GetAndLogThreadStatsCounters) {
+  constexpr int32_t kTxFakeTotal = 1;
+  constexpr int32_t kTxFakeUnicast = 2;
+  constexpr int32_t kTxFakeBroadcast = 3;
+  constexpr int32_t kTxFakeAckRequested = 4;
+  constexpr int32_t kTxFakeAcked = 5;
+  constexpr int32_t kTxFakeNoAckRequested = 6;
+  constexpr int32_t kTxFakeData = 7;
+  constexpr int32_t kTxFakeDataPoll = 8;
+  constexpr int32_t kTxFakeBeacon = 9;
+  constexpr int32_t kTxFakeBeaconRequest = 10;
+  constexpr int32_t kTxFakeOther = 11;
+  constexpr int32_t kTxFakeAddressFiltered = 12;
+  constexpr int32_t kTxFakeRetries = 13;
+  constexpr int32_t kTxFakeDirectMaxRetryExpiry = 14;
+  constexpr int32_t kTxFakeIndirectMaxRetryExpiry = 15;
+  constexpr int32_t kTxFakeErrCca = 23;
+  constexpr int32_t kTxFakeErrAbort = 24;
+  constexpr int32_t kTxFakeErrBusyChannel = 25;
+  constexpr int32_t kTxFakeErrOther = 26;
+
+  constexpr int32_t kRxFakeTotal = 27;
+  constexpr int32_t kRxFakeUnicast = 28;
+  constexpr int32_t kRxFakeBroadcast = 29;
+  constexpr int32_t kRxFakeAckRequested = 30;
+  constexpr int32_t kRxFakeAcked = 31;
+  constexpr int32_t kRxFakeNoAckRequested = 32;
+  constexpr int32_t kRxFakeData = 33;
+  constexpr int32_t kRxFakeDataPoll = 34;
+  constexpr int32_t kRxFakeBeacon = 35;
+  constexpr int32_t kRxFakeBeaconRequest = 36;
+  constexpr int32_t kRxFakeOther = 37;
+  constexpr int32_t kRxFakeAddressFiltered = 38;
+  constexpr int32_t kRxFakeDestAddrFiltered = 42;
+  constexpr int32_t kRxFakeDuplicated = 43;
+  constexpr int32_t kRxFakeErrNoFrame = 44;
+  constexpr int32_t kRxFakeErrUnknownNeighbor = 45;
+  constexpr int32_t kRxFakeErrInvalidSrcAddr = 46;
+  constexpr int32_t kRxFakeErrSec = 47;
+  constexpr int32_t kRxFakeErrFcs = 48;
+  constexpr int32_t kRxFakeErrOther = 52;
+
+  AllCounters counters;
+  MacCounters tx;
+  MacCounters rx;
+
+  tx.set_total(kTxFakeTotal)
+      .set_unicast(kTxFakeUnicast)
+      .set_broadcast(kTxFakeBroadcast)
+      .set_ack_requested(kTxFakeAckRequested)
+      .set_acked(kTxFakeAcked)
+      .set_no_ack_requested(kTxFakeNoAckRequested)
+      .set_data(kTxFakeData)
+      .set_data_poll(kTxFakeDataPoll)
+      .set_beacon(kTxFakeBeacon)
+      .set_beacon_request(kTxFakeBeaconRequest)
+      .set_other(kTxFakeOther)
+      .set_address_filtered(kTxFakeAddressFiltered)
+      .set_retries(kTxFakeRetries)
+      .set_direct_max_retry_expiry(kTxFakeDirectMaxRetryExpiry)
+      .set_indirect_max_retry_expiry(kTxFakeIndirectMaxRetryExpiry)
+      .set_err_cca(kTxFakeErrCca)
+      .set_err_abort(kTxFakeErrAbort)
+      .set_err_busy_channel(kTxFakeErrBusyChannel)
+      .set_err_other(kTxFakeErrOther);
+
+  rx.set_total(kRxFakeTotal)
+      .set_unicast(kRxFakeUnicast)
+      .set_broadcast(kRxFakeBroadcast)
+      .set_ack_requested(kRxFakeAckRequested)
+      .set_acked(kRxFakeAcked)
+      .set_no_ack_requested(kRxFakeNoAckRequested)
+      .set_data(kRxFakeData)
+      .set_data_poll(kRxFakeDataPoll)
+      .set_beacon(kRxFakeBeacon)
+      .set_beacon_request(kRxFakeBeaconRequest)
+      .set_other(kRxFakeOther)
+      .set_address_filtered(kRxFakeAddressFiltered)
+      .set_dest_addr_filtered(kRxFakeDestAddrFiltered)
+      .set_duplicated(kRxFakeDuplicated)
+      .set_err_no_frame(kRxFakeErrNoFrame)
+      .set_err_unknown_neighbor(kRxFakeErrUnknownNeighbor)
+      .set_err_invalid_src_addr(kRxFakeErrInvalidSrcAddr)
+      .set_err_sec(kRxFakeErrSec)
+      .set_err_fcs(kRxFakeErrFcs)
+      .set_err_other(kRxFakeErrOther);
+
+  counters.set_mac_tx(std::move(tx)).set_mac_rx(std::move(rx));
+  fake_lookup_.counters().SetCounters(std::move(counters));
+
+  EXPECT_EQ(ZX_OK, ThreadStackMgr().GetAndLogThreadStatsCounters());
+  EXPECT_EQ(1u, tsm_delegate_->CountLogNetworkWpanStatsEvent());
+
+  const NetworkWpanStatsEvent& event = tsm_delegate_->network_wpan_stats_event();
+
+  EXPECT_EQ(event.phyTx, kTxFakeTotal);
+  EXPECT_EQ(event.macUnicastTx, kTxFakeUnicast);
+  EXPECT_EQ(event.macBroadcastTx, kTxFakeBroadcast);
+  EXPECT_EQ(event.macTxAckReq, kTxFakeAckRequested);
+  EXPECT_EQ(event.macTxAcked, kTxFakeAcked);
+  EXPECT_EQ(event.macTxNoAckReq, kTxFakeNoAckRequested);
+  EXPECT_EQ(event.macTxData, kTxFakeData);
+  EXPECT_EQ(event.macTxDataPoll, kTxFakeDataPoll);
+  EXPECT_EQ(event.macTxBeacon, kTxFakeBeacon);
+  EXPECT_EQ(event.macTxBeaconReq, kTxFakeBeaconRequest);
+  EXPECT_EQ(event.macTxOtherPkt, kTxFakeOther);
+  EXPECT_EQ(event.macTxRetry, kTxFakeRetries);
+  EXPECT_EQ(event.macTxFailCca, kTxFakeErrCca);
+
+  EXPECT_EQ(event.phyRx, kRxFakeTotal);
+  EXPECT_EQ(event.macUnicastRx, kRxFakeUnicast);
+  EXPECT_EQ(event.macBroadcastRx, kRxFakeBroadcast);
+  EXPECT_EQ(event.macRxData, kRxFakeData);
+  EXPECT_EQ(event.macRxDataPoll, kRxFakeDataPoll);
+  EXPECT_EQ(event.macRxBeacon, kRxFakeBeacon);
+  EXPECT_EQ(event.macRxBeaconReq, kRxFakeBeaconRequest);
+  EXPECT_EQ(event.macRxOtherPkt, kRxFakeOther);
+  EXPECT_EQ(event.macRxFilterWhitelist, kRxFakeAddressFiltered);
+  EXPECT_EQ(event.macRxFilterDestAddr, kRxFakeDestAddrFiltered);
+  EXPECT_EQ(event.macRxFailNoFrame, kRxFakeErrNoFrame);
+  EXPECT_EQ(event.macRxFailUnknownNeighbor, kRxFakeErrUnknownNeighbor);
+  EXPECT_EQ(event.macRxFailInvalidSrcAddr, kRxFakeErrInvalidSrcAddr);
+  EXPECT_EQ(event.macRxFailFcs, kRxFakeErrFcs);
+  EXPECT_EQ(event.macRxFailOther, kRxFakeErrOther);
 }
 
 }  // namespace testing
