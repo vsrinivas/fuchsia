@@ -127,12 +127,6 @@ constexpr void HasIo::CheckLayout() {
 
 bool zxio_is_valid(const zxio_t* io);
 
-zx_status_t zxio_datagram_pipe_readv(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
-                                     zxio_flags_t flags, size_t* out_actual);
-
-zx_status_t zxio_datagram_pipe_writev(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
-                                      zxio_flags_t flags, size_t* out_actual);
-
 void zxio_node_init(zxio_node_t* node, zx_handle_t control, const zxio_extension_ops_t* ops);
 
 zx_status_t zxio_vmo_get_common(const zx::vmo& vmo, size_t content_size, uint32_t flags,

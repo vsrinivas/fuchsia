@@ -9,10 +9,10 @@
 #include <lib/zxio/inception.h>
 #include <lib/zxio/null.h>
 #include <lib/zxio/ops.h>
+#include <lib/zxio/types.h>
 #include <sys/stat.h>
 #include <zircon/syscalls.h>
 
-#include "lib/zxio/types.h"
 #include "private.h"
 
 namespace fio = fuchsia_io;
