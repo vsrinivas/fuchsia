@@ -83,7 +83,7 @@ impl TestEnvironment {
         let handler_signature =
             TestEnvironment::spawn_setting_handler(&delegate, &test_delegate).await;
 
-        let client_proxy = ClientProxy::new(messenger, store.clone(), policy_type);
+        let client_proxy = ClientProxy::new(messenger, policy_type);
 
         let mut components = HashSet::new();
         components.insert(SettingType::Audio);

@@ -75,8 +75,7 @@ async fn test_write() {
         .await
         .expect("env should be created");
     let (messenger, _) = env.delegate.create(MessengerType::Unbound).await.unwrap();
-    let store = storage_factory.get_store().await;
-    let client_proxy = ClientProxy::new(messenger, store.clone(), PolicyType::Unknown);
+    let client_proxy = ClientProxy::new(messenger, PolicyType::Unknown);
 
     // Create a handler that writes a value through the client proxy when handle_policy_request is
     // called.
@@ -96,6 +95,7 @@ async fn test_write() {
     handler.handle_policy_request(PolicyRequest::Get).await.expect("handle failed");
 
     // Verify the value was written to the store through the client proxy.
+    let store = storage_factory.get_store().await;
     assert_eq!(store.get::<UnknownInfo>().await, expected_value);
 
     // Verify that the written value can be read again through the client proxy.

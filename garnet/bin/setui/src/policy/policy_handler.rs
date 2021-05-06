@@ -4,7 +4,6 @@
 
 use crate::base::SettingType;
 use crate::handler::base::{Payload as HandlerPayload, Request, Response as SettingResponse};
-use crate::handler::device_storage::{DeviceStorage, DeviceStorageCompatible};
 use crate::handler::setting_handler::persist::UpdateState;
 use crate::handler::setting_handler::{SettingHandlerResult, StorageFactory};
 use crate::message::base::Audience;
@@ -20,7 +19,6 @@ use async_trait::async_trait;
 use fuchsia_syslog::fx_log_err;
 use futures::future::BoxFuture;
 use std::convert::{TryFrom, TryInto};
-use std::sync::Arc;
 
 /// PolicyHandlers are in charge of applying and persisting policies set by clients.
 #[async_trait]
@@ -105,10 +103,7 @@ where
     C: Create + PolicyHandler + Send + Sync + 'static,
 {
     Box::pin(async move {
-        let storage = context.storage_factory.get_store().await;
-
-        let proxy = ClientProxy::new(context.service_messenger, storage, context.policy_type);
-
+        let proxy = ClientProxy::new(context.service_messenger, context.policy_type);
         C::create(proxy).await.map(|handler| Box::new(handler) as BoxedHandler)
     })
 }
@@ -117,7 +112,6 @@ where
 #[derive(Clone)]
 pub struct ClientProxy {
     service_messenger: service::message::Messenger,
-    storage: Arc<DeviceStorage>,
     policy_type: PolicyType,
 }
 
@@ -148,12 +142,8 @@ impl ClientProxy {
 }
 
 impl ClientProxy {
-    pub fn new(
-        service_messenger: service::message::Messenger,
-        storage: Arc<DeviceStorage>,
-        policy_type: PolicyType,
-    ) -> Self {
-        Self { service_messenger, storage, policy_type }
+    pub fn new(service_messenger: service::message::Messenger, policy_type: PolicyType) -> Self {
+        Self { service_messenger, policy_type }
     }
 
     pub fn policy_type(&self) -> PolicyType {
@@ -237,32 +227,6 @@ impl ClientProxy {
 
         Err(PolicyError::WriteFailure(policy_type))
     }
-
-    #[allow(dead_code)]
-    pub(crate) async fn read<S>(&self) -> S
-    where
-        S: DeviceStorageCompatible,
-    {
-        self.storage.get().await
-    }
-
-    /// Returns Ok if the value was written, or an Error if the write failed. The argument
-    /// `write_through` will block returning until the value has been completely written to
-    /// persistent store, rather than any temporary in-memory caching.
-    #[allow(dead_code)]
-    pub(crate) async fn write<S>(&self, value: &S, write_through: bool) -> Result<(), PolicyError>
-    where
-        S: DeviceStorageCompatible,
-    {
-        if *value == self.read().await {
-            return Ok(());
-        }
-
-        match self.storage.write(value, write_through).await {
-            Ok(_) => Ok(()),
-            Err(_) => Err(PolicyError::WriteFailure(self.policy_type)),
-        }
-    }
 }
 
 #[cfg(test)]
@@ -270,11 +234,8 @@ mod tests {
     use super::*;
     use crate::base::SettingType;
     use crate::handler::base::{Payload as HandlerPayload, Request};
-    use crate::handler::device_storage::testing::InMemoryStorageFactory;
-    use crate::handler::device_storage::DeviceStorageFactory;
     use crate::message::base::MessengerType;
     use crate::policy::PolicyType;
-    use crate::privacy::types::PrivacyInfo;
     use crate::service;
     use crate::tests::message_utils::verify_payload;
 
@@ -291,9 +252,6 @@ mod tests {
             )))
             .await
             .expect("setting proxy messenger created");
-        let storage_factory = InMemoryStorageFactory::new();
-        storage_factory.initialize_storage::<PrivacyInfo>().await;
-        let storage = storage_factory.get_store().await;
 
         let client_proxy = ClientProxy {
             service_messenger: service_delegate
@@ -301,7 +259,6 @@ mod tests {
                 .await
                 .expect("messenger should be created")
                 .0,
-            storage,
             policy_type,
         };
 
@@ -333,7 +290,6 @@ mod tests {
                 .await
                 .expect("messenger should be created")
                 .0,
-            storage: InMemoryStorageFactory::new().get_store().await,
             policy_type,
         };
 
