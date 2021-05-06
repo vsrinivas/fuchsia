@@ -34,14 +34,15 @@ constexpr uint32_t kMutexRegNum = 48;
 class MockNoCpuBufferCollection : public mock_sysmem::MockBufferCollection {
  public:
   MockNoCpuBufferCollection() { EXPECT_EQ(ZX_OK, fake_bti_create(bti_.reset_and_get_address())); }
-  void SetConstraints(bool has_constraints, sysmem::wire::BufferCollectionConstraints constraints,
+  void SetConstraints(SetConstraintsRequestView request,
                       SetConstraintsCompleter::Sync& _completer) override {
-    EXPECT_FALSE(constraints.buffer_memory_constraints.cpu_domain_supported);
-    image_constraints_ = constraints.image_format_constraints[0];
+    EXPECT_FALSE(request->constraints.buffer_memory_constraints.cpu_domain_supported);
+    image_constraints_ = request->constraints.image_format_constraints[0];
     set_constraints_called_ = true;
   }
 
-  void WaitForBuffersAllocated(WaitForBuffersAllocatedCompleter::Sync& completer) override {
+  void WaitForBuffersAllocated(WaitForBuffersAllocatedRequestView request,
+                               WaitForBuffersAllocatedCompleter::Sync& completer) override {
     sysmem::wire::BufferCollectionInfo2 info;
     zx::vmo vmo;
     constexpr uint32_t kWidth = 800;

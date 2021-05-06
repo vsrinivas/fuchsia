@@ -28,7 +28,7 @@ void Allocator::CreateChannelOwned(zx::channel request, Device* device) {
   fidl::BindServer(device->dispatcher(), std::move(request), std::move(allocator));
 }
 
-void Allocator::AllocateNonSharedCollection(zx::channel buffer_collection_request,
+void Allocator::AllocateNonSharedCollection(AllocateNonSharedCollectionRequestView request,
                                             AllocateNonSharedCollectionCompleter::Sync& completer) {
   TRACE_DURATION("gfx", "Allocator::AllocateNonSharedCollection");
 
@@ -69,7 +69,7 @@ void Allocator::AllocateNonSharedCollection(zx::channel buffer_collection_reques
   // out which token we're talking about based on the koid(s), as usual.
   LogicalBufferCollection::Create(std::move(token_server), parent_device_);
   LogicalBufferCollection::BindSharedCollection(
-      parent_device_, std::move(token_client), std::move(buffer_collection_request),
+      parent_device_, std::move(token_client), request->collection_request.TakeChannel(),
       client_debug_info_ ? &*client_debug_info_ : nullptr);
 
   // Now the client can SetConstraints() on the BufferCollection, etc.  The
@@ -78,7 +78,7 @@ void Allocator::AllocateNonSharedCollection(zx::channel buffer_collection_reques
   // AllocateSharedCollection().
 }
 
-void Allocator::AllocateSharedCollection(zx::channel token_request,
+void Allocator::AllocateSharedCollection(AllocateSharedCollectionRequestView request,
                                          AllocateSharedCollectionCompleter::Sync& completer) {
   TRACE_DURATION("gfx", "Allocator::AllocateSharedCollection");
 
@@ -93,10 +93,10 @@ void Allocator::AllocateSharedCollection(zx::channel token_request,
   // go ahead and allocate the LogicalBufferCollection here since the
   // LogicalBufferCollection associates all the BufferCollectionToken and
   // BufferCollection bindings to the same LogicalBufferCollection.
-  LogicalBufferCollection::Create(std::move(token_request), parent_device_);
+  LogicalBufferCollection::Create(request->token_request.TakeChannel(), parent_device_);
 }
 
-void Allocator::BindSharedCollection(zx::channel token, zx::channel buffer_collection_request,
+void Allocator::BindSharedCollection(BindSharedCollectionRequestView request,
                                      BindSharedCollectionCompleter::Sync& completer) {
   TRACE_DURATION("gfx", "Allocator::BindSharedCollection");
 
@@ -108,23 +108,25 @@ void Allocator::BindSharedCollection(zx::channel token, zx::channel buffer_colle
   // LogicalBufferCollection, so delegate over to LogicalBufferCollection for
   // this request.
   LogicalBufferCollection::BindSharedCollection(
-      parent_device_, std::move(token), std::move(buffer_collection_request),
+      parent_device_, request->token.TakeChannel(),
+      request->buffer_collection_request.TakeChannel(),
       client_debug_info_ ? &*client_debug_info_ : nullptr);
 }
 
 void Allocator::ValidateBufferCollectionToken(
-    zx_koid_t token_server_koid, ValidateBufferCollectionTokenCompleter::Sync& completer) {
-  zx_status_t status =
-      LogicalBufferCollection::ValidateBufferCollectionToken(parent_device_, token_server_koid);
+    ValidateBufferCollectionTokenRequestView request,
+    ValidateBufferCollectionTokenCompleter::Sync& completer) {
+  zx_status_t status = LogicalBufferCollection::ValidateBufferCollectionToken(
+      parent_device_, request->token_server_koid);
   ZX_DEBUG_ASSERT(status == ZX_OK || status == ZX_ERR_NOT_FOUND);
   completer.Reply(status == ZX_OK);
 }
 
-void Allocator::SetDebugClientInfo(fidl::StringView name, uint64_t id,
+void Allocator::SetDebugClientInfo(SetDebugClientInfoRequestView request,
                                    SetDebugClientInfoCompleter::Sync& completer) {
   client_debug_info_.emplace();
-  client_debug_info_->name = std::string(name.begin(), name.end());
-  client_debug_info_->id = id;
+  client_debug_info_->name = std::string(request->name.begin(), request->name.end());
+  client_debug_info_->id = request->id;
 }
 
 }  // namespace sysmem_driver

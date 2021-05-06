@@ -11,52 +11,59 @@
 
 namespace mock_sysmem {
 
-class MockBufferCollection : public fidl::WireInterface<fuchsia_sysmem::BufferCollection> {
+class MockBufferCollection : public fidl::WireServer<fuchsia_sysmem::BufferCollection> {
  public:
-  void SetEventSink(fidl::ClientEnd<fuchsia_sysmem::BufferCollectionEvents> events,
+  void SetEventSink(SetEventSinkRequestView request,
                     SetEventSinkCompleter::Sync& _completer) override {
     EXPECT_TRUE(false);
   }
-  void Sync(SyncCompleter::Sync& _completer) override { EXPECT_TRUE(false); }
-  void SetConstraints(bool has_constraints,
-                      fuchsia_sysmem::wire::BufferCollectionConstraints constraints,
+  void Sync(SyncRequestView request, SyncCompleter::Sync& _completer) override {
+    EXPECT_TRUE(false);
+  }
+  void SetConstraints(SetConstraintsRequestView request,
                       SetConstraintsCompleter::Sync& _completer) override {
     EXPECT_TRUE(false);
   }
-  void WaitForBuffersAllocated(WaitForBuffersAllocatedCompleter::Sync& _completer) override {
+  void WaitForBuffersAllocated(WaitForBuffersAllocatedRequestView request,
+                               WaitForBuffersAllocatedCompleter::Sync& _completer) override {
     EXPECT_TRUE(false);
   }
-  void CheckBuffersAllocated(CheckBuffersAllocatedCompleter::Sync& _completer) override {
+  void CheckBuffersAllocated(CheckBuffersAllocatedRequestView request,
+                             CheckBuffersAllocatedCompleter::Sync& _completer) override {
     EXPECT_TRUE(false);
   }
 
-  void CloseSingleBuffer(uint64_t buffer_index,
+  void CloseSingleBuffer(CloseSingleBufferRequestView request,
                          CloseSingleBufferCompleter::Sync& _completer) override {
     EXPECT_TRUE(false);
   }
-  void AllocateSingleBuffer(uint64_t buffer_index,
+  void AllocateSingleBuffer(AllocateSingleBufferRequestView request,
                             AllocateSingleBufferCompleter::Sync& _completer) override {
     EXPECT_TRUE(false);
   }
   void WaitForSingleBufferAllocated(
-      uint64_t buffer_index, WaitForSingleBufferAllocatedCompleter::Sync& _completer) override {
+      WaitForSingleBufferAllocatedRequestView request,
+      WaitForSingleBufferAllocatedCompleter::Sync& _completer) override {
     EXPECT_TRUE(false);
   }
-  void CheckSingleBufferAllocated(uint64_t buffer_index,
+  void CheckSingleBufferAllocated(CheckSingleBufferAllocatedRequestView request,
                                   CheckSingleBufferAllocatedCompleter::Sync& _completer) override {
     EXPECT_TRUE(false);
   }
-  void Close(CloseCompleter::Sync& _completer) override { EXPECT_TRUE(false); }
-  void SetName(uint32_t priority, fidl::StringView name,
-               SetNameCompleter::Sync& completer) override {}
-  void SetDebugClientInfo(fidl::StringView name, uint64_t id,
-                          SetDebugClientInfoCompleter::Sync& completer) override {}
-  void SetConstraintsAuxBuffers(
-      fuchsia_sysmem::wire::BufferCollectionConstraintsAuxBuffers constraints,
-      SetConstraintsAuxBuffersCompleter::Sync& _completer) override {
+  void Close(CloseRequestView request, CloseCompleter::Sync& _completer) override {
     EXPECT_TRUE(false);
   }
-  void GetAuxBuffers(GetAuxBuffersCompleter::Sync& _completer) override { EXPECT_TRUE(false); }
+  void SetName(SetNameRequestView request, SetNameCompleter::Sync& completer) override {}
+  void SetDebugClientInfo(SetDebugClientInfoRequestView request,
+                          SetDebugClientInfoCompleter::Sync& completer) override {}
+  void SetConstraintsAuxBuffers(SetConstraintsAuxBuffersRequestView request,
+                                SetConstraintsAuxBuffersCompleter::Sync& _completer) override {
+    EXPECT_TRUE(false);
+  }
+  void GetAuxBuffers(GetAuxBuffersRequestView request,
+                     GetAuxBuffersCompleter::Sync& _completer) override {
+    EXPECT_TRUE(false);
+  }
 };
 
 }  // namespace mock_sysmem

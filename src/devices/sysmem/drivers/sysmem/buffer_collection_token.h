@@ -19,7 +19,7 @@ namespace sysmem_driver {
 class BufferCollectionToken;
 
 class BufferCollectionToken : public Node,
-                              public fidl::WireInterface<fuchsia_sysmem::BufferCollectionToken>,
+                              public fidl::WireServer<fuchsia_sysmem::BufferCollectionToken>,
                               public LoggingMixin {
  public:
   ~BufferCollectionToken() override;
@@ -35,18 +35,16 @@ class BufferCollectionToken : public Node,
   }
   void Bind(fidl::ServerEnd<fuchsia_sysmem::BufferCollectionToken> token_request);
 
-  void Duplicate(
-      uint32_t rights_attenuation_mask,
-      fidl::ServerEnd<fuchsia_sysmem::BufferCollectionToken> buffer_collection_token_request,
-      DuplicateCompleter::Sync& completer) override;
-  void Sync(SyncCompleter::Sync&) override;
-  void Close(CloseCompleter::Sync&) override;
-  void SetName(uint32_t priority, fidl::StringView name, SetNameCompleter::Sync&) override;
-  void SetDebugClientInfo(fidl::StringView, uint64_t id,
-                          SetDebugClientInfoCompleter::Sync&) override;
-  void SetDebugTimeoutLogDeadline(int64_t deadline,
-                                  SetDebugTimeoutLogDeadlineCompleter::Sync&) override;
-  void SetDispensable(SetDispensableCompleter::Sync& completer) override;
+  void Duplicate(DuplicateRequestView request, DuplicateCompleter::Sync& completer) override;
+  void Sync(SyncRequestView request, SyncCompleter::Sync& completer) override;
+  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override;
+  void SetName(SetNameRequestView request, SetNameCompleter::Sync& completer) override;
+  void SetDebugClientInfo(SetDebugClientInfoRequestView request,
+                          SetDebugClientInfoCompleter::Sync& completer) override;
+  void SetDebugTimeoutLogDeadline(SetDebugTimeoutLogDeadlineRequestView request,
+                                  SetDebugTimeoutLogDeadlineCompleter::Sync& completer) override;
+  void SetDispensable(SetDispensableRequestView request,
+                      SetDispensableCompleter::Sync& completer) override;
 
   void SetDebugClientInfoInternal(std::string name, uint64_t id);
 

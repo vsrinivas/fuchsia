@@ -19,7 +19,7 @@
 
 namespace sysmem_driver {
 
-class BufferCollection : public Node, public fidl::WireInterface<fuchsia_sysmem::BufferCollection> {
+class BufferCollection : public Node, public fidl::WireServer<fuchsia_sysmem::BufferCollection> {
  public:
   // Use EmplaceInTree() instead of Create() (until we switch to llcpp when we can have a new
   // Create() that does what EmplaceInTree() currently does).  The returned reference is valid while
@@ -37,36 +37,34 @@ class BufferCollection : public Node, public fidl::WireInterface<fuchsia_sysmem:
   // fuchsia.sysmem.BufferCollection interface methods
   //
 
-  void SetEventSink(
-      fidl::ClientEnd<fuchsia_sysmem::BufferCollectionEvents> buffer_collection_events_client,
-      SetEventSinkCompleter::Sync& completer) override;
-  void Sync(SyncCompleter::Sync& completer) override;
-  void SetConstraints(bool has_constraints,
-                      fuchsia_sysmem::wire::BufferCollectionConstraints constraints,
+  void SetEventSink(SetEventSinkRequestView request,
+                    SetEventSinkCompleter::Sync& completer) override;
+  void Sync(SyncRequestView request, SyncCompleter::Sync& completer) override;
+  void SetConstraints(SetConstraintsRequestView request,
                       SetConstraintsCompleter::Sync& completer) override;
-  void WaitForBuffersAllocated(WaitForBuffersAllocatedCompleter::Sync& completer) override;
-  void CheckBuffersAllocated(CheckBuffersAllocatedCompleter::Sync& completer) override;
-  void CloseSingleBuffer(uint64_t buffer_index,
+  void WaitForBuffersAllocated(WaitForBuffersAllocatedRequestView request,
+                               WaitForBuffersAllocatedCompleter::Sync& completer) override;
+  void CheckBuffersAllocated(CheckBuffersAllocatedRequestView request,
+                             CheckBuffersAllocatedCompleter::Sync& completer) override;
+  void CloseSingleBuffer(CloseSingleBufferRequestView request,
                          CloseSingleBufferCompleter::Sync& completer) override;
-  void AllocateSingleBuffer(uint64_t buffer_index,
+  void AllocateSingleBuffer(AllocateSingleBufferRequestView request,
                             AllocateSingleBufferCompleter::Sync& completer) override;
   void WaitForSingleBufferAllocated(
-      uint64_t buffer_index, WaitForSingleBufferAllocatedCompleter::Sync& completer) override;
-  void CheckSingleBufferAllocated(uint64_t buffer_index,
+      WaitForSingleBufferAllocatedRequestView request,
+      WaitForSingleBufferAllocatedCompleter::Sync& completer) override;
+  void CheckSingleBufferAllocated(CheckSingleBufferAllocatedRequestView request,
                                   CheckSingleBufferAllocatedCompleter::Sync& completer) override;
-  void Close(CloseCompleter::Sync& completer) override;
-  void SetName(uint32_t priority, fidl::StringView name,
-               SetNameCompleter::Sync& completer) override;
-  void SetDebugClientInfo(fidl::StringView name, uint64_t id,
+  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override;
+  void SetName(SetNameRequestView request, SetNameCompleter::Sync& completer) override;
+  void SetDebugClientInfo(SetDebugClientInfoRequestView request,
                           SetDebugClientInfoCompleter::Sync& completer) override;
-  void SetConstraintsAuxBuffers(
-      fuchsia_sysmem::wire::BufferCollectionConstraintsAuxBuffers constraints_aux_buffers,
-      SetConstraintsAuxBuffersCompleter::Sync& completer) override;
-  void GetAuxBuffers(GetAuxBuffersCompleter::Sync& completer) override;
-  void AttachToken(uint32_t rights_attenuation_mask,
-                   fidl::ServerEnd<fuchsia_sysmem::BufferCollectionToken> token_request,
-                   AttachTokenCompleter::Sync& completer) override;
-  void AttachLifetimeTracking(zx::eventpair server_end, uint32_t buffers_remaining,
+  void SetConstraintsAuxBuffers(SetConstraintsAuxBuffersRequestView request,
+                                SetConstraintsAuxBuffersCompleter::Sync& completer) override;
+  void GetAuxBuffers(GetAuxBuffersRequestView request,
+                     GetAuxBuffersCompleter::Sync& completer) override;
+  void AttachToken(AttachTokenRequestView request, AttachTokenCompleter::Sync& completer) override;
+  void AttachLifetimeTracking(AttachLifetimeTrackingRequestView request,
                               AttachLifetimeTrackingCompleter::Sync& completer) override;
 
   //

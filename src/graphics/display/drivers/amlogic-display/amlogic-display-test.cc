@@ -17,25 +17,25 @@ namespace sysmem = fuchsia_sysmem;
 
 class MockBufferCollection : public mock_sysmem::MockBufferCollection {
  public:
-  void SetConstraints(bool has_constraints, sysmem::wire::BufferCollectionConstraints constraints,
+  void SetConstraints(SetConstraintsRequestView request,
                       SetConstraintsCompleter::Sync& _completer) override {
-    EXPECT_TRUE(constraints.buffer_memory_constraints.inaccessible_domain_supported);
-    EXPECT_FALSE(constraints.buffer_memory_constraints.cpu_domain_supported);
-    EXPECT_EQ(64u, constraints.image_format_constraints[0].bytes_per_row_divisor);
-    EXPECT_EQ(4u, constraints.image_format_constraints_count);
+    EXPECT_TRUE(request->constraints.buffer_memory_constraints.inaccessible_domain_supported);
+    EXPECT_FALSE(request->constraints.buffer_memory_constraints.cpu_domain_supported);
+    EXPECT_EQ(64u, request->constraints.image_format_constraints[0].bytes_per_row_divisor);
+    EXPECT_EQ(4u, request->constraints.image_format_constraints_count);
     EXPECT_EQ(sysmem::wire::kFormatModifierArmLinearTe,
-              constraints.image_format_constraints[1].pixel_format.format_modifier.value);
+              request->constraints.image_format_constraints[1].pixel_format.format_modifier.value);
     set_constraints_called_ = true;
   }
 
-  void SetName(uint32_t priority, fidl::StringView name,
-               SetNameCompleter::Sync& completer) override {
-    EXPECT_EQ(10u, priority);
-    EXPECT_EQ(std::string("Display"), std::string(name.data(), name.size()));
+  void SetName(SetNameRequestView request, SetNameCompleter::Sync& completer) override {
+    EXPECT_EQ(10u, request->priority);
+    EXPECT_EQ(std::string("Display"), std::string(request->name.data(), request->name.size()));
     set_name_called_ = true;
   }
 
-  void WaitForBuffersAllocated(WaitForBuffersAllocatedCompleter::Sync& completer) override {
+  void WaitForBuffersAllocated(WaitForBuffersAllocatedRequestView request,
+                               WaitForBuffersAllocatedCompleter::Sync& completer) override {
     sysmem::wire::BufferCollectionInfo2 collection;
     collection.buffer_count = 1;
     collection.settings.has_image_format_constraints = true;

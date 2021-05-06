@@ -22,13 +22,15 @@ namespace {
 // require things that aren't available on the current system.
 class StubBufferCollection : public mock_sysmem::MockBufferCollection {
  public:
-  void SetConstraints(bool has_constraints, sysmem::wire::BufferCollectionConstraints constraints,
+  void SetConstraints(SetConstraintsRequestView request,
                       SetConstraintsCompleter::Sync& _completer) override {
-    auto& image_constraints = constraints.image_format_constraints[0];
+    auto& image_constraints = request->constraints.image_format_constraints[0];
     EXPECT_EQ(sysmem::wire::PixelFormatType::kBgra32, image_constraints.pixel_format.type);
     EXPECT_EQ(4u, image_constraints.bytes_per_row_divisor);
   }
-  void WaitForBuffersAllocated(WaitForBuffersAllocatedCompleter::Sync& _completer) override {
+
+  void WaitForBuffersAllocated(WaitForBuffersAllocatedRequestView request,
+                               WaitForBuffersAllocatedCompleter::Sync& _completer) override {
     sysmem::wire::BufferCollectionInfo2 info;
     info.settings.has_image_format_constraints = true;
     info.buffer_count = 1;

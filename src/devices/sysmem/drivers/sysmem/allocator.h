@@ -19,8 +19,7 @@ namespace sysmem_driver {
 //
 // Because Allocator is essentially self-contained and handling the server end
 // of a channel, most of Allocator is private.
-class Allocator : public fidl::WireRawChannelInterface<fuchsia_sysmem::Allocator>,
-                  public LoggingMixin {
+class Allocator : public fidl::WireServer<fuchsia_sysmem::Allocator>, public LoggingMixin {
  public:
   // Public for std::unique_ptr<Allocator>:
   ~Allocator();
@@ -30,16 +29,16 @@ class Allocator : public fidl::WireRawChannelInterface<fuchsia_sysmem::Allocator
  private:
   Allocator(Device* parent_device);
 
-  void AllocateNonSharedCollection(zx::channel buffer_collection_request,
+  void AllocateNonSharedCollection(AllocateNonSharedCollectionRequestView request,
                                    AllocateNonSharedCollectionCompleter::Sync& completer) override;
-  void AllocateSharedCollection(zx::channel token_request,
+  void AllocateSharedCollection(AllocateSharedCollectionRequestView request,
                                 AllocateSharedCollectionCompleter::Sync& completer) override;
-  void BindSharedCollection(zx::channel token, zx::channel buffer_collection,
+  void BindSharedCollection(BindSharedCollectionRequestView request,
                             BindSharedCollectionCompleter::Sync& completer) override;
   void ValidateBufferCollectionToken(
-      zx_koid_t token_server_koid,
+      ValidateBufferCollectionTokenRequestView request,
       ValidateBufferCollectionTokenCompleter::Sync& completer) override;
-  void SetDebugClientInfo(fidl::StringView name, uint64_t id,
+  void SetDebugClientInfo(SetDebugClientInfoRequestView request,
                           SetDebugClientInfoCompleter::Sync& completer) override;
 
   Device* parent_device_ = nullptr;

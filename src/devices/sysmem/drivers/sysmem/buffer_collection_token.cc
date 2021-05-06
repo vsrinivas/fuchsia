@@ -79,10 +79,8 @@ void BufferCollectionToken::Bind(
                        });
 }
 
-void BufferCollectionToken::Duplicate(
-    uint32_t rights_attenuation_mask,
-    fidl::ServerEnd<fuchsia_sysmem::BufferCollectionToken> token_request,
-    DuplicateCompleter::Sync& completer) {
+void BufferCollectionToken::Duplicate(DuplicateRequestView request,
+                                      DuplicateCompleter::Sync& completer) {
   TRACE_DURATION("gfx", "BufferCollectionToken::Duplicate", "this", this,
                  "logical_buffer_collection", &logical_buffer_collection());
   table_set_.MitigateChurn();
@@ -94,20 +92,20 @@ void BufferCollectionToken::Duplicate(
     return;
   }
   NodeProperties* new_node_properties = node_properties().NewChild(&logical_buffer_collection());
-  if (rights_attenuation_mask == 0) {
+  if (request->rights_attenuation_mask == 0) {
     logical_buffer_collection().LogClientError(
         FROM_HERE, &node_properties(),
         "rights_attenuation_mask of 0 is DEPRECATED - use ZX_RIGHT_SAME_RIGHTS instead.");
-    rights_attenuation_mask = ZX_RIGHT_SAME_RIGHTS;
+    request->rights_attenuation_mask = ZX_RIGHT_SAME_RIGHTS;
   }
-  if (rights_attenuation_mask != ZX_RIGHT_SAME_RIGHTS) {
-    new_node_properties->rights_attenuation_mask() &= rights_attenuation_mask;
+  if (request->rights_attenuation_mask != ZX_RIGHT_SAME_RIGHTS) {
+    new_node_properties->rights_attenuation_mask() &= request->rights_attenuation_mask;
   }
   logical_buffer_collection().CreateBufferCollectionToken(
-      shared_logical_buffer_collection(), new_node_properties, std::move(token_request));
+      shared_logical_buffer_collection(), new_node_properties, std::move(request->token_request));
 }
 
-void BufferCollectionToken::Sync(SyncCompleter::Sync& completer) {
+void BufferCollectionToken::Sync(SyncRequestView request, SyncCompleter::Sync& completer) {
   table_set_.MitigateChurn();
   TRACE_DURATION("gfx", "BufferCollectionToken::Sync", "this", this, "logical_buffer_collection",
                  &logical_buffer_collection());
@@ -122,7 +120,7 @@ void BufferCollectionToken::Sync(SyncCompleter::Sync& completer) {
 }
 
 // Clean token close without causing LogicalBufferCollection failure.
-void BufferCollectionToken::Close(CloseCompleter::Sync& completer) {
+void BufferCollectionToken::Close(CloseRequestView request, CloseCompleter::Sync& completer) {
   table_set_.MitigateChurn();
   if (is_done_ || buffer_collection_request_) {
     FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE,
@@ -168,16 +166,16 @@ zx::channel BufferCollectionToken::TakeBufferCollectionRequest() {
   return std::move(buffer_collection_request_);
 }
 
-void BufferCollectionToken::SetName(uint32_t priority, fidl::StringView name,
-                                    SetNameCompleter::Sync&) {
+void BufferCollectionToken::SetName(SetNameRequestView request, SetNameCompleter::Sync&) {
   table_set_.MitigateChurn();
-  logical_buffer_collection().SetName(priority, std::string(name.begin(), name.end()));
+  logical_buffer_collection().SetName(request->priority,
+                                      std::string(request->name.begin(), request->name.end()));
 }
 
-void BufferCollectionToken::SetDebugClientInfo(fidl::StringView name, uint64_t id,
+void BufferCollectionToken::SetDebugClientInfo(SetDebugClientInfoRequestView request,
                                                SetDebugClientInfoCompleter::Sync&) {
   table_set_.MitigateChurn();
-  SetDebugClientInfoInternal(std::string(name.begin(), name.end()), id);
+  SetDebugClientInfoInternal(std::string(request->name.begin(), request->name.end()), request->id);
 }
 
 void BufferCollectionToken::SetDebugClientInfoInternal(std::string name, uint64_t id) {
@@ -199,13 +197,14 @@ void BufferCollectionToken::SetDebugClientInfoInternal(std::string name, uint64_
   }
 }
 
-void BufferCollectionToken::SetDebugTimeoutLogDeadline(int64_t deadline,
-                                                       SetDebugTimeoutLogDeadlineCompleter::Sync&) {
+void BufferCollectionToken::SetDebugTimeoutLogDeadline(
+    SetDebugTimeoutLogDeadlineRequestView request, SetDebugTimeoutLogDeadlineCompleter::Sync&) {
   table_set_.MitigateChurn();
-  logical_buffer_collection().SetDebugTimeoutLogDeadline(deadline);
+  logical_buffer_collection().SetDebugTimeoutLogDeadline(request->deadline);
 }
 
-void BufferCollectionToken::SetDispensable(SetDispensableCompleter::Sync& completer) {
+void BufferCollectionToken::SetDispensable(SetDispensableRequestView request,
+                                           SetDispensableCompleter::Sync& completer) {
   SetDispensableInternal();
 }
 

@@ -17,7 +17,7 @@
 #include "secmem-session.h"
 
 // This is used with fidl::BindSingleInFlightOnly() to dispatch fuchsia::sysmem::Tee requests.
-class SysmemSecureMemServer : public fidl::WireInterface<fuchsia_sysmem::SecureMem> {
+class SysmemSecureMemServer : public fidl::WireServer<fuchsia_sysmem::SecureMem> {
  public:
   using SecureMemServerDone = fit::callback<void(bool is_success)>;
 
@@ -29,9 +29,10 @@ class SysmemSecureMemServer : public fidl::WireInterface<fuchsia_sysmem::SecureM
                         SecureMemServerDone secure_mem_server_done);
   void StopAsync();
 
-  // fidl::WireInterface<fuchsia_sysmem::SecureMem> impl
-  void GetPhysicalSecureHeaps(GetPhysicalSecureHeapsCompleter::Sync& completer) override;
-  void SetPhysicalSecureHeaps(fuchsia_sysmem::wire::PhysicalSecureHeaps heaps,
+  // fidl::WireServer<fuchsia_sysmem::SecureMem> impl
+  void GetPhysicalSecureHeaps(GetPhysicalSecureHeapsRequestView request,
+                              GetPhysicalSecureHeapsCompleter::Sync& completer) override;
+  void SetPhysicalSecureHeaps(SetPhysicalSecureHeapsRequestView request,
                               SetPhysicalSecureHeapsCompleter::Sync& completer) override;
 
  private:

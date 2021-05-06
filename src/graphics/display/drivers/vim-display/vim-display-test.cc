@@ -21,13 +21,15 @@ namespace {
 // system.
 class MockBufferCollection : public mock_sysmem::MockBufferCollection {
  public:
-  void SetConstraints(bool has_constraints, sysmem::wire::BufferCollectionConstraints constraints,
+  void SetConstraints(SetConstraintsRequestView request,
                       SetConstraintsCompleter::Sync& _completer) override {
-    EXPECT_FALSE(constraints.buffer_memory_constraints.inaccessible_domain_supported);
-    EXPECT_FALSE(constraints.buffer_memory_constraints.cpu_domain_supported);
+    EXPECT_FALSE(request->constraints.buffer_memory_constraints.inaccessible_domain_supported);
+    EXPECT_FALSE(request->constraints.buffer_memory_constraints.cpu_domain_supported);
     set_constraints_called_ = true;
   }
-  void WaitForBuffersAllocated(WaitForBuffersAllocatedCompleter::Sync& _completer) override {
+
+  void WaitForBuffersAllocated(WaitForBuffersAllocatedRequestView request,
+                               WaitForBuffersAllocatedCompleter::Sync& _completer) override {
     sysmem::wire::BufferCollectionInfo2 info;
     info.settings.has_image_format_constraints = true;
     info.buffer_count = 1;
