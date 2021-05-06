@@ -20,7 +20,8 @@ use {
         Error as FidlError,
     },
     fidl_fuchsia_developer_bridge::{
-        FastbootProxy, UploadProgressListenerMarker, UploadProgressListenerRequest,
+        FastbootProxy, RebootListenerMarker, RebootListenerRequest, UploadProgressListenerMarker,
+        UploadProgressListenerRequest,
     },
     futures::prelude::*,
     futures::try_join,
@@ -96,11 +97,24 @@ impl Flash for FlashManifest {
         W: Write + Send,
         F: FileResolver + Send + Sync,
     {
+        let total_time = Utc::now();
+        prepare(writer, &fastboot_proxy).await?;
         match self {
-            Self::V1(v) => v.flash(writer, file_resolver, fastboot_proxy, cmd).await,
-            Self::V2(v) => v.flash(writer, file_resolver, fastboot_proxy, cmd).await,
-            Self::V3(v) => v.flash(writer, file_resolver, fastboot_proxy, cmd).await,
-        }
+            Self::V1(v) => v.flash(writer, file_resolver, fastboot_proxy, cmd).await?,
+            Self::V2(v) => v.flash(writer, file_resolver, fastboot_proxy, cmd).await?,
+            Self::V3(v) => v.flash(writer, file_resolver, fastboot_proxy, cmd).await?,
+        };
+        let duration = Utc::now().signed_duration_since(total_time);
+        writeln!(
+            writer,
+            "{}Total Time{} [{}{:.2}s{}]",
+            color::Fg(color::Green),
+            style::Reset,
+            color::Fg(color::Blue),
+            (duration.num_milliseconds() as f32) / (1000 as f32),
+            style::Reset
+        )?;
+        Ok(())
     }
 }
 
@@ -306,6 +320,61 @@ pub(crate) async fn verify_variable_value(
         .map_err(map_fidl_error)?
         .map_err(|e| anyhow!("Communication error with the device: {:?}", e))
         .map(|res| res == value)
+}
+
+pub(crate) async fn reboot_bootloader<W: Write + Send>(
+    writer: &mut W,
+    fastboot_proxy: &FastbootProxy,
+) -> Result<()> {
+    write!(writer, "Rebooting to bootloader... ")?;
+    writer.flush()?;
+    let (reboot_client, reboot_server) = create_endpoints::<RebootListenerMarker>()?;
+    let mut stream = reboot_server.into_stream()?;
+    let start_time = Utc::now();
+    try_join!(fastboot_proxy.reboot_bootloader(reboot_client).map_err(map_fidl_error), async move {
+        if let Some(RebootListenerRequest::OnReboot { control_handle: _ }) =
+            stream.try_next().await?
+        {
+            Ok(())
+        } else {
+            bail!("Did not receive reboot signal");
+        }
+    })
+    .and_then(|(reboot, _)| {
+        let d = Utc::now().signed_duration_since(start_time);
+        log::debug!("Reboot duration: {:.2}s", (d.num_milliseconds() / 1000));
+        done_time(writer, d)?;
+        reboot.map_err(|e| anyhow!("failed booting to bootloader: {:?}", e))
+    })
+}
+
+pub(crate) async fn prepare<W: Write + Send>(
+    writer: &mut W,
+    fastboot_proxy: &FastbootProxy,
+) -> Result<()> {
+    writer.flush()?;
+    let (reboot_client, reboot_server) = create_endpoints::<RebootListenerMarker>()?;
+    let mut stream = reboot_server.into_stream()?;
+    let mut start_time = None;
+    writer.flush()?;
+    try_join!(fastboot_proxy.prepare(reboot_client).map_err(map_fidl_error), async {
+        if let Some(RebootListenerRequest::OnReboot { control_handle: _ }) =
+            stream.try_next().await?
+        {
+            start_time.replace(Utc::now());
+            write!(writer, "Rebooting to bootloader... ")?;
+            writer.flush()?;
+        }
+        Ok(())
+    })
+    .and_then(|(prepare, _)| {
+        if let Some(s) = start_time {
+            let d = Utc::now().signed_duration_since(s);
+            log::debug!("Reboot duration: {:.2}s", (d.num_milliseconds() / 1000));
+            done_time(writer, d)?;
+        }
+        prepare.map_err(|e| anyhow!("failed preparing target for flashing: {:?}", e))
+    })
 }
 
 ////////////////////////////////////////////////////////////////////////////////

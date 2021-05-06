@@ -5,22 +5,15 @@
 use {
     crate::{
         file::FileResolver,
-        manifest::{
-            done_time, flash_partition, map_fidl_error, stage_file, verify_variable_value, Flash,
-        },
+        manifest::{flash_partition, reboot_bootloader, stage_file, verify_variable_value, Flash},
     },
-    anyhow::{anyhow, bail, Result},
+    anyhow::{anyhow, Result},
     async_trait::async_trait,
-    chrono::Utc,
     ffx_core::ffx_bail,
     ffx_flash_args::{FlashCommand, OemFile},
-    fidl::endpoints::create_endpoints,
-    fidl_fuchsia_developer_bridge::{FastbootProxy, RebootListenerMarker, RebootListenerRequest},
-    futures::prelude::*,
-    futures::try_join,
+    fidl_fuchsia_developer_bridge::FastbootProxy,
     serde::{Deserialize, Serialize},
     std::io::Write,
-    termion::{color, style},
 };
 
 pub(crate) const MISSING_PRODUCT: &str = "Manifest does not contain product";
@@ -87,7 +80,6 @@ impl Flash for FlashManifest {
         W: Write + Send,
         F: FileResolver + Send + Sync,
     {
-        let total_time = Utc::now();
         let product = match cmd.product {
             Some(p) => match self.0.iter().find(|product| product.name == p) {
                 Some(res) => res,
@@ -107,29 +99,7 @@ impl Flash for FlashManifest {
         flash_partitions(writer, file_resolver, &product.bootloader_partitions, &fastboot_proxy)
             .await?;
         if product.bootloader_partitions.len() > 0 {
-            write!(writer, "Rebooting to bootloader... ")?;
-            writer.flush()?;
-            let (reboot_client, reboot_server) = create_endpoints::<RebootListenerMarker>()?;
-            let mut stream = reboot_server.into_stream()?;
-            let start_time = Utc::now();
-            try_join!(
-                fastboot_proxy.reboot_bootloader(reboot_client).map_err(map_fidl_error),
-                async move {
-                    if let Some(RebootListenerRequest::OnReboot { control_handle: _ }) =
-                        stream.try_next().await?
-                    {
-                        Ok(())
-                    } else {
-                        bail!("Did not receive reboot signal");
-                    }
-                }
-            )
-            .and_then(|(reboot, _)| {
-                let d = Utc::now().signed_duration_since(start_time);
-                log::debug!("Reboot duration: {:.2}s", (d.num_milliseconds() / 1000));
-                done_time(writer, d)?;
-                reboot.map_err(|e| anyhow!("failed booting to bootloader: {:?}", e))
-            })?;
+            reboot_bootloader(writer, &fastboot_proxy).await?;
         }
         flash_partitions(writer, file_resolver, &product.partitions, &fastboot_proxy).await?;
         stage_oem_files(writer, file_resolver, true, &product.oem_files, &fastboot_proxy).await?;
@@ -140,16 +110,6 @@ impl Flash for FlashManifest {
             .map_err(|_| anyhow!("Could not erase misc partition"))?;
         fastboot_proxy.set_active("a").await?.map_err(|_| anyhow!("Could not set active slot"))?;
         fastboot_proxy.continue_boot().await?.map_err(|_| anyhow!("Could not reboot device"))?;
-        let duration = Utc::now().signed_duration_since(total_time);
-        writeln!(
-            writer,
-            "{}Total Time{} [{}{:.2}s{}]",
-            color::Fg(color::Green),
-            style::Reset,
-            color::Fg(color::Blue),
-            (duration.num_milliseconds() as f32) / (1000 as f32),
-            style::Reset
-        )?;
         writeln!(writer, "Continuing to boot - this could take awhile")?;
         Ok(())
     }

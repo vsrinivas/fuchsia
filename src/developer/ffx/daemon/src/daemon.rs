@@ -469,15 +469,6 @@ impl Daemon {
                         return Ok(());
                     }
                 };
-                // TODO(fxb/69285): reboot device into fastboot
-                if !matches!(target.get_connection_state().await, ConnectionState::Fastboot(_)) {
-                    let nodename = target.nodename().await.unwrap_or("<No Nodename>".to_string());
-                    log::warn!("Attempting to run fastboot on a non-fastboot target: {}", nodename);
-                    responder
-                        .send(&mut Err(DaemonError::NonFastbootDevice))
-                        .context("sending error response")?;
-                    return Ok(());
-                }
                 let mut fastboot_manager = Fastboot::new(target);
                 let stream = fastboot.into_stream()?;
                 fuchsia_async::Task::spawn(async move {

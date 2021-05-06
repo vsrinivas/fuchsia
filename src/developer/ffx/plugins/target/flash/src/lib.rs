@@ -131,6 +131,10 @@ mod test {
         (
             state.clone(),
             setup_fake_fastboot_proxy(move |req| match req {
+                FastbootRequest::Prepare { listener, responder } => {
+                    listener.into_proxy().unwrap().on_reboot().unwrap();
+                    responder.send(&mut Ok(())).unwrap();
+                }
                 FastbootRequest::GetVar { responder, .. } => {
                     let mut state = state.lock().unwrap();
                     let var = state.variables.pop().unwrap_or("test".to_string());

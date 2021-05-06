@@ -998,6 +998,19 @@ impl Target {
     pub async fn run_logger(&self) {
         self.task_manager.spawn_detached(TargetTaskType::ProactiveLog).await;
     }
+
+    pub async fn init_remote_proxy(&self) -> Result<RemoteControlProxy> {
+        // Ensure auto-connect has at least started.
+        self.run_host_pipe().await;
+        match self.events.wait_for(None, |e| e == TargetEvent::RcsActivated).await {
+            Ok(()) => (),
+            Err(e) => {
+                log::warn!("{}", e);
+                bail!("RCS connection issue")
+            }
+        }
+        self.rcs().await.ok_or(anyhow!("rcs dropped after event fired")).map(|r| r.proxy)
+    }
 }
 
 #[async_trait]

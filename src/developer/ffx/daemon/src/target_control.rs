@@ -4,7 +4,7 @@
 
 use {
     crate::fastboot::Fastboot,
-    crate::target::{ConnectionState, Target, TargetEvent},
+    crate::target::{ConnectionState, Target},
     anyhow::{anyhow, bail, Result},
     async_once::Once,
     fidl::endpoints::create_endpoints,
@@ -133,20 +133,10 @@ impl TargetControl {
     }
 
     async fn get_remote_proxy(&self) -> Result<RemoteControlProxy> {
-        self.remote_proxy.get_or_try_init(self.init_remote_proxy()).await.map(|proxy| proxy.clone())
-    }
-
-    async fn init_remote_proxy(&self) -> Result<RemoteControlProxy> {
-        // Ensure auto-connect has at least started.
-        self.target.run_host_pipe().await;
-        match self.target.events.wait_for(None, |e| e == TargetEvent::RcsActivated).await {
-            Ok(()) => (),
-            Err(e) => {
-                log::warn!("{}", e);
-                bail!("RCS connection issue")
-            }
-        }
-        self.target.rcs().await.ok_or(anyhow!("rcs dropped after event fired")).map(|r| r.proxy)
+        self.remote_proxy
+            .get_or_try_init(self.target.init_remote_proxy())
+            .await
+            .map(|proxy| proxy.clone())
     }
 
     async fn get_fastboot_proxy(&self) -> Result<FastbootProxy> {

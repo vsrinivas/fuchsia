@@ -12,6 +12,7 @@ enum FastbootError {
     TARGET_ERROR = 4;
     [Deprecated]
     NON_FASTBOOT_DEVICE = 5;
+    REBOOT_FAILED = 6;
 };
 
 /// Callback event listener for upload progress.
@@ -30,6 +31,7 @@ protocol RebootListener {
 
 [Discoverable]
 protocol Fastboot {
+    Prepare(RebootListener listener) -> () error FastbootError;
     GetVar(string:64 name) -> (string:64 value) error FastbootError;
     Flash(string:64 partition_name, string:256 path, UploadProgressListener listener) -> () error FastbootError;
     Erase(string:64 partition_name) -> () error FastbootError;
