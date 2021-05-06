@@ -15,6 +15,7 @@
 
 namespace zxdb {
 
+class StepOverThreadController;
 class StepThreadController;
 
 // Implements a user-level "step into" command. On top of the regular step into, this provides
@@ -61,7 +62,7 @@ class StepIntoThreadController : public ThreadController {
   FrameFingerprint original_frame_fingerprint_;
 
   std::unique_ptr<StepThreadController> step_into_;
-  std::unique_ptr<StepThreadController> skip_prologue_;
+  std::unique_ptr<StepOverThreadController> skip_prologue_;
 };
 
 }  // namespace zxdb

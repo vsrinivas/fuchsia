@@ -64,6 +64,7 @@ class StepIntoThreadControllerTest : public InlineThreadControllerTest {
     constexpr uint64_t kStackFramePrevious = 0x5010;
     constexpr uint64_t kStackFrameInitial = 0x5000;
     constexpr uint64_t kStackFrameNested = 0x4090;
+    constexpr uint64_t kStackFrameNestedPrologueCall = 0x4080;
 
     // Set up the thread to be stopped at the beginning of our range.
     debug_ipc::NotifyException exception;
@@ -104,6 +105,18 @@ class StepIntoThreadControllerTest : public InlineThreadControllerTest {
 
     // When skipping prologues, it should continue through the prologue.
     EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
+
+    // Test a function call from within the prologue. This corresponds to things like asan
+    // bookkeeping functions that should be skipped. Here we generate some random unsymbolized
+    // code address for the prologue call.
+    exception.thread.frames.emplace(exception.thread.frames.begin(),
+                                    kEndAddr + 0x8,  // Call address, arbitrary.
+                                    kStackFrameNestedPrologueCall, kStackFrameNestedPrologueCall);
+    InjectException(exception);
+    EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());  // Skip prologue call.
+
+    // Delete the nested prologue call from the stack.
+    exception.thread.frames.erase(exception.thread.frames.begin());
 
     // Report a stop at the end of the prologue. This just updates the same stack frame still in the
     // exception record.

@@ -9,6 +9,7 @@
 #include "src/developer/debug/zxdb/client/finish_thread_controller.h"
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/process.h"
+#include "src/developer/debug/zxdb/client/step_over_thread_controller.h"
 #include "src/developer/debug/zxdb/client/step_thread_controller.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/common/err.h"
@@ -101,10 +102,13 @@ ThreadController::StopOp StepIntoThreadController::OnThreadStop(
     return kStopDone;
   }
 
-  // Got to a prologue, now step to the end.
+  // Got to a prologue, now step to the end. This uses a "step over" controller since sometimes
+  // there can be function calls in the prologue itself. We want to automatically skip these.
+  // Normally they are bookkeeping functions (for example, asan injects "stack malloc" calls there)
+  // that the user does not want to stop at.
   Log("Stepped to function prologue ending at 0x%" PRIx64 ". Going over it.",
       after_prologue.address());
-  skip_prologue_ = std::make_unique<StepThreadController>(
+  skip_prologue_ = std::make_unique<StepOverThreadController>(
       AddressRanges(AddressRange(current_ip, after_prologue.address())));
   // Init for this object is guaranteed synchronous so we don't have to wait for the callback.
   skip_prologue_->InitWithThread(thread(), [](const Err&) {});
