@@ -4,6 +4,7 @@
 
 use {anyhow::Result, ffx_assembly_args::*, ffx_core::ffx_plugin};
 
+mod config;
 mod operations;
 pub mod vfs;
 

@@ -2,11 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-pub mod config;
-
+use crate::config::Config;
 use anyhow::{Context, Result};
 use assembly_base_package::BasePackageBuilder;
-use config::Config;
 use ffx_assembly_args::ImageArgs;
 use ffx_core::{ffx_bail, ffx_error};
 use fuchsia_hash::Hash;
