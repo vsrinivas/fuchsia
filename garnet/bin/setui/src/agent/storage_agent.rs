@@ -7,6 +7,7 @@
 
 use crate::accessibility::types::AccessibilityInfo;
 use crate::agent::{self, Context, Lifespan};
+use crate::audio::policy as audio_policy;
 use crate::audio::types::AudioInfo;
 #[cfg(test)]
 use crate::base::UnknownInfo;
@@ -23,6 +24,9 @@ use crate::message::base::{MessageEvent, MessengerType};
 use crate::message::receptor::Receptor;
 use crate::night_mode::types::NightModeInfo;
 use crate::payload_convert;
+#[cfg(test)]
+use crate::policy;
+use crate::policy::{PolicyInfo, PolicyType};
 use crate::privacy::types::PrivacyInfo;
 use crate::service::{self, Address};
 use crate::setup::types::SetupInfo;
@@ -149,6 +153,8 @@ macro_rules! into_storage_info {
 
 #[cfg(test)]
 into_storage_info!(UnknownInfo => SettingInfo);
+#[cfg(test)]
+into_storage_info!(policy::UnknownInfo => PolicyInfo);
 into_storage_info!(AccessibilityInfo => SettingInfo);
 into_storage_info!(AudioInfo => SettingInfo);
 into_storage_info!(DisplayInfo => SettingInfo);
@@ -160,6 +166,7 @@ into_storage_info!(IntlInfo => SettingInfo);
 into_storage_info!(NightModeInfo => SettingInfo);
 into_storage_info!(PrivacyInfo => SettingInfo);
 into_storage_info!(SetupInfo => SettingInfo);
+into_storage_info!(audio_policy::State => PolicyInfo);
 
 struct StorageManagement<T>
 where
@@ -233,6 +240,11 @@ where
                 SettingType::Privacy => self.read::<PrivacyInfo>(responder).await,
                 SettingType::Setup => self.read::<SetupInfo>(responder).await,
             },
+            StorageRequest::Read(StorageType::PolicyType(policy_type)) => match policy_type {
+                #[cfg(test)]
+                PolicyType::Unknown => self.read::<policy::UnknownInfo>(responder).await,
+                PolicyType::Audio => self.read::<audio_policy::State>(responder).await,
+            },
             StorageRequest::Write(StorageInfo::SettingInfo(setting_info), flush) => {
                 match setting_info {
                     #[cfg(test)]
@@ -256,10 +268,12 @@ where
                     SettingInfo::Setup(info) => self.write(info, flush, responder).await,
                 }
             }
-            // TODO(fxb/72731) Implement storage calls for policy data types
-            _ => {
-                unimplemented!()
-            }
+            StorageRequest::Write(StorageInfo::PolicyInfo(policy_info), flush) => match policy_info
+            {
+                #[cfg(test)]
+                PolicyInfo::Unknown(info) => self.write(info, flush, responder).await,
+                PolicyInfo::Audio(info) => self.write(info, flush, responder).await,
+            },
         }
     }
 }
