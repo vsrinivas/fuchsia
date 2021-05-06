@@ -211,6 +211,7 @@ mod tests {
                 .1,
             messenger_factory.clone(),
             HashSet::new(),
+            HashSet::new(),
             None,
         )
         .await;

@@ -138,6 +138,7 @@ pub mod testing {
             create_hub().create(MessengerType::Unbound).await.expect("should be present").1,
             create_hub(),
             HashSet::new(),
+            HashSet::new(),
             None,
         )
         .await

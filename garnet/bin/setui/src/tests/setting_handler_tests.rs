@@ -145,6 +145,7 @@ async fn test_write_notify() {
             settings.insert(SettingType::Accessibility);
             settings
         },
+        HashSet::new(),
         None,
     )
     .await;

@@ -200,7 +200,9 @@ async fn test_environment_startup() {
 }
 
 async fn create_authority() -> Authority {
-    Authority::create(service::message::create_hub(), HashSet::new(), None).await.unwrap()
+    Authority::create(service::message::create_hub(), HashSet::new(), HashSet::new(), None)
+        .await
+        .unwrap()
 }
 
 /// Ensures that agents are executed in sequential order and the

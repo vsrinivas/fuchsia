@@ -7,6 +7,7 @@ use crate::agent::{AgentError, BlueprintHandle, Context, Invocation, Lifespan, P
 use crate::base::SettingType;
 use crate::message::base::{Audience, MessengerType};
 use crate::monitor;
+use crate::policy::PolicyType;
 use crate::service;
 use crate::service_context::ServiceContext;
 use anyhow::{format_err, Error};
@@ -24,6 +25,7 @@ pub struct Authority {
     messenger: service::message::Messenger,
     // Available components
     available_components: HashSet<SettingType>,
+    available_policies: HashSet<PolicyType>,
     // Available resource monitors
     resource_monitor_actor: Option<monitor::environment::Actor>,
 }
@@ -32,6 +34,7 @@ impl Authority {
     pub async fn create(
         delegate: service::message::Delegate,
         available_components: HashSet<SettingType>,
+        available_policies: HashSet<PolicyType>,
         resource_monitor_actor: Option<monitor::environment::Actor>,
     ) -> Result<Authority, Error> {
         let (client, _) = delegate
@@ -44,6 +47,7 @@ impl Authority {
             delegate,
             messenger: client,
             available_components,
+            available_policies,
             resource_monitor_actor,
         });
     }
@@ -62,6 +66,7 @@ impl Authority {
                     agent_receptor,
                     self.delegate.clone(),
                     self.available_components.clone(),
+                    self.available_policies.clone(),
                     self.resource_monitor_actor.clone(),
                 )
                 .await,

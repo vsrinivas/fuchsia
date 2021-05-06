@@ -48,7 +48,8 @@ async fn test_camera_agent_proxy() {
     let mut event_receptor = service::build_event_listener(&service_hub).await;
 
     // Create the agent context and agent.
-    let context = Context::new(agent_receptor, service_hub, HashSet::new(), None).await;
+    let context =
+        Context::new(agent_receptor, service_hub, HashSet::new(), HashSet::new(), None).await;
     // Setup the fake services.
     let (service_registry, fake_services) = create_services().await;
 

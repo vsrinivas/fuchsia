@@ -7,6 +7,7 @@ use crate::event;
 use crate::message::base::MessengerType;
 use crate::monitor;
 use crate::payload_convert;
+use crate::policy::PolicyType;
 use crate::service;
 use crate::service::message::Receptor;
 use crate::service_context::ServiceContext;
@@ -102,6 +103,7 @@ pub struct Context {
     publisher: event::Publisher,
     pub delegate: service::message::Delegate,
     pub available_components: HashSet<SettingType>,
+    pub available_policies: HashSet<PolicyType>,
     pub resource_monitor_actor: Option<monitor::environment::Actor>,
 }
 
@@ -110,10 +112,18 @@ impl Context {
         receptor: Receptor,
         delegate: service::message::Delegate,
         available_components: HashSet<SettingType>,
+        available_policies: HashSet<PolicyType>,
         resource_monitor_actor: Option<monitor::environment::Actor>,
     ) -> Self {
         let publisher = event::Publisher::create(&delegate, MessengerType::Unbound).await;
-        Self { receptor, publisher, delegate, available_components, resource_monitor_actor }
+        Self {
+            receptor,
+            publisher,
+            delegate,
+            available_components,
+            available_policies,
+            resource_monitor_actor,
+        }
     }
 
     /// Generates a new `Messenger` on the service `MessageHub`. Only

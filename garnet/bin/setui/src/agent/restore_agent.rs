@@ -10,6 +10,7 @@ use crate::event::{restore, Event, Publisher};
 use crate::handler::base::{Error, Payload as HandlerPayload, Request};
 use crate::handler::device_storage::DeviceStorageAccess;
 use crate::message::base::Audience;
+use crate::policy::PolicyType;
 use crate::service;
 use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log_err, fx_log_info};
@@ -24,6 +25,7 @@ pub struct RestoreAgent {
     messenger: service::message::Messenger,
     event_publisher: Publisher,
     available_components: HashSet<SettingType>,
+    available_policies: HashSet<PolicyType>,
 }
 
 impl DeviceStorageAccess for RestoreAgent {
@@ -31,16 +33,18 @@ impl DeviceStorageAccess for RestoreAgent {
 }
 
 impl RestoreAgent {
-    async fn create(mut context: Context) {
+    async fn create(context: Context) {
         let mut agent = RestoreAgent {
             messenger: context.create_messenger().await.expect("should acquire messenger"),
             event_publisher: context.get_publisher(),
-            available_components: context.available_components.clone(),
+            available_components: context.available_components,
+            available_policies: context.available_policies,
         };
 
+        let mut receptor = context.receptor;
         fasync::Task::spawn(async move {
             while let Ok((Payload::Invocation(invocation), client)) =
-                context.receptor.next_of::<Payload>().await
+                receptor.next_of::<Payload>().await
             {
                 client.reply(Payload::Complete(agent.handle(invocation).await).into()).send().ack();
             }

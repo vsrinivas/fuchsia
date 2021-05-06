@@ -689,16 +689,16 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         .await?;
     }
 
-    for policy_type in policies {
+    for policy_type in &policies {
         let setting_type = policy_type.setting_type();
         if components.contains(&setting_type) {
-            PolicyProxy::create(policy_type, policy_handler_factory.clone(), delegate.clone())
+            PolicyProxy::create(*policy_type, policy_handler_factory.clone(), delegate.clone())
                 .await?;
         }
     }
 
     let mut agent_authority =
-        Authority::create(delegate.clone(), components.clone(), monitor_actor).await?;
+        Authority::create(delegate.clone(), components.clone(), policies, monitor_actor).await?;
 
     register_fidl_handler!(components, service_dir, delegate, LightRequestStream, light, Light);
 
