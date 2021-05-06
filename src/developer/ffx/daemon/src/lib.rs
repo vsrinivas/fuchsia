@@ -3,14 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::daemon::Daemon,
     anyhow::{Context, Result},
     ffx_core::{ffx_error, FfxError},
-    fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker},
-    fidl_fuchsia_developer_bridge::{DaemonMarker, DaemonProxy, DaemonRequestStream},
-    fidl_fuchsia_overnet::{ServiceProviderRequest, ServiceProviderRequestStream},
+    fidl::endpoints::ServiceMarker,
+    fidl_fuchsia_developer_bridge::{DaemonMarker, DaemonProxy},
     fidl_fuchsia_overnet_protocol::NodeId,
-    fuchsia_async::Task,
     futures::prelude::*,
     hoist::OvernetInstance,
     libc,
@@ -26,6 +23,7 @@ mod discovery;
 mod events;
 mod fastboot;
 mod logger;
+mod manual_targets;
 mod mdns;
 mod onet;
 mod ssh;
@@ -35,6 +33,8 @@ mod util;
 
 pub mod target;
 pub use constants::{get_socket, LOG_FILE_PREFIX};
+
+pub use daemon::Daemon;
 
 async fn create_daemon_proxy(id: &mut NodeId) -> Result<DaemonProxy> {
     let svc = hoist::hoist().connect_as_service_consumer()?;
@@ -159,41 +159,6 @@ pub async fn spawn_daemon() -> Result<()> {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// Overnet Server implementation
-
-async fn next_request(
-    stream: &mut ServiceProviderRequestStream,
-) -> Result<Option<ServiceProviderRequest>> {
-    Ok(stream.try_next().await.context("error running service provider server")?)
-}
-
-async fn exec_server(daemon: Daemon) -> Result<()> {
-    let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
-    let chan = fidl::AsyncChannel::from_channel(s).context("failed to make async channel")?;
-    let mut stream = ServiceProviderRequestStream::from_channel(chan);
-    hoist::hoist().publish_service(DaemonMarker::NAME, ClientEnd::new(p))?;
-    while let Some(ServiceProviderRequest::ConnectToService {
-        chan,
-        info: _,
-        control_handle: _control_handle,
-    }) = next_request(&mut stream).await?
-    {
-        log::trace!("Received service request for service");
-        let chan =
-            fidl::AsyncChannel::from_channel(chan).context("failed to make async channel")?;
-        let daemon_clone = daemon.clone();
-        Task::spawn(async move {
-            daemon_clone
-                .handle_requests_from_stream(DaemonRequestStream::from_channel(chan))
-                .await
-                .unwrap_or_else(|err| panic!("fatal error handling request: {:?}", err));
-        })
-        .detach();
-    }
-    Ok(())
-}
-
-////////////////////////////////////////////////////////////////////////////////
 // start
 
 pub async fn is_daemon_running() -> bool {
@@ -230,11 +195,6 @@ pub async fn is_daemon_running() -> bool {
             false
         }
     }
-}
-
-pub async fn start() -> Result<()> {
-    exec_server(Daemon::new().await?).await?;
-    Ok(())
 }
 
 // daemonize adds a pre_exec to call daemon(3) causing the spawned

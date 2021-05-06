@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    anyhow::Result, ffx_core::ffx_plugin, ffx_daemon::start, ffx_daemon_start_args::StartCommand,
-};
+use {anyhow::Result, ffx_core::ffx_plugin, ffx_daemon_start_args::StartCommand};
 
 #[ffx_plugin()]
 pub async fn daemon(_cmd: StartCommand) -> Result<()> {
-    start().await
+    let daemon = ffx_daemon::Daemon::new().await;
+    daemon.start().await
 }

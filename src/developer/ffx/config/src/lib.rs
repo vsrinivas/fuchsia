@@ -44,7 +44,7 @@ mod persistent_config;
 mod priority_config;
 mod runtime;
 
-pub use cache::{env_file, init_config};
+pub use cache::{env_file, init_config, init_config_test};
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum ConfigLevel {

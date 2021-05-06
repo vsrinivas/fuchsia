@@ -8,6 +8,7 @@ use {
     anyhow::Result,
     serde_json::Value,
     std::convert::{From, TryFrom, TryInto},
+    thiserror::Error,
 };
 
 pub mod query;
@@ -15,8 +16,15 @@ pub mod value;
 
 pub type ConfigResult = Result<ConfigValue>;
 
-#[derive(Debug)]
-pub struct ConfigError(anyhow::Error);
+#[derive(Debug, Error)]
+#[error("Configuraton error")]
+pub struct ConfigError(#[from] anyhow::Error);
+
+impl ConfigError {
+    pub fn new(e: anyhow::Error) -> Self {
+        Self(e)
+    }
+}
 
 pub(crate) async fn get_config<'a, T: Fn(Value) -> Option<Value>>(
     query: ConfigQuery<'a>,
@@ -36,18 +44,6 @@ where
     match result {
         Ok(_) => Some(value),
         Err(_) => None,
-    }
-}
-
-impl From<anyhow::Error> for ConfigError {
-    fn from(value: anyhow::Error) -> Self {
-        ConfigError(value)
-    }
-}
-
-impl From<ConfigError> for anyhow::Error {
-    fn from(value: ConfigError) -> Self {
-        value.0
     }
 }
 

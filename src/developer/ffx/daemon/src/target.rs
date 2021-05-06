@@ -834,7 +834,6 @@ impl Target {
         }
     }
 
-    #[cfg(test)]
     pub(crate) async fn manual_addrs(&self) -> Vec<TargetAddr> {
         self.inner
             .addrs
@@ -1177,6 +1176,16 @@ impl From<SocketAddr> for TargetAddr {
 }
 
 impl TargetAddr {
+    /// Construct a new TargetAddr from a string representation of the form
+    /// accepted by std::net::SocketAddr, e.g. 127.0.0.1:22, or [fe80::1%1]:0.
+    pub fn new<S>(s: S) -> Result<Self>
+    where
+        S: AsRef<str>,
+    {
+        let sa = s.as_ref().parse::<SocketAddr>()?;
+        Ok(Self::from(sa))
+    }
+
     pub fn scope_id(&self) -> u32 {
         self.scope_id
     }
@@ -1196,6 +1205,18 @@ impl Display for TargetAddr {
 
         Ok(())
     }
+}
+
+/// Convert a TargetAddrInfo to a SocketAddr preserving the port number if
+/// provided, otherwise the returned SocketAddr will have port number 0.
+pub fn target_addr_info_to_socketaddr(tai: TargetAddrInfo) -> SocketAddr {
+    let mut sa = SocketAddr::from(TargetAddr::from(&tai));
+    // TODO(raggi): the port special case needed here indicates a general problem in our
+    // addressing strategy that is worth reviewing.
+    if let TargetAddrInfo::IpPort(ref ipp) = tai {
+        sa.set_port(ipp.port)
+    }
+    sa
 }
 
 #[async_trait]
@@ -2738,5 +2759,62 @@ mod test {
             "this-is-connected",
             found_target.nodename().await.expect("target should have nodename")
         );
+    }
+
+    #[test]
+    fn test_target_addr_info_to_socketaddr() {
+        let tai = TargetAddrInfo::IpPort(TargetIpPort {
+            ip: IpAddress::Ipv4(Ipv4Address { addr: [127, 0, 0, 1] }),
+            port: 8022,
+            scope_id: 0,
+        });
+
+        let sa = "127.0.0.1:8022".parse::<SocketAddr>().unwrap();
+
+        assert_eq!(target_addr_info_to_socketaddr(tai), sa);
+
+        let tai = TargetAddrInfo::Ip(TargetIp {
+            ip: IpAddress::Ipv4(Ipv4Address { addr: [127, 0, 0, 1] }),
+            scope_id: 0,
+        });
+
+        let sa = "127.0.0.1:0".parse::<SocketAddr>().unwrap();
+
+        assert_eq!(target_addr_info_to_socketaddr(tai), sa);
+
+        let tai = TargetAddrInfo::IpPort(TargetIpPort {
+            ip: IpAddress::Ipv6(Ipv6Address {
+                addr: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            }),
+            port: 8022,
+            scope_id: 0,
+        });
+
+        let sa = "[::1]:8022".parse::<SocketAddr>().unwrap();
+
+        assert_eq!(target_addr_info_to_socketaddr(tai), sa);
+
+        let tai = TargetAddrInfo::Ip(TargetIp {
+            ip: IpAddress::Ipv6(Ipv6Address {
+                addr: [0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            }),
+            scope_id: 1,
+        });
+
+        let sa = "[fe80::1%1]:0".parse::<SocketAddr>().unwrap();
+
+        assert_eq!(target_addr_info_to_socketaddr(tai), sa);
+
+        let tai = TargetAddrInfo::IpPort(TargetIpPort {
+            ip: IpAddress::Ipv6(Ipv6Address {
+                addr: [0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            }),
+            port: 8022,
+            scope_id: 1,
+        });
+
+        let sa = "[fe80::1%1]:8022".parse::<SocketAddr>().unwrap();
+
+        assert_eq!(target_addr_info_to_socketaddr(tai), sa);
     }
 }

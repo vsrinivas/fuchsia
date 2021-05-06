@@ -8,32 +8,37 @@ use {
     crate::events::{DaemonEvent, TargetInfo, WireTrafficType},
     crate::fastboot::{spawn_fastboot_discovery, Fastboot},
     crate::logger::streamer::GenericDiagnosticsStreamer,
+    crate::manual_targets,
     crate::mdns::MdnsTargetFinder,
-    crate::onet::create_ascendd,
     crate::target::{
-        ConnectionState, RcsConnection, Target, TargetAddrEntry, TargetCollection, TargetEvent,
-        ToFidlTarget,
+        target_addr_info_to_socketaddr, ConnectionState, RcsConnection, Target, TargetAddrEntry,
+        TargetCollection, TargetEvent, ToFidlTarget,
     },
     crate::target_control::TargetControl,
     anyhow::{anyhow, Context, Result},
     ascendd::Ascendd,
+    async_lock::Mutex,
     async_trait::async_trait,
     chrono::Utc,
     diagnostics_data::Timestamp,
     ffx_core::{build_info, TryStreamUtilExt},
     ffx_daemon_core::events::{self, EventHandler},
+    fidl::endpoints::ClientEnd,
+    fidl::endpoints::RequestStream,
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_developer_bridge::{
-        DaemonError, DaemonRequest, DaemonRequestStream, DiagnosticsStreamError, TargetAddrInfo,
+        DaemonError, DaemonMarker, DaemonRequest, DaemonRequestStream, DiagnosticsStreamError,
     },
     fidl_fuchsia_developer_remotecontrol::{
         ArchiveIteratorEntry, ArchiveIteratorError, ArchiveIteratorRequest, RemoteControlMarker,
     },
+    fidl_fuchsia_overnet::{ServiceProviderRequest, ServiceProviderRequestStream},
     fidl_fuchsia_overnet_protocol::NodeId,
     fuchsia_async::{Task, TimeoutExt, Timer},
     futures::prelude::*,
     hoist::{hoist, OvernetInstance},
     std::convert::TryInto,
+    std::net::SocketAddr,
     std::sync::{Arc, Weak},
     std::time::Duration,
 };
@@ -44,7 +49,8 @@ pub struct Daemon {
     pub event_queue: events::Queue<DaemonEvent>,
 
     target_collection: Arc<TargetCollection>,
-    ascendd: Arc<Option<Ascendd>>,
+    ascendd: Arc<Mutex<Option<Ascendd>>>,
+    manual_targets: Arc<dyn manual_targets::ManualTargets>,
 }
 
 // This is just for mocking config values for unit testing.
@@ -199,16 +205,40 @@ impl EventHandler<DaemonEvent> for DaemonEventHandler {
 }
 
 impl Daemon {
-    pub async fn new() -> Result<Daemon> {
-        log::info!("Starting daemon overnet server");
+    pub async fn new() -> Daemon {
         let target_collection = Arc::new(TargetCollection::new());
-        let queue = events::Queue::new(&target_collection);
-        let ascendd = Arc::new(Some(create_ascendd().await?));
-        let daemon_event_handler = DaemonEventHandler::new(Arc::downgrade(&target_collection));
-        queue.add_handler(daemon_event_handler).await;
-        target_collection.set_event_queue(queue.clone()).await;
-        Daemon::spawn_onet_discovery(queue.clone());
-        spawn_fastboot_discovery(queue.clone());
+        let event_queue = events::Queue::new(&target_collection);
+        target_collection.set_event_queue(event_queue.clone()).await;
+
+        #[cfg(not(test))]
+        let manual_targets = manual_targets::Config::default();
+        #[cfg(test)]
+        let manual_targets = manual_targets::Mock::default();
+
+        Self {
+            target_collection,
+            event_queue,
+            ascendd: Arc::new(Mutex::new(None)),
+            manual_targets: Arc::new(manual_targets),
+        }
+    }
+
+    pub async fn start(&self) -> Result<()> {
+        self.load_manual_targets().await;
+        self.start_discovery().await?;
+        self.start_ascendd().await?;
+        self.serve().await
+    }
+
+    /// Start all discovery tasks
+    async fn start_discovery(&self) -> Result<()> {
+        let daemon_event_handler = DaemonEventHandler::new(Arc::downgrade(&self.target_collection));
+        self.event_queue.add_handler(daemon_event_handler).await;
+
+        // TODO: these tasks could and probably should be managed by the daemon
+        // instead of being detached.
+        Daemon::spawn_onet_discovery(self.event_queue.clone());
+        spawn_fastboot_discovery(self.event_queue.clone());
 
         let config = TargetFinderConfig {
             interface_discovery_interval: Duration::from_secs(1),
@@ -216,17 +246,65 @@ impl Daemon {
             mdns_ttl: 255,
         };
         let mut mdns = MdnsTargetFinder::new(&config)?;
-        mdns.start(queue.clone())?;
-        Ok(Daemon {
-            target_collection: target_collection.clone(),
-            event_queue: queue,
-            ascendd: ascendd,
-        })
+        mdns.start(self.event_queue.clone())?;
+        Ok(())
+    }
+
+    async fn start_ascendd(&self) -> Result<()> {
+        // Start the ascendd socket only after we have registered our services.
+        log::info!("Starting ascendd");
+
+        let ascendd = Ascendd::new(
+            ascendd::Opt { sockpath: Some(get_socket().await), ..Default::default() },
+            // TODO: this just prints serial output to stdout - ffx probably wants to take a more
+            // nuanced approach here.
+            blocking::Unblock::new(std::io::stdout()),
+        )?;
+
+        self.ascendd.lock().await.replace(ascendd);
+
+        Ok(())
+    }
+
+    async fn load_manual_targets(&self) {
+        for str in self.manual_targets.get_or_default().await {
+            let sa = match str.parse::<std::net::SocketAddr>() {
+                Ok(sa) => sa,
+                Err(e) => {
+                    log::error!("Parse of manual target config failed: {}", e);
+                    continue;
+                }
+            };
+            self.add_manual_target(sa).await;
+        }
+    }
+
+    async fn add_manual_target(&self, addr: SocketAddr) {
+        let tae: TargetAddrEntry = (addr.into(), Utc::now(), true).into();
+
+        let _ = self.manual_targets.add(format!("{}", addr)).await.map_err(|e| {
+            log::error!("Unable to persist manual target: {:?}", e);
+        });
+
+        let target = Target::new_with_addr_entries(Option::<String>::None, Some(tae).into_iter());
+        if addr.port() != 0 {
+            target.set_ssh_port(Some(addr.port())).await;
+        }
+
+        let target = self.target_collection.merge_insert(target).await;
+
+        target
+            .update_connection_state(|s| match s {
+                ConnectionState::Disconnected => ConnectionState::Manual,
+                _ => s,
+            })
+            .await;
+        target.run_host_pipe().await
     }
 
     /// get_target attempts to get the target that matches the match string if
     /// provided, otherwise the default target from the target collection.
-    pub async fn get_target(&self, matcher: Option<String>) -> Result<Target, DaemonError> {
+    async fn get_target(&self, matcher: Option<String>) -> Result<Target, DaemonError> {
         // TODO(72818): make target match timeout configurable / paramterable
         self.target_collection
             .wait_for_match(matcher)
@@ -234,22 +312,14 @@ impl Daemon {
             .await
     }
 
-    #[cfg(test)]
-    pub async fn new_for_test() -> Daemon {
-        let target_collection = Arc::new(TargetCollection::new());
-        let event_queue = events::Queue::new(&target_collection);
-        target_collection.set_event_queue(event_queue.clone()).await;
-        Daemon { target_collection, event_queue, ascendd: Arc::new(None) }
-    }
-
-    pub async fn handle_requests_from_stream(&self, stream: DaemonRequestStream) -> Result<()> {
+    async fn handle_requests_from_stream(&self, stream: DaemonRequestStream) -> Result<()> {
         stream
             .map_err(|e| anyhow!("reading FIDL stream: {:#}", e))
             .try_for_each_concurrent_while_connected(None, |r| self.handle_request(r))
             .await
     }
 
-    pub fn spawn_onet_discovery(queue: events::Queue<DaemonEvent>) {
+    fn spawn_onet_discovery(queue: events::Queue<DaemonEvent>) {
         fuchsia_async::Task::spawn(async move {
             loop {
                 let svc = match hoist().connect_as_service_consumer() {
@@ -294,7 +364,7 @@ impl Daemon {
         .detach();
     }
 
-    pub async fn handle_request(&self, req: DaemonRequest) -> Result<()> {
+    async fn handle_request(&self, req: DaemonRequest) -> Result<()> {
         log::debug!("daemon received request: {:?}", req);
         match req {
             DaemonRequest::Crash { .. } => panic!("instructed to crash by client!"),
@@ -480,34 +550,23 @@ impl Daemon {
                 return responder.send(build_info()).context("sending GetVersionInfo response");
             }
             DaemonRequest::AddTarget { ip, responder } => {
-                let ssh_port = match ip {
-                    TargetAddrInfo::IpPort(ref ipp) => Some(ipp.port),
-                    _ => None,
-                };
-                let tae: TargetAddrEntry = (ip.into(), Utc::now(), true).into();
-
-                let target =
-                    Target::new_with_addr_entries(Option::<String>::None, Some(tae).into_iter());
-                target.set_ssh_port(ssh_port).await;
-
-                self.target_collection
-                    .merge_insert(target)
-                    .then(|target| async move {
-                        target
-                            .update_connection_state(|s| match s {
-                                ConnectionState::Disconnected => ConnectionState::Manual,
-                                _ => {
-                                    log::warn!("New manual target in unexpected state {:?}", s);
-                                    s
-                                }
-                            })
-                            .await;
-                        target.run_host_pipe().await
-                    })
-                    .await;
+                self.add_manual_target(target_addr_info_to_socketaddr(ip)).await;
                 responder.send(&mut Ok(())).context("error sending response")?;
             }
             DaemonRequest::RemoveTarget { target_id, responder } => {
+                let target = self.target_collection.get(target_id.clone()).await;
+                if let Some(target) = target {
+                    let ssh_port = target.ssh_port().await;
+                    for addr in target.manual_addrs().await {
+                        let mut sockaddr = SocketAddr::from(addr);
+                        ssh_port.map(|p| sockaddr.set_port(p));
+                        let _ = self.manual_targets.remove(format!("{}", sockaddr)).await.map_err(
+                            |e| {
+                                log::error!("Unable to persist target removal: {}", e);
+                            },
+                        );
+                    }
+                }
                 let result = self.target_collection.remove_target(target_id.clone()).await;
                 responder.send(&mut Ok(result)).context("error sending response")?;
             }
@@ -632,10 +691,36 @@ impl Daemon {
         }
         Ok(())
     }
-}
 
-////////////////////////////////////////////////////////////////////////////////
-// tests
+    async fn serve(&self) -> Result<()> {
+        let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
+        let chan = fidl::AsyncChannel::from_channel(s).context("failed to make async channel")?;
+        let mut stream = ServiceProviderRequestStream::from_channel(chan);
+
+        log::info!("Starting daemon overnet server");
+        hoist::hoist().publish_service(DaemonMarker::NAME, ClientEnd::new(p))?;
+
+        while let Some(ServiceProviderRequest::ConnectToService {
+            chan,
+            info: _,
+            control_handle: _control_handle,
+        }) = stream.try_next().await.context("error running service provider server")?
+        {
+            log::trace!("Received service request for service");
+            let chan =
+                fidl::AsyncChannel::from_channel(chan).context("failed to make async channel")?;
+            let daemon_clone = self.clone();
+            Task::local(async move {
+                daemon_clone
+                    .handle_requests_from_stream(DaemonRequestStream::from_channel(chan))
+                    .await
+                    .unwrap_or_else(|err| panic!("fatal error handling request: {:?}", err));
+            })
+            .detach();
+        }
+        Ok(())
+    }
+}
 
 #[cfg(test)]
 mod test {
@@ -643,6 +728,9 @@ mod test {
         super::*,
         crate::target::TargetAddr,
         anyhow::bail,
+        bridge::DaemonProxy,
+        bridge::TargetAddrInfo,
+        bridge::TargetIpPort,
         fidl_fuchsia_developer_bridge as bridge,
         fidl_fuchsia_developer_bridge::{DaemonMarker, FastbootMarker},
         fidl_fuchsia_developer_remotecontrol as rcs,
@@ -650,6 +738,8 @@ mod test {
         fidl_fuchsia_net as fidl_net,
         fidl_fuchsia_net::Subnet,
         fidl_fuchsia_overnet_protocol::NodeId,
+        fidl_net::IpAddress,
+        fidl_net::Ipv6Address,
         fuchsia_async::Task,
         std::collections::BTreeSet,
         std::iter::FromIterator,
@@ -772,10 +862,21 @@ mod test {
         }
     }
 
+    async fn spawn_test_daemon() -> (DaemonProxy, Daemon, Task<Result<()>>) {
+        let d = Daemon::new().await;
+
+        let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
+
+        let d2 = d.clone();
+        let task = Task::local(async move { d2.handle_requests_from_stream(stream).await });
+
+        (proxy, d, task)
+    }
+
     async fn spawn_daemon_server_with_target_ctrl_for_fastboot(
         stream: DaemonRequestStream,
     ) -> TargetControl {
-        let d = Daemon::new_for_test().await;
+        let d = Daemon::new().await;
         d.event_queue
             .add_handler(TestHookFakeFastboot { tc: Arc::downgrade(&d.target_collection) })
             .await;
@@ -783,7 +884,7 @@ mod test {
         let res = TargetControl {
             event_queue: event_clone,
             tc: d.target_collection.clone(),
-            _task: Task::spawn(async move {
+            _task: Task::local(async move {
                 d.handle_requests_from_stream(stream)
                     .await
                     .unwrap_or_else(|err| log::warn!("Fatal error handling request: {:?}", err));
@@ -793,7 +894,7 @@ mod test {
     }
 
     async fn spawn_daemon_server_with_target_ctrl(stream: DaemonRequestStream) -> TargetControl {
-        let d = Daemon::new_for_test().await;
+        let d = Daemon::new().await;
         d.event_queue
             .add_handler(TestHookFakeRcs { tc: Arc::downgrade(&d.target_collection) })
             .await;
@@ -801,7 +902,7 @@ mod test {
         let res = TargetControl {
             event_queue: event_clone,
             tc: d.target_collection.clone(),
-            _task: Task::spawn(async move {
+            _task: Task::local(async move {
                 d.handle_requests_from_stream(stream)
                     .await
                     .unwrap_or_else(|err| log::warn!("Fatal error handling request: {:?}", err));
@@ -991,25 +1092,23 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_get_ssh_address() -> Result<()> {
-        let (daemon_proxy, stream) = fidl::endpoints::create_proxy_and_stream::<DaemonMarker>()?;
-        let mut _ctrl = spawn_daemon_server_with_fake_target("foobar", stream).await;
-        let timeout = std::i64::MAX;
-        let r = daemon_proxy.get_ssh_address(Some("foobar"), timeout).await?;
+    async fn test_get_ssh_address() {
+        let (proxy, daemon, _task) = spawn_test_daemon().await;
 
-        // This is from the `spawn_daemon_server_with_fake_target` impl.
-        let want = Ok(TargetAddrInfo::Ip(bridge::TargetIp {
-            ip: fidl_net::IpAddress::Ipv6(fidl_net::Ipv6Address {
-                addr: [254, 128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            }),
-            scope_id: 1,
-        }));
-        assert_eq!(r, want);
+        let target = Target::new_autoconnected("foobar").await;
+        target.addrs_insert(TargetAddr::new("[fe80::1%1]:0").unwrap()).await;
+        let addr_info = target.ssh_address_info().await.unwrap();
 
-        let r = daemon_proxy.get_ssh_address(Some("toothpaste"), 10000).await?;
+        daemon.target_collection.merge_insert(target).await;
+
+        assert_eq!(daemon.target_collection.targets().await.len(), 1);
+        assert!(daemon.target_collection.get("foobar").await.is_some());
+
+        let r = proxy.get_ssh_address(Some("foobar"), std::i64::MAX).await.unwrap();
+        assert_eq!(r, Ok(addr_info));
+
+        let r = proxy.get_ssh_address(Some("toothpaste"), 1).await.unwrap();
         assert_eq!(r, Err(DaemonError::Timeout));
-
-        Ok(())
     }
 
     struct FakeConfigReader {
@@ -1096,7 +1195,7 @@ mod test {
         let ctrl = spawn_daemon_server_with_target_ctrl(stream).await;
 
         let mut info = TargetAddrInfo::Ip(bridge::TargetIp {
-            ip: fidl_net::IpAddress::Ipv6(fidl_net::Ipv6Address {
+            ip: IpAddress::Ipv6(fidl_net::Ipv6Address {
                 addr: [254, 127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
             }),
             scope_id: 0,
@@ -1121,7 +1220,7 @@ mod test {
         let ctrl = spawn_daemon_server_with_target_ctrl(stream).await;
 
         let mut info = bridge::TargetAddrInfo::IpPort(bridge::TargetIpPort {
-            ip: fidl_net::IpAddress::Ipv6(fidl_net::Ipv6Address {
+            ip: IpAddress::Ipv6(fidl_net::Ipv6Address {
                 addr: [254, 127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
             }),
             scope_id: 0,
@@ -1137,7 +1236,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_get_target_empty() {
-        let d = Daemon::new_for_test().await;
+        let d = Daemon::new().await;
         let nodename = "where-is-my-hasenpfeffer";
         let t = Target::new_autoconnected(nodename).await;
         d.target_collection.merge_insert(t.clone()).await;
@@ -1146,7 +1245,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_get_target_query() {
-        let d = Daemon::new_for_test().await;
+        let d = Daemon::new().await;
         let nodename = "where-is-my-hasenpfeffer";
         let t = Target::new_autoconnected(nodename).await;
         d.target_collection.merge_insert(t.clone()).await;
@@ -1158,7 +1257,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_get_target_ambiguous() {
-        let d = Daemon::new_for_test().await;
+        let d = Daemon::new().await;
         let t = Target::new_autoconnected("where-is-my-hasenpfeffer").await;
         let t2 = Target::new_autoconnected("it-is-rabbit-season").await;
         d.target_collection.merge_insert(t.clone()).await;
@@ -1167,6 +1266,8 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    // TODO(72965): Disabled due to flakiness. Remove when fxbug.dev/72965 is resolved.
+    #[ignore]
     async fn test_fastboot_on_rcs_error_msg() -> Result<()> {
         let (daemon_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
@@ -1190,5 +1291,59 @@ mod test {
             Err(DaemonError::TargetInFastboot) => Ok(()),
             _ => bail!("Expecting target in fastboot error message."),
         }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_persisted_manual_target_load() {
+        let daemon = Daemon::new().await;
+        daemon.manual_targets.add("127.0.0.1:8022".to_string()).await.unwrap();
+
+        // This happens in daemon.start(), but we want to avoid binding the
+        // network sockets in unit tests, thus not calling start.
+        daemon.load_manual_targets().await;
+
+        let target = daemon.get_target(Some("127.0.0.1:8022".to_string())).await.unwrap();
+        let ta = TargetAddr::from("127.0.0.1:8022".parse::<SocketAddr>().unwrap());
+        assert_eq!(target.ssh_address().await, Some(ta));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_persisted_manual_target_add() {
+        let (proxy, daemon, _task) = spawn_test_daemon().await;
+        daemon.load_manual_targets().await;
+
+        let r = proxy
+            .add_target(&mut TargetAddrInfo::IpPort(TargetIpPort {
+                ip: IpAddress::Ipv6(Ipv6Address {
+                    addr: [0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                }),
+                port: 8022,
+                scope_id: 1,
+            }))
+            .await
+            .unwrap();
+
+        assert_eq!(r, Ok(()));
+
+        assert_eq!(1, daemon.target_collection.targets().await.len());
+
+        assert_eq!(daemon.manual_targets.get().await.unwrap(), vec!["[fe80::1%1]:8022"]);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_persisted_manual_target_remove() {
+        let (proxy, daemon, _task) = spawn_test_daemon().await;
+        daemon.manual_targets.add("127.0.0.1:8022".to_string()).await.unwrap();
+        daemon.load_manual_targets().await;
+
+        assert_eq!(1, daemon.target_collection.targets().await.len());
+
+        let r = proxy.remove_target("127.0.0.1:8022").await.unwrap();
+
+        assert_eq!(r, Ok(true));
+
+        assert_eq!(0, daemon.target_collection.targets().await.len());
+
+        assert_eq!(daemon.manual_targets.get_or_default().await, Vec::<String>::new());
     }
 }

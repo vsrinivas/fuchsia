@@ -9,13 +9,14 @@ use {
     ffx_daemon::target::TargetAddr,
     ffx_target_show_args as args,
     fidl_fuchsia_buildinfo::ProviderProxy,
-    fidl_fuchsia_developer_bridge::DaemonProxy,
+    fidl_fuchsia_developer_bridge::{DaemonProxy, TargetAddrInfo},
     fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
     fidl_fuchsia_feedback::{DeviceIdProviderProxy, LastRebootInfoProviderProxy},
     fidl_fuchsia_hwinfo::{BoardProxy, DeviceProxy, ProductProxy},
     fidl_fuchsia_intl::RegulatoryDomain,
     fidl_fuchsia_update_channelcontrol::ChannelControlProxy,
     std::io::{stdout, Write},
+    std::net::SocketAddr,
     std::time::Duration,
 };
 
@@ -111,12 +112,20 @@ async fn gather_target_show(
         remote_proxy.identify_host().await?.map_err(|_| anyhow!("Could not identify host"))?;
     let name = host.nodename;
     let timeout = Duration::from_secs(1);
-    let res = daemon_proxy
+    let addr_info = daemon_proxy
         .get_ssh_address(name.as_deref(), timeout.as_nanos() as i64)
         .await?
         .map_err(|e| anyhow!("Failed to get ssh address: {:?}", e))?;
-    let out = TargetAddr::from(res);
-    let ifaces_str = format!("{}", out);
+    let ifaces_str = {
+        let mut socket_addr = SocketAddr::from(TargetAddr::from(&addr_info));
+        if let TargetAddrInfo::IpPort(ref ipp) = addr_info {
+            socket_addr.set_port(ipp.port);
+        } else {
+            socket_addr.set_port(22);
+        }
+        // TODO: pretty format the interface name
+        format!("{}", socket_addr)
+    };
     Ok(ShowEntry::group(
         "Target",
         "target",
@@ -370,7 +379,7 @@ mod tests {
     const TEST_OUTPUT_HUMAN: &'static str = "\
         Target: \
         \n    Name: \u{1b}[38;5;2m\"fake_fuchsia_device\"\u{1b}[m\
-        \n    SSH Address: \u{1b}[38;5;2m\"127.0.0.1\"\u{1b}[m\
+        \n    SSH Address: \u{1b}[38;5;2m\"127.0.0.1:22\"\u{1b}[m\
         \nBoard: \
         \n    Name: \"fake_name\"\
         \n    Revision: \"fake_revision\"\

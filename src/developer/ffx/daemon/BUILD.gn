@@ -83,6 +83,7 @@ if (is_host) {
       "src/lib.rs",
       "src/logger/mod.rs",
       "src/logger/streamer.rs",
+      "src/manual_targets.rs",
       "src/mdns.rs",
       "src/onet.rs",
       "src/ssh.rs",

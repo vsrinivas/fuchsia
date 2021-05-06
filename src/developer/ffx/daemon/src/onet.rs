@@ -3,11 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::constants::{get_socket, RETRY_DELAY},
+    crate::constants::RETRY_DELAY,
     crate::ssh::build_ssh_command,
     crate::target::{ConnectionState, TargetAddr, WeakTarget},
     anyhow::{anyhow, Context, Result},
-    ascendd::Ascendd,
     async_io::Async,
     fuchsia_async::{Task, Timer},
     futures::channel::oneshot,
@@ -203,16 +202,6 @@ impl HostPipeConnection {
             Timer::new(relaunch_command_delay).await;
         }
     }
-}
-
-pub async fn create_ascendd() -> Result<Ascendd> {
-    log::info!("Starting ascendd");
-    Ascendd::new(
-        ascendd::Opt { sockpath: Some(get_socket().await), ..Default::default() },
-        // TODO: this just prints serial output to stdout - ffx probably wants to take a more
-        // nuanced approach here.
-        blocking::Unblock::new(std::io::stdout()),
-    )
 }
 
 fn overnet_pipe(overnet_instance: &dyn OvernetInstance) -> Result<fidl::AsyncSocket> {

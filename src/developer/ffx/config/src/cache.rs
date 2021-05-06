@@ -20,9 +20,6 @@ use {
     },
 };
 
-#[cfg(test)]
-use tempfile::NamedTempFile;
-
 struct CacheItem {
     created: Instant,
     config: Arc<RwLock<Config>>,
@@ -43,13 +40,24 @@ pub fn env_file() -> Option<String> {
     ENV_FILE.lock().unwrap().as_ref().map(|v| format!("{}", v))
 }
 
-#[cfg(test)]
-pub fn env_file() -> Option<String> {
+pub fn test_env_file() -> Option<String> {
+    use tempfile::NamedTempFile;
     lazy_static::lazy_static! {
         static ref FILE: NamedTempFile = NamedTempFile::new().expect("tmp access failed");
     }
     Environment::init_env_file(&FILE.path().to_path_buf()).expect("initializing env file");
     FILE.path().to_str().map(|s| s.to_string())
+}
+
+#[cfg(test)]
+pub fn env_file() -> Option<String> {
+    test_env_file()
+}
+
+/// Initialize the configuration infrastructure in a manner suitable for tests,
+/// with the environment coming from a temporary file.
+pub fn init_config_test() -> Result<()> {
+    init_config(&vec![], &None, &test_env_file())
 }
 
 pub fn init_config(
