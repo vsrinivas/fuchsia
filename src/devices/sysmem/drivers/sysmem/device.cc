@@ -212,6 +212,8 @@ Device::Device(zx_device_t* parent_device, Driver* parent_driver)
   ZX_DEBUG_ASSERT(parent_driver_);
   zx_status_t status = loop_.StartThread("sysmem", &loop_thrd_);
   ZX_ASSERT(status == ZX_OK);
+  // Up until DdkAdd, all access to member variables must happen on this thread.
+  loop_checker_.emplace(fit::thread_checker());
 }
 
 // static
@@ -276,6 +278,7 @@ zx_status_t Device::GetContiguousGuardParameters(uint64_t* guard_bytes_out,
 void Device::DdkUnbind(ddk::UnbindTxn txn) {
   // Try to ensure there are no outstanding VMOS before shutting down the loop.
   async::PostTask(loop_.dispatcher(), [this]() mutable {
+    std::lock_guard checker(*loop_checker_);
     waiting_for_unbind_ = true;
     CheckForUnbind();
   });
@@ -292,6 +295,7 @@ void Device::DdkUnbind(ddk::UnbindTxn txn) {
 }
 
 void Device::CheckForUnbind() {
+  std::lock_guard checker(*loop_checker_);
   if (!waiting_for_unbind_)
     return;
   if (!logical_buffer_collections().empty()) {
@@ -318,6 +322,7 @@ void Device::CheckForUnbind() {
 TableSet& Device::table_set() { return table_set_; }
 
 zx_status_t Device::Bind() {
+  std::lock_guard checker(*loop_checker_);
   // Put everything under a node called "sysmem" because there's currently there's not a simple way
   // to distinguish (using a selector) which driver inspect information is coming from.
   sysmem_root_ = inspector_.GetRoot().CreateChild("sysmem");
@@ -440,6 +445,14 @@ zx_status_t Device::Bind() {
     zxlogf(INFO, "ZX_PROTOCL_PBUS not available %d", status);
   }
 
+  sync_completion_t completion;
+  async::PostTask(loop_.dispatcher(), [this, &completion] {
+    // After this point, all operations must happen on the loop thread.
+    loop_checker_.emplace(fit::thread_checker());
+    sync_completion_signal(&completion);
+  });
+  sync_completion_wait_deadline(&completion, ZX_TIME_INFINITE);
+
   status = DdkAdd(ddk::DeviceAddArgs("sysmem")
                       .set_flags(DEVICE_ADD_ALLOW_MULTI_COMPOSITE)
                       .set_inspect_vmo(inspector_.DuplicateVmo()));
@@ -502,13 +515,16 @@ zx_status_t Device::SysmemRegisterHeap(uint64_t heap_param, zx::channel heap_con
   return async::PostTask(loop_.dispatcher(), [this, heap,
                                               heap_connection =
                                                   std::move(heap_connection)]() mutable {
+    std::lock_guard checker(*loop_checker_);
     table_set_.MitigateChurn();
     // Clean up heap allocator after peer closed channel.
     auto wait_for_close = std::make_unique<async::Wait>(
         heap_connection.get(), ZX_CHANNEL_PEER_CLOSED, 0,
-        async::Wait::Handler(
-            [this, heap](async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
-                         const zx_packet_signal_t* signal) { allocators_.erase(heap); }));
+        async::Wait::Handler([this, heap](async_dispatcher_t* dispatcher, async::Wait* wait,
+                                          zx_status_t status, const zx_packet_signal_t* signal) {
+          std::lock_guard checker(*loop_checker_);
+          allocators_.erase(heap);
+        }));
     // It is safe to call Begin() here before adding entry to the map as
     // handler will run on current thread.
     zx_status_t status = wait_for_close->Begin(dispatcher());
@@ -528,6 +544,7 @@ zx_status_t Device::SysmemRegisterHeap(uint64_t heap_param, zx::channel heap_con
             wait_for_close_(std::move(wait_for_close)) {}
 
       void OnRegister(fidl::WireResponse<fuchsia_sysmem2::Heap::OnRegister>* event) override {
+        std::lock_guard checker(*device_->loop_checker_);
         // A heap should not be registered twice.
         ZX_DEBUG_ASSERT(heap_client_);
         // This replaces any previously registered allocator for heap (also cancels the old
@@ -539,6 +556,7 @@ zx_status_t Device::SysmemRegisterHeap(uint64_t heap_param, zx::channel heap_con
       }
 
       void Unbound(fidl::UnbindInfo info) override {
+        std::lock_guard checker(*device_->loop_checker_);
         if (info.reason() != fidl::Reason::kPeerClosed && info.reason() != fidl::Reason::kClose) {
           DRIVER_ERROR("Heap failed: reason %d status %d error %s\n",
                        static_cast<int>(info.reason()), info.status(), info.error_message());
@@ -569,6 +587,7 @@ zx_status_t Device::SysmemRegisterSecureMem(zx::channel secure_mem_connection) {
   return async::PostTask(
       loop_.dispatcher(), [this, secure_mem_connection = std::move(secure_mem_connection),
                            close_is_abort = current_close_is_abort_]() mutable {
+        std::lock_guard checker(*loop_checker_);
         table_set_.MitigateChurn();
         // This code must run asynchronously for two reasons:
         // 1) It does synchronous IPCs to the secure mem device, so SysmemRegisterSecureMem must
@@ -580,6 +599,7 @@ zx_status_t Device::SysmemRegisterSecureMem(zx::channel secure_mem_connection) {
             async::Wait::Handler([this, close_is_abort](async_dispatcher_t* dispatcher,
                                                         async::Wait* wait, zx_status_t status,
                                                         const zx_packet_signal_t* signal) {
+              std::lock_guard checker(*loop_checker_);
               if (*close_is_abort && secure_mem_) {
                 // The server end of this channel (the aml-securemem driver) is the driver that
                 // listens for suspend(mexec) so that soft reboot can succeed.  If that driver has
@@ -705,6 +725,7 @@ zx_status_t Device::SysmemUnregisterSecureMem() {
   *current_close_is_abort_ = false;
   current_close_is_abort_.reset();
   return async::PostTask(loop_.dispatcher(), [this]() {
+    std::lock_guard checker(*loop_checker_);
     LOG(DEBUG, "begin UnregisterSecureMem()");
     table_set_.MitigateChurn();
     secure_mem_.reset();
@@ -739,6 +760,7 @@ uint32_t Device::pdev_device_info_pid() {
 }
 
 void Device::TrackToken(BufferCollectionToken* token) {
+  std::lock_guard checker(*loop_checker_);
   zx_koid_t server_koid = token->server_koid();
   ZX_DEBUG_ASSERT(server_koid != ZX_KOID_INVALID);
   ZX_DEBUG_ASSERT(tokens_by_koid_.find(server_koid) == tokens_by_koid_.end());
@@ -746,6 +768,7 @@ void Device::TrackToken(BufferCollectionToken* token) {
 }
 
 void Device::UntrackToken(BufferCollectionToken* token) {
+  std::lock_guard checker(*loop_checker_);
   zx_koid_t server_koid = token->server_koid();
   if (server_koid == ZX_KOID_INVALID) {
     // The caller is allowed to un-track a token that never saw
@@ -759,6 +782,7 @@ void Device::UntrackToken(BufferCollectionToken* token) {
 }
 
 bool Device::TryRemoveKoidFromUnfoundTokenList(zx_koid_t token_server_koid) {
+  std::lock_guard checker(*loop_checker_);
   // unfound_token_koids_ is limited to kMaxUnfoundTokenCount (and likely empty), so a loop over it
   // should be efficient enough.
   for (auto it = unfound_token_koids_.begin(); it != unfound_token_koids_.end(); ++it) {
@@ -771,6 +795,7 @@ bool Device::TryRemoveKoidFromUnfoundTokenList(zx_koid_t token_server_koid) {
 }
 
 BufferCollectionToken* Device::FindTokenByServerChannelKoid(zx_koid_t token_server_koid) {
+  std::lock_guard checker(*loop_checker_);
   auto iter = tokens_by_koid_.find(token_server_koid);
   if (iter == tokens_by_koid_.end()) {
     unfound_token_koids_.push_back(token_server_koid);
@@ -784,6 +809,7 @@ BufferCollectionToken* Device::FindTokenByServerChannelKoid(zx_koid_t token_serv
 }
 
 MemoryAllocator* Device::GetAllocator(const fuchsia_sysmem2::wire::BufferMemorySettings& settings) {
+  std::lock_guard checker(*loop_checker_);
   if (settings.heap() == fuchsia_sysmem2::wire::HeapType::kSystemRam &&
       settings.is_physically_contiguous()) {
     return contiguous_system_ram_allocator_.get();
@@ -798,6 +824,7 @@ MemoryAllocator* Device::GetAllocator(const fuchsia_sysmem2::wire::BufferMemoryS
 
 const fuchsia_sysmem2::wire::HeapProperties& Device::GetHeapProperties(
     fuchsia_sysmem2::wire::HeapType heap) const {
+  std::lock_guard checker(*loop_checker_);
   ZX_DEBUG_ASSERT(allocators_.find(heap) != allocators_.end());
   return allocators_.at(heap)->heap_properties();
 }

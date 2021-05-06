@@ -15,6 +15,7 @@ FakeDdkSysmem::~FakeDdkSysmem() {
   if (initialized_) {
     sysmem_.DdkAsyncRemove();
     ZX_ASSERT(ZX_OK == ddk_.WaitUntilRemove());
+    sysmem_.ResetThreadCheckerForTesting();
     ZX_ASSERT(sysmem_.logical_buffer_collections().size() == 0);
     ZX_ASSERT(ddk_.Ok());
     initialized_ = false;

@@ -17,6 +17,7 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
+#include <lib/fit/thread_checker.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/channel.h>
@@ -125,16 +126,19 @@ class Device final : public DdkDeviceType,
 
   // Test hook
   [[nodiscard]] std::unordered_set<LogicalBufferCollection*>& logical_buffer_collections() {
+    std::lock_guard checker(*loop_checker_);
     return logical_buffer_collections_;
   }
 
   // Test hook
   void AddLogicalBufferCollection(LogicalBufferCollection* collection) {
+    std::lock_guard checker(*loop_checker_);
     logical_buffer_collections_.insert(collection);
   }
 
   // Test hook
   void RemoveLogicalBufferCollection(LogicalBufferCollection* collection) {
+    std::lock_guard checker(*loop_checker_);
     logical_buffer_collections_.erase(collection);
     CheckForUnbind();
   }
@@ -144,6 +148,10 @@ class Device final : public DdkDeviceType,
   void set_settings(const Settings& settings) { settings_ = settings; }
 
   [[nodiscard]] const Settings& settings() const { return settings_; }
+
+  void ResetThreadCheckerForTesting() {
+    loop_checker_.emplace(fit::thread_checker());
+  }
 
  private:
   class SecureMemConnection {
@@ -160,6 +168,9 @@ class Device final : public DdkDeviceType,
   inspect::Inspector inspector_;
   async::Loop loop_;
   thrd_t loop_thrd_;
+  // During initialization this checks that operations are performed on a DDK thread. After
+  // initialization, it checks that operations are on the loop thread.
+  mutable std::optional<fit::thread_checker> loop_checker_;
 
   TableSet table_set_;
 
@@ -182,24 +193,26 @@ class Device final : public DdkDeviceType,
 
   // This map allows us to look up the BufferCollectionToken by the koid of
   // the server end of a BufferCollectionToken channel.
-  std::map<zx_koid_t, BufferCollectionToken*> tokens_by_koid_;
+  std::map<zx_koid_t, BufferCollectionToken*> tokens_by_koid_ __TA_GUARDED(*loop_checker_);
 
-  std::deque<zx_koid_t> unfound_token_koids_;
+  std::deque<zx_koid_t> unfound_token_koids_ __TA_GUARDED(*loop_checker_);
 
   // This map contains all registered memory allocators.
-  std::map<fuchsia_sysmem2::wire::HeapType, std::unique_ptr<MemoryAllocator>> allocators_;
+  std::map<fuchsia_sysmem2::wire::HeapType, std::unique_ptr<MemoryAllocator>> allocators_
+      __TA_GUARDED(*loop_checker_);
 
   // Some memory allocators need to be registered with properties before
   // we can use them to allocate memory. We keep this map to store all the
   // unregistered allocators.
   std::map<MemoryAllocator*,
            std::pair<fuchsia_sysmem2::wire::HeapType, std::unique_ptr<MemoryAllocator>>>
-      unregistered_allocators_;
+      unregistered_allocators_ __TA_GUARDED(*loop_checker_);
 
   // This map contains only the secure allocators, if any.  The pointers are owned by allocators_.
   //
   // TODO(dustingreen): Consider unordered_map for this and some of above.
-  std::map<fuchsia_sysmem2::wire::HeapType, MemoryAllocator*> secure_allocators_;
+  std::map<fuchsia_sysmem2::wire::HeapType, MemoryAllocator*> secure_allocators_
+      __TA_GUARDED(*loop_checker_);
 
   // This flag is used to determine if the closing of the current secure mem
   // connection is an error (true), or expected (false).
@@ -210,15 +223,16 @@ class Device final : public DdkDeviceType,
   // DdkSuspend() to allow mexec to work.  For example, by calling secmem TA.  This channel will
   // close from the server end when DdkSuspend(mexec) happens, but only after
   // UnregisterSecureMem().
-  std::unique_ptr<SecureMemConnection> secure_mem_;
+  std::unique_ptr<SecureMemConnection> secure_mem_ __TA_GUARDED(*loop_checker_);
 
-  std::unique_ptr<MemoryAllocator> contiguous_system_ram_allocator_;
+  std::unique_ptr<MemoryAllocator> contiguous_system_ram_allocator_ __TA_GUARDED(*loop_checker_);
 
-  std::unordered_set<LogicalBufferCollection*> logical_buffer_collections_;
+  std::unordered_set<LogicalBufferCollection*> logical_buffer_collections_
+      __TA_GUARDED(*loop_checker_);
 
   Settings settings_;
 
-  bool waiting_for_unbind_ = false;
+  bool waiting_for_unbind_ __TA_GUARDED(*loop_checker_) = false;
 };
 
 }  // namespace sysmem_driver
