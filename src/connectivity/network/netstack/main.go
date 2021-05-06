@@ -122,6 +122,22 @@ const (
 	// guarantee that if a new address is generated, it will be assigned for at
 	// least 5s before the original address is deprecated.
 	regenAdvanceDuration = 5*time.Second + dadTransmits*dadRetransmitTimer*(1+autoGenAddressConflictRetries)
+
+	// handleRAs is the configuration for when Router Advertisements should be
+	// handled.
+	//
+	// This is the default configuration on linux, as per
+	// https://www.kernel.org/doc/Documentation/networking/ip-sysctl.txt:
+	//
+	//   accept_ra - INTEGER
+	//
+	//     Accept Router Advertisements; autoconfigure using them.
+	//
+	//     ...
+	//
+	//     Functional default: enabled if local forwarding is disabled.
+	//                         disabled if local forwarding is enabled.
+	handleRAs = ipv6.HandlingRAsEnabledWhenForwardingDisabled
 )
 
 type atomicBool uint32
@@ -262,7 +278,7 @@ func Main() {
 					MaxRtrSolicitations:           maxRtrSolicitations,
 					RtrSolicitationInterval:       rtrSolicitationInterval,
 					MaxRtrSolicitationDelay:       maxRtrSolicitationDelay,
-					HandleRAs:                     true,
+					HandleRAs:                     handleRAs,
 					DiscoverDefaultRouters:        true,
 					DiscoverOnLinkPrefixes:        true,
 					AutoGenGlobalAddresses:        true,
