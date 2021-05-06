@@ -26,7 +26,7 @@ use crate::payload_convert;
 use crate::privacy::types::PrivacyInfo;
 use crate::service::{self, Address};
 use crate::setup::types::SetupInfo;
-use crate::storage::{Error, Payload, StorageRequest, StorageResponse};
+use crate::storage::{Error, Payload, StorageInfo, StorageRequest, StorageResponse, StorageType};
 use crate::Role;
 use fuchsia_async as fasync;
 use futures::future::BoxFuture;
@@ -136,6 +136,31 @@ where
     }
 }
 
+macro_rules! into_storage_info {
+    ($ty:ty => $intermediate_ty:ty) => {
+        impl From<$ty> for StorageInfo {
+            fn from(info: $ty) -> StorageInfo {
+                let info: $intermediate_ty = info.into();
+                info.into()
+            }
+        }
+    };
+}
+
+#[cfg(test)]
+into_storage_info!(UnknownInfo => SettingInfo);
+into_storage_info!(AccessibilityInfo => SettingInfo);
+into_storage_info!(AudioInfo => SettingInfo);
+into_storage_info!(DisplayInfo => SettingInfo);
+into_storage_info!(FactoryResetInfo => SettingInfo);
+into_storage_info!(LightInfo => SettingInfo);
+into_storage_info!(DoNotDisturbInfo => SettingInfo);
+into_storage_info!(InputInfoSources => SettingInfo);
+into_storage_info!(IntlInfo => SettingInfo);
+into_storage_info!(NightModeInfo => SettingInfo);
+into_storage_info!(PrivacyInfo => SettingInfo);
+into_storage_info!(SetupInfo => SettingInfo);
+
 struct StorageManagement<T>
 where
     T: DeviceStorageFactory,
@@ -149,11 +174,11 @@ where
 {
     async fn read<S>(&self, responder: service::message::MessageClient)
     where
-        S: DeviceStorageConvertible + Into<SettingInfo>,
+        S: DeviceStorageConvertible + Into<StorageInfo>,
     {
         let store = self.storage_factory.get_store().await;
-        let setting: S = store.get::<S::Storable>().await.into();
-        responder.reply(Payload::Response(StorageResponse::Read(setting.into())).into()).send();
+        let storable: S = store.get::<S::Storable>().await.into();
+        responder.reply(Payload::Response(StorageResponse::Read(storable.into())).into()).send();
     }
 
     async fn write<S>(&self, data: S, flush: bool, responder: service::message::MessageClient)
@@ -187,7 +212,7 @@ where
         responder: service::message::MessageClient,
     ) {
         match storage_request {
-            StorageRequest::Read(setting_type) => match setting_type {
+            StorageRequest::Read(StorageType::SettingType(setting_type)) => match setting_type {
                 #[cfg(test)]
                 SettingType::Unknown => self.read::<UnknownInfo>(responder).await,
                 SettingType::Accessibility => self.read::<AccessibilityInfo>(responder).await,
@@ -208,25 +233,33 @@ where
                 SettingType::Privacy => self.read::<PrivacyInfo>(responder).await,
                 SettingType::Setup => self.read::<SetupInfo>(responder).await,
             },
-            StorageRequest::Write(setting_info, flush) => match setting_info {
-                #[cfg(test)]
-                SettingInfo::Unknown(info) => self.write(info, flush, responder).await,
-                SettingInfo::Accessibility(info) => self.write(info, flush, responder).await,
-                SettingInfo::Audio(info) => self.write(info, flush, responder).await,
-                SettingInfo::Brightness(info) => self.write(info, flush, responder).await,
-                SettingInfo::Device(_) => panic!("SettingInfo::Device does not support storage"),
-                SettingInfo::DoNotDisturb(info) => self.write(info, flush, responder).await,
-                SettingInfo::FactoryReset(info) => self.write(info, flush, responder).await,
-                SettingInfo::Input(info) => self.write(info, flush, responder).await,
-                SettingInfo::Intl(info) => self.write(info, flush, responder).await,
-                SettingInfo::Light(info) => self.write(info, flush, responder).await,
-                SettingInfo::LightSensor(_) => {
-                    panic!("SettingInfo::LightSensor does not support storage")
+            StorageRequest::Write(StorageInfo::SettingInfo(setting_info), flush) => {
+                match setting_info {
+                    #[cfg(test)]
+                    SettingInfo::Unknown(info) => self.write(info, flush, responder).await,
+                    SettingInfo::Accessibility(info) => self.write(info, flush, responder).await,
+                    SettingInfo::Audio(info) => self.write(info, flush, responder).await,
+                    SettingInfo::Brightness(info) => self.write(info, flush, responder).await,
+                    SettingInfo::Device(_) => {
+                        panic!("SettingInfo::Device does not support storage")
+                    }
+                    SettingInfo::DoNotDisturb(info) => self.write(info, flush, responder).await,
+                    SettingInfo::FactoryReset(info) => self.write(info, flush, responder).await,
+                    SettingInfo::Input(info) => self.write(info, flush, responder).await,
+                    SettingInfo::Intl(info) => self.write(info, flush, responder).await,
+                    SettingInfo::Light(info) => self.write(info, flush, responder).await,
+                    SettingInfo::LightSensor(_) => {
+                        panic!("SettingInfo::LightSensor does not support storage")
+                    }
+                    SettingInfo::NightMode(info) => self.write(info, flush, responder).await,
+                    SettingInfo::Privacy(info) => self.write(info, flush, responder).await,
+                    SettingInfo::Setup(info) => self.write(info, flush, responder).await,
                 }
-                SettingInfo::NightMode(info) => self.write(info, flush, responder).await,
-                SettingInfo::Privacy(info) => self.write(info, flush, responder).await,
-                SettingInfo::Setup(info) => self.write(info, flush, responder).await,
-            },
+            }
+            // TODO(fxb/72731) Implement storage calls for policy data types
+            _ => {
+                unimplemented!()
+            }
         }
     }
 }
@@ -286,7 +319,7 @@ mod tests {
         messenger
             .message(
                 service::Payload::Storage(Payload::Request(StorageRequest::Read(
-                    SettingType::Unknown,
+                    SettingType::Unknown.into(),
                 ))),
                 Audience::Messenger(receptor.get_signature()),
             )
@@ -302,11 +335,13 @@ mod tests {
 
         match setting {
             Setting::Type(setting_type) => {
-                storage_manager.handle_request(StorageRequest::Read(setting_type), responder).await;
+                storage_manager
+                    .handle_request(StorageRequest::Read(setting_type.into()), responder)
+                    .await;
             }
             Setting::Info(setting_info) => {
                 storage_manager
-                    .handle_request(StorageRequest::Write(setting_info, true), responder)
+                    .handle_request(StorageRequest::Write(setting_info.into(), true), responder)
                     .await;
             }
         }

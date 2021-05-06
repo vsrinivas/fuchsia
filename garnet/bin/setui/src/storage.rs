@@ -7,6 +7,7 @@
 
 use crate::base::{SettingInfo, SettingType};
 use crate::handler::setting_handler::persist::UpdateState;
+use crate::policy::{PolicyInfo, PolicyType};
 
 /// `Payload` wraps the request and response payloads.
 #[derive(Clone, PartialEq, Debug)]
@@ -18,20 +19,56 @@ pub enum Payload {
 /// `StorageRequest` contains all of the requests that can be made to the storage agent.
 #[derive(Clone, PartialEq, Debug)]
 pub enum StorageRequest {
-    /// A read requests for the corresponding [`SettingInfo`] of this `SettingType`.
-    Read(SettingType),
-    /// A write requests for this [`SettingInfo`]. The `bool` is for specifying whether
+    /// A read requests for the corresponding [`StorageInfo`] of this `StorageType`.
+    Read(StorageType),
+    /// A write requests for this [`StorageInfo`]. The `bool` is for specifying whether
     /// the data needs to be immediately flushed to disk or not.
-    Write(SettingInfo, bool),
+    Write(StorageInfo, bool),
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub enum StorageType {
+    SettingType(SettingType),
+    PolicyType(PolicyType),
+}
+
+impl From<SettingType> for StorageType {
+    fn from(setting_type: SettingType) -> Self {
+        StorageType::SettingType(setting_type)
+    }
+}
+
+impl From<PolicyType> for StorageType {
+    fn from(policy_data_type: PolicyType) -> Self {
+        StorageType::PolicyType(policy_data_type)
+    }
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub enum StorageInfo {
+    SettingInfo(SettingInfo),
+    PolicyInfo(PolicyInfo),
+}
+
+impl From<SettingInfo> for StorageInfo {
+    fn from(setting_info: SettingInfo) -> Self {
+        StorageInfo::SettingInfo(setting_info)
+    }
+}
+
+impl From<PolicyInfo> for StorageInfo {
+    fn from(policy_info: PolicyInfo) -> Self {
+        StorageInfo::PolicyInfo(policy_info)
+    }
 }
 
 /// `StorageResponse` contains the corresponding result types to the matching [`StorageRequest`]
 /// variants of the same name.
 #[derive(Clone, PartialEq, Debug)]
 pub enum StorageResponse {
-    /// The setting info read from storage in response to a [`StorageRequest::Read`]
-    Read(SettingInfo),
-    /// The result of a write request with either the [`UpdateState`] after a succesful write
+    /// The storage info read from storage in response to a [`StorageRequest::Read`]
+    Read(StorageInfo),
+    /// The result of a write request with either the [`UpdateState`] after a successful write
     /// or a formatted error describing why the write could not occur.
     Write(Result<UpdateState, Error>),
 }

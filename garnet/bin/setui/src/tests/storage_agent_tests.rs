@@ -10,7 +10,7 @@ use crate::handler::device_storage::{
 use crate::handler::setting_handler::persist::UpdateState;
 use crate::message::base::{Audience, MessengerType};
 use crate::service::{self, Address};
-use crate::storage::{Payload, StorageRequest, StorageResponse};
+use crate::storage::{Payload, StorageInfo, StorageRequest, StorageResponse};
 use crate::EnvironmentBuilder;
 use matches::assert_matches;
 use std::sync::Arc;
@@ -46,14 +46,20 @@ async fn test_read() {
         delegate.create(MessengerType::Unbound).await.expect("should be able to get messenger");
     let mut receptor = messenger
         .message(
-            service::Payload::Storage(Payload::Request(StorageRequest::Read(SettingType::Unknown))),
+            service::Payload::Storage(Payload::Request(StorageRequest::Read(
+                SettingType::Unknown.into(),
+            ))),
             Audience::Address(Address::Storage),
         )
         .send();
 
     assert_matches!(receptor.next_of::<Payload>().await,
-        Ok((Payload::Response(StorageResponse::Read(SettingInfo::Unknown(UnknownInfo(value)))), _))
-            if value == ORIGINAL_VALUE);
+        Ok((
+            Payload::Response(StorageResponse::Read(StorageInfo::SettingInfo(
+                SettingInfo::Unknown(UnknownInfo(value))
+            ))),
+            _
+        )) if value == ORIGINAL_VALUE);
 }
 
 // Assert that we can write values by sending messages to the storage agent and seeing a response
@@ -75,7 +81,7 @@ async fn test_write() {
     let mut receptor = messenger
         .message(
             service::Payload::Storage(Payload::Request(StorageRequest::Write(
-                SettingInfo::Unknown(UnknownInfo(CHANGED_VALUE)),
+                SettingInfo::Unknown(UnknownInfo(CHANGED_VALUE)).into(),
                 true,
             ))),
             Audience::Address(Address::Storage),

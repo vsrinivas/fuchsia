@@ -15,6 +15,7 @@ use async_trait::async_trait;
 use futures::future::BoxFuture;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
+use std::convert::TryFrom;
 use std::sync::Arc;
 use thiserror::Error;
 
@@ -36,6 +37,10 @@ pub enum PolicyType {
     #[cfg(test)]
     Unknown,
     Audio,
+}
+
+pub(crate) trait HasPolicyType {
+    const POLICY_TYPE: PolicyType;
 }
 
 impl PolicyType {
@@ -76,23 +81,76 @@ generate_inspect_with_info! {
     }
 }
 
-/// This struct is reserved for testing purposes.
-#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
-#[cfg(test)]
-pub struct UnknownInfo(pub bool);
+macro_rules! conversion_impls {
+    ($($(#[cfg($test:meta)])? $variant:ident($info_ty:ty) => $ty_variant:ident ),+ $(,)?) => {
+        $(
+            $(#[cfg($test)])?
+            impl HasPolicyType for $info_ty {
+                const POLICY_TYPE: PolicyType = PolicyType::$ty_variant;
+            }
 
-/// This trait implementation is reserved for testing purposes.
-#[cfg(test)]
-impl Into<PolicyInfo> for UnknownInfo {
-    fn into(self) -> PolicyInfo {
-        PolicyInfo::Unknown(self)
+            $(#[cfg($test)])?
+            impl TryFrom<PolicyInfo> for $info_ty {
+                type Error = ();
+
+                fn try_from(setting_info: PolicyInfo) -> Result<Self, ()> {
+                    // Remove allow once additional non-test variant is added.
+                    #[allow(unreachable_patterns)]
+                    match setting_info {
+                        PolicyInfo::$variant(info) => Ok(info),
+                        _ => Err(()),
+                    }
+                }
+            }
+        )+
     }
 }
 
-#[derive(PartialEq, Copy, Clone, Debug, Eq, Hash)]
-pub enum Address {
-    //    Policy(PolicyType),
+conversion_impls! {
+    #[cfg(test)] Unknown(UnknownInfo) => Unknown,
+    Audio(State) => Audio,
 }
+
+#[cfg(test)]
+mod testing {
+    use super::{PolicyInfo, UnknownInfo};
+    use crate::handler::device_storage::DeviceStorageCompatible;
+
+    impl DeviceStorageCompatible for UnknownInfo {
+        const KEY: &'static str = "unknown_info";
+
+        fn default_value() -> Self {
+            Self(false)
+        }
+    }
+
+    impl From<UnknownInfo> for PolicyInfo {
+        fn from(unknown_info: UnknownInfo) -> Self {
+            PolicyInfo::Unknown(unknown_info)
+        }
+    }
+}
+
+impl From<State> for PolicyInfo {
+    fn from(state: State) -> Self {
+        PolicyInfo::Audio(state)
+    }
+}
+
+impl From<&PolicyInfo> for PolicyType {
+    fn from(policy_info: &PolicyInfo) -> Self {
+        match policy_info {
+            #[cfg(test)]
+            PolicyInfo::Unknown(_) => PolicyType::Unknown,
+            PolicyInfo::Audio(_) => PolicyType::Audio,
+        }
+    }
+}
+
+/// This struct is reserved for testing purposes.
+#[derive(PartialEq, Debug, Copy, Clone, Serialize, Deserialize)]
+#[cfg(test)]
+pub struct UnknownInfo(pub bool);
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum Payload {

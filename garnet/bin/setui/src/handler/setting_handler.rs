@@ -8,6 +8,7 @@ use crate::message::base::Audience;
 use crate::payload_convert;
 use crate::service::message::{MessageClient, Messenger, Signature};
 use crate::service_context::ServiceContext;
+use crate::storage::StorageInfo;
 use async_trait::async_trait;
 use core::convert::TryFrom;
 use fuchsia_async as fasync;
@@ -383,15 +384,18 @@ pub mod persist {
                 .base
                 .messenger
                 .message(
-                    storage::Payload::Request(storage::StorageRequest::Read(T::SETTING_TYPE))
-                        .into(),
+                    storage::Payload::Request(storage::StorageRequest::Read(
+                        T::SETTING_TYPE.into(),
+                    ))
+                    .into(),
                     Audience::Address(service::Address::Storage),
                 )
                 .send();
 
             while let Ok((payload, _)) = receptor.next_of::<storage::Payload>().await {
-                if let storage::Payload::Response(storage::StorageResponse::Read(setting_info)) =
-                    payload
+                if let storage::Payload::Response(storage::StorageResponse::Read(
+                    StorageInfo::SettingInfo(setting_info),
+                )) = payload
                 {
                     return setting_info;
                 } else {
@@ -428,7 +432,7 @@ pub mod persist {
                 .messenger
                 .message(
                     storage::Payload::Request(storage::StorageRequest::Write(
-                        setting_info.clone(),
+                        setting_info.clone().into(),
                         write_through,
                     ))
                     .into(),
