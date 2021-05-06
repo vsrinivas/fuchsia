@@ -9,9 +9,6 @@ import("//build/rust/rustc_test.gni")
 
 group("starnix") {
   deps = [ ":pkg" ]
-  if (target_cpu == "x64") {
-    deps += [ "//src/proc/bin/starnix/fixtures/hello_starnix:hello-starnix" ]
-  }
 }
 
 if (target_cpu == "x64") {
@@ -117,9 +114,6 @@ group("tests") {
   testonly = true
 
   if (target_cpu == "x64") {
-    deps = [
-      ":starnix-tests",
-      "//src/proc/bin/starnix/fixtures/hello_starnix:hello-starnix-test",
-    ]
+    deps = [ ":starnix-tests" ]
   }
 }

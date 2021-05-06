@@ -2,11 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("bin") {
-  deps = [ "starnix" ]
-}
-
 group("tests") {
   testonly = true
-  deps = [ "starnix:tests" ]
+
+  deps = [ "android:tests" ]
+
+  if (target_cpu == "x64") {
+    deps += [ "hello_starnix:tests" ]
+  }
 }
