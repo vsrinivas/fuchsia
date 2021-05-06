@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/fidl/fidl.gni")
 import("//build/test.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
@@ -13,11 +14,15 @@ bind_rules("metadata-test-bind") {
   deps = [ "//src/devices/bind/test.platform" ]
 }
 
+fidl("fuchsia.device.manager.test") {
+  sources = [ "metadata.test.fidl" ]
+}
+
 driver_module("isolateddevmgr-test-driver") {
   sources = [ "test-driver.cc" ]
   deps = [
+    ":fuchsia.device.manager.test_c",
     ":metadata-test-bind",
-    "//sdk/fidl/fuchsia.device.manager.test:fuchsia.device.manager.test_c",
     "//sdk/lib/fdio",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
@@ -27,10 +32,9 @@ driver_module("isolateddevmgr-test-driver") {
 
 test("isolateddevmgr") {
   output_name = "isolateddevmgr-test"
-  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "test.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.device.manager.test:fuchsia.device.manager.test_c",
+    ":fuchsia.device.manager.test_c",
     "//sdk/lib/fdio",
     "//src/lib/ddk",
     "//zircon/public/lib/fbl",
