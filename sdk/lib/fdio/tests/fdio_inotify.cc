@@ -35,8 +35,7 @@ class Server final : public fio::testing::Directory_TestBase {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Open(uint32_t flags, uint32_t mode, fidl::StringView path,
-            fidl::ServerEnd<::fuchsia_io::Node> object, OpenCompleter::Sync& completer) override {
+  void Open(OpenRequestView request, OpenCompleter::Sync& completer) override {
     // Normally inotify would send an event on the registered socket. At the time of writing, we are
     // only interested in testing that AddInotifyFilter and Open are properly serialized by the
     // client, so we just send a known payload as a simpler alternative that we can observe in the
@@ -46,13 +45,12 @@ class Server final : public fio::testing::Directory_TestBase {
     completer.Close(ZX_OK);
   }
 
-  void AddInotifyFilter(fidl::StringView path, fio2::wire::InotifyWatchMask filters,
-                        uint32_t watch_descriptor, zx::socket socket,
+  void AddInotifyFilter(AddInotifyFilterRequestView request,
                         AddInotifyFilterCompleter::Sync& completer) override {
     if (add_inotify_filter_async_) {
       async::PostDelayedTask(
           dispatcher_,
-          [&, socket = std::move(socket), completer = completer.ToAsync()]() mutable {
+          [&, socket = std::move(request->socket), completer = completer.ToAsync()]() mutable {
             ASSERT_FALSE(inotify_socket_.has_value());
             inotify_socket_ = std::move(socket);
             completer.Reply();
@@ -60,7 +58,7 @@ class Server final : public fio::testing::Directory_TestBase {
           zx::msec(50));
     } else {
       ASSERT_FALSE(inotify_socket_.has_value());
-      inotify_socket_ = std::move(socket);
+      inotify_socket_ = std::move(request->socket);
       completer.Reply();
     }
   }

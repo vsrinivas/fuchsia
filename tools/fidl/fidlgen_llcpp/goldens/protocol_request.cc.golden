@@ -594,101 +594,6 @@ fidl::WireServer<::fidl_test_protocolrequest::Parent>::dispatch_message(
   return ::fidl::internal::WireServerDispatcher<
       ::fidl_test_protocolrequest::Parent>::Dispatch(this, std::move(msg), txn);
 }
-
-::fidl::DispatchResult fidl::internal::
-    WireDispatcher<::fidl_test_protocolrequest::Parent>::TryDispatch(
-        ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>* impl,
-        ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn) {
-  static const ::fidl::internal::MethodEntry entries[] = {
-      {
-          ::fidl_test_protocolrequest::kParent_GetChild_Ordinal,
-          [](void* interface, ::fidl::IncomingMessage&& msg,
-             ::fidl::Transaction* txn) {
-            ::fidl::WireServer<::fidl_test_protocolrequest::Parent>::
-                GetChildCompleter::Sync completer(txn);
-            reinterpret_cast<
-                ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>*>(
-                interface)
-                ->GetChild(completer);
-            return ZX_OK;
-          },
-      },
-      {
-          ::fidl_test_protocolrequest::kParent_GetChildRequest_Ordinal,
-          [](void* interface, ::fidl::IncomingMessage&& msg,
-             ::fidl::Transaction* txn) {
-            ::fidl::WireServer<::fidl_test_protocolrequest::Parent>::
-                GetChildRequestCompleter::Sync completer(txn);
-            reinterpret_cast<
-                ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>*>(
-                interface)
-                ->GetChildRequest(completer);
-            return ZX_OK;
-          },
-      },
-      {
-          ::fidl_test_protocolrequest::kParent_TakeChild_Ordinal,
-          [](void* interface, ::fidl::IncomingMessage&& msg,
-             ::fidl::Transaction* txn) {
-            ::fidl::DecodedMessage<::fidl::WireRequest<
-                ::fidl_test_protocolrequest::Parent::TakeChild>>
-                decoded{std::move(msg)};
-            if (unlikely(!decoded.ok())) {
-              return decoded.status();
-            }
-            auto* primary = decoded.PrimaryObject();
-            ::fidl::WireServer<::fidl_test_protocolrequest::Parent>::
-                TakeChildCompleter::Sync completer(txn);
-            reinterpret_cast<
-                ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>*>(
-                interface)
-                ->TakeChild(std::move(primary->c), completer);
-            return ZX_OK;
-          },
-      },
-      {
-          ::fidl_test_protocolrequest::kParent_TakeChildRequest_Ordinal,
-          [](void* interface, ::fidl::IncomingMessage&& msg,
-             ::fidl::Transaction* txn) {
-            ::fidl::DecodedMessage<::fidl::WireRequest<
-                ::fidl_test_protocolrequest::Parent::TakeChildRequest>>
-                decoded{std::move(msg)};
-            if (unlikely(!decoded.ok())) {
-              return decoded.status();
-            }
-            auto* primary = decoded.PrimaryObject();
-            ::fidl::WireServer<::fidl_test_protocolrequest::Parent>::
-                TakeChildRequestCompleter::Sync completer(txn);
-            reinterpret_cast<
-                ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>*>(
-                interface)
-                ->TakeChildRequest(std::move(primary->r), completer);
-            return ZX_OK;
-          },
-      },
-  };
-  return ::fidl::internal::TryDispatch(
-      impl, msg, txn, entries,
-      entries + sizeof(entries) / sizeof(::fidl::internal::MethodEntry));
-}
-
-::fidl::DispatchResult
-fidl::internal::WireDispatcher<::fidl_test_protocolrequest::Parent>::Dispatch(
-    ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>* impl,
-    fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
-  ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
-  if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
-    std::move(msg).CloseHandles();
-    txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal());
-  }
-  return dispatch_result;
-}
-::fidl::DispatchResult
-fidl::WireInterface<::fidl_test_protocolrequest::Parent>::dispatch_message(
-    fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
-  return ::fidl::internal::WireDispatcher<
-      ::fidl_test_protocolrequest::Parent>::Dispatch(this, std::move(msg), txn);
-}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -838,28 +743,6 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
 fidl::WireServer<::fidl_test_protocolrequest::Child>::dispatch_message(
     fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   return ::fidl::internal::WireServerDispatcher<
-      ::fidl_test_protocolrequest::Child>::Dispatch(this, std::move(msg), txn);
-}
-
-::fidl::DispatchResult
-fidl::internal::WireDispatcher<::fidl_test_protocolrequest::Child>::TryDispatch(
-    ::fidl::WireInterface<::fidl_test_protocolrequest::Child>* impl,
-    ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn) {
-  return ::fidl::DispatchResult::kNotFound;
-}
-
-::fidl::DispatchResult
-fidl::internal::WireDispatcher<::fidl_test_protocolrequest::Child>::Dispatch(
-    ::fidl::WireInterface<::fidl_test_protocolrequest::Child>* impl,
-    fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
-  std::move(msg).CloseHandles();
-  txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal());
-  return ::fidl::DispatchResult::kNotFound;
-}
-::fidl::DispatchResult
-fidl::WireInterface<::fidl_test_protocolrequest::Child>::dispatch_message(
-    fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
-  return ::fidl::internal::WireDispatcher<
       ::fidl_test_protocolrequest::Child>::Dispatch(this, std::move(msg), txn);
 }
 #endif  // __Fuchsia__

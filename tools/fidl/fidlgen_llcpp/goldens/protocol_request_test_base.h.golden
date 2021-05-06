@@ -7,31 +7,31 @@ namespace fidl_test_protocolrequest {
 namespace testing {
 
 class Parent_TestBase
-    : public ::fidl::WireInterface<::fidl_test_protocolrequest::Parent> {
+    : public ::fidl::WireServer<::fidl_test_protocolrequest::Parent> {
  public:
   virtual ~Parent_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
-
-  using Interface = ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>;
   virtual void GetChild(
+      GetChildRequestView request,
       ::fidl::WireServer<::fidl_test_protocolrequest::Parent>::
           GetChildCompleter::Sync& completer) override {
     NotImplemented_("GetChild", completer);
   }
   virtual void GetChildRequest(
+      GetChildRequestRequestView request,
       ::fidl::WireServer<::fidl_test_protocolrequest::Parent>::
           GetChildRequestCompleter::Sync& completer) override {
     NotImplemented_("GetChildRequest", completer);
   }
   virtual void TakeChild(
-      ::fidl::ClientEnd<::fidl_test_protocolrequest::Child> c,
+      TakeChildRequestView request,
       ::fidl::WireServer<::fidl_test_protocolrequest::Parent>::
           TakeChildCompleter::Sync& completer) override {
     NotImplemented_("TakeChild", completer);
   }
   virtual void TakeChildRequest(
-      ::fidl::ServerEnd<::fidl_test_protocolrequest::Child> r,
+      TakeChildRequestRequestView request,
       ::fidl::WireServer<::fidl_test_protocolrequest::Parent>::
           TakeChildRequestCompleter::Sync& completer) override {
     NotImplemented_("TakeChildRequest", completer);
@@ -39,13 +39,11 @@ class Parent_TestBase
 };
 
 class Child_TestBase
-    : public ::fidl::WireInterface<::fidl_test_protocolrequest::Child> {
+    : public ::fidl::WireServer<::fidl_test_protocolrequest::Child> {
  public:
   virtual ~Child_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
-
-  using Interface = ::fidl::WireInterface<::fidl_test_protocolrequest::Child>;
 };
 }  // namespace testing
 }  // namespace fidl_test_protocolrequest

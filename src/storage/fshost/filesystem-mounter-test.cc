@@ -79,7 +79,7 @@ class TestMounter : public FilesystemMounter {
       completer.Close(ZX_ERR_NOT_SUPPORTED);
     }
 
-    void Describe(DescribeCompleter::Sync& completer) override {
+    void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {
       fuchsia_io::wire::DirectoryObject dir;
       completer.Reply(fuchsia_io::wire::NodeInfo::WithDirectory(
           fidl::ObjectView<fuchsia_io::wire::DirectoryObject>::FromExternal(&dir)));

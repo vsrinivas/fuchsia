@@ -128,14 +128,12 @@ zx_status_t GetBootItem(const std::vector<board_test::DeviceEntry>& entries, uin
 }
 
 class FakePowerRegistration
-    : public fidl::WireInterface<fuchsia_power_manager::DriverManagerRegistration> {
+    : public fidl::WireServer<fuchsia_power_manager::DriverManagerRegistration> {
  public:
-  void Register(fidl::ClientEnd<fuchsia_device_manager::SystemStateTransition> transition,
-                fidl::ClientEnd<fuchsia_io::Directory> dir,
-                RegisterCompleter::Sync& completer) override {
+  void Register(RegisterRequestView request, RegisterCompleter::Sync& completer) override {
     // Store these so the other side doesn't see the channels close.
-    transition_ = std::move(transition);
-    dir_ = std::move(dir);
+    transition_ = std::move(request->system_state_transition);
+    dir_ = std::move(request->dir);
     completer.ReplySuccess();
   }
 

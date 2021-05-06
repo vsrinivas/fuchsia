@@ -1026,19 +1026,6 @@ struct ::fidl::internal::ProtocolDetails<
 #ifdef __Fuchsia__
 
 template <>
-struct ::fidl::internal::WireDispatcher<
-    ::fidl_test_protocols::HandleRightsProtocol>
-    final {
-  WireDispatcher() = delete;
-  static ::fidl::DispatchResult TryDispatch(
-      ::fidl::WireInterface<::fidl_test_protocols::HandleRightsProtocol>* impl,
-      fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
-  static ::fidl::DispatchResult Dispatch(
-      ::fidl::WireInterface<::fidl_test_protocols::HandleRightsProtocol>* impl,
-      fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
-};
-
-template <>
 struct ::fidl::internal::WireServerDispatcher<
     ::fidl_test_protocols::HandleRightsProtocol>
     final {
@@ -2162,39 +2149,6 @@ class ::fidl::WireServer<::fidl_test_protocols::HandleRightsProtocol>
   ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
                                           ::fidl::Transaction* txn) final;
 };
-
-// Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
-template <>
-class ::fidl::WireInterface<::fidl_test_protocols::HandleRightsProtocol>
-    : public ::fidl::internal::IncomingMessageDispatcher {
- public:
-  WireInterface() = default;
-  virtual ~WireInterface() = default;
-
-  // The marker protocol type within which this |WireInterface| class is
-  // defined.
-  using _EnclosingProtocol = ::fidl_test_protocols::HandleRightsProtocol;
-
-  using NoResponseMethodCompleter = ::fidl::WireServer<
-      ::fidl_test_protocols::HandleRightsProtocol>::NoResponseMethodCompleter;
-  virtual void NoResponseMethod(
-      ::zx::socket h, NoResponseMethodCompleter::Sync& _completer) = 0;
-
-  using ResponseMethodCompleterBase = ::fidl::WireServer<
-      ::fidl_test_protocols::HandleRightsProtocol>::ResponseMethodCompleterBase;
-
-  using ResponseMethodCompleter = ::fidl::WireServer<
-      ::fidl_test_protocols::HandleRightsProtocol>::ResponseMethodCompleter;
-  virtual void ResponseMethod(::zx::socket h,
-                              ResponseMethodCompleter::Sync& _completer) = 0;
-
- private:
-  ::fidl::DispatchResult dispatch_message(fidl::IncomingMessage&& msg,
-                                          ::fidl::Transaction* txn) final;
-};
-
 #endif  // __Fuchsia__
 
 namespace fidl_test_protocols {
@@ -2532,19 +2486,6 @@ struct ::fidl::internal::ProtocolDetails<
 #ifdef __Fuchsia__
 
 template <>
-struct ::fidl::internal::WireDispatcher<
-    ::fidl_test_protocols::DiscoverableProtocol>
-    final {
-  WireDispatcher() = delete;
-  static ::fidl::DispatchResult TryDispatch(
-      ::fidl::WireInterface<::fidl_test_protocols::DiscoverableProtocol>* impl,
-      fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
-  static ::fidl::DispatchResult Dispatch(
-      ::fidl::WireInterface<::fidl_test_protocols::DiscoverableProtocol>* impl,
-      fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
-};
-
-template <>
 struct ::fidl::internal::WireServerDispatcher<
     ::fidl_test_protocols::DiscoverableProtocol>
     final {
@@ -2866,30 +2807,6 @@ class ::fidl::WireServer<::fidl_test_protocols::DiscoverableProtocol>
   ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
                                           ::fidl::Transaction* txn) final;
 };
-
-// Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
-template <>
-class ::fidl::WireInterface<::fidl_test_protocols::DiscoverableProtocol>
-    : public ::fidl::internal::IncomingMessageDispatcher {
- public:
-  WireInterface() = default;
-  virtual ~WireInterface() = default;
-
-  // The marker protocol type within which this |WireInterface| class is
-  // defined.
-  using _EnclosingProtocol = ::fidl_test_protocols::DiscoverableProtocol;
-
-  using MethodCompleter = ::fidl::WireServer<
-      ::fidl_test_protocols::DiscoverableProtocol>::MethodCompleter;
-  virtual void Method(MethodCompleter::Sync& _completer) = 0;
-
- private:
-  ::fidl::DispatchResult dispatch_message(fidl::IncomingMessage&& msg,
-                                          ::fidl::Transaction* txn) final;
-};
-
 #endif  // __Fuchsia__
 
 namespace fidl_test_protocols {
@@ -2934,18 +2851,6 @@ struct ::fidl::internal::ProtocolDetails<::fidl_test_protocols::Transitional> {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-
-template <>
-struct ::fidl::internal::WireDispatcher<::fidl_test_protocols::Transitional>
-    final {
-  WireDispatcher() = delete;
-  static ::fidl::DispatchResult TryDispatch(
-      ::fidl::WireInterface<::fidl_test_protocols::Transitional>* impl,
-      fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
-  static ::fidl::DispatchResult Dispatch(
-      ::fidl::WireInterface<::fidl_test_protocols::Transitional>* impl,
-      fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
-};
 
 template <>
 struct ::fidl::internal::WireServerDispatcher<
@@ -3930,41 +3835,6 @@ class ::fidl::WireServer<::fidl_test_protocols::Transitional>
   ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
                                           ::fidl::Transaction* txn) final;
 };
-
-// Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
-template <>
-class ::fidl::WireInterface<::fidl_test_protocols::Transitional>
-    : public ::fidl::internal::IncomingMessageDispatcher {
- public:
-  WireInterface() = default;
-  virtual ~WireInterface() = default;
-
-  // The marker protocol type within which this |WireInterface| class is
-  // defined.
-  using _EnclosingProtocol = ::fidl_test_protocols::Transitional;
-
-  using RequestCompleterBase = ::fidl::WireServer<
-      ::fidl_test_protocols::Transitional>::RequestCompleterBase;
-
-  using RequestCompleter =
-      ::fidl::WireServer<::fidl_test_protocols::Transitional>::RequestCompleter;
-  virtual void Request(int64_t x, RequestCompleter::Sync& _completer) {
-    _completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  using OneWayCompleter =
-      ::fidl::WireServer<::fidl_test_protocols::Transitional>::OneWayCompleter;
-  virtual void OneWay(int64_t x, OneWayCompleter::Sync& _completer) {
-    _completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
- private:
-  ::fidl::DispatchResult dispatch_message(fidl::IncomingMessage&& msg,
-                                          ::fidl::Transaction* txn) final;
-};
-
 #endif  // __Fuchsia__
 
 namespace fidl_test_protocols {
@@ -4027,18 +3897,6 @@ struct ::fidl::internal::ProtocolDetails<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-
-template <>
-struct ::fidl::internal::WireDispatcher<::fidl_test_protocols::ChannelProtocol>
-    final {
-  WireDispatcher() = delete;
-  static ::fidl::DispatchResult TryDispatch(
-      ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>* impl,
-      fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
-  static ::fidl::DispatchResult Dispatch(
-      ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>* impl,
-      fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
-};
 
 template <>
 struct ::fidl::internal::WireServerDispatcher<
@@ -6084,55 +5942,6 @@ class ::fidl::WireServer<::fidl_test_protocols::ChannelProtocol>
   ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
                                           ::fidl::Transaction* txn) final;
 };
-
-// Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
-template <>
-class ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>
-    : public ::fidl::internal::IncomingMessageDispatcher {
- public:
-  WireInterface() = default;
-  virtual ~WireInterface() = default;
-
-  // The marker protocol type within which this |WireInterface| class is
-  // defined.
-  using _EnclosingProtocol = ::fidl_test_protocols::ChannelProtocol;
-
-  using MethodACompleter = ::fidl::WireServer<
-      ::fidl_test_protocols::ChannelProtocol>::MethodACompleter;
-  virtual void MethodA(int64_t a, int64_t b,
-                       MethodACompleter::Sync& _completer) = 0;
-
-  using MethodBCompleterBase = ::fidl::WireServer<
-      ::fidl_test_protocols::ChannelProtocol>::MethodBCompleterBase;
-
-  using MethodBCompleter = ::fidl::WireServer<
-      ::fidl_test_protocols::ChannelProtocol>::MethodBCompleter;
-  virtual void MethodB(int64_t a, int64_t b,
-                       MethodBCompleter::Sync& _completer) = 0;
-
-  using TakeHandleCompleterBase = ::fidl::WireServer<
-      ::fidl_test_protocols::ChannelProtocol>::TakeHandleCompleterBase;
-
-  using TakeHandleCompleter = ::fidl::WireServer<
-      ::fidl_test_protocols::ChannelProtocol>::TakeHandleCompleter;
-  virtual void TakeHandle(::zx::handle h,
-                          TakeHandleCompleter::Sync& _completer) = 0;
-
-  using MutateSocketCompleterBase = ::fidl::WireServer<
-      ::fidl_test_protocols::ChannelProtocol>::MutateSocketCompleterBase;
-
-  using MutateSocketCompleter = ::fidl::WireServer<
-      ::fidl_test_protocols::ChannelProtocol>::MutateSocketCompleter;
-  virtual void MutateSocket(::zx::socket a,
-                            MutateSocketCompleter::Sync& _completer) = 0;
-
- private:
-  ::fidl::DispatchResult dispatch_message(fidl::IncomingMessage&& msg,
-                                          ::fidl::Transaction* txn) final;
-};
-
 #endif  // __Fuchsia__
 
 namespace fidl_test_protocols {
@@ -6222,21 +6031,6 @@ struct ::fidl::internal::ProtocolDetails<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-
-template <>
-struct ::fidl::internal::WireDispatcher<
-    ::fidl_test_protocols::WithAndWithoutRequestResponse>
-    final {
-  WireDispatcher() = delete;
-  static ::fidl::DispatchResult TryDispatch(
-      ::fidl::WireInterface<
-          ::fidl_test_protocols::WithAndWithoutRequestResponse>* impl,
-      fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
-  static ::fidl::DispatchResult Dispatch(
-      ::fidl::WireInterface<
-          ::fidl_test_protocols::WithAndWithoutRequestResponse>* impl,
-      fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
-};
 
 template <>
 struct ::fidl::internal::WireServerDispatcher<
@@ -9320,83 +9114,6 @@ class ::fidl::WireServer<::fidl_test_protocols::WithAndWithoutRequestResponse>
   ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
                                           ::fidl::Transaction* txn) final;
 };
-
-// Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
-template <>
-class ::fidl::WireInterface<
-    ::fidl_test_protocols::WithAndWithoutRequestResponse>
-    : public ::fidl::internal::IncomingMessageDispatcher {
- public:
-  WireInterface() = default;
-  virtual ~WireInterface() = default;
-
-  // The marker protocol type within which this |WireInterface| class is
-  // defined.
-  using _EnclosingProtocol =
-      ::fidl_test_protocols::WithAndWithoutRequestResponse;
-
-  using NoRequestNoResponseCompleter =
-      ::fidl::WireServer<::fidl_test_protocols::WithAndWithoutRequestResponse>::
-          NoRequestNoResponseCompleter;
-  virtual void NoRequestNoResponse(
-      NoRequestNoResponseCompleter::Sync& _completer) = 0;
-
-  using NoRequestEmptyResponseCompleterBase =
-      ::fidl::WireServer<::fidl_test_protocols::WithAndWithoutRequestResponse>::
-          NoRequestEmptyResponseCompleterBase;
-
-  using NoRequestEmptyResponseCompleter =
-      ::fidl::WireServer<::fidl_test_protocols::WithAndWithoutRequestResponse>::
-          NoRequestEmptyResponseCompleter;
-  virtual void NoRequestEmptyResponse(
-      NoRequestEmptyResponseCompleter::Sync& _completer) = 0;
-
-  using NoRequestWithResponseCompleterBase =
-      ::fidl::WireServer<::fidl_test_protocols::WithAndWithoutRequestResponse>::
-          NoRequestWithResponseCompleterBase;
-
-  using NoRequestWithResponseCompleter =
-      ::fidl::WireServer<::fidl_test_protocols::WithAndWithoutRequestResponse>::
-          NoRequestWithResponseCompleter;
-  virtual void NoRequestWithResponse(
-      NoRequestWithResponseCompleter::Sync& _completer) = 0;
-
-  using WithRequestNoResponseCompleter =
-      ::fidl::WireServer<::fidl_test_protocols::WithAndWithoutRequestResponse>::
-          WithRequestNoResponseCompleter;
-  virtual void WithRequestNoResponse(
-      ::fidl::StringView arg,
-      WithRequestNoResponseCompleter::Sync& _completer) = 0;
-
-  using WithRequestEmptyResponseCompleterBase =
-      ::fidl::WireServer<::fidl_test_protocols::WithAndWithoutRequestResponse>::
-          WithRequestEmptyResponseCompleterBase;
-
-  using WithRequestEmptyResponseCompleter =
-      ::fidl::WireServer<::fidl_test_protocols::WithAndWithoutRequestResponse>::
-          WithRequestEmptyResponseCompleter;
-  virtual void WithRequestEmptyResponse(
-      ::fidl::StringView arg,
-      WithRequestEmptyResponseCompleter::Sync& _completer) = 0;
-
-  using WithRequestWithResponseCompleterBase =
-      ::fidl::WireServer<::fidl_test_protocols::WithAndWithoutRequestResponse>::
-          WithRequestWithResponseCompleterBase;
-
-  using WithRequestWithResponseCompleter =
-      ::fidl::WireServer<::fidl_test_protocols::WithAndWithoutRequestResponse>::
-          WithRequestWithResponseCompleter;
-  virtual void WithRequestWithResponse(
-      ::fidl::StringView arg,
-      WithRequestWithResponseCompleter::Sync& _completer) = 0;
-
- private:
-  ::fidl::DispatchResult dispatch_message(fidl::IncomingMessage&& msg,
-                                          ::fidl::Transaction* txn) final;
-};
-
 #endif  // __Fuchsia__
 
 namespace fidl_test_protocols {
@@ -9450,18 +9167,6 @@ struct ::fidl::internal::ProtocolDetails<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-
-template <>
-struct ::fidl::internal::WireDispatcher<::fidl_test_protocols::WithErrorSyntax>
-    final {
-  WireDispatcher() = delete;
-  static ::fidl::DispatchResult TryDispatch(
-      ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>* impl,
-      fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
-  static ::fidl::DispatchResult Dispatch(
-      ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>* impl,
-      fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
-};
 
 template <>
 struct ::fidl::internal::WireServerDispatcher<
@@ -11647,56 +11352,6 @@ class ::fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>
   ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
                                           ::fidl::Transaction* txn) final;
 };
-
-// Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
-template <>
-class ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>
-    : public ::fidl::internal::IncomingMessageDispatcher {
- public:
-  WireInterface() = default;
-  virtual ~WireInterface() = default;
-
-  // The marker protocol type within which this |WireInterface| class is
-  // defined.
-  using _EnclosingProtocol = ::fidl_test_protocols::WithErrorSyntax;
-
-  using ResponseAsStructCompleterBase = ::fidl::WireServer<
-      ::fidl_test_protocols::WithErrorSyntax>::ResponseAsStructCompleterBase;
-
-  using ResponseAsStructCompleter = ::fidl::WireServer<
-      ::fidl_test_protocols::WithErrorSyntax>::ResponseAsStructCompleter;
-  virtual void ResponseAsStruct(
-      ResponseAsStructCompleter::Sync& _completer) = 0;
-
-  using ErrorAsPrimitiveCompleterBase = ::fidl::WireServer<
-      ::fidl_test_protocols::WithErrorSyntax>::ErrorAsPrimitiveCompleterBase;
-
-  using ErrorAsPrimitiveCompleter = ::fidl::WireServer<
-      ::fidl_test_protocols::WithErrorSyntax>::ErrorAsPrimitiveCompleter;
-  virtual void ErrorAsPrimitive(
-      ErrorAsPrimitiveCompleter::Sync& _completer) = 0;
-
-  using ErrorAsEnumCompleterBase = ::fidl::WireServer<
-      ::fidl_test_protocols::WithErrorSyntax>::ErrorAsEnumCompleterBase;
-
-  using ErrorAsEnumCompleter = ::fidl::WireServer<
-      ::fidl_test_protocols::WithErrorSyntax>::ErrorAsEnumCompleter;
-  virtual void ErrorAsEnum(ErrorAsEnumCompleter::Sync& _completer) = 0;
-
-  using HandleInResultCompleterBase = ::fidl::WireServer<
-      ::fidl_test_protocols::WithErrorSyntax>::HandleInResultCompleterBase;
-
-  using HandleInResultCompleter = ::fidl::WireServer<
-      ::fidl_test_protocols::WithErrorSyntax>::HandleInResultCompleter;
-  virtual void HandleInResult(HandleInResultCompleter::Sync& _completer) = 0;
-
- private:
-  ::fidl::DispatchResult dispatch_message(fidl::IncomingMessage&& msg,
-                                          ::fidl::Transaction* txn) final;
-};
-
 #endif  // __Fuchsia__
 
 namespace fidl {

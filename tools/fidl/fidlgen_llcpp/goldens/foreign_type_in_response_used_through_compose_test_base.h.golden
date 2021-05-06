@@ -7,16 +7,14 @@ namespace fidl_test_foreigntypeinresponseusedthroughcompose {
 namespace testing {
 
 class Top_TestBase
-    : public ::fidl::WireInterface<
+    : public ::fidl::WireServer<
           ::fidl_test_foreigntypeinresponseusedthroughcompose::Top> {
  public:
   virtual ~Top_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
-
-  using Interface = ::fidl::WireInterface<
-      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>;
   virtual void GetFoo(
+      GetFooRequestView request,
       ::fidl::WireServer<::fidl_test_foreigntypeinresponseusedthroughcompose::
                              Top>::GetFooCompleter::Sync& completer) override {
     NotImplemented_("GetFoo", completer);

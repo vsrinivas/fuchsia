@@ -24,9 +24,7 @@ class Server final : public fuchsia_posix_socket::testing::StreamSocket_TestBase
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  using Interface = fidl::WireInterface<fuchsia_posix_socket::StreamSocket>;
-
-  void Describe(Interface::DescribeCompleter::Sync& completer) override {
+  void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {
     fuchsia_io::wire::StreamSocket stream_socket;
     zx_status_t status =
         peer_.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_WRITE, &stream_socket.socket);
@@ -39,7 +37,7 @@ class Server final : public fuchsia_posix_socket::testing::StreamSocket_TestBase
     completer.Reply(std::move(info));
   }
 
-  void Accept(bool want_addr, Interface::AcceptCompleter::Sync& completer) override {
+  void Accept(AcceptRequestView request, AcceptCompleter::Sync& completer) override {
     zx_status_t status = zx_object_signal_peer(channel_, 0, ZX_USER_SIGNAL_0);
     if (status != ZX_OK) {
       return completer.Close(status);

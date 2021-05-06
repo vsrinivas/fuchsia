@@ -7,31 +7,26 @@ namespace fidl_test_inheritance {
 namespace testing {
 
 class Super_TestBase
-    : public ::fidl::WireInterface<::fidl_test_inheritance::Super> {
+    : public ::fidl::WireServer<::fidl_test_inheritance::Super> {
  public:
   virtual ~Super_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
-
-  using Interface = ::fidl::WireInterface<::fidl_test_inheritance::Super>;
   virtual void Foo(
-      ::fidl::StringView s,
+      FooRequestView request,
       ::fidl::WireServer<::fidl_test_inheritance::Super>::FooCompleter::Sync&
           completer) override {
     NotImplemented_("Foo", completer);
   }
 };
 
-class Sub_TestBase
-    : public ::fidl::WireInterface<::fidl_test_inheritance::Sub> {
+class Sub_TestBase : public ::fidl::WireServer<::fidl_test_inheritance::Sub> {
  public:
   virtual ~Sub_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
-
-  using Interface = ::fidl::WireInterface<::fidl_test_inheritance::Sub>;
   virtual void Foo(
-      ::fidl::StringView s,
+      FooRequestView request,
       ::fidl::WireServer<::fidl_test_inheritance::Sub>::FooCompleter::Sync&
           completer) override {
     NotImplemented_("Foo", completer);

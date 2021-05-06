@@ -107,14 +107,11 @@ var (
 	WireEventHandlerInterface = internalNs.member("WireEventHandlerInterface")
 	WireSyncEventHandler      = fidlNs.member("WireSyncEventHandler")
 	WireAsyncEventHandler     = fidlNs.member("WireAsyncEventHandler")
-	WireInterface             = fidlNs.member("WireInterface")
-	WireRawChannelInterface   = fidlNs.member("WireRawChannelInterface")
 	WireServer                = fidlNs.member("WireServer")
 	WireEventSender           = fidlNs.member("WireEventSender")
 	WireWeakEventSender       = internalNs.member("WireWeakEventSender")
 	WireClientImpl            = internalNs.member("WireClientImpl")
 	WireCaller                = internalNs.member("WireCaller")
-	WireDispatcher            = internalNs.member("WireDispatcher")
 	WireServerDispatcher      = internalNs.member("WireServerDispatcher")
 
 	// MethodRelated
@@ -136,14 +133,11 @@ type wireTypeNames struct {
 	WireEventHandlerInterface name
 	WireSyncEventHandler      name
 	WireAsyncEventHandler     name
-	WireInterface             name
-	WireRawChannelInterface   name
 	WireServer                name
 	WireEventSender           name
 	WireWeakEventSender       name
 	WireClientImpl            name
 	WireCaller                name
-	WireDispatcher            name
 	WireServerDispatcher      name
 }
 
@@ -156,14 +150,11 @@ func newWireTypeNames(protocolVariants nameVariants) wireTypeNames {
 		WireEventHandlerInterface: WireEventHandlerInterface.template(p),
 		WireSyncEventHandler:      WireSyncEventHandler.template(p),
 		WireAsyncEventHandler:     WireAsyncEventHandler.template(p),
-		WireInterface:             WireInterface.template(p),
-		WireRawChannelInterface:   WireRawChannelInterface.template(p),
 		WireServer:                WireServer.template(p),
 		WireEventSender:           WireEventSender.template(p),
 		WireWeakEventSender:       WireWeakEventSender.template(p),
 		WireClientImpl:            WireClientImpl.template(p),
 		WireCaller:                WireCaller.template(p),
-		WireDispatcher:            WireDispatcher.template(p),
 		WireServerDispatcher:      WireServerDispatcher.template(p),
 	}
 }

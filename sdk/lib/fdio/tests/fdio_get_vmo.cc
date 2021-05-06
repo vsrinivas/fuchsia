@@ -54,9 +54,11 @@ class TestServer final : public fuchsia_io::testing::File_TestBase {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Close(CloseCompleter::Sync& completer) override { completer.Reply(ZX_OK); }
+  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
+    completer.Reply(ZX_OK);
+  }
 
-  void Describe(DescribeCompleter::Sync& completer) override {
+  void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {
     if (context->is_vmofile) {
       fuchsia_io::wire::Vmofile vmofile = {
           .offset = 0,
@@ -78,7 +80,7 @@ class TestServer final : public fuchsia_io::testing::File_TestBase {
     }
   }
 
-  void GetAttr(GetAttrCompleter::Sync& completer) override {
+  void GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) override {
     completer.Reply(ZX_OK, {
                                .id = 5,
                                .content_size = context->content_size,
@@ -87,18 +89,18 @@ class TestServer final : public fuchsia_io::testing::File_TestBase {
                            });
   }
 
-  void ReadAt(uint64_t count, uint64_t offset, ReadAtCompleter::Sync& completer) override {
+  void ReadAt(ReadAtRequestView request, ReadAtCompleter::Sync& completer) override {
     if (!context->supports_read_at) {
       completer.Reply(ZX_ERR_NOT_SUPPORTED, fidl::VectorView<uint8_t>());
       return;
     }
-    if (offset >= context->content_size) {
+    if (request->offset >= context->content_size) {
       completer.Reply(ZX_OK, fidl::VectorView<uint8_t>());
       return;
     }
-    size_t actual = std::min(count, context->content_size - offset);
+    size_t actual = std::min(request->count, context->content_size - request->offset);
     std::vector<uint8_t> buffer(zx_system_get_page_size());
-    zx_status_t status = context->vmo.read(buffer.data(), offset, actual);
+    zx_status_t status = context->vmo.read(buffer.data(), request->offset, actual);
     if (status != ZX_OK) {
       completer.Reply(status, fidl::VectorView<uint8_t>());
       return;
@@ -106,16 +108,15 @@ class TestServer final : public fuchsia_io::testing::File_TestBase {
     completer.Reply(ZX_OK, fidl::VectorView<uint8_t>::FromExternal(buffer.data(), actual));
   }
 
-  void Seek(int64_t offset, fuchsia_io::wire::SeekOrigin start,
-            SeekCompleter::Sync& completer) override {
+  void Seek(SeekRequestView request, SeekCompleter::Sync& completer) override {
     if (!context->supports_seek) {
       completer.Reply(ZX_ERR_NOT_SUPPORTED, 0);
     }
     completer.Reply(ZX_OK, 0);
   }
 
-  void GetBuffer(uint32_t flags, GetBufferCompleter::Sync& completer) override {
-    context->last_flags = flags;
+  void GetBuffer(GetBufferRequestView request, GetBufferCompleter::Sync& completer) override {
+    context->last_flags = request->flags;
 
     if (!context->supports_get_buffer) {
       completer.Reply(ZX_ERR_NOT_SUPPORTED, nullptr);
@@ -126,16 +127,16 @@ class TestServer final : public fuchsia_io::testing::File_TestBase {
     buffer.size = context->content_size;
 
     zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY;
-    rights |= (flags & fuchsia_io::wire::kVmoFlagRead) ? ZX_RIGHT_READ : 0;
-    rights |= (flags & fuchsia_io::wire::kVmoFlagWrite) ? ZX_RIGHT_WRITE : 0;
-    rights |= (flags & fuchsia_io::wire::kVmoFlagExec) ? ZX_RIGHT_EXECUTE : 0;
+    rights |= (request->flags & fuchsia_io::wire::kVmoFlagRead) ? ZX_RIGHT_READ : 0;
+    rights |= (request->flags & fuchsia_io::wire::kVmoFlagWrite) ? ZX_RIGHT_WRITE : 0;
+    rights |= (request->flags & fuchsia_io::wire::kVmoFlagExec) ? ZX_RIGHT_EXECUTE : 0;
 
     zx_status_t status = ZX_OK;
     zx::vmo result;
-    if (flags & fuchsia_io::wire::kVmoFlagPrivate) {
+    if (request->flags & fuchsia_io::wire::kVmoFlagPrivate) {
       rights |= ZX_RIGHT_SET_PROPERTY;
       uint32_t options = ZX_VMO_CHILD_COPY_ON_WRITE;
-      if (flags & fuchsia_io::wire::kVmoFlagExec) {
+      if (request->flags & fuchsia_io::wire::kVmoFlagExec) {
         // Creating a COPY_ON_WRITE child removes ZX_RIGHT_EXECUTE even if the parent VMO has it,
         // but NO_WRITE changes this behavior so that the new handle doesn't have WRITE and
         // preserves EXECUTE.

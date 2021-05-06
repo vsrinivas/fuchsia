@@ -24,7 +24,7 @@ class TestInspectDriver;
 using DeviceType = ddk::Device<TestInspectDriver, ddk::Messageable>;
 class TestInspectDriver : public DeviceType,
                           public ddk::EmptyProtocol<ZX_PROTOCOL_TEST>,
-                          public fidl::WireInterface<TestInspect> {
+                          public fidl::WireServer<TestInspect> {
  public:
   TestInspectDriver(zx_device_t* parent) : DeviceType(parent) {}
   zx_status_t Bind();
@@ -38,7 +38,7 @@ class TestInspectDriver : public DeviceType,
   }
 
   // Device message ops implementation.
-  void ModifyInspect(ModifyInspectCompleter::Sync& completer) override;
+  void ModifyInspect(ModifyInspectRequestView, ModifyInspectCompleter::Sync& completer) override;
 
   zx::vmo inspect_vmo() { return inspect_.DuplicateVmo(); }
 
@@ -46,7 +46,8 @@ class TestInspectDriver : public DeviceType,
   inspect::Inspector inspect_;
 };
 
-void TestInspectDriver::ModifyInspect(ModifyInspectCompleter::Sync& completer) {
+void TestInspectDriver::ModifyInspect(ModifyInspectRequestView,
+                                      ModifyInspectCompleter::Sync& completer) {
   inspect_.GetRoot().CreateString("testModify", "OK", &inspect_);
   completer.ReplySuccess();
 }

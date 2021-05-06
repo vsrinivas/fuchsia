@@ -251,8 +251,8 @@ func primitiveNameVariants(primitive string) nameVariants {
 // namePart represents part of non-namespace part of a name.
 // It's implemented by three types: stringNamePart, nestedNamePart and templateNamePart.
 // These form a tree to hold the structure of a name so that it can be accessed and manipulated safely.
-// For example in fidl::WireInterface<fuchsia_library::Protocol>::ProtocolMethod this would be:
-//   WireInterface<fuchsia_library::Protocol>::ProtocolMethod
+// For example in fidl::WireServer<fuchsia_library::Protocol>::ProtocolMethod this would be:
+//   WireServer<fuchsia_library::Protocol>::ProtocolMethod
 //   |-nestedNP---------------------------------------------|
 //   |-templateNP---------------------------|  |-stringNP---|
 //   |-stringNP---|-Name--------------------|

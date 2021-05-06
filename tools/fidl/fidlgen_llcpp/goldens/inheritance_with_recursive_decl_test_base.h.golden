@@ -6,43 +6,34 @@
 namespace fidl_test_inheritancewithrecursivedecl {
 namespace testing {
 
-class Parent_TestBase : public ::fidl::WireInterface<
+class Parent_TestBase : public ::fidl::WireServer<
                             ::fidl_test_inheritancewithrecursivedecl::Parent> {
  public:
   virtual ~Parent_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
-
-  using Interface =
-      ::fidl::WireInterface<::fidl_test_inheritancewithrecursivedecl::Parent>;
   virtual void First(
-      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
-          request,
+      FirstRequestView request,
       ::fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::Parent>::
           FirstCompleter::Sync& completer) override {
     NotImplemented_("First", completer);
   }
 };
 
-class Child_TestBase : public ::fidl::WireInterface<
+class Child_TestBase : public ::fidl::WireServer<
                            ::fidl_test_inheritancewithrecursivedecl::Child> {
  public:
   virtual ~Child_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
-
-  using Interface =
-      ::fidl::WireInterface<::fidl_test_inheritancewithrecursivedecl::Child>;
   virtual void First(
-      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
-          request,
+      FirstRequestView request,
       ::fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::Child>::
           FirstCompleter::Sync& completer) override {
     NotImplemented_("First", completer);
   }
   virtual void Second(
-      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
-          request,
+      SecondRequestView request,
       ::fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::Child>::
           SecondCompleter::Sync& completer) override {
     NotImplemented_("Second", completer);

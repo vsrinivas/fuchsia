@@ -18,18 +18,17 @@ const testBaseTmpl = `
 {{ EnsureNamespace .TestBase }}
 
 
-class {{ .TestBase.Name }} : public {{ .WireInterface }} {
+class {{ .TestBase.Name }} : public {{ .WireServer }} {
   public:
   virtual ~{{ .TestBase.Name }}() { }
   virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
 
-  using Interface = {{ .WireInterface }};
-
   {{- range .Methods }}
     {{- if .HasRequest }}
     virtual void {{ .Name }}(
-        {{- RenderParams .RequestArgs (printf "%s::Sync& completer" .WireCompleter) }})
-          override { NotImplemented_("{{ .Name }}", completer); }
+        {{ .WireRequestView.Self }} request, {{ .WireCompleter }}::Sync& completer) override {
+          NotImplemented_("{{ .Name }}", completer);
+    }
     {{- end }}
   {{- end }}
 };

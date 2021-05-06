@@ -65,21 +65,6 @@ struct ::fidl::internal::ProtocolDetails<
 #ifdef __Fuchsia__
 
 template <>
-struct ::fidl::internal::WireDispatcher<
-    ::fidl_test_inheritancewithrecursivedecl::Parent>
-    final {
-  WireDispatcher() = delete;
-  static ::fidl::DispatchResult TryDispatch(
-      ::fidl::WireInterface<::fidl_test_inheritancewithrecursivedecl::Parent>*
-          impl,
-      fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
-  static ::fidl::DispatchResult Dispatch(
-      ::fidl::WireInterface<::fidl_test_inheritancewithrecursivedecl::Parent>*
-          impl,
-      fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
-};
-
-template <>
 struct ::fidl::internal::WireServerDispatcher<
     ::fidl_test_inheritancewithrecursivedecl::Parent>
     final {
@@ -495,33 +480,6 @@ class ::fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::Parent>
   ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
                                           ::fidl::Transaction* txn) final;
 };
-
-// Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
-template <>
-class ::fidl::WireInterface<::fidl_test_inheritancewithrecursivedecl::Parent>
-    : public ::fidl::internal::IncomingMessageDispatcher {
- public:
-  WireInterface() = default;
-  virtual ~WireInterface() = default;
-
-  // The marker protocol type within which this |WireInterface| class is
-  // defined.
-  using _EnclosingProtocol = ::fidl_test_inheritancewithrecursivedecl::Parent;
-
-  using FirstCompleter = ::fidl::WireServer<
-      ::fidl_test_inheritancewithrecursivedecl::Parent>::FirstCompleter;
-  virtual void First(
-      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
-          request,
-      FirstCompleter::Sync& _completer) = 0;
-
- private:
-  ::fidl::DispatchResult dispatch_message(fidl::IncomingMessage&& msg,
-                                          ::fidl::Transaction* txn) final;
-};
-
 #endif  // __Fuchsia__
 
 namespace fidl_test_inheritancewithrecursivedecl {
@@ -557,21 +515,6 @@ struct ::fidl::internal::ProtocolDetails<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-
-template <>
-struct ::fidl::internal::WireDispatcher<
-    ::fidl_test_inheritancewithrecursivedecl::Child>
-    final {
-  WireDispatcher() = delete;
-  static ::fidl::DispatchResult TryDispatch(
-      ::fidl::WireInterface<::fidl_test_inheritancewithrecursivedecl::Child>*
-          impl,
-      fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
-  static ::fidl::DispatchResult Dispatch(
-      ::fidl::WireInterface<::fidl_test_inheritancewithrecursivedecl::Child>*
-          impl,
-      fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
-};
 
 template <>
 struct ::fidl::internal::WireServerDispatcher<
@@ -1276,40 +1219,6 @@ class ::fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::Child>
   ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
                                           ::fidl::Transaction* txn) final;
 };
-
-// Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
-template <>
-class ::fidl::WireInterface<::fidl_test_inheritancewithrecursivedecl::Child>
-    : public ::fidl::internal::IncomingMessageDispatcher {
- public:
-  WireInterface() = default;
-  virtual ~WireInterface() = default;
-
-  // The marker protocol type within which this |WireInterface| class is
-  // defined.
-  using _EnclosingProtocol = ::fidl_test_inheritancewithrecursivedecl::Child;
-
-  using FirstCompleter = ::fidl::WireServer<
-      ::fidl_test_inheritancewithrecursivedecl::Child>::FirstCompleter;
-  virtual void First(
-      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
-          request,
-      FirstCompleter::Sync& _completer) = 0;
-
-  using SecondCompleter = ::fidl::WireServer<
-      ::fidl_test_inheritancewithrecursivedecl::Child>::SecondCompleter;
-  virtual void Second(
-      ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
-          request,
-      SecondCompleter::Sync& _completer) = 0;
-
- private:
-  ::fidl::DispatchResult dispatch_message(fidl::IncomingMessage&& msg,
-                                          ::fidl::Transaction* txn) final;
-};
-
 #endif  // __Fuchsia__
 
 namespace fidl {

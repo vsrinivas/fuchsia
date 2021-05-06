@@ -73,28 +73,6 @@ fidl::WireServer<::fidl_test_handles::SomeProtocol>::dispatch_message(
   return ::fidl::internal::WireServerDispatcher<
       ::fidl_test_handles::SomeProtocol>::Dispatch(this, std::move(msg), txn);
 }
-
-::fidl::DispatchResult
-fidl::internal::WireDispatcher<::fidl_test_handles::SomeProtocol>::TryDispatch(
-    ::fidl::WireInterface<::fidl_test_handles::SomeProtocol>* impl,
-    ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn) {
-  return ::fidl::DispatchResult::kNotFound;
-}
-
-::fidl::DispatchResult
-fidl::internal::WireDispatcher<::fidl_test_handles::SomeProtocol>::Dispatch(
-    ::fidl::WireInterface<::fidl_test_handles::SomeProtocol>* impl,
-    fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
-  std::move(msg).CloseHandles();
-  txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal());
-  return ::fidl::DispatchResult::kNotFound;
-}
-::fidl::DispatchResult
-fidl::WireInterface<::fidl_test_handles::SomeProtocol>::dispatch_message(
-    fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
-  return ::fidl::internal::WireDispatcher<
-      ::fidl_test_handles::SomeProtocol>::Dispatch(this, std::move(msg), txn);
-}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__

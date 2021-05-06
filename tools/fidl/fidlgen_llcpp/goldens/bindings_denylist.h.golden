@@ -158,21 +158,6 @@ struct ::fidl::internal::ProtocolDetails<
 #ifdef __Fuchsia__
 
 template <>
-struct ::fidl::internal::WireDispatcher<
-    ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
-    final {
-  WireDispatcher() = delete;
-  static ::fidl::DispatchResult TryDispatch(
-      ::fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>*
-          impl,
-      fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
-  static ::fidl::DispatchResult Dispatch(
-      ::fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>*
-          impl,
-      fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
-};
-
-template <>
 struct ::fidl::internal::WireServerDispatcher<
     ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
     final {
@@ -793,36 +778,6 @@ class ::fidl::WireServer<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
   ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
                                           ::fidl::Transaction* txn) final;
 };
-
-// Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
-template <>
-class ::fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
-    : public ::fidl::internal::IncomingMessageDispatcher {
- public:
-  WireInterface() = default;
-  virtual ~WireInterface() = default;
-
-  // The marker protocol type within which this |WireInterface| class is
-  // defined.
-  using _EnclosingProtocol = ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps;
-
-  using LibfuzzerNeedsNonemptyProtocolCompleterBase =
-      ::fidl::WireServer<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
-          LibfuzzerNeedsNonemptyProtocolCompleterBase;
-
-  using LibfuzzerNeedsNonemptyProtocolCompleter =
-      ::fidl::WireServer<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
-          LibfuzzerNeedsNonemptyProtocolCompleter;
-  virtual void LibfuzzerNeedsNonemptyProtocol(
-      LibfuzzerNeedsNonemptyProtocolCompleter::Sync& _completer) = 0;
-
- private:
-  ::fidl::DispatchResult dispatch_message(fidl::IncomingMessage&& msg,
-                                          ::fidl::Transaction* txn) final;
-};
-
 #endif  // __Fuchsia__
 
 namespace fidl_test_bindingsdenylist {
@@ -840,19 +795,6 @@ struct ::fidl::internal::ProtocolDetails<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-
-template <>
-struct ::fidl::internal::WireDispatcher<
-    ::fidl_test_bindingsdenylist::OnlyCppAndDeps>
-    final {
-  WireDispatcher() = delete;
-  static ::fidl::DispatchResult TryDispatch(
-      ::fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyCppAndDeps>* impl,
-      fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
-  static ::fidl::DispatchResult Dispatch(
-      ::fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyCppAndDeps>* impl,
-      fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
-};
 
 template <>
 struct ::fidl::internal::WireServerDispatcher<
@@ -972,26 +914,6 @@ class ::fidl::WireServer<::fidl_test_bindingsdenylist::OnlyCppAndDeps>
   ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
                                           ::fidl::Transaction* txn) final;
 };
-
-// Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
-template <>
-class ::fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyCppAndDeps>
-    : public ::fidl::internal::IncomingMessageDispatcher {
- public:
-  WireInterface() = default;
-  virtual ~WireInterface() = default;
-
-  // The marker protocol type within which this |WireInterface| class is
-  // defined.
-  using _EnclosingProtocol = ::fidl_test_bindingsdenylist::OnlyCppAndDeps;
-
- private:
-  ::fidl::DispatchResult dispatch_message(fidl::IncomingMessage&& msg,
-                                          ::fidl::Transaction* txn) final;
-};
-
 #endif  // __Fuchsia__
 
 namespace fidl_test_bindingsdenylist {

@@ -6,16 +6,14 @@
 namespace fidl_test_transitivedependenciescompose {
 namespace testing {
 
-class Top_TestBase : public ::fidl::WireInterface<
+class Top_TestBase : public ::fidl::WireServer<
                          ::fidl_test_transitivedependenciescompose::Top> {
  public:
   virtual ~Top_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
-
-  using Interface =
-      ::fidl::WireInterface<::fidl_test_transitivedependenciescompose::Top>;
   virtual void GetFoo(
+      GetFooRequestView request,
       ::fidl::WireServer<::fidl_test_transitivedependenciescompose::Top>::
           GetFooCompleter::Sync& completer) override {
     NotImplemented_("GetFoo", completer);

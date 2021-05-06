@@ -6,16 +6,13 @@
 namespace fidl_test_error {
 namespace testing {
 
-class Example_TestBase
-    : public ::fidl::WireInterface<::fidl_test_error::Example> {
+class Example_TestBase : public ::fidl::WireServer<::fidl_test_error::Example> {
  public:
   virtual ~Example_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
-
-  using Interface = ::fidl::WireInterface<::fidl_test_error::Example>;
   virtual void Foo(
-      ::fidl::StringView s,
+      FooRequestView request,
       ::fidl::WireServer<::fidl_test_error::Example>::FooCompleter::Sync&
           completer) override {
     NotImplemented_("Foo", completer);

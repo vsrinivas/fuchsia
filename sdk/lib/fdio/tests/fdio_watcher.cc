@@ -30,17 +30,18 @@ class Server final : public fuchsia_io::testing::Directory_TestBase {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Close(Interface::CloseCompleter::Sync& completer) override { completer.Reply(ZX_OK); }
+  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
+    completer.Reply(ZX_OK);
+  }
 
-  void Describe(Interface::DescribeCompleter::Sync& completer) override {
+  void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {
     fuchsia_io::wire::DirectoryObject directory;
     completer.Reply(fuchsia_io::wire::NodeInfo::WithDirectory(
         fidl::ObjectView<fuchsia_io::wire::DirectoryObject>::FromExternal(&directory)));
   }
 
-  void Watch(uint32_t mask, uint32_t options, zx::channel watcher,
-             Interface::WatchCompleter::Sync& completer) override {
-    onWatch_(mask, options, std::move(watcher), completer);
+  void Watch(WatchRequestView request, WatchCompleter::Sync& completer) override {
+    onWatch_(request->mask, request->options, std::move(request->watcher), completer);
   }
 
  private:
@@ -52,7 +53,7 @@ TEST(WatcherTest, Smoke) {
   ASSERT_OK(endpoints.status_value());
 
   Server server([](uint32_t mask, uint32_t options, zx::channel watcher,
-                   fidl::WireInterface<fuchsia_io::Directory>::WatchCompleter::Sync& completer) {
+                   fidl::WireServer<fuchsia_io::Directory>::WatchCompleter::Sync& completer) {
     uint8_t bytes[fuchsia_io::wire::kMaxBuf];
     auto it = std::begin(bytes);
 

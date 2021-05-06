@@ -26,15 +26,13 @@ class Server final : public fuchsia_io::testing::Node_TestBase {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  using Interface = fidl::WireInterface<fuchsia_io::Node>;
-
-  void Close(Interface::CloseCompleter::Sync& completer) override {
+  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
     EXPECT_OK(completer.Reply(ZX_OK).status());
     // FDIO expects the channel to be closed after replying.
     completer.Close(ZX_OK);
   }
 
-  void Describe(Interface::DescribeCompleter::Sync& completer) override {
+  void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {
     ASSERT_TRUE(describe_info_.has_value(), "Describe called more than once");
     EXPECT_OK(completer.Reply(std::move(*describe_info_)).status());
     describe_info_.reset();

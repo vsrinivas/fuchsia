@@ -7,14 +7,12 @@ namespace fidl_test_nullable {
 namespace testing {
 
 class SimpleProtocol_TestBase
-    : public ::fidl::WireInterface<::fidl_test_nullable::SimpleProtocol> {
+    : public ::fidl::WireServer<::fidl_test_nullable::SimpleProtocol> {
  public:
   virtual ~SimpleProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
-
-  using Interface = ::fidl::WireInterface<::fidl_test_nullable::SimpleProtocol>;
-  virtual void Add(int32_t a, int32_t b,
+  virtual void Add(AddRequestView request,
                    ::fidl::WireServer<::fidl_test_nullable::SimpleProtocol>::
                        AddCompleter::Sync& completer) override {
     NotImplemented_("Add", completer);

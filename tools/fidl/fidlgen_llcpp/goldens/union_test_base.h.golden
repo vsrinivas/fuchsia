@@ -7,20 +7,20 @@ namespace fidl_test_union {
 namespace testing {
 
 class TestProtocol_TestBase
-    : public ::fidl::WireInterface<::fidl_test_union::TestProtocol> {
+    : public ::fidl::WireServer<::fidl_test_union::TestProtocol> {
  public:
   virtual ~TestProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
-
-  using Interface = ::fidl::WireInterface<::fidl_test_union::TestProtocol>;
   virtual void StrictXUnionHenceResponseMayBeStackAllocated(
+      StrictXUnionHenceResponseMayBeStackAllocatedRequestView request,
       ::fidl::WireServer<::fidl_test_union::TestProtocol>::
           StrictXUnionHenceResponseMayBeStackAllocatedCompleter::Sync&
               completer) override {
     NotImplemented_("StrictXUnionHenceResponseMayBeStackAllocated", completer);
   }
   virtual void FlexibleXUnionHenceResponseMustBeHeapAllocated(
+      FlexibleXUnionHenceResponseMustBeHeapAllocatedRequestView request,
       ::fidl::WireServer<::fidl_test_union::TestProtocol>::
           FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleter::Sync&
               completer) override {

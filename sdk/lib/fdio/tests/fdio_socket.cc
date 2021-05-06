@@ -44,14 +44,12 @@ class Server final : public fuchsia_posix_socket::testing::StreamSocket_TestBase
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  using Interface = fidl::WireInterface<fuchsia_posix_socket::StreamSocket>;
-
-  void Close(Interface::CloseCompleter::Sync& completer) override {
+  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
     completer.Reply(ZX_OK);
     completer.Close(ZX_OK);
   }
 
-  void Describe(Interface::DescribeCompleter::Sync& completer) override {
+  void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {
     fuchsia_io::wire::StreamSocket stream_socket;
     zx_status_t status =
         peer_.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_WRITE, &stream_socket.socket);

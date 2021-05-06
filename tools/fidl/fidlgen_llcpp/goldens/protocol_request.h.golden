@@ -92,18 +92,6 @@ struct ::fidl::internal::ProtocolDetails<::fidl_test_protocolrequest::Parent> {
 #ifdef __Fuchsia__
 
 template <>
-struct ::fidl::internal::WireDispatcher<::fidl_test_protocolrequest::Parent>
-    final {
-  WireDispatcher() = delete;
-  static ::fidl::DispatchResult TryDispatch(
-      ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>* impl,
-      fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
-  static ::fidl::DispatchResult Dispatch(
-      ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>* impl,
-      fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
-};
-
-template <>
 struct ::fidl::internal::WireServerDispatcher<
     ::fidl_test_protocolrequest::Parent>
     final {
@@ -1778,52 +1766,6 @@ class ::fidl::WireServer<::fidl_test_protocolrequest::Parent>
   ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
                                           ::fidl::Transaction* txn) final;
 };
-
-// Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
-template <>
-class ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>
-    : public ::fidl::internal::IncomingMessageDispatcher {
- public:
-  WireInterface() = default;
-  virtual ~WireInterface() = default;
-
-  // The marker protocol type within which this |WireInterface| class is
-  // defined.
-  using _EnclosingProtocol = ::fidl_test_protocolrequest::Parent;
-
-  using GetChildCompleterBase = ::fidl::WireServer<
-      ::fidl_test_protocolrequest::Parent>::GetChildCompleterBase;
-
-  using GetChildCompleter = ::fidl::WireServer<
-      ::fidl_test_protocolrequest::Parent>::GetChildCompleter;
-  virtual void GetChild(GetChildCompleter::Sync& _completer) = 0;
-
-  using GetChildRequestCompleterBase = ::fidl::WireServer<
-      ::fidl_test_protocolrequest::Parent>::GetChildRequestCompleterBase;
-
-  using GetChildRequestCompleter = ::fidl::WireServer<
-      ::fidl_test_protocolrequest::Parent>::GetChildRequestCompleter;
-  virtual void GetChildRequest(GetChildRequestCompleter::Sync& _completer) = 0;
-
-  using TakeChildCompleter = ::fidl::WireServer<
-      ::fidl_test_protocolrequest::Parent>::TakeChildCompleter;
-  virtual void TakeChild(
-      ::fidl::ClientEnd<::fidl_test_protocolrequest::Child> c,
-      TakeChildCompleter::Sync& _completer) = 0;
-
-  using TakeChildRequestCompleter = ::fidl::WireServer<
-      ::fidl_test_protocolrequest::Parent>::TakeChildRequestCompleter;
-  virtual void TakeChildRequest(
-      ::fidl::ServerEnd<::fidl_test_protocolrequest::Child> r,
-      TakeChildRequestCompleter::Sync& _completer) = 0;
-
- private:
-  ::fidl::DispatchResult dispatch_message(fidl::IncomingMessage&& msg,
-                                          ::fidl::Transaction* txn) final;
-};
-
 #endif  // __Fuchsia__
 
 namespace fidl_test_protocolrequest {
@@ -1840,18 +1782,6 @@ struct ::fidl::internal::ProtocolDetails<::fidl_test_protocolrequest::Child> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-
-template <>
-struct ::fidl::internal::WireDispatcher<::fidl_test_protocolrequest::Child>
-    final {
-  WireDispatcher() = delete;
-  static ::fidl::DispatchResult TryDispatch(
-      ::fidl::WireInterface<::fidl_test_protocolrequest::Child>* impl,
-      fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
-  static ::fidl::DispatchResult Dispatch(
-      ::fidl::WireInterface<::fidl_test_protocolrequest::Child>* impl,
-      fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
-};
 
 template <>
 struct ::fidl::internal::WireServerDispatcher<
@@ -1962,26 +1892,6 @@ class ::fidl::WireServer<::fidl_test_protocolrequest::Child>
   ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
                                           ::fidl::Transaction* txn) final;
 };
-
-// Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
-template <>
-class ::fidl::WireInterface<::fidl_test_protocolrequest::Child>
-    : public ::fidl::internal::IncomingMessageDispatcher {
- public:
-  WireInterface() = default;
-  virtual ~WireInterface() = default;
-
-  // The marker protocol type within which this |WireInterface| class is
-  // defined.
-  using _EnclosingProtocol = ::fidl_test_protocolrequest::Child;
-
- private:
-  ::fidl::DispatchResult dispatch_message(fidl::IncomingMessage&& msg,
-                                          ::fidl::Transaction* txn) final;
-};
-
 #endif  // __Fuchsia__
 
 namespace fidl {

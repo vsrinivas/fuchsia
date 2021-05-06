@@ -73,18 +73,6 @@ struct ::fidl::internal::ProtocolDetails<::fidl_test_service::SecondProtocol> {
 #ifdef __Fuchsia__
 
 template <>
-struct ::fidl::internal::WireDispatcher<::fidl_test_service::SecondProtocol>
-    final {
-  WireDispatcher() = delete;
-  static ::fidl::DispatchResult TryDispatch(
-      ::fidl::WireInterface<::fidl_test_service::SecondProtocol>* impl,
-      fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
-  static ::fidl::DispatchResult Dispatch(
-      ::fidl::WireInterface<::fidl_test_service::SecondProtocol>* impl,
-      fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
-};
-
-template <>
 struct ::fidl::internal::WireServerDispatcher<
     ::fidl_test_service::SecondProtocol>
     final {
@@ -398,30 +386,6 @@ class ::fidl::WireServer<::fidl_test_service::SecondProtocol>
   ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
                                           ::fidl::Transaction* txn) final;
 };
-
-// Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
-template <>
-class ::fidl::WireInterface<::fidl_test_service::SecondProtocol>
-    : public ::fidl::internal::IncomingMessageDispatcher {
- public:
-  WireInterface() = default;
-  virtual ~WireInterface() = default;
-
-  // The marker protocol type within which this |WireInterface| class is
-  // defined.
-  using _EnclosingProtocol = ::fidl_test_service::SecondProtocol;
-
-  using MethodOnSecondCompleter = ::fidl::WireServer<
-      ::fidl_test_service::SecondProtocol>::MethodOnSecondCompleter;
-  virtual void MethodOnSecond(MethodOnSecondCompleter::Sync& _completer) = 0;
-
- private:
-  ::fidl::DispatchResult dispatch_message(fidl::IncomingMessage&& msg,
-                                          ::fidl::Transaction* txn) final;
-};
-
 #endif  // __Fuchsia__
 
 namespace fidl_test_service {
@@ -447,18 +411,6 @@ struct ::fidl::internal::ProtocolDetails<::fidl_test_service::FirstProtocol> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-
-template <>
-struct ::fidl::internal::WireDispatcher<::fidl_test_service::FirstProtocol>
-    final {
-  WireDispatcher() = delete;
-  static ::fidl::DispatchResult TryDispatch(
-      ::fidl::WireInterface<::fidl_test_service::FirstProtocol>* impl,
-      fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
-  static ::fidl::DispatchResult Dispatch(
-      ::fidl::WireInterface<::fidl_test_service::FirstProtocol>* impl,
-      fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
-};
 
 template <>
 struct ::fidl::internal::WireServerDispatcher<
@@ -772,30 +724,6 @@ class ::fidl::WireServer<::fidl_test_service::FirstProtocol>
   ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
                                           ::fidl::Transaction* txn) final;
 };
-
-// Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
-template <>
-class ::fidl::WireInterface<::fidl_test_service::FirstProtocol>
-    : public ::fidl::internal::IncomingMessageDispatcher {
- public:
-  WireInterface() = default;
-  virtual ~WireInterface() = default;
-
-  // The marker protocol type within which this |WireInterface| class is
-  // defined.
-  using _EnclosingProtocol = ::fidl_test_service::FirstProtocol;
-
-  using MethodOnFirstCompleter = ::fidl::WireServer<
-      ::fidl_test_service::FirstProtocol>::MethodOnFirstCompleter;
-  virtual void MethodOnFirst(MethodOnFirstCompleter::Sync& _completer) = 0;
-
- private:
-  ::fidl::DispatchResult dispatch_message(fidl::IncomingMessage&& msg,
-                                          ::fidl::Transaction* txn) final;
-};
-
 #endif  // __Fuchsia__
 
 namespace fidl_test_service {
