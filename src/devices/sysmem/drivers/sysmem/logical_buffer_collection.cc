@@ -10,6 +10,7 @@
 #include <lib/fidl/llcpp/fidl_allocator.h>
 #include <lib/image-format/image_format.h>
 #include <lib/sysmem-version/sysmem-version.h>
+#include <lib/zx/clock.h>
 #include <limits.h>  // PAGE_SIZE
 #include <zircon/assert.h>
 #include <zircon/errors.h>
@@ -2622,6 +2623,8 @@ LogicalBufferCollection::Allocate(
   inspect_node_.CreateUint("allocator_id", allocator->id(), &vmo_properties_);
   inspect_node_.CreateUint("size_bytes", buffer_settings.size_bytes(), &vmo_properties_);
   inspect_node_.CreateUint("heap", static_cast<uint64_t>(buffer_settings.heap()), &vmo_properties_);
+  inspect_node_.CreateUint("allocation_timestamp_ns", zx::clock::get_monotonic().get(),
+                           &vmo_properties_);
 
   // Get memory allocator for aux buffers, if needed.
   MemoryAllocator* maybe_aux_allocator = nullptr;
