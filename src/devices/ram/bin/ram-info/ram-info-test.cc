@@ -16,14 +16,15 @@ namespace ram_info {
 // fake register value used in test.
 constexpr uint32_t TEST_REGISTER_VALUE = 42;
 
-class FakeRamDevice : public fidl::WireInterface<fuchsia_hardware_ram_metrics::Device> {
+class FakeRamDevice : public fidl::WireServer<fuchsia_hardware_ram_metrics::Device> {
  public:
   FakeRamDevice() = default;
 
   void set_close() { completer_action_ = CompleterAction::kClose; }
   void set_reply_error() { completer_action_ = CompleterAction::kReplyError; }
 
-  void GetDdrWindowingResults(GetDdrWindowingResultsCompleter::Sync& completer) override {
+  void GetDdrWindowingResults(GetDdrWindowingResultsRequestView request,
+                              GetDdrWindowingResultsCompleter::Sync& completer) override {
     if (completer_action_ == CompleterAction::kClose) {
       completer.Close(0);
       return;
@@ -35,7 +36,7 @@ class FakeRamDevice : public fidl::WireInterface<fuchsia_hardware_ram_metrics::D
     completer.ReplySuccess(TEST_REGISTER_VALUE);
   }
 
-  void MeasureBandwidth(ram_metrics::wire::BandwidthMeasurementConfig config,
+  void MeasureBandwidth(MeasureBandwidthRequestView request,
                         MeasureBandwidthCompleter::Sync& completer) override {
     if (completer_action_ == CompleterAction::kClose) {
       completer.Close(0);
@@ -46,8 +47,8 @@ class FakeRamDevice : public fidl::WireInterface<fuchsia_hardware_ram_metrics::D
       return;
     }
 
-    EXPECT_EQ(config.cycles_to_measure % 1024, 0);
-    auto mul = config.cycles_to_measure / 1024;
+    EXPECT_EQ(request->config.cycles_to_measure % 1024, 0);
+    auto mul = request->config.cycles_to_measure / 1024;
 
     ram_metrics::wire::BandwidthInfo info = {};
     info.timestamp = zx::msec(1234).to_nsecs();

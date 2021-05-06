@@ -164,9 +164,9 @@ zx_status_t AmlRam::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   return transaction.Status();
 }
 
-void AmlRam::MeasureBandwidth(ram_metrics::wire::BandwidthMeasurementConfig config,
+void AmlRam::MeasureBandwidth(MeasureBandwidthRequestView request,
                               MeasureBandwidthCompleter::Sync& completer) {
-  zx_status_t st = ValidateRequest(config);
+  zx_status_t st = ValidateRequest(request->config);
   if (st != ZX_OK) {
     zxlogf(ERROR, "aml-ram: bad request\n");
     completer.ReplyError(st);
@@ -187,7 +187,7 @@ void AmlRam::MeasureBandwidth(ram_metrics::wire::BandwidthMeasurementConfig conf
     }
 
     // Enqueue task and signal worker thread as needed.
-    requests_.emplace_back(std::move(config), completer.ToAsync());
+    requests_.emplace_back(std::move(request->config), completer.ToAsync());
     if (requests_.size() == 1u) {
       zx_port_packet_t packet = {
           .key = kPortKeyWorkPendingMsg, .type = ZX_PKT_TYPE_USER, .status = ZX_OK};
@@ -196,7 +196,8 @@ void AmlRam::MeasureBandwidth(ram_metrics::wire::BandwidthMeasurementConfig conf
   }
 }
 
-void AmlRam::GetDdrWindowingResults(GetDdrWindowingResultsCompleter::Sync& completer) {
+void AmlRam::GetDdrWindowingResults(GetDdrWindowingResultsRequestView request,
+                                    GetDdrWindowingResultsCompleter::Sync& completer) {
   if (windowing_data_supported_) {
     completer.ReplySuccess(mmio_.Read32(DMC_STICKY_1));
   } else {
