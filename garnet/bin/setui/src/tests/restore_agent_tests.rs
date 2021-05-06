@@ -113,16 +113,24 @@ async fn test_restore() {
     .await;
 }
 
-// TODO(fxbug.dev/73047): Verify the event was properly passed through and matches.
+// Verifies the no-op event was properly passed through and matches.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_unimplemented() {
+    // The environment uses SettingType::Setup, whose controller, setup_controller, does not
+    // implement Restore.
     let receptor = create_event_environment().await;
     let mut event_receptor = receptor.lock().await.take().expect("Should have captured receptor");
-    if let Ok((
-        event::Payload::Event(Event::Restore(restore::Event::NoOp(SettingType::Setup))),
-        _,
-    )) = event_receptor.next_of::<event::Payload>().await
-    {
-        return;
+
+    loop {
+        let payload = event_receptor.next_of::<event::Payload>().await;
+        if let Ok((
+            event::Payload::Event(Event::Restore(restore::Event::NoOp(SettingType::Setup))),
+            _,
+        )) = payload
+        {
+            return;
+        }
+
+        // Else, test will stall and fail if the above event is never received.
     }
 }
