@@ -299,6 +299,10 @@ void DirectoryConnection::Rename(RenameRequestView request, RenameCompleter::Syn
   completer.Reply(status);
 }
 
+void DirectoryConnection::Rename2(Rename2RequestView request, Rename2Completer::Sync& completer) {
+  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+}
+
 void DirectoryConnection::Link(LinkRequestView request, LinkCompleter::Sync& completer) {
   FS_PRETTY_TRACE_DEBUG("[DirectoryLink] our options: ", options(), ", src: ", request->src.data(),
                         ", dst: ", request->dst.data());

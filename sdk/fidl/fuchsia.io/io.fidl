@@ -619,6 +619,24 @@ protocol Directory {
     /// `ZX_ERR_BAD_HANDLE`.
     Rename(string:MAX_PATH src, zx.handle dst_parent_token, string:MAX_PATH dst) -> (zx.status s);
 
+    /// Renames a node named `src` to the name `dst`, in a directory represented
+    /// by `dst_parent_token`.
+    ///
+    /// `src` and `dst` must be valid node names.
+    /// See [`fuchsia.io2/Name`] for what constitutes a valid name.
+    ///
+    /// This method requires the following rights on both the current
+    /// connection, and the connection identified by `dst_parent_token`:
+    ///
+    /// * [`Rights.ENUMERATE`]
+    /// * [`Rights.MODIFY_DIRECTORY`]
+    ///
+    /// * error `ZX_ERR_INVALID_ARGS` if `src` or `dst` is invalid.
+    [Selector = "fuchsia.io/Directory.Rename"]
+    Rename2(fuchsia.io2.Name src,
+            fuchsia.io2.Token dst_parent_token,
+            fuchsia.io2.Name dst) -> () error zx.status;
+
     /// Creates a link to an object named src by the name dst, within a directory represented by
     /// token.
     ///

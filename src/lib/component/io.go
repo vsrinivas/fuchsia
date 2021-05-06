@@ -324,6 +324,10 @@ func (dirState *directoryState) Rename(_ fidl.Context, src string, dstParentToke
 	return int32(zx.ErrNotSupported), nil
 }
 
+func (dirState *directoryState) Rename2(_ fidl.Context, src string, dstParentToken zx.Event, dst string) (fidlio.DirectoryRename2Result, error) {
+	return fidlio.DirectoryRename2ResultWithErr(int32(zx.ErrNotSupported)), nil
+}
+
 func (dirState *directoryState) Link(_ fidl.Context, src string, dstParentToken zx.Handle, dst string) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }

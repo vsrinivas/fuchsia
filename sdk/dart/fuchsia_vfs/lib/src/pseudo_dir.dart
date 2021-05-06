@@ -486,6 +486,11 @@ class _DirConnection extends Directory {
   }
 
   @override
+  Future<int> rename2(String src, Handle dstParentToken, String dst) async {
+    return ZX.ERR_NOT_SUPPORTED;
+  }
+
+  @override
   Future<int> rewind() async {
     _seek = -1;
     return ZX.OK;

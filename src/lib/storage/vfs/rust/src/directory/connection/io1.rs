@@ -18,16 +18,17 @@ use crate::{
 
 use {
     anyhow::Error,
-    fidl::{endpoints::ServerEnd, Handle},
+    fidl::{endpoints::ServerEnd, Event, Handle},
     fidl_fuchsia_io::{
         DirectoryCloseResponder, DirectoryControlHandle, DirectoryDescribeResponder,
         DirectoryGetAttrResponder, DirectoryGetTokenResponder, DirectoryLinkResponder,
         DirectoryNodeGetFlagsResponder, DirectoryNodeSetFlagsResponder, DirectoryObject,
-        DirectoryReadDirentsResponder, DirectoryRenameResponder, DirectoryRequest,
-        DirectoryRequestStream, DirectoryRewindResponder, DirectorySetAttrResponder,
-        DirectorySyncResponder, DirectoryUnlink2Responder, DirectoryUnlinkResponder,
-        DirectoryWatchResponder, NodeAttributes, NodeInfo, NodeMarker, INO_UNKNOWN,
-        MODE_TYPE_DIRECTORY, OPEN_FLAG_CREATE, OPEN_FLAG_NODE_REFERENCE, OPEN_RIGHT_WRITABLE,
+        DirectoryReadDirentsResponder, DirectoryRename2Responder, DirectoryRenameResponder,
+        DirectoryRequest, DirectoryRequestStream, DirectoryRewindResponder,
+        DirectorySetAttrResponder, DirectorySyncResponder, DirectoryUnlink2Responder,
+        DirectoryUnlinkResponder, DirectoryWatchResponder, NodeAttributes, NodeInfo, NodeMarker,
+        INO_UNKNOWN, MODE_TYPE_DIRECTORY, OPEN_FLAG_CREATE, OPEN_FLAG_NODE_REFERENCE,
+        OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_io2::UnlinkOptions,
     fuchsia_async::Channel,
@@ -213,6 +214,12 @@ pub(in crate::directory) enum DerivedDirectoryRequest {
         dst: String,
         responder: DirectoryRenameResponder,
     },
+    Rename2 {
+        src: String,
+        dst_parent_token: Event,
+        dst: String,
+        responder: DirectoryRename2Responder,
+    },
     SetAttr {
         flags: u32,
         attributes: NodeAttributes,
@@ -257,7 +264,7 @@ impl From<DirectoryRequest> for DirectoryRequestType {
                 socket,
                 responder,
             } => Base(AddInotifyFilter { path, filters, watch_descriptor, socket, responder }),
-            DirectoryRequest::AdvisoryLock { request, responder} => {
+            DirectoryRequest::AdvisoryLock { request, responder } => {
                 Base(AdvisoryLock { request, responder })
             }
             DirectoryRequest::Unlink { path, responder } => Derived(Unlink { path, responder }),
@@ -271,6 +278,9 @@ impl From<DirectoryRequest> for DirectoryRequestType {
             DirectoryRequest::GetToken { responder } => Derived(GetToken { responder }),
             DirectoryRequest::Rename { src, dst_parent_token, dst, responder } => {
                 Derived(Rename { src, dst_parent_token, dst, responder })
+            }
+            DirectoryRequest::Rename2 { src, dst_parent_token, dst, responder } => {
+                Derived(Rename2 { src, dst_parent_token, dst, responder })
             }
             DirectoryRequest::Link { src, dst_parent_token, dst, responder } => {
                 Base(Link { src, dst_parent_token, dst, responder })
@@ -379,7 +389,7 @@ where
                 self.handle_open(flags, mode, path, object);
             }
             BaseDirectoryRequest::AddInotifyFilter { .. } => {}
-            BaseDirectoryRequest::AdvisoryLock { request : _, responder } => {
+            BaseDirectoryRequest::AdvisoryLock { request: _, responder } => {
                 responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
             }
             BaseDirectoryRequest::ReadDirents { max_bytes, responder } => {

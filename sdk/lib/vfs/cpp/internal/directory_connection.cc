@@ -94,6 +94,11 @@ void DirectoryConnection::Rename(std::string src, zx::handle dst_parent_token, s
   callback(ZX_ERR_NOT_SUPPORTED);
 }
 
+void DirectoryConnection::Rename2(std::string src, zx::event dst_parent_token, std::string dst,
+                                  Rename2Callback callback) {
+  callback(fuchsia::io::Directory_Rename2_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
+}
+
 void DirectoryConnection::Link(std::string src, zx::handle dst_parent_token, std::string dst,
                                LinkCallback callback) {
   callback(ZX_ERR_NOT_SUPPORTED);

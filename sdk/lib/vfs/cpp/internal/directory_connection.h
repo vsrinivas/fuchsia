@@ -48,6 +48,8 @@ class DirectoryConnection final : public Connection, public fuchsia::io::Directo
   void GetToken(GetTokenCallback callback) override;
   void Rename(std::string src, zx::handle dst_parent_token, std::string dst,
               RenameCallback callback) override;
+  void Rename2(std::string src, zx::event dst_parent_token, std::string dst,
+               Rename2Callback callback) override;
   void Link(std::string src, zx::handle dst_parent_token, std::string dst,
             LinkCallback callback) override;
   void Watch(uint32_t mask, uint32_t options, zx::channel watcher, WatchCallback callback) override;

@@ -32,7 +32,7 @@ use {
         OPEN_FLAG_CREATE, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_io2::{UnlinkFlags, UnlinkOptions},
-    fuchsia_zircon::Status,
+    fuchsia_zircon::{Status},
     futures::future::BoxFuture,
     std::sync::Arc,
 };
@@ -178,6 +178,12 @@ impl MutableConnection {
             DerivedDirectoryRequest::Rename { src, dst_parent_token, dst, responder } => {
                 self.handle_rename(src, dst_parent_token, dst, |status| {
                     responder.send(status.into_raw())
+                })
+                .await?;
+            }
+            DerivedDirectoryRequest::Rename2 { src, dst_parent_token, dst, responder } => {
+                self.handle_rename(src, Handle::from(dst_parent_token), dst, |status| {
+                    responder.send(&mut Result::from(status).map_err(|e| e.into_raw()))
                 })
                 .await?;
             }
