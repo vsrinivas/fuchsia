@@ -206,6 +206,43 @@ a different callee.
 
     We might need to define an equivalent to `zx_port_cancel()`.
 
+Handle-closing: operations when all references or handles to an object
+are dropped:
+
+*   MBO: An MBO is freed when all references to it have been dropped.
+
+    Closing all the handles to an MBO only causes the MBO to be freed
+    if there are no other references to the MBO from a MsgQueue or a
+    CMH.  If the handles to an MBO are closed while the MBO is
+    enqueued as a request on a MsgQueue, the MBO remains in the
+    MsgQueue, and it can still be read into a CMH and sent as a reply,
+    but it will be freed when `zx_msgqueue_read()` returns the MBO to
+    the `owned_by_caller` state.
+
+    This means it is possible to do a "send and forget" with an MBO:
+    that is, send the MBO as a request message, but close the MBO
+    handle and ignore any replies.
+
+*   CMH: If a CMH is closed while it holds a reference to an MBO, the
+    system will send an automatic reply on the MBO: It will replace
+    the MBO's contents with a default reply message and send the MBO
+    as a reply (as if `zx_cmh_send_reply()` was called).
+
+    This means that if a callee process crashes in the middle of
+    processing a request from a caller, the caller will not be left
+    waiting for a reply message indefinitely.
+
+*   MsgQueue: If all the handles to a MsgQueue are closed while its
+    queue contains MBOs in the state `enqueued_as_request`, the system
+    will send automatic replies on these MBOs (as described above for
+    closing CMHs).  This does not apply to MBOs in the state
+    `enqueued_as_reply` because these are already replies.
+
+    Similarly, a channel might be set to redirect to a MsgQueue that
+    later becomes unreadable when all the handles to that MsgQueue are
+    closed.  In this case, any MBOs sent to that channel will receive
+    automatic replies.
+
 ## State for each object type
 
 This section gives a summary of the state that is stored by each of
