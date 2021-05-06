@@ -15,6 +15,17 @@
 
 set -e
 
+function preserve_owner_files {
+  local owners_tmp=$1
+  find . -name "OWNERS" -print0 | while read -d $'\0' owner_file
+  do
+    local owner_dir=$(dirname "$owner_file")
+    local temp_owner_dir="$owners_tmp/$owner_dir"
+    mkdir -p "$temp_owner_dir"
+    cp "$owner_file" "$temp_owner_dir"
+  done
+}
+
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
 fx-config-read
 
@@ -59,8 +70,7 @@ export VENDOR_DIR=$FUCHSIA_DIR/third_party/rust_crates/vendor
 export OWNERS_TMP=$(mktemp -d)
 
 # preserve OWNERS files
-(cd $VENDOR_DIR;
-  find . -name OWNERS -exec cp --parents {} $OWNERS_TMP \;)
+(cd $VENDOR_DIR; $(preserve_owner_files $OWNERS_TMP))
 
 # this deletes OWNERS and LICENSE files
 (cd $FUCHSIA_DIR; $PREBUILT_RUST_DIR/bin/cargo vendor \
