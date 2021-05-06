@@ -49,8 +49,12 @@ class PressureNotifier : public fuchsia::memorypressure::Provider {
   void OnLevelChangedCallback(WatcherState* watcher);
   void NotifyWatcher(WatcherState* watcher, Level level);
 
-  bool CanGenerateNewCrashReports();
-  void FileCrashReport();
+  bool CanGenerateNewCriticalCrashReports();
+  enum CrashReportType : uint8_t {
+    kImminentOOM,
+    kCritical,
+  };
+  void FileCrashReport(CrashReportType type);
 
   async::TaskClosureMethod<PressureNotifier, &PressureNotifier::PostLevelChange> post_task_{this};
   async_dispatcher_t* const provider_dispatcher_;
@@ -61,8 +65,8 @@ class PressureNotifier : public fuchsia::memorypressure::Provider {
   PressureObserver observer_;
 
   bool observed_normal_level_ = true;
-  zx::time prev_crash_report_time_ = zx::time(ZX_TIME_INFINITE_PAST);
-  zx::duration crash_report_interval_ = zx::min(30);
+  zx::time prev_critical_crash_report_time_ = zx::time(ZX_TIME_INFINITE_PAST);
+  zx::duration critical_crash_report_interval_ = zx::min(30);
   const bool send_critical_pressure_crash_reports_;
 
   friend class test::PressureNotifierUnitTest;

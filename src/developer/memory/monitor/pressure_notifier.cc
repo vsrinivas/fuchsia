@@ -70,6 +70,12 @@ void PressureNotifier::PostLevelChange() {
   }
 
   if (level_to_send == Level::kImminentOOM) {
+    // We condition sending a crash report for imminent OOM the same way as for critical memory
+    // pressure.
+    if (send_critical_pressure_crash_reports_) {
+      FileCrashReport(CrashReportType::kImminentOOM);
+    }
+
     // Nothing else to do. This is a diagnostic-only level that is not signaled to watchers.
     return;
   }
@@ -78,11 +84,11 @@ void PressureNotifier::PostLevelChange() {
     // See comments about |observed_normal_level_| in the definition of |FileCrashReport()|.
     observed_normal_level_ = true;
   } else if (send_critical_pressure_crash_reports_ && level_to_send == Level::kCritical &&
-             CanGenerateNewCrashReports()) {
+             CanGenerateNewCriticalCrashReports()) {
     // File crash report before notifying watchers, so that we can capture the state *before*
     // watchers can respond to memory pressure, thereby changing the state that caused the memory
     // pressure in the first place.
-    FileCrashReport();
+    FileCrashReport(CrashReportType::kCritical);
   }
 
   // TODO(rashaeqbal): Throttle notifications to prevent thrashing.
@@ -190,23 +196,25 @@ void PressureNotifier::ReleaseWatcher(fuchsia::memorypressure::Watcher* watcher)
   }
 }
 
-bool PressureNotifier::CanGenerateNewCrashReports() {
-  // Generate a new crash report only if any of these two conditions hold:
+bool PressureNotifier::CanGenerateNewCriticalCrashReports() {
+  // Generate a new Critical crash report only if any of these two conditions hold:
   // 1. |observed_normal_level_| is set to true, which indicates that a Normal level
   // was observed after the last Critical crash report.
-  // 2. At least |crash_report_interval_| time has elapsed since the last crash report.
+  // 2. At least |critical_crash_report_interval_| time has elapsed since the last Critical crash
+  // report.
   //
   // This is done for two reasons:
-  // 1) It helps limit the number of crash reports we generate.
+  // 1) It helps limit the number of Critical crash reports we generate.
   // 2) If the memory pressure changes to Critical again after going via Normal, we're
   // presumably observing a different memory usage pattern / use case, so it makes sense to
   // generate a new crash report. Instead if we're only observing Critical -> Warning ->
   // Critical transitions, we might be seeing the same memory usage pattern repeat.
   return (observed_normal_level_ ||
-          zx::clock::get_monotonic() >= (prev_crash_report_time_ + crash_report_interval_));
+          zx::clock::get_monotonic() >=
+              (prev_critical_crash_report_time_ + critical_crash_report_interval_));
 }
 
-void PressureNotifier::FileCrashReport() {
+void PressureNotifier::FileCrashReport(CrashReportType type) {
   if (context_ == nullptr) {
     return;
   }
@@ -217,17 +225,27 @@ void PressureNotifier::FileCrashReport() {
 
   fuchsia::feedback::CrashReport report;
   report.set_program_name("system");
-  report.set_crash_signature("fuchsia-critical-memory-pressure");
+  switch (type) {
+    case CrashReportType::kImminentOOM:
+      report.set_crash_signature("fuchsia-imminent-oom");
+      break;
+    case CrashReportType::kCritical:
+      report.set_crash_signature("fuchsia-critical-memory-pressure");
+      break;
+  }
   report.set_program_uptime(zx_clock_get_monotonic());
   report.set_is_fatal(false);
 
   crash_reporter->File(std::move(report),
                        [](fuchsia::feedback::CrashReporter_File_Result unused) {});
 
-  prev_crash_report_time_ = zx::clock::get_monotonic();
+  // Logic to control rate of Critical crash report generation.
+  if (type == CrashReportType::kCritical) {
+    prev_critical_crash_report_time_ = zx::clock::get_monotonic();
 
-  // Clear |observed_normal_level_| and wait for another normal level change to occur.
-  observed_normal_level_ = false;
+    // Clear |observed_normal_level_| and wait for another normal level change to occur.
+    observed_normal_level_ = false;
+  }
 }
 
 }  // namespace monitor
