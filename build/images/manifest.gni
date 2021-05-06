@@ -88,32 +88,35 @@ template("generate_manifest") {
                          "",
                          "//build/images")
     outputs = [ temp_manifest ]
+
+    # First the Zircon manifests are pure auxiliaries:
+    # they just supply libraries that might satisfy dependencies.
+    sources += [ runtime_deps_manifest ]
+    deps += [ ":${runtime_deps_manifest_target}" ]
+
+    response_file = "${temp_manifest}.rsp"
+    write_file(
+        response_file,
+        [
+              "--cwd=.",
+              "--manifest=" +
+                  rebase_path(runtime_deps_manifest, root_build_dir),
+
+              # Note that after the first '--output' argument, further `--manifest` or
+              # `--entry` arguments in invoker.args will contribute to the output manifest.
+              "--output=" + rebase_path(outputs[0], root_build_dir),
+              "--cwd=.",
+            ] + invoker.args)
+    inputs += [ response_file ]
+
     args = extra_manifest_args + [
              "--depfile=" + rebase_path(depfile, root_build_dir),
              "--stripped-dir=" + rebase_path(stripped_dir, root_build_dir),
              "--build-id-dir=" + rebase_path("$root_build_dir/.build-id"),
              "--toolchain-lib-dir=" + clang_lib_dir,
              "--toolchain-lib-dir=" + rustc_lib_dir,
-             "@{{response_file_name}}",
+             "@" + rebase_path(response_file, root_build_dir),
            ]
-    response_file_contents = []
-
-    # First the Zircon manifests are pure auxiliaries:
-    # they just supply libraries that might satisfy dependencies.
-    sources += [ runtime_deps_manifest ]
-    deps += [ ":${runtime_deps_manifest_target}" ]
-    response_file_contents += [
-      "--cwd=.",
-      "--manifest=" + rebase_path(runtime_deps_manifest),
-    ]
-
-    # Note that after the first '--output' argument, further `--manifest` or
-    # `--entry` arguments in invoker.args will contribute to the output manifest.
-    response_file_contents +=
-        [
-          "--output=" + rebase_path(outputs[0], root_build_dir),
-          "--cwd=.",
-        ] + invoker.args
   }
 
   verify_manifest_action = "${target_name}.verify"

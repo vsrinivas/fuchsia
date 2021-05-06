@@ -266,6 +266,11 @@ template("dart_tool") {
     ]
 
     deps = sdk_deps + [ ":$_dart_package_config_target_name" ]
+
+    metadata = {
+      rebased_snapshot_path = [ snapshot_path ]
+      rebased_snapshot_path_barrier = []
+    }
   }
 
   # Builds a convenience script to invoke the app.

@@ -236,6 +236,7 @@ def collect_binaries(manifest, aux_binaries, examined):
             add_binary(lib, context)
 
     for entry in manifest:
+        examined.add(entry.source)
         info = None
         # Don't inspect data or firmware resources in the manifest.  Regardless
         # of the bits in these files, we treat them as opaque data.

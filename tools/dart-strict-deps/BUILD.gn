@@ -62,8 +62,11 @@ proto_gen_target = dart_library_target_name + "_generate_bindings"
 copy_pubspec_target = dart_library_target_name + "_copy_pubspec"
 
 generated_file("protoc_gen_dart_snapshot_info") {
+  visibility = [ ":*" ]
   outputs = [ "$target_gen_dir/${target_name}.snapshot_info" ]
   data_keys = [ "rebased_snapshot_path" ]
+  walk_keys = [ "rebased_snapshot_path_barrier" ]
+  rebase = root_build_dir
   deps = [ protoc_gen_dart_label ]
 }
 
@@ -79,7 +82,10 @@ action(proto_gen_target) {
   snapshot_info_target = ":protoc_gen_dart_snapshot_info"
   snapshot_info_files = get_target_outputs(snapshot_info_target)
   snapshot_info_file = snapshot_info_files[0]
-  response_file_contents = proto_output_filepaths
+
+  proto_outputs_file = "${target_gen_dir}/${target_name}_proto.outputs"
+  write_file(proto_outputs_file,
+             rebase_path(proto_output_filepaths, root_build_dir))
 
   script = "//build/secondary/third_party/protobuf/protoc_wrapper.py"
   sources = proto_input_filepaths
@@ -87,6 +93,7 @@ action(proto_gen_target) {
              protoc_path,
              plugin_path,
              snapshot_info_file,
+             proto_outputs_file,
            ] + proto_input_filepaths
   outputs = proto_output_filepaths
 
@@ -116,7 +123,7 @@ action(proto_gen_target) {
     "--plugin-depfile-deps",
     rebase_path(snapshot_info_file, root_build_dir),
     "--plugin-depfile-outputs",
-    "{{response_file_name}}",
+    rebase_path(proto_outputs_file, root_build_dir),
   ]
 
   # the proto files themselves
