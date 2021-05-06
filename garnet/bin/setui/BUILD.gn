@@ -151,7 +151,6 @@ rustc_library("lib") {
     "src/handler/setting_handler.rs",
     "src/handler/setting_handler_factory_impl.rs",
     "src/handler/setting_proxy.rs",
-    "src/handler/store_accessor.rs",
     "src/hanging_get_handler.rs",
     "src/input.rs",
     "src/input/common.rs",
