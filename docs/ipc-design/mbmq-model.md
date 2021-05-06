@@ -291,3 +291,8 @@ Channel endpoint:
 *   List of MBOs, all of which will be in the state
     `enqueued_as_request`.  This will be empty if the endpoint has an
     associated MsgQueue.
+
+## Acknowledgements
+
+The concept of MBOs, with the MBO acting as both a reusable message
+buffer and a return path, is due to Corey Tabaka.
