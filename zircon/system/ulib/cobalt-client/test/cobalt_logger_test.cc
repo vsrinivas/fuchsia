@@ -38,22 +38,20 @@ using Status = fuchsia_cobalt::wire::Status;
 using EventData = fuchsia_cobalt::wire::EventPayload;
 
 // Fake Implementation for fuchsia::cobalt::LoggerFactory.
-class FakeLoggerFactoryService : public fidl::WireInterface<fuchsia_cobalt::LoggerFactory> {
+class FakeLoggerFactoryService : public fidl::WireServer<fuchsia_cobalt::LoggerFactory> {
  public:
-  void CreateLoggerFromProjectId(uint32_t project_id,
-                                 ::fidl::ServerEnd<fuchsia_cobalt::Logger> logger,
+  void CreateLoggerFromProjectId(CreateLoggerFromProjectIdRequestView request,
                                  CreateLoggerFromProjectIdCompleter::Sync& completer) final {
-    completer.Reply(create_logger_handler_(project_id, std::move(logger)));
+    completer.Reply(create_logger_handler_(request->project_id, std::move(request->logger)));
   }
 
   void CreateLoggerSimpleFromProjectId(
-      uint32_t project_id, ::fidl::ServerEnd<fuchsia_cobalt::LoggerSimple> logger,
+      CreateLoggerSimpleFromProjectIdRequestView request,
       CreateLoggerSimpleFromProjectIdCompleter::Sync& completer) final {
     ZX_PANIC("Not Implemented.");
   }
 
-  void CreateLoggerFromProjectSpec(uint32_t customer_id, uint32_t project_id,
-                                   ::fidl::ServerEnd<fuchsia_cobalt::Logger> logger,
+  void CreateLoggerFromProjectSpec(CreateLoggerFromProjectSpecRequestView request,
                                    CreateLoggerFromProjectSpecCompleter::Sync& completer) final {
     ZX_PANIC("Not Implemented.");
   }
@@ -68,60 +66,54 @@ class FakeLoggerFactoryService : public fidl::WireInterface<fuchsia_cobalt::Logg
 };
 
 // Fake Implementation for fuchsia::cobalt::Logger.
-class FakeLoggerService : public fidl::WireInterface<fuchsia_cobalt::Logger> {
+class FakeLoggerService : public fidl::WireServer<fuchsia_cobalt::Logger> {
  public:
-  void LogEvent(uint32_t metric_id, uint32_t event_code, LogEventCompleter::Sync& completer) final {
+  void LogEvent(LogEventRequestView request, LogEventCompleter::Sync& completer) final {
     ZX_PANIC("Not Implemented.");
   }
 
-  void LogEventCount(uint32_t metric_id, uint32_t event_code, ::fidl::StringView component,
-                     int64_t period_duration_micros, int64_t count,
-                     LogEventCountCompleter::Sync& completer) {
+  void LogEventCount(LogEventCountRequestView request,
+                     LogEventCountCompleter::Sync& completer) final {
     ZX_PANIC("Not Implemented.");
   }
 
-  void LogElapsedTime(uint32_t metric_id, uint32_t event_code, ::fidl::StringView component,
-                      int64_t elapsed_micros, LogElapsedTimeCompleter::Sync& completer) final {
+  void LogElapsedTime(LogElapsedTimeRequestView request,
+                      LogElapsedTimeCompleter::Sync& completer) final {
     ZX_PANIC("Not Implemented.");
   }
 
-  void LogFrameRate(uint32_t metric_id, uint32_t event_code, ::fidl::StringView component,
-                    float fps, LogFrameRateCompleter::Sync& completer) final {
+  void LogFrameRate(LogFrameRateRequestView request, LogFrameRateCompleter::Sync& completer) final {
     ZX_PANIC("Not Implemented.");
   }
 
-  void LogMemoryUsage(uint32_t metric_id, uint32_t event_code, ::fidl::StringView component,
-                      int64_t bytes, LogMemoryUsageCompleter::Sync& completer) final {
+  void LogMemoryUsage(LogMemoryUsageRequestView request,
+                      LogMemoryUsageCompleter::Sync& completer) final {
     ZX_PANIC("Not Implemented.");
   }
 
-  void StartTimer(uint32_t metric_id, uint32_t event_code, ::fidl::StringView component,
-                  ::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s,
-                  StartTimerCompleter::Sync& completer) final {
+  void StartTimer(StartTimerRequestView request, StartTimerCompleter::Sync& completer) final {
     ZX_PANIC("Not Implemented.");
   }
 
-  void EndTimer(::fidl::StringView timer_id, uint64_t timestamp, uint32_t timeout_s,
-                EndTimerCompleter::Sync& completer) {
+  void EndTimer(EndTimerRequestView request, EndTimerCompleter::Sync& completer) final {
     ZX_PANIC("Not Implemented.");
   }
 
-  void LogIntHistogram(uint32_t metric_id, uint32_t event_code, ::fidl::StringView component,
-                       ::fidl::VectorView<fuchsia_cobalt::wire::HistogramBucket> histogram,
+  void LogIntHistogram(LogIntHistogramRequestView request,
                        LogIntHistogramCompleter::Sync& completer) final {
     ZX_PANIC("Not Implemented.");
   }
 
-  void LogCustomEvent(uint32_t metric_id,
-                      ::fidl::VectorView<fuchsia_cobalt::wire::CustomEventValue> event_values,
+  void LogCustomEvent(LogCustomEventRequestView request,
                       LogCustomEventCompleter::Sync& completer) final {
     ZX_PANIC("Not Implemented.");
   }
 
-  void LogCobaltEvent(fuchsia_cobalt::wire::CobaltEvent event,
+  void LogCobaltEvent(LogCobaltEventRequestView request,
                       LogCobaltEventCompleter::Sync& completer) final {
     // Use MetricOptions as a key.
     MetricOptions info;
+    auto& event = request->event;
     info.metric_dimensions = static_cast<uint32_t>(event.event_codes.count());
     if (event_code_count_tracker_ != nullptr) {
       *event_code_count_tracker_ = info.metric_dimensions;
@@ -151,7 +143,7 @@ class FakeLoggerService : public fidl::WireInterface<fuchsia_cobalt::Logger> {
     completer.Reply(log_return_status_);
   }
 
-  void LogCobaltEvents(::fidl::VectorView<fuchsia_cobalt::wire::CobaltEvent> events,
+  void LogCobaltEvents(LogCobaltEventsRequestView request,
                        LogCobaltEventsCompleter::Sync& completer) final {
     ZX_PANIC("Not Implemented.");
   }
