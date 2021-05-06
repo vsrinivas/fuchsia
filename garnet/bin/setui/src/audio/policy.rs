@@ -62,7 +62,7 @@ impl StateBuilder {
 /// `State` defines the current configuration of the audio policy. This
 /// includes the available properties, which encompass the active transform
 /// policies and transforms available to be set.
-#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
+#[derive(PartialEq, Default, Debug, Clone, Serialize, Deserialize)]
 pub struct State {
     properties: HashMap<PropertyTarget, Property>,
 }

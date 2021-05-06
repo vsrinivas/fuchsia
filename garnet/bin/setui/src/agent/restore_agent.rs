@@ -10,7 +10,7 @@ use crate::event::{restore, Event, Publisher};
 use crate::handler::base::{Error, Payload as HandlerPayload, Request};
 use crate::handler::device_storage::DeviceStorageAccess;
 use crate::message::base::Audience;
-use crate::policy::PolicyType;
+use crate::policy::{Payload as PolicyPayload, PolicyType, Request as PolicyRequest};
 use crate::service;
 use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log_err, fx_log_info};
@@ -55,21 +55,24 @@ impl RestoreAgent {
     async fn handle(&mut self, invocation: Invocation) -> InvocationResult {
         match invocation.lifespan {
             Lifespan::Initialization => {
-                for component in self.available_components.clone() {
+                for component in &self.available_components {
                     let mut receptor = self
                         .messenger
                         .message(
                             HandlerPayload::Request(Request::Restore).into(),
-                            Audience::Address(service::Address::Handler(component)),
+                            Audience::Address(service::Address::Handler(*component)),
                         )
                         .send();
 
-                    if let HandlerPayload::Response(response) = receptor
+                    let response = receptor
                         .next_of::<HandlerPayload>()
                         .await
-                        .map_err(|_| AgentError::UnexpectedError)?
-                        .0
-                    {
+                        .map_err(|e| {
+                            fx_log_err!("Received error when getting payload: {:?}", e);
+                            AgentError::UnexpectedError
+                        })?
+                        .0;
+                    if let HandlerPayload::Response(response) = response {
                         match response {
                             Ok(_) => {
                                 continue;
@@ -92,6 +95,39 @@ impl RestoreAgent {
                             }
                         }
                     } else {
+                        fx_log_err!("Error because of response: {:?}", response);
+                        return Err(AgentError::UnexpectedError);
+                    }
+                }
+                for policy in &self.available_policies {
+                    let mut receptor = self
+                        .messenger
+                        .message(
+                            PolicyPayload::Request(PolicyRequest::Restore).into(),
+                            Audience::Address(service::Address::PolicyHandler(*policy)),
+                        )
+                        .send();
+
+                    let response = receptor
+                        .next_of::<PolicyPayload>()
+                        .await
+                        .map_err(|e| {
+                            fx_log_err!("Received error while getting policy payload: {:?}", e);
+                            AgentError::UnexpectedError
+                        })?
+                        .0;
+                    if let PolicyPayload::Response(response) = response {
+                        match response {
+                            Ok(_) => {
+                                continue;
+                            }
+                            _ => {
+                                fx_log_err!("error during policy restore for {:?}", policy);
+                                return Err(AgentError::UnexpectedError);
+                            }
+                        }
+                    } else {
+                        fx_log_err!("Error because of policy response: {:?}", response);
                         return Err(AgentError::UnexpectedError);
                     }
                 }

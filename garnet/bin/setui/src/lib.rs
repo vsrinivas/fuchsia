@@ -39,7 +39,7 @@ use {
     crate::service_context::GenerateService,
     crate::service_context::ServiceContext,
     crate::setup::setup_controller::SetupController,
-    anyhow::{format_err, Error},
+    anyhow::{format_err, Context, Error},
     fidl_fuchsia_settings::{
         AccessibilityRequestStream, AudioRequestStream, DeviceRequestStream, DisplayRequestStream,
         DoNotDisturbRequestStream, FactoryResetRequestStream, InputRequestStream,
@@ -782,13 +782,10 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     }
 
     // Execute initialization agents sequentially
-    if agent_authority
+    agent_authority
         .execute_lifespan(Lifespan::Initialization, Arc::clone(&service_context), true)
         .await
-        .is_err()
-    {
-        return Err(format_err!("Agent initialization failed"));
-    }
+        .context("Agent initialization failed")?;
 
     // Execute service agents concurrently
     agent_authority

@@ -11,11 +11,13 @@ use crate::policy::policy_handler::{
 };
 use crate::policy::response::{Payload, Response};
 use crate::policy::{PolicyType, Request as PolicyRequest, UnknownInfo};
-use crate::privacy::types::PrivacyInfo;
-use crate::service;
+use crate::EnvironmentBuilder;
 use anyhow::Error;
 use async_trait::async_trait;
 use futures::future::BoxFuture;
+use std::sync::Arc;
+
+const ENV_NAME: &str = "policy_handler_tests_env";
 
 pub type HandlePolicyRequestCallback =
     Box<dyn Fn(PolicyRequest, ClientProxy) -> BoxFuture<'static, Response> + Send + Sync>;
@@ -63,13 +65,16 @@ impl PolicyHandler for FakePolicyHandler {
 /// Verifies that policy handlers are able to write to storage through their client proxy.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_write() {
-    let expected_value = PrivacyInfo { user_data_sharing_consent: Some(true) };
+    let expected_value = UnknownInfo(true);
 
-    let delegate = service::message::create_hub();
-    let (messenger, _) = delegate.create(MessengerType::Unbound).await.unwrap();
+    let storage_factory = Arc::new(InMemoryStorageFactory::new());
+    storage_factory.initialize_storage::<UnknownInfo>().await;
 
-    let storage_factory = InMemoryStorageFactory::new();
-    storage_factory.initialize_storage::<PrivacyInfo>().await;
+    let env = EnvironmentBuilder::new(Arc::clone(&storage_factory))
+        .spawn_nested(ENV_NAME)
+        .await
+        .expect("env should be created");
+    let (messenger, _) = env.delegate.create(MessengerType::Unbound).await.unwrap();
     let store = storage_factory.get_store().await;
     let client_proxy = ClientProxy::new(messenger, store.clone(), PolicyType::Unknown);
 
@@ -79,7 +84,10 @@ async fn test_write() {
         FakePolicyHandler::create(client_proxy.clone()).await.expect("failed to create handler");
     handler.set_handle_policy_request_callback(Box::new(move |_, client_proxy| {
         Box::pin(async move {
-            client_proxy.write(&expected_value, false).await.expect("write failed");
+            client_proxy
+                .write_policy(expected_value.clone().into(), false)
+                .await
+                .expect("write failed");
             Ok(Payload::PolicyInfo(UnknownInfo(true).into()))
         })
     }));
@@ -88,8 +96,8 @@ async fn test_write() {
     handler.handle_policy_request(PolicyRequest::Get).await.expect("handle failed");
 
     // Verify the value was written to the store through the client proxy.
-    assert_eq!(store.get::<PrivacyInfo>().await, expected_value);
+    assert_eq!(store.get::<UnknownInfo>().await, expected_value);
 
     // Verify that the written value can be read again through the client proxy.
-    assert_eq!(client_proxy.read::<PrivacyInfo>().await, expected_value);
+    assert_eq!(client_proxy.read_policy::<UnknownInfo>().await, expected_value);
 }

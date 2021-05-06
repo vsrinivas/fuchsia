@@ -9,6 +9,7 @@ use crate::audio::policy::{
 use crate::audio::types::{AudioSettingSource, AudioStream, AudioStreamType};
 use crate::audio::utils::round_volume_level;
 use crate::base::SettingType;
+use crate::config::base::AgentType;
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::message::base::{Audience, MessengerType};
 use crate::policy::response;
@@ -60,6 +61,7 @@ async fn create_test_environment_with_data(data: Option<&State>) -> TestEnvironm
         .service(ServiceRegistry::serve(service_registry))
         .settings(&[SettingType::Audio])
         .policies(&[PolicyType::Audio])
+        .agents(&[AgentType::Restore.into()])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
         .unwrap();

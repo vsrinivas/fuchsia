@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::agent::authority::Authority;
+use crate::agent::Lifespan;
 use crate::audio::default_audio_info;
 use crate::audio::policy::audio_policy_handler::{AudioPolicyHandler, ARG_POLICY_ID};
 use crate::audio::policy::{
@@ -24,10 +26,12 @@ use crate::policy::response::{Error as PolicyError, Payload};
 use crate::policy::{PolicyInfo, PolicyType, Request};
 use crate::service;
 use crate::service::TryFromWithClient;
+use crate::service_context::ServiceContext;
 use crate::tests::message_utils::verify_payload;
 use fuchsia_async::Task;
 use futures::StreamExt;
 use matches::assert_matches;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 // The types of data that can be sent.
@@ -56,18 +60,19 @@ struct TestEnvironment {
 }
 
 impl TestEnvironment {
-    async fn create_store() -> Arc<DeviceStorage> {
+    async fn create_storage_factory() -> Arc<InMemoryStorageFactory> {
         let storage_factory = InMemoryStorageFactory::new();
         // Initialize storage since there's no EnvironmentBuilder to manage that here.
         storage_factory.initialize_storage::<State>().await;
-        return storage_factory.get_store().await;
+        Arc::new(storage_factory)
     }
 
     async fn new() -> Self {
-        TestEnvironment::new_with_store(TestEnvironment::create_store().await).await
+        TestEnvironment::new_with_store(TestEnvironment::create_storage_factory().await).await
     }
 
-    async fn new_with_store(store: Arc<DeviceStorage>) -> Self {
+    async fn new_with_store(storage_factory: Arc<InMemoryStorageFactory>) -> Self {
+        let store = storage_factory.get_store().await;
         let delegate = service::message::create_hub();
         let (messenger, _) =
             delegate.create(MessengerType::Unbound).await.expect("core messenger created");
@@ -80,16 +85,46 @@ impl TestEnvironment {
 
         let client_proxy = ClientProxy::new(messenger, store.clone(), policy_type);
 
-        let handler = AudioPolicyHandler::create(client_proxy.clone())
+        let mut components = HashSet::new();
+        components.insert(SettingType::Audio);
+        let mut policies = HashSet::new();
+        policies.insert(PolicyType::Audio);
+        let mut agent_authority = Authority::create(delegate.clone(), components, policies, None)
+            .await
+            .expect("failed to create agent authority");
+
+        agent_authority
+            .register(Arc::new(crate::agent::storage_agent::Blueprint::new(storage_factory)))
+            .await;
+        agent_authority
+            .execute_lifespan(
+                Lifespan::Initialization,
+                Arc::new(ServiceContext::new(None, None)),
+                false,
+            )
+            .await
+            .expect("failed to initialize storage");
+        agent_authority
+            .execute_lifespan(Lifespan::Service, Arc::new(ServiceContext::new(None, None)), false)
+            .await
+            .expect("failed to start storage");
+
+        let mut handler = AudioPolicyHandler::create(client_proxy.clone())
             .await
             .expect("failed to create handler");
+
+        let result = handler.handle_policy_request(Request::Restore).await;
+        match result {
+            Ok(Payload::Restore) => {} // no-op
+            _ => panic!("Failed to restore policy handler: {:?}", result),
+        }
 
         Self {
             store,
             handler,
             internal_delegate: test_delegate,
             setting_handler_signature: handler_signature,
-            delegate: delegate,
+            delegate,
         }
     }
 
@@ -399,12 +434,13 @@ async fn test_handler_restore_persisted_state() {
         StateBuilder::new().add_property(AudioStreamType::Media, TransformFlags::all()).build();
     persisted_state.add_transform(modified_property, expected_transform);
 
-    let store = TestEnvironment::create_store().await;
+    let storage_factory = TestEnvironment::create_storage_factory().await;
+    let store = storage_factory.get_store().await;
 
     // Write the "persisted" value to storage for the handler to read on start.
     store.write(&persisted_state, false).await.expect("write failed");
 
-    let mut env = TestEnvironment::new_with_store(store).await;
+    let mut env = TestEnvironment::new_with_store(storage_factory).await;
 
     // Start task to provide audio info to the handler, which it requests at startup.
     env.serve_audio_info(default_audio_info()).await;

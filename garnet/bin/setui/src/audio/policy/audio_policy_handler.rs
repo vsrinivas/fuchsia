@@ -109,10 +109,7 @@ struct VolumeLimits {
 #[async_trait]
 impl Create for AudioPolicyHandler {
     async fn create(client_proxy: ClientProxy) -> Result<Self, Error> {
-        Ok(Self {
-            state: AudioPolicyHandler::restore_policy_state(client_proxy.read().await),
-            client_proxy,
-        })
+        Ok(Self { state: Default::default(), client_proxy })
     }
 }
 
@@ -127,9 +124,7 @@ impl PolicyHandler for AudioPolicyHandler {
                 PolicyInfo::Audio(self.state.clone()),
             )),
             policy_base::Request::Restore => {
-                self.state = AudioPolicyHandler::restore_policy_state(
-                    self.client_proxy.read_policy::<State>().await,
-                );
+                self.restore_policy_state(self.client_proxy.read_policy::<State>().await);
                 Ok(policy_base::response::Payload::Restore)
             }
             policy_base::Request::Audio(audio_request) => match audio_request {
@@ -201,7 +196,7 @@ impl PolicyHandler for AudioPolicyHandler {
 impl AudioPolicyHandler {
     /// Restores the policy state based on the configured audio streams and the previously persisted
     /// state.
-    fn restore_policy_state(persisted_state: State) -> State {
+    fn restore_policy_state(&mut self, persisted_state: State) {
         // Read the audio default info to see what policy targets are valid and create properties.
         let audio_info = default_audio_info();
         let mut state_builder = StateBuilder::new();
@@ -220,7 +215,7 @@ impl AudioPolicyHandler {
             });
         }
 
-        state
+        self.state = state;
     }
 
     /// Requests the current audio state from the audio setting proxy.
@@ -334,7 +329,7 @@ impl AudioPolicyHandler {
             ))?;
 
         // Persist the policy state.
-        self.client_proxy.write(&self.state, false).await?;
+        self.client_proxy.write_policy(self.state.clone().into(), false).await?;
 
         // Put the transform into effect, updating internal/external volume levels as needed.
         self.apply_policy_transforms(target, audio_info, external_volume).await?;
@@ -375,7 +370,7 @@ impl AudioPolicyHandler {
         ))?;
 
         // Persist the policy state.
-        self.client_proxy.write(&self.state, false).await?;
+        self.client_proxy.write_policy(self.state.clone().into(), false).await?;
 
         // Put the transform into effect, updating internal/external volume levels as needed.
         self.apply_policy_transforms(target, audio_info, external_volume).await?;

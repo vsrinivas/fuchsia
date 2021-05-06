@@ -7,7 +7,7 @@ use crate::handler::base::{Payload as HandlerPayload, Request, Response as Setti
 use crate::handler::device_storage::{DeviceStorage, DeviceStorageCompatible};
 use crate::handler::setting_handler::persist::UpdateState;
 use crate::handler::setting_handler::{SettingHandlerResult, StorageFactory};
-use crate::message::base::{Audience, MessageEvent};
+use crate::message::base::Audience;
 use crate::policy::response::{Error as PolicyError, Response};
 use crate::policy::{
     BoxedHandler, Context, GenerateHandlerResult, HasPolicyType, PolicyInfo, PolicyType,
@@ -19,7 +19,6 @@ use anyhow::Error;
 use async_trait::async_trait;
 use fuchsia_syslog::fx_log_err;
 use futures::future::BoxFuture;
-use futures::StreamExt;
 use std::convert::{TryFrom, TryInto};
 use std::sync::Arc;
 
@@ -161,7 +160,6 @@ impl ClientProxy {
         self.policy_type
     }
 
-    #[allow(dead_code)]
     /// The type `T` is any type that has a [`PolicyType`] associated with it and that can be
     /// converted into a [`PolicyInfo`]. This is usually a variant of the `PolicyInfo` enum.
     pub(crate) async fn read_policy<T: HasPolicyType + TryFrom<PolicyInfo>>(&self) -> T {
@@ -174,31 +172,34 @@ impl ClientProxy {
             )
             .send();
 
-        while let Ok((payload, _)) = receptor.next_of::<storage::Payload>().await {
-            if let storage::Payload::Response(storage::StorageResponse::Read(
-                StorageInfo::PolicyInfo(policy_info),
-            )) = payload
-            {
-                let policy_type: PolicyType = (&policy_info).into();
-                if let Ok(info) = policy_info.try_into() {
-                    return info;
+        match receptor.next_of::<storage::Payload>().await {
+            Ok((payload, _)) => {
+                if let storage::Payload::Response(storage::StorageResponse::Read(
+                    StorageInfo::PolicyInfo(policy_info),
+                )) = payload
+                {
+                    let policy_type: PolicyType = (&policy_info).into();
+                    if let Ok(info) = policy_info.try_into() {
+                        return info;
+                    }
+                    panic!(
+                        "Mismatching type during read. Expected {:?}, but got {:?}",
+                        T::POLICY_TYPE,
+                        policy_type
+                    );
+                } else {
+                    panic!("Incorrect response received from storage: {:?}", payload);
                 }
-                panic!(
-                    "Mismatching type during read. Expected {:?}, but got {:?}",
-                    T::POLICY_TYPE,
-                    policy_type
-                );
-            } else {
-                panic!("Incorrect response received from storage: {:?}", payload);
+            }
+            Err(err) => {
+                panic!("Error reading from storage: {:?}", err);
             }
         }
-
-        panic!("Did not get a read response");
     }
 
-    #[allow(dead_code)]
-    /// The argument `write_through` will block returning until the value has been completely
-    /// written to persistent store, rather than any temporary in-memory caching.
+    /// Write a policy info object to storage. The argument `write_through` will
+    /// block returning until the value has been completely written to
+    /// persistent store, rather than any temporary in-memory caching.
     pub(crate) async fn write_policy(
         &self,
         policy_info: PolicyInfo,
@@ -209,7 +210,7 @@ impl ClientProxy {
             .service_messenger
             .message(
                 storage::Payload::Request(storage::StorageRequest::Write(
-                    policy_info.clone().into(),
+                    policy_info.into(),
                     write_through,
                 ))
                 .into(),
@@ -217,25 +218,28 @@ impl ClientProxy {
             )
             .send();
 
-        while let Some(response) = receptor.next().await {
-            if let MessageEvent::Message(
-                service::Payload::Storage(storage::Payload::Response(
-                    storage::StorageResponse::Write(result),
-                )),
-                _,
-            ) = response
-            {
-                return result.map_err(|e| {
-                    fx_log_err!("Failed to write policy: {:?}", e);
-                    PolicyError::WriteFailure(policy_type)
-                });
+        match receptor.next_of::<storage::Payload>().await {
+            Ok((payload, _)) => {
+                if let storage::Payload::Response(storage::StorageResponse::Write(result)) = payload
+                {
+                    return result.map_err(|e| {
+                        fx_log_err!("Failed to write policy: {:?}", e);
+                        PolicyError::WriteFailure(policy_type)
+                    });
+                } else {
+                    fx_log_err!("Incorrect response received from storage: {:?}", payload);
+                }
+            }
+            Err(err) => {
+                fx_log_err!("Error writing to storage: {:?}", err);
             }
         }
 
-        panic!("Did not get a write response");
+        Err(PolicyError::WriteFailure(policy_type))
     }
 
-    pub async fn read<S>(&self) -> S
+    #[allow(dead_code)]
+    pub(crate) async fn read<S>(&self) -> S
     where
         S: DeviceStorageCompatible,
     {
@@ -245,7 +249,8 @@ impl ClientProxy {
     /// Returns Ok if the value was written, or an Error if the write failed. The argument
     /// `write_through` will block returning until the value has been completely written to
     /// persistent store, rather than any temporary in-memory caching.
-    pub async fn write<S>(&self, value: &S, write_through: bool) -> Result<(), PolicyError>
+    #[allow(dead_code)]
+    pub(crate) async fn write<S>(&self, value: &S, write_through: bool) -> Result<(), PolicyError>
     where
         S: DeviceStorageCompatible,
     {
