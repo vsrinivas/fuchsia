@@ -3170,6 +3170,9 @@ static uint8_t brcmf_cfg80211_start_ap(struct net_device* ndev, const wlanif_sta
   if (status != ZX_OK) {
     BRCMF_ERR("SET SSID error: %s, fw err %s", zx_status_get_string(status),
               brcmf_fil_get_errstr(fw_err));
+    if (fw_err == BCME_ERROR) {
+      ifp->drvr->device->GetInspect()->LogApSetSsidErr();
+    }
     goto fail;
   }
 

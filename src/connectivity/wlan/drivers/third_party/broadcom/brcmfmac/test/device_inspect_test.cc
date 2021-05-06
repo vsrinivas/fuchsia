@@ -31,8 +31,8 @@
 namespace wlan {
 namespace brcmfmac {
 
-constexpr uint16_t kUintPropertyNum = 8;
-constexpr uint16_t kWindowPropertyNum = 8;
+constexpr uint16_t kUintPropertyNum = 9;
+constexpr uint16_t kWindowPropertyNum = 9;
 
 const std::vector<std::string> kRootMetrics = {"brcmfmac-phy"};
 const std::vector<std::string> kConnMetrics = {"brcmfmac-phy", "connection-metrics"};
@@ -58,6 +58,7 @@ class DeviceInspectTest : public gtest::TestLoopFixture {
   void LogConnOtherFail() { device_inspect_->LogConnOtherFail(); }
   void LogRxFreeze() { device_inspect_->LogRxFreeze(); }
   void LogSdioMaxTxSeqErr() { device_inspect_->LogSdioMaxTxSeqErr(); }
+  void LogApSetSsidErr() { device_inspect_->LogApSetSsidErr(); }
 
   uint64_t GetUintProperty(const std::vector<std::string>& path, std::string name) {
     auto hierarchy = FetchHierarchy(device_inspect_->inspector());
@@ -85,6 +86,8 @@ class DeviceInspectTest : public gtest::TestLoopFixture {
       PropertyTestUnit(kRootMetrics, "rx_freeze", std::bind(&DeviceInspectTest::LogRxFreeze, this)),
       PropertyTestUnit(kRootMetrics, "sdio_max_tx_seq_err",
                        std::bind(&DeviceInspectTest::LogSdioMaxTxSeqErr, this)),
+      PropertyTestUnit(kRootMetrics, "ap_set_ssid_err",
+                       std::bind(&DeviceInspectTest::LogApSetSsidErr, this)),
   };
   const PropertyTestUnit window_properties_[kWindowPropertyNum] = {
       PropertyTestUnit(kRootMetrics, "tx_qfull_24hrs",
@@ -103,6 +106,8 @@ class DeviceInspectTest : public gtest::TestLoopFixture {
                        std::bind(&DeviceInspectTest::LogRxFreeze, this)),
       PropertyTestUnit(kRootMetrics, "sdio_max_tx_seq_err_24hrs",
                        std::bind(&DeviceInspectTest::LogSdioMaxTxSeqErr, this)),
+      PropertyTestUnit(kRootMetrics, "ap_set_ssid_err_24hrs",
+                       std::bind(&DeviceInspectTest::LogApSetSsidErr, this)),
   };
 };
 

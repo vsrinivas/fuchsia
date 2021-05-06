@@ -40,6 +40,7 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/macros.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim.h"
 #include "third_party/bcmdhd/crossdriver/include/proto/802.11.h"
+#include "zircon/errors.h"
 
 namespace wlan::brcmfmac {
 
@@ -281,8 +282,9 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
     if (status == ZX_OK) {
       // If the transmission status is ZX_OK, customize the firmware error code which will be
       // sent back through bcdc response.
-      if (fw_err != BCME_OK)
+      if (fw_err != BCME_OK) {
         dcmd->flags |= BCDC_DCMD_ERROR;
+      }
       dcmd->status = fw_err;
       bcdc_response_.Set(msg, len);
     }

@@ -58,6 +58,7 @@ class DeviceInspect {
   void LogConnOtherFail();
   void LogRxFreeze();
   void LogSdioMaxTxSeqErr();
+  void LogApSetSsidErr();
 
  private:
   // Only constructible through Create().
@@ -77,6 +78,8 @@ class DeviceInspect {
   WindowedUintProperty rx_freeze_24hrs_;
   inspect::UintProperty sdio_max_tx_seq_err_;
   WindowedUintProperty sdio_max_tx_seq_err_24hrs_;
+  inspect::UintProperty ap_set_ssid_err_;
+  WindowedUintProperty ap_set_ssid_err_24hrs_;
 };
 
 }  // namespace wlan::brcmfmac

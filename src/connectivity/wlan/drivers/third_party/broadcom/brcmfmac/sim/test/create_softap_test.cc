@@ -5,6 +5,8 @@
 #include <fuchsia/hardware/wlan/info/c/banjo.h>
 #include <fuchsia/hardware/wlanif/c/banjo.h>
 #include <fuchsia/wlan/ieee80211/cpp/fidl.h>
+#include <lib/inspect/cpp/hierarchy.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <zircon/errors.h>
 
 #include <ddk/hw/wlan/wlaninfo/c/banjo.h>
@@ -17,9 +19,11 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/test/device_inspect_test_utils.h"
 #include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/macaddr.h"
 
 namespace wlan::brcmfmac {
+
 namespace {
 
 constexpr zx::duration kSimulatedClockDuration = zx::sec(10);
@@ -43,6 +47,10 @@ class CreateSoftAPTest : public SimTest {
   zx_status_t StartSoftAP();
   zx_status_t StopSoftAP();
   uint32_t DeviceCount();
+
+  // We track a specific firmware error condition seen in AP start.
+  uint64_t GetApSetSsidErrInspectCount();
+
   void TxAuthReq(simulation::SimAuthType auth_type, common::MacAddr client_mac);
   void TxAssocReq(common::MacAddr client_mac);
   void TxDisassocReq(common::MacAddr client_mac);
@@ -57,6 +65,7 @@ class CreateSoftAPTest : public SimTest {
   void ClearAssocInd();
   void InjectStartAPError();
   void InjectChanspecError();
+  void InjectSetSsidError();
   void InjectStopAPError();
   void SetExpectMacForInds(common::MacAddr set_mac);
 
@@ -168,6 +177,17 @@ void CreateSoftAPTest::DeleteInterface() {
 
 uint32_t CreateSoftAPTest::DeviceCount() { return (dev_mgr_->DeviceCount()); }
 
+uint64_t CreateSoftAPTest::GetApSetSsidErrInspectCount() {
+  auto hierarchy = FetchHierarchy(device_->GetInspect()->inspector());
+  auto* root = hierarchy.value().GetByPath({"brcmfmac-phy"});
+  EXPECT_NE(root, nullptr);
+  // Only verify the value of hourly counter here, the relationship between hourly counter and daily
+  // counter is verified in device_inspect_test.
+  auto* uint_property = root->node().get_property<inspect::UintPropertyValue>("ap_set_ssid_err");
+  EXPECT_NE(uint_property, nullptr);
+  return uint_property->value();
+}
+
 uint16_t CreateSoftAPTest::CreateRsneIe(uint8_t* buffer) {
   // construct a fake rsne ie in the input buffer
   uint16_t offset = 0;
@@ -253,6 +273,11 @@ void CreateSoftAPTest::InjectStopAPError() {
 void CreateSoftAPTest::InjectChanspecError() {
   brcmf_simdev* sim = device_->GetSim();
   sim->sim_fw->err_inj_.AddErrInjIovar("chanspec", ZX_ERR_IO, BCME_BADARG, softap_ifc_.iface_id_);
+}
+
+void CreateSoftAPTest::InjectSetSsidError() {
+  brcmf_simdev* sim = device_->GetSim();
+  sim->sim_fw->err_inj_.AddErrInjCmd(BRCMF_C_SET_SSID, ZX_OK, BCME_ERROR, softap_ifc_.iface_id_);
 }
 
 void CreateSoftAPTest::SetExpectMacForInds(common::MacAddr set_mac) { ind_expect_mac_ = set_mac; }
@@ -422,6 +447,22 @@ TEST_F(CreateSoftAPTest, CreateSoftAPFail_ChanSetError) {
   env_->ScheduleNotification(std::bind(&CreateSoftAPTest::StartSoftAP, this), zx::msec(50));
   env_->Run(kSimulatedClockDuration);
   VerifyStartAPConf(WLAN_START_RESULT_NOT_SUPPORTED);
+}
+
+// SoftAP can encounter this specific SET_SSID firmware error, which we detect and log.
+TEST_F(CreateSoftAPTest, CreateSoftAPFail_SetSsidError) {
+  Init();
+  CreateInterface();
+  EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
+  InjectSetSsidError();
+  env_->ScheduleNotification(std::bind(&CreateSoftAPTest::StartSoftAP, this), zx::msec(50));
+  ASSERT_EQ(0U, GetApSetSsidErrInspectCount());
+  env_->Run(kSimulatedClockDuration);
+
+  VerifyStartAPConf(WLAN_START_RESULT_NOT_SUPPORTED);
+
+  // Verify inspect is updated.
+  EXPECT_EQ(1U, GetApSetSsidErrInspectCount());
 }
 
 // Fail the iovar bss but Stop AP should still succeed
