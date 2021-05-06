@@ -6,6 +6,7 @@ use bitflags::bitflags;
 use fuchsia_zircon as zx;
 use parking_lot::{Mutex, RwLock};
 use std::collections::HashMap;
+use std::fmt;
 use std::sync::Arc;
 
 use crate::not_implemented;
@@ -18,11 +19,19 @@ pub use starnix_macros::FileObject;
 #[derive(Hash, PartialEq, Eq, Debug, Copy, Clone)]
 pub struct FdNumber(i32);
 impl FdNumber {
+    pub const AT_FDCWD: FdNumber = FdNumber(AT_FDCWD);
+
     pub fn from_raw(n: i32) -> FdNumber {
         FdNumber(n)
     }
     pub fn raw(&self) -> i32 {
         self.0
+    }
+}
+
+impl fmt::Display for FdNumber {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "fd({})", self.0)
     }
 }
 

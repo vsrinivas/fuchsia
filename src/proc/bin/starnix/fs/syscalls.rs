@@ -13,6 +13,7 @@ use crate::fs::*;
 use crate::not_implemented;
 use crate::strace;
 use crate::syscalls::*;
+use crate::task::*;
 use crate::types::*;
 
 pub fn sys_read(
@@ -74,17 +75,6 @@ pub fn sys_fcntl(
     }
 }
 
-pub fn sys_fstat(
-    ctx: &SyscallContext<'_>,
-    fd: FdNumber,
-    buffer: UserRef<stat_t>,
-) -> Result<SyscallResult, Errno> {
-    let file = ctx.task.files.get(fd)?;
-    let result = file.ops().fstat(&file, &ctx.task)?;
-    ctx.task.mm.write_object(buffer, &result)?;
-    return Ok(SUCCESS);
-}
-
 pub fn sys_pread64(
     ctx: &SyscallContext<'_>,
     fd: FdNumber,
@@ -122,23 +112,6 @@ pub fn sys_writev(
     Ok(file.ops().write(&file, &ctx.task, &iovecs)?.into())
 }
 
-pub fn sys_access(
-    _ctx: &SyscallContext<'_>,
-    _path: UserCString,
-    _mode: i32,
-) -> Result<SyscallResult, Errno> {
-    Err(ENOSYS)
-}
-
-pub fn sys_readlink(
-    _ctx: &SyscallContext<'_>,
-    _path: UserCString,
-    _buffer: UserAddress,
-    _buffer_size: usize,
-) -> Result<SyscallResult, Errno> {
-    Err(EINVAL)
-}
-
 pub fn sys_fstatfs(
     ctx: &SyscallContext<'_>,
     _fd: FdNumber,
@@ -149,20 +122,29 @@ pub fn sys_fstatfs(
     Ok(SUCCESS)
 }
 
-pub fn sys_openat(
-    ctx: &SyscallContext<'_>,
-    dir_fd: i32,
+fn get_fio_flags_from_open_flags(open_flags: u32) -> Result<u32, Errno> {
+    match open_flags & O_RDWR {
+        O_RDONLY => Ok(fio::OPEN_RIGHT_READABLE),
+        O_WRONLY => Ok(fio::OPEN_RIGHT_WRITABLE),
+        O_RDWR => Ok(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE),
+        _ => Err(EINVAL),
+    }
+}
+
+fn open_at(
+    task: &Task,
+    dir_fd: FdNumber,
     user_path: UserCString,
-    flags: i32,
+    flags: u32,
     mode: i32,
-) -> Result<SyscallResult, Errno> {
-    if dir_fd != AT_FDCWD {
-        not_implemented!("openat dirfds are unimplemented");
+) -> Result<FileHandle, Errno> {
+    if dir_fd != FdNumber::AT_FDCWD {
+        not_implemented!("open_at dirfds are unimplemented");
         return Err(EINVAL);
     }
     let mut buf = [0u8; PATH_MAX as usize];
-    let path = ctx.task.mm.read_c_string(user_path, &mut buf)?;
-    strace!("openat({}, {}, {:#x}, {:#o})", dir_fd, String::from_utf8_lossy(path), flags, mode);
+    let path = task.mm.read_c_string(user_path, &mut buf)?;
+    strace!("open_at({}, {}, {:#x}, {:#o})", dir_fd, String::from_utf8_lossy(path), flags, mode);
     if path[0] != b'/' {
         not_implemented!("non-absolute paths are unimplemented");
         return Err(ENOENT);
@@ -170,10 +152,11 @@ pub fn sys_openat(
     let path = &path[1..];
     // TODO(tbodt): Need to switch to filesystem APIs that do not require UTF-8
     let path = std::str::from_utf8(path).expect("bad UTF-8 in filename");
+
     let description = syncio::directory_open(
-        &ctx.task.fs.root,
+        &task.fs.root,
         path,
-        fio::OPEN_RIGHT_READABLE,
+        get_fio_flags_from_open_flags(flags)?,
         0,
         zx::Time::INFINITE,
     )
@@ -184,7 +167,112 @@ pub fn sys_openat(
             EIO
         }
     })?;
-    Ok(ctx.task.files.install_fd(RemoteFile::from_description(description))?.into())
+    Ok(RemoteFile::from_description(description))
+}
+
+pub fn sys_openat(
+    ctx: &SyscallContext<'_>,
+    dir_fd: FdNumber,
+    user_path: UserCString,
+    flags: u32,
+    mode: i32,
+) -> Result<SyscallResult, Errno> {
+    let file = open_at(&ctx.task, dir_fd, user_path, flags, mode)?;
+    Ok(ctx.task.files.install_fd(file)?.into())
+}
+
+pub fn sys_faccessat(
+    ctx: &SyscallContext<'_>,
+    dir_fd: FdNumber,
+    user_path: UserCString,
+    mode: u32,
+) -> Result<SyscallResult, Errno> {
+    // These values are defined in libc headers rather than in UAPI headers.
+    // const F_OK: u32 = 0;
+    const X_OK: u32 = 1;
+    const W_OK: u32 = 2;
+    const R_OK: u32 = 4;
+
+    if mode & !(X_OK | W_OK | R_OK) != 0 {
+        return Err(EINVAL);
+    }
+
+    // TODO: Using open_at to implement faccessat is not quite correct.
+    //       For example, we cannot properly implement F_OK, which could
+    //       succeed for write-only files. Implementing faccessat properly
+    //       will require a more complete VFS that can perform access checks
+    //       directly.
+
+    if mode & X_OK != 0 {
+        return Err(ENOSYS);
+    }
+
+    let flags = if mode & (W_OK | R_OK) == W_OK | R_OK {
+        O_RDWR
+    } else if mode & W_OK != 0 {
+        O_WRONLY
+    } else {
+        O_RDONLY
+    };
+
+    let _ = open_at(&ctx.task, dir_fd, user_path, flags | O_PATH, 0)?;
+    Ok(SUCCESS)
+}
+
+pub fn sys_access(
+    ctx: &SyscallContext<'_>,
+    user_path: UserCString,
+    mode: u32,
+) -> Result<SyscallResult, Errno> {
+    sys_faccessat(ctx, FdNumber::AT_FDCWD, user_path, mode)
+}
+
+pub fn sys_fstat(
+    ctx: &SyscallContext<'_>,
+    fd: FdNumber,
+    buffer: UserRef<stat_t>,
+) -> Result<SyscallResult, Errno> {
+    let file = ctx.task.files.get(fd)?;
+    let result = file.ops().fstat(&file, &ctx.task)?;
+    ctx.task.mm.write_object(buffer, &result)?;
+    Ok(SUCCESS)
+}
+
+pub fn sys_newfstatat(
+    ctx: &SyscallContext<'_>,
+    dir_fd: FdNumber,
+    user_path: UserCString,
+    buffer: UserRef<stat_t>,
+    flags: u32,
+) -> Result<SyscallResult, Errno> {
+    if flags != 0 {
+        not_implemented!("newfstatat: flags 0x{:x}", flags);
+        return Err(ENOSYS);
+    }
+    let file = open_at(&ctx.task, dir_fd, user_path, O_RDONLY | O_PATH, 0)?;
+    let result = file.ops().fstat(&file, &ctx.task)?;
+    ctx.task.mm.write_object(buffer, &result)?;
+    Ok(SUCCESS)
+}
+
+pub fn sys_readlinkat(
+    ctx: &SyscallContext<'_>,
+    dir_fd: FdNumber,
+    user_path: UserCString,
+    _buffer: UserAddress,
+    _buffer_size: usize,
+) -> Result<SyscallResult, Errno> {
+    let _ = open_at(&ctx.task, dir_fd, user_path, O_RDONLY, 0)?;
+    Err(EINVAL)
+}
+
+pub fn sys_readlink(
+    ctx: &SyscallContext<'_>,
+    user_path: UserCString,
+    buffer: UserAddress,
+    buffer_size: usize,
+) -> Result<SyscallResult, Errno> {
+    sys_readlinkat(ctx, FdNumber::AT_FDCWD, user_path, buffer, buffer_size)
 }
 
 pub fn sys_getcwd(
