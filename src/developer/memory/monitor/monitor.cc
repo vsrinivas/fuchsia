@@ -158,7 +158,10 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
 
   // Expose lazy values under the root, populated from the Inspect method.
   inspector_.root().CreateLazyValues(
-      "memory_measurements", [this, bucket_matches = std::move(bucket_matches)] { return fit::make_result_promise(fit::ok(Inspect(bucket_matches))); },
+      "memory_measurements",
+      [this, bucket_matches = std::move(bucket_matches)] {
+        return fit::make_result_promise(fit::ok(Inspect(bucket_matches)));
+      },
       &inspector_);
 
   component_context_->outgoing()->AddPublicService(bindings_.GetHandler(this));

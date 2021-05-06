@@ -23,14 +23,15 @@ class PressureNotifierUnitTest;
 }  // namespace test
 
 enum Level : size_t {
-  kCritical = 0,
+  kImminentOOM = 0,
+  kCritical,
   kWarning,
   kNormal,
   kNumLevels,
 };
-static constexpr size_t kNameLength = 10;
+static constexpr size_t kNameLength = 15;
 static constexpr std::array<char[kNameLength], Level::kNumLevels + 1> kLevelNames = {
-    "CRITICAL", "WARNING", "NORMAL", "UNSET"};
+    "IMMINENT-OOM", "CRITICAL", "WARNING", "NORMAL", "UNSET"};
 
 class PressureNotifier;
 

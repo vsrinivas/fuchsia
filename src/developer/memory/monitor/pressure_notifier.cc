@@ -69,6 +69,11 @@ void PressureNotifier::PostLevelChange() {
     notify_cb_(level_to_send);
   }
 
+  if (level_to_send == Level::kImminentOOM) {
+    // Nothing else to do. This is a diagnostic-only level that is not signaled to watchers.
+    return;
+  }
+
   if (level_to_send == Level::kNormal) {
     // See comments about |observed_normal_level_| in the definition of |FileCrashReport()|.
     observed_normal_level_ = true;

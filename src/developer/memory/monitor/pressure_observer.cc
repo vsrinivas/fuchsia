@@ -65,6 +65,14 @@ zx_status_t PressureObserver::InitMemPressureEvents() {
     return status;
   }
 
+  status = zx_system_get_event(root_job.get(), ZX_SYSTEM_EVENT_IMMINENT_OUT_OF_MEMORY,
+                               events_[Level::kImminentOOM].reset_and_get_address());
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "zx_system_get_event [IMMINENT-OOM] returned "
+                   << zx_status_get_string(status);
+    return status;
+  }
+
   status = zx_system_get_event(root_job.get(), ZX_SYSTEM_EVENT_MEMORY_PRESSURE_CRITICAL,
                                events_[Level::kCritical].reset_and_get_address());
   if (status != ZX_OK) {
