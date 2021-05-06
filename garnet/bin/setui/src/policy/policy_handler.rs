@@ -5,16 +5,22 @@
 use crate::base::SettingType;
 use crate::handler::base::{Payload as HandlerPayload, Request, Response as SettingResponse};
 use crate::handler::device_storage::{DeviceStorage, DeviceStorageCompatible};
+use crate::handler::setting_handler::persist::UpdateState;
 use crate::handler::setting_handler::{SettingHandlerResult, StorageFactory};
-use crate::message::base::Audience;
+use crate::message::base::{Audience, MessageEvent};
 use crate::policy::response::{Error as PolicyError, Response};
 use crate::policy::{
-    BoxedHandler, Context, GenerateHandlerResult, PolicyType, Request as PolicyRequest,
+    BoxedHandler, Context, GenerateHandlerResult, HasPolicyType, PolicyInfo, PolicyType,
+    Request as PolicyRequest,
 };
 use crate::service;
+use crate::storage::{self, StorageInfo};
 use anyhow::Error;
 use async_trait::async_trait;
+use fuchsia_syslog::fx_log_err;
 use futures::future::BoxFuture;
+use futures::StreamExt;
+use std::convert::{TryFrom, TryInto};
 use std::sync::Arc;
 
 /// PolicyHandlers are in charge of applying and persisting policies set by clients.
@@ -153,6 +159,80 @@ impl ClientProxy {
 
     pub fn policy_type(&self) -> PolicyType {
         self.policy_type
+    }
+
+    #[allow(dead_code)]
+    /// The type `T` is any type that has a [`PolicyType`] associated with it and that can be
+    /// converted into a [`PolicyInfo`]. This is usually a variant of the `PolicyInfo` enum.
+    pub(crate) async fn read_policy<T: HasPolicyType + TryFrom<PolicyInfo>>(&self) -> T {
+        let mut receptor = self
+            .service_messenger
+            .message(
+                storage::Payload::Request(storage::StorageRequest::Read(T::POLICY_TYPE.into()))
+                    .into(),
+                Audience::Address(service::Address::Storage),
+            )
+            .send();
+
+        while let Ok((payload, _)) = receptor.next_of::<storage::Payload>().await {
+            if let storage::Payload::Response(storage::StorageResponse::Read(
+                StorageInfo::PolicyInfo(policy_info),
+            )) = payload
+            {
+                let policy_type: PolicyType = (&policy_info).into();
+                if let Ok(info) = policy_info.try_into() {
+                    return info;
+                }
+                panic!(
+                    "Mismatching type during read. Expected {:?}, but got {:?}",
+                    T::POLICY_TYPE,
+                    policy_type
+                );
+            } else {
+                panic!("Incorrect response received from storage: {:?}", payload);
+            }
+        }
+
+        panic!("Did not get a read response");
+    }
+
+    #[allow(dead_code)]
+    /// The argument `write_through` will block returning until the value has been completely
+    /// written to persistent store, rather than any temporary in-memory caching.
+    pub(crate) async fn write_policy(
+        &self,
+        policy_info: PolicyInfo,
+        write_through: bool,
+    ) -> Result<UpdateState, PolicyError> {
+        let policy_type = (&policy_info).into();
+        let mut receptor = self
+            .service_messenger
+            .message(
+                storage::Payload::Request(storage::StorageRequest::Write(
+                    policy_info.clone().into(),
+                    write_through,
+                ))
+                .into(),
+                Audience::Address(service::Address::Storage),
+            )
+            .send();
+
+        while let Some(response) = receptor.next().await {
+            if let MessageEvent::Message(
+                service::Payload::Storage(storage::Payload::Response(
+                    storage::StorageResponse::Write(result),
+                )),
+                _,
+            ) = response
+            {
+                return result.map_err(|e| {
+                    fx_log_err!("Failed to write policy: {:?}", e);
+                    PolicyError::WriteFailure(policy_type)
+                });
+            }
+        }
+
+        panic!("Did not get a write response");
     }
 
     pub async fn read<S>(&self) -> S
