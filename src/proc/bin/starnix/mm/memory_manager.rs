@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fuchsia_zircon::{self as zx, AsHandleRef, HandleBased, Status};
+use fuchsia_zircon::{self as zx, AsHandleRef};
 use lazy_static::lazy_static;
-use parking_lot::{Mutex, RwLock};
-use std::ffi::CString;
+use parking_lot::{Mutex, RwLock, RwLockUpgradableReadGuard};
+use std::ffi::{CStr, CString};
+use std::mem;
 use std::sync::Arc;
 use zerocopy::{AsBytes, FromBytes};
 
@@ -15,31 +16,6 @@ use crate::types::*;
 
 lazy_static! {
     pub static ref PAGE_SIZE: u64 = zx::system_get_page_size() as u64;
-}
-
-pub struct ProgramBreak {
-    vmar: zx::Vmar,
-    vmo: zx::Vmo,
-
-    // These base address at which the data segment is mapped.
-    base: UserAddress,
-
-    // The current program break.
-    //
-    // The addresses from [base, current.round_up(*PAGE_SIZE)) are mapped into the
-    // client address space from the underlying |vmo|.
-    current: UserAddress,
-}
-
-impl Default for ProgramBreak {
-    fn default() -> ProgramBreak {
-        return ProgramBreak {
-            vmar: zx::Handle::invalid().into(),
-            vmo: zx::Handle::invalid().into(),
-            base: UserAddress::default(),
-            current: UserAddress::default(),
-        };
-    }
 }
 
 #[derive(Debug, Eq, PartialEq, Clone)]
@@ -81,6 +57,18 @@ impl Mapping {
 
 const PROGRAM_BREAK_LIMIT: u64 = 64 * 1024 * 1024;
 
+#[derive(Debug, Default, Clone, Copy, Eq, PartialEq)]
+struct ProgramBreak {
+    // These base address at which the data segment is mapped.
+    base: UserAddress,
+
+    // The current program break.
+    //
+    // The addresses from [base, current.round_up(*PAGE_SIZE)) are mapped into the
+    // client address space from the underlying |vmo|.
+    current: UserAddress,
+}
+
 /// The policy about whether the address space can be dumped.
 pub enum DumpPolicy {
     /// The address space cannot be dumped.
@@ -108,8 +96,11 @@ pub struct MemoryManager {
     // interface.
     pub root_vmar: zx::Vmar,
 
+    /// The base address of the root_vmar.
+    vmar_base: UserAddress,
+
     /// State for the brk and sbrk syscalls.
-    program_break: RwLock<ProgramBreak>,
+    program_break: Mutex<Option<ProgramBreak>>,
 
     /// The memory mappings currently used by this address space.
     ///
@@ -122,79 +113,124 @@ pub struct MemoryManager {
 
 impl MemoryManager {
     pub fn new(process: zx::Process, root_vmar: zx::Vmar) -> Self {
+        let vmar_base = UserAddress::from_ptr(root_vmar.info().unwrap().base);
         MemoryManager {
             process,
             root_vmar,
-            program_break: RwLock::new(ProgramBreak::default()),
+            vmar_base,
+            program_break: Mutex::new(None),
             mappings: RwLock::new(RangeMap::<UserAddress, Mapping>::new()),
             dumpable: Mutex::new(DumpPolicy::DISABLE),
         }
     }
 
-    pub fn set_program_break(&self, addr: UserAddress) -> Result<UserAddress, Status> {
-        let mut program_break = self.program_break.write();
-        if program_break.vmar.is_invalid_handle() {
-            // TODO: This allocation places the program break at a random location in the
-            // child's address space. However, we're supposed to put this memory directly
-            // above the last segment of the ELF for the child.
-            let (vmar, ptr) = self.root_vmar.allocate(
-                0,
-                PROGRAM_BREAK_LIMIT as usize,
-                zx::VmarFlags::CAN_MAP_SPECIFIC
-                    | zx::VmarFlags::CAN_MAP_READ
-                    | zx::VmarFlags::CAN_MAP_WRITE,
-            )?;
-            let vmo = zx::Vmo::create(PROGRAM_BREAK_LIMIT)?;
-            program_break.vmar = vmar;
-            program_break.vmo = vmo;
-            program_break.base = UserAddress::from_ptr(ptr);
-            program_break.current = program_break.base;
-        }
-        if addr < program_break.base || addr > program_break.base + PROGRAM_BREAK_LIMIT {
+    pub fn set_brk(&self, addr: UserAddress) -> Result<UserAddress, Errno> {
+        let mut program_break = self.program_break.lock();
+
+        // Ensure that a program break exists by mapping at least one page.
+        let mut brk = match *program_break {
+            None => {
+                let vmo = zx::Vmo::create(PROGRAM_BREAK_LIMIT).map_err(|_| ENOMEM)?;
+                vmo.set_name(CStr::from_bytes_with_nul(b"starnix-brk\0").unwrap())
+                    .map_err(impossible_error)?;
+                let length = *PAGE_SIZE as usize;
+                let addr = self.map(
+                    UserAddress::default(),
+                    vmo,
+                    0,
+                    length,
+                    zx::VmarFlags::PERM_READ
+                        | zx::VmarFlags::PERM_WRITE
+                        | zx::VmarFlags::REQUIRE_NON_RESIZABLE,
+                )?;
+                let brk = ProgramBreak { base: addr, current: addr };
+                *program_break = Some(brk);
+                brk
+            }
+            Some(brk) => brk,
+        };
+
+        if addr < brk.base || addr > brk.base + PROGRAM_BREAK_LIMIT {
             // The requested program break is out-of-range. We're supposed to simply
             // return the current program break.
-            return Ok(program_break.current);
-        }
-        if addr < program_break.current {
-            // The client wishes to free up memory. Adjust the program break to the new
-            // location.
-            let aligned_previous = program_break.current.round_up(*PAGE_SIZE);
-            program_break.current = addr;
-            let aligned_current = program_break.current.round_up(*PAGE_SIZE);
-
-            let len = aligned_current - aligned_previous;
-            if len > 0 {
-                // If we crossed a page boundary, we can actually unmap and free up the
-                // unused pages.
-                let offset = aligned_previous - program_break.base;
-                unsafe { program_break.vmar.unmap(aligned_current.ptr(), len)? };
-                program_break.vmo.op_range(zx::VmoOp::DECOMMIT, offset as u64, len as u64)?;
-            }
-            return Ok(program_break.current);
+            return Ok(brk.current);
         }
 
-        // Otherwise, we've been asked to increase the page break.
-        let aligned_previous = program_break.current.round_up(*PAGE_SIZE);
-        program_break.current = addr;
-        let aligned_current = program_break.current.round_up(*PAGE_SIZE);
+        let mappings = self.mappings.upgradable_read();
+        let (range, mapping) = mappings.get(&brk.current).ok_or(EFAULT)?;
 
-        let len = aligned_current - aligned_previous;
-        if len > 0 {
-            // If we crossed a page boundary, we need to map more of the underlying VMO
-            // into the client's address space.
-            let offset = aligned_previous - program_break.base;
-            program_break.vmar.map(
-                offset,
-                &program_break.vmo,
-                offset as u64,
-                len,
+        brk.current = addr;
+
+        let old_end = range.end;
+        let new_end = (brk.current + 1u64).round_up(*PAGE_SIZE);
+
+        if new_end < old_end {
+            // We've been asked to free memory.
+            let delta = old_end - new_end;
+            let vmo = mapping.vmo.clone();
+            mem::drop(mappings);
+            self.unmap(new_end, delta)?;
+            let vmo_offset = new_end - brk.base;
+            vmo.op_range(zx::VmoOp::DECOMMIT, vmo_offset as u64, delta as u64)
+                .map_err(|e| impossible_error(e))?;
+        } else if new_end > old_end {
+            // We've been asked to map more memory.
+            let delta = new_end - old_end;
+            let vmo_offset = old_end - brk.base;
+            let range = range.clone();
+            let mapping = mapping.clone();
+
+            let mut mappings = RwLockUpgradableReadGuard::upgrade(mappings);
+            mappings.remove(&range);
+            match self.map_locked(
+                &mut mappings,
+                old_end,
+                &mapping.vmo,
+                vmo_offset as u64,
+                delta,
                 zx::VmarFlags::PERM_READ
                     | zx::VmarFlags::PERM_WRITE
                     | zx::VmarFlags::REQUIRE_NON_RESIZABLE
                     | zx::VmarFlags::SPECIFIC,
-            )?;
+            ) {
+                Ok(_addr) => {
+                    mappings.insert(brk.base..new_end, mapping);
+                }
+                Err(e) => {
+                    // We failed to extend the mapping, which means we need to add
+                    // back the old mapping.
+                    mappings.insert(brk.base..old_end, mapping);
+                    return Err(e);
+                }
+            }
         }
-        return Ok(program_break.current);
+
+        *program_break = Some(brk);
+        return Ok(brk.current);
+    }
+
+    fn map_locked(
+        &self,
+        _mappings: &mut RangeMap<UserAddress, Mapping>,
+        addr: UserAddress,
+        vmo: &zx::Vmo,
+        vmo_offset: u64,
+        length: usize,
+        flags: zx::VmarFlags,
+    ) -> Result<UserAddress, Errno> {
+        let vmar_offset = if addr.ptr() == 0 { 0 } else { addr - self.vmar_base };
+        let addr = UserAddress::from_ptr(
+            self.root_vmar.map(vmar_offset, vmo, vmo_offset, length, flags).map_err(
+                |s| match s {
+                    zx::Status::INVALID_ARGS => EINVAL,
+                    zx::Status::ACCESS_DENIED => EACCES, // or EPERM?
+                    zx::Status::NOT_SUPPORTED => ENODEV,
+                    zx::Status::NO_MEMORY => ENOMEM,
+                    _ => impossible_error(s),
+                },
+            )?,
+        );
+        Ok(addr)
     }
 
     pub fn map(
@@ -205,20 +241,10 @@ impl MemoryManager {
         length: usize,
         flags: zx::VmarFlags,
     ) -> Result<UserAddress, Errno> {
-        let root_base = self.root_vmar.info().unwrap().base;
-        let vmar_offset = if addr.ptr() == 0 { 0 } else { addr.ptr() - root_base };
         let mut mappings = self.mappings.write();
-        let addr = UserAddress::from_ptr(
-            self.root_vmar.map(vmar_offset, &vmo, vmo_offset, length, flags).map_err(|s| {
-                match s {
-                    zx::Status::INVALID_ARGS => EINVAL,
-                    zx::Status::ACCESS_DENIED => EACCES, // or EPERM?
-                    zx::Status::NOT_SUPPORTED => ENODEV,
-                    zx::Status::NO_MEMORY => ENOMEM,
-                    _ => impossible_error(s),
-                }
-            })?,
-        );
+
+        let addr = self.map_locked(&mut mappings, addr, &vmo, vmo_offset, length, flags)?;
+
         let mapping = Mapping::new(addr, vmo, vmo_offset, flags);
         let end = (addr + length).round_up(*PAGE_SIZE);
         mappings.insert(addr..end, mapping);
@@ -303,5 +329,71 @@ impl MemoryManager {
         object: &T,
     ) -> Result<(), Errno> {
         self.write_memory(user.addr(), &object.as_bytes())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fuchsia_async as fasync;
+
+    use crate::testing::*;
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_brk() {
+        let (_kernel, task_owner) = create_kernel_and_task();
+        let mm = &task_owner.task.mm;
+
+        // Look up the given addr in the mappings table.
+        let get_range = |addr: &UserAddress| {
+            let mappings = mm.mappings.read();
+            let (range, _) = mappings.get(&addr).expect("failed to find mapping");
+            range.clone()
+        };
+
+        // Initialize the program break.
+        let base_addr =
+            mm.set_brk(UserAddress::default()).expect("failed to set initial program break");
+        assert!(base_addr > UserAddress::default());
+
+        // Check that the initial program break actually maps some memory.
+        let range0 = get_range(&base_addr);
+        assert_eq!(range0.start, base_addr);
+        assert_eq!(range0.end, base_addr + *PAGE_SIZE);
+
+        // Grow the program break by a tiny amount that does not actually result in a change.
+        let addr1 = mm.set_brk(base_addr + 1u64).expect("failed to grow brk");
+        assert_eq!(addr1, base_addr + 1u64);
+        let range1 = get_range(&base_addr);
+        assert_eq!(range1.start, range0.start);
+        assert_eq!(range1.end, range0.end);
+
+        // Grow the program break by a non-trival amount and observe the larger mapping.
+        let addr2 = mm.set_brk(base_addr + 24893u64).expect("failed to grow brk");
+        assert_eq!(addr2, base_addr + 24893u64);
+        let range2 = get_range(&base_addr);
+        assert_eq!(range2.start, base_addr);
+        assert_eq!(range2.end, addr2.round_up(*PAGE_SIZE));
+
+        // Shrink the program break and observe the smaller mapping.
+        let addr3 = mm.set_brk(base_addr + 14832u64).expect("failed to shrink brk");
+        assert_eq!(addr3, base_addr + 14832u64);
+        let range3 = get_range(&base_addr);
+        assert_eq!(range3.start, base_addr);
+        assert_eq!(range3.end, addr3.round_up(*PAGE_SIZE));
+
+        // Shrink the program break close to zero and observe the smaller mapping.
+        let addr4 = mm.set_brk(base_addr + 3u64).expect("failed to drastically shrink brk");
+        assert_eq!(addr4, base_addr + 3u64);
+        let range4 = get_range(&base_addr);
+        assert_eq!(range4.start, base_addr);
+        assert_eq!(range4.end, addr4.round_up(*PAGE_SIZE));
+
+        // Shrink the program break close to zero and observe that the mapping is not entirely gone.
+        let addr5 = mm.set_brk(base_addr).expect("failed to drastically shrink brk to zero");
+        assert_eq!(addr5, base_addr);
+        let range5 = get_range(&base_addr);
+        assert_eq!(range5.start, base_addr);
+        assert_eq!(range5.end, addr5 + *PAGE_SIZE);
     }
 }

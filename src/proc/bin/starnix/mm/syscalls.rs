@@ -132,8 +132,7 @@ pub fn sys_munmap(
 }
 
 pub fn sys_brk(ctx: &SyscallContext<'_>, addr: UserAddress) -> Result<SyscallResult, Errno> {
-    // TODO(tbodt): explicit error mapping
-    Ok(ctx.task.mm.set_program_break(addr).map_err(Errno::from_status_like_fdio)?.into())
+    Ok(ctx.task.mm.set_brk(addr)?.into())
 }
 
 #[cfg(test)]
