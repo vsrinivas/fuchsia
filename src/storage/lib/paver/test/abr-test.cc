@@ -40,6 +40,7 @@ namespace {
 
 using devmgr_integration_test::RecursiveWaitForFile;
 using driver_integration_test::IsolatedDevmgr;
+using paver::BlockWatcherPauser;
 
 TEST(AstroAbrTests, CreateFails) {
   IsolatedDevmgr devmgr;
@@ -146,7 +147,20 @@ class ChromebookX64AbrTests : public zxtest::Test {
 
   ~ChromebookX64AbrTests() override { dispatcher_.Shutdown(); }
 
+  fidl::ClientEnd<fuchsia_io::Directory> GetFshostSvcRoot() {
+    auto fshost_root = devmgr_.fshost_outgoing_dir();
+    auto local = service::ConnectAt<fuchsia_io::Directory>(fshost_root, "svc");
+    if (!local.is_ok()) {
+      std::cout << "Failed to connect to fshost svc dir: " << local.status_string() << std::endl;
+      return fidl::ClientEnd<fuchsia_io::Directory>();
+    }
+    return std::move(*local);
+  }
+
   void SetupPartitions(AbrSlotIndex active_slot) {
+    auto pauser = BlockWatcherPauser::Create(GetFshostSvcRoot());
+    ASSERT_OK(pauser);
+
     std::unique_ptr<gpt::GptDevice> gpt;
     ASSERT_OK(gpt::GptDevice::Create(disk_->fd(), /*blocksize=*/disk_->block_size(),
                                      /*blocks=*/disk_->block_count(), &gpt));
