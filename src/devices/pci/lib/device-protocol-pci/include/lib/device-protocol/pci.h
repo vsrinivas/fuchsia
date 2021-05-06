@@ -48,11 +48,14 @@ class MmioBuffer;
 
 class Pci : public ddk::PciProtocolClient {
  public:
-  Pci() {}
+  Pci() = default;
 
-  Pci(const pci_protocol_t& proto) : ddk::PciProtocolClient(&proto) {}
+  explicit Pci(const pci_protocol_t& proto) : ddk::PciProtocolClient(&proto) {}
 
-  Pci(zx_device_t* parent) : ddk::PciProtocolClient(parent) {}
+  explicit Pci(zx_device_t* parent) : ddk::PciProtocolClient(parent) {}
+
+  Pci(zx_device_t* parent, const char* fragment_name)
+      : ddk::PciProtocolClient(parent, fragment_name) {}
 
   ~Pci() = default;
 
