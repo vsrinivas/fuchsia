@@ -316,7 +316,7 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
   std::vector<fidl::InterfaceRequest<fdf::Driver>> requests_;
 
   inspect::Inspector inspector_;
-  async::Loop loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
+  async::Loop loop_{&kAsyncLoopConfigNeverAttachToThread};
   sys::testing::ComponentContextProvider provider_{loop_.dispatcher()};
 };
 

@@ -277,7 +277,7 @@ int main(int argc, char** argv) {
     }
   };
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
   svc::Outgoing outgoing(loop.dispatcher());
   InspectManager inspect_manager(loop.dispatcher());
 
