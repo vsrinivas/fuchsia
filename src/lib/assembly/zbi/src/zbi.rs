@@ -90,7 +90,7 @@ impl ZbiBuilder {
 
     fn write_boot_args(&self, out: &mut impl Write) -> Result<()> {
         for arg in &self.bootargs {
-            write!(out, "{}\n", arg)?;
+            writeln!(out, "{}", arg)?;
         }
         Ok(())
     }

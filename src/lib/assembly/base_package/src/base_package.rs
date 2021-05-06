@@ -113,7 +113,7 @@ impl PackageList {
     /// Generate the file to be placed in the Base Package.
     fn write(&self, out: &mut impl Write) -> Result<()> {
         for (name, merkle) in self.packages.iter() {
-            write!(out, "{}={}\n", name, merkle)?;
+            writeln!(out, "{}={}", name, merkle)?;
         }
         Ok(())
     }
