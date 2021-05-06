@@ -167,7 +167,11 @@ impl Shell {
         }
     }
 
-    fn builtin(&mut self, command: String, out_buffer: &mut impl std::fmt::Write) -> Result<CommandResponse> {
+    fn builtin(
+        &mut self,
+        command: String,
+        out_buffer: &mut impl std::fmt::Write,
+    ) -> Result<CommandResponse> {
         if let Some(builtin) = BuiltinCommand::parse(command) {
             match builtin.program {
                 Builtin::PluginLoad => {
@@ -327,7 +331,11 @@ impl Shell {
     /// any plugin services that url. Two syntaxes are supported /foo/bar or
     /// foo.bar both will be translated into /foo/bar before being sent to the
     /// dispatcher.
-    fn plugin(&mut self, command: String, out_buffer: &mut impl std::fmt::Write) -> Result<CommandResponse> {
+    fn plugin(
+        &mut self,
+        command: String,
+        out_buffer: &mut impl std::fmt::Write,
+    ) -> Result<CommandResponse> {
         let command_result = Self::parse_command(command);
         if let Err(err) = command_result {
             if let Some(shell_error) = err.downcast_ref::<ShellError>() {
