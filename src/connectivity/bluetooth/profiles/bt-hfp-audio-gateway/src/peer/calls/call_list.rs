@@ -40,8 +40,6 @@ impl<T> CallList<T> {
     }
 
     /// Retrieve a value by index. Returns `None` if the index does not point to a value.
-    // TODO (fxb/64550): Remove when call requests are initiated
-    #[allow(unused)]
     pub fn get(&self, index: CallIdx) -> Option<&T> {
         match Self::to_internal_index(index) {
             Some(index) => self.inner.get(index).map(|v| v.as_ref()).unwrap_or(None),
