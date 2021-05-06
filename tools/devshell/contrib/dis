@@ -17,7 +17,8 @@
 ##   -L                        use llvm-objdump rather than GNU objdump
 ##
 ## Each BINARY can be the name of the binary file without directory, e.g.
-## "libzircon.so" or "zircon.elf"; or the name of a GN target, e.g. "zircon".
+## "libzircon.so" or "zircon.elf"; or the name of a GN target, e.g. "zircon";
+## or a string of (lowercase) hex characters that's an ELF build ID.
 ##
 ## The disassembly will be written to a file next to the binary file in
 ## the build directory, using its name with ".lst" suffix.
@@ -51,20 +52,80 @@ if [[ $# -eq 0 ]]; then
   exit 1
 fi
 
+run_jq() {
+  fx-command-run jq --raw-output "$@"
+}
+
+run_direct_filter() {
+  run_jq "$1" "$BINARIES_JSON"
+}
+
+normalize_build_ids() {
+  local query='
+.[] | select(.elf_build_id) | "\(.elf_build_id) \(.cpu) \(.debug) \(.label)"'
+  run_jq "$query" "$BINARIES_JSON" | normalize_build_ids_filter
+}
+
+normalize_build_ids_filter() {
+  echo '['
+  local comma=
+  while read id cpu debug label; do
+    echo "$comma{\
+\"build_id\": \"$(<"$FUCHSIA_BUILD_DIR/$id")\",\
+\"cpu\": \"$cpu\",\
+\"debug\": \"$debug\",\
+\"label\": \"$label\"\
+}"
+    comma=','
+  done
+  echo ']'
+}
+
+run_buildid_filter() {
+  normalize_build_ids | run_jq "$1"
+}
+
+is_hex() {
+  local str="$1"
+  if [[ -z "$str" ]]; then
+    return 0
+  fi
+  while [[ -n "$str" ]]; do
+    case "${str:0:1}" in
+      [0-9a-f]) ;;
+      *) return 1 ;;
+    esac
+    str="${str:1}"
+  done
+  return 0
+}
+
+RUN_FILTER=run_direct_filter
+for BINARY in "$@"; do
+  if is_hex "$BINARY"; then
+    RUN_FILTER=run_buildid_filter
+    break
+  fi
+done
+
 FILTER=".[] | select(false"
 
 for BINARY in "$@"; do
-  DEBUG_RE="(^|/)$BINARY([.]debug)?\$"
-  LABEL_RE=":$BINARY[(]"
-  FILTER+=" or (.debug | test(\"$DEBUG_RE\")) or (.label | test(\"$LABEL_RE\"))"
+  if is_hex "$BINARY"; then
+    FILTER+=" or (.build_id == \"$BINARY\")"
+  else
+    DEBUG_RE="(^|/)$BINARY([.]debug)?\$"
+    LABEL_RE=":$BINARY[(]"
+    FILTER+=" or (.debug | test(\"$DEBUG_RE\")) or (.label | test(\"$LABEL_RE\"))"
+  fi
 done
 
-FILTER+=") | [.cpu, .debug, .label] | join(\" \")"
+FILTER+=') | "\(.cpu) \(.debug) \(.label)"'
 
-PATHS=($(fx-command-run jq --raw-output "$FILTER" "$BINARIES_JSON"))
+PATHS=($($RUN_FILTER "$FILTER"))
 
 if (( ${#PATHS[@]} == 0 )); then
-  fx-error "No binaries matched $BINARY"
+  fx-error "No binaries matched any of: $*"
   exit 1
 fi
 
