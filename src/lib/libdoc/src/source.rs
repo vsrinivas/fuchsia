@@ -26,6 +26,7 @@ impl Source {
 }
 
 /// Defines the location of an item within a documentation source.
+#[derive(Clone)]
 pub struct Location {
     /// The source of the documentation.
     pub source: Rc<Source>,

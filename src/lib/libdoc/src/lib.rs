@@ -7,7 +7,9 @@
 //! This library provide checks for the documentation.
 
 mod lexer;
+mod parser;
 mod source;
+mod utils;
 
 use std::cmp;
 use std::rc::Rc;
@@ -37,15 +39,15 @@ impl DocCompiler {
         if source.text.is_empty() {
             let location = source::Location { source, start: 0, end: 1 };
             self.add_error(&location, "Documentation is empty".to_owned());
-            false
         } else {
-            if let Some(_items) = lexer::reduce_lexems(self, &source) {
-                // The parser is not implemented yet. Just return true.
-                true
-            } else {
-                false
+            if let Some(items) = lexer::reduce_lexems(self, &source) {
+                if let Some(_text) = parser::parse_text(self, items) {
+                    // The next stage is not implemented yet. Just return true.
+                    return true;
+                }
             }
         }
+        false
     }
 
     fn add_error(&mut self, location: &source::Location, message: String) {

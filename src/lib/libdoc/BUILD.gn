@@ -12,7 +12,9 @@ if (is_host) {
     sources = [
       "src/lexer.rs",
       "src/lib.rs",
+      "src/parser.rs",
       "src/source.rs",
+      "src/utils.rs",
     ]
   }
 
