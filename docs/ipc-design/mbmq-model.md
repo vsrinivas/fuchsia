@@ -223,25 +223,28 @@ are dropped:
     that is, send the MBO as a request message, but close the MBO
     handle and ignore any replies.
 
-*   CMH: If a CMH is closed while it holds a reference to an MBO, the
-    system will send an automatic reply on the MBO: It will replace
-    the MBO's contents with a default reply message and send the MBO
-    as a reply (as if `zx_cmh_send_reply()` was called).
+*   Automatic replies: An MBO receives an automatic reply message if
+    it was sent as a request but there is no way a callee could send a
+    reply.  There are two cases for this:
+
+    *   Closed CMH: If a CMH is closed while it holds a reference to
+        an MBO, the system will send an automatic reply on the MBO.
+        The system will replace the MBO's contents with a default
+        reply message and send the MBO as a reply (as if
+        `zx_cmh_send_reply()` was called).
+
+    *   Closed MsgQueue: If all the handles to a MsgQueue are closed
+        while its queue contains MBOs in the state
+        `enqueued_as_request`, or if MBOs are enqueued onto the
+        MsgQueue after all handles to the MsgQueue were closed, then
+        the system will send automatic replies on those MBOs.  This
+        does not apply to MBOs in the state `enqueued_as_reply`
+        because these are already replies.
 
     This means that if a callee process crashes in the middle of
-    processing a request from a caller, the caller will not be left
-    waiting for a reply message indefinitely.
-
-*   MsgQueue: If all the handles to a MsgQueue are closed while its
-    queue contains MBOs in the state `enqueued_as_request`, the system
-    will send automatic replies on these MBOs (as described above for
-    closing CMHs).  This does not apply to MBOs in the state
-    `enqueued_as_reply` because these are already replies.
-
-    Similarly, a channel might be set to redirect to a MsgQueue that
-    later becomes unreadable when all the handles to that MsgQueue are
-    closed.  In this case, any MBOs sent to that channel will receive
-    automatic replies.
+    processing a request from a caller, or before unqueuing the
+    request, the caller will not be left waiting for a reply message
+    indefinitely.
 
 ## State for each object type
 
