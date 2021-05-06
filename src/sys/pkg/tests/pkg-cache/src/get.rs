@@ -2,45 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::TestEnv;
-use fidl_fuchsia_io::{DirectoryMarker, FileMarker, FileProxy};
-use fidl_fuchsia_pkg::{
-    BlobInfo, BlobInfoIteratorMarker, NeededBlobsMarker, NeededBlobsProxy, PackageCacheProxy,
-};
+use crate::{get_missing_blobs, write_blob, TestEnv};
+use fidl_fuchsia_io::{DirectoryMarker, FileMarker};
+use fidl_fuchsia_pkg::{BlobInfo, NeededBlobsMarker, PackageCacheProxy};
 use fidl_fuchsia_pkg_ext::BlobId;
 use fuchsia_pkg_testing::{Package, PackageBuilder};
 use fuchsia_zircon::Status;
 use futures::prelude::*;
 use std::collections::HashMap;
-
-async fn write_blob(contents: &[u8], file: FileProxy) {
-    let s = file.truncate(contents.len() as u64).await.unwrap();
-    assert_eq!(Status::from_raw(s), Status::OK);
-
-    let (s, len) = file.write(contents).await.unwrap();
-    assert_eq!(Status::from_raw(s), Status::OK);
-    assert_eq!(len, contents.len() as u64);
-
-    let s = file.close().await.unwrap();
-    assert_eq!(Status::from_raw(s), Status::OK);
-}
-
-async fn get_missing_blobs(proxy: &NeededBlobsProxy) -> Vec<BlobInfo> {
-    let (blob_iterator, blob_iterator_server_end) =
-        fidl::endpoints::create_proxy::<BlobInfoIteratorMarker>().unwrap();
-    let () = proxy.get_missing_blobs(blob_iterator_server_end).unwrap();
-
-    let mut res = vec![];
-    loop {
-        let chunk = blob_iterator.next().await.unwrap();
-        if chunk.is_empty() {
-            break;
-        }
-        res.extend(chunk);
-    }
-
-    res
-}
 
 async fn do_fetch(package_cache: &PackageCacheProxy, pkg: &Package) {
     let mut meta_blob_info =

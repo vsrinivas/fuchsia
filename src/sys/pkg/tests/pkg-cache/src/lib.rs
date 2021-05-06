@@ -9,9 +9,11 @@ use {
     blobfs_ramdisk::BlobfsRamdisk,
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_cobalt::CobaltEvent,
-    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy},
+    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, FileProxy},
     fidl_fuchsia_io2::Operations,
-    fidl_fuchsia_pkg::{PackageCacheMarker, PackageCacheProxy},
+    fidl_fuchsia_pkg::{
+        BlobInfo, BlobInfoIteratorMarker, NeededBlobsProxy, PackageCacheMarker, PackageCacheProxy,
+    },
     fidl_fuchsia_pkg_ext::BlobId,
     fidl_fuchsia_space::{ManagerMarker as SpaceManagerMarker, ManagerProxy as SpaceManagerProxy},
     fidl_fuchsia_update::{CommitStatusProviderMarker, CommitStatusProviderProxy},
@@ -38,6 +40,34 @@ mod get;
 mod inspect;
 mod space;
 mod sync;
+
+async fn write_blob(contents: &[u8], file: FileProxy) {
+    let s = file.truncate(contents.len() as u64).await.unwrap();
+    assert_eq!(zx::Status::from_raw(s), zx::Status::OK);
+
+    let (s, len) = file.write(contents).await.unwrap();
+    assert_eq!(zx::Status::from_raw(s), zx::Status::OK);
+    assert_eq!(len, contents.len() as u64);
+
+    let s = file.close().await.unwrap();
+    assert_eq!(zx::Status::from_raw(s), zx::Status::OK);
+}
+
+async fn get_missing_blobs(proxy: &NeededBlobsProxy) -> Vec<BlobInfo> {
+    let (blob_iterator, blob_iterator_server_end) =
+        fidl::endpoints::create_proxy::<BlobInfoIteratorMarker>().unwrap();
+    let () = proxy.get_missing_blobs(blob_iterator_server_end).unwrap();
+
+    let mut res = vec![];
+    loop {
+        let chunk = blob_iterator.next().await.unwrap();
+        if chunk.is_empty() {
+            break;
+        }
+        res.extend(chunk);
+    }
+    res
+}
 
 trait PkgFs {
     fn root_dir_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error>;
