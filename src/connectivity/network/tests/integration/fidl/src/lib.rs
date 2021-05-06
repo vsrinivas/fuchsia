@@ -1053,17 +1053,25 @@ async fn test_interfaces_watcher() -> Result {
                     }
                     let got_addrs = got_addrs
                         .iter()
-                        .filter_map(|a| {
-                            if let fidl_fuchsia_net::Subnet {
-                                addr: fidl_fuchsia_net::IpAddress::Ipv6(_),
-                                prefix_len: _,
-                            } = a.addr?
-                            {
-                                a.addr
-                            } else {
-                                None
-                            }
-                        })
+                        .filter_map(
+                            |&fidl_fuchsia_net_interfaces::Address {
+                                 addr, valid_until, ..
+                             }| {
+                                assert_eq!(
+                                    valid_until,
+                                    Some(fuchsia_zircon::sys::ZX_TIME_INFINITE)
+                                );
+                                let subnet = addr?;
+                                match &subnet.addr {
+                                    fidl_fuchsia_net::IpAddress::Ipv4(
+                                        fidl_fuchsia_net::Ipv4Address { addr: _ },
+                                    ) => None,
+                                    fidl_fuchsia_net::IpAddress::Ipv6(
+                                        fidl_fuchsia_net::Ipv6Address { addr: _ },
+                                    ) => Some(subnet),
+                                }
+                            },
+                        )
                         .collect::<HashSet<_>>();
                     if got_addrs.len() == want_addr_count {
                         return futures::future::ok(async_utils::fold::FoldWhile::Done(got_addrs));
@@ -1147,7 +1155,13 @@ async fn test_interfaces_watcher() -> Result {
             has_default_ipv4_route: None,
             has_default_ipv6_route: None,
             ..
-        }) if event_id == id => Ok(addresses.iter().filter_map(|a| a.addr).collect::<HashSet<_>>()),
+        }) if event_id == id => Ok(addresses
+            .iter()
+            .filter_map(|&fidl_fuchsia_net_interfaces::Address { addr, valid_until, .. }| {
+                assert_eq!(valid_until, Some(fuchsia_zircon::sys::ZX_TIME_INFINITE));
+                addr
+            })
+            .collect::<HashSet<_>>()),
         _ => Err(anyhow::anyhow!("got: {:?}, want changed event with added IPv4 address", event)),
     };
     let want = ll_addrs.iter().cloned().chain(std::iter::once(subnet)).collect();

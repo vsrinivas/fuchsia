@@ -62,6 +62,7 @@ pub async fn verify_v4_addr_present(
                     addresses.iter().any(
                         |fidl_fuchsia_net_interfaces_ext::Address {
                              addr: fnet::Subnet { addr, prefix_len: _ },
+                             valid_until: _,
                          }| { *addr == want_addr },
                     )
                 })

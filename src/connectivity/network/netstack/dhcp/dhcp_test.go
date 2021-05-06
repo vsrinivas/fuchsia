@@ -376,7 +376,7 @@ func TestDHCP(t *testing.T) {
 			t.Errorf("cfg.SubnetMask=%s, want=%s", got, want)
 		}
 
-		if diff := cmp.Diff(cfg, defaultServerCfg); diff != "" {
+		if diff := cmp.Diff(cfg, defaultServerCfg, cmp.AllowUnexported(time.Time{})); diff != "" {
 			t.Errorf("got config diff (-want +got):\n%s", diff)
 		}
 		c0.verifyClientStats(t, 3)
@@ -2008,5 +2008,57 @@ func TestClientRestartLeaseTime(t *testing.T) {
 	info := c.Info()
 	if info.State != bound {
 		t.Errorf("info.State=%s, want=%s", info.State, bound)
+	}
+}
+
+func TestClientUpdateInfo(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	_, _, _, _, c := setupTestEnv(ctx, t, defaultServerCfg)
+
+	acquired := tcpip.AddressWithPrefix{Address: defaultClientAddrs[0], PrefixLen: 24}
+	offeredAt := time.Monotonic(100)
+	renewTime := defaultRenewTime(defaultLeaseLength)
+	rebindTime := defaultRebindTime(defaultLeaseLength)
+	c.acquiredFunc = func(old, acq tcpip.AddressWithPrefix, cfg Config) {
+		if want := (tcpip.AddressWithPrefix{}); old != want {
+			t.Errorf("old=%s, want=%s", old, want)
+		}
+		if acq != acquired {
+			t.Errorf("acquired=%s, want=%s", acq, acquired)
+		}
+		if cfg.LeaseLength != defaultLeaseLength {
+			t.Errorf("cfg.LeaseLength=%s, want=%s", cfg.LeaseLength, defaultLeaseLength)
+		}
+		if cfg.RenewTime != renewTime {
+			t.Errorf("cfg.RenewTime=%s, want=%s", cfg.RenewTime, renewTime)
+		}
+		if cfg.RebindTime != rebindTime {
+			t.Errorf("cfg.RebindTime=%s, want=%s", cfg.RebindTime, rebindTime)
+		}
+		if cfg.UpdatedAt != offeredAt {
+			t.Errorf("cfg.UpdatedAt=%d, want=%d", cfg.UpdatedAt, offeredAt)
+		}
+	}
+	state := bound
+	cfg := Config{LeaseLength: defaultLeaseLength, RenewTime: renewTime, RebindTime: rebindTime}
+	info := c.Info()
+	c.updateInfo(&info, acquired, cfg, offeredAt, state)
+	info = c.Info()
+	if info.Assigned != acquired {
+		t.Errorf("info.Assigned=%s, want=%s", info.Assigned, acquired)
+	}
+	if want := offeredAt.Add(defaultLeaseLength.Duration()); info.LeaseExpiration != want {
+		t.Errorf("info.LeaseExpiration=%s, want=%s", info.LeaseExpiration, want)
+	}
+	if want := offeredAt.Add(renewTime.Duration()); info.RenewTime != want {
+		t.Errorf("info.RenewTime=%s, want=%s", info.RenewTime, want)
+	}
+	if want := offeredAt.Add(rebindTime.Duration()); info.RebindTime != want {
+		t.Errorf("info.RebindTime=%s, want=%s", info.RebindTime, want)
+	}
+	if info.State != state {
+		t.Errorf("info.State=%s, want=%s", info.State, state)
 	}
 }

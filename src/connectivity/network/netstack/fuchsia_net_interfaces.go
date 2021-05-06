@@ -10,11 +10,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"math"
 	"sort"
 	"sync"
 	"syscall/zx/fidl"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/time"
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
@@ -29,7 +31,19 @@ import (
 	tcpipstack "gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
-func interfaceProperties(nicInfo tcpipstack.NICInfo, hasDefaultIPv4Route, hasDefaultIPv6Route bool) interfaces.Properties {
+// addressPatch is a patch to the address data exposed by upstream interface
+// data. This type provides a mechanism by which clients of onPropertiesChange
+// can extend the data exposed by fuchsia.net.interfaces beyond what is
+// available in the upstream interface representation. At the the time of this
+// writing, there is only need for an extension to Address data; should more
+// general extensions be needed, a properties patch type which composes this
+// type may be called for.
+type addressPatch struct {
+	addr       tcpip.AddressWithPrefix
+	validUntil time.Time
+}
+
+func interfaceProperties(nicInfo tcpipstack.NICInfo, hasDefaultIPv4Route, hasDefaultIPv6Route bool, addressPatches []addressPatch) interfaces.Properties {
 	var p interfaces.Properties
 	ifs := nicInfo.Context.(*ifState)
 	p.SetId(uint64(ifs.nicid))
@@ -59,6 +73,13 @@ func interfaceProperties(nicInfo tcpipstack.NICInfo, hasDefaultIPv4Route, hasDef
 			Addr:      fidlconv.ToNetIpAddress(a.AddressWithPrefix.Address),
 			PrefixLen: uint8(a.AddressWithPrefix.PrefixLen),
 		})
+		addr.SetValidUntil(math.MaxInt64)
+		for _, p := range addressPatches {
+			if p.addr == a.AddressWithPrefix {
+				addr.SetValidUntil(p.validUntil.MonotonicNano())
+				break
+			}
+		}
 		addrs = append(addrs, addr)
 	}
 	sort.Slice(addrs, func(i, j int) bool {
@@ -150,7 +171,11 @@ func diffInterfaceProperties(p1, p2 interfaces.Properties) interfaces.Properties
 			return true
 		}
 		for i, addr := range p1.GetAddresses() {
-			if cmpSubnet(addr.GetAddr(), p2.GetAddresses()[i].GetAddr()) != 0 {
+			p2Addr := p2.GetAddresses()[i]
+			if cmpSubnet(addr.GetAddr(), p2Addr.GetAddr()) != 0 {
+				return true
+			}
+			if addr.GetValidUntil() != p2Addr.GetValidUntil() {
 				return true
 			}
 		}
@@ -206,7 +231,7 @@ type interfaceWatcherCollection struct {
 	}
 }
 
-func (ns *Netstack) onPropertiesChange(nicid tcpip.NICID) {
+func (ns *Netstack) onPropertiesChange(nicid tcpip.NICID, addressPatches []addressPatch) {
 	ns.interfaceWatchers.mu.Lock()
 	defer ns.interfaceWatchers.mu.Unlock()
 
@@ -217,7 +242,7 @@ func (ns *Netstack) onPropertiesChange(nicid tcpip.NICID) {
 	}
 
 	if properties, ok := ns.interfaceWatchers.mu.lastObserved[nicid]; ok {
-		newProperties := interfaceProperties(nicInfo, properties.GetHasDefaultIpv4Route(), properties.GetHasDefaultIpv6Route())
+		newProperties := interfaceProperties(nicInfo, properties.GetHasDefaultIpv4Route(), properties.GetHasDefaultIpv6Route(), addressPatches)
 		if diff := diffInterfaceProperties(properties, newProperties); !emptyInterfaceProperties(diff) {
 			ns.interfaceWatchers.mu.lastObserved[nicid] = newProperties
 			for w := range ns.interfaceWatchers.mu.watchers {
@@ -288,7 +313,7 @@ func (ns *Netstack) onInterfaceAdd(nicid tcpip.NICID) {
 		}
 	}
 
-	properties := interfaceProperties(nicInfo, hasDefaultIpv4Route, hasDefaultIpv6Route)
+	properties := interfaceProperties(nicInfo, hasDefaultIpv4Route, hasDefaultIpv6Route, nil)
 	ns.interfaceWatchers.mu.lastObserved[nicid] = properties
 	for w := range ns.interfaceWatchers.mu.watchers {
 		w.onEvent(interfaces.EventWithAdded(properties))

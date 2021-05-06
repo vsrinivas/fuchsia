@@ -42,9 +42,10 @@ type Config struct {
 	SubnetMask    tcpip.AddressMask // client address subnet mask
 	Router        []tcpip.Address   // client router addresses
 	DNS           []tcpip.Address   // client DNS server addresses
-	LeaseLength   Seconds           // length of the address lease
-	RenewTime     Seconds           // time until client enters RENEWING state
-	RebindTime    Seconds           // time until client enters REBINDING state
+	UpdatedAt     time.Time         // monotonic time at which lease was last updated
+	LeaseLength   Seconds           // time until lease expires, relative to the value of UpdatedAt
+	RenewTime     Seconds           // time until client enters RENEWING state, relative to the value of UpdatedAt
+	RebindTime    Seconds           // time until client enters REBINDING state, relative to the value of UpdatedAt
 	Declined      bool              // server sent a NAK
 }
 

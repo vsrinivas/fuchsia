@@ -554,7 +554,7 @@ func (n *ndpDispatcher) start(ctx context.Context) {
 					panic(fmt.Sprintf("unhandled DAD result variant %#v", result))
 				}
 
-				n.ns.onPropertiesChange(event.nicID)
+				n.ns.onPropertiesChange(event.nicID, nil)
 
 			case *ndpDiscoveredRouterEvent:
 				nicID, addr := event.nicID, event.addr
@@ -605,7 +605,7 @@ func (n *ndpDispatcher) start(ctx context.Context) {
 			case *ndpInvalidatedAutoGenAddrEvent:
 				nicID, addrWithPrefix := event.nicID, event.addrWithPrefix
 				_ = syslog.InfoTf(ndpSyslogTagName, "invalidated an auto-generated address (%s) on nicID (%d), sending interface changed event...", addrWithPrefix, nicID)
-				n.ns.onPropertiesChange(event.nicID)
+				n.ns.onPropertiesChange(event.nicID, nil)
 
 			case *ndpRecursiveDNSServerEvent:
 				nicID, addrs, lifetime := event.nicID, event.addrs, event.lifetime

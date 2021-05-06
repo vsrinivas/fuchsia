@@ -344,6 +344,7 @@ async fn slaac_with_privacy_extensions<E: netemul::Endpoint>(name: &str) -> Resu
                 .filter_map(
                     |&fidl_fuchsia_net_interfaces_ext::Address {
                          addr: fidl_fuchsia_net::Subnet { addr, prefix_len: _ },
+                         valid_until: _,
                      }| {
                         match addr {
                             net::IpAddress::Ipv4(net::Ipv4Address { addr: _ }) => None,
@@ -554,6 +555,7 @@ async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) -> Result
             addresses.iter().find_map(
                 |&fidl_fuchsia_net_interfaces_ext::Address {
                      addr: fidl_fuchsia_net::Subnet { addr, prefix_len: _ },
+                     valid_until: _,
                  }| {
                     match addr {
                         net::IpAddress::Ipv6(net::Ipv6Address { addr }) => {
@@ -778,7 +780,7 @@ async fn slaac_regeneration_after_dad_failure<E: netemul::Endpoint>(name: &str) 
             // 2. The last tried address should be among the addresses for the interface.
             let (slaac_addrs, has_target_addr) = addresses.iter().fold(
                 (0, false),
-                |(mut slaac_addrs, mut has_target_addr), &fidl_fuchsia_net_interfaces_ext::Address { addr: fidl_fuchsia_net::Subnet { addr, prefix_len: _ } }| {
+                |(mut slaac_addrs, mut has_target_addr), &fidl_fuchsia_net_interfaces_ext::Address { addr: fidl_fuchsia_net::Subnet { addr, prefix_len: _ }, valid_until: _ }| {
                     match addr {
                         net::IpAddress::Ipv6(net::Ipv6Address { addr }) => {
                             let configured_addr = net_types_ip::Ipv6Addr::new(addr);

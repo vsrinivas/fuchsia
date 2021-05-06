@@ -471,7 +471,7 @@ async fn compute_state(
 
     let (v4_addrs, v6_addrs): (Vec<_>, _) = addresses
         .iter()
-        .map(|fnet_interfaces_ext::Address { addr }| LifIpAddr::from(addr))
+        .map(|fnet_interfaces_ext::Address { addr, valid_until: _ }| LifIpAddr::from(addr))
         .partition(|addr| addr.is_ipv4());
 
     if !online {
@@ -855,8 +855,14 @@ mod tests {
             has_default_ipv6_route: true,
             online: true,
             addresses: vec![
-                fnet_interfaces_ext::Address { addr: fidl_subnet!("1.2.3.4/24") },
-                fnet_interfaces_ext::Address { addr: fidl_subnet!("123::4/64") },
+                fnet_interfaces_ext::Address {
+                    addr: fidl_subnet!("1.2.3.4/24"),
+                    valid_until: fuchsia_zircon::Time::INFINITE.into_nanos(),
+                },
+                fnet_interfaces_ext::Address {
+                    addr: fidl_subnet!("123::4/64"),
+                    valid_until: fuchsia_zircon::Time::INFINITE.into_nanos(),
+                },
             ],
         };
         let route_table = &[

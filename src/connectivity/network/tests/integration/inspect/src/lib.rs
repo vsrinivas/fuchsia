@@ -27,7 +27,7 @@ impl AddressMatcher {
         let set = props
             .addresses
             .iter()
-            .map(|&fidl_fuchsia_net_interfaces_ext::Address { addr: subnet }| {
+            .map(|&fidl_fuchsia_net_interfaces_ext::Address { addr: subnet, valid_until: _ }| {
                 let fidl_fuchsia_net::Subnet { addr, prefix_len: _ } = subnet;
                 let prefix = match addr {
                     fidl_fuchsia_net::IpAddress::Ipv4(_) => "ipv4",
@@ -140,6 +140,7 @@ async fn inspect_nic() -> Result {
                         |(v4_count, v6_count),
                          fidl_fuchsia_net_interfaces_ext::Address {
                              addr: fidl_fuchsia_net::Subnet { addr, prefix_len: _ },
+                             valid_until: _,
                          }| match addr {
                             fidl_fuchsia_net::IpAddress::Ipv4(_) => (v4_count + 1, v6_count),
                             fidl_fuchsia_net::IpAddress::Ipv6(_) => (v4_count, v6_count + 1),

@@ -73,6 +73,7 @@ async fn create_environment<'a>(
             let addr = interfaces.get(&ep.id())?.addresses.iter().find_map(
                 |&fidl_fuchsia_net_interfaces_ext::Address {
                      addr: fidl_fuchsia_net::Subnet { addr, prefix_len: _ },
+                     valid_until: _,
                  }| {
                     match addr {
                         a @ fidl_fuchsia_net::IpAddress::Ipv6(_) => Some(a.clone()),

@@ -17,6 +17,7 @@ use std::convert::TryFrom as _;
 use thiserror::Error;
 
 use fidl_fuchsia_net_interfaces as fnet_interfaces;
+use fuchsia_zircon as zx;
 
 // TODO(fxbug.dev/66175) Prevent this type from becoming stale.
 /// Properties of a network interface.
@@ -44,9 +45,30 @@ pub struct Properties {
 /// An address and its properties.
 #[derive(Clone, Debug, Eq, PartialEq, ValidFidlTable)]
 #[fidl_table_src(fnet_interfaces::Address)]
+#[fidl_table_validator(AddressValidator)]
 pub struct Address {
     /// The address and prefix length.
     pub addr: fidl_fuchsia_net::Subnet,
+    /// The time after which the address will no longer be valid.
+    ///
+    /// Its value must be greater than 0. A value of zx.time.INFINITE indicates
+    /// that the address will always be valid.
+    // TODO(https://fxbug.dev/75531): Replace with zx::Time once there is support for custom
+    // conversion functions.
+    pub valid_until: zx::sys::zx_time_t,
+}
+
+/// Helper struct implementing Address validation.
+pub struct AddressValidator;
+
+impl Validate<Address> for AddressValidator {
+    type Error = String;
+    fn validate(Address { addr: _, valid_until }: &Address) -> Result<(), Self::Error> {
+        if *valid_until <= 0 {
+            return Err(format!("non-positive value for valid_until={}", *valid_until));
+        }
+        Ok(())
+    }
 }
 
 /// Interface watcher event update errors.
@@ -488,7 +510,7 @@ mod tests {
             online: Some(false),
             has_default_ipv4_route: Some(false),
             has_default_ipv6_route: Some(false),
-            addresses: Some(vec![fidl_address(ADDR)]),
+            addresses: Some(vec![fidl_address(ADDR, zx::Time::INFINITE.into_nanos())]),
             ..fnet_interfaces::Properties::EMPTY
         }
     }
@@ -505,7 +527,7 @@ mod tests {
             online: Some(true),
             has_default_ipv4_route: Some(true),
             has_default_ipv6_route: Some(true),
-            addresses: Some(vec![fidl_address(ADDR2)]),
+            addresses: Some(vec![fidl_address(ADDR2, zx::Time::INFINITE.into_nanos())]),
             ..fnet_interfaces::Properties::EMPTY
         }
     }
@@ -518,7 +540,7 @@ mod tests {
             online: Some(true),
             has_default_ipv4_route: Some(true),
             has_default_ipv6_route: Some(true),
-            addresses: Some(vec![fidl_address(ADDR2)]),
+            addresses: Some(vec![fidl_address(ADDR2, zx::Time::INFINITE.into_nanos())]),
             ..fnet_interfaces::Properties::EMPTY
         }
     }
@@ -527,8 +549,15 @@ mod tests {
         fidl_properties_after_change(id).try_into().expect("failed to validate FIDL Properties")
     }
 
-    fn fidl_address(addr: fnet::Subnet) -> fnet_interfaces::Address {
-        fnet_interfaces::Address { addr: Some(addr), ..fnet_interfaces::Address::EMPTY }
+    fn fidl_address(
+        addr: fnet::Subnet,
+        valid_until: zx::sys::zx_time_t,
+    ) -> fnet_interfaces::Address {
+        fnet_interfaces::Address {
+            addr: Some(addr),
+            valid_until: Some(valid_until),
+            ..fnet_interfaces::Address::EMPTY
+        }
     }
 
     const ID: u64 = 1;
@@ -627,7 +656,7 @@ mod tests {
             online: Some(false),
             has_default_ipv4_route: Some(false),
             has_default_ipv6_route: Some(false),
-            addresses: Some(vec![fidl_address(ADDR)]),
+            addresses: Some(vec![fidl_address(ADDR, zx::Time::INFINITE.into_nanos())]),
             ..fnet_interfaces::Properties::EMPTY
         };
         matches::assert_matches!(
@@ -774,6 +803,25 @@ mod tests {
                 .expect("existing did not complete immediately")
                 .expect("existing returned error"),
             want,
+        );
+    }
+
+    #[test]
+    fn test_address_validator() {
+        let valid = fidl_address(ADDR, 42);
+        let fidl_fuchsia_net_interfaces::Address { addr, valid_until, .. } = valid.clone();
+        assert_eq!(
+            Address::try_from(valid).expect("failed to create address from valid fidl table"),
+            Address {
+                addr: addr.expect("addr field missing from valid address"),
+                valid_until: valid_until.expect("valid_until field missing from valid address")
+            }
+        );
+        let invalid = fidl_address(ADDR, 0);
+        assert_matches!(
+            Address::try_from(invalid),
+            Err(AddressValidationError::Logical(e @ String { .. }))
+                if e == "non-positive value for valid_until=0"
         );
     }
 }

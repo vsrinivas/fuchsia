@@ -303,6 +303,7 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint>(name: &str) -> Result {
                             && addresses.iter().any(
                                 |&fidl_fuchsia_net_interfaces_ext::Address {
                                      addr: fidl_fuchsia_net::Subnet { addr, prefix_len: _ },
+                                     valid_until: _,
                                  }| {
                                     addr == INTERFACE_ADDR.into_ext()
                                 },
@@ -401,6 +402,7 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint>(name: &str) -> Result {
                             && addresses.iter().any(
                                 |&fidl_fuchsia_net_interfaces_ext::Address {
                                      addr: fidl_fuchsia_net::Subnet { addr, prefix_len: _ },
+                                     valid_until: _,
                                  }| match addr {
                                     net::IpAddress::Ipv4(net::Ipv4Address { addr }) => {
                                         NETWORK_ADDR_SUBNET

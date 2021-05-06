@@ -497,6 +497,7 @@ impl NetCfg {
                 .filter_map(
                     |fnet_interfaces_ext::Address {
                          addr: fnet::Subnet { addr, prefix_len: _ },
+                         valid_until: _,
                      }| match addr {
                         fnet::IpAddress::Ipv4(addr) => Some(addr),
                         fnet::IpAddress::Ipv6(_) => None,
@@ -575,7 +576,10 @@ impl NetCfg {
                 .addresses
                 .into_iter()
                 .find_map(
-                    |fnet_interfaces_ext::Address { addr: fnet::Subnet { addr, prefix_len } }| {
+                    |fnet_interfaces_ext::Address {
+                         addr: fnet::Subnet { addr, prefix_len },
+                         valid_until: _,
+                     }| {
                         match addr {
                             fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr }) => {
                                 Some((addr, prefix_len))
@@ -1213,6 +1217,9 @@ mod tests {
                                     online: Some(true),
                                     addresses: Some(vec![fnet_interfaces::Address {
                                         addr: Some(fidl_subnet!("192.168.42.1/24")),
+                                        valid_until: Some(
+                                            fuchsia_zircon::Time::INFINITE.into_nanos(),
+                                        ),
                                         ..fnet_interfaces::Address::EMPTY
                                     }]),
                                     has_default_ipv4_route: Some(false),

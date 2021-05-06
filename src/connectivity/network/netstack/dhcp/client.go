@@ -491,6 +491,7 @@ func (c *Client) assign(info *Info, acquired tcpip.AddressWithPrefix, config Con
 }
 
 func (c *Client) updateInfo(info *Info, acquired tcpip.AddressWithPrefix, config Config, now time.Time, state dhcpClientState) {
+	config.UpdatedAt = now
 	prevAssigned := info.Assigned
 	info.Assigned = acquired
 	info.LeaseExpiration = now.Add(config.LeaseLength.Duration())

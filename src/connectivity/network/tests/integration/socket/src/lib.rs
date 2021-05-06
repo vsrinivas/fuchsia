@@ -220,9 +220,11 @@ async fn install_ip_device(
             addrs
                 .iter()
                 .all(|want| {
-                    addresses
-                        .iter()
-                        .any(|&fidl_fuchsia_net_interfaces_ext::Address { addr }| addr == *want)
+                    addresses.iter().any(
+                        |&fidl_fuchsia_net_interfaces_ext::Address { addr, valid_until: _ }| {
+                            addr == *want
+                        },
+                    )
                 })
                 .then(|| ())
         },

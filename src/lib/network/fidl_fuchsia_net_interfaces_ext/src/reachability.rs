@@ -44,15 +44,18 @@ pub fn is_globally_routable(
     if !has_default_ipv4_route && !has_default_ipv6_route {
         return false;
     }
-    addresses.iter().any(|Address { addr: fnet::Subnet { addr, prefix_len: _ } }| match addr {
-        fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr }) => {
-            has_default_ipv4_route && !net_types::ip::Ipv4Addr::new(*addr).is_linklocal()
-        }
-        fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr }) => {
-            has_default_ipv6_route
-                && net_types::ip::Ipv6Addr::new(*addr).scope() == net_types::ip::Ipv6Scope::Global
-        }
-    })
+    addresses.iter().any(
+        |Address { addr: fnet::Subnet { addr, prefix_len: _ }, valid_until: _ }| match addr {
+            fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr }) => {
+                has_default_ipv4_route && !net_types::ip::Ipv4Addr::new(*addr).is_linklocal()
+            }
+            fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr }) => {
+                has_default_ipv6_route
+                    && net_types::ip::Ipv6Addr::new(*addr).scope()
+                        == net_types::ip::Ipv6Scope::Global
+            }
+        },
+    )
 }
 
 /// Wraps `event_stream` and returns a stream which yields the reachability status as a bool (true
@@ -151,18 +154,22 @@ mod tests {
             addresses: Some(vec![
                 fnet_interfaces::Address {
                     addr: Some(IPV4_GLOBAL),
+                    valid_until: Some(fuchsia_zircon::Time::INFINITE.into_nanos()),
                     ..fnet_interfaces::Address::EMPTY
                 },
                 fnet_interfaces::Address {
                     addr: Some(IPV4_LINK_LOCAL),
+                    valid_until: Some(fuchsia_zircon::Time::INFINITE.into_nanos()),
                     ..fnet_interfaces::Address::EMPTY
                 },
                 fnet_interfaces::Address {
                     addr: Some(IPV6_GLOBAL),
+                    valid_until: Some(fuchsia_zircon::Time::INFINITE.into_nanos()),
                     ..fnet_interfaces::Address::EMPTY
                 },
                 fnet_interfaces::Address {
                     addr: Some(IPV6_LINK_LOCAL),
+                    valid_until: Some(fuchsia_zircon::Time::INFINITE.into_nanos()),
                     ..fnet_interfaces::Address::EMPTY
                 },
             ]),
@@ -194,22 +201,34 @@ mod tests {
             ..valid_interface(ID).try_into()?
         }));
         assert!(!is_globally_routable(&Properties {
-            addresses: vec![Address { addr: IPV4_GLOBAL }],
+            addresses: vec![Address {
+                addr: IPV4_GLOBAL,
+                valid_until: fuchsia_zircon::Time::INFINITE.into_nanos()
+            }],
             has_default_ipv4_route: false,
             ..valid_interface(ID).try_into()?
         }));
         assert!(!is_globally_routable(&Properties {
-            addresses: vec![Address { addr: IPV6_GLOBAL }],
+            addresses: vec![Address {
+                addr: IPV6_GLOBAL,
+                valid_until: fuchsia_zircon::Time::INFINITE.into_nanos()
+            }],
             has_default_ipv6_route: false,
             ..valid_interface(ID).try_into()?
         }));
         assert!(!is_globally_routable(&Properties {
-            addresses: vec![Address { addr: IPV6_LINK_LOCAL }],
+            addresses: vec![Address {
+                addr: IPV6_LINK_LOCAL,
+                valid_until: fuchsia_zircon::Time::INFINITE.into_nanos()
+            }],
             has_default_ipv6_route: true,
             ..valid_interface(ID).try_into()?
         }));
         assert!(!is_globally_routable(&Properties {
-            addresses: vec![Address { addr: IPV4_LINK_LOCAL }],
+            addresses: vec![Address {
+                addr: IPV4_LINK_LOCAL,
+                valid_until: fuchsia_zircon::Time::INFINITE.into_nanos()
+            }],
             has_default_ipv4_route: true,
             ..valid_interface(ID).try_into()?
         }));
@@ -217,13 +236,19 @@ mod tests {
         // These combinations are globally routable.
         assert!(is_globally_routable(&valid_interface(ID).try_into()?));
         assert!(is_globally_routable(&Properties {
-            addresses: vec![Address { addr: IPV4_GLOBAL }],
+            addresses: vec![Address {
+                addr: IPV4_GLOBAL,
+                valid_until: fuchsia_zircon::Time::INFINITE.into_nanos()
+            }],
             has_default_ipv4_route: true,
             has_default_ipv6_route: false,
             ..valid_interface(ID).try_into()?
         }));
         assert!(is_globally_routable(&Properties {
-            addresses: vec![Address { addr: IPV6_GLOBAL }],
+            addresses: vec![Address {
+                addr: IPV6_GLOBAL,
+                valid_until: fuchsia_zircon::Time::INFINITE.into_nanos()
+            }],
             has_default_ipv4_route: false,
             has_default_ipv6_route: true,
             ..valid_interface(ID).try_into()?

@@ -602,21 +602,40 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
         let mut options = Vec::new();
         options.push(DhcpOption::DhcpMessageType(MessageType::DHCPOFFER));
         options.push(DhcpOption::ServerIdentifier(self.get_server_ip(&disc)?));
-        let seconds = match disc
-            .options
-            .iter()
-            .filter_map(|opt| match opt {
-                DhcpOption::IpAddressLeaseTime(seconds) => Some(*seconds),
-                _ => None,
-            })
-            .next()
-        {
+        let lease_length = match disc.options.iter().find_map(|opt| match opt {
+            DhcpOption::IpAddressLeaseTime(seconds) => Some(*seconds),
+            _ => None,
+        }) {
             Some(seconds) => std::cmp::min(seconds, self.params.lease_length.max_seconds),
             None => self.params.lease_length.default_seconds,
         };
-        options.push(DhcpOption::IpAddressLeaseTime(seconds));
-        options.push(DhcpOption::RenewalTimeValue(seconds / 2));
-        options.push(DhcpOption::RebindingTimeValue((seconds * 3) / 4));
+        options.push(DhcpOption::IpAddressLeaseTime(lease_length));
+        let v = self
+            .options_repo
+            .get(&OptionCode::RenewalTimeValue)
+            .map(|v| match v {
+                DhcpOption::RenewalTimeValue(v) => *v,
+                v => panic!(
+                    "options repo contains code-value mismatch: key={:?} value={:?}",
+                    &OptionCode::RenewalTimeValue,
+                    v
+                ),
+            })
+            .unwrap_or_else(|| lease_length / 2);
+        options.push(DhcpOption::RenewalTimeValue(v));
+        let v = self
+            .options_repo
+            .get(&OptionCode::RebindingTimeValue)
+            .map(|v| match v {
+                DhcpOption::RebindingTimeValue(v) => *v,
+                v => panic!(
+                    "options repo contains code-value mismatch: key={:?} value={:?}",
+                    &OptionCode::RenewalTimeValue,
+                    v
+                ),
+            })
+            .unwrap_or_else(|| (lease_length / 4) * 3 + (lease_length % 4) * 3 / 4);
+        options.push(DhcpOption::RebindingTimeValue(v));
         options.extend_from_slice(&self.get_requested_options(&disc.options));
         let offer = Message {
             op: OpCode::BOOTREPLY,
@@ -4104,5 +4123,73 @@ pub mod tests {
         disc = new_test_discover();
         assert_eq!(validate_discover(&disc), Ok(()));
         Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_build_offer_with_custom_t1_t2() {
+        let mut server = new_test_minimal_server().expect("failed to instantiate server");
+        let initial_disc = new_test_discover();
+        let initial_offer_ip = random_ipv4_generator();
+        assert!(server.pool.universe.insert(initial_offer_ip));
+        let offer =
+            server.build_offer(initial_disc, initial_offer_ip).expect("failed to build offer");
+        let v = offer.options.iter().find_map(|v| match v {
+            DhcpOption::RenewalTimeValue(v) => Some(*v),
+            _ => None,
+        });
+        assert_eq!(
+            v,
+            Some(server.params.lease_length.default_seconds / 2),
+            "offer options did not contain expected renewal time: {:?}",
+            offer.options
+        );
+        let v = offer.options.iter().find_map(|v| match v {
+            DhcpOption::RebindingTimeValue(v) => Some(*v),
+            _ => None,
+        });
+        assert_eq!(
+            v,
+            Some((server.params.lease_length.default_seconds * 3) / 4),
+            "offer options did not contain expected rebinding time: {:?}",
+            offer.options
+        );
+        let t1 = rand::random::<u32>();
+        matches::assert_matches!(
+            server
+                .options_repo
+                .insert(OptionCode::RenewalTimeValue, DhcpOption::RenewalTimeValue(t1)),
+            None
+        );
+        let t2 = rand::random::<u32>();
+        matches::assert_matches!(
+            server
+                .options_repo
+                .insert(OptionCode::RebindingTimeValue, DhcpOption::RebindingTimeValue(t2)),
+            None
+        );
+        let disc = new_test_discover();
+        let offer_ip = random_ipv4_generator();
+        assert!(server.pool.universe.insert(offer_ip));
+        let offer = server.build_offer(disc, offer_ip).expect("failed to build offer");
+        let v = offer.options.iter().find_map(|v| match v {
+            DhcpOption::RenewalTimeValue(v) => Some(*v),
+            _ => None,
+        });
+        assert_eq!(
+            v,
+            Some(t1),
+            "offer options did not contain expected renewal time: {:?}",
+            offer.options
+        );
+        let v = offer.options.iter().find_map(|v| match v {
+            DhcpOption::RebindingTimeValue(v) => Some(*v),
+            _ => None,
+        });
+        assert_eq!(
+            v,
+            Some(t2),
+            "offer options did not contain expected rebinding time: {:?}",
+            offer.options
+        );
     }
 }

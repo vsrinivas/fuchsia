@@ -421,7 +421,10 @@ fn start_dhcpv6_client(
     watchers: &mut DnsServerWatchers<'_>,
 ) -> Result<Option<fnet::Ipv6SocketAddress>, errors::Error> {
     let sockaddr = addresses.iter().find_map(
-        |&fnet_interfaces_ext::Address { addr: fnet::Subnet { addr, prefix_len: _ } }| match addr {
+        |&fnet_interfaces_ext::Address {
+             addr: fnet::Subnet { addr, prefix_len: _ },
+             valid_until: _,
+         }| match addr {
             fnet::IpAddress::Ipv6(address) => {
                 if address.is_unicast_linklocal() {
                     Some(fnet::Ipv6SocketAddress {
@@ -842,6 +845,7 @@ impl<'a> NetCfg<'a> {
                             if !addresses.iter().any(
                                 |&fnet_interfaces_ext::Address {
                                      addr: fnet::Subnet { addr, prefix_len: _ },
+                                     valid_until: _,
                                  }| {
                                     addr == fnet::IpAddress::Ipv6(address)
                                 },
@@ -1594,11 +1598,13 @@ mod tests {
         // and expect it to not be used.
         std::iter::once(fnet_interfaces::Address {
             addr: Some(GLOBAL_ADDR),
+            valid_until: Some(fuchsia_zircon::Time::INFINITE.into_nanos()),
             ..fnet_interfaces::Address::EMPTY
         })
         .chain(a.map(|fnet::Ipv6SocketAddress { address, port: _, zone_index: _ }| {
             fnet_interfaces::Address {
                 addr: Some(fnet::Subnet { addr: fnet::IpAddress::Ipv6(address), prefix_len: 64 }),
+                valid_until: Some(fuchsia_zircon::Time::INFINITE.into_nanos()),
                 ..fnet_interfaces::Address::EMPTY
             }
         }))

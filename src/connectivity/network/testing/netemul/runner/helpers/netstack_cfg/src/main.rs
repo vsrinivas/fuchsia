@@ -113,6 +113,7 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
             [address] => {
                 let fidl_fuchsia_net_interfaces_ext::Address {
                     addr: fidl_fuchsia_net::Subnet { addr, prefix_len },
+                    valid_until: _,
                 } = address;
                 let fidl_fuchsia_netstack::NetErr { status, message } = netstack
                     .remove_interface_address(nicid_u32, addr, *prefix_len)
@@ -226,7 +227,8 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
     }
 
     log::info!("Waiting for interface up...");
-    let interface_state = client::connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()?;
+    let interface_state =
+        client::connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()?;
     let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
         fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)?,
         &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(nicid.into()),
@@ -238,9 +240,11 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
             // If configuring static addresses, make sure the addresses are present (this ensures
             // that DAD has resolved for IPv6 addresses).
             if subnets.iter().all(|subnet| {
-                let present = addresses
-                    .iter()
-                    .any(|fidl_fuchsia_net_interfaces_ext::Address { addr }| addr == subnet);
+                let present = addresses.iter().any(
+                    |fidl_fuchsia_net_interfaces_ext::Address { addr, valid_until: _ }| {
+                        addr == subnet
+                    },
+                );
                 if !present {
                     log::info!(
                         "Found interface with id {}, but address {} not yet present. waiting.",

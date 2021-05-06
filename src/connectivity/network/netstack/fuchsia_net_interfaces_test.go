@@ -13,7 +13,9 @@ import (
 	"runtime"
 	"syscall/zx"
 	"testing"
-	"time"
+
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dhcp"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/time"
 
 	fidlnet "fidl/fuchsia/net"
 	"fidl/fuchsia/net/interfaces"
@@ -125,7 +127,7 @@ func wantInterfaceProperties(ns *Netstack, nicid tcpip.NICID) interfaces.Propert
 			}
 		}
 	}
-	return interfaceProperties(ns.stack.NICInfo()[nicid], hasDefaultIpv4Route, hasDefaultIpv6Route)
+	return interfaceProperties(ns.stack.NICInfo()[nicid], hasDefaultIpv4Route, hasDefaultIpv6Route, nil)
 }
 
 func TestInterfacesWatcher(t *testing.T) {
@@ -283,6 +285,46 @@ func TestInterfacesWatcher(t *testing.T) {
 	properties = wantInterfaceProperties(ns, ifs.nicid)
 	addressRemoved.SetAddresses(properties.GetAddresses())
 	verifyWatchResults(interfaces.EventWithChanged(addressRemoved))
+
+	// DHCP Acquired on the interface.
+	blockingWatch()
+	acquiredAddr := tcpip.AddressWithPrefix{Address: "\xc0\xa8\x00\x04", PrefixLen: 24}
+	leaseLength := dhcp.Seconds(10)
+	initUpdatedAt := time.Monotonic(42)
+	ifs.dhcpAcquired(tcpip.AddressWithPrefix{}, acquiredAddr, dhcp.Config{UpdatedAt: initUpdatedAt, LeaseLength: leaseLength})
+	dhcpAddressAdded := id
+	var address interfaces.Address
+	address.SetAddr(fidlnet.Subnet{
+		Addr:      toIpAddress(net.ParseIP(acquiredAddr.Address.String()).To4()),
+		PrefixLen: uint8(acquiredAddr.PrefixLen),
+	})
+	address.SetValidUntil(initUpdatedAt.Add(leaseLength.Duration()).MonotonicNano())
+	dhcpAddressAdded.SetAddresses([]interfaces.Address{address})
+	verifyWatchResults(interfaces.EventWithChanged(dhcpAddressAdded))
+
+	// DHCP Acquired with same valid_until does not produce event.
+	ifs.dhcpAcquired(acquiredAddr, acquiredAddr, dhcp.Config{UpdatedAt: initUpdatedAt, LeaseLength: leaseLength})
+	blockingWatch()
+	select {
+	case <-ch:
+		t.Fatalf("dhcp acquired triggered a diff-less watcher event")
+	case <-time.After(2 * time.Millisecond):
+	}
+
+	// DHCP Acquired with different valid_until.
+	updatedAt := time.Monotonic(100)
+	ifs.dhcpAcquired(acquiredAddr, acquiredAddr, dhcp.Config{UpdatedAt: updatedAt, LeaseLength: leaseLength})
+	dhcpAddressRenewed := id
+	address.SetValidUntil(updatedAt.Add(leaseLength.Duration()).MonotonicNano())
+	dhcpAddressRenewed.SetAddresses([]interfaces.Address{address})
+	verifyWatchResults(interfaces.EventWithChanged(dhcpAddressRenewed))
+
+	// DHCP Acquired on empty address signaling end of lease.
+	blockingWatch()
+	ifs.dhcpAcquired(acquiredAddr, tcpip.AddressWithPrefix{}, dhcp.Config{})
+	dhcpExpired := id
+	dhcpExpired.SetAddresses([]interfaces.Address{})
+	verifyWatchResults(interfaces.EventWithChanged(dhcpExpired))
 
 	// Set interface down.
 	blockingWatch()

@@ -120,13 +120,14 @@ struct DhcpTestNetwork<'a> {
     eps: &'a mut [DhcpTestEndpoint<'a>],
 }
 
-async fn set_server_parameters(
+async fn set_server_settings(
     dhcp_server: &fidl_fuchsia_net_dhcp::Server_Proxy,
     parameters: &mut [fidl_fuchsia_net_dhcp::Parameter],
+    options: &mut [fidl_fuchsia_net_dhcp::Option_],
 ) -> Result {
-    stream::iter(parameters.iter_mut())
-        .map(Ok)
-        .try_for_each_concurrent(None, |parameter| async move {
+    let parameters = stream::iter(parameters.iter_mut()).map(Ok).try_for_each_concurrent(
+        None,
+        |parameter| async move {
             dhcp_server
                 .set_parameter(parameter)
                 .await
@@ -135,9 +136,21 @@ async fn set_server_parameters(
                 .with_context(|| {
                     format!("dhcp/Server.SetParameter({:?}) returned error", parameter)
                 })
-        })
-        .await
-        .context("failed to set server parameters")
+        },
+    );
+    let options = stream::iter(options.iter_mut()).map(Ok).try_for_each_concurrent(
+        None,
+        |option| async move {
+            dhcp_server
+                .set_option(option)
+                .await
+                .context("failed to call dhcp/Server.SetOption")?
+                .map_err(fuchsia_zircon::Status::from_raw)
+                .with_context(|| format!("dhcp/Server.SetOption({:?}) returned error", option))
+        },
+    );
+    let ((), ()) = futures::future::try_join(parameters, options).await?;
+    Ok(())
 }
 
 async fn client_acquires_addr(
@@ -209,9 +222,11 @@ async fn client_acquires_addr(
                      has_default_ipv6_route: _,
                      name: _,
                  }| {
-                    if addresses.iter().any(|&fidl_fuchsia_net_interfaces_ext::Address { addr }| {
-                        addr == expected_acquired
-                    }) {
+                    if addresses.iter().any(
+                        |&fidl_fuchsia_net_interfaces_ext::Address { addr, valid_until: _ }| {
+                            addr == expected_acquired
+                        },
+                    ) {
                         None
                     } else {
                         Some(())
@@ -244,7 +259,7 @@ async fn assert_interface_assigned_addr(
              name: _,
          }| {
             addresses.iter().find_map(
-                |&fidl_fuchsia_net_interfaces_ext::Address { addr: subnet }| {
+                |&fidl_fuchsia_net_interfaces_ext::Address { addr: subnet, valid_until: _ }| {
                     let fidl_fuchsia_net::Subnet { addr, prefix_len: _ } = subnet;
                     match addr {
                         fidl_fuchsia_net::IpAddress::Ipv4(_) => Some(subnet),
@@ -283,33 +298,38 @@ fn bind<'a>(
     std::net::UdpSocket::bind_in_env(client_env, std::net::SocketAddr::new(ip_address, 0))
 }
 
+struct Settings<'a> {
+    parameters: &'a mut [fidl_fuchsia_net_dhcp::Parameter],
+    options: &'a mut [fidl_fuchsia_net_dhcp::Option_],
+}
+
 /// test_dhcp starts 2 netstacks, client and server, and attaches endpoints to
 /// them in potentially multiple networks based on the input network
 /// configuration.
 ///
-/// DHCP servers are started on the server side, configured from the dhcp_parameters argument.
+/// DHCP servers are started on the server side, configured from the dhcp_settings argument.
 /// Notice based on the configuration, it is possible that multiple servers are started and bound
 /// to different endpoints.
 ///
 /// DHCP clients are started on each client endpoint, attempt to acquire
 /// addresses through DHCP and compare them to expected address.
 ///
-/// The DHCP client's renewal path is tested with the `client_renews` flag. Since a client only
-/// renews after lease_length/2 seconds has passed, `dhcp_parameters` should include a short lease
-/// length when `client_renews` is set.
+/// The DHCP client's renewal path is tested with the `client_renews` flag. If this flag is enabled,
+/// the user will likely want to set custom renewal and rebinding times, with short values, so as to
+/// minimize time spent waiting for renewal to trigger.
 async fn test_dhcp<E: netemul::Endpoint>(
     name: &str,
     network_configs: &mut [DhcpTestNetwork<'_>],
-    dhcp_parameters: &mut [&mut [fidl_fuchsia_net_dhcp::Parameter]],
+    dhcp_settings: &mut [Settings<'_>],
     cycles: usize,
     client_renews: bool,
 ) -> Result {
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
 
     let sandbox_ref = &sandbox;
-    let server_environments = stream::iter(dhcp_parameters)
+    let server_environments = stream::iter(dhcp_settings.into_iter())
         .enumerate()
-        .then(|(id, parameters)| async move {
+        .then(|(id, Settings { parameters, options })| async move {
             let server_environment = sandbox_ref
                 .create_netstack_environment_with::<Netstack2, _, _>(
                     format!("{}_server_{}", name, id),
@@ -330,8 +350,7 @@ async fn test_dhcp<E: netemul::Endpoint>(
             let dhcp_server = dhcpd
                 .connect_to_protocol::<fidl_fuchsia_net_dhcp::Server_Marker>()
                 .context("failed to connect to DHCP server")?;
-            let () = set_server_parameters(&dhcp_server, parameters).await?;
-
+            let () = set_server_settings(&dhcp_server, parameters, options).await?;
             Result::Ok((server_environment, dhcpd))
         })
         .try_collect::<Vec<_>>()
@@ -455,7 +474,7 @@ async fn acquire_dhcp_with_dhcpd_bound_device<E: netemul::Endpoint>(name: &str) 
                 },
             ],
         }],
-        &mut [&mut config.dhcp_parameters()],
+        &mut [Settings { parameters: &mut config.dhcp_parameters(), options: &mut [] }],
         1,
         false,
     )
@@ -466,20 +485,20 @@ async fn acquire_dhcp_with_dhcpd_bound_device<E: netemul::Endpoint>(name: &str) 
 async fn acquire_dhcp_then_renew_with_dhcpd_bound_device<E: netemul::Endpoint>(
     name: &str,
 ) -> Result {
-    // TODO(https://fxbug.dev/74365): Reenable flaky test once underlying race is fixed.
-    // #[ignore] doesn't work with #[variants_test] so we have to employ the following hack.
-    if true {
-        return Ok(());
-    }
     let config = default_test_config().context("failed to create test config")?;
-    let mut dhcp_parameters = config.dhcp_parameters();
-    let () = dhcp_parameters.push(fidl_fuchsia_net_dhcp::Parameter::Lease(
-        fidl_fuchsia_net_dhcp::LeaseLength {
-            default: Some(4),
-            max: Some(4),
+    let mut parameters = config.dhcp_parameters();
+    // A realistic lease length that won't expire within the test timeout of 2 minutes.
+    const LONG_LEASE: u32 = 60 * 60 * 24;
+    // A short client renewal time which will trigger well before the test timeout of 2 minutes.
+    const SHORT_RENEW: u32 = 3;
+    let () = parameters.push(
+        fidl_fuchsia_net_dhcp::Parameter::Lease(fidl_fuchsia_net_dhcp::LeaseLength {
+            default: Some(LONG_LEASE),
+            max: Some(LONG_LEASE),
             ..fidl_fuchsia_net_dhcp::LeaseLength::EMPTY
-        },
-    ));
+        })
+        .into(),
+    );
     test_dhcp::<E>(
         name,
         &mut [DhcpTestNetwork {
@@ -497,7 +516,10 @@ async fn acquire_dhcp_then_renew_with_dhcpd_bound_device<E: netemul::Endpoint>(
                 },
             ],
         }],
-        &mut [&mut dhcp_parameters],
+        &mut [Settings {
+            parameters: &mut parameters,
+            options: &mut [fidl_fuchsia_net_dhcp::Option_::RenewalTimeValue(SHORT_RENEW)],
+        }],
         1,
         true,
     )
@@ -560,7 +582,7 @@ async fn acquire_dhcp_with_dhcpd_bound_device_dup_addr<E: netemul::Endpoint>(nam
                 },
             ],
         }],
-        &mut [&mut config.dhcp_parameters()],
+        &mut [Settings { parameters: &mut config.dhcp_parameters(), options: &mut [] }],
         1,
         false,
     )
@@ -605,7 +627,10 @@ async fn acquire_dhcp_with_multiple_network<E: netemul::Endpoint>(name: &str) ->
                 ],
             },
         ],
-        &mut [&mut default_config.dhcp_parameters(), &mut alt_config.dhcp_parameters()],
+        &mut [
+            Settings { parameters: &mut default_config.dhcp_parameters(), options: &mut [] },
+            Settings { parameters: &mut alt_config.dhcp_parameters(), options: &mut [] },
+        ],
         1,
         false,
     )
@@ -640,7 +665,8 @@ impl PersistenceMode {
     ) -> Result<Vec<(fidl_fuchsia_net_dhcp::ParameterName, fidl_fuchsia_net_dhcp::Parameter)>> {
         Ok(match self {
             Self::Persistent => {
-                let params = test_dhcpd_params().context("failed to create test dhcpd params")?;
+                let params =
+                    test_dhcpd_parameters().context("failed to create test dhcpd params")?;
                 params.into_iter().map(|p| (param_name(&p), p)).collect()
             }
             Self::Ephemeral => vec![
@@ -670,7 +696,7 @@ impl PersistenceMode {
 
 // This collection of parameters is defined as a function because we need to allocate a Vec which
 // cannot be done statically, i.e. as a constant.
-fn test_dhcpd_params() -> Result<Vec<fidl_fuchsia_net_dhcp::Parameter>> {
+fn test_dhcpd_parameters() -> Result<Vec<fidl_fuchsia_net_dhcp::Parameter>> {
     let config = default_test_config().context("failed to create test config")?;
     Ok(vec![
         fidl_fuchsia_net_dhcp::Parameter::IpAddrs(vec![config.server_addr]),
@@ -807,7 +833,7 @@ async fn acquire_dhcp_server_after_restart<E: netemul::Endpoint>(
     // persistent storage.
     {
         let (mut dhcpd, dhcp_server) = setup_component_proxy(mode, &server_env)?;
-        let () = set_server_parameters(&dhcp_server, &mut config.dhcp_parameters()).await?;
+        let () = set_server_settings(&dhcp_server, &mut config.dhcp_parameters(), &mut []).await?;
         let () = dhcp_server
             .start_serving()
             .await
@@ -937,9 +963,9 @@ async fn test_dhcp_server_persistence_mode<E: netemul::Endpoint>(
 
     // Configure the server with parameters and then restart it.
     {
-        let mut params = test_dhcpd_params().context("failed to create test dhcpd params")?;
+        let mut settings = test_dhcpd_parameters().context("failed to create test dhcpd params")?;
         let (mut dhcpd, dhcp_server) = setup_component_proxy(mode, &server_env)?;
-        let () = set_server_parameters(&dhcp_server, &mut params).await?;
+        let () = set_server_settings(&dhcp_server, &mut settings, &mut []).await?;
         let () = cleanup_component(&mut dhcpd).await?;
     }
 

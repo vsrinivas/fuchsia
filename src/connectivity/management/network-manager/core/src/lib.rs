@@ -440,7 +440,7 @@ impl DeviceState {
     ) -> error::Result<()> {
         let (v4_addr, v6_addrs) = addresses.into_iter().fold(
             (None, Vec::new()),
-            |(mut v4, mut v6), fnet_interfaces_ext::Address { addr }| {
+            |(mut v4, mut v6), fnet_interfaces_ext::Address { addr, valid_until: _ }| {
                 match addr.addr {
                     fnet::IpAddress::Ipv4(_) => {
                         if v4.is_none() {
@@ -890,7 +890,11 @@ mod tests {
             device_class: Some(fnet_interfaces::DeviceClass::Loopback(fnet_interfaces::Empty {})),
             online: Some(online),
             addresses: Some(addr.map_or_else(Vec::new, |a| {
-                vec![fnet_interfaces::Address { addr: Some(a), ..fnet_interfaces::Address::EMPTY }]
+                vec![fnet_interfaces::Address {
+                    addr: Some(a),
+                    valid_until: Some(fuchsia_zircon::Time::INFINITE.into_nanos()),
+                    ..fnet_interfaces::Address::EMPTY
+                }]
             })),
             has_default_ipv4_route: Some(false),
             has_default_ipv6_route: Some(false),

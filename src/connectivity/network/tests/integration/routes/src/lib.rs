@@ -96,7 +96,9 @@ async fn test_resolve_route() -> Result {
             // TODO(https://github.com/rust-lang/rust/issues/80967): use bool::then_some.
             addresses
                 .iter()
-                .any(|&fidl_fuchsia_net_interfaces_ext::Address { addr }| addr == HOST_IP_V6)
+                .any(|&fidl_fuchsia_net_interfaces_ext::Address { addr, valid_until: _ }| {
+                    addr == HOST_IP_V6
+                })
                 .then(|| ())
         },
     )
@@ -131,7 +133,9 @@ async fn test_resolve_route() -> Result {
             // TODO(https://github.com/rust-lang/rust/issues/80967): use bool::then_some.
             addresses
                 .iter()
-                .any(|&fidl_fuchsia_net_interfaces_ext::Address { addr }| addr == GATEWAY_IP_V6)
+                .any(|&fidl_fuchsia_net_interfaces_ext::Address { addr, valid_until: _ }| {
+                    addr == GATEWAY_IP_V6
+                })
                 .then(|| ())
         },
     )

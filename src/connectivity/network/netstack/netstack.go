@@ -561,7 +561,7 @@ func (ns *Netstack) removeInterfaceAddress(nic tcpip.NICID, addr tcpip.ProtocolA
 		return false, fmt.Errorf("error removing address %s from NIC ID %d: %s", addr.AddressWithPrefix, nic, err)
 	}
 
-	ns.onPropertiesChange(nic)
+	ns.onPropertiesChange(nic, nil)
 	return true, nil
 }
 
@@ -595,7 +595,7 @@ func (ns *Netstack) addInterfaceAddress(nic tcpip.NICID, addr tcpip.ProtocolAddr
 		return false, fmt.Errorf("error adding subnet route %s to NIC ID %d: %w", route, nic, err)
 	}
 
-	ns.onPropertiesChange(nic)
+	ns.onPropertiesChange(nic, nil)
 	return true, nil
 }
 
@@ -652,14 +652,20 @@ func (ifs *ifState) dhcpAcquired(lost, acquired tcpip.AddressWithPrefix, config 
 				}
 			}
 		}
-
-		// Dispatch interface change handlers on another goroutine to prevent a
-		// deadlock while holding ifState.mu since dhcpAcquired is called on
-		// cancellation.
-		go func() {
-			ifs.ns.onPropertiesChange(ifs.nicid)
-		}()
 	}
+
+	// Patch the address data exposed by fuchsia.net.interfaces with a validUntil
+	// value derived from the DHCP configuration.
+	patches := []addressPatch{
+		{
+			addr:       acquired,
+			validUntil: config.UpdatedAt.Add(config.LeaseLength.Duration()),
+		},
+	}
+	// Dispatch interface change handlers on another goroutine to prevent a
+	// deadlock while holding ifState.mu since dhcpAcquired is called on
+	// cancellation.
+	go ifs.ns.onPropertiesChange(ifs.nicid, patches)
 
 	if updated := ifs.setDNSServers(config.DNS); updated {
 		_ = syslog.Infof("NIC %s: set DNS servers: %s", name, config.DNS)
@@ -832,7 +838,7 @@ func (ifs *ifState) onLinkOnlineChanged(linkOnline bool) {
 	ifs.mu.Unlock()
 	_ = syslog.Infof("NIC %s: observed linkOnline=%t interfacesChanged=%t", name, linkOnline, changed)
 	if changed {
-		ifs.ns.onPropertiesChange(ifs.nicid)
+		ifs.ns.onPropertiesChange(ifs.nicid, nil)
 	}
 }
 
@@ -866,7 +872,7 @@ func (ifs *ifState) setState(enabled bool) error {
 	_ = syslog.Infof("NIC %s: set adminUp=%t interfacesChanged=%t", name, enabled, changed)
 
 	if changed {
-		ifs.ns.onPropertiesChange(ifs.nicid)
+		ifs.ns.onPropertiesChange(ifs.nicid, nil)
 	}
 
 	return nil
