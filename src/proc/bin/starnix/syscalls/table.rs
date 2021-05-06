@@ -5,9 +5,13 @@
 use paste::paste;
 use zerocopy::{AsBytes, FromBytes};
 
+use crate::fs::syscalls::*;
 use crate::fs::FdNumber;
-use crate::syscalls::*;
-use crate::uapi::*;
+use crate::mm::syscalls::*;
+use crate::syscalls::system::*;
+use crate::syscalls::{SyscallContext, SyscallResult};
+use crate::task::syscalls::*;
+use crate::types::*;
 
 trait FromSyscallArg {
     fn from_arg(arg: u64) -> Self;
@@ -74,7 +78,7 @@ macro_rules! syscall_match {
     } => {
         paste! {
             match $syscall_number as u32 {
-                $(crate::uapi::[<__NR_ $call>] => syscall_match!(@call $ctx; $args; [<sys_ $call>][$num_args]),)*
+                $(crate::types::[<__NR_ $call>] => syscall_match!(@call $ctx; $args; [<sys_ $call>][$num_args]),)*
                 _ => sys_unknown($ctx, $syscall_number),
             }
         }

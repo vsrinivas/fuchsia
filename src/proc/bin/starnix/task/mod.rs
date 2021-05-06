@@ -10,10 +10,12 @@ use std::ffi::CString;
 use std::ops;
 use std::sync::{Arc, Weak};
 
+pub mod syscalls;
+
 use crate::auth::Credentials;
 use crate::fs::{FdTable, FileSystem};
 use crate::mm::MemoryManager;
-use crate::uapi::*;
+use crate::types::*;
 
 // # Ownership structure
 //
@@ -189,19 +191,6 @@ impl Task {
         return Task::create(kernel, fs, creds, process, root_vmar, thread, duplicate_process);
     }
 
-    #[cfg(test)]
-    pub fn new_mock(kernel: &Arc<Kernel>, fs: Arc<FileSystem>) -> Result<TaskOwner, zx::Status> {
-        return Task::create(
-            kernel,
-            fs,
-            Credentials::root(),
-            zx::Process::from(zx::Handle::invalid()),
-            zx::Vmar::from(zx::Handle::invalid()),
-            zx::Thread::from(zx::Handle::invalid()),
-            zx::Process::from(zx::Handle::invalid()),
-        );
-    }
-
     fn create(
         kernel: &Arc<Kernel>,
         fs: Arc<FileSystem>,
@@ -258,20 +247,23 @@ impl Task {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::fs::test::create_test_file_system;
     use fuchsia_async as fasync;
+
+    use crate::testing::*;
 
     #[fasync::run_singlethreaded(test)]
     async fn test_tid_allocation() {
-        let kernel =
-            Kernel::new(&CString::new("test-kernel").unwrap()).expect("failed to create kernel");
-        let fs = create_test_file_system();
+        let (kernel, task_owner) = create_kernel_and_task();
 
-        let task_owner = Task::new_mock(&kernel, fs.clone()).expect("failed to create first task");
         let task = &task_owner.task;
         assert_eq!(task.get_tid(), 1);
-        let another_task_owner =
-            Task::new_mock(&kernel, fs.clone()).expect("failed to create second task");
+        let another_task_owner = Task::new(
+            &kernel,
+            &CString::new("another-task").unwrap(),
+            task.fs.clone(),
+            Credentials::default(),
+        )
+        .expect("failed to create second task");
         let another_task = &another_task_owner.task;
         assert_eq!(another_task.get_tid(), 2);
 

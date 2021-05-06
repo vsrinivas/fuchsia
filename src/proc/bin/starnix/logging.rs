@@ -4,7 +4,7 @@
 
 use fuchsia_zircon as zx;
 
-use crate::uapi::Errno;
+use crate::types::Errno;
 
 #[macro_export]
 macro_rules! not_implemented {

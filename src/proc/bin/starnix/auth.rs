@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::uapi::*;
+use crate::types::*;
 
 #[derive(Default)]
 pub struct Credentials {
@@ -10,11 +10,4 @@ pub struct Credentials {
     pub gid: uid_t,
     pub euid: uid_t,
     pub egid: uid_t,
-}
-
-impl Credentials {
-    #[cfg(test)] // Currently used only by tests.
-    pub fn root() -> Credentials {
-        Credentials { uid: 0, gid: 0, euid: 0, egid: 0 }
-    }
 }

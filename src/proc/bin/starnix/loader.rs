@@ -13,7 +13,7 @@ use crate::auth::*;
 use crate::fs::{FileSystem, SyslogFile};
 use crate::mm::PAGE_SIZE;
 use crate::task::*;
-use crate::uapi::*;
+use crate::types::*;
 
 pub struct ProcessParameters {
     pub name: CString,

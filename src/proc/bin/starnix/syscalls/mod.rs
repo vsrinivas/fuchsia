@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-mod fd;
-mod file_system;
-mod fuchsia;
-pub mod syscalls;
+pub mod decls;
+mod syscall_context;
+mod syscall_result;
+pub mod system;
+pub mod table;
 
-pub use fd::*;
-pub use file_system::*;
-pub use fuchsia::*;
+pub use syscall_context::*;
+pub use syscall_result::*;

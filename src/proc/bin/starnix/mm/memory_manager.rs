@@ -11,7 +11,7 @@ use zerocopy::{AsBytes, FromBytes};
 
 use crate::collections::*;
 use crate::logging::*;
-use crate::uapi::*;
+use crate::types::*;
 
 lazy_static! {
     pub static ref PAGE_SIZE: u64 = zx::system_get_page_size() as u64;

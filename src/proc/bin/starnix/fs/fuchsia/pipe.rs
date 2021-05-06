@@ -7,7 +7,7 @@ use fuchsia_zircon as zx;
 use crate::fd_impl_nonseekable;
 use crate::fs::*;
 use crate::task::*;
-use crate::uapi::*;
+use crate::types::*;
 
 pub struct FuchsiaPipe {
     socket: zx::Socket,

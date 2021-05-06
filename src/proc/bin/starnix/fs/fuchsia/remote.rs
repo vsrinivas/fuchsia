@@ -12,7 +12,7 @@ use log::info;
 use crate::fd_impl_seekable;
 use crate::fs::*;
 use crate::task::*;
-use crate::uapi::*;
+use crate::types::*;
 
 lazy_static! {
     static ref VMEX_RESOURCE: zx::Resource = {

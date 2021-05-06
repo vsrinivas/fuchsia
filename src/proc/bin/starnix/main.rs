@@ -32,19 +32,19 @@ mod fs;
 mod loader;
 mod logging;
 mod mm;
-mod syscall_table;
 mod syscalls;
 mod task;
-mod uapi;
-mod user_address;
+mod types;
+
+#[cfg(test)]
+mod testing;
 
 use crate::fs::FileSystem;
 use crate::loader::*;
-use crate::syscall_table::dispatch_syscall;
-use crate::syscalls::SyscallContext;
+use crate::syscalls::decls::SyscallDecl;
+use crate::syscalls::table::dispatch_syscall;
+use crate::syscalls::*;
 use crate::task::*;
-use crate::uapi::SyscallDecl;
-use crate::uapi::SyscallResult;
 
 // TODO: Should we move this code into fuchsia_zircon? It seems like part of a better abstraction
 // for exception channels.

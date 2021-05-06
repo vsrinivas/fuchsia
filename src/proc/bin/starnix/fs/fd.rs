@@ -9,8 +9,9 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::not_implemented;
+use crate::syscalls::SyscallResult;
 use crate::task::*;
-use crate::uapi::*;
+use crate::types::*;
 
 pub use starnix_macros::FileObject;
 
@@ -35,9 +36,9 @@ pub trait FileOps {
     fn read_at(
         &self,
         fd: &FileObject,
-        _task: &Task,
-        _offset: usize,
-        _data: &[iovec_t],
+        task: &Task,
+        offset: usize,
+        data: &[iovec_t],
     ) -> Result<usize, Errno>;
     /// Write to the file without an offset. If your file is seekable, consider implementing this
     /// with fd_impl_seekable!.
@@ -47,8 +48,8 @@ pub trait FileOps {
     fn write_at(
         &self,
         fd: &FileObject,
-        _task: &Task,
-        _offset: usize,
+        task: &Task,
+        offset: usize,
         data: &[iovec_t],
     ) -> Result<usize, Errno>;
 
