@@ -57,9 +57,8 @@ protocol ContentDecryptionModule {
     /// immediately close the `license_session`.
     ///
     /// + request `session_type` a field containing either
-    ///   [`LicenseSessionType.TEMPORARY`],
-    ///   [`LicenseSessionType.PERSISTENT_LICENSE`] or
-    ///   [`LicenseSessionType.PERSISTENT_USAGE_RECORD`]
+    ///   [`LicenseSessionType.TEMPORARY`] or
+    ///   [`LicenseSessionType.PERSISTENT_LICENSE`]
     /// + request `license_session` the server endpoint of the
     ///   [`LicenseSession`]
     /// - response `session_id` an identifier that can be used to reload the

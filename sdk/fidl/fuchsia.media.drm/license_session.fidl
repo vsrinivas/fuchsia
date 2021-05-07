@@ -22,9 +22,6 @@ enum LicenseSessionType {
     /// persisted for offline use and can subsequently be loaded using
     /// LoadSession().
     PERSISTENT_LICENSE = 2;
-    /// A session for which the the record of the session will be persisted, but
-    /// the keys and license will not be.
-    PERSISTENT_USAGE_RECORD = 3;
 };
 
 enum LicenseMessageType {
