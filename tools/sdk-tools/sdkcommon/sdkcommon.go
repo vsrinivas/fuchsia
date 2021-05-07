@@ -96,7 +96,7 @@ type DeviceConfig struct {
 
 // SDKProperties holds the common data for SDK tools.
 // These values should be set or initialized by calling
-// (sdk *SDKProperties) Init().
+// New().
 type SDKProperties struct {
 	dataPath                 string
 	version                  string
@@ -163,14 +163,18 @@ var GetUsername = DefaultGetUsername
 // GetHostname to allow mocking.
 var GetHostname = DefaultGetHostname
 
-// New creates an initialized SDKProperties
-func New() (SDKProperties, error) {
+func NewWithDataPath(dataPath string) (SDKProperties, error) {
 	sdk := SDKProperties{}
-	homeDir, err := GetUserHomeDir()
-	if err != nil {
-		return sdk, err
+
+	if dataPath != "" {
+		sdk.dataPath = dataPath
+	} else {
+		homeDir, err := GetUserHomeDir()
+		if err != nil {
+			return sdk, err
+		}
+		sdk.dataPath = filepath.Join(homeDir, ".fuchsia")
 	}
-	sdk.dataPath = filepath.Join(homeDir, ".fuchsia")
 
 	toolsDir, err := sdk.GetToolsDir()
 	if err != nil {
@@ -190,6 +194,12 @@ func New() (SDKProperties, error) {
 	sdk.globalPropertiesFilename = filepath.Join(sdk.dataPath, "global_ffx_props.json")
 	err = initFFXGlobalConfig(sdk)
 	return sdk, err
+}
+
+// New creates an initialized SDKProperties using the default location
+// for the data directory.
+func New() (SDKProperties, error) {
+	return NewWithDataPath("")
 }
 
 // GetSDKVersion returns the version of the SDK or empty if not set.
@@ -269,6 +279,17 @@ func (sdk SDKProperties) GetToolsDir() (string, error) {
 	dir, err := filepath.Abs(filepath.Dir(exePath))
 	if err != nil {
 		return "", fmt.Errorf("could not get directory of currently running file: %s", err)
+	}
+
+	// This could be a symlink in a directory, so look for another common
+	// tool (ffx). If it does not, try using the dir from argv[0].
+	if FileExists(filepath.Join(dir, "ffx")) {
+		return dir, nil
+	}
+
+	dir, err = filepath.Abs(filepath.Dir(os.Args[0]))
+	if err != nil {
+		return "", fmt.Errorf("Could not get path of argv[0]: %v", err)
 	}
 	return dir, nil
 }
@@ -1064,8 +1085,14 @@ func initFFXGlobalConfig(sdk SDKProperties) error {
 			return fmt.Errorf("Cannot initialize property config, global file name is empty: %v", sdk)
 		}
 		args := []string{"config", "env", "set", sdk.globalPropertiesFilename, "--level", "global"}
+
 		if _, err := sdk.RunFFX(args, false); err != nil {
-			return fmt.Errorf("Error initializing global properties environment: %v", err)
+			var exitError *exec.ExitError
+			if errors.As(err, &exitError) {
+				return fmt.Errorf("Error initializing global properties environment: %v %v: %v", args, string(exitError.Stderr), exitError)
+			} else {
+				return fmt.Errorf("Error initializing global properties environment: %v %v", args, err)
+			}
 		}
 	}
 	return nil

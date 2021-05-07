@@ -36,6 +36,43 @@ func helperCommandForSDKCommon(command string, s ...string) (cmd *exec.Cmd) {
 	return cmd
 }
 
+func TestNewSDK(t *testing.T) {
+	tempDir := t.TempDir()
+	homeDir := filepath.Join(tempDir, "_TEMP_HOME")
+	if err := os.MkdirAll(homeDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	ExecCommand = helperCommandForSDKCommon
+	GetUserHomeDir = mockedUserProperty(homeDir)
+	GetUsername = mockedUserProperty("testuser")
+	GetHostname = mockedUserProperty("test-host")
+	defer func() {
+		ExecCommand = exec.Command
+		GetUserHomeDir = DefaultGetUserHomeDir
+		GetUsername = DefaultGetUsername
+		GetHostname = DefaultGetHostname
+	}()
+	testSDK, err := NewWithDataPath(tempDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expectedPath := tempDir
+	if testSDK.GetSDKDataPath() != expectedPath {
+		t.Fatalf("NewWithDataPath datapath mismatch: expected: %v actual: %v",
+			expectedPath, testSDK.GetSDKDataPath())
+	}
+
+	testSDK, err = New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	expectedPath = tempDir + "/_TEMP_HOME/.fuchsia"
+	if testSDK.GetSDKDataPath() != expectedPath {
+		t.Fatalf("New datapath mismatch: expected: %v actual: %v",
+			expectedPath, testSDK.GetSDKDataPath())
+	}
+}
+
 func TestGetAvailableImages(t *testing.T) {
 	ExecCommand = helperCommandForSDKCommon
 	ExecLookPath = func(cmd string) (string, error) { return filepath.Join("mocked", cmd), nil }
@@ -191,9 +228,11 @@ func TestFindDeviceByNameFfx(t *testing.T) {
 	defer func() {
 		ExecCommand = exec.Command
 	}()
-	testSDK := SDKProperties{
-		dataPath: t.TempDir(),
+	testSDK, err := NewWithDataPath(t.TempDir())
+	if err != nil {
+		t.Error(err)
 	}
+
 	deviceName := "test-device"
 	expectedFuchsiaDevice := &FuchsiaDevice{
 		IpAddr: "123-123-123-123",
@@ -390,8 +429,9 @@ func TestRunSSHCommand(t *testing.T) {
 		GetUsername = DefaultGetUsername
 		GetHostname = DefaultGetHostname
 	}()
-	testSDK := SDKProperties{
-		dataPath: t.TempDir(),
+	testSDK, err := NewWithDataPath(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	targetAddress := resolvedAddr

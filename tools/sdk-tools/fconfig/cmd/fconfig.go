@@ -29,12 +29,6 @@ type SDKProvider interface {
 var stdoutPrintln = fmt.Println
 
 func main() {
-	sdk, err := sdkcommon.New()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Could not initialize SDK: %v", err)
-		os.Exit(1)
-	}
-
 	helpFlag := flag.Bool("help", false, "Show the usage message")
 	flag.String("bucket", "", "Specify the GCS bucket to be retrieve prebuilt images and packages.")
 	flag.String("image", "", "Specify the GCS image to be retrieve prebuilt images and packages.")
@@ -43,8 +37,15 @@ func main() {
 	flag.String("package-repo", "", "Override the default package repository path for the target device.")
 	flag.String("package-port", "", "Override the default port number use by the package server for this device.")
 	flag.Bool("default", false, "Marks this device as the default device.")
+	dataPathFlag := flag.String("data-path", "", "Specifies the data path for SDK tools. Defaults to $HOME/.fuchsia")
 
 	flag.Parse()
+
+	sdk, err := sdkcommon.NewWithDataPath(*dataPathFlag)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Could not initialize SDK: %v", err)
+		os.Exit(1)
+	}
 
 	if *helpFlag || len(flag.Args()) == 0 {
 		usage(sdk)
