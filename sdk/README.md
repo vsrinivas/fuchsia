@@ -1,11 +1,8 @@
 # Fuchsia IDK
 
-This directory contains the source code for the core of the [Fuchsia
-Fuchsia Integrator Development Kit (IDK)](../docs/glossary.md#fuchsia-idk),
-formerly called the Fuchsia SDK. The IDK is produced as an output
-of the build by processing the contents of this directory. For example, this
-directory might contain the source code for a library that is included in the
-IDK as a prebuilt shared library.
+This directory contains build instructions for the core of Fuchsia, the
+[Fuchsia Integrator Development Kit (IDK)](../docs/glossary.md#fuchsia-idk).
+The IDK is produced (or built) by processing the contents of this directory.
 
 Software outside of the [Platform Source
 Tree](../docs/glossary.md#platform-source-tree) should depend only on the Fuchsia
@@ -13,9 +10,15 @@ IDK.
 
 > [Learn more](../docs/development/sdk/)
 
+Developer-facing development kits are then derived from the IDK. For example
+(this list is not exhaustive):
+
+- Software Development Kit (SDK)
+- Product Development Kit (PDK)
+
 ## Categories
 
-Not all the interfaces defined in this directory are part of every Fuchsia IDK.
+Not all the interfaces defined in this directory are part of every Fuchsia SDK.
 Instead, interfaces have a `category` label that determines whether the
 interface can be included in a given SDK. For example, interfaces with the
 `internal` category are available only within the
