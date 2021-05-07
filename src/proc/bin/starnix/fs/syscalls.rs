@@ -131,20 +131,20 @@ fn get_fio_flags_from_open_flags(open_flags: u32) -> Result<u32, Errno> {
     }
 }
 
-fn open_at(
+fn open_internal(
     task: &Task,
     dir_fd: FdNumber,
     user_path: UserCString,
-    flags: u32,
+    fio_flags: u32,
     mode: i32,
 ) -> Result<FileHandle, Errno> {
     if dir_fd != FdNumber::AT_FDCWD {
-        not_implemented!("open_at dirfds are unimplemented");
+        not_implemented!("dirfds are unimplemented");
         return Err(EINVAL);
     }
     let mut buf = [0u8; PATH_MAX as usize];
     let path = task.mm.read_c_string(user_path, &mut buf)?;
-    strace!("open_at({}, {}, {:#x}, {:#o})", dir_fd, String::from_utf8_lossy(path), flags, mode);
+    strace!("open_internal({}, {}, {:#x}, {:#o})", dir_fd, String::from_utf8_lossy(path), fio_flags, mode);
     if path[0] != b'/' {
         not_implemented!("non-absolute paths are unimplemented");
         return Err(ENOENT);
@@ -156,7 +156,7 @@ fn open_at(
     let description = syncio::directory_open(
         &task.fs.root,
         path,
-        get_fio_flags_from_open_flags(flags)?,
+        fio_flags,
         0,
         zx::Time::INFINITE,
     )
@@ -177,7 +177,8 @@ pub fn sys_openat(
     flags: u32,
     mode: i32,
 ) -> Result<SyscallResult, Errno> {
-    let file = open_at(&ctx.task, dir_fd, user_path, flags, mode)?;
+    let fio_flags = get_fio_flags_from_open_flags(flags)?;
+    let file = open_internal(&ctx.task, dir_fd, user_path, fio_flags, mode)?;
     Ok(ctx.task.files.install_fd(file)?.into())
 }
 
@@ -188,7 +189,7 @@ pub fn sys_faccessat(
     mode: u32,
 ) -> Result<SyscallResult, Errno> {
     // These values are defined in libc headers rather than in UAPI headers.
-    // const F_OK: u32 = 0;
+    const F_OK: u32 = 0;
     const X_OK: u32 = 1;
     const W_OK: u32 = 2;
     const R_OK: u32 = 4;
@@ -197,25 +198,28 @@ pub fn sys_faccessat(
         return Err(EINVAL);
     }
 
-    // TODO: Using open_at to implement faccessat is not quite correct.
-    //       For example, we cannot properly implement F_OK, which could
-    //       succeed for write-only files. Implementing faccessat properly
-    //       will require a more complete VFS that can perform access checks
-    //       directly.
-
-    if mode & X_OK != 0 {
-        return Err(ENOSYS);
-    }
-
-    let flags = if mode & (W_OK | R_OK) == W_OK | R_OK {
-        O_RDWR
-    } else if mode & W_OK != 0 {
-        O_WRONLY
+    let fio_flags = if mode == F_OK {
+        // TODO: Using open_internal to implement faccessat is not quite correct.
+        //       For example, we cannot properly implement F_OK, which could
+        //       succeed for write-only files. Implementing faccessat properly
+        //       will require a more complete VFS that can perform access checks
+        //       directly.
+        fio::OPEN_RIGHT_READABLE
     } else {
-        O_RDONLY
+        let mut fio_flags = 0;
+        if mode & X_OK != 0 {
+            fio_flags |= fio::OPEN_RIGHT_EXECUTABLE;
+        }
+        if mode & W_OK != 0 {
+            fio_flags |= fio::OPEN_RIGHT_WRITABLE;
+        }
+        if mode & R_OK != 0 {
+            fio_flags |= fio::OPEN_RIGHT_READABLE;
+        }
+        fio_flags
     };
 
-    let _ = open_at(&ctx.task, dir_fd, user_path, flags | O_PATH, 0)?;
+    let _ = open_internal(&ctx.task, dir_fd, user_path, fio_flags, 0)?;
     Ok(SUCCESS)
 }
 
@@ -249,7 +253,8 @@ pub fn sys_newfstatat(
         not_implemented!("newfstatat: flags 0x{:x}", flags);
         return Err(ENOSYS);
     }
-    let file = open_at(&ctx.task, dir_fd, user_path, O_RDONLY | O_PATH, 0)?;
+    let fio_flags = fio::OPEN_RIGHT_READABLE;
+    let file = open_internal(&ctx.task, dir_fd, user_path, fio_flags, 0)?;
     let result = file.ops().fstat(&file, &ctx.task)?;
     ctx.task.mm.write_object(buffer, &result)?;
     Ok(SUCCESS)
@@ -262,7 +267,7 @@ pub fn sys_readlinkat(
     _buffer: UserAddress,
     _buffer_size: usize,
 ) -> Result<SyscallResult, Errno> {
-    let _ = open_at(&ctx.task, dir_fd, user_path, O_RDONLY, 0)?;
+    let _ = open_internal(&ctx.task, dir_fd, user_path, fio::OPEN_RIGHT_READABLE, 0)?;
     Err(EINVAL)
 }
 

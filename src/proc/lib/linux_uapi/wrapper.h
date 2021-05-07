@@ -24,6 +24,7 @@
 #include <linux/prctl.h>
 #include <linux/sched.h>
 #include <linux/signal.h>
+#include <linux/stat.h>
 #include <linux/time.h>
 #include <linux/uio.h>
 

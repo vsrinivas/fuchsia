@@ -131,7 +131,6 @@ impl FileOps for RemoteFile {
     }
 
     fn fstat(&self, _fd: &FileObject, task: &Task) -> Result<stat_t, Errno> {
-        // TODO: log FIDL error
         let (status, attrs) = self.node.get_attr().map_err(fidl_error)?;
         zx::Status::ok(status).map_err(fio_error)?;
         Ok(stat_t {
