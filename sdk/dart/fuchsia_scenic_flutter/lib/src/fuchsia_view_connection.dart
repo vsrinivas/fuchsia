@@ -68,8 +68,8 @@ class FuchsiaViewConnection extends FuchsiaViewController {
   /// Requests that focus be transferred to the remote Scene represented by
   /// this connection.
   @override
-  Future<void> requestFocus(_) async {
-    assert(viewRef?.reference != null && _ == null);
+  Future<void> requestFocus([int _ = 0]) async {
+    assert(viewRef?.reference != null && _ == 0);
     return super.requestFocus(viewRef!.reference.handle!.handle);
   }
 
