@@ -22,7 +22,7 @@ using cobalt::util::Status;
 
 const char FuchsiaConfigurationData::kDefaultEnvironmentDir[] = "/pkg/data";
 const char FuchsiaConfigurationData::kDefaultConfigDir[] = "/config/data";
-const char FuchsiaConfigurationData::kDefaultBuildDir[] = "/config/build";
+const char FuchsiaConfigurationData::kDefaultBuildDir[] = "/config/data/build";
 
 namespace {
 
@@ -229,6 +229,11 @@ SystemProfile::BuildType LookupBuildType(const std::string& build_type_dir) {
                    << ". Falling back to default type: " << SystemProfile::UNKNOWN_TYPE;
     return SystemProfile::UNKNOWN_TYPE;
   }
+  //
+  // Trim trailing whitespace.
+  size_t end = build_type.find_last_not_of(" \n\r\t\f\v");
+  build_type = (end == std::string::npos) ? "" : build_type.substr(0, end + 1);
+
   if (build_type == "eng") {
     return SystemProfile::ENG;
   }

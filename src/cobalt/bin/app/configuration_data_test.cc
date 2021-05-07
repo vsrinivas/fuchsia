@@ -193,7 +193,7 @@ TEST(ConfigTest, GetBuildType) {
   EXPECT_TRUE(files::DeletePath(kTestDir, true));
   EXPECT_TRUE(files::CreateDirectory(kTestDir));
 
-  EXPECT_TRUE(WriteFile("type", "eng"));
+  EXPECT_TRUE(WriteFile("type", "eng\n"));
   FuchsiaConfigurationData config_data(kTestDir, kTestDir, kTestDir);
   auto build_type = config_data.GetBuildType();
   EXPECT_EQ(build_type, SystemProfile::ENG);

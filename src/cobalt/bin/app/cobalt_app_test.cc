@@ -120,7 +120,7 @@ TEST_F(CreateCobaltConfigTest, ConfigFields) {
 
 TEST_F(CreateCobaltConfigTest, BuildTypeUser) {
   ASSERT_TRUE(WriteFile("cobalt_environment", "DEVEL"));
-  ASSERT_TRUE(WriteFile("type", "user"));
+  ASSERT_TRUE(WriteFile("type", "user\n"));
   FuchsiaConfigurationData configuration_data(kTestDir, kTestDir, kTestDir);
   CobaltConfig config =
       CreateCobaltConfig("/pkg/data/testapp_metrics_registry.pb", configuration_data,
