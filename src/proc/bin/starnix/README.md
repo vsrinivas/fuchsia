@@ -78,6 +78,15 @@ In the device logs you should see output like:
 
 ## Testing
 
+### Running the in-process unit tests
+
+Starnix also has in-process unit tests that can interact with its internals
+during the test. To run those tests, use the following command:
+
+```sh
+$ fx test starnix-tests
+```
+
 ### Using a locally built syscalls test binary
 
 The `syscalls_test` test runs a prebuilt binary that has been built with the
