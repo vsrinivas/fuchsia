@@ -1820,7 +1820,7 @@ struct stream_socket : public pipe {
 
     if (events & POLLOUT) {
       // signal when connect() operation is finished.
-      zx_signals |= ZXSIO_SIGNAL_OUTGOING;
+      zx_signals |= ZXSIO_SIGNAL_CONNECTED;
     }
     if (events & POLLIN) {
       // signal when a listening socket gets an incoming connection.
@@ -1837,16 +1837,18 @@ struct stream_socket : public pipe {
       return;
     }
 
+    zxio_signals_t signals = ZXIO_SIGNAL_NONE;
+    uint32_t events = 0;
+
     // check the connection state
     if (state_ == StreamSocketState::kConnecting) {
       if (zx_signals & ZXSIO_SIGNAL_CONNECTED) {
         state_ = StreamSocketState::kConnected;
+        events |= POLLOUT;
       }
       zx_signals &= ~ZXSIO_SIGNAL_CONNECTED;
     }
 
-    zxio_signals_t signals = ZXIO_SIGNAL_NONE;
-    uint32_t events = 0;
     switch (state_) {
       case StreamSocketState::kConnected:
       case StreamSocketState::kRefused:
@@ -1856,9 +1858,6 @@ struct stream_socket : public pipe {
         break;
       default:
         zxio_wait_end(&zxio_storage().io, zx_signals, &signals);
-        if (zx_signals & ZXSIO_SIGNAL_OUTGOING) {
-          events |= POLLOUT;
-        }
         if (zx_signals & ZXSIO_SIGNAL_INCOMING) {
           events |= POLLIN;
         }
