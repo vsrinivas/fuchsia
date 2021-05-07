@@ -664,6 +664,8 @@ async fn pkg_resolver_blob_fetch_status_ranges() {
 }
 
 // Test the HTTP status range space for metrics related to TUF client construction.
+// TODO(fxbug.dev/76320): re-enable this.
+#[ignore]
 #[fasync::run_singlethreaded(test)]
 async fn pkg_resolver_create_tuf_client_status_ranges() {
     let pkg = PackageBuilder::new("just_meta_far").build().await.expect("created pkg");
