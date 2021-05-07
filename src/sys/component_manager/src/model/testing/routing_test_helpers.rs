@@ -350,51 +350,6 @@ impl RoutingTest {
         namespace
     }
 
-    /// Checks using a capability from a component's exposed directory.
-    pub async fn check_use_exposed_dir(&self, moniker: AbsoluteMoniker, check: CheckUse) {
-        match check {
-            CheckUse::Protocol { path, expected_res } => {
-                capability_util::call_echo_svc_from_exposed_dir(
-                    path,
-                    &moniker,
-                    &self.model,
-                    expected_res,
-                )
-                .await;
-            }
-            CheckUse::Service { path, instance, member, expected_res } => {
-                capability_util::call_service_instance_echo_svc_from_exposed_dir(
-                    path,
-                    instance,
-                    member,
-                    &moniker,
-                    &self.model,
-                    expected_res,
-                )
-                .await;
-            }
-            CheckUse::Directory { path, file, expected_res } => {
-                capability_util::read_data_from_exposed_dir(
-                    path,
-                    &file,
-                    &moniker,
-                    &self.model,
-                    expected_res,
-                )
-                .await;
-            }
-            CheckUse::Storage { .. } => {
-                panic!("storage capabilities can't be exposed");
-            }
-            CheckUse::StorageAdmin { .. } => {
-                panic!("unimplemented");
-            }
-            CheckUse::Event { .. } => {
-                panic!("event capabilities can't be exposed");
-            }
-        }
-    }
-
     /// Lists the contents of a storage directory.
     pub async fn list_directory_in_storage(
         &self,
@@ -798,6 +753,50 @@ impl RoutingTestModel for RoutingTest {
                 // not allowed.
                 capability_util::subscribe_to_event_stream(&namespace, expected_res, requests)
                     .await;
+            }
+        }
+    }
+
+    async fn check_use_exposed_dir(&self, moniker: AbsoluteMoniker, check: CheckUse) {
+        match check {
+            CheckUse::Protocol { path, expected_res } => {
+                capability_util::call_echo_svc_from_exposed_dir(
+                    path,
+                    &moniker,
+                    &self.model,
+                    expected_res,
+                )
+                .await;
+            }
+            CheckUse::Service { path, instance, member, expected_res } => {
+                capability_util::call_service_instance_echo_svc_from_exposed_dir(
+                    path,
+                    instance,
+                    member,
+                    &moniker,
+                    &self.model,
+                    expected_res,
+                )
+                .await;
+            }
+            CheckUse::Directory { path, file, expected_res } => {
+                capability_util::read_data_from_exposed_dir(
+                    path,
+                    &file,
+                    &moniker,
+                    &self.model,
+                    expected_res,
+                )
+                .await;
+            }
+            CheckUse::Storage { .. } => {
+                panic!("storage capabilities can't be exposed");
+            }
+            CheckUse::StorageAdmin { .. } => {
+                panic!("unimplemented");
+            }
+            CheckUse::Event { .. } => {
+                panic!("event capabilities can't be exposed");
             }
         }
     }

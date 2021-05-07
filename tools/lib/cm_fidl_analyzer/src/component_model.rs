@@ -5,7 +5,7 @@
 use {
     crate::component_tree::{ComponentNode, ComponentTree, NodeEnvironment, NodePath},
     async_trait::async_trait,
-    cm_rust::{ComponentDecl, UseDecl},
+    cm_rust::{ComponentDecl, ExposeDecl, UseDecl},
     fuchsia_zircon_status as zx_status,
     moniker::{AbsoluteMoniker, ChildMoniker, PartialMoniker},
     routing::{
@@ -189,6 +189,24 @@ impl ComponentModelForAnalyzer {
         self.check_use_source(&source).await
     }
 
+    /// Given a `ExposeDecl` for a capability at an instance `target`, checks whether the capability
+    /// can be used from an expose declaration. If so, routes the capability to its source and then
+    /// validates the source.
+    pub async fn check_use_exposed_capability(
+        self: &Arc<Self>,
+        expose_decl: &ExposeDecl,
+        target: &Arc<ComponentInstanceForAnalyzer>,
+    ) -> Result<(), AnalyzerModelError> {
+        match self.request_from_expose(expose_decl) {
+            Some(request) => {
+                let source =
+                    route_capability::<ComponentInstanceForAnalyzer>(request, target).await?;
+                self.check_use_source(&source).await
+            }
+            None => Ok(()),
+        }
+    }
+
     /// Checks properties of a capability source that are necessary to use the capability
     /// and that are possible to verify statically.
     async fn check_use_source(
@@ -227,6 +245,24 @@ impl ComponentModelForAnalyzer {
                 self.check_executable(&weak.upgrade()?).await
             }
             _ => unimplemented![],
+        }
+    }
+
+    // A helper function which prepares a route request for capabilities which can be used
+    // from an expose declaration, and returns None if the capability type cannot be used
+    // from an expose.
+    fn request_from_expose(self: &Arc<Self>, expose_decl: &ExposeDecl) -> Option<RouteRequest> {
+        match expose_decl {
+            ExposeDecl::Directory(expose_directory_decl) => {
+                Some(RouteRequest::ExposeDirectory(expose_directory_decl.clone()))
+            }
+            ExposeDecl::Protocol(expose_protocol_decl) => {
+                Some(RouteRequest::ExposeProtocol(expose_protocol_decl.clone()))
+            }
+            ExposeDecl::Service(expose_service_decl) => {
+                Some(RouteRequest::ExposeService(expose_service_decl.clone()))
+            }
+            _ => None,
         }
     }
 

@@ -117,6 +117,9 @@ impl CheckUse {
 pub trait RoutingTestModel {
     /// Checks a `use` declaration at `moniker` by trying to use `capability`.
     async fn check_use(&self, moniker: AbsoluteMoniker, check: CheckUse);
+
+    /// Checks using a capability from a component's exposed directory.
+    async fn check_use_exposed_dir(&self, moniker: AbsoluteMoniker, check: CheckUse);
 }
 
 /// Builds an implementation of `RoutingTestModel` from a set of `ComponentDecl`s.
@@ -1324,6 +1327,163 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                 CheckUse::Protocol {
                     path: default_service_capability(),
                     expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
+                },
+            )
+            .await;
+    }
+
+    pub async fn test_expose_from_self_and_child(&self) {
+        let components = vec![
+            ("a", ComponentDeclBuilder::new().add_lazy_child("b").build()),
+            (
+                "b",
+                ComponentDeclBuilder::new()
+                    .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
+                        source: ExposeSource::Child("c".to_string()),
+                        source_name: "hippo_data".into(),
+                        target_name: "hippo_bar_data".into(),
+                        target: ExposeTarget::Parent,
+                        rights: Some(*READ_RIGHTS),
+                        subdir: None,
+                    }))
+                    .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
+                        source: ExposeSource::Child("c".to_string()),
+                        source_name: "hippo_svc".into(),
+                        target_name: "hippo_bar_svc".into(),
+                        target: ExposeTarget::Parent,
+                    }))
+                    .add_lazy_child("c")
+                    .build(),
+            ),
+            (
+                "c",
+                ComponentDeclBuilder::new()
+                    .directory(DirectoryDeclBuilder::new("foo_data").build())
+                    .protocol(ProtocolDeclBuilder::new("foo_svc").build())
+                    .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
+                        source: ExposeSource::Self_,
+                        source_name: "foo_data".into(),
+                        target_name: "hippo_data".into(),
+                        target: ExposeTarget::Parent,
+                        rights: Some(*READ_RIGHTS),
+                        subdir: None,
+                    }))
+                    .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
+                        source: ExposeSource::Self_,
+                        source_name: "foo_svc".into(),
+                        target_name: "hippo_svc".into(),
+                        target: ExposeTarget::Parent,
+                    }))
+                    .build(),
+            ),
+        ];
+        let model = T::new("a", components).build().await;
+        model
+            .check_use_exposed_dir(
+                vec!["b:0"].into(),
+                CheckUse::Directory {
+                    path: "/hippo_bar_data".try_into().unwrap(),
+                    file: PathBuf::from("hippo"),
+                    expected_res: ExpectedResult::Ok,
+                },
+            )
+            .await;
+        model
+            .check_use_exposed_dir(
+                vec!["b:0"].into(),
+                CheckUse::Protocol {
+                    path: "/hippo_bar_svc".try_into().unwrap(),
+                    expected_res: ExpectedResult::Ok,
+                },
+            )
+            .await;
+        model
+            .check_use_exposed_dir(
+                vec!["b:0", "c:0"].into(),
+                CheckUse::Directory {
+                    path: "/hippo_data".try_into().unwrap(),
+                    file: PathBuf::from("hippo"),
+                    expected_res: ExpectedResult::Ok,
+                },
+            )
+            .await;
+        model
+            .check_use_exposed_dir(
+                vec!["b:0", "c:0"].into(),
+                CheckUse::Protocol {
+                    path: "/hippo_svc".try_into().unwrap(),
+                    expected_res: ExpectedResult::Ok,
+                },
+            )
+            .await;
+    }
+
+    pub async fn test_use_not_exposed(&self) {
+        let components = vec![
+            ("a", ComponentDeclBuilder::new().add_lazy_child("b").build()),
+            ("b", ComponentDeclBuilder::new().add_lazy_child("c").build()),
+            (
+                "c",
+                ComponentDeclBuilder::new()
+                    .directory(DirectoryDeclBuilder::new("foo_data").build())
+                    .protocol(ProtocolDeclBuilder::new("foo_svc").build())
+                    .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
+                        source: ExposeSource::Self_,
+                        source_name: "foo_data".into(),
+                        target_name: "hippo_data".into(),
+                        target: ExposeTarget::Parent,
+                        rights: Some(*READ_RIGHTS),
+                        subdir: None,
+                    }))
+                    .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
+                        source: ExposeSource::Self_,
+                        source_name: "foo_svc".into(),
+                        target_name: "hippo_svc".into(),
+                        target: ExposeTarget::Parent,
+                    }))
+                    .build(),
+            ),
+        ];
+        let model = T::new("a", components).build().await;
+        // Capability is only exposed from "c", so it only be usable from there.
+
+        // When trying to open a capability that's not exposed to realm, there's no node for it in the
+        // exposed dir, so no routing takes place.
+        model
+            .check_use_exposed_dir(
+                vec!["b:0"].into(),
+                CheckUse::Directory {
+                    path: "/hippo_data".try_into().unwrap(),
+                    file: PathBuf::from("hippo"),
+                    expected_res: ExpectedResult::Err(zx::Status::NOT_FOUND),
+                },
+            )
+            .await;
+        model
+            .check_use_exposed_dir(
+                vec!["b:0"].into(),
+                CheckUse::Protocol {
+                    path: "/hippo_svc".try_into().unwrap(),
+                    expected_res: ExpectedResult::Err(zx::Status::NOT_FOUND),
+                },
+            )
+            .await;
+        model
+            .check_use_exposed_dir(
+                vec!["b:0", "c:0"].into(),
+                CheckUse::Directory {
+                    path: "/hippo_data".try_into().unwrap(),
+                    file: PathBuf::from("hippo"),
+                    expected_res: ExpectedResult::Ok,
+                },
+            )
+            .await;
+        model
+            .check_use_exposed_dir(
+                vec!["b:0", "c:0"].into(),
+                CheckUse::Protocol {
+                    path: "/hippo_svc".try_into().unwrap(),
+                    expected_res: ExpectedResult::Ok,
                 },
             )
             .await;

@@ -8,7 +8,7 @@ use {
         component_model::{ComponentModelForAnalyzer, ModelBuilderForAnalyzer},
         component_tree::{ComponentTreeBuilder, NodePath},
     },
-    cm_rust::{ComponentDecl, UseDecl},
+    cm_rust::{ComponentDecl, ExposeDecl, ExposeDeclCommon, UseDecl},
     fuchsia_zircon_status as zx_status,
     moniker::AbsoluteMoniker,
     routing::{component_instance::ComponentInstanceInterface, config::RuntimeConfig},
@@ -114,6 +114,28 @@ impl RoutingTestForAnalyzer {
             CheckUse::StorageAdmin { .. } => unimplemented![],
         }
     }
+
+    fn find_matching_expose(
+        &self,
+        check: CheckUse,
+        decl: &ComponentDecl,
+    ) -> (Result<ExposeDecl, TestModelError>, ExpectedResult) {
+        match check {
+            CheckUse::Directory { path, expected_res, .. }
+            | CheckUse::Protocol { path, expected_res, .. } => (
+                decl.exposes
+                    .iter()
+                    .find(|&e| e.target_name().to_string() == path.basename)
+                    .cloned()
+                    .ok_or(TestModelError::ExposeDeclNotFound),
+                expected_res,
+            ),
+            CheckUse::Service { .. } => unimplemented![],
+            CheckUse::Event { .. } | CheckUse::Storage { .. } | CheckUse::StorageAdmin { .. } => {
+                panic!("attempted to use from expose for unsupported capability type")
+            }
+        }
+    }
 }
 
 #[async_trait]
@@ -129,8 +151,8 @@ impl RoutingTestModel for RoutingTestForAnalyzer {
 
         // If `find_decl` is not OK, check that `expected` has a matching error.
         // Otherwise, route the capability and compare the result to `expected`.
-        match find_decl {
-            Err(ref err) => {
+        match &find_decl {
+            Err(err) => {
                 match expected {
                     ExpectedResult::Ok => panic!("expected ExposeDecl was not found"),
                     ExpectedResult::Err(status) => {
@@ -140,7 +162,7 @@ impl RoutingTestModel for RoutingTestForAnalyzer {
                 };
                 return;
             }
-            Ok(ref use_decl) => match self.model.check_use_capability(use_decl, &target).await {
+            Ok(use_decl) => match self.model.check_use_capability(use_decl, &target).await {
                 Err(ref err) => match expected {
                     ExpectedResult::Ok => panic!("routing failed, expected success"),
                     ExpectedResult::Err(status) => {
@@ -153,6 +175,44 @@ impl RoutingTestModel for RoutingTestForAnalyzer {
                     _ => panic!("capability use succeeded, expected failure"),
                 },
             },
+        }
+    }
+
+    async fn check_use_exposed_dir(&self, moniker: AbsoluteMoniker, check: CheckUse) {
+        let target =
+            self.model.get_instance(&NodePath::from(moniker)).expect("target instance not found");
+        let target_decl = target.decl().await.expect("target ComponentDecl not found");
+
+        let (find_decl, expected) = self.find_matching_expose(check, &target_decl);
+
+        // If `find_decl` is not OK, check that `expected` has a matching error.
+        // Otherwise, route the capability and compare the result to `expected`.
+        match &find_decl {
+            Err(err) => {
+                match expected {
+                    ExpectedResult::Ok => panic!("expected ExposeDecl was not found"),
+                    ExpectedResult::Err(status) => {
+                        assert_eq!(err.as_zx_status(), status);
+                    }
+                    _ => unimplemented![],
+                };
+                return;
+            }
+            Ok(expose_decl) => {
+                match self.model.check_use_exposed_capability(expose_decl, &target).await {
+                    Err(err) => match expected {
+                        ExpectedResult::Ok => panic!("routing failed, expected success"),
+                        ExpectedResult::Err(status) => {
+                            assert_eq!(err.as_zx_status(), status);
+                        }
+                        _ => unimplemented![],
+                    },
+                    Ok(()) => match expected {
+                        ExpectedResult::Ok => {}
+                        _ => panic!("capability use succeeded, expected failure"),
+                    },
+                }
+            }
         }
     }
 }
@@ -264,6 +324,22 @@ mod tests {
             CommonRoutingTest::<RoutingTestBuilderForAnalyzer>::new()
                 .test_offer_from_non_executable()
                 .await
+        });
+    }
+
+    #[test]
+    fn expose_from_self_and_child() {
+        block_on(async {
+            CommonRoutingTest::<RoutingTestBuilderForAnalyzer>::new()
+                .test_expose_from_self_and_child()
+                .await
+        });
+    }
+
+    #[test]
+    fn use_not_exposed() {
+        block_on(async {
+            CommonRoutingTest::<RoutingTestBuilderForAnalyzer>::new().test_use_not_exposed().await
         });
     }
 }

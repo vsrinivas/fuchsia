@@ -4,7 +4,7 @@
 
 use {
     cm_rust::{ChildDecl, ComponentDecl, EnvironmentDecl},
-    moniker::PartialMoniker,
+    moniker::{AbsoluteMoniker, PartialMoniker},
     routing::environment::{DebugRegistry, EnvironmentExtends, RunnerRegistry},
     serde::{Deserialize, Serialize},
     std::{
@@ -153,6 +153,14 @@ impl Display for NodePath {
             path_string.push_str(moniker.as_str());
         }
         write!(f, "{}", path_string)
+    }
+}
+
+impl From<AbsoluteMoniker> for NodePath {
+    fn from(moniker: AbsoluteMoniker) -> Self {
+        Self::new(
+            moniker.path().into_iter().map(|child_moniker| child_moniker.to_partial()).collect(),
+        )
     }
 }
 

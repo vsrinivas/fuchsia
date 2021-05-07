@@ -577,6 +577,50 @@ pub enum ExposeDecl {
     Resolver(ExposeResolverDecl),
 }
 
+impl SourceName for ExposeDecl {
+    fn source_name(&self) -> &CapabilityName {
+        match self {
+            Self::Service(e) => e.source_name(),
+            Self::Protocol(e) => e.source_name(),
+            Self::Directory(e) => e.source_name(),
+            Self::Runner(e) => e.source_name(),
+            Self::Resolver(e) => e.source_name(),
+        }
+    }
+}
+
+impl ExposeDeclCommon for ExposeDecl {
+    fn source(&self) -> &ExposeSource {
+        match self {
+            Self::Service(e) => e.source(),
+            Self::Protocol(e) => e.source(),
+            Self::Directory(e) => e.source(),
+            Self::Runner(e) => e.source(),
+            Self::Resolver(e) => e.source(),
+        }
+    }
+
+    fn target(&self) -> &ExposeTarget {
+        match self {
+            Self::Service(e) => e.target(),
+            Self::Protocol(e) => e.target(),
+            Self::Directory(e) => e.target(),
+            Self::Runner(e) => e.target(),
+            Self::Resolver(e) => e.target(),
+        }
+    }
+
+    fn target_name(&self) -> &CapabilityName {
+        match self {
+            Self::Service(e) => e.target_name(),
+            Self::Protocol(e) => e.target_name(),
+            Self::Directory(e) => e.target_name(),
+            Self::Runner(e) => e.target_name(),
+            Self::Resolver(e) => e.target_name(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ExposeServiceDecl {
     pub sources: Vec<ServiceSource<ExposeSource>>,
