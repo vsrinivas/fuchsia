@@ -6,7 +6,7 @@ use crate::config::Config;
 use anyhow::{Context, Result};
 use assembly_base_package::BasePackageBuilder;
 use ffx_assembly_args::ImageArgs;
-use ffx_core::{ffx_bail, ffx_error};
+use ffx_core::ffx_bail;
 use fuchsia_hash::Hash;
 use fuchsia_merkle::MerkleTree;
 use fuchsia_pkg::PackageManifest;
@@ -42,16 +42,22 @@ fn construct_base_package(
 ) -> Result<File> {
     let mut base_pkg_builder = BasePackageBuilder::default();
     for pkg_manifest_path in &config.extra_packages_for_base_package {
-        let pkg_manifest = pkg_manifest_from_path(pkg_manifest_path);
+        let pkg_manifest = pkg_manifest_from_path(pkg_manifest_path)?;
         base_pkg_builder.add_files_from_package(pkg_manifest);
     }
     for pkg_manifest_path in &config.base_packages {
-        let pkg_manifest = pkg_manifest_from_path(pkg_manifest_path);
-        base_pkg_builder.add_base_package(pkg_manifest);
+        let pkg_manifest = pkg_manifest_from_path(pkg_manifest_path)?;
+        base_pkg_builder.add_base_package(pkg_manifest).context(format!(
+            "Failed to add package to base package list with manifest: {}",
+            pkg_manifest_path.display()
+        ))?;
     }
     for pkg_manifest_path in &config.cache_packages {
-        let pkg_manifest = pkg_manifest_from_path(pkg_manifest_path);
-        base_pkg_builder.add_cache_package(pkg_manifest);
+        let pkg_manifest = pkg_manifest_from_path(pkg_manifest_path)?;
+        base_pkg_builder.add_cache_package(pkg_manifest).context(format!(
+            "Failed to add package to cache package list with manifest: {}",
+            pkg_manifest_path.display()
+        ))?;
     }
 
     let base_package_path = outdir.as_ref().join("base.far");
@@ -60,17 +66,17 @@ fn construct_base_package(
         .write(true)
         .create(true)
         .open(base_package_path)
-        .or_else(|e| ffx_bail!("Failed to create the base package file: {}", e))?;
-    base_pkg_builder
+        .context("Failed to create the base package file")?;
+    let _ = base_pkg_builder
         .build(gendir, &mut base_package)
-        .or_else(|e| ffx_bail!("Failed to build the base package: {}", e))?;
+        .context("Failed to build the base package")?;
     Ok(base_package)
 }
 
-fn pkg_manifest_from_path(path: impl AsRef<Path>) -> PackageManifest {
-    let manifest_file = File::open(path).unwrap();
+fn pkg_manifest_from_path(path: impl AsRef<Path>) -> Result<PackageManifest> {
+    let manifest_file = File::open(path)?;
     let pkg_manifest_reader = BufReader::new(manifest_file);
-    serde_json::from_reader(pkg_manifest_reader).unwrap()
+    serde_json::from_reader(pkg_manifest_reader).map_err(Into::into)
 }
 
 fn construct_zbi(
@@ -98,9 +104,15 @@ fn construct_zbi(
         let pkgfs_manifest: PackageManifest = config
             .base_packages
             .iter()
-            .map(pkg_manifest_from_path)
-            .find(|m| m.name() == "pkgfs")
-            .ok_or_else(|| ffx_error!("Failed to find pkgfs in the base packages"))?;
+            .find_map(|p| {
+                if let Ok(m) = pkg_manifest_from_path(p) {
+                    if m.name() == "pkgfs" {
+                        return Some(m);
+                    }
+                }
+                return None;
+            })
+            .context("Failed to find pkgfs in the base packages")?;
 
         pkgfs_manifest.into_blobs().into_iter().filter(|b| b.path != "meta/").for_each(|b| {
             zbi_builder.add_boot_arg(&format!("zircon.system.pkgfs.file.{}={}", b.path, b.merkle));
