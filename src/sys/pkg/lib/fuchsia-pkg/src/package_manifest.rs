@@ -4,6 +4,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::{PackagePath, PackagePathError};
+
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(transparent)]
 pub struct PackageManifest(VersionedPackageManifest);
@@ -18,6 +20,15 @@ impl PackageManifest {
     pub fn name(&self) -> &str {
         match &self.0 {
             VersionedPackageManifest::Version1(manifest) => &manifest.package.name,
+        }
+    }
+
+    pub fn package_path(&self) -> Result<PackagePath, PackagePathError> {
+        match &self.0 {
+            VersionedPackageManifest::Version1(manifest) => PackagePath::from_name_and_variant(
+                manifest.package.name.as_str(),
+                manifest.package.version.as_str(),
+            ),
         }
     }
 }
