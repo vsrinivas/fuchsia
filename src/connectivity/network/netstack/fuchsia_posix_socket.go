@@ -138,8 +138,6 @@ func (r *socketReader) Len() int {
 	return n
 }
 
-const signalerSupportedEvents = waiter.EventIn | waiter.EventErr
-
 func eventsToSignals(events waiter.EventMask) zx.Signals {
 	signals := zx.SignalNone
 	if events&waiter.EventIn != 0 {
@@ -157,6 +155,7 @@ func eventsToSignals(events waiter.EventMask) zx.Signals {
 }
 
 type signaler struct {
+	supported  waiter.EventMask
 	readiness  func(waiter.EventMask) waiter.EventMask
 	signalPeer func(zx.Signals, zx.Signals) error
 
@@ -174,13 +173,13 @@ func (s *signaler) update() error {
 
 	// Consult the present readiness of the events we are interested in while
 	// we're locked, as they may have changed already.
-	observed := s.readiness(signalerSupportedEvents)
+	observed := s.readiness(s.supported)
 	// readiness may return events that were not requested so only keep the events
 	// we explicitly requested. For example, Readiness implementation of the UDP
 	// endpoint in gvisor may return EventErr whether or not it was set in the
 	// mask:
 	// https://github.com/google/gvisor/blob/8ee4a3f/pkg/tcpip/transport/udp/endpoint.go#L1252
-	observed &= signalerSupportedEvents
+	observed &= s.supported
 
 	if observed == s.mu.asserted {
 		// No events changed since last time.
@@ -1170,6 +1169,7 @@ func (eps *endpointWithSocket) Listen(_ fidl.Context, backlog int16) (socket.Str
 	// fail above, so we register the callback only in the success case to avoid
 	// incorrectly handling events on connected sockets.
 	eps.onListen.Do(func() {
+		eps.pending.supported = waiter.EventIn
 		// Start polling for any shutdown events from the client as shutdown is
 		// allowed on a listening stream socket.
 		eps.startPollLoop()
@@ -1193,7 +1193,7 @@ func (eps *endpointWithSocket) Listen(_ fidl.Context, backlog int16) (socket.Str
 		entry.Callback = callback(func(*waiter.Entry, waiter.EventMask) {
 			cb()
 		})
-		eps.wq.EventRegister(&entry, signalerSupportedEvents)
+		eps.wq.EventRegister(&entry, eps.pending.supported)
 
 		// We're registering after calling Listen, so we might've missed an event.
 		// Call the callback once to check for already-present incoming
@@ -1299,8 +1299,7 @@ func (eps *endpointWithSocket) Accept(wantAddr bool) (posix.Errno, *tcpip.FullAd
 	}
 	{
 		if err := eps.pending.update(); err != nil {
-			ep.Close()
-			return 0, nil, nil, err
+			panic(err)
 		}
 	}
 
@@ -2297,6 +2296,7 @@ func (sp *providerImpl) DatagramSocket(ctx fidl.Context, domain socket.Domain, p
 				netProto:   netProto,
 				ns:         sp.ns,
 				pending: signaler{
+					supported:  waiter.EventIn | waiter.EventErr,
 					readiness:  ep.Readiness,
 					signalPeer: localE.SignalPeer,
 				},
@@ -2312,7 +2312,7 @@ func (sp *providerImpl) DatagramSocket(ctx fidl.Context, domain socket.Domain, p
 		}
 	})
 
-	s.wq.EventRegister(&s.entry, signalerSupportedEvents)
+	s.wq.EventRegister(&s.entry, s.pending.supported)
 
 	s.addConnection(ctx, fidlio.NodeWithCtxInterfaceRequest{Channel: localC})
 	_ = syslog.DebugTf("NewDatagram", "%p", s.endpointWithEvent)
