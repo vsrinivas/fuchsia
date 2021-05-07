@@ -157,50 +157,6 @@
             "url": "fuchsia-pkg://fuchsia.com/pkgfs-tests#meta/pkgfs-lib-test.cmx"
         },
         {
-            "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/base-pinning.cmx"
-        },
-        {
-            "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/dynamic-repositories-disabled.cmx"
-        },
-        {
-            "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/dynamic-rewrite-disabled.cmx"
-        },
-        {
-            "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/get-hash.cmx"
-        },
-        {
-            "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/metrics.cmx"
-        },
-        {
-            "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-resolve-inspect.cmx"
-        },
-        {
-            "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/resolve-propagates-pkgfs-failure.cmx"
-        },
-        {
-            "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/resolve-recovers-from-http-errors.cmx"
-        },
-        {
-            "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/resolve-succeeds-with-broken-minfs.cmx"
-        },
-        {
-            "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/resolve-succeeds.cmx"
-        },
-        {
-            "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/system-cache-fallback.cmx"
-        },
-        {
             "max_severity": "FATAL",
             "url": "fuchsia-pkg://fuchsia.com/reboot-info-tests#meta/reboot_log_handler_unittest.cmx"
         },
