@@ -52,6 +52,11 @@ DisplaySwapchain::DisplaySwapchain(
       FX_LOGS(FATAL) << "Initializing buffers for display swapchain failed - check "
                         "whether fuchsia.sysmem.Allocator is available in this sandbox";
     }
+    if (escher_->device()->caps().allow_protected_memory &&
+        !InitializeFramebuffers(escher_->resource_recycler(), /*use_protected_memory=*/true)) {
+      FX_LOGS(FATAL) << "Initializing protected buffers for display swapchain failed - check "
+                        "whether fuchsia.sysmem.Allocator is available in this sandbox";
+    }
 
     display_->SetVsyncCallback(fit::bind_member(this, &DisplaySwapchain::OnVsync));
 
@@ -336,12 +341,7 @@ void DisplaySwapchain::SetUseProtectedMemory(bool use_protected_memory) {
   if (use_protected_memory == use_protected_memory_)
     return;
 
-  // Allocate protected memory buffers lazily and once only.
-  // TODO(fxbug.dev/35785): Free this memory chunk when we no longer expect protected memory.
-  if (use_protected_memory && protected_swapchain_buffers_.empty()) {
-    InitializeFramebuffers(escher_->resource_recycler(), use_protected_memory);
-  }
-
+  FX_CHECK(!use_protected_memory || !protected_swapchain_buffers_.empty());
   use_protected_memory_ = use_protected_memory;
 }
 

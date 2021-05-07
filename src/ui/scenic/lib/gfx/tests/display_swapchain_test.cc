@@ -58,20 +58,6 @@ class DisplaySwapchainTest : public Fixture {
     sysmem_ = std::make_unique<Sysmem>();
     display_manager_ = std::make_unique<display::DisplayManager>([]() {});
 
-    auto vulkan_device = CreateVulkanDeviceQueues(/*use_protected_memory*/ false);
-    escher_ = std::make_unique<escher::Escher>(vulkan_device);
-    image_factory_ = std::make_unique<ImageFactoryAdapter>(escher_->gpu_allocator(),
-                                                           escher_->resource_recycler());
-    frame_scheduler_ = std::make_shared<MockFrameScheduler>();
-    auto session_context = SessionContext{.vk_device = escher_->vk_device(),
-                                          .escher = escher_.get(),
-                                          .escher_resource_recycler = escher_->resource_recycler(),
-                                          .escher_image_factory = image_factory_.get(),
-                                          .scene_graph = SceneGraphWeakPtr()};
-    error_reporter_ = std::make_shared<TestErrorReporter>();
-    event_reporter_ = std::make_shared<TestEventReporter>();
-    session_ = std::make_unique<Session>(1, session_context, event_reporter_, error_reporter_);
-
     auto hdc_promise = ui_display::GetHardwareDisplayController();
     executor_->schedule_task(
         hdc_promise.then([this](fit::result<ui_display::DisplayControllerHandles>& handles) {
@@ -98,7 +84,22 @@ class DisplaySwapchainTest : public Fixture {
     Fixture::TearDown();
   }
 
-  static escher::VulkanDeviceQueuesPtr CreateVulkanDeviceQueues(bool use_protected_memory) {
+  void SetUpEscherAndSession(escher::VulkanDeviceQueuesPtr vulkan_device) {
+    escher_ = std::make_unique<escher::Escher>(vulkan_device);
+    image_factory_ = std::make_unique<ImageFactoryAdapter>(escher_->gpu_allocator(),
+                                                           escher_->resource_recycler());
+    frame_scheduler_ = std::make_shared<MockFrameScheduler>();
+    auto session_context = SessionContext{.vk_device = escher_->vk_device(),
+                                          .escher = escher_.get(),
+                                          .escher_resource_recycler = escher_->resource_recycler(),
+                                          .escher_image_factory = image_factory_.get(),
+                                          .scene_graph = SceneGraphWeakPtr()};
+    error_reporter_ = std::make_shared<TestErrorReporter>();
+    event_reporter_ = std::make_shared<TestEventReporter>();
+    session_ = std::make_unique<Session>(1, session_context, event_reporter_, error_reporter_);
+  }
+
+  escher::VulkanDeviceQueuesPtr CreateVulkanDeviceQueues(bool use_protected_memory) {
     VulkanInstance::Params instance_params(
         {{"VK_LAYER_KHRONOS_validation"},
          {VK_EXT_DEBUG_REPORT_EXTENSION_NAME, VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME},
@@ -106,13 +107,15 @@ class DisplaySwapchainTest : public Fixture {
 
     auto vulkan_instance = VulkanInstance::New(std::move(instance_params));
     // This extension is necessary to support exporting Vulkan memory to a VMO.
-    auto queues = VulkanDeviceQueues::New(
-        vulkan_instance,
+    VulkanDeviceQueues::Params device_params(
         {{VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME, VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME,
           VK_FUCHSIA_EXTERNAL_MEMORY_EXTENSION_NAME, VK_FUCHSIA_EXTERNAL_SEMAPHORE_EXTENSION_NAME,
           VK_FUCHSIA_BUFFER_COLLECTION_EXTENSION_NAME},
          {},
          vk::SurfaceKHR()});
+    if (use_protected_memory)
+      device_params.flags = VulkanDeviceQueues::Params::kAllowProtectedMemory;
+    auto queues = VulkanDeviceQueues::New(vulkan_instance, device_params);
     if (use_protected_memory && !queues->caps().allow_protected_memory) {
       return nullptr;
     }
@@ -144,8 +147,9 @@ class DisplaySwapchainTest : public Fixture {
         frame_number, [this](const FrameTimings& timings) { ++frame_presented_call_count_; });
   }
 
-  BufferPool* Framebuffers(DisplaySwapchain* swapchain) const {
-    return &swapchain->swapchain_buffers_;
+  BufferPool* Framebuffers(DisplaySwapchain* swapchain, bool use_protected_memory) const {
+    return use_protected_memory ? &swapchain->protected_swapchain_buffers_
+                                : &swapchain->swapchain_buffers_;
   }
 
   escher::Escher* escher() { return escher_.get(); }
@@ -162,15 +166,16 @@ class DisplaySwapchainTest : public Fixture {
 
   std::unique_ptr<Sysmem> sysmem_;
   std::unique_ptr<display::DisplayManager> display_manager_;
+  std::unique_ptr<escher::Escher> escher_;
   std::unique_ptr<Session> session_;
   std::shared_ptr<MockFrameScheduler> frame_scheduler_;
-  std::unique_ptr<escher::Escher> escher_;
   std::unique_ptr<escher::ImageFactoryAdapter> image_factory_;
   std::shared_ptr<TestErrorReporter> error_reporter_;
   std::shared_ptr<TestEventReporter> event_reporter_;
 };
 
 VK_TEST_F(DisplaySwapchainTest, RenderStress) {
+  SetUpEscherAndSession(CreateVulkanDeviceQueues(/*use_protected_memory*/ false));
   auto swapchain = CreateSwapchain(display());
 
   auto layer = fxl::MakeRefCounted<Layer>(session(), session()->id(), 0);
@@ -193,9 +198,13 @@ VK_TEST_F(DisplaySwapchainTest, RenderStress) {
 }
 
 VK_TEST_F(DisplaySwapchainTest, RenderProtectedStress) {
-  if (!CreateVulkanDeviceQueues(/*use_protected_memory=*/true)) {
+  // Check if we can create escher that support protected memory.
+  auto vulkan_device = CreateVulkanDeviceQueues(/*use_protected_memory*/ true);
+  if (!vulkan_device) {
     GTEST_SKIP();
   }
+  SetUpEscherAndSession(vulkan_device);
+
   auto swapchain = CreateSwapchain(display());
   swapchain->SetUseProtectedMemory(true);
 
@@ -219,22 +228,26 @@ VK_TEST_F(DisplaySwapchainTest, RenderProtectedStress) {
 }
 
 VK_TEST_F(DisplaySwapchainTest, InitializesFramebuffers) {
+  SetUpEscherAndSession(CreateVulkanDeviceQueues(/*use_protected_memory*/ false));
   auto swapchain = CreateSwapchain(display());
 
-  BufferPool* buffer_pool = Framebuffers(swapchain.get());
+  BufferPool* buffer_pool = Framebuffers(swapchain.get(), /*use_protected_memory=*/false);
   EXPECT_EQ(2u, buffer_pool->size());
   zx::vmo vmo = ExportMemoryAsVmo(escher(), buffer_pool->GetUnused()->device_memory);
   EXPECT_EQ(0u, fsl::GetObjectName(vmo.get()).find("Display"));
 }
 
 VK_TEST_F(DisplaySwapchainTest, InitializesProtectedFramebuffers) {
-  if (!CreateVulkanDeviceQueues(/*use_protected_memory=*/true)) {
+  // Check if we can create escher that support protected memory.
+  auto vulkan_device = CreateVulkanDeviceQueues(/*use_protected_memory*/ true);
+  if (!vulkan_device) {
     GTEST_SKIP();
   }
-  auto swapchain = CreateSwapchain(display());
-  swapchain->SetUseProtectedMemory(true);
+  SetUpEscherAndSession(vulkan_device);
 
-  BufferPool* buffer_pool = Framebuffers(swapchain.get());
+  auto swapchain = CreateSwapchain(display());
+
+  BufferPool* buffer_pool = Framebuffers(swapchain.get(), /*use_protected_memory=*/true);
   EXPECT_EQ(2u, buffer_pool->size());
   zx::vmo vmo = ExportMemoryAsVmo(escher(), buffer_pool->GetUnused()->device_memory);
   EXPECT_EQ(0u, fsl::GetObjectName(vmo.get()).find("Display-Protected"));
