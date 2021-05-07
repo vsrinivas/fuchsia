@@ -598,21 +598,15 @@ zx::status<std::unique_ptr<DriverHostComponent>> DriverRunner::StartDriverHost()
     return create.take_error();
   }
 
-  auto endpoints = fidl::CreateEndpoints<fdf::DriverHost>();
-  if (endpoints.is_error()) {
-    return endpoints.take_error();
-  }
-  zx_status_t status = fdio_service_connect_at(create->channel().get(),
-                                               fidl::DiscoverableProtocolName<fdf::DriverHost>,
-                                               endpoints->server.TakeChannel().release());
-  if (status != ZX_OK) {
+  auto client_end = service::ConnectAt<fdf::DriverHost>(*create);
+  if (client_end.is_error()) {
     LOGF(ERROR, "Failed to connect to service '%s': %s",
-         fidl::DiscoverableProtocolName<fdf::DriverHost>, zx_status_get_string(status));
-    return zx::error(status);
+         fidl::DiscoverableProtocolName<fdf::DriverHost>, client_end.status_string());
+    return client_end.take_error();
   }
 
-  auto driver_host = std::make_unique<DriverHostComponent>(std::move(endpoints->client),
-                                                           dispatcher_, &driver_hosts_);
+  auto driver_host =
+      std::make_unique<DriverHostComponent>(std::move(*client_end), dispatcher_, &driver_hosts_);
   return zx::ok(std::move(driver_host));
 }
 
