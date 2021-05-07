@@ -36,6 +36,7 @@ class CrashReportBuilder {
  private:
   std::optional<std::string> process_name_;
   std::optional<zx_koid_t> process_koid_;
+  std::optional<zx_duration_t> process_uptime_{std::nullopt};
   std::optional<std::string> thread_name_;
   std::optional<zx_koid_t> thread_koid_;
   std::optional<zx::vmo> minidump_{std::nullopt};

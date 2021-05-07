@@ -32,9 +32,32 @@ std::string Sanitize(std::string process_name) {
 }  // namespace
 
 CrashReportBuilder& CrashReportBuilder::SetProcess(const zx::process& process) {
-  process_name_ = (process.is_valid()) ? fsl::GetObjectName(process.get()) : "unknown_process";
-  if (process.is_valid()) {
-    process_koid_ = fsl::GetKoid(process.get());
+  if (!process.is_valid()) {
+    process_name_ = "unknown_process";
+    return *this;
+  }
+
+  process_name_ = fsl::GetObjectName(process.get());
+  process_koid_ = fsl::GetKoid(process.get());
+
+  // Get the crashed process uptime
+  zx_info_process_v2_t process_info;
+  if (const zx_status_t status = process.get_info(ZX_INFO_PROCESS_V2, &process_info,
+                                                  sizeof(process_info), nullptr, nullptr);
+      status == ZX_OK) {
+    if (!(process_info.flags & ZX_INFO_PROCESS_FLAG_STARTED)) {
+      FX_LOGS(WARNING) << "Cannot get the start time from crashed process "
+                       << process_name_.value();
+      return *this;
+    }
+
+    const zx_time_t crashed_process_uptime = zx_clock_get_monotonic() - process_info.start_time;
+    if (crashed_process_uptime >= 0) {
+      process_uptime_ = crashed_process_uptime;
+    } else {
+      FX_LOGS(WARNING) << "Invalid uptime = " << crashed_process_uptime << ", for crashed process "
+                       << process_name_.value();
+    }
   }
 
   return *this;
@@ -107,6 +130,9 @@ fuchsia::feedback::CrashReport CrashReportBuilder::Consume() {
   AddAnnotation("crash.thread.name", thread_name_.value());
   if (process_koid_.has_value()) {
     AddAnnotation("crash.process.koid", std::to_string(process_koid_.value()));
+  }
+  if (process_uptime_.has_value()) {
+    crash_report.set_program_uptime(process_uptime_.value());
   }
   if (thread_koid_.has_value()) {
     AddAnnotation("crash.thread.koid", std::to_string(thread_koid_.value()));

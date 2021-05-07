@@ -5,6 +5,7 @@
 
 #include <gtest/gtest.h>
 
+#include "src/developer/forensics/exceptions/tests/crasher_wrapper.h"
 #include "src/lib/fsl/vmo/strings.h"
 
 namespace forensics {
@@ -65,6 +66,11 @@ TEST_F(CrashReportBuilderTest, ProcessTerminated) {
   ASSERT_FALSE(crash_report.has_specific_report());
   ASSERT_TRUE(crash_report.has_crash_signature());
 
+  ASSERT_TRUE(crash_report.has_program_name());
+  ASSERT_EQ(crash_report.program_name(), "unknown_process");
+
+  ASSERT_FALSE(crash_report.has_program_uptime());
+
   EXPECT_EQ(crash_report.crash_signature(), "fuchsia-no-minidump-process-terminated");
 }
 
@@ -84,6 +90,34 @@ TEST_F(CrashReportBuilderTest, IsFatal) {
   auto crash_report = builder_.Consume();
   ASSERT_TRUE(crash_report.has_is_fatal());
   EXPECT_TRUE(crash_report.is_fatal());
+}
+
+TEST(ReportBuilderTest, TestUptime) {
+  CrashReportBuilder builder;
+  ExceptionContext exception;
+
+  // Spawn the 'crasher' process.
+  ASSERT_TRUE(SpawnCrasher(&exception));
+  // If we don't mark it as handled, the exception will bubble out of our environment.
+  ASSERT_TRUE(MarkExceptionAsHandled(&exception));
+
+  zx::process process;
+  zx::thread thread;
+  ASSERT_EQ(exception.exception.get_process(&process), ZX_OK);
+  ASSERT_EQ(exception.exception.get_thread(&thread), ZX_OK);
+  builder.SetProcess(process).SetThread(thread);
+  builder.SetProcessTerminated();
+
+  auto crash_report = builder.Consume();
+  ASSERT_TRUE(crash_report.has_program_name());
+  ASSERT_EQ(crash_report.program_name(), "crasher");
+  ASSERT_TRUE(crash_report.has_program_uptime());
+  ASSERT_GE(crash_report.program_uptime(), 0);
+
+  // We kill the jobs. This kills the underlying process. We do this so that the crashed process
+  // doesn't get rescheduled. Otherwise the exception on the crash program would bubble out of our
+  // environment and create noise on the overall system.
+  exception.job.kill();
 }
 
 }  // namespace
