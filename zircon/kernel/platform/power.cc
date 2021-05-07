@@ -59,3 +59,24 @@ void platform_halt(platform_halt_action suggested_action, zircon_crash_reason_t 
   // Finally, fall into the platform specific halt handler.
   platform_specific_halt(suggested_action, reason, halt_on_panic);
 }
+
+namespace {
+__NO_RETURN
+int cmd_reboot(int argc, const cmd_args* argv, uint32_t flags) {
+  bool is_panic_shell = (flags & CMD_FLAG_PANIC) != 0;
+
+  // If we are already panicking, don't repeat the first half of `platform_halt`. Instead,
+  // just finish the reboot.
+  if (is_panic_shell) {
+    platform_specific_halt(HALT_ACTION_REBOOT, ZirconCrashReason::Panic,
+                           /*halt_on_panic=*/false);
+    // unreachable
+  }
+
+  platform_halt(HALT_ACTION_REBOOT, ZirconCrashReason::NoCrash);
+}
+}  // namespace
+
+STATIC_COMMAND_START
+STATIC_COMMAND_MASKED("reboot", "reboot the system", &cmd_reboot, CMD_AVAIL_ALWAYS)
+STATIC_COMMAND_END(power)
