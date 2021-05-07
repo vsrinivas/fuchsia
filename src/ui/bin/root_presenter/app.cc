@@ -43,7 +43,7 @@ App::App(sys::ComponentContext* component_context, async_dispatcher_t* dispatche
                                                          std::make_shared<MediaRetriever>())),
       focuser_binding_(this),
       media_buttons_handler_(),
-      virtual_keyboard_controller_creator_(component_context),
+      virtual_keyboard_coordinator_(component_context),
       virtual_keyboard_manager_(component_context) {
   FX_DCHECK(component_context_);
 

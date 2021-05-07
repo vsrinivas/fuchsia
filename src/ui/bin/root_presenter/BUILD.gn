@@ -254,8 +254,8 @@ source_set("virtual_keyboard") {
   sources = [
     "virtual_keyboard_controller.cc",
     "virtual_keyboard_controller.h",
-    "virtual_keyboard_controller_creator.cc",
-    "virtual_keyboard_controller_creator.h",
+    "virtual_keyboard_coordinator.cc",
+    "virtual_keyboard_coordinator.h",
     "virtual_keyboard_manager.cc",
     "virtual_keyboard_manager.h",
   ]

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/bin/root_presenter/virtual_keyboard_controller_creator.h"
+#include "src/ui/bin/root_presenter/virtual_keyboard_coordinator.h"
 
 #include <fuchsia/input/virtualkeyboard/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
@@ -15,10 +15,10 @@
 #include <src/lib/testing/loop_fixture/test_loop_fixture.h>
 
 namespace root_presenter {
-namespace virtual_keyboard_controller_creator {
+namespace virtual_keyboard_coordinator {
 namespace {
 
-class VirtualKeyboardControllerCreatorTest : public gtest::TestLoopFixture {
+class VirtualKeyboardCoordinatorTest : public gtest::TestLoopFixture {
  protected:
   auto* context_provider() { return &context_provider_; }
 
@@ -26,8 +26,8 @@ class VirtualKeyboardControllerCreatorTest : public gtest::TestLoopFixture {
   sys::testing::ComponentContextProvider context_provider_;
 };
 
-TEST_F(VirtualKeyboardControllerCreatorTest, CtorRegistersPublicService) {
-  VirtualKeyboardControllerCreator controller_creator(context_provider()->context());
+TEST_F(VirtualKeyboardCoordinatorTest, CtorRegistersControllerCreatorService) {
+  VirtualKeyboardCoordinator coordinator(context_provider()->context());
 
   zx_status_t status = ZX_OK;
   fuchsia::input::virtualkeyboard::ControllerCreatorPtr controller_creator_proxy;
@@ -45,5 +45,5 @@ TEST_F(VirtualKeyboardControllerCreatorTest, CtorRegistersPublicService) {
 }
 
 }  // namespace
-}  // namespace virtual_keyboard_controller_creator
+}  // namespace virtual_keyboard_coordinator
 }  // namespace root_presenter

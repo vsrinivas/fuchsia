@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_BIN_ROOT_PRESENTER_VIRTUAL_KEYBOARD_CONTROLLER_CREATOR_H_
-#define SRC_UI_BIN_ROOT_PRESENTER_VIRTUAL_KEYBOARD_CONTROLLER_CREATOR_H_
+#ifndef SRC_UI_BIN_ROOT_PRESENTER_VIRTUAL_KEYBOARD_COORDINATOR_H_
+#define SRC_UI_BIN_ROOT_PRESENTER_VIRTUAL_KEYBOARD_COORDINATOR_H_
 
 #include <fuchsia/input/virtualkeyboard/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
@@ -15,16 +15,19 @@
 
 namespace root_presenter {
 
-// Enables the binding of one or more `fuchsia.input.virtualkeyboard.Controller`s with
-// a virtual keyboard. A `VirtualKeyboardControllerCreator` and its `VirtualKeyboardController`s
-// are associated with a single virtual keyboard.
-class VirtualKeyboardControllerCreator : public fuchsia::input::virtualkeyboard::ControllerCreator {
+// Coordinates all activities for a single virtual keyboard.
+//
+// This includes:
+// * Publishing the `fuchsia.input.virtualkeyboard.ControllerCreator` FIDL
+//   protocol.
+// * Binding `VirtualKeyboardController`s to the virtual keyboard.
+class VirtualKeyboardCoordinator : public fuchsia::input::virtualkeyboard::ControllerCreator {
  public:
-  // Constructs an object which can serve the `fuchsia.input.virtualkeyboard.ControllerCreator`
-  // FIDL protocol, and publishes the protocol using `component_context`.
+  // Constructs a VirtualKeyboardCoordinator, and publishes the relevant FIDL
+  // using `component_context`.
   //
   // Callers _should_ construct this object before entering the event loop.
-  explicit VirtualKeyboardControllerCreator(sys::ComponentContext* component_context);
+  explicit VirtualKeyboardCoordinator(sys::ComponentContext* component_context);
 
  private:
   using ControllerBinding =
@@ -43,4 +46,4 @@ class VirtualKeyboardControllerCreator : public fuchsia::input::virtualkeyboard:
 
 }  // namespace root_presenter
 
-#endif  // SRC_UI_BIN_ROOT_PRESENTER_VIRTUAL_KEYBOARD_CONTROLLER_CREATOR_H_
+#endif  // SRC_UI_BIN_ROOT_PRESENTER_VIRTUAL_KEYBOARD_COORDINATOR_H_

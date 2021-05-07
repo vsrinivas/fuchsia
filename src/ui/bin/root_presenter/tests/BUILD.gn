@@ -55,8 +55,8 @@ executable("root_presenter_unittests_bin") {
     "media_buttons_handler_unittest.cc",
     "root_presenter_unittest.cc",
     "safe_presenter_unittest.cc",
-    "virtual_keyboard_controller_creator_unittest.cc",
     "virtual_keyboard_controller_unittest.cc",
+    "virtual_keyboard_coordinator_unittest.cc",
     "virtual_keyboard_manager_unittest.cc",
   ]
 
