@@ -73,6 +73,10 @@ template("zbi_executable") {
   }
 }
 
+_phys_import = {
+  import("//zircon/kernel/arch/$zircon_cpu/phys/phys.gni")
+}
+
 set_defaults("zbi_executable") {
-  configs = default_executable_configs
+  configs = default_executable_configs + _phys_import.phys_zbi_configs
 }

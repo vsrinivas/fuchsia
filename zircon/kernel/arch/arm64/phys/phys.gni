@@ -21,6 +21,7 @@ phys_configs = [
   "//build/config/zircon:static-pie-compile",
   "//build/config/zircon:static-pie-link",
 ]
+
 phys_tags = [
   "strict-align",
   "tiny",
@@ -28,3 +29,5 @@ phys_tags = [
 ]
 
 phys_exclude_variant_tags = []
+
+phys_zbi_configs = [ "//zircon/kernel/phys:load-pic" ]

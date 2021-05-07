@@ -93,6 +93,11 @@ if (toolchain.environment == "kernel.phys" ||
     include_dirs = [ "include" ]
   }
 
+  config("load-pic") {
+    # ZBI executables can be loaded anywhere, so they are linked at 0.
+    ldflags = [ "-Wl,-defsym,PHYS_LOAD_ADDRESS=0" ]
+  }
+
   source_set("symbolize") {
     public = [
       "include/phys/frame-pointer.h",
@@ -143,8 +148,6 @@ if (toolchain.environment == "kernel.phys" ||
       "//zircon/system/ulib/uart",
       "//zircon/system/ulib/zbitl",
     ]
-    public_configs =
-        [ "//zircon/kernel/arch/$zircon_cpu/phys:zbi_executable.config" ]
   }
 
   # Transitive dependencies for the <phys/main.h> header.

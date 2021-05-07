@@ -60,10 +60,6 @@ if (current_toolchain == default_toolchain) {
       ]
       include_dirs = [ "//." ]
     }
-
-    config("zbi_executable.config") {
-      configs = [ ":load-1mb" ]
-    }
   } else if (toolchain.environment == "kernel.phys32") {
     # ... or here in the other phys environment.
 
@@ -213,7 +209,6 @@ if (current_toolchain == default_toolchain) {
   # This is where code is actually loaded both for the Multiboot spec and for
   # the original/legacy x86 ZBI booting spec.
   config("load-1mb") {
-    visibility = [ ":*" ]
     ldflags = [ "-Wl,-defsym,PHYS_LOAD_ADDRESS=0x100000" ]
   }
 }

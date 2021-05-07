@@ -36,12 +36,8 @@ source_set("phys") {
   ]
 }
 
-config("zbi_executable.config") {
-  # ZBI executables can be loaded anywhere, so they are linked at 0.
-  ldflags = [ "-Wl,-defsym,PHYS_LOAD_ADDRESS=0" ]
-}
-
 config("qemu.config") {
-  # Direct QEMU phys executables are the same.
-  configs = [ ":zbi_executable.config" ]
+  # Like ZBI executables, direct QEMU phys executables can be loaded anywhere,
+  # so they are linked at 0.
+  configs = [ "//zircon/kernel/phys:load-pic" ]
 }
