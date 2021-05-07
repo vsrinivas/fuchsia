@@ -908,6 +908,10 @@ if (!(current_os == "fuchsia")) {
   }
 }
 
+group("zstd") {
+  deps = [ ":zstd-v0_8_0+zstd_1_4_9" ]
+}
+
 group("cxxbridge") {
   deps = [ ":cxxbridge-cmd-cxxbridge-v0_3_5" ]
 }
@@ -11153,5 +11157,78 @@ rust_library("zip-v0_5_5") {
     "-Cextra-filename=-ac1fb914318fbe66",
     "--cfg=feature=\"deflate\"",
     "--cfg=feature=\"flate2\"",
+  ]
+}
+
+rust_library("zstd-v0_8_0+zstd_1_4_9") {
+  crate_name = "zstd"
+  crate_root = "//third_party/rust_crates/vendor/zstd/src/lib.rs"
+  output_name = "zstd-c8ff0f5dd4ac4df6"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":zstd-safe-v4_0_0+zstd_1_4_9" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=c8ff0f5dd4ac4df6",
+    "-Cextra-filename=-c8ff0f5dd4ac4df6",
+    "--cfg=feature=\"default\"",
+    "--cfg=feature=\"legacy\"",
+  ]
+}
+
+rust_library("zstd-safe-v4_0_0+zstd_1_4_9") {
+  crate_name = "zstd_safe"
+  crate_root = "//third_party/rust_crates/vendor/zstd-safe/src/lib.rs"
+  output_name = "zstd_safe-2be33306fb989aac"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":libc-v0_2_88" ]
+  deps += [ ":zstd-sys-v1_5_0+zstd_1_4_9" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2015",
+    "-Cmetadata=2be33306fb989aac",
+    "-Cextra-filename=-2be33306fb989aac",
+    "--cfg=feature=\"legacy\"",
+    "--cfg=feature=\"std\"",
+  ]
+}
+
+rust_library("zstd-sys-v1_5_0+zstd_1_4_9") {
+  crate_name = "zstd_sys"
+  crate_root = "//third_party/rust_crates/tiny_mirrors/zstd-sys/src/lib.rs"
+  output_name = "zstd_sys-f55a42cf5076e22d"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":libc-v0_2_88" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2015",
+    "-Cmetadata=f55a42cf5076e22d",
+    "-Cextra-filename=-f55a42cf5076e22d",
+    "--cfg=feature=\"legacy\"",
+    "--cfg=feature=\"std\"",
   ]
 }

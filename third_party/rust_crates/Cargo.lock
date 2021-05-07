@@ -1214,6 +1214,7 @@ dependencies = [
  "webpki",
  "xml-rs",
  "zip",
+ "zstd",
 ]
 
 [[package]]
@@ -4177,6 +4178,32 @@ dependencies = [
  "crc32fast",
  "flate2",
  "podio",
+]
+
+[[package]]
+name = "zstd"
+version = "0.8.0+zstd.1.4.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "afab5e288c9e10bcd910b16ad82cb8028b74b09eccaa5ecd90621f99d3380735"
+dependencies = [
+ "zstd-safe",
+]
+
+[[package]]
+name = "zstd-safe"
+version = "4.0.0+zstd.1.4.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "81f02c0811d5455aa82c6bc400cffd8c882f3a2813f5e2245e2b264443305ab2"
+dependencies = [
+ "libc",
+ "zstd-sys",
+]
+
+[[package]]
+name = "zstd-sys"
+version = "1.5.0+zstd.1.4.9"
+dependencies = [
+ "libc",
 ]
 
 [[patch.unused]]

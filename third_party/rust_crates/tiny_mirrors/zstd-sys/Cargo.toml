@@ -1,0 +1,19 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+[package]
+name = "zstd-sys"
+version = "1.5.0+zstd.1.4.9"
+authors = ["The Fuchsia Authors"]
+
+[dependencies]
+libc = "0.2.88"
+
+[features]
+default = ["legacy"]
+experimental = []
+legacy = []
+non-cargo = []
+std = []
+zstdmt = []
