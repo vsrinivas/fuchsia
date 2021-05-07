@@ -14,6 +14,26 @@ std::vector<uint8_t> hello_world = {
     0x0b, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
     0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72, 0x6c, 0x64, 0x00, 0x00, 0x00, 0x00, 0x00};
 
+std::vector<uint8_t> hello_world_iovec_1 = {0x01, 0x00, 0x00, 0x00, 0x01, 0x00};
+
+std::vector<uint8_t> hello_world_iovec_2 = {0x00, 0x01, 0x91, 0x5b, 0xf2, 0x9e, 0x82, 0xe5, 0xc1,
+                                            0x28, 0x0b, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
+std::vector<uint8_t> hello_world_iovec_3 = {0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+                                            0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x77, 0x6f, 0x72,
+                                            0x6c, 0x64, 0x00, 0x00, 0x00, 0x00, 0x00};
+
+std::vector<zx_channel_iovec> hello_world_iovec = {
+    {.buffer = hello_world_iovec_1.data(),
+     .capacity = static_cast<uint32_t>(hello_world_iovec_1.size()),
+     .reserved = 0},
+    {.buffer = hello_world_iovec_2.data(),
+     .capacity = static_cast<uint32_t>(hello_world_iovec_2.size()),
+     .reserved = 0},
+    {.buffer = hello_world_iovec_3.data(),
+     .capacity = static_cast<uint32_t>(hello_world_iovec_3.size()),
+     .reserved = 0}};
+
 std::vector<uint8_t> on_pong = {0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x01,
                                 0x33, 0xd6, 0x9d, 0x96, 0x83, 0x30, 0x8e, 0x0f};
 
@@ -63,6 +83,58 @@ WRITE_DISPLAY_TEST(
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_write("
     "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
     "options: \x1B[32muint32\x1B[0m = \x1B[34m0\x1B[0m)\n"
+    "  \x1B[45m\x1B[37msent request\x1B[0m \x1B[32mfidl.examples.echo/Echo.EchoString\x1B[0m = { "
+    "value: \x1B[32mstring\x1B[0m = \x1B[31m\"hello world\"\x1B[0m }\n"
+    "  Message: num_bytes=48 num_handles=0 txid=1 "
+    "ordinal=28c1e5829ef25b91(fidl.examples.echo/Echo.EchoString)\x1B[0m\n"
+    "    data=\n"
+    "      0000: \x1B[31m01, 00, 00, 00\x1B[0m, 01, 00, 00, 01\x1B[31m, "
+    "91, 5b, f2, 9e\x1B[0m, 82, e5, c1, 28, \n"
+    "      0010: \x1B[31m0b, 00, 00, 00\x1B[0m, 00, 00, 00, 00\x1B[31m, "
+    "ff, ff, ff, ff\x1B[0m, ff, ff, ff, ff, \n"
+    "      0020: \x1B[31m68, 65, 6c, 6c\x1B[0m, 6f, 20, 77, 6f\x1B[31m, "
+    "72, 6c, 64, 00\x1B[0m, 00, 00, 00, 00\x1B[0m\n"
+    "\x1B[32m0.000000\x1B[0m "
+    "  -> \x1B[32mZX_OK\x1B[0m\n");
+
+// zx_channel_write_with_iovec_tests.
+
+#define WRITE_IOVEC_DISPLAY_TEST_CONTENT(errno, dump_messages, expected)                  \
+  set_dump_messages(dump_messages);                                                       \
+  auto loader = GetTestLibraryLoader();                                                   \
+  PerformDisplayTest("$plt(zx_channel_write)",                                            \
+                     ZxChannelWrite(errno, #errno, kHandle, ZX_CHANNEL_WRITE_USE_IOVEC,   \
+                                    reinterpret_cast<uint8_t*>(hello_world_iovec.data()), \
+                                    hello_world_iovec.size(), nullptr, 0),                \
+                     expected, loader)
+
+#define WRITE_IOVEC_DISPLAY_TEST(name, errno, dump_messages, expected) \
+  TEST_F(InterceptionWorkflowTestX64, name) {                          \
+    WRITE_IOVEC_DISPLAY_TEST_CONTENT(errno, dump_messages, expected);  \
+  }                                                                    \
+  TEST_F(InterceptionWorkflowTestArm, name) {                          \
+    WRITE_IOVEC_DISPLAY_TEST_CONTENT(errno, dump_messages, expected);  \
+  }
+
+WRITE_IOVEC_DISPLAY_TEST(
+    ZxChannelWriteIovecDecoded, ZX_OK, false,
+    "\n"
+    "\x1B[32m0.000000\x1B[0m "
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_write("
+    "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+    "options: \x1B[32muint32\x1B[0m = \x1B[34mZX_CHANNEL_WRITE_USE_IOVEC\x1B[0m)\n"
+    "  \x1B[45m\x1B[37msent request\x1B[0m \x1B[32mfidl.examples.echo/Echo.EchoString\x1B[0m = { "
+    "value: \x1B[32mstring\x1B[0m = \x1B[31m\"hello world\"\x1B[0m }\n"
+    "\x1B[32m0.000000\x1B[0m "
+    "  -> \x1B[32mZX_OK\x1B[0m\n");
+
+WRITE_IOVEC_DISPLAY_TEST(
+    ZxChannelWriteIovecDecodedDumped, ZX_OK, true,
+    "\n"
+    "\x1B[32m0.000000\x1B[0m "
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_write("
+    "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+    "options: \x1B[32muint32\x1B[0m = \x1B[34mZX_CHANNEL_WRITE_USE_IOVEC\x1B[0m)\n"
     "  \x1B[45m\x1B[37msent request\x1B[0m \x1B[32mfidl.examples.echo/Echo.EchoString\x1B[0m = { "
     "value: \x1B[32mstring\x1B[0m = \x1B[31m\"hello world\"\x1B[0m }\n"
     "  Message: num_bytes=48 num_handles=0 txid=1 "

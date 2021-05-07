@@ -203,6 +203,65 @@ std::unique_ptr<fidl_codec::Value> SyscallInputOutputBase::GenerateValue(
   return std::make_unique<fidl_codec::InvalidValue>();
 }
 
+void SyscallFidlMessageBase::LoadBytes(SyscallDecoderInterface* decoder, Stage stage) const {
+  handle_->Load(decoder, stage);
+  options_->Load(decoder, stage);
+  num_bytes_->Load(decoder, stage);
+  if (num_bytes_->Loaded(decoder, stage)) {
+    uint32_t count = num_bytes_->Value(decoder, stage);
+    bool use_iovec = false;
+    if ((type_ == fidl_codec::SyscallFidlType::kOutputMessage) ||
+        (type_ == fidl_codec::SyscallFidlType::kOutputRequest)) {
+      uint32_t options = options_->Value(decoder, stage);
+      if ((options & ZX_CHANNEL_WRITE_USE_IOVEC) != 0) {
+        use_iovec = true;
+      }
+    }
+    if (count > 0) {
+      if (use_iovec) {
+        bytes_->LoadArray(decoder, stage, count * sizeof(zx_channel_iovec_t));
+        if (bytes_->ArrayLoaded(decoder, stage, count * sizeof(zx_channel_iovec_t))) {
+          auto iovec = reinterpret_cast<const zx_channel_iovec_t*>(bytes_->Content(decoder, stage));
+          for (uint32_t buffer = 0; buffer < count; ++buffer) {
+            decoder->LoadBuffer(stage, reinterpret_cast<uint64_t>(iovec[buffer].buffer),
+                                iovec[buffer].capacity);
+          }
+        }
+      } else {
+        bytes_->LoadArray(decoder, stage, count);
+      }
+    }
+  }
+}
+
+SyscallFidlMessageBase::ByteBuffer::ByteBuffer(SyscallDecoderInterface* decoder, Stage stage,
+                                               const SyscallFidlMessageBase* from) {
+  uint32_t options_value = from->options()->Value(decoder, stage);
+  if (((from->type() == fidl_codec::SyscallFidlType::kOutputMessage) ||
+       (from->type() == fidl_codec::SyscallFidlType::kOutputRequest)) &&
+      ((options_value & ZX_CHANNEL_WRITE_USE_IOVEC) != 0)) {
+    // For the iovec case, we need to concatanate all the buffers into one.
+    const zx_channel_iovec_t* iovec =
+        reinterpret_cast<const zx_channel_iovec_t*>(from->bytes()->Content(decoder, stage));
+    uint32_t iovec_count = from->num_bytes()->Value(decoder, stage);
+    for (uint32_t i = 0; i < iovec_count; ++i) {
+      count_ += static_cast<uint32_t>(iovec[i].capacity);
+    }
+    buffer_ = new uint8_t[count_];
+    uint8_t* dst = buffer_;
+    for (uint32_t i = 0; i < iovec_count; ++i) {
+      const uint8_t* data =
+          decoder->BufferContent(stage, reinterpret_cast<uint64_t>(iovec[i].buffer));
+      memcpy(dst, data, iovec[i].capacity);
+      dst += iovec[i].capacity;
+    }
+    bytes_ = buffer_;
+  } else {
+    bytes_ = from->bytes()->Content(decoder, stage);
+    count_ = from->num_bytes()->Value(decoder, stage);
+  }
+}
+
 std::unique_ptr<fidl_codec::Type> SyscallFidlMessageHandle::ComputeType() const {
   return std::make_unique<fidl_codec::FidlMessageType>();
 }
@@ -210,8 +269,7 @@ std::unique_ptr<fidl_codec::Type> SyscallFidlMessageHandle::ComputeType() const 
 std::unique_ptr<fidl_codec::Value> SyscallFidlMessageHandle::GenerateValue(
     SyscallDecoderInterface* decoder, Stage stage) const {
   zx_handle_t handle_value = handle()->Value(decoder, stage);
-  const uint8_t* bytes_value = bytes()->Content(decoder, stage);
-  uint32_t num_bytes_value = num_bytes()->Value(decoder, stage);
+  ByteBuffer buffer(decoder, stage, this);
   const zx_handle_t* handles_value = handles()->Content(decoder, stage);
   uint32_t num_handles_value = num_handles()->Value(decoder, stage);
   zx_handle_disposition_t* handle_dispositions_value = nullptr;
@@ -228,11 +286,11 @@ std::unique_ptr<fidl_codec::Value> SyscallFidlMessageHandle::GenerateValue(
   fidl_codec::DecodedMessage message;
   std::stringstream error_stream;
   message.DecodeMessage(decoder->dispatcher()->MessageDecoderDispatcher(),
-                        decoder->fidlcat_thread()->process()->koid(), handle_value, bytes_value,
-                        num_bytes_value, handle_dispositions_value, num_handles_value, type(),
+                        decoder->fidlcat_thread()->process()->koid(), handle_value, buffer.bytes(),
+                        buffer.count(), handle_dispositions_value, num_handles_value, type(),
                         error_stream);
   auto result = std::make_unique<fidl_codec::FidlMessageValue>(
-      &message, error_stream.str(), bytes_value, num_bytes_value, handle_dispositions_value,
+      &message, error_stream.str(), buffer.bytes(), buffer.count(), handle_dispositions_value,
       num_handles_value);
   delete[] handle_dispositions_value;
   if (result->is_request()) {
@@ -255,8 +313,7 @@ std::unique_ptr<fidl_codec::Type> SyscallFidlMessageHandleInfo::ComputeType() co
 std::unique_ptr<fidl_codec::Value> SyscallFidlMessageHandleInfo::GenerateValue(
     SyscallDecoderInterface* decoder, Stage stage) const {
   zx_handle_t handle_value = handle()->Value(decoder, stage);
-  const uint8_t* bytes_value = bytes()->Content(decoder, stage);
-  uint32_t num_bytes_value = num_bytes()->Value(decoder, stage);
+  ByteBuffer buffer(decoder, stage, this);
   const zx_handle_info_t* handle_infos_value = handles()->Content(decoder, stage);
   uint32_t num_handles_value = num_handles()->Value(decoder, stage);
   zx_handle_disposition_t* handle_dispositions_value = nullptr;
@@ -273,11 +330,11 @@ std::unique_ptr<fidl_codec::Value> SyscallFidlMessageHandleInfo::GenerateValue(
   fidl_codec::DecodedMessage message;
   std::stringstream error_stream;
   message.DecodeMessage(decoder->dispatcher()->MessageDecoderDispatcher(),
-                        decoder->fidlcat_thread()->process()->koid(), handle_value, bytes_value,
-                        num_bytes_value, handle_dispositions_value, num_handles_value, type(),
+                        decoder->fidlcat_thread()->process()->koid(), handle_value, buffer.bytes(),
+                        buffer.count(), handle_dispositions_value, num_handles_value, type(),
                         error_stream);
   auto result = std::make_unique<fidl_codec::FidlMessageValue>(
-      &message, error_stream.str(), bytes_value, num_bytes_value, handle_dispositions_value,
+      &message, error_stream.str(), buffer.bytes(), buffer.count(), handle_dispositions_value,
       num_handles_value);
   delete[] handle_dispositions_value;
   if (result->is_request()) {
@@ -300,18 +357,17 @@ std::unique_ptr<fidl_codec::Type> SyscallFidlMessageHandleDisposition::ComputeTy
 std::unique_ptr<fidl_codec::Value> SyscallFidlMessageHandleDisposition::GenerateValue(
     SyscallDecoderInterface* decoder, Stage stage) const {
   zx_handle_t handle_value = handle()->Value(decoder, stage);
-  const uint8_t* bytes_value = bytes()->Content(decoder, stage);
-  uint32_t num_bytes_value = num_bytes()->Value(decoder, stage);
+  ByteBuffer buffer(decoder, stage, this);
   const zx_handle_disposition_t* handle_dispositions_value = handles()->Content(decoder, stage);
   uint32_t num_handles_value = num_handles()->Value(decoder, stage);
   fidl_codec::DecodedMessage message;
   std::stringstream error_stream;
   message.DecodeMessage(decoder->dispatcher()->MessageDecoderDispatcher(),
-                        decoder->fidlcat_thread()->process()->koid(), handle_value, bytes_value,
-                        num_bytes_value, handle_dispositions_value, num_handles_value, type(),
+                        decoder->fidlcat_thread()->process()->koid(), handle_value, buffer.bytes(),
+                        buffer.count(), handle_dispositions_value, num_handles_value, type(),
                         error_stream);
   auto result = std::make_unique<fidl_codec::FidlMessageValue>(
-      &message, error_stream.str(), bytes_value, num_bytes_value, handle_dispositions_value,
+      &message, error_stream.str(), buffer.bytes(), buffer.count(), handle_dispositions_value,
       num_handles_value);
   if (result->is_request()) {
     if (result->matched_request()) {

@@ -3468,6 +3468,7 @@ void SyscallDecoderDispatcher::Populate() {
     zx_channel_read->OutputFidlMessageHandle(
         ZX_OK, "", fidl_codec::SyscallFidlType::kInputMessage,
         std::make_unique<ArgumentAccess<zx_handle_t>>(handle),
+        std::make_unique<ArgumentAccess<uint32_t>>(options),
         std::make_unique<ArgumentAccess<uint8_t>>(bytes),
         std::make_unique<ArgumentAccess<uint32_t>>(actual_bytes),
         std::make_unique<ArgumentAccess<zx_handle_t>>(handles),
@@ -3514,6 +3515,7 @@ void SyscallDecoderDispatcher::Populate() {
     zx_channel_read_etc->OutputFidlMessageHandleInfo(
         ZX_OK, "", fidl_codec::SyscallFidlType::kInputMessage,
         std::make_unique<ArgumentAccess<zx_handle_t>>(handle),
+        std::make_unique<ArgumentAccess<uint32_t>>(options),
         std::make_unique<ArgumentAccess<uint8_t>>(bytes),
         std::make_unique<ArgumentAccess<uint32_t>>(actual_bytes),
         std::make_unique<ArgumentAccess<zx_handle_info_t>>(handles),
@@ -3554,6 +3556,7 @@ void SyscallDecoderDispatcher::Populate() {
     zx_channel_write->InputFidlMessageHandle(
         "", fidl_codec::SyscallFidlType::kOutputMessage,
         std::make_unique<ArgumentAccess<zx_handle_t>>(handle),
+        std::make_unique<ArgumentAccess<uint32_t>>(options),
         std::make_unique<ArgumentAccess<uint8_t>>(bytes),
         std::make_unique<ArgumentAccess<uint32_t>>(num_bytes),
         std::make_unique<ArgumentAccess<zx_handle_t>>(handles),
@@ -3590,6 +3593,7 @@ void SyscallDecoderDispatcher::Populate() {
     zx_channel_write_etc->InputFidlMessageHandleDisposition(
         "", fidl_codec::SyscallFidlType::kOutputMessage,
         std::make_unique<ArgumentAccess<zx_handle_t>>(handle),
+        std::make_unique<ArgumentAccess<uint32_t>>(options),
         std::make_unique<ArgumentAccess<uint8_t>>(bytes),
         std::make_unique<ArgumentAccess<uint32_t>>(num_bytes),
         std::make_unique<ArgumentAccess<zx_handle_disposition_t>>(handles),
@@ -3633,6 +3637,7 @@ void SyscallDecoderDispatcher::Populate() {
     zx_channel_call->InputFidlMessageHandle(
         "", fidl_codec::SyscallFidlType::kOutputRequest,
         std::make_unique<ArgumentAccess<zx_handle_t>>(handle),
+        std::make_unique<ArgumentAccess<uint32_t>>(options),
         std::make_unique<PointerFieldAccess<zx_channel_call_args, uint8_t>>(
             args, ZxChannelCallArgs::wr_bytes, SyscallType::kUint8),
         std::make_unique<FieldAccess<zx_channel_call_args, uint32_t>>(
@@ -3645,6 +3650,7 @@ void SyscallDecoderDispatcher::Populate() {
     zx_channel_call->OutputFidlMessageHandle(
         ZX_OK, "", fidl_codec::SyscallFidlType::kInputResponse,
         std::make_unique<ArgumentAccess<zx_handle_t>>(handle),
+        std::make_unique<ArgumentAccess<uint32_t>>(options),
         std::make_unique<PointerFieldAccess<zx_channel_call_args, uint8_t>>(
             args, ZxChannelCallArgs::rd_bytes, SyscallType::kUint8),
         std::make_unique<ArgumentAccess<uint32_t>>(actual_bytes),
@@ -3700,6 +3706,7 @@ void SyscallDecoderDispatcher::Populate() {
     zx_channel_call_etc->InputFidlMessageHandleDisposition(
         "", fidl_codec::SyscallFidlType::kOutputRequest,
         std::make_unique<ArgumentAccess<zx_handle_t>>(handle),
+        std::make_unique<ArgumentAccess<uint32_t>>(options),
         std::make_unique<PointerFieldAccess<zx_channel_call_etc_args, uint8_t>>(
             args, ZxChannelCallEtcArgs::wr_bytes, SyscallType::kUint8),
         std::make_unique<FieldAccess<zx_channel_call_etc_args, uint32_t>>(
@@ -3712,6 +3719,7 @@ void SyscallDecoderDispatcher::Populate() {
     zx_channel_call_etc->OutputFidlMessageHandleInfo(
         ZX_OK, "", fidl_codec::SyscallFidlType::kInputResponse,
         std::make_unique<ArgumentAccess<zx_handle_t>>(handle),
+        std::make_unique<ArgumentAccess<uint32_t>>(options),
         std::make_unique<PointerFieldAccess<zx_channel_call_etc_args, uint8_t>>(
             args, ZxChannelCallEtcArgs::rd_bytes, SyscallType::kUint8),
         std::make_unique<ArgumentAccess<uint32_t>>(actual_bytes),
