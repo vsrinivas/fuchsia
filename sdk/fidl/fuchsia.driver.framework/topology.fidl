@@ -63,21 +63,23 @@ protocol NodeController {
 
 /// Error codes for the Node protocol.
 enum NodeError {
+    // The Node was removed from the topology.
+    NODE_REMOVED = 1;
     // The Node's name is missing.
-    NAME_MISSING = 1;
+    NAME_MISSING = 2;
     /// The Node's name is invalid. Specifically, it must not contain a period
     /// in its name.
-    NAME_INVALID = 2;
+    NAME_INVALID = 3;
     /// A sibling Node exists with the same name.
-    NAME_ALREADY_EXISTS = 3;
+    NAME_ALREADY_EXISTS = 4;
     /// There is another offer for this Node with the same name.
-    OFFER_ALREADY_EXISTS = 4;
+    OFFER_ALREADY_EXISTS = 5;
     /// A symbol for this Node is missing a name.
-    SYMBOL_NAME_MISSING = 5;
+    SYMBOL_NAME_MISSING = 6;
     /// A symbol for this Node is missing an address.
-    SYMBOL_ADDRESS_MISSING = 6;
+    SYMBOL_ADDRESS_MISSING = 7;
     /// There is another symbol for this Node with the same name.
-    SYMBOL_ALREADY_EXISTS = 7;
+    SYMBOL_ALREADY_EXISTS = 8;
 };
 
 /// Protocol through which a driver manages a node that it is bound to.

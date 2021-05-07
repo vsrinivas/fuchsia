@@ -26,15 +26,12 @@
 class DriverComponent : public fidl::WireServer<fuchsia_component_runner::ComponentController>,
                         public fbl::DoublyLinkedListable<std::unique_ptr<DriverComponent>> {
  public:
-  DriverComponent(fidl::ClientEnd<fuchsia_io::Directory> exposed_dir,
-                  fidl::ClientEnd<fuchsia_driver_framework::Driver> driver);
-  ~DriverComponent() override;
+  explicit DriverComponent(fidl::ClientEnd<fuchsia_driver_framework::Driver> driver);
 
   void set_driver_ref(
       fidl::ServerBindingRef<fuchsia_component_runner::ComponentController> driver_ref);
-  void set_node_ref(fidl::ServerBindingRef<fuchsia_driver_framework::Node> node_ref);
 
-  zx::status<> WatchDriver(async_dispatcher_t* dispatcher);
+  zx::status<> Watch(async_dispatcher_t* dispatcher);
 
  private:
   // fidl::WireServer<fuchsia_component_runner::ComponentController>
@@ -44,11 +41,9 @@ class DriverComponent : public fidl::WireServer<fuchsia_component_runner::Compon
   void OnPeerClosed(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                     const zx_packet_signal_t* signal);
 
-  fidl::ClientEnd<fuchsia_io::Directory> exposed_dir_;
   fidl::ClientEnd<fuchsia_driver_framework::Driver> driver_;
   async::WaitMethod<DriverComponent, &DriverComponent::OnPeerClosed> wait_;
   std::optional<fidl::ServerBindingRef<fuchsia_component_runner::ComponentController>> driver_ref_;
-  std::optional<fidl::ServerBindingRef<fuchsia_driver_framework::Node>> node_ref_;
 };
 
 class DriverHostComponent : public fbl::DoublyLinkedListable<std::unique_ptr<DriverHostComponent>> {
@@ -70,6 +65,7 @@ class DriverHostComponent : public fbl::DoublyLinkedListable<std::unique_ptr<Dri
   fidl::Client<fuchsia_driver_framework::DriverHost> driver_host_;
 };
 
+class AsyncRemove;
 class Node;
 
 class DriverBinder {
@@ -85,7 +81,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
              public fidl::WireServer<fuchsia_driver_framework::Node>,
              public std::enable_shared_from_this<Node> {
  public:
-  Node(Node* parent, DriverBinder& driver_binder, async_dispatcher_t* dispatcher,
+  Node(Node* parent, DriverBinder* driver_binder, async_dispatcher_t* dispatcher,
        std::string_view name);
   ~Node() override;
 
@@ -102,17 +98,18 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   const std::vector<std::shared_ptr<Node>>& children() const;
 
   std::string TopoName() const;
+  bool Unbind(std::unique_ptr<AsyncRemove>& async_remove);
   void Remove();
 
  private:
-  void Unbind();
   // fidl::WireServer<fuchsia_driver_framework::NodeController>
   void Remove(RemoveRequestView request, RemoveCompleter::Sync& completer) override;
   // fidl::WireServer<fuchsia_driver_framework::Node>
   void AddChild(AddChildRequestView request, AddChildCompleter::Sync& completer) override;
 
   Node* const parent_;
-  DriverBinder& driver_binder_;
+  // This can be null when Remove() is called.
+  DriverBinder* driver_binder_;
   async_dispatcher_t* const dispatcher_;
 
   const std::string name_;
@@ -124,6 +121,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   std::optional<fidl::ServerBindingRef<fuchsia_component_runner::ComponentController>> driver_ref_;
   std::optional<fidl::ServerBindingRef<fuchsia_driver_framework::Node>> node_ref_;
   std::optional<fidl::ServerBindingRef<fuchsia_driver_framework::NodeController>> controller_ref_;
+  std::unique_ptr<AsyncRemove> async_remove_;
   std::vector<std::shared_ptr<Node>> children_;
 };
 
