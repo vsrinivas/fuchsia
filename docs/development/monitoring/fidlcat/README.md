@@ -152,7 +152,8 @@ You have two input options:
 
  * --from=device This is the default option, which monitors a device in real time.
 
- * --from=&lt;path&gt; With this option, fidlcat replay a previously saved session.
+ * --from=&lt;path&gt; Playback. With this option, fidlcat replays a session previously saved with
+   --to=&lt;path&gt; (protobuf format).
 
 ### Session save
 

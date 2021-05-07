@@ -56,9 +56,9 @@
 ##                                     At least one of '--remote-pid', '--remote-name',
 ##                                     '--remote-job-id', --'remote-job-name', 'run' must be
 ##                                     specified.
-##                       --from=<path> The input comes from a previously recorded session (protobuf
-##                                     format). Path gives the name of the file to read. If path is
-##                                     '-' then the standard input is used.
+##                       --from=<path> Playback. Used to replay a session previously recorded with
+##                                     --to=<path> (protobuf format). Path gives the name of the
+##                                     file to read. If path is '-' then the standard input is used.
 ##
 ## Session save option:
 ##    --to=<path> The session is saved to the specified file (binary protobuf format).
