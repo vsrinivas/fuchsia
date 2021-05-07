@@ -270,13 +270,8 @@ void Engine::SignalFencesWhenPreviousRendersAreDone(std::vector<zx::event> fence
       auto semaphore = escher::Semaphore::New(escher_->vk_device());
       vk::ImportSemaphoreZirconHandleInfoFUCHSIA info;
       info.semaphore = semaphore->vk_semaphore();
-#if VK_HEADER_VERSION > 173
       info.zirconHandle = f.release();
       info.handleType = vk::ExternalSemaphoreHandleTypeFlagBits::eZirconEventFUCHSIA;
-#else
-      info.handle = f.release();
-      info.handleType = vk::ExternalSemaphoreHandleTypeFlagBits::eTempZirconEventFUCHSIA;
-#endif
 
       auto result = escher_->vk_device().importSemaphoreZirconHandleFUCHSIA(
           info, escher_->device()->dispatch_loader());

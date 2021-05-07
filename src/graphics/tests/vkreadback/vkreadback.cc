@@ -180,9 +180,6 @@ bool VkReadbackTest::InitVulkan(uint32_t vk_api_version) {
   if (use_temp_external_memory_) {
     builder.set_validation_layers_enabled(false);
   }
-#if VK_HEADER_VERSION < 174
-  builder.set_validation_layers_enabled(false);
-#endif
   ctx_ = builder.Unique();
 
 #ifdef __Fuchsia__

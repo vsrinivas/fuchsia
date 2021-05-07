@@ -32,11 +32,7 @@ std::pair<escher::SemaphorePtr, zx::event> NewSemaphoreEventPair(escher::Escher*
 
 zx::event GetEventForSemaphore(VulkanDeviceQueues* device, const escher::SemaphorePtr& semaphore) {
   vk::SemaphoreGetZirconHandleInfoFUCHSIA info(
-#if VK_HEADER_VERSION > 173
       semaphore->vk_semaphore(), vk::ExternalSemaphoreHandleTypeFlagBits::eZirconEventFUCHSIA);
-#else
-      semaphore->vk_semaphore(), vk::ExternalSemaphoreHandleTypeFlagBits::eTempZirconEventFUCHSIA);
-#endif
 
   auto result =
       device->vk_device().getSemaphoreZirconHandleFUCHSIA(info, device->dispatch_loader());
@@ -53,23 +49,14 @@ escher::SemaphorePtr GetSemaphoreForEvent(VulkanDeviceQueues* device, zx::event 
 
   vk::ImportSemaphoreZirconHandleInfoFUCHSIA info;
   info.semaphore = sema->vk_semaphore();
-#if VK_HEADER_VERSION > 173
   info.zirconHandle = event.release();
   info.handleType = vk::ExternalSemaphoreHandleTypeFlagBits::eZirconEventFUCHSIA;
-#else
-  info.handle = event.release();
-  info.handleType = vk::ExternalSemaphoreHandleTypeFlagBits::eTempZirconEventFUCHSIA;
-#endif
 
   if (vk::Result::eSuccess !=
       device->vk_device().importSemaphoreZirconHandleFUCHSIA(info, device->dispatch_loader())) {
     FX_LOGS(ERROR) << "Failed to import event as VkSemaphore.";
-// Don't leak handle.
-#if VK_HEADER_VERSION > 173
+    // Don't leak handle.
     zx_handle_close(info.zirconHandle);
-#else
-    zx_handle_close(info.handle);
-#endif
     return escher::SemaphorePtr();
   }
   return sema;
@@ -77,11 +64,7 @@ escher::SemaphorePtr GetSemaphoreForEvent(VulkanDeviceQueues* device, zx::event 
 
 zx::vmo ExportMemoryAsVmo(escher::Escher* escher, const escher::GpuMemPtr& mem) {
   vk::MemoryGetZirconHandleInfoFUCHSIA export_memory_info(
-#if VK_HEADER_VERSION > 173
       mem->base(), vk::ExternalMemoryHandleTypeFlagBits::eZirconVmoFUCHSIA);
-#else
-      mem->base(), vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA);
-#endif
   auto result = escher->vk_device().getMemoryZirconHandleFUCHSIA(
       export_memory_info, escher->device()->dispatch_loader());
   if (result.result != vk::Result::eSuccess) {
@@ -114,11 +97,7 @@ std::pair<escher::GpuMemPtr, escher::ImagePtr> GenerateExportableMemImage(
   // Allocate vk::Memory.
   vk::MemoryDedicatedAllocateInfo dedicated_allocate_info(vk_image, vk::Buffer());
   vk::ExportMemoryAllocateInfoKHR export_allocate_info(
-#if VK_HEADER_VERSION > 173
       vk::ExternalMemoryHandleTypeFlagBits::eZirconVmoFUCHSIA);
-#else
-      vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA);
-#endif
   export_allocate_info.setPNext(&dedicated_allocate_info);
 
   vk::MemoryAllocateInfo alloc_info(reqs.size, memory_type);

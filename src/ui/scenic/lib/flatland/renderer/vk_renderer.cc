@@ -483,13 +483,8 @@ void VkRenderer::Render(const ImageMetadata& render_target,
     auto sema = escher::Semaphore::New(escher_->vk_device());
     vk::ImportSemaphoreZirconHandleInfoFUCHSIA info;
     info.semaphore = sema->vk_semaphore();
-#if VK_HEADER_VERSION > 173
     info.zirconHandle = fence_copy.release();
     info.handleType = vk::ExternalSemaphoreHandleTypeFlagBits::eZirconEventFUCHSIA;
-#else
-    info.handle = fence_copy.release();
-    info.handleType = vk::ExternalSemaphoreHandleTypeFlagBits::eTempZirconEventFUCHSIA;
-#endif
 
     auto result = escher_->vk_device().importSemaphoreZirconHandleFUCHSIA(
         info, escher_->device()->dispatch_loader());

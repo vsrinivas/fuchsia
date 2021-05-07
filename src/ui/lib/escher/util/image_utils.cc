@@ -22,16 +22,13 @@ struct RGBA {
   uint8_t a;
 };
 
-constexpr VkExternalMemoryImageCreateInfo kExternalImageCreateInfo {
-  .sType = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO, .pNext = nullptr,
+constexpr VkExternalMemoryImageCreateInfo kExternalImageCreateInfo{
+    .sType = VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO,
+    .pNext = nullptr,
 #ifdef __Fuchsia__
-#if VK_HEADER_VERSION > 173
-  .handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_ZIRCON_VMO_BIT_FUCHSIA,
+    .handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_ZIRCON_VMO_BIT_FUCHSIA,
 #else
-  .handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA,
-#endif
-#else
-  .handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT,
+    .handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT,
 #endif
 };
 }  // namespace

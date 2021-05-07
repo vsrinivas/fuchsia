@@ -143,9 +143,7 @@ loadable_module("copy") {
     "swapchain_copy_surface.cc",
     "swapchain_copy_surface.h",
   ]
-
   public_deps = [ "//third_party/Vulkan-ValidationLayers:micro_layer_common" ]
-
   deps = [ ":surface_header" ]
 
   if (is_fuchsia) {

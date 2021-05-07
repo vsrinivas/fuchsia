@@ -26,26 +26,12 @@ std::unique_ptr<PlatformEvent> FuchsiaEvent::Duplicate(VkDevice device,
 VkResult FuchsiaEvent::ImportToSemaphore(VkDevice device, VkLayerDispatchTable* dispatch_table,
                                          VkSemaphore& semaphore_out) {
   VkImportSemaphoreZirconHandleInfoFUCHSIA import_info = {
-#if VK_HEADER_VERSION > 173
-    .sType = VK_STRUCTURE_TYPE_IMPORT_SEMAPHORE_ZIRCON_HANDLE_INFO_FUCHSIA,
-#else
-    .sType = VK_STRUCTURE_TYPE_TEMP_IMPORT_SEMAPHORE_ZIRCON_HANDLE_INFO_FUCHSIA,
-#endif
-    .pNext = nullptr,
-    .semaphore = semaphore_out,
-    .flags = VK_SEMAPHORE_IMPORT_TEMPORARY_BIT_KHR,
-#if VK_HEADER_VERSION > 173
-    .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_ZIRCON_EVENT_BIT_FUCHSIA,
-#else
-    .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_TEMP_ZIRCON_EVENT_BIT_FUCHSIA,
-#endif
-#if VK_HEADER_VERSION > 173
-    .zirconHandle = event_.release()
-  };
-#else
-    .handle = event_.release()
-  };
-#endif
+      .sType = VK_STRUCTURE_TYPE_IMPORT_SEMAPHORE_ZIRCON_HANDLE_INFO_FUCHSIA,
+      .pNext = nullptr,
+      .semaphore = semaphore_out,
+      .flags = VK_SEMAPHORE_IMPORT_TEMPORARY_BIT_KHR,
+      .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_ZIRCON_EVENT_BIT_FUCHSIA,
+      .zirconHandle = event_.release()};
 
   return dispatch_table->ImportSemaphoreZirconHandleFUCHSIA(device, &import_info);
 }

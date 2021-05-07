@@ -54,7 +54,7 @@ DebugUtilsTestCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
                        const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData, void *pUserData);
 
 // TODO(fxbug.dev/73025): remove this condition block when it's time.
-#if VK_HEADER_VERSION < 173
+#if VK_HEADER_VERSION < 174
 constexpr VkExternalMemoryHandleTypeFlagBits VK_EXTERNAL_MEMORY_HANDLE_TYPE_ZIRCON_VMO_BIT_FUCHSIA =
     static_cast<VkExternalMemoryHandleTypeFlagBits>(0x00000800);
 constexpr VkExternalSemaphoreHandleTypeFlagBits
