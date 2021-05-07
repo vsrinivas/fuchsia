@@ -122,7 +122,7 @@ mod tests {
 
         assert_data_tree!(inspector, root: contains {
             "fuchsia.inspect.Stats": {
-                current_size: 65536u64,
+                current_size: 61440u64,
                 maximum_size: constants::DEFAULT_VMO_SIZE_BYTES as u64,
                 total_dynamic_children: 2u64,
             }

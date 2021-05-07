@@ -56,7 +56,7 @@ impl Heap {
         let next_order = match order_found {
             Some(order) => order,
             None => {
-                self.grow_heap(self.current_size_bytes * 2)?;
+                self.grow_heap(self.current_size_bytes + constants::PAGE_SIZE_BYTES)?;
                 constants::NUM_ORDERS - 1
             }
         };
@@ -431,19 +431,16 @@ mod tests {
             BlockDebug { index: 384, order: 7, block_type: BlockType::Free },
             BlockDebug { index: 512, order: 7, block_type: BlockType::Free },
             BlockDebug { index: 640, order: 7, block_type: BlockType::Free },
-            BlockDebug { index: 768, order: 7, block_type: BlockType::Free },
-            BlockDebug { index: 896, order: 7, block_type: BlockType::Free },
         ];
         validate(&expected, &heap);
+        assert_eq!(heap.current_size_bytes, 2048 * 4 + 4096);
         assert_eq!(heap.free_head_per_order[7], 512);
         assert_eq!(heap.get_block(512).unwrap().free_next_index().unwrap(), 384);
         assert_eq!(heap.get_block(384).unwrap().free_next_index().unwrap(), 256);
         assert_eq!(heap.get_block(256).unwrap().free_next_index().unwrap(), 128);
         assert_eq!(heap.get_block(128).unwrap().free_next_index().unwrap(), 0);
         assert_eq!(heap.get_block(0).unwrap().free_next_index().unwrap(), 640);
-        assert_eq!(heap.get_block(640).unwrap().free_next_index().unwrap(), 768);
-        assert_eq!(heap.get_block(768).unwrap().free_next_index().unwrap(), 896);
-        assert_eq!(heap.get_block(896).unwrap().free_next_index().unwrap(), 0);
+        assert_eq!(heap.get_block(640).unwrap().free_next_index().unwrap(), 0);
     }
 
     #[test]
