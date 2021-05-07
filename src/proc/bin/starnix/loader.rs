@@ -4,26 +4,18 @@
 
 use anyhow::{Context, Error};
 use fidl_fuchsia_io as fio;
-use fuchsia_zircon::{self as zx, AsHandleRef, Status, Task as zxTask};
+use fuchsia_zircon::{self as zx, AsHandleRef, Status};
 use process_builder::{elf_load, elf_parse};
 use std::ffi::{CStr, CString};
-use std::sync::Arc;
 
-use crate::auth::*;
-use crate::fs::{FileSystem, SyslogFile};
 use crate::mm::PAGE_SIZE;
 use crate::task::*;
 use crate::types::*;
 
-pub struct ProcessParameters {
-    pub name: CString,
-    pub argv: Vec<CString>,
-    pub environ: Vec<CString>,
-}
-
 fn populate_initial_stack(
     stack_vmo: &zx::Vmo,
-    params: &ProcessParameters,
+    argv: &Vec<CString>,
+    environ: &Vec<CString>,
     mut auxv: Vec<(u32, u64)>,
     stack_base: usize,
     original_stack_start_addr: usize,
@@ -32,10 +24,10 @@ fn populate_initial_stack(
     let write_stack = |data: &[u8], addr: usize| stack_vmo.write(data, (addr - stack_base) as u64);
 
     let mut string_data = vec![];
-    for arg in &params.argv {
+    for arg in argv {
         string_data.extend_from_slice(arg.as_bytes_with_nul());
     }
-    for env in &params.environ {
+    for env in environ {
         string_data.extend_from_slice(env.as_bytes_with_nul());
     }
     stack_pointer -= string_data.len();
@@ -58,18 +50,18 @@ fn populate_initial_stack(
     // and push it all at once.
     let mut main_data = vec![];
     // argc
-    let argc: u64 = params.argv.len() as u64;
+    let argc: u64 = argv.len() as u64;
     main_data.extend_from_slice(&argc.to_ne_bytes());
     // argv
     const ZERO: [u8; 8] = [0; 8];
     let mut next_string_addr = strings_addr;
-    for arg in &params.argv {
+    for arg in argv {
         main_data.extend_from_slice(&next_string_addr.to_ne_bytes());
         next_string_addr += arg.as_bytes_with_nul().len();
     }
     main_data.extend_from_slice(&ZERO);
     // environ
-    for env in &params.environ {
+    for env in environ {
         main_data.extend_from_slice(&next_string_addr.to_ne_bytes());
         next_string_addr += env.as_bytes_with_nul().len();
     }
@@ -113,15 +105,11 @@ fn load_elf(vmo: &zx::Vmo, vmar: &zx::Vmar) -> Result<LoadedElf, Error> {
 
 // TODO(tbodt): change to return an errno when it's time to implement execve
 pub fn load_executable(
-    kernel: &Arc<Kernel>,
+    task: &Task,
     executable: zx::Vmo,
-    params: &ProcessParameters,
-    fs: Arc<FileSystem>,
-) -> Result<(TaskOwner, zx::Channel), Error> {
-    let creds = Credentials { uid: 3, gid: 3, euid: 3, egid: 3 };
-    let task_owner = Task::new(&kernel, &params.name, fs.clone(), creds)?;
-    let task = &task_owner.task;
-
+    argv: &Vec<CString>,
+    environ: &Vec<CString>,
+) -> Result<(), Error> {
     // TODO: We don't keep track of the mappings created by load_elf in the MemoryManager.
     let main_elf = load_elf(&executable, &task.mm.root_vmar).context("Main ELF failed to load")?;
     let interp_elf = if let Some(interp_hdr) =
@@ -135,7 +123,7 @@ pub fn load_executable(
             interp = &interp[1..];
         }
         let interp_vmo = syncio::directory_open_vmo(
-            &fs.root,
+            &task.fs.root,
             interp,
             fio::VMO_FLAG_READ | fio::VMO_FLAG_EXEC,
             zx::Time::INFINITE,
@@ -160,12 +148,6 @@ pub fn load_executable(
         .context("failed to map stack")?;
     let stack = stack_base + stack_size - 8;
 
-    // TODO(tbodt): this would fit better elsewhere
-    let stdio = SyslogFile::new();
-    assert!(task.files.install_fd(stdio.clone()).unwrap().raw() == 0);
-    assert!(task.files.install_fd(stdio.clone()).unwrap().raw() == 1);
-    assert!(task.files.install_fd(stdio).unwrap().raw() == 2);
-
     let auxv = vec![
         (AT_UID, task.creds.uid as u64),
         (AT_EUID, task.creds.euid as u64),
@@ -178,12 +160,10 @@ pub fn load_executable(
         (AT_ENTRY, main_elf.bias.wrapping_add(main_elf.headers.file_header().entry) as u64),
         (AT_SECURE, 0),
     ];
-    let stack = populate_initial_stack(&stack_vmo, &params, auxv, stack_base, stack)?;
-
-    let exceptions = task.thread.create_exception_channel()?;
+    let stack = populate_initial_stack(&stack_vmo, argv, environ, auxv, stack_base, stack)?;
     task.thread_group.process.start(&task.thread, entry, stack, zx::Handle::invalid(), 0)?;
 
-    Ok((task_owner, exceptions))
+    Ok(())
 }
 
 #[cfg(test)]
@@ -197,15 +177,13 @@ mod tests {
         let stack_base: usize = 0x3000_0000;
         let original_stack_start_addr: usize = 0x3000_1000;
 
-        let params = ProcessParameters {
-            name: CString::new("trivial").unwrap(),
-            argv: vec![],
-            environ: vec![],
-        };
+        let argv = &vec![];
+        let environ = &vec![];
 
         let stack_start_addr = populate_initial_stack(
             &stack_vmo,
-            &params,
+            &argv,
+            &environ,
             vec![],
             stack_base,
             original_stack_start_addr,

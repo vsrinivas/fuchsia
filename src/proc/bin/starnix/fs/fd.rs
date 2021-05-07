@@ -191,13 +191,24 @@ struct FdTableEntry {
     flags: FdFlags,
 }
 
+impl FdTableEntry {
+    fn new(file: FileHandle) -> FdTableEntry {
+        FdTableEntry { file, flags: FdFlags::empty() }
+    }
+}
+
 pub struct FdTable {
     table: RwLock<HashMap<FdNumber, FdTableEntry>>,
 }
 
 impl FdTable {
-    pub fn new() -> FdTable {
-        FdTable { table: RwLock::new(HashMap::new()) }
+    pub fn new() -> Arc<FdTable> {
+        Arc::new(FdTable { table: RwLock::new(HashMap::new()) })
+    }
+
+    pub fn insert(&self, fd: FdNumber, file: FileHandle) {
+        let mut table = self.table.write();
+        table.insert(fd, FdTableEntry::new(file));
     }
 
     pub fn install_fd(&self, file: FileHandle) -> Result<FdNumber, Errno> {
@@ -206,7 +217,7 @@ impl FdTable {
         while table.contains_key(&fd) {
             fd = FdNumber::from_raw(fd.raw() + 1);
         }
-        table.insert(fd, FdTableEntry { file, flags: FdFlags::empty() });
+        table.insert(fd, FdTableEntry::new(file));
         Ok(fd)
     }
 
@@ -243,38 +254,38 @@ mod test {
 
     #[test]
     fn test_fd_table_install() {
-        let table = FdTable::new();
+        let files = FdTable::new();
         let file = SyslogFile::new();
 
-        let fd0 = table.install_fd(file.clone()).unwrap();
+        let fd0 = files.install_fd(file.clone()).unwrap();
         assert_eq!(fd0.raw(), 0);
-        let fd1 = table.install_fd(file.clone()).unwrap();
+        let fd1 = files.install_fd(file.clone()).unwrap();
         assert_eq!(fd1.raw(), 1);
 
-        assert!(Arc::ptr_eq(&table.get(fd0).unwrap(), &file));
-        assert!(Arc::ptr_eq(&table.get(fd1).unwrap(), &file));
-        assert_eq!(table.get(FdNumber::from_raw(fd1.raw() + 1)).map(|_| ()), Err(EBADF));
+        assert!(Arc::ptr_eq(&files.get(fd0).unwrap(), &file));
+        assert!(Arc::ptr_eq(&files.get(fd1).unwrap(), &file));
+        assert_eq!(files.get(FdNumber::from_raw(fd1.raw() + 1)).map(|_| ()), Err(EBADF));
     }
 
     #[test]
     fn test_fd_table_pack_values() {
-        let table = FdTable::new();
+        let files = FdTable::new();
         let file = SyslogFile::new();
 
         // Add two FDs.
-        let fd0 = table.install_fd(file.clone()).unwrap();
-        let fd1 = table.install_fd(file.clone()).unwrap();
+        let fd0 = files.install_fd(file.clone()).unwrap();
+        let fd1 = files.install_fd(file.clone()).unwrap();
         assert_eq!(fd0.raw(), 0);
         assert_eq!(fd1.raw(), 1);
 
         // Close FD 0
-        assert!(table.close(fd0).is_ok());
-        assert!(table.close(fd0).is_err());
+        assert!(files.close(fd0).is_ok());
+        assert!(files.close(fd0).is_err());
         // Now it's gone.
-        assert!(table.get(fd0).is_err());
+        assert!(files.get(fd0).is_err());
 
         // The next FD we insert fills in the hole we created.
-        let another_fd = table.install_fd(file.clone()).unwrap();
+        let another_fd = files.install_fd(file.clone()).unwrap();
         assert_eq!(another_fd.raw(), 0);
     }
 }

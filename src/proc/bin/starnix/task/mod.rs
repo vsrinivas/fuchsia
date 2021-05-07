@@ -190,26 +190,17 @@ impl Task {
     pub fn new(
         kernel: &Arc<Kernel>,
         name: &CString,
+        files: Arc<FdTable>,
         fs: Arc<FileSystem>,
         creds: Credentials,
     ) -> Result<TaskOwner, zx::Status> {
         let (process, root_vmar) = kernel.job.create_child_process(name.as_bytes())?;
         let thread = process.create_thread("initial-thread".as_bytes())?;
+
         // TODO: Stop giving MemoryManager a duplicate of the process handle once a process
         // handle is not needed to implement read_memory or write_memory.
         let duplicate_process = process.duplicate_handle(zx::Rights::SAME_RIGHTS)?;
-        return Task::create(kernel, fs, creds, process, root_vmar, thread, duplicate_process);
-    }
 
-    fn create(
-        kernel: &Arc<Kernel>,
-        fs: Arc<FileSystem>,
-        creds: Credentials,
-        process: zx::Process,
-        root_vmar: zx::Vmar,
-        thread: zx::Thread,
-        duplicate_process: zx::Process,
-    ) -> Result<TaskOwner, zx::Status> {
         let mut pids = kernel.pids.write();
         let id = pids.allocate_pid();
         let task = Arc::new(Task {
@@ -217,7 +208,7 @@ impl Task {
             thread_group: Arc::new(ThreadGroup::new(kernel.clone(), process, id)),
             parent: 0,
             thread,
-            files: Arc::new(FdTable::new()),
+            files,
             mm: Arc::new(MemoryManager::new(duplicate_process, root_vmar)),
             fs,
             creds: creds,
@@ -270,6 +261,7 @@ mod test {
         let another_task_owner = Task::new(
             &kernel,
             &CString::new("another-task").unwrap(),
+            FdTable::new(),
             task.fs.clone(),
             Credentials::default(),
         )

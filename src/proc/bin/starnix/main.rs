@@ -17,7 +17,7 @@ use fuchsia_component::server::ServiceFs;
 use fuchsia_zircon::{
     self as zx, sys::zx_exception_info_t, sys::ZX_EXCEPTION_STATE_HANDLED,
     sys::ZX_EXCEPTION_STATE_TRY_NEXT, sys::ZX_EXCP_POLICY_CODE_BAD_SYSCALL,
-    sys::ZX_EXCP_POLICY_ERROR, AsHandleRef,
+    sys::ZX_EXCP_POLICY_ERROR, AsHandleRef, Task as zxTask,
 };
 use futures::{StreamExt, TryStreamExt};
 use log::{error, info};
@@ -39,7 +39,8 @@ mod types;
 #[cfg(test)]
 mod testing;
 
-use crate::fs::FileSystem;
+use crate::auth::Credentials;
+use crate::fs::*;
 use crate::loader::*;
 use crate::syscalls::decls::SyscallDecl;
 use crate::syscalls::table::dispatch_syscall;
@@ -185,17 +186,25 @@ async fn start_component(
     )
     .map_err(|e| anyhow!("Failed to load executable: {}", e))?;
 
+    let name = CString::new(binary_path.clone())?;
+    let files = FdTable::new();
     let fs = Arc::new(FileSystem::new(root));
+    let creds = Credentials { uid: 3, gid: 3, euid: 3, egid: 3 };
 
-    let params = ProcessParameters {
-        name: CString::new(binary_path.clone())?,
-        argv: vec![CString::new(binary_path.clone())?],
-        environ: vec![],
-    };
+    let stdio = SyslogFile::new();
+    files.insert(FdNumber::from_raw(0), stdio.clone());
+    files.insert(FdNumber::from_raw(1), stdio.clone());
+    files.insert(FdNumber::from_raw(2), stdio);
+
+    let task_owner = Task::new(&kernel, &name, files, fs, creds)?;
+
+    let argv = vec![CString::new(binary_path.clone())?];
+    let environ = vec![];
 
     std::thread::spawn(move || {
         let err = (|| -> Result<(), Error> {
-            let (task_owner, exceptions) = load_executable(&kernel, executable_vmo, &params, fs)?;
+            let exceptions = task_owner.task.thread.create_exception_channel()?;
+            load_executable(&task_owner.task, executable_vmo, &argv, &environ)?;
             let exit_code = run_task(task_owner, exceptions)?;
 
             // TODO(fxb/74803): Using the component controller's epitaph may not be the best way to
