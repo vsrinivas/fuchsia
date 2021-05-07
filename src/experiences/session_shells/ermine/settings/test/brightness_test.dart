@@ -10,8 +10,8 @@ import 'package:mockito/mockito.dart';
 import 'package:settings/settings.dart';
 
 void main() {
-  MockControl control;
-  MockProxyController mockProxy;
+  late MockControl control;
+  late MockProxyController mockProxy;
 
   setUp(() async {
     control = MockControl();
@@ -30,13 +30,13 @@ void main() {
 
     // Should receive brightness spec.
     Spec spec = await brightness.getSpec();
-    expect(spec.groups.first.title, isNotNull);
-    expect(spec.groups.first.values.isEmpty, false);
+    expect(spec.groups?.first.title, isNotNull);
+    expect(spec.groups?.first.values?.isEmpty, false);
 
-    ProgressValue progress = spec.groups.first.values
-        .where((v) => v.$tag == ValueTag.progress)
+    ProgressValue? progress = spec.groups?.first.values
+        ?.where((v) => v.$tag == ValueTag.progress)
         .first
-        ?.progress;
+        .progress;
     expect(progress, isNotNull);
     expect(progress?.value, 0.8);
 
@@ -61,13 +61,13 @@ void main() {
 
     // Should follow immediately by brightness spec.
     spec = await brightness.getSpec();
-    expect(spec.groups.first.title, isNotNull);
-    expect(spec.groups.first.values.isEmpty, false);
+    expect(spec.groups?.first.title, isNotNull);
+    expect(spec.groups?.first.values?.isEmpty, false);
 
-    ProgressValue progress = spec.groups.first.values
-        .where((v) => v.$tag == ValueTag.progress)
+    ProgressValue? progress = spec.groups?.first.values
+        ?.where((v) => v.$tag == ValueTag.progress)
         .first
-        ?.progress;
+        .progress;
     expect(progress, isNotNull);
     expect(progress?.value, 0.3);
 
@@ -84,7 +84,7 @@ void main() {
 
     // Now set brightness to auto.
     brightness.update(Value.withButton(ButtonValue(
-      label: null,
+      label: 'label',
       action: Brightness.autoAction,
     )));
 
@@ -92,12 +92,12 @@ void main() {
 
     // Should follow immediately by brightness spec.
     spec = await brightness.getSpec();
-    expect(spec.groups.first.title, isNotNull);
-    expect(spec.groups.first.values.isEmpty, false);
+    expect(spec.groups?.first.title, isNotNull);
+    expect(spec.groups?.first.values?.isEmpty, false);
 
     // Should be MISSING a button to set auto brightness.
     final hasButton =
-        spec.groups.first.values.any((v) => v.$tag == ValueTag.button);
+        spec.groups?.first.values?.any((v) => v.$tag == ValueTag.button);
     expect(hasButton, isFalse);
 
     brightness.dispose();

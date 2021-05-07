@@ -20,9 +20,9 @@ class Bluetooth extends UiSpec {
   static String get _title => Strings.bluetooth;
   static String get _disconnect => Strings.disconnect.toUpperCase();
 
-  BluetoothModel model;
+  late BluetoothModel model;
 
-  Bluetooth({bt.ControlProxy monitor}) {
+  Bluetooth({required bt.ControlProxy monitor}) {
     model = BluetoothModel(
       monitor: monitor,
       onChange: _onChange,
@@ -42,9 +42,9 @@ class Bluetooth extends UiSpec {
   @override
   void update(Value value) async {
     if (value.$tag == ValueTag.text &&
-        value.text.action > 0 &&
-        value.text.text == _disconnect) {
-      final index = (value.text.action ^ QuickAction.submit.$value) ~/ 2;
+        value.text!.action > 0 &&
+        value.text!.text == _disconnect) {
+      final index = (value.text!.action ^ QuickAction.submit.$value) ~/ 2;
       await model.disconnectDevice(model.remoteDevices[index]);
     }
   }
@@ -61,7 +61,7 @@ class Bluetooth extends UiSpec {
     }
     final values = List<TextValue>.generate(devices.length * 2, (index) {
       return TextValue(
-        text: index.isEven ? devices[index ~/ 2].name : _disconnect,
+        text: index.isEven ? devices[index ~/ 2].name! : _disconnect,
         action: index.isEven
             ? (QuickAction.submit.$value | (index))
             : (QuickAction.submit.$value | (index - 1)),
@@ -78,14 +78,14 @@ class Bluetooth extends UiSpec {
 
 class BluetoothModel {
   final VoidCallback onChange;
-  bt.ControlProxy _monitor;
+  late bt.ControlProxy _monitor;
 
-  StreamSubscription _bluetoothSubscription;
-  List<bt.RemoteDevice> _bluetoothDevices;
+  late StreamSubscription _bluetoothSubscription;
+  late List<bt.RemoteDevice> _bluetoothDevices;
 
   BluetoothModel({
-    @required this.onChange,
-    bt.ControlProxy monitor,
+    required this.onChange,
+    bt.ControlProxy? monitor,
   }) {
     _monitor = monitor ?? bt.ControlProxy();
     _bluetoothDevices = <bt.RemoteDevice>[];
@@ -99,8 +99,8 @@ class BluetoothModel {
 
   void loadInitialBluetoothDevices() async {
     final remoteDevices = await _monitor.getKnownRemoteDevices();
-    await Future.forEach(remoteDevices, (device) async {
-      if (device != null && device.connected) {
+    await Future.forEach<bt.RemoteDevice>(remoteDevices, (device) async {
+      if (device.connected) {
         if (device.name != null) {
           _bluetoothDevices.add(device);
         }
@@ -110,8 +110,9 @@ class BluetoothModel {
   }
 
   void listConnectedBluetoothDevices() async {
-    final remoteDevices = List.from(await _monitor.getKnownRemoteDevices());
-    await Future.forEach(remoteDevices, (device) async {
+    final remoteDevices =
+        List<bt.RemoteDevice>.from(await _monitor.getKnownRemoteDevices());
+    await Future.forEach<bt.RemoteDevice>(remoteDevices, (device) async {
       final deviceIdentifiers =
           _bluetoothDevices.map((btDevice) => btDevice.identifier);
       bool isPreviouslyConnectedDevice =
@@ -120,12 +121,12 @@ class BluetoothModel {
         if (!device.connected) {
           _bluetoothDevices
               .removeWhere((dv) => dv.identifier == device.identifier);
-          onChange?.call();
+          onChange();
         }
-      } else if (device != null && device.connected) {
+      } else if (device.connected) {
         if (device.name != null) {
           _bluetoothDevices.add(device);
-          onChange?.call();
+          onChange();
         }
       }
     });

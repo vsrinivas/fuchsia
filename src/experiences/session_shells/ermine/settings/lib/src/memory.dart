@@ -19,9 +19,9 @@ import 'package:quickui/quickui.dart';
 class Memory extends UiSpec {
   static String get _memory => Strings.memory;
 
-  MemoryModel model;
+  late MemoryModel model;
 
-  Memory({Monitor monitor, WatcherBinding binding}) {
+  Memory({required Monitor monitor, WatcherBinding? binding}) {
     model = MemoryModel(
       monitor: monitor,
       binding: binding,
@@ -61,14 +61,14 @@ class Memory extends UiSpec {
 class MemoryModel {
   final VoidCallback onChange;
   final WatcherBinding _binding;
-  double memUsed;
-  double memTotal;
-  double _memory;
+  late double memUsed;
+  late double memTotal;
+  late double _memory;
 
   MemoryModel({
-    @required this.onChange,
-    WatcherBinding binding,
-    Monitor monitor,
+    required this.onChange,
+    required Monitor monitor,
+    WatcherBinding? binding,
   }) : _binding = binding ?? WatcherBinding() {
     monitor.watch(_binding.wrap(_MonitorWatcherImpl(this)));
   }
@@ -80,7 +80,7 @@ class MemoryModel {
   double get memory => _memory;
   set memory(double value) {
     _memory = value;
-    onChange?.call();
+    onChange();
   }
 
   void updateMem(Stats stats) {

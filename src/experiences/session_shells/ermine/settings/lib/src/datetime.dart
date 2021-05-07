@@ -20,7 +20,7 @@ class Datetime extends UiSpec {
   // Action to change timezone.
   static int changeAction = QuickAction.details.$value;
 
-  Timer _timer;
+  late Timer _timer;
 
   Datetime() {
     _timer = Timer.periodic(refreshDuration, (_) => _onChange());
@@ -36,7 +36,7 @@ class Datetime extends UiSpec {
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _timer.cancel();
   }
 
   static Spec _specForDateTime() {

@@ -21,10 +21,13 @@ class TimeZone extends UiSpec {
   // Action to change timezone.
   static int changeAction = QuickAction.details.$value;
 
-  _TimeZoneModel model;
+  late _TimeZoneModel model;
   Future<List<TimeZoneInfo>> Function() timeZonesProvider;
 
-  TimeZone({IntlProxy intlSettingsService, this.timeZonesProvider}) {
+  TimeZone({
+    required IntlProxy intlSettingsService,
+    required this.timeZonesProvider,
+  }) {
     model = _TimeZoneModel(
       intlSettingsService: intlSettingsService,
       onChange: _onChange,
@@ -50,13 +53,13 @@ class TimeZone extends UiSpec {
   @override
   void update(Value value) async {
     if (value.$tag == ValueTag.button &&
-        value.button.action == QuickAction.cancel.$value) {
+        value.button!.action == QuickAction.cancel.$value) {
       spec = await _specForTimeZone(model);
-    } else if (value.$tag == ValueTag.text && value.text.action > 0) {
-      if (value.text.action == changeAction) {
+    } else if (value.$tag == ValueTag.text && value.text!.action > 0) {
+      if (value.text!.action == changeAction) {
         spec = await _specForTimeZone(model, changeAction);
       } else {
-        final index = value.text.action ^ QuickAction.submit.$value;
+        final index = value.text!.action ^ QuickAction.submit.$value;
         model.timeZoneId = (await timeZonesProvider())[index].zoneId;
         spec = await _specForTimeZone(model);
       }
@@ -73,7 +76,7 @@ class TimeZone extends UiSpec {
       return Spec(title: _title, groups: [
         Group(title: _title, values: [
           Value.withText(TextValue(
-            text: model.timeZoneId,
+            text: model.timeZoneId!,
             action: changeAction,
           )),
         ]),
@@ -99,7 +102,14 @@ class TimeZone extends UiSpec {
         ]),
       ]);
     } else {
-      return null;
+      return Spec(title: _title, groups: [
+        Group(title: _title, values: [
+          Value.withText(TextValue(
+            text: model.timeZoneId!,
+            action: changeAction,
+          )),
+        ]),
+      ]);
     }
   }
 }
@@ -108,38 +118,35 @@ class _TimeZoneModel {
   IntlProxy intlSettingsService;
   final VoidCallback onChange;
 
-  IntlSettings _intlSettings;
+  IntlSettings? _intlSettings;
 
-  _TimeZoneModel({this.intlSettingsService, this.onChange}) {
+  _TimeZoneModel({required this.intlSettingsService, required this.onChange}) {
     // Get current timezone and watch it for changes.
     intlSettingsService.watch().then(_onIntlSettingsChange);
   }
 
   Future<void> _onIntlSettingsChange(IntlSettings intlSettings) async {
     bool timeZoneChanged = (_intlSettings == null) ||
-        (_intlSettings.timeZoneId.id != intlSettings.timeZoneId.id);
+        (_intlSettings?.timeZoneId?.id != intlSettings.timeZoneId?.id);
     _intlSettings = intlSettings;
     if (timeZoneChanged) {
       onChange();
     }
     // Use the FIDL "hanging get" pattern to request the next update.
-    if (intlSettingsService != null) {
-      await intlSettingsService.watch().then(_onIntlSettingsChange);
-    }
+    await intlSettingsService.watch().then(_onIntlSettingsChange);
   }
 
   void dispose() {
     intlSettingsService.ctrl.close();
-    intlSettingsService = null;
   }
 
-  String get timeZoneId =>
-      _intlSettings == null ? null : _intlSettings.timeZoneId.id;
-  set timeZoneId(String value) {
+  String? get timeZoneId =>
+      _intlSettings == null ? null : _intlSettings?.timeZoneId?.id;
+  set timeZoneId(String? value) {
     final IntlSettings newIntlSettings = IntlSettings(
-        locales: _intlSettings.locales,
-        temperatureUnit: _intlSettings.temperatureUnit,
-        timeZoneId: TimeZoneId(id: value));
+        locales: _intlSettings?.locales,
+        temperatureUnit: _intlSettings?.temperatureUnit,
+        timeZoneId: TimeZoneId(id: value!));
     intlSettingsService.set(newIntlSettings);
   }
 }
@@ -149,7 +156,7 @@ class TimeZoneInfo {
   /// The ICU standard zone ID.
   final String zoneId;
 
-  const TimeZoneInfo({this.zoneId});
+  const TimeZoneInfo({required this.zoneId});
 }
 
 // Loads and caches a list of time zones from the Ermine package.

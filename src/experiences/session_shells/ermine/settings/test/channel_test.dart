@@ -16,7 +16,7 @@ const List<String> channels = [
 ];
 
 void main() {
-  MockControl control;
+  late MockControl control;
 
   setUp(() async {
     control = MockControl();
@@ -30,7 +30,7 @@ void main() {
     Spec spec = await channel.getSpec();
 
     expect(spec.title, 'Channel');
-    expect(spec.groups.first.values.first.text.text, channels[0]);
+    expect(spec.groups?.first.values?.first.text?.text, channels[0]);
   });
 
   test('Change Channel', () async {
@@ -41,7 +41,7 @@ void main() {
     Spec specA = await channel.getSpec();
 
     expect(specA.title, 'Channel');
-    expect(specA.groups.first.values.first.text.text, channels[0]);
+    expect(specA.groups?.first.values?.first.text?.text, channels[0]);
 
     // Change channel
     channel.model.channel = channels[1];
@@ -49,8 +49,7 @@ void main() {
     // Wait one event cycle for the change
     await channel.getSpec();
     Spec specB = await channel.getSpec();
-    print(specB.groups.first.values.first.text);
-    expect(specB.groups.first.values.first.text.text, channels[1]);
+    expect(specB.groups?.first.values?.first.text?.text, channels[1]);
   });
 }
 

@@ -16,25 +16,25 @@ enum TileType { content, row, column, custom }
 /// The [content] of tile holds a reference to an arbitrary object, that is
 /// passed to the caller during the construction of the tile's chrome widget.
 class TileModel<T> extends ChangeNotifier {
-  TileModel<T> parent;
+  TileModel<T>? parent;
   TileType _type;
-  T content;
+  T? content;
   double flex;
-  Offset position;
+  Offset? position;
   final Size _minSize;
-  List<TileModel<T>> tiles;
+  late List<TileModel<T>> tiles;
 
   TileModel({
-    @required TileType type,
-    this.parent,
+    required TileType type,
     this.content,
-    this.tiles,
+    this.parent,
+    List<TileModel<T>>? tiles,
     this.flex = 1,
     this.position = Offset.zero,
     Size minSize = Size.zero,
   })  : _minSize = minSize,
         _type = type {
-    tiles ??= <TileModel<T>>[];
+    this.tiles = tiles ?? [];
     traverse(tile: this, callback: (tile, parent) => tile.parent = parent);
   }
 
@@ -77,7 +77,7 @@ class TileModel<T> extends ChangeNotifier {
   }
 
   void resize(double delta) {
-    parent.type == TileType.column
+    parent?.type == TileType.column
         ? flex += flex / width * delta
         : flex += flex / height * delta;
 
@@ -89,7 +89,7 @@ class TileModel<T> extends ChangeNotifier {
       : tiles.map((tile) => tile.minSize).reduce(
           (s1, s2) => Size(max(s1.width, s2.width), max(s1.height, s2.height)));
 
-  bool get overflowed => parent.type == TileType.column
+  bool get overflowed => parent?.type == TileType.column
       ? width < minSize.width
       : height < minSize.height;
 

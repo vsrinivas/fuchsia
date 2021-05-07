@@ -15,7 +15,7 @@ class TilerModel<T> extends ChangeNotifier {
   final TileModel<T> _root;
   final List<TileModel<T>> _floats;
 
-  TilerModel({TileModel<T> root, List<TileModel<T>> floats})
+  TilerModel({TileModel<T>? root, List<TileModel<T>>? floats})
       : _root = root ?? TileModel<T>(type: TileType.column),
         _floats = floats ?? <TileModel<T>>[] {
     if (!_root.isCollection) {
@@ -29,7 +29,7 @@ class TilerModel<T> extends ChangeNotifier {
   List<TileModel<T>> get floats => _floats;
 
   /// Returns the tile next to [tile] in the given [direction].
-  TileModel<T> navigate(AxisDirection direction, [TileModel<T> tile]) {
+  TileModel<T>? navigate(AxisDirection direction, [TileModel<T>? tile]) {
     if (tile == null) {
       return _first(root);
     } else if (tile.isFloating && floats.contains(tile)) {
@@ -57,8 +57,8 @@ class TilerModel<T> extends ChangeNotifier {
   /// Adds a new tile with [content] next to currently focused tile in the
   /// [direction] specified.
   TileModel<T> add({
-    TileModel<T> nearTile,
-    T content,
+    TileModel<T>? nearTile,
+    T? content,
     AxisDirection direction = AxisDirection.right,
     Size minSize = Size.zero,
   }) {
@@ -127,8 +127,8 @@ class TilerModel<T> extends ChangeNotifier {
   /// Returns a new tile after splitting the supplied [tile] in the [direction].
   /// The [tile] is split such that new tile has supplied [flex].
   TileModel<T> split({
-    @required TileModel<T> tile,
-    T content,
+    TileModel<T>? tile,
+    T? content,
     AxisDirection direction = AxisDirection.right,
     double flex = 0.5,
     Size minSize = Size.zero,
@@ -144,8 +144,8 @@ class TilerModel<T> extends ChangeNotifier {
       minSize: minSize,
     );
 
-    final parent = tile.parent;
-    int index = parent?.tiles?.indexOf(tile) ?? 0;
+    final parent = tile!.parent;
+    int index = parent?.tiles.indexOf(tile) ?? 0;
     parent?.remove(tile);
 
     final newParent = TileModel<T>(
@@ -165,11 +165,11 @@ class TilerModel<T> extends ChangeNotifier {
   /// Removes the [tile] and it's parent if it is empty, recursively. Does not
   /// remove the root. If root type was [TileType.content], converts it to
   /// a collection type [TileType.column].
-  void remove(TileModel<T> tile) {
+  void remove(TileModel<T>? tile) {
     assert(tile != null);
 
-    void _remove(TileModel<T> tile) {
-      final parent = tile.parent;
+    void _remove(TileModel<T>? tile) {
+      final parent = tile!.parent;
       // Don't remove root tile.
       if (parent != null) {
         parent.remove(tile);
@@ -180,7 +180,7 @@ class TilerModel<T> extends ChangeNotifier {
           // Move the only child to it's grandparent.
           final child = parent.tiles.first;
           final grandparent = parent.parent;
-          final index = grandparent.tiles.indexOf(parent);
+          final index = grandparent!.tiles.indexOf(parent);
           parent.remove(child);
           grandparent
             ..remove(parent)
@@ -193,24 +193,24 @@ class TilerModel<T> extends ChangeNotifier {
   }
 
   void floatTile(TileModel<T> tile) {
-    tile.parent.tiles.remove(tile);
+    tile.parent!.tiles.remove(tile);
     tile.parent = null;
     floats.add(tile);
 
-    SchedulerBinding.instance.scheduleTask(notifyListeners, Priority.idle);
+    SchedulerBinding.instance!.scheduleTask(notifyListeners, Priority.idle);
   }
 
   /// Returns the tile next to [tile] in a column or row. If [tile] is the last
   /// tile in the parent, it returns the next ancestor column or row. This is
   /// usefule for finding the tile to the right or below the given [tile].
-  TileModel _next(TileModel tile, TileType type) {
+  TileModel<T>? _next(TileModel<T>? tile, TileType type) {
     if (tile == null || tile.parent == null) {
       return null;
     }
-    assert(tile.parent.tiles.contains(tile));
+    assert(tile.parent!.tiles.contains(tile));
 
-    final tiles = tile.parent.tiles;
-    if (tile.parent.type == type && tile != tiles.last) {
+    final tiles = tile.parent!.tiles;
+    if (tile.parent!.type == type && tile != tiles.last) {
       int index = tiles.indexOf(tile);
       return tiles[index + 1];
     }
@@ -220,14 +220,14 @@ class TilerModel<T> extends ChangeNotifier {
   /// Returns the tile previous to [tile] in a column or row. If [tile] is the
   /// last tile in the parent, it returns the previous ancestor column or row.
   /// This is useful for finding the tile to the left or above the given [tile].
-  TileModel _previous(TileModel tile, TileType type) {
+  TileModel<T>? _previous(TileModel<T>? tile, TileType type) {
     if (tile == null || tile.parent == null) {
       return null;
     }
-    assert(tile.parent.tiles.contains(tile));
+    assert(tile.parent!.tiles.contains(tile));
 
-    final tiles = tile.parent.tiles;
-    if (tile.parent.type == type && tile != tiles.first) {
+    final tiles = tile.parent!.tiles;
+    if (tile.parent!.type == type && tile != tiles.first) {
       int index = tiles.indexOf(tile);
       return tiles[index - 1];
     }
@@ -235,7 +235,7 @@ class TilerModel<T> extends ChangeNotifier {
   }
 
   /// Returns the leaf tile node given a [tile] using depth first search.
-  TileModel _first(TileModel tile) {
+  TileModel<T>? _first(TileModel<T>? tile) {
     if (tile == null || tile.isContent) {
       return tile;
     }
@@ -243,7 +243,7 @@ class TilerModel<T> extends ChangeNotifier {
   }
 
   /// Returns the leaf tile node given a [tile] using depth last search.
-  TileModel _last(TileModel tile) {
+  TileModel<T>? _last(TileModel<T>? tile) {
     if (tile == null || tile.isContent) {
       return tile;
     }

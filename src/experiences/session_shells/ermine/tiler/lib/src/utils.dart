@@ -32,12 +32,12 @@ enum Traversal { depthFirst, depthLast }
 /// Traverse the tree rooted at [tile] in [order] and call [callback] at each
 /// node, unless [contentOnly] was set to [true].
 void traverse<T>({
-  TileModel<T> tile,
+  required TileModel<T> tile,
+  required void callback(TileModel<T> tile, TileModel<T>? parent),
   Traversal order = Traversal.depthFirst,
   bool contentOnly = false,
-  void callback(TileModel<T> tile, TileModel<T> parent),
 }) {
-  void _traverse(TileModel<T> t, TileModel<T> p) {
+  void _traverse(TileModel<T> t, TileModel<T>? p) {
     if (t.isContent || !contentOnly) {
       callback(t, p);
     }

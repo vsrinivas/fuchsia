@@ -20,28 +20,28 @@ void main() {
 
     // Should receive volume spec.
     Spec spec = await volume.getSpec();
-    expect(spec.groups.first.title, isNotNull);
-    expect(spec.groups.first.values.isEmpty, false);
+    expect(spec.groups?.first.title, isNotNull);
+    expect(spec.groups?.first.values?.isEmpty, false);
 
     // Confirm progress value is correct
-    ProgressValue progress = spec.groups.first.values
-        .where((v) => v.$tag == ValueTag.progress)
+    ProgressValue? progress = spec.groups?.first.values
+        ?.where((v) => v.$tag == ValueTag.progress)
         .first
-        ?.progress;
+        .progress;
     expect(progress, isNotNull);
     expect(progress?.value, 0.8);
 
     // Confirm text displayed is correct
-    TextValue text = spec.groups.first.values
-        .where((v) => v.$tag == ValueTag.text)
+    TextValue? text = spec.groups?.first.values
+        ?.where((v) => v.$tag == ValueTag.text)
         .first
-        ?.text;
+        .text;
     expect(text?.text, '80');
 
     // Confirm min & max buttons are present
-    Iterable hasButtons =
-        spec.groups.first.values.where((v) => v.$tag == ValueTag.button);
-    expect(hasButtons.length, 2);
+    Iterable? hasButtons =
+        spec.groups?.first.values?.where((v) => v.$tag == ValueTag.button);
+    expect(hasButtons?.length, 2);
 
     volume.dispose();
   });
@@ -55,22 +55,22 @@ void main() {
 
     // Should receive volume spec.
     Spec spec = await volume.getSpec();
-    expect(spec.groups.first.title, isNotNull);
-    expect(spec.groups.first.values.isEmpty, false);
+    expect(spec.groups?.first.title, isNotNull);
+    expect(spec.groups?.first.values?.isEmpty, false);
 
     // Confirm progress value is correct
-    ProgressValue progress = spec.groups.first.values
-        .where((v) => v.$tag == ValueTag.progress)
+    ProgressValue? progress = spec.groups?.first.values
+        ?.where((v) => v.$tag == ValueTag.progress)
         .first
-        ?.progress;
+        .progress;
     expect(progress, isNotNull);
     expect(progress?.value, 0.8);
 
     // Confirm text displayed is correct
-    TextValue text = spec.groups.first.values
-        .where((v) => v.$tag == ValueTag.text)
+    TextValue? text = spec.groups?.first.values
+        ?.where((v) => v.$tag == ValueTag.text)
         .first
-        ?.text;
+        .text;
     expect(text?.text, '80');
 
     // Change volume level
@@ -78,27 +78,27 @@ void main() {
 
     // Should receive volume spec.
     spec = await volume.getSpec();
-    expect(spec.groups.first.title, isNotNull);
-    expect(spec.groups.first.values.isEmpty, false);
+    expect(spec.groups?.first.title, isNotNull);
+    expect(spec.groups?.first.values?.isEmpty, false);
 
-    progress = spec.groups.first.values
-        .where((v) => v.$tag == ValueTag.progress)
+    progress = spec.groups?.first.values
+        ?.where((v) => v.$tag == ValueTag.progress)
         .first
-        ?.progress;
+        .progress;
     expect(progress, isNotNull);
     expect(progress?.value, 0.9);
 
     // Confirm text displayed is correct
-    text = spec.groups.first.values
-        .where((v) => v.$tag == ValueTag.text)
+    text = spec.groups?.first.values
+        ?.where((v) => v.$tag == ValueTag.text)
         .first
-        ?.text;
+        .text;
     expect(text?.text, '90');
 
     // Confirm min & max buttons are present
-    Iterable hasButtons =
-        spec.groups.first.values.where((v) => v.$tag == ValueTag.button);
-    expect(hasButtons.length, 2);
+    Iterable? hasButtons =
+        spec.groups?.first.values?.where((v) => v.$tag == ValueTag.button);
+    expect(hasButtons?.length, 2);
 
     volume.dispose();
   });
@@ -112,22 +112,22 @@ void main() {
 
     // Should receive volume spec.
     Spec spec = await volume.getSpec();
-    expect(spec.groups.first.title, isNotNull);
-    expect(spec.groups.first.values.isEmpty, false);
+    expect(spec.groups?.first.title, isNotNull);
+    expect(spec.groups?.first.values?.isEmpty, false);
 
     // Confirm progress value is correct
-    ProgressValue progress = spec.groups.first.values
-        .where((v) => v.$tag == ValueTag.progress)
+    ProgressValue? progress = spec.groups?.first.values
+        ?.where((v) => v.$tag == ValueTag.progress)
         .first
-        ?.progress;
+        .progress;
     expect(progress, isNotNull);
     expect(progress?.value, 1);
 
     // Confirm text displayed is correct
-    TextValue text = spec.groups.first.values
-        .where((v) => v.$tag == ValueTag.text)
+    TextValue? text = spec.groups?.first.values
+        ?.where((v) => v.$tag == ValueTag.text)
         .first
-        ?.text;
+        .text;
     expect(text?.text, '100');
 
     // Change volume level above max accepted dB
@@ -135,28 +135,28 @@ void main() {
 
     // Should receive volume spec.
     spec = await volume.getSpec();
-    expect(spec.groups.first.title, isNotNull);
-    expect(spec.groups.first.values.isEmpty, false);
+    expect(spec.groups?.first.title, isNotNull);
+    expect(spec.groups?.first.values?.isEmpty, false);
 
     // Confirm volume is still at max
-    progress = spec.groups.first.values
-        .where((v) => v.$tag == ValueTag.progress)
+    progress = spec.groups?.first.values
+        ?.where((v) => v.$tag == ValueTag.progress)
         .first
-        ?.progress;
+        .progress;
     expect(progress, isNotNull);
     expect(progress?.value, 1);
 
     // Confirm text displayed is correct
-    text = spec.groups.first.values
-        .where((v) => v.$tag == ValueTag.text)
+    text = spec.groups?.first.values
+        ?.where((v) => v.$tag == ValueTag.text)
         .first
-        ?.text;
+        .text;
     expect(text?.text, '100');
 
     // Confirm min & max buttons are present
-    Iterable hasButtons =
-        spec.groups.first.values.where((v) => v.$tag == ValueTag.button);
-    expect(hasButtons.length, 2);
+    Iterable? hasButtons =
+        spec.groups?.first.values?.where((v) => v.$tag == ValueTag.button);
+    expect(hasButtons?.length, 2);
 
     volume.dispose();
   });
@@ -170,22 +170,22 @@ void main() {
 
     // Should receive volume spec.
     Spec spec = await volume.getSpec();
-    expect(spec.groups.first.title, isNotNull);
-    expect(spec.groups.first.values.isEmpty, false);
+    expect(spec.groups?.first.title, isNotNull);
+    expect(spec.groups?.first.values?.isEmpty, false);
 
     // Confirm progress value is correct
-    ProgressValue progress = spec.groups.first.values
-        .where((v) => v.$tag == ValueTag.progress)
+    ProgressValue? progress = spec.groups?.first.values
+        ?.where((v) => v.$tag == ValueTag.progress)
         .first
-        ?.progress;
+        .progress;
     expect(progress, isNotNull);
     expect(progress?.value, 0);
 
     // Confirm text displayed is correct
-    TextValue text = spec.groups.first.values
-        .where((v) => v.$tag == ValueTag.text)
+    TextValue? text = spec.groups?.first.values
+        ?.where((v) => v.$tag == ValueTag.text)
         .first
-        ?.text;
+        .text;
     expect(text?.text, '0');
 
     // Change volume level below min accepted dB
@@ -193,28 +193,28 @@ void main() {
 
     // Should receive volume spec.
     spec = await volume.getSpec();
-    expect(spec.groups.first.title, isNotNull);
-    expect(spec.groups.first.values.isEmpty, false);
+    expect(spec.groups?.first.title, isNotNull);
+    expect(spec.groups?.first.values?.isEmpty, false);
 
     // Confirm volume is still at min
-    progress = spec.groups.first.values
-        .where((v) => v.$tag == ValueTag.progress)
+    progress = spec.groups?.first.values
+        ?.where((v) => v.$tag == ValueTag.progress)
         .first
-        ?.progress;
+        .progress;
     expect(progress, isNotNull);
     expect(progress?.value, 0);
 
     // Confirm text displayed is correct
-    text = spec.groups.first.values
-        .where((v) => v.$tag == ValueTag.text)
+    text = spec.groups?.first.values
+        ?.where((v) => v.$tag == ValueTag.text)
         .first
-        ?.text;
+        .text;
     expect(text?.text, '0');
 
     // Confirm min & max buttons are present
-    Iterable hasButtons =
-        spec.groups.first.values.where((v) => v.$tag == ValueTag.button);
-    expect(hasButtons.length, 2);
+    Iterable? hasButtons =
+        spec.groups?.first.values?.where((v) => v.$tag == ValueTag.button);
+    expect(hasButtons?.length, 2);
 
     volume.dispose();
   });

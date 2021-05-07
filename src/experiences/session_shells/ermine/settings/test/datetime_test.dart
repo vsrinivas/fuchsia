@@ -12,7 +12,7 @@ void main() {
     var spec = await datetime.getSpec();
 
     expect(spec.title, isNotNull);
-    expect(spec.groups.first.values.first.text.text, isNotNull);
+    expect(spec.groups?.first.values?.first.text?.text, isNotNull);
 
     // Make sure the next update is received after [Datetime.refreshDuration].
     spec = await datetime.getSpec();

@@ -21,14 +21,14 @@ typedef CustomTilesBuilder<T> = Widget Function(
 class Tile<T> extends StatelessWidget {
   final TileModel<T> model;
   final TileChromeBuilder<T> chromeBuilder;
-  final TileSizerBuilder sizerBuilder;
-  final CustomTilesBuilder<T> customTilesBuilder;
-  final double sizerThickness;
-  final ValueChanged<TileModel<T>> onFloat;
+  final TileSizerBuilder? sizerBuilder;
+  final CustomTilesBuilder<T>? customTilesBuilder;
+  final double? sizerThickness;
+  final ValueChanged<TileModel<T>>? onFloat;
 
   const Tile({
-    @required this.model,
-    @required this.chromeBuilder,
+    required this.model,
+    required this.chromeBuilder,
     this.customTilesBuilder,
     this.sizerBuilder,
     this.sizerThickness,
@@ -65,7 +65,7 @@ class Tile<T> extends StatelessWidget {
                 availableTiles
                     .where((t) => !tiles.contains(t))
                     .toList()
-                    .forEach(onFloat?.call);
+                    .forEach(onFloat!);
 
                 // All tiles fit, set flex,width and height and return tiles.
                 final flex = _totalFlex(tiles);
@@ -134,12 +134,12 @@ class Tile<T> extends StatelessWidget {
   }
 
   Widget _tileBuilder({
-    TileModel<T> tile,
-    TileChromeBuilder<T> chromeBuilder,
-    TileSizerBuilder sizerBuilder,
-    CustomTilesBuilder<T> customTilesBuilder,
-    ValueChanged<TileModel<T>> onFloat,
-    double sizerThickness,
+    required TileModel<T> tile,
+    required TileChromeBuilder<T> chromeBuilder,
+    TileSizerBuilder? sizerBuilder,
+    CustomTilesBuilder<T>? customTilesBuilder,
+    ValueChanged<TileModel<T>>? onFloat,
+    double? sizerThickness,
   }) =>
       AnimatedBuilder(
         animation: tile,
@@ -152,10 +152,10 @@ class Tile<T> extends StatelessWidget {
           sizerThickness: sizerThickness,
         ),
         builder: (context, child) => SizedBox(
-              width: tile.width,
-              height: tile.height,
-              child: child,
-            ),
+          width: tile.width,
+          height: tile.height,
+          child: child,
+        ),
       );
 
   /// Fit as many tiles as possible within [size].
@@ -195,10 +195,10 @@ class Tile<T> extends StatelessWidget {
 
     // Calculate the width/height of a tile minus sizer thickness.
     final width = type == TileType.column
-        ? (size.width - sizerThickness * numSizers)
+        ? (size.width - sizerThickness! * numSizers)
         : size.width;
     final height = type == TileType.row
-        ? (size.height - sizerThickness * numSizers)
+        ? (size.height - sizerThickness! * numSizers)
         : size.height;
     return Size(width, height);
   }

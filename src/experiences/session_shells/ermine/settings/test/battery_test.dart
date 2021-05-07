@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:fidl/fidl.dart';
 import 'package:fidl_fuchsia_ui_remotewidgets/fidl_async.dart';
 import 'package:fidl_fuchsia_power/fidl_async.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -22,12 +23,12 @@ void main() {
 
     final spec = await battery.getSpec();
 
-    TextValue text = spec.groups.first.values
-        .where((v) => v.$tag == ValueTag.text)
+    TextValue? text = spec.groups?.first.values
+        ?.where((v) => v.$tag == ValueTag.text)
         .first
-        ?.text;
-    expect(spec.groups.first.title, isNotNull);
-    expect(spec.groups.first.values.isEmpty, false);
+        .text;
+    expect(spec.groups?.first.title, isNotNull);
+    expect(spec.groups?.first.values?.isEmpty, false);
     expect(text?.text, '5%');
   });
 
@@ -44,12 +45,12 @@ void main() {
 
     final spec = await battery.getSpec();
 
-    TextValue text = spec.groups.first.values
-        .where((v) => v.$tag == ValueTag.text)
+    TextValue? text = spec.groups?.first.values
+        ?.where((v) => v.$tag == ValueTag.text)
         .first
-        ?.text;
-    expect(spec.groups.first.title, isNotNull);
-    expect(spec.groups.first.values.isEmpty, false);
+        .text;
+    expect(spec.groups?.first.title, isNotNull);
+    expect(spec.groups?.first.values?.isEmpty, false);
     expect(text?.text, '5%');
 
     // Change battery level
@@ -58,12 +59,12 @@ void main() {
 
     final updatedSpec = await battery.getSpec();
 
-    text = updatedSpec.groups.first.values
-        .where((v) => v.$tag == ValueTag.text)
+    text = updatedSpec.groups?.first.values
+        ?.where((v) => v.$tag == ValueTag.text)
         .first
-        ?.text;
-    expect(spec.groups.first.title, isNotNull);
-    expect(spec.groups.first.values.isEmpty, false);
+        .text;
+    expect(spec.groups?.first.title, isNotNull);
+    expect(spec.groups?.first.values?.isEmpty, false);
     expect(text?.text, '6%');
   });
 
@@ -80,15 +81,16 @@ void main() {
 
     Spec spec = await battery.getSpec();
 
-    TextValue text = spec.groups.first.values
-        .where((v) => v.$tag == ValueTag.text)
+    TextValue? text = spec.groups?.first.values
+        ?.where((v) => v.$tag == ValueTag.text)
         .first
-        ?.text;
-    expect(spec.groups.first.title, isNotNull);
-    expect(spec.groups.first.values.isEmpty, false);
+        .text;
+    expect(spec.groups?.first.title, isNotNull);
+    expect(spec.groups?.first.values?.isEmpty, false);
     expect(text?.text, '50%');
 
-    bool hasIcon = spec.groups.first.values.any((v) => v.$tag == ValueTag.icon);
+    bool? hasIcon =
+        spec.groups?.first.values?.any((v) => v.$tag == ValueTag.icon);
     expect(hasIcon, isFalse);
 
     // Change charging status
@@ -96,15 +98,15 @@ void main() {
         _buildStats(51, BatteryStatus.ok, ChargeStatus.charging));
 
     spec = await battery.getSpec();
-    text = spec.groups.first.values
-        .where((v) => v.$tag == ValueTag.text)
+    text = spec.groups?.first.values
+        ?.where((v) => v.$tag == ValueTag.text)
         .first
-        ?.text;
-    expect(spec.groups.first.title, isNotNull);
-    expect(spec.groups.first.values.isEmpty, false);
+        .text;
+    expect(spec.groups?.first.title, isNotNull);
+    expect(spec.groups?.first.values?.isEmpty, false);
     expect(text?.text, '51%');
 
-    hasIcon = spec.groups.first.values.any((v) => v.$tag == ValueTag.icon);
+    hasIcon = spec.groups?.first.values?.any((v) => v.$tag == ValueTag.icon);
     expect(hasIcon, isTrue);
   });
 
@@ -121,15 +123,16 @@ void main() {
 
     Spec spec = await battery.getSpec();
 
-    TextValue text = spec.groups.first.values
-        .where((v) => v.$tag == ValueTag.text)
+    TextValue? text = spec.groups?.first.values
+        ?.where((v) => v.$tag == ValueTag.text)
         .first
-        ?.text;
-    expect(spec.groups.first.title, isNotNull);
-    expect(spec.groups.first.values.isEmpty, false);
+        .text;
+    expect(spec.groups?.first.title, isNotNull);
+    expect(spec.groups?.first.values?.isEmpty, false);
     expect(text?.text, '50%');
 
-    bool hasIcon = spec.groups.first.values.any((v) => v.$tag == ValueTag.icon);
+    bool? hasIcon =
+        spec.groups?.first.values?.any((v) => v.$tag == ValueTag.icon);
     expect(hasIcon, isFalse);
 
     // Change charge to <10% (low status)
@@ -137,15 +140,15 @@ void main() {
         _buildStats(9, BatteryStatus.ok, ChargeStatus.notCharging));
 
     spec = await battery.getSpec();
-    text = spec.groups.first.values
-        .where((v) => v.$tag == ValueTag.text)
+    text = spec.groups?.first.values
+        ?.where((v) => v.$tag == ValueTag.text)
         .first
-        ?.text;
-    expect(spec.groups.first.title, isNotNull);
-    expect(spec.groups.first.values.isEmpty, false);
+        .text;
+    expect(spec.groups?.first.title, isNotNull);
+    expect(spec.groups?.first.values?.isEmpty, false);
     expect(text?.text, '9%');
 
-    hasIcon = spec.groups.first.values.any((v) => v.$tag == ValueTag.icon);
+    hasIcon = spec.groups?.first.values?.any((v) => v.$tag == ValueTag.icon);
     expect(hasIcon, isTrue);
   });
 
@@ -162,15 +165,16 @@ void main() {
 
     Spec spec = await battery.getSpec();
 
-    TextValue text = spec.groups.first.values
-        .where((v) => v.$tag == ValueTag.text)
+    TextValue? text = spec.groups?.first.values
+        ?.where((v) => v.$tag == ValueTag.text)
         .first
-        ?.text;
-    expect(spec.groups.first.title, isNotNull);
-    expect(spec.groups.first.values.isEmpty, false);
+        .text;
+    expect(spec.groups?.first.title, isNotNull);
+    expect(spec.groups?.first.values?.isEmpty, false);
     expect(text?.text, '50%');
 
-    bool hasIcon = spec.groups.first.values.any((v) => v.$tag == ValueTag.icon);
+    bool? hasIcon =
+        spec.groups?.first.values?.any((v) => v.$tag == ValueTag.icon);
     expect(hasIcon, isFalse);
 
     // Change charge to 100% (full)
@@ -178,15 +182,15 @@ void main() {
         _buildStats(100, BatteryStatus.ok, ChargeStatus.notCharging));
 
     spec = await battery.getSpec();
-    text = spec.groups.first.values
-        .where((v) => v.$tag == ValueTag.text)
+    text = spec.groups?.first.values
+        ?.where((v) => v.$tag == ValueTag.text)
         .first
-        ?.text;
-    expect(spec.groups.first.title, isNotNull);
-    expect(spec.groups.first.values.isEmpty, false);
+        .text;
+    expect(spec.groups?.first.title, isNotNull);
+    expect(spec.groups?.first.values?.isEmpty, false);
     expect(text?.text, '100%');
 
-    hasIcon = spec.groups.first.values.any((v) => v.$tag == ValueTag.icon);
+    hasIcon = spec.groups?.first.values?.any((v) => v.$tag == ValueTag.icon);
     expect(hasIcon, isTrue);
   });
 }
@@ -204,4 +208,8 @@ BatteryInfo _buildStats(
 // Mock classes.
 class MockMonitorProxy extends Mock implements BatteryManagerProxy {}
 
-class MockBinding extends Mock implements BatteryInfoWatcherBinding {}
+class MockBinding extends Mock implements BatteryInfoWatcherBinding {
+  @override
+  InterfaceHandle<BatteryInfoWatcher> wrap(BatteryInfoWatcher? impl) =>
+      super.noSuchMethod(Invocation.method(#wrap, [impl]));
+}

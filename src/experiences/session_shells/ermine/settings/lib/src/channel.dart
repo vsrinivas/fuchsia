@@ -18,7 +18,7 @@ class Channel extends UiSpec {
   // Action to change channel.
   static int changeAction = QuickAction.details.$value;
 
-  _ChannelModel model;
+  late _ChannelModel model;
 
   Channel(ChannelControlProxy control) {
     model = _ChannelModel(control: control, onChange: _onChange);
@@ -37,13 +37,13 @@ class Channel extends UiSpec {
   @override
   void update(Value value) async {
     if (value.$tag == ValueTag.button &&
-        value.button.action == QuickAction.cancel.$value) {
+        value.button!.action == QuickAction.cancel.$value) {
       spec = await _specForChannel(model);
-    } else if (value.$tag == ValueTag.text && value.text.action > 0) {
-      if (value.text.action == changeAction) {
+    } else if (value.$tag == ValueTag.text && value.text!.action > 0) {
+      if (value.text!.action == changeAction) {
         spec = await _specForChannel(model, changeAction);
       } else {
-        final index = value.text.action ^ QuickAction.submit.$value;
+        final index = value.text!.action ^ QuickAction.submit.$value;
         model.channel = model.channels[index];
         spec = await _specForChannel(model);
       }
@@ -99,10 +99,10 @@ class _ChannelModel {
   final ChannelControlProxy control;
   final VoidCallback onChange;
 
-  String _channel;
-  List<String> _channels;
+  late String _channel;
+  late List<String> _channels;
 
-  _ChannelModel({this.control, this.onChange}) {
+  _ChannelModel({required this.control, required this.onChange}) {
     loadCurrentChannel();
     loadTargetChannels();
   }
@@ -115,7 +115,7 @@ class _ChannelModel {
   set channel(String name) {
     _channel = name;
     control.setTarget(name);
-    onChange?.call();
+    onChange();
   }
 
   List<String> get channels => _channels;
@@ -123,7 +123,7 @@ class _ChannelModel {
   void loadCurrentChannel() {
     control.getTarget().then((name) {
       _channel = name;
-      onChange?.call();
+      onChange();
     });
   }
 

@@ -7,6 +7,7 @@ import("//build/flutter/test.gni")
 
 dart_library("tiler") {
   package_name = "tiler"
+  null_safe = true
 
   sources = [
     "src/sizer.dart",
@@ -23,6 +24,7 @@ dart_library("tiler") {
 
 flutter_test("tiler_unittests") {
   sources = [ "tiler_test.dart" ]
+  null_safe = true
 
   deps = [
     ":tiler",

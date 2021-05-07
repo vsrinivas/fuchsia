@@ -35,7 +35,7 @@ class Brightness extends UiSpec {
   static String get _title => Strings.brightness;
   static String get _auto => Strings.auto;
 
-  _BrightnessModel _model;
+  late _BrightnessModel _model;
 
   Brightness(ControlProxy control) {
     _model = _BrightnessModel(control: control, onChange: _onChange);
@@ -56,10 +56,10 @@ class Brightness extends UiSpec {
   @override
   void update(Value value) async {
     if (value.$tag == ValueTag.progress &&
-        value.progress.action == progressAction) {
-      _model.brightness = value.progress.value;
+        value.progress!.action == progressAction) {
+      _model.brightness = value.progress!.value;
     } else if (value.$tag == ValueTag.button &&
-        value.button.action == autoAction) {
+        value.button!.action == autoAction) {
       _model.auto = true;
     }
   }
@@ -95,12 +95,12 @@ class _BrightnessModel {
   final ControlProxy control;
   final VoidCallback onChange;
 
-  bool _auto;
-  bool _enabled = false;
-  double _brightness;
-  StreamSubscription _brightnessSubscription;
+  late bool _auto;
+  late bool _enabled = false;
+  late double _brightness;
+  late StreamSubscription _brightnessSubscription;
 
-  _BrightnessModel({this.control, this.onChange}) {
+  _BrightnessModel({required this.control, required this.onChange}) {
     control.watchAutoBrightness().then((auto) {
       _enabled = true;
       _auto = auto;
@@ -119,7 +119,7 @@ class _BrightnessModel {
   set auto(bool value) {
     _auto = value;
     control.setAutoBrightness();
-    onChange?.call();
+    onChange();
   }
 
   double get brightness => _brightness;
@@ -127,7 +127,7 @@ class _BrightnessModel {
     _brightness = value;
     _auto = false;
     control.setManualBrightness(value);
-    onChange?.call();
+    onChange();
   }
 
   void _listen() {
@@ -135,7 +135,7 @@ class _BrightnessModel {
         control.watchCurrentBrightness().asStream().listen((brightness) {
       _brightnessSubscription.cancel();
       _brightness = brightness;
-      onChange?.call();
+      onChange();
       _listen();
     });
   }

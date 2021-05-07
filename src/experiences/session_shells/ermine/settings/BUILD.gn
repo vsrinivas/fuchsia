@@ -8,6 +8,7 @@ import("//build/flutter/test.gni")
 
 dart_library("settings") {
   package_name = "settings"
+  null_safe = true
 
   sources = [
     "settings.dart",
@@ -41,6 +42,7 @@ dart_library("settings") {
 }
 
 flutter_test("ermine_settings_unittests") {
+  null_safe = true
   sources = [
     "battery_test.dart",
     "bluetooth_test.dart",

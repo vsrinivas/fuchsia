@@ -16,16 +16,16 @@ import 'tiler_model.dart';
 /// two tiles. If [sizerBuilder] returns null, no space is created between
 /// the tiles. The supplied [sizerThickness] is used during layout calculations.
 class Tiler<T> extends StatelessWidget {
-  final TilerModel<T> model;
-  final TileChromeBuilder<T> chromeBuilder;
-  final TileSizerBuilder sizerBuilder;
-  final CustomTilesBuilder<T> customTilesBuilder;
-  final double sizerThickness;
-  final ValueChanged<TileModel<T>> onFloat;
+  final TilerModel<T>? model;
+  final TileChromeBuilder<T>? chromeBuilder;
+  final TileSizerBuilder? sizerBuilder;
+  final CustomTilesBuilder<T>? customTilesBuilder;
+  final double? sizerThickness;
+  final ValueChanged<TileModel<T>>? onFloat;
 
   const Tiler({
-    @required this.model,
-    @required this.chromeBuilder,
+    this.model,
+    this.chromeBuilder,
     this.customTilesBuilder,
     this.sizerBuilder,
     this.sizerThickness = 0,
@@ -35,19 +35,19 @@ class Tiler<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: model,
+      animation: model!,
       builder: (_, __) {
-        return model.root != null
+        return model?.root != null
             ? Stack(
                 children: <Widget>[
                   Positioned.fill(
                     child: Tile<T>(
-                      model: model.root,
-                      chromeBuilder: chromeBuilder,
+                      model: model!.root,
+                      chromeBuilder: chromeBuilder!,
                       sizerBuilder: sizerBuilder,
                       customTilesBuilder: customTilesBuilder,
                       sizerThickness: sizerThickness,
-                      onFloat: onFloat ?? model.floatTile,
+                      onFloat: onFloat ?? model!.floatTile,
                     ),
                   ),
                   Positioned.fill(
@@ -55,24 +55,24 @@ class Tiler<T> extends StatelessWidget {
                       builder: (context, constraint) {
                         Offset offset = Offset.zero;
                         List<Widget> children = [];
-                        for (final tile in model.floats) {
+                        for (final tile in model!.floats) {
                           tile
                             ..position ??= offset
                             ..width = max(tile.minSize.width, 300)
                             ..height = max(tile.minSize.height, 300);
                           final widget = Positioned(
-                            left: tile.position.dx,
-                            top: tile.position.dy,
+                            left: tile.position!.dx,
+                            top: tile.position!.dy,
                             child: SizedBox(
                               width: tile.width,
                               height: tile.height,
                               child: Tile<T>(
                                 model: tile,
-                                chromeBuilder: chromeBuilder,
+                                chromeBuilder: chromeBuilder!,
                                 sizerBuilder: sizerBuilder,
                                 customTilesBuilder: customTilesBuilder,
                                 sizerThickness: sizerThickness,
-                                onFloat: model.floatTile,
+                                onFloat: model!.floatTile,
                               ),
                             ),
                           );

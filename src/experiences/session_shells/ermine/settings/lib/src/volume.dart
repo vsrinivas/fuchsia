@@ -25,7 +25,7 @@ class Volume extends UiSpec {
   static String get _min => Strings.min;
   static String get _max => Strings.max;
 
-  _VolumeModel model;
+  late _VolumeModel model;
 
   Volume(vol.AudioCoreProxy control) {
     model = _VolumeModel(control: control, onChange: _onChange);
@@ -44,13 +44,13 @@ class Volume extends UiSpec {
   @override
   void update(Value value) async {
     if (value.$tag == ValueTag.button) {
-      if (value.button.action == minVolumeAction) {
+      if (value.button!.action == minVolumeAction) {
         model.volume = 0;
-      } else if (value.button.action == maxVolumeAction) {
+      } else if (value.button!.action == maxVolumeAction) {
         model.volume = 1;
       }
     } else if (value.$tag == ValueTag.progress) {
-      model.volume = value.progress.value;
+      model.volume = value.progress!.value;
     }
   }
 
@@ -80,10 +80,10 @@ class _VolumeModel {
   final vol.AudioCoreProxy control;
   final VoidCallback onChange;
 
-  double _volume;
-  StreamSubscription _volumeSubscription;
+  late double _volume;
+  late StreamSubscription _volumeSubscription;
 
-  _VolumeModel({this.control, this.onChange}) {
+  _VolumeModel({required this.control, required this.onChange}) {
     _volumeSubscription = control.systemGainMuteChanged.listen((response) {
       volume = gainToLevel(response.gainDb);
     });
@@ -102,7 +102,7 @@ class _VolumeModel {
     } else {
       control.setSystemMute(false);
     }
-    onChange?.call();
+    onChange();
   }
 
   /// Converts a gain in db to an audio 'level' in the range 0.0 to 1.0

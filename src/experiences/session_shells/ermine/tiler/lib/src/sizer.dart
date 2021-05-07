@@ -15,15 +15,15 @@ typedef TileSizerBuilder = Widget Function(
 
 class Sizer extends StatelessWidget {
   final Axis direction;
-  final TileSizerBuilder sizerBuilder;
+  final TileSizerBuilder? sizerBuilder;
   final TileModel tileBefore;
   final TileModel tileAfter;
   final bool horizontal;
 
   const Sizer({
-    this.direction,
-    this.tileBefore,
-    this.tileAfter,
+    required this.direction,
+    required this.tileBefore,
+    required this.tileAfter,
     this.sizerBuilder,
   }) : horizontal = direction == Axis.horizontal;
 

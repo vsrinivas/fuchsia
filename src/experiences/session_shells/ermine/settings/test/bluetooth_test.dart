@@ -33,26 +33,27 @@ void main() {
 
     // Should receive bluetooth spec.
     Spec spec = await bluetooth.getSpec();
-    expect(spec.groups.first.title, isNotNull);
-    expect(spec.groups.first.values.isEmpty, false);
+    expect(spec.groups?.first.title, isNotNull);
+    expect(spec.groups?.first.values?.isEmpty, false);
 
     // Confirm grid values are correct
-    GridValue grid = spec.groups.first.values
-        .where((v) => v.$tag == ValueTag.grid)
+    GridValue? grid = spec.groups?.first.values
+        ?.where((v) => v.$tag == ValueTag.grid)
         .first
-        ?.grid;
+        .grid;
 
-    List<String> mockBtNames =
-        grid.values.map((device) => device.text).toList();
-    expect(mockBtNames[0], 'Mouse');
-    expect(mockBtNames[1], _disconnect);
-    expect(mockBtNames[2], 'Keyboard');
-    expect(mockBtNames[3], _disconnect);
-    expect(mockBtNames[4], 'Headphones');
-    expect(mockBtNames[5], _disconnect);
+    List<String>? mockBtNames =
+        grid?.values.map((device) => device.text).toList();
+    expect(mockBtNames?[0], 'Mouse');
+    expect(mockBtNames?[1], _disconnect);
+    expect(mockBtNames?[2], 'Keyboard');
+    expect(mockBtNames?[3], _disconnect);
+    expect(mockBtNames?[4], 'Headphones');
+    expect(mockBtNames?[5], _disconnect);
 
     // Confirm bluetooth icon present
-    bool hasIcon = spec.groups.first.values.any((v) => v.$tag == ValueTag.icon);
+    bool? hasIcon =
+        spec.groups?.first.values?.any((v) => v.$tag == ValueTag.icon);
     expect(hasIcon, isTrue);
 
     bluetooth.dispose();
@@ -74,22 +75,23 @@ void main() {
 
     // Should receive bluetooth spec.
     Spec spec = await bluetooth.getSpec();
-    expect(spec.groups.first.title, isNotNull);
-    expect(spec.groups.first.values.isEmpty, false);
+    expect(spec.groups?.first.title, isNotNull);
+    expect(spec.groups?.first.values?.isEmpty, false);
 
     // Confirm initial grid values are correct
-    GridValue grid = spec.groups.first.values
-        .where((v) => v.$tag == ValueTag.grid)
+    GridValue? grid = spec.groups?.first.values
+        ?.where((v) => v.$tag == ValueTag.grid)
         .first
-        ?.grid;
+        .grid;
 
-    List<String> mockBtNames =
-        grid.values.map((device) => device.text).toList();
-    expect(mockBtNames[0], 'Mouse');
-    expect(mockBtNames[1], _disconnect);
+    List<String>? mockBtNames =
+        grid?.values.map((device) => device.text).toList();
+    expect(mockBtNames?[0], 'Mouse');
+    expect(mockBtNames?[1], _disconnect);
 
     // Confirm bluetooth icon present
-    bool hasIcon = spec.groups.first.values.any((v) => v.$tag == ValueTag.icon);
+    bool? hasIcon =
+        spec.groups?.first.values?.any((v) => v.$tag == ValueTag.icon);
     expect(hasIcon, isTrue);
 
     // Add devices to mock bluetooth devices
@@ -100,22 +102,22 @@ void main() {
 
     // Get updated spec
     spec = await bluetooth.getSpec();
-    expect(spec.groups.first.title, isNotNull);
-    expect(spec.groups.first.values.isEmpty, false);
+    expect(spec.groups?.first.title, isNotNull);
+    expect(spec.groups?.first.values?.isEmpty, false);
 
     // Confirm updated grid values are correct
-    grid = spec.groups.first.values
-        .where((v) => v.$tag == ValueTag.grid)
+    grid = spec.groups?.first.values
+        ?.where((v) => v.$tag == ValueTag.grid)
         .first
-        ?.grid;
+        .grid;
 
-    mockBtNames = grid.values.map((device) => device.text).toList();
-    expect(mockBtNames[0], 'Mouse');
-    expect(mockBtNames[1], _disconnect);
-    expect(mockBtNames[2], 'Keyboard');
-    expect(mockBtNames[3], _disconnect);
-    expect(mockBtNames[4], 'Headphones');
-    expect(mockBtNames[5], _disconnect);
+    mockBtNames = grid?.values.map((device) => device.text).toList();
+    expect(mockBtNames?[0], 'Mouse');
+    expect(mockBtNames?[1], _disconnect);
+    expect(mockBtNames?[2], 'Keyboard');
+    expect(mockBtNames?[3], _disconnect);
+    expect(mockBtNames?[4], 'Headphones');
+    expect(mockBtNames?[5], _disconnect);
 
     bluetooth.dispose();
   });
@@ -138,26 +140,27 @@ void main() {
 
     // Should receive bluetooth spec.
     Spec spec = await bluetooth.getSpec();
-    expect(spec.groups.first.title, isNotNull);
-    expect(spec.groups.first.values.isEmpty, false);
+    expect(spec.groups?.first.title, isNotNull);
+    expect(spec.groups?.first.values?.isEmpty, false);
 
     // Confirm grid values are correct
-    GridValue grid = spec.groups.first.values
-        .where((v) => v.$tag == ValueTag.grid)
+    GridValue? grid = spec.groups?.first.values
+        ?.where((v) => v.$tag == ValueTag.grid)
         .first
-        ?.grid;
+        .grid;
 
-    List<String> mockBtNames =
-        grid.values.map((device) => device.text).toList();
-    expect(mockBtNames[0], 'Mouse');
-    expect(mockBtNames[1], _disconnect);
-    expect(mockBtNames[2], 'Keyboard');
-    expect(mockBtNames[3], _disconnect);
-    expect(mockBtNames[4], 'Headphones');
-    expect(mockBtNames[5], _disconnect);
+    List<String>? mockBtNames =
+        grid?.values.map((device) => device.text).toList();
+    expect(mockBtNames?[0], 'Mouse');
+    expect(mockBtNames?[1], _disconnect);
+    expect(mockBtNames?[2], 'Keyboard');
+    expect(mockBtNames?[3], _disconnect);
+    expect(mockBtNames?[4], 'Headphones');
+    expect(mockBtNames?[5], _disconnect);
 
     // Confirm bluetooth icon present
-    bool hasIcon = spec.groups.first.values.any((v) => v.$tag == ValueTag.icon);
+    bool? hasIcon =
+        spec.groups?.first.values?.any((v) => v.$tag == ValueTag.icon);
     expect(hasIcon, isTrue);
 
     // Remove device from mock bluetooth devices
@@ -166,20 +169,20 @@ void main() {
 
     // Get updated spec
     spec = await bluetooth.getSpec();
-    expect(spec.groups.first.title, isNotNull);
-    expect(spec.groups.first.values.isEmpty, false);
+    expect(spec.groups?.first.title, isNotNull);
+    expect(spec.groups?.first.values?.isEmpty, false);
 
     // Confirm updated grid values are correct
-    grid = spec.groups.first.values
-        .where((v) => v.$tag == ValueTag.grid)
+    grid = spec.groups?.first.values
+        ?.where((v) => v.$tag == ValueTag.grid)
         .first
-        ?.grid;
+        .grid;
 
-    mockBtNames = grid.values.map((device) => device.text).toList();
-    expect(mockBtNames[0], 'Keyboard');
-    expect(mockBtNames[1], _disconnect);
-    expect(mockBtNames[2], 'Headphones');
-    expect(mockBtNames[3], _disconnect);
+    mockBtNames = grid?.values.map((device) => device.text).toList();
+    expect(mockBtNames?[0], 'Keyboard');
+    expect(mockBtNames?[1], _disconnect);
+    expect(mockBtNames?[2], 'Headphones');
+    expect(mockBtNames?[3], _disconnect);
 
     // Remove another device from mock bluetooth devices
     mockBluetoothDevices.removeWhere((device) => device.identifier == '3333');
@@ -187,18 +190,18 @@ void main() {
 
     // Get updated spec
     spec = await bluetooth.getSpec();
-    expect(spec.groups.first.title, isNotNull);
-    expect(spec.groups.first.values.isEmpty, false);
+    expect(spec.groups?.first.title, isNotNull);
+    expect(spec.groups?.first.values?.isEmpty, false);
 
     // Confirm updated grid values are correct
-    grid = spec.groups.first.values
-        .where((v) => v.$tag == ValueTag.grid)
+    grid = spec.groups?.first.values
+        ?.where((v) => v.$tag == ValueTag.grid)
         .first
-        ?.grid;
+        .grid;
 
-    mockBtNames = grid.values.map((device) => device.text).toList();
-    expect(mockBtNames[0], 'Keyboard');
-    expect(mockBtNames[1], _disconnect);
+    mockBtNames = grid?.values.map((device) => device.text).toList();
+    expect(mockBtNames?[0], 'Keyboard');
+    expect(mockBtNames?[1], _disconnect);
 
     // Remove last device from mock bluetooth devices
     mockBluetoothDevices.removeWhere((device) => device.identifier == '2222');

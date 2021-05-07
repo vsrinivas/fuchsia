@@ -15,50 +15,29 @@ const List<TimeZoneInfo> timeZones = [
 ];
 
 void main() {
-  MockIntlProxy intlSettingsProxy;
-  MockIntlProxyController intlSettingsProxyController;
+  test('Change Timezone', () async {
+    var response = 'tz1';
 
-  setUp(() async {
-    intlSettingsProxy = MockIntlProxy();
-    intlSettingsProxyController = MockIntlProxyController();
+    final intlSettingsProxy = MockIntlProxy();
+    final intlSettingsProxyController = MockIntlProxyController();
+
     when(intlSettingsProxy.ctrl).thenReturn(intlSettingsProxyController);
-  });
-
-  test('Timezone', () async {
     when(intlSettingsProxy.watch())
         .thenAnswer((_) => Future<IntlSettings>.value(IntlSettings(
-              timeZoneId: TimeZoneId(id: 'Foo'),
+              timeZoneId: TimeZoneId(id: response),
             )));
 
     TimeZone timeZone = TimeZone(
         intlSettingsService: intlSettingsProxy,
         timeZonesProvider: () => Future.value(timeZones));
-    final spec = await timeZone.getSpec();
-    expect(spec.groups.first.values.first.text.text == 'Foo', true);
-
-    timeZone.dispose();
-  });
-
-  test('Change Timezone', () async {
-    var response = 'tz1';
-
-    when(intlSettingsProxy.watch()).thenAnswer((_) {
-      return Future<IntlSettings>.value(IntlSettings(
-        timeZoneId: TimeZoneId(id: response),
-      ));
-    });
-
-    TimeZone timeZone = TimeZone(
-        intlSettingsService: intlSettingsProxy,
-        timeZonesProvider: () => Future.value(timeZones));
     final specA = await timeZone.getSpec();
-    expect(specA.groups.first.values.first.text.text, 'tz1');
+    expect(specA.groups?.first.values?.first.text?.text, response);
 
     response = 'tz2';
     // Wait one event cycle for the change.
     await timeZone.getSpec();
     final specB = await timeZone.getSpec();
-    expect(specB.groups.first.values.first.text.text, 'tz2');
+    expect(specB.groups?.first.values?.first.text?.text, response);
 
     timeZone.dispose();
   });

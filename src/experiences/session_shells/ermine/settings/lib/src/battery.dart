@@ -19,9 +19,12 @@ class Battery extends UiSpec {
   // Localized strings.
   static String get _title => Strings.battery;
 
-  BatteryModel model;
+  late BatteryModel model;
 
-  Battery({BatteryManagerProxy monitor, BatteryInfoWatcherBinding binding}) {
+  Battery({
+    required BatteryManagerProxy monitor,
+    BatteryInfoWatcherBinding? binding,
+  }) {
     model = BatteryModel(
       monitor: monitor,
       binding: binding,
@@ -90,13 +93,13 @@ class BatteryModel {
   final BatteryInfoWatcherBinding _binding;
   final BatteryManagerProxy _monitor;
 
-  double _battery;
-  bool charging;
+  late double _battery;
+  late bool charging;
 
   BatteryModel({
-    @required this.onChange,
-    BatteryInfoWatcherBinding binding,
-    BatteryManagerProxy monitor,
+    required this.onChange,
+    required BatteryManagerProxy monitor,
+    BatteryInfoWatcherBinding? binding,
   })  : _binding = binding ?? BatteryInfoWatcherBinding(),
         _monitor = monitor {
     // Note that watcher will receive callback immediately with
@@ -113,7 +116,7 @@ class BatteryModel {
   double get battery => _battery;
   set battery(double value) {
     _battery = value;
-    onChange?.call();
+    onChange();
   }
 
   void _updateBattery(BatteryInfo info) {
@@ -127,7 +130,7 @@ class BatteryModel {
     if (info.status == BatteryStatus.ok) {
       final chargeStatus = info.chargeStatus;
       charging = chargeStatus == ChargeStatus.charging;
-      battery = info.levelPercent;
+      battery = info.levelPercent!;
     } else if (info.status == BatteryStatus.notPresent) {
       // upon receiving report of status 'notPresent' it is safe to close the
       // connection and stop listening for battery status updates.
