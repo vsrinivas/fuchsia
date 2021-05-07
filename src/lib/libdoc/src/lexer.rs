@@ -29,6 +29,9 @@ pub enum LexicalContent {
     /// A reference is held between back quotes.
     Reference(String),
 
+    /// A block of text between two triple back quotes.
+    CodeBlock(String),
+
     /// A text between single quotes. The left quote must be after a white space or at the
     /// beginning of the text. The text inside the quotes can't start with a space (in that
     /// particular case, it's a stand alone single quote).
@@ -167,7 +170,7 @@ pub fn reduce_lexems(compiler: &mut DocCompiler, source: &Rc<Source>) -> Option<
         current = match character {
             '0'..='9' => reduce_number_or_name(&mut items, &source, index, character, &mut iter),
             'a'..='z' | 'A'..='Z' | '_' => reduce_name(&mut items, &source, index, &mut iter),
-            '`' => reduce_reference(compiler, &mut items, &source, &mut iter),
+            '`' => reduce_back_quote(compiler, &mut items, &source, &mut iter),
             '\'' => {
                 reduce_single_quote_string(compiler, &mut items, &source, index, &mut iter, &mut ok)
             }
@@ -499,8 +502,11 @@ fn reduce_name(
     current
 }
 
-/// Reduces a reference (text between back quotes).
-fn reduce_reference(
+/// Reduces an item which starts with a back quote.
+///
+/// It can be a reference (text between two back quotes).
+/// It can be a code block (text between two triple back quotes).
+fn reduce_back_quote(
     compiler: &mut DocCompiler,
     items: &mut Vec<LexicalItem>,
     source: &Rc<Source>,
@@ -508,6 +514,29 @@ fn reduce_reference(
 ) -> Option<(usize, char)> {
     let mut current = iter.next();
     let start = if let Some((index, _)) = current { index } else { 0 };
+    // A fist back quote has already been reduced. Look for a second one.
+    if let Some((_, character)) = current {
+        if character == '`' {
+            current = iter.next();
+            // Two back quotes have already been reduced. Look for a third one.
+            let end = if let Some((index, character)) = current {
+                if character == '`' {
+                    // Three back quotes have been found. That means this is a code block.
+                    return reduce_code_block(compiler, items, source, iter);
+                }
+                index
+            } else {
+                source.text.len()
+            };
+            // Only two back quotes have been found. It would be an empty reference. That means an
+            // error.
+            compiler.add_error(
+                &Location { source: Rc::clone(&source), start, end },
+                "Empty reference".to_owned(),
+            );
+            return current;
+        }
+    }
     loop {
         match current {
             Some((index, character)) => match character {
@@ -534,6 +563,120 @@ fn reduce_reference(
     current
 }
 
+/// Reduces a block of text within two triple back quotes.
+///
+/// The opening triple back quotes have already been reduced.
+fn reduce_code_block(
+    compiler: &mut DocCompiler,
+    items: &mut Vec<LexicalItem>,
+    source: &Rc<Source>,
+    iter: &mut CharIndices<'_>,
+) -> Option<(usize, char)> {
+    let mut current = iter.next();
+    let start = if let Some((index, _)) = current { index } else { 0 };
+    // Skip the characters between the opening three back quotes and the end of the line (these
+    // characters define the code syntax to use).
+    loop {
+        match current {
+            Some((_, character)) => {
+                if character == '\n' {
+                    current = iter.next();
+                    break;
+                }
+            }
+            None => {
+                compiler.add_error(
+                    &Location { source: Rc::clone(&source), start, end: source.text.len() },
+                    "Unterminated code block".to_owned(),
+                );
+                return current;
+            }
+        }
+        current = iter.next();
+    }
+    // Reduce the code block. The end of the block is reached when three back quotes followed by a
+    // new line are found at the beginning of a line.
+    // If three back quote are found at the beginning of a line without a following new line, this
+    // is an error.
+    let start_block = if let Some((index, _)) = current { index } else { 0 };
+    loop {
+        match current {
+            Some((_, character)) => {
+                if character != '\n' {
+                    current = iter.next();
+                    continue;
+                }
+                // A new line is found.
+                current = iter.next();
+                if current.is_none() {
+                    continue;
+                }
+                let (end_block, first_quote) = current.unwrap();
+                if first_quote != '`' {
+                    continue;
+                }
+                // A fist back quote is found.
+                current = iter.next();
+                if current.is_none() {
+                    continue;
+                }
+                let (_, second_quote) = current.unwrap();
+                if second_quote != '`' {
+                    continue;
+                }
+                // A second back quote is found.
+                current = iter.next();
+                if current.is_none() {
+                    continue;
+                }
+                let (_, third_quote) = current.unwrap();
+                if third_quote != '`' {
+                    continue;
+                }
+                // A third back quote is found.
+                current = iter.next();
+                let new_line_pos = if let Some((index, ending_new_line)) = current {
+                    if ending_new_line == '\n' {
+                        // A following new line is found. We have reduced a code block.
+                        items.push(LexicalItem {
+                            location: Location {
+                                source: Rc::clone(&source),
+                                start: start_block,
+                                end: end_block,
+                            },
+                            content: LexicalContent::CodeBlock(
+                                source.text[start_block..end_block].to_string(),
+                            ),
+                        });
+                        return iter.next();
+                    }
+                    index
+                } else {
+                    source.text.len()
+                };
+                // The three back quote are not followed by a new line. This is an error.
+                compiler.add_error(
+                    &Location {
+                        source: Rc::clone(&source),
+                        start: new_line_pos,
+                        end: new_line_pos,
+                    },
+                    "New line expected to end the code block".to_owned(),
+                );
+                return current;
+            }
+            None => {
+                compiler.add_error(
+                    &Location { source: Rc::clone(&source), start, end: source.text.len() },
+                    "Unterminated code block".to_owned(),
+                );
+                break;
+            }
+        }
+    }
+    current
+}
+
 /// Reduces a string between single quotes, a single quote or a name.
 ///
 /// If the first single quote is not after a white space or at the beginning of the text then,
@@ -551,7 +694,7 @@ fn reduce_single_quote_string(
     iter: &mut CharIndices<'_>,
     ok: &mut bool,
 ) -> Option<(usize, char)> {
-    // If the quote is not at the beginning of the next and not preceded by a white space then
+    // If the quote is not at the beginning of the line and not preceded by a white space then
     // reduce a Name.
     if let Some(last) = items.last() {
         match last.content {
@@ -955,6 +1098,121 @@ sdk/foo/foo.fidl: 10:5: Reference <xyz>
 `xyz`'s
      ^^
 sdk/foo/foo.fidl: 10:9: Name <'s>
+"
+        );
+    }
+
+    #[test]
+    fn lexer_empty_reference() {
+        let mut compiler = DocCompiler::new();
+        let source =
+            Rc::new(Source::new("sdk/foo/foo.fidl".to_owned(), 10, 4, "`` abc".to_owned()));
+        let _items = reduce_lexems(&mut compiler, &source);
+        assert_eq!(
+            compiler.errors,
+            "\
+`` abc
+ ^
+sdk/foo/foo.fidl: 10:5: Empty reference
+"
+        );
+    }
+
+    #[test]
+    fn lexer_code_block() {
+        let mut compiler = DocCompiler::new();
+        let source = Rc::new(Source::new(
+            "sdk/foo/foo.fidl".to_owned(),
+            10,
+            4,
+            "```c++\nint a;\n```\n".to_owned(),
+        ));
+        let items = reduce_lexems(&mut compiler, &source);
+        assert!(!items.is_none());
+        lexical_items_to_errors(&mut compiler, &items.unwrap(), /*with_spaces=*/ false);
+        assert_eq!(
+            compiler.errors,
+            "\
+int a;
+^^^^^^
+sdk/foo/foo.fidl: 11:4: CodeBlock <int a;
+>
+"
+        );
+    }
+
+    #[test]
+    fn lexer_unterminated_code_block_1() {
+        let mut compiler = DocCompiler::new();
+        let source =
+            Rc::new(Source::new("sdk/foo/foo.fidl".to_owned(), 10, 4, "```c++".to_owned()));
+        let _items = reduce_lexems(&mut compiler, &source);
+        assert_eq!(
+            compiler.errors,
+            "\
+```c++
+   ^^^
+sdk/foo/foo.fidl: 10:7: Unterminated code block
+"
+        );
+    }
+
+    #[test]
+    fn lexer_unterminated_code_block_2() {
+        let mut compiler = DocCompiler::new();
+        let source = Rc::new(Source::new(
+            "sdk/foo/foo.fidl".to_owned(),
+            10,
+            4,
+            "```c++\nint a;\n".to_owned(),
+        ));
+        let _items = reduce_lexems(&mut compiler, &source);
+        assert_eq!(
+            compiler.errors,
+            "\
+```c++
+   ^^^
+sdk/foo/foo.fidl: 10:7: Unterminated code block
+"
+        );
+    }
+
+    #[test]
+    fn lexer_code_block_missing_ending_new_line_1() {
+        let mut compiler = DocCompiler::new();
+        let source = Rc::new(Source::new(
+            "sdk/foo/foo.fidl".to_owned(),
+            10,
+            4,
+            "```c++\nint a;\n```".to_owned(),
+        ));
+        let _items = reduce_lexems(&mut compiler, &source);
+        assert_eq!(
+            compiler.errors,
+            "\
+```
+   ^
+sdk/foo/foo.fidl: 12:7: New line expected to end the code block
+"
+        );
+    }
+
+    #[test]
+    fn lexer_code_block_missing_ending_new_line_2() {
+        let mut compiler = DocCompiler::new();
+        let source = Rc::new(Source::new(
+            "sdk/foo/foo.fidl".to_owned(),
+            10,
+            4,
+            "```c++\nint a;\n```xyz".to_owned(),
+        ));
+        let _items = reduce_lexems(&mut compiler, &source);
+        assert_eq!(
+            compiler.errors,
+            "\
+```xyz
+   ^
+sdk/foo/foo.fidl: 12:7: New line expected to end the code block
 "
         );
     }

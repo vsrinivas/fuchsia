@@ -27,6 +27,9 @@ pub mod test {
                 LexicalContent::Reference(text) => {
                     compiler.add_error(&item.location, format!("Reference <{}>", text))
                 }
+                LexicalContent::CodeBlock(text) => {
+                    compiler.add_error(&item.location, format!("CodeBlock <{}>", text))
+                }
                 LexicalContent::SingleQuoteString(text) => {
                     compiler.add_error(&item.location, format!("SingleQuoteString <{}>", text))
                 }
