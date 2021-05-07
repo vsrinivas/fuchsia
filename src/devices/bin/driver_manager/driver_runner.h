@@ -107,9 +107,8 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   // fidl::WireServer<fuchsia_driver_framework::Node>
   void AddChild(AddChildRequestView request, AddChildCompleter::Sync& completer) override;
 
-  Node* const parent_;
-  // This can be null when Remove() is called.
-  DriverBinder* driver_binder_;
+  const fit::nullable<Node*> parent_;
+  fit::nullable<DriverBinder*> driver_binder_;
   async_dispatcher_t* const dispatcher_;
 
   const std::string name_;
@@ -117,7 +116,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   std::vector<fidl::StringView> offers_;
   std::vector<fuchsia_driver_framework::wire::NodeSymbol> symbols_;
 
-  DriverHostComponent* driver_host_ = nullptr;
+  fit::nullable<DriverHostComponent*> driver_host_;
   std::optional<fidl::ServerBindingRef<fuchsia_component_runner::ComponentController>> driver_ref_;
   std::optional<fidl::ServerBindingRef<fuchsia_driver_framework::Node>> node_ref_;
   std::optional<fidl::ServerBindingRef<fuchsia_driver_framework::NodeController>> controller_ref_;

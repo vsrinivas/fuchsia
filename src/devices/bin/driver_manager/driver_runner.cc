@@ -234,7 +234,7 @@ fidl::VectorView<fdf::wire::NodeSymbol> Node::symbols() {
   return fidl::VectorView<fdf::wire::NodeSymbol>::FromExternal(symbols_);
 }
 
-DriverHostComponent* Node::parent_driver_host() const { return parent_->driver_host_; }
+DriverHostComponent* Node::parent_driver_host() const { return *(*parent_)->driver_host_; }
 
 void Node::set_driver_host(DriverHostComponent* driver_host) { driver_host_ = driver_host; }
 
@@ -254,7 +254,7 @@ const std::vector<std::shared_ptr<Node>>& Node::children() const { return childr
 
 std::string Node::TopoName() const {
   std::deque<std::string_view> names;
-  for (auto node = this; node != nullptr; node = node->parent_) {
+  for (auto node = this; node != nullptr; node = *node->parent_) {
     names.push_front(node->name());
   }
   return fxl::JoinStrings(names, ".");
@@ -286,7 +286,7 @@ void Node::Remove() {
   std::shared_ptr<Node> this_node;
   if (parent_ != nullptr) {
     this_node = shared_from_this();
-    auto& children = parent_->children_;
+    auto& children = (*parent_)->children_;
     children.erase(std::find(children.begin(), children.end(), this_node));
   }
 
@@ -351,7 +351,7 @@ void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& comple
       return;
     }
   }
-  auto child = std::make_shared<Node>(this, driver_binder_, dispatcher_, name);
+  auto child = std::make_shared<Node>(this, *driver_binder_, dispatcher_, name);
 
   if (request->args.has_offers()) {
     child->offers_.reserve(request->args.offers().count());
@@ -420,7 +420,7 @@ void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& comple
       children_.push_back(std::move(child));
       completer.ReplySuccess();
     };
-    driver_binder_->Bind(*child_ptr, std::move(request->args), std::move(callback));
+    (*driver_binder_)->Bind(*child_ptr, std::move(request->args), std::move(callback));
   }
 }
 
