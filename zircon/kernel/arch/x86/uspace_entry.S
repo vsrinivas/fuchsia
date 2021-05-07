@@ -7,9 +7,16 @@
 #include <asm.h>
 #include <arch/regs.h>
 #include <arch/x86/descriptor.h>
+#include <zircon/compiler.h>
+#include <zircon/tls.h>
 
 // x86_uspace_entry(iframe_t* iframe)
+// optionally vaddr_t unsafe_sp top
 FUNCTION(x86_uspace_entry)
+#if __has_feature(safe_stack)
+    mov  %rsi, %gs:ZX_TLS_UNSAFE_SP_OFFSET
+#endif
+
     /* push a fake 64bit interrupt stack frame and iret to it */
     push_value X86_IFRAME_OFFSET_USER_SS(%rdi) // ss
     push_value X86_IFRAME_OFFSET_USER_SP(%rdi) // sp

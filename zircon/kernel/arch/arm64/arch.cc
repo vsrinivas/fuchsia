@@ -273,15 +273,23 @@ void arch_setup_uspace_iframe(iframe_t* iframe, uintptr_t pc, uintptr_t sp, uint
 void arch_enter_uspace(iframe_t* iframe) {
   Thread* ct = Thread::Current::Get();
 
-  LTRACEF("arm_uspace_entry(%#" PRIxPTR ", %#" PRIxPTR ", %#" PRIxPTR ", %#" PRIxPTR ", %#" PRIxPTR
-          ", 0, %#" PRIxPTR ")\n",
+  LTRACEF("r0 %#" PRIxPTR " r1 %#" PRIxPTR " spsr %#" PRIxPTR " st %#" PRIxPTR " usp %#" PRIxPTR
+          " pc %#" PRIxPTR "\n",
           iframe->r[0], iframe->r[1], iframe->spsr, ct->stack().top(), iframe->usp, iframe->elr);
-
-  arch_disable_ints();
+#if __has_feature(shadow_call_stack)
+  auto scsp_base = ct->stack().shadow_call_base();
+  LTRACEF("scsp %p, scsp base %#" PRIxPTR "\n", ct->arch().shadow_call_sp, scsp_base);
+#endif
 
   ASSERT(arch_is_valid_user_pc(iframe->elr));
 
+  arch_disable_ints();
+
+#if __has_feature(shadow_call_stack)
+  arm64_uspace_entry(iframe, ct->stack().top(), scsp_base);
+#else
   arm64_uspace_entry(iframe, ct->stack().top());
+#endif
   __UNREACHABLE;
 }
 

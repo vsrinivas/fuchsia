@@ -4,21 +4,29 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <arch/arch_thread.h>
 #include <arch/asm_macros.h>
 #include <arch/regs.h>
 #include <asm.h>
+#include <zircon/compiler.h>
 
 // void arm64_uspace_entry(iframe_t* iframe, vaddr_t kstack) __NO_RETURN;
+// optionally vaddr_t scsp
 FUNCTION(arm64_uspace_entry)
+#if __has_feature(shadow_call_stack)
+    mrs x16, tpidr_el1
+    str x2, [x16, CURRENT_SCSP_OFFSET]
+#endif
+
     mov sp, x1
-    ldr x2, [x0, ARM64_IFRAME_OFFSET_USP]
-    msr sp_el0, x2
-    ldr x2, [x0, ARM64_IFRAME_OFFSET_ELR]
-    msr elr_el1, x2
-    ldr x2, [x0, ARM64_IFRAME_OFFSET_SPSR]
-    msr spsr_el1, x2
-    ldr x2, [x0, ARM64_IFRAME_OFFSET_MDSCR]
-    msr mdscr_el1, x2
+    ldr x16, [x0, ARM64_IFRAME_OFFSET_USP]
+    msr sp_el0, x16
+    ldr x16, [x0, ARM64_IFRAME_OFFSET_ELR]
+    msr elr_el1, x16
+    ldr x16, [x0, ARM64_IFRAME_OFFSET_SPSR]
+    msr spsr_el1, x16
+    ldr x16, [x0, ARM64_IFRAME_OFFSET_MDSCR]
+    msr mdscr_el1, x16
 
     // Setting x0 deferred to last, we're still using it.
     ldp x1, x2, [x0, ARM64_IFRAME_OFFSET_R + (1 * 8)]

@@ -190,6 +190,9 @@ void arch_setup_uspace_iframe(iframe_t* iframe, uintptr_t pc, uintptr_t sp, uint
 void arch_enter_uspace(iframe_t* iframe) {
   LTRACEF("entry %#" PRIxPTR " user stack %#" PRIxPTR "\n", iframe->ip, iframe->user_sp);
   LTRACEF("kernel stack %#" PRIxPTR "\n", x86_get_percpu()->default_tss.rsp0);
+#if __has_feature(safe_stack)
+  LTRACEF("kernel unsafe stack %#" PRIxPTR "\n", Thread::Current::Get()->stack().unsafe_top());
+#endif
 
   arch_disable_ints();
 
@@ -202,7 +205,13 @@ void arch_enter_uspace(iframe_t* iframe) {
   /* check that the kernel stack is set properly */
   DEBUG_ASSERT(is_kernel_address(x86_get_percpu()->default_tss.rsp0));
 
+#if __has_feature(safe_stack)
+  /* set the kernel unsafe stack back to the top as we enter user space */
+  auto unsafe_top = Thread::Current::Get()->stack().unsafe_top();
+  x86_uspace_entry(iframe, unsafe_top);
+#else
   x86_uspace_entry(iframe);
+#endif
   __UNREACHABLE;
 }
 

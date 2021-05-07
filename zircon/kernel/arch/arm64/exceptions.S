@@ -12,10 +12,7 @@
 #include <arch/asm_macros.h>
 #include <lib/syscalls/arm64.h>
 #include <lib/syscalls/zx-syscall-numbers.h>
-
-#ifndef __has_feature
-#define __has_feature(x) 0
-#endif
+#include <zircon/compiler.h>
 
 .text
 

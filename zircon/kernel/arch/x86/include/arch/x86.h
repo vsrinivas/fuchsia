@@ -11,6 +11,7 @@
 #define ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_H_
 
 #include <cpuid.h>
+#include <lib/arch/intrin.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -19,8 +20,6 @@
 
 #include <arch/x86/registers.h>
 #include <kernel/cpu.h>
-
-#include <lib/arch/intrin.h>
 
 __BEGIN_CDECLS
 
@@ -48,13 +47,14 @@ struct x86_64_context_switch_frame {
   uint64_t rip;
 };
 
-void x86_64_context_switch(vaddr_t* oldsp, vaddr_t newsp
 #if __has_feature(safe_stack)
-                           ,
-                           vaddr_t* old_unsafe_sp, vaddr_t new_unsafe_sp
-#endif
-);
+void x86_64_context_switch(vaddr_t* oldsp, vaddr_t newsp, vaddr_t* old_unsafe_sp,
+                           vaddr_t new_unsafe_sp);
+void x86_uspace_entry(const struct iframe_t* iframe, vaddr_t unsafe_sp) __NO_RETURN;
+#else
+void x86_64_context_switch(vaddr_t* oldsp, vaddr_t newsp);
 void x86_uspace_entry(const struct iframe_t* iframe) __NO_RETURN;
+#endif
 
 void x86_syscall(void);
 
