@@ -159,7 +159,9 @@ func eventsToSignals(events waiter.EventMask) zx.Signals {
 }
 
 type signaler struct {
-	allowed waiter.EventMask
+	allowed    waiter.EventMask
+	readiness  func(waiter.EventMask) waiter.EventMask
+	signalPeer func(zx.Signals, zx.Signals) error
 
 	mu struct {
 		sync.Mutex
@@ -167,7 +169,7 @@ type signaler struct {
 	}
 }
 
-func (s *signaler) init(allowed waiter.EventMask) {
+func (s *signaler) init(allowed waiter.EventMask, readiness func(waiter.EventMask) waiter.EventMask, signalPeer func(zx.Signals, zx.Signals) error) {
 	if allowed&signalerSupportedEvents != allowed {
 		panic(fmt.Sprintf("allowed=%b but signalerSupportedEvents=%b", allowed, signalerSupportedEvents))
 	}
@@ -177,9 +179,11 @@ func (s *signaler) init(allowed waiter.EventMask) {
 	}
 
 	s.allowed = allowed
+	s.readiness = readiness
+	s.signalPeer = signalPeer
 }
 
-func (s *signaler) update(readiness func(waiter.EventMask) waiter.EventMask, signalPeer func(zx.Signals, zx.Signals) error) error {
+func (s *signaler) update() error {
 	// We lock to ensure that no incoming event changes readiness while we maybe
 	// set the signals.
 	s.mu.Lock()
@@ -187,7 +191,7 @@ func (s *signaler) update(readiness func(waiter.EventMask) waiter.EventMask, sig
 
 	// Consult the present readiness of the events we are interested in while
 	// we're locked, as they may have changed already.
-	observed := readiness(s.allowed)
+	observed := s.readiness(s.allowed)
 	// readiness may return events that were not requested so only keep the events
 	// we explicitly requested. For example, Readiness implementation of the UDP
 	// endpoint in gvisor may return EventErr whether or not it was set in the
@@ -205,11 +209,25 @@ func (s *signaler) update(readiness func(waiter.EventMask) waiter.EventMask, sig
 	if set == 0 && clear == 0 {
 		return nil
 	}
-	if err := signalPeer(clear, set); err != nil {
+	if err := s.signalPeer(clear, set); err != nil {
 		return err
 	}
 	s.mu.asserted = observed
 	return nil
+}
+
+func (s *signaler) mustUpdate() {
+	err := s.update()
+	switch err := err.(type) {
+	case nil:
+		return
+	case *zx.Error:
+		switch err.Status {
+		case zx.ErrBadHandle, zx.ErrPeerClosed:
+			return
+		}
+	}
+	panic(err)
 }
 
 type hardError struct {
@@ -442,6 +460,9 @@ func (ep *endpoint) GetSockOpt(_ fidl.Context, level, optName int16) (socket.Bas
 	} else {
 		var err tcpip.Error
 		val, err = GetSockOpt(ep.ep, ep.ns, &ep.hardError, ep.netProto, ep.transProto, level, optName)
+		if level == C.SOL_SOCKET && optName == C.SO_ERROR {
+			ep.pending.mustUpdate()
+		}
 		if err != nil {
 			return socket.BaseSocketGetSockOptResultWithErr(tcpipErrorToCode(err)), nil
 		}
@@ -488,7 +509,11 @@ func (ep *endpoint) domain() (socket.Domain, tcpip.Error) {
 }
 
 func (ep *endpoint) GetError(fidl.Context) (socket.BaseSocketGetErrorResult, error) {
-	if err := ep.hardError.storeAndRetrieveLocked(ep.ep.LastError()); err != nil {
+	ep.hardError.mu.Lock()
+	err := ep.hardError.storeAndRetrieveLocked(ep.ep.LastError())
+	ep.hardError.mu.Unlock()
+	ep.pending.mustUpdate()
+	if err != nil {
 		return socket.BaseSocketGetErrorResultWithErr(tcpipErrorToCode(err)), nil
 	}
 	return socket.BaseSocketGetErrorResultWithResponse(socket.BaseSocketGetErrorResponse{}), nil
@@ -969,7 +994,7 @@ func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip
 		closing: make(chan struct{}),
 		linger:  make(chan struct{}),
 	}
-	eps.pending.init(endpointWithSocketAllowedEvents)
+	eps.pending.init(endpointWithSocketAllowedEvents, eps.endpoint.ep.Readiness, eps.local.Handle().SignalPeer)
 
 	// Add the endpoint before registering callback for hangup event.
 	// The callback could be called soon after registration, where the
@@ -1047,24 +1072,6 @@ func (epe *endpointWithEvent) Describe(fidl.Context) (fidlio.NodeInfo, error) {
 	}
 	info.SetDatagramSocket(fidlio.DatagramSocket{Event: event})
 	return info, nil
-}
-
-func (epe *endpointWithEvent) GetSockOpt(ctx fidl.Context, level, optName int16) (socket.BaseSocketGetSockOptResult, error) {
-	opts, err := epe.endpoint.GetSockOpt(ctx, level, optName)
-	if level == C.SOL_SOCKET && optName == C.SO_ERROR {
-		if err := epe.pending.update(epe.ep.Readiness, epe.local.SignalPeer); err != nil {
-			panic(err)
-		}
-	}
-	return opts, err
-}
-
-func (epe *endpointWithEvent) GetError(ctx fidl.Context) (socket.BaseSocketGetErrorResult, error) {
-	result, err := epe.endpoint.GetError(ctx)
-	if err := epe.pending.update(epe.ep.Readiness, epe.local.SignalPeer); err != nil {
-		panic(err)
-	}
-	return result, err
 }
 
 func (epe *endpointWithEvent) Shutdown(_ fidl.Context, how socket.ShutdownMode) (socket.DatagramSocketShutdownResult, error) {
@@ -1186,15 +1193,20 @@ func (eps *endpointWithSocket) Listen(_ fidl.Context, backlog int16) (socket.Str
 		eps.startPollLoop()
 		var entry waiter.Entry
 		cb := func() {
-			if err := eps.pending.update(eps.ep.Readiness, eps.local.Handle().SignalPeer); err != nil {
-				if err, ok := err.(*zx.Error); ok && (err.Status == zx.ErrBadHandle || err.Status == zx.ErrPeerClosed) {
+			err := eps.pending.update()
+			switch err := err.(type) {
+			case nil:
+				return
+			case *zx.Error:
+				switch err.Status {
+				case zx.ErrBadHandle, zx.ErrPeerClosed:
 					// The endpoint is closing -- this is possible when an incoming
 					// connection races with the listening endpoint being closed.
 					go eps.wq.EventUnregister(&entry)
-				} else {
-					panic(err)
+					return
 				}
 			}
+			panic(err)
 		}
 		entry.Callback = callback(func(_ *waiter.Entry, m waiter.EventMask) {
 			if m&waiter.EventErr == 0 {
@@ -1308,7 +1320,7 @@ func (eps *endpointWithSocket) Accept(wantAddr bool) (posix.Errno, *tcpip.FullAd
 		return tcpipErrorToCode(err), nil, nil, nil
 	}
 	{
-		if err := eps.pending.update(eps.ep.Readiness, eps.local.Handle().SignalPeer); err != nil {
+		if err := eps.pending.update(); err != nil {
 			ep.Close()
 			return 0, nil, nil, err
 		}
@@ -1694,7 +1706,7 @@ func (s *datagramSocketImpl) RecvMsg(_ fidl.Context, wantAddr bool, dataLen uint
 	if _, ok := err.(*tcpip.ErrBadBuffer); ok && dataLen == 0 {
 		err = nil
 	}
-	if err := s.pending.update(s.ep.Readiness, s.local.SignalPeer); err != nil {
+	if err := s.pending.update(); err != nil {
 		panic(err)
 	}
 	if err != nil {
@@ -1733,7 +1745,7 @@ func (s *datagramSocketImpl) SendMsg(_ fidl.Context, addr *fidlnet.SocketAddress
 	r.Reset(data)
 	n, err := s.ep.Write(&r, writeOpts)
 	if err != nil {
-		if err := s.pending.update(s.ep.Readiness, s.local.SignalPeer); err != nil {
+		if err := s.pending.update(); err != nil {
 			panic(err)
 		}
 		return socket.DatagramSocketSendMsgResultWithErr(tcpipErrorToCode(err)), nil
@@ -2330,10 +2342,10 @@ func (sp *providerImpl) DatagramSocket(ctx fidl.Context, domain socket.Domain, p
 			peer:  peerE,
 		},
 	}
-	s.pending.init(registeredEvents)
+	s.pending.init(registeredEvents, s.endpointWithEvent.endpoint.ep.Readiness, s.endpointWithEvent.local.SignalPeer)
 
 	s.entry.Callback = callback(func(*waiter.Entry, waiter.EventMask) {
-		if err := s.pending.update(s.ep.Readiness, s.endpointWithEvent.local.SignalPeer); err != nil {
+		if err := s.pending.update(); err != nil {
 			panic(err)
 		}
 	})
