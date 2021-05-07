@@ -382,6 +382,7 @@ zx_status_t Astro::AudioInit() {
     metadata.codecs.external_delays[1].frequency = 96'000;
     metadata.codecs.external_delays[1].nsecs = ZX_NSEC(83333);
     metadata.codecs.channels_to_use_bitmask[0] = (1 << 0);
+    metadata.codecs.delta_gains[0] = -1.5f;
     pbus_metadata_t tdm_metadata[] = {
         {
             .type = DEVICE_METADATA_PRIVATE,
