@@ -6,6 +6,9 @@
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/cpp/inspect.h>
 
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim.h"
@@ -13,6 +16,8 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/test/device_inspect_test_utils.h"
 
 namespace wlan::brcmfmac {
+
+using ::testing::NotNull;
 
 constexpr wlan_channel_t kDefaultChannel = {
     .primary = 9, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
@@ -29,9 +34,10 @@ class CrashRecoveryTest : public SimTest {
   void RecreateClientIface();
   void VerifyScanResult(const uint64_t scan_id, size_t min_result_num,
                         wlan_scan_result_t expect_code);
+
   // Get the value of inspect counter of firmware recovery. It is used to verify the number of
-  // counted firmware recovery in driver's metrix.
-  uint64_t GetFwRcvrInspectCount();
+  // counted firmware recovery in driver's metrics.
+  void GetFwRcvrInspectCount(uint64_t* out_count);
 
   simulation::FakeAp ap_;
   SimInterface client_ifc_;
@@ -46,7 +52,9 @@ void CrashRecoveryTest::Init() {
   brcmf_simdev* sim = device_->GetSim();
   client_ifp_ = brcmf_get_ifp(sim->drvr, client_ifc_.iface_id_);
   client_ifc_.GetMacAddr(&client_mac_addr_);
-  ASSERT_EQ(0U, GetFwRcvrInspectCount());
+  uint64_t count;
+  GetFwRcvrInspectCount(&count);
+  ASSERT_EQ(0U, count);
 }
 
 void CrashRecoveryTest::RecreateClientIface() {
@@ -83,15 +91,16 @@ void CrashRecoveryTest::VerifyScanResult(const uint64_t scan_id, size_t min_resu
   EXPECT_EQ(client_ifc_.ScanResultCode(scan_id).value(), expect_code);
 }
 
-uint64_t CrashRecoveryTest::GetFwRcvrInspectCount() {
+void CrashRecoveryTest::GetFwRcvrInspectCount(uint64_t* out_count) {
+  ASSERT_THAT(out_count, NotNull());
   auto hierarchy = FetchHierarchy(device_->GetInspect()->inspector());
   auto* root = hierarchy.value().GetByPath({"brcmfmac-phy"});
-  EXPECT_TRUE(root);
+  ASSERT_THAT(root, NotNull());
   // Only verify the value of hourly counter here, the relationship between hourly counter and daily
   // counter is verified in device_inspect_test.
   auto* uint_property = root->node().get_property<inspect::UintPropertyValue>("fw_recovered");
-  EXPECT_TRUE(uint_property);
-  return uint_property->value();
+  ASSERT_THAT(uint_property, NotNull());
+  *out_count = uint_property->value();
 }
 
 TEST_F(CrashRecoveryTest, DeviceDestroyOnCrash) {
@@ -132,7 +141,9 @@ TEST_F(CrashRecoveryTest, ConnectAfterCrashDuringScan) {
   EXPECT_EQ(client_ifc_.stats_.assoc_successes, 1U);
 
   // Verify inspect is updated.
-  EXPECT_EQ(1U, GetFwRcvrInspectCount());
+  uint64_t count;
+  GetFwRcvrInspectCount(&count);
+  EXPECT_EQ(1U, count);
 }
 
 // Verify that an association can be done correctly after firmware crashes while driver is already
@@ -153,7 +164,9 @@ TEST_F(CrashRecoveryTest, ConnectAfterCrashAfterConnect) {
   EXPECT_EQ(client_ifc_.stats_.assoc_successes, 2U);
 
   // Verify inspect is updated.
-  EXPECT_EQ(1U, GetFwRcvrInspectCount());
+  uint64_t count;
+  GetFwRcvrInspectCount(&count);
+  EXPECT_EQ(1U, count);
 }
 
 // Verify that a scan can be done correctly after a crash recovery happens when client is connected
@@ -177,7 +190,9 @@ TEST_F(CrashRecoveryTest, ScanAfterCrashAfterConnect) {
   VerifyScanResult(kScanId, kExpectMinScanResultNumber, WLAN_SCAN_RESULT_SUCCESS);
 
   // Verify inspect is updated.
-  EXPECT_EQ(1U, GetFwRcvrInspectCount());
+  uint64_t count;
+  GetFwRcvrInspectCount(&count);
+  EXPECT_EQ(1U, count);
 }
 
 }  // namespace wlan::brcmfmac

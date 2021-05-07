@@ -10,6 +10,7 @@
 #include <zircon/errors.h>
 
 #include <ddk/hw/wlan/wlaninfo/c/banjo.h>
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <wifi/wifi-config.h>
 
@@ -25,6 +26,8 @@
 namespace wlan::brcmfmac {
 
 namespace {
+
+using ::testing::NotNull;
 
 constexpr zx::duration kSimulatedClockDuration = zx::sec(10);
 
@@ -49,7 +52,7 @@ class CreateSoftAPTest : public SimTest {
   uint32_t DeviceCount();
 
   // We track a specific firmware error condition seen in AP start.
-  uint64_t GetApSetSsidErrInspectCount();
+  void GetApSetSsidErrInspectCount(uint64_t* out_count);
 
   void TxAuthReq(simulation::SimAuthType auth_type, common::MacAddr client_mac);
   void TxAssocReq(common::MacAddr client_mac);
@@ -177,15 +180,16 @@ void CreateSoftAPTest::DeleteInterface() {
 
 uint32_t CreateSoftAPTest::DeviceCount() { return (dev_mgr_->DeviceCount()); }
 
-uint64_t CreateSoftAPTest::GetApSetSsidErrInspectCount() {
+void CreateSoftAPTest::GetApSetSsidErrInspectCount(uint64_t* out_count) {
+  ASSERT_THAT(out_count, NotNull());
   auto hierarchy = FetchHierarchy(device_->GetInspect()->inspector());
   auto* root = hierarchy.value().GetByPath({"brcmfmac-phy"});
-  EXPECT_NE(root, nullptr);
+  ASSERT_THAT(root, NotNull());
   // Only verify the value of hourly counter here, the relationship between hourly counter and daily
   // counter is verified in device_inspect_test.
   auto* uint_property = root->node().get_property<inspect::UintPropertyValue>("ap_set_ssid_err");
-  EXPECT_NE(uint_property, nullptr);
-  return uint_property->value();
+  ASSERT_THAT(uint_property, NotNull());
+  *out_count = uint_property->value();
 }
 
 uint16_t CreateSoftAPTest::CreateRsneIe(uint8_t* buffer) {
@@ -456,13 +460,16 @@ TEST_F(CreateSoftAPTest, CreateSoftAPFail_SetSsidError) {
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(2));
   InjectSetSsidError();
   env_->ScheduleNotification(std::bind(&CreateSoftAPTest::StartSoftAP, this), zx::msec(50));
-  ASSERT_EQ(0U, GetApSetSsidErrInspectCount());
+  uint64_t count;
+  GetApSetSsidErrInspectCount(&count);
+  ASSERT_EQ(count, 0u);
   env_->Run(kSimulatedClockDuration);
 
   VerifyStartAPConf(WLAN_START_RESULT_NOT_SUPPORTED);
 
   // Verify inspect is updated.
-  EXPECT_EQ(1U, GetApSetSsidErrInspectCount());
+  GetApSetSsidErrInspectCount(&count);
+  EXPECT_EQ(count, 1u);
 }
 
 // Fail the iovar bss but Stop AP should still succeed

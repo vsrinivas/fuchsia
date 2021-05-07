@@ -22,14 +22,16 @@
 #include <functional>
 #include <memory>
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/test/device_inspect_test_utils.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
-namespace wlan {
-namespace brcmfmac {
+namespace wlan::brcmfmac {
+
+using ::testing::NotNull;
 
 constexpr uint16_t kUintPropertyNum = 9;
 constexpr uint16_t kWindowPropertyNum = 9;
@@ -60,13 +62,15 @@ class DeviceInspectTest : public gtest::TestLoopFixture {
   void LogSdioMaxTxSeqErr() { device_inspect_->LogSdioMaxTxSeqErr(); }
   void LogApSetSsidErr() { device_inspect_->LogApSetSsidErr(); }
 
-  uint64_t GetUintProperty(const std::vector<std::string>& path, std::string name) {
+  void GetUintProperty(const std::vector<std::string>& path, std::string name,
+                       uint64_t* out_property) {
+    ASSERT_THAT(out_property, NotNull());
     auto hierarchy = FetchHierarchy(device_inspect_->inspector());
     auto* root = hierarchy.value().GetByPath(path);
-    EXPECT_TRUE(root);
+    ASSERT_THAT(root, NotNull());
     auto* uint_property = root->node().get_property<inspect::UintPropertyValue>(name);
-    EXPECT_TRUE(uint_property);
-    return uint_property->value();
+    ASSERT_THAT(uint_property, NotNull());
+    *out_property = uint_property->value();
   }
 
   std::unique_ptr<DeviceInspect> device_inspect_;
@@ -120,9 +124,12 @@ TEST_F(DeviceInspectTest, SimpleIncrementCounterSingle) {
   // Going over all inspect counters inside this loop.
   for (uint16_t k = 0; k < kUintPropertyNum; k++) {
     BRCMF_INFO("Testing %s", uint_properties_[k].name_.c_str());
-    EXPECT_EQ(0u, GetUintProperty(uint_properties_[k].path_, uint_properties_[k].name_));
+    uint64_t property;
+    GetUintProperty(uint_properties_[k].path_, uint_properties_[k].name_, &property);
+    EXPECT_EQ(0u, property);
     uint_properties_[k].log_callback_();
-    EXPECT_EQ(1u, GetUintProperty(uint_properties_[k].path_, uint_properties_[k].name_));
+    GetUintProperty(uint_properties_[k].path_, uint_properties_[k].name_, &property);
+    EXPECT_EQ(1u, property);
   }
 }
 
@@ -132,21 +139,26 @@ TEST_F(DeviceInspectTest, SimpleIncrementCounterMultiple) {
   // Outer Loop is to go over all inspect counters.
   for (uint16_t k = 0; k < kUintPropertyNum; k++) {
     BRCMF_INFO("Testing %s", uint_properties_[k].name_.c_str());
-    EXPECT_EQ(0u, GetUintProperty(uint_properties_[k].path_, uint_properties_[k].name_));
+    uint64_t property;
+    GetUintProperty(uint_properties_[k].path_, uint_properties_[k].name_, &property);
+    EXPECT_EQ(0u, property);
     for (uint32_t i = 0; i < property_cnt; i++) {
       uint_properties_[k].log_callback_();
     }
-    EXPECT_EQ(property_cnt, GetUintProperty(uint_properties_[k].path_, uint_properties_[k].name_));
+    GetUintProperty(uint_properties_[k].path_, uint_properties_[k].name_, &property);
+    EXPECT_EQ(property_cnt, property);
   }
 }
 
 TEST_F(DeviceInspectTest, SimpleIncrementCounter24HrsFor10Hrs) {
   constexpr zx::duration kLogDuration = zx::hour(10);
+  uint64_t property;
 
   // Outer Loop is to go over all inspect counters.
   for (uint16_t k = 0; k < kWindowPropertyNum; k++) {
     BRCMF_INFO("Testing %s", window_properties_[k].name_.c_str());
-    EXPECT_EQ(0u, GetUintProperty(window_properties_[k].path_, window_properties_[k].name_));
+    GetUintProperty(window_properties_[k].path_, window_properties_[k].name_, &property);
+    EXPECT_EQ(0u, property);
     // Log 1 queue full event every hour, including the first and last, for 'log_duration' hours.
     for (zx::duration i; i <= kLogDuration; i += zx::hour(1)) {
       async::PostDelayedTask(dispatcher(), window_properties_[k].log_callback_, i);
@@ -154,18 +166,21 @@ TEST_F(DeviceInspectTest, SimpleIncrementCounter24HrsFor10Hrs) {
     RunLoopFor(kLogDuration);
 
     // Since we also log once at the beginning of the run, we will have one more count.
-    EXPECT_EQ(static_cast<uint64_t>(kLogDuration / zx::hour(1)) + 1,
-              GetUintProperty(window_properties_[k].path_, window_properties_[k].name_));
+    uint64_t expected_count = (kLogDuration / zx::hour(1)) + 1;
+    GetUintProperty(window_properties_[k].path_, window_properties_[k].name_, &property);
+    EXPECT_EQ(expected_count, property);
   }
 }
 
 TEST_F(DeviceInspectTest, LogTxQfull24HrsFor100Hrs) {
   constexpr zx::duration kLogDuration = zx::hour(100);
+  uint64_t property;
 
   // Outer Loop is to go over all inspect counters.
   for (uint16_t k = 0; k < kWindowPropertyNum; k++) {
     BRCMF_INFO("Testing %s", window_properties_[k].name_.c_str());
-    EXPECT_EQ(0u, GetUintProperty(window_properties_[k].path_, window_properties_[k].name_));
+    GetUintProperty(window_properties_[k].path_, window_properties_[k].name_, &property);
+    EXPECT_EQ(0u, property);
 
     // Log 1 queue full event every hour, including the first and last, for 'log_duration' hours.
     for (zx::duration i; i <= kLogDuration; i += zx::hour(1)) {
@@ -175,9 +190,9 @@ TEST_F(DeviceInspectTest, LogTxQfull24HrsFor100Hrs) {
 
     // Since log_duration is > 24hrs, we expect the rolling counter to show
     // a count of only 24.
-    EXPECT_EQ(24u, GetUintProperty(window_properties_[k].path_, window_properties_[k].name_));
+    GetUintProperty(window_properties_[k].path_, window_properties_[k].name_, &property);
+    EXPECT_EQ(24u, property);
   }
 }
 
-}  // namespace brcmfmac
-}  // namespace wlan
+}  // namespace wlan::brcmfmac

@@ -24,13 +24,15 @@
 #include <functional>
 #include <memory>
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/test/device_inspect_test_utils.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
-namespace wlan {
-namespace brcmfmac {
+namespace wlan::brcmfmac {
+
+using ::testing::NotNull;
 
 class WindowedUintPropertyTest : public gtest::TestLoopFixture {
  public:
@@ -63,17 +65,20 @@ class WindowedUintPropertyTest : public gtest::TestLoopFixture {
     }
   }
 
-  uint64_t GetCount() {
+  void GetCount(uint64_t* out_count) {
+    ASSERT_THAT(out_count, NotNull());
     auto hierarchy = FetchHierarchy(inspector_);
     auto* count = hierarchy.value().node().get_property<inspect::UintPropertyValue>(name_);
-    EXPECT_TRUE(count);
-    return count->value();
+    ASSERT_THAT(count, NotNull());
+    *out_count = count->value();
   }
 
   void AddAndValidate(uint64_t inc, uint64_t value) {
     count_.Add(inc);
     count_.SlideWindow();
-    EXPECT_EQ(value, GetCount());
+    uint64_t count;
+    GetCount(&count);
+    EXPECT_EQ(value, count);
   }
 
  protected:
@@ -123,20 +128,27 @@ TEST_F(WindowedUintPropertyTest, CounterWithoutWindowUpdate) {
   //  - Slide window for one period.
   //  - Increment by 3, 1, 5 - ensure counter keeps up without window update.
   //  - Update window and ensure count remains unchanged.
-  ASSERT_EQ(0u, GetCount());
+  uint64_t count;
+  GetCount(&count);
+  ASSERT_EQ(0u, count);
   count_.Add(1);
-  ASSERT_EQ(1u, GetCount());
+  GetCount(&count);
+  ASSERT_EQ(1u, count);
   count_.SlideWindow();
 
   count_.Add(3);
-  ASSERT_EQ(4u, GetCount());
+  GetCount(&count);
+  ASSERT_EQ(4u, count);
   count_.Add(1);
-  ASSERT_EQ(5u, GetCount());
+  GetCount(&count);
+  ASSERT_EQ(5u, count);
   count_.Add(5);
-  ASSERT_EQ(10u, GetCount());
+  GetCount(&count);
+  ASSERT_EQ(10u, count);
 
   count_.SlideWindow();
-  ASSERT_EQ(10u, GetCount());
+  GetCount(&count);
+  ASSERT_EQ(10u, count);
 }
 
 TEST_F(WindowedUintPropertyTest, 24HrsCounter) {
@@ -151,7 +163,9 @@ TEST_F(WindowedUintPropertyTest, 24HrsCounter) {
   RunLoopFor(kLogHours);
 
   // Since kLogHours is > 24hrs, we expect the counter to show a count of only 24.
-  EXPECT_EQ(24u, GetCount());
+  uint64_t count;
+  GetCount(&count);
+  EXPECT_EQ(24u, count);
 }
 
 TEST_F(WindowedUintPropertyTest, 60MinsCounter) {
@@ -166,8 +180,9 @@ TEST_F(WindowedUintPropertyTest, 60MinsCounter) {
   // ensure those counts are accounted for.
   RunLoopFor(zx::min(85));
 
-  EXPECT_EQ(12u, GetCount());
+  uint64_t count;
+  GetCount(&count);
+  EXPECT_EQ(12u, count);
 }
 
-}  // namespace brcmfmac
-}  // namespace wlan
+}  // namespace wlan::brcmfmac

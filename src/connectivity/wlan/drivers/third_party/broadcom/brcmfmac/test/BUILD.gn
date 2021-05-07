@@ -125,6 +125,7 @@ executable("device_inspect_test") {
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
+    "//third_party/googletest:gmock",
     "//zircon/system/public",
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/zx",
