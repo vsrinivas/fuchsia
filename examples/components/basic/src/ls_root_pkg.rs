@@ -4,6 +4,7 @@
 
 use std::fs;
 
+#[fuchsia::component]
 fn main() {
     let paths = fs::read_dir("/root_pkg").unwrap();
     for path in paths {

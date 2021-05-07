@@ -4,14 +4,12 @@
 
 use {
     fidl, fidl_fidl_examples_routing_echo as fecho, fuchsia_async as fasync,
-    fuchsia_component::client, fuchsia_syslog as syslog, fuchsia_zircon as zx, log::*,
-    matches::assert_matches,
+    fuchsia_component::client, fuchsia_zircon as zx, matches::assert_matches, tracing::info,
 };
 
 #[fasync::run_singlethreaded]
+#[fuchsia::component]
 async fn main() {
-    syslog::init_with_tags(&["routing_failed_echo_client"]).expect("failed to init logger");
-
     // The `echo` channel should be closed with an epitaph because routing failed (see
     // echo_realm.cml)
     //
@@ -23,7 +21,8 @@ async fn main() {
     // > realm` declaration was found at `/echo_client:0` for
     // > `/svc/fidl.examples.routing.echo.Echo`, but no matching `offer` declaration was found in
     // > the parent
-    let echo = client::connect_to_protocol::<fecho::EchoMarker>().expect("error connecting to echo");
+    let echo =
+        client::connect_to_protocol::<fecho::EchoMarker>().expect("error connecting to echo");
     let err =
         echo.echo_string(Some("Hippos rule!")).await.expect_err("echo_string should have failed");
     info!("Connecting to Echo protocol failed with error \"{}\"", err);
