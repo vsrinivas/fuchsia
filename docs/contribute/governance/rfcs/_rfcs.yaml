@@ -1210,3 +1210,16 @@
   reviewers: ['jjosh@google.com', 'geb@google.com', 'pascallouis@google.com', 'abarth@google.com', 'mesch@google.com', 'thatguy@google.com', 'shrike@google.com', 'brunodalbo@google.com']
   submitted: '2021-04-26'
   reviewed: '2021-05-05'
+
+- name: 'RFC-0094'
+  title: 'Carnelian Virtcon'
+  short_description: 'Convert Virtcon from a C++ program to a Rust based Carnelian application.'
+  authors: ['reveman@google.com']
+  file: '0094_carnelian_virtcon.md'
+  area: ['General']
+  issue: ['74628']
+  gerrit_change_id: ['519560']
+  status: 'Accepted'
+  reviewers: [ 'andresoportus@google.com', 'chaselatta@google.com', 'cpu@google.com', 'dgilhooley@google.com', 'robtsuk@google.com', 'surajmalhotra@google.com', 'travisg@google.com']
+  submitted: '2021-04-21'
+  reviewed: '2021-05-04'
