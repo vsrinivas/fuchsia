@@ -7,11 +7,12 @@
 use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
-        NodeMarker, CLONE_FLAG_SAME_RIGHTS, OPEN_FLAG_APPEND, OPEN_FLAG_DESCRIBE,
+        NodeAttributes, NodeMarker, CLONE_FLAG_SAME_RIGHTS, OPEN_FLAG_APPEND, OPEN_FLAG_DESCRIBE,
         OPEN_FLAG_NODE_REFERENCE, OPEN_RIGHT_ADMIN, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE,
         OPEN_RIGHT_WRITABLE,
     },
     fuchsia_zircon::Status,
+    std::convert::TryFrom,
 };
 
 /// Set of known rights.
@@ -58,6 +59,28 @@ pub fn inherit_rights_for_clone(parent_flags: u32, mut flags: u32) -> Result<u32
     }
 
     Ok(flags)
+}
+
+/// Returns the current time in UTC nanoseconds since the UNIX epoch.
+pub fn current_time() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| u64::try_from(d.as_nanos()).unwrap_or(0u64))
+        .unwrap_or(0u64)
+}
+
+/// Creates a default-initialized NodeAttributes. Exists because NodeAttributes does not implement
+/// Default.
+pub fn node_attributes() -> NodeAttributes {
+    NodeAttributes {
+        id: 0,
+        mode: 0,
+        content_size: 0,
+        storage_size: 0,
+        link_count: 0,
+        modification_time: 0,
+        creation_time: 0,
+    }
 }
 
 /// A helper method to send OnOpen event on the handle owned by the `server_end` in case `flags`

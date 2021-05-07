@@ -120,6 +120,7 @@ impl File for FxFile {
     }
 
     async fn write_at(&self, offset: u64, content: &[u8]) -> Result<u64, Status> {
+        // TODO(jfsulliv): Update mtime.
         let mut buf = self.handle.allocate_buffer(content.len());
         buf.as_mut_slice()[..content.len()].copy_from_slice(content);
         self.handle.write(offset, buf.as_ref()).await.map_err(map_to_status)?;
@@ -130,11 +131,12 @@ impl File for FxFile {
         // TODO(jfsulliv): this needs to be made atomic. We already lock at the Device::write level
         // but we need to lift a lock higher.
         let offset = self.handle.get_size();
-        let bytes_written = self.write_at(offset, content).await.expect("FIDL call failed");
+        let bytes_written = self.write_at(offset, content).await?;
         Ok((bytes_written, offset + bytes_written))
     }
 
     async fn truncate(&self, length: u64) -> Result<(), Status> {
+        // TODO(jfsulliv): Update mtime.
         let mut transaction = self.handle.new_transaction().await.map_err(map_to_status)?;
         self.handle.truncate(&mut transaction, length).await.map_err(map_to_status)?;
         transaction.commit().await;
@@ -155,7 +157,16 @@ impl File for FxFile {
         Err(Status::NOT_SUPPORTED)
     }
 
-    async fn set_attrs(&self, _flags: u32, _attrs: NodeAttributes) -> Result<(), Status> {
+    async fn set_attrs(
+        &self,
+        _flags: u32,
+        _attrs: NodeAttributes,
+        may_defer: bool,
+    ) -> Result<(), Status> {
+        if may_defer {
+            // TODO(jfsulliv): Cache the new attributes.
+            return Ok(());
+        }
         log::error!("set_attrs not implemented");
         Err(Status::NOT_SUPPORTED)
     }

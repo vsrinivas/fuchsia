@@ -212,6 +212,8 @@ impl MutableConnection {
             return Err(Status::BAD_HANDLE);
         }
 
+        // TODO(jfsulliv): Consider always permitting attributes to be deferrable. The risk with
+        // this is that filesystems would require a background flush of dirty attributes to disk.
         self.base.directory.set_attrs(flags, attributes).await
     }
 

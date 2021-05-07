@@ -36,15 +36,21 @@ pub trait File: Sync + Send + DirectoryEntry {
 
     /// Write |content| starting at |offset|, returning the number of bytes that were successfully
     /// written.
+    /// If there are pending attributes to update (see set_attrs), they should also be flushed at
+    /// this time.  Otherwise, no attributes should be updated, other than size as needed.
     async fn write_at(&self, offset: u64, content: &[u8]) -> Result<u64, Status>;
 
     /// Appends |content| returning, if successful, the number of bytes written, and the file offset
     /// after writing.  Implementations should make the writes atomic, so in the event that multiple
     /// requests to append are in-flight, it should appear that the two writes are applied in
     /// sequence.
+    /// If there are pending attributes to update (see set_attrs), they should also be flushed at
+    /// this time.  Otherwise, no attributes should be updated, other than size as needed.
     async fn append(&self, content: &[u8]) -> Result<(u64, u64), Status>;
 
     /// Truncate the file to |length|.
+    /// If there are pending attributes to update (see set_attrs), they should also be flushed at
+    /// this time.  Otherwise, no attributes should be updated, other than size as needed.
     async fn truncate(&self, length: u64) -> Result<(), Status>;
 
     /// Get a VMO representing this file.
@@ -61,7 +67,17 @@ pub trait File: Sync + Send + DirectoryEntry {
 
     /// Set the attributes of this file based on the values in `attrs`.
     /// The attributes to update are specified in flags, see fidl_fuchsia_io::NODE_ATTRIBUTE_FLAG_*.
-    async fn set_attrs(&self, flags: u32, attrs: NodeAttributes) -> Result<(), Status>;
+    /// If |may_defer| is set, the filesystem can choose to delay writing the new attributes to
+    /// disk, but the new attribute value must be reflected even if the write is deferred (i.e. the
+    /// filesystem should cache the new value until flushed).  The filesystem should flush these
+    /// attribute writes atomically with the next data write.  If the filesystem cannot do so
+    /// atomically, the filesystem should *first* write the attributes, then write the data.
+    async fn set_attrs(
+        &self,
+        flags: u32,
+        attrs: NodeAttributes,
+        may_defer: bool,
+    ) -> Result<(), Status>;
 
     /// Called when the file is closed.
     /// This function will also do the equivalent of sync() before the returning.
