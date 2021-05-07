@@ -300,7 +300,29 @@ void DirectoryConnection::Rename(RenameRequestView request, RenameCompleter::Syn
 }
 
 void DirectoryConnection::Rename2(Rename2RequestView request, Rename2Completer::Sync& completer) {
-  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  FS_PRETTY_TRACE_DEBUG("[DirectoryRename] our options: ", options(),
+                        ", src: ", request->src.data(), ", dst: ", request->dst.data());
+
+  if (request->src.empty() || request->dst.empty()) {
+    completer.ReplyError(ZX_ERR_INVALID_ARGS);
+    return;
+  }
+  if (options().flags.node_reference) {
+    completer.ReplyError(ZX_ERR_BAD_HANDLE);
+    return;
+  }
+  if (!options().rights.write) {
+    completer.ReplyError(ZX_ERR_BAD_HANDLE);
+    return;
+  }
+  zx_status_t status = vfs()->Rename(std::move(request->dst_parent_token), vnode(),
+                                     std::string_view(request->src.data(), request->src.size()),
+                                     std::string_view(request->dst.data(), request->dst.size()));
+  if (status == ZX_OK) {
+    completer.ReplySuccess();
+  } else {
+    completer.ReplyError(status);
+  }
 }
 
 void DirectoryConnection::Link(LinkRequestView request, LinkCompleter::Sync& completer) {
