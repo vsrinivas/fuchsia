@@ -110,7 +110,7 @@ enum IncomingStream<S> {
 /// A `SubStream` wraps an inner stream and keeps its latest value cached inline for comparison
 /// with the cached values of other `SubStream`s, allowing for semi-ordered merging of streams.
 #[derive(Debug)]
-struct SubStream<I> {
+pub struct SubStream<I> {
     name: String,
     cached: Option<I>,
     inner_is_live: bool,
@@ -118,7 +118,7 @@ struct SubStream<I> {
 }
 
 impl<I> SubStream<I> {
-    fn new(name: String, inner: PinStream<I>) -> Self {
+    pub fn new(name: String, inner: PinStream<I>) -> Self {
         Self { name, cached: None, inner_is_live: true, inner }
     }
 }

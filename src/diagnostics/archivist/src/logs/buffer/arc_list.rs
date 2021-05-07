@@ -52,6 +52,11 @@ impl<T> ArcList<T> {
     pub fn terminate(&self) {
         self.inner.lock().terminate();
     }
+
+    #[cfg(test)]
+    pub fn final_entry(&self) -> u64 {
+        self.inner.lock().final_entry
+    }
 }
 
 impl<T> Clone for ArcList<T> {

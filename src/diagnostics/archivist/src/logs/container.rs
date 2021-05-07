@@ -266,4 +266,9 @@ impl LogsArtifactsContainer {
     pub fn terminate(&self) {
         self.buffer.terminate();
     }
+
+    #[cfg(test)]
+    pub fn buffer(&self) -> &ArcList<Message> {
+        &self.buffer
+    }
 }

@@ -83,6 +83,7 @@ impl BudgetState {
         while i != self.containers.len() {
             if !self.containers[i].should_retain() {
                 let container = self.containers.remove(i);
+                container.terminate();
                 let identity = &container.identity;
                 debug!(%identity, "Removing now that we've popped the last message.");
                 self.remover.maybe_remove_component(identity);
@@ -115,5 +116,88 @@ impl BudgetHandle {
     /// removed from the data repo but we haven't dropped ourselves.
     pub fn terminate(&self) {
         self.state.upgrade().expect("budgetmanager outlives all containers").lock().terminate();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::logs::{
+        container::LogsArtifactsContainer,
+        message::{Message, TEST_IDENTITY},
+        multiplex::PinStream,
+        stats::LogStreamStats,
+    };
+    use diagnostics_data::{hierarchy, LogsField, Severity};
+    use fidl_fuchsia_diagnostics::StreamMode;
+    use futures::{Stream, StreamExt};
+    use std::{
+        pin::Pin,
+        task::{Context, Poll},
+    };
+
+    struct CursorWrapper(PinStream<Arc<Message>>);
+
+    impl Stream for CursorWrapper {
+        type Item = Arc<Message>;
+        fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+            self.0.as_mut().poll_next(cx)
+        }
+    }
+
+    #[fuchsia::test]
+    async fn verify_container_is_terminated_on_removal() {
+        let manager = BudgetManager::new(100);
+        let container_a = Arc::new(LogsArtifactsContainer::new(
+            TEST_IDENTITY.clone(),
+            &vec![],
+            LogStreamStats::default(),
+            manager.handle(),
+        ));
+        let container_b = Arc::new(LogsArtifactsContainer::new(
+            TEST_IDENTITY.clone(),
+            &vec![],
+            LogStreamStats::default(),
+            manager.handle(),
+        ));
+        manager.add_container(container_a.clone());
+        manager.add_container(container_b.clone());
+        assert_eq!(manager.state.lock().containers.len(), 2);
+
+        // Add a few test messages
+        let b_message = fake_message(1);
+        container_b.ingest_message(b_message.clone());
+        container_a.ingest_message(fake_message(2));
+
+        let mut cursor = CursorWrapper(container_b.cursor(StreamMode::SnapshotThenSubscribe));
+        assert_eq!(cursor.next().await, Some(Arc::new(b_message)));
+
+        container_b.mark_stopped();
+
+        // This allocation exceeds capacity, so the B container is dropped and terminated.
+        container_a.ingest_message(fake_message(3));
+        assert_eq!(manager.state.lock().containers.len(), 1);
+
+        // The container was terminated too.
+        assert_eq!(container_b.buffer().final_entry(), 1);
+
+        // Container is terminated, the cursor should give None.
+        assert_eq!(cursor.next().await, None);
+    }
+
+    fn fake_message(timestamp: i64) -> Message {
+        Message::new(
+            timestamp,
+            Severity::Debug,
+            50,
+            0,
+            &*TEST_IDENTITY,
+            hierarchy! {
+                root: {
+                    LogsField::ProcessId => 123,
+                    LogsField::ThreadId => 456,
+                }
+            },
+        )
     }
 }
