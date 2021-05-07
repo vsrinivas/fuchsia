@@ -692,6 +692,7 @@ fuchsia_test_package("pkg-resolver-integration-tests") {
 
     # binaries that are used at runtime.
     ":pkgsvr-binary",
+    "//src/lib/storage/ramdevice_client:ramdisk-isolated-devmgr-component",
     "//src/storage/bin/blobfs",
     "//src/sys/pkg/bin/pm:pm_bin",
   ]
@@ -707,7 +708,6 @@ group("tests") {
   testonly = true
   public_deps = [
     ":pkg-resolver-integration-tests",
-    "//src/lib/storage/ramdevice_client:ramdisk-isolated-devmgr",
     "//src/sys/pkg/bin/pm:pm",
   ]
 }
