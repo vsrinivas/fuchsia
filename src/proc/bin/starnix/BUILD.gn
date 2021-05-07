@@ -64,6 +64,7 @@ if (target_cpu == "x64") {
       "fs/fuchsia/syslog.rs",
       "fs/mod.rs",
       "fs/syscalls.rs",
+      "fs/tree.rs",
       "loader.rs",
       "logging.rs",
       "main.rs",

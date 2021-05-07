@@ -6,6 +6,8 @@ mod fd;
 mod file_system;
 mod fuchsia;
 pub mod syscalls;
+#[allow(dead_code)]
+mod tree;
 
 pub use fd::*;
 pub use file_system::*;
