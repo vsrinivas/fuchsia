@@ -105,7 +105,7 @@ fit::promise<inspect::Inspector> DriverHost::Inspect() {
 }
 
 zx::status<> DriverHost::PublishDriverHost(const fbl::RefPtr<fs::PseudoDir>& svc_dir) {
-  const auto service = [this](zx::channel request) {
+  const auto service = [this](fidl::ServerEnd<fdf::DriverHost> request) {
     fidl::BindServer(loop_.dispatcher(), std::move(request), this);
     return ZX_OK;
   };

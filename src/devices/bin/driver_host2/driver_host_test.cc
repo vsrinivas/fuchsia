@@ -13,6 +13,7 @@
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/inspect/cpp/reader.h>
 #include <lib/inspect/testing/cpp/inspect.h>
+#include <lib/service/llcpp/service.h>
 
 #include <fbl/string_printf.h>
 #include <gmock/gmock.h>
@@ -52,12 +53,12 @@ class TestFile : public fio::testing::File_TestBase {
  private:
   void GetBuffer(uint32_t flags, GetBufferCallback callback) override {
     EXPECT_EQ(fio::VMO_FLAG_READ | fio::VMO_FLAG_EXEC | fio::VMO_FLAG_PRIVATE, flags);
-    zx::channel client_end, server_end;
-    ASSERT_EQ(ZX_OK, zx::channel::create(0, &client_end, &server_end));
+    auto endpoints = fidl::CreateEndpoints<fuchsia_io::File>();
+    ASSERT_TRUE(endpoints.is_ok());
     EXPECT_EQ(ZX_OK, fdio_open(path_.data(), fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
-                               server_end.release()));
+                               endpoints->server.channel().release()));
 
-    fidl::WireSyncClient<fuchsia_io::File> file(std::move(client_end));
+    fidl::WireSyncClient<fuchsia_io::File> file(std::move(endpoints->client));
     auto result = file.GetBuffer(flags);
     EXPECT_TRUE(result.ok());
     auto buffer = fmem::Buffer::New();
@@ -113,8 +114,8 @@ class TestTransaction : public fidl::Transaction {
 };
 
 struct StartDriverResult {
-  zx::channel driver;
-  zx::channel outgoing_dir;
+  fidl::ClientEnd<fdf::Driver> driver;
+  fidl::ClientEnd<fuchsia_io::Directory> outgoing_dir;
 };
 
 class DriverHostTest : public gtest::TestLoopFixture {
@@ -196,8 +197,8 @@ class DriverHostTest : public gtest::TestLoopFixture {
     EXPECT_EQ(expected_epitaph, epitaph);
 
     return {
-        .driver = driver_endpoints->client.TakeChannel(),
-        .outgoing_dir = outgoing_dir_endpoints->client.TakeChannel(),
+        .driver = std::move(driver_endpoints->client),
+        .outgoing_dir = std::move(outgoing_dir_endpoints->client),
     };
   }
 
@@ -244,12 +245,10 @@ TEST_F(DriverHostTest, Start_MultipleDrivers) {
 TEST_F(DriverHostTest, Start_OutgoingServices) {
   auto [driver, outgoing_dir] = StartDriver();
 
-  auto path = fbl::StringPrintf("svc/%s", fidl::DiscoverableProtocolName<ftest::Outgoing>);
-  zx::channel client_end, server_end;
-  EXPECT_EQ(ZX_OK, zx::channel::create(0, &client_end, &server_end));
-  zx_status_t status =
-      fdio_service_connect_at(outgoing_dir.get(), path.data(), server_end.release());
-  EXPECT_EQ(ZX_OK, status);
+  // NOTE: We skip the leading '/' in the default path to form a relative path.
+  auto path = fidl::DiscoverableProtocolDefaultPath<ftest::Outgoing> + 1;
+  auto client_end = service::ConnectAt<ftest::Outgoing>(outgoing_dir, path);
+  ASSERT_TRUE(client_end.is_ok());
 
   class EventHandler : public fidl::WireAsyncEventHandler<ftest::Outgoing> {
    public:
@@ -264,7 +263,8 @@ TEST_F(DriverHostTest, Start_OutgoingServices) {
   };
 
   auto event_handler = std::make_shared<EventHandler>();
-  fidl::Client<ftest::Outgoing> outgoing(std::move(client_end), loop().dispatcher(), event_handler);
+  fidl::Client<ftest::Outgoing> outgoing(std::move(*client_end), loop().dispatcher(),
+                                         event_handler);
   loop().RunUntilIdle();
   EXPECT_EQ(ZX_ERR_STOP, event_handler->status());
 
@@ -276,7 +276,7 @@ TEST_F(DriverHostTest, Start_OutgoingServices) {
 // Start a single driver, and receive an incoming connection to our service.
 TEST_F(DriverHostTest, Start_IncomingServices) {
   bool connected = false;
-  AddEntry([&connected](zx::channel request) {
+  AddEntry([&connected](auto request) {
     connected = true;
     return ZX_OK;
   });
@@ -312,48 +312,48 @@ TEST_F(DriverHostTest, Start_InvalidStartArgs) {
   TestTransaction transaction(&epitaph);
 
   // DriverStartArgs::ns is missing "/pkg" entry.
-  zx::channel driver_client_end, driver_server_end;
-  ASSERT_EQ(ZX_OK, zx::channel::create(0, &driver_client_end, &driver_server_end));
+  auto endpoints = fidl::CreateEndpoints<fdf::Driver>();
+  ASSERT_TRUE(endpoints.is_ok());
   {
     Completer completer(&transaction);
     fidl::WireRequest<fdf::DriverHost::Start> request(0, fdf::wire::DriverStartArgs(),
-                                                      std::move(driver_server_end));
+                                                      std::move(endpoints->server));
     driver_host()->Start(&request, completer);
   }
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, epitaph);
 
   // DriverStartArgs::ns not set.
-  ASSERT_EQ(ZX_OK, zx::channel::create(0, &driver_client_end, &driver_server_end));
+  endpoints = fidl::CreateEndpoints<fdf::Driver>();
+  ASSERT_TRUE(endpoints.is_ok());
   {
     Completer completer(&transaction);
     fidl::FidlAllocator allocator;
     fdf::wire::DriverStartArgs driver_start_args(allocator);
     driver_start_args.set_url(allocator, "fuchsia-pkg://fuchsia.com/driver#meta/driver.cm");
 
-    fidl::WireRequest<fdf::DriverHost::Start> request(
-        0, std::move(driver_start_args),
-        fidl::ServerEnd<fdf::Driver>(std::move(driver_server_end)));
+    fidl::WireRequest<fdf::DriverHost::Start> request(0, std::move(driver_start_args),
+                                                      std::move(endpoints->server));
     driver_host()->Start(&request, completer);
   }
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, epitaph);
 
   // DriverStartArgs::ns is missing "/pkg" entry.
-  // TODO(fxbug.dev/65212): Migrate the use of |zx::channel::create| to |fidl::CreateEndpoints|.
-  ASSERT_EQ(ZX_OK, zx::channel::create(0, &driver_client_end, &driver_server_end));
+  endpoints = fidl::CreateEndpoints<fdf::Driver>();
+  ASSERT_TRUE(endpoints.is_ok());
   {
     Completer completer(&transaction);
     fidl::FidlAllocator allocator;
     fdf::wire::DriverStartArgs driver_start_args(allocator);
     driver_start_args.set_url(allocator, "fuchsia-pkg://fuchsia.com/driver#meta/driver.cm");
     driver_start_args.set_ns(allocator);
-    fidl::WireRequest<fdf::DriverHost::Start> request(
-        0, std::move(driver_start_args),
-        fidl::ServerEnd<fdf::Driver>(std::move(driver_server_end)));
+    fidl::WireRequest<fdf::DriverHost::Start> request(0, std::move(driver_start_args),
+                                                      std::move(endpoints->server));
     driver_host()->Start(&request, completer);
   }
   EXPECT_EQ(ZX_ERR_NOT_FOUND, epitaph);
 
-  ASSERT_EQ(ZX_OK, zx::channel::create(0, &driver_client_end, &driver_server_end));
+  endpoints = fidl::CreateEndpoints<fdf::Driver>();
+  ASSERT_TRUE(endpoints.is_ok());
   {
     fidl::FidlAllocator allocator;
     // DriverStartArgs::program not set.
@@ -367,14 +367,14 @@ TEST_F(DriverHostTest, Start_InvalidStartArgs) {
     driver_start_args.set_ns(allocator, std::move(entries1));
 
     Completer completer(&transaction);
-    fidl::WireRequest<fdf::DriverHost::Start> request(
-        0, std::move(driver_start_args),
-        fidl::ServerEnd<fdf::Driver>(std::move(driver_server_end)));
+    fidl::WireRequest<fdf::DriverHost::Start> request(0, std::move(driver_start_args),
+                                                      std::move(endpoints->server));
     driver_host()->Start(&request, completer);
   }
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, epitaph);
 
-  ASSERT_EQ(ZX_OK, zx::channel::create(0, &driver_client_end, &driver_server_end));
+  endpoints = fidl::CreateEndpoints<fdf::Driver>();
+  ASSERT_TRUE(endpoints.is_ok());
   {
     // DriverStartArgs::program is missing "binary" entry.
     fidl::FidlAllocator allocator;
@@ -389,9 +389,8 @@ TEST_F(DriverHostTest, Start_InvalidStartArgs) {
     driver_start_args.set_ns(allocator, std::move(entries2));
 
     Completer completer(&transaction);
-    fidl::WireRequest<fdf::DriverHost::Start> request(
-        0, std::move(driver_start_args),
-        fidl::ServerEnd<fdf::Driver>(std::move(driver_server_end)));
+    fidl::WireRequest<fdf::DriverHost::Start> request(0, std::move(driver_start_args),
+                                                      std::move(endpoints->server));
     driver_host()->Start(&request, completer);
   }
   EXPECT_EQ(ZX_ERR_NOT_FOUND, epitaph);
@@ -400,16 +399,16 @@ TEST_F(DriverHostTest, Start_InvalidStartArgs) {
 // Start a driver with an invalid client-end.
 TEST_F(DriverHostTest, InvalidHandleRights) {
   bool connected = false;
-  AddEntry([&connected](zx::channel request) {
+  AddEntry([&connected](auto request) {
     connected = true;
     return ZX_OK;
   });
-  zx::channel client, server;
-  ASSERT_EQ(ZX_OK, zx::channel::create(0, &client, &server));
-  ASSERT_EQ(ZX_OK, client.replace(ZX_RIGHT_TRANSFER, &client));
-  fidl::ClientEnd<fdf::Node> client_end(std::move(client));
+  auto endpoints = fidl::CreateEndpoints<fdf::Node>();
+  ASSERT_TRUE(endpoints.is_ok());
+  auto& client_end = endpoints->client.channel();
+  ASSERT_EQ(ZX_OK, client_end.replace(ZX_RIGHT_TRANSFER, &client_end));
   // This should fail when node rights are not ZX_DEFAULT_CHANNEL_RIGHTS.
-  StartDriver({}, &client_end, ZX_ERR_INVALID_ARGS);
+  StartDriver({}, &endpoints->client, ZX_ERR_INVALID_ARGS);
   EXPECT_FALSE(connected);
 }
 
@@ -419,18 +418,17 @@ TEST_F(DriverHostTest, Start_InvalidBinary) {
   TestTransaction transaction(&epitaph);
   fidl::FidlAllocator allocator;
 
-  zx::channel pkg_client_end, pkg_server_end;
-  EXPECT_EQ(ZX_OK, zx::channel::create(0, &pkg_client_end, &pkg_server_end));
+  auto pkg_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  ASSERT_TRUE(pkg_endpoints.is_ok());
   fidl::VectorView<frunner::wire::ComponentNamespaceEntry> ns_entries(allocator, 1);
   ns_entries[0].Allocate(allocator);
   ns_entries[0].set_path(allocator, "/pkg");
-  ns_entries[0].set_directory(allocator,
-                              fidl::ClientEnd<fuchsia_io::Directory>(std::move(pkg_client_end)));
+  ns_entries[0].set_directory(allocator, std::move(pkg_endpoints->client));
   TestFile file("/pkg/driver/test_not_driver.so");
   fidl::Binding<fio::File> file_binding(&file);
   TestDirectory pkg_directory;
   fidl::Binding<fio::Directory> pkg_binding(&pkg_directory);
-  pkg_binding.Bind(std::move(pkg_server_end), loop().dispatcher());
+  pkg_binding.Bind(pkg_endpoints->server.TakeChannel(), loop().dispatcher());
   pkg_directory.SetOpenHandler(
       [this, &file_binding](uint32_t flags, std::string path, auto object) {
         EXPECT_EQ(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE, flags);
@@ -441,8 +439,8 @@ TEST_F(DriverHostTest, Start_InvalidBinary) {
   program_entries[0].key.Set(allocator, "binary");
   program_entries[0].value.set_str(allocator, "driver/library.so");
 
-  zx::channel driver_client_end, driver_server_end;
-  EXPECT_EQ(ZX_OK, zx::channel::create(0, &driver_client_end, &driver_server_end));
+  auto driver_endpoints = fidl::CreateEndpoints<fdf::Driver>();
+  ASSERT_TRUE(driver_endpoints.is_ok());
   {
     Completer completer(&transaction);
     fdata::wire::Dictionary dictionary(allocator);
@@ -454,7 +452,7 @@ TEST_F(DriverHostTest, Start_InvalidBinary) {
     driver_start_args.set_ns(allocator, std::move(ns_entries));
 
     fidl::WireRequest<fdf::DriverHost::Start> request(0, std::move(driver_start_args),
-                                                      std::move(driver_server_end));
+                                                      std::move(driver_endpoints->server));
     driver_host()->Start(&request, completer);
   }
   loop().RunUntilIdle();
