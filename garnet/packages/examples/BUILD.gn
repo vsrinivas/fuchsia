@@ -37,7 +37,6 @@ group("all") {
     "//garnet/packages/examples:bluetooth",
     "//garnet/packages/examples:components",
     "//garnet/packages/examples:escher",
-    "//garnet/packages/examples:eth-rs",
     "//garnet/packages/examples:fidl",
     "//garnet/packages/examples:http",
     "//garnet/packages/examples:intl",
@@ -47,11 +46,6 @@ group("all") {
     "//garnet/packages/examples:speech",
     "//garnet/packages/examples:tcp",
   ]
-}
-
-group("eth-rs") {
-  testonly = true
-  public_deps = [ "//examples/rust/eth-rs:eth-rs" ]
 }
 
 group("http") {

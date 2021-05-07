@@ -11,7 +11,6 @@ group("rust") {
 
     # TODO(fxbug.dev/50421): This target seems broken.
     # "cdylib",
-    "eth-rs",
     "staticlib",
   ]
 }
@@ -27,7 +26,6 @@ group("tests") {
 
     # TODO(fxbug.dev/50421): This target seems broken.
     # "cdylib",
-    "eth-rs",
     "staticlib",
   ]
 }
