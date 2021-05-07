@@ -23,8 +23,15 @@
       },
       "maybe_attributes": [
         {
-          "name": "OnBits",
-          "value": ""
+          "name": "on_bits",
+          "value": "",
+          "arguments": [],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
+            "line": 6,
+            "column": 2,
+            "length": 6
+          }
         }
       ],
       "type": {
@@ -53,8 +60,15 @@
           },
           "maybe_attributes": [
             {
-              "name": "OnBitsMember",
-              "value": ""
+              "name": "on_bits_member",
+              "value": "",
+              "arguments": [],
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
+                "line": 8,
+                "column": 6,
+                "length": 12
+              }
             }
           ]
         }
@@ -73,8 +87,15 @@
       },
       "maybe_attributes": [
         {
-          "name": "OnConst",
-          "value": ""
+          "name": "on_const",
+          "value": "",
+          "arguments": [],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
+            "line": 12,
+            "column": 2,
+            "length": 7
+          }
         }
       ],
       "type": {
@@ -104,8 +125,15 @@
       },
       "maybe_attributes": [
         {
-          "name": "OnEnum",
-          "value": ""
+          "name": "on_enum",
+          "value": "",
+          "arguments": [],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
+            "line": 15,
+            "column": 2,
+            "length": 6
+          }
         }
       ],
       "type": "uint32",
@@ -130,8 +158,15 @@
           },
           "maybe_attributes": [
             {
-              "name": "OnEnumMember",
-              "value": ""
+              "name": "on_enum_member",
+              "value": "",
+              "arguments": [],
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
+                "line": 17,
+                "column": 6,
+                "length": 12
+              }
             }
           ]
         }
@@ -151,8 +186,15 @@
       },
       "maybe_attributes": [
         {
-          "name": "OnProtocol",
-          "value": ""
+          "name": "on_protocol",
+          "value": "",
+          "arguments": [],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
+            "line": 21,
+            "column": 2,
+            "length": 10
+          }
         }
       ],
       "methods": [
@@ -168,8 +210,15 @@
           "has_request": true,
           "maybe_attributes": [
             {
-              "name": "OnMethod",
-              "value": ""
+              "name": "on_method",
+              "value": "",
+              "arguments": [],
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
+                "line": 23,
+                "column": 6,
+                "length": 8
+              }
             }
           ],
           "maybe_request": [
@@ -261,8 +310,15 @@
       "anonymous": false,
       "maybe_attributes": [
         {
-          "name": "OnStruct",
-          "value": ""
+          "name": "on_struct",
+          "value": "",
+          "arguments": [],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
+            "line": 27,
+            "column": 2,
+            "length": 8
+          }
         }
       ],
       "members": [
@@ -280,8 +336,15 @@
           },
           "maybe_attributes": [
             {
-              "name": "OnStructMember",
-              "value": ""
+              "name": "on_struct_member",
+              "value": "",
+              "arguments": [],
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
+                "line": 29,
+                "column": 6,
+                "length": 14
+              }
             }
           ],
           "field_shape_v1": {
@@ -313,8 +376,15 @@
       },
       "maybe_attributes": [
         {
-          "name": "OnTable",
-          "value": ""
+          "name": "on_table",
+          "value": "",
+          "arguments": [],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
+            "line": 33,
+            "column": 2,
+            "length": 7
+          }
         }
       ],
       "members": [
@@ -334,8 +404,15 @@
           },
           "maybe_attributes": [
             {
-              "name": "OnTableMember",
-              "value": ""
+              "name": "on_table_member",
+              "value": "",
+              "arguments": [],
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
+                "line": 35,
+                "column": 6,
+                "length": 13
+              }
             }
           ]
         }
@@ -364,8 +441,15 @@
       },
       "maybe_attributes": [
         {
-          "name": "OnUnion",
-          "value": ""
+          "name": "on_union",
+          "value": "",
+          "arguments": [],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
+            "line": 42,
+            "column": 2,
+            "length": 7
+          }
         }
       ],
       "members": [
@@ -385,8 +469,15 @@
           },
           "maybe_attributes": [
             {
-              "name": "OnUnionMember",
-              "value": ""
+              "name": "on_union_member",
+              "value": "",
+              "arguments": [],
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
+                "line": 44,
+                "column": 6,
+                "length": 13
+              }
             }
           ]
         }
@@ -413,8 +504,15 @@
       },
       "maybe_attributes": [
         {
-          "name": "OnXUnion",
-          "value": ""
+          "name": "on_x_union",
+          "value": "",
+          "arguments": [],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
+            "line": 48,
+            "column": 2,
+            "length": 8
+          }
         }
       ],
       "members": [
@@ -434,8 +532,15 @@
           },
           "maybe_attributes": [
             {
-              "name": "OnXUnionMember",
-              "value": ""
+              "name": "on_x_union_member",
+              "value": "",
+              "arguments": [],
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
+                "line": 50,
+                "column": 6,
+                "length": 14
+              }
             }
           ]
         }
@@ -464,8 +569,15 @@
       },
       "maybe_attributes": [
         {
-          "name": "OnTypeAlias",
-          "value": ""
+          "name": "on_type_alias",
+          "value": "",
+          "arguments": [],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
+            "line": 39,
+            "column": 2,
+            "length": 11
+          }
         }
       ],
       "partial_type_ctor": {

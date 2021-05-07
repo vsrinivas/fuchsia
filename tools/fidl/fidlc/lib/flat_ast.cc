@@ -2344,8 +2344,8 @@ bool Library::ConsumeAttributeListOld(std::unique_ptr<raw::AttributeListOld> raw
       std::vector<std::unique_ptr<AttributeArg>> args;
       if (raw_attribute.value) {
         auto constant = std::make_unique<LiteralConstant>(std::move(raw_attribute.value));
-        args.emplace_back(
-            std::make_unique<AttributeArg>(kDefaultAttributeArg, std::move(constant)));
+        args.emplace_back(std::make_unique<AttributeArg>(kDefaultAttributeArg, std::move(constant),
+                                                         raw_attribute.span()));
       }
       auto attribute = std::make_unique<Attribute>(raw_attribute.name, fidl::utils::Syntax::kOld,
                                                    raw_attribute.span(), std::move(args));
@@ -2370,8 +2370,8 @@ bool Library::ConsumeAttributeListNew(std::unique_ptr<raw::AttributeListNew> raw
       for (auto& raw_arg : raw_attribute.args) {
         std::unique_ptr<LiteralConstant> constant;
         constant = std::make_unique<LiteralConstant>(std::move(raw_arg.value));
-        args.emplace_back(
-            std::make_unique<AttributeArg>(kDefaultAttributeArg, std::move(constant)));
+        args.emplace_back(std::make_unique<AttributeArg>(kDefaultAttributeArg, std::move(constant),
+                                                         raw_arg.span()));
       }
       auto attribute = std::make_unique<Attribute>(raw_attribute.name, fidl::utils::Syntax::kNew,
                                                    raw_attribute.span(), std::move(args));

@@ -66,11 +66,14 @@ bool HasSimpleLayout(const Decl* decl);
 std::string LibraryName(const Library* library, std::string_view separator);
 
 struct AttributeArg final {
-  AttributeArg(std::string name, std::unique_ptr<Constant> value)
-      : name(std::move(name)), value(std::move(value)) {}
+  AttributeArg(std::string name, std::unique_ptr<Constant> value, SourceSpan span)
+      : name(std::move(name)), value(std::move(value)), span_(span) {}
+
+  SourceSpan span() const { return span_; }
 
   std::string name;
   std::unique_ptr<Constant> value;
+  SourceSpan span_;
 };
 
 using MaybeConstantValue = std::optional<std::reference_wrapper<const ConstantValue>>;
@@ -93,8 +96,6 @@ struct Attribute final {
   const std::string name;
   const fidl::utils::Syntax syntax;
   std::vector<std::unique_ptr<AttributeArg>> args;
-
-  // The span is retained for error reporting purposes.
   SourceSpan span_;
 };
 

@@ -181,7 +181,6 @@ std::string NameHandleRights(types::RightsWrappedType rights) { return std::to_s
 std::string NameRawLiteralKind(raw::Literal::Kind kind) {
   switch (kind) {
     case raw::Literal::Kind::kDocComment:
-      assert(false && "doc comment literals should not be exposed in the IR");
     case raw::Literal::Kind::kString:
       return "string";
     case raw::Literal::Kind::kNumeric:

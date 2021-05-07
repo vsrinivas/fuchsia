@@ -173,7 +173,7 @@ definitions will appear as follows:
         "name",
         "value",
     ],
-    "properties": [
+    "properties": {
       "name": {
         "description": "Name of the attribute argument",
         "type": "string",
@@ -182,7 +182,11 @@ definitions will appear as follows:
         "description": "Value of the attribute argument",
         "$ref": "#/definitions/constant",
       },
-    ],
+      "location": {
+        "description": "Source location of the attribute argument",
+        "$ref": "#/definitions/location"
+      },
+    },
   },
 },
 "attribute-args": {
@@ -204,7 +208,7 @@ definitions will appear as follows:
         "arguments",
         "location",
     ],
-    "properties": [
+    "properties": {
       "name": {
         "description": "Attribute name",
         "type": "string",
@@ -217,7 +221,7 @@ definitions will appear as follows:
         "description": "Source location of the declaration",
         "$ref": "#/definitions/location",
       },
-    ],
+    },
   },
 },
 "compose": {
@@ -228,7 +232,7 @@ definitions will appear as follows:
         "composed",
         "location",
     ],
-    "properties": [
+    "properties": {
       "composed": {
         "description": "List of composed protocols",
         "type": "array",
@@ -244,7 +248,7 @@ definitions will appear as follows:
         "description": "Source location of the compose declaration",
         "$ref": "#/definitions/location",
       },
-    ],
+    },
   },
 },
 ```

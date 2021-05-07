@@ -176,8 +176,15 @@
           },
           "maybe_attributes": [
             {
-              "name": "Unknown",
-              "value": ""
+              "name": "unknown",
+              "value": "",
+              "arguments": [],
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/enum.test.fidl",
+                "line": 16,
+                "column": 6,
+                "length": 7
+              }
             }
           ]
         }

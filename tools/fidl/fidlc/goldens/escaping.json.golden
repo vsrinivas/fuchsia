@@ -20,8 +20,35 @@
       "anonymous": false,
       "maybe_attributes": [
         {
-          "name": "Doc",
-          "value": " \"pleaseescapethisdocommentproperly\"\n"
+          "name": "doc",
+          "value": " \"pleaseescapethisdocommentproperly\"\n",
+          "arguments": [
+            {
+              "name": "value",
+              "value": {
+                "kind": "literal",
+                "value": " \"pleaseescapethisdocommentproperly\"\n",
+                "expression": "/// \"pleaseescapethisdocommentproperly\"",
+                "literal": {
+                  "kind": "string",
+                  "value": " \"pleaseescapethisdocommentproperly\"\n",
+                  "expression": "/// \"pleaseescapethisdocommentproperly\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/escaping.test.fidl",
+                "line": 3,
+                "column": 1,
+                "length": 39
+              }
+            }
+          ],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/escaping.test.fidl",
+            "line": 3,
+            "column": 1,
+            "length": 39
+          }
         }
       ],
       "members": [],

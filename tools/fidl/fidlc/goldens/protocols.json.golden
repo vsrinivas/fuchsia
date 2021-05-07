@@ -792,8 +792,35 @@
       },
       "maybe_attributes": [
         {
-          "name": "Transport",
-          "value": "Channel"
+          "name": "transport",
+          "value": "Channel",
+          "arguments": [
+            {
+              "name": "value",
+              "value": {
+                "kind": "literal",
+                "value": "Channel",
+                "expression": "\"Channel\"",
+                "literal": {
+                  "kind": "string",
+                  "value": "Channel",
+                  "expression": "\"Channel\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+                "line": 46,
+                "column": 2,
+                "length": 21
+              }
+            }
+          ],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "line": 46,
+            "column": 2,
+            "length": 21
+          }
         }
       ],
       "methods": [
@@ -1158,8 +1185,15 @@
           "has_request": true,
           "maybe_attributes": [
             {
-              "name": "Transitional",
-              "value": ""
+              "name": "transitional",
+              "value": "",
+              "arguments": [],
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+                "line": 56,
+                "column": 6,
+                "length": 12
+              }
             }
           ],
           "maybe_request": [
@@ -1236,7 +1270,14 @@
           "maybe_attributes": [
             {
               "name": "transitional",
-              "value": ""
+              "value": "",
+              "arguments": [],
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+                "line": 59,
+                "column": 6,
+                "length": 12
+              }
             }
           ],
           "maybe_request": [
@@ -1283,8 +1324,15 @@
           "has_request": false,
           "maybe_attributes": [
             {
-              "name": "Transitional",
-              "value": ""
+              "name": "transitional",
+              "value": "",
+              "arguments": [],
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+                "line": 62,
+                "column": 6,
+                "length": 12
+              }
             }
           ],
           "has_response": true,
@@ -1331,8 +1379,15 @@
       },
       "maybe_attributes": [
         {
-          "name": "Discoverable",
-          "value": ""
+          "name": "discoverable",
+          "value": "",
+          "arguments": [],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "line": 66,
+            "column": 2,
+            "length": 12
+          }
         }
       ],
       "methods": [
@@ -2763,8 +2818,9 @@
       },
       "maybe_attributes": [
         {
-          "name": "Result",
-          "value": ""
+          "name": "result",
+          "value": "",
+          "arguments": []
         }
       ],
       "members": [
@@ -2822,8 +2878,9 @@
       },
       "maybe_attributes": [
         {
-          "name": "Result",
-          "value": ""
+          "name": "result",
+          "value": "",
+          "arguments": []
         }
       ],
       "members": [
@@ -2881,8 +2938,9 @@
       },
       "maybe_attributes": [
         {
-          "name": "Result",
-          "value": ""
+          "name": "result",
+          "value": "",
+          "arguments": []
         }
       ],
       "members": [
@@ -2941,8 +2999,9 @@
       },
       "maybe_attributes": [
         {
-          "name": "Result",
-          "value": ""
+          "name": "result",
+          "value": "",
+          "arguments": []
         }
       ],
       "members": [

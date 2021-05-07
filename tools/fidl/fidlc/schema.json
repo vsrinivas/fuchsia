@@ -31,12 +31,20 @@
         "attribute": {
             "description": "Definition of an attribute list element",
             "properties": {
+                "arguments": {
+                    "$ref": "#/definitions/attribute-args-list",
+                    "description": "Attribute arguments"
+                },
+                "location": {
+                    "$ref": "#/definitions/location",
+                    "description": "Source location of the declaration"
+                },
                 "name": {
                     "description": "Attribute name",
                     "type": "string"
                 },
                 "value": {
-                    "description": "Attribute value",
+                    "description": "Attribute value (deprecated)",
                     "type": "string"
                 }
             },
@@ -45,6 +53,36 @@
                 "value"
             ],
             "type": "object"
+        },
+        "attribute-arg": {
+            "description": "Definition of an attribute argument",
+            "properties": {
+                "location": {
+                    "$ref": "#/definitions/location",
+                    "description": "Source location of the attribute argument"
+                },
+                "name": {
+                    "description": "Name of the attribute argument",
+                    "type": "string"
+                },
+                "value": {
+                    "$ref": "#/definitions/literal-constant",
+                    "description": "Value of the attribute argument"
+                }
+            },
+            "required": [
+                "name",
+                "value"
+            ],
+            "type": "object"
+        },
+        "attribute-args-list": {
+            "description": "Definition of an attributes argument list",
+            "items": {
+                "$ref": "#/definitions/attribute-arg",
+                "description": "List of arguments"
+            },
+            "type": "array"
         },
         "attributes-list": {
             "description": "Definition of an attribute list",

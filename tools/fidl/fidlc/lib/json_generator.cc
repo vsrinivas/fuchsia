@@ -86,7 +86,7 @@ void JSONGenerator::Generate(const flat::ConstantValue& value) {
     }
     case flat::ConstantValue::Kind::kDocComment: {
       auto doc_comment_constant = reinterpret_cast<const flat::DocCommentConstantValue&>(value);
-      EmitLiteral(doc_comment_constant.MakeContents());
+      EmitString(doc_comment_constant.MakeContents());
       break;
     }
     case flat::ConstantValue::Kind::kString: {
@@ -210,13 +210,20 @@ void JSONGenerator::Generate(const flat::Type* value) {
   });
 }
 
+void JSONGenerator::Generate(const flat::AttributeArg& value) {
+  GenerateObject([&]() {
+    GenerateObjectMember("name", value.name, Position::kFirst);
+    GenerateObjectMember("value", value.value);
+
+    const SourceSpan& span = value.span();
+    if (span.valid())
+      GenerateObjectMember("location", NameSpan(span));
+  });
+}
+
 void JSONGenerator::Generate(const flat::Attribute& value) {
   GenerateObject([&]() {
-    // TODO(fxbug.dev/74955): force lower_snake_case in a subsequent CL.
-    auto name = value.name;
-    if (value.syntax == utils::Syntax::kNew) {
-      name = fidl::utils::to_upper_camel_case(name);
-    }
+    const auto& name = fidl::utils::to_lower_snake_case(value.name);
     GenerateObjectMember("name", name, Position::kFirst);
 
     // TODO(fxbug.dev/74955): the rest of this block currently assumes a single
@@ -250,6 +257,11 @@ void JSONGenerator::Generate(const flat::Attribute& value) {
     } else {
       GenerateObjectMember("value", std::string_view());
     }
+    GenerateObjectMember("arguments", value.args);
+
+    const SourceSpan& span = value.span();
+    if (span.valid())
+      GenerateObjectMember("location", NameSpan(span));
   });
 }
 

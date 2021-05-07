@@ -224,8 +224,9 @@
       },
       "maybe_attributes": [
         {
-          "name": "Result",
-          "value": ""
+          "name": "result",
+          "value": "",
+          "arguments": []
         }
       ],
       "members": [
