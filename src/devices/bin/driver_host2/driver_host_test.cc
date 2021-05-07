@@ -119,15 +119,13 @@ struct StartDriverResult {
 };
 
 class DriverHostTest : public gtest::TestLoopFixture {
- public:
-  void TearDown() override {
-    loop_.Shutdown();
-    TestLoopFixture::TearDown();
-  }
-
  protected:
   async::Loop& loop() { return loop_; }
-  fidl::WireServer<fdf::DriverHost>* driver_host() { return &driver_host_; }
+  async::Loop& second_loop() { return second_loop_; }
+  fidl::WireServer<fdf::DriverHost>* driver_host() { return driver_host_.get(); }
+  void set_driver_host(std::unique_ptr<DriverHost> driver_host) {
+    driver_host_ = std::move(driver_host);
+  }
 
   void AddEntry(fs::Service::Connector connector) {
     EXPECT_EQ(ZX_OK, svc_dir_->AddEntry(fidl::DiscoverableProtocolName<ftest::Incoming>,
@@ -158,12 +156,12 @@ class DriverHostTest : public gtest::TestLoopFixture {
     fidl::Binding<fio::File> file_binding(&file);
     TestDirectory pkg_directory;
     fidl::Binding<fio::Directory> pkg_binding(&pkg_directory);
-    pkg_binding.Bind(pkg_endpoints->server.TakeChannel(), loop().dispatcher());
+    pkg_binding.Bind(pkg_endpoints->server.TakeChannel(), loop_.dispatcher());
     pkg_directory.SetOpenHandler(
         [this, &file_binding](uint32_t flags, std::string path, auto object) {
           EXPECT_EQ(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE, flags);
           EXPECT_EQ("driver/library.so", path);
-          file_binding.Bind(object.TakeChannel(), loop().dispatcher());
+          file_binding.Bind(object.TakeChannel(), loop_.dispatcher());
         });
     EXPECT_EQ(ZX_OK, vfs_.ServeDirectory(svc_dir_, std::move(svc_endpoints->server)));
 
@@ -193,7 +191,7 @@ class DriverHostTest : public gtest::TestLoopFixture {
                                                         std::move(driver_endpoints->server));
       driver_host()->Start(&request, completer);
     }
-    loop().RunUntilIdle();
+    loop_.RunUntilIdle();
     EXPECT_EQ(expected_epitaph, epitaph);
 
     return {
@@ -204,14 +202,16 @@ class DriverHostTest : public gtest::TestLoopFixture {
 
   inspect::Hierarchy Inspect() {
     fake_context context;
-    auto inspector = driver_host_.Inspect()(context).take_value();
+    auto inspector = driver_host_->Inspect()(context).take_value();
     return inspect::ReadFromInspector(inspector)(context).take_value();
   }
 
  private:
   inspect::Inspector inspector_;
-  async::Loop loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
-  DriverHost driver_host_{inspector_, loop_};
+  async::Loop second_loop_{&kAsyncLoopConfigNeverAttachToThread};
+  async::Loop loop_{&kAsyncLoopConfigNeverAttachToThread};
+  std::unique_ptr<DriverHost> driver_host_ =
+      std::make_unique<DriverHost>(inspector_, loop_, loop_.dispatcher());
   fs::SynchronousVfs vfs_{loop_.dispatcher()};
   fbl::RefPtr<fs::PseudoDir> svc_dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
 };
@@ -289,7 +289,7 @@ TEST_F(DriverHostTest, Start_IncomingServices) {
 }
 
 static bool called = false;
-void func() { called = true; }
+void FuncForNodeSymbols(async_dispatcher_t* dispatcher) { called = true; }
 
 // Start a single driver, and receive a call to a shared function.
 TEST_F(DriverHostTest, Start_NodeSymbols) {
@@ -297,12 +297,36 @@ TEST_F(DriverHostTest, Start_NodeSymbols) {
   fidl::VectorView<fdf::wire::NodeSymbol> symbols(allocator, 1);
   symbols[0].Allocate(allocator);
   symbols[0].set_name(allocator, "func");
-  symbols[0].set_address(allocator, reinterpret_cast<zx_vaddr_t>(func));
+  symbols[0].set_address(allocator, reinterpret_cast<zx_vaddr_t>(FuncForNodeSymbols));
   auto [driver, outgoing_dir] = StartDriver(std::move(symbols));
   EXPECT_TRUE(called);
 
   driver.reset();
   loop().RunUntilIdle();
+  EXPECT_EQ(ASYNC_LOOP_QUIT, loop().GetState());
+}
+
+static async_dispatcher_t* second_dispatcher = nullptr;
+void FuncForDifferentDispatcher(async_dispatcher_t* dispatcher) { second_dispatcher = dispatcher; }
+
+// Start a single driver, and verify that a different dispatcher is used.
+TEST_F(DriverHostTest, Start_DifferentDispatcher) {
+  inspect::Inspector inspector;
+  auto driver_host = std::make_unique<DriverHost>(inspector, loop(), second_loop().dispatcher());
+  set_driver_host(std::move(driver_host));
+
+  fidl::FidlAllocator allocator;
+  fidl::VectorView<fdf::wire::NodeSymbol> symbols(allocator, 1);
+  symbols[0].Allocate(allocator);
+  symbols[0].set_name(allocator, "func");
+  symbols[0].set_address(allocator, reinterpret_cast<zx_vaddr_t>(FuncForDifferentDispatcher));
+  auto [driver, outgoing_dir] = StartDriver(std::move(symbols));
+  second_loop().RunUntilIdle();
+  EXPECT_EQ(second_loop().dispatcher(), second_dispatcher);
+
+  driver.reset();
+  loop().RunUntilIdle();
+  second_loop().RunUntilIdle();
   EXPECT_EQ(ASYNC_LOOP_QUIT, loop().GetState());
 }
 

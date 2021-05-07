@@ -9,6 +9,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/zx/status.h>
+#include <zircon/compiler.h>
 
 #include <fbl/intrusive_double_list.h>
 
@@ -29,8 +30,8 @@ class Driver : public fidl::WireServer<fuchsia_driver_framework::Driver>,
 
   // Starts the driver.
   //
-  // The handles in |message| will be consumed.
-  zx::status<> Start(fidl::OutgoingMessage& message, async_dispatcher_t* dispatcher);
+  // The handles in `message` will be consumed.
+  zx::status<> Start(fidl::OutgoingMessage& message, async_dispatcher_t* driver_dispatcher);
 
  private:
   std::string url_;
@@ -43,19 +44,22 @@ class Driver : public fidl::WireServer<fuchsia_driver_framework::Driver>,
 
 class DriverHost : public fidl::WireServer<fuchsia_driver_framework::DriverHost> {
  public:
-  // DriverHost does not take ownership of |loop|, and |loop| must outlive
+  // DriverHost does not take ownership of `loop`, and `loop` must outlive
   // DriverHost.
-  DriverHost(inspect::Inspector& inspector, async::Loop& loop);
+  DriverHost(inspect::Inspector& inspector, async::Loop& loop,
+             async_dispatcher_t* driver_dispatcher);
 
-  zx::status<> PublishDriverHost(const fbl::RefPtr<fs::PseudoDir>& svc_dir);
   fit::promise<inspect::Inspector> Inspect();
+  zx::status<> PublishDriverHost(const fbl::RefPtr<fs::PseudoDir>& svc_dir);
 
  private:
   // fidl::WireServer<fuchsia_driver_framework::DriverHost>
   void Start(StartRequestView request, StartCompleter::Sync& completer) override;
 
   async::Loop& loop_;
-  fbl::DoublyLinkedList<std::unique_ptr<Driver>> drivers_;
+  async_dispatcher_t* driver_dispatcher_;
+  std::mutex mutex_;
+  fbl::DoublyLinkedList<std::unique_ptr<Driver>> drivers_ __TA_GUARDED(mutex_);
 };
 
 #endif  // SRC_DEVICES_BIN_DRIVER_HOST2_DRIVER_HOST_H_

@@ -17,6 +17,7 @@
 namespace fdf = fuchsia_driver_framework;
 
 constexpr char kDiagnosticsDir[] = "diagnostics";
+constexpr size_t kNumDriverLoopThreads = 2;
 
 int main(int argc, char** argv) {
   // TODO(fxbug.dev/33183): Lock down job.
@@ -25,7 +26,7 @@ int main(int argc, char** argv) {
     LOGF(INFO, "Failed to redirect stdout to debuglog, assuming test environment and continuing");
   }
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
 
   svc::Outgoing outgoing(loop.dispatcher());
   status = outgoing.ServeFromStartupInfo();
@@ -60,7 +61,18 @@ int main(int argc, char** argv) {
     return status;
   }
 
-  DriverHost driver_host(inspector, loop);
+  // Setup driver loop.
+  async::Loop driver_loop(&kAsyncLoopConfigNeverAttachToThread);
+  for (size_t i = 0; i != kNumDriverLoopThreads; ++i) {
+    auto thread_name = "driver-loop-" + std::to_string(i);
+    status = driver_loop.StartThread(thread_name.data());
+    if (status != ZX_OK) {
+      LOGF(ERROR, "Failed to start thread for driver loop: %s", zx_status_get_string(status));
+      return status;
+    }
+  }
+
+  DriverHost driver_host(inspector, loop, driver_loop.dispatcher());
   auto init = driver_host.PublishDriverHost(outgoing.svc_dir());
   if (init.is_error()) {
     return init.error_value();

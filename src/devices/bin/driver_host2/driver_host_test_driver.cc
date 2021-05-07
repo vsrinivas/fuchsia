@@ -16,13 +16,15 @@ namespace ftest = fuchsia_driverhost_test;
 
 class TestDriver {
  public:
-  explicit TestDriver(async_dispatcher_t* dispatcher) : outgoing_(dispatcher) {}
+  explicit TestDriver(async_dispatcher_t* dispatcher)
+      : dispatcher_(dispatcher), outgoing_(dispatcher) {}
 
   zx::status<> Init(fdf::wire::DriverStartArgs* start_args) {
     // Call the "func" driver symbol.
-    auto func = start_args::SymbolValue<void (*)()>(start_args->symbols(), "func");
+    auto func =
+        start_args::SymbolValue<void (*)(async_dispatcher_t*)>(start_args->symbols(), "func");
     if (func.is_ok()) {
-      func.value()();
+      func.value()(dispatcher_);
     }
 
     // Connect to the incoming service.
@@ -49,6 +51,7 @@ class TestDriver {
   }
 
  private:
+  async_dispatcher_t* dispatcher_;
   svc::Outgoing outgoing_;
 };
 

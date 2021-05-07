@@ -5,7 +5,7 @@
 #include "src/devices/bin/driver_host2/driver_host.h"
 
 #include <fuchsia/io/llcpp/fidl.h>
-#include <lib/async-loop/loop.h>
+#include <lib/async/cpp/task.h>
 #include <lib/fdio/directory.h>
 #include <lib/fit/function.h>
 #include <zircon/dlfcn.h>
@@ -74,7 +74,8 @@ void Driver::set_binding(fidl::ServerBindingRef<fuchsia_driver_framework::Driver
   binding_.emplace(std::move(binding));
 }
 
-zx::status<> Driver::Start(fidl::OutgoingMessage& start_args, async_dispatcher_t* dispatcher) {
+zx::status<> Driver::Start(fidl::OutgoingMessage& start_args,
+                           async_dispatcher_t* driver_dispatcher) {
   auto converted = fidl::OutgoingToIncomingMessage(start_args);
   if (converted.status() != ZX_OK) {
     return zx::error(converted.status());
@@ -82,11 +83,13 @@ zx::status<> Driver::Start(fidl::OutgoingMessage& start_args, async_dispatcher_t
   // After calling |record_->start|, we assume it has taken ownership of
   // the handles from |start_args|, and can therefore relinquish ownership.
   fidl_incoming_msg_t c_msg = std::move(converted.incoming_message()).ReleaseToEncodedCMessage();
-  zx_status_t status = record_->start(&c_msg, dispatcher, &opaque_);
+  zx_status_t status = record_->start(&c_msg, driver_dispatcher, &opaque_);
   return zx::make_status(status);
 }
 
-DriverHost::DriverHost(inspect::Inspector& inspector, async::Loop& loop) : loop_(loop) {
+DriverHost::DriverHost(inspect::Inspector& inspector, async::Loop& loop,
+                       async_dispatcher_t* driver_dispatcher)
+    : loop_(loop), driver_dispatcher_(driver_dispatcher) {
   inspector.GetRoot().CreateLazyNode(
       "drivers", [this] { return Inspect(); }, &inspector);
 }
@@ -95,12 +98,15 @@ fit::promise<inspect::Inspector> DriverHost::Inspect() {
   inspect::Inspector inspector;
   auto& root = inspector.GetRoot();
   size_t i = 0;
+
+  std::lock_guard<std::mutex> lock(mutex_);
   for (auto& driver : drivers_) {
     auto child = root.CreateChild("driver-" + std::to_string(++i));
     child.CreateString("url", driver.url(), &inspector);
     child.CreateString("binary", driver.binary(), &inspector);
     inspector.emplace(std::move(child));
   }
+
   return fit::make_ok_promise(std::move(inspector));
 }
 
@@ -197,25 +203,42 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
       completer.Close(driver.error_value());
       return;
     }
-    auto driver_ptr = driver.value().get();
-    auto bind = fidl::BindServer<Driver>(loop_.dispatcher(), std::move(request), driver_ptr,
-                                         [this](Driver* driver, auto, auto) {
-                                           drivers_.erase(*driver);
-                                           // If this is the last driver, shutdown the driver host.
-                                           if (drivers_.is_empty()) {
-                                             loop_.Quit();
-                                           }
-                                         });
-    driver->set_binding(std::move(bind));
-    drivers_.push_back(std::move(driver.value()));
+    // Task to start the driver. Post this to the driver dispatcher thread.
+    auto start_task = [this, request = std::move(request), completer = std::move(completer),
+                       message = std::move(message), binary = std::move(binary),
+                       driver = std::move(driver.value())]() mutable {
+      auto start = driver->Start(message->GetOutgoingMessage(), driver_dispatcher_);
+      if (start.is_error()) {
+        LOGF(ERROR, "Failed to start driver '/pkg/%s': %s", binary.data(), start.status_string());
+        completer.Close(start.error_value());
+        return;
+      }
+      LOGF(INFO, "Started '%s'", binary.data());
 
-    auto start = driver_ptr->Start(message->GetOutgoingMessage(), loop_.dispatcher());
-    if (start.is_error()) {
-      LOGF(ERROR, "Failed to start driver '/pkg/%s': %s", binary.data(), start.status_string());
-      completer.Close(start.error_value());
-      return;
-    }
-    LOGF(INFO, "Started '%s'", binary.data());
+      auto unbind_callback = [this](Driver* driver, fidl::UnbindInfo info, auto) {
+        if (!info.ok()) {
+          LOGF(WARNING, "Unexpected stop of driver '/pkg/%s': %s", driver->binary().data(),
+               info.error_message());
+        }
+        // Task to stop the driver. Post this to the driver dispatcher thread.
+        auto stop_task = [this, driver] {
+          std::lock_guard<std::mutex> lock(mutex_);
+          drivers_.erase(*driver);
+          // If this is the last driver, shutdown the driver host.
+          if (drivers_.is_empty()) {
+            loop_.Quit();
+          }
+        };
+        async::PostTask(driver_dispatcher_, std::move(stop_task));
+      };
+      auto bind = fidl::BindServer<Driver>(loop_.dispatcher(), std::move(request), driver.get(),
+                                           std::move(unbind_callback));
+      driver->set_binding(std::move(bind));
+
+      std::lock_guard<std::mutex> lock(mutex_);
+      drivers_.push_back(std::move(driver));
+    };
+    async::PostTask(driver_dispatcher_, std::move(start_task));
   };
   file->GetBuffer(fio::wire::kVmoFlagRead | fio::wire::kVmoFlagExec | fio::wire::kVmoFlagPrivate,
                   std::move(callback));
