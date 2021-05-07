@@ -96,7 +96,7 @@ class TestDirectory : public fio::testing::Directory_TestBase {
 
 class TestTransaction : public fidl::Transaction {
  public:
-  TestTransaction(zx_status_t* epitaph) : epitaph_(epitaph) {}
+  TestTransaction(zx_status_t& epitaph) : epitaph_(epitaph) {}
 
  private:
   std::unique_ptr<Transaction> TakeOwnership() override {
@@ -108,9 +108,9 @@ class TestTransaction : public fidl::Transaction {
     return ZX_OK;
   }
 
-  void Close(zx_status_t epitaph) override { *epitaph_ = epitaph; }
+  void Close(zx_status_t epitaph) override { epitaph_ = epitaph; }
 
-  zx_status_t* const epitaph_;
+  zx_status_t& epitaph_;
 };
 
 struct StartDriverResult {
@@ -122,7 +122,7 @@ class DriverHostTest : public gtest::TestLoopFixture {
  protected:
   async::Loop& loop() { return loop_; }
   async::Loop& second_loop() { return second_loop_; }
-  fidl::WireServer<fdf::DriverHost>* driver_host() { return driver_host_.get(); }
+  fidl::WireServer<fdf::DriverHost>& driver_host() { return *driver_host_; }
   void set_driver_host(std::unique_ptr<DriverHost> driver_host) {
     driver_host_ = std::move(driver_host);
   }
@@ -136,7 +136,7 @@ class DriverHostTest : public gtest::TestLoopFixture {
                                 fidl::ClientEnd<fuchsia_driver_framework::Node>* node = nullptr,
                                 zx_status_t expected_epitaph = ZX_OK) {
     zx_status_t epitaph = ZX_OK;
-    TestTransaction transaction(&epitaph);
+    TestTransaction transaction(epitaph);
     fidl::FidlAllocator allocator;
 
     auto pkg_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
@@ -189,7 +189,7 @@ class DriverHostTest : public gtest::TestLoopFixture {
       Completer completer(&transaction);
       fidl::WireRequest<fdf::DriverHost::Start> request(0, driver_start_args,
                                                         std::move(driver_endpoints->server));
-      driver_host()->Start(&request, completer);
+      driver_host().Start(&request, completer);
     }
     loop_.RunUntilIdle();
     EXPECT_EQ(expected_epitaph, epitaph);
@@ -333,7 +333,7 @@ TEST_F(DriverHostTest, Start_DifferentDispatcher) {
 // Start a driver with invalid arguments.
 TEST_F(DriverHostTest, Start_InvalidStartArgs) {
   zx_status_t epitaph = ZX_OK;
-  TestTransaction transaction(&epitaph);
+  TestTransaction transaction(epitaph);
 
   // DriverStartArgs::ns is missing "/pkg" entry.
   auto endpoints = fidl::CreateEndpoints<fdf::Driver>();
@@ -342,7 +342,7 @@ TEST_F(DriverHostTest, Start_InvalidStartArgs) {
     Completer completer(&transaction);
     fidl::WireRequest<fdf::DriverHost::Start> request(0, fdf::wire::DriverStartArgs(),
                                                       std::move(endpoints->server));
-    driver_host()->Start(&request, completer);
+    driver_host().Start(&request, completer);
   }
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, epitaph);
 
@@ -357,7 +357,7 @@ TEST_F(DriverHostTest, Start_InvalidStartArgs) {
 
     fidl::WireRequest<fdf::DriverHost::Start> request(0, std::move(driver_start_args),
                                                       std::move(endpoints->server));
-    driver_host()->Start(&request, completer);
+    driver_host().Start(&request, completer);
   }
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, epitaph);
 
@@ -372,7 +372,7 @@ TEST_F(DriverHostTest, Start_InvalidStartArgs) {
     driver_start_args.set_ns(allocator);
     fidl::WireRequest<fdf::DriverHost::Start> request(0, std::move(driver_start_args),
                                                       std::move(endpoints->server));
-    driver_host()->Start(&request, completer);
+    driver_host().Start(&request, completer);
   }
   EXPECT_EQ(ZX_ERR_NOT_FOUND, epitaph);
 
@@ -393,7 +393,7 @@ TEST_F(DriverHostTest, Start_InvalidStartArgs) {
     Completer completer(&transaction);
     fidl::WireRequest<fdf::DriverHost::Start> request(0, std::move(driver_start_args),
                                                       std::move(endpoints->server));
-    driver_host()->Start(&request, completer);
+    driver_host().Start(&request, completer);
   }
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, epitaph);
 
@@ -415,7 +415,7 @@ TEST_F(DriverHostTest, Start_InvalidStartArgs) {
     Completer completer(&transaction);
     fidl::WireRequest<fdf::DriverHost::Start> request(0, std::move(driver_start_args),
                                                       std::move(endpoints->server));
-    driver_host()->Start(&request, completer);
+    driver_host().Start(&request, completer);
   }
   EXPECT_EQ(ZX_ERR_NOT_FOUND, epitaph);
 }
@@ -439,7 +439,7 @@ TEST_F(DriverHostTest, InvalidHandleRights) {
 // Start a driver with an invalid binary.
 TEST_F(DriverHostTest, Start_InvalidBinary) {
   zx_status_t epitaph = ZX_OK;
-  TestTransaction transaction(&epitaph);
+  TestTransaction transaction(epitaph);
   fidl::FidlAllocator allocator;
 
   auto pkg_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
@@ -477,7 +477,7 @@ TEST_F(DriverHostTest, Start_InvalidBinary) {
 
     fidl::WireRequest<fdf::DriverHost::Start> request(0, std::move(driver_start_args),
                                                       std::move(driver_endpoints->server));
-    driver_host()->Start(&request, completer);
+    driver_host().Start(&request, completer);
   }
   loop().RunUntilIdle();
   EXPECT_EQ(ZX_ERR_NOT_FOUND, epitaph);
