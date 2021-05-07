@@ -12,6 +12,6 @@ abstract class ErmineButton extends StatelessWidget {
   final VoidCallback onTap;
   final TextStyle textStyle;
 
-  const ErmineButton(this.label, this.onTap, this.textStyle, {Key key})
+  const ErmineButton(this.label, this.onTap, this.textStyle, {Key? key})
       : super(key: key);
 }

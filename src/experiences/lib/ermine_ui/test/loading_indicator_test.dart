@@ -21,7 +21,8 @@ void main() {
     await tester.pumpWidget(_wrap(indicator));
 
     final StatefulElement element = tester.element(find.byKey(key));
-    final LoadingIndicatorState state = element.state;
+    // ignore: avoid_as
+    final state = element.state as LoadingIndicatorState;
     expect(state.widget, equals(indicator));
     expect(state.firstColorIndex, 0);
 
@@ -60,7 +61,8 @@ void main() {
     await tester.pumpWidget(_wrap(indicator));
 
     final StatefulElement element = tester.element(find.byKey(key));
-    final LoadingIndicatorState state = element.state;
+    // ignore: avoid_as
+    final state = element.state as LoadingIndicatorState;
     expect(state.widget, equals(indicator));
     expect(state.firstColorIndex, 0);
 

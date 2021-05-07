@@ -13,18 +13,18 @@ class FilledButton extends ErmineButton {
 
   const FilledButton._(
       String label, VoidCallback onTap, TextStyle textStyle, this._minSize,
-      {Key key})
+      {Key? key})
       : super(label, onTap, textStyle, key: key);
 
-  factory FilledButton.small(String label, VoidCallback onTap, {Key key}) =>
+  factory FilledButton.small(String label, VoidCallback onTap, {Key? key}) =>
       FilledButton._(label, onTap, kLabelSmallTextStyle, kMinSizeSmall,
           key: key);
 
-  factory FilledButton.medium(String label, VoidCallback onTap, {Key key}) =>
+  factory FilledButton.medium(String label, VoidCallback onTap, {Key? key}) =>
       FilledButton._(label, onTap, kLabelMediumTextStyle, kMinSizeMedium,
           key: key);
 
-  factory FilledButton.large(String label, VoidCallback onTap, {Key key}) =>
+  factory FilledButton.large(String label, VoidCallback onTap, {Key? key}) =>
       FilledButton._(label, onTap, kLabelLargeTextStyle, kMinSizeLarge,
           key: key);
 

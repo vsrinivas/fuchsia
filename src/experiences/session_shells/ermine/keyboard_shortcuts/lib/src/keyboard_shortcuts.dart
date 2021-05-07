@@ -5,7 +5,6 @@
 import 'dart:convert' show json;
 
 import 'package:flutter/material.dart' show VoidCallback;
-import 'package:meta/meta.dart';
 
 import 'package:fidl_fuchsia_input/fidl_async.dart' show Key;
 import 'package:fidl_fuchsia_ui_shortcut/fidl_async.dart' as ui_shortcut
@@ -19,28 +18,28 @@ class KeyboardShortcuts extends ui_shortcut.Listener {
   final Map<String, VoidCallback> actions;
   final List<Shortcut> shortcuts;
 
-  ViewRef _viewRef;
+  ViewRef? _viewRef;
   final ui_shortcut.ListenerBinding _listenerBinding;
 
   KeyboardShortcuts({
-    @required this.registry,
-    @required this.actions,
-    @required String bindings,
-    ViewRef viewRef,
-    ui_shortcut.ListenerBinding listenerBinding,
+    required this.registry,
+    required this.actions,
+    required String bindings,
+    ViewRef? viewRef,
+    ui_shortcut.ListenerBinding? listenerBinding,
   })  : shortcuts = _decodeJsonBindings(bindings, actions),
         _viewRef = viewRef,
         _listenerBinding = listenerBinding ?? ui_shortcut.ListenerBinding() {
     if (_viewRef != null) {
-      registry.setView(_viewRef, _listenerBinding.wrap(this));
+      registry.setView(_viewRef!, _listenerBinding.wrap(this));
     }
     shortcuts.forEach(registry.registerShortcut);
   }
 
   factory KeyboardShortcuts.withViewRef(
     ViewRef viewRef, {
-    Map<String, VoidCallback> actions,
-    String bindings,
+    required Map<String, VoidCallback> actions,
+    required String bindings,
   }) {
     final shortcutRegistry = ui_shortcut.RegistryProxy();
     Incoming.fromSvcPath().connectToService(shortcutRegistry);
@@ -54,7 +53,7 @@ class KeyboardShortcuts extends ui_shortcut.Listener {
 
   void dispose() {
     if (registry is ui_shortcut.RegistryProxy) {
-      ui_shortcut.RegistryProxy proxy = registry;
+      final proxy = registry as ui_shortcut.RegistryProxy;
       proxy.ctrl.close();
     }
     shortcuts.clear();
@@ -64,8 +63,8 @@ class KeyboardShortcuts extends ui_shortcut.Listener {
   @override
   Future<bool> onShortcut(int id) async {
     Shortcut shortcut = shortcuts.firstWhere((shortcut) => shortcut.id == id);
-    shortcut.onKey();
-    return shortcut?.exclusive ?? false;
+    shortcut.onKey?.call();
+    return shortcut.exclusive ?? false;
   }
 
   /// Returns keyboard binding help text.
@@ -73,16 +72,16 @@ class KeyboardShortcuts extends ui_shortcut.Listener {
     final result = <String, List<String>>{};
     for (final binding in shortcuts) {
       if (result.containsKey(binding.description) &&
-          !result[binding.description].contains(binding.chord)) {
-        result[binding.description].add(binding.chord);
+          !result[binding.description]!.contains(binding.chord)) {
+        result[binding.description]?.add(binding.chord!);
       } else {
-        result[binding.description] = [binding.chord];
+        result[binding.description] = [binding.chord!];
       }
     }
     final buf = StringBuffer();
     for (final description in result.keys) {
       buf.writeln(description);
-      for (final chord in result[description]) {
+      for (final chord in result[description]!) {
         buf
           ..write('          ')
           ..writeln(chord);
@@ -100,14 +99,14 @@ class KeyboardShortcuts extends ui_shortcut.Listener {
         }
 
         List<dynamic> chords = value;
-        VoidCallback callback = actions[key];
+        VoidCallback callback = actions[key]!;
         return chords
             .whereType<Map>()
             .map((c) {
               return Shortcut.parseJson(
-                object: c,
+                object: c as Map<String, dynamic>,
                 onKey: callback,
-                action: key,
+                action: key.toString(),
               );
             })
             .expand((c) => c)
@@ -118,7 +117,7 @@ class KeyboardShortcuts extends ui_shortcut.Listener {
     if (data is! Map) {
       return [];
     }
-    Map<String, dynamic> kvData = data
+    Map<String, dynamic> kvData = data as Map<String, dynamic>
       ..removeWhere((name, value) =>
           !actions.containsKey(name) ||
           value == null ||
@@ -136,16 +135,16 @@ class KeyboardShortcuts extends ui_shortcut.Listener {
 class Shortcut extends ui_shortcut.Shortcut {
   static int lastId = 0;
 
-  bool exclusive = true;
-  String action;
-  String chord;
+  bool? exclusive = true;
+  String? action;
+  String? chord;
   String description;
-  VoidCallback onKey;
+  VoidCallback? onKey;
 
   Shortcut({
-    Key key3,
-    List<Key> keysRequired,
-    ui_shortcut.Trigger trigger,
+    Key? key3,
+    List<Key>? keysRequired,
+    ui_shortcut.Trigger? trigger,
     bool usePriority = true,
     this.exclusive,
     this.onKey,
@@ -160,9 +159,9 @@ class Shortcut extends ui_shortcut.Shortcut {
             trigger: trigger);
 
   static List<Shortcut> parseJson({
-    Map<String, dynamic> object,
-    VoidCallback onKey,
-    String action,
+    required Map<String, dynamic> object,
+    required VoidCallback onKey,
+    required String action,
   }) {
     return _keysRequiredFromArray(object['modifier'])
         .map((keysRequired) => Shortcut(
@@ -199,7 +198,7 @@ class Shortcut extends ui_shortcut.Shortcut {
   String toString() =>
       'id: $id key3: $key3 keysRequired: $keysRequired action: $action';
 
-  static List<List<Key>> _keysRequiredFromArray(String s) {
+  static List<List<Key>> _keysRequiredFromArray(String? s) {
     List<List<Key>> r = [[]];
     if (s == null) {
       return r;
@@ -208,12 +207,12 @@ class Shortcut extends ui_shortcut.Shortcut {
         s.split('+').map((x) => x.trim()).map(_keyVariantsFromString);
     // Convert list of modifier variants to a list of combinations.
     for (var modifierVariant in modifiers) {
-      r = r.expand((i) => modifierVariant.map((j) => i + [j])).toList();
+      r = r.expand((i) => modifierVariant.map((j) => i + [j!])).toList();
     }
     return r;
   }
 
-  static List<Key> _keyVariantsFromString(String s) {
+  static List<Key?> _keyVariantsFromString(String s) {
     switch (s) {
       case 'shift':
         return [Key.leftShift, Key.rightShift];

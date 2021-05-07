@@ -13,20 +13,20 @@ import 'layout.dart';
 /// and therefore, not provided by [ErmineCheckbox].
 class ErmineCheckbox extends StatelessWidget {
   final bool value;
-  final ValueChanged<bool> onChanged;
+  final ValueChanged<bool?>? onChanged;
   final bool tristate;
   final bool autofocus;
-  final FocusNode focusNode;
-  final MouseCursor mouseCursor;
+  final FocusNode? focusNode;
+  final MouseCursor? mouseCursor;
 
   const ErmineCheckbox({
-    @required this.value,
+    required this.value,
     this.onChanged,
     this.tristate = false,
     this.autofocus = false,
     this.focusNode,
     this.mouseCursor,
-    Key key,
+    Key? key,
   }) : super(key: key);
 
   @override

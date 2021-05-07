@@ -14,19 +14,19 @@ import 'layout.dart';
 class ErmineRadio<T> extends StatelessWidget {
   final T value;
   final T groupValue;
-  final ValueChanged<T> onChanged;
+  final ValueChanged<T?>? onChanged;
   final bool autofocus;
-  final FocusNode focusNode;
-  final MouseCursor mouseCursor;
+  final FocusNode? focusNode;
+  final MouseCursor? mouseCursor;
 
   const ErmineRadio({
-    @required this.value,
-    @required this.groupValue,
+    required this.value,
+    required this.groupValue,
     this.onChanged,
     this.autofocus = false,
     this.focusNode,
     this.mouseCursor,
-    Key key,
+    Key? key,
   }) : super(key: key);
 
   @override

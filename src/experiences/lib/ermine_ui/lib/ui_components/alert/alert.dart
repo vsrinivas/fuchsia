@@ -20,7 +20,7 @@ class Alert extends StatelessWidget {
   final String description;
 
   /// Optional widget displayed under the body text for customization purpose.
-  final Widget customWidget;
+  final Widget? customWidget;
 
   /// Optional buttons that trigger an action related to this alert.
   final _buttons = <ErmineButton>[];
@@ -30,13 +30,13 @@ class Alert extends StatelessWidget {
   List<ErmineButton> get buttons => _buttons;
 
   Alert({
-    @required this.title,
-    @required this.onClose,
+    required this.title,
+    required this.onClose,
     this.header = '',
     this.description = '',
     this.customWidget,
     List<ErmineButton> buttons = const <ErmineButton>[],
-    Key key,
+    Key? key,
   }) : super(key: key) {
     _buttons.addAll(buttons);
   }
@@ -125,7 +125,7 @@ class Alert extends StatelessWidget {
             ],
             if (customWidget != null) ...[
               SizedBox(height: kDescriptionToCustomWidgetGap),
-              customWidget
+              customWidget!
             ],
           ],
         ),

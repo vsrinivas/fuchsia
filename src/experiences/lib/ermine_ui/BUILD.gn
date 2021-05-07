@@ -7,6 +7,7 @@ import("//build/flutter/test.gni")
 
 dart_library("ermine_ui") {
   package_name = "ermine_ui"
+  null_safe = true
   sources = [
     "ermine_ui.dart",
     "ui_components/alert/alert.dart",
@@ -32,6 +33,7 @@ dart_library("ermine_ui") {
 
 # fx test ermine_ui_unittests
 flutter_test("ermine_ui_unittests") {
+  null_safe = true
   sources = [
     "alert_test.dart",
     "bordered_button_test.dart",

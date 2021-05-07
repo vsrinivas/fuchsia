@@ -22,7 +22,7 @@ class LoadingIndicator extends StatefulWidget {
 
   // TODO(fxb/72867): Add factories providing different sizes.
   const LoadingIndicator(
-      {this.description = '', this.speedMs = kDefaultSpeed, Key key})
+      {this.description = '', this.speedMs = kDefaultSpeed, Key? key})
       : super(key: key);
 
   @override
@@ -31,7 +31,7 @@ class LoadingIndicator extends StatefulWidget {
 
 class LoadingIndicatorState extends State<LoadingIndicator> {
   final _firstColorIndex = ValueNotifier(0);
-  Timer _timer;
+  Timer? _timer;
 
   final _colors = [
     ErmineColors.white,
@@ -95,7 +95,7 @@ class LoadingIndicatorState extends State<LoadingIndicator> {
                 child: ValueListenableBuilder(
                   valueListenable: _firstColorIndex,
                   builder: (BuildContext context, int firstColorIndex,
-                          Widget child) =>
+                          Widget? child) =>
                       _Dot(_getColor(i, firstColorIndex)),
                 ),
               ),

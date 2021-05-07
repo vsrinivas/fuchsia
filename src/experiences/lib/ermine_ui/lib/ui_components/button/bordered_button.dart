@@ -13,18 +13,18 @@ class BorderedButton extends ErmineButton {
 
   const BorderedButton._(
       String label, VoidCallback onTap, TextStyle textStyle, this._minSize,
-      {Key key})
+      {Key? key})
       : super(label, onTap, textStyle, key: key);
 
-  factory BorderedButton.small(String label, VoidCallback onTap, {Key key}) =>
+  factory BorderedButton.small(String label, VoidCallback onTap, {Key? key}) =>
       BorderedButton._(label, onTap, kLabelSmallTextStyle, kMinSizeSmall,
           key: key);
 
-  factory BorderedButton.medium(String label, VoidCallback onTap, {Key key}) =>
+  factory BorderedButton.medium(String label, VoidCallback onTap, {Key? key}) =>
       BorderedButton._(label, onTap, kLabelMediumTextStyle, kMinSizeMedium,
           key: key);
 
-  factory BorderedButton.large(String label, VoidCallback onTap, {Key key}) =>
+  factory BorderedButton.large(String label, VoidCallback onTap, {Key? key}) =>
       BorderedButton._(label, onTap, kLabelLargeTextStyle, kMinSizeLarge,
           key: key);
 

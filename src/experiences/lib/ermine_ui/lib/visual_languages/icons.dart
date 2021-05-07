@@ -26,12 +26,12 @@ const _kDefaultIconSize = 24.0;
 /// library to the package (fxb/73369)
 class ErmineIcons extends Icon {
   const ErmineIcons._(
-    IconData icon, {
-    Color color = _kDefaultIconColor,
-    double size = _kDefaultIconSize,
-    String semanticLabel,
-    TextDirection textDirection,
-    Key key,
+    IconData? icon, {
+    Color? color = _kDefaultIconColor,
+    double? size = _kDefaultIconSize,
+    String? semanticLabel,
+    TextDirection? textDirection,
+    Key? key,
   }) : super(icon,
             color: color,
             size: size,
@@ -58,11 +58,11 @@ class ErmineIcons extends Icon {
   static final wifi = ErmineIcons._(Icons.wifi);
 
   ErmineIcons copyWith({
-    Color color,
-    double size,
-    String semanticLabel,
-    TextDirection textDirection,
-    Key key,
+    Color? color,
+    double? size,
+    String? semanticLabel,
+    TextDirection? textDirection,
+    Key? key,
   }) =>
       ErmineIcons._(
         super.icon,

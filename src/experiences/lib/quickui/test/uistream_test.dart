@@ -13,9 +13,9 @@ void main() {
     final uiStream = UiStream(ui)..listen();
     final spec = await uiStream.stream.first;
 
-    final group = spec.groups.first;
-    expect(group.title, 'Foo');
-    expect(group.values.length, 0);
+    final group = spec.groups?.first;
+    expect(group?.title, 'Foo');
+    expect(group?.values?.length, 0);
   });
 
   test('Update UiStream', () async {
@@ -24,9 +24,9 @@ void main() {
     final stream = uiStream.stream;
     Spec spec = await stream.first;
 
-    Group group = spec.groups.first;
-    expect(group.title, 'Foo');
-    expect(group.values.length, 0);
+    Group? group = spec.groups?.first;
+    expect(group?.title, 'Foo');
+    expect(group?.values?.length, 0);
 
     ui.update(Value.withNumber(NumberValue(
       value: Number.withIntValue(5),
@@ -35,12 +35,12 @@ void main() {
 
     spec = await stream.skip(1).first;
 
-    group = spec.groups.first;
-    expect(group.title, 'Bar');
-    expect(group.values.length, 1);
-    expect(group.values.first.$tag, ValueTag.number);
-    expect(group.values.first.number.action, 1);
-    expect(group.values.first.number.value.intValue, 5);
+    group = spec.groups?.first;
+    expect(group?.title, 'Bar');
+    expect(group?.values?.length, 1);
+    expect(group?.values?.first.$tag, ValueTag.number);
+    expect(group?.values?.first.number?.action, 1);
+    expect(group?.values?.first.number?.value.intValue, 5);
   });
 }
 

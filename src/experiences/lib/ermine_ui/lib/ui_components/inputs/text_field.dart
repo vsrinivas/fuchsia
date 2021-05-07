@@ -12,31 +12,31 @@ import 'layout.dart';
 /// and therefore, not provided by [ErmineTextField].
 class ErmineTextField extends StatelessWidget {
   final TextEditingController controller;
-  final double width;
+  final double? width;
   final EdgeInsetsGeometry contentPadding;
   final String labelText;
   final String hintText;
-  final FocusNode focusNode;
+  final FocusNode? focusNode;
   final bool autofocus;
   final bool enabled;
   final bool enableInteractiveSelection;
   final bool obscureText;
   final String obscuringCharacter;
-  final String restorationId;
-  final int minLines;
-  final int maxLines;
-  final int maxLength;
+  final String? restorationId;
+  final int? minLines;
+  final int? maxLines;
+  final int? maxLength;
   final bool readOnly;
 
-  final ValueChanged<String> onChanged;
-  final VoidCallback onEditingComplete;
-  final ValueChanged<String> onSubmitted;
-  final EdgeInsets scrollPadding;
-  final ScrollPhysics scrollPhysics;
-  final ScrollController scrollController;
+  final ValueChanged<String>? onChanged;
+  final VoidCallback? onEditingComplete;
+  final ValueChanged<String>? onSubmitted;
+  final EdgeInsets? scrollPadding;
+  final ScrollPhysics? scrollPhysics;
+  final ScrollController? scrollController;
 
   const ErmineTextField({
-    @required this.controller,
+    required this.controller,
     this.width,
     this.contentPadding = kFieldPaddings,
     this.labelText = '',
@@ -58,19 +58,19 @@ class ErmineTextField extends StatelessWidget {
     this.scrollPadding,
     this.scrollPhysics,
     this.scrollController,
-    Key key,
+    Key? key,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) => Row(
-        crossAxisAlignment: (maxLines > 1)
+        crossAxisAlignment: (maxLines! > 1)
             ? CrossAxisAlignment.start
             : CrossAxisAlignment.center,
         children: [
           if (labelText.isNotEmpty)
             Padding(
               padding: EdgeInsets.only(
-                top: (maxLines > 1) ? contentPadding.vertical / 2 : 0,
+                top: (maxLines! > 1) ? contentPadding.vertical / 2 : 0,
                 right: kLabelToFieldGap,
               ),
               child: Text(labelText, style: kLabelTextStyle),
@@ -84,7 +84,7 @@ class ErmineTextField extends StatelessWidget {
       );
 
   Widget _buildInputFieldWithHint() => Stack(
-        alignment: (maxLines > 1) ? Alignment.topLeft : Alignment.centerLeft,
+        alignment: (maxLines! > 1) ? Alignment.topLeft : Alignment.centerLeft,
         children: [
           (width != null)
               ? Container(
@@ -130,10 +130,10 @@ class ErmineTextField extends StatelessWidget {
   Widget _buildHintText() => AnimatedBuilder(
         animation: controller,
         builder: (context, child) =>
-            controller.text.isEmpty ? child : Offstage(),
+            controller.text.isEmpty ? child! : Offstage(),
         child: Padding(
           padding: EdgeInsets.only(
-            top: (maxLines > 1) ? contentPadding.vertical / 2 : 0,
+            top: (maxLines! > 1) ? contentPadding.vertical / 2 : 0,
             left:
                 contentPadding.horizontal / 2 + kCursorWidth + kCursorToHintGap,
           ),

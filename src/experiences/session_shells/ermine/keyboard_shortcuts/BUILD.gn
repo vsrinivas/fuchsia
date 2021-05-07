@@ -8,6 +8,7 @@ import("//build/flutter/test.gni")
 
 dart_library("keyboard_shortcuts") {
   package_name = "keyboard_shortcuts"
+  null_safe = true
 
   sources = [
     "keyboard_shortcuts.dart",
@@ -28,9 +29,12 @@ dart_library("keyboard_shortcuts") {
 #fx run-host-tests keyboard_shortcuts_unittests
 flutter_test("keyboard_shortcuts_unittests") {
   sources = [ "keyboard_shortcuts_test.dart" ]
+  null_safe = true
 
   deps = [
     ":keyboard_shortcuts",
+    "//sdk/dart/fidl",
+    "//sdk/dart/zircon",
     "//sdk/fidl/fuchsia.input",
     "//sdk/fidl/fuchsia.ui.shortcut",
     "//sdk/fidl/fuchsia.ui.views",

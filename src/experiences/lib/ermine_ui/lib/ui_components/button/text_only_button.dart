@@ -13,18 +13,18 @@ class TextOnlyButton extends ErmineButton {
 
   const TextOnlyButton._(
       String label, VoidCallback onTap, TextStyle textStyle, this._minSize,
-      {Key key})
+      {Key? key})
       : super(label, onTap, textStyle, key: key);
 
-  factory TextOnlyButton.small(String label, VoidCallback onTap, {Key key}) =>
+  factory TextOnlyButton.small(String label, VoidCallback onTap, {Key? key}) =>
       TextOnlyButton._(label, onTap, kLabelSmallTextStyle, kMinSizeSmall,
           key: key);
 
-  factory TextOnlyButton.medium(String label, VoidCallback onTap, {Key key}) =>
+  factory TextOnlyButton.medium(String label, VoidCallback onTap, {Key? key}) =>
       TextOnlyButton._(label, onTap, kLabelMediumTextStyle, kMinSizeMedium,
           key: key);
 
-  factory TextOnlyButton.large(String label, VoidCallback onTap, {Key key}) =>
+  factory TextOnlyButton.large(String label, VoidCallback onTap, {Key? key}) =>
       TextOnlyButton._(label, onTap, kLabelLargeTextStyle, kMinSizeLarge,
           key: key);
 

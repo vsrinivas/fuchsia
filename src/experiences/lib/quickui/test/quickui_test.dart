@@ -11,30 +11,30 @@ void main() {
     final ui = TestUi();
     final spec = await ui.getSpec(null);
 
-    final group = spec.groups.first;
-    expect(group.title, 'Foo');
-    expect(group.values.length, 0);
+    final group = spec.groups?.first;
+    expect(group?.title, 'Foo');
+    expect(group?.values?.length, 0);
   });
 
   test('Update UiSpec', () async {
     final ui = TestUi();
     Spec spec = await ui.getSpec(null);
 
-    Group group = spec.groups.first;
-    expect(group.title, 'Foo');
-    expect(group.values.length, 0);
+    Group? group = spec.groups?.first;
+    expect(group?.title, 'Foo');
+    expect(group?.values?.length, 0);
 
     spec = await ui.getSpec(Value.withNumber(NumberValue(
       value: Number.withIntValue(5),
       action: 1,
     )));
 
-    group = spec.groups.first;
-    expect(group.title, 'Bar');
-    expect(group.values.length, 1);
-    expect(group.values.first.$tag, ValueTag.number);
-    expect(group.values.first.number.action, 1);
-    expect(group.values.first.number.value.intValue, 5);
+    group = spec.groups?.first;
+    expect(group?.title, 'Bar');
+    expect(group?.values?.length, 1);
+    expect(group?.values?.first.$tag, ValueTag.number);
+    expect(group?.values?.first.number?.action, 1);
+    expect(group?.values?.first.number?.value.intValue, 5);
   });
 }
 
