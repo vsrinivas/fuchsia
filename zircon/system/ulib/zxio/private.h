@@ -7,40 +7,13 @@
 
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
+#include <lib/zxio/cpp/vector.h>
 #include <lib/zxio/extensions.h>
 #include <lib/zxio/zxio.h>
 #include <zircon/types.h>
 
 #include <algorithm>
 #include <functional>
-
-namespace {
-
-template <typename F>
-zx_status_t zxio_do_vector(const zx_iovec_t* vector, size_t vector_count, size_t* out_actual,
-                           F fn) {
-  size_t total = 0;
-  for (size_t i = 0; i < vector_count; ++i) {
-    size_t actual;
-    zx_status_t status = fn(vector[i].buffer, vector[i].capacity, &actual);
-    if (status != ZX_OK) {
-      // This can't be `i > 0` because the first buffer supplied by the caller
-      // might've been of length zero, and we may never have attempted an I/O
-      // operation with it.
-      if (total > 0) {
-        break;
-      }
-      return status;
-    }
-    total += actual;
-    if (actual != vector[i].capacity) {
-      // Short.
-      break;
-    }
-  }
-  *out_actual = total;
-  return ZX_OK;
-}
 
 template <typename F>
 zx_status_t zxio_vmo_do_vector(size_t start, size_t length, size_t* offset,
@@ -61,8 +34,6 @@ zx_status_t zxio_vmo_do_vector(size_t start, size_t length, size_t* offset,
                           return ZX_OK;
                         });
 }
-
-}  // namespace
 
 // A utility which helps implementing the C-style |zxio_ops_t| ops table
 // from a C++ class. The specific backend implementation should inherit

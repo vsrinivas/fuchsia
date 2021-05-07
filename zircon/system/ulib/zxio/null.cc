@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/zxio/cpp/vector.h>
 #include <lib/zxio/null.h>
 #include <zircon/syscalls.h>
-
-#include "private.h"
 
 zx_status_t zxio_default_close(zxio_t* io) { return ZX_OK; }
 

@@ -13,6 +13,7 @@ zx_library("zxio") {
     "lib/zxio/ops.h",
     "lib/zxio/types.h",
     "lib/zxio/zxio.h",
+    "lib/zxio/cpp/vector.h",
   ]
   sources = [
     "debuglog.cc",
