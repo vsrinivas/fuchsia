@@ -15,6 +15,7 @@
 #include "src/sys/lib/stdout-to-debuglog/cpp/stdout-to-debuglog.h"
 
 namespace fdf = fuchsia_driver_framework;
+namespace fi = fuchsia::inspect;
 
 constexpr char kDiagnosticsDir[] = "diagnostics";
 constexpr size_t kNumDriverLoopThreads = 2;
@@ -43,14 +44,14 @@ int main(int argc, char** argv) {
   }
   auto tree_handler = inspect::MakeTreeHandler(&inspector, loop.dispatcher());
   auto tree_service = fbl::MakeRefCounted<fs::Service>(
-      [tree_handler = std::move(tree_handler)](zx::channel request) {
-        tree_handler(fidl::InterfaceRequest<fuchsia::inspect::Tree>(std::move(request)));
+      [tree_handler = std::move(tree_handler)](fidl::ServerEnd<fi::Tree> request) {
+        tree_handler(fidl::InterfaceRequest<fi::Tree>(request.TakeChannel()));
         return ZX_OK;
       });
   auto diagnostics_dir = fbl::MakeRefCounted<fs::PseudoDir>();
-  status = diagnostics_dir->AddEntry(fuchsia::inspect::Tree::Name_, std::move(tree_service));
+  status = diagnostics_dir->AddEntry(fi::Tree::Name_, std::move(tree_service));
   if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to add directory entry '%s': %s", fuchsia::inspect::Tree::Name_,
+    LOGF(ERROR, "Failed to add directory entry '%s': %s", fi::Tree::Name_,
          zx_status_get_string(status));
     return status;
   }
