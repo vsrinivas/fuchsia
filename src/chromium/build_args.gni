@@ -3,8 +3,9 @@
 # found in the LICENSE file.
 
 declare_args() {
-  # This variable specifies a chromium build output directory, such as `~/chromium/src/out/fuchsia`,
-  # that cast_runner, web_runner, and web_engine will be obtained from. If unset, the prebuilt
+  # This variable specifies a fully qualified Chromium build output directory,
+  # such as `/home/USER/chrome/src/out/fuchsia`, that 'cast_runner', 'web_runner',
+  # and 'web_engine' will be obtained from. If unset, the prebuilt
   # packages from CIPD will be used.
   chromium_build_dir = ""
 

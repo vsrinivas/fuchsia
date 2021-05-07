@@ -52,7 +52,7 @@ template("generate_cast_targets") {
   generate_pkg_and_config("cast_runner") {
     prebuilt_archive_base_path = prebuilt_archive_base_path
     debug_archive_base_path = debug_archive_base_path
-    custom_package_path = "/gen/fuchsia/engine/cast_runner/cast_runner.far"
+    custom_package_path = "/gen/fuchsia/runners/cast_runner/cast_runner.far"
     selections = package_flavor_selections
 
     # Config data arguments.
