@@ -13,6 +13,7 @@
 #include <lib/console.h>
 #include <lib/instrumentation/asan.h>
 #include <lib/unittest/user_memory.h>
+#include <lib/zircon-internal/macros.h>
 #include <platform.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,7 +23,9 @@
 #include <zircon/types.h>
 
 #include <arch/ops.h>
+#include <kernel/lockdep.h>
 #include <kernel/thread.h>
+#include <kernel/thread_lock.h>
 #include <ktl/array.h>
 #include <ktl/unique_ptr.h>
 #include <platform/debug.h>
@@ -46,6 +49,7 @@ static int cmd_cmdline(int argc, const cmd_args* argv, uint32_t flags);
 static int cmd_crash_user_read(int argc, const cmd_args* argv, uint32_t flags);
 static int cmd_crash_pmm_use_after_free(int argc, const cmd_args* argv, uint32_t flags);
 static int cmd_crash_assert(int argc, const cmd_args* argv, uint32_t flags);
+static int cmd_crash_thread_lock(int argc, const cmd_args* argv, uint32_t flags);
 static int cmd_build_instrumentation(int argc, const cmd_args* argv, uint32_t flags);
 
 STATIC_COMMAND_START
@@ -68,6 +72,8 @@ STATIC_COMMAND("crash_user_read", "intentionally read user memory", &cmd_crash_u
 STATIC_COMMAND("crash_pmm_use_after_free", "intentionally corrupt the pmm free list",
                &cmd_crash_pmm_use_after_free)
 STATIC_COMMAND("crash_assert", "intentionally crash by failing an assert", &cmd_crash_assert)
+STATIC_COMMAND("crash_thread_lock", "intentionally crash while holding the thread lock",
+               &cmd_crash_thread_lock)
 STATIC_COMMAND("cmdline", "display kernel commandline", &cmd_cmdline)
 STATIC_COMMAND("sleep", "sleep number of seconds", &cmd_sleep)
 STATIC_COMMAND("sleepm", "sleep number of milliseconds", &cmd_sleep)
@@ -445,6 +451,14 @@ static int cmd_crash_pmm_use_after_free(int argc, const cmd_args* argv, uint32_t
 static int cmd_crash_assert(int argc, const cmd_args* argv, uint32_t flags) {
   constexpr int kValue = 42;
   ASSERT_MSG(kValue == 0, "value %d\n", kValue);
+  return -1;
+}
+
+static int cmd_crash_thread_lock(int argc, const cmd_args* argv, uint32_t flags) {
+  {
+    Guard<MonitoredSpinLock, IrqSave> thread_lock_guard{ThreadLock::Get(), SOURCE_TAG};
+    panic("intentionally panicking while holding thread lock\n");
+  }
   return -1;
 }
 

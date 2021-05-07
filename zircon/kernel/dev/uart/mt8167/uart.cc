@@ -107,6 +107,9 @@ static bool uart_tx_irq_enabled = false;
 static AutounsignalEvent uart_dputc_event{true};
 
 namespace {
+// It's important to ensure that no other locks are acquired while holding this lock.  This lock
+// is needed for the printf and panic code paths, and printing and panicking must be safe while
+// holding (almost) any lock.
 DECLARE_SINGLETON_SPINLOCK_WITH_TYPE(uart_spinlock, MonitoredSpinLock);
 }  // namespace
 
@@ -136,7 +139,6 @@ static interrupt_eoi uart_irq_handler(void* arg) {
   // Signal if anyone is waiting to TX
   if (UARTREG(UART_LSR) & UART_LSR_THRE) {
     uartreg_and_eq(UART_IER, ~UART_IER_ETBEI);  // Disable TX interrupt
-    Guard<MonitoredSpinLock, NoIrqSave> guard{uart_spinlock::Get(), SOURCE_TAG};
     // TODO(andresoportus): Revisit all UART drivers usage of events, from event.h:
     // 1. The reschedule flag is not supposed to be true in interrupt context.
     // 2. AutounsignalEvent only wakes up one thread per Signal() call.

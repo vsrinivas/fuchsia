@@ -108,6 +108,9 @@ static bool uart_tx_irq_enabled = false;
 static AutounsignalEvent uart_dputc_event{true};
 
 namespace {
+// It's important to ensure that no other locks are acquired while holding this lock.  This lock is
+// needed for the printf and panic code paths, and printing and panicking must be safe while holding
+// (almost) any lock.
 DECLARE_SINGLETON_SPINLOCK_WITH_TYPE(uart_spinlock, MonitoredSpinLock);
 }  // namespace
 
@@ -145,10 +148,15 @@ static interrupt_eoi uart_irq(void* arg) {
 
   /* handle TX */
   if (UARTREG(s905_uart_base, S905_UART_CONTROL) & S905_UART_CONTROL_TXINTEN) {
-    Guard<MonitoredSpinLock, NoIrqSave> guard{uart_spinlock::Get(), SOURCE_TAG};
-    if (!(UARTREG(s905_uart_base, S905_UART_STATUS) & S905_UART_STATUS_TXFULL))
-    /* Signal any waiting Tx */
+    bool signal;
     {
+      Guard<MonitoredSpinLock, NoIrqSave> guard{uart_spinlock::Get(), SOURCE_TAG};
+      // Drop the uart_spinlock before calling |Event::Signal| to avoid creating an invalid lock
+      // dependency between uart_spinlock and any locks Event::Signal may acquire.
+      signal = !(UARTREG(s905_uart_base, S905_UART_STATUS) & S905_UART_STATUS_TXFULL);
+    }
+    if (signal) {
+      /* Signal any waiting Tx */
       uart_dputc_event.Signal();
     }
   }
