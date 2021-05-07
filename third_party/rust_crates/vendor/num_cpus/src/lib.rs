@@ -28,7 +28,7 @@
 //! [`rayon::ThreadPool`]: https://docs.rs/rayon/1.*/rayon/struct.ThreadPool.html
 #![cfg_attr(test, deny(warnings))]
 #![deny(missing_docs)]
-#![doc(html_root_url = "https://docs.rs/num_cpus/1.12.0")]
+#![doc(html_root_url = "https://docs.rs/num_cpus/1.13.0")]
 #![allow(non_snake_case)]
 
 #[cfg(not(windows))]
@@ -37,12 +37,10 @@ extern crate libc;
 #[cfg(target_os = "hermit")]
 extern crate hermit_abi;
 
-#[cfg(test)]
-#[macro_use]
-extern crate doc_comment;
-
-#[cfg(test)]
-doctest!("../README.md");
+#[cfg(target_os = "linux")]
+mod linux;
+#[cfg(target_os = "linux")]
+use linux::{get_num_cpus, get_num_physical_cpus};
 
 /// Returns the number of available CPUs of the current system.
 ///
@@ -62,11 +60,14 @@ doctest!("../README.md");
 ///
 /// # Note
 ///
-/// This will check [sched affinity] on Linux, showing a lower number of CPUs if the current 
-/// thread does not have access to all the computer's CPUs. 
+/// This will check [sched affinity] on Linux, showing a lower number of CPUs if the current
+/// thread does not have access to all the computer's CPUs.
+///
+/// This will also check [cgroups], frequently used in containers to constrain CPU usage.
 ///
 /// [smt]: https://en.wikipedia.org/wiki/Simultaneous_multithreading
 /// [sched affinity]: http://www.gnu.org/software/libc/manual/html_node/CPU-Affinity.html
+/// [cgroups]: https://www.kernel.org/doc/Documentation/cgroup-v1/cgroups.txt
 #[inline]
 pub fn get() -> usize {
     get_num_cpus()
@@ -196,56 +197,6 @@ fn get_num_physical_cpus_windows() -> Option<usize> {
     }
 }
 
-#[cfg(target_os = "linux")]
-fn get_num_physical_cpus() -> usize {
-    use std::collections::HashMap;
-    use std::fs::File;
-    use std::io::BufRead;
-    use std::io::BufReader;
-
-    let file = match File::open("/proc/cpuinfo") {
-        Ok(val) => val,
-        Err(_) => return get_num_cpus(),
-    };
-    let reader = BufReader::new(file);
-    let mut map = HashMap::new();
-    let mut physid: u32 = 0;
-    let mut cores: usize = 0;
-    let mut chgcount = 0;
-    for line in reader.lines().filter_map(|result| result.ok()) {
-        let mut it = line.split(':');
-        let (key, value) = match (it.next(), it.next()) {
-            (Some(key), Some(value)) => (key.trim(), value.trim()),
-            _ => continue,
-        };
-        if key == "physical id" {
-            match value.parse() {
-                Ok(val) => physid = val,
-                Err(_) => break,
-            };
-            chgcount += 1;
-        }
-        if key == "cpu cores" {
-            match value.parse() {
-                Ok(val) => cores = val,
-                Err(_) => break,
-            };
-            chgcount += 1;
-        }
-        if chgcount == 2 {
-            map.insert(physid, cores);
-            chgcount = 0;
-        }
-    }
-    let count = map.into_iter().fold(0, |acc, (_, cores)| acc + cores);
-
-    if count == 0 {
-        get_num_cpus()
-    } else {
-        count
-    }
-}
-
 #[cfg(windows)]
 fn get_num_cpus() -> usize {
     #[repr(C)]
@@ -371,27 +322,6 @@ fn get_num_physical_cpus() -> usize {
         }
     }
     cpus as usize
-}
-
-#[cfg(target_os = "linux")]
-fn get_num_cpus() -> usize {
-    let mut set:  libc::cpu_set_t = unsafe { std::mem::zeroed() };
-    if unsafe { libc::sched_getaffinity(0, std::mem::size_of::<libc::cpu_set_t>(), &mut set) } == 0 {
-        let mut count: u32 = 0;
-        for i in 0..libc::CPU_SETSIZE as usize {
-            if unsafe { libc::CPU_ISSET(i, &set) } {
-                count += 1
-            }
-        }
-        count as usize
-    } else {
-        let cpus = unsafe { libc::sysconf(libc::_SC_NPROCESSORS_ONLN) };
-        if cpus < 1 {
-            1
-        } else {
-            cpus as usize
-        }
-    }
 }
 
 #[cfg(any(

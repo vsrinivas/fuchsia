@@ -148,6 +148,10 @@ group("darling") {
   deps = [ ":darling-v0_12_0" ]
 }
 
+group("dashmap") {
+  deps = [ ":dashmap-v4_0_2" ]
+}
+
 group("data-encoding") {
   deps = [ ":data-encoding-v2_1_2" ]
 }
@@ -2873,6 +2877,30 @@ rust_proc_macro("darling_macro-v0_12_0") {
   ]
 }
 
+rust_library("dashmap-v4_0_2") {
+  crate_name = "dashmap"
+  crate_root = "//third_party/rust_crates/vendor/dashmap/src/lib.rs"
+  output_name = "dashmap-3cd01d2a224a57b"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":cfg-if-v1_0_0" ]
+  deps += [ ":num_cpus-v1_13_0" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=3cd01d2a224a57b",
+    "-Cextra-filename=-3cd01d2a224a57b",
+    "--cfg=feature=\"default\"",
+  ]
+}
+
 rust_library("data-encoding-v2_1_2") {
   crate_name = "data_encoding"
   crate_root = "//third_party/rust_crates/vendor/data-encoding/src/lib.rs"
@@ -5507,10 +5535,10 @@ rust_library("num-traits-v0_2_11") {
   ]
 }
 
-rust_library("num_cpus-v1_12_0") {
+rust_library("num_cpus-v1_13_0") {
   crate_name = "num_cpus"
   crate_root = "//third_party/rust_crates/vendor/num_cpus/src/lib.rs"
-  output_name = "num_cpus-5d7427ef5ac8370a"
+  output_name = "num_cpus-2a33e47c2187c1d3"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -5527,8 +5555,8 @@ rust_library("num_cpus-v1_12_0") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=5d7427ef5ac8370a",
-    "-Cextra-filename=-5d7427ef5ac8370a",
+    "-Cmetadata=2a33e47c2187c1d3",
+    "-Cextra-filename=-2a33e47c2187c1d3",
   ]
 }
 
@@ -7340,7 +7368,7 @@ rust_library("rayon-core-v1_7_0") {
   deps += [ ":crossbeam-queue-v0_2_1" ]
   deps += [ ":crossbeam-utils-v0_7_2" ]
   deps += [ ":lazy_static-v1_4_0" ]
-  deps += [ ":num_cpus-v1_12_0" ]
+  deps += [ ":num_cpus-v1_13_0" ]
 
   rustenv = []
 
@@ -7624,7 +7652,7 @@ rust_library("rouille-v3_0_0") {
   deps += [ ":deflate-v0_7_19" ]
   deps += [ ":filetime-v0_2_14" ]
   deps += [ ":multipart-v0_15_4" ]
-  deps += [ ":num_cpus-v1_12_0" ]
+  deps += [ ":num_cpus-v1_13_0" ]
   deps += [ ":rand-v0_5_6" ]
   deps += [ ":serde-v1_0_116" ]
   deps += [ ":serde_derive-v1_0_116($host_toolchain)" ]
@@ -9465,7 +9493,7 @@ rust_library("threadpool-v1_7_1") {
   ]
 
   deps = []
-  deps += [ ":num_cpus-v1_12_0" ]
+  deps += [ ":num_cpus-v1_13_0" ]
 
   rustenv = []
 
