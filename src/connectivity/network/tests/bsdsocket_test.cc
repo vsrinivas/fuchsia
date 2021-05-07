@@ -1529,7 +1529,7 @@ TEST(NetStreamTest, ConnectTwice) {
       << strerror(errno);
 #else
             -1);
-  ASSERT_EQ(errno, ECONNREFUSED) << strerror(errno);
+  ASSERT_EQ(errno, ECONNABORTED) << strerror(errno);
 #endif
 
   ASSERT_EQ(close(listener.release()), 0) << strerror(errno);
@@ -2408,6 +2408,13 @@ TEST_P(AnyAddrStreamSocketTest, Connect) {
   socklen_t addrlen = AddrLen();
   ASSERT_EQ(connect(sock().get(), reinterpret_cast<const struct sockaddr*>(&any), addrlen), -1);
   ASSERT_EQ(errno, ECONNREFUSED) << strerror(errno);
+
+  // The error should have been consumed.
+  int err;
+  socklen_t optlen = sizeof(err);
+  ASSERT_EQ(getsockopt(sock().get(), SOL_SOCKET, SO_ERROR, &err, &optlen), 0) << strerror(errno);
+  ASSERT_EQ(optlen, sizeof(err));
+  ASSERT_EQ(err, 0) << strerror(err);
 }
 
 TEST_P(AnyAddrDatagramSocketTest, Connect) {
@@ -3221,9 +3228,10 @@ void TestListenWhileConnect(const IOMethod& ioMethod, void (*stopListen)(fbl::un
     EXPECT_GE(n, 0) << strerror(errno);
     EXPECT_EQ(n, 1);
     EXPECT_EQ(pfd.revents, POLLIN | POLLHUP | POLLERR);
+
     char c;
     EXPECT_EQ(ioMethod.executeIO(fd, &c, sizeof(c)), -1);
-    EXPECT_EQ(errno, expected_errno);
+    EXPECT_EQ(errno, expected_errno) << strerror(errno) << " vs " << strerror(expected_errno);
 
     bool isWrite = ioMethod.isWrite();
 #if !defined(__Fuchsia__)
