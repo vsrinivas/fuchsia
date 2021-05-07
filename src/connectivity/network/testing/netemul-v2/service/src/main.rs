@@ -532,7 +532,7 @@ mod tests {
     use super::*;
     use {
         fidl::endpoints::Proxy as _, fidl_fuchsia_netemul as fnetemul,
-        fidl_fuchsia_netemul_test::CounterMarker, std::convert::TryFrom as _,
+        fidl_fuchsia_netemul_test::CounterMarker, fixture::fixture, std::convert::TryFrom as _,
     };
 
     // We can't just use a counter for the sandbox identifier, as we do in `main`, because tests
@@ -548,6 +548,15 @@ mod tests {
         (sandbox_proxy, async move {
             handle_sandbox(stream, sandbox_name).await.expect("handle_sandbox error")
         })
+    }
+
+    async fn with_sandbox<F, Fut>(name: &str, test: F)
+    where
+        F: FnOnce(fnetemul::SandboxProxy) -> Fut,
+        Fut: futures::Future<Output = ()>,
+    {
+        let (sandbox, fut) = setup_sandbox_service(name);
+        let ((), ()) = futures::future::join(fut, test(sandbox)).await;
     }
 
     struct TestRealm {
@@ -577,15 +586,6 @@ mod tests {
         }
     }
 
-    async fn with_sandbox<F, Fut>(name: &str, test: F)
-    where
-        F: FnOnce(fnetemul::SandboxProxy) -> Fut,
-        Fut: futures::Future<Output = ()>,
-    {
-        let (sandbox, fut) = setup_sandbox_service(name);
-        let ((), ()) = futures::future::join(fut, test(sandbox)).await;
-    }
-
     const TEST_DRIVER_COMPONENT_NAME: &str = "test_driver";
     const COUNTER_COMPONENT_NAME: &str = "counter";
     const COUNTER_PACKAGE_URL: &str = "fuchsia-pkg://fuchsia.com/netemul-v2-tests#meta/counter.cm";
@@ -602,16 +602,117 @@ mod tests {
         }
     }
 
+    #[fixture(with_sandbox)]
     #[fuchsia::test]
-    async fn can_connect_to_single_service() {
-        with_sandbox("can_connect_to_single_service", |sandbox| async move {
-            let realm = TestRealm::new(
-                &sandbox,
-                fnetemul::RealmOptions {
-                    children: Some(vec![counter_component()]),
-                    ..fnetemul::RealmOptions::EMPTY
-                },
+    async fn can_connect_to_single_service(sandbox: fnetemul::SandboxProxy) {
+        let realm = TestRealm::new(
+            &sandbox,
+            fnetemul::RealmOptions {
+                children: Some(vec![counter_component()]),
+                ..fnetemul::RealmOptions::EMPTY
+            },
+        );
+        let counter = realm.connect_to_service::<CounterMarker>();
+        assert_eq!(
+            counter.increment().await.expect("fuchsia.netemul.test/Counter.increment call failed"),
+            1,
+        );
+    }
+
+    #[fixture(with_sandbox)]
+    #[fuchsia::test]
+    async fn multiple_realms(sandbox: fnetemul::SandboxProxy) {
+        let realm_a = TestRealm::new(
+            &sandbox,
+            fnetemul::RealmOptions {
+                name: Some("a".to_string()),
+                children: Some(vec![counter_component()]),
+                ..fnetemul::RealmOptions::EMPTY
+            },
+        );
+        let realm_b = TestRealm::new(
+            &sandbox,
+            fnetemul::RealmOptions {
+                name: Some("b".to_string()),
+                children: Some(vec![counter_component()]),
+                ..fnetemul::RealmOptions::EMPTY
+            },
+        );
+        let counter_a = realm_a.connect_to_service::<CounterMarker>();
+        let counter_b = realm_b.connect_to_service::<CounterMarker>();
+        assert_eq!(
+            counter_a
+                .increment()
+                .await
+                .expect("fuchsia.netemul.test/Counter.increment call failed"),
+            1,
+        );
+        for i in 1..=10 {
+            assert_eq!(
+                counter_b
+                    .increment()
+                    .await
+                    .expect("fuchsia.netemul.test/Counter.increment call failed"),
+                i,
             );
+        }
+        assert_eq!(
+            counter_a
+                .increment()
+                .await
+                .expect("fuchsia.netemul.test/Counter.increment call failed"),
+            2,
+        );
+    }
+
+    #[fixture(with_sandbox)]
+    #[fuchsia::test]
+    async fn drop_realm_destroys_children(sandbox: fnetemul::SandboxProxy) {
+        let realm = TestRealm::new(
+            &sandbox,
+            fnetemul::RealmOptions {
+                children: Some(vec![counter_component()]),
+                ..fnetemul::RealmOptions::EMPTY
+            },
+        );
+        let counter = realm.connect_to_service::<CounterMarker>();
+        assert_eq!(
+            counter.increment().await.expect("fuchsia.netemul.test/Counter.increment call failed"),
+            1,
+        );
+        drop(realm);
+        assert_eq!(
+            fasync::OnSignals::new(
+                &counter
+                    .into_channel()
+                    .expect("failed to convert `CounterProxy` into `fasync::Channel`"),
+                zx::Signals::CHANNEL_PEER_CLOSED,
+            )
+            .await,
+            Ok(zx::Signals::CHANNEL_PEER_CLOSED),
+            "`CounterProxy` should be closed when `ManagedRealmProxy` is dropped",
+        );
+    }
+
+    #[fixture(with_sandbox)]
+    #[fuchsia::test]
+    async fn drop_sandbox_destroys_realms(sandbox: fnetemul::SandboxProxy) {
+        const REALMS_COUNT: usize = 10;
+        let realms = std::iter::repeat(())
+            .take(REALMS_COUNT)
+            .map(|()| {
+                TestRealm::new(
+                    &sandbox,
+                    fnetemul::RealmOptions {
+                        children: Some(vec![counter_component()]),
+                        ..fnetemul::RealmOptions::EMPTY
+                    },
+                )
+            })
+            .collect::<Vec<_>>();
+
+        let mut counters = vec![];
+        for realm in &realms {
             let counter = realm.connect_to_service::<CounterMarker>();
             assert_eq!(
                 counter
@@ -620,77 +721,10 @@ mod tests {
                     .expect("fuchsia.netemul.test/Counter.increment call failed"),
                 1,
             );
-        })
-        .await
-    }
-
-    #[fuchsia::test]
-    async fn multiple_realms() {
-        with_sandbox("multiple_realms", |sandbox| async move {
-            let realm_a = TestRealm::new(
-                &sandbox,
-                fnetemul::RealmOptions {
-                    name: Some("a".to_string()),
-                    children: Some(vec![counter_component()]),
-                    ..fnetemul::RealmOptions::EMPTY
-                },
-            );
-            let realm_b = TestRealm::new(
-                &sandbox,
-                fnetemul::RealmOptions {
-                    name: Some("b".to_string()),
-                    children: Some(vec![counter_component()]),
-                    ..fnetemul::RealmOptions::EMPTY
-                },
-            );
-            let counter_a = realm_a.connect_to_service::<CounterMarker>();
-            let counter_b = realm_b.connect_to_service::<CounterMarker>();
-            assert_eq!(
-                counter_a
-                    .increment()
-                    .await
-                    .expect("fuchsia.netemul.test/Counter.increment call failed"),
-                1,
-            );
-            for i in 1..=10 {
-                assert_eq!(
-                    counter_b
-                        .increment()
-                        .await
-                        .expect("fuchsia.netemul.test/Counter.increment call failed"),
-                    i,
-                );
-            }
-            assert_eq!(
-                counter_a
-                    .increment()
-                    .await
-                    .expect("fuchsia.netemul.test/Counter.increment call failed"),
-                2,
-            );
-        })
-        .await
-    }
-
-    #[fuchsia::test]
-    async fn drop_realm_destroys_children() {
-        with_sandbox("drop_realm_destroys_children", |sandbox| async move {
-            let realm = TestRealm::new(
-                &sandbox,
-                fnetemul::RealmOptions {
-                    children: Some(vec![counter_component()]),
-                    ..fnetemul::RealmOptions::EMPTY
-                },
-            );
-            let counter = realm.connect_to_service::<CounterMarker>();
-            assert_eq!(
-                counter
-                    .increment()
-                    .await
-                    .expect("fuchsia.netemul.test/Counter.increment call failed"),
-                1,
-            );
-            drop(realm);
+            let () = counters.push(counter);
+        }
+        drop(sandbox);
+        for counter in counters {
             assert_eq!(
                 fasync::OnSignals::new(
                     &counter
@@ -700,80 +734,54 @@ mod tests {
                 )
                 .await,
                 Ok(zx::Signals::CHANNEL_PEER_CLOSED),
-                "`CounterProxy` should be closed when `ManagedRealmProxy` is dropped",
+                "`CounterProxy` should be closed when `SandboxProxy` is dropped",
             );
-        })
-        .await
+        }
+        for realm in realms {
+            let TestRealm { realm } = realm;
+            assert_eq!(
+                fasync::OnSignals::new(
+                    &realm
+                        .into_channel()
+                        .expect("failed to convert `ManagedRealmProxy` into `fasync::Channel`"),
+                    zx::Signals::CHANNEL_PEER_CLOSED,
+                )
+                .await,
+                Ok(zx::Signals::CHANNEL_PEER_CLOSED),
+                "`ManagedRealmProxy` should be closed when `SandboxProxy` is dropped",
+            );
+        }
     }
 
+    #[fixture(with_sandbox)]
     #[fuchsia::test]
-    async fn drop_sandbox_destroys_realms() {
-        with_sandbox("drop_sandbox_destroys_realms", |sandbox| async move {
-            const REALMS_COUNT: usize = 10;
-            let realms = std::iter::repeat(())
-                .take(REALMS_COUNT)
-                .map(|()| {
-                    TestRealm::new(
-                        &sandbox,
-                        fnetemul::RealmOptions {
-                            children: Some(vec![counter_component()]),
-                            ..fnetemul::RealmOptions::EMPTY
-                        },
-                    )
-                })
-                .collect::<Vec<_>>();
-
-            let mut counters = vec![];
-            for realm in &realms {
-                let counter = realm.connect_to_service::<CounterMarker>();
-                assert_eq!(
-                    counter
-                        .increment()
-                        .await
-                        .expect("fuchsia.netemul.test/Counter.increment call failed"),
-                    1,
-                );
-                let () = counters.push(counter);
-            }
-            drop(sandbox);
-            for counter in counters {
-                assert_eq!(
-                    fasync::OnSignals::new(
-                        &counter
-                            .into_channel()
-                            .expect("failed to convert `CounterProxy` into `fasync::Channel`"),
-                        zx::Signals::CHANNEL_PEER_CLOSED,
-                    )
-                    .await,
-                    Ok(zx::Signals::CHANNEL_PEER_CLOSED),
-                    "`CounterProxy` should be closed when `SandboxProxy` is dropped",
-                );
-            }
-            for realm in realms {
-                let TestRealm { realm } = realm;
-                assert_eq!(
-                    fasync::OnSignals::new(
-                        &realm
-                            .into_channel()
-                            .expect("failed to convert `ManagedRealmProxy` into `fasync::Channel`"),
-                        zx::Signals::CHANNEL_PEER_CLOSED,
-                    )
-                    .await,
-                    Ok(zx::Signals::CHANNEL_PEER_CLOSED),
-                    "`ManagedRealmProxy` should be closed when `SandboxProxy` is dropped",
-                );
-            }
-        })
-        .await
+    async fn set_realm_name(sandbox: fnetemul::SandboxProxy) {
+        let TestRealm { realm } = TestRealm::new(
+            &sandbox,
+            fnetemul::RealmOptions {
+                name: Some("test-realm-name".to_string()),
+                children: Some(vec![counter_component()]),
+                ..fnetemul::RealmOptions::EMPTY
+            },
+        );
+        assert_eq!(
+            realm
+                .get_moniker()
+                .await
+                .expect("fuchsia.netemul/ManagedRealm.get_moniker call failed"),
+            format!("{}\\:set_realm_name0-test-realm-name", REALM_COLLECTION_NAME),
+        );
     }
 
+    #[fixture(with_sandbox)]
     #[fuchsia::test]
-    async fn set_realm_name() {
-        with_sandbox("set_realm_name", |sandbox| async move {
+    async fn auto_generated_realm_name(sandbox: fnetemul::SandboxProxy) {
+        const REALMS_COUNT: usize = 10;
+        for i in 0..REALMS_COUNT {
             let TestRealm { realm } = TestRealm::new(
                 &sandbox,
                 fnetemul::RealmOptions {
-                    name: Some("test-realm-name".to_string()),
+                    name: None,
                     children: Some(vec![counter_component()]),
                     ..fnetemul::RealmOptions::EMPTY
                 },
@@ -783,119 +791,91 @@ mod tests {
                     .get_moniker()
                     .await
                     .expect("fuchsia.netemul/ManagedRealm.get_moniker call failed"),
-                format!("{}\\:set_realm_name0-test-realm-name", REALM_COLLECTION_NAME),
+                format!("{}\\:auto_generated_realm_name{}", REALM_COLLECTION_NAME, i),
             );
-        })
-        .await
+        }
     }
 
+    #[fixture(with_sandbox)]
     #[fuchsia::test]
-    async fn auto_generated_realm_name() {
-        with_sandbox("auto_generated_realm_name", |sandbox| async move {
-            const REALMS_COUNT: usize = 10;
-            for i in 0..REALMS_COUNT {
-                let TestRealm { realm } = TestRealm::new(
+    async fn inspect(sandbox: fnetemul::SandboxProxy) {
+        const REALMS_COUNT: usize = 10;
+        let realms = std::iter::repeat(())
+            .take(REALMS_COUNT)
+            .map(|()| {
+                TestRealm::new(
                     &sandbox,
                     fnetemul::RealmOptions {
-                        name: None,
                         children: Some(vec![counter_component()]),
                         ..fnetemul::RealmOptions::EMPTY
                     },
-                );
+                )
+            })
+            // Collect the `TestRealm`s because we want all the test realms to be alive for the
+            // duration of the test.
+            //
+            // Each `TestRealm` owns a `ManagedRealmProxy`, which has RAII semantics: when the proxy
+            // is dropped, the backing test realm managed by the sandbox is also destroyed.
+            .collect::<Vec<_>>();
+        for (i, realm) in realms.iter().enumerate() {
+            let i = u32::try_from(i).unwrap();
+            let counter = realm.connect_to_service::<CounterMarker>();
+            for j in 1..=i {
                 assert_eq!(
-                    realm
-                        .get_moniker()
-                        .await
-                        .expect("fuchsia.netemul/ManagedRealm.get_moniker call failed"),
-                    format!("{}\\:auto_generated_realm_name{}", REALM_COLLECTION_NAME, i),
-                );
-            }
-        })
-        .await
-    }
-
-    #[fuchsia::test]
-    async fn inspect() {
-        with_sandbox("inspect", |sandbox| async move {
-            const REALMS_COUNT: usize = 10;
-            let realms = std::iter::repeat(())
-                .take(REALMS_COUNT)
-                .map(|()| {
-                    TestRealm::new(
-                        &sandbox,
-                        fnetemul::RealmOptions {
-                            children: Some(vec![counter_component()]),
-                            ..fnetemul::RealmOptions::EMPTY
-                        },
-                    )
-                })
-                // Collect the `TestRealm`s because we want all the test realms to be alive for the
-                // duration of the test.
-                //
-                // Each `TestRealm` owns a `ManagedRealmProxy`, which has RAII semantics: when the
-                // proxy is dropped, the backing test realm managed by the sandbox is also
-                // destroyed.
-                .collect::<Vec<_>>();
-            for (i, realm) in realms.iter().enumerate() {
-                let i = u32::try_from(i).unwrap();
-                let counter = realm.connect_to_service::<CounterMarker>();
-                for j in 1..=i {
-                    assert_eq!(
-                        counter.increment().await.expect(&format!(
-                            "fuchsia.netemul.test/Counter.increment call failed on realm {}",
-                            i
-                        )),
-                        j,
-                    );
-                }
-                let TestRealm { realm } = realm;
-                let selector = vec![
-                    TEST_DRIVER_COMPONENT_NAME.into(),
-                    realm.get_moniker().await.expect(&format!(
-                        "fuchsia.netemul/ManagedRealm.get_moniker call failed on realm {}",
+                    counter.increment().await.expect(&format!(
+                        "fuchsia.netemul.test/Counter.increment call failed on realm {}",
                         i
                     )),
-                    COUNTER_COMPONENT_NAME.into(),
-                ];
-                let data = diagnostics_reader::ArchiveReader::new()
-                    .add_selector(diagnostics_reader::ComponentSelector::new(selector))
-                    .snapshot::<diagnostics_reader::Inspect>()
-                    .await
-                    .expect(&format!("failed to get inspect data in realm {}", i))
-                    .into_iter()
-                    .map(
-                        |diagnostics_data::InspectData {
-                             data_source: _,
-                             metadata: _,
-                             moniker: _,
-                             payload,
-                             version: _,
-                         }| payload,
-                    )
-                    .collect::<Vec<_>>();
-                match &data[..] {
-                    [datum] => match datum {
-                        None => panic!("empty inspect payload in realm {}", i),
-                        Some(data) => {
-                            diagnostics_reader::assert_data_tree!(data, root: {
-                                counter: {
-                                    count: u64::from(i),
-                                }
-                            });
-                        }
-                    },
-                    data => panic!(
-                        "there should be exactly one matching inspect node in realm {}; got {:?}",
-                        i, data
-                    ),
-                }
+                    j,
+                );
             }
-        })
-        .await
+            let TestRealm { realm } = realm;
+            let selector = vec![
+                TEST_DRIVER_COMPONENT_NAME.into(),
+                realm.get_moniker().await.expect(&format!(
+                    "fuchsia.netemul/ManagedRealm.get_moniker call failed on realm {}",
+                    i
+                )),
+                COUNTER_COMPONENT_NAME.into(),
+            ];
+            let data = diagnostics_reader::ArchiveReader::new()
+                .add_selector(diagnostics_reader::ComponentSelector::new(selector))
+                .snapshot::<diagnostics_reader::Inspect>()
+                .await
+                .expect(&format!("failed to get inspect data in realm {}", i))
+                .into_iter()
+                .map(
+                    |diagnostics_data::InspectData {
+                         data_source: _,
+                         metadata: _,
+                         moniker: _,
+                         payload,
+                         version: _,
+                     }| payload,
+                )
+                .collect::<Vec<_>>();
+            match &data[..] {
+                [datum] => match datum {
+                    None => panic!("empty inspect payload in realm {}", i),
+                    Some(data) => {
+                        diagnostics_reader::assert_data_tree!(data, root: {
+                            counter: {
+                                count: u64::from(i),
+                            }
+                        });
+                    }
+                },
+                data => panic!(
+                    "there should be exactly one matching inspect node in realm {}; got {:?}",
+                    i, data
+                ),
+            }
+        }
     }
 
+    #[fixture(with_sandbox)]
     #[fuchsia::test]
-    async fn child_uses_all_capabilities() {
+    async fn child_uses_all_capabilities(sandbox: fnetemul::SandboxProxy) {
         // These services are aliased instances of the `fuchsia.netemul.test.Counter` service
         // (configured in the component manifest), so there is no actual `CounterAMarker` type, for
         // example, from which we could extract its `SERVICE_NAME`.
@@ -906,149 +886,141 @@ mod tests {
         const COUNTER_A_SERVICE_NAME: &str = "fuchsia.netemul.test.CounterA";
         const COUNTER_B_SERVICE_NAME: &str = "fuchsia.netemul.test.CounterB";
 
-        with_sandbox("child_uses_all_capabilities", |sandbox| async move {
-            let TestRealm { realm } = TestRealm::new(
-                &sandbox,
-                fnetemul::RealmOptions {
-                    children: Some(vec![
-                        fnetemul::ChildDef {
-                            url: Some(COUNTER_PACKAGE_URL.to_string()),
-                            name: Some("counter-a".to_string()),
-                            exposes: Some(vec![COUNTER_A_SERVICE_NAME.to_string()]),
-                            uses: Some(fnetemul::ChildUses::All(fnetemul::Empty {})),
-                            ..fnetemul::ChildDef::EMPTY
-                        },
-                        fnetemul::ChildDef {
-                            url: Some(COUNTER_PACKAGE_URL.to_string()),
-                            name: Some("counter-b".to_string()),
-                            exposes: Some(vec![COUNTER_B_SERVICE_NAME.to_string()]),
-                            uses: Some(fnetemul::ChildUses::All(fnetemul::Empty {})),
-                            ..fnetemul::ChildDef::EMPTY
-                        },
-                        // TODO(https://fxbug.dev/74868): once we can allow the ERROR logs that
-                        // result from the routing failure, add a child that does *not* use `All`,
-                        // and verify that it does not have access to the other components' exposed
-                        // services.
-                    ]),
-                    ..fnetemul::RealmOptions::EMPTY
-                },
-            );
-            let counter_b = {
-                let (counter_b, server_end) = fidl::endpoints::create_proxy::<CounterMarker>()
-                    .expect("failed to create CounterB proxy");
-                let () = realm
-                    .connect_to_service(COUNTER_B_SERVICE_NAME, None, server_end.into_channel())
-                    .expect("failed to connect to CounterB service");
-                counter_b
-            };
-            // counter-b should have access to counter-a's exposed service.
-            let (counter_a, server_end) = fidl::endpoints::create_proxy::<CounterMarker>()
-                .expect("failed to create CounterA proxy");
-            let () = counter_b
-                .connect_to_service(COUNTER_A_SERVICE_NAME, server_end.into_channel())
-                .expect("fuchsia.netemul.test/CounterB.connect_to_service call failed");
-            assert_eq!(
-                counter_a
-                    .increment()
-                    .await
-                    .expect("fuchsia.netemul.test/CounterA.increment call failed"),
-                1,
-            );
-            // counter-a should have access to counter-b's exposed service.
-            let (counter_b, server_end) = fidl::endpoints::create_proxy::<CounterMarker>()
-                .expect("failed to create CounterA proxy");
-            let () = counter_a
-                .connect_to_service(COUNTER_B_SERVICE_NAME, server_end.into_channel())
-                .expect("fuchsia.netemul.test/CounterA.connect_to_service call failed");
-            assert_eq!(
-                counter_b
-                    .increment()
-                    .await
-                    .expect("fuchsia.netemul.test/CounterB.increment call failed"),
-                1,
-            );
-        })
-        .await
-    }
-
-    #[fuchsia::test]
-    async fn child_uses_all_netemul_services() {
-        with_sandbox("child_uses_all_netemul_services", |sandbox| async move {
-            let realm = TestRealm::new(
-                &sandbox,
-                fnetemul::RealmOptions {
-                    children: Some(vec![fnetemul::ChildDef {
+        let TestRealm { realm } = TestRealm::new(
+            &sandbox,
+            fnetemul::RealmOptions {
+                children: Some(vec![
+                    fnetemul::ChildDef {
                         url: Some(COUNTER_PACKAGE_URL.to_string()),
-                        name: Some(COUNTER_COMPONENT_NAME.to_string()),
-                        exposes: Some(vec![CounterMarker::SERVICE_NAME.to_string()]),
+                        name: Some("counter-a".to_string()),
+                        exposes: Some(vec![COUNTER_A_SERVICE_NAME.to_string()]),
                         uses: Some(fnetemul::ChildUses::All(fnetemul::Empty {})),
                         ..fnetemul::ChildDef::EMPTY
-                    }]),
-                    ..fnetemul::RealmOptions::EMPTY
-                },
-            );
-            let counter = realm.connect_to_service::<CounterMarker>();
-            let (network_context, server_end) =
-                fidl::endpoints::create_proxy::<fnetemul_network::NetworkContextMarker>()
-                    .expect("failed to create network context proxy");
-            let () = counter
-                .connect_to_service(
-                    fnetemul_network::NetworkContextMarker::SERVICE_NAME,
-                    server_end.into_channel(),
-                )
-                .expect("failed to connect to network context through counter");
-            matches::assert_matches!(
-                network_context.setup(&mut Vec::new().iter_mut()).await,
-                Ok((zx::sys::ZX_OK, Some(_setup_handle)))
-            );
-        })
-        .await
+                    },
+                    fnetemul::ChildDef {
+                        url: Some(COUNTER_PACKAGE_URL.to_string()),
+                        name: Some("counter-b".to_string()),
+                        exposes: Some(vec![COUNTER_B_SERVICE_NAME.to_string()]),
+                        uses: Some(fnetemul::ChildUses::All(fnetemul::Empty {})),
+                        ..fnetemul::ChildDef::EMPTY
+                    },
+                    // TODO(https://fxbug.dev/74868): once we can allow the ERROR logs that result
+                    // from the routing failure, add a child that does *not* use `All`, and verify
+                    // that it does not have access to the other components' exposed services.
+                ]),
+                ..fnetemul::RealmOptions::EMPTY
+            },
+        );
+        let counter_b = {
+            let (counter_b, server_end) = fidl::endpoints::create_proxy::<CounterMarker>()
+                .expect("failed to create CounterB proxy");
+            let () = realm
+                .connect_to_service(COUNTER_B_SERVICE_NAME, None, server_end.into_channel())
+                .expect("failed to connect to CounterB service");
+            counter_b
+        };
+        // counter-b should have access to counter-a's exposed service.
+        let (counter_a, server_end) = fidl::endpoints::create_proxy::<CounterMarker>()
+            .expect("failed to create CounterA proxy");
+        let () = counter_b
+            .connect_to_service(COUNTER_A_SERVICE_NAME, server_end.into_channel())
+            .expect("fuchsia.netemul.test/CounterB.connect_to_service call failed");
+        assert_eq!(
+            counter_a
+                .increment()
+                .await
+                .expect("fuchsia.netemul.test/CounterA.increment call failed"),
+            1,
+        );
+        // counter-a should have access to counter-b's exposed service.
+        let (counter_b, server_end) = fidl::endpoints::create_proxy::<CounterMarker>()
+            .expect("failed to create CounterA proxy");
+        let () = counter_a
+            .connect_to_service(COUNTER_B_SERVICE_NAME, server_end.into_channel())
+            .expect("fuchsia.netemul.test/CounterA.connect_to_service call failed");
+        assert_eq!(
+            counter_b
+                .increment()
+                .await
+                .expect("fuchsia.netemul.test/CounterB.increment call failed"),
+            1,
+        );
     }
 
+    #[fixture(with_sandbox)]
     #[fuchsia::test]
-    async fn network_context() {
-        with_sandbox("network_context", |sandbox| async move {
-            let (network_ctx, server) =
-                fidl::endpoints::create_proxy::<fnetemul_network::NetworkContextMarker>()
-                    .expect("failed to create network context proxy");
-            let () = sandbox.get_network_context(server).expect("FIDL error");
-            let (endpoint_mgr, server) =
-                fidl::endpoints::create_proxy::<fnetemul_network::EndpointManagerMarker>()
-                    .expect("failed to create endpoint manager proxy");
-            let () = network_ctx.get_endpoint_manager(server).expect("FIDL error");
-            let endpoints = endpoint_mgr.list_endpoints().await.expect("FIDL error");
-            assert_eq!(endpoints, Vec::<String>::new());
+    async fn child_uses_all_netemul_services(sandbox: fnetemul::SandboxProxy) {
+        let realm = TestRealm::new(
+            &sandbox,
+            fnetemul::RealmOptions {
+                children: Some(vec![fnetemul::ChildDef {
+                    url: Some(COUNTER_PACKAGE_URL.to_string()),
+                    name: Some(COUNTER_COMPONENT_NAME.to_string()),
+                    exposes: Some(vec![CounterMarker::SERVICE_NAME.to_string()]),
+                    uses: Some(fnetemul::ChildUses::All(fnetemul::Empty {})),
+                    ..fnetemul::ChildDef::EMPTY
+                }]),
+                ..fnetemul::RealmOptions::EMPTY
+            },
+        );
+        let counter = realm.connect_to_service::<CounterMarker>();
+        let (network_context, server_end) =
+            fidl::endpoints::create_proxy::<fnetemul_network::NetworkContextMarker>()
+                .expect("failed to create network context proxy");
+        let () = counter
+            .connect_to_service(
+                fnetemul_network::NetworkContextMarker::SERVICE_NAME,
+                server_end.into_channel(),
+            )
+            .expect("failed to connect to network context through counter");
+        matches::assert_matches!(
+            network_context.setup(&mut Vec::new().iter_mut()).await,
+            Ok((zx::sys::ZX_OK, Some(_setup_handle)))
+        );
+    }
 
-            let backings = [
-                fnetemul_network::EndpointBacking::Ethertap,
-                fnetemul_network::EndpointBacking::NetworkDevice,
-            ];
-            for (i, backing) in backings.iter().enumerate() {
-                let name = format!("ep{}", i);
-                let (status, endpoint) = endpoint_mgr
-                    .create_endpoint(
-                        &name,
-                        &mut fnetemul_network::EndpointConfig {
-                            mtu: 1500,
-                            mac: None,
-                            backing: *backing,
-                        },
-                    )
-                    .await
-                    .expect("FIDL error");
-                let () = zx::Status::ok(status).expect("endpoint creation");
-                let endpoint = endpoint
-                    .expect("endpoint creation")
-                    .into_proxy()
-                    .expect("failed to create endpoint proxy");
-                assert_eq!(endpoint.get_name().await.expect("FIDL error"), name);
-                assert_eq!(
-                    endpoint.get_config().await.expect("FIDL error"),
-                    fnetemul_network::EndpointConfig { mtu: 1500, mac: None, backing: *backing }
-                );
-            }
-        })
-        .await
+    #[fixture(with_sandbox)]
+    #[fuchsia::test]
+    async fn network_context(sandbox: fnetemul::SandboxProxy) {
+        let (network_ctx, server) =
+            fidl::endpoints::create_proxy::<fnetemul_network::NetworkContextMarker>()
+                .expect("failed to create network context proxy");
+        let () = sandbox.get_network_context(server).expect("FIDL error");
+        let (endpoint_mgr, server) =
+            fidl::endpoints::create_proxy::<fnetemul_network::EndpointManagerMarker>()
+                .expect("failed to create endpoint manager proxy");
+        let () = network_ctx.get_endpoint_manager(server).expect("FIDL error");
+        let endpoints = endpoint_mgr.list_endpoints().await.expect("FIDL error");
+        assert_eq!(endpoints, Vec::<String>::new());
+
+        let backings = [
+            fnetemul_network::EndpointBacking::Ethertap,
+            fnetemul_network::EndpointBacking::NetworkDevice,
+        ];
+        for (i, backing) in backings.iter().enumerate() {
+            let name = format!("ep{}", i);
+            let (status, endpoint) = endpoint_mgr
+                .create_endpoint(
+                    &name,
+                    &mut fnetemul_network::EndpointConfig {
+                        mtu: 1500,
+                        mac: None,
+                        backing: *backing,
+                    },
+                )
+                .await
+                .expect("FIDL error");
+            let () = zx::Status::ok(status).expect("endpoint creation");
+            let endpoint = endpoint
+                .expect("endpoint creation")
+                .into_proxy()
+                .expect("failed to create endpoint proxy");
+            assert_eq!(endpoint.get_name().await.expect("FIDL error"), name);
+            assert_eq!(
+                endpoint.get_config().await.expect("FIDL error"),
+                fnetemul_network::EndpointConfig { mtu: 1500, mac: None, backing: *backing }
+            );
+        }
     }
 
     fn get_network_manager(
@@ -1100,281 +1072,274 @@ mod tests {
         .await;
     }
 
+    #[fixture(with_sandbox)]
     #[fuchsia::test]
-    async fn network_context_used_by_child() {
-        with_sandbox("network_context_used_by_child", |sandbox| async move {
-            let realm = TestRealm::new(
-                &sandbox,
-                fnetemul::RealmOptions {
-                    children: Some(vec![
-                        fnetemul::ChildDef {
-                            url: Some(COUNTER_PACKAGE_URL.to_string()),
-                            name: Some("counter-with-network-context".to_string()),
-                            exposes: Some(vec![CounterMarker::SERVICE_NAME.to_string()]),
-                            uses: Some(fnetemul::ChildUses::Capabilities(vec![
-                                fnetemul::Capability::LogSink(fnetemul::Empty {}),
-                                fnetemul::Capability::NetemulNetworkContext(fnetemul::Empty {}),
-                            ])),
-                            ..fnetemul::ChildDef::EMPTY
-                        },
-                        // TODO(https://fxbug.dev/74868): when we can allow ERROR logs for routing
-                        // errors, add a child component that does not `use` NetworkContext, and
-                        // verify that we cannot get at NetworkContext through it. It should result
-                        // in a zx::Status::UNAVAILABLE error.
-                    ]),
-                    ..fnetemul::RealmOptions::EMPTY
-                },
-            );
-            let counter = realm.connect_to_service::<CounterMarker>();
-            let (network_context, server_end) =
-                fidl::endpoints::create_proxy::<fnetemul_network::NetworkContextMarker>()
-                    .expect("failed to create network context proxy");
-            let () = counter
-                .connect_to_service(
-                    fnetemul_network::NetworkContextMarker::SERVICE_NAME,
-                    server_end.into_channel(),
-                )
-                .expect("failed to connect to network context through counter");
-            matches::assert_matches!(
-                network_context.setup(&mut Vec::new().iter_mut()).await,
-                Ok((zx::sys::ZX_OK, Some(_setup_handle)))
-            );
-        })
-        .await
+    async fn network_context_used_by_child(sandbox: fnetemul::SandboxProxy) {
+        let realm = TestRealm::new(
+            &sandbox,
+            fnetemul::RealmOptions {
+                children: Some(vec![
+                    fnetemul::ChildDef {
+                        url: Some(COUNTER_PACKAGE_URL.to_string()),
+                        name: Some("counter-with-network-context".to_string()),
+                        exposes: Some(vec![CounterMarker::SERVICE_NAME.to_string()]),
+                        uses: Some(fnetemul::ChildUses::Capabilities(vec![
+                            fnetemul::Capability::LogSink(fnetemul::Empty {}),
+                            fnetemul::Capability::NetemulNetworkContext(fnetemul::Empty {}),
+                        ])),
+                        ..fnetemul::ChildDef::EMPTY
+                    },
+                    // TODO(https://fxbug.dev/74868): when we can allow ERROR logs for routing
+                    // errors, add a child component that does not `use` NetworkContext, and verify
+                    // that we cannot get at NetworkContext through it. It should result in a
+                    // zx::Status::UNAVAILABLE error.
+                ]),
+                ..fnetemul::RealmOptions::EMPTY
+            },
+        );
+        let counter = realm.connect_to_service::<CounterMarker>();
+        let (network_context, server_end) =
+            fidl::endpoints::create_proxy::<fnetemul_network::NetworkContextMarker>()
+                .expect("failed to create network context proxy");
+        let () = counter
+            .connect_to_service(
+                fnetemul_network::NetworkContextMarker::SERVICE_NAME,
+                server_end.into_channel(),
+            )
+            .expect("failed to connect to network context through counter");
+        matches::assert_matches!(
+            network_context.setup(&mut Vec::new().iter_mut()).await,
+            Ok((zx::sys::ZX_OK, Some(_setup_handle)))
+        );
     }
 
+    #[fixture(with_sandbox)]
     // TODO(https://fxbug.dev/74868): when we can allowlist particular ERROR logs in a test, we can
     // use #[fuchsia::test] which initializes syslog.
     #[fasync::run_singlethreaded(test)]
-    async fn create_realm_invalid_options() {
-        with_sandbox("create_realm_invalid_options", |sandbox| async move {
-            // TODO(https://github.com/frondeus/test-case/issues/37): consider using the
-            // #[test_case] macro to define these cases statically, if we can access the name of the
-            // test case from the test case body. This is necessary in order to avoid creating
-            // sandboxes with colliding names at runtime.
-            //
-            // Note, however, that rustfmt struggles with macros, and using test-case for this test
-            // would result in a lot of large struct literals defined as macro arguments of
-            // #[test_case]. This may be more readable as an auto-formatted array.
-            struct TestCase<'a> {
-                name: &'a str,
-                options: fnetemul::RealmOptions,
-                epitaph: zx::Status,
-            }
-            let cases = [
-                TestCase {
-                    name: "no url provided",
-                    options: fnetemul::RealmOptions {
-                        children: Some(vec![fnetemul::ChildDef {
-                            name: Some(COUNTER_COMPONENT_NAME.to_string()),
-                            ..fnetemul::ChildDef::EMPTY
-                        }]),
-                        ..fnetemul::RealmOptions::EMPTY
-                    },
-                    epitaph: zx::Status::INVALID_ARGS,
+    async fn create_realm_invalid_options(sandbox: fnetemul::SandboxProxy) {
+        // TODO(https://github.com/frondeus/test-case/issues/37): consider using the #[test_case]
+        // macro to define these cases statically, if we can access the name of the test case from
+        // the test case body. This is necessary in order to avoid creating sandboxes with colliding
+        // names at runtime.
+        //
+        // Note, however, that rustfmt struggles with macros, and using test-case for this test
+        // would result in a lot of large struct literals defined as macro arguments of
+        // #[test_case]. This may be more readable as an auto-formatted array.
+        struct TestCase<'a> {
+            name: &'a str,
+            options: fnetemul::RealmOptions,
+            epitaph: zx::Status,
+        }
+        let cases = [
+            TestCase {
+                name: "no url provided",
+                options: fnetemul::RealmOptions {
+                    children: Some(vec![fnetemul::ChildDef {
+                        name: Some(COUNTER_COMPONENT_NAME.to_string()),
+                        ..fnetemul::ChildDef::EMPTY
+                    }]),
+                    ..fnetemul::RealmOptions::EMPTY
                 },
-                TestCase {
-                    name: "no name provided",
-                    options: fnetemul::RealmOptions {
-                        children: Some(vec![fnetemul::ChildDef {
-                            url: Some(COUNTER_PACKAGE_URL.to_string()),
-                            ..fnetemul::ChildDef::EMPTY
-                        }]),
-                        ..fnetemul::RealmOptions::EMPTY
-                    },
-                    epitaph: zx::Status::INVALID_ARGS,
+                epitaph: zx::Status::INVALID_ARGS,
+            },
+            TestCase {
+                name: "no name provided",
+                options: fnetemul::RealmOptions {
+                    children: Some(vec![fnetemul::ChildDef {
+                        url: Some(COUNTER_PACKAGE_URL.to_string()),
+                        ..fnetemul::ChildDef::EMPTY
+                    }]),
+                    ..fnetemul::RealmOptions::EMPTY
                 },
-                TestCase {
-                    name: "duplicate service used by child",
-                    options: fnetemul::RealmOptions {
-                        children: Some(vec![fnetemul::ChildDef {
-                            name: Some(COUNTER_COMPONENT_NAME.to_string()),
-                            url: Some(COUNTER_PACKAGE_URL.to_string()),
-                            uses: Some(fnetemul::ChildUses::Capabilities(vec![
-                                fnetemul::Capability::LogSink(fnetemul::Empty {}),
-                                fnetemul::Capability::LogSink(fnetemul::Empty {}),
-                            ])),
-                            ..fnetemul::ChildDef::EMPTY
-                        }]),
-                        ..fnetemul::RealmOptions::EMPTY
-                    },
-                    epitaph: zx::Status::INVALID_ARGS,
+                epitaph: zx::Status::INVALID_ARGS,
+            },
+            TestCase {
+                name: "duplicate service used by child",
+                options: fnetemul::RealmOptions {
+                    children: Some(vec![fnetemul::ChildDef {
+                        name: Some(COUNTER_COMPONENT_NAME.to_string()),
+                        url: Some(COUNTER_PACKAGE_URL.to_string()),
+                        uses: Some(fnetemul::ChildUses::Capabilities(vec![
+                            fnetemul::Capability::LogSink(fnetemul::Empty {}),
+                            fnetemul::Capability::LogSink(fnetemul::Empty {}),
+                        ])),
+                        ..fnetemul::ChildDef::EMPTY
+                    }]),
+                    ..fnetemul::RealmOptions::EMPTY
                 },
-                TestCase {
-                    name: "child manually depends on a duplicate of a netemul-provided service",
-                    options: fnetemul::RealmOptions {
-                        children: Some(vec![fnetemul::ChildDef {
-                            name: Some(COUNTER_COMPONENT_NAME.to_string()),
-                            url: Some(COUNTER_PACKAGE_URL.to_string()),
-                            uses: Some(fnetemul::ChildUses::Capabilities(vec![
-                                fnetemul::Capability::LogSink(fnetemul::Empty {}),
-                                fnetemul::Capability::ChildDep(fnetemul::ChildDep {
-                                    name: Some("root".to_string()),
-                                    capability: Some(fnetemul::ExposedCapability::Service(
-                                        flogger::LogSinkMarker::SERVICE_NAME.to_string(),
-                                    )),
-                                    ..fnetemul::ChildDep::EMPTY
-                                }),
-                            ])),
-                            ..fnetemul::ChildDef::EMPTY
-                        }]),
-                        ..fnetemul::RealmOptions::EMPTY
-                    },
-                    epitaph: zx::Status::INVALID_ARGS,
+                epitaph: zx::Status::INVALID_ARGS,
+            },
+            TestCase {
+                name: "child manually depends on a duplicate of a netemul-provided service",
+                options: fnetemul::RealmOptions {
+                    children: Some(vec![fnetemul::ChildDef {
+                        name: Some(COUNTER_COMPONENT_NAME.to_string()),
+                        url: Some(COUNTER_PACKAGE_URL.to_string()),
+                        uses: Some(fnetemul::ChildUses::Capabilities(vec![
+                            fnetemul::Capability::LogSink(fnetemul::Empty {}),
+                            fnetemul::Capability::ChildDep(fnetemul::ChildDep {
+                                name: Some("root".to_string()),
+                                capability: Some(fnetemul::ExposedCapability::Service(
+                                    flogger::LogSinkMarker::SERVICE_NAME.to_string(),
+                                )),
+                                ..fnetemul::ChildDep::EMPTY
+                            }),
+                        ])),
+                        ..fnetemul::ChildDef::EMPTY
+                    }]),
+                    ..fnetemul::RealmOptions::EMPTY
                 },
-                TestCase {
-                    name: "child depends on nonexistent child",
-                    options: fnetemul::RealmOptions {
-                        children: Some(vec![
-                            counter_component(),
-                            fnetemul::ChildDef {
-                                name: Some("counter-b".to_string()),
-                                url: Some(COUNTER_PACKAGE_URL.to_string()),
-                                uses: Some(fnetemul::ChildUses::Capabilities(vec![
-                                    fnetemul::Capability::ChildDep(fnetemul::ChildDep {
-                                        // counter-a does not exist.
-                                        name: Some("counter-a".to_string()),
-                                        capability: Some(fnetemul::ExposedCapability::Service(
-                                            CounterMarker::SERVICE_NAME.to_string(),
-                                        )),
-                                        ..fnetemul::ChildDep::EMPTY
-                                    }),
-                                ])),
-                                ..fnetemul::ChildDef::EMPTY
-                            },
-                        ]),
-                        ..fnetemul::RealmOptions::EMPTY
-                    },
-                    epitaph: zx::Status::INVALID_ARGS,
-                },
-                TestCase {
-                    name: "duplicate components",
-                    options: fnetemul::RealmOptions {
-                        children: Some(vec![
-                            fnetemul::ChildDef {
-                                name: Some(COUNTER_COMPONENT_NAME.to_string()),
-                                url: Some(COUNTER_PACKAGE_URL.to_string()),
-                                ..fnetemul::ChildDef::EMPTY
-                            },
-                            fnetemul::ChildDef {
-                                name: Some(COUNTER_COMPONENT_NAME.to_string()),
-                                url: Some(COUNTER_PACKAGE_URL.to_string()),
-                                ..fnetemul::ChildDef::EMPTY
-                            },
-                        ]),
-                        ..fnetemul::RealmOptions::EMPTY
-                    },
-                    epitaph: zx::Status::INTERNAL,
-                },
-                // TODO(https://fxbug.dev/72043): once we allow duplicate services, verify that a
-                // child exposing duplicate services results in a ZX_ERR_INTERNAL epitaph.
-                //
-                // TODO(https://fxbug.dev/74977): once we only mark dependencies as `weak` that
-                // originated from a `ChildUses.all` configuration, verify that an explicit
-                // dependency cycle between components in a test realm (not using `ChildUses.all`)
-                // results in a ZX_ERR_INTERNAL epitaph.
-            ];
-            for TestCase { name, options, epitaph } in std::array::IntoIter::new(cases) {
-                let TestRealm { realm } = TestRealm::new(&sandbox, options);
-                match realm.take_event_stream().next().await.expect(&format!(
-                    "test case failed: \"{}\": epitaph should be sent on realm channel",
-                    name
-                )) {
-                    Err(fidl::Error::ClientChannelClosed {
-                        status,
-                        service_name:
-                            <ManagedRealmMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
-                    }) if status == epitaph => (),
-                    event => panic!(
-                        "test case failed: \"{}\": expected channel close with epitaph {}, got \
-                        unexpected event on realm channel: {:?}",
-                        name, epitaph, event
-                    ),
-                }
-            }
-        })
-        .await
-    }
-
-    #[fuchsia::test]
-    async fn child_dep() {
-        with_sandbox("child_dep", |sandbox| async move {
-            const COUNTER_A_SERVICE_NAME: &str = "fuchsia.netemul.test.CounterA";
-            const COUNTER_B_SERVICE_NAME: &str = "fuchsia.netemul.test.CounterB";
-            let TestRealm { realm } = TestRealm::new(
-                &sandbox,
-                fnetemul::RealmOptions {
+                epitaph: zx::Status::INVALID_ARGS,
+            },
+            TestCase {
+                name: "child depends on nonexistent child",
+                options: fnetemul::RealmOptions {
                     children: Some(vec![
+                        counter_component(),
                         fnetemul::ChildDef {
+                            name: Some("counter-b".to_string()),
                             url: Some(COUNTER_PACKAGE_URL.to_string()),
-                            name: Some("counter-a".to_string()),
-                            exposes: Some(vec![COUNTER_A_SERVICE_NAME.to_string()]),
                             uses: Some(fnetemul::ChildUses::Capabilities(vec![
-                                fnetemul::Capability::LogSink(fnetemul::Empty {}),
                                 fnetemul::Capability::ChildDep(fnetemul::ChildDep {
-                                    name: Some("counter-b".to_string()),
+                                    // counter-a does not exist.
+                                    name: Some("counter-a".to_string()),
                                     capability: Some(fnetemul::ExposedCapability::Service(
-                                        COUNTER_B_SERVICE_NAME.to_string(),
+                                        CounterMarker::SERVICE_NAME.to_string(),
                                     )),
                                     ..fnetemul::ChildDep::EMPTY
                                 }),
-                            ])),
-                            ..fnetemul::ChildDef::EMPTY
-                        },
-                        fnetemul::ChildDef {
-                            url: Some(COUNTER_PACKAGE_URL.to_string()),
-                            name: Some("counter-b".to_string()),
-                            exposes: Some(vec![COUNTER_B_SERVICE_NAME.to_string()]),
-                            uses: Some(fnetemul::ChildUses::Capabilities(vec![
-                                fnetemul::Capability::LogSink(fnetemul::Empty {}),
                             ])),
                             ..fnetemul::ChildDef::EMPTY
                         },
                     ]),
                     ..fnetemul::RealmOptions::EMPTY
                 },
-            );
-            let counter_a = {
-                let (counter_a, server_end) = fidl::endpoints::create_proxy::<CounterMarker>()
-                    .expect("failed to create CounterA proxy");
-                let () = realm
-                    .connect_to_service(COUNTER_A_SERVICE_NAME, None, server_end.into_channel())
-                    .expect("failed to connect to CounterA service");
-                counter_a
-            };
-            // counter-a should have access to counter-b's exposed service.
+                epitaph: zx::Status::INVALID_ARGS,
+            },
+            TestCase {
+                name: "duplicate components",
+                options: fnetemul::RealmOptions {
+                    children: Some(vec![
+                        fnetemul::ChildDef {
+                            name: Some(COUNTER_COMPONENT_NAME.to_string()),
+                            url: Some(COUNTER_PACKAGE_URL.to_string()),
+                            ..fnetemul::ChildDef::EMPTY
+                        },
+                        fnetemul::ChildDef {
+                            name: Some(COUNTER_COMPONENT_NAME.to_string()),
+                            url: Some(COUNTER_PACKAGE_URL.to_string()),
+                            ..fnetemul::ChildDef::EMPTY
+                        },
+                    ]),
+                    ..fnetemul::RealmOptions::EMPTY
+                },
+                epitaph: zx::Status::INTERNAL,
+            },
+            // TODO(https://fxbug.dev/72043): once we allow duplicate services, verify that a child
+            // exposing duplicate services results in a ZX_ERR_INTERNAL epitaph.
+            //
+            // TODO(https://fxbug.dev/74977): once we only mark dependencies as `weak` that
+            // originated from a `ChildUses.all` configuration, verify that an explicit dependency
+            // cycle between components in a test realm (not using `ChildUses.all`) results in a
+            // ZX_ERR_INTERNAL epitaph.
+        ];
+        for TestCase { name, options, epitaph } in std::array::IntoIter::new(cases) {
+            let TestRealm { realm } = TestRealm::new(&sandbox, options);
+            match realm.take_event_stream().next().await.expect(&format!(
+                "test case failed: \"{}\": epitaph should be sent on realm channel",
+                name
+            )) {
+                Err(fidl::Error::ClientChannelClosed {
+                    status,
+                    service_name: <ManagedRealmMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+                }) if status == epitaph => (),
+                event => panic!(
+                    "test case failed: \"{}\": expected channel close with epitaph {}, got \
+                        unexpected event on realm channel: {:?}",
+                    name, epitaph, event
+                ),
+            }
+        }
+    }
+
+    #[fixture(with_sandbox)]
+    #[fuchsia::test]
+    async fn child_dep(sandbox: fnetemul::SandboxProxy) {
+        const COUNTER_A_SERVICE_NAME: &str = "fuchsia.netemul.test.CounterA";
+        const COUNTER_B_SERVICE_NAME: &str = "fuchsia.netemul.test.CounterB";
+        let TestRealm { realm } = TestRealm::new(
+            &sandbox,
+            fnetemul::RealmOptions {
+                children: Some(vec![
+                    fnetemul::ChildDef {
+                        url: Some(COUNTER_PACKAGE_URL.to_string()),
+                        name: Some("counter-a".to_string()),
+                        exposes: Some(vec![COUNTER_A_SERVICE_NAME.to_string()]),
+                        uses: Some(fnetemul::ChildUses::Capabilities(vec![
+                            fnetemul::Capability::LogSink(fnetemul::Empty {}),
+                            fnetemul::Capability::ChildDep(fnetemul::ChildDep {
+                                name: Some("counter-b".to_string()),
+                                capability: Some(fnetemul::ExposedCapability::Service(
+                                    COUNTER_B_SERVICE_NAME.to_string(),
+                                )),
+                                ..fnetemul::ChildDep::EMPTY
+                            }),
+                        ])),
+                        ..fnetemul::ChildDef::EMPTY
+                    },
+                    fnetemul::ChildDef {
+                        url: Some(COUNTER_PACKAGE_URL.to_string()),
+                        name: Some("counter-b".to_string()),
+                        exposes: Some(vec![COUNTER_B_SERVICE_NAME.to_string()]),
+                        uses: Some(fnetemul::ChildUses::Capabilities(vec![
+                            fnetemul::Capability::LogSink(fnetemul::Empty {}),
+                        ])),
+                        ..fnetemul::ChildDef::EMPTY
+                    },
+                ]),
+                ..fnetemul::RealmOptions::EMPTY
+            },
+        );
+        let counter_a = {
+            let (counter_a, server_end) = fidl::endpoints::create_proxy::<CounterMarker>()
+                .expect("failed to create CounterA proxy");
+            let () = realm
+                .connect_to_service(COUNTER_A_SERVICE_NAME, None, server_end.into_channel())
+                .expect("failed to connect to CounterA service");
+            counter_a
+        };
+        // counter-a should have access to counter-b's exposed service.
+        let (counter_b, server_end) = fidl::endpoints::create_proxy::<CounterMarker>()
+            .expect("failed to create CounterB proxy");
+        let () = counter_a
+            .connect_to_service(COUNTER_B_SERVICE_NAME, server_end.into_channel())
+            .expect("fuchsia.netemul.test/CounterA.connect_to_service call failed");
+        assert_eq!(
+            counter_b
+                .increment()
+                .await
+                .expect("fuchsia.netemul.test/CounterB.increment call failed"),
+            1,
+        );
+        // The counter-b service that counter-a has access to should be the same one accessible
+        // through the test realm.
+        let counter_b = {
             let (counter_b, server_end) = fidl::endpoints::create_proxy::<CounterMarker>()
                 .expect("failed to create CounterB proxy");
-            let () = counter_a
-                .connect_to_service(COUNTER_B_SERVICE_NAME, server_end.into_channel())
-                .expect("fuchsia.netemul.test/CounterA.connect_to_service call failed");
-            assert_eq!(
-                counter_b
-                    .increment()
-                    .await
-                    .expect("fuchsia.netemul.test/CounterB.increment call failed"),
-                1,
-            );
-            // The counter-b service that counter-a has access to should be the same one accessible
-            // through the test realm.
-            let counter_b = {
-                let (counter_b, server_end) = fidl::endpoints::create_proxy::<CounterMarker>()
-                    .expect("failed to create CounterB proxy");
-                let () = realm
-                    .connect_to_service(COUNTER_B_SERVICE_NAME, None, server_end.into_channel())
-                    .expect("failed to connect to CounterB service");
-                counter_b
-            };
-            assert_eq!(
-                counter_b
-                    .increment()
-                    .await
-                    .expect("fuchsia.netemul.test/CounterB.increment call failed"),
-                2,
-            );
-            // TODO(https://fxbug.dev/74868): once we can allow the ERROR logs that result from the
-            // routing failure, verify that counter-b does *not* have access to counter-a's service.
-        })
-        .await
+            let () = realm
+                .connect_to_service(COUNTER_B_SERVICE_NAME, None, server_end.into_channel())
+                .expect("failed to connect to CounterB service");
+            counter_b
+        };
+        assert_eq!(
+            counter_b
+                .increment()
+                .await
+                .expect("fuchsia.netemul.test/CounterB.increment call failed"),
+            2,
+        );
+        // TODO(https://fxbug.dev/74868): once we can allow the ERROR logs that result from the
+        // routing failure, verify that counter-b does *not* have access to counter-a's service.
     }
 }
