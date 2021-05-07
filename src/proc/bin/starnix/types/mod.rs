@@ -3,9 +3,11 @@
 // found in the LICENSE file.
 
 mod errno;
+mod signal;
 pub mod uapi;
 mod user_address;
 
 pub use errno::*;
+pub use signal::*;
 pub use uapi::*;
 pub use user_address::*;

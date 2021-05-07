@@ -59,6 +59,12 @@ impl FromSyscallArg for FdNumber {
         FdNumber::from_raw(arg as i32)
     }
 }
+
+impl FromSyscallArg for UncheckedSignal {
+    fn from_arg(arg: u64) -> UncheckedSignal {
+        UncheckedSignal::new(arg)
+    }
+}
 trait IntoSyscallArg<T> {
     fn into_arg(self) -> T;
 }
@@ -134,6 +140,7 @@ pub fn dispatch_syscall(
         read[3],
         readlink[3],
         readlinkat[4],
+        rt_sigaction[3],
         rt_sigprocmask[4],
         sched_getaffinity[3],
         sched_getscheduler[1],

@@ -104,6 +104,10 @@ pub struct ThreadGroup {
 
     /// The tasks in the thread group.
     pub tasks: RwLock<HashSet<pid_t>>,
+
+    /// The signal actions that are registered for `tasks`. All `tasks` share the same `sigaction`
+    /// for a given signal.
+    pub signal_actions: RwLock<SignalActions>,
 }
 
 impl ThreadGroup {
@@ -111,7 +115,13 @@ impl ThreadGroup {
         let mut tasks = HashSet::new();
         tasks.insert(leader);
 
-        ThreadGroup { kernel, process, leader, tasks: RwLock::new(tasks) }
+        ThreadGroup {
+            kernel,
+            process,
+            leader,
+            tasks: RwLock::new(tasks),
+            signal_actions: RwLock::new(SignalActions::default()),
+        }
     }
 
     fn remove(&self, task: &Task) {

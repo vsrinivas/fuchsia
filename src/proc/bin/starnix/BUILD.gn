@@ -81,6 +81,7 @@ if (target_cpu == "x64") {
       "testing.rs",
       "types/errno.rs",
       "types/mod.rs",
+      "types/signal.rs",
       "types/uapi.rs",
       "types/user_address.rs",
     ]

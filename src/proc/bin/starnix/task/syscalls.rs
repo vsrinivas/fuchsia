@@ -3,12 +3,46 @@
 // found in the LICENSE file.
 
 use log::info;
+use std::convert::TryFrom;
 use std::ffi::CString;
 
 use crate::mm::*;
 use crate::not_implemented;
 use crate::syscalls::*;
 use crate::types::*;
+
+pub fn sys_rt_sigaction(
+    ctx: &SyscallContext<'_>,
+    signum: UncheckedSignal,
+    user_action: UserRef<sigaction_t>,
+    user_old_action: UserRef<sigaction_t>,
+) -> Result<SyscallResult, Errno> {
+    let signal = Signal::try_from(signum)?;
+    if signal == SIGKILL || signal == SIGSTOP {
+        return Err(EINVAL);
+    }
+
+    let new_signal_action = if !user_action.is_null() {
+        let mut signal_action = sigaction_t::default();
+        ctx.task.mm.read_object(user_action, &mut signal_action)?;
+        Some(signal_action)
+        // TODO: Sometimes the new action will trigger pending signals to be discarded.
+    } else {
+        None
+    };
+
+    let mut signal_actions = ctx.task.thread_group.signal_actions.write();
+    if !user_old_action.is_null() {
+        let existing_signal_action = signal_actions[&signal];
+        ctx.task.mm.write_object(user_old_action, &existing_signal_action)?;
+    }
+
+    if let Some(new_signal_action) = new_signal_action {
+        signal_actions[&signal] = new_signal_action;
+    }
+
+    Ok(SUCCESS)
+}
 
 pub fn sys_rt_sigprocmask(
     ctx: &SyscallContext<'_>,
@@ -48,7 +82,7 @@ pub fn sys_rt_sigprocmask(
     };
 
     // Can't block SIGKILL, or SIGSTOP.
-    updated_signal_mask = updated_signal_mask & !((1 << SIGSTOP) | (1 << SIGKILL));
+    updated_signal_mask = updated_signal_mask & !(SIGSTOP.mask() | SIGKILL.mask());
     *signal_mask = updated_signal_mask;
 
     Ok(SUCCESS)
@@ -251,10 +285,6 @@ mod tests {
     use crate::mm::syscalls::sys_munmap;
     use crate::testing::*;
 
-    fn signal_mask(signal: u32) -> u64 {
-        1 << signal
-    }
-
     #[fasync::run_singlethreaded(test)]
     async fn test_prctl_set_vma_anon_name() {
         let (_kernel, task_owner) = create_kernel_and_task();
@@ -394,7 +424,7 @@ mod tests {
         let (_kernel, task_owner) = create_kernel_and_task();
         let ctx = SyscallContext::new(&task_owner.task);
         let addr = map_memory(&ctx, UserAddress::default(), *PAGE_SIZE);
-        let original_mask = signal_mask(SIGTRAP);
+        let original_mask = SIGTRAP.mask();
         {
             *ctx.task.signal_mask.lock() = original_mask;
         }
@@ -424,7 +454,7 @@ mod tests {
     async fn test_sigprocmask_null_set_and_old_set() {
         let (_kernel, task_owner) = create_kernel_and_task();
         let ctx = SyscallContext::new(&task_owner.task);
-        let original_mask = signal_mask(SIGTRAP);
+        let original_mask = SIGTRAP.mask();
         {
             *ctx.task.signal_mask.lock() = original_mask;
         }
@@ -451,12 +481,12 @@ mod tests {
             .write_memory(addr, &[0u8; std::mem::size_of::<sigset_t>() * 2])
             .expect("failed to clear struct");
 
-        let original_mask = signal_mask(SIGTRAP);
+        let original_mask = SIGTRAP.mask();
         {
             *ctx.task.signal_mask.lock() = original_mask;
         }
 
-        let new_mask: sigset_t = signal_mask(SIGPOLL);
+        let new_mask: sigset_t = SIGPOLL.mask();
         let set = UserRef::<sigset_t>::new(addr);
         ctx.task.mm.write_object(set, &new_mask).expect("failed to set mask");
 
@@ -485,12 +515,12 @@ mod tests {
             .write_memory(addr, &[0u8; std::mem::size_of::<sigset_t>() * 2])
             .expect("failed to clear struct");
 
-        let original_mask = signal_mask(SIGTRAP);
+        let original_mask = SIGTRAP.mask();
         {
             *ctx.task.signal_mask.lock() = original_mask;
         }
 
-        let new_mask: sigset_t = signal_mask(SIGPOLL);
+        let new_mask: sigset_t = SIGPOLL.mask();
         let set = UserRef::<sigset_t>::new(addr);
         ctx.task.mm.write_object(set, &new_mask).expect("failed to set mask");
 
@@ -519,12 +549,12 @@ mod tests {
             .write_memory(addr, &[0u8; std::mem::size_of::<sigset_t>() * 2])
             .expect("failed to clear struct");
 
-        let original_mask = signal_mask(SIGTRAP) | signal_mask(SIGPOLL);
+        let original_mask = SIGTRAP.mask() | SIGPOLL.mask();
         {
             *ctx.task.signal_mask.lock() = original_mask;
         }
 
-        let new_mask: sigset_t = signal_mask(SIGTRAP);
+        let new_mask: sigset_t = SIGTRAP.mask();
         let set = UserRef::<sigset_t>::new(addr);
         ctx.task.mm.write_object(set, &new_mask).expect("failed to set mask");
 
@@ -539,7 +569,7 @@ mod tests {
         let mut old_mask = sigset_t::default();
         ctx.task.mm.read_object(old_set, &mut old_mask).expect("failed to read mask");
         assert_eq!(old_mask, original_mask);
-        assert_eq!(*ctx.task.signal_mask.lock(), signal_mask(SIGPOLL));
+        assert_eq!(*ctx.task.signal_mask.lock(), SIGPOLL.mask());
     }
 
     /// It's ok to call sigprocmask to unblock a signal that is not set.
@@ -553,12 +583,12 @@ mod tests {
             .write_memory(addr, &[0u8; std::mem::size_of::<sigset_t>() * 2])
             .expect("failed to clear struct");
 
-        let original_mask = signal_mask(SIGPOLL);
+        let original_mask = SIGPOLL.mask();
         {
             *ctx.task.signal_mask.lock() = original_mask;
         }
 
-        let new_mask: sigset_t = signal_mask(SIGTRAP);
+        let new_mask: sigset_t = SIGTRAP.mask();
         let set = UserRef::<sigset_t>::new(addr);
         ctx.task.mm.write_object(set, &new_mask).expect("failed to set mask");
 
@@ -587,12 +617,12 @@ mod tests {
             .write_memory(addr, &[0u8; std::mem::size_of::<sigset_t>() * 2])
             .expect("failed to clear struct");
 
-        let original_mask = signal_mask(SIGPOLL);
+        let original_mask = SIGPOLL.mask();
         {
             *ctx.task.signal_mask.lock() = original_mask;
         }
 
-        let new_mask: sigset_t = signal_mask(SIGSTOP) | signal_mask(SIGKILL);
+        let new_mask: sigset_t = SIGSTOP.mask() | SIGKILL.mask();
         let set = UserRef::<sigset_t>::new(addr);
         ctx.task.mm.write_object(set, &new_mask).expect("failed to set mask");
 
@@ -608,5 +638,99 @@ mod tests {
         ctx.task.mm.read_object(old_set, &mut old_mask).expect("failed to read mask");
         assert_eq!(old_mask, original_mask);
         assert_eq!(*ctx.task.signal_mask.lock(), original_mask);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_sigaction_invalid_signal() {
+        let (_kernel, task_owner) = create_kernel_and_task();
+        let ctx = SyscallContext::new(&task_owner.task);
+        assert_eq!(
+            sys_rt_sigaction(
+                &ctx,
+                UncheckedSignal::from(SIGKILL),
+                UserRef::<sigaction_t>::default(),
+                UserRef::<sigaction_t>::default()
+            ),
+            Err(EINVAL)
+        );
+        assert_eq!(
+            sys_rt_sigaction(
+                &ctx,
+                UncheckedSignal::from(SIGSTOP),
+                UserRef::<sigaction_t>::default(),
+                UserRef::<sigaction_t>::default()
+            ),
+            Err(EINVAL)
+        );
+        assert_eq!(
+            sys_rt_sigaction(
+                &ctx,
+                UncheckedSignal::from(Signal::NUM_SIGNALS + 1),
+                UserRef::<sigaction_t>::default(),
+                UserRef::<sigaction_t>::default()
+            ),
+            Err(EINVAL)
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_sigaction_old_value_set() {
+        let (_kernel, task_owner) = create_kernel_and_task();
+        let ctx = SyscallContext::new(&task_owner.task);
+        let addr = map_memory(&ctx, UserAddress::default(), *PAGE_SIZE);
+        ctx.task
+            .mm
+            .write_memory(addr, &[0u8; std::mem::size_of::<sigaction_t>()])
+            .expect("failed to clear struct");
+
+        let mut original_action = sigaction_t::default();
+        original_action.sa_mask = 3;
+
+        {
+            ctx.task.thread_group.signal_actions.write()[&SIGHUP] = original_action.clone();
+        }
+
+        let old_action_ref = UserRef::<sigaction_t>::new(addr);
+        assert_eq!(
+            sys_rt_sigaction(
+                &ctx,
+                UncheckedSignal::from(SIGHUP),
+                UserRef::<sigaction_t>::default(),
+                old_action_ref
+            ),
+            Ok(SUCCESS)
+        );
+
+        let mut old_action = sigaction_t::default();
+        ctx.task.mm.read_object(old_action_ref, &mut old_action).expect("failed to read action");
+        assert_eq!(old_action, original_action);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_sigaction_new_value_set() {
+        let (_kernel, task_owner) = create_kernel_and_task();
+        let ctx = SyscallContext::new(&task_owner.task);
+        let addr = map_memory(&ctx, UserAddress::default(), *PAGE_SIZE);
+        ctx.task
+            .mm
+            .write_memory(addr, &[0u8; std::mem::size_of::<sigaction_t>()])
+            .expect("failed to clear struct");
+
+        let mut original_action = sigaction_t::default();
+        original_action.sa_mask = 3;
+        let set_action_ref = UserRef::<sigaction_t>::new(addr);
+        ctx.task.mm.write_object(set_action_ref, &original_action).expect("failed to set action");
+
+        assert_eq!(
+            sys_rt_sigaction(
+                &ctx,
+                UncheckedSignal::from(SIGINT),
+                set_action_ref,
+                UserRef::<sigaction_t>::default()
+            ),
+            Ok(SUCCESS)
+        );
+
+        assert_eq!(ctx.task.thread_group.signal_actions.read()[&SIGINT], original_action,);
     }
 }

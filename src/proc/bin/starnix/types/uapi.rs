@@ -84,3 +84,12 @@ pub struct sigaltstack_t {
     pub _pad0: u32,
     pub ss_size: usize,
 }
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, AsBytes, FromBytes)]
+#[repr(C)]
+pub struct sigaction_t {
+    pub sa_handler: UserAddress,
+    pub sa_flags: uapi::c_ulong,
+    pub sa_restorer: UserAddress,
+    pub sa_mask: sigset_t,
+}
