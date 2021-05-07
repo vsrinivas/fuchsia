@@ -24,7 +24,13 @@ func buildHandleDefs(defs []gidlir.HandleDef) string {
 	builder.WriteString("[\n")
 	for i, d := range defs {
 		// Write indices corresponding to the .gidl file handle_defs block.
-		builder.WriteString(fmt.Sprintf("HandleSubtype::%s, // #%d\n", handleTypeName(d.Subtype), i))
+		builder.WriteString(fmt.Sprintf(
+			`// #%d
+HandleDef{
+	subtype: HandleSubtype::%s,
+	rights: Rights::from_bits(%d).unwrap(),
+},
+`, i, handleTypeName(d.Subtype), d.Rights))
 	}
 	builder.WriteString("]")
 	return builder.String()

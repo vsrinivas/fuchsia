@@ -28,7 +28,7 @@ use {
 	fuchsia_criterion::criterion::{BatchSize, Bencher, black_box},
 	fuchsia_async::futures::{future, stream::StreamExt},
 	fuchsia_zircon as zx,
-	gidl_util::{HandleSubtype, create_handles, copy_handle, copy_handles_at, disown_vec},
+	gidl_util::{HandleDef, HandleSubtype, create_handles, copy_handle, copy_handles_at, disown_vec},
 	std::mem::ManuallyDrop
 };
 
@@ -55,7 +55,7 @@ fn benchmark_{{ .Name }}_builder(b: &mut Bencher) {
 	b.iter_batched_ref(
 		|| {
 			{{- if .HandleDefs }}
-			let handle_defs = create_handles(&{{ .HandleDefs }}).unwrap();
+			let handle_defs = create_handles(&{{ .HandleDefs }});
 			unsafe { disown_vec(handle_defs) }
 			{{- else }}
 			{{- /* Use empty vector with b.iter_batched_ref, rather than b.iter,
@@ -78,7 +78,7 @@ fn benchmark_{{ .Name }}_encode(b: &mut Bencher) {
 	b.iter_batched_ref(
 		|| {
 			{{- if .HandleDefs }}
-			let handle_defs = create_handles(&{{ .HandleDefs }}).unwrap();
+			let handle_defs = create_handles(&{{ .HandleDefs }});
 			let handle_defs = unsafe { disown_vec(handle_defs) };
 			let handle_defs = handle_defs.as_ref();
 			{{- end }}
@@ -107,7 +107,7 @@ fn benchmark_{{ .Name }}_decode(b: &mut Bencher) {
 	b.iter_batched_ref(
 		|| {
 			{{- if .HandleDefs }}
-			let handle_defs = create_handles(&{{ .HandleDefs }}).unwrap();
+			let handle_defs = create_handles(&{{ .HandleDefs }});
 			let handle_defs = unsafe { disown_vec(handle_defs) };
 			let handle_defs = handle_defs.as_ref();
 			{{- end }}
@@ -167,7 +167,7 @@ fn benchmark_{{ .Name }}_send_event(b: &mut Bencher) {
 			let sender = <{{ .ValueType }}EventProtocolRequestStream as fidl::endpoints::RequestStream>::from_channel(async_sender_fidl_chan_end);
 			b.iter_batched_ref(|| {
 				{{- if .HandleDefs }}
-				let handle_defs = create_handles(&{{ .HandleDefs }}).unwrap();
+				let handle_defs = create_handles(&{{ .HandleDefs }});
 				let handle_defs = unsafe { disown_vec(handle_defs) };
 				let handle_defs = handle_defs.as_ref();
 				{{- end }}
@@ -212,7 +212,7 @@ fn benchmark_{{ .Name }}_echo_call(b: &mut Bencher) {
 	let proxy = {{ .ValueType }}EchoCallSynchronousProxy::new(client_end);
 	b.iter_batched_ref(|| {
 		{{- if .HandleDefs }}
-		let handle_defs = create_handles(&{{ .HandleDefs }}).unwrap();
+		let handle_defs = create_handles(&{{ .HandleDefs }});
 		let handle_defs = unsafe { disown_vec(handle_defs) };
 		let handle_defs = handle_defs.as_ref();
 		{{- end }}

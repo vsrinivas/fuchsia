@@ -24,17 +24,18 @@ use {
 	fidl::encoding::{Context, Decodable, Decoder, Encoder},
 	fidl_conformance as conformance,
 	fuchsia_zircon_status::Status,
-	gidl_util::{HandleSubtype, create_handles, copy_handle, copy_handles_at, disown_vec, get_info_handle_valid},
+	gidl_util::{HandleDef, HandleSubtype, create_handles, copy_handle, copy_handles_at, disown_vec, get_info_handle_valid},
 	matches::assert_matches,
 };
 
 const V1_CONTEXT: &Context = &Context {};
 
 {{ range .EncodeSuccessCases }}
+{{- if .HandleDefs }}#[cfg(target_os = "fuchsia")]{{ end }}
 #[test]
 fn test_{{ .Name }}_encode() {
 	{{- if .HandleDefs }}
-	let handle_defs = create_handles(&{{ .HandleDefs }}).unwrap();
+	let handle_defs = create_handles(&{{ .HandleDefs }});
 	let handle_defs = unsafe { disown_vec(handle_defs) };
 	let handle_defs = handle_defs.as_ref();
 	let expected_handles = unsafe { disown_vec(copy_handles_at(handle_defs, &{{ .Handles }})) };
@@ -59,11 +60,12 @@ fn test_{{ .Name }}_encode() {
 {{ end }}
 
 {{ range .DecodeSuccessCases }}
+{{- if .HandleDefs }}#[cfg(target_os = "fuchsia")]{{ end }}
 #[test]
 fn test_{{ .Name }}_decode() {
 	let bytes = &{{ .Bytes }};
 	{{- if .HandleDefs }}
-	let handle_defs = create_handles(&{{ .HandleDefs }}).unwrap();
+	let handle_defs = create_handles(&{{ .HandleDefs }});
 	let handle_defs = unsafe { disown_vec(handle_defs) };
 	let handle_defs = handle_defs.as_ref();
 	let mut handles = unsafe { copy_handles_at(handle_defs, &{{ .Handles }}) };
@@ -91,10 +93,11 @@ fn test_{{ .Name }}_decode() {
 {{ end }}
 
 {{ range .EncodeFailureCases }}
+{{- if .HandleDefs }}#[cfg(target_os = "fuchsia")]{{ end }}
 #[test]
 fn test_{{ .Name }}_encode_failure() {
 	{{- if .HandleDefs }}
-	let handle_defs = create_handles(&{{ .HandleDefs }}).unwrap();
+	let handle_defs = create_handles(&{{ .HandleDefs }});
 	let handle_defs = unsafe { disown_vec(handle_defs) };
 	let handle_defs = handle_defs.as_ref();
 	{{- end }}
@@ -116,22 +119,24 @@ fn test_{{ .Name }}_encode_failure() {
 {{ end }}
 
 {{ range .DecodeFailureCases }}
+{{- if .HandleDefs }}#[cfg(target_os = "fuchsia")]{{ end }}
 #[test]
 fn test_{{ .Name }}_decode_failure() {
 	let bytes = &{{ .Bytes }};
 	{{- if .HandleDefs }}
-	let handle_defs = create_handles(&{{ .HandleDefs }}).unwrap();
+	let handle_defs = create_handles(&{{ .HandleDefs }});
 	let handle_defs = unsafe { disown_vec(handle_defs) };
 	let handle_defs = handle_defs.as_ref();
 	let mut handles = unsafe { copy_handles_at(handle_defs, &{{ .Handles }}) };
 	{{- else }}
 	let mut handles = Vec::new();
 	{{- end }}
-	let mut handle_infos : Vec::<_> = handles.drain(..).map(|h| {
+	let mut handle_infos : Vec::<_> = handles.drain(..).map(|h: fidl::Handle| {
+		let info = h.as_handle_ref().basic_info().unwrap();
 		HandleInfo {
 			handle: h,
-			object_type: ObjectType::NONE,
-			rights: Rights::SAME_RIGHTS,
+			object_type: info.object_type,
+			rights: info.rights,
 		}
 	}).collect();
 	let value = &mut {{ .ValueType }}::new_empty();

@@ -5,7 +5,7 @@
 //! This crate contains utility functions used in GIDL tests and benchmarks.
 
 use {
-    fidl::{AsHandleRef, Handle, HandleBased},
+    fidl::{AsHandleRef, Handle, HandleBased, Rights},
     fuchsia_zircon_status::Status,
 };
 
@@ -16,18 +16,29 @@ pub enum HandleSubtype {
     Channel,
 }
 
+/// Specifies a handle to be created with `create_handles`. Corresponds to
+/// `HandleDef` in //tools/fidl/gidl/ir/test_case.go.
+pub struct HandleDef {
+    pub subtype: HandleSubtype,
+    pub rights: Rights,
+}
+
 /// Creates a vector of handles whose concrete subtypes correspond to the given
-/// list. It fails if creating any of the handles fails.
-pub fn create_handles(subtypes: &[HandleSubtype]) -> Result<Vec<Handle>, Status> {
+/// list. It panics if creating any of the handles fails.
+pub fn create_handles(defs: &[HandleDef]) -> Vec<Handle> {
     let mut factory: HandleFactory = Default::default();
-    let mut handles = Vec::with_capacity(subtypes.len());
-    for subtype in subtypes {
-        handles.push(match subtype {
-            HandleSubtype::Event => factory.create_event()?.into_handle(),
-            HandleSubtype::Channel => factory.create_channel()?.into_handle(),
+    let mut handles = Vec::with_capacity(defs.len());
+    for def in defs {
+        let default_rights_handle = match def.subtype {
+            HandleSubtype::Event => factory.create_event().unwrap().into_handle(),
+            HandleSubtype::Channel => factory.create_channel().unwrap().into_handle(),
+        };
+        handles.push(match def.rights {
+            Rights::SAME_RIGHTS => default_rights_handle,
+            rights => default_rights_handle.replace(rights).unwrap(),
         });
     }
-    Ok(handles)
+    handles
 }
 
 /// HandleFactory creates handles. For handle subtypes that come in pairs, it
