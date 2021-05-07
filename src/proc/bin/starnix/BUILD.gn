@@ -70,6 +70,7 @@ if (target_cpu == "x64") {
       "mm/memory_manager.rs",
       "mm/mod.rs",
       "mm/syscalls.rs",
+      "runner.rs",
       "syscalls/decls.rs",
       "syscalls/mod.rs",
       "syscalls/syscall_context.rs",
