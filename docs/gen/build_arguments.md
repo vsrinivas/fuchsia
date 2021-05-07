@@ -13,7 +13,7 @@ From [//third_party/acpica/BUILD.gn:9](https://fuchsia.googlesource.com/third_pa
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:76
+From //build/images/args.gni:82
 
 ### add_qemu_to_build_archives
 Whether to include images necessary to run Fuchsia in QEMU in build
@@ -21,7 +21,7 @@ archives.
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:82
+From //build/images/args.gni:88
 
 ### additional_bootserver_arguments
 Additional bootserver args to add to pave.sh. New uses of this should be
@@ -31,7 +31,7 @@ with specific boards, due to driver and hardware challenges.
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:88
+From //build/images/args.gni:94
 
 ### all_font_file_paths
 List of file paths to every font asset. Populated in fonts.gni.
@@ -54,7 +54,7 @@ Build boot images that prefer Zedboot over local boot (only for EFI).
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:103
+From //build/images/args.gni:109
 
 ### anv_enable_external_fd
 TODO(fxbug.dev/67565) - remove once external FD extensions fully supported
@@ -182,7 +182,7 @@ The format blobfs should store blobs in.
 
 **Current value (from the default):** `"compact"`
 
-From //build/images/args.gni:100
+From //build/images/args.gni:106
 
 ### blobfs_board_maximum_bytes
 In addition to reserving space for inodes and data, fs needs additional
@@ -406,7 +406,7 @@ any kind of stable contract for users of the archive.
 
 **Current value (from the default):** `[]`
 
-From //build/images/args.gni:130
+From //build/images/args.gni:136
 
 ### board_zedboot_bootfs_labels
 A list of binary labels to include in the zedboot ZBI.
@@ -632,7 +632,7 @@ non-production GN labels. Build will fail if such dependency is found.
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:94
+From //build/images/args.gni:100
 
 ### check_repeatability
 If enabled, run each affected action twice (once with renamed outputs)
@@ -642,14 +642,25 @@ and compare the outputs' contents for reproducibility.
 
 From //build/config/BUILDCONFIG.gn:570
 
+### check_vtables_in_rodata
+Check that all vtables in fuchsia binaries listed in binaries.json are in
+readonly data sections. This check will be run at the end of a full build.
+
+This is primarily meant to be used by the clang canary builders.
+
+**Current value (from the default):** `false`
+
+From //build/images/args.gni:61
+
 ### chromium_build_dir
-This variable specifies a chromium build output directory, such as `~/chromium/src/out/fuchsia`,
-that cast_runner, web_runner, and web_engine will be obtained from. If unset, the prebuilt
+This variable specifies a fully qualified Chromium build output directory,
+such as `/home/USER/chrome/src/out/fuchsia`, that 'cast_runner', 'web_runner',
+and 'web_engine' will be obtained from. If unset, the prebuilt
 packages from CIPD will be used.
 
 **Current value (from the default):** `""`
 
-From //src/chromium/build_args.gni:9
+From //src/chromium/build_args.gni:10
 
 ### clang_embed_bitcode
 Embed LLVM bitcode as .llvmbc section in ELF files. This is intended
@@ -706,7 +717,7 @@ Whether to compress the blobfs image.
 
 **Current value (from the default):** `true`
 
-From //build/images/args.gni:97
+From //build/images/args.gni:103
 
 ### concurrent_dart_jobs
 Maximum number of Dart processes to run in parallel.
@@ -760,19 +771,19 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/a2ab062f46775b1d632c4c437daade7c530422dc/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/0c3d6e5fa10fcac9ca63df7d3fb68ef7f7bd5f3c/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_http_transport_impl
 
 **Current value (from the default):** `"libcurl"`
 
-From [//third_party/crashpad/util/net/tls.gni:21](https://chromium.googlesource.com/crashpad/crashpad/+/a2ab062f46775b1d632c4c437daade7c530422dc/util/net/tls.gni#21)
+From [//third_party/crashpad/util/net/tls.gni:21](https://chromium.googlesource.com/crashpad/crashpad/+/0c3d6e5fa10fcac9ca63df7d3fb68ef7f7bd5f3c/util/net/tls.gni#21)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/a2ab062f46775b1d632c4c437daade7c530422dc/util/net/tls.gni#30)
+From [//third_party/crashpad/util/net/tls.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/0c3d6e5fa10fcac9ca63df7d3fb68ef7f7bd5f3c/util/net/tls.gni#30)
 
 ### current_cpu
 
@@ -1085,7 +1096,7 @@ From //src/storage/fshost/BUILD.gn:32
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:77
+From //build/images/args.gni:83
 
 ### fidl_trace_level
 0 = Disable FIDL userspace tracing (default).
@@ -1335,7 +1346,7 @@ From //build/images/fvm.gni:30
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:75
+From //build/images/args.gni:81
 
 ### fvm_reserved_slices
 Number of slices reserved by FVM for internal usage. A reservation
@@ -1534,7 +1545,7 @@ Include fvm.blob.sparse.blk image into the build if set to true
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:110
+From //build/images/args.gni:116
 
 ### include_internal_fonts
 Set to true to include internal fonts in the build.
@@ -2091,7 +2102,7 @@ From //products/bringup.gni:49
 
 **Overridden from the default:** `[]`
 
-From //build/images/args.gni:58
+From //build/images/args.gni:64
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
@@ -2099,7 +2110,7 @@ From //products/bringup.gni:49
 
 **Overridden from the default:** `[]`
 
-From //build/images/args.gni:58
+From //build/images/args.gni:64
 
 ### minfs_board_maximum_bytes
 
@@ -2164,13 +2175,13 @@ From //build/images/fvm.gni:64
 
 **Current value (from the default):** `false`
 
-From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:31](https://chromium.googlesource.com/crashpad/crashpad/+/a2ab062f46775b1d632c4c437daade7c530422dc/third_party/mini_chromium/mini_chromium/build/platform.gni#31)
+From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:31](https://chromium.googlesource.com/crashpad/crashpad/+/0c3d6e5fa10fcac9ca63df7d3fb68ef7f7bd5f3c/third_party/mini_chromium/mini_chromium/build/platform.gni#31)
 
 ### mini_chromium_is_chromeos_lacros
 
 **Current value (from the default):** `false`
 
-From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/a2ab062f46775b1d632c4c437daade7c530422dc/third_party/mini_chromium/mini_chromium/build/platform.gni#30)
+From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/0c3d6e5fa10fcac9ca63df7d3fb68ef7f7bd5f3c/third_party/mini_chromium/mini_chromium/build/platform.gni#30)
 
 ### msd_arm_enable_all_cores
 Enable all 8 cores, which is faster but emits more heat.
@@ -2755,7 +2766,7 @@ From //build/persist_logs.gni:13
 
 **Current value (from the default):** `"//src/security/policy/pkgfs_non_static_pkgs_allowlist_eng.txt"`
 
-From //build/images/args.gni:107
+From //build/images/args.gni:113
 
 ### platform_enable_user_pci
 
@@ -2774,7 +2785,7 @@ From //boards/kernel_cmdline/BUILD.gn:34
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:78
+From //build/images/args.gni:84
 
 ### prebuilt_dart_sdk
 Directory containing prebuilt Dart SDK.
@@ -2852,7 +2863,7 @@ Example value: "//build/images/recovery"
 
 **Current value (from the default):** `"//build/images/zedboot"`
 
-From //build/images/args.gni:119
+From //build/images/args.gni:125
 
 ### recovery_logo_path
 Path to file to use for recovery logo
@@ -3232,27 +3243,6 @@ a list that can be spliced into [`select_variant`](#select_variant).
 
 From //build/config/BUILDCONFIG.gn:1397
 
-### shaderc_enable_spvc_parser
-Enables using the parsing built into spvc instead spirv-cross
-
-**Current value (from the default):** `false`
-
-From [//third_party/shaderc/shaderc_features.gni:17](https://fuchsia.googlesource.com/third_party/shaderc/+/4162bb13b426dab68ebe411ea7ef05f6343bea95/shaderc_features.gni#17)
-
-### shaderc_spvc_disable_context_logging
-Disables logging to messages in context struct
-
-**Current value (from the default):** `false`
-
-From [//third_party/shaderc/shaderc_features.gni:23](https://fuchsia.googlesource.com/third_party/shaderc/+/4162bb13b426dab68ebe411ea7ef05f6343bea95/shaderc_features.gni#23)
-
-### shaderc_spvc_enable_direct_logging
-Enables logging directly out to the terminal
-
-**Current value (from the default):** `false`
-
-From [//third_party/shaderc/shaderc_features.gni:20](https://fuchsia.googlesource.com/third_party/shaderc/+/4162bb13b426dab68ebe411ea7ef05f6343bea95/shaderc_features.gni#20)
-
 ### size_checker_input
 The input to the size checker.
 The build system will produce a JSON file to be consumed by the size checker, which
@@ -3589,7 +3579,7 @@ otherwise the most recently validated version is used.
 
 **Current value (from the default):** `false`
 
-From //src/chromium/build_args.gni:17
+From //src/chromium/build_args.gni:18
 
 ### use_ccache
 Set to true to enable compiling with ccache
@@ -3604,7 +3594,7 @@ otherwise the most recently validated version is used.
 
 **Current value (from the default):** `false`
 
-From //src/chromium/build_args.gni:13
+From //src/chromium/build_args.gni:14
 
 ### use_cxx_relative_vtables
 Controls if we enable relative-vtables for C++ targets.
@@ -3754,19 +3744,19 @@ From //build/fuchsia/sdk.gni:8
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:72
+From //build/images/args.gni:78
 
 ### vbmeta_b_partition
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:73
+From //build/images/args.gni:79
 
 ### vbmeta_r_partition
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:74
+From //build/images/args.gni:80
 
 ### vendor_linting
 Whether libraries under //vendor should be linted.
@@ -3925,7 +3915,7 @@ doesn't require the FVM or SSH keys.
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:69
+From //build/images/args.gni:75
 
 ### zircon_asserts
 
@@ -3937,7 +3927,7 @@ From //build/config/fuchsia/BUILD.gn:168
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:70
+From //build/images/args.gni:76
 
 ### zircon_build_root
 
@@ -3974,7 +3964,7 @@ From //build/config/zircon/levels.gni:18
 
 **Current value (from the default):** `""`
 
-From //build/images/args.gni:71
+From //build/images/args.gni:77
 
 ### zircon_toolchain
 *This should never be set as a build argument.*
