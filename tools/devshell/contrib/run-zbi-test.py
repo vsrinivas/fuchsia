@@ -85,11 +85,14 @@ def main():
                 if name.startswith('_qemu_phys_test.') and name.endswith(
                         '.executable'):
                     name = name[len('_qemu_phys_test.'):-len('.executable')]
+                else:
+                    name = test['name']
                 return {
                     'label': label,
                     'disabled': test['disabled'],
                     'name': name,
-                    'path': image['path']
+                    'kernel_path': image['path'],
+                    'ramdisk_path': test['path'],
                 }
         print('%s missing from images.json' % label)
         sys.exit(1)
@@ -121,7 +124,9 @@ def main():
     ]
 
     qemus = [
-        os.path.join(build_dir, test['path'])
+        (
+            os.path.join(build_dir, test['kernel_path']),
+            os.path.join(build_dir, test['ramdisk_path']))
         for test in all_qemu
         if test['name'] == args.name
     ]
@@ -152,10 +157,9 @@ def main():
 
         if zbis:
             cmd += ['-z'] + zbis
-        elif args.emu:
-            cmd += ['-K'] + qemus
         else:
-            cmd += ['-t'] + qemus
+            [(kernel, zbi)] = qemus
+            cmd += ['-K' if args.emu else '-t', kernel, '-z', zbi]
 
     for arg in args.cmdline:
         cmd += ['-c', arg]
