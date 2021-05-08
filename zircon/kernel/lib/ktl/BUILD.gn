@@ -15,8 +15,6 @@ zx_library("ktl") {
     "popcount.cc",
   ]
 
-  public_configs = [ ":ktl.config" ]
-
   deps = [
     "//sdk/lib/stdcompat",
     "//zircon/kernel/lib/libc",
@@ -25,40 +23,5 @@ zx_library("ktl") {
   public_deps = [
     # <ktl/bit.h> has #include <lib/stdcompat/bit.h>.
     "//sdk/lib/stdcompat:headers",
-  ]
-}
-
-config("ktl.config") {
-  visibility = [
-    ":*",
-
-    # TODO(fxbug.dev/44971): Referenced in environment configs.
-    "//build/config/*",
-    "//sdk/lib/fit/*",
-    "//sdk/lib/stdcompat/*",
-    "//third_party/zstd/*",
-    "//zircon/kernel/*",
-    "//zircon/system/ulib/*",
-    "//zircon/third_party/lib/*",
-    "//zircon/third_party/ulib/*",
-  ]
-
-  defines = [
-    # This tells the headers not to use `extern template` declarations that
-    # expect specific instantiations/specializations to come from the libc++
-    # library rather than the headers.  In the kernel, only the headers are
-    # ever going to be available.
-    "_LIBCPP_DISABLE_EXTERN_TEMPLATE",
-
-    # This tells <atomic> not to use threading APIs.
-    "_LIBCPP_HAS_NO_PLATFORM_WAIT",
-
-    # This tells <atomic> et al to use <__external_threading> instead
-    # of expecting either POSIX or C11 threading APIs.
-    "_LIBCPP_HAS_THREAD_API_EXTERNAL",
-    "_LIBCPP_HAS_THREAD_LIBRARY_EXTERNAL",
-
-    # Enable C++20 library APIs even in C++17.
-    "_LIBCPP_STD_VER=20",
   ]
 }

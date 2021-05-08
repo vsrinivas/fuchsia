@@ -1,0 +1,43 @@
+// Copyright 2021 The Fuchsia Authors
+//
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file or at
+// https://opensource.org/licenses/MIT
+
+#ifndef ZIRCON_KERNEL_LIB_KTL_INCLUDE___CONFIG_SITE_
+#define ZIRCON_KERNEL_LIB_KTL_INCLUDE___CONFIG_SITE_
+
+// The libc++ internal header <__config> does #include <__config_site> to get
+// definitions that vary by operating system, machine, or configuration.  The
+// toolchain's libc++ installation provides include/$triple/.../__config_site
+// files for each $cpu-fuchsia appropriate for normal userland.  But the ktl
+// abuse of libc++ is different from public userland libc++, so provide special
+// kernel-appropriate definitions here.  This file will be in the include path
+// ahead of any toolchain-supplied header.  Also, some special bare-metal build
+// environments such as phys32 or efi that reuse ktl and kernel libc code may
+// use settings that cause the compiler to change the $triple it injects into
+// the include path to one for which no runtimes are built and so there is no
+// __config_site file to be found at all.
+
+// These two are what <__config_site> for Fuchsia userland defines.
+#define _LIBCPP_ABI_VERSION 2
+#define _LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS
+
+// This tells the headers not to use `extern template` declarations that
+// expect specific instantiations/specializations to come from the libc++
+// library rather than the headers.  In the kernel, only the headers are
+// ever going to be available.
+#define _LIBCPP_DISABLE_EXTERN_TEMPLATE
+
+// This tells <atomic> not to use threading APIs.
+#define _LIBCPP_HAS_NO_PLATFORM_WAIT
+
+// This tells <atomic> et al to use <__external_threading> instead
+// of expecting either POSIX or C11 threading APIs.
+#define _LIBCPP_HAS_THREAD_API_EXTERNAL
+#define _LIBCPP_HAS_THREAD_LIBRARY_EXTERNAL
+
+// Enable C++20 library APIs even in C++17.
+#define _LIBCPP_STD_VER 20
+
+#endif  // ZIRCON_KERNEL_LIB_KTL_INCLUDE___CONFIG_SITE_

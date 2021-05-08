@@ -49,7 +49,6 @@ if (current_toolchain == default_toolchain) {
 
         # TODO(fxbug.dev/44971): Many include/ headers use <ktl/*.h> headers.
         "//zircon/kernel/lib/ktl:headers.config",
-        "//zircon/kernel/lib/ktl:ktl.config",
         "//sdk/lib/stdcompat:headers.config",
 
         # <stdio.h> has #include <lib/io.h>.
