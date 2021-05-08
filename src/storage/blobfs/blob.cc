@@ -1107,7 +1107,7 @@ zx_status_t Blob::GetAttributes(fs::VnodeAttributes* a) {
   std::lock_guard lock(mutex_);
 
   *a = fs::VnodeAttributes();
-  a->mode = V_TYPE_FILE | V_IRUSR;
+  a->mode = V_TYPE_FILE | V_IRUSR | V_IXUSR;
   a->inode = map_index_;
   a->content_size = content_size;
   a->storage_size = block_count_ * kBlobfsBlockSize;

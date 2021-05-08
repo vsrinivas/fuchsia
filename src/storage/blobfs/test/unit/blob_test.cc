@@ -493,7 +493,7 @@ TEST_P(BlobTest, GetAttributes) {
   uint64_t inode, block_count;
 
   auto check_attributes = [&](const fs::VnodeAttributes& attributes) {
-    ASSERT_EQ(attributes.mode, unsigned{V_TYPE_FILE | V_IRUSR});
+    ASSERT_EQ(attributes.mode, unsigned{V_TYPE_FILE | V_IRUSR | V_IXUSR});
     ASSERT_EQ(attributes.inode, inode);
     ASSERT_EQ(attributes.content_size, 64u);
     ASSERT_EQ(attributes.storage_size, block_count * kBlobfsBlockSize);
