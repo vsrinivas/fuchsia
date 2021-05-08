@@ -181,8 +181,7 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
   fidl::Client<fio::File> file(std::move(endpoints->client), loop_.dispatcher(),
                                std::make_shared<FileEventHandler>(binary.value()));
   auto callback = [this, request = std::move(request->driver), completer = completer.ToAsync(),
-                   url = std::move(url), binary = std::move(binary.value()),
-                   message = std::move(message),
+                   url = std::move(url), binary = std::move(*binary), message = std::move(message),
                    _ = file.Clone()](fidl::WireResponse<fio::File::GetBuffer>* response) mutable {
     if (response->s != ZX_OK) {
       LOGF(ERROR, "Failed to start driver '/pkg/%s', could not get library VMO: %s", binary.data(),
@@ -206,7 +205,7 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
     // Task to start the driver. Post this to the driver dispatcher thread.
     auto start_task = [this, request = std::move(request), completer = std::move(completer),
                        message = std::move(message), binary = std::move(binary),
-                       driver = std::move(driver.value())]() mutable {
+                       driver = std::move(*driver)]() mutable {
       auto start = driver->Start(message->GetOutgoingMessage(), driver_dispatcher_);
       if (start.is_error()) {
         LOGF(ERROR, "Failed to start driver '/pkg/%s': %s", binary.data(), start.status_string());

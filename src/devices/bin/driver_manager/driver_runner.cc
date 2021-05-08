@@ -467,7 +467,7 @@ zx::status<> DriverRunner::StartDriver(Node& node, std::string_view url) {
   if (create_result.is_error()) {
     return create_result.take_error();
   }
-  driver_args_.emplace(url, DriverArgs{std::move(create_result.value()), node});
+  driver_args_.emplace(url, DriverArgs{std::move(*create_result), node});
   return zx::ok();
 }
 
@@ -504,7 +504,7 @@ void DriverRunner::Start(StartRequestView request, StartCompleter::Sync& complet
       return;
     }
     driver_host = result.value().get();
-    driver_hosts_.push_back(std::move(result.value()));
+    driver_hosts_.push_back(std::move(*result));
   }
   driver_args.node.set_driver_host(driver_host);
 
@@ -531,7 +531,7 @@ void DriverRunner::Start(StartRequestView request, StartCompleter::Sync& complet
   }
 
   // Create a DriverComponent to manage the driver.
-  auto driver = std::make_unique<DriverComponent>(std::move(start.value()));
+  auto driver = std::make_unique<DriverComponent>(std::move(*start));
   auto bind_driver = fidl::BindServer<DriverComponent>(
       dispatcher_, std::move(request->controller), driver.get(),
       [this, name = driver_args.node.TopoName(), collection = DriverCollection(url)](
