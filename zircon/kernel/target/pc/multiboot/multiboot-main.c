@@ -103,8 +103,8 @@ static void add_fake_serial_number(void* zbi, size_t capacity) {
   zbi_result_t result = zbi_create_entry_with_payload(zbi, capacity, ZBI_TYPE_SERIAL_NUMBER, 0, 0,
                                                       serial_number, sizeof(serial_number) - 1);
   if (result != ZBI_RESULT_OK) {
-    panic("zbi_create_entry_with_payload() on zbi %p with capacity %u for size %u failed: %d",
-          zbi, capacity, sizeof(serial_number), (int)result);
+    panic("zbi_create_entry_with_payload() on zbi %p with capacity %u for size %u failed: %d", zbi,
+          capacity, sizeof(serial_number), (int)result);
   }
 }
 
@@ -116,7 +116,7 @@ static void add_zbi_items(void* zbi, size_t capacity, const multiboot_info_t* in
 
 static zbi_result_t find_kernel_item(zbi_header_t* hdr, void* payload, void* cookie) {
   if (hdr->type == ZBI_TYPE_KERNEL_X64) {
-    *(const zbi_header_t**)cookie = hdr;
+    *(zbi_header_t**)cookie = hdr;
     return ZBI_RESULT_INCOMPLETE_KERNEL;
   }
   return ZBI_RESULT_OK;
@@ -205,11 +205,14 @@ noreturn void multiboot_main(uint32_t magic, multiboot_info_t* info) {
   }
 
   // Find the kernel item.
-  const zbi_header_t* kernel_item_header = NULL;
+  zbi_header_t* kernel_item_header = NULL;
   result = zbi_for_each(zbi, &find_kernel_item, &kernel_item_header);
   if (result != ZBI_RESULT_INCOMPLETE_KERNEL) {
     panic("ZBI missing kernel");
   }
+
+  // Stub out the kernel item so it's not part of the data ZBI item list.
+  kernel_item_header->type = ZBI_TYPE_DISCARD;
 
   // This is the kernel item's payload, but it expects the whole
   // zircon_kernel_t (i.e. starting with the container header) to be loaded
