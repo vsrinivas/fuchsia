@@ -203,6 +203,29 @@ TEST_F(VirtualKeyboardFidlTest, NewManagerClientCanConnectAfterFirstDisconnects)
 }
 }  // namespace fuchsia_input_virtualkeyboard_manager_connections
 
+// Tests that verify the behavior of the methods of `fuchsia.input.virtualkeyboard.Manager`.
+namespace fuchsia_input_virtualkeyboard_manager_methods {
+TEST_F(VirtualKeyboardFidlTest, WatchTypeAndVisibilityDoesNotError) {
+  zx_status_t status = ZX_OK;
+  auto manager = CreateManagerClient();
+  manager.set_error_handler([&status](zx_status_t stat) { status = stat; });
+  manager->WatchTypeAndVisibility(
+      [](fuchsia::input::virtualkeyboard::TextType reason, bool is_visible) {});
+  RunLoopUntilIdle();
+  ASSERT_EQ(ZX_OK, status) << "status = " << zx_status_get_string(status);
+}
+
+TEST_F(VirtualKeyboardFidlTest, NotifyDoesNotError) {
+  zx_status_t status = ZX_OK;
+  auto manager = CreateManagerClient();
+  manager.set_error_handler([&status](zx_status_t stat) { status = stat; });
+  manager->Notify(true, fuchsia::input::virtualkeyboard::VisibilityChangeReason::USER_INTERACTION,
+                  []() {});
+  RunLoopUntilIdle();
+  ASSERT_EQ(ZX_OK, status) << "status = " << zx_status_get_string(status);
+}
+}  // namespace fuchsia_input_virtualkeyboard_manager_methods
+
 }  // namespace
 }  // namespace virtual_keyboard_fidl
 }  // namespace root_presenter
