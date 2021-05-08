@@ -25,7 +25,7 @@ void VirtualKeyboardCoordinator::Create(
     fidl::InterfaceRequest<fuchsia::input::virtualkeyboard::Controller> controller_request) {
   FX_LOGS(INFO) << __PRETTY_FUNCTION__;
   controller_binding_ = std::make_unique<ControllerBinding>(
-      std::make_unique<VirtualKeyboardController>(std::move(view_ref), text_type),
+      std::make_unique<VirtualKeyboardController>(GetWeakPtr(), std::move(view_ref), text_type),
       std::move(controller_request));
 }
 

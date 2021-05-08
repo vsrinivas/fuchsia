@@ -8,14 +8,18 @@
 #include <fuchsia/input/virtualkeyboard/cpp/fidl.h>
 
 #include "fuchsia/ui/views/cpp/fidl.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace root_presenter {
+
+class VirtualKeyboardCoordinator;
 
 // Allows callers to request changes in virtual keyboard configuration, and to
 // watch for changes in virtual keyboard visibility.
 class VirtualKeyboardController : public fuchsia::input::virtualkeyboard::Controller {
  public:
-  VirtualKeyboardController(fuchsia::ui::views::ViewRef view_ref,
+  VirtualKeyboardController(fxl::WeakPtr<VirtualKeyboardCoordinator> coordinator,
+                            fuchsia::ui::views::ViewRef view_ref,
                             fuchsia::input::virtualkeyboard::TextType text_type);
 
   // |fuchsia.input.virtualkeyboard.Controller|
@@ -28,6 +32,7 @@ class VirtualKeyboardController : public fuchsia::input::virtualkeyboard::Contro
  private:
   void MaybeNotifyWatcher();
 
+  fxl::WeakPtr<VirtualKeyboardCoordinator> coordinator_;
   bool visible_;
   std::optional<bool> last_sent_visible_;
   WatchVisibilityCallback watch_callback_;

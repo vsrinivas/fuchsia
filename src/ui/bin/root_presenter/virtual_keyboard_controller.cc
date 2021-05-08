@@ -7,12 +7,14 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include <memory>
+#include <utility>
 
 namespace root_presenter {
 
 VirtualKeyboardController::VirtualKeyboardController(
-    fuchsia::ui::views::ViewRef view_ref, fuchsia::input::virtualkeyboard::TextType text_type)
-    : visible_(false) {}
+    fxl::WeakPtr<VirtualKeyboardCoordinator> coordinator, fuchsia::ui::views::ViewRef view_ref,
+    fuchsia::input::virtualkeyboard::TextType text_type)
+    : coordinator_(std::move(coordinator)), visible_(false) {}
 
 void VirtualKeyboardController::SetTextType(fuchsia::input::virtualkeyboard::TextType text_type) {
   FX_LOGS(INFO) << __PRETTY_FUNCTION__;
