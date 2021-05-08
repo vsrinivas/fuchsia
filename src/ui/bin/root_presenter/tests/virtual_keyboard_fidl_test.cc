@@ -29,6 +29,12 @@ class VirtualKeyboardFidlTest : public gtest::TestLoopFixture {
     context_provider_.ConnectToPublicService(std::move(request));
   }
 
+  auto CreateManagerClient() {
+    fuchsia::input::virtualkeyboard::ManagerPtr client;
+    ConnectToPublicService(client.NewRequest());
+    return client;
+  }
+
  private:
   sys::testing::ComponentContextProvider context_provider_;
   VirtualKeyboardCoordinator coordinator_;
@@ -54,7 +60,7 @@ TEST_F(VirtualKeyboardFidlTest, RegistersControllerCreatorService) {
 
 TEST_F(VirtualKeyboardFidlTest, RegistersManagerService) {
   zx_status_t status = ZX_OK;
-  fuchsia::input::virtualkeyboard::ManagerPtr manager;
+  auto manager = CreateManagerClient();
   ConnectToPublicService(manager.NewRequest());
   manager.set_error_handler([&status](zx_status_t stat) { status = stat; });
   manager->Notify(true, fuchsia::input::virtualkeyboard::VisibilityChangeReason::USER_INTERACTION,
@@ -68,16 +74,14 @@ TEST_F(VirtualKeyboardFidlTest, RegistersManagerService) {
 namespace fuchsia_input_virtualkeyboard_manager_connections {
 TEST_F(VirtualKeyboardFidlTest, FirstManagerClientHasPriority) {
   // First client tries to connect.
-  fuchsia::input::virtualkeyboard::ManagerPtr client1;
   zx_status_t client1_status = ZX_OK;
-  ConnectToPublicService(client1.NewRequest());
+  auto client1 = CreateManagerClient();
   client1.set_error_handler([&client1_status](zx_status_t stat) { client1_status = stat; });
   RunLoopUntilIdle();
 
   // Second client tries to connect.
-  fuchsia::input::virtualkeyboard::ManagerPtr client2;
   zx_status_t client2_status = ZX_OK;
-  ConnectToPublicService(client2.NewRequest());
+  auto client2 = CreateManagerClient();
   client2.set_error_handler([&client2_status](zx_status_t stat) { client2_status = stat; });
   RunLoopUntilIdle();
 
@@ -94,9 +98,8 @@ TEST_F(VirtualKeyboardFidlTest, FirstManagerClientHasPriority) {
 TEST_F(VirtualKeyboardFidlTest, NewManagerClientCanConnectAfterFirstDisconnects) {
   {
     // First client connects and calls Notify().
-    fuchsia::input::virtualkeyboard::ManagerPtr client;
     zx_status_t status = ZX_OK;
-    ConnectToPublicService(client.NewRequest());
+    auto client = CreateManagerClient();
     client.set_error_handler([&status](zx_status_t stat) { status = stat; });
     client->Notify(true, fuchsia::input::virtualkeyboard::VisibilityChangeReason::USER_INTERACTION,
                    []() {});
@@ -109,9 +112,8 @@ TEST_F(VirtualKeyboardFidlTest, NewManagerClientCanConnectAfterFirstDisconnects)
 
   {
     // Second client connects and calls Notify().
-    fuchsia::input::virtualkeyboard::ManagerPtr client;
     zx_status_t status = ZX_OK;
-    ConnectToPublicService(client.NewRequest());
+    auto client = CreateManagerClient();
     client.set_error_handler([&status](zx_status_t stat) { status = stat; });
     client->Notify(true, fuchsia::input::virtualkeyboard::VisibilityChangeReason::USER_INTERACTION,
                    []() {});
