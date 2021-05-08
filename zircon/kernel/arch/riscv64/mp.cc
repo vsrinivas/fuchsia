@@ -44,10 +44,11 @@ void riscv64_software_exception(void) {
     reason &= ~(1u << MP_IPI_RESCHEDULE);
   }
   if (reason & (1u << MP_IPI_GENERIC)) {
-    panic("unimplemented MP_IPI_GENERIC\n");
+    mp_mbx_generic_irq(nullptr);
     reason &= ~(1u << MP_IPI_GENERIC);
   }
   if (reason & (1u << MP_IPI_INTERRUPT)) {
+    mp_mbx_interrupt_irq(nullptr);
     panic("unimplemented MP_IPI_INTERRUPT\n");
     reason &= ~(1u << MP_IPI_INTERRUPT);
   }
