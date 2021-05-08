@@ -36,8 +36,8 @@ std::optional<LookupPageResult> LookupPage(MemoryManager& allocator, const PageT
   for (uint64_t level = layout.NumLevels() - 1;; level--) {
     // Get the page table entry for this level.
     const uint64_t pte_range_bits = layout.PageTableEntryRangeBits(level);
-    const uint64_t index =
-        (virt_addr.value() >> pte_range_bits) & internal::Mask(layout.TranslationBitsPerLevel());
+    const size_t index = static_cast<size_t>((virt_addr.value() >> pte_range_bits) &
+                                             internal::Mask(layout.TranslationBitsPerLevel()));
     const PageTableEntry entry = node.at(index);
 
     // If the entry is not present, abort.

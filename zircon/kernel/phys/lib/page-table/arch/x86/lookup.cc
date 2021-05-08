@@ -34,7 +34,7 @@ std::optional<LookupResult> LookupPage(MemoryManager& allocator, PageTableNode* 
 
   for (int8_t level = kPageTableLevels - 1; level >= 0; level--) {
     // Get the PTE for the current node.
-    uint64_t index = (virt_addr.value() >> PageLevelBits(level)) % kEntriesPerNode;
+    size_t index = (virt_addr.value() >> PageLevelBits(level)) % kEntriesPerNode;
     PageTableEntry entry = node->at(index);
 
     // If present bit is off, the entry is invalid.
@@ -73,7 +73,7 @@ zx_status_t MapPage(MemoryManager& allocator, PageTableNode* node, Vaddr virt_ad
 
   for (int8_t level = kPageTableLevels - 1; level > final_level; level--) {
     // Get the PTE for the current node.
-    uint64_t index = (virt_addr.value() >> PageLevelBits(level)) % kEntriesPerNode;
+    size_t index = (virt_addr.value() >> PageLevelBits(level)) % kEntriesPerNode;
     PageTableEntry entry = node->at(index);
 
     // If there is already a page mapping here, abort.
@@ -104,7 +104,7 @@ zx_status_t MapPage(MemoryManager& allocator, PageTableNode* node, Vaddr virt_ad
   }
 
   // At the final level. Get the PTE.
-  uint64_t index = (virt_addr.value() >> PageLevelBits(final_level)) % kEntriesPerNode;
+  size_t index = (virt_addr.value() >> PageLevelBits(final_level)) % kEntriesPerNode;
   PageTableEntry entry = node->at(index);
 
   // If there is already a page mapping here, abort.

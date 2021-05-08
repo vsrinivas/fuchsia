@@ -15,7 +15,8 @@ namespace {
 
 // Return true if the beginning of the given vaddr/paddr/size range can
 // be mapped with the given page size.
-constexpr bool RegionMappableWithPageSize(Vaddr vaddr, Paddr paddr, size_t size, size_t page_size) {
+constexpr bool RegionMappableWithPageSize(Vaddr vaddr, Paddr paddr, uint64_t size,
+                                          size_t page_size) {
   // If the region size is smaller than the page, we can't map it.
   if (size < page_size) {
     return false;
@@ -29,7 +30,7 @@ constexpr bool RegionMappableWithPageSize(Vaddr vaddr, Paddr paddr, size_t size,
 // `[vaddr, vaddr+size)` to `paddr`.
 //
 // All arguments must be aligned to at least the smallet page size.
-constexpr PageSize GetLargestPageSize(Vaddr vaddr, Paddr paddr, size_t size,
+constexpr PageSize GetLargestPageSize(Vaddr vaddr, Paddr paddr, uint64_t size,
                                       bool use_1gib_mappings) {
   if (use_1gib_mappings && RegionMappableWithPageSize(vaddr, paddr, size, kPageSize1GiB)) {
     return PageSize::k1GiB;

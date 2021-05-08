@@ -60,9 +60,9 @@ constexpr uint8_t PageLevelBits(int8_t level) {
 }
 
 // Page size constants.
-constexpr uint64_t kPageSize4KiB = 4 * 1024;
-constexpr uint64_t kPageSize2MiB = 2 * 1024 * 1024;
-constexpr uint64_t kPageSize1GiB = 1024 * 1024 * 1024;
+constexpr size_t kPageSize4KiB = 4u * 1024u;
+constexpr size_t kPageSize2MiB = 2u * 1024u * 1024u;
+constexpr size_t kPageSize1GiB = 1024u * 1024u * 1024u;
 
 // Supported page sizes.
 //
@@ -74,7 +74,7 @@ enum class PageSize {
 };
 
 // Return the number of bytes in the given PageSize.
-constexpr uint64_t PageBytes(PageSize size) { return static_cast<uint64_t>(size); }
+constexpr size_t PageBytes(PageSize size) { return static_cast<size_t>(size); }
 
 // Determine if the given virtual address is in canonical form.
 //
@@ -145,6 +145,8 @@ struct alignas(sizeof(uint64_t)) PageTableEntry {
   // pointer at different levels.
   static constexpr std::array<int, kPageTableLevels> kPageBitIndex = {-1, 7, 7, -1};
 };
+static_assert(sizeof(PageTableEntry) == sizeof(uint64_t));
+static_assert(alignof(PageTableEntry) == sizeof(uint64_t));
 
 // A node in the page table.
 class alignas(kPageTableNodeBytes) PageTableNode {
@@ -163,7 +165,8 @@ class alignas(kPageTableNodeBytes) PageTableNode {
   PageTableEntry entries_[kEntriesPerNode] = {};
 };
 static_assert(sizeof(PageTableNode) == kPageTableNodeBytes);
-static_assert(std::is_standard_layout<PageTableNode>::value);
+static_assert(alignof(PageTableNode) == kPageTableNodeBytes);
+static_assert(std::is_standard_layout_v<PageTableNode>);
 
 //
 // Implementation details below.

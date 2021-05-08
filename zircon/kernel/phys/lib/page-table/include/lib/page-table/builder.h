@@ -13,7 +13,7 @@
 namespace page_table {
 
 // Convenience class for building address spaces.
-#if defined(__x86_64__)
+#if defined(__x86_64__) || defined(__i386__)
 using AddressSpaceBuilder = ::page_table::x86::AddressSpaceBuilder;
 #else
 using AddressSpaceBuilder = void;
