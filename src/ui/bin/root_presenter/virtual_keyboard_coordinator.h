@@ -32,6 +32,8 @@ class VirtualKeyboardCoordinator : public fuchsia::input::virtualkeyboard::Contr
   // Callers _should_ construct this object before entering the event loop.
   explicit VirtualKeyboardCoordinator(sys::ComponentContext* component_context);
 
+  fxl::WeakPtr<VirtualKeyboardCoordinator> GetWeakPtr() { return weak_ptr_factory_.GetWeakPtr(); }
+
  private:
   using ControllerBinding =
       fidl::Binding<fuchsia::input::virtualkeyboard::Controller,
@@ -46,7 +48,11 @@ class VirtualKeyboardCoordinator : public fuchsia::input::virtualkeyboard::Contr
   fidl::BindingSet<fuchsia::input::virtualkeyboard::ControllerCreator> creator_bindings_;
   std::unique_ptr<ControllerBinding> controller_binding_;
 
-  VirtualKeyboardManager manager_;
+  std::optional<VirtualKeyboardManager> manager_;
+
+  // Must be last, to invalidate weak pointers held by other fields before their
+  // destructors are called.
+  fxl::WeakPtrFactory<VirtualKeyboardCoordinator> weak_ptr_factory_;
 };
 
 }  // namespace root_presenter

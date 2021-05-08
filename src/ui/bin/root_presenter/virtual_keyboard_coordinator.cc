@@ -13,9 +13,10 @@
 namespace root_presenter {
 
 VirtualKeyboardCoordinator::VirtualKeyboardCoordinator(sys::ComponentContext* component_context)
-    : manager_(component_context) {
+    : weak_ptr_factory_(this) {
   FX_DCHECK(component_context);
   component_context->outgoing()->AddPublicService(creator_bindings_.GetHandler(this));
+  manager_.emplace(GetWeakPtr(), component_context);
 }
 
 // fuchsia.input.virtualkeyboard.ControllerCreator.Create()

@@ -11,30 +11,35 @@
 #include <gtest/gtest.h>
 #include <src/lib/testing/loop_fixture/test_loop_fixture.h>
 
+#include "src/ui/bin/root_presenter/virtual_keyboard_coordinator.h"
+
 namespace root_presenter {
 namespace virtual_keyboard_manager {
 namespace {
 
 class VirtualKeyboardManagerTest : public gtest::TestLoopFixture {
  protected:
+  VirtualKeyboardManagerTest() : coordinator_(context_provider_.context()) {}
   auto* context_provider() { return &context_provider_; }
+  fxl::WeakPtr<VirtualKeyboardCoordinator> coordinator() { return coordinator_.GetWeakPtr(); }
 
  private:
   sys::testing::ComponentContextProvider context_provider_;
+  VirtualKeyboardCoordinator coordinator_;
 };
 
 TEST_F(VirtualKeyboardManagerTest, CtorDoesNotCrash) {
-  VirtualKeyboardManager(context_provider()->context());
+  VirtualKeyboardManager(coordinator(), context_provider()->context());
 }
 
 TEST_F(VirtualKeyboardManagerTest, WatchTypeAndVisibilityDoesNotCrash) {
-  VirtualKeyboardManager(context_provider()->context())
+  VirtualKeyboardManager(coordinator(), context_provider()->context())
       .WatchTypeAndVisibility(
           [](fuchsia::input::virtualkeyboard::TextType text_type, bool is_visible) {});
 }
 
 TEST_F(VirtualKeyboardManagerTest, NotifyDoesNotCrash) {
-  VirtualKeyboardManager(context_provider()->context())
+  VirtualKeyboardManager(coordinator(), context_provider()->context())
       .Notify(true, fuchsia::input::virtualkeyboard::VisibilityChangeReason::USER_INTERACTION,
               []() {});
 }

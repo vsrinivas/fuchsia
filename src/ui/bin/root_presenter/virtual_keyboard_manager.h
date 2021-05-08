@@ -9,13 +9,17 @@
 
 #include "fuchsia/ui/views/cpp/fidl.h"
 #include "lib/sys/cpp/component_context.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace root_presenter {
+
+class VirtualKeyboardCoordinator;
 
 // Allows the virtual keyboard GUI to synchronize virtual keyboard state with the platform.
 class VirtualKeyboardManager : public fuchsia::input::virtualkeyboard::Manager {
  public:
-  explicit VirtualKeyboardManager(sys::ComponentContext* component_context);
+  explicit VirtualKeyboardManager(fxl::WeakPtr<VirtualKeyboardCoordinator> coordinator,
+                                  sys::ComponentContext* component_context);
 
   // |fuchsia.input.virtualkeyboard.Manager|
   // Called either via IPC, or from unit tests.
@@ -26,6 +30,7 @@ class VirtualKeyboardManager : public fuchsia::input::virtualkeyboard::Manager {
  private:
   void MaybeBind(fidl::InterfaceRequest<fuchsia::input::virtualkeyboard::Manager> request);
 
+  fxl::WeakPtr<VirtualKeyboardCoordinator> coordinator_;
   fidl::Binding<fuchsia::input::virtualkeyboard::Manager> manager_binding_;
 };
 

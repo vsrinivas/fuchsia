@@ -6,13 +6,17 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include <utility>
+
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/sys/cpp/component_context.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace root_presenter {
 
-VirtualKeyboardManager::VirtualKeyboardManager(sys::ComponentContext* component_context)
-    : manager_binding_(this) {
+VirtualKeyboardManager::VirtualKeyboardManager(fxl::WeakPtr<VirtualKeyboardCoordinator> coordinator,
+                                               sys::ComponentContext* component_context)
+    : coordinator_(std::move(coordinator)), manager_binding_(this) {
   FX_DCHECK(component_context);
   component_context->outgoing()->AddPublicService<fuchsia::input::virtualkeyboard::Manager>(
       [this](fidl::InterfaceRequest<fuchsia::input::virtualkeyboard::Manager> request) {

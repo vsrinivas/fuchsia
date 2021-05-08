@@ -273,5 +273,6 @@ source_set("virtual_keyboard") {
     "//sdk/fidl/fuchsia.input.virtualkeyboard",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+    "//src/lib/fxl",
   ]
 }
