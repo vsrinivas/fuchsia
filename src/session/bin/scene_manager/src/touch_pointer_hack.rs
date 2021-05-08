@@ -7,10 +7,11 @@ use {
     fidl_fuchsia_ui_input as fidl_ui_input,
     fidl_fuchsia_ui_policy::PointerCaptureListenerHackProxy,
     futures::lock::Mutex,
-    input::input_device,
-    input::input_handler::InputHandler,
-    input::touch,
-    input::{Position, Size},
+    input_pipeline::{
+        self, input_device,
+        input_handler::InputHandler,
+        touch, {Position, Size},
+    },
     std::sync::Arc,
 };
 

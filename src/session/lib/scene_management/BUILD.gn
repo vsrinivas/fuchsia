@@ -24,7 +24,7 @@ rustc_library("scene_management") {
     "//src/lib/syslog/rust:syslog",
     "//src/lib/ui/fuchsia-scenic",
     "//src/lib/zircon/rust:fuchsia-zircon",
-    "//src/session/lib/input",
+    "//src/ui/lib/input_pipeline",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",

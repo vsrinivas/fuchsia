@@ -610,7 +610,7 @@ the keys available on the keyboard, and a `InputDeviceDescriptor::Touch`
 contains the maximum number of touch contacts and the range of `x-` and
 `y-`values each contact can take on.
 
-[`enum InputDeviceDescriptor`]: /src/session/lib/input/src/input_device.rs
+[`enum InputDeviceDescriptor`]: /src/ui/lib/input_pipeline/src/input_device.rs
 [`fuchsia.input.report.DeviceDescriptor`]: https://fuchsia.dev/reference/fidl/fuchsia.input.report#DeviceDescriptor
 
 `InputDeviceDescriptor` is a [Session Framework](#session-framework) concept.

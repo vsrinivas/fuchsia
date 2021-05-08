@@ -13,11 +13,12 @@ use {
     fuchsia_syslog::fx_log_warn,
     futures::lock::Mutex,
     futures::StreamExt,
-    input::{
+    input_pipeline::{
+        self,
         ime_handler::ImeHandler,
         input_device,
         input_handler::InputHandler,
-        input_pipeline::{self, InputPipeline},
+        input_pipeline::{InputDeviceBindingHashMap, InputPipeline},
         mouse_handler::MouseHandler,
         shortcut_handler::ShortcutHandler,
         touch_handler::TouchHandler,
@@ -176,7 +177,7 @@ pub async fn handle_input_device_registry_request_streams(
     stream_receiver: futures::channel::mpsc::UnboundedReceiver<InputDeviceRegistryRequestStream>,
     input_device_types: Vec<input_device::InputDeviceType>,
     input_event_sender: futures::channel::mpsc::Sender<input_device::InputEvent>,
-    input_device_bindings: input_pipeline::InputDeviceBindingHashMap,
+    input_device_bindings: InputDeviceBindingHashMap,
 ) {
     // It's unlikely that multiple clients will concurrently connect to the InputDeviceRegistry.
     // However, if multiple clients do connect concurrently, we don't want said clients

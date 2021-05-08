@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {fuchsia_scenic::DisplayRotation, input::Size, std::f32::consts as f32};
+use {fuchsia_scenic::DisplayRotation, input_pipeline::Size, std::f32::consts as f32};
 
 /// Predefined viewing distances with values in millimeters.
 #[derive(Copy, Clone, PartialEq, Debug)]

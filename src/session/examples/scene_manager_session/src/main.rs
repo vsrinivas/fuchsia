@@ -9,8 +9,9 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_syslog as fsyslog,
-    input::{
-        input_device, input_handler::InputHandler, input_pipeline::InputPipeline, mouse, Position,
+    input_pipeline::{
+        self, input_device, input_handler::InputHandler, input_pipeline::InputPipeline, mouse,
+        Position,
     },
     scene_management::{self, SceneManager, ScreenCoordinates},
 };

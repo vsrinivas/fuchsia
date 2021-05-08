@@ -4,7 +4,7 @@
 
 #[cfg(test)]
 use {
-    fidl_fuchsia_ui_input as fidl_ui_input, input::input_device, input::mouse,
+    fidl_fuchsia_ui_input as fidl_ui_input, input_pipeline::input_device, input_pipeline::mouse,
     std::collections::HashSet,
 };
 

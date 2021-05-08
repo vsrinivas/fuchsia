@@ -11,7 +11,7 @@ use {
     fidl, fidl_fuchsia_ui_app as ui_app, fidl_fuchsia_ui_gfx as ui_gfx,
     fidl_fuchsia_ui_scenic as ui_scenic, fidl_fuchsia_ui_views as ui_views,
     fuchsia_scenic as scenic, fuchsia_scenic,
-    input::Size,
+    input_pipeline::Size,
     std::sync::Arc,
 };
 

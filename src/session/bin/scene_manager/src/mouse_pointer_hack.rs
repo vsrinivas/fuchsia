@@ -7,10 +7,11 @@ use {
     fidl_fuchsia_ui_input as fidl_ui_input,
     fidl_fuchsia_ui_policy::PointerCaptureListenerHackProxy,
     futures::lock::Mutex,
-    input::input_device,
-    input::input_handler::InputHandler,
-    input::mouse,
-    input::{Position, Size},
+    input_pipeline::{
+        self, input_device,
+        input_handler::InputHandler,
+        mouse, {Position, Size},
+    },
     std::collections::HashSet,
     std::sync::Arc,
 };
@@ -147,7 +148,7 @@ mod tests {
     use {
         super::*, crate::input_testing_utilities::create_mouse_event,
         fidl_fuchsia_ui_policy as fidl_ui_policy, fuchsia_async as fasync, fuchsia_zircon as zx,
-        futures::StreamExt, input::Position,
+        futures::StreamExt,
     };
 
     const DEVICE_ID: u32 = 1;

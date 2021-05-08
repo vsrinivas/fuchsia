@@ -7,7 +7,7 @@ use {
     anyhow::Error,
     fidl_fuchsia_images as images, fidl_fuchsia_ui_gfx as ui_gfx, fuchsia_scenic as scenic,
     fuchsia_scenic,
-    input::{Position, Size},
+    input_pipeline::{Position, Size},
 };
 
 /// A struct that contains all the information needed to use an image with [`scenic`].

@@ -1,16 +1,14 @@
-# Input client library {#input-client-library}
+# Input pipeline library {#input-pipeline-library}
 
 ## Overview {#overview}
 
-The input library tracks available input devices, manages device state, and
+The input pipeline library tracks available input devices, manages device state, and
 allows the session to register handlers for events.
 
-The session creates an input pipeline that is configured for the specific
-product. First, the session decides which types of input devices the input
-pipeline should support. Then, the session registers input handlers for input
-events.
+An input pipeline runs alongside session. It is preconfigured to support a
+set of input devices. This will be configurable by the session in the future.
 
-The input library provides implementations for common input handlers, such as
+The input pipeline library provides implementations for common input handlers, such as
 Scenic and input method editors (IME). After the session instantiates components
 that consume input, the input pipeline directly sends input events to those
 components through the registered input handlers.
@@ -65,5 +63,5 @@ The developer guide includes an
 [`InputEvent`s]: /docs/glossary.md#input-pipeline-input-event
 [`InputHandler`s]: /docs/glossary.md#input-pipeline-input-handler
 [`InputReport`]: /docs/glossary.md#input-report
-[input_pipeline.rs]: /src/session/lib/input/src/input_pipeline.rs
+[input_pipeline.rs]: /src/ui/lib/input_pipeline/src/input_pipeline.rs
 [example-input-handler]: /docs/development/sessions/roles-and-responsibilities.md#handling-input

@@ -7,7 +7,9 @@ use {
     async_trait::async_trait,
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_info,
-    input::{input_device, input_handler::InputHandler, input_pipeline::InputPipeline},
+    input_pipeline::{
+        self, input_device, input_handler::InputHandler, input_pipeline::InputPipeline,
+    },
 };
 
 /// A simple InputHandler that prints MouseEvents as they're received.

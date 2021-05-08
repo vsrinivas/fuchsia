@@ -5,7 +5,7 @@
 use {
     anyhow::Error, fidl_fuchsia_input_injection::InputDeviceRegistryRequestStream,
     fuchsia_async as fasync, fuchsia_component::server::ServiceFs, fuchsia_syslog::fx_log_warn,
-    futures::StreamExt, input as input_lib, input::input_device,
+    futures::StreamExt, input_pipeline as input_pipeline_lib, input_pipeline::input_device,
 };
 
 mod input_handlers;
@@ -27,7 +27,7 @@ async fn main() -> Result<(), Error> {
     let device_types = vec![input_device::InputDeviceType::MediaButtons];
 
     // Create a new input pipeline.
-    let input_pipeline = input_lib::input_pipeline::InputPipeline::new(
+    let input_pipeline = input_pipeline_lib::input_pipeline::InputPipeline::new(
         device_types.clone(),
         input_handlers::create(),
     )
@@ -61,11 +61,13 @@ async fn main() -> Result<(), Error> {
 
 async fn handle_input_device_registry_request_stream(
     stream: InputDeviceRegistryRequestStream,
-    device_types: Vec<input_lib::input_device::InputDeviceType>,
-    input_event_sender: futures::channel::mpsc::Sender<input_lib::input_device::InputEvent>,
-    bindings: input_lib::input_pipeline::InputDeviceBindingHashMap,
+    device_types: Vec<input_pipeline_lib::input_device::InputDeviceType>,
+    input_event_sender: futures::channel::mpsc::Sender<
+        input_pipeline_lib::input_device::InputEvent,
+    >,
+    bindings: input_pipeline_lib::input_pipeline::InputDeviceBindingHashMap,
 ) {
-    match input_lib::input_pipeline::InputPipeline::handle_input_device_registry_request_stream(
+    match input_pipeline_lib::input_pipeline::InputPipeline::handle_input_device_registry_request_stream(
         stream,
         &device_types,
         &input_event_sender,
