@@ -11,6 +11,7 @@
 #include "lib/fidl/cpp/interface_request.h"
 #include "lib/sys/cpp/component_context.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/ui/bin/root_presenter/virtual_keyboard_coordinator.h"
 
 namespace root_presenter {
 
@@ -32,6 +33,12 @@ void VirtualKeyboardManager::Notify(bool is_visible,
                                     fuchsia::input::virtualkeyboard::VisibilityChangeReason reason,
                                     NotifyCallback callback) {
   FX_LOGS(INFO) << __PRETTY_FUNCTION__;
+  if (coordinator_) {
+    coordinator_->NotifyVisibilityChange(is_visible, reason);
+  } else {
+    FX_LOGS(WARNING) << "Ignorning Notify() call: no `coordinator_`";
+  }
+  callback();
 }
 
 void VirtualKeyboardManager::MaybeBind(

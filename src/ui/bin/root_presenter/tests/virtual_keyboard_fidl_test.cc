@@ -346,14 +346,16 @@ TEST_F(VirtualKeyboardFidlTest, WatchTypeAndVisibilityDoesNotError) {
   ASSERT_EQ(ZX_OK, status) << "status = " << zx_status_get_string(status);
 }
 
-TEST_F(VirtualKeyboardFidlTest, NotifyDoesNotError) {
+TEST_F(VirtualKeyboardFidlTest, NotifyIsAcked) {
+  bool got_ack = false;
   zx_status_t status = ZX_OK;
   auto manager = CreateManagerClient();
   manager.set_error_handler([&status](zx_status_t stat) { status = stat; });
   manager->Notify(true, fuchsia::input::virtualkeyboard::VisibilityChangeReason::USER_INTERACTION,
-                  []() {});
+                  [&got_ack]() { got_ack = true; });
   RunLoopUntilIdle();
   ASSERT_EQ(ZX_OK, status) << "status = " << zx_status_get_string(status);
+  ASSERT_EQ(true, got_ack);
 }
 }  // namespace fuchsia_input_virtualkeyboard_manager_methods
 
