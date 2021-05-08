@@ -150,6 +150,137 @@ TEST_F(VirtualKeyboardFidlTest, LastControllerHasPriority) {
 }
 }  // namespace fuchsia_input_virtualkeyboard_controller_connections
 
+// Tests that verify the behavior of the methods of `fuchsia.input.virtualkeyboard.Controller`.
+namespace fuchsia_input_virtualkeyboard_controller_methods {
+
+TEST_F(VirtualKeyboardFidlTest, SetTextTypeDoesNotError) {
+  // Create controller.
+  zx_status_t controller_status = ZX_OK;
+  auto [controller, view_ref_control] = CreateControllerClient();
+  controller.set_error_handler(
+      [&controller_status](zx_status_t stat) { controller_status = stat; });
+
+  // Invoke SetTextType(), and verify there is no error on the channel.
+  controller->SetTextType(fuchsia::input::virtualkeyboard::TextType::PHONE);
+  RunLoopUntilIdle();
+  ASSERT_EQ(ZX_OK, controller_status) << "status = " << zx_status_get_string(controller_status);
+}
+
+TEST_F(VirtualKeyboardFidlTest, RequestShowDoesNotError) {
+  // Create controller.
+  zx_status_t controller_status = ZX_OK;
+  auto [controller, view_ref_control] = CreateControllerClient();
+  controller.set_error_handler(
+      [&controller_status](zx_status_t stat) { controller_status = stat; });
+
+  // Invoke RequestShow(), and verify there is no error on the channel.
+  controller->RequestShow();
+  RunLoopUntilIdle();
+  ASSERT_EQ(ZX_OK, controller_status) << "status = " << zx_status_get_string(controller_status);
+}
+
+TEST_F(VirtualKeyboardFidlTest, RequestHideDoesNotError) {
+  // Create controller.
+  zx_status_t controller_status = ZX_OK;
+  auto [controller, view_ref_control] = CreateControllerClient();
+  controller.set_error_handler(
+      [&controller_status](zx_status_t stat) { controller_status = stat; });
+
+  // Invoke RequestHide(), and verify there is no error on the channel.
+  controller->RequestHide();
+  RunLoopUntilIdle();
+  ASSERT_EQ(ZX_OK, controller_status) << "status = " << zx_status_get_string(controller_status);
+}
+
+TEST_F(VirtualKeyboardFidlTest, WatchVisibility_FirstCallReturnsImmediately) {
+  // Create controller.
+  auto [controller, view_ref_control] = CreateControllerClient();
+
+  // Send watch.
+  bool got_watch_visibility_result = false;
+  controller->WatchVisibility(
+      [&got_watch_visibility_result](bool vis) { got_watch_visibility_result = true; });
+  RunLoopUntilIdle();
+
+  // Verify watch completed immediately.
+  ASSERT_TRUE(got_watch_visibility_result);
+}
+
+TEST_F(VirtualKeyboardFidlTest, WatchVisibility_SecondCallHangs) {
+  // Create controller.
+  zx_status_t controller_status = ZX_OK;
+  auto [controller, view_ref_control] = CreateControllerClient();
+  controller.set_error_handler(
+      [&controller_status](zx_status_t stat) { controller_status = stat; });
+
+  // Send first watch, which completes immediately.
+  controller->WatchVisibility([](bool vis) {});
+  RunLoopUntilIdle();
+
+  // Send second watch, which hangs.
+  bool got_watch_visibility_result = false;
+  controller->WatchVisibility(
+      [&got_watch_visibility_result](bool vis) { got_watch_visibility_result = true; });
+  RunLoopUntilIdle();
+  ASSERT_FALSE(got_watch_visibility_result);
+  ASSERT_EQ(ZX_OK, controller_status) << "status = " << zx_status_get_string(controller_status);
+}
+
+TEST_F(VirtualKeyboardFidlTest, WatchVisibility_SecondCallIsResolvedByOwnRequestShow) {
+  // Create controller.
+  auto [controller, view_ref_control] = CreateControllerClient();
+
+  // Send first watch, which completes immediately.
+  controller->WatchVisibility([](bool vis) {});
+  RunLoopUntilIdle();
+
+  // Second second watch, and let it hang.
+  bool got_watch_visibility_result = false;
+  controller->WatchVisibility(
+      [&got_watch_visibility_result](bool vis) { got_watch_visibility_result = true; });
+  RunLoopUntilIdle();
+
+  // Request the keyboard to be shown. This changes the state of the keyboard, since
+  // the default state is hidden.
+  controller->RequestShow();
+  RunLoopUntilIdle();
+
+  // Verify that the watch completed.
+  //
+  // Note: when we incorporate focus state into VirtualKeyboardCoordinator, we'll need
+  // to update this test. (The watch should not complete until the `View` associated with
+  // `view_ref_pair` has focus.)
+  ASSERT_TRUE(got_watch_visibility_result);
+}
+
+TEST_F(VirtualKeyboardFidlTest, WatchVisibility_SecondCallIsNotResolvedByOwnRequestHide) {
+  // Create controller.
+  zx_status_t controller_status = ZX_OK;
+  auto [controller, view_ref_control] = CreateControllerClient();
+  controller.set_error_handler(
+      [&controller_status](zx_status_t stat) { controller_status = stat; });
+
+  // Send first watch, which completes immediately.
+  controller->WatchVisibility([](bool vis) {});
+  RunLoopUntilIdle();
+
+  // Second second watch, and let it hang.
+  bool got_watch_visibility_result = false;
+  controller->WatchVisibility(
+      [&got_watch_visibility_result](bool vis) { got_watch_visibility_result = true; });
+  RunLoopUntilIdle();
+
+  // Request the keyboard to be hidden. This does _not_ change the state of the keyboard,
+  // since the default state is also hidden.
+  controller->RequestHide();
+  RunLoopUntilIdle();
+
+  // Verify that the watch did not complete.
+  ASSERT_FALSE(got_watch_visibility_result);
+  ASSERT_EQ(ZX_OK, controller_status) << "status = " << zx_status_get_string(controller_status);
+}
+}  // namespace fuchsia_input_virtualkeyboard_controller_methods
+
 // Tests which validate how connections to `fuchsia.input.virtualkeyboard.Manager` are handled.
 namespace fuchsia_input_virtualkeyboard_manager_connections {
 TEST_F(VirtualKeyboardFidlTest, FirstManagerClientHasPriority) {
