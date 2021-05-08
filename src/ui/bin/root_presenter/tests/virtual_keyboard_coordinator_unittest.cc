@@ -26,22 +26,8 @@ class VirtualKeyboardCoordinatorTest : public gtest::TestLoopFixture {
   sys::testing::ComponentContextProvider context_provider_;
 };
 
-TEST_F(VirtualKeyboardCoordinatorTest, CtorRegistersControllerCreatorService) {
+TEST_F(VirtualKeyboardCoordinatorTest, CtorDoesNotCrash) {
   VirtualKeyboardCoordinator coordinator(context_provider()->context());
-
-  zx_status_t status = ZX_OK;
-  fuchsia::input::virtualkeyboard::ControllerCreatorPtr controller_creator_proxy;
-  context_provider()->ConnectToPublicService(controller_creator_proxy.NewRequest());
-  controller_creator_proxy.set_error_handler([&status](zx_status_t stat) { status = stat; });
-
-  fuchsia::input::virtualkeyboard::ControllerPtr controller_proxy;
-  auto view_ref_pair = scenic::ViewRefPair::New();
-  controller_creator_proxy->Create(std::move(view_ref_pair.view_ref),
-                                   fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC,
-                                   controller_proxy.NewRequest());
-  RunLoopUntilIdle();
-
-  ASSERT_EQ(ZX_OK, status) << "status = " << zx_status_get_string(status);
 }
 
 }  // namespace
