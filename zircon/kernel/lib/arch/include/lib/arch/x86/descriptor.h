@@ -7,15 +7,16 @@
 #ifndef ZIRCON_KERNEL_LIB_ARCH_INCLUDE_LIB_ARCH_X86_DESCRIPTOR_H_
 #define ZIRCON_KERNEL_LIB_ARCH_INCLUDE_LIB_ARCH_X86_DESCRIPTOR_H_
 
-#include <hwreg/bitfields.h>
 #include <stddef.h>
+
+#include <hwreg/bitfields.h>
 
 namespace arch {
 
 // This represents the 32-bit descriptor format in the GDT or LDT.
 struct Desc32 {
   // These raw fields are normally accessed via the accessors defined below.
-  uint32_t limit_base_lo16;
+  alignas(uint64_t) uint32_t limit_base_lo16;
   uint32_t flags_base_hi16;
 
   enum SegmentSystem : uint32_t {
@@ -100,6 +101,18 @@ struct Desc32 {
     set_system(arch::Desc32::SegmentSystem::NONSYSTEM);
     set_addr32(true);
     set_base(0);
+    SetScaledLimit(UINT32_MAX);
+    return *this;
+  }
+
+  // Set fields to make this a 64-bit code segment.
+  constexpr Desc32& MakeCode64() {
+    set_type(arch::Desc32::CODE_RX);
+    set_system(arch::Desc32::SegmentSystem::NONSYSTEM);
+    set_present(true);
+    set_addr32(false);
+    set_base(0);
+    set_long_mode(true);
     SetScaledLimit(UINT32_MAX);
     return *this;
   }
@@ -210,7 +223,7 @@ struct AlignedGdtRegister64 {
   GdtRegister64 reg;
 
   AlignedGdtRegister64() = default;
-  AlignedGdtRegister64(GdtRegister64 reg): reg(reg) {} // NOLINT
+  explicit AlignedGdtRegister64(GdtRegister64 reg) : reg(reg) {}
 } __PACKED __ALIGNED(8);
 static_assert(offsetof(AlignedGdtRegister64, reg) % 4 == 2);
 

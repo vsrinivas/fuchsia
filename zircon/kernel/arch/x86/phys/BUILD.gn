@@ -41,7 +41,6 @@ if (current_toolchain == default_toolchain) {
         "gdt.cc",
         "start.S",
       ]
-      include_dirs = [ "//zircon/.." ]
       deps = [
         "//zircon/kernel/lib/arch",
         "//zircon/kernel/phys:arch-header",

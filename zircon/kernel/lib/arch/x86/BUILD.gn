@@ -23,10 +23,11 @@ zx_library("x86") {
 
   public_deps += [ ":gen-cpuid-asm" ]
   if (!is_host) {
-    sources = [
+    sources += [
       "boot-cpuid.S",
       "boot-cpuid.cc",
       "random.cc",
+      "standard-segments.cc",
     ]
     if (toolchain.environment != "kernel.phys32") {
       sources += [ "descriptor-regs.S" ]
