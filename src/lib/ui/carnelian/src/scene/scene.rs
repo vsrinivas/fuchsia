@@ -75,7 +75,7 @@ impl SceneOptions {
 
 impl Default for SceneOptions {
     fn default() -> Self {
-        Self { background_color: Color::new(), round_scene_corners: true, root_arranger: None }
+        Self { background_color: Color::new(), round_scene_corners: false, root_arranger: None }
     }
 }
 

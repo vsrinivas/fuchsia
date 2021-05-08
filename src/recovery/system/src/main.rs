@@ -182,7 +182,7 @@ impl RenderResources {
         let body_text_size = min_dimension / 18.0;
         let countdown_text_size = min_dimension / 6.0;
 
-        let mut builder = SceneBuilder::new().background_color(BG_COLOR);
+        let mut builder = SceneBuilder::new().background_color(BG_COLOR).round_scene_corners(true);
 
         let logo_size: Size = size2(logo_edge, logo_edge);
         // Calculate position for centering the logo image
