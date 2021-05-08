@@ -30,7 +30,6 @@ const char Symbolize::kProgramName_[] = "zbi-boot-shim";
 // TODO(fxbug.dev/68762): x86 needs page table setup
 
 void ZbiMain(void* ptr, arch::EarlyTicks boot_ticks) {
-  ApplyRelocations();
   InitMemory(ptr);
 
   auto zbi_ptr = static_cast<const zbi_header_t*>(ptr);

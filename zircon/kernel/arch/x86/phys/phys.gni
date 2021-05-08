@@ -6,8 +6,13 @@
 
 # See //zircon/kernel/phys/BUILD.gn:kernel.phys.
 
-phys_configs = []
-phys_tags = []
+phys_configs = [
+  # Compile as a position-independent executable. The code will apply its own
+  # fixups during initialization.
+  "//build/config/zircon:static-pie-compile",
+  "//build/config/zircon:static-pie-link",
+]
+phys_tags = [ "static-pie" ]
 phys_exclude_variant_tags = []
 
 phys_zbi_configs = [ "//zircon/kernel/arch/x86/phys:load-1mb" ]
