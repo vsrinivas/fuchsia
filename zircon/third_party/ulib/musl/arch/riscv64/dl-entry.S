@@ -15,5 +15,11 @@ ENTRY(_start)
     jal  _dl_start
     li   fp, 0 // frame pointer (FP)
     li   ra, 0 // return address (RA)
+.option push
+.option norelax
+    .weak __global_pointer$
+    .hidden __global_pointer$
+    lla gp, __global_pointer$
+.option pop
     jalr a1
 END(_start)
