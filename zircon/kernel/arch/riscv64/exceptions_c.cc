@@ -145,6 +145,8 @@ static void riscv64_page_fault_handler(long cause, struct iframe_t *frame) {
       if (try_dispatch_user_data_fault_exception(ZX_EXCP_FATAL_PAGE_FAULT, frame) == ZX_OK) {
         return;
       }
+    } else {
+      panic("Kernel page fault");
     }
   }
 }
