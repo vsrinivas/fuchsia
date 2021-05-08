@@ -9,6 +9,7 @@
 #include <lib/zbitl/view.h>
 #include <zircon/boot/image.h>
 
+#include <iterator>
 #include <variant>
 
 namespace zbitl {
@@ -163,8 +164,9 @@ class MemRangeMerger {
 
    private:
     // Ensure iterator type is valid.
-    static_assert(std::is_same_v<zbi_mem_range_t, typename Iterator::value_type>,
-                  "Expected an iterator of type zbi_mem_range_t.");
+    static_assert(
+        std::is_same_v<zbi_mem_range_t, typename std::iterator_traits<Iterator>::value_type>,
+        "Expected an iterator of type zbi_mem_range_t.");
 
     // Fill `current_` with the next merged range.
     void Next() {
