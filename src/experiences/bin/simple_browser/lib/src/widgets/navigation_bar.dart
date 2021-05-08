@@ -81,7 +81,7 @@ class NavigationBar extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.all(1.0),
             child: Container(
-              color: Theme.of(context).accentColor,
+              color: Theme.of(context).highlightColor,
               alignment: Alignment.center,
               child: Icon(
                 Icons.add,

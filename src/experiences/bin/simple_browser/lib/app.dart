@@ -55,7 +55,7 @@ class App extends StatelessWidget {
                     hintColor: _kErmineColor400,
                     primaryColor: _kErmineColor100,
                     canvasColor: _kErmineColor100,
-                    accentColor: _kErmineColor400,
+                    highlightColor: _kErmineColor400,
                     buttonColor: _kErmineColor300,
                     textTheme: TextTheme(
                       bodyText2: _kTextStyle,

@@ -139,11 +139,11 @@ class _TabsWidgetState extends State<TabsWidget>
                 color: _browserTheme.primaryColor,
                 border: Border(
                   top: BorderSide(
-                    color: _browserTheme.accentColor,
+                    color: _browserTheme.highlightColor,
                     width: _kBorderWidth,
                   ),
                   bottom: BorderSide(
-                    color: _browserTheme.accentColor,
+                    color: _browserTheme.highlightColor,
                     width: _kBorderWidth,
                   ),
                 ),
@@ -311,7 +311,7 @@ class _TabsWidgetState extends State<TabsWidget>
       height: _kTabBarHeight,
       decoration: BoxDecoration(
         color: (index == widget.bloc.currentTabIdx)
-            ? _browserTheme.accentColor
+            ? _browserTheme.highlightColor
             : _browserTheme.primaryColor,
         border: _buildBorder(index != widget.bloc.currentTabIdx &&
             !((!_isAnimating) && renderingIndex == 0) &&
@@ -334,7 +334,7 @@ class _TabsWidgetState extends State<TabsWidget>
 
   Border _buildBorder(bool hasBorder) => Border(
         left: BorderSide(
-          color: hasBorder ? _browserTheme.accentColor : Colors.transparent,
+          color: hasBorder ? _browserTheme.highlightColor : Colors.transparent,
           width: _kBorderWidth,
         ),
       );
@@ -643,8 +643,9 @@ class _TabWidgetState extends State<_TabWidget> {
       },
       child: DefaultTextStyle(
         style: baseTheme.textTheme.bodyText2.copyWith(
-          color:
-              widget.selected ? baseTheme.primaryColor : baseTheme.accentColor,
+          color: widget.selected
+              ? baseTheme.primaryColor
+              : baseTheme.highlightColor,
         ),
         child: Stack(
           children: <Widget>[
@@ -681,7 +682,7 @@ class _TabWidgetState extends State<_TabWidget> {
                         Icons.clear,
                         color: widget.selected
                             ? baseTheme.primaryColor
-                            : baseTheme.accentColor,
+                            : baseTheme.highlightColor,
                         size: _kIconSize,
                       ),
                     ),
