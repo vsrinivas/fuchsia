@@ -55,7 +55,7 @@ class VirtualKeyboardFidlTest : public gtest::TestLoopFixture {
 
  private:
   sys::testing::ComponentContextProvider context_provider_;
-  VirtualKeyboardCoordinator coordinator_;
+  FidlBoundVirtualKeyboardCoordinator coordinator_;
 };
 
 // Tests which verify that the virtual keyboard subsystem registers the `Discoverable`

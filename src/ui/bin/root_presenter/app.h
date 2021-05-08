@@ -182,7 +182,7 @@ class App : public fuchsia::ui::policy::Presenter,
   // Used to dispatch the focus change messages to interested downstream clients.
   std::unique_ptr<FocusDispatcher> focus_dispatcher_;
 
-  VirtualKeyboardCoordinator virtual_keyboard_coordinator_;
+  FidlBoundVirtualKeyboardCoordinator virtual_keyboard_coordinator_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };

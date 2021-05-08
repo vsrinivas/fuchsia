@@ -27,10 +27,22 @@ class VirtualKeyboardCoordinatorTest : public gtest::TestLoopFixture {
 };
 
 TEST_F(VirtualKeyboardCoordinatorTest, CtorDoesNotCrash) {
-  VirtualKeyboardCoordinator coordinator(context_provider()->context());
+  FidlBoundVirtualKeyboardCoordinator coordinator(context_provider()->context());
 }
 
 // For tests exercising `Create()`, see virtual_keyboard_fidl_test.cc.
+
+TEST_F(VirtualKeyboardCoordinatorTest, NotifyVisibilityChangeDoesNotCrash) {
+  FidlBoundVirtualKeyboardCoordinator coordinator(context_provider()->context());
+  coordinator.NotifyVisibilityChange(
+      false, fuchsia::input::virtualkeyboard::VisibilityChangeReason::USER_INTERACTION);
+}
+
+TEST_F(VirtualKeyboardCoordinatorTest, RequestTypeAndVisibilityDoesNotCrash) {
+  FidlBoundVirtualKeyboardCoordinator coordinator(context_provider()->context());
+  coordinator.RequestTypeAndVisibility(fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC,
+                                       true);
+}
 
 }  // namespace
 }  // namespace virtual_keyboard_coordinator

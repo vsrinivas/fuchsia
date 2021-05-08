@@ -36,7 +36,7 @@ class VirtualKeyboardControllerTest : public gtest::TestLoopFixture {
  private:
   sys::testing::ComponentContextProvider context_provider_;
   scenic::ViewRefPair view_ref_pair_;
-  VirtualKeyboardCoordinator coordinator_;
+  FidlBoundVirtualKeyboardCoordinator coordinator_;
 };
 
 TEST_F(VirtualKeyboardControllerTest, FirstWatchReturnsImmediately) {

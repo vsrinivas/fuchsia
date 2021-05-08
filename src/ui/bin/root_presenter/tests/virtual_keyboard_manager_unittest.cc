@@ -25,7 +25,7 @@ class VirtualKeyboardManagerTest : public gtest::TestLoopFixture {
 
  private:
   sys::testing::ComponentContextProvider context_provider_;
-  VirtualKeyboardCoordinator coordinator_;
+  FidlBoundVirtualKeyboardCoordinator coordinator_;
 };
 
 TEST_F(VirtualKeyboardManagerTest, CtorDoesNotCrash) {
