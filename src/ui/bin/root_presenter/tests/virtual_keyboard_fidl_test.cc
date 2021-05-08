@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/input/virtualkeyboard/cpp/fidl.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
@@ -12,6 +13,7 @@
 #include <gtest/gtest.h>
 #include <src/lib/testing/loop_fixture/test_loop_fixture.h>
 
+#include "src/ui/bin/root_presenter/virtual_keyboard_controller.h"
 #include "src/ui/bin/root_presenter/virtual_keyboard_coordinator.h"
 
 namespace root_presenter {
@@ -33,6 +35,22 @@ class VirtualKeyboardFidlTest : public gtest::TestLoopFixture {
     fuchsia::input::virtualkeyboard::ManagerPtr client;
     ConnectToPublicService(client.NewRequest());
     return client;
+  }
+
+  std::tuple<fuchsia::input::virtualkeyboard::ControllerPtr, fuchsia::ui::views::ViewRefControl>
+  CreateControllerClient() {
+    // Connect to `ControllerCreator` protocol.
+    fuchsia::input::virtualkeyboard::ControllerCreatorPtr controller_creator;
+    ConnectToPublicService(controller_creator.NewRequest());
+
+    // Create a `Controller`.
+    fuchsia::input::virtualkeyboard::ControllerPtr controller;
+    auto view_ref_pair = scenic::ViewRefPair::New();
+    controller_creator->Create(std::move(view_ref_pair.view_ref),
+                               fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC,
+                               controller.NewRequest());
+
+    return {std::move(controller), std::move(view_ref_pair.control_ref)};
   }
 
  private:
@@ -69,6 +87,68 @@ TEST_F(VirtualKeyboardFidlTest, RegistersManagerService) {
   ASSERT_EQ(ZX_OK, status) << "status = " << zx_status_get_string(status);
 }
 }  // namespace protocol_registration
+
+// Tests which validate how connections to `fuchsia.input.virtualkeyboard.Controller` are handled.
+namespace fuchsia_input_virtualkeyboard_controller_connections {
+TEST_F(VirtualKeyboardFidlTest, ClosingCreatorDoesNotCloseController) {
+  // Note: this test creates the controller manually (instead of using CreateControllerClient()),
+  // because this test
+  // a) wants to set an error handler on the ControllerCreator
+  // b) wants to be explicit about the lifetime of the ControllerCreator
+
+  // Connect to `ControllerCreator` protocol.
+  fuchsia::input::virtualkeyboard::ControllerCreatorPtr controller_creator;
+  ConnectToPublicService(controller_creator.NewRequest());
+
+  // Create controller.
+  zx_status_t controller_status = ZX_OK;
+  fuchsia::input::virtualkeyboard::ControllerPtr controller;
+  auto view_ref_pair1 = scenic::ViewRefPair::New();
+  controller_creator->Create(std::move(view_ref_pair1.view_ref),
+                             fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC,
+                             controller.NewRequest());
+  controller.set_error_handler(
+      [&controller_status](zx_status_t stat) { controller_status = stat; });
+  RunLoopUntilIdle();
+
+  // Close the `ControllerCreator` connection.
+  controller_creator.Unbind();
+  RunLoopUntilIdle();
+
+  // Call a method on the `Controller`, and verify no error occurred.
+  controller->RequestShow();
+  RunLoopUntilIdle();
+  ASSERT_EQ(ZX_OK, controller_status) << "status = " << zx_status_get_string(controller_status);
+}
+
+TEST_F(VirtualKeyboardFidlTest, LastControllerHasPriority) {
+  // Create first controller.
+  zx_status_t controller1_status = ZX_OK;
+  auto [controller1, view_ref_control1] = CreateControllerClient();
+  controller1.set_error_handler(
+      [&controller1_status](zx_status_t stat) { controller1_status = stat; });
+  RunLoopUntilIdle();
+
+  // Create second controller.
+  zx_status_t controller2_status = ZX_OK;
+  auto [controller2, view_ref_control2] = CreateControllerClient();
+  controller2.set_error_handler(
+      [&controller2_status](zx_status_t stat) { controller2_status = stat; });
+  RunLoopUntilIdle();
+
+  // Both clients try to call `RequestShow()`.
+  controller1->RequestShow();
+  controller2->RequestShow();
+
+  // The request to the first controller should fail, since we only support a single
+  // controller at a time, and the second controller replaces the first one.
+  //
+  // Note: we'll need to update this test when we add support for multiple
+  // simultaneous controllers.
+  ASSERT_NE(ZX_OK, controller1_status) << "status = " << zx_status_get_string(controller1_status);
+  ASSERT_EQ(ZX_OK, controller2_status) << "status = " << zx_status_get_string(controller2_status);
+}
+}  // namespace fuchsia_input_virtualkeyboard_controller_connections
 
 // Tests which validate how connections to `fuchsia.input.virtualkeyboard.Manager` are handled.
 namespace fuchsia_input_virtualkeyboard_manager_connections {

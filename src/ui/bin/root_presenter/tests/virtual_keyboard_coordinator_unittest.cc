@@ -30,6 +30,8 @@ TEST_F(VirtualKeyboardCoordinatorTest, CtorDoesNotCrash) {
   VirtualKeyboardCoordinator coordinator(context_provider()->context());
 }
 
+// For tests exercising `Create()`, see virtual_keyboard_fidl_test.cc.
+
 }  // namespace
 }  // namespace virtual_keyboard_coordinator
 }  // namespace root_presenter
