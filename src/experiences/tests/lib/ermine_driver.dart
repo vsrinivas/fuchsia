@@ -202,17 +202,7 @@ class ErmineDriver {
   }
 
   /// Launches a simple browser and returns a [FlutterDriver] connected to it.
-  ///
-  /// Opens another new tab as soon as the browser is launched, unless you set
-  /// [openNewTab] to false. Contrarily, set [fullscreen] to true if you want
-  /// the browser to expand its size to full-screen upon its launch.
-  /// Also, you can set the text entry emulation of the browser's flutter driver
-  /// using [enableTextEntryEmulation], which has false by default.
-  Future<FlutterDriver> launchAndWaitForSimpleBrowser({
-    bool openNewTab = true,
-    bool fullscreen = false,
-    bool enableTextEntryEmulation = false,
-  }) async {
+  Future<FlutterDriver> launchSimpleBrowser() async {
     expect(await launch(simpleBrowserUrl), isTrue);
 
     // Initializes the browser's flutter driver connector.
@@ -235,6 +225,23 @@ class ErmineDriver {
     if (browserDriver == null) {
       fail('unable to connect to simple browser.');
     }
+
+    return browserDriver;
+  }
+
+  /// Launches a simple browser and sets up options for test convenience.
+  ///
+  /// Opens another new tab as soon as the browser is launched, unless you set
+  /// [openNewTab] to false. Contrarily, set [fullscreen] to true if you want
+  /// the browser to expand its size to full-screen upon its launch.
+  /// Also, you can set the text entry emulation of the browser's flutter driver
+  /// using [enableTextEntryEmulation], which has false by default.
+  Future<FlutterDriver> launchAndWaitForSimpleBrowser({
+    bool openNewTab = true,
+    bool fullscreen = false,
+    bool enableTextEntryEmulation = false,
+  }) async {
+    final browserDriver = await launchSimpleBrowser();
 
     // Set the flutter driver's text entry emulation.
     await browserDriver.setTextEntryEmulation(
