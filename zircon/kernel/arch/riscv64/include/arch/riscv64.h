@@ -30,6 +30,7 @@
 
 #define RISCV64_CSR_SSTATUS_IE         (1u << 1)
 #define RISCV64_CSR_SSTATUS_PIE        (1u << 5)
+#define RISCV64_CSR_SSTATUS_PP         (1u << 8)
 #define RISCV64_CSR_SSTATUS_FS         (3u << 13)
 #define RISCV64_CSR_SSTATUS_FS_OFF     (0u)
 #define RISCV64_CSR_SSTATUS_FS_INITIAL (1u << 13)

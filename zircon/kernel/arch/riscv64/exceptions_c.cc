@@ -127,7 +127,7 @@ static void riscv64_page_fault_handler(long cause, struct iframe_t *frame) {
   uint pf_flags = VMM_PF_FLAG_NOT_PRESENT;
   pf_flags |= cause == RISCV64_EXCEPTION_STORE_PAGE_FAULT ? VMM_PF_FLAG_WRITE : 0;
   pf_flags |= cause == RISCV64_EXCEPTION_INS_PAGE_FAULT ? VMM_PF_FLAG_INSTRUCTION : 0;
-  pf_flags |= is_user_address(tval) ? VMM_PF_FLAG_USER : 0; // TODO: also check whether the privilege number matches!
+  pf_flags |= !(frame->status & RISCV64_CSR_SSTATUS_PP) ? VMM_PF_FLAG_USER : 0;
 
   zx_status_t pf_status = vmm_page_fault_handler(tval, pf_flags);
 
