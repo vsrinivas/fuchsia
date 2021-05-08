@@ -13,6 +13,7 @@ mod cipd;
 mod graphic_utils;
 mod images;
 mod portpicker;
+mod tools;
 mod types;
 pub mod vdl_files;
 mod vdl_proto_parser;

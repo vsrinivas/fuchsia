@@ -81,10 +81,11 @@ impl VDLFiles {
 
             Ok(vdl_files)
         } else {
+            let mut in_tree = InTreePaths { root_dir: None, build_dir: None };
             let mut vdl_files = VDLFiles {
-                image_files: ImageFiles::from_tree_env(&InTreePaths {})?,
-                host_tools: HostTools::from_tree_env(&InTreePaths {})?,
-                ssh_files: SSHKeys::from_tree_env(&InTreePaths {})?,
+                image_files: ImageFiles::from_tree_env(&mut in_tree)?,
+                host_tools: HostTools::from_tree_env(&mut in_tree)?,
+                ssh_files: SSHKeys::from_tree_env(&mut in_tree)?,
                 output_proto: staging_dir_path.join("vdl_proto"),
                 emulator_log: staging_dir_path.join("emu_log"),
                 staging_dir: staging_dir,
@@ -366,11 +367,11 @@ impl VDLFiles {
             .arg("--emulator_binary_path")
             .arg(&aemu)
             .arg("--pm_tool")
-            .arg(&self.host_tools.pm)
+            .arg(&self.host_tools.pm.as_ref().unwrap_or(&PathBuf::new()))
             .arg("--far_tool")
-            .arg(&self.host_tools.far)
+            .arg(&self.host_tools.far.as_ref().unwrap_or(&PathBuf::new()))
             .arg("--fvm_tool")
-            .arg(&self.host_tools.fvm)
+            .arg(&self.host_tools.fvm.as_ref().unwrap_or(&PathBuf::new()))
             .arg("--device_finder_tool")
             .arg(&self.host_tools.device_finder)
             .arg("--zbi_tool")

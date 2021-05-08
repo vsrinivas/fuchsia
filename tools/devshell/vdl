@@ -8,8 +8,6 @@ set -e
 DEVSHELL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 source "${DEVSHELL_DIR}"/lib/image_build_vars.sh || exit $?
 
-export HOST_OUT_DIR
-export FUCHSIA_ZBI_COMPRESSION
 
 function main {
   local build=false

@@ -268,8 +268,8 @@ mod test {
         }
       ]"#;
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_image_parse() -> Result<()> {
+    #[test]
+    fn test_image_parse() -> Result<()> {
         let images = Images::from_string(IMAGE_JSON)?;
         assert_eq!(
             images.find_path(vec!["storage-full", "storage-sparse"], "blk")?,

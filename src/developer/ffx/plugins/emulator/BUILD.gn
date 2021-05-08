@@ -16,6 +16,7 @@ ffx_plugin("ffx_emulator") {
     "src/images.rs",
     "src/lib.rs",
     "src/portpicker.rs",
+    "src/tools.rs",
     "src/types.rs",
     "src/vdl_files.rs",
     "src/vdl_proto_parser.rs",
