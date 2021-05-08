@@ -1,0 +1,111 @@
+# Copyright 2021 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("//build/testing/zbi_test.gni")
+import("//build/unification/global_variables.gni")
+import("//zircon/kernel/phys/zbi_executable.gni")
+
+group("boot-shim") {
+  deps = [
+    ":pic-1mb-boot-shim",
+    ":x86-1mb-boot-shim",
+  ]
+}
+
+# This is a shim between a legacy 1M ZBI boot loader and a modern
+# position-independent ZBI.  It's just the plain ZBI boot shim but
+# linked at the fixed 1M load address instead of linked at zero.  Like
+# that shim, it's simply a ZBI kernel item prepended to a bootable ZBI
+# to make the shimmed bootable ZBI--in this case, the 1M protocol ZBI.
+zbi_executable("x86-1mb-boot-shim") {
+  # The add, remove trick ensures these are removed, whether or not they're
+  # present in the default configs list.
+  configs += [ "//zircon/kernel/arch/x86/phys:load-1mb" ]
+  configs -= [ "//zircon/kernel/arch/x86/phys:load-1mb" ]
+  configs += [ "//zircon/kernel/phys:load-pic" ]
+  configs -= [ "//zircon/kernel/phys:load-pic" ]
+
+  # Now add the one we want.
+  configs += [ "//zircon/kernel/arch/x86/phys:load-1mb" ]
+
+  deps = [ "//zircon/kernel/phys/boot-shim:noop-boot-shim" ]
+}
+
+# This is the inverse shim: between a modern ZBI boot loader that
+# supports only the position-independent protocol, and a legacy ZBI
+# that must be loaded at the 1M fixed address.  It's also just a ZBI
+# kernel item prepended to a bootable ZBI to make the shimmed bootable
+# ZBI--in this case, the position-independent protocol ZBI.
+zbi_executable("pic-1mb-boot-shim") {
+  # The add, remove trick ensures these are removed, whether or not they're
+  # present in the default configs list.
+  configs += [ "//zircon/kernel/arch/x86/phys:load-1mb" ]
+  configs -= [ "//zircon/kernel/arch/x86/phys:load-1mb" ]
+  configs += [ "//zircon/kernel/phys:load-pic" ]
+  configs -= [ "//zircon/kernel/phys:load-pic" ]
+
+  # Now add the one we want.
+  configs += [ "//zircon/kernel/phys:load-pic" ]
+
+  sources = [ "pic-1mb-shim.cc" ]
+  deps = [
+    ":trampoline-boot",
+    "//zircon/kernel/phys:main",
+    "//zircon/kernel/phys:symbolize",
+    "//zircon/kernel/phys:zbi-memory",
+    "//zircon/kernel/phys/lib/memalloc",
+    "//zircon/system/ulib/zbitl",
+  ]
+}
+
+if (toolchain.environment == "kernel.phys" ||
+    toolchain.environment == "kernel.phys32") {
+  source_set("trampoline-boot") {
+    visibility = [ ":*" ]
+    sources = [ "trampoline-boot.cc" ]
+    public = [ "trampoline-boot.h" ]
+    public_deps = [ "//zircon/kernel/phys:boot-zbi" ]
+    deps = [ "//zircon/kernel/lib/arch" ]
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":x86-boot-shim-tests" ]
+}
+
+zbi_executable("phys-1mb-hello-world") {
+  testonly = true
+
+  # The add, remove trick ensures these are removed, whether or not they're
+  # present in the default configs list.
+  configs += [ "//zircon/kernel/arch/x86/phys:load-1mb" ]
+  configs -= [ "//zircon/kernel/arch/x86/phys:load-1mb" ]
+  configs += [ "//zircon/kernel/phys:load-pic" ]
+  configs -= [ "//zircon/kernel/phys:load-pic" ]
+
+  # Now add the one we want.
+  configs += [ "//zircon/kernel/arch/x86/phys:load-1mb" ]
+
+  deps = [
+    "//zircon/kernel/phys/test:hello-world-test.source",
+    "//zircon/kernel/phys/test:zbi-test-main",
+  ]
+}
+
+zbi_test("x86-boot-shim-tests") {
+  # The order matters here!
+  deps = [
+    # First, the 1M shim: boot loaders in use today support the 1M protocol.
+    ":x86-1mb-boot-shim",
+
+    # Second, the 1M->PIC shim hands off to the PIC->1M shim.
+    ":pic-1mb-boot-shim",
+
+    # Finally, the PIC->1M shim hands off to the 1M test program.
+    ":phys-1mb-hello-world",
+  ]
+}

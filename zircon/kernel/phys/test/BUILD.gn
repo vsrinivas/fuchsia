@@ -187,6 +187,11 @@ if (current_toolchain != default_toolchain) {
   }
 
   common_test("hello-world-test") {
+    deps = [ ":hello-world-test.source" ]
+  }
+
+  source_set("hello-world-test.source") {
+    testonly = true
     sources = [ "hello-world-test.cc" ]
     deps = [
       ":test-main",

@@ -121,7 +121,7 @@ fitx::result<BootZbi::Error> BootZbi::Load(uint32_t extra_data_capacity) {
   auto it = kernel_item_;
   ++it;
 
-  // Create() has identified the kernel item in the input ZBI.  We now have an
+  // Init() has identified the kernel item in the input ZBI.  We now have an
   // image in memory and know what its pieces are:
   //
   //  zbi_.storage().data() -> offset 0: zbi_header_t (ZBI_TYPE_CONTAINER)
@@ -192,7 +192,7 @@ fitx::result<BootZbi::Error> BootZbi::Load(uint32_t extra_data_capacity) {
   // In a proper bootable ZBI in its original state, the kernel item must be
   // the first item so kernel_item_.item_offset() is 32 (sizeof(zbi_header_t)).
   // However, this code supports uses in boot shims that had other fish to fry
-  // first and so Create() allowed any number of ZBI_TYPE_DISCARD items at the
+  // first and so Init() allowed any number of ZBI_TYPE_DISCARD items at the
   // start before kernel_item_.  In that case kernel_ now points 32 bytes back
   // into the ~~~ discard area.  When there are no discard items, then kernel_
   // now points directly at the start of the container; if this is already
@@ -233,7 +233,7 @@ fitx::result<BootZbi::Error> BootZbi::Load(uint32_t extra_data_capacity) {
   }
 
   // There must be a container header for the data ZBI even if it's empty.
-  uint32_t data_required_size = sizeof(zbi_header_t) + data_load_size + extra_data_capacity;
+  const uint32_t data_required_size = sizeof(zbi_header_t) + data_load_size + extra_data_capacity;
 
   // The incoming space can be reused for the data ZBI if either the tail is
   // already exactly aligned to leave space for a header with correct
@@ -260,8 +260,8 @@ fitx::result<BootZbi::Error> BootZbi::Load(uint32_t extra_data_capacity) {
 
   // If we can reuse either the kernel image or the data ZBI items in place,
   // choose whichever makes for less copying.
-  if (data_.storage().size() >= data_required_size && KernelCanLoadInPlace() &&
-      KernelLoadSize() < data_load_size) {
+  if (input_address + input_capacity - data_address < data_required_size ||
+      (KernelCanLoadInPlace() && KernelLoadSize() < data_load_size)) {
     data_.storage() = {};
   }
 
@@ -319,6 +319,8 @@ fitx::result<BootZbi::Error> BootZbi::Load(uint32_t extra_data_capacity) {
     });
   }
 
+  ZX_ASSERT(data_.storage().size() >= data_required_size);
+  ZX_ASSERT(data_.storage().size() - data_.size_bytes() >= extra_data_capacity);
   return fitx::ok();
 }
 

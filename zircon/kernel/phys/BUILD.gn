@@ -255,9 +255,9 @@ if (toolchain.environment == "kernel.phys" ||
   source_set("boot-zbi") {
     public = [ "include/phys/boot-zbi.h" ]
     sources = [ "boot-zbi.cc" ]
-    deps = [ "//zircon/kernel/lib/arch" ]
     public_deps = [
       ":allocation",
+      "//zircon/kernel/lib/arch",
       "//zircon/kernel/lib/ktl",
       "//zircon/kernel/lib/libc",
       "//zircon/system/ulib/zbitl",

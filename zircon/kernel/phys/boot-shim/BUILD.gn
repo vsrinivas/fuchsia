@@ -8,8 +8,9 @@ import("//build/testing/zbi_test.gni")
 import("//zircon/kernel/phys/zbi_executable.gni")
 
 group("boot-shim") {
-  if (current_cpu != "x64") {
-    deps = [ ":zbi-boot-shim" ]
+  deps = [ ":zbi-boot-shim" ]
+  if (current_cpu == "x64") {
+    deps += [ "//zircon/kernel/arch/x86/phys/boot-shim" ]
   }
 }
 
@@ -35,9 +36,15 @@ if (toolchain.environment == "kernel.phys") {
 group("tests") {
   testonly = true
 
+  deps = []
+
+  if (current_cpu == "x64") {
+    deps += [ "//zircon/kernel/arch/x86/phys/boot-shim:tests" ]
+  }
+
   # TODO(mcgrathr): not compatible with legacy fixed-address ZBI booting
   if (current_cpu != "x64") {
-    deps = [
+    deps += [
       ":zbi-boot-shim-core-tests",
       ":zbi-boot-shim-phys-unittests",
     ]
