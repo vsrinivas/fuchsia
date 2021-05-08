@@ -37,6 +37,13 @@ class ConstValue;
 // tell which were set), then call Decode().
 class DwarfDieDecoder {
  public:
+  // Callback for handling form values. This takes the unit in addition to the form value.
+  // llvm::DWARFFormValue::getUnit() exists but this won't always be set (depending on the decode
+  // path, currently the implicit constant path ignores it) and there's currently no API to set it
+  // explicitly. As a result, if the unit is needed, always use the passed-in parameter rather than
+  // getUnit().
+  using AttributeHandler = fit::function<void(llvm::DWARFUnit*, const llvm::DWARFFormValue&)>;
+
   // DW_AT_high_pc is special: If it is of class "address", it's an address, and if it's of class
   // "constant" it's an unsigned integer offset from the low PC. This struct encodes whether it was
   // a constant or not in the output. Use with AddHighPC().
@@ -107,16 +114,14 @@ class DwarfDieDecoder {
   // Extracts data with a custom callback. When the attribute is encountered, the callback is
   // executed with the associated form value. This can be used to cover attributes that could be
   // encoded using multiple different encodings.
-  void AddCustom(llvm::dwarf::Attribute attribute,
-                 fit::function<void(const llvm::DWARFFormValue&)> callback);
+  void AddCustom(llvm::dwarf::Attribute attribute, AttributeHandler callback);
 
   // Decode one info entry. Returns true on success, false means the DIE was corrupt. The outputs
   // for each encountered attribute will be set.
   bool Decode(const llvm::DWARFDie& die);
 
  public:
-  using Dispatch =
-      std::pair<llvm::dwarf::Attribute, fit::function<void(const llvm::DWARFFormValue&)>>;
+  using Dispatch = std::pair<llvm::dwarf::Attribute, AttributeHandler>;
 
   // Backend for Decode() above.
   //
@@ -127,7 +132,7 @@ class DwarfDieDecoder {
   bool DecodeInternal(const llvm::DWARFDie& die, int abstract_origin_refs_to_follow);
 
   // Decodes a cross-DIE reference. Return value will be !isValid() on failure.
-  llvm::DWARFDie DecodeReference(const llvm::DWARFFormValue& form);
+  llvm::DWARFDie DecodeReference(llvm::DWARFUnit* unit, const llvm::DWARFFormValue& form);
 
   llvm::DWARFContext* context_;
 

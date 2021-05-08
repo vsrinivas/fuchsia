@@ -250,8 +250,8 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(const llvm::DWARFDie& die
 
   VariableLocation frame_base;
   decoder.AddCustom(llvm::dwarf::DW_AT_frame_base,
-                    [unit = die.getDwarfUnit(), &frame_base,
-                     source = MakeUncachedLazy(die)](const llvm::DWARFFormValue& value) {
+                    [&frame_base, source = MakeUncachedLazy(die)](
+                        llvm::DWARFUnit* unit, const llvm::DWARFFormValue& value) {
                       frame_base = DecodeVariableLocation(unit, value, source);
                     });
 
@@ -623,20 +623,21 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeEnum(const llvm::DWARFDie& die) {
   // This could be enhanced by using ConstValues directly. See the enumeration header file for more.
   llvm::Optional<uint64_t> enumerator_value;
   bool is_signed = false;
-  enumerator_decoder.AddCustom(llvm::dwarf::DW_AT_const_value,
-                               [&enumerator_value, &is_signed](const llvm::DWARFFormValue& value) {
-                                 if (value.getForm() == llvm::dwarf::DW_FORM_udata) {
-                                   enumerator_value = value.getAsUnsignedConstant();
-                                 } else if (value.getForm() == llvm::dwarf::DW_FORM_sdata) {
-                                   // Cast signed values to unsigned.
-                                   if (auto signed_value = value.getAsSignedConstant()) {
-                                     is_signed = true;
-                                     enumerator_value = static_cast<uint64_t>(*signed_value);
-                                   }
-                                   // Else case is corrupted symbols or an unsupported format, just
-                                   // ignore this one.
-                                 }
-                               });
+  enumerator_decoder.AddCustom(
+      llvm::dwarf::DW_AT_const_value,
+      [&enumerator_value, &is_signed](llvm::DWARFUnit*, const llvm::DWARFFormValue& value) {
+        if (value.getForm() == llvm::dwarf::DW_FORM_udata) {
+          enumerator_value = value.getAsUnsignedConstant();
+        } else if (value.getForm() == llvm::dwarf::DW_FORM_sdata) {
+          // Cast signed values to unsigned.
+          if (auto signed_value = value.getAsSignedConstant()) {
+            is_signed = true;
+            enumerator_value = static_cast<uint64_t>(*signed_value);
+          }
+          // Else case is corrupted symbols or an unsupported format, just
+          // ignore this one.
+        }
+      });
 
   if (!main_decoder.Decode(die))
     return fxl::MakeRefCounted<Symbol>();
@@ -729,8 +730,8 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeInheritedFrom(const llvm::DWARFDie
   llvm::Optional<uint64_t> member_offset;
   std::vector<uint8_t> offset_expression;
   decoder.AddCustom(llvm::dwarf::DW_AT_data_member_location,
-                    [unit = die.getDwarfUnit(), &member_offset,
-                     &offset_expression](const llvm::DWARFFormValue& form) {
+                    [&member_offset, &offset_expression](llvm::DWARFUnit* unit,
+                                                         const llvm::DWARFFormValue& form) {
                       if (form.isFormClass(llvm::DWARFFormValue::FC_Exprloc)) {
                         // Location expression.
                         llvm::ArrayRef<uint8_t> block = *form.getAsBlock();
@@ -913,8 +914,8 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeVariable(const llvm::DWARFDie& die
 
   VariableLocation location;
   decoder.AddCustom(llvm::dwarf::DW_AT_location,
-                    [unit = die.getDwarfUnit(), &location,
-                     source = MakeUncachedLazy(die)](const llvm::DWARFFormValue& value) {
+                    [&location, source = MakeUncachedLazy(die)](llvm::DWARFUnit* unit,
+                                                                const llvm::DWARFFormValue& value) {
                       location = DecodeVariableLocation(unit, value, source);
                     });
 

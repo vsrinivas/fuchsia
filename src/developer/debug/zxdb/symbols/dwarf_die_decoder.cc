@@ -26,77 +26,81 @@ DwarfDieDecoder::DwarfDieDecoder(llvm::DWARFContext* context) : context_(context
 DwarfDieDecoder::~DwarfDieDecoder() = default;
 
 void DwarfDieDecoder::AddPresenceCheck(llvm::dwarf::Attribute attribute, bool* present) {
-  attrs_.emplace_back(attribute, [present](const llvm::DWARFFormValue&) { *present = true; });
+  attrs_.emplace_back(
+      attribute, [present](llvm::DWARFUnit*, const llvm::DWARFFormValue&) { *present = true; });
 }
 
 void DwarfDieDecoder::AddBool(llvm::dwarf::Attribute attribute, llvm::Optional<bool>* output) {
-  attrs_.emplace_back(attribute, [output](const llvm::DWARFFormValue& form) {
+  attrs_.emplace_back(attribute, [output](llvm::DWARFUnit*, const llvm::DWARFFormValue& form) {
     *output = !!form.getAsUnsignedConstant();
   });
 }
 
 void DwarfDieDecoder::AddUnsignedConstant(llvm::dwarf::Attribute attribute,
                                           llvm::Optional<uint64_t>* output) {
-  attrs_.emplace_back(attribute, [output](const llvm::DWARFFormValue& form) {
+  attrs_.emplace_back(attribute, [output](llvm::DWARFUnit*, const llvm::DWARFFormValue& form) {
     *output = form.getAsUnsignedConstant();
   });
 }
 
 void DwarfDieDecoder::AddSignedConstant(llvm::dwarf::Attribute attribute,
                                         llvm::Optional<int64_t>* output) {
-  attrs_.emplace_back(attribute, [output](const llvm::DWARFFormValue& form) {
+  attrs_.emplace_back(attribute, [output](llvm::DWARFUnit*, const llvm::DWARFFormValue& form) {
     *output = form.getAsSignedConstant();
   });
 }
 
 void DwarfDieDecoder::AddAddress(llvm::dwarf::Attribute attribute,
                                  llvm::Optional<uint64_t>* output) {
-  attrs_.emplace_back(
-      attribute, [output](const llvm::DWARFFormValue& form) { *output = form.getAsAddress(); });
+  attrs_.emplace_back(attribute, [output](llvm::DWARFUnit*, const llvm::DWARFFormValue& form) {
+    *output = form.getAsAddress();
+  });
 }
 
 void DwarfDieDecoder::AddHighPC(llvm::Optional<HighPC>* output) {
-  attrs_.emplace_back(llvm::dwarf::DW_AT_high_pc, [output](const llvm::DWARFFormValue& form) {
-    if (form.isFormClass(llvm::DWARFFormValue::FC_Constant)) {
-      auto as_constant = form.getAsUnsignedConstant();
-      if (as_constant)
-        *output = HighPC(true, *as_constant);
-    } else if (form.isFormClass(llvm::DWARFFormValue::FC_Address)) {
-      auto as_addr = form.getAsAddress();
-      if (as_addr)
-        *output = HighPC(false, *as_addr);
-    }
-  });
+  attrs_.emplace_back(llvm::dwarf::DW_AT_high_pc,
+                      [output](llvm::DWARFUnit*, const llvm::DWARFFormValue& form) {
+                        if (form.isFormClass(llvm::DWARFFormValue::FC_Constant)) {
+                          auto as_constant = form.getAsUnsignedConstant();
+                          if (as_constant)
+                            *output = HighPC(true, *as_constant);
+                        } else if (form.isFormClass(llvm::DWARFFormValue::FC_Address)) {
+                          auto as_addr = form.getAsAddress();
+                          if (as_addr)
+                            *output = HighPC(false, *as_addr);
+                        }
+                      });
 }
 
 void DwarfDieDecoder::AddCString(llvm::dwarf::Attribute attribute,
                                  llvm::Optional<const char*>* output) {
-  attrs_.emplace_back(
-      attribute, [output](const llvm::DWARFFormValue& form) { *output = form.getAsCString(); });
+  attrs_.emplace_back(attribute, [output](llvm::DWARFUnit*, const llvm::DWARFFormValue& form) {
+    *output = form.getAsCString();
+  });
 }
 
 void DwarfDieDecoder::AddLineTableFile(llvm::dwarf::Attribute attribute,
                                        llvm::Optional<std::string>* output) {
-  attrs_.emplace_back(attribute, [this, output](const llvm::DWARFFormValue& form) {
-    const llvm::DWARFDebugLine::LineTable* line_table =
-        context_->getLineTableForUnit(const_cast<llvm::DWARFUnit*>(form.getUnit()));
-    if (!line_table)
-      return;
+  attrs_.emplace_back(
+      attribute, [this, output](llvm::DWARFUnit* unit, const llvm::DWARFFormValue& form) {
+        const llvm::DWARFDebugLine::LineTable* line_table = context_->getLineTableForUnit(unit);
+        if (!line_table)
+          return;
 
-    output->emplace();
-    // Pass "" for the compilation directory so it doesn't rebase the file name. Our output
-    // file names are always relative to the build (compilation) dir.
-    line_table->getFileNameByIndex(form.getAsUnsignedConstant().getValue(), "",
-                                   llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
-                                   output->getValue());
-    output->getValue() = NormalizePath(output->getValue());
-  });
+        output->emplace();
+        // Pass "" for the compilation directory so it doesn't rebase the file name. Our output
+        // file names are always relative to the build (compilation) dir.
+        line_table->getFileNameByIndex(
+            form.getAsUnsignedConstant().getValue(), "",
+            llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath, output->getValue());
+        output->getValue() = NormalizePath(output->getValue());
+      });
 }
 
 void DwarfDieDecoder::AddConstValue(llvm::dwarf::Attribute attribute, ConstValue* output) {
   // The ConstValue already holds an "unset" state so we don't need an optional. Assume it's already
   // in the unset state when adding.
-  attrs_.emplace_back(attribute, [output](const llvm::DWARFFormValue& form) {
+  attrs_.emplace_back(attribute, [output](llvm::DWARFUnit*, const llvm::DWARFFormValue& form) {
     if (form.getForm() == llvm::dwarf::DW_FORM_udata) {
       if (auto opt_unsigned = form.getAsUnsignedConstant()) {
         *output = ConstValue(*opt_unsigned);
@@ -121,7 +125,7 @@ void DwarfDieDecoder::AddSectionOffset(llvm::dwarf::Attribute attribute,
                                        llvm::Optional<uint64_t>* offset) {
   // The returned section offset will be the raw value. The caller will have to look up the
   // address of the elf section it references and interpret it accordingly.
-  attrs_.emplace_back(attribute, [offset](const llvm::DWARFFormValue& form) {
+  attrs_.emplace_back(attribute, [offset](llvm::DWARFUnit*, const llvm::DWARFFormValue& form) {
     // The getAsSectionOffset() call will return "None" if the form class doesn't match, so we don't
     // need to check also.
     *offset = form.getAsSectionOffset();
@@ -129,32 +133,33 @@ void DwarfDieDecoder::AddSectionOffset(llvm::dwarf::Attribute attribute,
 }
 
 void DwarfDieDecoder::AddReference(llvm::dwarf::Attribute attribute, llvm::DWARFDie* output) {
-  attrs_.emplace_back(attribute, [this, output](const llvm::DWARFFormValue& form) {
-    *output = DecodeReference(form);
-  });
+  attrs_.emplace_back(attribute,
+                      [this, output](llvm::DWARFUnit* unit, const llvm::DWARFFormValue& form) {
+                        *output = DecodeReference(unit, form);
+                      });
 }
 
 void DwarfDieDecoder::AddFile(llvm::dwarf::Attribute attribute,
                               llvm::Optional<std::string>* output) {
-  attrs_.emplace_back(attribute, [this, output](const llvm::DWARFFormValue& form) {
-    llvm::Optional<uint64_t> file_index = form.getAsUnsignedConstant();
-    if (!file_index)
-      return;
+  attrs_.emplace_back(
+      attribute, [this, output](llvm::DWARFUnit* unit, const llvm::DWARFFormValue& form) {
+        llvm::Optional<uint64_t> file_index = form.getAsUnsignedConstant();
+        if (!file_index)
+          return;
 
-    const llvm::DWARFDebugLine::LineTable* line_table =
-        context_->getLineTableForUnit(const_cast<llvm::DWARFUnit*>(form.getUnit()));
-    if (!line_table)
-      return;
+        const llvm::DWARFDebugLine::LineTable* line_table = context_->getLineTableForUnit(unit);
+        if (!line_table)
+          return;
 
-    // Pass "" for the compilation directory so it doesn't rebase the file name. Our output file
-    // names are always relative to the build (compilation) dir.
-    std::string file_name;
-    if (line_table->getFileNameByIndex(
-            *file_index, "", llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
-            file_name)) {
-      *output = NormalizePath(file_name);
-    }
-  });
+        // Pass "" for the compilation directory so it doesn't rebase the file name. Our output file
+        // names are always relative to the build (compilation) dir.
+        std::string file_name;
+        if (line_table->getFileNameByIndex(
+                *file_index, "", llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
+                file_name)) {
+          *output = NormalizePath(file_name);
+        }
+      });
 }
 
 void DwarfDieDecoder::AddAbstractParent(llvm::DWARFDie* output) {
@@ -162,8 +167,7 @@ void DwarfDieDecoder::AddAbstractParent(llvm::DWARFDie* output) {
   abstract_parent_ = output;
 }
 
-void DwarfDieDecoder::AddCustom(llvm::dwarf::Attribute attribute,
-                                fit::function<void(const llvm::DWARFFormValue&)> callback) {
+void DwarfDieDecoder::AddCustom(llvm::dwarf::Attribute attribute, AttributeHandler callback) {
   attrs_.emplace_back(attribute, std::move(callback));
 }
 
@@ -220,7 +224,7 @@ bool DwarfDieDecoder::DecodeInternal(const llvm::DWARFDie& die,
       // check for duplicate attributes in this case so we can follow more than
       // one link in the chain.
       form_value.extractValue(extractor, &offset, unit->getFormParams(), unit);
-      abstract_origin = DecodeReference(form_value);
+      abstract_origin = DecodeReference(unit, form_value);
       decoded_current = true;
     } else {
       // Track attributes that we've already seen and don't decode duplicates
@@ -243,10 +247,18 @@ bool DwarfDieDecoder::DecodeInternal(const llvm::DWARFDie& die,
 
         // Found the attribute, dispatch it and mark it read.
         if (!decoded_current) {
-          form_value.extractValue(extractor, &offset, unit->getFormParams(), unit);
+          if (spec.isImplicitConst()) {
+            // In the "implicit const" form, the value is stored in the abbreviation declaration
+            // which is not passed in to the DWARFFormValue constructor or its extractValue()
+            // member. So this form has to be specially decoded.
+            form_value =
+                llvm::DWARFFormValue::createFromSValue(spec.Form, spec.getImplicitConstValue());
+          } else {
+            form_value.extractValue(extractor, &offset, unit->getFormParams(), unit);
+          }
           decoded_current = true;
         }
-        dispatch.second(form_value);
+        dispatch.second(unit, form_value);
         break;
       }
     }
@@ -271,7 +283,8 @@ bool DwarfDieDecoder::DecodeInternal(const llvm::DWARFDie& die,
   return true;
 }
 
-llvm::DWARFDie DwarfDieDecoder::DecodeReference(const llvm::DWARFFormValue& form) {
+llvm::DWARFDie DwarfDieDecoder::DecodeReference(llvm::DWARFUnit* unit,
+                                                const llvm::DWARFFormValue& form) {
   switch (form.getForm()) {
     case llvm::dwarf::DW_FORM_ref1:
     case llvm::dwarf::DW_FORM_ref2:
@@ -281,10 +294,8 @@ llvm::DWARFDie DwarfDieDecoder::DecodeReference(const llvm::DWARFFormValue& form
       // A DWARF "form" is the way a value is encoded in the file. These
       // are all relative location of DIEs within the same unit.
       auto ref_value = form.getAsReferenceUVal();
-      if (ref_value) {
-        llvm::DWARFUnit* unit = const_cast<llvm::DWARFUnit*>(form.getUnit());
+      if (ref_value)
         return unit->getDIEForOffset(unit->getOffset() + *ref_value);
-      }
       break;
     }
     case llvm::dwarf::DW_FORM_ref_addr: {
