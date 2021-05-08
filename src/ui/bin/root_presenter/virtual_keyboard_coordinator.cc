@@ -12,7 +12,8 @@
 
 namespace root_presenter {
 
-VirtualKeyboardCoordinator::VirtualKeyboardCoordinator(sys::ComponentContext* component_context) {
+VirtualKeyboardCoordinator::VirtualKeyboardCoordinator(sys::ComponentContext* component_context)
+    : manager_(component_context) {
   FX_DCHECK(component_context);
   component_context->outgoing()->AddPublicService(creator_bindings_.GetHandler(this));
 }

@@ -13,17 +13,20 @@
 
 #include <memory>
 
+#include "src/ui/bin/root_presenter/virtual_keyboard_manager.h"
+
 namespace root_presenter {
 
 // Coordinates all activities for a single virtual keyboard.
 //
 // This includes:
 // * Publishing the `fuchsia.input.virtualkeyboard.ControllerCreator` FIDL
-//   protocol.
-// * Binding `VirtualKeyboardController`s to the virtual keyboard.
+//   protocol, and binding `VirtualKeyboardController`s to the virtual keyboard.
+// * Publishing the `fuchsia.input.virtualkeyboard.Manager` FIDL protocol, and
+//   binding a `VirtualKeyboardManager` to the virtual keyboard.
 class VirtualKeyboardCoordinator : public fuchsia::input::virtualkeyboard::ControllerCreator {
  public:
-  // Constructs a VirtualKeyboardCoordinator, and publishes the relevant FIDL
+  // Constructs a VirtualKeyboardCoordinator, and publishes the relevant FIDLs
   // using `component_context`.
   //
   // Callers _should_ construct this object before entering the event loop.
@@ -42,6 +45,8 @@ class VirtualKeyboardCoordinator : public fuchsia::input::virtualkeyboard::Contr
 
   fidl::BindingSet<fuchsia::input::virtualkeyboard::ControllerCreator> creator_bindings_;
   std::unique_ptr<ControllerBinding> controller_binding_;
+
+  VirtualKeyboardManager manager_;
 };
 
 }  // namespace root_presenter

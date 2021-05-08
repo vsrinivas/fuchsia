@@ -183,7 +183,6 @@ class App : public fuchsia::ui::policy::Presenter,
   std::unique_ptr<FocusDispatcher> focus_dispatcher_;
 
   VirtualKeyboardCoordinator virtual_keyboard_coordinator_;
-  VirtualKeyboardManager virtual_keyboard_manager_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };
