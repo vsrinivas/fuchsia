@@ -771,19 +771,19 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/0c3d6e5fa10fcac9ca63df7d3fb68ef7f7bd5f3c/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/d9bc7cf06aef74e928f9afc3dee33b60121b9c73/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_http_transport_impl
 
 **Current value (from the default):** `"libcurl"`
 
-From [//third_party/crashpad/util/net/tls.gni:21](https://chromium.googlesource.com/crashpad/crashpad/+/0c3d6e5fa10fcac9ca63df7d3fb68ef7f7bd5f3c/util/net/tls.gni#21)
+From [//third_party/crashpad/util/net/tls.gni:21](https://chromium.googlesource.com/crashpad/crashpad/+/d9bc7cf06aef74e928f9afc3dee33b60121b9c73/util/net/tls.gni#21)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/0c3d6e5fa10fcac9ca63df7d3fb68ef7f7bd5f3c/util/net/tls.gni#30)
+From [//third_party/crashpad/util/net/tls.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/d9bc7cf06aef74e928f9afc3dee33b60121b9c73/util/net/tls.gni#30)
 
 ### current_cpu
 
@@ -2175,13 +2175,13 @@ From //build/images/fvm.gni:64
 
 **Current value (from the default):** `false`
 
-From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:31](https://chromium.googlesource.com/crashpad/crashpad/+/0c3d6e5fa10fcac9ca63df7d3fb68ef7f7bd5f3c/third_party/mini_chromium/mini_chromium/build/platform.gni#31)
+From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:31](https://chromium.googlesource.com/crashpad/crashpad/+/d9bc7cf06aef74e928f9afc3dee33b60121b9c73/third_party/mini_chromium/mini_chromium/build/platform.gni#31)
 
 ### mini_chromium_is_chromeos_lacros
 
 **Current value (from the default):** `false`
 
-From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/0c3d6e5fa10fcac9ca63df7d3fb68ef7f7bd5f3c/third_party/mini_chromium/mini_chromium/build/platform.gni#30)
+From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/d9bc7cf06aef74e928f9afc3dee33b60121b9c73/third_party/mini_chromium/mini_chromium/build/platform.gni#30)
 
 ### msd_arm_enable_all_cores
 Enable all 8 cores, which is faster but emits more heat.
@@ -3036,7 +3036,7 @@ toolchain, so that recompilations with the new compiler can be triggered.
 When using the prebuilt, this is ignored and the CIPD instance ID of the
 prebuilt is used.
 
-**Current value (from the default):** `"8HYUPLBQS_Odv6Q7gCroGEelRYTxK94IuJh03o8bggIC"`
+**Current value (from the default):** `"p02bf1j30gGAbq7fnn_Zg8v4YlyOtJe9UPobJa8PfE4C"`
 
 From //build/rust/config.gni:32
 
