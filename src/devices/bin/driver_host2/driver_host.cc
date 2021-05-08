@@ -216,7 +216,7 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
       LOGF(INFO, "Started '%s'", binary.data());
 
       auto unbind_callback = [this](Driver* driver, fidl::UnbindInfo info, auto) {
-        if (!info.ok()) {
+        if (!info.ok() && info.reason() != fidl::Reason::kPeerClosed) {
           LOGF(WARNING, "Unexpected stop of driver '/pkg/%s': %s", driver->binary().data(),
                info.error_message());
         }
