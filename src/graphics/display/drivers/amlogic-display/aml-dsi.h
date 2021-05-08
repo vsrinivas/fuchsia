@@ -94,48 +94,48 @@
 #define LPCMD_PKT_SIZE (4)
 
 // The following values are based on MIPI D-PHY Spec Version 2.1 Table 14. The
-// values defined are recommended values coming from AmLogic
+// values defined are recommended values coming from AmLogic.
 
 // x100 multiplier to ensure proper ui value
 #define UI_X_100 (100)
 // Time that the transmitter continues to send HS clock after the last associated Data Lane
 // has transitioned to LP Mode. Interval is defined as the period from the end of HS-Trail
 // to the beginning of CLK-TRAIL (>60+52*ui)
-#define DPHY_TIME_CLK_POST(ui) (2 * (60 * UI_X_100 + 52 * ui))
+#define DPHY_TIME_CLK_POST(ui) (DPHY_TIME_CLK_TRAIL + 52 * (ui) + 10 * UI_X_100)
 
 // Time that the HS clock shall be driven by the transmitter prior to any associated Data Lane
 // beginning the transition from LP to HS mode.  (>8*ui)
-#define DPHY_TIME_CLK_PRE(ui) (10 * ui)
+#define DPHY_TIME_CLK_PRE(ui) (10 * (ui))
 
 // Time that the transmitter drives the Clock Lane LP-00 Line state immediately
 // before the HS-0 Line state starting the HS transmission (38, 95)
-#define DPHY_TIME_CLK_PREPARE (50 * UI_X_100)
+#define DPHY_TIME_CLK_PREPARE (6650)  // (((38+95)/2) * UI_X_100)
 
 // Time that the transmitter drives the HS-0 state after the last payload clock bit of a
-// HS transmission burst  (>60ns)
-#define DPHY_TIME_CLK_TRAIL (70 * UI_X_100)
+// HS transmission burst  (>=60ns)
+#define DPHY_TIME_CLK_TRAIL (60 * UI_X_100)
 
 // CLK-PREPARE + time the transmitter drives the HS-0 state prior to starting the Clock (> 300)
-#define DPHY_TIME_CLK_ZERO(ui) (320 * UI_X_100 - DPHY_TIME_CLK_PREPARE)
+#define DPHY_TIME_CLK_ZERO(ui) (300 * UI_X_100 - DPHY_TIME_CLK_PREPARE + 10 * UI_X_100)
 
 // Transmitted time internal from the start of HS-TRAIL or CLK-TRAIL to start of
 // LP-11 state following a HS burst
-#define DPHY_TIME_EOT(ui) (105 * UI_X_100 + 12 * ui)
+#define DPHY_TIME_EOT(ui) (105 * UI_X_100 + 12 * (ui))
 
 // Time that the transmitter drives the LP-11 following a HS burst (>100ns)
-#define DPHY_TIME_HS_EXIT (110 * UI_X_100)
+#define DPHY_TIME_HS_EXIT (100 * UI_X_100)
 
 // Time that the transmitter drives the Data Lane LP-00 Line state immediately
 // before the HS-0 Line state starting the HS transmission (40+4*ui, 85+6*ui)
-#define DPHY_TIME_HS_PREPARE(ui) (50 * UI_X_100 + 4 * ui)
+#define DPHY_TIME_HS_PREPARE(ui) (((40+85) * UI_X_100 + (4+6)*(ui)) / 2)
 
 // HS_PREPARE + time that the transmitter drives the HS-0 state prior to transmitting
 // the Sync sequence  (>145+10*ui)
-#define DPHY_TIME_HS_ZERO(ui) (160 * UI_X_100 + 10 * ui - DPHY_TIME_HS_PREPARE(ui))
+#define DPHY_TIME_HS_ZERO(ui) (145 * UI_X_100 + 10 * (ui) - DPHY_TIME_HS_PREPARE(ui))
 
 // Time that the transmitter drives the flipped differential state after last
 // payload data bit of a HS transmission burst  max(n*8*ui, 60+n*4*ui) <n = 1>
-#define DPHY_TIME_HS_TRAIL(ui) (std::max((8 * ui), (60 * UI_X_100 + 4 * ui)))
+#define DPHY_TIME_HS_TRAIL(ui) (std::max((8 * (ui)), (60 * UI_X_100 + 4 * (ui))))
 
 // >100us
 #define DPHY_TIME_INIT (110 * UI_X_100 * 1000)
