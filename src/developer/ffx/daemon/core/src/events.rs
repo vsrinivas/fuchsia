@@ -100,7 +100,7 @@ impl<T: EventTrait + 'static> Dispatcher<T> {
         let inner = Arc::new(DispatcherInner { handler: Box::new(handler), event_in });
         Self {
             inner: Arc::downgrade(&inner),
-            _task: Task::spawn(async move {
+            _task: Task::local(async move {
                 queue
                     .map(|e| Ok(e))
                     .try_for_each_concurrent_while_connected(None, move |e| {
@@ -219,7 +219,7 @@ impl<T: 'static + EventTrait> Queue<T> {
         let handlers = Arc::new(Mutex::new(Vec::<Dispatcher<T>>::new()));
         let proc = Processor::<T> { inner_rx: Some(inner_rx), handlers: handlers.clone() };
         let state = Arc::downgrade(state);
-        Self { inner_tx, handlers, state, _processor_task: Arc::new(Task::spawn(proc.process())) }
+        Self { inner_tx, handlers, state, _processor_task: Arc::new(Task::local(proc.process())) }
     }
 
     /// Creates an event queue (see `new`) with a single handler to start.
@@ -232,7 +232,7 @@ impl<T: 'static + EventTrait> Queue<T> {
         let handlers = Arc::new(Mutex::new(vec![Dispatcher::new(handler)]));
         let proc = Processor::<T> { inner_rx: Some(inner_rx), handlers: handlers.clone() };
         let state = Arc::downgrade(state);
-        Self { inner_tx, handlers, state, _processor_task: Arc::new(Task::spawn(proc.process())) }
+        Self { inner_tx, handlers, state, _processor_task: Arc::new(Task::local(proc.process())) }
     }
 
     /// Adds an event handler, which is fired every time an event comes in.

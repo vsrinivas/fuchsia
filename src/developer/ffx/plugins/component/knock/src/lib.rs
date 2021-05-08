@@ -87,7 +87,7 @@ mod test {
     };
 
     fn setup_fake_daemon_service(mut stream: DaemonRequestStream) {
-        fuchsia_async::Task::spawn(async move {
+        fuchsia_async::Task::local(async move {
             while let Ok(Some(req)) = stream.try_next().await {
                 match req {
                     DaemonRequest::EchoString { value, responder } => {

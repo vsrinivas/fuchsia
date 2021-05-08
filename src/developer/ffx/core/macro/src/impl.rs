@@ -79,7 +79,7 @@ fn generate_fake_test_proxy_method(
             use futures::TryStreamExt;
             let (proxy, mut stream) =
                 fidl::endpoints::create_proxy_and_stream::<<#qualified_proxy_type as fidl::endpoints::Proxy>::Service>().unwrap();
-            fuchsia_async::Task::spawn(async move {
+            fuchsia_async::Task::local(async move {
                 while let Ok(Some(req)) = stream.try_next().await {
                     handle_request(req);
                 }
@@ -95,7 +95,7 @@ fn generate_fake_test_proxy_method(
             use futures::TryStreamExt;
             let (proxy, mut stream) =
                 fidl::endpoints::create_proxy_and_stream::<<#qualified_proxy_type as fidl::endpoints::Proxy>::Service>().unwrap();
-            fuchsia_async::Task::spawn(async move {
+            fuchsia_async::Task::local(async move {
                 if let Ok(Some(req)) = stream.try_next().await {
                     handle_request(req);
                 }

@@ -106,7 +106,7 @@ impl HostPipeChild {
         Ok(HostPipeChild {
             inner,
             cancel_tx: Some(cancel_tx),
-            task: Some(Task::spawn(async move {
+            task: Some(Task::local(async move {
                 futures::join!(reader, writer, logger);
             })),
         })
@@ -227,7 +227,7 @@ mod test {
             Self {
                 inner: child,
                 cancel_tx: Some(cancel_tx),
-                task: Some(Task::spawn(async move {
+                task: Some(Task::local(async move {
                     cancel_rx.await.expect("host-pipe fake test writer");
                 })),
             }

@@ -124,7 +124,7 @@ mod test {
     fn setup_fake_daemon_server(succeed: bool, info: VersionInfo) -> bridge::DaemonProxy {
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<bridge::DaemonMarker>().unwrap();
-        fuchsia_async::Task::spawn(async move {
+        fuchsia_async::Task::local(async move {
             while let Ok(Some(req)) = stream.try_next().await {
                 match req {
                     DaemonRequest::GetVersionInfo { responder } => {
@@ -149,7 +149,7 @@ mod test {
     fn setup_hanging_daemon_server(waiter: Shared<Receiver<()>>) -> bridge::DaemonProxy {
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<bridge::DaemonMarker>().unwrap();
-        fuchsia_async::Task::spawn(async move {
+        fuchsia_async::Task::local(async move {
             while let Ok(Some(req)) = stream.try_next().await {
                 match req {
                     DaemonRequest::GetVersionInfo { responder: _ } => {

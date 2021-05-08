@@ -101,7 +101,7 @@ impl<'a> Symbolizer for LogSymbolizer {
         let mut inner = self.inner.lock().await;
         inner.replace(LogSymbolizerInner {
             _child: c,
-            _task: Task::spawn(async move {
+            _task: Task::local(async move {
                 let mut stdout_reader = BufReader::new(stdout);
                 loop {
                     let mut msg = match rx.next().await {
@@ -192,7 +192,7 @@ impl Symbolizer for FakeSymbolizerForTest {
 
         let prefix = self.prefix.clone();
         let mut t = self._task.lock().await;
-        t.replace(Task::spawn(async move {
+        t.replace(Task::local(async move {
             while let Some(out) = rx.next().await {
                 if !is_symbolizer_context_marker(&out) {
                     tx.send(format!("{}", out)).await.unwrap();

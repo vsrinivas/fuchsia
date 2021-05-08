@@ -136,7 +136,7 @@ async fn record_cmd_impl<'a, L: LineWaiter<'a>, W: Write>(
 
     let f = File::create(&opts.output).await?;
 
-    let t = fuchsia_async::Task::spawn(async move {
+    let t = fuchsia_async::Task::local(async move {
         let mut f = f;
         futures::io::copy(client_socket, &mut f).await
     });

@@ -40,7 +40,7 @@ pub fn setup_fake_archive_iterator(
     responses: Arc<Vec<FakeArchiveIteratorResponse>>,
 ) -> Result<()> {
     let mut stream = server_end.into_stream()?;
-    fuchsia_async::Task::spawn(async move {
+    fuchsia_async::Task::local(async move {
         let mut iter = responses.iter();
         while let Ok(Some(req)) = stream.try_next().await {
             match req {

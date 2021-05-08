@@ -98,7 +98,7 @@ impl<
             Entry::Vacant(e) => {
                 let task = self.make_cleanup_task(t);
                 e.insert(task.clone());
-                fuchsia_async::Task::spawn(async move {
+                fuchsia_async::Task::local(async move {
                     let _ = task.await;
                 })
                 .detach();
@@ -157,7 +157,7 @@ mod test {
         SingleFlight::new(move |t| match t {
             TestTaskType::TaskThatGloballyRunsOnce => fire_once_global().boxed(),
             TestTaskType::TaskThatExitsImmediately => futures::future::ready(true).boxed(),
-            TestTaskType::TaskThatPollsItself => Task::spawn(async move { true }).boxed(),
+            TestTaskType::TaskThatPollsItself => Task::local(async move { true }).boxed(),
         })
     }
 

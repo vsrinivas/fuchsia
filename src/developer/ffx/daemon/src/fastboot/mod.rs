@@ -362,7 +362,7 @@ pub async fn oem<T: AsyncRead + AsyncWrite + Unpin>(interface: &mut T, cmd: &Str
 }
 
 pub(crate) fn spawn_fastboot_discovery(queue: events::Queue<DaemonEvent>) {
-    fuchsia_async::Task::spawn(async move {
+    fuchsia_async::Task::local(async move {
         loop {
             log::trace!("Looking for fastboot devices");
             let fastboot_devices = find_devices().await;

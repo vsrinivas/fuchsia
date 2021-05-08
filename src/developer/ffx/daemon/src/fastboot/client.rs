@@ -371,7 +371,7 @@ mod test {
         let mut fb =
             FastbootImpl::<TestTransport>::new(target.clone(), Box::new(TestFactory::new(replies)));
         let (proxy, stream) = create_proxy_and_stream::<FastbootMarker>().unwrap();
-        fuchsia_async::Task::spawn(async move {
+        fuchsia_async::Task::local(async move {
             match fb.handle_fastboot_requests_from_stream(stream).await {
                 Ok(_) => log::debug!("Fastboot proxy finished - client disconnected"),
                 Err(e) => log::error!("There was an error handling fastboot requests: {:?}", e),

@@ -69,7 +69,7 @@ async fn interface_discovery(
                 Ok(sock) => {
                     let sock = Arc::new(sock);
                     v4_listen_socket = Arc::downgrade(&sock);
-                    Task::spawn(recv_loop(sock, e.clone())).detach();
+                    Task::local(recv_loop(sock, e.clone())).detach();
                     should_log_v4_listen_error = true;
                 }
                 Err(err) => {
@@ -91,7 +91,7 @@ async fn interface_discovery(
                 Ok(sock) => {
                     let sock = Arc::new(sock);
                     v6_listen_socket = Arc::downgrade(&sock);
-                    Task::spawn(recv_loop(sock, e.clone())).detach();
+                    Task::local(recv_loop(sock, e.clone())).detach();
                     should_log_v6_listen_error = true;
                 }
                 Err(err) => {
@@ -159,7 +159,7 @@ async fn interface_discovery(
                 if sock.is_some() {
                     socket_tasks.lock().await.insert(
                         addr.ip().clone(),
-                        Task::spawn(query_recv_loop(
+                        Task::local(query_recv_loop(
                             Arc::new(sock.unwrap()),
                             e.clone(),
                             query_interval,
@@ -312,7 +312,7 @@ impl TargetFinder for MdnsTargetFinder {
     }
 
     fn start(&mut self, e: events::Queue<DaemonEvent>) -> Result<()> {
-        Task::spawn(interface_discovery(
+        Task::local(interface_discovery(
             self.socket_tasks.clone(),
             e.clone(),
             self.config.interface_discovery_interval,

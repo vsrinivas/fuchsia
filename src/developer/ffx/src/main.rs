@@ -219,7 +219,7 @@ async fn init_daemon_proxy() -> Result<DaemonProxy> {
     let (nodeid, proxy, link) = get_daemon_proxy_single_link(None).await?;
 
     // Spawn off the link task, so that FIDL functions can be called (link IO makes progress).
-    let link_task = fuchsia_async::Task::spawn(link.map(|_| ()));
+    let link_task = fuchsia_async::Task::local(link.map(|_| ()));
 
     // TODO(fxb/67400) Create an e2e test.
     #[cfg(test)]
@@ -266,7 +266,7 @@ async fn init_daemon_proxy() -> Result<DaemonProxy> {
 
     let (_nodeid, proxy, link) = get_daemon_proxy_single_link(Some(vec![nodeid])).await?;
 
-    fuchsia_async::Task::spawn(link.map(|_| ())).detach();
+    fuchsia_async::Task::local(link.map(|_| ())).detach();
 
     Ok(proxy)
 }
@@ -370,7 +370,7 @@ async fn run() -> Result<i32> {
 
     let analytics_start = Instant::now();
 
-    let analytics_task = fuchsia_async::Task::spawn(async {
+    let analytics_task = fuchsia_async::Task::local(async {
         if let Err(e) = add_fx_launch_event().await {
             log::error!("metrics submission failed: {}", e);
         }
@@ -463,7 +463,7 @@ mod test {
 
         // Start a listener that accepts and immediately closes the socket..
         let listener = UnixListener::bind(sockpath.to_owned()).unwrap();
-        let _listen_task = Task::spawn(async move {
+        let _listen_task = Task::local(async move {
             loop {
                 drop(listener.accept().await.unwrap());
             }
@@ -498,13 +498,13 @@ mod test {
         let link_tasks1 = link_tasks.clone();
 
         let listener = UnixListener::bind(sockpath.to_owned()).unwrap();
-        let listen_task = Task::spawn(async move {
+        let listen_task = Task::local(async move {
             // let (sock, _addr) = listener.accept().await.unwrap();
             let mut stream = listener.incoming();
             while let Some(sock) = stream.try_next().await.unwrap_or(None) {
                 fuchsia_async::Timer::new(Duration::from_secs(sleep_secs)).await;
                 let hoist_clone = daemon_hoist.clone();
-                link_tasks1.lock().await.push(Task::spawn(async move {
+                link_tasks1.lock().await.push(Task::local(async move {
                     let (mut rx, mut tx) = sock.split();
                     ascendd::run_stream(
                         hoist_clone.node(),
@@ -557,7 +557,7 @@ mod test {
         let sockpath = setup_ascendd_temp();
 
         let sockpath1 = sockpath.to_owned();
-        let daemons_task = Task::spawn(async move {
+        let daemons_task = Task::local(async move {
             test_daemon(sockpath1.to_owned(), "testcurrenthash", 0).await;
         });
 
@@ -577,7 +577,7 @@ mod test {
 
         // Spawn two daemons, the first out of date, the second is up to date.
         let sockpath1 = sockpath.to_owned();
-        let daemons_task = Task::spawn(async move {
+        let daemons_task = Task::local(async move {
             test_daemon(sockpath1.to_owned(), "oldhash", 0).await;
             // Note: testcurrenthash is explicitly expected by #cfg in get_daemon_proxy
             test_daemon(sockpath1.to_owned(), "testcurrenthash", 0).await;
@@ -599,7 +599,7 @@ mod test {
 
         // Spawn two daemons, the first out of date, the second is up to date.
         let sockpath1 = sockpath.to_owned();
-        let daemon_task = Task::spawn(async move {
+        let daemon_task = Task::local(async move {
             test_daemon(sockpath1.to_owned(), "testcurrenthash", 4).await;
         });
 
@@ -619,7 +619,7 @@ mod test {
 
         // Spawn two daemons, the first out of date, the second is up to date.
         let sockpath1 = sockpath.to_owned();
-        let _daemon_task = Task::spawn(async move {
+        let _daemon_task = Task::local(async move {
             test_daemon(sockpath1.to_owned(), "testcurrenthash", 6).await;
         });
 

@@ -149,7 +149,7 @@ impl TargetControl {
     async fn init_fastboot_proxy(&self) -> Result<FastbootProxy> {
         let mut fastboot_manager = Fastboot::new(self.target.clone());
         let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<FastbootMarker>()?;
-        fuchsia_async::Task::spawn(async move {
+        fuchsia_async::Task::local(async move {
             match fastboot_manager.0.handle_fastboot_requests_from_stream(stream).await {
                 Ok(_) => log::debug!("Fastboot proxy finished - client disconnected"),
                 Err(e) => {
@@ -215,7 +215,7 @@ mod test {
     async fn setup_fastboot() -> FastbootProxy {
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<FastbootMarker>().unwrap();
-        fuchsia_async::Task::spawn(async move {
+        fuchsia_async::Task::local(async move {
             while let Ok(Some(req)) = stream.try_next().await {
                 match req {
                     FastbootRequest::Reboot { responder } => {
@@ -235,7 +235,7 @@ mod test {
 
     fn setup_admin(chan: fidl::Channel) -> Result<()> {
         let mut stream = AdminRequestStream::from_channel(fidl::AsyncChannel::from_channel(chan)?);
-        fuchsia_async::Task::spawn(async move {
+        fuchsia_async::Task::local(async move {
             while let Ok(Some(req)) = stream.try_next().await {
                 match req {
                     AdminRequest::Reboot { reason: RebootReason::UserRequest, responder } => {
@@ -258,7 +258,7 @@ mod test {
     async fn setup_remote() -> RemoteControlProxy {
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<RemoteControlMarker>().unwrap();
-        fuchsia_async::Task::spawn(async move {
+        fuchsia_async::Task::local(async move {
             while let Ok(Some(req)) = stream.try_next().await {
                 match req {
                     RemoteControlRequest::Connect { selector: _, service_chan, responder } => {
@@ -289,7 +289,7 @@ mod test {
         let mut tc =
             TargetControl { target: target.clone(), fastboot_proxy, remote_proxy, admin_proxy };
         let (proxy, stream) = create_proxy_and_stream::<TargetControlMarker>().unwrap();
-        fuchsia_async::Task::spawn(async move {
+        fuchsia_async::Task::local(async move {
             match tc.handle_requests_from_stream(stream).await {
                 Ok(_) => log::debug!("Target control proxy finished - client disconnected"),
                 Err(e) => {

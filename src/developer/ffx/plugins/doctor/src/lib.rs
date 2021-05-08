@@ -117,7 +117,9 @@ impl std::fmt::Display for StepType {
                 );
                 format!("{}{}\n{}{}", style::Bold, welcome_str, DAEMON_CHECK_INTRO, style::Reset)
             }
-            StepType::AttemptStarted(i, total) => format!("\n\nKilling the daemon and trying again. Attempt {} of {}", i + 1, total),
+            StepType::AttemptStarted(i, total) => {
+                format!("\n\nKilling the daemon and trying again. Attempt {} of {}", i + 1, total)
+            }
             StepType::KillingZombieDaemons => KILLING_ZOMBIE_DAEMONS.to_string(),
             StepType::DaemonForceRestart => FORCE_DAEMON_RESTART_MESSAGE.to_string(),
             StepType::DaemonRunning => DAEMON_RUNNING_CHECK.to_string(),
@@ -833,7 +835,7 @@ mod test {
         F: FnMut(Request<T>) -> Fut + 'static + std::marker::Send,
         Fut: Future<Output = ()> + 'static + std::marker::Send,
     {
-        fasync::Task::spawn(
+        fasync::Task::local(
             stream
                 .try_for_each(move |r| f(r).map(Ok))
                 .unwrap_or_else(|e| panic!("failed to handle request: {:?}", e)),

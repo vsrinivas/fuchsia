@@ -268,7 +268,7 @@ mod tests {
             RepositoryServer::builder(addr, Arc::clone(&manager)).start().await.unwrap();
 
         // Run the server in the background.
-        let task = fasync::Task::spawn(server_fut);
+        let task = fasync::Task::local(server_fut);
 
         test(server.local_url()).await;
 
@@ -287,7 +287,7 @@ mod tests {
             RepositoryServer::builder(addr, Arc::clone(&manager)).start().await.unwrap();
 
         // Run the server in the background.
-        let task = fasync::Task::spawn(server_fut);
+        let task = fasync::Task::local(server_fut);
 
         // Signal the server to shutdown.
         server.stop();

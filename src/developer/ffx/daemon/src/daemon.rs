@@ -320,7 +320,7 @@ impl Daemon {
     }
 
     fn spawn_onet_discovery(queue: events::Queue<DaemonEvent>) {
-        fuchsia_async::Task::spawn(async move {
+        fuchsia_async::Task::local(async move {
             loop {
                 let svc = match hoist().connect_as_service_consumer() {
                     Ok(svc) => svc,
@@ -471,7 +471,7 @@ impl Daemon {
                 };
                 let mut fastboot_manager = Fastboot::new(target);
                 let stream = fastboot.into_stream()?;
-                fuchsia_async::Task::spawn(async move {
+                fuchsia_async::Task::local(async move {
                     match fastboot_manager.0.handle_fastboot_requests_from_stream(stream).await {
                         Ok(_) => log::debug!("Fastboot proxy finished - client disconnected"),
                         Err(e) => {
@@ -506,7 +506,7 @@ impl Daemon {
                 // local reactor observes this disconnection before the timer
                 // expires, an in-line timer wait would never fire, and the
                 // daemon would never exit.
-                Task::spawn(
+                Task::local(
                     Timer::new(std::time::Duration::from_millis(20)).map(|_| std::process::exit(0)),
                 )
                 .detach();
@@ -622,7 +622,7 @@ impl Daemon {
                         parameters.min_target_timestamp_nanos.map(|t| Timestamp::from(t as i64)),
                     )
                     .await?;
-                let task = Task::spawn(async move {
+                let task = Task::local(async move {
                     let mut iter_stream = iterator.into_stream()?;
 
                     while let Some(request) = iter_stream.next().await {
@@ -668,7 +668,7 @@ impl Daemon {
                 };
                 let mut target_control_server = TargetControl::new(target);
                 let stream = target_controller.into_stream()?;
-                fuchsia_async::Task::spawn(async move {
+                fuchsia_async::Task::local(async move {
                     match target_control_server.handle_requests_from_stream(stream).await {
                         Ok(_) => log::debug!("Target Control proxy finished - client disconnected"),
                         Err(e) => {
@@ -930,7 +930,7 @@ mod test {
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<RemoteControlMarker>().unwrap();
 
-        fuchsia_async::Task::spawn(async move {
+        fuchsia_async::Task::local(async move {
             while let Ok(Some(req)) = stream.try_next().await {
                 match req {
                     rcs::RemoteControlRequest::IdentifyHost { responder } => {
