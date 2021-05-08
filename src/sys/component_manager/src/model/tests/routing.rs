@@ -33,11 +33,6 @@ use {
             testing::{routing_test_helpers::*, test_helpers::*},
         },
     },
-    ::routing::{error::ComponentInstanceError, route_capability},
-    ::routing_test_helpers::{
-        default_directory_capability, default_service_capability, CommonRoutingTest,
-        RoutingTestModel,
-    },
     anyhow::Error,
     async_trait::async_trait,
     cm_rust::*,
@@ -51,10 +46,12 @@ use {
     maplit::hashmap,
     matches::assert_matches,
     moniker::{AbsoluteMoniker, ExtendedMoniker},
+    routing::{error::ComponentInstanceError, route_capability},
+    routing_test_helpers::{default_service_capability, CommonRoutingTest, RoutingTestModel},
     std::{
         collections::HashSet,
         convert::{TryFrom, TryInto},
-        path::{Path, PathBuf},
+        path::PathBuf,
         sync::{Arc, Weak},
     },
     vfs::pseudo_directory,
@@ -211,87 +208,9 @@ async fn use_framework_service() {
     test.check_use_realm(vec!["b:0"].into(), realm_service_host.bind_calls()).await;
 }
 
-///   a
-///    \
-///     b
-///
-/// a: offers directory /data/foo from self as /data/bar
-/// a: offers service /svc/foo from self as /svc/bar
-/// a: offers service /svc/file from self as /svc/device
-/// b: uses directory /data/bar as /data/hippo
-/// b: uses service /svc/bar as /svc/hippo
-/// b: uses service /svc/device
-///
-/// The test related to `/svc/file` is used to verify that services that require
-/// extended flags, like `OPEN_FLAG_DESCRIBE`, work correctly. This often
-/// happens for fuchsia.hardware protocols that compose fuchsia.io protocols,
-/// and expect that `fdio_open` should operate correctly.
 #[fuchsia::test]
 async fn use_from_parent() {
-    let components = vec![
-        (
-            "a",
-            ComponentDeclBuilder::new()
-                .directory(DirectoryDeclBuilder::new("foo_data").build())
-                .protocol(ProtocolDeclBuilder::new("foo_svc").build())
-                .protocol(ProtocolDeclBuilder::new("file").path("/svc/file").build())
-                .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source: OfferSource::Self_,
-                    source_name: "foo_data".into(),
-                    target_name: "bar_data".into(),
-                    target: OfferTarget::Child("b".to_string()),
-                    rights: Some(*rights::READ_RIGHTS),
-                    subdir: None,
-                    dependency_type: DependencyType::Strong,
-                }))
-                .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferSource::Self_,
-                    source_name: "foo_svc".into(),
-                    target_name: "bar_svc".into(),
-                    target: OfferTarget::Child("b".to_string()),
-                    dependency_type: DependencyType::Strong,
-                }))
-                .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                    source: OfferSource::Self_,
-                    source_name: "file".into(),
-                    target_name: "device".into(),
-                    target: OfferTarget::Child("b".to_string()),
-                    dependency_type: DependencyType::Strong,
-                }))
-                .add_lazy_child("b")
-                .build(),
-        ),
-        (
-            "b",
-            ComponentDeclBuilder::new()
-                .use_(UseDecl::Directory(UseDirectoryDecl {
-                    source: UseSource::Parent,
-                    source_name: "bar_data".into(),
-                    target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                    rights: *rights::READ_RIGHTS,
-                    subdir: None,
-                }))
-                .use_(UseDecl::Protocol(UseProtocolDecl {
-                    source: UseSource::Parent,
-                    source_name: "bar_svc".into(),
-                    target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
-                }))
-                .use_(UseDecl::Protocol(UseProtocolDecl {
-                    source: UseSource::Parent,
-                    source_name: "device".into(),
-                    target_path: CapabilityPath::try_from("/svc/device").unwrap(),
-                }))
-                .build(),
-        ),
-    ];
-    let test = RoutingTest::new("a", components).await;
-    test.check_use(vec!["b:0"].into(), CheckUse::default_directory(ExpectedResult::Ok)).await;
-    test.check_use(
-        vec!["b:0"].into(),
-        CheckUse::Protocol { path: default_service_capability(), expected_res: ExpectedResult::Ok },
-    )
-    .await;
-    test.check_open_file(vec!["b:0"].into(), "/svc/device".try_into().unwrap()).await;
+    CommonRoutingTest::<RoutingTestBuilder>::new().test_use_from_parent().await
 }
 
 #[fuchsia::test]
@@ -805,76 +724,11 @@ async fn use_in_collection_not_offered() {
     .await;
 }
 
-///   a
-///    \
-///     b
-///      \
-///       c
-///
-/// a: offers directory /data/foo from self with subdir 's1/s2'
-/// b: offers directory /data/foo from realm with subdir 's3'
-/// c: uses /data/foo as /data/hippo
 #[fuchsia::test]
 async fn use_directory_with_subdir_from_grandparent() {
-    let components = vec![
-        (
-            "a",
-            ComponentDeclBuilder::new()
-                .directory(DirectoryDeclBuilder::new("foo_data").build())
-                .protocol(ProtocolDeclBuilder::new("foo_svc").build())
-                .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source: OfferSource::Self_,
-                    source_name: "foo_data".into(),
-                    target_name: "foo_data".into(),
-                    target: OfferTarget::Child("b".to_string()),
-                    rights: Some(*rights::READ_RIGHTS),
-                    subdir: Some(PathBuf::from("s1/s2")),
-                    dependency_type: DependencyType::Strong,
-                }))
-                .add_lazy_child("b")
-                .build(),
-        ),
-        (
-            "b",
-            ComponentDeclBuilder::new()
-                .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source: OfferSource::Parent,
-                    source_name: "foo_data".into(),
-                    target_name: "foo_data".into(),
-                    target: OfferTarget::Child("c".to_string()),
-                    rights: Some(*rights::READ_RIGHTS),
-                    subdir: Some(PathBuf::from("s3")),
-                    dependency_type: DependencyType::Strong,
-                }))
-                .add_lazy_child("c")
-                .build(),
-        ),
-        (
-            "c",
-            ComponentDeclBuilder::new()
-                .use_(UseDecl::Directory(UseDirectoryDecl {
-                    source: UseSource::Parent,
-                    source_name: "foo_data".into(),
-                    target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                    rights: *rights::READ_RIGHTS,
-                    subdir: Some(PathBuf::from("s4")),
-                }))
-                .build(),
-        ),
-    ];
-    let test = RoutingTest::new("a", components).await;
-    test.create_static_file(Path::new("foo/s1/s2/s3/s4/inner"), "hello")
+    CommonRoutingTest::<RoutingTestBuilder>::new()
+        .test_use_directory_with_subdir_from_grandparent()
         .await
-        .expect("failed to create file");
-    test.check_use(
-        vec!["b:0", "c:0"].into(),
-        CheckUse::Directory {
-            path: default_directory_capability(),
-            file: PathBuf::from("inner"),
-            expected_res: ExpectedResult::Ok,
-        },
-    )
-    .await;
 }
 
 #[fuchsia::test]
@@ -914,144 +768,16 @@ async fn destroying_instance_kills_framework_service_task() {
     assert_matches!(event_stream.next().await, None);
 }
 
-///   a
-///  / \
-/// b   c
-///
-///
-/// b: exposes directory /data/foo from self with subdir 's1/s2'
-/// a: offers directory /data/foo from `b` to `c` with subdir 's3'
-/// c: uses /data/foo as /data/hippo
 #[fuchsia::test]
 async fn use_directory_with_subdir_from_sibling() {
-    let components = vec![
-        (
-            "a",
-            ComponentDeclBuilder::new()
-                .offer(OfferDecl::Directory(OfferDirectoryDecl {
-                    source: OfferSource::Child("b".to_string()),
-                    source_name: "foo_data".into(),
-                    target: OfferTarget::Child("c".to_string()),
-                    target_name: "foo_data".into(),
-                    rights: Some(*rights::READ_RIGHTS),
-                    subdir: Some(PathBuf::from("s3")),
-                    dependency_type: DependencyType::Strong,
-                }))
-                .add_lazy_child("b")
-                .add_lazy_child("c")
-                .build(),
-        ),
-        (
-            "b",
-            ComponentDeclBuilder::new()
-                .directory(DirectoryDeclBuilder::new("foo_data").build())
-                .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
-                    source: ExposeSource::Self_,
-                    source_name: "foo_data".into(),
-                    target: ExposeTarget::Parent,
-                    target_name: "foo_data".into(),
-                    rights: Some(*rights::READ_RIGHTS),
-                    subdir: Some(PathBuf::from("s1/s2")),
-                }))
-                .build(),
-        ),
-        (
-            "c",
-            ComponentDeclBuilder::new()
-                .use_(UseDecl::Directory(UseDirectoryDecl {
-                    source: UseSource::Parent,
-                    source_name: "foo_data".into(),
-                    target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
-                    rights: *rights::READ_RIGHTS,
-                    subdir: None,
-                }))
-                .build(),
-        ),
-    ];
-    let test = RoutingTest::new("a", components).await;
-    test.create_static_file(Path::new("foo/s1/s2/s3/inner"), "hello")
+    CommonRoutingTest::<RoutingTestBuilder>::new()
+        .test_use_directory_with_subdir_from_sibling()
         .await
-        .expect("failed to create file");
-    test.check_use(
-        vec!["c:0"].into(),
-        CheckUse::Directory {
-            path: default_directory_capability(),
-            file: PathBuf::from("inner"),
-            expected_res: ExpectedResult::Ok,
-        },
-    )
-    .await;
 }
 
-///   a
-///    \
-///     b
-///      \
-///       c
-///
-/// c: exposes /data/foo from self
-/// b: exposes /data/foo from `c` with subdir `s1/s2`
-/// a: exposes /data/foo from `b` with subdir `s3` as /data/hippo
-/// use /data/hippo from a's exposed dir
 #[fuchsia::test]
 async fn expose_directory_with_subdir() {
-    let components = vec![
-        (
-            "a",
-            ComponentDeclBuilder::new()
-                .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
-                    source: ExposeSource::Child("b".to_string()),
-                    source_name: "foo_data".into(),
-                    target_name: "hippo_data".into(),
-                    target: ExposeTarget::Parent,
-                    rights: None,
-                    subdir: Some(PathBuf::from("s3")),
-                }))
-                .add_lazy_child("b")
-                .build(),
-        ),
-        (
-            "b",
-            ComponentDeclBuilder::new()
-                .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
-                    source: ExposeSource::Child("c".to_string()),
-                    source_name: "foo_data".into(),
-                    target_name: "foo_data".into(),
-                    target: ExposeTarget::Parent,
-                    rights: None,
-                    subdir: Some(PathBuf::from("s1/s2")),
-                }))
-                .add_lazy_child("c")
-                .build(),
-        ),
-        (
-            "c",
-            ComponentDeclBuilder::new()
-                .directory(DirectoryDeclBuilder::new("foo_data").build())
-                .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
-                    source: ExposeSource::Self_,
-                    source_name: "foo_data".into(),
-                    target_name: "foo_data".into(),
-                    target: ExposeTarget::Parent,
-                    rights: Some(*rights::READ_RIGHTS),
-                    subdir: None,
-                }))
-                .build(),
-        ),
-    ];
-    let test = RoutingTest::new("a", components).await;
-    test.create_static_file(Path::new("foo/s1/s2/s3/inner"), "hello")
-        .await
-        .expect("failed to create file");
-    test.check_use_exposed_dir(
-        vec![].into(),
-        CheckUse::Directory {
-            path: "/hippo_data".try_into().unwrap(),
-            file: PathBuf::from("inner"),
-            expected_res: ExpectedResult::Ok,
-        },
-    )
-    .await;
+    CommonRoutingTest::<RoutingTestBuilder>::new().test_expose_directory_with_subdir().await
 }
 
 ///  a

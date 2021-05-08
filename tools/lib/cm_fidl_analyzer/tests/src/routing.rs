@@ -8,14 +8,14 @@ use {
         component_model::{ComponentModelForAnalyzer, ModelBuilderForAnalyzer},
         component_tree::{ComponentTreeBuilder, NodePath},
     },
-    cm_rust::{ComponentDecl, ExposeDecl, ExposeDeclCommon, UseDecl},
+    cm_rust::{CapabilityPath, ComponentDecl, ExposeDecl, ExposeDeclCommon, UseDecl},
     fuchsia_zircon_status as zx_status,
     moniker::AbsoluteMoniker,
     routing::{component_instance::ComponentInstanceInterface, config::RuntimeConfig},
     routing_test_helpers::{
         CheckUse, CommonRoutingTest, ExpectedResult, RoutingTestModel, RoutingTestModelBuilder,
     },
-    std::{collections::HashMap, iter::FromIterator, sync::Arc},
+    std::{collections::HashMap, iter::FromIterator, path::Path, sync::Arc},
     thiserror::Error,
 };
 
@@ -215,10 +215,27 @@ impl RoutingTestModel for RoutingTestForAnalyzer {
             }
         }
     }
+
+    // This is a no-op for the static model.
+    #[allow(unused_variables)]
+    async fn check_open_file(&self, moniker: AbsoluteMoniker, path: CapabilityPath) {}
+
+    // This is a no-op for the static model.
+    #[allow(unused_variables)]
+    async fn create_static_file(&self, path: &Path, contents: &str) -> Result<(), anyhow::Error> {
+        Ok(())
+    }
 }
 
 mod tests {
     use {super::*, futures::executor::block_on};
+
+    #[test]
+    fn use_from_parent() {
+        block_on(async {
+            CommonRoutingTest::<RoutingTestBuilderForAnalyzer>::new().test_use_from_parent().await
+        });
+    }
 
     #[test]
     fn use_from_child() {
@@ -323,6 +340,33 @@ mod tests {
         block_on(async {
             CommonRoutingTest::<RoutingTestBuilderForAnalyzer>::new()
                 .test_offer_from_non_executable()
+                .await
+        });
+    }
+
+    #[test]
+    fn use_directory_with_subdir_from_grandparent() {
+        block_on(async {
+            CommonRoutingTest::<RoutingTestBuilderForAnalyzer>::new()
+                .test_use_directory_with_subdir_from_grandparent()
+                .await
+        });
+    }
+
+    #[test]
+    fn use_directory_with_subdir_from_sibling() {
+        block_on(async {
+            CommonRoutingTest::<RoutingTestBuilderForAnalyzer>::new()
+                .test_use_directory_with_subdir_from_sibling()
+                .await
+        });
+    }
+
+    #[test]
+    fn expose_directory_with_subdir() {
+        block_on(async {
+            CommonRoutingTest::<RoutingTestBuilderForAnalyzer>::new()
+                .test_expose_directory_with_subdir()
                 .await
         });
     }

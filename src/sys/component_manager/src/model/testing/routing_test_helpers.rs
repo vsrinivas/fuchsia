@@ -275,15 +275,6 @@ impl RoutingTest {
         self.test_dir.path()
     }
 
-    /// Creates a static file at the given path in the temp directory.
-    pub async fn create_static_file(
-        &self,
-        path: &Path,
-        contents: &str,
-    ) -> Result<(), anyhow::Error> {
-        capability_util::create_static_file(&self.test_dir_proxy, path, contents).await
-    }
-
     /// Set up the given OutDir, installing a set of files assumed to exist by
     /// many tests:
     ///   - A file `/svc/foo` implementing `fidl.examples.echo.Echo`.
@@ -452,17 +443,6 @@ impl RoutingTest {
             bind_calls.clone(),
         )
         .await;
-    }
-
-    /// Checks that a use declaration of `path` at `moniker` can be opened with
-    /// Fuchsia file operations.
-    pub async fn check_open_file(&self, moniker: AbsoluteMoniker, path: CapabilityPath) {
-        let component_name =
-            self.bind_instance_and_wait_start(&moniker).await.expect("bind instance failed");
-        let component_resolved_url = Self::resolved_url(&component_name);
-        Self::check_namespace(component_name, &self.mock_runner, self.components.clone()).await;
-        let namespace = self.mock_runner.get_namespace(&component_resolved_url).unwrap();
-        capability_util::call_file_svc_from_namespace(&namespace, path).await;
     }
 
     /// Build an outgoing directory for the given component.
@@ -799,6 +779,19 @@ impl RoutingTestModel for RoutingTest {
                 panic!("event capabilities can't be exposed");
             }
         }
+    }
+
+    async fn check_open_file(&self, moniker: AbsoluteMoniker, path: CapabilityPath) {
+        let component_name =
+            self.bind_instance_and_wait_start(&moniker).await.expect("bind instance failed");
+        let component_resolved_url = Self::resolved_url(&component_name);
+        Self::check_namespace(component_name, &self.mock_runner, self.components.clone()).await;
+        let namespace = self.mock_runner.get_namespace(&component_resolved_url).unwrap();
+        capability_util::call_file_svc_from_namespace(&namespace, path).await;
+    }
+
+    async fn create_static_file(&self, path: &Path, contents: &str) -> Result<(), anyhow::Error> {
+        capability_util::create_static_file(&self.test_dir_proxy, path, contents).await
     }
 }
 

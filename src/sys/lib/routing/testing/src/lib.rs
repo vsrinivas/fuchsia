@@ -21,7 +21,11 @@ use {
     maplit::hashmap,
     moniker::{AbsoluteMoniker, RelativeMoniker},
     routing::{event::EventSubscription, rights::READ_RIGHTS},
-    std::{convert::TryFrom, convert::TryInto, marker::PhantomData, path::PathBuf},
+    std::{
+        convert::{TryFrom, TryInto},
+        marker::PhantomData,
+        path::{Path, PathBuf},
+    },
 };
 
 /// Construct a capability path for the hippo service.
@@ -120,6 +124,14 @@ pub trait RoutingTestModel {
 
     /// Checks using a capability from a component's exposed directory.
     async fn check_use_exposed_dir(&self, moniker: AbsoluteMoniker, check: CheckUse);
+
+    /// Checks that a use declaration of `path` at `moniker` can be opened with
+    /// Fuchsia file operations.
+    async fn check_open_file(&self, moniker: AbsoluteMoniker, path: CapabilityPath);
+
+    /// Create a file with the given contents in the test dir, along with any subdirectories
+    /// required.
+    async fn create_static_file(&self, path: &Path, contents: &str) -> Result<(), anyhow::Error>;
 }
 
 /// Builds an implementation of `RoutingTestModel` from a set of `ComponentDecl`s.
@@ -141,6 +153,92 @@ pub struct CommonRoutingTest<T: RoutingTestModelBuilder> {
 impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
     pub fn new() -> Self {
         Self { builder: PhantomData }
+    }
+
+    ///   a
+    ///    \
+    ///     b
+    ///
+    /// a: offers directory /data/foo from self as /data/bar
+    /// a: offers service /svc/foo from self as /svc/bar
+    /// a: offers service /svc/file from self as /svc/device
+    /// b: uses directory /data/bar as /data/hippo
+    /// b: uses service /svc/bar as /svc/hippo
+    /// b: uses service /svc/device
+    ///
+    /// The test related to `/svc/file` is used to verify that services that require
+    /// extended flags, like `OPEN_FLAG_DESCRIBE`, work correctly. This often
+    /// happens for fuchsia.hardware protocols that compose fuchsia.io protocols,
+    /// and expect that `fdio_open` should operate correctly.
+    pub async fn test_use_from_parent(&self) {
+        let components = vec![
+            (
+                "a",
+                ComponentDeclBuilder::new()
+                    .directory(DirectoryDeclBuilder::new("foo_data").build())
+                    .protocol(ProtocolDeclBuilder::new("foo_svc").build())
+                    .protocol(ProtocolDeclBuilder::new("file").path("/svc/file").build())
+                    .offer(OfferDecl::Directory(OfferDirectoryDecl {
+                        source: OfferSource::Self_,
+                        source_name: "foo_data".into(),
+                        target_name: "bar_data".into(),
+                        target: OfferTarget::Child("b".to_string()),
+                        rights: Some(*READ_RIGHTS),
+                        subdir: None,
+                        dependency_type: DependencyType::Strong,
+                    }))
+                    .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                        source: OfferSource::Self_,
+                        source_name: "foo_svc".into(),
+                        target_name: "bar_svc".into(),
+                        target: OfferTarget::Child("b".to_string()),
+                        dependency_type: DependencyType::Strong,
+                    }))
+                    .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                        source: OfferSource::Self_,
+                        source_name: "file".into(),
+                        target_name: "device".into(),
+                        target: OfferTarget::Child("b".to_string()),
+                        dependency_type: DependencyType::Strong,
+                    }))
+                    .add_lazy_child("b")
+                    .build(),
+            ),
+            (
+                "b",
+                ComponentDeclBuilder::new()
+                    .use_(UseDecl::Directory(UseDirectoryDecl {
+                        source: UseSource::Parent,
+                        source_name: "bar_data".into(),
+                        target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        rights: *READ_RIGHTS,
+                        subdir: None,
+                    }))
+                    .use_(UseDecl::Protocol(UseProtocolDecl {
+                        source: UseSource::Parent,
+                        source_name: "bar_svc".into(),
+                        target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                    }))
+                    .use_(UseDecl::Protocol(UseProtocolDecl {
+                        source: UseSource::Parent,
+                        source_name: "device".into(),
+                        target_path: CapabilityPath::try_from("/svc/device").unwrap(),
+                    }))
+                    .build(),
+            ),
+        ];
+        let model = T::new("a", components).build().await;
+        model.check_use(vec!["b:0"].into(), CheckUse::default_directory(ExpectedResult::Ok)).await;
+        model
+            .check_use(
+                vec!["b:0"].into(),
+                CheckUse::Protocol {
+                    path: default_service_capability(),
+                    expected_res: ExpectedResult::Ok,
+                },
+            )
+            .await;
+        model.check_open_file(vec!["b:0"].into(), "/svc/device".try_into().unwrap()).await;
     }
 
     ///   a
@@ -1327,6 +1425,221 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                 CheckUse::Protocol {
                     path: default_service_capability(),
                     expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
+                },
+            )
+            .await;
+    }
+
+    ///   a
+    ///    \
+    ///     b
+    ///      \
+    ///       c
+    ///
+    /// a: offers directory /data/foo from self with subdir 's1/s2'
+    /// b: offers directory /data/foo from realm with subdir 's3'
+    /// c: uses /data/foo as /data/hippo
+    pub async fn test_use_directory_with_subdir_from_grandparent(&self) {
+        let components = vec![
+            (
+                "a",
+                ComponentDeclBuilder::new()
+                    .directory(DirectoryDeclBuilder::new("foo_data").build())
+                    .protocol(ProtocolDeclBuilder::new("foo_svc").build())
+                    .offer(OfferDecl::Directory(OfferDirectoryDecl {
+                        source: OfferSource::Self_,
+                        source_name: "foo_data".into(),
+                        target_name: "foo_data".into(),
+                        target: OfferTarget::Child("b".to_string()),
+                        rights: Some(*READ_RIGHTS),
+                        subdir: Some(PathBuf::from("s1/s2")),
+                        dependency_type: DependencyType::Strong,
+                    }))
+                    .add_lazy_child("b")
+                    .build(),
+            ),
+            (
+                "b",
+                ComponentDeclBuilder::new()
+                    .offer(OfferDecl::Directory(OfferDirectoryDecl {
+                        source: OfferSource::Parent,
+                        source_name: "foo_data".into(),
+                        target_name: "foo_data".into(),
+                        target: OfferTarget::Child("c".to_string()),
+                        rights: Some(*READ_RIGHTS),
+                        subdir: Some(PathBuf::from("s3")),
+                        dependency_type: DependencyType::Strong,
+                    }))
+                    .add_lazy_child("c")
+                    .build(),
+            ),
+            (
+                "c",
+                ComponentDeclBuilder::new()
+                    .use_(UseDecl::Directory(UseDirectoryDecl {
+                        source: UseSource::Parent,
+                        source_name: "foo_data".into(),
+                        target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        rights: *READ_RIGHTS,
+                        subdir: Some(PathBuf::from("s4")),
+                    }))
+                    .build(),
+            ),
+        ];
+        let model = T::new("a", components).build().await;
+        model
+            .create_static_file(Path::new("foo/s1/s2/s3/s4/inner"), "hello")
+            .await
+            .expect("failed to create file");
+        model
+            .check_use(
+                vec!["b:0", "c:0"].into(),
+                CheckUse::Directory {
+                    path: default_directory_capability(),
+                    file: PathBuf::from("inner"),
+                    expected_res: ExpectedResult::Ok,
+                },
+            )
+            .await;
+    }
+
+    ///   a
+    ///  / \
+    /// b   c
+    ///
+    ///
+    /// b: exposes directory /data/foo from self with subdir 's1/s2'
+    /// a: offers directory /data/foo from `b` to `c` with subdir 's3'
+    /// c: uses /data/foo as /data/hippo
+    pub async fn test_use_directory_with_subdir_from_sibling(&self) {
+        let components = vec![
+            (
+                "a",
+                ComponentDeclBuilder::new()
+                    .offer(OfferDecl::Directory(OfferDirectoryDecl {
+                        source: OfferSource::Child("b".to_string()),
+                        source_name: "foo_data".into(),
+                        target: OfferTarget::Child("c".to_string()),
+                        target_name: "foo_data".into(),
+                        rights: Some(*READ_RIGHTS),
+                        subdir: Some(PathBuf::from("s3")),
+                        dependency_type: DependencyType::Strong,
+                    }))
+                    .add_lazy_child("b")
+                    .add_lazy_child("c")
+                    .build(),
+            ),
+            (
+                "b",
+                ComponentDeclBuilder::new()
+                    .directory(DirectoryDeclBuilder::new("foo_data").build())
+                    .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
+                        source: ExposeSource::Self_,
+                        source_name: "foo_data".into(),
+                        target: ExposeTarget::Parent,
+                        target_name: "foo_data".into(),
+                        rights: Some(*READ_RIGHTS),
+                        subdir: Some(PathBuf::from("s1/s2")),
+                    }))
+                    .build(),
+            ),
+            (
+                "c",
+                ComponentDeclBuilder::new()
+                    .use_(UseDecl::Directory(UseDirectoryDecl {
+                        source: UseSource::Parent,
+                        source_name: "foo_data".into(),
+                        target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        rights: *READ_RIGHTS,
+                        subdir: None,
+                    }))
+                    .build(),
+            ),
+        ];
+        let model = T::new("a", components).build().await;
+        model
+            .create_static_file(Path::new("foo/s1/s2/s3/inner"), "hello")
+            .await
+            .expect("failed to create file");
+        model
+            .check_use(
+                vec!["c:0"].into(),
+                CheckUse::Directory {
+                    path: default_directory_capability(),
+                    file: PathBuf::from("inner"),
+                    expected_res: ExpectedResult::Ok,
+                },
+            )
+            .await;
+    }
+
+    ///   a
+    ///    \
+    ///     b
+    ///      \
+    ///       c
+    ///
+    /// c: exposes /data/foo from self
+    /// b: exposes /data/foo from `c` with subdir `s1/s2`
+    /// a: exposes /data/foo from `b` with subdir `s3` as /data/hippo
+    /// use /data/hippo from a's exposed dir
+    pub async fn test_expose_directory_with_subdir(&self) {
+        let components = vec![
+            (
+                "a",
+                ComponentDeclBuilder::new()
+                    .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
+                        source: ExposeSource::Child("b".to_string()),
+                        source_name: "foo_data".into(),
+                        target_name: "hippo_data".into(),
+                        target: ExposeTarget::Parent,
+                        rights: None,
+                        subdir: Some(PathBuf::from("s3")),
+                    }))
+                    .add_lazy_child("b")
+                    .build(),
+            ),
+            (
+                "b",
+                ComponentDeclBuilder::new()
+                    .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
+                        source: ExposeSource::Child("c".to_string()),
+                        source_name: "foo_data".into(),
+                        target_name: "foo_data".into(),
+                        target: ExposeTarget::Parent,
+                        rights: None,
+                        subdir: Some(PathBuf::from("s1/s2")),
+                    }))
+                    .add_lazy_child("c")
+                    .build(),
+            ),
+            (
+                "c",
+                ComponentDeclBuilder::new()
+                    .directory(DirectoryDeclBuilder::new("foo_data").build())
+                    .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
+                        source: ExposeSource::Self_,
+                        source_name: "foo_data".into(),
+                        target_name: "foo_data".into(),
+                        target: ExposeTarget::Parent,
+                        rights: Some(*READ_RIGHTS),
+                        subdir: None,
+                    }))
+                    .build(),
+            ),
+        ];
+        let model = T::new("a", components).build().await;
+        model
+            .create_static_file(Path::new("foo/s1/s2/s3/inner"), "hello")
+            .await
+            .expect("failed to create file");
+        model
+            .check_use_exposed_dir(
+                vec![].into(),
+                CheckUse::Directory {
+                    path: "/hippo_data".try_into().unwrap(),
+                    file: PathBuf::from("inner"),
+                    expected_res: ExpectedResult::Ok,
                 },
             )
             .await;
