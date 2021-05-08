@@ -24,6 +24,12 @@ fuchsia_package("root_presenter") {
   ]
 }
 
+fuchsia_component("component_v1_for_test") {
+  component_name = "root_presenter"
+  manifest = "meta/root_presenter_base.cmx"
+  deps = [ ":bin" ]
+}
+
 group("configs") {
   deps = [ ":root_presenter_config" ]
 }
@@ -37,7 +43,10 @@ config_data("root_presenter_config") {
 group("tests") {
   testonly = true
 
-  deps = [ "tests" ]
+  deps = [
+    ":component_v1_for_test",
+    "//src/ui/bin/root_presenter/tests",
+  ]
 }
 
 executable("bin") {

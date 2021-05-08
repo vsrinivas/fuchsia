@@ -23,23 +23,23 @@ FocusDispatcher::FocusDispatcher(const std::shared_ptr<ServiceDirectory>& svc) {
   // Connect to `fuchsia.ui.keyboard.focus.Controller`.
   keyboard_focus_ctl_ = svc->Connect<Controller>();
   keyboard_focus_ctl_.set_error_handler([](zx_status_t status) {
-    FX_LOGS(ERROR) << "Error from fuchsia.ui.keyboard.focus.Controller: "
-                   << zx_status_get_string(status);
+    FX_LOGS(WARNING) << "Error from fuchsia.ui.keyboard.focus.Controller: "
+                     << zx_status_get_string(status);
   });
 
   // Connect to `fuchsia.ui.focus.FocusChainListenerRegistry`, then send it
   // a client-side handle to `fuchsia.ui.focus.FocusChainListener`.
   focus_chain_listener_registry_ = svc->Connect<FocusChainListenerRegistry>();
   focus_chain_listener_registry_.set_error_handler([](zx_status_t status) {
-    FX_LOGS(ERROR) << "Error from fuchsia.ui.focus.FocusChainListenerRegistry: "
-                   << zx_status_get_string(status);
+    FX_LOGS(WARNING) << "Error from fuchsia.ui.focus.FocusChainListenerRegistry: "
+                     << zx_status_get_string(status);
   });
   auto handle = focus_chain_listeners_.AddBinding(this);
   focus_chain_listener_registry_->Register(handle.Bind());
 }
 
 void FocusDispatcher::OnFocusChange(FocusChain new_focus_chain,
-                                  FocusChainListener::OnFocusChangeCallback callback) {
+                                    FocusChainListener::OnFocusChangeCallback callback) {
   if (new_focus_chain.has_focus_chain()) {
     auto& focus_chain = new_focus_chain.focus_chain();
     if (focus_chain.empty()) {

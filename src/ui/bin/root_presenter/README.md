@@ -23,10 +23,11 @@ The production package `//src/ui/bin/root_presenter:root_presenter` includes
 `/dev/class/input-report`. The regular content is pulled in from
 `meta/root_presenter_base.cmx`.
 
-Test packages should include `meta/root_presenter_base.cmx`, which omits the
-driver access. Generally, test packages should include their own copy of a
-component (including CMX file) to ensure hermeticity with respect to package
-loading semantics.
+Test packages should include `//src/ui/bin/root_presenter:component_v1_for_test`
+and launch it with `fuchsia-pkg://fuchsia.com/<your-test-package>#meta/root_presenter.cmx`.
+This test-only Root Presenter omits the driver access. Generally, test packages
+should include their own copy of a component to ensure hermeticity with respect
+to package loading semantics.
 
 Integration tests don't require access to the device files, because (1) input
 injection occurs at a different protocol in Root Presenter, and (2) exposure to

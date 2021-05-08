@@ -23,7 +23,7 @@
 //                                              -> Factory Reset -> Test Assert
 
 constexpr char kRootPresenter[] =
-    "fuchsia-pkg://fuchsia.com/factory-reset-test#meta/root-presenter-for-test.cmx";
+    "fuchsia-pkg://fuchsia.com/factory-reset-test#meta/root_presenter.cmx";
 constexpr zx::duration kTimeout = zx::min(1);
 
 // A sound player used to fake a reset tone triggered by root presenter.

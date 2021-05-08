@@ -37,17 +37,12 @@ config_data("factory-reset-test-audio") {
   sources = [ "data/chirp-start-tone.wav" ]
 }
 
-fuchsia_test_component("root-presenter-for-test") {
-  manifest = "//src/ui/bin/root_presenter/meta/root_presenter_base.cmx"
-  deps = [ "//src/ui/bin/root_presenter:bin" ]
-}
-
 fuchsia_unittest_package("factory-reset-test") {
   manifest = "meta/factory_reset_test.cmx"
   deps = [
     ":factory-reset-test-audio",
     ":factory_reset_test",
-    ":root-presenter-for-test",
+    "//src/ui/bin/root_presenter:component_v1_for_test",
   ]
 
   test_specs = {
