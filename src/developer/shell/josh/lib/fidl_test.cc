@@ -115,7 +115,7 @@ client = new fidl.ProtocolClient(
 client.Frob("one");
 )";
   ASSERT_TRUE(Eval(test_string));
-  EXPECT_EQ(0, impl.frobs.size());
+  EXPECT_EQ(0u, impl.frobs.size());
 
   loop.RunUntilIdle();
 

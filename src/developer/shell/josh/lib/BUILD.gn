@@ -35,6 +35,13 @@ static_library("lib") {
     "//zircon/public/lib/fidl_base",
     "//zircon/public/lib/zx",
   ]
+
+  configs += [
+    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+    #
+    # Might be hard because these conversions come from quickjs.h.
+    "//build/config:Wno-conversion",
+  ]
 }
 
 compiled_js("fidl") {
@@ -109,5 +116,11 @@ source_set("tests") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/task-utils",
+  ]
+  configs += [
+    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+    #
+    # Might be hard because these conversions come from quickjs.h.
+    "//build/config:Wno-conversion",
   ]
 }

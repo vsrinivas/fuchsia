@@ -118,8 +118,8 @@ TEST(Repl, SpecialCharacters) {
   repl.FeedInput(reinterpret_cast<unsigned char*>(test_string.data()), test_string.size());
   std::queue<std::string> res_lines = repl.GetListFullLines();
   std::queue<std::string> res_cmds = repl.GetListFullCmds();
-  EXPECT_EQ(res_lines.size(), 1);
-  EXPECT_EQ(res_cmds.size(), 1);
+  EXPECT_EQ(res_lines.size(), 1u);
+  EXPECT_EQ(res_cmds.size(), 1u);
   EXPECT_STREQ(res_lines.front().c_str(), expected.c_str());
   EXPECT_STREQ(res_cmds.front().c_str(), expected.c_str());
 }
@@ -138,12 +138,12 @@ TEST(Repl, MultipleLines) {
     repl.FeedInput(reinterpret_cast<unsigned char*>(test_string1[i].data()),
                    test_string1[i].size());
     std::queue<std::string> res_lines = repl.GetListFullLines();
-    ASSERT_EQ(res_lines.size(), 1);
+    ASSERT_EQ(res_lines.size(), 1u);
     cur_cmd += res_lines.front();
     EXPECT_STREQ(repl.PublicOpenSymbols(cur_cmd).c_str(), expected_open_symbols[i].c_str());
   }
   std::queue<std::string> res_cmds = repl.GetListFullCmds();
-  EXPECT_EQ(res_cmds.size(), 1);
+  EXPECT_EQ(res_cmds.size(), 1u);
   EXPECT_STREQ(res_cmds.front().c_str(), expected.c_str());
 
   constexpr int kNumLines2 = 5;
@@ -157,12 +157,12 @@ TEST(Repl, MultipleLines) {
     repl.FeedInput(reinterpret_cast<unsigned char*>(test_string2[i].data()),
                    test_string2[i].size());
     std::queue<std::string> res_lines = repl.GetListFullLines();
-    ASSERT_EQ(res_lines.size(), 1);
+    ASSERT_EQ(res_lines.size(), 1u);
     cur_cmd += res_lines.front();
     EXPECT_STREQ(repl.PublicOpenSymbols(cur_cmd).c_str(), expected_open_symbols2[i].c_str());
   }
   res_cmds = repl.GetListFullCmds();
-  EXPECT_EQ(res_cmds.size(), 1);
+  EXPECT_EQ(res_cmds.size(), 1u);
   EXPECT_STREQ(res_cmds.front().c_str(), expected2.c_str());
 }
 

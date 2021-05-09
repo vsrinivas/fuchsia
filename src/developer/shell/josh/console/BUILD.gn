@@ -23,6 +23,13 @@ static_library("console") {
     "//third_party/quickjs:repl",
     "//zircon/system/ulib/cmdline",
   ]
+
+  configs += [
+    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+    #
+    # Might be hard because these conversions come from quickjs.h.
+    "//build/config:Wno-conversion",
+  ]
 }
 
 compiled_js("repl_init") {
@@ -49,5 +56,11 @@ source_set("tests") {
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+  configs += [
+    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+    #
+    # Might be hard because these conversions come from quickjs.h.
+    "//build/config:Wno-conversion",
   ]
 }
