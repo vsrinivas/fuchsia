@@ -265,7 +265,7 @@ class SimpleClient {
 };
 
 class TunTest : public gtest::RealLoopFixture {
- public:
+ protected:
   TunTest()
       : gtest::RealLoopFixture(),
         tun_ctl_loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
@@ -377,7 +377,8 @@ class TunTest : public gtest::RealLoopFixture {
     return zx::ok(std::move(endpoints->client));
   }
 
- protected:
+  DeviceAdapter& first_adapter() { return *tun_ctl_.devices().front().adapter(); }
+
   async::Loop tun_ctl_loop_;
   TunCtl tun_ctl_;
   fidl::FidlAllocator<> alloc_;
@@ -1148,6 +1149,64 @@ TEST_F(TunTest, PairEcho) {
     }
     received += count;
   }
+}
+
+TEST_F(TunTest, ReportsInternalTxErrors) {
+  fuchsia_net_tun::wire::DeviceConfig config = DefaultDeviceConfig();
+  config.set_online(alloc_, true);
+  // We need tun to be nonblocking so we're able to excite the path that attempts to copy a tx
+  // buffer into FIDL and fails because we've removed the VMOs. If the call was blocking it'd block
+  // forever and we wouldn't be able to use a sync client here.
+  config.set_blocking(alloc_, false);
+  zx::status client_end = CreateDevice(std::move(config));
+  ASSERT_OK(client_end.status_value());
+  fidl::WireSyncClient tun = fidl::BindSyncClient(std::move(client_end.value()));
+
+  SimpleClient client;
+  zx::status protos = client.NewRequest();
+  ASSERT_OK(protos.status_value());
+  ASSERT_OK(tun.ConnectProtocols(std::move(protos.value())).status());
+  ASSERT_OK(client.OpenSession());
+  ASSERT_OK(client.session().SetPaused(false).status());
+
+  // Wait for the device to observe the online session. This guarantees the Session's VMO will be
+  // installed by the time we're done waiting.
+  for (;;) {
+    fidl::WireResult watch_state_result = tun.WatchState();
+    ASSERT_OK(watch_state_result.status());
+    fuchsia_net_tun::wire::InternalState internal_state = watch_state_result.value().state;
+    if (internal_state.has_has_session() && internal_state.has_session()) {
+      break;
+    }
+  }
+
+  // Release all VMOs to make copying the buffer fail later.
+  DeviceAdapter& adapter = first_adapter();
+  for (uint8_t i = 0; i < MAX_VMOS; i++) {
+    adapter.NetworkDeviceImplReleaseVmo(i);
+  }
+
+  ASSERT_OK(client.SendTx({0x00}, true));
+  uint16_t descriptor;
+  // Attempt to fetch the buffer back, calling into ReadFrame through FIDL each round to excite the
+  // rx path to attempt the copy into the VMO we invalidated and cause the buffer to be returned to
+  // the client.
+  for (;;) {
+    zx_status_t status = client.FetchTx(&descriptor, nullptr, false);
+    if (status == ZX_OK) {
+      break;
+    }
+    ASSERT_STATUS(status, ZX_ERR_SHOULD_WAIT);
+    fidl::WireResult read_frame_wire_result = tun.ReadFrame();
+    ASSERT_OK(read_frame_wire_result.status());
+    fuchsia_net_tun::wire::DeviceReadFrameResult read_frame_result =
+        read_frame_wire_result.value().result;
+    ASSERT_EQ(read_frame_result.which(), fuchsia_net_tun::wire::DeviceReadFrameResult::Tag::kErr);
+    ASSERT_STATUS(read_frame_result.err(), ZX_ERR_SHOULD_WAIT);
+  }
+  const buffer_descriptor_t* desc = client.descriptor(descriptor);
+  EXPECT_EQ(desc->return_flags,
+            static_cast<uint32_t>(fuchsia_hardware_network::wire::TxReturnFlags::kTxRetError));
 }
 
 }  // namespace testing

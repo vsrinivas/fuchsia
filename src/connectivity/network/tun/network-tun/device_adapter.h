@@ -102,7 +102,7 @@ class DeviceAdapter : public ddk::NetworkDeviceImplProtocol<DeviceAdapter>,
   // including the one given to it).
   // Returns `true` if a buffer was successfully allocated. The buffer given to `callback` is
   // discarded from the list of pending buffers and marked as pending for return.
-  bool TryGetTxBuffer(fit::callback<void(Buffer*, size_t)> callback);
+  bool TryGetTxBuffer(fit::callback<zx_status_t(Buffer*, size_t)> callback);
   // Attempts to write `data` and `meta` into an available rx buffer and return it to the
   // `NetworkDeviceInterface`.
   // Returns the number of remaining available buffers.

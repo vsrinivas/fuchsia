@@ -152,33 +152,40 @@ bool TunDevice::RunWriteFrame() {
 
 void TunDevice::RunReadFrame() {
   while (!pending_read_frame_.empty()) {
-    auto success = device_->TryGetTxBuffer([this](Buffer* buff, size_t avail) {
+    bool success = device_->TryGetTxBuffer([this](Buffer* buff, size_t avail) {
       std::vector<uint8_t> data;
       zx_status_t status = buff->Read(data);
       if (status != ZX_OK) {
         FX_LOGF(ERROR, "tun", "Failed to read from tx buffer: %s", zx_status_get_string(status));
-      } else if (data.empty()) {
-        FX_LOG(WARNING, "tun", "Ignoring empty tx buffer");
-      } else {
-        fuchsia_net_tun::wire::Frame::Frame_ fidl_frame;
-        fuchsia_net_tun::wire::Frame frame(
-            fidl::ObjectView<fuchsia_net_tun::wire::Frame::Frame_>::FromExternal(&fidl_frame));
-        fidl::VectorView data_view = fidl::VectorView<uint8_t>::FromExternal(data);
-        frame.set_data(fidl::ObjectView<fidl::VectorView<uint8_t>>::FromExternal(&data_view));
-        netdev::wire::FrameType frame_type = buff->frame_type();
-        frame.set_frame_type(fidl::ObjectView<netdev::wire::FrameType>::FromExternal(&frame_type));
-        std::optional meta = buff->TakeMetadata();
-        if (meta.has_value()) {
-          frame.set_meta(
-              fidl::ObjectView<fuchsia_net_tun::wire::FrameMetadata>::FromExternal(&meta.value()));
-        }
-        pending_read_frame_.front().ReplySuccess(std::move(frame));
-        pending_read_frame_.pop();
-        if (avail == 0) {
-          // clear Signals::READABLE if we don't have any more tx buffers.
-          signals_self_.signal_peer(uint32_t(fuchsia_net_tun::wire::Signals::kReadable), 0);
-        }
+        // The error reported here is relayed back to clients as an errored tx frame. There's a
+        // contract about specific meanings of errors returned in a tx frame through the netdevice
+        // banjo API and it might not match the semantics of the buffer API that generated this
+        // error. To avoid the possible impedance mismatch, return a fixed error.
+        return ZX_ERR_INTERNAL;
       }
+      if (data.empty()) {
+        FX_LOG(WARNING, "tun", "Ignoring empty tx buffer");
+        return ZX_OK;
+      }
+      fuchsia_net_tun::wire::Frame::Frame_ fidl_frame;
+      fuchsia_net_tun::wire::Frame frame(
+          fidl::ObjectView<fuchsia_net_tun::wire::Frame::Frame_>::FromExternal(&fidl_frame));
+      fidl::VectorView data_view = fidl::VectorView<uint8_t>::FromExternal(data);
+      frame.set_data(fidl::ObjectView<fidl::VectorView<uint8_t>>::FromExternal(&data_view));
+      netdev::wire::FrameType frame_type = buff->frame_type();
+      frame.set_frame_type(fidl::ObjectView<netdev::wire::FrameType>::FromExternal(&frame_type));
+      std::optional meta = buff->TakeMetadata();
+      if (meta.has_value()) {
+        frame.set_meta(
+            fidl::ObjectView<fuchsia_net_tun::wire::FrameMetadata>::FromExternal(&meta.value()));
+      }
+      pending_read_frame_.front().ReplySuccess(std::move(frame));
+      pending_read_frame_.pop();
+      if (avail == 0) {
+        // clear Signals::READABLE if we don't have any more tx buffers.
+        signals_self_.signal_peer(uint32_t(fuchsia_net_tun::wire::Signals::kReadable), 0);
+      }
+      return ZX_OK;
     });
     if (!success) {
       if (IsBlocking()) {

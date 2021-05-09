@@ -20,6 +20,11 @@
 namespace network {
 namespace tun {
 
+// Forward declaration for test-only friend class used below.
+namespace testing {
+class TunTest;
+}
+
 // Implements `fuchsia.net.tun.Device`.
 //
 // `TunDevice` uses `DeviceAdapter` to fulfill the `fuchsia.net.tun.Device` protocol. All FIDL
@@ -61,6 +66,10 @@ class TunDevice : public fbl::DoublyLinkedListable<std::unique_ptr<TunDevice>>,
   // NOTE: at this moment only one binding is supported, if the device is already bound the previous
   // channel is closed.
   void Bind(fidl::ServerEnd<fuchsia_net_tun::Device> req);
+
+ protected:
+  friend testing::TunTest;
+  const std::unique_ptr<DeviceAdapter>& adapter() const { return device_; }
 
  private:
   TunDevice(fit::callback<void(TunDevice*)> teardown, DeviceConfig config);

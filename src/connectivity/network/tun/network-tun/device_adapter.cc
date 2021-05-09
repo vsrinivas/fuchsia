@@ -199,7 +199,7 @@ bool DeviceAdapter::HasSession() {
   return has_sessions_;
 }
 
-bool DeviceAdapter::TryGetTxBuffer(fit::callback<void(Buffer*, size_t)> callback) {
+bool DeviceAdapter::TryGetTxBuffer(fit::callback<zx_status_t(Buffer*, size_t)> callback) {
   uint32_t id;
 
   fbl::AutoLock lock(&tx_lock_);
@@ -208,11 +208,11 @@ bool DeviceAdapter::TryGetTxBuffer(fit::callback<void(Buffer*, size_t)> callback
   }
   auto& buff = tx_buffers_.front();
   auto avail = tx_buffers_.size() - 1;
-  callback(&buff, avail);
+  zx_status_t status = callback(&buff, avail);
   id = buff.id();
   tx_buffers_.pop();
 
-  EnqueueTx(id, ZX_OK);
+  EnqueueTx(id, status);
   CommitTx();
   return true;
 }

@@ -13,6 +13,11 @@
 namespace network {
 namespace tun {
 
+// Forward declaration for test-only friend class used below.
+namespace testing {
+class TunTest;
+}
+
 // Implements `fuchsia.net.tun.Control`.
 //
 // `TunCtl` is created with a `dispatcher`, over which it serves the `fuchsia.net.tun.Control`
@@ -35,6 +40,10 @@ class TunCtl : public fidl::WireServer<fuchsia_net_tun::Control> {
   // NOTE: This does not trigger the destruction of all devices, it installs an observer that
   // will notify the caller when all the devices are destroyed by their regular lifetime semantics.
   void SetSafeShutdownCallback(fit::callback<void()> shutdown_callback);
+
+ protected:
+  friend testing::TunTest;
+  const fbl::DoublyLinkedList<std::unique_ptr<TunDevice>>& devices() const { return devices_; }
 
  private:
   void TryFireShutdownCallback();
