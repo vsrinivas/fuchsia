@@ -35,7 +35,10 @@ proto_library("proto") {
   generator_plugin_label = "//third_party/grpc:grpc_cpp_plugin"
   import_protobuf_full = true
 
-  deps = [ "//third_party/grpc:grpc++" ]
+  deps = [
+    "//third_party/grpc:grpc++",
+    "//third_party/protobuf:protobuf_full",
+  ]
 }
 
 source_set("common") {
