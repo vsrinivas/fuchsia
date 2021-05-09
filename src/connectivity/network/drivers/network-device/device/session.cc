@@ -34,19 +34,19 @@ bool Session::IsPaused() const { return paused_; }
 
 bool Session::ShouldTakeOverPrimary(const Session* current_primary) const {
   if ((!IsPrimary()) || current_primary == this) {
-    // if we're not a primary session, or the primary is already ourselves, then we don't
+    // If we're not a primary session, or the primary is already ourselves, then we don't
     // want to take over.
     return false;
   }
   if (!current_primary) {
-    // always request to take over if there is no current primary session.
+    // Always request to take over if there is no current primary session.
     return true;
   }
   if (current_primary->IsPaused() && !IsPaused()) {
     // If the current primary session is paused, but we aren't we can take it over.
     return true;
   }
-  // otherwise, the heuristic to apply here is that we want to use the
+  // Otherwise, the heuristic to apply here is that we want to use the
   // session that has the largest number of descriptors defined, as that relates to having more
   // buffers available for us.
   return descriptor_count_ > current_primary->descriptor_count_;
@@ -788,8 +788,7 @@ bool Session::CompleteRx(uint16_t descriptor_index, const rx_buffer_t* buff) {
     return true;
   }
 
-  bool ignore =
-      !IsSubscribedToFrameType(buff->meta.port_id, buff->meta.frame_type) || paused_.load();
+  bool ignore = !IsSubscribedToFrameType(buff->meta.port, buff->meta.frame_type) || paused_.load();
 
   // Copy session data to other sessions (if any) even if this session is paused.
   parent_->CopySessionData(*this, descriptor_index, buff);
@@ -807,7 +806,7 @@ bool Session::CompleteRx(uint16_t descriptor_index, const rx_buffer_t* buff) {
 void Session::CompleteRxWith(const Session& owner, uint16_t owner_index, const rx_buffer_t* buff) {
   // can't call this if owner is self.
   ZX_ASSERT(&owner != this);
-  if (!IsSubscribedToFrameType(buff->meta.port_id, buff->meta.frame_type) || paused_.load()) {
+  if (!IsSubscribedToFrameType(buff->meta.port, buff->meta.frame_type) || paused_.load()) {
     // don't do anything if we're paused or not subscribed to this frame type.
     return;
   }
@@ -969,7 +968,7 @@ zx_status_t Session::LoadRxInfo(uint16_t descriptor_index, const rx_buffer_t* bu
   }
   desc->frame_type = buff->meta.frame_type;
   desc->inbound_flags = buff->meta.flags;
-  desc->port_id = buff->meta.port_id;
+  desc->port_id = buff->meta.port;
   if (desc->chain_length >= netdev::wire::kMaxDescriptorChain) {
     LOGF_ERROR("network-device(%s): invalid descriptor %d chain length %d", name(),
                descriptor_index, desc->chain_length);

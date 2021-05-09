@@ -1162,7 +1162,7 @@ TEST_F(NetworkDeviceTest, OnlyReceiveOnSubscribedPorts) {
     auto rx_space = impl_.rx_buffers().pop_back();
     // Set the port ID to the index, we should expect the session to only see port0.
     uint8_t port_id = static_cast<uint8_t>(i);
-    rx_space->return_buffer().meta.port_id = port_id;
+    rx_space->return_buffer().meta.port = port_id;
     // Write some data so the buffer makes it into the session.
     ASSERT_OK(rx_space->WriteData(&port_id, sizeof(port_id), impl_.VmoGetter()));
     return_session.Enqueue(std::move(rx_space));

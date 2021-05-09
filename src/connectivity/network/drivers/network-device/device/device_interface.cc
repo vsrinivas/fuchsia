@@ -489,12 +489,12 @@ void DeviceInterface::SessionStarted(Session& session) {
     if (session.IsPrimary()) {
       active_primary_sessions_++;
       if (session.ShouldTakeOverPrimary(primary_session_.get())) {
-        // push primary session to sessions list.
+        // Push primary session to sessions list.
         sessions_.push_back(std::move(primary_session_));
-        // find the session in the list and promote it to primary
+        // Find the session in the list and promote it to primary.
         primary_session_ = sessions_.erase(session);
         ZX_ASSERT(primary_session_);
-        // notify rx queue of primary session change
+        // Notify rx queue of primary session change.
         rx_queue_->TriggerSessionChanged();
       }
       should_start = active_primary_sessions_ != 0;
@@ -502,7 +502,7 @@ void DeviceInterface::SessionStarted(Session& session) {
   }
 
   if (should_start) {
-    // start the device if we haven't done so already.
+    // Start the device if we haven't done so already.
     StartDevice();
   }
 
@@ -896,11 +896,11 @@ void DeviceInterface::NotifyDeadSession(Session& dead_session) {
   LOGF_TRACE("network-device: NotifyDeadSession '%s'", dead_session.name());
   // First of all, stop all data-plane operations with stopped session.
   if (!dead_session.IsPaused()) {
-    // Stop the session
+    // Stop the session.
     SessionStopped(dead_session);
   }
   if (dead_session.IsPrimary()) {
-    // Tell rx queue this session can't be used anymore
+    // Tell rx queue this session can't be used anymore.
     rx_queue_->PurgeSession(dead_session);
   }
 

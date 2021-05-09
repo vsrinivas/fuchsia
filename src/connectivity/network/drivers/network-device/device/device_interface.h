@@ -129,7 +129,7 @@ class DeviceInterface : public fidl::WireServer<netdev::Device>,
   zx::status<std::pair<uint8_t, DataVmoStore::StoredVmo*>> RegisterDataVmo(zx::vmo vmo)
       __TA_REQUIRES(control_lock_);
 
-  // Fidl protocol implementation.
+  // FIDL protocol implementation.
   void GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) override;
   void GetStatus(GetStatusRequestView request, GetStatusCompleter::Sync& completer) override;
   void OpenSession(OpenSessionRequestView request, OpenSessionCompleter::Sync& completer) override;

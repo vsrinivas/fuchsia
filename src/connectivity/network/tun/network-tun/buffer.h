@@ -30,9 +30,11 @@ class VmoStore {
  public:
   VmoStore()
       : store_(vmo_store::Options{
-            vmo_store::MapOptions{ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_REQUIRE_NON_RESIZABLE,
-                                  nullptr},
-            std::nullopt}) {}
+            .map =
+                vmo_store::MapOptions{
+                    .vm_option = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_REQUIRE_NON_RESIZABLE,
+                },
+        }) {}
 
   ~VmoStore() = default;
 

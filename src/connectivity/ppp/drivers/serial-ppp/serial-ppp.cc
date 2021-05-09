@@ -276,7 +276,7 @@ bool SerialPpp::ConsumeSerial(bool fetch_from_socket) {
       complete = {.id = buffer.id,
                   .length = static_cast<uint64_t>(copied - buffer.data.begin()),
                   .meta = {
-                      .port_id = kPortId,
+                      .port = kPortId,
                       .info = {},
                       .info_type = 0,
                       .flags = 0,

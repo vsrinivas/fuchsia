@@ -89,7 +89,6 @@ const uint32 FEATURE_NO_AUTO_SNOOP = 0x01;
 const uint32 MAX_BUFFER_PARTS = 4;
 
 /// The maximum number of concurrent shared VMOs that may exist.
-/// VMO IDs must  be in the range `[0, MAX_VMOS)`.
 // NOTE: The expected number of VMOs in use is going to be between 1 and 3 with common client usage.
 // This value is chosen to be larger than that to account for possible transitions between clients
 // (there may be an overlap of one client shutting of a data session as one comes online) and also
@@ -97,12 +96,30 @@ const uint32 MAX_BUFFER_PARTS = 4;
 const uint8 MAX_VMOS = 32;
 
 /// The maximum number of ports a device can have at once.
-/// Port IDs must be in the range `[0, MAX_PORTS)`.
 // NOTE: Chosen arbitrarily to allow for static memory allocation for port information. Expectation
 // is that devices are not going to have more than 4 ports in typical use cases.
 const uint8 MAX_PORTS = 32;
 
-/// A contiguous memory region in [`fuchsia.hardware.network.device/BufferData`].
+/// VMO identifier.
+///
+/// VMO identifiers are always in the range [0, [`fuchsia.hardware.network.device/MAX_VMOS`]).
+///
+/// VMO identifiers are reported to devices through
+/// [`fuchsia.hardware.network.device/NetworkDeviceImpl.PrepareVmo`].
+alias vmo_id = uint8;
+
+/// Buffer identifier.
+///
+/// Rx space buffers and tx buffers are identified by these when exchanged between interface and
+/// implementation.
+alias buffer_id = uint32;
+
+/// Port identifier.
+///
+/// Port identifiers are always in the range [0, [`fuchsia.hardware.network.device/MAX_PORTS`]).
+alias port_id = uint8;
+
+/// A contiguous memory region.
 ///
 /// Note that a `BufferRegion` is only contiguous in terms of the VMO it references, it does not
 /// necessarily translate into contiguous physical memory.
@@ -118,7 +135,7 @@ struct BufferData {
     /// Identifier of VMO backing the data in this buffer.
     /// The VMO identifier matches the one reported to devices through
     /// [`fuchsia.hardware.network.device/NetworkDeviceImpl.PrepareVmo`].
-    uint8 vmo_id;
+    vmo_id vmo_id;
     /// Regions of VMO holding frame data.
     vector<BufferRegion>:MAX_BUFFER_PARTS parts;
 };
@@ -141,7 +158,7 @@ union FrameInfo {
 /// [`fuchsia.hardware.network.device/RxBuffer`].
 struct BufferMetadata {
     /// Destination or source port identifier for this buffer.
-    uint8 port_id;
+    port_id port;
     /// Extra frame metadata information. The type of the
     /// [`fuchsia.hardware.network.device/FrameInfo`] union is defined by the value in `info_type`.
     FrameInfo info;
@@ -158,7 +175,7 @@ struct BufferMetadata {
 /// A transmit buffer containing a single frame.
 struct TxBuffer {
     /// Unique buffer identifier.
-    uint32 id;
+    buffer_id id;
     /// Description of data in this buffer.
     BufferData data;
     /// Metadata associated with this buffer.
@@ -178,7 +195,7 @@ struct TxBuffer {
 /// [`fuchsia.hardware.network.device/NetworkDeviceIfc.CompleteRx`].
 struct RxSpaceBuffer {
     /// Unique buffer identifier.
-    uint32 id;
+    buffer_id id;
     /// Description of data in this buffer.
     BufferData data;
 };
@@ -187,7 +204,7 @@ struct RxSpaceBuffer {
 struct RxBuffer {
     /// The buffer identifier informed in the [`fuchsia.hardware.network.device/RxSpaceBuffer`] that
     /// originated this `RxBuffer`.
-    uint32 id;
+    buffer_id id;
     /// The total length of bytes written in the [`fuchsia.hardware.network.device/RxSpaceBuffer`]
     /// referenced by `id`, excluding any `offset` bytes.
     uint64 length;
@@ -200,7 +217,7 @@ struct RxBuffer {
 struct TxResult {
     /// The buffer identifier informed in the [`fuchsia.hardware.network.device/TxBuffer`] that
     /// originated this `TxResult`.
-    uint32 id;
+    buffer_id id;
     /// The result status to report.
     ///
     /// Error results map to their equivalents in [`fuchsia.hardware.network/TxReturnFlags`].
@@ -250,27 +267,25 @@ protocol NetworkPort {
 
 [Transport = "Banjo", BanjoLayout = "ddk-interface"]
 protocol NetworkDeviceIfc {
-    /// Notifies the interface of status changes on port with `port_id`.
+    /// Notifies the interface of status changes on port with `id`.
     ///
     /// Port status changes must always be notified through `StatusChanged`. The interface will not
     /// poll ports for status via [`fuchsia.hardware.network.device/NetworkPort.GetStatus`].
-    PortStatusChanged(uint8 port_id, PortStatus new_status);
-    /// Instantiates a new port with `port_id`.
+    PortStatusChanged(port_id id, PortStatus new_status);
+    /// Instantiates a new port with `id`.
     ///
-    /// `port_id` must not be currently in use by any other ports. `port_id`s may be reused once the
+    /// `id` must not be currently in use by any other ports. `id`s may be reused once the
     /// provided port is destroyed by [`fuchsia.hardware.network.device/NetworkPort.Removed`].
-    ///
-    /// `port_id` must be in the range [0, [`fuchsia.hardware.network.device/MAX_PORTS`]).
     ///
     /// Port identifiers do not need to be stable across instantiations or reboots.
     /// Port identifiers don't need to be allocated in any specific order as long as
     /// [`fuchsia.hardware.network.device/MAX_PORTS`] is not exceeded.
-    AddPort(uint8 port_id, NetworkPort port);
-    /// Destroys port with `port_id`.
+    AddPort(port_id id, NetworkPort port);
+    /// Destroys port with `id`.
     ///
     /// NOTE: Resources associated with the port must not be freed until
     /// [`fuchsia.hardware.network.device/NetworkPort.Removed`] is called.
-    RemovePort(uint8 port_id);
+    RemovePort(port_id id);
     /// Notifies interface of incoming rx data, contained in
     /// [`fuchsia.hardware.network.device/RxBuffer`].
     ///
