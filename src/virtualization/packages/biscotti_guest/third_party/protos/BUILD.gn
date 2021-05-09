@@ -35,4 +35,6 @@ proto_library("vsh_cc_proto") {
   generate_python = false
   cc_generator_options = "lite"
   import_protobuf_full = true
+
+  deps = [ "//third_party/protobuf:protobuf_full" ]
 }
