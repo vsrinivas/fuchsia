@@ -1472,7 +1472,11 @@ TEST(NetStreamTest, UnconnectPoll) {
   ASSERT_EQ(bind(bound.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
 
-  for (int16_t events : {0, POLLIN | POLLOUT | POLLPRI | POLLRDHUP}) {
+  constexpr short masks[] = {
+      0,
+      POLLIN | POLLOUT | POLLPRI | POLLRDHUP,
+  };
+  for (short events : masks) {
     struct pollfd pfds[] = {{
                                 .fd = init.get(),
                                 .events = events,
@@ -4431,7 +4435,7 @@ TEST_P(SocketKindTest, IoctlInterfaceLookupRoundTrip) {
 
   struct ioctl_request {
     std::string name;
-    uint64_t request;
+    int request;
   };
   const ioctl_request requests[] = {
       {
@@ -4466,7 +4470,7 @@ TEST_P(SocketKindTest, IoctlInterfaceNotFound) {
   };
   struct ioctl_request {
     std::string name;
-    uint64_t request;
+    int request;
   };
   const ioctl_request requests[] = {
       {
@@ -4498,7 +4502,7 @@ TEST(SocketKindTest, IoctlLookupForNonSocketFd) {
   strcpy(ifr.ifr_name, "loblah");
   struct ioctl_request {
     std::string name;
-    uint64_t request;
+    int request;
   };
   const ioctl_request requests[] = {
       {

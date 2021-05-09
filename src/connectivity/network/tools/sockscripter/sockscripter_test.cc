@@ -101,7 +101,7 @@ class TestApi : ApiAbstraction {
     if (start && strlen(start)) {
       args.push_back(start);
     }
-    return scripter.Execute(args.size(), args.data());
+    return scripter.Execute(static_cast<int>(args.size()), args.data());
   }
 };
 
@@ -388,7 +388,7 @@ TEST_P(SockOptTest, SetGetParam) {
         auto expected = param.optval;
         EXPECT_GE(*optlen, param.optval.size());
         memcpy(optval, param.optval.data(), param.optval.size());
-        *optlen = param.optval.size();
+        *optlen = static_cast<socklen_t>(param.optval.size());
         return 0;
       });
   cmd << "tcp set-" << param.name << " " << param.arg << " log-" << param.name;
