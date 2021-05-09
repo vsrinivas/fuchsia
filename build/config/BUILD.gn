@@ -635,7 +635,6 @@ config("Wno-conversion") {
     "//src/lib/framebuffer/*",
     "//src/lib/fsl/socket/*",
     "//src/lib/fsl/vmo/*",
-    "//src/lib/fxl/*",
     "//src/lib/icu/tools/extractor/*",
     "//src/lib/json_parser/*",
     "//src/lib/line_input/*",

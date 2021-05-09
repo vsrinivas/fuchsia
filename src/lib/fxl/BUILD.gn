@@ -42,10 +42,6 @@ source_set("memory") {
     ":common",
     "//sdk/lib/syslog/cpp",
   ]
-  configs += [
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
-  ]
 }
 
 source_set("strings") {
@@ -81,10 +77,6 @@ source_set("strings") {
     ":common",
     "//sdk/lib/syslog/cpp",
   ]
-  configs += [
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
-  ]
 }
 
 source_set("functional") {
@@ -119,10 +111,6 @@ static_library("fxl") {
     "//sdk/lib/fit",
     "//sdk/lib/syslog/cpp",
     "//src/lib/files",
-  ]
-  configs += [
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
   ]
 }
 

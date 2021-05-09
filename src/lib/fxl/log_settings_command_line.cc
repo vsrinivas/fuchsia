@@ -62,8 +62,9 @@ bool ParseLogSettings(const fxl::CommandLine& command_line, syslog::LogSettings*
     }
 
     // verbosity scale sits in the interstitial space between INFO and DEBUG
-    settings.min_log_level = std::max(int(syslog::LOG_DEBUG) + 1,
-                                      syslog::LOG_INFO - (level * syslog::LogVerbosityStepSize));
+    settings.min_log_level = std::max<syslog::LogSeverity>(
+        syslog::LOG_INFO - static_cast<syslog::LogSeverity>(level * syslog::LogVerbosityStepSize),
+        syslog::LOG_DEBUG + 1);
   }
 
   // --quiet=<level>
@@ -84,7 +85,8 @@ bool ParseLogSettings(const fxl::CommandLine& command_line, syslog::LogSettings*
     if (level > 3) {
       level = 3;
     }
-    settings.min_log_level = syslog::LOG_INFO + (level * syslog::LogSeverityStepSize);
+    settings.min_log_level =
+        syslog::LOG_INFO + static_cast<syslog::LogSeverity>(level * syslog::LogSeverityStepSize);
   }
 
   // --log-file=<file>

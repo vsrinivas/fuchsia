@@ -120,7 +120,7 @@ std::string NumberToString(NumberType number, Base base) {
       abs_number /= 10u;
     } else {
       UnsignedNumberType val = abs_number % 16u;
-      buf[i] = (val < 10) ? ('0' + val) : ('A' + val % 10u);
+      buf[i] = (val < 10) ? static_cast<char>('0' + val) : ('A' + val % 10u);
       abs_number /= 16u;
     }
   }
