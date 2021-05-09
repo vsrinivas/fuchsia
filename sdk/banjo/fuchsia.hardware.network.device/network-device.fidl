@@ -202,12 +202,17 @@ struct TxResult {
     /// originated this `TxResult`.
     uint32 id;
     /// The result status to report.
+    ///
+    /// Error results map to their equivalents in [`fuchsia.hardware.network/TxReturnFlags`].
+    ///
     /// - `ZX_OK` if the frame was sent successfully.
     /// - `ZX_ERR_NOT_SUPPORTED` if any of the frame's flags are not supported.
     /// - `ZX_ERR_NO_RESOURCES` if the transmit failed to allocate space in its output queue for the
     /// frame.
     /// - `ZX_ERR_UNAVAILABLE` if the device is offline (or went offline before getting a
     /// confirmation that the frame was sent).
+    /// - `ZX_ERR_INTERNAL` or any other unlisted errors will be reported as a generic
+    /// [`fuchsia.hardware.network/TxReturnFlags.TX_RET_ERROR`].
     zx.status status;
 };
 

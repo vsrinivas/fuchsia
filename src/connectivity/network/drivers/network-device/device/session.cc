@@ -658,6 +658,9 @@ void Session::MarkTxReturnResult(uint16_t descriptor_index, zx_status_t status) 
       desc->return_flags =
           static_cast<uint32_t>(TxReturnFlags::kTxRetNotAvailable | TxReturnFlags::kTxRetError);
       break;
+    case ZX_ERR_INTERNAL:
+      // ZX_ERR_INTERNAL should never assume any flag semantics besides generic error.
+      __FALLTHROUGH;
     default:
       desc->return_flags = static_cast<uint32_t>(TxReturnFlags::kTxRetError);
       break;
