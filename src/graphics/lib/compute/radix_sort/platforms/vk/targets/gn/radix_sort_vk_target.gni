@@ -39,10 +39,10 @@ template("radix_sort_vk_target") {
   #
   # shader_sources
   #
-  # Shaders *must* remain in the listed order.
+  # ***********************************************
+  # *** shaders must remain in the listed order ***
+  # ***********************************************
   #
-  assert(defined(invoker.keyval_dwords), "Define invoker.keyval_dwords")
-
   # NOSORT
   shader_sources = [
     "${_radix_sort_vk_dir}/shaders/init.comp",
@@ -52,6 +52,9 @@ template("radix_sort_vk_target") {
     "${_radix_sort_vk_dir}/shaders/scatter_0_even.comp",
     "${_radix_sort_vk_dir}/shaders/scatter_0_odd.comp",
   ]
+
+  assert(defined(invoker.keyval_dwords), "Define invoker.keyval_dwords")
+
   if (invoker.keyval_dwords == 2) {
     shader_sources += [
       "${_radix_sort_vk_dir}/shaders/scatter_1_even.comp",

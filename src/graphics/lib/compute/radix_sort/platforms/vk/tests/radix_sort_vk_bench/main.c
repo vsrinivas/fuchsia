@@ -407,12 +407,12 @@ rs_usage(char const * const argv[])
     "[validate?] ] ] ] ] ]\n\n"
 
     "  <vendorID>:<deviceID> : Execute on a specific Vulkan physical device.\n"
-    "  <\"direct\"|\"indirect\"> : Direct or indirect radix sort.\n"
 #ifdef __Fuchsia__
     "  <target name>         : Name of Radix Sort target: \"pkg/data/targets/<vendor name>_<arch name>_<u32 or u64>.ar\".\n"
 #else
     "  <target name>         : Name of Radix Sort target: <vendor name>_<arch name>_<u32 or u64>.\n"
 #endif
+    "  <\"direct\"|\"indirect\"> : Direct or indirect radix sort.\n"
     "  <count lo>            : Initial number of keyvals.\n"
     "  <count hi>            : Final number of keyvals.\n"
     "  <count step>          : Keyval step size.\n"

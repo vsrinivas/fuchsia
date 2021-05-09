@@ -50,7 +50,7 @@ radix_sort_vk_target_get_requirements(struct radix_sort_vk_target const *       
 #endif
 
   //
-  // Get the Radix Sort target header.
+  // Get the target header.
   //
   struct target_archive_header const * const ar_header  = &target->ar_header;
   struct target_archive_entry const * const  ar_entries = ar_header->entries;
@@ -66,7 +66,7 @@ radix_sort_vk_target_get_requirements(struct radix_sort_vk_target const *       
   //
   // Verify target is compatible with the library.
   //
-  if (rs_target.header->config.magic != RS_CONFIG_MAGIC)
+  if (rs_target.header->magic != RS_HEADER_MAGIC)
     {
 #ifndef NDEBUG
       fprintf(stderr, "Error: Target is not compatible with library.");

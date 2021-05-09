@@ -55,6 +55,60 @@
 // clang-format on
 
 //
+// Arguments to indirectly launched shaders.
+//
+//   struct rs_indirect_info_dispatch
+//   {
+//     u32vec4 pad;
+//     u32vec4 zero;
+//     u32vec4 histogram;
+//     u32vec4 scatter;
+//   };
+//
+//   struct rs_indirect_info_fill
+//   {
+//     uint32_t block_offset;
+//     uint32_t dword_offset_min;
+//     uint32_t dword_offset_max_minus_min;
+//     uint32_t reserved; // padding for 16 bytes
+//   };
+//
+//   struct rs_indirect_info
+//   {
+//     rs_indirect_info_fill     pad;
+//     rs_indirect_info_fill     zero;
+//     rs_indirect_info_dispatch dispatch;
+//   };
+//
+#define RS_STRUCT_INDIRECT_INFO_DISPATCH()                                                         \
+  struct rs_indirect_info_dispatch                                                                 \
+  {                                                                                                \
+    RS_STRUCT_MEMBER_STRUCT(u32vec4, pad)                                                          \
+    RS_STRUCT_MEMBER_STRUCT(u32vec4, zero)                                                         \
+    RS_STRUCT_MEMBER_STRUCT(u32vec4, histogram)                                                    \
+    RS_STRUCT_MEMBER_STRUCT(u32vec4, scatter)                                                      \
+  }
+
+#define RS_STRUCT_INDIRECT_INFO_FILL()                                                             \
+  struct rs_indirect_info_fill                                                                     \
+  {                                                                                                \
+    RS_STRUCT_MEMBER(uint32_t, block_offset)                                                       \
+    RS_STRUCT_MEMBER(uint32_t, dword_offset_min)                                                   \
+    RS_STRUCT_MEMBER(uint32_t, dword_offset_max_minus_min)                                         \
+    RS_STRUCT_MEMBER(uint32_t, reserved)                                                           \
+  }
+
+#define RS_STRUCT_INDIRECT_INFO()                                                                  \
+  RS_STRUCT_INDIRECT_INFO_DISPATCH();                                                              \
+  RS_STRUCT_INDIRECT_INFO_FILL();                                                                  \
+  struct rs_indirect_info                                                                          \
+  {                                                                                                \
+    RS_STRUCT_MEMBER_STRUCT(rs_indirect_info_fill, pad)                                            \
+    RS_STRUCT_MEMBER_STRUCT(rs_indirect_info_fill, zero)                                           \
+    RS_STRUCT_MEMBER_STRUCT(rs_indirect_info_dispatch, dispatch)                                   \
+  }
+
+//
 // Define the push constant structures shared by the host and device.
 //
 //   INIT
@@ -139,38 +193,6 @@
     RS_STRUCT_MEMBER(RS_DEVADDR, devaddr_partitions)                                               \
     RS_STRUCT_MEMBER(RS_DEVADDR, devaddr_histograms)                                               \
     RS_STRUCT_MEMBER(uint32_t, pass_offset)                                                        \
-  }
-
-//
-// Arguments to indirectly launched shaders.
-//
-
-#define RS_STRUCT_INDIRECT_INFO_DISPATCH()                                                         \
-  struct rs_indirect_info_dispatch                                                                 \
-  {                                                                                                \
-    RS_STRUCT_MEMBER_STRUCT(u32vec4, pad)                                                          \
-    RS_STRUCT_MEMBER_STRUCT(u32vec4, zero)                                                         \
-    RS_STRUCT_MEMBER_STRUCT(u32vec4, histogram)                                                    \
-    RS_STRUCT_MEMBER_STRUCT(u32vec4, scatter)                                                      \
-  }
-
-#define RS_STRUCT_INDIRECT_INFO_FILL()                                                             \
-  struct rs_indirect_info_fill                                                                     \
-  {                                                                                                \
-    RS_STRUCT_MEMBER(uint32_t, block_offset)                                                       \
-    RS_STRUCT_MEMBER(uint32_t, dword_offset_min)                                                   \
-    RS_STRUCT_MEMBER(uint32_t, dword_offset_max_minus_min)                                         \
-    RS_STRUCT_MEMBER(uint32_t, reserved)                                                           \
-  }
-
-#define RS_STRUCT_INDIRECT_INFO()                                                                  \
-  RS_STRUCT_INDIRECT_INFO_DISPATCH();                                                              \
-  RS_STRUCT_INDIRECT_INFO_FILL();                                                                  \
-  struct rs_indirect_info                                                                          \
-  {                                                                                                \
-    RS_STRUCT_MEMBER_STRUCT(rs_indirect_info_fill, pad)                                            \
-    RS_STRUCT_MEMBER_STRUCT(rs_indirect_info_fill, zero)                                           \
-    RS_STRUCT_MEMBER_STRUCT(rs_indirect_info_dispatch, dispatch)                                   \
   }
 
 ////////////////////////////////////////////////////////////////////

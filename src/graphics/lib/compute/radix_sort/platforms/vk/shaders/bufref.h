@@ -39,7 +39,7 @@
 // is a uvec2.
 //
 #ifdef RS_DISABLE_SHADER_INT64
-#define RS_DEVADDR uvec2
+#define RS_DEVADDR u32vec2
 #else
 #define RS_DEVADDR uint64_t
 #endif
@@ -53,14 +53,14 @@
 // Define a buffer reference at a UINT32 offset.
 //
 #ifdef RS_DISABLE_SHADER_INT64
-#define RS_BUFREF_DEFINE_AT_OFFSET_UINT32(_layout, _name, _devaddr_uvec2, _offset)                 \
+#define RS_BUFREF_DEFINE_AT_OFFSET_UINT32(_layout, _name, _devaddr_u32vec2, _offset)               \
   RS_RESTRICT _layout _name;                                                                       \
   {                                                                                                \
-    uvec2 devaddr;                                                                                 \
-    uint  carry;                                                                                   \
+    u32vec2  devaddr;                                                                              \
+    uint32_t carry;                                                                                \
                                                                                                    \
-    devaddr.x = uaddCarry(_devaddr_uvec2.x, _offset, carry);                                       \
-    devaddr.y = _devaddr_uvec2.y + carry;                                                          \
+    devaddr.x = uaddCarry(_devaddr_u32vec2.x, _offset, carry);                                     \
+    devaddr.y = _devaddr_u32vec2.y + carry;                                                        \
                                                                                                    \
     _name = _layout(devaddr);                                                                      \
   }
@@ -73,20 +73,20 @@
 // Define a buffer reference at a packed UINT64 offset.
 //
 #ifdef RS_DISABLE_SHADER_INT64
-#define RS_BUFREF_DEFINE_AT_OFFSET_UVEC2(_layout, _name, _devaddr_uvec2, _offset_uvec2)            \
+#define RS_BUFREF_DEFINE_AT_OFFSET_U32VEC2(_layout, _name, _devaddr_u32vec2, _offset_u32vec2)      \
   RS_RESTRICT _layout _name;                                                                       \
   {                                                                                                \
-    uvec2 devaddr;                                                                                 \
-    uint  carry;                                                                                   \
+    u32vec2  devaddr;                                                                              \
+    uint32_t carry;                                                                                \
                                                                                                    \
-    devaddr.x = uaddCarry(_devaddr_uvec2.x, _offset_uvec2.x, carry);                               \
-    devaddr.y = _devaddr_uvec2.y + _offset_uvec2.y + carry;                                        \
+    devaddr.x = uaddCarry(_devaddr_u32vec2.x, _offset_u32vec2.x, carry);                           \
+    devaddr.y = _devaddr_u32vec2.y + _offset_u32vec2.y + carry;                                    \
                                                                                                    \
     _name = _layout(devaddr);                                                                      \
   }
 #else
-#define RS_BUFREF_DEFINE_AT_OFFSET_UVEC2(_layout, _name, _devaddr, _offset_uvec2)                  \
-  RS_RESTRICT _layout _name = _layout(_devaddr + pack64(_offset_uvec2))
+#define RS_BUFREF_DEFINE_AT_OFFSET_U32VEC2(_layout, _name, _devaddr, _offset_u32vec2)              \
+  RS_RESTRICT _layout _name = _layout(_devaddr + pack64(_offset_u32vec2))
 #endif
 
 //
@@ -95,8 +95,8 @@
 #ifdef RS_DISABLE_SHADER_INT64
 #define RS_BUFREF_INC_UINT32(_layout, _name, _inc)                                                 \
   {                                                                                                \
-    uvec2 devaddr = uvec2(_name);                                                                  \
-    uint  carry;                                                                                   \
+    u32vec2  devaddr = u32vec2(_name);                                                             \
+    uint32_t carry;                                                                                \
                                                                                                    \
     devaddr.x = uaddCarry(devaddr.x, _inc, carry);                                                 \
     devaddr.y = devaddr.y + carry;                                                                 \
@@ -111,19 +111,19 @@
 // Increment the buffer reference by a packed UINT64 offset.
 //
 #ifdef RS_DISABLE_SHADER_INT64
-#define RS_BUFREF_INC_UVEC2(_layout, _name, _inc_uvec2)                                            \
+#define RS_BUFREF_INC_U32VEC2(_layout, _name, _inc_u32vec2)                                        \
   {                                                                                                \
-    uvec2 devaddr = uvec2(_name);                                                                  \
-    uint  carry;                                                                                   \
+    u32vec2  devaddr = u32vec2(_name);                                                             \
+    uint32_t carry;                                                                                \
                                                                                                    \
-    devaddr.x = uaddCarry(devaddr.x, _inc_uvec2.x, carry);                                         \
-    devaddr.y = devaddr.y + _inc_uvec2.y + carry;                                                  \
+    devaddr.x = uaddCarry(devaddr.x, _inc_u32vec2.x, carry);                                       \
+    devaddr.y = devaddr.y + _inc_u32vec2.y + carry;                                                \
                                                                                                    \
     _name = _layout(devaddr);                                                                      \
   }
 #else
-#define RS_BUFREF_INC_UVEC2(_layout, _name, _inc_uvec2)                                            \
-  _name = _layout(uint64_t(_name) + pack64(_inc_uvec2))
+#define RS_BUFREF_INC_U32VEC2(_layout, _name, _inc_u32vec2)                                        \
+  _name = _layout(uint64_t(_name) + pack64(_inc_u32vec2))
 #endif
 
 //
@@ -131,11 +131,11 @@
 //
 #define RS_BUFREF_INC_UINT32_UINT32(_layout, _name, _inc_a, _inc_b)                                \
   {                                                                                                \
-    uvec2 inc;                                                                                     \
+    u32vec2 inc;                                                                                   \
                                                                                                    \
     umulExtended(_inc_a, _inc_b, inc.y, inc.x);                                                    \
                                                                                                    \
-    RS_BUFREF_INC_UVEC2(_layout, _name, inc);                                                      \
+    RS_BUFREF_INC_U32VEC2(_layout, _name, inc);                                                    \
   }
 
 //

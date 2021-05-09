@@ -113,14 +113,14 @@ main()
   const uint32_t dwords_idx =
     (info.block_offset + gl_WorkGroupID.x) * RS_BLOCK_DWORDS + gl_LocalInvocationID.x;
 
-  uvec2 dwords_offset;
+  u32vec2 dwords_offset;
 
   umulExtended(dwords_idx, 4, dwords_offset.y, dwords_offset.x);
 
-  writeonly RS_BUFREF_DEFINE_AT_OFFSET_UVEC2(buffer_rs_dwords,
-                                             rs_dwords,
-                                             push.devaddr_dwords,
-                                             dwords_offset);
+  writeonly RS_BUFREF_DEFINE_AT_OFFSET_U32VEC2(buffer_rs_dwords,
+                                               rs_dwords,
+                                               push.devaddr_dwords,
+                                               dwords_offset);
 
   //
   // Fills are always aligned to RS_BLOCK_KEYVALS

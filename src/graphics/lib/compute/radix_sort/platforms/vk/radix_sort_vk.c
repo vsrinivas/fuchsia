@@ -329,7 +329,7 @@ radix_sort_vk_create(VkDevice                            device,
   // archives will have a static count.
   //
 #ifndef RADIX_SORT_VK_DISABLE_VERIFY
-  if (rs_target.header->config.magic != RS_CONFIG_MAGIC)
+  if (rs_target.header->magic != RS_HEADER_MAGIC)
     {
 #ifndef NDEBUG
       fprintf(stderr, "Error: Target is not compatible with library.");

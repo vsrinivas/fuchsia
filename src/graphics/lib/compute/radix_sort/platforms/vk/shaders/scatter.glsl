@@ -707,8 +707,7 @@ rs_first_prefix_store(restrict buffer_rs_partitions rs_partitions)
 
     atomicStore(rs_partitions.extent[ii],
                 inc | RS_PARTITION_MASK_PREFIX,
-                gl_ScopeDevice,
-                // gl_ScopeQueueFamily,
+                gl_ScopeQueueFamily,
                 gl_StorageSemanticsBuffer,
                 gl_SemanticsRelease);
   }
@@ -732,8 +731,7 @@ rs_first_prefix_store(restrict buffer_rs_partitions rs_partitions)
 
     atomicStore(rs_partitions.extent[ii],
                 inc | RS_PARTITION_MASK_PREFIX,
-                gl_ScopeDevice,
-                // gl_ScopeQueueFamily,
+                gl_ScopeQueueFamily,
                 gl_StorageSemanticsBuffer,
                 gl_SemanticsRelease);
   }
@@ -753,8 +751,7 @@ rs_first_prefix_store(restrict buffer_rs_partitions rs_partitions)
 
       atomicStore(rs_partitions.extent[RS_WORKGROUP_BASE_FINAL],
                   inc | RS_PARTITION_MASK_PREFIX,
-                  gl_ScopeDevice,
-                  // gl_ScopeQueueFamily,
+                  gl_ScopeQueueFamily,
                   gl_StorageSemanticsBuffer,
                   gl_SemanticsRelease);
     }
@@ -778,8 +775,7 @@ rs_first_prefix_store(restrict buffer_rs_partitions rs_partitions)
 
       atomicStore(rs_partitions.extent[0],
                   inc | RS_PARTITION_MASK_PREFIX,
-                  gl_ScopeDevice,
-                  // gl_ScopeQueueFamily,
+                  gl_ScopeQueueFamily,
                   gl_StorageSemanticsBuffer,
                   gl_SemanticsRelease);
     }
@@ -807,8 +803,7 @@ rs_reduction_store(restrict buffer_rs_partitions      rs_partitions,
 
     atomicStore(rs_partitions.extent[partition_base + ii],
                 red | RS_PARTITION_MASK_REDUCTION,
-                gl_ScopeDevice,
-                // gl_ScopeQueueFamily,
+                gl_ScopeQueueFamily,
                 gl_StorageSemanticsBuffer,
                 gl_SemanticsRelease);
   }
@@ -826,8 +821,7 @@ rs_reduction_store(restrict buffer_rs_partitions      rs_partitions,
 
     atomicStore(rs_partitions.extent[partition_base + ii],
                 red | RS_PARTITION_MASK_REDUCTION,
-                gl_ScopeDevice,
-                // gl_ScopeQueueFamily,
+                gl_ScopeQueueFamily,
                 gl_StorageSemanticsBuffer,
                 gl_SemanticsRelease);
   }
@@ -841,8 +835,7 @@ rs_reduction_store(restrict buffer_rs_partitions      rs_partitions,
 
       atomicStore(rs_partitions.extent[partition_base + RS_WORKGROUP_BASE_FINAL],
                   red | RS_PARTITION_MASK_REDUCTION,
-                  gl_ScopeDevice,
-                  // gl_ScopeQueueFamily,
+                  gl_ScopeQueueFamily,
                   gl_StorageSemanticsBuffer,
                   gl_SemanticsRelease);
     }
@@ -861,8 +854,7 @@ rs_reduction_store(restrict buffer_rs_partitions      rs_partitions,
 
       atomicStore(rs_partitions.extent[partition_base],
                   red | RS_PARTITION_MASK_REDUCTION,
-                  gl_ScopeDevice,
-                  // gl_ScopeQueueFamily,
+                  gl_ScopeQueueFamily,
                   gl_StorageSemanticsBuffer,
                   gl_SemanticsRelease);
     }
@@ -902,8 +894,7 @@ rs_lookback_store(restrict buffer_rs_partitions      rs_partitions,
     while (true)
       {
         const uint32_t prev = atomicLoad(rs_partitions.extent[partition_base_prev + ii],
-                                         gl_ScopeDevice,
-                                         // gl_ScopeQueueFamily,
+                                         gl_ScopeQueueFamily,
                                          gl_StorageSemanticsBuffer,
                                          gl_SemanticsAcquire);
 
@@ -932,8 +923,7 @@ rs_lookback_store(restrict buffer_rs_partitions      rs_partitions,
 
         atomicAdd(rs_partitions.extent[partition_base + ii],
                   exc | (1 << 30),
-                  gl_ScopeDevice,
-                  // gl_ScopeQueueFamily,
+                  gl_ScopeQueueFamily,
                   gl_StorageSemanticsBuffer,
                   gl_SemanticsAcquireRelease);
         break;
@@ -959,8 +949,7 @@ rs_lookback_store(restrict buffer_rs_partitions      rs_partitions,
     while (true)
       {
         const uint32_t prev = atomicLoad(rs_partitions.extent[partition_base_prev + ii],
-                                         gl_ScopeDevice,
-                                         // gl_ScopeQueueFamily,
+                                         gl_ScopeQueueFamily,
                                          gl_StorageSemanticsBuffer,
                                          gl_SemanticsAcquire);
 
@@ -989,8 +978,7 @@ rs_lookback_store(restrict buffer_rs_partitions      rs_partitions,
 
         atomicAdd(rs_partitions.extent[partition_base + ii],
                   exc | (1 << 30),
-                  gl_ScopeDevice,
-                  // gl_ScopeQueueFamily,
+                  gl_ScopeQueueFamily,
                   gl_StorageSemanticsBuffer,
                   gl_SemanticsAcquireRelease);
         break;
@@ -1012,8 +1000,7 @@ rs_lookback_store(restrict buffer_rs_partitions      rs_partitions,
       while (true)
         {
           const uint32_t prev = atomicLoad(rs_partitions.extent[partition_base_prev + ii],
-                                           gl_ScopeDevice,
-                                           // gl_ScopeQueueFamily,
+                                           gl_ScopeQueueFamily,
                                            gl_StorageSemanticsBuffer,
                                            gl_SemanticsAcquire);
 
@@ -1042,8 +1029,8 @@ rs_lookback_store(restrict buffer_rs_partitions      rs_partitions,
 
           atomicAdd(rs_partitions.extent[partition_base + RS_WORKGROUP_BASE_FINAL],
                     exc | (1 << 30),
-                    gl_ScopeDevice,
-                    // gl_ScopeQueueFamily,gl_StorageSemanticsBuffer,
+                    gl_ScopeQueueFamily,
+                    gl_StorageSemanticsBuffer,
                     gl_SemanticsAcquireRelease);
           break;
         }
@@ -1069,8 +1056,7 @@ rs_lookback_store(restrict buffer_rs_partitions      rs_partitions,
       while (true)
         {
           const uint32_t prev = atomicLoad(rs_partitions.extent[partition_base_prev],
-                                           gl_ScopeDevice,
-                                           // gl_ScopeQueueFamily,
+                                           gl_ScopeQueueFamily,
                                            gl_StorageSemanticsBuffer,
                                            gl_SemanticsAcquire);
 
@@ -1099,8 +1085,7 @@ rs_lookback_store(restrict buffer_rs_partitions      rs_partitions,
 
           atomicAdd(rs_partitions.extent[partition_base],
                     exc | (1 << 30),
-                    gl_ScopeDevice,
-                    // gl_ScopeQueueFamily,
+                    gl_ScopeQueueFamily,
                     gl_StorageSemanticsBuffer,
                     gl_SemanticsAcquireRelease);
           break;
@@ -1139,8 +1124,7 @@ rs_lookback_skip_store(restrict buffer_rs_partitions      rs_partitions,
     while (true)
       {
         const uint32_t prev = atomicLoad(rs_partitions.extent[partition_base_prev + ii],
-                                         gl_ScopeDevice,
-                                         // gl_ScopeQueueFamily,
+                                         gl_ScopeQueueFamily,
                                          gl_StorageSemanticsBuffer,
                                          gl_SemanticsAcquire);
 
@@ -1184,8 +1168,7 @@ rs_lookback_skip_store(restrict buffer_rs_partitions      rs_partitions,
     while (true)
       {
         const uint32_t prev = atomicLoad(rs_partitions.extent[partition_base_prev + ii],
-                                         gl_ScopeDevice,
-                                         // gl_ScopeQueueFamily,
+                                         gl_ScopeQueueFamily,
                                          gl_StorageSemanticsBuffer,
                                          gl_SemanticsAcquire);
 
@@ -1226,8 +1209,7 @@ rs_lookback_skip_store(restrict buffer_rs_partitions      rs_partitions,
         {
           const uint32_t prev =
             atomicLoad(rs_partitions.extent[partition_base_prev + RS_WORKGROUP_BASE_FINAL],
-                       gl_ScopeDevice,
-                       // gl_ScopeQueueFamily,
+                       gl_ScopeQueueFamily,
                        gl_StorageSemanticsBuffer,
                        gl_SemanticsAcquire);
 
@@ -1272,8 +1254,7 @@ rs_lookback_skip_store(restrict buffer_rs_partitions      rs_partitions,
       while (true)
         {
           const uint32_t prev = atomicLoad(rs_partitions.extent[partition_base_prev],
-                                           gl_ScopeDevice,
-                                           // gl_ScopeQueueFamily,
+                                           gl_ScopeQueueFamily,
                                            gl_StorageSemanticsBuffer,
                                            gl_SemanticsAcquire);
 
@@ -1330,7 +1311,7 @@ rs_rank_to_local(const RS_KEYVAL_TYPE kv[RS_SCATTER_BLOCK_ROWS],
 //
 void
 rs_rank_to_global(const RS_KEYVAL_TYPE kv[RS_SCATTER_BLOCK_ROWS],
-                        inout uint32_t       kr[RS_SCATTER_BLOCK_ROWS])
+                  inout uint32_t       kr[RS_SCATTER_BLOCK_ROWS])
 {
   //
   // Define the histogram reference
@@ -1481,17 +1462,17 @@ rs_load(out RS_KEYVAL_TYPE kv[RS_SCATTER_BLOCK_ROWS])
   const uint32_t kv_in_offset_keys = gl_WorkGroupID.x * RS_BLOCK_KEYVALS +
                                      gl_SubgroupID * RS_SUBGROUP_KEYVALS + gl_SubgroupInvocationID;
 
-  uvec2 kv_in_offset;
+  u32vec2 kv_in_offset;
 
   umulExtended(kv_in_offset_keys,
                RS_KEYVAL_SIZE,
                kv_in_offset.y,   // msb
                kv_in_offset.x);  // lsb
 
-  readonly RS_BUFREF_DEFINE_AT_OFFSET_UVEC2(buffer_rs_kv,
-                                            rs_kv_in,
-                                            RS_DEVADDR_KEYVALS_IN(push),
-                                            kv_in_offset);
+  readonly RS_BUFREF_DEFINE_AT_OFFSET_U32VEC2(buffer_rs_kv,
+                                              rs_kv_in,
+                                              RS_DEVADDR_KEYVALS_IN(push),
+                                              kv_in_offset);
 
   //
   // Load keyvals

@@ -15,6 +15,8 @@
 
 static struct radix_sort_vk_target_header const header __attribute__((used)) =
 {
+  .magic = RS_HEADER_MAGIC,
+
   .extensions.named = {
 
   },
@@ -28,7 +30,6 @@ static struct radix_sort_vk_target_header const header __attribute__((used)) =
   },
 
   .config = {
-    .magic                 = RS_CONFIG_MAGIC,
     .keyval_dwords         = RS_KEYVAL_DWORDS,
 
     .histogram =  {

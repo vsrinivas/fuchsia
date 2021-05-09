@@ -334,17 +334,17 @@ main()
   // Assumes less than 2^30-1 keys and then extended multiplies it
   // by the keyval size.
   //
-  uvec2 kv_in_offset;
+  u32vec2 kv_in_offset;
 
   umulExtended(gl_WorkGroupID.x * RS_BLOCK_KEYVALS + gl_LocalInvocationID.x,
                RS_KEYVAL_SIZE,
                kv_in_offset.y,   // msb
                kv_in_offset.x);  // lsb
 
-  readonly RS_BUFREF_DEFINE_AT_OFFSET_UVEC2(buffer_rs_kv,
-                                            rs_kv_in,
-                                            push.devaddr_keyvals,
-                                            kv_in_offset);
+  readonly RS_BUFREF_DEFINE_AT_OFFSET_U32VEC2(buffer_rs_kv,
+                                              rs_kv_in,
+                                              push.devaddr_keyvals,
+                                              kv_in_offset);
 
   //
   // Load keyvals

@@ -17,7 +17,7 @@
 //
 //
 
-#define RS_CONFIG_MAGIC 0x4B565352  // "RSVK"
+#define RS_HEADER_MAGIC 0x4B565352  // "RSVK"
 
 //
 // This structure packages target-specific configuration parameters.
@@ -25,7 +25,6 @@
 
 struct radix_sort_vk_target_config
 {
-  uint32_t magic;
   uint32_t keyval_dwords;
 
   struct
@@ -65,6 +64,7 @@ struct radix_sort_vk_target_config
 
 struct radix_sort_vk_target_header
 {
+  uint32_t                              magic;       // magic header dword
   union radix_sort_vk_target_extensions extensions;  // target device extensions
   union radix_sort_vk_target_features   features;    // target device features
   struct radix_sort_vk_target_config    config;      // target configuration
