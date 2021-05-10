@@ -147,10 +147,6 @@ protocol Primary {
                              bytes:MAX_IMMEDIATE_COMMANDS_DATA_SIZE command_data,
                              vector<zx.koid>:MAX semaphores);
 
-    /// Deprecated: Retrieve the current magma error status.
-    //TODO(fxbug.dev/12993) - remove
-    GetError() -> (int32 magma_status);
-
     /// Incurs a round-trip to the system driver, used to ensure all previous messages are seen.
     Sync() -> ();
 

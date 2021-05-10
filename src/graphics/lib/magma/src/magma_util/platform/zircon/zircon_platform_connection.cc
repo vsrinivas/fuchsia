@@ -278,13 +278,6 @@ void ZirconPlatformConnection::ExecuteImmediateCommands(
     SetError(&completer, status.get());
 }
 
-// Deprecated, errors are sent as epitaph on channel close
-void ZirconPlatformConnection::GetError(GetErrorRequestView request,
-                                        GetErrorCompleter::Sync& completer) {
-  DLOG("ZirconPlatformConnection: GetError");
-  completer.Reply(MAGMA_STATUS_OK);
-}
-
 void ZirconPlatformConnection::Sync(SyncRequestView request, SyncCompleter::Sync& completer) {
   DLOG("ZirconPlatformConnection: Sync");
   completer.Reply();
