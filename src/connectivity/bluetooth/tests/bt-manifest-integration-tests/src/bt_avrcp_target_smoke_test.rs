@@ -4,21 +4,17 @@
 
 use {
     anyhow::Error,
-    fidl_fuchsia_bluetooth_avrcp::{
-        PeerManagerRequest, PeerManagerRequestStream, TargetHandlerProxy,
-    },
+    bt_manifest_integration_lib::mock_component,
+    fidl_fuchsia_bluetooth_avrcp::{PeerManagerMarker, PeerManagerRequest, TargetHandlerProxy},
     fidl_fuchsia_bluetooth_component::{LifecycleMarker, LifecycleProxy, LifecycleState},
-    fidl_fuchsia_media_sessions2::{
-        DiscoveryRequest, DiscoveryRequestStream, SessionsWatcherProxy,
-    },
+    fidl_fuchsia_media_sessions2::{DiscoveryMarker, DiscoveryRequest, SessionsWatcherProxy},
     fuchsia_async as fasync,
-    fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{
         builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
         mock::{Mock, MockHandles},
     },
     fuchsia_zircon::DurationNum,
-    futures::{channel::mpsc, SinkExt, StreamExt, TryStreamExt},
+    futures::{channel::mpsc, SinkExt, StreamExt},
     log::info,
     std::{collections::HashSet, iter::FromIterator},
 };
@@ -38,6 +34,33 @@ enum Event {
     Media(Option<SessionsWatcherProxy>),
     /// Bluetooth Lifecycle event.
     Lifecycle(Option<LifecycleProxy>),
+}
+
+impl From<DiscoveryRequest> for Event {
+    fn from(src: DiscoveryRequest) -> Self {
+        // Only expect WatchSessions request in this integration test.
+        match src {
+            DiscoveryRequest::WatchSessions { session_watcher, .. } => {
+                let watcher = session_watcher.into_proxy().unwrap();
+                Self::Media(Some(watcher))
+            }
+            r => panic!("Expected Watch but got {:?}", r),
+        }
+    }
+}
+
+impl From<PeerManagerRequest> for Event {
+    fn from(src: PeerManagerRequest) -> Self {
+        // Only expect RegisterTargetHandler requests in this integration test.
+        match src {
+            PeerManagerRequest::RegisterTargetHandler { handler, responder, .. } => {
+                let handler = handler.into_proxy().unwrap();
+                responder.send(&mut Ok(())).expect("Failed to respond");
+                Self::Avrcp(Some(handler))
+            }
+            r => panic!("Expected RegisterTargetHandler but got: {:?}", r),
+        }
+    }
 }
 
 /// Represents a fake AVRCP-TG client that requests the `fuchsia.bluetooth.component.Lifecycle`
@@ -60,64 +83,6 @@ async fn mock_avrcp_target_client(
         sender.send(Event::Lifecycle(Some(lifecycle))).await.expect("failed sending ack to test");
     })
     .detach();
-    Ok(())
-}
-
-/// Simulates the main AVRCP component (bt-avrcp.cmx) by providing the `PeerManager` service.
-async fn mock_avrcp_component(
-    sender: mpsc::Sender<Event>,
-    handles: MockHandles,
-) -> Result<(), Error> {
-    let mut fs = ServiceFs::new();
-    fs.dir("svc").add_fidl_service(move |mut req_stream: PeerManagerRequestStream| {
-        let mut sender_clone = sender.clone();
-        fasync::Task::local(async move {
-            while let Some(PeerManagerRequest::RegisterTargetHandler {
-                handler, responder, ..
-            }) = req_stream.try_next().await.expect("serving PeerManager stream failed")
-            {
-                info!("Received PeerManager service connection");
-                let handler = handler.into_proxy().unwrap();
-                responder.send(&mut Ok(())).expect("Failed to respond");
-                sender_clone
-                    .send(Event::Avrcp(Some(handler)))
-                    .await
-                    .expect("failed sending ack to test");
-            }
-        })
-        .detach();
-    });
-
-    fs.serve_connection(handles.outgoing_dir.into_channel())?;
-    fs.collect::<()>().await;
-    Ok(())
-}
-
-/// Simulates the MediaSession component by providing the `Discovery` service.
-async fn mock_media_session_component(
-    sender: mpsc::Sender<Event>,
-    handles: MockHandles,
-) -> Result<(), Error> {
-    let mut fs = ServiceFs::new();
-    fs.dir("svc").add_fidl_service(move |mut req_stream: DiscoveryRequestStream| {
-        let mut sender_clone = sender.clone();
-        fasync::Task::local(async move {
-            while let Some(DiscoveryRequest::WatchSessions { session_watcher, .. }) =
-                req_stream.try_next().await.expect("serving PeerManager stream failed")
-            {
-                info!("Received MediaSession Discovery service connection");
-                let stream = session_watcher.into_proxy().unwrap();
-                sender_clone
-                    .send(Event::Media(Some(stream)))
-                    .await
-                    .expect("failed sending ack to test");
-            }
-        })
-        .detach();
-    });
-
-    fs.serve_connection(handles.outgoing_dir.into_channel())?;
-    fs.collect::<()>().await;
     Ok(())
 }
 
@@ -146,7 +111,7 @@ async fn avrcp_tg_v2_connects_to_avrcp_service() {
             ComponentSource::Mock(Mock::new({
                 move |mock_handles: MockHandles| {
                     let sender = avrcp_tx.clone();
-                    Box::pin(mock_avrcp_component(sender, mock_handles))
+                    Box::pin(mock_component::<PeerManagerMarker, _>(sender, mock_handles))
                 }
             })),
         )
@@ -159,7 +124,7 @@ async fn avrcp_tg_v2_connects_to_avrcp_service() {
             ComponentSource::Mock(Mock::new({
                 move |mock_handles: MockHandles| {
                     let sender = media_tx.clone();
-                    Box::pin(mock_media_session_component(sender, mock_handles))
+                    Box::pin(mock_component::<DiscoveryMarker, _>(sender, mock_handles))
                 }
             })),
         )

@@ -4,6 +4,7 @@
 
 use {
     anyhow::Error,
+    bt_manifest_integration_lib::add_fidl_service_handler,
     fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileProxy, ProfileRequestStream},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
@@ -11,7 +12,7 @@ use {
         builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
         mock::{Mock, MockHandles},
     },
-    futures::{channel::mpsc, SinkExt, StreamExt, TryStreamExt},
+    futures::{channel::mpsc, SinkExt, StreamExt},
     log::info,
 };
 
@@ -27,7 +28,13 @@ enum Event {
     Client(Option<ProfileProxy>),
     /// A BR/EDR Profile service connection request was received - request was
     /// made by the RFCOMM component.
-    Component,
+    Profile(Option<ProfileRequestStream>),
+}
+
+impl From<ProfileRequestStream> for Event {
+    fn from(src: ProfileRequestStream) -> Self {
+        Self::Profile(Some(src))
+    }
 }
 
 /// Represents a fake RFCOMM client that requests the Profile service.
@@ -46,20 +53,7 @@ async fn mock_profile_component(
     handles: MockHandles,
 ) -> Result<(), Error> {
     let mut fs = ServiceFs::new();
-    fs.dir("svc").add_fidl_service(move |mut req_stream: ProfileRequestStream| {
-        let mut sender_clone = sender.clone();
-        fasync::Task::local(async move {
-            info!("Received Profile service connection from RFCOMM component");
-            sender_clone.send(Event::Component).await.expect("failed sending ack to test");
-            while let Some(request) =
-                req_stream.try_next().await.expect("serving Profile stream failed")
-            {
-                panic!("Received unexpected Profile request: {:?}", request);
-            }
-        })
-        .detach();
-    });
-
+    add_fidl_service_handler::<ProfileMarker, _>(&mut fs, sender.clone());
     fs.serve_connection(handles.outgoing_dir.into_channel())?;
     fs.collect::<()>().await;
     Ok(())
@@ -151,7 +145,7 @@ async fn rfcomm_v2_component_topology() {
         .expect("Should receive client event");
     let _rfcomm_component_event = events
         .iter()
-        .find(|&p| std::mem::discriminant(p) == std::mem::discriminant(&Event::Component))
+        .find(|&p| std::mem::discriminant(p) == std::mem::discriminant(&Event::Profile(None)))
         .expect("Should receive component event");
 
     info!("Finished RFCOMM smoke test");

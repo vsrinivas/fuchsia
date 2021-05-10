@@ -4,6 +4,7 @@
 
 use {
     anyhow::Error,
+    bt_manifest_integration_lib::add_fidl_service_handler,
     fidl::endpoints::DiscoverableService,
     fidl_fuchsia_bluetooth_a2dp as fidl_a2dp, fidl_fuchsia_bluetooth_avdtp as fidl_avdtp,
     fidl_fuchsia_bluetooth_avrcp as fidl_avrcp,
@@ -53,6 +54,72 @@ enum Event {
     Allocator(Option<AllocatorRequestStream>),
 }
 
+impl From<ProfileRequestStream> for Event {
+    fn from(src: ProfileRequestStream) -> Self {
+        Self::Profile(Some(src))
+    }
+}
+
+impl From<fidl_avrcp::PeerManagerRequestStream> for Event {
+    fn from(src: fidl_avrcp::PeerManagerRequestStream) -> Self {
+        Self::Avrcp(Some(src))
+    }
+}
+
+impl From<CodecFactoryRequestStream> for Event {
+    fn from(src: CodecFactoryRequestStream) -> Self {
+        Self::Codec(Some(src))
+    }
+}
+
+impl From<RegistryRequestStream> for Event {
+    fn from(src: RegistryRequestStream) -> Self {
+        Self::Registry(Some(src))
+    }
+}
+
+impl From<SessionAudioConsumerFactoryRequestStream> for Event {
+    fn from(src: SessionAudioConsumerFactoryRequestStream) -> Self {
+        Self::Session(Some(src))
+    }
+}
+
+impl From<AudioRequestStream> for Event {
+    fn from(src: AudioRequestStream) -> Self {
+        Self::AudioSettings(Some(src))
+    }
+}
+
+impl From<LoggerFactoryRequestStream> for Event {
+    fn from(src: LoggerFactoryRequestStream) -> Self {
+        Self::Cobalt(Some(src))
+    }
+}
+
+impl From<DiscoveryRequestStream> for Event {
+    fn from(src: DiscoveryRequestStream) -> Self {
+        Self::MediaSession(Some(src))
+    }
+}
+
+impl From<PublisherRequestStream> for Event {
+    fn from(src: PublisherRequestStream) -> Self {
+        Self::MediaPublisher(Some(src))
+    }
+}
+
+impl From<AudioDeviceEnumeratorRequestStream> for Event {
+    fn from(src: AudioDeviceEnumeratorRequestStream) -> Self {
+        Self::AudioDevice(Some(src))
+    }
+}
+
+impl From<AllocatorRequestStream> for Event {
+    fn from(src: AllocatorRequestStream) -> Self {
+        Self::Allocator(Some(src))
+    }
+}
+
 /// Represents a fake A2DP client that requests the `avdtp.PeerManager` and `a2dp.AudioMode` services.
 async fn mock_a2dp_client(
     mut sender: mpsc::Sender<Event>,
@@ -69,106 +136,18 @@ async fn mock_a2dp_client(
 /// The component mock that provides all the services that A2DP requires.
 async fn mock_component(sender: mpsc::Sender<Event>, handles: MockHandles) -> Result<(), Error> {
     let mut fs = ServiceFs::new();
-    let sender0 = sender.clone();
-    let sender1 = sender.clone();
-    let sender2 = sender.clone();
-    let sender3 = sender.clone();
-    let sender4 = sender.clone();
-    let sender5 = sender.clone();
-    let sender6 = sender.clone();
-    let sender7 = sender.clone();
-    let sender8 = sender.clone();
-    let sender9 = sender.clone();
-    let sender10 = sender.clone();
-    fs.dir("svc")
-        .add_fidl_service(move |req_stream: fidl_avrcp::PeerManagerRequestStream| {
-            let mut sender = sender0.clone();
-            fasync::Task::local(async move {
-                info!("Received avrcp.PeerManager connection");
-                sender.send(Event::Avrcp(Some(req_stream))).await.expect("should send");
-            })
-            .detach()
-        })
-        .add_fidl_service(move |req_stream: ProfileRequestStream| {
-            let mut sender = sender1.clone();
-            fasync::Task::local(async move {
-                info!("Received Profile connection");
-                sender.send(Event::Profile(Some(req_stream))).await.expect("should send");
-            })
-            .detach()
-        })
-        .add_fidl_service(move |req_stream: LoggerFactoryRequestStream| {
-            let mut sender = sender2.clone();
-            fasync::Task::local(async move {
-                info!("Received cobalt LoggerFactory connection");
-                sender.send(Event::Cobalt(Some(req_stream))).await.expect("should send");
-            })
-            .detach()
-        })
-        .add_fidl_service(move |req_stream: AudioDeviceEnumeratorRequestStream| {
-            let mut sender = sender3.clone();
-            fasync::Task::local(async move {
-                info!("Received AudioDeviceEnumerator connection");
-                sender.send(Event::AudioDevice(Some(req_stream))).await.expect("should send");
-            })
-            .detach()
-        })
-        .add_fidl_service(move |req_stream: SessionAudioConsumerFactoryRequestStream| {
-            let mut sender = sender4.clone();
-            fasync::Task::local(async move {
-                info!("Received SessionAudioConsumerFactory connection");
-                sender.send(Event::Session(Some(req_stream))).await.expect("should send");
-            })
-            .detach()
-        })
-        .add_fidl_service(move |req_stream: PublisherRequestStream| {
-            let mut sender = sender5.clone();
-            fasync::Task::local(async move {
-                info!("Received Publisher connection");
-                sender.send(Event::MediaPublisher(Some(req_stream))).await.expect("should send");
-            })
-            .detach()
-        })
-        .add_fidl_service(move |req_stream: CodecFactoryRequestStream| {
-            let mut sender = sender6.clone();
-            fasync::Task::local(async move {
-                info!("Received CodecFactory connection");
-                sender.send(Event::Codec(Some(req_stream))).await.expect("should send");
-            })
-            .detach()
-        })
-        .add_fidl_service(move |req_stream: AudioRequestStream| {
-            let mut sender = sender7.clone();
-            fasync::Task::local(async move {
-                info!("Received Audio connection");
-                sender.send(Event::AudioSettings(Some(req_stream))).await.expect("should send");
-            })
-            .detach()
-        })
-        .add_fidl_service(move |req_stream: AllocatorRequestStream| {
-            let mut sender = sender8.clone();
-            fasync::Task::local(async move {
-                info!("Received Allocator connection");
-                sender.send(Event::Allocator(Some(req_stream))).await.expect("should send");
-            })
-            .detach()
-        })
-        .add_fidl_service(move |req_stream: RegistryRequestStream| {
-            let mut sender = sender9.clone();
-            fasync::Task::local(async move {
-                info!("Received Registry connection");
-                sender.send(Event::Registry(Some(req_stream))).await.expect("should send");
-            })
-            .detach()
-        })
-        .add_fidl_service(move |req_stream: DiscoveryRequestStream| {
-            let mut sender = sender10.clone();
-            fasync::Task::local(async move {
-                info!("Received Discovery connection");
-                sender.send(Event::MediaSession(Some(req_stream))).await.expect("should send");
-            })
-            .detach()
-        });
+
+    add_fidl_service_handler::<fidl_avrcp::PeerManagerMarker, _>(&mut fs, sender.clone());
+    add_fidl_service_handler::<ProfileMarker, _>(&mut fs, sender.clone());
+    add_fidl_service_handler::<LoggerFactoryMarker, _>(&mut fs, sender.clone());
+    add_fidl_service_handler::<AudioDeviceEnumeratorMarker, _>(&mut fs, sender.clone());
+    add_fidl_service_handler::<SessionAudioConsumerFactoryMarker, _>(&mut fs, sender.clone());
+    add_fidl_service_handler::<PublisherMarker, _>(&mut fs, sender.clone());
+    add_fidl_service_handler::<CodecFactoryMarker, _>(&mut fs, sender.clone());
+    add_fidl_service_handler::<AudioMarker, _>(&mut fs, sender.clone());
+    add_fidl_service_handler::<AllocatorMarker, _>(&mut fs, sender.clone());
+    add_fidl_service_handler::<RegistryMarker, _>(&mut fs, sender.clone());
+    add_fidl_service_handler::<DiscoveryMarker, _>(&mut fs, sender);
 
     fs.serve_connection(handles.outgoing_dir.into_channel())?;
     fs.collect::<()>().await;

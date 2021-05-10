@@ -4,16 +4,16 @@
 
 use {
     anyhow::Error,
-    fidl_fuchsia_bluetooth_bredr::{ProfileRequest, ProfileRequestStream},
+    bt_manifest_integration_lib::mock_component,
+    fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequest},
     fidl_fuchsia_bluetooth_hfp::{HfpMarker, HfpProxy},
     fidl_fuchsia_bluetooth_hfp_test::{HfpTestMarker, HfpTestProxy},
     fuchsia_async as fasync,
-    fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{
         builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
         mock::{Mock, MockHandles},
     },
-    futures::{channel::mpsc, SinkExt, StreamExt, TryStreamExt},
+    futures::{channel::mpsc, SinkExt, StreamExt},
     log::info,
 };
 
@@ -41,6 +41,12 @@ enum Event {
     HfpTest(Option<HfpTestProxy>),
 }
 
+impl From<ProfileRequest> for Event {
+    fn from(src: ProfileRequest) -> Self {
+        Self::Profile(Some(src))
+    }
+}
+
 /// Represents a fake HFP client that requests the `Hfp` and `HfpTest` services.
 async fn mock_hfp_client(
     mut sender: mpsc::Sender<Event>,
@@ -51,34 +57,6 @@ async fn mock_hfp_client(
 
     let hfp_test_svc = handles.connect_to_service::<HfpTestMarker>()?;
     sender.send(Event::HfpTest(Some(hfp_test_svc))).await.expect("failed sending ack to test");
-    Ok(())
-}
-
-/// Simulates a component that provides the `bredr.Profile` service.
-async fn mock_profile_component(
-    sender: mpsc::Sender<Event>,
-    handles: MockHandles,
-) -> Result<(), Error> {
-    let mut fs = ServiceFs::new();
-    fs.dir("svc").add_fidl_service(move |mut req_stream: ProfileRequestStream| {
-        let mut sender_clone = sender.clone();
-        info!("Received Profile connection request");
-        fasync::Task::local(async move {
-            while let Some(request) =
-                req_stream.try_next().await.expect("serving Profile stream failed")
-            {
-                info!("Received Profile service request");
-                sender_clone
-                    .send(Event::Profile(Some(request)))
-                    .await
-                    .expect("failed sending ack to test");
-            }
-        })
-        .detach();
-    });
-
-    fs.serve_connection(handles.outgoing_dir.into_channel())?;
-    fs.collect::<()>().await;
     Ok(())
 }
 
@@ -106,7 +84,7 @@ async fn hfp_audio_gateway_v2_capability_routing() {
             ComponentSource::Mock(Mock::new({
                 move |mock_handles: MockHandles| {
                     let sender = profile_tx.clone();
-                    Box::pin(mock_profile_component(sender, mock_handles))
+                    Box::pin(mock_component::<ProfileMarker, _>(sender, mock_handles))
                 }
             })),
         )

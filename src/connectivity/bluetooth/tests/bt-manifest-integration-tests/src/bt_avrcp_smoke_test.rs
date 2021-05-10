@@ -4,16 +4,16 @@
 
 use {
     anyhow::Error,
+    bt_manifest_integration_lib::mock_component,
     fidl_fuchsia_bluetooth_avrcp::{PeerManagerMarker, PeerManagerProxy},
     fidl_fuchsia_bluetooth_avrcp_test::{PeerManagerExtMarker, PeerManagerExtProxy},
-    fidl_fuchsia_bluetooth_bredr::{ProfileRequest, ProfileRequestStream},
+    fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequest},
     fuchsia_async as fasync,
-    fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{
         builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
         mock::{Mock, MockHandles},
     },
-    futures::{channel::mpsc, SinkExt, StreamExt, TryStreamExt},
+    futures::{channel::mpsc, SinkExt, StreamExt},
     log::info,
 };
 
@@ -32,6 +32,12 @@ enum Event {
     PeerManagerExt(Option<PeerManagerExtProxy>),
 }
 
+impl From<ProfileRequest> for Event {
+    fn from(src: ProfileRequest) -> Self {
+        Self::Profile(Some(src))
+    }
+}
+
 /// Represents a fake AVRCP client that requests the PeerManager and PeerManagerExt services.
 async fn mock_avrcp_client(
     mut sender: mpsc::Sender<Event>,
@@ -48,33 +54,6 @@ async fn mock_avrcp_client(
         .send(Event::PeerManagerExt(Some(peer_manager_ext_svc)))
         .await
         .expect("failed sending ack to test");
-    Ok(())
-}
-
-/// Simulates a component that provides the `bredr.Profile` service.
-async fn mock_profile_component(
-    sender: mpsc::Sender<Event>,
-    handles: MockHandles,
-) -> Result<(), Error> {
-    let mut fs = ServiceFs::new();
-    fs.dir("svc").add_fidl_service(move |mut req_stream: ProfileRequestStream| {
-        let mut sender_clone = sender.clone();
-        fasync::Task::local(async move {
-            while let Some(request) =
-                req_stream.try_next().await.expect("serving Profile stream failed")
-            {
-                info!("Received Profile service request");
-                sender_clone
-                    .send(Event::Profile(Some(request)))
-                    .await
-                    .expect("failed sending ack to test");
-            }
-        })
-        .detach();
-    });
-
-    fs.serve_connection(handles.outgoing_dir.into_channel())?;
-    fs.collect::<()>().await;
     Ok(())
 }
 
@@ -102,7 +81,7 @@ async fn avrcp_v2_component_topology() {
             ComponentSource::Mock(Mock::new({
                 move |mock_handles: MockHandles| {
                     let sender = profile_tx.clone();
-                    Box::pin(mock_profile_component(sender, mock_handles))
+                    Box::pin(mock_component::<ProfileMarker, _>(sender, mock_handles))
                 }
             })),
         )
