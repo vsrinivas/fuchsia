@@ -22,3 +22,6 @@ To run the RFCOMM smoke test:
 To run the HFP Audio Gateway smoke test:
 
 `fx test bt-hfp-audio-gateway-smoke-test`
+
+To run the A2DP smoke test:
+`fx test bt-a2dp-smoke-test`

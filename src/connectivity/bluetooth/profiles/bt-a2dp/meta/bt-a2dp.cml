@@ -1,0 +1,15 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "src/connectivity/bluetooth/profiles/bt-a2dp/meta/bt-a2dp.shard.cml" ],
+    program: {
+        binary: "bin/bt_a2dp",
+    },
+    children: [
+        {
+            name: "bt-avrcp-target",
+            url: "fuchsia-pkg://fuchsia.com/bt-avrcp-target#meta/bt-avrcp-target.cm",
+        },
+    ],
+}

@@ -1,0 +1,74 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    // This manifest shard provides the set of capabilities used by the A2DP profile.
+    //
+    // The manifest that includes it (production, testing) should declare "bt-avrcp-target"
+    // as a child with the appropriate package URL.
+    // e.g.:
+    //   children: [
+    //     {
+    //         name: "bt-avrcp-target",
+    //         url: "fuchsia-pkg://fuchsia.com/bt-avrcp-target#meta/bt-avrcp-target.cm",
+    //     },
+    //   ],
+    //
+    // This allows for hermetic packaging as manifests can use a relative URL for the child.
+    include: [
+        "sdk/lib/diagnostics/inspect/client.shard.cml",
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+    },
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.bluetooth.a2dp.AudioMode",
+                "fuchsia.bluetooth.avdtp.PeerManager",
+            ],
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.bluetooth.avrcp.PeerManager",
+                "fuchsia.bluetooth.bredr.Profile",
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.media.AudioDeviceEnumerator",
+                "fuchsia.media.SessionAudioConsumerFactory",
+                "fuchsia.media.sessions2.Publisher",
+                "fuchsia.mediacodec.CodecFactory",
+                "fuchsia.settings.Audio",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+        },
+        {
+            protocol: [ "fuchsia.bluetooth.component.Lifecycle" ],
+            from: "#bt-avrcp-target",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.bluetooth.avrcp.PeerManager",
+                "fuchsia.logger.LogSink",
+                "fuchsia.media.sessions2.Discovery",
+            ],
+            from: "parent",
+            to: [ "#bt-avrcp-target" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.bluetooth.a2dp.AudioMode",
+                "fuchsia.bluetooth.avdtp.PeerManager",
+            ],
+            from: "self",
+        },
+    ],
+}

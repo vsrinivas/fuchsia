@@ -94,8 +94,17 @@ fuchsia_component("component") {
   deps = [ ":bin" ]
 }
 
+fuchsia_component("component-v2") {
+  component_name = "bt-a2dp"
+  manifest = "meta/bt-a2dp.cml"
+  deps = [ ":bin" ]
+}
+
 fuchsia_package("bt-a2dp") {
-  deps = [ ":component" ]
+  deps = [
+    ":component",
+    ":component-v2",
+  ]
 }
 
 fuchsia_unittest_package("bt-a2dp-tests") {
