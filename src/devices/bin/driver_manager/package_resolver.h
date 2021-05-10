@@ -13,6 +13,7 @@
 #include <zircon/types.h>
 
 #include "src/devices/bin/driver_manager/driver.h"
+#include "src/lib/pkg_url/fuchsia_pkg_url.h"
 
 namespace internal {
 
@@ -28,30 +29,29 @@ class PackageResolver : public PackageResolverInterface {
   // Takes in an unowned connection to boot arguments. boot_args must outlive PackageResolver.
   explicit PackageResolver(fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_args)
       : boot_args_(boot_args) {}
+
   // PackageResolverInterface implementation.
   //
-  // This will resolve the package, discover a driver inside the package,
+  // This takes a URL which should be a path to a driver shared library. This
+  // will resolve the package, load the driver shared library,
   // and return the resulting Driver object.
-  // At the moment this function assumes that the package will only have
-  // one file in /lib/ and it assumes that this file is the package's driver.
+  //
+  // E.g of a URL: fuchsia-pkg://fuchsia.com/my-package#driver/my-driver.so
   zx::status<std::unique_ptr<Driver>> FetchDriver(const std::string& package_url) override;
 
  private:
-  struct FetchDriverVmoResult {
-    std::string libname;
-    zx::vmo vmo;
-  };
   // Fetches the driver shared library from |package_url|.
-  zx::status<FetchDriverVmoResult> FetchDriverVmo(const std::string& package_url);
+  zx::status<zx::vmo> FetchDriverVmo(const component::FuchsiaPkgUrl& package_url);
 
   // Connects to the package resolver service if not already connected.
   zx_status_t ConnectToResolverService();
+
   // Creates the directory client for |package_url|.
   zx::status<fidl::WireSyncClient<fuchsia_io::Directory>> Resolve(
-      const std::string_view& package_url);
-  zx::status<FetchDriverVmoResult> LoadDriverPackage(
-      fidl::WireSyncClient<fuchsia_io::Directory>* package_dir);
-  zx::status<std::string> GetDriverLibname(fidl::WireSyncClient<fuchsia_io::Directory>* lib_dir);
+      const component::FuchsiaPkgUrl& package_url);
+
+  zx::status<zx::vmo> LoadDriver(fidl::WireSyncClient<fuchsia_io::Directory>* package_dir,
+                                 const component::FuchsiaPkgUrl& package_url);
 
   fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_args_;
   fidl::WireSyncClient<fuchsia_pkg::PackageResolver> resolver_client_;
