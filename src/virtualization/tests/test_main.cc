@@ -13,9 +13,12 @@
 // This test event listener dumps the guest's serial logs when a test fails.
 class LoggerOutputListener : public ::testing::EmptyTestEventListener {
   void OnTestEnd(const ::testing::TestInfo& info) override {
-    if (!info.result()->Failed()) {
+    // Don't show guest output on success, or if it was already printed
+    // during the test.
+    if (!info.result()->Failed() || Logger::kLogAllGuestOutput) {
       return;
     }
+
     std::cout << "[----------] Begin guest output\n";
     std::cout << Logger::Get().Buffer();
     std::cout << "\n[----------] End guest output\n";

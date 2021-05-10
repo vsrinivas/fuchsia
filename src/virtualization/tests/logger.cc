@@ -13,7 +13,7 @@ Logger& Logger::Get() {
 
 void Logger::Write(const char* s, size_t count) {
   buffer_.append(s, count);
-  if (kGuestOutput) {
+  if (kLogAllGuestOutput) {
     std::cout.write(s, count);
     std::cout.flush();
   }

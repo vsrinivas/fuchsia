@@ -17,14 +17,18 @@ class Logger {
   void Write(const std::string& buffer);
   const std::string& Buffer() { return buffer_; }
 
+  // Log all guest output immediately upon being received.
+  //
+  // If false, we only log guest output on test failure.
+  //
+  // TODO(fxbug.dev/56119): Currently enabled to diagnose ongoing test flakes.
+  static constexpr bool kLogAllGuestOutput = true;
+
  private:
   Logger() = default;
 
   Logger(const Logger&) = delete;
   Logger& operator=(const Logger&) = delete;
-
-  // TODO(fxbug.dev/56119): Currently enabled to diagnose ongoing test flakes.
-  static constexpr bool kGuestOutput = true;
 
   std::string buffer_;
 };
