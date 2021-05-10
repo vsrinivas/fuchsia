@@ -31,7 +31,7 @@ TODO(fxbug.dev/32253)
 
 ## RETURN VALUE
 
-[`zx_clock_get()`] returns the current monotonic time.
+[`zx_clock_get_monotonic()`] returns the current monotonic time.
 
 ## ERRORS
 
