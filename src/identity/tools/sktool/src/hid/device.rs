@@ -72,7 +72,7 @@ pub struct Device<C: Connection, R: Rng> {
     /// A `Connection` used to communicate with the device.
     connection: C,
     /// A random number generator used for nonce generation.
-    /// The rng is mutex-wrapped to faciliate connection error handling without a mutable reference
+    /// The rng is mutex-wrapped to facilitate connection error handling without a mutable reference
     /// to the device. A lock is held on this mutex during device operations that should not be
     /// overlapped.
     rng: Mutex<R>,

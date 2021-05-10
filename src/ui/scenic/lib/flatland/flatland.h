@@ -190,7 +190,7 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // Each importer is used for a different service.
   std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> buffer_collection_importers_;
 
-  // A Sysmem allocator to faciliate buffer allocation with the Renderer.
+  // A Sysmem allocator to facilitate buffer allocation with the Renderer.
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
 
   // True if any function has failed since the previous call to Present(), false otherwise.
