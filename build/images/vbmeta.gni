@@ -40,6 +40,12 @@ declare_args() {
   # Board level extra vbmeta images to be combined into the top-level vbmeta
   # struct.
   board_extra_vbmeta_images = []
+
+  # Board level extra vbmeta descriptors to be combined into the top-level
+  # vbmeta struct (these are in json format)
+  #
+  # see //build/images/vbmeta/README.md for more information about these.
+  board_extra_vbmeta_descriptors = []
 }
 
 # Template for producing VBMETA image for AVB
@@ -291,15 +297,31 @@ template("vbmeta") {
       zbi[0],
     ]
 
-    foreach(descriptor_target, additional_descriptor_labels) {
-      descriptor_outputs = get_target_outputs(descriptor_target)
-      descriptor_file = descriptor_outputs[0]
+    # Add any json-format descriptors to the arguments list directly.
+    foreach(descriptor_file, board_extra_vbmeta_descriptors) {
       args += [
         "--additional-descriptor",
         rebase_path(descriptor_file, root_build_dir),
       ]
       inputs += [ descriptor_file ]
-      deps += [ descriptor_target ]
+    }
+
+    if (board_extra_vbmeta_descriptors == []) {
+      # TODO: Remove this set of actions when additional descriptors are moved to
+      # JSON files instead of vbmeta files that the descriptors need to be extracted
+      # from.
+      foreach(descriptor_target, additional_descriptor_labels) {
+        descriptor_outputs = get_target_outputs(descriptor_target)
+        descriptor_file = descriptor_outputs[0]
+        args += [
+          "--additional-descriptor",
+          rebase_path(descriptor_file, root_build_dir),
+        ]
+        inputs += [ descriptor_file ]
+        deps += [ descriptor_target ]
+      }
+    } else {
+      not_needed(additional_descriptor_labels)
     }
 
     outputs = [
