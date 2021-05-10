@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1594
+From //build/config/BUILDCONFIG.gn:1589
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -1082,7 +1082,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1351
+From //build/config/BUILDCONFIG.gn:1346
 
 ### extract_minfs_metadata_on_corruption
 If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
@@ -1855,7 +1855,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1202
+From //build/config/BUILDCONFIG.gn:1197
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -3188,7 +3188,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1584
+From //build/config/BUILDCONFIG.gn:1579
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -3197,7 +3197,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1589
+From //build/config/BUILDCONFIG.gn:1584
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3241,7 +3241,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1397
+From //build/config/BUILDCONFIG.gn:1392
 
 ### size_checker_input
 The input to the size checker.
@@ -3527,7 +3527,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1381
+From //build/config/BUILDCONFIG.gn:1376
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
