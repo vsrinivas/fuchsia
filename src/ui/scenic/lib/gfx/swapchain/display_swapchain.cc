@@ -352,7 +352,8 @@ bool DisplaySwapchain::InitializeDisplayLayer() {
   zx_status_t transport_status =
       (*display_controller_)->CreateLayer(&create_layer_status, &primary_layer_id_);
   if (create_layer_status != ZX_OK || transport_status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to create layer, " << create_layer_status;
+    FX_LOGS(ERROR) << "Failed to create layer, op_status=" << create_layer_status
+                   << " fidl_status=" << transport_status;
     return false;
   }
 
