@@ -11,17 +11,26 @@ import("//build/testing/environments.gni")
 # This is pulled from workstation.gni.
 group("performance_deps") {
   testonly = true
-
-  # TODO(fxbug.dev/68516): Add ermine_testserver for navigation performance test
-  public_deps = []
+  public_deps = [ "//src/experiences/bin/ermine_testserver" ]
 }
 
 dart_test("experiences_ermine_session_shell_performance_test") {
-  sources = []
+  sources = [ "workstation_performance_navigation_test.dart" ]
 
-  deps = []
+  deps = [
+    "//sdk/fidl/fuchsia.input",
+    "//sdk/fidl/fuchsia.ui.input",
+    "//sdk/fidl/fuchsia.ui.input3",
+    "//sdk/testing/sl4f/client",
+    "//sdk/testing/sl4f/flutter_driver_sl4f",
+    "//src/experiences/tests:ermine_driver",
+    "//third_party/dart-pkg/git/flutter/packages/flutter_driver",
+    "//third_party/dart-pkg/pub/image",
+    "//third_party/dart-pkg/pub/test",
+    "//third_party/dart-pkg/pub/webdriver",
+  ]
 
-  non_dart_deps = [ ":runtime_deps" ]
+  non_dart_deps = [ ":runtime_deps($host_toolchain)" ]
 
   environments = [
     {
@@ -37,16 +46,24 @@ dart_test("experiences_ermine_session_shell_performance_test") {
   ]
 }
 
-copy("runtime_deps") {
-  _data_dir = "$target_gen_dir/runtime_deps"
+if (is_host) {
+  host_test_data("runtime_deps") {
+    sources = [
+      "$root_out_dir/catapult_converter",
+      "$root_out_dir/trace2json",
+    ]
+    outputs = [ "$target_gen_dir/runtime_deps/{{source_file_part}}" ]
 
-  # Chromedriver prebuilt is only available for linux-x64 machines
-  sources = [ "//prebuilt/third_party/chromedriver/linux-x64/chromedriver" ]
+    deps = [
+      "//garnet/bin/catapult_converter:converter_bin",
+      "//garnet/bin/trace2json:bin",
+    ]
 
-  outputs = [ "$_data_dir/{{source_file_part}}" ]
-
-  metadata = {
-    test_runtime_deps = [ "$_data_dir/chromedriver" ]
+    # Host build for linux only
+    if (host_os == "linux") {
+      sources += [ "$root_out_dir/iperf3" ]
+      deps += [ "//third_party/iperf:bin" ]
+    }
   }
 }
 
