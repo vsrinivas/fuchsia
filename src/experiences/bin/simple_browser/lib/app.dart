@@ -6,7 +6,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:fuchsia_scenic_flutter/child_view.dart' show ChildView;
+import 'package:fuchsia_scenic_flutter/fuchsia_view.dart' show FuchsiaView;
 import 'package:internationalization/localizations_delegate.dart'
     as localizations;
 import 'package:internationalization/strings.dart';
@@ -116,7 +116,7 @@ class App extends StatelessWidget {
   }
 
   Widget _buildNormalPage() =>
-      ChildView(connection: model.tabsBloc.currentTab.childViewConnection);
+      FuchsiaView(controller: model.tabsBloc.currentTab.fuchsiaViewConnection);
   Widget _buildErrorPage() => ErrorPage();
   Widget _buildEmptyPage() => Container();
 }

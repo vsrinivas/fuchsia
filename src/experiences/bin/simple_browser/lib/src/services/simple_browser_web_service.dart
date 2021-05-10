@@ -7,8 +7,8 @@ import 'package:fidl/fidl.dart' show InterfaceHandle;
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart' as views;
 import 'package:fidl_fuchsia_web/fidl_async.dart' as web;
 import 'package:flutter/foundation.dart';
-import 'package:fuchsia_scenic_flutter/child_view.dart'
-    show ChildViewConnection;
+import 'package:fuchsia_scenic_flutter/fuchsia_view.dart'
+    show FuchsiaViewConnection;
 import 'package:zircon/zircon.dart';
 
 import '../blocs/webpage_bloc.dart';
@@ -23,9 +23,9 @@ class SimpleBrowserWebService {
   final _simpleBrowserNavigationEventListener =
       SimpleBrowserNavigationEventListener();
 
-  /// Used to present webpage in Flutter ChildView
-  ChildViewConnection get childViewConnection => _childViewConnection;
-  ChildViewConnection _childViewConnection;
+  /// Used to present webpage in Flutter FuchsiaView
+  FuchsiaViewConnection get fuchsiaViewConnection => _fuchsiaViewConnection;
+  FuchsiaViewConnection _fuchsiaViewConnection;
 
   views.ViewHolderToken _viewHolderToken;
 
@@ -72,7 +72,7 @@ class SimpleBrowserWebService {
     final viewToken = views.ViewToken(value: tokenPair.second);
 
     _frame.createView(viewToken);
-    _childViewConnection = ChildViewConnection(_viewHolderToken);
+    _fuchsiaViewConnection = FuchsiaViewConnection(_viewHolderToken);
   }
 
   Future<void> enableConsoleLog() =>

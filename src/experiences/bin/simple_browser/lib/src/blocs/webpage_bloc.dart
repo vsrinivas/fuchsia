@@ -4,8 +4,8 @@
 
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:fuchsia_scenic_flutter/child_view.dart'
-    show ChildViewConnection;
+import 'package:fuchsia_scenic_flutter/fuchsia_view.dart'
+    show FuchsiaViewConnection;
 import '../models/webpage_action.dart';
 import '../services/simple_browser_web_service.dart';
 import '../utils/sanitize_url.dart';
@@ -25,8 +25,9 @@ enum PageType { empty, normal, error }
 class WebPageBloc {
   final SimpleBrowserWebService webService;
 
-  /// Used to present webpage in Flutter ChildView
-  ChildViewConnection get childViewConnection => webService.childViewConnection;
+  /// Used to present webpage in Flutter FuchsiaView
+  FuchsiaViewConnection get fuchsiaViewConnection =>
+      webService.fuchsiaViewConnection;
 
   ChangeNotifier get urlNotifier =>
       webService.navigationEventListener.urlNotifier;
