@@ -24,7 +24,7 @@ protocol Draw {
     Callback(Point p, Direction d) -> ();
 };
 
-[transport = "Banjo", banjo_layout = "ddk-protocol"]
+[Transport = "Banjo", banjo_layout = "ddk-protocol"]
 protocol Drawing {
     RegisterCallback(Draw cb) -> ();
     DeregisterCallback() -> ();
