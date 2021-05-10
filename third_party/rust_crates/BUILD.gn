@@ -916,6 +916,10 @@ group("zstd") {
   deps = [ ":zstd-v0_8_0+zstd_1_4_9" ]
 }
 
+group("zstd-safe") {
+  deps = [ ":zstd-safe-v4_0_0+zstd_1_4_9" ]
+}
+
 group("cxxbridge") {
   deps = [ ":cxxbridge-cmd-cxxbridge-v0_3_5" ]
 }
@@ -11232,6 +11236,7 @@ rust_library("zstd-safe-v4_0_0+zstd_1_4_9") {
     "--edition=2015",
     "-Cmetadata=2be33306fb989aac",
     "-Cextra-filename=-2be33306fb989aac",
+    "--cfg=feature=\"default\"",
     "--cfg=feature=\"legacy\"",
     "--cfg=feature=\"std\"",
   ]

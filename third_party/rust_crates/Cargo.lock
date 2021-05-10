@@ -1226,6 +1226,7 @@ dependencies = [
  "xml-rs",
  "zip",
  "zstd",
+ "zstd-safe",
 ]
 
 [[package]]
