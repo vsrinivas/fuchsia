@@ -536,11 +536,12 @@ TEST_F(DisplayCompositorTest, HardwareFrameCorrectnessTest) {
 
   EXPECT_CALL(*mock, ApplyConfig()).WillOnce(Return());
 
-  DisplayInfo display_info{parent_root_handle, resolution, {kPixelFormat}};
+  DisplayInfo display_info = {resolution, {kPixelFormat}};
   display_compositor_->AddDisplay(display_id, display_info, sysmem_allocator_.get(),
                                   /*num_vmos*/ 0);
 
-  display_compositor_->RenderFrame(GenerateDisplayListForTest({{display_id, display_info}}));
+  display_compositor_->RenderFrame(
+      GenerateDisplayListForTest({{display_id, {display_info, parent_root_handle}}}));
 
   for (uint32_t i = 0; i < 2; i++) {
     EXPECT_CALL(*mock, DestroyLayer(layers[i]));

@@ -17,14 +17,13 @@
 namespace flatland {
 
 // Struct to represent the display's flatland info. The TransformHandle must be the root
-// transform of the root Flatland instance. The pixel scale is the ratio between the
-// display's width and height and the logical pixel size calculated from the provided
-// transform handle. A new DisplayInfo struct is added to the display_map_ when a client
-// calls AddDisplay().
+// transform of the root Flatland instance. A new DisplayInfo struct is added to the
+// display_map_ when a client calls AddDisplay().
 struct DisplayInfo {
-  // TODO(fxbug.dev/70464): |transform| is unnecessary now.
-  TransformHandle transform;
-  glm::uvec2 pixel_scale;
+  // The width and height of the display in pixels.
+  glm::uvec2 dimensions;
+
+  // The pixel formats available on this particular display.
   std::vector<zx_pixel_format_t> formats;
 };
 
@@ -34,7 +33,6 @@ struct DisplayInfo {
 struct RenderData {
   std::vector<Rectangle2D> rectangles;
   std::vector<allocation::ImageMetadata> images;
-  glm::uvec2 pixel_scale;
   // TODO(fxbug.dev/70464): should we remove this, and pass to RenderFrame() as a std::map of
   // RenderData keyed by display_id?  That would have the benefit of guaranteeing by construction
   // that each display_id could only appear once.

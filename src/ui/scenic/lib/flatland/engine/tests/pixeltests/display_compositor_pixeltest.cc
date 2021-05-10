@@ -269,6 +269,7 @@ class DisplayCompositorPixelTest : public DisplayCompositorTestBase {
     return memcmp(actual_buf, capture_buf, size) == 0;
   }
 #else
+
   // This function is taken directly from the zircon display capture test and modified slightly
   // to fit this test.
   bool CaptureCompare(void* capture_buf, void* actual_buf, size_t size, uint32_t height,
@@ -433,8 +434,7 @@ VK_TEST_P(DisplayCompositorParameterizedPixelTest, FullscreenRectangleTest) {
   const TransformHandle image_handle = session.graph().CreateTransform();
   session.graph().AddChild(root_handle, image_handle);
   DisplayInfo display_info{
-      .transform = root_handle,
-      .pixel_scale = glm::uvec2(display->width_in_px(), display->height_in_px()),
+      .dimensions = glm::uvec2(display->width_in_px(), display->height_in_px()),
       .formats = {kPixelFormat}};
   display_compositor->AddDisplay(display->display_id(), display_info, sysmem_allocator_.get(),
                                  /*num_vmos*/ 0);
@@ -447,8 +447,8 @@ VK_TEST_P(DisplayCompositorParameterizedPixelTest, FullscreenRectangleTest) {
   session.PushUberStruct(std::move(uberstruct));
 
   // Now we can finally render.
-  display_compositor->RenderFrame(
-      GenerateDisplayListForTest({{display->display_id(), display_info}}));
+  display_compositor->RenderFrame(GenerateDisplayListForTest(
+      {{display->display_id(), std::make_pair(display_info, root_handle)}}));
 
   // Grab the capture vmo data.
   std::vector<uint8_t> read_values;
@@ -579,8 +579,7 @@ VK_TEST_P(DisplayCompositorFallbackParameterizedPixelTest, SoftwareRenderingTest
 
   fuchsia::sysmem::BufferCollectionInfo_2 render_target_info;
   DisplayInfo display_info{
-      .transform = TransformHandle(),
-      .pixel_scale = glm::vec2(display->width_in_px(), display->height_in_px()),
+      .dimensions = glm::uvec2(display->width_in_px(), display->height_in_px()),
       .formats = {kPixelFormat}};
   auto render_target_collection_id =
       display_compositor->AddDisplay(display->display_id(), display_info, sysmem_allocator_.get(),
@@ -599,8 +598,6 @@ VK_TEST_P(DisplayCompositorFallbackParameterizedPixelTest, SoftwareRenderingTest
 
     render_data.images.push_back(image_metadatas[0]);
     render_data.images.push_back(image_metadatas[1]);
-
-    render_data.pixel_scale = display_info.pixel_scale;
   }
   display_compositor->RenderFrame({std::move(render_data)});
   renderer->WaitIdle();
@@ -716,8 +713,7 @@ VK_TEST_F(DisplayCompositorPixelTest, OverlappingTransparencyTest) {
 
   fuchsia::sysmem::BufferCollectionInfo_2 render_target_info;
   DisplayInfo display_info{
-      .transform = TransformHandle(),
-      .pixel_scale = glm::vec2(display->width_in_px(), display->height_in_px()),
+      .dimensions = glm::uvec2(display->width_in_px(), display->height_in_px()),
       .formats = {kPixelFormat}};
   auto render_target_collection_id =
       display_compositor->AddDisplay(display->display_id(), display_info, sysmem_allocator_.get(),
@@ -741,8 +737,6 @@ VK_TEST_F(DisplayCompositorPixelTest, OverlappingTransparencyTest) {
 
     render_data.images.push_back(image_metadatas[0]);
     render_data.images.push_back(image_metadatas[1]);
-
-    render_data.pixel_scale = display_info.pixel_scale;
   }
   display_compositor->RenderFrame({std::move(render_data)});
   renderer->WaitIdle();

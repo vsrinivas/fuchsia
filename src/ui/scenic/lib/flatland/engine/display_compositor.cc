@@ -341,7 +341,6 @@ void DisplayCompositor::RenderFrame(const std::vector<RenderData>& render_data_l
     DiscardConfig();
 
     for (const auto& data : render_data_list) {
-      FX_DCHECK(data.pixel_scale.x > 0 && data.pixel_scale.y > 0);
       auto& display_engine_data = display_engine_data_map_[data.display_id];
       auto& curr_vmo = display_engine_data.curr_vmo;
       const auto& render_target = display_engine_data.targets[curr_vmo];
@@ -366,8 +365,8 @@ void DisplayCompositor::RenderFrame(const std::vector<RenderData>& render_data_l
 
       auto layer = display_engine_data.layers[0];
       SetDisplayLayers(data.display_id, {layer});
-      ApplyLayerImage(layer, {glm::vec2(0), data.pixel_scale}, render_target, event_data.wait_id,
-                      event_data.signal_id);
+      ApplyLayerImage(layer, {glm::vec2(0), glm::vec2(render_target.width, render_target.height)},
+                      render_target, event_data.wait_id, event_data.signal_id);
 
       auto [result, /*ops*/ _] = CheckConfig();
       if (result != fuchsia::hardware::display::ConfigResult::OK) {
@@ -411,8 +410,8 @@ allocation::GlobalBufferCollectionId DisplayCompositor::AddDisplay(
   FX_DCHECK(display_engine_data_map_.find(display_id) == display_engine_data_map_.end())
       << "Engine::AddDisplay(): display already exists: " << display_id;
 
-  const uint32_t kWidth = info.pixel_scale.x;
-  const uint32_t kHeight = info.pixel_scale.y;
+  const uint32_t kWidth = info.dimensions.x;
+  const uint32_t kHeight = info.dimensions.y;
 
   // Grab the best pixel format that the renderer prefers given the list of available formats on
   // the display.
