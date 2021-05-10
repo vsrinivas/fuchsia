@@ -77,6 +77,7 @@ class AddressSpace {
 
   bool Clear(gpu_addr_t start, uint64_t length);
   void Unlock() { owner_->GetAddressSpaceObserver()->UnlockAddressSpace(this); }
+  void ReleaseSpaceMappings();
 
   bool ReadPteForTesting(gpu_addr_t addr, mali_pte_t* entry);
 

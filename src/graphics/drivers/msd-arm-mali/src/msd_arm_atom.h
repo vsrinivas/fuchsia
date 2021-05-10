@@ -159,16 +159,37 @@ class MsdArmSoftAtom : public MsdArmAtom {
       : MsdArmAtom(connection, kInvalidGpuAddress, 0, atom_number, user_data, 0, soft_flags),
         platform_semaphore_(platform_semaphore) {}
 
+  MsdArmSoftAtom(std::weak_ptr<MsdArmConnection> connection, AtomFlags soft_flags,
+                 uint8_t atom_number, magma_arm_mali_user_data user_data,
+                 std::vector<magma_arm_jit_memory_allocate_info> jit_allocate_info)
+      : MsdArmAtom(std::move(connection), kInvalidGpuAddress, 0, atom_number, user_data, 0,
+                   soft_flags),
+        jit_allocate_info_(std::move(jit_allocate_info)) {}
+
+  MsdArmSoftAtom(std::weak_ptr<MsdArmConnection> connection, AtomFlags soft_flags,
+                 uint8_t atom_number, magma_arm_mali_user_data user_data,
+                 std::vector<magma_arm_jit_memory_free_info> jit_free_info)
+      : MsdArmAtom(std::move(connection), kInvalidGpuAddress, 0, atom_number, user_data, 0,
+                   soft_flags),
+        jit_free_info_(std::move(jit_free_info)) {}
+
   AtomFlags soft_flags() const { return flags(); }
   std::shared_ptr<magma::PlatformSemaphore> platform_semaphore() const {
     return platform_semaphore_;
   }
-
+  const std::vector<magma_arm_jit_memory_allocate_info>& jit_allocate_info() const {
+    return jit_allocate_info_;
+  }
+  const std::vector<magma_arm_jit_memory_free_info>& jit_free_info() const {
+    return jit_free_info_;
+  }
   bool is_soft_atom() const override { return true; }
   virtual std::vector<std::string> DumpInformation() override;
 
  private:
   // Immutable after construction.
+  const std::vector<magma_arm_jit_memory_allocate_info> jit_allocate_info_;
+  const std::vector<magma_arm_jit_memory_free_info> jit_free_info_;
   const std::shared_ptr<magma::PlatformSemaphore> platform_semaphore_;
 };
 

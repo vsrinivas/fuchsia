@@ -58,7 +58,11 @@ std::unique_ptr<AddressSpace> AddressSpace::Create(Owner* owner, bool cache_cohe
       new AddressSpace(owner, cache_coherent, std::move(page_directory)));
 }
 
-AddressSpace::~AddressSpace() { owner_->GetAddressSpaceObserver()->ReleaseSpaceMappings(this); }
+AddressSpace::~AddressSpace() { ReleaseSpaceMappings(); }
+
+void AddressSpace::ReleaseSpaceMappings() {
+  owner_->GetAddressSpaceObserver()->ReleaseSpaceMappings(this);
+}
 
 bool AddressSpace::Insert(gpu_addr_t addr, magma::PlatformBusMapper::BusMapping* bus_mapping,
                           uint64_t offset, uint64_t length, uint64_t flags) {

@@ -268,6 +268,8 @@ void JobScheduler::CancelAtomsForConnection(std::shared_ptr<MsdArmConnection> co
   waiting_atoms_.erase(
       std::remove_if(waiting_atoms_.begin(), waiting_atoms_.end(), removal_function),
       waiting_atoms_.end());
+  jit_atoms_.erase(std::remove_if(jit_atoms_.begin(), jit_atoms_.end(), removal_function),
+                   jit_atoms_.end());
 
   atoms_.remove_if(removal_function);
   for (auto& runnable_list : runnable_atoms_)
@@ -469,9 +471,37 @@ void JobScheduler::HandleTimedOutAtoms() {
     TryToSchedule();
 }
 
+void JobScheduler::ProcessJitAtoms() {
+  for (auto it = jit_atoms_.begin(); it != jit_atoms_.end();) {
+    auto& atom = *it;
+    auto connection = atom->connection().lock();
+    if (connection) {
+      std::optional<ArmMaliResultCode> result = connection->AllocateJitMemory(atom);
+      if (result.has_value()) {
+        owner_->AtomCompleted(atom.get(), result.value());
+        it = jit_atoms_.erase(it);
+      } else {
+        ++it;
+      }
+    } else {
+      it = jit_atoms_.erase(it);
+    }
+  }
+}
+
 void JobScheduler::ProcessSoftAtom(std::shared_ptr<MsdArmSoftAtom> atom) {
   DASSERT(owner_->GetPlatformPort());
-  if (atom->soft_flags() == kAtomFlagSemaphoreSet) {
+  if (atom->soft_flags() == kAtomFlagJitMemoryAllocate) {
+    jit_atoms_.push_back(std::move(atom));
+    ProcessJitAtoms();
+    // The connection will complete the atom when ready.
+  } else if (atom->soft_flags() == kAtomFlagJitMemoryFree) {
+    auto connection = atom->connection().lock();
+    if (connection)
+      connection->ReleaseJitMemory(atom);
+    SoftJobCompleted(atom);
+    ProcessJitAtoms();
+  } else if (atom->soft_flags() == kAtomFlagSemaphoreSet) {
     atom->platform_semaphore()->Signal();
     SoftJobCompleted(atom);
   } else if (atom->soft_flags() == kAtomFlagSemaphoreReset) {

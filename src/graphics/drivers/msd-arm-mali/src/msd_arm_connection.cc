@@ -6,6 +6,7 @@
 
 #include <zircon/compiler.h>
 
+#include <atomic>
 #include <limits>
 #include <vector>
 
@@ -15,6 +16,8 @@
 #include "gpu_mapping.h"
 #include "magma_arm_mali_types.h"
 #include "magma_util/dlog.h"
+#include "magma_util/macros.h"
+#include "magma_util/simple_allocator.h"
 #include "msd_arm_buffer.h"
 #include "msd_arm_context.h"
 #include "msd_arm_device.h"
@@ -50,11 +53,39 @@ void msd_context_destroy(msd_context_t* ctx) {
   delete context;
 }
 
+namespace {
+
+// Calculates if there is enough space remaining to allocate |count| structs of type T, and returns
+// the address of the first struct if so. current_ptr is modified to point to first byte after the
+// returned region.
+template <typename T>
+T* GetNextDataPtr(uint8_t*& current_ptr, msd_client_id_t client_id,
+                  size_t* remaining_data_size_in_out, size_t count) {
+  if (count == 0)
+    return nullptr;
+  if (*remaining_data_size_in_out / count < sizeof(T)) {
+    magma::log(magma::LOG_WARNING, "Client %" PRIu64 ": Atom size too small", client_id);
+    return nullptr;
+  }
+  size_t current_size = count * sizeof(T);
+  *remaining_data_size_in_out -= current_size;
+
+  uint8_t* old_ptr = current_ptr;
+  current_ptr += current_size;
+
+  return reinterpret_cast<T*>(old_ptr);
+}
+}  // namespace
+
 bool MsdArmConnection::ExecuteAtom(
-    volatile magma_arm_mali_atom* atom,
+    size_t* remaining_data_size_in_out, magma_arm_mali_atom* atom,
     std::deque<std::shared_ptr<magma::PlatformSemaphore>>* semaphores) {
   TRACE_DURATION("magma", "Connection::ExecuteAtom");
-
+  if (*remaining_data_size_in_out < atom->size) {
+    magma::log(magma::LOG_WARNING, "Client %" PRIu64 ": Submitted too-small atom", client_id_);
+    return false;
+  }
+  *remaining_data_size_in_out -= atom->size;
   uint8_t atom_number = atom->atom_number;
   if (outstanding_atoms_[atom_number] &&
       outstanding_atoms_[atom_number]->result_code() == kArmMaliResultRunning) {
@@ -66,20 +97,117 @@ bool MsdArmConnection::ExecuteAtom(
   user_data.data[0] = atom->data.data[0];
   user_data.data[1] = atom->data.data[1];
   std::shared_ptr<MsdArmAtom> msd_atom;
+  uint8_t* current_ptr = reinterpret_cast<uint8_t*>(atom) + atom->size;
   if (flags & kAtomFlagSoftware) {
-    if (flags != kAtomFlagSemaphoreSet && flags != kAtomFlagSemaphoreReset &&
-        flags != kAtomFlagSemaphoreWait && flags != kAtomFlagSemaphoreWaitAndReset) {
-      MAGMA_LOG(WARNING, "Client %" PRIu64 ": Invalid soft atom flags 0x%x", client_id_, flags);
-      return false;
-    }
-    if (semaphores->empty()) {
-      MAGMA_LOG(WARNING, "Client %" PRIu64 ": No remaining semaphores", client_id_);
-      return false;
+    if (flags == kAtomFlagJitAddressSpaceAllocate) {
+      std::lock_guard<std::mutex> lock(address_lock_);
+      if (jit_allocator_) {
+        magma::log(magma::LOG_WARNING, "Client %" PRIu64 ": Already allocated JIT memory region",
+                   client_id_);
+        return false;
+      }
+      auto* allocate_info = GetNextDataPtr<magma_arm_jit_address_space_allocate_info>(
+          current_ptr, client_id_, remaining_data_size_in_out, 1);
+      if (!allocate_info) {
+        return false;
+      }
+      if (allocate_info->version_number != 0) {
+        magma::log(magma::LOG_WARNING,
+                   "Client %" PRIu64 ": Invalid address space allocate version %d", client_id_,
+                   allocate_info->version_number);
+        return false;
+      }
+      if (allocate_info->trim_level > 100) {
+        magma::log(magma::LOG_WARNING, "Client %" PRIu64 ": Set invalid trim level %d", client_id_,
+                   allocate_info->trim_level);
+        return false;
+      }
+      const uint64_t kMaxPagesAllowed =
+          (1ul << AddressSpace::kVirtualAddressSize) / magma::page_size();
+      if (kMaxPagesAllowed < allocate_info->va_page_count) {
+        magma::log(magma::LOG_WARNING, "Client %" PRIu64 ": Set invalid VA page count %ld, max %ld",
+                   client_id_, allocate_info->va_page_count, kMaxPagesAllowed);
+        return false;
+      }
+
+      // Always 0 on current drivers.
+      jit_properties_.trim_level = allocate_info->trim_level;
+      // Always 255 on current drivers.
+      jit_properties_.max_allocations = allocate_info->max_allocations;
+      jit_allocator_ = magma::SimpleAllocator::Create(
+          allocate_info->address, allocate_info->va_page_count * magma::page_size());
+      // Don't notify on completion, since this is not a real atom.
+      return true;
     }
 
-    msd_atom = std::make_shared<MsdArmSoftAtom>(shared_from_this(), static_cast<AtomFlags>(flags),
-                                                semaphores->front(), atom_number, user_data);
-    semaphores->pop_front();
+    if (flags == kAtomFlagJitMemoryAllocate) {
+      auto* trailer = GetNextDataPtr<magma_arm_jit_atom_trailer>(current_ptr, client_id_,
+                                                                 remaining_data_size_in_out, 1);
+      if (!trailer) {
+        return false;
+      }
+      if (trailer->jit_memory_info_count < 1) {
+        magma::log(magma::LOG_WARNING, "Client %" PRIu64 ": No jit memory info", client_id_);
+        return false;
+      }
+      auto* jit_info = GetNextDataPtr<magma_arm_jit_memory_allocate_info>(
+          current_ptr, client_id_, remaining_data_size_in_out, trailer->jit_memory_info_count);
+      if (!jit_info) {
+        return false;
+      }
+      std::vector<magma_arm_jit_memory_allocate_info> infos(
+          jit_info, jit_info + trailer->jit_memory_info_count);
+      for (auto& info : infos) {
+        if (info.version_number != 0) {
+          magma::log(magma::LOG_WARNING,
+                     "Client %" PRIu64 ": Invalid JIT memory allocate version %d", client_id_,
+                     info.version_number);
+          return false;
+        }
+      }
+      msd_atom = std::make_shared<MsdArmSoftAtom>(shared_from_this(), static_cast<AtomFlags>(flags),
+                                                  atom_number, user_data, std::move(infos));
+    } else if (flags == kAtomFlagJitMemoryFree) {
+      auto* trailer = GetNextDataPtr<magma_arm_jit_atom_trailer>(current_ptr, client_id_,
+                                                                 remaining_data_size_in_out, 1);
+      if (!trailer) {
+        return false;
+      }
+      if (trailer->jit_memory_info_count < 1) {
+        magma::log(magma::LOG_WARNING, "Client %" PRIu64 ": No jit memory info", client_id_);
+        return false;
+      }
+      auto* jit_info = GetNextDataPtr<magma_arm_jit_memory_free_info>(
+          current_ptr, client_id_, remaining_data_size_in_out, trailer->jit_memory_info_count);
+      if (!jit_info) {
+        return false;
+      }
+      std::vector<magma_arm_jit_memory_free_info> infos(jit_info,
+                                                        jit_info + trailer->jit_memory_info_count);
+      for (auto& info : infos) {
+        if (info.version_number != 0) {
+          magma::log(magma::LOG_WARNING, "Client %" PRIu64 ": Invalid JIT memory free version %d",
+                     client_id_, info.version_number);
+          return false;
+        }
+      }
+      msd_atom = std::make_shared<MsdArmSoftAtom>(shared_from_this(), static_cast<AtomFlags>(flags),
+                                                  atom_number, user_data, std::move(infos));
+    } else {
+      if (flags != kAtomFlagSemaphoreSet && flags != kAtomFlagSemaphoreReset &&
+          flags != kAtomFlagSemaphoreWait && flags != kAtomFlagSemaphoreWaitAndReset) {
+        magma::log(magma::LOG_WARNING, "Client %" PRIu64 ": Invalid soft atom flags 0x%x\n",
+                   client_id_, flags);
+        return false;
+      }
+      if (semaphores->empty()) {
+        magma::log(magma::LOG_WARNING, "Client %" PRIu64 ": No remaining semaphores", client_id_);
+        return false;
+      }
+      msd_atom = std::make_shared<MsdArmSoftAtom>(shared_from_this(), static_cast<AtomFlags>(flags),
+                                                  semaphores->front(), atom_number, user_data);
+      semaphores->pop_front();
+    }
   } else {
     uint32_t slot = flags & kAtomFlagRequireFragmentShader ? 0 : 1;
     if (slot == 0 && (flags & (kAtomFlagRequireComputeShader | kAtomFlagRequireTiler))) {
@@ -164,11 +292,6 @@ magma_status_t msd_context_execute_immediate_commands(msd_context_t* ctx, uint64
     if (atom->size < sizeof(uint64_t)) {
       return DRET_MSG(MAGMA_STATUS_CONTEXT_KILLED, "Atom size must be at least 8");
     }
-    // Check for overflow (defined for unsigned types) or too large for buffer.
-    if ((offset + atom->size < offset) || offset + atom->size > commands_size) {
-      return DRET_MSG(MAGMA_STATUS_CONTEXT_KILLED, "Atom size %ld too large for buffer",
-                      atom->size);
-    }
 
     // This check could be changed to allow for backwards compatibility in
     // future versions.
@@ -176,9 +299,10 @@ magma_status_t msd_context_execute_immediate_commands(msd_context_t* ctx, uint64
       return DRET_MSG(MAGMA_STATUS_CONTEXT_KILLED, "Atom size %ld too small", atom->size);
     }
 
-    if (!connection->ExecuteAtom(atom, &semaphores))
+    size_t remaining_data_size = commands_size - offset;
+    if (!connection->ExecuteAtom(&remaining_data_size, atom, &semaphores))
       return DRET(MAGMA_STATUS_CONTEXT_KILLED);
-    offset += atom->size;
+    offset = commands_size - remaining_data_size;
   }
 
   return MAGMA_STATUS_OK;
@@ -195,6 +319,7 @@ std::shared_ptr<MsdArmConnection> MsdArmConnection::Create(msd_client_id_t clien
 void MsdArmConnection::InitializeInspectNode(inspect::Node* parent) {
   static std::atomic_uint64_t counter;
   node_ = parent->CreateChild(fbl::StringPrintf("connection-%ld", counter++).c_str());
+  jit_regions_ = node_.CreateChild("jit_regions");
   client_id_property_ = node_.CreateUint("client_id", client_id_);
 }
 
@@ -222,7 +347,11 @@ MsdArmConnection::~MsdArmConnection() {
         });
   }
 
+  // Do this before tearing down GpuMappings to ensure it doesn't try to grab a
+  // reference to this object while flushing the address space.
+  address_space_->ReleaseSpaceMappings();
   owner_->DeregisterConnection();
+  jit_memory_regions_.clear();
 }
 
 static bool access_flags_from_flags(uint64_t mapping_flags, bool cache_coherent,
@@ -458,17 +587,15 @@ bool MsdArmConnection::PageInMemory(uint64_t address) {
 
   // TODO(fxbug.dev/13028): Look into growing the buffer on a different thread.
 
-  // Try to grow in units of 64 pages to avoid needing to fault too often.
-  constexpr uint64_t kPagesToGrow = 64;
   constexpr uint64_t kCacheLineSize = 64;
   uint64_t offset_needed = address - mapping.gpu_va() + kCacheLineSize - 1;
 
   // Don't shrink the amount being committed if there's a race and the
   // client committed more memory between when the fault happened and this
   // code.
-  uint64_t committed_page_count =
-      std::max(buffer->committed_page_count(),
-               magma::round_up(offset_needed, PAGE_SIZE * kPagesToGrow) / PAGE_SIZE);
+  uint64_t committed_page_count = std::max(
+      buffer->committed_page_count(),
+      magma::round_up(offset_needed, PAGE_SIZE * mapping.pages_to_grow_on_fault()) / PAGE_SIZE);
   committed_page_count =
       std::min(committed_page_count,
                buffer->platform_buffer()->size() / PAGE_SIZE - buffer->start_committed_pages());
@@ -476,6 +603,288 @@ bool MsdArmConnection::PageInMemory(uint64_t address) {
   // The MMU command to update the page tables should automatically cause
   // the atom to continue executing.
   return buffer->CommitPageRange(buffer->start_committed_pages(), committed_page_count);
+}
+
+MsdArmConnection::JitMemoryRegion* MsdArmConnection::FindBestJitRegionAddressWithUsage(
+    const magma_arm_jit_memory_allocate_info& info, bool check_usage) {
+  JitMemoryRegion* best_region = nullptr;
+  uint64_t committed_page_difference = 0;
+  for (size_t i = 0; i < jit_memory_regions_.size(); ++i) {
+    auto& region = jit_memory_regions_[i];
+    bool usage_ok = !check_usage || region.usage_id == info.usage_id;
+    if (region.id == 0 && usage_ok && region.bin_id == info.bin_id &&
+        region.buffer->platform_buffer()->size() >= info.va_page_count * PAGE_SIZE) {
+      uint64_t committed_pages = region.buffer->committed_page_count();
+      // Try to pick the allocation with the closest number of initial committed pages as we need.
+      // This is more useful when check_usage is false, because when check_usage is true the initial
+      // sizes of all buffers with the same usage is generally the same.
+      uint32_t new_committed_page_difference = committed_pages > info.committed_page_count
+                                                   ? committed_pages - info.committed_page_count
+                                                   : info.committed_page_count - committed_pages;
+      if (!best_region || (committed_page_difference > new_committed_page_difference)) {
+        best_region = &region;
+        committed_page_difference = new_committed_page_difference;
+        if (committed_page_difference == 0)
+          break;
+      }
+    }
+  }
+  return best_region;
+}
+
+uint64_t MsdArmConnection::FindBestJitRegionAddress(
+    const magma_arm_jit_memory_allocate_info& info) {
+  std::lock_guard<std::mutex> lock(address_lock_);
+  JitMemoryRegion* best_region = FindBestJitRegionAddressWithUsage(info, /*check_usage=*/true);
+  if (!best_region) {
+    // Prefer to use a non-optimal region rather than allocate a completely new one.
+    best_region = FindBestJitRegionAddressWithUsage(info, /*check_usage=*/false);
+  }
+  if (best_region) {
+    best_region->id = info.id;
+    best_region->id_property.Set(info.id);
+    best_region->usage_id = info.usage_id;
+    best_region->bin_id = info.bin_id;
+    best_region->requested_comitted_pages_property.Set(info.committed_page_count);
+    best_region->comitted_page_count_property.Set(best_region->buffer->committed_page_count());
+    DLOG("Reused JIT memory id: %d address: %lx\n", best_region->id, best_region->gpu_address);
+    return best_region->gpu_address;
+  }
+  return 0;
+}
+
+// Allocate a new JIT region. On success, outputs the result into |*address_out| and returns {}.
+// On temporary failure (if the allocation would exceed a limit like the maximum number of
+// outstanding allocations), returns {} and doesn't modify |*address_out| On permanent failures,
+// returns a result code.
+std::optional<ArmMaliResultCode> MsdArmConnection::AllocateNewJitMemoryRegion(
+    const magma_arm_jit_memory_allocate_info& info, uint64_t* address_out) {
+  uint64_t current_address = 0;
+  {
+    std::lock_guard<std::mutex> lock(address_lock_);
+    if (jit_memory_regions_.size() > jit_properties_.max_allocations) {
+      return {};
+    }
+    if (!jit_allocator_) {
+      DLOG("No JIT memory allocator created");
+      return {kArmMaliResultJobInvalid};
+    }
+    bool result = jit_allocator_->Alloc(info.va_page_count * magma::page_size(),
+                                        magma::page_shift(), &current_address);
+    if (!result) {
+      DLOG("Can't allocate jit memory region because of lack of address space.");
+      return {};
+    }
+    // Release address_lock_ so we can do a few slower operations like creating the buffer without
+    // the address space lock held. Also, AddMapping locks address_space_lock_.
+  }
+
+  std::shared_ptr<MsdArmBuffer> buffer =
+      MsdArmBuffer::Create(info.va_page_count * magma::page_size(),
+                           fbl::StringPrintf("Mali JIT memory %ld", client_id_).c_str());
+  if (!buffer) {
+    DLOG("Can't allocate buffer for jit memory");
+    std::lock_guard<std::mutex> lock(address_lock_);
+    jit_allocator_->Free(current_address);
+    return {kArmMaliResultMemoryGrowthFailed};
+  }
+  // Cache policy doesn't really matter since the memory should never be
+  // accessed by the CPU, but write-combining simplifies management of CPU cache
+  // flushes, so use that.
+  buffer->platform_buffer()->SetCachePolicy(MAGMA_CACHE_POLICY_WRITE_COMBINING);
+  uint64_t flags = MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE |
+                   MAGMA_GPU_MAP_FLAG_GROWABLE | kMagmaArmMaliGpuMapFlagInnerShareable;
+
+  // SetCommittedPages can be done without |address_lock_| held since no GPU mapping exists.
+  if (!buffer->SetCommittedPages(0, info.committed_page_count)) {
+    std::lock_guard<std::mutex> lock(address_lock_);
+    jit_allocator_->Free(current_address);
+    return {kArmMaliResultMemoryGrowthFailed};
+  }
+
+  auto mapping = std::make_unique<GpuMapping>(current_address, 0, info.va_page_count * PAGE_SIZE,
+                                              flags, this, buffer);
+  mapping->set_pages_to_grow_on_fault(info.extend_page_count);
+  bool result = AddMapping(std::move(mapping));
+  std::lock_guard<std::mutex> lock(address_lock_);
+  if (!result) {
+    // This could happen if the client mapped something here, or if the
+    // buffer can't be committed.
+    jit_allocator_->Free(current_address);
+    DLOG("Failed to map JIT memory to GPU");
+    return {kArmMaliResultJobInvalid};
+  }
+  JitMemoryRegion region;
+  region.id = info.id;
+  region.gpu_address = current_address;
+  region.buffer = buffer;
+  region.usage_id = info.usage_id;
+  region.bin_id = info.bin_id;
+  region.committed_pages = info.committed_page_count;
+  static std::atomic_uint64_t region_num;
+  region.node = jit_regions_.CreateChild(std::to_string(region_num++));
+  region.id_property = region.node.CreateUint("id", 0);
+  region.node.CreateUint("gpu_address", region.gpu_address, &region.properties);
+  region.node.CreateUint("size", region.buffer->platform_buffer()->size(), &region.properties);
+  region.node.CreateUint("usage_id", region.usage_id, &region.properties);
+  region.node.CreateUint("bin_id", region.bin_id, &region.properties);
+  region.node.CreateUint("koid", region.buffer->platform_buffer()->id(), &region.properties);
+  region.node.CreateUint("extend_page_count", info.extend_page_count, &region.properties);
+  region.node.CreateUint("max_allocations", info.max_allocations, &region.properties);
+  region.requested_comitted_pages_property =
+      region.node.CreateUint("requested_comitted_pages", info.committed_page_count);
+  region.comitted_page_count_property =
+      region.node.CreateUint("comitted_page_count", region.buffer->committed_page_count());
+  jit_memory_regions_.push_back(std::move(region));
+  *address_out = current_address;
+  return {};
+}
+
+// Writes the address of the JIT region into the address specified in |info|.
+ArmMaliResultCode MsdArmConnection::WriteJitRegionAdddress(
+    const magma_arm_jit_memory_allocate_info& info, uint64_t address) {
+  if (info.address & 0x7) {
+    DLOG("Unaligned GPU address %lx", info.address);
+    return kArmMaliResultJobInvalid;
+  }
+  {
+    std::lock_guard<std::mutex> lock(address_lock_);
+    auto it = gpu_mappings_.upper_bound(info.address);
+    if (it == gpu_mappings_.begin()) {
+      DLOG("JIT result address %lx not mapped", info.address);
+      return kArmMaliResultJobInvalid;
+    }
+    --it;
+    if (it->second->size() + it->second->gpu_va() <= info.address) {
+      DLOG("JIT result address %lx not mapped", info.address);
+      return kArmMaliResultJobInvalid;
+    }
+    auto buffer = it->second->buffer().lock();
+
+    if (!buffer) {
+      DLOG("JIT result region previously freed");
+      return kArmMaliResultJobInvalid;
+    }
+    uint64_t offset =
+        info.address - it->second->gpu_va() + it->second->page_offset() * magma::page_size();
+    {
+      TRACE_DURATION("magma", "MsdArmConnection::AllocateJitMemory write");
+      // Prefer zx_vmo_write(), since it's faster for writing small amounts of data. It won't work
+      // on write-combining memory, so fall back to mapping and writing if that fails.
+      bool result = buffer->platform_buffer()->Write(&address, offset, sizeof(address));
+      if (result) {
+        result = buffer->platform_buffer()->CleanCache(offset, sizeof(uint64_t), false);
+        DASSERT(result);
+      } else {
+        void* mapped;
+        if (!buffer->platform_buffer()->MapCpu(&mapped)) {
+          DLOG("Mapping JIT region failed");
+          return kArmMaliResultJobInvalid;
+        }
+        DASSERT(!(info.address & 7));
+        // Guaranteed not to straddle pages.
+        *reinterpret_cast<uint64_t*>(static_cast<uint8_t*>(mapped) + offset) = address;
+        result = buffer->platform_buffer()->CleanCache(offset, sizeof(uint64_t), false);
+        DASSERT(result);
+        result = buffer->platform_buffer()->UnmapCpu();
+        DASSERT(result);
+      }
+    }
+  }
+  return kArmMaliResultSuccess;
+}
+
+std::optional<ArmMaliResultCode> MsdArmConnection::AllocateOneJitMemoryRegion(
+    const magma_arm_jit_memory_allocate_info& info) {
+  if (!info.extend_page_count) {
+    DLOG("extend_pages must be > 0");
+    return {kArmMaliResultMemoryGrowthFailed};
+  }
+  if (info.id == 0) {
+    DLOG("JIT ID 0 not valid.");
+    return {kArmMaliResultJobInvalid};
+  }
+  uint64_t current_address = FindBestJitRegionAddress(info);
+  // TODO(fxbug.dev/12972): Run on other thread.
+
+  if (!current_address) {
+    auto allocate_result = AllocateNewJitMemoryRegion(info, &current_address);
+    if (allocate_result) {
+      // Permanent failure.
+      return allocate_result;
+    }
+    // Temporary failure.
+    if (!current_address) {
+      return {};
+    }
+    // Success.
+  }
+  // After this point we assume a free atom will come along and release the JIT
+  // region even if there's an error.
+
+  return {WriteJitRegionAdddress(info, current_address)};
+}
+
+std::optional<ArmMaliResultCode> MsdArmConnection::AllocateJitMemory(
+    const std::shared_ptr<MsdArmSoftAtom>& atom) {
+  TRACE_DURATION("magma", "MsdArmConnection::AllocateJitMemory");
+  const auto& infos = atom->jit_allocate_info();
+  for (size_t i = 0; i < infos.size(); i++) {
+    std::optional<ArmMaliResultCode> result_code = AllocateOneJitMemoryRegion(infos[i]);
+    if (!result_code) {
+      // Free all the earlier-allocated JIT memory to avoid unnecessary deadlocks if two separate
+      // atoms allocate more than half of all JIT VA space.
+      for (size_t j = 0; j < i; j++) {
+        magma_arm_jit_memory_free_info free_info;
+        free_info.id = infos[j].id;
+        ReleaseOneJitMemory(free_info);
+      }
+      // Since no result code was set, the job scheduler will retry the allocation after a release
+      // has been processed.
+      return {};
+    }
+    if (*result_code != kArmMaliResultSuccess) {
+      // A release jit atom should still run to clean up an earlier-created
+      // jit memory.
+      return result_code;
+    }
+  }
+  return {kArmMaliResultSuccess};
+}
+
+void MsdArmConnection::ReleaseOneJitMemory(const magma_arm_jit_memory_free_info& info) {
+  std::lock_guard<std::mutex> lock(address_lock_);
+  uint32_t free_id = info.id;
+  for (size_t i = 0; i < jit_memory_regions_.size(); ++i) {
+    auto& region = jit_memory_regions_[i];
+    if (jit_memory_regions_[i].id == free_id) {
+      jit_memory_regions_[i].id_property.Set(0);
+      jit_memory_regions_[i].id = 0;
+
+      uint64_t current_committed_page_count = region.buffer->committed_page_count();
+
+      if (jit_properties_.trim_level > 0 && region.committed_pages < current_committed_page_count) {
+        uint8_t keep_percentage = 100 - jit_properties_.trim_level;
+        uint64_t new_page_count =
+            std::max(current_committed_page_count * keep_percentage / 100, region.committed_pages);
+        if (new_page_count != current_committed_page_count) {
+          // Modifies the buffer and the AddressSpace and flushes the TLB, so must be called with
+          // address_lock_ held.
+          region.buffer->SetCommittedPages(0, new_page_count);
+          magma::Status result = region.buffer->platform_buffer()->DecommitPages(
+              new_page_count, current_committed_page_count - new_page_count);
+          DASSERT(result.ok());
+        }
+      }
+      break;
+    }
+  }
+}
+
+void MsdArmConnection::ReleaseJitMemory(const std::shared_ptr<MsdArmSoftAtom>& atom) {
+  for (auto& info : atom->jit_free_info()) {
+    ReleaseOneJitMemory(info);
+  }
 }
 
 bool MsdArmConnection::CommitMemoryForBuffer(MsdArmBuffer* buffer, uint64_t page_offset,
@@ -503,7 +912,7 @@ void MsdArmConnection::SetNotificationCallback(msd_connection_notification_callb
   token_ = token;
 }
 
-void MsdArmConnection::SendNotificationData(MsdArmAtom* atom, ArmMaliResultCode result_code) {
+void MsdArmConnection::SendNotificationData(MsdArmAtom* atom) {
   std::lock_guard<std::mutex> lock(callback_lock_);
   // It may already have been destroyed on the main thread.
   if (!token_)
@@ -515,7 +924,7 @@ void MsdArmConnection::SendNotificationData(MsdArmAtom* atom, ArmMaliResultCode 
   notification.u.channel_send.size = sizeof(magma_arm_mali_status);
 
   auto status = reinterpret_cast<magma_arm_mali_status*>(notification.u.channel_send.data);
-  status->result_code = result_code;
+  status->result_code = atom->result_code();
   status->atom_number = atom->atom_number();
   status->data = atom->user_data();
 

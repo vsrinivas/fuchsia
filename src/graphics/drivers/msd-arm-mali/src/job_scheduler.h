@@ -64,6 +64,7 @@ class JobScheduler {
  private:
   MsdArmAtom* executing_atom() const { return executing_atoms_[0].get(); }
   void ProcessSoftAtom(std::shared_ptr<MsdArmSoftAtom> atom);
+  void ProcessJitAtoms();
   void SoftJobCompleted(std::shared_ptr<MsdArmSoftAtom> atom);
   void UpdatePowerManager();
   void MoveAtomsToRunnable();
@@ -103,6 +104,9 @@ class JobScheduler {
 
   uint32_t current_mode_atom_count_ = 0;
 
+  // The list of JIT atoms that have no outstanding dependencies, but aren't executed yet.
+  std::list<std::shared_ptr<MsdArmSoftAtom>> jit_atoms_;
+  // List of semaphores that are waiting for events before executing.
   std::vector<std::shared_ptr<MsdArmSoftAtom>> waiting_atoms_;
   std::vector<std::shared_ptr<MsdArmAtom>> executing_atoms_;
   std::list<std::shared_ptr<MsdArmAtom>> atoms_;

@@ -80,6 +80,7 @@ source_set("src") {
     "../include",
     "//sdk/lib/fit",
     "//src/graphics/lib/magma/include:msd_abi",
+    "//src/graphics/lib/magma/src/magma_util:allocator",
     "//src/graphics/lib/magma/src/magma_util:macros",
     "//src/graphics/lib/magma/src/magma_util:registers",
     "//src/graphics/lib/magma/src/magma_util:thread",

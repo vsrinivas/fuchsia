@@ -19,6 +19,8 @@
 #include "address_space.h"
 #include "device_request.h"
 #include "gpu_mapping.h"
+#include "magma_arm_mali_types.h"
+#include "magma_util/address_space_allocator.h"
 #include "magma_util/macros.h"
 #include "msd.h"
 #include "msd_arm_atom.h"
@@ -86,12 +88,20 @@ class MsdArmConnection : public std::enable_shared_from_this<MsdArmConnection>,
   bool AddMapping(std::unique_ptr<GpuMapping> mapping);
   // If |atom| is a soft atom, then the first element from
   // |signal_semaphores| will be removed and used for it.
-  bool ExecuteAtom(volatile magma_arm_mali_atom* atom,
+  bool ExecuteAtom(size_t* remaining_data_size, magma_arm_mali_atom* atom,
                    std::deque<std::shared_ptr<magma::PlatformSemaphore>>* signal_semaphores);
 
   void SetNotificationCallback(msd_connection_notification_callback_t callback, void* token);
-  void SendNotificationData(MsdArmAtom* atom, ArmMaliResultCode result_code);
+  void SendNotificationData(MsdArmAtom* atom);
   void MarkDestroyed();
+
+  // Tries to allocate JIT memory for an atom.  Returns a status if allocation
+  // finished (successfully or not) or no status if the allocation needs to be
+  // retried after a free is completed.
+  [[nodiscard]] std::optional<ArmMaliResultCode> AllocateJitMemory(
+      const std::shared_ptr<MsdArmSoftAtom>& atom);
+  // Process a JIT memory free operation. Doesn't modify the result code of the atom.
+  void ReleaseJitMemory(const std::shared_ptr<MsdArmSoftAtom>& atom);
 
   // Called only on device thread.
   void set_address_space_lost() { address_space_lost_ = true; }
@@ -132,6 +142,32 @@ class MsdArmConnection : public std::enable_shared_from_this<MsdArmConnection>,
 
  private:
   static const uint32_t kMagic = 0x636f6e6e;  // "conn" (Connection)
+  friend class TestConnection;
+
+  struct JitMemoryRegion {
+    // ID the client uses to refer to this region while it's allocated. If 0, the region is not
+    // currently in use.
+    uint8_t id;
+    // Bin ID of the region. Bin IDs must match for the region to be reused.
+    uint8_t bin_id;
+    // Usage ID of the region. Usage ID preferably matches.
+    uint8_t usage_id;
+    uint64_t gpu_address;
+    // Number of initial committed pages requested. The region may grow in size
+    // while in use, and may be shrunk when freed.
+    uint64_t committed_pages;
+    std::shared_ptr<MsdArmBuffer> buffer;
+    inspect::Node node;
+    inspect::ValueList properties;
+    inspect::UintProperty id_property;
+    inspect::UintProperty comitted_page_count_property;
+    inspect::UintProperty requested_comitted_pages_property;
+  };
+
+  struct JitProperties {
+    uint8_t trim_level;
+    uint8_t max_allocations;
+  };
 
   struct ConnectionPerfCountManager final : public PerformanceCountersManager {
     // PerformanceCountersManager implementation. Only called on device thread.
@@ -144,6 +180,20 @@ class MsdArmConnection : public std::enable_shared_from_this<MsdArmConnection>,
   MsdArmConnection(msd_client_id_t client_id, Owner* owner);
 
   bool Init();
+
+  JitMemoryRegion* FindBestJitRegionAddressWithUsage(const magma_arm_jit_memory_allocate_info& info,
+                                                     bool check_usage)
+      MAGMA_REQUIRES(address_lock_);
+  uint64_t FindBestJitRegionAddress(const magma_arm_jit_memory_allocate_info& info);
+  std::optional<ArmMaliResultCode> AllocateNewJitMemoryRegion(
+      const magma_arm_jit_memory_allocate_info& info, uint64_t* address_out);
+  ArmMaliResultCode WriteJitRegionAdddress(const magma_arm_jit_memory_allocate_info& info,
+                                           uint64_t address);
+
+  // Returns a result code on success or failure. Returns no value if allocation is delayed.
+  std::optional<ArmMaliResultCode> AllocateOneJitMemoryRegion(
+      const magma_arm_jit_memory_allocate_info& info);
+  void ReleaseOneJitMemory(const magma_arm_jit_memory_free_info& info);
   PerformanceCounters* performance_counters() { return owner_->performance_counters(); }
 
   magma::PlatformBusMapper* GetBusMapper() override { return owner_->GetBusMapper(); }
@@ -151,13 +201,17 @@ class MsdArmConnection : public std::enable_shared_from_this<MsdArmConnection>,
   msd_client_id_t client_id_;
 
   inspect::Node node_;
+  inspect::Node jit_regions_;
   inspect::UintProperty client_id_property_;
 
   std::mutex address_lock_;
   __THREAD_ANNOTATION(__pt_guarded_by__(address_lock_))
   std::unique_ptr<AddressSpace> address_space_;
   // Map GPU va to a mapping.
-  __TA_GUARDED(address_lock_) std::map<uint64_t, std::unique_ptr<GpuMapping>> gpu_mappings_;
+  MAGMA_GUARDED(address_lock_) std::map<uint64_t, std::unique_ptr<GpuMapping>> gpu_mappings_;
+  MAGMA_GUARDED(address_lock_) JitProperties jit_properties_;
+  MAGMA_GUARDED(address_lock_) std::vector<JitMemoryRegion> jit_memory_regions_;
+  MAGMA_GUARDED(address_lock_) std::unique_ptr<magma::AddressSpaceAllocator> jit_allocator_;
 
   // Store a list of a small number of mappings to help debug issues when references to freed
   // memory.

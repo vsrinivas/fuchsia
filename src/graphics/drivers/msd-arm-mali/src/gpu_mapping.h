@@ -95,6 +95,9 @@ class GpuMapping {
     return bus_mappings_;
   }
 
+  uint64_t pages_to_grow_on_fault() const { return pages_to_grow_on_fault_; }
+  void set_pages_to_grow_on_fault(uint64_t pages) { pages_to_grow_on_fault_ = pages; }
+
   // Returns committed region in pages relative to the start of the mapping.
   Region committed_region() const {
     return Region::FromStartAndLength(committed_region_in_buffer_.start() - page_offset_,
@@ -109,6 +112,8 @@ class GpuMapping {
   // In bytes
   const uint64_t size_;
   const uint64_t flags_;
+  // By default try to grow in units of 64 pages to avoid needing to fault too often.
+  uint64_t pages_to_grow_on_fault_ = 64;
   // Region in pages relative to the beginning of the buffer. This is stored as an optimization so
   // we don't have to union the regions in bus_mappings_ whenever this is queried.
   Region committed_region_in_buffer_;

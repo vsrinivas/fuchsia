@@ -1196,7 +1196,7 @@ void MsdArmDevice::AtomCompleted(MsdArmAtom* atom, ArmMaliResultCode result) {
     // hops.
     magma::barriers::Barrier();
     if (connection)
-      connection->SendNotificationData(atom, result);
+      connection->SendNotificationData(atom);
   }
 }
 
