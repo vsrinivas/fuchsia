@@ -1126,114 +1126,135 @@ mod tests {
         // Note, however, that rustfmt struggles with macros, and using test-case for this test
         // would result in a lot of large struct literals defined as macro arguments of
         // #[test_case]. This may be more readable as an auto-formatted array.
+        //
+        // TODO(https://fxbug.dev/76384): refactor how we specify the test cases to make it easier
+        // to tell why a given case is invalid.
         struct TestCase<'a> {
             name: &'a str,
-            options: fnetemul::RealmOptions,
+            children: Vec<fnetemul::ChildDef>,
             epitaph: zx::Status,
         }
         let cases = [
             TestCase {
                 name: "no url provided",
-                options: fnetemul::RealmOptions {
-                    children: Some(vec![fnetemul::ChildDef {
-                        name: Some(COUNTER_COMPONENT_NAME.to_string()),
-                        ..fnetemul::ChildDef::EMPTY
-                    }]),
-                    ..fnetemul::RealmOptions::EMPTY
-                },
+                children: vec![fnetemul::ChildDef {
+                    url: None,
+                    name: Some(COUNTER_COMPONENT_NAME.to_string()),
+                    ..fnetemul::ChildDef::EMPTY
+                }],
                 epitaph: zx::Status::INVALID_ARGS,
             },
             TestCase {
                 name: "no name provided",
-                options: fnetemul::RealmOptions {
-                    children: Some(vec![fnetemul::ChildDef {
-                        url: Some(COUNTER_PACKAGE_URL.to_string()),
-                        ..fnetemul::ChildDef::EMPTY
-                    }]),
-                    ..fnetemul::RealmOptions::EMPTY
-                },
+                children: vec![fnetemul::ChildDef {
+                    url: Some(COUNTER_PACKAGE_URL.to_string()),
+                    name: None,
+                    ..fnetemul::ChildDef::EMPTY
+                }],
+                epitaph: zx::Status::INVALID_ARGS,
+            },
+            TestCase {
+                name: "name not specified for child dependency",
+                children: vec![fnetemul::ChildDef {
+                    name: Some(COUNTER_COMPONENT_NAME.to_string()),
+                    url: Some(COUNTER_PACKAGE_URL.to_string()),
+                    uses: Some(fnetemul::ChildUses::Capabilities(vec![
+                        fnetemul::Capability::ChildDep(fnetemul::ChildDep {
+                            name: None,
+                            capability: Some(fnetemul::ExposedCapability::Service(
+                                CounterMarker::SERVICE_NAME.to_string(),
+                            )),
+                            ..fnetemul::ChildDep::EMPTY
+                        }),
+                    ])),
+                    ..fnetemul::ChildDef::EMPTY
+                }],
+                epitaph: zx::Status::INVALID_ARGS,
+            },
+            TestCase {
+                name: "capability not specified for child dependency",
+                children: vec![fnetemul::ChildDef {
+                    name: Some(COUNTER_COMPONENT_NAME.to_string()),
+                    url: Some(COUNTER_PACKAGE_URL.to_string()),
+                    uses: Some(fnetemul::ChildUses::Capabilities(vec![
+                        fnetemul::Capability::ChildDep(fnetemul::ChildDep {
+                            name: Some("component".to_string()),
+                            capability: None,
+                            ..fnetemul::ChildDep::EMPTY
+                        }),
+                    ])),
+                    ..fnetemul::ChildDef::EMPTY
+                }],
                 epitaph: zx::Status::INVALID_ARGS,
             },
             TestCase {
                 name: "duplicate service used by child",
-                options: fnetemul::RealmOptions {
-                    children: Some(vec![fnetemul::ChildDef {
-                        name: Some(COUNTER_COMPONENT_NAME.to_string()),
-                        url: Some(COUNTER_PACKAGE_URL.to_string()),
-                        uses: Some(fnetemul::ChildUses::Capabilities(vec![
-                            fnetemul::Capability::LogSink(fnetemul::Empty {}),
-                            fnetemul::Capability::LogSink(fnetemul::Empty {}),
-                        ])),
-                        ..fnetemul::ChildDef::EMPTY
-                    }]),
-                    ..fnetemul::RealmOptions::EMPTY
-                },
+                children: vec![fnetemul::ChildDef {
+                    name: Some(COUNTER_COMPONENT_NAME.to_string()),
+                    url: Some(COUNTER_PACKAGE_URL.to_string()),
+                    uses: Some(fnetemul::ChildUses::Capabilities(vec![
+                        fnetemul::Capability::LogSink(fnetemul::Empty {}),
+                        fnetemul::Capability::LogSink(fnetemul::Empty {}),
+                    ])),
+                    ..fnetemul::ChildDef::EMPTY
+                }],
                 epitaph: zx::Status::INVALID_ARGS,
             },
             TestCase {
                 name: "child manually depends on a duplicate of a netemul-provided service",
-                options: fnetemul::RealmOptions {
-                    children: Some(vec![fnetemul::ChildDef {
-                        name: Some(COUNTER_COMPONENT_NAME.to_string()),
+                children: vec![fnetemul::ChildDef {
+                    name: Some(COUNTER_COMPONENT_NAME.to_string()),
+                    url: Some(COUNTER_PACKAGE_URL.to_string()),
+                    uses: Some(fnetemul::ChildUses::Capabilities(vec![
+                        fnetemul::Capability::LogSink(fnetemul::Empty {}),
+                        fnetemul::Capability::ChildDep(fnetemul::ChildDep {
+                            name: Some("root".to_string()),
+                            capability: Some(fnetemul::ExposedCapability::Service(
+                                flogger::LogSinkMarker::SERVICE_NAME.to_string(),
+                            )),
+                            ..fnetemul::ChildDep::EMPTY
+                        }),
+                    ])),
+                    ..fnetemul::ChildDef::EMPTY
+                }],
+                epitaph: zx::Status::INVALID_ARGS,
+            },
+            TestCase {
+                name: "child depends on nonexistent child",
+                children: vec![
+                    counter_component(),
+                    fnetemul::ChildDef {
+                        name: Some("counter-b".to_string()),
                         url: Some(COUNTER_PACKAGE_URL.to_string()),
                         uses: Some(fnetemul::ChildUses::Capabilities(vec![
-                            fnetemul::Capability::LogSink(fnetemul::Empty {}),
                             fnetemul::Capability::ChildDep(fnetemul::ChildDep {
-                                name: Some("root".to_string()),
+                                // counter-a does not exist.
+                                name: Some("counter-a".to_string()),
                                 capability: Some(fnetemul::ExposedCapability::Service(
-                                    flogger::LogSinkMarker::SERVICE_NAME.to_string(),
+                                    CounterMarker::SERVICE_NAME.to_string(),
                                 )),
                                 ..fnetemul::ChildDep::EMPTY
                             }),
                         ])),
                         ..fnetemul::ChildDef::EMPTY
-                    }]),
-                    ..fnetemul::RealmOptions::EMPTY
-                },
-                epitaph: zx::Status::INVALID_ARGS,
-            },
-            TestCase {
-                name: "child depends on nonexistent child",
-                options: fnetemul::RealmOptions {
-                    children: Some(vec![
-                        counter_component(),
-                        fnetemul::ChildDef {
-                            name: Some("counter-b".to_string()),
-                            url: Some(COUNTER_PACKAGE_URL.to_string()),
-                            uses: Some(fnetemul::ChildUses::Capabilities(vec![
-                                fnetemul::Capability::ChildDep(fnetemul::ChildDep {
-                                    // counter-a does not exist.
-                                    name: Some("counter-a".to_string()),
-                                    capability: Some(fnetemul::ExposedCapability::Service(
-                                        CounterMarker::SERVICE_NAME.to_string(),
-                                    )),
-                                    ..fnetemul::ChildDep::EMPTY
-                                }),
-                            ])),
-                            ..fnetemul::ChildDef::EMPTY
-                        },
-                    ]),
-                    ..fnetemul::RealmOptions::EMPTY
-                },
+                    },
+                ],
                 epitaph: zx::Status::INVALID_ARGS,
             },
             TestCase {
                 name: "duplicate components",
-                options: fnetemul::RealmOptions {
-                    children: Some(vec![
-                        fnetemul::ChildDef {
-                            name: Some(COUNTER_COMPONENT_NAME.to_string()),
-                            url: Some(COUNTER_PACKAGE_URL.to_string()),
-                            ..fnetemul::ChildDef::EMPTY
-                        },
-                        fnetemul::ChildDef {
-                            name: Some(COUNTER_COMPONENT_NAME.to_string()),
-                            url: Some(COUNTER_PACKAGE_URL.to_string()),
-                            ..fnetemul::ChildDef::EMPTY
-                        },
-                    ]),
-                    ..fnetemul::RealmOptions::EMPTY
-                },
+                children: vec![
+                    fnetemul::ChildDef {
+                        name: Some(COUNTER_COMPONENT_NAME.to_string()),
+                        url: Some(COUNTER_PACKAGE_URL.to_string()),
+                        ..fnetemul::ChildDef::EMPTY
+                    },
+                    fnetemul::ChildDef {
+                        name: Some(COUNTER_COMPONENT_NAME.to_string()),
+                        url: Some(COUNTER_PACKAGE_URL.to_string()),
+                        ..fnetemul::ChildDef::EMPTY
+                    },
+                ],
                 epitaph: zx::Status::INTERNAL,
             },
             // TODO(https://fxbug.dev/72043): once we allow duplicate services, verify that a child
@@ -1244,8 +1265,14 @@ mod tests {
             // cycle between components in a test realm (not using `ChildUses.all`) results in a
             // ZX_ERR_INTERNAL epitaph.
         ];
-        for TestCase { name, options, epitaph } in std::array::IntoIter::new(cases) {
-            let TestRealm { realm } = TestRealm::new(&sandbox, options);
+        for TestCase { name, children, epitaph } in std::array::IntoIter::new(cases) {
+            let TestRealm { realm } = TestRealm::new(
+                &sandbox,
+                fnetemul::RealmOptions {
+                    children: Some(children),
+                    ..fnetemul::RealmOptions::EMPTY
+                },
+            );
             match realm.take_event_stream().next().await.expect(&format!(
                 "test case failed: \"{}\": epitaph should be sent on realm channel",
                 name
