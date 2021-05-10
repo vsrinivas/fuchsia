@@ -35,13 +35,13 @@
     push_value %r13
     push_value %r12
 
-    /* move arg 4 into the proper register for calling convention */
+    // move arg 4 into the proper register for calling convention
     mov      %r10, %rcx
 .endm
 
 .macro post_8_args
     post_pop 3
-    jmp     .Lcleanup_and_return
+    jmp     x86_syscall_cleanup_and_return
 .endm
 
 //
@@ -65,7 +65,7 @@
 
 .macro post_7_args
     post_pop 2
-    jmp     .Lcleanup_and_return
+    jmp     x86_syscall_cleanup_and_return
 .endm
 
 //
@@ -87,7 +87,7 @@
 
 .macro post_6_args
     post_pop 1
-    jmp     .Lcleanup_and_return
+    jmp     x86_syscall_cleanup_and_return
 .endm
 
 //
@@ -108,7 +108,7 @@
 
 .macro post_5_args
     post_pop 0
-    jmp     .Lcleanup_and_return
+    jmp     x86_syscall_cleanup_and_return
 .endm
 
 //
@@ -128,7 +128,7 @@
 
 .macro post_4_args
     post_pop 0
-    jmp     .Lcleanup_and_return
+    jmp     x86_syscall_cleanup_and_return
 .endm
 
 //
@@ -145,7 +145,7 @@
 
 .macro post_3_args
     post_pop 0
-    jmp     .Lcleanup_and_return
+    jmp     x86_syscall_cleanup_and_return
 .endm
 
 //
@@ -162,7 +162,7 @@
 
 .macro post_2_args
     post_pop 0
-    jmp     .Lcleanup_and_return
+    jmp     x86_syscall_cleanup_and_return
 .endm
 
 //
@@ -178,7 +178,7 @@
 
 .macro post_1_args
     post_pop 0
-    jmp     .Lcleanup_and_return
+    jmp     x86_syscall_cleanup_and_return
 .endm
 
 
@@ -194,7 +194,7 @@
 
 .macro post_0_args
     post_pop 0
-    jmp     .Lcleanup_and_return
+    jmp     x86_syscall_cleanup_and_return
 .endm
 
 // These macros ensure the stack pointer remains 16-byte aligned.
@@ -222,16 +222,17 @@
 // Adds a label for making the syscall and adds it to the jump table.
 .macro syscall_dispatch nargs, syscall
     .pushsection .text.syscall-dispatch,"ax",%progbits
-    LOCAL_FUNCTION(.Lcall_\syscall\())
+    .balign 16
+    LOCAL_FUNCTION(x86_syscall_call_\syscall\())
         // See x86_syscall for why this is here.
         cfi_outermost_frame
         pre_\nargs\()_args
         call wrapper_\syscall
         post_\nargs\()_args
-    END_FUNCTION(.Lcall_\syscall\())
+    END_FUNCTION(x86_syscall_call_\syscall\())
     .popsection
     .pushsection .rodata.syscall-table,"a",%progbits
-        .quad .Lcall_\syscall
+        .quad x86_syscall_call_\syscall
     .popsection
 .endm
 
@@ -245,32 +246,33 @@
 
 .text
 
-    /* kernel side of the SYSCALL instruction
-     * state on entry:
-     * RCX holds user RIP
-     * R11 holds user RFLAGS
-     * RSP still holds user stack
-     * CS loaded with kernel CS from IA32_STAR
-     * SS loaded with kernel CS + 8 from IA32_STAR
+    // kernel side of the SYSCALL instruction
+    // state on entry:
+    // RCX holds user RIP
+    // R11 holds user RFLAGS
+    // RSP still holds user stack
+    // CS loaded with kernel CS from IA32_STAR
+    // SS loaded with kernel CS + 8 from IA32_STAR
 
-     * args passed:
-     *  rax - syscall # and return
-     *  rbx - saved
-     *  rcx - modified as part of syscall instruction
-     *  rdx - arg 3
-     *  rsi - arg 2
-     *  rdi - arg 1
-     *  rbp - saved
-     *  rsp - saved
-     *  r8  - arg 5
-     *  r9  - arg 6
-     *  r10 - arg 4
-     *  r11 - modified as part of syscall instruction
-     *  r12 - arg 7
-     *  r13 - arg 8
-     *  r14 - saved
-     *  r15 - saved
-     */
+    // args passed:
+    //  rax - syscall # and return
+    //  rbx - saved
+    //  rcx - modified as part of syscall instruction
+    //  rdx - arg 3
+    //  rsi - arg 2
+    //  rdi - arg 1
+    //  rbp - saved
+    //  rsp - saved
+    //  r8  - arg 5
+    //  r9  - arg 6
+    //  r10 - arg 4
+    //  r11 - modified as part of syscall instruction
+    //  r12 - arg 7
+    //  r13 - arg 8
+    //  r14 - saved
+    //  r15 - saved
+    //
+.balign 16
 FUNCTION_LABEL(x86_syscall)
     .cfi_startproc simple
     // CFI tracking here doesn't (currently) try to support backtracing from
@@ -283,13 +285,13 @@ FUNCTION_LABEL(x86_syscall)
     // sake mark them all as undefined.
     ALL_CFI_UNDEFINED
 
-    /* swap to the kernel GS register */
+    // swap to the kernel GS register
     swapgs
 
-    /* save the user stack pointer */
+    // save the user stack pointer
     mov     %rsp, %gs:PERCPU_SAVED_USER_SP_OFFSET
 
-    /* load the kernel stack pointer */
+    // load the kernel stack pointer
     mov     %gs:PERCPU_KERNEL_SP_OFFSET, %rsp
     .cfi_def_cfa %rsp, 0
 
@@ -336,14 +338,17 @@ FUNCTION_LABEL(x86_syscall)
     jmp     *%r11
 .Lunknown_syscall:
     pre_push 0
-    mov %rax, %rdi // move the syscall number into the 0 arg slot
-    mov %rcx, %rsi // pc into arg 1
+    mov     %rax, %rdi // move the syscall number into the 0 arg slot
+    mov     %rcx, %rsi // pc into arg 1
     call    unknown_syscall
     post_pop 0
-    jmp     .Lcleanup_and_return
+    jmp     x86_syscall_cleanup_and_return
+END_FUNCTION(x86_syscall)
 
-.Lcleanup_and_return:
-
+.balign 16
+    // All the syscall wrapper routines return to here.
+LOCAL_FUNCTION_LABEL(x86_syscall_cleanup_and_return)
+    .cfi_startproc simple
     // At this point:
     //   rax = syscall result
     //   rdx = non-zero if thread was signaled
@@ -372,15 +377,13 @@ FUNCTION_LABEL(x86_syscall)
 
 .Lreturn_from_syscall:
 #if LK_DEBUGLEVEL > 2
-    /* Ensure that interrupts are disabled on all paths to here. */
-    /* If they are not, enter a spinloop. */
-    pushq   %rax
+    // Ensure that interrupts are disabled on all paths to here.
+    // If they are not, enter a spinloop.
     pushf
     popq    %rax
-    bt      $9, %rax  /* RFLAGS.IF */
-bad:
-    jc      bad       /* Loop if we found RFLAGS.IF set (interrupts enabled) */
-    popq    %rax
+    bt      $9, %rax  // RFLAGS.IF
+0:
+    jc      0b       // Loop if we found RFLAGS.IF set (interrupts enabled)
 #endif
 
     // If we are affected by the MDS speculative execution vulnerability, flush microarchitectural
@@ -423,15 +426,15 @@ syscall_maybe_mds_buff_overwrite:
     pop_value %r11  // RFLAGS
     pop_value %rsp  // User stack
 
-    /* put the user gs back */
+    // put the user gs back
     swapgs
 
-    /* This will fault if the return address is non-canonical.  See
-     * docs/sysret_problem.md for how we avoid that. */
+    // This will fault if the return address is non-canonical.  See
+    // docs/sysret_problem.md for how we avoid that.
     sysretq
 
 .Lthread_signaled:
-    /* re-enable interrupts to maintain kernel preemptiveness */
+    // re-enable interrupts to maintain kernel preemptiveness
     sti
 
     // Pass a pointer to the syscall_regs_t struct as first arg.
@@ -440,8 +443,7 @@ syscall_maybe_mds_buff_overwrite:
 
     cli
     jmp     .Lreturn_from_syscall
-
-END_FUNCTION(x86_syscall)
+END_FUNCTION(x86_syscall_cleanup_and_return)
 
 // One of these macros is invoked by kernel.inc for each syscall.
 
