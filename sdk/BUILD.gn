@@ -47,6 +47,7 @@ group("sdk.modular") {
   public_deps = [
     ":bootstrap",
     ":core.modular",
+    ":ddk",
     ":host_tools.all",
     ":modular_testing",
     ":zircon_sysroot",
