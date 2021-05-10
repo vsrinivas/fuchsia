@@ -70,7 +70,10 @@ impl data_controller::Create for LightController {
             Some(messenger),
             true,
         )
-        .get_default_value();
+        .get_default_value()
+        .map_err(|_| {
+            ControllerError::InitFailure("Invalid default light hardware config".into())
+        })?;
 
         LightController::create_with_config(client, light_hardware_config).await
     }

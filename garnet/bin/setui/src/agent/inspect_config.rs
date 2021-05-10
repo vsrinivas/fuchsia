@@ -231,7 +231,7 @@ mod tests {
             .to_string();
         let expected_inspect_info = config::base::ConfigLoadInfo {
             path: "/config/data/input_device_config.json".to_string(),
-            status: config::base::ConfigLoadStatus::LoadFailure(message),
+            status: config::base::ConfigLoadStatus::UsingDefaults(message),
         };
 
         // Send the config load message.

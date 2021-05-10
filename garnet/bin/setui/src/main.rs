@@ -44,6 +44,7 @@ fn main() -> Result<(), Error> {
         false,
     )
     .get_default_value()
+    .expect("invalid default enabled service configuration")
     .expect("no default enabled service configuration");
 
     let enabled_policy_configuration = DefaultSetting::new(
@@ -53,6 +54,7 @@ fn main() -> Result<(), Error> {
         false,
     )
     .get_default_value()
+    .expect("invalid default enabled policy configuration")
     .expect("no default enabled policy configuration");
 
     let flags = DefaultSetting::new(
@@ -62,6 +64,7 @@ fn main() -> Result<(), Error> {
         false,
     )
     .get_default_value()
+    .expect("invalid service flag configuration")
     .expect("no default service flags");
 
     let agent_types = DefaultSetting::new(
@@ -71,6 +74,7 @@ fn main() -> Result<(), Error> {
         false,
     )
     .get_default_value()
+    .expect("invalid default agent configuration")
     .expect("no default agent types");
 
     let configuration = ServiceConfiguration::from(

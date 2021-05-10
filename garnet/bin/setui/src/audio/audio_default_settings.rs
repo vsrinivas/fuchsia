@@ -78,7 +78,12 @@ pub const fn create_default_audio_stream(stream_type: AudioStreamType) -> AudioS
 }
 
 pub fn default_audio_info() -> AudioInfo {
-    AUDIO_DEFAULT_SETTINGS.lock().unwrap().get_default_value().expect("no audio default settings")
+    AUDIO_DEFAULT_SETTINGS
+        .lock()
+        .unwrap()
+        .get_default_value()
+        .expect("invalid audio default settings")
+        .expect("no audio default settings")
 }
 
 /// The following struct should never be modified. It represents an old

@@ -51,6 +51,7 @@ mod test {
             false,
         )
         .get_default_value()
+        .expect("Invalid display configuration")
         .expect("Unable to parse configuration");
 
         assert_eq!(default_value.theme.theme_mode, vec![ConfigurationThemeMode::Auto]);

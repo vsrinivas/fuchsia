@@ -52,7 +52,10 @@ lazy_static! {
 pub fn default_display_info() -> DisplayInfo {
     let mut default_display_info = DEFAULT_DISPLAY_INFO.clone();
 
-    if let Some(display_configuration) = DISPLAY_CONFIGURATION.lock().unwrap().get_default_value() {
+    // TODO(fxbug.dev/76038): Clean up unwrap calls.
+    if let Ok(Some(display_configuration)) =
+        DISPLAY_CONFIGURATION.lock().unwrap().get_default_value()
+    {
         default_display_info.theme = Some(Theme {
             theme_type: Some(match display_configuration.theme.theme_type {
                 ConfigurationThemeType::Light => ThemeType::Light,

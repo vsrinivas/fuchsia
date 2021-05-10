@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use anyhow::{format_err, Error};
 use serde::de::DeserializeOwned;
 use std::fmt::Display;
 use std::fs::File;
@@ -46,54 +47,52 @@ where
         }
     }
 
-    pub fn get_default_value(&mut self) -> Option<T> {
+    pub fn get_default_value(&mut self) -> Result<Option<T>, Error> {
         if self.cached_value.is_none() {
-            self.cached_value = Some(self.load_default_settings());
+            self.cached_value = Some(self.load_default_settings()?);
         }
 
-        self.cached_value.as_ref().unwrap().clone()
+        Ok(self.cached_value.as_ref().unwrap().clone())
     }
 
     /// Attempts to load the settings from the given config_file_path.
     ///
     /// Returns the default value if unable to read or parse the file. The returned option will
     /// only be None if the default_value was provided as None.
-    // TODO(fxbug.dev/75676): Convert to returning Result, make parse failures return Error.
-    fn load_default_settings(&self) -> Option<T> {
-        if let Some(config) = File::open(self.config_file_path.as_ref())
-            .map_err(|e| {
-                self.report_config_load(config::base::Event::Load(config::base::ConfigLoadInfo {
-                    path: self.config_file_path.to_string(),
-                    status: config::base::ConfigLoadStatus::LoadFailure(format!(
-                        "unable to open file, using defaults: {:?}",
-                        e
-                    )),
-                }));
-            })
-            .ok()
-            .and_then(|file| {
-                serde_json::from_reader(BufReader::new(file))
-                    .map_err(|e| {
-                        self.report_config_load(config::base::Event::Load(
-                            config::base::ConfigLoadInfo {
-                                path: self.config_file_path.to_string(),
-                                status: config::base::ConfigLoadStatus::ParseFailure(format!(
-                                    "unable to parse config, using defaults: {:?}",
-                                    e
-                                )),
-                            },
-                        ));
-                    })
-                    .ok()
-            })
-        {
+    fn load_default_settings(&self) -> Result<Option<T>, Error> {
+        if let Ok(file) = File::open(self.config_file_path.as_ref()) {
+            match serde_json::from_reader(BufReader::new(file)) {
+                Ok(config) => {
+                    // Success path.
+                    self.report_config_load(config::base::Event::Load(
+                        config::base::ConfigLoadInfo {
+                            path: self.config_file_path.to_string(),
+                            status: config::base::ConfigLoadStatus::Success,
+                        },
+                    ));
+                    Ok(config)
+                }
+                Err(e) => {
+                    // Found file, but failed to parse.
+                    let err_msg = format!("unable to parse config: {:?}", e);
+                    self.report_config_load(config::base::Event::Load(
+                        config::base::ConfigLoadInfo {
+                            path: self.config_file_path.to_string(),
+                            status: config::base::ConfigLoadStatus::ParseFailure(err_msg.clone()),
+                        },
+                    ));
+                    Err(format_err!("{:?}", err_msg))
+                }
+            }
+        } else {
+            // No file found.
             self.report_config_load(config::base::Event::Load(config::base::ConfigLoadInfo {
                 path: self.config_file_path.to_string(),
-                status: config::base::ConfigLoadStatus::Success,
+                status: config::base::ConfigLoadStatus::UsingDefaults(
+                    "File not found, using defaults".to_string(),
+                ),
             }));
-            config
-        } else {
-            self.default_value.clone()
+            Ok(self.default_value.clone())
         }
     }
 
@@ -153,11 +152,13 @@ pub mod testing {
             true,
         );
 
-        assert_eq!(setting.get_default_value().unwrap().value, 10);
+        assert_eq!(
+            setting.get_default_value().expect("Failed to get default value").unwrap().value,
+            10
+        );
     }
 
     #[test]
-    // Loading a malformed config data should panic with a message.
     fn test_load_invalid_config_data() {
         let mut setting = DefaultSetting::new(
             Some(TestConfigData { value: 3 }),
@@ -165,8 +166,7 @@ pub mod testing {
             None,
             true,
         );
-
-        assert_eq!(setting.get_default_value().unwrap().value, 3);
+        assert!(setting.get_default_value().is_err());
     }
 
     #[test]
@@ -174,14 +174,17 @@ pub mod testing {
         let mut setting =
             DefaultSetting::new(Some(TestConfigData { value: 3 }), "nuthatch", None, true);
 
-        assert_eq!(setting.get_default_value().unwrap().value, 3);
+        assert_eq!(
+            setting.get_default_value().expect("Failed to get default value").unwrap().value,
+            3
+        );
     }
 
     #[test]
     fn test_load_default_none() {
         let mut setting = DefaultSetting::<TestConfigData, &str>::new(None, "nuthatch", None, true);
 
-        assert!(setting.get_default_value().is_none());
+        assert!(setting.get_default_value().expect("Failed to get default value").is_none());
     }
 
     #[test]
@@ -189,7 +192,7 @@ pub mod testing {
         let mut setting =
             DefaultSetting::<TestConfigData, &str>::new(None, "nuthatch", None, false);
 
-        assert!(setting.get_default_value().is_none());
+        assert!(setting.get_default_value().expect("Failed to get default value").is_none());
     }
 
     #[fuchsia_async::run_until_stalled(test)]
@@ -219,10 +222,8 @@ pub mod testing {
             service::Payload::Event(event::Payload::Event(event::Event::ConfigLoad(
                 config::base::Event::Load(config::base::ConfigLoadInfo {
                     path: "nuthatch".to_string(),
-                    status: config::base::ConfigLoadStatus::LoadFailure(
-                        "unable to open file, using defaults: \
-                        Os { code: 2, kind: NotFound, message: \"No such file or directory\" }"
-                            .to_string(),
+                    status: config::base::ConfigLoadStatus::UsingDefaults(
+                        "File not found, using defaults".to_string(),
                     ),
                 }),
             ))),

@@ -74,6 +74,7 @@ async fn test_default_configuration_provided() {
     let configuration =
         DefaultSetting::new(None, "/config/data/service_configuration.json", None, false)
             .get_default_value()
+            .expect("invalid service configuration")
             .expect("no enabled service configuration provided");
 
     let flags = ServiceFlags::default();
@@ -105,6 +106,7 @@ async fn test_default_policy_configuration_provided() {
     let policy_configuration =
         DefaultSetting::new(None, "/config/data/policy_configuration.json", None, false)
             .get_default_value()
+            .expect("invalid policy configuration provided")
             .expect("no enabled policy configuration provided");
 
     let flags = ServiceFlags::default();

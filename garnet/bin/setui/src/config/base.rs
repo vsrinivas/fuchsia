@@ -33,9 +33,12 @@ pub struct ConfigLoadInfo {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum ConfigLoadStatus {
-    LoadFailure(String),
+    /// Failed to parse the file.
     ParseFailure(String),
+    /// Successfully loaded the file.
     Success,
+    /// Falling back to default.
+    UsingDefaults(String),
 }
 
 /// Represents each agent that can be run.
