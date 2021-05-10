@@ -26,6 +26,7 @@
 #include "src/storage/blobfs/mkfs.h"
 #include "src/storage/blobfs/test/blob_utils.h"
 #include "src/storage/blobfs/test/blobfs_test_setup.h"
+#include "src/storage/blobfs/test/test_scoped_vnode_open.h"
 #include "src/storage/blobfs/test/unit/utils.h"
 
 namespace blobfs {
@@ -180,25 +181,25 @@ TEST_P(BlobTest, ReadingBlobZerosTail) {
   fbl::RefPtr<fs::Vnode> file;
   ASSERT_EQ(root->Lookup(info->path + 1, &file), ZX_OK);
 
+  TestScopedVnodeOpen open(file);  // Must be open to read or get the Vmo.
+
   // Trying to read from the blob would fail if the tail wasn't zeroed.
   size_t actual;
   uint8_t data;
   EXPECT_EQ(file->Read(&data, 1, 0, &actual), ZX_OK);
-  {
-    zx::vmo vmo = {};
-    size_t data_size;
-    EXPECT_EQ(file->GetVmo(fio::wire::kVmoFlagRead, &vmo, &data_size), ZX_OK);
-    EXPECT_EQ(data_size, 64ul);
 
-    size_t vmo_size;
-    EXPECT_EQ(vmo.get_size(&vmo_size), ZX_OK);
-    ASSERT_EQ(vmo_size, size_t{PAGE_SIZE});
+  zx::vmo vmo;
+  size_t data_size;
+  EXPECT_EQ(file->GetVmo(fio::wire::kVmoFlagRead, &vmo, &data_size), ZX_OK);
+  EXPECT_EQ(data_size, 64ul);
 
-    uint8_t data;
-    EXPECT_EQ(vmo.read(&data, PAGE_SIZE - 1, 1), ZX_OK);
-    // The corrupted bit in the tail was zeroed when being read.
-    EXPECT_EQ(data, 0);
-  }
+  size_t vmo_size;
+  EXPECT_EQ(vmo.get_size(&vmo_size), ZX_OK);
+  ASSERT_EQ(vmo_size, size_t{PAGE_SIZE});
+
+  EXPECT_EQ(vmo.read(&data, PAGE_SIZE - 1, 1), ZX_OK);
+  // The corrupted bit in the tail was zeroed when being read.
+  EXPECT_EQ(data, 0);
 }
 
 TEST_P(BlobTestWithOldMinorVersion, ReadWriteAllCompressionFormats) {
@@ -219,11 +220,17 @@ TEST_P(BlobTestWithOldMinorVersion, ReadWriteAllCompressionFormats) {
     // Read back the blob
     fbl::RefPtr<fs::Vnode> file;
     ASSERT_EQ(root->Lookup(info->path + 1, &file), ZX_OK);
-    size_t actual;
-    uint8_t data[info->size_data];
-    EXPECT_EQ(file->Read(&data, info->size_data, 0, &actual), ZX_OK);
-    EXPECT_EQ(info->size_data, actual);
-    EXPECT_EQ(memcmp(data, info->data.get(), info->size_data), 0);
+
+    // File must be open to read, but closed for the remount to happen below.
+    {
+      TestScopedVnodeOpen opener(file);
+
+      size_t actual;
+      uint8_t data[info->size_data];
+      EXPECT_EQ(file->Read(&data, info->size_data, 0, &actual), ZX_OK);
+      EXPECT_EQ(info->size_data, actual);
+      EXPECT_EQ(memcmp(data, info->data.get(), info->size_data), 0);
+    }
 
     if (pass == 1) {
       // Check that it got migrated.
@@ -276,6 +283,8 @@ TEST_P(BlobTest, WriteBlobWithSharedBlockInCompactFormat) {
     fbl::RefPtr<fs::Vnode> file;
     auto root = OpenRoot();
     ASSERT_EQ(root->Lookup(info->path + 1, &file), ZX_OK);
+
+    TestScopedVnodeOpen open(file);  // Must be open to read.
     size_t actual;
     uint8_t data[info->size_data];
     EXPECT_EQ(file->Read(&data, info->size_data, 0, &actual), ZX_OK);
@@ -317,6 +326,9 @@ TEST_P(BlobTest, UnlinkBlocksUntilNoVmoChildren) {
     fbl::RefPtr<fs::Vnode> file;
     // Lookup doesn't call Open, so no need to Close later.
     EXPECT_EQ(root->Lookup(info->path + 1, &file), ZX_OK);
+
+    // Open the blob, get the vmo, and close the blob.
+    TestScopedVnodeOpen open(file);
     zx::vmo vmo = {};
     size_t data_size;
     EXPECT_EQ(file->GetVmo(fio::wire::kVmoFlagRead, &vmo, &data_size), ZX_OK);
@@ -353,6 +365,9 @@ TEST_P(BlobTest, VmoChildDeletedTriggersPurging) {
     EXPECT_EQ(root->Lookup(info->path + 1, &file), ZX_OK);
     zx::vmo vmo = {};
     size_t data_size;
+
+    // Open the blob, get the vmo, and close the blob.
+    TestScopedVnodeOpen open(file);
     EXPECT_EQ(file->GetVmo(fio::wire::kVmoFlagRead, &vmo, &data_size), ZX_OK);
     EXPECT_EQ(data_size, info->size_data);
     return vmo;
@@ -593,6 +608,8 @@ TEST_P(BlobMigrationTest, MigrateLargeBlobSucceeds) {
     // Read back the blob
     fbl::RefPtr<fs::Vnode> file;
     ASSERT_EQ(root->Lookup(info->path + 1, &file), ZX_OK);
+    TestScopedVnodeOpen opener(file);  // Must be open to read or get the Vmo.
+
     size_t actual;
     auto data = std::make_unique<uint8_t[]>(info->size_data);
     EXPECT_EQ(file->Read(data.get(), info->size_data, 0, &actual), ZX_OK);
@@ -617,6 +634,8 @@ TEST_P(BlobMigrationTest, MigrateWhenNoSpaceSkipped) {
     fbl::RefPtr<fs::Vnode> file;
     ASSERT_EQ(root->Create(info->path + 1, 0, &file), ZX_OK);
     auto blob = fbl::RefPtr<Blob>::Downcast(file);
+    TestScopedVnodeOpen opener(file);  // Must be open to write.
+
     size_t out_actual = 0;
     EXPECT_EQ(blob->PrepareWrite(info->size_data, /*compress=*/true), ZX_OK);
     EXPECT_EQ(blob->Write(info->data.get(), info->size_data, 0, &out_actual), ZX_OK);
@@ -631,6 +650,8 @@ TEST_P(BlobMigrationTest, MigrateWhenNoSpaceSkipped) {
     // Read back the blob
     fbl::RefPtr<fs::Vnode> file;
     ASSERT_EQ(root->Lookup(info->path + 1, &file), ZX_OK);
+    TestScopedVnodeOpen opener(file);  // Must be open to read.
+
     size_t actual;
     auto data = std::make_unique<uint8_t[]>(info->size_data);
     EXPECT_EQ(file->Read(data.get(), info->size_data, 0, &actual), ZX_OK);

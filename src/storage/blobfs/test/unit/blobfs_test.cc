@@ -22,6 +22,7 @@
 #include "src/storage/blobfs/mkfs.h"
 #include "src/storage/blobfs/test/blob_utils.h"
 #include "src/storage/blobfs/test/blobfs_test_setup.h"
+#include "src/storage/blobfs/test/test_scoped_vnode_open.h"
 #include "src/storage/blobfs/transaction.h"
 
 namespace blobfs {
@@ -261,6 +262,8 @@ TEST_F(BlobfsTestWithLargeDevice, WritingBlobLargerThanWritebackCapacitySucceeds
   blob.reset();
 
   ASSERT_EQ(root_node->Lookup(info->path + 1, &file), ZX_OK);
+  TestScopedVnodeOpen open(file);  // File must be open to read from it.
+
   auto buffer = std::make_unique<uint8_t[]>(info->size_data);
   EXPECT_EQ(file->Read(buffer.get(), info->size_data, 0, &actual), ZX_OK);
   EXPECT_EQ(memcmp(buffer.get(), info->data.get(), info->size_data), 0);

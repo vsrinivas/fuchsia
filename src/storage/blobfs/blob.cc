@@ -136,7 +136,13 @@ uint64_t Blob::SizeData() const {
 }
 
 Blob::Blob(Blobfs* bs, const digest::Digest& digest)
-    : CacheNode(bs->vfs(), digest), blobfs_(bs), clone_watcher_(this) {
+    : CacheNode(bs->vfs(), digest),
+      blobfs_(bs)
+#if !defined(ENABLE_BLOBFS_NEW_PAGER)
+      ,
+      clone_watcher_(this)
+#endif
+{
   write_info_ = std::make_unique<WriteInfo>();
 }
 
@@ -146,7 +152,9 @@ Blob::Blob(Blobfs* bs, uint32_t node_index, const Inode& inode)
       state_(SupportsPaging(inode) ? BlobState::kReadablePaged : BlobState::kReadableLegacy),
       syncing_state_(SyncingState::kDone),
       map_index_(node_index),
+#if !defined(ENABLE_BLOBFS_NEW_PAGER)
       clone_watcher_(this),
+#endif
       blob_size_(inode.blob_size),
       block_count_(inode.block_count) {
   write_info_ = std::make_unique<WriteInfo>();
@@ -688,6 +696,7 @@ zx_status_t Blob::CloneDataVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out
   *out_vmo = std::move(clone);
   *out_size = blob_size_;
 
+#if !defined(ENABLE_BLOBFS_NEW_PAGER)
   if (clone_watcher_.object() == ZX_HANDLE_INVALID) {
     clone_watcher_.set_object(paged_vmo().get());
     clone_watcher_.set_trigger(ZX_VMO_ZERO_CHILDREN);
@@ -699,12 +708,12 @@ zx_status_t Blob::CloneDataVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out
     clone_ref_ = fbl::RefPtr<Blob>(this);
     clone_watcher_.Begin(blobfs_->dispatcher());
   }
+#endif
 
   return ZX_OK;
 }
 
-// TODO(fxbug.dev/51111) This is not used with the new pager. Remove this code when the transition
-// is complete.
+#if !defined(ENABLE_BLOBFS_NEW_PAGER)
 void Blob::HandleNoClones(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                           const zx_packet_signal_t* signal) {
   fbl::RefPtr<Blob> local_clone_ref;
@@ -762,6 +771,7 @@ void Blob::HandleNoClones(async_dispatcher_t* dispatcher, async::WaitBase* wait,
     SetPagedVmoName(false);
   }
 }
+#endif
 
 zx_status_t Blob::ReadInternal(void* data, size_t len, size_t off, size_t* actual) {
   TRACE_DURATION("blobfs", "Blobfs::ReadInternal", "len", len, "off", off);
@@ -769,6 +779,10 @@ zx_status_t Blob::ReadInternal(void* data, size_t len, size_t off, size_t* actua
   // The common case is that the blob is already loaded. To allow multiple readers, it's important
   // to avoid taking an exclusive lock unless necessary.
   fs::SharedLock lock(mutex_);
+
+  // Only expect this to be called when the blob is open. The fidl API guarantees this but tests
+  // can easily forget to open the blob before trying to read.
+  ZX_DEBUG_ASSERT(open_count() > 0);
 
   if (!IsReadable())
     return ZX_ERR_BAD_STATE;
@@ -843,6 +857,8 @@ zx_status_t Blob::LoadPagedVmosFromDisk() {
       status.is_error())
     return status.error_value();
 
+  EnsurePagedVmoRegistered();
+
   // Commit the other load information.
   pager_info_ = std::move(load_result->pager_info);
   merkle_mapping_ = std::move(load_result->merkle);
@@ -904,6 +920,11 @@ zx_status_t Blob::LoadUnpagedVmosFromDisk() {
 }
 
 zx_status_t Blob::LoadVmosFromDisk() {
+  // We expect the file to be open in FIDL for this to be called. Whether the paged vmo is
+  // registered with the pager is dependent on the HasReferences() flag so this should not get
+  // out-of-sync.
+  ZX_DEBUG_ASSERT(HasReferences());
+
   if (IsDataLoaded())
     return ZX_OK;
 
@@ -995,8 +1016,16 @@ zx_status_t Blob::Verify() {
 
 #if defined(ENABLE_BLOBFS_NEW_PAGER)
 void Blob::OnNoPagedVmoClones() {
-  // Do nothing. The default implementation will free the VMO but we always need to keep it
-  // around and registered with the pager because FIDL reads go through VMO read code path.
+  if (!HasReferences()) {
+    // No more references to this node. It may still be kept alive for caching purposes, so mark
+    // the necessary things as unused.
+    SetPagedVmoName(false);
+
+    // Unregister for paging notifications to release the reference to this class owned by the
+    // PagedVfs. This keeps the vmo alive for caching, its lifetime is handled separately from
+    // the lifetime of the memory mappings.
+    EnsurePagedVmoUnregistered();
+  }
 }
 #endif
 
@@ -1144,6 +1173,10 @@ zx_status_t Blob::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
 
   std::lock_guard lock(mutex_);
 
+  // Only expect this to be called when the blob is open. The fidl API guarantees this but tests
+  // can easily forget to open the blob before getting the VMO.
+  ZX_DEBUG_ASSERT(open_count() > 0);
+
   if (flags & fuchsia_io::wire::kVmoFlagWrite) {
     return ZX_ERR_NOT_SUPPORTED;
   } else if (flags & fuchsia_io::wire::kVmoFlagExact) {
@@ -1266,6 +1299,7 @@ void Blob::CompleteSync() {
   }
 }
 
+#if !defined(ENABLE_BLOBFS_NEW_PAGER)
 // TODO(fxbug.dev/51111) This is not used with the new pager. Remove this code when the transition
 // is complete.
 fbl::RefPtr<Blob> Blob::CloneWatcherTeardown() {
@@ -1278,12 +1312,31 @@ fbl::RefPtr<Blob> Blob::CloneWatcherTeardown() {
   }
   return nullptr;
 }
+#endif
 
 zx_status_t Blob::OpenNode([[maybe_unused]] ValidatedOptions options,
                            fbl::RefPtr<Vnode>* out_redirect) {
   std::lock_guard lock(mutex_);
-  if (IsDataLoaded()) {
+  if (IsDataLoaded() && open_count() == 1) {
+    // Just went from an unopened node that already had data to an opened node (the open_count()
+    // reflects the new state).
+    //
+    // This normally means that the node was closed but cached, and we're not re-opening it. This
+    // means we have to mark things as being open and register for the corresponding notifications.
+    //
+    // It's also possible to get in this state if there was a memory mapping for a file that
+    // was otherwise closed. In that case we don't need to do anything but the operations here
+    // can be performed multiple times with no bad effects. Avoiding these calls in the "mapped but
+    // opened" state would mean checking for no mappings which bundles this code more tightly to
+    // the HasReferences() implementation that is better avoided.
     SetPagedVmoName(true);
+
+#if defined(ENABLE_BLOBFS_NEW_PAGER)
+    // The paged vmo is keps alive as long as this object for caching purposes, but we will have
+    // unregistered for pager notifications (to release the Vfs owning reference to this class)
+    // when there are no references. In the re-opening case we will need to re-register.
+    EnsurePagedVmoRegistered();
+#endif
   }
   return ZX_OK;
 }
@@ -1293,8 +1346,12 @@ zx_status_t Blob::CloseNode() {
 
   auto event = blobfs_->GetMetrics()->NewLatencyEvent(fs_metrics::Event::kClose);
 
-  if (paged_vmo() && !HasReferences())
+  if (paged_vmo() && !HasReferences()) {
     SetPagedVmoName(false);
+#if defined(ENABLE_BLOBFS_NEW_PAGER)
+    EnsurePagedVmoUnregistered();
+#endif
+  }
 
   // Attempt purge in case blob was unlinked prior to close.
   return TryPurge();
@@ -1313,15 +1370,16 @@ zx_status_t Blob::Purge() {
   if (IsReadable()) {
     // A readable blob should only be purged if it has been unlinked.
     ZX_ASSERT_MSG(deletable_, "Should not purge blob which is not unlinked.");
+
     BlobTransaction transaction;
-    zx_status_t status = blobfs_->FreeInode(map_index_, transaction);
-    ZX_ASSERT_MSG(status == ZX_OK, "FreeInode for map_index_:%u failed with error: %s", map_index_,
-                  zx_status_get_string(status));
+    if (zx_status_t status = blobfs_->FreeInode(map_index_, transaction); status != ZX_OK)
+      return status;
     transaction.Commit(*blobfs_->GetJournal());
   }
-  zx_status_t status = GetCache().Evict(fbl::RefPtr(this));
-  ZX_ASSERT_MSG(status == ZX_OK, "Cache eviction for blob failed with error: %s",
-                zx_status_get_string(status));
+
+  if (zx_status_t status = GetCache().Evict(fbl::RefPtr(this)); status != ZX_OK)
+    return status;
+
   set_state(BlobState::kPurged);
   return ZX_OK;
 }

@@ -13,34 +13,46 @@ PagedVnode::PagedVnode(PagedVfs* vfs) : Vnode(vfs), clone_watcher_(this) {}
 PagedVnode::~PagedVnode() {}
 
 zx::status<> PagedVnode::EnsureCreatePagedVmo(uint64_t size) {
-  if (paged_vmo()) {
-    // The derived class can choose to cache the VMO even if it has no clones, so just because the
-    // VMO exists doesn't mean it has clones. As a result, we may need to arm the watcher.
-    WatchForZeroVmoClones();
-
+  if (paged_vmo())
     return zx::ok();
-  }
 
   if (!paged_vfs())
     return zx::error(ZX_ERR_BAD_STATE);  // Currently shutting down.
 
-  auto info_or = paged_vfs()->CreatePagedNodeVmo(fbl::RefPtr<PagedVnode>(this), size);
+  auto info_or = paged_vfs()->CreatePagedNodeVmo(size);
   if (info_or.is_error())
     return info_or.take_error();
   paged_vmo_info_ = std::move(info_or).value();
 
-  // Watch the VMO for the presence of no children. The VMO currently has no children because we
-  // just created it, but the signal will be edge-triggered.
-  WatchForZeroVmoClones();
-
   return zx::ok();
+}
+
+void PagedVnode::EnsurePagedVmoRegistered() {
+  // The paged VMO must have been created before registering for notifications.
+  ZX_DEBUG_ASSERT(paged_vmo());
+
+  if (is_registered_with_pager_)
+    return;
+
+  WatchForZeroVmoClones();
+  paged_vfs()->RegisterPagedVmo(paged_vmo_info_.id, fbl::RefPtr<PagedVnode>(this));
+  is_registered_with_pager_ = true;
+}
+
+void PagedVnode::EnsurePagedVmoUnregistered() {
+  if (!is_registered_with_pager_ || !paged_vfs())
+    return;
+
+  StopWatchingForZeroVmoClones();
+  paged_vfs()->UnregisterPagedVmo(paged_vmo_info_.id);
+  is_registered_with_pager_ = false;
 }
 
 void PagedVnode::FreePagedVmo() {
   if (!paged_vmo_info_.vmo.is_valid())
     return;
 
-  if (paged_vfs())
+  if (paged_vfs() && is_registered_with_pager_)
     paged_vfs()->UnregisterPagedVmo(paged_vmo_info_.id);
 
   paged_vmo_info_.vmo.reset();
@@ -73,18 +85,25 @@ void PagedVnode::OnNoPagedVmoClonesMessage(async_dispatcher_t* dispatcher, async
     return;
   }
 
-  clone_watcher_.set_object(ZX_HANDLE_INVALID);
-  has_clones_ = false;
-
+  StopWatchingForZeroVmoClones();
   OnNoPagedVmoClones();
 }
 
 void PagedVnode::WatchForZeroVmoClones() {
-  has_clones_ = true;
+  if (!has_clones_) {
+    has_clones_ = true;
 
-  clone_watcher_.set_object(paged_vmo().get());
-  clone_watcher_.set_trigger(ZX_VMO_ZERO_CHILDREN);
-  clone_watcher_.Begin(paged_vfs()->dispatcher());
+    clone_watcher_.set_object(paged_vmo().get());
+    clone_watcher_.set_trigger(ZX_VMO_ZERO_CHILDREN);
+    clone_watcher_.Begin(paged_vfs()->dispatcher());
+  }
+}
+
+void PagedVnode::StopWatchingForZeroVmoClones() {
+  if (has_clones_) {
+    has_clones_ = false;
+    clone_watcher_.set_object(ZX_HANDLE_INVALID);
+  }
 }
 
 }  // namespace fs

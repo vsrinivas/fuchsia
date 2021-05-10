@@ -64,8 +64,7 @@ zx::status<> PagedVfs::ReportPagerError(const zx::vmo& node_vmo, uint64_t offset
   return zx::make_status(pager_.op_range(ZX_PAGER_OP_FAIL, node_vmo, offset, length, err));
 }
 
-zx::status<PagedVfs::VmoCreateInfo> PagedVfs::CreatePagedNodeVmo(fbl::RefPtr<PagedVnode> node,
-                                                                 uint64_t size) {
+zx::status<PagedVfs::VmoCreateInfo> PagedVfs::CreatePagedNodeVmo(uint64_t size) {
   // Register this node with a unique ID to associated it with pager requests.
   VmoCreateInfo create_info;
   {
@@ -73,33 +72,46 @@ zx::status<PagedVfs::VmoCreateInfo> PagedVfs::CreatePagedNodeVmo(fbl::RefPtr<Pag
 
     create_info.id = next_node_id_;
     ++next_node_id_;
-
-    paged_nodes_[create_info.id] = std::move(node);
   }
 
   // Create the VMO itself outside the lock.
   if (auto status =
           pager_.create_vmo(0, pager_pool_->port(), create_info.id, size, &create_info.vmo);
       status != ZX_OK) {
-    // On error we need to undo the owning reference from above.
-    std::lock_guard lock(vfs_lock_);
-    paged_nodes_.erase(create_info.id);
     return zx::error(status);
   }
 
   return zx::ok(std::move(create_info));
 }
 
-void PagedVfs::UnregisterPagedVmo(uint64_t paged_vmo_id) {
+void PagedVfs::RegisterPagedVmo(uint64_t paged_vmo_id, fbl::RefPtr<PagedVnode> node) {
   std::lock_guard lock(vfs_lock_);
 
-  auto found = paged_nodes_.find(paged_vmo_id);
-  if (found == paged_nodes_.end()) {
-    ZX_DEBUG_ASSERT(false);  // Should always be found.
-    return;                  // Possible race with completion message on another thread, ignore.
+  // Should not already be registered.
+  ZX_DEBUG_ASSERT(paged_nodes_.find(paged_vmo_id) == paged_nodes_.end());
+
+  paged_nodes_[paged_vmo_id] = std::move(node);
+}
+
+void PagedVfs::UnregisterPagedVmo(uint64_t paged_vmo_id) {
+  fbl::RefPtr<PagedVnode> freed_node;
+  {
+    std::lock_guard lock(vfs_lock_);
+
+    auto found = paged_nodes_.find(paged_vmo_id);
+    if (found == paged_nodes_.end()) {
+      ZX_DEBUG_ASSERT(false);  // Should always be found.
+      return;                  // Possible race with completion message on another thread, ignore.
+    }
+
+    freed_node = std::move(found->second);
+    paged_nodes_.erase(found);
   }
 
-  paged_nodes_.erase(found);
+  // The reference we're freeing could be the last owning reference to the Vnode. Because this
+  // function is normally called by the vnode itself this can delete the node out from under itself.
+  // To avoid this, ensure the reference is freed outside of this stack frame.
+  async::PostTask(dispatcher(), [node_ref = std::move(freed_node)]() {});
 }
 
 void PagedVfs::PagerVmoRead(uint64_t node_id, uint64_t offset, uint64_t length) {

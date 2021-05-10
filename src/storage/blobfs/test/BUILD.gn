@@ -38,6 +38,7 @@ source_set("test_utils") {
     "blob_utils.h",
     "blobfs_test_setup.cc",
     "blobfs_test_setup.h",
+    "test_scoped_vnode_open.h",
     "unit/utils.cc",
     "unit/utils.h",
   ]

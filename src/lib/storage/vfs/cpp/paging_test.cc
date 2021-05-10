@@ -129,6 +129,8 @@ class PagingTestFile : public PagedVnode {
         status != ZX_OK)
       return status;
 
+    EnsurePagedVmoRegistered();
+
     if (becoming_mapped)
       shared_->SignalVmoPresenceChanged(true);
     return ZX_OK;

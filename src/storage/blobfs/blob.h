@@ -127,6 +127,7 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
 
   void CompleteSync() __TA_EXCLUDES(mutex_);
 
+#if !defined(ENABLE_BLOBFS_NEW_PAGER)
   // When blob VMOs are cloned and returned to clients, blobfs watches the original VMO handle for
   // the signal |ZX_VMO_ZERO_CHILDREN|. While this signal is not set, the blob's Vnode keeps an
   // extra reference to itself to prevent teardown while clients are using this Vmo. This reference
@@ -141,6 +142,7 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // TODO(fxbug.dev/51111) This is not used with the new pager. Remove this code when the transition
   // is complete.
   fbl::RefPtr<Blob> CloneWatcherTeardown() __TA_EXCLUDES(mutex_);
+#endif
 
   // Marks the blob as deletable, and attempt to purge it.
   zx_status_t QueueUnlink() __TA_EXCLUDES(mutex_);
@@ -221,12 +223,11 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   zx_status_t CloneDataVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out_size)
       __TA_REQUIRES(mutex_);
 
+#if !defined(ENABLE_BLOBFS_NEW_PAGER)
   // Receives notifications when all clones vended by CloneDataVmo() are released.
-  //
-  // TODO(fxbug.dev/51111) This is not used with the new pager. Remove this code when the transition
-  // is complete.
   void HandleNoClones(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                       const zx_packet_signal_t* signal) __TA_EXCLUDES(mutex_);
+#endif
 
   // Invokes |Purge()| if the vnode is purgeable.
   zx_status_t TryPurge() __TA_REQUIRES(mutex_);
@@ -376,12 +377,14 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   bool has_clones() const { return !!clone_ref_; }
 #endif
 
+#if !defined(ENABLE_BLOBFS_NEW_PAGER)
   // Watches any clones of "paged_vmo()" provided to clients. Observes the ZX_VMO_ZERO_CHILDREN
   // signal.
   //
   // TODO(fxbug.dev/51111) This is not used with the new pager. Remove this code when the transition
   // is complete.
   async::WaitMethod<Blob, &Blob::HandleNoClones> clone_watcher_ __TA_GUARDED(mutex_);
+#endif
 
   // Keeps a reference to the blob alive (from within itself) until there are no cloned VMOs in
   // used.

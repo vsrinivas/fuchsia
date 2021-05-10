@@ -29,6 +29,7 @@
 #include "src/storage/blobfs/mkfs.h"
 #include "src/storage/blobfs/test/blob_utils.h"
 #include "src/storage/blobfs/test/blobfs_test_setup.h"
+#include "src/storage/blobfs/test/test_scoped_vnode_open.h"
 #include "src/storage/blobfs/test/unit/utils.h"
 
 namespace blobfs {
@@ -123,6 +124,8 @@ class BlobLoaderTest : public TestWithParam<TestParamType> {
   zx_status_t LoadBlobData(Blob* blob, std::vector<uint8_t>* data) {
     data->clear();
 
+    TestScopedVnodeOpen opener(blob);  // Blob must be open to get the data.
+
     fs::VnodeAttributes attrs;
     if (zx_status_t status = blob->GetAttributes(&attrs); status != ZX_OK)
       return status;
@@ -140,6 +143,8 @@ class BlobLoaderTest : public TestWithParam<TestParamType> {
   }
 
   std::vector<uint8_t> LoadPagedBlobData(Blob* blob) {
+    TestScopedVnodeOpen opener(blob);  // Blob must be open to get the vmo.
+
     zx::vmo vmo;
     size_t size = 0;
     EXPECT_EQ(ZX_OK, blob->GetVmo(fuchsia_io::wire::kVmoFlagRead, &vmo, &size));
@@ -321,7 +326,10 @@ TEST_P(BlobLoaderTest, NullBlobWithCorruptedMerkleRootFailsToLoad) {
 
   // The added empty blob should be valid.
   auto blob = LookupBlob(*info);
-  ASSERT_EQ(ZX_OK, blob->Verify());
+  {
+    TestScopedVnodeOpen open(blob);  // Blob must be open to verify.
+    ASSERT_EQ(ZX_OK, blob->Verify());
+  }
 
   std::vector<uint8_t> data;
   ASSERT_EQ(ZX_OK, LoadBlobData(blob.get(), &data));

@@ -40,6 +40,7 @@
 #include "src/lib/storage/vfs/cpp/journal/replay.h"
 #include "src/lib/storage/vfs/cpp/journal/superblock.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/scoped_vnode_open.h"
 #include "src/lib/storage/vfs/cpp/ticker.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "src/storage/blobfs/allocator/extent_reserver.h"
@@ -397,7 +398,12 @@ zx_status_t Blobfs::LoadAndVerifyBlob(uint32_t node_index) {
   if (inode.is_error()) {
     return inode.status_value();
   }
+
+  // Create a blob and open it (required for verification).
   fbl::RefPtr<Blob> blob = fbl::MakeRefCounted<Blob>(this, node_index, *inode.value());
+  fs::ScopedVnodeOpen opener;
+  if (zx_status_t status = opener.Open(blob); status != ZX_OK)
+    return status;
   return blob->Verify();
 }
 
@@ -841,7 +847,9 @@ std::unique_ptr<BlockDevice> Blobfs::Reset() {
   // Shutdown all internal connections to blobfs.
   GetCache().ForAllOpenNodes([](fbl::RefPtr<CacheNode> cache_node) {
     auto vnode = fbl::RefPtr<Blob>::Downcast(std::move(cache_node));
+#if !defined(ENABLE_BLOBFS_NEW_PAGER)
     vnode->CloneWatcherTeardown();
+#endif
     return ZX_OK;
   });
 
@@ -1081,6 +1089,7 @@ zx_status_t Blobfs::MigrateToRev3() {
         SupportsPaging(*inode.value())) {
       continue;
     }
+
     // Make a copy of the blob.
     fbl::RefPtr<CacheNode> cache_node;
     Digest digest(inode->merkle_root_hash);
@@ -1089,14 +1098,29 @@ zx_status_t Blobfs::MigrateToRev3() {
       return status;
     }
     auto blob = fbl::RefPtr<Blob>::Downcast(std::move(cache_node));
+    fs::ScopedVnodeOpen blob_opener;
+    if (zx_status_t status = blob_opener.Open(blob); status != ZX_OK) {
+      FX_LOGS(ERROR) << "Open error: " << zx_status_get_string(status);
+      return status;
+    }
+    // blob->OpenValidating(fs::VnodeConnectionOptions(), nullptr);
     uint64_t len = blob->SizeData();
     FX_LOGS(INFO) << "Migrating " << node_index << ": " << digest.ToString() << " (" << len
                   << " bytes)";
+
+    // Create and open the new blob.
     fbl::RefPtr<Blob> new_blob = fbl::MakeRefCounted<Blob>(this, digest);
+    fs::ScopedVnodeOpen new_blob_opener;
+    if (zx_status_t status = new_blob_opener.Open(new_blob); status != ZX_OK) {
+      FX_LOGS(ERROR) << "Open error: " << zx_status_get_string(status);
+      return status;
+    }
+
     if (zx_status_t status = new_blob->Truncate(len); status != ZX_OK) {
       FX_LOGS(ERROR) << "Truncate error: " << zx_status_get_string(status);
       return status;
     }
+
     new_blob->SetOldBlob(*blob);
     uint64_t offset = 0;
     while (len > 0) {
