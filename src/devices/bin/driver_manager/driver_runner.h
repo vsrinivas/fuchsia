@@ -81,7 +81,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
              public fidl::WireServer<fuchsia_driver_framework::Node>,
              public std::enable_shared_from_this<Node> {
  public:
-  Node(Node* parent, DriverBinder* driver_binder, async_dispatcher_t* dispatcher,
+  Node(std::vector<Node*> parents, DriverBinder* driver_binder, async_dispatcher_t* dispatcher,
        std::string_view name);
   ~Node() override;
 
@@ -107,11 +107,11 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   // fidl::WireServer<fuchsia_driver_framework::Node>
   void AddChild(AddChildRequestView request, AddChildCompleter::Sync& completer) override;
 
-  const fit::nullable<Node*> parent_;
+  const std::vector<Node*> parents_;
   fit::nullable<DriverBinder*> driver_binder_;
   async_dispatcher_t* const dispatcher_;
-
   const std::string name_;
+
   fidl::FidlAllocator<128> allocator_;
   std::vector<fidl::StringView> offers_;
   std::vector<fuchsia_driver_framework::wire::NodeSymbol> symbols_;

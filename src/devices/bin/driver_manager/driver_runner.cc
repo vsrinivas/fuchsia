@@ -218,9 +218,12 @@ zx::status<fidl::ClientEnd<fdf::Driver>> DriverHostComponent::Start(
   return zx::ok(std::move(endpoints->client));
 }
 
-Node::Node(Node* parent, DriverBinder* driver_binder, async_dispatcher_t* dispatcher,
+Node::Node(std::vector<Node*> parents, DriverBinder* driver_binder, async_dispatcher_t* dispatcher,
            std::string_view name)
-    : parent_(parent), driver_binder_(driver_binder), dispatcher_(dispatcher), name_(name) {}
+    : parents_(std::move(parents)),
+      driver_binder_(driver_binder),
+      dispatcher_(dispatcher),
+      name_(name) {}
 
 Node::~Node() { UnbindAndReset(controller_ref_); }
 
@@ -234,7 +237,7 @@ fidl::VectorView<fdf::wire::NodeSymbol> Node::symbols() {
   return fidl::VectorView<fdf::wire::NodeSymbol>::FromExternal(symbols_);
 }
 
-DriverHostComponent* Node::parent_driver_host() const { return *(*parent_)->driver_host_; }
+DriverHostComponent* Node::parent_driver_host() const { return *parents_[0]->driver_host_; }
 
 void Node::set_driver_host(DriverHostComponent* driver_host) { driver_host_ = driver_host; }
 
@@ -254,7 +257,8 @@ const std::vector<std::shared_ptr<Node>>& Node::children() const { return childr
 
 std::string Node::TopoName() const {
   std::deque<std::string_view> names;
-  for (auto node = this; node != nullptr; node = *node->parent_) {
+  for (auto node = this; node != nullptr;
+       node = node->parents_.empty() ? nullptr : node->parents_[0]) {
     names.push_front(node->name());
   }
   return fxl::JoinStrings(names, ".");
@@ -284,10 +288,12 @@ void Node::Remove() {
 
   // Remove this node from its parent.
   std::shared_ptr<Node> this_node;
-  if (parent_ != nullptr) {
+  if (!parents_.empty()) {
     this_node = shared_from_this();
-    auto& children = (*parent_)->children_;
-    children.erase(std::find(children.begin(), children.end(), this_node));
+    for (auto parent : parents_) {
+      auto& children = parent->children_;
+      children.erase(std::find(children.begin(), children.end(), this_node));
+    }
   }
 
   // Create list of nodes to unbind.
@@ -350,8 +356,9 @@ void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& comple
       completer.ReplyError(fdf::wire::NodeError::kNameAlreadyExists);
       return;
     }
-  }
-  auto child = std::make_shared<Node>(this, *driver_binder_, dispatcher_, name);
+  };
+  std::vector<Node*> parents{this};
+  auto child = std::make_shared<Node>(std::move(parents), *driver_binder_, dispatcher_, name);
 
   if (request->args.has_offers()) {
     child->offers_.reserve(request->args.offers().count());
@@ -430,7 +437,7 @@ DriverRunner::DriverRunner(fidl::ClientEnd<fsys::Realm> realm,
     : realm_(std::move(realm), dispatcher),
       driver_index_(std::move(driver_index), dispatcher),
       dispatcher_(dispatcher),
-      root_node_(nullptr, this, dispatcher, "root") {
+      root_node_({}, this, dispatcher, "root") {
   inspector.GetRoot().CreateLazyNode(
       "driver_runner", [this] { return Inspect(); }, &inspector);
 }
