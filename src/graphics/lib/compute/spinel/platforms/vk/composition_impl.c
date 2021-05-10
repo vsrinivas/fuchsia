@@ -1004,7 +1004,7 @@ spn_ci_unseal(struct spn_composition_impl * const impl)
 
       case SPN_CI_STATE_SEALING:
         spn_ci_block_until_sealed(impl);
-        __FALLTHROUGH;
+        __attribute__((__fallthrough__));
 
       case SPN_CI_STATE_SEALED:
         // default:
@@ -1084,8 +1084,7 @@ spn_ci_set_clip(struct spn_composition_impl * const impl, uint32_t const clip[4]
         do
           {
             spn(device_wait(impl->device, __func__));
-          }
-        while (impl->state == SPN_CI_STATE_RESETTING);
+        } while (impl->state == SPN_CI_STATE_RESETTING);
         break;
 
       case SPN_CI_STATE_UNSEALED:
@@ -1146,8 +1145,7 @@ spn_ci_place(struct spn_composition_impl * const impl,
         do
           {
             spn(device_wait(impl->device, __func__));
-          }
-        while (impl->state == SPN_CI_STATE_RESETTING);
+        } while (impl->state == SPN_CI_STATE_RESETTING);
         break;
 
       case SPN_CI_STATE_UNSEALED:
