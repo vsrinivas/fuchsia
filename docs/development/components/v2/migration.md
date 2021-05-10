@@ -1826,6 +1826,7 @@ using the directory capability `build-info` and path `/config/build-info`.
 [manifests-program]: /docs/concepts/components/v2/component_manifests.md#program
 [manifests-use]: /docs/concepts/components/v2/component_manifests.md#use
 [manifests-include]: /docs/concepts/components/v2/component_manifests.md#include
+[moniker]: /docs/concepts/components/v2/monikers.md
 [protocol-capabilities]: /docs/concepts/components/v2/capabilities/protocol.md
 [storage-capabilities]: /docs/concepts/components/v2/capabilities/storage.md
 [syslog]: /docs/development/diagnostics/logs/recording.md#logsinksyslog
