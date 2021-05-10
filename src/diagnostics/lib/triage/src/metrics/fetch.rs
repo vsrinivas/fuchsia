@@ -485,6 +485,25 @@ mod test {
             SelectorString::try_from("INSPECT:bar2.cmx:root:bar".to_owned()).unwrap();
         static ref WRONG_SELECTOR: SelectorString =
             SelectorString::try_from("INSPECT:bar.cmx:root:oops".to_owned()).unwrap();
+        static ref LOCAL_DUPLICATES_F: Vec<DiagnosticData> = {
+            let s = r#"[
+                {
+                    "data_source": "Inspect",
+                    "moniker": "bootstrap/foo",
+                    "payload": null
+                },
+                {
+                    "data_source": "Inspect",
+                    "moniker": "bootstrap/foo",
+                    "payload": {"root": {"bar": 10}}
+                }
+            ]"#;
+            vec![DiagnosticData::new("i".to_string(), Source::Inspect, s.to_string()).unwrap()]
+        };
+        static ref LOCAL_DUPLICATES_FETCHER: FileDataFetcher<'static> =
+            FileDataFetcher::new(&LOCAL_DUPLICATES_F);
+        static ref DUPLICATE_SELECTOR: SelectorString =
+            SelectorString::try_from("INSPECT:bootstrap/foo:root:bar".to_owned()).unwrap();
     }
 
     macro_rules! variable {
@@ -509,6 +528,14 @@ mod test {
             MetricValue::Vector(vec![MetricValue::Int(99)])
         );
         assert_eq!(BAR_99_FILE_FETCHER.fetch(&WRONG_SELECTOR), MetricValue::Vector(vec![]),);
+    }
+
+    #[test]
+    fn test_duplicate_file_fetch() {
+        assert_eq!(
+            LOCAL_DUPLICATES_FETCHER.fetch(&DUPLICATE_SELECTOR),
+            MetricValue::Vector(vec![MetricValue::Int(10)])
+        );
     }
 
     #[test]
