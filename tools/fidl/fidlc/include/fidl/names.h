@@ -33,7 +33,7 @@ std::string NameRawLiteralKind(raw::Literal::Kind kind);
 
 std::string NameFlatName(const flat::Name& name);
 std::string NameFlatConstantKind(flat::Constant::Kind kind);
-std::string NameFlatTypeKind(flat::Type::Kind kind);
+std::string NameFlatTypeKind(const flat::Type* type);
 std::string NameUnionTag(std::string_view union_name, const flat::Union::Member::Used& member);
 std::string NameFlatConstant(const flat::Constant* constant);
 std::string NameFlatBinaryOperator(flat::BinaryOperatorConstant::Operator op);

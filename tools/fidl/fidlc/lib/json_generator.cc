@@ -155,19 +155,13 @@ void JSONGenerator::Generate(const flat::Constant& value) {
 
 void JSONGenerator::Generate(const flat::Type* value) {
   GenerateObject([&]() {
-    GenerateObjectMember("kind", NameFlatTypeKind(value->kind), Position::kFirst);
+    GenerateObjectMember("kind", NameFlatTypeKind(value), Position::kFirst);
 
     switch (value->kind) {
-      case flat::Type::Kind::kArray: {
-        auto type = static_cast<const flat::ArrayType*>(value);
-        GenerateObjectMember("element_type", type->element_type);
-        GenerateObjectMember("element_count", type->element_count->value);
-        break;
-      }
       case flat::Type::Kind::kVector: {
         // This code path should only be exercised if the type is "bytes." All
         // other handling of kVector is handled in GenerateParameterizedType.
-        auto type = static_cast<const flat::VectorType*>(value);
+        const auto* type = static_cast<const flat::VectorType*>(value);
         GenerateObjectMember("element_type", type->element_type);
         if (*type->element_count < flat::Size::Max())
           GenerateObjectMember("maybe_element_count", type->element_count->value);
@@ -175,14 +169,14 @@ void JSONGenerator::Generate(const flat::Type* value) {
         break;
       }
       case flat::Type::Kind::kString: {
-        auto type = static_cast<const flat::StringType*>(value);
+        const auto* type = static_cast<const flat::StringType*>(value);
         if (*type->max_size < flat::Size::Max())
           GenerateObjectMember("maybe_element_count", type->max_size->value);
         GenerateObjectMember("nullable", type->nullability);
         break;
       }
       case flat::Type::Kind::kHandle: {
-        auto type = static_cast<const flat::HandleType*>(value);
+        const auto* type = static_cast<const flat::HandleType*>(value);
         GenerateObjectMember("obj_type", type->obj_type);
         GenerateObjectMember("subtype", type->subtype);
         GenerateObjectMember(
@@ -192,17 +186,30 @@ void JSONGenerator::Generate(const flat::Type* value) {
         break;
       }
       case flat::Type::Kind::kPrimitive: {
-        auto type = static_cast<const flat::PrimitiveType*>(value);
+        const auto* type = static_cast<const flat::PrimitiveType*>(value);
         GenerateObjectMember("subtype", type->name);
         break;
       }
       case flat::Type::Kind::kIdentifier: {
-        auto type = static_cast<const flat::IdentifierType*>(value);
+        const auto* type = static_cast<const flat::IdentifierType*>(value);
         GenerateObjectMember("identifier", type->name);
         GenerateObjectMember("nullable", type->nullability);
         break;
       }
-      default: {
+      // We treat client_end the same as an IdentifierType of a protocol to avoid changing
+      // the JSON IR.
+      // TODO(fxbug.dev/70186): clean up client/server end representation in the IR
+      case flat::Type::Kind::kTransportSide: {
+        const auto* type = static_cast<const flat::TransportSideType*>(value);
+        // This code path should only apply to client ends. The server end code
+        // path is colocated with kRequestHandle.
+        assert(type->end == flat::TransportSide::kClient);
+        GenerateObjectMember("identifier", type->protocol_decl->name);
+        GenerateObjectMember("nullable", type->nullability);
+        break;
+      }
+      case flat::Type::Kind::kArray:
+      case flat::Type::Kind::kRequestHandle: {
         assert(false &&
                "expected non-parameterized type (neither array<T>, vector<T>, nor request<P>)");
       }
@@ -396,10 +403,13 @@ void JSONGenerator::GenerateTypeAndFromTypeAlias(const flat::TypeConstructor& va
 }
 
 bool ShouldExposeTypeAliasOfParametrizedType(const flat::Type& type) {
-  // TODO(fxbug.dev/68667): The last of these three conditionals will need to
-  //  change slightly for the new syntax once client and server ends are added.
+  bool is_server_end = false;
+  if (type.kind == flat::Type::Kind::kTransportSide) {
+    const auto* transport_side = static_cast<const flat::TransportSideType*>(&type);
+    is_server_end = transport_side->end == flat::TransportSide::kServer;
+  }
   return type.kind == flat::Type::Kind::kArray || type.kind == flat::Type::Kind::kVector ||
-         type.kind == flat::Type::Kind::kRequestHandle;
+         type.kind == flat::Type::Kind::kRequestHandle || is_server_end;
 }
 
 void JSONGenerator::GenerateTypeAndFromTypeAlias(TypeKind parent_type_kind,
@@ -439,7 +449,8 @@ void JSONGenerator::GenerateParameterizedType(TypeKind parent_type_kind, const f
 
   // Special case: type "bytes" is a builtin alias, so it will have no
   // user-specified arg type.
-  if (!flat::IsTypeConstructorDefined(invocation.element_type_raw)) {
+  if (type->kind == flat::Type::Kind::kVector &&
+      !flat::IsTypeConstructorDefined(invocation.element_type_raw)) {
     GenerateObjectMember(key, type, position);
     return;
   }
@@ -447,17 +458,17 @@ void JSONGenerator::GenerateParameterizedType(TypeKind parent_type_kind, const f
   GenerateObjectPunctuation(position);
   EmitObjectKey(key);
   GenerateObject([&]() {
-    GenerateObjectMember("kind", NameFlatTypeKind(type->kind), Position::kFirst);
+    GenerateObjectMember("kind", NameFlatTypeKind(type), Position::kFirst);
 
     switch (type->kind) {
       case flat::Type::Kind::kArray: {
-        auto array_type = static_cast<const flat::ArrayType*>(type);
+        const auto* array_type = static_cast<const flat::ArrayType*>(type);
         GenerateTypeAndFromTypeAlias(TypeKind::kParameterized, invocation.element_type_raw);
         GenerateObjectMember("element_count", array_type->element_count->value);
         break;
       }
       case flat::Type::Kind::kVector: {
-        auto vector_type = static_cast<const flat::VectorType*>(type);
+        const auto* vector_type = static_cast<const flat::VectorType*>(type);
         GenerateTypeAndFromTypeAlias(TypeKind::kParameterized, invocation.element_type_raw);
         if (*vector_type->element_count < flat::Size::Max())
           GenerateObjectMember("maybe_element_count", vector_type->element_count->value);
@@ -465,7 +476,7 @@ void JSONGenerator::GenerateParameterizedType(TypeKind parent_type_kind, const f
         break;
       }
       case flat::Type::Kind::kRequestHandle: {
-        auto request_type = static_cast<const flat::RequestHandleType*>(type);
+        const auto* request_type = static_cast<const flat::RequestHandleType*>(type);
         GenerateObjectMember("subtype", request_type->protocol_type->name);
         if (flat::IsTypeConstructorDefined(invocation.element_type_raw)) {
           GenerateExperimentalMaybeFromTypeAlias(
@@ -475,7 +486,23 @@ void JSONGenerator::GenerateParameterizedType(TypeKind parent_type_kind, const f
         GenerateObjectMember("nullable", request_type->nullability);
         break;
       }
-      default: {
+      case flat::Type::Kind::kTransportSide: {
+        const auto* server_end = static_cast<const flat::TransportSideType*>(type);
+        // This code path should only apply to server ends. The client end code
+        // path is colocated with the identifier type code for protocols.
+        assert(server_end->end == flat::TransportSide::kServer);
+        GenerateObjectMember("subtype", server_end->protocol_decl->name);
+        // We don't need to call GenerateExperimentalMaybeFromTypeAlias here like we
+        // do above because we're guaranteed that the protocol constraint didn't come
+        // from a type alias: in the new syntax, protocols aren't types, and therefore
+        // `alias Foo = MyProtocol;` is not allowed.
+        GenerateObjectMember("nullable", server_end->nullability);
+        break;
+      }
+      case flat::Type::Kind::kIdentifier:
+      case flat::Type::Kind::kString:
+      case flat::Type::Kind::kPrimitive:
+      case flat::Type::Kind::kHandle: {
         assert(false && "expected parameterized type (either array<T>, vector<T>, or request<P>)");
       }
     }
@@ -696,20 +723,53 @@ void JSONGenerator::Generate(const flat::TypeConstructor& value) {
 
 void JSONGenerator::GenerateTypeCtor(const flat::TypeConstructorPtr& value) {
   GenerateObject([&]() {
-    GenerateObjectMember("name", GetType(value) ? GetType(value)->name : GetName(value),
-                         Position::kFirst);
+    const auto* type = GetType(value);
+    // TODO(fxbug.dev/70186, fxbug.dev/70246): We need to coerce client and
+    // server ends from the new syntax into the same representation as P and
+    // request<P>, respectively, in the old syntax
+    const flat::TransportSideType* server_end = nullptr;
+    if (type && type->kind == flat::Type::Kind::kTransportSide) {
+      const auto* end_type = static_cast<const flat::TransportSideType*>(type);
+      if (end_type->end == flat::TransportSide::kClient) {
+        // for client ends, the partial_type_ctor name should be the protocol name
+        // (since client_end:P is P in the old syntax)
+        GenerateObjectMember("name", end_type->protocol_decl->name, Position::kFirst);
+      } else {
+        // for server ends, the partial_type_ctor name is just "request" (since
+        // server_end:P is request<P> in the old syntax), and we also need to
+        // emit the protocol "arg" below
+        GenerateObjectMember("name", flat::Name::CreateIntrinsic("request"), Position::kFirst);
+        server_end = end_type;
+      }
+    } else {
+      GenerateObjectMember("name", GetType(value) ? GetType(value)->name : GetName(value),
+                           Position::kFirst);
+    }
     GenerateObjectPunctuation(Position::kSubsequent);
     EmitObjectKey("args");
     const auto& invocation = flat::GetLayoutInvocation(value);
 
     // In preparation of template support, it is better to expose a
-    // heterogenous argument list to backends, rather than the currently
+    // heterogeneous argument list to backends, rather than the currently
     // limited internal view.
     EmitArrayBegin();
-    if (invocation.element_type_resolved) {
+    if (server_end || invocation.element_type_resolved) {
       Indent();
       EmitNewlineWithIndent();
-      GenerateTypeCtor(invocation.element_type_raw);
+      if (server_end) {
+        // TODO(fxbug.dev/70186, fxbug.dev/70246): We need to emit a "fake" arg for server
+        // ends. Create a TypeConstructor to simulate this argument - we use TypeConstructorOld
+        // simply because it's easier to create and this code will be removed at the same
+        // time as TypeConstructorOld
+        flat::TypeConstructorOld type_ctor(server_end->protocol_decl->name, nullptr, std::nullopt,
+                                           nullptr, nullptr,
+                                           // server_end<Protocol:optional> is a parse error, so
+                                           // it's guaranteed to be non nullable here.
+                                           types::Nullability::kNonnullable);
+        GenerateTypeCtor(&type_ctor);
+      } else {
+        GenerateTypeCtor(invocation.element_type_raw);
+      }
       Outdent();
       EmitNewlineWithIndent();
     }

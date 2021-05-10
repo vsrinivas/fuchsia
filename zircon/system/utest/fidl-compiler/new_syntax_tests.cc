@@ -644,10 +644,6 @@ type t1 = resource struct {
   u7 union { 1: b bool; };
   // TODO(fxbug.dev/74683):
   // u8 union { 1: b bool; }:optional;
-  // p13 client_end:MyProtocol;
-  // p14 client_end:<MyProtocol,optional>;
-  // r15 server_end:P;
-  // r16 server_end:<MyProtocol,optional>;
 };
 )FIDL",
                       experimental_flags);
@@ -1026,9 +1022,6 @@ type TypeDecl = resource struct {
   EXPECT_EQ(h5_type->nullability, fidl::types::Nullability::kNullable);
 }
 
-// TODO(fxbug.dev/71536): once the new flat AST is in, we should add a test for
-//  partial constraints being respected.
-// TODO(fxbug.dev/68667): Add tests for constraint errors.
 // Ensure that we don't accidentally enable the new syntax when the new syntax
 // flag is not enabled.
 TEST(NewSyntaxTests, GoodTypedChannelNewInOld) {
@@ -1063,31 +1056,76 @@ struct Foo {
 
 // Ensure that we don't accidentally enable the old syntax when the new syntax
 // flag is enabled.
-TEST(NewSyntaxTests, GoodTypedChannelOldInNew) {
-  // TODO(fcz): enable in follow up
-  //   fidl::ExperimentalFlags experimental_flags;
-  //   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+TEST(NewSyntaxTests, BadTypedChannelOldInNew) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
 
-  //   TestLibrary library(R"FIDL(
-  // library test;
+  {
+    TestLibrary library(R"FIDL(
+library test;
 
-  // protocol MyProtocol {};
+protocol MyProtocol {};
 
-  // type Foo = struct {
-  //   foo MyProtocol;
-  // };
+type Foo = struct {
+  foo MyProtocol;
+};
 
-  // )FIDL",
-  //                       std::move(experimental_flags));
-  //   EXPECT_FALSE(library.Compile());
-  //   const auto& errors = library.errors();
-  //   ASSERT_EQ(errors.size(), 1);
-  //   ASSERT_ERR(errors[0], fidl::ErrCannotUseProtocol);
+)FIDL",
+                        experimental_flags);
+    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotUseProtocol);
+  }
+
+  {
+    TestLibrary library(R"FIDL(
+library test;
+
+protocol MyProtocol {};
+
+type Foo = resource struct {
+  foo request<MyProtocol>;
+};
+
+)FIDL",
+                        experimental_flags);
+    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownType);
+  }
+
+  {
+    TestLibrary library(R"FIDL(
+library test;
+
+type Bar = struct {};
+
+type Foo = resource struct {
+  foo request<Bar>;
+};
+
+)FIDL",
+                        experimental_flags);
+    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownType);
+  }
 }
 
 // The new syntax works when the new syntax flag is enabled.
 TEST(NewSyntaxTests, GoodTypedChannelNewInNew) {
-  // TODO(fcz): make accompanying typespace change
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+
+  TestLibrary library(R"FIDL(
+library test;
+
+protocol MyProtocol {};
+
+type Foo = resource struct {
+  foo client_end:MyProtocol;
+  bar server_end:MyProtocol;
+  maybe_foo client_end:<MyProtocol, optional>;
+  maybe_bar server_end:<MyProtocol, optional>;
+};
+
+)FIDL",
+                      experimental_flags);
+  ASSERT_COMPILED(library);
 }
 
 TEST(NewSyntaxTests, BadTooManyLayoutParameters) {

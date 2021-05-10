@@ -71,7 +71,7 @@ std::optional<UnderlyingType> resolve_as_user_defined_type(const flat::Name& nam
 std::optional<UnderlyingType> resolve_as_user_defined_type(const std::string& keyword) {
   const flat::Typespace root = flat::Typespace::RootTypes(nullptr);
   const flat::Name instrinsic = flat::Name::CreateIntrinsic(keyword);
-  const flat::TypeTemplate* t = root.LookupTemplate(instrinsic);
+  const flat::TypeTemplate* t = root.LookupTemplate(instrinsic, fidl::utils::Syntax::kOld);
   if (t == nullptr) {
     return std::nullopt;
   }

@@ -240,6 +240,7 @@ void EmitMethodInParamDecl(std::ostream* file, const CGenerator::Member& member)
       break;
     case flat::Type::Kind::kHandle:
     case flat::Type::Kind::kRequestHandle:
+    case flat::Type::Kind::kTransportSide:
     case flat::Type::Kind::kPrimitive:
       *file << member.type << " " << member.name;
       break;
@@ -293,6 +294,7 @@ void EmitMethodOutParamDecl(std::ostream* file, const CGenerator::Member& member
       break;
     case flat::Type::Kind::kHandle:
     case flat::Type::Kind::kRequestHandle:
+    case flat::Type::Kind::kTransportSide:
     case flat::Type::Kind::kPrimitive:
       *file << member.type << "* out_" << member.name;
       break;
@@ -508,6 +510,7 @@ void EmitLinearizeMessage(std::ostream* file, std::string_view receiver, std::st
         break;
       case flat::Type::Kind::kHandle:
       case flat::Type::Kind::kRequestHandle:
+      case flat::Type::Kind::kTransportSide:
       case flat::Type::Kind::kPrimitive:
         *file << kIndent << receiver << "->" << name << " = " << name << ";\n";
         break;
@@ -726,6 +729,7 @@ CGenerator::Member CreateMember(const flat::Library* library, const T& decl,
     case flat::Type::Kind::kHandle:
       break;
     case flat::Type::Kind::kRequestHandle:
+    case flat::Type::Kind::kTransportSide:
       break;
     case flat::Type::Kind::kPrimitive:
       break;
@@ -1337,6 +1341,7 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
             break;
           case flat::Type::Kind::kHandle:
           case flat::Type::Kind::kRequestHandle:
+          case flat::Type::Kind::kTransportSide:
           case flat::Type::Kind::kPrimitive:
             file_ << kIndent << "*out_" << name << " = _response->" << name << ";\n";
             break;
@@ -1461,6 +1466,7 @@ void CGenerator::ProduceProtocolServerImplementation(const NamedProtocol& named_
         case flat::Type::Kind::kArray:
         case flat::Type::Kind::kHandle:
         case flat::Type::Kind::kRequestHandle:
+        case flat::Type::Kind::kTransportSide:
         case flat::Type::Kind::kPrimitive:
           file_ << ", request->" << member.name;
           break;

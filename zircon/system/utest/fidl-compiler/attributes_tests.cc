@@ -15,9 +15,8 @@
 
 namespace {
 
-// TODO(fxbug.dev/75526): a couple of these test cases required parsing method
-//  arguments and client_end/server_end declarations, which require those new
-//  syntax features to be implemented.  Once that's landed, this test case can
+// TODO(fxbug.dev/76285), TODO(fxbug.dev/76286): Fix method attribute parsing
+// and parameter attribute conversion.  Once that's landed, this test case can
 //  be converted as well, and "GoodPlacementOfAttributesTemporary" can be
 //  removed.
 TEST(AttributesTests, GoodPlacementOfAttributes) {
@@ -346,10 +345,10 @@ union ExampleUnion {
   EXPECT_TRUE(example_union->members.front().maybe_used->attributes->HasAttribute("OnUnionMember"));
 }
 
-// TODO(fxbug.dev/75526): a couple of these test cases required parsing method
-//  arguments and client_end/server_end declarations, which require those new
-//  syntax features to be implemented.  Once that's landed, this test case can
-//  be converted as well, and "GoodOfficialAttributesTemporary" can be removed.
+// TODO(fxbug.dev/76285), TODO(fxbug.dev/76286): Fix method attribute parsing
+// and parameter attribute conversion.  Once that's landed, this test case can
+//  be converted as well, and "GoodPlacementOfAttributesTemporary" can be
+//  removed.
 TEST(AttributesTests, GoodOfficialAttributes) {
   TestLibrary library("example.fidl", R"FIDL(
 [NoDoc]

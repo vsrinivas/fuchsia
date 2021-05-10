@@ -636,6 +636,32 @@ alias quux = vector<server_end:P>:4;
   ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
 }
 
+// TODO(fxbug.dev/76282): fix constraint ordering
+TEST(ConverterTests, ParameterBecomesConstraint) {
+  std::string old_version = R"FIDL(
+library example;
+
+protocol MyProtocol {};
+resource struct Foo {
+  MyProtocol? b;
+  request<MyProtocol>? d;
+};
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+protocol MyProtocol {};
+type Foo = resource struct {
+  b client_end:<optional,MyProtocol>;
+  d server_end:<optional,MyProtocol>;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
+}
+
 TEST(ConverterTests, AliasOfHandleWithSubtype) {
   std::string old_version = R"FIDL(
 library example;

@@ -195,6 +195,7 @@ const LayoutInvocation& GetLayoutInvocation(const T& type_ctor) {
 }
 
 struct TypeAlias;
+struct Protocol;
 
 // This is a struct used to group together all data produced during compilation
 // that might be used by consumers that are downstream from type compilation
@@ -228,6 +229,9 @@ struct LayoutInvocation {
   // This has no users, probably because it's missing in the JSON IR (it is not
   // yet generated for experimental_maybe_from_type_alias).
   const HandleRights* rights_resolved = nullptr;
+  // This has no users, probably because it's missing in the JSON IR (it is not
+  // yet generated for experimental_maybe_from_type_alias).
+  const Protocol* protocol_decl = nullptr;
 
   // raw form of this type constructor's arguments
   TypeConstructorPtr element_type_raw = {};
@@ -239,6 +243,7 @@ struct LayoutInvocation {
   // was never done). This field is never set in the old syntax.
   const Constant* subtype_raw = nullptr;
   const Constant* rights_raw = nullptr;
+  const Constant* protocol_decl_raw = nullptr;
 
   // Nullability is represented differently because there's only one degree of
   // freedom: if it was specified, this value is equal to kNullable
@@ -816,6 +821,7 @@ class LibraryMediator {
     kHandleRights,
     kSize,
     kNullability,
+    kProtocol,
   };
   struct ResolvedConstraint {
     ConstraintKind kind;
@@ -827,6 +833,7 @@ class LibraryMediator {
       // Storing a value for nullability is redundant, since there's only one possible value - if we
       // resolved to optional, then the caller knows that the resulting value is
       // types::Nullability::kNullable.
+      const Protocol* protocol_decl;
     } value;
   };
   // Convenience method to iterate through the possible interpretations, returning the first one
@@ -846,15 +853,12 @@ class LibraryMediator {
                               uint32_t* out_obj_type) const;
   bool ResolveAsHandleRights(Resource* resource, Constant* constant,
                              const HandleRights** out_rights) const;
+  bool ResolveAsProtocol(const Constant* size_constant, const Protocol** out_decl) const;
+  Decl* LookupDeclByName(Name::Key name) const;
 
   template <typename... Args>
   bool Fail(const ErrorDef<Args...>& err, const std::optional<SourceSpan>& span,
             const Args&... args) const;
-
-  // This is unrelated to resolving arguments: it is required in the workaround for
-  // the special handling of handles, and can be removed once resources are fully
-  // generalized (see HandleTypeTemplate::GetResource)
-  Decl* LookupDeclByName(Name::Key name) const;
 
   // Used specifically in TypeAliasTypeTemplates to recursively compile the next
   // type alias.
@@ -893,6 +897,10 @@ class TypeTemplate {
   TypeTemplate(Name name, Typespace* typespace, Reporter* reporter)
       : typespace_(typespace), name_(std::move(name)), reporter_(reporter) {}
 
+  // TODO(fxbug.dev/70247): The copy constructor can be deleted, it only exists
+  // to allow adding a type template to multiple typespace maps (we add one
+  // to the old typespace, then make a copy to add to the new typespace).
+  TypeTemplate(const TypeTemplate& type_template) = default;
   TypeTemplate(TypeTemplate&& type_template) = default;
 
   virtual ~TypeTemplate() = default;
@@ -971,12 +979,19 @@ class Typespace {
               const std::unique_ptr<TypeConstraints>& constraints, const Type** out_type,
               LayoutInvocation* out_params);
 
-  void AddTemplate(std::unique_ptr<TypeTemplate> type_template);
+  // TODO(fxbug.dev/70247): T is ordinarily always a TypeTemplate, but we temporarily
+  // parameterize this method so that T is the specific subclass in order to
+  // call the subclass' copy constructor. A copy is needed so that the type template
+  // can be added to both template maps.
+  // An alternative would be to use the "virtual constructor" idiom, which would
+  // involve more code for this temporary workaround.
+  template <typename T>
+  void AddTemplate(std::unique_ptr<T> type_template);
 
   // TODO(fxbug.dev/70247): this method has been made public solely for the
   //   benefit of fidlconv.  Once the conversion using that tool has been
   //   completed and tool has been removed, this method should be re-privatized.
-  const TypeTemplate* LookupTemplate(const flat::Name& name) const;
+  const TypeTemplate* LookupTemplate(const flat::Name& name, fidl::utils::Syntax syntax) const;
 
   // RootTypes creates a instance with all primitive types. It is meant to be
   // used as the top-level types lookup mechanism, providing definitional
@@ -997,7 +1012,9 @@ class Typespace {
                       const std::unique_ptr<TypeConstraints>& constraints,
                       std::unique_ptr<Type>* out_type, LayoutInvocation* out_params);
 
-  std::map<Name::Key, std::unique_ptr<TypeTemplate>> templates_;
+  // TODO(fxbug.dev/70247): go back to a single map
+  std::map<Name::Key, std::unique_ptr<TypeTemplate>> old_syntax_templates_;
+  std::map<Name::Key, std::unique_ptr<TypeTemplate>> new_syntax_templates_;
   std::vector<std::unique_ptr<Type>> types_;
 
   Reporter* reporter_;
@@ -1530,6 +1547,7 @@ struct Object::VisitorAny {
   virtual std::any Visit(const PrimitiveType&) = 0;
   virtual std::any Visit(const IdentifierType&) = 0;
   virtual std::any Visit(const RequestHandleType&) = 0;
+  virtual std::any Visit(const TransportSideType&) = 0;
   virtual std::any Visit(const Enum&) = 0;
   virtual std::any Visit(const Bits&) = 0;
   virtual std::any Visit(const Service&) = 0;
@@ -1572,6 +1590,10 @@ inline std::any IdentifierType::AcceptAny(VisitorAny* visitor) const {
 }
 
 inline std::any RequestHandleType::AcceptAny(VisitorAny* visitor) const {
+  return visitor->Visit(*this);
+}
+
+inline std::any TransportSideType::AcceptAny(VisitorAny* visitor) const {
   return visitor->Visit(*this);
 }
 

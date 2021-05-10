@@ -328,6 +328,8 @@ constexpr ErrorDef<const flat::TypeTemplate *> ErrUnexpectedConstraint(
 // TODO(fxbug.dev/74193): Remove this error and allow re-constraining.
 constexpr ErrorDef<const flat::TypeTemplate *> ErrCannotConstrainTwice(
     "{} cannot add additional constraint");
+constexpr ErrorDef<const flat::TypeTemplate *> ErrProtocolConstraintRequired(
+    "{} requires a protocol as its first constraint");
 // other
 constexpr ErrorDef<> ErrHandleSubtypeNotResource("handle subtype is not a defined resource");
 constexpr ErrorDef<flat::Name> ErrResourceMustBeUint32Derived("resource {} must be uint32");

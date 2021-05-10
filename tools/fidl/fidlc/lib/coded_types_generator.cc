@@ -171,6 +171,42 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
       coded_types_.push_back(std::move(coded_request_type));
       return coded_types_.back().get();
     }
+    case flat::Type::Kind::kTransportSide: {
+      auto channel_end = static_cast<const flat::TransportSideType*>(type);
+      auto iter = channel_end_map_.find(channel_end);
+      if (iter != channel_end_map_.end())
+        return iter->second;
+      // TODO(fxbug.dev/70186): This is where the separate handling of the old
+      // vs new syntax channel ends, ends (i.e. in the coded types backend they
+      // are represented using the same types). As we clean up the old
+      // representation in fidlc, we'll want to switch the coded AST to better
+      // match the new representation (client/server end rather than protocol/request).
+      if (channel_end->end == flat::TransportSide::kClient) {
+        // In the old syntax this would be represented as an identifier type of a
+        // protocol decl, so the code in this if statement is copied from the
+        // kIdentifier > kProtocol code path below in order to maintain the same
+        // behavior.
+        auto name =
+            NameCodedProtocolHandle(NameCodedName(channel_end->name), channel_end->nullability);
+        auto coded_protocol_type =
+            std::make_unique<coded::ProtocolHandleType>(std::move(name), channel_end->nullability);
+        channel_end_map_[channel_end] = coded_protocol_type.get();
+        coded_types_.push_back(std::move(coded_protocol_type));
+        return coded_types_.back().get();
+      } else {
+        // In the old syntax this would be represented as a RequestType,
+        // so the code in this if statement is copied from the
+        // kRequestHandle code path below in order to maintain the same
+        // behavior.
+        auto name =
+            NameCodedRequestHandle(NameCodedName(channel_end->name), channel_end->nullability);
+        auto coded_request_type =
+            std::make_unique<coded::RequestHandleType>(std::move(name), channel_end->nullability);
+        channel_end_map_[channel_end] = coded_request_type.get();
+        coded_types_.push_back(std::move(coded_request_type));
+        return coded_types_.back().get();
+      }
+    }
     case flat::Type::Kind::kPrimitive: {
       auto primitive_type = static_cast<const flat::PrimitiveType*>(type);
       auto iter = primitive_type_map_.find(primitive_type);

@@ -162,6 +162,7 @@ class UnalignedSizeVisitor final : public TypeShapeVisitor<DataSize> {
   }
 
   std::any Visit(const flat::RequestHandleType& object) override { return DataSize(kHandleSize); }
+  std::any Visit(const flat::TransportSideType& object) override { return DataSize(kHandleSize); }
 
   std::any Visit(const flat::Enum& object) override {
     return UnalignedSize(GetType(object.subtype_ctor));
@@ -270,6 +271,7 @@ class AlignmentVisitor final : public TypeShapeVisitor<DataSize> {
   }
 
   std::any Visit(const flat::RequestHandleType& object) override { return DataSize(kHandleSize); }
+  std::any Visit(const flat::TransportSideType& object) override { return DataSize(kHandleSize); }
 
   std::any Visit(const flat::Enum& object) override {
     return Alignment(GetType(object.subtype_ctor));
@@ -405,6 +407,7 @@ class DepthVisitor : public TypeShapeVisitor<DataSize> {
   }
 
   std::any Visit(const flat::RequestHandleType& object) override { return DataSize(0); }
+  std::any Visit(const flat::TransportSideType& object) override { return DataSize(0); }
 
   std::any Visit(const flat::Enum& object) override { return Depth(GetType(object.subtype_ctor)); }
 
@@ -539,6 +542,7 @@ class MaxHandlesVisitor final : public flat::Object::Visitor<DataSize> {
   }
 
   std::any Visit(const flat::RequestHandleType& object) override { return DataSize(1); }
+  std::any Visit(const flat::TransportSideType& object) override { return DataSize(1); }
 
   std::any Visit(const flat::Enum& object) override {
     return MaxHandles(GetType(object.subtype_ctor));
@@ -560,6 +564,7 @@ class MaxHandlesVisitor final : public flat::Object::Visitor<DataSize> {
         switch (flat::GetType(member.type_ctor)->kind) {
           case flat::Type::Kind::kHandle:
           case flat::Type::Kind::kRequestHandle:
+          case flat::Type::Kind::kTransportSide:
             return std::numeric_limits<DataSize>::max();
           case flat::Type::Kind::kArray:
           case flat::Type::Kind::kVector:
@@ -680,6 +685,7 @@ class MaxOutOfLineVisitor final : public TypeShapeVisitor<DataSize> {
   }
 
   std::any Visit(const flat::RequestHandleType& object) override { return DataSize(0); }
+  std::any Visit(const flat::TransportSideType& object) override { return DataSize(0); }
 
   std::any Visit(const flat::Enum& object) override {
     return MaxOutOfLine(GetType(object.subtype_ctor));
@@ -829,6 +835,7 @@ class HasPaddingVisitor final : public TypeShapeVisitor<bool> {
   }
 
   std::any Visit(const flat::RequestHandleType& object) override { return false; }
+  std::any Visit(const flat::TransportSideType& object) override { return false; }
 
   std::any Visit(const flat::Enum& object) override {
     return HasPadding(GetType(object.subtype_ctor));
@@ -928,6 +935,7 @@ class HasFlexibleEnvelopeVisitor final : public TypeShapeVisitor<bool> {
   }
 
   std::any Visit(const flat::RequestHandleType& object) override { return false; }
+  std::any Visit(const flat::TransportSideType& object) override { return false; }
 
   std::any Visit(const flat::Enum& object) override {
     return HasFlexibleEnvelope(GetType(object.subtype_ctor), wire_format());

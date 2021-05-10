@@ -83,6 +83,7 @@ class CodedTypesGenerator {
   TypeMap<flat::PrimitiveType, coded::PrimitiveType> primitive_type_map_;
   TypeMap<flat::HandleType, coded::HandleType> handle_type_map_;
   TypeMap<flat::RequestHandleType, coded::RequestHandleType> request_type_map_;
+  TypeMap<flat::TransportSideType, coded::Type> channel_end_map_;
   TypeMap<flat::IdentifierType, coded::ProtocolHandleType> protocol_type_map_;
   TypeMap<flat::ArrayType, coded::ArrayType> array_type_map_;
   TypeMap<flat::VectorType, coded::VectorType> vector_type_map_;

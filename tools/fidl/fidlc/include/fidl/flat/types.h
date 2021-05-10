@@ -13,6 +13,7 @@ namespace fidl {
 namespace flat {
 
 struct CreateInvocation;
+struct Decl;
 struct TypeDecl;
 class LibraryMediator;
 struct LayoutInvocation;
@@ -28,7 +29,9 @@ struct Type : public Object {
     kVector,
     kString,
     kHandle,
+    // TODO(fxbug.dev/70247): Delete this
     kRequestHandle,
+    kTransportSide,
     kPrimitive,
     kIdentifier,
   };
@@ -315,6 +318,7 @@ struct IdentifierType final : public Type {
                         LayoutInvocation* out_params) const override;
 };
 
+// TODO(fxbug.dev/70247): Delete this
 // TODO(fxbug.dev/43803) Add required and optional rights.
 struct RequestHandleType final : public Type {
   RequestHandleType(const Name& name, const IdentifierType* protocol_type)
@@ -330,6 +334,42 @@ struct RequestHandleType final : public Type {
   Comparison Compare(const Type& other) const override {
     const auto& o = static_cast<const RequestHandleType&>(other);
     return Type::Compare(o).Compare(*protocol_type, *o.protocol_type);
+  }
+
+  bool ApplySomeLayoutParametersAndConstraints(const flat::LibraryMediator& lib,
+                                               const CreateInvocation& create_invocation,
+                                               const flat::TypeTemplate* layout,
+                                               std::unique_ptr<Type>* out_type,
+                                               LayoutInvocation* out_params) const override;
+
+  bool ApplyConstraints(const flat::LibraryMediator& lib, const TypeConstraints& constraints,
+                        const flat::TypeTemplate* layout, std::unique_ptr<Type>* out_type,
+                        LayoutInvocation* out_params) const override;
+};
+
+enum class TransportSide {
+  kClient,
+  kServer,
+};
+
+struct TransportSideType final : public Type {
+  TransportSideType(const Name& name, TransportSide end)
+      : TransportSideType(name, nullptr, types::Nullability::kNonnullable, end) {}
+  TransportSideType(const Name& name, const Decl* protocol_decl, types::Nullability nullability,
+                    TransportSide end)
+      : Type(name, Kind::kTransportSide, nullability), protocol_decl(protocol_decl), end(end) {}
+
+  const Decl* protocol_decl;
+  const TransportSide end;
+
+  std::any AcceptAny(VisitorAny* visitor) const override;
+
+  Comparison Compare(const Type& other) const override {
+    const auto& o = static_cast<const TransportSideType&>(other);
+    return Type::Compare(o)
+        .Compare(name, o.name)
+        .Compare(end, o.end)
+        .Compare(protocol_decl, o.protocol_decl);
   }
 
   bool ApplySomeLayoutParametersAndConstraints(const flat::LibraryMediator& lib,

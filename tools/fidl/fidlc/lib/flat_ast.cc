@@ -313,6 +313,7 @@ bool IsSimple(const Type* type, Reporter* reporter) {
       switch (vector_type->element_type->kind) {
         case Type::Kind::kHandle:
         case Type::Kind::kRequestHandle:
+        case Type::Kind::kTransportSide:
         case Type::Kind::kPrimitive:
           return true;
         case Type::Kind::kArray:
@@ -329,6 +330,7 @@ bool IsSimple(const Type* type, Reporter* reporter) {
     case Type::Kind::kArray:
     case Type::Kind::kHandle:
     case Type::Kind::kRequestHandle:
+    case Type::Kind::kTransportSide:
     case Type::Kind::kPrimitive:
       return depth == 0u;
     case Type::Kind::kIdentifier: {
@@ -416,7 +418,7 @@ bool Typespace::CreateNotOwned(const LibraryMediator& lib, const flat::Name& nam
   // return it rather than create a new one. Lookup must be by name,
   // arg_type, size, and nullability.
 
-  auto type_template = LookupTemplate(name);
+  auto type_template = LookupTemplate(name, fidl::utils::Syntax::kOld);
   if (type_template == nullptr) {
     reporter_->Report(ErrUnknownType, name.span(), name);
     return false;
@@ -439,7 +441,7 @@ bool Typespace::CreateNotOwned(const LibraryMediator& lib, const flat::Name& nam
   // return it rather than create a new one. Lookup must be by name,
   // arg_type, size, and nullability.
 
-  auto type_template = LookupTemplate(name);
+  auto type_template = LookupTemplate(name, fidl::utils::Syntax::kNew);
   if (type_template == nullptr) {
     reporter_->Report(ErrUnknownType, name.span(), name);
     return false;
@@ -449,17 +451,22 @@ bool Typespace::CreateNotOwned(const LibraryMediator& lib, const flat::Name& nam
                                out_type, out_params);
 }
 
-void Typespace::AddTemplate(std::unique_ptr<TypeTemplate> type_template) {
-  templates_.emplace(type_template->name(), std::move(type_template));
+template <typename T>
+void Typespace::AddTemplate(std::unique_ptr<T> type_template) {
+  old_syntax_templates_.emplace(type_template->name(), std::make_unique<T>(*type_template));
+  new_syntax_templates_.emplace(type_template->name(), std::move(type_template));
 }
 
-const TypeTemplate* Typespace::LookupTemplate(const flat::Name& name) const {
+const TypeTemplate* Typespace::LookupTemplate(const flat::Name& name,
+                                              fidl::utils::Syntax syntax) const {
+  const auto& typemap =
+      syntax == fidl::utils::Syntax::kNew ? new_syntax_templates_ : old_syntax_templates_;
   auto global_name = Name::Key(nullptr, name.decl_name());
-  if (auto iter = templates_.find(global_name); iter != templates_.end()) {
+  if (auto iter = typemap.find(global_name); iter != typemap.end()) {
     return iter->second.get();
   }
 
-  if (auto iter = templates_.find(name); iter != templates_.end()) {
+  if (auto iter = typemap.find(name); iter != typemap.end()) {
     return iter->second.get();
   }
 
@@ -988,24 +995,25 @@ class HandleTypeTemplate final : public TypeTemplate {
     return true;
   }
 
-  bool Create(const LibraryMediator& lib, const NewSyntaxParamsAndConstraints& args,
+  bool Create(const LibraryMediator& lib, const NewSyntaxParamsAndConstraints& unresolved_args,
               std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
-    size_t num_params = !args.parameters->items.empty();
+    size_t num_params = !unresolved_args.parameters->items.empty();
     if (num_params)
-      return Fail(ErrWrongNumberOfLayoutParameters, args.parameters->span, size_t(0), num_params);
+      return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span, size_t(0),
+                  num_params);
 
     Resource* handle_resource_decl = nullptr;
-    if (!GetResource(lib, args.name, &handle_resource_decl))
+    if (!GetResource(lib, unresolved_args.name, &handle_resource_decl))
       return false;
 
     HandleType type(name_, handle_resource_decl);
-    return type.ApplyConstraints(lib, *args.constraints, this, out_type, out_params);
+    return type.ApplyConstraints(lib, *unresolved_args.constraints, this, out_type, out_params);
   }
 
-  bool Create(const LibraryMediator& lib, const OldSyntaxParamsAndConstraints& args,
+  bool Create(const LibraryMediator& lib, const OldSyntaxParamsAndConstraints& unresolved_args,
               std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
     std::unique_ptr<CreateInvocation> resolved;
-    if (!ResolveOldSyntaxArgs(lib, args, &resolved, out_params))
+    if (!ResolveOldSyntaxArgs(lib, unresolved_args, &resolved, out_params))
       return false;
 
     assert(resolved->arg_type == nullptr);
@@ -1020,7 +1028,7 @@ class HandleTypeTemplate final : public TypeTemplate {
     // more constraints later (e.g. if there's an alias to this handle that also
     // specifies more constraints) in the new syntax.
     Resource* handle_resource_decl = nullptr;
-    if (!GetResource(lib, args.name, &handle_resource_decl))
+    if (!GetResource(lib, unresolved_args.name, &handle_resource_decl))
       return false;
 
     HandleType type(name_, handle_resource_decl);
@@ -1198,6 +1206,7 @@ bool HandleType::ApplySomeLayoutParametersAndConstraints(const LibraryMediator& 
   return true;
 }
 
+// TODO(fxbug.dev/70247): Remove this in favor of TransportSideTypeTemplate
 class RequestTypeTemplate final : public TypeTemplate {
  public:
   RequestTypeTemplate(Typespace* typespace, Reporter* reporter)
@@ -1258,6 +1267,110 @@ bool RequestHandleType::ApplySomeLayoutParametersAndConstraints(
 
   *out_type = std::make_unique<RequestHandleType>(name, protocol_type, merged_nullability);
   return true;
+}
+
+class TransportSideTypeTemplate final : public TypeTemplate {
+ public:
+  TransportSideTypeTemplate(Typespace* typespace, Reporter* reporter, TransportSide end)
+      : TypeTemplate(end == TransportSide::kClient ? Name::CreateIntrinsic("client_end")
+                                                   : Name::CreateIntrinsic("server_end"),
+                     typespace, reporter),
+        end_(end) {}
+
+  bool Create(const LibraryMediator& lib, const NewSyntaxParamsAndConstraints& unresolved_args,
+              std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
+    size_t num_params = !unresolved_args.parameters->items.empty();
+    if (num_params)
+      return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span, size_t(0),
+                  num_params);
+
+    TransportSideType type(name_, end_);
+    return type.ApplyConstraints(lib, *unresolved_args.constraints, this, out_type, out_params);
+  }
+
+  bool Create(const LibraryMediator& lib, const OldSyntaxParamsAndConstraints& unresolved_args,
+              std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
+    assert(false && "Compiler bug: this type template should only be used in the new syntax");
+    return false;
+  }
+
+ private:
+  TransportSide end_;
+};
+
+bool TransportSideType::ApplyConstraints(const flat::LibraryMediator& lib,
+                                         const TypeConstraints& constraints,
+                                         const TypeTemplate* layout,
+                                         std::unique_ptr<Type>* out_type,
+                                         LayoutInvocation* out_params) const {
+  size_t num_constraints = constraints.items.size();
+
+  // We need to store this separately from out_params, because out_params doesn't
+  // store the raw Constant that gets resolved to a nullability constraint.
+  std::optional<SourceSpan> applied_nullability_span;
+
+  if (num_constraints == 1) {
+    // could either be a protocol or optional
+    auto constraint_span = constraints.items[0]->span;
+    LibraryMediator::ResolvedConstraint resolved;
+    if (!lib.ResolveConstraintAs(constraints.items[0],
+                                 {LibraryMediator::ConstraintKind::kProtocol,
+                                  LibraryMediator::ConstraintKind::kNullability},
+                                 /* resource_decl */ nullptr, &resolved))
+      return lib.Fail(ErrUnexpectedConstraint, constraint_span, layout);
+    switch (resolved.kind) {
+      case LibraryMediator::ConstraintKind::kProtocol:
+        out_params->protocol_decl = resolved.value.protocol_decl;
+        out_params->protocol_decl_raw = constraints.items[0].get();
+        break;
+      case LibraryMediator::ConstraintKind::kNullability:
+        out_params->nullability = types::Nullability::kNullable;
+        applied_nullability_span = constraint_span;
+        break;
+      default:
+        assert(false && "Compiler bug: resolved to wrong constraint kind");
+    }
+  } else if (num_constraints == 2) {
+    // first constraint must be protocol
+    if (!lib.ResolveAsProtocol(constraints.items[0].get(), &out_params->protocol_decl))
+      return lib.Fail(ErrMustBeAProtocol, constraints.items[0]->span, layout);
+    out_params->protocol_decl_raw = constraints.items[0].get();
+
+    // second constraint must be optional
+    if (!lib.ResolveAsOptional(constraints.items[1].get()))
+      return lib.Fail(ErrUnexpectedConstraint, constraints.items[1]->span, layout);
+    out_params->nullability = types::Nullability::kNullable;
+    applied_nullability_span = constraints.items[1]->span;
+  } else if (num_constraints > 2) {
+    return lib.Fail(ErrTooManyConstraints, constraints.span, layout, size_t(2), num_constraints);
+  }
+
+  if (protocol_decl && out_params->protocol_decl)
+    return lib.Fail(ErrCannotConstrainTwice, constraints.items[0]->span, layout);
+  if (!protocol_decl && !out_params->protocol_decl)
+    return lib.Fail(ErrProtocolConstraintRequired, constraints.span, layout);
+  const Decl* merged_protocol = protocol_decl;
+  if (out_params->protocol_decl)
+    merged_protocol = out_params->protocol_decl;
+
+  bool has_nullability = nullability == types::Nullability::kNullable;
+  if (has_nullability && out_params->nullability == types::Nullability::kNullable)
+    return lib.Fail(ErrCannotIndicateNullabilityTwice, applied_nullability_span, layout);
+  auto merged_nullability =
+      has_nullability || out_params->nullability == types::Nullability::kNullable
+          ? types::Nullability::kNullable
+          : types::Nullability::kNonnullable;
+
+  *out_type = std::make_unique<TransportSideType>(name, merged_protocol, merged_nullability, end);
+  return true;
+}
+
+bool TransportSideType::ApplySomeLayoutParametersAndConstraints(
+    const LibraryMediator& lib, const CreateInvocation& create_invocation,
+    const TypeTemplate* layout, std::unique_ptr<Type>* out_type,
+    LayoutInvocation* out_params) const {
+  assert(false && "Compiler bug: this type should only be used in the new syntax");
+  return false;
 }
 
 class TypeDeclTypeTemplate final : public TypeTemplate {
@@ -1512,13 +1625,21 @@ class TypeAliasTypeTemplate final : public TypeTemplate {
 Typespace Typespace::RootTypes(Reporter* reporter) {
   Typespace root_typespace(reporter);
 
-  auto add_template = [&](std::unique_ptr<TypeTemplate> type_template) {
+  auto add_template_old = [&](std::unique_ptr<TypeTemplate> type_template) {
     const Name& name = type_template->name();
-    root_typespace.templates_.emplace(name, std::move(type_template));
+    root_typespace.old_syntax_templates_.emplace(name, std::move(type_template));
+  };
+
+  auto add_template_new = [&](std::unique_ptr<TypeTemplate> type_template) {
+    const Name& name = type_template->name();
+    root_typespace.new_syntax_templates_.emplace(name, std::move(type_template));
   };
 
   auto add_primitive = [&](const std::string& name, types::PrimitiveSubtype subtype) {
-    add_template(std::make_unique<PrimitiveTypeTemplate>(&root_typespace, reporter, name, subtype));
+    add_template_old(
+        std::make_unique<PrimitiveTypeTemplate>(&root_typespace, reporter, name, subtype));
+    add_template_new(
+        std::make_unique<PrimitiveTypeTemplate>(&root_typespace, reporter, name, subtype));
   };
 
   add_primitive("bool", types::PrimitiveSubtype::kBool);
@@ -1538,18 +1659,37 @@ Typespace Typespace::RootTypes(Reporter* reporter) {
   // TODO(fxbug.dev/7807): Remove when there is generalized support.
   const static auto kByteName = Name::CreateIntrinsic("byte");
   const static auto kBytesName = Name::CreateIntrinsic("bytes");
-  root_typespace.templates_.emplace(
+  root_typespace.old_syntax_templates_.emplace(
       kByteName, std::make_unique<PrimitiveTypeTemplate>(&root_typespace, reporter, "uint8",
                                                          types::PrimitiveSubtype::kUint8));
-  root_typespace.templates_.emplace(kBytesName,
-                                    std::make_unique<BytesTypeTemplate>(&root_typespace, reporter));
+  root_typespace.new_syntax_templates_.emplace(
+      kByteName, std::make_unique<PrimitiveTypeTemplate>(&root_typespace, reporter, "uint8",
+                                                         types::PrimitiveSubtype::kUint8));
+  root_typespace.old_syntax_templates_.emplace(
+      kBytesName, std::make_unique<BytesTypeTemplate>(&root_typespace, reporter));
+  root_typespace.new_syntax_templates_.emplace(
+      kBytesName, std::make_unique<BytesTypeTemplate>(&root_typespace, reporter));
 
-  add_template(std::make_unique<ArrayTypeTemplate>(&root_typespace, reporter));
-  add_template(std::make_unique<VectorTypeTemplate>(&root_typespace, reporter));
-  add_template(std::make_unique<StringTypeTemplate>(&root_typespace, reporter));
-  add_template(std::make_unique<HandleTypeTemplate>(&root_typespace, reporter));
-  add_template(std::make_unique<RequestTypeTemplate>(&root_typespace, reporter));
+  add_template_old(std::make_unique<ArrayTypeTemplate>(&root_typespace, reporter));
+  add_template_new(std::make_unique<ArrayTypeTemplate>(&root_typespace, reporter));
+  add_template_old(std::make_unique<VectorTypeTemplate>(&root_typespace, reporter));
+  add_template_new(std::make_unique<VectorTypeTemplate>(&root_typespace, reporter));
+  add_template_old(std::make_unique<StringTypeTemplate>(&root_typespace, reporter));
+  add_template_new(std::make_unique<StringTypeTemplate>(&root_typespace, reporter));
+  add_template_old(std::make_unique<HandleTypeTemplate>(&root_typespace, reporter));
+  add_template_new(std::make_unique<HandleTypeTemplate>(&root_typespace, reporter));
 
+  // add syntax specific typespace entries
+  // TODO(fxbug.dev/70247): consolidate maps
+  auto request = std::make_unique<RequestTypeTemplate>(&root_typespace, reporter);
+  root_typespace.old_syntax_templates_.emplace(request->name(), std::move(request));
+  auto server_end = std::make_unique<TransportSideTypeTemplate>(&root_typespace, reporter,
+                                                                TransportSide::kServer);
+  root_typespace.new_syntax_templates_.emplace(server_end->name(), std::move(server_end));
+
+  auto client_end = std::make_unique<TransportSideTypeTemplate>(&root_typespace, reporter,
+                                                                TransportSide::kClient);
+  root_typespace.new_syntax_templates_.emplace(client_end->name(), std::move(client_end));
   return root_typespace;
 }
 
@@ -3985,6 +4125,7 @@ bool Library::DeclDependencies(const Decl* decl, std::set<const Decl*>* out_edge
         case Type::Kind::kPrimitive:
         case Type::Kind::kString:
         case Type::Kind::kRequestHandle:
+        case Type::Kind::kTransportSide:
           return;
         case Type::Kind::kArray:
         case Type::Kind::kVector: {
@@ -4478,6 +4619,7 @@ types::Resourceness Type::Resourceness() const {
       return types::Resourceness::kValue;
     case Type::Kind::kHandle:
     case Type::Kind::kRequestHandle:
+    case Type::Kind::kTransportSide:
       return types::Resourceness::kResource;
     case Type::Kind::kArray:
       return static_cast<const ArrayType*>(this)->element_type->Resourceness();
@@ -4519,6 +4661,7 @@ types::Resourceness VerifyResourcenessStep::EffectiveResourceness(const Type* ty
       return types::Resourceness::kValue;
     case Type::Kind::kHandle:
     case Type::Kind::kRequestHandle:
+    case Type::Kind::kTransportSide:
       return types::Resourceness::kResource;
     case Type::Kind::kArray:
       return EffectiveResourceness(static_cast<const ArrayType*>(type)->element_type);
@@ -5611,6 +5754,11 @@ bool LibraryMediator::ResolveConstraintAs(const std::unique_ptr<Constant>& const
           return true;
         break;
       }
+      case ConstraintKind::kProtocol: {
+        if (ResolveAsProtocol(constraint.get(), &(out->value.protocol_decl)))
+          return true;
+        break;
+      }
     }
   }
   return false;
@@ -5641,6 +5789,20 @@ bool LibraryMediator::ResolveAsHandleSubtype(Resource* resource,
 bool LibraryMediator::ResolveAsHandleRights(Resource* resource, Constant* constant,
                                             const HandleRights** out_rights) const {
   return library_->ResolveHandleRightsConstant(resource, constant, out_rights);
+}
+
+bool LibraryMediator::ResolveAsProtocol(const Constant* constant, const Protocol** out_decl) const {
+  // TODO(fxbug.dev/75112): If/when this method is responsible for reporting errors, the
+  // `return false` statements should fail with ErrConstraintMustBeProtocol instead.
+  if (constant->kind != Constant::Kind::kIdentifier)
+    return false;
+
+  const auto* as_identifier = static_cast<const IdentifierConstant*>(constant);
+  const auto* decl = LookupDeclByName(as_identifier->name);
+  if (!decl || decl->kind != Decl::Kind::kProtocol)
+    return false;
+  *out_decl = static_cast<const Protocol*>(decl);
+  return true;
 }
 
 template <typename... Args>

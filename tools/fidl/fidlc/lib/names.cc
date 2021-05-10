@@ -220,8 +220,8 @@ std::string NameFlatTypeConstructorOld(const flat::TypeConstructorOld* type_ctor
   return buf.str();
 }
 
-std::string NameFlatTypeKind(flat::Type::Kind kind) {
-  switch (kind) {
+std::string NameFlatTypeKind(const flat::Type* type) {
+  switch (type->kind) {
     case flat::Type::Kind::kArray:
       return "array";
     case flat::Type::Kind::kVector:
@@ -232,6 +232,12 @@ std::string NameFlatTypeKind(flat::Type::Kind kind) {
       return "handle";
     case flat::Type::Kind::kRequestHandle:
       return "request";
+    case flat::Type::Kind::kTransportSide: {
+      // TODO(fxbug.dev/70186): transition the JSON and other backends to using
+      // client/server end
+      auto channel_end = static_cast<const flat::TransportSideType*>(type);
+      return (channel_end->end == flat::TransportSide::kClient) ? "identifier" : "request";
+    }
     case flat::Type::Kind::kPrimitive:
       return "primitive";
     case flat::Type::Kind::kIdentifier:
@@ -342,7 +348,7 @@ void NameFlatTypeHelper(std::ostringstream& buf, const flat::Type* type) {
   buf << NameFlatName(type->name);
   switch (type->kind) {
     case flat::Type::Kind::kArray: {
-      auto array_type = static_cast<const flat::ArrayType*>(type);
+      const auto* array_type = static_cast<const flat::ArrayType*>(type);
       buf << "<";
       NameFlatTypeHelper(buf, array_type->element_type);
       buf << ">";
@@ -353,7 +359,7 @@ void NameFlatTypeHelper(std::ostringstream& buf, const flat::Type* type) {
       break;
     }
     case flat::Type::Kind::kVector: {
-      auto vector_type = static_cast<const flat::VectorType*>(type);
+      const auto* vector_type = static_cast<const flat::VectorType*>(type);
       buf << "<";
       NameFlatTypeHelper(buf, vector_type->element_type);
       buf << ">";
@@ -364,7 +370,7 @@ void NameFlatTypeHelper(std::ostringstream& buf, const flat::Type* type) {
       break;
     }
     case flat::Type::Kind::kString: {
-      auto string_type = static_cast<const flat::StringType*>(type);
+      const auto* string_type = static_cast<const flat::StringType*>(type);
       if (*string_type->max_size != flat::Size::Max()) {
         buf << ":";
         buf << string_type->max_size->value;
@@ -372,7 +378,7 @@ void NameFlatTypeHelper(std::ostringstream& buf, const flat::Type* type) {
       break;
     }
     case flat::Type::Kind::kHandle: {
-      auto handle_type = static_cast<const flat::HandleType*>(type);
+      const auto* handle_type = static_cast<const flat::HandleType*>(type);
       if (handle_type->subtype != types::HandleSubtype::kHandle) {
         buf << "<";
         buf << NameHandleSubtype(handle_type->subtype);
@@ -381,10 +387,17 @@ void NameFlatTypeHelper(std::ostringstream& buf, const flat::Type* type) {
       break;
     }
     case flat::Type::Kind::kRequestHandle: {
-      auto request_handle_type = static_cast<const flat::RequestHandleType*>(type);
+      const auto* request_handle_type = static_cast<const flat::RequestHandleType*>(type);
       buf << "<";
       buf << NameFlatName(request_handle_type->protocol_type->name);
       buf << ">";
+      break;
+    }
+    case flat::Type::Kind::kTransportSide: {
+      const auto* transport_side = static_cast<const flat::TransportSideType*>(type);
+      buf << (transport_side->end == flat::TransportSide::kClient ? "client" : "server");
+      buf << ":";
+      buf << NameFlatName(transport_side->protocol_decl->name);
       break;
     }
     case flat::Type::Kind::kPrimitive:
@@ -408,6 +421,7 @@ std::string NameFlatCType(const flat::Type* type, flat::Decl::Kind decl_kind) {
     switch (type->kind) {
       case flat::Type::Kind::kHandle:
       case flat::Type::Kind::kRequestHandle:
+      case flat::Type::Kind::kTransportSide:
         return "zx_handle_t";
 
       case flat::Type::Kind::kVector:

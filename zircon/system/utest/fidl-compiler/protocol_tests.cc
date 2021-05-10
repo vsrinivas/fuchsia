@@ -484,7 +484,23 @@ protocol YearningForSimplicity {
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "arg");
 }
 
-// TODO(fxbug.dev/71536): implement client/server end in the new syntax
+TEST(ProtocolTests, BadRequestMustBeProtocol) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  // TODO(fxbug.dev/75112): currently need to specify second constraint to get
+  // the more specific error
+  TestLibrary library(R"FIDL(
+library example;
+
+type S = struct {};
+protocol P {
+    Method(r server_end:<S, optional>);
+};
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustBeAProtocol);
+}
+
 TEST(ProtocolTests, BadRequestMustBeProtocolOld) {
   TestLibrary library(R"FIDL(
 library example;
@@ -497,8 +513,23 @@ protocol P {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustBeAProtocol);
 }
 
-// TODO(fxbug.dev/71536): implement client/server end in the new syntax
 TEST(ProtocolTests, BadRequestMustBeParameterized) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol P {
+    Method(r server_end);
+};
+)FIDL",
+                      experimental_flags);
+  // NOTE(fxbug.dev/72924): more specific error in the new syntax since it goes
+  // through a separate code path.
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrProtocolConstraintRequired);
+}
+
+TEST(ProtocolTests, BadRequestMustBeParameterizedOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -509,8 +540,23 @@ protocol P {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustBeParameterized);
 }
 
-// TODO(fxbug.dev/71536): implement client/server end in the new syntax
 TEST(ProtocolTests, BadRequestCannotHaveSize) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol P {};
+type S = struct {
+    p server_end:<P,0>;
+};
+)FIDL",
+                      experimental_flags);
+  // NOTE(fxbug.dev/72924): more general error in the new syntax
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedConstraint);
+}
+
+TEST(ProtocolTests, BadRequestCannotHaveSizeOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -545,6 +591,151 @@ protocol P {
 )FIDL",
                       std::move(experimental_flags));
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMethodParameterName);
+}
+
+TEST(ProtocolTests, BadParameterizedTypedChannel) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol MyProtocol {};
+
+type Foo = resource struct {
+  foo client_end<MyProtocol>;
+};
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrWrongNumberOfLayoutParameters);
+}
+
+TEST(ProtocolTests, BadTooManyConstraintsTypedChannel) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol MyProtocol {};
+
+type Foo = resource struct {
+  foo client_end:<MyProtocol, optional, foo, bar>;
+};
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrTooManyConstraints);
+}
+
+TEST(ProtocolTests, GoodTypedChannels) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol MyProtocol {};
+
+type Foo = resource struct {
+  a client_end:MyProtocol;
+  b client_end:<MyProtocol, optional>;
+  c server_end:MyProtocol;
+  d server_end:<MyProtocol, optional>;
+};
+)FIDL",
+                      experimental_flags);
+  ASSERT_COMPILED(library);
+
+  auto container = library.LookupStruct("Foo");
+  ASSERT_NOT_NULL(container);
+  ASSERT_EQ(container->members.size(), 4);
+
+  size_t i = 0;
+
+  auto a_type_base = GetType(container->members[i++].type_ctor);
+  ASSERT_EQ(a_type_base->kind, fidl::flat::Type::Kind::kTransportSide);
+  const auto* a_type = static_cast<const fidl::flat::TransportSideType*>(a_type_base);
+  EXPECT_EQ(a_type->end, fidl::flat::TransportSide::kClient);
+  EXPECT_EQ(a_type->nullability, fidl::types::Nullability::kNonnullable);
+
+  auto b_type_base = GetType(container->members[i++].type_ctor);
+  ASSERT_EQ(b_type_base->kind, fidl::flat::Type::Kind::kTransportSide);
+  const auto* b_type = static_cast<const fidl::flat::TransportSideType*>(b_type_base);
+  EXPECT_EQ(a_type->end, fidl::flat::TransportSide::kClient);
+  EXPECT_EQ(b_type->nullability, fidl::types::Nullability::kNullable);
+
+  auto c_type_base = GetType(container->members[i++].type_ctor);
+  ASSERT_EQ(c_type_base->kind, fidl::flat::Type::Kind::kTransportSide);
+  const auto* c_type = static_cast<const fidl::flat::TransportSideType*>(c_type_base);
+  EXPECT_EQ(c_type->end, fidl::flat::TransportSide::kServer);
+  EXPECT_EQ(c_type->nullability, fidl::types::Nullability::kNonnullable);
+
+  auto d_type_base = GetType(container->members[i++].type_ctor);
+  ASSERT_EQ(d_type_base->kind, fidl::flat::Type::Kind::kTransportSide);
+  const auto* d_type = static_cast<const fidl::flat::TransportSideType*>(d_type_base);
+  EXPECT_EQ(d_type->end, fidl::flat::TransportSide::kServer);
+  EXPECT_EQ(d_type->nullability, fidl::types::Nullability::kNullable);
+}
+
+// TODO(fxbug.dev/76282): Convert this correctly and merge this with GoodTypedChannels
+TEST(ProtocolTests, GoodTypedChannelsOld) {
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol MyProtocol {};
+
+resource struct Foo {
+  MyProtocol a;
+  MyProtocol? b;
+  request<MyProtocol> c;
+  request<MyProtocol>? d;
+};
+)FIDL");
+  ASSERT_COMPILED(library);
+
+  auto container = library.LookupStruct("Foo");
+  ASSERT_NOT_NULL(container);
+  ASSERT_EQ(container->members.size(), 4);
+
+  size_t i = 0;
+
+  auto a_type_base = GetType(container->members[i++].type_ctor);
+  ASSERT_EQ(a_type_base->kind, fidl::flat::Type::Kind::kIdentifier);
+  const auto* a_type = static_cast<const fidl::flat::IdentifierType*>(a_type_base);
+  EXPECT_EQ(a_type->nullability, fidl::types::Nullability::kNonnullable);
+  EXPECT_EQ(a_type->type_decl->kind, fidl::flat::Decl::Kind::kProtocol);
+
+  auto b_type_base = GetType(container->members[i++].type_ctor);
+  ASSERT_EQ(b_type_base->kind, fidl::flat::Type::Kind::kIdentifier);
+  const auto* b_type = static_cast<const fidl::flat::IdentifierType*>(b_type_base);
+  EXPECT_EQ(b_type->nullability, fidl::types::Nullability::kNullable);
+  EXPECT_EQ(b_type->type_decl->kind, fidl::flat::Decl::Kind::kProtocol);
+
+  auto c_type_base = GetType(container->members[i++].type_ctor);
+  ASSERT_EQ(c_type_base->kind, fidl::flat::Type::Kind::kRequestHandle);
+  const auto* c_type = static_cast<const fidl::flat::RequestHandleType*>(c_type_base);
+  EXPECT_EQ(c_type->nullability, fidl::types::Nullability::kNonnullable);
+
+  auto d_type_base = GetType(container->members[i++].type_ctor);
+  ASSERT_EQ(d_type_base->kind, fidl::flat::Type::Kind::kRequestHandle);
+  const auto* d_type = static_cast<const fidl::flat::RequestHandleType*>(d_type_base);
+  EXPECT_EQ(d_type->nullability, fidl::types::Nullability::kNullable);
+}
+
+TEST(ProtocolTests, GoodPartialTypedChannelConstraints) {
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol MyProtocol {};
+
+alias ClientEnd = MyProtocol;
+alias ServerEnd = request<MyProtocol>;
+
+resource struct Foo {
+  ClientEnd a;
+  ClientEnd? b;
+  ServerEnd c;
+  ServerEnd? d;
+};
+)FIDL");
+  ASSERT_COMPILED_AND_CONVERT(library);
 }
 
 }  // namespace
