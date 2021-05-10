@@ -282,7 +282,11 @@ is_efi_toolchain =
 shlib_toolchain = "${toolchain_variant.base}${toolchain_variant.suffix}-shared"
 
 # Prepend the prefix configs, if any, before the default ones.
-default_common_binary_configs = toolchain_variant.prefix_configs
+default_common_binary_configs =
+    toolchain_variant.prefix_configs + [
+      # TODO(fxbug.dev/76297) Remove this to re-enable mutable-noalias.
+      "//build/config/rust:no_mutable_noalias",
+    ]
 
 # Note that Zircon toolchains and non-Zircon ones have a very different set
 # of default configs for all target types.
