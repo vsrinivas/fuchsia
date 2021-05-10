@@ -6,25 +6,35 @@ group("lib") {
   testonly = true
   deps = [
     "async-helpers",
-    "async-helpers:tests",
     "bt-a2dp",
-    "bt-a2dp:tests",
+    "bt-avctp",
     "bt-avdtp",
+    "bt-fidl-mocks",
+    "bt-rfcomm",
+    "cpp-type",
+    "device-protocol-bt-gatt-svc",
+    "fidl",
+    "fuchsia-audio-codec",
+    "fuchsia-audio-device-output",
+    "fuchsia-bluetooth",
+    "packet-encoding",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    "async-helpers:tests",
+    "bt-a2dp:tests",
+    "bt-avctp:tests",
     "bt-avdtp:tests",
     "bt-fidl-mocks:tests",
-    "bt-rfcomm",
     "bt-rfcomm:tests",
-    "cpp-type",
     "cpp-type:tests",
-    "fidl",
     "fidl:tests",
-    "fuchsia-audio-codec",
     "fuchsia-audio-codec:tests",
-    "fuchsia-audio-device-output",
     "fuchsia-audio-device-output:tests",
-    "fuchsia-bluetooth",
     "fuchsia-bluetooth:tests",
-    "packet-encoding",
     "packet-encoding:tests",
   ]
 }
