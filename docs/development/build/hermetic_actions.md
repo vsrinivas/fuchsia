@@ -227,7 +227,8 @@ action("foo") {
 ### Expanding arguments from a file
 
 There is a common pattern used especially in Python scripts to expand the
-contents of a file as arguments. In `BUILD.gn` you will find:
+contents of a file as arguments (also known as a "response file"). In `BUILD.gn`
+you will find:
 
 ```gn
 action("foo") {
@@ -237,7 +238,8 @@ action("foo") {
 }
 ```
 
-Then in the associated Python file `myaction.py` you will find:
+Then in the associated Python file `myaction.py` you will find
+an argument parser with [`fromfile_prefix_chars`][fromfile_prefix_chars]:
 
 ```python
 def main():
@@ -258,11 +260,32 @@ action("foo") {
 }
 ```
 
+If you need to quickly populate such a file from a list in GN, you can use
+[`write_file()`][write_file]:
+
+```gn
+action("foo") {
+  args_file = "${target_gen_dir}/${target_name}.args"
+  write_file(args_file, a_very_long_list_of_args)
+  args = [ "@" + rebase_path(args_file, root_build_dir) ]
+  ...
+}
+```
+
+Note GN provides [`response_file_contents`][response_file_contents] as a
+convenient alternative, instead of `write_file`, for this purpose. However due
+to a [bug][response_file_bug] rooted in Ninja, we currently don't allow
+`response_file_contents` in our builds.
+
 See also: [hermetic actions in open projects][hermetic-actions-bb]
 
 [action]: https://gn.googlesource.com/gn/+/master/docs/reference.md#func_action
 [action_foreach]: https://gn.googlesource.com/gn/+/master/docs/reference.md#func_action_foreach
 [depfile]: https://gn.googlesource.com/gn/+/master/docs/reference.md#var_depfile
+[fromfile_prefix_chars]: https://docs.python.org/3/library/argparse.html#fromfile-prefix-chars
 [hermetic-actions-bb]: /docs/contribute/open_projects/build/hermetic_actions.md
 [no_op]: /docs/development/build/ninja_no_op.md
 [relative-paths]: /docs/concepts/build_system/best_practices.md#prefer-relative-paths-from-rebase-path
+[response_file_bug]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=76068
+[response_file_contents]: https://gn.googlesource.com/gn/+/master/docs/reference.md#var_response_file_contents
+[write_file]: https://gn.googlesource.com/gn/+/master/docs/reference.md#func_write_file
