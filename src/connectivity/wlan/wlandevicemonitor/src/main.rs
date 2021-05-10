@@ -5,6 +5,8 @@
 #[cfg(test)]
 mod device_watch;
 mod service;
+#[cfg(test)]
+mod watchable_map;
 
 use {
     anyhow::Error,
