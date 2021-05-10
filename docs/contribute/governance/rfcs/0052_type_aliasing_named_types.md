@@ -53,11 +53,13 @@ in the current scope. In other words, for a type like `vector`, it must contain
 both the inner type and size constraint.
 
 For example, this would be valid:
+
 ```fidl
 alias SmallBytes = vector<uint8>:SMALL_NUM;
 ```
 
 But his would not (partial type reference on the right hand side of the equals):
+
 ```fidl
 alias SmallVec = vector:SMALL_NUM;
 ```
