@@ -14,6 +14,7 @@
 #endif
 
 #include <memory>
+#include <vector>
 
 #include <zxtest/zxtest.h>
 
@@ -2593,6 +2594,102 @@ TEST(Iovec, TooFewIovec) {
       &out_actual_iovecs, &out_actual_handles, &out_error);
   ASSERT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NOT_NULL(out_error);
+}
+
+TEST(Iovec, EncodeDoesntMutateVectorObject) {
+  std::vector<uint32_t> arr = {1u, 2u, 3u};
+  Uint32VectorStruct obj{
+      .vec = fidl::VectorView<uint32_t>::FromExternal(arr),
+  };
+
+  constexpr size_t obj_size = sizeof(Uint32VectorStruct);
+  size_t vec_body_size = sizeof(uint32_t) * obj.vec.count();
+
+  auto make_snapshot = [&](Uint32VectorStruct* obj) {
+    std::vector<uint8_t> snapshot;
+    snapshot.resize(obj_size);
+    memcpy(snapshot.data(), obj, obj_size);
+    snapshot.resize(obj_size + vec_body_size);
+    memcpy(snapshot.data() + obj_size, obj->vec.data(), vec_body_size);
+    return snapshot;
+  };
+  auto initial_snapshot = make_snapshot(&obj);
+
+  auto iovecs = std::make_unique<zx_channel_iovec_t[]>(ZX_CHANNEL_MAX_MSG_IOVECS);
+  auto buffer = std::make_unique<uint8_t[]>(ZX_CHANNEL_MAX_MSG_BYTES);
+  uint32_t out_actual_iovecs;
+  uint32_t out_actual_handles;
+  const char* out_error = nullptr;
+  zx_status_t status = fidl::internal::EncodeIovecEtc(
+      &fidl_test_coding_Uint32VectorStructTable, &obj, iovecs.get(), ZX_CHANNEL_MAX_MSG_IOVECS,
+      nullptr, 0, buffer.get(), ZX_CHANNEL_MAX_MSG_BYTES, &out_actual_iovecs, &out_actual_handles,
+      &out_error);
+  ASSERT_EQ(status, ZX_OK);
+  EXPECT_NULL(out_error);
+  ASSERT_EQ(out_actual_iovecs, 3);
+  EXPECT_EQ(out_actual_handles, 0);
+  EXPECT_EQ(iovecs[0].buffer, buffer.get());
+  EXPECT_EQ(iovecs[0].capacity, obj_size);
+  EXPECT_EQ(iovecs[0].reserved, 0);
+  EXPECT_EQ(iovecs[1].buffer, arr.data());
+  EXPECT_EQ(iovecs[1].capacity, vec_body_size);
+  EXPECT_EQ(iovecs[1].reserved, 0);
+  EXPECT_EQ(iovecs[2].buffer, buffer.get() + obj_size + 4);
+  EXPECT_EQ(iovecs[2].capacity, 4);
+  EXPECT_EQ(iovecs[2].reserved, 0);
+
+  auto final_snapshot = make_snapshot(&obj);
+  EXPECT_EQ(initial_snapshot.size(), final_snapshot.size());
+  EXPECT_BYTES_EQ(initial_snapshot.data(), final_snapshot.data(), initial_snapshot.size());
+}
+
+TEST(Iovec, ExceedVectorBufferCount) {
+  std::vector<uint32_t> arr = {1u, 2u, 3u};
+  Uint32VectorStruct obj{
+      .vec = fidl::VectorView<uint32_t>::FromExternal(arr),
+  };
+
+  // 3 iovecs are needed to directly point at the vector body.
+  // When 1 or 2 are present, the encoder should linearize into just the first
+  // iovec.
+  auto iovecs = std::make_unique<zx_channel_iovec_t[]>(2);
+  auto buffer = std::make_unique<uint8_t[]>(ZX_CHANNEL_MAX_MSG_BYTES);
+  uint32_t out_actual_iovecs;
+  uint32_t out_actual_handles;
+  const char* out_error = nullptr;
+  zx_status_t status = fidl::internal::EncodeIovecEtc(
+      &fidl_test_coding_Uint32VectorStructTable, &obj, iovecs.get(), 2, nullptr, 0, buffer.get(),
+      ZX_CHANNEL_MAX_MSG_BYTES, &out_actual_iovecs, &out_actual_handles, &out_error);
+  ASSERT_EQ(status, ZX_OK);
+  EXPECT_NULL(out_error);
+  ASSERT_EQ(out_actual_iovecs, 1);
+  EXPECT_EQ(out_actual_handles, 0);
+  EXPECT_EQ(iovecs[0].buffer, buffer.get());
+  EXPECT_EQ(iovecs[0].capacity, sizeof(obj) + arr.size() * sizeof(uint32_t) + 4);
+  EXPECT_EQ(iovecs[0].reserved, 0);
+  EXPECT_BYTES_EQ(iovecs[0].buffer, &obj, 8);
+  EXPECT_BYTES_EQ(obj.vec.data(), arr.data(), arr.size() * sizeof(uint32_t));
+}
+
+TEST(Iovec, MatchNeededVectorBufferCount) {
+  std::vector<uint32_t> arr = {1u, 2u, 3u};
+  Uint32VectorStruct obj{
+      .vec = fidl::VectorView<uint32_t>::FromExternal(arr),
+  };
+
+  // With 3 iovecs, the second iovec will directly point at the vector body.
+  auto iovecs = std::make_unique<zx_channel_iovec_t[]>(3);
+  auto buffer = std::make_unique<uint8_t[]>(ZX_CHANNEL_MAX_MSG_BYTES);
+  uint32_t out_actual_iovecs;
+  uint32_t out_actual_handles;
+  const char* out_error = nullptr;
+  zx_status_t status = fidl::internal::EncodeIovecEtc(
+      &fidl_test_coding_Uint32VectorStructTable, &obj, iovecs.get(), 3, nullptr, 0, buffer.get(),
+      ZX_CHANNEL_MAX_MSG_BYTES, &out_actual_iovecs, &out_actual_handles, &out_error);
+  ASSERT_EQ(status, ZX_OK);
+  EXPECT_NULL(out_error);
+  ASSERT_EQ(out_actual_iovecs, 3);
+  EXPECT_EQ(out_actual_handles, 0);
 }
 
 TEST(Iovec, TooFewBytes) {

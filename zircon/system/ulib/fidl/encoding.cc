@@ -23,16 +23,10 @@
 
 namespace {
 
-enum class Mode { EncodeOnly, LinearizeAndEncode };
-
-template <Mode mode>
-struct EncodingPosition {};
-
-template <>
-struct EncodingPosition<Mode::EncodeOnly> {
+struct EncodingPosition {
   // |dest| is an address in the destination buffer.
   uint8_t* dest;
-  __ALWAYS_INLINE static EncodingPosition<Mode::EncodeOnly> Create(void* source_object, uint8_t* dest) {
+  __ALWAYS_INLINE static EncodingPosition Create(void* source_object, uint8_t* dest) {
     return {
         .dest = dest,
     };
@@ -57,40 +51,6 @@ struct EncodingPosition<Mode::EncodeOnly> {
   }
 };
 
-template <>
-struct EncodingPosition<Mode::LinearizeAndEncode> {
-  // |source_object| points to one of the objects from the source pile.
-  void* source_object;
-  // |dest| is an address in the destination buffer.
-  uint8_t* dest;
-  __ALWAYS_INLINE static EncodingPosition<Mode::LinearizeAndEncode> Create(void* source_object, uint8_t* dest) {
-    return {
-        .source_object = source_object,
-        .dest = dest,
-    };
-  }
-  __ALWAYS_INLINE EncodingPosition operator+(uint32_t size) const {
-    return {
-        .source_object = reinterpret_cast<void*>(reinterpret_cast<uint8_t*>(source_object) + size),
-        .dest = dest + size,
-    };
-  }
-  __ALWAYS_INLINE EncodingPosition& operator+=(uint32_t size) {
-    *this = *this + size;
-    return *this;
-  }
-  // By default, return the pointer to the destination buffer
-  template <typename T>
-  __ALWAYS_INLINE constexpr T* Get() const {
-    return reinterpret_cast<T*>(dest);
-  }
-  // Additional method to get a pointer to one of the source objects
-  template <typename T>
-  __ALWAYS_INLINE constexpr T* GetFromSource() const {
-    return reinterpret_cast<T*>(source_object);
-  }
-};
-
 struct EnvelopeCheckpoint {
   uint32_t num_bytes;
   uint32_t num_handles;
@@ -105,25 +65,21 @@ struct BufferEncodeArgs {
   const char** out_error_msg;
 };
 
-template <Mode mode>
-class FidlEncoder final : public ::fidl::Visitor<fidl::MutatingVisitorTrait, EncodingPosition<mode>,
-                                                 EnvelopeCheckpoint> {
+class FidlEncoder final
+    : public ::fidl::Visitor<fidl::MutatingVisitorTrait, EncodingPosition, EnvelopeCheckpoint> {
  public:
-  using Base =
-      ::fidl::Visitor<fidl::MutatingVisitorTrait, EncodingPosition<mode>, EnvelopeCheckpoint>;
+  using Base = ::fidl::Visitor<fidl::MutatingVisitorTrait, EncodingPosition, EnvelopeCheckpoint>;
   using Status = typename Base::Status;
   using PointeeType = typename Base::PointeeType;
   using ObjectPointerPointer = typename Base::ObjectPointerPointer;
   using HandlePointer = typename Base::HandlePointer;
   using CountPointer = typename Base::CountPointer;
   using EnvelopePointer = typename Base::EnvelopePointer;
-  using Position = EncodingPosition<mode>;
+  using Position = EncodingPosition;
 
   FidlEncoder(BufferEncodeArgs args)
-      : bs_({
-            .bytes_ = args.bytes,
-            .num_bytes_ = args.num_bytes,
-        }),
+      : bytes_(args.bytes),
+        num_bytes_(args.num_bytes),
         handles_(args.handles),
         num_handles_(args.num_handles),
         next_out_of_line_(args.next_out_of_line),
@@ -133,50 +89,33 @@ class FidlEncoder final : public ::fidl::Visitor<fidl::MutatingVisitorTrait, Enc
   static constexpr bool kContinueAfterConstraintViolation = true;
 
   Status VisitAbsentPointerInNonNullableCollection(ObjectPointerPointer object_ptr_ptr) {
-    if (mode == Mode::LinearizeAndEncode) {
-      // Empty LLCPP vectors and strings typically have null data portions, which differs
-      // from the wire format representation (0 length out-of-line object for empty vector
-      // or string).
-      // By marking the pointer as present, the wire format will have the correct
-      // representation.
-      return SetPointerPresent(object_ptr_ptr, nullptr);
-    }
-
     SetError("absent pointer disallowed in non-nullable collection");
     return Status::kConstraintViolationError;
   }
 
   Status VisitPointerBuffer(Position ptr_position, PointeeType pointee_type, void* object_ptr,
                             uint32_t new_offset, uint32_t inline_size, Position* out_position) {
-    ZX_DEBUG_ASSERT(mode == Mode::EncodeOnly || mode == Mode::LinearizeAndEncode);
-    if (unlikely(new_offset > bs_.num_bytes_)) {
+    if (unlikely(new_offset > num_bytes_)) {
       SetError("pointed offset exceeds buffer size");
       return Status::kConstraintViolationError;
     }
-    if (mode == Mode::LinearizeAndEncode) {
-      // Zero the last 8 bytes so that padding is zero after the memcpy.
-      if (likely(inline_size != 0)) {
-        *reinterpret_cast<uint64_t*>(
-            __builtin_assume_aligned(&bs_.bytes_[new_offset - FIDL_ALIGNMENT], FIDL_ALIGNMENT)) = 0;
-      }
-      // Copy the pointee to the desired location in secondary storage
-      memcpy(&bs_.bytes_[next_out_of_line_], object_ptr, inline_size);
-    } else if (unlikely(object_ptr != &bs_.bytes_[next_out_of_line_])) {
+    if (unlikely(object_ptr != &bytes_[next_out_of_line_])) {
       SetError("noncontiguous out of line storage during encode");
       return Status::kMemoryError;
     } else {
       // Zero padding between out of line storage.
-      memset(&bs_.bytes_[next_out_of_line_] + inline_size, 0,
+      memset(&bytes_[next_out_of_line_] + inline_size, 0,
              (new_offset - next_out_of_line_) - inline_size);
     }
 
     // Instruct the walker to traverse the pointee afterwards.
-    *out_position = Position::Create(object_ptr, bs_.bytes_ + next_out_of_line_);
+    *out_position = Position::Create(object_ptr, bytes_ + next_out_of_line_);
     return Status::kSuccess;
   }
 
   Status VisitPointer(Position ptr_position, PointeeType pointee_type,
                       ObjectPointerPointer object_ptr_ptr, uint32_t inline_size,
+                      FidlMemcpyCompatibility pointee_memcpy_compatibility,
                       Position* out_position) {
     // For pointers in types other than vectors and strings, the LSB is reserved to mark ownership
     // and may be set to 1 if the object is heap allocated. However, the original pointer has this
@@ -237,9 +176,6 @@ class FidlEncoder final : public ::fidl::Visitor<fidl::MutatingVisitorTrait, Enc
     }
 
     *dest_handle = FIDL_HANDLE_PRESENT;
-    if (mode == Mode::LinearizeAndEncode) {
-      *handle_position.template GetFromSource<zx_handle_t>() = ZX_HANDLE_INVALID;
-    }
     handle_idx_++;
     return Status::kSuccess;
   }
@@ -263,27 +199,20 @@ class FidlEncoder final : public ::fidl::Visitor<fidl::MutatingVisitorTrait, Enc
   Status LeaveEnvelope(EnvelopePointer envelope, EnvelopeCheckpoint prev_checkpoint) {
     uint32_t num_bytes = next_out_of_line_ - prev_checkpoint.num_bytes;
     uint32_t num_handles = handle_idx_ - prev_checkpoint.num_handles;
-    if (mode == Mode::LinearizeAndEncode) {
-      // Write the num_bytes/num_handles.
-      envelope->num_bytes = num_bytes;
-      envelope->num_handles = num_handles;
-    } else {
-      // Validate the claimed num_bytes/num_handles.
-      if (unlikely(envelope->num_bytes != num_bytes)) {
-        SetError("Envelope num_bytes was mis-sized");
-        return Status::kConstraintViolationError;
-      }
-      if (unlikely(envelope->num_handles != num_handles)) {
-        SetError("Envelope num_handles was mis-sized");
-        return Status::kConstraintViolationError;
-      }
+    // Validate the claimed num_bytes/num_handles.
+    if (unlikely(envelope->num_bytes != num_bytes)) {
+      SetError("Envelope num_bytes was mis-sized");
+      return Status::kConstraintViolationError;
+    }
+    if (unlikely(envelope->num_handles != num_handles)) {
+      SetError("Envelope num_handles was mis-sized");
+      return Status::kConstraintViolationError;
     }
     return Status::kSuccess;
   }
 
   // Error when attempting to encode an unknown envelope.
-  // This behavior is LLCPP specific, and so assumes that the FidlEncoder is only
-  // used in LLCPP.
+  // Unknown envelopes are not supported in C, which is the only user of FidlEncoder.
   Status VisitUnknownEnvelope(EnvelopePointer envelope, FidlIsResource is_resource) {
     SetError("Cannot encode unknown union or table");
     return Status::kConstraintViolationError;
@@ -331,14 +260,9 @@ class FidlEncoder final : public ::fidl::Visitor<fidl::MutatingVisitorTrait, Enc
     return Status::kSuccess;
   }
 
-  // State for populating a buffer.
-  struct BufferState {
-    uint8_t* const bytes_ = nullptr;
-    const uint32_t num_bytes_ = 0;
-  };
-
   // Message state initialized in the constructor.
-  BufferState bs_;
+  uint8_t* const bytes_ = nullptr;
+  const uint32_t num_bytes_ = 0;
   cpp17::variant<cpp17::monostate, zx_handle_t*, zx_handle_disposition_t*> handles_;
   const uint32_t num_handles_;
   uint32_t next_out_of_line_;
@@ -393,7 +317,7 @@ zx_status_t fidl_encode_impl(const fidl_type_t* type, void* bytes, uint32_t num_
   if (handles != nullptr) {
     args.handles = handles;
   }
-  FidlEncoder<Mode::EncodeOnly> encoder(args);
+  FidlEncoder encoder(args);
   fidl::Walk(encoder, type, {.dest = reinterpret_cast<uint8_t*>(bytes)});
 
   auto drop_all_handles = [&]() {
@@ -462,104 +386,3 @@ zx_status_t fidl_encode_msg(const fidl_type_t* type, fidl_outgoing_msg_byte_t* m
   return fidl_encode_etc(type, msg->bytes, msg->num_bytes, msg->handles, msg->num_handles,
                          out_actual_handles, out_error_msg);
 }
-
-namespace fidl {
-namespace internal {
-
-zx_status_t EncodeIovecEtc(const fidl_type_t* type, void* value, zx_channel_iovec_t* iovecs,
-                           uint32_t num_iovecs, zx_handle_disposition_t* handle_dispositions,
-                           uint32_t num_handle_dispositions, uint8_t* backing_buffer,
-                           uint32_t num_backing_buffer, uint32_t* out_actual_iovec,
-                           uint32_t* out_actual_handles, const char** out_error_msg) {
-  auto set_error = [&out_error_msg](const char* msg) {
-    if (out_error_msg)
-      *out_error_msg = msg;
-  };
-  // TODO(fxbug.dev/66977) Change these to debug asserts after tests expecting these are removed.
-  // This is only used in one place and the runtime checks add unnecessary overhead.
-  if (unlikely(type == nullptr)) {
-    set_error("fidl type cannot be null");
-    return ZX_ERR_INVALID_ARGS;
-  }
-  if (unlikely(value == nullptr)) {
-    set_error("Cannot encode null value");
-    return ZX_ERR_INVALID_ARGS;
-  }
-  if (unlikely(backing_buffer == nullptr)) {
-    set_error("Cannot encode to null byte array");
-    return ZX_ERR_INVALID_ARGS;
-  }
-  if (unlikely(!FidlIsAligned(reinterpret_cast<uint8_t*>(value)))) {
-    set_error("value must be aligned to FIDL_ALIGNMENT");
-    return ZX_ERR_INVALID_ARGS;
-  }
-  if (unlikely(!FidlIsAligned(backing_buffer))) {
-    set_error("backing_buffer must be aligned to FIDL_ALIGNMENT");
-    return ZX_ERR_INVALID_ARGS;
-  }
-  if (unlikely(num_backing_buffer % FIDL_ALIGNMENT != 0)) {
-    set_error("num_bytes must be aligned to FIDL_ALIGNMENT");
-    return ZX_ERR_INVALID_ARGS;
-  }
-  if (unlikely(out_actual_iovec == nullptr)) {
-    set_error("Cannot encode with null out_actual_iovec");
-    return ZX_ERR_INVALID_ARGS;
-  }
-  if (num_iovecs < 1) {
-    set_error("iovecs must contain at least one iovec");
-    return ZX_ERR_INVALID_ARGS;
-  }
-  if (unlikely(out_actual_handles == nullptr)) {
-    set_error("Cannot encode with null out_actual_handles");
-    return ZX_ERR_INVALID_ARGS;
-  }
-  if (unlikely(handle_dispositions == nullptr && num_handle_dispositions != 0)) {
-    set_error("Cannot provide non-zero handle count and null handle pointer");
-    // When |handles| is nullptr, handles are closed as part of traversal.
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  zx_status_t status;
-  uint32_t primary_size;
-  uint32_t next_out_of_line;
-  if (unlikely((status = fidl::PrimaryObjectSize(type, num_backing_buffer, &primary_size,
-                                                 &next_out_of_line, out_error_msg)) != ZX_OK)) {
-    return status;
-  }
-
-  // Zero the last 8 bytes so padding will be zero after memcpy.
-  *reinterpret_cast<uint64_t*>(__builtin_assume_aligned(
-      &backing_buffer[next_out_of_line - FIDL_ALIGNMENT], FIDL_ALIGNMENT)) = 0;
-
-  // Copy the primary object
-  memcpy(backing_buffer, value, primary_size);
-
-  BufferEncodeArgs args = {
-      .bytes = static_cast<uint8_t*>(backing_buffer),
-      .num_bytes = num_backing_buffer,
-      .num_handles = num_handle_dispositions,
-      .next_out_of_line = next_out_of_line,
-      .out_error_msg = out_error_msg,
-  };
-  if (handle_dispositions != nullptr) {
-    args.handles = handle_dispositions;
-  }
-  FidlEncoder<Mode::LinearizeAndEncode> encoder(args);
-  fidl::Walk(encoder, type, {.source_object = value, .dest = backing_buffer});
-  if (unlikely(encoder.status() != ZX_OK)) {
-    *out_actual_handles = 0;
-    FidlHandleDispositionCloseMany(handle_dispositions, encoder.num_out_handles());
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  iovecs[0] = zx_channel_iovec_t{
-      .buffer = backing_buffer,
-      .capacity = encoder.num_out_bytes(),
-  };
-  *out_actual_iovec = 1;
-  *out_actual_handles = encoder.num_out_handles();
-  return ZX_OK;
-}
-
-}  // namespace internal
-}  // namespace fidl

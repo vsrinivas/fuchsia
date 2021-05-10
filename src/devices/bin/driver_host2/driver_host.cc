@@ -76,15 +76,11 @@ void Driver::set_binding(fidl::ServerBindingRef<fuchsia_driver_framework::Driver
   binding_.emplace(std::move(binding));
 }
 
-zx::status<> Driver::Start(fidl::OutgoingMessage& start_args,
+zx::status<> Driver::Start(fidl::IncomingMessage& start_args,
                            async_dispatcher_t* driver_dispatcher) {
-  auto converted = fidl::OutgoingToIncomingMessage(start_args);
-  if (converted.status() != ZX_OK) {
-    return zx::error(converted.status());
-  }
   // After calling |record_->start|, we assume it has taken ownership of
   // the handles from |start_args|, and can therefore relinquish ownership.
-  fidl_incoming_msg_t c_msg = std::move(converted.incoming_message()).ReleaseToEncodedCMessage();
+  fidl_incoming_msg_t c_msg = std::move(start_args).ReleaseToEncodedCMessage();
   void* opaque = nullptr;
   zx_status_t status = record_->start(&c_msg, driver_dispatcher, &opaque);
   if (status != ZX_OK) {
@@ -209,11 +205,19 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
       completer.Close(driver.error_value());
       return;
     }
+
+    auto converted_message =
+        std::make_unique<fidl::OutgoingToIncomingMessage>(message->GetOutgoingMessage());
+    if (converted_message->status() != ZX_OK) {
+      completer.Close(converted_message->status());
+      return;
+    }
+
     // Task to start the driver. Post this to the driver dispatcher thread.
     auto start_task = [this, request = std::move(request), completer = std::move(completer),
-                       message = std::move(message), binary = std::move(binary),
+                       converted_message = std::move(converted_message), binary = std::move(binary),
                        driver = std::move(*driver)]() mutable {
-      auto start = driver->Start(message->GetOutgoingMessage(), driver_dispatcher_);
+      auto start = driver->Start(converted_message->incoming_message(), driver_dispatcher_);
       if (start.is_error()) {
         LOGF(ERROR, "Failed to start driver '/pkg/%s': %s", binary.data(), start.status_string());
         completer.Close(start.error_value());

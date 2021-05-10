@@ -412,7 +412,8 @@ Result Walker<VisitorImpl>::WalkStructPointer(const FidlCodedStructPointer* code
   Position obj_position;
   auto status =
       visitor_->VisitPointer(position, VisitorImpl::PointeeType::kOther, PtrTo<Ptr<void>>(position),
-                             coded_struct_pointer->struct_type->size, &obj_position);
+                             coded_struct_pointer->struct_type->size,
+                             kFidlMemcpyCompatibility_CannotMemcpy, &obj_position);
   FIDL_STATUS_GUARD(status);
   return WalkStruct(coded_struct_pointer->struct_type, obj_position, inner_depth);
 }
@@ -431,10 +432,10 @@ Result Walker<VisitorImpl>::WalkEnvelope(Position envelope_position,
 
     uint32_t num_bytes = payload_type != nullptr ? TypeSize(payload_type) : envelope->num_bytes;
     Position obj_position;
-    auto status =
-        visitor_->VisitPointer(envelope_position, VisitorImpl::PointeeType::kOther,
-                               // casting since |envelope_ptr->data| is always void*
-                               &const_cast<Ptr<void>&>(envelope->data), num_bytes, &obj_position);
+    auto status = visitor_->VisitPointer(envelope_position, VisitorImpl::PointeeType::kOther,
+                                         // casting since |envelope_ptr->data| is always void*
+                                         &const_cast<Ptr<void>&>(envelope->data), num_bytes,
+                                         kFidlMemcpyCompatibility_CannotMemcpy, &obj_position);
     FIDL_CONTINUE_IN_SCOPE_STATUS_GUARD(status);
 
     if (likely(payload_type != nullptr)) {
@@ -477,8 +478,9 @@ Result Walker<VisitorImpl>::WalkTable(const FidlCodedTable* coded_table,
   OutOfLineDepth envelope_vector_depth = INCREASE_DEPTH(depth);
   FIDL_DEPTH_GUARD(envelope_vector_depth);
   Position envelope_vector_position;
-  auto status = visitor_->VisitPointer(position, VisitorImpl::PointeeType::kOther,
-                                       &envelope_vector_ptr->data, size, &envelope_vector_position);
+  auto status = visitor_->VisitPointer(
+      position, VisitorImpl::PointeeType::kOther, &envelope_vector_ptr->data, size,
+      kFidlMemcpyCompatibility_CannotMemcpy, &envelope_vector_position);
   FIDL_STATUS_GUARD(status);
 
   const FidlTableField* next_field = coded_table->fields;
@@ -583,7 +585,7 @@ Result Walker<VisitorImpl>::WalkString(const FidlCodedString* coded_string,
   status = visitor_->VisitPointer(
       position, VisitorImpl::PointeeType::kString,
       &reinterpret_cast<Ptr<void>&>(const_cast<Ptr<char>&>(string_ptr->data)),
-      static_cast<uint32_t>(size), &array_position);
+      static_cast<uint32_t>(size), kFidlMemcpyCompatibility_CanMemcpy, &array_position);
   FIDL_STATUS_GUARD(status);
   return Result::kContinue;
 }
@@ -640,8 +642,9 @@ Result Walker<VisitorImpl>::WalkVector(const FidlCodedVector* coded_vector,
   OutOfLineDepth array_depth = INCREASE_DEPTH(depth);
   FIDL_DEPTH_GUARD(array_depth);
   Position array_position;
-  status = visitor_->VisitPointer(position, VisitorImpl::PointeeType::kVector, &vector_ptr->data,
-                                  size, &array_position);
+  status =
+      visitor_->VisitPointer(position, VisitorImpl::PointeeType::kVector, &vector_ptr->data, size,
+                             coded_vector->element_memcpy_compatibility, &array_position);
   FIDL_STATUS_GUARD(status);
 
   uint32_t stride = coded_vector->element_size;

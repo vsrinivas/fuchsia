@@ -84,19 +84,33 @@ bool EncodeSuccess(FidlType* value, const std::vector<uint8_t>& bytes,
               << "): " << encoded.error_message() << std::endl;
     return false;
   }
-  auto encoded_bytes = encoded.GetOutgoingMessage().CopyBytes();
+  ::fidl::OutgoingMessage& outgoing = encoded.GetOutgoingMessage();
+  for (uint32_t i = 0; i < outgoing.iovec_actual(); i++) {
+    if (outgoing.iovecs()[i].buffer == nullptr) {
+      std::cout << "Iovec " << i << " unexpectedly had a null buffer" << std::endl;
+      return false;
+    }
+    if (outgoing.iovecs()[i].capacity == 0) {
+      std::cout << "Iovec " << i << " had zero capacity" << std::endl;
+      return false;
+    }
+    if (outgoing.iovecs()[i].reserved != 0) {
+      std::cout << "Iovec " << i << " had a non-zero reserved field" << std::endl;
+      return false;
+    }
+  }
+  auto encoded_bytes = outgoing.CopyBytes();
   bool bytes_match =
       ComparePayload(encoded_bytes.data(), encoded_bytes.size(), bytes.data(), bytes.size());
   bool handles_match = false;
   if (check_handle_rights) {
-    handles_match = ComparePayload(encoded.GetOutgoingMessage().handles(),
-                                   encoded.GetOutgoingMessage().handle_actual(),
+    handles_match = ComparePayload(outgoing.handles(), outgoing.handle_actual(),
                                    handle_dispositions.data(), handle_dispositions.size());
   } else {
     std::vector<zx_handle_t> outgoing_msg_handles;
     std::vector<zx_handle_t> expected_handles;
-    for (size_t i = 0; i < encoded.GetOutgoingMessage().handle_actual(); i++) {
-      outgoing_msg_handles.push_back(encoded.GetOutgoingMessage().handles()[i].handle);
+    for (size_t i = 0; i < outgoing.handle_actual(); i++) {
+      outgoing_msg_handles.push_back(outgoing.handles()[i].handle);
     }
     for (const auto& handle_disposition : handle_dispositions) {
       expected_handles.push_back(handle_disposition.handle);

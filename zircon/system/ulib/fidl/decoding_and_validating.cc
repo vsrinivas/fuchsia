@@ -115,6 +115,7 @@ class FidlDecoder final : public BaseVisitor<Byte> {
 
   Status VisitPointer(Position ptr_position, PointeeType pointee_type,
                       ObjectPointerPointer object_ptr_ptr, uint32_t inline_size,
+                      FidlMemcpyCompatibility pointee_memcpy_compatibility,
                       Position* out_position) {
     uint32_t new_offset;
     if (unlikely(!FidlAddOutOfLine(next_out_of_line_, inline_size, &new_offset))) {

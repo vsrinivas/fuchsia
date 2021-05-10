@@ -97,6 +97,7 @@ if (is_fuchsia) {
       "llcpp_async_transaction.cc",
       "llcpp_client_base.cc",
       "llcpp_coding.c",
+      "llcpp_encoding.cc",
       "llcpp_fidl_allocator.cc",
       "llcpp_message.cc",
       "llcpp_result.cc",
@@ -157,6 +158,7 @@ if (is_fuchsia) {
     sdk_migrated = true
     sources = [
       "llcpp_coding.c",
+      "llcpp_encoding.cc",
       "llcpp_fidl_allocator.cc",
       "llcpp_message.cc",
       "llcpp_result.cc",

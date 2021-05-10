@@ -51,6 +51,7 @@ class FidlHandleCloser final
 
   Status VisitPointer(Position ptr_position, PointeeType pointee_type,
                       ObjectPointerPointer object_ptr_ptr, uint32_t inline_size,
+                      FidlMemcpyCompatibility pointee_memcpy_compatibility,
                       Position* out_position) {
     // Just follow the pointer into the child object
     *out_position = Position{*object_ptr_ptr};

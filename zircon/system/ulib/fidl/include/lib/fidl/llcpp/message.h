@@ -32,9 +32,9 @@ class ClientBase;
 class ResponseContext;
 #endif  // __Fuchsia__
 
-// Create a type for the 1-element iovec buffer used as the output of fidl_encode_iovec.
-// TODO(fxbug.dev/66977) Replace this with a resizable buffer type.
-constexpr size_t IovecBufferSize = 1;
+// This is chosen for performance reasons. It should generally be the same as kIovecChunkSize in
+// the kernel.
+constexpr size_t IovecBufferSize = 16;
 using IovecBuffer = zx_channel_iovec_t[IovecBufferSize];
 
 }  // namespace internal
