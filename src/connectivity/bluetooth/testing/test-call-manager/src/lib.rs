@@ -140,9 +140,9 @@ impl CallState {
     /// responder to report with.
     pub fn update_state(&mut self, state: FidlCallState) -> Result<(), Error> {
         self.state = state;
-        if self.reported_state != Some(state) {
+        if self.reported_state != Some(state) && self.responder.is_some() {
             let responder =
-                self.responder.take().ok_or_else(|| format_err!("No call responder"))?;
+                self.responder.take().expect("responder must be some after checking for presence");
             responder.send(state)?;
             self.reported_state = Some(state);
         }
