@@ -4,6 +4,7 @@
 
 use std::cmp::{Eq, Ord, Ordering, PartialOrd};
 use std::collections::BTreeMap;
+use std::iter::Iterator;
 use std::ops::Bound;
 use std::ops::Range;
 
@@ -257,6 +258,12 @@ where
         }
     }
 
+    /// Iterate over the ranges in the map.
+    #[cfg(test)]
+    pub fn iter(&self) -> impl Iterator<Item = (&Range<K>, &V)> {
+        self.map.iter().map(|(k, value)| (&k.range, value))
+    }
+
     /// Associate the keys in the given range with the given value.
     ///
     /// Callers must ensure that the keys in the given range are not already
@@ -299,6 +306,26 @@ mod test {
         assert!(map.get(&9).is_none());
         assert_eq!((&(10..34), &-14), map.get(&33).unwrap());
         assert!(map.get(&34).is_none());
+    }
+
+    #[test]
+    fn test_iter() {
+        let mut map = RangeMap::<u32, i32>::new();
+
+        map.insert(10..34, -14);
+        map.insert(74..92, -12);
+
+        let mut iter = map.iter();
+
+        let (range, value) = iter.next().expect("missing first");
+        assert_eq!(10..34, *range);
+        assert_eq!(-14, *value);
+
+        let (range, value) = iter.next().expect("missing first");
+        assert_eq!(74..92, *range);
+        assert_eq!(-12, *value);
+
+        assert!(iter.next().is_none());
     }
 
     #[test]
