@@ -115,7 +115,6 @@ constexpr ErrorDef<std::vector<std::string_view>> ErrUnknownLibrary(
 constexpr ErrorDef ErrProtocolComposedMultipleTimes("protocol composed multiple times");
 constexpr ErrorDef ErrDefaultsOnTablesNotSupported("Defaults on table members are not supported.");
 constexpr ErrorDef ErrDefaultsOnUnionsNotSupported("Defaults on union members are not supported.");
-constexpr ErrorDef ErrNullableOrdinaledMember("Table/union members cannot be nullable");
 constexpr ErrorDef ErrNullableTableMember("Table members cannot be nullable");
 constexpr ErrorDef ErrNullableUnionMember("Union members cannot be nullable");
 

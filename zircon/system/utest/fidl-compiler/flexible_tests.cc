@@ -10,22 +10,51 @@
 
 namespace {
 
-TEST(FlexibleEnum, BadMultipleUnknown) {
-  std::string fidl_library = R"FIDL(
+TEST(FlexibleTests, BadEnumMultipleUnknown) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+type Foo = flexible enum : uint8 {
+  @unknown ZERO = 0;
+  @unknown ONE = 1;
+};
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownAttributeOnMultipleMembers);
+}
+
+TEST(FlexibleTests, BadEnumMultipleUnknownOld) {
+  TestLibrary library(R"FIDL(
 library example;
 
 flexible enum Foo : uint8 {
   [Unknown] ZERO = 0;
   [Unknown] ONE = 1;
 };
-)FIDL";
-
-  TestLibrary library(fidl_library);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownAttributeOnMultipleMembers);
 }
 
-TEST(FlexibleEnum, BadMaxValueWithoutUnknownUnsigned) {
-  std::string fidl_library = R"FIDL(
+TEST(FlexibleTests, BadEnumMaxValueWithoutUnknownUnsigned) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+type Foo = flexible enum : uint8 {
+  ZERO = 0;
+  ONE = 1;
+  MAX = 255;
+};
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrFlexibleEnumMemberWithMaxValue);
+}
+
+TEST(FlexibleTests, BadEnumMaxValueWithoutUnknownUnsignedOld) {
+  TestLibrary library(R"FIDL(
 library example;
 
 flexible enum Foo : uint8 {
@@ -33,14 +62,28 @@ flexible enum Foo : uint8 {
   ONE = 1;
   MAX = 255;
 };
-)FIDL";
-
-  TestLibrary library(fidl_library);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrFlexibleEnumMemberWithMaxValue);
 }
 
-TEST(FlexibleEnum, BadMaxValueWithoutUnknownSigned) {
-  std::string fidl_library = R"FIDL(
+TEST(FlexibleTests, BadEnumMaxValueWithoutUnknownSigned) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+type Foo = flexible enum : int8 {
+  ZERO = 0;
+  ONE = 1;
+  MAX = 127;
+};
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrFlexibleEnumMemberWithMaxValue);
+}
+
+TEST(FlexibleTests, BadEnumMaxValueWithoutUnknownSignedOld) {
+  TestLibrary library(R"FIDL(
 library example;
 
 flexible enum Foo : int8 {
@@ -48,14 +91,12 @@ flexible enum Foo : int8 {
   ONE = 1;
   MAX = 127;
 };
-)FIDL";
-
-  TestLibrary library(fidl_library);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrFlexibleEnumMemberWithMaxValue);
 }
 
-TEST(FlexibleEnum, GoodCanUseMaxValueIfOtherIsUnknownUnsigned) {
-  std::string fidl_library = R"FIDL(
+TEST(FlexibleTests, GoodEnumCanUseMaxValueIfOtherIsUnknownUnsigned) {
+  TestLibrary library(R"FIDL(
 library example;
 
 flexible enum Foo : uint8 {
@@ -63,10 +104,8 @@ flexible enum Foo : uint8 {
   [Unknown] ONE = 1;
   MAX = 255;
 };
-)FIDL";
-
-  TestLibrary library(fidl_library);
-  ASSERT_TRUE(library.Compile());
+)FIDL");
+  ASSERT_COMPILED_AND_CONVERT(library);
 
   auto foo_enum = library.LookupEnum("Foo");
   ASSERT_NOT_NULL(foo_enum);
@@ -75,8 +114,8 @@ flexible enum Foo : uint8 {
   EXPECT_EQ(foo_enum->unknown_value_unsigned.value(), 1);
 }
 
-TEST(FlexibleEnum, GoodCanUseMaxValueIfOtherIsUnknownSigned) {
-  std::string fidl_library = R"FIDL(
+TEST(FlexibleTests, GoodEnumCanUseMaxValueIfOtherIsUnknownSigned) {
+  TestLibrary library(R"FIDL(
 library example;
 
 flexible enum Foo : int8 {
@@ -84,10 +123,8 @@ flexible enum Foo : int8 {
   [Unknown] ONE = 1;
   MAX = 127;
 };
-)FIDL";
-
-  TestLibrary library(fidl_library);
-  ASSERT_TRUE(library.Compile());
+)FIDL");
+  ASSERT_COMPILED_AND_CONVERT(library);
 
   auto foo_enum = library.LookupEnum("Foo");
   ASSERT_NOT_NULL(foo_enum);
@@ -96,8 +133,8 @@ flexible enum Foo : int8 {
   EXPECT_FALSE(foo_enum->unknown_value_unsigned.has_value());
 }
 
-TEST(FlexibleEnum, GoodCanUseZeroAsUnknownValue) {
-  std::string fidl_library = R"FIDL(
+TEST(FlexibleTests, GoodEnumCanUseZeroAsUnknownValue) {
+  TestLibrary library(R"FIDL(
 library example;
 
 flexible enum Foo : int8 {
@@ -105,10 +142,8 @@ flexible enum Foo : int8 {
   ONE = 1;
   MAX = 127;
 };
-)FIDL";
-
-  TestLibrary library(fidl_library);
-  ASSERT_TRUE(library.Compile());
+)FIDL");
+  ASSERT_COMPILED_AND_CONVERT(library);
 
   auto foo_enum = library.LookupEnum("Foo");
   ASSERT_NOT_NULL(foo_enum);
@@ -117,36 +152,64 @@ flexible enum Foo : int8 {
   EXPECT_FALSE(foo_enum->unknown_value_unsigned.has_value());
 }
 
-TEST(FlexibleUnion, BadMultipleUnknown) {
-  std::string fidl_library = R"FIDL(
+TEST(FlexibleTests, GoodUnionWithSingleUnknown) {
+  TestLibrary library(R"FIDL(
+library example;
+
+flexible union Foo {
+  1: int32 a;
+  [Unknown] 2: int32 b;
+};
+)FIDL");
+  ASSERT_COMPILED_AND_CONVERT(library);
+
+  auto foo_union = library.LookupUnion("Foo");
+  ASSERT_NOT_NULL(foo_union);
+}
+
+TEST(FlexibleTests, BadUnionMultipleUnknown) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+type Foo = flexible union {
+  @unknown 1: a int32;
+  @unknown 2: b int32;
+};
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownAttributeOnMultipleMembers);
+}
+
+TEST(FlexibleTests, BadUnionMultipleUnknownOld) {
+  TestLibrary library(R"FIDL(
 library example;
 
 flexible union Foo {
   [Unknown] 1: int32 a;
   [Unknown] 2: int32 b;
 };
-)FIDL";
-
-  TestLibrary library(fidl_library);
+)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownAttributeOnMultipleMembers);
 }
 
-TEST(FlexibleUnion, BadMaxValueWithoutUnknown) {
-  // Ideally, we'd want to be able to define a union with an ordinal that's the
-  // maximum possible value for a uint64:
-  //
-  // flexible union Foo {
-  //   1: reserved;
-  //   2: reserved;
-  //   3: reserved;
-  //   …
-  //   UINT64_MAX: int32 a;
-  // };
-  //
-  // … and ensure that this fails compilation, due to UINT64_MAX being reserved
-  // for the unknown member. However, it's impossible to define this given that
-  // union ordinals must be contiguous (the disk space used for the FIDL definition
-  // in ASCII would require 18 petabytes), so it doesn't make sense to test for this.
-}
+// TEST(FlexibleTests, BadUnionMaxValueWithoutUnknown) {
+// Ideally, we'd want to be able to define a union with an ordinal that's the
+// maximum possible value for a uint64:
+//
+// flexible union Foo {
+//   1: reserved;
+//   2: reserved;
+//   3: reserved;
+//   …
+//   UINT64_MAX: int32 a;
+// };
+//
+// … and ensure that this fails compilation, due to UINT64_MAX being reserved
+// for the unknown member. However, it's impossible to define this given that
+// union ordinals must be contiguous (the disk space used for the FIDL definition
+// in ASCII would require 18 petabytes), so it doesn't make sense to test for this.
+// }
 
 }  // namespace

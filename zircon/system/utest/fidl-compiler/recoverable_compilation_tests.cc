@@ -11,6 +11,30 @@
 namespace {
 
 TEST(RecoverableCompilationTests, BadRecoverInLibraryConsume) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol P {};
+protocol P {};         // Error: name collision
+
+type Union = union {
+    1: b bool;
+}:optional;            // Error: cannot constraint in declaration
+
+type NewType = Union;  // Error: new types not allowed
+)FIDL",
+                      experimental_flags);
+  EXPECT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 3);
+  ASSERT_ERR(errors[0], fidl::ErrNameCollision);
+  ASSERT_ERR(errors[1], fidl::ErrCannotConstrainInLayoutDecl);
+  ASSERT_ERR(errors[2], fidl::ErrNewTypesNotAllowed);
+}
+
+TEST(RecoverableCompilationTests, BadRecoverInLibraryConsumeOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -34,6 +58,45 @@ union Union {
 }
 
 TEST(RecoverableCompilationTests, BadRecoverInLibraryCompile) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+type Union = union {
+    1: string_value string;
+    2: unknown_value UnknownType; // Error: unknown type
+};
+
+type Enum = enum {
+    ZERO = 0;
+    ONE = 1;
+    TWO = 1;                      // Error: duplicate value
+    THREE = 3;
+};
+
+type OtherEnum = enum {
+    NONE = 0;
+    ONE = 1;
+    ONE = 2;                      // Error: duplicate name
+};
+
+type NonDenseTable = table {
+    1: s string;
+    3: b uint8;                   // Error: non-dense ordinals
+};
+)FIDL",
+                      experimental_flags);
+  EXPECT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 4);
+  ASSERT_ERR(errors[0], fidl::ErrDuplicateMemberValue);
+  ASSERT_ERR(errors[1], fidl::ErrNonDenseOrdinal);
+  ASSERT_ERR(errors[2], fidl::ErrDuplicateMemberName);
+  ASSERT_ERR(errors[3], fidl::ErrUnknownType);
+}
+
+TEST(RecoverableCompilationTests, BadRecoverInLibraryCompileOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -71,6 +134,37 @@ table NonDenseTable {
 }
 
 TEST(RecoverableCompilationTests, BadRecoverInLibraryVerifyAttributes) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+@for_deprecated_c_bindings("True")  // Error: invalid placement & value
+type Union = union {
+    1: foo string;
+};
+
+@transitional                       // Error: invalid placement
+type Table = table {
+    1: foo string;
+};
+
+@max_bytes("1")                     // Error: too large
+type Struct = struct {
+    foo uint16;
+};
+)FIDL",
+                      experimental_flags);
+  EXPECT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 4);
+  ASSERT_ERR(errors[0], fidl::ErrInvalidAttributePlacement);
+  ASSERT_ERR(errors[1], fidl::ErrInvalidAttributeValue);
+  ASSERT_ERR(errors[2], fidl::ErrInvalidAttributePlacement);
+  ASSERT_ERR(errors[3], fidl::ErrTooManyBytes);
+}
+
+TEST(RecoverableCompilationTests, BadRecoverInLibraryVerifyAttributesOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -88,7 +182,6 @@ table Table {
 struct Struct {
     uint16 foo;
 };
-
 )FIDL");
   EXPECT_FALSE(library.Compile());
   const auto& errors = library.errors();

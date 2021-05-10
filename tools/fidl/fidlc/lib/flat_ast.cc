@@ -1996,20 +1996,20 @@ const AttributeSchema* Libraries::RetrieveAttributeSchema(
 
   // Match against all known attributes.
   for (const auto& name_and_schema : attribute_schemas_) {
-    std::string schema_name = attribute_name;
-    std::string supplied_name = name_and_schema.first;
+    std::string supplied_name = attribute_name;
+    std::string suspected_name = name_and_schema.first;
 
     // TODO(fxbug.dev/70247): once the migration is complete, we no longer need
     //  to do the the casting to lower_snake_case, so this check should be
     //  removed.
     if (syntax == fidl::utils::Syntax::kOld) {
-      schema_name = fidl::utils::to_upper_camel_case(name_and_schema.first);
       supplied_name = attribute->name;
+      suspected_name = fidl::utils::to_upper_camel_case(name_and_schema.first);
     }
 
-    auto edit_distance = EditDistance(schema_name, supplied_name);
+    auto edit_distance = EditDistance(supplied_name, suspected_name);
     if (0 < edit_distance && edit_distance < 2) {
-      reporter->Report(WarnAttributeTypo, attribute->span(), supplied_name, schema_name);
+      reporter->Report(WarnAttributeTypo, attribute->span(), supplied_name, suspected_name);
       return nullptr;
     }
   }
@@ -3262,7 +3262,7 @@ void Library::ConsumeTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl) {
   // TODO(fxbug.dev/7807)
   if (layout_ref->kind == raw::LayoutReference::Kind::kNamed) {
     auto named_ref = static_cast<raw::NamedLayoutReference*>(layout_ref.get());
-    Fail(ErrNewTypesNotAllowed, name, named_ref->span().data());
+    Fail(ErrNewTypesNotAllowed, type_decl->span(), name, named_ref->span().data());
     return;
   }
 
