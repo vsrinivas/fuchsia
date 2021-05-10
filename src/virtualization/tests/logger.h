@@ -23,7 +23,9 @@ class Logger {
   Logger(const Logger&) = delete;
   Logger& operator=(const Logger&) = delete;
 
-  static constexpr bool kGuestOutput = false;
+  // TODO(fxbug.dev/56119): Currently enabled to diagnose ongoing test flakes.
+  static constexpr bool kGuestOutput = true;
+
   std::string buffer_;
 };
 
