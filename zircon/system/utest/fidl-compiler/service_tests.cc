@@ -21,7 +21,7 @@ library example;
 service SomeService {};
 
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
 
   auto service = library.LookupService("SomeService");
   ASSERT_NOT_NULL(service);
@@ -43,7 +43,7 @@ service SomeService {
 };
 
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
 
   auto service = library.LookupService("SomeService");
   ASSERT_NOT_NULL(service);
@@ -64,6 +64,25 @@ service SomeService {
 }
 
 TEST(ServiceTests, BadCannotHaveConflictingMembers) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol SomeProtocol1 {};
+protocol SomeProtocol2 {};
+
+service SomeService {
+    this_will_conflict client_end:SomeProtocol1;
+    this_will_conflict client_end:SomeProtocol2;
+};
+
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateServiceMemberName);
+}
+
+TEST(ServiceTests, BadCannotHaveConflictingMembersOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -80,6 +99,23 @@ service SomeService {
 }
 
 TEST(ServiceTests, BadNoNullableProtocolMembers) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol SomeProtocol {};
+
+service SomeService {
+    members_are_optional_already client_end:<SomeProtocol, optional>;
+};
+
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNullableServiceMember);
+}
+
+TEST(ServiceTests, BadNoNullableProtocolMembersOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -94,6 +130,25 @@ service SomeService {
 }
 
 TEST(ServiceTests, BadOnlyProtocolMembers) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+type NotAProtocol = struct {};
+
+service SomeService {
+    not_a_protocol NotAProtocol;
+};
+
+)FIDL",
+                      experimental_flags);
+  // NOTE(fxbug.dev/72924): a separate error is used, since client/server ends
+  // are types.
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustBeTransportSide);
+}
+
+TEST(ServiceTests, BadOnlyProtocolMembersOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -108,6 +163,23 @@ service SomeService {
 }
 
 TEST(ServiceTests, BadCannotUseServicesInDecls) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+service SomeService {};
+
+type CannotUseService = struct {
+    svc SomeService;
+};
+
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotUseService);
+}
+
+TEST(ServiceTests, BadCannotUseServicesInDeclsOld) {
   TestLibrary library(R"FIDL(
 library example;
 

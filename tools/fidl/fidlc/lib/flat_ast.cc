@@ -5096,14 +5096,17 @@ bool Library::CompileService(Service* service_decl) {
     // in this context: in the new syntax, nothing changes. In the old syntax, we are more
     // restrictive in this context, requiring kProtocolOnly rather than kTypeOrProtocol (which is
     // the default for TypeConstructorOld).
-    bool ok =
-        std::visit(fidl::utils::matchers{
-                       [this](const std::unique_ptr<TypeConstructorOld>& type_ctor) -> bool {
-                         return VerifyTypeCategory(type_ctor->type, type_ctor->name.span(),
-                                                   AllowedCategories::kProtocolOnly);
-                       },
-                       [](const std::unique_ptr<TypeConstructorNew>& t) -> bool { return true; }},
-                   member.type_ctor);
+    bool ok = std::visit(fidl::utils::matchers{
+                             [this](const std::unique_ptr<TypeConstructorOld>& type_ctor) -> bool {
+                               return VerifyTypeCategory(type_ctor->type, type_ctor->name.span(),
+                                                         AllowedCategories::kProtocolOnly);
+                             },
+                             [&member, this](const std::unique_ptr<TypeConstructorNew>& t) -> bool {
+                               if (t->type->kind != Type::Kind::kTransportSide)
+                                 return Fail(ErrMustBeTransportSide, member.name);
+                               return true;
+                             }},
+                         member.type_ctor);
     if (!ok)
       return false;
     if (GetType(member.type_ctor)->nullability != types::Nullability::kNonnullable)
