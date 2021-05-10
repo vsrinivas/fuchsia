@@ -272,30 +272,18 @@ func TestEndpoint_Close(t *testing.T) {
 	defer eps.close()
 
 	eps.mu.Lock()
-	errChannels := []struct {
-		ch   <-chan tcpip.Error
-		name string
-	}{
-		{ch: eps.mu.loopReadDone, name: "loopReadDone"},
-		{ch: eps.mu.loopWriteDone, name: "loopWriteDone"},
-	}
 	channels := []struct {
 		ch   <-chan struct{}
 		name string
 	}{
 		{ch: eps.closing, name: "closing"},
 		{ch: eps.mu.loopPollDone, name: "loopPollDone"},
+		{ch: eps.mu.loopReadDone, name: "loopReadDone"},
+		{ch: eps.mu.loopWriteDone, name: "loopWriteDone"},
 	}
 	eps.mu.Unlock()
 
 	// Check starting conditions.
-	for _, ch := range errChannels {
-		select {
-		case err := <-ch.ch:
-			t.Errorf("%s cleaned up prematurely: %#v", ch.name, err)
-		default:
-		}
-	}
 	for _, ch := range channels {
 		select {
 		case <-ch.ch:
@@ -366,13 +354,6 @@ func TestEndpoint_Close(t *testing.T) {
 	}
 
 	// There's still a referent.
-	for _, ch := range errChannels {
-		select {
-		case err := <-ch.ch:
-			t.Errorf("%s cleaned up prematurely: %#v", ch.name, err)
-		default:
-		}
-	}
 	for _, ch := range channels {
 		select {
 		case <-ch.ch:
@@ -402,18 +383,6 @@ func TestEndpoint_Close(t *testing.T) {
 	// Give a generous timeout for the closed channel to be detected.
 	timeout := make(chan struct{})
 	time.AfterFunc(5*time.Second, func() { close(timeout) })
-	for _, ch := range errChannels {
-		if ch.ch != nil {
-			select {
-			case err := <-ch.ch:
-				if err != nil {
-					t.Error(err)
-				}
-			case <-timeout:
-				t.Errorf("%s not cleaned up", ch.name)
-			}
-		}
-	}
 	for _, ch := range channels {
 		if ch.ch != nil {
 			select {
@@ -507,42 +476,20 @@ func TestTCPEndpointMapAcceptAfterReset(t *testing.T) {
 	}
 
 	eps.mu.Lock()
-	errChannels := []struct {
-		ch   <-chan tcpip.Error
-		name string
-	}{
-		{ch: eps.mu.loopReadDone, name: "loopReadDone"},
-		{ch: eps.mu.loopWriteDone, name: "loopWriteDone"},
-	}
 	channels := []struct {
 		ch   <-chan struct{}
 		name string
 	}{
 		{ch: eps.closing, name: "closing"},
 		{ch: eps.mu.loopPollDone, name: "loopPollDone"},
+		{ch: eps.mu.loopReadDone, name: "loopReadDone"},
+		{ch: eps.mu.loopWriteDone, name: "loopWriteDone"},
 	}
 	eps.mu.Unlock()
 
 	// Give a generous timeout for the closed channel to be detected.
 	timeout := make(chan struct{})
 	time.AfterFunc(5*time.Second, func() { close(timeout) })
-	for _, ch := range errChannels {
-		if ch.ch != nil {
-			select {
-			case err := <-ch.ch:
-				switch err.(type) {
-				case nil:
-				case *tcpip.ErrClosedForReceive:
-				case *tcpip.ErrClosedForSend:
-				case *tcpip.ErrConnectionReset:
-				default:
-					t.Error(err)
-				}
-			case <-timeout:
-				t.Errorf("%s not cleaned up", ch.name)
-			}
-		}
-	}
 	for _, ch := range channels {
 		if ch.ch != nil {
 			select {

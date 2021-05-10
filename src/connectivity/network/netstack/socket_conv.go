@@ -78,7 +78,7 @@ func boolToInt32(v bool) int32 {
 	return 0
 }
 
-func GetSockOpt(ep tcpip.Endpoint, ns *Netstack, terminal <-chan tcpip.Error, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, level, name int16) (interface{}, tcpip.Error) {
+func GetSockOpt(ep tcpip.Endpoint, ns *Netstack, terminal *terminalError, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, level, name int16) (interface{}, tcpip.Error) {
 	switch level {
 	case C.SOL_SOCKET:
 		return getSockOptSocket(ep, ns, terminal, netProto, transProto, name)
@@ -105,7 +105,7 @@ func GetSockOpt(ep tcpip.Endpoint, ns *Netstack, terminal <-chan tcpip.Error, ne
 	return nil, &tcpip.ErrUnknownProtocol{}
 }
 
-func getSockOptSocket(ep tcpip.Endpoint, ns *Netstack, terminal <-chan tcpip.Error, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, name int16) (interface{}, tcpip.Error) {
+func getSockOptSocket(ep tcpip.Endpoint, ns *Netstack, terminal *terminalError, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, name int16) (interface{}, tcpip.Error) {
 	switch name {
 	case C.SO_TYPE:
 		switch transProto {
@@ -143,12 +143,17 @@ func getSockOptSocket(ep tcpip.Endpoint, ns *Netstack, terminal <-chan tcpip.Err
 
 	case C.SO_ERROR:
 		err := func() tcpip.Error {
-			select {
-			case err := <-terminal:
+			terminal.mu.Lock()
+			defer terminal.mu.Unlock()
+			if ch := terminal.mu.ch; ch != nil {
+				err := <-ch
+				_ = syslog.DebugTf("SO_ERROR", "%p: err=%#v", ep, err)
 				return err
-			default:
-				return ep.LastError()
 			}
+			err := ep.LastError()
+			terminal.setConsumedLocked(err)
+			_ = syslog.DebugTf("SO_ERROR", "%p: err=%#v", ep, err)
+			return err
 		}()
 		if err == nil {
 			return int32(0), nil

@@ -1589,7 +1589,41 @@ TEST(NetStreamTest, ConnectCloseRace) {
   }
 }
 
-void TestHangupDuringConnect(void (*hangup)(fbl::unique_fd*)) {
+enum class CloseTarget {
+  CLIENT,
+  SERVER,
+};
+
+constexpr const char* CloseTargetToString(const CloseTarget s) {
+  switch (s) {
+    case CloseTarget::CLIENT:
+      return "Client";
+    case CloseTarget::SERVER:
+      return "Server";
+  }
+}
+
+enum class HangupMethod {
+  kClose,
+  kShutdown,
+};
+
+constexpr const char* HangupMethodToString(const HangupMethod s) {
+  switch (s) {
+    case HangupMethod::kClose:
+      return "Close";
+    case HangupMethod::kShutdown:
+      return "Shutdown";
+  }
+}
+
+using hangupParams = std::tuple<CloseTarget, HangupMethod>;
+
+class HangupTest : public ::testing::TestWithParam<hangupParams> {};
+
+TEST_P(HangupTest, DuringConnect) {
+  auto const& [closeTarget, hangupMethod] = GetParam();
+
   fbl::unique_fd client, listener;
   ASSERT_TRUE(client = fbl::unique_fd(socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)))
       << strerror(errno);
@@ -1610,18 +1644,41 @@ void TestHangupDuringConnect(void (*hangup)(fbl::unique_fd*)) {
   }
   ASSERT_EQ(listen(listener.get(), 0), 0) << strerror(errno);
 
-  // Connect asynchronously and immediately hang up the listener.
-  int ret = connect(client.get(), addr, addr_len);
+  // Connect asynchronously and immediately hang up.
+  int ret1 = connect(client.get(), addr, addr_len);
 #if !defined(__Fuchsia__)
   // Linux connect may succeed if the handshake completes before the system call returns.
-  if (ret != 0)
+  if (ret1 != 0)
 #endif
   {
-    ASSERT_EQ(ret, -1);
+    ASSERT_EQ(ret1, -1);
     ASSERT_EQ(errno, EINPROGRESS) << strerror(errno);
   }
 
-  ASSERT_NO_FATAL_FAILURE(hangup(&listener));
+  switch (closeTarget) {
+    case CloseTarget::CLIENT:
+      switch (hangupMethod) {
+        case HangupMethod::kClose:
+          ASSERT_EQ(close(client.release()), 0) << strerror(errno);
+          // Since we're closing the client, there's nothing more to do.
+          return;
+        case HangupMethod::kShutdown:
+          ASSERT_EQ(shutdown(client.get(), SHUT_RD), 0) << strerror(errno);
+          break;
+      }
+      break;
+    case CloseTarget::SERVER: {
+      switch (hangupMethod) {
+        case HangupMethod::kClose:
+          ASSERT_EQ(close(listener.release()), 0) << strerror(errno);
+          break;
+        case HangupMethod::kShutdown:
+          ASSERT_EQ(shutdown(listener.get(), SHUT_RD), 0) << strerror(errno);
+          break;
+      }
+      break;
+    }
+  }
 
   // Wait for the connection to close.
   {
@@ -1633,23 +1690,87 @@ void TestHangupDuringConnect(void (*hangup)(fbl::unique_fd*)) {
     int n = poll(&pfd, 1, kTimeout);
     ASSERT_GE(n, 0) << strerror(errno);
     ASSERT_EQ(n, 1);
-    ASSERT_EQ(pfd.revents, POLLIN | POLLERR | POLLHUP);
+
+    switch (closeTarget) {
+      case CloseTarget::CLIENT:
+        ASSERT_EQ(pfd.revents, POLLIN);
+        break;
+      case CloseTarget::SERVER:
+        ASSERT_EQ(pfd.revents, POLLIN | POLLERR | POLLHUP);
+        break;
+    }
   }
 
-  ASSERT_EQ(close(client.release()), 0) << strerror(errno);
+  // Retrieve the error; this sets errno.
+  int ret2 = connect(client.get(), addr, addr_len);
+#if defined(__Fuchsia__)
+  if (closeTarget == CloseTarget::CLIENT) {
+    // TODO(https://fxbug.dev/76353): This sometimes fails and sometimes doesn't. See below.
+  } else
+#endif
+  {
+    EXPECT_EQ(ret2, -1);
+  }
+
+  // Retrieve the error again, this does not mutate errno unless it fails.
+  int err;
+  socklen_t optlen = sizeof(err);
+  ASSERT_EQ(getsockopt(client.get(), SOL_SOCKET, SO_ERROR, &err, &optlen), 0) << strerror(errno);
+  ASSERT_EQ(optlen, sizeof(err));
+
+  // NB: ret1 is allowed to be success or EINPROGRESS on Linux. I was never able to see the success
+  // case locally, so EXPECT the EINPROGRESS value as a hint in case this flakes in CQ.
+  EXPECT_EQ(ret1, -1);
+  switch (closeTarget) {
+    case CloseTarget::CLIENT:
+#if defined(__Fuchsia__)
+      if (ret2 != 0) {
+        // ret2 was retrieved before the handshake completed. poll returned early.
+        EXPECT_EQ(errno, EALREADY) << strerror(errno);
+      } else {
+        // ret2 was successful, so errno wasn't modified.
+        //
+        // TODO(https://fxbug.dev/76353): Linux somehow returns EISCONN in this case, even though
+        // the first successful connection result was never returned to us. We should match that
+        // behavior, but more work is required to understand where the successful result was dropped
+        // (likely a side effect of the shutdown call).
+        EXPECT_EQ(errno, EINPROGRESS) << strerror(errno);
+      }
+#else
+      EXPECT_EQ(errno, EISCONN) << strerror(errno);
+#endif
+      EXPECT_EQ(err, 0) << strerror(err);
+      break;
+    case CloseTarget::SERVER:
+      switch (errno) {
+        case ECONNRESET:
+          // Listener was closed during or after handshake.
+          break;
+        case ECONNREFUSED:
+          // Listener was closed before handshake.
+          break;
+        default:
+          ADD_FAILURE() << strerror(errno);
+      }
+      // Error should have been consumed by the second connect call.
+      EXPECT_EQ(err, 0) << strerror(err);
+      break;
+  }
 }
 
-TEST(NetStreamTest, CloseDuringConnect) {
-  TestHangupDuringConnect([](fbl::unique_fd* listener) {
-    ASSERT_EQ(close(listener->release()), 0) << strerror(errno);
-  });
+std::string hangupParamsToString(const ::testing::TestParamInfo<hangupParams> info) {
+  auto const& [closeTarget, hangupMethod] = info.param;
+  std::stringstream s;
+  s << HangupMethodToString(hangupMethod);
+  s << CloseTargetToString(closeTarget);
+  return s.str();
 }
 
-TEST(NetStreamTest, ShutdownDuringConnect) {
-  TestHangupDuringConnect([](fbl::unique_fd* listener) {
-    ASSERT_EQ(shutdown(listener->get(), SHUT_RD), 0) << strerror(errno);
-  });
-}
+INSTANTIATE_TEST_SUITE_P(
+    NetStreamTest, HangupTest,
+    ::testing::Combine(::testing::Values(CloseTarget::CLIENT, CloseTarget::SERVER),
+                       ::testing::Values(HangupMethod::kClose, HangupMethod::kShutdown)),
+    hangupParamsToString);
 
 TEST(LocalhostTest, RaceLocalPeerClose) {
   fbl::unique_fd listener;
@@ -3589,20 +3710,6 @@ TEST_F(NetStreamSocketsTest, ShutdownPendingWrite) {
   // Expect no data drops and all written data by server is received
   // by the client().
   EXPECT_EQ(rcvd, wrote);
-}
-
-enum class CloseTarget {
-  CLIENT,
-  SERVER,
-};
-
-constexpr const char* CloseTargetToString(const CloseTarget s) {
-  switch (s) {
-    case CloseTarget::CLIENT:
-      return "Client";
-    case CloseTarget::SERVER:
-      return "Server";
-  }
 }
 
 using blockedIOParams = std::tuple<IOMethod, CloseTarget, bool>;
