@@ -37,6 +37,23 @@ zx::status<PackageResolver::FetchDriverVmoResult> PackageResolver::FetchDriverVm
   return LoadDriverPackage(&result.value() /* package_dir */);
 }
 
+zx::status<std::unique_ptr<Driver>> PackageResolver::FetchDriver(const std::string& package_url) {
+  auto result = FetchDriverVmo(package_url);
+  if (result.is_error()) {
+    return result.take_error();
+  }
+  Driver* driver = nullptr;
+  DriverLoadCallback callback = [&driver](Driver* d, const char* version) mutable { driver = d; };
+
+  zx_status_t status = load_driver_vmo(boot_args_, result.value().libname,
+                                       std::move(result.value().vmo), std::move(callback));
+
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+  return zx::ok(std::unique_ptr<Driver>(driver));
+}
+
 zx_status_t PackageResolver::ConnectToResolverService() {
   zx::channel local, remote;
   zx_status_t status = zx::channel::create(0u, &local, &remote);

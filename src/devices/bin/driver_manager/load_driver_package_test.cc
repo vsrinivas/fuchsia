@@ -7,6 +7,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/ddk/binding.h>
+#include <zircon/errors.h>
 
 #include <zxtest/zxtest.h>
 
@@ -27,14 +28,22 @@ class FakePackageResolver : public internal::PackageResolverInterface {
     registered_drivers_.push_back(DriverInfo{package_url, libname, std::move(vmo)});
   }
 
-  // PackageResolverInterface implementation.
-  zx::status<internal::PackageResolver::FetchDriverVmoResult> FetchDriverVmo(
-      const std::string& package_url) override {
+  zx::status<std::unique_ptr<Driver>> FetchDriver(const std::string& package_url) override {
     for (auto& driver_info : registered_drivers_) {
-      if (driver_info.package_url == package_url) {
-        return zx::ok(internal::PackageResolver::FetchDriverVmoResult{driver_info.libname,
-                                                                      std::move(driver_info.vmo)});
+      if (driver_info.package_url != package_url) {
+        continue;
       }
+      Driver* driver = nullptr;
+      DriverLoadCallback callback = [&driver](Driver* d, const char* version) mutable {
+        driver = d;
+      };
+
+      zx_status_t status = load_driver_vmo(nullptr, driver_info.libname, std::move(driver_info.vmo),
+                                           std::move(callback));
+      if (status != ZX_OK) {
+        return zx::error(status);
+      }
+      return zx::ok(std::unique_ptr<Driver>(driver));
     }
     return zx::error(ZX_ERR_NOT_FOUND);
   }

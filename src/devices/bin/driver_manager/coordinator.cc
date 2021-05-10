@@ -100,7 +100,8 @@ Coordinator::Coordinator(CoordinatorConfig config, InspectManager* inspect_manag
     : config_(std::move(config)),
       dispatcher_(dispatcher),
       suspend_handler_(this, config.suspend_fallback, config.suspend_timeout),
-      inspect_manager_(inspect_manager) {
+      inspect_manager_(inspect_manager),
+      package_resolver_(config.boot_args) {
   if (config_.oom_event) {
     wait_on_oom_event_.set_object(config_.oom_event.get());
     wait_on_oom_event_.set_trigger(ZX_EVENT_SIGNALED);
@@ -1672,16 +1673,16 @@ zx_status_t Coordinator::LoadEphemeralDriver(internal::PackageResolverInterface*
                                              const std::string& package_url) {
   ZX_ASSERT(config_.enable_ephemeral);
 
-  auto result = resolver->FetchDriverVmo(package_url);
+  auto result = resolver->FetchDriver(package_url);
   if (!result.is_ok()) {
     return result.status_value();
   }
-  zx_status_t status =
-      load_driver_vmo(boot_args(), result.value().libname, std::move(result.value().vmo),
-                      fit::bind_member(this, &Coordinator::DriverAdded));
-  if (status != ZX_OK) {
-    return ZX_ERR_INTERNAL;
-  }
+  fbl::DoublyLinkedList<std::unique_ptr<Driver>> driver_list;
+  driver_list.push_back(std::move(result.value()));
+  async::PostTask(dispatcher_, [this, driver_list = std::move(driver_list)]() mutable {
+    AddAndBindDrivers(std::move(driver_list));
+  });
+
   return ZX_OK;
 }
 
