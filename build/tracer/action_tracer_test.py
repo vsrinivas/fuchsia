@@ -784,14 +784,6 @@ class AccessConstraintsTests(unittest.TestCase):
                 allowed_writes=abspaths({"main.o"}),
                 required_writes=abspaths({"main.o"})))
 
-    def test_have_response_file(self):
-        action = action_tracer.Action(
-            inputs=["script.sh"], response_file_name="response.out")
-        self.assertEqual(
-            action.access_constraints(),
-            action_tracer.AccessConstraints(
-                allowed_reads=abspaths({"script.sh", "response.out"})))
-
     def test_have_depfile_writeable_inputs(self):
         action = action_tracer.Action(inputs=["script.sh"], depfile="foo.d")
         with mock.patch.object(os.path, 'exists',

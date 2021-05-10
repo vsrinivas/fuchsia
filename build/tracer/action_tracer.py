@@ -388,7 +388,6 @@ class Action(object):
     outputs: Collection[str] = dataclasses.field(default_factory=list)
     depfile: Optional[str] = None
     parsed_depfile: Optional[DepFile] = None
-    response_file_name: Optional[str] = None
 
     def access_constraints(
             self, writeable_depfile_inputs=False) -> AccessConstraints:
@@ -417,9 +416,6 @@ class Action(object):
 
         # Everything writeable is readable.
         allowed_reads.update(allowed_writes)
-
-        if self.response_file_name:
-            allowed_reads.add(self.response_file_name)
 
         return AccessConstraints(
             # Follow links in all inputs because fsatrace will log access to link
@@ -699,8 +695,6 @@ def main_arg_parser() -> argparse.ArgumentParser:
         default="action",
         help="Type of target being wrapped",
     )
-    parser.add_argument(
-        "--response-file-name", help="action#response_file_name")
     parser.add_argument("--inputs", nargs="*", help="action#inputs")
     parser.add_argument("--outputs", nargs="*", help="action#outputs")
     parser.add_argument("--depfile", help="action#depfile")
@@ -837,10 +831,7 @@ def main():
 
     # Compute constraints from action properties (from args).
     action = Action(
-        inputs=args.inputs,
-        outputs=args.outputs,
-        depfile=args.depfile,
-        response_file_name=args.response_file_name)
+        inputs=args.inputs, outputs=args.outputs, depfile=args.depfile)
     access_constraints = action.access_constraints(
         writeable_depfile_inputs=args.writeable_depfile_inputs)
 

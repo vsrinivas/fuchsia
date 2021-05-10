@@ -595,6 +595,10 @@ foreach(_target_type,
                                "visibility",
                              ])
 
+      assert(
+          !defined(response_file_contents),
+          "Prefer write_file over response_file_contents, see https://fuchsia.dev/fuchsia-src/development/build/hermetic_actions?hl=en#expanding_arguments_from_a_file")
+
       # Accumulate action parameters (inputs, script, args, etc.)
       # over a series of transformations.
       # Innermost tranformations should be applied first.
@@ -710,10 +714,8 @@ foreach(_target_type,
         all_outputs_fresh = invoker.all_outputs_fresh
       }
 
-      # TODO(shayba): fix response file issue (see below)
       should_trace =
-          build_should_trace_actions && (hermetic_deps || all_outputs_fresh) &&
-          !defined(response_file_contents)
+          build_should_trace_actions && (hermetic_deps || all_outputs_fresh)
       if (!should_trace) {
         not_needed([
                      "hermetic_deps",
@@ -784,13 +786,6 @@ foreach(_target_type,
           args += [
             "--depfile",
             rebase_path(depfile, root_build_dir),
-          ]
-        }
-
-        if (defined(response_file_contents) && response_file_contents != []) {
-          args += [
-            "--response-file-name",
-            "{{response_file_name}}",
           ]
         }
 
