@@ -54,7 +54,7 @@ pub struct Daemon {
 }
 
 // This is just for mocking config values for unit testing.
-#[async_trait]
+#[async_trait(?Send)]
 trait ConfigReader: Send + Sync {
     async fn get(&self, q: &str) -> Result<Option<String>>;
 }
@@ -62,7 +62,7 @@ trait ConfigReader: Send + Sync {
 #[derive(Default)]
 struct DefaultConfigReader {}
 
-#[async_trait]
+#[async_trait(?Send)]
 impl ConfigReader for DefaultConfigReader {
     async fn get(&self, q: &str) -> Result<Option<String>> {
         Ok(ffx_config::get(q).await?)
@@ -172,7 +172,7 @@ impl DaemonEventHandler {
     }
 }
 
-#[async_trait]
+#[async_trait(?Send)]
 impl EventHandler<DaemonEvent> for DaemonEventHandler {
     async fn on_event(&self, event: DaemonEvent) -> Result<bool> {
         let tc = match self.target_collection.upgrade() {
@@ -399,12 +399,12 @@ impl Daemon {
                                             None
                                         }
                                     }
-                                    .boxed()
+                                    .boxed_local()
                                 })
                                 .collect(),
                             _ => match self.target_collection.get_connected(value).await {
                                 Some(t) => {
-                                    vec![async move { Some(t.to_fidl_target().await) }.boxed()]
+                                    vec![async move { Some(t.to_fidl_target().await) }.boxed_local()]
                                 }
                                 None => vec![],
                             },
@@ -803,7 +803,7 @@ mod test {
         }
     }
 
-    #[async_trait]
+    #[async_trait(?Send)]
     impl EventHandler<DaemonEvent> for TestHookFakeFastboot {
         async fn on_event(&self, event: DaemonEvent) -> Result<bool> {
             let tc = match self.tc.upgrade() {
@@ -828,7 +828,7 @@ mod test {
         }
     }
 
-    #[async_trait]
+    #[async_trait(?Send)]
     impl EventHandler<DaemonEvent> for TestHookFakeRcs {
         async fn on_event(&self, event: DaemonEvent) -> Result<bool> {
             let tc = match self.tc.upgrade() {
@@ -1107,7 +1107,7 @@ mod test {
         value: String,
     }
 
-    #[async_trait]
+    #[async_trait(?Send)]
     impl ConfigReader for FakeConfigReader {
         async fn get(&self, q: &str) -> Result<Option<String>> {
             assert_eq!(q, self.query_expected);

@@ -14,7 +14,7 @@ pub(crate) const MANUAL_TARGETS: &'static str = "targets.manual";
 #[cfg(not(test))]
 const MANUAL_TARGETS: &'static str = "targets.manual";
 
-#[async_trait]
+#[async_trait(?Send)]
 pub trait ManualTargets: Sync {
     async fn storage_set(&self, targets: Vec<String>) -> Result<()>;
     async fn storage_get(&self) -> Result<Vec<String>>;
@@ -47,7 +47,7 @@ pub trait ManualTargets: Sync {
 #[derive(Default)]
 pub struct Config();
 
-#[async_trait]
+#[async_trait(?Send)]
 impl ManualTargets for Config {
     async fn storage_get(&self) -> Result<Vec<String>> {
         ffx_config::get((MANUAL_TARGETS, ConfigLevel::User)).await.context("manual_targets::get")
@@ -63,7 +63,7 @@ pub struct Mock {
     targets: Mutex<Option<Vec<String>>>,
 }
 
-#[async_trait]
+#[async_trait(?Send)]
 impl ManualTargets for Mock {
     async fn storage_get(&self) -> Result<Vec<String>> {
         self.targets

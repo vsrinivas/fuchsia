@@ -50,7 +50,7 @@ pub use crate::target_task::*;
 
 const IDENTIFY_HOST_TIMEOUT_MILLIS: u64 = 1000;
 
-#[async_trait]
+#[async_trait(?Send)]
 pub trait ToFidlTarget {
     async fn to_fidl_target(self) -> bridge::Target;
 }
@@ -415,7 +415,7 @@ impl TargetInner {
     }
 }
 
-#[async_trait]
+#[async_trait(?Send)]
 impl EventSynthesizer<TargetEvent> for TargetInner {
     async fn synthesize_events(&self) -> Vec<TargetEvent> {
         match self.state.lock().await.connection_state {
@@ -439,7 +439,9 @@ impl WeakTarget {
         Some(Target {
             inner,
             events,
-            task_manager: Arc::new(SingleFlight::new(|_| futures::future::ready(Ok(())).boxed())),
+            task_manager: Arc::new(SingleFlight::new(|_| {
+                futures::future::ready(Ok(())).boxed_local()
+            })),
         })
     }
 }
@@ -533,20 +535,20 @@ impl Target {
         let weak_inner = Arc::downgrade(&inner);
         let weak_target = WeakTarget { inner: weak_inner, events: events.clone() };
         let task_manager = Arc::new(SingleFlight::new(move |t| match t {
-            TargetTaskType::HostPipe => HostPipeConnection::new(weak_target.clone()).boxed(),
+            TargetTaskType::HostPipe => HostPipeConnection::new(weak_target.clone()).boxed_local(),
             TargetTaskType::MdnsMonitor => Target::mdns_monitor_loop(
                 weak_target.clone(),
                 Duration::from_secs(
                     MDNS_BROADCAST_INTERVAL_SECS + MDNS_TARGET_DROP_GRACE_PERIOD_SECS,
                 ),
             )
-            .boxed(),
-            TargetTaskType::ProactiveLog => Logger::new(weak_target.clone()).start().boxed(),
+            .boxed_local(),
+            TargetTaskType::ProactiveLog => Logger::new(weak_target.clone()).start().boxed_local(),
             TargetTaskType::FastbootMonitor => Target::fastboot_monitor_loop(
                 weak_target.clone(),
                 Duration::from_secs(FASTBOOT_CHECK_INTERVAL_SECS + FASTBOOT_DROP_GRACE_PERIOD_SECS),
             )
-            .boxed(),
+            .boxed_local(),
         }));
         Self { inner, events, task_manager }
     }
@@ -746,7 +748,7 @@ impl Target {
     /// to the event queue.
     pub async fn update_connection_state<F>(&self, func: F)
     where
-        F: FnOnce(ConnectionState) -> ConnectionState + Sized + Send,
+        F: FnOnce(ConnectionState) -> ConnectionState + Sized,
     {
         let mut state = self.inner.state.lock().await;
         let former_state = state.connection_state.clone();
@@ -1013,7 +1015,7 @@ impl Target {
     }
 }
 
-#[async_trait]
+#[async_trait(?Send)]
 impl EventSynthesizer<DaemonEvent> for Target {
     async fn synthesize_events(&self) -> Vec<DaemonEvent> {
         if self.inner.state.lock().await.connection_state.is_connected() {
@@ -1024,7 +1026,7 @@ impl EventSynthesizer<DaemonEvent> for Target {
     }
 }
 
-#[async_trait]
+#[async_trait(?Send)]
 impl ToFidlTarget for Target {
     async fn to_fidl_target(self) -> bridge::Target {
         let (addrs, last_response, rcs_state, serial_number, build_config, state) = futures::join!(
@@ -1232,22 +1234,22 @@ pub fn target_addr_info_to_socketaddr(tai: TargetAddrInfo) -> SocketAddr {
     sa
 }
 
-#[async_trait]
+#[async_trait(?Send)]
 pub trait MatchTarget {
     async fn match_target<TQ>(self, t: TQ) -> Option<Target>
     where
-        TQ: Into<TargetQuery> + Send;
+        TQ: Into<TargetQuery>;
 }
 
 // It's unclear why this definition has to exist, but the compiler complains
 // if invoking this either directly on `iter()` or if invoking on
 // `iter().into_iter()` about there being unmet trait constraints. With this
 // definition there are no compilation complaints.
-#[async_trait]
+#[async_trait(?Send)]
 impl<'a> MatchTarget for std::slice::Iter<'_, &'a Target> {
     async fn match_target<TQ>(self, t: TQ) -> Option<Target>
     where
-        TQ: Into<TargetQuery> + Send,
+        TQ: Into<TargetQuery>,
     {
         let t: TargetQuery = t.into();
         for target in self {
@@ -1259,11 +1261,11 @@ impl<'a> MatchTarget for std::slice::Iter<'_, &'a Target> {
     }
 }
 
-#[async_trait]
-impl<'a, T: Iterator<Item = &'a Target> + Send> MatchTarget for &'a mut T {
+#[async_trait(?Send)]
+impl<'a, T: Iterator<Item = &'a Target>> MatchTarget for &'a mut T {
     async fn match_target<TQ>(self, t: TQ) -> Option<Target>
     where
-        TQ: Into<TargetQuery> + Send,
+        TQ: Into<TargetQuery>,
     {
         let t: TargetQuery = t.into();
         for target in self {
@@ -1372,7 +1374,7 @@ pub struct TargetCollection {
     events: RwLock<Option<events::Queue<DaemonEvent>>>,
 }
 
-#[async_trait]
+#[async_trait(?Send)]
 impl EventSynthesizer<DaemonEvent> for TargetCollection {
     async fn synthesize_events(&self) -> Vec<DaemonEvent> {
         let collection = self.inner.read().await;
@@ -1641,7 +1643,7 @@ mod test {
         super::*,
         chrono::offset::TimeZone,
         fidl, fidl_fuchsia_developer_remotecontrol as rcs,
-        futures::{channel::mpsc, executor::block_on},
+        futures::executor::block_on,
         std::net::{Ipv4Addr, Ipv6Addr},
     };
 
@@ -2097,21 +2099,21 @@ mod test {
     }
 
     struct EventPusher {
-        got: mpsc::UnboundedSender<String>,
+        got: async_channel::Sender<String>,
     }
 
     impl EventPusher {
-        fn new() -> (Self, mpsc::UnboundedReceiver<String>) {
-            let (got, rx) = mpsc::unbounded::<String>();
+        fn new() -> (Self, async_channel::Receiver<String>) {
+            let (got, rx) = async_channel::unbounded::<String>();
             (Self { got }, rx)
         }
     }
 
-    #[async_trait]
+    #[async_trait(?Send)]
     impl events::EventHandler<DaemonEvent> for EventPusher {
         async fn on_event(&self, event: DaemonEvent) -> Result<bool> {
             if let DaemonEvent::NewTarget(TargetInfo { nodename: Some(s), .. }) = event {
-                self.got.unbounded_send(s).unwrap();
+                self.got.send(s).await.unwrap();
                 Ok(false)
             } else {
                 panic!("this should never receive any other kind of event");

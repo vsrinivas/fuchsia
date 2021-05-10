@@ -4,14 +4,12 @@
 
 use {
     anyhow::{Context, Result},
+    async_channel::{Receiver, Sender},
     async_io::Async,
     async_lock::Mutex,
     ffx_config::{get, get_sdk},
     fuchsia_async::Task,
-    futures::{
-        channel::mpsc::{Receiver, Sender},
-        AsyncBufReadExt, AsyncWriteExt, FutureExt, SinkExt, StreamExt,
-    },
+    futures::{AsyncBufReadExt, AsyncWriteExt, FutureExt, StreamExt},
     futures_lite::io::BufReader,
     std::path::PathBuf,
     std::process::{Child, Command, Stdio},
@@ -44,7 +42,7 @@ pub async fn is_current_sdk_root_registered() -> Result<bool> {
     Ok(symbol_list_contains(String::from_utf8(c.stdout).unwrap(), abs_path))
 }
 
-#[async_trait::async_trait]
+#[async_trait::async_trait(?Send)]
 pub trait Symbolizer {
     async fn start(
         &self,
@@ -68,12 +66,12 @@ impl LogSymbolizer {
     }
 }
 
-#[async_trait::async_trait]
+#[async_trait::async_trait(?Send)]
 impl<'a> Symbolizer for LogSymbolizer {
     async fn start(
         &self,
         mut rx: Receiver<String>,
-        mut tx: Sender<String>,
+        tx: Sender<String>,
         extra_args: Vec<String>,
     ) -> Result<()> {
         let path = get_sdk()
@@ -176,12 +174,12 @@ impl FakeSymbolizerForTest {
     }
 }
 
-#[async_trait::async_trait]
+#[async_trait::async_trait(?Send)]
 impl Symbolizer for FakeSymbolizerForTest {
     async fn start(
         &self,
         mut rx: Receiver<String>,
-        mut tx: Sender<String>,
+        tx: Sender<String>,
         extra_args: Vec<String>,
     ) -> Result<()> {
         assert_eq!(
@@ -209,14 +207,14 @@ impl Symbolizer for FakeSymbolizerForTest {
 
 #[cfg(test)]
 mod test {
-    use {super::*, futures::channel::mpsc::channel};
+    use {super::*, async_channel::bounded};
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_fake_symbolizer() {
         let args = vec!["arg".to_string(), "arg2".to_string()];
         let s = FakeSymbolizerForTest::new("prefix", args.clone());
 
-        let (mut in_tx, in_rx) = channel(1);
-        let (out_tx, mut out_rx) = channel(1);
+        let (in_tx, in_rx) = bounded(1);
+        let (out_tx, mut out_rx) = bounded(1);
 
         s.start(in_rx, out_tx, args.clone()).await.unwrap();
 

@@ -13,7 +13,7 @@ use {
     fidl_fuchsia_developer_bridge::StreamMode,
     futures::{
         channel::oneshot,
-        future::{BoxFuture, Shared},
+        future::{LocalBoxFuture, Shared},
         FutureExt,
     },
     futures_lite::io::{BufReader, Lines},
@@ -524,7 +524,7 @@ impl SessionStream {
 struct DiagnosticsStreamerInner<'a> {
     output_dir: Option<TargetSessionDirectory>,
     setup_notifier: Option<oneshot::Sender<()>>,
-    setup_fut: Shared<BoxFuture<'a, Result<(), oneshot::Canceled>>>,
+    setup_fut: Shared<LocalBoxFuture<'a, Result<(), oneshot::Canceled>>>,
     current_file: Option<LogFile>,
     max_file_size_bytes: usize,
     max_session_size_bytes: usize,
@@ -538,7 +538,7 @@ impl Clone for DiagnosticsStreamerInner<'_> {
         Self {
             output_dir: self.output_dir.clone(),
             setup_notifier: Some(tx),
-            setup_fut: rx.boxed().shared(),
+            setup_fut: rx.boxed_local().shared(),
             current_file: None,
             max_file_size_bytes: self.max_file_size_bytes,
             max_session_size_bytes: self.max_session_size_bytes,
@@ -554,7 +554,7 @@ impl DiagnosticsStreamerInner<'_> {
         Self {
             output_dir: None,
             setup_notifier: Some(tx),
-            setup_fut: rx.boxed().shared(),
+            setup_fut: rx.boxed_local().shared(),
             current_file: None,
             max_file_size_bytes: 0,
             max_session_size_bytes: 0,
@@ -581,7 +581,7 @@ impl Default for DiagnosticsStreamer<'_> {
     }
 }
 
-#[async_trait]
+#[async_trait(?Send)]
 pub trait GenericDiagnosticsStreamer {
     async fn setup_stream(
         &self,
@@ -604,7 +604,7 @@ pub trait GenericDiagnosticsStreamer {
     ) -> Result<SessionStream>;
 }
 
-#[async_trait::async_trait]
+#[async_trait::async_trait(?Send)]
 impl GenericDiagnosticsStreamer for DiagnosticsStreamer<'_> {
     async fn setup_stream(
         &self,

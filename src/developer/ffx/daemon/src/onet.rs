@@ -156,17 +156,17 @@ impl Drop for HostPipeChild {
 pub struct HostPipeConnection {}
 
 impl HostPipeConnection {
-    pub fn new(target: WeakTarget) -> impl Future<Output = Result<(), String>> + Send {
+    pub fn new(target: WeakTarget) -> impl Future<Output = Result<(), String>> {
         HostPipeConnection::new_with_cmd(target, HostPipeChild::new, RETRY_DELAY)
     }
 
     async fn new_with_cmd<F>(
         target: WeakTarget,
-        cmd_func: impl FnOnce(Vec<TargetAddr>, Option<u16>, u64) -> F + Send + Copy + 'static,
+        cmd_func: impl FnOnce(Vec<TargetAddr>, Option<u16>, u64) -> F + Copy + 'static,
         relaunch_command_delay: Duration,
     ) -> Result<(), String>
     where
-        F: futures::Future<Output = Result<HostPipeChild>> + Send,
+        F: futures::Future<Output = Result<HostPipeChild>>,
     {
         loop {
             log::debug!("Spawning new host-pipe instance");

@@ -4,6 +4,7 @@
 use {
     crate::target::WeakTarget,
     anyhow::{anyhow, bail, Context, Result},
+    async_channel::bounded,
     diagnostics_data::{LogsData, Timestamp},
     ffx_config::get,
     ffx_log_data::{EventType, LogData, LogEntry},
@@ -17,7 +18,7 @@ use {
     fidl_fuchsia_developer_remotecontrol::{
         ArchiveIteratorMarker, BridgeStreamParameters, RemoteDiagnosticsBridgeMarker,
     },
-    futures::{channel::mpsc::channel, SinkExt, StreamExt, TryFutureExt},
+    futures::{StreamExt, TryFutureExt},
     selectors::parse_selector,
     std::convert::TryInto,
     std::future::Future,
@@ -44,7 +45,7 @@ fn get_timestamp() -> Result<Timestamp> {
     ))
 }
 
-fn write_logs_to_file<T: GenericDiagnosticsStreamer + 'static + Send + ?Sized>(
+fn write_logs_to_file<T: GenericDiagnosticsStreamer + 'static + ?Sized>(
     streamer: Arc<T>,
     symbolizer_config: Option<&SymbolizerConfig>,
 ) -> Result<(ServerEnd<ArchiveIteratorMarker>, impl Future<Output = Result<()>> + '_)> {
@@ -81,8 +82,8 @@ fn write_logs_to_file<T: GenericDiagnosticsStreamer + 'static + Send + ?Sized>(
             },
         };
 
-        let (mut sender_tx, sender_rx) = channel(1);
-        let (reader_tx, mut reader_rx) = channel(1);
+        let (sender_tx, sender_rx) = bounded(1);
+        let (reader_tx, mut reader_rx) = bounded(1);
         let symbolizer = if let Some(config) = symbolizer_config {
             if config.enabled {
                 match config
@@ -247,7 +248,7 @@ fn write_logs_to_file<T: GenericDiagnosticsStreamer + 'static + Send + ?Sized>(
 
 #[derive(Default)]
 pub struct SymbolizerConfig {
-    pub symbolizer: Option<Arc<dyn Symbolizer + 'static + Send + Sync>>,
+    pub symbolizer: Option<Arc<dyn Symbolizer + 'static>>,
     pub enabled: bool,
     pub symbolizer_args: Vec<String>,
 }
@@ -267,7 +268,7 @@ impl SymbolizerConfig {
 
     #[cfg(test)]
     fn new_with_config(
-        symbolizer: Arc<impl Symbolizer + 'static + Send + Sync>,
+        symbolizer: Arc<impl Symbolizer + 'static>,
         enabled: bool,
         symbolizer_args: Vec<String>,
     ) -> Self {
@@ -278,7 +279,7 @@ impl SymbolizerConfig {
 pub struct Logger {
     target: WeakTarget,
     enabled: Option<bool>,
-    streamer: Option<Arc<dyn GenericDiagnosticsStreamer + Send + Sync>>,
+    streamer: Option<Arc<dyn GenericDiagnosticsStreamer>>,
     symbolizer: Option<SymbolizerConfig>,
 }
 
@@ -290,7 +291,7 @@ impl Logger {
     #[cfg(test)]
     pub fn new_with_streamer_and_config(
         target: WeakTarget,
-        streamer: impl GenericDiagnosticsStreamer + 'static + Send + Sync,
+        streamer: impl GenericDiagnosticsStreamer + 'static,
         enabled: bool,
         symbolizer: SymbolizerConfig,
     ) -> Self {
@@ -302,7 +303,7 @@ impl Logger {
         };
     }
 
-    pub fn start(self) -> impl Future<Output = Result<(), String>> + Send {
+    pub fn start(self) -> impl Future<Output = Result<(), String>> {
         async move {
             let enabled = match self.enabled {
                 Some(e) => e,
@@ -387,6 +388,7 @@ mod test {
         super::*,
         crate::target::{RcsConnection, Target},
         crate::NodeId,
+        async_channel::{Receiver, Sender},
         async_lock::Mutex,
         async_trait::async_trait,
         ffx_log_test_utils::{
@@ -400,10 +402,7 @@ mod test {
             RemoteDiagnosticsBridgeRequestStream, ServiceMatch,
         },
         fidl_fuchsia_diagnostics::DataType,
-        futures::{
-            channel::mpsc::{Receiver, Sender},
-            TryStreamExt,
-        },
+        futures::TryStreamExt,
         streamer::SessionStream,
     };
 
@@ -450,7 +449,7 @@ mod test {
         }
     }
 
-    #[async_trait]
+    #[async_trait(?Send)]
     impl GenericDiagnosticsStreamer for FakeDiagnosticsStreamer {
         async fn setup_stream(
             &self,
@@ -507,7 +506,7 @@ mod test {
         }
     }
 
-    #[async_trait]
+    #[async_trait(?Send)]
     impl Symbolizer for DisabledSymbolizer {
         async fn start(
             &self,

@@ -16,6 +16,7 @@ rustc_library("lib") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:async-channel",
     "//third_party/rust_crates:async-io",
     "//third_party/rust_crates:async-lock",
     "//third_party/rust_crates:async-trait",

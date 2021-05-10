@@ -54,7 +54,7 @@ struct UsbFactory {
     serial: Option<String>,
 }
 
-#[async_trait]
+#[async_trait(?Send)]
 impl InterfaceFactory<Interface> for UsbFactory {
     async fn open(&mut self, target: &Target) -> Result<Interface> {
         let (s, usb) = target.usb().await;

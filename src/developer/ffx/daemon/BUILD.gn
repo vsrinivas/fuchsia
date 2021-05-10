@@ -45,6 +45,7 @@ if (is_host) {
       "//src/lib/zerocopy",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",
+      "//third_party/rust_crates:async-channel",
       "//third_party/rust_crates:async-fs",
       "//third_party/rust_crates:async-io",
       "//third_party/rust_crates:async-lock",

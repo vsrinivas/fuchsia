@@ -6,7 +6,6 @@ use {
     async_trait::async_trait,
     ffx_core::TryStreamUtilExt,
     fuchsia_async::Task,
-    futures::channel::mpsc,
     futures::future::Future,
     futures::lock::Mutex,
     futures::prelude::*,
@@ -21,13 +20,13 @@ use {
     timeout::timeout,
 };
 
-pub trait EventTrait: Debug + Sized + Hash + Clone + Eq + Send + Sync {}
-impl<T> EventTrait for T where T: Debug + Sized + Hash + Clone + Eq + Send + Sync {}
+pub trait EventTrait: Debug + Sized + Hash + Clone + Eq {}
+impl<T> EventTrait for T where T: Debug + Sized + Hash + Clone + Eq {}
 
 /// An EventSynthesizer is any object that can convert a snapshot of its current
 /// state into a vector of events.
-#[async_trait]
-pub trait EventSynthesizer<T: EventTrait>: Send + Sync {
+#[async_trait(?Send)]
+pub trait EventSynthesizer<T: EventTrait> {
     async fn synthesize_events(&self) -> Vec<T>;
 }
 
@@ -35,7 +34,7 @@ pub trait EventSynthesizer<T: EventTrait>: Send + Sync {
 /// pointer, returns empty when the weak pointer is no longer valid.
 ///
 /// Leaves a log for debugging.
-#[async_trait]
+#[async_trait(?Send)]
 impl<T: EventTrait> EventSynthesizer<T> for Weak<dyn EventSynthesizer<T>> {
     async fn synthesize_events(&self) -> Vec<T> {
         let this = match self.upgrade() {
@@ -50,14 +49,14 @@ impl<T: EventTrait> EventSynthesizer<T> for Weak<dyn EventSynthesizer<T>> {
 }
 
 /// Implements a general event handler for any inbound events.
-#[async_trait]
-pub trait EventHandler<T: EventTrait>: Send + Sync {
+#[async_trait(?Send)]
+pub trait EventHandler<T: EventTrait> {
     async fn on_event(&self, event: T) -> Result<bool>;
 }
 
 struct DispatcherInner<T: EventTrait + 'static> {
     handler: Box<dyn EventHandler<T>>,
-    event_in: mpsc::UnboundedSender<T>,
+    event_in: async_channel::Sender<T>,
 }
 
 /// Dispatcher runs events in the handler's queue until the handler is finished,
@@ -96,7 +95,7 @@ impl<T: EventTrait + 'static> Dispatcher<T> {
     }
 
     fn new(handler: impl EventHandler<T> + 'static) -> Self {
-        let (event_in, queue) = mpsc::unbounded::<T>();
+        let (event_in, queue) = async_channel::unbounded::<T>();
         let inner = Arc::new(DispatcherInner { handler: Box::new(handler), event_in });
         Self {
             inner: Arc::downgrade(&inner),
@@ -112,13 +111,13 @@ impl<T: EventTrait + 'static> Dispatcher<T> {
         }
     }
 
-    fn push(&self, e: T) -> Result<()> {
+    async fn push(&self, e: T) -> Result<()> {
         let inner = match self.inner.upgrade() {
             Some(i) => i,
             None => return Err(anyhow!("done")),
         };
 
-        inner.event_in.unbounded_send(e).map_err(|e| anyhow!("error enqueueing event: {:#}", e))
+        inner.event_in.send(e).await.map_err(|e| anyhow!("error enqueueing event: {:#}", e))
     }
 }
 
@@ -147,33 +146,33 @@ impl<F: Future<Output = Result<()>>> Future for PredicateHandlerFuture<F> {
 
 struct PredicateHandler<T: EventTrait, F>
 where
-    F: Future<Output = bool> + Send + Sync,
+    F: Future<Output = bool>,
 {
     parent_link: Weak<()>,
-    predicate_matched: mpsc::UnboundedSender<()>,
-    predicate: Box<dyn Fn(T) -> F + Send + Sync + 'static>,
+    predicate_matched: async_channel::Sender<()>,
+    predicate: Box<dyn Fn(T) -> F + 'static>,
 }
 
 impl<T: EventTrait, F> PredicateHandler<T, F>
 where
-    F: Future<Output = bool> + Send + Sync,
+    F: Future<Output = bool>,
 {
     fn new(
         parent_link: Weak<()>,
-        predicate: impl (Fn(T) -> F) + Send + Sync + 'static,
-    ) -> (Self, mpsc::UnboundedReceiver<()>) {
-        let (tx, rx) = mpsc::unbounded::<()>();
+        predicate: impl (Fn(T) -> F) + 'static,
+    ) -> (Self, async_channel::Receiver<()>) {
+        let (tx, rx) = async_channel::unbounded::<()>();
         let s = Self { parent_link, predicate_matched: tx, predicate: Box::new(predicate) };
 
         (s, rx)
     }
 }
 
-#[async_trait]
+#[async_trait(?Send)]
 impl<T, F> EventHandler<T> for PredicateHandler<T, F>
 where
     T: EventTrait,
-    F: Future<Output = bool> + Send + Sync,
+    F: Future<Output = bool>,
 {
     async fn on_event(&self, event: T) -> Result<bool> {
         // This is a bit of a race, but will eventually clean things up by the
@@ -182,7 +181,7 @@ where
             return Ok(true);
         }
         if (self.predicate)(event).await {
-            self.predicate_matched.unbounded_send(()).context("sending 'done' signal to waiter")?;
+            self.predicate_matched.send(()).await.context("sending 'done' signal to waiter")?;
             return Ok(true);
         }
         Ok(false)
@@ -193,7 +192,7 @@ type Handlers<T> = Arc<Mutex<Vec<Dispatcher<T>>>>;
 
 #[derive(Clone)]
 pub struct Queue<T: EventTrait + 'static> {
-    inner_tx: mpsc::UnboundedSender<T>,
+    inner_tx: async_channel::Sender<T>,
     handlers: Handlers<T>,
     state: Weak<dyn EventSynthesizer<T>>,
 
@@ -203,7 +202,7 @@ pub struct Queue<T: EventTrait + 'static> {
 }
 
 struct Processor<T: 'static + EventTrait> {
-    inner_rx: Option<mpsc::UnboundedReceiver<T>>,
+    inner_rx: Option<async_channel::Receiver<T>>,
     handlers: Handlers<T>,
 }
 
@@ -215,7 +214,7 @@ impl<T: 'static + EventTrait> Queue<T> {
     /// background and tied to the lifetimes of these objects. Once all objects
     /// are dropped, the background process will be shutdown automatically.
     pub fn new(state: &Arc<impl EventSynthesizer<T> + 'static>) -> Self {
-        let (inner_tx, inner_rx) = mpsc::unbounded::<T>();
+        let (inner_tx, inner_rx) = async_channel::unbounded::<T>();
         let handlers = Arc::new(Mutex::new(Vec::<Dispatcher<T>>::new()));
         let proc = Processor::<T> { inner_rx: Some(inner_rx), handlers: handlers.clone() };
         let state = Arc::downgrade(state);
@@ -228,7 +227,7 @@ impl<T: 'static + EventTrait> Queue<T> {
         state: &Arc<impl EventSynthesizer<T> + 'static>,
         handler: impl EventHandler<T> + 'static,
     ) -> Self {
-        let (inner_tx, inner_rx) = mpsc::unbounded::<T>();
+        let (inner_tx, inner_rx) = async_channel::unbounded::<T>();
         let handlers = Arc::new(Mutex::new(vec![Dispatcher::new(handler)]));
         let proc = Processor::<T> { inner_rx: Some(inner_rx), handlers: handlers.clone() };
         let state = Arc::downgrade(state);
@@ -252,7 +251,10 @@ impl<T: 'static + EventTrait> Queue<T> {
             // so just return if there's an error. The result for continuing and
             // adding the dispatcher anyway would be about the same, this just
             // makes cleanup slightly faster.
-            match dispatcher.push(event.clone()).context("sending synthesized event to child queue")
+            match dispatcher
+                .push(event.clone())
+                .await
+                .context("sending synthesized event to child queue")
             {
                 Ok(_) => (),
                 Err(e) => {
@@ -273,7 +275,7 @@ impl<T: 'static + EventTrait> Queue<T> {
     pub async fn wait_for(
         &self,
         timeout: Option<Duration>,
-        predicate: impl Fn(T) -> bool + Send + Sync + 'static,
+        predicate: impl Fn(T) -> bool + 'static,
     ) -> Result<()> {
         self.wait_for_async(timeout, move |e| future::ready(predicate(e))).await
     }
@@ -282,10 +284,10 @@ impl<T: 'static + EventTrait> Queue<T> {
     pub async fn wait_for_async<F1>(
         &self,
         timeout_opt: Option<Duration>,
-        predicate: impl Fn(T) -> F1 + Send + Sync + 'static,
+        predicate: impl Fn(T) -> F1 + 'static,
     ) -> Result<()>
     where
-        F1: Future<Output = bool> + Send + Sync + 'static,
+        F1: Future<Output = bool> + 'static,
     {
         let link = Arc::new(());
         let parent_link = Arc::downgrade(&link);
@@ -309,7 +311,7 @@ impl<T: 'static + EventTrait> Queue<T> {
     }
 
     pub async fn push(&self, event: T) -> Result<()> {
-        self.inner_tx.unbounded_send(event).context("enqueueing")
+        self.inner_tx.send(event).await.map_err(|e| anyhow!("event queue push: {:#}", e))
     }
 }
 
@@ -318,13 +320,18 @@ where
     T: EventTrait + 'static,
 {
     async fn dispatch(&self, event: T) {
-        self.handlers.lock().await.retain(|dispatcher| match dispatcher.push(event.clone()) {
-            Ok(()) => true,
-            Err(e) => {
-                log::info!("dispatcher closed. reason: {:#}", e);
-                false
+        let mut handlers = self.handlers.lock().await;
+
+        let mut new_handlers = Vec::new();
+        for dispatcher in handlers.drain(..) {
+            match dispatcher.push(event.clone()).await {
+                Ok(()) => new_handlers.push(dispatcher),
+                Err(e) => {
+                    log::info!("dispatcher closed. reason: {:#}", e);
+                }
             }
-        });
+        }
+        *handlers = new_handlers;
     }
 
     /// Consumes the processor and then runs until all instances of the Queue are closed.
@@ -340,37 +347,36 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use futures::channel::mpsc;
 
     struct TestHookFirst {
-        callbacks_done: mpsc::UnboundedSender<bool>,
+        callbacks_done: async_channel::Sender<bool>,
     }
 
-    #[async_trait]
+    #[async_trait(?Send)]
     impl EventHandler<i32> for TestHookFirst {
         async fn on_event(&self, event: i32) -> Result<bool> {
             assert_eq!(event, 5);
-            self.callbacks_done.unbounded_send(true).unwrap();
+            self.callbacks_done.send(true).await.unwrap();
             Ok(false)
         }
     }
 
     struct TestHookSecond {
-        callbacks_done: mpsc::UnboundedSender<bool>,
+        callbacks_done: async_channel::Sender<bool>,
     }
 
-    #[async_trait]
+    #[async_trait(?Send)]
     impl EventHandler<i32> for TestHookSecond {
         async fn on_event(&self, event: i32) -> Result<bool> {
             assert_eq!(event, 5);
-            self.callbacks_done.unbounded_send(true).unwrap();
+            self.callbacks_done.send(true).await.unwrap();
             Ok(false)
         }
     }
 
     struct FakeEventStruct {}
 
-    #[async_trait]
+    #[async_trait(?Send)]
     impl<T: EventTrait + 'static> EventSynthesizer<T> for FakeEventStruct {
         async fn synthesize_events(&self) -> Vec<T> {
             vec![]
@@ -379,7 +385,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_receive_two_handlers() {
-        let (tx_from_callback, mut rx_from_callback) = mpsc::unbounded::<bool>();
+        let (tx_from_callback, mut rx_from_callback) = async_channel::unbounded::<bool>();
         let fake_events = Arc::new(FakeEventStruct {});
         let queue = Queue::new(&fake_events);
         let ((), ()) = futures::join!(
@@ -417,7 +423,7 @@ mod test {
 
     struct FakeEventSynthesizer {}
 
-    #[async_trait]
+    #[async_trait(?Send)]
     impl EventSynthesizer<i32> for FakeEventSynthesizer {
         async fn synthesize_events(&self) -> Vec<i32> {
             vec![2, 3, 7, 6]
@@ -462,23 +468,24 @@ mod test {
     }
 
     struct EventFailer {
-        dropped: mpsc::UnboundedSender<bool>,
+        dropped: async_channel::Sender<bool>,
     }
 
     impl EventFailer {
-        fn new() -> (Self, mpsc::UnboundedReceiver<bool>) {
-            let (dropped, handler_dropped_rx) = mpsc::unbounded::<bool>();
+        fn new() -> (Self, async_channel::Receiver<bool>) {
+            let (dropped, handler_dropped_rx) = async_channel::unbounded::<bool>();
             (Self { dropped }, handler_dropped_rx)
         }
     }
 
     impl Drop for EventFailer {
         fn drop(&mut self) {
-            self.dropped.unbounded_send(true).unwrap();
+            // TODO(raggi): use a safer executor
+            futures::executor::block_on(self.dropped.send(true)).unwrap();
         }
     }
 
-    #[async_trait]
+    #[async_trait(?Send)]
     impl EventHandler<EventFailerInput> for EventFailer {
         async fn on_event(&self, event: EventFailerInput) -> Result<bool> {
             match event {
@@ -490,7 +497,7 @@ mod test {
 
     struct EventFailerState {}
 
-    #[async_trait]
+    #[async_trait(?Send)]
     impl EventSynthesizer<EventFailerInput> for EventFailerState {
         async fn synthesize_events(&self) -> Vec<EventFailerInput> {
             vec![EventFailerInput::Fail]

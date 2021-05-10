@@ -280,8 +280,8 @@ async fn query_recv_loop(
     interval: Duration,
     tasks: Arc<Mutex<HashMap<IpAddr, Task<()>>>>,
 ) {
-    let mut recv = recv_loop(sock.clone(), e).boxed().fuse();
-    let mut query = query_loop(sock.clone(), interval).boxed().fuse();
+    let mut recv = recv_loop(sock.clone(), e).boxed_local().fuse();
+    let mut query = query_loop(sock.clone(), interval).boxed_local().fuse();
 
     let addr = match sock.local_addr() {
         Ok(addr) => addr,

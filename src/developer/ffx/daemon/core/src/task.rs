@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    futures::future::BoxFuture, futures::future::FutureExt, futures::future::Shared,
+    futures::future::FutureExt, futures::future::LocalBoxFuture, futures::future::Shared,
     futures::lock::Mutex, std::collections::hash_map::Entry, std::collections::HashMap,
     std::fmt::Debug, std::hash::Hash, std::sync::Arc,
 };
@@ -14,8 +14,8 @@ use {
 /// one running at a time. An arbitrary number of listeners can await these
 /// Futures.
 pub struct SingleFlight<T, R> {
-    guarded_task_map: Arc<Mutex<HashMap<T, Shared<BoxFuture<'static, R>>>>>,
-    spawner: Box<dyn 'static + Send + Sync + Fn(T) -> BoxFuture<'static, R>>,
+    guarded_task_map: Arc<Mutex<HashMap<T, Shared<LocalBoxFuture<'static, R>>>>>,
+    spawner: Box<dyn 'static + Fn(T) -> LocalBoxFuture<'static, R>>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -24,22 +24,18 @@ pub enum TaskSnapshot {
     NotRunning,
 }
 
-impl<
-        T: Hash + Eq + PartialEq + Clone + Send + Sync + 'static,
-        R: Clone + Send + Sync + 'static,
-    > SingleFlight<T, R>
-{
+impl<T: Hash + Eq + PartialEq + Clone + 'static, R: Clone + 'static> SingleFlight<T, R> {
     /// Constructs a single flight manager. Accepts a function that turns an
     /// input value into a task of some kind. The return value of the task
     /// must be clonable as its output (see `spawn`) can be waited on by an
     /// arbitrary number of waiters.
-    pub fn new(func: impl Fn(T) -> BoxFuture<'static, R> + Send + Sync + 'static) -> Self {
+    pub fn new(func: impl Fn(T) -> LocalBoxFuture<'static, R> + 'static) -> Self {
         let guarded_task_map = Arc::new(Mutex::new(HashMap::new()));
         let spawner = Box::new(func);
         Self { guarded_task_map, spawner }
     }
 
-    fn make_cleanup_task(&self, t: T) -> Shared<BoxFuture<'static, R>> {
+    fn make_cleanup_task(&self, t: T) -> Shared<LocalBoxFuture<'static, R>> {
         let task = (self.spawner)(t.clone());
         let weak_map = Arc::downgrade(&self.guarded_task_map);
         // Converts the future into something that will
@@ -51,7 +47,7 @@ impl<
             }
             res
         };
-        task.boxed().shared()
+        task.boxed_local().shared()
     }
 
     /// Spawns a task at most once.
@@ -70,7 +66,7 @@ impl<
     /// When a task for a given `T` completes, it will atomically remove itself
     /// from the pool.
     #[allow(unused)] // Unused yet (will be used w/ paving, etc).
-    pub async fn spawn(&self, t: T) -> Shared<BoxFuture<'static, R>> {
+    pub async fn spawn(&self, t: T) -> Shared<LocalBoxFuture<'static, R>> {
         let mut map = self.guarded_task_map.lock().await;
         // This cannot be done using `or_insert` as the code inside that
         // function must not be executed if there is not an entry. Furthermore,
@@ -155,9 +151,9 @@ mod test {
 
     fn setup() -> SingleFlight<TestTaskType, bool> {
         SingleFlight::new(move |t| match t {
-            TestTaskType::TaskThatGloballyRunsOnce => fire_once_global().boxed(),
-            TestTaskType::TaskThatExitsImmediately => futures::future::ready(true).boxed(),
-            TestTaskType::TaskThatPollsItself => Task::local(async move { true }).boxed(),
+            TestTaskType::TaskThatGloballyRunsOnce => fire_once_global().boxed_local(),
+            TestTaskType::TaskThatExitsImmediately => futures::future::ready(true).boxed_local(),
+            TestTaskType::TaskThatPollsItself => Task::local(async move { true }).boxed_local(),
         })
     }
 

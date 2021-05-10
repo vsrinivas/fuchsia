@@ -25,25 +25,22 @@ use {
 
 const ADMIN_SELECTOR: &str = "core/appmgr:out:fuchsia.hardware.power.statecontrol.Admin";
 
-#[async_trait]
-pub(crate) trait InterfaceFactory<T: AsyncRead + AsyncWrite + Unpin + Send> {
+#[async_trait(?Send)]
+pub(crate) trait InterfaceFactory<T: AsyncRead + AsyncWrite + Unpin> {
     async fn open(&mut self, target: &Target) -> Result<T>;
     async fn close(&self);
 }
 
-pub(crate) struct FastbootImpl<T: AsyncRead + AsyncWrite + Send + Unpin> {
+pub(crate) struct FastbootImpl<T: AsyncRead + AsyncWrite + Unpin> {
     pub(crate) target: Target,
     pub(crate) usb: Option<T>,
-    pub(crate) usb_factory: Box<dyn InterfaceFactory<T> + Send + Sync>,
+    pub(crate) usb_factory: Box<dyn InterfaceFactory<T>>,
     remote_proxy: Once<RemoteControlProxy>,
     admin_proxy: Once<AdminProxy>,
 }
 
-impl<T: AsyncRead + AsyncWrite + Unpin + Send> FastbootImpl<T> {
-    pub(crate) fn new(
-        target: Target,
-        usb_factory: Box<dyn InterfaceFactory<T> + Send + Sync>,
-    ) -> Self {
+impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
+    pub(crate) fn new(target: Target, usb_factory: Box<dyn InterfaceFactory<T>>) -> Self {
         Self { target, usb: None, usb_factory, remote_proxy: Once::new(), admin_proxy: Once::new() }
     }
 
@@ -355,7 +352,7 @@ mod test {
         }
     }
 
-    #[async_trait]
+    #[async_trait(?Send)]
     impl InterfaceFactory<TestTransport> for TestFactory {
         async fn open(&mut self, _target: &Target) -> Result<TestTransport> {
             let mut transport = TestTransport::new();
