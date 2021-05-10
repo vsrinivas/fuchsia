@@ -1824,31 +1824,34 @@ struct stream_socket : public pipe {
     uint32_t events = 0;
 
     bool use_inner;
-    auto [state, has_error] = State();
-    switch (state) {
-      case StreamSocketState::kUnconnected:
-        ZX_ASSERT_MSG(zx_signals == ZX_SIGNAL_NONE, "zx_signals=%s on unconnected socket",
-                      std::bitset<sizeof(zx_signals)>(zx_signals).to_string().c_str());
-        *out_events = POLLOUT | POLLHUP;
-        return;
+    {
+      std::lock_guard lock(state_lock_);
+      auto [state, has_error] = StateLocked();
+      switch (state) {
+        case StreamSocketState::kUnconnected:
+          ZX_ASSERT_MSG(zx_signals == ZX_SIGNAL_NONE, "zx_signals=%s on unconnected socket",
+                        std::bitset<sizeof(zx_signals)>(zx_signals).to_string().c_str());
+          *out_events = POLLOUT | POLLHUP;
+          return;
 
-      case StreamSocketState::kListening:
-        if (zx_signals & ZXSIO_SIGNAL_INCOMING) {
-          events |= POLLIN;
-        }
-        use_inner = false;
-        break;
-      case StreamSocketState::kConnecting:
-        if (zx_signals & ZXSIO_SIGNAL_CONNECTED) {
-          state_ = StreamSocketState::kConnected;
-          events |= POLLOUT;
-        }
-        zx_signals &= ~ZXSIO_SIGNAL_CONNECTED;
-        use_inner = false;
-        break;
-      case StreamSocketState::kConnected:
-        use_inner = true;
-        break;
+        case StreamSocketState::kListening:
+          if (zx_signals & ZXSIO_SIGNAL_INCOMING) {
+            events |= POLLIN;
+          }
+          use_inner = false;
+          break;
+        case StreamSocketState::kConnecting:
+          if (zx_signals & ZXSIO_SIGNAL_CONNECTED) {
+            state_ = StreamSocketState::kConnected;
+            events |= POLLOUT;
+          }
+          zx_signals &= ~ZXSIO_SIGNAL_CONNECTED;
+          use_inner = false;
+          break;
+        case StreamSocketState::kConnected:
+          use_inner = true;
+          break;
+      }
     }
 
     if (use_inner) {
@@ -1882,6 +1885,7 @@ struct stream_socket : public pipe {
   zx_status_t connect(const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) override {
     zx_status_t status = BaseSocket(zxio_stream_socket().client).connect(addr, addrlen, out_code);
     if (status == ZX_OK) {
+      std::lock_guard lock(state_lock_);
       switch (*out_code) {
         case 0:
           state_ = StreamSocketState::kConnected;
@@ -1905,7 +1909,10 @@ struct stream_socket : public pipe {
       *out_code = static_cast<int16_t>(result.err());
       return ZX_OK;
     }
-    state_ = StreamSocketState::kListening;
+    {
+      std::lock_guard lock(state_lock_);
+      state_ = StreamSocketState::kListening;
+    }
     *out_code = 0;
     return ZX_OK;
   }
@@ -2099,10 +2106,10 @@ struct stream_socket : public pipe {
     }
   }
 
-  // TODO(https://fxbug.dev/67465): This field should be synchronized.
-  StreamSocketState state_;
+  std::mutex state_lock_;
+  StreamSocketState state_ __TA_GUARDED(state_lock_);
 
-  std::pair<StreamSocketState, bool> State() {
+  std::pair<StreamSocketState, bool> StateLocked() __TA_REQUIRES(state_lock_) {
     switch (state_) {
       case StreamSocketState::kUnconnected:
         __FALLTHROUGH;
@@ -2129,6 +2136,11 @@ struct stream_socket : public pipe {
       case StreamSocketState::kConnected:
         return std::make_pair(state_, false);
     }
+  }
+
+  std::pair<StreamSocketState, bool> State() __TA_EXCLUDES(state_lock_) {
+    std::lock_guard lock(state_lock_);
+    return StateLocked();
   }
 
  protected:
