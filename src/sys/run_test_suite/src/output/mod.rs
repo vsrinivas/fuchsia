@@ -62,25 +62,25 @@ impl RunReporter {
 
     /// Create a `RunReporter` that saves artifacts and results to the given directory.
     /// Any stdout and syslog artifacts are filtered for ANSI escape sequences before saving.
-    pub fn new_ansi_filtered(root: PathBuf) -> Self {
-        let reporter: Arc<DirectoryReporter> = Arc::new(DirectoryReporter::new(root));
+    pub fn new_ansi_filtered(root: PathBuf) -> Result<Self, Error> {
+        let reporter: Arc<DirectoryReporter> = Arc::new(DirectoryReporter::new(root)?);
         let reporter_dyn = reporter.clone() as Arc<DynReporter>;
         let artifact_fn = Box::new(move |entity: &EntityId, artifact_type: &ArtifactType| {
             let unfiltered = reporter.new_artifact(entity, artifact_type)?;
             Ok(Box::new(AnsiFilterWriter::new(unfiltered)) as Box<DynArtifact>)
         });
-        Self { reporter: reporter_dyn, artifact_fn }
+        Ok(Self { reporter: reporter_dyn, artifact_fn })
     }
 
     /// Create a `RunReporter` that saves artifacts and results to the given directory.
-    pub fn new(root: PathBuf) -> Self {
-        let reporter: Arc<DirectoryReporter> = Arc::new(DirectoryReporter::new(root));
+    pub fn new(root: PathBuf) -> Result<Self, Error> {
+        let reporter: Arc<DirectoryReporter> = Arc::new(DirectoryReporter::new(root)?);
         let reporter_dyn = reporter.clone() as Arc<DynReporter>;
         let artifact_fn = Box::new(move |entity: &EntityId, artifact_type: &ArtifactType| {
             let inner = reporter.new_artifact(entity, artifact_type)?;
             Ok(Box::new(inner) as Box<DynArtifact>)
         });
-        Self { reporter: reporter_dyn, artifact_fn }
+        Ok(Self { reporter: reporter_dyn, artifact_fn })
     }
 
     /// Create a new artifact scoped to the test run.
@@ -153,6 +153,7 @@ pub enum ArtifactType {
 }
 
 /// Common outcome type for test results, suites, and test cases.
+#[derive(Clone, Copy)]
 pub enum ReportedOutcome {
     Passed,
     Failed,

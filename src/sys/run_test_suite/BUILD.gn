@@ -20,6 +20,7 @@ rustc_library("lib") {
   ]
 
   deps = [
+    "directory",
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//sdk/fidl/fuchsia.test:fuchsia.test-rustc",
@@ -32,15 +33,20 @@ rustc_library("lib") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:uuid",
     "//third_party/rust_crates:vte",
   ]
   if (!is_host) {
     deps += [ "//src/lib/zircon/rust:fuchsia-zircon" ]
   }
 
-  test_deps = [ "//third_party/rust_crates:ansi_term" ]
+  test_deps = [
+    "//third_party/rust_crates:ansi_term",
+    "//third_party/rust_crates:tempfile",
+  ]
 
   sources = [
     "src/diagnostics.rs",
@@ -79,6 +85,7 @@ fuchsia_shell_package("run_test_suite_pkg") {
 }
 
 fuchsia_unittest_component("run-test-suite-lib-test") {
+  manifest = "meta/run_test_suite_lib_test.cml"
   deps = [ ":lib_test" ]
 }
 
@@ -106,6 +113,7 @@ group("tests") {
   testonly = true
   deps = [
     ":run-test-suite-unit-tests",
+    "directory:tests",
     "tests",
   ]
 }

@@ -453,10 +453,17 @@ pub async fn run_tests_and_get_outcome(
         true => Box::new(AnsiFilterWriter::new(io::stdout())),
         false => Box::new(io::stdout()),
     };
-    let mut reporter = match (filter_ansi, record_directory) {
+    let reporter_res = match (filter_ansi, record_directory) {
         (true, Some(dir)) => RunReporter::new_ansi_filtered(dir),
         (false, Some(dir)) => RunReporter::new(dir),
-        (_, None) => RunReporter::new_noop(),
+        (_, None) => Ok(RunReporter::new_noop()),
+    };
+    let mut reporter = match reporter_res {
+        Ok(r) => r,
+        Err(e) => {
+            println!("Test suite encountered error trying to run tests: {:?}", e);
+            return Outcome::Error;
+        }
     };
 
     let streams =
