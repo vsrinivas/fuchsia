@@ -1,7 +1,10 @@
+<!-- mdformat off(templates not supported) -->
 {% set rfcid = "RFC-0000" %}
 {% include "docs/contribute/governance/rfcs/_common/_rfc_header.md" %}
 # {{ rfc.name }}: {{ rfc.title }}
 <!-- SET the `rfcid` VAR ABOVE. DO NOT EDIT ANYTHING ELSE ABOVE THIS LINE. -->
+
+<!-- mdformat on -->
 
 <!-- This should begin with an H2 element (for example, ## Summary).-->
 
@@ -18,20 +21,20 @@ What problem does this proposal solve?
 This is the technically detailed version of your proposal.
 
 The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD",
-"SHOULD NOT", "RECOMMENDED",  "MAY", and "OPTIONAL" in this document are to be
-interpreted as described in [IETF RFC
-2119](https://tools.ietf.org/html/rfc2119).
+"SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this document are to be
+interpreted as described in
+[IETF RFC 2119](https://tools.ietf.org/html/rfc2119).
 
 _Area: FIDL_
 
 One important high-level bit of your proposal is what part of FIDL your proposal
 modifies. This includes at least:
 
-* The FIDL source language
-* The FIDL wire format
-* The first-class language bindings (C, C++, Dart, Go, Rust)
-* The FIDL style guide and API rubric
-* The FIDL tuning process
+*   The FIDL source language
+*   The FIDL wire format
+*   The first-class language bindings (C, C++, Dart, Go, Rust)
+*   The FIDL style guide and API rubric
+*   The FIDL tuning process
 
 Your proposal should talk about all the relevant areas. For instance, if your
 proposal adds a new type to the FIDL language, it also needs to discuss the
@@ -41,8 +44,8 @@ style guide for that feature, and how to implement it in the bindings.
 
 How will you go about implementing this design? Can the change be made in a
 single Gerrit change or does the change involve a complex migration of
-third-party dependencies? Do you plan to structure the implementation
-into phases? What dependencies exist at each phase?
+third-party dependencies? Do you plan to structure the implementation into
+phases? What dependencies exist at each phase?
 
 ## Performance
 
@@ -112,8 +115,8 @@ for `fidlc`, or for the C++ bindings?
 If your change affects encoding or decoding, plan to update the conformance test
 suite.
 
-If your change affects source compatibility, plan to update the [source
-compatibility test suite](/src/tests/fidl/source_compatibility).
+If your change affects source compatibility, plan to update the
+[source compatibility test suite](/src/tests/fidl/source_compatibility).
 
 How will uses of your new feature be tested? If you add a language feature, how
 will you test it in each language's bindings?
