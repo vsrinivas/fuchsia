@@ -288,8 +288,25 @@ TEST_F(DriverHostTest, Start_IncomingServices) {
   EXPECT_EQ(ASYNC_LOOP_QUIT, loop().GetState());
 }
 
+// Start a single driver, and return an error on start.
+TEST_F(DriverHostTest, Start_ReturnError) {
+  zx_status_t error = ZX_ERR_STOP;
+  fidl::FidlAllocator allocator;
+  fidl::VectorView<fdf::wire::NodeSymbol> symbols(allocator, 1);
+  symbols[0].Allocate(allocator);
+  symbols[0].set_name(allocator, "error");
+  symbols[0].set_address(allocator, reinterpret_cast<zx_vaddr_t>(&error));
+  auto [driver, outgoing_dir] = StartDriver(std::move(symbols), nullptr, error);
+
+  driver.reset();
+  loop().RunUntilIdle();
+  // We never started our first driver, so the driver host would not attempt to
+  // quit the loop after the last driver has stopped.
+  EXPECT_EQ(ASYNC_LOOP_RUNNABLE, loop().GetState());
+}
+
 static bool called = false;
-void FuncForNodeSymbols(async_dispatcher_t* dispatcher) { called = true; }
+void Func() { called = true; }
 
 // Start a single driver, and receive a call to a shared function.
 TEST_F(DriverHostTest, Start_NodeSymbols) {
@@ -297,7 +314,7 @@ TEST_F(DriverHostTest, Start_NodeSymbols) {
   fidl::VectorView<fdf::wire::NodeSymbol> symbols(allocator, 1);
   symbols[0].Allocate(allocator);
   symbols[0].set_name(allocator, "func");
-  symbols[0].set_address(allocator, reinterpret_cast<zx_vaddr_t>(FuncForNodeSymbols));
+  symbols[0].set_address(allocator, reinterpret_cast<zx_vaddr_t>(Func));
   auto [driver, outgoing_dir] = StartDriver(std::move(symbols));
   EXPECT_TRUE(called);
 
@@ -306,23 +323,21 @@ TEST_F(DriverHostTest, Start_NodeSymbols) {
   EXPECT_EQ(ASYNC_LOOP_QUIT, loop().GetState());
 }
 
-static async_dispatcher_t* second_dispatcher = nullptr;
-void FuncForDifferentDispatcher(async_dispatcher_t* dispatcher) { second_dispatcher = dispatcher; }
-
 // Start a single driver, and verify that a different dispatcher is used.
 TEST_F(DriverHostTest, Start_DifferentDispatcher) {
   inspect::Inspector inspector;
   auto driver_host = std::make_unique<DriverHost>(inspector, loop(), second_loop().dispatcher());
   set_driver_host(std::move(driver_host));
 
+  async_dispatcher_t* dispatcher = nullptr;
   fidl::FidlAllocator allocator;
   fidl::VectorView<fdf::wire::NodeSymbol> symbols(allocator, 1);
   symbols[0].Allocate(allocator);
-  symbols[0].set_name(allocator, "func");
-  symbols[0].set_address(allocator, reinterpret_cast<zx_vaddr_t>(FuncForDifferentDispatcher));
+  symbols[0].set_name(allocator, "dispatcher");
+  symbols[0].set_address(allocator, reinterpret_cast<zx_vaddr_t>(&dispatcher));
   auto [driver, outgoing_dir] = StartDriver(std::move(symbols));
   second_loop().RunUntilIdle();
-  EXPECT_EQ(second_loop().dispatcher(), second_dispatcher);
+  EXPECT_EQ(second_loop().dispatcher(), dispatcher);
 
   driver.reset();
   loop().RunUntilIdle();

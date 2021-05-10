@@ -20,11 +20,22 @@ class TestDriver {
       : dispatcher_(dispatcher), outgoing_(dispatcher) {}
 
   zx::status<> Init(fdf::wire::DriverStartArgs* start_args) {
+    auto error = start_args::SymbolValue<zx_status_t*>(start_args->symbols(), "error");
+    if (error.is_ok()) {
+      return zx::error(**error);
+    }
+
     // Call the "func" driver symbol.
-    auto func =
-        start_args::SymbolValue<void (*)(async_dispatcher_t*)>(start_args->symbols(), "func");
+    auto func = start_args::SymbolValue<void (*)()>(start_args->symbols(), "func");
     if (func.is_ok()) {
-      func.value()(dispatcher_);
+      (*func)();
+    }
+
+    // Set the "dispatcher" driver symbol.
+    auto dispatcher =
+        start_args::SymbolValue<async_dispatcher_t**>(start_args->symbols(), "dispatcher");
+    if (dispatcher.is_ok()) {
+      **dispatcher = dispatcher_;
     }
 
     // Connect to the incoming service.
@@ -62,9 +73,14 @@ zx_status_t test_driver_start(fidl_incoming_msg_t* msg, async_dispatcher_t* disp
     return decoded.status();
   }
 
-  auto test_driver = new TestDriver(dispatcher);
-  *driver = test_driver;
-  return test_driver->Init(decoded.PrimaryObject()).status_value();
+  auto test_driver = std::make_unique<TestDriver>(dispatcher);
+  auto init = test_driver->Init(decoded.PrimaryObject());
+  if (init.is_error()) {
+    return init.error_value();
+  }
+
+  *driver = test_driver.release();
+  return ZX_OK;
 }
 
 zx_status_t test_driver_stop(void* driver) {

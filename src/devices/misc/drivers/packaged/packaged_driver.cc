@@ -65,11 +65,14 @@ zx_status_t PackagedDriverStart(fidl_incoming_msg_t* msg, async_dispatcher_t* di
     return decoded.status();
   }
 
-  auto packaged_driver = new PackagedDriver(dispatcher);
-  // If we return failure at any point in this function, PackagedDriverStop()
-  // will be called with the value of |driver|.
-  *driver = packaged_driver;
-  return packaged_driver->Init(decoded.PrimaryObject()).status_value();
+  auto packaged_driver = std::make_unique<PackagedDriver>(dispatcher);
+  auto init = packaged_driver->Init(decoded.PrimaryObject());
+  if (init.is_error()) {
+    return init.error_value();
+  }
+
+  *driver = packaged_driver.release();
+  return ZX_OK;
 }
 
 zx_status_t PackagedDriverStop(void* driver) {

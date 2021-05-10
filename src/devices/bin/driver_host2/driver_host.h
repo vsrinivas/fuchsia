@@ -38,7 +38,7 @@ class Driver : public fidl::WireServer<fuchsia_driver_framework::Driver>,
   std::string binary_;
   void* library_;
   DriverRecordV1* record_;
-  void* opaque_ = nullptr;
+  std::optional<void*> opaque_;
   std::optional<fidl::ServerBindingRef<fuchsia_driver_framework::Driver>> binding_;
 };
 

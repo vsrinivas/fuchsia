@@ -59,9 +59,11 @@ Driver::Driver(std::string url, std::string binary, void* library, DriverRecordV
     : url_(std::move(url)), binary_(std::move(binary)), library_(library), record_(record) {}
 
 Driver::~Driver() {
-  zx_status_t status = record_->stop(opaque_);
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to stop driver: %s", zx_status_get_string(status));
+  if (opaque_.has_value()) {
+    zx_status_t status = record_->stop(*opaque_);
+    if (status != ZX_OK) {
+      LOGF(ERROR, "Failed to stop driver: %s", zx_status_get_string(status));
+    }
   }
   dlclose(library_);
 
@@ -83,8 +85,13 @@ zx::status<> Driver::Start(fidl::OutgoingMessage& start_args,
   // After calling |record_->start|, we assume it has taken ownership of
   // the handles from |start_args|, and can therefore relinquish ownership.
   fidl_incoming_msg_t c_msg = std::move(converted.incoming_message()).ReleaseToEncodedCMessage();
-  zx_status_t status = record_->start(&c_msg, driver_dispatcher, &opaque_);
-  return zx::make_status(status);
+  void* opaque = nullptr;
+  zx_status_t status = record_->start(&c_msg, driver_dispatcher, &opaque);
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+  opaque_.emplace(opaque);
+  return zx::ok();
 }
 
 DriverHost::DriverHost(inspect::Inspector& inspector, async::Loop& loop,
