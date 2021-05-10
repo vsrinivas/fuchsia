@@ -1642,7 +1642,7 @@ TEST_F(FlatlandTest, ConnectedToDisplayParentPresentsBeforeChild) {
   properties.set_logical_size({1.0f, 2.0f});
   parent.CreateLink(kLinkId, std::move(parent_token), std::move(properties),
                     content_link.NewRequest());
-  parent.SetContentOnTransform(kLinkId, kTransformId);
+  parent.SetContentOnTransform(kTransformId, kLinkId);
 
   fidl::InterfacePtr<GraphLink> graph_link;
   child.LinkToParent(std::move(child_token), graph_link.NewRequest());
@@ -1699,7 +1699,7 @@ TEST_F(FlatlandTest, ConnectedToDisplayChildPresentsBeforeParent) {
   properties.set_logical_size({1.0f, 2.0f});
   parent.CreateLink(kLinkId, std::move(parent_token), std::move(properties),
                     content_link.NewRequest());
-  parent.SetContentOnTransform(kLinkId, kTransformId);
+  parent.SetContentOnTransform(kTransformId, kLinkId);
 
   fidl::InterfacePtr<GraphLink> graph_link;
   child.LinkToParent(std::move(child_token), graph_link.NewRequest());
@@ -1756,7 +1756,7 @@ TEST_F(FlatlandTest, ChildReceivesDisconnectedFromDisplay) {
   properties.set_logical_size({1.0f, 2.0f});
   parent.CreateLink(kLinkId, std::move(parent_token), std::move(properties),
                     content_link.NewRequest());
-  parent.SetContentOnTransform(kLinkId, kTransformId);
+  parent.SetContentOnTransform(kTransformId, kLinkId);
 
   fidl::InterfacePtr<GraphLink> graph_link;
   child.LinkToParent(std::move(child_token), graph_link.NewRequest());
@@ -1780,7 +1780,7 @@ TEST_F(FlatlandTest, ChildReceivesDisconnectedFromDisplay) {
     status_updated = true;
   });
 
-  parent.SetContentOnTransform(0, kTransformId);
+  parent.SetContentOnTransform(kTransformId, 0);
   PRESENT(parent, true);
 
   UpdateLinks(parent.GetRoot());
@@ -1870,7 +1870,7 @@ TEST_F(FlatlandTest, LayoutOnlyUpdatesChildrenInGlobalTopology) {
   // Attach the child to the global topology.
   parent.CreateTransform(kTransformId);
   parent.SetRootTransform(kTransformId);
-  parent.SetContentOnTransform(kLinkId, kTransformId);
+  parent.SetContentOnTransform(kTransformId, kLinkId);
   PRESENT(parent, true);
 
   // Confirm that the new logical size is accessible.
@@ -1901,7 +1901,7 @@ TEST_F(FlatlandTest, SetLinkPropertiesDefaultBehavior) {
 
   parent.CreateTransform(kTransformId);
   parent.SetRootTransform(kTransformId);
-  parent.SetContentOnTransform(kLinkId, kTransformId);
+  parent.SetContentOnTransform(kTransformId, kLinkId);
   PRESENT(parent, true);
 
   UpdateLinks(parent.GetRoot());
@@ -1988,7 +1988,7 @@ TEST_F(FlatlandTest, SetLinkPropertiesMultisetBehavior) {
   // Create a full chain of transforms from parent root to child root.
   parent.CreateTransform(kTransformId);
   parent.SetRootTransform(kTransformId);
-  parent.SetContentOnTransform(kLinkId, kTransformId);
+  parent.SetContentOnTransform(kTransformId, kLinkId);
   PRESENT(parent, true);
 
   const float kInitialSize = 100.0f;
@@ -2069,7 +2069,7 @@ TEST_F(FlatlandTest, SetLinkPropertiesOnMultipleChildren) {
     parent.CreateTransform(kTransformIds[i]);
     parent.AddChild(kRootTransform, kTransformIds[i]);
     CreateLink(&parent, &children[i], kLinkIds[i], &content_link[i], &graph_link[i]);
-    parent.SetContentOnTransform(kLinkIds[i], kTransformIds[i]);
+    parent.SetContentOnTransform(kTransformIds[i], kLinkIds[i]);
   }
   UpdateLinks(parent.GetRoot());
 
@@ -2125,7 +2125,7 @@ TEST_F(FlatlandTest, DisplayPixelScaleAffectsPixelScale) {
 
   parent.CreateTransform(kTransformId);
   parent.SetRootTransform(kTransformId);
-  parent.SetContentOnTransform(kLinkId, kTransformId);
+  parent.SetContentOnTransform(kTransformId, kLinkId);
   PRESENT(parent, true);
 
   UpdateLinks(parent.GetRoot());
@@ -2165,7 +2165,7 @@ TEST_F(FlatlandTest, LinkSizesAffectPixelScale) {
 
   parent.CreateTransform(kTransformId);
   parent.SetRootTransform(kTransformId);
-  parent.SetContentOnTransform(kLinkId, kTransformId);
+  parent.SetContentOnTransform(kTransformId, kLinkId);
   PRESENT(parent, true);
 
   UpdateLinks(parent.GetRoot());
@@ -2214,7 +2214,7 @@ TEST_F(FlatlandTest, GeometricAttributesAffectPixelScale) {
 
   parent.CreateTransform(kTransformId);
   parent.SetRootTransform(kTransformId);
-  parent.SetContentOnTransform(kLinkId, kTransformId);
+  parent.SetContentOnTransform(kTransformId, kLinkId);
   PRESENT(parent, true);
 
   UpdateLinks(parent.GetRoot());
@@ -2321,15 +2321,15 @@ TEST_F(FlatlandTest, SetLinkOnTransformErrorCases) {
   PRESENT(flatland, true);
 
   // Zero is not a valid transform_id.
-  flatland.SetContentOnTransform(kLinkId1, 0);
+  flatland.SetContentOnTransform(0, kLinkId1);
   PRESENT(flatland, false);
 
   // Setting a valid link on an ivnalid transform is not valid.
-  flatland.SetContentOnTransform(kLinkId1, kId2);
+  flatland.SetContentOnTransform(kId2, kLinkId1);
   PRESENT(flatland, false);
 
   // Setting an invalid link on a valid transform is not valid.
-  flatland.SetContentOnTransform(kLinkId2, kId1);
+  flatland.SetContentOnTransform(kId1, kLinkId2);
   PRESENT(flatland, false);
 }
 
@@ -2467,7 +2467,7 @@ TEST_F(FlatlandTest, CreateLinkPresentedBeforeLinkToParent) {
   properties.set_logical_size({kDefaultSize, kDefaultSize});
   parent.CreateLink(kLinkId, std::move(parent_token), std::move(properties),
                     parent_content_link.NewRequest());
-  parent.SetContentOnTransform(kLinkId, kId1);
+  parent.SetContentOnTransform(kId1, kLinkId);
 
   PRESENT(parent, true);
 
@@ -2512,7 +2512,7 @@ TEST_F(FlatlandTest, LinkToParentPresentedBeforeCreateLink) {
   properties.set_logical_size({kDefaultSize, kDefaultSize});
   parent.CreateLink(kLinkId, std::move(parent_token), std::move(properties),
                     parent_content_link.NewRequest());
-  parent.SetContentOnTransform(kLinkId, kId1);
+  parent.SetContentOnTransform(kId1, kLinkId);
 
   // The child should only be accessible from the parent when Present() is called on the parent.
   EXPECT_FALSE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
@@ -2545,7 +2545,7 @@ TEST_F(FlatlandTest, LinkResolvedBeforeEitherPresent) {
   properties.set_logical_size({kDefaultSize, kDefaultSize});
   parent.CreateLink(kLinkId, std::move(parent_token), std::move(properties),
                     parent_content_link.NewRequest());
-  parent.SetContentOnTransform(kLinkId, kId1);
+  parent.SetContentOnTransform(kId1, kLinkId);
 
   // Link the child to the parent.
   fidl::InterfacePtr<GraphLink> child_graph_link;
@@ -2584,7 +2584,7 @@ TEST_F(FlatlandTest, ClearChildLink) {
   properties.set_logical_size({kDefaultSize, kDefaultSize});
   parent.CreateLink(kLinkId, std::move(parent_token), std::move(properties),
                     parent_content_link.NewRequest());
-  parent.SetContentOnTransform(kLinkId, kId1);
+  parent.SetContentOnTransform(kId1, kLinkId);
 
   fidl::InterfacePtr<GraphLink> child_graph_link;
   child.LinkToParent(std::move(child_token), child_graph_link.NewRequest());
@@ -2595,7 +2595,7 @@ TEST_F(FlatlandTest, ClearChildLink) {
   EXPECT_TRUE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
 
   // Reset the child link using zero as the link id.
-  parent.SetContentOnTransform(0, kId1);
+  parent.SetContentOnTransform(kId1, 0);
 
   PRESENT(parent, true);
 
@@ -2741,7 +2741,7 @@ TEST_F(FlatlandTest, LinkSizeRatiosCreateScaleMatrix) {
 
   parent.CreateTransform(kId1);
   parent.SetRootTransform(kId1);
-  parent.SetContentOnTransform(kLinkId1, kId1);
+  parent.SetContentOnTransform(kId1, kLinkId1);
 
   PRESENT(parent, true);
 
@@ -2802,7 +2802,7 @@ TEST_F(FlatlandTest, EmptyLogicalSizePreservesOldSize) {
 
   parent.CreateTransform(kId1);
   parent.SetRootTransform(kId1);
-  parent.SetContentOnTransform(kLinkId1, kId1);
+  parent.SetContentOnTransform(kId1, kLinkId1);
 
   PRESENT(parent, true);
 
@@ -2926,7 +2926,7 @@ TEST_F(FlatlandTest, SetOpacityTestCases) {
     properties.set_height(175);
     std::shared_ptr<Allocator> allocator = CreateAllocator();
     CreateImage(&flatland, allocator.get(), kImageId, std::move(ref_pair), std::move(properties));
-    flatland.SetContentOnTransform(kImageId, kId);
+    flatland.SetContentOnTransform(kId, kImageId);
     PRESENT(flatland, true);
   }
 
@@ -3130,15 +3130,15 @@ TEST_F(FlatlandTest, SetContentOnTransformErrorCases) {
   PRESENT(flatland, true);
 
   // Zero is not a valid transform.
-  flatland.SetContentOnTransform(kImageId, 0);
+  flatland.SetContentOnTransform(0, kImageId);
   PRESENT(flatland, false);
 
   // The transform must exist.
-  flatland.SetContentOnTransform(kImageId, 2);
+  flatland.SetContentOnTransform(2, kImageId);
   PRESENT(flatland, false);
 
   // The image must exist.
-  flatland.SetContentOnTransform(2, kTransformId);
+  flatland.SetContentOnTransform(kTransformId, 2);
   PRESENT(flatland, false);
 }
 
@@ -3168,7 +3168,7 @@ TEST_F(FlatlandTest, ClearContentOnTransform) {
 
   flatland.CreateTransform(kTransformId);
   flatland.SetRootTransform(kTransformId);
-  flatland.SetContentOnTransform(kImageId, kTransformId);
+  flatland.SetContentOnTransform(kTransformId, kImageId);
   PRESENT(flatland, true);
 
   // The image handle should be the last handle in the local_topology, and the image should be in
@@ -3181,7 +3181,7 @@ TEST_F(FlatlandTest, ClearContentOnTransform) {
   EXPECT_EQ(image_kv->second.collection_id, global_collection_id);
 
   // An ContentId of 0 indicates to remove any content on the specified transform.
-  flatland.SetContentOnTransform(0, kTransformId);
+  flatland.SetContentOnTransform(kTransformId, 0);
   PRESENT(flatland, true);
 
   uber_struct = GetUberStruct(flatland);
@@ -3237,9 +3237,9 @@ TEST_F(FlatlandTest, TopologyVisitsContentBeforeChildren) {
   PRESENT(flatland, true);
 
   // Attach image 1 to the root and the second child. Attach image 2 to the first child.
-  flatland.SetContentOnTransform(kImageId1, kTransformId1);
-  flatland.SetContentOnTransform(kImageId2, kTransformId2);
-  flatland.SetContentOnTransform(kImageId1, kTransformId3);
+  flatland.SetContentOnTransform(kTransformId1, kImageId1);
+  flatland.SetContentOnTransform(kTransformId2, kImageId2);
+  flatland.SetContentOnTransform(kTransformId3, kImageId1);
   PRESENT(flatland, true);
 
   // The images should appear pre-order toplogically sorted: 1, 2, 1 again. The same image is
@@ -3258,7 +3258,7 @@ TEST_F(FlatlandTest, TopologyVisitsContentBeforeChildren) {
 
   // Clearing the image from the parent removes the first entry of the list since images are
   // visited before children.
-  flatland.SetContentOnTransform(0, kTransformId1);
+  flatland.SetContentOnTransform(kTransformId1, 0);
   PRESENT(flatland, true);
 
   // Meaning the new list of images should be: 2, 1.
@@ -3369,7 +3369,7 @@ TEST_F(FlatlandTest, ReleaseImageWaitsForReleaseFence) {
   const TransformId kTransformId = 3;
   flatland.CreateTransform(kTransformId);
   flatland.SetRootTransform(kTransformId);
-  flatland.SetContentOnTransform(kImageId, kTransformId);
+  flatland.SetContentOnTransform(kTransformId, kImageId);
   PRESENT(flatland, true);
 
   // Release the buffer collection, but ensure that the ReleaseBufferImage call on the importer has
@@ -3390,7 +3390,7 @@ TEST_F(FlatlandTest, ReleaseImageWaitsForReleaseFence) {
   // still does not result in a deregestration call. Skip session updates to test that release
   // fences are what trigger the importer calls.
   EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferImage(_)).Times(0);
-  flatland.SetContentOnTransform(0, kTransformId);
+  flatland.SetContentOnTransform(kTransformId, 0);
 
   PresentArgs args;
   args.skip_session_update_and_release_fences = true;
@@ -3527,7 +3527,7 @@ TEST_F(FlatlandTest, BufferImporterImageReleaseTest) {
 
   flatland.CreateTransform(kTransformId);
   flatland.SetRootTransform(kTransformId);
-  flatland.SetContentOnTransform(kImageId, kTransformId);
+  flatland.SetContentOnTransform(kTransformId, kImageId);
   PRESENT(flatland, true);
 
   // Now release the image.
@@ -3536,7 +3536,7 @@ TEST_F(FlatlandTest, BufferImporterImageReleaseTest) {
 
   // Now remove the image from the transform, which should result in it being
   // garbage collected.
-  flatland.SetContentOnTransform(0, kTransformId);
+  flatland.SetContentOnTransform(kTransformId, 0);
   PresentArgs args;
   args.skip_session_update_and_release_fences = true;
   PRESENT_WITH_ARGS(flatland, std::move(args), true);
@@ -3571,7 +3571,7 @@ TEST_F(FlatlandTest, ReleasedImageRemainsUntilCleared) {
 
   flatland.CreateTransform(kTransformId);
   flatland.SetRootTransform(kTransformId);
-  flatland.SetContentOnTransform(kImageId, kTransformId);
+  flatland.SetContentOnTransform(kTransformId, kImageId);
   PRESENT(flatland, true);
 
   // The image handle should be the last handle in the local_topology, and the image should be in
@@ -3596,7 +3596,7 @@ TEST_F(FlatlandTest, ReleasedImageRemainsUntilCleared) {
 
   // Clearing the Transform of its Image removes all references from the UberStruct.
   EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferImage(_)).Times(1);
-  flatland.SetContentOnTransform(0, kTransformId);
+  flatland.SetContentOnTransform(kTransformId, 0);
   PRESENT(flatland, true);
 
   uber_struct = GetUberStruct(flatland);
@@ -3633,7 +3633,7 @@ TEST_F(FlatlandTest, ReleasedImageIdCanBeReused) {
 
   flatland.CreateTransform(kTransformId1);
   flatland.SetRootTransform(kTransformId1);
-  flatland.SetContentOnTransform(kImageId, kTransformId1);
+  flatland.SetContentOnTransform(kTransformId1, kImageId);
   flatland.ReleaseImage(kImageId);
   PRESENT(flatland, true);
 
@@ -3653,7 +3653,7 @@ TEST_F(FlatlandTest, ReleasedImageIdCanBeReused) {
 
   flatland.CreateTransform(kTransformId2);
   flatland.AddChild(kTransformId1, kTransformId2);
-  flatland.SetContentOnTransform(kImageId, kTransformId2);
+  flatland.SetContentOnTransform(kTransformId2, kImageId);
   PRESENT(flatland, true);
 
   const auto maybe_image_handle2 = flatland.GetContentHandle(kImageId);
@@ -3699,7 +3699,7 @@ TEST_F(FlatlandTest, ReleasedImagePersistsOutsideGlobalTopology) {
 
   flatland.CreateTransform(kTransformId);
   flatland.SetRootTransform(kTransformId);
-  flatland.SetContentOnTransform(kImageId, kTransformId);
+  flatland.SetContentOnTransform(kTransformId, kImageId);
   flatland.ReleaseImage(kImageId);
   PRESENT(flatland, true);
 
@@ -3748,7 +3748,7 @@ TEST_F(FlatlandTest, ClearGraphReleasesImagesAndBufferCollections) {
 
   flatland.CreateTransform(kTransformId);
   flatland.SetRootTransform(kTransformId);
-  flatland.SetContentOnTransform(kImageId, kTransformId);
+  flatland.SetContentOnTransform(kTransformId, kImageId);
   PRESENT(flatland, true);
 
   // Clear the graph, then signal the release fence and ensure the buffer collection is released.
@@ -3776,7 +3776,7 @@ TEST_F(FlatlandTest, ClearGraphReleasesImagesAndBufferCollections) {
   // Verify that the Image is valid and can be attached to a transform.
   flatland.CreateTransform(kTransformId);
   flatland.SetRootTransform(kTransformId);
-  flatland.SetContentOnTransform(kImageId, kTransformId);
+  flatland.SetContentOnTransform(kTransformId, kImageId);
   PRESENT(flatland, true);
 }
 

@@ -648,7 +648,7 @@ void Flatland::SetOpacity(TransformId transform_id, float val) {
   }
 }
 
-void Flatland::SetContentOnTransform(ContentId content_id, TransformId transform_id) {
+void Flatland::SetContentOnTransform(TransformId transform_id, ContentId content_id) {
   if (transform_id == kInvalidId) {
     FX_LOGS(ERROR) << "SetContentOnTransform called with transform_id zero";
     ReportError();
