@@ -1424,7 +1424,7 @@ pub mod tests {
         ClientState, DataStore, LeaseRecord, NakReason, ResponseTarget, ServerAction,
         ServerDispatcher, ServerError, ServerParameters, SystemTimeSource,
     };
-    use anyhow::{Context as _, Error};
+    use anyhow::Error;
     use datastore::{ActionRecordingDataStore, DataStoreAction};
     use fuchsia_zircon::Status;
     use net_declare::{fidl_ip_v4, std_ip_v4};
@@ -1621,13 +1621,14 @@ pub mod tests {
         .ok_or(ProtocolError::MissingOption(code))
     }
 
-    fn new_test_minimal_server_with_time_source() -> Result<(Server, TestSystemTime), Error> {
+    fn new_test_minimal_server_with_time_source() -> (Server, TestSystemTime) {
         let time_source = TestSystemTime::with_current_time();
         let params = test_server_params(
             vec![random_ipv4_generator()],
             LeaseLength { default_seconds: 100, max_seconds: 60 * 60 * 24 * 7 },
-        )?;
-        Ok((
+        )
+        .expect("failed to create test server parameters");
+        (
             super::Server {
                 records: HashMap::new(),
                 pool: AddressPool::new(params.managed_addrs.pool_range()),
@@ -1646,12 +1647,12 @@ pub mod tests {
                 time_source: time_source.clone(),
             },
             time_source.clone(),
-        ))
+        )
     }
 
-    fn new_test_minimal_server() -> Result<Server, Error> {
-        let (server, _time_source) = new_test_minimal_server_with_time_source()?;
-        Ok(server)
+    fn new_test_minimal_server() -> Server {
+        let (server, _time_source) = new_test_minimal_server_with_time_source();
+        server
     }
 
     fn new_client_message(message_type: MessageType) -> Message {
@@ -1820,10 +1821,9 @@ pub mod tests {
         decline
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_discover_returns_correct_offer_and_dest_giaddr_when_giaddr_set(
-    ) -> Result<(), Error> {
-        let mut server = new_test_minimal_server()?;
+    #[test]
+    fn test_dispatch_with_discover_returns_correct_offer_and_dest_giaddr_when_giaddr_set() {
+        let mut server = new_test_minimal_server();
         let mut disc = new_test_discover();
         disc.giaddr = random_ipv4_generator();
         let client_id = ClientIdentifier::from(&disc);
@@ -1846,16 +1846,15 @@ pub mod tests {
             ))
         );
         matches::assert_matches!(
-            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
+            server.store.expect("missing store").actions().as_slice(),
             [DataStoreAction::StoreClientRecord {client_id: id, ..}] if *id == client_id
         );
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_discover_returns_correct_offer_and_dest_broadcast_when_giaddr_unspecified(
-    ) -> Result<(), Error> {
-        let mut server = new_test_minimal_server()?;
+    #[test]
+    fn test_dispatch_with_discover_returns_correct_offer_and_dest_broadcast_when_giaddr_unspecified(
+    ) {
+        let mut server = new_test_minimal_server();
         let disc = new_test_discover();
         let client_id = ClientIdentifier::from(&disc);
 
@@ -1872,16 +1871,15 @@ pub mod tests {
             Ok(ServerAction::SendResponse(expected_offer, ResponseTarget::Broadcast))
         );
         matches::assert_matches!(
-            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
+            server.store.expect("missing store").actions().as_slice(),
             [DataStoreAction::StoreClientRecord {client_id: id, ..}] if *id == client_id
         );
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_discover_returns_correct_offer_and_dest_yiaddr_when_giaddr_and_ciaddr_unspecified_and_broadcast_bit_unset(
-    ) -> Result<(), Error> {
-        let mut server = new_test_minimal_server()?;
+    #[test]
+    fn test_dispatch_with_discover_returns_correct_offer_and_dest_yiaddr_when_giaddr_and_ciaddr_unspecified_and_broadcast_bit_unset(
+    ) {
+        let mut server = new_test_minimal_server();
         let disc = {
             let mut disc = new_test_discover();
             disc.bdcast_flag = false;
@@ -1906,16 +1904,15 @@ pub mod tests {
             ))
         );
         matches::assert_matches!(
-            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
+            server.store.expect("missing store").actions().as_slice(),
             [DataStoreAction::StoreClientRecord {client_id: id, ..}] if *id == client_id
         );
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_discover_returns_correct_offer_and_dest_giaddr_if_giaddr_broadcast_bit_is_set(
-    ) -> Result<(), Error> {
-        let mut server = new_test_minimal_server()?;
+    #[test]
+    fn test_dispatch_with_discover_returns_correct_offer_and_dest_giaddr_if_giaddr_broadcast_bit_is_set(
+    ) {
+        let mut server = new_test_minimal_server();
         let giaddr = random_ipv4_generator();
         let disc = {
             let mut disc = new_test_discover();
@@ -1939,16 +1936,15 @@ pub mod tests {
             Ok(ServerAction::SendResponse(expected_offer, ResponseTarget::Unicast(giaddr, None)))
         );
         matches::assert_matches!(
-            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
+            server.store.expect("missing store").actions().as_slice(),
             [DataStoreAction::StoreClientRecord {client_id: id, ..}] if *id == client_id
         );
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_discover_returns_error_if_ciaddr_set() -> Result<(), Error> {
+    #[test]
+    fn test_dispatch_with_discover_returns_error_if_ciaddr_set() {
         use std::string::ToString as _;
-        let mut server = new_test_minimal_server()?;
+        let mut server = new_test_minimal_server();
         let ciaddr = random_ipv4_generator();
         let disc = {
             let mut disc = new_test_discover();
@@ -1966,12 +1962,11 @@ pub mod tests {
                 msg_type: MessageType::DHCPDISCOVER
             }))
         );
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_discover_updates_server_state() -> Result<(), Error> {
-        let (mut server, time_source) = new_test_minimal_server_with_time_source()?;
+    #[test]
+    fn test_dispatch_with_discover_updates_server_state() {
+        let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let disc = new_test_discover();
 
         let offer_ip = random_ipv4_generator();
@@ -1980,8 +1975,8 @@ pub mod tests {
         assert!(server.pool.universe.insert(offer_ip));
 
         let server_id = server.params.server_ips.first().unwrap();
-        let router = get_router(&server)?;
-        let dns_server = get_dns_server(&server)?;
+        let router = get_router(&server).expect("failed to get router");
+        let dns_server = get_dns_server(&server).expect("failed to get dns server");
         let expected_client_record = LeaseRecord::new(
             Some(offer_ip),
             vec![
@@ -1997,7 +1992,8 @@ pub mod tests {
             ],
             time_source.now(),
             server.params.lease_length.default_seconds,
-        )?;
+        )
+        .expect("failed to create lease record");
 
         let _response = server.dispatch(disc);
 
@@ -2007,16 +2003,15 @@ pub mod tests {
         assert_eq!(server.records.len(), 1);
         assert_eq!(server.records.get(&client_id), Some(&expected_client_record));
         matches::assert_matches!(
-            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
+            server.store.expect("missing store").actions().as_slice(),
             [DataStoreAction::StoreClientRecord {client_id: id, ..}] if *id == client_id
         );
-        Ok(())
     }
 
-    async fn dispatch_with_discover_updates_stash_helper(
+    fn dispatch_with_discover_updates_stash_helper(
         additional_options: impl Iterator<Item = DhcpOption>,
-    ) -> Result<(), Error> {
-        let mut server = new_test_minimal_server()?;
+    ) {
+        let mut server = new_test_minimal_server();
         let disc = new_test_discover_with_options(additional_options);
 
         let client_id = ClientIdentifier::from(&disc);
@@ -2029,33 +2024,31 @@ pub mod tests {
         let client_record = server
             .records
             .get(&client_id)
-            .ok_or(anyhow::anyhow!("server records missing entry for {}", client_id))?
+            .unwrap_or_else(|| panic!("server records missing entry for {}", client_id))
             .clone();
         matches::assert_matches!(
-            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
+            server.store.expect("missing store").actions().as_slice(),
             [
                 DataStoreAction::StoreClientRecord { client_id: id, record },
             ] if *id == client_id && *record == client_record
         );
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_discover_updates_stash() -> Result<(), Error> {
-        dispatch_with_discover_updates_stash_helper(std::iter::empty()).await
+    #[test]
+    fn test_dispatch_with_discover_updates_stash() {
+        dispatch_with_discover_updates_stash_helper(std::iter::empty())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_discover_with_client_id_updates_stash() -> Result<(), Error> {
+    #[test]
+    fn test_dispatch_with_discover_with_client_id_updates_stash() {
         dispatch_with_discover_updates_stash_helper(std::iter::once(DhcpOption::ClientIdentifier(
             vec![1, 2, 3, 4, 5],
         )))
-        .await
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_discover_client_binding_returns_bound_addr() -> Result<(), Error> {
-        let (mut server, time_source) = new_test_minimal_server_with_time_source()?;
+    #[test]
+    fn test_dispatch_with_discover_client_binding_returns_bound_addr() {
+        let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let disc = new_test_discover();
         let client_id = ClientIdentifier::from(&disc);
 
@@ -2072,7 +2065,8 @@ pub mod tests {
                     Vec::new(),
                     time_source.now(),
                     std::u32::MAX
-                )?,
+                )
+                .expect("failed to create lease record"),
             ),
             None
         );
@@ -2081,19 +2075,17 @@ pub mod tests {
 
         assert_eq!(extract_message(response).yiaddr, bound_client_ip);
         matches::assert_matches!(
-            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
+            server.store.expect("missing store").actions().as_slice(),
             [
                 DataStoreAction::StoreClientRecord {client_id: id, record: LeaseRecord {current: Some(ip), previous: None, .. }},
             ] if *id == client_id && *ip == bound_client_ip
         );
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[test]
     #[should_panic(expected = "active lease is unallocated in address pool")]
-    async fn test_dispatch_with_discover_client_binding_panics_when_addr_previously_not_allocated()
-    {
-        let (mut server, time_source) = new_test_minimal_server_with_time_source().unwrap();
+    fn test_dispatch_with_discover_client_binding_panics_when_addr_previously_not_allocated() {
+        let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let disc = new_test_discover();
 
         let bound_client_ip = random_ipv4_generator();
@@ -2117,10 +2109,9 @@ pub mod tests {
         let _ = server.dispatch(disc);
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_discover_expired_client_binding_returns_available_old_addr(
-    ) -> Result<(), Error> {
-        let (mut server, time_source) = new_test_minimal_server_with_time_source()?;
+    #[test]
+    fn test_dispatch_with_discover_expired_client_binding_returns_available_old_addr() {
+        let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let disc = new_test_discover();
         let client_id = ClientIdentifier::from(&disc);
 
@@ -2151,16 +2142,15 @@ pub mod tests {
 
         assert_eq!(extract_message(response).yiaddr, bound_client_ip);
         matches::assert_matches!(
-            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
+            server.store.expect("missing store").actions().as_slice(),
             [DataStoreAction::StoreClientRecord {client_id: id, ..}] if *id == client_id
         );
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_discover_expired_client_binding_unavailable_addr_returns_next_free_addr(
-    ) -> Result<(), Error> {
-        let (mut server, time_source) = new_test_minimal_server_with_time_source()?;
+    #[test]
+    fn test_dispatch_with_discover_expired_client_binding_unavailable_addr_returns_next_free_addr()
+    {
+        let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let disc = new_test_discover();
         let client_id = ClientIdentifier::from(&disc);
 
@@ -2193,16 +2183,14 @@ pub mod tests {
 
         assert_eq!(extract_message(response).yiaddr, free_ip);
         matches::assert_matches!(
-            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
+            server.store.expect("missing store").actions().as_slice(),
             [DataStoreAction::StoreClientRecord {client_id: id, ..}] if *id == client_id
         );
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_discover_expired_client_binding_returns_available_requested_addr(
-    ) -> Result<(), Error> {
-        let (mut server, time_source) = new_test_minimal_server_with_time_source()?;
+    #[test]
+    fn test_dispatch_with_discover_expired_client_binding_returns_available_requested_addr() {
+        let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let mut disc = new_test_discover();
         let client_id = ClientIdentifier::from(&disc);
 
@@ -2237,16 +2225,15 @@ pub mod tests {
 
         assert_eq!(extract_message(response).yiaddr, requested_ip);
         matches::assert_matches!(
-            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
+            server.store.expect("missing store").actions().as_slice(),
             [DataStoreAction::StoreClientRecord {client_id: id, ..}] if *id == client_id
         );
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_discover_expired_client_binding_returns_next_addr_for_unavailable_requested_addr(
-    ) -> Result<(), Error> {
-        let (mut server, time_source) = new_test_minimal_server_with_time_source()?;
+    #[test]
+    fn test_dispatch_with_discover_expired_client_binding_returns_next_addr_for_unavailable_requested_addr(
+    ) {
+        let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let mut disc = new_test_discover();
         let client_id = ClientIdentifier::from(&disc);
 
@@ -2283,16 +2270,14 @@ pub mod tests {
 
         assert_eq!(extract_message(response).yiaddr, free_ip);
         matches::assert_matches!(
-            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
+            server.store.expect("missing store").actions().as_slice(),
             [DataStoreAction::StoreClientRecord {client_id: id, ..}] if *id == client_id
         );
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_discover_available_requested_addr_returns_requested_addr(
-    ) -> Result<(), Error> {
-        let mut server = new_test_minimal_server()?;
+    #[test]
+    fn test_dispatch_with_discover_available_requested_addr_returns_requested_addr() {
+        let mut server = new_test_minimal_server();
         let mut disc = new_test_discover();
         let client_id = ClientIdentifier::from(&disc);
 
@@ -2312,16 +2297,14 @@ pub mod tests {
 
         assert_eq!(extract_message(response).yiaddr, requested_ip);
         matches::assert_matches!(
-            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
+            server.store.expect("missing store").actions().as_slice(),
             [DataStoreAction::StoreClientRecord {client_id: id, ..}] if *id == client_id
         );
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_discover_unavailable_requested_addr_returns_next_free_addr(
-    ) -> Result<(), Error> {
-        let mut server = new_test_minimal_server()?;
+    #[test]
+    fn test_dispatch_with_discover_unavailable_requested_addr_returns_next_free_addr() {
+        let mut server = new_test_minimal_server();
         let mut disc = new_test_discover();
         let client_id = ClientIdentifier::from(&disc);
 
@@ -2337,16 +2320,14 @@ pub mod tests {
 
         assert_eq!(extract_message(response).yiaddr, free_ip_1);
         matches::assert_matches!(
-            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
+            server.store.expect("missing store").actions().as_slice(),
             [DataStoreAction::StoreClientRecord {client_id: id, ..}] if *id == client_id
         );
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_discover_unavailable_requested_addr_no_available_addr_returns_error(
-    ) -> Result<(), Error> {
-        let mut server = new_test_minimal_server()?;
+    #[test]
+    fn test_dispatch_with_discover_unavailable_requested_addr_no_available_addr_returns_error() {
+        let mut server = new_test_minimal_server();
         let mut disc = new_test_discover();
 
         let requested_ip = random_ipv4_generator();
@@ -2359,13 +2340,11 @@ pub mod tests {
             server.dispatch(disc),
             Err(ServerError::ServerAddressPoolFailure(AddressPoolError::Ipv4AddrExhaustion))
         );
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_discover_no_requested_addr_no_available_addr_returns_error(
-    ) -> Result<(), Error> {
-        let mut server = new_test_minimal_server()?;
+    #[test]
+    fn test_dispatch_with_discover_no_requested_addr_no_available_addr_returns_error() {
+        let mut server = new_test_minimal_server();
         let disc = new_test_discover();
         server.pool.universe.clear();
 
@@ -2373,13 +2352,10 @@ pub mod tests {
             server.dispatch(disc),
             Err(ServerError::ServerAddressPoolFailure(AddressPoolError::Ipv4AddrExhaustion))
         );
-        Ok(())
     }
 
-    async fn test_dispatch_with_bogus_client_message_returns_error(
-        message_type: MessageType,
-    ) -> Result<(), Error> {
-        let mut server = new_test_minimal_server()?;
+    fn test_dispatch_with_bogus_client_message_returns_error(message_type: MessageType) {
+        let mut server = new_test_minimal_server();
 
         assert_eq!(
             server.dispatch(Message {
@@ -2398,38 +2374,35 @@ pub mod tests {
             }),
             Err(ServerError::UnexpectedClientMessageType(message_type))
         );
-
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_client_offer_message_returns_error() -> Result<(), Error> {
-        test_dispatch_with_bogus_client_message_returns_error(MessageType::DHCPOFFER).await
+    #[test]
+    fn test_dispatch_with_client_offer_message_returns_error() {
+        test_dispatch_with_bogus_client_message_returns_error(MessageType::DHCPOFFER)
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_client_ack_message_returns_error() -> Result<(), Error> {
-        test_dispatch_with_bogus_client_message_returns_error(MessageType::DHCPACK).await
+    #[test]
+    fn test_dispatch_with_client_ack_message_returns_error() {
+        test_dispatch_with_bogus_client_message_returns_error(MessageType::DHCPACK)
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_client_nak_message_returns_error() -> Result<(), Error> {
-        test_dispatch_with_bogus_client_message_returns_error(MessageType::DHCPNAK).await
+    #[test]
+    fn test_dispatch_with_client_nak_message_returns_error() {
+        test_dispatch_with_bogus_client_message_returns_error(MessageType::DHCPNAK)
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_selecting_request_returns_correct_ack() -> Result<(), Error> {
+    #[test]
+    fn test_dispatch_with_selecting_request_returns_correct_ack() {
         test_selecting(true)
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_selecting_request_bdcast_unset_returns_unicast_ack(
-    ) -> Result<(), Error> {
+    #[test]
+    fn test_dispatch_with_selecting_request_bdcast_unset_returns_unicast_ack() {
         test_selecting(false)
     }
 
-    fn test_selecting(broadcast: bool) -> Result<(), Error> {
-        let (mut server, time_source) = new_test_minimal_server_with_time_source()?;
+    fn test_selecting(broadcast: bool) {
+        let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let requested_ip = random_ipv4_generator();
         let req = {
             let mut req = new_test_request_selecting_state(&server, requested_ip);
@@ -2440,8 +2413,8 @@ pub mod tests {
         assert!(server.pool.allocated.insert(requested_ip));
 
         let server_id = server.params.server_ips.first().unwrap();
-        let router = get_router(&server)?;
-        let dns_server = get_dns_server(&server)?;
+        let router = get_router(&server).expect("failed to get router from server");
+        let dns_server = get_dns_server(&server).expect("failed to get dns server from the server");
         matches::assert_matches!(
             server.records.insert(
                 ClientIdentifier::from(&req),
@@ -2462,7 +2435,8 @@ pub mod tests {
                     ],
                     time_source.now(),
                     std::u32::MAX,
-                )?,
+                )
+                .expect("failed to create lease record"),
             ),
             None
         );
@@ -2478,13 +2452,11 @@ pub mod tests {
             ))
         };
         assert_eq!(server.dispatch(req), expected_response,);
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_selecting_request_maintains_server_invariants() -> Result<(), Error>
-    {
-        let (mut server, time_source) = new_test_minimal_server_with_time_source()?;
+    #[test]
+    fn test_dispatch_with_selecting_request_maintains_server_invariants() {
+        let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let requested_ip = random_ipv4_generator();
         let req = new_test_request_selecting_state(&server, requested_ip);
 
@@ -2494,20 +2466,19 @@ pub mod tests {
         matches::assert_matches!(
             server.records.insert(
                 client_id.clone(),
-                LeaseRecord::new(Some(requested_ip), Vec::new(), time_source.now(), std::u32::MAX)?,
+                LeaseRecord::new(Some(requested_ip), Vec::new(), time_source.now(), std::u32::MAX)
+                    .expect("failed to create lease record"),
             ),
             None
         );
         let _response = server.dispatch(req).unwrap();
         assert!(server.records.contains_key(&client_id));
         assert!(server.pool.addr_is_allocated(requested_ip));
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_selecting_request_wrong_server_ip_returns_error(
-    ) -> Result<(), Error> {
-        let mut server = new_test_minimal_server()?;
+    #[test]
+    fn test_dispatch_with_selecting_request_wrong_server_ip_returns_error() {
+        let mut server = new_test_minimal_server();
         let mut req = new_test_request_selecting_state(&server, random_ipv4_generator());
 
         // Update request to have a server ip different from actual server ip.
@@ -2517,16 +2488,14 @@ pub mod tests {
         );
         req.options.push(DhcpOption::ServerIdentifier(random_ipv4_generator()));
 
-        let server_ip =
-            *server.params.server_ips.first().ok_or(ServerError::ServerMissingIpAddr)?;
+        let server_ip = *server.params.server_ips.first().expect("server missing IP address");
         assert_eq!(server.dispatch(req), Err(ServerError::IncorrectDHCPServer(server_ip)));
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_selecting_request_unknown_client_mac_returns_nak_maintains_server_invariants(
-    ) -> Result<(), Error> {
-        let mut server = new_test_minimal_server()?;
+    #[test]
+    fn test_dispatch_with_selecting_request_unknown_client_mac_returns_nak_maintains_server_invariants(
+    ) {
+        let mut server = new_test_minimal_server();
         let requested_ip = random_ipv4_generator();
         let req = new_test_request_selecting_state(&server, requested_ip);
 
@@ -2543,13 +2512,11 @@ pub mod tests {
         );
         assert!(!server.records.contains_key(&client_id));
         assert!(!server.pool.addr_is_allocated(requested_ip));
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_selecting_request_mismatched_requested_addr_returns_nak(
-    ) -> Result<(), Error> {
-        let (mut server, time_source) = new_test_minimal_server_with_time_source()?;
+    #[test]
+    fn test_dispatch_with_selecting_request_mismatched_requested_addr_returns_nak() {
+        let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let client_requested_ip = random_ipv4_generator();
         let req = new_test_request_selecting_state(&server, client_requested_ip);
 
@@ -2565,7 +2532,8 @@ pub mod tests {
                     Vec::new(),
                     time_source.now(),
                     std::u32::MAX,
-                )?,
+                )
+                .expect("failed to create lease record"),
             ),
             None
         );
@@ -2582,13 +2550,11 @@ pub mod tests {
             server.dispatch(req),
             Ok(ServerAction::SendResponse(expected_nak, ResponseTarget::Broadcast))
         );
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_selecting_request_expired_client_binding_returns_nak(
-    ) -> Result<(), Error> {
-        let (mut server, time_source) = new_test_minimal_server_with_time_source()?;
+    #[test]
+    fn test_dispatch_with_selecting_request_expired_client_binding_returns_nak() {
+        let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let requested_ip = random_ipv4_generator();
         let req = new_test_request_selecting_state(&server, requested_ip);
 
@@ -2598,7 +2564,8 @@ pub mod tests {
         matches::assert_matches!(
             server.records.insert(
                 ClientIdentifier::from(&req),
-                LeaseRecord::new(Some(requested_ip), Vec::new(), time_source.now(), std::u32::MIN)?,
+                LeaseRecord::new(Some(requested_ip), Vec::new(), time_source.now(), std::u32::MIN)
+                    .expect("failed to create lease record"),
             ),
             None
         );
@@ -2612,20 +2579,19 @@ pub mod tests {
             server.dispatch(req),
             Ok(ServerAction::SendResponse(expected_nak, ResponseTarget::Broadcast))
         );
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_selecting_request_no_reserved_addr_returns_nak() -> Result<(), Error>
-    {
-        let (mut server, time_source) = new_test_minimal_server_with_time_source()?;
+    #[test]
+    fn test_dispatch_with_selecting_request_no_reserved_addr_returns_nak() {
+        let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let requested_ip = random_ipv4_generator();
         let req = new_test_request_selecting_state(&server, requested_ip);
 
         matches::assert_matches!(
             server.records.insert(
                 ClientIdentifier::from(&req),
-                LeaseRecord::new(Some(requested_ip), Vec::new(), time_source.now(), std::u32::MAX)?,
+                LeaseRecord::new(Some(requested_ip), Vec::new(), time_source.now(), std::u32::MAX)
+                    .expect("failed to create lese record"),
             ),
             None
         );
@@ -2639,22 +2605,20 @@ pub mod tests {
             server.dispatch(req),
             Ok(ServerAction::SendResponse(expected_nak, ResponseTarget::Broadcast))
         );
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_init_boot_request_returns_correct_ack() -> Result<(), Error> {
+    #[test]
+    fn test_dispatch_with_init_boot_request_returns_correct_ack() {
         test_init_reboot(true)
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_init_boot_bdcast_unset_request_returns_correct_ack(
-    ) -> Result<(), Error> {
+    #[test]
+    fn test_dispatch_with_init_boot_bdcast_unset_request_returns_correct_ack() {
         test_init_reboot(false)
     }
 
-    fn test_init_reboot(broadcast: bool) -> Result<(), Error> {
-        let (mut server, time_source) = new_test_minimal_server_with_time_source()?;
+    fn test_init_reboot(broadcast: bool) {
+        let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let mut req = new_test_request();
         req.bdcast_flag = broadcast;
 
@@ -2669,8 +2633,8 @@ pub mod tests {
         req.options.push(DhcpOption::RequestedIpAddress(init_reboot_client_ip));
 
         let server_id = server.params.server_ips.first().unwrap();
-        let router = get_router(&server)?;
-        let dns_server = get_dns_server(&server)?;
+        let router = get_router(&server).expect("failed to get router");
+        let dns_server = get_dns_server(&server).expect("failed to get dns server");
         matches::assert_matches!(
             server.records.insert(
                 ClientIdentifier::from(&req),
@@ -2691,7 +2655,8 @@ pub mod tests {
                     ],
                     time_source.now(),
                     std::u32::MAX,
-                )?,
+                )
+                .expect("failed to create lease record"),
             ),
             None
         );
@@ -2708,13 +2673,11 @@ pub mod tests {
             ))
         };
         assert_eq!(server.dispatch(req), expected_response,);
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_init_boot_request_client_on_wrong_subnet_returns_nak(
-    ) -> Result<(), Error> {
-        let mut server = new_test_minimal_server()?;
+    #[test]
+    fn test_dispatch_with_init_boot_request_client_on_wrong_subnet_returns_nak() {
+        let mut server = new_test_minimal_server();
         let mut req = new_test_request();
 
         // Update request to have requested ip not on same subnet as server.
@@ -2726,13 +2689,11 @@ pub mod tests {
             server.dispatch(req),
             Ok(ServerAction::SendResponse(expected_nak, ResponseTarget::Broadcast))
         );
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_init_boot_request_with_giaddr_set_returns_nak_with_broadcast_bit_set(
-    ) -> Result<(), Error> {
-        let mut server = new_test_minimal_server()?;
+    #[test]
+    fn test_dispatch_with_init_boot_request_with_giaddr_set_returns_nak_with_broadcast_bit_set() {
+        let mut server = new_test_minimal_server();
         let mut req = new_test_request();
         req.giaddr = random_ipv4_generator();
 
@@ -2743,13 +2704,11 @@ pub mod tests {
         let response = server.dispatch(req).unwrap();
 
         assert!(extract_message(response).bdcast_flag);
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_init_boot_request_unknown_client_mac_returns_error(
-    ) -> Result<(), Error> {
-        let mut server = new_test_minimal_server()?;
+    #[test]
+    fn test_dispatch_with_init_boot_request_unknown_client_mac_returns_error() {
+        let mut server = new_test_minimal_server();
         let mut req = new_test_request();
 
         let client_id = ClientIdentifier::from(&req);
@@ -2759,13 +2718,11 @@ pub mod tests {
         server.params.server_ips = vec![std_ip_v4!("192.165.30.1")];
 
         assert_eq!(server.dispatch(req), Err(ServerError::UnknownClientId(client_id)));
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_init_boot_request_mismatched_requested_addr_returns_nak(
-    ) -> Result<(), Error> {
-        let (mut server, time_source) = new_test_minimal_server_with_time_source()?;
+    #[test]
+    fn test_dispatch_with_init_boot_request_mismatched_requested_addr_returns_nak() {
+        let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let mut req = new_test_request();
 
         // Update requested ip and server ip to be on the same subnet.
@@ -2783,7 +2740,8 @@ pub mod tests {
                     Vec::new(),
                     time_source.now(),
                     std::u32::MAX,
-                )?,
+                )
+                .expect("failed to create lease record"),
             ),
             None
         );
@@ -2800,13 +2758,11 @@ pub mod tests {
             server.dispatch(req),
             Ok(ServerAction::SendResponse(expected_nak, ResponseTarget::Broadcast))
         );
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_init_boot_request_expired_client_binding_returns_nak(
-    ) -> Result<(), Error> {
-        let (mut server, time_source) = new_test_minimal_server_with_time_source()?;
+    #[test]
+    fn test_dispatch_with_init_boot_request_expired_client_binding_returns_nak() {
+        let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let mut req = new_test_request();
 
         let init_reboot_client_ip = std_ip_v4!("192.165.25.4");
@@ -2824,7 +2780,8 @@ pub mod tests {
                     Vec::new(),
                     time_source.now(),
                     std::u32::MIN,
-                )?,
+                )
+                .expect("failed to create lease record"),
             ),
             None
         );
@@ -2839,13 +2796,11 @@ pub mod tests {
             server.dispatch(req),
             Ok(ServerAction::SendResponse(expected_nak, ResponseTarget::Broadcast))
         );
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_init_boot_request_no_reserved_addr_returns_nak() -> Result<(), Error>
-    {
-        let (mut server, time_source) = new_test_minimal_server_with_time_source()?;
+    #[test]
+    fn test_dispatch_with_init_boot_request_no_reserved_addr_returns_nak() {
+        let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let mut req = new_test_request();
 
         let init_reboot_client_ip = std_ip_v4!("192.165.25.4");
@@ -2860,7 +2815,8 @@ pub mod tests {
                     Vec::new(),
                     time_source.now(),
                     std::u32::MAX,
-                )?,
+                )
+                .expect("failed to create lease record"),
             ),
             None
         );
@@ -2877,12 +2833,11 @@ pub mod tests {
             server.dispatch(req),
             Ok(ServerAction::SendResponse(expected_nak, ResponseTarget::Broadcast))
         );
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_renewing_request_returns_correct_ack() -> Result<(), Error> {
-        let (mut server, time_source) = new_test_minimal_server_with_time_source()?;
+    #[test]
+    fn test_dispatch_with_renewing_request_returns_correct_ack() {
+        let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let mut req = new_test_request();
 
         let bound_client_ip = random_ipv4_generator();
@@ -2891,8 +2846,8 @@ pub mod tests {
         req.ciaddr = bound_client_ip;
 
         let server_id = server.params.server_ips.first().unwrap();
-        let router = get_router(&server)?;
-        let dns_server = get_dns_server(&server)?;
+        let router = get_router(&server).expect("failed to get router");
+        let dns_server = get_dns_server(&server).expect("failed to get dns server");
         matches::assert_matches!(
             server.records.insert(
                 ClientIdentifier::from(&req),
@@ -2913,7 +2868,8 @@ pub mod tests {
                     ],
                     time_source.now(),
                     std::u32::MAX,
-                )?,
+                )
+                .expect("failed to create lease record"),
             ),
             None
         );
@@ -2931,13 +2887,11 @@ pub mod tests {
                 ResponseTarget::Unicast(expected_dest, None)
             ))
         );
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_renewing_request_unknown_client_mac_returns_nak(
-    ) -> Result<(), Error> {
-        let mut server = new_test_minimal_server()?;
+    #[test]
+    fn test_dispatch_with_renewing_request_unknown_client_mac_returns_nak() {
+        let mut server = new_test_minimal_server();
         let mut req = new_test_request();
 
         let bound_client_ip = random_ipv4_generator();
@@ -2954,13 +2908,11 @@ pub mod tests {
             server.dispatch(req),
             Ok(ServerAction::SendResponse(expected_nak, ResponseTarget::Broadcast))
         );
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_renewing_request_mismatched_requested_addr_returns_nak(
-    ) -> Result<(), Error> {
-        let (mut server, time_source) = new_test_minimal_server_with_time_source()?;
+    #[test]
+    fn test_dispatch_with_renewing_request_mismatched_requested_addr_returns_nak() {
+        let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let mut req = new_test_request();
 
         let client_renewal_ip = random_ipv4_generator();
@@ -2977,7 +2929,8 @@ pub mod tests {
                     Vec::new(),
                     time_source.now(),
                     std::u32::MAX
-                )?,
+                )
+                .expect("failed to create lease record"),
             ),
             None
         );
@@ -2994,13 +2947,11 @@ pub mod tests {
             server.dispatch(req),
             Ok(ServerAction::SendResponse(expected_nak, ResponseTarget::Broadcast))
         );
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_renewing_request_expired_client_binding_returns_nak(
-    ) -> Result<(), Error> {
-        let (mut server, time_source) = new_test_minimal_server_with_time_source()?;
+    #[test]
+    fn test_dispatch_with_renewing_request_expired_client_binding_returns_nak() {
+        let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let mut req = new_test_request();
 
         let bound_client_ip = random_ipv4_generator();
@@ -3017,7 +2968,8 @@ pub mod tests {
                     Vec::new(),
                     time_source.now(),
                     std::u32::MIN
-                )?,
+                )
+                .expect("failed to create lease record"),
             ),
             None
         );
@@ -3031,13 +2983,11 @@ pub mod tests {
             server.dispatch(req),
             Ok(ServerAction::SendResponse(expected_nak, ResponseTarget::Broadcast))
         );
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_renewing_request_no_reserved_addr_returns_nak() -> Result<(), Error>
-    {
-        let (mut server, time_source) = new_test_minimal_server_with_time_source()?;
+    #[test]
+    fn test_dispatch_with_renewing_request_no_reserved_addr_returns_nak() {
+        let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let mut req = new_test_request();
 
         let bound_client_ip = random_ipv4_generator();
@@ -3051,7 +3001,8 @@ pub mod tests {
                     Vec::new(),
                     time_source.now(),
                     std::u32::MAX
-                )?,
+                )
+                .expect("failed to create lease record"),
             ),
             None
         );
@@ -3067,21 +3018,19 @@ pub mod tests {
             server.dispatch(req),
             Ok(ServerAction::SendResponse(expected_nak, ResponseTarget::Broadcast))
         );
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_unknown_client_state_returns_error() -> Result<(), Error> {
-        let mut server = new_test_minimal_server()?;
+    #[test]
+    fn test_dispatch_with_unknown_client_state_returns_error() {
+        let mut server = new_test_minimal_server();
 
         let req = new_test_request();
 
         assert_eq!(server.dispatch(req), Err(ServerError::UnknownClientStateDuringRequest));
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_get_client_state_with_selecting_returns_selecting() -> Result<(), Error> {
+    #[test]
+    fn test_get_client_state_with_selecting_returns_selecting() {
         let mut req = new_test_request();
 
         // Selecting state request must have server id and requested ip populated.
@@ -3089,43 +3038,38 @@ pub mod tests {
         req.options.push(DhcpOption::RequestedIpAddress(random_ipv4_generator()));
 
         assert_eq!(get_client_state(&req), Ok(ClientState::Selecting));
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_get_client_state_with_initreboot_returns_initreboot() -> Result<(), Error> {
+    #[test]
+    fn test_get_client_state_with_initreboot_returns_initreboot() {
         let mut req = new_test_request();
 
         // Init reboot state request must have requested ip populated.
         req.options.push(DhcpOption::RequestedIpAddress(random_ipv4_generator()));
 
         assert_eq!(get_client_state(&req), Ok(ClientState::InitReboot));
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_get_client_state_with_renewing_returns_renewing() -> Result<(), Error> {
+    #[test]
+    fn test_get_client_state_with_renewing_returns_renewing() {
         let mut req = new_test_request();
 
         // Renewing state request must have ciaddr populated.
         req.ciaddr = random_ipv4_generator();
 
         assert_eq!(get_client_state(&req), Ok(ClientState::Renewing));
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_get_client_state_with_unknown_returns_unknown() -> Result<(), Error> {
+    #[test]
+    fn test_get_client_state_with_unknown_returns_unknown() {
         let msg = new_test_request();
 
         assert_eq!(get_client_state(&msg), Err(()));
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_client_msg_missing_message_type_option_returns_error(
-    ) -> Result<(), Error> {
-        let mut server = new_test_minimal_server()?;
+    #[test]
+    fn test_dispatch_with_client_msg_missing_message_type_option_returns_error() {
+        let mut server = new_test_minimal_server();
         let mut msg = new_test_request();
         msg.options.clear();
 
@@ -3135,12 +3079,11 @@ pub mod tests {
                 OptionCode::DhcpMessageType
             )))
         );
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_release_expired_leases_with_none_expired_releases_none() -> Result<(), Error> {
-        let (mut server, mut time_source) = new_test_minimal_server_with_time_source()?;
+    #[test]
+    fn test_release_expired_leases_with_none_expired_releases_none() {
+        let (mut server, mut time_source) = new_test_minimal_server_with_time_source();
         server.pool.universe.clear();
 
         // Insert client 1 bindings.
@@ -3148,22 +3091,28 @@ pub mod tests {
         let client_1_id = ClientIdentifier::from(random_mac_generator());
         let client_opts = [DhcpOption::IpAddressLeaseTime(u32::MAX)];
         assert!(server.pool.universe.insert(client_1_ip));
-        server.store_client_record(client_1_ip, client_1_id.clone(), &client_opts)?;
+        server
+            .store_client_record(client_1_ip, client_1_id.clone(), &client_opts)
+            .expect("failed to store client record");
 
         // Insert client 2 bindings.
         let client_2_ip = random_ipv4_generator();
         let client_2_id = ClientIdentifier::from(random_mac_generator());
         assert!(server.pool.universe.insert(client_2_ip));
-        server.store_client_record(client_2_ip, client_2_id.clone(), &client_opts)?;
+        server
+            .store_client_record(client_2_ip, client_2_id.clone(), &client_opts)
+            .expect("failed to store client record");
 
         // Insert client 3 bindings.
         let client_3_ip = random_ipv4_generator();
         let client_3_id = ClientIdentifier::from(random_mac_generator());
         assert!(server.pool.universe.insert(client_3_ip));
-        server.store_client_record(client_3_ip, client_3_id.clone(), &client_opts)?;
+        server
+            .store_client_record(client_3_ip, client_3_id.clone(), &client_opts)
+            .expect("failed to store client record");
 
         let () = time_source.move_forward(Duration::from_secs(1));
-        let () = server.release_expired_leases()?;
+        let () = server.release_expired_leases().expect("failed to release expired leases");
 
         let client_ips: BTreeSet<_> =
             std::array::IntoIter::new([client_1_ip, client_2_ip, client_3_ip]).collect();
@@ -3174,7 +3123,7 @@ pub mod tests {
         assert!(available.is_empty(), "{:?}", available);
         assert_eq!(server.pool.allocated, client_ips);
         matches::assert_matches!(
-            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
+            server.store.expect("missing store").actions().as_slice(),
             [
                 DataStoreAction::StoreClientRecord { client_id: id_1, record: LeaseRecord { current: Some(ip1), previous: None, ..}, .. },
                 DataStoreAction::StoreClientRecord { client_id: id_2, record: LeaseRecord { current: Some(ip2), previous: None, ..},.. },
@@ -3182,43 +3131,48 @@ pub mod tests {
             ] if *id_1 == client_1_id && *id_2 == client_2_id && *id_3 == client_3_id &&
                 *ip1 == client_1_ip && *ip2 == client_2_ip && *ip3 == client_3_ip
         );
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_release_expired_leases_with_all_expired_releases_all() -> Result<(), Error> {
-        let (mut server, mut time_source) = new_test_minimal_server_with_time_source()?;
+    #[test]
+    fn test_release_expired_leases_with_all_expired_releases_all() {
+        let (mut server, mut time_source) = new_test_minimal_server_with_time_source();
         server.pool.universe.clear();
 
         let client_1_ip = random_ipv4_generator();
         assert!(server.pool.universe.insert(client_1_ip));
         let client_1_id = ClientIdentifier::from(random_mac_generator());
-        let () = server.store_client_record(
-            client_1_ip,
-            client_1_id.clone(),
-            &[DhcpOption::IpAddressLeaseTime(0)],
-        )?;
+        let () = server
+            .store_client_record(
+                client_1_ip,
+                client_1_id.clone(),
+                &[DhcpOption::IpAddressLeaseTime(0)],
+            )
+            .expect("failed to store client record");
 
         let client_2_ip = random_ipv4_generator();
         assert!(server.pool.universe.insert(client_2_ip));
         let client_2_id = ClientIdentifier::from(random_mac_generator());
-        let () = server.store_client_record(
-            client_2_ip,
-            client_2_id.clone(),
-            &[DhcpOption::IpAddressLeaseTime(0)],
-        )?;
+        let () = server
+            .store_client_record(
+                client_2_ip,
+                client_2_id.clone(),
+                &[DhcpOption::IpAddressLeaseTime(0)],
+            )
+            .expect("failed to store client record");
 
         let client_3_ip = random_ipv4_generator();
         assert!(server.pool.universe.insert(client_3_ip));
         let client_3_id = ClientIdentifier::from(random_mac_generator());
-        let () = server.store_client_record(
-            client_3_ip,
-            client_3_id.clone(),
-            &[DhcpOption::IpAddressLeaseTime(0)],
-        )?;
+        let () = server
+            .store_client_record(
+                client_3_ip,
+                client_3_id.clone(),
+                &[DhcpOption::IpAddressLeaseTime(0)],
+            )
+            .expect("failed to store client record");
 
         let () = time_source.move_forward(Duration::from_secs(1));
-        let () = server.release_expired_leases()?;
+        let () = server.release_expired_leases().expect("failed to release expired leases");
 
         assert_eq!(server.records.len(), 3);
         matches::assert_matches!(server.records.get(&client_1_id), Some(LeaseRecord {current: None, previous: Some(ip), ..}) if *ip == client_1_ip);
@@ -3232,7 +3186,7 @@ pub mod tests {
         // Delete actions occur in non-deterministic (HashMap iteration) order, so we must not
         // assert on the ordering of the deleted ids.
         matches::assert_matches!(
-            &server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice()[..],
+            &server.store.expect("missing store").actions().as_slice()[..],
             [
                 DataStoreAction::StoreClientRecord { client_id: id_1, record: LeaseRecord { current: Some(ip1), previous: None, ..}, .. },
                 DataStoreAction::StoreClientRecord { client_id: id_2, record: LeaseRecord { current: Some(ip2), previous: None, ..},.. },
@@ -3249,43 +3203,48 @@ pub mod tests {
                     [&client_1_ip, &client_2_ip, &client_3_ip].contains(ip)
                 })
         );
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_release_expired_leases_with_some_expired_releases_expired() -> Result<(), Error> {
-        let (mut server, mut time_source) = new_test_minimal_server_with_time_source()?;
+    #[test]
+    fn test_release_expired_leases_with_some_expired_releases_expired() {
+        let (mut server, mut time_source) = new_test_minimal_server_with_time_source();
         server.pool.universe.clear();
 
         let client_1_ip = random_ipv4_generator();
         assert!(server.pool.universe.insert(client_1_ip));
         let client_1_id = ClientIdentifier::from(random_mac_generator());
-        let () = server.store_client_record(
-            client_1_ip,
-            client_1_id.clone(),
-            &[DhcpOption::IpAddressLeaseTime(u32::MAX)],
-        )?;
+        let () = server
+            .store_client_record(
+                client_1_ip,
+                client_1_id.clone(),
+                &[DhcpOption::IpAddressLeaseTime(u32::MAX)],
+            )
+            .expect("failed to store client record");
 
         let client_2_ip = random_ipv4_generator();
         assert!(server.pool.universe.insert(client_2_ip));
         let client_2_id = ClientIdentifier::from(random_mac_generator());
-        let () = server.store_client_record(
-            client_2_ip,
-            client_2_id.clone(),
-            &[DhcpOption::IpAddressLeaseTime(0)],
-        )?;
+        let () = server
+            .store_client_record(
+                client_2_ip,
+                client_2_id.clone(),
+                &[DhcpOption::IpAddressLeaseTime(0)],
+            )
+            .expect("failed to store client record");
 
         let client_3_ip = random_ipv4_generator();
         assert!(server.pool.universe.insert(client_3_ip));
         let client_3_id = ClientIdentifier::from(random_mac_generator());
-        let () = server.store_client_record(
-            client_3_ip,
-            client_3_id.clone(),
-            &[DhcpOption::IpAddressLeaseTime(u32::MAX)],
-        )?;
+        let () = server
+            .store_client_record(
+                client_3_ip,
+                client_3_id.clone(),
+                &[DhcpOption::IpAddressLeaseTime(u32::MAX)],
+            )
+            .expect("failed to store client record");
 
         let () = time_source.move_forward(Duration::from_secs(1));
-        let () = server.release_expired_leases()?;
+        let () = server.release_expired_leases().expect("failed to release expired leases");
 
         let client_ips: BTreeSet<_> =
             std::array::IntoIter::new([client_1_ip, client_3_ip]).collect();
@@ -3295,7 +3254,7 @@ pub mod tests {
         assert_eq!(server.pool.available().collect::<Vec<_>>(), vec![client_2_ip]);
         assert_eq!(server.pool.allocated, client_ips);
         matches::assert_matches!(
-            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
+            server.store.expect("missing store").actions().as_slice(),
             [
                 DataStoreAction::StoreClientRecord { client_id: id_1, record: LeaseRecord { current: Some(ip1), previous: None, ..}, .. },
                 DataStoreAction::StoreClientRecord { client_id: id_2, record: LeaseRecord { current: Some(ip2), previous: None, ..},.. },
@@ -3304,13 +3263,11 @@ pub mod tests {
             ] if *id_1 == client_1_id && *id_2 == client_2_id && *id_3 == client_3_id && *update_id_1 == client_2_id &&
                 *ip1 == client_1_ip && *ip2 == client_2_ip && *ip3 == client_3_ip && *update_ip_1 == client_2_ip
         );
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_known_release_updates_address_pool_retains_client_record(
-    ) -> Result<(), Error> {
-        let (mut server, time_source) = new_test_minimal_server_with_time_source()?;
+    #[test]
+    fn test_dispatch_with_known_release_updates_address_pool_retains_client_record() {
+        let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let mut release = new_test_release();
 
         let release_ip = random_ipv4_generator();
@@ -3335,7 +3292,7 @@ pub mod tests {
 
         assert_eq!(server.dispatch(release), Ok(ServerAction::AddressRelease(release_ip)));
         matches::assert_matches!(
-            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
+            server.store.expect("missing store").actions().as_slice(),
             [
                 DataStoreAction::StoreClientRecord { client_id: id, record: LeaseRecord {current: None, previous: Some(ip), options, ..}}
             ] if *id == client_id  &&  *ip == release_ip && *options == opts
@@ -3348,14 +3305,11 @@ pub mod tests {
             Some(LeaseRecord {current: None, previous: Some(ip), options, lease_length_seconds, ..})
                if *ip == release_ip && *options == opts && *lease_length_seconds == u32::MAX
         );
-
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_unknown_release_maintains_server_state_returns_unknown_mac_error(
-    ) -> Result<(), Error> {
-        let mut server = new_test_minimal_server()?;
+    #[test]
+    fn test_dispatch_with_unknown_release_maintains_server_state_returns_unknown_mac_error() {
+        let mut server = new_test_minimal_server();
         let mut release = new_test_release();
 
         let release_ip = random_ipv4_generator();
@@ -3368,12 +3322,11 @@ pub mod tests {
 
         assert!(server.pool.addr_is_allocated(release_ip), "addr not marked allocated");
         assert!(!server.pool.addr_is_available(release_ip), "addr still marked available");
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_inform_returns_correct_ack() -> Result<(), Error> {
-        let mut server = new_test_minimal_server()?;
+    #[test]
+    fn test_dispatch_with_inform_returns_correct_ack() {
+        let mut server = new_test_minimal_server();
         let mut inform = new_test_inform();
 
         let inform_client_ip = random_ipv4_generator();
@@ -3392,12 +3345,11 @@ pub mod tests {
                 ResponseTarget::Unicast(expected_dest, None)
             ))
         );
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_decline_for_allocated_addr_returns_ok() -> Result<(), Error> {
-        let (mut server, time_source) = new_test_minimal_server_with_time_source()?;
+    #[test]
+    fn test_dispatch_with_decline_for_allocated_addr_returns_ok() {
+        let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let mut decline = new_test_decline(&server);
 
         let declined_ip = random_ipv4_generator();
@@ -3411,7 +3363,8 @@ pub mod tests {
         matches::assert_matches!(
             server.records.insert(
                 client_id.clone(),
-                LeaseRecord::new(Some(declined_ip), Vec::new(), time_source.now(), std::u32::MAX)?,
+                LeaseRecord::new(Some(declined_ip), Vec::new(), time_source.now(), std::u32::MAX)
+                    .expect("failed to create lease record"),
             ),
             None
         );
@@ -3421,15 +3374,14 @@ pub mod tests {
         assert!(server.pool.addr_is_allocated(declined_ip), "addr not marked allocated");
         assert!(!server.records.contains_key(&client_id), "client record incorrectly retained");
         matches::assert_matches!(
-            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
+            server.store.expect("missing store").actions().as_slice(),
             [DataStoreAction::Delete { client_id: id }] if *id == client_id
         );
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_decline_for_available_addr_returns_ok() -> Result<(), Error> {
-        let (mut server, time_source) = new_test_minimal_server_with_time_source()?;
+    #[test]
+    fn test_dispatch_with_decline_for_available_addr_returns_ok() {
+        let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let mut decline = new_test_decline(&server);
 
         let declined_ip = random_ipv4_generator();
@@ -3439,7 +3391,8 @@ pub mod tests {
         matches::assert_matches!(
             server.records.insert(
                 client_id.clone(),
-                LeaseRecord::new(Some(declined_ip), Vec::new(), time_source.now(), std::u32::MAX)?,
+                LeaseRecord::new(Some(declined_ip), Vec::new(), time_source.now(), std::u32::MAX)
+                    .expect("failed to create lease record"),
             ),
             None
         );
@@ -3450,15 +3403,14 @@ pub mod tests {
         assert!(server.pool.addr_is_allocated(declined_ip), "addr not marked allocated");
         assert!(!server.records.contains_key(&client_id), "client record incorrectly retained");
         matches::assert_matches!(
-            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
+            server.store.expect("missing store").actions().as_slice(),
             [DataStoreAction::Delete { client_id: id }] if *id == client_id
         );
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_decline_for_mismatched_addr_returns_err() -> Result<(), Error> {
-        let (mut server, time_source) = new_test_minimal_server_with_time_source()?;
+    #[test]
+    fn test_dispatch_with_decline_for_mismatched_addr_returns_err() {
+        let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let mut decline = new_test_decline(&server);
 
         let declined_ip = random_ipv4_generator();
@@ -3480,7 +3432,8 @@ pub mod tests {
                     Vec::new(),
                     time_source.now(),
                     std::u32::MAX,
-                )?,
+                )
+                .expect("failed to create lease record"),
             ),
             None
         );
@@ -3495,12 +3448,11 @@ pub mod tests {
         assert!(server.pool.addr_is_available(declined_ip), "addr not marked available");
         assert!(!server.pool.addr_is_allocated(declined_ip), "addr marked allocated");
         assert!(server.records.contains_key(&client_id), "client record deleted from records");
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_decline_for_expired_lease_returns_ok() -> Result<(), Error> {
-        let (mut server, time_source) = new_test_minimal_server_with_time_source()?;
+    #[test]
+    fn test_dispatch_with_decline_for_expired_lease_returns_ok() {
+        let (mut server, time_source) = new_test_minimal_server_with_time_source();
         let mut decline = new_test_decline(&server);
 
         let declined_ip = random_ipv4_generator();
@@ -3513,7 +3465,8 @@ pub mod tests {
         matches::assert_matches!(
             server.records.insert(
                 client_id.clone(),
-                LeaseRecord::new(Some(declined_ip), Vec::new(), time_source.now(), std::u32::MIN)?,
+                LeaseRecord::new(Some(declined_ip), Vec::new(), time_source.now(), std::u32::MIN)
+                    .expect("failed to create lease record"),
             ),
             None
         );
@@ -3523,15 +3476,14 @@ pub mod tests {
         assert!(server.pool.addr_is_allocated(declined_ip), "addr not marked allocated");
         assert!(!server.records.contains_key(&client_id), "client record incorrectly retained");
         matches::assert_matches!(
-            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
+            server.store.expect("failed to create ").actions().as_slice(),
             [DataStoreAction::Delete { client_id: id }] if *id == client_id
         );
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_decline_for_unknown_client_returns_err() -> Result<(), Error> {
-        let mut server = new_test_minimal_server()?;
+    #[test]
+    fn test_dispatch_with_decline_for_unknown_client_returns_err() {
+        let mut server = new_test_minimal_server();
         let mut decline = new_test_decline(&server);
 
         let declined_ip = random_ipv4_generator();
@@ -3547,12 +3499,11 @@ pub mod tests {
         );
         assert!(server.pool.addr_is_available(declined_ip), "addr not marked available");
         assert!(!server.pool.addr_is_allocated(declined_ip), "addr marked allocated");
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_decline_for_incorrect_server_returns_err() -> Result<(), Error> {
-        let (mut server, time_source) = new_test_minimal_server_with_time_source()?;
+    #[test]
+    fn test_dispatch_with_decline_for_incorrect_server_returns_err() {
+        let (mut server, time_source) = new_test_minimal_server_with_time_source();
         server.params.server_ips = vec![random_ipv4_generator()];
 
         let mut decline = new_client_message(MessageType::DHCPDECLINE);
@@ -3568,7 +3519,8 @@ pub mod tests {
         matches::assert_matches!(
             server.records.insert(
                 client_id.clone(),
-                LeaseRecord::new(Some(declined_ip), Vec::new(), time_source.now(), std::u32::MAX)?,
+                LeaseRecord::new(Some(declined_ip), Vec::new(), time_source.now(), std::u32::MAX)
+                    .expect("failed to create lease record"),
             ),
             None
         );
@@ -3577,20 +3529,18 @@ pub mod tests {
         assert!(!server.pool.addr_is_available(declined_ip), "addr marked available");
         assert!(server.pool.addr_is_allocated(declined_ip), "addr not marked allocated");
         assert!(server.records.contains_key(&client_id), "client record not retained");
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_decline_without_requested_addr_returns_err() -> Result<(), Error> {
-        let mut server = new_test_minimal_server()?;
+    #[test]
+    fn test_dispatch_with_decline_without_requested_addr_returns_err() {
+        let mut server = new_test_minimal_server();
         let decline = new_test_decline(&server);
 
         assert_eq!(server.dispatch(decline), Err(ServerError::NoRequestedAddrForDecline));
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_client_requested_lease_time() -> Result<(), Error> {
+    #[test]
+    fn test_client_requested_lease_time() {
         let mut disc = new_test_discover();
         let client_id = ClientIdentifier::from(&disc);
 
@@ -3598,7 +3548,7 @@ pub mod tests {
 
         disc.options.push(DhcpOption::IpAddressLeaseTime(client_requested_time));
 
-        let mut server = new_test_minimal_server()?;
+        let mut server = new_test_minimal_server();
         assert!(server.pool.universe.insert(random_ipv4_generator()));
 
         let response = server.dispatch(disc).unwrap();
@@ -3623,14 +3573,13 @@ pub mod tests {
             client_requested_time,
         );
         matches::assert_matches!(
-            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
+            server.store.expect("missing store").actions().as_slice(),
             [DataStoreAction::StoreClientRecord {client_id: id, ..}] if *id == client_id
         );
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_client_requested_lease_time_greater_than_max() -> Result<(), Error> {
+    #[test]
+    fn test_client_requested_lease_time_greater_than_max() {
         let mut disc = new_test_discover();
         let client_id = ClientIdentifier::from(&disc);
 
@@ -3639,7 +3588,7 @@ pub mod tests {
 
         disc.options.push(DhcpOption::IpAddressLeaseTime(client_requested_time));
 
-        let mut server = new_test_minimal_server()?;
+        let mut server = new_test_minimal_server();
         assert!(server.pool.universe.insert(std_ip_v4!("195.168.1.45")));
         let ll = LeaseLength { default_seconds: 60 * 60 * 24, max_seconds: server_max_lease_time };
         server.params.lease_length = ll;
@@ -3666,74 +3615,73 @@ pub mod tests {
             server_max_lease_time,
         );
         matches::assert_matches!(
-            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
+            server.store.expect("missing store").actions().as_slice(),
             [DataStoreAction::StoreClientRecord {client_id: id, ..}] if *id == client_id
         );
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_server_dispatcher_get_option_with_unset_option_returns_not_found(
-    ) -> Result<(), Error> {
-        let server = new_test_minimal_server()?;
+    #[test]
+    fn test_server_dispatcher_get_option_with_unset_option_returns_not_found() {
+        let server = new_test_minimal_server();
         let result = server.dispatch_get_option(fidl_fuchsia_net_dhcp::OptionCode::SubnetMask);
         assert_eq!(result, Err(Status::NOT_FOUND));
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_server_dispatcher_get_option_with_set_option_returns_option() -> Result<(), Error>
-    {
-        let mut server = new_test_minimal_server()?;
+    #[test]
+    fn test_server_dispatcher_get_option_with_set_option_returns_option() {
+        let mut server = new_test_minimal_server();
         let option = || fidl_fuchsia_net_dhcp::Option_::SubnetMask(fidl_ip_v4!("255.255.255.0"));
         matches::assert_matches!(
-            server
-                .options_repo
-                .insert(OptionCode::SubnetMask, DhcpOption::try_from_fidl(option())?),
+            server.options_repo.insert(
+                OptionCode::SubnetMask,
+                DhcpOption::try_from_fidl(option())
+                    .expect("failed to convert dhcp option from fidl")
+            ),
             None
         );
-        let result = server.dispatch_get_option(fidl_fuchsia_net_dhcp::OptionCode::SubnetMask)?;
+        let result = server
+            .dispatch_get_option(fidl_fuchsia_net_dhcp::OptionCode::SubnetMask)
+            .expect("failed to get dhcp option");
         assert_eq!(result, option());
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_server_dispatcher_get_parameter_returns_parameter() -> Result<(), Error> {
-        let mut server = new_test_minimal_server()?;
+    #[test]
+    fn test_server_dispatcher_get_parameter_returns_parameter() {
+        let mut server = new_test_minimal_server();
         let addr = random_ipv4_generator();
         server.params.server_ips = vec![addr];
         let expected = fidl_fuchsia_net_dhcp::Parameter::IpAddrs(vec![addr.into_fidl()]);
-        let result =
-            server.dispatch_get_parameter(fidl_fuchsia_net_dhcp::ParameterName::IpAddrs)?;
+        let result = server
+            .dispatch_get_parameter(fidl_fuchsia_net_dhcp::ParameterName::IpAddrs)
+            .expect("failed to get dhcp option");
         assert_eq!(result, expected);
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_server_dispatcher_set_option_returns_unit() -> Result<(), Error> {
-        let mut server = new_test_minimal_server()?;
+    #[test]
+    fn test_server_dispatcher_set_option_returns_unit() {
+        let mut server = new_test_minimal_server();
         let option = || fidl_fuchsia_net_dhcp::Option_::SubnetMask(fidl_ip_v4!("255.255.255.0"));
-        let () = server.dispatch_set_option(option())?;
-        let stored_option: DhcpOption = DhcpOption::try_from_fidl(option())?;
+        let () = server.dispatch_set_option(option()).expect("failed to set dhcp option");
+        let stored_option: DhcpOption =
+            DhcpOption::try_from_fidl(option()).expect("failed to convert dhcp option from fidl");
         let code = stored_option.code();
         let result = server.options_repo.get(&code);
         assert_eq!(result, Some(&stored_option));
         matches::assert_matches!(
-            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
+            server.store.expect("missing store").actions().as_slice(),
             [
                 DataStoreAction::StoreOptions { opts },
             ] if opts.contains(&stored_option)
         );
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_server_dispatcher_set_option_saves_to_stash() -> Result<(), Error> {
+    #[test]
+    fn test_server_dispatcher_set_option_saves_to_stash() {
         let mask = [255, 255, 255, 0];
         let fidl_mask = fidl_fuchsia_net_dhcp::Option_::SubnetMask(fidl_fuchsia_net::Ipv4Address {
             addr: mask,
         });
-        let params = default_server_params()?;
+        let params = default_server_params().expect("failed to get default serve parameters");
         let mut server: Server = super::Server {
             records: HashMap::new(),
             pool: AddressPool::new(params.managed_addrs.pool_range()),
@@ -3742,18 +3690,17 @@ pub mod tests {
             options_repo: HashMap::new(),
             time_source: TestSystemTime::with_current_time(),
         };
-        let () = server.dispatch_set_option(fidl_mask)?;
+        let () = server.dispatch_set_option(fidl_mask).expect("failed to set dhcp option");
         matches::assert_matches!(
-            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
+            server.store.expect("missing store").actions().as_slice(),
             [
                 DataStoreAction::StoreOptions { opts },
             ] if *opts == vec![DhcpOption::SubnetMask(Ipv4Addr::from(mask))]
         );
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_server_dispatcher_set_parameter_saves_to_stash() -> Result<(), Error> {
+    #[test]
+    fn test_server_dispatcher_set_parameter_saves_to_stash() {
         let (default, max) = (42, 100);
         let fidl_lease =
             fidl_fuchsia_net_dhcp::Parameter::Lease(fidl_fuchsia_net_dhcp::LeaseLength {
@@ -3761,10 +3708,10 @@ pub mod tests {
                 max: Some(max),
                 ..fidl_fuchsia_net_dhcp::LeaseLength::EMPTY
             });
-        let mut server = new_test_minimal_server()?;
-        let () = server.dispatch_set_parameter(fidl_lease)?;
+        let mut server = new_test_minimal_server();
+        let () = server.dispatch_set_parameter(fidl_lease).expect("failed to set parameter");
         matches::assert_matches!(
-            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().next(),
+            server.store.expect("missing store").actions().next(),
             Some(DataStoreAction::StoreParameters {
                 params: ServerParameters {
                     lease_length: LeaseLength { default_seconds: 42, max_seconds: 100 },
@@ -3772,12 +3719,11 @@ pub mod tests {
                 },
             })
         );
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_server_dispatcher_set_parameter() -> Result<(), Error> {
-        let mut server = new_test_minimal_server()?;
+    #[test]
+    fn test_server_dispatcher_set_parameter() {
+        let mut server = new_test_minimal_server();
         let addr = random_ipv4_generator();
         let valid_parameter = || fidl_fuchsia_net_dhcp::Parameter::IpAddrs(vec![addr.into_fidl()]);
         let empty_lease_length =
@@ -3808,9 +3754,12 @@ pub mod tests {
                 },
             ]);
 
-        let () = server.dispatch_set_parameter(valid_parameter())?;
+        let () =
+            server.dispatch_set_parameter(valid_parameter()).expect("failed to set dhcp parameter");
         assert_eq!(
-            server.dispatch_get_parameter(fidl_fuchsia_net_dhcp::ParameterName::IpAddrs)?,
+            server
+                .dispatch_get_parameter(fidl_fuchsia_net_dhcp::ParameterName::IpAddrs)
+                .expect("failed to get dhcp parameter"),
             valid_parameter()
         );
         assert_eq!(
@@ -3826,97 +3775,100 @@ pub mod tests {
             Err(fuchsia_zircon::Status::INVALID_ARGS)
         );
         matches::assert_matches!(
-            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
+            server.store.expect("missing store").actions().as_slice(),
             [DataStoreAction::StoreParameters { params }] if *params == server.params
         );
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_server_dispatcher_list_options_returns_set_options() -> Result<(), Error> {
-        let mut server = new_test_minimal_server()?;
+    #[test]
+    fn test_server_dispatcher_list_options_returns_set_options() {
+        let mut server = new_test_minimal_server();
         let mask = || fidl_fuchsia_net_dhcp::Option_::SubnetMask(fidl_ip_v4!("255.255.255.0"));
         let hostname = || fidl_fuchsia_net_dhcp::Option_::HostName(String::from("testhostname"));
         matches::assert_matches!(
-            server.options_repo.insert(OptionCode::SubnetMask, DhcpOption::try_from_fidl(mask())?),
+            server.options_repo.insert(
+                OptionCode::SubnetMask,
+                DhcpOption::try_from_fidl(mask()).expect("failed to convert dhcp option from fidl")
+            ),
             None
         );
         matches::assert_matches!(
-            server
-                .options_repo
-                .insert(OptionCode::HostName, DhcpOption::try_from_fidl(hostname())?),
+            server.options_repo.insert(
+                OptionCode::HostName,
+                DhcpOption::try_from_fidl(hostname())
+                    .expect("failed to convert dhcp option from fidl")
+            ),
             None
         );
-        let result = server.dispatch_list_options()?;
+        let result = server.dispatch_list_options().expect("failed to list dhcp options");
         assert_eq!(result.len(), server.options_repo.len());
         assert!(result.contains(&mask()));
         assert!(result.contains(&hostname()));
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_server_dispatcher_list_parameters_returns_parameters() -> Result<(), Error> {
-        let mut server = new_test_minimal_server()?;
+    #[test]
+    fn test_server_dispatcher_list_parameters_returns_parameters() {
+        let mut server = new_test_minimal_server();
         let addr = random_ipv4_generator();
         server.params.server_ips = vec![addr];
         let expected = fidl_fuchsia_net_dhcp::Parameter::IpAddrs(vec![addr.into_fidl()]);
-        let result = server.dispatch_list_parameters()?;
+        let result = server.dispatch_list_parameters().expect("failed to list dhcp options");
         let params_fields_ct = 7;
         assert_eq!(result.len(), params_fields_ct);
         assert!(result.contains(&expected));
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_server_dispatcher_reset_options() -> Result<(), Error> {
-        let mut server = new_test_minimal_server()?;
+    #[test]
+    fn test_server_dispatcher_reset_options() {
+        let mut server = new_test_minimal_server();
         let empty_map = HashMap::new();
         assert_ne!(empty_map, server.options_repo);
-        let () = server.dispatch_reset_options()?;
+        let () = server.dispatch_reset_options().expect("failed to reset options");
         assert_eq!(empty_map, server.options_repo);
         let stored_opts = server
             .store
             .as_mut()
-            .ok_or_else(|| anyhow::anyhow!("missing store"))?
-            .load_options()?;
+            .expect("missing store")
+            .load_options()
+            .expect("failed to load options");
         assert_eq!(empty_map, stored_opts);
         matches::assert_matches!(
-            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
+            server.store.expect("missing store").actions().as_slice(),
             [
                 DataStoreAction::StoreOptions { opts },
                 DataStoreAction::LoadOptions
             ] if opts.is_empty()
         );
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_server_dispatcher_reset_parameters() -> Result<(), Error> {
-        let mut server = new_test_minimal_server()?;
+    #[test]
+    fn test_server_dispatcher_reset_parameters() {
+        let mut server = new_test_minimal_server();
         let default_params = test_server_params(
             vec![std_ip_v4!("192.168.0.1")],
             LeaseLength { default_seconds: 86400, max_seconds: 86400 },
-        )?;
+        )
+        .expect("failed to get test server parameters");
         assert_ne!(default_params, server.params);
-        let () = server.dispatch_reset_parameters(&default_params)?;
+        let () =
+            server.dispatch_reset_parameters(&default_params).expect("failed to reset parameters");
         assert_eq!(default_params, server.params);
         matches::assert_matches!(
-            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
+            server.store.expect("missing store").actions().as_slice(),
             [DataStoreAction::StoreParameters { params }] if *params == default_params
         );
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_server_dispatcher_clear_leases() -> Result<(), Error> {
-        let mut server = new_test_minimal_server()?;
+    #[test]
+    fn test_server_dispatcher_clear_leases() {
+        let mut server = new_test_minimal_server();
         server.params.managed_addrs.pool_range_stop = std_ip_v4!("192.168.0.4");
         server.pool = AddressPool::new(server.params.managed_addrs.pool_range());
         let client = std_ip_v4!("192.168.0.2");
         let () = server
             .pool
             .allocate_addr(client)
-            .with_context(|| format!("allocate_addr({}) failed", client))?;
+            .unwrap_or_else(|err| panic!("allocate_addr({}) failed: {:?}", client, err));
         let client_id = ClientIdentifier::from(random_mac_generator());
         server.records = std::array::IntoIter::new([(
             client_id.clone(),
@@ -3929,7 +3881,7 @@ pub mod tests {
             },
         )])
         .collect();
-        let () = server.dispatch_clear_leases().context("dispatch_clear_leases() failed")?;
+        let () = server.dispatch_clear_leases().expect("dispatch_clear_leases() failed");
         let empty_map = HashMap::new();
         assert_eq!(empty_map, server.records);
         assert!(server.pool.addr_is_available(client));
@@ -3937,31 +3889,29 @@ pub mod tests {
         let stored_leases = server
             .store
             .as_mut()
-            .ok_or_else(|| anyhow::anyhow!("missing store"))?
+            .expect("missing store")
             .load_client_records()
-            .context("load_client_records() failed")?;
+            .expect("load_client_records() failed");
         assert_eq!(empty_map, stored_leases);
         matches::assert_matches!(
-            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
+            server.store.expect("missing store").actions().as_slice(),
             [
                 DataStoreAction::Delete { client_id: id },
                 DataStoreAction::LoadClientRecords
             ] if *id == client_id
         );
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_server_dispatcher_validate_params() -> Result<(), Error> {
-        let mut server = new_test_minimal_server()?;
+    #[test]
+    fn test_server_dispatcher_validate_params() {
+        let mut server = new_test_minimal_server();
         let () = server.pool.universe.clear();
         assert_eq!(server.try_validate_parameters(), Err(Status::INVALID_ARGS));
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_set_address_pool_fails_if_leases_present() -> Result<(), Error> {
-        let mut server = new_test_minimal_server()?;
+    #[test]
+    fn test_set_address_pool_fails_if_leases_present() {
+        let mut server = new_test_minimal_server();
         matches::assert_matches!(
             server.records.insert(
                 ClientIdentifier::from(MacAddr::new([1, 2, 3, 4, 5, 6])),
@@ -3980,12 +3930,11 @@ pub mod tests {
             )),
             Err(Status::BAD_STATE)
         );
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_set_address_pool_updates_internal_pool() -> Result<(), Error> {
-        let mut server = new_test_minimal_server()?;
+    #[test]
+    fn test_set_address_pool_updates_internal_pool() {
+        let mut server = new_test_minimal_server();
         let () = server.pool.universe.clear();
         let () = server
             .dispatch_set_parameter(fidl_fuchsia_net_dhcp::Parameter::AddressPool(
@@ -3996,17 +3945,16 @@ pub mod tests {
                     ..fidl_fuchsia_net_dhcp::AddressPool::EMPTY
                 },
             ))
-            .context("failed to set parameter")?;
+            .expect("failed to set parameter");
         assert_eq!(server.pool.available().count(), 3);
         matches::assert_matches!(
-            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
+            server.store.expect("missing store").actions().as_slice(),
             [DataStoreAction::StoreParameters { params }] if *params == server.params
         );
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_recovery_from_expired_persistent_record() -> Result<(), Error> {
+    #[test]
+    fn test_recovery_from_expired_persistent_record() {
         let client_ip = net_declare::std::ip_v4!("192.168.0.1");
         let mut time_source = TestSystemTime::with_current_time();
         const LEASE_EXPIRATION_SECONDS: u32 = 60;
@@ -4018,8 +3966,9 @@ pub mod tests {
             Vec::new(),
             time_source.now(),
             LEASE_EXPIRATION_SECONDS,
-        )?;
-        let () = store.insert(&client_id, &client_record)?;
+        )
+        .expect("failed to create lease record");
+        let () = store.insert(&client_id, &client_record).expect("failed to insert client record");
         // The record should become expired now.
         let () = time_source.move_forward(Duration::from_secs(LEASE_EXPIRATION_SECONDS.into()));
 
@@ -4031,7 +3980,7 @@ pub mod tests {
                 max_seconds: 60 * 60 * 24 * 7,
             },
             managed_addrs: ManagedAddresses {
-                mask: SubnetMask::try_from(24)?,
+                mask: SubnetMask::try_from(24).unwrap(),
                 pool_range_start: client_ip,
                 pool_range_stop: net_declare::std::ip_v4!("192.168.0.2"),
             },
@@ -4045,7 +3994,8 @@ pub mod tests {
         let records: HashMap<_, _> =
             Some((client_id.clone(), client_record.clone())).into_iter().collect();
         let server: Server =
-            Server::new_with_time_source(store, params, HashMap::new(), records, time_source)?;
+            Server::new_with_time_source(store, params, HashMap::new(), records, time_source)
+                .expect("failed to create server");
         // Create a temporary because assert_matches! doesn't like turbo-fish type annotation.
         let contents: Vec<(&ClientIdentifier, &LeaseRecord)> = server.records.iter().collect();
         matches::assert_matches!(
@@ -4057,17 +4007,16 @@ pub mod tests {
         assert_eq!(server.pool.available().collect::<Vec<_>>(), vec![client_ip]);
 
         matches::assert_matches!(
-            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
+            server.store.expect("missing store").actions().as_slice(),
             [
                 DataStoreAction::StoreClientRecord{ client_id: id1, record },
                 DataStoreAction::StoreClientRecord{ client_id: id2, record: LeaseRecord {current: None, previous: Some(ip), ..} },
             ] if id1 == id2 && id2 == &client_id && record == &client_record && *ip == client_ip
         );
-        Ok(())
     }
 
     #[test]
-    fn test_validate_discover() -> Result<(), Error> {
+    fn test_validate_discover() {
         use std::string::ToString as _;
         let mut disc = new_test_discover();
         disc.op = OpCode::BOOTREPLY;
@@ -4122,12 +4071,11 @@ pub mod tests {
         );
         disc = new_test_discover();
         assert_eq!(validate_discover(&disc), Ok(()));
-        Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_build_offer_with_custom_t1_t2() {
-        let mut server = new_test_minimal_server().expect("failed to instantiate server");
+    #[test]
+    fn test_build_offer_with_custom_t1_t2() {
+        let mut server = new_test_minimal_server();
         let initial_disc = new_test_discover();
         let initial_offer_ip = random_ipv4_generator();
         assert!(server.pool.universe.insert(initial_offer_ip));

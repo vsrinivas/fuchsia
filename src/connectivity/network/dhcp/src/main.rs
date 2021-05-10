@@ -752,60 +752,59 @@ mod tests {
         }
     }
 
-    async fn run_with_server<T, F, Fut>(f: F) -> Result<T, Error>
+    async fn run_with_server<T, F, Fut>(f: F) -> T
     where
         F: Fn(fidl_fuchsia_net_dhcp::Server_Proxy) -> Fut,
-        Fut: Future<Output = Result<T, Error>>,
+        Fut: Future<Output = T>,
     {
         let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
+            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()
+                .expect("failed to create proxy");
         let server = RefCell::new(ServerDispatcherRuntime::new(CannedDispatcher::new()));
 
         let defaults = default_params();
         futures::select! {
             res = f(proxy).fuse() => res,
             res = run_server(stream, &server, &defaults, drain()).fuse() => {
-                Err(anyhow::anyhow!("server finished before request: {:?}", res))
+                unreachable!("server finished before request: {:?}", res)
             },
         }
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn get_option_with_subnet_mask_returns_subnet_mask() -> Result<(), Error> {
+    async fn get_option_with_subnet_mask_returns_subnet_mask() {
         run_with_server(|proxy| async move {
             assert_eq!(
                 proxy
                     .get_option(fidl_fuchsia_net_dhcp::OptionCode::SubnetMask)
                     .await
-                    .context("get_option failed")?,
+                    .expect("get_option failed"),
                 Ok(fidl_fuchsia_net_dhcp::Option_::SubnetMask(fidl_ip_v4!("0.0.0.0")))
             );
-            Ok(())
         })
         .await
     }
 
     #[fasync::run_until_stalled(test)]
-    async fn get_parameter_with_lease_length_returns_lease_length() -> Result<(), Error> {
+    async fn get_parameter_with_lease_length_returns_lease_length() {
         run_with_server(|proxy| async move {
             assert_eq!(
                 proxy
                     .get_parameter(fidl_fuchsia_net_dhcp::ParameterName::LeaseLength)
                     .await
-                    .context("get_parameter failed")?,
+                    .expect("get_parameter failed"),
                 Ok(fidl_fuchsia_net_dhcp::Parameter::Lease(fidl_fuchsia_net_dhcp::LeaseLength {
                     default: None,
                     max: None,
                     ..fidl_fuchsia_net_dhcp::LeaseLength::EMPTY
                 }))
             );
-            Ok(())
         })
         .await
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn set_option_with_subnet_mask_returns_unit() -> Result<(), Error> {
+    async fn set_option_with_subnet_mask_returns_unit() {
         run_with_server(|proxy| async move {
             assert_eq!(
                 proxy
@@ -813,16 +812,15 @@ mod tests {
                         "0.0.0.0"
                     )))
                     .await
-                    .context("set_option failed")?,
+                    .expect("set_option failed"),
                 Ok(())
             );
-            Ok(())
         })
         .await
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn set_parameter_with_lease_length_returns_unit() -> Result<(), Error> {
+    async fn set_parameter_with_lease_length_returns_unit() {
         run_with_server(|proxy| async move {
             assert_eq!(
                 proxy
@@ -834,66 +832,61 @@ mod tests {
                         },
                     ))
                     .await
-                    .context("set_parameter failed")?,
+                    .expect("set_parameter failed"),
                 Ok(())
             );
-            Ok(())
         })
         .await
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn list_options_returns_empty_vec() -> Result<(), Error> {
+    async fn list_options_returns_empty_vec() {
         run_with_server(|proxy| async move {
-            assert_eq!(proxy.list_options().await.context("list_options failed")?, Ok(Vec::new()));
-            Ok(())
+            assert_eq!(proxy.list_options().await.expect("list_options failed"), Ok(Vec::new()));
         })
         .await
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn list_parameters_returns_empty_vec() -> Result<(), Error> {
+    async fn list_parameters_returns_empty_vec() {
         run_with_server(|proxy| async move {
             assert_eq!(
-                proxy.list_parameters().await.context("list_parameters failed")?,
+                proxy.list_parameters().await.expect("list_parameters failed"),
                 Ok(Vec::new())
             );
-            Ok(())
         })
         .await
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn reset_options_returns_unit() -> Result<(), Error> {
+    async fn reset_options_returns_unit() {
         run_with_server(|proxy| async move {
-            assert_eq!(proxy.reset_options().await.context("reset_options failed")?, Ok(()));
-            Ok(())
+            assert_eq!(proxy.reset_options().await.expect("reset_options failed"), Ok(()));
         })
         .await
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn reset_parameters_returns_unit() -> Result<(), Error> {
+    async fn reset_parameters_returns_unit() {
         run_with_server(|proxy| async move {
-            assert_eq!(proxy.reset_parameters().await.context("reset_parameters failed")?, Ok(()));
-            Ok(())
+            assert_eq!(proxy.reset_parameters().await.expect("reset_parameters failed"), Ok(()));
         })
         .await
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn clear_leases_returns_unit() -> Result<(), Error> {
+    async fn clear_leases_returns_unit() {
         run_with_server(|proxy| async move {
-            assert_eq!(proxy.clear_leases().await.context("clear_leases failed")?, Ok(()));
-            Ok(())
+            assert_eq!(proxy.clear_leases().await.expect("clear_leases failed"), Ok(()));
         })
         .await
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn start_stop_server() -> Result<(), Error> {
+    async fn start_stop_server() {
         let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
+            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()
+                .expect("failed to create proxy");
         let (socket_sink, mut socket_stream) =
             futures::channel::mpsc::channel::<ServerSocketCollection<CannedSocket>>(1);
 
@@ -909,21 +902,19 @@ mod tests {
         let test_fut = async {
             for () in std::iter::repeat(()).take(3) {
                 assert!(
-                    !proxy.is_serving().await.context("query server status request")?,
+                    !proxy.is_serving().await.expect("query server status request"),
                     "server should not be serving"
                 );
 
                 let () = proxy
                     .start_serving()
                     .await
-                    .context("start_serving failed")?
+                    .expect("start_serving failed")
                     .map_err(fuchsia_zircon::Status::from_raw)
-                    .context("start_serving returned an error")?;
+                    .expect("start_serving returned an error");
 
-                let ServerSocketCollection { sockets, abort_registration } = socket_stream
-                    .next()
-                    .await
-                    .ok_or_else(|| anyhow::anyhow!("Socket stream ended unexpectedly"))?;
+                let ServerSocketCollection { sockets, abort_registration } =
+                    socket_stream.next().await.expect("Socket stream ended unexpectedly");
 
                 // Assert that the sockets that would be created are correct.
                 assert_eq!(
@@ -945,11 +936,11 @@ mod tests {
                 );
 
                 assert!(
-                    proxy.is_serving().await.context("query server status request")?,
+                    proxy.is_serving().await.expect("query server status request"),
                     "server should be serving"
                 );
 
-                let () = proxy.stop_serving().await.context("stop_serving failed")?;
+                let () = proxy.stop_serving().await.expect("stop_serving failed");
 
                 // Dummy future was aborted.
                 assert_eq!(dummy_fut.await, Err(futures::future::Aborted {}));
@@ -957,50 +948,47 @@ mod tests {
                 assert_eq!(server.borrow().mock_leases, 1);
 
                 assert!(
-                    !proxy.is_serving().await.context("query server status request")?,
+                    !proxy.is_serving().await.expect("query server status request"),
                     "server should no longer be serving"
                 );
             }
-
-            Ok::<(), Error>(())
         };
 
         let () = futures::select! {
-            res = test_fut.fuse() => res.context("test future failed"),
+            res = test_fut.fuse() => res,
             res = run_server(stream, &server, &defaults, socket_sink).fuse() => {
-                Err(anyhow::anyhow!("server finished before request: {:?}", res))
+                unreachable!("server finished before request: {:?}", res)
             },
-        }?;
-
-        Ok(())
+        };
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn start_server_fails_on_bad_params() -> Result<(), Error> {
+    async fn start_server_fails_on_bad_params() {
         let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
+            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()
+                .expect("failed to create proxy");
         let server = RefCell::new(ServerDispatcherRuntime::new(CannedDispatcher::new()));
 
         let defaults = default_params();
         let res = futures::select! {
-            res = proxy.start_serving().fuse() => res.context("start_serving failed"),
+            res = proxy.start_serving().fuse() => res.expect("start_serving failed"),
             res = run_server(stream, &server, &defaults, drain()).fuse() => {
-                Err(anyhow::anyhow!("server finished before request: {:?}", res))
+                unreachable!("server finished before request: {:?}", res)
             },
-        }?
+        }
         .map_err(fuchsia_zircon::Status::from_raw);
 
         // Must have failed to start the server.
         assert_eq!(res, Err(fuchsia_zircon::Status::INVALID_ARGS));
         // No abort handler must've been set.
         assert!(server.borrow().abort_handle.is_none());
-        Ok(())
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn start_server_fails_on_missing_interface_names() -> Result<(), Error> {
+    async fn start_server_fails_on_missing_interface_names() {
         let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
+            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()
+                .expect("failed to create proxy");
         let server = RefCell::new(ServerDispatcherRuntime::new(CannedDispatcher::new()));
 
         let defaults = dhcp::configuration::ServerParameters {
@@ -1010,24 +998,24 @@ mod tests {
         server.borrow_mut().params = Some(defaults.clone());
 
         let res = futures::select! {
-            res = proxy.start_serving().fuse() => res.context("start_serving failed"),
+            res = proxy.start_serving().fuse() => res.expect("start_serving failed"),
             res = run_server(stream, &server, &defaults, drain()).fuse() => {
-                Err(anyhow::anyhow!("server finished before request: {:?}", res))
+                unreachable!("server finished before request: {:?}", res)
             },
-        }?
+        }
         .map_err(fuchsia_zircon::Status::from_raw);
 
         // Must have failed to start the server.
         assert_eq!(res, Err(fuchsia_zircon::Status::INVALID_ARGS));
         // No abort handler must've been set.
         assert!(server.borrow().abort_handle.is_none());
-        Ok(())
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn disallow_change_parameters_if_enabled() -> Result<(), Error> {
+    async fn disallow_change_parameters_if_enabled() {
         let (proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()?;
+            fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_net_dhcp::Server_Marker>()
+                .expect("failed to create proxy");
 
         let server = RefCell::new(ServerDispatcherRuntime::new(CannedDispatcher::new()));
         // Set default parameters to the server so we can create sockets.
@@ -1039,9 +1027,9 @@ mod tests {
             let () = proxy
                 .start_serving()
                 .await
-                .context("start_serving failed")?
+                .expect("start_serving failed")
                 .map_err(fuchsia_zircon::Status::from_raw)
-                .context("start_serving returned an error")?;
+                .expect("start_serving returned an error");
 
             // SetParameter disallowed when the server is enabled.
             assert_eq!(
@@ -1054,7 +1042,7 @@ mod tests {
                         },
                     ))
                     .await
-                    .context("set_parameter FIDL failure")?
+                    .expect("set_parameter FIDL failure")
                     .map_err(fuchsia_zircon::Status::from_raw),
                 Err(fuchsia_zircon::Status::BAD_STATE)
             );
@@ -1064,22 +1052,18 @@ mod tests {
                 proxy
                     .reset_parameters()
                     .await
-                    .context("reset_parameters FIDL failure")?
+                    .expect("reset_parameters FIDL failure")
                     .map_err(fuchsia_zircon::Status::from_raw),
                 Err(fuchsia_zircon::Status::BAD_STATE)
             );
-
-            Ok::<(), Error>(())
         };
 
         let () = futures::select! {
-            res = test_fut.fuse() => res.context("test future failed"),
+            res = test_fut.fuse() => res,
             res = run_server(stream, &server, &defaults, drain()).fuse() => {
-                Err(anyhow::anyhow!("server finished before request: {:?}", res))
+                unreachable!("server finished before request: {:?}", res)
             },
-        }?;
-
-        Ok(())
+        };
     }
 
     /// Test that a malformed message does not cause MessageHandler to return an

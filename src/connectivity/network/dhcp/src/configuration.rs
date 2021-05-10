@@ -410,26 +410,27 @@ mod tests {
         }};
     }
     #[test]
-    fn test_try_from_ipv4addr_with_consecutive_ones_returns_mask() -> Result<(), anyhow::Error> {
-        assert_eq!(SubnetMask::try_from(std_ip_v4!("255.255.255.0"))?, SubnetMask { ones: 24 });
-        Ok(())
+    fn test_try_from_ipv4addr_with_consecutive_ones_returns_mask() {
+        assert_eq!(
+            SubnetMask::try_from(std_ip_v4!("255.255.255.0"))
+                .expect("failed to create subnet mask"),
+            SubnetMask { ones: 24 }
+        );
     }
 
     #[test]
-    fn test_try_from_ipv4addr_with_nonconsecutive_ones_returns_err() -> Result<(), anyhow::Error> {
+    fn test_try_from_ipv4addr_with_nonconsecutive_ones_returns_err() {
         assert!(SubnetMask::try_from(std_ip_v4!("255.255.255.1")).is_err());
-        Ok(())
     }
 
     #[test]
-    fn test_into_ipv4addr_returns_ipv4addr() -> Result<(), anyhow::Error> {
+    fn test_into_ipv4addr_returns_ipv4addr() {
         let v1: Ipv4Addr = SubnetMask { ones: 24 }.into();
         let v2: Ipv4Addr = SubnetMask { ones: 0 }.into();
         let v3: Ipv4Addr = SubnetMask { ones: 32 }.into();
         assert_eq!(v1, std_ip_v4!("255.255.255.0"));
         assert_eq!(v2, Ipv4Addr::UNSPECIFIED);
         assert_eq!(v3, std_ip_v4!("255.255.255.255"));
-        Ok(())
     }
 
     #[test]
@@ -468,7 +469,7 @@ mod tests {
     }
 
     #[test]
-    fn test_managed_addresses_try_from_fidl() -> Result<(), anyhow::Error> {
+    fn test_managed_addresses_try_from_fidl() {
         let prefix_length = 24;
         let start_addr = fidl_ip_v4!("192.168.0.2");
         let stop_addr = fidl_ip_v4!("192.168.0.254");
@@ -535,12 +536,10 @@ mod tests {
             ManagedAddresses::try_from_fidl(mask_range_too_small_pool),
             "cannot fit address pool"
         );
-
-        Ok(())
     }
 
     #[test]
-    fn test_static_assignments_try_from_fidl() -> Result<(), anyhow::Error> {
+    fn test_static_assignments_try_from_fidl() {
         use std::iter::FromIterator;
 
         let mac = random_mac_generator().bytes();
@@ -576,6 +575,5 @@ mod tests {
         );
         assert!(StaticAssignments::try_from_fidl(multiple_entries).is_err());
         assert!(StaticAssignments::try_from_fidl(fields_missing).is_err());
-        Ok(())
     }
 }
