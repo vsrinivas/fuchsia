@@ -10,12 +10,12 @@ rustc_test("ipv4") {
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//src/connectivity/lib/net-declare",
     "//src/connectivity/lib/net-types",
+    "//src/connectivity/lib/packet-formats",
     "//src/connectivity/network/testing/netemul/rust:lib",
     "//src/connectivity/network/tests/integration/common:netstack_testing_common",
     "//src/connectivity/network/tests/integration/macros:netstack_testing_macros",
     "//src/lib/fuchsia-async",
     "//src/lib/network/packet",
-    "//src/lib/network/packet-formats",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]

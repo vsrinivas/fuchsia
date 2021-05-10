@@ -5,10 +5,15 @@
 group("lib") {
   testonly = true
   deps = [
+    "fidl_fuchsia_net_name_ext",
+    "fidl_fuchsia_net_stack_ext",
+    "fidl_fuchsia_netstack_ext",
     "internet-checksum",
     "net-declare",
     "net-types",
     "network-device",
+    "packet-formats",
+    "packet-formats-dhcp",
   ]
 }
 
@@ -16,6 +21,11 @@ group("tests") {
   testonly = true
 
   deps = [
+    "fidl_fuchsia_net_name_ext:fidl-fuchsia-net-name-ext-tests",
+    "fidl_fuchsia_net_stack_ext:fidl-fuchsia-net-stack-ext-tests",
+    "fidl_fuchsia_netstack_ext:fidl-fuchsia-netstack-ext-tests",
+    "packet-formats:tests",
+    "packet-formats-dhcp:tests",
     "//src/connectivity/lib/internet-checksum:tests",
     "//src/connectivity/lib/net-declare:tests",
     "//src/connectivity/lib/net-types:tests",

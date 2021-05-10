@@ -21,6 +21,7 @@ group("lib") {
     "files",
     "fuchsia-async-testloop",
     "fuchsia-url",
+    "fuchsia_nix",
     "http-sse:http_sse",
     "http-uri-ext",
     "icu",
