@@ -1495,6 +1495,9 @@ this section to migrate directory access:
 These features are supported in v2 components using
 [directory capabilities][directory-capabilities].
 
+For more details using data files, see
+[product-specific configuration with `config_data()`][config-data].
+
 #### Declare the required directory capabilities
 
 When [migrating your component manifest](#create-component-manifest), add
@@ -1788,6 +1791,7 @@ using the directory capability `build-info` and path `/config/build-info`.
 [components-intro]: /docs/concepts/components/v2/introduction.md
 [components-topology]: /docs/concepts/components/v2/topology.md
 [components-migration-status]: /docs/concepts/components/v2/migration.md
+[config-data]: /docs/development/components/data.md#product-specific_configuration_with_config_data
 [cs-appmgr-cml]: /src/sys/appmgr/meta/appmgr.cml
 [cs-appmgr-allowlist]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/sys/appmgr/main.cc;l=125;drc=ddf6d10ce8cf63268e21620638ea02e9b2b7cd20
 [cs-core-cml]: /src/sys/core/meta/core.cml
