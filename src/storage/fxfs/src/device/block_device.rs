@@ -32,7 +32,7 @@ struct VmoBufferSource {
 unsafe impl Sync for VmoBufferSource {}
 
 impl VmoBufferSource {
-    fn new(remote: &dyn BlockClient, size: usize) -> Self {
+    async fn new(remote: &dyn BlockClient, size: usize) -> Result<Self, Error> {
         let vmo = zx::Vmo::create(size as u64).unwrap();
         let cname = CString::new("transfer-buf").unwrap();
         vmo.set_name(&cname).unwrap();
@@ -43,8 +43,7 @@ impl VmoBufferSource {
         let addr = vmar_root_self().map(0, &vmo, 0, size, flags).unwrap();
         let slice =
             unsafe { UnsafeCell::new(std::slice::from_raw_parts_mut(addr as *mut u8, size)) };
-        let vmoid = remote.attach_vmo(&vmo).unwrap();
-        Self { vmoid, slice, vmo }
+        Ok(Self { vmoid: remote.attach_vmo(&vmo).await?, slice, vmo })
     }
 
     fn vmoid(&self) -> &VmoId {
@@ -90,16 +89,16 @@ const TRANSFER_VMO_SIZE: usize = 128 * 1024 * 1024;
 
 impl BlockDevice {
     /// Creates a new BlockDevice over |remote|.
-    pub fn new(remote: Box<dyn BlockClient>, read_only: bool) -> Self {
+    pub async fn new(remote: Box<dyn BlockClient>, read_only: bool) -> Result<Self, Error> {
         // TODO(jfsulliv): Should we align buffers to the system page size as well? This will be
         // necessary for splicing pages out of the transfer buffer, but that only improves
         // performance for large data transfers, and we might simply attach separate VMOs to the
         // block device in those cases.
         let allocator = BufferAllocator::new(
             remote.block_size() as usize,
-            Box::new(VmoBufferSource::new(remote.as_ref(), TRANSFER_VMO_SIZE)),
+            Box::new(VmoBufferSource::new(remote.as_ref(), TRANSFER_VMO_SIZE).await?),
         );
-        Self { allocator, remote, read_only }
+        Ok(Self { allocator, remote, read_only })
     }
 
     fn buffer_source(&self) -> &VmoBufferSource {
@@ -167,7 +166,9 @@ impl Device for BlockDevice {
     }
 
     async fn close(&self) -> Result<(), Error> {
-        self.remote.detach_vmo(self.buffer_source().take_vmoid()).await
+        // We can leak the VMO id because we are closing the device.
+        self.buffer_source().take_vmoid().into_id();
+        self.remote.close().await
     }
 
     async fn flush(&self) -> Result<(), Error> {
@@ -196,7 +197,9 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_lifecycle() {
-        let device = BlockDevice::new(Box::new(FakeBlockClient::new(1024, 1024)), false);
+        let device = BlockDevice::new(Box::new(FakeBlockClient::new(1024, 1024)), false)
+            .await
+            .expect("new failed");
 
         {
             let _buf = device.allocate_buffer(8192);
@@ -207,7 +210,9 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_read_write_buffer() {
-        let device = BlockDevice::new(Box::new(FakeBlockClient::new(1024, 1024)), false);
+        let device = BlockDevice::new(Box::new(FakeBlockClient::new(1024, 1024)), false)
+            .await
+            .expect("new failed");
 
         {
             let mut buf1 = device.allocate_buffer(8192);
@@ -229,7 +234,9 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_read_only() {
-        let device = BlockDevice::new(Box::new(FakeBlockClient::new(1024, 1024)), true);
+        let device = BlockDevice::new(Box::new(FakeBlockClient::new(1024, 1024)), true)
+            .await
+            .expect("new failed");
         let mut buf1 = device.allocate_buffer(8192);
         buf1.as_mut_slice().fill(0xaa as u8);
         assert!(FxfsError::ReadOnlyFilesystem

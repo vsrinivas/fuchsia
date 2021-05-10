@@ -14,7 +14,7 @@ use {
     fuchsia_zircon::{self as zx, Status},
     futures::future::TryFutureExt,
     futures::stream::{StreamExt, TryStreamExt},
-    remote_block_device::RemoteBlockClient,
+    remote_block_device::RemoteBlockClientSync,
     std::sync::Arc,
     vfs::{execution_scope::ExecutionScope, path::Path, registry::token_registry},
 };
@@ -46,15 +46,14 @@ async fn main() -> Result<(), Error> {
     fuchsia_syslog::init().unwrap();
 
     // Open the remote block device.
-    let device = Box::new(remote_block_device::Cache::new(RemoteBlockClient::new_sync(
-        zx::Channel::from(
+    let device =
+        Box::new(remote_block_device::Cache::new(RemoteBlockClientSync::new(zx::Channel::from(
             fuchsia_runtime::take_startup_handle(fuchsia_runtime::HandleInfo::new(
                 HandleType::User0,
                 1,
             ))
             .ok_or(format_err!("Missing device handle"))?,
-        ),
-    )?)?);
+        ))?)?);
 
     // VFS initialization.
     let registry = token_registry::Simple::new();

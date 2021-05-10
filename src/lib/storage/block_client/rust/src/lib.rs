@@ -15,7 +15,7 @@ use {
     fuchsia_trace as trace,
     fuchsia_zircon::{self as zx, HandleBased},
     fuchsia_zircon_sys::zx_handle_t,
-    futures::channel::oneshot,
+    futures::{channel::oneshot, executor::block_on},
     lazy_static::lazy_static,
     std::{
         collections::HashMap,
@@ -244,7 +244,7 @@ impl Drop for VmoId {
 #[async_trait]
 pub trait BlockClient: Send + Sync {
     /// Wraps AttachVmo from fuchsia.hardware.block::Block.
-    fn attach_vmo(&self, vmo: &zx::Vmo) -> Result<VmoId, Error>;
+    async fn attach_vmo(&self, vmo: &zx::Vmo) -> Result<VmoId, Error>;
 
     /// Detaches the given vmo-id from the device.
     async fn detach_vmo(&self, vmo_id: VmoId) -> Result<(), Error>;
@@ -266,6 +266,9 @@ pub trait BlockClient: Send + Sync {
     /// Sends a flush request to the underlying block device.
     async fn flush(&self) -> Result<(), Error>;
 
+    /// Closes the fifo.
+    async fn close(&self) -> Result<(), Error>;
+
     /// Returns the block size of the device.
     fn block_size(&self) -> u32;
 
@@ -276,10 +279,7 @@ pub trait BlockClient: Send + Sync {
     fn is_connected(&self) -> bool;
 }
 
-/// RemoteBlockClient is a BlockClient that communicates with a real block device over FIDL.
-pub struct RemoteBlockClient {
-    // TODO: This mutex might no longer be needed.
-    device: Mutex<block::BlockSynchronousProxy>,
+struct Common {
     block_size: u32,
     block_count: u64,
     fifo_state: FifoStateRef,
@@ -287,55 +287,7 @@ pub struct RemoteBlockClient {
     temp_vmo_id: VmoId,
 }
 
-impl RemoteBlockClient {
-    /// Returns a connection to a remote block device via the given channel.
-    pub fn new(channel: zx::Channel) -> Result<Self, Error> {
-        let device = Self::from_channel(channel)?;
-        fasync::Task::spawn(FifoPoller { fifo_state: device.fifo_state.clone() }).detach();
-        Ok(device)
-    }
-
-    /// Returns a connection to a remote block device via the given channel, but spawns a separate
-    /// thread for polling the fifo which makes it work in cases where no executor is configured for
-    /// the calling thread.
-    pub fn new_sync(channel: zx::Channel) -> Result<Self, Error> {
-        // The fifo needs to be instantiated from the thread that has the executor as that's where
-        // the fifo registers for notifications to be delivered.
-        let (sender, receiver) = oneshot::channel::<Result<Self, Error>>();
-        std::thread::spawn(move || {
-            let mut executor = fasync::Executor::new().expect("failed to create executor");
-            let maybe_device = Self::from_channel(channel);
-            let fifo_state = maybe_device.as_ref().ok().map(|device| device.fifo_state.clone());
-            let _ = sender.send(maybe_device);
-            if let Some(fifo_state) = fifo_state {
-                executor.run_singlethreaded(FifoPoller { fifo_state });
-            }
-        });
-        futures::executor::block_on(receiver).unwrap()
-    }
-
-    fn from_channel(channel: zx::Channel) -> Result<Self, Error> {
-        let block_device = block::BlockSynchronousProxy::new(channel);
-        let (status, maybe_info) = block_device.get_info(zx::Time::INFINITE)?;
-        let info = maybe_info.ok_or(zx::Status::from_raw(status))?;
-        let (status, maybe_fifo) = block_device.get_fifo(zx::Time::INFINITE)?;
-        let fifo = fasync::Fifo::from_fifo(maybe_fifo.ok_or(zx::Status::from_raw(status))?)?;
-        let fifo_state = Arc::new(Mutex::new(FifoState { fifo: Some(fifo), ..Default::default() }));
-        let temp_vmo = zx::Vmo::create(TEMP_VMO_SIZE as u64)?;
-        let (status, maybe_vmo_id) = block_device
-            .attach_vmo(temp_vmo.duplicate_handle(zx::Rights::SAME_RIGHTS)?, zx::Time::INFINITE)?;
-        let temp_vmo_id = VmoId::new(maybe_vmo_id.ok_or(zx::Status::from_raw(status))?.id);
-        let device = Self {
-            device: Mutex::new(block_device),
-            block_size: info.block_size,
-            block_count: info.block_count,
-            fifo_state,
-            temp_vmo: futures::lock::Mutex::new(temp_vmo),
-            temp_vmo_id,
-        };
-        Ok(device)
-    }
-
+impl Common {
     fn to_blocks(&self, bytes: u64) -> Result<u64, Error> {
         ensure!(bytes % self.block_size as u64 == 0, "bad alignment");
         Ok(bytes / self.block_size as u64)
@@ -372,17 +324,24 @@ impl RemoteBlockClient {
     }
 }
 
-#[async_trait]
-impl BlockClient for RemoteBlockClient {
-    /// Wraps AttachVmo from fuchsia.hardware.block::Block.
-    fn attach_vmo(&self, vmo: &zx::Vmo) -> Result<VmoId, Error> {
-        let device = self.device.lock().unwrap();
-        let (status, maybe_vmo_id) = device
-            .attach_vmo(vmo.duplicate_handle(zx::Rights::SAME_RIGHTS)?, zx::Time::INFINITE)?;
-        Ok(VmoId::new(maybe_vmo_id.ok_or(zx::Status::from_raw(status))?.id))
+impl Common {
+    fn new(
+        fifo: fasync::Fifo<BlockFifoResponse, BlockFifoRequest>,
+        info: &block::BlockInfo,
+        temp_vmo: zx::Vmo,
+        temp_vmo_id: VmoId,
+    ) -> Self {
+        let fifo_state = Arc::new(Mutex::new(FifoState { fifo: Some(fifo), ..Default::default() }));
+        fasync::Task::spawn(FifoPoller { fifo_state: fifo_state.clone() }).detach();
+        Self {
+            block_size: info.block_size,
+            block_count: info.block_count,
+            fifo_state,
+            temp_vmo: futures::lock::Mutex::new(temp_vmo),
+            temp_vmo_id,
+        }
     }
 
-    /// Detaches the given vmo-id from the device.
     async fn detach_vmo(&self, vmo_id: VmoId) -> Result<(), Error> {
         self.send(BlockFifoRequest {
             op_code: BLOCKIO_CLOSE_VMO,
@@ -512,13 +471,187 @@ impl BlockClient for RemoteBlockClient {
     }
 }
 
-impl Drop for RemoteBlockClient {
+impl Drop for Common {
     fn drop(&mut self) {
         // It's OK to leak the VMO id because the server will dump all VMOs when the fifo is torn
         // down.
         self.temp_vmo_id.take().into_id();
+        self.fifo_state.lock().unwrap().terminate();
+    }
+}
+
+/// RemoteBlockClient is a BlockClient that communicates with a real block device over FIDL.
+pub struct RemoteBlockClient {
+    remote: block::BlockProxy,
+    common: Common,
+}
+
+impl RemoteBlockClient {
+    /// Returns a connection to a remote block device via the given channel.
+    pub async fn new(channel: zx::Channel) -> Result<Self, Error> {
+        let remote = block::BlockProxy::new(fasync::Channel::from_channel(channel)?);
+        let (status, maybe_info) = remote.get_info().await?;
+        let info = maybe_info.ok_or(zx::Status::from_raw(status))?;
+        let (status, maybe_fifo) = remote.get_fifo().await?;
+        let fifo = fasync::Fifo::from_fifo(maybe_fifo.ok_or(zx::Status::from_raw(status))?)?;
+        let temp_vmo = zx::Vmo::create(TEMP_VMO_SIZE as u64)?;
+        let (status, maybe_vmo_id) =
+            remote.attach_vmo(temp_vmo.duplicate_handle(zx::Rights::SAME_RIGHTS)?).await?;
+        let vmo_id = VmoId::new(maybe_vmo_id.ok_or(zx::Status::from_raw(status))?.id);
+        Ok(RemoteBlockClient { remote, common: Common::new(fifo, &info, temp_vmo, vmo_id) })
+    }
+
+    // TODO(csuter): Remove this once all clients have been migrated.
+    pub fn new_sync(channel: zx::Channel) -> Result<RemoteBlockClientSync, Error> {
+        RemoteBlockClientSync::new(channel)
+    }
+}
+
+#[async_trait]
+impl BlockClient for RemoteBlockClient {
+    async fn attach_vmo(&self, vmo: &zx::Vmo) -> Result<VmoId, Error> {
+        let (status, maybe_vmo_id) =
+            self.remote.attach_vmo(vmo.duplicate_handle(zx::Rights::SAME_RIGHTS)?).await?;
+        Ok(VmoId::new(maybe_vmo_id.ok_or(zx::Status::from_raw(status))?.id))
+    }
+
+    async fn detach_vmo(&self, vmo_id: VmoId) -> Result<(), Error> {
+        self.common.detach_vmo(vmo_id).await
+    }
+
+    async fn read_at(
+        &self,
+        buffer_slice: MutableBufferSlice<'_>,
+        device_offset: u64,
+    ) -> Result<(), Error> {
+        self.common.read_at(buffer_slice, device_offset).await
+    }
+
+    async fn write_at(
+        &self,
+        buffer_slice: BufferSlice<'_>,
+        device_offset: u64,
+    ) -> Result<(), Error> {
+        self.common.write_at(buffer_slice, device_offset).await
+    }
+
+    async fn flush(&self) -> Result<(), Error> {
+        self.common.flush().await
+    }
+
+    async fn close(&self) -> Result<(), Error> {
+        // It's OK to leak the VMO id because the server will dump all VMOs when the fifo is torn
+        // down.
+        self.common.temp_vmo_id.take().into_id();
+        zx::Status::ok(self.remote.close_fifo().await?)?;
+        Ok(())
+    }
+
+    fn block_size(&self) -> u32 {
+        self.common.block_size()
+    }
+
+    fn block_count(&self) -> u64 {
+        self.common.block_count()
+    }
+
+    fn is_connected(&self) -> bool {
+        self.common.is_connected()
+    }
+}
+
+pub struct RemoteBlockClientSync {
+    remote: block::BlockSynchronousProxy,
+    common: Common,
+}
+
+impl RemoteBlockClientSync {
+    /// Returns a connection to a remote block device via the given channel, but spawns a separate
+    /// thread for polling the fifo which makes it work in cases where no executor is configured for
+    /// the calling thread.
+    pub fn new(channel: zx::Channel) -> Result<Self, Error> {
+        let remote = block::BlockSynchronousProxy::new(channel);
+        let (status, maybe_info) = remote.get_info(zx::Time::INFINITE)?;
+        let info = maybe_info.ok_or(zx::Status::from_raw(status))?;
+        let (status, maybe_fifo) = remote.get_fifo(zx::Time::INFINITE)?;
+        let fifo = maybe_fifo.ok_or(zx::Status::from_raw(status))?;
+        let temp_vmo = zx::Vmo::create(TEMP_VMO_SIZE as u64)?;
+        let (status, maybe_vmo_id) = remote
+            .attach_vmo(temp_vmo.duplicate_handle(zx::Rights::SAME_RIGHTS)?, zx::Time::INFINITE)?;
+        let vmo_id = VmoId::new(maybe_vmo_id.ok_or(zx::Status::from_raw(status))?.id);
+
+        // The fifo needs to be instantiated from the thread that has the executor as that's where
+        // the fifo registers for notifications to be delivered.
+        let (sender, receiver) = oneshot::channel::<Result<Self, Error>>();
+        std::thread::spawn(move || {
+            let mut executor = fasync::Executor::new().expect("failed to create executor");
+            match fasync::Fifo::from_fifo(fifo) {
+                Ok(fifo) => {
+                    let common = Common::new(fifo, &info, temp_vmo, vmo_id);
+                    let fifo_state = common.fifo_state.clone();
+                    let _ = sender.send(Ok(RemoteBlockClientSync { remote, common }));
+                    executor.run_singlethreaded(FifoPoller { fifo_state });
+                }
+                Err(e) => {
+                    let _ = sender.send(Err(e.into()));
+                }
+            }
+        });
+        block_on(receiver)?
+    }
+
+    pub fn attach_vmo(&self, vmo: &zx::Vmo) -> Result<VmoId, Error> {
+        let (status, maybe_vmo_id) = self
+            .remote
+            .attach_vmo(vmo.duplicate_handle(zx::Rights::SAME_RIGHTS)?, zx::Time::INFINITE)?;
+        Ok(VmoId::new(maybe_vmo_id.ok_or(zx::Status::from_raw(status))?.id))
+    }
+
+    pub fn detach_vmo(&self, vmo_id: VmoId) -> Result<(), Error> {
+        block_on(self.common.detach_vmo(vmo_id))
+    }
+
+    pub fn read_at(
+        &self,
+        buffer_slice: MutableBufferSlice<'_>,
+        device_offset: u64,
+    ) -> Result<(), Error> {
+        block_on(self.common.read_at(buffer_slice, device_offset))
+    }
+
+    pub fn write_at(&self, buffer_slice: BufferSlice<'_>, device_offset: u64) -> Result<(), Error> {
+        block_on(self.common.write_at(buffer_slice, device_offset))
+    }
+
+    pub fn flush(&self) -> Result<(), Error> {
+        block_on(self.common.flush())
+    }
+
+    pub fn close(&self) -> Result<(), Error> {
+        // It's OK to leak the VMO id because the server will dump all VMOs when the fifo is torn
+        // down.
+        self.common.temp_vmo_id.take().into_id();
+        zx::Status::ok(self.remote.close_fifo(zx::Time::INFINITE)?)?;
+        Ok(())
+    }
+
+    pub fn block_size(&self) -> u32 {
+        self.common.block_size()
+    }
+
+    pub fn block_count(&self) -> u64 {
+        self.common.block_count()
+    }
+
+    pub fn is_connected(&self) -> bool {
+        self.common.is_connected()
+    }
+}
+
+impl Drop for RemoteBlockClientSync {
+    fn drop(&mut self) {
         // Ignore errors here as there is not much we can do about it.
-        let _ = self.device.lock().unwrap().close_fifo(zx::Time::INFINITE);
+        let _ = self.close();
     }
 }
 
@@ -590,7 +723,7 @@ mod tests {
     use {
         super::{
             BlockClient, BlockFifoRequest, BlockFifoResponse, BufferSlice, MutableBufferSlice,
-            RemoteBlockClient,
+            RemoteBlockClient, RemoteBlockClientSync,
         },
         fidl_fuchsia_hardware_block::{self as block, BlockRequest},
         fuchsia_async::{self as fasync, FifoReadable, FifoWritable},
@@ -606,7 +739,7 @@ mod tests {
     const RAMDISK_BLOCK_SIZE: u64 = 1024;
     const RAMDISK_BLOCK_COUNT: u64 = 1024;
 
-    pub fn make_ramdisk() -> (RamdiskClient, RemoteBlockClient) {
+    pub async fn make_ramdisk() -> (RamdiskClient, RemoteBlockClient) {
         isolated_driver_manager::launch_isolated_driver_manager()
             .expect("launch_isolated_driver_manager failed");
         ramdevice_client::wait_for_device("/dev/misc/ramctl", std::time::Duration::from_secs(10))
@@ -615,27 +748,24 @@ mod tests {
             .expect("RamdiskClient::create failed");
         let remote_block_device =
             RemoteBlockClient::new(ramdisk.open().expect("ramdisk.open failed"))
-                .expect("RemoteBlockDeviceImpl::new failed");
+                .await
+                .expect("new failed");
         assert_eq!(remote_block_device.block_size(), 1024);
         (ramdisk, remote_block_device)
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_against_ram_disk() {
-        let (_ramdisk, remote_block_device) = make_ramdisk();
+        let (_ramdisk, remote_block_device) = make_ramdisk().await;
 
-        let stats_before = remote_block_device
-            .device
-            .lock()
-            .unwrap()
-            .get_stats(false, zx::Time::INFINITE)
-            .expect("get_stats failed");
+        let stats_before =
+            remote_block_device.remote.get_stats(false).await.expect("get_stats failed");
         assert_eq!(stats_before.0, zx::Status::OK.into_raw());
         let stats_before = stats_before.1.expect("Processing get_stats result failed");
 
         let vmo = zx::Vmo::create(131072).expect("Vmo::create failed");
         vmo.write(b"hello", 5).expect("vmo.write failed");
-        let vmo_id = remote_block_device.attach_vmo(&vmo).expect("attach_vmo failed");
+        let vmo_id = remote_block_device.attach_vmo(&vmo).await.expect("attach_vmo failed");
         remote_block_device
             .write_at(BufferSlice::new_with_vmo_id(&vmo_id, 0, 1024), 0)
             .await
@@ -650,12 +780,8 @@ mod tests {
         remote_block_device.detach_vmo(vmo_id).await.expect("detach_vmo failed");
 
         // check that the stats are what we expect them to be
-        let stats_after = remote_block_device
-            .device
-            .lock()
-            .unwrap()
-            .get_stats(false, zx::Time::INFINITE)
-            .expect("get_stats failed");
+        let stats_after =
+            remote_block_device.remote.get_stats(false).await.expect("get_stats failed");
         assert_eq!(stats_after.0, zx::Status::OK.into_raw());
         let stats_after = stats_after.1.expect("Processing get_stats result failed");
         // write stats
@@ -679,20 +805,16 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_against_ram_disk_with_flush() {
-        let (_ramdisk, remote_block_device) = make_ramdisk();
+        let (_ramdisk, remote_block_device) = make_ramdisk().await;
 
-        let stats_before = remote_block_device
-            .device
-            .lock()
-            .unwrap()
-            .get_stats(false, zx::Time::INFINITE)
-            .expect("get_stats failed");
+        let stats_before =
+            remote_block_device.remote.get_stats(false).await.expect("get_stats failed");
         assert_eq!(stats_before.0, zx::Status::OK.into_raw());
         let stats_before = stats_before.1.expect("Processing get_stats result failed");
 
         let vmo = zx::Vmo::create(131072).expect("Vmo::create failed");
         vmo.write(b"hello", 5).expect("vmo.write failed");
-        let vmo_id = remote_block_device.attach_vmo(&vmo).expect("attach_vmo failed");
+        let vmo_id = remote_block_device.attach_vmo(&vmo).await.expect("attach_vmo failed");
         remote_block_device
             .write_at(BufferSlice::new_with_vmo_id(&vmo_id, 0, 1024), 0)
             .await
@@ -708,12 +830,8 @@ mod tests {
         remote_block_device.detach_vmo(vmo_id).await.expect("detach_vmo failed");
 
         // check that the stats are what we expect them to be
-        let stats_after = remote_block_device
-            .device
-            .lock()
-            .unwrap()
-            .get_stats(false, zx::Time::INFINITE)
-            .expect("get_stats failed");
+        let stats_after =
+            remote_block_device.remote.get_stats(false).await.expect("get_stats failed");
         assert_eq!(stats_after.0, zx::Status::OK.into_raw());
         let stats_after = stats_after.1.expect("Processing get_stats result failed");
         // write stats
@@ -743,9 +861,9 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_alignment() {
-        let (_ramdisk, remote_block_device) = make_ramdisk();
+        let (_ramdisk, remote_block_device) = make_ramdisk().await;
         let vmo = zx::Vmo::create(131072).expect("Vmo::create failed");
-        let vmo_id = remote_block_device.attach_vmo(&vmo).expect("attach_vmo failed");
+        let vmo_id = remote_block_device.attach_vmo(&vmo).await.expect("attach_vmo failed");
         remote_block_device
             .write_at(BufferSlice::new_with_vmo_id(&vmo_id, 0, 1024), 1)
             .await
@@ -755,9 +873,9 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_parallel_io() {
-        let (_ramdisk, remote_block_device) = make_ramdisk();
+        let (_ramdisk, remote_block_device) = make_ramdisk().await;
         let vmo = zx::Vmo::create(131072).expect("Vmo::create failed");
-        let vmo_id = remote_block_device.attach_vmo(&vmo).expect("attach_vmo failed");
+        let vmo_id = remote_block_device.attach_vmo(&vmo).await.expect("attach_vmo failed");
         let mut reads = Vec::new();
         for _ in 0..1024 {
             reads.push(
@@ -772,9 +890,9 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_closed_device() {
-        let (ramdisk, remote_block_device) = make_ramdisk();
+        let (ramdisk, remote_block_device) = make_ramdisk().await;
         let vmo = zx::Vmo::create(131072).expect("Vmo::create failed");
-        let vmo_id = remote_block_device.attach_vmo(&vmo).expect("attach_vmo failed");
+        let vmo_id = remote_block_device.attach_vmo(&vmo).await.expect("attach_vmo failed");
         let mut reads = Vec::new();
         for _ in 0..1024 {
             reads.push(
@@ -807,9 +925,9 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_cancelled_reads() {
-        let (_ramdisk, remote_block_device) = make_ramdisk();
+        let (_ramdisk, remote_block_device) = make_ramdisk().await;
         let vmo = zx::Vmo::create(131072).expect("Vmo::create failed");
-        let vmo_id = remote_block_device.attach_vmo(&vmo).expect("attach_vmo failed");
+        let vmo_id = remote_block_device.attach_vmo(&vmo).await.expect("attach_vmo failed");
         {
             let mut reads = FuturesUnordered::new();
             for _ in 0..1024 {
@@ -828,7 +946,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_parallel_large_read_and_write_with_memory_succeds() {
-        let (_ramdisk, remote_block_device) = make_ramdisk();
+        let (_ramdisk, remote_block_device) = make_ramdisk().await;
         let remote_block_device_ref = &remote_block_device;
         let test_one = |offset, len, fill| async move {
             let buf = vec![fill; len];
@@ -977,11 +1095,9 @@ mod tests {
         let close_called = std::sync::Mutex::new(false);
         let (client, server) = zx::Channel::create().expect("Channel::create failed");
 
-        // Have to spawn this on a different thread because RemoteBlockDevice uses a synchronous
-        // client and we are using a single threaded executor.
         std::thread::spawn(move || {
             let _remote_block_device =
-                RemoteBlockClient::new_sync(client).expect("RemoteBlockDevice::new_sync failed");
+                RemoteBlockClientSync::new(client).expect("RemoteBlockDevice::new failed");
             // The drop here should cause CloseFifo to be sent.
         });
 
@@ -991,8 +1107,7 @@ mod tests {
             }
             false
         };
-        let mut fake_server = FakeBlockServer::new(server, channel_handler, |_| unreachable!());
-        fake_server.run().await;
+        FakeBlockServer::new(server, channel_handler, |_| unreachable!()).run().await;
 
         // After the server has finished running, we can check to see that close was called.
         assert!(*close_called.lock().unwrap());
@@ -1000,62 +1115,57 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_block_flush_is_called() {
-        let flush_called = std::sync::Mutex::new(false);
         let (client, server) = zx::Channel::create().expect("Channel::create failed");
 
-        // Have to spawn this on a different thread because RemoteBlockDevice uses a synchronous
-        // client and we are using a single threaded executor.
-        std::thread::spawn(move || {
-            let remote_block_device = RemoteBlockClient::new_sync(client)
-                .expect("RemoteBlockDeviceImpl::new_sync failed");
-            futures::executor::block_on(remote_block_device.flush())
-                .expect("RemoteBlockDevice::flush failed");
-        });
+        futures::join!(
+            async {
+                let remote_block_device = RemoteBlockClient::new(client).await.expect("new failed");
 
-        let fifo_handler = |request: BlockFifoRequest| -> BlockFifoResponse {
-            *flush_called.lock().unwrap() = true;
-            assert_eq!(request.op_code, super::BLOCKIO_FLUSH);
-            BlockFifoResponse {
-                status: zx::Status::OK.into_raw(),
-                request_id: request.request_id,
-                ..Default::default()
+                remote_block_device.flush().await.expect("flush failed");
+            },
+            async {
+                let flush_called = std::sync::Mutex::new(false);
+                let fifo_handler = |request: BlockFifoRequest| -> BlockFifoResponse {
+                    *flush_called.lock().unwrap() = true;
+                    assert_eq!(request.op_code, super::BLOCKIO_FLUSH);
+                    BlockFifoResponse {
+                        status: zx::Status::OK.into_raw(),
+                        request_id: request.request_id,
+                        ..Default::default()
+                    }
+                };
+                FakeBlockServer::new(server, |_| false, fifo_handler).run().await;
+                // After the server has finished running, we can check to see that close was called.
+                assert!(*flush_called.lock().unwrap());
             }
-        };
-        let mut fake_server = FakeBlockServer::new(server, |_| false, fifo_handler);
-        fake_server.run().await;
-
-        // After the server has finished running, we can check to see that close was called.
-        assert!(*flush_called.lock().unwrap());
+        );
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_trace_flow_ids_set() {
-        let flow_id: std::sync::Mutex<Option<u64>> = std::sync::Mutex::new(None);
         let (client, server) = zx::Channel::create().expect("Channel::create failed");
 
-        // Have to spawn this on a different thread because RemoteBlockDevice uses a synchronous
-        // client and we are using a single threaded executor.
-        std::thread::spawn(move || {
-            let remote_block_device = RemoteBlockClient::new_sync(client)
-                .expect("RemoteBlockDeviceImpl::new_sync failed");
-            futures::executor::block_on(remote_block_device.flush())
-                .expect("RemoteBlockDevice::flush failed");
-        });
-
-        let fifo_handler = |request: BlockFifoRequest| -> BlockFifoResponse {
-            if request.trace_flow_id > 0 {
-                *flow_id.lock().unwrap() = Some(request.trace_flow_id);
+        futures::join!(
+            async {
+                let remote_block_device = RemoteBlockClient::new(client).await.expect("new failed");
+                remote_block_device.flush().await.expect("flush failed");
+            },
+            async {
+                let flow_id: std::sync::Mutex<Option<u64>> = std::sync::Mutex::new(None);
+                let fifo_handler = |request: BlockFifoRequest| -> BlockFifoResponse {
+                    if request.trace_flow_id > 0 {
+                        *flow_id.lock().unwrap() = Some(request.trace_flow_id);
+                    }
+                    BlockFifoResponse {
+                        status: zx::Status::OK.into_raw(),
+                        request_id: request.request_id,
+                        ..Default::default()
+                    }
+                };
+                FakeBlockServer::new(server, |_| false, fifo_handler).run().await;
+                // After the server has finished running, verify the trace flow ID was set to some value.
+                assert!(flow_id.lock().unwrap().is_some());
             }
-            BlockFifoResponse {
-                status: zx::Status::OK.into_raw(),
-                request_id: request.request_id,
-                ..Default::default()
-            }
-        };
-        let mut fake_server = FakeBlockServer::new(server, |_| false, fifo_handler);
-        fake_server.run().await;
-
-        // After the server has finished running, verify the trace flow ID was set to some value.
-        assert!(flow_id.lock().unwrap().is_some());
+        );
     }
 }

@@ -49,7 +49,7 @@ impl FakeBlockClient {
 
 #[async_trait]
 impl BlockClient for FakeBlockClient {
-    fn attach_vmo(&self, vmo: &zx::Vmo) -> Result<VmoId, Error> {
+    async fn attach_vmo(&self, vmo: &zx::Vmo) -> Result<VmoId, Error> {
         let len = vmo.get_size()?;
         let vmo = vmo.create_child(zx::VmoChildOptions::SLICE, 0, len)?;
         let mut inner = self.inner.lock().unwrap();
@@ -131,6 +131,10 @@ impl BlockClient for FakeBlockClient {
 
     async fn flush(&self) -> Result<(), Error> {
         self.flush_count.fetch_add(1, atomic::Ordering::Relaxed);
+        Ok(())
+    }
+
+    async fn close(&self) -> Result<(), Error> {
         Ok(())
     }
 

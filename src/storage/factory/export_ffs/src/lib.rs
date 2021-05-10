@@ -13,7 +13,7 @@ use {
     files_async::{readdir_recursive, DirEntry, DirentKind},
     fuchsia_zircon as zx,
     futures::StreamExt,
-    remote_block_device::{cache::Cache, RemoteBlockClient},
+    remote_block_device::{cache::Cache, RemoteBlockClientSync},
     std::io::Write,
 };
 
@@ -322,7 +322,7 @@ async fn write_directory<W: Write>(dir: &fio::DirectoryProxy, device: &mut W) ->
 pub async fn export_directory(dir: &fio::DirectoryProxy, device: zx::Channel) -> Result<(), Error> {
     // TODO(sdemos): for now we are taking a device as a channel, but this might change as we
     // integrate.
-    let device = RemoteBlockClient::new_sync(device)
+    let device = RemoteBlockClientSync::new(device)
         .context("failed to create remote block device client")?;
     let mut device = Cache::new(device).context("failed to create cache layer for block device")?;
 

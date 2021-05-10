@@ -3,11 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    super::{BlockClient, BufferSlice, MutableBufferSlice, RemoteBlockClient, VmoId},
+    super::{BufferSlice, MutableBufferSlice, RemoteBlockClientSync, VmoId},
     anyhow::{ensure, Error},
     fuchsia_syslog::fx_log_err,
     fuchsia_zircon as zx,
-    futures::executor::block_on,
     linked_hash_map::LinkedHashMap,
     std::io::SeekFrom,
     std::io::Write,
@@ -29,8 +28,12 @@ pub struct Stats {
     cache_hits: u64,
 }
 
-pub struct AbstractCache<T: BlockClient> {
-    device: T,
+/// Wraps RemoteBlockDeviceSync providing a simple LRU cache and trait implementations for
+/// std::io::{Read, Seek, Write}. This is unlikely to be performant; the implementation is single
+/// threaded. The cache works by dividing up a VMO into BLOCK_COUNT blocks of BLOCK_SIZE bytes, and
+/// maintaining mappings from device offsets to offsets in the VMO.
+pub struct Cache {
+    device: RemoteBlockClientSync,
     vmo: zx::Vmo,
     vmo_id: VmoId,
     map: LinkedHashMap<u64, CacheEntry>,
@@ -38,15 +41,9 @@ pub struct AbstractCache<T: BlockClient> {
     stats: Stats,
 }
 
-/// Wraps RemoteBlockDevice providing a simple LRU cache and trait implementations for
-/// std::io::{Read, Seek, Write}. This is unlikely to be performant; the implementation is single
-/// threaded. The cache works by dividing up a VMO into BLOCK_COUNT blocks of BLOCK_SIZE bytes, and
-/// maintaining mappings from device offsets to offsets in the VMO.
-pub type Cache = AbstractCache<RemoteBlockClient>;
-
-impl<T: BlockClient> AbstractCache<T> {
-    /// Returns a new Cache wrapping the given RemoteBlockDevice.
-    pub fn new(device: T) -> Result<Self, Error> {
+impl Cache {
+    /// Returns a new Cache wrapping the given RemoteBlockClientSync.
+    pub fn new(device: RemoteBlockClientSync) -> Result<Self, Error> {
         ensure!(
             BLOCK_SIZE % device.block_size() as u64 == 0,
             "underlying block size not supported"
@@ -84,14 +81,14 @@ impl<T: BlockClient> AbstractCache<T> {
                 let entry = self.map.pop_front().unwrap();
                 if entry.1.dirty {
                     self.stats.write_count += 1;
-                    block_on(self.device.write_at(
+                    self.device.write_at(
                         BufferSlice::new_with_vmo_id(
                             &self.vmo_id,
                             entry.1.vmo_offset,
                             std::cmp::min(BLOCK_SIZE, self.device_size() - entry.0),
                         ),
                         entry.0,
-                    ))?;
+                    )?;
                 }
                 entry.1.vmo_offset
             };
@@ -105,14 +102,14 @@ impl<T: BlockClient> AbstractCache<T> {
         let (vmo_offset, hit) = self.get_block(offset, mark_dirty)?;
         if !hit {
             self.stats.read_count += 1;
-            block_on(self.device.read_at(
+            self.device.read_at(
                 MutableBufferSlice::new_with_vmo_id(
                     &self.vmo_id,
                     vmo_offset,
                     std::cmp::min(BLOCK_SIZE, self.device_size() - offset),
                 ),
                 offset,
-            ))?;
+            )?;
             self.map.insert(offset, CacheEntry { vmo_offset, dirty: mark_dirty });
         }
         Ok(vmo_offset)
@@ -196,16 +193,16 @@ impl<T: BlockClient> AbstractCache<T> {
 
     /// Returns a reference to the underlying device
     /// Can be used for additional control, like instructing the device to flush any written data
-    pub fn device(&self) -> &T {
+    pub fn device(&self) -> &RemoteBlockClientSync {
         &self.device
     }
 
     pub fn flush_device(&self) -> Result<(), Error> {
-        futures::executor::block_on(self.device.flush())
+        self.device.flush()
     }
 }
 
-impl<T: BlockClient> Drop for AbstractCache<T> {
+impl Drop for Cache {
     fn drop(&mut self) {
         if let Err(e) = self.flush() {
             fx_log_err!("Flush failed: {}", e);
@@ -218,7 +215,7 @@ fn into_io_error(error: Error) -> std::io::Error {
     std::io::Error::new(std::io::ErrorKind::Other, error)
 }
 
-impl<T: BlockClient> std::io::Read for AbstractCache<T> {
+impl std::io::Read for Cache {
     fn read(&mut self, mut buf: &mut [u8]) -> std::io::Result<usize> {
         if self.offset > self.device_size() {
             return Ok(0);
@@ -233,7 +230,7 @@ impl<T: BlockClient> std::io::Read for AbstractCache<T> {
     }
 }
 
-impl<T: BlockClient> Write for AbstractCache<T> {
+impl Write for Cache {
     fn write(&mut self, mut buf: &[u8]) -> std::io::Result<usize> {
         if self.offset > self.device_size() {
             return Ok(0);
@@ -254,15 +251,16 @@ impl<T: BlockClient> Write for AbstractCache<T> {
         for mut entry in self.map.entries() {
             if entry.get().dirty {
                 self.stats.write_count += 1;
-                block_on(self.device.write_at(
-                    BufferSlice::new_with_vmo_id(
-                        &self.vmo_id,
-                        entry.get().vmo_offset,
-                        std::cmp::min(BLOCK_SIZE, max - *entry.key()),
-                    ),
-                    *entry.key(),
-                ))
-                .map_err(into_io_error)?;
+                self.device
+                    .write_at(
+                        BufferSlice::new_with_vmo_id(
+                            &self.vmo_id,
+                            entry.get().vmo_offset,
+                            std::cmp::min(BLOCK_SIZE, max - *entry.key()),
+                        ),
+                        *entry.key(),
+                    )
+                    .map_err(into_io_error)?;
                 entry.get_mut().dirty = false;
             }
         }
@@ -270,7 +268,7 @@ impl<T: BlockClient> Write for AbstractCache<T> {
     }
 }
 
-impl<T: BlockClient> std::io::Seek for AbstractCache<T> {
+impl std::io::Seek for Cache {
     fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64> {
         self.offset = match pos {
             SeekFrom::Start(offset) => Some(offset),
@@ -298,7 +296,7 @@ impl<T: BlockClient> std::io::Seek for AbstractCache<T> {
 mod tests {
     use {
         super::{Cache, Stats},
-        crate::RemoteBlockClient,
+        crate::RemoteBlockClientSync,
         ramdevice_client::RamdiskClient,
         std::io::{Read, Seek, SeekFrom, Write},
     };
@@ -307,7 +305,7 @@ mod tests {
     const RAMDISK_BLOCK_COUNT: u64 = 1023; // Deliberate for testing max offset.
     const RAMDISK_SIZE: u64 = RAMDISK_BLOCK_SIZE * RAMDISK_BLOCK_COUNT;
 
-    pub fn make_ramdisk() -> (RamdiskClient, RemoteBlockClient) {
+    pub fn make_ramdisk() -> (RamdiskClient, RemoteBlockClientSync) {
         isolated_driver_manager::launch_isolated_driver_manager()
             .expect("launch_isolated_driver_manager failed");
         ramdevice_client::wait_for_device("/dev/misc/ramctl", std::time::Duration::from_secs(10))
@@ -315,8 +313,8 @@ mod tests {
         let ramdisk = RamdiskClient::create(RAMDISK_BLOCK_SIZE, RAMDISK_BLOCK_COUNT)
             .expect("RamdiskClient::create failed");
         let remote_block_device =
-            RemoteBlockClient::new_sync(ramdisk.open().expect("ramdisk.open failed"))
-                .expect("RemoteBlockDevice::new_sync failed");
+            RemoteBlockClientSync::new(ramdisk.open().expect("ramdisk.open failed"))
+                .expect("RemoteBlockClientSync::new failed");
         (ramdisk, remote_block_device)
     }
 
@@ -409,8 +407,8 @@ mod tests {
 
         drop(cache);
         let mut cache = Cache::new(
-            RemoteBlockClient::new_sync(ramdisk.open().expect("ramdisk.open failed"))
-                .expect("RemoteBlockDevice::new_sync failed"),
+            RemoteBlockClientSync::new(ramdisk.open().expect("ramdisk.open failed"))
+                .expect("RemoteBlockClientSync::new failed"),
         )
         .expect("Cache::new failed");
 
@@ -519,8 +517,8 @@ mod tests {
         let ramdisk =
             RamdiskClient::create(super::BLOCK_SIZE * 2, 10).expect("RamdiskClient::create failed");
         let remote_block_device =
-            RemoteBlockClient::new_sync(ramdisk.open().expect("ramdisk.open failed"))
-                .expect("RemoteBlockDevice::new_sync failed");
+            RemoteBlockClientSync::new(ramdisk.open().expect("ramdisk.open failed"))
+                .expect("RemoteBlockClientSync::new failed");
         Cache::new(remote_block_device).err().expect("Cache::new succeeded");
     }
 }

@@ -60,17 +60,19 @@ async fn main() -> Result<(), Error> {
             1,
         ))
         .ok_or(format_err!("Missing device handle"))?,
-    ))?;
+    ))
+    .await?;
 
     match args {
         TopLevel { nested: SubCommand::Format(_) } => {
-            mkfs::mkfs(DeviceHolder::new(BlockDevice::new(Box::new(client), false))).await?;
+            mkfs::mkfs(DeviceHolder::new(BlockDevice::new(Box::new(client), false).await?)).await?;
             Ok(())
         }
         TopLevel { nested: SubCommand::Mount(_) } => {
             let fs =
-                mount::mount(DeviceHolder::new(BlockDevice::new(Box::new(client), false))).await?;
-            let mut server = FxfsServer::new(fs, "default").await?;
+                mount::mount(DeviceHolder::new(BlockDevice::new(Box::new(client), false).await?))
+                    .await?;
+            let server = FxfsServer::new(fs, "default").await?;
             let startup_handle =
                 fuchsia_runtime::take_startup_handle(HandleType::DirectoryRequest.into())
                     .ok_or(MissingStartupHandle)?;
@@ -78,7 +80,8 @@ async fn main() -> Result<(), Error> {
         }
         TopLevel { nested: SubCommand::Fsck(_) } => {
             let fs =
-                mount::mount(DeviceHolder::new(BlockDevice::new(Box::new(client), true))).await?;
+                mount::mount(DeviceHolder::new(BlockDevice::new(Box::new(client), true).await?))
+                    .await?;
             fsck(fs.as_ref()).await
         }
     }

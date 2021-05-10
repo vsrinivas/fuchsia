@@ -11,7 +11,10 @@ use {
     fuchsia_zircon::{self as zx},
     futures::stream::{StreamExt, TryStreamExt},
     futures::TryFutureExt,
-    std::sync::Arc,
+    std::sync::{
+        atomic::{self, AtomicBool},
+        Arc,
+    },
     vfs::{
         directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path,
         registry::token_registry,
@@ -37,6 +40,7 @@ pub struct FxfsServer {
     // TODO(jfsulliv): we'd like to support multiple volumes, but not clear how to multiplex
     // requests.
     volume: FxVolumeAndRoot,
+    closed: AtomicBool,
 }
 
 impl FxfsServer {
@@ -50,10 +54,10 @@ impl FxfsServer {
                 .expect("Open or create volume failed"),
         )
         .await?;
-        Ok(Self { fs, volume })
+        Ok(Self { fs, volume, closed: AtomicBool::new(false) })
     }
 
-    pub async fn run(&mut self, outgoing_chan: zx::Channel) -> Result<(), Error> {
+    pub async fn run(self, outgoing_chan: zx::Channel) -> Result<(), Error> {
         // VFS initialization.
         let registry = token_registry::Simple::new();
         let scope = ExecutionScope::build().token_registry(registry).new();
@@ -76,7 +80,7 @@ impl FxfsServer {
         // Handle all ServiceFs connections. VFS connections will be spawned as separate tasks.
         const MAX_CONCURRENT: usize = 10_000;
         fs.for_each_concurrent(MAX_CONCURRENT, |request| {
-            self.handle_request(request, &scope).unwrap_or_else(|e| log::error!("{:?}", e))
+            self.handle_request(request, &scope).unwrap_or_else(|e| log::error!("{}", e))
         })
         .await;
 
@@ -84,22 +88,35 @@ impl FxfsServer {
         // resurrected), but before we finish, we must wait for all VFS connections to be closed.
         scope.wait().await;
 
-        self.fs.close().await.unwrap_or_else(|e| log::error!("Failed to shutdown fxfs: {:?}", e));
+        if !self.closed.load(atomic::Ordering::Relaxed) {
+            self.fs.close().await.unwrap_or_else(|e| log::error!("Failed to shutdown fxfs: {}", e));
+        }
 
         Ok(())
     }
 
-    async fn handle_admin(&self, scope: &ExecutionScope, req: AdminRequest) -> Result<(), Error> {
+    // Returns true if we should close the connection.
+    async fn handle_admin(&self, scope: &ExecutionScope, req: AdminRequest) -> Result<bool, Error> {
         match req {
             AdminRequest::Shutdown { responder } => {
+                // TODO(csuter): shutdown is brutal and will just drop running tasks which could
+                // leave transactions in a half completed state.  VFS should be fixed so that it
+                // drops connections at some point that isn't midway through processing a request.
                 scope.shutdown();
-                responder.send()?;
+                self.closed.store(true, atomic::Ordering::Relaxed);
+                self.fs
+                    .close()
+                    .await
+                    .unwrap_or_else(|e| log::error!("Failed to shutdown fxfs: {}", e));
+                responder
+                    .send()
+                    .unwrap_or_else(|e| log::warn!("Failed to send shutdown response: {}", e));
+                return Ok(true);
             }
             _ => {
                 panic!("Unimplemented")
             }
         }
-        Ok(())
     }
 
     async fn handle_query(&self, _scope: &ExecutionScope, _req: QueryRequest) -> Result<(), Error> {
@@ -110,7 +127,9 @@ impl FxfsServer {
         match stream {
             Services::Admin(mut stream) => {
                 while let Some(request) = stream.try_next().await.context("Reading request")? {
-                    self.handle_admin(scope, request).await?;
+                    if self.handle_admin(scope, request).await? {
+                        break;
+                    }
                 }
             }
             Services::Query(mut stream) => {
@@ -140,7 +159,7 @@ mod tests {
     async fn test_lifecycle() -> Result<(), Error> {
         let device = DeviceHolder::new(FakeDevice::new(2048, 512));
         let filesystem = FxFilesystem::new_empty(device).await?;
-        let mut server = FxfsServer::new(filesystem, "root").await.expect("Create server failed");
+        let server = FxfsServer::new(filesystem, "root").await.expect("Create server failed");
 
         let (client_end, server_end) = fidl::endpoints::create_endpoints::<DirectoryMarker>()?;
         let client_proxy = client_end.into_proxy().expect("Create DirectoryProxy failed");

@@ -387,7 +387,7 @@ impl FxFilesystem {
     }
 
     async fn compact(self: Arc<Self>) {
-        log::debug!("Compaction starting");
+        log::info!("Compaction starting");
         if let Err(e) = self.objects.flush().await {
             log::error!("Compaction ecnountered error: {}", e);
             return;
@@ -396,6 +396,7 @@ impl FxFilesystem {
             log::error!("Error writing journal super-block: {}", e);
             return;
         }
+        log::info!("Compaction finished");
         *self.compaction_task.lock().unwrap() = None;
     }
 

@@ -52,7 +52,7 @@ impl VolumeConnection {
         // Connect to the Block FIDL protocol
         let (client_end, server_end) = Channel::create().unwrap();
         connect_channel_to_protocol_at_path(server_end, volume_path).unwrap();
-        let block_device = RemoteBlockClient::new(client_end).unwrap();
+        let block_device = RemoteBlockClient::new(client_end).await.unwrap();
 
         Self { volume_proxy, block_device, slice_size }
     }
