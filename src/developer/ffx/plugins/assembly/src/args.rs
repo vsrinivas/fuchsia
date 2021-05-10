@@ -21,6 +21,7 @@ pub struct AssemblyCommand {
 pub enum OperationClass {
     VBMeta(VBMetaArgs),
     Image(ImageArgs),
+    Extract(ExtractArgs),
 }
 
 /// vbmeta operations
@@ -92,4 +93,13 @@ pub struct ImageArgs {
     /// the directory to write generated intermediate files to.
     #[argh(option)]
     pub gendir: Option<PathBuf>,
+}
+
+/// extract information from an image.
+#[derive(Debug, FromArgs, PartialEq)]
+#[argh(subcommand, name = "extract")]
+pub struct ExtractArgs {
+    /// the directory to write extracted artifacts to.
+    #[argh(option)]
+    pub outdir: PathBuf,
 }

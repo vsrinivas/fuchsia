@@ -15,7 +15,7 @@ pub async fn assembly(cmd: AssemblyCommand) -> Result<()> {
         OperationClass::VBMeta(vbmeta_op) => match vbmeta_op.operation {
             VBMetaOperation::Sign(args) => operations::vbmeta::sign(args),
         },
-        // placeholder
         OperationClass::Image(args) => operations::image::assemble(args),
+        OperationClass::Extract(args) => operations::extract::extract(args),
     }
 }

@@ -13,6 +13,7 @@ ffx_plugin("ffx_assembly") {
     "src/config.rs",
     "src/lib.rs",
     "src/operations.rs",
+    "src/operations/extract.rs",
     "src/operations/image.rs",
     "src/operations/vbmeta.rs",
     "src/vfs.rs",
