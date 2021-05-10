@@ -178,35 +178,44 @@ impl VolumeController {
                 "connect for audio_core".into(),
             )
         })?;
-        self.audio_service_connected = true;
 
+        // The stream_volume_controls are generated in two steps instead of
+        // one so that if one of the bindings fails during the first loop,
+        // none of the streams are modified.
+        let mut stream_tuples = Vec::new();
         for stream in streams {
             let client = self.client.clone();
-            let stream_volume_control = StreamVolumeControl::create(
-                &audio_service,
-                *stream,
-                Some(Arc::new(move || {
-                    // When the StreamVolumeControl exits early, inform the
-                    // proxy we have exited. The proxy will then cleanup this
-                    // AudioController.
-                    let client = client.clone();
-                    fasync::Task::spawn(async move {
-                        client
-                            .notify(Event::Exited(Err(ControllerError::UnexpectedError(
-                                "stream_volume_control exit".into(),
-                            ))))
-                            .await;
-                    })
-                    .detach();
-                })),
-                None,
-            )
-            // TODO(fxbug.dev/73629) This could be bad. If this fails partway we would have
-            // inserted some of the volume controls but not all. The service would also think that
-            // the audio core service is fully connected since that setting is not reverted.
-            .await?;
-            self.stream_volume_controls.insert(stream.stream_type, stream_volume_control);
+
+            // Generate a tuple with stream type and StreamVolumeControl.
+            stream_tuples.push((
+                stream.stream_type,
+                StreamVolumeControl::create(
+                    &audio_service,
+                    *stream,
+                    Some(Arc::new(move || {
+                        // When the StreamVolumeControl exits early, inform the
+                        // proxy we have exited. The proxy will then cleanup this
+                        // AudioController.
+                        let client = client.clone();
+                        fasync::Task::spawn(async move {
+                            client
+                                .notify(Event::Exited(Err(ControllerError::UnexpectedError(
+                                    "stream_volume_control exit".into(),
+                                ))))
+                                .await;
+                        })
+                        .detach();
+                    })),
+                    None,
+                )
+                .await?,
+            ));
         }
+
+        stream_tuples.into_iter().for_each(|(stream_type, stream_volume_control)| {
+            self.stream_volume_controls.insert(stream_type, stream_volume_control);
+        });
+        self.audio_service_connected = true;
 
         Ok(())
     }
