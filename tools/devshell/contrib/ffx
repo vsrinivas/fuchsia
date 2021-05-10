@@ -63,6 +63,16 @@ if ! ${found_target}; then
   args=(--target "$(get-device-pair)" "${args[@]}")
 fi
 
+if [[ "${args[*]}" =~ "target default" ]]; then
+  fx-warn "Inside the Fuchsia tree, ffx has a target specified by fx"
+  fx-warn "Using default targets via ffx target default may have undefined behavior"
+  fx-warn "See https://fxbug.dev/74963 for more information."
+  fx-warn "Prefer:"
+  fx-warn "   fx set-device"
+  fx-warn "   fx get-device"
+  fx-warn "   fx unset-device"
+fi
+
 config="{ \"sdk\": { \"root\": \"${FUCHSIA_BUILD_DIR}\", \"type\": \"in-tree\" } }"
 
 exec "${FUCHSIA_BUILD_DIR}/host-tools/ffx" "--config" "${config}" "${args[@]}"
