@@ -8,8 +8,17 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include <fbl/type_info.h>
+#include <gtest/gtest.h>
 
+#include "lib/zx/time.h"
 #include "src/virtualization/tests/enclosed_guest.h"
+
+// Timeout waiting for a guest to start / stop.
+static constexpr zx::duration kGuestStartupTimeout = zx::sec(60);
+static constexpr zx::duration kGuestShutdownTimeout = zx::sec(30);
+
+// Timeout waiting for a single test case to run.
+static constexpr zx::duration kPerTestTimeout = zx::sec(60);
 
 // GuestTest creates a static EnclosedGuest to be shared across all tests in a
 // test fixture.
@@ -19,35 +28,38 @@ class GuestTest : public ::testing::Test {
   static void SetUpTestSuite() {
     FX_LOGS(INFO) << "Guest: " << fbl::TypeInfo<T>::Name();
     enclosed_guest_ = new T();
-    ASSERT_EQ(enclosed_guest_->Start(), ZX_OK);
+    ASSERT_EQ(enclosed_guest_->Start(zx::deadline_after(kGuestStartupTimeout)), ZX_OK);
   }
 
   static void TearDownTestSuite() {
-    EXPECT_EQ(enclosed_guest_->Stop(), ZX_OK);
+    EXPECT_EQ(enclosed_guest_->Stop(zx::deadline_after(kGuestShutdownTimeout)), ZX_OK);
     delete enclosed_guest_;
   }
 
  protected:
   void SetUp() override {
+    // Set up the deadline for this test case.
+    deadline_ = zx::deadline_after(kPerTestTimeout);
+
     // An assertion failure in SetUpTestSuite doesn't prevent tests from running,
     // so we need to check that it succeeded here.
     ASSERT_TRUE(enclosed_guest_->Ready()) << "Guest setup failed";
   }
 
-  static zx_status_t Execute(const std::vector<std::string>& argv, std::string* result = nullptr,
-                             int32_t* return_code = nullptr) {
-    return enclosed_guest_->Execute(argv, {}, result, return_code);
+  zx_status_t Execute(const std::vector<std::string>& argv, std::string* result = nullptr,
+                      int32_t* return_code = nullptr) {
+    return enclosed_guest_->Execute(argv, {}, deadline_, result, return_code);
   }
 
-  static zx_status_t Execute(const std::vector<std::string>& argv,
-                             const std::unordered_map<std::string, std::string>& env,
-                             std::string* result = nullptr, int32_t* return_code = nullptr) {
-    return enclosed_guest_->Execute(argv, env, result, return_code);
+  zx_status_t Execute(const std::vector<std::string>& argv,
+                      const std::unordered_map<std::string, std::string>& env,
+                      std::string* result = nullptr, int32_t* return_code = nullptr) {
+    return enclosed_guest_->Execute(argv, env, deadline_, result, return_code);
   }
 
-  static zx_status_t RunUtil(const std::string& util, const std::vector<std::string>& argv,
-                             std::string* result = nullptr) {
-    return enclosed_guest_->RunUtil(util, argv, result);
+  zx_status_t RunUtil(const std::string& util, const std::vector<std::string>& argv,
+                      std::string* result = nullptr) {
+    return enclosed_guest_->RunUtil(util, argv, deadline_, result);
   }
 
   GuestKernel GetGuestKernel() { return enclosed_guest_->GetGuestKernel(); }
@@ -69,6 +81,7 @@ class GuestTest : public ::testing::Test {
   const T* GetEnclosedGuest() const { return enclosed_guest_; }
 
  private:
+  zx::time deadline_;  // Deadline for a single test case.
   static inline T* enclosed_guest_ = nullptr;
 };
 

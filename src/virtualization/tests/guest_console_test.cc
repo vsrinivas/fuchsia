@@ -42,11 +42,11 @@ TEST(GuestConsole, WaitForMarkerEmpty) {
 
   // Ensure an empty read returns success, and clears out result.
   std::string result = "non-empty";
-  EXPECT_EQ(console.WaitForMarker("", &result), ZX_OK);
+  EXPECT_EQ(console.WaitForMarker("", zx::time::infinite(), &result), ZX_OK);
   EXPECT_EQ(result, "");
 
   // A non-empty marker read should return an error.
-  EXPECT_EQ(console.WaitForMarker("x", &result), ZX_ERR_PEER_CLOSED);
+  EXPECT_EQ(console.WaitForMarker("x", zx::time::infinite(), &result), ZX_ERR_PEER_CLOSED);
 }
 
 TEST(GuestConsole, WaitForMarkerSimple) {
@@ -54,7 +54,7 @@ TEST(GuestConsole, WaitForMarkerSimple) {
   GuestConsole console(std::move(socket));
 
   std::string result;
-  EXPECT_EQ(console.WaitForMarker("marker", &result), ZX_OK);
+  EXPECT_EQ(console.WaitForMarker("marker", zx::time::infinite(), &result), ZX_OK);
   EXPECT_EQ(result, "");
 }
 
@@ -63,7 +63,7 @@ TEST(GuestConsole, WaitForMarkerContentBefore) {
   GuestConsole console(std::move(socket));
 
   std::string result;
-  EXPECT_EQ(console.WaitForMarker("marker", &result), ZX_OK);
+  EXPECT_EQ(console.WaitForMarker("marker", zx::time::infinite(), &result), ZX_OK);
   EXPECT_EQ(result, "xxx");
 }
 
@@ -72,10 +72,10 @@ TEST(GuestConsole, WaitForMarkerContentAfterPreserved) {
   GuestConsole console(std::move(socket));
 
   std::string result;
-  EXPECT_EQ(console.WaitForMarker("marker", &result), ZX_OK);
+  EXPECT_EQ(console.WaitForMarker("marker", zx::time::infinite(), &result), ZX_OK);
   EXPECT_EQ(result, "xxx");
 
-  EXPECT_EQ(console.WaitForMarker("second", &result), ZX_OK);
+  EXPECT_EQ(console.WaitForMarker("second", zx::time::infinite(), &result), ZX_OK);
   EXPECT_EQ(result, "yyy");
 }
 
@@ -86,10 +86,10 @@ TEST(GuestConsole, WaitForMarkerSplitMarker) {
   GuestConsole console(std::move(socket));
 
   std::string result;
-  EXPECT_EQ(console.WaitForMarker("marker", &result), ZX_OK);
+  EXPECT_EQ(console.WaitForMarker("marker", zx::time::infinite(), &result), ZX_OK);
   EXPECT_EQ(result, "xxx");
 
-  EXPECT_EQ(console.WaitForMarker("second", &result), ZX_OK);
+  EXPECT_EQ(console.WaitForMarker("second", zx::time::infinite(), &result), ZX_OK);
   EXPECT_EQ(result, "yyy");
 }
 

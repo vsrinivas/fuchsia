@@ -46,6 +46,8 @@ class GuestInteractionTest : public sys::testing::TestWithEnvironment {
   }
 
   void LaunchDebianGuest() {
+    zx::time deadline = zx::deadline_after(kLaunchTimeout);
+
     // Launch the Debian guest
     fuchsia::virtualization::GuestConfig cfg;
     cfg.set_virtio_gpu(false);
@@ -58,37 +60,41 @@ class GuestInteractionTest : public sys::testing::TestWithEnvironment {
     manager->Create(fuchsia::netemul::guest::DEFAULT_REALM, realm_.NewRequest());
     realm_->LaunchInstance(kDebianGuestUrl, kGuestLabel, std::move(cfg), guest.NewRequest(),
                            [&](uint32_t callback_cid) { cid_ = callback_cid; });
-    ASSERT_TRUE(RunLoopWithTimeoutOrUntil([this]() { return cid_ >= 0; }, zx::sec(5)));
+    ASSERT_TRUE(RunLoopWithTimeoutOrUntil([this]() { return cid_ >= 0; },
+                                          deadline - zx::clock::get_monotonic()));
 
     // Start a GuestConsole.  When the console starts, it waits until it
     // receives some sensible output from the guest to ensure that the guest is
     // usable.
     zx::socket socket;
     guest->GetSerial([&socket](zx::socket s) { socket = std::move(s); });
-    ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&socket] { return socket.is_valid(); }, zx::sec(30)));
+    ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&socket] { return socket.is_valid(); },
+                                          deadline - zx::clock::get_monotonic()));
 
     GuestConsole serial(std::make_unique<ZxSocket>(std::move(socket)));
-    zx_status_t status = serial.Start();
+    zx_status_t status = serial.Start(deadline);
     ASSERT_EQ(status, ZX_OK);
 
     // Wait until sysctl shows that the guest_interaction_daemon is running.
-    RunLoopUntil([&status, &serial]() -> bool {
-      std::string output;
-      status = serial.ExecuteBlocking("journalctl -u guest_interaction_daemon | grep Listening",
-                                      "$", &output);
+    RunLoopWithTimeoutOrUntil(
+        [&status, &serial, deadline]() -> bool {
+          std::string output;
+          status = serial.ExecuteBlocking("journalctl -u guest_interaction_daemon | grep Listening",
+                                          "$", deadline, &output);
 
-      // If the command cannot be executed, break out of the loop so the test can fail.
-      if (status != ZX_OK) {
-        return true;
-      }
+          // If the command cannot be executed, break out of the loop so the test can fail.
+          if (status != ZX_OK) {
+            return true;
+          }
 
-      // Ensure that the output from the command indicates that guest_interaction_daemon is
-      // active.
-      if (output.find("Listening") != std::string::npos) {
-        return true;
-      }
-      return false;
-    });
+          // Ensure that the output from the command indicates that guest_interaction_daemon is
+          // active.
+          if (output.find("Listening") != std::string::npos) {
+            return true;
+          }
+          return false;
+        },
+        deadline - zx::clock::get_monotonic());
 
     ASSERT_EQ(status, ZX_OK);
   }
@@ -120,6 +126,9 @@ class GuestInteractionTest : public sys::testing::TestWithEnvironment {
     // Allow vmex resource for virtualization.
     services_->AllowParentService(fuchsia::kernel::VmexResource::Name_);
   }
+
+ private:
+  static constexpr zx::duration kLaunchTimeout = zx::sec(60);
 };
 
 #endif  // SRC_VIRTUALIZATION_LIB_GUEST_INTERACTION_TEST_INTEGRATION_TEST_LIB_H_

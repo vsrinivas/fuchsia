@@ -14,25 +14,28 @@
 
 class GuestConsole {
  public:
-  GuestConsole(std::unique_ptr<SocketInterface> socket);
+  explicit GuestConsole(std::unique_ptr<SocketInterface> socket);
 
   // Initialize the socket, attempting to reach a state where we have a
   // useable shell.
   //
   // Skips over noise (such as boot logs, etc) that may be present on
   // the socket interface.
-  zx_status_t Start();
+  //
+  // Aborts with the error ZX_ERR_TIMEOUT if `deadline` is reached
+  // prior to the system reaching its shell.
+  zx_status_t Start(zx::time deadline);
 
   // Executes a command and waits for a response. Uses a header and a footer to
   // ensure the command finished executing and to capture output. Blocks on the
   // serial socket being writable and readable at various points and on the
   // command completing.
   zx_status_t ExecuteBlocking(const std::string& command, const std::string& prompt,
-                              std::string* result = nullptr);
+                              zx::time deadline, std::string* result = nullptr);
 
   // Sends a message to the guest's serial. Blocks until the entire message is
   // written to the socket but doesn't wait for a response.
-  zx_status_t SendBlocking(const std::string& message);
+  zx_status_t SendBlocking(const std::string& message, zx::time deadline);
 
   // Waits for a marker string to be read from the guest's serial, or until an
   // internal timeout passes. Optionally fills |result| with everything read up
@@ -49,14 +52,15 @@ class GuestConsole {
   //
   // then a call `WaitForMarker("marker", &result)` will return `xxx` in
   // |result|, and consume the buffer so that only `yyy` remains.
-  zx_status_t WaitForMarker(const std::string& marker, std::string* result = nullptr);
+  zx_status_t WaitForMarker(const std::string& marker, zx::time deadline,
+                            std::string* result = nullptr);
 
   // Waits for the socket interface to be closed, or a deadline is reached.
-  zx_status_t WaitForSocketClosed();
+  zx_status_t WaitForSocketClosed(zx::time deadline);
 
  private:
   // Waits for something to be written to the socket and drains it.
-  zx_status_t WaitForAny(zx::duration timeout);
+  zx_status_t WaitForAny(zx::time deadline);
 
   // Read all pending data from the socket. Non-blocking.
   zx_status_t Drain();

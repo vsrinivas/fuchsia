@@ -6,6 +6,7 @@
 
 #include <endian.h>
 #include <fuchsia/kernel/cpp/fidl.h>
+#include <lib/fitx/result.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/time.h>
 #include <stdio.h>

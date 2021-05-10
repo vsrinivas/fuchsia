@@ -5,6 +5,7 @@
 #include "src/virtualization/tests/guest_console.h"
 
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zx/clock.h>
 #include <lib/zx/time.h>
 #include <zircon/status.h>
 
@@ -14,7 +15,6 @@
 #include "logger.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
-static constexpr zx::duration kTestTimeout = zx::sec(300);
 static constexpr zx::duration kSerialStableDelay = zx::msec(800);
 
 // This is the maximum line length of dash in both zircon_guest and
@@ -39,13 +39,13 @@ static std::string normalize_new_lines(const std::string& s) {
 
 GuestConsole::GuestConsole(std::unique_ptr<SocketInterface> socket) : socket_(std::move(socket)) {}
 
-zx_status_t GuestConsole::Start() {
+zx_status_t GuestConsole::Start(zx::time deadline) {
   zx_status_t status;
 
   // Wait for something to be sent over serial. Both Zircon and Debian will send
   // at least a command prompt. For Debian, this is necessary since any commands
   // we send will be ignored until the guest is ready.
-  status = WaitForAny(kTestTimeout);
+  status = WaitForAny(deadline);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed waiting for any output on the serial console: "
                    << zx_status_get_string(status);
@@ -57,11 +57,16 @@ zx_status_t GuestConsole::Start() {
   // In particular, we wait for a duration of kSerialStableDelay to pass
   // without any output on the line before we consider the output stable.
   do {
-    status = WaitForAny(kSerialStableDelay);
+    status = WaitForAny(zx::deadline_after(kSerialStableDelay));
     if (status != ZX_OK && status != ZX_ERR_TIMED_OUT) {
       FX_LOGS(ERROR) << "Failed waiting for serial console to stabilize: "
                      << zx_status_get_string(status);
       return status;
+    }
+
+    // If we've exceeded our deadline, abort.
+    if (zx::clock::get_monotonic() >= deadline) {
+      return ZX_ERR_TIMED_OUT;
     }
   } while (status == ZX_OK);
 
@@ -73,7 +78,7 @@ zx_status_t GuestConsole::Start() {
 // to be written back to the serial, then the header, then finally we capture
 // everything until the footer.
 zx_status_t GuestConsole::ExecuteBlocking(const std::string& command, const std::string& prompt,
-                                          std::string* result) {
+                                          zx::time deadline, std::string* result) {
   std::string header = command_hash(command);
   std::string footer = header;
   std::reverse(footer.begin(), footer.end());
@@ -84,28 +89,28 @@ zx_status_t GuestConsole::ExecuteBlocking(const std::string& command, const std:
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  zx_status_t status = SendBlocking(full_command + "\n");
+  zx_status_t status = SendBlocking(full_command + "\n", deadline);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to send command: " << zx_status_get_string(status);
     return status;
   }
 
   std::string intermediate_result;
-  status = WaitForMarker(full_command, &intermediate_result);
+  status = WaitForMarker(full_command, deadline, &intermediate_result);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to wait for command echo: " << zx_status_get_string(status);
     FX_LOGS(ERROR) << "Received: \"" << intermediate_result << "\"";
     return status;
   }
 
-  status = WaitForMarker(header + "\n", &intermediate_result);
+  status = WaitForMarker(header + "\n", deadline, &intermediate_result);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to wait for command header: " << zx_status_get_string(status);
     FX_LOGS(ERROR) << "Received: \"" << intermediate_result << "\"";
     return status;
   }
 
-  status = WaitForMarker(footer + "\n", result);
+  status = WaitForMarker(footer + "\n", deadline, result);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to wait for command footer: " << zx_status_get_string(status);
     if (result != nullptr) {
@@ -114,7 +119,7 @@ zx_status_t GuestConsole::ExecuteBlocking(const std::string& command, const std:
     return status;
   }
 
-  status = WaitForMarker(prompt, &intermediate_result);
+  status = WaitForMarker(prompt, deadline, &intermediate_result);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to wait for command prompt: " << zx_status_get_string(status);
     FX_LOGS(ERROR) << "Received: \"" << intermediate_result << "\"";
@@ -124,11 +129,12 @@ zx_status_t GuestConsole::ExecuteBlocking(const std::string& command, const std:
   return ZX_OK;
 }
 
-zx_status_t GuestConsole::SendBlocking(const std::string& message) {
-  return socket_->Send(zx::deadline_after(kTestTimeout), message);
+zx_status_t GuestConsole::SendBlocking(const std::string& message, zx::time deadline) {
+  return socket_->Send(deadline, message);
 }
 
-zx_status_t GuestConsole::WaitForMarker(const std::string& marker, std::string* result) {
+zx_status_t GuestConsole::WaitForMarker(const std::string& marker, zx::time deadline,
+                                        std::string* result) {
   std::string output = buffer_;
   buffer_.erase();
   while (true) {
@@ -150,7 +156,7 @@ zx_status_t GuestConsole::WaitForMarker(const std::string& marker, std::string* 
 
     // Marker is not present: read some more data into the buffer.
     std::string buff;
-    zx_status_t status = socket_->Receive(zx::deadline_after(kTestTimeout), &buff);
+    zx_status_t status = socket_->Receive(deadline, &buff);
     if (status != ZX_OK) {
       if (result != nullptr) {
         *result = output;
@@ -162,8 +168,8 @@ zx_status_t GuestConsole::WaitForMarker(const std::string& marker, std::string* 
   }
 }
 
-zx_status_t GuestConsole::WaitForSocketClosed() {
-  return socket_->WaitForClosed(zx::deadline_after(kTestTimeout));
+zx_status_t GuestConsole::WaitForSocketClosed(zx::time deadline) {
+  return socket_->WaitForClosed(deadline);
 }
 
 zx_status_t GuestConsole::Drain() {
@@ -173,9 +179,9 @@ zx_status_t GuestConsole::Drain() {
   return status;
 }
 
-zx_status_t GuestConsole::WaitForAny(zx::duration timeout) {
+zx_status_t GuestConsole::WaitForAny(zx::time deadline) {
   std::string result;
-  zx_status_t status = socket_->Receive(deadline_after(timeout), &result);
+  zx_status_t status = socket_->Receive(deadline, &result);
   if (status != ZX_OK) {
     return status;
   }

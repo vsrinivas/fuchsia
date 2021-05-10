@@ -11,6 +11,7 @@
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fit/single_threaded_executor.h>
+#include <lib/fitx/result.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
 #include <string.h>
@@ -35,15 +36,12 @@ static constexpr char kRealm[] = "realmguestintegrationtest";
 static constexpr char kFuchsiaTestUtilsUrl[] =
     "fuchsia-pkg://fuchsia.com/virtualization-test-utils";
 static constexpr char kDebianTestUtilDir[] = "/test_utils";
-static constexpr zx::duration kLoopTimeout = zx::sec(300);
 static constexpr zx::duration kLoopConditionStep = zx::msec(10);
-static constexpr size_t kNumRetries = 40;
 static constexpr zx::duration kRetryStep = zx::msec(200);
 static constexpr uint32_t kTerminaStartupListenerPort = 7777;
 static constexpr uint32_t kTerminaMaitredPort = 8888;
 
-static bool RunLoopUntil(async::Loop* loop, fit::function<bool()> condition) {
-  const zx::time deadline = zx::deadline_after(kLoopTimeout);
+static bool RunLoopUntil(async::Loop* loop, fit::function<bool()> condition, zx::time deadline) {
   while (zx::clock::get_monotonic() < deadline) {
     // Check our condition.
     if (condition()) {
@@ -70,16 +68,16 @@ static std::string JoinArgVector(const std::vector<std::string>& argv) {
 // Execute |command| on the guest serial and wait for the |result|.
 zx_status_t EnclosedGuest::Execute(const std::vector<std::string>& argv,
                                    const std::unordered_map<std::string, std::string>& env,
-                                   std::string* result, int32_t* return_code) {
+                                   zx::time deadline, std::string* result, int32_t* return_code) {
   if (env.size() > 0) {
     FX_LOGS(ERROR) << "Only TerminaEnclosedGuest::Execute accepts environment variables.";
     return ZX_ERR_NOT_SUPPORTED;
   }
   auto command = JoinArgVector(argv);
-  return console_->ExecuteBlocking(command, ShellPrompt(), result);
+  return console_->ExecuteBlocking(command, ShellPrompt(), deadline, result);
 }
 
-zx_status_t EnclosedGuest::Start() {
+zx_status_t EnclosedGuest::Start(zx::time deadline) {
   Logger::Get().Reset();
   PeriodicLogger logger;
 
@@ -130,8 +128,8 @@ zx_status_t EnclosedGuest::Start() {
   logger.Start("Creating guest sandbox", zx::sec(5));
   enclosing_environment_ =
       sys::testing::EnclosingEnvironment::Create(kRealm, real_env_, std::move(services));
-  bool environment_running =
-      RunLoopUntil(GetLoop(), [this] { return enclosing_environment_->is_running(); });
+  bool environment_running = RunLoopUntil(
+      GetLoop(), [this] { return enclosing_environment_->is_running(); }, deadline);
   if (!environment_running) {
     FX_LOGS(ERROR) << "Timed out waiting for guest sandbox environment to become ready.";
     return ZX_ERR_TIMED_OUT;
@@ -148,7 +146,7 @@ zx_status_t EnclosedGuest::Start() {
   enclosing_environment_->ConnectToService(manager_.NewRequest());
   manager_->Create("EnclosedGuest", realm_.NewRequest());
 
-  status = SetupVsockServices();
+  status = SetupVsockServices(deadline);
   if (status != ZX_OK) {
     return status;
   }
@@ -161,26 +159,27 @@ zx_status_t EnclosedGuest::Start() {
                            guest_cid_ = cid;
                            launch_complete = true;
                          });
-  RunLoopUntil(GetLoop(), [&launch_complete]() { return launch_complete; });
+  RunLoopUntil(
+      GetLoop(), [&launch_complete]() { return launch_complete; }, deadline);
 
   logger.Start("Connecting to guest serial", zx::sec(10));
   zx::socket serial_socket;
   guest_->GetSerial([&serial_socket](zx::socket s) { serial_socket = std::move(s); });
-  bool socket_valid =
-      RunLoopUntil(GetLoop(), [&serial_socket] { return serial_socket.is_valid(); });
+  bool socket_valid = RunLoopUntil(
+      GetLoop(), [&serial_socket] { return serial_socket.is_valid(); }, deadline);
   if (!socket_valid) {
     FX_LOGS(ERROR) << "Timed out waiting to connect to guest's serial.";
     return ZX_ERR_TIMED_OUT;
   }
   console_ = std::make_unique<GuestConsole>(std::make_unique<ZxSocket>(std::move(serial_socket)));
-  status = console_->Start();
+  status = console_->Start(deadline);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Error connecting to guest's console: " << zx_status_get_string(status);
     return status;
   }
 
   logger.Start("Waiting for system to become ready", zx::sec(10));
-  status = WaitForSystemReady();
+  status = WaitForSystemReady(deadline);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failure while waiting for guest system to become ready: "
                    << zx_status_get_string(status);
@@ -191,8 +190,8 @@ zx_status_t EnclosedGuest::Start() {
   return ZX_OK;
 }
 
-zx_status_t EnclosedGuest::Stop() {
-  zx_status_t status = ShutdownAndWait();
+zx_status_t EnclosedGuest::Stop(zx::time deadline) {
+  zx_status_t status = ShutdownAndWait(deadline);
   if (status != ZX_OK) {
     return status;
   }
@@ -201,8 +200,8 @@ zx_status_t EnclosedGuest::Stop() {
 }
 
 zx_status_t EnclosedGuest::RunUtil(const std::string& util, const std::vector<std::string>& argv,
-                                   std::string* result) {
-  return Execute(GetTestUtilCommand(util, argv), {}, result);
+                                   zx::time deadline, std::string* result) {
+  return Execute(GetTestUtilCommand(util, argv), {}, deadline, result);
 }
 
 zx_status_t ZirconEnclosedGuest::LaunchInfo(std::string* url,
@@ -212,40 +211,46 @@ zx_status_t ZirconEnclosedGuest::LaunchInfo(std::string* url,
   return ZX_OK;
 }
 
-zx_status_t ZirconEnclosedGuest::WaitForSystemReady() {
-  std::string ps;
-  for (size_t i = 0; i != kNumRetries; i++) {
-    zx_status_t status = Execute({"ps"}, {}, &ps);
-    if (status != ZX_OK) {
-      continue;
-    }
-    auto appmgr = ps.find("appmgr");
-    auto virtcon = ps.find("virtual-console");
-    if (appmgr == std::string::npos || virtcon == std::string::npos) {
-      zx::nanosleep(zx::deadline_after(kRetryStep));
-      continue;
-    }
-    return ZX_OK;
+namespace {
+fitx::result<std::string> EnsureValidZirconPsOutput(std::string_view ps_output) {
+  if (ps_output.find("appmgr") == std::string::npos) {
+    return fitx::error("'appmgr' cannot be found in 'ps' output");
   }
-  FX_LOGS(ERROR) << "Failed to wait for appmgr and virtual-console";
+  if (ps_output.find("virtual-console") == std::string::npos) {
+    return fitx::error("'virtual-console' cannot be found in 'ps' output");
+  }
+  return fitx::ok();
+}
+}  // namespace
 
-  auto appmgr = ps.find("appmgr");
-  if (appmgr == std::string::npos) {
-    FX_LOGS(ERROR) << "'appmgr' cannot be found in 'ps' output";
-  }
-  auto virtcon = ps.find("virtual-console");
-  if (virtcon == std::string::npos) {
-    FX_LOGS(ERROR) << "'virtual-console' cannot be found in 'ps' output";
-  }
+zx_status_t ZirconEnclosedGuest::WaitForSystemReady(zx::time deadline) {
+  std::string ps;
+
+  // Keep running `ps` until we get a reasonable result or run out of time.
+  do {
+    // Execute `ps`.
+    constexpr zx::duration kPsWaitTime = zx::sec(5);
+    zx_status_t status =
+        Execute({"ps"}, {}, std::min(zx::deadline_after(kPsWaitTime), deadline), &ps);
+    if (status == ZX_OK && EnsureValidZirconPsOutput(ps).is_ok()) {
+      return ZX_OK;
+    }
+
+    // Keep trying until we run out of time.
+    zx::nanosleep(std::min(zx::deadline_after(kRetryStep), deadline));
+  } while (zx::clock::get_monotonic() < deadline);
+
+  FX_LOGS(ERROR) << "Failed to wait for appmgr and virtual-console: "
+                 << EnsureValidZirconPsOutput(ps).error_value();
   return ZX_ERR_TIMED_OUT;
 }
 
-zx_status_t ZirconEnclosedGuest::ShutdownAndWait() {
-  zx_status_t status = GetConsole()->SendBlocking("dm shutdown\n");
+zx_status_t ZirconEnclosedGuest::ShutdownAndWait(zx::time deadline) {
+  zx_status_t status = GetConsole()->SendBlocking("dm shutdown\n", deadline);
   if (status != ZX_OK) {
     return status;
   }
-  return GetConsole()->WaitForSocketClosed();
+  return GetConsole()->WaitForSocketClosed(deadline);
 }
 
 std::vector<std::string> ZirconEnclosedGuest::GetTestUtilCommand(
@@ -262,31 +267,33 @@ zx_status_t DebianEnclosedGuest::LaunchInfo(std::string* url,
   return ZX_OK;
 }
 
-zx_status_t DebianEnclosedGuest::WaitForSystemReady() {
-  for (size_t i = 0; i != kNumRetries; i++) {
+zx_status_t DebianEnclosedGuest::WaitForSystemReady(zx::time deadline) {
+  // Keep running a simple command until we get a valid response.
+  do {
+    // Execute `echo "guest ready"`.
+    constexpr zx::duration kEchoWaitTime = zx::sec(1);
     std::string response;
-    zx_status_t status = Execute({"echo", "guest ready"}, {}, &response);
-    if (status != ZX_OK) {
-      continue;
+    zx_status_t status = Execute({"echo", "guest ready"}, {},
+                                 std::min(zx::deadline_after(kEchoWaitTime), deadline), &response);
+    if (status == ZX_OK && response.find("guest ready") != std::string::npos) {
+      return ZX_OK;
     }
-    auto ready = response.find("guest ready");
-    if (ready == std::string::npos) {
-      zx::nanosleep(zx::deadline_after(kRetryStep));
-      continue;
-    }
-    return ZX_OK;
-  }
+
+    // Keep trying until we run out of time.
+    zx::nanosleep(std::min(zx::deadline_after(kRetryStep), deadline));
+  } while (zx::clock::get_monotonic() < deadline);
+
   FX_LOGS(ERROR) << "Failed to wait for shell";
   return ZX_ERR_TIMED_OUT;
 }
 
-zx_status_t DebianEnclosedGuest::ShutdownAndWait() {
+zx_status_t DebianEnclosedGuest::ShutdownAndWait(zx::time deadline) {
   PeriodicLogger logger("Attempting to shut down guest", zx::sec(10));
-  zx_status_t status = GetConsole()->SendBlocking("shutdown now\n");
+  zx_status_t status = GetConsole()->SendBlocking("shutdown now\n", deadline);
   if (status != ZX_OK) {
     return status;
   }
-  return GetConsole()->WaitForSocketClosed();
+  return GetConsole()->WaitForSocketClosed(deadline);
 }
 
 std::vector<std::string> DebianEnclosedGuest::GetTestUtilCommand(
@@ -337,7 +344,7 @@ zx_status_t TerminaEnclosedGuest::LaunchInfo(std::string* url,
   return ZX_OK;
 }
 
-zx_status_t TerminaEnclosedGuest::SetupVsockServices() {
+zx_status_t TerminaEnclosedGuest::SetupVsockServices(zx::time deadline) {
   fuchsia::virtualization::HostVsockEndpointPtr grpc_endpoint;
   GetHostVsockEndpoint(vsock_.NewRequest());
   GetHostVsockEndpoint(grpc_endpoint.NewRequest());
@@ -351,7 +358,8 @@ zx_status_t TerminaEnclosedGuest::SetupVsockServices() {
         server_ = std::move(result);
         return fit::ok();
       }));
-  if (!RunLoopUntil(GetLoop(), [this] { return server_ != nullptr; })) {
+  if (!RunLoopUntil(
+          GetLoop(), [this] { return server_ != nullptr; }, deadline)) {
     return ZX_ERR_TIMED_OUT;
   }
 
@@ -401,12 +409,13 @@ zx_status_t MountDeviceInGuest(vm_tools::Maitred::Stub& maitred, std::string_vie
   return ZX_OK;
 }
 
-zx_status_t TerminaEnclosedGuest::WaitForSystemReady() {
+zx_status_t TerminaEnclosedGuest::WaitForSystemReady(zx::time deadline) {
   // The VM will connect to the StartupListener port when it's ready and we'll
   // create the maitred stub in |VmReady|.
   {
     PeriodicLogger logger("Wait for maitred", zx::sec(1));
-    if (!RunLoopUntil(GetLoop(), [this] { return maitred_ != nullptr; })) {
+    if (!RunLoopUntil(
+            GetLoop(), [this] { return maitred_ != nullptr; }, deadline)) {
       return ZX_ERR_TIMED_OUT;
     }
   }
@@ -433,7 +442,7 @@ zx_status_t TerminaEnclosedGuest::WaitForSystemReady() {
   return ZX_OK;
 }
 
-zx_status_t TerminaEnclosedGuest::ShutdownAndWait() {
+zx_status_t TerminaEnclosedGuest::ShutdownAndWait(zx::time deadline) {
   if (server_) {
     server_->inner()->Shutdown();
     server_->inner()->Wait();
@@ -443,7 +452,8 @@ zx_status_t TerminaEnclosedGuest::ShutdownAndWait() {
 
 zx_status_t TerminaEnclosedGuest::Execute(const std::vector<std::string>& argv,
                                           const std::unordered_map<std::string, std::string>& env,
-                                          std::string* result, int32_t* return_code) {
+                                          zx::time deadline, std::string* result,
+                                          int32_t* return_code) {
   auto command_result = command_runner_->Execute({argv, env});
   if (command_result.is_error()) {
     return command_result.error();

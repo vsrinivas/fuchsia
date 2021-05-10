@@ -46,20 +46,28 @@ class EnclosedGuest {
         real_services_(sys::ServiceDirectory::CreateFromNamespace()) {}
   virtual ~EnclosedGuest() {}
 
-  zx_status_t Start();
-  zx_status_t Stop();
+  // Start the guest.
+  //
+  // Abort with ZX_ERR_TIMED_OUT if we reach `deadline` first.
+  zx_status_t Start(zx::time deadline);
+
+  // Attempt to gracefully stop the guest.
+  //
+  // Abort with ZX_ERR_TIMED_OUT if we reach `deadline` first.
+  zx_status_t Stop(zx::time deadline);
 
   bool Ready() const { return ready_; }
 
   // Execute |command| on the guest serial and wait for the |result|.
   virtual zx_status_t Execute(const std::vector<std::string>& argv,
-                              const std::unordered_map<std::string, std::string>& env = {},
-                              std::string* result = nullptr, int32_t* return_code = nullptr);
+                              const std::unordered_map<std::string, std::string>& env,
+                              zx::time deadline, std::string* result = nullptr,
+                              int32_t* return_code = nullptr);
 
   // Run a test util named |util| with |argv| in the guest and wait for the
   // |result|.
   zx_status_t RunUtil(const std::string& util, const std::vector<std::string>& argv,
-                      std::string* result = nullptr);
+                      zx::time deadline, std::string* result = nullptr);
 
   // Return a shell command for a test utility named |util| with the given
   // |argv| in the guest. The result may be passed directly to |Execute|
@@ -92,10 +100,10 @@ class EnclosedGuest {
   virtual zx_status_t LaunchInfo(std::string* url, fuchsia::virtualization::GuestConfig* cfg) = 0;
 
   // Waits until the guest is ready to run test utilities, called by Start.
-  virtual zx_status_t WaitForSystemReady() = 0;
+  virtual zx_status_t WaitForSystemReady(zx::time deadline) = 0;
 
   // Waits for the guest to perform a graceful shutdown.
-  virtual zx_status_t ShutdownAndWait() = 0;
+  virtual zx_status_t ShutdownAndWait(zx::time deadline) = 0;
 
   virtual std::string ShellPrompt() = 0;
 
@@ -104,7 +112,7 @@ class EnclosedGuest {
   //
   // Any vsock ports that are listened on here are guaranteed to be ready to
   // accept connections before the guest attempts to connect to them.
-  virtual zx_status_t SetupVsockServices() { return ZX_OK; }
+  virtual zx_status_t SetupVsockServices(zx::time deadline) { return ZX_OK; }
 
   async::Loop* GetLoop() { return &loop_; }
 
@@ -145,8 +153,8 @@ class ZirconEnclosedGuest : public EnclosedGuest {
 
  protected:
   zx_status_t LaunchInfo(std::string* url, fuchsia::virtualization::GuestConfig* cfg) override;
-  zx_status_t WaitForSystemReady() override;
-  zx_status_t ShutdownAndWait() override;
+  zx_status_t WaitForSystemReady(zx::time deadline) override;
+  zx_status_t ShutdownAndWait(zx::time deadline) override;
   std::string ShellPrompt() override { return "$ "; }
 };
 
@@ -159,8 +167,8 @@ class DebianEnclosedGuest : public EnclosedGuest {
 
  protected:
   zx_status_t LaunchInfo(std::string* url, fuchsia::virtualization::GuestConfig* cfg) override;
-  zx_status_t WaitForSystemReady() override;
-  zx_status_t ShutdownAndWait() override;
+  zx_status_t WaitForSystemReady(zx::time deadline) override;
+  zx_status_t ShutdownAndWait(zx::time deadline) override;
   std::string ShellPrompt() override { return "$ "; }
 };
 
@@ -171,17 +179,17 @@ class TerminaEnclosedGuest : public EnclosedGuest, public vm_tools::StartupListe
   std::vector<std::string> GetTestUtilCommand(const std::string& util,
                                               const std::vector<std::string>& argv) override;
   zx_status_t Execute(const std::vector<std::string>& argv,
-                      const std::unordered_map<std::string, std::string>& env, std::string* result,
-                      int32_t* return_code) override;
+                      const std::unordered_map<std::string, std::string>& env, zx::time deadline,
+                      std::string* result, int32_t* return_code) override;
 
  protected:
   zx_status_t LaunchInfo(std::string* url, fuchsia::virtualization::GuestConfig* cfg) override;
-  zx_status_t WaitForSystemReady() override;
-  zx_status_t ShutdownAndWait() override;
+  zx_status_t WaitForSystemReady(zx::time deadline) override;
+  zx_status_t ShutdownAndWait(zx::time deadline) override;
   std::string ShellPrompt() override { return "$ "; }
 
  private:
-  zx_status_t SetupVsockServices() override;
+  zx_status_t SetupVsockServices(zx::time deadline) override;
 
   // |vm_tools::StartupListener::Service|
   grpc::Status VmReady(grpc::ServerContext* context, const vm_tools::EmptyMessage* request,

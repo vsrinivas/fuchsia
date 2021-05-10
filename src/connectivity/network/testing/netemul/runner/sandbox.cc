@@ -20,6 +20,7 @@
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/termination_reason.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zx/time.h>
 #include <zircon/status.h>
 
 #include <src/lib/pkg_url/fuchsia_pkg_url.h>
@@ -554,7 +555,7 @@ Sandbox::Promise Sandbox::LaunchGuestEnvironment(ConfiguringEnvironmentPtr env,
         // Wait until the guest's serial console becomes usable to ensure that the guest has
         // finished booting.
         GuestConsole serial(std::make_unique<ZxSocket>(std::move(socket)));
-        zx_status_t status = serial.Start();
+        zx_status_t status = serial.Start(zx::time::infinite());
 
         if (status != ZX_OK) {
           return fit::error(SandboxResult(SandboxResult::Status::SETUP_FAILED,
@@ -566,8 +567,9 @@ Sandbox::Promise Sandbox::LaunchGuestEnvironment(ConfiguringEnvironmentPtr env,
           // vsock.
           while (true) {
             std::string output;
-            zx_status_t status = serial.ExecuteBlocking(
-                "journalctl -u guest_interaction_daemon | grep Listening", "$", &output);
+            zx_status_t status =
+                serial.ExecuteBlocking("journalctl -u guest_interaction_daemon | grep Listening",
+                                       "$", zx::time::infinite(), &output);
             // If the command cannot be executed, break out of the loop so the test can fail.
             if (status != ZX_OK) {
               return fit::error(

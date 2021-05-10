@@ -176,6 +176,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.kernel",
     "//sdk/fidl/fuchsia.sysinfo",
     "//sdk/lib/fit-promise",
+    "//zircon/system/ulib/zxc",
   ]
   public_deps = [
     ":fake_netstack",
