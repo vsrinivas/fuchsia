@@ -11,6 +11,13 @@ config("public_preprocessor_definitions") {
   defines = [ "SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS" ]
 }
 
+config("spirv_warnings") {
+  cflags = [
+    "-Wno-conversion",
+    "-Wno-implicit-fallthrough",
+  ]
+}
+
 source_set("spirv-cross") {
   public_configs = [ ":public_preprocessor_definitions" ]
 
@@ -45,8 +52,7 @@ source_set("spirv-cross") {
     "spirv_msl.hpp",
   ]
 
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
+  configs += [ ":spirv_warnings" ]
 }
 
 # NOTE: Required by recent versions of libshaderc_spvc and is provided by more

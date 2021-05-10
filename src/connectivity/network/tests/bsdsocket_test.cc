@@ -2834,6 +2834,7 @@ void doNullPtrIO(const fbl::unique_fd& fd, const fbl::unique_fd& other, IOMethod
           // An additional byte of space was provided in the executeIO closure.
           space += 1;
 #endif
+          [[fallthrough]];
         case IOMethod::Op::READ:
         case IOMethod::Op::RECV:
         case IOMethod::Op::RECVFROM:
@@ -2863,6 +2864,7 @@ void doNullPtrIO(const fbl::unique_fd& fd, const fbl::unique_fd& other, IOMethod
         break;
       }
 #endif
+      [[fallthrough]];
     case IOMethod::Op::READ:
     case IOMethod::Op::RECV:
     case IOMethod::Op::RECVFROM:
@@ -3675,7 +3677,7 @@ TEST_P(BlockedIOTest, CloseWhileBlocked) {
       ASSERT_EQ(fsync(fd), -1) << strerror(errno);
       ASSERT_EQ(errno, EBADF) << errno;
 
-      // Fallthrough to unblock the future.
+      [[fallthrough]];  // to unblock the future.
     }
     case CloseTarget::SERVER: {
       ASSERT_EQ(setsockopt(server().get(), SOL_SOCKET, SO_LINGER, &opt, sizeof(opt)), 0)

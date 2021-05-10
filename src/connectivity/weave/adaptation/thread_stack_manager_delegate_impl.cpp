@@ -575,6 +575,7 @@ WEAVE_ERROR ThreadStackManagerDelegateImpl::GetAndLogThreadStatsCounters() {
     case Role::LEADER:
       counter_event.nodeType |= TelemetryNetworkWpanTrait::NODE_TYPE_LEADER;
       // Fallthrough intentional, leaders are also routers.
+      __FALLTHROUGH;
     case Role::ROUTER:
     case Role::SLEEPY_ROUTER:
     case Role::COORDINATOR:

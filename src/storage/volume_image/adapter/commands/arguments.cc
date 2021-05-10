@@ -69,9 +69,11 @@ fit::result<uint64_t, std::string> ParseSize(std::string_view size_str) {
       case 'G':
       case 'g':
         result *= 1024;
+        __FALLTHROUGH;
       case 'M':
       case 'm':
         result *= 1024;
+        __FALLTHROUGH;
       case 'K':
       case 'k':
         result *= 1024;

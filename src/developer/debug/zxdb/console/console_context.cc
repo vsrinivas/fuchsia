@@ -473,10 +473,14 @@ void ConsoleContext::HandleNotification(NotificationType type, const std::string
   switch (type) {
     case NotificationType::kError:
       out.Append(Syntax::kError, std::move(preamble));
+      [[fallthrough]];
     case NotificationType::kWarning:
       out.Append(Syntax::kWarning, std::move(preamble));
+      [[fallthrough]];
     case NotificationType::kProcessEnteredLimbo:
+      [[fallthrough]];
     case NotificationType::kProcessStdout:
+      [[fallthrough]];
     case NotificationType::kProcessStderr:
       break;
     case NotificationType::kNone:  // None is a no-op.

@@ -395,7 +395,7 @@ void MessageLoopTarget::StopWatching(int id) {
     }
     case WatchType::kFdio:
       fdio_unsafe_release(info.fdio);
-      // fallthrough
+      __FALLTHROUGH;
     case WatchType::kTask:
     case WatchType::kSocket:
       RemoveSignalHandler(&info);

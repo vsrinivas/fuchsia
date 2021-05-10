@@ -160,6 +160,7 @@ zx_status_t Nelson::DisplayInit() {
   switch (display_id) {
     case 0b10:
       display_panel_info[0].panel_type = PANEL_TV070WSM_FT;
+      break;
     case 0b11:
       display_panel_info[0].panel_type = PANEL_TV070WSM_FT_9365;
       break;

@@ -65,6 +65,7 @@ vk_image_alloc_generic(vk_image_t *                  image,
           vk_check_image_usage_vs_format_features(image_tiling, format_props.linearTilingFeatures),
           "Create image with VK_IMAGE_TILING_LINEAR is not supported by format %d\n",
           image_format);
+        break;
       default:
         ASSERT_MSG(false, "Unsupported VkImageTiling value %d\n", image_tiling);
     }

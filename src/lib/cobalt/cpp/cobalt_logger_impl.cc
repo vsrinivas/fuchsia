@@ -221,7 +221,8 @@ void BaseCobaltLoggerImpl::LogEventCallback(const BaseEvent* event, Status statu
       // Log the failure.
       FX_LOGS(WARNING) << "Cobalt rejected event for metric: " << event->metric_id()
                        << " with status: " << fidl::ToUnderlying(status);
-    case Status::OK:  // fall through
+      __FALLTHROUGH;
+    case Status::OK:
       // Remove the event from the set of events to send.
       events_in_transit_.erase(std::lower_bound(
           events_in_transit_.begin(), events_in_transit_.end(), event,

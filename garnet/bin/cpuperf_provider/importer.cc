@@ -134,7 +134,7 @@ uint64_t Importer::ImportRecords(perfmon::Reader& reader, const perfmon::Config&
       switch (record.type()) {
         case perfmon::kRecordTypeTime:
           FX_DCHECK(event_id != perfmon::kEventIdNone);
-          // fall through
+          __FALLTHROUGH;
         case perfmon::kRecordTypeTick:
           if (is_tally_mode) {
             event_data.AccumulateCount(cpu, event_id, sample_rate);

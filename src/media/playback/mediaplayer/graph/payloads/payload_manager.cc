@@ -865,7 +865,7 @@ VmoAllocation PayloadManager::CombinedVmoAllocation() const {
   switch (output_.config_.vmo_allocation_) {
     case VmoAllocation::kNotApplicable:
       FX_DCHECK(input_.config_.vmo_allocation_ != VmoAllocation::kNotApplicable);
-      // Falls through.
+      __FALLTHROUGH;
     case VmoAllocation::kUnrestricted:
       if (input_.config_.vmo_allocation_ == VmoAllocation::kSingleVmo ||
           input_.config_.vmo_allocation_ == VmoAllocation::kVmoPerBuffer) {

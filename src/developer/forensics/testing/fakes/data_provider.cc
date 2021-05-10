@@ -86,6 +86,7 @@ void DataProvider::GetScreenshot(ImageEncoding encoding, GetScreenshotCallback c
   switch (encoding) {
     case ImageEncoding::PNG:
       callback(LoadPngScreenshot());
+      break;
     default:
       callback(nullptr);
   }

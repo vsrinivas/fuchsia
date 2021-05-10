@@ -910,6 +910,8 @@ struct BaseSocket {
             default:
               return SockOptResult::Errno(ENOPROTOOPT);
           }
+        } else {
+          __FALLTHROUGH;
         }
       default:
         return SockOptResult::Errno(EPROTONOSUPPORT);
@@ -1108,6 +1110,8 @@ struct BaseSocket {
             default:
               return SockOptResult::Errno(ENOPROTOOPT);
           }
+        } else {
+          __FALLTHROUGH;
         }
       default:
         return SockOptResult::Errno(EPROTONOSUPPORT);
@@ -1161,6 +1165,7 @@ struct BaseSocket {
           default:
             break;
         }
+        break;
       default:
         break;
     }
@@ -1910,8 +1915,10 @@ struct stream_socket : public pipe {
       switch (*out_code) {
         case 0:
           state_ = StreamSocketState::kConnected;
+          break;
         case EINPROGRESS:
           state_ = StreamSocketState::kConnecting;
+          break;
       }
     }
     return status;

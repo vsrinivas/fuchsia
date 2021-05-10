@@ -220,7 +220,6 @@ void ChromiumExporter::ExportRecord(const trace::Record& record) {
         default:
           break;
       }
-    default:
       break;
   }
 }
@@ -370,9 +369,8 @@ void ChromiumExporter::ExportKernelObject(const trace::Record::KernelObject& ker
       } else if (kernel_object.name.size() > thread_it->second.size()) {
         thread_it->second = kernel_object.name;
       }
-    }
-    default:
       break;
+    }
   }
 }
 

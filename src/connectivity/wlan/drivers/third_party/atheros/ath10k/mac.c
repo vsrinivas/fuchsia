@@ -4046,7 +4046,7 @@ void __ath10k_scan_finish(struct ath10k* ar) {
             ieee80211_remain_on_channel_expired(ar->hw);
 #endif  // NEEDS PORTING
       }
-    /* fall through */
+      __FALLTHROUGH;
     case ATH10K_SCAN_STARTING:
       ar->scan.state = ATH10K_SCAN_IDLE;
       ar->scan.roc_freq = 0;

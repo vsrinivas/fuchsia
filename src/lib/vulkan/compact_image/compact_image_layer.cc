@@ -137,6 +137,7 @@ class ImageCompactor {
           default:
             break;
         }
+        break;
       default:
         break;
     }

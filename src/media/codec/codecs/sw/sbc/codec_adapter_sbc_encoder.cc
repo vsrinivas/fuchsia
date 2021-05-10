@@ -315,6 +315,7 @@ CodecAdapterSbcEncoder::InputLoopStatus CodecAdapterSbcEncoder::EncodeInput(
       events_->onCoreCodecFailCodec(
           "Extrapolation was required for a timestamp because the input "
           "was unaligned, but no timebase is set.");
+      __FALLTHROUGH;
     case ChunkInputStream::kUserTerminated:
       return kShouldTerminate;
     default:

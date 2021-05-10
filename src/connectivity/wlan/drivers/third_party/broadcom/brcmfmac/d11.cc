@@ -259,6 +259,7 @@ void chanspec_to_channel(const brcmu_d11inf* d11_inf, uint16_t chanspec, wlan_ch
           ZX_DEBUG_ASSERT(0);
           break;
       }
+      __FALLTHROUGH;
     default:
       BRCMF_ERR("unsupported channel width");
       break;

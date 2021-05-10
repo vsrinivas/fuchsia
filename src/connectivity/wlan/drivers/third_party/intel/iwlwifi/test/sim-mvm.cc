@@ -52,7 +52,7 @@ zx_status_t SimMvm::SendCmd(struct iwl_host_cmd* cmd, bool* notify_wait) {
 
           // The above commands require unblock the notification.
           *notify_wait = true;
-
+          __FALLTHROUGH;
         case SHARED_MEM_CFG:
         case TX_ANT_CONFIGURATION_CMD:
         case PHY_DB_CMD:

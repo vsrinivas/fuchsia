@@ -480,6 +480,7 @@ config("default_warnings") {
     "-Wextra",
     "-Wnewline-eof",
     "-Wconversion",
+    "-Wimplicit-fallthrough",
     "-Wno-unused-parameter",
     "-Wno-unknown-warning-option",
     "-Wno-sign-conversion",
@@ -751,6 +752,15 @@ config("Wno-conversion") {
     "//zircon/tools/minfs/*",
     "//zircon/tools/mtd-redundant-storage/*",
     "//zircon/tools/xdc-server/*",
+  ]
+}
+
+config("Wno-implicit-fallthrough") {
+  cflags = [ "-Wno-implicit-fallthrough" ]
+  visibility = [
+    "//src/lib/fxl:third_party",
+    "//third_party/rust_crates/compat/brotli",
+    "//zircon/third_party/uapp/dash",
   ]
 }
 

@@ -12,4 +12,5 @@ Modifications:
 - line endings were auto-converted from CRLF
 - Mutex macros (FXL_ACQUIRE, FXL_RELEASE) added to compile with -Wthread-safety
 - clang formatting disabled
+- suppress "-Wimplicit-fallthrough" warning
 - suppress "-Wnullability-completeness" warning

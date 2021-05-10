@@ -34,6 +34,7 @@ void Magnifier::Trigger::OnTapCommit(input::GestureDetector::TapType tap_type) {
       switch (primer_type_) {
         case PrimerType::k3x1_1:
           primer_type_ = PrimerType::k3x1_2;
+          break;
         case PrimerType::k3x1_2:
           break;
         default:

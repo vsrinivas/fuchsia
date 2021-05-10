@@ -3724,10 +3724,10 @@ static void brcmf_get_bwcap(struct brcmf_if* ifp, uint32_t bw_cap[]) {
   switch (mimo_bwcap) {
     case WLC_N_BW_40ALL:
       bw_cap[WLAN_INFO_BAND_2GHZ] |= WLC_BW_40MHZ_BIT;
-      /* fall-thru */
+      __FALLTHROUGH;
     case WLC_N_BW_20IN2G_40IN5G:
       bw_cap[WLAN_INFO_BAND_5GHZ] |= WLC_BW_40MHZ_BIT;
-      /* fall-thru */
+      __FALLTHROUGH;
     case WLC_N_BW_20ALL:
       bw_cap[WLAN_INFO_BAND_2GHZ] |= WLC_BW_20MHZ_BIT;
       bw_cap[WLAN_INFO_BAND_5GHZ] |= WLC_BW_20MHZ_BIT;

@@ -1004,7 +1004,7 @@ spn_ci_unseal(struct spn_composition_impl * const impl)
 
       case SPN_CI_STATE_SEALING:
         spn_ci_block_until_sealed(impl);
-        // [[fallthrough]];
+        __FALLTHROUGH;
 
       case SPN_CI_STATE_SEALED:
         // default:

@@ -111,6 +111,7 @@ spn_vk_find_target(uint32_t const                          vendor_id,
               default:
                 break;
             }
+          break;
         }
 
         default: {

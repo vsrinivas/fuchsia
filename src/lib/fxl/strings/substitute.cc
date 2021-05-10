@@ -160,7 +160,7 @@ std::string SubstituteWithArray(std::string_view format, std::string_view* args,
         break;
       }
       case CharType::kMissingId:
-        assert(false);
+        abort();
       case CharType::kRegularChar:
         output[out_pos++] = format[format_pos++];
         break;

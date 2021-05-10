@@ -722,6 +722,7 @@ bool DeviceInterface::ContinueTeardown(network::internal::DeviceInterface::Teard
           return nullptr;
         }
         // Let fallthrough, no bindings to destroy.
+        __FALLTHROUGH;
       }
       case TeardownState::BINDINGS: {
         // Pre-condition to enter ports state: bindings must be empty.
@@ -741,6 +742,7 @@ bool DeviceInterface::ContinueTeardown(network::internal::DeviceInterface::Teard
           return nullptr;
         }
         // Let it fallthrough, no ports to destroy.
+        __FALLTHROUGH;
       }
       case TeardownState::PORTS: {
         // Pre-condition to enter sessions state: ports must all be destroyed.
@@ -776,6 +778,7 @@ bool DeviceInterface::ContinueTeardown(network::internal::DeviceInterface::Teard
           return nullptr;
         }
         // We can teardown immediately, let it fall through
+        __FALLTHROUGH;
       }
       case TeardownState::SESSIONS: {
         // Condition to finish teardown: no more sessions exists (dead or alive) and the device

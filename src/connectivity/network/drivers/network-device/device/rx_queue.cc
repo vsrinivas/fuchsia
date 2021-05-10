@@ -173,6 +173,7 @@ std::tuple<RxQueue::InFlightBuffer*, uint32_t> RxQueue::GetBuffer() {
     default:
       LOGF_ERROR("network-device: failed to load rx buffer descriptors: %s",
                  zx_status_get_string(status));
+      __FALLTHROUGH;
     case ZX_ERR_PEER_CLOSED:  // Primary FIFO closed.
     case ZX_ERR_SHOULD_WAIT:  // No Rx buffers available in FIFO.
     case ZX_ERR_BAD_STATE:    // Primary session stopped or paused.

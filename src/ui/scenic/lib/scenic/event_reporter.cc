@@ -48,6 +48,7 @@ void EventReporter::EnqueueEvent(fuchsia::ui::scenic::Event event) {
       break;
     case fuchsia::ui::scenic::Event::Tag::kUnhandled:
       EnqueueEvent(std::move(event.unhandled()));
+      break;
     default:
       FX_LOGS(ERROR) << "Unknown Scenic event.";
   }

@@ -23,6 +23,7 @@
 // FUCHSIA
 // clang-format off
 #pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wimplicit-fallthrough"
 #pragma clang diagnostic ignored "-Wnullability-completeness"
 
 #ifndef AMD_VULKAN_MEMORY_ALLOCATOR_H

@@ -134,12 +134,15 @@ static bool parse_args(int argc, const char** argv, async::Loop* loop,
       case 4:
         port = -1;
         success &= parse_number(argv[3], "port", &*port);
+        __FALLTHROUGH;
       case 3:
         cid = -1;
         success &= parse_number(argv[2], "context ID", &*cid);
+        __FALLTHROUGH;
       case 2:
         env_id = -1;
         success &= parse_number(argv[1], "environment ID", &*env_id);
+        __FALLTHROUGH;
       case 1:
         break;
       default:

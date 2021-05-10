@@ -932,7 +932,7 @@ zx_status_t ath10k_htt_tx(struct ath10k_htt* htt, enum ath10k_hw_txrx_mode txmod
     case ATH10K_HW_TXRX_RAW:
     case ATH10K_HW_TXRX_NATIVE_WIFI:
       flags0 |= HTT_DATA_TX_DESC_FLAGS0_MAC_HDR_PRESENT;
-    /* pass through */
+      __FALLTHROUGH;
     case ATH10K_HW_TXRX_ETHERNET:
       if (ar->hw_params.continuous_frag_desc) {
         memset(&htt->frag_desc.vaddr[msdu_id], 0, sizeof(struct htt_msdu_ext_desc));

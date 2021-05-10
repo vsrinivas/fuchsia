@@ -545,6 +545,7 @@ class FakeDevice : public ddk::UsbBusProtocol<FakeDevice>, public ddk::UsbProtoc
             if (emulation_.speed != USB_SPEED_SUPER) {
               break;
             }
+            __FALLTHROUGH;
           case USB_HUB_DESC_TYPE:
             // Fetch secondary hub descriptor
             memcpy(out_read_buffer, emulation_.secondary_descriptor.data(),

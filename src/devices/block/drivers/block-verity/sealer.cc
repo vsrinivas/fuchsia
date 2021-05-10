@@ -92,6 +92,7 @@ void Sealer::ScheduleNextWorkUnit() {
       } else {
         // Otherwise, update state, then fall through to PadHashBlocks.
         state_ = PadHashBlocks;
+        __FALLTHROUGH;
       }
     case PadHashBlocks: {
       // For each hash tier that is not already empty (since we eagerly flush
@@ -107,6 +108,7 @@ void Sealer::ScheduleNextWorkUnit() {
       // If all hash tiers have been fully written out, proceed to writing out
       // the superblock.
       state_ = CommitSuperblock;
+      __FALLTHROUGH;
     }
     case CommitSuperblock:
       WriteSuperblock();

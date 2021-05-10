@@ -259,6 +259,7 @@ void MediaPlayerTestUtilView::OnScenicEvent(fuchsia::ui::scenic::Event event) {
         default:
           break;
       }
+      break;
     default:
       break;
   }

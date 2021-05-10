@@ -243,7 +243,7 @@ class CursorStream : public StreamBase {
       switch (request->type) {
         case VIRTIO_GPU_CMD_UPDATE_CURSOR:
           UpdateCursor(reinterpret_cast<const virtio_gpu_update_cursor_t*>(request));
-          // fall-through
+          __FALLTHROUGH;
         case VIRTIO_GPU_CMD_MOVE_CURSOR:
           MoveCursor(reinterpret_cast<const virtio_gpu_update_cursor_t*>(request));
           break;

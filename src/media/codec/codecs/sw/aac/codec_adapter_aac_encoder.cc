@@ -194,7 +194,8 @@ CodecAdapterAacEncoder::CoreCodecBuildNewOutputConstraints(
 
   auto* buffer_constraints = constraints->mutable_buffer_constraints();
 
-  buffer_constraints->set_buffer_constraints_version_ordinal(new_output_buffer_constraints_version_ordinal);
+  buffer_constraints->set_buffer_constraints_version_ordinal(
+      new_output_buffer_constraints_version_ordinal);
 
   return constraints;
 }
@@ -306,9 +307,11 @@ void CodecAdapterAacEncoder::ProcessInput(CodecInputItem input_item) {
               "of an unaligned timestamp, but no timebase was provided "
               "in `input_details`.\n");
       events_->onCoreCodecFailStream(fuchsia::media::StreamError::ENCODER_UNKNOWN);
+      __FALLTHROUGH;
     case ChunkInputStream::kUserTerminated:
       // A failure was reported through `events_`.
       stream_ = std::nullopt;
+      __FALLTHROUGH;
     case ChunkInputStream::kOk:
       return;
   };

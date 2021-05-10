@@ -578,6 +578,7 @@ svg_print(const struct svg * svg, svg_printf_func_t * print_func, void * print_o
             ls << "FillOpacity("
               << cmd->fill_opacity.fill_opacity
               << ")" << ls.comma;
+            break;
 
           case SVG_LAYER_CMD_STROKE_COLOR:
             ls << "StrokeColor("

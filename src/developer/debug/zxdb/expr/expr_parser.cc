@@ -492,6 +492,7 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
               // template parameters.
               FX_NOTREACHED();
               // Fall through to "other" case for fallback.
+              [[fallthrough]];
             case FoundName::kVariable:
             case FoundName::kMemberVariable:
             case FoundName::kFunction:
@@ -541,6 +542,7 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
         }
 
         // Fall-through to regular name parsing to treat "operator" as a normal name as per C.
+        [[fallthrough]];
       }
 
       case ExprTokenType::kName:

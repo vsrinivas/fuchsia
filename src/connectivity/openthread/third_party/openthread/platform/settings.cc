@@ -55,15 +55,17 @@ static otError get_ot_error(ThreadConfigMgrError error) {
       return OT_ERROR_NONE;
     case kThreadConfigMgrErrorPersistedStorageFail:
       FX_CHECK(0) << "failed to write to config file";
+      abort();
     case kThreadConfigMgrErrorConflictingTypes:
       // This happens when either during set or get it is found that key exists
       // but the value type is not array. There is no way to handle this
       // situation as it is totally unexpected unless there is some bug in
       // config manager itself
       FX_CHECK(0) << "Matching keys with different types";
-    default:;
+      abort();
+    default:
+      return OT_ERROR_NONE;
   }
-  return OT_ERROR_NONE;
 }
 
 otError otPlatSettingsGet(otInstance *instance, uint16_t key, int index, uint8_t *value,

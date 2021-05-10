@@ -44,6 +44,16 @@ source_set("memory") {
   ]
 }
 
+source_set("third_party") {
+  visibility = [ ":strings" ]
+
+  sources = [
+    "third_party/icu/icu_utf.cc",
+    "third_party/icu/icu_utf.h",
+  ]
+  configs += [ "//build/config:Wno-implicit-fallthrough" ]
+}
+
 source_set("strings") {
   visibility = [
     ":*",
@@ -69,12 +79,11 @@ source_set("strings") {
     "strings/trim.h",
     "strings/utf_codecs.cc",
     "strings/utf_codecs.h",
-    "third_party/icu/icu_utf.cc",
-    "third_party/icu/icu_utf.h",
   ]
 
   public_deps = [
     ":common",
+    ":third_party",
     "//sdk/lib/syslog/cpp",
   ]
 }

@@ -35,8 +35,10 @@ inline std::string ToReason(const Error error) {
       return "file write failure";
     case Error::kCustom:
       FX_LOGS(FATAL) << "Error::kCustom does not have a reason";
+      return "FATAL, THIS SHOULD NOT HAPPEN";
     case Error::kDefault:
       FX_LOGS(FATAL) << "Error::kDefault does not have a reason";
+      return "FATAL, THIS SHOULD NOT HAPPEN";
     case Error::kNotSet:
       FX_LOGS(FATAL) << "Error::kNotSet does not have a reason";
       return "FATAL, THIS SHOULD NOT HAPPEN";
