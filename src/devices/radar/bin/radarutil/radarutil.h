@@ -25,7 +25,7 @@ class RadarUtil {
   using BurstReaderProvider = fuchsia_hardware_radar::RadarBurstReaderProvider;
   using BurstReader = fuchsia_hardware_radar::RadarBurstReader;
 
-  static constexpr zx::duration kDefaultRunTime = zx::sec(10);
+  static constexpr zx::duration kDefaultRunTime = zx::sec(1);
   static constexpr size_t kDefaultVmoCount = 10;
   static constexpr zx::duration kDefaultBurstProcessTime = zx::nsec(0);
 
@@ -69,6 +69,8 @@ class RadarUtil {
 
   uint64_t bursts_received_ = 0;
   uint64_t burst_errors_ = 0;
+
+  bool help_ = false;
 };
 
 }  // namespace radarutil

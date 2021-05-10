@@ -48,7 +48,7 @@ void Usage() {
       "    burst process time: Time to sleep after each burst to simulate processing delay."
       " Default: 0s\n"
       "    run time: Total time to read frames."
-      " Default: 10s\n"
+      " Default: 1s\n"
       "    vmos: Number of VMOs to register for receiving frames."
       " Default: 10\n"
       "\n"
@@ -64,7 +64,7 @@ zx_status_t RadarUtil::Run(
   RadarUtil radarutil;
 
   zx_status_t status = radarutil.ParseArgs(argc, argv);
-  if (status != ZX_OK) {
+  if (status != ZX_OK || radarutil.help_) {
     return status;
   }
 
@@ -89,6 +89,7 @@ zx_status_t RadarUtil::ParseArgs(int argc, char** argv) {
     switch (opt) {
       case 'h':
         Usage();
+        help_ = true;
         return ZX_OK;
       case 'p': {
         zx::status<zx::duration> burst_process_time = ParseDuration(optarg);

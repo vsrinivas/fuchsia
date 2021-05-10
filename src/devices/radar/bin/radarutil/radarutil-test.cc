@@ -261,4 +261,10 @@ TEST(RadarUtilTest, InjectError) {
   ASSERT_NO_FATAL_FAILURES(device.Ok());
 }
 
+TEST(RadarUtilTest, Help) {
+  FakeRadarDevice device;
+  EXPECT_OK(device.RunRadarUtil({"radarutil", "-h"}));
+  EXPECT_EQ(device.GetRegisteredVmoCount(), 0);
+}
+
 }  // namespace radarutil
