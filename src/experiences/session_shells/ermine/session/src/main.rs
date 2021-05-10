@@ -160,8 +160,8 @@ async fn set_view_focus(
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["workstation_session"]).expect("Failed to initialize logger.");
-    let realm =
-        connect_to_protocol::<fsys::RealmMarker>().context("Could not connect to Realm service.")?;
+    let realm = connect_to_protocol::<fsys::RealmMarker>()
+        .context("Could not connect to Realm service.")?;
     let element_manager = SimpleElementManager::new(realm);
 
     let mut element_repository = ElementRepository::new(Rc::new(element_manager));
@@ -186,7 +186,7 @@ async fn main() -> Result<(), Error> {
     let services_fut =
         expose_services(element_repository.make_server(), scene_manager, element_channel);
     let element_manager_fut = element_repository.run_with_handler(&mut handler);
-    let focus_fut = input::focus_listening::handle_focus_changes();
+    let focus_fut = input_pipeline::focus_listening::handle_focus_changes();
 
     //TODO(47080) monitor the futures to see if they complete in an error.
     let _ = try_join!(element_manager_fut, focus_fut, services_fut, set_focus_fut);
