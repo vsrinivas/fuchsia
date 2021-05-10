@@ -124,7 +124,7 @@ static bool out_of_memory() {
   // Allocate all of the data objects.
   fbl::AllocChecker ac;
   ktl::unique_ptr<void*[]> objs = ktl::make_unique<void*[]>(&ac, num_slots);
-  EXPECT_TRUE(ac.check());
+  ASSERT_TRUE(ac.check());
   void** top = &objs[0];
   for (size_t i = 0; i < num_slots; i++) {
     char msg[32];
@@ -302,7 +302,7 @@ static bool uncommitting_tests() {
   // them.
   fbl::AllocChecker ac;
   ktl::unique_ptr<void*[]> objs = ktl::make_unique<void*[]>(&ac, num_slots);
-  EXPECT_TRUE(ac.check());
+  ASSERT_TRUE(ac.check());
   void** top = &objs[0];
   for (size_t i = 0; i < num_slots; i++) {
     char msg[32];
@@ -404,7 +404,7 @@ static bool memory_cleanup() {
 
   fbl::AllocChecker ac;
   Arena* arena = new (&ac) Arena();
-  EXPECT_TRUE(ac.check());
+  ASSERT_TRUE(ac.check());
   EXPECT_EQ(ZX_OK, arena->Init("name", sizeof(TestObj), num_slots));
 
   auto start = reinterpret_cast<vaddr_t>(arena->start());

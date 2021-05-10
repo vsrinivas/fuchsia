@@ -240,7 +240,7 @@ static bool parallel_grow_memory() {
 
   fbl::AllocChecker ac;
   ktl::unique_ptr<void*[]> allocs = ktl::make_unique<void*[]>(&ac, count);
-  EXPECT_TRUE(ac.check());
+  ASSERT_TRUE(ac.check());
 
   ASSERT_EQ(arena.Init("test", count), ZX_OK);
 
