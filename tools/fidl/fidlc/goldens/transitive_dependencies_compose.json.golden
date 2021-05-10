@@ -44,6 +44,17 @@
         "column": 10,
         "length": 3
       },
+      "composed_protocols": [
+        {
+          "name": "middle/Middle",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/transitive_dependencies_compose/top.test.fidl",
+            "line": 6,
+            "column": 20,
+            "length": 6
+          }
+        }
+      ],
       "methods": [
         {
           "ordinal": 3210163844600846111,

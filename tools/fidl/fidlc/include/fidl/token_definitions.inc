@@ -81,6 +81,7 @@ TOKEN_SUBKIND(Error, "error")
 TOKEN_SUBKIND(True, "true")
 TOKEN_SUBKIND(False, "false")
 
+TOKEN_SUBKIND(Compose, "compose")
 TOKEN_SUBKIND(Reserved, "reserved")
 TOKEN_SUBKIND(Properties, "properties")
 

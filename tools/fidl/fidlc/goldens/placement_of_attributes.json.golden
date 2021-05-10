@@ -197,6 +197,7 @@
           }
         }
       ],
+      "composed_protocols": [],
       "methods": [
         {
           "ordinal": 2341079615635566980,

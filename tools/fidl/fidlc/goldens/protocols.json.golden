@@ -218,6 +218,7 @@
         "column": 10,
         "length": 29
       },
+      "composed_protocols": [],
       "methods": [
         {
           "ordinal": 7699066378708085668,
@@ -567,6 +568,7 @@
         "column": 10,
         "length": 15
       },
+      "composed_protocols": [],
       "methods": [
         {
           "ordinal": 4000554951765344912,
@@ -823,6 +825,7 @@
           }
         }
       ],
+      "composed_protocols": [],
       "methods": [
         {
           "ordinal": 565531679656837166,
@@ -1172,6 +1175,7 @@
         "column": 10,
         "length": 12
       },
+      "composed_protocols": [],
       "methods": [
         {
           "ordinal": 7121112290509197032,
@@ -1390,6 +1394,7 @@
           }
         }
       ],
+      "composed_protocols": [],
       "methods": [
         {
           "ordinal": 16177161678225767,
@@ -1424,6 +1429,7 @@
         "column": 10,
         "length": 20
       },
+      "composed_protocols": [],
       "methods": [
         {
           "ordinal": 5073990954122988412,

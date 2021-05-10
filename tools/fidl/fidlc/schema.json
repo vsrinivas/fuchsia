@@ -188,6 +188,28 @@
             ],
             "type": "object"
         },
+        "compose": {
+            "description": "Compose member of an interface declaration",
+            "properties": {
+                "location": {
+                    "$ref": "#/definitions/location",
+                    "description": "Source location of the compose declaration"
+                },
+                "maybe_attributes": {
+                    "$ref": "#/definitions/attributes-list",
+                    "description": "Optional list of attributes of the compose declaration"
+                },
+                "name": {
+                    "$ref": "#/definitions/compound-identifier",
+                    "description": "Name of the composed interface"
+                }
+            },
+            "required": [
+                "name",
+                "location"
+            ],
+            "type": "object"
+        },
         "compound-identifier": {
             "description": "Definition of compound identifier",
             "pattern": "([_A-Za-z][_A-Za-z0-9]*-)*[_A-Za-z][_A-Za-z0-9]*/[_A-Za-z][_A-Za-z0-9]*",
@@ -550,6 +572,13 @@
         "interface": {
             "description": "Definition of an interface declaration",
             "properties": {
+                "composed_protocols": {
+                    "description": "List of composed interfaces",
+                    "items": {
+                        "$ref": "#/definitions/compose"
+                    },
+                    "type": "array"
+                },
                 "location": {
                     "$ref": "#/definitions/location",
                     "description": "Source location of the declaration"

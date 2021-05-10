@@ -944,8 +944,8 @@ std::unique_ptr<raw::ParameterList> Parser::ParseParameterList() {
   return std::make_unique<raw::ParameterList>(scope.GetSourceElement(), std::move(parameter_list));
 }
 
-std::unique_ptr<raw::ProtocolMethod> Parser::ParseProtocolEvent(
-    std::unique_ptr<raw::AttributeListOld> attributes, ASTScope& scope) {
+std::unique_ptr<raw::ProtocolMethod> Parser::ParseProtocolEvent(raw::AttributeList attributes,
+                                                                ASTScope& scope) {
   ConsumeToken(OfKind(Token::Kind::kArrow));
   if (!Ok())
     return Fail();
@@ -984,8 +984,7 @@ std::unique_ptr<raw::ProtocolMethod> Parser::ParseProtocolEvent(
 }
 
 std::unique_ptr<raw::ProtocolMethod> Parser::ParseProtocolMethod(
-    std::unique_ptr<raw::AttributeListOld> attributes, ASTScope& scope,
-    std::unique_ptr<raw::Identifier> method_name) {
+    raw::AttributeList attributes, ASTScope& scope, std::unique_ptr<raw::Identifier> method_name) {
   auto parse_params = [this](std::unique_ptr<raw::ParameterList>* params_out) {
     *params_out = ParseParameterList();
     if (!Ok())
@@ -1019,11 +1018,21 @@ std::unique_ptr<raw::ProtocolMethod> Parser::ParseProtocolMethod(
                                                std::move(maybe_response), std::move(maybe_error));
 }
 
+std::unique_ptr<raw::ComposeProtocol> Parser::ParseComposeProtocol(raw::AttributeList attributes,
+                                                                   ASTScope& scope) {
+  auto identifier = ParseCompoundIdentifier();
+  if (!Ok())
+    return Fail();
+
+  return std::make_unique<raw::ComposeProtocol>(scope.GetSourceElement(), std::move(attributes),
+                                                std::move(identifier));
+}
+
 void Parser::ParseProtocolMember(
     std::vector<std::unique_ptr<raw::ComposeProtocol>>* composed_protocols,
     std::vector<std::unique_ptr<raw::ProtocolMethod>>* methods) {
   ASTScope scope(this);
-  std::unique_ptr<raw::AttributeListOld> attributes = MaybeParseAttributeListOld();
+  raw::AttributeList attributes = MaybeParseAttributeList();
   if (!Ok())
     Fail();
 
@@ -1032,30 +1041,22 @@ void Parser::ParseProtocolMember(
       add(methods, [&] { return ParseProtocolEvent(std::move(attributes), scope); });
       break;
     }
-    case Token::Kind::kIdentifier: {
+    case CASE_TOKEN(Token::Kind::kIdentifier): {
+      bool is_composed = Peek().combined() == CASE_IDENTIFIER(Token::Subkind::kCompose);
       auto identifier = ParseIdentifier();
       if (!Ok())
         break;
+
       if (Peek().kind() == Token::Kind::kLeftParen) {
         add(methods, [&] {
           return ParseProtocolMethod(std::move(attributes), scope, std::move(identifier));
         });
-        break;
-      } else if (identifier->span().data() == "compose") {
-        if (attributes) {
-          Fail(ErrCannotAttachAttributesToCompose);
-          break;
-        }
-        auto protocol_name = ParseCompoundIdentifier();
-        if (!Ok())
-          break;
-        composed_protocols->push_back(std::make_unique<raw::ComposeProtocol>(
-            raw::SourceElement(identifier->start_, protocol_name->end_), std::move(protocol_name)));
-        break;
+      } else if (is_composed) {
+        add(composed_protocols, [&] { return ParseComposeProtocol(std::move(attributes), scope); });
       } else {
         Fail(ErrUnrecognizedProtocolMember);
-        break;
       }
+      break;
     }
     default:
       Fail(ErrExpectedProtocolMember);

@@ -15,6 +15,7 @@
         "column": 10,
         "length": 10
       },
+      "composed_protocols": [],
       "methods": []
     }
   ],

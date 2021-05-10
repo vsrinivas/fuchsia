@@ -226,23 +226,20 @@ definitions will appear as follows:
 },
 "compose": {
   {
-    "description": "Compose member of a protocol declaration",
+    "description": "Compose member of an interface declaration",
     "type": "object",
     "required": [
-        "composed",
+        "name",
         "location",
     ],
     "properties": {
-      "composed": {
-        "description": "List of composed protocols",
-        "type": "array",
-        "items": {
-          "$ref": "#/definitions/identifier",
-        }
+      "name": {
+        "$ref": "#/definitions/compound-identifier",
+        "description": "Name of the composed interface"
       },
       "maybe_attributes": {
         "description": "Optional list of attributes of the compose declaration",
-        "$ref": "#/definitions/attributes.md-list",
+        "$ref": "#/definitions/attributes-list",
       },
       "location": {
         "description": "Source location of the compose declaration",

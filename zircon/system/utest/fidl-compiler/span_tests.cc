@@ -527,6 +527,11 @@ const uint16 two_fifty_seven = «one | two_fifty_six»;
     {ElementType::ComposeProtocol,
      {
          R"FIDL(library x; protocol X { «compose OtherProtocol»; };)FIDL",
+         R"FIDL(library x; protocol X { «[attr] compose OtherProtocol»; };)FIDL",
+         R"FIDL(library x; protocol X {
+            «/// Foo
+            compose OtherProtocol»;
+          };)FIDL",
      }},
     {ElementType::ParameterList,
      {

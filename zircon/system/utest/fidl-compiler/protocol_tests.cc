@@ -157,16 +157,40 @@ protocol WellDocumented {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedProtocolMember);
 }
 
-TEST(ProtocolTests, BadCannotAttachAttributesToCompose) {
+TEST(ProtocolTests, GoodAttachAttributesToCompose) {
   TestLibrary library(R"FIDL(
 library example;
 
+protocol ParentA {
+    ParentMethodA();
+};
+
+protocol ParentB {
+    ParentMethodB();
+};
+
 protocol Child {
-    [NoCantDo] compose Parent;
+    [ThisIsAllowed] compose ParentA;
+    /// This is also allowed.
+    compose ParentB;
+    ChildMethod();
 };
 
 )FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotAttachAttributesToCompose);
+  ASSERT_TRUE(library.Compile());
+
+  auto child_protocol = library.LookupProtocol("Child");
+  ASSERT_NOT_NULL(child_protocol);
+  EXPECT_EQ(child_protocol->methods.size(), 1);
+  EXPECT_EQ(child_protocol->all_methods.size(), 3);
+  ASSERT_EQ(child_protocol->composed_protocols.size(), 2);
+  EXPECT_EQ(child_protocol->composed_protocols.front().attributes->attributes.size(), 1);
+  EXPECT_EQ(child_protocol->composed_protocols.front().attributes->attributes.front()->name,
+            "ThisIsAllowed");
+  EXPECT_EQ(child_protocol->composed_protocols.back().attributes->attributes.size(), 1);
+  EXPECT_EQ(child_protocol->composed_protocols.back().attributes->attributes.front()->name, "Doc");
+  EXPECT_EQ(child_protocol->composed_protocols.back().attributes->attributes.front()->span().data(),
+            "/// This is also allowed.");
 }
 
 TEST(ProtocolTests, BadCannotComposeYourselfOld) {

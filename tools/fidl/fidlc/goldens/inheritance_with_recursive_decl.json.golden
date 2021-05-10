@@ -15,6 +15,7 @@
         "column": 10,
         "length": 6
       },
+      "composed_protocols": [],
       "methods": [
         {
           "ordinal": 3051519745671742363,
@@ -69,6 +70,17 @@
         "column": 10,
         "length": 5
       },
+      "composed_protocols": [
+        {
+          "name": "fidl.test.inheritancewithrecursivedecl/Parent",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
+            "line": 8,
+            "column": 13,
+            "length": 6
+          }
+        }
+      ],
       "methods": [
         {
           "ordinal": 3051519745671742363,

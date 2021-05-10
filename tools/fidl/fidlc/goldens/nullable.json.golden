@@ -96,6 +96,7 @@
         "column": 10,
         "length": 14
       },
+      "composed_protocols": [],
       "methods": [
         {
           "ordinal": 1238508415331800925,

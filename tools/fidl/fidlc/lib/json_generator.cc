@@ -355,7 +355,17 @@ void JSONGenerator::Generate(const flat::Protocol& value) {
     GenerateObjectMember("location", NameSpan(value.name));
     if (value.attributes && !value.attributes->attributes.empty())
       GenerateObjectMember("maybe_attributes", value.attributes);
+    GenerateObjectMember("composed_protocols", value.composed_protocols);
     GenerateObjectMember("methods", value.all_methods);
+  });
+}
+
+void JSONGenerator::Generate(const flat::Protocol::ComposedProtocol& value) {
+  GenerateObject([&]() {
+    GenerateObjectMember("name", value.name, Position::kFirst);
+    if (value.attributes && !value.attributes->attributes.empty())
+      GenerateObjectMember("maybe_attributes", value.attributes);
+    GenerateObjectMember("location", NameSpan(value.name));
   });
 }
 

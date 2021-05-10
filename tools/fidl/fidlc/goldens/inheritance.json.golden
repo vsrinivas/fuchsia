@@ -15,6 +15,7 @@
         "column": 10,
         "length": 5
       },
+      "composed_protocols": [],
       "methods": [
         {
           "ordinal": 4999045011615110827,
@@ -97,6 +98,17 @@
         "column": 10,
         "length": 3
       },
+      "composed_protocols": [
+        {
+          "name": "fidl.test.inheritance/super",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
+            "line": 8,
+            "column": 13,
+            "length": 5
+          }
+        }
+      ],
       "methods": [
         {
           "ordinal": 4999045011615110827,

@@ -2691,16 +2691,25 @@ void Library::ConsumeProtocolDeclaration(
     std::unique_ptr<raw::ProtocolDeclaration> protocol_declaration) {
   auto name = Name::CreateSourced(this, protocol_declaration->identifier->span());
 
-  std::set<Name> composed_protocols;
-  for (auto& composed_protocol : protocol_declaration->composed_protocols) {
-    auto& protocol_name = composed_protocol->protocol_name;
+  std::vector<Protocol::ComposedProtocol> composed_protocols;
+  std::set<Name> seen_composed_protocols;
+  for (auto& raw_composed : protocol_declaration->composed_protocols) {
+    std::unique_ptr<AttributeList> attributes;
+    if (!ConsumeAttributeList(std::move(raw_composed->attributes), &attributes)) {
+      return;
+    }
+
+    auto& protocol_name = raw_composed->protocol_name;
     auto composed_protocol_name = CompileCompoundIdentifier(protocol_name.get());
     if (!composed_protocol_name)
       return;
-    if (!composed_protocols.insert(std::move(composed_protocol_name.value())).second) {
+    if (!seen_composed_protocols.insert(composed_protocol_name.value()).second) {
       Fail(ErrProtocolComposedMultipleTimes, composed_protocol_name->span());
       return;
     }
+
+    composed_protocols.emplace_back(std::move(attributes),
+                                    std::move(composed_protocol_name.value()));
   }
 
   std::vector<Protocol::Method> methods;
@@ -4033,7 +4042,7 @@ bool Library::DeclDependencies(const Decl* decl, std::set<const Decl*>* out_edge
     case Decl::Kind::kProtocol: {
       auto protocol_decl = static_cast<const Protocol*>(decl);
       for (const auto& composed_protocol : protocol_decl->composed_protocols) {
-        if (auto type_decl = LookupDeclByName(composed_protocol); type_decl) {
+        if (auto type_decl = LookupDeclByName(composed_protocol.name); type_decl) {
           edges.insert(type_decl);
         }
       }
@@ -4815,7 +4824,8 @@ bool Library::CompileProtocol(Protocol* protocol_declaration) {
   MethodScope method_scope;
   auto CheckScopes = [this, &protocol_declaration, &method_scope](const Protocol* protocol,
                                                                   auto Visitor) -> bool {
-    for (const auto& name : protocol->composed_protocols) {
+    for (const auto& composed_protocol : protocol->composed_protocols) {
+      auto name = composed_protocol.name;
       auto decl = LookupDeclByName(name);
       // TODO(fxbug.dev/7926): Special handling here should not be required, we
       // should first rely on creating the types representing composed
@@ -4825,11 +4835,11 @@ bool Library::CompileProtocol(Protocol* protocol_declaration) {
       }
       if (decl->kind != Decl::Kind::kProtocol)
         return Fail(ErrComposingNonProtocol, name);
-      auto composed_protocol = static_cast<const Protocol*>(decl);
-      auto span = composed_protocol->name.span();
+      auto composed_protocol_declaration = static_cast<const Protocol*>(decl);
+      auto span = composed_protocol_declaration->name.span();
       assert(span);
-      if (method_scope.protocols.Insert(composed_protocol, span.value()).ok()) {
-        if (!Visitor(composed_protocol, Visitor))
+      if (method_scope.protocols.Insert(composed_protocol_declaration, span.value()).ok()) {
+        if (!Visitor(composed_protocol_declaration, Visitor))
           return false;
       } else {
         // Otherwise we have already seen this protocol in
@@ -4873,13 +4883,13 @@ bool Library::CompileProtocol(Protocol* protocol_declaration) {
   // child protocols.  This means that child protocols must be compiled prior to
   // this one, or they will not have generated_ordinal64s on their methods, and
   // will fail the scope check.
-  for (const auto& name : protocol_declaration->composed_protocols) {
-    auto decl = LookupDeclByName(name);
+  for (const auto& composed_protocol : protocol_declaration->composed_protocols) {
+    auto decl = LookupDeclByName(composed_protocol.name);
     if (!decl) {
-      return Fail(ErrUnknownType, name, name);
+      return Fail(ErrUnknownType, composed_protocol.name, composed_protocol.name);
     }
     if (decl->kind != Decl::Kind::kProtocol)
-      return Fail(ErrComposingNonProtocol, name);
+      return Fail(ErrComposingNonProtocol, composed_protocol.name);
     if (!CompileDecl(decl)) {
       return false;
     }

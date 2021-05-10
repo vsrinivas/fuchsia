@@ -724,6 +724,7 @@
         "column": 10,
         "length": 12
       },
+      "composed_protocols": [],
       "methods": []
     }
   ],

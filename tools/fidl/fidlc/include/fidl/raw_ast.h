@@ -585,11 +585,15 @@ class ProtocolMethod : public SourceElement {
 
 class ComposeProtocol final : public SourceElement {
  public:
-  ComposeProtocol(SourceElement const& element, std::unique_ptr<CompoundIdentifier> protocol_name)
-      : SourceElement(element), protocol_name(std::move(protocol_name)) {}
+  ComposeProtocol(SourceElement const& element, AttributeList attributes,
+                  std::unique_ptr<CompoundIdentifier> protocol_name)
+      : SourceElement(element),
+        attributes(std::move(attributes)),
+        protocol_name(std::move(protocol_name)) {}
 
   void Accept(TreeVisitor* visitor) const;
 
+  AttributeList attributes;
   std::unique_ptr<CompoundIdentifier> protocol_name;
 };
 

@@ -726,8 +726,16 @@ struct Protocol final : public TypeDecl {
     const bool is_composed;
   };
 
-  Protocol(std::unique_ptr<AttributeList> attributes, Name name, std::set<Name> composed_protocols,
-           std::vector<Method> methods)
+  struct ComposedProtocol {
+    ComposedProtocol(std::unique_ptr<AttributeList> attributes, Name name)
+        : attributes(std::move(attributes)), name(std::move(name)) {}
+
+    std::unique_ptr<AttributeList> attributes;
+    Name name;
+  };
+
+  Protocol(std::unique_ptr<AttributeList> attributes, Name name,
+           std::vector<ComposedProtocol> composed_protocols, std::vector<Method> methods)
       : TypeDecl(Kind::kProtocol, std::move(attributes), std::move(name)),
         composed_protocols(std::move(composed_protocols)),
         methods(std::move(methods)) {
@@ -736,7 +744,7 @@ struct Protocol final : public TypeDecl {
     }
   }
 
-  std::set<Name> composed_protocols;
+  std::vector<ComposedProtocol> composed_protocols;
   std::vector<Method> methods;
   std::vector<MethodWithInfo> all_methods;
 
@@ -1016,6 +1024,7 @@ class AttributeSchema {
     kConstDecl,
     kEnumDecl,
     kEnumMember,
+    kProtocolCompose,
     kProtocolDecl,
     kLibrary,
     kMethod,

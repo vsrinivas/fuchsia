@@ -56,7 +56,6 @@ constexpr ErrorDef ErrCompoundAliasIdentifier("alias identifiers cannot contain 
 constexpr ErrorDef ErrOldUsingSyntaxDeprecated(
     "old `using Name = Type;` syntax is disallowed; use `alias Name = Type;` instead");
 constexpr ErrorDef ErrMustHaveOneMember("must have at least one member");
-constexpr ErrorDef ErrCannotAttachAttributesToCompose("Cannot attach attributes to compose stanza");
 constexpr ErrorDef ErrUnrecognizedProtocolMember("unrecognized protocol member");
 constexpr ErrorDef ErrExpectedProtocolMember("expected protocol member");
 constexpr ErrorDef ErrCannotAttachAttributesToReservedOrdinals(

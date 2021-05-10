@@ -15,6 +15,7 @@
         "column": 10,
         "length": 8
       },
+      "composed_protocols": [],
       "methods": [
         {
           "ordinal": 4346871690266280218,
