@@ -438,7 +438,12 @@ In this example, suppose there's a single injected service,
 }
 ```
 
-To migrate this test to the Test Runner Framework, do the following:
+To migrate this test to the Test Runner Framework, construct the following
+components topology:
+
+![Diagram of test realm and capability routes](images/font_provider_test.png)
+
+Do the following:
 
 1.  Create a CML file for the test driver that points to the test binary,
     and includes the appropriate [test runner][trf-test-runners]:
