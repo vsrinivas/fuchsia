@@ -56,24 +56,40 @@ async fn measure<T>(
     Ok(start.elapsed())
 }
 
-async fn verify_broken_pipe(
-    mut stream: fuchsia_async::net::TcpStream,
-) -> Result<(), anyhow::Error> {
+async fn verify_error(mut stream: fuchsia_async::net::TcpStream) -> Result<(), anyhow::Error> {
     let mut buf = [0xad; 1];
-    let n = stream.read(&mut buf).await?;
+    {
+        let kind = std::io::ErrorKind::TimedOut;
+        let () = match stream.read(&mut buf).await {
+            Ok(n) => Err(anyhow::format_err!("read {} bytes, expected {:?}", n, kind)),
+            Err(io_error) => {
+                if io_error.kind() != kind {
+                    Err(io_error).with_context(|| format!("expected {:?}", kind))
+                } else {
+                    Ok(())
+                }
+            }
+        }?;
+    }
+    // The first read consumes the error.
+    let n = stream.read(&mut buf).await.context("read after error")?;
     if n != 0 {
         let () = Err(anyhow::format_err!("read {}/{} bytes", n, 0))?;
     }
-    match stream.write(&buf).await {
-        Ok(n) => Err(anyhow::format_err!("unexpectedly wrote {} bytes", n)),
-        Err(io_error) => {
-            if io_error.kind() == std::io::ErrorKind::BrokenPipe {
-                Ok(())
-            } else {
-                Err(anyhow::format_err!("unexpected error {}", io_error))
+    {
+        let kind = std::io::ErrorKind::BrokenPipe;
+        let () = match stream.write(&buf).await {
+            Ok(n) => Err(anyhow::format_err!("wrote {} bytes, expected {:?}", n, kind)),
+            Err(io_error) => {
+                if io_error.kind() != kind {
+                    Err(io_error).with_context(|| format!("expected {:?}", kind))
+                } else {
+                    Ok(())
+                }
             }
-        }
+        }?;
     }
+    Ok(())
 }
 
 #[fuchsia_async::run_singlethreaded]
@@ -191,13 +207,13 @@ async fn main() -> Result<(), anyhow::Error> {
 
             let connect_timeout = measure(connect_timeout).fuse();
             futures::pin_mut!(connect_timeout);
-            let keepalive_timeout = measure(verify_broken_pipe(keepalive_timeout)).fuse();
+            let keepalive_timeout = measure(verify_error(keepalive_timeout)).fuse();
             futures::pin_mut!(keepalive_timeout);
-            let keepalive_usertimeout = measure(verify_broken_pipe(keepalive_usertimeout)).fuse();
+            let keepalive_usertimeout = measure(verify_error(keepalive_usertimeout)).fuse();
             futures::pin_mut!(keepalive_usertimeout);
-            let retransmit_timeout = measure(verify_broken_pipe(retransmit_timeout)).fuse();
+            let retransmit_timeout = measure(verify_error(retransmit_timeout)).fuse();
             futures::pin_mut!(retransmit_timeout);
-            let retransmit_usertimeout = measure(verify_broken_pipe(retransmit_usertimeout)).fuse();
+            let retransmit_usertimeout = measure(verify_error(retransmit_usertimeout)).fuse();
             futures::pin_mut!(retransmit_usertimeout);
 
             macro_rules! try_print_elapsed {

@@ -3213,7 +3213,7 @@ TEST_P(ConnectingIOTest, BlockedIO) {
       EXPECT_EQ(executeIO(), -1);
       EXPECT_EQ(errno, ECONNREFUSED) << strerror(errno);
     } else {
-      EXPECT_EQ(executeIO(), ssize_t(sizeof(sample_data)));
+      EXPECT_EQ(executeIO(), ssize_t(sizeof(sample_data))) << strerror(errno);
     }
   });
   fut_started.wait();
@@ -3360,6 +3360,15 @@ void TestListenWhileConnect(const IOMethod& ioMethod, void (*stopListen)(fbl::un
     EXPECT_EQ(ioMethod.executeIO(fd, &c, sizeof(c)), -1);
     EXPECT_EQ(errno, expected_errno) << strerror(errno) << " vs " << strerror(expected_errno);
 
+    {
+      // The error should have been consumed.
+      int err;
+      socklen_t optlen = sizeof(err);
+      ASSERT_EQ(getsockopt(fd, SOL_SOCKET, SO_ERROR, &err, &optlen), 0) << strerror(errno);
+      ASSERT_EQ(optlen, sizeof(err));
+      ASSERT_EQ(err, 0) << strerror(err);
+    }
+
     bool isWrite = ioMethod.isWrite();
 #if !defined(__Fuchsia__)
     auto undo = disableSIGPIPE(isWrite);
@@ -3368,6 +3377,13 @@ void TestListenWhileConnect(const IOMethod& ioMethod, void (*stopListen)(fbl::un
     if (isWrite) {
       ASSERT_EQ(ioMethod.executeIO(fd, &c, sizeof(c)), -1);
       EXPECT_EQ(errno, EPIPE) << strerror(errno);
+
+      // The error should have been consumed.
+      int err;
+      socklen_t optlen = sizeof(err);
+      ASSERT_EQ(getsockopt(fd, SOL_SOCKET, SO_ERROR, &err, &optlen), 0) << strerror(errno);
+      ASSERT_EQ(optlen, sizeof(err));
+      ASSERT_EQ(err, 0) << strerror(err);
     } else {
       ASSERT_EQ(ioMethod.executeIO(fd, &c, sizeof(c)), 0) << strerror(errno);
     }

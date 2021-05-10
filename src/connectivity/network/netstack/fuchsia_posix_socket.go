@@ -1192,6 +1192,8 @@ func (eps *endpointWithSocket) close() {
 
 		// Signal the client about errors that require special errno
 		// handling by the client for read/write calls.
+		//
+		// TODO(https://fxbug.dev/75717): Remove after ABI transition.
 		eps.terminal.mu.Lock()
 		err := eps.terminal.mu.err
 		eps.terminal.mu.Unlock()

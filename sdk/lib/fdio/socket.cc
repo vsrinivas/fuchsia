@@ -4,6 +4,7 @@
 
 #include <lib/fdio/fdio.h>
 #include <lib/zx/socket.h>
+#include <lib/zxio/cpp/vector.h>
 #include <lib/zxio/inception.h>
 #include <lib/zxio/null.h>
 #include <net/if.h>
@@ -1775,36 +1776,26 @@ struct stream_socket : public pipe {
   }
 
   void wait_begin(uint32_t events, zx_handle_t* handle, zx_signals_t* out_signals) override {
-    if (state_ == StreamSocketState::kConnecting) {
-      // check the connection state
-      zx_signals_t observed;
-      zx_status_t status = zxio_stream_socket().pipe.socket.wait_one(
-          ZXSIO_SIGNAL_CONNECTED, zx::time::infinite_past(), &observed);
-      if (status == ZX_OK || status == ZX_ERR_TIMED_OUT) {
-        if (observed & ZXSIO_SIGNAL_CONNECTED) {
-          state_ = StreamSocketState::kConnected;
-        }
-      }
-    }
-
-    // Stream sockets which are non-listening or unconnected do not have a potential peer
-    // to generate any waitable signals, skip signal waiting and notify the caller of the
-    // same.
-    if (state_ == StreamSocketState::kUnconnected) {
-      *out_signals = ZX_SIGNAL_NONE;
-      return;
-    }
-
     zxio_signals_t signals = ZXIO_SIGNAL_PEER_CLOSED;
 
-    switch (state_) {
-      case StreamSocketState::kConnected:
-      case StreamSocketState::kRefused:
-      case StreamSocketState::kReset:
-      case StreamSocketState::kErrorConsumed:
-        return wait_begin_inner(events, signals, handle, out_signals);
-      default:
+    auto [state, has_error] = State();
+    switch (state) {
+      case StreamSocketState::kUnconnected:
+        // Stream sockets which are non-listening or unconnected do not have a potential peer
+        // to generate any waitable signals, skip signal waiting and notify the caller of the
+        // same.
+        *out_signals = ZX_SIGNAL_NONE;
+        return;
+      case StreamSocketState::kListening:
         break;
+      case StreamSocketState::kConnecting:
+        if (events & POLLIN) {
+          signals |= ZXIO_SIGNAL_READABLE;
+        }
+        break;
+      case StreamSocketState::kConnected:
+        wait_begin_inner(events, signals, handle, out_signals);
+        return;
     }
 
     if (events & POLLOUT) {
@@ -1812,12 +1803,6 @@ struct stream_socket : public pipe {
     }
     if (events & (POLLIN | POLLRDHUP)) {
       signals |= ZXIO_SIGNAL_READ_DISABLED;
-    }
-
-    if (state_ == StreamSocketState::kConnecting) {
-      if (events & POLLIN) {
-        signals |= ZXIO_SIGNAL_READABLE;
-      }
     }
 
     zx_signals_t zx_signals = ZX_SIGNAL_NONE;
@@ -1835,59 +1820,44 @@ struct stream_socket : public pipe {
   }
 
   void wait_end(zx_signals_t zx_signals, uint32_t* out_events) override {
-    // The caller has not provided any waitable signal, this is the case where we are asked to wait
-    // on an unconnected or non-listening socket.
-    if (zx_signals == ZX_SIGNAL_NONE) {
-      *out_events = POLLOUT | POLLHUP;
-      return;
-    }
-
     zxio_signals_t signals = ZXIO_SIGNAL_NONE;
     uint32_t events = 0;
 
-    // check the connection state
-    if (state_ == StreamSocketState::kConnecting) {
-      if (zx_signals & ZXSIO_SIGNAL_CONNECTED) {
-        state_ = StreamSocketState::kConnected;
-        events |= POLLOUT;
-      }
-      zx_signals &= ~ZXSIO_SIGNAL_CONNECTED;
-    }
+    bool use_inner;
+    auto [state, has_error] = State();
+    switch (state) {
+      case StreamSocketState::kUnconnected:
+        ZX_ASSERT_MSG(zx_signals == ZX_SIGNAL_NONE, "zx_signals=%s on unconnected socket",
+                      std::bitset<sizeof(zx_signals)>(zx_signals).to_string().c_str());
+        *out_events = POLLOUT | POLLHUP;
+        return;
 
-    switch (state_) {
-      case StreamSocketState::kConnected:
-      case StreamSocketState::kRefused:
-      case StreamSocketState::kReset:
-      case StreamSocketState::kErrorConsumed:
-        wait_end_inner(zx_signals, &events, &signals);
-        break;
-      default:
-        zxio_wait_end(&zxio_storage().io, zx_signals, &signals);
+      case StreamSocketState::kListening:
         if (zx_signals & ZXSIO_SIGNAL_INCOMING) {
           events |= POLLIN;
         }
+        use_inner = false;
+        break;
+      case StreamSocketState::kConnecting:
+        if (zx_signals & ZXSIO_SIGNAL_CONNECTED) {
+          state_ = StreamSocketState::kConnected;
+          events |= POLLOUT;
+        }
+        zx_signals &= ~ZXSIO_SIGNAL_CONNECTED;
+        use_inner = false;
+        break;
+      case StreamSocketState::kConnected:
+        use_inner = true;
         break;
     }
 
+    if (use_inner) {
+      wait_end_inner(zx_signals, &events, &signals);
+    } else {
+      zxio_wait_end(&zxio_storage().io, zx_signals, &signals);
+    }
+
     if (signals & ZXIO_SIGNAL_PEER_CLOSED) {
-      // Update flags to hold an error state which can be harvested by read/write calls.
-      // For other errors like connection timeouts, no error is reported to the
-      // subsequent read/write calls, hence we do not update the ioflag state for those.
-      //
-      // I/O on non-blocking sockets and blocking sockets with preceding poll, rely on this flag
-      // state to return errors.
-      // I/O on blocking socket without a preceding poll is one of the two below:
-      // (1) If the peer resets the connection while the socket is blocked, return error.
-      //     The caller of this routine can interpret POLLHUP to return appropriate error.
-      // (2) If the read/write is called post connection reset, that is treated as I/O
-      //     on a peer-closed socket handle.
-      //
-      // TODO(https://fxbug.dev/75717): Remove this. This function should not have side effects.
-      if (zx_signals & ZXSIO_SIGNAL_CONNECTION_REFUSED) {
-        state_ = StreamSocketState::kRefused;
-      } else if (zx_signals & ZXSIO_SIGNAL_CONNECTION_RESET) {
-        state_ = StreamSocketState::kReset;
-      }
       events |= POLLIN | POLLOUT | POLLERR | POLLHUP | POLLRDHUP;
     }
     if (signals & ZXIO_SIGNAL_WRITE_DISABLED) {
@@ -1999,37 +1969,74 @@ struct stream_socket : public pipe {
 
   zx_status_t recvmsg(struct msghdr* msg, int flags, size_t* out_actual,
                       int16_t* out_code) override {
-    *out_code = 0;
-
-    zx_status_t status = flag_status(ZX_ERR_NOT_CONNECTED);
-    if (status != ZX_OK) {
-      return status;
+    zx::status preflight = Preflight(ENOTCONN);
+    if (preflight.is_error()) {
+      return preflight.status_value();
+    }
+    if (std::optional err = preflight.value(); err.has_value()) {
+      *out_code = err.value();
+      return ZX_OK;
     }
 
-    status = recvmsg_inner(msg, flags, out_actual);
-    if (status == ZX_ERR_INVALID_ARGS) {
-      status = ZX_OK;
-      *out_code = EFAULT;
+    zx_status_t status = recvmsg_inner(msg, flags, out_actual);
+    switch (status) {
+      case ZX_ERR_INVALID_ARGS:
+        *out_code = EFAULT;
+        return ZX_OK;
+      case ZX_ERR_BAD_STATE:
+        __FALLTHROUGH;
+      case ZX_ERR_PEER_CLOSED: {
+        zx::status err = GetError();
+        if (err.is_error()) {
+          return err.status_value();
+        }
+        *out_actual = 0;
+        *out_code = err.value();
+        return ZX_OK;
+      }
+      default:
+        *out_code = 0;
+        return status;
     }
-    return status;
   }
 
   zx_status_t sendmsg(const struct msghdr* msg, int flags, size_t* out_actual,
                       int16_t* out_code) override {
-    *out_code = 0;
-
-    zx_status_t status = flag_status(ZX_ERR_BAD_STATE);
-    if (status != ZX_OK) {
-      return status;
+    zx::status preflight = Preflight(EPIPE);
+    if (preflight.is_error()) {
+      return preflight.status_value();
+    }
+    if (std::optional err = preflight.value(); err.has_value()) {
+      *out_code = err.value();
+      return ZX_OK;
     }
 
     // TODO(https://fxbug.dev/21106): support flags and control messages
-    status = sendmsg_inner(msg, flags, out_actual);
-    if (status == ZX_ERR_INVALID_ARGS) {
-      status = ZX_OK;
-      *out_code = EFAULT;
+    zx_status_t status = sendmsg_inner(msg, flags, out_actual);
+    switch (status) {
+      case ZX_ERR_INVALID_ARGS:
+        *out_code = EFAULT;
+        return ZX_OK;
+      case ZX_ERR_BAD_STATE:
+        __FALLTHROUGH;
+      case ZX_ERR_PEER_CLOSED: {
+        zx::status err = GetError();
+        if (err.is_error()) {
+          return err.status_value();
+        }
+        if (int value = err.value(); value != 0) {
+          *out_code = value;
+          return ZX_OK;
+        }
+
+        // Error was consumed.
+        *out_code = EPIPE;
+        return ZX_OK;
+      }
+      default:
+        *out_code = 0;
+        return status;
     }
-    return status;
   }
 
   zx_status_t shutdown(int how, int16_t* out_code) override {
@@ -2049,29 +2056,78 @@ struct stream_socket : public pipe {
  private:
   zxio_stream_socket_t& zxio_stream_socket() { return ::zxio_stream_socket(&zxio_storage().io); }
 
+  zx::status<std::optional<int32_t>> Preflight(int fallback) {
+    auto [state, has_error] = State();
+    if (has_error) {
+      zx::status err = GetError();
+      if (err.is_error()) {
+        return err.take_error();
+      }
+      if (int value = err.value(); value != 0) {
+        return zx::ok(value);
+      }
+      // Error was consumed.
+    }
+
+    switch (state) {
+      case StreamSocketState::kUnconnected:
+        __FALLTHROUGH;
+      case StreamSocketState::kListening:
+        return zx::ok(fallback);
+      case StreamSocketState::kConnecting:
+        if (!has_error) {
+          return zx::ok(EAGAIN);
+        }
+        // There's an error on the socket, we will discover it when we perform our I/O.
+        __FALLTHROUGH;
+      case StreamSocketState::kConnected:
+        return zx::ok(std::nullopt);
+    }
+  }
+
+  zx::status<int32_t> GetError() {
+    fidl::WireResult response = zxio_stream_socket().client.GetError();
+    if (!response.ok()) {
+      return zx::error(response.status());
+    }
+    fsocket::wire::BaseSocketGetErrorResult result = response.value().result;
+    switch (result.which()) {
+      case fsocket::wire::BaseSocketGetErrorResult::Tag::kResponse:
+        return zx::ok(0);
+      case fsocket::wire::BaseSocketGetErrorResult::Tag::kErr:
+        return zx::ok(static_cast<int32_t>(result.err()));
+    }
+  }
+
   // TODO(https://fxbug.dev/67465): This field should be synchronized.
   StreamSocketState state_;
 
-  // Read the current ioflag state and try to infer the return zx_status.
-  // Returns the appropriate ZX_ERR status if possible, else returns ZX_OK.
-  zx_status_t flag_status(zx_status_t fallback) {
+  std::pair<StreamSocketState, bool> State() {
     switch (state_) {
       case StreamSocketState::kUnconnected:
         __FALLTHROUGH;
       case StreamSocketState::kListening:
-        return fallback;
-      case StreamSocketState::kConnecting:
-        return ZX_ERR_SHOULD_WAIT;
+        return std::make_pair(state_, false);
+      case StreamSocketState::kConnecting: {
+        zx_signals_t observed;
+        zx_status_t status = zxio_stream_socket().pipe.socket.wait_one(
+            ZXSIO_SIGNAL_CONNECTED, zx::time::infinite_past(), &observed);
+        switch (status) {
+          case ZX_OK:
+            if (observed & ZXSIO_SIGNAL_CONNECTED) {
+              state_ = StreamSocketState::kConnected;
+            }
+            __FALLTHROUGH;
+          case ZX_ERR_TIMED_OUT:
+            return std::make_pair(state_, observed & ZX_SOCKET_PEER_CLOSED);
+          default:
+            ZX_PANIC("ASSERT FAILED at (%s:%d): status=%s\n", __FILE__, __LINE__,
+                     zx_status_get_string(status));
+        }
+        break;
+      }
       case StreamSocketState::kConnected:
-        return ZX_OK;
-      case StreamSocketState::kRefused:
-        state_ = StreamSocketState::kErrorConsumed;
-        return ZX_ERR_CONNECTION_REFUSED;
-      case StreamSocketState::kReset:
-        state_ = StreamSocketState::kErrorConsumed;
-        return ZX_ERR_CONNECTION_RESET;
-      case StreamSocketState::kErrorConsumed:
-        return ZX_OK;
+        return std::make_pair(state_, false);
     }
   }
 
@@ -2111,7 +2167,49 @@ static constexpr zxio_ops_t zxio_stream_socket_ops = []() {
   };
   ops.readv = [](zxio_t* io, const zx_iovec_t* vector, size_t vector_count, zxio_flags_t flags,
                  size_t* out_actual) {
-    return zxio_readv(&zxio_stream_socket(io).pipe.io, vector, vector_count, flags, out_actual);
+    zx::socket& socket = zxio_stream_socket(io).pipe.socket;
+
+    if (flags & ZXIO_PEEK) {
+      uint32_t zx_flags = ZX_SOCKET_PEEK;
+      flags &= ~ZXIO_PEEK;
+
+      if (flags) {
+        return ZX_ERR_NOT_SUPPORTED;
+      }
+
+      size_t total = 0;
+      for (size_t i = 0; i < vector_count; ++i) {
+        total += vector[i].capacity;
+      }
+      std::unique_ptr<uint8_t[]> buf(new uint8_t[total]);
+
+      size_t actual;
+      zx_status_t status = socket.read(zx_flags, buf.get(), total, &actual);
+      if (status != ZX_OK) {
+        return status;
+      }
+
+      uint8_t* data = buf.get();
+      size_t remaining = actual;
+      return zxio_do_vector(vector, vector_count, out_actual,
+                            [&](void* buffer, size_t capacity, size_t* out_actual) {
+                              size_t actual = std::min(capacity, remaining);
+                              memcpy(buffer, data, actual);
+                              data += actual;
+                              remaining -= actual;
+                              *out_actual = actual;
+                              return ZX_OK;
+                            });
+    }
+
+    if (flags) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    return zxio_do_vector(vector, vector_count, out_actual,
+                          [&](void* buffer, size_t capacity, size_t* out_actual) {
+                            return socket.read(0, buffer, capacity, out_actual);
+                          });
   };
   ops.writev = [](zxio_t* io, const zx_iovec_t* vector, size_t vector_count, zxio_flags_t flags,
                   size_t* out_actual) {

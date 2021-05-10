@@ -62,6 +62,10 @@ class Server final : public fuchsia_posix_socket::testing::StreamSocket_TestBase
     completer.Reply(std::move(info));
   }
 
+  void GetError(GetErrorRequestView request, GetErrorCompleter::Sync& completer) override {
+    completer.ReplySuccess();
+  };
+
   void FillPeerSocket() const {
     zx_info_socket_t info;
     ASSERT_OK(peer_.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr));

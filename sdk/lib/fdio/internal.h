@@ -84,11 +84,6 @@ enum class StreamSocketState {
   kListening,
   kConnecting,
   kConnected,
-  // TODO(https://fxbug.dev/75717): Remove these states, they are used only to propagate side
-  // effects from stream_socket::wait_end.
-  kRefused,
-  kReset,
-  kErrorConsumed,
 };
 
 fdio_ptr fdio_stream_socket_create(zx::socket socket,
