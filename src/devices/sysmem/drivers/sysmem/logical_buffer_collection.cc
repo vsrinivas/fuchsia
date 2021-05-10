@@ -556,22 +556,13 @@ void LogicalBufferCollection::FailDownFrom(NodeProperties* tree_to_fail, zx_stat
     // order to get ZX_VMO_ZERO_CHILDREN to happen in TrackedParentVmo, but not sufficient alone
     // (clients must also close their VMO(s)).
     //
-    // We can't just allocation_result_info_.reset() here, because we're using a
-    // BufferThenHeapAllocator<> that'll delay close of the VMOs until during
-    // ~LogicalBufferCollection (a deadlock) unless we dig into the structure and close these VMOs
-    // directly.
-    if (allocation_result_info_) {
-      auto& allocation_result = allocation_result_info_->mutate();
-      for (uint32_t i = 0; i < allocation_result.buffers().count(); ++i) {
-        if (allocation_result.buffers()[i].has_vmo()) {
-          allocation_result.buffers()[i].vmo().reset();
-        }
-        if (allocation_result.buffers()[i].has_aux_vmo()) {
-          allocation_result.buffers()[i].aux_vmo().reset();
-        }
-      }
-      allocation_result_info_.reset();
-    }
+    // Clear out the result info. This may not yet close the VMOs, since they'll still be held onto
+    // by the TableSet allocator.
+    allocation_result_info_.reset();
+    // Ensure VMO handles from the allocation result info and other old tables are destroyed, as
+    // otherwise they could cause reference cycles (through TrackedParentVmo) that would leak the
+    // LogicalBufferCollection.
+    table_set_.GcTables();
   }
   // ~self, which will delete "this" if there are no more references to "this".
 }

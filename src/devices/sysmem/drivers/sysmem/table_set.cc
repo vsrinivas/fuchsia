@@ -27,6 +27,10 @@ void TableSet::MitigateChurn() {
   if (churn_count_ < kChurnCountThreshold) {
     return;
   }
+  GcTables();
+}
+
+void TableSet::GcTables() {
   auto old_allocator = std::move(allocator_);
   allocator_ = std::make_unique<FidlAllocator>();
   {

@@ -418,11 +418,60 @@ TEST_F(FakeDdkSysmem, TeardownLeak) {
   zx_status_t status;
   EXPECT_OK(fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(collection_client.get(), &status,
                                                                    &info));
+
   EXPECT_OK(status);
   for (uint32_t i = 0; i < info.buffer_count; i++) {
     zx_handle_close(info.buffers[i].vmo);
   }
   collection_client.reset();
+}
+
+// Check that there are no circular references from a VMO to the logical buffer collection, even
+// when aux buffers are checked for.
+TEST_F(FakeDdkSysmem, AuxBufferLeak) {
+  zx::channel collection_client = AllocateNonSharedCollection();
+
+  fuchsia_sysmem_BufferCollectionConstraints constraints{};
+  constraints.min_buffer_count = 1;
+  constraints.has_buffer_memory_constraints = true;
+  constraints.buffer_memory_constraints.min_size_bytes = PAGE_SIZE;
+  constraints.buffer_memory_constraints.cpu_domain_supported = true;
+  constraints.usage.cpu = fuchsia_sysmem_cpuUsageRead;
+
+  EXPECT_OK(
+      fuchsia_sysmem_BufferCollectionSetConstraints(collection_client.get(), true, &constraints));
+
+  fuchsia_sysmem_BufferCollectionInfo_2 info;
+  zx_status_t status;
+  EXPECT_OK(fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(collection_client.get(), &status,
+                                                                   &info));
+
+  EXPECT_OK(status);
+  for (uint32_t i = 0; i < info.buffer_count; i++) {
+    zx_handle_close(info.buffers[i].vmo);
+  }
+
+  fuchsia_sysmem_BufferCollectionInfo_2 aux_info;
+  EXPECT_OK(
+      fuchsia_sysmem_BufferCollectionGetAuxBuffers(collection_client.get(), &status, &aux_info));
+
+  EXPECT_OK(status);
+  EXPECT_EQ(1u, aux_info.buffer_count);
+  EXPECT_EQ(ZX_HANDLE_INVALID, aux_info.buffers[0].vmo);
+  collection_client.reset();
+  // Poll until all buffer collections are deleted.
+  while (true) {
+    bool no_collections = false;
+    sync_completion_t completion;
+    async::PostTask(sysmem_.dispatcher(), [&] {
+      no_collections = sysmem_.logical_buffer_collections().empty();
+      sync_completion_signal(&completion);
+    });
+
+    sync_completion_wait(&completion, ZX_TIME_INFINITE);
+    if (no_collections)
+      break;
+  }
 }
 
 TEST_F(FakeDdkSysmemPbus, Register) { EXPECT_EQ(ZX_PROTOCOL_SYSMEM, pbus_.registered_proto_id()); }

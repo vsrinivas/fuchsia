@@ -19,6 +19,7 @@ class TableSet {
 
   void CountChurn();
   void MitigateChurn();
+  void GcTables();
 
  private:
   friend class TableHolderBase;
