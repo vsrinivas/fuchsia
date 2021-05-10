@@ -207,7 +207,9 @@ class Coordinator : public fidl::WireServer<device_manager_fidl::BindDebugger>,
   zx_status_t AddDevice(const fbl::RefPtr<Device>& parent, zx::channel device_controller,
                         zx::channel coordinator,
                         const fuchsia_device_manager::wire::DeviceProperty* props_data,
-                        size_t props_count, std::string_view name, uint32_t protocol_id,
+                        size_t props_count,
+                        const fuchsia_device_manager::wire::DeviceStrProperty* str_props_data,
+                        size_t str_props_count, std::string_view name, uint32_t protocol_id,
                         std::string_view driver_path, std::string_view args, bool invisible,
                         bool skip_autobind, bool has_init, bool always_init, zx::vmo inspect,
                         zx::channel client_remote, fbl::RefPtr<Device>* new_device);
@@ -430,7 +432,8 @@ class Coordinator : public fidl::WireServer<device_manager_fidl::BindDebugger>,
 };
 
 bool driver_is_bindable(const Driver* drv, uint32_t protocol_id,
-                        const fbl::Array<const zx_device_prop_t>& props, bool autobind);
+                        const fbl::Array<const zx_device_prop_t>& props,
+                        const fbl::Array<const StrProperty>& str_props, bool autobind);
 
 zx_status_t fidl_DirectoryWatch(void* ctx, uint32_t mask, uint32_t options, zx_handle_t raw_watcher,
                                 fidl_txn_t* txn);

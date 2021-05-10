@@ -132,7 +132,8 @@ template Match MatchParts(const fbl::RefPtr<Device>& device, const FragmentPartD
 }  // namespace internal
 
 bool driver_is_bindable(const Driver* drv, uint32_t protocol_id,
-                        const fbl::Array<const zx_device_prop_t>& props, bool autobind) {
+                        const fbl::Array<const zx_device_prop_t>& props,
+                        const fbl::Array<const StrProperty>& str_props, bool autobind) {
   if (drv->bytecode_version == 1) {
     auto* binding = std::get_if<std::unique_ptr<zx_bind_inst_t[]>>(&drv->binding);
     if (!binding && drv->binding_size > 0) {
@@ -158,6 +159,7 @@ bool driver_is_bindable(const Driver* drv, uint32_t protocol_id,
       properties[i] = device_property_t{.key = props[i].id, .value = props[i].value};
     }
 
+    // TODO(fxb/74654): Match device string properties to the bind rules.
     return match_bind_rules(bytecode ? bytecode->get() : nullptr, drv->binding_size,
                             properties.get(), props.size(), protocol_id, autobind);
   }

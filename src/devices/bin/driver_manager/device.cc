@@ -24,6 +24,7 @@
 #include "init_task.h"
 #include "resume_task.h"
 #include "src/devices/lib/log/log.h"
+#include "src/lib/fxl/strings/utf_codecs.h"
 #include "suspend_task.h"
 
 // TODO(fxbug.dev/43370): remove this once init tasks can be enabled for all devices.
@@ -83,10 +84,10 @@ Device::~Device() {
 zx_status_t Device::Create(Coordinator* coordinator, const fbl::RefPtr<Device>& parent,
                            fbl::String name, fbl::String driver_path, fbl::String args,
                            uint32_t protocol_id, fbl::Array<zx_device_prop_t> props,
-                           zx::channel coordinator_rpc, zx::channel device_controller_rpc,
-                           bool wait_make_visible, bool want_init_task, bool skip_autobind,
-                           zx::vmo inspect, zx::channel client_remote,
-                           fbl::RefPtr<Device>* device) {
+                           fbl::Array<StrProperty> str_props, zx::channel coordinator_rpc,
+                           zx::channel device_controller_rpc, bool wait_make_visible,
+                           bool want_init_task, bool skip_autobind, zx::vmo inspect,
+                           zx::channel client_remote, fbl::RefPtr<Device>* device) {
   fbl::RefPtr<Device> real_parent;
   // If our parent is a proxy, for the purpose of devfs, we need to work with
   // *its* parent which is the device that it is proxying.
@@ -115,6 +116,10 @@ zx_status_t Device::Create(Coordinator* coordinator, const fbl::RefPtr<Device>& 
 
   zx_status_t status = dev->SetProps(std::move(props));
   if (status != ZX_OK) {
+    return status;
+  }
+
+  if (auto status = dev->SetStrProps(std::move(str_props)); status != ZX_OK) {
     return status;
   }
 
@@ -675,6 +680,21 @@ zx_status_t Device::SetProps(fbl::Array<const zx_device_prop_t> props) {
   return ZX_OK;
 }
 
+zx_status_t Device::SetStrProps(fbl::Array<const StrProperty> str_props) {
+  // This function should only be called once.
+  ZX_DEBUG_ASSERT(!str_props_.data());
+  str_props_ = std::move(str_props);
+
+  // Ensure that the string properties are encoded in UTF-8 format.
+  for (const auto str_prop : str_props_) {
+    if (!fxl::IsStringUTF8(str_prop.key) || !fxl::IsStringUTF8(str_prop.value)) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+  }
+
+  return ZX_OK;
+}
+
 void Device::set_host(fbl::RefPtr<DriverHost> host) {
   if (host_) {
     host_->devices().erase(*this);
@@ -823,7 +843,8 @@ void Device::AddDevice(AddDeviceRequestView request, AddDeviceCompleter::Sync& c
   fbl::RefPtr<Device> device;
   zx_status_t status = parent->coordinator->AddDevice(
       parent, request->device_controller.TakeChannel(), request->coordinator.TakeChannel(),
-      request->property_list.props.data(), request->property_list.props.count(), name,
+      request->property_list.props.data(), request->property_list.props.count(),
+      request->property_list.str_props.data(), request->property_list.str_props.count(), name,
       request->protocol_id, driver_path, args, invisible, skip_autobind, request->has_init,
       kEnableAlwaysInit, std::move(request->inspect), std::move(request->client_remote), &device);
   if (device != nullptr && (request->device_add_config &

@@ -135,7 +135,9 @@ void MultipleDeviceTestCase::SetUp() {
 
     status = coordinator().AddDevice(
         coordinator().sys_device()->proxy(), std::move(local), std::move(local2),
-        /* props_data */ nullptr, /* props_count */ 0, "platform-bus", 0, /* driver_path */ {},
+        /* props_data */ nullptr, /* props_count */ 0, /* str_props_data */ nullptr,
+        /* str_props_count */ 0, "platform-bus", 0,
+        /* driver_path */ {},
         /* args */ {}, /* invisible */ false, /* skip_autobind */ false, /* has_init */ false,
         /* always_init */ true,
         /*inspect*/ zx::vmo(), /* client_remote */ zx::channel(), &platform_bus_.device);
@@ -197,11 +199,13 @@ void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<Device>& parent, const 
   status = zx::channel::create(0, &local2, &state.coordinator_remote);
   ASSERT_OK(status);
 
-  status = coordinator().AddDevice(
-      parent, std::move(local), std::move(local2), /* props_data */ nullptr, /* props_count */ 0,
-      name, /* driver_path */ protocol_id, driver.data(), /* args */ {}, invisible,
-      /* skip_autobind */ false, has_init, always_init, std::move(inspect),
-      /* client_remote */ zx::channel(), &state.device);
+  status =
+      coordinator().AddDevice(parent, std::move(local), std::move(local2), /* props_data */ nullptr,
+                              /* props_count */ 0, /* str_props_data */ nullptr,
+                              /* str_props_count */ 0, name, /* driver_path */ protocol_id,
+                              driver.data(), /* args */ {}, invisible,
+                              /* skip_autobind */ false, has_init, always_init, std::move(inspect),
+                              /* client_remote */ zx::channel(), &state.device);
   state.device->flags |= DEV_CTX_ALLOW_MULTI_COMPOSITE;
   ASSERT_OK(status);
   coordinator_loop_.RunUntilIdle();
@@ -235,7 +239,9 @@ void MultipleDeviceTestCase::AddDeviceSkipAutobind(const fbl::RefPtr<Device>& pa
 
   status = coordinator().AddDevice(
       parent, std::move(local), std::move(local2), /* props_data */ nullptr, /* props_count */ 0,
-      name, /* driver_path */ protocol_id, /* driver */ "", /* args */ {}, /* invisible */ false,
+      /* str_props_data */ nullptr,
+      /* str_props_count */ 0, name, /* driver_path */ protocol_id, /* driver */ "", /* args */ {},
+      /* invisible */ false,
       /* skip_autobind */ true, /* has_init */ false, /* always_init */ true,
       /* inspect */ zx::vmo(),
       /* client_remote */ zx::channel(), &state.device);

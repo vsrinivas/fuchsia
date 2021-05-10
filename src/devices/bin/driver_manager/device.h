@@ -92,6 +92,11 @@ struct DeviceDriverHostListTag {};
 struct DeviceAllDevicesListTag {};
 }  // namespace internal
 
+struct StrProperty {
+  std::string key;
+  std::string value;
+};
+
 class Device
     : public fbl::RefCounted<Device>,
       public fidl::WireServer<fuchsia_device_manager::Coordinator>,
@@ -267,10 +272,10 @@ class Device
   static zx_status_t Create(Coordinator* coordinator, const fbl::RefPtr<Device>& parent,
                             fbl::String name, fbl::String driver_path, fbl::String args,
                             uint32_t protocol_id, fbl::Array<zx_device_prop_t> props,
-                            zx::channel coordinator_rpc, zx::channel device_controller_rpc,
-                            bool wait_make_visible, bool want_init_task, bool skip_autobind,
-                            zx::vmo inspect, zx::channel client_remote,
-                            fbl::RefPtr<Device>* device);
+                            fbl::Array<StrProperty> str_props, zx::channel coordinator_rpc,
+                            zx::channel device_controller_rpc, bool wait_make_visible,
+                            bool want_init_task, bool skip_autobind, zx::vmo inspect,
+                            zx::channel client_remote, fbl::RefPtr<Device>* device);
   static zx_status_t CreateComposite(Coordinator* coordinator, fbl::RefPtr<DriverHost> driver_host,
                                      const CompositeDevice& composite, zx::channel coordinator_rpc,
                                      zx::channel device_controller_rpc,
@@ -333,6 +338,9 @@ class Device
   zx_status_t SetProps(fbl::Array<const zx_device_prop_t> props);
   const fbl::Array<const zx_device_prop_t>& props() const { return props_; }
   const zx_device_prop_t* topo_prop() const { return topo_prop_; }
+
+  const fbl::Array<const StrProperty>& str_props() const { return str_props_; }
+  zx_status_t SetStrProps(fbl::Array<const StrProperty> str_props);
 
   const fbl::RefPtr<Device>& parent() { return parent_; }
   fbl::RefPtr<const Device> parent() const { return parent_; }
@@ -586,6 +594,8 @@ class Device
   fbl::Array<const zx_device_prop_t> props_;
   // If the device has a topological property in |props|, this points to it.
   const zx_device_prop_t* topo_prop_ = nullptr;
+
+  fbl::Array<const StrProperty> str_props_;
 
   async::TaskClosure publish_task_;
 

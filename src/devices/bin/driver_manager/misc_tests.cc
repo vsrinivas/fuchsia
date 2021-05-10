@@ -403,10 +403,10 @@ TEST(MiscTestCase, BindDevices) {
   fbl::RefPtr<Device> device;
   status = coordinator.AddDevice(
       coordinator.test_device(), std::move(controller_local), std::move(coordinator_local),
-      nullptr /* props_data */, 0 /* props_count */, "mock-device", ZX_PROTOCOL_TEST,
-      {} /* driver_path */, {} /* args */, false /* invisible */, false /* skip_autobind */,
-      false /* has_init */, true /* always_init */, zx::vmo() /*inspect*/,
-      zx::channel() /* client_remote */, &device);
+      nullptr /* props_data */, 0 /* props_count */, nullptr /* str_props_data */,
+      0 /* str_props_count */, "mock-device", ZX_PROTOCOL_TEST, {} /* driver_path */, {} /* args */,
+      false /* invisible */, false /* skip_autobind */, false /* has_init */,
+      true /* always_init */, zx::vmo() /*inspect*/, zx::channel() /* client_remote */, &device);
   ASSERT_OK(status);
   ASSERT_EQ(1, coordinator.devices().size_slow());
 
@@ -457,10 +457,10 @@ TEST(MiscTestCase, TestOutput) {
   fbl::RefPtr<Device> device;
   status = coordinator.AddDevice(
       coordinator.test_device(), std::move(controller_local), std::move(coordinator_local),
-      nullptr /* props_data */, 0 /* props_count */, "mock-device", ZX_PROTOCOL_TEST,
-      {} /* driver_path */, {} /* args */, false /* invisible */, false /* skip_autobind */,
-      false /* has_init */, true /* always_init */, zx::vmo() /*inspect*/,
-      zx::channel() /* client_remote */, &device);
+      nullptr /* props_data */, 0 /* props_count */, nullptr /* str_props_data */,
+      0 /* str_props_count */, "mock-device", ZX_PROTOCOL_TEST, {} /* driver_path */, {} /* args */,
+      false /* invisible */, false /* skip_autobind */, false /* has_init */,
+      true /* always_init */, zx::vmo() /*inspect*/, zx::channel() /* client_remote */, &device);
   ASSERT_OK(status);
   ASSERT_EQ(1, coordinator.devices().size_slow());
 
@@ -520,7 +520,9 @@ TEST(MiscTestCase, TestOutput) {
 // Adds a device with the given properties to the device coordinator, then checks that the
 // coordinator contains the device, and that its properties are correct.
 void AddDeviceWithProperties(const fuchsia_device_manager::wire::DeviceProperty* props_data,
-                             size_t props_count) {
+                             size_t props_count,
+                             const fuchsia_device_manager::wire::DeviceStrProperty* str_props_data,
+                             size_t str_props_count) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   InspectManager inspect_manager(loop.dispatcher());
   Coordinator coordinator(NullConfig(), &inspect_manager, loop.dispatcher());
@@ -538,9 +540,10 @@ void AddDeviceWithProperties(const fuchsia_device_manager::wire::DeviceProperty*
   fbl::RefPtr<Device> device;
   status = coordinator.AddDevice(
       coordinator.test_device(), std::move(controller_local), std::move(coordinator_local),
-      props_data, props_count, "mock-device", ZX_PROTOCOL_TEST, {} /* driver_path */, {} /* args */,
-      false /* invisible */, false /* skip_autobind */, false /* has_init */,
-      true /* always_init */, zx::vmo() /*inspect*/, zx::channel() /* client_remote */, &device);
+      props_data, props_count, str_props_data, str_props_count, "mock-device", ZX_PROTOCOL_TEST,
+      {} /* driver_path */, {} /* args */, false /* invisible */, false /* skip_autobind */,
+      false /* has_init */, true /* always_init */, zx::vmo() /*inspect*/,
+      zx::channel() /* client_remote */, &device);
   ASSERT_OK(status);
 
   // Check that the device has been added to the coordinator, with the correct properties.
@@ -553,6 +556,12 @@ void AddDeviceWithProperties(const fuchsia_device_manager::wire::DeviceProperty*
     ASSERT_EQ(dev.props()[i].value, props_data[i].value);
   }
 
+  ASSERT_EQ(dev.str_props().size(), str_props_count);
+  for (size_t i = 0; i < str_props_count; i++) {
+    ASSERT_STR_EQ(str_props_data[i].key.get(), dev.str_props()[i].key);
+    ASSERT_STR_EQ(str_props_data[i].value.get(), dev.str_props()[i].value);
+  }
+
   controller_remote.reset();
   coordinator_remote.reset();
   loop.RunUntilIdle();
@@ -560,14 +569,56 @@ void AddDeviceWithProperties(const fuchsia_device_manager::wire::DeviceProperty*
 
 TEST(MiscTestCase, DeviceProperties) {
   // No properties.
-  AddDeviceWithProperties(nullptr, 0);
+  AddDeviceWithProperties(nullptr, 0, nullptr, 0);
 
-  // Multiple properties.
+  // Multiple device properties. No string properties.
   fuchsia_device_manager::wire::DeviceProperty props[] = {
       fuchsia_device_manager::wire::DeviceProperty{1, 0, 1},
       fuchsia_device_manager::wire::DeviceProperty{2, 0, 1},
   };
-  AddDeviceWithProperties(props, std::size(props));
+  AddDeviceWithProperties(props, std::size(props), nullptr, 0);
+
+  // Multiple device string properties. No device properties.
+  fuchsia_device_manager::wire::DeviceStrProperty str_props[] = {
+      fuchsia_device_manager::wire::DeviceStrProperty{"snipe", "timberdoodle"},
+      fuchsia_device_manager::wire::DeviceStrProperty{"sandpiper", "turnstone"},
+  };
+  AddDeviceWithProperties(nullptr, 0, str_props, std::size(str_props));
+
+  // Multiple device properties and device string properties.
+  AddDeviceWithProperties(props, std::size(props), str_props, std::size(str_props));
+}
+
+TEST(MiscTestCase, InvalidStringProperties) {
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  InspectManager inspect_manager(loop.dispatcher());
+  Coordinator coordinator(NullConfig(), &inspect_manager, loop.dispatcher());
+
+  ASSERT_NO_FATAL_FAILURES(InitializeCoordinator(&coordinator));
+
+  zx::channel coordinator_local, coordinator_remote;
+  zx_status_t status = zx::channel::create(0, &coordinator_local, &coordinator_remote);
+  ASSERT_OK(status);
+
+  zx::channel controller_local, controller_remote;
+  status = zx::channel::create(0, &controller_local, &controller_remote);
+  ASSERT_OK(status);
+
+  // Create an invalid string with invalid UTF-8 characters.
+  const char kInvalidStr[] = {static_cast<char>(0xC0), 0};
+  fuchsia_device_manager::wire::DeviceStrProperty str_props[] = {
+      fuchsia_device_manager::wire::DeviceStrProperty{
+          fidl::StringView::FromExternal(kInvalidStr, std::size(kInvalidStr)), "ovenbird"},
+  };
+
+  fbl::RefPtr<Device> device;
+  status = coordinator.AddDevice(
+      coordinator.test_device(), std::move(controller_local), std::move(coordinator_local),
+      nullptr /* props */, 0 /* props_count */, str_props, std::size(str_props), "mock-device",
+      ZX_PROTOCOL_TEST, {} /* driver_path */, {} /* args */, false /* invisible */,
+      false /* skip_autobind */, false /* has_init */, true /* always_init */,
+      zx::vmo() /*inspect*/, zx::channel() /* client_remote */, &device);
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, status);
 }
 
 int main(int argc, char** argv) { return RUN_ALL_TESTS(argc, argv); }

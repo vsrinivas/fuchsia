@@ -473,14 +473,13 @@ zx_status_t Coordinator::NewDriverHost(const char* name, fbl::RefPtr<DriverHost>
 // Add a new device to a parent device (same driver_host)
 // New device is published in devfs.
 // Caller closes handles on error, so we don't have to.
-zx_status_t Coordinator::AddDevice(const fbl::RefPtr<Device>& parent, zx::channel device_controller,
-                                   zx::channel coordinator,
-                                   const fuchsia_device_manager::wire::DeviceProperty* props_data,
-                                   size_t props_count, std::string_view name, uint32_t protocol_id,
-                                   std::string_view driver_path, std::string_view args,
-                                   bool invisible, bool skip_autobind, bool has_init,
-                                   bool always_init, zx::vmo inspect, zx::channel client_remote,
-                                   fbl::RefPtr<Device>* new_device) {
+zx_status_t Coordinator::AddDevice(
+    const fbl::RefPtr<Device>& parent, zx::channel device_controller, zx::channel coordinator,
+    const fuchsia_device_manager::wire::DeviceProperty* props_data, size_t props_count,
+    const fuchsia_device_manager::wire::DeviceStrProperty* str_props_data, size_t str_props_count,
+    std::string_view name, uint32_t protocol_id, std::string_view driver_path,
+    std::string_view args, bool invisible, bool skip_autobind, bool has_init, bool always_init,
+    zx::vmo inspect, zx::channel client_remote, fbl::RefPtr<Device>* new_device) {
   // If this is true, then |name_data|'s size is properly bounded.
   static_assert(fuchsia_device_manager_DEVICE_NAME_MAX == ZX_DEVICE_NAME_MAX);
   static_assert(fuchsia_device_manager_PROPERTIES_MAX <= UINT32_MAX);
@@ -515,6 +514,15 @@ zx_status_t Coordinator::AddDevice(const fbl::RefPtr<Device>& parent, zx::channe
     };
   }
 
+  fbl::Array<StrProperty> str_props(new StrProperty[str_props_count], str_props_count);
+  if (!str_props) {
+    return ZX_ERR_NO_MEMORY;
+  }
+  for (uint32_t i = 0; i < str_props_count; i++) {
+    str_props[i].key = str_props_data[i].key.get();
+    str_props[i].value = str_props_data[i].value.get();
+  }
+
   fbl::String name_str(name);
   fbl::String driver_path_str(driver_path);
   fbl::String args_str(args);
@@ -526,11 +534,11 @@ zx_status_t Coordinator::AddDevice(const fbl::RefPtr<Device>& parent, zx::channe
   // TODO(fxbug.dev/43261): remove |has_init| once device_make_visible() is deprecated.
   bool init_wait_make_visible = invisible && !has_init;
   fbl::RefPtr<Device> dev;
-  zx_status_t status =
-      Device::Create(this, parent, std::move(name_str), std::move(driver_path_str),
-                     std::move(args_str), protocol_id, std::move(props), std::move(coordinator),
-                     std::move(device_controller), init_wait_make_visible, want_init_task,
-                     skip_autobind, std::move(inspect), std::move(client_remote), &dev);
+  zx_status_t status = Device::Create(
+      this, parent, std::move(name_str), std::move(driver_path_str), std::move(args_str),
+      protocol_id, std::move(props), std::move(str_props), std::move(coordinator),
+      std::move(device_controller), init_wait_make_visible, want_init_task, skip_autobind,
+      std::move(inspect), std::move(client_remote), &dev);
   if (status != ZX_OK) {
     return status;
   }
@@ -1436,7 +1444,7 @@ zx_status_t Coordinator::MatchDeviceToDriver(const fbl::RefPtr<Device>& dev, con
   if (!dev->is_bindable() && !(dev->is_composite_bindable())) {
     return ZX_ERR_NEXT;
   }
-  if (!driver_is_bindable(driver, dev->protocol_id(), dev->props(), autobind)) {
+  if (!driver_is_bindable(driver, dev->protocol_id(), dev->props(), dev->str_props(), autobind)) {
     return ZX_ERR_NEXT;
   }
   return ZX_OK;
