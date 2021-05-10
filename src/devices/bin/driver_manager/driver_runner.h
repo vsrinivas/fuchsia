@@ -112,7 +112,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   async_dispatcher_t* const dispatcher_;
 
   const std::string name_;
-  fidl::FidlAllocator<512> allocator_;
+  fidl::FidlAllocator<128> allocator_;
   std::vector<fidl::StringView> offers_;
   std::vector<fuchsia_driver_framework::wire::NodeSymbol> symbols_;
 
