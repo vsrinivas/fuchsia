@@ -17,15 +17,12 @@ if (is_host) {
       "//src/lib/fuchsia-async",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:async-channel",
+      "//third_party/rust_crates:async-lock",
       "//third_party/rust_crates:async-trait",
       "//third_party/rust_crates:futures",
-      "//third_party/rust_crates:itertools",
       "//third_party/rust_crates:lazy_static",
-      "//third_party/rust_crates:libc",
       "//third_party/rust_crates:log",
-      "//third_party/rust_crates:nix",
       "//third_party/rust_crates:pin-project",
-      "//third_party/rust_crates:simplelog",
     ]
 
     sources = [

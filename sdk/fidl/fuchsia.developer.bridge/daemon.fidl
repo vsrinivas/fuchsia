@@ -7,6 +7,8 @@ using fuchsia.developer.remotecontrol as rc;
 using fuchsia.device;
 using zx;
 
+const uint8 MAX_SERVICE_NAME_SIZE = 255;
+
 enum DaemonError {
     TARGET_CACHE_ERROR = 1;
     TARGET_STATE_ERROR = 2;
@@ -24,9 +26,18 @@ enum DaemonError {
     TARGET_NOT_FOUND = 7;
     /// When attempting to connect to RCS on a Fastboot device.
     TARGET_IN_FASTBOOT = 8;
-
     /// Fastboot device expected.
     NON_FASTBOOT_DEVICE = 9;
+    /// When attempting to connect to a service that does not exist on the
+    /// daemon.
+    SERVICE_NOT_FOUND = 10;
+    /// An error was encountered when attempting to open a service stream.
+    SERVICE_OPEN_ERROR = 11;
+    /// An error encountered when the daemon's service register is in a bad
+    /// state internally. This is primarily caused by trying to open a service
+    /// while the daaemon is actively shutting down, and should be extremely
+    /// rare.
+    BAD_SERVICE_REGISTER_STATE = 12;
 };
 
 [Discoverable]
@@ -127,4 +138,18 @@ protocol Daemon {
     GetTarget(
         string:fuchsia.device.DEVICE_NAME_MAX? target,
         request<TargetControl> target_controller) -> () error DaemonError;
+
+    /// Connects to a deamon service.
+    ///
+    /// Takes a service name under which the channel will be connected (the
+    /// caller is intended to know the type of the channel a priori).
+    ///
+    /// Developers are not intended to use this directly. Instead this should
+    /// be invoked automatically through the FFX plugin/service framework.
+    ///
+    /// Again for emphasis: if you are a developer and you are invoking this
+    /// function directly, you should reconsider your actions.
+    ConnectToService(
+        string:MAX_SERVICE_NAME_SIZE name,
+        zx.handle:CHANNEL server_channel) -> () error DaemonError;
 };

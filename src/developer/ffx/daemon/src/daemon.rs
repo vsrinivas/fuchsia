@@ -23,6 +23,7 @@ use {
     diagnostics_data::Timestamp,
     ffx_core::{build_info, TryStreamUtilExt},
     ffx_daemon_core::events::{self, EventHandler},
+    ffx_daemon_services::create_service_register_map,
     fidl::endpoints::ClientEnd,
     fidl::endpoints::RequestStream,
     fidl::endpoints::ServiceMarker,
@@ -37,6 +38,7 @@ use {
     fuchsia_async::{Task, TimeoutExt, Timer},
     futures::prelude::*,
     hoist::{hoist, OvernetInstance},
+    services::{DaemonServiceProvider, ServiceError, ServiceRegister},
     std::convert::TryInto,
     std::net::SocketAddr,
     std::sync::{Arc, Weak},
@@ -50,7 +52,8 @@ pub struct Daemon {
 
     target_collection: Arc<TargetCollection>,
     ascendd: Arc<Mutex<Option<Ascendd>>>,
-    manual_targets: Arc<dyn manual_targets::ManualTargets>,
+    manual_targets: Arc<dyn manual_targets::ManualTargets + Send>,
+    service_register: ServiceRegister,
 }
 
 // This is just for mocking config values for unit testing.
@@ -173,6 +176,55 @@ impl DaemonEventHandler {
 }
 
 #[async_trait(?Send)]
+impl DaemonServiceProvider for Daemon {
+    async fn open_service_proxy(&self, service_name: String) -> Result<fidl::Channel> {
+        let (server, client) = fidl::Channel::create().context("creating zx channel")?;
+        self.service_register
+            .open(
+                service_name,
+                services::Context::new(self.clone()),
+                fidl::AsyncChannel::from_channel(server)?,
+            )
+            .await?;
+        Ok(client)
+    }
+
+    async fn open_target_proxy(
+        &self,
+        target_identifier: Option<String>,
+        service_selector: fidl_fuchsia_diagnostics::Selector,
+    ) -> Result<fidl::Channel> {
+        let target = self
+            .get_target(target_identifier)
+            .await
+            .map_err(|e| anyhow!("{:#?}", e))
+            .context("getting default target")?;
+        // Ensure auto-connect has at least started.
+        target.run_host_pipe().await;
+        target
+            .events
+            .wait_for(None, |e| e == TargetEvent::RcsActivated)
+            .await
+            .context("waiting for RCS activation")?;
+        let rcs = target
+            .rcs()
+            .await
+            .ok_or(anyhow!("rcs disconnected after event fired"))
+            .context("getting rcs instance")?;
+        let (server, client) = fidl::Channel::create().context("creating zx channel")?;
+
+        // TODO(awdavies): Handle these errors properly so the client knows what happened.
+        rcs.proxy
+            .connect(service_selector, server)
+            .await
+            .context("FIDL connection")?
+            .map_err(|e| anyhow!("{:#?}", e))
+            .context("proxy connect")?;
+        Ok(client)
+    }
+}
+
+#[async_trait(?Send)]
 impl EventHandler<DaemonEvent> for DaemonEventHandler {
     async fn on_event(&self, event: DaemonEvent) -> Result<bool> {
         let tc = match self.target_collection.upgrade() {
@@ -220,6 +272,7 @@ impl Daemon {
             event_queue,
             ascendd: Arc::new(Mutex::new(None)),
             manual_targets: Arc::new(manual_targets),
+            service_register: ServiceRegister::new(create_service_register_map()),
         }
     }
 
@@ -494,6 +547,11 @@ impl Daemon {
                     panic!("quit() should not be invoked in test code");
                 }
 
+                self.service_register
+                    .shutdown(services::Context::new(self.clone()))
+                    .await
+                    .unwrap_or_else(|e| log::error!("shutting down service register: {:?}", e));
+
                 // It is desirable for the client to receive an ACK for the quit
                 // request. As Overnet has a potentially complicated routing
                 // path, it is tricky to implement some notion of a bounded
@@ -565,6 +623,34 @@ impl Daemon {
                 let hash: String =
                     ffx_config::get((CURRENT_EXE_HASH, ffx_config::ConfigLevel::Runtime)).await?;
                 responder.send(&hash).context("error sending response")?;
+            }
+            DaemonRequest::ConnectToService { name, server_channel, responder } => {
+                match self
+                    .service_register
+                    .open(
+                        name,
+                        services::Context::new(self.clone()),
+                        fidl::AsyncChannel::from_channel(server_channel)?,
+                    )
+                    .await
+                {
+                    Ok(()) => responder.send(&mut Ok(())).context("fidl response")?,
+                    Err(e) => {
+                        log::error!("{}", e);
+                        match e {
+                            ServiceError::NoServiceFound(_) => {
+                                responder.send(&mut Err(DaemonError::ServiceNotFound))?
+                            }
+                            ServiceError::StreamOpenError(_) => {
+                                responder.send(&mut Err(DaemonError::ServiceOpenError))?
+                            }
+                            ServiceError::BadRegisterState(_)
+                            | ServiceError::DuplicateTaskId(..) => {
+                                responder.send(&mut Err(DaemonError::BadServiceRegisterState))?
+                            }
+                        }
+                    }
+                }
             }
             DaemonRequest::StreamDiagnostics { target, parameters, iterator, responder } => {
                 let target = match self

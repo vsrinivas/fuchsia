@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 use {
     anyhow::{anyhow, Context as _, Result},
+    async_lock::Mutex,
     async_trait::async_trait,
     ffx_core::TryStreamUtilExt,
     fuchsia_async::Task,
     futures::future::Future,
-    futures::lock::Mutex,
     futures::prelude::*,
     futures::task::{Context, Poll},
     pin_project::pin_project,

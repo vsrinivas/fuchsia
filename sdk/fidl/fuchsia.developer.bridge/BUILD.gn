@@ -9,6 +9,7 @@ fidl("fuchsia.developer.bridge") {
   sources = [
     "daemon.fidl",
     "diagnostics.fidl",
+    "echo.fidl",
     "fastboot.fidl",
     "target.fidl",
     "version.fidl",

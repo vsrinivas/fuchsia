@@ -27,8 +27,10 @@ if (is_host) {
       "//src/developer/ffx/core:lib",
       "//src/developer/ffx/core/version:lib",
       "//src/developer/ffx/daemon/core:lib",
+      "//src/developer/ffx/daemon/services:lib",
       "//src/developer/ffx/lib/async-once:lib",
       "//src/developer/ffx/lib/netext:lib",
+      "//src/developer/ffx/lib/services:lib",
       "//src/developer/ffx/lib/timeout:lib",
       "//src/developer/ffx/logger/data:lib",
       "//src/developer/ffx/logger/test_utils:lib",
@@ -102,5 +104,6 @@ group("tests") {
   deps = [
     ":lib_test($host_toolchain)",
     "core:tests($host_toolchain)",
+    "services:tests($host_toolchain)",
   ]
 }

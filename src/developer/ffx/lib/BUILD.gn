@@ -6,6 +6,7 @@ if (is_host) {
   libs = [
     "async-once",
     "pkg",
+    "services",
     "timeout",
   ]
 
