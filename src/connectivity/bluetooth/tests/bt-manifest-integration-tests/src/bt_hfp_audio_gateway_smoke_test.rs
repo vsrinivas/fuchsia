@@ -10,7 +10,7 @@ use {
     fidl_fuchsia_bluetooth_hfp_test::{HfpTestMarker, HfpTestProxy},
     fuchsia_async as fasync,
     fuchsia_component_test::{
-        builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
+        builder::{ComponentSource, RealmBuilder, RouteEndpoint},
         mock::{Mock, MockHandles},
     },
     futures::{channel::mpsc, SinkExt, StreamExt},
@@ -107,33 +107,29 @@ async fn hfp_audio_gateway_v2_capability_routing() {
 
     // Set up capabilities.
     builder
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.bluetooth.hfp.Hfp"),
-            source: RouteEndpoint::component(HFP_MONIKER),
-            targets: vec![RouteEndpoint::component(HFP_CLIENT_MONIKER)],
-        })
+        .add_protocol_route::<HfpMarker>(
+            RouteEndpoint::component(HFP_MONIKER),
+            vec![RouteEndpoint::component(HFP_CLIENT_MONIKER)],
+        )
         .expect("Failed adding route for Hfp service")
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.bluetooth.hfp.test.HfpTest"),
-            source: RouteEndpoint::component(HFP_MONIKER),
-            targets: vec![RouteEndpoint::component(HFP_CLIENT_MONIKER)],
-        })
+        .add_protocol_route::<HfpTestMarker>(
+            RouteEndpoint::component(HFP_MONIKER),
+            vec![RouteEndpoint::component(HFP_CLIENT_MONIKER)],
+        )
         .expect("Failed adding route for HfpTest service")
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.bluetooth.bredr.Profile"),
-            source: RouteEndpoint::component(FAKE_PROFILE_MONIKER),
-            targets: vec![RouteEndpoint::component(HFP_MONIKER)],
-        })
+        .add_protocol_route::<ProfileMarker>(
+            RouteEndpoint::component(FAKE_PROFILE_MONIKER),
+            vec![RouteEndpoint::component(HFP_MONIKER)],
+        )
         .expect("Failed adding route for Profile service")
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.logger.LogSink"),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![
+        .add_protocol_route::<fidl_fuchsia_logger::LogSinkMarker>(
+            RouteEndpoint::AboveRoot,
+            vec![
                 RouteEndpoint::component(HFP_MONIKER),
                 RouteEndpoint::component(FAKE_PROFILE_MONIKER),
                 RouteEndpoint::component(HFP_CLIENT_MONIKER),
             ],
-        })
+        )
         .expect("Failed adding LogSink route to test components");
     let _test_topology = builder.build().create().await.unwrap();
 

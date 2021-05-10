@@ -9,7 +9,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{
-        builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
+        builder::{ComponentSource, RealmBuilder, RouteEndpoint},
         mock::{Mock, MockHandles},
     },
     futures::{channel::mpsc, SinkExt, StreamExt},
@@ -105,27 +105,24 @@ async fn rfcomm_v2_component_topology() {
 
     // Set up capabilities.
     builder
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.bluetooth.bredr.Profile"),
-            source: RouteEndpoint::component("fake-profile"),
-            targets: vec![RouteEndpoint::component("rfcomm")],
-        })
+        .add_protocol_route::<ProfileMarker>(
+            RouteEndpoint::component("fake-profile"),
+            vec![RouteEndpoint::component("rfcomm")],
+        )
         .expect("Failed adding route for profile service")
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.bluetooth.bredr.Profile"),
-            source: RouteEndpoint::component("rfcomm"),
-            targets: vec![RouteEndpoint::component("fake-rfcomm-client")],
-        })
-        .expect("Failed adding route for profile service")
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.logger.LogSink"),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![
+        .add_protocol_route::<ProfileMarker>(
+            RouteEndpoint::component("rfcomm"),
+            vec![RouteEndpoint::component("fake-rfcomm-client")],
+        )
+        .expect("Failed adding route for RFCOMM profile service")
+        .add_protocol_route::<fidl_fuchsia_logger::LogSinkMarker>(
+            RouteEndpoint::AboveRoot,
+            vec![
                 RouteEndpoint::component("rfcomm"),
                 RouteEndpoint::component("fake-profile"),
                 RouteEndpoint::component("fake-rfcomm-client"),
             ],
-        })
+        )
         .expect("Failed adding LogSink route to test components");
     let _test_topology = builder.build().create().await.unwrap();
 

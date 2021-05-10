@@ -24,7 +24,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{
-        builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
+        builder::{ComponentSource, RealmBuilder, RouteEndpoint},
         mock::{Mock, MockHandles},
     },
     futures::{channel::mpsc, SinkExt, StreamExt},
@@ -162,13 +162,12 @@ const A2DP_CLIENT_MONIKER: &str = "fake-a2dp-client";
 /// Local name of the component which provides services used by A2DP in the Realm.
 const SERVICE_PROVIDER_MONIKER: &str = "fake-service-provider";
 
-fn add_a2dp_dependency_route(builder: &mut RealmBuilder, capability: Capability) {
+fn add_a2dp_dependency_route<S: DiscoverableService>(builder: &mut RealmBuilder) {
     builder
-        .add_route(CapabilityRoute {
-            capability,
-            source: RouteEndpoint::component(SERVICE_PROVIDER_MONIKER),
-            targets: vec![RouteEndpoint::component(A2DP_MONIKER)],
-        })
+        .add_protocol_route::<S>(
+            RouteEndpoint::component(SERVICE_PROVIDER_MONIKER),
+            vec![RouteEndpoint::component(A2DP_MONIKER)],
+        )
         .expect("Failed adding route for service");
 }
 
@@ -222,58 +221,43 @@ async fn a2dp_v2_component_topology() {
 
     // Capabilities provided by A2DP.
     builder
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol(fidl_avdtp::PeerManagerMarker::SERVICE_NAME),
-            source: RouteEndpoint::component(A2DP_MONIKER),
-            targets: vec![RouteEndpoint::component(A2DP_CLIENT_MONIKER)],
-        })
+        .add_protocol_route::<fidl_avdtp::PeerManagerMarker>(
+            RouteEndpoint::component(A2DP_MONIKER),
+            vec![RouteEndpoint::component(A2DP_CLIENT_MONIKER)],
+        )
         .expect("Failed adding route for avdtp.PeerManager service")
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol(fidl_a2dp::AudioModeMarker::SERVICE_NAME),
-            source: RouteEndpoint::component(A2DP_MONIKER),
-            targets: vec![RouteEndpoint::component(A2DP_CLIENT_MONIKER)],
-        })
+        .add_protocol_route::<fidl_a2dp::AudioModeMarker>(
+            RouteEndpoint::component(A2DP_MONIKER),
+            vec![RouteEndpoint::component(A2DP_CLIENT_MONIKER)],
+        )
         .expect("Failed adding route for a2dp.AudioMode service");
 
     // Capabilities provided by the generic service provider component, which are consumed
     // by the A2DP component.
-    add_a2dp_dependency_route(
-        &mut builder,
-        Capability::protocol(fidl_avrcp::PeerManagerMarker::SERVICE_NAME),
-    );
-    add_a2dp_dependency_route(&mut builder, Capability::protocol(ProfileMarker::SERVICE_NAME));
-    add_a2dp_dependency_route(
-        &mut builder,
-        Capability::protocol(LoggerFactoryMarker::SERVICE_NAME),
-    );
-    add_a2dp_dependency_route(
-        &mut builder,
-        Capability::protocol(AudioDeviceEnumeratorMarker::SERVICE_NAME),
-    );
-    add_a2dp_dependency_route(
-        &mut builder,
-        Capability::protocol(SessionAudioConsumerFactoryMarker::SERVICE_NAME),
-    );
-    add_a2dp_dependency_route(&mut builder, Capability::protocol(PublisherMarker::SERVICE_NAME));
-    add_a2dp_dependency_route(&mut builder, Capability::protocol(CodecFactoryMarker::SERVICE_NAME));
-    add_a2dp_dependency_route(&mut builder, Capability::protocol(AudioMarker::SERVICE_NAME));
-    add_a2dp_dependency_route(&mut builder, Capability::protocol(AllocatorMarker::SERVICE_NAME));
-    add_a2dp_dependency_route(&mut builder, Capability::protocol(RegistryMarker::SERVICE_NAME));
+    add_a2dp_dependency_route::<fidl_avrcp::PeerManagerMarker>(&mut builder);
+    add_a2dp_dependency_route::<ProfileMarker>(&mut builder);
+    add_a2dp_dependency_route::<LoggerFactoryMarker>(&mut builder);
+    add_a2dp_dependency_route::<AudioDeviceEnumeratorMarker>(&mut builder);
+    add_a2dp_dependency_route::<SessionAudioConsumerFactoryMarker>(&mut builder);
+    add_a2dp_dependency_route::<PublisherMarker>(&mut builder);
+    add_a2dp_dependency_route::<CodecFactoryMarker>(&mut builder);
+    add_a2dp_dependency_route::<AudioMarker>(&mut builder);
+    add_a2dp_dependency_route::<AllocatorMarker>(&mut builder);
+    add_a2dp_dependency_route::<RegistryMarker>(&mut builder);
     // Capability used by AVRCP Target, a child of A2DP. Route this service to A2DP to be
     // transitively routed to it.
-    add_a2dp_dependency_route(&mut builder, Capability::protocol(DiscoveryMarker::SERVICE_NAME));
+    add_a2dp_dependency_route::<DiscoveryMarker>(&mut builder);
 
     // Logging service, used by all children in this test.
     builder
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.logger.LogSink"),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![
+        .add_protocol_route::<fidl_fuchsia_logger::LogSinkMarker>(
+            RouteEndpoint::AboveRoot,
+            vec![
                 RouteEndpoint::component(A2DP_MONIKER),
                 RouteEndpoint::component(A2DP_CLIENT_MONIKER),
                 RouteEndpoint::component(SERVICE_PROVIDER_MONIKER),
             ],
-        })
+        )
         .expect("Failed adding LogSink route to test components");
     let _test_topology = builder.build().create().await.unwrap();
 

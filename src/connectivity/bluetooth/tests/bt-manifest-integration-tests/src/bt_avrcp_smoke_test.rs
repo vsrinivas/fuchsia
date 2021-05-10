@@ -10,7 +10,7 @@ use {
     fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequest},
     fuchsia_async as fasync,
     fuchsia_component_test::{
-        builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
+        builder::{ComponentSource, RealmBuilder, RouteEndpoint},
         mock::{Mock, MockHandles},
     },
     futures::{channel::mpsc, SinkExt, StreamExt},
@@ -104,33 +104,29 @@ async fn avrcp_v2_component_topology() {
 
     // Set up capabilities.
     builder
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.bluetooth.avrcp.PeerManager"),
-            source: RouteEndpoint::component("avrcp"),
-            targets: vec![RouteEndpoint::component("fake-avrcp-client")],
-        })
+        .add_protocol_route::<PeerManagerMarker>(
+            RouteEndpoint::component("avrcp"),
+            vec![RouteEndpoint::component("fake-avrcp-client")],
+        )
         .expect("Failed adding route for PeerManager service")
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.bluetooth.avrcp.test.PeerManagerExt"),
-            source: RouteEndpoint::component("avrcp"),
-            targets: vec![RouteEndpoint::component("fake-avrcp-client")],
-        })
+        .add_protocol_route::<PeerManagerExtMarker>(
+            RouteEndpoint::component("avrcp"),
+            vec![RouteEndpoint::component("fake-avrcp-client")],
+        )
         .expect("Failed adding route for PeerManagerExt service")
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.bluetooth.bredr.Profile"),
-            source: RouteEndpoint::component("fake-profile"),
-            targets: vec![RouteEndpoint::component("avrcp")],
-        })
+        .add_protocol_route::<ProfileMarker>(
+            RouteEndpoint::component("fake-profile"),
+            vec![RouteEndpoint::component("avrcp")],
+        )
         .expect("Failed adding route for Profile service")
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.logger.LogSink"),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![
+        .add_protocol_route::<fidl_fuchsia_logger::LogSinkMarker>(
+            RouteEndpoint::AboveRoot,
+            vec![
                 RouteEndpoint::component("avrcp"),
                 RouteEndpoint::component("fake-profile"),
                 RouteEndpoint::component("fake-avrcp-client"),
             ],
-        })
+        )
         .expect("Failed adding LogSink route to test components");
     let _test_topology = builder.build().create().await.unwrap();
 

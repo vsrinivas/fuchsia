@@ -10,7 +10,7 @@ use {
     fidl_fuchsia_media_sessions2::{DiscoveryMarker, DiscoveryRequest, SessionsWatcherProxy},
     fuchsia_async as fasync,
     fuchsia_component_test::{
-        builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
+        builder::{ComponentSource, RealmBuilder, RouteEndpoint},
         mock::{Mock, MockHandles},
     },
     fuchsia_zircon::DurationNum,
@@ -146,34 +146,30 @@ async fn avrcp_tg_v2_connects_to_avrcp_service() {
 
     // Set up capabilities.
     builder
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.bluetooth.avrcp.PeerManager"),
-            source: RouteEndpoint::component("fake-avrcp"),
-            targets: vec![RouteEndpoint::component("avrcp-target")],
-        })
+        .add_protocol_route::<PeerManagerMarker>(
+            RouteEndpoint::component("fake-avrcp"),
+            vec![RouteEndpoint::component("avrcp-target")],
+        )
         .expect("Failed adding route for PeerManager service")
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.media.sessions2.Discovery"),
-            source: RouteEndpoint::component("fake-media-session"),
-            targets: vec![RouteEndpoint::component("avrcp-target")],
-        })
+        .add_protocol_route::<DiscoveryMarker>(
+            RouteEndpoint::component("fake-media-session"),
+            vec![RouteEndpoint::component("avrcp-target")],
+        )
         .expect("Failed adding route for Discovery service")
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.bluetooth.component.Lifecycle"),
-            source: RouteEndpoint::component("avrcp-target"),
-            targets: vec![RouteEndpoint::component("fake-avrcp-target-client")],
-        })
+        .add_protocol_route::<LifecycleMarker>(
+            RouteEndpoint::component("avrcp-target"),
+            vec![RouteEndpoint::component("fake-avrcp-target-client")],
+        )
         .expect("Failed adding route for Lifecycle service")
-        .add_route(CapabilityRoute {
-            capability: Capability::protocol("fuchsia.logger.LogSink"),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![
+        .add_protocol_route::<fidl_fuchsia_logger::LogSinkMarker>(
+            RouteEndpoint::AboveRoot,
+            vec![
                 RouteEndpoint::component("avrcp-target"),
                 RouteEndpoint::component("fake-avrcp"),
                 RouteEndpoint::component("fake-media-session"),
                 RouteEndpoint::component("fake-avrcp-target-client"),
             ],
-        })
+        )
         .expect("Failed adding LogSink route to test components");
     let _test_topology = builder.build().create().await.unwrap();
 
