@@ -1,0 +1,9 @@
+{
+    include: [ "src/sys/pkg/tests/pkg-resolver/meta/pkg-resolver-test-common.shard.cml" ],
+    program: {
+        args: [
+            "--blob-network-header-timeout-seconds",
+            "0",
+        ],
+    },
+}

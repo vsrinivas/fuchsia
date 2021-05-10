@@ -17,7 +17,7 @@ use {
     http_uri_ext::HttpUriExt as _,
     lib::{
         extra_blob_contents, make_pkg_with_extra_blobs, resolve_package, test_package_bin,
-        test_package_cmx, TestEnv, TestEnvBuilder, EMPTY_REPO_PATH,
+        test_package_cmx, ResolverVariant, TestEnv, TestEnvBuilder, EMPTY_REPO_PATH,
     },
     matches::assert_matches,
     rand::prelude::*,
@@ -367,7 +367,6 @@ async fn retries() {
         .start()
         .unwrap();
     env.register_repo(&served_repository).await;
-
     let package_dir = env.resolve_package("fuchsia-pkg://test/try-hard").await.unwrap();
     pkg.verify_contents(&package_dir).await.unwrap();
 
@@ -939,7 +938,7 @@ async fn resolve_local_mirror() {
     );
 
     let env = TestEnvBuilder::new()
-        .allow_local_mirror()
+        .resolver_variant(ResolverVariant::AllowLocalMirror)
         .local_mirror_repo(&repo, "fuchsia-pkg://test".parse().unwrap())
         .build()
         .await;

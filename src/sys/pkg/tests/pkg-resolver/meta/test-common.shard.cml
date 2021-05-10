@@ -1,0 +1,94 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "sdk/lib/diagnostics/inspect/client.shard.cml",
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
+        "src/sys/test_runners/rust/default.shard.cml",
+        "src/sys/test_runners/tmp_storage.shard.cml",
+    ],
+    children: [
+        {
+            name: "isolated_devmgr",
+            url: "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/isolated-devmgr.cm",
+        },
+        {
+            name: "netstack",
+            url: "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/netstack-debug.cm",
+        },
+        {
+            name: "dns_resolver",
+            url: "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/dns_resolver.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.sys2.Realm",
+            from: "framework",
+        },
+        {
+            protocol: [
+                "fuchsia.diagnostics.ArchiveAccessor",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys.Launcher",
+                "fuchsia.sys.Loader",
+            ],
+        },
+        {
+            protocol: [ "fuchsia.posix.socket.Provider" ],
+            from: "#netstack",
+        },
+        {
+            directory: "dev",
+            from: "#isolated_devmgr",
+            rights: [ "rw*" ],
+            path: "/dev",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#dns_resolver",
+                "#isolated_devmgr",
+                "#netstack",
+            ],
+        },
+        {
+            protocol: [
+                "fuchsia.process.Launcher",
+                "fuchsia.sys.Launcher",
+            ],
+            from: "parent",
+            to: "#isolated_devmgr",
+        },
+        {
+            storage: "cache",
+            from: "parent",
+            to: "#netstack",
+        },
+        {
+            protocol: "fuchsia.net.routes.State",
+            from: "#netstack",
+            to: "#dns_resolver",
+        },
+        {
+            protocol: "fuchsia.posix.socket.Provider",
+            from: "#netstack",
+            to: "#fuchsia_component_test_collection",
+        },
+        {
+            protocol: "fuchsia.net.NameLookup",
+            from: "#dns_resolver",
+            to: "#fuchsia_component_test_collection",
+        },
+        {
+            protocol: [ "fuchsia.process.Launcher" ],
+            from: "parent",
+            to: "#fuchsia_component_test_collection",
+        },
+    ],
+}

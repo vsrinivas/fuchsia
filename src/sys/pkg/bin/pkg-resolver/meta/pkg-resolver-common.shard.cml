@@ -1,0 +1,70 @@
+{
+    include: [
+        "sdk/lib/diagnostics/inspect/client.shard.cml",
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/lib/fuchsia-hyper/hyper.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/pkg_resolver",
+    },
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.pkg.FontResolver",
+                "fuchsia.pkg.PackageResolver",
+                "fuchsia.pkg.PackageResolverAdmin",
+                "fuchsia.pkg.RepositoryManager",
+                "fuchsia.pkg.rewrite.Engine",
+            ],
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.boot.Arguments",
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.pkg.LocalMirror",
+                "fuchsia.pkg.PackageCache",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+        },
+        {
+            directory: "pkgfs",
+            rights: [ "r*" ],
+            path: "/pkgfs",
+        },
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config/data",
+        },
+        {
+            directory: "root-ssl-certificates",
+            rights: [ "r*" ],
+            path: "/config/ssl",
+        },
+
+        // Note: in an ideal world, we'd declare a storage capability here for
+        // /data, but we can't *quite* do that because TestRealmBuilder doesn't
+        // support mock storage capabilities, and we have some tests that want
+        // to inject failures when interacting with /data to verify pkg-resolver's
+        // resilience.  To mock that out, we have to use a directory capability.
+        // So pkg-resolver's integration tests that include this shard will
+        // use a directory capability for /data, and the load-bearing
+        // pkg-resolver.cml will specify a storage capability for /data.
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.pkg.FontResolver",
+                "fuchsia.pkg.PackageResolver",
+                "fuchsia.pkg.PackageResolverAdmin",
+                "fuchsia.pkg.RepositoryManager",
+                "fuchsia.pkg.rewrite.Engine",
+            ],
+            from: "self",
+        },
+    ],
+}

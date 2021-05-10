@@ -6,22 +6,25 @@ import("//build/components.gni")
 import("//build/dist/renamed_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
+import("//src/lib/isolated_devmgr/v2_component/isolated_devmgr.gni")
 
 rustc_library("lib") {
   name = "lib"
   edition = "2018"
+  testonly = true
 
   deps = [
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket-rustc",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider-rustc",
     "//src/lib/diagnostics/hierarchy/rust",
     "//src/lib/diagnostics/reader/rust",
@@ -29,6 +32,7 @@ rustc_library("lib") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-component-test",
     "//src/lib/fuchsia-hyper",
     "//src/lib/fuchsia-url",
     "//src/lib/http-uri-ext",
@@ -76,7 +80,6 @@ rustc_test("dynamic_repositories_disabled") {
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket-rustc",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider-rustc",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fdio/rust:fdio",
@@ -122,7 +125,6 @@ rustc_test("dynamic_rewrite_disabled") {
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket-rustc",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider-rustc",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fdio/rust:fdio",
@@ -168,7 +170,6 @@ rustc_test("pkg_resolve_inspect") {
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket-rustc",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider-rustc",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fdio/rust:fdio",
@@ -233,7 +234,6 @@ rustc_test("resolve_propagates_pkgfs_failure") {
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket-rustc",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider-rustc",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fdio/rust:fdio",
@@ -280,7 +280,6 @@ rustc_test("resolve_recovers_from_http_errors") {
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket-rustc",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider-rustc",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fdio/rust:fdio",
@@ -346,7 +345,6 @@ rustc_test("resolve_succeeds_with_broken_minfs") {
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket-rustc",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider-rustc",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fdio/rust:fdio",
@@ -392,7 +390,6 @@ rustc_test("resolve_succeeds") {
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket-rustc",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider-rustc",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fdio/rust:fdio",
@@ -440,7 +437,6 @@ rustc_test("get_hash") {
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket-rustc",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider-rustc",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fdio/rust:fdio",
@@ -556,79 +552,79 @@ rustc_test("metrics") {
 
 fuchsia_test_component("dynamic_repositories_disabled-component") {
   component_name = "dynamic-repositories-disabled"
-  manifest = "meta/dynamic-repositories-disabled.cmx"
+  manifest = "meta/dynamic-repositories-disabled.cml"
   deps = [ ":dynamic_repositories_disabled" ]
 }
 
 fuchsia_test_component("dynamic_rewrite_disabled-component") {
   component_name = "dynamic-rewrite-disabled"
-  manifest = "meta/dynamic-rewrite-disabled.cmx"
+  manifest = "meta/dynamic-rewrite-disabled.cml"
   deps = [ ":dynamic_rewrite_disabled" ]
 }
 
 fuchsia_test_component("get_hash-component") {
   component_name = "get-hash"
-  manifest = "meta/get-hash.cmx"
+  manifest = "meta/get-hash.cml"
   deps = [ ":get_hash" ]
 }
 
 fuchsia_test_component("pkg_resolve_inspect-component") {
   component_name = "pkg-resolve-inspect"
-  manifest = "meta/pkg-resolve-inspect.cmx"
+  manifest = "meta/pkg-resolve-inspect.cml"
   deps = [ ":pkg_resolve_inspect" ]
 }
 
 fuchsia_test_component("resolve_propagates_pkgfs_failure-component") {
   component_name = "resolve-propagates-pkgfs-failure"
-  manifest = "meta/resolve-propagates-pkgfs-failure.cmx"
+  manifest = "meta/resolve-propagates-pkgfs-failure.cml"
   deps = [ ":resolve_propagates_pkgfs_failure" ]
 }
 
 fuchsia_test_component("resolve_recovers_from_http_errors-component") {
   component_name = "resolve-recovers-from-http-errors"
-  manifest = "meta/resolve-recovers-from-http-errors.cmx"
+  manifest = "meta/resolve-recovers-from-http-errors.cml"
   deps = [ ":resolve_recovers_from_http_errors" ]
 }
 
 fuchsia_test_component("resolve_resumes_blob_gets-component") {
   component_name = "resolve-resumes-blob-gets"
-  manifest = "meta/resolve-resumes-blob-gets.cmx"
+  manifest = "meta/resolve-resumes-blob-gets.cml"
   deps = [ ":resolve_resumes_blob_gets" ]
 }
 
 fuchsia_test_component("resolve_fails-component") {
   component_name = "resolve-fails"
-  manifest = "meta/resolve-fails.cmx"
+  manifest = "meta/resolve-fails.cml"
   deps = [ ":resolve_fails" ]
 }
 
 fuchsia_test_component("resolve_succeeds-component") {
   component_name = "resolve-succeeds"
-  manifest = "meta/resolve-succeeds.cmx"
+  manifest = "meta/resolve-succeeds.cml"
   deps = [ ":resolve_succeeds" ]
 }
 
 fuchsia_test_component("resolve_succeeds_with_broken_minfs-component") {
   component_name = "resolve-succeeds-with-broken-minfs"
-  manifest = "meta/resolve-succeeds-with-broken-minfs.cmx"
+  manifest = "meta/resolve-succeeds-with-broken-minfs.cml"
   deps = [ ":resolve_succeeds_with_broken_minfs" ]
 }
 
 fuchsia_test_component("system_cache_fallback-component") {
   component_name = "system-cache-fallback"
-  manifest = "meta/system-cache-fallback.cmx"
+  manifest = "meta/system-cache-fallback.cml"
   deps = [ ":system_cache_fallback" ]
 }
 
 fuchsia_test_component("base_pinning-component") {
   component_name = "base-pinning"
-  manifest = "meta/base-pinning.cmx"
+  manifest = "meta/base-pinning.cml"
   deps = [ ":base_pinning" ]
 }
 
 fuchsia_test_component("metrics-component") {
   component_name = "metrics"
-  manifest = "meta/metrics.cmx"
+  manifest = "meta/metrics.cml"
   deps = [ ":metrics" ]
 }
 
@@ -644,27 +640,65 @@ renamed_binary("pkg_resolver-binary") {
   source_deps = [ "//src/sys/pkg/bin/grand-swd-binary" ]
 }
 
+fuchsia_component("pkg_resolver_wrapper-component") {
+  component_name = "pkg-resolver-wrapper"
+  manifest = "meta/pkg-resolver-wrapper.cml"
+}
+
 fuchsia_component("pkg_resolver-component") {
   component_name = "pkg-resolver"
   deps = [ ":pkg_resolver-binary" ]
-  manifest = "//src/sys/pkg/bin/pkg-resolver/meta/pkg-resolver-isolated.cmx"
+  manifest = "meta/pkg-resolver-test-common.shard.cml"
 }
 
-fuchsia_component("pkg_local_mirror-component") {
-  component_name = "pkg-local-mirror"
-  manifest = "//src/sys/pkg/bin/pkg-local-mirror/meta/pkg-local-mirror.cmx"
-  deps = [ "//src/sys/pkg/bin/pkg-local-mirror:bin" ]
+fuchsia_component("pkg_resolver_allow_local_mirror-component") {
+  component_name = "pkg-resolver-allow-local-mirror"
+  deps = [ ":pkg_resolver-binary" ]
+  manifest = "meta/pkg-resolver-allow-local-mirror.cml"
 }
 
-fuchsia_component("pkg_cache-component") {
-  component_name = "pkg-cache"
-  manifest = "//src/sys/pkg/bin/pkg-cache/meta/pkg-cache-isolated.cmx"
-  deps = [ "//src/sys/pkg/bin/pkg-cache:bin" ]
+fuchsia_component("pkg_resolver_short_tuf_metadata_timeout-component") {
+  component_name = "pkg-resolver-short-tuf-metadata-timeout"
+  deps = [ ":pkg_resolver-binary" ]
+  manifest = "meta/pkg-resolver-short-tuf-metadata-timeout.cml"
+}
+
+fuchsia_component("pkg_resolver_zero_tuf_metadata_timeout-component") {
+  component_name = "pkg-resolver-zero-tuf-metadata-timeout"
+  deps = [ ":pkg_resolver-binary" ]
+  manifest = "meta/pkg-resolver-zero-tuf-metadata-timeout.cml"
+}
+
+fuchsia_component(
+    "pkg_resolver_zero_blob_download_resumption_attempts-component") {
+  component_name = "pkg-resolver-zero-blob-download-resumption-attempts"
+  deps = [ ":pkg_resolver-binary" ]
+  manifest = "meta/pkg-resolver-zero-blob-download-resumption-attempts.cml"
+}
+
+fuchsia_component("pkg_resolver_zero_blob_network_body_timeout-component") {
+  component_name = "pkg-resolver-zero-blob-network-body-timeout"
+  deps = [ ":pkg_resolver-binary" ]
+  manifest = "meta/pkg-resolver-zero-blob-network-body-timeout.cml"
+}
+
+fuchsia_component("pkg_resolver_zero_blob_network_header_timeout-component") {
+  component_name = "pkg-resolver-zero-blob-network-header-timeout"
+  deps = [ ":pkg_resolver-binary" ]
+  manifest = "meta/pkg-resolver-zero-blob-network-header-timeout.cml"
 }
 
 resource("ca.cert-resource") {
   sources = [ "//src/sys/pkg/lib/fuchsia-pkg-testing/certs/ca.cert" ]
   outputs = [ "data/ssl/cert.pem" ]
+}
+
+isolated_devmgr_v2_component("isolated-devmgr-component") {
+  package_name = "pkg-resolver-integration-tests"
+  deps = [
+    "//src/devices/bus/drivers/platform",
+    "//src/storage/testing:storage_drivers",
+  ]
 }
 
 fuchsia_test_package("pkg-resolver-integration-tests") {
@@ -686,17 +720,36 @@ fuchsia_test_package("pkg-resolver-integration-tests") {
   deps = [
     ":ca.cert-resource",
     ":empty-repo",
-    ":pkg_cache-component",
-    ":pkg_local_mirror-component",
+
+    # For ramdisk devices, needed to back blobfs (which in turn backs pkgfs and pkg-cache)
+    ":isolated-devmgr-component",
+    "//src/sys/pkg/bin/pkg-cache:component",
+    "//src/sys/pkg/bin/pkg-local-mirror",
+
+    # pkg-resolver components that vary by program arguments
     ":pkg_resolver-component",
+    ":pkg_resolver_allow_local_mirror-component",
+    ":pkg_resolver_short_tuf_metadata_timeout-component",
+    ":pkg_resolver_wrapper-component",
+    ":pkg_resolver_zero_blob_download_resumption_attempts-component",
+    ":pkg_resolver_zero_blob_network_body_timeout-component",
+    ":pkg_resolver_zero_blob_network_header_timeout-component",
+    ":pkg_resolver_zero_tuf_metadata_timeout-component",
+    "//src/connectivity/network/dns:component-v2",
+
+    # Isolated, low-deps netstack
+    "//src/connectivity/network/netstack:component-debug-v2",
+
+    # Embedded archivist, which we need for inspect
+    "//src/diagnostics/archivist:archivist-for-embedding",
 
     # binaries that are used at runtime.
     ":pkgsvr-binary",
     "//src/lib/storage/ramdevice_client:ramdisk-isolated-devmgr-component",
     "//src/storage/bin/blobfs",
     "//src/sys/pkg/bin/pm:pm_bin",
+    "//src/sys/pkg/bin/system-update-committer:component",
   ]
-
   test_specs = {
     log_settings = {
       max_severity = "ERROR"

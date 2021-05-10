@@ -1,0 +1,23 @@
+{
+    include: [ "src/sys/pkg/bin/pkg-resolver/meta/pkg-resolver-common.shard.cml" ],
+    use: [
+        {
+            protocol: [ "fuchsia.paver.Paver" ],
+            from: "parent",
+        },
+        {
+            storage: "data",
+            path: "/data",
+        },
+        {
+            directory: "skip-block",
+            rights: [ "rw*" ],
+            path: "/dev/class/skip-block",
+        },
+        {
+            directory: "platform",
+            rights: [ "rw*" ],
+            path: "/dev/sys/platform",
+        },
+    ],
+}

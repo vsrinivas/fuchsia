@@ -11,7 +11,10 @@ use {
     fuchsia_zircon::Status,
     futures::future::{BoxFuture, FutureExt as _},
     hyper::{Body, Response},
-    lib::{TestEnvBuilder, EMPTY_REPO_PATH, FILE_SIZE_LARGE_ENOUGH_TO_TRIGGER_HYPER_BATCHING},
+    lib::{
+        ResolverVariant, TestEnvBuilder, EMPTY_REPO_PATH,
+        FILE_SIZE_LARGE_ENOUGH_TO_TRIGGER_HYPER_BATCHING,
+    },
     std::{convert::TryInto as _, sync::Arc},
 };
 
@@ -398,7 +401,10 @@ async fn resume_enforces_max_resumption_limit() {
 
     let served_repository = repo.server().response_overrider(get_responder).start().unwrap();
 
-    let env = TestEnvBuilder::new().blob_download_resumption_attempts_limit(0).build().await;
+    let env = TestEnvBuilder::new()
+        .resolver_variant(ResolverVariant::ZeroBlobDownloadResumptionAttemptsLimit)
+        .build()
+        .await;
     env.register_repo(&served_repository).await;
     assert_eq!(env.resolve_package(&pkg_url).await.unwrap_err(), Status::UNAVAILABLE);
 

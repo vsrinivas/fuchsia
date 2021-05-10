@@ -11,25 +11,24 @@ use {
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_boot::{ArgumentsRequest, ArgumentsRequestStream},
     fidl_fuchsia_cobalt::{CobaltEvent, CountEvent, EventPayload},
-    fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryProxy, CLONE_FLAG_SAME_RIGHTS, OPEN_RIGHT_READABLE,
-        OPEN_RIGHT_WRITABLE,
-    },
+    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
+    fidl_fuchsia_io2::Operations,
     fidl_fuchsia_pkg::{
-        ExperimentToggle as Experiment, FontResolverMarker, FontResolverProxy, LocalMirrorMarker,
-        PackageCacheMarker, PackageResolverAdminMarker, PackageResolverAdminProxy,
-        PackageResolverMarker, PackageResolverProxy, RepositoryManagerMarker,
-        RepositoryManagerProxy,
+        ExperimentToggle as Experiment, FontResolverMarker, FontResolverProxy, PackageCacheMarker,
+        PackageResolverAdminMarker, PackageResolverAdminProxy, PackageResolverMarker,
+        PackageResolverProxy, RepositoryManagerMarker, RepositoryManagerProxy,
     },
     fidl_fuchsia_pkg_ext::{BlobId, RepositoryConfig, RepositoryConfigBuilder, RepositoryConfigs},
     fidl_fuchsia_pkg_rewrite::{
         EngineMarker as RewriteEngineMarker, EngineProxy as RewriteEngineProxy,
     },
     fidl_fuchsia_pkg_rewrite_ext::{Rule, RuleConfig},
+    fidl_fuchsia_sys2::{RealmMarker, RealmProxy},
     fuchsia_async as fasync,
-    fuchsia_component::{
-        client::{App, AppBuilder},
-        server::{NestedEnvironment, ServiceFs},
+    fuchsia_component::server::ServiceFs,
+    fuchsia_component_test::{
+        builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
+        RealmInstance, ScopedInstance, ScopedInstanceFactory,
     },
     fuchsia_merkle::{Hash, MerkleTree},
     fuchsia_pkg_testing::SystemImageBuilder,
@@ -221,35 +220,21 @@ pub enum DirOrProxy {
     Proxy(DirectoryProxy),
 }
 
-pub trait AppBuilderExt {
-    fn add_dir_or_proxy_to_namespace(
-        self,
-        path: impl Into<String>,
-        dir_or_proxy: &DirOrProxy,
-    ) -> Self;
-}
-
-impl AppBuilderExt for AppBuilder {
-    fn add_dir_or_proxy_to_namespace(
-        self,
-        path: impl Into<String>,
-        dir_or_proxy: &DirOrProxy,
-    ) -> Self {
-        match dir_or_proxy {
+impl DirOrProxy {
+    fn to_proxy(&self, rights: u32) -> DirectoryProxy {
+        match &self {
             DirOrProxy::Dir(d) => {
-                self.add_dir_to_namespace(path.into(), File::open(d.path()).unwrap()).unwrap()
+                io_util::directory::open_in_namespace(d.path().to_str().unwrap(), rights).unwrap()
             }
-            DirOrProxy::Proxy(p) => {
-                self.add_handle_to_namespace(path.into(), clone_directory_proxy(p))
-            }
+            DirOrProxy::Proxy(p) => clone_directory_proxy(p, rights),
         }
     }
 }
 
-pub fn clone_directory_proxy(proxy: &DirectoryProxy) -> zx::Handle {
+pub fn clone_directory_proxy(proxy: &DirectoryProxy, rights: u32) -> DirectoryProxy {
     let (client, server) = fidl::endpoints::create_endpoints().unwrap();
-    proxy.clone(CLONE_FLAG_SAME_RIGHTS, server).unwrap();
-    client.into()
+    proxy.clone(rights, server).unwrap();
+    ClientEnd::<DirectoryMarker>::new(client.into_channel()).into_proxy().unwrap()
 }
 
 async fn pkgfs_with_system_image() -> PkgfsRamdisk {
@@ -274,6 +259,16 @@ pub async fn pkgfs_with_system_image_and_pkg(
         .unwrap()
 }
 
+pub enum ResolverVariant {
+    DefaultArgs,
+    AllowLocalMirror,
+    ZeroTufMetadataTimeout,
+    ShortTufMetadataTimeout,
+    ZeroBlobNetworkHeaderTimeout,
+    ZeroBlobNetworkBodyTimeout,
+    ZeroBlobDownloadResumptionAttemptsLimit,
+}
+
 pub struct TestEnvBuilder<PkgFsFn, PkgFsFut, MountsFn>
 where
     PkgFsFn: FnOnce() -> PkgFsFut,
@@ -283,11 +278,7 @@ where
     mounts: MountsFn,
     boot_arguments_service: Option<BootArgumentsService<'static>>,
     local_mirror_repo: Option<(Arc<Repository>, RepoUrl)>,
-    allow_local_mirror: bool,
-    tuf_metadata_timeout: Option<Duration>,
-    blob_network_header_timeout: Option<Duration>,
-    blob_network_body_timeout: Option<Duration>,
-    blob_download_resumption_attempts_limit: Option<u64>,
+    resolver_variant: ResolverVariant,
 }
 
 impl
@@ -309,11 +300,7 @@ impl
             },
             boot_arguments_service: None,
             local_mirror_repo: None,
-            allow_local_mirror: false,
-            tuf_metadata_timeout: None,
-            blob_network_header_timeout: None,
-            blob_network_body_timeout: None,
-            blob_download_resumption_attempts_limit: None,
+            resolver_variant: ResolverVariant::DefaultArgs,
         }
     }
 }
@@ -337,11 +324,7 @@ where
             mounts: self.mounts,
             boot_arguments_service: self.boot_arguments_service,
             local_mirror_repo: self.local_mirror_repo,
-            allow_local_mirror: self.allow_local_mirror,
-            tuf_metadata_timeout: self.tuf_metadata_timeout,
-            blob_network_header_timeout: self.blob_network_header_timeout,
-            blob_network_body_timeout: self.blob_network_body_timeout,
-            blob_download_resumption_attempts_limit: self.blob_download_resumption_attempts_limit,
+            resolver_variant: self.resolver_variant,
         }
     }
     pub fn mounts(
@@ -353,11 +336,7 @@ where
             mounts: || mounts,
             boot_arguments_service: self.boot_arguments_service,
             local_mirror_repo: self.local_mirror_repo,
-            allow_local_mirror: self.allow_local_mirror,
-            tuf_metadata_timeout: self.tuf_metadata_timeout,
-            blob_network_header_timeout: self.blob_network_header_timeout,
-            blob_network_body_timeout: self.blob_network_body_timeout,
-            blob_download_resumption_attempts_limit: self.blob_download_resumption_attempts_limit,
+            resolver_variant: self.resolver_variant,
         }
     }
     pub fn boot_arguments_service(self, svc: BootArgumentsService<'static>) -> Self {
@@ -366,11 +345,7 @@ where
             mounts: self.mounts,
             boot_arguments_service: Some(svc),
             local_mirror_repo: self.local_mirror_repo,
-            allow_local_mirror: self.allow_local_mirror,
-            tuf_metadata_timeout: self.tuf_metadata_timeout,
-            blob_network_header_timeout: self.blob_network_header_timeout,
-            blob_network_body_timeout: self.blob_network_body_timeout,
-            blob_download_resumption_attempts_limit: self.blob_download_resumption_attempts_limit,
+            resolver_variant: self.resolver_variant,
         }
     }
 
@@ -379,210 +354,243 @@ where
         self
     }
 
-    pub fn allow_local_mirror(mut self) -> Self {
-        assert_eq!(self.allow_local_mirror, false, "allow_local_mirror should only be set once");
-        self.allow_local_mirror = true;
-        self
-    }
-
-    pub fn tuf_metadata_timeout(mut self, timeout: Duration) -> Self {
-        assert!(
-            self.tuf_metadata_timeout.is_none(),
-            "tuf_metadata_timeout should only be set once"
-        );
-        assert_eq!(
-            timeout,
-            Duration::from_secs(timeout.as_secs()),
-            "tuf_metadata_timeout must be a whole number of seconds, because the command line \
-            flag is in seconds"
-        );
-        self.tuf_metadata_timeout = Some(timeout);
-        self
-    }
-
-    pub fn blob_network_header_timeout(mut self, timeout: Duration) -> Self {
-        assert!(
-            self.blob_network_header_timeout.is_none(),
-            "blob_network_header_timeout should only be set once"
-        );
-        assert_eq!(
-            timeout,
-            Duration::from_secs(timeout.as_secs()),
-            "blob_network_header_timeout must be a whole number of seconds, because the command line \
-            flag is in seconds"
-        );
-        self.blob_network_header_timeout = Some(timeout);
-        self
-    }
-
-    pub fn blob_network_body_timeout(mut self, timeout: Duration) -> Self {
-        assert!(
-            self.blob_network_body_timeout.is_none(),
-            "blob_network_body_timeout should only be set once"
-        );
-        assert_eq!(
-            timeout,
-            Duration::from_secs(timeout.as_secs()),
-            "blob_network_body_timeout must be a whole number of seconds, because the command line \
-            flag is in seconds"
-        );
-        self.blob_network_body_timeout = Some(timeout);
-        self
-    }
-
-    pub fn blob_download_resumption_attempts_limit(mut self, limit: u64) -> Self {
-        assert!(
-            self.blob_download_resumption_attempts_limit.is_none(),
-            "blob_download_resumption_attempts_limit should only be set once"
-        );
-        self.blob_download_resumption_attempts_limit = Some(limit);
+    pub fn resolver_variant(mut self, variant: ResolverVariant) -> Self {
+        self.resolver_variant = variant;
         self
     }
 
     pub async fn build(self) -> TestEnv<PkgFsFut::Output> {
+        let mut fs = ServiceFs::new();
+
         let pkgfs = (self.pkgfs)().await;
         let mounts = (self.mounts)();
 
-        let mut pkg_cache = AppBuilder::new(
-            "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-cache.cmx"
-                .to_owned(),
-        )
-        .add_handle_to_namespace(
-            "/pkgfs".to_owned(),
-            pkgfs.root_dir_handle().expect("pkgfs dir to open").into(),
-        )
-        .add_handle_to_namespace(
-            "/blob".to_owned(),
-            pkgfs.blobfs_root_dir_handle().expect("blob dir to open").into(),
+        fs.add_remote(
+            "pkgfs",
+            pkgfs.root_dir_handle().expect("pkgfs dir to open").into_proxy().unwrap(),
+        );
+        fs.add_remote(
+            "blob",
+            pkgfs.blobfs_root_dir_handle().expect("blob dir to open").into_proxy().unwrap(),
+        );
+        fs.add_remote(
+            "data",
+            mounts.pkg_resolver_data.to_proxy(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE),
+        );
+        fs.dir("config")
+            .add_remote("data", mounts.pkg_resolver_config_data.to_proxy(OPEN_RIGHT_READABLE));
+        fs.dir("config").add_remote(
+            "ssl",
+            io_util::directory::open_in_namespace("/pkg/data/ssl", OPEN_RIGHT_READABLE).unwrap(),
         );
 
         let local_mirror_dir = tempfile::tempdir().unwrap();
-        let mut local_mirror = if let Some((repo, url)) = self.local_mirror_repo {
+        if let Some((repo, url)) = self.local_mirror_repo {
             let proxy = io_util::directory::open_in_namespace(
                 local_mirror_dir.path().to_str().unwrap(),
                 OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             )
             .unwrap();
             repo.copy_local_repository_to_dir(&proxy, &url).await;
-
-            Some(AppBuilder::new(
-                "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-local-mirror.cmx"
-                    .to_owned(),
-            ).add_dir_to_namespace("/usb/0/fuchsia_pkg".to_owned(), std::fs::File::open(local_mirror_dir.path()).unwrap()).unwrap())
-        } else {
-            None
-        };
-
-        let pkg_resolver = AppBuilder::new(RESOLVER_MANIFEST_URL.to_owned())
-            .add_handle_to_namespace(
-                "/pkgfs".to_owned(),
-                pkgfs.root_dir_handle().expect("pkgfs dir to open").into(),
-            )
-            .add_dir_or_proxy_to_namespace("/data", &mounts.pkg_resolver_data)
-            .add_dir_or_proxy_to_namespace("/config/data", &mounts.pkg_resolver_config_data)
-            .add_dir_to_namespace("/config/ssl".to_owned(), File::open("/pkg/data/ssl").unwrap())
-            .unwrap();
-
-        let pkg_resolver = if self.allow_local_mirror {
-            pkg_resolver.args(vec!["--allow-local-mirror", "true"])
-        } else {
-            pkg_resolver
-        };
-
-        let pkg_resolver = if let Some(timeout) = self.tuf_metadata_timeout {
-            pkg_resolver.args(vec![
-                "--tuf-metadata-timeout-seconds".to_string(),
-                timeout.as_secs().to_string(),
-            ])
-        } else {
-            pkg_resolver
-        };
-
-        let pkg_resolver = if let Some(timeout) = self.blob_network_header_timeout {
-            pkg_resolver.args(vec![
-                "--blob-network-header-timeout-seconds".to_string(),
-                timeout.as_secs().to_string(),
-            ])
-        } else {
-            pkg_resolver
-        };
-
-        let pkg_resolver = if let Some(timeout) = self.blob_network_body_timeout {
-            pkg_resolver.args(vec![
-                "--blob-network-body-timeout-seconds".to_string(),
-                timeout.as_secs().to_string(),
-            ])
-        } else {
-            pkg_resolver
-        };
-
-        let pkg_resolver = if let Some(limit) = self.blob_download_resumption_attempts_limit {
-            pkg_resolver.args(vec![
-                "--blob-download-resumption-attempts-limit".to_string(),
-                limit.to_string(),
-            ])
-        } else {
-            pkg_resolver
-        };
-
-        let mut fs = ServiceFs::new();
-        fs.add_proxy_service::<fidl_fuchsia_net::NameLookupMarker, _>()
-            .add_proxy_service::<fidl_fuchsia_posix_socket::ProviderMarker, _>()
-            .add_proxy_service::<fidl_fuchsia_logger::LogSinkMarker, _>()
-            .add_proxy_service::<fidl_fuchsia_tracing_provider::RegistryMarker, _>()
-            .add_proxy_service_to::<PackageCacheMarker, _>(
-                pkg_cache.directory_request().unwrap().clone(),
-            );
-        if let Some(local_mirror) = local_mirror.as_mut() {
-            fs.add_proxy_service_to::<LocalMirrorMarker, _>(
-                local_mirror.directory_request().unwrap().clone(),
-            );
+            fs.dir("usb").dir("0").add_remote("fuchsia_pkg", proxy);
         }
 
         if let Some(boot_arguments_service) = self.boot_arguments_service {
             let mock_arg_svc = Arc::new(boot_arguments_service);
-            fs.add_fidl_service(move |stream: ArgumentsRequestStream| {
+            fs.dir("svc").add_fidl_service(move |stream: ArgumentsRequestStream| {
                 fasync::Task::spawn(Arc::clone(&mock_arg_svc).run_service(stream)).detach();
             });
         }
 
         let logger_factory = Arc::new(MockLoggerFactory::new());
         let logger_factory_clone = Arc::clone(&logger_factory);
-        fs.add_fidl_service(move |stream| {
+        fs.dir("svc").add_fidl_service(move |stream| {
             fasync::Task::spawn(Arc::clone(&logger_factory_clone).run_logger_factory(stream))
                 .detach()
         });
 
-        let mut salt = [0; 4];
-        zx::cprng_draw(&mut salt[..]).expect("zx_cprng_draw does not fail");
-        let environment_label = format!("pkg-resolver-env_{}", hex::encode(&salt));
-        let env = fs
-            .create_nested_environment(&environment_label)
-            .expect("nested environment to create successfully");
-        fasync::Task::spawn(fs.collect()).detach();
+        let fs_holder = Mutex::new(Some(fs));
+        let read_star_rights = Operations::from_bits(fidl_fuchsia_io2::R_STAR_DIR).unwrap();
+        let read_write_star_rights = Operations::from_bits(fidl_fuchsia_io2::RW_STAR_DIR).unwrap();
 
-        let pkg_cache = pkg_cache.spawn(env.launcher()).expect("package cache to launch");
-        let pkg_resolver = pkg_resolver.spawn(env.launcher()).expect("package resolver to launch");
-        let local_mirror =
-            local_mirror.map(|app| app.spawn(env.launcher()).expect("local mirror to launch"));
+        let mut builder = RealmBuilder::new().await.unwrap();
+        builder
+            .add_component("pkg_cache", ComponentSource::url("fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-cache.cm")).await.unwrap()
+            .add_component("system_update_committer", ComponentSource::url("fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/system-update-committer.cm")).await.unwrap()
+            .add_component("service_reflector", ComponentSource::mock(move |mock_handles| {
+                let mut rfs = fs_holder.lock().take().expect("mock component should only be launched once");
+                async {
+                    rfs.serve_connection(mock_handles.outgoing_dir.into_channel()).unwrap();
+                    let () = rfs.collect().await;
+                    Ok::<(), anyhow::Error>(())
+                }.boxed()
+            })).await.unwrap()
+            .add_component("local_mirror", ComponentSource::url("fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-local-mirror.cm")).await.unwrap()
+            .add_component("pkg_resolver_wrapper", ComponentSource::url("fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-resolver-wrapper.cm")).await.unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.logger.LogSink"),
+                source: RouteEndpoint::AboveRoot,
+                targets: vec![
+                    RouteEndpoint::component("pkg_cache"),
+                    RouteEndpoint::component("system_update_committer"),
+                    RouteEndpoint::component("local_mirror"),
+                    RouteEndpoint::component("pkg_resolver_wrapper"),
+                ],
+            }).unwrap()
+
+            // Make sure pkg_resolver has network access as required by the hyper client shard
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.net.NameLookup"),
+                source: RouteEndpoint::AboveRoot,
+                targets: vec![
+                    RouteEndpoint::component("pkg_resolver_wrapper"),
+                ],
+            }).unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.posix.socket.Provider"),
+                source: RouteEndpoint::AboveRoot,
+                targets: vec![
+                    RouteEndpoint::component("pkg_resolver_wrapper"),
+                ],
+            }).unwrap()
+
+            // Fill out the rest of the `use` stanzas for pkg_resolver and pkg_cache
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.boot.Arguments"),
+                source: RouteEndpoint::component("service_reflector"),
+                targets: vec![
+                    RouteEndpoint::component("pkg_resolver_wrapper"),
+                ],
+            }).unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.cobalt.LoggerFactory"),
+                source: RouteEndpoint::component("service_reflector"),
+                targets: vec![
+                    RouteEndpoint::component("pkg_cache"),
+                    RouteEndpoint::component("pkg_resolver_wrapper"),
+                ],
+            }).unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.pkg.LocalMirror"),
+                source: RouteEndpoint::component("local_mirror"),
+                targets: vec![
+                    RouteEndpoint::component("pkg_resolver_wrapper"),
+                ],
+            }).unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.pkg.PackageCache"),
+                source: RouteEndpoint::component("pkg_cache"),
+                targets: vec![
+                    RouteEndpoint::component("pkg_resolver_wrapper"),
+                    RouteEndpoint::AboveRoot,
+                ],
+            }).unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.tracing.provider.Registry"),
+                source: RouteEndpoint::component("service_reflector"),
+                targets: vec![
+                    RouteEndpoint::component("pkg_cache"),
+                    RouteEndpoint::component("pkg_resolver_wrapper"),
+                ],
+            }).unwrap()
+
+            // Route the Realm protocol from the pkg_resolver_wrapper so that
+            // the test can control starting and stopping pkg-resolver.
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.sys2.Realm"),
+                source: RouteEndpoint::component("pkg_resolver_wrapper"),
+                targets: vec![
+                    RouteEndpoint::AboveRoot,
+                ],
+            }).unwrap()
+
+            // Directory routes
+            .add_route(CapabilityRoute {
+                capability: Capability::directory("pkgfs", "/pkgfs", read_write_star_rights),
+                source: RouteEndpoint::component("service_reflector"),
+                targets: vec![
+                    RouteEndpoint::component("pkg_cache"),
+                    RouteEndpoint::component("pkg_resolver_wrapper"),
+                ],
+            }).unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::directory("blob", "/blob", read_write_star_rights),
+                source: RouteEndpoint::component("service_reflector"),
+                targets: vec![ RouteEndpoint::component("pkg_cache") ],
+            }).unwrap()
+            // route mock /usb to local_mirror
+            .add_route(CapabilityRoute {
+                capability: Capability::directory("usb", "/usb", read_write_star_rights),
+                source: RouteEndpoint::component("service_reflector"),
+                targets: vec![ RouteEndpoint::component("local_mirror") ],
+            }).unwrap()
+
+            .add_route(CapabilityRoute {
+                capability: Capability::directory("config-data", "/config/data", read_star_rights),
+                source: RouteEndpoint::component("service_reflector"),
+                targets: vec![
+                    RouteEndpoint::component("pkg_resolver_wrapper"),
+                ],
+            }).unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::directory("root-ssl-certificates", "/config/ssl", read_star_rights),
+                source: RouteEndpoint::component("service_reflector"),
+                targets: vec![
+                    RouteEndpoint::component("pkg_resolver_wrapper"),
+                ],
+            }).unwrap()
+
+            // TODO(fxbug.dev/75658): Change to storage once convenient.
+            .add_route(CapabilityRoute {
+                capability: Capability::directory("data", "/data", read_write_star_rights),
+                source: RouteEndpoint::component("service_reflector"),
+                targets: vec![
+                    RouteEndpoint::component("pkg_resolver_wrapper"),
+                ],
+            }).unwrap();
+
+        let realm_instance = builder.build().create().await.unwrap();
+
+        let realm = realm_instance
+            .root
+            .connect_to_protocol_at_exposed_dir::<RealmMarker>()
+            .expect("connect to pkg_resolver_wrapper Realm");
+        let pkg_resolver = start_pkg_resolver(realm, &self.resolver_variant).await;
 
         TestEnv {
-            env,
             pkgfs,
-            proxies: Proxies::from_app(&pkg_resolver),
-            apps: Apps { pkg_cache, pkg_resolver, local_mirror },
+            proxies: Proxies::from_instance(&pkg_resolver),
+            apps: Apps { realm_instance, pkg_resolver: Some(pkg_resolver) },
             _mounts: mounts,
-            nested_environment_label: environment_label,
             mocks: Mocks { logger_factory },
             local_mirror_dir,
+            resolver_variant: self.resolver_variant,
         }
     }
 }
 
+async fn start_pkg_resolver(realm: RealmProxy, variant: &ResolverVariant) -> ScopedInstance {
+    // The only differences between these packages is additional arguments
+    // to the binary declared in the program section of the .cml file.
+    let url = match variant {
+        ResolverVariant::DefaultArgs => "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-resolver.cm",
+        ResolverVariant::AllowLocalMirror => "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-resolver-allow-local-mirror.cm",
+        ResolverVariant::ZeroTufMetadataTimeout => "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-resolver-zero-tuf-metadata-timeout.cm",
+        ResolverVariant::ShortTufMetadataTimeout => "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-resolver-short-tuf-metadata-timeout.cm",
+        ResolverVariant::ZeroBlobNetworkHeaderTimeout => "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-resolver-zero-blob-network-header-timeout.cm",
+        ResolverVariant::ZeroBlobNetworkBodyTimeout => "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-resolver-zero-blob-network-body-timeout.cm",
+        ResolverVariant::ZeroBlobDownloadResumptionAttemptsLimit => "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-resolver-zero-blob-download-resumption-attempts.cm",
+    };
+    ScopedInstanceFactory::new("pkg-resolver-coll")
+        .with_realm_proxy(realm)
+        .new_named_instance("pkg-resolver", url)
+        .await
+        .expect("failed to launch pkg-resolver")
+}
+
 pub struct Apps {
-    pub pkg_cache: App,
-    pub pkg_resolver: App,
-    pub local_mirror: Option<App>,
+    pub realm_instance: RealmInstance,
+    pub pkg_resolver: Option<ScopedInstance>,
 }
 
 pub struct Proxies {
@@ -594,22 +602,22 @@ pub struct Proxies {
 }
 
 impl Proxies {
-    pub fn from_app(app: &App) -> Self {
+    fn from_instance(instance: &ScopedInstance) -> Proxies {
         Proxies {
-            resolver: app
-                .connect_to_protocol::<PackageResolverMarker>()
+            resolver: instance
+                .connect_to_protocol_at_exposed_dir::<PackageResolverMarker>()
                 .expect("connect to package resolver"),
-            resolver_admin: app
-                .connect_to_protocol::<PackageResolverAdminMarker>()
+            resolver_admin: instance
+                .connect_to_protocol_at_exposed_dir::<PackageResolverAdminMarker>()
                 .expect("connect to package resolver admin"),
-            repo_manager: app
-                .connect_to_protocol::<RepositoryManagerMarker>()
+            repo_manager: instance
+                .connect_to_protocol_at_exposed_dir::<RepositoryManagerMarker>()
                 .expect("connect to repository manager"),
-            rewrite_engine: app
-                .connect_to_protocol::<RewriteEngineMarker>()
+            rewrite_engine: instance
+                .connect_to_protocol_at_exposed_dir::<RewriteEngineMarker>()
                 .expect("connect to rewrite engine"),
-            font_resolver: app
-                .connect_to_protocol::<FontResolverMarker>()
+            font_resolver: instance
+                .connect_to_protocol_at_exposed_dir::<FontResolverMarker>()
                 .expect("connect to font resolver"),
         }
     }
@@ -621,13 +629,12 @@ pub struct Mocks {
 
 pub struct TestEnv<P = PkgfsRamdisk> {
     pub pkgfs: P,
-    pub env: NestedEnvironment,
     pub apps: Apps,
     pub proxies: Proxies,
     pub _mounts: Mounts,
-    pub nested_environment_label: String,
     pub mocks: Mocks,
     pub local_mirror_dir: TempDir,
+    resolver_variant: ResolverVariant,
 }
 
 impl TestEnv<PkgfsRamdisk> {
@@ -699,7 +706,6 @@ impl TestEnv<PkgfsRamdisk> {
         // Tear down the environment in reverse order, ending with the storage.
         drop(self.proxies);
         drop(self.apps);
-        drop(self.env);
         self.pkgfs.stop().await.expect("pkgfs to stop gracefully");
     }
 }
@@ -826,22 +832,18 @@ impl<P: PkgFs> TestEnv<P> {
     }
 
     pub async fn restart_pkg_resolver(&mut self) {
-        // Start a new package resolver component
-        let pkg_resolver = AppBuilder::new(RESOLVER_MANIFEST_URL.to_owned())
-            .add_handle_to_namespace(
-                "/pkgfs".to_owned(),
-                self.pkgfs.root_dir_handle().expect("pkgfs dir to open").into(),
-            )
-            .add_dir_or_proxy_to_namespace("/data", &self._mounts.pkg_resolver_data)
-            .add_dir_or_proxy_to_namespace("/config/data", &self._mounts.pkg_resolver_config_data)
-            .add_dir_to_namespace("/config/ssl".to_owned(), File::open("/pkg/data/ssl").unwrap())
-            .unwrap();
-        let pkg_resolver =
-            pkg_resolver.spawn(self.env.launcher()).expect("package resolver to launch");
+        let waiter = self.apps.pkg_resolver.as_mut().unwrap().take_destroy_waiter();
+        drop(self.apps.pkg_resolver.take());
+        waiter.await.expect("failed to destroy pkg-resolver");
 
-        // Previous pkg-resolver terminated when its app goes out of scope
-        self.proxies = Proxies::from_app(&pkg_resolver);
-        self.apps.pkg_resolver = pkg_resolver;
+        let realm = self
+            .apps
+            .realm_instance
+            .root
+            .connect_to_protocol_at_exposed_dir::<RealmMarker>()
+            .expect("connect to pkg_resolver_wrapper Realm");
+        self.apps.pkg_resolver = Some(start_pkg_resolver(realm, &self.resolver_variant).await);
+        self.proxies = Proxies::from_instance(self.apps.pkg_resolver.as_ref().unwrap());
 
         self.wait_for_pkg_resolver_to_start().await;
     }
@@ -858,7 +860,9 @@ impl<P: PkgFs> TestEnv<P> {
     pub fn connect_to_resolver(&self) -> PackageResolverProxy {
         self.apps
             .pkg_resolver
-            .connect_to_protocol::<PackageResolverMarker>()
+            .as_ref()
+            .unwrap()
+            .connect_to_protocol_at_exposed_dir::<PackageResolverMarker>()
             .expect("connect to package resolver")
     }
 
@@ -876,7 +880,12 @@ impl<P: PkgFs> TestEnv<P> {
     }
 
     pub async fn open_cached_package(&self, hash: BlobId) -> Result<DirectoryProxy, zx::Status> {
-        let cache_service = self.apps.pkg_cache.connect_to_protocol::<PackageCacheMarker>().unwrap();
+        let cache_service = self
+            .apps
+            .realm_instance
+            .root
+            .connect_to_protocol_at_exposed_dir::<PackageCacheMarker>()
+            .unwrap();
         let (proxy, server_end) = fidl::endpoints::create_proxy().unwrap();
         let () = cache_service
             .open(&mut hash.into(), &mut std::iter::empty(), server_end)
@@ -887,10 +896,15 @@ impl<P: PkgFs> TestEnv<P> {
     }
 
     pub async fn pkg_resolver_inspect_hierarchy(&self) -> DiagnosticsHierarchy {
+        let nested_environment_label = format!(
+            "fuchsia_component_test_collection\\:{}",
+            self.apps.realm_instance.root.child_name()
+        );
         ArchiveReader::new()
             .add_selector(ComponentSelector::new(vec![
-                self.nested_environment_label.clone(),
-                "pkg-resolver.cmx".to_string(),
+                nested_environment_label.to_string(),
+                "pkg_resolver_wrapper".to_string(),
+                "pkg-resolver-coll\\:pkg-resolver".to_string(),
             ]))
             .snapshot::<Inspect>()
             .await
@@ -953,8 +967,6 @@ impl<P: PkgFs> TestEnv<P> {
 }
 
 pub const EMPTY_REPO_PATH: &str = "/pkg/empty-repo";
-const RESOLVER_MANIFEST_URL: &str =
-    "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-resolver.cmx";
 
 // The following functions generate unique test package dummy content. Callers are recommended
 // to pass in the name of the test case.
