@@ -25,6 +25,7 @@ action("cargo_toml_gen_desc") {
   script = "//scripts/generate_cargo_desc.py"
   sources = []
   inputs = []
+  hermetic_deps = false
   outputs = [ cargo_toml_gen_desc_out ]
   depfile = "$cargo_toml_gen_desc_out.d"
   args = [
@@ -68,6 +69,7 @@ action("cargo_toml_gen") {
     cargo_toml_gen_desc_out,
     "//third_party/rust_crates/Cargo.toml",
   ]
+  hermetic_deps = false
 
   outputs = [ "$root_build_dir/cargo/generate_cargo.stamp" ]
   depfile = "$root_build_dir/cargo/generate_cargo.stamp.d"
