@@ -10,6 +10,7 @@
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/inspect/cpp/reader.h>
 #include <lib/mock-i2c/mock-i2c.h>
+#include <math.h>
 
 #include <map>
 
@@ -94,7 +95,7 @@ class Lp8556DeviceTest : public zxtest::Test, public inspect::InspectTestHelper 
 
   void VerifySetBrightness(bool power, double brightness) {
     if (brightness != dev_->GetDeviceBrightness()) {
-      uint16_t brightness_reg_value = static_cast<uint16_t>(brightness * kBrightnessRegMaxValue);
+      uint16_t brightness_reg_value = static_cast<uint16_t>(ceil(brightness * kBrightnessRegMaxValue));
       mock_i2c_.ExpectWriteStop({kBacklightBrightnessLsbReg,
                                  static_cast<uint8_t>(brightness_reg_value & kBrightnessLsbMask)});
       // An I2C bus read is a write of the address followed by a read of the data.
@@ -334,20 +335,20 @@ TEST_F(Lp8556DeviceTest, SetAbsoluteBrightnessScaleReset) {
   mock_i2c_.ExpectWrite({kCurrentMsbReg})
       .ExpectReadStop({0x6e})
       .ExpectWriteStop({kCurrentLsbReg, 0x05, 0x6e})
-      .ExpectWriteStop({kBacklightBrightnessLsbReg, 0xff})
+      .ExpectWriteStop({kBacklightBrightnessLsbReg, 0x00})
       .ExpectWrite({kBacklightBrightnessMsbReg})
       .ExpectReadStop({0xab})
-      .ExpectWriteStop({kBacklightBrightnessMsbReg, 0xa7});
+      .ExpectWriteStop({kBacklightBrightnessMsbReg, 0xa8});
 
   auto absolute_result_1 = backlight_client.SetStateAbsolute({true, 175.0});
   EXPECT_TRUE(absolute_result_1.ok());
   EXPECT_FALSE(absolute_result_1.value().result.is_err());
 
   // The scale is already set to the default, so the register should not be written again.
-  mock_i2c_.ExpectWriteStop({kBacklightBrightnessLsbReg, 0xff})
+  mock_i2c_.ExpectWriteStop({kBacklightBrightnessLsbReg, 0x00})
       .ExpectWrite({kBacklightBrightnessMsbReg})
       .ExpectReadStop({0x1b})
-      .ExpectWriteStop({kBacklightBrightnessMsbReg, 0x13});
+      .ExpectWriteStop({kBacklightBrightnessMsbReg, 0x14});
 
   auto absolute_result_2 = backlight_client.SetStateAbsolute({true, 87.5});
   EXPECT_TRUE(absolute_result_2.ok());

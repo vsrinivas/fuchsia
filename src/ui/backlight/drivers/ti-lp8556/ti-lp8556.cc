@@ -6,6 +6,7 @@
 #include <fuchsia/hardware/composite/cpp/banjo.h>
 #include <lib/device-protocol/i2c.h>
 #include <lib/device-protocol/pdev.h>
+#include <math.h>
 
 #include <algorithm>
 
@@ -35,7 +36,8 @@ zx_status_t Lp8556Device::SetBacklightState(bool power, double brightness) {
   brightness = std::min(brightness, 1.0);
 
   if (brightness != brightness_) {
-    uint16_t brightness_reg_value = static_cast<uint16_t>(brightness * kBrightnessRegMaxValue);
+    uint16_t brightness_reg_value =
+        static_cast<uint16_t>(ceil(brightness * kBrightnessRegMaxValue));
 
     // LSB should be updated before MSB. Writing to MSB triggers the brightness change.
     uint8_t buf[2];
