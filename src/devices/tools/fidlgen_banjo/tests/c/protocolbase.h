@@ -14,6 +14,7 @@
 __BEGIN_CDECLS
 
 // Forward declarations
+
 typedef struct synchronous_base_protocol synchronous_base_protocol_t;
 typedef struct synchronous_base_protocol_ops synchronous_base_protocol_ops_t;
 typedef void (*async_base_status_callback)(void* ctx, zx_status_t status, zx_status_t status_2);
@@ -29,6 +30,7 @@ typedef struct async_base_protocol async_base_protocol_t;
 typedef struct async_base_protocol_ops async_base_protocol_ops_t;
 
 // Declarations
+
 struct synchronous_base_protocol_ops {
     zx_status_t (*status)(void* ctx, zx_status_t status, zx_status_t* out_status_2);
     zx_time_t (*time)(void* ctx, zx_time_t time, zx_time_t* out_time_2);
@@ -67,6 +69,7 @@ struct async_base_protocol {
 
 
 // Helpers
+
 static inline zx_status_t synchronous_base_status(const synchronous_base_protocol_t* proto, zx_status_t status, zx_status_t* out_status_2) {
     return proto->ops->status(proto->ctx, status, out_status_2);
 }

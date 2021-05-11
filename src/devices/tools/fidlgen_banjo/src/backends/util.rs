@@ -76,20 +76,30 @@ impl From<&Option<Vec<Attribute>>> for ProtocolType {
 
 pub fn filter_protocol<'b>(declaration: &Decl<'b>) -> Option<&'b Interface> {
     match declaration {
-        Decl::Interface { data } => match ProtocolType::from(&data.maybe_attributes) {
-            ProtocolType::Protocol => Some(data),
-            _ => None,
-        },
+        Decl::Interface { data } => {
+            if !for_banjo_transport(&data.maybe_attributes) {
+                return None;
+            }
+            match ProtocolType::from(&data.maybe_attributes) {
+                ProtocolType::Protocol => Some(data),
+                _ => None,
+            }
+        }
         _ => None,
     }
 }
 
 pub fn filter_interface<'b>(declaration: &Decl<'b>) -> Option<&'b Interface> {
     match declaration {
-        Decl::Interface { data } => match ProtocolType::from(&data.maybe_attributes) {
-            ProtocolType::Interface => Some(data),
-            _ => None,
-        },
+        Decl::Interface { data } => {
+            if !for_banjo_transport(&data.maybe_attributes) {
+                return None;
+            }
+            match ProtocolType::from(&data.maybe_attributes) {
+                ProtocolType::Interface => Some(data),
+                _ => None,
+            }
+        }
         _ => None,
     }
 }
@@ -114,29 +124,15 @@ pub fn get_doc_comment(maybe_attrs: &Option<Vec<Attribute>>, tabs: usize) -> Str
     "".to_string()
 }
 
-pub fn validate_transport(maybe_attrs: &Option<Vec<Attribute>>) -> Result<(), Error> {
+pub fn for_banjo_transport(maybe_attrs: &Option<Vec<Attribute>>) -> bool {
     if let Some(attrs) = maybe_attrs {
         for attr in attrs.iter() {
             if to_lower_snake_case(&attr.name) == ATTR_NAME_TRANSPORT {
-                if attr.value == "Banjo" {
-                    return Ok(());
-                } else {
-                    return Err(anyhow!("Invalid transport, expected \"Banjo\": {:?}", attr.value));
-                }
+                return attr.value == "Banjo";
             }
         }
     }
-    return Err(anyhow!("Transport attribute not specified, expected \"Banjo\""));
-}
-
-pub fn validate_declarations(declarations: &Vec<Decl<'_>>) -> Result<(), Error> {
-    for data in declarations.iter().filter_map(|declaration| match declaration {
-        Decl::Interface { data } => Some(data),
-        _ => None,
-    }) {
-        validate_transport(&data.maybe_attributes)?;
-    }
-    Ok(())
+    false
 }
 
 //---------------------------------------------

@@ -5,9 +5,9 @@
 use {
     super::{
         util::{
-            array_bounds, get_base_type_from_alias, get_declarations, get_doc_comment, name_buffer,
-            name_size, not_callback, primitive_type_to_c_str, to_c_name, validate_declarations,
-            Decl, ProtocolType,
+            array_bounds, for_banjo_transport, get_base_type_from_alias, get_declarations,
+            get_doc_comment, name_buffer, name_size, not_callback, primitive_type_to_c_str,
+            to_c_name, Decl, ProtocolType,
         },
         Backend,
     },
@@ -598,7 +598,9 @@ impl<'a, W: io::Write> CBackend<'a, W> {
     }
 
     fn codegen_protocol_helper(&self, data: &'a Interface, ir: &FidlIr) -> Result<String, Error> {
-        if ProtocolType::from(&data.maybe_attributes) == ProtocolType::Callback {
+        if ProtocolType::from(&data.maybe_attributes) == ProtocolType::Callback
+            || !for_banjo_transport(&data.maybe_attributes)
+        {
             return Ok("".to_string());
         }
         let name = data.name.get_name();
@@ -685,6 +687,9 @@ impl<'a, W: io::Write> CBackend<'a, W> {
     }
 
     fn codegen_protocol_def(&self, data: &'a Interface, ir: &FidlIr) -> Result<String, Error> {
+        if !for_banjo_transport(&data.maybe_attributes) {
+            return Ok("".to_string());
+        }
         let name = data.name.get_name();
         Ok(match ProtocolType::from(&data.maybe_attributes) {
             ProtocolType::Interface | ProtocolType::Protocol => format!(
@@ -747,6 +752,9 @@ impl<'a, W: io::Write> CBackend<'a, W> {
     }
 
     fn codegen_protocol_decl(&self, data: &'a Interface, ir: &FidlIr) -> Result<String, Error> {
+        if !for_banjo_transport(&data.maybe_attributes) {
+            return Ok("".to_string());
+        }
         let name = to_c_name(&data.name.get_name());
         Ok(match ProtocolType::from(&data.maybe_attributes) {
             ProtocolType::Interface | ProtocolType::Protocol => format!(
@@ -789,7 +797,6 @@ impl<'a, W: io::Write> Backend<'a, W> for CBackend<'a, W> {
         ))?;
 
         let decl_order = get_declarations(&ir)?;
-        validate_declarations(&decl_order)?;
 
         let declarations = decl_order
             .iter()

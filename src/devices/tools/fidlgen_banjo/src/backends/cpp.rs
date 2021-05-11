@@ -477,7 +477,6 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
 impl<'a, W: io::Write> Backend<'a, W> for CppBackend<'a, W> {
     fn codegen(&mut self, ir: FidlIr) -> Result<(), Error> {
         let decl_order = get_declarations(&ir)?;
-        validate_declarations(&decl_order)?;
         self.w.write_fmt(format_args!(
             include_str!("templates/cpp/header.h"),
             includes = self.codegen_includes(&decl_order, &ir)?,

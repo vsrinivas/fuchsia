@@ -118,7 +118,6 @@ impl<'a, W: io::Write> CppInternalBackend<'a, W> {
 impl<'a, W: io::Write> Backend<'a, W> for CppInternalBackend<'a, W> {
     fn codegen(&mut self, ir: FidlIr) -> Result<(), Error> {
         let decl_order = get_declarations(&ir)?;
-        validate_declarations(&decl_order)?;
         self.w.write_fmt(format_args!(
             include_str!("templates/cpp/internal.h"),
             protocol_static_asserts = self.codegen_protocol(&decl_order, &ir)?,
