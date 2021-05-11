@@ -286,6 +286,8 @@ multiconst!(zx_signals_t, [
 
     // Thread
     ZX_THREAD_TERMINATED        = ZX_OBJECT_SIGNAL_3;
+    ZX_THREAD_RUNNING           = ZX_OBJECT_SIGNAL_4;
+    ZX_THREAD_SUSPENDED         = ZX_OBJECT_SIGNAL_5;
 
     // Log
     ZX_LOG_READABLE             = ZX_OBJECT_READABLE;

@@ -31,7 +31,7 @@ unsafe impl ObjectQuery for TaskRuntimeInfo {
 }
 
 pub trait Task: AsHandleRef {
-    /// Kill the give task (job, process, or thread).
+    /// Kill the given task (job, process, or thread).
     ///
     /// Wraps the
     /// [zx_task_kill](https://fuchsia.dev/fuchsia-src/reference/syscalls/task_kill.md)
@@ -39,6 +39,20 @@ pub trait Task: AsHandleRef {
     // TODO(fxbug.dev/72722): guaranteed to return an error when called on a Thread.
     fn kill(&self) -> Result<(), Status> {
         ok(unsafe { sys::zx_task_kill(self.raw_handle()) })
+    }
+
+    /// Suspend the given task
+    ///
+    /// Wraps the
+    /// [zx_task_suspend](https://fuchsia.dev/fuchsia-src/reference/syscalls/task_suspend.md)
+    /// syscall.
+    ///
+    /// Resume the task by closing the returned handle.
+    fn suspend(&self) -> Result<Handle, Status> {
+        let mut suspend_token = 0;
+        let status = unsafe { sys::zx_task_suspend(self.raw_handle(), &mut suspend_token) };
+        ok(status)?;
+        unsafe { Ok(Handle::from_raw(suspend_token)) }
     }
 
     /// Create an exception channel (with options) for the task.

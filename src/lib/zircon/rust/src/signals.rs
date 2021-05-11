@@ -105,6 +105,8 @@ bitflags! {
 
         // Thread
         const THREAD_TERMINATED = ZX_THREAD_TERMINATED;
+        const THREAD_RUNNING    = ZX_THREAD_RUNNING;
+        const THREAD_SUSPENDED  = ZX_THREAD_SUSPENDED;
 
         // Log
         const LOG_READABLE = ZX_LOG_READABLE;
