@@ -35,7 +35,9 @@ class Driver;
 namespace display {
 
 class SysmemProxyDevice;
-using DdkDeviceType2 = ddk::Device<SysmemProxyDevice, ddk::MessageableOld, ddk::Unbindable>;
+using DdkDeviceType2 =
+    ddk::Device<SysmemProxyDevice, ddk::Messageable<fuchsia_sysmem::DriverConnector>::Mixin,
+                ddk::Unbindable>;
 
 // SysmemProxyDevice is a replacement for sysmem_driver::Device, intended for use in tests.  Instead
 // of instantiating a separate/hermetic Sysmem, SysmemProxyDevice connects to the allocator made
@@ -45,6 +47,7 @@ using DdkDeviceType2 = ddk::Device<SysmemProxyDevice, ddk::MessageableOld, ddk::
 // image compositing, and then wishes to display the resulting image on the screen.  In order to do
 // so, it must allocate an image which is acceptable both to Vulkan and the display driver.
 class SysmemProxyDevice final : public DdkDeviceType2,
+                                public fidl::WireServer<fuchsia_sysmem::DriverConnector>,
                                 public ddk::SysmemProtocol<SysmemProxyDevice, ddk::base_protocol> {
  public:
   SysmemProxyDevice(zx_device_t* parent_device, sysmem_driver::Driver* parent_driver);
@@ -62,7 +65,6 @@ class SysmemProxyDevice final : public DdkDeviceType2,
   zx_status_t SysmemUnregisterSecureMem();
 
   // Ddk mixin implementations.
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   // Quits the async loop and joins with all spawned threads.  Note: this doesn't tear down
   // connections already made via SysmemConnect().  This is because these connections are made by
   // passing the channel handle to an external Sysmem service, after which SysmemProxyDevice has no
@@ -70,7 +72,7 @@ class SysmemProxyDevice final : public DdkDeviceType2,
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease() { delete this; }
 
-  zx_status_t Connect(zx_handle_t allocator_request);
+  void Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) override;
 
   const sysmem_protocol_t* proto() const { return &in_proc_sysmem_protocol_; }
   const zx_device_t* device() const { return zxdev_; }

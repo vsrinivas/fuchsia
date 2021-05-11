@@ -27,12 +27,6 @@
 
 namespace display {
 
-namespace {
-fuchsia_sysmem_DriverConnector_ops_t driver_connector_ops = {
-    .Connect = fidl::Binder<SysmemProxyDevice>::BindMember<&SysmemProxyDevice::Connect>,
-};
-}  // namespace
-
 // severity can be ERROR, WARN, INFO, DEBUG, TRACE.  See ddk/debug.h.
 //
 // Using ## __VA_ARGS__ instead of __VA_OPT__(,) __VA_ARGS__ for now, since
@@ -52,8 +46,8 @@ SysmemProxyDevice::SysmemProxyDevice(zx_device_t* parent_device,
   ZX_ASSERT(status == ZX_OK);
 }
 
-zx_status_t SysmemProxyDevice::Connect(zx_handle_t allocator_request) {
-  return SysmemConnect(zx::channel(allocator_request));
+void SysmemProxyDevice::Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) {
+  SysmemConnect(request->allocator_request.TakeChannel());
 }
 
 zx_status_t SysmemProxyDevice::SysmemConnect(zx::channel allocator_request) {
@@ -117,10 +111,6 @@ zx_status_t SysmemProxyDevice::Bind() {
   }
 
   return ZX_OK;
-}
-
-zx_status_t SysmemProxyDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  return fuchsia_sysmem_DriverConnector_dispatch(this, txn, msg, &driver_connector_ops);
 }
 
 void SysmemProxyDevice::DdkUnbind(ddk::UnbindTxn txn) {

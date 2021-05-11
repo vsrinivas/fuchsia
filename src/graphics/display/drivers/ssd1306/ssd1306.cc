@@ -16,29 +16,20 @@
 
 namespace ssd1306 {
 
-zx_status_t Ssd1306::FidlGetConfig(void* ctx, fidl_txn_t* txn) {
-  fuchsia_hardware_dotmatrixdisplay_DotmatrixDisplayConfig config = {};
+void Ssd1306::GetConfig(GetConfigRequestView request, GetConfigCompleter::Sync& completer) {
+  fuchsia_hardware_dotmatrixdisplay::wire::DotmatrixDisplayConfig config;
   config.width = kDisplayWidth;
   config.height = kDisplayHeight;
-  config.format = fuchsia_hardware_dotmatrixdisplay_PixelFormat_MONOCHROME;
-  config.layout = fuchsia_hardware_dotmatrixdisplay_ScreenLayout_COLUMN_TB_ROW_LR;
+  config.format = fuchsia_hardware_dotmatrixdisplay::wire::PixelFormat::kMonochrome;
+  config.layout = fuchsia_hardware_dotmatrixdisplay::wire::ScreenLayout::kColumnTbRowLr;
 
-  return fuchsia_hardware_dotmatrixdisplay_DotmatrixDisplayGetConfig_reply(txn, &config);
+  completer.Reply(config);
 }
 
-zx_status_t Ssd1306::FidlSetScreen(void* ctx, const uint8_t* screen_buffer_list,
-                                   size_t screen_buffer_count, fidl_txn* txn) {
-  Ssd1306* ssd = reinterpret_cast<Ssd1306*>(ctx);
-  zx_status_t status = ssd->DotmatrixDisplaySetScreen(screen_buffer_list, screen_buffer_count);
-  return fuchsia_hardware_dotmatrixdisplay_DotmatrixDisplaySetScreen_reply(txn, status);
-}
-
-zx_status_t Ssd1306::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  static const fuchsia_hardware_dotmatrixdisplay_DotmatrixDisplay_ops_t kOps = {
-      .GetConfig = Ssd1306::FidlGetConfig,
-      .SetScreen = Ssd1306::FidlSetScreen,
-  };
-  return fuchsia_hardware_dotmatrixdisplay_DotmatrixDisplay_dispatch(this, txn, msg, &kOps);
+void Ssd1306::SetScreen(SetScreenRequestView request, SetScreenCompleter::Sync& completer) {
+  zx_status_t status =
+      DotmatrixDisplaySetScreen(request->screen_buffer.data(), request->screen_buffer.count());
+  completer.Reply(status);
 }
 
 static zx_status_t WriteCommand(ddk::I2cChannel& i2c, uint8_t reg_address, uint8_t data) {

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/dotmatrixdisplay/c/fidl.h>
+#include <fuchsia/hardware/dotmatrixdisplay/llcpp/fidl.h>
 #include <fuchsia/hardware/dotmatrixdisplay/cpp/banjo.h>
 #include <fuchsia/hardware/i2c/cpp/banjo.h>
 #include <lib/device-protocol/i2c-channel.h>
@@ -17,14 +17,16 @@
 namespace ssd1306 {
 
 class Ssd1306;
-using DeviceType = ddk::Device<Ssd1306, ddk::Unbindable, ddk::MessageableOld>;
+using DeviceType =
+    ddk::Device<Ssd1306, ddk::Unbindable,
+                ddk::Messageable<fuchsia_hardware_dotmatrixdisplay::DotmatrixDisplay>::Mixin>;
 class Ssd1306 : public DeviceType,
+                public fidl::WireServer<fuchsia_hardware_dotmatrixdisplay::DotmatrixDisplay>,
                 public ddk::DotmatrixDisplayProtocol<Ssd1306, ddk::base_protocol> {
  public:
   Ssd1306(zx_device_t* parent) : DeviceType(parent), frame_buffer_(), i2c_(parent) {}
 
   zx_status_t Bind(ddk::I2cChannel i2c);
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease() { delete this; }
 
@@ -32,9 +34,8 @@ class Ssd1306 : public DeviceType,
   zx_status_t DotmatrixDisplaySetScreen(const uint8_t* screen_buffer_list,
                                         size_t screen_buffer_count);
 
-  static zx_status_t FidlGetConfig(void* ctx, fidl_txn_t* txn);
-  static zx_status_t FidlSetScreen(void* ctx, const uint8_t* screen_buffer_list,
-                                   size_t screen_buffer_count, fidl_txn* txn);
+  void GetConfig(GetConfigRequestView request, GetConfigCompleter::Sync& completer) override;
+  void SetScreen(SetScreenRequestView request, SetScreenCompleter::Sync& completer) override;
 
   zx_status_t FlushScreen();
 
