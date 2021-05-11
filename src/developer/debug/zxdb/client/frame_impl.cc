@@ -94,8 +94,7 @@ void FrameImpl::GetRegisterCategoryAsync(
   }
 
   debug_ipc::ReadRegistersRequest request;
-  request.process_koid = thread_->GetProcess()->GetKoid();
-  request.thread_koid = thread_->GetKoid();
+  request.id = {.process = thread_->GetProcess()->GetKoid(), .thread = thread_->GetKoid()};
   request.categories.push_back(category);
 
   session()->remote_api()->ReadRegisters(
@@ -125,8 +124,7 @@ void FrameImpl::WriteRegister(debug_ipc::RegisterID id, std::vector<uint8_t> dat
   }
 
   debug_ipc::WriteRegistersRequest request;
-  request.process_koid = thread_->GetProcess()->GetKoid();
-  request.thread_koid = thread_->GetKoid();
+  request.id = {.process = thread_->GetProcess()->GetKoid(), .thread = thread_->GetKoid()};
   request.registers.emplace_back(id, data);  // Don't move, used below.
 
   session()->remote_api()->WriteRegisters(

@@ -31,8 +31,8 @@ TEST(DebuggedThreadBreakpoint, NormalException) {
   EXPECT_EQ(harness.stream_backend()->exceptions()[0].hit_breakpoints.size(), 0u);
 
   auto& thread_record = harness.stream_backend()->exceptions()[0].thread;
-  EXPECT_EQ(thread_record.process_koid, kProcKoid);
-  EXPECT_EQ(thread_record.thread_koid, kThreadKoid);
+  EXPECT_EQ(thread_record.id.process, kProcKoid);
+  EXPECT_EQ(thread_record.id.thread, kThreadKoid);
   EXPECT_EQ(thread_record.state, debug_ipc::ThreadRecord::State::kBlocked);
   EXPECT_EQ(thread_record.blocked_reason, debug_ipc::ThreadRecord::BlockedReason::kException);
   EXPECT_EQ(thread_record.stack_amount, debug_ipc::ThreadRecord::StackAmount::kMinimal);
@@ -88,8 +88,8 @@ TEST(DebuggedThreadBreakpoint, SoftwareBreakpoint) {
   // it has been client suspended which is a more detailed check.
   EXPECT_TRUE(thread2->mock_thread_handle().is_suspended());
   ASSERT_EQ(exception.other_affected_threads.size(), 1u);
-  EXPECT_EQ(exception.other_affected_threads[0].process_koid, kProcKoid);
-  EXPECT_EQ(exception.other_affected_threads[0].thread_koid, kThread2Koid);
+  EXPECT_EQ(exception.other_affected_threads[0].id.process, kProcKoid);
+  EXPECT_EQ(exception.other_affected_threads[0].id.thread, kThread2Koid);
 
   // The breakpoint stats should be up-to-date.
   Breakpoint* breakpoint = harness.debug_agent()->GetBreakpoint(kBreakpointId);

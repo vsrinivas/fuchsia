@@ -136,15 +136,14 @@ TEST_F(SystemTest, GlobalContinue) {
   // Notify of thread stop on thread 1.
   debug_ipc::NotifyException break_notification;
   break_notification.type = debug_ipc::ExceptionType::kSoftwareBreakpoint;
-  break_notification.thread.process_koid = kProcessKoid;
-  break_notification.thread.thread_koid = kThread1Koid;
+  break_notification.thread.id = {.process = kProcessKoid, .thread = kThread1Koid};
   break_notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
   break_notification.thread.frames.emplace_back(kAddress, kStack, kStack);
   InjectException(break_notification);
   EXPECT_EQ(0, sink()->GetAndResetResumeCount());
 
   // Same on thread 2.
-  break_notification.thread.thread_koid = kThread2Koid;
+  break_notification.thread.id = {.process = kProcessKoid, .thread = kThread2Koid};
   InjectException(break_notification);
 
   // Continue globally. This should in turn update the thread.

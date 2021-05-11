@@ -86,8 +86,7 @@ TEST_F(VerbPrint, VectorRegisterFormat) {
   // frame implementation which provides the real EvalContext and SymbolDataSource.
   debug_ipc::NotifyException exception;
   exception.type = debug_ipc::ExceptionType::kSingleStep;
-  exception.thread.process_koid = kProcessKoid;
-  exception.thread.thread_koid = kThreadKoid;
+  exception.thread.id = {.process = kProcessKoid, .thread = kThreadKoid};
   exception.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
   exception.thread.frames.emplace_back(0x10000, 0x20000, 0x3000);
   InjectException(exception);

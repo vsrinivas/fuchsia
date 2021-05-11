@@ -84,8 +84,8 @@ TEST_F(ProcessImplTest, OnModules) {
 
   constexpr uint64_t kThread1Koid = 237645;
   constexpr uint64_t kThread2Koid = 809712;
-  notify.stopped_thread_koids.push_back(kThread1Koid);
-  notify.stopped_thread_koids.push_back(kThread2Koid);
+  notify.stopped_threads.push_back({.process = kProcessKoid, .thread = kThread1Koid});
+  notify.stopped_threads.push_back({.process = kProcessKoid, .thread = kThread2Koid});
 
   session().DispatchNotifyModules(notify);
 
@@ -94,9 +94,8 @@ TEST_F(ProcessImplTest, OnModules) {
   // Should have resumed both of those threads.
   ASSERT_EQ(1, sink()->resume_count());
   const debug_ipc::ResumeRequest& resume = sink()->resume_request();
-  EXPECT_EQ(kProcessKoid, resume.process_koid);
   EXPECT_EQ(debug_ipc::ResumeRequest::How::kResolveAndContinue, resume.how);
-  EXPECT_EQ(notify.stopped_thread_koids, resume.thread_koids);
+  EXPECT_EQ(notify.stopped_threads, resume.ids);
 }
 
 TEST_F(ProcessImplTest, GetTLSHelpers) {
@@ -121,7 +120,7 @@ TEST_F(ProcessImplTest, GetTLSHelpers) {
   modules.push_back(module);
 
   TargetImpl* target = session().system().GetTargetImpls()[0];
-  target->process()->OnModules(modules, std::vector<uint64_t>());
+  target->process()->OnModules(modules, {});
 
   constexpr uint64_t kThrdTAddr = 0x1000;
   constexpr uint64_t kLinkMapTlsModIdAddr = 0x2000;

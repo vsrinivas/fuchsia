@@ -267,11 +267,11 @@ void BreakpointImpl::SendBackendAddOrChange() {
         continue;
 
       debug_ipc::ProcessBreakpointSettings addition;
-      addition.process_koid = proc.first->GetKoid();
+      addition.id.process = proc.first->GetKoid();
 
       if (settings_.scope.type() == ExecutionScope::kThread) {
         if (Thread* thread = settings_.scope.thread())
-          addition.thread_koid = thread->GetKoid();
+          addition.id.thread = thread->GetKoid();
       }
 
       if (BreakpointSettings::TypeHasSize(settings_.type)) {

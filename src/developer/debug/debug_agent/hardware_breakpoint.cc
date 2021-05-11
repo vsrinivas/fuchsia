@@ -69,7 +69,7 @@ std::set<zx_koid_t> HWThreadsTargeted(const ProcessBreakpoint& pb) {
       if (location.address != pb.address())
         continue;
 
-      auto thread_id = location.thread_koid;
+      auto thread_id = location.id.thread;
       if (thread_id == 0) {
         all_threads = true;
         break;

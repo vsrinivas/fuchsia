@@ -288,7 +288,7 @@ class InterceptionRemoteAPI : public zxdb::MockRemoteAPI {
       fit::callback<void(const zxdb::Err&, debug_ipc::ReadRegistersReply)> cb) override {
     // TODO: Parameterize this so we can have more than one test.
     debug_ipc::ReadRegistersReply reply;
-    data_.PopulateRegisters(request.process_koid, &reply.registers);
+    data_.PopulateRegisters(request.id.process, &reply.registers);
     debug_ipc::MessageLoop::Current()->PostTask(
         FROM_HERE, [cb = std::move(cb), reply]() mutable { cb(zxdb::Err(), reply); });
   }
@@ -296,7 +296,7 @@ class InterceptionRemoteAPI : public zxdb::MockRemoteAPI {
   void Resume(const debug_ipc::ResumeRequest& request,
               fit::callback<void(const zxdb::Err&, debug_ipc::ResumeReply)> cb) override {
     debug_ipc::ResumeReply reply;
-    data_.Step(request.process_koid);
+    data_.Step(request.ids[0].process);
     debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(cb), reply]() mutable {
       cb(zxdb::Err(), reply);
       // This is so that the test can inject the next exception.

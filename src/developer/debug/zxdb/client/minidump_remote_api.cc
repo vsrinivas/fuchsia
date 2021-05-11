@@ -689,8 +689,8 @@ void MinidumpRemoteAPI::Attach(const debug_ipc::AttachRequest& request,
   for (const auto& thread : minidump_->Threads()) {
     auto& notification = notifications.emplace_back();
 
-    notification.record.process_koid = minidump_->ProcessID();
-    notification.record.thread_koid = thread->ThreadID();
+    notification.record.id.process = minidump_->ProcessID();
+    notification.record.id.thread = thread->ThreadID();
     notification.record.state = debug_ipc::ThreadRecord::State::kCoreDump;
   }
 
@@ -718,8 +718,8 @@ void MinidumpRemoteAPI::Attach(const debug_ipc::AttachRequest& request,
         break;
     }
 
-    exception_notification.thread.process_koid = minidump_->ProcessID();
-    exception_notification.thread.thread_koid = exception->ThreadID();
+    exception_notification.thread.id.process = minidump_->ProcessID();
+    exception_notification.thread.id.thread = exception->ThreadID();
     exception_notification.thread.state = debug_ipc::ThreadRecord::State::kCoreDump;
   }
 
@@ -824,8 +824,8 @@ void MinidumpRemoteAPI::Threads(const debug_ipc::ThreadsRequest& request,
     for (const auto& thread : minidump_->Threads()) {
       auto& record = reply.threads.emplace_back();
 
-      record.process_koid = request.process_koid;
-      record.thread_koid = thread->ThreadID();
+      record.id.process = request.process_koid;
+      record.id.thread = thread->ThreadID();
       record.state = debug_ipc::ThreadRecord::State::kCoreDump;
     }
   }
@@ -901,12 +901,12 @@ void MinidumpRemoteAPI::ReadRegisters(
 
   debug_ipc::ReadRegistersReply reply;
 
-  if (static_cast<pid_t>(request.process_koid) != minidump_->ProcessID()) {
+  if (static_cast<pid_t>(request.id.process) != minidump_->ProcessID()) {
     Succeed(std::move(cb), reply);
     return;
   }
 
-  const crashpad::ThreadSnapshot* thread = GetThreadById(request.thread_koid);
+  const crashpad::ThreadSnapshot* thread = GetThreadById(request.id.thread);
 
   if (thread == nullptr) {
     Succeed(std::move(cb), reply);
@@ -968,20 +968,19 @@ void MinidumpRemoteAPI::ThreadStatus(
 
   debug_ipc::ThreadStatusReply reply;
 
-  if (static_cast<pid_t>(request.process_koid) != minidump_->ProcessID()) {
+  if (static_cast<pid_t>(request.id.process) != minidump_->ProcessID()) {
     Succeed(std::move(cb), reply);
     return;
   }
 
-  const crashpad::ThreadSnapshot* thread = GetThreadById(request.thread_koid);
+  const crashpad::ThreadSnapshot* thread = GetThreadById(request.id.thread);
 
   if (thread == nullptr) {
     Succeed(std::move(cb), reply);
     return;
   }
 
-  reply.record.process_koid = request.process_koid;
-  reply.record.thread_koid = thread->ThreadID();
+  reply.record.id = request.id;
   reply.record.state = debug_ipc::ThreadRecord::State::kCoreDump;
   reply.record.stack_amount = debug_ipc::ThreadRecord::StackAmount::kFull;
 
@@ -1036,7 +1035,7 @@ void MinidumpRemoteAPI::ThreadStatus(
     if (i == 0) {
       dest.ip = src.pc;
     } else {
-      dest.ip = src.pc + regs->GetPcAdjustment(src.pc, nullptr);;
+      dest.ip = src.pc + regs->GetPcAdjustment(src.pc, nullptr);
     }
     dest.sp = src.sp;
     if (src.regs) {

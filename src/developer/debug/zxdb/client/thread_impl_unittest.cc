@@ -88,8 +88,7 @@ TEST_F(ThreadImplTest, Frames) {
   // Notify of thread stop.
   debug_ipc::NotifyException break_notification;
   break_notification.type = debug_ipc::ExceptionType::kSoftwareBreakpoint;
-  break_notification.thread.process_koid = kProcessKoid;
-  break_notification.thread.thread_koid = kThreadKoid;
+  break_notification.thread.id = {.process = kProcessKoid, .thread = kThreadKoid};
   break_notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
   break_notification.thread.frames.emplace_back(kAddress1, kStack1, kStack2);
   InjectException(break_notification);
@@ -149,8 +148,7 @@ TEST_F(ThreadImplTest, ControllersWithGeneralException) {
   constexpr uint64_t kStack1 = 0x7890;
   debug_ipc::NotifyException notification;
   notification.type = debug_ipc::ExceptionType::kSoftwareBreakpoint;
-  notification.thread.process_koid = kProcessKoid;
-  notification.thread.thread_koid = kThreadKoid;
+  notification.thread.id = {.process = kProcessKoid, .thread = kThreadKoid};
   notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
   notification.thread.frames.emplace_back(kAddress1, kStack1);
   InjectException(notification);
@@ -188,8 +186,7 @@ TEST_F(ThreadImplTest, ControllersUnexpected) {
   constexpr uint64_t kStack1 = 0x7890;
   debug_ipc::NotifyException notification;
   notification.type = debug_ipc::ExceptionType::kSoftwareBreakpoint;
-  notification.thread.process_koid = kProcessKoid;
-  notification.thread.thread_koid = kThreadKoid;
+  notification.thread.id = {.process = kProcessKoid, .thread = kThreadKoid};
   notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
   notification.thread.frames.emplace_back(kAddress1, kStack1);
   InjectException(notification);
@@ -260,8 +257,7 @@ TEST_F(ThreadImplTest, JumpTo) {
   constexpr uint64_t kStack = 0x7890;
   debug_ipc::NotifyException notification;
   notification.type = debug_ipc::ExceptionType::kSoftwareBreakpoint;
-  notification.thread.process_koid = kProcessKoid;
-  notification.thread.thread_koid = kThreadKoid;
+  notification.thread.id = {.process = kProcessKoid, .thread = kThreadKoid};
   notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
   notification.thread.frames.emplace_back(kAddress1, kStack);
   InjectException(notification);

@@ -33,9 +33,9 @@ debug_ipc::ProcessBreakpointSettings CreateLocation(const MockProcess& process,
                                                     const MockThread* thread,
                                                     const debug_ipc::AddressRange& range) {
   debug_ipc::ProcessBreakpointSettings location = {};
-  location.process_koid = process.koid();
+  location.id.process = process.koid();
   if (thread)
-    location.thread_koid = thread->koid();
+    location.id.thread = thread->koid();
   location.address = 0;
   location.address_range = range;
 

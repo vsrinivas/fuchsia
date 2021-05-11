@@ -43,7 +43,7 @@ void RemoteAPITest::InjectModule(Process* process, fxl::RefPtr<ModuleSymbols> mo
   // Need to convert to an actual ProcessImpl.
   ProcessImpl* process_impl = session().system().ProcessImplFromKoid(process->GetKoid());
   FX_CHECK(process_impl);
-  process_impl->OnModules(modules, std::vector<uint64_t>());
+  process_impl->OnModules(modules, {});
 }
 
 fxl::RefPtr<MockModuleSymbols> RemoteAPITest::InjectMockModule(Process* process,
@@ -86,13 +86,12 @@ Process* RemoteAPITest::InjectProcess(uint64_t process_koid) {
 
 Thread* RemoteAPITest::InjectThread(uint64_t process_koid, uint64_t thread_koid) {
   debug_ipc::NotifyThread notify;
-  notify.record.process_koid = process_koid;
-  notify.record.thread_koid = thread_koid;
+  notify.record.id = {.process = process_koid, .thread = thread_koid};
   notify.record.name = fxl::StringPrintf("test %" PRIu64, thread_koid);
   notify.record.state = debug_ipc::ThreadRecord::State::kRunning;
 
   session_->DispatchNotifyThreadStarting(notify);
-  return session_->ThreadImplFromKoid(process_koid, thread_koid);
+  return session_->ThreadImplFromKoid(notify.record.id);
 }
 
 void RemoteAPITest::InjectException(const debug_ipc::NotifyException& exception) {
@@ -102,8 +101,7 @@ void RemoteAPITest::InjectException(const debug_ipc::NotifyException& exception)
 void RemoteAPITest::InjectExceptionWithStack(const debug_ipc::NotifyException& exception,
                                              std::vector<std::unique_ptr<Frame>> frames,
                                              bool has_all_frames) {
-  ThreadImpl* thread =
-      session_->ThreadImplFromKoid(exception.thread.process_koid, exception.thread.thread_koid);
+  ThreadImpl* thread = session_->ThreadImplFromKoid(exception.thread.id);
   FX_CHECK(thread);  // Tests should always pass valid KOIDs.
 
   // Create an exception record with a thread frame so it's valid. There must be one frame even
@@ -131,8 +129,7 @@ void RemoteAPITest::InjectExceptionWithStack(
     const std::vector<debug_ipc::BreakpointStats>& breakpoints) {
   debug_ipc::NotifyException exception;
   exception.type = exception_type;
-  exception.thread.process_koid = process_koid;
-  exception.thread.thread_koid = thread_koid;
+  exception.thread.id = {.process = process_koid, .thread = thread_koid};
   exception.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
   exception.hit_breakpoints = breakpoints;
 

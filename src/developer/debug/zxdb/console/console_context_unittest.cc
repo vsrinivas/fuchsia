@@ -41,8 +41,7 @@ TEST_F(ConsoleContextTest, CurrentBreakpoint) {
   // Provide a stop at breakpoint 1.
   debug_ipc::NotifyException notify;
   notify.type = debug_ipc::ExceptionType::kSoftwareBreakpoint;
-  notify.thread.process_koid = kProcessKoid;
-  notify.thread.thread_koid = kThreadKoid;
+  notify.thread.id = {.process = kProcessKoid, .thread = kThreadKoid};
   notify.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
   notify.thread.frames.emplace_back(0x10000, 0);
   notify.hit_breakpoints.emplace_back();

@@ -44,17 +44,17 @@ constexpr size_t kMegabyte = 1024 * 1024;
 
 std::string LogResumeRequest(const debug_ipc::ResumeRequest& request) {
   std::stringstream ss;
-  ss << "Got resume request for process " << request.process_koid;
+  ss << "Got resume request for ";
 
   // Print thread koids.
-  if (!request.thread_koids.empty()) {
-    ss << ", Threads: (";
-    for (size_t i = 0; i < request.thread_koids.size(); i++) {
+  if (request.ids.empty()) {
+    ss << "all processes.";
+  } else {
+    for (size_t i = 0; i < request.ids.size(); i++) {
       if (i > 0)
         ss << ", ";
-      ss << request.thread_koids[i];
+      ss << "(" << request.ids[i].process << ", " << request.ids[i].thread << ")";
     }
-    ss << ")";
   }
 
   // Print step range.
@@ -260,22 +260,22 @@ void DebugAgent::OnDetach(const debug_ipc::DetachRequest& request, debug_ipc::De
 }
 
 void DebugAgent::OnPause(const debug_ipc::PauseRequest& request, debug_ipc::PauseReply* reply) {
-  std::vector<std::pair<zx_koid_t, zx_koid_t>> proc_thread_pairs;
+  std::vector<debug_ipc::ProcessThreadId> proc_thread_pairs;
 
-  if (request.process_koid) {
+  if (request.id.process) {
     // Single process.
-    if (DebuggedProcess* proc = GetDebuggedProcess(request.process_koid)) {
-      if (request.thread_koid) {
+    if (DebuggedProcess* proc = GetDebuggedProcess(request.id.process)) {
+      if (request.id.thread) {
         // Single thread of the process.
-        if (DebuggedThread* thread = proc->GetThread(request.thread_koid)) {
+        if (DebuggedThread* thread = proc->GetThread(request.id.thread)) {
           thread->ClientSuspend(true);
-          proc_thread_pairs.emplace_back(request.process_koid, request.thread_koid);
+          proc_thread_pairs.push_back(request.id);
         }
       } else {
         // All threads of that process.
         auto suspended_thread_koids = proc->ClientSuspendAllThreads();
         for (zx_koid_t thread_koid : suspended_thread_koids) {
-          proc_thread_pairs.emplace_back(request.process_koid, thread_koid);
+          proc_thread_pairs.push_back({.process = request.id.process, .thread = thread_koid});
         }
       }
     }
@@ -285,10 +285,11 @@ void DebugAgent::OnPause(const debug_ipc::PauseRequest& request, debug_ipc::Paus
   }
 
   // Save the affected thread info.
-  for (auto& [process_koid, thread_koid] : proc_thread_pairs) {
-    if (DebuggedThread* thread = GetDebuggedThread(process_koid, thread_koid))
+  for (const auto& id : proc_thread_pairs) {
+    if (DebuggedThread* thread = GetDebuggedThread(id)) {
       reply->threads.push_back(
           thread->GetThreadRecord(debug_ipc::ThreadRecord::StackAmount::kMinimal));
+    }
   }
 }
 
@@ -300,18 +301,29 @@ void DebugAgent::OnQuitAgent(const debug_ipc::QuitAgentRequest& request,
 void DebugAgent::OnResume(const debug_ipc::ResumeRequest& request, debug_ipc::ResumeReply* reply) {
   DEBUG_LOG(Agent) << LogResumeRequest(request);
 
-  if (request.process_koid) {
-    // Single process.
-    DebuggedProcess* proc = GetDebuggedProcess(request.process_koid);
-    if (proc) {
-      proc->OnResume(request);
-    } else {
-      FX_LOGS(WARNING) << "Could not find process by koid: " << request.process_koid;
-    }
-  } else {
+  if (request.ids.empty()) {
     // All debugged processes.
     for (const auto& pair : procs_)
       pair.second->OnResume(request);
+  } else {
+    // Explicit list.
+    for (const auto& id : request.ids) {
+      if (DebuggedProcess* proc = GetDebuggedProcess(id.process)) {
+        if (id.thread) {
+          // Single thread in that process.
+          if (DebuggedThread* thread = proc->GetThread(id.thread)) {
+            thread->ClientResume(request);
+          } else {
+            FX_LOGS(WARNING) << "Could not find thread by koid: " << id.thread;
+          }
+        } else {
+          // All threads in the process.
+          proc->OnResume(request);
+        }
+      } else {
+        FX_LOGS(WARNING) << "Could not find process by koid: " << id.process;
+      }
+    }
   }
 }
 
@@ -345,23 +357,23 @@ void DebugAgent::OnReadMemory(const debug_ipc::ReadMemoryRequest& request,
 
 void DebugAgent::OnReadRegisters(const debug_ipc::ReadRegistersRequest& request,
                                  debug_ipc::ReadRegistersReply* reply) {
-  DebuggedThread* thread = GetDebuggedThread(request.process_koid, request.thread_koid);
+  DebuggedThread* thread = GetDebuggedThread(request.id);
   if (thread) {
     reply->registers = thread->ReadRegisters(request.categories);
   } else {
-    FX_LOGS(ERROR) << "Cannot find thread with koid: " << request.thread_koid;
+    FX_LOGS(ERROR) << "Cannot find thread with koid: " << request.id.thread;
   }
 }
 
 void DebugAgent::OnWriteRegisters(const debug_ipc::WriteRegistersRequest& request,
                                   debug_ipc::WriteRegistersReply* reply) {
-  DebuggedThread* thread = GetDebuggedThread(request.process_koid, request.thread_koid);
+  DebuggedThread* thread = GetDebuggedThread(request.id);
   if (thread) {
     reply->status = ZX_OK;
     reply->registers = thread->WriteRegisters(request.registers);
   } else {
     reply->status = ZX_ERR_NOT_FOUND;
-    FX_LOGS(ERROR) << "Cannot find thread with koid: " << request.thread_koid;
+    FX_LOGS(ERROR) << "Cannot find thread with koid: " << request.id.thread;
   }
 }
 
@@ -425,13 +437,11 @@ void DebugAgent::OnProcessStatus(const debug_ipc::ProcessStatusRequest& request,
 
 void DebugAgent::OnThreadStatus(const debug_ipc::ThreadStatusRequest& request,
                                 debug_ipc::ThreadStatusReply* reply) {
-  DebuggedThread* thread = GetDebuggedThread(request.process_koid, request.thread_koid);
-  if (thread) {
+  if (DebuggedThread* thread = GetDebuggedThread(request.id)) {
     reply->record = thread->GetThreadRecord(debug_ipc::ThreadRecord::StackAmount::kFull);
   } else {
     // When the thread is not found the thread record is set to "dead".
-    reply->record.process_koid = request.process_koid;
-    reply->record.thread_koid = request.thread_koid;
+    reply->record.id = request.id;
     reply->record.state = debug_ipc::ThreadRecord::State::kDead;
   }
 }
@@ -548,20 +558,20 @@ DebuggedJob* DebugAgent::GetDebuggedJob(zx_koid_t koid) {
   return found->second.get();
 }
 
-DebuggedThread* DebugAgent::GetDebuggedThread(zx_koid_t process_koid, zx_koid_t thread_koid) {
-  DebuggedProcess* process = GetDebuggedProcess(process_koid);
+DebuggedThread* DebugAgent::GetDebuggedThread(const debug_ipc::ProcessThreadId& id) {
+  DebuggedProcess* process = GetDebuggedProcess(id.process);
   if (!process)
     return nullptr;
-  return process->GetThread(thread_koid);
+  return process->GetThread(id.thread);
 }
 
-std::vector<std::pair<zx_koid_t, zx_koid_t>> DebugAgent::ClientSuspendAll(zx_koid_t except_process,
-                                                                          zx_koid_t except_thread) {
+std::vector<debug_ipc::ProcessThreadId> DebugAgent::ClientSuspendAll(zx_koid_t except_process,
+                                                                     zx_koid_t except_thread) {
   // Neither or both koids must be supplied.
   FX_DCHECK((except_process == ZX_KOID_INVALID && except_thread == ZX_KOID_INVALID) ||
             (except_process != ZX_KOID_INVALID && except_thread != ZX_KOID_INVALID));
 
-  std::vector<std::pair<zx_koid_t, zx_koid_t>> affected;
+  std::vector<debug_ipc::ProcessThreadId> affected;
 
   for (const auto& [process_koid, process] : procs_) {
     std::vector<zx_koid_t> affected_threads;
@@ -572,7 +582,7 @@ std::vector<std::pair<zx_koid_t, zx_koid_t>> DebugAgent::ClientSuspendAll(zx_koi
     }
 
     for (zx_koid_t thread_koid : affected_threads) {
-      affected.emplace_back(process_koid, thread_koid);
+      affected.push_back({.process = process_koid, .thread = thread_koid});
     }
   }
 

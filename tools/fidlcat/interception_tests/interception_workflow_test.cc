@@ -233,8 +233,7 @@ std::vector<std::unique_ptr<zxdb::Frame>> InterceptionWorkflowTest::FillBreakpoi
     debug_ipc::NotifyException* notification, uint64_t process_koid, uint64_t thread_koid) {
   notification->timestamp = 0;
   notification->type = debug_ipc::ExceptionType::kSoftwareBreakpoint;
-  notification->thread.process_koid = process_koid;
-  notification->thread.thread_koid = thread_koid;
+  notification->thread.id = {.process = process_koid, .thread = thread_koid};
   notification->thread.state = debug_ipc::ThreadRecord::State::kBlocked;
   notification->thread.stack_amount = debug_ipc::ThreadRecord::StackAmount::kMinimal;
 
@@ -287,8 +286,7 @@ void InterceptionWorkflowTest::TriggerCallerBreakpoint(uint64_t process_koid,
   debug_ipc::NotifyException notification;
   notification.timestamp = 0;
   notification.type = debug_ipc::ExceptionType::kSoftwareBreakpoint;
-  notification.thread.process_koid = process_koid;
-  notification.thread.thread_koid = thread_koid;
+  notification.thread.id = {.process = process_koid, .thread = thread_koid};
   notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
   notification.thread.stack_amount = debug_ipc::ThreadRecord::StackAmount::kMinimal;
 
@@ -333,8 +331,7 @@ void InterceptionWorkflowTest::TriggerException(uint64_t process_koid, uint64_t 
   debug_ipc::NotifyException notification;
   notification.timestamp = 0;
   notification.type = type;
-  notification.thread.process_koid = process_koid;
-  notification.thread.thread_koid = thread_koid;
+  notification.thread.id = {.process = process_koid, .thread = thread_koid};
   notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
   notification.thread.stack_amount = debug_ipc::ThreadRecord::StackAmount::kMinimal;
 

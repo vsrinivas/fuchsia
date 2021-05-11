@@ -83,8 +83,7 @@ size_t MockThreadHandle::TotalWatchpointUninstallCalls() const {
 
 debug_ipc::ThreadRecord MockThreadHandle::GetThreadRecord(zx_koid_t process_koid) const {
   debug_ipc::ThreadRecord record;
-  record.process_koid = process_koid;
-  record.thread_koid = thread_koid_;
+  record.id = {.process = process_koid, .thread = thread_koid_};
   record.name = "test thread";
   record.state = state_.state;
   record.blocked_reason = state_.blocked_reason;

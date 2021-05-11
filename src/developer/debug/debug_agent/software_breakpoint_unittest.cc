@@ -785,8 +785,7 @@ TEST(ProcessBreakpoint, HitCount) {
   settings.locations.resize(1);
 
   debug_ipc::ProcessBreakpointSettings& pr_settings = settings.locations.back();
-  pr_settings.process_koid = kProcess1;
-  pr_settings.thread_koid = 0;
+  pr_settings.id = {.process = kProcess1, .thread = 0};
   pr_settings.address = kAddress;
 
   // Create a ProcessBreakpoint referencing the two Breakpoint objects

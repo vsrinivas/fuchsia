@@ -52,8 +52,8 @@ class DynamicLoaderStreamBackend : public LocalStreamBackend {
 
 void DynamicLoaderStreamBackend::HandleNotifyThreadStarting(debug_ipc::NotifyThread thread) {
   if (stage_ == Stage::kWaitingForThread) {
-    process_koid_ = thread.record.process_koid;
-    thread_koid_ = thread.record.thread_koid;
+    process_koid_ = thread.record.id.process;
+    thread_koid_ = thread.record.id.thread;
     stage_ = Stage::kWaitingForModules;
     ResumeAll();
   } else {

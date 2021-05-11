@@ -20,7 +20,7 @@ zx_status_t MockDebugAgentHarness::AddOrChangeBreakpoint(uint32_t breakpoint_id,
                                                          zx_koid_t process_koid, uint64_t address,
                                                          debug_ipc::BreakpointType type) {
   debug_ipc::ProcessBreakpointSettings location;
-  location.process_koid = process_koid;
+  location.id.process = process_koid;
   location.address = address;
 
   debug_ipc::AddOrChangeBreakpointRequest request;
@@ -40,8 +40,7 @@ zx_status_t MockDebugAgentHarness::AddOrChangeBreakpoint(uint32_t breakpoint_id,
                                                          const debug_ipc::AddressRange& range,
                                                          debug_ipc::BreakpointType type) {
   debug_ipc::ProcessBreakpointSettings location;
-  location.process_koid = process_koid;
-  location.thread_koid = thread_koid;
+  location.id = {.process = process_koid, .thread = thread_koid};
   location.address_range = range;
 
   debug_ipc::AddOrChangeBreakpointRequest request;
@@ -57,8 +56,7 @@ zx_status_t MockDebugAgentHarness::AddOrChangeBreakpoint(uint32_t breakpoint_id,
 
 void MockDebugAgentHarness::Pause(zx_koid_t process_koid, zx_koid_t thread_koid) {
   debug_ipc::PauseRequest request;
-  request.process_koid = process_koid;
-  request.thread_koid = thread_koid;
+  request.id = {.process = process_koid, .thread = thread_koid};
 
   debug_ipc::PauseReply reply;
   debug_agent()->OnPause(request, &reply);
@@ -68,9 +66,8 @@ void MockDebugAgentHarness::Resume(debug_ipc::ResumeRequest::How how, zx_koid_t 
                                    zx_koid_t thread_koid) {
   debug_ipc::ResumeRequest request;
   request.how = how;
-  request.process_koid = process_koid;
-  if (thread_koid)
-    request.thread_koids.push_back(thread_koid);
+  if (process_koid)
+    request.ids.push_back({.process = process_koid, .thread = thread_koid});
 
   debug_ipc::ResumeReply reply;
   debug_agent()->OnResume(request, &reply);

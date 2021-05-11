@@ -20,6 +20,17 @@ void Serialize(int32_t data, MessageWriter* writer) { writer->WriteInt32(data); 
 
 bool Deserialize(MessageReader* reader, int32_t* data) { return reader->ReadInt32(data); }
 
+void Serialize(const ProcessThreadId& ids, MessageWriter* writer) {
+  writer->WriteUint64(ids.process);
+  writer->WriteUint64(ids.thread);
+}
+
+bool Deserialize(MessageReader* reader, ProcessThreadId* ids) {
+  if (!reader->ReadUint64(&ids->process))
+    return false;
+  return reader->ReadUint64(&ids->thread);
+}
+
 void Serialize(const Register& reg, MessageWriter* writer) {
   writer->WriteUint32(*reinterpret_cast<const uint32_t*>(&reg.id));
   writer->WriteUint32(static_cast<uint32_t>(reg.data.size()));

@@ -86,11 +86,11 @@ void LogSetSettings(debug_ipc::FileLineFunction location, const Breakpoint* bp) 
   ss << "Updating locations: ";
   for (auto& location : bp->settings().locations) {
     // Log the process.
-    ss << std::dec << "[P: " << location.process_koid;
+    ss << std::dec << "[P: " << location.id.process;
 
     // |thread_koid| == 0 means that it applies to all the threads.
-    if (location.thread_koid != 0)
-      ss << ", T: " << location.thread_koid;
+    if (location.id.thread != 0)
+      ss << ", T: " << location.id.thread;
 
     // Print the actual location.
     ss << "], addr: 0x" << std::hex << location.address
@@ -150,7 +150,7 @@ zx_status_t Breakpoint::SetSettings(std::string name, zx_koid_t process_koid, ui
   settings.name = std::move(name);
 
   debug_ipc::ProcessBreakpointSettings& location = settings.locations.emplace_back();
-  location.process_koid = process_koid;
+  location.id.process = process_koid;
   location.address = address;
 
   return SetSettings(settings);
@@ -162,7 +162,7 @@ zx_status_t Breakpoint::SetBreakpointLocations(const debug_ipc::BreakpointSettin
   // The set of new locations.
   std::set<LocationPair> new_set;
   for (const auto& cur : settings.locations)
-    new_set.emplace(cur.process_koid, cur.address);
+    new_set.emplace(cur.id.process, cur.address);
 
   // Removed locations.
   for (const auto& loc : locations_) {
@@ -190,7 +190,7 @@ zx_status_t Breakpoint::SetWatchpointLocations(const debug_ipc::BreakpointSettin
   // The set of new locations.
   std::set<WatchpointLocationPair, WatchpointLocationPairCompare> new_set;
   for (const auto& cur : settings.locations)
-    new_set.emplace(cur.process_koid, cur.address_range);
+    new_set.emplace(cur.id.process, cur.address_range);
 
   // Removed locations.
   for (const auto& loc : watchpoint_locations_) {
@@ -214,8 +214,8 @@ zx_status_t Breakpoint::SetWatchpointLocations(const debug_ipc::BreakpointSettin
 
 bool Breakpoint::AppliesToThread(zx_koid_t pid, zx_koid_t tid) const {
   for (auto& location : settings_.locations) {
-    if (location.process_koid == pid) {
-      if (location.thread_koid == 0 || location.thread_koid == tid) {
+    if (location.id.process == pid) {
+      if (location.id.thread == 0 || location.id.thread == tid) {
         LogAppliesToThread(this, pid, tid, true);
         return true;
       }

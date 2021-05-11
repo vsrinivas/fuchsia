@@ -520,12 +520,12 @@ bool Session::ClearConnectionData() {
 }
 
 void Session::DispatchNotifyThreadStarting(const debug_ipc::NotifyThread& notify) {
-  ProcessImpl* process = system_.ProcessImplFromKoid(notify.record.process_koid);
+  ProcessImpl* process = system_.ProcessImplFromKoid(notify.record.id.process);
   if (!process) {
     SendSessionNotification(SessionObserver::NotificationType::kWarning,
                             "Received thread starting notification for an "
                             "unexpected process %" PRIu64 ".\n",
-                            notify.record.process_koid);
+                            notify.record.id.process);
     return;
   }
 
@@ -554,12 +554,12 @@ void Session::DispatchNotifyThreadStarting(const debug_ipc::NotifyThread& notify
 }
 
 void Session::DispatchNotifyThreadExiting(const debug_ipc::NotifyThread& notify) {
-  ProcessImpl* process = system_.ProcessImplFromKoid(notify.record.process_koid);
+  ProcessImpl* process = system_.ProcessImplFromKoid(notify.record.id.process);
   if (!process) {
     SendSessionNotification(SessionObserver::NotificationType::kWarning,
                             "Received thread exiting notification for an "
                             "unexpected process %" PRIu64 ".\n",
-                            notify.record.process_koid);
+                            notify.record.id.process);
     return;
   }
 
@@ -568,7 +568,7 @@ void Session::DispatchNotifyThreadExiting(const debug_ipc::NotifyThread& notify)
 
 // This is the main entrypoint for all thread stops notifications in the client.
 void Session::DispatchNotifyException(const debug_ipc::NotifyException& notify, bool set_metadata) {
-  ThreadImpl* thread = ThreadImplFromKoid(notify.thread.process_koid, notify.thread.thread_koid);
+  ThreadImpl* thread = ThreadImplFromKoid(notify.thread.id);
   if (!thread) {
     SendSessionNotification(SessionObserver::NotificationType::kWarning,
                             "Received thread exception for an unknown thread.\n");
@@ -628,7 +628,7 @@ void Session::DispatchNotifyException(const debug_ipc::NotifyException& notify, 
 void Session::DispatchNotifyModules(const debug_ipc::NotifyModules& notify) {
   ProcessImpl* process = system_.ProcessImplFromKoid(notify.process_koid);
   if (process) {
-    process->OnModules(std::move(notify.modules), notify.stopped_thread_koids);
+    process->OnModules(std::move(notify.modules), notify.stopped_threads);
   } else {
     SendSessionNotification(SessionObserver::NotificationType::kWarning,
                             "Received modules notification for an unexpected process %" PRIu64 ".",
@@ -754,11 +754,11 @@ void Session::DispatchNotification(const debug_ipc::MsgHeader& header, std::vect
   }
 }
 
-ThreadImpl* Session::ThreadImplFromKoid(uint64_t process_koid, uint64_t thread_koid) {
-  ProcessImpl* process = system_.ProcessImplFromKoid(process_koid);
+ThreadImpl* Session::ThreadImplFromKoid(const debug_ipc::ProcessThreadId& id) {
+  ProcessImpl* process = system_.ProcessImplFromKoid(id.process);
   if (!process)
     return nullptr;
-  return process->GetThreadImplFromKoid(thread_koid);
+  return process->GetThreadImplFromKoid(id.thread);
 }
 
 void Session::ConnectionResolved(fxl::RefPtr<PendingConnection> pending, const Err& err,

@@ -37,8 +37,7 @@ std::vector<uint8_t> GetBreakpointMemory() {
 debug_ipc::ProcessBreakpointSettings CreateLocation(zx_koid_t process_koid, zx_koid_t thread_koid,
                                                     uint64_t address) {
   debug_ipc::ProcessBreakpointSettings location = {};
-  location.process_koid = process_koid;
-  location.thread_koid = thread_koid;
+  location.id = {.process = process_koid, .thread = thread_koid};
   location.address = address;
 
   return location;
@@ -47,8 +46,7 @@ debug_ipc::ProcessBreakpointSettings CreateLocation(zx_koid_t process_koid, zx_k
 debug_ipc::ProcessBreakpointSettings CreateLocation(zx_koid_t process_koid, zx_koid_t thread_koid,
                                                     const debug_ipc::AddressRange& range) {
   debug_ipc::ProcessBreakpointSettings location = {};
-  location.process_koid = process_koid;
-  location.thread_koid = thread_koid;
+  location.id = {.process = process_koid, .thread = thread_koid};
   location.address_range = range;
 
   return location;

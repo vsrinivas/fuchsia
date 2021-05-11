@@ -87,8 +87,8 @@ TEST_F(DebugAgentTests, OnGlobalStatus) {
   EXPECT_EQ(reply.processes[0].process_koid, kProcessKoid1);
   EXPECT_EQ(reply.processes[0].process_name, kProcessName1);
   ASSERT_EQ(reply.processes[0].threads.size(), 1u);
-  EXPECT_EQ(reply.processes[0].threads[0].process_koid, kProcessKoid1);
-  EXPECT_EQ(reply.processes[0].threads[0].thread_koid, kProcess1ThreadKoid1);
+  EXPECT_EQ(reply.processes[0].threads[0].id.process, kProcessKoid1);
+  EXPECT_EQ(reply.processes[0].threads[0].id.thread, kProcess1ThreadKoid1);
 
   constexpr uint64_t kProcessKoid2 = 0x5678;
   const std::string kProcessName2 = "process-2";
@@ -107,16 +107,16 @@ TEST_F(DebugAgentTests, OnGlobalStatus) {
   EXPECT_EQ(reply.processes[0].process_koid, kProcessKoid1);
   EXPECT_EQ(reply.processes[0].process_name, kProcessName1);
   ASSERT_EQ(reply.processes[0].threads.size(), 1u);
-  EXPECT_EQ(reply.processes[0].threads[0].process_koid, kProcessKoid1);
-  EXPECT_EQ(reply.processes[0].threads[0].thread_koid, kProcess1ThreadKoid1);
+  EXPECT_EQ(reply.processes[0].threads[0].id.process, kProcessKoid1);
+  EXPECT_EQ(reply.processes[0].threads[0].id.thread, kProcess1ThreadKoid1);
 
   EXPECT_EQ(reply.processes[1].process_koid, kProcessKoid2);
   EXPECT_EQ(reply.processes[1].process_name, kProcessName2);
   ASSERT_EQ(reply.processes[1].threads.size(), 2u);
-  EXPECT_EQ(reply.processes[1].threads[0].process_koid, kProcessKoid2);
-  EXPECT_EQ(reply.processes[1].threads[0].thread_koid, kProcess2ThreadKoid1);
-  EXPECT_EQ(reply.processes[1].threads[1].process_koid, kProcessKoid2);
-  EXPECT_EQ(reply.processes[1].threads[1].thread_koid, kProcess2ThreadKoid2);
+  EXPECT_EQ(reply.processes[1].threads[0].id.process, kProcessKoid2);
+  EXPECT_EQ(reply.processes[1].threads[0].id.thread, kProcess2ThreadKoid1);
+  EXPECT_EQ(reply.processes[1].threads[1].id.process, kProcessKoid2);
+  EXPECT_EQ(reply.processes[1].threads[1].id.thread, kProcess2ThreadKoid2);
 
   // Set a limbo provider.
 

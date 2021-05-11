@@ -115,7 +115,7 @@ void DebuggedProcess::DetachFromProcess() {
   // Technically a 0'ed request would work, but being explicit is future-proof.
   debug_ipc::ResumeRequest resume_request = {};
   resume_request.how = debug_ipc::ResumeRequest::How::kResolveAndContinue;
-  resume_request.process_koid = koid();
+  resume_request.ids.push_back({.process = koid(), .thread = 0});
   OnResume(resume_request);
 
   // 3. Unbind from notifications (this will detach from the process).
@@ -157,13 +157,13 @@ zx_status_t DebuggedProcess::Init() {
 }
 
 void DebuggedProcess::OnResume(const debug_ipc::ResumeRequest& request) {
-  if (request.thread_koids.empty()) {
+  if (request.ids.empty()) {
     // Empty thread ID list means resume all threads.
     for (auto& [thread_koid, thread] : threads_)
       thread->ClientResume(request);
   } else {
-    for (uint64_t thread_koid : request.thread_koids) {
-      if (DebuggedThread* thread = GetThread(thread_koid))
+    for (const debug_ipc::ProcessThreadId& id : request.ids) {
+      if (DebuggedThread* thread = GetThread(id.thread))
         thread->ClientResume(request);
       // Might be not found if there is a race between the thread exiting and the client sending the
       // request.
@@ -348,7 +348,7 @@ void DebuggedProcess::SendModuleNotification() {
 
   // All threads are assumed to be stopped.
   for (auto& [thread_koid, thread_ptr] : threads_)
-    notify.stopped_thread_koids.push_back(thread_koid);
+    notify.stopped_threads.push_back({.process = koid(), .thread = thread_koid});
 
   DEBUG_LOG(Process) << LogPreamble(this) << "Sending modules.";
 
@@ -578,8 +578,7 @@ void DebuggedProcess::OnThreadExiting(std::unique_ptr<ExceptionHandle> exception
 
   // Notify the client. Can't call GetThreadRecord since the thread doesn't exist any more.
   debug_ipc::NotifyThread notify;
-  notify.record.process_koid = koid();
-  notify.record.thread_koid = thread_id;
+  notify.record.id = {.process = koid(), .thread = thread_id};
   notify.record.state = debug_ipc::ThreadRecord::State::kDead;
   notify.timestamp = zx::clock::get_monotonic().get();
 

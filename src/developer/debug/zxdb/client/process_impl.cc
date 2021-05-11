@@ -117,7 +117,7 @@ void ProcessImpl::SyncThreads(fit::callback<void()> callback) {
 
 void ProcessImpl::Pause(fit::callback<void()> on_paused) {
   debug_ipc::PauseRequest request;
-  request.process_koid = koid_;
+  request.id.process = koid_;
   session()->remote_api()->Pause(
       request, [weak_process = weak_factory_.GetWeakPtr(), on_paused = std::move(on_paused)](
                    const Err& err, debug_ipc::PauseReply reply) mutable {
@@ -125,8 +125,8 @@ void ProcessImpl::Pause(fit::callback<void()> on_paused) {
           // Save any new thread metadata (will be empty for errors so don't need to check
           // explicitly for errors).
           for (const auto& record : reply.threads) {
-            FX_DCHECK(record.process_koid == weak_process->koid_);
-            if (ThreadImpl* thread = weak_process->GetThreadImplFromKoid(record.thread_koid))
+            FX_DCHECK(record.id.process == weak_process->koid_);
+            if (ThreadImpl* thread = weak_process->GetThreadImplFromKoid(record.id.thread))
               thread->SetMetadata(record);
           }
         }
@@ -222,7 +222,7 @@ void ProcessImpl::LoadInfoHandleTable(
 }
 
 void ProcessImpl::OnThreadStarting(const debug_ipc::ThreadRecord& record, bool resume) {
-  if (threads_.find(record.thread_koid) != threads_.end()) {
+  if (threads_.find(record.id.thread) != threads_.end()) {
     // Duplicate new thread notification. Some legitimate cases could cause
     // this, like the client requesting a thread list (which will add missing
     // ones and get here) racing with the notification for just-created thread.
@@ -231,7 +231,7 @@ void ProcessImpl::OnThreadStarting(const debug_ipc::ThreadRecord& record, bool r
 
   auto thread = std::make_unique<ThreadImpl>(this, record);
   Thread* thread_ptr = thread.get();
-  threads_[record.thread_koid] = std::move(thread);
+  threads_[record.id.thread] = std::move(thread);
 
   for (auto& observer : session()->thread_observers())
     observer.DidCreateThread(thread_ptr);
@@ -241,7 +241,7 @@ void ProcessImpl::OnThreadStarting(const debug_ipc::ThreadRecord& record, bool r
 }
 
 void ProcessImpl::OnThreadExiting(const debug_ipc::ThreadRecord& record) {
-  auto found = threads_.find(record.thread_koid);
+  auto found = threads_.find(record.id.thread);
   if (found == threads_.end()) {
     // Duplicate exit thread notification. Some legitimate cases could cause this as in
     // OnThreadStarting().
@@ -255,7 +255,7 @@ void ProcessImpl::OnThreadExiting(const debug_ipc::ThreadRecord& record) {
 }
 
 void ProcessImpl::OnModules(std::vector<debug_ipc::Module> modules,
-                            const std::vector<uint64_t>& stopped_thread_koids) {
+                            const std::vector<debug_ipc::ProcessThreadId>& stopped_threads) {
   FixupEmptyModuleNames(modules);
   symbols_.SetModules(modules);
 
@@ -263,7 +263,7 @@ void ProcessImpl::OnModules(std::vector<debug_ipc::Module> modules,
   if (start_type() == StartType::kLaunch || start_type() == StartType::kComponent) {
     bool pause_on_launch =
         session()->system().settings().GetBool(ClientSettings::System::kPauseOnLaunch);
-    if (stopped_thread_koids.size() == 1u && pause_on_launch) {
+    if (stopped_threads.size() == 1u && pause_on_launch) {
       return;
     }
   }
@@ -273,11 +273,11 @@ void ProcessImpl::OnModules(std::vector<debug_ipc::Module> modules,
   //
   // Note that this is a "blind" resume, as the |this| does not yet know about any threads that are
   // currently running. It will issue a sync call shortly.
-  if (!stopped_thread_koids.empty()) {
+  if (!stopped_threads.empty()) {
     debug_ipc::ResumeRequest request;
-    request.process_koid = koid_;
+    request.ids.push_back({.process = koid_, .thread = 0});
     request.how = debug_ipc::ResumeRequest::How::kResolveAndContinue;
-    request.thread_koids = stopped_thread_koids;
+    request.ids = stopped_threads;
     session()->remote_api()->Resume(request, [](const Err& err, debug_ipc::ResumeReply) {});
   }
 
@@ -299,8 +299,8 @@ void ProcessImpl::UpdateThreads(const std::vector<debug_ipc::ThreadRecord>& new_
   // Go through all new threads, checking to added ones and updating existing.
   std::set<uint64_t> new_threads_koids;
   for (const auto& record : new_threads) {
-    new_threads_koids.insert(record.thread_koid);
-    auto found_existing = threads_.find(record.thread_koid);
+    new_threads_koids.insert(record.id.thread);
+    auto found_existing = threads_.find(record.id.thread);
     if (found_existing == threads_.end()) {
       // New thread added.
       OnThreadStarting(record, false);
@@ -319,7 +319,7 @@ void ProcessImpl::UpdateThreads(const std::vector<debug_ipc::ThreadRecord>& new_
   for (uint64_t existing_koid : existing_koids) {
     if (new_threads_koids.find(existing_koid) == new_threads_koids.end()) {
       debug_ipc::ThreadRecord record;
-      record.thread_koid = existing_koid;
+      record.id = {.process = koid_, .thread = existing_koid};
       OnThreadExiting(record);
     }
   }

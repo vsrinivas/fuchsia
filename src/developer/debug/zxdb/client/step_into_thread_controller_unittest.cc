@@ -69,8 +69,7 @@ class StepIntoThreadControllerTest : public InlineThreadControllerTest {
     // Set up the thread to be stopped at the beginning of our range.
     debug_ipc::NotifyException exception;
     exception.type = debug_ipc::ExceptionType::kSingleStep;
-    exception.thread.process_koid = process()->GetKoid();
-    exception.thread.thread_koid = thread()->GetKoid();
+    exception.thread.id = {.process = process()->GetKoid(), .thread = thread()->GetKoid()};
     exception.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
     exception.thread.frames.emplace_back(kBeginAddr, kStackFrameInitial, kStackFrameInitial);
     exception.thread.frames.emplace_back(kBeginAddr - 10, kStackFramePrevious, kStackFramePrevious);

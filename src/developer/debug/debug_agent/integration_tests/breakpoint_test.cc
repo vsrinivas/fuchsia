@@ -172,7 +172,7 @@ TEST(BreakpointIntegration, DISABLED_SWBreakpoint) {
 
     // We resume the thread because the new thread will be stopped.
     debug_ipc::ResumeRequest resume_request;
-    resume_request.process_koid = mock_stream_backend.process_koid();
+    resume_request.ids.push_back({.process = mock_stream_backend.process_koid(), .thread = 0});
     debug_ipc::ResumeReply resume_reply;
     remote_api->OnResume(resume_request, &resume_reply);
 
@@ -197,11 +197,11 @@ TEST(BreakpointIntegration, DISABLED_SWBreakpoint) {
     breakpoint_request.breakpoint.one_shot = false;
 
     debug_ipc::ProcessBreakpointSettings location1 = {};
-    location1.process_koid = launch_reply.process_id;
+    location1.id.process = launch_reply.process_id;
     location1.address = module_function1;
     breakpoint_request.breakpoint.locations.push_back(location1);
     debug_ipc::ProcessBreakpointSettings location2 = {};
-    location2.process_koid = launch_reply.process_id;
+    location2.id.process = launch_reply.process_id;
     location2.address = module_function2;
     breakpoint_request.breakpoint.locations.push_back(location2);
 
@@ -217,7 +217,7 @@ TEST(BreakpointIntegration, DISABLED_SWBreakpoint) {
     // We should have received a breakpoint exception by now.
     ASSERT_EQ(mock_stream_backend.exceptions().size(), 1u);
     debug_ipc::NotifyException exception = mock_stream_backend.exceptions()[0];
-    EXPECT_EQ(exception.thread.process_koid, launch_reply.process_id);
+    EXPECT_EQ(exception.thread.id.process, launch_reply.process_id);
     EXPECT_EQ(exception.type, debug_ipc::ExceptionType::kSoftwareBreakpoint);
     ASSERT_EQ(exception.hit_breakpoints.size(), 1u);
     EXPECT_TRUE(exception.other_affected_threads.empty());  // Test has only one thread.
@@ -236,7 +236,7 @@ TEST(BreakpointIntegration, DISABLED_SWBreakpoint) {
     // We should've received a second breakpoint exception.
     ASSERT_EQ(mock_stream_backend.exceptions().size(), 2u);
     exception = mock_stream_backend.exceptions()[1];
-    EXPECT_EQ(exception.thread.process_koid, launch_reply.process_id);
+    EXPECT_EQ(exception.thread.id.process, launch_reply.process_id);
     EXPECT_EQ(exception.type, debug_ipc::ExceptionType::kSoftwareBreakpoint);
     ASSERT_EQ(exception.hit_breakpoints.size(), 1u);
 
@@ -304,7 +304,7 @@ TEST(BreakpointIntegration, DISABLED_HWBreakpoint) {
 
     // We resume the thread because the new thread will be stopped.
     debug_ipc::ResumeRequest resume_request;
-    resume_request.process_koid = mock_stream_backend.process_koid();
+    resume_request.ids.push_back({.process = mock_stream_backend.process_koid(), .thread = 0});
     debug_ipc::ResumeReply resume_reply;
     remote_api->OnResume(resume_request, &resume_reply);
 
@@ -324,7 +324,7 @@ TEST(BreakpointIntegration, DISABLED_HWBreakpoint) {
     // We add a breakpoint in that address.
     constexpr uint32_t kBreakpointId = 1234u;
     debug_ipc::ProcessBreakpointSettings location = {};
-    location.process_koid = launch_reply.process_id;
+    location.id.process = launch_reply.process_id;
     location.address = module_function;
 
     debug_ipc::AddOrChangeBreakpointRequest breakpoint_request = {};
@@ -348,7 +348,7 @@ TEST(BreakpointIntegration, DISABLED_HWBreakpoint) {
     // We should have received an exception now.
     ASSERT_EQ(mock_stream_backend.exceptions().size(), 1u);
     debug_ipc::NotifyException exception = mock_stream_backend.exceptions()[0];
-    EXPECT_EQ(exception.thread.process_koid, launch_reply.process_id);
+    EXPECT_EQ(exception.thread.id.process, launch_reply.process_id);
     EXPECT_EQ(exception.type, debug_ipc::ExceptionType::kHardwareBreakpoint)
         << "Got: " << debug_ipc::ExceptionTypeToString(exception.type);
     ASSERT_EQ(exception.hit_breakpoints.size(), 1u);

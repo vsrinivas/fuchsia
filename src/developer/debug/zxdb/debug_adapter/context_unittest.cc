@@ -78,8 +78,7 @@ TEST_F(DebugAdapterContextTest, ThreadStartExitEvent) {
   EXPECT_TRUE(start_received);
 
   debug_ipc::NotifyThread notify;
-  notify.record.process_koid = kProcessKoid;
-  notify.record.thread_koid = kThreadKoid;
+  notify.record.id = {.process = kProcessKoid, .thread = kThreadKoid};
   notify.record.state = debug_ipc::ThreadRecord::State::kDying;
   session().DispatchNotifyThreadExiting(notify);
 
@@ -114,8 +113,7 @@ TEST_F(DebugAdapterContextTest, StoppedEvent) {
   // Notify of thread stop.
   debug_ipc::NotifyException break_notification;
   break_notification.type = debug_ipc::ExceptionType::kSoftwareBreakpoint;
-  break_notification.thread.process_koid = kProcessKoid;
-  break_notification.thread.thread_koid = kThreadKoid;
+  break_notification.thread.id = {.process = kProcessKoid, .thread = kThreadKoid};
   break_notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
   break_notification.thread.frames.emplace_back(kAddress, kStack, kStack);
   InjectException(break_notification);
@@ -167,7 +165,7 @@ TEST_F(DebugAdapterContextTest, ExitedEvent) {
   // Detach from target
   auto targets = session().system().GetTargetImpls();
   ASSERT_EQ(targets.size(), 1u);
-  targets[0]->OnProcessExiting(20,0);
+  targets[0]->OnProcessExiting(20, 0);
 
   // Run client to receive event.
   RunClient();

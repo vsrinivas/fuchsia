@@ -28,6 +28,9 @@ bool Deserialize(MessageReader* reader, uint64_t* data);
 void Serialize(int32_t data, MessageWriter* writer);
 bool Deserialize(MessageReader* reader, int32_t* data);
 
+void Serialize(const ProcessThreadId& ids, MessageWriter* writer);
+bool Deserialize(MessageReader* reader, ProcessThreadId* ids);
+
 // Aggregate types that are serialized in both directions (otherwise the
 // implementations would go into the client-/agent-specific file).
 void Serialize(const Register& reg, MessageWriter* writer);

@@ -13,8 +13,7 @@ namespace debug_ipc {
 // Record deserializers ----------------------------------------------------------------------------
 
 bool Deserialize(MessageReader* reader, ProcessBreakpointSettings* settings) {
-  if (!reader->ReadUint64(&settings->process_koid) || !reader->ReadUint64(&settings->thread_koid) ||
-      !reader->ReadUint64(&settings->address)) {
+  if (!Deserialize(reader, &settings->id) || !reader->ReadUint64(&settings->address)) {
     return false;
   }
   return Deserialize(reader, &settings->address_range);
@@ -63,8 +62,7 @@ void Serialize(const ProcessTreeRecord& record, MessageWriter* writer) {
 }
 
 void Serialize(const ThreadRecord& record, MessageWriter* writer) {
-  writer->WriteUint64(record.process_koid);
-  writer->WriteUint64(record.thread_koid);
+  Serialize(record.id, writer);
   writer->WriteString(record.name);
   writer->WriteUint32(static_cast<uint32_t>(record.state));
   writer->WriteUint32(static_cast<uint32_t>(record.blocked_reason));
@@ -259,11 +257,7 @@ bool ReadRequest(MessageReader* reader, PauseRequest* request, uint32_t* transac
   if (!reader->ReadHeader(&header))
     return false;
   *transaction_id = header.transaction_id;
-  if (!reader->ReadUint64(&request->process_koid))
-    return false;
-  if (!reader->ReadUint64(&request->thread_koid))
-    return false;
-  return true;
+  return Deserialize(reader, &request->id);
 }
 
 void WriteReply(const PauseReply& reply, uint32_t transaction_id, MessageWriter* writer) {
@@ -292,9 +286,7 @@ bool ReadRequest(MessageReader* reader, ResumeRequest* request, uint32_t* transa
   if (!reader->ReadHeader(&header))
     return false;
   *transaction_id = header.transaction_id;
-  if (!reader->ReadUint64(&request->process_koid))
-    return false;
-  if (!Deserialize(reader, &request->thread_koids))
+  if (!Deserialize(reader, &request->ids))
     return false;
 
   uint32_t how;
@@ -525,7 +517,7 @@ bool ReadRequest(MessageReader* reader, ReadRegistersRequest* request, uint32_t*
     return false;
   *transaction_id = header.transaction_id;
 
-  if (!reader->ReadUint64(&request->process_koid) || !reader->ReadUint64(&request->thread_koid))
+  if (!Deserialize(reader, &request->id))
     return false;
 
   return Deserialize(reader, &request->categories);
@@ -544,7 +536,7 @@ bool ReadRequest(MessageReader* reader, WriteRegistersRequest* request, uint32_t
     return false;
   *transaction_id = header.transaction_id;
 
-  if (!reader->ReadUint64(&request->process_koid) || !reader->ReadUint64(&request->thread_koid))
+  if (!Deserialize(reader, &request->id))
     return false;
   return Deserialize(reader, &request->registers);
 }
@@ -624,7 +616,7 @@ void WriteNotifyModules(const NotifyModules& notify, MessageWriter* writer) {
   writer->WriteUint64(notify.timestamp);
   writer->WriteUint64(notify.process_koid);
   Serialize(notify.modules, writer);
-  Serialize(notify.stopped_thread_koids, writer);
+  Serialize(notify.stopped_threads, writer);
 }
 
 void WriteNotifyIO(const NotifyIO& notify, MessageWriter* writer) {

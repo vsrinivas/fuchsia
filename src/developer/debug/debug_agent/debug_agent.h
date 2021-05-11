@@ -67,7 +67,7 @@ class DebugAgent : public RemoteAPI,
 
   DebuggedJob* GetDebuggedJob(zx_koid_t koid);
   DebuggedProcess* GetDebuggedProcess(zx_koid_t koid);
-  DebuggedThread* GetDebuggedThread(zx_koid_t process_koid, zx_koid_t thread_koid);
+  DebuggedThread* GetDebuggedThread(const debug_ipc::ProcessThreadId& id);
 
   // Returns the exception handling strategy for a given type.
   debug_ipc::ExceptionStrategy GetExceptionStrategy(debug_ipc::ExceptionType type);
@@ -77,7 +77,7 @@ class DebugAgent : public RemoteAPI,
   //
   // The affected process/thread koid pairs are returned. Any threads already in a client suspend
   // will not be affected.
-  std::vector<std::pair<zx_koid_t, zx_koid_t>> ClientSuspendAll(
+  std::vector<debug_ipc::ProcessThreadId> ClientSuspendAll(
       zx_koid_t except_process = ZX_KOID_INVALID, zx_koid_t except_thread = ZX_KOID_INVALID);
 
   // RemoteAPI implementation.

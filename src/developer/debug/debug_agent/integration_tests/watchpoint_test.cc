@@ -142,8 +142,8 @@ TEST(Watchpoint, DISABLED_DefaultCase) {
 
     auto& exception = exceptions[0];
     EXPECT_EQ(exception.type, ExceptionType::kWatchpoint) << ExceptionTypeToString(exception.type);
-    EXPECT_EQ(exception.thread.process_koid, backend.process_koid());
-    EXPECT_EQ(exception.thread.thread_koid, backend.thread_koid());
+    EXPECT_EQ(exception.thread.id.process, backend.process_koid());
+    EXPECT_EQ(exception.thread.id.thread, backend.thread_koid());
 
     ASSERT_EQ(exception.hit_breakpoints.size(), 1u);
     auto& wp = exception.hit_breakpoints[0];
@@ -172,8 +172,7 @@ std::pair<AddOrChangeBreakpointRequest, AddOrChangeBreakpointReply> GetWatchpoin
     const WatchpointStreamBackend& backend, uint64_t address) {
   // We add a breakpoint in that address.
   debug_ipc::ProcessBreakpointSettings location = {};
-  location.process_koid = backend.process_koid();
-  location.thread_koid = backend.thread_koid();
+  location.id = {.process = backend.process_koid(), .thread = backend.thread_koid()};
   location.address_range = {address, address};
 
   debug_ipc::AddOrChangeBreakpointRequest watchpoint_request = {};
@@ -194,7 +193,7 @@ void WatchpointStreamBackend::ResumeAllThreadsAndRunLoop() {
 
 void WatchpointStreamBackend::ResumeAllThreads() {
   debug_ipc::ResumeRequest resume_request;
-  resume_request.process_koid = process_koid();
+  resume_request.ids.push_back({.process = process_koid(), .thread = 0});
   debug_ipc::ResumeReply resume_reply;
   remote_api_->OnResume(resume_request, &resume_reply);
 }
@@ -214,14 +213,14 @@ void WatchpointStreamBackend::HandleNotifyModules(NotifyModules modules) {
 // Records the exception given from the debug agent.
 void WatchpointStreamBackend::HandleNotifyException(NotifyException exception) {
   DEBUG_LOG(Test) << "Received " << ExceptionTypeToString(exception.type)
-                  << " on Thread: " << exception.thread.thread_koid;
+                  << " on Thread: " << exception.thread.id.thread;
   exceptions_.push_back(std::move(exception));
   ShouldQuitLoop();
 }
 
 void WatchpointStreamBackend::HandleNotifyThreadStarting(NotifyThread thread) {
-  process_koid_ = thread.record.process_koid;
-  thread_koid_ = thread.record.thread_koid;
+  process_koid_ = thread.record.id.process;
+  thread_koid_ = thread.record.id.thread;
   ShouldQuitLoop();
 }
 

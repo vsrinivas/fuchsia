@@ -12,7 +12,7 @@ namespace debug_ipc {
 // As defined in zircon/types.h
 using zx_status_t = int32_t;
 
-constexpr uint32_t kProtocolVersion = 33;
+constexpr uint32_t kProtocolVersion = 34;
 
 enum class Arch : uint32_t { kUnknown = 0, kX64, kArm64 };
 
@@ -193,11 +193,9 @@ struct DetachReply {
 };
 
 struct PauseRequest {
-  // If 0, all threads of all debugged processes will be paused.
-  uint64_t process_koid = 0;
-
-  // If 0, all threads in the given process will be paused.
-  uint64_t thread_koid = 0;
+  // If the process is 0, all threads of all debugged processes will be paused. If the thread is 0,
+  // all threads in the given process will be paused.
+  ProcessThreadId id;
 };
 // The backend should make a best effort to ensure the requested threads are
 // actually stopped before sending the reply.
@@ -225,19 +223,16 @@ struct ResumeRequest {
   }
   static const char* HowToString(How);
 
-  // If 0, all threads of all debugged processes will be continued.
-  uint64_t process_koid = 0;
-
-  // If empty, all threads in the given process will be continued. If nonempty,
-  // the threads with listed koids will be resumed. kStepInRange may only be
-  // used with a single thread.
-  std::vector<uint64_t> thread_koids;
+  // If empty, all threads of all debugged processes will be continued. An entry with a process
+  // koid and a 0 thread koid will resume all threads of the given process.
+  //
+  // kStepInRange may only be used with a unique thread.
+  std::vector<ProcessThreadId> ids;
 
   How how = How::kResolveAndContinue;
 
-  // When how == kStepInRange, these variables define the address range to
-  // step in. As long as the instruction pointer is inside
-  // [range_begin, range_end), execution will continue.
+  // When how == kStepInRange, these variables define the address range to step in. As long as the
+  // instruction pointer is inside [range_begin, range_end), execution will continue.
   uint64_t range_begin = 0;
   uint64_t range_end = 0;
 };
@@ -299,8 +294,7 @@ struct SysInfoReply {
 // backtrace if it is suspended. If the thread with the given KOID doesn't
 // exist, the ThreadRecord will report a "kDead" status.
 struct ThreadStatusRequest {
-  uint64_t process_koid = 0;
-  uint32_t thread_koid = 0;
+  ProcessThreadId id;
 };
 struct ThreadStatusReply {
   ThreadRecord record;
@@ -375,8 +369,8 @@ struct UpdateGlobalSettingsReply {
 // ReadRegisters ---------------------------------------------------------------
 
 struct ReadRegistersRequest {
-  uint64_t process_koid = 0;
-  uint64_t thread_koid = 0;
+  ProcessThreadId id;
+
   // What categories do we want to receive data from.
   std::vector<RegisterCategory> categories;
 };
@@ -388,8 +382,7 @@ struct ReadRegistersReply {
 // WriteRegisters --------------------------------------------------------------
 
 struct WriteRegistersRequest {
-  uint64_t process_koid = 0;
-  uint64_t thread_koid = 0;
+  ProcessThreadId id;
   std::vector<Register> registers;
 };
 
@@ -489,10 +482,9 @@ struct NotifyModules {
   uint64_t process_koid = 0;
   std::vector<Module> modules;
 
-  // The list of threads in the process stopped automatically as a result of
-  // the module load. The client will want to resume these threads once it has
-  // processed the load.
-  std::vector<uint64_t> stopped_thread_koids;
+  // The list of threads in the process stopped automatically as a result of the module load. The
+  // client will want to resume these threads once it has processed the load.
+  std::vector<ProcessThreadId> stopped_threads;
 };
 
 struct NotifyIO {

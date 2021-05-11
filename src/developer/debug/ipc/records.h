@@ -87,6 +87,24 @@ std::optional<ExceptionStrategy> ToExceptionStrategy(uint32_t raw_value);
 
 std::optional<uint32_t> ToRawValue(ExceptionStrategy strategy);
 
+// A process+thread koid pair for referring to a thread. While a thread koid is globally unique and
+// doesn't technically need a process koid to scope it, most code deals with a process/thread
+// hierarchy so maintaining both is more convenient.
+struct ProcessThreadId {
+  uint64_t process = 0;
+  uint64_t thread = 0;
+
+  bool operator==(const ProcessThreadId& other) const {
+    return process == other.process && thread == other.thread;
+  }
+  bool operator!=(const ProcessThreadId& other) const { return !operator==(other); }
+
+  // For ordered containers.
+  bool operator<(const ProcessThreadId& other) const {
+    return std::tie(process, thread) < std::tie(other.process, other.thread);
+  }
+};
+
 struct ExceptionRecord {
   ExceptionRecord() { memset(&arch, 0, sizeof(Arch)); }
 
@@ -250,8 +268,7 @@ struct ThreadRecord {
     kLast  // Not an actual state, for range checking.
   };
 
-  uint64_t process_koid = 0;
-  uint64_t thread_koid = 0;
+  ProcessThreadId id;
   std::string name;
   State state = State::kNew;
   // Only valid when state is kBlocked.
@@ -292,11 +309,9 @@ struct MemoryBlock {
 };
 
 struct ProcessBreakpointSettings {
-  // Required to be nonzero.
-  uint64_t process_koid = 0;
-
-  // Zero indicates this is a process-wide breakpoint. Otherwise, this is the thread to break.
-  uint64_t thread_koid = 0;
+  // The process is required to be nonzero. A zero thread ID indicates this is a process-wide
+  // breakpoint. Otherwise, this is the thread to break.
+  ProcessThreadId id;
 
   // Address to break at.
   uint64_t address = 0;

@@ -25,9 +25,7 @@ bool Deserialize(MessageReader* reader, ProcessTreeRecord* record) {
 }
 
 bool Deserialize(MessageReader* reader, ThreadRecord* record) {
-  if (!reader->ReadUint64(&record->process_koid))
-    return false;
-  if (!reader->ReadUint64(&record->thread_koid))
+  if (!Deserialize(reader, &record->id))
     return false;
   if (!reader->ReadString(&record->name))
     return false;
@@ -129,8 +127,7 @@ bool Deserialize(MessageReader* reader, AddressRegion* region) {
 // Record serializers ------------------------------------------------------------------------------
 
 void Serialize(const ProcessBreakpointSettings& settings, MessageWriter* writer) {
-  writer->WriteUint64(settings.process_koid);
-  writer->WriteUint64(settings.thread_koid);
+  Serialize(settings.id, writer);
   writer->WriteUint64(settings.address);
   Serialize(settings.address_range, writer);
 }
@@ -304,8 +301,7 @@ bool ReadReply(MessageReader* reader, DetachReply* reply, uint32_t* transaction_
 
 void WriteRequest(const PauseRequest& request, uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kPause, transaction_id);
-  writer->WriteUint64(request.process_koid);
-  writer->WriteUint64(request.thread_koid);
+  Serialize(request.id, writer);
 }
 
 bool ReadReply(MessageReader* reader, PauseReply* reply, uint32_t* transaction_id) {
@@ -335,8 +331,7 @@ bool ReadReply(MessageReader* reader, QuitAgentReply* reply, uint32_t* transacti
 
 void WriteRequest(const ResumeRequest& request, uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kResume, transaction_id);
-  writer->WriteUint64(request.process_koid);
-  Serialize(request.thread_koids, writer);
+  Serialize(request.ids, writer);
   writer->WriteUint32(static_cast<uint32_t>(request.how));
   writer->WriteUint64(request.range_begin);
   writer->WriteUint64(request.range_end);
@@ -405,8 +400,7 @@ void WriteRequest(const ReadRegistersRequest& request, uint32_t transaction_id,
                   MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kReadRegisters, transaction_id);
 
-  writer->WriteUint64(request.process_koid);
-  writer->WriteUint64(request.thread_koid);
+  Serialize(request.id, writer);
   Serialize(request.categories, writer);
 }
 
@@ -424,8 +418,7 @@ bool ReadReply(MessageReader* reader, ReadRegistersReply* reply, uint32_t* trans
 void WriteRequest(const WriteRegistersRequest& request, uint32_t transaction_id,
                   MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kWriteRegisters, transaction_id);
-  writer->WriteUint64(request.process_koid);
-  writer->WriteUint64(request.thread_koid);
+  Serialize(request.id, writer);
   Serialize(request.registers, writer);
 }
 
@@ -715,7 +708,7 @@ bool ReadNotifyModules(MessageReader* reader, NotifyModules* notify) {
 
   if (!Deserialize(reader, &notify->modules))
     return false;
-  return Deserialize(reader, &notify->stopped_thread_koids);
+  return Deserialize(reader, &notify->stopped_threads);
 }
 
 bool ReadNotifyIO(MessageReader* reader, NotifyIO* notify) {

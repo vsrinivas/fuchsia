@@ -128,8 +128,7 @@ std::pair<AddOrChangeBreakpointRequest, AddOrChangeBreakpointReply> GetBreakpoin
     zx_koid_t process_koid, zx_koid_t thread_koid, uint64_t address) {
   // We add a breakpoint in that address.
   debug_ipc::ProcessBreakpointSettings location = {};
-  location.process_koid = process_koid;
-  location.thread_koid = thread_koid;
+  location.id = {.process = process_koid, .thread = thread_koid};
   location.address = address;
 
   debug_ipc::AddOrChangeBreakpointRequest breakpoint_request = {};
@@ -221,7 +220,7 @@ TEST(MultithreadedBreakpoint, DISABLED_SWBreakpoint) {
     auto& thread_excp = backend.thread_excp();
     ASSERT_EQ(thread_excp.size(), 1u);
     auto& brk_notify = thread_excp.front();
-    EXPECT_EQ(brk_notify.thread.thread_koid, thread_koid);
+    EXPECT_EQ(brk_notify.thread.id.thread, thread_koid);
     EXPECT_EQ(brk_notify.type, debug_ipc::ExceptionType::kSoftwareBreakpoint);
 
     ASSERT_EQ(brk_notify.hit_breakpoints.size(), 1u);
@@ -248,7 +247,7 @@ void BreakpointStreamBackend::ResumeAllThreadsAndRunLoop() {
 
 void BreakpointStreamBackend::ResumeAllThreads() {
   debug_ipc::ResumeRequest resume_request;
-  resume_request.process_koid = process_koid();
+  resume_request.ids.push_back({.process = process_koid(), .thread = 0});
   debug_ipc::ResumeReply resume_reply;
   remote_api_->OnResume(resume_request, &resume_reply);
 }
@@ -256,7 +255,7 @@ void BreakpointStreamBackend::ResumeAllThreads() {
 // Records the exception given from the debug agent.
 void BreakpointStreamBackend::HandleNotifyException(NotifyException exception) {
   DEBUG_LOG(Test) << "Received " << ExceptionTypeToString(exception.type)
-                  << " on Thread: " << exception.thread.thread_koid;
+                  << " on Thread: " << exception.thread.id.thread;
   thread_excp_.push_back(exception);
   ShouldQuitLoop();
 }
@@ -284,17 +283,17 @@ void BreakpointStreamBackend::HandleNotifyProcessExiting(NotifyProcessExiting pr
 
 void BreakpointStreamBackend::HandleNotifyThreadStarting(NotifyThread thread) {
   if (process_koid_ == 0) {
-    process_koid_ = thread.record.process_koid;
+    process_koid_ = thread.record.id.process;
     DEBUG_LOG(Test) << "Process starting: " << process_koid_;
   }
-  DEBUG_LOG(Test) << "Thread starting: " << thread.record.thread_koid;
+  DEBUG_LOG(Test) << "Thread starting: " << thread.record.id.thread;
   thread_starts_.push_back(thread);
-  thread_koids_.push_back(thread.record.thread_koid);
+  thread_koids_.push_back(thread.record.id.thread);
   ShouldQuitLoop();
 }
 
 void BreakpointStreamBackend::HandleNotifyThreadExiting(NotifyThread thread) {
-  DEBUG_LOG(Test) << "Thread exiting: " << thread.record.thread_koid;
+  DEBUG_LOG(Test) << "Thread exiting: " << thread.record.id.thread;
   thread_exits_.push_back(thread);
   ShouldQuitLoop();
 }

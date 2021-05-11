@@ -38,8 +38,7 @@ TEST_F(VerbUp, Up) {
   // This is the reply with the full stack it will get asynchronously. We add three stack
   // frames.
   debug_ipc::ThreadStatusReply thread_status;
-  thread_status.record.process_koid = kProcessKoid;
-  thread_status.record.thread_koid = kThreadKoid;
+  thread_status.record.id = {.process = kProcessKoid, .thread = kThreadKoid};
   thread_status.record.state = debug_ipc::ThreadRecord::State::kBlocked;
   thread_status.record.stack_amount = debug_ipc::ThreadRecord::StackAmount::kFull;
   thread_status.record.frames.emplace_back(kAddress0, kSP0, kSP0);

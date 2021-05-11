@@ -708,9 +708,7 @@ void System::DeleteFilter(Filter* filter) {
 }
 
 void System::Pause(fit::callback<void()> on_paused) {
-  debug_ipc::PauseRequest request;
-  request.process_koid = 0;  // 0 means all processes.
-  request.thread_koid = 0;   // 0 means all threads.
+  debug_ipc::PauseRequest request;  // Unset process/thread means everything.
   session()->remote_api()->Pause(
       request, [weak_system = weak_factory_.GetWeakPtr(), on_paused = std::move(on_paused)](
                    const Err&, debug_ipc::PauseReply reply) mutable {
@@ -718,8 +716,8 @@ void System::Pause(fit::callback<void()> on_paused) {
           // Save the newly paused thread metadata. This may need to be
           // generalized if we add other messages that update thread metadata.
           for (const auto& record : reply.threads) {
-            if (auto* process = weak_system->ProcessImplFromKoid(record.process_koid)) {
-              if (auto* thread = process->GetThreadImplFromKoid(record.thread_koid))
+            if (auto* process = weak_system->ProcessImplFromKoid(record.id.process)) {
+              if (auto* thread = process->GetThreadImplFromKoid(record.id.thread))
                 thread->SetMetadata(record);
             }
           }

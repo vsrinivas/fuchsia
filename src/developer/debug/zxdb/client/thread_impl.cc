@@ -27,7 +27,7 @@ namespace zxdb {
 ThreadImpl::ThreadImpl(ProcessImpl* process, const debug_ipc::ThreadRecord& record)
     : Thread(process->session()),
       process_(process),
-      koid_(record.thread_koid),
+      koid_(record.id.thread),
       stack_(this),
       weak_factory_(this) {
   SetMetadata(record);
@@ -54,14 +54,13 @@ void ThreadImpl::Pause(fit::callback<void()> on_paused) {
   ClearFrames();
 
   debug_ipc::PauseRequest request;
-  request.process_koid = process_->GetKoid();
-  request.thread_koid = koid_;
+  request.id = {.process = process_->GetKoid(), .thread = koid_};
   session()->remote_api()->Pause(
       request, [weak_thread = weak_factory_.GetWeakPtr(), on_paused = std::move(on_paused)](
                    const Err& err, debug_ipc::PauseReply reply) mutable {
         if (!err.has_error() && weak_thread) {
           // Save the new metadata.
-          if (reply.threads.size() == 1 && reply.threads[0].thread_koid == weak_thread->koid_) {
+          if (reply.threads.size() == 1 && reply.threads[0].id.thread == weak_thread->koid_) {
             weak_thread->SetMetadata(reply.threads[0]);
           } else {
             // If the client thread still exists, the agent's record of that thread should have
@@ -76,8 +75,7 @@ void ThreadImpl::Pause(fit::callback<void()> on_paused) {
 
 void ThreadImpl::Continue(bool forward_exception) {
   debug_ipc::ResumeRequest request;
-  request.process_koid = process_->GetKoid();
-  request.thread_koids.push_back(koid_);
+  request.ids.push_back({.process = process_->GetKoid(), .thread = koid_});
 
   if (controllers_.empty()) {
     request.how = forward_exception ? debug_ipc::ResumeRequest::How::kForwardAndContinue
@@ -152,8 +150,7 @@ void ThreadImpl::ContinueWith(std::unique_ptr<ThreadController> controller,
 void ThreadImpl::JumpTo(uint64_t new_address, fit::callback<void(const Err&)> cb) {
   // The register to set.
   debug_ipc::WriteRegistersRequest request;
-  request.process_koid = process_->GetKoid();
-  request.thread_koid = koid_;
+  request.id = {.process = process_->GetKoid(), .thread = koid_};
   request.registers.emplace_back(
       GetSpecialRegisterID(session()->arch(), debug_ipc::SpecialRegisterType::kIP), new_address);
 
@@ -198,8 +195,7 @@ void ThreadImpl::NotifyControllerDone(ThreadController* controller) {
 
 void ThreadImpl::StepInstruction() {
   debug_ipc::ResumeRequest request;
-  request.process_koid = process_->GetKoid();
-  request.thread_koids.push_back(koid_);
+  request.ids.push_back({.process = process_->GetKoid(), .thread = koid_});
   request.how = debug_ipc::ResumeRequest::How::kStepInstruction;
   session()->remote_api()->Resume(request, [](const Err& err, debug_ipc::ResumeReply) {});
 }
@@ -209,7 +205,7 @@ const Stack& ThreadImpl::GetStack() const { return stack_; }
 Stack& ThreadImpl::GetStack() { return stack_; }
 
 void ThreadImpl::SetMetadata(const debug_ipc::ThreadRecord& record) {
-  FX_DCHECK(koid_ == record.thread_koid);
+  FX_DCHECK(koid_ == record.id.thread);
 
   name_ = record.name;
   state_ = record.state;
@@ -315,8 +311,7 @@ void ThreadImpl::OnException(const StopInfo& info) {
 
 void ThreadImpl::SyncFramesForStack(fit::callback<void(const Err&)> callback) {
   debug_ipc::ThreadStatusRequest request;
-  request.process_koid = process_->GetKoid();
-  request.thread_koid = koid_;
+  request.id = {.process = process_->GetKoid(), .thread = koid_};
 
   session()->remote_api()->ThreadStatus(
       request, [callback = std::move(callback), thread = weak_factory_.GetWeakPtr()](

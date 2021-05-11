@@ -42,7 +42,7 @@ TEST_F(RequestPauseTest, PauseThread) {
   debug_ipc::PauseReply reply;
   debug_ipc::ThreadRecord record;
   record.state = debug_ipc::ThreadRecord::State::kSuspended;
-  record.thread_koid = kThreadKoid;
+  record.id = {.process = kProcessKoid, .thread = kThreadKoid};
   reply.threads.push_back(record);
   mock_remote_api()->set_pause_reply(reply);
 

@@ -47,7 +47,7 @@ void ThreadControllerTest::SetUp() {
   modules.push_back(sym_load);
 
   TargetImpl* target = session().system().GetTargetImpls()[0];
-  target->process()->OnModules(modules, std::vector<uint64_t>());
+  target->process()->OnModules(modules, {});
 }
 
 fxl::RefPtr<MockModuleSymbols> ThreadControllerTest::MakeModuleSymbols() {

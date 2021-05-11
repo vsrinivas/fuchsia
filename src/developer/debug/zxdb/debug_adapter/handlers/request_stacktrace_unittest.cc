@@ -113,8 +113,7 @@ TEST_F(RequestStackTraceTest, SyncFramesRequired) {
   // Notify of thread stop and push expected stack frames.
   debug_ipc::NotifyException break_notification;
   break_notification.type = debug_ipc::ExceptionType::kSoftwareBreakpoint;
-  break_notification.thread.process_koid = kProcessKoid;
-  break_notification.thread.thread_koid = kThreadKoid;
+  break_notification.thread.id = {.process = kProcessKoid, .thread = kThreadKoid};
   break_notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
   InjectException(break_notification);
 

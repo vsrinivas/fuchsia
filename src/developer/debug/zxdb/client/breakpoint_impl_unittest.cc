@@ -171,7 +171,7 @@ TEST_F(BreakpointImplTest, DynamicLoading) {
   load1.base = kModule1Base;
   load1.build_id = kBuildID1;
   modules.push_back(load1);
-  target->process()->OnModules(modules, std::vector<uint64_t>());
+  target->process()->OnModules(modules, {});
 
   // After adding modules, the client should have asked for threads.
   EXPECT_TRUE(sink().thread_request_made);
@@ -185,10 +185,10 @@ TEST_F(BreakpointImplTest, DynamicLoading) {
 
   // Both locations should be for the same process, with no thread restriction.
   ASSERT_EQ(2u, out.breakpoint.locations.size());
-  EXPECT_EQ(koid, out.breakpoint.locations[0].process_koid);
-  EXPECT_EQ(koid, out.breakpoint.locations[1].process_koid);
-  EXPECT_EQ(0u, out.breakpoint.locations[0].thread_koid);
-  EXPECT_EQ(0u, out.breakpoint.locations[1].thread_koid);
+  EXPECT_EQ(koid, out.breakpoint.locations[0].id.process);
+  EXPECT_EQ(koid, out.breakpoint.locations[1].id.process);
+  EXPECT_EQ(0u, out.breakpoint.locations[0].id.thread);
+  EXPECT_EQ(0u, out.breakpoint.locations[1].id.thread);
 
   // Addresses could be in either order. They should be absolute.
   EXPECT_TRUE((out.breakpoint.locations[0].address == kAddress1 &&
@@ -204,7 +204,7 @@ TEST_F(BreakpointImplTest, DynamicLoading) {
   load2.base = kModule2Base;
   load2.build_id = kBuildID2;
   modules.push_back(load2);
-  target->process()->OnModules(modules, std::vector<uint64_t>());
+  target->process()->OnModules(modules, {});
   ASSERT_TRUE(sink().adds.empty());
 
   // Should have sent a notification. It should not be marked user-requested since this was a

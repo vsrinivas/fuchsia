@@ -194,7 +194,7 @@ class Session : public SettingStoreObserver {
   void DispatchNotification(const debug_ipc::MsgHeader& header, std::vector<char> data);
 
   // Returns the thread object from the given koids, or null.
-  ThreadImpl* ThreadImplFromKoid(uint64_t process_koid, uint64_t thread_koid);
+  ThreadImpl* ThreadImplFromKoid(const debug_ipc::ProcessThreadId& id);
 
   // Callback when a connection has been successful or failed.
   void ConnectionResolved(fxl::RefPtr<PendingConnection> pending, const Err& err,

@@ -51,8 +51,7 @@ TEST_F(StepThreadControllerTest, SofwareException) {
   // Set up the thread to be stopped at the beginning of our range.
   debug_ipc::NotifyException exception;
   exception.type = debug_ipc::ExceptionType::kSingleStep;
-  exception.thread.process_koid = process()->GetKoid();
-  exception.thread.thread_koid = thread()->GetKoid();
+  exception.thread.id = {.process = process()->GetKoid(), .thread = thread()->GetKoid()};
   exception.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
   exception.thread.frames.emplace_back(kBeginAddr, 0x5000);
   InjectException(exception);
@@ -195,8 +194,7 @@ void StepThreadControllerTest::DoSharedLibThunkTest(bool stop_on_no_symbols) {
   // Set up the thread to be stopped at the beginning of our range.
   debug_ipc::NotifyException exception;
   exception.type = debug_ipc::ExceptionType::kSingleStep;
-  exception.thread.process_koid = process()->GetKoid();
-  exception.thread.thread_koid = thread()->GetKoid();
+  exception.thread.id = {.process = process()->GetKoid(), .thread = thread()->GetKoid()};
   exception.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
   exception.thread.frames.emplace_back(kAddrSrc, kSrcSP, 0);
   InjectException(exception);
@@ -259,8 +257,7 @@ void StepThreadControllerTest::DoUnsymbolizedFunctionTest(bool stop_on_no_symbol
   // Set up the thread to be stopped at the beginning of our range.
   debug_ipc::NotifyException src_exception;
   src_exception.type = debug_ipc::ExceptionType::kSingleStep;
-  src_exception.thread.process_koid = process()->GetKoid();
-  src_exception.thread.thread_koid = thread()->GetKoid();
+  src_exception.thread.id = {.process = process()->GetKoid(), .thread = thread()->GetKoid()};
   src_exception.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
   src_exception.thread.frames.emplace_back(kAddrSrc, kSrcSP, 0x5008);
   src_exception.thread.frames.emplace_back(0x10, 0x5008, 0);

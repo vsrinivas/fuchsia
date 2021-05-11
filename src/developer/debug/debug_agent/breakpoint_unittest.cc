@@ -64,8 +64,7 @@ class TestProcessDelegate : public Breakpoint::ProcessDelegate {
 debug_ipc::ProcessBreakpointSettings CreateLocation(zx_koid_t process_koid, zx_koid_t thread_koid,
                                                     const debug_ipc::AddressRange& address_range) {
   debug_ipc::ProcessBreakpointSettings settings = {};
-  settings.process_koid = process_koid;
-  settings.thread_koid = thread_koid;
+  settings.id = {.process = process_koid, .thread = thread_koid};
   settings.address_range = address_range;
 
   return settings;
@@ -86,8 +85,7 @@ TEST(Breakpoint, Registration) {
   constexpr uint64_t kAddress1 = 0x1234;
 
   debug_ipc::ProcessBreakpointSettings& pr_settings = settings.locations.back();
-  pr_settings.process_koid = kProcess1;
-  pr_settings.thread_koid = 0;
+  pr_settings.id = {.process = kProcess1, .thread = 0};
   pr_settings.address = kAddress1;
 
   // Apply the settings.
@@ -100,8 +98,7 @@ TEST(Breakpoint, Registration) {
   // Change the settings to move the breakpoint.
   constexpr zx_koid_t kProcess2 = 2;
   constexpr uint64_t kAddress2 = 0x5678;
-  pr_settings.process_koid = kProcess2;
-  pr_settings.thread_koid = 0;
+  pr_settings.id = {.process = kProcess2, .thread = 0};
   pr_settings.address = kAddress2;
 
   ASSERT_EQ(ZX_OK, bp.SetSettings(settings));
@@ -113,16 +110,14 @@ TEST(Breakpoint, Registration) {
 
   // Add the old breakpoint and a new one
   debug_ipc::ProcessBreakpointSettings old_pr_settings;
-  old_pr_settings.process_koid = kProcess1;
-  old_pr_settings.thread_koid = 0;
+  old_pr_settings.id = {.process = kProcess1, .thread = 0};
   old_pr_settings.address = kAddress1;
 
   constexpr zx_koid_t kProcess3 = 3;
   constexpr uint64_t kAddress3 = 0x9ABC;
 
   debug_ipc::ProcessBreakpointSettings new_pr_settings;
-  new_pr_settings.process_koid = kProcess3;
-  new_pr_settings.thread_koid = 0;
+  new_pr_settings.id = {.process = kProcess3, .thread = 0};
   new_pr_settings.address = kAddress3;
 
   settings.locations.clear();
@@ -150,8 +145,7 @@ TEST(Breakpoint, Destructor) {
   constexpr uint64_t kAddress1 = 0x1234;
 
   debug_ipc::ProcessBreakpointSettings& pr_settings = settings.locations.back();
-  pr_settings.process_koid = kProcess1;
-  pr_settings.thread_koid = 0;
+  pr_settings.id = {.process = kProcess1, .thread = 0};
   pr_settings.address = kAddress1;
 
   // Apply the settings.
@@ -181,8 +175,7 @@ TEST(Breakpoint, HitCount) {
   constexpr uint64_t kAddress1 = 0x1234;
 
   debug_ipc::ProcessBreakpointSettings& pr_settings = settings.locations.back();
-  pr_settings.process_koid = kProcess1;
-  pr_settings.thread_koid = 0;
+  pr_settings.id = {.process = kProcess1, .thread = 0};
   pr_settings.address = kAddress1;
 
   // Apply the settings.
@@ -218,8 +211,7 @@ TEST(Breakpoint, OneShot) {
   constexpr uint64_t kAddress = 0x1234;
 
   debug_ipc::ProcessBreakpointSettings& pr_settings = settings.locations.back();
-  pr_settings.process_koid = kProcess;
-  pr_settings.thread_koid = 0;
+  pr_settings.id = {.process = kProcess, .thread = 0};
   pr_settings.address = kAddress;
 
   // Apply the settings.

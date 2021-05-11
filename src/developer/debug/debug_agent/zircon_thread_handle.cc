@@ -135,8 +135,7 @@ bool ZirconThreadHandle::WaitForSuspension(zx::time deadline) const {
 
 debug_ipc::ThreadRecord ZirconThreadHandle::GetThreadRecord(zx_koid_t process_koid) const {
   debug_ipc::ThreadRecord record;
-  record.process_koid = process_koid;
-  record.thread_koid = thread_koid_;
+  record.id = {.process = process_koid, .thread = thread_koid_};
 
   // Name.
   char name[ZX_MAX_NAME_LEN];

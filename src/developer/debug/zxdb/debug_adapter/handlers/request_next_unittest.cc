@@ -33,8 +33,7 @@ TEST_F(RequestNextTest, NextStatement) {
   // Notify of thread stop.
   debug_ipc::NotifyException break_notification;
   break_notification.type = debug_ipc::ExceptionType::kSoftwareBreakpoint;
-  break_notification.thread.process_koid = kProcessKoid;
-  break_notification.thread.thread_koid = kThreadKoid;
+  break_notification.thread.id = {.process = kProcessKoid, .thread = kThreadKoid};
   break_notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
   break_notification.thread.frames.emplace_back(kAddress, kStack, kStack);
   InjectException(break_notification);

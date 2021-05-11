@@ -215,8 +215,7 @@ TEST_F(SessionTest, MultiBreakpointStop) {
   thread_observer.ResetStopState();
   debug_ipc::NotifyException notify;
   notify.type = debug_ipc::ExceptionType::kSoftwareBreakpoint;
-  notify.thread.process_koid = kProcessKoid;
-  notify.thread.thread_koid = kThreadKoid;
+  notify.thread.id = {.process = kProcessKoid, .thread = kThreadKoid};
   notify.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
   // Don't need stack pointers for this test.
   notify.thread.frames.emplace_back(kAddress, 0);
@@ -261,8 +260,7 @@ TEST_F(SessionTest, OneShotBreakpointDelete) {
 
   debug_ipc::NotifyException notify;
   notify.type = debug_ipc::ExceptionType::kSoftwareBreakpoint;
-  notify.thread.process_koid = kProcessKoid;
-  notify.thread.thread_koid = kThreadKoid;
+  notify.thread.id = {.process = kProcessKoid, .thread = kThreadKoid};
   notify.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
   // Don't need stack pointers for this test.
   notify.thread.frames.emplace_back(kAddress, 0);
@@ -299,8 +297,7 @@ TEST_F(SessionTest, BreakpointStopNone) {
 
   debug_ipc::NotifyException notify;
   notify.type = debug_ipc::ExceptionType::kSoftwareBreakpoint;
-  notify.thread.process_koid = kProcessKoid;
-  notify.thread.thread_koid = kThreadKoid;
+  notify.thread.id = {.process = kProcessKoid, .thread = kThreadKoid};
   notify.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
   // Don't need stack pointers for this test.
   notify.thread.frames.emplace_back(kAddress, 0);
@@ -337,8 +334,7 @@ TEST_F(SessionTest, HitMultBreakpoint) {
 
   debug_ipc::NotifyException notify;
   notify.type = debug_ipc::ExceptionType::kSoftwareBreakpoint;
-  notify.thread.process_koid = kProcessKoid;
-  notify.thread.thread_koid = kThreadKoid;
+  notify.thread.id = {.process = kProcessKoid, .thread = kThreadKoid};
   notify.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
   // Don't need stack pointers for this test.
   notify.thread.frames.emplace_back(kAddress, 0);

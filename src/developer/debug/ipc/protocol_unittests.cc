@@ -120,15 +120,14 @@ TEST(Protocol, HelloReply) {
 namespace {
 
 ThreadRecord CreateThreadRecord(uint32_t process_koid, uint32_t thread_koid) {
-  ThreadRecord record = {};
-  record.process_koid = process_koid;
-  record.thread_koid = thread_koid;
+  ThreadRecord record;
+  record.id = {.process = process_koid, .thread = thread_koid};
   record.name = fxl::StringPrintf("thread-%u", thread_koid);
   return record;
 }
 
 ProcessRecord CreateProcessRecord(uint32_t process_koid, uint32_t thread_count) {
-  ProcessRecord record = {};
+  ProcessRecord record;
   record.process_koid = process_koid;
   record.process_name = fxl::StringPrintf("process-%u", process_koid);
 
@@ -160,36 +159,30 @@ TEST(Protocol, StatusReply) {
 
   // clang-format off
   ASSERT_EQ(two.processes.size(), 2u);
-  EXPECT_EQ(two.processes[0].process_koid,            one.processes[0].process_koid);
-  EXPECT_EQ(two.processes[0].process_name,            one.processes[0].process_name);
+  EXPECT_EQ(two.processes[0].process_koid,    one.processes[0].process_koid);
+  EXPECT_EQ(two.processes[0].process_name,    one.processes[0].process_name);
   ASSERT_EQ(two.processes[0].threads.size(), 1u);
-  ASSERT_EQ(two.processes[0].threads[0].process_koid, one.processes[0].threads[0].process_koid);
-  ASSERT_EQ(two.processes[0].threads[0].thread_koid,  one.processes[0].threads[0].thread_koid);
-  ASSERT_EQ(two.processes[0].threads[0].name,         one.processes[0].threads[0].name);
+  ASSERT_EQ(two.processes[0].threads[0].id,   one.processes[0].threads[0].id);
+  ASSERT_EQ(two.processes[0].threads[0].name, one.processes[0].threads[0].name);
 
-  EXPECT_EQ(two.processes[1].process_koid,            one.processes[1].process_koid);
-  EXPECT_EQ(two.processes[1].process_name,            one.processes[1].process_name);
-  ASSERT_EQ(two.processes[1].threads.size(), 2u);
-  ASSERT_EQ(two.processes[1].threads[0].process_koid, one.processes[1].threads[0].process_koid);
-  ASSERT_EQ(two.processes[1].threads[0].thread_koid,  one.processes[1].threads[0].thread_koid);
-  ASSERT_EQ(two.processes[1].threads[0].name,         one.processes[1].threads[0].name);
-  ASSERT_EQ(two.processes[1].threads[1].process_koid, one.processes[1].threads[1].process_koid);
-  ASSERT_EQ(two.processes[1].threads[1].thread_koid,  one.processes[1].threads[1].thread_koid);
-  ASSERT_EQ(two.processes[1].threads[1].name,         one.processes[1].threads[1].name);
+  EXPECT_EQ(two.processes[1].process_koid,    one.processes[1].process_koid);
+  EXPECT_EQ(two.processes[1].process_name,    one.processes[1].process_name);
+  ASSERT_EQ(two.processes[1].threads.size(),  2u);
+  ASSERT_EQ(two.processes[1].threads[0].id,   one.processes[1].threads[0].id);
+  ASSERT_EQ(two.processes[1].threads[0].name, one.processes[1].threads[0].name);
+  ASSERT_EQ(two.processes[1].threads[1].id,   one.processes[1].threads[1].id);
+  ASSERT_EQ(two.processes[1].threads[1].name, one.processes[1].threads[1].name);
 
   ASSERT_EQ(two.limbo.size(), 1u);
-  EXPECT_EQ(two.limbo[0].process_koid,            one.limbo[0].process_koid);
-  EXPECT_EQ(two.limbo[0].process_name,            one.limbo[0].process_name);
-  ASSERT_EQ(two.limbo[0].threads.size(), 3u);
-  ASSERT_EQ(two.limbo[0].threads[0].process_koid, one.limbo[0].threads[0].process_koid);
-  ASSERT_EQ(two.limbo[0].threads[0].thread_koid,  one.limbo[0].threads[0].thread_koid);
-  ASSERT_EQ(two.limbo[0].threads[0].name,         one.limbo[0].threads[0].name);
-  ASSERT_EQ(two.limbo[0].threads[1].process_koid, one.limbo[0].threads[1].process_koid);
-  ASSERT_EQ(two.limbo[0].threads[1].thread_koid,  one.limbo[0].threads[1].thread_koid);
-  ASSERT_EQ(two.limbo[0].threads[1].name,         one.limbo[0].threads[1].name);
-  ASSERT_EQ(two.limbo[0].threads[2].process_koid, one.limbo[0].threads[2].process_koid);
-  ASSERT_EQ(two.limbo[0].threads[2].thread_koid,  one.limbo[0].threads[2].thread_koid);
-  ASSERT_EQ(two.limbo[0].threads[2].name,         one.limbo[0].threads[2].name);
+  EXPECT_EQ(two.limbo[0].process_koid,    one.limbo[0].process_koid);
+  EXPECT_EQ(two.limbo[0].process_name,    one.limbo[0].process_name);
+  ASSERT_EQ(two.limbo[0].threads.size(),  3u);
+  ASSERT_EQ(two.limbo[0].threads[0].id,   one.limbo[0].threads[0].id);
+  ASSERT_EQ(two.limbo[0].threads[0].name, one.limbo[0].threads[0].name);
+  ASSERT_EQ(two.limbo[0].threads[1].id,   one.limbo[0].threads[1].id);
+  ASSERT_EQ(two.limbo[0].threads[1].name, one.limbo[0].threads[1].name);
+  ASSERT_EQ(two.limbo[0].threads[2].id,   one.limbo[0].threads[2].id);
+  ASSERT_EQ(two.limbo[0].threads[2].name, one.limbo[0].threads[2].name);
   // clang-format on
 }
 
@@ -325,31 +318,26 @@ TEST(Protocol, DetachReply) {
 
 TEST(Protocol, PauseRequest) {
   PauseRequest initial;
-  initial.process_koid = 3746234;
-  initial.thread_koid = 123523;
+  initial.id = {.process = 3746234, .thread = 123523};
 
   PauseRequest second;
   ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
-  EXPECT_EQ(initial.process_koid, second.process_koid);
-  EXPECT_EQ(initial.thread_koid, second.thread_koid);
+  EXPECT_EQ(initial.id, second.id);
 }
 
 TEST(Protocol, PauseReply) {
   PauseReply initial;
   initial.threads.resize(2);
-  initial.threads[0].process_koid = 41;
-  initial.threads[0].thread_koid = 1234;
+  initial.threads[0].id = {.process = 41, .thread = 1234};
   initial.threads[0].name = "thread 0";
-  initial.threads[1].process_koid = 42;
-  initial.threads[1].thread_koid = 5678;
+  initial.threads[1].id = {.process = 42, .thread = 5678};
   initial.threads[1].name = "thread 1";
 
   PauseReply second;
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
   ASSERT_EQ(initial.threads.size(), second.threads.size());
   for (size_t i = 0; i < initial.threads.size(); i++) {
-    EXPECT_EQ(initial.threads[i].process_koid, second.threads[i].process_koid);
-    EXPECT_EQ(initial.threads[i].thread_koid, second.threads[i].thread_koid);
+    EXPECT_EQ(initial.threads[i].id, second.threads[i].id);
     EXPECT_EQ(initial.threads[i].name, second.threads[i].name);
   }
 }
@@ -358,16 +346,14 @@ TEST(Protocol, PauseReply) {
 
 TEST(Protocol, ResumeRequest) {
   ResumeRequest initial;
-  initial.process_koid = 3746234;
-  initial.thread_koids.push_back(123523);
+  initial.ids.push_back({.process = 3746234, .thread = 123523});
   initial.how = ResumeRequest::How::kStepInRange;
   initial.range_begin = 0x12345;
   initial.range_end = 0x123456;
 
   ResumeRequest second;
   ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
-  EXPECT_EQ(initial.process_koid, second.process_koid);
-  EXPECT_EQ(initial.thread_koids, second.thread_koids);
+  EXPECT_EQ(initial.ids, second.ids);
   EXPECT_EQ(initial.how, second.how);
   EXPECT_EQ(initial.range_begin, second.range_begin);
   EXPECT_EQ(initial.range_end, second.range_end);
@@ -418,22 +404,18 @@ TEST(Protocol, ThreadsRequest) {
 TEST(Protocol, ThreadsReply) {
   ThreadsReply initial;
   initial.threads.resize(2);
-  initial.threads[0].process_koid = 41;
-  initial.threads[0].thread_koid = 1234;
+  initial.threads[0].id = {.process = 41, .thread = 1234};
   initial.threads[0].name = "one";
-  initial.threads[1].process_koid = 42;
-  initial.threads[1].thread_koid = 7634;
+  initial.threads[1].id = {.process = 42, .thread = 7634};
   initial.threads[1].name = "two";
 
   ThreadsReply second;
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
 
   ASSERT_EQ(initial.threads.size(), second.threads.size());
-  EXPECT_EQ(initial.threads[0].process_koid, second.threads[0].process_koid);
-  EXPECT_EQ(initial.threads[0].thread_koid, second.threads[0].thread_koid);
+  EXPECT_EQ(initial.threads[0].id, second.threads[0].id);
   EXPECT_EQ(initial.threads[0].name, second.threads[0].name);
-  EXPECT_EQ(initial.threads[1].process_koid, second.threads[1].process_koid);
-  EXPECT_EQ(initial.threads[1].thread_koid, second.threads[1].thread_koid);
+  EXPECT_EQ(initial.threads[1].id, second.threads[1].id);
   EXPECT_EQ(initial.threads[1].name, second.threads[1].name);
 }
 
@@ -494,8 +476,7 @@ TEST(Protocol, AddOrChangeBreakpointRequest) {
   initial.breakpoint.locations.resize(1);
 
   ProcessBreakpointSettings& pr_settings = initial.breakpoint.locations.back();
-  pr_settings.process_koid = 1234;
-  pr_settings.thread_koid = 14612;
+  pr_settings.id = {.process = 1234, .thread = 14612};
   pr_settings.address = 0x723456234;
   pr_settings.address_range = {0x1234, 0x5678};
 
@@ -508,10 +489,7 @@ TEST(Protocol, AddOrChangeBreakpointRequest) {
   EXPECT_EQ(initial.breakpoint.stop, second.breakpoint.stop);
   ASSERT_EQ(initial.breakpoint.locations.size(), second.breakpoint.locations.size());
 
-  EXPECT_EQ(initial.breakpoint.locations[0].process_koid,
-            second.breakpoint.locations[0].process_koid);
-  EXPECT_EQ(initial.breakpoint.locations[0].thread_koid,
-            second.breakpoint.locations[0].thread_koid);
+  EXPECT_EQ(initial.breakpoint.locations[0].id, second.breakpoint.locations[0].id);
   EXPECT_EQ(initial.breakpoint.locations[0].address, second.breakpoint.locations[0].address);
   EXPECT_EQ(initial.breakpoint.locations[0].address_range,
             second.breakpoint.locations[0].address_range);
@@ -575,20 +553,17 @@ TEST(Protocol, SysInfoReply) {
 
 TEST(Protocol, ThreadStatusRequest) {
   ThreadStatusRequest initial;
-  initial.process_koid = 1234;
-  initial.thread_koid = 8976;
+  initial.id = {.process = 1234, .thread = 8976};
 
   ThreadStatusRequest second;
   ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
 
-  EXPECT_EQ(initial.process_koid, second.process_koid);
-  EXPECT_EQ(initial.thread_koid, second.thread_koid);
+  EXPECT_EQ(initial.id, second.id);
 }
 
 TEST(Protocol, ThreadStatusReply) {
   ThreadStatusReply initial;
-  initial.record.process_koid = 42;
-  initial.record.thread_koid = 1234;
+  initial.record.id = {.process = 42, .thread = 1234};
   initial.record.name = "Spartacus";
   initial.record.state = ThreadRecord::State::kRunning;
   initial.record.stack_amount = ThreadRecord::StackAmount::kFull;
@@ -605,8 +580,7 @@ TEST(Protocol, ThreadStatusReply) {
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
 
   EXPECT_EQ(2u, second.record.frames.size());
-  EXPECT_EQ(initial.record.process_koid, second.record.process_koid);
-  EXPECT_EQ(initial.record.thread_koid, second.record.thread_koid);
+  EXPECT_EQ(initial.record.id, second.record.id);
   EXPECT_EQ(initial.record.name, second.record.name);
   EXPECT_EQ(initial.record.state, second.record.state);
   EXPECT_EQ(initial.record.stack_amount, second.record.stack_amount);
@@ -835,16 +809,14 @@ using debug_ipc::RegisterID;
 
 TEST(Protocol, ReadRegistersRequest) {
   ReadRegistersRequest initial;
-  initial.process_koid = 0x1234;
-  initial.thread_koid = 0x5678;
+  initial.id = {.process = 0x1234, .thread = 0x5678};
   initial.categories.push_back(RegisterCategory::kGeneral);
   initial.categories.push_back(RegisterCategory::kVector);
 
   ReadRegistersRequest second;
   ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
 
-  EXPECT_EQ(initial.process_koid, second.process_koid);
-  EXPECT_EQ(initial.thread_koid, second.thread_koid);
+  EXPECT_EQ(initial.id, second.id);
   EXPECT_EQ(initial.categories, second.categories);
 }
 
@@ -877,8 +849,7 @@ TEST(Protocol, ReadRegistersReply) {
 
 TEST(Protocol, WriteRegistersRequest) {
   WriteRegistersRequest initial;
-  initial.process_koid = 0x1234;
-  initial.thread_koid = 0x5678;
+  initial.id = {.process = 0x1234, .thread = 0x5678};
   initial.registers.push_back(CreateRegisterWithTestData(RegisterID::kARMv8_x0, 1));
   initial.registers.push_back(CreateRegisterWithTestData(RegisterID::kARMv8_x1, 2));
   initial.registers.push_back(CreateRegisterWithTestData(RegisterID::kARMv8_x2, 4));
@@ -888,8 +859,7 @@ TEST(Protocol, WriteRegistersRequest) {
   WriteRegistersRequest second;
   ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
 
-  EXPECT_EQ(initial.process_koid, second.process_koid);
-  EXPECT_EQ(initial.thread_koid, second.thread_koid);
+  EXPECT_EQ(initial.id, second.id);
   ASSERT_EQ(second.registers.size(), 5u);
   EXPECT_EQ(second.registers[0].id, initial.registers[0].id);
   EXPECT_EQ(second.registers[0].data, initial.registers[0].data);
@@ -918,8 +888,7 @@ TEST(Protocol, WriteRegistersReply) {
 
 TEST(Protocol, NotifyThread) {
   NotifyThread initial;
-  initial.record.process_koid = 9887;
-  initial.record.thread_koid = 1234;
+  initial.record.id = {.process = 9887, .thread = 1234};
   initial.record.name = "Wolfgang";
   initial.record.state = ThreadRecord::State::kDying;
   initial.record.stack_amount = ThreadRecord::StackAmount::kNone;
@@ -932,8 +901,7 @@ TEST(Protocol, NotifyThread) {
   NotifyThread second;
   ASSERT_TRUE(ReadNotifyThread(&reader, &second));
 
-  EXPECT_EQ(initial.record.process_koid, second.record.process_koid);
-  EXPECT_EQ(initial.record.thread_koid, second.record.thread_koid);
+  EXPECT_EQ(initial.record.id, second.record.id);
   EXPECT_EQ(initial.record.name, second.record.name);
   EXPECT_EQ(initial.record.state, second.record.state);
   EXPECT_EQ(initial.record.stack_amount, second.record.stack_amount);
@@ -942,8 +910,7 @@ TEST(Protocol, NotifyThread) {
 
 TEST(Protocol, NotifyException) {
   NotifyException initial;
-  initial.thread.process_koid = 23;
-  initial.thread.thread_koid = 23;
+  initial.thread.id = {.process = 23, .thread = 23};
   initial.thread.name = "foo";
   initial.thread.stack_amount = ThreadRecord::StackAmount::kMinimal;
   initial.thread.frames.emplace_back(0x7647342634, 0x9861238251);
@@ -966,15 +933,13 @@ TEST(Protocol, NotifyException) {
   initial.hit_breakpoints[1].should_delete = false;
 
   initial.other_affected_threads.emplace_back();
-  initial.other_affected_threads[0].process_koid = 667788;
-  initial.other_affected_threads[0].thread_koid = 990011;
+  initial.other_affected_threads[0].id = {.process = 667788, .thread = 990011};
 
   NotifyException second;
   ASSERT_TRUE(SerializeDeserializeNotification(initial, &second, &WriteNotifyException,
                                                &ReadNotifyException));
 
-  EXPECT_EQ(initial.thread.process_koid, second.thread.process_koid);
-  EXPECT_EQ(initial.thread.thread_koid, second.thread.thread_koid);
+  EXPECT_EQ(initial.thread.id, second.thread.id);
   EXPECT_EQ(initial.thread.name, second.thread.name);
   EXPECT_EQ(initial.thread.stack_amount, second.thread.stack_amount);
   EXPECT_EQ(initial.thread.frames[0], second.thread.frames[0]);
@@ -997,22 +962,21 @@ TEST(Protocol, NotifyException) {
   EXPECT_EQ(initial.hit_breakpoints[1].should_delete, second.hit_breakpoints[1].should_delete);
 
   ASSERT_EQ(initial.other_affected_threads.size(), second.other_affected_threads.size());
-  EXPECT_EQ(initial.other_affected_threads[0].process_koid,
-            second.other_affected_threads[0].process_koid);
-  EXPECT_EQ(initial.other_affected_threads[0].thread_koid,
-            second.other_affected_threads[0].thread_koid);
+  EXPECT_EQ(initial.other_affected_threads[0].id, second.other_affected_threads[0].id);
 }
 
 TEST(Protocol, NotifyModules) {
+  constexpr uint64_t kProcessKoid = 23;
+
   NotifyModules initial;
-  initial.process_koid = 23;
+  initial.process_koid = kProcessKoid;
   initial.modules.resize(2);
   initial.modules[0].name = "foo";
   initial.modules[0].base = 0x12345;
   initial.modules[1].name = "bar";
   initial.modules[1].base = 0x43567;
-  initial.stopped_thread_koids.push_back(34);
-  initial.stopped_thread_koids.push_back(96);
+  initial.stopped_threads.push_back({.process = kProcessKoid, .thread = 34});
+  initial.stopped_threads.push_back({.process = kProcessKoid, .thread = 96});
   initial.timestamp = kTestTimestampDefault;
 
   NotifyModules second;
@@ -1025,7 +989,7 @@ TEST(Protocol, NotifyModules) {
   EXPECT_EQ(initial.modules[0].base, second.modules[0].base);
   EXPECT_EQ(initial.modules[1].name, second.modules[1].name);
   EXPECT_EQ(initial.modules[1].base, second.modules[1].base);
-  EXPECT_EQ(initial.stopped_thread_koids, second.stopped_thread_koids);
+  EXPECT_EQ(initial.stopped_threads, second.stopped_threads);
   EXPECT_EQ(initial.timestamp, second.timestamp);
 }
 

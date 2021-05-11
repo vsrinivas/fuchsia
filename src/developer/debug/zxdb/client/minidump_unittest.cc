@@ -196,7 +196,7 @@ TEST_F(MinidumpTest, Threads) {
 
   auto& thread = reply.threads[0];
 
-  EXPECT_EQ(kTestExampleMinidumpThreadKOID, thread.thread_koid);
+  EXPECT_EQ(kTestExampleMinidumpThreadKOID, thread.id.thread);
   EXPECT_EQ("", thread.name);
   EXPECT_EQ(debug_ipc::ThreadRecord::State::kCoreDump, thread.state);
 }
@@ -213,8 +213,8 @@ TEST_F(MinidumpTest, Registers) {
   using C = debug_ipc::RegisterCategory;
   using R = debug_ipc::RegisterID;
 
-  request.process_koid = kTestExampleMinidumpKOID;
-  request.thread_koid = kTestExampleMinidumpThreadKOID;
+  request.id.process = kTestExampleMinidumpKOID;
+  request.id.thread = kTestExampleMinidumpThreadKOID;
   request.categories = {
       C::kGeneral,
       C::kFloatingPoint,
@@ -569,8 +569,7 @@ TEST_F(MinidumpTest, Backtrace) {
   debug_ipc::ThreadStatusRequest request;
   debug_ipc::ThreadStatusReply reply;
 
-  request.process_koid = kProcessKOID;
-  request.thread_koid = kThreadKOID;
+  request.id = {.process = kProcessKOID, .thread = kThreadKOID};
   DoRequest(request, reply, err, &RemoteAPI::ThreadStatus);
   ASSERT_ZXDB_SUCCESS(err);
 

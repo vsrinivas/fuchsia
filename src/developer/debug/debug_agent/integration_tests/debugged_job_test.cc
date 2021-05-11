@@ -151,7 +151,7 @@ void ResumeAllProcesses(RemoteAPI* remote_api, const JobStreamBackend& backend) 
     // We continue the process.
     ResumeRequest resume_request;
     resume_request.how = ResumeRequest::How::kResolveAndContinue;
-    resume_request.process_koid = start_event.koid;
+    resume_request.ids.push_back({.process = start_event.koid, .thread = 0});
     ResumeReply resume_reply;
     remote_api->OnResume(resume_request, &resume_reply);
   }
@@ -358,7 +358,7 @@ TEST(DebuggedJobIntegrationTest, DISABLED_RepresentativeScenario) {
 
   // We add a breakpoint.
   ProcessBreakpointSettings location;
-  location.process_koid = process_koid;
+  location.id.process = process_koid;
   location.address = function_address;
   AddOrChangeBreakpointRequest breakpoint_request;
   breakpoint_request.breakpoint.id = breakpoint_id;
@@ -380,7 +380,7 @@ TEST(DebuggedJobIntegrationTest, DISABLED_RepresentativeScenario) {
   ASSERT_EQ(backend.exceptions().size(), 1u);
   const auto& exception = backend.exceptions().back();
   EXPECT_EQ(exception.type, ExceptionType::kSoftwareBreakpoint);
-  EXPECT_EQ(exception.thread.process_koid, process_koid);
+  EXPECT_EQ(exception.thread.id.process, process_koid);
   ASSERT_EQ(exception.hit_breakpoints.size(), 1u);
   const auto& breakpoint_stat = exception.hit_breakpoints.back();
   EXPECT_EQ(breakpoint_stat.id, breakpoint_id);
