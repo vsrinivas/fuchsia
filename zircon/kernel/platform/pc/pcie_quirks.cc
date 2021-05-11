@@ -10,6 +10,7 @@
 #if WITH_KERNEL_PCIE
 
 #include <inttypes.h>
+#include <lib/arch/x86/boot-cpuid.h>
 #include <trace.h>
 #include <zircon/types.h>
 
@@ -186,7 +187,7 @@ static void pcie_amd_topmem_quirk(const fbl::RefPtr<PcieDevice>& dev) {
   }
 
   if (top_mem2 && dev) {
-    uint64_t max = (1ULL << x86_physical_address_width());
+    uint64_t max = 1ULL << arch::BootCpuid<arch::CpuidAddressSizeInfo>().phys_addr_bits();
 
     // TODO: make this subtractive on (0, TOP_MEM2) when we start preloading the
     // upper pci range.

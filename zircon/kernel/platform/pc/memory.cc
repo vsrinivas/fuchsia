@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <inttypes.h>
+#include <lib/arch/x86/boot-cpuid.h>
 #include <lib/memory_limit.h>
 #include <lib/zbitl/items/mem_config.h>
 #include <lib/zircon-internal/macros.h>
@@ -193,8 +194,9 @@ void pc_mem_init(ktl::span<zbi_mem_range_t> ranges) {
 // Initialize the higher level PhysicalAspaceManager after the heap is initialized.
 static void x86_resource_init_hook(unsigned int rl) {
   // An error is likely fatal if the bookkeeping is broken and driver
-  ResourceDispatcher::InitializeAllocator(ZX_RSRC_KIND_MMIO, 0,
-                                          (1ull << (x86_physical_address_width())) - 1);
+  ResourceDispatcher::InitializeAllocator(
+      ZX_RSRC_KIND_MMIO, 0,
+      (1ull << arch::BootCpuid<arch::CpuidAddressSizeInfo>().phys_addr_bits()) - 1);
   ResourceDispatcher::InitializeAllocator(ZX_RSRC_KIND_IOPORT, 0, UINT16_MAX);
   ResourceDispatcher::InitializeAllocator(ZX_RSRC_KIND_IRQ, interrupt_get_base_vector(),
                                           interrupt_get_max_vector());

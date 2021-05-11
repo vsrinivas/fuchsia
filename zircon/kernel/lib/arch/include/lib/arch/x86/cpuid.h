@@ -938,9 +938,18 @@ struct CpuidL3CacheInformation
 //---------------------------------------------------------------------------//
 // Leaf/Function 0x8000'0008
 //
+// [intel/vol2]: Table 3-8.  Information Returned by CPUID Instruction.
 // [amd/vol3]: E.4.7  Function 8000_0008h—Processor Capacity Parameters and
 // Extended Feature Identification.
 //---------------------------------------------------------------------------//
+
+struct CpuidAddressSizeInfo
+    : public CpuidIoValueBase<CpuidAddressSizeInfo, 0x8000'0008, 0x0, CpuidIo::kEax> {
+  // Bits [31:24] are reserved.
+  DEF_FIELD(23, 16, guest_phys_addr_bits);
+  DEF_FIELD(15, 8, linear_addr_bits);
+  DEF_FIELD(7, 0, phys_addr_bits);
+};
 
 // [amd/ibc] details bits [18:14] and 12.
 // [amd/ssbd] details bits [26:24].

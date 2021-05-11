@@ -8,6 +8,7 @@
 #include <align.h>
 #include <assert.h>
 #include <lib/arch/sysreg.h>
+#include <lib/arch/x86/boot-cpuid.h>
 #include <lib/arch/x86/system.h>
 #include <lib/boot-options/boot-options.h>
 #include <lib/counters.h>
@@ -503,8 +504,8 @@ void x86_mmu_early_init() {
   x86_tlb_global_invalidate();
 
   /* get the address width from the CPU */
-  uint8_t vaddr_width = x86_linear_address_width();
-  uint8_t paddr_width = x86_physical_address_width();
+  uint8_t vaddr_width = arch::BootCpuid<arch::CpuidAddressSizeInfo>().linear_addr_bits();
+  uint8_t paddr_width = arch::BootCpuid<arch::CpuidAddressSizeInfo>().phys_addr_bits();
 
   supports_huge_pages = x86_feature_test(X86_FEATURE_HUGE_PAGE);
 

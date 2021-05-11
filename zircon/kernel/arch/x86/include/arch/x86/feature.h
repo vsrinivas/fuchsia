@@ -200,30 +200,6 @@ void x86_feature_debug(void);
 #define X86_FEATURE_INVAR_TSC X86_CPUID_BIT(0x80000007, 3, 8)
 
 /* legacy accessors */
-static inline uint8_t x86_linear_address_width(void) {
-  const struct cpuid_leaf* leaf = x86_get_cpuid_leaf(X86_CPUID_ADDR_WIDTH);
-  if (!leaf)
-    return 0;
-
-  /*
-   Extracting bit 15:8 from eax register
-   Bits 15-08: #Linear Address Bits
-  */
-  return (leaf->a >> 8) & 0xff;
-}
-
-static inline uint8_t x86_physical_address_width(void) {
-  const struct cpuid_leaf* leaf = x86_get_cpuid_leaf(X86_CPUID_ADDR_WIDTH);
-  if (!leaf)
-    return 0;
-
-  /*
-   Extracting bit 7:0 from eax register
-   Bits 07-00: #Physical Address Bits
-  */
-  return leaf->a & 0xff;
-}
-
 static inline uint32_t x86_get_clflush_line_size(void) {
   const struct cpuid_leaf* leaf = x86_get_cpuid_leaf(X86_CPUID_MODEL_FEATURES);
   if (!leaf)
