@@ -82,7 +82,7 @@ class DeviceInterface : public fidl::WireServer<netdev::Device>,
   const device_info_t& info() { return device_info_; }
 
   // Loads rx path descriptors from the primary session into a session transaction.
-  zx_status_t LoadRxDescriptors(RxSessionTransaction& transact);
+  zx_status_t LoadRxDescriptors(RxSessionTransaction& transact) __TA_REQUIRES_SHARED(control_lock_);
 
   // Operates workflow for when a session is started. If the session is eligible to take over the
   // primary spot, it'll be elected the new primary session. If there was no primary session before,
@@ -113,10 +113,12 @@ class DeviceInterface : public fidl::WireServer<netdev::Device>,
   // Checks if dead sessions are ready to be destroyed due to buffers returning.
   void NotifyTxReturned(bool was_full);
   // Sends the provided space buffers in `rx` to the device implementation.
-  void QueueRxSpace(const rx_space_buffer_t* rx, size_t count);
-  // Sends the provided transmit buffers in `rx` to the device implementation.
-  void QueueTx(const tx_buffer_t* tx, size_t count);
-  bool IsDataPlaneOpen();
+  void QueueRxSpace(const rx_space_buffer_t* rx, size_t count)
+      __TA_EXCLUDES(control_lock_, rx_lock_, tx_lock_);
+  // Sends the provided transmit buffers in `tx` to the device implementation.
+  void QueueTx(const tx_buffer_t* tx, size_t count)
+      __TA_EXCLUDES(control_lock_, rx_lock_, tx_lock_);
+  bool IsDataPlaneOpen() __TA_REQUIRES_SHARED(control_lock_);
 
   // Called by sessions when they're no longer running. If the dead session has any outstanding
   // buffers with the device implementation, it'll be kept in `dead_sessions_` until all the buffers
@@ -271,10 +273,10 @@ class DeviceInterface : public fidl::WireServer<netdev::Device>,
 
   DeviceStatus device_status_ __TA_GUARDED(control_lock_) = DeviceStatus::STOPPED;
 
-  fbl::Mutex rx_lock_ __TA_ACQUIRED_BEFORE(control_lock_, tx_lock_);
-  fbl::Mutex tx_lock_ __TA_ACQUIRED_BEFORE(control_lock_);
-  fbl::Mutex tx_buffers_lock_ __TA_ACQUIRED_AFTER(tx_lock_) __TA_ACQUIRED_BEFORE(control_lock_);
-  SharedLock control_lock_;
+  fbl::Mutex rx_lock_;
+  fbl::Mutex tx_lock_ __TA_ACQUIRED_AFTER(tx_lock_);
+  fbl::Mutex tx_buffers_lock_ __TA_ACQUIRED_AFTER(tx_lock_);
+  SharedLock control_lock_ __TA_ACQUIRED_AFTER(tx_lock_, tx_buffers_lock_, rx_lock_);
 
  public:
   // Event hooks used in tests:

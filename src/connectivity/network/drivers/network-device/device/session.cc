@@ -668,15 +668,22 @@ void Session::MarkTxReturnResult(uint16_t descriptor_index, zx_status_t status) 
 }
 
 void Session::ReturnTxDescriptors(const uint16_t* descriptors, size_t count) {
-  size_t actual_count = 0;
-  zx_status_t status;
-  if ((status = fifo_tx_.write(sizeof(uint16_t), descriptors, count, &actual_count)) != ZX_OK ||
-      actual_count != count) {
-    LOGF_WARN("network-device(%s): failed to return %ld tx descriptors: %s", name(),
-              count - actual_count, zx_status_get_string(status));
-    // given that we always tightly control the amount of stuff written to the FIFOs. We don't
-    // expect this to happen during regular operation, unless there's a bug somewhere. This line is
-    // expected to fire, though, if the tx FIFO is closed while we're trying to return buffers.
+  size_t actual_count;
+  zx_status_t status = fifo_tx_.write(sizeof(uint16_t), descriptors, count, &actual_count);
+  constexpr char kLogFormat[] = "network-device(%s): failed to return %ld tx descriptors: %s";
+  switch (status) {
+    case ZX_OK:
+      if (actual_count != count) {
+        LOGF_ERROR("network-device(%s): failed to return %ld/%ld tx descriptors", name(),
+                   count - actual_count, count);
+      }
+      break;
+    case ZX_ERR_PEER_CLOSED:
+      LOGF_WARN(kLogFormat, name(), count, zx_status_get_string(status));
+      break;
+    default:
+      LOGF_ERROR(kLogFormat, name(), count, zx_status_get_string(status));
+      break;
   }
   // Always assume we were able to return the descriptors.
   // After descriptors are marked as returned, the session may be destroyed.
@@ -1012,17 +1019,26 @@ void Session::CommitRx() {
   if (rx_return_queue_count_ == 0 || paused_.load()) {
     return;
   }
-  zx_status_t status;
-  size_t actual = 0;
-  if ((status = fifo_rx_->fifo.write(sizeof(uint16_t), rx_return_queue_.get(),
-                                     rx_return_queue_count_, &actual)) != ZX_OK ||
-      actual != rx_return_queue_count_) {
-    LOGF_WARN("network-device(%s): failed to return %ld tx descriptors: %s", name(),
-              rx_return_queue_count_ - actual, zx_status_get_string(status));
-    // given that we always tightly control the amount of stuff written to the FIFOs. We don't
-    // expect this to happen during regular operation, unless there's a bug somewhere. This line is
-    // expected to fire, though, if the rx FIFO is closed while we're trying to return buffers.
+  size_t actual;
+  zx_status_t status = fifo_rx_->fifo.write(sizeof(uint16_t), rx_return_queue_.get(),
+                                            rx_return_queue_count_, &actual);
+  constexpr char kLogFormat[] = "network-device(%s): failed to return %ld rx descriptors: %s";
+  switch (status) {
+    case ZX_OK:
+      if (actual != rx_return_queue_count_) {
+        LOGF_ERROR("network-device(%s): failed to return %ld/%ld rx descriptors", name(),
+                   rx_return_queue_count_ - actual, rx_return_queue_count_);
+      }
+      break;
+    case ZX_ERR_PEER_CLOSED:
+      LOGF_WARN(kLogFormat, name(), rx_return_queue_count_, zx_status_get_string(status));
+      break;
+
+    default:
+      LOGF_ERROR(kLogFormat, name(), rx_return_queue_count_, zx_status_get_string(status));
+      break;
   }
+  // Always assume we were able to return the descriptors.
   rx_return_queue_count_ = 0;
 }
 

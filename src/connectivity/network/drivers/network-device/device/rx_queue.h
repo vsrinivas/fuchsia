@@ -86,10 +86,12 @@ class RxQueue {
   // Get a single buffer from the queue, along with its identifier. On success, the buffer is popped
   // from the queue. The returned buffer pointer is still owned by the queue and the pointer should
   // not outlive the currently held lock.
-  std::tuple<InFlightBuffer*, uint32_t> GetBuffer() __TA_REQUIRES(parent_->rx_lock());
+  std::tuple<InFlightBuffer*, uint32_t> GetBuffer() __TA_REQUIRES(parent_->rx_lock())
+      __TA_REQUIRES_SHARED(parent_->control_lock());
   // Pops a buffer from the queue, if any are available, and stores the space information in `buff`.
   // Returns ZX_ERR_NO_RESOURCES if there are no buffers available.
-  zx_status_t PrepareBuff(rx_space_buffer_t* buff) __TA_REQUIRES(parent_->rx_lock());
+  zx_status_t PrepareBuff(rx_space_buffer_t* buff) __TA_REQUIRES(parent_->rx_lock())
+      __TA_REQUIRES_SHARED(parent_->control_lock());
   int WatchThread();
   // Reclaims the buffer with `id` from the device. If the buffer's session is still valid, gives it
   // to the session, otherwise drops it.

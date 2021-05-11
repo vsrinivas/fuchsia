@@ -1052,17 +1052,13 @@ void DeviceInterface::ListenSessionData(const Session& owner,
 }
 
 zx_status_t DeviceInterface::LoadRxDescriptors(RxSessionTransaction& transact) {
-  SharedAutoLock lock(&control_lock_);
   if (!primary_session_) {
     return ZX_ERR_BAD_STATE;
   }
   return primary_session_->LoadRxDescriptors(transact);
 }
 
-bool DeviceInterface::IsDataPlaneOpen() {
-  SharedAutoLock lock(&control_lock_);
-  return device_status_ == DeviceStatus::STARTED;
-}
+bool DeviceInterface::IsDataPlaneOpen() { return device_status_ == DeviceStatus::STARTED; }
 
 DeviceInterface::DeviceInterface(async_dispatcher_t* dispatcher,
                                  ddk::NetworkDeviceImplProtocolClient parent)

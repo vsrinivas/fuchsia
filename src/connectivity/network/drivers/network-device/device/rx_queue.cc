@@ -286,7 +286,8 @@ int RxQueue::WatchThread() {
       size_t pushed = 0;
       bool should_wait_on_fifo;
 
-      fbl::AutoLock lock(&parent_->rx_lock());
+      fbl::AutoLock rx_lock(&parent_->rx_lock());
+      SharedAutoLock control_lock(&parent_->control_lock());
       size_t push_count = parent_->info().rx_depth - device_buffer_count_;
       if (parent_->IsDataPlaneOpen()) {
         for (; pushed < push_count; pushed++) {
@@ -307,10 +308,10 @@ int RxQueue::WatchThread() {
       should_wait_on_fifo =
           device_buffer_count_ < parent_->info().rx_depth && parent_->IsDataPlaneOpen();
 
-      // We release the main rx queue lock before calling into the parent device,
-      // so we don't cause a re-entrant deadlock.
-      // We keep the buffers_parent_->rx_lock() since those are tied to our lifecycle.
-      lock.release();
+      // We release the main rx queue and control locks before calling into the parent device so we
+      // don't cause a re-entrant deadlock.
+      rx_lock.release();
+      control_lock.release();
 
       if (pushed != 0) {
         parent_->QueueRxSpace(space_buffers_.get(), static_cast<uint32_t>(pushed));
