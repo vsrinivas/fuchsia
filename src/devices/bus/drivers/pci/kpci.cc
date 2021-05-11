@@ -28,6 +28,7 @@
 
 #include <memory>
 
+#include <bind/fuchsia/pci/cpp/fidl.h>
 #include <ddktl/device.h>
 
 #include "src/devices/bus/drivers/pci/pci_bind.h"
@@ -35,10 +36,105 @@
 
 namespace pci {
 
-zx_status_t KernelPci::Create(zx_device_t* parent, kpci_device device) {
+static const zx_bind_inst_t root_match[] = {
+    BI_MATCH(),
+};
+static const zx_bind_inst_t sysmem_match[] = {
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SYSMEM),
+};
+
+static const device_fragment_part_t sysmem_fragment[] = {
+    {countof(root_match), root_match},
+    {countof(sysmem_match), sysmem_match},
+};
+
+zx_status_t KernelPci::CreateComposite(zx_device_t* parent, kpci_device device) {
+  zx_device_prop_t fragment_props[] = {
+      {BIND_PROTOCOL, 0, ZX_PROTOCOL_PCI},
+      {BIND_PCI_VID, 0, device.info.vendor_id},
+      {BIND_PCI_DID, 0, device.info.device_id},
+      {BIND_PCI_CLASS, 0, device.info.base_class},
+      {BIND_PCI_SUBCLASS, 0, device.info.sub_class},
+      {BIND_PCI_INTERFACE, 0, device.info.program_interface},
+      {BIND_PCI_REVISION, 0, device.info.revision_id},
+      {BIND_PCI_COMPONENT, 0, bind::fuchsia::pci::BIND_PCI_COMPONENT_COMPONENT},
+      {BIND_TOPO_PCI, 0,
+       static_cast<uint32_t>(
+           BIND_TOPO_PCI_PACK(device.info.bus_id, device.info.dev_id, device.info.func_id))},
+  };
+
   char name[ZX_DEVICE_NAME_MAX];
-  snprintf(name, sizeof(name), "%02x:%02x.%1x", device.info.bus_id, device.info.dev_id,
-           device.info.func_id);
+  snprintf(name, sizeof(device.name), "fragment %s", device.name);
+
+  auto kpci = std::unique_ptr<KernelPci>(new KernelPci(parent, device));
+  zx_status_t status = kpci->DdkAdd(
+      ddk::DeviceAddArgs(name).set_props(fragment_props).set_proto_id(ZX_PROTOCOL_PCI));
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  auto pci_bind_topo = static_cast<uint32_t>(
+      BIND_TOPO_PCI_PACK(device.info.bus_id, device.info.dev_id, device.info.func_id));
+  const zx_bind_inst_t pci_match[] = {
+      BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
+      BI_ABORT_IF(NE, BIND_PCI_VID, device.info.vendor_id),
+      BI_ABORT_IF(NE, BIND_PCI_DID, device.info.device_id),
+      BI_ABORT_IF(NE, BIND_PCI_CLASS, device.info.base_class),
+      BI_ABORT_IF(NE, BIND_PCI_SUBCLASS, device.info.sub_class),
+      BI_ABORT_IF(NE, BIND_PCI_INTERFACE, device.info.program_interface),
+      BI_ABORT_IF(NE, BIND_PCI_REVISION, device.info.revision_id),
+      BI_ABORT_IF(NE, BIND_PCI_COMPONENT, bind::fuchsia::pci::BIND_PCI_COMPONENT_COMPONENT),
+      BI_MATCH_IF(EQ, BIND_TOPO_PCI, pci_bind_topo),
+  };
+
+  const device_fragment_part_t pci_fragment[] = {
+      {countof(root_match), root_match},
+      {countof(pci_match), pci_match},
+  };
+
+  const device_fragment_t fragments[] = {
+      {"sysmem", countof(sysmem_fragment), sysmem_fragment},
+      {"pci", countof(pci_fragment), pci_fragment},
+  };
+  zx_device_prop_t composite_props[] = {
+      {BIND_PROTOCOL, 0, ZX_PROTOCOL_PCI},
+      {BIND_PCI_VID, 0, device.info.vendor_id},
+      {BIND_PCI_DID, 0, device.info.device_id},
+      {BIND_PCI_CLASS, 0, device.info.base_class},
+      {BIND_PCI_SUBCLASS, 0, device.info.sub_class},
+      {BIND_PCI_INTERFACE, 0, device.info.program_interface},
+      {BIND_PCI_REVISION, 0, device.info.revision_id},
+      {BIND_PCI_COMPONENT, 0, bind::fuchsia::pci::BIND_PCI_COMPONENT_COMPOSITE},
+      {BIND_TOPO_PCI, 0,
+       static_cast<uint32_t>(
+           BIND_TOPO_PCI_PACK(device.info.bus_id, device.info.dev_id, device.info.func_id))},
+  };
+
+  composite_device_desc_t composite_desc = {
+      .props = composite_props,
+      .props_count = countof(composite_props),
+      .fragments = fragments,
+      .fragments_count = countof(fragments),
+      .coresident_device_index = UINT32_MAX,  // create a new devhost
+  };
+
+  snprintf(name, sizeof(device.name), "composite %s", device.name);
+  auto kpci_composite = std::unique_ptr<KernelPci>(new KernelPci(parent, device));
+  status = kpci_composite->DdkAddComposite(name, &composite_desc);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  static_cast<void>(kpci_composite.release());
+  static_cast<void>(kpci.release());
+  return status;
+}
+
+zx_status_t KernelPci::CreateSimple(zx_device_t* parent, kpci_device device) {
+  char argstr[ZX_DEVICE_NAME_MAX];
+  snprintf(argstr, sizeof(argstr), "pci#%04x:%04x,%02x:%02x.%1x", device.info.vendor_id,
+           device.info.device_id, device.info.bus_id, device.info.dev_id, device.info.func_id);
+
   zx_device_prop_t props[] = {
       {BIND_PROTOCOL, 0, ZX_PROTOCOL_PCI},
       {BIND_PCI_VID, 0, device.info.vendor_id},
@@ -47,17 +143,14 @@ zx_status_t KernelPci::Create(zx_device_t* parent, kpci_device device) {
       {BIND_PCI_SUBCLASS, 0, device.info.sub_class},
       {BIND_PCI_INTERFACE, 0, device.info.program_interface},
       {BIND_PCI_REVISION, 0, device.info.revision_id},
+      {BIND_PCI_COMPONENT, 0, 0},
       {BIND_TOPO_PCI, 0,
        static_cast<uint32_t>(
            BIND_TOPO_PCI_PACK(device.info.bus_id, device.info.dev_id, device.info.func_id))},
   };
 
-  char argstr[ZX_DEVICE_NAME_MAX];
-  snprintf(argstr, sizeof(argstr), "pci#%04x:%04x,%s", device.info.vendor_id, device.info.device_id,
-           name);
-
   auto kpci = std::unique_ptr<KernelPci>(new KernelPci(parent, device));
-  zx_status_t status = kpci->DdkAdd(ddk::DeviceAddArgs(name)
+  zx_status_t status = kpci->DdkAdd(ddk::DeviceAddArgs(device.name)
                                         .set_props(props)
                                         .set_proto_id(ZX_PROTOCOL_PCI)
                                         .set_proxy_args(argstr)
@@ -502,7 +595,22 @@ static zx_status_t pci_init_child(zx_device_t* parent, uint32_t index) {
   device_get_protocol(parent, ZX_PROTOCOL_PCIROOT, &device.pciroot);
   device_get_protocol(parent, ZX_PROTOCOL_PDEV, &device.pdev);
 
-  return KernelPci::Create(parent, device);
+  snprintf(device.name, sizeof(device.name), "%02x:%02x.%1x", device.info.bus_id,
+           device.info.dev_id, device.info.func_id);
+  status = KernelPci::CreateSimple(parent, device);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "failed to create kPCIProxy for %#02x:%#02x.%1x (%#04x:%#04x)", info.bus_id,
+           info.dev_id, info.func_id, info.vendor_id, info.device_id);
+  }
+
+  status = KernelPci::CreateComposite(parent, device);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "failed to create kPCI for %#02x:%#02x.%1x (%#04x:%#04x)", info.bus_id,
+           info.dev_id, info.func_id, info.vendor_id, info.device_id);
+    return status;
+  }
+
+  return status;
 }  // namespace pci
 
 static zx_status_t pci_drv_bind(void* ctx, zx_device_t* parent) {

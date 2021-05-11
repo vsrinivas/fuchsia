@@ -84,6 +84,7 @@ bind_rules("pci_bind") {
   output = "pci_bind.h"
   tests = "pci_bind_tests.json"
   deps = [
+    "//src/devices/bind/fuchsia.pci",
     "//src/devices/bind/fuchsia.pciroot",
     "//src/devices/bind/fuchsia.platform",
   ]
@@ -123,6 +124,7 @@ if (platform_enable_user_pci) {
       "//sdk/banjo/fuchsia.hardware.pciroot:fuchsia.hardware.pciroot_banjo_cpp",
       "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
       "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
+      "//src/devices/bind/fuchsia.pci:bind.fuchsia.pci",
       "//src/devices/lib/driver",
       "//src/devices/lib/pci",
       "//src/devices/pci/lib/pci",

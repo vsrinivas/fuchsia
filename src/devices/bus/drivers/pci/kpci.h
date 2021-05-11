@@ -1,4 +1,3 @@
-
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -29,6 +28,7 @@ struct kpci_device {
   // nth device index
   uint32_t index;
   zx_pcie_device_info_t info;
+  char name[ZX_DEVICE_NAME_MAX];
 };
 
 namespace pci {
@@ -43,7 +43,8 @@ class KernelPci : public KernelPciType,
   zx_status_t DdkRxrpc(zx_handle_t ch);
   void DdkRelease();
 
-  static zx_status_t Create(zx_device_t* parent, kpci_device device);
+  static zx_status_t CreateComposite(zx_device_t* parent, kpci_device device);
+  static zx_status_t CreateSimple(zx_device_t* parent, kpci_device device);
   zx_status_t RpcReply(zx_handle_t ch, zx_status_t status, zx_handle_t* handle, PciRpcMsg* req,
                        PciRpcMsg* resp);
 
