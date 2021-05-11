@@ -157,6 +157,11 @@ KCOUNTER(malloc_heap_grow_fail, "malloc.heap_grow_fail")
 
 #else
 
+// When built in a host (aka non-kernel) environment it is assumed to be for testing and so we want
+// to make sure that zircon assertions are correctly enabled. This to prevent any regressions due to
+// libraries and build system changes.
+static_assert(ZX_DEBUG_ASSERT_IMPLEMENTED, "Expect debug assertions in host builds");
+
 #define LOCAL_TRACE_DURATION(label, name, ...)
 #define LOCAL_TRACE_DURATION_END(name)
 #define PREEMPT_DISABLE(name)

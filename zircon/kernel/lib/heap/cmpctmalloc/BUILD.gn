@@ -30,6 +30,7 @@ zx_library("cmpctmalloc") {
       "include",
       "//zircon/kernel/lib/heap/include",
     ]
+    defines = [ "ZX_ASSERT_LEVEL=2" ]
   } else if (is_kernel) {
     # TODO(fxbug.dev/51163): Remove headers when possible.
     deps += [ "//zircon/kernel/lib/instrumentation:headers" ]
