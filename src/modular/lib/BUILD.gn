@@ -18,6 +18,7 @@ group("lib") {
     "lifecycle",
     "pseudo_dir",
     "scoped_tmpfs",
+    "session",
     "testing",
   ]
 }
@@ -42,6 +43,7 @@ executable("modular_lib_unittests") {
     "//src/modular/lib/modular_test_harness/cpp:unittests",
     "//src/modular/lib/pseudo_dir:unittests",
     "//src/modular/lib/scoped_tmpfs:unittests",
+    "//src/modular/lib/session:unittests",
     "//src/modular/lib/string_escape:unittests",
   ]
 }

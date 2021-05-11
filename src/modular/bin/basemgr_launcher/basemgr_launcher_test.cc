@@ -108,8 +108,8 @@ TEST_F(BasemgrLauncherTest, NoopShutdownReturnsOk) {
   EXPECT_EQ(ZX_OK, RunBasemgrLauncher({"shutdown"}));
 }
 
-// Clear persistent config should complete without error.
-TEST_F(BasemgrLauncherTest, ClearConfigRuns) {
+// Deleting persistent config should complete without error.
+TEST_F(BasemgrLauncherTest, DeleteConfigRuns) {
   EXPECT_EQ(ZX_OK, RunBasemgrLauncher({"delete_config"}));
 }
 
