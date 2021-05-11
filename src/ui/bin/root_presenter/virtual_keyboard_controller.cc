@@ -9,12 +9,14 @@
 #include <memory>
 #include <utility>
 
+#include "src/ui/bin/root_presenter/virtual_keyboard_coordinator.h"
+
 namespace root_presenter {
 
 VirtualKeyboardController::VirtualKeyboardController(
     fxl::WeakPtr<VirtualKeyboardCoordinator> coordinator, fuchsia::ui::views::ViewRef view_ref,
     fuchsia::input::virtualkeyboard::TextType text_type)
-    : coordinator_(std::move(coordinator)), visible_(false) {}
+    : coordinator_(std::move(coordinator)), want_visible_(false) {}
 
 void VirtualKeyboardController::SetTextType(fuchsia::input::virtualkeyboard::TextType text_type) {
   FX_LOGS(INFO) << __PRETTY_FUNCTION__;
@@ -22,13 +24,15 @@ void VirtualKeyboardController::SetTextType(fuchsia::input::virtualkeyboard::Tex
 
 void VirtualKeyboardController::RequestShow() {
   FX_LOGS(INFO) << __PRETTY_FUNCTION__;
-  visible_ = true;
+  want_visible_ = true;
+  NotifyCoordinator();
   MaybeNotifyWatcher();
 }
 
 void VirtualKeyboardController::RequestHide() {
   FX_LOGS(INFO) << __PRETTY_FUNCTION__;
-  visible_ = false;
+  want_visible_ = false;
+  NotifyCoordinator();
   MaybeNotifyWatcher();
 }
 
@@ -37,25 +41,34 @@ void VirtualKeyboardController::WatchVisibility(WatchVisibilityCallback callback
   if (watch_callback_) {
     // Called with a watch already active. Resend the current value, so that
     // the old call doesn't hang forever.
-    FX_DCHECK(last_sent_visible_ == visible_);
-    watch_callback_(visible_);
+    FX_DCHECK(last_sent_visible_ == want_visible_);
+    watch_callback_(want_visible_);
   }
 
   if (last_sent_visible_.has_value()) {
     watch_callback_ = std::move(callback);
     MaybeNotifyWatcher();
   } else {
-    callback(visible_);
-    last_sent_visible_ = visible_;
+    callback(want_visible_);
+    last_sent_visible_ = want_visible_;
   }
 }
 
 void VirtualKeyboardController::MaybeNotifyWatcher() {
   FX_LOGS(INFO) << __PRETTY_FUNCTION__;
-  if (watch_callback_ && visible_ != last_sent_visible_) {
-    watch_callback_(visible_);
+  if (watch_callback_ && want_visible_ != last_sent_visible_) {
+    watch_callback_(want_visible_);
     watch_callback_ = {};
-    last_sent_visible_ = visible_;
+    last_sent_visible_ = want_visible_;
+  }
+}
+
+void VirtualKeyboardController::NotifyCoordinator() {
+  if (coordinator_) {
+    coordinator_->RequestTypeAndVisibility(fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC,
+                                           want_visible_);
+  } else {
+    FX_LOGS(WARNING) << "Ignoring RequestShow()/RequestHide(): no `coordinator_`";
   }
 }
 

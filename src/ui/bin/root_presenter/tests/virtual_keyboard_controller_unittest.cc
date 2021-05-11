@@ -6,8 +6,6 @@
 
 #include <fuchsia/input/virtualkeyboard/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
-#include <lib/sys/cpp/component_context.h>
-#include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
 
 #include <gtest/gtest.h>
@@ -19,11 +17,36 @@ namespace root_presenter {
 namespace virtual_keyboard_controller {
 namespace {
 
+class FakeVirtualKeyboardCoordinator : public VirtualKeyboardCoordinator {
+ public:
+  FakeVirtualKeyboardCoordinator() : weak_ptr_factory_(this) {}
+  virtual ~FakeVirtualKeyboardCoordinator() = default;
+
+  // |VirtualKeyboardCoordinator|
+  void NotifyVisibilityChange(
+      bool is_visible, fuchsia::input::virtualkeyboard::VisibilityChangeReason reason) override {
+    FX_NOTIMPLEMENTED();
+  }
+  void RequestTypeAndVisibility(fuchsia::input::virtualkeyboard::TextType text_type,
+                                bool is_visibile) override {
+    want_visible_ = is_visibile;
+  }
+
+  // Test support.
+  const auto& want_visible() { return want_visible_; }
+
+  fxl::WeakPtr<FakeVirtualKeyboardCoordinator> GetWeakPtr() {
+    return weak_ptr_factory_.GetWeakPtr();
+  }
+
+ private:
+  std::optional<bool> want_visible_;
+  fxl::WeakPtrFactory<FakeVirtualKeyboardCoordinator> weak_ptr_factory_;
+};
+
 class VirtualKeyboardControllerTest : public gtest::TestLoopFixture {
  protected:
-  VirtualKeyboardControllerTest() : coordinator_(context_provider_.context()) {
-    view_ref_pair_ = scenic::ViewRefPair::New();
-  }
+  VirtualKeyboardControllerTest() { view_ref_pair_ = scenic::ViewRefPair::New(); }
 
   fuchsia::ui::views::ViewRef view_ref() const {
     fuchsia::ui::views::ViewRef clone;
@@ -31,12 +54,11 @@ class VirtualKeyboardControllerTest : public gtest::TestLoopFixture {
     return clone;
   }
 
-  fxl::WeakPtr<VirtualKeyboardCoordinator> coordinator() { return coordinator_.GetWeakPtr(); }
+  fxl::WeakPtr<FakeVirtualKeyboardCoordinator> coordinator() { return coordinator_.GetWeakPtr(); }
 
  private:
-  sys::testing::ComponentContextProvider context_provider_;
   scenic::ViewRefPair view_ref_pair_;
-  FidlBoundVirtualKeyboardCoordinator coordinator_;
+  FakeVirtualKeyboardCoordinator coordinator_;
 };
 
 TEST_F(VirtualKeyboardControllerTest, FirstWatchReturnsImmediately) {
@@ -161,6 +183,36 @@ TEST_F(VirtualKeyboardControllerTest, ConcurrentCallsFirstWatchersGetsOldValue) 
   controller.WatchVisibility([](bool visibility) {});
   controller.RequestShow();
   ASSERT_EQ(false, first_watcher_visibility);
+}
+
+TEST_F(VirtualKeyboardControllerTest, RequestShowInformsCoordinatorOfVisibility) {
+  VirtualKeyboardController(coordinator(), view_ref(),
+                            fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC)
+      .RequestShow();
+  ASSERT_EQ(true, coordinator()->want_visible());
+}
+
+TEST_F(VirtualKeyboardControllerTest, RequestHideInformsCoordinatorOfVisibility) {
+  VirtualKeyboardController(coordinator(), view_ref(),
+                            fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC)
+      .RequestHide();
+  ASSERT_EQ(false, coordinator()->want_visible());
+}
+
+TEST_F(VirtualKeyboardControllerTest, RequestShowDoesNotCrashWhenCoordinatorIsNull) {
+  std::optional<FakeVirtualKeyboardCoordinator> coordinator(std::in_place);
+  VirtualKeyboardController controller(coordinator->GetWeakPtr(), view_ref(),
+                                       fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC);
+  coordinator.reset();
+  controller.RequestShow();
+}
+
+TEST_F(VirtualKeyboardControllerTest, RequestHideDoesNotCrashWhenCoordinatorIsNull) {
+  std::optional<FakeVirtualKeyboardCoordinator> coordinator(std::in_place);
+  VirtualKeyboardController controller(coordinator->GetWeakPtr(), view_ref(),
+                                       fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC);
+  coordinator.reset();
+  controller.RequestHide();
 }
 
 TEST_F(VirtualKeyboardControllerTest, SetTextTypeDoesNotCrash) {

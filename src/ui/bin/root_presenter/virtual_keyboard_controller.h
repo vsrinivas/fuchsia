@@ -31,10 +31,34 @@ class VirtualKeyboardController : public fuchsia::input::virtualkeyboard::Contro
 
  private:
   void MaybeNotifyWatcher();
+  void NotifyCoordinator();
 
   fxl::WeakPtr<VirtualKeyboardCoordinator> coordinator_;
-  bool visible_;
+
+  // Whether or not `this` wants the keyboard to be visible. The value may differ
+  // from the ground truth about visibility, which is owned by the client of the
+  // `fuchsia.input.virtualkeyboard.Manager` protocol.
+  //
+  // Currently, `want_visible_` differs from the actual visibility only during the
+  // transient periods when either
+  // a) `want_visible_` has been updated, and the Manager client has not read a new
+  //    value from fuchsia.input.virtualkeyboard.Manager.WatchTypeAndVisibility()
+  // b) the user has dismissed the keyboard using the virtual keyboard GUI, and
+  //    `want_visible_` has not yet observed the change
+  //
+  // In the future, `want_visible_` may also differ from the ground truth when
+  // `this` is unable to effect its desire, because the corresponding
+  // `fuchsia.ui.views.View` does not have focus.
+  bool want_visible_;
+
+  // The visibility last sent on the `fuchsia.input.virtualkeyboard.Controller`
+  // channel bound to `this`.
+  // * used to
+  //   * identify the first call to WatchVisibility()
+  //   * avoid sending no-op responses on later calls to WatchVisibility()
+  // * equal to `nullopt`, iff the client has never called WatchTypeAndVisibility()
   std::optional<bool> last_sent_visible_;
+
   WatchVisibilityCallback watch_callback_;
 };
 
