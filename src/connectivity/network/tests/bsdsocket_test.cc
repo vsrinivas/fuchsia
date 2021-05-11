@@ -29,6 +29,18 @@
 
 namespace {
 
+template <typename T>
+void AssertBlocked(const std::future<T>& fut) {
+  // Give an asynchronous blocking operation some time to reach the blocking state. Clocks
+  // sometimes jump in infrastructure, which may cause a single wait to trip sooner than expected,
+  // without the asynchronous task getting a meaningful shot at running. We protect against that by
+  // splitting the wait into multiple calls as an attempt to guarantee that clock jumps do not
+  // impact the duration of a wait.
+  for (int i = 0; i < 50; i++) {
+    ASSERT_EQ(fut.wait_for(std::chrono::milliseconds(1)), std::future_status::timeout);
+  }
+}
+
 TEST(LocalhostTest, SendToZeroPort) {
   struct sockaddr_in addr = {
       .sin_family = AF_INET,
@@ -3217,7 +3229,7 @@ TEST_P(ConnectingIOTest, BlockedIO) {
     }
   });
   fut_started.wait();
-  EXPECT_EQ(fut.wait_for(std::chrono::milliseconds(10)), std::future_status::timeout);
+  ASSERT_NO_FATAL_FAILURE(AssertBlocked(fut));
 
   if (closeListener) {
     ASSERT_EQ(close(listener.release()), 0) << strerror(errno);
@@ -3769,14 +3781,7 @@ TEST_P(BlockedIOTest, CloseWhileBlocked) {
     }
   });
   fut_started.wait();
-  // Give the asynchronous blocking operation some time to reach the blocking state. Clocks
-  // sometimes jump in infrastructure, which may cause a single wait to trip sooner than expected,
-  // without the asynchronous task getting a meaningful shot at running. We protect against that by
-  // splitting the wait into multiple calls as an attempt to guarantee that clock jumps are not what
-  // causes the wait below to continue prematurely.
-  for (int i = 0; i < 50; i++) {
-    EXPECT_EQ(fut.wait_for(std::chrono::milliseconds(1)), std::future_status::timeout);
-  }
+  ASSERT_NO_FATAL_FAILURE(AssertBlocked(fut));
 
   // When enabled, causes `close` to send a TCP RST.
   struct linger opt = {
@@ -3794,7 +3799,7 @@ TEST_P(BlockedIOTest, CloseWhileBlocked) {
       ASSERT_EQ(close(fd), 0) << strerror(errno);
 
       // Closing the file descriptor does not interrupt the pending I/O.
-      ASSERT_EQ(fut.wait_for(std::chrono::milliseconds(10)), std::future_status::timeout);
+      ASSERT_NO_FATAL_FAILURE(AssertBlocked(fut));
 
       // The pending I/O is still blocked, but the file descriptor is gone.
       ASSERT_EQ(fsync(fd), -1) << strerror(errno);
