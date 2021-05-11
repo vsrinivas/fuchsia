@@ -70,6 +70,10 @@ std::string DriverCollection(std::string_view url) {
   return url.compare(0, strlen(scheme), scheme) == 0 ? "boot-drivers" : "pkg-drivers";
 }
 
+Node* PrimaryParent(const std::vector<Node*>& parents) {
+  return parents.empty() ? nullptr : parents[0];
+}
+
 template <typename T>
 bool UnbindAndReset(std::optional<fidl::ServerBindingRef<T>>& ref) {
   bool unbind = ref.has_value();
@@ -237,7 +241,9 @@ fidl::VectorView<fdf::wire::NodeSymbol> Node::symbols() {
   return fidl::VectorView<fdf::wire::NodeSymbol>::FromExternal(symbols_);
 }
 
-DriverHostComponent* Node::parent_driver_host() const { return *parents_[0]->driver_host_; }
+DriverHostComponent* Node::parent_driver_host() const {
+  return *PrimaryParent(parents_)->driver_host_;
+}
 
 void Node::set_driver_host(DriverHostComponent* driver_host) { driver_host_ = driver_host; }
 
@@ -257,8 +263,7 @@ const std::vector<std::shared_ptr<Node>>& Node::children() const { return childr
 
 std::string Node::TopoName() const {
   std::deque<std::string_view> names;
-  for (auto node = this; node != nullptr;
-       node = node->parents_.empty() ? nullptr : node->parents_[0]) {
+  for (auto node = this; node != nullptr; node = PrimaryParent(node->parents_)) {
     names.push_front(node->name());
   }
   return fxl::JoinStrings(names, ".");
