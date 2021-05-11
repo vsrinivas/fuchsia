@@ -184,9 +184,7 @@ async fn package_and_blob_queues() {
                     "/",
                 )
                 .unwrap()]))
-                .enable_dynamic_config(lib::EnableDynamicConfig {
-                    enable_dynamic_configuration: true,
-                })
+                .config(lib::Config { enable_dynamic_configuration: true })
                 .build(),
         )
         .build()
