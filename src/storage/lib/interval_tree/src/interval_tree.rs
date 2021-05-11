@@ -108,9 +108,50 @@ where
         self.insert_interval(interval.clone())
     }
 
+    /// Removes all the intervals that overlap with given `range`. Returns removed interval.
+    pub fn remove_interval(&mut self, range: &Range<U>) -> Result<Vec<T>, Error> {
+        if !range.is_valid() {
+            return Err(Error::InvalidRange);
+        }
+        let affected_intervals = self.remove_affected(range);
+        let mut ret = vec![];
+        for interval in &affected_intervals {
+            let (remainings, removed) = interval.difference(range);
+            for remaining in remainings {
+                let _ = self.add_interval(&remaining).unwrap();
+            }
+            ret.push(removed.unwrap());
+        }
+        Ok(ret)
+    }
+
+    /// Updates the range in interval tree with properties in `interval`.
+    /// Existing intervals are updated irrespective of their properties.
+    /// Returns old intervals, if any.
+    pub fn update_interval(&mut self, interval: &T) -> Result<Vec<T>, Error> {
+        let ret = self.remove_interval(interval.as_ref())?;
+        let _ = self.add_interval(interval)?;
+        Ok(ret)
+    }
+
     /// Returns number of interval in interval tree.
     pub fn interval_count(&self) -> usize {
         self.interval_tree.len()
+    }
+
+    /// Returns a list of intervals whose ranges overlap with given `range`.
+    /// The function may return an interval which starts/ends before/after given `range`.
+    pub fn get_intervals(&self, range: &Range<U>) -> Result<Vec<T>, Error> {
+        if !range.is_valid() {
+            return Err(Error::InvalidRange);
+        }
+        let mut affected_intervals = vec![];
+        for (_, interval) in self.interval_tree.iter() {
+            if range.overlaps(interval.as_ref()) {
+                affected_intervals.push(interval.clone());
+            }
+        }
+        Ok(affected_intervals)
     }
 
     /// Iterate over the interval_tree and check that they are in ascending order
@@ -534,5 +575,96 @@ mod test {
         expected_intervals[0].set_end(small_interval.start());
         expected_intervals.push(small_interval.clone());
         verify(file!(), line!(), &tree, &expected_intervals);
+    }
+
+    #[test]
+    fn test_remove_all() {
+        let (mut tree, expected_intervals) = setup_interval_tree();
+        for interval in &expected_intervals {
+            assert_eq!(tree.remove_interval(interval.as_ref()), Ok(vec![interval.clone()]));
+        }
+        assert_eq!(0, tree.interval_count());
+    }
+
+    #[test]
+    fn test_remove_at_start() {
+        let (mut tree, _) = setup_interval_tree();
+
+        let ret = tree
+            .remove_interval(&(inserted_range().start - 4..inserted_range().start + 4))
+            .unwrap();
+
+        assert_eq!(ret.len(), 1);
+        assert_eq!(ret[0].range, inserted_range().start..inserted_range().start + 4);
+        assert_eq!(1, tree.interval_count());
+        for (_, interval) in tree.get_iter() {
+            assert_eq!(interval.range, inserted_range().start + 4..inserted_range().end);
+        }
+    }
+
+    #[test]
+    fn test_remove_at_end() {
+        let (mut tree, _) = setup_interval_tree();
+
+        let ret =
+            tree.remove_interval(&(inserted_range().end - 4..inserted_range().end + 4)).unwrap();
+
+        assert_eq!(ret.len(), 1);
+        assert_eq!(ret[0].range, inserted_range().end - 4..inserted_range().end);
+        assert_eq!(1, tree.interval_count());
+        for (_, interval) in tree.get_iter() {
+            assert_eq!(interval.range, inserted_range().start..inserted_range().end - 4);
+        }
+    }
+
+    #[test]
+    fn test_remove_from_middle() {
+        let (mut tree, _) = setup_interval_tree();
+
+        let ret =
+            tree.remove_interval(&(inserted_range().start + 4..inserted_range().end - 4)).unwrap();
+
+        assert_eq!(ret.len(), 1);
+        assert_eq!(ret[0].range, inserted_range().start + 4..inserted_range().end - 4);
+        assert_eq!(2, tree.interval_count());
+        for (_, interval) in tree.get_iter() {
+            assert!(
+                (interval.range == (inserted_range().start..inserted_range().start + 4))
+                    || (interval.range == (inserted_range().end - 4..inserted_range().end))
+            );
+        }
+    }
+
+    #[test]
+    fn test_update() {
+        let (mut tree, _) = setup_interval_tree();
+        let mut new_interval = inserted_interval().clone();
+        new_interval.state += 1;
+
+        assert_eq!(tree.update_interval(&new_interval), Ok(vec![inserted_interval().clone()]));
+        assert_eq!(1, tree.interval_count());
+
+        for (_, interval) in tree.get_iter() {
+            assert_eq!(interval.clone(), new_interval);
+        }
+    }
+
+    #[test]
+    fn test_get_intervals() {
+        let (mut tree, _) = setup_interval_tree();
+        let mut removed = inserted_interval().clone();
+        removed.range = inserted_range().start + 4..inserted_range().end - 4;
+
+        let mut new_interval = removed.clone();
+        new_interval.state += 1;
+
+        assert_eq!(tree.update_interval(&new_interval), Ok(vec![removed]));
+        assert_eq!(3, tree.interval_count());
+
+        let mut start = inserted_interval().clone();
+        start.range.end = inserted_range().start + 4;
+        let mut end = inserted_interval().clone();
+        end.range.start = inserted_range().end - 4;
+        assert_eq!(tree.get_intervals(&inserted_range()), Ok(vec![start, new_interval, end]));
     }
 }

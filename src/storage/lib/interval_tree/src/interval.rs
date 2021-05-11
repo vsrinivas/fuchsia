@@ -161,6 +161,62 @@ pub trait Interval<T: 'static + Copy + Clone + Ord + Sub<Output = T>>: AsRef<Ran
             None
         }
     }
+
+    /// Calculates the difference between `self.as_ref()` and `other` and returns
+    /// (remaining and removed). What is left of self after difference is returned in `remaining`
+    /// and what was taken out of self is in `removed`.
+    ///
+    /// There are three different ways `difference` may affect a other. difference() may
+    /// - consume all of self.
+    /// - consume a part of self, leaving beginning or end or both ranges from self.
+    /// - not affect self at all.
+    /// | self          | other         | remaining     | removed           |
+    /// |---------------|---------------|---------------|-------------------|
+    /// | 1..9          | 1..9          | []            | 1..9              |
+    /// | 1..9          | 0..5          | [5..9]        | 1..5              |
+    /// | 1..9          | 4..13         | [1..4]        | 4..9              |
+    /// | 1..9          | 4..7          | [1..4, 7..9]  | 4..7              |
+    /// | 1..9          | 9..17         | [1..9]        | None              |
+    fn difference(&self, other: &Range<T>) -> (Vec<Self>, Option<Self>)
+    where
+        Self: Sized + Clone,
+    {
+        let range = self.as_ref();
+        if !range.overlaps(other) {
+            return (vec![self.clone()], None);
+        }
+
+        if other.contains_range(range) {
+            return (vec![], Some(self.clone()));
+        }
+
+        if range.contains_range(other) {
+            let removed = self.clone_with(other);
+            let mut remaining = vec![];
+            if range.start < other.start {
+                remaining.push(self.clone_with(&(range.start..other.start)));
+            }
+            if range.end > other.end {
+                remaining.push(self.clone_with(&(other.end..range.end)));
+            }
+            return (remaining, Some(removed));
+        }
+
+        // The ranges overlap such that a part of self's end gets removed.
+        if other.start > range.start {
+            return (
+                vec![self.clone_with(&(range.start..other.start))],
+                Some(self.clone_with(&(other.start..range.end))),
+            );
+        }
+
+        // The ranges overlap such that a part of self's beginning gets removed.
+        assert!(other.start < range.start);
+        (
+            vec![self.clone_with(&(other.end..range.end))],
+            Some(self.clone_with(&(range.start..other.end))),
+        )
+    }
 }
 
 #[cfg(test)]
@@ -421,5 +477,31 @@ mod test {
         for (case_number, case) in test_cases.iter().enumerate() {
             verify_merge_split_case(case_number, case);
         }
+    }
+
+    #[test]
+    fn test_interval_difference() {
+        let interval1 = TestInterval { range: 1..9, state: true };
+        // Nothing gets removed if ranges don't overlap.
+        assert_eq!(interval1.difference(&(9..19)), (vec![interval1.clone()], None));
+        assert_eq!(interval1.difference(&(19..29)), (vec![interval1.clone()], None));
+
+        // Everything gets removed if ranges contain each other.
+        assert_eq!(interval1.difference(&(1..9)), (vec![], Some(interval1.clone())));
+        assert_eq!(interval1.difference(&(0..19)), (vec![], Some(interval1.clone())));
+
+        // Three different cases of overlap.
+        let remaining = vec![TestInterval { range: 5..9, state: true }];
+        let removed = Some(TestInterval { range: 1..5, state: true });
+        assert_eq!(interval1.difference(&(0..5)), (remaining, removed));
+        let remaining = vec![TestInterval { range: 1..4, state: true }];
+        let removed = Some(TestInterval { range: 4..9, state: true });
+        assert_eq!(interval1.difference(&(4..13)), (remaining, removed));
+        let remaining = vec![
+            TestInterval { range: 1..4, state: true },
+            TestInterval { range: 7..9, state: true },
+        ];
+        let removed = Some(TestInterval { range: 4..7, state: true });
+        assert_eq!(interval1.difference(&removed.as_ref().unwrap().range), (remaining, removed));
     }
 }
