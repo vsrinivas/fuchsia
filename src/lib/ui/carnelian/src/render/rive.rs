@@ -65,7 +65,6 @@ impl RenderCache {
         self.cached_rasters
             .retain(|_, cached_raster| std::mem::replace(&mut cached_raster.was_used, false));
 
-
         self.rasters.clear();
     }
 

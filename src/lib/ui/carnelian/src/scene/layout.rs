@@ -77,6 +77,15 @@ impl Alignment {
     pub fn bottom_right() -> Self {
         Self { location: point2(1.0, 1.0) }
     }
+
+    fn arrange(&self, facet_size: &Size, group_size: &Size) -> Point {
+        let half_delta = (*group_size - *facet_size) / 2.0;
+
+        let x = half_delta.width + self.location.x * half_delta.width;
+        let y = half_delta.height + self.location.y * half_delta.height;
+
+        point2(x, y)
+    }
 }
 
 impl Default for Alignment {
@@ -123,10 +132,6 @@ impl Stack {
     }
 }
 
-fn point_from_size(s: Size) -> Point {
-    point2(s.width, s.height)
-}
-
 impl Arranger for Stack {
     fn calculate_size(&self, group_size: Size, member_sizes: &[Size]) -> Size {
         if self.expand {
@@ -146,8 +151,7 @@ impl Arranger for Stack {
     fn arrange(&self, group_size: Size, member_sizes: &[Size]) -> Vec<Point> {
         member_sizes
             .iter()
-            .map(|facet_size| (group_size - *facet_size) / 2.0)
-            .map(point_from_size)
+            .map(|facet_size| self.alignment.arrange(facet_size, &group_size))
             .collect()
     }
 }
@@ -172,6 +176,12 @@ impl<'a> StackBuilder<'a> {
     /// Set the center alignment option for this group.
     pub fn center(mut self) -> Self {
         self.stack_options.alignment = Alignment::center();
+        self
+    }
+
+    /// Set the alignment option for this group.
+    pub fn align(mut self, align: Alignment) -> Self {
+        self.stack_options.alignment = align;
         self
     }
 
@@ -460,6 +470,12 @@ impl<'a> FlexBuilder<'a> {
         self
     }
 
+    /// Use a specific main size.
+    pub fn main_size(mut self, main_size: MainAxisSize) -> Self {
+        self.flex_options.main_size = main_size;
+        self
+    }
+
     /// Use MainAxisAlignment::SpaceEvenly for main alignment.
     pub fn space_evenly(mut self) -> Self {
         self.flex_options.main_align = MainAxisAlignment::SpaceEvenly;
@@ -469,6 +485,12 @@ impl<'a> FlexBuilder<'a> {
     /// Use a particular main axis alignnment.
     pub fn main_align(mut self, main_align: MainAxisAlignment) -> Self {
         self.flex_options.main_align = main_align;
+        self
+    }
+
+    /// Use a particular cross axis alignnment.
+    pub fn cross_align(mut self, cross_align: CrossAxisAlignment) -> Self {
+        self.flex_options.cross_align = cross_align;
         self
     }
 

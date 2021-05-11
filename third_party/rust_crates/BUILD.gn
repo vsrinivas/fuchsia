@@ -3193,6 +3193,7 @@ rust_library("euclid-v0_22_1") {
 
   deps = []
   deps += [ ":num-traits-v0_2_11" ]
+  deps += [ ":serde-v1_0_116" ]
 
   rustenv = []
 
@@ -3202,6 +3203,7 @@ rust_library("euclid-v0_22_1") {
     "-Cmetadata=f36cc8a923068aca",
     "-Cextra-filename=-f36cc8a923068aca",
     "--cfg=feature=\"default\"",
+    "--cfg=feature=\"serde\"",
     "--cfg=feature=\"std\"",
   ]
 }
