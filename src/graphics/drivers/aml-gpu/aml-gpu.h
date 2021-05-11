@@ -4,6 +4,7 @@
 #ifndef SRC_GRAPHICS_DRIVERS_AML_GPU_AML_GPU_H_
 #define SRC_GRAPHICS_DRIVERS_AML_GPU_AML_GPU_H_
 
+#include <fuchsia/hardware/gpu/clock/llcpp/fidl.h>
 #include <fuchsia/hardware/gpu/mali/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <fuchsia/hardware/registers/cpp/banjo.h>
@@ -64,9 +65,12 @@ namespace aml_gpu {
 class TestAmlGpu;
 
 class AmlGpu;
-using DdkDeviceType = ddk::Device<AmlGpu, ddk::MessageableOld, ddk::GetProtocolable>;
+using DdkDeviceType =
+    ddk::Device<AmlGpu, ddk::Messageable<fuchsia_hardware_gpu_clock::Clock>::Mixin,
+                ddk::GetProtocolable>;
 
 class AmlGpu final : public DdkDeviceType,
+                     public fidl::WireServer<fuchsia_hardware_gpu_clock::Clock>,
                      public ddk::ArmMaliProtocol<AmlGpu>,
                      public ddk::EmptyProtocol<ZX_PROTOCOL_GPU_THERMAL> {
  public:
@@ -77,7 +81,6 @@ class AmlGpu final : public DdkDeviceType,
   zx_status_t Bind();
 
   void DdkRelease() { delete this; }
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
 
   // ArmMaliProtocol implementation.
@@ -86,7 +89,8 @@ class AmlGpu final : public DdkDeviceType,
   zx_status_t ArmMaliStartExitProtectedMode();
   zx_status_t ArmMaliFinishExitProtectedMode();
 
-  zx_status_t SetFrequencySource(uint32_t clk_source, fidl_txn_t* txn);
+  void SetFrequencySource(SetFrequencySourceRequestView request,
+                          SetFrequencySourceCompleter::Sync& completer) override;
 
  private:
   friend class TestAmlGpu;

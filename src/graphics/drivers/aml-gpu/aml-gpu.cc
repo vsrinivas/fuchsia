@@ -5,7 +5,6 @@
 #include "aml-gpu.h"
 
 #include <fuchsia/hardware/gpu/amlogic/llcpp/fidl.h>
-#include <fuchsia/hardware/gpu/clock/c/fidl.h>
 #include <fuchsia/hardware/iommu/c/banjo.h>
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
@@ -278,21 +277,15 @@ zx_status_t AmlGpu::ArmMaliFinishExitProtectedMode() {
   return SetProtected(DMC_DEV_TYPE_NON_SECURE);
 }
 
-zx_status_t AmlGpu::SetFrequencySource(uint32_t clk_source, fidl_txn_t* txn) {
-  if (clk_source >= kMaxGpuClkFreq) {
+void AmlGpu::SetFrequencySource(SetFrequencySourceRequestView request,
+                                SetFrequencySourceCompleter::Sync& completer) {
+  if (request->source >= kMaxGpuClkFreq) {
     GPU_ERROR("Invalid clock freq source index\n");
-    return fuchsia_hardware_gpu_clock_ClockSetFrequencySource_reply(txn, ZX_ERR_NOT_SUPPORTED);
+    completer.Reply(ZX_ERR_NOT_SUPPORTED);
+    return;
   }
-  SetClkFreqSource(clk_source);
-  return fuchsia_hardware_gpu_clock_ClockSetFrequencySource_reply(txn, ZX_OK);
-}
-
-static fuchsia_hardware_gpu_clock_Clock_ops_t fidl_ops = {
-    .SetFrequencySource = fidl::Binder<AmlGpu>::BindMember<&AmlGpu::SetFrequencySource>,
-};
-
-zx_status_t AmlGpu::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  return fuchsia_hardware_gpu_clock_Clock_dispatch(this, txn, msg, &fidl_ops);
+  SetClkFreqSource(request->source);
+  completer.Reply(ZX_OK);
 }
 
 zx_status_t AmlGpu::ProcessMetadata(std::vector<uint8_t> raw_metadata) {
