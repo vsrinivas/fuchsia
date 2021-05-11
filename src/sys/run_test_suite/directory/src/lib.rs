@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 
 /// A serializable version of a test outcome.
 #[derive(Deserialize, Serialize, PartialEq, Eq, Debug)]
@@ -23,7 +24,13 @@ pub enum Outcome {
 #[serde(tag = "version")]
 pub enum TestRunResult {
     #[serde(rename = "0")]
-    V0 { outcome: Outcome, suites: Vec<SuiteEntryV0> },
+    V0 {
+        /// Paths to artifacts scoped at the run level. The paths are relative to the root of
+        /// the output directory.
+        artifacts: Vec<PathBuf>,
+        outcome: Outcome,
+        suites: Vec<SuiteEntryV0>,
+    },
 }
 
 /// A suite listing in the test run summary.
@@ -40,12 +47,22 @@ pub struct SuiteEntryV0 {
 #[serde(tag = "version")]
 pub enum SuiteResult {
     #[serde(rename = "0")]
-    V0 { outcome: Outcome, name: String, cases: Vec<TestCaseResultV0> },
+    V0 {
+        /// Paths to artifacts scoped at the run level. The paths are relative to the root of
+        /// the output directory.
+        artifacts: Vec<PathBuf>,
+        outcome: Outcome,
+        name: String,
+        cases: Vec<TestCaseResultV0>,
+    },
 }
 
 /// A serializable test case result.
 #[derive(Deserialize, Serialize, PartialEq, Eq, Debug)]
 pub struct TestCaseResultV0 {
+    /// Paths to artifacts scoped at the run level. The paths are relative to the root of
+    /// the output directory.
+    pub artifacts: Vec<PathBuf>,
     pub outcome: Outcome,
     pub name: String,
 }
@@ -58,13 +75,15 @@ mod test {
     #[test]
     fn run_version_serialized() {
         // This is a sanity check that verifies version is serialized.
-        let run_result = TestRunResult::V0 { outcome: Outcome::Inconclusive, suites: vec![] };
+        let run_result =
+            TestRunResult::V0 { artifacts: vec![], outcome: Outcome::Inconclusive, suites: vec![] };
 
         let serialized = to_string(&run_result).expect("serialize result");
         let value = from_str::<Value>(&serialized).expect("deserialize result");
 
         let expected = json!({
             "version": "0",
+            "artifacts": [],
             "outcome": "INCONCLUSIVE",
             "suites": [],
         });
@@ -76,6 +95,7 @@ mod test {
     fn run_version_mismatch() {
         let wrong_version_json = json!({
             "version": "10",
+            "artifacts": [],
             "outcome": "INCONCLUSIVE",
             "suites": [],
         });
@@ -88,6 +108,7 @@ mod test {
     #[test]
     fn suite_version_serialized() {
         let suite_result = SuiteResult::V0 {
+            artifacts: vec![],
             outcome: Outcome::Inconclusive,
             cases: vec![],
             name: "suite".to_string(),
@@ -98,6 +119,7 @@ mod test {
 
         let expected = json!({
             "version": "0",
+            "artifacts": [],
             "outcome": "INCONCLUSIVE",
             "cases": [],
             "name": "suite",
@@ -110,6 +132,7 @@ mod test {
     fn suite_version_mismatch() {
         let wrong_version_json = json!({
             "version": "10",
+            "artifacts": [],
             "outcome": "INCONCLUSIVE",
             "cases": [],
             "name": "suite",

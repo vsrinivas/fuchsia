@@ -9,12 +9,13 @@ use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::fs::{DirBuilder, File};
 use std::io::Error;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use test_output_directory as directory;
 
 const TEST_RUN_ID: u64 = 0;
 const SUMMARY_FILE: &str = "run_summary.json";
+const STDOUT_FILE: &str = "stdout";
 
 /// A reporter that saves results and artifacts to disk in the Fuchsia test output format.
 pub(super) struct DirectoryReporter {
@@ -34,6 +35,10 @@ struct EntityEntry {
     name: String,
     /// A list of the children of an entity referenced by their id. Unused for a test case.
     children: Vec<u64>,
+    /// Name of the artifact directory containing artifacts scoped to this entity.
+    artifact_dir: PathBuf,
+    /// A list of artifacts by filename.
+    artifacts: Vec<String>,
     /// Most recently known outcome for the entity.
     outcome: ReportedOutcome,
 }
@@ -41,12 +46,17 @@ struct EntityEntry {
 impl DirectoryReporter {
     /// Create a new `DirectoryReporter` that places results in the given `root` directory.
     pub(super) fn new(root: PathBuf) -> Result<Self, Error> {
-        DirBuilder::new().recursive(true).create(&root)?;
+        let artifact_dir = artifact_dir_name(TEST_RUN_ID);
+
+        Self::ensure_directory_exists(root.as_path())?;
+
         let mut entries = HashMap::new();
         entries.insert(
             TEST_RUN_ID,
             EntityEntry {
                 name: "".to_string(),
+                artifact_dir,
+                artifacts: vec![],
                 children: vec![],
                 outcome: ReportedOutcome::Inconclusive,
             },
@@ -65,6 +75,7 @@ impl DirectoryReporter {
     /// Create a new child entity. Parent id is either an id for a suite or TEST_RUN_ID.
     fn new_entity(&self, parent_id: u64, name: &str) -> Result<u64, Error> {
         let new_entity_id = self.next_id.fetch_add(1, Ordering::Relaxed);
+        let artifact_dir = artifact_dir_name(new_entity_id);
 
         let mut entries = self.entries.lock();
         let parent = entries
@@ -75,12 +86,21 @@ impl DirectoryReporter {
             new_entity_id,
             EntityEntry {
                 name: name.to_string(),
+                artifact_dir,
+                artifacts: vec![],
                 children: vec![],
                 outcome: ReportedOutcome::Inconclusive,
             },
         );
 
         Ok(new_entity_id)
+    }
+
+    fn ensure_directory_exists(absolute: &Path) -> Result<(), Error> {
+        match absolute.exists() {
+            true => Ok(()),
+            false => DirBuilder::new().recursive(true).create(&absolute),
+        }
     }
 }
 
@@ -89,10 +109,22 @@ impl ArtifactReporter for DirectoryReporter {
 
     fn new_artifact(
         &self,
-        _entity: &EntityId,
-        _artifact_type: &ArtifactType,
+        entity: &EntityId,
+        artifact_type: &ArtifactType,
     ) -> Result<Self::Writer, Error> {
-        unimplemented!()
+        let mut lock = self.entries.lock();
+        let entry = lock
+            .get_mut(&Self::into_entry_id(entity))
+            .expect("Attempting to create an artifact for an entity that does not exist");
+        let name = filename_for_type(artifact_type);
+
+        let artifact_dir = self.root.join(&entry.artifact_dir);
+        Self::ensure_directory_exists(&artifact_dir)?;
+
+        let artifact = File::create(artifact_dir.join(name))?;
+
+        entry.artifacts.push(name.to_string());
+        Ok(artifact)
     }
 }
 
@@ -155,8 +187,18 @@ impl Reporter for DirectoryReporter {
     }
 }
 
+fn artifact_dir_name(entity_id: u64) -> PathBuf {
+    format!("artifact-{:?}", entity_id).into()
+}
+
 fn suite_json_name(suite_id: u64) -> String {
     format!("{:?}.json", suite_id)
+}
+
+fn filename_for_type(artifact_type: &ArtifactType) -> &'static str {
+    match artifact_type {
+        ArtifactType::Stdout => STDOUT_FILE,
+    }
 }
 
 /// Construct a serializable version of a test run.
@@ -166,7 +208,15 @@ fn construct_serializable_run(run_entry: EntityEntry) -> directory::TestRunResul
         .iter()
         .map(|suite_id| directory::SuiteEntryV0 { summary: suite_json_name(*suite_id) })
         .collect();
-    directory::TestRunResult::V0 { outcome: into_serializable_outcome(run_entry.outcome), suites }
+    directory::TestRunResult::V0 {
+        artifacts: run_entry
+            .artifacts
+            .iter()
+            .map(|name| run_entry.artifact_dir.join(name))
+            .collect(),
+        outcome: into_serializable_outcome(run_entry.outcome),
+        suites,
+    }
 }
 
 /// Construct a serializable version of a test suite.
@@ -177,11 +227,21 @@ fn construct_serializable_suite(
     let cases = case_entries
         .into_iter()
         .map(|case_entry| directory::TestCaseResultV0 {
+            artifacts: case_entry
+                .artifacts
+                .iter()
+                .map(|name| case_entry.artifact_dir.join(name))
+                .collect(),
             outcome: into_serializable_outcome(case_entry.outcome),
             name: case_entry.name,
         })
         .collect::<Vec<_>>();
     directory::SuiteResult::V0 {
+        artifacts: suite_entry
+            .artifacts
+            .iter()
+            .map(|name| suite_entry.artifact_dir.join(name))
+            .collect(),
         outcome: into_serializable_outcome(suite_entry.outcome),
         cases,
         name: suite_entry.name,
@@ -229,12 +289,18 @@ mod test {
         (run_result, suite_results)
     }
 
-    fn assert_run_result(actual_run: &directory::TestRunResult, expected_run: &ExpectedTestRun) {
-        let &directory::TestRunResult::V0 { outcome, .. } = &actual_run;
+    fn assert_run_result(
+        root: &Path,
+        actual_run: &directory::TestRunResult,
+        expected_run: &ExpectedTestRun,
+    ) {
+        let &directory::TestRunResult::V0 { artifacts, outcome, .. } = &actual_run;
         assert_eq!(outcome, &expected_run.outcome);
+        assert_artifacts(root, &artifacts, &expected_run.artifacts);
     }
 
     fn assert_suite_results(
+        root: &Path,
         actual_suites: &Vec<directory::SuiteResult>,
         expected_suites: &Vec<ExpectedSuite>,
     ) {
@@ -248,66 +314,116 @@ mod test {
                 directory::SuiteResult::V0 { name, .. } => name,
             };
             assert_suite_result(
+                root,
                 suite,
                 expected_suites_map.get(suite_name).expect("No matching expected suite"),
             );
         }
     }
 
-    fn assert_suite_result(actual_suite: &directory::SuiteResult, expected_suite: &ExpectedSuite) {
-        let &directory::SuiteResult::V0 { outcome, name, cases } = &actual_suite;
+    fn assert_suite_result(
+        root: &Path,
+        actual_suite: &directory::SuiteResult,
+        expected_suite: &ExpectedSuite,
+    ) {
+        let &directory::SuiteResult::V0 { artifacts, outcome, name, cases } = &actual_suite;
         assert_eq!(outcome, &expected_suite.outcome);
         assert_eq!(name, &expected_suite.name);
 
+        assert_artifacts(root, &artifacts, &expected_suite.artifacts);
+
         assert_eq!(cases.len(), expected_suite.cases.len());
         for case in cases.iter() {
-            assert_case_result(case, expected_suite.cases.get(&case.name).unwrap());
+            assert_case_result(root, case, expected_suite.cases.get(&case.name).unwrap());
         }
     }
 
     fn assert_case_result(
+        root: &Path,
         actual_case: &directory::TestCaseResultV0,
         expected_case: &ExpectedTestCase,
     ) {
         assert_eq!(actual_case.name, expected_case.name);
         assert_eq!(actual_case.outcome, expected_case.outcome);
+        assert_artifacts(root, &actual_case.artifacts, &expected_case.artifacts);
+    }
+
+    fn assert_artifacts(
+        root: &Path,
+        actual_artifact_list: &Vec<PathBuf>,
+        expected_artifact_contents: &HashMap<String, String>,
+    ) {
+        assert_eq!(actual_artifact_list.len(), expected_artifact_contents.len());
+        for artifact_path in actual_artifact_list.iter() {
+            let absolute_artifact_path = root.join(artifact_path);
+            let artifact_name = absolute_artifact_path.file_name().unwrap().to_str().unwrap();
+            let artifact_contents =
+                std::fs::read_to_string(&absolute_artifact_path).expect("read artifact file");
+            assert_eq!(
+                artifact_contents,
+                *expected_artifact_contents.get(artifact_name).expect("unexpected artifact")
+            );
+        }
     }
 
     struct ExpectedTestRun {
+        artifacts: HashMap<String, String>,
         outcome: directory::Outcome,
     }
 
     struct ExpectedSuite {
+        artifacts: HashMap<String, String>,
         name: String,
         outcome: directory::Outcome,
         cases: HashMap<String, ExpectedTestCase>,
     }
 
     struct ExpectedTestCase {
+        artifacts: HashMap<String, String>,
         name: String,
         outcome: directory::Outcome,
     }
 
     impl ExpectedTestRun {
         fn new(outcome: directory::Outcome) -> Self {
-            Self { outcome }
+            Self { artifacts: HashMap::new(), outcome }
+        }
+
+        fn with_artifact<S: AsRef<str>, T: AsRef<str>>(mut self, name: S, contents: T) -> Self {
+            self.artifacts.insert(name.as_ref().to_string(), contents.as_ref().to_string());
+            self
         }
     }
 
     impl ExpectedSuite {
         fn new<S: AsRef<str>>(name: S, outcome: directory::Outcome) -> Self {
-            Self { name: name.as_ref().to_string(), outcome, cases: HashMap::new() }
+            Self {
+                artifacts: HashMap::new(),
+                name: name.as_ref().to_string(),
+                outcome,
+                cases: HashMap::new(),
+            }
         }
 
         fn with_case(mut self, case: ExpectedTestCase) -> Self {
             self.cases.insert(case.name.clone(), case);
             self
         }
+
+        fn with_artifact<S: AsRef<str>, T: AsRef<str>>(mut self, name: S, contents: T) -> Self {
+            self.artifacts.insert(name.as_ref().to_string(), contents.as_ref().to_string());
+            self
+        }
     }
 
     impl ExpectedTestCase {
         fn new<S: AsRef<str>>(name: S, outcome: directory::Outcome) -> Self {
-            Self { name: name.as_ref().to_string(), outcome }
+            Self { artifacts: HashMap::new(), name: name.as_ref().to_string(), outcome }
+        }
+
+        fn with_artifact<S: AsRef<str>, T: AsRef<str>>(mut self, name: S, contents: T) -> Self {
+            self.artifacts.insert(name.as_ref().to_string(), contents.as_ref().to_string());
+            self
         }
     }
 
@@ -333,8 +449,13 @@ mod test {
 
         // assert on directory
         let (run_result, suite_results) = parse_json_in_output(dir.path());
-        assert_run_result(&run_result, &ExpectedTestRun::new(directory::Outcome::Timedout));
+        assert_run_result(
+            dir.path(),
+            &run_result,
+            &ExpectedTestRun::new(directory::Outcome::Timedout),
+        );
         assert_suite_results(
+            dir.path(),
             &suite_results,
             &vec![
                 ExpectedSuite::new("suite-0", directory::Outcome::Failed)
@@ -354,12 +475,74 @@ mod test {
     }
 
     #[test]
+    fn artifacts_per_entity() {
+        let dir = tempdir().expect("create temp directory");
+        let run_reporter = RunReporter::new(dir.path().to_path_buf()).expect("create run reporter");
+        let suite_reporter = run_reporter.new_suite("suite-1").expect("create new suite");
+        for case_no in 0..3 {
+            let case_reporter =
+                suite_reporter.new_case(&format!("case-1-{:?}", case_no)).expect("create new case");
+            let mut artifact =
+                case_reporter.new_artifact(&ArtifactType::Stdout).expect("create case artifact");
+            artifact
+                .write_line(format!("stdout from case {:?}", case_no).as_str())
+                .expect("write to artifact");
+            case_reporter.outcome(&ReportedOutcome::Passed).expect("report case outcome");
+        }
+
+        let mut suite_artifact =
+            suite_reporter.new_artifact(&ArtifactType::Stdout).expect("create suite artifact");
+        suite_artifact.write_line("stdout from suite").expect("write to artifact");
+        suite_reporter.outcome(&ReportedOutcome::Passed).expect("report suite outcome");
+        suite_reporter.record().expect("record suite");
+        drop(suite_artifact); // want to flush contents
+
+        let mut run_artifact =
+            run_reporter.new_artifact(&ArtifactType::Stdout).expect("create run artifact");
+        run_artifact.write_line("stdout from run").expect("write to artifact");
+        run_reporter.outcome(&ReportedOutcome::Passed).expect("record run outcome");
+        run_reporter.record().expect("record run");
+        drop(run_artifact); // want to flush contents
+
+        let (run_result, suite_results) = parse_json_in_output(dir.path());
+        assert_run_result(
+            dir.path(),
+            &run_result,
+            &ExpectedTestRun::new(directory::Outcome::Passed)
+                .with_artifact(STDOUT_FILE, "stdout from run\n"),
+        );
+        assert_suite_results(
+            dir.path(),
+            &suite_results,
+            &vec![ExpectedSuite::new("suite-1", directory::Outcome::Passed)
+                .with_case(
+                    ExpectedTestCase::new("case-1-0", directory::Outcome::Passed)
+                        .with_artifact(STDOUT_FILE, "stdout from case 0\n"),
+                )
+                .with_case(
+                    ExpectedTestCase::new("case-1-1", directory::Outcome::Passed)
+                        .with_artifact(STDOUT_FILE, "stdout from case 1\n"),
+                )
+                .with_case(
+                    ExpectedTestCase::new("case-1-2", directory::Outcome::Passed)
+                        .with_artifact(STDOUT_FILE, "stdout from case 2\n"),
+                )
+                .with_artifact(STDOUT_FILE, "stdout from suite\n")],
+        );
+    }
+
+    #[test]
     fn duplicate_suite_names_ok() {
         let dir = tempdir().expect("create temp directory");
         let run_reporter = RunReporter::new(dir.path().to_path_buf()).expect("create run reporter");
 
         let success_suite_reporter = run_reporter.new_suite("suite").expect("create new suite");
         success_suite_reporter.outcome(&ReportedOutcome::Passed).expect("report suite outcome");
+        success_suite_reporter
+            .new_artifact(&ArtifactType::Stdout)
+            .expect("create new artifact")
+            .write_line("stdout from passed suite")
+            .expect("write to artifact");
         success_suite_reporter.record().expect("record suite");
 
         let failed_suite_reporter = run_reporter.new_suite("suite").expect("create new suite");
@@ -370,21 +553,26 @@ mod test {
         run_reporter.record().expect("record run");
 
         let (run_result, suite_results) = parse_json_in_output(dir.path());
-        assert_run_result(&run_result, &ExpectedTestRun::new(directory::Outcome::Failed));
+        assert_run_result(
+            dir.path(),
+            &run_result,
+            &ExpectedTestRun::new(directory::Outcome::Failed),
+        );
 
         assert_eq!(suite_results.len(), 2);
         // names of the suites are identical, so we rely on the outcome to differentiate them.
-        let expected_success_suite = ExpectedSuite::new("suite", directory::Outcome::Passed);
+        let expected_success_suite = ExpectedSuite::new("suite", directory::Outcome::Passed)
+            .with_artifact(STDOUT_FILE, "stdout from passed suite\n");
         let expected_failed_suite = ExpectedSuite::new("suite", directory::Outcome::Failed);
 
         if let directory::SuiteResult::V0 { outcome: directory::Outcome::Passed, .. } =
             suite_results[0]
         {
-            assert_suite_result(&suite_results[0], &expected_success_suite);
-            assert_suite_result(&suite_results[1], &expected_failed_suite);
+            assert_suite_result(dir.path(), &suite_results[0], &expected_success_suite);
+            assert_suite_result(dir.path(), &suite_results[1], &expected_failed_suite);
         } else {
-            assert_suite_result(&suite_results[0], &expected_failed_suite);
-            assert_suite_result(&suite_results[1], &expected_success_suite);
+            assert_suite_result(dir.path(), &suite_results[0], &expected_failed_suite);
+            assert_suite_result(dir.path(), &suite_results[1], &expected_success_suite);
         }
     }
 }
