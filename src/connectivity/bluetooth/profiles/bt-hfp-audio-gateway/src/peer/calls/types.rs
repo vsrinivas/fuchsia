@@ -31,9 +31,9 @@ impl From<CallState> for Direction {
 impl From<Direction> for i64 {
     fn from(x: Direction) -> Self {
         match x {
-            // When we do not know the direction, arbitrarily choose Mobile Originated.
+            // When we do not know the direction, arbitrarily choose Mobile Terminated.
             // TODO (fxbug.dev/73326): Update the FIDL API so that the direction is always provided.
-            Direction::Unknown => 0,
+            Direction::Unknown => 1,
             Direction::MobileOriginated => 0,
             Direction::MobileTerminated => 1,
         }
