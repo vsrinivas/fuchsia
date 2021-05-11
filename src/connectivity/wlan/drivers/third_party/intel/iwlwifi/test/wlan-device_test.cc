@@ -60,13 +60,7 @@ class WlanDeviceTest : public SingleApTest {
                 {
                     .beacon_int = 100,
                 },
-        } {
-    struct iwl_mvm* mvm = iwl_trans_get_mvm(sim_trans_.iwl_trans());
-    mtx_lock(&mvm->mutex);
-    zx_status_t ret = iwl_nvm_init(mvm);
-    mtx_unlock(&mvm->mutex);
-    EXPECT_EQ(ZX_OK, ret);
-  }
+        } {}
   ~WlanDeviceTest() {}
 
  protected:
@@ -322,8 +316,6 @@ TEST_F(WlanDeviceTest, MacRelease) {
 // TODO(fxbug.dev/63618): Modify tests that use wlanphy_ops, to use the below approach.
 // Once that is done, this test can be removed since it will get covered by existing tests.
 TEST_F(WlanDeviceTest, CreateAndDestroyIfaceTest) {
-  FakeDdkTester tester;
-
   wlanphy_impl_create_iface_req_t req = {
       .role = WLAN_INFO_MAC_ROLE_CLIENT,
       .sme_channel = sme_channel_,
@@ -338,9 +330,9 @@ TEST_F(WlanDeviceTest, CreateAndDestroyIfaceTest) {
   // Delete same interface again to ensure it fails.
   EXPECT_NOT_OK(device->WlanphyImplDestroyIface(out_id), "second destroy should fail");
 
-  auto mac_device = tester.macdevs()[0];
+  auto mac_device = fake_ddk_.macdevs()[0];
   mac_device->DdkAsyncRemove();
-  EXPECT_OK(tester.ddk().WaitUntilRemove());
+  EXPECT_OK(fake_ddk_.ddk().WaitUntilRemove());
   mac_device->DdkRelease();
 }
 
@@ -409,7 +401,7 @@ TEST_F(WlanDeviceTest, PhyCreateDestroySingleInterface) {
   // Remove interface
   ASSERT_EQ(wlanphy_ops.destroy_iface(iwl_trans, 0), ZX_OK);
   ASSERT_EQ(mvm->mvmvif[iface_id], nullptr);
-
+  fake_ddk_.WaitUntilRemove();
   device_mac_ops.release(mvmvif);
 }
 
@@ -446,6 +438,7 @@ TEST_F(WlanDeviceTest, PhyCreateDestroyMultipleInterfaces) {
   // Remove the 2nd interface
   ASSERT_EQ(wlanphy_ops.destroy_iface(iwl_trans, 1), ZX_OK);
   ASSERT_EQ(mvm->mvmvif[1], nullptr);
+  fake_ddk_.WaitUntilRemove();
   device_mac_ops.release(mvmvif1);
 
   // Add a new interface and it should be the 2nd one.
@@ -468,21 +461,25 @@ TEST_F(WlanDeviceTest, PhyCreateDestroyMultipleInterfaces) {
   // Remove the 2nd interface
   ASSERT_EQ(wlanphy_ops.destroy_iface(iwl_trans, 1), ZX_OK);
   ASSERT_EQ(mvm->mvmvif[1], nullptr);
+  fake_ddk_.WaitUntilRemove();
   device_mac_ops.release(mvmvif1);
 
   // Remove the 3rd interface
   ASSERT_EQ(wlanphy_ops.destroy_iface(iwl_trans, 2), ZX_OK);
   ASSERT_EQ(mvm->mvmvif[2], nullptr);
+  fake_ddk_.WaitUntilRemove();
   device_mac_ops.release(mvmvif2);
 
   // Remove the 4th interface
   ASSERT_EQ(wlanphy_ops.destroy_iface(iwl_trans, 3), ZX_OK);
   ASSERT_EQ(mvm->mvmvif[3], nullptr);
+  fake_ddk_.WaitUntilRemove();
   device_mac_ops.release(mvmvif3);
 
   // Remove the 1st interface
   ASSERT_EQ(wlanphy_ops.destroy_iface(iwl_trans, 0), ZX_OK);
   ASSERT_EQ(mvm->mvmvif[0], nullptr);
+  fake_ddk_.WaitUntilRemove();
   device_mac_ops.release(mvmvif0);
 
   // Remove the 1st interface again and it should fail.
@@ -511,6 +508,7 @@ TEST_F(WlanDeviceTest, PhyDestroyInvalidZxdev) {
   // Remove interface
   ASSERT_EQ(wlanphy_ops.destroy_iface(iwl_trans, 0), ZX_OK);
   ASSERT_EQ(mvm->mvmvif[iface_id], nullptr);
+  fake_ddk_.WaitUntilRemove();
   device_mac_ops.release(mvmvif);
 }
 

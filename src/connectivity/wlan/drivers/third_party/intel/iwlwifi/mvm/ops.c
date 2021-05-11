@@ -823,7 +823,7 @@ static struct iwl_op_mode* iwl_op_mode_mvm_start(struct iwl_trans* trans, const 
   trans_cfg.no_reclaim_cmds = no_reclaim_cmds;
   trans_cfg.n_no_reclaim_cmds = ARRAY_SIZE(no_reclaim_cmds);
 
-  mvm->dispatcher = async_loop_get_dispatcher(mvm->trans->loop);
+  mvm->dispatcher = mvm->trans->dispatcher;
   mvm->scan_timeout_task.state = (async_state_t)ASYNC_STATE_INIT;
   mvm->scan_timeout_task.handler = iwl_mvm_scan_timeout;
   mvm->scan_timeout_delay = ZX_SEC(IWL_SCAN_TIMEOUT_SEC);
@@ -924,30 +924,23 @@ static struct iwl_op_mode* iwl_op_mode_mvm_start(struct iwl_trans* trans, const 
     goto out_free;
   }
 
-  if (trans->to_load_firmware) {
-    mtx_lock(&mvm->mutex);
-    iwl_mvm_ref(mvm, IWL_MVM_REF_INIT_UCODE);
-    err = iwl_run_init_mvm_ucode(mvm, true);
+  mtx_lock(&mvm->mutex);
+  iwl_mvm_ref(mvm, IWL_MVM_REF_INIT_UCODE);
+  err = iwl_run_init_mvm_ucode(mvm, true);
 
 #if 0   // NEEDS_PORTING
-    if (test_bit(IWL_FWRT_STATUS_WAIT_ALIVE, &mvm->fwrt.status)) {
-        iwl_fw_alive_error_dump(&mvm->fwrt);
-    }
+  if (test_bit(IWL_FWRT_STATUS_WAIT_ALIVE, &mvm->fwrt.status)) {
+      iwl_fw_alive_error_dump(&mvm->fwrt);
+  }
 #endif  // NEEDS_PORTING
-    if (!iwlmvm_mod_params.init_dbg || !err) {
-      iwl_mvm_stop_device(mvm);
-    }
-    iwl_mvm_unref(mvm, IWL_MVM_REF_INIT_UCODE);
-    mtx_unlock(&mvm->mutex);
-    if (err < 0) {
-      IWL_ERR(mvm, "Failed to run INIT ucode: %d\n", err);
-      goto out_free;
-    }
-  } else {
-    // Testing code doesn't have firmware TLV parsing. But the MVM driver still needs this value to
-    // initialize. Fake it with real number from a firmware image.
-    uint32_t* n_scan_channels = (uint32_t*)(&mvm->fw->ucode_capa.n_scan_channels);
-    *n_scan_channels = 40;
+  if (!iwlmvm_mod_params.init_dbg || !err) {
+    iwl_mvm_stop_device(mvm);
+  }
+  iwl_mvm_unref(mvm, IWL_MVM_REF_INIT_UCODE);
+  mtx_unlock(&mvm->mutex);
+  if (err < 0) {
+    IWL_ERR(mvm, "Failed to run INIT ucode: %d\n", err);
+    goto out_free;
   }
 
   scan_size = iwl_mvm_scan_size(mvm);

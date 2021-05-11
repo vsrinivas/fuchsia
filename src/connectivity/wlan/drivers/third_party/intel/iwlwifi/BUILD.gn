@@ -35,6 +35,10 @@ source_set("core") {
     "cpp-wrapper.cc",
     "device.cc",
     "device.h",
+    "fuchsia_device.c",
+    "fuchsia_device.h",
+    "fuchsia_module.c",
+    "fuchsia_module.h",
     "fuchsia_porting.c",
     "fuchsia_porting.h",
     "fw/init.c",
@@ -92,7 +96,6 @@ source_set("core") {
     "//sdk/banjo/fuchsia.hardware.wlanphyimpl:fuchsia.hardware.wlanphyimpl_banjo_cpp",
     "//sdk/fidl/fuchsia.wlan.ieee80211:fuchsia.wlan.ieee80211_c",
     "//zircon/public/lib/sync",
-    "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/backtrace-request",
   ]
 }
@@ -107,6 +110,7 @@ source_set("pcie") {
   sources = [
     "pcie/bind.cc",
     "pcie/drv.c",
+    "pcie/fuchsia_pci.h",
     "pcie/internal.h",
     "pcie/pcie_device.cc",
     "pcie/pcie_device.h",
@@ -122,6 +126,7 @@ source_set("pcie") {
     "//garnet/lib/wlan/protocol",
     "//src/devices/lib/driver",
     "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 

@@ -184,7 +184,7 @@ static void iwl_pcie_txq_stuck_timer(async_dispatcher_t* dispatcher, async_task_
 }
 
 void iwlwifi_timer_init(struct iwl_trans* trans, struct iwlwifi_timer_info* timer) {
-  timer->dispatcher = async_loop_get_dispatcher(trans->loop);
+  timer->dispatcher = trans->dispatcher;
 
   // Initialize the completion to signaled so that if the timer is stopped before being set then
   // waiting on |finished| doesn't block.

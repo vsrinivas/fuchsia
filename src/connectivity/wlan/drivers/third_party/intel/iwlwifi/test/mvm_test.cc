@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/async-loop/loop.h>
-#include <lib/async/default.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/mock-function/mock-function.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/bti.h>
 #include <stdio.h>
+
+#include <memory>
 
 #include <zxtest/zxtest.h>
 
@@ -246,10 +247,13 @@ class ScanTest : public MvmTest {
     scan_config.scan_type = WLAN_HW_SCAN_TYPE_PASSIVE;
 
     // Create scan timeout async loop.
+    loop_ = std::make_unique<::async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
+    ASSERT_OK(loop_->StartThread("iwlwifi-mvm-test-worker", nullptr));
+
     trans_ = sim_trans_.iwl_trans();
-    ASSERT_OK(async_loop_create(&kAsyncLoopConfigNoAttachToCurrentThread, &trans_->loop));
-    ASSERT_OK(async_loop_start_thread(trans_->loop, "iwlwifi-mvm-test-worker", NULL));
-    mvm_->dispatcher = async_loop_get_dispatcher(trans_->loop);
+    trans_->dispatcher = loop_->dispatcher();
+
+    mvm_->dispatcher = trans_->dispatcher;
     mvm_->scan_timeout_task.handler = iwl_mvm_scan_timeout;
     mvm_->scan_timeout_task.state = (async_state_t)ASYNC_STATE_INIT;
     mvm_->scan_timeout_delay = ZX_SEC(10);
@@ -258,12 +262,9 @@ class ScanTest : public MvmTest {
     buildRxcb(&rxb, &scan_notif, sizeof(scan_notif));
   }
 
-  ~ScanTest() {
-    async_loop_quit(trans_->loop);
-    async_loop_join_threads(trans_->loop);
-    free(trans_->loop);
-  }
+  ~ScanTest() {}
 
+  std::unique_ptr<::async::Loop> loop_;
   struct iwl_trans* trans_;
   wlanmac_ifc_protocol_ops_t ops;
   struct iwl_mvm_vif mvmvif_sta;

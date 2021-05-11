@@ -209,12 +209,6 @@ struct work_struct {
   char dummy;
 };
 
-struct firmware {
-  zx_handle_t vmo;
-  uint8_t* data;
-  size_t size;
-};
-
 struct page {
   void* virtual_addr;
 };

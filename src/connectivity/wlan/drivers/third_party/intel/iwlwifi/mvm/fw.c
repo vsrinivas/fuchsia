@@ -312,7 +312,7 @@ static zx_status_t iwl_mvm_load_ucode_wait_alive(struct iwl_mvm* mvm,
     return ret;
   }
 
-  if (mvm->trans->to_load_firmware && !alive_data.valid) {
+  if (!alive_data.valid) {
     IWL_ERR(mvm, "Loaded ucode is not valid!\n");
     iwl_fw_set_current_image(&mvm->fwrt, old_type);
     return ZX_ERR_IO_INVALID;

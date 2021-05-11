@@ -7,13 +7,22 @@
 
 #include <lib/ddk/device.h>
 
+#include <memory>
+
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/device.h"
 
-struct iwl_trans;
+extern "C" {
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/fuchsia_pci.h"
+}
+
+namespace async {
+class Loop;
+}  // namespace async
 
 namespace wlan::iwlwifi {
 
-// This class uses the DDKTL classes to manage the lifetime of a iwlwifi driver instance.
+// This class contains the Fuchsia-specific PCIE bus initialization logic, using the DDKTL classes
+// to manage the lifetime of a iwlwifi driver instance.
 class PcieDevice : public Device {
  public:
   PcieDevice(const PcieDevice& device) = delete;
@@ -31,8 +40,10 @@ class PcieDevice : public Device {
   void DdkUnbind(::ddk::UnbindTxn txn) override;
 
  protected:
-  explicit PcieDevice(zx_device_t* parent, iwl_trans* iwl_trans);
-  iwl_trans* drvdata_ = nullptr;
+  explicit PcieDevice(zx_device_t* parent);
+
+  std::unique_ptr<::async::Loop> task_loop_;
+  iwl_pci_dev pci_dev_;
 };
 
 }  // namespace wlan::iwlwifi

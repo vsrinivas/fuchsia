@@ -1808,17 +1808,11 @@ static void iwl_trans_pcie_configure(struct iwl_trans* trans,
 #endif  // NEEDS_PORTING
 }
 
-void iwl_trans_pcie_unbind(struct iwl_trans* trans) {
-  // Since thrd_join() can block, we cannot invoke it during the Release()
-  // process (which would cause driver mgr to get locked up). Therefore,
-  // this must stay within the Unbind() sequence.
-  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-  zx_interrupt_destroy(trans_pcie->irq_handle);
-  thrd_join(trans_pcie->irq_thread, NULL);
-}
-
 void iwl_trans_pcie_free(struct iwl_trans* trans) {
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
+
+  zx_interrupt_destroy(trans_pcie->irq_handle);
+  thrd_join(trans_pcie->irq_thread, NULL);
   zx_handle_close(trans_pcie->bti);
 
 #if 0   // NEEDS_PORTING
@@ -3155,19 +3149,20 @@ static const struct iwl_trans_ops trans_ops_pcie_gen2 = {
 };
 #endif  // NEEDS_PORTING
 
-struct iwl_trans* iwl_trans_pcie_alloc(const pci_protocol_t* pci,
-                                       const struct iwl_pci_device* device) {
+struct iwl_trans* iwl_trans_pcie_alloc(struct iwl_pci_dev* pdev,
+                                       const struct iwl_pci_device_id* ent,
+                                       const struct iwl_cfg* cfg) {
   struct iwl_trans_pcie* trans_pcie;
   struct iwl_trans* trans;
   zx_status_t status;
   int addr_size;
 
 #if 0   // NEEDS_PORTING
-  if (device->config->gen2) {
-    trans = iwl_trans_alloc(sizeof(struct iwl_trans_pcie), device->config, &trans_ops_pcie_gen2);
+  if (cfg->gen2) {
+    trans = iwl_trans_alloc(sizeof(struct iwl_trans_pcie), &pdev->dev, cfg, &trans_ops_pcie_gen2);
   } else {
 #endif  // NEEDS_PORTING
-  trans = iwl_trans_alloc(sizeof(struct iwl_trans_pcie), device->config, &trans_ops_pcie);
+  trans = iwl_trans_alloc(sizeof(struct iwl_trans_pcie), &pdev->dev, cfg, &trans_ops_pcie);
 #if 0   // NEEDS_PORTING
   }
 #endif  // NEEDS_PORTING
@@ -3191,7 +3186,7 @@ struct iwl_trans* iwl_trans_pcie_alloc(const pci_protocol_t* pci,
         goto out_no_pci;
     }
 
-    if (!device->config->base_params->pcie_l1_allowed) {
+    if (!cfg->base_params->pcie_l1_allowed) {
         /*
          * W/A - seems to solve weird behavior. We need to remove this
          * if we don't want to stay in L1 all the time. This wastes a
@@ -3204,7 +3199,7 @@ struct iwl_trans* iwl_trans_pcie_alloc(const pci_protocol_t* pci,
 
   trans_pcie->def_rx_queue = 0;
 
-  if (device->config->use_tfh) {
+  if (cfg->use_tfh) {
     addr_size = 64;
     trans_pcie->max_tbs = IWL_TFH_NUM_TBS;
     trans_pcie->tfd_size = sizeof(struct iwl_tfh_tfd);
@@ -3215,7 +3210,7 @@ struct iwl_trans* iwl_trans_pcie_alloc(const pci_protocol_t* pci,
   }
   trans->max_skb_frags = IWL_PCIE_MAX_FRAGS(trans_pcie);
 
-  memcpy(&trans_pcie->pci, &pci, sizeof(trans_pcie->pci));
+  trans_pcie->pci = &pdev->proto;
   status = pci_enable_bus_master(trans_pcie->pci, true);
   if (status != ZX_OK) {
     IWL_ERR(trans, "Failed to enable bus mastering: %s\n", zx_status_get_string(status));
@@ -3313,7 +3308,7 @@ struct iwl_trans* iwl_trans_pcie_alloc(const pci_protocol_t* pci,
 #if IS_ENABLED(CPTCFG_IWLMVM) || IS_ENABLED(CPTCFG_IWLFMAC)
   trans->hw_rf_id = iwl_read32(trans, CSR_HW_RF_ID);
 
-  if (device->config == &iwl22560_2ax_cfg_hr) {
+  if (cfg == &iwl22560_2ax_cfg_hr) {
     if (CSR_HW_RF_ID_TYPE_CHIP_ID(trans->hw_rf_id) ==
         CSR_HW_RF_ID_TYPE_CHIP_ID(CSR_HW_RF_ID_TYPE_HR)) {
       trans->cfg = &iwl22560_2ax_cfg_hr;
@@ -3394,9 +3389,9 @@ struct iwl_trans* iwl_trans_pcie_alloc(const pci_protocol_t* pci,
     goto out_no_pci;
   }
 
-  trans->hw_id = (device->device_id << 16) + device->subsystem_device_id;
-  snprintf(trans->hw_id_str, sizeof(trans->hw_id_str), "PCI ID: 0x%04X:0x%04X", device->device_id,
-           device->subsystem_device_id);
+  trans->hw_id = (ent->device_id << 16) + ent->subsystem_device_id;
+  snprintf(trans->hw_id_str, sizeof(trans->hw_id_str), "PCI ID: 0x%04X:0x%04X", ent->device_id,
+           ent->subsystem_device_id);
 
   /* Initialize the wait queue for commands */
   trans_pcie->wait_command_queue = SYNC_COMPLETION_INIT;

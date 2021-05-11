@@ -16,9 +16,12 @@ source_set("iwlwifi_sim_trans_ss") {
   testonly = true
 
   sources = [
+    "fake-ddk-tester.cc",
     "sim-default-nvm.cc",
     "sim-mvm.cc",
     "sim-nvm.cc",
+    "single-ap-test.cc",
+    "tlv-fw-builder.cc",
     "trans-sim.cc",
   ]
 
@@ -37,6 +40,7 @@ source_set("iwlwifi_sim_trans_ss") {
     "//src/connectivity/wlan/drivers/testing/lib/sim-env",
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:core",
+    "//zircon/public/lib/zxtest",
   ]
 }
 
@@ -124,7 +128,10 @@ executable("mvm_test") {
   sources = [ "mvm_test.cc" ]
 
   defines = testing_defines
-  deps = testing_deps
+  deps = [
+           "//zircon/system/ulib/async-loop:async-loop-cpp",
+           "//zircon/system/ulib/async-loop:async-loop-default",
+         ] + testing_deps
 }
 
 executable("notif-wait_test") {
@@ -159,7 +166,7 @@ executable("pcie_test") {
     "//garnet/lib/wlan/protocol:protocol",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:core",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:pcie",
-    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }

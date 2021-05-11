@@ -7,6 +7,9 @@
 
 #include <lib/fake_ddk/fake_ddk.h>
 
+#include <string>
+#include <vector>
+
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/device.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mac-device.h"
 
@@ -14,35 +17,31 @@ namespace wlan::testing {
 
 class FakeDdkTester : public fake_ddk::Bind {
  public:
-  FakeDdkTester() : fake_ddk::Bind() {}
+  FakeDdkTester();
+  ~FakeDdkTester() override;
 
-  wlan::iwlwifi::Device* dev() { return dev_; }
-  const std::vector<wlan::iwlwifi::MacDevice*>& macdevs() { return macdevs_; }
-  fake_ddk::Bind& ddk() { return *this; }
+  // Set the firmware binary to be returned by load_firmware().
+  void SetFirmware(std::string firmware);
+
+  // State accessors.
+  wlan::iwlwifi::Device* dev();
+  const wlan::iwlwifi::Device* dev() const;
+  const std::vector<wlan::iwlwifi::MacDevice*>& macdevs() const;
+  fake_ddk::Bind& ddk();
+  const fake_ddk::Bind& ddk() const;
+  std::string GetFirmware() const;
+
+  // Trampoline for the load_firmware() DDK call.
+  zx_status_t LoadFirmware(zx_device_t* device, const char* path, zx_handle_t* fw, size_t* size);
 
  protected:
+  // fake_ddk overrides.
   zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
-                        zx_device_t** out) override {
-    zx_status_t ret = Bind::DeviceAdd(drv, parent, args, out);
-    if (ret == ZX_OK) {
-      // On successful DeviceAdd() we save off the devices so that we can access them in the test
-      // to take subsequent actions or to release its resources at the end of the test.
-      if (parent == fake_ddk::kFakeParent) {
-        // The top node for iwlwifi will be the SimDevice
-        dev_ = static_cast<wlan::iwlwifi::Device*>(args->ctx);
-      } else {
-        // Everything else (i.e. children) will be of type MacDevice, created via
-        // the WlanphyImplCreateIface() call.
-        macdevs_.push_back(static_cast<wlan::iwlwifi::MacDevice*>(args->ctx));
-        IWL_ERR(this, "adding %p\n", args->ctx);
-      }
-    }
-    return ret;
-  }
+                        zx_device_t** out) override;
 
- private:
-  wlan::iwlwifi::Device* dev_;
+  wlan::iwlwifi::Device* dev_ = nullptr;
   std::vector<wlan::iwlwifi::MacDevice*> macdevs_;
+  std::string firmware_;
 };
 }  // namespace wlan::testing
 

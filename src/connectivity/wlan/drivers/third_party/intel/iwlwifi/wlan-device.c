@@ -406,10 +406,13 @@ void mac_unbind(void* ctx) {
   struct iwl_mvm_vif* mvmvif = ctx;
 
   if (!mvmvif->zxdev) {
+    IWL_ERR(NULL, "mac_unbind(): no zxdev\n");
     return;
   }
 
+  zx_device_t* zxdev = mvmvif->zxdev;
   mvmvif->zxdev = NULL;
+  device_unbind_reply(zxdev);
 }
 
 void mac_release(void* ctx) {

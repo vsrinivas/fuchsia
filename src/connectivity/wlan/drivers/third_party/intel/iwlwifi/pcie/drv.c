@@ -36,8 +36,6 @@
 
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
-#include <lib/async-loop/default.h>
-#include <lib/async-loop/loop.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
@@ -50,6 +48,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-drv.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwlwifi-bind.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/fuchsia_pci.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/internal.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/wlan-device.h"
 
@@ -61,7 +60,7 @@
   .device_id = (dev), .subsystem_device_id = (subdev), .config = &(cfg)
 
 /* Hardware specific file defines the PCI IDs table for that hardware module */
-static const struct iwl_pci_device iwl_devices[] = {
+static const struct iwl_pci_device_id iwl_devices[] = {
 #if CPTCFG_IWLDVM
     {IWL_PCI_DEVICE(0x4232, 0x1201, iwl5100_agn_cfg)}, /* Mini Card */
     {IWL_PCI_DEVICE(0x4232, 0x1301, iwl5100_agn_cfg)}, /* Half Mini Card */
@@ -947,9 +946,9 @@ static const struct iwl_pci_device iwl_devices[] = {
     {0},
 };
 
-static zx_status_t iwl_find_pci_device(uint16_t device_id, uint16_t subsystem_device_id,
-                                       const struct iwl_pci_device** out_device) {
-  const struct iwl_pci_device* device = iwl_devices;
+zx_status_t iwl_pci_find_device_id(uint16_t device_id, uint16_t subsystem_device_id,
+                                   const struct iwl_pci_device_id** out_device) {
+  const struct iwl_pci_device_id* device = iwl_devices;
   for (size_t i = 0; i != ARRAY_SIZE(iwl_devices); ++i) {
     if (iwl_devices[i].device_id == device_id &&
         iwl_devices[i].subsystem_device_id == subsystem_device_id) {
@@ -961,70 +960,23 @@ static zx_status_t iwl_find_pci_device(uint16_t device_id, uint16_t subsystem_de
   return ZX_ERR_NOT_FOUND;
 }
 
-void iwl_pci_unbind(struct iwl_trans* trans) {
-  iwl_trans_pcie_unbind(trans);
-
-#if 0   // NEEDS_PORTING
-    /* if RTPM was in use, restore it to the state before probe */
-    if (trans->runtime_pm_mode != IWL_PLAT_PM_MODE_DISABLED) {
-        /* We should not call forbid here, but we do for now.
-         * Check the comment to pm_runtime_allow() in
-         * iwl_pci_probe().
-         */
-        pm_runtime_forbid(trans->dev);
-    }
-#endif  // NEEDS_PORTING
-
-  iwl_drv_stop(trans->drv);
-}
-
-void iwl_pci_release(struct iwl_trans* trans) { iwl_trans_pcie_free(trans); }
-
-zx_status_t iwl_pci_create(zx_device_t* parent, struct iwl_trans** out_trans, bool load_firmware) {
+zx_status_t iwl_pci_probe(struct iwl_pci_dev* pdev, const struct iwl_pci_device_id* ent) {
+  const struct iwl_cfg* cfg = ent->config;
   struct iwl_trans* iwl_trans;
-  zx_status_t status;
+  zx_status_t ret;
 
-  pci_protocol_t pci;
-  status = device_get_protocol(parent, ZX_PROTOCOL_PCI, &pci);
-  if (status != ZX_OK) {
-    return status;
+  if (!cfg->csr) {
+    IWL_ERR(nullptr, "CSR addresses aren't configured\n");
+    return ZX_ERR_INVALID_ARGS;
   }
 
-  pcie_device_info_t pci_info;
-  status = pci_get_device_info(&pci, &pci_info);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  uint16_t subsystem_device_id;
-  status = pci_config_read16(&pci, PCI_CFG_SUBSYSTEM_ID, &subsystem_device_id);
-  if (status != ZX_OK) {
-    IWL_ERR(nullptr, "Failed to read PCI subsystem device ID: %s\n", zx_status_get_string(status));
-    return status;
-  }
-
-  IWL_INFO(nullptr, "Device ID: %04x Subsystem Device ID: %04x\n", pci_info.device_id,
-           subsystem_device_id);
-
-  const struct iwl_pci_device* device;
-  status = iwl_find_pci_device(pci_info.device_id, subsystem_device_id, &device);
-  if (status != ZX_OK) {
-    IWL_ERR(nullptr, "Failed to find PCI config: %s\n", zx_status_get_string(status));
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  iwl_trans = iwl_trans_pcie_alloc(&pci, device);
+  iwl_trans = iwl_trans_pcie_alloc(pdev, ent, cfg);
   if (!iwl_trans) {
-    IWL_ERR(nullptr, "Failed to allocate PCIE transport: %s\n", zx_status_get_string(status));
+    IWL_ERR(nullptr, "Failed to allocate PCIE transport\n");
     return ZX_ERR_NO_MEMORY;
   }
 
-  if (!iwl_trans->cfg->csr) {
-    IWL_ERR(iwl_trans, "CSR addresses aren't configured\n");
-    return ZX_ERR_BAD_STATE;
-  }
-
-  iwl_trans->to_load_firmware = load_firmware;  // indicate to load firmware in the later code.
+  iwl_trans->dispatcher = pdev->dev.task_dispatcher;
 
   /*
    * special-case 7265D, it has the same PCI IDs.
@@ -1074,42 +1026,18 @@ zx_status_t iwl_pci_create(zx_device_t* parent, struct iwl_trans** out_trans, bo
 #endif  // CPTCFG_IWLMVM || CPTCFG_IWLFMAC
 #endif  // NEEDS_PORTING
 
-  *out_trans = iwl_trans;
-  return status;
-}
-
-zx_status_t iwl_pci_start(struct iwl_trans* iwl_trans, zx_device_t* zxdev) {
-  iwl_trans->zxdev = zxdev;
-  zx_status_t status =
-      async_loop_create(&kAsyncLoopConfigNoAttachToCurrentThread, &iwl_trans->loop);
-  if (status != ZX_OK) {
-    IWL_ERR(iwl_trans, "Failed to create async loop: %s\n", zx_status_get_string(status));
-    return status;
-  }
-
-  status = async_loop_start_thread(iwl_trans->loop, "iwlwifi-worker", NULL);
-  if (status != ZX_OK) {
-    IWL_ERR(iwl_trans, "Failed to create async loop thread: %s\n", zx_status_get_string(status));
-    goto fail_destroy_loop;
-  }
-
-  status = iwl_drv_init();
-  if (status != ZX_OK) {
-    IWL_ERR(iwl_trans, "Failed to init driver: %s\n", zx_status_get_string(status));
-    goto fail_destroy_loop;
-  }
-
-  status = iwl_drv_start(iwl_trans);
-  if (status != ZX_OK) {
-    IWL_ERR(iwl_trans, "Failed to start driver: %s\n", zx_status_get_string(status));
-    goto fail_destroy_loop;
+  iwl_pci_set_drvdata(pdev, iwl_trans);
+  ret = iwl_drv_start(iwl_trans);
+  if (ret != ZX_OK) {
+    IWL_ERR(iwl_trans, "Failed to start driver: %s\n", zx_status_get_string(ret));
+    goto out_free_trans;
   }
 
   /* register transport layer debugfs here */
-  status = iwl_trans_pcie_dbgfs_register(iwl_trans);
-  if (status != ZX_OK) {
-    IWL_ERR(iwl_trans, "Failed to register debugfs: %s\n", zx_status_get_string(status));
-    goto fail_stop_device;
+  ret = iwl_trans_pcie_dbgfs_register(iwl_trans);
+  if (ret != ZX_OK) {
+    IWL_ERR(iwl_trans, "Failed to register debugfs: %s\n", zx_status_get_string(ret));
+    goto out_free_drv;
   }
 
 #if 0   // NEEDS_PORTING
@@ -1135,12 +1063,31 @@ zx_status_t iwl_pci_start(struct iwl_trans* iwl_trans, zx_device_t* zxdev) {
 
   return ZX_OK;
 
-fail_stop_device:
+out_free_drv:
   iwl_drv_stop(iwl_trans->drv);
-fail_destroy_loop:
-  async_loop_destroy(iwl_trans->loop);
+out_free_trans:
+  iwl_trans_pcie_free(iwl_trans);
+  return ret;
+}
 
-  return status;
+void iwl_pci_remove(struct iwl_pci_dev* pdev) {
+  struct iwl_trans* trans = iwl_pci_get_drvdata(pdev);
+
+#if 0   // NEEDS_PORTING
+    /* if RTPM was in use, restore it to the state before probe */
+    if (trans->runtime_pm_mode != IWL_PLAT_PM_MODE_DISABLED) {
+        /* We should not call forbid here, but we do for now.
+         * Check the comment to pm_runtime_allow() in
+         * iwl_pci_probe().
+         */
+        pm_runtime_forbid(trans->dev);
+    }
+#endif  // NEEDS_PORTING
+
+  iwl_drv_stop(trans->drv);
+
+  iwl_trans_pcie_free(trans);
+  iwl_pci_set_drvdata(pdev, NULL);
 }
 
 #if 0  // NEEDS_PORTING

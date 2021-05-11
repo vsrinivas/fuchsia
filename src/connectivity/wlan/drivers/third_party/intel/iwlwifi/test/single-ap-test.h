@@ -5,14 +5,13 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_TEST_SINGLE_AP_TEST_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_TEST_SINGLE_AP_TEST_H_
 
-#include <lib/mock-function/mock-function.h>
-#include <zircon/assert.h>
 #include <zircon/status.h>
 
 #include <zxtest/zxtest.h>
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-fake-ap/sim-fake-ap.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/fake-ddk-tester.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/trans-sim.h"
 
 namespace wlan::testing {
@@ -25,13 +24,9 @@ namespace wlan::testing {
 //
 class SingleApTest : public ::zxtest::Test {
  public:
-  SingleApTest() : ap_(&env_, default_macaddr_, kSsid, kChannel), sim_trans_(&env_) {
-    zx_status_t status = sim_trans_.Init();
-    ZX_ASSERT_MSG(ZX_OK == status, "Transportation initialization failed: %s",
-                  zx_status_get_string(status));
-    env_.AddStation(&ap_);
-  }
-  ~SingleApTest() {}
+  SingleApTest();
+  ~SingleApTest() override;
+  ;
 
  protected:
   static constexpr std::array<uint8_t, common::kMacAddrLen> kApAddr = {0x12, 0x34, 0x56,
@@ -41,12 +36,11 @@ class SingleApTest : public ::zxtest::Test {
 
   static const common::MacAddr default_macaddr_;
 
+  FakeDdkTester fake_ddk_;
   ::wlan::simulation::Environment env_;
   ::wlan::simulation::FakeAp ap_;
   TransportSim sim_trans_;
 };
-
-const common::MacAddr SingleApTest::default_macaddr_(kApAddr);
 
 }  // namespace wlan::testing
 

@@ -14,6 +14,7 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_TEST_TRANS_SIM_H_
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_device.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/sim-mvm.h"
 
 namespace wlan {
@@ -34,8 +35,8 @@ static inline struct trans_sim_priv* IWL_TRANS_GET_TRANS_SIM(struct iwl_trans* t
 
 class TransportSim : public SimMvm {
  public:
-  explicit TransportSim(::wlan::simulation::Environment* env) : SimMvm(env), iwl_trans_(nullptr) {}
-  ~TransportSim() { Release(); }
+  explicit TransportSim(::wlan::simulation::Environment* env);
+  ~TransportSim();
 
   // This function must be called before starting using other functions.
   zx_status_t Init();
@@ -48,6 +49,7 @@ class TransportSim : public SimMvm {
   }
 
  private:
+  struct device device_;
   struct iwl_trans* iwl_trans_;
 };
 

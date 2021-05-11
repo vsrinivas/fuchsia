@@ -136,15 +136,6 @@ struct iwl_drv* iwl_drv_get_dev_container(struct device* dev);
 int iwl_drv_switch_op_mode(struct iwl_drv* drv, const char* new_op_name);
 
 /*
- * iwl_drv_add_to_mvm_opmode - add the 'drv' into the MVM opmode drv list
- *
- * This is used for testing code to inject the 'drv' into an opmode.
- * Otherwise, we have to mock up lots of functions in iwl_req_fw_callback()
- * to make it happen, which is too complicated.
- */
-void iwl_drv_add_to_mvm_opmode(struct iwl_drv* drv);
-
-/*
  * exported symbol management
  *
  * The driver can be split into multiple modules, in which case some symbols

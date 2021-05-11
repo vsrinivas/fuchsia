@@ -52,6 +52,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-io.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-op-mode.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/fuchsia_pci.h"
 
 /* We need 2 entries for the TX command and header, and another one might
  * be needed for potential data in the SKB's head. The remaining ones can
@@ -559,7 +560,7 @@ struct iwl_trans_pcie {
   unsigned long queue_stopped[BITS_TO_LONGS(IWL_MAX_TVQM_QUEUES)];
 
   /* PCI bus related data */
-  struct pci_dev* pci_dev;
+  struct iwl_pci_dev* pci_dev;
   pci_protocol_t* pci;
   pci_irq_mode_t irq_mode;
   mmio_buffer_t mmio;
@@ -636,25 +637,13 @@ static inline struct iwl_trans* iwl_trans_pcie_get_trans(struct iwl_trans_pcie* 
   return containerof(trans_pcie, struct iwl_trans, trans_specific);
 }
 
-/**
- * struct iwl_pcie_device - PCI specific data
- * @device_id: PCI device ID.
- * @subsystem_device_id: PCI subsystem device ID.
- * @config: Config for the current device. See iwl-config.h.
- */
-struct iwl_pci_device {
-  uint16_t device_id;
-  uint16_t subsystem_device_id;
-  const struct iwl_cfg* config;
-};
-
 /*
  * Convention: trans API functions: iwl_trans_pcie_XXX
  *  Other functions: iwl_pcie_XXX
  */
-struct iwl_trans* iwl_trans_pcie_alloc(const pci_protocol_t* pci,
-                                       const struct iwl_pci_device* device);
-void iwl_trans_pcie_unbind(struct iwl_trans* trans);
+struct iwl_trans* iwl_trans_pcie_alloc(struct iwl_pci_dev* pdev,
+                                       const struct iwl_pci_device_id* ent,
+                                       const struct iwl_cfg* cfg);
 void iwl_trans_pcie_free(struct iwl_trans* trans);
 
 /*****************************************************
@@ -1062,10 +1051,10 @@ void iwl_pcie_gen2_tx_free(struct iwl_trans* trans);
 void iwl_pcie_gen2_tx_stop(struct iwl_trans* trans);
 #endif  // NEEDS_PORTING
 
-/* PCIe device lifecycle related helpers */
-zx_status_t iwl_pci_create(zx_device_t* parent, struct iwl_trans** out_trans, bool load_firmware);
-zx_status_t iwl_pci_start(struct iwl_trans* iwl_trans, zx_device_t* zxdev);
-void iwl_pci_unbind(struct iwl_trans* trans);
-void iwl_pci_release(struct iwl_trans* trans);
+/* PCIe device lifecycle entry points */
+zx_status_t iwl_pci_find_device_id(uint16_t device_id, uint16_t subsystem_device_id,
+                                   const struct iwl_pci_device_id** out_id);
+zx_status_t iwl_pci_probe(struct iwl_pci_dev* pdev, const struct iwl_pci_device_id* ent);
+void iwl_pci_remove(struct iwl_pci_dev* pdev);
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PCIE_INTERNAL_H_

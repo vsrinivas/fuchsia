@@ -37,7 +37,7 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_TRANS_H_
 
 #include <fuchsia/hardware/wlan/mac/c/banjo.h>
-#include <lib/async-loop/loop.h>
+#include <lib/async/dispatcher.h>
 #include <lib/ddk/io-buffer.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/img.h"
@@ -701,7 +701,6 @@ struct iwl_dram_data {
  * @rx_mpdu_cmd_hdr_size: used for tracing, amount of data before the
  *  start of the 802.11 header in the @rx_mpdu_cmd
  * @dflt_pwr_limit: default power limit fetched from the platform (ACPI)
- * @to_load_firmware: this trans has firmware to load. For sim-trans, this should be false.
  * @dbg_dest_tlv: points to the destination TLV for debug
  * @dbg_conf_tlv: array of pointers to configuration TLVs for debug
  * @dbg_trigger_tlv: array of pointers to triggers TLVs for debug
@@ -726,7 +725,7 @@ struct iwl_trans {
   unsigned long status;
 
   zx_device_t* zxdev;
-  async_loop_t* loop;
+  async_dispatcher_t* dispatcher;
   struct device* dev;
   uint32_t max_skb_frags;
   uint32_t hw_rev;
@@ -759,7 +758,6 @@ struct iwl_trans {
 
   bool external_ini_loaded;
   bool ini_valid;
-  bool to_load_firmware;
 
   const struct iwl_fw_dbg_dest_tlv_v1* dbg_dest_tlv;
   const struct iwl_fw_dbg_conf_tlv* dbg_conf_tlv[FW_DBG_CONF_MAX];
@@ -1174,8 +1172,8 @@ static inline bool iwl_trans_fw_running(struct iwl_trans* trans) {
 /*****************************************************
  * transport helper functions
  *****************************************************/
-struct iwl_trans* iwl_trans_alloc(unsigned int priv_size, const struct iwl_cfg* cfg,
-                                  struct iwl_trans_ops* ops);
+struct iwl_trans* iwl_trans_alloc(unsigned int priv_size, struct device* dev,
+                                  const struct iwl_cfg* cfg, struct iwl_trans_ops* ops);
 void iwl_trans_free(struct iwl_trans* trans);
 void iwl_trans_ref(struct iwl_trans* trans);
 void iwl_trans_unref(struct iwl_trans* trans);

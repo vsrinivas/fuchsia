@@ -27,6 +27,8 @@
 #include <wlan/protocol/mac.h>
 
 extern "C" {
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/alive.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/commands.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 }
 
@@ -38,6 +40,20 @@ extern "C" {
 using wlan::testing::IWL_TRANS_GET_TRANS_SIM;
 using wlan::testing::SimMvm;
 using wlan::testing::trans_sim_priv;
+
+// Send a fake packet from FW to unblock one wait in mvm->notif_wait.
+static void rx_fw_notification(struct iwl_trans* trans, uint8_t cmd, const void* data,
+                               size_t size) {
+  struct iwl_mvm* mvm = IWL_OP_MODE_GET_MVM(trans->op_mode);
+  iwl_rx_packet pkt = {};
+  pkt.len_n_flags = (size & FH_RSCSR_FRAME_SIZE_MSK) + sizeof(pkt.hdr);
+  pkt.hdr.cmd = cmd;
+
+  std::string buffer(sizeof(pkt) + size, '\0');
+  std::memcpy(buffer.data(), &pkt, sizeof(pkt));
+  std::memcpy(buffer.data() + sizeof(pkt), data, size);
+  iwl_notification_wait_notify(&mvm->notif_wait, reinterpret_cast<iwl_rx_packet*>(buffer.data()));
+}
 
 // Notify the mvm->notif_wait to unblock the waiting.
 static void unblock_notif_wait(struct iwl_trans* trans) {
@@ -57,7 +73,9 @@ static zx_status_t iwl_trans_sim_start_fw(struct iwl_trans* trans, const struct 
   //
   // Since we don't have a real firmware to load, there will be no notification from the firmware.
   // Fake a RX packet's behavior so that we won't get blocked in the iwl_mvm_mac_start().
-  unblock_notif_wait(trans);
+  mvm_alive_resp resp = {};
+  resp.status = htole16(IWL_ALIVE_STATUS_OK);
+  rx_fw_notification(trans, iwl_legacy_cmds::MVM_ALIVE, &resp, sizeof(resp));
 
   return ZX_OK;
 }
@@ -202,9 +220,10 @@ static struct iwl_trans_ops trans_ops_trans_sim = {
 };
 
 // iwl_trans_alloc() will allocate memory containing iwl_trans + trans_sim_priv.
-static struct iwl_trans* iwl_trans_transport_sim_alloc(const struct iwl_cfg* cfg, SimMvm* fw) {
+static struct iwl_trans* iwl_trans_transport_sim_alloc(struct device* dev,
+                                                       const struct iwl_cfg* cfg, SimMvm* fw) {
   struct iwl_trans* iwl_trans =
-      iwl_trans_alloc(sizeof(struct trans_sim_priv), cfg, &trans_ops_trans_sim);
+      iwl_trans_alloc(sizeof(struct trans_sim_priv), dev, cfg, &trans_ops_trans_sim);
 
   IWL_TRANS_GET_TRANS_SIM(iwl_trans)->fw = fw;
 
@@ -234,11 +253,10 @@ static zx_protocol_device_t device_ops = {
 // This function intends to be like this because we want to mimic the transport_pcie_bind().
 // But definitely can be refactored into the TransportSim::Init().
 // 'out_trans' is used to return the new allocated 'struct iwl_trans'.
-static zx_status_t transport_sim_bind(SimMvm* fw, zx_device_t* dev,
+static zx_status_t transport_sim_bind(SimMvm* fw, struct device* dev,
                                       struct iwl_trans** out_iwl_trans) {
   const struct iwl_cfg* cfg = &iwl7265_2ac_cfg;
-  struct iwl_trans* iwl_trans = iwl_trans_transport_sim_alloc(cfg, fw);
-  iwl_trans->to_load_firmware = false;
+  struct iwl_trans* iwl_trans = iwl_trans_transport_sim_alloc(dev, cfg, fw);
   zx_status_t status;
 
   if (!iwl_trans) {
@@ -256,7 +274,7 @@ static zx_status_t transport_sim_bind(SimMvm* fw, zx_device_t* dev,
       .flags = DEVICE_ADD_NON_BINDABLE,
   };
 
-  status = device_add(dev, &args, &iwl_trans->zxdev);
+  status = device_add(dev->zxdev, &args, &iwl_trans->zxdev);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to create device: %s", zx_status_get_string(status));
     free(iwl_trans);
@@ -275,15 +293,6 @@ static zx_status_t transport_sim_bind(SimMvm* fw, zx_device_t* dev,
     goto remove_dev;
   }
 
-  // Manually add the driver to the MVM opmode so that iwl_mvm_init() can call the
-  // corresponding start function (iwl_op_mode_mvm_start()).
-  iwl_drv_add_to_mvm_opmode(iwl_trans->drv);
-  status = iwl_mvm_init();
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to init MVM: %s", zx_status_get_string(status));
-    goto remove_dev;
-  }
-
   {
     *out_iwl_trans = iwl_trans;
     struct iwl_mvm* mvm = IWL_OP_MODE_GET_MVM(iwl_trans->op_mode);
@@ -299,9 +308,14 @@ remove_dev:
 namespace wlan {
 namespace testing {
 
-zx_status_t TransportSim::Init() {
-  return transport_sim_bind(this, fake_ddk::kFakeParent, &iwl_trans_);
+TransportSim::TransportSim(::wlan::simulation::Environment* env)
+    : SimMvm(env), device_{}, iwl_trans_(nullptr) {
+  device_.zxdev = ::fake_ddk::kFakeParent;
 }
+
+TransportSim::~TransportSim() { Release(); }
+
+zx_status_t TransportSim::Init() { return transport_sim_bind(this, &device_, &iwl_trans_); }
 
 void TransportSim::Release() { transport_sim_release(iwl_trans_); }
 

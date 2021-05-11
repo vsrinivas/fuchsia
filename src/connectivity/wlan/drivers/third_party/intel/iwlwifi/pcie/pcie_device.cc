@@ -1,9 +1,12 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/pcie_device.h"
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <zircon/assert.h>
 #include <zircon/status.h>
 
 #include <memory>
@@ -19,30 +22,17 @@ extern "C" {
 namespace wlan {
 namespace iwlwifi {
 
-PcieDevice::PcieDevice(zx_device_t* parent, iwl_trans* iwl_trans)
-    : Device(parent), drvdata_(iwl_trans) {}
+PcieDevice::PcieDevice(zx_device_t* parent) : Device(parent) { pci_dev_ = {}; }
 
-PcieDevice::~PcieDevice() {
-  if (drvdata_) {
-    iwl_pci_release(drvdata_);
-    drvdata_ = nullptr;
-  }
-}
+PcieDevice::~PcieDevice() { ZX_DEBUG_ASSERT(pci_dev_.drvdata == nullptr); }
 
 zx_status_t PcieDevice::Create(zx_device_t* parent_device, bool load_firmware) {
   zx_status_t status = ZX_OK;
 
-  iwl_trans* iwl_trans = nullptr;
-  if ((status = iwl_pci_create(parent_device, &iwl_trans, load_firmware)) != ZX_OK) {
-    IWL_ERR(iwl_trans, "%s() failed pci create: %s", __func__, zx_status_get_string(status));
-    return status;
-  }
-
   fbl::AllocChecker ac;
-  auto device = std::unique_ptr<PcieDevice>(new (&ac) PcieDevice(parent_device, iwl_trans));
-  iwl_trans = nullptr;
+  auto device = std::unique_ptr<PcieDevice>(new (&ac) PcieDevice(parent_device));
   if (!ac.check()) {
-    IWL_ERR(ctx, "failed to allocate pcie_device (%zu bytes)", sizeof(PcieDevice));
+    IWL_ERR(nullptr, "failed to allocate pcie_device (%zu bytes)", sizeof(PcieDevice));
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -57,27 +47,70 @@ zx_status_t PcieDevice::Create(zx_device_t* parent_device, bool load_firmware) {
   return ZX_OK;
 }
 
-iwl_trans* PcieDevice::drvdata() { return drvdata_; }
+iwl_trans* PcieDevice::drvdata() { return pci_dev_.drvdata; }
 
-const iwl_trans* PcieDevice::drvdata() const { return drvdata_; }
+const iwl_trans* PcieDevice::drvdata() const { return pci_dev_.drvdata; }
 
 void PcieDevice::DdkInit(::ddk::InitTxn txn) {
-  zx_status_t status = ZX_OK;
+  const zx_status_t status = [&]() {
+    zx_status_t status = ZX_OK;
 
-  status = iwl_pci_start(drvdata(), zxdev());
-  if (status != ZX_OK) {
-    IWL_ERR(drvdata(), "%s() failed pci start: %s", __func__, zx_status_get_string(status));
-    txn.Reply(status);
-    return;
-  }
+    task_loop_ = std::make_unique<::async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
+    if ((status = task_loop_->StartThread("iwlwifi-worker", nullptr)) != ZX_OK) {
+      IWL_ERR(iwl_trans, "Failed to create async loop thread: %s\n", zx_status_get_string(status));
+      return status;
+    }
 
-  txn.Reply(ZX_OK);
+    // Fill in the relevant Fuchsia-specific fields in our driver interface struct.
+    pci_dev_.dev.zxdev = zxdev();
+    pci_dev_.dev.task_dispatcher = task_loop_->dispatcher();
+
+    if ((status = device_get_protocol(parent(), ZX_PROTOCOL_PCI, &pci_dev_.proto)) != ZX_OK) {
+      return status;
+    }
+
+    // Perform Fuchsia-specific PCI initialization.
+    pcie_device_info_t pci_info = {};
+    if ((status = pci_get_device_info(&pci_dev_.proto, &pci_info)) != ZX_OK) {
+      return status;
+    }
+    uint16_t subsystem_device_id = 0;
+    if ((status = pci_config_read16(&pci_dev_.proto, PCI_CFG_SUBSYSTEM_ID, &subsystem_device_id)) !=
+        ZX_OK) {
+      IWL_ERR(nullptr, "Failed to read PCI subsystem device ID: %s\n",
+              zx_status_get_string(status));
+      return status;
+    }
+
+    IWL_INFO(nullptr, "Device ID: %04x Subsystem Device ID: %04x\n", pci_info.device_id,
+             subsystem_device_id);
+
+    if ((status = iwl_drv_init()) != ZX_OK) {
+      IWL_ERR(nullptr, "Failed to init driver: %s\n", zx_status_get_string(status));
+      return status;
+    }
+
+    const iwl_pci_device_id* id = nullptr;
+    if ((status = iwl_pci_find_device_id(pci_info.device_id, subsystem_device_id, &id)) != ZX_OK) {
+      IWL_ERR(nullptr, "Failed to find PCI config: %s\n", zx_status_get_string(status));
+      return status;
+    }
+
+    if ((status = iwl_pci_probe(&pci_dev_, id)) != ZX_OK) {
+      IWL_ERR(nullptr, "Failed to probe PCI device: %s\n", zx_status_get_string(status));
+      return status;
+    }
+
+    return ZX_OK;
+  }();
+
+  txn.Reply(status);
   return;
 }
 
 void PcieDevice::DdkUnbind(::ddk::UnbindTxn txn) {
-  IWL_INFO(this, "Unbinding pcie device\n");
-  iwl_pci_unbind(drvdata());
+  iwl_pci_remove(&pci_dev_);
+  task_loop_->Shutdown();
   txn.Reply();
 }
 

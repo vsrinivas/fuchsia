@@ -42,10 +42,10 @@
 #include <stdio.h>
 #include <threads.h>
 #include <zircon/listnode.h>
-#include <zircon/process.h>
 #include <zircon/status.h>
-#include <zircon/syscalls.h>
 
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_device.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_module.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/img.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-agn-hw.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-config.h"
@@ -62,10 +62,6 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-tm-gnl.h"
 #endif
 
-// For iwl_mvm_init(). This is not a best dependancy. But there is no better way
-// to include it now.
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
-
 #define FIRMWARE_DIR "iwlwifi"
 #define DRV_DESCRIPTION "Intel(R) Wireless WiFi driver for Fuchsia"
 
@@ -73,7 +69,6 @@
 static struct dentry* iwl_dbgfs_root;
 #endif
 
-// TODO(yjlou@): consider moving to iwl-drv.h for clean-up.
 /**
  * struct iwl_drv - drv common data
  * @list: list of drv structures using this opmode
@@ -92,7 +87,6 @@ struct iwl_drv {
   struct iwl_op_mode* op_mode;
   struct iwl_trans* trans;
   struct device* dev;
-  zx_device_t* zxdev;
 #if IS_ENABLED(CPTCFG_IWLXVT)
   bool xvt_mode_on;
 #endif
@@ -144,13 +138,6 @@ static struct iwlwifi_opmode_table {
 #endif
 };
 
-void iwl_drv_add_to_mvm_opmode(struct iwl_drv* drv) {
-  struct iwlwifi_opmode_table* op = &iwlwifi_opmode_table[MVM_OP_MODE];
-
-  /* add this device to the list of devices using this op_mode */
-  list_add_tail(&op->drv, &drv->list);
-}
-
 #if IS_ENABLED(CPTCFG_IWLXVT)
 /* kernel object for a device dedicated
  * folder in the sysfs */
@@ -192,8 +179,10 @@ static zx_status_t iwl_drv_get_op_mode_idx(struct iwl_drv* drv) {
 
   /* Going over all drivers, looking for the list that holds it */
   for (i = 0; (i < ARRAY_SIZE(iwlwifi_opmode_table)); i++) {
-    list_for_each_entry(drv_itr, &iwlwifi_opmode_table[i].drv, list) if (drv_itr->dev == drv->dev) {
-      return i;
+    list_for_each_entry(drv_itr, &iwlwifi_opmode_table[i].drv, list) {
+      if (drv_itr->dev == drv->dev) {
+        return i;
+      }
     }
   }
 
@@ -282,7 +271,7 @@ zx_status_t iwl_drv_switch_op_mode(struct iwl_drv* drv, const char* new_op_name)
       return ZX_ERR_INVALID_ARGS;
     }
   } else {
-    return request_module("%s", new_op->name);
+    return iwl_module_request("%s", new_op->name);
   }
 
   return 0;
@@ -409,18 +398,9 @@ static zx_status_t iwl_alloc_fw_desc(struct iwl_drv* drv, struct fw_desc* desc,
   return 0;
 }
 
-static inline void release_firmware(struct firmware* fw) {
-  if (fw->vmo != ZX_HANDLE_INVALID) {
-    zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)fw->data, fw->size);
-    fw->data = NULL;
-    zx_handle_close(fw->vmo);
-    fw->vmo = ZX_HANDLE_INVALID;
-  }
-}
+static void iwl_req_fw_callback(struct firmware* ucode_raw, void* context);
 
-static void iwl_req_fw_callback(struct firmware* ucode_raw, struct iwl_drv* drv);
-
-static zx_status_t iwl_request_firmware(struct iwl_drv* drv, bool first) {
+static zx_status_t iwl_load_firmware(struct iwl_drv* drv, bool first) {
   const struct iwl_cfg* cfg = drv->trans->cfg;
   char tag[8];
 #if defined(CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES)
@@ -466,9 +446,7 @@ static zx_status_t iwl_request_firmware(struct iwl_drv* drv, bool first) {
     }
 
     IWL_ERR(drv,
-            "check "
-            "git://git.kernel.org/pub/scm/linux/kernel/git/firmware/"
-            "linux-firmware.git\n");
+            "check git://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git\n");
     return ZX_ERR_NOT_FOUND;
   }
 
@@ -485,29 +463,7 @@ static zx_status_t iwl_request_firmware(struct iwl_drv* drv, bool first) {
 
   IWL_DEBUG_INFO(drv, "attempting to load firmware '%s'\n", drv->firmware_name);
 
-  struct firmware firmware;
-  zx_status_t status;
-
-  status = load_firmware(drv->zxdev, drv->firmware_name, &firmware.vmo, &firmware.size);
-  if (status != ZX_OK) {
-    IWL_ERR(drv, "Failed to load firmware: %s\n", zx_status_get_string(status));
-    return status;
-  }
-
-  uintptr_t vaddr;
-  status =
-      zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ, 0, firmware.vmo, 0, firmware.size, &vaddr);
-  if (status != ZX_OK) {
-    IWL_ERR(drv, "Failed to map firmware VMO: %s", zx_status_get_string(status));
-    zx_handle_close(firmware.vmo);
-    return status;
-  }
-
-  firmware.data = (uint8_t*)vaddr;
-
-  iwl_req_fw_callback(&firmware, drv);
-
-  return ZX_OK;
+  return iwl_firmware_request_nowait(drv->trans->dev, drv->firmware_name, iwl_req_fw_callback, drv);
 }
 
 struct fw_img_parsing {
@@ -1452,7 +1408,8 @@ static void _iwl_op_mode_stop(struct iwl_drv* drv) {
  * If loaded successfully, copies the firmware into buffers
  * for the card to fetch (via DMA).
  */
-static void iwl_req_fw_callback(struct firmware* ucode_raw, struct iwl_drv* drv) {
+static void iwl_req_fw_callback(struct firmware* ucode_raw, void* context) {
+  struct iwl_drv* drv = context;
   struct iwl_fw* fw = &drv->fw;
   struct iwl_ucode_header* ucode;
   struct iwlwifi_opmode_table* op;
@@ -1463,6 +1420,7 @@ static void iwl_req_fw_callback(struct firmware* ucode_raw, struct iwl_drv* drv)
   size_t trigger_tlv_sz[FW_DBG_TRIGGER_MAX];
   uint32_t api_ver;
   size_t i;
+  bool load_module = false;
   bool usniffer_images = false;
 
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
@@ -1510,7 +1468,7 @@ static void iwl_req_fw_callback(struct firmware* ucode_raw, struct iwl_drv* drv)
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
   if (!ucode->ver && drv->trans->dbg_cfg.fw_dbg_conf) {
     load_fw_dbg_err =
-        request_firmware(&fw_dbg_config, drv->trans->dbg_cfg.fw_dbg_conf, drv->trans->dev);
+        iwl_firmware_request(drv->trans->dev, &fw_dbg_config, drv->trans->dbg_cfg.fw_dbg_conf);
     if (!load_fw_dbg_err) {
       err = iwl_parse_tlv_firmware(drv, fw_dbg_config, pieces, &fw->ucode_capa, &usniffer_images);
       if (err) {
@@ -1677,11 +1635,11 @@ static void iwl_req_fw_callback(struct firmware* ucode_raw, struct iwl_drv* drv)
   }
 
   /* We have our copies now, allow OS release its copies */
-  release_firmware(ucode_raw);
+  iwl_firmware_release(ucode_raw);
 
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
   if (!load_fw_dbg_err) {
-    release_firmware(fw_dbg_config);
+    iwl_firmware_release(fw_dbg_config);
   }
 #endif
 
@@ -1721,7 +1679,6 @@ static void iwl_req_fw_callback(struct firmware* ucode_raw, struct iwl_drv* drv)
   /* add this device to the list of devices using this op_mode */
   list_add_tail(&op->drv, &drv->list);
 
-  bool load_mvm_module = false;
   if (op->ops) {
     drv->op_mode = _iwl_op_mode_start(drv, op);
 
@@ -1730,7 +1687,7 @@ static void iwl_req_fw_callback(struct firmware* ucode_raw, struct iwl_drv* drv)
       goto out_unbind;
     }
   } else {
-    load_mvm_module = true;
+    load_module = true;
   }
   mtx_unlock(&iwlwifi_opmode_table_mtx);
 
@@ -1741,33 +1698,31 @@ static void iwl_req_fw_callback(struct firmware* ucode_raw, struct iwl_drv* drv)
    */
   sync_completion_signal(&drv->request_firmware_complete);
 
-  // If the op_mode doesn't start, load the MVM module.
-  if (load_mvm_module) {
-    zx_status_t status = iwl_mvm_init();
-    if (status != ZX_OK) {
-      IWL_ERR(drv, "Cannot init MVM: %s\n", zx_status_get_string(status));
-      goto free;
-    }
+  /*
+   * Load the module last so we don't block anything
+   * else from proceeding if the module fails to load
+   * or hangs loading.
+   */
+  if (load_module) {
+    iwl_module_request("%s", op->name);
   }
 
   goto free;
 
 try_again:
   /* try next, if any */
-  release_firmware(ucode_raw);
-  if (iwl_request_firmware(drv, false)) {
+  iwl_firmware_release(ucode_raw);
+  if (iwl_load_firmware(drv, false)) {
     goto out_unbind;
   }
   goto free;
 
 out_free_fw:
   iwl_dealloc_ucode(drv);
-  release_firmware(ucode_raw);
+  iwl_firmware_release(ucode_raw);
 out_unbind:
   sync_completion_signal(&drv->request_firmware_complete);
-#if 0   // NEEDS_PORTING
-    device_release_driver(drv->trans->dev);
-#endif  // NEEDS_PORTING
+  iwl_device_release(drv->trans->dev);
 free:
   if (pieces) {
     for (i = 0; i < ARRAY_SIZE(pieces->img); i++) {
@@ -1789,7 +1744,6 @@ zx_status_t iwl_drv_start(struct iwl_trans* trans) {
   }
 
   drv->trans = trans;
-  drv->zxdev = trans->zxdev;
   drv->dev = trans->dev;
 
   drv->request_firmware_complete = SYNC_COMPLETION_INIT;
@@ -1826,12 +1780,10 @@ zx_status_t iwl_drv_start(struct iwl_trans* trans) {
   iwl_tm_gnl_add(drv->trans);
 #endif
 
-  if (trans->to_load_firmware) {
-    status = iwl_request_firmware(drv, true);
-    if (status != ZX_OK) {
-      IWL_ERR(trans, "Couldn't request the fw\n");
-      goto err_fw;
-    }
+  status = iwl_load_firmware(drv, true);
+  if (status != ZX_OK) {
+    IWL_ERR(trans, "Couldn't request the fw\n");
+    goto err_fw;
   }
 
 #if IS_ENABLED(CPTCFG_IWLXVT)
@@ -1861,9 +1813,7 @@ err:
 }
 
 void iwl_drv_stop(struct iwl_drv* drv) {
-  if (drv->trans->to_load_firmware) {
-    sync_completion_wait(&drv->request_firmware_complete, ZX_SEC(5));
-  }
+  sync_completion_wait(&drv->request_firmware_complete, ZX_SEC(5));
 
   _iwl_op_mode_stop(drv);
 
@@ -1903,6 +1853,7 @@ void iwl_drv_stop(struct iwl_drv* drv) {
 
   kfree(drv);
 }
+
 
 /* shared module parameters */
 struct iwl_mod_params iwlwifi_mod_params = {

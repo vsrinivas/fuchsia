@@ -14,8 +14,8 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/async-loop/loop.h>
 #include <lib/ddk/io-buffer.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/fake_ddk/fake_ddk.h>
@@ -27,6 +27,7 @@
 #include <zircon/listnode.h>
 
 #include <array>
+#include <string>
 #include <thread>
 
 #include <zxtest/zxtest.h>
@@ -36,6 +37,7 @@ extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/internal.h"
 }
 
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_device.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-csr.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/pcie_device.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/fake-ddk-tester-pci.h"
@@ -45,6 +47,9 @@ namespace {
 
 TEST(FakeDdkTesterPci, DeviceLifeCycle) {
   wlan::testing::FakeDdkTesterPci tester;
+
+  // Set up a fake firmware of non-zero size.
+  tester.SetFirmware(std::string(4, '\0'));
 
   // Create() allocates and binds the device.
   EXPECT_OK(wlan::iwlwifi::PcieDevice::Create(fake_ddk::kFakeParent, false), "Bind failed");
@@ -113,6 +118,10 @@ static void FakeEchoWrite32(struct iwl_trans* trans, uint32_t ofs, uint32_t val)
 class PcieTest : public zxtest::Test {
  public:
   PcieTest() {
+    loop_ = std::make_unique<::async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
+    ASSERT_OK(loop_->StartThread("iwlwifi-pcie-test-worker", nullptr));
+    device_.task_dispatcher = loop_->dispatcher();
+
     trans_ops_.write8 = write8_wrapper;
     trans_ops_.write32 = write32_wrapper;
     trans_ops_.read32 = read32_wrapper;
@@ -126,8 +135,9 @@ class PcieTest : public zxtest::Test {
     trans_ops_.unref = unref_wrapper;
 
     cfg_.base_params = &base_params_;
-    trans_ = iwl_trans_alloc(sizeof(struct iwl_trans_pcie_wrapper), &cfg_, &trans_ops_);
+    trans_ = iwl_trans_alloc(sizeof(struct iwl_trans_pcie_wrapper), &device_, &cfg_, &trans_ops_);
     ASSERT_NE(trans_, nullptr);
+    trans_->dispatcher = loop_->dispatcher();
     auto wrapper = reinterpret_cast<iwl_trans_pcie_wrapper*>(IWL_TRANS_GET_PCIE_TRANS(trans_));
     wrapper->test = this;
     trans_pcie_ = &wrapper->trans_pcie;
@@ -297,13 +307,15 @@ class PcieTest : public zxtest::Test {
   }
 
  protected:
-  struct iwl_trans* trans_;
-  struct iwl_trans_pcie* trans_pcie_;
-  struct iwl_base_params base_params_;
-  struct iwl_cfg cfg_;
-  struct iwl_trans_ops trans_ops_;
-  struct iwl_op_mode op_mode_;
-  struct iwl_op_mode_ops op_mode_ops_;
+  std::unique_ptr<::async::Loop> loop_;
+  struct device device_ = {};
+  struct iwl_trans* trans_ = {};
+  struct iwl_trans_pcie* trans_pcie_ = {};
+  struct iwl_base_params base_params_ = {};
+  struct iwl_cfg cfg_ = {};
+  struct iwl_trans_ops trans_ops_ = {};
+  struct iwl_op_mode op_mode_ = {};
+  struct iwl_op_mode_ops op_mode_ops_ = {};
 };
 
 TEST_F(PcieTest, DisableInterrupts) {
@@ -423,8 +435,6 @@ TEST_F(PcieTest, RxInterrupts) {
   base_params_.num_of_queues = 31;
   base_params_.max_tfd_queue_size = 256;
   trans_pcie_->tfd_size = sizeof(struct iwl_tfh_tfd);
-  // This need not be started, just created so that iwl_pcie_tx_free() has a target to cancel.
-  ASSERT_OK(async_loop_create(&kAsyncLoopConfigNoAttachToCurrentThread, &trans_->loop));
   ASSERT_OK(iwl_pcie_tx_init(trans_));
 
   ASSERT_TRUE(io_buffer_is_valid(&trans_pcie_->ict_tbl));
@@ -467,7 +477,6 @@ TEST_F(PcieTest, RxInterrupts) {
 
   iwl_pcie_rx_free(trans_);
   iwl_pcie_tx_free(trans_);
-  free(trans_->loop);
 }
 
 class TxTest : public PcieTest {
@@ -475,16 +484,10 @@ class TxTest : public PcieTest {
     base_params_.num_of_queues = 31;
     base_params_.max_tfd_queue_size = 256;
     trans_pcie_->tfd_size = sizeof(struct iwl_tfh_tfd);
-
-    ASSERT_OK(async_loop_create(&kAsyncLoopConfigNoAttachToCurrentThread, &trans_->loop));
-    ASSERT_OK(async_loop_start_thread(trans_->loop, "iwlwifi-test-worker", NULL));
   }
 
   void TearDown() {
-    async_loop_quit(trans_->loop);
-    async_loop_join_threads(trans_->loop);
     iwl_pcie_tx_free(trans_);
-    free(trans_->loop);
   }
 
  protected:
@@ -1011,9 +1014,6 @@ TEST_F(TxTest, TxSoManyPacketsThenReclaim) {
 class StuckTimerTest : public PcieTest {
  public:
   StuckTimerTest() {
-    ASSERT_OK(async_loop_create(&kAsyncLoopConfigNoAttachToCurrentThread, &trans_->loop));
-    ASSERT_OK(async_loop_start_thread(trans_->loop, "iwlwifi-test-worker", NULL));
-
     mtx_init(&txq_.lock, mtx_plain);
     iwlwifi_timer_init(trans_, &txq_.stuck_timer);
 
@@ -1022,12 +1022,7 @@ class StuckTimerTest : public PcieTest {
     txq_.read_ptr = 1;
   }
 
-  ~StuckTimerTest() { free(trans_->loop); }
-
-  void WaitForWorkerThread() {
-    async_loop_quit(trans_->loop);
-    async_loop_join_threads(trans_->loop);
-  }
+  ~StuckTimerTest() {}
 
  protected:
   struct iwl_txq txq_;
@@ -1036,7 +1031,6 @@ class StuckTimerTest : public PcieTest {
 TEST_F(StuckTimerTest, SetTimer) {
   iwlwifi_timer_set(&txq_.stuck_timer, ZX_TIME_INFINITE_PAST);
   sync_completion_wait(&txq_.stuck_timer.finished, ZX_TIME_INFINITE);
-  WaitForWorkerThread();
 }
 
 TEST_F(StuckTimerTest, SetSpuriousTimer) {
@@ -1045,27 +1039,23 @@ TEST_F(StuckTimerTest, SetSpuriousTimer) {
   txq_.read_ptr = 0;
   iwlwifi_timer_set(&txq_.stuck_timer, ZX_TIME_INFINITE_PAST);
   sync_completion_wait(&txq_.stuck_timer.finished, ZX_TIME_INFINITE);
-  WaitForWorkerThread();
 }
 
 TEST_F(StuckTimerTest, SetTimerOverride) {
   iwlwifi_timer_set(&txq_.stuck_timer, ZX_TIME_INFINITE);
   iwlwifi_timer_set(&txq_.stuck_timer, ZX_TIME_INFINITE_PAST);
   sync_completion_wait(&txq_.stuck_timer.finished, ZX_TIME_INFINITE);
-  WaitForWorkerThread();
 }
 
 TEST_F(StuckTimerTest, StopPendingTimer) {
   iwlwifi_timer_set(&txq_.stuck_timer, ZX_TIME_INFINITE);
   // Test that stop doesn't deadlock.
   iwlwifi_timer_stop(&txq_.stuck_timer);
-  WaitForWorkerThread();
 }
 
 TEST_F(StuckTimerTest, StopUnsetTimer) {
   // Test that stop doesn't deadlock.
   iwlwifi_timer_stop(&txq_.stuck_timer);
-  WaitForWorkerThread();
 }
 
 // This test is a best-effort attempt to test that a race condition is correctly handled. The test
@@ -1092,7 +1082,7 @@ TEST_F(StuckTimerTest, StopRunningTimer) {
   // the value of finished, since there's a chance that the race condition we're trying to trigger
   // didn't happen (i.e. the handler didn't fire before we called stop, or stop didn't block before
   // the handler was unblocked.)
-  WaitForWorkerThread();
+  loop_->Quit();
   stop_thread.join();
 }
 

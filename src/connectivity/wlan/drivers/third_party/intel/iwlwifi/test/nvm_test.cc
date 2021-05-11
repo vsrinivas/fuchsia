@@ -26,14 +26,7 @@ class NvmTest : public SingleApTest {
 // are based on those binary data.
 TEST_F(NvmTest, TestParsingDefaultNvm) {
   auto mvm = iwl_trans_get_mvm(sim_trans_.iwl_trans());
-
-  mtx_lock(&mvm->mutex);
-  zx_status_t status = iwl_nvm_init(mvm);
-  mtx_unlock(&mvm->mutex);
-  EXPECT_EQ(status, ZX_OK);
-
   auto data = mvm->nvm_data;
-
   EXPECT_EQ(data->nvm_version, 0xc16);
 
   // Compare the parsed MAC address
