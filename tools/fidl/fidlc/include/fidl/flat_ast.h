@@ -115,7 +115,45 @@ struct AttributeList final {
   std::vector<std::unique_ptr<Attribute>> attributes;
 };
 
-struct Decl {
+// AttributePlacement indicates the placement of an attribute, e.g. whether an
+// attribute is placed on an enum declaration, method, or union member.
+enum class AttributePlacement {
+  kBitsDecl,
+  kBitsMember,
+  kConstDecl,
+  kEnumDecl,
+  kEnumMember,
+  kProtocolDecl,
+  kProtocolCompose,
+  kLibrary,
+  kMethod,
+  kResourceDecl,
+  kResourceProperty,
+  kServiceDecl,
+  kServiceMember,
+  kStructDecl,
+  kStructMember,
+  kTableDecl,
+  kTableMember,
+  kTypeAliasDecl,
+  kUnionDecl,
+  kUnionMember,
+  kDeprecated,
+};
+
+struct Attributable {
+  Attributable(Attributable&&) = default;
+  Attributable& operator=(Attributable&&) = default;
+  virtual ~Attributable() = default;
+
+  Attributable(AttributePlacement placement, std::unique_ptr<AttributeList> attributes)
+      : placement(placement), attributes(std::move(attributes)) {}
+
+  AttributePlacement placement;
+  std::unique_ptr<AttributeList> attributes;
+};
+
+struct Decl : public Attributable {
   virtual ~Decl() {}
 
   enum struct Kind {
@@ -131,12 +169,37 @@ struct Decl {
     kTypeAlias,
   };
 
+  static AttributePlacement AttributePlacement(Kind kind) {
+    switch (kind) {
+      case Kind::kBits:
+        return AttributePlacement::kBitsDecl;
+      case Kind::kConst:
+        return AttributePlacement::kConstDecl;
+      case Kind::kEnum:
+        return AttributePlacement::kEnumDecl;
+      case Kind::kProtocol:
+        return AttributePlacement::kProtocolDecl;
+      case Kind::kResource:
+        return AttributePlacement::kResourceDecl;
+      case Kind::kService:
+        return AttributePlacement::kServiceDecl;
+      case Kind::kStruct:
+        return AttributePlacement::kStructDecl;
+      case Kind::kTable:
+        return AttributePlacement::kTableDecl;
+      case Kind::kUnion:
+        return AttributePlacement::kUnionDecl;
+      case Kind::kTypeAlias:
+        return AttributePlacement::kTypeAliasDecl;
+    }
+  };
+
   Decl(Kind kind, std::unique_ptr<AttributeList> attributes, Name name)
-      : kind(kind), attributes(std::move(attributes)), name(std::move(name)) {}
+      : Attributable(AttributePlacement(kind), std::move(attributes)),
+        kind(kind),
+        name(std::move(name)) {}
 
   const Kind kind;
-
-  std::unique_ptr<AttributeList> attributes;
   const Name name;
 
   bool HasAttribute(std::string_view attribute_name) const;
@@ -420,13 +483,14 @@ struct Const final : public Decl {
 };
 
 struct Enum final : public TypeDecl {
-  struct Member {
+  struct Member : public Attributable {
     Member(SourceSpan name, std::unique_ptr<Constant> value,
            std::unique_ptr<AttributeList> attributes)
-        : name(name), value(std::move(value)), attributes(std::move(attributes)) {}
+        : Attributable(AttributePlacement::kEnumMember, std::move(attributes)),
+          name(name),
+          value(std::move(value)) {}
     SourceSpan name;
     std::unique_ptr<Constant> value;
-    std::unique_ptr<AttributeList> attributes;
   };
 
   Enum(std::unique_ptr<AttributeList> attributes, Name name, TypeConstructor subtype_ctor,
@@ -452,13 +516,14 @@ struct Enum final : public TypeDecl {
 };
 
 struct Bits final : public TypeDecl {
-  struct Member {
+  struct Member : public Attributable {
     Member(SourceSpan name, std::unique_ptr<Constant> value,
            std::unique_ptr<AttributeList> attributes)
-        : name(name), value(std::move(value)), attributes(std::move(attributes)) {}
+        : Attributable(AttributePlacement::kBitsMember, std::move(attributes)),
+          name(name),
+          value(std::move(value)) {}
     SourceSpan name;
     std::unique_ptr<Constant> value;
-    std::unique_ptr<AttributeList> attributes;
   };
 
   Bits(std::unique_ptr<AttributeList> attributes, Name name, TypeConstructor subtype_ctor,
@@ -480,15 +545,14 @@ struct Bits final : public TypeDecl {
 };
 
 struct Service final : public TypeDecl {
-  struct Member {
+  struct Member : public Attributable {
     Member(TypeConstructor type_ctor, SourceSpan name, std::unique_ptr<AttributeList> attributes)
-        : type_ctor(std::move(type_ctor)),
-          name(std::move(name)),
-          attributes(std::move(attributes)) {}
+        : Attributable(AttributePlacement::kServiceMember, std::move(attributes)),
+          type_ctor(std::move(type_ctor)),
+          name(name) {}
 
     TypeConstructor type_ctor;
     SourceSpan name;
-    std::unique_ptr<AttributeList> attributes;
   };
 
   Service(std::unique_ptr<AttributeList> attributes, Name name, std::vector<Member> members)
@@ -506,18 +570,17 @@ struct Struct;
 // was made a top-level class since it's not possible to forward-declare nested classes in C++. For
 // backward-compatibility, Struct::Member is now an alias for this top-level StructMember.
 // TODO(fxbug.dev/37535): Move this to a nested class inside Struct.
-struct StructMember : public Object {
+struct StructMember : public Attributable, public Object {
   StructMember(TypeConstructor type_ctor, SourceSpan name,
                std::unique_ptr<Constant> maybe_default_value,
                std::unique_ptr<AttributeList> attributes)
-      : type_ctor(std::move(type_ctor)),
+      : Attributable(AttributePlacement::kStructMember, std::move(attributes)),
+        type_ctor(std::move(type_ctor)),
         name(std::move(name)),
-        maybe_default_value(std::move(maybe_default_value)),
-        attributes(std::move(attributes)) {}
+        maybe_default_value(std::move(maybe_default_value)) {}
   TypeConstructor type_ctor;
   SourceSpan name;
   std::unique_ptr<Constant> maybe_default_value;
-  std::unique_ptr<AttributeList> attributes;
 
   std::any AcceptAny(VisitorAny* visitor) const override;
 
@@ -558,18 +621,17 @@ struct Table;
 
 // See the comment on the StructMember class for why this is a top-level class.
 // TODO(fxbug.dev/37535): Move this to a nested class inside Table::Member.
-struct TableMemberUsed : public Object {
+struct TableMemberUsed : public Attributable, public Object {
   TableMemberUsed(TypeConstructor type_ctor, SourceSpan name,
                   std::unique_ptr<Constant> maybe_default_value,
                   std::unique_ptr<AttributeList> attributes)
-      : type_ctor(std::move(type_ctor)),
+      : Attributable(AttributePlacement::kTableMember, std::move(attributes)),
+        type_ctor(std::move(type_ctor)),
         name(std::move(name)),
-        maybe_default_value(std::move(maybe_default_value)),
-        attributes(std::move(attributes)) {}
+        maybe_default_value(std::move(maybe_default_value)) {}
   TypeConstructor type_ctor;
   SourceSpan name;
   std::unique_ptr<Constant> maybe_default_value;
-  std::unique_ptr<AttributeList> attributes;
 
   std::any AcceptAny(VisitorAny* visitor) const override;
 
@@ -625,13 +687,14 @@ struct Union;
 
 // See the comment on the StructMember class for why this is a top-level class.
 // TODO(fxbug.dev/37535): Move this to a nested class inside Union.
-struct UnionMemberUsed : public Object {
+struct UnionMemberUsed : public Attributable, public Object {
   UnionMemberUsed(TypeConstructor type_ctor, SourceSpan name,
                   std::unique_ptr<AttributeList> attributes)
-      : type_ctor(std::move(type_ctor)), name(name), attributes(std::move(attributes)) {}
+      : Attributable(AttributePlacement::kUnionMember, std::move(attributes)),
+        type_ctor(std::move(type_ctor)),
+        name(name) {}
   TypeConstructor type_ctor;
   SourceSpan name;
-  std::unique_ptr<AttributeList> attributes;
 
   std::any AcceptAny(VisitorAny* visitor) const override;
 
@@ -693,13 +756,13 @@ struct Union final : public TypeDecl {
 };
 
 struct Protocol final : public TypeDecl {
-  struct Method {
+  struct Method : public Attributable {
     Method(Method&&) = default;
     Method& operator=(Method&&) = default;
 
     Method(std::unique_ptr<AttributeList> attributes, std::unique_ptr<raw::Identifier> identifier,
            SourceSpan name, Struct* maybe_request, Struct* maybe_response)
-        : attributes(std::move(attributes)),
+        : Attributable(AttributePlacement::kMethod, std::move(attributes)),
           identifier(std::move(identifier)),
           name(name),
           maybe_request(maybe_request),
@@ -708,7 +771,6 @@ struct Protocol final : public TypeDecl {
       assert(this->maybe_request != nullptr || this->maybe_response != nullptr);
     }
 
-    std::unique_ptr<AttributeList> attributes;
     std::unique_ptr<raw::Identifier> identifier;
     SourceSpan name;
     Struct* maybe_request;
@@ -757,14 +819,13 @@ struct Protocol final : public TypeDecl {
 };
 
 struct Resource final : public Decl {
-  struct Property {
+  struct Property : public Attributable {
     Property(TypeConstructor type_ctor, SourceSpan name, std::unique_ptr<AttributeList> attributes)
-        : type_ctor(std::move(type_ctor)),
-          name(std::move(name)),
-          attributes(std::move(attributes)) {}
+        : Attributable(AttributePlacement::kResourceProperty, std::move(attributes)),
+          type_ctor(std::move(type_ctor)),
+          name(name) {}
     TypeConstructor type_ctor;
     SourceSpan name;
-    std::unique_ptr<AttributeList> attributes;
   };
 
   Resource(std::unique_ptr<AttributeList> attributes, Name name, TypeConstructor subtype_ctor,
@@ -1029,37 +1090,11 @@ class Typespace {
 // - A constraint which must be met by the declaration.
 class AttributeSchema {
  public:
-  using Constraint = fit::function<bool(
-      Reporter* reporter, const std::unique_ptr<Attribute>& attribute, const Decl* decl)>;
+  using Constraint =
+      fit::function<bool(Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
+                         const Attributable* attributable)>;
 
-  // Placement indicates the placement of an attribute, e.g. whether an
-  // attribute is placed on an enum declaration, method, or union
-  // member.
-  enum class Placement {
-    kBitsDecl,
-    kBitsMember,
-    kConstDecl,
-    kEnumDecl,
-    kEnumMember,
-    kProtocolCompose,
-    kProtocolDecl,
-    kLibrary,
-    kMethod,
-    kResourceDecl,
-    kResourceProperty,
-    kServiceDecl,
-    kServiceMember,
-    kStructDecl,
-    kStructMember,
-    kTableDecl,
-    kTableMember,
-    kTypeAliasDecl,
-    kUnionDecl,
-    kUnionMember,
-    kDeprecated,
-  };
-
-  AttributeSchema(const std::set<Placement>& allowed_placements,
+  AttributeSchema(const std::set<AttributePlacement>& allowed_placements,
                   const std::set<std::string> allowed_values,
                   Constraint constraint = NoOpConstraint);
 
@@ -1068,20 +1103,20 @@ class AttributeSchema {
   static AttributeSchema Deprecated();
 
   void ValidatePlacement(Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
-                         Placement placement) const;
+                         AttributePlacement placement) const;
 
   void ValidateValue(Reporter* reporter, const std::unique_ptr<Attribute>& attribute) const;
 
   void ValidateConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
-                          const Decl* decl) const;
+                          const Attributable* attributable) const;
 
  private:
   static bool NoOpConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
-                             const Decl* decl) {
+                             const Attributable* attributable) {
     return true;
   }
 
-  std::set<Placement> allowed_placements_;
+  std::set<AttributePlacement> allowed_placements_;
   std::set<std::string> allowed_values_;
   Constraint constraint_;
 };
@@ -1209,9 +1244,9 @@ class Library {
     return Fail(err, decl.name, args...);
   }
 
-  void ValidateAttributesPlacement(AttributeSchema::Placement placement,
-                                   const AttributeList* attributes);
-  void ValidateAttributesConstraints(const Decl* decl, const AttributeList* attributes);
+  void ValidateAttributesPlacement(AttributePlacement placement, const AttributeList* attributes);
+  void ValidateAttributesConstraints(const Attributable* attributable,
+                                     const AttributeList* attributes);
 
   // TODO(fxbug.dev/7920): Rationalize the use of names. Here, a simple name is
   // one that is not scoped, it is just text. An anonymous name is one that

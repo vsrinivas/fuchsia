@@ -1249,10 +1249,10 @@ protocol MyProtocol {
 
 bool MustHaveThreeMembers(fidl::Reporter* reporter,
                           const std::unique_ptr<fidl::flat::Attribute>& attribute,
-                          const fidl::flat::Decl* decl) {
-  switch (decl->kind) {
-    case fidl::flat::Decl::Kind::kStruct: {
-      auto struct_decl = static_cast<const fidl::flat::Struct*>(decl);
+                          const fidl::flat::Attributable* attributable) {
+  switch (attributable->placement) {
+    case fidl::flat::AttributePlacement::kStructDecl: {
+      auto struct_decl = static_cast<const fidl::flat::Struct*>(attributable);
       return struct_decl->members.size() == 3;
     }
     default:
@@ -1279,7 +1279,7 @@ type MyStruct = struct {
   library.AddAttributeSchema("must_have_three_members",
                              fidl::flat::AttributeSchema(
                                  {
-                                     fidl::flat::AttributeSchema::Placement::kStructDecl,
+                                     fidl::flat::AttributePlacement::kStructDecl,
                                  },
                                  {
                                      "",
@@ -1305,7 +1305,7 @@ struct MyStruct {
   library.AddAttributeSchema("must_have_three_members",
                              fidl::flat::AttributeSchema(
                                  {
-                                     fidl::flat::AttributeSchema::Placement::kStructDecl,
+                                     fidl::flat::AttributePlacement::kStructDecl,
                                  },
                                  {
                                      "",
@@ -1329,7 +1329,7 @@ protocol MyProtocol {
   library.AddAttributeSchema("must_have_three_members",
                              fidl::flat::AttributeSchema(
                                  {
-                                     fidl::flat::AttributeSchema::Placement::kMethod,
+                                     fidl::flat::AttributePlacement::kMethod,
                                  },
                                  {
                                      "",
@@ -1356,7 +1356,7 @@ protocol MyProtocol {
   library.AddAttributeSchema("must_have_three_members",
                              fidl::flat::AttributeSchema(
                                  {
-                                     fidl::flat::AttributeSchema::Placement::kProtocolDecl,
+                                     fidl::flat::AttributePlacement::kProtocolDecl,
                                  },
                                  {
                                      "",
@@ -1382,7 +1382,7 @@ protocol MyProtocol {
   library.AddAttributeSchema("must_have_three_members",
                              fidl::flat::AttributeSchema(
                                  {
-                                     fidl::flat::AttributeSchema::Placement::kProtocolDecl,
+                                     fidl::flat::AttributePlacement::kProtocolDecl,
                                  },
                                  {
                                      "",

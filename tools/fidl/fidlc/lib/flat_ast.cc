@@ -1693,23 +1693,24 @@ Typespace Typespace::RootTypes(Reporter* reporter) {
   return root_typespace;
 }
 
-AttributeSchema::AttributeSchema(const std::set<Placement>& allowed_placements,
+AttributeSchema::AttributeSchema(const std::set<AttributePlacement>& allowed_placements,
                                  const std::set<std::string> allowed_values, Constraint constraint)
     : allowed_placements_(allowed_placements),
       allowed_values_(allowed_values),
       constraint_(std::move(constraint)) {}
 
 AttributeSchema AttributeSchema::Deprecated() {
-  return AttributeSchema({Placement::kDeprecated}, {});
+  return AttributeSchema({AttributePlacement::kDeprecated}, {});
 }
 
 void AttributeSchema::ValidatePlacement(Reporter* reporter,
                                         const std::unique_ptr<Attribute>& attribute,
-                                        Placement placement) const {
+                                        AttributePlacement placement) const {
   if (allowed_placements_.size() == 0)
     return;
 
-  if (allowed_placements_.size() == 1 && *allowed_placements_.cbegin() == Placement::kDeprecated) {
+  if (allowed_placements_.size() == 1 &&
+      *allowed_placements_.cbegin() == AttributePlacement::kDeprecated) {
     reporter->Report(ErrDeprecatedAttribute, attribute->span(), attribute.get());
     return;
   }
@@ -1746,9 +1747,10 @@ void AttributeSchema::ValidateValue(Reporter* reporter,
 
 void AttributeSchema::ValidateConstraint(Reporter* reporter,
                                          const std::unique_ptr<Attribute>& attribute,
-                                         const Decl* decl) const {
+                                         const Attributable* attributable) const {
+  assert(attributable);
   auto check = reporter->Checkpoint();
-  auto passed = constraint_(reporter, attribute, decl);
+  auto passed = constraint_(reporter, attribute, attributable);
   if (passed) {
     assert(check.NoNewErrors() && "cannot add errors and pass");
   } else if (check.NoNewErrors()) {
@@ -1772,18 +1774,37 @@ void AttributeSchema::ValidateConstraint(Reporter* reporter,
   }
 }
 
-bool SimpleLayoutConstraint(Reporter* reporter, const std::unique_ptr<Attribute>&,
-                            const Decl* decl) {
-  assert(decl->kind == Decl::Kind::kStruct);
-  auto struct_decl = static_cast<const Struct*>(decl);
-  bool ok = true;
-  for (const auto& member : struct_decl->members) {
-    if (!IsSimple(GetType(member.type_ctor), reporter)) {
-      reporter->Report(ErrMemberMustBeSimple, member.name, member.name.data());
-      ok = false;
+bool SimpleLayoutConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& attr,
+                            const Attributable* attributable) {
+  assert(attributable);
+  switch (attributable->placement) {
+    case AttributePlacement::kStructDecl: {
+      auto struct_decl = static_cast<const Struct*>(attributable);
+      bool ok = true;
+      for (const auto& member : struct_decl->members) {
+        if (!IsSimple(GetType(member.type_ctor), reporter)) {
+          reporter->Report(ErrMemberMustBeSimple, member.name, member.name.data());
+          ok = false;
+        }
+      }
+      return ok;
     }
+    case AttributePlacement::kMethod: {
+      auto method = static_cast<const Protocol::Method*>(attributable);
+      if (method->maybe_request && !SimpleLayoutConstraint(reporter, attr, method->maybe_request)) {
+        return false;
+      }
+      if (method->maybe_response &&
+          !SimpleLayoutConstraint(reporter, attr, method->maybe_response)) {
+        return false;
+      }
+      return true;
+    }
+    default:
+      assert(false && "unexpected kind");
   }
-  return ok;
+
+  __builtin_unreachable();
 }
 
 bool ParseBound(Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
@@ -1810,7 +1831,8 @@ bool Library::VerifyInlineSize(const Struct* struct_decl) {
 }
 
 bool MaxBytesConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
-                        const Decl* decl) {
+                        const Attributable* attributable) {
+  assert(attributable);
   auto arg_constant = attribute->GetArg();
   if (!arg_constant.has_value() ||
       arg_constant.value().get().kind != flat::ConstantValue::Kind::kString) {
@@ -1822,21 +1844,21 @@ bool MaxBytesConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& at
   if (!ParseBound(reporter, attribute, std::string(arg_value.MakeContents()), &bound))
     return false;
   uint32_t max_bytes = std::numeric_limits<uint32_t>::max();
-  switch (decl->kind) {
-    case Decl::Kind::kStruct: {
-      auto struct_decl = static_cast<const Struct*>(decl);
+  switch (attributable->placement) {
+    case AttributePlacement::kStructDecl: {
+      auto struct_decl = static_cast<const Struct*>(attributable);
       max_bytes = struct_decl->typeshape(WireFormat::kV1NoEe).InlineSize() +
                   struct_decl->typeshape(WireFormat::kV1NoEe).MaxOutOfLine();
       break;
     }
-    case Decl::Kind::kTable: {
-      auto table_decl = static_cast<const Table*>(decl);
+    case AttributePlacement::kTableDecl: {
+      auto table_decl = static_cast<const Table*>(attributable);
       max_bytes = table_decl->typeshape(WireFormat::kV1NoEe).InlineSize() +
                   table_decl->typeshape(WireFormat::kV1NoEe).MaxOutOfLine();
       break;
     }
-    case Decl::Kind::kUnion: {
-      auto union_decl = static_cast<const Union*>(decl);
+    case AttributePlacement::kUnionDecl: {
+      auto union_decl = static_cast<const Union*>(attributable);
       max_bytes = union_decl->typeshape(WireFormat::kV1NoEe).InlineSize() +
                   union_decl->typeshape(WireFormat::kV1NoEe).MaxOutOfLine();
       break;
@@ -1853,7 +1875,8 @@ bool MaxBytesConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& at
 }
 
 bool MaxHandlesConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
-                          const Decl* decl) {
+                          const Attributable* attributable) {
+  assert(attributable);
   auto arg_constant = attribute->GetArg();
   if (!arg_constant.has_value() ||
       arg_constant.value().get().kind != flat::ConstantValue::Kind::kString) {
@@ -1866,19 +1889,19 @@ bool MaxHandlesConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& 
   if (!ParseBound(reporter, attribute, std::string(arg_value.MakeContents()), &bound))
     return false;
   uint32_t max_handles = std::numeric_limits<uint32_t>::max();
-  switch (decl->kind) {
-    case Decl::Kind::kStruct: {
-      auto struct_decl = static_cast<const Struct*>(decl);
+  switch (attributable->placement) {
+    case AttributePlacement::kStructDecl: {
+      auto struct_decl = static_cast<const Struct*>(attributable);
       max_handles = struct_decl->typeshape(WireFormat::kV1NoEe).MaxHandles();
       break;
     }
-    case Decl::Kind::kTable: {
-      auto table_decl = static_cast<const Table*>(decl);
+    case AttributePlacement::kTableDecl: {
+      auto table_decl = static_cast<const Table*>(attributable);
       max_handles = table_decl->typeshape(WireFormat::kV1NoEe).MaxHandles();
       break;
     }
-    case Decl::Kind::kUnion: {
-      auto union_decl = static_cast<const Union*>(decl);
+    case AttributePlacement::kUnionDecl: {
+      auto union_decl = static_cast<const Union*>(attributable);
       max_handles = union_decl->typeshape(WireFormat::kV1NoEe).MaxHandles();
       break;
     }
@@ -1894,9 +1917,10 @@ bool MaxHandlesConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& 
 }
 
 bool ResultShapeConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
-                           const Decl* decl) {
-  assert(decl->kind == Decl::Kind::kUnion);
-  auto union_decl = static_cast<const Union*>(decl);
+                           const Attributable* attributable) {
+  assert(attributable);
+  assert(attributable->placement == AttributePlacement::kUnionDecl);
+  auto union_decl = static_cast<const Union*>(attributable);
   assert(union_decl->members.size() == 2);
   auto& error_member = union_decl->members.at(1);
   assert(error_member.maybe_used && "must have an error member");
@@ -1916,7 +1940,7 @@ bool ResultShapeConstraint(Reporter* reporter, const std::unique_ptr<Attribute>&
 
   if (!error_primitive || (error_primitive->subtype != types::PrimitiveSubtype::kInt32 &&
                            error_primitive->subtype != types::PrimitiveSubtype::kUint32)) {
-    reporter->Report(ErrInvalidErrorType, decl->name.span());
+    reporter->Report(ErrInvalidErrorType, union_decl->name.span());
     return false;
   }
 
@@ -1935,7 +1959,11 @@ static std::string Trim(std::string s) {
 }
 
 bool TransportConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& attribute,
-                         const Decl* decl) {
+                         const Attributable* attributable) {
+  assert(attributable);
+  assert(attributable->placement == AttributePlacement::kMethod);
+  auto method = static_cast<const Protocol::Method*>(attributable);
+
   // function-local static pointer to non-trivially-destructible type
   // is allowed by styleguide
   static const auto kValidTransports = new std::set<std::string>{
@@ -1946,7 +1974,7 @@ bool TransportConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& a
 
   auto arg_constant = attribute->GetArg();
   if (!arg_constant.has_value()) {
-    reporter->Report(ErrInvalidTransportType, decl->name.span(), std::string(), *kValidTransports);
+    reporter->Report(ErrInvalidTransportType, method->name, std::string(), *kValidTransports);
     return false;
   }
   if (arg_constant.value().get().kind != flat::ConstantValue::Kind::kString)
@@ -1967,7 +1995,7 @@ bool TransportConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& a
   // Validate that they're ok
   for (auto transport : transports) {
     if (kValidTransports->count(transport) == 0) {
-      reporter->Report(ErrInvalidTransportType, decl->name.span(), transport, *kValidTransports);
+      reporter->Report(ErrInvalidTransportType, method->name, transport, *kValidTransports);
       return false;
     }
   }
@@ -1986,7 +2014,7 @@ Resource::Property* Resource::LookupProperty(std::string_view name) {
 Libraries::Libraries() {
   // clang-format off
   AddAttributeSchema("discoverable", AttributeSchema({
-    AttributeSchema::Placement::kProtocolDecl,
+    AttributePlacement::kProtocolDecl,
   }, {
     "",
   }));
@@ -1997,59 +2025,59 @@ Libraries::Libraries() {
   }));
   AddAttributeSchema("layout", AttributeSchema::Deprecated()),
   AddAttributeSchema("for_deprecated_c_bindings", AttributeSchema({
-    AttributeSchema::Placement::kProtocolDecl,
-    AttributeSchema::Placement::kStructDecl,
+    AttributePlacement::kProtocolDecl,
+    AttributePlacement::kStructDecl,
   }, {
     "",
   },
   SimpleLayoutConstraint));
   AddAttributeSchema("max_bytes", AttributeSchema({
-    AttributeSchema::Placement::kProtocolDecl,
-    AttributeSchema::Placement::kMethod,
-    AttributeSchema::Placement::kStructDecl,
-    AttributeSchema::Placement::kTableDecl,
-    AttributeSchema::Placement::kUnionDecl,
+    AttributePlacement::kProtocolDecl,
+    AttributePlacement::kMethod,
+    AttributePlacement::kStructDecl,
+    AttributePlacement::kTableDecl,
+    AttributePlacement::kUnionDecl,
   }, {
       /* any value */
   },
   MaxBytesConstraint));
   AddAttributeSchema("max_handles", AttributeSchema({
-    AttributeSchema::Placement::kProtocolDecl,
-    AttributeSchema::Placement::kMethod,
-    AttributeSchema::Placement::kStructDecl,
-    AttributeSchema::Placement::kTableDecl,
-    AttributeSchema::Placement::kUnionDecl,
+    AttributePlacement::kProtocolDecl,
+    AttributePlacement::kMethod,
+    AttributePlacement::kStructDecl,
+    AttributePlacement::kTableDecl,
+    AttributePlacement::kUnionDecl,
   }, {
     /* any value */
   },
   MaxHandlesConstraint));
   AddAttributeSchema("result", AttributeSchema({
-    AttributeSchema::Placement::kUnionDecl,
+    AttributePlacement::kUnionDecl,
   }, {
       "",
   },
   ResultShapeConstraint));
   AddAttributeSchema("selector", AttributeSchema({
-    AttributeSchema::Placement::kMethod,
+    AttributePlacement::kMethod,
   }, {
       /* any value */
   }));
   AddAttributeSchema("transitional", AttributeSchema({
-    AttributeSchema::Placement::kMethod,
-    AttributeSchema::Placement::kBitsDecl,
-    AttributeSchema::Placement::kEnumDecl,
-    AttributeSchema::Placement::kUnionDecl,
+    AttributePlacement::kMethod,
+    AttributePlacement::kBitsDecl,
+    AttributePlacement::kEnumDecl,
+    AttributePlacement::kUnionDecl,
   }, {
     /* any value */
   }));
   AddAttributeSchema("transport", AttributeSchema({
-    AttributeSchema::Placement::kProtocolDecl,
+    AttributePlacement::kProtocolDecl,
   }, {
     /* any value */
   }, TransportConstraint));
   AddAttributeSchema("unknown", AttributeSchema({
-    AttributeSchema::Placement::kEnumMember,
-    AttributeSchema::Placement::kUnionMember,
+    AttributePlacement::kEnumMember,
+    AttributePlacement::kUnionMember,
   }, {
     ""
   }));
@@ -2271,7 +2299,7 @@ bool Library::Fail(const ErrorDef<Args...>& err, const std::optional<SourceSpan>
   return false;
 }
 
-void Library::ValidateAttributesPlacement(AttributeSchema::Placement placement,
+void Library::ValidateAttributesPlacement(AttributePlacement placement,
                                           const AttributeList* attributes) {
   if (attributes == nullptr)
     return;
@@ -2284,13 +2312,14 @@ void Library::ValidateAttributesPlacement(AttributeSchema::Placement placement,
   }
 }
 
-void Library::ValidateAttributesConstraints(const Decl* decl, const AttributeList* attributes) {
+void Library::ValidateAttributesConstraints(const Attributable* attributable,
+                                            const AttributeList* attributes) {
   if (attributes == nullptr)
     return;
   for (const auto& attribute : attributes->attributes) {
     auto schema = all_libraries_->RetrieveAttributeSchema(nullptr, attribute, attribute->syntax);
     if (schema != nullptr)
-      schema->ValidateConstraint(reporter_, attribute, decl);
+      schema->ValidateConstraint(reporter_, attribute, attributable);
   }
 }
 
@@ -2967,7 +2996,7 @@ bool Library::ConsumeParameterList(Name name, std::unique_ptr<raw::ParameterList
             utils::to_upper_camel_case(std::string(parameter->identifier->span().data())));
     if (!ConsumeTypeConstructor(std::move(parameter->type_ctor), param_name, &type_ctor))
       return false;
-    ValidateAttributesPlacement(AttributeSchema::Placement::kStructMember, attributes.get());
+    ValidateAttributesPlacement(AttributePlacement::kStructMember, attributes.get());
     members.emplace_back(std::move(type_ctor), parameter->identifier->span(),
                          nullptr /* maybe_default_value */, std::move(attributes));
   }
@@ -3416,7 +3445,7 @@ bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
     if (!ConsumeAttributeList(std::move(file->attributes), &attributes)) {
       return false;
     }
-    ValidateAttributesPlacement(AttributeSchema::Placement::kLibrary, attributes.get());
+    ValidateAttributesPlacement(AttributePlacement::kLibrary, attributes.get());
     if (!attributes_) {
       attributes_ = std::move(attributes);
     } else {
@@ -4404,11 +4433,10 @@ void Library::VerifyDeclAttributes(const Decl* decl) {
     case Decl::Kind::kBits: {
       auto bits_declaration = static_cast<const Bits*>(decl);
       // Attributes: check placement.
-      ValidateAttributesPlacement(AttributeSchema::Placement::kBitsDecl,
+      ValidateAttributesPlacement(AttributePlacement::kBitsDecl,
                                   bits_declaration->attributes.get());
       for (const auto& member : bits_declaration->members) {
-        ValidateAttributesPlacement(AttributeSchema::Placement::kBitsMember,
-                                    member.attributes.get());
+        ValidateAttributesPlacement(AttributePlacement::kBitsMember, member.attributes.get());
       }
       if (placement_ok.NoNewErrors()) {
         // Attributes: check constraints.
@@ -4419,18 +4447,16 @@ void Library::VerifyDeclAttributes(const Decl* decl) {
     case Decl::Kind::kConst: {
       auto const_decl = static_cast<const Const*>(decl);
       // Attributes: for const declarations, we only check placement.
-      ValidateAttributesPlacement(AttributeSchema::Placement::kConstDecl,
-                                  const_decl->attributes.get());
+      ValidateAttributesPlacement(AttributePlacement::kConstDecl, const_decl->attributes.get());
       break;
     }
     case Decl::Kind::kEnum: {
       auto enum_declaration = static_cast<const Enum*>(decl);
       // Attributes: check placement.
-      ValidateAttributesPlacement(AttributeSchema::Placement::kEnumDecl,
+      ValidateAttributesPlacement(AttributePlacement::kEnumDecl,
                                   enum_declaration->attributes.get());
       for (const auto& member : enum_declaration->members) {
-        ValidateAttributesPlacement(AttributeSchema::Placement::kEnumMember,
-                                    member.attributes.get());
+        ValidateAttributesPlacement(AttributePlacement::kEnumMember, member.attributes.get());
       }
       if (placement_ok.NoNewErrors()) {
         // Attributes: check constraints.
@@ -4441,26 +4467,20 @@ void Library::VerifyDeclAttributes(const Decl* decl) {
     case Decl::Kind::kProtocol: {
       auto protocol_declaration = static_cast<const Protocol*>(decl);
       // Attributes: check placement.
-      ValidateAttributesPlacement(AttributeSchema::Placement::kProtocolDecl,
+      ValidateAttributesPlacement(AttributePlacement::kProtocolDecl,
                                   protocol_declaration->attributes.get());
       for (const auto& method_with_info : protocol_declaration->all_methods) {
-        ValidateAttributesPlacement(AttributeSchema::Placement::kMethod,
+        ValidateAttributesPlacement(AttributePlacement::kMethod,
                                     method_with_info.method->attributes.get());
       }
       if (placement_ok.NoNewErrors()) {
         // Attributes: check constraints.
         for (const auto method_with_info : protocol_declaration->all_methods) {
           const auto& method = *method_with_info.method;
-          if (method.maybe_request) {
-            ValidateAttributesConstraints(method.maybe_request,
-                                          protocol_declaration->attributes.get());
-            ValidateAttributesConstraints(method.maybe_request, method.attributes.get());
-          }
-          if (method.maybe_response) {
-            ValidateAttributesConstraints(method.maybe_response,
-                                          protocol_declaration->attributes.get());
-            ValidateAttributesConstraints(method.maybe_response, method.attributes.get());
-          }
+          // All of the attributes on the protocol get checked against each of
+          // its methods as well.
+          ValidateAttributesConstraints(&method, protocol_declaration->attributes.get());
+          ValidateAttributesConstraints(&method, method.attributes.get());
         }
       }
       break;
@@ -4468,10 +4488,10 @@ void Library::VerifyDeclAttributes(const Decl* decl) {
     case Decl::Kind::kResource: {
       auto resource_declaration = static_cast<const Resource*>(decl);
       // Attributes: check placement.
-      ValidateAttributesPlacement(AttributeSchema::Placement::kResourceDecl,
+      ValidateAttributesPlacement(AttributePlacement::kResourceDecl,
                                   resource_declaration->attributes.get());
       for (const auto& property : resource_declaration->properties) {
-        ValidateAttributesPlacement(AttributeSchema::Placement::kResourceProperty,
+        ValidateAttributesPlacement(AttributePlacement::kResourceProperty,
                                     property.attributes.get());
       }
       if (placement_ok.NoNewErrors()) {
@@ -4483,11 +4503,9 @@ void Library::VerifyDeclAttributes(const Decl* decl) {
     case Decl::Kind::kService: {
       auto service_decl = static_cast<const Service*>(decl);
       // Attributes: check placement.
-      ValidateAttributesPlacement(AttributeSchema::Placement::kServiceDecl,
-                                  service_decl->attributes.get());
+      ValidateAttributesPlacement(AttributePlacement::kServiceDecl, service_decl->attributes.get());
       for (const auto& member : service_decl->members) {
-        ValidateAttributesPlacement(AttributeSchema::Placement::kServiceMember,
-                                    member.attributes.get());
+        ValidateAttributesPlacement(AttributePlacement::kServiceMember, member.attributes.get());
       }
       if (placement_ok.NoNewErrors()) {
         // Attributes: check constraint.
@@ -4498,11 +4516,10 @@ void Library::VerifyDeclAttributes(const Decl* decl) {
     case Decl::Kind::kStruct: {
       auto struct_declaration = static_cast<const Struct*>(decl);
       // Attributes: check placement.
-      ValidateAttributesPlacement(AttributeSchema::Placement::kStructDecl,
+      ValidateAttributesPlacement(AttributePlacement::kStructDecl,
                                   struct_declaration->attributes.get());
       for (const auto& member : struct_declaration->members) {
-        ValidateAttributesPlacement(AttributeSchema::Placement::kStructMember,
-                                    member.attributes.get());
+        ValidateAttributesPlacement(AttributePlacement::kStructMember, member.attributes.get());
       }
       if (placement_ok.NoNewErrors()) {
         // Attributes: check constraint.
@@ -4513,12 +4530,12 @@ void Library::VerifyDeclAttributes(const Decl* decl) {
     case Decl::Kind::kTable: {
       auto table_declaration = static_cast<const Table*>(decl);
       // Attributes: check placement.
-      ValidateAttributesPlacement(AttributeSchema::Placement::kTableDecl,
+      ValidateAttributesPlacement(AttributePlacement::kTableDecl,
                                   table_declaration->attributes.get());
       for (const auto& member : table_declaration->members) {
         if (!member.maybe_used)
           continue;
-        ValidateAttributesPlacement(AttributeSchema::Placement::kTableMember,
+        ValidateAttributesPlacement(AttributePlacement::kTableMember,
                                     member.maybe_used->attributes.get());
       }
       if (placement_ok.NoNewErrors()) {
@@ -4530,12 +4547,12 @@ void Library::VerifyDeclAttributes(const Decl* decl) {
     case Decl::Kind::kUnion: {
       auto union_declaration = static_cast<const Union*>(decl);
       // Attributes: check placement.
-      ValidateAttributesPlacement(AttributeSchema::Placement::kUnionDecl,
+      ValidateAttributesPlacement(AttributePlacement::kUnionDecl,
                                   union_declaration->attributes.get());
       for (const auto& member : union_declaration->members) {
         if (!member.maybe_used)
           continue;
-        ValidateAttributesPlacement(AttributeSchema::Placement::kUnionMember,
+        ValidateAttributesPlacement(AttributePlacement::kUnionMember,
                                     member.maybe_used->attributes.get());
       }
       if (placement_ok.NoNewErrors()) {
@@ -4547,7 +4564,7 @@ void Library::VerifyDeclAttributes(const Decl* decl) {
     case Decl::Kind::kTypeAlias: {
       auto type_alias_declaration = static_cast<const TypeAlias*>(decl);
       // Attributes: check placement.
-      ValidateAttributesPlacement(AttributeSchema::Placement::kTypeAliasDecl,
+      ValidateAttributesPlacement(AttributePlacement::kTypeAliasDecl,
                                   type_alias_declaration->attributes.get());
       if (placement_ok.NoNewErrors()) {
         // Attributes: check constraints.
