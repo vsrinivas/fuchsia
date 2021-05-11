@@ -5,6 +5,7 @@
 #![allow(dead_code)]
 
 use fuchsia_zircon as zx;
+use std::error;
 use std::fmt;
 
 use crate::types::uapi;
@@ -20,6 +21,8 @@ impl Errno {
         self.value as i32
     }
 }
+
+impl error::Error for Errno {}
 
 impl fmt::Display for Errno {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

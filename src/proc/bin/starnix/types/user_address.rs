@@ -66,6 +66,42 @@ impl ops::Add<usize> for UserAddress {
     }
 }
 
+impl ops::Sub<u32> for UserAddress {
+    type Output = UserAddress;
+
+    fn sub(self, rhs: u32) -> UserAddress {
+        UserAddress(self.0 - (rhs as u64))
+    }
+}
+
+impl ops::Sub<u64> for UserAddress {
+    type Output = UserAddress;
+
+    fn sub(self, rhs: u64) -> UserAddress {
+        UserAddress(self.0 - rhs)
+    }
+}
+
+impl ops::Sub<usize> for UserAddress {
+    type Output = UserAddress;
+
+    fn sub(self, rhs: usize) -> UserAddress {
+        UserAddress(self.0 - (rhs as u64))
+    }
+}
+
+impl ops::AddAssign<usize> for UserAddress {
+    fn add_assign(&mut self, rhs: usize) {
+        *self = *self + rhs;
+    }
+}
+
+impl ops::SubAssign<usize> for UserAddress {
+    fn sub_assign(&mut self, rhs: usize) {
+        *self = *self - rhs;
+    }
+}
+
 impl ops::Sub<UserAddress> for UserAddress {
     type Output = usize;
 
