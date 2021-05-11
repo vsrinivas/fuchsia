@@ -56,7 +56,7 @@ static zx_status_t fidl_tap_ctl_open_device(void* ctx, const char* name_data, si
 static const fuchsia_hardware_ethertap_TapControl_ops_t tap_ctl_ops_ = {
     .OpenDevice = fidl_tap_ctl_open_device};
 
-TapCtl::TapCtl(zx_device_t* device) : ddk::Device<TapCtl, ddk::Messageable>(device) {}
+TapCtl::TapCtl(zx_device_t* device) : ddk::Device<TapCtl, ddk::MessageableOld>(device) {}
 
 zx_status_t TapCtl::Create(void* ctx, zx_device_t* parent) {
   auto dev = std::unique_ptr<TapCtl>(new TapCtl(parent));

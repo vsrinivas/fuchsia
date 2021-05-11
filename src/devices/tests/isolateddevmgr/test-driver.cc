@@ -16,7 +16,7 @@
 #include "src/devices/tests/isolateddevmgr/metadata-test-bind.h"
 
 class IsolatedDevMgrTestDriver;
-using DeviceType = ddk::Device<IsolatedDevMgrTestDriver, ddk::Unbindable, ddk::Messageable>;
+using DeviceType = ddk::Device<IsolatedDevMgrTestDriver, ddk::Unbindable, ddk::MessageableOld>;
 class IsolatedDevMgrTestDriver : public DeviceType {
  public:
   IsolatedDevMgrTestDriver(zx_device_t* parent) : DeviceType(parent) {}

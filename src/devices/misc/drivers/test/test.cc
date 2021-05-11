@@ -26,7 +26,7 @@
 namespace {
 
 class TestDevice;
-using TestDeviceType = ddk::Device<TestDevice, ddk::Messageable, ddk::Unbindable>;
+using TestDeviceType = ddk::Device<TestDevice, ddk::MessageableOld, ddk::Unbindable>;
 
 class TestDevice : public TestDeviceType, public ddk::TestProtocol<TestDevice, ddk::base_protocol> {
  public:
@@ -54,7 +54,7 @@ class TestDevice : public TestDeviceType, public ddk::TestProtocol<TestDevice, d
 };
 
 class TestRootDevice;
-using TestRootDeviceType = ddk::Device<TestRootDevice, ddk::Messageable, ddk::Unbindable>;
+using TestRootDeviceType = ddk::Device<TestRootDevice, ddk::MessageableOld, ddk::Unbindable>;
 
 class TestRootDevice : public TestRootDeviceType {
  public:

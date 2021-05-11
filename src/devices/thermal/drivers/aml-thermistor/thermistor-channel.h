@@ -21,7 +21,7 @@
 namespace thermal {
 
 class ThermistorChannel;
-using DeviceType2 = ddk::Device<ThermistorChannel, ddk::Unbindable, ddk::Messageable>;
+using DeviceType2 = ddk::Device<ThermistorChannel, ddk::Unbindable, ddk::MessageableOld>;
 
 namespace FidlTemperature = fuchsia_hardware_temperature;
 
@@ -46,7 +46,7 @@ class ThermistorChannel : public DeviceType2,
 };
 
 class RawChannel;
-using DeviceType3 = ddk::Device<RawChannel, ddk::Unbindable, ddk::Messageable>;
+using DeviceType3 = ddk::Device<RawChannel, ddk::Unbindable, ddk::MessageableOld>;
 
 namespace FidlAdc = fuchsia_hardware_adc;
 

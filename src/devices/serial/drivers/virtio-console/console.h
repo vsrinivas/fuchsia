@@ -67,7 +67,7 @@ class TransferQueue {
 
 // Actual virtio console implementation
 class ConsoleDevice : public Device,
-                      public ddk::Device<ConsoleDevice, ddk::Messageable>,
+                      public ddk::Device<ConsoleDevice, ddk::MessageableOld>,
                       public ddk::EmptyProtocol<ZX_PROTOCOL_CONSOLE>,
                       public fidl::WireServer<fuchsia_hardware_virtioconsole::Device> {
  public:

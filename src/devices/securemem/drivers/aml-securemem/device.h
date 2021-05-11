@@ -30,7 +30,7 @@ static constexpr const char* kDeviceName = "aml-securemem";
 class AmlogicSecureMemDevice;
 
 using AmlogicSecureMemDeviceBase =
-    ddk::Device<AmlogicSecureMemDevice, ddk::Messageable, ddk::Suspendable>;
+    ddk::Device<AmlogicSecureMemDevice, ddk::MessageableOld, ddk::Suspendable>;
 
 class AmlogicSecureMemDevice : public AmlogicSecureMemDeviceBase,
                                public fidl::WireServer<fuchsia_hardware_securemem::Device>,

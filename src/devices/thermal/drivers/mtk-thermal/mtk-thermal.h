@@ -23,7 +23,7 @@
 namespace thermal {
 
 class MtkThermal;
-using DeviceType = ddk::Device<MtkThermal, ddk::Messageable>;
+using DeviceType = ddk::Device<MtkThermal, ddk::MessageableOld>;
 
 class MtkThermal : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_THERMAL> {
  public:

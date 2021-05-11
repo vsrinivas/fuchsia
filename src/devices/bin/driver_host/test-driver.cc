@@ -25,7 +25,7 @@ using fuchsia_device_restarttest::TestDevice;
 
 class TestDevhostDriver;
 using DeviceType =
-    ddk::Device<TestDevhostDriver, ddk::Initializable, ddk::Unbindable, ddk::Messageable>;
+    ddk::Device<TestDevhostDriver, ddk::Initializable, ddk::Unbindable, ddk::MessageableOld>;
 class TestDevhostDriver : public DeviceType,
                           public ddk::EmptyProtocol<ZX_PROTOCOL_DEVHOST_TEST>,
                           public fidl::WireServer<TestDevice> {

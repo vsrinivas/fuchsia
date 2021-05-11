@@ -28,7 +28,7 @@ constexpr uint32_t kNumLogicalCores = 4;
 constexpr uint64_t kLogicalCoreIds[kNumLogicalCores] = {1, 2, 3, 4};
 
 class FakeCpuDevice;
-using TestDeviceType = ddk::Device<FakeCpuDevice, ddk::Messageable, ddk::PerformanceTunable>;
+using TestDeviceType = ddk::Device<FakeCpuDevice, ddk::MessageableOld, ddk::PerformanceTunable>;
 
 class FakeCpuDevice : TestDeviceType,
                       fidl::WireServer<cpuctrl::Device>,

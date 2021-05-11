@@ -59,7 +59,7 @@ constexpr int kNumBacklightDriverChannels = 6;
 constexpr int kMilliampPerAmp = 1000;
 
 class Lp8556Device;
-using DeviceType = ddk::Device<Lp8556Device, ddk::Unbindable, ddk::Messageable>;
+using DeviceType = ddk::Device<Lp8556Device, ddk::Unbindable, ddk::MessageableOld>;
 namespace FidlBacklight = fuchsia_hardware_backlight;
 namespace FidlPowerSensor = fuchsia_hardware_power_sensor;
 

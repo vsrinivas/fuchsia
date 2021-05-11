@@ -31,7 +31,7 @@
 namespace audio::aml_g12 {
 
 class AmlG12TdmDai;
-using AmlG12TdmDaiDeviceType = ddk::Device<AmlG12TdmDai, ddk::Messageable>;
+using AmlG12TdmDaiDeviceType = ddk::Device<AmlG12TdmDai, ddk::MessageableOld>;
 
 class AmlG12TdmDai : public AmlG12TdmDaiDeviceType,
                      public ddk::DaiProtocol<AmlG12TdmDai, ddk::base_protocol>,

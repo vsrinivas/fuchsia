@@ -31,7 +31,7 @@ class TestObserver : public zxtest::LifecycleObserver {
 };
 
 class ProtocolTestDriver;
-using ProtocolTestDriverType = ddk::Device<ProtocolTestDriver, ddk::Messageable>;
+using ProtocolTestDriverType = ddk::Device<ProtocolTestDriver, ddk::MessageableOld>;
 class ProtocolTestDriver : public ProtocolTestDriverType, public TestObserver {
  public:
   // A singleton instance is used so that the test fixture has no issues working

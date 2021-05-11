@@ -119,7 +119,7 @@ bool TransferQueue::IsEmpty() const { return queue_.is_empty(); }
 
 ConsoleDevice::ConsoleDevice(zx_device_t* bus_device, zx::bti bti, std::unique_ptr<Backend> backend)
     : virtio::Device(bus_device, std::move(bti), std::move(backend)),
-      ddk::Device<ConsoleDevice, ddk::Messageable>(bus_device) {}
+      ddk::Device<ConsoleDevice, ddk::MessageableOld>(bus_device) {}
 
 ConsoleDevice::~ConsoleDevice() {}
 

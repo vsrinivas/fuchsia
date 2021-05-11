@@ -63,14 +63,14 @@ a folder within [/sdk/fidl](/sdk/fidl).
 To enable FIDL communication in C++ drivers that do not already offer a FIDL
 API, complete the following steps:
 
-1. Make the device messagable by deriving from `ddk::Messageable`.
+1. Make the device messagable by deriving from `ddk::MessageableOld`.
 2. Add a DdkMessage method to handle incoming FIDL messages.
 3. Add methods for the FIDL protocol methods of the given FIDL API.
 
 For instance for [SPI](/src/devices/spi/drivers/spi/spi.h):
 
 ```
-using SpiChildType = ddk::Device<SpiChild, ddk::Messageable>;
+using SpiChildType = ddk::Device<SpiChild, ddk::MessageableOld>;
 class SpiChild : public SpiChildType,
                  public fuchsia_hardware_spi::Device::Interface,
                  public ddk::SpiProtocol<SpiChild, ddk::base_protocol> {

@@ -116,7 +116,7 @@ struct IpPktHdr {
 // format requirement: unicast and locally administered
 constexpr std::array<uint8_t, kMacAddrLen> kFakeMacAddr = {0x02, 0x47, 0x4f, 0x4f, 0x47, 0x4c};
 
-class Device : public ddk::Device<Device, ddk::Unbindable, ddk::Messageable>,
+class Device : public ddk::Device<Device, ddk::Unbindable, ddk::MessageableOld>,
                fidl::WireServer<fuchsia_hardware_telephony_transport::Qmi> {
  public:
   explicit Device(zx_device_t* parent);

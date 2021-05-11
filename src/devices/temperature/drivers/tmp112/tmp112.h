@@ -37,7 +37,7 @@ constexpr uint16_t kTemperatureNormalModeShift = 4;
 constexpr float kTemperatureResolution = 0.0625;
 
 class Tmp112Device;
-using DdkDeviceType = ddk::Device<Tmp112Device, ddk::Unbindable, ddk::Messageable>;
+using DdkDeviceType = ddk::Device<Tmp112Device, ddk::Unbindable, ddk::MessageableOld>;
 namespace temperature_fidl = fuchsia_hardware_temperature;
 
 class Tmp112Device : public DdkDeviceType,

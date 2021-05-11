@@ -64,7 +64,7 @@ namespace aml_gpu {
 class TestAmlGpu;
 
 class AmlGpu;
-using DdkDeviceType = ddk::Device<AmlGpu, ddk::Messageable, ddk::GetProtocolable>;
+using DdkDeviceType = ddk::Device<AmlGpu, ddk::MessageableOld, ddk::GetProtocolable>;
 
 class AmlGpu final : public DdkDeviceType,
                      public ddk::ArmMaliProtocol<AmlGpu>,

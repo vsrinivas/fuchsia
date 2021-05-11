@@ -62,7 +62,7 @@ enum {
 std::string GetNewFirmwareVersion();
 #endif
 
-class OtRadioDevice : public ddk::Device<OtRadioDevice, ddk::Unbindable, ddk::Messageable>,
+class OtRadioDevice : public ddk::Device<OtRadioDevice, ddk::Unbindable, ddk::MessageableOld>,
                       public fidl::WireServer<fuchsia_lowpan_spinel::DeviceSetup> {
  public:
   explicit OtRadioDevice(zx_device_t* device);

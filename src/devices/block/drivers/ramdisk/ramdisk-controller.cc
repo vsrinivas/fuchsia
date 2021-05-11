@@ -21,7 +21,7 @@ namespace ramdisk {
 namespace {
 
 class RamdiskController;
-using RamdiskControllerDeviceType = ddk::Device<RamdiskController, ddk::Messageable>;
+using RamdiskControllerDeviceType = ddk::Device<RamdiskController, ddk::MessageableOld>;
 
 class RamdiskController : public RamdiskControllerDeviceType {
  public:

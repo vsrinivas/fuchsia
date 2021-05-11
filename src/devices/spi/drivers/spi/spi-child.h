@@ -19,7 +19,7 @@ namespace spi {
 class SpiDevice;
 
 class SpiChild;
-using SpiChildType = ddk::Device<SpiChild, ddk::Messageable>;
+using SpiChildType = ddk::Device<SpiChild, ddk::MessageableOld>;
 
 class SpiChild : public SpiChildType,
                  public fbl::RefCounted<SpiChild>,

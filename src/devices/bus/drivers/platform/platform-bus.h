@@ -40,7 +40,7 @@ namespace platform_bus {
 
 class PlatformBus;
 using PlatformBusType =
-    ddk::Device<PlatformBus, ddk::GetProtocolable, ddk::Initializable, ddk::Messageable>;
+    ddk::Device<PlatformBus, ddk::GetProtocolable, ddk::Initializable, ddk::MessageableOld>;
 
 // This is the main class for the platform bus driver.
 class PlatformBus : public PlatformBusType,

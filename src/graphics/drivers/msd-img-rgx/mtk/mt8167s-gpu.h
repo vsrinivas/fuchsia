@@ -59,7 +59,7 @@ constexpr uint32_t kPwrStatus2nd = 0x610;
 
 class Mt8167sGpu;
 
-using DeviceType = ddk::Device<Mt8167sGpu, ddk::Messageable>;
+using DeviceType = ddk::Device<Mt8167sGpu, ddk::MessageableOld>;
 
 class Mt8167sGpu : public DeviceType,
                    public ddk::EmptyProtocol<ZX_PROTOCOL_GPU>,

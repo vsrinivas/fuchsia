@@ -22,7 +22,7 @@ namespace i2c {
 
 class I2cChild;
 
-using I2cChildType = ddk::Device<I2cChild, ddk::Unbindable, ddk::Messageable>;
+using I2cChildType = ddk::Device<I2cChild, ddk::Unbindable, ddk::MessageableOld>;
 
 namespace fidl_i2c = fuchsia_hardware_i2c;
 

@@ -20,7 +20,7 @@
 namespace audio::daitest {
 
 class DaiTest;
-using DaiTestDeviceType = ddk::Device<DaiTest, ddk::Messageable>;
+using DaiTestDeviceType = ddk::Device<DaiTest, ddk::MessageableOld>;
 
 class DaiTest : public DaiTestDeviceType,
                 public ddk::internal::base_protocol,

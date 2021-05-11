@@ -21,7 +21,7 @@
 namespace lp50xx_light {
 
 class Lp50xxLight;
-using Lp50xxLightType = ddk::Device<Lp50xxLight, ddk::Messageable>;
+using Lp50xxLightType = ddk::Device<Lp50xxLight, ddk::MessageableOld>;
 
 class Lp50xxLight : public Lp50xxLightType,
                     public fidl::WireServer<fuchsia_hardware_light::Light>,

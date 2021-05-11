@@ -37,7 +37,7 @@
 namespace sysmem_driver {
 
 class Device;
-using DdkDeviceType = ddk::Device<Device, ddk::Messageable, ddk::Unbindable>;
+using DdkDeviceType = ddk::Device<Device, ddk::MessageableOld, ddk::Unbindable>;
 
 class Driver;
 class BufferCollectionToken;

@@ -20,7 +20,7 @@
 namespace fidl {
 
 class DdkFidlDevice;
-using DeviceType = ddk::Device<DdkFidlDevice, ddk::Messageable>;
+using DeviceType = ddk::Device<DdkFidlDevice, ddk::MessageableOld>;
 
 class DdkFidlDevice : public DeviceType, public fidl::WireServer<fuchsia_hardware_test::Device> {
  public:

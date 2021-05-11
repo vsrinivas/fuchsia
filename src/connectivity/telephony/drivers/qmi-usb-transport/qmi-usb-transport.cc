@@ -740,7 +740,7 @@ static void usb_write_complete(void* ctx, usb_request_t* request) {
 }
 
 Device::Device(zx_device_t* parent)
-    : ddk::Device<Device, ddk::Unbindable, ddk::Messageable>(parent) {
+    : ddk::Device<Device, ddk::Unbindable, ddk::MessageableOld>(parent) {
   usb_device_ = parent;
 }
 

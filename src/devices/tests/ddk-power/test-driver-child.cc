@@ -28,7 +28,7 @@ using fuchsia_device_power_test::TestDevice;
 
 class TestPowerDriverChild;
 using DeviceType =
-    ddk::Device<TestPowerDriverChild, ddk::Unbindable, ddk::Messageable, ddk::Suspendable,
+    ddk::Device<TestPowerDriverChild, ddk::Unbindable, ddk::MessageableOld, ddk::Suspendable,
                 ddk::Resumable, ddk::PerformanceTunable, ddk::AutoSuspendable, ddk::Initializable>;
 class TestPowerDriverChild : public DeviceType, public fidl::WireServer<TestDevice> {
  public:

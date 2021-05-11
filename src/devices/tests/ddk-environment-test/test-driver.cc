@@ -23,7 +23,7 @@ namespace {
 using fuchsia_device_environment_test::TestDevice;
 
 class TestEnvironmentDriver;
-using DeviceType = ddk::Device<TestEnvironmentDriver, ddk::Unbindable, ddk::Messageable>;
+using DeviceType = ddk::Device<TestEnvironmentDriver, ddk::Unbindable, ddk::MessageableOld>;
 
 class TestEnvironmentDriver : public DeviceType, public fidl::WireServer<TestDevice> {
  public:

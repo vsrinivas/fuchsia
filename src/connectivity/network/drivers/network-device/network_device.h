@@ -19,7 +19,7 @@
 namespace network {
 
 class NetworkDevice;
-using DeviceType = ddk::Device<NetworkDevice, ddk::Messageable, ddk::Unbindable>;
+using DeviceType = ddk::Device<NetworkDevice, ddk::MessageableOld, ddk::Unbindable>;
 
 class NetworkDevice : public DeviceType,
                       public ddk::EmptyProtocol<ZX_PROTOCOL_NETWORK_DEVICE>,

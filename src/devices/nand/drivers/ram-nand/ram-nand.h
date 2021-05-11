@@ -51,7 +51,7 @@ struct NandParams : public nand_info_t {
 
 class NandDevice;
 using DeviceType =
-    ddk::Device<NandDevice, ddk::GetSizable, ddk::Initializable, ddk::Unbindable, ddk::Messageable>;
+    ddk::Device<NandDevice, ddk::GetSizable, ddk::Initializable, ddk::Unbindable, ddk::MessageableOld>;
 
 // Provides the bulk of the functionality for a ram-backed NAND device.
 class NandDevice : public DeviceType, public ddk::NandProtocol<NandDevice, ddk::base_protocol> {

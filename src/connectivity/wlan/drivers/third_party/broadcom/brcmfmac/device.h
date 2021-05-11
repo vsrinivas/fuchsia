@@ -34,7 +34,7 @@ class Device;
 class DeviceInspect;
 class WlanInterface;
 
-class Device : public ::ddk::Device<Device, ddk::Initializable, ddk::Messageable>,
+class Device : public ::ddk::Device<Device, ddk::Initializable, ddk::MessageableOld>,
                fidl::WireServer<fuchsia_factory_wlan::Iovar>,
                public ::ddk::WlanphyImplProtocol<Device, ::ddk::base_protocol> {
  public:

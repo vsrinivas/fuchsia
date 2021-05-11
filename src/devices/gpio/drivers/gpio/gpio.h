@@ -18,7 +18,7 @@
 namespace gpio {
 
 class GpioDevice;
-using GpioDeviceType = ddk::Device<GpioDevice, ddk::Unbindable, ddk::Messageable>;
+using GpioDeviceType = ddk::Device<GpioDevice, ddk::Unbindable, ddk::MessageableOld>;
 using fuchsia_hardware_gpio::Gpio;
 using fuchsia_hardware_gpio::wire::GpioFlags;
 

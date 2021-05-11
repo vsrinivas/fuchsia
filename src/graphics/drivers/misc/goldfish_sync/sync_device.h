@@ -38,7 +38,7 @@ namespace goldfish {
 namespace sync {
 
 class SyncDevice;
-using SyncDeviceType = ddk::Device<SyncDevice, ddk::Unbindable, ddk::Messageable>;
+using SyncDeviceType = ddk::Device<SyncDevice, ddk::Unbindable, ddk::MessageableOld>;
 
 class SyncTimeline;
 

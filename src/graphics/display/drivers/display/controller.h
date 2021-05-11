@@ -88,7 +88,7 @@ class DisplayInfo : public IdMappable<fbl::RefPtr<DisplayInfo>>,
   inspect::ValueList properties;
 };
 
-using ControllerParent = ddk::Device<Controller, ddk::Unbindable, ddk::Openable, ddk::Messageable>;
+using ControllerParent = ddk::Device<Controller, ddk::Unbindable, ddk::Openable, ddk::MessageableOld>;
 class Controller : public ControllerParent,
                    public ddk::DisplayControllerInterfaceProtocol<Controller>,
                    public ddk::DisplayCaptureInterfaceProtocol<Controller>,

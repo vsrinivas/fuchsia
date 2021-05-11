@@ -17,7 +17,7 @@
 namespace ssd1306 {
 
 class Ssd1306;
-using DeviceType = ddk::Device<Ssd1306, ddk::Unbindable, ddk::Messageable>;
+using DeviceType = ddk::Device<Ssd1306, ddk::Unbindable, ddk::MessageableOld>;
 class Ssd1306 : public DeviceType,
                 public ddk::DotmatrixDisplayProtocol<Ssd1306, ddk::base_protocol> {
  public:

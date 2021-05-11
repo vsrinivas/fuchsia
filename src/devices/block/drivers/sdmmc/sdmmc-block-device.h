@@ -89,7 +89,7 @@ class PartitionDevice : public PartitionDeviceType,
 };
 
 class RpmbDevice;
-using RpmbDeviceType = ddk::Device<RpmbDevice, ddk::Messageable>;
+using RpmbDeviceType = ddk::Device<RpmbDevice, ddk::MessageableOld>;
 
 class RpmbDevice : public RpmbDeviceType,
                    public ddk::RpmbProtocol<RpmbDevice, ddk::base_protocol>,

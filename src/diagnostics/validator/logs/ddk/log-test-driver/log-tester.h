@@ -15,7 +15,7 @@
 namespace log_test_driver {
 
 class LogTester;
-using LogTesterType = ddk::Device<LogTester, ddk::Initializable, ddk::Unbindable, ddk::Messageable>;
+using LogTesterType = ddk::Device<LogTester, ddk::Initializable, ddk::Unbindable, ddk::MessageableOld>;
 
 // This is the main class for the log test driver.
 class LogTester : public LogTesterType,

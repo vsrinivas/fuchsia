@@ -102,7 +102,7 @@ class EthDev0 : public EthDev0Type, public ddk::EmptyProtocol<ZX_PROTOCOL_ETHERN
   fbl::DoublyLinkedList<fbl::RefPtr<EthDev>> list_idle_ __TA_GUARDED(ethdev_lock_);
 };
 
-using EthDevType = ddk::Device<EthDev, ddk::Openable, ddk::Closable, ddk::Messageable>;
+using EthDevType = ddk::Device<EthDev, ddk::Openable, ddk::Closable, ddk::MessageableOld>;
 
 class EthDev : public EthDevType,
                public ddk::EmptyProtocol<ZX_PROTOCOL_ETHERNET>,

@@ -39,7 +39,7 @@ constexpr uint16_t kApInterfaceId = 1;
 namespace wlan_llcpp = fuchsia_factory_wlan;
 
 Device::Device(zx_device_t* parent)
-    : ::ddk::Device<Device, ddk::Initializable, ddk::Messageable>(parent),
+    : ::ddk::Device<Device, ddk::Initializable, ddk::MessageableOld>(parent),
       brcmf_pub_(std::make_unique<brcmf_pub>()),
       client_interface_(nullptr),
       ap_interface_(nullptr) {

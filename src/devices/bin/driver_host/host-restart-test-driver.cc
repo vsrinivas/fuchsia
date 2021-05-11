@@ -24,7 +24,7 @@ namespace {
 using fuchsia_device_restarttest::TestDevice;
 
 class TestHostRestartDriver;
-using DeviceType = ddk::Device<TestHostRestartDriver, ddk::Unbindable, ddk::Messageable>;
+using DeviceType = ddk::Device<TestHostRestartDriver, ddk::Unbindable, ddk::MessageableOld>;
 
 class TestHostRestartDriver : public DeviceType, public fidl::WireServer<TestDevice> {
  public:

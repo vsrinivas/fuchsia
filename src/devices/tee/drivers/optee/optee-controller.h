@@ -61,7 +61,7 @@ class OpteeControllerBase {
 };
 
 class OpteeController;
-using DeviceType = ddk::Device<OpteeController, ddk::Messageable, ddk::Openable, ddk::Suspendable,
+using DeviceType = ddk::Device<OpteeController, ddk::MessageableOld, ddk::Openable, ddk::Suspendable,
                                ddk::Unbindable>;
 class OpteeController : public OpteeControllerBase,
                         public DeviceType,

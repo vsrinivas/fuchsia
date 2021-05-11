@@ -21,7 +21,7 @@ namespace btintel {
 class Device;
 
 using DeviceType = ddk::Device<Device, ddk::Initializable, ddk::GetProtocolable, ddk::Unbindable,
-                               ddk::Messageable>;
+                               ddk::MessageableOld>;
 
 class Device : public DeviceType, public ddk::BtHciProtocol<Device, ddk::base_protocol> {
  public:

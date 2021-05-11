@@ -43,7 +43,7 @@ struct Gt6853InputReport {
 };
 
 class Gt6853Device;
-using DeviceType = ddk::Device<Gt6853Device, ddk::Messageable, ddk::Unbindable>;
+using DeviceType = ddk::Device<Gt6853Device, ddk::MessageableOld, ddk::Unbindable>;
 
 class Gt6853Device : public DeviceType,
                      fidl::WireServer<fuchsia_input_report::InputDevice>,

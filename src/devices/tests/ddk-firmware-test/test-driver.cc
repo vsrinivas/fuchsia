@@ -24,7 +24,7 @@ constexpr const char TEST_FIRMWARE_CONTENTS[] = "this is some firmware\n";
 using fuchsia_device_firmware_test::TestDevice;
 
 class TestFirmwareDriver;
-using DeviceType = ddk::Device<TestFirmwareDriver, ddk::Unbindable, ddk::Messageable>;
+using DeviceType = ddk::Device<TestFirmwareDriver, ddk::Unbindable, ddk::MessageableOld>;
 
 class TestFirmwareDriver : public DeviceType, public fidl::WireServer<TestDevice> {
  public:

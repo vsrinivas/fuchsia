@@ -21,7 +21,7 @@ using fuchsia_hardware_thermal::wire::PowerDomain;
 using fuchsia_hardware_thermal::wire::ThermalDeviceInfo;
 
 class As370Thermal;
-using DeviceType = ddk::Device<As370Thermal, ddk::Messageable, ddk::Unbindable>;
+using DeviceType = ddk::Device<As370Thermal, ddk::MessageableOld, ddk::Unbindable>;
 
 class As370Thermal : public DeviceType,
                      public ddk::EmptyProtocol<ZX_PROTOCOL_THERMAL>,

@@ -293,11 +293,11 @@ constexpr void CheckGetSizable() {
                 "'zx_off_t DdkGetSize()'.");
 }
 
-DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN(has_ddk_message, DdkMessage);
+DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN(has_ddk_message_old, DdkMessage);
 
 template <typename D>
-constexpr void CheckMessageable() {
-  static_assert(has_ddk_message<D>::value, "Messageable classes must implement DdkMessage");
+constexpr void CheckMessageableOld() {
+  static_assert(has_ddk_message_old<D>::value, "Messageable classes must implement DdkMessage");
   static_assert(std::is_same<decltype(&D::DdkMessage),
                              zx_status_t (D::*)(fidl_incoming_msg_t*, fidl_txn_t*)>::value,
                 "DdkMessage must be a public non-static member function with signature "

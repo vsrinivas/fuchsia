@@ -65,7 +65,7 @@ using DeviceTree =
     fbl::WAVLTree<pci_bdf_t, fbl::RefPtr<pci::Device>, pci::Device::KeyTraitsSortByBdf>;
 
 class Bus;
-using PciBusType = ddk::Device<Bus, ddk::Messageable>;
+using PciBusType = ddk::Device<Bus, ddk::MessageableOld>;
 class Bus : public PciBusType,
             public ddk::EmptyProtocol<ZX_PROTOCOL_PCI>,
             public fidl::WireServer<PciFidl::Bus>,

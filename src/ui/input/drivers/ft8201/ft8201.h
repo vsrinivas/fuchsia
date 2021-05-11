@@ -48,7 +48,7 @@ struct Ft8201InputReport {
 class Ft8201Device;
 
 class Ft8201Device;
-using DeviceType = ddk::Device<Ft8201Device, ddk::Messageable, ddk::Unbindable>;
+using DeviceType = ddk::Device<Ft8201Device, ddk::MessageableOld, ddk::Unbindable>;
 
 class Ft8201Device : public DeviceType,
                      fidl::WireServer<fuchsia_input_report::InputDevice>,

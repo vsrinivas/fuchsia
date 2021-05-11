@@ -44,7 +44,7 @@ constexpr size_t INTR_MAX_PACKET = 64;
 
 class FakeUsbAx88179Function;
 
-using DeviceType = ddk::Device<FakeUsbAx88179Function, ddk::Unbindable, ddk::Messageable>;
+using DeviceType = ddk::Device<FakeUsbAx88179Function, ddk::Unbindable, ddk::MessageableOld>;
 
 class FakeUsbAx88179Function : public DeviceType,
                                public ddk::UsbFunctionInterfaceProtocol<FakeUsbAx88179Function>,

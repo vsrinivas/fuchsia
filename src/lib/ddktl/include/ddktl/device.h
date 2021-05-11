@@ -7,6 +7,8 @@
 
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
+#include <lib/fidl/llcpp/message.h>
+#include <lib/fidl/llcpp/wire_messaging.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 #include <zircon/assert.h>
@@ -14,6 +16,7 @@
 #include <type_traits>
 
 #include <ddktl/device-internal.h>
+#include <ddktl/fidl.h>
 #include <ddktl/init-txn.h>
 #include <ddktl/resume-txn.h>
 #include <ddktl/span.h>
@@ -38,38 +41,37 @@
 //
 //
 // :: Available mixins ::
-// +-------------------------+----------------------------------------------------+
-// | Mixin class             | Required function implementation                   |
-// +-------------------------+----------------------------------------------------+
-// | ddk::GetProtocolable    | zx_status_t DdkGetProtocol(uint32_t proto_id,      |
-// |                         |                            void* out)              |
-// |                         |                                                    |
-// | ddk::Initializable      | void DdkInit(ddk::InitTxn txn)                     |
-// |                         |                                                    |
-// | ddk::Openable           | zx_status_t DdkOpen(zx_device_t** dev_out,         |
-// |                         |                     uint32_t flags)                |
-// |                         |                                                    |
-// | ddk::Closable           | zx_status_t DdkClose(uint32_t flags)               |
-// |                         |                                                    |
-// | ddk::Unbindable         | void DdkUnbind(ddk::UnbindTxn txn)                 |
-// |                         |                                                    |
-// | ddk::PerformanceTunable | zx_status_t DdkSetPerformanceState(                |
-// |                         |                           uint32_t requested_state,|
-// |                         |                           uint32_t* out_state)     |
-// |                         |                                                    |
-// | ddk::AutoSuspendable    | zx_status_t DdkConfigureAutoSuspend(bool enable,   |
-// |                         |                      uint8_t requested_sleep_state)|
-// |                         |                                                    |
-// | ddk::Messageable        | zx_status_t DdkMessage(fidl_incoming_msg_t* msg,   |
-// |                         |                        fidl_txn_t* txn)            |
-// |                         |                                                    |
-// | ddk::Suspendable        | void DdkSuspend(ddk::SuspendTxn txn)               |
-// |                         |                                                    |
-// | ddk::Resumable          | zx_status_t DdkResume(uint8_t requested_state,     |
-// |                         |                          uint8_t* out_state)       |
-// |                         |                                                    |
-// | ddk::Rxrpcable          | zx_status_t DdkRxrpc(zx_handle_t channel)          |
-// +-------------------------+----------------------------------------------------+
+// +----------------------------+----------------------------------------------------+
+// | Mixin class                | Required function implementation                   |
+// +----------------------------+----------------------------------------------------+
+// | ddk::GetProtocolable       | zx_status_t DdkGetProtocol(uint32_t proto_id,      |
+// |                            |                            void* out)              |
+// |                            |                                                    |
+// | ddk::Initializable         | void DdkInit(ddk::InitTxn txn)                     |
+// |                            |                                                    |
+// | ddk::Openable              | zx_status_t DdkOpen(zx_device_t** dev_out,         |
+// |                            |                     uint32_t flags)                |
+// |                            |                                                    |
+// | ddk::Closable              | zx_status_t DdkClose(uint32_t flags)               |
+// |                            |                                                    |
+// | ddk::Unbindable            | void DdkUnbind(ddk::UnbindTxn txn)                 |
+// |                            |                                                    |
+// | ddk::PerformanceTunable    | zx_status_t DdkSetPerformanceState(                |
+// |                            |                           uint32_t requested_state,|
+// |                            |                           uint32_t* out_state)     |
+// |                            |                                                    |
+// | ddk::AutoSuspendable       | zx_status_t DdkConfigureAutoSuspend(bool enable,   |
+// |                            |                      uint8_t requested_sleep_state)|
+// |                            |                                                    |
+// | ddk::Messageable<P>::Mixin | Methods defined by fidl::WireServer<P>             |
+// |                            |                                                    |
+// | ddk::Suspendable           | void DdkSuspend(ddk::SuspendTxn txn)               |
+// |                            |                                                    |
+// | ddk::Resumable             | zx_status_t DdkResume(uint8_t requested_state,     |
+// |                            |                          uint8_t* out_state)       |
+// |                            |                                                    |
+// | ddk::Rxrpcable             | zx_status_t DdkRxrpc(zx_handle_t channel)          |
+// +----------------------------+----------------------------------------------------+
 //
 // Deprecated Mixins:
 // +--------------------------+----------------------------------------------------+
@@ -83,6 +85,9 @@
 // |                          |                      size_t* actual)               |
 // |                          |                                                    |
 // | ddk::GetSizable          | zx_off_t DdkGetSize()                              |
+// |                          |                                                    |
+// | ddk::MessageableOld      | zx_status_t DdkMessage(fidl_incoming_msg_t* msg,   |
+// |                          |                        fidl_txn_t* txn)            |
 // |                          |                                                    |
 // +--------------------------+----------------------------------------------------+
 //
@@ -260,25 +265,37 @@ class GetSizable : public base_mixin {
   static zx_off_t GetSize(void* ctx) { return static_cast<D*>(ctx)->DdkGetSize(); }
 };
 
-template <typename D>
-class Messageable : public base_mixin {
+template <typename D, typename Protocol>
+class MessageableInternal : public base_mixin {
  protected:
   static constexpr void InitOp(zx_protocol_device_t* proto) {
-    internal::CheckMessageable<D>();
+    static_assert(std::is_base_of_v<fidl::WireServer<Protocol>, D>,
+                  "Messageable<Protocol> classes must implement fidl::WireServer<Protocol>");
     proto->message = Message;
   }
 
  private:
   static zx_status_t Message(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-    return static_cast<D*>(ctx)->DdkMessage(msg, txn);
+    DdkTransaction transaction(txn);
+    fidl::WireDispatch<Protocol>(static_cast<D*>(ctx),
+                                 fidl::IncomingMessage::FromEncodedCMessage(msg), &transaction);
+    return transaction.Status();
   }
+};
+
+template <typename Protocol>
+struct Messageable {
+  // This is necessary for currying as this mixin requires two type parameters, which are passed
+  // at different times.
+  template <typename D>
+  using Mixin = MessageableInternal<D, Protocol>;
 };
 
 template <typename D>
 class MessageableOld : public base_mixin {
  protected:
   static constexpr void InitOp(zx_protocol_device_t* proto) {
-    internal::CheckMessageable<D>();
+    internal::CheckMessageableOld<D>();
     proto->message = Message;
   }
 

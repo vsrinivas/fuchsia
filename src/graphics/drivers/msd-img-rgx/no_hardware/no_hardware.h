@@ -22,7 +22,7 @@
 
 class NoHardwareGpu;
 
-using DeviceType = ddk::Device<NoHardwareGpu, ddk::Messageable>;
+using DeviceType = ddk::Device<NoHardwareGpu, ddk::MessageableOld>;
 
 class NoHardwareGpu : public DeviceType,
                       public ImgSysDevice,

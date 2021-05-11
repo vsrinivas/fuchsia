@@ -58,7 +58,7 @@ struct SimpleAudioStreamProtocol : public ddk::internal::base_protocol {
 
 class SimpleAudioStream;
 using SimpleAudioStreamBase =
-    ddk::Device<SimpleAudioStream, ddk::Messageable, ddk::Suspendable, ddk::Unbindable>;
+    ddk::Device<SimpleAudioStream, ddk::MessageableOld, ddk::Suspendable, ddk::Unbindable>;
 
 // The SimpleAudioStream server (thread compatible) implements fidl::WireServer<Device> and
 // fidl::WireServer<RingBuffer>.

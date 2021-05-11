@@ -75,7 +75,7 @@ using fuchsia_hardware_usb_peripheral::wire::DeviceDescriptor;
 using fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor;
 
 class UsbPeripheral;
-using UsbPeripheralType = ddk::Device<UsbPeripheral, ddk::Unbindable, ddk::Messageable>;
+using UsbPeripheralType = ddk::Device<UsbPeripheral, ddk::Unbindable, ddk::MessageableOld>;
 
 struct UsbConfiguration : fbl::RefCounted<UsbConfiguration> {
   static constexpr uint8_t MAX_INTERFACES = 32;

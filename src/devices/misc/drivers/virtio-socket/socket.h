@@ -35,7 +35,7 @@ namespace virtio {
 using vsock_Addr = fuchsia_hardware_vsock_Addr;
 
 class SocketDevice : public Device,
-                     public ddk::Device<SocketDevice, ddk::Unbindable, ddk::Messageable>,
+                     public ddk::Device<SocketDevice, ddk::Unbindable, ddk::MessageableOld>,
                      public ddk::EmptyProtocol<ZX_PROTOCOL_CONSOLE> {
  public:
   class ConnectionKey;

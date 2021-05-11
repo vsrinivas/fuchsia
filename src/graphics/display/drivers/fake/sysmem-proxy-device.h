@@ -35,7 +35,7 @@ class Driver;
 namespace display {
 
 class SysmemProxyDevice;
-using DdkDeviceType2 = ddk::Device<SysmemProxyDevice, ddk::Messageable, ddk::Unbindable>;
+using DdkDeviceType2 = ddk::Device<SysmemProxyDevice, ddk::MessageableOld, ddk::Unbindable>;
 
 // SysmemProxyDevice is a replacement for sysmem_driver::Device, intended for use in tests.  Instead
 // of instantiating a separate/hermetic Sysmem, SysmemProxyDevice connects to the allocator made

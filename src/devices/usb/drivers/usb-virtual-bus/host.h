@@ -22,7 +22,7 @@
 namespace virtualbus {
 
 class Device;
-using DeviceType = ddk::Device<Device, ddk::Unbindable, ddk::Messageable>;
+using DeviceType = ddk::Device<Device, ddk::Unbindable, ddk::MessageableOld>;
 class Device : public DeviceType,
                public fidl::WireServer<fuchsia_hardware_usb_virtualbustest::BusTest>,
                public ddk::EmptyProtocol<ZX_PROTOCOL_VIRTUALBUS_TEST> {

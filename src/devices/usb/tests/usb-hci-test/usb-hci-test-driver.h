@@ -20,7 +20,7 @@
 namespace usb {
 
 class HciTest;
-using HciTestBase = ddk::Device<HciTest, ddk::Unbindable, ddk::Messageable, ddk::Initializable>;
+using HciTestBase = ddk::Device<HciTest, ddk::Unbindable, ddk::MessageableOld, ddk::Initializable>;
 
 class HciTest : public HciTestBase,
                 public ddk::EmptyProtocol<ZX_PROTOCOL_USB_HCI_TEST>,

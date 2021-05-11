@@ -28,7 +28,7 @@ namespace registers {
 template <typename T>
 class Register;
 template <typename T>
-using RegisterType = ddk::Device<Register<T>, ddk::Messageable, ddk::Unbindable>;
+using RegisterType = ddk::Device<Register<T>, ddk::MessageableOld, ddk::Unbindable>;
 
 template <typename T>
 class RegistersDevice;

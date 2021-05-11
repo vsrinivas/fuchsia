@@ -21,7 +21,7 @@
 namespace hid_input_report_dev {
 
 class InputReport;
-using DeviceType = ddk::Device<InputReport, ddk::Unbindable, ddk::Messageable>;
+using DeviceType = ddk::Device<InputReport, ddk::Unbindable, ddk::MessageableOld>;
 class InputReport : public DeviceType,
                     public InputReportBase,
                     fidl::WireServer<fuchsia_input_report::InputDevice>,

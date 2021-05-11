@@ -48,7 +48,7 @@ struct FtlOp {
 };
 
 class BlockDevice;
-using DeviceType = ddk::Device<BlockDevice, ddk::GetSizable, ddk::Unbindable, ddk::Messageable,
+using DeviceType = ddk::Device<BlockDevice, ddk::GetSizable, ddk::Unbindable, ddk::MessageableOld,
                                ddk::Suspendable, ddk::Resumable, ddk::GetProtocolable>;
 
 // Exposes the FTL library as a Fuchsia BlockDevice protocol.

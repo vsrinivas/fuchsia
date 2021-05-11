@@ -14,7 +14,7 @@
 namespace magma {
 
 class MagmaPerformanceCounterDevice;
-using DdkPerfCountDeviceType = ddk::Device<MagmaPerformanceCounterDevice, ddk::Messageable>;
+using DdkPerfCountDeviceType = ddk::Device<MagmaPerformanceCounterDevice, ddk::MessageableOld>;
 
 class MagmaPerformanceCounterDevice
     : public fidl::WireServer<fuchsia_gpu_magma::PerformanceCounterAccess>,

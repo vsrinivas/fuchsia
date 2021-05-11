@@ -31,7 +31,7 @@ namespace thermal {
 using fuchsia_hardware_thermal::wire::PowerDomain;
 
 class Vs680Thermal;
-using DeviceType = ddk::Device<Vs680Thermal, ddk::Messageable>;
+using DeviceType = ddk::Device<Vs680Thermal, ddk::MessageableOld>;
 
 class Vs680Thermal : public DeviceType,
                      public ddk::EmptyProtocol<ZX_PROTOCOL_THERMAL>,

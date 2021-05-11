@@ -76,7 +76,7 @@ constexpr uint8_t kFtdiSioEraseEepromRequest = 0x92;
 
 class FtdiDevice;
 using DeviceType =
-    ddk::Device<FtdiDevice, ddk::Unbindable, ddk::Messageable, ddk::Writable, ddk::Readable>;
+    ddk::Device<FtdiDevice, ddk::Unbindable, ddk::MessageableOld, ddk::Writable, ddk::Readable>;
 class FtdiDevice : public DeviceType,
                    public fidl::WireServer<fuchsia_hardware_ftdi::Device>,
                    public ddk::SerialImplProtocol<FtdiDevice, ddk::base_protocol> {

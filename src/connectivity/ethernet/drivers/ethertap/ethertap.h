@@ -21,7 +21,7 @@
 
 namespace eth {
 
-class TapCtl : public ddk::Device<TapCtl, ddk::Messageable> {
+class TapCtl : public ddk::Device<TapCtl, ddk::MessageableOld> {
  public:
   TapCtl(zx_device_t* device);
 

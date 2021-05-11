@@ -12,7 +12,7 @@
 #include <ddktl/fidl.h>
 
 class TestLifecycleDriverChild;
-using DeviceType = ddk::Device<TestLifecycleDriverChild, ddk::Unbindable, ddk::Messageable,
+using DeviceType = ddk::Device<TestLifecycleDriverChild, ddk::Unbindable, ddk::MessageableOld,
                                ddk::Openable, ddk::Closable>;
 using fuchsia_device_instancelifecycle_test::Lifecycle;
 
@@ -48,7 +48,7 @@ class TestLifecycleDriverChild : public DeviceType {
 
 class TestLifecycleDriverChildInstance;
 using InstanceDeviceType = ddk::Device<TestLifecycleDriverChildInstance, ddk::Unbindable,
-                                       ddk::Messageable, ddk::Openable, ddk::Closable>;
+                                       ddk::MessageableOld, ddk::Openable, ddk::Closable>;
 using fuchsia_device_instancelifecycle_test::InstanceDevice;
 
 class TestLifecycleDriverChildInstance : public InstanceDeviceType,

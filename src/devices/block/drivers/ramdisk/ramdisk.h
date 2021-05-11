@@ -28,7 +28,7 @@ namespace ramdisk {
 
 class Ramdisk;
 using RamdiskDeviceType =
-    ddk::Device<Ramdisk, ddk::GetProtocolable, ddk::GetSizable, ddk::Unbindable, ddk::Messageable>;
+    ddk::Device<Ramdisk, ddk::GetProtocolable, ddk::GetSizable, ddk::Unbindable, ddk::MessageableOld>;
 
 class Ramdisk : public RamdiskDeviceType,
                 public ddk::BlockImplProtocol<Ramdisk, ddk::base_protocol>,

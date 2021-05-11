@@ -23,7 +23,7 @@
 namespace aml_light {
 
 class AmlLight;
-using AmlLightType = ddk::Device<AmlLight, ddk::Messageable>;
+using AmlLightType = ddk::Device<AmlLight, ddk::MessageableOld>;
 using fuchsia_hardware_light::Light;
 using fuchsia_hardware_light::wire::Capability;
 using fuchsia_hardware_light::wire::LightError;

@@ -22,7 +22,7 @@ using fuchsia_device_instancelifecycle_test::Lifecycle;
 using fuchsia_device_instancelifecycle_test::TestDevice;
 
 class TestLifecycleDriver;
-using DeviceType = ddk::Device<TestLifecycleDriver, ddk::Unbindable, ddk::Messageable>;
+using DeviceType = ddk::Device<TestLifecycleDriver, ddk::Unbindable, ddk::MessageableOld>;
 
 class TestLifecycleDriver : public DeviceType, public fidl::WireServer<TestDevice> {
  public:

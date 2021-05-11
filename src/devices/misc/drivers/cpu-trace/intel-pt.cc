@@ -86,7 +86,7 @@ typedef struct ipt_per_trace_state {
 
 // TODO(dje): add unbindable?
 class InsntraceDevice;
-using DeviceType = ddk::Device<InsntraceDevice, ddk::Openable, ddk::Closable, ddk::Messageable>;
+using DeviceType = ddk::Device<InsntraceDevice, ddk::Openable, ddk::Closable, ddk::MessageableOld>;
 
 class InsntraceDevice : public DeviceType, fidl::WireServer<fuchsia_insntrace::Controller> {
  public:

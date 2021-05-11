@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/examples/llcpp/fidl.h>
+
 #include <memory>
 
 #include <ddktl/device.h>
@@ -65,9 +67,21 @@ BEGIN_SUCCESS_CASE(GetSizable)
 zx_off_t DdkGetSize() { return 0; }
 END_SUCCESS_CASE
 
-BEGIN_SUCCESS_CASE(Messageable)
+BEGIN_SUCCESS_CASE(MessageableOld)
 zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) { return ZX_OK; }
 END_SUCCESS_CASE
+
+class TestMessageable;
+using MessageableDevice =
+    ddk::Device<TestMessageable, ddk::Messageable<fuchsia_examples::Echo>::Mixin>;
+class TestMessageable : public MessageableDevice, public fidl::WireServer<fuchsia_examples::Echo> {
+ public:
+  TestMessageable() : MessageableDevice(nullptr) {}
+  void DdkRelease() {}
+
+  void SendString(SendStringRequestView request, SendStringCompleter::Sync& completer) override {}
+  void EchoString(EchoStringRequestView request, EchoStringCompleter::Sync& completer) override {}
+};
 
 BEGIN_SUCCESS_CASE(Suspendable)
 // As the txn does not contain a valid device pointer, the destructor won't throw an error

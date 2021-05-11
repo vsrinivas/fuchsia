@@ -21,7 +21,7 @@ using fuchsia_hardware_sdio::wire::SdioRwTxn;
 class SdioControllerDevice;
 
 class SdioFunctionDevice;
-using SdioFunctionDeviceType = ddk::Device<SdioFunctionDevice, ddk::Messageable>;
+using SdioFunctionDeviceType = ddk::Device<SdioFunctionDevice, ddk::MessageableOld>;
 
 class SdioFunctionDevice : public SdioFunctionDeviceType,
                            public ddk::SdioProtocol<SdioFunctionDevice, ddk::base_protocol>,

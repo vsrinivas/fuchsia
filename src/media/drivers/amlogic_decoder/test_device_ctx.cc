@@ -19,7 +19,7 @@ namespace amlogic_decoder {
 namespace test {
 
 class AmlogicTestDevice;
-using DdkDeviceType = ddk::Device<AmlogicTestDevice, ddk::Messageable>;
+using DdkDeviceType = ddk::Device<AmlogicTestDevice, ddk::MessageableOld>;
 
 class AmlogicTestDevice : public fidl::WireServer<fuchsia_hardware_mediacodec::Tester>,
                           public DdkDeviceType {

@@ -23,7 +23,7 @@ namespace fuchsia_cpuctrl = fuchsia_hardware_cpu_ctrl;
 
 class AmlCpu;
 using DeviceType =
-    ddk::Device<AmlCpu, ddk::Messageable, ddk::PerformanceTunable, ddk::AutoSuspendable>;
+    ddk::Device<AmlCpu, ddk::MessageableOld, ddk::PerformanceTunable, ddk::AutoSuspendable>;
 
 class AmlCpu : public DeviceType,
                public ddk::EmptyProtocol<ZX_PROTOCOL_CPU_CTRL>,
@@ -49,7 +49,7 @@ class AmlCpu : public DeviceType,
 
   zx_status_t Init();
 
-  // Implements ddk::Messageable
+  // Implements ddk::MessageableOld
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
   // Implements DDK Device Ops

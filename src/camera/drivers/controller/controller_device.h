@@ -34,7 +34,7 @@
 namespace camera {
 
 class ControllerDevice;
-using ControllerDeviceType = ddk::Device<ControllerDevice, ddk::Unbindable, ddk::Messageable>;
+using ControllerDeviceType = ddk::Device<ControllerDevice, ddk::Unbindable, ddk::MessageableOld>;
 
 class ControllerDevice : public ControllerDeviceType,
                          public ddk::EmptyProtocol<ZX_PROTOCOL_CAMERA>,

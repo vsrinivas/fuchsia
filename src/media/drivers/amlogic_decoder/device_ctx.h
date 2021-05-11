@@ -20,7 +20,7 @@ namespace amlogic_decoder {
 
 class DeviceCtx;
 
-using DdkDeviceType = ddk::Device<DeviceCtx, ddk::Messageable>;
+using DdkDeviceType = ddk::Device<DeviceCtx, ddk::MessageableOld>;
 
 // A pointer to an instance of this class is the per-device "ctx".  The purpose
 // of this class is to provide a place for device-lifetime stuff to be rooted,

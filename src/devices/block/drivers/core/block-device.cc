@@ -44,7 +44,7 @@ class BlockDevice;
 namespace {
 
 using storage_metrics::BlockDeviceMetrics;
-using BlockDeviceType = ddk::Device<BlockDevice, ddk::GetProtocolable, ddk::Messageable,
+using BlockDeviceType = ddk::Device<BlockDevice, ddk::GetProtocolable, ddk::MessageableOld,
                                     ddk::Unbindable, ddk::Readable, ddk::Writable, ddk::GetSizable>;
 
 struct StatsCookie {

@@ -29,7 +29,7 @@
 namespace goldfish {
 
 class Control;
-using ControlType = ddk::Device<Control, ddk::Unbindable, ddk::Messageable, ddk::GetProtocolable>;
+using ControlType = ddk::Device<Control, ddk::Unbindable, ddk::MessageableOld, ddk::GetProtocolable>;
 
 class Control : public ControlType,
                 public ddk::GoldfishControlProtocol<Control, ddk::base_protocol>,

@@ -17,10 +17,10 @@
 
 namespace {
 
-class TestBti : public ddk::Device<TestBti, ddk::Messageable>,
+class TestBti : public ddk::Device<TestBti, ddk::MessageableOld>,
                 public fidl::WireServer<fuchsia_hardware_btitest::BtiDevice> {
  public:
-  explicit TestBti(zx_device_t* parent) : ddk::Device<TestBti, ddk::Messageable>(parent) {}
+  explicit TestBti(zx_device_t* parent) : ddk::Device<TestBti, ddk::MessageableOld>(parent) {}
 
   static zx_status_t Create(void*, zx_device_t* parent);
 

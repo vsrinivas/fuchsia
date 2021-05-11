@@ -24,10 +24,10 @@
 namespace goldfish {
 
 class AddressSpaceDevice;
-using DeviceType = ddk::Device<AddressSpaceDevice, ddk::Messageable>;
+using DeviceType = ddk::Device<AddressSpaceDevice, ddk::MessageableOld>;
 
 class AddressSpaceChildDriver;
-using ChildDriverType = ddk::Device<AddressSpaceChildDriver, ddk::Messageable>;
+using ChildDriverType = ddk::Device<AddressSpaceChildDriver, ddk::MessageableOld>;
 
 class AddressSpaceDevice
     : public DeviceType,

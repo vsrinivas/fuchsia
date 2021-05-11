@@ -19,7 +19,7 @@ namespace usb {
 
 class UsbMidiSource;
 using UsbMidiSourceBase = ddk::Device<UsbMidiSource, ddk::Unbindable, ddk::Openable, ddk::Closable,
-                                      ddk::Readable, ddk::Messageable>;
+                                      ddk::Readable, ddk::MessageableOld>;
 
 class UsbMidiSource : public UsbMidiSourceBase,
                       public fidl::WireServer<fuchsia_hardware_midi::Device>,

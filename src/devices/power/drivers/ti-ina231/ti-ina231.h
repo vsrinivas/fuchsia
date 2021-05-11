@@ -17,7 +17,7 @@ namespace power_sensor {
 namespace power_sensor_fidl = fuchsia_hardware_power_sensor;
 
 class Ina231Device;
-using DeviceType = ddk::Device<Ina231Device, ddk::Messageable>;
+using DeviceType = ddk::Device<Ina231Device, ddk::MessageableOld>;
 
 class Ina231Device : public DeviceType,
                      public ddk::EmptyProtocol<ZX_PROTOCOL_POWER_SENSOR>,

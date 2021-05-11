@@ -76,7 +76,7 @@ zx_status_t HidCtl::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   return fuchsia_hardware_hidctl_Device_dispatch(this, txn, msg, &kOps);
 }
 
-HidCtl::HidCtl(zx_device_t* device) : ddk::Device<HidCtl, ddk::Messageable>(device) {}
+HidCtl::HidCtl(zx_device_t* device) : ddk::Device<HidCtl, ddk::MessageableOld>(device) {}
 
 void HidCtl::DdkRelease() { delete this; }
 

@@ -36,7 +36,7 @@ class MesonCpuClock;
 class MesonRateClock;
 
 class AmlClock;
-using DeviceType = ddk::Device<AmlClock, ddk::Unbindable, ddk::Messageable>;
+using DeviceType = ddk::Device<AmlClock, ddk::Unbindable, ddk::MessageableOld>;
 
 class AmlClock : public DeviceType, public ddk::ClockImplProtocol<AmlClock, ddk::base_protocol> {
  public:

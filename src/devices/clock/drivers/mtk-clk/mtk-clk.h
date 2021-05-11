@@ -14,7 +14,7 @@
 namespace clk {
 
 class MtkClk;
-using DeviceType = ddk::Device<MtkClk, ddk::Messageable>;
+using DeviceType = ddk::Device<MtkClk, ddk::MessageableOld>;
 
 class MtkClk : public DeviceType, public ddk::ClockImplProtocol<MtkClk, ddk::base_protocol> {
  public:

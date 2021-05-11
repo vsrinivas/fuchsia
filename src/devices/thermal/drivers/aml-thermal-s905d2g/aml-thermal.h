@@ -23,7 +23,7 @@
 namespace thermal {
 
 class AmlThermal;
-using DeviceType = ddk::Device<AmlThermal, ddk::Unbindable, ddk::Messageable>;
+using DeviceType = ddk::Device<AmlThermal, ddk::Unbindable, ddk::MessageableOld>;
 
 class AmlThermal : public DeviceType, public ddk::ThermalProtocol<AmlThermal, ddk::base_protocol> {
  public:

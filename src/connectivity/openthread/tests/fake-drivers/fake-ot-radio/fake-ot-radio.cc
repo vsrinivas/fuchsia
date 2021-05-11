@@ -154,7 +154,7 @@ void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::ReadyToReceiveFrames(
 }
 
 FakeOtRadioDevice::FakeOtRadioDevice(zx_device_t* device)
-    : ddk::Device<FakeOtRadioDevice, ddk::Unbindable, ddk::Messageable>(device),
+    : ddk::Device<FakeOtRadioDevice, ddk::Unbindable, ddk::MessageableOld>(device),
       loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
 zx_status_t FakeOtRadioDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {

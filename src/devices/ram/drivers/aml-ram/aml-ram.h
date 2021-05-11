@@ -68,7 +68,7 @@ constexpr uint64_t kMinimumCycleCount = 1024 * 512;
 constexpr uint64_t kMaximumCycleCount = 0xffffffff;
 
 class AmlRam;
-using DeviceType = ddk::Device<AmlRam, ddk::Suspendable, ddk::Messageable>;
+using DeviceType = ddk::Device<AmlRam, ddk::Suspendable, ddk::MessageableOld>;
 
 class AmlRam : public DeviceType, private fidl::WireServer<ram_metrics::Device> {
  public:
@@ -82,7 +82,7 @@ class AmlRam : public DeviceType, private fidl::WireServer<ram_metrics::Device> 
   void DdkRelease();
   void DdkSuspend(ddk::SuspendTxn txn);
 
-  // Implements ddk::Messageable
+  // Implements ddk::MessageableOld
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
  private:

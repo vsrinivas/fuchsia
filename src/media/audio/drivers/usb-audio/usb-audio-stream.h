@@ -42,7 +42,7 @@ struct AudioStreamProtocol : public ddk::internal::base_protocol {
 };
 
 class UsbAudioStream;
-using UsbAudioStreamBase = ddk::Device<UsbAudioStream, ddk::Messageable, ddk::Unbindable>;
+using UsbAudioStreamBase = ddk::Device<UsbAudioStream, ddk::MessageableOld, ddk::Unbindable>;
 
 // UsbAudioStream implements WireServer<Device> and WireServer<RingBuffer>.
 // All this is serialized in the single threaded UsbAudioStream's dispatcher() in loop_.

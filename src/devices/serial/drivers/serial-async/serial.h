@@ -23,7 +23,7 @@
 namespace serial {
 
 class SerialDevice;
-using DeviceType = ddk::Device<SerialDevice, ddk::Messageable>;
+using DeviceType = ddk::Device<SerialDevice, ddk::MessageableOld>;
 
 class SerialDevice : public DeviceType,
                      public fidl::WireServer<fuchsia_hardware_serial::NewDevice>,

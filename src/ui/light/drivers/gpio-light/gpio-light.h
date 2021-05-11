@@ -16,7 +16,7 @@
 namespace gpio_light {
 
 class GpioLight;
-using GpioLightType = ddk::Device<GpioLight, ddk::Messageable>;
+using GpioLightType = ddk::Device<GpioLight, ddk::MessageableOld>;
 
 class GpioLight : public GpioLightType,
                   public fidl::WireServer<fuchsia_hardware_light::Light>,

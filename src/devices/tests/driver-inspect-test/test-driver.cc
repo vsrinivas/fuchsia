@@ -21,7 +21,7 @@ namespace {
 using fuchsia_device_inspect_test::TestInspect;
 
 class TestInspectDriver;
-using DeviceType = ddk::Device<TestInspectDriver, ddk::Messageable>;
+using DeviceType = ddk::Device<TestInspectDriver, ddk::MessageableOld>;
 class TestInspectDriver : public DeviceType,
                           public ddk::EmptyProtocol<ZX_PROTOCOL_TEST>,
                           public fidl::WireServer<TestInspect> {

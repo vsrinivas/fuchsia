@@ -16,7 +16,7 @@
 namespace temperature {
 
 class Shtv3Device;
-using DeviceType = ddk::Device<Shtv3Device, ddk::Messageable>;
+using DeviceType = ddk::Device<Shtv3Device, ddk::MessageableOld>;
 namespace temperature_fidl = fuchsia_hardware_temperature;
 
 class Shtv3Device : public DeviceType,

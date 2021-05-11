@@ -23,7 +23,7 @@
 namespace {
 
 class RamNandCtl;
-using RamNandCtlDeviceType = ddk::Device<RamNandCtl, ddk::Messageable>;
+using RamNandCtlDeviceType = ddk::Device<RamNandCtl, ddk::MessageableOld>;
 
 class RamNandCtl : public RamNandCtlDeviceType {
  public:

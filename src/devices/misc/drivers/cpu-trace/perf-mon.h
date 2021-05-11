@@ -118,7 +118,7 @@ struct PmuPerTraceState {
 
 // TODO(dje): add unbindable?
 class PerfmonDevice;
-using DeviceType = ddk::Device<PerfmonDevice, ddk::Openable, ddk::Closable, ddk::Messageable>;
+using DeviceType = ddk::Device<PerfmonDevice, ddk::Openable, ddk::Closable, ddk::MessageableOld>;
 
 class PerfmonDevice : public DeviceType, public fidl::WireServer<fidl_perfmon::Controller> {
  public:

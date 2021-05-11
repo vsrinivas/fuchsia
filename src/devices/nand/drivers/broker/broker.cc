@@ -58,7 +58,7 @@ class Operation {
 };
 
 class Broker;
-using DeviceType = ddk::Device<Broker, ddk::Unbindable, ddk::Messageable>;
+using DeviceType = ddk::Device<Broker, ddk::Unbindable, ddk::MessageableOld>;
 
 // Exposes a control device (nand-broker) for a nand protocol device.
 class Broker : public DeviceType {

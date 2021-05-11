@@ -22,7 +22,7 @@ namespace goldfish {
 
 class Pipe;
 class Instance;
-using InstanceType = ddk::Device<Instance, ddk::Messageable, ddk::Closable>;
+using InstanceType = ddk::Device<Instance, ddk::MessageableOld, ddk::Closable>;
 
 // This class implements a pipe instance device. By opening the pipe device,
 // an instance of this class will be created to service a new channel

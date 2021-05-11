@@ -37,7 +37,7 @@ using fuchsia_hardware_input::wire::BootProtocol;
 using fuchsia_hardware_input::wire::ReportType;
 
 class HidInstance;
-using HidInstanceDeviceType = ddk::Device<HidInstance, ddk::Closable, ddk::Messageable>;
+using HidInstanceDeviceType = ddk::Device<HidInstance, ddk::Closable, ddk::MessageableOld>;
 
 class HidInstance : public HidInstanceDeviceType,
                     public fbl::DoublyLinkedListable<HidInstance*>,

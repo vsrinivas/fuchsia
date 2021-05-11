@@ -30,7 +30,7 @@ class UsbVirtualBus;
 class UsbVirtualDevice;
 class UsbVirtualHost;
 using UsbVirtualBusType =
-    ddk::Device<UsbVirtualBus, ddk::Initializable, ddk::Unbindable, ddk::Messageable>;
+    ddk::Device<UsbVirtualBus, ddk::Initializable, ddk::Unbindable, ddk::MessageableOld>;
 
 // This is the main class for the USB virtual bus.
 class UsbVirtualBus : public UsbVirtualBusType,

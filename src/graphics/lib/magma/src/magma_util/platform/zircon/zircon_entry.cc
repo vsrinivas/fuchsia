@@ -38,7 +38,7 @@ class GpuDevice;
 
 using FidlStatus = fuchsia_gpu_magma::wire::Status;
 
-using DdkDeviceType = ddk::Device<GpuDevice, ddk::Messageable, ddk::Unbindable, ddk::Initializable>;
+using DdkDeviceType = ddk::Device<GpuDevice, ddk::MessageableOld, ddk::Unbindable, ddk::Initializable>;
 
 class GpuDevice : public fidl::WireServer<fuchsia_gpu_magma::Device>,
                   public DdkDeviceType,

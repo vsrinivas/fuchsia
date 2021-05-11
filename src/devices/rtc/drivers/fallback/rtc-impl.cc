@@ -22,7 +22,7 @@ static zx_status_t fidl_Get(void* ctx, fidl_txn_t* txn);
 static zx_status_t fidl_Set(void* ctx, const fuchsia_hardware_rtc_Time* rtc, fidl_txn_t* txn);
 
 class FallbackRtc;
-using RtcDevice = ddk::Device<FallbackRtc, ddk::Messageable>;
+using RtcDevice = ddk::Device<FallbackRtc, ddk::MessageableOld>;
 
 // The fallback RTC driver is a fake driver which avoids to special case
 // in the upper layers on boards which don't have an RTC chip (and battery).

@@ -21,7 +21,7 @@
 
 namespace hidctl {
 
-class HidCtl : public ddk::Device<HidCtl, ddk::Messageable> {
+class HidCtl : public ddk::Device<HidCtl, ddk::MessageableOld> {
  public:
   HidCtl(zx_device_t* device);
   static zx_status_t Create(void* ctx, zx_device_t* parent);

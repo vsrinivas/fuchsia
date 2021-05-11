@@ -15,7 +15,7 @@
 namespace usb {
 
 class Dfu;
-using DfuBase = ddk::Device<Dfu, ddk::Messageable, ddk::Unbindable>;
+using DfuBase = ddk::Device<Dfu, ddk::MessageableOld, ddk::Unbindable>;
 
 class Dfu : public DfuBase, public ddk::EmptyProtocol<ZX_PROTOCOL_USB_FWLOADER> {
  public:
