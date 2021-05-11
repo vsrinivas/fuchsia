@@ -138,7 +138,7 @@ of services is fixed at realm creation time.
 Components in the `services` map are started lazily as the services they provide
 are connected to. In other words, in the example above `foo.cmx` will not be
 started until another component attempts to connect to `fuchsia.foo.Service`. If
-your component needs to be stared eagerly, see `startup_services` or `apps`
+your component needs to be started eagerly, see `startup_services` or `apps`
 below.
 
 ### `startup_services` and `apps`
