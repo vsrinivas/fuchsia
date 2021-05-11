@@ -12,7 +12,6 @@ use {
     crate::logger::{streamer::DiagnosticsStreamer, Logger},
     crate::onet::HostPipeConnection,
     anyhow::{anyhow, bail, Context, Error, Result},
-    async_lock::RwLock,
     async_trait::async_trait,
     bridge::{DaemonError, TargetAddrInfo, TargetIp, TargetIpPort},
     chrono::{DateTime, Utc},
@@ -27,12 +26,11 @@ use {
     fidl_fuchsia_net::{IpAddress, Ipv4Address, Ipv6Address, Subnet},
     fidl_fuchsia_overnet_protocol::NodeId,
     fuchsia_async::Timer,
-    futures::future,
-    futures::lock::Mutex,
     futures::prelude::*,
     hoist::OvernetInstance,
     netext::{scope_id_to_name, IsLocalAddr},
     rand::random,
+    std::cell::RefCell,
     std::cmp::Ordering,
     std::collections::{BTreeSet, HashMap, HashSet},
     std::default::Default,
@@ -299,18 +297,18 @@ struct TargetInner {
     id: u64,
     // ids keeps track of additional ids discovered over Overnet, these could
     // come from old Daemons, or other Daemons. The set should be used
-    ids: Mutex<HashSet<u64>>,
-    nodename: Mutex<Option<String>>,
-    state: Mutex<TargetState>,
-    last_response: RwLock<DateTime<Utc>>,
-    addrs: RwLock<BTreeSet<TargetAddrEntry>>,
+    ids: RefCell<HashSet<u64>>,
+    nodename: RefCell<Option<String>>,
+    state: RefCell<TargetState>,
+    last_response: RefCell<DateTime<Utc>>,
+    addrs: RefCell<BTreeSet<TargetAddrEntry>>,
     // ssh_port if set overrides the global default configuration for ssh port,
     // for this target.
-    ssh_port: Mutex<Option<u16>>,
+    ssh_port: RefCell<Option<u16>>,
     // used for Fastboot
-    serial: RwLock<Option<String>>,
-    build_config: RwLock<Option<BuildConfig>>,
-    boot_timestamp_nanos: RwLock<Option<u64>>,
+    serial: RefCell<Option<String>>,
+    build_config: RefCell<Option<BuildConfig>>,
+    boot_timestamp_nanos: RefCell<Option<u64>>,
     diagnostics_info: Arc<DiagnosticsStreamer<'static>>,
 }
 
@@ -319,14 +317,14 @@ impl Debug for TargetInner {
         async_io::block_on(async {
             f.debug_struct("TargetInner")
                 .field("id", &self.id)
-                .field("ids", &self.ids.lock().await.clone())
-                .field("nodename", &self.nodename.lock().await.clone())
-                .field("state", &self.state.lock().await.clone())
-                .field("last_response", &self.last_response.read().await.clone())
-                .field("addrs", &self.addrs.read().await.clone())
-                .field("ssh_port", &self.ssh_port.lock().await.clone())
-                .field("serial", &self.serial.read().await.clone())
-                .field("boot_timestamp_nanos", &self.boot_timestamp_nanos.read().await.clone())
+                .field("ids", &self.ids.borrow().clone())
+                .field("nodename", &self.nodename.borrow().clone())
+                .field("state", &self.state.borrow().clone())
+                .field("last_response", &self.last_response.borrow().clone())
+                .field("addrs", &self.addrs.borrow().clone())
+                .field("ssh_port", &self.ssh_port.borrow().clone())
+                .field("serial", &self.serial.borrow().clone())
+                .field("boot_timestamp_nanos", &self.boot_timestamp_nanos.borrow().clone())
                 .finish()
         })
     }
@@ -339,14 +337,14 @@ impl TargetInner {
         ids.insert(id.clone());
         Self {
             id: id.clone(),
-            ids: Mutex::new(ids),
-            nodename: Mutex::new(nodename),
-            last_response: RwLock::new(Utc::now()),
-            state: Mutex::new(TargetState::default()),
-            addrs: RwLock::new(BTreeSet::new()),
-            ssh_port: Mutex::new(None),
-            serial: RwLock::new(None),
-            boot_timestamp_nanos: RwLock::new(None),
+            ids: RefCell::new(ids),
+            nodename: RefCell::new(nodename),
+            last_response: RefCell::new(Utc::now()),
+            state: RefCell::new(TargetState::default()),
+            addrs: RefCell::new(BTreeSet::new()),
+            ssh_port: RefCell::new(None),
+            serial: RefCell::new(None),
+            boot_timestamp_nanos: RefCell::new(None),
             build_config: Default::default(),
             diagnostics_info: Arc::new(DiagnosticsStreamer::default()),
         }
@@ -354,14 +352,14 @@ impl TargetInner {
 
     pub fn new_with_boot_timestamp(nodename: String, boot_timestamp_nanos: u64) -> Self {
         Self {
-            boot_timestamp_nanos: RwLock::new(Some(boot_timestamp_nanos)),
+            boot_timestamp_nanos: RefCell::new(Some(boot_timestamp_nanos)),
             ..Self::new(Some(nodename))
         }
     }
 
     pub fn new_with_addrs(nodename: Option<String>, addrs: BTreeSet<TargetAddr>) -> Self {
         Self {
-            addrs: RwLock::new(addrs.iter().map(|e| (*e, Utc::now()).into()).collect()),
+            addrs: RefCell::new(addrs.iter().map(|e| (*e, Utc::now()).into()).collect()),
             ..Self::new(nodename)
         }
     }
@@ -370,11 +368,11 @@ impl TargetInner {
         nodename: Option<String>,
         entries: BTreeSet<TargetAddrEntry>,
     ) -> Self {
-        Self { addrs: RwLock::new(entries), ..Self::new(nodename) }
+        Self { addrs: RefCell::new(entries), ..Self::new(nodename) }
     }
 
     pub fn new_with_serial(serial: &str) -> Self {
-        Self { serial: RwLock::new(Some(serial.to_string())), ..Self::new(None) }
+        Self { serial: RefCell::new(Some(serial.to_string())), ..Self::new(None) }
     }
 
     pub fn id(&self) -> u64 {
@@ -382,14 +380,14 @@ impl TargetInner {
     }
 
     pub async fn ids(&self) -> HashSet<u64> {
-        self.ids.lock().await.clone()
+        self.ids.borrow().clone()
     }
 
     pub async fn has_id<'a, I>(&self, ids: I) -> bool
     where
         I: Iterator<Item = &'a u64>,
     {
-        let my_ids = self.ids.lock().await;
+        let my_ids = self.ids.borrow();
         for id in ids {
             if my_ids.contains(id) {
                 return true;
@@ -400,25 +398,25 @@ impl TargetInner {
 
     /// ssh_address returns the TargetAddr of the next SSH address to connect to for this target.
     pub async fn ssh_address(&self) -> Option<TargetAddr> {
-        ssh_address_from(self.addrs.read().await.iter())
+        ssh_address_from(self.addrs.borrow().iter())
     }
 
     /// Dependency injection constructor so we can insert a fake time for
     /// testing.
     #[cfg(test)]
     pub fn new_with_time(nodename: String, time: DateTime<Utc>) -> Self {
-        Self { last_response: RwLock::new(time), ..Self::new(Some(nodename)) }
+        Self { last_response: RefCell::new(time), ..Self::new(Some(nodename)) }
     }
 
     pub async fn nodename_str(&self) -> String {
-        self.nodename.lock().await.clone().unwrap_or("<unknown>".to_owned())
+        self.nodename.borrow().clone().unwrap_or("<unknown>".to_owned())
     }
 }
 
 #[async_trait(?Send)]
 impl EventSynthesizer<TargetEvent> for TargetInner {
     async fn synthesize_events(&self) -> Vec<TargetEvent> {
-        match self.state.lock().await.connection_state {
+        match self.state.borrow().connection_state {
             ConnectionState::Rcs(_) => vec![TargetEvent::RcsActivated],
             _ => vec![],
         }
@@ -523,7 +521,7 @@ impl Target {
     }
 
     pub async fn is_connected(&self) -> bool {
-        self.inner.state.lock().await.connection_state.is_connected()
+        self.inner.state.borrow().connection_state.is_connected()
     }
 
     pub fn downgrade(&self) -> WeakTarget {
@@ -634,7 +632,7 @@ impl Target {
     where
         I: Iterator<Item = &'a u64>,
     {
-        let mut my_ids = self.inner.ids.lock().await;
+        let mut my_ids = self.inner.ids.borrow_mut();
         for id in new_ids {
             my_ids.insert(*id);
         }
@@ -672,7 +670,7 @@ impl Target {
     async fn rcs_state(&self) -> bridge::RemoteControlState {
         let loop_running = self.task_manager.task_snapshot(TargetTaskType::HostPipe).await
             == TaskSnapshot::Running;
-        let state = self.inner.state.lock().await;
+        let state = self.inner.state.borrow();
         match (loop_running, &state.connection_state) {
             (true, ConnectionState::Rcs(_)) => bridge::RemoteControlState::Up,
             (true, _) => bridge::RemoteControlState::Down,
@@ -681,7 +679,7 @@ impl Target {
     }
 
     pub async fn nodename(&self) -> Option<String> {
-        self.inner.nodename.lock().await.clone()
+        self.inner.nodename.borrow().clone()
     }
 
     pub async fn nodename_str(&self) -> String {
@@ -689,16 +687,15 @@ impl Target {
     }
 
     pub async fn set_nodename(&self, nodename: String) {
-        self.inner.nodename.lock().await.replace(nodename);
+        self.inner.nodename.borrow_mut().replace(nodename);
     }
 
     pub async fn boot_timestamp_nanos(&self) -> Option<u64> {
-        self.inner.boot_timestamp_nanos.read().await.clone()
+        self.inner.boot_timestamp_nanos.borrow().clone()
     }
 
     pub async fn update_boot_timestamp(&self, ts: Option<u64>) {
-        let mut inner_ts = self.inner.boot_timestamp_nanos.write().await;
-        *inner_ts = ts;
+        self.inner.boot_timestamp_nanos.replace(ts);
     }
 
     pub fn stream_info(&self) -> Arc<DiagnosticsStreamer<'static>> {
@@ -706,22 +703,20 @@ impl Target {
     }
 
     pub async fn serial(&self) -> Option<String> {
-        self.inner.serial.read().await.clone()
+        self.inner.serial.borrow().clone()
     }
 
     pub async fn state(&self) -> TargetState {
-        self.inner.state.lock().await.clone()
+        self.inner.state.borrow().clone()
     }
 
     #[cfg(test)]
     pub async fn set_state(&self, state: ConnectionState) {
-        let mut inner_state = self.inner.state.lock().await;
-        *inner_state = TargetState { connection_state: state }
+        self.inner.state.replace(TargetState { connection_state: state });
     }
 
     pub async fn get_connection_state(&self) -> ConnectionState {
-        let state = self.inner.state.lock().await;
-        state.connection_state.clone()
+        self.inner.state.borrow().connection_state.clone()
     }
 
     /// Allows a client to atomically update the connection state based on what
@@ -750,7 +745,7 @@ impl Target {
     where
         F: FnOnce(ConnectionState) -> ConnectionState + Sized,
     {
-        let mut state = self.inner.state.lock().await;
+        let mut state = self.inner.state.borrow_mut();
         let former_state = state.connection_state.clone();
         let update =
             (func)(std::mem::replace(&mut state.connection_state, ConnectionState::Disconnected));
@@ -767,35 +762,35 @@ impl Target {
     }
 
     pub async fn rcs(&self) -> Option<RcsConnection> {
-        match &self.inner.state.lock().await.connection_state {
+        match &self.inner.state.borrow().connection_state {
             ConnectionState::Rcs(conn) => Some(conn.clone()),
             _ => None,
         }
     }
 
     pub async fn usb(&self) -> (String, Option<Interface>) {
-        match self.inner.serial.read().await.as_ref() {
+        match self.inner.serial.borrow().as_ref() {
             Some(s) => (s.to_string(), open_interface_with_serial(s).ok()),
             None => ("".to_string(), None),
         }
     }
 
     pub async fn last_response(&self) -> DateTime<Utc> {
-        self.inner.last_response.read().await.clone()
+        self.inner.last_response.borrow().clone()
     }
 
     pub async fn build_config(&self) -> Option<BuildConfig> {
-        self.inner.build_config.read().await.clone()
+        self.inner.build_config.borrow().clone()
     }
 
     pub async fn addrs(&self) -> Vec<TargetAddr> {
-        let mut addrs = self.inner.addrs.read().await.iter().cloned().collect::<Vec<_>>();
+        let mut addrs = self.inner.addrs.borrow().iter().cloned().collect::<Vec<_>>();
         addrs.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
         addrs.drain(..).map(|e| e.addr).collect()
     }
 
     pub async fn drop_unscoped_link_local_addrs(&self) {
-        let mut addrs = self.inner.addrs.write().await;
+        let mut addrs = self.inner.addrs.borrow_mut();
 
         *addrs = addrs
             .clone()
@@ -812,7 +807,7 @@ impl Target {
     }
 
     pub async fn drop_loopback_addrs(&self) {
-        let mut addrs = self.inner.addrs.write().await;
+        let mut addrs = self.inner.addrs.borrow_mut();
 
         *addrs = addrs
             .clone()
@@ -825,22 +820,17 @@ impl Target {
     }
 
     pub async fn ssh_port(&self) -> Option<u16> {
-        self.inner.ssh_port.lock().await.clone()
+        self.inner.ssh_port.borrow().clone()
     }
 
     pub(crate) async fn set_ssh_port(&self, port: Option<u16>) {
-        if let Some(port) = port {
-            self.inner.ssh_port.lock().await.replace(port);
-        } else {
-            self.inner.ssh_port.lock().await.take();
-        }
+        self.inner.ssh_port.replace(port);
     }
 
     pub(crate) async fn manual_addrs(&self) -> Vec<TargetAddr> {
         self.inner
             .addrs
-            .read()
-            .await
+            .borrow()
             .iter()
             .filter_map(|entry| if entry.manual { Some(entry.addr.clone()) } else { None })
             .collect()
@@ -848,7 +838,7 @@ impl Target {
 
     #[cfg(test)]
     pub(crate) async fn addrs_insert(&self, t: TargetAddr) {
-        self.inner.addrs.write().await.replace(t.into());
+        self.inner.addrs.borrow_mut().replace(t.into());
     }
 
     #[cfg(test)]
@@ -864,7 +854,7 @@ impl Target {
 
     #[cfg(test)]
     pub(crate) async fn addrs_insert_entry(&self, t: TargetAddrEntry) {
-        self.inner.addrs.write().await.replace(t);
+        self.inner.addrs.borrow_mut().replace(t);
     }
 
     async fn addrs_extend<T>(&self, new_addrs: T)
@@ -872,7 +862,7 @@ impl Target {
         T: IntoIterator<Item = TargetAddr>,
     {
         let now = Utc::now();
-        let mut addrs = self.inner.addrs.write().await;
+        let mut addrs = self.inner.addrs.borrow_mut();
 
         for mut addr in new_addrs.into_iter() {
             // Do not add localhost to the collection during extend.
@@ -909,14 +899,14 @@ impl Target {
     }
 
     async fn update_last_response(&self, other: DateTime<Utc>) {
-        let mut last_response = self.inner.last_response.write().await;
+        let mut last_response = self.inner.last_response.borrow_mut();
         if *last_response < other {
             *last_response = other;
         }
     }
 
     async fn overwrite_state(&self, mut other: TargetState) {
-        let mut state = self.inner.state.lock().await;
+        let mut state = self.inner.state.borrow_mut();
         if let Some(rcs) = other.connection_state.take_rcs() {
             // Nots this so that we know to push an event.
             let rcs_activated = !state.connection_state.is_rcs();
@@ -941,7 +931,7 @@ impl Target {
         if let Some(ids) = identify.ids {
             target.merge_ids(ids.iter()).await;
         }
-        *target.inner.build_config.write().await =
+        *target.inner.build_config.borrow_mut() =
             if identify.board_config.is_some() || identify.product_config.is_some() {
                 let p = identify.product_config.unwrap_or("<unknown>".to_string());
                 let b = identify.board_config.unwrap_or("<unknown>".to_string());
@@ -951,13 +941,13 @@ impl Target {
             };
 
         if let Some(serial) = identify.serial_number {
-            target.inner.serial.write().await.replace(serial);
+            target.inner.serial.borrow_mut().replace(serial);
         }
         if let Some(t) = identify.boot_timestamp_nanos {
-            target.inner.boot_timestamp_nanos.write().await.replace(t);
+            target.inner.boot_timestamp_nanos.borrow_mut().replace(t);
         }
         if let Some(addrs) = identify.addresses {
-            let mut taddrs = target.inner.addrs.write().await;
+            let mut taddrs = target.inner.addrs.borrow_mut();
             for addr in addrs.iter().map(|addr| TargetAddr::from(addr.clone())) {
                 taddrs.insert(addr.into());
             }
@@ -1018,7 +1008,7 @@ impl Target {
 #[async_trait(?Send)]
 impl EventSynthesizer<DaemonEvent> for Target {
     async fn synthesize_events(&self) -> Vec<DaemonEvent> {
-        if self.inner.state.lock().await.connection_state.is_connected() {
+        if self.inner.state.borrow().connection_state.is_connected() {
             vec![DaemonEvent::NewTarget(self.target_info().await)]
         } else {
             vec![]
@@ -1370,14 +1360,14 @@ struct TargetCollectionInner {
 }
 
 pub struct TargetCollection {
-    inner: RwLock<TargetCollectionInner>,
-    events: RwLock<Option<events::Queue<DaemonEvent>>>,
+    inner: RefCell<TargetCollectionInner>,
+    events: RefCell<Option<events::Queue<DaemonEvent>>>,
 }
 
 #[async_trait(?Send)]
 impl EventSynthesizer<DaemonEvent> for TargetCollection {
     async fn synthesize_events(&self) -> Vec<DaemonEvent> {
-        let collection = self.inner.read().await;
+        let collection = self.inner.borrow();
         // TODO(awdavies): This won't be accurate once a target is able to create
         // more than one event at a time.
         let mut res = Vec::with_capacity(collection.targets.len());
@@ -1391,8 +1381,8 @@ impl EventSynthesizer<DaemonEvent> for TargetCollection {
 impl TargetCollection {
     pub fn new() -> Self {
         Self {
-            inner: RwLock::new(TargetCollectionInner { targets: HashMap::new() }),
-            events: RwLock::new(None),
+            inner: RefCell::new(TargetCollectionInner { targets: HashMap::new() }),
+            events: RefCell::new(None),
         }
     }
 
@@ -1406,23 +1396,17 @@ impl TargetCollection {
 
     pub async fn set_event_queue(&self, q: events::Queue<DaemonEvent>) {
         // This should be the only place a write lock is ever held.
-        self.events
-            .write()
-            .then(move |mut e| {
-                *e = Some(q);
-                future::ready(())
-            })
-            .await;
+        self.events.replace(Some(q));
     }
 
     pub async fn targets(&self) -> Vec<Target> {
-        let inner = self.inner.read().await;
+        let inner = self.inner.borrow();
         inner.targets.values().cloned().collect()
     }
 
     pub async fn remove_target(&self, target_id: String) -> bool {
         if let Some(t) = self.get(target_id).await {
-            let mut inner = self.inner.write().await;
+            let mut inner = self.inner.borrow_mut();
             inner.targets.remove(&t.id());
             true
         } else {
@@ -1442,7 +1426,7 @@ impl TargetCollection {
         let new_port = new_target.ssh_port().await;
         let new_serial = new_target.serial().await;
 
-        let mut inner = self.inner.write().await;
+        let mut inner = self.inner.borrow_mut();
 
         // Look for a target by primary ID first
         let mut to_update = new_ids.iter().find_map(|id| inner.targets.get(&id));
@@ -1488,10 +1472,10 @@ impl TargetCollection {
 
         if let Some(to_update) = to_update {
             if let Some(config) = new_target.build_config().await {
-                to_update.inner.build_config.write().await.replace(config);
+                to_update.inner.build_config.borrow_mut().replace(config);
             }
             if let Some(serial) = new_target.serial().await {
-                to_update.inner.serial.write().await.replace(serial);
+                to_update.inner.serial.borrow_mut().replace(serial);
             }
             if let Some(new_name) = new_target.nodename().await {
                 to_update.set_nodename(new_name).await;
@@ -1503,7 +1487,7 @@ impl TargetCollection {
                 to_update.update_boot_timestamp(new_target.boot_timestamp_nanos().await),
                 to_update.overwrite_state(TargetState {
                     connection_state: std::mem::replace(
-                        &mut new_target.inner.state.lock().await.connection_state,
+                        &mut new_target.inner.state.borrow_mut().connection_state,
                         ConnectionState::Disconnected
                     ),
                 }),
@@ -1523,7 +1507,7 @@ impl TargetCollection {
 
             if new_target_name.is_some() || new_target_serial.is_some() {
                 let info = result.target_info().await;
-                if let Some(e) = self.events.read().await.as_ref() {
+                if let Some(e) = self.events.borrow().as_ref() {
                     e.push(DaemonEvent::NewTarget(info))
                         .await
                         .unwrap_or_else(|e| log::warn!("unable to push new target event: {}", e));
@@ -1561,13 +1545,13 @@ impl TargetCollection {
             // clear that an ambiguous target error is about having more than
             // one target in the cache rather than giving an ambiguous target
             // error around targets that cannot be displayed in the frontend.
-            let targets = &self.inner.read().await.targets;
+            let targets = &self.inner.borrow().targets;
             let targets =
                 futures::future::join_all(
                     targets
                         .values()
                         .map(|t| async move {
-                            t.inner.state.lock().await.connection_state.is_connected()
+                            t.inner.state.borrow_mut().connection_state.is_connected()
                         })
                         .collect::<Vec<_>>(),
                 )
@@ -1582,8 +1566,7 @@ impl TargetCollection {
         // will lead to this being cleaned up eventually. It is the client's
         // responsibility to determine their respective timeout(s).
         self.events
-            .read()
-            .await
+            .borrow()
             .as_ref()
             .expect("target event queue must be initialized by now")
             .wait_for(None, move |e| {
@@ -1615,9 +1598,9 @@ impl TargetCollection {
         TQ: Into<TargetQuery>,
     {
         let t: TargetQuery = t.into();
-        let inner = self.inner.read().await;
+        let inner = self.inner.borrow();
         for target in inner.targets.values() {
-            if target.inner.state.lock().await.connection_state.is_connected() {
+            if target.inner.state.borrow_mut().connection_state.is_connected() {
                 if t.matches(target).await {
                     return Some(target.clone());
                 }
@@ -1632,7 +1615,7 @@ impl TargetCollection {
         TQ: Into<TargetQuery>,
     {
         let t: TargetQuery = t.into();
-        let inner = self.inner.read().await;
+        let inner = self.inner.borrow();
         inner.targets.values().match_target(t).await
     }
 }
@@ -1660,18 +1643,16 @@ mod test {
         fn clone(&self) -> Self {
             Self {
                 id: self.id.clone(),
-                ids: Mutex::new(block_on(self.ids.lock()).clone()),
-                nodename: Mutex::new(block_on(self.nodename.lock()).clone()),
-                last_response: RwLock::new(block_on(self.last_response.read()).clone()),
-                state: Mutex::new(block_on(self.state.lock()).clone()),
-                addrs: RwLock::new(block_on(self.addrs.read()).clone()),
-                ssh_port: Mutex::new(block_on(self.ssh_port.lock()).clone()),
-                serial: RwLock::new(block_on(self.serial.read()).clone()),
-                boot_timestamp_nanos: RwLock::new(
-                    block_on(self.boot_timestamp_nanos.read()).clone(),
-                ),
+                ids: RefCell::new(self.ids.borrow().clone()),
+                nodename: RefCell::new(self.nodename.borrow().clone()),
+                last_response: RefCell::new(self.last_response.borrow().clone()),
+                state: RefCell::new(self.state.borrow().clone()),
+                addrs: RefCell::new(self.addrs.borrow().clone()),
+                ssh_port: RefCell::new(self.ssh_port.borrow().clone()),
+                serial: RefCell::new(self.serial.borrow().clone()),
+                boot_timestamp_nanos: RefCell::new(self.boot_timestamp_nanos.borrow().clone()),
                 diagnostics_info: self.diagnostics_info.clone(),
-                build_config: RwLock::new(block_on(self.build_config.read()).clone()),
+                build_config: RefCell::new(self.build_config.borrow().clone()),
             }
         }
     }
@@ -1687,13 +1668,13 @@ mod test {
     impl PartialEq for Target {
         fn eq(&self, o: &Target) -> bool {
             block_on(self.nodename()) == block_on(o.nodename())
-                && *block_on(self.inner.last_response.read())
-                    == *block_on(o.inner.last_response.read())
+                && *self.inner.last_response.borrow() == *o.inner.last_response.borrow()
                 && block_on(self.addrs()) == block_on(o.addrs())
-                && *block_on(self.inner.state.lock()) == *block_on(o.inner.state.lock())
+                && *self.inner.state.borrow() == *o.inner.state.borrow()
                 && block_on(self.build_config()) == block_on(o.build_config())
         }
     }
+
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_collection_insert_new_not_connected() {
         let tc = TargetCollection::new_with_queue().await;
@@ -1752,7 +1733,7 @@ mod test {
         assert_ne!(&merged_target, &t1);
         assert_ne!(&merged_target, &t2);
         assert_eq!(merged_target.addrs().await.len(), 2);
-        assert_eq!(*merged_target.inner.last_response.read().await, fake_elapsed());
+        assert_eq!(*merged_target.inner.last_response.borrow(), fake_elapsed());
         assert!(merged_target.addrs().await.contains(&(a1, 1).into()));
         assert!(merged_target.addrs().await.contains(&(a2, 1).into()));
 
@@ -1791,7 +1772,7 @@ mod test {
         assert_ne!(&merged_target, &t1);
         assert_ne!(&merged_target, &t2);
         assert_eq!(merged_target.addrs().await.len(), 1);
-        assert_eq!(*merged_target.inner.last_response.read().await, fake_elapsed());
+        assert_eq!(*merged_target.inner.last_response.borrow(), fake_elapsed());
         assert!(merged_target.addrs().await.contains(&(a1, 0).into()));
         assert!(!merged_target.addrs().await.contains(&(a2, 0).into()));
     }
@@ -1985,7 +1966,7 @@ mod test {
                 t.run_host_pipe().await;
             }
             {
-                *t.inner.state.lock().await = TargetState {
+                *t.inner.state.borrow_mut() = TargetState {
                     connection_state: if test.rcs_is_some {
                         ConnectionState::Rcs(RcsConnection::new_with_proxy(
                             setup_fake_remote_control_service(true, "foobiedoo".to_owned()),
@@ -2007,7 +1988,7 @@ mod test {
         let a2 = IpAddr::V6(Ipv6Addr::new(
             0xfe80, 0xcafe, 0xf00d, 0xf000, 0xb412, 0xb455, 0x1337, 0xfeed,
         ));
-        *t.inner.build_config.write().await = Some(BuildConfig {
+        *t.inner.build_config.borrow_mut() = Some(BuildConfig {
             board_config: DEFAULT_BOARD_CONFIG.to_owned(),
             product_config: DEFAULT_PRODUCT_CONFIG.to_owned(),
         });
@@ -2218,7 +2199,7 @@ mod test {
             ConnectionState::Mdns(fake_time_clone)
         })
         .await;
-        assert_eq!(ConnectionState::Mdns(fake_time), t.inner.state.lock().await.connection_state);
+        assert_eq!(ConnectionState::Mdns(fake_time), t.inner.state.borrow_mut().connection_state);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -2363,7 +2344,7 @@ mod test {
         // missing scope information, this is essentially what occurs when we
         // ask the target for its addresses.
         let t2 = Target::new("this-is-a-crunchy-falafel");
-        t2.inner.addrs.write().await.replace(TargetAddr { ip, scope_id: 0 }.into());
+        t2.inner.addrs.borrow_mut().replace(TargetAddr { ip, scope_id: 0 }.into());
 
         let tc = TargetCollection::new_with_queue().await;
         tc.merge_insert(t1).await;
@@ -2478,7 +2459,7 @@ mod test {
         let t1 = Target::new_with_addrs::<String>(None, addr_set);
         let t2 = Target::new("this-is-a-crunchy-falafel");
         let tc = TargetCollection::new_with_queue().await;
-        t2.inner.addrs.write().await.replace(TargetAddr { ip: ip2, scope_id: 0 }.into());
+        t2.inner.addrs.borrow_mut().replace(TargetAddr { ip: ip2, scope_id: 0 }.into());
         tc.merge_insert(t1).await;
         tc.merge_insert(t2).await;
         let mut targets = tc.targets().await.into_iter();
@@ -2508,7 +2489,7 @@ mod test {
         let t1 = Target::new_with_addrs::<String>(None, addr_set);
         let t2 = Target::new("this-is-a-crunchy-falafel");
         let tc = TargetCollection::new_with_queue().await;
-        t2.inner.addrs.write().await.replace(TargetAddr { ip: ip2, scope_id: 0 }.into());
+        t2.inner.addrs.borrow_mut().replace(TargetAddr { ip: ip2, scope_id: 0 }.into());
         tc.merge_insert(t1).await;
         tc.merge_insert(t2).await;
         let mut targets = tc.targets().await.into_iter();
@@ -2537,7 +2518,7 @@ mod test {
         let t1 = Target::new_with_addrs::<String>(None, addr_set);
         let t2 = Target::new("this-is-a-crunchy-falafel");
         let tc = TargetCollection::new_with_queue().await;
-        t2.inner.addrs.write().await.replace(TargetAddr { ip: ip2, scope_id: 0 }.into());
+        t2.inner.addrs.borrow_mut().replace(TargetAddr { ip: ip2, scope_id: 0 }.into());
         tc.merge_insert(t1).await;
         tc.merge_insert(t2).await;
         let mut targets = tc.targets().await.into_iter();
