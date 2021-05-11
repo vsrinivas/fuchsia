@@ -19,8 +19,9 @@
 #include <stdint.h>
 
 //
-// Radix Sort is a high-performance GPU-accelerated sorting library for Vulkan
-// that supports both direct and execution-time (indirect) dispatch.
+// Radix Sort Vk is a high-performance sorting library for Vulkan 1.2.
+//
+// The sorting function is both directly and indirectly dispatchable.
 //
 
 #ifdef __cplusplus
@@ -43,10 +44,10 @@ struct radix_sort_vk_target_requirements
 };
 
 //
-// RADIX SORT TARGET REQUIREMENTS: VULKAN
+// Get a radix sort target's Vulkan requirements.
 //
-// A Radix Sort target is a binary image containing target-specific
-// configuration parameters and a bundle of SPIR-V modules.
+// A Radix Sort target is a binary image containing configuration parameters and
+// a bundle of SPIR-V modules.
 //
 // Targets are prebuilt and specific to a particular device vendor, architecture
 // and key-val configuration.
@@ -100,15 +101,16 @@ radix_sort_vk_destroy(struct radix_sort_vk * rs, VkDevice device, VkAllocationCa
 // Returns the buffer size and alignment requirements for a maximum number of
 // keyvals.
 //
-// The radix sort implementation is not in place so two non-overlapping keyval
-// extents are required that are at least `.keyvals_size`.
+// The radix sort implementation is not an in-place sorting algorithm so two
+// non-overlapping keyval buffers are required that are at least
+// `.keyvals_size`.
 //
-// The radix sort instance also requires an internal extent during sorting.
+// The radix sort instance also requires an `internal` buffer during sorting.
 //
-// If the indirect dispatch sorting will be used, then a dispatch extent is also
-// required.
+// If the indirect dispatch sorting function is used, then an `indirect` buffer
+// is also required.
 //
-// The alignment requirements for the keyval, internal, and dispatch extents
+// The alignment requirements for the keyval, internal, and indirect buffers
 // must be honored.
 //
 //   Input:
@@ -117,14 +119,14 @@ radix_sort_vk_destroy(struct radix_sort_vk * rs, VkDevice device, VkAllocationCa
 //   Outputs:
 //     keyval_size       : Size of a single keyval
 //
-//     keyvals_size      : Minimum size of the even and odd keyval extents
-//     keyvals_alignment : Alignment of each keyval extent
+//     keyvals_size      : Minimum size of the even and odd keyval buffers
+//     keyvals_alignment : Alignment of each keyval buffer
 //
-//     internal_size     : Minimum size of internal extent
-//     internal_aligment : Alignment of the internal extent
+//     internal_size     : Minimum size of internal buffer
+//     internal_aligment : Alignment of the internal buffer
 //
-//     indirect_size     : Minimum size of indirect extent
-//     indirect_aligment : Alignment of the indirect extent
+//     indirect_size     : Minimum size of indirect buffer
+//     indirect_aligment : Alignment of the indirect buffer
 //
 //   .keyvals_even/odd
 //   -----------------
@@ -164,34 +166,39 @@ radix_sort_vk_get_memory_requirements(struct radix_sort_vk const *              
                                       struct radix_sort_vk_memory_requirements * mr);
 
 //
-// Direct dispatch sorting (default)
-// ---------------------------------
+// Direct dispatch sorting
+// -----------------------
 //
 // Using a key size of `key_bits`, sort `count` keyvals found in the
-// `.devaddr_keyvals_even` extent.
+// `.devaddr_keyvals_even` buffer.
 //
-// Each internal sorting pass copies the keyvals from one extent to the other.
+// Each internal sorting pass copies the keyvals from one keyvals buffer to the
+// other.
 //
-// If an even number of internal sorting passes are required, the sorted keyvals
-// will be found in the "even" keyvals extent.  Otherwise, the sorted keyvals
-// will be found in the "odd" keyvals extent.
+// The number of internal sorting passes is determined by `.key_bits`.
 //
-// Which extent has the sorted keyvals is returned in `keyvals_out`.
+// If an even number of internal sorting passes is required, the sorted keyvals
+// will be found in the "even" keyvals buffer.  Otherwise, the sorted keyvals
+// will be found in the "odd" keyvals buffer.
+//
+// Which buffer has the sorted keyvals is returned in `keyvals_sorted`.
 //
 // A keyval's `key_bits` are the most significant bits of a keyval.
 //
 // The maximum number of key bits is determined by the keyval size.
 //
-// The keyval count must be less than RADIX_SORT_VK_MAX_KEYVALS as well as be
-// less than or equal to the count used to obtain the the memory requirements.
+// The keyval count must be less than (1 << 30) as well as be less than or equal
+// to the count used to obtain the the memory requirements.
 //
 // This function appends push constants, dispatch commands, and barriers.
 //
 // Pipeline barriers should be applied as necessary, both before and after
 // invoking this function.
 //
-// The radix sort begins with TRANSFER/WRITE to the internal and keyvals_even
-// buffer and ends with a COMPUTE/WRITE to the internal and one of the keyvals
+// The sort begins with either a TRANSFER/WRITE or a COMPUTE/READ to the
+// `internal` and `keyvals_even` buffers.
+//
+// The sort ends with a COMPUTE/WRITE to the `internal` and `keyvals_sorted`
 // buffers.
 //
 
@@ -219,32 +226,34 @@ radix_sort_vk_sort(VkDevice                               device,
 // Using a key size of `key_bits`, at pipeline execution time, load keyvals
 // count from `devaddr_count` and sorts the keyvals in `.devaddr_keyvals_even`.
 //
-// Each internal sorting pass copies the keyvals from one extent to the other.
+// Each internal sorting pass copies the keyvals from one keyvals buffer to the
+// other.
 //
-// If an even number of internal sorting passes are required, the sorted keyvals
-// will be found in the "even" keyvals extent.  Otherwise, the sorted keyvals
-// will be found in the "odd" keyvals extent.
+// The number of internal sorting passes is determined by `.key_bits`.
 //
-// Which extent has the sorted keyvals is returned in `keyvals_out`.
+// If an even number of internal sorting passes is required, the sorted keyvals
+// will be found in the "even" keyvals buffer.  Otherwise, the sorted keyvals
+// will be found in the "odd" keyvals buffer.
+//
+// Which buffer has the sorted keyvals is returned in `keyvals_sorted`.
 //
 // A keyval's `key_bits` are the most significant bits of a keyval.
 //
-// The maximum number of key bits is determined by the keyval size.
-//
-// The keyval count must be less than RADIX_SORT_VK_MAX_KEYVALS as well as be
-// less than or equal to the count used to obtain the the memory requirements.
+// The keyval count must be less than (1 << 30) as well as be less than or equal
+// to the count used to obtain the the memory requirements.
 //
 // This function appends push constants, dispatch commands, and barriers.
 //
 // Pipeline barriers should be applied as necessary, both before and after
 // invoking this function.
 //
-// The indirect radix sort begins with a COMPUTE/READ from the count buffer and
-// ends with a COMPUTE/WRITE to the internal and one of the keyvals buffers.
+// The indirect radix sort begins with a COMPUTE/READ from the `count` buffer
+// and ends with a COMPUTE/WRITE to the `internal` and the `keyvals_sorted`
+// buffers.
 //
-// The indirect buffer must support USAGE_INDIRECT.
+// The `indirect` buffer must support USAGE_INDIRECT.
 //
-// The `count` buffer is at least 4 bytes and 4-byte aligned.
+// The `count` buffer must be at least 4 bytes and 4-byte aligned.
 //
 
 struct radix_sort_vk_sort_indirect_info
