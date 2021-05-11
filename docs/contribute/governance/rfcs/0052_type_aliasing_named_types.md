@@ -240,8 +240,8 @@ class MyNumber {
   UnderlyingType value_;
 };
 ```
-
 Rust
+
 ```rust
 #[derive(Copy, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
 struct MyNumber(u32);
