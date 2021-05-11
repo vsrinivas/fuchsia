@@ -5,9 +5,11 @@
 package fint
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"math"
 	"net/url"
@@ -128,6 +130,12 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 
 	if ninjaErr != nil {
 		return artifacts, ninjaErr
+	}
+
+	gn := thirdPartyPrebuilt(contextSpec.CheckoutDir, platform, "gn")
+	if output, err := gnCheckGenerated(ctx, runner.runner, gn, contextSpec.CheckoutDir, contextSpec.BuildDir); err != nil {
+		artifacts.FailureSummary = output
+		return artifacts, err
 	}
 
 	if !contextSpec.SkipNinjaNoopCheck {
@@ -389,4 +397,25 @@ func removeDuplicates(slice []string) []string {
 	}
 
 	return slice[:numUnique]
+}
+
+// gnCheckGenerated runs `gn check` against a build directory that's already had
+// `ninja` run, to check generated files that weren't available for checking at
+// the time we ran `fint set`.
+//
+// It returns the stdout of the subprocess.
+func gnCheckGenerated(ctx context.Context, r subprocessRunner, gn, checkoutDir, buildDir string) (string, error) {
+	cmd := []string{
+		gn,
+		"check",
+		buildDir,
+		fmt.Sprintf("--root=%s", checkoutDir),
+		"--check-generated",
+		"--check-system",
+	}
+	var stdoutBuf bytes.Buffer
+	if err := r.Run(ctx, cmd, io.MultiWriter(&stdoutBuf, os.Stdout), os.Stderr); err != nil {
+		return stdoutBuf.String(), fmt.Errorf("error running `gn check`: %w", err)
+	}
+	return stdoutBuf.String(), nil
 }

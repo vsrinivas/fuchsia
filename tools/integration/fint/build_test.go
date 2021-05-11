@@ -5,6 +5,7 @@
 package fint
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"testing"
@@ -291,4 +292,19 @@ func mustStructPB(t *testing.T, s interface{}) *structpb.Struct {
 		t.Fatal(err)
 	}
 	return ret
+}
+
+func Test_gnCheckGenerated(t *testing.T) {
+	ctx := context.Background()
+	runner := fakeSubprocessRunner{
+		mockStdout: []byte("check error\n"),
+		fail:       true,
+	}
+	output, err := gnCheckGenerated(ctx, &runner, "gn", t.TempDir(), t.TempDir())
+	if err == nil {
+		t.Fatalf("Expected gn check to fail")
+	}
+	if diff := cmp.Diff(string(runner.mockStdout), output); diff != "" {
+		t.Errorf("Got wrong gn check output (-want +got):\n%s", diff)
+	}
 }
