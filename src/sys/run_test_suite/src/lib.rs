@@ -439,6 +439,7 @@ async fn collect_results(
 
 /// Runs the test and writes logs to stdout.
 /// |count|: Number of times to run this test.
+/// |filter_ansi|: Whether or not to filter out ANSI escape sequences from stdout.
 pub async fn run_tests_and_get_outcome(
     test_params: TestParams,
     log_opts: diagnostics::LogCollectionOptions,
@@ -476,10 +477,7 @@ pub async fn run_tests_and_get_outcome(
         };
 
     let (log_stream, result_stream) = streams.into_log_and_result();
-    let mut stdout_for_logs: Box<dyn WriteLine + Send + Sync> = match filter_ansi {
-        true => Box::new(AnsiFilterWriter::new(io::stdout())),
-        false => Box::new(io::stdout()),
-    };
+    let mut stdout_for_logs = io::stdout();
     let log_collection_fut = diagnostics::collect_logs(log_stream, &mut stdout_for_logs, log_opts);
     let results_collection_fut = collect_results(&test_url, count, result_stream);
 

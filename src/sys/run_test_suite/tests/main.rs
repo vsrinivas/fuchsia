@@ -694,13 +694,13 @@ async fn test_logging_component_min_severity() {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn test_logging_ansi() {
+async fn test_stdout_ansi() {
     let mut output: Vec<u8> = vec![];
     let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
         .expect("connecting to HarnessProxy");
 
     let mut test_params = new_test_params(
-        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/log_ansi_test.cm",
+        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/stdout_ansi_test.cm",
         harness,
     );
     test_params.timeout = std::num::NonZeroU32::new(600);
@@ -712,10 +712,7 @@ async fn test_logging_ansi() {
         .await
         .expect("Running test should not fail");
 
-    let expected_output = "[RUNNING]	log_ansi_test
-[TIMESTAMP][PID][TID][<root>][log_ansi_test] INFO: \u{1b}[31mred log\u{1b}[0m
-[PASSED]	log_ansi_test
-[RUNNING]	stdout_ansi_test
+    let expected_output = "[RUNNING]	stdout_ansi_test
 \u{1b}[31mred stdout\u{1b}[0m
 [PASSED]	stdout_ansi_test
 ";
@@ -725,7 +722,7 @@ async fn test_logging_ansi() {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn test_logging_filter_ansi() {
+async fn test_stdout_filter_ansi() {
     let mut output: Vec<u8> = vec![];
     let mut ansi_filter = output::AnsiFilterWriter::new(&mut output);
     let mut reporter = output::RunReporter::new_noop();
@@ -733,7 +730,7 @@ async fn test_logging_filter_ansi() {
         .expect("connecting to HarnessProxy");
 
     let mut test_params = new_test_params(
-        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/log_ansi_test.cm",
+        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/stdout_ansi_test.cm",
         harness,
     );
     test_params.timeout = std::num::NonZeroU32::new(600);
@@ -752,10 +749,7 @@ async fn test_logging_filter_ansi() {
     };
     let _ = diagnostics::collect_logs(log_stream, &mut ansi_filter, log_opts).await.unwrap();
 
-    let expected_output = "[RUNNING]	log_ansi_test
-[TIMESTAMP][PID][TID][<root>][log_ansi_test] INFO: red log
-[PASSED]	log_ansi_test
-[RUNNING]	stdout_ansi_test
+    let expected_output = "[RUNNING]	stdout_ansi_test
 red stdout
 [PASSED]	stdout_ansi_test
 ";
@@ -856,7 +850,7 @@ async fn test_stdout_to_directory() {
         .expect("connecting to HarnessProxy");
 
     let mut test_params = new_test_params(
-        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/log_ansi_test.cm",
+        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/stdout_ansi_test.cm",
         harness,
     );
     test_params.timeout = std::num::NonZeroU32::new(600);
@@ -874,10 +868,9 @@ async fn test_stdout_to_directory() {
 
     let expected_test_run = ExpectedTestRun::new(directory::Outcome::Passed);
     let expected_test_suites = vec![ExpectedSuite::new(
-        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/log_ansi_test.cm",
+        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/stdout_ansi_test.cm",
         directory::Outcome::Passed,
     )
-    .with_case(ExpectedTestCase::new("log_ansi_test", directory::Outcome::Passed))
     .with_case(
         ExpectedTestCase::new("stdout_ansi_test", directory::Outcome::Passed)
             .with_artifact("stdout", "\u{1b}[31mred stdout\u{1b}[0m\n"),

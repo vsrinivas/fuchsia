@@ -4,6 +4,6 @@
         "src/sys/test_runners/rust/default.shard.cml",
     ],
     program: {
-        binary: "bin/log_ansi_test",
+        binary: "bin/stdout_ansi_test",
     },
 }

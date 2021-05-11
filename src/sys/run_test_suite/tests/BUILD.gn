@@ -48,15 +48,15 @@ rustc_test("logging_test_bin") {
   sources = [ "logging_test.rs" ]
 }
 
-rustc_test("log_ansi_test_bin") {
-  source_root = "log_ansi_test.rs"
-  name = "log_ansi_test"
+rustc_test("stdout_ansi_test_bin") {
+  source_root = "stdout_ansi_test.rs"
+  name = "stdout_ansi_test"
   deps = [
     "//src/lib/syslog/rust:syslog",
     "//third_party/rust_crates:ansi_term",
     "//third_party/rust_crates:log",
   ]
-  sources = [ "log_ansi_test.rs" ]
+  sources = [ "stdout_ansi_test.rs" ]
 }
 
 executable("long_running_test_bin") {
@@ -82,10 +82,10 @@ fuchsia_component("logging_test") {
   manifest = "meta/logging_test.cml"
 }
 
-fuchsia_component("log_ansi_test") {
+fuchsia_component("stdout_ansi_test") {
   testonly = true
-  deps = [ ":log_ansi_test_bin" ]
-  manifest = "meta/log_ansi_test.cml"
+  deps = [ ":stdout_ansi_test_bin" ]
+  manifest = "meta/stdout_ansi_test.cml"
 }
 
 fuchsia_component("error_logging_test") {
@@ -94,17 +94,13 @@ fuchsia_component("error_logging_test") {
   manifest = "meta/error_logging_test.cml"
 }
 
-fuchsia_test_package("log_ansi_test_pkg") {
-  test_components = [ ":log_ansi_test" ]
-}
-
 fuchsia_unittest_package("run_test_suite_integration_tests") {
   manifest = "meta/run_test_suite_integration_tests.cmx"
   deps = [
     ":error_logging_test",
-    ":log_ansi_test",
     ":logging_test",
     ":long_running_test",
+    ":stdout_ansi_test",
     ":tests_bin",
     "//examples/components/routing/echo_server:echo_server_component",
     "//examples/tests:disabled-test-example",
@@ -135,7 +131,6 @@ fuchsia_unittest_package("run_test_suite_integration_tests") {
 group("tests") {
   testonly = true
   deps = [
-    ":log_ansi_test_pkg",
     ":run_test_suite_integration_tests",
     "//examples/tests",
   ]
