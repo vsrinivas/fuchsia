@@ -22,13 +22,16 @@ pub(crate) struct VmoImage {
     len_bytes: u64,
     mapping: Arc<Mapping>,
     stride: usize,
-    composition: mold::Composition,
-    old_layers: Option<u32>,
+    buffer_layer_cache: Option<mold::BufferLayerCache>,
     coherency_domain: CoherencyDomain,
 }
 
 impl VmoImage {
-    pub fn new(width: u32, height: u32) -> Self {
+    pub fn new(
+        width: u32,
+        height: u32,
+        buffer_layer_cache: Option<mold::BufferLayerCache>,
+    ) -> Self {
         let len_bytes = (width * height) as usize * mem::size_of::<u32>();
         let (mapping, vmo) = mapped_vmo::Mapping::allocate(len_bytes as usize)
             .expect("failed to allocated mapped VMO");
@@ -40,13 +43,15 @@ impl VmoImage {
             len_bytes: len_bytes as u64,
             mapping: Arc::new(mapping),
             stride: width as usize,
-            composition: mold::Composition::new(),
-            old_layers: None,
+            buffer_layer_cache,
             coherency_domain: CoherencyDomain::Cpu,
         }
     }
 
-    pub fn from_png<R: Read>(reader: &mut png::Reader<R>) -> Result<Self, Error> {
+    pub fn from_png<R: Read>(
+        reader: &mut png::Reader<R>,
+        buffer_layer_cache: Option<mold::BufferLayerCache>,
+    ) -> Result<Self, Error> {
         let info = reader.info();
         let color_type = info.color_type;
         ensure!(
@@ -82,8 +87,7 @@ impl VmoImage {
             len_bytes: len_bytes as u64,
             mapping: Arc::new(mapping),
             stride: width as usize,
-            composition: mold::Composition::new(),
-            old_layers: None,
+            buffer_layer_cache,
             coherency_domain: CoherencyDomain::Cpu,
         })
     }
@@ -93,6 +97,7 @@ impl VmoImage {
         width: u32,
         height: u32,
         index: u32,
+        buffer_layer_cache: Option<mold::BufferLayerCache>,
     ) -> Self {
         let (status, buffers) = buffer_collection
             .wait_for_buffers_allocated(zx::Time::after(10.second()))
@@ -132,8 +137,7 @@ impl VmoImage {
             len_bytes: len_bytes as u64,
             mapping,
             stride: bytes_per_row as usize / mem::size_of::<u32>(),
-            composition: mold::Composition::new(),
-            old_layers: None,
+            buffer_layer_cache,
             coherency_domain: buffers.settings.buffer_settings.coherency_domain,
         }
     }
@@ -173,6 +177,7 @@ impl VmoImage {
             buffer,
             width: self.width as usize,
             width_stride: Some(self.stride),
+            layer_cache: self.buffer_layer_cache.clone(),
             flusher: if self.coherency_domain == CoherencyDomain::Ram {
                 Some(Box::new(SliceFlusher))
             } else {

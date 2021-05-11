@@ -4,15 +4,15 @@
 
 use std::{
     cell::RefCell,
-    fmt,
     ops::Range,
     slice::{self, ChunksExactMut},
 };
 
+use dashmap::DashMap;
 use rayon::prelude::*;
 
 use crate::{
-    painter::Style,
+    painter::LayerStyles,
     rasterizer::{search_last_by_key, CompactSegment},
     TILE_MASK, TILE_SHIFT, TILE_SIZE,
 };
@@ -58,13 +58,12 @@ pub trait Flusher: Send + Sync {
 pub struct BufferLayoutBuilder {
     width: usize,
     width_stride: usize,
-    flusher: Option<Box<dyn Flusher>>,
 }
 
 impl BufferLayoutBuilder {
     #[inline]
     pub fn new(width: usize) -> Self {
-        BufferLayoutBuilder { width, width_stride: width, flusher: None }
+        BufferLayoutBuilder { width, width_stride: width }
     }
 
     #[inline]
@@ -74,16 +73,9 @@ impl BufferLayoutBuilder {
     }
 
     #[inline]
-    pub fn set_flusher(mut self, flusher: Box<dyn Flusher>) -> Self {
-        self.flusher = Some(flusher);
-        self
-    }
-
-    #[inline]
     pub fn build(self, buffer: &mut [[u8; 4]]) -> BufferLayout {
         let width = self.width;
         let width_stride = self.width_stride;
-        let flusher = self.flusher;
 
         assert!(width <= buffer.len(), "width exceeds buffer length: {} > {}", width, buffer.len());
         assert!(
@@ -116,42 +108,25 @@ impl BufferLayoutBuilder {
             len: buffer.len(),
             layout: layout.into_iter().map(|(_, _, slice)| slice).collect(),
             row_len,
-            flusher,
         }
     }
 }
 
+#[derive(Debug)]
 pub struct BufferLayout {
     ptr: *mut [u8; 4],
     len: usize,
     layout: Vec<TileSlice>,
     row_len: usize,
-    flusher: Option<Box<dyn Flusher>>,
-}
-
-impl fmt::Debug for BufferLayout {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt.debug_struct("BufferLayout")
-            .field("ptr", &self.ptr)
-            .field("len", &self.len)
-            .field("layout", &self.layout)
-            .field("row_len", &self.row_len)
-            .field("flusher", &format_args!("{}", self.flusher.is_some()))
-            .finish()
-    }
 }
 
 impl BufferLayout {
-    fn par_tile_rows(
-        &mut self,
-        f: impl Fn(usize, ChunksExactMut<'_, TileSlice>, Option<&dyn Flusher>) + Send + Sync,
-    ) {
+    fn par_tile_rows(&mut self, f: impl Fn(usize, ChunksExactMut<'_, TileSlice>) + Send + Sync) {
         let row_len = self.row_len;
-        let flusher = self.flusher.as_ref().map(|flusher| &**flusher);
         self.layout
             .par_chunks_mut(row_len * TILE_SIZE)
             .enumerate()
-            .for_each(|(j, row)| f(j, row.chunks_exact_mut(row.len() / row_len), flusher));
+            .for_each(|(j, row)| f(j, row.chunks_exact_mut(row.len() / row_len)));
     }
 
     #[inline]
@@ -159,16 +134,16 @@ impl BufferLayout {
         buffer.as_mut_ptr() == self.ptr && buffer.len() == self.len
     }
 
-    pub fn print<F>(
+    pub fn print<S: LayerStyles>(
         &mut self,
         buffer: &mut [[u8; 4]],
+        layers_per_tile: Option<&DashMap<(usize, usize), usize>>,
+        flusher: Option<&dyn Flusher>,
         mut segments: &[CompactSegment],
         clear_color: [f32; 4],
         crop: Option<Rect>,
-        styles: F,
-    ) where
-        F: Fn(u16) -> Style + Send + Sync,
-    {
+        styles: S,
+    ) {
         if !self.same_buffer(buffer) {
             panic!(
                 "BufferLayout::print called with a different buffer than the one than the\
@@ -182,7 +157,7 @@ impl BufferLayout {
             segments = &segments[..=end];
         }
 
-        self.par_tile_rows(|j, row, flusher| {
+        self.par_tile_rows(|j, row| {
             if let Some(rect) = &crop {
                 if !rect.vertical.contains(&j) {
                     return;
@@ -202,226 +177,229 @@ impl BufferLayout {
                 }
 
                 PAINTER.with(|painter| {
-                    painter.borrow_mut().paint_tile_row(
+                    let mut painter = painter.borrow_mut();
+
+                    painter.paint_tile_row(
                         segments,
                         &styles,
                         clear_color,
+                        layers_per_tile,
                         flusher,
                         row,
                         crop.clone(),
                     );
-                    painter.borrow_mut().reset();
+                    painter.reset();
                 });
             }
         });
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
 
-    use std::{collections::HashMap, iter};
+//     use std::{collections::HashMap, iter};
 
-    use crate::{
-        painter::{BlendMode, Fill, FillRule, Style},
-        PIXEL_WIDTH,
-    };
+//     use crate::{
+//         painter::{BlendMode, Fill, FillRule, Style},
+//         PIXEL_WIDTH,
+//     };
 
-    const BLACK: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
-    const RED: [f32; 4] = [1.0, 0.0, 0.0, 1.0];
-    const GREEN: [f32; 4] = [0.0, 1.0, 0.0, 1.0];
-    const BLUE: [f32; 4] = [0.0, 0.0, 1.0, 1.0];
-    const BLACK_RGBA: [u8; 4] = [0, 0, 0, 255];
-    const RED_RGBA: [u8; 4] = [255, 0, 0, 255];
-    const GREEN_RGBA: [u8; 4] = [0, 255, 0, 255];
-    const BLUE_RGBA: [u8; 4] = [0, 0, 255, 255];
+//     const BLACK: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
+//     const RED: [f32; 4] = [1.0, 0.0, 0.0, 1.0];
+//     const GREEN: [f32; 4] = [0.0, 1.0, 0.0, 1.0];
+//     const BLUE: [f32; 4] = [0.0, 0.0, 1.0, 1.0];
+//     const BLACK_RGBA: [u8; 4] = [0, 0, 0, 255];
+//     const RED_RGBA: [u8; 4] = [255, 0, 0, 255];
+//     const GREEN_RGBA: [u8; 4] = [0, 255, 0, 255];
+//     const BLUE_RGBA: [u8; 4] = [0, 0, 255, 255];
 
-    #[test]
-    fn flusher() {
-        macro_rules! seg {
-            ( $j:expr, $i:expr ) => {
-                CompactSegment::new(0, $j, $i, 0, 0, 0, 0, 0)
-            };
-        }
+//     #[test]
+//     fn flusher() {
+//         macro_rules! seg {
+//             ( $j:expr, $i:expr ) => {
+//                 CompactSegment::new(0, $j, $i, 0, 0, 0, 0, 0)
+//             };
+//         }
 
-        struct WhiteFlusher;
+//         struct WhiteFlusher;
 
-        impl Flusher for WhiteFlusher {
-            fn flush(&self, slice: &mut [[u8; 4]]) {
-                for color in slice {
-                    *color = [255u8; 4];
-                }
-            }
-        }
+//         impl Flusher for WhiteFlusher {
+//             fn flush(&self, slice: &mut [[u8; 4]]) {
+//                 for color in slice {
+//                     *color = [255u8; 4];
+//                 }
+//             }
+//         }
 
-        let size = TILE_SIZE + TILE_SIZE / 2;
-        let mut buffer = vec![[0u8; 4]; size * size];
-        let mut buffer_layout =
-            BufferLayoutBuilder::new(size).set_flusher(Box::new(WhiteFlusher)).build(&mut buffer);
+//         let size = TILE_SIZE + TILE_SIZE / 2;
+//         let mut buffer = vec![[0u8; 4]; size * size];
+//         let mut buffer_layout =
+//             BufferLayoutBuilder::new(size).set_flusher(Box::new(WhiteFlusher)).build(&mut buffer);
 
-        buffer_layout.print(
-            &mut buffer,
-            &[seg!(0, 0), seg!(0, 1), seg!(1, 0), seg!(1, 1)],
-            [0.0; 4],
-            None,
-            |_| Style::default(),
-        );
+//         buffer_layout.print(
+//             &mut buffer,
+//             &[seg!(0, 0), seg!(0, 1), seg!(1, 0), seg!(1, 1)],
+//             [0.0; 4],
+//             None,
+//             |_| Style::default(),
+//         );
 
-        assert!(buffer.iter().all(|&color| color == [255u8; 4]));
-    }
+//         assert!(buffer.iter().all(|&color| color == [255u8; 4]));
+//     }
 
-    #[test]
-    fn skip_opaque_tiles() {
-        let mut buffer = vec![[0u8; 4]; TILE_SIZE * TILE_SIZE * 3];
-        let mut buffer_layout = BufferLayoutBuilder::new(TILE_SIZE * 3).build(&mut buffer);
+//     #[test]
+//     fn skip_opaque_tiles() {
+//         let mut buffer = vec![[0u8; 4]; TILE_SIZE * TILE_SIZE * 3];
+//         let mut buffer_layout = BufferLayoutBuilder::new(TILE_SIZE * 3).build(&mut buffer);
 
-        let mut segments = vec![];
-        for y in 0..TILE_SIZE {
-            segments.push(CompactSegment::new(
-                0,
-                0,
-                -1,
-                2,
-                y as u8,
-                TILE_SIZE as u8 - 1,
-                0,
-                PIXEL_WIDTH as i8,
-            ));
-        }
+//         let mut segments = vec![];
+//         for y in 0..TILE_SIZE {
+//             segments.push(CompactSegment::new(
+//                 0,
+//                 0,
+//                 -1,
+//                 2,
+//                 y as u8,
+//                 TILE_SIZE as u8 - 1,
+//                 0,
+//                 PIXEL_WIDTH as i8,
+//             ));
+//         }
 
-        segments.push(CompactSegment::new(
-            0,
-            0,
-            -1,
-            0,
-            0,
-            TILE_SIZE as u8 - 1,
-            0,
-            PIXEL_WIDTH as i8,
-        ));
-        segments.push(CompactSegment::new(0, 0, 0, 1, 1, 0, 0, PIXEL_WIDTH as i8));
+//         segments.push(CompactSegment::new(
+//             0,
+//             0,
+//             -1,
+//             0,
+//             0,
+//             TILE_SIZE as u8 - 1,
+//             0,
+//             PIXEL_WIDTH as i8,
+//         ));
+//         segments.push(CompactSegment::new(0, 0, 0, 1, 1, 0, 0, PIXEL_WIDTH as i8));
 
-        for y in 0..TILE_SIZE {
-            segments.push(CompactSegment::new(
-                0,
-                0,
-                1,
-                2,
-                y as u8,
-                TILE_SIZE as u8 - 1,
-                0,
-                -(PIXEL_WIDTH as i8),
-            ));
-        }
+//         for y in 0..TILE_SIZE {
+//             segments.push(CompactSegment::new(
+//                 0,
+//                 0,
+//                 1,
+//                 2,
+//                 y as u8,
+//                 TILE_SIZE as u8 - 1,
+//                 0,
+//                 -(PIXEL_WIDTH as i8),
+//             ));
+//         }
 
-        segments.sort();
+//         segments.sort();
 
-        let mut styles = HashMap::new();
+//         let mut styles = HashMap::new();
 
-        styles.insert(
-            0,
-            Style {
-                fill_rule: FillRule::NonZero,
-                fill: Fill::Solid(BLUE),
-                blend_mode: BlendMode::Over,
-            },
-        );
-        styles.insert(
-            1,
-            Style {
-                fill_rule: FillRule::NonZero,
-                fill: Fill::Solid(GREEN),
-                blend_mode: BlendMode::Over,
-            },
-        );
-        styles.insert(
-            2,
-            Style {
-                fill_rule: FillRule::NonZero,
-                fill: Fill::Solid(RED),
-                blend_mode: BlendMode::Over,
-            },
-        );
+//         styles.insert(
+//             0,
+//             Style {
+//                 fill_rule: FillRule::NonZero,
+//                 fill: Fill::Solid(BLUE),
+//                 blend_mode: BlendMode::Over,
+//             },
+//         );
+//         styles.insert(
+//             1,
+//             Style {
+//                 fill_rule: FillRule::NonZero,
+//                 fill: Fill::Solid(GREEN),
+//                 blend_mode: BlendMode::Over,
+//             },
+//         );
+//         styles.insert(
+//             2,
+//             Style {
+//                 fill_rule: FillRule::NonZero,
+//                 fill: Fill::Solid(RED),
+//                 blend_mode: BlendMode::Over,
+//             },
+//         );
 
-        buffer_layout.print(&mut buffer, &segments, BLACK, None, |layer| styles[&layer].clone());
+//         buffer_layout.print(&mut buffer, &segments, BLACK, None, |layer| styles[&layer].clone());
 
-        let tiles: Vec<_> =
-            buffer_layout.layout.iter_mut().map(|slice| slice.as_mut_slice().to_owned()).collect();
+//         let tiles: Vec<_> =
+//             buffer_layout.layout.iter_mut().map(|slice| slice.as_mut_slice().to_owned()).collect();
 
-        assert_eq!(
-            tiles,
-            // First two tiles need to be completely red.
-            iter::repeat(vec![RED_RGBA; TILE_SIZE])
-                .take(TILE_SIZE)
-                .chain(iter::repeat(vec![RED_RGBA; TILE_SIZE]).take(TILE_SIZE))
-                .chain(
-                    // The last tile contains one blue and one green line.
-                    iter::once(vec![BLUE_RGBA; TILE_SIZE])
-                        .chain(iter::once(vec![GREEN_RGBA; TILE_SIZE]))
-                        // Followed by black lines (clear color).
-                        .chain(iter::repeat(vec![BLACK_RGBA; TILE_SIZE]).take(TILE_SIZE - 2))
-                )
-                .collect::<Vec<_>>()
-        );
-    }
+//         assert_eq!(
+//             tiles,
+//             // First two tiles need to be completely red.
+//             iter::repeat(vec![RED_RGBA; TILE_SIZE])
+//                 .take(TILE_SIZE)
+//                 .chain(iter::repeat(vec![RED_RGBA; TILE_SIZE]).take(TILE_SIZE))
+//                 .chain(
+//                     // The last tile contains one blue and one green line.
+//                     iter::once(vec![BLUE_RGBA; TILE_SIZE])
+//                         .chain(iter::once(vec![GREEN_RGBA; TILE_SIZE]))
+//                         // Followed by black lines (clear color).
+//                         .chain(iter::repeat(vec![BLACK_RGBA; TILE_SIZE]).take(TILE_SIZE - 2))
+//                 )
+//                 .collect::<Vec<_>>()
+//         );
+//     }
 
-    #[test]
-    fn crop() {
-        let mut buffer = vec![[0u8; 4]; TILE_SIZE * TILE_SIZE * 9];
-        let mut buffer_layout = BufferLayoutBuilder::new(TILE_SIZE * 3).build(&mut buffer);
+//     #[test]
+//     fn crop() {
+//         let mut buffer = vec![[0u8; 4]; TILE_SIZE * TILE_SIZE * 9];
+//         let mut buffer_layout = BufferLayoutBuilder::new(TILE_SIZE * 3).build(&mut buffer);
 
-        let mut segments = vec![];
-        for j in 0..3 {
-            for y in 0..TILE_SIZE {
-                segments.push(CompactSegment::new(
-                    0,
-                    j,
-                    0,
-                    0,
-                    y as u8,
-                    TILE_SIZE as u8 - 1,
-                    0,
-                    PIXEL_WIDTH as i8,
-                ));
-            }
-        }
+//         let mut segments = vec![];
+//         for j in 0..3 {
+//             for y in 0..TILE_SIZE {
+//                 segments.push(CompactSegment::new(
+//                     0,
+//                     j,
+//                     0,
+//                     0,
+//                     y as u8,
+//                     TILE_SIZE as u8 - 1,
+//                     0,
+//                     PIXEL_WIDTH as i8,
+//                 ));
+//             }
+//         }
 
-        segments.sort();
+//         segments.sort();
 
-        let mut styles = HashMap::new();
+//         let mut styles = HashMap::new();
 
-        styles.insert(
-            0,
-            Style {
-                fill_rule: FillRule::NonZero,
-                fill: Fill::Solid(BLUE),
-                blend_mode: BlendMode::Over,
-            },
-        );
+//         styles.insert(
+//             0,
+//             Style {
+//                 fill_rule: FillRule::NonZero,
+//                 fill: Fill::Solid(BLUE),
+//                 blend_mode: BlendMode::Over,
+//             },
+//         );
 
-        buffer_layout.print(
-            &mut buffer,
-            &segments,
-            RED,
-            Some(Rect::new(TILE_SIZE..TILE_SIZE * 2 + TILE_SIZE / 2, TILE_SIZE..TILE_SIZE * 2)),
-            |layer| styles[&layer].clone(),
-        );
+//         buffer_layout.print(
+//             &mut buffer,
+//             &segments,
+//             RED,
+//             Some(Rect::new(TILE_SIZE..TILE_SIZE * 2 + TILE_SIZE / 2, TILE_SIZE..TILE_SIZE * 2)),
+//             |layer| styles[&layer].clone(),
+//         );
 
-        let tiles: Vec<_> =
-            buffer_layout.layout.iter_mut().map(|slice| slice.as_mut_slice().to_owned()).collect();
+//         let tiles: Vec<_> =
+//             buffer_layout.layout.iter_mut().map(|slice| slice.as_mut_slice().to_owned()).collect();
 
-        assert_eq!(
-            tiles,
-            // First row of tiles needs to be completely black.
-            iter::repeat(vec![[0u8; 4]; TILE_SIZE])
-                .take(TILE_SIZE * 3)
-                // Second row begins with a black tile.
-                .chain(iter::repeat(vec![[0u8; 4]; TILE_SIZE]).take(TILE_SIZE))
-                .chain(iter::repeat(vec![BLUE_RGBA; TILE_SIZE]).take(TILE_SIZE * 2))
-                // Third row of tiles needs to be completely black as well.
-                .chain(iter::repeat(vec![[0u8; 4]; TILE_SIZE]).take(TILE_SIZE * 3))
-                .collect::<Vec<_>>()
-        );
-    }
-}
+//         assert_eq!(
+//             tiles,
+//             // First row of tiles needs to be completely black.
+//             iter::repeat(vec![[0u8; 4]; TILE_SIZE])
+//                 .take(TILE_SIZE * 3)
+//                 // Second row begins with a black tile.
+//                 .chain(iter::repeat(vec![[0u8; 4]; TILE_SIZE]).take(TILE_SIZE))
+//                 .chain(iter::repeat(vec![BLUE_RGBA; TILE_SIZE]).take(TILE_SIZE * 2))
+//                 // Third row of tiles needs to be completely black as well.
+//                 .chain(iter::repeat(vec![[0u8; 4]; TILE_SIZE]).take(TILE_SIZE * 3))
+//                 .collect::<Vec<_>>()
+//         );
+//     }
+// }

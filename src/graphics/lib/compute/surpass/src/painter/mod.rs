@@ -22,6 +22,7 @@ mod style;
 use buffer_layout::TileSlice;
 pub use buffer_layout::{BufferLayout, BufferLayoutBuilder, Flusher, Rect};
 
+use dashmap::{mapref::entry::Entry, DashMap};
 pub use style::{BlendMode, Fill, FillRule, Gradient, GradientBuilder, GradientType, Style};
 
 const LAST_BYTE_MASK: i32 = 0b1111_1111;
@@ -121,6 +122,24 @@ fn to_bytes(color: [f32; 4]) -> [u8; 4] {
         to_byte(linear_to_srgb_approx(color[2] * alpha_recip)),
         to_byte(color[3]),
     ]
+}
+
+pub trait LayerStyles: Send + Sync {
+    fn get(&self, layer: u16) -> Style;
+    fn is_unchanged(&self, layer: u16) -> bool;
+}
+
+impl<F> LayerStyles for F
+where
+    F: Fn(u16) -> Style + Send + Sync,
+{
+    fn get(&self, layer: u16) -> Style {
+        self(layer)
+    }
+
+    fn is_unchanged(&self, _: u16) -> bool {
+        false
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -311,15 +330,13 @@ impl Painter {
         }
     }
 
-    pub fn paint_tile<F>(
+    pub fn paint_tile<S: LayerStyles>(
         &mut self,
         tile_i: usize,
         tile_j: usize,
         segments: &[CompactSegment],
-        styles: &F,
-    ) where
-        F: Fn(u16) -> Style + Send + Sync,
-    {
+        styles: &S,
+    ) {
         let mut i = 0;
 
         self.next_queue.clear();
@@ -348,21 +365,18 @@ impl Painter {
                 });
             }
 
-            let covers = self.paint_layer(tile_i, tile_j, &styles(layer));
+            let covers = self.paint_layer(tile_i, tile_j, &styles.get(layer));
             if covers.iter().any(|&cover| !cover.eq(i8x16::splat(0)).all()) {
                 self.next_queue.push_back(CoverCarry { covers, layer });
             }
         }
     }
 
-    fn top_carry_layer_solid_opaque<F>(
+    fn top_carry_layer_solid_opaque<S: LayerStyles>(
         &mut self,
         segments: &[CompactSegment],
-        styles: &F,
-    ) -> Option<[f32; 4]>
-    where
-        F: Fn(u16) -> Style + Send + Sync,
-    {
+        styles: &S,
+    ) -> Option<[f32; 4]> {
         let top_carry_layer = self
             .queue
             .back()
@@ -380,7 +394,7 @@ impl Painter {
             }
         }
 
-        match styles(top_carry_layer).fill {
+        match styles.get(top_carry_layer).fill {
             Fill::Solid(color) => {
                 if color[3] < 1.0 {
                     return None;
@@ -431,6 +445,54 @@ impl Painter {
         }
     }
 
+    fn is_unchanged<S: LayerStyles>(
+        &mut self,
+        mut entry: Entry<'_, (usize, usize), usize>,
+        segments: &[CompactSegment],
+        styles: &S,
+    ) -> bool {
+        let queue_layers = self.queue.len();
+
+        fn reduce_layers_is_unchanged<S: LayerStyles>(
+            segments: &[CompactSegment],
+            styles: &S,
+        ) -> (usize, bool) {
+            let first_layer = segments.first().map(|s| s.layer());
+            let last_layer = segments.last().map(|s| s.layer());
+
+            if first_layer == last_layer {
+                return (
+                    if first_layer.is_some() { 1 } else { 0 },
+                    first_layer.map(|l| styles.is_unchanged(l)).unwrap_or(true),
+                );
+            }
+
+            let mid = segments.len() / 2;
+
+            let left = reduce_layers_is_unchanged(&segments[..mid], styles);
+            let right = reduce_layers_is_unchanged(&segments[mid..], styles);
+
+            (left.0 + right.0, left.1 && right.1)
+        }
+
+        let (segment_layers, is_unchanged) = reduce_layers_is_unchanged(segments, styles);
+
+        let total_layers = queue_layers + segment_layers;
+        let is_unchanged = is_unchanged
+            & self.queue.iter().all(|cover_carry| styles.is_unchanged(cover_carry.layer));
+
+        match entry {
+            Entry::Occupied(ref mut occupied) => {
+                let old_layers = mem::replace(occupied.get_mut(), total_layers);
+                old_layers == total_layers && is_unchanged
+            }
+            Entry::Vacant(vacant) => {
+                vacant.insert(total_layers);
+                false
+            }
+        }
+    }
+
     fn compute_srgb(&mut self) {
         for (channel, alpha) in self.c0.iter_mut().zip(self.alpha.iter()) {
             *channel = (linear_to_srgb_approx_simd(*channel) * *alpha) * f32x8::splat(255.0);
@@ -468,17 +530,30 @@ impl Painter {
         }
     }
 
-    pub fn paint_tile_row<F>(
+    pub fn paint_tile_row<S: LayerStyles>(
         &mut self,
         mut segments: &[CompactSegment],
-        styles: F,
+        styles: &S,
         clear_color: [f32; 4],
+        layers_per_tile: Option<&DashMap<(usize, usize), usize>>,
         flusher: Option<&dyn Flusher>,
         row: ChunksExactMut<'_, TileSlice>,
         crop: Option<Rect>,
-    ) where
-        F: Fn(u16) -> Style + Send + Sync,
-    {
+    ) {
+        fn acc_covers(
+            segments: &[CompactSegment],
+            covers: &mut BTreeMap<u16, [i8x16; TILE_SIZE / 16]>,
+        ) {
+            for segment in segments {
+                let covers = covers
+                    .entry(segment.layer())
+                    .or_insert_with(|| [i8x16::splat(0); TILE_SIZE / 16]);
+
+                let covers: &mut [i8; TILE_SIZE] = unsafe { mem::transmute(covers) };
+                covers[segment.tile_y() as usize] += segment.cover();
+            }
+        }
+
         let j = segments[0].tile_j() as usize;
 
         let mut covers_left_of_row: BTreeMap<u16, [i8x16; TILE_SIZE / 16]> = BTreeMap::new();
@@ -491,21 +566,15 @@ impl Painter {
             if let Ok(i) = query {
                 let i = i + 1;
 
-                for segment in match limit {
-                    Some(_) => &segments[..i],
-                    None => &segments[i..],
-                } {
-                    let covers = covers_left_of_row
-                        .entry(segment.layer())
-                        .or_insert_with(|| [i8x16::splat(0); TILE_SIZE / 16]);
-
-                    let covers: &mut [i8; TILE_SIZE] = unsafe { mem::transmute(covers) };
-                    covers[segment.tile_y() as usize] += segment.cover();
-                }
-
                 match limit {
-                    Some(_) => segments = &segments[i..],
-                    None => segments = &segments[..i],
+                    Some(_) => {
+                        acc_covers(&segments[..i], &mut covers_left_of_row);
+                        segments = &segments[i..];
+                    }
+                    None => {
+                        acc_covers(&segments[i..], &mut covers_left_of_row);
+                        segments = &segments[..i];
+                    }
                 }
             }
         };
@@ -519,7 +588,9 @@ impl Painter {
         }
 
         for (layer, covers) in covers_left_of_row {
-            self.queue.push_back(CoverCarry { covers, layer });
+            if covers.iter().any(|&cover| !cover.eq(i8x16::splat(0)).all()) {
+                self.queue.push_back(CoverCarry { covers, layer });
+            }
         }
 
         for (i, tile) in row.enumerate() {
@@ -539,8 +610,29 @@ impl Painter {
                     .unwrap_or(&[]);
             let tile_len = tile.len();
 
-            if !current_segments.is_empty() || !self.queue.is_empty() {
-                if let Some(color) = self.top_carry_layer_solid_opaque(current_segments, &styles) {
+            let is_unchanged = layers_per_tile
+                .map(|layers_per_tile| {
+                    self.is_unchanged(layers_per_tile.entry((i, j)), current_segments, styles)
+                })
+                .unwrap_or_default();
+
+            if current_segments.is_empty() && self.queue.is_empty() {
+                if !is_unchanged {
+                    let tile_color = to_bytes(clear_color);
+
+                    for slice in tile.iter_mut().take(tile_len) {
+                        let slice = slice.as_mut_slice();
+                        for color in slice.iter_mut() {
+                            *color = tile_color;
+                        }
+                    }
+                }
+
+                continue;
+            }
+
+            if !is_unchanged {
+                if let Some(color) = self.top_carry_layer_solid_opaque(current_segments, styles) {
                     let tile_color = to_bytes(color);
 
                     for slice in tile.iter_mut().take(tile_len) {
@@ -552,7 +644,7 @@ impl Painter {
                 } else {
                     self.clear(clear_color);
 
-                    self.paint_tile(i, j, current_segments, &styles);
+                    self.paint_tile(i, j, current_segments, styles);
                     self.compute_srgb();
 
                     let srgb: &[[u8; 4]] = unsafe {
@@ -570,8 +662,6 @@ impl Painter {
                     }
                 }
 
-                mem::swap(&mut self.queue, &mut self.next_queue);
-
                 if let Some(flusher) = flusher {
                     for slice in tile.iter_mut().take(tile_len) {
                         let slice = slice.as_mut_slice();
@@ -582,7 +672,29 @@ impl Painter {
                         });
                     }
                 }
+            } else {
+                let mut covers = BTreeMap::new();
+
+                acc_covers(current_segments, &mut covers);
+
+                for cover_carry in self.queue.drain(..) {
+                    let covers = covers
+                        .entry(cover_carry.layer)
+                        .or_insert_with(|| [i8x16::splat(0); TILE_SIZE / 16]);
+
+                    for (dst, src) in covers.iter_mut().zip(cover_carry.covers.iter()) {
+                        *dst += *src;
+                    }
+                }
+
+                for (layer, covers) in covers {
+                    if covers.iter().any(|&cover| !cover.eq(i8x16::splat(0)).all()) {
+                        self.next_queue.push_back(CoverCarry { covers, layer });
+                    }
+                }
             }
+
+            mem::swap(&mut self.queue, &mut self.next_queue);
         }
     }
 }

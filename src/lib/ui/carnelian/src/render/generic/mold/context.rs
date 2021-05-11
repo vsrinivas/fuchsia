@@ -317,7 +317,8 @@ impl Context<Mold> for MoldContext {
 
     fn new_image(&mut self, size: Size2D<u32>) -> MoldImage {
         let image = MoldImage(self.images.len());
-        self.images.push(RefCell::new(VmoImage::new(size.width, size.height)));
+        let buffer_layer_cache = self.composition.create_buffer_layer_cache();
+        self.images.push(RefCell::new(VmoImage::new(size.width, size.height, buffer_layer_cache)));
 
         image
     }
@@ -327,7 +328,8 @@ impl Context<Mold> for MoldContext {
         reader: &mut png::Reader<R>,
     ) -> Result<MoldImage, Error> {
         let image = MoldImage(self.images.len());
-        self.images.push(RefCell::new(VmoImage::from_png(reader)?));
+        let buffer_layer_cache = self.composition.create_buffer_layer_cache();
+        self.images.push(RefCell::new(VmoImage::from_png(reader, buffer_layer_cache)?));
 
         Ok(image)
     }
@@ -337,14 +339,17 @@ impl Context<Mold> for MoldContext {
         let images = &mut self.images;
         let width = self.size.width;
         let height = self.size.height;
+        let composition = &mut self.composition;
 
         let index = self.index_map.entry(image_index).or_insert_with(|| {
             let index = images.len();
+            let buffer_layer_cache = composition.create_buffer_layer_cache();
             images.push(RefCell::new(VmoImage::from_buffer_collection(
                 buffer_collection,
                 width,
                 height,
                 image_index,
+                buffer_layer_cache,
             )));
 
             index

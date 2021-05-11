@@ -2,17 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use std::{cell::RefCell, rc::Rc};
+
 use rustc_hash::FxHashMap;
 use surpass::{
     self,
-    painter::{BufferLayout, Rect},
+    painter::{BufferLayout, LayerStyles, Rect, Style},
     rasterizer::{self, Rasterizer},
     LinesBuilder,
 };
 
 use crate::{
-    buffer::Buffer,
-    layer::{Layer, LayerId, LayerIdSet},
+    buffer::{Buffer, BufferLayerCache},
+    layer::{Layer, LayerId, LayerIdSet, SmallBitSet},
     path::{Path, PathSegments},
 };
 
@@ -33,6 +35,7 @@ pub struct Composition {
     layer_ids: LayerIdSet,
     orders_to_layers: FxHashMap<u16, u16>,
     layouts: FxHashMap<(*mut [u8; 4], usize), BufferLayout>,
+    buffers_with_caches: Rc<RefCell<SmallBitSet>>,
 }
 
 impl Composition {
@@ -45,6 +48,7 @@ impl Composition {
             layer_ids: LayerIdSet::new(),
             orders_to_layers: FxHashMap::default(),
             layouts: FxHashMap::default(),
+            buffers_with_caches: Rc::new(RefCell::new(SmallBitSet::default())),
         }
     }
 
@@ -142,6 +146,15 @@ impl Composition {
         }
     }
 
+    #[inline]
+    pub fn create_buffer_layer_cache(&mut self) -> Option<BufferLayerCache> {
+        self.buffers_with_caches.borrow_mut().first_empty_slot().map(|id| BufferLayerCache {
+            id,
+            layers_per_tile: Default::default(),
+            buffers_with_caches: Rc::downgrade(&self.buffers_with_caches),
+        })
+    }
+
     pub fn render(
         &mut self,
         mut buffer: Buffer<'_>,
@@ -168,6 +181,49 @@ impl Composition {
         let orders_to_layers = &self.orders_to_layers;
         let rasterizer = &mut self.rasterizer;
 
+        struct CompositionContext<'l> {
+            layers: &'l FxHashMap<u16, Layer>,
+            orders_to_layers: &'l FxHashMap<u16, u16>,
+            cache_id: Option<u8>,
+        }
+
+        impl LayerStyles for CompositionContext<'_> {
+            #[inline]
+            fn get(&self, layer: u16) -> Style {
+                let layer_id = self
+                    .orders_to_layers
+                    .get(&layer)
+                    .expect("orders_to_layers was not populated in Composition::render");
+                self.layers
+                    .get(layer_id)
+                    .map(|layer| layer.style().clone())
+                    .expect("orders_to_layers points to non-existant Layer")
+            }
+
+            #[inline]
+            fn is_unchanged(&self, layer: u16) -> bool {
+                match self.cache_id {
+                    None => return false,
+                    Some(cache_id) => {
+                        let layer_id = self
+                            .orders_to_layers
+                            .get(&layer)
+                            .expect("orders_to_layers was not populated in Composition::render");
+                        self.layers
+                            .get(layer_id)
+                            .map(|layer| layer.is_unchanged(cache_id))
+                            .expect("orders_to_layers points to non-existant Layer")
+                    }
+                }
+            }
+        }
+
+        let context = CompositionContext {
+            layers,
+            orders_to_layers,
+            cache_id: buffer.layer_cache.as_ref().map(|cache| cache.id),
+        };
+
         take_builder!(self, |builder: LinesBuilder| {
             let lines =
                 builder.build(|layer_id| layers.get(&layer_id).map(|layer| layer.inner.clone()));
@@ -182,18 +238,24 @@ impl Composition {
                 .unwrap_or(0);
             let segments = rasterizer.segments().get(0..=last_segment).unwrap_or(&[]);
 
-            layout.print(&mut buffer.buffer, segments, background_color, crop, |order| {
-                let layer_id = orders_to_layers
-                    .get(&order)
-                    .expect("orders_to_layers was not populated in Composition::render");
-                layers
-                    .get(layer_id)
-                    .map(|layer| layer.style().clone())
-                    .expect("orders_to_layers points to non-existant Layer")
-            });
+            layout.print(
+                &mut buffer.buffer,
+                buffer.layer_cache.as_ref().map(|cache| &*cache.layers_per_tile),
+                buffer.flusher.as_ref().map(|flusher| &**flusher),
+                segments,
+                background_color,
+                crop,
+                context,
+            );
 
             lines.unwrap()
         });
+
+        if let Some(buffer_layer_cache) = buffer.layer_cache {
+            for layer in self.layers.values_mut() {
+                layer.set_is_unchanged(buffer_layer_cache.id, layer.inner.is_enabled);
+            }
+        }
     }
 }
 
@@ -201,8 +263,12 @@ impl Composition {
 mod tests {
     use super::*;
 
+    use surpass::TILE_SIZE;
+
     use crate::{Fill, Point, Style};
 
+    const BLACK: [u8; 4] = [0x00, 0x0, 0x00, 0xFF];
+    const BLACKF: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
     const RED: [u8; 4] = [0xFF, 0x0, 0x00, 0xFF];
     const REDF: [f32; 4] = [1.0, 0.0, 0.0, 1.0];
     const GREEN: [u8; 4] = [0x00, 0xFF, 0x00, 0xFF];
@@ -392,5 +458,197 @@ mod tests {
         composition.get_mut(layer_id).unwrap().disable();
 
         assert_eq!(composition.actual_len(), 0);
+    }
+
+    #[test]
+    fn render_change_layers_only() {
+        let mut buffer = [BLACK; 3 * TILE_SIZE * TILE_SIZE];
+        let mut composition = Composition::new();
+        let layer_cache = composition.create_buffer_layer_cache();
+
+        let layer_id = composition.create_layer().unwrap();
+        composition
+            .insert_in_layer(layer_id, &pixel_path(0, 0))
+            .set_style(Style { fill: Fill::Solid(REDF), ..Default::default() });
+        composition.insert_in_layer(layer_id, &pixel_path(TILE_SIZE as i32, 0));
+
+        let layer_id = composition.create_layer().unwrap();
+        composition
+            .insert_in_layer(layer_id, &pixel_path(TILE_SIZE as i32 + 1, 0))
+            .set_style(Style { fill: Fill::Solid(GREENF), ..Default::default() });
+        composition.insert_in_layer(layer_id, &pixel_path(2 * TILE_SIZE as i32, 0));
+
+        composition.render(
+            Buffer {
+                buffer: &mut buffer,
+                width: 3 * TILE_SIZE,
+                layer_cache: layer_cache.clone(),
+                ..Default::default()
+            },
+            BLACKF,
+            None,
+        );
+
+        assert_eq!(buffer[0], RED);
+        assert_eq!(buffer[TILE_SIZE], RED);
+        assert_eq!(buffer[TILE_SIZE + 1], GREEN);
+        assert_eq!(buffer[2 * TILE_SIZE], GREEN);
+
+        buffer.fill(BLACK);
+
+        composition
+            .get_mut(layer_id)
+            .unwrap()
+            .set_style(Style { fill: Fill::Solid(REDF), ..Default::default() });
+
+        composition.render(
+            Buffer {
+                buffer: &mut buffer,
+                width: 3 * TILE_SIZE,
+                layer_cache: layer_cache.clone(),
+                ..Default::default()
+            },
+            BLACKF,
+            None,
+        );
+
+        assert_eq!(buffer[0], BLACK);
+        assert_eq!(buffer[TILE_SIZE], RED);
+        assert_eq!(buffer[TILE_SIZE + 1], RED);
+        assert_eq!(buffer[2 * TILE_SIZE], RED);
+    }
+
+    #[test]
+    fn clear_emptied_tiles() {
+        let mut buffer = [BLACK; 2 * TILE_SIZE * TILE_SIZE];
+        let mut composition = Composition::new();
+        let layer_cache = composition.create_buffer_layer_cache();
+
+        let layer_id = composition.create_layer().unwrap();
+        composition
+            .insert_in_layer(layer_id, &pixel_path(0, 0))
+            .set_style(Style { fill: Fill::Solid(REDF), ..Default::default() });
+        composition.insert_in_layer(layer_id, &pixel_path(TILE_SIZE as i32, 0));
+
+        composition.render(
+            Buffer {
+                buffer: &mut buffer,
+                width: 2 * TILE_SIZE,
+                layer_cache: layer_cache.clone(),
+                ..Default::default()
+            },
+            BLACKF,
+            None,
+        );
+
+        assert_eq!(buffer[0], RED);
+
+        composition.get_mut(layer_id).unwrap().set_transform(&[
+            1.0,
+            0.0,
+            0.0,
+            1.0,
+            TILE_SIZE as f32,
+            0.0,
+        ]);
+
+        composition.render(
+            Buffer {
+                buffer: &mut buffer,
+                width: 2 * TILE_SIZE,
+                layer_cache: layer_cache.clone(),
+                ..Default::default()
+            },
+            BLACKF,
+            None,
+        );
+
+        assert_eq!(buffer[0], BLACK);
+    }
+
+    #[test]
+    fn separare_layer_caches() {
+        let mut buffer = [BLACK; TILE_SIZE * TILE_SIZE];
+        let mut composition = Composition::new();
+        let layer_cache0 = composition.create_buffer_layer_cache();
+        let layer_cache1 = composition.create_buffer_layer_cache();
+
+        let layer_id = composition.create_layer().unwrap();
+        composition
+            .insert_in_layer(layer_id, &pixel_path(0, 0))
+            .set_style(Style { fill: Fill::Solid(REDF), ..Default::default() });
+
+        composition.render(
+            Buffer {
+                buffer: &mut buffer,
+                width: TILE_SIZE,
+                layer_cache: layer_cache0.clone(),
+                ..Default::default()
+            },
+            BLACKF,
+            None,
+        );
+
+        assert_eq!(buffer[0], RED);
+
+        buffer.fill(BLACK);
+
+        composition.render(
+            Buffer {
+                buffer: &mut buffer,
+                width: TILE_SIZE,
+                layer_cache: layer_cache0.clone(),
+                ..Default::default()
+            },
+            BLACKF,
+            None,
+        );
+
+        assert_eq!(buffer[0], BLACK);
+
+        composition.render(
+            Buffer {
+                buffer: &mut buffer,
+                width: TILE_SIZE,
+                layer_cache: layer_cache1.clone(),
+                ..Default::default()
+            },
+            BLACKF,
+            None,
+        );
+
+        assert_eq!(buffer[0], RED);
+
+        composition.get_mut(layer_id).unwrap().set_transform(&[1.0, 0.0, 0.0, 1.0, 1.0, 0.0]);
+
+        composition.render(
+            Buffer {
+                buffer: &mut buffer,
+                width: TILE_SIZE,
+                layer_cache: layer_cache0.clone(),
+                ..Default::default()
+            },
+            BLACKF,
+            None,
+        );
+
+        assert_eq!(buffer[0], BLACK);
+        assert_eq!(buffer[1], RED);
+
+        buffer.fill(BLACK);
+
+        composition.render(
+            Buffer {
+                buffer: &mut buffer,
+                width: TILE_SIZE,
+                layer_cache: layer_cache1.clone(),
+                ..Default::default()
+            },
+            BLACKF,
+            None,
+        );
+
+        assert_eq!(buffer[0], BLACK);
+        assert_eq!(buffer[1], RED);
     }
 }

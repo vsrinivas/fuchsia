@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{u16, u64};
+use std::mem;
 
 use surpass;
 
 use crate::Style;
 
 const IDENTITY: &[f32; 6] = &[1.0, 0.0, 0.0, 1.0, 0.0, 0.0];
-const MAX_LAYER: usize = u16::max_value() as usize;
+const MAX_LAYER: usize = u16::MAX as usize;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct LayerId(pub(crate) u16);
@@ -97,10 +97,54 @@ impl LayerIdSet {
     }
 }
 
+type Container = u32;
+
+#[derive(Clone, Copy, Debug, Default)]
+pub struct SmallBitSet {
+    bit_set: Container,
+}
+
+impl SmallBitSet {
+    pub fn clear(&mut self) {
+        self.bit_set = 0;
+    }
+
+    pub const fn contains(&self, val: &u8) -> bool {
+        (self.bit_set >> *val as Container) & 0b1 != 0
+    }
+
+    pub fn insert(&mut self, val: u8) -> bool {
+        if val as usize >= mem::size_of_val(&self.bit_set) * 8 {
+            return false;
+        }
+
+        self.bit_set |= 0b1 << val as Container;
+
+        true
+    }
+
+    pub fn remove(&mut self, val: u8) -> bool {
+        if val as usize >= mem::size_of_val(&self.bit_set) * 8 {
+            return false;
+        }
+
+        self.bit_set &= !(0b1 << val as Container);
+
+        true
+    }
+
+    pub fn first_empty_slot(&mut self) -> Option<u8> {
+        let slot = self.bit_set.trailing_ones() as u8;
+
+        self.insert(slot).then(|| slot)
+    }
+}
+
 #[derive(Debug, Default)]
 pub struct Layer {
     pub(crate) inner: surpass::Layer,
     style: Style,
+    pub(crate) is_unchanged: SmallBitSet,
     pub(crate) len: usize,
 }
 
@@ -135,17 +179,23 @@ impl Layer {
 
     #[inline]
     pub fn set_transform(&mut self, transform: &[f32; 6]) -> &mut Self {
-        if transform == IDENTITY {
-            self.inner.affine_transform = None;
+        let affine_transform = if transform == IDENTITY {
+            None
+        } else {
+            if transform[0] * transform[0] + transform[2] * transform[2] > 1.001
+                || transform[1] * transform[1] + transform[3] * transform[3] > 1.001
+            {
+                panic!("Layer's scaling on each axis must be between -1.0 and 1.0");
+            }
+
+            Some(*transform)
+        };
+
+        if self.inner.affine_transform != affine_transform {
+            self.is_unchanged.clear();
+            self.inner.affine_transform = affine_transform;
         }
 
-        if transform[0] * transform[0] + transform[2] * transform[2] > 1.0
-            || transform[2] * transform[2] + transform[3] * transform[3] > 1.0
-        {
-            panic!("Layer's scaling on each axis must be between -1.0 and 1.0");
-        }
-
-        self.inner.affine_transform = Some(*transform);
         self
     }
 
@@ -156,7 +206,11 @@ impl Layer {
 
     #[inline]
     pub fn set_order(&mut self, order: u16) -> &mut Self {
-        self.inner.order = Some(order);
+        if self.inner.order != Some(order) {
+            self.is_unchanged.clear();
+            self.inner.order = Some(order);
+        }
+
         self
     }
 
@@ -167,8 +221,24 @@ impl Layer {
 
     #[inline]
     pub fn set_style(&mut self, style: Style) -> &mut Self {
-        self.style = style;
+        if self.style != style {
+            self.is_unchanged.clear();
+            self.style = style;
+        }
+
         self
+    }
+
+    pub(crate) fn is_unchanged(&self, cache_id: u8) -> bool {
+        self.is_unchanged.contains(&cache_id)
+    }
+
+    pub(crate) fn set_is_unchanged(&mut self, cache_id: u8, is_unchanged: bool) -> bool {
+        if is_unchanged {
+            self.is_unchanged.insert(cache_id)
+        } else {
+            self.is_unchanged.remove(cache_id)
+        }
     }
 }
 

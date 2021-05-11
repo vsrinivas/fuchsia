@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use crate::simd::f32x8;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum FillRule {
     NonZero,
     EvenOdd,
@@ -18,7 +18,7 @@ impl Default for FillRule {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum GradientType {
     Linear,
     Radial,
@@ -79,7 +79,7 @@ impl GradientBuilder {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Gradient {
     r#type: GradientType,
     start: [f32; 2],
@@ -167,7 +167,7 @@ impl Gradient {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Fill {
     Solid([f32; 4]),
     Gradient(Gradient),
@@ -179,7 +179,7 @@ impl Default for Fill {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum BlendMode {
     Over,
     Multiply,
@@ -331,7 +331,7 @@ impl Default for BlendMode {
     }
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct Style {
     pub fill_rule: FillRule,
     pub fill: Fill,
