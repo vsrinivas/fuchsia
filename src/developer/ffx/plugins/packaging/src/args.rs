@@ -68,11 +68,11 @@ pub struct ImportCommand {
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "download", description = "download Package from TUF package server.")]
 pub struct DownloadCommand {
-    #[argh(positional, description = "hostname of TUF repository")]
-    pub tuf_hostname: String,
+    #[argh(positional, description = "URL of TUF repository")]
+    pub tuf_url: String,
 
-    #[argh(positional, description = "hostname of Blobs Server")]
-    pub blob_hostname: String,
+    #[argh(positional, description = "URL of Blobs Server")]
+    pub blob_url: String,
 
     #[argh(positional, description = "target_path")]
     pub target_path: String,

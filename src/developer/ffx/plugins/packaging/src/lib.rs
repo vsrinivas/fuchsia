@@ -130,7 +130,7 @@ fn write_depfile(depfile: String, output_file: String, deps: Vec<String>) -> Res
 }
 
 async fn cmd_package_download(cmd: DownloadCommand) -> Result<()> {
-    package_download(cmd.tuf_hostname, cmd.blob_hostname, cmd.target_path, cmd.output_path).await?;
+    package_download(cmd.tuf_url, cmd.blob_url, cmd.target_path, cmd.output_path).await?;
     Ok(())
 }
 

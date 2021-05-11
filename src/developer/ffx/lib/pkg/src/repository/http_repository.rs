@@ -20,22 +20,22 @@ use std::sync::Arc;
 
 /// Download a package from a TUF repo.
 ///
-/// `tuf_hostname`: The host name of the TUF repo.
-/// `blob_hostname`: Host name of Blobs Server.
+/// `tuf_url`: The URL of the TUF repo.
+/// `blob_url`: URL of Blobs Server.
 /// `target_path`: Target path for the package to download.
 /// `output_path`: Local path to save the downloaded package.
 pub async fn package_download(
-    tuf_hostname: String,
-    blob_hostname: String,
+    tuf_url: String,
+    blob_url: String,
     target_path: String,
     output_path: PathBuf,
 ) -> Result<()> {
     let client = Arc::new(new_https_client());
 
     // TODO(fxb/75396): Use rust-tuf to find the merkle for the package path
-    let merkle = read_meta_far_merkle(tuf_hostname, &client, target_path).await?;
+    let merkle = read_meta_far_merkle(tuf_url, &client, target_path).await?;
 
-    let uri = format!("https://{}/{}", blob_hostname, merkle).parse::<Uri>()?;
+    let uri = format!("{}/{}", blob_url, merkle).parse::<Uri>()?;
     if !output_path.exists() {
         async_fs::create_dir_all(&output_path).await?;
     }
@@ -54,7 +54,7 @@ pub async fn package_download(
         fuchsia_pkg::MetaContents::deserialize(meta_contents.as_slice())?.into_contents();
     let mut tasks = Vec::new();
     for hash in meta_contents.values() {
-        let uri = format!("https://{}/{}", blob_hostname, hash).parse::<Uri>()?;
+        let uri = format!("{}/{}", blob_url, hash).parse::<Uri>()?;
         let blob_path = output_path.join(&hash.to_string());
         let client = Arc::clone(&client);
         tasks.push(async move { download_file_to_destination(uri, &client, blob_path).await });
@@ -65,15 +65,15 @@ pub async fn package_download(
 
 /// Check if the merkle of downloaded meta.far matches the merkle in targets.json
 ///
-/// `tuf_hostname`: The host name of the TUF repo.
+/// `tuf_url`: The URL of the TUF repo.
 /// `client`: Https Client used to make request.
 /// `target_path`: target path of package on TUF repo.
 async fn read_meta_far_merkle(
-    tuf_hostname: String,
+    tuf_url: String,
     client: &HttpsClient,
     target_path: String,
 ) -> Result<String> {
-    let uri = format!("https://{}/targets.json", tuf_hostname).parse::<Uri>()?;
+    let uri = format!("{}/targets.json", tuf_url).parse::<Uri>()?;
     let dir = tempfile::tempdir()?;
     let path = dir.path().join("targets.json");
 
