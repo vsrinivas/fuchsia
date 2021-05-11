@@ -104,7 +104,11 @@ Fuchsia:
   <tr>
    <td><a href="https://groups.google.com/a/fuchsia.dev/g/component-framework-dev">component-framework-dev</a>
    </td>
-   <td>For conversation about <a href="/docs/glossary.md#component-framework">Component Framework</a>.
+   <td>For conversation about <a href="/docs/glossary.md#component-framework">Component Framework</a>,
+     <a href="/docs/glossary.md#session-framework">Session Framework</a>, and
+     <a href="/docs/concepts/modular/overview.md">Modular</a>.
+   </td>
+  </tr>
    </td>
   </tr>
   <tr>
@@ -174,12 +178,6 @@ Fuchsia:
    <td><a href="https://groups.google.com/a/fuchsia.dev/g/security-dev">security-dev</a>
    </td>
    <td>For conversation about Fuchsia’s security architecture.
-   </td>
-  </tr>
-  <tr>
-   <td><a href="https://groups.google.com/a/fuchsia.dev/g/session-framework-dev">session-framework-dev</a>
-   </td>
-   <td>For conversation about <a href="/docs/glossary.md#session-framework">Session Framework</a>.
    </td>
   </tr>
   <tr>
