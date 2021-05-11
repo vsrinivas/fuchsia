@@ -21,6 +21,9 @@ namespace {
 // TODO(fxbug.dev/71344): We shouldn't need to provide the display controller with a pixel format.
 const zx_pixel_format_t kDefaultImageFormat = ZX_PIXEL_FORMAT_ARGB_8888;
 
+// Debugging color used to highlight images that have gone through the GPU rendering path.
+const std::array<float, 4> kDebugColor = {0.9, 0.5, 0.5, 1};
+
 // TODO(fxbug.dev/71410): Remove all references to zx_pixel_format_t.
 fuchsia::sysmem::PixelFormatType ConvertZirconFormatToSysmemFormat(zx_pixel_format_t format) {
   switch (format) {
@@ -357,9 +360,20 @@ void DisplayCompositor::RenderFrame(const std::vector<RenderData>& render_data_l
       event_data.wait_event.signal(ZX_EVENT_SIGNALED, 0);
       event_data.signal_event.signal(ZX_EVENT_SIGNALED, 0);
 
+      // Apply the debugging color to the images.
+      auto images = data.images;
+#ifdef VISUAL_DEBUGGING_ENABLED
+      for (auto& image : images) {
+        image.multiply_color[0] *= kDebugColor[0];
+        image.multiply_color[1] *= kDebugColor[1];
+        image.multiply_color[2] *= kDebugColor[2];
+        image.multiply_color[3] *= kDebugColor[3];
+      }
+#endif  // VISUAL_DEBUGGIN_ENABLED
+
       std::vector<zx::event> render_fences;
       render_fences.push_back(std::move(event_data.wait_event));
-      renderer_->Render(render_target, data.rectangles, data.images, render_fences);
+      renderer_->Render(render_target, data.rectangles, images, render_fences);
       curr_vmo = (curr_vmo + 1) % display_engine_data.vmo_count;
       event_data.wait_event = std::move(render_fences[0]);
 

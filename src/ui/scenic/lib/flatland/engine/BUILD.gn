@@ -2,6 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//src/ui/scenic/lib/flatland/engine/build_args.gni")
+
+config("engine_config") {
+  defines = []
+  if (flatland_visual_debugging) {
+    defines += [ "VISUAL_DEBUGGING_ENABLED" ]
+  }
+}
+
 source_set("engine") {
   sources = [
     "display_compositor.cc",
@@ -19,4 +28,6 @@ source_set("engine") {
     "//src/ui/scenic/lib/flatland/renderer",
     "//src/ui/scenic/lib/scheduling:frame_scheduler_interface",
   ]
+
+  public_configs = [ ":engine_config" ]
 }
