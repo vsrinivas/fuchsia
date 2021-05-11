@@ -123,11 +123,15 @@ table ImageProperties {
 
 /// A user-defined identifier for a particular transform. See CreateTransform() and
 /// ReleaseTransform() for more information.
-alias TransformId = uint64;
+struct TransformId {
+    uint64 value;
+};
 
 /// A user-defined identifier for a particular piece of Content. See Content creation functions
 /// (e.g. CreateLink(), CreateImage()) for more information.
-alias ContentId = uint64;
+struct ContentId {
+    uint64 value;
+};
 
 // A maximum of 16 fences is enough for the current usage of these APIs.
 const int32 MAX_ACQUIRE_RELEASE_FENCE_COUNT = 16;

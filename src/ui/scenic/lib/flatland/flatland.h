@@ -41,10 +41,10 @@ namespace flatland {
 // provide a platform for features to be iterated and implemented over time.
 class Flatland : public fuchsia::ui::scenic::internal::Flatland {
  public:
-  using TransformId = uint64_t;
   using BufferCollectionId = uint64_t;
-  using ContentId = uint64_t;
+  using ContentId = fuchsia::ui::scenic::internal::ContentId;
   using FuturePresentationInfos = std::vector<fuchsia::scenic::scheduling::PresentationInfo>;
+  using TransformId = fuchsia::ui::scenic::internal::TransformId;
 
   // Binds this Flatland object to serve |request| on |dispatcher|. The |destroy_instance_function|
   // will be invoked from the Looper that owns |dispatcher| when this object is ready to be cleaned
@@ -155,8 +155,8 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // run on |dispatcher_|.
   fidl::Binding<fuchsia::ui::scenic::internal::Flatland> binding_;
 
-  // Users are not allowed to use zero as a transform ID.
-  static constexpr TransformId kInvalidId = 0;
+  // Users are not allowed to use zero as a TransformId or ContentId.
+  static constexpr uint64_t kInvalidId = 0;
 
   // The unique SessionId for this Flatland instance. Used to schedule Presents and register
   // UberStructs with the UberStructSystem.
@@ -206,7 +206,7 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // A map from user-generated ID to global handle. This map constitutes the set of transforms that
   // can be referenced by the user through method calls. Keep in mind that additional transforms may
   // be kept alive through child references.
-  std::unordered_map<TransformId, TransformHandle> transforms_;
+  std::unordered_map<uint64_t, TransformHandle> transforms_;
 
   // A graph representing this flatland instance's local transforms and their relationships.
   TransformGraph transform_graph_;
@@ -219,7 +219,7 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // A mapping from user-generated ID to the TransformHandle that owns that piece of Content.
   // Attaching Content to a Transform consists of setting one of these "Content Handles" as the
   // priority child of the Transform.
-  std::unordered_map<ContentId, TransformHandle> content_handles_;
+  std::unordered_map<uint64_t, TransformHandle> content_handles_;
 
   // The set of link operations that are pending a call to Present(). Unlike other operations,
   // whose effects are only visible when a new UberStruct is published, Link destruction operations
