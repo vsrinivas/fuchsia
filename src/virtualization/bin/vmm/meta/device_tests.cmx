@@ -1,8 +1,13 @@
 {
     "facets": {
         "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.cobalt.LoggerFactory": "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx",
+                "fuchsia.hardware.display.Provider": "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx",
+                "fuchsia.scenic.allocation.Allocator": "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"
+            },
             "system-services": [
-                "fuchsia.scenic.allocation.Allocator"
+                "fuchsia.scheduler.ProfileProvider"
             ]
         }
     },

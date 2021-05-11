@@ -15,6 +15,9 @@ group("vmm_tests") {
   deps = [
     ":device_tests_package",
     ":vmm_unittests_package",
+
+    # Mock cobalt component that is injected into device_tests_package.
+    "//src/cobalt/bin/testing/mock_cobalt",
   ]
 }
 
