@@ -107,12 +107,10 @@ pub struct MemoryManager {
     /// Use the map / unmap functions on the MemoryManager rather than directly
     /// mapping/unmapping memory from the VMAR so that the mappings can be tracked
     /// by the MemoryManager.
-    // TODO: Make root_vmar private to force clients through the MemoryManager
-    // interface.
-    pub root_vmar: zx::Vmar,
+    root_vmar: zx::Vmar,
 
     /// The base address of the root_vmar.
-    vmar_base: UserAddress,
+    pub vmar_base: UserAddress,
 
     /// State for the brk and sbrk syscalls.
     program_break: Mutex<Option<ProgramBreak>>,
@@ -333,6 +331,17 @@ impl MemoryManager {
     pub fn get_mapping_count(&self) -> usize {
         let mapping = self.mappings.read();
         mapping.iter().count()
+    }
+
+    pub fn get_random_base(&self, length: usize) -> UserAddress {
+        // Allocate a vmar of the correct size, get the random location, then immediately destroy it.
+        // This randomizes the load address without loading into a sub-vmar and breaking mprotect.
+        // This is different from how Linux actually lays out the address space. We might need to
+        // rewrite it eventually.
+        let (temp_vmar, base) = self.root_vmar.allocate(0, length, zx::VmarFlags::empty()).unwrap();
+        // SAFETY: This is safe because the vmar is not in the current process.
+        unsafe { temp_vmar.destroy().unwrap() };
+        UserAddress::from_ptr(base)
     }
 
     pub fn read_memory(&self, addr: UserAddress, bytes: &mut [u8]) -> Result<(), Errno> {

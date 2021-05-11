@@ -101,19 +101,10 @@ fn elf_load_error_to_errno(_: elf_load::ElfLoadError) -> Errno {
 fn load_elf(vmo: &zx::Vmo, mm: &MemoryManager) -> Result<LoadedElf, Errno> {
     let headers = elf_parse::Elf64Headers::from_vmo(&vmo).map_err(elf_parse_error_to_errno)?;
     let elf_info = elf_load::loaded_elf_info(&headers);
-    // Allocate a vmar of the correct size, get the random location, then immediately destroy it.
-    // This randomizes the load address without loading into a sub-vmar and breaking mprotect.
-    // This is different from how Linux actually lays out the address space. We might need to
-    // rewrite it eventually.
-    let (temp_vmar, base) = mm
-        .root_vmar
-        .allocate(0, elf_info.high - elf_info.low, zx::VmarFlags::empty())
-        .map_err(impossible_error)?;
-    unsafe { temp_vmar.destroy().map_err(impossible_error)? }; // Not unsafe, the vmar is not in the current process
+    let base = mm.get_random_base(elf_info.high - elf_info.low).ptr();
     let bias = base.wrapping_sub(elf_info.low);
     let mapper = mm as &dyn elf_load::Mapper;
-    let vmar_base = mm.root_vmar.info().map_err(impossible_error)?.base;
-    elf_load::map_elf_segments(&vmo, &headers, mapper, vmar_base, bias)
+    elf_load::map_elf_segments(&vmo, &headers, mapper, mm.vmar_base.ptr(), bias)
         .map_err(elf_load_error_to_errno)?;
     Ok(LoadedElf { headers, base, bias })
 }
