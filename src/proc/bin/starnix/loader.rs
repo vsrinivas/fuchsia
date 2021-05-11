@@ -4,11 +4,11 @@
 
 use anyhow::{Context, Error};
 use fidl_fuchsia_io as fio;
-use fuchsia_zircon::{self as zx, AsHandleRef, Status};
+use fuchsia_zircon::{self as zx, AsHandleRef};
 use process_builder::{elf_load, elf_parse};
 use std::ffi::{CStr, CString};
 
-use crate::mm::PAGE_SIZE;
+use crate::mm::*;
 use crate::task::*;
 use crate::types::*;
 
@@ -19,7 +19,7 @@ fn populate_initial_stack(
     mut auxv: Vec<(u32, u64)>,
     stack_base: usize,
     original_stack_start_addr: usize,
-) -> Result<usize, Status> {
+) -> Result<usize, zx::Status> {
     let mut stack_pointer = original_stack_start_addr;
     let write_stack = |data: &[u8], addr: usize| stack_vmo.write(data, (addr - stack_base) as u64);
 
@@ -86,24 +86,29 @@ struct LoadedElf {
     bias: usize,
 }
 
-fn load_elf(vmo: &zx::Vmo, vmar: &zx::Vmar) -> Result<LoadedElf, Error> {
+fn load_elf(vmo: &zx::Vmo, mm: &MemoryManager) -> Result<LoadedElf, Error> {
     let headers = elf_parse::Elf64Headers::from_vmo(&vmo).context("ELF parsing failed")?;
     let elf_info = elf_load::loaded_elf_info(&headers);
     // Allocate a vmar of the correct size, get the random location, then immediately destroy it.
     // This randomizes the load address without loading into a sub-vmar and breaking mprotect.
     // This is different from how Linux actually lays out the address space. We might need to
     // rewrite it eventually.
-    let (temp_vmar, base) = vmar
+    let (temp_vmar, base) = mm
+        .root_vmar
         .allocate(0, elf_info.high - elf_info.low, zx::VmarFlags::empty())
         .context("Couldn't allocate temporary VMAR")?;
     unsafe { temp_vmar.destroy()? }; // Not unsafe, the vmar is not in the current process
     let bias = base.wrapping_sub(elf_info.low);
-    elf_load::map_elf_segments(&vmo, &headers, &vmar, vmar.info()?.base, bias)
+    let mapper = mm as &dyn elf_load::Mapper;
+    elf_load::map_elf_segments(&vmo, &headers, mapper, mm.root_vmar.info()?.base, bias)
         .context("map_elf_segments failed")?;
     Ok(LoadedElf { headers, base, bias })
 }
 
 // TODO(tbodt): change to return an errno when it's time to implement execve
+// TODO(abarth): Split the loading of the executable from the starting of the thread
+//               so that execve can reconfigure the memory in the process using this
+//               function without needing to actually start the thread.
 pub fn load_executable(
     task: &Task,
     executable: zx::Vmo,
@@ -111,7 +116,7 @@ pub fn load_executable(
     environ: &Vec<CString>,
 ) -> Result<(), Error> {
     // TODO: We don't keep track of the mappings created by load_elf in the MemoryManager.
-    let main_elf = load_elf(&executable, &task.mm.root_vmar).context("Main ELF failed to load")?;
+    let main_elf = load_elf(&executable, &task.mm).context("Main ELF failed to load")?;
     let interp_elf = if let Some(interp_hdr) =
         main_elf.headers.program_header_with_type(elf_parse::SegmentType::Interp)?
     {
@@ -128,7 +133,7 @@ pub fn load_executable(
             fio::VMO_FLAG_READ | fio::VMO_FLAG_EXEC,
             zx::Time::INFINITE,
         )?;
-        Some(load_elf(&interp_vmo, &task.mm.root_vmar).context("Interpreter ELF failed to load")?)
+        Some(load_elf(&interp_vmo, &task.mm).context("Interpreter ELF failed to load")?)
     } else {
         None
     };
@@ -169,10 +174,14 @@ pub fn load_executable(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fidl_fuchsia_io as fio;
     use fuchsia_async as fasync;
+    use fuchsia_zircon::Task as zxTask;
+
+    use crate::testing::*;
 
     #[fasync::run_singlethreaded(test)]
-    async fn trivial_initial_stack() {
+    async fn test_trivial_initial_stack() {
         let stack_vmo = zx::Vmo::create(0x4000).expect("VMO creation should succeed.");
         let stack_base: usize = 0x3000_0000;
         let original_stack_start_addr: usize = 0x3000_1000;
@@ -206,5 +215,34 @@ mod tests {
         payload_size += payload_size % 16;
 
         assert_eq!(stack_start_addr, original_stack_start_addr - payload_size);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_load_hello_starnix() {
+        let (_kernel, task_owner) = create_kernel_and_task();
+        let task = &task_owner.task;
+
+        let executable = syncio::directory_open_vmo(
+            &task.fs.root,
+            &"bin/hello_starnix",
+            fio::VMO_FLAG_READ | fio::VMO_FLAG_EXEC,
+            zx::Time::INFINITE,
+        )
+        .expect("failed to load vmo for bin/hello_starnix");
+
+        let argv = &vec![];
+        let environ = &vec![];
+
+        // Currently, load_executable also starts the thread. We need to install
+        // an exception handler so that the test framework doesn't see any
+        // BAD_SYSCALL exceptions.
+        let _exceptions = task_owner
+            .task
+            .thread
+            .create_exception_channel()
+            .expect("failed to create exception channel");
+        load_executable(&task, executable, argv, environ).expect("failed to load executable");
+
+        assert!(task.mm.get_mapping_count() > 0);
     }
 }

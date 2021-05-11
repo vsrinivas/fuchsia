@@ -97,7 +97,10 @@ if (target_cpu == "x64") {
 
   fuchsia_unittest_package("starnix-tests") {
     manifest = "meta/starnix-tests.cml"
-    deps = [ ":starnix_runner_bin_test" ]
+    deps = [
+      ":starnix_runner_bin_test",
+      "//src/proc/tests/hello_starnix:bin",
+    ]
   }
 }
 

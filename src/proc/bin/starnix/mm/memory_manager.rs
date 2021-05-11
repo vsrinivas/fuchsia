@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fuchsia_zircon::{self as zx, AsHandleRef};
+use fuchsia_zircon::{self as zx, AsHandleRef, HandleBased};
 use lazy_static::lazy_static;
 use parking_lot::{Mutex, RwLock, RwLockUpgradableReadGuard};
+use process_builder::elf_load;
 use std::ffi::{CStr, CString};
 use std::mem;
 use std::sync::Arc;
@@ -182,9 +183,8 @@ impl MemoryManager {
 
             let mut mappings = RwLockUpgradableReadGuard::upgrade(mappings);
             mappings.remove(&range);
-            match self.map_locked(
-                &mut mappings,
-                old_end,
+            match self.root_vmar.map(
+                old_end - self.vmar_base,
                 &mapping.vmo,
                 vmo_offset as u64,
                 delta,
@@ -193,14 +193,14 @@ impl MemoryManager {
                     | zx::VmarFlags::REQUIRE_NON_RESIZABLE
                     | zx::VmarFlags::SPECIFIC,
             ) {
-                Ok(_addr) => {
+                Ok(_) => {
                     mappings.insert(brk.base..new_end, mapping);
                 }
                 Err(e) => {
                     // We failed to extend the mapping, which means we need to add
                     // back the old mapping.
                     mappings.insert(brk.base..old_end, mapping);
-                    return Err(e);
+                    return Err(Self::get_errno_for_map_err(e));
                 }
             }
         }
@@ -209,28 +209,36 @@ impl MemoryManager {
         return Ok(brk.current);
     }
 
-    fn map_locked(
+    fn map_internal(
         &self,
-        _mappings: &mut RangeMap<UserAddress, Mapping>,
-        addr: UserAddress,
-        vmo: &zx::Vmo,
+        vmar_offset: usize,
+        vmo: zx::Vmo,
         vmo_offset: u64,
         length: usize,
         flags: zx::VmarFlags,
-    ) -> Result<UserAddress, Errno> {
-        let vmar_offset = if addr.ptr() == 0 { 0 } else { addr - self.vmar_base };
-        let addr = UserAddress::from_ptr(
-            self.root_vmar.map(vmar_offset, vmo, vmo_offset, length, flags).map_err(
-                |s| match s {
-                    zx::Status::INVALID_ARGS => EINVAL,
-                    zx::Status::ACCESS_DENIED => EACCES, // or EPERM?
-                    zx::Status::NOT_SUPPORTED => ENODEV,
-                    zx::Status::NO_MEMORY => ENOMEM,
-                    _ => impossible_error(s),
-                },
-            )?,
-        );
+    ) -> Result<UserAddress, zx::Status> {
+        let mut mappings = self.mappings.write();
+        let addr = UserAddress::from_ptr(self.root_vmar.map(
+            vmar_offset,
+            &vmo,
+            vmo_offset,
+            length,
+            flags,
+        )?);
+        let mapping = Mapping::new(addr, vmo, vmo_offset, flags);
+        let end = (addr + length).round_up(*PAGE_SIZE);
+        mappings.insert(addr..end, mapping);
         Ok(addr)
+    }
+
+    fn get_errno_for_map_err(status: zx::Status) -> Errno {
+        match status {
+            zx::Status::INVALID_ARGS => EINVAL,
+            zx::Status::ACCESS_DENIED => EACCES, // or EPERM?
+            zx::Status::NOT_SUPPORTED => ENODEV,
+            zx::Status::NO_MEMORY => ENOMEM,
+            _ => impossible_error(status),
+        }
     }
 
     pub fn map(
@@ -241,14 +249,9 @@ impl MemoryManager {
         length: usize,
         flags: zx::VmarFlags,
     ) -> Result<UserAddress, Errno> {
-        let mut mappings = self.mappings.write();
-
-        let addr = self.map_locked(&mut mappings, addr, &vmo, vmo_offset, length, flags)?;
-
-        let mapping = Mapping::new(addr, vmo, vmo_offset, flags);
-        let end = (addr + length).round_up(*PAGE_SIZE);
-        mappings.insert(addr..end, mapping);
-        Ok(addr)
+        let vmar_offset = if addr.is_null() { 0 } else { addr - self.vmar_base };
+        self.map_internal(vmar_offset, vmo, vmo_offset, length, flags)
+            .map_err(Self::get_errno_for_map_err)
     }
 
     pub fn unmap(&self, addr: UserAddress, length: usize) -> Result<(), Errno> {
@@ -286,6 +289,12 @@ impl MemoryManager {
         let mapping = self.mappings.read();
         let (_, mapping) = mapping.get(&addr).ok_or(EFAULT)?;
         Ok(mapping.name.clone())
+    }
+
+    #[cfg(test)]
+    pub fn get_mapping_count(&self) -> usize {
+        let mapping = self.mappings.read();
+        mapping.iter().count()
     }
 
     pub fn read_memory(&self, addr: UserAddress, bytes: &mut [u8]) -> Result<(), Errno> {
@@ -329,6 +338,20 @@ impl MemoryManager {
         object: &T,
     ) -> Result<(), Errno> {
         self.write_memory(user.addr(), &object.as_bytes())
+    }
+}
+
+impl elf_load::Mapper for MemoryManager {
+    fn map(
+        &self,
+        vmar_offset: usize,
+        vmo: &zx::Vmo,
+        vmo_offset: u64,
+        length: usize,
+        flags: zx::VmarFlags,
+    ) -> Result<usize, zx::Status> {
+        let vmo = vmo.duplicate_handle(zx::Rights::SAME_RIGHTS)?;
+        self.map_internal(vmar_offset, vmo, vmo_offset, length, flags).map(|addr| addr.ptr())
     }
 }
 

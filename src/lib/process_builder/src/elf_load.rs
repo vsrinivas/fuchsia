@@ -97,6 +97,34 @@ pub struct LoadedElf {
     pub entry: usize,
 }
 
+/// A trait so that callers of map_elf_segments can hook the map operation.
+pub trait Mapper {
+    /// Map memory from the given VMO at the specified location.
+    ///
+    /// See zx::Vmar::map for more details.
+    fn map(
+        &self,
+        vmar_offset: usize,
+        vmo: &zx::Vmo,
+        vmo_offset: u64,
+        length: usize,
+        flags: zx::VmarFlags,
+    ) -> Result<usize, zx::Status>;
+}
+
+impl Mapper for zx::Vmar {
+    fn map(
+        &self,
+        vmar_offset: usize,
+        vmo: &zx::Vmo,
+        vmo_offset: u64,
+        length: usize,
+        flags: zx::VmarFlags,
+    ) -> Result<usize, zx::Status> {
+        Self::map(self, vmar_offset, vmo, vmo_offset, length, flags)
+    }
+}
+
 /// Load an ELF into a new sub-VMAR of the specified root.
 pub fn load_elf(
     vmo: &zx::Vmo,
@@ -128,20 +156,20 @@ pub fn load_elf(
 pub fn map_elf_segments(
     vmo: &zx::Vmo,
     headers: &elf::Elf64Headers,
-    vmar: &zx::Vmar,
-    vmar_base: usize,
+    mapper: &dyn Mapper,
+    mapper_base: usize,
     vaddr_bias: usize,
 ) -> Result<(), ElfLoadError> {
     // We intentionally use wrapping subtraction here, in case the ELF file happens to use vaddr's
     // that are higher than the VMAR base chosen by the kernel. Wrapping addition will be used when
     // adding this bias to vaddr values.
-    let vmar_relative_bias = vaddr_bias.wrapping_sub(vmar_base);
+    let mapper_relative_bias = vaddr_bias.wrapping_sub(mapper_base);
     let vmo_name = vmo.get_name().map_err(|s| ElfLoadError::GetVmoName(s))?;
     for hdr in headers.program_headers_with_type(elf::SegmentType::Load) {
         // Map in all whole pages that this segment touches. Calculate the virtual address
         // range that this mapping needs to cover. These addresses are relative to the
         // allocated VMAR, not the root VMAR.
-        let vaddr_start = hdr.vaddr.wrapping_add(vmar_relative_bias);
+        let vaddr_start = hdr.vaddr.wrapping_add(mapper_relative_bias);
         let map_start = util::page_start(vaddr_start);
         let map_end = util::page_end(vaddr_start + hdr.memsz as usize);
         let map_size = map_end - map_start;
@@ -184,7 +212,8 @@ pub fn map_elf_segments(
         // do. Create the mapping and we're done with this segment.
         let flags = zx::VmarFlags::SPECIFIC | elf_to_vmar_perm_flags(&hdr.flags());
         if map_size == vmo_size {
-            vmar.map(map_start, vmo_to_map, vmo_start as u64, vmo_size, flags)
+            mapper
+                .map(map_start, vmo_to_map, vmo_start as u64, vmo_size, flags)
                 .map_err(ElfLoadError::VmarMap)?;
             continue;
         }
@@ -194,7 +223,8 @@ pub fn map_elf_segments(
         // out by mapping any full pages from the vmo.
         let vmo_full_page_size = vmo_full_page_end - vmo_start;
         if vmo_full_page_size > 0 {
-            vmar.map(map_start, vmo_to_map, vmo_start as u64, vmo_full_page_size, flags)
+            mapper
+                .map(map_start, vmo_to_map, vmo_start as u64, vmo_full_page_size, flags)
                 .map_err(ElfLoadError::VmarMap)?;
         }
 
@@ -217,7 +247,9 @@ pub fn map_elf_segments(
         }
 
         // Map the anonymous vmo and done with this segment!
-        vmar.map(anon_map_start, &anon_vmo, 0, anon_size, flags).map_err(ElfLoadError::VmarMap)?;
+        mapper
+            .map(anon_map_start, &anon_vmo, 0, anon_size, flags)
+            .map_err(ElfLoadError::VmarMap)?;
     }
     Ok(())
 }
