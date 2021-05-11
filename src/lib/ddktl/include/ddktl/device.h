@@ -275,6 +275,20 @@ class Messageable : public base_mixin {
 };
 
 template <typename D>
+class MessageableOld : public base_mixin {
+ protected:
+  static constexpr void InitOp(zx_protocol_device_t* proto) {
+    internal::CheckMessageable<D>();
+    proto->message = Message;
+  }
+
+ private:
+  static zx_status_t Message(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
+    return static_cast<D*>(ctx)->DdkMessage(msg, txn);
+  }
+};
+
+template <typename D>
 class Suspendable : public base_mixin {
  protected:
   static constexpr void InitOp(zx_protocol_device_t* proto) {
