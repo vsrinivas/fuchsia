@@ -43,7 +43,6 @@ group("all") {
     "//garnet/packages/prod:magma-qcom-adreno",
     "//garnet/packages/prod:memory_monitor",
     "//garnet/packages/prod:network-speed-test",
-    "//garnet/packages/prod:realtek",
     "//garnet/packages/prod:run",
     "//garnet/packages/prod:sbase",
     "//garnet/packages/prod:scenic",
@@ -351,14 +350,6 @@ group("network-speed-test") {
   public_deps = [ "//src/connectivity/network/tools/network-speed-test" ]
 }
 
-group("realtek") {
-  public_deps = [
-    "//src/connectivity/wlan/drivers/realtek/rtl88xx",
-    "//src/connectivity/wlan/drivers/wlan",
-    "//src/connectivity/wlan/drivers/wlanphy",
-  ]
-}
-
 group("run") {
   testonly = true
   public_deps = [ "//garnet/bin/run" ]
@@ -527,6 +518,5 @@ group("wlan_drivers") {
   public_deps = [
     "//garnet/packages/prod:atheros",
     "//garnet/packages/prod:broadcom",
-    "//garnet/packages/prod:realtek",
   ]
 }

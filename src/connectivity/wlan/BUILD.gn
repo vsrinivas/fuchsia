@@ -12,7 +12,6 @@ group("wlan") {
 
 group("drivers") {
   deps = [
-    "drivers/realtek/rtl88xx:rtl88xx_driver",
     "drivers/testing:wlanphy-testdev",
     "drivers/third_party/atheros/ath10k:ath10k_driver",
     "drivers/third_party/broadcom/brcmfmac:driver_module",
@@ -41,7 +40,6 @@ group("tests") {
   testonly = true
 
   deps = [
-    "drivers/realtek:tests",
     "drivers/testing/lib/sim-device/test:sim_device_test",
     "drivers/testing/lib/sim-env/test:wlan-sim-env-test",
     "drivers/testing/lib/sim-fake-ap/test:wlan-sim-fake-ap-test",
