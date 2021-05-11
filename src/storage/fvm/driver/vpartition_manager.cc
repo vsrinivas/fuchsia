@@ -5,7 +5,7 @@
 #include "src/storage/fvm/driver/vpartition_manager.h"
 
 #include <fuchsia/hardware/block/c/banjo.h>
-#include <fuchsia/hardware/block/volume/c/fidl.h>
+#include <fuchsia/hardware/block/volume/llcpp/fidl.h>
 #include <inttypes.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
@@ -641,7 +641,7 @@ zx_status_t VPartitionManager::FreeSlicesLocked(VPartition* vp, uint64_t vslice_
   return WriteFvmLocked();
 }
 
-void VPartitionManager::Query(volume_info_t* info) {
+void VPartitionManager::QueryInternal(VolumeInfo* info) {
   info->slice_size = slice_size_;
   info->vslice_count = VSliceMax();
   {
@@ -651,7 +651,8 @@ void VPartitionManager::Query(volume_info_t* info) {
   }
 }
 
-zx_status_t VPartitionManager::GetPartitionLimit(const uint8_t* guid, uint64_t* byte_count) const {
+zx_status_t VPartitionManager::GetPartitionLimitInternal(const uint8_t* guid,
+                                                         uint64_t* byte_count) const {
   fbl::AutoLock lock(&lock_);
 
   if (size_t partition = GetPartitionNumberLocked(guid)) {
@@ -665,7 +666,7 @@ zx_status_t VPartitionManager::GetPartitionLimit(const uint8_t* guid, uint64_t* 
   return ZX_ERR_NOT_FOUND;
 }
 
-zx_status_t VPartitionManager::SetPartitionLimit(const uint8_t* guid, uint64_t byte_count) {
+zx_status_t VPartitionManager::SetPartitionLimitInternal(const uint8_t* guid, uint64_t byte_count) {
   fbl::AutoLock lock(&lock_);
 
   if (size_t partition = GetPartitionNumberLocked(guid)) {
@@ -743,13 +744,9 @@ void VPartitionManager::LogPartitionsLocked() const {
 
 // Device protocol (FVM)
 
-zx_status_t VPartitionManager::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  return fuchsia_hardware_block_volume_VolumeManager_dispatch(this, txn, msg, Ops());
-}
-
 zx::status<std::unique_ptr<VPartition>> VPartitionManager::AllocatePartition(
-    uint64_t slice_count, const fuchsia_hardware_block_partition_GUID* type,
-    const fuchsia_hardware_block_partition_GUID* instance, const char* name_data, size_t name_size,
+    uint64_t slice_count, const fuchsia_hardware_block_partition::wire::Guid& type,
+    const fuchsia_hardware_block_partition::wire::Guid& instance, fidl::StringView name,
     uint32_t flags) {
   if (slice_count >= std::numeric_limits<uint32_t>::max()) {
     return zx::error(ZX_ERR_OUT_OF_RANGE);
@@ -759,13 +756,13 @@ zx::status<std::unique_ptr<VPartition>> VPartitionManager::AllocatePartition(
   }
 
   // Validate the name. It should fit and not have any NULL terminators in it.
-  constexpr size_t kMaxNameLen =
-      std::min<size_t>(fuchsia_hardware_block_partition_NAME_LENGTH, kMaxVPartitionNameLength);
-  if (name_size > kMaxNameLen) {
+  constexpr size_t kMaxNameLen = std::min<size_t>(
+      fuchsia_hardware_block_partition::wire::kNameLength, kMaxVPartitionNameLength);
+  if (name.size() > kMaxNameLen) {
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
-  std::string name(name_data, name_size);
-  if (name.find('\0') != std::string::npos) {
+  std::string name_str(name.get());
+  if (name_str.find('\0') != std::string::npos) {
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
@@ -782,7 +779,8 @@ zx::status<std::unique_ptr<VPartition>> VPartitionManager::AllocatePartition(
     }
 
     auto* entry = GetVPartEntryLocked(vpart_entry);
-    *entry = VPartitionEntry(type->value, instance->value, 0, std::move(name), flags);
+    *entry =
+        VPartitionEntry(type.value.data(), instance.value.data(), 0, std::move(name_str), flags);
 
     // Each partition starts off with a 0 max length ("no limit").
     max_partition_sizes_[vpart_entry] = 0;
@@ -796,56 +794,53 @@ zx::status<std::unique_ptr<VPartition>> VPartitionManager::AllocatePartition(
   return zx::ok(std::move(vpart));
 }
 
-zx_status_t VPartitionManager::FIDLAllocatePartition(
-    uint64_t slice_count, const fuchsia_hardware_block_partition_GUID* type,
-    const fuchsia_hardware_block_partition_GUID* instance, const char* name_data, size_t name_size,
-    uint32_t flags, fidl_txn_t* txn) {
-  auto partition_or = AllocatePartition(slice_count, type, instance, name_data, name_size, flags);
+void VPartitionManager::AllocatePartition(AllocatePartitionRequestView request,
+                                          AllocatePartitionCompleter::Sync& completer) {
+  auto partition_or = AllocatePartition(request->slice_count, request->type, request->instance,
+                                        request->name, request->flags);
   zx_status_t status = partition_or.status_value();
   if (partition_or.is_ok()) {
     // Register the created partition with the device manager.
     status = AddPartition(std::move(partition_or.value()));
   }
 
-  return fuchsia_hardware_block_volume_VolumeManagerAllocatePartition_reply(txn, status);
+  completer.Reply(status);
 }
 
-zx_status_t VPartitionManager::FIDLQuery(fidl_txn_t* txn) {
-  fuchsia_hardware_block_volume_VolumeInfo info;
-  Query(&info);
-  return fuchsia_hardware_block_volume_VolumeManagerQuery_reply(txn, ZX_OK, &info);
+void VPartitionManager::Query(QueryRequestView request, QueryCompleter::Sync& completer) {
+  fidl::FidlAllocator allocator;
+  fidl::ObjectView<fuchsia_hardware_block_volume::wire::VolumeInfo> info(allocator);
+  QueryInternal(info.get());
+  completer.Reply(ZX_OK, info);
 }
 
-zx_status_t VPartitionManager::FIDLGetInfo(fidl_txn_t* txn) {
-  fuchsia_hardware_block_volume_VolumeManagerInfo info;
+void VPartitionManager::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) {
+  fidl::FidlAllocator allocator;
+  fidl::ObjectView<fuchsia_hardware_block_volume::wire::VolumeManagerInfo> info(allocator);
 
   {
     fbl::AutoLock lock(&lock_);
-    info.slice_size = slice_size_;
-    info.current_slice_count = GetFvmLocked()->GetMaxAllocationTableEntriesForDiskSize(DiskSize());
-    info.maximum_slice_count = GetFvmLocked()->GetAllocationTableAllocatedEntryCount();
+    info->slice_size = slice_size_;
+    info->current_slice_count = GetFvmLocked()->GetMaxAllocationTableEntriesForDiskSize(DiskSize());
+    info->maximum_slice_count = GetFvmLocked()->GetAllocationTableAllocatedEntryCount();
   }
-  return fuchsia_hardware_block_volume_VolumeManagerGetInfo_reply(txn, ZX_OK, &info);
+  completer.Reply(ZX_OK, info);
 }
 
-zx_status_t VPartitionManager::FIDLActivate(const fuchsia_hardware_block_partition_GUID* old_guid,
-                                            const fuchsia_hardware_block_partition_GUID* new_guid,
-                                            fidl_txn_t* txn) {
-  zx_status_t status = Upgrade(old_guid->value, new_guid->value);
-  return fuchsia_hardware_block_volume_VolumeManagerActivate_reply(txn, status);
+void VPartitionManager::Activate(ActivateRequestView request, ActivateCompleter::Sync& completer) {
+  completer.Reply(Upgrade(request->old_guid.value.data(), request->new_guid.value.data()));
 }
 
-zx_status_t VPartitionManager::FIDLGetPartitionLimit(
-    const fuchsia_hardware_block_partition_GUID* guid, fidl_txn_t* txn) {
+void VPartitionManager::GetPartitionLimit(GetPartitionLimitRequestView request,
+                                          GetPartitionLimitCompleter::Sync& completer) {
   uint64_t byte_size = 0;
-  zx_status_t status = GetPartitionLimit(guid->value, &byte_size);
-  return fuchsia_hardware_block_volume_VolumeManagerGetPartitionLimit_reply(txn, status, byte_size);
+  zx_status_t status = GetPartitionLimitInternal(request->guid.value.data(), &byte_size);
+  completer.Reply(status, byte_size);
 }
 
-zx_status_t VPartitionManager::FIDLSetPartitionLimit(
-    const fuchsia_hardware_block_partition_GUID* guid, uint64_t byte_count, fidl_txn_t* txn) {
-  return fuchsia_hardware_block_volume_VolumeManagerSetPartitionLimit_reply(
-      txn, SetPartitionLimit(guid->value, byte_count));
+void VPartitionManager::SetPartitionLimit(SetPartitionLimitRequestView request,
+                                          SetPartitionLimitCompleter::Sync& completer) {
+  completer.Reply(SetPartitionLimitInternal(request->guid.value.data(), request->byte_count));
 }
 
 void VPartitionManager::DdkUnbind(ddk::UnbindTxn txn) {

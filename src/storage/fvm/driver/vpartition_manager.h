@@ -7,7 +7,7 @@
 
 #include <fuchsia/hardware/block/cpp/banjo.h>
 #include <fuchsia/hardware/block/partition/cpp/banjo.h>
-#include <fuchsia/hardware/block/volume/c/fidl.h>
+#include <fuchsia/hardware/block/volume/llcpp/fidl.h>
 #include <lib/ddk/device.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/fzl/owned-vmo-mapper.h>
@@ -38,14 +38,17 @@
 
 namespace fvm {
 
-using volume_info_t = fuchsia_hardware_block_volume_VolumeInfo;
+using fuchsia_hardware_block_volume::wire::VolumeInfo;
 
 // Forward declaration
 class VPartitionManager;
 using ManagerDeviceType =
-    ddk::Device<VPartitionManager, ddk::Initializable, ddk::MessageableOld, ddk::Unbindable>;
+    ddk::Device<VPartitionManager, ddk::Initializable,
+                ddk::Messageable<fuchsia_hardware_block_volume::VolumeManager>::Mixin,
+                ddk::Unbindable>;
 
-class VPartitionManager : public ManagerDeviceType {
+class VPartitionManager : public ManagerDeviceType,
+                          public fidl::WireServer<fuchsia_hardware_block_volume::VolumeManager> {
  public:
   DISALLOW_COPY_ASSIGN_AND_MOVE(VPartitionManager);
   static zx_status_t Bind(void*, zx_device_t* dev);
@@ -76,10 +79,10 @@ class VPartitionManager : public ManagerDeviceType {
   zx_status_t FreeSlices(VPartition* vp, size_t vslice_start, size_t count) TA_EXCL(lock_);
 
   // Returns global information about the FVM.
-  void Query(volume_info_t* info) TA_EXCL(lock_);
+  void QueryInternal(VolumeInfo* info) TA_EXCL(lock_);
 
-  zx_status_t GetPartitionLimit(const uint8_t* guid, uint64_t* byte_count) const;
-  zx_status_t SetPartitionLimit(const uint8_t* guid, uint64_t byte_count);
+  zx_status_t GetPartitionLimitInternal(const uint8_t* guid, uint64_t* byte_count) const;
+  zx_status_t SetPartitionLimitInternal(const uint8_t* guid, uint64_t byte_count);
 
   size_t DiskSize() const { return info_.block_count * info_.block_size; }
   size_t slice_size() const { return slice_size_; }
@@ -90,7 +93,6 @@ class VPartitionManager : public ManagerDeviceType {
   fvm::Header GetHeader() const;
 
   void DdkInit(ddk::InitTxn txn);
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
@@ -101,41 +103,23 @@ class VPartitionManager : public ManagerDeviceType {
   // Allocates the partition, returning it without adding it to the device manager. Production code
   // will go through the FIDL API, this is exposed separately to allow testing without FIDL.
   zx::status<std::unique_ptr<VPartition>> AllocatePartition(
-      uint64_t slice_count, const fuchsia_hardware_block_partition_GUID* type,
-      const fuchsia_hardware_block_partition_GUID* instance, const char* name_data,
-      size_t name_size, uint32_t flags);
+      uint64_t slice_count, const fuchsia_hardware_block_partition::wire::Guid& type,
+      const fuchsia_hardware_block_partition::wire::Guid& instance, fidl::StringView name,
+      uint32_t flags);
 
   // Returns a reference to the Diagnostics that this instance publishes to.
   Diagnostics& diagnostics() { return diagnostics_; }
 
  private:
-  static const fuchsia_hardware_block_volume_VolumeManager_ops* Ops() {
-    using Binder = fidl::Binder<VPartitionManager>;
-    static const fuchsia_hardware_block_volume_VolumeManager_ops kOps = {
-        .AllocatePartition = Binder::BindMember<&VPartitionManager::FIDLAllocatePartition>,
-        .Query = Binder::BindMember<&VPartitionManager::FIDLQuery>,
-        .GetInfo = Binder::BindMember<&VPartitionManager::FIDLGetInfo>,
-        .Activate = Binder::BindMember<&VPartitionManager::FIDLActivate>,
-        .GetPartitionLimit = Binder::BindMember<&VPartitionManager::FIDLGetPartitionLimit>,
-        .SetPartitionLimit = Binder::BindMember<&VPartitionManager::FIDLSetPartitionLimit>,
-    };
-    return &kOps;
-  }
-
-  // FIDL interface VolumeManager
-  zx_status_t FIDLAllocatePartition(uint64_t slice_count,
-                                    const fuchsia_hardware_block_partition_GUID* type,
-                                    const fuchsia_hardware_block_partition_GUID* instance,
-                                    const char* name_data, size_t name_size, uint32_t flags,
-                                    fidl_txn_t* txn);
-  zx_status_t FIDLQuery(fidl_txn_t* txn);
-  zx_status_t FIDLGetInfo(fidl_txn_t* txn);
-  zx_status_t FIDLActivate(const fuchsia_hardware_block_partition_GUID* old_guid,
-                           const fuchsia_hardware_block_partition_GUID* new_guid, fidl_txn_t* txn);
-  zx_status_t FIDLGetPartitionLimit(const fuchsia_hardware_block_partition_GUID* guid,
-                                    fidl_txn_t* txn);
-  zx_status_t FIDLSetPartitionLimit(const fuchsia_hardware_block_partition_GUID* guid,
-                                    uint64_t byte_count, fidl_txn_t* txn);
+  void AllocatePartition(AllocatePartitionRequestView request,
+                         AllocatePartitionCompleter::Sync& completer);
+  void Query(QueryRequestView request, QueryCompleter::Sync& completer);
+  void GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer);
+  void Activate(ActivateRequestView request, ActivateCompleter::Sync& completer);
+  void GetPartitionLimit(GetPartitionLimitRequestView request,
+                         GetPartitionLimitCompleter::Sync& completer);
+  void SetPartitionLimit(SetPartitionLimitRequestView request,
+                         SetPartitionLimitCompleter::Sync& completer);
 
   // Marks the partition with instance GUID |old_guid| as inactive,
   // and marks partitions with instance GUID |new_guid| as active.

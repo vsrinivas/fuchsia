@@ -153,16 +153,16 @@ class VPartitionManagerTestAtRevision : public zxtest::Test {
     static int next_id = 1;
 
     // Generates a test-unique id for the type and instance.
-    fuchsia_hardware_block_partition_GUID type_guid{.value = {0}};
+    fuchsia_hardware_block_partition::wire::Guid type_guid{.value = {0}};
     memcpy(&type_guid.value[0], &next_id, sizeof(int));
     next_id++;
 
-    fuchsia_hardware_block_partition_GUID instance_guid{.value = {0}};
+    fuchsia_hardware_block_partition::wire::Guid instance_guid{.value = {0}};
     memcpy(&instance_guid.value[0], &next_id, sizeof(int));
     next_id++;
 
-    return device_->AllocatePartition(slices, &type_guid, &instance_guid, name.c_str(),
-                                      name.length(), 0);
+    return device_->AllocatePartition(slices, type_guid, instance_guid,
+                                      fidl::StringView::FromExternal(name), 0);
   }
 
  protected:
