@@ -14,7 +14,6 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use test_output_directory as directory;
 
 const TEST_RUN_ID: u64 = 0;
-const SUMMARY_FILE: &str = "run_summary.json";
 const STDOUT_FILE: &str = "stdout";
 
 /// A reporter that saves results and artifacts to disk in the Fuchsia test output format.
@@ -158,7 +157,7 @@ impl Reporter for DirectoryReporter {
                     .remove(&TEST_RUN_ID)
                     .expect("Run entry not found, was it already recorded?");
                 let serializable_run = construct_serializable_run(run_entry);
-                let summary_path = self.root.join(SUMMARY_FILE);
+                let summary_path = self.root.join(directory::RUN_SUMMARY_NAME);
                 let mut summary = File::create(summary_path)?;
                 serde_json::to_writer_pretty(&mut summary, &serializable_run)?;
                 summary.sync_all()
@@ -263,169 +262,11 @@ fn into_serializable_outcome(outcome: ReportedOutcome) -> directory::Outcome {
 mod test {
     use super::*;
     use crate::output::RunReporter;
-    use std::path::Path;
     use tempfile::tempdir;
-
-    /// Parse the json files in a directory. Returns the parsed test run document and a list of
-    /// parsed suite results.
-    fn parse_json_in_output(
-        path: &Path,
-    ) -> (directory::TestRunResult, Vec<directory::SuiteResult>) {
-        let summary_file = File::open(path.join(SUMMARY_FILE)).expect("open summary file");
-        let run_result: directory::TestRunResult =
-            serde_json::from_reader(summary_file).expect("parse summary file");
-        let suite_entries = match &run_result {
-            directory::TestRunResult::V0 { suites, .. } => suites,
-        };
-        let suite_results = suite_entries
-            .iter()
-            .map(|directory::SuiteEntryV0 { summary }| {
-                let suite_summary_file =
-                    File::open(path.join(summary)).expect("open suite summary file");
-                serde_json::from_reader::<_, directory::SuiteResult>(suite_summary_file)
-                    .expect("parse suite summary file")
-            })
-            .collect::<Vec<_>>();
-        (run_result, suite_results)
-    }
-
-    fn assert_run_result(
-        root: &Path,
-        actual_run: &directory::TestRunResult,
-        expected_run: &ExpectedTestRun,
-    ) {
-        let &directory::TestRunResult::V0 { artifacts, outcome, .. } = &actual_run;
-        assert_eq!(outcome, &expected_run.outcome);
-        assert_artifacts(root, &artifacts, &expected_run.artifacts);
-    }
-
-    fn assert_suite_results(
-        root: &Path,
-        actual_suites: &Vec<directory::SuiteResult>,
-        expected_suites: &Vec<ExpectedSuite>,
-    ) {
-        assert_eq!(actual_suites.len(), expected_suites.len());
-        let mut expected_suites_map = HashMap::new();
-        for suite in expected_suites.iter() {
-            expected_suites_map.insert(suite.name.clone(), suite);
-        }
-        for suite in actual_suites.iter() {
-            let suite_name = match suite {
-                directory::SuiteResult::V0 { name, .. } => name,
-            };
-            assert_suite_result(
-                root,
-                suite,
-                expected_suites_map.get(suite_name).expect("No matching expected suite"),
-            );
-        }
-    }
-
-    fn assert_suite_result(
-        root: &Path,
-        actual_suite: &directory::SuiteResult,
-        expected_suite: &ExpectedSuite,
-    ) {
-        let &directory::SuiteResult::V0 { artifacts, outcome, name, cases } = &actual_suite;
-        assert_eq!(outcome, &expected_suite.outcome);
-        assert_eq!(name, &expected_suite.name);
-
-        assert_artifacts(root, &artifacts, &expected_suite.artifacts);
-
-        assert_eq!(cases.len(), expected_suite.cases.len());
-        for case in cases.iter() {
-            assert_case_result(root, case, expected_suite.cases.get(&case.name).unwrap());
-        }
-    }
-
-    fn assert_case_result(
-        root: &Path,
-        actual_case: &directory::TestCaseResultV0,
-        expected_case: &ExpectedTestCase,
-    ) {
-        assert_eq!(actual_case.name, expected_case.name);
-        assert_eq!(actual_case.outcome, expected_case.outcome);
-        assert_artifacts(root, &actual_case.artifacts, &expected_case.artifacts);
-    }
-
-    fn assert_artifacts(
-        root: &Path,
-        actual_artifact_list: &Vec<PathBuf>,
-        expected_artifact_contents: &HashMap<String, String>,
-    ) {
-        assert_eq!(actual_artifact_list.len(), expected_artifact_contents.len());
-        for artifact_path in actual_artifact_list.iter() {
-            let absolute_artifact_path = root.join(artifact_path);
-            let artifact_name = absolute_artifact_path.file_name().unwrap().to_str().unwrap();
-            let artifact_contents =
-                std::fs::read_to_string(&absolute_artifact_path).expect("read artifact file");
-            assert_eq!(
-                artifact_contents,
-                *expected_artifact_contents.get(artifact_name).expect("unexpected artifact")
-            );
-        }
-    }
-
-    struct ExpectedTestRun {
-        artifacts: HashMap<String, String>,
-        outcome: directory::Outcome,
-    }
-
-    struct ExpectedSuite {
-        artifacts: HashMap<String, String>,
-        name: String,
-        outcome: directory::Outcome,
-        cases: HashMap<String, ExpectedTestCase>,
-    }
-
-    struct ExpectedTestCase {
-        artifacts: HashMap<String, String>,
-        name: String,
-        outcome: directory::Outcome,
-    }
-
-    impl ExpectedTestRun {
-        fn new(outcome: directory::Outcome) -> Self {
-            Self { artifacts: HashMap::new(), outcome }
-        }
-
-        fn with_artifact<S: AsRef<str>, T: AsRef<str>>(mut self, name: S, contents: T) -> Self {
-            self.artifacts.insert(name.as_ref().to_string(), contents.as_ref().to_string());
-            self
-        }
-    }
-
-    impl ExpectedSuite {
-        fn new<S: AsRef<str>>(name: S, outcome: directory::Outcome) -> Self {
-            Self {
-                artifacts: HashMap::new(),
-                name: name.as_ref().to_string(),
-                outcome,
-                cases: HashMap::new(),
-            }
-        }
-
-        fn with_case(mut self, case: ExpectedTestCase) -> Self {
-            self.cases.insert(case.name.clone(), case);
-            self
-        }
-
-        fn with_artifact<S: AsRef<str>, T: AsRef<str>>(mut self, name: S, contents: T) -> Self {
-            self.artifacts.insert(name.as_ref().to_string(), contents.as_ref().to_string());
-            self
-        }
-    }
-
-    impl ExpectedTestCase {
-        fn new<S: AsRef<str>>(name: S, outcome: directory::Outcome) -> Self {
-            Self { artifacts: HashMap::new(), name: name.as_ref().to_string(), outcome }
-        }
-
-        fn with_artifact<S: AsRef<str>, T: AsRef<str>>(mut self, name: S, contents: T) -> Self {
-            self.artifacts.insert(name.as_ref().to_string(), contents.as_ref().to_string());
-            self
-        }
-    }
+    use test_output_directory::testing::{
+        assert_run_result, assert_suite_result, assert_suite_results, parse_json_in_output,
+        ExpectedSuite, ExpectedTestCase, ExpectedTestRun,
+    };
 
     #[test]
     fn no_artifacts() {

@@ -2,8 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+pub mod testing;
+
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+
+/// Filename of the top level summary json.
+pub const RUN_SUMMARY_NAME: &str = "run_summary.json";
 
 /// A serializable version of a test outcome.
 #[derive(Deserialize, Serialize, PartialEq, Eq, Debug)]
