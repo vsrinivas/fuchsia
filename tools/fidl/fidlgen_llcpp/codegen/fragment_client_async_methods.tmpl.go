@@ -18,7 +18,7 @@ The request and callback are allocated on the heap.
 {{- IfdefFuchsia -}}
 
 ::fidl::Result {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}(
-        {{ RenderCalleeParams .RequestArgs
+        {{ RenderParams .RequestArgs
                         (printf "::fit::callback<void (%s* response)> _cb" .WireResponse) }}) {
   class ResponseContext final : public {{ .WireResponseContext }} {
    public:
@@ -48,7 +48,7 @@ The request and callback are allocated on the heap.
 
 ::fidl::Result {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}(
         {{- if .RequestArgs }}
-          {{ RenderCalleeParams "::fidl::BufferSpan _request_buffer"
+          {{ RenderParams "::fidl::BufferSpan _request_buffer"
                           .RequestArgs
                           (printf "%s* _context" .WireResponseContext) }}
         {{- else }}

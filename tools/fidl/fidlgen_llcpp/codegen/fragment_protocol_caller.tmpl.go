@@ -24,14 +24,14 @@ class {{ .WireCaller }} final {
     {{- .Docs }}
     //{{ template "ClientAllocationComment" . }}
     static {{ .WireResult }} {{ .Name }}(
-        {{- RenderCalleeParams (printf "::fidl::UnownedClientEnd<%s> _client_end" .Protocol)
+        {{- RenderParams (printf "::fidl::UnownedClientEnd<%s> _client_end" .Protocol)
                          .RequestArgs }}) {
       return {{ .WireResult }}({{ RenderForwardParams "_client_end" .RequestArgs }});
     }
 
     {{- .Docs }}
     //{{ template "ClientAllocationComment" . }}
-    {{ .WireResult }} {{ .Name }}({{- RenderCalleeParams .RequestArgs }}) && {
+    {{ .WireResult }} {{ .Name }}({{- RenderParams .RequestArgs }}) && {
       return {{ .WireResult }}({{ RenderForwardParams "client_end_" .RequestArgs }});
     }
 {{ "" }}
@@ -57,14 +57,14 @@ class {{ .WireCaller }} final {
       {{- .Docs }}
       // Caller provides the backing storage for FIDL message via request and response buffers.
       static {{ .WireUnownedResult }} {{ .Name }}(
-          {{- RenderCalleeParams (printf "::fidl::UnownedClientEnd<%s> _client_end" .Protocol)
+          {{- RenderParams (printf "::fidl::UnownedClientEnd<%s> _client_end" .Protocol)
                            $call_args }}) {
         return {{ .WireUnownedResult }}({{ RenderForwardParams "_client_end" $result_args }});
       }
 
       {{- .Docs }}
       // Caller provides the backing storage for FIDL message via request and response buffers.
-      {{ .WireUnownedResult }} {{ .Name }}({{ RenderCalleeParams $call_args }}) && {
+      {{ .WireUnownedResult }} {{ .Name }}({{ RenderParams $call_args }}) && {
         return {{ .WireUnownedResult }}({{ RenderForwardParams "client_end_" $result_args }});
       }
 

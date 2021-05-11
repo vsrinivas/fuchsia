@@ -13,7 +13,7 @@ const fragmentSyncRequestCallerAllocateTmpl = `
 {{- if .HasResponse }}
   {{- $args = (List $args "::fidl::BufferSpan _response_buffer") }}
 {{- end }}
-{{- RenderCalleeParams $args }}
+{{- RenderParams $args }}
 {{- end }}
 
 {{- define "StaticCallSyncRequestCallerAllocateMethodArguments" -}}
@@ -24,7 +24,7 @@ const fragmentSyncRequestCallerAllocateTmpl = `
 {{- if .HasResponse }}
   {{- $args = (List $args "::fidl::BufferSpan _response_buffer") }}
 {{- end }}
-{{- RenderCalleeParams $args }}
+{{- RenderParams $args }}
 {{- end }}
 
 `

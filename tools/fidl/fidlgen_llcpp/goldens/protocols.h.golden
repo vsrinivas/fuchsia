@@ -12564,7 +12564,7 @@ class ::fidl::internal::WireWeakEventSender<
  public:
   zx_status_t Event(int64_t x) const {
     if (auto _binding = binding_.lock()) {
-      return _binding->event_sender().Event(std::move(x));
+      return _binding->event_sender().Event(x);
     }
     return ZX_ERR_CANCELED;
   }
@@ -12572,7 +12572,7 @@ class ::fidl::internal::WireWeakEventSender<
   // Caller provides the backing storage for FIDL message via response buffers.
   zx_status_t Event(::fidl::BufferSpan _buffer, int64_t x) const {
     if (auto _binding = binding_.lock()) {
-      return _binding->event_sender().Event(std::move(_buffer), std::move(x));
+      return _binding->event_sender().Event(std::move(_buffer), x);
     }
     return ZX_ERR_CANCELED;
   }
@@ -12825,7 +12825,7 @@ class ::fidl::internal::WireWeakEventSender<
  public:
   zx_status_t EventA(int64_t a, int64_t b) const {
     if (auto _binding = binding_.lock()) {
-      return _binding->event_sender().EventA(std::move(a), std::move(b));
+      return _binding->event_sender().EventA(a, b);
     }
     return ZX_ERR_CANCELED;
   }
@@ -12833,8 +12833,7 @@ class ::fidl::internal::WireWeakEventSender<
   // Caller provides the backing storage for FIDL message via response buffers.
   zx_status_t EventA(::fidl::BufferSpan _buffer, int64_t a, int64_t b) const {
     if (auto _binding = binding_.lock()) {
-      return _binding->event_sender().EventA(std::move(_buffer), std::move(a),
-                                             std::move(b));
+      return _binding->event_sender().EventA(std::move(_buffer), a, b);
     }
     return ZX_ERR_CANCELED;
   }
@@ -13169,7 +13168,7 @@ class ::fidl::internal::WireWeakEventSender<
 
   zx_status_t OnWithResponse(::fidl::StringView ret) const {
     if (auto _binding = binding_.lock()) {
-      return _binding->event_sender().OnWithResponse(std::move(ret));
+      return _binding->event_sender().OnWithResponse(ret);
     }
     return ZX_ERR_CANCELED;
   }
@@ -13178,8 +13177,7 @@ class ::fidl::internal::WireWeakEventSender<
   zx_status_t OnWithResponse(::fidl::BufferSpan _buffer,
                              ::fidl::StringView ret) const {
     if (auto _binding = binding_.lock()) {
-      return _binding->event_sender().OnWithResponse(std::move(_buffer),
-                                                     std::move(ret));
+      return _binding->event_sender().OnWithResponse(std::move(_buffer), ret);
     }
     return ZX_ERR_CANCELED;
   }

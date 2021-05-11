@@ -44,7 +44,7 @@ const fragmentClientSyncMethodsTmpl = `
   {{- if .HasResponse }}
 {{- IfdefFuchsia -}}
 {{ .WireResult }}
-{{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}_Sync({{ RenderCalleeParams .RequestArgs }}) {
+{{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}_Sync({{ RenderParams .RequestArgs }}) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return {{ .WireResult }}(
       {{- RenderForwardParams (printf "::fidl::UnownedClientEnd<%s>(_channel->handle())" .Protocol)
@@ -55,7 +55,7 @@ const fragmentClientSyncMethodsTmpl = `
 {{- EndifFuchsia -}}
   {{- else }}
 {{- IfdefFuchsia -}}
-::fidl::Result {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}({{ RenderCalleeParams .RequestArgs }}) {
+::fidl::Result {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}({{ RenderParams .RequestArgs }}) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = {{ .WireResult }}(
       {{- RenderForwardParams (printf "::fidl::UnownedClientEnd<%s>(_channel->handle())" .Protocol)

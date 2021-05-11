@@ -20,7 +20,7 @@ class {{ .WireUnownedResult }} final : public ::fidl::Result {
     {{- if .HasResponse }}
         {{- $args = (List $args "uint8_t* _response_bytes" "uint32_t _response_byte_capacity") }}
     {{- end }}
-     explicit {{ .WireUnownedResult.Self }}({{ RenderCalleeParams $args}});
+     explicit {{ .WireUnownedResult.Self }}({{ RenderParams $args}});
 	 explicit {{ .WireUnownedResult.Self }}(const ::fidl::Result& result) : ::fidl::Result(result) {}
 	 {{ .WireUnownedResult.Self }}({{ .WireUnownedResult.Self }}&&) = delete;
 	 {{ .WireUnownedResult.Self }}(const {{ .WireUnownedResult.Self }}&) = delete;
@@ -75,7 +75,7 @@ class {{ .WireUnownedResult }} final : public ::fidl::Result {
 {{- if .HasResponse }}
   {{- $args = (List $args "uint8_t* _response_bytes" "uint32_t _response_byte_capacity") }}
 {{- end -}}
-{{ .WireUnownedResult }}::{{ .WireUnownedResult.Self }}({{ RenderCalleeParams $args }})
+{{ .WireUnownedResult }}::{{ .WireUnownedResult.Self }}({{ RenderParams $args }})
 {{- if .HasResponse }}
     : bytes_(_response_bytes)
 {{- end }}

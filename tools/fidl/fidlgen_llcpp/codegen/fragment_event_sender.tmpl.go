@@ -32,13 +32,13 @@ class {{ .WireEventSender }} {
   {{- /* Events have no "request" part of the call; they are unsolicited. */}}
   {{- range .Events }}
     {{- .Docs }}
-    zx_status_t {{ .Name }}({{ RenderCalleeParams .ResponseArgs }}) const;
+    zx_status_t {{ .Name }}({{ RenderParams .ResponseArgs }}) const;
 
     {{- if .ResponseArgs }}
 {{ "" }}
     {{- .Docs }}
     // Caller provides the backing storage for FIDL message via response buffers.
-    zx_status_t {{ .Name }}({{ RenderCalleeParams "::fidl::BufferSpan _buffer" .ResponseArgs }}) const;
+    zx_status_t {{ .Name }}({{ RenderParams "::fidl::BufferSpan _buffer" .ResponseArgs }}) const;
     {{- end }}
 {{ "" }}
   {{- end }}
@@ -52,9 +52,9 @@ class {{ .WireWeakEventSender }} {
  public:
   {{- range .Events }}
     {{- .Docs }}
-    zx_status_t {{ .Name }}({{ RenderCalleeParams .ResponseArgs }}) const {
+    zx_status_t {{ .Name }}({{ RenderParams .ResponseArgs }}) const {
       if (auto _binding = binding_.lock()) {
-        return _binding->event_sender().{{ .Name }}({{ RenderParamMoveNames .ResponseArgs }});
+        return _binding->event_sender().{{ .Name }}({{ RenderForwardParams .ResponseArgs }});
       }
       return ZX_ERR_CANCELED;
     }
@@ -63,9 +63,9 @@ class {{ .WireWeakEventSender }} {
 {{ "" }}
     {{- .Docs }}
   // Caller provides the backing storage for FIDL message via response buffers.
-  zx_status_t {{ .Name }}({{ RenderCalleeParams "::fidl::BufferSpan _buffer" .ResponseArgs }}) const {
+  zx_status_t {{ .Name }}({{ RenderParams "::fidl::BufferSpan _buffer" .ResponseArgs }}) const {
     if (auto _binding = binding_.lock()) {
-      return _binding->event_sender().{{ .Name }}({{ RenderParamMoveNames "std::move(_buffer)" .ResponseArgs }});
+      return _binding->event_sender().{{ .Name }}({{ RenderForwardParams "std::move(_buffer)" .ResponseArgs }});
     }
     return ZX_ERR_CANCELED;
   }
@@ -88,7 +88,7 @@ class {{ .WireWeakEventSender }} {
 {{- IfdefFuchsia -}}
   {{- range .Events }}
     {{- /* Managed */}}
-zx_status_t {{ $.WireEventSender.NoLeading }}::{{ .Name }}({{ RenderCalleeParams .ResponseArgs }}) const {
+zx_status_t {{ $.WireEventSender.NoLeading }}::{{ .Name }}({{ RenderParams .ResponseArgs }}) const {
   ::fidl::OwnedEncodedMessage<{{ .WireResponse }}> _response{
       {{- RenderForwardParams .ResponseArgs -}}
   };
@@ -98,7 +98,7 @@ zx_status_t {{ $.WireEventSender.NoLeading }}::{{ .Name }}({{ RenderCalleeParams
     {{- /* Caller-allocated */}}
     {{- if .ResponseArgs }}
 {{ "" }}
-zx_status_t {{ $.WireEventSender.NoLeading }}::{{ .Name }}({{ RenderCalleeParams "::fidl::BufferSpan _buffer" .ResponseArgs }}) const {
+zx_status_t {{ $.WireEventSender.NoLeading }}::{{ .Name }}({{ RenderParams "::fidl::BufferSpan _buffer" .ResponseArgs }}) const {
   ::fidl::UnownedEncodedMessage<{{ .WireResponse }}> _response(
       {{- RenderForwardParams "_buffer.data" "_buffer.capacity" .ResponseArgs }});
   _response.Write(server_end_);

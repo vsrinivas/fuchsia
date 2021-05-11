@@ -13,11 +13,11 @@ template<>
 class {{ .WireResult }} final : public ::fidl::Result {
 	public:
 	 explicit {{ .WireResult.Self }}(
-		 {{ RenderCalleeParams (printf "::fidl::UnownedClientEnd<%s> _client" .Protocol)
+		 {{ RenderParams (printf "::fidl::UnownedClientEnd<%s> _client" .Protocol)
 		                       .RequestArgs }});
    {{- if .HasResponse }}
 	 {{ .WireResult.Self }}(
-		{{ RenderCalleeParams (printf "::fidl::UnownedClientEnd<%s> _client" .Protocol)
+		{{ RenderParams (printf "::fidl::UnownedClientEnd<%s> _client" .Protocol)
 		                      .RequestArgs "zx_time_t _deadline"}});
    {{- end }}
 	 explicit {{ .WireResult.Self }}(const ::fidl::Result& result) : ::fidl::Result(result) {}
@@ -71,7 +71,7 @@ class {{ .WireResult }} final : public ::fidl::Result {
 {{- IfdefFuchsia -}}
 {{- EnsureNamespace "" }}
 {{ .WireResult }}::{{ .WireResult.Self }}(
-    {{- RenderCalleeParams (printf "::fidl::UnownedClientEnd<%s> _client" .Protocol)
+    {{- RenderParams (printf "::fidl::UnownedClientEnd<%s> _client" .Protocol)
                           .RequestArgs }})
    {
   ::fidl::OwnedEncodedMessage<{{ .WireRequest }}> _request(
@@ -90,7 +90,7 @@ class {{ .WireResult }} final : public ::fidl::Result {
   {{- if .HasResponse }}
 
 {{ .WireResult }}::{{ .WireResult.Self }}(
-    {{- RenderCalleeParams (printf "::fidl::UnownedClientEnd<%s> _client" .Protocol)
+    {{- RenderParams (printf "::fidl::UnownedClientEnd<%s> _client" .Protocol)
                            .RequestArgs "zx_time_t _deadline" }})
    {
   ::fidl::OwnedEncodedMessage<{{ .WireRequest }}> _request(

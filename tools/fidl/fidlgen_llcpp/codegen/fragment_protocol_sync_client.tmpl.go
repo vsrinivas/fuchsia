@@ -31,7 +31,7 @@ class {{ .WireSyncClient }} final {
    {{- range .ClientMethods -}}
    {{- .Docs }}
    //{{ template "ClientAllocationComment" . }}
-   {{ .WireResult }} {{ .Name }}({{ RenderCalleeParams .RequestArgs }}) {
+   {{ .WireResult }} {{ .Name }}({{ RenderParams .RequestArgs }}) {
      return {{ .WireResult }}({{ RenderForwardParams "this->client_end()" .RequestArgs }});
    }
 {{ "" }}

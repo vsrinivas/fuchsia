@@ -22,7 +22,7 @@ class {{ .WireClientImpl }} final : private ::fidl::internal::ClientBase {
   // Asynchronous variant of |{{ $.Name }}.{{ .Name }}()|.
   // {{ template "AsyncClientAllocationComment" . }}
   ::fidl::Result {{ .Name }}(
-        {{ RenderCalleeParams .RequestArgs
+        {{ RenderParams .RequestArgs
                         (printf "::fit::callback<void (%s* response)> _cb" .WireResponse) }});
 {{ "" }}
 
@@ -37,7 +37,7 @@ class {{ .WireClientImpl }} final : private ::fidl::internal::ClientBase {
   // or |OnReply| are called on it.
   ::fidl::Result {{ .Name }}(
         {{- if .RequestArgs }}
-          {{ RenderCalleeParams "::fidl::BufferSpan _request_buffer"
+          {{ RenderParams "::fidl::BufferSpan _request_buffer"
                           .RequestArgs
                           (printf "%s* _context" .WireResponseContext) }}
         {{- else }}
@@ -53,7 +53,7 @@ class {{ .WireClientImpl }} final : private ::fidl::internal::ClientBase {
     {{- end }}
   // Synchronous variant of |{{ $.Name }}.{{ .Name }}()|.
   // {{- template "ClientAllocationComment" . }}
-  {{ .WireResult }} {{ .Name }}_Sync({{ RenderCalleeParams .RequestArgs }});
+  {{ .WireResult }} {{ .Name }}_Sync({{ RenderParams .RequestArgs }});
 
     {{- /* Sync caller-allocate flavor */}}
     {{- if or .RequestArgs .ResponseArgs }}
@@ -79,7 +79,7 @@ class {{ .WireClientImpl }} final : private ::fidl::internal::ClientBase {
   //
     {{- end }}
   // {{- template "ClientAllocationComment" . }}
-  ::fidl::Result {{ .Name }}({{ RenderCalleeParams .RequestArgs }});
+  ::fidl::Result {{ .Name }}({{ RenderParams .RequestArgs }});
 
     {{- /* Caller-allocate flavor */}}
     {{- if .RequestArgs }}

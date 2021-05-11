@@ -1430,7 +1430,7 @@ class ::fidl::internal::WireWeakEventSender<
  public:
   zx_status_t Receive(const ::fidl_test_emptystruct::wire::Empty& e) const {
     if (auto _binding = binding_.lock()) {
-      return _binding->event_sender().Receive(std::move(e));
+      return _binding->event_sender().Receive(e);
     }
     return ZX_ERR_CANCELED;
   }
@@ -1439,7 +1439,7 @@ class ::fidl::internal::WireWeakEventSender<
   zx_status_t Receive(::fidl::BufferSpan _buffer,
                       const ::fidl_test_emptystruct::wire::Empty& e) const {
     if (auto _binding = binding_.lock()) {
-      return _binding->event_sender().Receive(std::move(_buffer), std::move(e));
+      return _binding->event_sender().Receive(std::move(_buffer), e);
     }
     return ZX_ERR_CANCELED;
   }

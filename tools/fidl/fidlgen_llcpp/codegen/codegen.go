@@ -82,7 +82,7 @@ func renderParams(format formatParam, list interface{}) string {
 	return buf.String()
 }
 
-func calleeParam(n string, t cpp.Type) string {
+func param(n string, t cpp.Type) string {
 	if t.Kind == cpp.TypeKinds.Array || t.Kind == cpp.TypeKinds.Struct {
 		if !t.Nullable {
 			if t.IsResource {
@@ -183,34 +183,10 @@ var utilityFuncs = template.FuncMap{
 		return closeHandles(n, n, t, t.WirePointer, t.WirePointer, access, mutableAccess)
 	},
 	"RenderParams": func(params ...interface{}) string {
-		return renderParams(func(n string, t cpp.Type) string {
-			return fmt.Sprintf("%s %s", t.String(), n)
-		}, params)
-	},
-	"RenderCalleeParams": func(params ...interface{}) string {
-		return renderParams(calleeParam, params)
+		return renderParams(param, params)
 	},
 	"RenderForwardParams": func(params ...interface{}) string {
 		return renderParams(forwardParam, params)
-	},
-	"RenderParamsNoTypedChannels": func(params ...interface{}) string {
-		return renderParams(func(n string, t cpp.Type) string {
-			return fmt.Sprintf("%s %s", t.WireNoTypedChannels(), n)
-		}, params)
-	},
-	"RenderParamMoveNames": func(params ...interface{}) string {
-		return renderParams(func(n string, t cpp.Type) string {
-			return fmt.Sprintf("std::move(%s)", n)
-		}, params)
-	},
-	"RenderParamsMoveNamesNoTypedChannels": func(params ...interface{}) string {
-		return renderParams(func(n string, t cpp.Type) string {
-			if t.Kind == cpp.TypeKinds.Protocol || t.Kind == cpp.TypeKinds.Request {
-				return fmt.Sprintf("std::move(%s.channel())", n)
-			} else {
-				return fmt.Sprintf("std::move(%s)", n)
-			}
-		}, params)
 	},
 	"RenderInitMessage": func(params ...interface{}) string {
 		s := renderParams(func(n string, t cpp.Type) string {

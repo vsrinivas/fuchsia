@@ -17,16 +17,16 @@ class {{ .WireCompleterBase.Self }} : public ::fidl::CompleterBase {
   // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
   //
   // Because the reply status is identical to the unbinding status, it can be safely ignored.
-  ::fidl::Result Reply({{ RenderCalleeParams .ResponseArgs }});
+  ::fidl::Result Reply({{ RenderParams .ResponseArgs }});
       {{- if .Result }}
-  ::fidl::Result ReplySuccess({{ RenderCalleeParams .Result.ValueMembers }});
+  ::fidl::Result ReplySuccess({{ RenderParams .Result.ValueMembers }});
   ::fidl::Result ReplyError({{ .Result.ErrorDecl }} error);
       {{- end }}
       {{- if .ResponseArgs }}
-  ::fidl::Result Reply({{ RenderCalleeParams "::fidl::BufferSpan _buffer" .ResponseArgs }});
+  ::fidl::Result Reply({{ RenderParams "::fidl::BufferSpan _buffer" .ResponseArgs }});
         {{- if .Result }}
   ::fidl::Result ReplySuccess(
-      {{- RenderCalleeParams "::fidl::BufferSpan _buffer" .Result.ValueMembers }});
+      {{- RenderParams "::fidl::BufferSpan _buffer" .Result.ValueMembers }});
         {{- end }}
       {{- end }}
 
@@ -39,7 +39,7 @@ class {{ .WireCompleterBase.Self }} : public ::fidl::CompleterBase {
 {{ EnsureNamespace "" }}
 {{- IfdefFuchsia -}}
 ::fidl::Result
-{{ .WireCompleterBase.NoLeading }}::Reply({{ RenderCalleeParams .ResponseArgs }}) {
+{{ .WireCompleterBase.NoLeading }}::Reply({{ RenderParams .ResponseArgs }}) {
   ::fidl::OwnedEncodedMessage<{{ .WireResponse }}> _response{
     {{- RenderForwardParams .ResponseArgs -}}
   };
@@ -49,7 +49,7 @@ class {{ .WireCompleterBase.Self }} : public ::fidl::CompleterBase {
 {{- if .Result }}
   ::fidl::Result
   {{ .WireCompleterBase.NoLeading }}::ReplySuccess(
-        {{ RenderCalleeParams .Result.ValueMembers }}) {
+        {{ RenderParams .Result.ValueMembers }}) {
     {{ .Result.ValueStructDecl }} _response;
     {{- range .Result.ValueMembers }}
       _response.{{ .Name }} = std::move({{ .Name }});
@@ -69,7 +69,7 @@ class {{ .WireCompleterBase.Self }} : public ::fidl::CompleterBase {
 {{- if .ResponseArgs }}
 
   ::fidl::Result {{ .WireCompleterBase.NoLeading }}::Reply(
-        {{- RenderCalleeParams "::fidl::BufferSpan _buffer" .ResponseArgs }}) {
+        {{- RenderParams "::fidl::BufferSpan _buffer" .ResponseArgs }}) {
     {{ .WireResponse }}::UnownedEncodedMessage _response(
           {{ RenderForwardParams "_buffer.data" "_buffer.capacity" .ResponseArgs }});
     return CompleterBase::SendReply(&_response.GetOutgoingMessage());
@@ -77,7 +77,7 @@ class {{ .WireCompleterBase.Self }} : public ::fidl::CompleterBase {
 
   {{- if .Result }}
     ::fidl::Result {{ .WireCompleterBase.NoLeading }}::ReplySuccess(
-          {{- RenderCalleeParams "::fidl::BufferSpan _buffer" .Result.ValueMembers }}) {
+          {{- RenderParams "::fidl::BufferSpan _buffer" .Result.ValueMembers }}) {
       {{ .Result.ValueStructDecl }} response;
       {{- range .Result.ValueMembers }}
         response.{{ .Name }} = std::move({{ .Name }});
