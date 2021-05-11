@@ -73,21 +73,9 @@ impl RunResult {
 mod tests {
     use {super::*, triage::ActionResults};
 
-    macro_rules! make_action_result {
-        ($($action:expr => $r:literal),+) => {
-            {
-                let mut result = ActionResults::new();
-                $(
-                    result.set_result($action, $r);
-                )*
-                result
-            }
-        };
-    }
-
     #[test]
     fn test_output_text_no_warnings() -> Result<(), Error> {
-        let action_results = make_action_result!("a" => true);
+        let action_results = ActionResults::new();
         let run_result = RunResult::new(OutputFormat::Text, action_results);
 
         let mut dest = vec![];
@@ -101,7 +89,7 @@ mod tests {
 
     #[test]
     fn test_output_text_with_warnings() -> Result<(), Error> {
-        let mut action_results = make_action_result!("a" => true);
+        let mut action_results = ActionResults::new();
         action_results.add_warning("fail".to_string());
 
         let run_result = RunResult::new(OutputFormat::Text, action_results);
@@ -117,7 +105,7 @@ mod tests {
 
     #[test]
     fn test_output_text_with_gauges() -> Result<(), Error> {
-        let mut action_results = make_action_result!("a" => true);
+        let mut action_results = ActionResults::new();
         action_results.add_gauge("gauge".to_string());
         let run_result = RunResult::new(OutputFormat::Text, action_results);
 

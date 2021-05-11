@@ -52,7 +52,6 @@ impl<'a> ActionContext<'a> {
 /// the [warnings] and [gauges] that are generated.
 #[derive(Clone, Debug)]
 pub struct ActionResults {
-    results: HashMap<String, bool>,
     warnings: Vec<String>,
     gauges: Vec<String>,
     snapshots: Vec<SnapshotTrigger>,
@@ -63,17 +62,12 @@ pub struct ActionResults {
 impl ActionResults {
     pub fn new() -> ActionResults {
         ActionResults {
-            results: HashMap::new(),
             warnings: Vec::new(),
             gauges: Vec::new(),
             snapshots: Vec::new(),
             sort_gauges: true,
             sub_results: Vec::new(),
         }
-    }
-
-    pub fn set_result(&mut self, action: &str, value: bool) {
-        self.results.insert(action.to_string(), value);
     }
 
     pub fn add_warning(&mut self, warning: String) {
@@ -232,8 +226,8 @@ impl ActionContext<'_> {
     }
 
     /// Update warnings if condition is met.
-    fn update_warnings(&mut self, action: &Warning, namespace: &String, name: &String) {
-        let was_triggered = match self.metric_state.eval_action_metric(namespace, &action.trigger) {
+    fn update_warnings(&mut self, action: &Warning, namespace: &String, _name: &String) {
+        match self.metric_state.eval_action_metric(namespace, &action.trigger) {
             MetricValue::Bool(true) => {
                 self.action_results.add_warning(format!("[WARNING] {}.", action.print));
                 true
@@ -252,12 +246,11 @@ impl ActionContext<'_> {
                 false
             }
         };
-        self.action_results.set_result(&format!("{}::{}", namespace, name), was_triggered);
     }
 
     /// Update snapshots if condition is met.
-    fn update_snapshots(&mut self, action: &Snapshot, namespace: &str, name: &str) {
-        let was_triggered = match self.metric_state.eval_action_metric(namespace, &action.trigger) {
+    fn update_snapshots(&mut self, action: &Snapshot, namespace: &str, _name: &str) {
+        match self.metric_state.eval_action_metric(namespace, &action.trigger) {
             MetricValue::Bool(true) => {
                 let interval = self.metric_state.eval_action_metric(namespace, &action.repeat);
                 match interval {
@@ -299,7 +292,6 @@ impl ActionContext<'_> {
                 false
             }
         };
-        self.action_results.set_result(&format!("{}::{}", namespace, name), was_triggered);
     }
 
     /// Update gauges.
