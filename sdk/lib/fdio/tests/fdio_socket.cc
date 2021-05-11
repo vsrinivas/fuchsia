@@ -10,6 +10,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fidl-async/cpp/bind.h>
+#include <lib/fit/defer.h>
 #include <netinet/in.h>
 #include <poll.h>
 #include <sys/socket.h>
@@ -23,7 +24,6 @@
 #include <future>
 #include <latch>
 
-#include <fbl/array.h>
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
 
@@ -33,11 +33,7 @@ namespace {
 
 class Server final : public fuchsia_posix_socket::testing::StreamSocket_TestBase {
  public:
-  explicit Server(zx::socket peer) : peer_(std::move(peer)) {
-    // We need the FDIO to act like it's connected.
-    // ZXSIO_SIGNAL_CONNECTED is private, but we know the value.
-    EXPECT_OK(peer_.signal(0, ZX_USER_SIGNAL_3));
-  }
+  explicit Server(zx::socket peer) : peer_(std::move(peer)) {}
 
   void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) override {
     ADD_FAILURE("%s should not be called", name.c_str());
@@ -62,9 +58,17 @@ class Server final : public fuchsia_posix_socket::testing::StreamSocket_TestBase
     completer.Reply(std::move(info));
   }
 
+  void Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) override {
+    if (on_connect_) {
+      on_connect_(peer_, completer);
+    } else {
+      fuchsia_posix_socket::testing::StreamSocket_TestBase::Connect(request, completer);
+    }
+  }
+
   void GetError(GetErrorRequestView request, GetErrorCompleter::Sync& completer) override {
     completer.ReplySuccess();
-  };
+  }
 
   void FillPeerSocket() const {
     zx_info_socket_t info;
@@ -78,8 +82,14 @@ class Server final : public fuchsia_posix_socket::testing::StreamSocket_TestBase
 
   void ResetSocket() { peer_.reset(); }
 
+  void SetOnConnect(fit::function<void(zx::socket&, ConnectCompleter::Sync&)> cb) {
+    on_connect_ = std::move(cb);
+  }
+
  private:
   zx::socket peer_;
+
+  fit::function<void(zx::socket&, ConnectCompleter::Sync&)> on_connect_;
 };
 
 template <int sock_type>
@@ -117,6 +127,38 @@ class BaseTest : public zxtest::Test {
 
   Server& mutable_server() { return server_.value(); }
 
+  void set_connected() {
+    mutable_server().SetOnConnect(
+        [connected = false](zx::socket& peer, Server::ConnectCompleter::Sync& completer) mutable {
+          switch (sock_type) {
+            case ZX_SOCKET_STREAM:
+              if (!connected) {
+                connected = true;
+                // We need the FDIO to act like it's connected.
+                // ZXSIO_SIGNAL_CONNECTED is private, but we know the value.
+                EXPECT_OK(peer.signal(0, ZX_USER_SIGNAL_3));
+                completer.ReplyError(fuchsia_posix::wire::Errno::kEinprogress);
+                break;
+              }
+              __FALLTHROUGH;
+            case ZX_SOCKET_DATAGRAM:
+              completer.ReplySuccess();
+              break;
+          }
+        });
+    const sockaddr_in addr = {
+        .sin_family = AF_INET,
+    };
+    ASSERT_SUCCESS(
+        connect(client_fd().get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)));
+  }
+
+  void set_nonblocking_io() {
+    int flags;
+    ASSERT_GE(flags = fcntl(client_fd().get(), F_GETFL), 0, "%s", strerror(errno));
+    ASSERT_SUCCESS(fcntl(client_fd().get(), F_SETFL, flags | O_NONBLOCK));
+  }
+
  private:
   zx::socket clientSocket() {}
 
@@ -125,12 +167,6 @@ class BaseTest : public zxtest::Test {
   std::optional<Server> server_;
   async::Loop loop_;
 };
-
-void set_nonblocking_io(int fd) {
-  int flags;
-  EXPECT_GE(flags = fcntl(fd, F_GETFL), 0, "%s", strerror(errno));
-  EXPECT_SUCCESS(fcntl(fd, F_SETFL, flags | O_NONBLOCK));
-}
 
 using TcpSocketTest = BaseTest<ZX_SOCKET_STREAM>;
 TEST_F(TcpSocketTest, CloseZXSocketOnTransfer) {
@@ -155,7 +191,8 @@ TEST_F(TcpSocketTest, CloseZXSocketOnTransfer) {
 // fails with ZX_ERR_SHOULD_WAIT, and this may lead to bogus EAGAIN even if some
 // data has actually been read.
 TEST_F(TcpSocketTest, RecvmsgNonblockBoundary) {
-  set_nonblocking_io(client_fd().get());
+  ASSERT_NO_FATAL_FAILURES(set_connected());
+  ASSERT_NO_FATAL_FAILURES(set_nonblocking_io());
 
   // Write 4 bytes of data to socket.
   size_t actual;
@@ -192,7 +229,8 @@ TEST_F(TcpSocketTest, RecvmsgNonblockBoundary) {
 
 // Make sure we can successfully read zero bytes if we pass a zero sized input buffer.
 TEST_F(TcpSocketTest, RecvmsgEmptyBuffer) {
-  set_nonblocking_io(client_fd().get());
+  ASSERT_NO_FATAL_FAILURES(set_connected());
+  ASSERT_NO_FATAL_FAILURES(set_nonblocking_io());
 
   // Write 4 bytes of data to socket.
   size_t actual;
@@ -213,7 +251,8 @@ TEST_F(TcpSocketTest, RecvmsgEmptyBuffer) {
 // with ZX_ERR_SHOULD_WAIT, but the sendmsg should report first segment length
 // rather than failing with EAGAIN.
 TEST_F(TcpSocketTest, SendmsgNonblockBoundary) {
-  set_nonblocking_io(client_fd().get());
+  ASSERT_NO_FATAL_FAILURES(set_connected());
+  ASSERT_NO_FATAL_FAILURES(set_nonblocking_io());
 
   const size_t memlength = 65536;
   std::unique_ptr<uint8_t[]> memchunk(new uint8_t[memlength]);
@@ -248,42 +287,118 @@ TEST_F(TcpSocketTest, SendmsgNonblockBoundary) {
   EXPECT_SUCCESS(close(mutable_client_fd().release()));
 }
 
-TEST_F(TcpSocketTest, WaitBeginEnd) {
+TEST_F(TcpSocketTest, WaitBeginEndConnecting) {
+  ASSERT_NO_FATAL_FAILURES(set_nonblocking_io());
+
+  // Like set_connected, but does not advance to the connected state.
+  mutable_server().SetOnConnect([](zx::socket& peer, Server::ConnectCompleter::Sync& completer) {
+    completer.ReplyError(fuchsia_posix::wire::Errno::kEinprogress);
+  });
+  const sockaddr_in addr = {
+      .sin_family = AF_INET,
+  };
+  ASSERT_EQ(connect(client_fd().get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), -1);
+  ASSERT_ERRNO(EINPROGRESS);
+
   fdio_t* io = fdio_unsafe_fd_to_io(client_fd().get());
+  auto release = fit::defer([io]() { fdio_unsafe_release(io); });
 
-  // fdio_unsafe_wait_begin
-
-  zx::handle handle;
+  zx_handle_t handle;
 
   {
     zx_signals_t signals;
-    fdio_unsafe_wait_begin(io, POLLIN, handle.reset_and_get_address(), &signals);
-    EXPECT_NE(handle.get(), ZX_HANDLE_INVALID);
-    EXPECT_EQ(signals, ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED | ZX_SOCKET_PEER_WRITE_DISABLED);
+    fdio_unsafe_wait_begin(io, POLLIN, &handle, &signals);
+    EXPECT_NE(handle, ZX_HANDLE_INVALID);
+    EXPECT_EQ(signals, ZX_USER_SIGNAL_0 | ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED |
+                           ZX_SOCKET_PEER_WRITE_DISABLED);
   }
 
   {
     zx_signals_t signals;
-    fdio_unsafe_wait_begin(io, POLLOUT, handle.reset_and_get_address(), &signals);
-    EXPECT_NE(handle.get(), ZX_HANDLE_INVALID);
-    EXPECT_EQ(signals, ZX_SOCKET_PEER_CLOSED | ZX_SOCKET_WRITABLE | ZX_SOCKET_WRITE_DISABLED);
+    fdio_unsafe_wait_begin(io, POLLOUT, &handle, &signals);
+    EXPECT_NE(handle, ZX_HANDLE_INVALID);
+    EXPECT_EQ(signals, ZX_USER_SIGNAL_3 | ZX_SOCKET_PEER_CLOSED | ZX_SOCKET_WRITE_DISABLED);
   }
 
   {
     zx_signals_t signals;
-    fdio_unsafe_wait_begin(io, POLLRDHUP, handle.reset_and_get_address(), &signals);
-    EXPECT_NE(handle.get(), ZX_HANDLE_INVALID);
+    fdio_unsafe_wait_begin(io, POLLRDHUP, &handle, &signals);
+    EXPECT_NE(handle, ZX_HANDLE_INVALID);
     EXPECT_EQ(signals, ZX_SOCKET_PEER_CLOSED | ZX_SOCKET_PEER_WRITE_DISABLED);
   }
 
   {
     zx_signals_t signals;
-    fdio_unsafe_wait_begin(io, POLLHUP, handle.reset_and_get_address(), &signals);
-    EXPECT_NE(handle.get(), ZX_HANDLE_INVALID);
+    fdio_unsafe_wait_begin(io, POLLHUP, &handle, &signals);
+    EXPECT_NE(handle, ZX_HANDLE_INVALID);
     EXPECT_EQ(signals, ZX_SOCKET_PEER_CLOSED);
   }
 
-  // fdio_unsafe_wait_end
+  {
+    uint32_t events;
+    fdio_unsafe_wait_end(io, ZX_SOCKET_READABLE, &events);
+    EXPECT_EQ(int32_t(events), 0);
+  }
+
+  {
+    uint32_t events;
+    fdio_unsafe_wait_end(io, ZX_SOCKET_PEER_CLOSED, &events);
+    EXPECT_EQ(int32_t(events), POLLIN | POLLOUT | POLLERR | POLLHUP | POLLRDHUP);
+  }
+
+  {
+    uint32_t events;
+    fdio_unsafe_wait_end(io, ZX_SOCKET_PEER_WRITE_DISABLED, &events);
+    EXPECT_EQ(int32_t(events), POLLIN | POLLRDHUP);
+  }
+
+  {
+    uint32_t events;
+    fdio_unsafe_wait_end(io, ZX_SOCKET_WRITABLE, &events);
+    EXPECT_EQ(int32_t(events), 0);
+  }
+
+  {
+    uint32_t events;
+    fdio_unsafe_wait_end(io, ZX_SOCKET_WRITE_DISABLED, &events);
+    EXPECT_EQ(int32_t(events), POLLOUT | POLLHUP);
+  }
+}
+
+TEST_F(TcpSocketTest, WaitBeginEndConnected) {
+  ASSERT_NO_FATAL_FAILURES(set_connected());
+  fdio_t* io = fdio_unsafe_fd_to_io(client_fd().get());
+  auto release = fit::defer([io]() { fdio_unsafe_release(io); });
+
+  zx_handle_t handle;
+
+  {
+    zx_signals_t signals;
+    fdio_unsafe_wait_begin(io, POLLIN, &handle, &signals);
+    EXPECT_NE(handle, ZX_HANDLE_INVALID);
+    EXPECT_EQ(signals, ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED | ZX_SOCKET_PEER_WRITE_DISABLED);
+  }
+
+  {
+    zx_signals_t signals;
+    fdio_unsafe_wait_begin(io, POLLOUT, &handle, &signals);
+    EXPECT_NE(handle, ZX_HANDLE_INVALID);
+    EXPECT_EQ(signals, ZX_SOCKET_PEER_CLOSED | ZX_SOCKET_WRITABLE | ZX_SOCKET_WRITE_DISABLED);
+  }
+
+  {
+    zx_signals_t signals;
+    fdio_unsafe_wait_begin(io, POLLRDHUP, &handle, &signals);
+    EXPECT_NE(handle, ZX_HANDLE_INVALID);
+    EXPECT_EQ(signals, ZX_SOCKET_PEER_CLOSED | ZX_SOCKET_PEER_WRITE_DISABLED);
+  }
+
+  {
+    zx_signals_t signals;
+    fdio_unsafe_wait_begin(io, POLLHUP, &handle, &signals);
+    EXPECT_NE(handle, ZX_HANDLE_INVALID);
+    EXPECT_EQ(signals, ZX_SOCKET_PEER_CLOSED);
+  }
 
   {
     uint32_t events;
@@ -314,12 +429,12 @@ TEST_F(TcpSocketTest, WaitBeginEnd) {
     fdio_unsafe_wait_end(io, ZX_SOCKET_WRITE_DISABLED, &events);
     EXPECT_EQ(int32_t(events), POLLOUT | POLLHUP);
   }
-
-  fdio_unsafe_release(io);
 }
 
 using UdpSocketTest = BaseTest<ZX_SOCKET_DATAGRAM>;
 TEST_F(UdpSocketTest, DatagramSendMsg) {
+  ASSERT_NO_FATAL_FAILURES(set_connected());
+
   {
     const struct msghdr msg = {};
     // sendmsg should accept 0 length payload.
@@ -374,101 +489,107 @@ TEST_F(UdpSocketTest, DatagramSendMsg) {
   EXPECT_SUCCESS(close(mutable_client_fd().release()));
 }
 
-template <int optname>
-auto timeout = [](fbl::unique_fd& fd, zx::socket& server_socket) {
-  static_assert(optname == SO_RCVTIMEO || optname == SO_SNDTIMEO);
+class TcpSocketTimeoutTest : public TcpSocketTest {
+ protected:
+  template <int optname>
+  void timeout(fbl::unique_fd& fd, zx::socket& server_socket) {
+    static_assert(optname == SO_RCVTIMEO || optname == SO_SNDTIMEO);
 
-  // We want this to be a small number so the test is fast, but at least 1
-  // second so that we exercise `tv_sec`.
-  const auto timeout = std::chrono::seconds(1) + std::chrono::milliseconds(50);
-  {
-    const auto sec = std::chrono::duration_cast<std::chrono::seconds>(timeout);
-    const struct timeval tv = {
-        .tv_sec = sec.count(),
-        .tv_usec = std::chrono::duration_cast<std::chrono::microseconds>(timeout - sec).count(),
-    };
-    ASSERT_SUCCESS(setsockopt(fd.get(), SOL_SOCKET, optname, &tv, sizeof(tv)));
-    struct timeval actual_tv;
-    socklen_t optlen = sizeof(actual_tv);
-    ASSERT_EQ(getsockopt(fd.get(), SOL_SOCKET, optname, &actual_tv, &optlen), 0, "%s",
-              strerror(errno));
-    ASSERT_EQ(optlen, sizeof(actual_tv));
-    ASSERT_EQ(actual_tv.tv_sec, tv.tv_sec);
-    ASSERT_EQ(actual_tv.tv_usec, tv.tv_usec);
-  }
+    // We want this to be a small number so the test is fast, but at least 1
+    // second so that we exercise `tv_sec`.
+    const auto timeout = std::chrono::seconds(1) + std::chrono::milliseconds(50);
+    {
+      const auto sec = std::chrono::duration_cast<std::chrono::seconds>(timeout);
+      const struct timeval tv = {
+          .tv_sec = sec.count(),
+          .tv_usec = std::chrono::duration_cast<std::chrono::microseconds>(timeout - sec).count(),
+      };
+      ASSERT_SUCCESS(setsockopt(fd.get(), SOL_SOCKET, optname, &tv, sizeof(tv)));
+      struct timeval actual_tv;
+      socklen_t optlen = sizeof(actual_tv);
+      ASSERT_EQ(getsockopt(fd.get(), SOL_SOCKET, optname, &actual_tv, &optlen), 0, "%s",
+                strerror(errno));
+      ASSERT_EQ(optlen, sizeof(actual_tv));
+      ASSERT_EQ(actual_tv.tv_sec, tv.tv_sec);
+      ASSERT_EQ(actual_tv.tv_usec, tv.tv_usec);
+    }
 
-  const auto margin = std::chrono::milliseconds(50);
+    const auto margin = std::chrono::milliseconds(50);
 
-  uint8_t buf[16];
+    uint8_t buf[16];
 
-  // Perform the read/write. This is the core of the test - we expect the operation to time out
-  // per our setting of the timeout above.
+    // Perform the read/write. This is the core of the test - we expect the operation to time out
+    // per our setting of the timeout above.
 
-  const auto start = std::chrono::steady_clock::now();
-
-  switch (optname) {
-    case SO_RCVTIMEO:
-      ASSERT_EQ(read(fd.get(), buf, sizeof(buf)), -1);
-      break;
-    case SO_SNDTIMEO:
-      ASSERT_EQ(write(fd.get(), buf, sizeof(buf)), -1);
-      break;
-  }
-  ASSERT_TRUE(errno == EAGAIN || errno == EWOULDBLOCK, "%s", strerror(errno));
-
-  const auto elapsed = std::chrono::steady_clock::now() - start;
-
-  // Check that the actual time waited was close to the expectation.
-  const auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed);
-  const auto timeout_ms = std::chrono::duration_cast<std::chrono::milliseconds>(timeout);
-
-  // TODO(fxbug.dev/40135): Only the lower bound of the elapsed time is checked. The upper bound
-  // check is ignored as the syscall could far miss the defined deadline to return.
-  EXPECT_GT(elapsed, timeout - margin, "elapsed=%lld ms (which is not within %lld ms of %lld ms)",
-            elapsed_ms.count(), margin.count(), timeout_ms.count());
-
-  // Remove the timeout.
-  const struct timeval tv = {};
-  ASSERT_SUCCESS(setsockopt(fd.get(), SOL_SOCKET, optname, &tv, sizeof(tv)));
-  // Wrap the read/write in a future to enable a timeout. We expect the future
-  // to time out.
-  std::latch fut_started(1);
-  auto fut = std::async(std::launch::async, [&]() -> std::pair<ssize_t, int> {
-    fut_started.count_down();
+    const auto start = std::chrono::steady_clock::now();
 
     switch (optname) {
       case SO_RCVTIMEO:
-        return std::make_pair(read(fd.get(), buf, sizeof(buf)), errno);
+        ASSERT_EQ(read(fd.get(), buf, sizeof(buf)), -1);
+        break;
       case SO_SNDTIMEO:
-        return std::make_pair(write(fd.get(), buf, sizeof(buf)), errno);
+        ASSERT_EQ(write(fd.get(), buf, sizeof(buf)), -1);
+        break;
     }
-  });
-  fut_started.wait();
-  EXPECT_EQ(fut.wait_for(margin), std::future_status::timeout);
-  // Resetting the remote end socket should cause the read/write to complete.
-  server_socket.reset();
-  // Closing the socket without asserting ZXSIO_SIGNAL_CONNECTION_{REFUSED,RESET} looks like the
-  // connection was gracefully closed. The same behavior is exercised in
-  // src/connectivity/network/tests/bsdsocket_test.cc:{StopListenWhileConnect,BlockedIOTest/CloseWhileBlocked}.
-  auto return_code_and_errno = fut.get();
-  switch (optname) {
-    case SO_RCVTIMEO:
-      EXPECT_EQ(return_code_and_errno.first, 0);
-      break;
-    case SO_SNDTIMEO:
-      EXPECT_EQ(return_code_and_errno.first, -1);
-      ASSERT_EQ(return_code_and_errno.second, EPIPE, "%s", strerror(return_code_and_errno.second));
-      break;
-  }
+    ASSERT_TRUE(errno == EAGAIN || errno == EWOULDBLOCK, "%s", strerror(errno));
 
-  ASSERT_SUCCESS(close(fd.release()));
+    const auto elapsed = std::chrono::steady_clock::now() - start;
+
+    // Check that the actual time waited was close to the expectation.
+    const auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed);
+    const auto timeout_ms = std::chrono::duration_cast<std::chrono::milliseconds>(timeout);
+
+    // TODO(fxbug.dev/40135): Only the lower bound of the elapsed time is checked. The upper bound
+    // check is ignored as the syscall could far miss the defined deadline to return.
+    EXPECT_GT(elapsed, timeout - margin, "elapsed=%lld ms (which is not within %lld ms of %lld ms)",
+              elapsed_ms.count(), margin.count(), timeout_ms.count());
+
+    // Remove the timeout.
+    const struct timeval tv = {};
+    ASSERT_SUCCESS(setsockopt(fd.get(), SOL_SOCKET, optname, &tv, sizeof(tv)));
+    // Wrap the read/write in a future to enable a timeout. We expect the future
+    // to time out.
+    std::latch fut_started(1);
+    auto fut = std::async(std::launch::async, [&]() -> std::pair<ssize_t, int> {
+      fut_started.count_down();
+
+      switch (optname) {
+        case SO_RCVTIMEO:
+          return std::make_pair(read(fd.get(), buf, sizeof(buf)), errno);
+        case SO_SNDTIMEO:
+          return std::make_pair(write(fd.get(), buf, sizeof(buf)), errno);
+      }
+    });
+    fut_started.wait();
+    EXPECT_EQ(fut.wait_for(margin), std::future_status::timeout);
+    // Resetting the remote end socket should cause the read/write to complete.
+    server_socket.reset();
+    // Closing the socket without asserting ZXSIO_SIGNAL_CONNECTION_{REFUSED,RESET} looks like the
+    // connection was gracefully closed. The same behavior is exercised in
+    // src/connectivity/network/tests/bsdsocket_test.cc:{StopListenWhileConnect,BlockedIOTest/CloseWhileBlocked}.
+    auto return_code_and_errno = fut.get();
+    switch (optname) {
+      case SO_RCVTIMEO:
+        EXPECT_EQ(return_code_and_errno.first, 0);
+        break;
+      case SO_SNDTIMEO:
+        EXPECT_EQ(return_code_and_errno.first, -1);
+        ASSERT_EQ(return_code_and_errno.second, EPIPE, "%s",
+                  strerror(return_code_and_errno.second));
+        break;
+    }
+
+    ASSERT_SUCCESS(close(fd.release()));
+  }
 };
 
-TEST_F(TcpSocketTest, RcvTimeout) {
+TEST_F(TcpSocketTimeoutTest, Rcv) {
+  ASSERT_NO_FATAL_FAILURES(set_connected());
   timeout<SO_RCVTIMEO>(mutable_client_fd(), mutable_server_socket());
 }
 
-TEST_F(TcpSocketTest, SndTimeout) {
+TEST_F(TcpSocketTimeoutTest, Snd) {
+  ASSERT_NO_FATAL_FAILURES(set_connected());
   server().FillPeerSocket();
   timeout<SO_SNDTIMEO>(mutable_client_fd(), mutable_server_socket());
 }
