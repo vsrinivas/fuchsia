@@ -7,6 +7,7 @@
 #include <bits.h>
 #include <lib/arch/x86/boot-cpuid.h>
 #include <lib/arch/x86/speculation.h>
+#include <lib/boot-options/boot-options.h>
 #include <lib/fit/defer.h>
 #include <lib/ktrace.h>
 #include <zircon/syscalls/hypervisor.h>
@@ -1007,7 +1008,7 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
 
     SaveGuestExtendedRegisters(current_thread, vmcs.Read(VmcsFieldXX::GUEST_CR4));
 
-    if (!x86_get_disable_spec_mitigations()) {
+    if (!gBootOptions->x86_disable_spec_mitigations) {
       // Spectre V2: Ensure that code executed in the VM guest cannot influence either
       // return address predictions or indirect branch prediction in the host.
       //
