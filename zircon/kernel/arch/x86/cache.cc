@@ -6,13 +6,19 @@
 // https://opensource.org/licenses/MIT
 
 #include <align.h>
+#include <lib/arch/x86/boot-cpuid.h>
+
 #include <arch/ops.h>
 #include <arch/x86.h>
 #include <arch/x86/feature.h>
 
-uint32_t arch_dcache_line_size(void) { return x86_get_clflush_line_size(); }
+uint32_t arch_dcache_line_size(void) {
+  return arch::BootCpuid<arch::CpuidProcessorInfo>().cache_line_size_bytes();
+}
 
-uint32_t arch_icache_line_size(void) { return x86_get_clflush_line_size(); }
+uint32_t arch_icache_line_size(void) {
+  return arch::BootCpuid<arch::CpuidProcessorInfo>().cache_line_size_bytes();
+}
 
 void arch_sync_cache_range(vaddr_t start, size_t len) {
   // Invoke cpuid to act as a serializing instruction.  This will ensure we
@@ -37,7 +43,7 @@ void arch_clean_invalidate_cache_range(vaddr_t start, size_t len) {
   }
 
   // clflush/clflushopt is present
-  const vaddr_t clsize = x86_get_clflush_line_size();
+  const size_t clsize = arch::BootCpuid<arch::CpuidProcessorInfo>().cache_line_size_bytes();
   vaddr_t end = start + len;
   vaddr_t ptr = ROUNDDOWN(start, clsize);
 

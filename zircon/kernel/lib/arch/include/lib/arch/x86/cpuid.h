@@ -223,6 +223,8 @@ struct CpuidProcessorInfo : public CpuidIoValueBase<CpuidProcessorInfo, 0x1, 0x0
   DEF_FIELD(23, 16, max_logical_processors);
   DEF_FIELD(15, 8, clflush_size);
   DEF_FIELD(7, 0, brand_index);
+
+  size_t cache_line_size_bytes() const { return static_cast<size_t>(clflush_size()) * 8; }
 };
 
 // [intel/vol2]: Table 3-10.  Feature Information Returned in the ECX Register.

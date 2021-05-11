@@ -7,6 +7,7 @@
 #include <align.h>
 #include <assert.h>
 #include <lib/arch/intrin.h>
+#include <lib/arch/x86/boot-cpuid.h>
 #include <lib/fit/defer.h>
 #include <trace.h>
 
@@ -150,7 +151,7 @@ class CacheLineFlusher {
 
 CacheLineFlusher::CacheLineFlusher(bool perform_invalidations)
     : dirty_line_(0),
-      cl_mask_(~(x86_get_clflush_line_size() - 1ull)),
+      cl_mask_(~(arch::BootCpuid<arch::CpuidProcessorInfo>().cache_line_size_bytes() - 1ull)),
       perform_invalidations_(perform_invalidations) {}
 
 CacheLineFlusher::~CacheLineFlusher() { ForceFlush(); }

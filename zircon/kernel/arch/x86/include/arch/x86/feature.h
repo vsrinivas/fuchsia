@@ -199,19 +199,6 @@ void x86_feature_debug(void);
 #define X86_FEATURE_RDTSCP X86_CPUID_BIT(0x80000001, 3, 27)
 #define X86_FEATURE_INVAR_TSC X86_CPUID_BIT(0x80000007, 3, 8)
 
-/* legacy accessors */
-static inline uint32_t x86_get_clflush_line_size(void) {
-  const struct cpuid_leaf* leaf = x86_get_cpuid_leaf(X86_CPUID_MODEL_FEATURES);
-  if (!leaf)
-    return 0;
-
-  /*
-   Extracting bit 15:8 from ebx register
-   Bits 15-08: #CLFLUSH line size in quadwords
-  */
-  return ((leaf->b >> 8) & 0xff) * 8u;
-}
-
 /* cpu vendors */
 enum x86_vendor_list { X86_VENDOR_UNKNOWN, X86_VENDOR_INTEL, X86_VENDOR_AMD };
 
