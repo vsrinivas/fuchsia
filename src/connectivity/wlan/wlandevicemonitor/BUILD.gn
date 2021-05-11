@@ -32,6 +32,8 @@ rustc_binary("bin") {
     "//src/connectivity/wlan/lib/common/rust/:wlan-common",
     "//src/connectivity/wlan/lib/isolated-devmgr",
     "//src/connectivity/wlan/lib/wlan_dev",
+    "//src/lib/diagnostics/inspect/contrib/rust",
+    "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -50,6 +52,7 @@ rustc_binary("bin") {
 
   sources = [
     "src/device_watch.rs",
+    "src/inspect.rs",
     "src/main.rs",
     "src/service.rs",
     "src/watchable_map.rs",

@@ -4,6 +4,8 @@
 
 #[cfg(test)]
 mod device_watch;
+#[allow(unused)]
+mod inspect;
 mod service;
 #[cfg(test)]
 mod watchable_map;
