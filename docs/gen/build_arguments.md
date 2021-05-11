@@ -1138,6 +1138,14 @@ that users can easily switch revisions using a single arg.
 
 From //build/images/args.gni:41
 
+### flatland_visual_debugging
+If true, this enables the display compositor to tint all Flatland views that
+are rendered via the GPU renderer instead of by direct DisplayController scanout.
+
+**Current value (from the default):** `false`
+
+From //src/ui/scenic/lib/flatland/engine/build_args.gni:8
+
 ### flutter_default_build_cfg
 Non-product AOT
 
