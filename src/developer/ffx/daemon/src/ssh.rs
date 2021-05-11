@@ -60,6 +60,7 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     #[serial]
     async fn test_empty_command_vec_produces_error() {
+        ffx_config::init_config_test().unwrap();
         let result = build_ssh_command(Vec::new(), None, vec![]).await;
         assert!(result.is_err(), "empty command vec should produce an error");
     }
@@ -67,6 +68,7 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     #[serial]
     async fn test_no_ips_produces_error() {
+        ffx_config::init_config_test().unwrap();
         let result = build_ssh_command(Vec::new(), None, vec!["ls"]).await;
         assert!(result.is_err(), "target with no IP's should produce an error");
     }
@@ -74,6 +76,7 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     #[serial]
     async fn test_ssh_default_port() {
+        ffx_config::init_config_test().unwrap();
         let key_path = std::env::current_exe().unwrap();
         let key_path = key_path.to_str().take().unwrap();
         std::env::remove_var("FUCHSIA_SSH_PORT");
@@ -95,6 +98,7 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     #[serial]
     async fn test_ssh_with_env_port() {
+        ffx_config::init_config_test().unwrap();
         let key_path = std::env::current_exe().unwrap();
         let key_path = key_path.to_str().take().unwrap();
         std::env::set_var("FUCHSIA_SSH_PORT", "1234");
@@ -115,6 +119,7 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     #[serial]
     async fn test_ssh_with_target_configured_port() {
+        ffx_config::init_config_test().unwrap();
         let key_path = std::env::current_exe().unwrap();
         let key_path = key_path.to_str().take().unwrap();
         std::env::set_var("FUCHSIA_SSH_PORT", "1234");
