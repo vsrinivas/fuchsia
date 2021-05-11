@@ -211,39 +211,31 @@ action("kazoo-syscall-golden-test") {
     ":kazoo.rspfile",
   ]
 
-  fidlc = get_target_outputs(deps[0])
-  assert(fidlc == [ fidlc[0] ])
-  fidlc = fidlc[0]
-
-  kazoo = get_target_outputs(deps[1])
-  assert(kazoo == [ kazoo[0] ])
-  kazoo = kazoo[0]
-
-  hermetic_deps = false
-  script = "golden-test"
+  script = "golden-test.py"
   sources = [
     "golden.txt",
-    fidlc,
-    kazoo,
+    fidlc_rspfile,
+    kazoo_rspfile,
   ]
   foreach(fidl, all_syscall_fidl_files) {
-    sources += [ "../../vdso/" + fidl ]
+    sources += [ "//zircon/vdso/" + fidl ]
   }
 
   outputs = [ "$target_gen_dir/kazoo-golden-test" ]
+  depfile = "$target_gen_dir/kazoo-golden-test.d"
 
   args = [
-    "--builddir",
-    rebase_path(root_build_dir),
     "--fidlc",
-    rebase_path(fidlc, root_build_dir),
+    rebase_path(fidlc_rspfile, root_build_dir),
     "--kazoo",
-    rebase_path(kazoo, root_build_dir),
+    rebase_path(kazoo_rspfile, root_build_dir),
     "--syscalls",
-    rebase_path("../../vdso"),
+    rebase_path("//zircon/vdso", root_build_dir),
     "--output-touch",
     rebase_path(outputs[0], root_build_dir),
     "--tmp-base",
     rebase_path(target_gen_dir, root_build_dir),
+    "--depfile",
+    rebase_path(depfile, root_build_dir),
   ]
 }

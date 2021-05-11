@@ -1,4 +1,9 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.8
+
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
 """
 Compares previous output of all kazoo generation with current output.
 
@@ -23,29 +28,27 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('--builddir',
-                        help='build root to which rsp files are relative',
-                        required=True)
-    parser.add_argument('--fidlc',
-                        help='rspfile containing fidlc binary',
-                        required=True)
-    parser.add_argument('--kazoo',
-                        help='rspfile containing kazoo binary',
-                        required=True)
-    parser.add_argument('--syscalls',
-                        help='path to syscalls',
-                        default=os.path.normpath(
-                            os.path.join(SCRIPT_DIR, os.pardir, os.pardir,
-                                         'vdso')))
-    parser.add_argument('--p4merge',
-                        action='store_true',
-                        help='open diffs in p4merge if changes')
-    parser.add_argument('--output-touch',
-                        help='file to touch on success',
-                        required=True)
-    parser.add_argument('--tmp-base',
-                        help='location to use for temporary files',
-                        required=True)
+    parser.add_argument(
+        '--fidlc', help='rspfile containing fidlc binary', required=True)
+    parser.add_argument(
+        '--kazoo', help='rspfile containing kazoo binary', required=True)
+    parser.add_argument(
+        '--syscalls',
+        help='path to syscalls',
+        default=os.path.normpath(
+            os.path.join(SCRIPT_DIR, os.pardir, os.pardir, 'vdso')))
+    parser.add_argument(
+        '--p4merge',
+        action='store_true',
+        help='open diffs in p4merge if changes')
+    parser.add_argument(
+        '--output-touch', help='file to touch on success', required=True)
+    parser.add_argument(
+        '--tmp-base', help='location to use for temporary files', required=True)
+    parser.add_argument(
+        '--depfile',
+        help='The path to write a depfile, see depfile from GN.',
+        required=True)
     return parser.parse_args()
 
 
@@ -65,13 +68,17 @@ def generate_fidlc_json(fidlc_binary, syscall_dir, output_fidlc_json_path):
 def build_golden(input_files, output_combined):
     with open(output_combined, 'wb') as outf:
         for filename in input_files:
-            outf.write(('----- %s START -----\n' % os.path.basename(filename)).encode('utf-8'))
+            outf.write(
+                ('----- %s START -----\n' %
+                 os.path.basename(filename)).encode('utf-8'))
             outf.write(open(filename, 'rb').read())
-            outf.write(('----- %s END -----\n\n\n' % os.path.basename(filename)).encode('utf-8'))
+            outf.write(
+                ('----- %s END -----\n\n\n' %
+                 os.path.basename(filename)).encode('utf-8'))
 
 
-def generate_kazoo_outputs(kazoo_binary, fidlc_json_path, all_output_styles,
-                           output_dir):
+def generate_kazoo_outputs(
+        kazoo_binary, fidlc_json_path, all_output_styles, output_dir):
 
     def guess_ext(style):
         if style in ('go-vdso-arm64-calls', 'go-vdso-x86-calls'):
@@ -94,17 +101,16 @@ def generate_kazoo_outputs(kazoo_binary, fidlc_json_path, all_output_styles,
     return files
 
 
-def read_rsp_and_rebase(path, builddir):
+def read_rsp(path):
     with open(path, 'r') as f:
-        from_rsp = f.read().strip()
-        return os.path.join(builddir, from_rsp)
+        return f.read().strip()
 
 
 def main():
     args = parse_args()
 
     tmp_json = os.path.join(args.tmp_base, 'syscalls.json')
-    fidlc = read_rsp_and_rebase(args.fidlc, args.builddir)
+    fidlc = read_rsp(args.fidlc)
     generate_fidlc_json(fidlc, args.syscalls, tmp_json)
 
     tmp_kazoo_dir = os.path.join(args.tmp_base, 'kazoo-outputs')
@@ -132,7 +138,7 @@ def main():
         'syscall-numbers',
         'testonly-public-header',
     )
-    kazoo = read_rsp_and_rebase(args.kazoo, args.builddir)
+    kazoo = read_rsp(args.kazoo)
     files = generate_kazoo_outputs(kazoo, tmp_json, all_styles, tmp_kazoo_dir)
 
     tmp_golden = os.path.join(args.tmp_base, 'new-golden.txt')
@@ -145,13 +151,27 @@ def main():
         print('  cp %s %s' % (tmp_golden, GOLDEN))
         print('to acknowledge these changes.')
         print()
-        print('Files can be found locally in %s for inspection.' %
-              tmp_kazoo_dir)
+        print(
+            'Files can be found locally in %s for inspection.' % tmp_kazoo_dir)
         if args.p4merge:
             subprocess.call(['p4merge', GOLDEN, tmp_golden])
     else:
         with open(args.output_touch, 'w') as f:
             f.write(str(datetime.datetime.utcnow()))
+        with open(args.depfile, 'w') as f:
+            f.write(f'{args.output_touch}: {fidlc} {kazoo}\n')
+
+    # Remove all temporary files and directories, otherwise they will be
+    # considered as unexpected outputs.
+    #
+    # TODO(https://fxbug.dev/75057): Use shutil.rmtree(tmp_kazoo_dir) instead
+    # when the action tracer knows how to ignore spurious directory reads.
+    for f in files:
+        os.remove(f)
+    os.rmdir(tmp_kazoo_dir)
+    os.remove(tmp_json)
+    os.remove(tmp_golden)
+
     return rc
 
 
