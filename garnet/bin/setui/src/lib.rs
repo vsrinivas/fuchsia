@@ -73,6 +73,7 @@ mod fidl_processor;
 mod hanging_get_handler;
 mod input;
 mod intl;
+mod job;
 mod light;
 mod night_mode;
 mod policy;

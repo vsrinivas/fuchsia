@@ -25,6 +25,7 @@ use crate::base::SettingType;
 use crate::event;
 use crate::handler::base as handler;
 use crate::handler::setting_handler as controller;
+use crate::job;
 #[cfg(test)]
 use crate::message::base::role;
 #[cfg(test)]
@@ -69,10 +70,30 @@ pub enum Payload {
     Agent(agent::Payload),
     /// Event payloads contain data about events that occur throughout the system.
     Event(event::Payload),
+    /// Job payloads contain information related to new sources of jobs to be executed.
+    Job(job::Payload),
     /// Monitor payloads contain commands and information surrounding resource usage.
     Monitor(monitor::Payload),
     /// Storage payloads contain read and write requests to storage and their responses.
     Storage(storage::Payload),
+    /// This value is reserved for testing purposes.
+    #[cfg(test)]
+    Test(test::Payload),
+}
+
+#[cfg(test)]
+pub mod test {
+    use crate::payload_convert;
+
+    /// This payload should be expanded to include any sort of data that tests would send that is
+    /// outside the scope of production payloads.
+    #[derive(PartialEq, Clone, Debug)]
+    pub enum Payload {
+        Integer(i64),
+    }
+
+    // Conversions for Handler Payload.
+    payload_convert!(Test, Payload);
 }
 
 /// A trait implemented by payloads for extracting the payload and associated

@@ -65,7 +65,7 @@ mod policy_proxy_tests;
 mod privacy_tests;
 mod resource_monitor_tests;
 mod restore_agent_tests;
-mod scaffold;
+pub(crate) mod scaffold;
 mod service_configuration_tests;
 mod setting_handler_tests;
 mod setting_proxy_tests;
