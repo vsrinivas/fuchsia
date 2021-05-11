@@ -276,13 +276,12 @@ template("target_archive_linkable") {
   source_set(target_name) {
     public_configs = [ ":${_config}" ]
     public = filter_include(get_target_outputs(":${_internal}"), [ "*.h" ])
-    sources = filter_include(
-            get_target_outputs(":${_internal}"),
-            [
-              "*.S",
-              "*.h",
-              "//src/graphics/lib/compute/tools/target_archive/include/target_archive/target_archive.h",
-            ])
+    sources = filter_include(get_target_outputs(":${_internal}"),
+                             [
+                               "*.S",
+                               "*.h",
+                             ])
+    sources += [ "//src/graphics/lib/compute/tools/target_archive/include/target_archive/target_archive.h" ]
     deps = [ ":${_internal}" ]
   }
 }
