@@ -13,6 +13,7 @@ rustc_library("disk_extractor_lib") {
 
   deps = [
     "//src/lib/zerocopy",
+    "//src/storage/lib/interval_tree",
     "//third_party/rust_crates:bincode",
     "//third_party/rust_crates:bitfield",
     "//third_party/rust_crates:crc",

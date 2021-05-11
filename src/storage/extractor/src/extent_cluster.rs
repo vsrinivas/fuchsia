@@ -11,6 +11,7 @@ use {
         properties::{DataKind, ExtentKind},
         utils::{RangeOps, ReadAndSeek},
     },
+    interval_tree::interval_tree::IntervalTree,
     std::io::{Read, Write},
 };
 
@@ -43,75 +44,13 @@ fn should_dump_data(extent: &Extent, dump_pii: bool) -> bool {
 /// The cluster of extents lives in image file in contiguous location.
 #[derive(Debug)]
 pub struct ExtentCluster {
-    pub(crate) extent_tree: std::collections::BTreeMap<u64, Extent>,
+    pub(crate) extent_tree: IntervalTree<Extent, u64>,
     options: ExtractorOptions,
 }
 
 impl ExtentCluster {
     pub fn new(options: &ExtractorOptions) -> Self {
-        Self { extent_tree: Default::default(), options: options.clone() }
-    }
-
-    // insert_extent's logic is as follows.
-    //  * create a list of all affected extents by this insertion.
-    //  * for each extent in affected extents, split/merge with current extents.
-    //  * replace affected and current extent with the new split/merged extents list.
-    fn insert_extent(&mut self, current_extent: Extent) -> Result<(), Error> {
-        let mut affected_extents = vec![];
-
-        // Get all extents that may be affected by this extent insertion.
-        for ext in self.extent_tree.iter_mut() {
-            if !(current_extent.overlaps(&ext.1) || current_extent.is_adjacent(&ext.1)) {
-                continue;
-            }
-            affected_extents.push(ext.1.clone());
-        }
-
-        // Remove all the affected extents.
-        for ext in &affected_extents {
-            self.extent_tree.remove(&ext.start());
-        }
-
-        // Perform split/merge of current extent with one affected extent at a time.
-        // Note:
-        //   1. This is performed on extents in the ascending order of extent.start.
-        //   2. The existing extents are assumed to be non-overlapping with all other
-        //      existing extents.
-        //   3. Order of insertion changes in intermediate state of the cluster.
-        let mut new_extents = vec![];
-        let mut remaining = Some(current_extent.clone());
-        for (i, ext) in affected_extents.iter().enumerate() {
-            assert!(current_extent.overlaps(&ext) || current_extent.is_adjacent(&ext));
-            // If remaining extent is completely consumed then iterate over the rest of affected
-            // extents and just add them.
-            // Ex. say we have already inserted extents [2, 5), [5, 8), and [8, 12) all having
-            // different priorities. Now the current extent is [5, 8) with lower
-            // priority than all the the extents then we may end up consuming current
-            // entirely before we parse all of affected_extents.
-            match remaining {
-                None => new_extents.push(ext.clone()),
-                Some(remaining_extent) => {
-                    remaining = remaining_extent.split_or_merge(&ext, &mut new_extents);
-                    assert!(remaining.is_some() || (i >= affected_extents.len() - 2));
-                }
-            }
-        }
-
-        // Insert all the split/merged extent into the extent tree.
-        for ext in new_extents {
-            self.extent_tree.insert(ext.start(), ext.clone());
-        }
-
-        // It may happen that the current extent maybe unaffected or partially affected.
-        // If so insert it into the tree.
-        match remaining {
-            Some(e) => {
-                self.extent_tree.insert(e.start(), e);
-            }
-            _ => {}
-        }
-
-        Ok(())
+        Self { extent_tree: IntervalTree::new(), options: options.clone() }
     }
 
     /// Adds an extent to extent cluster.
@@ -119,19 +58,19 @@ impl ExtentCluster {
         if !extent.storage_range().is_valid() {
             return Err(Error::InvalidRange);
         }
-        self.insert_extent(extent.clone())
+        self.extent_tree.add_interval(extent).map_err(|e| Error::from(e))
     }
 
     /// Returns number of extent in extent cluster.
     pub fn extent_count(&self) -> u64 {
-        self.extent_tree.len() as u64
+        self.extent_tree.interval_count() as u64
     }
 
     /// Returns number of data bytes that will be written
     /// in this cluster.
     fn data_size(&self) -> u64 {
         let mut size: u64 = 0;
-        for (_, extent) in &self.extent_tree {
+        for (_, extent) in self.extent_tree.get_iter() {
             if !should_dump_data(&extent, self.options.force_dump_pii) {
                 continue;
             }
@@ -146,7 +85,7 @@ impl ExtentCluster {
         let mut size =
             ExtentClusterHeader::serialize_to(self.extent_count() as u64, 0, out_stream)?;
 
-        for (_, extent) in &self.extent_tree {
+        for (_, extent) in self.extent_tree.get_iter() {
             size = size + extent.write(out_stream)?;
         }
         let zero_fill_len = (((size + self.options.alignment - 1) / self.options.alignment)
@@ -166,7 +105,7 @@ impl ExtentCluster {
         out_stream: &mut dyn Write,
     ) -> Result<u64, Error> {
         let mut size = 0;
-        for (_, extent) in &self.extent_tree {
+        for (_, extent) in self.extent_tree.get_iter() {
             // No need to dump the data. Only ExtentInfo will be written to the image file.
             if !should_dump_data(&extent, self.options.force_dump_pii) {
                 continue;
@@ -194,22 +133,6 @@ impl ExtentCluster {
         Ok(size)
     }
 
-    /// Iterate over the extent_tree and check that they are in ascending order
-    /// of start offset and they do not overlap.
-    fn check_extent_tree(&self) {
-        let mut prev_or: Option<Extent> = None;
-
-        for (_, extent) in &self.extent_tree {
-            if prev_or.is_some() {
-                let prev = prev_or.unwrap();
-                assert!(extent.start() >= prev.end());
-            }
-
-            assert!(extent.storage_range().is_valid());
-            prev_or = Some(extent.clone());
-        }
-    }
-
     /// Writes extent cluster to the image file.
     ///
     /// # Arguments
@@ -233,7 +156,7 @@ impl ExtentCluster {
             todo!("Support for more than one cluster is not implemented.")
         }
 
-        self.check_extent_tree();
+        self.extent_tree.check_interval_tree();
         // Update all the extent location w.r.t. starting of the extent cluster.
         let _data_size = self.data_size();
 
@@ -251,6 +174,7 @@ mod test {
             extent_cluster::ExtentCluster,
             properties::{DataKind, ExtentKind, ExtentProperties},
         },
+        interval_tree::interval::Interval,
         std::io::Cursor,
         std::ops::Range,
     };
@@ -304,12 +228,12 @@ mod test {
     }
 
     fn verify(file: &str, line: u32, cluster: &ExtentCluster, extents: &Vec<Extent>) {
-        if cluster.extent_tree.len() != extents.len() {
+        if cluster.extent_tree.interval_count() != extents.len() {
             println!("{}:{} Expected: {:?}\nFound: {:?}", file, line, extents, cluster.extent_tree);
         }
-        assert_eq!(cluster.extent_tree.len(), extents.len());
+        assert_eq!(cluster.extent_tree.interval_count(), extents.len());
 
-        for (_, ext) in cluster.extent_tree.iter() {
+        for (_, ext) in cluster.extent_tree.get_iter() {
             let mut found = false;
             for inserted in extents.iter() {
                 if inserted == ext {

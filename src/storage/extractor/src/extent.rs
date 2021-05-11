@@ -4,6 +4,7 @@
 
 use {
     crate::{error::Error, format::ExtentInfo, properties::ExtentProperties, utils::RangeOps},
+    interval_tree::interval::Interval,
     std::convert::TryFrom,
     std::io::Write,
     std::ops::Range,
@@ -73,16 +74,6 @@ impl Extent {
         Ok(Extent { storage_range, properties, data })
     }
 
-    /// Returns storage range start offset for the extent.
-    pub fn start(&self) -> u64 {
-        self.storage_range.start
-    }
-
-    /// Returns storage range end offset for the extent.
-    pub fn end(&self) -> u64 {
-        self.storage_range.end
-    }
-
     // Sets storage_range start.
     // Test only helper routines that reduces boiler plate code.
     #[cfg(test)]
@@ -118,12 +109,6 @@ impl Extent {
         Ok(c_extent.as_bytes().len() as u64)
     }
 
-    /// Two extents are is_adjacent if one ends where another starts.
-    /// Extent properties don't matter.
-    pub fn is_adjacent(&self, other: &Self) -> bool {
-        self.storage_range.is_adjacent(&other.storage_range)
-    }
-
     /// Two extents are considered mergeable if they
     /// * either overlap or are is_adjacent, and
     /// * they have same set of properties
@@ -146,6 +131,22 @@ impl Extent {
             None => None,
         }
     }
+}
+
+impl AsRef<Range<u64>> for Extent {
+    fn as_ref(&self) -> &Range<u64> {
+        self.storage_range()
+    }
+}
+
+impl Interval<u64> for Extent {
+    fn clone_with(&self, new_range: &Range<u64>) -> Self {
+        Self { storage_range: new_range.clone(), properties: self.properties.clone(), data: None }
+    }
+
+    fn has_mergeable_properties(&self, other: &Self) -> bool {
+        self.properties() == other.properties() && self.data == other.data
+    }
 
     /// Merge two mergeable extents.
     fn merge(&self, other: &Self) -> Self {
@@ -155,127 +156,12 @@ impl Extent {
         Extent::new(storage_range, self.properties().clone(), self.merge_data(&other)).unwrap()
     }
 
-    /// Two extents overlap if their storage ranges overlap. Extent
-    /// properties don't matter.
-    pub fn overlaps(&self, other: &Self) -> bool {
-        self.storage_range().overlaps(&other.storage_range())
-    }
-
     /// Returns `true` if self has higher priority that the other.
     ///
     /// Asserts that the two extents overlap.
     fn overrides(&self, other: &Self) -> bool {
         assert!(self.storage_range().overlaps(other.storage_range()));
         self.properties.overrides(&other.properties)
-    }
-
-    /// Splits or merges two extents based on the storage_range and properties of
-    /// the extents.
-    ///
-    /// Function returns remaining part of self whose storage_range.start is greater
-    /// than or equal to other.storage_range.end. Any other extents that should be
-    /// kept from either `self` or `other` are appended to `result`.
-    /// If self is entirely consumed, it returns None.
-    ///
-    /// Function asserts that the two extents overlap.
-    ///
-    /// | self          | other         | return        | result                         |
-    /// |---------------|---------------|---------------|--------------------------------|
-    /// | // Merge with same range and same properties. |  |  |                          |
-    /// | (1..5, &low)  | (1..5, &low)  | (1..5, &low)  | []                             |
-    /// | // Merge with same range and different properties. |  |  |                     |
-    /// | (1..5, &low)  | (1..5, &high) | None          | [(1..5, &high)]                |
-    /// | (1..5, &high) | (1..5, &low)  | (1..5, &high) | []                             |
-    /// | // Merge is_adjacent. |       |               |                                |
-    /// | (1..5, &low)  | (5..8, &low)  | (1..8, &low)  | []                             |
-    /// | (5..8, &low)  | (1..5, &low)  | (1..8, &low)  | []                             |
-    /// | // Non-mergeable is_adjacent and mixed properties. | | |                       |
-    /// | (1..5, &low)  | (5..8, &high) | (1..5, &low)  | [(5..8, &high)]                |
-    /// | (1..5, &high) | (5..8, &low)  | (1..5, &high) | [(5..8, &low)]                 |
-    /// | (5..8, &low)  | (1..5, &high) | (5..8, &low)  | [(1..5, &high)]                |
-    /// | (5..8, &high) | (1..5, &low)  | (5..8, &high) | [(1..5, &low)]                 |
-    /// | // Merge with overlapping ranges. Different combination of properties. |||     |
-    /// | (1..5, &low)  | (4..8, &low)  | (1..8, &low)  | []                             |
-    /// | (4..8, &low)  | (1..5, &low)  | (1..8, &low)  | []                             |
-    /// | (1..5, &low)  | (4..8, &high) | None,         | [(1..4, &low), (4..8, &high)]  |
-    /// | (1..5, &high) | (4..8, &low)  | (1..5, &high) | [(5..8, &low)]                 |
-    /// | (4..8, &low)  | (1..5, &high) | (5..8, &low)  | [(1..5, &high)]                |
-    /// | (4..8, &high) | (1..5, &low)  | (4..8, &high) | [((1..4, &low)]                |
-    /// | // One has the other. |       |               |                                |
-    /// | (1..8, &low)  | (4..6, &low)  | (1..8, &low)  | []                             |
-    /// | (4..6, &low)  | (1..8, &low)  | (1..8, &low)  | []                             |
-    /// | (1..8, &high) | (4..6, &low)  | (1..8, &high) | []                             |
-    /// | (4..6, &low)  | (1..8, &high) | None          | [(1..8, &high)]                |
-    /// | (1..8, &low)  | (4..6, &high) | (6..8, &low)  | [(1..4, &low), (4..6, &high)], |
-    /// | (4..6, &high) | (1..8, &low)  | (4..6, &high) | [(1..4, &low), (6..8, &low)]   |
-    ///
-    pub fn split_or_merge(&self, other: &Self, result: &mut Vec<Self>) -> Option<Self> {
-        assert!(self.overlaps(other) || self.is_adjacent(other));
-
-        if self.is_mergeable(&other) {
-            return Some(self.merge(other));
-        }
-
-        // These are adjacent that cannot be merged. Just retain both of them.
-        if self.is_adjacent(&other) {
-            result.push(other.clone());
-            return Some(self.clone());
-        }
-
-        // If properties are not the same then self can split the other based on
-        // whether properties of self are stronger than other's.
-        //
-        // If self has stronger properties, then it overrides other for the ranges that overlaps.
-        if self.overrides(other) {
-            // self swallows all of other.
-            if self.storage_range().contains_range(&other.storage_range()) {
-                return Some(self.clone());
-            }
-
-            // Other starts before self. So a slice from other's start to self's start is
-            // retained.
-            if self.start() > other.start() {
-                result.push(
-                    Extent::new(other.start()..self.start(), *other.properties(), None).unwrap(),
-                );
-            }
-
-            // Other ends after self. So a slice from self's end to other's start is
-            // retained.
-            if self.end() < other.end() {
-                result
-                    .push(Extent::new(self.end()..other.end(), *other.properties(), None).unwrap());
-            }
-
-            // The whole of self is retained.
-            return Some(self.clone());
-        } else {
-            // other swallows all of self.
-            if other.storage_range().contains_range(self.storage_range())
-                || self.storage_range() == other.storage_range()
-            {
-                result.push(other.clone());
-                return None;
-            }
-
-            // self start before the other. Some part of self at the beginning is retained.
-            if self.start() < other.start() {
-                result.push(
-                    Extent::new(self.start()..other.start(), *self.properties(), None).unwrap(),
-                );
-            }
-            result.push(other.clone());
-
-            // self ends after the other ends. Some part of self towards the self's end is retained.
-            if self.end() > other.end() {
-                return Some(
-                    Extent::new(other.end()..self.end(), *self.properties(), None).unwrap(),
-                );
-            }
-
-            // All relevant pieces of self are broken down. None remains.
-            None
-        }
     }
 }
 
@@ -288,6 +174,7 @@ mod test {
             utils::RangeOps,
             utils::*,
         },
+        interval_tree::interval::Interval,
         std::ops::Range,
     };
 

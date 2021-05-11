@@ -5,7 +5,7 @@
 //! This module defines errors used in the crate. Some of these error are
 //! converted C/C++ error types.
 
-use thiserror::Error;
+use {interval_tree, thiserror::Error};
 
 /// Defines errors used in the crate.
 /// Enum defines types of errors and their human readable messages.
@@ -56,4 +56,12 @@ pub enum Error {
     /// The failed to parse.
     #[error("failed to parse")]
     ParseFailed,
+}
+
+impl From<interval_tree::Error> for Error {
+    fn from(error: interval_tree::Error) -> Error {
+        match error {
+            interval_tree::Error::InvalidRange => Error::InvalidRange,
+        }
+    }
 }

@@ -445,9 +445,10 @@ impl ExtentClusterHeader {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use crate::properties::ExtentProperties;
-    use std::io::Cursor;
+    use {
+        super::*, crate::properties::ExtentProperties, interval_tree::interval::Interval,
+        std::io::Cursor,
+    };
 
     #[test]
     fn test_header_serialized_size() {

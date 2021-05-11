@@ -1,0 +1,37 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_library.gni")
+
+rustc_library("interval_tree") {
+  name = "interval_tree"
+  version = "0.1.0"
+  with_unit_tests = true
+  edition = "2018"
+
+  deps = [ "//third_party/rust_crates:thiserror" ]
+
+  test_deps = [ "//third_party/rust_crates:tempfile" ]
+
+  sources = [
+    "src/error.rs",
+    "src/interval.rs",
+    "src/interval_tree.rs",
+    "src/lib.rs",
+    "src/utils.rs",
+  ]
+}
+
+fuchsia_unittest_package("interval-tree-test") {
+  deps = [ ":interval_tree_test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":interval-tree-test",
+    ":interval-tree-test($host_toolchain)",
+  ]
+}
