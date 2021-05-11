@@ -331,6 +331,11 @@ impl crate::UChar {
     pub fn resize(&mut self, new_size: usize) {
         self.rep.resize(new_size, 0);
     }
+
+    /// Returns the equivalent UTF-8 string, useful for debugging.
+    pub fn as_string_debug(&self) -> String {
+        String::try_from(self).unwrap()
+    }
 }
 
 #[cfg(test)]

@@ -69,12 +69,13 @@ impl From<ULoc> for ULocMut {
                 }
             }
         }
-        let base = l.base_name();
-        ULocMut {
-            base,
+        // base_name may return an invalid language tag, so convert here.
+        let locmut = ULocMut {
+            base: l.base_name(),
             unicode_keyvalues,
             other_keyvalues,
-        }
+        };
+        locmut
     }
 }
 
@@ -106,9 +107,17 @@ impl From<ULocMut> for ULoc {
         if unicode_extension.len() > 0 {
             all_extensions.push(unicode_extension);
         }
-        all_extensions.sort();
-        let extension_string = all_extensions.join("-");
-        let everything = vec![lm.base.repr, extension_string].join("-");
+        // The base language must be in the form of BCP47 language tag to
+        // be usable in the code below.
+        let base_tag = lm.base.to_language_tag(true)
+            .expect("should be known-good");
+        let mut everything_vec: Vec<String> = vec![base_tag];
+        if !all_extensions.is_empty() {
+            all_extensions.sort();
+            let extension_string = all_extensions.join("-");
+            everything_vec.push(extension_string);
+        }
+        let everything = everything_vec.join("-").to_lowercase();
         ULoc::for_language_tag(&everything).unwrap()
     }
 }
@@ -300,6 +309,9 @@ impl ULoc {
     }
 
     /// Implements `uloc_forLanguageTag` from ICU4C.
+    ///
+    /// Note that an invalid tag will cause that tag and all others to be
+    /// ignored.  For example `en-us` will work but `en_US` will not.
     pub fn for_language_tag(tag: &str) -> Result<ULoc, common::Error> {
         buffered_string_method_with_retry!(
             buffered_string_for_language_tag,
@@ -366,7 +378,8 @@ impl ULoc {
 }
 
 /// This implementation is based on ULocale.compareTo from ICU4J.
-/// See https://github.com/unicode-org/icu/blob/%6d%61%73%74%65%72/icu4j/main/classes/core/src/com/ibm/icu/util/ULocale.java
+/// See 
+/// <https://github.com/unicode-org/icu/blob/%6d%61%73%74%65%72/icu4j/main/classes/core/src/com/ibm/icu/util/ULocale.java>
 impl Ord for ULoc {
     fn cmp(&self, other: &Self) -> Ordering {
         /// Compare corresponding keywords from two `ULoc`s. If the keywords match, compare the
@@ -949,5 +962,28 @@ mod tests {
         let loc = ULoc::from(loc_mut);
         assert_eq!(ULoc::for_language_tag("en-t-it-u-tz-usnyc-x-foo")?, loc);
         Ok(())
+    }
+
+    #[test]
+    fn test_round_trip_from_uloc_plain() -> Result<(), Error> {
+        let loc = ULoc::for_language_tag("sr")?;
+        let loc = ULocMut::from(loc);
+        let loc = ULoc::from(loc);
+        assert_eq!(ULoc::try_from("sr")?, loc);
+        Ok(())
+    }
+
+    #[test]
+    fn test_round_trip_from_uloc_with_country() -> Result<(), Error> {
+        let loc = ULoc::for_language_tag("sr-rs")?;
+        let loc = ULoc::from(ULocMut::from(loc));
+        assert_eq!(ULoc::try_from("sr-rs")?, loc);
+        Ok(())
+    }
+
+    #[test]
+    fn test_equivalence() {
+        let loc = ULoc::try_from("sr@timezone=America/Los_Angeles").unwrap();
+        assert_eq!(ULoc::for_language_tag("sr-u-tz-uslax").unwrap(), loc);
     }
 }

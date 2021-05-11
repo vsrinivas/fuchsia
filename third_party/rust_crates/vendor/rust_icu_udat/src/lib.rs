@@ -24,8 +24,71 @@
 use {
     rust_icu_common as common, rust_icu_sys as sys, rust_icu_sys::versioned_function,
     rust_icu_sys::*, rust_icu_ucal as ucal, rust_icu_uloc as uloc, rust_icu_ustring as ustring,
-    std::convert::TryFrom,
 };
+use std::convert::{TryFrom, TryInto};
+
+/// Implements `UDateTimePatternGenerator`. Since 0.5.1.
+#[derive(Debug)]
+pub struct UDatePatternGenerator {
+    rep: std::ptr::NonNull<sys::UDateTimePatternGenerator>,
+}
+
+impl std::clone::Clone for UDatePatternGenerator {
+    /// Implements `udatpg_clone`. Since 0.5.1.
+    fn clone(&self) -> Self {
+        let mut status = common::Error::OK_CODE;
+        let rep = unsafe {
+            let cloned = versioned_function!(udatpg_clone)(self.rep.as_ptr(), &mut status);
+            std::ptr::NonNull::new_unchecked(cloned)
+        };
+        UDatePatternGenerator{ rep }
+    }
+}
+
+// Implements `udatpg_close`.
+common::simple_drop_impl!(UDatePatternGenerator, udatpg_close);
+
+impl UDatePatternGenerator {
+    /// Implements `udatpg_open`. Since 0.5.1.
+    pub fn new(loc: &uloc::ULoc) -> Result<Self, common::Error> {
+        let mut status = common::Error::OK_CODE;
+        let asciiz = loc.as_c_str();
+
+        let rep = unsafe {
+            assert!(common::Error::is_ok(status));
+            let ptr = versioned_function!(udatpg_open)(
+                asciiz.as_ptr(),
+                &mut status,
+                );
+            std::ptr::NonNull::new_unchecked(ptr)
+        };
+        common::Error::ok_or_warning(status)?;
+        Ok(UDatePatternGenerator{ rep })
+    }
+
+    /// Implements `udatpg_getBestPattern`. Since 0.5.1.
+    pub fn get_best_pattern(&self, skeleton: &str) -> Result<String, common::Error> {
+        let skeleton = ustring::UChar::try_from(skeleton)?;
+        let result = self.get_best_pattern_ustring(&skeleton)?;
+        String::try_from(&result)
+    }
+
+    /// Implements `udatpg_getBestPattern`. Since 0.5.1.
+    pub fn get_best_pattern_ustring(&self, skeleton: &ustring::UChar) -> Result<ustring::UChar, common::Error> {
+        const BUFFER_CAPACITY: usize = 180;
+        ustring::buffered_uchar_method_with_retry!(
+            get_best_pattern_impl,
+            BUFFER_CAPACITY,
+            [f: *mut sys::UDateTimePatternGenerator, skel: *const sys::UChar, skel_len: i32,],
+            []
+        );
+        get_best_pattern_impl(
+            versioned_function!(udatpg_getBestPattern),
+            self.rep.as_ptr(),
+            skeleton.as_c_ptr(), skeleton.len() as i32,
+            )
+    }
+}
 
 /// Implements `UDateFormat`
 #[derive(Debug)]
@@ -335,7 +398,7 @@ mod tests {
             date: sys::UDate,
             expected: &'static str,
             calendar: Option<ucal::UCalendar>,
-        };
+        }
         let tests = vec![
             Test {
                 name: "French default",
@@ -465,7 +528,7 @@ mod tests {
             date: sys::UDate,
             pattern: &'static str,
             expected: &'static str,
-        };
+        }
         let tests = vec![
             Test {
                 date: 100.0,
@@ -505,7 +568,7 @@ mod tests {
             input: &'static str,
             pattern: &'static str,
             expected: sys::UDate,
-        };
+        }
         let tests: Vec<Test> = vec![
             Test {
                 input: "2018-10-30T15:30:00-07:00",
@@ -532,6 +595,45 @@ mod tests {
                 "want: {:?}, got: {:?}",
                 test.expected, actual
             )
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn best_pattern() -> Result<(), common::Error> {
+        #[derive(Debug)]
+        struct Test {
+            locale: &'static str,
+            skeleton: &'static str,
+            expected: &'static str,
+        }
+        let tests: Vec<Test> = vec![
+            Test {
+                locale: "sr-RS",
+                skeleton: "MMMMj",
+                expected: "LLLL HH",
+            },
+            Test {
+                locale: "en-US",
+                skeleton: "MMMMj",
+                expected: "LLLL, h a",
+            },
+            Test {
+                locale: "en-US",
+                skeleton: "jMMMM",
+                expected: "LLLL, h a",
+            },
+            Test {
+                locale: "en-US",
+                skeleton: "EEEE yyy LLL d H m s",
+                expected: "EEEE, MMM d, yyy, HH:mm:ss",
+            },
+        ];
+        for test in tests {
+            let locale = uloc::ULoc::try_from(test.locale)?;
+            let gen = UDatePatternGenerator::new(&locale)?.clone();
+            let actual = gen.get_best_pattern(&test.skeleton)?;
+            assert_eq!(actual, test.expected, "for test: {:?}", &test);
         }
         Ok(())
     }

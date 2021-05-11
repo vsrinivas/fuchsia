@@ -1,12 +1,12 @@
 # rust_icu: low-level rust language bindings for the ICU library
 
-Item       | Description
----------- | -----------
-ICU 63..68 | [![Test status](https://github.com/google/rust_icu/workflows/Test/badge.svg)](https://github.com/google/rust_icu/workflows/Test/badge.svg)
-Source     | https://github.com/google/rust_icu
-README     | https://github.com/google/rust_icu/blob/main/README.md
-Coverage   | [View report](/coverage/report.md)
-Docs       | https://docs.rs/crate/rust_icu
+Item           | Description
+-------------- | -----------
+ICU 63, 67..69 | [![Test status](https://github.com/google/rust_icu/workflows/Test/badge.svg)](https://github.com/google/rust_icu/workflows/Test/badge.svg)
+Source         | https://github.com/google/rust_icu
+README         | https://github.com/google/rust_icu/blob/main/README.md
+Coverage       | [View report](/coverage/report.md)
+Docs           | https://docs.rs/crate/rust_icu
 
 This is a library of low level native rust language bindings for the
 International Components for Unicode (ICU) library for C (a.k.a. ICU4C).
