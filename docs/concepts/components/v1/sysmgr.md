@@ -264,6 +264,7 @@ when sysmgr starts; the component may initially launch through other means,
 such as via `startup_services`.
 
 Here is an example configuration snippet:
+
 ```json
 {
   "startup_services": [
