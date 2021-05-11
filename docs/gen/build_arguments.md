@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1589
+From //build/config/BUILDCONFIG.gn:1593
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -292,6 +292,16 @@ by the board definition rather than the product definition.
 **Current value (from the default):** `[]`
 
 From //build/board.gni:11
+
+### board_extra_vbmeta_descriptors
+Board level extra vbmeta descriptors to be combined into the top-level
+vbmeta struct (these are in json format)
+
+see //build/images/vbmeta/README.md for more information about these.
+
+**Current value (from the default):** `[]`
+
+From //build/images/vbmeta.gni:48
 
 ### board_extra_vbmeta_images
 Board level extra vbmeta images to be combined into the top-level vbmeta
@@ -566,7 +576,7 @@ An action that accesses undeclared inputs or outputs will fail the build.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:566
+From //build/config/BUILDCONFIG.gn:570
 
 ### build_uefi_disk
 Generate a UEFI disk image
@@ -640,7 +650,7 @@ and compare the outputs' contents for reproducibility.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:570
+From //build/config/BUILDCONFIG.gn:574
 
 ### check_vtables_in_rodata
 Check that all vtables in fuchsia binaries listed in binaries.json are in
@@ -1082,7 +1092,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1346
+From //build/config/BUILDCONFIG.gn:1350
 
 ### extract_minfs_metadata_on_corruption
 If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
@@ -1855,7 +1865,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1197
+From //build/config/BUILDCONFIG.gn:1201
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -3188,7 +3198,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1579
+From //build/config/BUILDCONFIG.gn:1583
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -3197,7 +3207,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1584
+From //build/config/BUILDCONFIG.gn:1588
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3241,7 +3251,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1392
+From //build/config/BUILDCONFIG.gn:1396
 
 ### size_checker_input
 The input to the size checker.
@@ -3527,7 +3537,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1376
+From //build/config/BUILDCONFIG.gn:1380
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
