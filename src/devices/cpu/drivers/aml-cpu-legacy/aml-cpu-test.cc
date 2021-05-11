@@ -142,20 +142,17 @@ const fuchsia_thermal::wire::ThermalDeviceInfo kDefaultDeviceInfo = []() {
   return result;
 }();
 
-class FakeAmlThermal : fidl::WireServer<fuchsia_thermal::Device> {
+class FakeAmlThermal : public fidl::WireServer<fuchsia_thermal::Device> {
  public:
   FakeAmlThermal() : active_operating_point_(0), device_info_(kDefaultDeviceInfo) {}
   ~FakeAmlThermal() {}
 
   // Manage the Fake FIDL Message Loop
-  zx_status_t Init(std::optional<zx::channel> remote);
-  static zx_status_t MessageOp(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn);
-  zx::channel& GetMessengerChannel() { return messenger_.local(); }
+  zx_status_t Init(fidl::ServerEnd<fuchsia_thermal::Device> remote);
 
   // Accessor
   uint16_t ActiveOperatingPoint() const { return active_operating_point_; }
 
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease() {}
 
   void set_device_info(const fuchsia_thermal::wire::ThermalDeviceInfo& device_info) {
@@ -184,22 +181,14 @@ class FakeAmlThermal : fidl::WireServer<fuchsia_thermal::Device> {
   void SetFanLevel(SetFanLevelRequestView request, SetFanLevelCompleter::Sync& completer) override;
 
   uint16_t active_operating_point_;
-  fake_ddk::FidlMessenger messenger_;
+  async::Loop loop_{&kAsyncLoopConfigNeverAttachToThread};
   fuchsia_thermal::wire::ThermalDeviceInfo device_info_;
 };
 
-zx_status_t FakeAmlThermal::MessageOp(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  return static_cast<FakeAmlThermal*>(ctx)->DdkMessage(msg, txn);
-}
-
-zx_status_t FakeAmlThermal::Init(std::optional<zx::channel> remote) {
-  return messenger_.SetMessageOp(this, FakeAmlThermal::MessageOp, std::move(remote));
-}
-
-zx_status_t FakeAmlThermal::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<fuchsia_thermal::Device>(this, msg, &transaction);
-  return transaction.Status();
+zx_status_t FakeAmlThermal::Init(fidl::ServerEnd<fuchsia_thermal::Device> request) {
+  loop_.StartThread("fake-aml-thermal");
+  fidl::BindServer(loop_.dispatcher(), std::move(request), this, nullptr);
+  return ZX_OK;
 }
 
 void FakeAmlThermal::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) {
@@ -294,7 +283,7 @@ class FakeThermalDevice : public ddk::ThermalProtocol<FakeThermalDevice, ddk::ba
   zx_status_t ThermalConnect(zx::channel chan) {
     fidl_service_ = std::make_unique<FakeAmlThermal>();
     fidl_service_->set_device_info(device_info_);
-    return fidl_service_->Init({std::move(chan)});
+    return fidl_service_->Init(fidl::ServerEnd<fuchsia_thermal::Device>(std::move(chan)));
   }
 
   const thermal_protocol_t* proto() const { return &proto_; }
@@ -414,8 +403,11 @@ class AmlCpuTestFixture : public InspectTestHelper, public zxtest::Test {
 };
 
 void AmlCpuTestFixture::SetUp() {
-  ASSERT_OK(thermal_.Init({}));
-  ThermalSyncClient thermal_client(std::move(thermal_.GetMessengerChannel()));
+  auto endpoints = fidl::CreateEndpoints<fuchsia_thermal::Device>();
+  ASSERT_OK(endpoints.status_value());
+
+  ASSERT_OK(thermal_.Init(std::move(endpoints->server)));
+  ThermalSyncClient thermal_client = fidl::BindSyncClient(std::move(endpoints->client));
 
   dut_ = std::make_unique<AmlCpuTest>(std::move(thermal_client));
   ASSERT_OK(dut_->Init());
