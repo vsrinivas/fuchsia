@@ -16,7 +16,6 @@ source_set("hypervisor") {
   deps = [
     "//zircon/kernel/arch/x86:headers",
     "//zircon/kernel/hypervisor:headers",
-    "//zircon/kernel/lib/boot-options",
     "//zircon/kernel/platform/pc",
     "//zircon/system/ulib/explicit-memory",
   ]

@@ -349,7 +349,7 @@ static bool test_spectre_v2_mitigations() {
   const bool mitigated_by_ibrs =
       arch::GetPreferredSpectreV2Mitigation(arch::BootCpuidIo{}, hwreg::X86MsrIo{}) ==
       arch::SpectreV2Mitigation::kIbrs;
-  if (gBootOptions->x86_disable_spec_mitigations || mitigated_by_ibrs) {
+  if (x86_get_disable_spec_mitigations() || mitigated_by_ibrs) {
     // If speculative execution mitigations are disabled or Enhanced IBRS is enabled, we expect the
     // retpoline thunk to be:
     // __x86_indirect_thunk:

@@ -65,6 +65,8 @@ bool g_ras_fill_on_ctxt_switch;
 bool g_cpu_vulnerable_to_rsb_underflow;
 bool g_has_enhanced_ibrs;
 bool g_amd_retpoline;
+// True if we should disable all speculative execution mitigations.
+bool g_disable_spec_mitigations;
 
 enum x86_hypervisor_list x86_hypervisor;
 bool g_hypervisor_has_pv_clock;
@@ -193,6 +195,8 @@ void x86_cpu_feature_init() {
       break;
   }
 
+  // Evaluate speculative execution mitigation settings.
+  g_disable_spec_mitigations = gBootOptions->x86_disable_spec_mitigations;
   g_has_swapgs_bug = arch::HasX86SwapgsBug(cpuid);
 
   // If mitigations are enabled, try to disable TSX. Disabling TSX prevents exploiting
@@ -202,7 +206,7 @@ void x86_cpu_feature_init() {
   // WARNING: If we disable TSX, we must do so before we determine whether we are affected by
   // TAA/Cacheout; otherwise the TAA/Cacheout determination code will run before the TSX
   // CPUID bit is masked.
-  if (!gBootOptions->x86_disable_spec_mitigations && arch::DisableTsx(cpuid, msr)) {
+  if (!g_disable_spec_mitigations && arch::DisableTsx(cpuid, msr)) {
     // If successful, repopulate the boot CPU's CPUID cache in order to reflect
     // the disabling.
     arch::InitializeBootCpuid();
@@ -210,28 +214,28 @@ void x86_cpu_feature_init() {
 
   g_has_md_clear = cpuid.Read<arch::CpuidExtendedFeatureFlagsD>().md_clear();
   g_has_mds_taa = arch::HasX86MdsTaaBugs(cpuid, msr);
-  g_md_clear_on_user_return = !gBootOptions->x86_disable_spec_mitigations && g_has_mds_taa &&
-                              g_has_md_clear && gBootOptions->x86_md_clear_on_user_return;
+  g_md_clear_on_user_return = !g_disable_spec_mitigations && g_has_mds_taa && g_has_md_clear &&
+                              gBootOptions->x86_md_clear_on_user_return;
   g_has_spec_ctrl = arch::SpeculationControlMsr::IsSupported(cpuid);
   g_has_ssb = arch::HasX86SsbBug(cpuid, msr);
   g_has_ssbd = arch::CanMitigateX86SsbBug(cpuid);
-  g_ssb_mitigated = !gBootOptions->x86_disable_spec_mitigations && g_has_ssb && g_has_ssbd &&
+  g_ssb_mitigated = !g_disable_spec_mitigations && g_has_ssb && g_has_ssbd &&
                     gBootOptions->x86_spec_store_bypass_disable;
   g_has_ibpb = arch::HasIbpb(cpuid);
   g_has_enhanced_ibrs = arch::HasIbrs(cpuid, msr, /*always_on_mode=*/true);
   g_has_meltdown = arch::HasX86MeltdownBug(cpuid, msr);
   g_has_l1tf = arch::HasX86L1tfBug(cpuid, msr);
-  g_l1d_flush_on_vmentry = !gBootOptions->x86_disable_spec_mitigations && g_has_l1tf &&
+  g_l1d_flush_on_vmentry = !g_disable_spec_mitigations && g_has_l1tf &&
                            arch::BootCpuid<arch::CpuidExtendedFeatureFlagsD>().l1d_flush();
-  g_ras_fill_on_ctxt_switch = !gBootOptions->x86_disable_spec_mitigations;
-  g_cpu_vulnerable_to_rsb_underflow = !gBootOptions->x86_disable_spec_mitigations &&
+  g_ras_fill_on_ctxt_switch = (x86_get_disable_spec_mitigations() == false);
+  g_cpu_vulnerable_to_rsb_underflow = (x86_get_disable_spec_mitigations() == false) &&
                                       (x86_vendor == X86_VENDOR_INTEL) &&
                                       x86_intel_cpu_has_rsb_fallback(&cpuid_old, &msr_old);
   // TODO(fxbug.dev/33667, fxbug.dev/12150): Consider whether a process can opt-out of an IBPB on
   // switch, either on switch-in (ex: its compiled with a retpoline) or switch-out (ex: it promises
   // not to attack the next process).
   // TODO(fxbug.dev/33667, fxbug.dev/12150): Should we have an individual knob for IBPB?
-  g_should_ibpb_on_ctxt_switch = !gBootOptions->x86_disable_spec_mitigations && g_has_ibpb;
+  g_should_ibpb_on_ctxt_switch = (x86_get_disable_spec_mitigations() == false) && g_has_ibpb;
 }
 
 // Invoked on each CPU during boot, after platform init has taken place.
@@ -240,13 +244,13 @@ void x86_cpu_feature_late_init_percpu(void) {
   hwreg::X86MsrIo msr;
 
   // Same reasoning as was done in x86_cpu_feature_init() for the boot CPU.
-  if (!gBootOptions->x86_disable_spec_mitigations && arch_curr_cpu_num() == 0) {
+  if (x86_get_disable_spec_mitigations() == false && arch_curr_cpu_num() != 0) {
     arch::DisableTsx(cpuid, msr);
   }
 
   // Spectre v2 hardware-related mitigations; retpolines may further be used,
   // which is taken care of by the code-patching engine.
-  if (!gBootOptions->x86_disable_spec_mitigations) {
+  if (!x86_get_disable_spec_mitigations()) {
     switch (arch::GetPreferredSpectreV2Mitigation(cpuid, msr)) {
       case arch::SpectreV2Mitigation::kIbrs:
         arch::EnableIbrs(cpuid, msr);
@@ -928,7 +932,7 @@ void x86_cpu_set_turbo(const cpu_id::CpuId* cpu, MsrAccess* msr, Turbostate stat
 extern "C" {
 
 void x86_cpu_maybe_l1d_flush(zx_status_t syscall_return) {
-  if (gBootOptions->x86_disable_spec_mitigations) {
+  if (x86_get_disable_spec_mitigations()) {
     return;
   }
 

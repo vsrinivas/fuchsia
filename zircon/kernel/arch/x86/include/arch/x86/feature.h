@@ -293,6 +293,11 @@ static inline const x86_microarch_config_t* x86_get_microarch_config(void) {
   return x86_microarch_config;
 }
 
+static inline bool x86_get_disable_spec_mitigations(void) {
+  extern bool g_disable_spec_mitigations;
+  return g_disable_spec_mitigations;
+}
+
 static inline bool x86_cpu_has_ibpb(void) {
   extern bool g_has_ibpb;
   return g_has_ibpb;
