@@ -111,6 +111,23 @@ rustc_test("dynamic_repositories_disabled") {
   sources = [ "src/dynamic_repositories_disabled.rs" ]
 }
 
+rustc_test("persists_tuf_metadata") {
+  name = "persists-tuf-metadata"
+  edition = "2018"
+
+  source_root = "src/persists_tuf_metadata.rs"
+
+  deps = [
+    ":lib",
+    "//src/lib/fuchsia-async",
+    "//src/sys/pkg/lib/fuchsia-pkg-testing",
+    "//src/sys/pkg/testing/blobfs-ramdisk",
+    "//src/sys/pkg/testing/pkgfs-ramdisk",
+  ]
+
+  sources = [ "src/persists_tuf_metadata.rs" ]
+}
+
 rustc_test("dynamic_rewrite_disabled") {
   name = "dynamic-rewrite-disabled"
   edition = "2018"
@@ -556,6 +573,12 @@ fuchsia_test_component("dynamic_repositories_disabled-component") {
   deps = [ ":dynamic_repositories_disabled" ]
 }
 
+fuchsia_test_component("persists_tuf_metadata-component") {
+  component_name = "persists-tuf-metadata"
+  manifest = "meta/persists-tuf-metadata.cml"
+  deps = [ ":persists_tuf_metadata" ]
+}
+
 fuchsia_test_component("dynamic_rewrite_disabled-component") {
   component_name = "dynamic-rewrite-disabled"
   manifest = "meta/dynamic-rewrite-disabled.cml"
@@ -708,6 +731,7 @@ fuchsia_test_package("pkg-resolver-integration-tests") {
     ":dynamic_rewrite_disabled-component",
     ":get_hash-component",
     ":metrics-component",
+    ":persists_tuf_metadata-component",
     ":pkg_resolve_inspect-component",
     ":resolve_fails-component",
     ":resolve_propagates_pkgfs_failure-component",

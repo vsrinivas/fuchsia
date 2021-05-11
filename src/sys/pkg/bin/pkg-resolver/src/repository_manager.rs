@@ -394,7 +394,6 @@ impl<S, N> RepositoryManagerBuilder<S, N> {
     }
 
     /// Customize the repository manager with the persisted repository directory.
-    #[cfg(test)]
     pub fn with_persisted_repos_dir<P>(mut self, path: P) -> Self
     where
         P: Into<PathBuf>,

@@ -156,7 +156,7 @@ impl TestEnv {
             File::open(mounts.config_data.path()).unwrap(),
         )
         .expect("/config/data to mount");
-        let f = File::create(mounts.config_data.path().join("config.json")).unwrap();
+        let f = File::create(mounts.config_data.path().join("enable_dynamic_config.json")).unwrap();
         serde_json::to_writer(
             std::io::BufWriter::new(f),
             &Config { enable_dynamic_configuration: true },

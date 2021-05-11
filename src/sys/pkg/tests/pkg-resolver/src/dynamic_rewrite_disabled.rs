@@ -10,7 +10,9 @@ use {
     fidl_fuchsia_pkg_rewrite_ext::{Rule, RuleConfig},
     fuchsia_async as fasync,
     fuchsia_zircon::Status,
-    lib::{get_rules, mock_filesystem, Config, DirOrProxy, MountsBuilder, TestEnvBuilder},
+    lib::{
+        get_rules, mock_filesystem, DirOrProxy, EnableDynamicConfig, MountsBuilder, TestEnvBuilder,
+    },
 };
 
 fn make_rule_config(rule: &Rule) -> RuleConfig {
@@ -28,7 +30,7 @@ async fn load_dynamic_rules() {
         .mounts(
             MountsBuilder::new()
                 .dynamic_rewrite_rules(make_rule_config(&rule))
-                .config(Config { enable_dynamic_configuration: true })
+                .enable_dynamic_config(EnableDynamicConfig { enable_dynamic_configuration: true })
                 .build(),
         )
         .build()
@@ -45,7 +47,7 @@ async fn no_load_dynamic_rules_if_disabled() {
         .mounts(
             MountsBuilder::new()
                 .dynamic_rewrite_rules(make_rule_config(&make_rule()))
-                .config(Config { enable_dynamic_configuration: false })
+                .enable_dynamic_config(EnableDynamicConfig { enable_dynamic_configuration: false })
                 .build(),
         )
         .build()
@@ -74,7 +76,11 @@ async fn commit_transaction_succeeds() {
 #[fasync::run_singlethreaded(test)]
 async fn commit_transaction_fails_if_disabled() {
     let env = TestEnvBuilder::new()
-        .mounts(MountsBuilder::new().config(Config { enable_dynamic_configuration: false }).build())
+        .mounts(
+            MountsBuilder::new()
+                .enable_dynamic_config(EnableDynamicConfig { enable_dynamic_configuration: false })
+                .build(),
+        )
         .build()
         .await;
 
@@ -98,7 +104,7 @@ async fn attempt_to_open_persisted_dynamic_rules() {
         .mounts(
             MountsBuilder::default()
                 .pkg_resolver_data(DirOrProxy::Proxy(proxy))
-                .config(Config { enable_dynamic_configuration: true })
+                .enable_dynamic_config(EnableDynamicConfig { enable_dynamic_configuration: true })
                 .build(),
         )
         .build()
@@ -119,7 +125,7 @@ async fn no_attempt_to_open_persisted_dynamic_rules_if_disabled() {
         .mounts(
             MountsBuilder::new()
                 .pkg_resolver_data(DirOrProxy::Proxy(proxy))
-                .config(Config { enable_dynamic_configuration: false })
+                .enable_dynamic_config(EnableDynamicConfig { enable_dynamic_configuration: false })
                 .build(),
         )
         .build()

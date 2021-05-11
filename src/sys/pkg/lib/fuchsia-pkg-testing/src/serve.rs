@@ -8,7 +8,9 @@ use {
     crate::repo::Repository,
     anyhow::{bail, format_err, Context as _, Error},
     chrono::Utc,
-    fidl_fuchsia_pkg_ext::{MirrorConfig, MirrorConfigBuilder, RepositoryConfig},
+    fidl_fuchsia_pkg_ext::{
+        MirrorConfig, MirrorConfigBuilder, RepositoryConfig, RepositoryStorageType,
+    },
     fuchsia_async::{self as fasync, net::TcpListener, Task},
     fuchsia_url::pkg_url::RepoUrl,
     futures::{future::BoxFuture, prelude::*},
@@ -278,6 +280,16 @@ impl ServedRepository {
     // TODO(fxbug.dev/59827) delete this method once pkg-resolver can fetch metadata from a LocalMirror.
     pub fn make_repo_config_with_local_mirror(&self, url: RepoUrl) -> RepositoryConfig {
         self.repo.make_repo_config(url, Some(self.get_mirror_config(false)), true)
+    }
+
+    /// Generate a [`RepositoryConfig`] that permits persisting metadata.
+    pub fn make_repo_config_with_persistent_storage(&self, url: RepoUrl) -> RepositoryConfig {
+        self.repo
+            .make_repo_config_builder(url)
+            .add_mirror(self.get_mirror_config(false))
+            .use_local_mirror(false)
+            .repo_storage_type(RepositoryStorageType::Persistent)
+            .build()
     }
 
     /// Send an SSE event to all clients subscribed to /auto.
