@@ -1,0 +1,10 @@
+# these two `source` sections are needed to pick up the vendor directory
+[source.crates-io]
+replace-with = "vendored-sources"
+
+[source.vendored-sources]
+directory = "./vendor"
+
+# used to ensure consistency with other cargo workflows in-tree
+[build]
+target-dir = "../../out/cargo_target"
