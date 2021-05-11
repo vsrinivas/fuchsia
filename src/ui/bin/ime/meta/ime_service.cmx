@@ -7,8 +7,7 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.sys.Launcher",
-            "fuchsia.ui.input2.KeyboardLayoutState"
+            "fuchsia.sys.Launcher"
         ]
     }
 }

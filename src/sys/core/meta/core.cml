@@ -813,7 +813,6 @@
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.focus.FocusChainListenerRegistry",
                 "fuchsia.ui.input.ImeService",
-                "fuchsia.ui.input2.Keyboard",
                 "fuchsia.ui.input3.Keyboard",
                 "fuchsia.ui.input3.KeyEventInjector",
                 "fuchsia.ui.keyboard.focus.Controller",
