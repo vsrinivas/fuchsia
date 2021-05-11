@@ -7,7 +7,7 @@ use futures::AsyncReadExt;
 use std::collections::HashMap;
 use std::default::Default;
 use std::{fs, path};
-use tuf::crypto::{HashAlgorithm, PrivateKey, PublicKey, SignatureScheme};
+use tuf::crypto::{Ed25519PrivateKey, HashAlgorithm, PrivateKey, PublicKey};
 use tuf::interchange::{DataInterchange, Json};
 use tuf::metadata::{
     Metadata, MetadataDescription, MetadataPath, MetadataVersion, Role as TufRole, RootMetadata,
@@ -25,7 +25,7 @@ pub struct TufRepo {
     repo: FileSystemRepository<Json>,
     targets: TargetsMap,
     keys_dir: path::PathBuf,
-    keys: [Option<PrivateKey>; 4],
+    keys: [Option<Box<dyn PrivateKey>>; 4],
     versions: [u32; 4],
 }
 
@@ -96,14 +96,13 @@ impl TufRepo {
     fn public_key(&mut self, role: Role) -> &PublicKey {
         self.private_key(role).public()
     }
-    fn private_key(&mut self, role: Role) -> &PrivateKey {
+    fn private_key(&mut self, role: Role) -> &dyn PrivateKey {
         let Self { ref mut keys, ref keys_dir, .. } = self;
-        keys[role as usize].get_or_insert_with(|| {
-            PrivateKey::from_pkcs8(
+        &**keys[role as usize].get_or_insert_with(|| {
+            Box::new(Ed25519PrivateKey::from_pkcs8(
                 &fs::read(keys_dir.join(role.key_filename())).unwrap(),
-                SignatureScheme::Ed25519,
             )
-            .unwrap()
+            .unwrap())
         })
     }
 
