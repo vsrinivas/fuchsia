@@ -80,11 +80,12 @@
 //   the appropriately-sized free bucket.
 //
 // Normal (small/non-large) allocation:
-//   An alloction of less than HEAP_LARGE_ALLOC_BYTES, which can fit in a free
-//   bucket.
+//   An alloction of less than or equal to (HEAP_LARGE_ALLOC_BYTES - sizeof(header_t)), which
+//   can fit in a free bucket.
 //
 // Large allocation:
-//   An alloction of more than HEAP_LARGE_ALLOC_BYTES. This is no longer allowed.
+//   An alloction of more than (HEAP_LARGE_ALLOC_BYTES - sizeof(header_t)). This
+//   is no longer allowed.
 //
 // Free buckets:
 //   Freelist entries are kept in linked lists with 8 different sizes per binary
@@ -205,6 +206,14 @@ class __TA_SCOPED_CAPABILITY LockGuard {
 
 static_assert(ZX_IS_PAGE_ALIGNED(HEAP_GROW_SIZE), "");
 
+// HEAP_ALLOC_VIRTUAL_BITS defines the largest allocation bucket.
+//
+// The requirements on virtual bits is that the largest allocation (including
+// header), must roundup to not more 2**HEAP_ALLOC_VIRTUAL_BITS than this
+// alignment, and similarly the heap cannot grow by amounts that would not round
+// down to 2**HEAP_ALLOC_VIRTUAL_BITS or less. As such the heap can grow by more
+// than this many bits at once, but not so many as it must fall into the next
+// bucket.
 #define HEAP_ALLOC_VIRTUAL_BITS 20
 
 // HEAP_LARGE_ALLOC_BYTES limits size of any single allocation.
@@ -215,13 +224,13 @@ static_assert(ZX_IS_PAGE_ALIGNED(HEAP_GROW_SIZE), "");
 // block is limited by HEAP_LARGE_ALLOC_BYTES so reducing this value limits the
 // size of the cached block.
 //
+// Note that HEAP_LARGE_ALLOC_BYTES is the largest internal allocation that the
+// heap can do, and includes any headers. The largest allocation cmpct_alloc
+// could theoretically (it may be artificially limited) provide is therefore
+// slightly less than this.
+//
 // See also |HEAP_GROW_SIZE|.
-#define HEAP_LARGE_ALLOC_BYTES (size_t(1) << HEAP_ALLOC_VIRTUAL_BITS)
-
-// When we grow the heap we have to have somewhere in the freelist to put the
-// resulting freelist entry, so the freelist has to have a certain number of
-// buckets.
-static_assert(HEAP_GROW_SIZE <= HEAP_LARGE_ALLOC_BYTES, "");
+#define HEAP_LARGE_ALLOC_BYTES ((size_t(1) << HEAP_ALLOC_VIRTUAL_BITS) + sizeof(header_t))
 
 // Buckets for allocations.  The smallest 15 buckets are 8, 16, 24, etc. up to
 // 120 bytes.  After that we round up to the nearest size that can be written
@@ -248,6 +257,20 @@ typedef struct header_struct {
   // The right sentinel will have 0 in this field.
   size_t size;
 } header_t;
+
+// When we grow the heap we have to have somewhere in the freelist to put the
+// resulting freelist entry, so the freelist has to have a certain number of
+// buckets.
+static_assert(HEAP_GROW_SIZE <= HEAP_LARGE_ALLOC_BYTES);
+
+// When the heap is grown the requested internal usable size will be increased
+// by this amount before allocating from the OS. This can be factored into
+// any heap_grow requested to precisely control the OS allocation amount.
+constexpr size_t kHeapGrowOverhead = sizeof(header_t) * 2;
+
+// Precalculated version of HEAP_GROW_SIZE that takes into account the grow
+// overhead.
+constexpr size_t kHeapUsableGrowSize = HEAP_GROW_SIZE - kHeapGrowOverhead;
 
 typedef struct free_struct {
   header_t header;
@@ -312,22 +335,28 @@ NO_ASAN static void cmpct_dump_locked() TA_REQ(TheHeapLock::Get()) {
   }
 }
 
+struct SizeToIndexRet {
+  int bucket;
+  size_t rounded_up;
+};
+
 // Operates in sizes that don't include the allocation header;
 // i.e., the usable portion of a memory area.
-static int size_to_index_helper(size_t size, size_t* rounded_up_out, int adjust, int increment) {
+static constexpr SizeToIndexRet SizeToIndexHelper(size_t size, int adjust, int increment) {
+  size_t rounded_up = 0;
   // First buckets are simply 8-spaced up to 128.
   if (size <= 128) {
     if (sizeof(size_t) == 8u && size <= sizeof(free_t) - sizeof(header_t)) {
-      *rounded_up_out = sizeof(free_t) - sizeof(header_t);
+      rounded_up = sizeof(free_t) - sizeof(header_t);
     } else {
-      *rounded_up_out = size;
+      rounded_up = size;
     }
     // No allocation is smaller than 8 bytes, so the first bucket is for 8
     // byte spaces (not including the header).  For 64 bit, the free list
     // struct is 16 bytes larger than the header, so no allocation can be
     // smaller than that (otherwise how to free it), but we have empty 8
     // and 16 byte buckets for simplicity.
-    return (int)((size >> 3) - 1);
+    return {(int)((size >> 3) - 1), rounded_up};
   }
 
   // We are going to go up to the next size to round up, but if we hit a
@@ -345,25 +374,41 @@ static int size_to_index_helper(size_t size, size_t* rounded_up_out, int adjust,
   int row_column = (row << 3) | column;
   row_column += increment;
   size = (8 + (row_column & 7)) << (row_column >> 3);
-  *rounded_up_out = size;
+  rounded_up = size;
   // We start with 15 buckets, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96,
   // 104, 112, 120.  Then we have row 4, sizes 128 and up, with the
   // row-column 8 and up.
   int answer = row_column + 15 - 32;
   ZX_DEBUG_ASSERT(answer < NUMBER_OF_BUCKETS);
-  return answer;
+  return {answer, rounded_up};
 }
 
 // Round up size to next bucket when allocating.
-static int size_to_index_allocating(size_t size, size_t* rounded_up_out) {
+static constexpr SizeToIndexRet SizeToIndexAllocating(size_t size) {
   size_t rounded = ZX_ROUNDUP(size, 8);
-  return size_to_index_helper(rounded, rounded_up_out, -8, 1);
+  return SizeToIndexHelper(rounded, -8, 1);
 }
 
 // Round down size to next bucket when freeing.
-static int size_to_index_freeing(size_t size) {
-  size_t dummy;
-  return size_to_index_helper(size, &dummy, 0, 0);
+static constexpr int size_to_index_freeing(size_t size) {
+  return SizeToIndexHelper(size, 0, 0).bucket;
+}
+
+// Ensure that HEAP_LARGE_ALLOC_BYTES maps to a valid bucket when allocating.
+// Given how HEAP_LARGE_ALLOC_BYTES is defined this assert is somewhat excessive
+// but included for completeness should HEAP_LARGE_ALLOC_BYTES ever be given a
+// more complicated definition. Note that HEAP_LARGE_ALLOC_BYTES is the internal
+// size (including header), but we map to a bucket using the size without the
+// header, as the header is implicitly included in the final bucket. Or put
+// another way, the bucket for size X gives a bucket with a free block of
+// X+sizeof(header_t).
+static_assert(SizeToIndexAllocating(HEAP_LARGE_ALLOC_BYTES - sizeof(header_t)).bucket <=
+              NUMBER_OF_BUCKETS);
+
+static int size_to_index_allocating(size_t size, size_t* rounded_up_out) {
+  auto result = SizeToIndexAllocating(size);
+  *rounded_up_out = result.rounded_up;
+  return result.bucket;
 }
 
 static inline header_t* tag_as_free(void* left) TA_REQ(TheHeapLock::Get()) {
@@ -562,9 +607,26 @@ NO_ASAN static ssize_t heap_grow(size_t size) TA_REQ(TheHeapLock::Get()) {
   // This function accesses field members of header_t which are poisoned so it
   // has to be NO_ASAN.
 
+  // We expect to never have been asked to grow by more than the maximum
+  // allocation
+  ZX_DEBUG_ASSERT(size <= HEAP_LARGE_ALLOC_BYTES);
+
+  // Ensure that after performing the size manipulations below we do not end up
+  // overflowing the maximum bucket. This check is useful since an obvious
+  // setting of HEAP_LARGE_ALLOC_BYTES == 1<<HEAP_ALLOC_VIRTUAL_BITS will
+  // actually result in us growing the heap by *more* than 1<<HEAP_ALLOC_VIRTUAL_BITS
+  // However this is typically safe since growing by an extra partial page should
+  // not send us into the next bucket. However if pages are large enough and
+  // HEAP_ALLOC_VIRTUAL_BITS small enough this could happen, and so this assert
+  // exists to prevent choosing such sizes.
+  static_assert(
+      size_to_index_freeing(ZX_ROUNDUP(HEAP_LARGE_ALLOC_BYTES + kHeapGrowOverhead, ZX_PAGE_SIZE)) -
+          kHeapGrowOverhead - sizeof(header_t) <=
+      NUMBER_OF_BUCKETS);
+
   // The new free list entry will have a header on each side (the
   // sentinels) so we need to grow the gross heap size by this much more.
-  size += 2 * sizeof(header_t);
+  size += kHeapGrowOverhead;
   size = ZX_ROUNDUP(size, ZX_PAGE_SIZE);
 
   void* ptr = NULL;
@@ -884,8 +946,17 @@ static void cmpct_test_return_to_os(void) TA_EXCL(TheHeapLock::Get()) {
  *
  ****************************************************/
 
-// Factors in the header for an allocation.
-const size_t kHeapMaxAllocSize = HEAP_LARGE_ALLOC_BYTES - sizeof(header_t);
+// Factors in the header for an allocation. Value chosen here is hard coded and could be less than
+// the actual largest allocation that cmpct_alloc could provide. This is done so that larger buckets
+// can exist in order to allow the heap to grow by amounts larger than what we would like to allow
+// clients to allocate.
+constexpr size_t kHeapMaxAllocSize = (size_t(1) << 20) - sizeof(header_t);
+
+// Ensure that the maximum allocation is actually satisfiable. Note that since
+// HEAP_LARGE_ALLOC_BYTES is an internal allocation limit we have to add the header on. We have
+// already checked previously that the HEAP_LARGE_ALLOC_BYTES is a valid amount to grow the heap by.
+static_assert(SizeToIndexAllocating(kHeapMaxAllocSize).rounded_up + sizeof(header_t) <=
+              HEAP_LARGE_ALLOC_BYTES);
 
 NO_ASAN void* cmpct_alloc(size_t size) {
   LOCAL_TRACE_DURATION("cmpct_alloc", trace, size, 0);
@@ -926,6 +997,13 @@ NO_ASAN void* cmpct_alloc(size_t size) {
   // is also poisoned.
   const size_t alloc_size = size;
   size += asan_heap_redzone_size(alloc_size);
+  // When we validated the max allocation size above, we did not take into account the asan redzone.
+  // Unfortunately this cannot presently be checked statically due to the asan_heap_redzone_size not
+  // being a constexpr, and so we check it here instead.
+  ZX_ASSERT(SizeToIndexAllocating(asan_heap_redzone_size(kHeapMaxAllocSize) + kHeapMaxAllocSize)
+                    .rounded_up +
+                sizeof(header_t) <=
+            HEAP_LARGE_ALLOC_BYTES);
 #endif  // KERNEL_ASAN
 
   size_t rounded_up;
@@ -939,8 +1017,12 @@ NO_ASAN void* cmpct_alloc(size_t size) {
   int bucket = find_nonempty_bucket(start_bucket);
   if (bucket == -1) {
     // Grow heap by at least 12% if we can.
-    size_t growby = std::min(HEAP_LARGE_ALLOC_BYTES,
-                             std::max(theheap.size >> 3, std::max(HEAP_GROW_SIZE, rounded_up)));
+    size_t growby =
+        std::min(HEAP_LARGE_ALLOC_BYTES,
+                 std::max(theheap.size >> 3, std::max(kHeapUsableGrowSize, rounded_up)));
+    // Validate that our growby calculation is correct, and that if we grew the heap by this amount
+    // we would actually satisfy our allocation.
+    ZX_DEBUG_ASSERT(growby >= rounded_up);
     // Try to add a new OS allocation to the heap, reducing the size until
     // we succeed or get too small.
     while (heap_grow(growby) < 0) {
@@ -950,6 +1032,13 @@ NO_ASAN void* cmpct_alloc(size_t size) {
       growby = std::max(growby >> 1, rounded_up);
     }
     bucket = find_nonempty_bucket(start_bucket);
+    // It should be the case that, since we hold the heap lock, after growing the heap there should
+    // be something in our target bucket. However, if there was any confusion in calculating the
+    // |growby| amount, then it's possible we still do not have something. As this could only happen
+    // due to a systemic configuration error, and this should get caught in tests, this only needs
+    // to be a DEBUG_ASSERT and not a always enabled ASSERT. Further, it should not be possible for
+    // the assertion of the growby amount above to succeed and then this assertion to fail.
+    ZX_DEBUG_ASSERT(bucket != -1);
   }
   free_t* head = theheap.free_lists[bucket];
   size_t left_over = head->header.size - rounded_up;
@@ -1136,8 +1225,7 @@ void cmpct_init(void) {
   theheap.remaining = 0;
   theheap.cached_os_alloc = NULL;
 
-  size_t initial_alloc = HEAP_GROW_SIZE - 2 * sizeof(header_t);
-  heap_grow(initial_alloc);
+  heap_grow(kHeapUsableGrowSize);
 }
 
 void cmpct_dump(bool panic_time) {
