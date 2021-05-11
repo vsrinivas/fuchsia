@@ -6,7 +6,7 @@
 
 use crate::ok;
 use crate::{object_get_info, object_get_property, object_set_property, ObjectQuery, Topic};
-use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Resource, Status};
+use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Koid, Resource, Rights, Status};
 use crate::{Property, PropertyQuery, PropertyQueryGet, PropertyQuerySet};
 use bitflags::bitflags;
 use fuchsia_zircon_sys as sys;
@@ -24,18 +24,36 @@ impl_handle_based!(Vmo);
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct VmoInfo {
-    pub flags: u32,
+    pub koid: Koid,
+    pub size_bytes: u64,
+    pub parent_koid: Koid,
+    pub num_children: usize,
+    pub num_mappings: usize,
+    pub share_count: usize,
+    pub flags: VmoInfoFlags,
+    pub committed_bytes: u64,
+    handle_rights: Rights,
 }
 
 impl Default for VmoInfo {
     fn default() -> VmoInfo {
-        VmoInfo { flags: 0 }
+        Self::from(sys::zx_info_vmo_t::default())
     }
 }
 
 impl From<sys::zx_info_vmo_t> for VmoInfo {
-    fn from(vmo: sys::zx_info_vmo_t) -> VmoInfo {
-        VmoInfo { flags: vmo.flags }
+    fn from(info: sys::zx_info_vmo_t) -> VmoInfo {
+        VmoInfo {
+            koid: Koid::from_raw(info.koid),
+            size_bytes: info.size_bytes,
+            parent_koid: Koid::from_raw(info.parent_koid),
+            num_children: info.num_children,
+            num_mappings: info.num_mappings,
+            share_count: info.share_count,
+            flags: VmoInfoFlags::from_bits_truncate(info.flags),
+            committed_bytes: info.committed_bytes,
+            handle_rights: Rights::from_bits_truncate(info.handle_rights),
+        }
     }
 }
 
@@ -274,7 +292,7 @@ mod tests {
         let size = 4096;
         let vmo = Vmo::create(size).unwrap();
         let info = vmo.info().unwrap();
-        assert_eq!(0, info.flags & VmoInfoFlags::PAGER_BACKED.bits());
+        assert!(!info.flags.contains(VmoInfoFlags::PAGER_BACKED));
     }
 
     #[test]
@@ -282,19 +300,19 @@ mod tests {
         let size = 4096;
         let vmo = Vmo::create(size).unwrap();
         let info = vmo.info().unwrap();
-        assert!(info.flags & VmoInfoFlags::IS_COW_CLONE.bits() == 0);
+        assert!(!info.flags.contains(VmoInfoFlags::IS_COW_CLONE));
 
         let child = vmo.create_child(VmoChildOptions::SNAPSHOT, 0, 512).unwrap();
         let info = child.info().unwrap();
-        assert!(info.flags & VmoInfoFlags::IS_COW_CLONE.bits() != 0);
+        assert!(info.flags.contains(VmoInfoFlags::IS_COW_CLONE));
 
         let child = vmo.create_child(VmoChildOptions::SNAPSHOT_AT_LEAST_ON_WRITE, 0, 512).unwrap();
         let info = child.info().unwrap();
-        assert!(info.flags & VmoInfoFlags::IS_COW_CLONE.bits() != 0);
+        assert!(info.flags.contains(VmoInfoFlags::IS_COW_CLONE));
 
         let child = vmo.create_child(VmoChildOptions::SLICE, 0, 512).unwrap();
         let info = child.info().unwrap();
-        assert!(info.flags & VmoInfoFlags::IS_COW_CLONE.bits() == 0);
+        assert!(!info.flags.contains(VmoInfoFlags::IS_COW_CLONE));
     }
 
     #[test]
