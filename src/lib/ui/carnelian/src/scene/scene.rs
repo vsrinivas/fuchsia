@@ -221,7 +221,6 @@ impl Scene {
         let size = context.size;
         if size != size_rendering.size {
             size_rendering.size = context.size;
-            size_rendering.previous_rasters.clear();
             Some(PreClear { color: background_color })
         } else {
             None
@@ -229,15 +228,12 @@ impl Scene {
     }
 
     fn update_composition(
-        image_id: u64,
         layers: Vec<Layer>,
         mouse_position: &Option<IntPoint>,
         mouse_cursor_raster: &Option<Raster>,
         corner_knockouts: &Option<Raster>,
-        renderings: &mut HashMap<u64, Rendering>,
-        background_color: Color,
         composition: &mut Composition,
-    ) -> Vec<Layer> {
+    ) {
         let corner_knockouts_layer = corner_knockouts.as_ref().and_then(|raster| {
             Some(Layer {
                 raster: raster.clone(),
@@ -259,26 +255,14 @@ impl Scene {
             .flatten()
             .collect();
 
-        let clear_rendering = renderings.get_mut(&image_id).expect("rendering");
-
         composition.replace(
             ..,
             cursor_layers
                 .clone()
                 .into_iter()
                 .chain(corner_knockouts_layer.into_iter())
-                .chain(layers.into_iter())
-                .chain(clear_rendering.previous_rasters.drain(..).map(|raster| Layer {
-                    raster,
-                    style: Style {
-                        fill_rule: FillRule::WholeTile,
-                        fill: Fill::Solid(background_color),
-                        blend_mode: BlendMode::Over,
-                    },
-                })),
+                .chain(layers.into_iter()),
         );
-
-        cursor_layers
     }
 
     /// Render the scene. Expected to be called from the view assistant's render method.
@@ -289,7 +273,6 @@ impl Scene {
         context: &ViewAssistantContext,
     ) -> Result<(), Error> {
         let image = render_context.get_current_image(context);
-        let image_id = context.image_id;
         let background_color = self.options.background_color;
         let pre_clear =
             Self::create_or_update_rendering(&mut self.renderings, background_color, context);
@@ -308,28 +291,16 @@ impl Scene {
         }
 
         let layers: Vec<Layer> = self.layers(size, render_context);
-        let cursor_layer = Self::update_composition(
-            image_id,
+        Self::update_composition(
             layers.clone(),
             &context.mouse_cursor_position,
             &self.mouse_cursor_raster,
             &corner_knockouts,
-            &mut self.renderings,
-            background_color,
             &mut self.composition,
         );
         render_context.render(&self.composition, None, image, &ext);
         ready_event.as_handle_ref().signal(Signals::NONE, Signals::EVENT_SIGNALED)?;
 
-        let update_rendering = self.renderings.entry(image_id).or_insert_with(|| Rendering::new());
-
-        let previous_rasters: Vec<Raster> = layers
-            .iter()
-            .chain(cursor_layer.iter())
-            .map(|layer| layer.raster.clone())
-            .chain(corner_knockouts.into_iter())
-            .collect();
-        update_rendering.previous_rasters = previous_rasters;
         Ok(())
     }
 

@@ -27,12 +27,11 @@ use facets::{FacetId, FacetPtr};
 
 struct Rendering {
     size: Size,
-    previous_rasters: Vec<Raster>,
 }
 
 impl Rendering {
     fn new() -> Rendering {
-        Rendering { previous_rasters: Vec::new(), size: Size::zero() }
+        Rendering { size: Size::zero() }
     }
 }
 

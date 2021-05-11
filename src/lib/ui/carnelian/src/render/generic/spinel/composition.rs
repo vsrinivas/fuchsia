@@ -121,6 +121,7 @@ impl SpinelComposition {
         context: &InnerContext,
         raster_builder: SpnRasterBuilder,
         composition: SpnComposition,
+        previous_rasters: &mut Vec<SpnRaster>,
         size: Size2D<u32>,
         display_rotation: DisplayRotation,
         clip: Rect<u32>,
@@ -129,6 +130,17 @@ impl SpinelComposition {
             let clip = [clip.min_x(), clip.min_y(), clip.max_x(), clip.max_y()];
             spn!(spn_composition_reset(composition));
             spn!(spn_composition_set_clip(composition, clip.as_ptr(),));
+        }
+
+        // Release existing rasters after placing them in clear layer.
+        for raster in previous_rasters.drain(..) {
+            let i = self.layers.len();
+            unsafe {
+                spn!(spn_composition_place(composition, &raster, &(i as u32), ptr::null(), 1));
+            }
+            context.get_checked().map(|context| unsafe {
+                spn!(spn_raster_release(context, &raster as *const _, 1))
+            });
         }
 
         for (i, Layer { raster, .. }) in self.layers.iter().enumerate() {
@@ -177,12 +189,11 @@ impl SpinelComposition {
                     unsafe { init(|ptr| spn!(spn_raster_builder_end(raster_builder, ptr))) };
 
                 unsafe {
-                    spn!(spn_composition_place(composition, &raster, &(i as u32), ptr::null(), 1,));
+                    spn!(spn_composition_place(composition, &raster, &(i as u32), ptr::null(), 1));
                 }
 
-                context.get_checked().map(|context| unsafe {
-                    spn!(spn_raster_release(context, &raster as *const _, 1))
-                });
+                // Save raster for clearing.
+                previous_rasters.push(raster);
             }
         }
     }
@@ -198,7 +209,8 @@ impl SpinelComposition {
         const MAX_LAYER_CMDS: u32 = 6; // spn_styling_group_layer
         let leave_cmds: u32 = if needs_linear_to_srgb_opcode { 5 } else { 4 }; // spn_styling_group_leave
 
-        let len = self.layers.len() as u32;
+        let num_clear_layers = 1;
+        let len = self.layers.len() as u32 + num_clear_layers;
         let styling_len = len * MAX_LAYER_CMDS + PARENTS + ENTER_CMDS + leave_cmds + GROUP_SIZE;
         let spn_styling = context.get_checked().map(|context| unsafe {
             init(|ptr| spn!(spn_styling_create(context, ptr, len, styling_len)))
@@ -237,6 +249,26 @@ impl SpinelComposition {
         }
 
         group_layers(spn_styling, top_group, &self.layers, 0);
+
+        // Clear commands for layer with previous rasters.
+        let clear_cmds = unsafe {
+            let data = init(|ptr| {
+                let len = 5;
+                spn!(spn_styling_group_layer(
+                    spn_styling,
+                    top_group,
+                    self.layers.len() as u32,
+                    len,
+                    ptr
+                ))
+            });
+            slice::from_raw_parts_mut(data, len as usize)
+        };
+        clear_cmds[0] = SpnCommand::SpnStylingOpcodeCoverWipZero;
+        unsafe {
+            spn_styling_layer_fill_rgba_encoder(&mut clear_cmds[1], self.background_color.as_ptr());
+        }
+        clear_cmds[4] = SpnCommand::SpnStylingOpcodeBlendOver;
 
         unsafe {
             spn!(spn_styling_seal(spn_styling));

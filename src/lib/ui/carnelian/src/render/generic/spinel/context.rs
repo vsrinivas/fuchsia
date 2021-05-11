@@ -237,6 +237,7 @@ pub struct SpinelContext {
     path_builder: Rc<SpnPathBuilder>,
     raster_builder: Rc<SpnRasterBuilder>,
     compositions: HashMap<SpinelImage, SpnComposition>,
+    previous_rasters: HashMap<SpinelImage, Vec<SpnRaster>>,
     vulkan: VulkanContext,
     images: Vec<VulkanImage>,
     index_map: HashMap<u32, usize>,
@@ -713,6 +714,7 @@ impl SpinelContext {
             path_builder,
             raster_builder,
             compositions: HashMap::new(),
+            previous_rasters: HashMap::new(),
             vulkan: VulkanContext {
                 device,
                 vk_i,
@@ -1219,10 +1221,14 @@ impl Context<Spinel> for SpinelContext {
         let spn_composition = *self.compositions.entry(image_id).or_insert_with(|| unsafe {
             init(|ptr| spn!(spn_composition_create(spn_context, ptr)))
         });
+        let mut spn_previous_rasters =
+            self.previous_rasters.entry(image_id).or_insert_with(|| Vec::new());
+
         composition.set_up_spn_composition(
             &*self.inner.borrow(),
             *self.raster_builder,
             spn_composition,
+            &mut spn_previous_rasters,
             size2(self.vulkan.width, self.vulkan.height),
             self.display_rotation,
             clip,
@@ -1278,6 +1284,12 @@ impl Drop for SpinelContext {
         self.images.clear();
 
         unsafe {
+            for previous_rasters in self.previous_rasters.values() {
+                for raster in previous_rasters {
+                    let spn_context = self.inner.borrow().get();
+                    spn!(spn_raster_release(spn_context, raster as *const _, 1));
+                }
+            }
             for composition in self.compositions.values().copied() {
                 spn!(spn_composition_release(composition));
             }
