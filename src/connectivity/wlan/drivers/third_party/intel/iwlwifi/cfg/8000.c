@@ -33,10 +33,7 @@
  *
  *****************************************************************************/
 
-#include <linux/module.h>
-#include <linux/stringify.h>
-
-#include "iwl-config.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-config.h"
 
 /* Highest firmware API version supported */
 #define IWL8000_UCODE_API_MAX 36
@@ -80,7 +77,7 @@ static const struct iwl_base_params iwl8000_base_params = {
 static const struct iwl_ht_params iwl8000_ht_params = {
     .stbc = true,
     .ldpc = true,
-    .ht40_bands = BIT(NL80211_BAND_2GHZ) | BIT(NL80211_BAND_5GHZ),
+    .ht40_bands = BIT(WLAN_INFO_BAND_2GHZ) | BIT(WLAN_INFO_BAND_5GHZ),
 };
 
 static const struct iwl_tt_params iwl8000_tt_params = {
@@ -105,10 +102,12 @@ static const struct iwl_tt_params iwl8000_tt_params = {
     .support_tx_backoff = true,
 };
 
+// TODO(fxbug.dev/61069): We temporarily removed .features = NETIF_F_RXCSUM. Add it back when the
+//                        WLAN driver supports it.
 #define IWL_DEVICE_8000_COMMON                                                                    \
   .device_family = IWL_DEVICE_FAMILY_8000, .base_params = &iwl8000_base_params,                   \
-  .led_mode = IWL_LED_RF_STATE, .nvm_hw_section_num = 10, .features = NETIF_F_RXCSUM,             \
-  .non_shared_ant = ANT_A, .dccm_offset = IWL8260_DCCM_OFFSET, .dccm_len = IWL8260_DCCM_LEN,      \
+  .led_mode = IWL_LED_RF_STATE, .nvm_hw_section_num = 10, .features = 0, .non_shared_ant = ANT_A, \
+  .dccm_offset = IWL8260_DCCM_OFFSET, .dccm_len = IWL8260_DCCM_LEN,                               \
   .dccm2_offset = IWL8260_DCCM2_OFFSET, .dccm2_len = IWL8260_DCCM2_LEN,                           \
   .smem_offset = IWL8260_SMEM_OFFSET, .smem_len = IWL8260_SMEM_LEN,                               \
   .default_nvm_file_C_step = DEFAULT_NVM_FILE_FAMILY_8000C, .thermal_params = &iwl8000_tt_params, \
@@ -172,6 +171,3 @@ const struct iwl_cfg iwl4165_2ac_cfg = {
     .nvm_ver = IWL8000_NVM_VERSION,
     .max_ht_ampdu_exponent = IEEE80211_HT_MAX_AMPDU_64K,
 };
-
-MODULE_FIRMWARE(IWL8000_MODULE_FIRMWARE(IWL8000_UCODE_API_MAX));
-MODULE_FIRMWARE(IWL8265_MODULE_FIRMWARE(IWL8265_UCODE_API_MAX));

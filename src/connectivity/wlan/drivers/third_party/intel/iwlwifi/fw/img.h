@@ -36,9 +36,11 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_IMG_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_IMG_H_
 
-#include "api/dbg-tlv.h"
-#include "error-dump.h"
-#include "file.h"
+#include <lib/ddk/io-buffer.h>
+
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/dbg-tlv.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/error-dump.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/file.h"
 
 /**
  * enum iwl_ucode_type
@@ -145,9 +147,7 @@ struct fw_img {
  * @fw_paging_size: page size
  */
 struct iwl_fw_paging {
-  dma_addr_t fw_paging_phys;
-  struct page* fw_paging_block;
-  uint32_t fw_paging_size;
+  io_buffer_t io_buf;
 };
 
 /**

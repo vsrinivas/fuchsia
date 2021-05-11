@@ -54,7 +54,7 @@ static inline void iwl_clear_bit(struct iwl_trans* trans, uint32_t reg, uint32_t
 }
 
 zx_status_t iwl_poll_bit(struct iwl_trans* trans, uint32_t addr, uint32_t bits, uint32_t mask,
-                         int timeout, zx_duration_t* elapsed);
+                         int timeout_usecs, zx_duration_t* elapsed_usecs);
 zx_status_t iwl_poll_direct_bit(struct iwl_trans* trans, uint32_t addr, uint32_t mask, int timeout);
 
 uint32_t iwl_read_direct32(struct iwl_trans* trans, uint32_t reg);

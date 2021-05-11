@@ -465,8 +465,9 @@ static const struct iwl_pci_device iwl_devices[] = {
     {IWL_PCI_DEVICE(0x24F3, 0x0850, iwl8260_2ac_cfg)},
     {IWL_PCI_DEVICE(0x24F3, 0x0950, iwl8260_2ac_cfg)},
     {IWL_PCI_DEVICE(0x24F3, 0x0930, iwl8260_2ac_cfg)},
-    {IWL_PCI_DEVICE(0x24F3, 0x0000, iwl8265_2ac_cfg)},
     {IWL_PCI_DEVICE(0x24F3, 0x4010, iwl8260_2ac_cfg)},
+#endif  // NEEDS_PORTING
+    {IWL_PCI_DEVICE(0x24F3, 0x0000, iwl8265_2ac_cfg)},
     {IWL_PCI_DEVICE(0x24FD, 0x0010, iwl8265_2ac_cfg)},
     {IWL_PCI_DEVICE(0x24FD, 0x0110, iwl8265_2ac_cfg)},
     {IWL_PCI_DEVICE(0x24FD, 0x1110, iwl8265_2ac_cfg)},
@@ -488,13 +489,14 @@ static const struct iwl_pci_device iwl_devices[] = {
     {IWL_PCI_DEVICE(0x24FD, 0x0950, iwl8265_2ac_cfg)},
     {IWL_PCI_DEVICE(0x24FD, 0x0850, iwl8265_2ac_cfg)},
     {IWL_PCI_DEVICE(0x24FD, 0x1014, iwl8265_2ac_cfg)},
+#if 0   // NEEDS_PORTING
     {IWL_PCI_DEVICE(0x24FD, 0x3E02, iwl8275_2ac_cfg)},
     {IWL_PCI_DEVICE(0x24FD, 0x3E01, iwl8275_2ac_cfg)},
     {IWL_PCI_DEVICE(0x24FD, 0x1012, iwl8275_2ac_cfg)},
     {IWL_PCI_DEVICE(0x24FD, 0x0012, iwl8275_2ac_cfg)},
+#endif  // NEEDS_PORTING
     {IWL_PCI_DEVICE(0x24FD, 0x0014, iwl8265_2ac_cfg)},
     {IWL_PCI_DEVICE(0x24FD, 0x9074, iwl8265_2ac_cfg)},
-#endif  // NEEDS_PORTING
 #endif  // CPTCFG_IWLMVM
 
 #if CPTCFG_IWLMVM || CPTCFG_IWLFMAC

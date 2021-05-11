@@ -782,79 +782,75 @@ static void iwl_pcie_override_secure_boot_cfg(struct iwl_trans* trans) {
     return;
 }
 #endif
-
-static int iwl_pcie_load_cpu_sections_8000(struct iwl_trans* trans, const struct fw_img* image,
-                                           int cpu, int* first_ucode_section) {
-    int shift_param;
-    int i, ret = 0, sec_num = 0x1;
-    uint32_t val, last_read_idx = 0;
-
-    if (cpu == 1) {
-        shift_param = 0;
-        *first_ucode_section = 0;
-    } else {
-        shift_param = 16;
-        (*first_ucode_section)++;
-    }
-
-    for (i = *first_ucode_section; i < image->num_sec; i++) {
-        last_read_idx = i;
-
-        /*
-         * CPU1_CPU2_SEPARATOR_SECTION delimiter - separate between
-         * CPU1 to CPU2.
-         * PAGING_SEPARATOR_SECTION delimiter - separate between
-         * CPU2 non paged to CPU2 paging sec.
-         */
-        if (!image->sec[i].data || image->sec[i].offset == CPU1_CPU2_SEPARATOR_SECTION ||
-            image->sec[i].offset == PAGING_SEPARATOR_SECTION) {
-            IWL_DEBUG_FW(trans, "Break since Data not valid or Empty section, sec = %d\n", i);
-            break;
-        }
-
-        ret = iwl_pcie_load_section(trans, i, &image->sec[i]);
-        if (ret) { return ret; }
-
-        /* Notify ucode of loaded section number and status */
-        val = iwl_read_direct32(trans, FH_UCODE_LOAD_STATUS);
-        val = val | (sec_num << shift_param);
-        iwl_write_direct32(trans, FH_UCODE_LOAD_STATUS, val);
-
-        sec_num = (sec_num << 1) | 0x1;
-    }
-
-    *first_ucode_section = last_read_idx;
-
-    iwl_enable_interrupts(trans);
-
-    if (trans->cfg->use_tfh) {
-        if (cpu == 1) {
-            iwl_write_prph(trans, UREG_UCODE_LOAD_STATUS, 0xFFFF);
-        } else {
-            iwl_write_prph(trans, UREG_UCODE_LOAD_STATUS, 0xFFFFFFFF);
-        }
-    } else {
-        if (cpu == 1) {
-            iwl_write_direct32(trans, FH_UCODE_LOAD_STATUS, 0xFFFF);
-        } else {
-            iwl_write_direct32(trans, FH_UCODE_LOAD_STATUS, 0xFFFFFFFF);
-        }
-    }
-
-    return 0;
-}
 #endif  // NEEDS_PORTING
+
+static zx_status_t iwl_pcie_load_cpu_sections_8000(struct iwl_trans* trans,
+                                                   const struct fw_img* image, int cpu,
+                                                   int* first_ucode_section) {
+  zx_status_t ret = ZX_OK;
+  int shift_param;
+  int i, sec_num = 0x1;
+  uint32_t val, last_read_idx = 0;
+
+  if (cpu == 1) {
+    shift_param = 0;
+  } else {
+    shift_param = 16;
+  }
+
+  for (i = *first_ucode_section; i < image->num_sec; i++) {
+    last_read_idx = i;
+
+    /*
+     * CPU1_CPU2_SEPARATOR_SECTION delimiter - separate between
+     * CPU1 to CPU2.
+     * PAGING_SEPARATOR_SECTION delimiter - separate between
+     * CPU2 non paged to CPU2 paging sec.
+     */
+    if (!image->sec[i].data || image->sec[i].offset == CPU1_CPU2_SEPARATOR_SECTION ||
+        image->sec[i].offset == PAGING_SEPARATOR_SECTION) {
+      IWL_DEBUG_FW(trans, "Break since Data not valid or Empty section, sec = %d\n", i);
+      break;
+    }
+
+    ret = iwl_pcie_load_section(trans, i, &image->sec[i]);
+    if (ret != ZX_OK) {
+      return ret;
+    }
+
+    /* Notify ucode of loaded section number and status */
+    val = iwl_read_direct32(trans, FH_UCODE_LOAD_STATUS);
+    val = val | (sec_num << shift_param);
+    iwl_write_direct32(trans, FH_UCODE_LOAD_STATUS, val);
+
+    sec_num = (sec_num << 1) | 0x1;
+  }
+
+  *first_ucode_section = last_read_idx + 1;
+
+  iwl_enable_interrupts(trans);
+
+  if (trans->cfg->use_tfh) {
+    if (cpu == 1) {
+      iwl_write_prph(trans, UREG_UCODE_LOAD_STATUS, 0xFFFF);
+    } else {
+      iwl_write_prph(trans, UREG_UCODE_LOAD_STATUS, 0xFFFFFFFF);
+    }
+  } else {
+    if (cpu == 1) {
+      iwl_write_direct32(trans, FH_UCODE_LOAD_STATUS, 0xFFFF);
+    } else {
+      iwl_write_direct32(trans, FH_UCODE_LOAD_STATUS, 0xFFFFFFFF);
+    }
+  }
+
+  return ZX_OK;
+}
 
 static zx_status_t iwl_pcie_load_cpu_sections(struct iwl_trans* trans, const struct fw_img* image,
                                               int cpu, int* first_ucode_section) {
   int i, ret = ZX_OK;
   uint32_t last_read_idx = 0;
-
-  if (cpu == 1) {
-    *first_ucode_section = 0;
-  } else {
-    (*first_ucode_section)++;
-  }
 
   for (i = *first_ucode_section; i < image->num_sec; i++) {
     last_read_idx = i;
@@ -877,7 +873,7 @@ static zx_status_t iwl_pcie_load_cpu_sections(struct iwl_trans* trans, const str
     }
   }
 
-  *first_ucode_section = last_read_idx;
+  *first_ucode_section = last_read_idx + 1;
   return 0;
 }
 
@@ -956,7 +952,7 @@ monitor:
 
 static zx_status_t iwl_pcie_load_given_ucode(struct iwl_trans* trans, const struct fw_img* image) {
   zx_status_t ret = 0;
-  int first_ucode_section;
+  int first_ucode_section = 0;
 
   IWL_DEBUG_FW(trans, "working with %s CPU\n", image->is_dual_cpus ? "Dual" : "Single");
 
@@ -1004,44 +1000,46 @@ static zx_status_t iwl_pcie_load_given_ucode(struct iwl_trans* trans, const stru
   return ZX_OK;
 }
 
-static int iwl_pcie_load_given_ucode_8000(struct iwl_trans* trans, const struct fw_img* image) {
-#if 0  // NEEDS_PORTING
-    int ret = 0;
-    int first_ucode_section;
+static zx_status_t iwl_pcie_load_given_ucode_8000(struct iwl_trans* trans,
+                                                  const struct fw_img* image) {
+  zx_status_t ret = ZX_OK;
+  int first_ucode_section = 0;
 
-    IWL_DEBUG_FW(trans, "working with %s CPU\n", image->is_dual_cpus ? "Dual" : "Single");
+  IWL_DEBUG_FW(trans, "working with %s CPU\n", image->is_dual_cpus ? "Dual" : "Single");
 
-    if (iwl_pcie_dbg_on(trans)) { iwl_pcie_apply_destination(trans); }
+  if (iwl_pcie_dbg_on(trans)) {
+    iwl_pcie_apply_destination(trans);
+  }
 
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
-    iwl_dnt_configure(trans, image);
+  iwl_dnt_configure(trans, image);
 #endif
 
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
-    iwl_pcie_override_secure_boot_cfg(trans);
+  iwl_pcie_override_secure_boot_cfg(trans);
 #endif
 
-    IWL_DEBUG_POWER(trans, "Original WFPM value = 0x%08X\n", iwl_read_prph(trans, WFPM_GP2));
+  IWL_DEBUG_POWER(trans, "Original WFPM value = 0x%08X\n", iwl_read_prph(trans, WFPM_GP2));
 
-    /*
-     * Set default value. On resume reading the values that were
-     * zeored can provide debug data on the resume flow.
-     * This is for debugging only and has no functional impact.
-     */
-    iwl_write_prph(trans, WFPM_GP2, 0x01010101);
+  /*
+   * Set default value. On resume reading the values that were
+   * zeored can provide debug data on the resume flow.
+   * This is for debugging only and has no functional impact.
+   */
+  iwl_write_prph(trans, WFPM_GP2, 0x01010101);
 
-    /* configure the ucode to be ready to get the secured image */
-    /* release CPU reset */
-    iwl_write_prph(trans, RELEASE_CPU_RESET, RELEASE_CPU_RESET_BIT);
+  /* configure the ucode to be ready to get the secured image */
+  /* release CPU reset */
+  iwl_write_prph(trans, RELEASE_CPU_RESET, RELEASE_CPU_RESET_BIT);
 
-    /* load to FW the binary Secured sections of CPU1 */
-    ret = iwl_pcie_load_cpu_sections_8000(trans, image, 1, &first_ucode_section);
-    if (ret) { return ret; }
+  /* load to FW the binary Secured sections of CPU1 */
+  ret = iwl_pcie_load_cpu_sections_8000(trans, image, 1, &first_ucode_section);
+  if (ret != ZX_OK) {
+    return ret;
+  }
 
-    /* load to FW the binary sections of CPU2 */
-    return iwl_pcie_load_cpu_sections_8000(trans, image, 2, &first_ucode_section);
-#endif  // NEEDS_PORTING
-  return ZX_ERR_NOT_SUPPORTED;
+  /* load to FW the binary sections of CPU2 */
+  return iwl_pcie_load_cpu_sections_8000(trans, image, 2, &first_ucode_section);
 }
 
 bool iwl_pcie_check_hw_rf_kill(struct iwl_trans* trans) {
@@ -2694,8 +2692,15 @@ static void iwl_trans_pcie_debugfs_cleanup(struct iwl_trans* trans) {
     data->state = IWL_FW_MON_DBGFS_STATE_DISABLED;
     mutex_unlock(&data->mutex);
 }
-#endif /*CPTCFG_IWLWIFI_DEBUGFS */
+#endif  /*CPTCFG_IWLWIFI_DEBUGFS */
+#endif  // NEEDS_PORTING
 
+zx_handle_t iwl_trans_pcie_get_bti(struct iwl_trans* trans) {
+  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
+  return trans_pcie->bti;
+}
+
+#if 0  // NEEDS_PORTING
 static uint32_t iwl_trans_pcie_get_cmdlen(struct iwl_trans* trans, void* tfd) {
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     uint32_t cmdlen = 0;
@@ -3123,6 +3128,7 @@ static struct iwl_trans_ops trans_ops_pcie = {
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
     .debugfs_cleanup = iwl_trans_pcie_debugfs_cleanup,
 #endif
+    .get_bti = iwl_trans_pcie_get_bti,
 };
 
 #if 0  // NEEDS_PORTING
@@ -3145,6 +3151,7 @@ static const struct iwl_trans_ops trans_ops_pcie_gen2 = {
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
     .debugfs_cleanup = iwl_trans_pcie_debugfs_cleanup,
 #endif
+    .get_bti = iwl_trans_pcie_get_bti,
 };
 #endif  // NEEDS_PORTING
 
@@ -3154,9 +3161,6 @@ struct iwl_trans* iwl_trans_pcie_alloc(const pci_protocol_t* pci,
   struct iwl_trans* trans;
   zx_status_t status;
   int addr_size;
-#if 0   // NEEDS_PORTING
-    int ret, addr_size;
-#endif  // NEEDS_PORTING
 
 #if 0   // NEEDS_PORTING
   if (device->config->gen2) {
@@ -3263,47 +3267,46 @@ struct iwl_trans* iwl_trans_pcie_alloc(const pci_protocol_t* pci,
    * "dash" value). To keep hw_rev backwards compatible - we'll store it
    * in the old format.
    */
-#if 0   // NEEDS_PORTING
-    if (trans->cfg->device_family >= IWL_DEVICE_FAMILY_8000) {
-        unsigned long flags;
+  if (trans->cfg->device_family >= IWL_DEVICE_FAMILY_8000) {
+    unsigned long flags;
 
-        trans->hw_rev = (trans->hw_rev & 0xfff0) | (CSR_HW_REV_STEP(trans->hw_rev << 2) << 2);
+    trans->hw_rev = (trans->hw_rev & 0xfff0) | (CSR_HW_REV_STEP(trans->hw_rev << 2) << 2);
 
-        ret = iwl_pcie_prepare_card_hw(trans);
-        if (ret) {
-            IWL_WARN(trans, "Exit HW not ready\n");
-            goto out_no_pci;
-        }
-
-        /*
-         * in-order to recognize C step driver should read chip version
-         * id located at the AUX bus MISC address space.
-         */
-        iwl_set_bit(trans, CSR_GP_CNTRL, BIT(trans->cfg->csr->flag_init_done));
-        zx_nanosleep(zx_deadline_after(ZX_USEC(2)));
-
-        ret = iwl_poll_bit(trans, CSR_GP_CNTRL, BIT(trans->cfg->csr->flag_mac_clock_ready),
-                           BIT(trans->cfg->csr->flag_mac_clock_ready), 25000);
-        if (ret < 0) {
-            IWL_DEBUG_INFO(trans, "Failed to wake up the nic\n");
-            goto out_no_pci;
-        }
-
-        if (iwl_trans_grab_nic_access(trans, &flags)) {
-            uint32_t hw_step;
-
-            hw_step = iwl_read_prph_no_grab(trans, WFPM_CTRL_REG);
-            hw_step |= ENABLE_WFPM;
-            iwl_write_prph_no_grab(trans, WFPM_CTRL_REG, hw_step);
-            hw_step = iwl_read_prph_no_grab(trans, AUX_MISC_REG);
-            hw_step = (hw_step >> HW_STEP_LOCATION_BITS) & 0xF;
-            if (hw_step == 0x3) {
-                trans->hw_rev = (trans->hw_rev & 0xFFFFFFF3) | (SILICON_C_STEP << 2);
-            }
-            iwl_trans_release_nic_access(trans, &flags);
-        }
+    status = iwl_pcie_prepare_card_hw(trans);
+    if (status != ZX_OK) {
+      IWL_WARN(trans, "Exit HW not ready\n");
+      goto out_no_pci;
     }
-#endif  // NEEDS_PORTING
+
+    /*
+     * in-order to recognize C step driver should read chip version
+     * id located at the AUX bus MISC address space.
+     */
+    iwl_set_bit(trans, CSR_GP_CNTRL, BIT(trans->cfg->csr->flag_init_done));
+    zx_nanosleep(zx_deadline_after(ZX_USEC(2)));
+
+    zx_duration_t elapsed;
+    status = iwl_poll_bit(trans, CSR_GP_CNTRL, BIT(trans->cfg->csr->flag_mac_clock_ready),
+                          BIT(trans->cfg->csr->flag_mac_clock_ready), 25000, &elapsed);
+    if (status != ZX_OK) {
+      IWL_DEBUG_INFO(trans, "Failed to wake up the nic\n");
+      goto out_no_pci;
+    }
+
+    if (iwl_trans_grab_nic_access(trans, &flags)) {
+      uint32_t hw_step;
+
+      hw_step = iwl_read_prph_no_grab(trans, WFPM_CTRL_REG);
+      hw_step |= ENABLE_WFPM;
+      iwl_write_prph_no_grab(trans, WFPM_CTRL_REG, hw_step);
+      hw_step = iwl_read_prph_no_grab(trans, AUX_MISC_REG);
+      hw_step = (hw_step >> HW_STEP_LOCATION_BITS) & 0xF;
+      if (hw_step == 0x3) {
+        trans->hw_rev = (trans->hw_rev & 0xFFFFFFF3) | (SILICON_C_STEP << 2);
+      }
+      iwl_trans_release_nic_access(trans, &flags);
+    }
+  }
 
   IWL_DEBUG_INFO(trans, "HW REV: 0x%0x\n", trans->hw_rev);
 

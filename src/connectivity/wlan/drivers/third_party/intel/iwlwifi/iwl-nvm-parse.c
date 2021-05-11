@@ -292,6 +292,12 @@ static int iwl_init_channel_map(struct device* dev, const struct iwl_cfg* cfg,
       data->vht160_supported = true;
     }
 
+    // TODO(fxbug.dev/69717): Remove this workaround for IWL_NVM_EXT.
+    if (!is_valid_chan(nvm_chan[ch_idx])) {
+      IWL_WARN(channel, "Ignored invalid channel %d from NVM\n", nvm_chan[ch_idx]);
+      continue;
+    }
+
     if (!(sbands_flags & IWL_NVM_SBANDS_FLAGS_LAR) && !(ch_flags & NVM_CHANNEL_VALID)) {
       /*
        * Channels might become valid later if lar is
@@ -810,7 +816,6 @@ static void iwl_set_radio_cfg(const struct iwl_cfg* cfg, struct iwl_nvm_data* da
   data->valid_rx_ant = EXT_NVM_RF_CFG_RX_ANT_MSK(radio_cfg);
 }
 
-#if 0   // NEEDS_PORTING
 static void iwl_flip_hw_address(__le32 mac_addr0, __le32 mac_addr1, uint8_t* dest) {
   const uint8_t* hw_addr;
 
@@ -824,7 +829,6 @@ static void iwl_flip_hw_address(__le32 mac_addr0, __le32 mac_addr1, uint8_t* des
   dest[4] = hw_addr[1];
   dest[5] = hw_addr[0];
 }
-#endif  // NEEDS_PORTING
 
 static void iwl_set_hw_address_from_csr(struct iwl_trans* trans, struct iwl_nvm_data* data) {
   IWL_ERR(trans, "unimplemented iwl_set_hw_address_from_csr()\n");
@@ -851,8 +855,6 @@ static void iwl_set_hw_address_from_csr(struct iwl_trans* trans, struct iwl_nvm_
 static void iwl_set_hw_address_family_8000(struct iwl_trans* trans, const struct iwl_cfg* cfg,
                                            struct iwl_nvm_data* data, const __le16* mac_override,
                                            const __be16* nvm_hw) {
-  IWL_ERR(trans, "unimplemented iwl_set_hw_address_family_8000()\n");
-#if 0   // NEEDS_PORTING
   const uint8_t* hw_addr;
 
   if (mac_override) {
@@ -888,7 +890,6 @@ static void iwl_set_hw_address_family_8000(struct iwl_trans* trans, const struct
   }
 
   IWL_ERR(trans, "mac address is not found\n");
-#endif  // NEEDS_PORTING
 }
 
 static zx_status_t iwl_set_hw_address(struct iwl_trans* trans, const struct iwl_cfg* cfg,

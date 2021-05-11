@@ -94,8 +94,15 @@ struct iwl_fw_runtime {
   unsigned long status;
 
   /* Paging */
+  //
+  // Note that the first block is special (the CSS block). Please check the comment in paging.c.
+  //
   struct iwl_fw_paging fw_paging_db[NUM_OF_FW_PAGING_BLOCKS];
+  //
+  // Derived from fw->img[cur_fw_img].paging_mem_size in iwl_alloc_fw_paging_mem().
   uint16_t num_of_paging_blk;
+  //
+  // Also see iwl_alloc_fw_paging_mem() how this is determined.
   uint16_t num_of_pages_in_last_blk;
 
   enum iwl_ucode_type cur_fw_img;

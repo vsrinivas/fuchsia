@@ -31,6 +31,7 @@ source_set("core") {
 
   sources = [
     "cfg/7000.c",
+    "cfg/8000.c",
     "cpp-wrapper.cc",
     "device.cc",
     "device.h",

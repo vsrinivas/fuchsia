@@ -20,9 +20,7 @@
 
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
-#include <lib/ddk/debug.h>
-#include <lib/ddk/device.h>
-#include <lib/ddk/driver.h>
+#include <lib/fake-bti/bti.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <zircon/status.h>
 
@@ -144,6 +142,12 @@ static zx_status_t iwl_trans_sim_suspend(struct iwl_trans* trans) { return ZX_ER
 
 static void iwl_trans_sim_resume(struct iwl_trans* trans) {}
 
+static zx_handle_t iwl_trans_sim_get_bti(struct iwl_trans* trans) {
+  zx_handle_t bti = ZX_HANDLE_INVALID;
+  fake_bti_create(&bti);
+  return bti;
+}
+
 static struct iwl_trans_ops trans_ops_trans_sim = {
     .start_hw = iwl_trans_sim_start_hw,
     .op_mode_leave = iwl_trans_sim_op_mode_leave,
@@ -193,6 +197,8 @@ static struct iwl_trans_ops trans_ops_trans_sim = {
     struct iwl_trans_dump_data* (*dump_data)(struct iwl_trans* trans, uint32_t dump_mask);
     void (*debugfs_cleanup)(struct iwl_trans* trans);
 #endif  // NEEDS_PORTING
+
+    .get_bti = iwl_trans_sim_get_bti,
 };
 
 // iwl_trans_alloc() will allocate memory containing iwl_trans + trans_sim_priv.

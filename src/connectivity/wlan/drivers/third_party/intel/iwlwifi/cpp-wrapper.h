@@ -19,6 +19,16 @@
 extern "C" {
 #endif  // __cplusplus
 
+// Returns whether the channel is valid or not.
+//
+// Args:
+//   primary: the primary channel number.
+//
+// Returns:
+//   True if the channel is valid.
+//
+bool is_valid_chan(uint8_t primary);
+
 // Returns the center frequency of the channel.
 //
 // Args:

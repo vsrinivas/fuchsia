@@ -28,6 +28,7 @@ source_set("iwlwifi_sim_trans_ss") {
     "//sdk/banjo/fuchsia.hardware.wlanphyimpl:fuchsia.hardware.wlanphyimpl_banjo_cpp",
     "//src/devices/lib/driver",
     "//src/devices/pci/testing:pci-protocol-fake",
+    "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
   ]
@@ -70,6 +71,16 @@ executable("fuchsia_porting_test") {
   testonly = true
 
   sources = [ "fuchsia_porting_test.cc" ]
+
+  defines = testing_defines
+  deps = testing_deps
+}
+
+executable("fw_test") {
+  output_name = "fw_test"
+  testonly = true
+
+  sources = [ "fw_test.cc" ]
 
   defines = testing_defines
   deps = testing_deps
@@ -197,6 +208,7 @@ executable("wlan-device_test") {
 _tests = [
   "dummy_test",
   "fuchsia_porting_test",
+  "fw_test",
   "iwl-phy-db_test",
   "mac-ctxt_test",
   "mac80211_test",

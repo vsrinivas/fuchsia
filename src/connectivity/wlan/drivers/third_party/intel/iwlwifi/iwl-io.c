@@ -64,7 +64,7 @@ uint32_t iwl_read32(struct iwl_trans* trans, uint32_t ofs) {
 #define IWL_POLL_INTERVAL ZX_USEC(10)
 
 zx_status_t iwl_poll_bit(struct iwl_trans* trans, uint32_t addr, uint32_t bits, uint32_t mask,
-                         int timeout, zx_duration_t* elapsed) {
+                         int timeout_usecs, zx_duration_t* elapsed_usecs) {
   zx_status_t ret = ZX_ERR_TIMED_OUT;
   zx_duration_t t = 0;
 
@@ -75,10 +75,10 @@ zx_status_t iwl_poll_bit(struct iwl_trans* trans, uint32_t addr, uint32_t bits, 
     }
     zx_nanosleep(zx_deadline_after(IWL_POLL_INTERVAL));
     t = zx_duration_add_duration(t, IWL_POLL_INTERVAL);
-  } while (t < timeout);
+  } while (t < ZX_USEC(timeout_usecs));
 
-  if (elapsed) {
-    *elapsed = t;
+  if (elapsed_usecs) {
+    *elapsed_usecs = t;
   }
   return ret;
 }

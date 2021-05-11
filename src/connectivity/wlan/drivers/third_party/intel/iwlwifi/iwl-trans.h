@@ -520,6 +520,7 @@ struct iwl_trans_rxq_dma_data {
  *  Note that the transport must fill in the proper file headers.
  * @debugfs_cleanup: used in the driver unload flow to make a proper cleanup
  *  of the trans debugfs
+ * @get_bti: used to get the 'bti' handle to initialize io_buffer.
  */
 struct iwl_trans_ops {
   zx_status_t (*start_hw)(struct iwl_trans* iwl_trans, bool low_power);
@@ -580,6 +581,9 @@ struct iwl_trans_ops {
 
   struct iwl_trans_dump_data* (*dump_data)(struct iwl_trans* trans, uint32_t dump_mask);
   void (*debugfs_cleanup)(struct iwl_trans* trans);
+
+  // TODO(fxbug.dev/76234): move this out of here.
+  zx_handle_t (*get_bti)(struct iwl_trans* trans);
 };
 
 /**
@@ -1175,6 +1179,12 @@ struct iwl_trans* iwl_trans_alloc(unsigned int priv_size, const struct iwl_cfg* 
 void iwl_trans_free(struct iwl_trans* trans);
 void iwl_trans_ref(struct iwl_trans* trans);
 void iwl_trans_unref(struct iwl_trans* trans);
+
+// Although the 'bti' is a PCIE-concept, it is essential to initialize a io_buffer in zircon.
+// So add a new ops method in order to get it when the driver code needs to initialize io_buffer.
+static inline zx_handle_t iwl_trans_get_bti(struct iwl_trans* trans) {
+  return trans->ops->get_bti(trans);
+}
 
 /*****************************************************
  * driver (transport) register/unregister functions
