@@ -345,17 +345,6 @@ TEST_F(CompositeAddOrderSharedFragmentTestCase, DefineDevice1AfterDevice2After) 
   ASSERT_NO_FATAL_FAILURES(ExecuteSharedFragmentTest(AddLocation::AFTER, AddLocation::AFTER));
 }
 
-TEST_F(CompositeTestCase, CantAddFromNonPlatformBus) {
-  size_t index;
-  ASSERT_NO_FATAL_FAILURES(AddDevice(platform_bus(), "test-device", 0, "", &index));
-  auto device_state = device(index);
-
-  uint32_t protocol_id[] = {ZX_PROTOCOL_I2C, ZX_PROTOCOL_GPIO};
-  ASSERT_NO_FATAL_FAILURES(BindCompositeDefineComposite(device_state->device, protocol_id,
-                                                        std::size(protocol_id), nullptr /* props */,
-                                                        0, "composite-dev", ZX_ERR_ACCESS_DENIED));
-}
-
 TEST_F(CompositeTestCase, AddMultipleSharedFragmentCompositeDevices) {
   size_t device_indexes[2];
   zx_status_t status = ZX_OK;

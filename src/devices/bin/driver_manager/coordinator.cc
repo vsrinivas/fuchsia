@@ -785,12 +785,6 @@ zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool force
 zx_status_t Coordinator::AddCompositeDevice(
     const fbl::RefPtr<Device>& dev, std::string_view name,
     fuchsia_device_manager::wire::CompositeDeviceDescriptor comp_desc) {
-  // Only the platform bus driver should be able to use this.  It is the
-  // descendant of the sys device node.
-  if (dev->parent() != sys_device_) {
-    return ZX_ERR_ACCESS_DENIED;
-  }
-
   std::unique_ptr<CompositeDevice> new_device;
   zx_status_t status = CompositeDevice::Create(name, std::move(comp_desc), &new_device);
   if (status != ZX_OK) {
