@@ -4,53 +4,28 @@
 
 use {
     anyhow::{anyhow, Error},
+    diagnostics_reader::{assert_data_tree, ArchiveReader, Logs},
     fidl::endpoints::create_proxy,
     fidl_fuchsia_io::DirectoryMarker,
-    fidl_fuchsia_logger::{LogMarker, LogMessage, LogProxy},
-    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fidl_fuchsia_sys2 as fsys,
     fuchsia_component::client as fclient,
-    fuchsia_syslog_listener::{run_log_listener_with_proxy, LogProcessor},
-    futures::{channel::mpsc, Stream, StreamExt},
+    futures::StreamExt,
 };
 
-struct Listener {
-    send_logs: mpsc::UnboundedSender<LogMessage>,
-}
-
-impl LogProcessor for Listener {
-    fn log(&mut self, message: LogMessage) {
-        self.send_logs.unbounded_send(message).unwrap();
-    }
-
-    fn done(&mut self) {
-        panic!("this should not be called");
-    }
-}
-
-fn run_listener(log_proxy: LogProxy) -> impl Stream<Item = LogMessage> {
-    let (send_logs, recv_logs) = mpsc::unbounded();
-    let l = Listener { send_logs };
-    fasync::Task::spawn(async move {
-        let fut = run_log_listener_with_proxy(&log_proxy, l, None, false, None);
-        if let Err(e) = fut.await {
-            panic!("test fail {:?}", e);
-        }
-    })
-    .detach();
-    recv_logs
-}
-
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn hello_world_integration_test() -> Result<(), Error> {
     // Connect to the realm service, so that we can bind to and interact with child components
     let realm_proxy = fclient::realm()?;
 
     // The hello world component will connect to the /svc/fuchsia.logger.LogSink protocol provided
-    // by the observer component. Let's bind to the observer component by connecting to
-    // /svc/fuchsia.logger.Log, which will cause the component to start, and begin watching the log
-    // stream before starting the hello_world component, so we can see its message
-    let log_proxy = fclient::connect_to_protocol::<LogMarker>()?;
-    let log_stream = run_listener(log_proxy);
+    // by the archivist. Let's connect to the archivist from this test to read the logs written by
+    // the hello world component. We use the `ArchiveReader` library which simplifies interacting
+    // with the `ArchiveAccessor` protocol for simple cases like this one. We start watching for
+    // logs before starting the hello_world component although given that we are using the
+    // `SNAPSHOT_THEN_SUBSCRIBE` mode, technically we could start listening after starting the
+    // component as well and not miss logs.
+    let reader = ArchiveReader::new();
+    let log_stream = reader.snapshot_then_subscribe::<Logs>()?;
 
     // Now that we're connected to the log server, let's use the fuchsia.sys2.Realm protocol to
     // manually bind to our hello_world child, which will cause it to start. Once started, the
@@ -67,10 +42,11 @@ async fn hello_world_integration_test() -> Result<(), Error> {
 
     // We should see two log messages, one that states that logging started and the hello world
     // message we're expecting.
-    let logs: Vec<_> = log_stream.take(1).collect().await;
+    let logs = log_stream.take(1).next().await.expect("got log result")?;
 
-    assert_eq!(1, logs.len(), "log stream closed unexpectedly");
-    assert_eq!(logs[0].msg, "Hippo: Hello World!");
+    assert_data_tree!(logs.payload.unwrap(), root: contains {
+        message: "Hippo: Hello World!",
+    });
 
     Ok(())
 }

@@ -18,7 +18,7 @@
             protocol: "fuchsia.sys2.Realm",
             from: "framework",
         },
-        { protocol: "fuchsia.logger.Log" },
+        { protocol: "fuchsia.diagnostics.ArchiveAccessor" },
     ],
     offer: [
         {

@@ -9,7 +9,7 @@
     offer: [
         {
             protocol: [
-                "fuchsia.logger.Log",
+                "fuchsia.diagnostics.ArchiveAccessor",
                 "fuchsia.logger.LogSink",
             ],
             from: "parent",

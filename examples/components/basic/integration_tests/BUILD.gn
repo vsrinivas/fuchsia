@@ -13,12 +13,11 @@ rustc_test("bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/diagnostics/reader/rust",
     "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
-    "//src/lib/syslog/rust:syslog-listener",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
