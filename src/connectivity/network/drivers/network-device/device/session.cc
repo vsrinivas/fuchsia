@@ -221,12 +221,11 @@ void Session::OnUnbind(fidl::Reason reason, fidl::ServerEnd<netdev::Session> cha
   // Stop the Tx thread immediately, so we stop fetching more tx buffers from the client.
   StopTxThread();
 
-  // Close the Tx FIFO so no more data operations can occur. The session may linger around for a
-  // short while still if the device implementation is holding on to buffers on the session's VMO.
-  // When the session is destroyed, it'll attempt to send an epitaph message over the channel if
-  // it's still open. The Rx FIFO is not closed here since it's possible it's currently shared with
-  // the Rx Queue. The session will drop its reference to the Rx FIFO upon destruction.
-  fifo_tx_.reset();
+  // The session may linger around for a short while still if the device implementation is holding
+  // on to buffers on the session's VMO. When the session is destroyed, it'll attempt to send an
+  // epitaph message over the channel if it's still open. The Rx FIFO is not closed here since it's
+  // possible it's currently shared with the Rx Queue. The session will drop its reference to the Rx
+  // FIFO upon destruction.
 
   switch (reason) {
     case fidl::Reason::kUnbind:
@@ -250,6 +249,7 @@ void Session::OnUnbind(fidl::Reason reason, fidl::ServerEnd<netdev::Session> cha
       // We can ignore the return from detaching, this port is about to get destroyed.
       zx::status<bool> __UNUSED result = DetachPortLocked(i);
     }
+    dying_ = true;
   }
 
   // NOTE: the parent may destroy the session synchronously in NotifyDeadSession, this is the
@@ -667,7 +667,7 @@ void Session::MarkTxReturnResult(uint16_t descriptor_index, zx_status_t status) 
   }
 }
 
-void Session::ReturnTxDescriptors(const uint16_t* descriptors, uint32_t count) {
+void Session::ReturnTxDescriptors(const uint16_t* descriptors, size_t count) {
   size_t actual_count = 0;
   zx_status_t status;
   if ((status = fifo_tx_.write(sizeof(uint16_t), descriptors, count, &actual_count)) != ZX_OK ||
@@ -678,6 +678,9 @@ void Session::ReturnTxDescriptors(const uint16_t* descriptors, uint32_t count) {
     // expect this to happen during regular operation, unless there's a bug somewhere. This line is
     // expected to fire, though, if the tx FIFO is closed while we're trying to return buffers.
   }
+  // Always assume we were able to return the descriptors.
+  // After descriptors are marked as returned, the session may be destroyed.
+  TxReturned(count);
 }
 
 bool Session::LoadAvailableRxDescriptors(RxQueue::SessionTransaction& transact) {
@@ -781,26 +784,26 @@ bool Session::CompleteRx(uint16_t descriptor_index, const rx_buffer_t* buff) {
   ZX_ASSERT(IsPrimary());
 
   // Always mark a single buffer as returned upon completion.
-  auto defer = fit::defer([this]() { RxReturned(); });
+  auto defer = fit::defer([this]() {
+    []() __TA_ASSERT(parent_->rx_lock()) {}();
+    RxReturned();
+  });
 
-  // If there's no data in the buffer, just immediately return and allow it to be reused.
-  if (buff->length == 0) {
-    return true;
+  if (buff->length != 0) {
+    // Copy session data to other sessions (if any) even if this session is paused.
+    parent_->CopySessionData(*this, descriptor_index, buff);
+
+    if (IsSubscribedToFrameType(buff->meta.port, buff->meta.frame_type) && !paused_.load()) {
+      // We validated the descriptor coming in, writing it back should always work.
+      ZX_ASSERT(LoadRxInfo(descriptor_index, buff) == ZX_OK);
+      rx_return_queue_[rx_return_queue_count_++] = descriptor_index;
+      // Never allow reusing a frame that has been put in the return queue.
+      return false;
+    }
   }
 
-  bool ignore = !IsSubscribedToFrameType(buff->meta.port, buff->meta.frame_type) || paused_.load();
-
-  // Copy session data to other sessions (if any) even if this session is paused.
-  parent_->CopySessionData(*this, descriptor_index, buff);
-
-  if (!ignore) {
-    // We validated the descriptor coming in, writing it back should always work.
-    ZX_ASSERT(LoadRxInfo(descriptor_index, buff) == ZX_OK);
-    rx_return_queue_[rx_return_queue_count_++] = descriptor_index;
-  }
-
-  // Allow the buffer to be immediately reused if we ignored the frame AND if our rx is still valid.
-  return ignore && rx_valid_;
+  // Allow the buffer to be immediately reused as long as our rx path is still valid.
+  return rx_valid_;
 }
 
 void Session::CompleteRxWith(const Session& owner, uint16_t owner_index, const rx_buffer_t* buff) {

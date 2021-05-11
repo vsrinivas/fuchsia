@@ -92,7 +92,6 @@ uint32_t TxQueue::Enqueue(Session* session, uint16_t descriptor) {
 void TxQueue::MarkComplete(uint32_t id, zx_status_t status) {
   auto& buff = in_flight_->Get(id);
   buff.result = status;
-  buff.session->TxReturned();
   return_queue_->Push(id);
 }
 

@@ -121,6 +121,7 @@ void RxQueue::JoinThread() {
 void RxQueue::PurgeSession(Session& session) {
   fbl::AutoLock lock(&parent_->rx_lock());
   // Get rid of all available buffers that belong to the session and stop its rx path.
+  session.AssertParentRxLock(*parent_);
   session.StopRx();
   for (auto nu = available_queue_->count(); nu > 0; nu--) {
     auto b = available_queue_->Pop();
@@ -145,6 +146,7 @@ void RxQueue::Reclaim() {
 
 void RxQueue::ReclaimBuffer(uint32_t id) {
   auto& buff = in_flight_->Get(id);
+  buff.session->AssertParentRxLock(*parent_);
   if (buff.session->RxReturned()) {
     buff.flags &= static_cast<uint16_t>(~kDeviceHasBuffer);
     available_queue_->Push(id);

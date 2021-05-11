@@ -632,8 +632,20 @@ TEST_F(NetworkDeviceTest, ClosingPrimarySession) {
   ASSERT_EQ(session_a.session().channel().wait_one(ZX_CHANNEL_PEER_CLOSED,
                                                    zx::deadline_after(zx::msec(20)), nullptr),
             ZX_ERR_TIMED_OUT);
-  // and now return data.
-  rx_buff->return_buffer().length = 5;
+  // Session B should've now become primary. Provide enough buffers to fill the device queues.
+  uint16_t target_descriptor = 0;
+  while (impl_.rx_buffers().size_slow() < impl_.info().rx_depth - 1) {
+    session_b.ResetDescriptor(target_descriptor);
+    ASSERT_OK(session_b.SendRx(target_descriptor++));
+    ASSERT_OK(WaitRxAvailable());
+  }
+  // Send one more descriptor that will receive the copied data form the old buffer in Session A.
+  session_b.ResetDescriptor(target_descriptor);
+  ASSERT_OK(session_b.SendRx(target_descriptor));
+
+  // And now return data.
+  constexpr uint32_t kReturnLength = 5;
+  rx_buff->return_buffer().length = kReturnLength;
   RxReturnTransaction rx_transaction(&impl_);
   rx_transaction.Enqueue(std::move(rx_buff));
   rx_transaction.Commit();
@@ -643,8 +655,8 @@ TEST_F(NetworkDeviceTest, ClosingPrimarySession) {
   /// ...and Session b should still receive the data.
   uint16_t desc;
   ASSERT_OK(session_b.FetchRx(&desc));
-  ASSERT_EQ(desc, 1u);
-  ASSERT_EQ(session_b.descriptor(1)->data_length, 5u);
+  ASSERT_EQ(desc, target_descriptor);
+  ASSERT_EQ(session_b.descriptor(desc)->data_length, kReturnLength);
 }
 
 TEST_F(NetworkDeviceTest, DelayedStart) {

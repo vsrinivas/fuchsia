@@ -529,7 +529,8 @@ bool DeviceInterface::SessionStoppedInner(Session& session) {
     // If this was the primary session, offer all other sessions to take over:
     Session* primary_candidate = &session;
     for (auto& i : sessions_) {
-      if (i.ShouldTakeOverPrimary(primary_candidate)) {
+      primary_candidate->AssertParentControlLockShared(*this);
+      if (primary_candidate->IsDying() || i.ShouldTakeOverPrimary(primary_candidate)) {
         primary_candidate = &i;
       }
     }

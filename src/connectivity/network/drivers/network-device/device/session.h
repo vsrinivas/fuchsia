@@ -134,7 +134,7 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   // Sets the return code for a tx descriptor.
   void MarkTxReturnResult(uint16_t descriptor, zx_status_t status);
   // Returns tx descriptors to the session client.
-  void ReturnTxDescriptors(const uint16_t* descriptors, uint32_t count);
+  void ReturnTxDescriptors(const uint16_t* descriptors, size_t count);
   // Signals the session thread to observe the tx FIFO object.
   void ResumeTx();
   // Signals the session thread to stop servicing the session channel and FIFOs.
@@ -164,13 +164,12 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
       __TA_REQUIRES_SHARED(parent_->control_lock());
 
   inline void TxTaken() { in_flight_tx_++; }
-  inline void TxReturned() { ZX_ASSERT(in_flight_tx_-- != 0); }
   inline void RxTaken() { in_flight_rx_++; }
-  inline bool RxReturned() {
+  inline bool RxReturned() __TA_REQUIRES(parent_->rx_lock()) {
     ZX_ASSERT(in_flight_rx_-- != 0);
     return rx_valid_;
   }
-  inline void StopRx() { rx_valid_ = false; }
+  inline void StopRx() __TA_REQUIRES(parent_->rx_lock()) { rx_valid_ = false; }
   [[nodiscard]] inline bool ShouldDestroy() {
     if (in_flight_rx_ == 0 && in_flight_tx_ == 0) {
       bool expect = false;
@@ -184,6 +183,8 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
 
   const fbl::RefPtr<RefCountedFifo>& rx_fifo() { return fifo_rx_; }
   const char* name() const { return name_.data(); }
+
+  bool IsDying() const __TA_REQUIRES_SHARED(parent_->control_lock()) { return dying_; }
 
  protected:
   friend DeviceInterface;
@@ -200,6 +201,8 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   uint8_t ClearDataVmo();
 
  private:
+  inline void TxReturned(size_t count) { ZX_ASSERT(in_flight_tx_.fetch_sub(count) >= count); }
+
   Session(async_dispatcher_t* dispatcher, netdev::wire::SessionInfo& info, fidl::StringView name,
           DeviceInterface* parent);
   zx::status<netdev::wire::Fifos> Init();
@@ -269,11 +272,14 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   size_t rx_return_queue_count_ __TA_GUARDED(parent_->rx_lock()) = 0;
   std::unique_ptr<uint16_t[]> rx_avail_queue_ __TA_GUARDED(parent_->rx_lock());
   size_t rx_avail_queue_count_ __TA_GUARDED(parent_->rx_lock()) = 0;
+  bool rx_valid_ __TA_GUARDED(parent_->rx_lock()) = true;
+  // True if the session is currently being destroyed, i.e. tx thread is stopped and session is
+  // waiting for its buffers to be returned from the device.
+  bool dying_ __TA_GUARDED(parent_->control_lock()) = false;
 
   std::atomic<size_t> in_flight_tx_ = 0;
   std::atomic<size_t> in_flight_rx_ = 0;
   std::atomic<bool> scheduled_destruction_ = false;
-  std::atomic<bool> rx_valid_ = true;
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(Session);
 };
