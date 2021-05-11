@@ -64,11 +64,15 @@ template("cr_fuchsia_package") {
       _manifest_fragment = invoker.manifest
     }
 
-    script = "//chromium_compat/build/config/build_cmx_from_fragment.py"
+    script = "/usr/bin/env"
     inputs = [ _manifest_fragment ]
     outputs = [ _component_manifest ]
 
     args = [
+      "python3.8",
+      rebase_path("//chromium_compat/build/config/build_cmx_from_fragment.py",
+                  "",
+                  root_build_dir),
       "--cmx-fragment",
       rebase_path(_manifest_fragment),
       "--cmx",

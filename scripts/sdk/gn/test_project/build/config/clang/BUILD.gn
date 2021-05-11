@@ -18,10 +18,28 @@ copy("clang-runtime-libs") {
   vendor = "unknown"
 
   sys = target_os
-  sources = [
-    "${clang_base_path}/lib/${arch}-${vendor}-${sys}/c++/libc++.so.2.0",
-    "${clang_base_path}/lib/${arch}-${vendor}-${sys}/c++/libc++abi.so.1.0",
-    "${clang_base_path}/lib/${arch}-${vendor}-${sys}/c++/libunwind.so.1.0",
+
+  # Invoke clang directly to find the paths to each of these runtimes rather
+  # than hardcoding the path directly.
+  _sources = []
+  runtimes = [
+    "libc++.so.2.0",
+    "libc++abi.so.1.0",
+    "libunwind.so.1.0",
   ]
+  clang_target = "${arch}-${vendor}-${sys}"
+  foreach(runtime, runtimes) {
+    runtime_path = exec_script(
+            "/usr/bin/env",
+            [
+              rebase_path("${clang_base_path}/bin/clang++", "", root_build_dir),
+              "--target=${clang_target}",
+              "-print-file-name=${runtime}",
+            ],
+            "trim string")
+    _sources += [ runtime_path ]
+  }
+  sources = _sources
+
   outputs = [ "${root_out_dir}/lib/{{source_name_part}}" ]
 }
