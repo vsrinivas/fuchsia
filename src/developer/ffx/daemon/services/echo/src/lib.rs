@@ -6,6 +6,7 @@ use {
     services::prelude::*,
 };
 
+#[ffx_service]
 #[derive(Default)]
 pub struct Echo;
 
@@ -38,10 +39,9 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_echo() {
-        let daemon =
-            ffx_daemon_core::FakeDaemonBuilder::new().register_fidl_service::<Echo>().build();
+        let daemon = FakeDaemonBuilder::new().register_fidl_service::<Echo>().build();
         let proxy = daemon.open_proxy::<bridge::EchoMarker>().await;
         let string = "check-it-out".to_owned();
-        assert_eq!(string, proxy.echo_string(string.clone()).await.unwrap());
+        assert_eq!(string, proxy.echo_string(string.clone().as_ref()).await.unwrap());
     }
 }

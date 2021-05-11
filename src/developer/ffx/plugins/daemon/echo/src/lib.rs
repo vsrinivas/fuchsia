@@ -6,34 +6,16 @@ use {
     anyhow::Result,
     ffx_core::ffx_plugin,
     ffx_echo_args::EchoCommand,
-    fidl_fuchsia_developer_bridge as bridge,
+    fidl_fuchsia_developer_bridge::EchoProxy,
     std::io::{stdout, Write},
 };
 
-#[ffx_plugin()]
-pub async fn echo(daemon_proxy: bridge::DaemonProxy, cmd: EchoCommand) -> Result<()> {
-    echo_impl(daemon_proxy, cmd, Box::new(stdout())).await
+#[ffx_plugin(EchoProxy = "daemon::service")]
+pub async fn echo(echo_proxy: EchoProxy, cmd: EchoCommand) -> Result<()> {
+    echo_impl(echo_proxy, cmd, Box::new(stdout())).await
 }
 
-async fn echo_impl<W: Write>(
-    daemon_proxy: bridge::DaemonProxy,
-    cmd: EchoCommand,
-    mut writer: W,
-) -> Result<()> {
-    // XXX(awdavies): This is generated in a macro.
-    let (echo_proxy, server) = fidl::endpoints::create_endpoints::<bridge::EchoMarker>()?;
-    let echo_proxy = echo_proxy.into_proxy()?;
-    match daemon_proxy
-        .connect_to_service(
-            <bridge::EchoMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
-            server.into_channel(),
-        )
-        .await?
-    {
-        Ok(_) => (),
-        Err(e) => panic!("UNABLE TO CONNECT PROXY: {:#?}", e),
-    };
-
+async fn echo_impl<W: Write>(echo_proxy: EchoProxy, cmd: EchoCommand, mut writer: W) -> Result<()> {
     let echo_text = cmd.text.unwrap_or("Ffx".to_string());
     match echo_proxy.echo_string(&echo_text).await {
         Ok(r) => {
@@ -44,4 +26,43 @@ async fn echo_impl<W: Write>(
     }
 }
 
-//TODO(awdavies): Add tests back in when macros are implemented
+#[cfg(test)]
+mod test {
+    use {
+        super::*, anyhow::Context, fidl_fuchsia_developer_bridge::EchoRequest, std::io::BufWriter,
+    };
+
+    fn setup_fake_service() -> EchoProxy {
+        setup_fake_echo_proxy(|req| match req {
+            EchoRequest::EchoString { value, responder } => {
+                responder
+                    .send(value.as_ref())
+                    .context("error sending response")
+                    .expect("should send");
+            }
+        })
+    }
+
+    async fn run_echo_test(cmd: EchoCommand) -> String {
+        let mut output = String::new();
+        let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
+        let proxy = setup_fake_service();
+        let result = echo_impl(proxy, cmd, writer).await.unwrap();
+        assert_eq!(result, ());
+        output
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_echo_with_no_text() -> Result<()> {
+        let output = run_echo_test(EchoCommand { text: None }).await;
+        assert_eq!("SUCCESS: received \"Ffx\"\n".to_string(), output);
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_echo_with_text() -> Result<()> {
+        let output = run_echo_test(EchoCommand { text: Some("test".to_string()) }).await;
+        assert_eq!("SUCCESS: received \"test\"\n".to_string(), output);
+        Ok(())
+    }
+}

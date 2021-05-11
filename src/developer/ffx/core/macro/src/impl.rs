@@ -29,7 +29,9 @@ const EXPECTED_SIGNATURE: &str = "ffx_plugin expects at least the command create
                                   annotation.";
 
 const UNRECOGNIZED_PARAMETER: &str = "If this is a proxy, make sure the parameter's type matches \
-the mapping passed into the ffx_plugin attribute.";
+                                      the mapping passed into the ffx_plugin attribute.";
+
+const DAEMON_SERVICE_IDENT: &str = "daemon::service";
 
 lazy_static! {
     static ref KNOWN_PROXIES: Vec<(&'static str, &'static str)> = vec![
@@ -161,6 +163,19 @@ fn parse_arguments(
                         future_results.push(fut_res);
                         proxies_to_generate.push(implementation);
                         test_fake_methods_to_generate.push(testing);
+                    } else if let Some(GeneratedProxyParts {
+                        arg,
+                        fut,
+                        fut_res,
+                        implementation,
+                        testing,
+                    }) = generate_daemon_service_proxy(proxies, &pat, path)?
+                    {
+                        inner_args.push(arg);
+                        futures.push(fut);
+                        future_results.push(fut_res);
+                        proxies_to_generate.push(implementation);
+                        test_fake_methods_to_generate.push(testing);
                     } else if let Some(command) = parse_argh_command(&pat) {
                         // This SHOULD be the argh command - and there should only be one.
                         if let Some(_) = cmd {
@@ -218,13 +233,39 @@ fn parse_argh_command(pattern_type: &Box<Pat>) -> Option<Ident> {
     }
 }
 
-enum ProxyWrapper {
-    Option(syn::Path),
-    Result(syn::Path),
-    None(syn::Path),
+enum ProxyWrapper<'a> {
+    Option(&'a syn::Path),
+    Result(&'a syn::Path),
+    None(&'a syn::Path),
 }
 
-fn extract_proxy_type(proxy_type_path: &syn::Path) -> Result<ProxyWrapper, Error> {
+impl ProxyWrapper<'_> {
+    pub fn unwrap(&self) -> &syn::Path {
+        match *self {
+            ProxyWrapper::Option(ref p) => p,
+            ProxyWrapper::Result(ref p) => p,
+            ProxyWrapper::None(ref p) => p,
+        }
+    }
+
+    pub fn result_stream(&self, result: &Ident) -> TokenStream {
+        match self {
+            ProxyWrapper::Option(_) => quote! { #result.ok() },
+            ProxyWrapper::Result(_) => quote! { #result },
+            ProxyWrapper::None(_) => quote! { #result? },
+        }
+    }
+
+    pub fn map_result_stream(&self, result: &Ident, mapping: &Ident) -> TokenStream {
+        match self {
+            ProxyWrapper::Option(_) => quote! { #result.map(|_| #mapping).ok() },
+            ProxyWrapper::Result(_) => quote! { #result.map(|_| #mapping) },
+            ProxyWrapper::None(_) => quote! { #result.map(|_| #mapping)? },
+        }
+    }
+}
+
+fn extract_proxy_type(proxy_type_path: &syn::Path) -> Result<ProxyWrapper<'_>, Error> {
     if proxy_type_path.segments.last().is_none() {
         return Err(Error::new(proxy_type_path.span(), UNKNOWN_PROXY_TYPE));
     }
@@ -239,9 +280,9 @@ fn extract_proxy_type(proxy_type_path: &syn::Path) -> Result<ProxyWrapper, Error
                     match path.segments.last() {
                         Some(PathSegment { .. }) => {
                             if simple_proxy_type.ident == option_ident {
-                                Ok(ProxyWrapper::Option(path.clone()))
+                                Ok(ProxyWrapper::Option(&path))
                             } else if simple_proxy_type.ident == result_ident {
-                                Ok(ProxyWrapper::Result(path.clone()))
+                                Ok(ProxyWrapper::Result(&path))
                             } else {
                                 Err(Error::new(simple_proxy_type.span(), UNKNOWN_PROXY_TYPE))
                             }
@@ -252,7 +293,7 @@ fn extract_proxy_type(proxy_type_path: &syn::Path) -> Result<ProxyWrapper, Error
                 _ => Err(Error::new(simple_proxy_type.span(), UNKNOWN_PROXY_TYPE)),
             }
         }
-        PathArguments::None => Ok(ProxyWrapper::None(proxy_type_path.clone())),
+        PathArguments::None => Ok(ProxyWrapper::None(&proxy_type_path)),
         _ => Err(Error::new(simple_proxy_type.span(), UNKNOWN_PROXY_TYPE)),
     }
 }
@@ -262,11 +303,7 @@ fn generate_known_proxy(
     path: &syn::Path,
 ) -> Result<Option<GeneratedProxyParts>, Error> {
     let proxy_wrapper_type = extract_proxy_type(path)?;
-    let proxy_type_path = match proxy_wrapper_type {
-        ProxyWrapper::Option(ref ptype)
-        | ProxyWrapper::Result(ref ptype)
-        | ProxyWrapper::None(ref ptype) => ptype,
-    };
+    let proxy_type_path = proxy_wrapper_type.unwrap();
     let proxy_type = match proxy_type_path.segments.last() {
         Some(last) => last,
         None => return Err(Error::new(proxy_type_path.span(), UNKNOWN_PROXY_TYPE)),
@@ -281,11 +318,7 @@ fn generate_known_proxy(
                 let implementation = quote! { let #output_fut = injector.#factory_name(); };
                 let testing =
                     generate_fake_test_proxy_method(pat_ident.ident.clone(), proxy_type_path);
-                let arg = match proxy_wrapper_type {
-                    ProxyWrapper::Option(_) => quote! { #output_fut_res.ok() },
-                    ProxyWrapper::Result(_) => quote! { #output_fut_res },
-                    ProxyWrapper::None(_) => quote! { #output_fut_res? },
-                };
+                let arg = proxy_wrapper_type.result_stream(&output_fut_res);
                 return Ok(Some(GeneratedProxyParts {
                     arg,
                     fut: output_fut,
@@ -297,6 +330,61 @@ fn generate_known_proxy(
         }
     }
     Ok(None)
+}
+
+fn generate_daemon_service_proxy(
+    proxies: &ProxyMap,
+    pattern_type: &Box<Pat>,
+    path: &syn::Path,
+) -> Result<Option<GeneratedProxyParts>, Error> {
+    let proxy_wrapper_type = extract_proxy_type(path)?;
+    let proxy_type_path = proxy_wrapper_type.unwrap();
+    let daemon_service_name = qualified_name(proxy_type_path);
+    let res = proxies.map.get(&daemon_service_name).and_then(|mapping| {
+        if mapping != "daemon::service" {
+            return None;
+        }
+        if let Pat::Ident(pat_ident) = pattern_type.as_ref() {
+            let output = pat_ident.ident.clone();
+            let output_fut = Ident::new(&format!("{}_fut", output), Span::call_site());
+            let output_fut_res = Ident::new(&format!("{}_fut_res", output), Span::call_site());
+            let server_end = Ident::new(&format!("{}_server_end", output), Span::call_site());
+            // TODO(awdavies): When there is a component to test if a service exists, add the test
+            // command for it in the daemon.
+            let implementation = quote! {
+                let (#output, #server_end) = fidl::endpoints::create_endpoints::<<#path as fidl::endpoints::Proxy>::Service>()?;
+                let #output = #output.into_proxy()?;
+                let #output_fut;
+                {
+                    let svc_name = <<#path as fidl::endpoints::Proxy>::Service as fidl::endpoints::DiscoverableService>::SERVICE_NAME;
+                    use futures::TryFutureExt;
+                    #output_fut = injector.daemon_factory().await?.connect_to_service(
+                        svc_name,
+                        #server_end.into_channel(),
+                    ).map_ok_or_else(|e| anyhow::Result::<()>::Err(anyhow::anyhow!(e)), move |fidl_result| {
+                        fidl_result
+                        .map(|_| ())
+                        .map_err(|_| ffx_core::ffx_error!(format!(
+"The daemon service '{}' did not match any services on the daemon.
+If you are not developing this plugin or the service it connects to, then this is a bug.
+
+Please report it at http://fxbug.dev/new?template=ffx+User+Bug.", svc_name)).into())
+                    });
+                }
+            };
+            let arg = proxy_wrapper_type.map_result_stream(&output_fut_res, &output);
+            let testing = generate_fake_test_proxy_method(pat_ident.ident.clone(), path);
+            return Some(GeneratedProxyParts {
+                arg,
+                fut: output_fut,
+                fut_res: output_fut_res,
+                implementation,
+                testing,
+            })
+        }
+        None
+    });
+    Ok(res)
 }
 
 struct GeneratedProxyParts {
@@ -313,14 +401,13 @@ fn generate_mapped_proxy(
     path: &syn::Path,
 ) -> Result<Option<GeneratedProxyParts>, Error> {
     let proxy_wrapper_type = extract_proxy_type(path)?;
-    let proxy_type_path = match proxy_wrapper_type {
-        ProxyWrapper::Option(ref ptype)
-        | ProxyWrapper::Result(ref ptype)
-        | ProxyWrapper::None(ref ptype) => ptype,
-    };
+    let proxy_type_path = proxy_wrapper_type.unwrap();
     let qualified_proxy_name = qualified_name(proxy_type_path);
     if let Some(mapping) = proxies.map.get(&qualified_proxy_name) {
         let mapping_lit = LitStr::new(mapping, Span::call_site());
+        if mapping_lit.value() == DAEMON_SERVICE_IDENT {
+            return Ok(None);
+        }
         if let Pat::Ident(pat_ident) = pattern_type.as_ref() {
             let output = pat_ident.ident.clone();
             let output_fut = Ident::new(&format!("{}_fut", output), Span::call_site());
@@ -337,11 +424,7 @@ fn generate_mapped_proxy(
                 selector,
             );
             let testing = generate_fake_test_proxy_method(pat_ident.ident.clone(), proxy_type_path);
-            let arg = match proxy_wrapper_type {
-                ProxyWrapper::Option(_) => quote! { #output_fut_res.map(|_| #output).ok() },
-                ProxyWrapper::Result(_) => quote! { #output_fut_res.map(|_| #output) },
-                ProxyWrapper::None(_) => quote! { #output_fut_res.map(|_| #output)? },
-            };
+            let arg = proxy_wrapper_type.map_result_stream(&output_fut_res, &output);
             return Ok(Some(GeneratedProxyParts {
                 arg,
                 fut: output_fut,
@@ -572,25 +655,30 @@ impl Parse for ProxyMap {
                             // Parse the trailing comma
                             let _: Punct = input.parse()?;
                         }
-                        let parsed_selector = selectors::parse_selector(&selection.value())
-                            .map_err(|e| {
-                                Error::new(
-                                    selection.span(),
-                                    format!("Invalid component selector string: {}", e),
-                                )
-                            })?;
+                        let selector = if selection.value() == DAEMON_SERVICE_IDENT {
+                            selection.value()
+                        } else {
+                            let parsed_selector = selectors::parse_selector(&selection.value())
+                                .map_err(|e| {
+                                    Error::new(
+                                        selection.span(),
+                                        format!("Invalid component selector string: {}", e),
+                                    )
+                                })?;
 
-                        if has_wildcards(selection.span(), &parsed_selector)? {
-                            return Err(Error::new(selection.span(), format!("Component selectors in plugin definitions cannot use wildcards ('*').")));
-                        }
-                        let moniker = parsed_selector.component_selector.unwrap();
-                        let subdir = parsed_selector.tree_selector.unwrap();
-                        if !is_v1_moniker(selection.span(), moniker)?
-                            && !is_expose_dir(selection.span(), subdir)?
-                        {
-                            return Err(Error::new(selection.span(), format!("Selectors for V2 components in plugin definitions must use `expose`, not `out`. See fxbug.dev/60910.")));
-                        }
-                        map.insert(qualified_name(&path), selection.value());
+                            if has_wildcards(selection.span(), &parsed_selector)? {
+                                return Err(Error::new(selection.span(), format!("Component selectors in plugin definitions cannot use wildcards ('*').")));
+                            }
+                            let moniker = parsed_selector.component_selector.unwrap();
+                            let subdir = parsed_selector.tree_selector.unwrap();
+                            if !is_v1_moniker(selection.span(), moniker)?
+                                && !is_expose_dir(selection.span(), subdir)?
+                            {
+                                return Err(Error::new(selection.span(), format!("Selectors for V2 components in plugin definitions must use `expose`, not `out`. See fxbug.dev/60910.")));
+                            }
+                            selection.value()
+                        };
+                        map.insert(qualified_name(&path), selector);
                     }
                 }
             } else if input.peek(Lit) {
@@ -1297,5 +1385,32 @@ mod test {
             fn test_fn(cmd: OptionCommand) -> Result<i32> {}
         };
         ffx_plugin(input, proxies).map(|_| ())
+    }
+
+    #[test]
+    fn test_service_proxy_works() -> Result<(), Error> {
+        let proxies: ProxyMap = parse_quote! { TestProxy = "daemon::service" };
+        let input: ItemFn = parse_quote! {
+            fn test_fn(test_param: TestProxy, cmd: ResultCommand) -> Result<()> {}
+        };
+        ffx_plugin(input, proxies).map(drop)
+    }
+
+    #[test]
+    fn test_service_proxy_works_with_option() -> Result<(), Error> {
+        let proxies: ProxyMap = parse_quote! { TestProxy = "daemon::service" };
+        let input: ItemFn = parse_quote! {
+                fn test_fn(test_param: Option<TestProxy>, cmd: ResultCommand) -> Result<()> {}
+        };
+        ffx_plugin(input, proxies).map(drop)
+    }
+
+    #[test]
+    fn test_service_proxy_works_with_result() -> Result<(), Error> {
+        let proxies: ProxyMap = parse_quote! { TestProxy = "daemon::service" };
+        let input: ItemFn = parse_quote! {
+                fn test_fn(test_param: Result<TestProxy>, cmd: ResultCommand) -> Result<()> {}
+        };
+        ffx_plugin(input, proxies).map(drop)
     }
 }
