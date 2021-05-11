@@ -24,7 +24,8 @@ constexpr const char TEST_FIRMWARE_CONTENTS[] = "this is some firmware\n";
 using fuchsia_device_firmware_test::TestDevice;
 
 class TestFirmwareDriver;
-using DeviceType = ddk::Device<TestFirmwareDriver, ddk::Unbindable, ddk::MessageableOld>;
+using DeviceType =
+    ddk::Device<TestFirmwareDriver, ddk::Unbindable, ddk::Messageable<TestDevice>::Mixin>;
 
 class TestFirmwareDriver : public DeviceType, public fidl::WireServer<TestDevice> {
  public:
@@ -41,12 +42,6 @@ class TestFirmwareDriver : public DeviceType, public fidl::WireServer<TestDevice
                     LoadFirmwareCompleter::Sync& completer) override;
   void LoadFirmwareAsync(LoadFirmwareAsyncRequestView request,
                          LoadFirmwareAsyncCompleter::Sync& completer) override;
-
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-    DdkTransaction transaction(txn);
-    fidl::WireDispatch<TestDevice>(this, msg, &transaction);
-    return transaction.Status();
-  }
 
  private:
   static zx_status_t CheckFirmware(zx_handle_t fw, size_t size);

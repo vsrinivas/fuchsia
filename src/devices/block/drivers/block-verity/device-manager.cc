@@ -90,12 +90,6 @@ void DeviceManager::DdkUnbind(ddk::UnbindTxn txn) {
 
 void DeviceManager::DdkRelease() { delete this; }
 
-zx_status_t DeviceManager::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<fuchsia_hardware_block_verified::DeviceManager>(this, msg, &transaction);
-  return ZX_ERR_ASYNC;
-}
-
 void DeviceManager::DdkChildPreRelease(void* child_ctx) {
   fbl::AutoLock lock(&mtx_);
 

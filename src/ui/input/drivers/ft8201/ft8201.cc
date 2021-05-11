@@ -167,12 +167,6 @@ bool Ft8201Device::RunUnitTests(void* ctx, zx_device_t* parent, zx_handle_t chan
   return device->FirmwareDownloadIfNeeded() == ZX_OK;
 }
 
-zx_status_t Ft8201Device::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<fuchsia_input_report::InputDevice>(this, msg, &transaction);
-  return transaction.Status();
-}
-
 void Ft8201Device::DdkUnbind(ddk::UnbindTxn txn) {
   Shutdown();
   txn.Reply();

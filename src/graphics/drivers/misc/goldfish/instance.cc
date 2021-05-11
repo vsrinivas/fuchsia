@@ -79,12 +79,6 @@ void Instance::OpenPipe(OpenPipeRequestView request, OpenPipeCompleter::Sync& co
   completer.Close(ZX_OK);
 }
 
-zx_status_t Instance::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<fuchsia_hardware_goldfish::PipeDevice>(this, msg, &transaction);
-  return transaction.Status();
-}
-
 zx_status_t Instance::DdkClose(uint32_t flags) { return ZX_OK; }
 
 void Instance::DdkRelease() { delete this; }

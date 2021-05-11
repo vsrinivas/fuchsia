@@ -33,12 +33,6 @@ void InputReport::DdkUnbind(ddk::UnbindTxn txn) {
   txn.Reply();
 }
 
-zx_status_t InputReport::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<fuchsia_input_report::InputDevice>(this, msg, &transaction);
-  return transaction.Status();
-}
-
 void InputReport::RemoveReaderFromList(InputReportsReader* reader) {
   fbl::AutoLock lock(&readers_lock_);
   for (auto iter = readers_list_.begin(); iter != readers_list_.end(); ++iter) {

@@ -357,12 +357,6 @@ void FtdiDevice::CreateI2C(CreateI2CRequestView request, CreateI2CCompleter::Syn
   ftdi_mpsse::FtdiI2c::Create(this->zxdev(), &request->layout, &request->device);
 }
 
-zx_status_t FtdiDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<fuchsia_hardware_ftdi::Device>(this, msg, &transaction);
-  return transaction.Status();
-}
-
 zx_status_t ftdi_bind_fail(zx_status_t status) {
   zxlogf(ERROR, "ftdi_bind failed: %d", status);
   return status;

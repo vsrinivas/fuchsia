@@ -148,12 +148,6 @@ void SpiChild::Exchange(ExchangeRequestView request, ExchangeCompleter::Sync& co
   completer.Reply(std::move(result));
 }
 
-zx_status_t SpiChild::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<fuchsia_hardware_spi::Device>(this, msg, &transaction);
-  return transaction.Status();
-}
-
 zx_status_t SpiChild::SpiTransmit(const uint8_t* txdata_list, size_t txdata_count) {
   size_t actual;
   spi_.Exchange(cs_, txdata_list, txdata_count, nullptr, 0, &actual);

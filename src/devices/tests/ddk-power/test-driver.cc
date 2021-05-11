@@ -21,8 +21,8 @@ using fuchsia_device::wire::DevicePowerStateInfo;
 using fuchsia_device_power_test::TestDevice;
 
 class TestPowerDriver;
-using DeviceType =
-    ddk::Device<TestPowerDriver, ddk::Unbindable, ddk::Suspendable, ddk::MessageableOld>;
+using DeviceType = ddk::Device<TestPowerDriver, ddk::Unbindable, ddk::Suspendable,
+                               ddk::Messageable<TestDevice>::Mixin>;
 class TestPowerDriver : public DeviceType,
                         public ddk::EmptyProtocol<ZX_PROTOCOL_TEST_POWER_CHILD>,
                         public fidl::WireServer<TestDevice> {
@@ -35,11 +35,6 @@ class TestPowerDriver : public DeviceType,
     current_power_state_ = static_cast<DevicePowerState>(txn.requested_state());
     suspend_complete_event_.signal(0, ZX_USER_SIGNAL_0);
     txn.Reply(ZX_OK, txn.requested_state());
-  }
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-    DdkTransaction transaction(txn);
-    fidl::WireDispatch<fuchsia_device_power_test::TestDevice>(this, msg, &transaction);
-    return transaction.Status();
   }
 
   void GetSuspendCompletionEvent(GetSuspendCompletionEventRequestView request,

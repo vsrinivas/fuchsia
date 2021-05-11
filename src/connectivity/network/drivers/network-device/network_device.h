@@ -19,7 +19,9 @@
 namespace network {
 
 class NetworkDevice;
-using DeviceType = ddk::Device<NetworkDevice, ddk::MessageableOld, ddk::Unbindable>;
+using DeviceType =
+    ddk::Device<NetworkDevice, ddk::Messageable<fuchsia_hardware_network::DeviceInstance>::Mixin,
+                ddk::Unbindable>;
 
 class NetworkDevice : public DeviceType,
                       public ddk::EmptyProtocol<ZX_PROTOCOL_NETWORK_DEVICE>,
@@ -30,8 +32,6 @@ class NetworkDevice : public DeviceType,
   ~NetworkDevice() override;
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
-
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
   void DdkUnbind(ddk::UnbindTxn unbindTxn);
 

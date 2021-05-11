@@ -17,15 +17,17 @@
 
 namespace {
 
-class TestBti : public ddk::Device<TestBti, ddk::MessageableOld>,
-                public fidl::WireServer<fuchsia_hardware_btitest::BtiDevice> {
+class TestBti;
+using DeviceType =
+    ddk::Device<TestBti, ddk::Messageable<fuchsia_hardware_btitest::BtiDevice>::Mixin>;
+
+class TestBti : public DeviceType, public fidl::WireServer<fuchsia_hardware_btitest::BtiDevice> {
  public:
-  explicit TestBti(zx_device_t* parent) : ddk::Device<TestBti, ddk::MessageableOld>(parent) {}
+  explicit TestBti(zx_device_t* parent) : DeviceType(parent) {}
 
   static zx_status_t Create(void*, zx_device_t* parent);
 
   void DdkRelease() { delete this; }
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
   void GetKoid(GetKoidRequestView request, GetKoidCompleter::Sync& completer) override;
   void Crash(CrashRequestView request, CrashCompleter::Sync&) override { __builtin_abort(); }
@@ -43,13 +45,6 @@ zx_status_t TestBti::Create(void*, zx_device_t* parent) {
 
   return ZX_OK;
 }
-
-zx_status_t TestBti::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<fuchsia_hardware_btitest::BtiDevice>(this, msg, &transaction);
-  return transaction.Status();
-}
-
 void TestBti::GetKoid(GetKoidRequestView request, GetKoidCompleter::Sync& completer) {
   ddk::PDev pdev(parent());
   if (!pdev.is_valid()) {

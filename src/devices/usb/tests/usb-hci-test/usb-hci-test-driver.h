@@ -20,7 +20,9 @@
 namespace usb {
 
 class HciTest;
-using HciTestBase = ddk::Device<HciTest, ddk::Unbindable, ddk::MessageableOld, ddk::Initializable>;
+using HciTestBase =
+    ddk::Device<HciTest, ddk::Unbindable,
+                ddk::Messageable<fuchsia_hardware_usb_hcitest::Device>::Mixin, ddk::Initializable>;
 
 class HciTest : public HciTestBase,
                 public ddk::EmptyProtocol<ZX_PROTOCOL_USB_HCI_TEST>,
@@ -42,12 +44,6 @@ class HciTest : public HciTestBase,
   }
   void DdkRelease() { delete this; }
   void Run(RunRequestView request, RunCompleter::Sync& _completer) override;
-
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-    DdkTransaction transaction(txn);
-    fidl::WireDispatch<fuchsia_hardware_usb_hcitest::Device>(this, msg, &transaction);
-    return transaction.Status();
-  }
 
   void DdkInit(ddk::InitTxn txn);
   void TestThread(RunCompleter::Async completer);

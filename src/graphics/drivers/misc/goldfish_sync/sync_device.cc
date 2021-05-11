@@ -152,12 +152,6 @@ void SyncDevice::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void SyncDevice::DdkRelease() { delete this; }
 
-zx_status_t SyncDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<fuchsia_hardware_goldfish::SyncDevice>(this, msg, &transaction);
-  return transaction.Status();
-}
-
 zx_status_t SyncDevice::GoldfishSyncCreateTimeline(zx::channel request) {
   fbl::RefPtr<SyncTimeline> timeline = fbl::MakeRefCounted<SyncTimeline>(this);
   timelines_.push_back(timeline);

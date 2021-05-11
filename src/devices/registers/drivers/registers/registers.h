@@ -28,7 +28,9 @@ namespace registers {
 template <typename T>
 class Register;
 template <typename T>
-using RegisterType = ddk::Device<Register<T>, ddk::MessageableOld, ddk::Unbindable>;
+using RegisterType =
+    ddk::Device<Register<T>, ddk::Messageable<fuchsia_hardware_registers::Device>::Mixin,
+                ddk::Unbindable>;
 
 template <typename T>
 class RegistersDevice;
@@ -54,11 +56,6 @@ class Register : public fidl::WireServer<fuchsia_hardware_registers::Device>,
 
   zx_status_t Init(const RegistersMetadataEntry& config);
 
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-    DdkTransaction transaction(txn);
-    fidl::WireDispatch<fuchsia_hardware_registers::Device>(this, msg, &transaction);
-    return transaction.Status();
-  }
   void DdkUnbind(ddk::UnbindTxn txn) {
     loop_.Shutdown();
     txn.Reply();

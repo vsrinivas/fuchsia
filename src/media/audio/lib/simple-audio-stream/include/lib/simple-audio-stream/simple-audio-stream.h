@@ -58,7 +58,8 @@ struct SimpleAudioStreamProtocol : public ddk::internal::base_protocol {
 
 class SimpleAudioStream;
 using SimpleAudioStreamBase =
-    ddk::Device<SimpleAudioStream, ddk::MessageableOld, ddk::Suspendable, ddk::Unbindable>;
+    ddk::Device<SimpleAudioStream, ddk::Messageable<audio_fidl::Device>::Mixin, ddk::Suspendable,
+                ddk::Unbindable>;
 
 // The SimpleAudioStream server (thread compatible) implements fidl::WireServer<Device> and
 // fidl::WireServer<RingBuffer>.
@@ -114,12 +115,6 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
   void DdkRelease();
 
   void DdkSuspend(ddk::SuspendTxn txn);
-
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-    DdkTransaction transaction(txn);
-    fidl::WireDispatch<audio_fidl::Device>(this, msg, &transaction);
-    return transaction.Status();
-  }
 
  protected:
   friend class fbl::RefPtr<SimpleAudioStream>;

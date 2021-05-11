@@ -160,12 +160,6 @@ zx_status_t PlatformBus::PBusProtocolDeviceAdd(uint32_t proto_id, const pbus_dev
   return ZX_OK;
 }
 
-zx_status_t PlatformBus::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<fuchsia_sysinfo::SysInfo>(this, msg, &transaction);
-  return transaction.Status();
-}
-
 void PlatformBus::GetBoardName(GetBoardNameRequestView request,
                                GetBoardNameCompleter::Sync& completer) {
   fbl::AutoLock lock(&board_info_lock_);

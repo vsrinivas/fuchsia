@@ -711,12 +711,6 @@ zx_off_t SkipBlockDevice::DdkGetSize() {
   return GetBlockSize() * GetBlockCountLocked();
 }
 
-zx_status_t SkipBlockDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<fuchsia_hardware_skipblock::SkipBlock>(this, msg, &transaction);
-  return transaction.Status();
-}
-
 static constexpr zx_driver_ops_t driver_ops = []() {
   zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;

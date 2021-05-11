@@ -41,12 +41,6 @@ zx_status_t DdkFidlDevice::Create(void* ctx, zx_device_t* dev) {
   return ZX_OK;
 }
 
-zx_status_t DdkFidlDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<fuchsia_hardware_test::Device>(this, msg, &transaction);
-  return ZX_ERR_ASYNC;
-}
-
 void DdkFidlDevice::GetChannel(GetChannelRequestView request,
                                GetChannelCompleter::Sync& completer) {
   ZX_ASSERT(ZX_OK ==

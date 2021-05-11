@@ -128,14 +128,7 @@ void OtRadioDevice::LowpanSpinelDeviceFidlImpl::ReadyToReceiveFrames(
 }
 
 OtRadioDevice::OtRadioDevice(zx_device_t* device)
-    : ddk::Device<OtRadioDevice, ddk::Unbindable, ddk::MessageableOld>(device),
-      loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
-
-zx_status_t OtRadioDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<lowpan_spinel_fidl::DeviceSetup>(this, msg, &transaction);
-  return transaction.Status();
-}
+    : DeviceType(device), loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
 void OtRadioDevice::SetChannel(SetChannelRequestView request,
                                SetChannelCompleter::Sync& completer) {

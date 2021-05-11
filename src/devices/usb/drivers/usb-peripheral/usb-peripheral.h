@@ -75,7 +75,9 @@ using fuchsia_hardware_usb_peripheral::wire::DeviceDescriptor;
 using fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor;
 
 class UsbPeripheral;
-using UsbPeripheralType = ddk::Device<UsbPeripheral, ddk::Unbindable, ddk::MessageableOld>;
+using UsbPeripheralType =
+    ddk::Device<UsbPeripheral, ddk::Unbindable,
+                ddk::Messageable<fuchsia_hardware_usb_peripheral::Device>::Mixin>;
 
 struct UsbConfiguration : fbl::RefCounted<UsbConfiguration> {
   static constexpr uint8_t MAX_INTERFACES = 32;
@@ -102,7 +104,6 @@ class UsbPeripheral : public UsbPeripheralType,
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
   // Device protocol implementation.
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 

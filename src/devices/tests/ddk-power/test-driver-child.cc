@@ -28,8 +28,9 @@ using fuchsia_device_power_test::TestDevice;
 
 class TestPowerDriverChild;
 using DeviceType =
-    ddk::Device<TestPowerDriverChild, ddk::Unbindable, ddk::MessageableOld, ddk::Suspendable,
-                ddk::Resumable, ddk::PerformanceTunable, ddk::AutoSuspendable, ddk::Initializable>;
+    ddk::Device<TestPowerDriverChild, ddk::Unbindable, ddk::Messageable<TestDevice>::Mixin,
+                ddk::Suspendable, ddk::Resumable, ddk::PerformanceTunable, ddk::AutoSuspendable,
+                ddk::Initializable>;
 class TestPowerDriverChild : public DeviceType, public fidl::WireServer<TestDevice> {
  public:
   TestPowerDriverChild(zx_device_t* parent) : DeviceType(parent) {
@@ -53,11 +54,6 @@ class TestPowerDriverChild : public DeviceType, public fidl::WireServer<TestDevi
                          SetTestStatusInfoCompleter::Sync& completer) override;
 
   void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-    DdkTransaction transaction(txn);
-    fidl::WireDispatch<fuchsia_device_power_test::TestDevice>(this, msg, &transaction);
-    return transaction.Status();
-  }
   void DdkInit(ddk::InitTxn txn);
   void DdkRelease() { delete this; }
   void DdkSuspend(ddk::SuspendTxn txn);

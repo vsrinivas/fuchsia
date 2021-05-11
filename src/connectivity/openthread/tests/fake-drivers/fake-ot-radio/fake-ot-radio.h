@@ -35,9 +35,12 @@ constexpr uint32_t kResetMsDelay = 100;
 constexpr uint32_t kBitMaskHigherFourBits = 0xF0;
 constexpr uint32_t kBitMaskLowerFourBits = 0x0F;
 
-class FakeOtRadioDevice
-    : public ddk::Device<FakeOtRadioDevice, ddk::Unbindable, ddk::MessageableOld>,
-      public fidl::WireServer<fuchsia_lowpan_spinel::DeviceSetup> {
+class FakeOtRadioDevice;
+using DeviceType = ddk::Device<FakeOtRadioDevice, ddk::Unbindable,
+                               ddk::Messageable<fuchsia_lowpan_spinel::DeviceSetup>::Mixin>;
+
+class FakeOtRadioDevice : public DeviceType,
+                          public fidl::WireServer<fuchsia_lowpan_spinel::DeviceSetup> {
  public:
   explicit FakeOtRadioDevice(zx_device_t* device);
 
@@ -50,7 +53,6 @@ class FakeOtRadioDevice
 
   void DdkRelease();
   void DdkUnbind(ddk::UnbindTxn txn);
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   zx_status_t ShutDown();
   zx_status_t Reset();
 

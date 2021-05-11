@@ -36,9 +36,9 @@ constexpr uint16_t kMaxBrightnessRegValue = 0xFFF;
 constexpr uint16_t kBrightnessLsbBits = 4;
 constexpr uint16_t kBrightnessLsbMask = (0x1 << kBrightnessLsbBits) - 1;
 
-class Sgm37603a;
-using DeviceType = ddk::Device<Sgm37603a, ddk::MessageableOld>;
 namespace FidlBacklight = fuchsia_hardware_backlight;
+class Sgm37603a;
+using DeviceType = ddk::Device<Sgm37603a, ddk::Messageable<FidlBacklight::Device>::Mixin>;
 
 class Sgm37603a : public DeviceType,
                   public ddk::EmptyProtocol<ZX_PROTOCOL_BACKLIGHT>,
@@ -49,8 +49,6 @@ class Sgm37603a : public DeviceType,
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
   void DdkRelease() { delete this; }
-
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
   // Visible for testing.
   Sgm37603a(zx_device_t* parent, ddk::I2cChannel i2c, ddk::GpioProtocolClient reset_gpio)

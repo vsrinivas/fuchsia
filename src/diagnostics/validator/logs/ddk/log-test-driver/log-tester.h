@@ -15,7 +15,8 @@
 namespace log_test_driver {
 
 class LogTester;
-using LogTesterType = ddk::Device<LogTester, ddk::Initializable, ddk::Unbindable, ddk::MessageableOld>;
+using LogTesterType = ddk::Device<LogTester, ddk::Initializable, ddk::Unbindable,
+                                  ddk::Messageable<fuchsia_validate_logs::LogSinkPuppet>::Mixin>;
 
 // This is the main class for the log test driver.
 class LogTester : public LogTesterType,
@@ -28,7 +29,6 @@ class LogTester : public LogTesterType,
 
   // Device protocol implementation.
   void DdkInit(ddk::InitTxn txn);
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) override;
   void EmitLog(EmitLogRequestView request, EmitLogCompleter::Sync& completer) override;
   void EmitPrintfLog(EmitPrintfLogRequestView request,

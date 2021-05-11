@@ -37,7 +37,8 @@ using fuchsia_hardware_input::wire::BootProtocol;
 using fuchsia_hardware_input::wire::ReportType;
 
 class HidInstance;
-using HidInstanceDeviceType = ddk::Device<HidInstance, ddk::Closable, ddk::MessageableOld>;
+using HidInstanceDeviceType = ddk::Device<HidInstance, ddk::Closable,
+                                          ddk::Messageable<fuchsia_hardware_input::Device>::Mixin>;
 
 class HidInstance : public HidInstanceDeviceType,
                     public fbl::DoublyLinkedListable<HidInstance*>,
@@ -51,7 +52,6 @@ class HidInstance : public HidInstanceDeviceType,
   ~HidInstance() = default;
 
   zx_status_t Bind(HidDevice* base);
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease();
   zx_status_t DdkClose(uint32_t flags);
 

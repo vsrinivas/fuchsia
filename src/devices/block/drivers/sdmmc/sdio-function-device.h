@@ -21,7 +21,8 @@ using fuchsia_hardware_sdio::wire::SdioRwTxn;
 class SdioControllerDevice;
 
 class SdioFunctionDevice;
-using SdioFunctionDeviceType = ddk::Device<SdioFunctionDevice, ddk::MessageableOld>;
+using SdioFunctionDeviceType =
+    ddk::Device<SdioFunctionDevice, ddk::Messageable<fuchsia_hardware_sdio::Device>::Mixin>;
 
 class SdioFunctionDevice : public SdioFunctionDeviceType,
                            public ddk::SdioProtocol<SdioFunctionDevice, ddk::base_protocol>,
@@ -56,12 +57,6 @@ class SdioFunctionDevice : public SdioFunctionDeviceType,
   zx_status_t SdioUnregisterVmo(uint32_t vmo_id, zx::vmo* out_vmo);
   zx_status_t SdioDoRwTxnNew(const sdio_rw_txn_new_t* txn);
   void SdioRunDiagnostics();
-
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-    DdkTransaction transaction(txn);
-    fidl::WireDispatch<fuchsia_hardware_sdio::Device>(this, msg, &transaction);
-    return transaction.Status();
-  }
 
   // FIDL methods
   void GetDevHwInfo(GetDevHwInfoRequestView request,

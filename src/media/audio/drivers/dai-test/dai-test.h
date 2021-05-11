@@ -20,7 +20,8 @@
 namespace audio::daitest {
 
 class DaiTest;
-using DaiTestDeviceType = ddk::Device<DaiTest, ddk::MessageableOld>;
+using DaiTestDeviceType =
+    ddk::Device<DaiTest, ddk::Messageable<fuchsia_hardware_audio::Device>::Mixin>;
 
 class DaiTest : public DaiTestDeviceType,
                 public ddk::internal::base_protocol,
@@ -31,11 +32,6 @@ class DaiTest : public DaiTestDeviceType,
   virtual ~DaiTest() = default;
   void DdkRelease() { delete this; }
   zx_status_t InitPDev();
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-    DdkTransaction transaction(txn);
-    fidl::WireDispatch<fuchsia_hardware_audio::Device>(this, msg, &transaction);
-    return transaction.Status();
-  }
 
  private:
   // FIDL LLCPP methods for fuchsia.hardware.audio.Device.

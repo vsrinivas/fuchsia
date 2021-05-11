@@ -151,12 +151,6 @@ void UsbMidiSource::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& 
   completer.Reply(info);
 }
 
-zx_status_t UsbMidiSource::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<fuchsia_hardware_midi::Device>(this, msg, &transaction);
-  return transaction.Status();
-}
-
 zx_status_t UsbMidiSource::Create(zx_device_t* parent, const UsbDevice& usb, int index,
                                   const usb_interface_descriptor_t* intf,
                                   const usb_endpoint_descriptor_t* ep, const size_t req_size) {

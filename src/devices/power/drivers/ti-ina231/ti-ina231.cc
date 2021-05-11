@@ -82,12 +82,6 @@ zx_status_t Ina231Device::Create(void* ctx, zx_device_t* parent) {
   return ZX_OK;
 }
 
-zx_status_t Ina231Device::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<power_sensor_fidl::Device>(this, msg, &transaction);
-  return transaction.Status();
-}
-
 void Ina231Device::GetPowerWatts(GetPowerWattsRequestView request,
                                  GetPowerWattsCompleter::Sync& completer) {
   auto power_reg = Read16(Register::kPowerReg);

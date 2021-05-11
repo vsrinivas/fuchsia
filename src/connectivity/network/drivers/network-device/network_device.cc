@@ -67,12 +67,6 @@ zx_status_t NetworkDevice::Create(void* ctx, zx_device_t* parent) {
   return ZX_OK;
 }
 
-zx_status_t NetworkDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<fuchsia_hardware_network::DeviceInstance>(this, msg, &transaction);
-  return transaction.Status();
-}
-
 void NetworkDevice::DdkUnbind(ddk::UnbindTxn unbindTxn) {
   zxlogf(DEBUG, "network-device: DdkUnbind");
   device_->Teardown([txn = std::move(unbindTxn)]() mutable { txn.Reply(); });

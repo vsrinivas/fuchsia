@@ -21,10 +21,11 @@
 namespace hid_input_report_dev {
 
 class InputReport;
-using DeviceType = ddk::Device<InputReport, ddk::Unbindable, ddk::MessageableOld>;
+using DeviceType = ddk::Device<InputReport, ddk::Unbindable,
+                               ddk::Messageable<fuchsia_input_report::InputDevice>::Mixin>;
 class InputReport : public DeviceType,
                     public InputReportBase,
-                    fidl::WireServer<fuchsia_input_report::InputDevice>,
+                    public fidl::WireServer<fuchsia_input_report::InputDevice>,
                     ddk::HidReportListenerProtocol<InputReport>,
                     public ddk::EmptyProtocol<ZX_PROTOCOL_INPUTREPORT> {
  public:
@@ -36,7 +37,6 @@ class InputReport : public DeviceType,
   zx_status_t Bind();
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease() { delete this; }
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
   // HidReportListener functions.
   void HidReportListenerReceiveReport(const uint8_t* report, size_t report_size,

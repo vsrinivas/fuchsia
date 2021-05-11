@@ -29,7 +29,7 @@ class Tmp112DeviceTest : public zxtest::Test {
 
     const auto message_op = [](void* ctx, fidl_incoming_msg_t* msg,
                                fidl_txn_t* txn) -> zx_status_t {
-      return static_cast<Tmp112Device*>(ctx)->DdkMessage(msg, txn);
+      return static_cast<Tmp112Device*>(ctx)->ddk_device_proto_.message(ctx, msg, txn);
     };
     ASSERT_OK(messenger_.SetMessageOp(dev_.get(), message_op));
   }

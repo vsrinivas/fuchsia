@@ -116,8 +116,11 @@ struct IpPktHdr {
 // format requirement: unicast and locally administered
 constexpr std::array<uint8_t, kMacAddrLen> kFakeMacAddr = {0x02, 0x47, 0x4f, 0x4f, 0x47, 0x4c};
 
-class Device : public ddk::Device<Device, ddk::Unbindable, ddk::MessageableOld>,
-               fidl::WireServer<fuchsia_hardware_telephony_transport::Qmi> {
+class Device;
+using DeviceType = ddk::Device<Device, ddk::Unbindable,
+                               ddk::Messageable<fuchsia_hardware_telephony_transport::Qmi>::Mixin>;
+class Device : public DeviceType,
+               public fidl::WireServer<fuchsia_hardware_telephony_transport::Qmi> {
  public:
   explicit Device(zx_device_t* parent);
 
@@ -164,7 +167,6 @@ class Device : public ddk::Device<Device, ddk::Unbindable, ddk::MessageableOld>,
   void EthTxListNodeInit();
 
   // DDK Mixin methods
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 

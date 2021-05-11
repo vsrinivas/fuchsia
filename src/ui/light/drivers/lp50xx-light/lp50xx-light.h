@@ -21,7 +21,8 @@
 namespace lp50xx_light {
 
 class Lp50xxLight;
-using Lp50xxLightType = ddk::Device<Lp50xxLight, ddk::MessageableOld>;
+using Lp50xxLightType =
+    ddk::Device<Lp50xxLight, ddk::Messageable<fuchsia_hardware_light::Light>::Mixin>;
 
 class Lp50xxLight : public Lp50xxLightType,
                     public fidl::WireServer<fuchsia_hardware_light::Light>,
@@ -39,7 +40,6 @@ class Lp50xxLight : public Lp50xxLightType,
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
   // Device protocol implementation.
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease();
 
   // FIDL messages.

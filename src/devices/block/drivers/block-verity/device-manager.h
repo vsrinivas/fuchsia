@@ -27,7 +27,9 @@ class VerifiedDevice;
 
 class DeviceManager;
 using DeviceManagerType =
-    ddk::Device<DeviceManager, ddk::Unbindable, ddk::MessageableOld, ddk::ChildPreReleaseable>;
+    ddk::Device<DeviceManager, ddk::Unbindable,
+                ddk::Messageable<fuchsia_hardware_block_verified::DeviceManager>::Mixin,
+                ddk::ChildPreReleaseable>;
 
 // A device that consumes a block device and implements
 // `fuchsia.hardware.block.verified`.  It manages the lifecycle of a child block
@@ -58,9 +60,6 @@ class DeviceManager final
   // ddk::Device methods; see ddktl/device.h
   void DdkUnbind(ddk::UnbindTxn txn) __TA_EXCLUDES(mtx_);
   void DdkRelease();
-
-  // ddk::MessageableOld methods
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) __TA_EXCLUDES(mtx_);
 
   // ddk::ChildPreRelease methods
   void DdkChildPreRelease(void* child_ctx);

@@ -158,12 +158,6 @@ zx_status_t HidInstance::DdkClose(uint32_t flags) {
 
 void HidInstance::DdkRelease() { delete this; }
 
-zx_status_t HidInstance::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<fuchsia_hardware_input::Device>(this, msg, &transaction);
-  return transaction.Status();
-}
-
 void HidInstance::GetBootProtocol(GetBootProtocolRequestView request,
                                   GetBootProtocolCompleter::Sync& completer) {
   completer.Reply(base_->GetBootProtocol());

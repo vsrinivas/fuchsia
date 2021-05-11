@@ -38,7 +38,7 @@ class As370ThermalTest : public zxtest::Test {
   void SetUp() override {
     ASSERT_OK(messenger_.SetMessageOp(
         &dut_, [](void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) -> zx_status_t {
-          return static_cast<As370Thermal*>(ctx)->DdkMessage(msg, txn);
+          return static_cast<As370Thermal*>(ctx)->ddk_device_proto_.message(ctx, msg, txn);
         }));
   }
 

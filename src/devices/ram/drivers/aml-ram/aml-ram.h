@@ -68,9 +68,10 @@ constexpr uint64_t kMinimumCycleCount = 1024 * 512;
 constexpr uint64_t kMaximumCycleCount = 0xffffffff;
 
 class AmlRam;
-using DeviceType = ddk::Device<AmlRam, ddk::Suspendable, ddk::MessageableOld>;
+using DeviceType =
+    ddk::Device<AmlRam, ddk::Suspendable, ddk::Messageable<ram_metrics::Device>::Mixin>;
 
-class AmlRam : public DeviceType, private fidl::WireServer<ram_metrics::Device> {
+class AmlRam : public DeviceType, public fidl::WireServer<ram_metrics::Device> {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlRam);
 
@@ -81,9 +82,6 @@ class AmlRam : public DeviceType, private fidl::WireServer<ram_metrics::Device> 
   ~AmlRam();
   void DdkRelease();
   void DdkSuspend(ddk::SuspendTxn txn);
-
-  // Implements ddk::MessageableOld
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
  private:
   struct Job {

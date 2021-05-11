@@ -223,12 +223,6 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
   return ZX_OK;
 }
 
-zx_status_t AmlCpu::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<fuchsia_cpuctrl::Device>(this, msg, &transaction);
-  return transaction.Status();
-}
-
 void AmlCpu::DdkRelease() { delete this; }
 
 zx_status_t AmlCpu::DdkSetPerformanceState(uint32_t requested_state, uint32_t* out_state) {

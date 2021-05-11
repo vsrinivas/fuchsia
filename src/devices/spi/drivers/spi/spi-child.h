@@ -19,7 +19,7 @@ namespace spi {
 class SpiDevice;
 
 class SpiChild;
-using SpiChildType = ddk::Device<SpiChild, ddk::MessageableOld>;
+using SpiChildType = ddk::Device<SpiChild, ddk::Messageable<fuchsia_hardware_spi::Device>::Mixin>;
 
 class SpiChild : public SpiChildType,
                  public fbl::RefCounted<SpiChild>,
@@ -30,7 +30,6 @@ class SpiChild : public SpiChildType,
            SpiDevice* spi_parent)
       : SpiChildType(parent), spi_(spi), cs_(channel->cs), spi_parent_(*spi_parent) {}
 
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 

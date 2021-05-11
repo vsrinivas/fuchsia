@@ -73,12 +73,6 @@ void Pl031::Set(SetRequestView request, SetCompleter::Sync& completer) {
   completer.Reply(SetRtc(request->rtc));
 }
 
-zx_status_t Pl031::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<FidlRtc::Device>(this, msg, &transaction);
-  return transaction.Status();
-}
-
 void Pl031::DdkRelease() { delete this; }
 
 zx_status_t Pl031::SetRtc(FidlRtc::wire::Time rtc) {

@@ -19,7 +19,8 @@ namespace amlogic_decoder {
 namespace test {
 
 class AmlogicTestDevice;
-using DdkDeviceType = ddk::Device<AmlogicTestDevice, ddk::MessageableOld>;
+using DdkDeviceType =
+    ddk::Device<AmlogicTestDevice, ddk::Messageable<fuchsia_hardware_mediacodec::Tester>::Mixin>;
 
 class AmlogicTestDevice : public fidl::WireServer<fuchsia_hardware_mediacodec::Tester>,
                           public DdkDeviceType {
@@ -28,11 +29,6 @@ class AmlogicTestDevice : public fidl::WireServer<fuchsia_hardware_mediacodec::T
   zx_status_t Bind() { return DdkAdd("test_amlogic_video"); }
 
   void DdkRelease() { delete this; }
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-    DdkTransaction transaction(txn);
-    fidl::WireDispatch<fuchsia_hardware_mediacodec::Tester>(this, msg, &transaction);
-    return transaction.Status();
-  }
 
   void SetOutputDirectoryHandle(SetOutputDirectoryHandleRequestView request,
                                 SetOutputDirectoryHandleCompleter::Sync& completer) override {

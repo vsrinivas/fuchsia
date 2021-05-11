@@ -42,7 +42,9 @@ struct AudioStreamProtocol : public ddk::internal::base_protocol {
 };
 
 class UsbAudioStream;
-using UsbAudioStreamBase = ddk::Device<UsbAudioStream, ddk::MessageableOld, ddk::Unbindable>;
+using UsbAudioStreamBase =
+    ddk::Device<UsbAudioStream, ddk::Messageable<fuchsia_hardware_audio::Device>::Mixin,
+                ddk::Unbindable>;
 
 // UsbAudioStream implements WireServer<Device> and WireServer<RingBuffer>.
 // All this is serialized in the single threaded UsbAudioStream's dispatcher() in loop_.
@@ -148,11 +150,6 @@ class UsbAudioStream : public UsbAudioStreamBase,
   // DDK device implementation
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-    DdkTransaction transaction(txn);
-    fidl::WireDispatch<fuchsia_hardware_audio::Device>(this, msg, &transaction);
-    return transaction.Status();
-  }
 
  private:
   friend class fbl::RefPtr<UsbAudioStream>;

@@ -105,12 +105,6 @@ void GpioLight::SetRgbValue(SetRgbValueRequestView request, SetRgbValueCompleter
   completer.ReplyError(fuchsia_hardware_light::wire::LightError::kNotSupported);
 }
 
-zx_status_t GpioLight::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<fuchsia_hardware_light::Light>(this, msg, &transaction);
-  return transaction.Status();
-}
-
 void GpioLight::DdkRelease() { delete this; }
 
 zx_status_t GpioLight::Create(void* ctx, zx_device_t* parent) {

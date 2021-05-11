@@ -34,8 +34,11 @@ class Device;
 class DeviceInspect;
 class WlanInterface;
 
-class Device : public ::ddk::Device<Device, ddk::Initializable, ddk::MessageableOld>,
-               fidl::WireServer<fuchsia_factory_wlan::Iovar>,
+using DeviceType =
+    ::ddk::Device<Device, ddk::Initializable, ddk::Messageable<fuchsia_factory_wlan::Iovar>::Mixin>;
+
+class Device : public DeviceType,
+               public fidl::WireServer<fuchsia_factory_wlan::Iovar>,
                public ::ddk::WlanphyImplProtocol<Device, ::ddk::base_protocol> {
  public:
   virtual ~Device();
@@ -50,7 +53,6 @@ class Device : public ::ddk::Device<Device, ddk::Initializable, ddk::Messageable
 
   // ::ddk::Device implementation.
   void DdkInit(ddk::InitTxn txn);
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease();
 
   // WlanphyImpl interface implementation.

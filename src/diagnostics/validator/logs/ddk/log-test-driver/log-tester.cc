@@ -100,12 +100,6 @@ void LogTester::EmitLog(EmitLogRequestView request, EmitLogCompleter::Sync& comp
   completer.Reply();
 }
 
-zx_status_t LogTester::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<fuchsia_validate_logs::LogSinkPuppet>(this, msg, &transaction);
-  return transaction.Status();
-}
-
 void LogTester::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void LogTester::DdkRelease() { delete this; }

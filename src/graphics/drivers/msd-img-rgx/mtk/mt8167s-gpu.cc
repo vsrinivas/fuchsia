@@ -157,11 +157,6 @@ void Mt8167sGpu::StopMagma() {
 
 void Mt8167sGpu::DdkRelease() { delete this; }
 
-zx_status_t Mt8167sGpu::DdkMessage(fidl_incoming_msg_t* message, fidl_txn_t* transaction) {
-  DdkTransaction ddk_transaction(transaction);
-  fidl::WireDispatch<fuchsia_gpu_magma::Device>(this, message, &ddk_transaction);
-  return ddk_transaction.Status();
-}
 // Power on the asynchronous memory interface between the GPU and the DDR controller.
 zx_status_t Mt8167sGpu::PowerOnMfgAsync() {
   // Set clock sources properly. Some of these are also used by the 3D and 2D

@@ -89,7 +89,8 @@ class PartitionDevice : public PartitionDeviceType,
 };
 
 class RpmbDevice;
-using RpmbDeviceType = ddk::Device<RpmbDevice, ddk::MessageableOld>;
+using RpmbDeviceType =
+    ddk::Device<RpmbDevice, ddk::Messageable<fuchsia_hardware_rpmb::Rpmb>::Mixin>;
 
 class RpmbDevice : public RpmbDeviceType,
                    public ddk::RpmbProtocol<RpmbDevice, ddk::base_protocol>,
@@ -109,8 +110,6 @@ class RpmbDevice : public RpmbDeviceType,
         loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
   void DdkRelease() { delete this; }
-
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
   void RpmbConnectServer(zx::channel server);
 

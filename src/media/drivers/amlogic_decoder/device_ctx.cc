@@ -108,12 +108,6 @@ zx_status_t DeviceCtx::Bind() {
   return DdkAdd("amlogic_video");
 }
 
-zx_status_t DeviceCtx::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction ddk_transaction(txn);
-  fidl::WireDispatch<fuchsia_hardware_mediacodec::Device>(this, msg, &ddk_transaction);
-  return ddk_transaction.Status();
-}
-
 void DeviceCtx::SetThreadProfile(zx::unowned_thread thread, ThreadRole role) const {
   DeadlineParams deadline_params = GetDeadlineParamsForRole(role);
 

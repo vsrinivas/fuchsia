@@ -29,7 +29,9 @@
 namespace goldfish {
 
 class Control;
-using ControlType = ddk::Device<Control, ddk::Unbindable, ddk::MessageableOld, ddk::GetProtocolable>;
+using ControlType = ddk::Device<Control, ddk::Unbindable,
+                                ddk::Messageable<fuchsia_hardware_goldfish::ControlDevice>::Mixin,
+                                ddk::GetProtocolable>;
 
 class Control : public ControlType,
                 public ddk::GoldfishControlProtocol<Control, ddk::base_protocol>,
@@ -82,7 +84,6 @@ class Control : public ControlType,
   // Device protocol implementation.
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out_protocol);
   zx_status_t GoldfishControlGetColorBuffer(zx::vmo vmo, uint32_t* out_id);
   zx_status_t GoldfishControlCreateSyncFence(zx::eventpair event);

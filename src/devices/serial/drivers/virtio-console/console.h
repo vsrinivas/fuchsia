@@ -65,15 +65,18 @@ class TransferQueue {
   fbl::DoublyLinkedList<TransferDescriptor*> queue_;
 };
 
+class ConsoleDevice;
+using DeviceType =
+    ddk::Device<ConsoleDevice, ddk::Messageable<fuchsia_hardware_virtioconsole::Device>::Mixin>;
+
 // Actual virtio console implementation
 class ConsoleDevice : public Device,
-                      public ddk::Device<ConsoleDevice, ddk::MessageableOld>,
+                      public DeviceType,
                       public ddk::EmptyProtocol<ZX_PROTOCOL_CONSOLE>,
                       public fidl::WireServer<fuchsia_hardware_virtioconsole::Device> {
  public:
   explicit ConsoleDevice(zx_device_t* device, zx::bti bti, std::unique_ptr<Backend> backend);
   ~ConsoleDevice() override;
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease() { virtio::Device::Release(); }
 
   zx_status_t Init() override;

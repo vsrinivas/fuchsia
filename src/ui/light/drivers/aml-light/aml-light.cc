@@ -159,12 +159,6 @@ void AmlLight::SetRgbValue(SetRgbValueRequestView request, SetRgbValueCompleter:
   completer.ReplyError(LightError::kInvalidIndex);
 }
 
-zx_status_t AmlLight::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<Light>(this, msg, &transaction);
-  return transaction.Status();
-}
-
 void AmlLight::DdkRelease() { delete this; }
 
 zx_status_t AmlLight::Create(void* ctx, zx_device_t* parent) {

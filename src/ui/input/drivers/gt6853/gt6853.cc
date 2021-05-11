@@ -114,12 +114,6 @@ zx_status_t Gt6853Device::Create(void* ctx, zx_device_t* parent) {
   return status.is_error() ? status.error_value() : ZX_OK;
 }
 
-zx_status_t Gt6853Device::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<fuchsia_input_report::InputDevice>(this, msg, &transaction);
-  return transaction.Status();
-}
-
 void Gt6853Device::DdkUnbind(ddk::UnbindTxn txn) {
   Shutdown();
   txn.Reply();

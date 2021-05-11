@@ -622,12 +622,6 @@ void Control::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void Control::DdkRelease() { delete this; }
 
-zx_status_t Control::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<fuchsia_hardware_goldfish::ControlDevice>(this, msg, &transaction);
-  return transaction.Status();
-}
-
 zx_status_t Control::DdkGetProtocol(uint32_t proto_id, void* out_protocol) {
   fbl::AutoLock lock(&lock_);
 

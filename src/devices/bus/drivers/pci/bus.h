@@ -65,7 +65,7 @@ using DeviceTree =
     fbl::WAVLTree<pci_bdf_t, fbl::RefPtr<pci::Device>, pci::Device::KeyTraitsSortByBdf>;
 
 class Bus;
-using PciBusType = ddk::Device<Bus, ddk::MessageableOld>;
+using PciBusType = ddk::Device<Bus, ddk::Messageable<PciFidl::Bus>::Mixin>;
 class Bus : public PciBusType,
             public ddk::EmptyProtocol<ZX_PROTOCOL_PCI>,
             public fidl::WireServer<PciFidl::Bus>,
@@ -97,7 +97,6 @@ class Bus : public PciBusType,
 
   // All methods related to the fuchsia.hardware.pci service and the DDK.
   void DdkRelease() { delete this; }
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void GetDevices(GetDevicesRequestView request, GetDevicesCompleter::Sync& completer) final;
   void GetHostBridgeInfo(GetHostBridgeInfoRequestView request,
                          GetHostBridgeInfoCompleter::Sync& completer) final;

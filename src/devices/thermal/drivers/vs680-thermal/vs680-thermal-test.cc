@@ -40,7 +40,7 @@ class Vs680ThermalTest : public zxtest::Test {
 
     ASSERT_OK(messenger_.SetMessageOp(
         dut_.get(), [](void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) -> zx_status_t {
-          return static_cast<Vs680Thermal*>(ctx)->DdkMessage(msg, txn);
+          return static_cast<Vs680Thermal*>(ctx)->ddk_device_proto_.message(ctx, msg, txn);
         }));
 
     power_.ExpectRegisterPowerDomain(ZX_OK, 800'000, 800'000);

@@ -22,18 +22,6 @@ void ThermistorChannel::GetTemperatureCelsius(GetTemperatureCelsiusRequestView r
   }
 }
 
-zx_status_t ThermistorChannel::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<FidlTemperature::Device>(this, msg, &transaction);
-  return transaction.Status();
-}
-
-zx_status_t RawChannel::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<FidlAdc::Device>(this, msg, &transaction);
-  return transaction.Status();
-}
-
 void RawChannel::GetSample(GetSampleRequestView request, GetSampleCompleter::Sync& completer) {
   uint32_t sample;
   zx_status_t status = adc_->GetSample(adc_channel_, &sample);

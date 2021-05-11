@@ -59,7 +59,7 @@ constexpr uint32_t kPwrStatus2nd = 0x610;
 
 class Mt8167sGpu;
 
-using DeviceType = ddk::Device<Mt8167sGpu, ddk::MessageableOld>;
+using DeviceType = ddk::Device<Mt8167sGpu, ddk::Messageable<fuchsia_gpu_magma::Device>::Mixin>;
 
 class Mt8167sGpu : public DeviceType,
                    public ddk::EmptyProtocol<ZX_PROTOCOL_GPU>,
@@ -72,8 +72,6 @@ class Mt8167sGpu : public DeviceType,
 
   zx_status_t Bind();
   void DdkRelease();
-
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
   void Query2(Query2RequestView request, Query2Completer::Sync& _completer) override;
   void QueryReturnsBuffer(QueryReturnsBufferRequestView request,

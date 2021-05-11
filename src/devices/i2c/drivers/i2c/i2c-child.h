@@ -20,11 +20,12 @@
 
 namespace i2c {
 
+namespace fidl_i2c = fuchsia_hardware_i2c;
+
 class I2cChild;
 
-using I2cChildType = ddk::Device<I2cChild, ddk::Unbindable, ddk::MessageableOld>;
-
-namespace fidl_i2c = fuchsia_hardware_i2c;
+using I2cChildType =
+    ddk::Device<I2cChild, ddk::Unbindable, ddk::Messageable<fidl_i2c::Device2>::Mixin>;
 
 class I2cChild : public I2cChildType,
                  public ddk::I2cProtocol<I2cChild, ddk::base_protocol>,
@@ -37,11 +38,6 @@ class I2cChild : public I2cChildType,
 
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-    DdkTransaction transaction(txn);
-    fidl::WireDispatch<fuchsia_hardware_i2c::Device2>(this, msg, &transaction);
-    return transaction.Status();
-  }
 
   // FIDL methods.
   void Transfer(TransferRequestView request, TransferCompleter::Sync& completer) override;

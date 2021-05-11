@@ -46,10 +46,11 @@ class TestLifecycleDriverChild : public DeviceType {
   fidl::WireEventSender<fuchsia_device_instancelifecycle_test::Lifecycle> lifecycle_;
 };
 
-class TestLifecycleDriverChildInstance;
-using InstanceDeviceType = ddk::Device<TestLifecycleDriverChildInstance, ddk::Unbindable,
-                                       ddk::MessageableOld, ddk::Openable, ddk::Closable>;
 using fuchsia_device_instancelifecycle_test::InstanceDevice;
+class TestLifecycleDriverChildInstance;
+using InstanceDeviceType =
+    ddk::Device<TestLifecycleDriverChildInstance, ddk::Unbindable,
+                ddk::Messageable<InstanceDevice>::Mixin, ddk::Openable, ddk::Closable>;
 
 class TestLifecycleDriverChildInstance : public InstanceDeviceType,
                                          public fidl::WireServer<InstanceDevice> {
@@ -63,12 +64,6 @@ class TestLifecycleDriverChildInstance : public InstanceDeviceType,
     ZX_PANIC("DdkOpen reached in instance device\n");
   };
   zx_status_t DdkClose(uint32_t flags);
-
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-    DdkTransaction transaction(txn);
-    fidl::WireDispatch<InstanceDevice>(this, msg, &transaction);
-    return transaction.Status();
-  }
 
   // Implementation of InstanceDevice protocol
   void RemoveDevice(RemoveDeviceRequestView request,

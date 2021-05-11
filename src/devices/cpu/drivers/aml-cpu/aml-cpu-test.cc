@@ -48,7 +48,7 @@ class AmlCpuTest : public AmlCpu {
                std::move(pwr), operating_points, core_count) {}
 
   static zx_status_t MessageOp(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-    return static_cast<AmlCpuTest*>(ctx)->DdkMessage(msg, txn);
+    return static_cast<AmlCpuTest*>(ctx)->ddk_device_proto_.message(ctx, msg, txn);
   }
   zx_status_t InitTest() { return messenger_.SetMessageOp(this, AmlCpuTest::MessageOp); }
 

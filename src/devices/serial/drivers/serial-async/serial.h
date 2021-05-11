@@ -23,7 +23,8 @@
 namespace serial {
 
 class SerialDevice;
-using DeviceType = ddk::Device<SerialDevice, ddk::MessageableOld>;
+using DeviceType =
+    ddk::Device<SerialDevice, ddk::Messageable<fuchsia_hardware_serial::NewDeviceProxy>::Mixin>;
 
 class SerialDevice : public DeviceType,
                      public fidl::WireServer<fuchsia_hardware_serial::NewDevice>,
@@ -36,7 +37,6 @@ class SerialDevice : public DeviceType,
   zx_status_t Init();
 
   // Device protocol implementation.
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease();
 
   // Serial protocol implementation.

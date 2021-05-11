@@ -290,12 +290,6 @@ void Device::SetSnoopChannel(SetSnoopChannelRequestView request,
   }
 }
 
-zx_status_t Device::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<telephony_transport::Qmi>(this, msg, &transaction);
-  return transaction.Status();
-}
-
 void Device::Release() { delete this; }
 
 void Device::DdkRelease() {
@@ -739,10 +733,7 @@ static void usb_write_complete(void* ctx, usb_request_t* request) {
   device_ptr->UsbWriteCompleteHandler(request);
 }
 
-Device::Device(zx_device_t* parent)
-    : ddk::Device<Device, ddk::Unbindable, ddk::MessageableOld>(parent) {
-  usb_device_ = parent;
-}
+Device::Device(zx_device_t* parent) : DeviceType(parent) { usb_device_ = parent; }
 
 void Device::QmiBindFailedNoErr(usb_request_t* int_buf) {
   if (int_buf) {

@@ -22,7 +22,8 @@ using fuchsia_device_instancelifecycle_test::Lifecycle;
 using fuchsia_device_instancelifecycle_test::TestDevice;
 
 class TestLifecycleDriver;
-using DeviceType = ddk::Device<TestLifecycleDriver, ddk::Unbindable, ddk::MessageableOld>;
+using DeviceType =
+    ddk::Device<TestLifecycleDriver, ddk::Unbindable, ddk::Messageable<TestDevice>::Mixin>;
 
 class TestLifecycleDriver : public DeviceType, public fidl::WireServer<TestDevice> {
  public:
@@ -36,12 +37,6 @@ class TestLifecycleDriver : public DeviceType, public fidl::WireServer<TestDevic
   // Device message ops implementation.
   void CreateDevice(CreateDeviceRequestView request,
                     CreateDeviceCompleter::Sync& completer) override;
-
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-    DdkTransaction transaction(txn);
-    fidl::WireDispatch<TestDevice>(this, msg, &transaction);
-    return transaction.Status();
-  }
 };
 
 void TestLifecycleDriver::CreateDevice(CreateDeviceRequestView request,

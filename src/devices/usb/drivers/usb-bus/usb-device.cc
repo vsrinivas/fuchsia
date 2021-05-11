@@ -789,12 +789,6 @@ void UsbDevice::SetConfiguration(SetConfigurationRequestView request,
   completer.Reply(status);
 }
 
-zx_status_t UsbDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<fuchsia_hardware_usb_device::Device>(this, msg, &transaction);
-  return transaction.Status();
-}
-
 zx_status_t UsbDevice::HubResetPort(uint32_t port) {
   if (!hub_intf_.is_valid()) {
     zxlogf(ERROR, "hub interface not set in usb_bus_reset_hub_port");

@@ -30,7 +30,8 @@ static constexpr const char* kDeviceName = "aml-securemem";
 class AmlogicSecureMemDevice;
 
 using AmlogicSecureMemDeviceBase =
-    ddk::Device<AmlogicSecureMemDevice, ddk::MessageableOld, ddk::Suspendable>;
+    ddk::Device<AmlogicSecureMemDevice, ddk::Messageable<fuchsia_hardware_securemem::Device>::Mixin,
+                ddk::Suspendable>;
 
 class AmlogicSecureMemDevice : public AmlogicSecureMemDeviceBase,
                                public fidl::WireServer<fuchsia_hardware_securemem::Device>,
@@ -41,7 +42,6 @@ class AmlogicSecureMemDevice : public AmlogicSecureMemDeviceBase,
   zx_status_t Bind();
 
   zx_status_t DdkOpen(zx_device_t** out_dev, uint32_t flags);
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* parent);
   void DdkSuspend(ddk::SuspendTxn txn);
   void DdkRelease() { delete this; }
 

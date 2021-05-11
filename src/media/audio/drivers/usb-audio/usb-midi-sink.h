@@ -19,8 +19,9 @@ namespace audio {
 namespace usb {
 
 class UsbMidiSink;
-using UsbMidiSinkBase = ddk::Device<UsbMidiSink, ddk::Unbindable, ddk::Openable, ddk::Closable,
-                                    ddk::Writable, ddk::MessageableOld>;
+using UsbMidiSinkBase =
+    ddk::Device<UsbMidiSink, ddk::Unbindable, ddk::Openable, ddk::Closable, ddk::Writable,
+                ddk::Messageable<fuchsia_hardware_midi::Device>::Mixin>;
 
 class UsbMidiSink : public UsbMidiSinkBase,
                     public fidl::WireServer<fuchsia_hardware_midi::Device>,
@@ -43,7 +44,6 @@ class UsbMidiSink : public UsbMidiSinkBase,
   zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
   zx_status_t DdkClose(uint32_t flags);
   zx_status_t DdkWrite(const void* buf, size_t count, zx_off_t off, size_t* actual);
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
   // FIDL methods.
   void GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) final;

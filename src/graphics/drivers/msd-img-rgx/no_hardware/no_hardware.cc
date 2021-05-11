@@ -41,12 +41,6 @@ void NoHardwareGpu::StopMagma() {
 
 void NoHardwareGpu::DdkRelease() { delete this; }
 
-zx_status_t NoHardwareGpu::DdkMessage(fidl_incoming_msg_t* message, fidl_txn_t* transaction) {
-  DdkTransaction ddk_transaction(transaction);
-  fidl::WireDispatch<fuchsia_gpu_magma::Device>(this, message, &ddk_transaction);
-  return ddk_transaction.Status();
-}
-
 zx_status_t NoHardwareGpu::PowerUp() {
   DLOG("NoHardwareGpu::PowerUp");
   return ZX_OK;

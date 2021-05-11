@@ -12,12 +12,6 @@
 
 namespace pci {
 
-zx_status_t Bus::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<PciFidl::Bus>(this, msg, &transaction);
-  return transaction.Status();
-}
-
 // We need size both for the final serialized Device, as well as the out of line space used before
 // everything is serialized.
 constexpr size_t kAllocatorSize =

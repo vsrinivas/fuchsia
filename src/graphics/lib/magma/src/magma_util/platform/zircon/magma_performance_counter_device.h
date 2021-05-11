@@ -14,7 +14,9 @@
 namespace magma {
 
 class MagmaPerformanceCounterDevice;
-using DdkPerfCountDeviceType = ddk::Device<MagmaPerformanceCounterDevice, ddk::MessageableOld>;
+using DdkPerfCountDeviceType =
+    ddk::Device<MagmaPerformanceCounterDevice,
+                ddk::Messageable<fuchsia_gpu_magma::PerformanceCounterAccess>::Mixin>;
 
 class MagmaPerformanceCounterDevice
     : public fidl::WireServer<fuchsia_gpu_magma::PerformanceCounterAccess>,
@@ -27,7 +29,6 @@ class MagmaPerformanceCounterDevice
   // is released. Returns the koid of the event that was created.
   static bool AddDevice(zx_device_t* parent, zx_koid_t* koid_out);
 
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease() { delete this; }
 
  private:

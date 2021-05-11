@@ -22,12 +22,13 @@
 
 namespace aml_light {
 
-class AmlLight;
-using AmlLightType = ddk::Device<AmlLight, ddk::MessageableOld>;
 using fuchsia_hardware_light::Light;
 using fuchsia_hardware_light::wire::Capability;
 using fuchsia_hardware_light::wire::LightError;
 using fuchsia_hardware_light::wire::Rgb;
+
+class AmlLight;
+using AmlLightType = ddk::Device<AmlLight, ddk::Messageable<Light>::Mixin>;
 
 class LightDevice {
  public:
@@ -63,7 +64,6 @@ class AmlLight : public AmlLightType,
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
   // Device protocol implementation.
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease();
 
   // FIDL messages.

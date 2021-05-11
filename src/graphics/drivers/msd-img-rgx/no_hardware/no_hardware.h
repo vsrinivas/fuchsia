@@ -22,7 +22,7 @@
 
 class NoHardwareGpu;
 
-using DeviceType = ddk::Device<NoHardwareGpu, ddk::MessageableOld>;
+using DeviceType = ddk::Device<NoHardwareGpu, ddk::Messageable<fuchsia_gpu_magma::Device>::Mixin>;
 
 class NoHardwareGpu : public DeviceType,
                       public ImgSysDevice,
@@ -34,9 +34,6 @@ class NoHardwareGpu : public DeviceType,
 
   zx_status_t Bind();
   void DdkRelease();
-
-  // DDKTL method that dispatches FIDL messages from clients.
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
   void Query2(Query2RequestView request, Query2Completer::Sync& _completer) override;
   void QueryReturnsBuffer(QueryReturnsBufferRequestView request,

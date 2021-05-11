@@ -118,8 +118,7 @@ TransferDescriptor* TransferQueue::Dequeue() {
 bool TransferQueue::IsEmpty() const { return queue_.is_empty(); }
 
 ConsoleDevice::ConsoleDevice(zx_device_t* bus_device, zx::bti bti, std::unique_ptr<Backend> backend)
-    : virtio::Device(bus_device, std::move(bti), std::move(backend)),
-      ddk::Device<ConsoleDevice, ddk::MessageableOld>(bus_device) {}
+    : virtio::Device(bus_device, std::move(bti), std::move(backend)), DeviceType(bus_device) {}
 
 ConsoleDevice::~ConsoleDevice() {}
 
@@ -348,12 +347,6 @@ void ConsoleDevice::GetChannel(GetChannelRequestView request,
   async::PostTask(loop_.dispatcher(), [this, req = request->req.TakeChannel()]() mutable {
     vfs_.Serve(console_vnode_, std::move(req), fs::VnodeConnectionOptions::ReadWrite());
   });
-}
-
-zx_status_t ConsoleDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<fuchsia_hardware_virtioconsole::Device>(this, msg, &transaction);
-  return transaction.Status();
 }
 
 }  // namespace virtio

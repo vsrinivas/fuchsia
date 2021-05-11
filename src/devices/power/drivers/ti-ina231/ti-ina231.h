@@ -17,7 +17,7 @@ namespace power_sensor {
 namespace power_sensor_fidl = fuchsia_hardware_power_sensor;
 
 class Ina231Device;
-using DeviceType = ddk::Device<Ina231Device, ddk::MessageableOld>;
+using DeviceType = ddk::Device<Ina231Device, ddk::Messageable<power_sensor_fidl::Device>::Mixin>;
 
 class Ina231Device : public DeviceType,
                      public ddk::EmptyProtocol<ZX_PROTOCOL_POWER_SENSOR>,
@@ -29,8 +29,6 @@ class Ina231Device : public DeviceType,
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
   void DdkRelease() { delete this; }
-
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
   void GetPowerWatts(GetPowerWattsRequestView request,
                      GetPowerWattsCompleter::Sync& completer) override;

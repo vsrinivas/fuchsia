@@ -22,7 +22,9 @@
 namespace virtualbus {
 
 class Device;
-using DeviceType = ddk::Device<Device, ddk::Unbindable, ddk::MessageableOld>;
+using DeviceType =
+    ddk::Device<Device, ddk::Unbindable,
+                ddk::Messageable<fuchsia_hardware_usb_virtualbustest::BusTest>::Mixin>;
 class Device : public DeviceType,
                public fidl::WireServer<fuchsia_hardware_usb_virtualbustest::BusTest>,
                public ddk::EmptyProtocol<ZX_PROTOCOL_VIRTUALBUS_TEST> {
@@ -39,12 +41,6 @@ class Device : public DeviceType,
   static zx_status_t Bind(zx_device_t* device);
   void RunShortPacketTest(RunShortPacketTestRequestView request,
                           RunShortPacketTestCompleter::Sync& completer) override;
-
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-    DdkTransaction transaction(txn);
-    fidl::WireDispatch<fuchsia_hardware_usb_virtualbustest::BusTest>(this, msg, &transaction);
-    return transaction.Status();
-  }
 
  private:
   void RequestComplete(usb_request_t* request);

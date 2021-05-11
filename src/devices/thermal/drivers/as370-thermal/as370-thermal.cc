@@ -91,12 +91,6 @@ zx_status_t As370Thermal::Create(void* ctx, zx_device_t* parent) {
   return ZX_OK;
 }
 
-zx_status_t As370Thermal::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<fuchsia_hardware_thermal::Device>(this, msg, &transaction);
-  return transaction.Status();
-}
-
 void As370Thermal::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) {
   completer.Reply(ZX_ERR_NOT_SUPPORTED, nullptr);
 }

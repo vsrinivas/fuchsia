@@ -99,12 +99,6 @@ void Vs680Thermal::DdkRelease() {
   delete this;
 }
 
-zx_status_t Vs680Thermal::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<fuchsia_hardware_thermal::Device>(this, msg, &transaction);
-  return transaction.Status();
-}
-
 zx_status_t Vs680Thermal::Init() {
   TsenStatus::Get().ReadFrom(&mmio_).set_int_en(0).WriteTo(&mmio_);
 

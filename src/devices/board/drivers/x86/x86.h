@@ -21,12 +21,14 @@
 
 namespace x86 {
 
+class X86;
+using DeviceType = ddk::Device<X86, ddk::Messageable<fuchsia_hardware_acpi::Acpi>::Mixin>;
+
 // This is the main class for the X86 platform bus driver.
-class X86 : public ddk::Device<X86, ddk::MessageableOld>,
-            public fidl::WireServer<fuchsia_hardware_acpi::Acpi> {
+class X86 : public DeviceType, public fidl::WireServer<fuchsia_hardware_acpi::Acpi> {
  public:
   explicit X86(zx_device_t* parent, pbus_protocol_t* pbus, zx_device_t* sys_root)
-      : ddk::Device<X86, ddk::MessageableOld>(parent), pbus_(pbus), sys_root_(sys_root) {}
+      : DeviceType(parent), pbus_(pbus), sys_root_(sys_root) {}
   ~X86();
 
   static zx_status_t Create(void* ctx, zx_device_t* parent, std::unique_ptr<X86>* out);
@@ -35,7 +37,6 @@ class X86 : public ddk::Device<X86, ddk::MessageableOld>,
 
   // Device protocol implementation.
   void DdkRelease();
-  zx_status_t DdkMessage(fidl_incoming_msg*, fidl_txn*);
 
   // ACPI protocol FIDL interface implementation.
   void ListTableEntries(ListTableEntriesRequestView request,

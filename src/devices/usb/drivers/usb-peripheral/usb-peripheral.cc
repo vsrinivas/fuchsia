@@ -972,12 +972,6 @@ void UsbPeripheral::SetStateChangeListener(SetStateChangeListenerRequestView req
   }
 }
 
-zx_status_t UsbPeripheral::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<peripheral::Device>(this, msg, &transaction);
-  return transaction.Status();
-}
-
 void UsbPeripheral::DdkUnbind(ddk::UnbindTxn txn) {
   zxlogf(DEBUG, "%s", __func__);
   ClearFunctions();

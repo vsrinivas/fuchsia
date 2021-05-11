@@ -158,12 +158,6 @@ void AmlRam::DdkRelease() {
   delete this;
 }
 
-zx_status_t AmlRam::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<ram_metrics::Device>(this, msg, &transaction);
-  return transaction.Status();
-}
-
 void AmlRam::MeasureBandwidth(MeasureBandwidthRequestView request,
                               MeasureBandwidthCompleter::Sync& completer) {
   zx_status_t st = ValidateRequest(request->config);

@@ -74,12 +74,6 @@ void DsiDwBase::SendCmd(SendCmdRequestView request, SendCmdCompleter::Sync& _com
   _completer.ReplySuccess(std::move(rsp_data));
 }
 
-zx_status_t DsiDwBase::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<fidl_dsi::DsiBase>(this, msg, &transaction);
-  return transaction.Status();
-}
-
 void DsiDwBase::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 void DsiDwBase::DdkRelease() { delete this; }
 

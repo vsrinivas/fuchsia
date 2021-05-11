@@ -20,8 +20,12 @@ namespace thermal {
 using fuchsia_hardware_thermal::wire::PowerDomain;
 using fuchsia_hardware_thermal::wire::ThermalDeviceInfo;
 
+class As370ThermalTest;
+
 class As370Thermal;
-using DeviceType = ddk::Device<As370Thermal, ddk::MessageableOld, ddk::Unbindable>;
+using DeviceType =
+    ddk::Device<As370Thermal, ddk::Messageable<fuchsia_hardware_thermal::Device>::Mixin,
+                ddk::Unbindable>;
 
 class As370Thermal : public DeviceType,
                      public ddk::EmptyProtocol<ZX_PROTOCOL_THERMAL>,
@@ -39,8 +43,6 @@ class As370Thermal : public DeviceType,
 
   void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
-
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
   // Visible for testing.
   void GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) override;
@@ -65,6 +67,8 @@ class As370Thermal : public DeviceType,
   zx_status_t Init();
 
  private:
+  friend As370ThermalTest;
+
   zx_status_t SetOperatingPoint(uint16_t op_idx);
 
   const ddk::MmioBuffer mmio_;

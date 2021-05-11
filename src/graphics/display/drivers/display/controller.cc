@@ -1002,12 +1002,6 @@ void Controller::OpenController(OpenControllerRequestView request,
       CreateClient(/*is_vc=*/false, std::move(request->device), request->controller.TakeChannel()));
 }
 
-zx_status_t Controller::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<fidl_display::Provider>(this, msg, &transaction);
-  return transaction.Status();
-}
-
 zx_status_t Controller::Bind(std::unique_ptr<display::Controller>* device_ptr) {
   ZX_DEBUG_ASSERT_MSG(device_ptr && device_ptr->get() == this, "Wrong controller passed to Bind()");
 

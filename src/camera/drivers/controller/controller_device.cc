@@ -27,12 +27,6 @@ void ControllerDevice::DdkUnbind(ddk::UnbindTxn txn) {
 
 void ControllerDevice::DdkRelease() { delete this; }
 
-zx_status_t ControllerDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<fuchsia_hardware_camera::Device>(this, msg, &transaction);
-  return transaction.Status();
-}
-
 void ControllerDevice::GetChannel2(GetChannel2RequestView request,
                                    GetChannel2Completer::Sync& completer) {
   if (!request->server_end.is_valid()) {

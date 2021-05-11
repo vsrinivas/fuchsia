@@ -21,7 +21,7 @@ namespace {
 using fuchsia_device_inspect_test::TestInspect;
 
 class TestInspectDriver;
-using DeviceType = ddk::Device<TestInspectDriver, ddk::MessageableOld>;
+using DeviceType = ddk::Device<TestInspectDriver, ddk::Messageable<TestInspect>::Mixin>;
 class TestInspectDriver : public DeviceType,
                           public ddk::EmptyProtocol<ZX_PROTOCOL_TEST>,
                           public fidl::WireServer<TestInspect> {
@@ -31,11 +31,6 @@ class TestInspectDriver : public DeviceType,
 
   // Device protocol ops implementation.
   void DdkRelease() { delete this; }
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-    DdkTransaction transaction(txn);
-    fidl::WireDispatch<TestInspect>(this, msg, &transaction);
-    return transaction.Status();
-  }
 
   // Device message ops implementation.
   void ModifyInspect(ModifyInspectRequestView, ModifyInspectCompleter::Sync& completer) override;

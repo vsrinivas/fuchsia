@@ -88,12 +88,13 @@ class DisplayInfo : public IdMappable<fbl::RefPtr<DisplayInfo>>,
   inspect::ValueList properties;
 };
 
-using ControllerParent = ddk::Device<Controller, ddk::Unbindable, ddk::Openable, ddk::MessageableOld>;
+using ControllerParent = ddk::Device<Controller, ddk::Unbindable, ddk::Openable,
+                                     ddk::Messageable<fuchsia_hardware_display::Provider>::Mixin>;
 class Controller : public ControllerParent,
                    public ddk::DisplayControllerInterfaceProtocol<Controller>,
                    public ddk::DisplayCaptureInterfaceProtocol<Controller>,
                    public ddk::EmptyProtocol<ZX_PROTOCOL_DISPLAY_CONTROLLER>,
-                   private fidl::WireServer<fuchsia_hardware_display::Provider> {
+                   public fidl::WireServer<fuchsia_hardware_display::Provider> {
  public:
   Controller(zx_device_t* parent);
   ~Controller();
@@ -101,7 +102,6 @@ class Controller : public ControllerParent,
   static void PopulateDisplayMode(const edid::timing_params_t& params, display_mode_t* mode);
 
   zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
   zx_status_t Bind(std::unique_ptr<display::Controller>* device_ptr);

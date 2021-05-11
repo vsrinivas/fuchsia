@@ -23,7 +23,8 @@ namespace {
 using fuchsia_device_environment_test::TestDevice;
 
 class TestEnvironmentDriver;
-using DeviceType = ddk::Device<TestEnvironmentDriver, ddk::Unbindable, ddk::MessageableOld>;
+using DeviceType =
+    ddk::Device<TestEnvironmentDriver, ddk::Unbindable, ddk::Messageable<TestDevice>::Mixin>;
 
 class TestEnvironmentDriver : public DeviceType, public fidl::WireServer<TestDevice> {
  public:
@@ -40,11 +41,6 @@ class TestEnvironmentDriver : public DeviceType, public fidl::WireServer<TestDev
   void GetServiceList(GetServiceListRequestView request,
                       GetServiceListCompleter::Sync& completer) override;
 
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-    DdkTransaction transaction(txn);
-    fidl::WireDispatch<TestDevice>(this, msg, &transaction);
-    return transaction.Status();
-  }
 };
 
 void TestEnvironmentDriver::GetServiceList(GetServiceListRequestView request,

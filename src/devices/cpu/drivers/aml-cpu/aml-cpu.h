@@ -22,12 +22,12 @@ namespace amlogic_cpu {
 namespace fuchsia_cpuctrl = fuchsia_hardware_cpu_ctrl;
 
 class AmlCpu;
-using DeviceType =
-    ddk::Device<AmlCpu, ddk::MessageableOld, ddk::PerformanceTunable, ddk::AutoSuspendable>;
+using DeviceType = ddk::Device<AmlCpu, ddk::Messageable<fuchsia_cpuctrl::Device>::Mixin,
+                               ddk::PerformanceTunable, ddk::AutoSuspendable>;
 
 class AmlCpu : public DeviceType,
                public ddk::EmptyProtocol<ZX_PROTOCOL_CPU_CTRL>,
-               fidl::WireServer<fuchsia_cpuctrl::Device> {
+               public fidl::WireServer<fuchsia_cpuctrl::Device> {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlCpu);
   explicit AmlCpu(zx_device_t* parent, const ddk::ClockProtocolClient& plldiv16,
@@ -48,9 +48,6 @@ class AmlCpu : public DeviceType,
   static zx_status_t Create(void* context, zx_device_t* device);
 
   zx_status_t Init();
-
-  // Implements ddk::MessageableOld
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
   // Implements DDK Device Ops
   void DdkRelease();

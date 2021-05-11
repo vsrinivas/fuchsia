@@ -24,8 +24,8 @@
 using fuchsia_device_restarttest::TestDevice;
 
 class TestDevhostDriver;
-using DeviceType =
-    ddk::Device<TestDevhostDriver, ddk::Initializable, ddk::Unbindable, ddk::MessageableOld>;
+using DeviceType = ddk::Device<TestDevhostDriver, ddk::Initializable, ddk::Unbindable,
+                               ddk::Messageable<TestDevice>::Mixin>;
 class TestDevhostDriver : public DeviceType,
                           public ddk::EmptyProtocol<ZX_PROTOCOL_DEVHOST_TEST>,
                           public fidl::WireServer<TestDevice> {
@@ -35,14 +35,6 @@ class TestDevhostDriver : public DeviceType,
   void DdkInit(ddk::InitTxn txn);
   void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
-
-  // Device message ops implementation.
-
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-    DdkTransaction transaction(txn);
-    fidl::WireDispatch<TestDevice>(this, msg, &transaction);
-    return transaction.Status();
-  }
 
  private:
   struct devhost_test_metadata metadata_;

@@ -254,12 +254,6 @@ zx_status_t AddressSpaceDevice::OpenChildDriver(
 
 void AddressSpaceDevice::DdkRelease() { delete this; }
 
-zx_status_t AddressSpaceDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<fuchsia_hardware_goldfish::AddressSpaceDevice>(this, msg, &transaction);
-  return transaction.Status();
-}
-
 uint32_t AddressSpaceDevice::CommandMmioLocked(uint32_t cmd) {
   mmio_->Write32(cmd, REGISTER_COMMAND);
   return mmio_->Read32(REGISTER_STATUS);
@@ -396,12 +390,6 @@ void AddressSpaceChildDriver::Ping(PingRequestView request, PingCompleter::Sync&
 }
 
 // Device protocol implementation.
-zx_status_t AddressSpaceChildDriver::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<fuchsia_hardware_goldfish::AddressSpaceChildDriver>(this, msg, &transaction);
-  return transaction.Status();
-}
-
 void AddressSpaceChildDriver::DdkRelease() { delete this; }
 
 AddressSpaceChildDriver::Block::Block(uint64_t offset, uint64_t size, zx::pmt pmt)

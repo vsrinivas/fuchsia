@@ -36,9 +36,12 @@ constexpr uint16_t kTemperatureExtendedModeShift = 3;
 constexpr uint16_t kTemperatureNormalModeShift = 4;
 constexpr float kTemperatureResolution = 0.0625;
 
-class Tmp112Device;
-using DdkDeviceType = ddk::Device<Tmp112Device, ddk::Unbindable, ddk::MessageableOld>;
+class Tmp112DeviceTest;
+
 namespace temperature_fidl = fuchsia_hardware_temperature;
+class Tmp112Device;
+using DdkDeviceType =
+    ddk::Device<Tmp112Device, ddk::Unbindable, ddk::Messageable<temperature_fidl::Device>::Mixin>;
 
 class Tmp112Device : public DdkDeviceType,
                      public fidl::WireServer<temperature_fidl::Device>,
@@ -54,13 +57,14 @@ class Tmp112Device : public DdkDeviceType,
   // Ddk Hooks
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
   // FIDL calls
   void GetTemperatureCelsius(GetTemperatureCelsiusRequestView request,
                              GetTemperatureCelsiusCompleter::Sync& completer) override;
 
  private:
+  friend Tmp112DeviceTest;
+
   zx_status_t ReadReg(uint8_t addr, uint16_t* val);
   zx_status_t WriteReg(uint8_t addr, uint16_t val);
 

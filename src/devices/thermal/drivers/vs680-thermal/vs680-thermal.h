@@ -30,8 +30,11 @@ namespace thermal {
 
 using fuchsia_hardware_thermal::wire::PowerDomain;
 
+class Vs680ThermalTest;
+
 class Vs680Thermal;
-using DeviceType = ddk::Device<Vs680Thermal, ddk::MessageableOld>;
+using DeviceType =
+    ddk::Device<Vs680Thermal, ddk::Messageable<fuchsia_hardware_thermal::Device>::Mixin>;
 
 class Vs680Thermal : public DeviceType,
                      public ddk::EmptyProtocol<ZX_PROTOCOL_THERMAL>,
@@ -51,12 +54,12 @@ class Vs680Thermal : public DeviceType,
 
   void DdkRelease();
 
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
-
   // Visible for testing.
   zx_status_t Init();
 
  private:
+  friend Vs680ThermalTest;
+
   void GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) override;
   void GetDeviceInfo(GetDeviceInfoRequestView request,
                      GetDeviceInfoCompleter::Sync& completer) override;

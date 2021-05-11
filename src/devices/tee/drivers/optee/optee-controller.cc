@@ -347,12 +347,6 @@ zx_status_t OpteeController::Bind() {
   return ZX_OK;
 }
 
-zx_status_t OpteeController::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<fuchsia_hardware_tee::DeviceConnector>(this, msg, &transaction);
-  return transaction.Status();
-}
-
 zx_status_t OpteeController::DdkOpen(zx_device_t** out_dev, uint32_t flags) {
   // Do not set out_dev because this Controller will handle the FIDL messages
   return ZX_OK;

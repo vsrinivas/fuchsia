@@ -19,12 +19,6 @@ void Tmp112Device::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void Tmp112Device::DdkRelease() { delete this; }
 
-zx_status_t Tmp112Device::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<temperature_fidl::Device>(this, msg, &transaction);
-  return transaction.Status();
-}
-
 zx_status_t Tmp112Device::Init() {
   zx_status_t status;
 

@@ -31,7 +31,8 @@
 namespace audio::aml_g12 {
 
 class AmlG12TdmDai;
-using AmlG12TdmDaiDeviceType = ddk::Device<AmlG12TdmDai, ddk::MessageableOld>;
+using AmlG12TdmDaiDeviceType =
+    ddk::Device<AmlG12TdmDai, ddk::Messageable<fuchsia_hardware_audio::DaiConnect>::Mixin>;
 
 class AmlG12TdmDai : public AmlG12TdmDaiDeviceType,
                      public ddk::DaiProtocol<AmlG12TdmDai, ddk::base_protocol>,
@@ -45,11 +46,6 @@ class AmlG12TdmDai : public AmlG12TdmDaiDeviceType,
   zx_status_t DaiConnect(zx::channel channel);
   zx_status_t InitPDev();
   void Shutdown();
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-    DdkTransaction transaction(txn);
-    fidl::WireDispatch<fuchsia_hardware_audio::DaiConnect>(this, msg, &transaction);
-    return transaction.Status();
-  }
 
  private:
   // FIDL LLCPP method for fuchsia.hardware.audio.DaiConnect.

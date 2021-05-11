@@ -16,7 +16,8 @@
 namespace gpio_light {
 
 class GpioLight;
-using GpioLightType = ddk::Device<GpioLight, ddk::MessageableOld>;
+using GpioLightType =
+    ddk::Device<GpioLight, ddk::Messageable<fuchsia_hardware_light::Light>::Mixin>;
 
 class GpioLight : public GpioLightType,
                   public fidl::WireServer<fuchsia_hardware_light::Light>,
@@ -27,7 +28,6 @@ class GpioLight : public GpioLightType,
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
   // Device protocol implementation.
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease();
 
   // FIDL messages.

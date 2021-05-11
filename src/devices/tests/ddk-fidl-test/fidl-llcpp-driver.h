@@ -19,7 +19,8 @@
 namespace fidl {
 
 class DdkFidlDevice;
-using DeviceType = ddk::Device<DdkFidlDevice, ddk::MessageableOld>;
+using DeviceType =
+    ddk::Device<DdkFidlDevice, ddk::Messageable<fuchsia_hardware_test::Device>::Mixin>;
 
 class DdkFidlDevice : public DeviceType, public fidl::WireServer<fuchsia_hardware_test::Device> {
  public:
@@ -29,7 +30,6 @@ class DdkFidlDevice : public DeviceType, public fidl::WireServer<fuchsia_hardwar
   zx_status_t Bind();
 
   // Device protocol implementation.
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease();
 
   void GetChannel(GetChannelRequestView request, GetChannelCompleter::Sync& completer) override;

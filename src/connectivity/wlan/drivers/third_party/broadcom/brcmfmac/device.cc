@@ -39,7 +39,7 @@ constexpr uint16_t kApInterfaceId = 1;
 namespace wlan_llcpp = fuchsia_factory_wlan;
 
 Device::Device(zx_device_t* parent)
-    : ::ddk::Device<Device, ddk::Initializable, ddk::MessageableOld>(parent),
+    : DeviceType(parent),
       brcmf_pub_(std::make_unique<brcmf_pub>()),
       client_interface_(nullptr),
       ap_interface_(nullptr) {
@@ -58,12 +58,6 @@ Device::Device(zx_device_t* parent)
 Device::~Device() = default;
 
 void Device::DdkInit(ddk::InitTxn txn) { Init(std::move(txn)); }
-
-zx_status_t Device::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<wlan_llcpp::Iovar>(this, msg, &transaction);
-  return transaction.Status();
-}
 
 void Device::DdkRelease() { delete this; }
 

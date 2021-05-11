@@ -24,8 +24,8 @@ using fuchsia_device_lifecycle_test::Lifecycle;
 using fuchsia_device_lifecycle_test::TestDevice;
 
 class TestLifecycleDriver;
-using DeviceType =
-    ddk::Device<TestLifecycleDriver, ddk::Unbindable, ddk::MessageableOld, ddk::ChildPreReleaseable>;
+using DeviceType = ddk::Device<TestLifecycleDriver, ddk::Unbindable,
+                               ddk::Messageable<TestDevice>::Mixin, ddk::ChildPreReleaseable>;
 
 class TestLifecycleDriver : public DeviceType, public fidl::WireServer<TestDevice> {
  public:
@@ -50,12 +50,6 @@ class TestLifecycleDriver : public DeviceType, public fidl::WireServer<TestDevic
                       CompleteUnbindCompleter::Sync& completer) override;
   void CompleteChildInit(CompleteChildInitRequestView request,
                          CompleteChildInitCompleter::Sync& completer) override;
-
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-    DdkTransaction transaction(txn);
-    fidl::WireDispatch<TestDevice>(this, msg, &transaction);
-    return transaction.Status();
-  }
 
  private:
   // Converts the device pointer into an id we can use as a unique identifier.

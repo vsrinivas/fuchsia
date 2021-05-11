@@ -197,12 +197,6 @@ bool X86::RunUnitTests(void* ctx, zx_device_t* parent, zx_handle_t channel) {
   return driver_unit_test::RunZxTests("X86Tests", parent, channel);
 }
 
-zx_status_t X86::DdkMessage(fidl_incoming_msg* message, fidl_txn* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<fuchsia_hardware_acpi::Acpi>(this, message, &transaction);
-  return transaction.Status();
-}
-
 zx_status_t X86::GetAcpiTableEntries(fbl::Vector<TableInfo>* entries) {
   ZX_DEBUG_ASSERT(acpica_initialized_);
 

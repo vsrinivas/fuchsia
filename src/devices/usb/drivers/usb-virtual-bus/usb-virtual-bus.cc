@@ -283,12 +283,6 @@ zx_status_t UsbVirtualBus::SetStall(uint8_t ep_address, bool stall) {
   return ZX_OK;
 }
 
-zx_status_t UsbVirtualBus::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<fuchsia_hardware_usb_virtual_bus::Bus>(this, msg, &transaction);
-  return transaction.Status();
-}
-
 void UsbVirtualBus::DdkUnbind(ddk::UnbindTxn txn) {
   if (!device_thread_started_) {
     // Initialization failed, nothing to shut down.

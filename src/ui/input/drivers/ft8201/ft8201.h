@@ -48,10 +48,12 @@ struct Ft8201InputReport {
 class Ft8201Device;
 
 class Ft8201Device;
-using DeviceType = ddk::Device<Ft8201Device, ddk::MessageableOld, ddk::Unbindable>;
+using DeviceType =
+    ddk::Device<Ft8201Device, ddk::Messageable<fuchsia_input_report::InputDevice>::Mixin,
+                ddk::Unbindable>;
 
 class Ft8201Device : public DeviceType,
-                     fidl::WireServer<fuchsia_input_report::InputDevice>,
+                     public fidl::WireServer<fuchsia_input_report::InputDevice>,
                      public ddk::EmptyProtocol<ZX_PROTOCOL_INPUTREPORT> {
  public:
   Ft8201Device(zx_device_t* parent, ddk::I2cChannel i2c) : Ft8201Device(parent, i2c, {}, {}) {}
@@ -73,7 +75,6 @@ class Ft8201Device : public DeviceType,
 
   void DdkRelease() { delete this; }
 
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkUnbind(ddk::UnbindTxn txn);
 
   void GetInputReportsReader(GetInputReportsReaderRequestView request,

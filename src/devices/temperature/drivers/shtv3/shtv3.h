@@ -15,9 +15,9 @@
 
 namespace temperature {
 
-class Shtv3Device;
-using DeviceType = ddk::Device<Shtv3Device, ddk::MessageableOld>;
 namespace temperature_fidl = fuchsia_hardware_temperature;
+class Shtv3Device;
+using DeviceType = ddk::Device<Shtv3Device, ddk::Messageable<temperature_fidl::Device>::Mixin>;
 
 class Shtv3Device : public DeviceType,
                     public fidl::WireServer<temperature_fidl::Device>,
@@ -27,7 +27,6 @@ class Shtv3Device : public DeviceType,
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease();
 
   void GetTemperatureCelsius(GetTemperatureCelsiusRequestView request,

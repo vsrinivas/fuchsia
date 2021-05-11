@@ -24,10 +24,14 @@
 namespace goldfish {
 
 class AddressSpaceDevice;
-using DeviceType = ddk::Device<AddressSpaceDevice, ddk::MessageableOld>;
+using DeviceType =
+    ddk::Device<AddressSpaceDevice,
+                ddk::Messageable<fuchsia_hardware_goldfish::AddressSpaceDevice>::Mixin>;
 
 class AddressSpaceChildDriver;
-using ChildDriverType = ddk::Device<AddressSpaceChildDriver, ddk::MessageableOld>;
+using ChildDriverType =
+    ddk::Device<AddressSpaceChildDriver,
+                ddk::Messageable<fuchsia_hardware_goldfish::AddressSpaceChildDriver>::Mixin>;
 
 class AddressSpaceDevice
     : public DeviceType,
@@ -69,7 +73,6 @@ class AddressSpaceDevice
 
   // Device protocol implementation.
   void DdkRelease();
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
  private:
   zx_status_t OpenChildDriver(fuchsia_hardware_goldfish::wire::AddressSpaceChildDriverType type,
@@ -119,7 +122,6 @@ class AddressSpaceChildDriver
                           UnclaimSharedBlockCompleter::Sync& completer) override;
   void Ping(PingRequestView request, PingCompleter::Sync& completer) override;
 
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease();
 
   struct Block {

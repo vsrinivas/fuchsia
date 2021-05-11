@@ -161,12 +161,6 @@ void SerialDevice::SetConfig(SetConfigRequestView request, SetConfigCompleter::S
   completer.Reply(status);
 }
 
-zx_status_t SerialDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<fuchsia_hardware_serial::NewDeviceProxy>(this, msg, &transaction);
-  return transaction.Status();
-}
-
 void SerialDevice::DdkRelease() {
   serial_.Enable(false);
   if (binding_) {

@@ -137,12 +137,6 @@ void Sgm37603a::GetNormalizedBrightnessScale(
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
-zx_status_t Sgm37603a::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<FidlBacklight::Device>(this, msg, &transaction);
-  return transaction.Status();
-}
-
 zx_status_t Sgm37603a::GetBacklightState(bool* power, double* brightness) {
   *power = enabled_;
   *brightness = brightness_;

@@ -43,10 +43,12 @@ struct Gt6853InputReport {
 };
 
 class Gt6853Device;
-using DeviceType = ddk::Device<Gt6853Device, ddk::MessageableOld, ddk::Unbindable>;
+using DeviceType =
+    ddk::Device<Gt6853Device, ddk::Messageable<fuchsia_input_report::InputDevice>::Mixin,
+                ddk::Unbindable>;
 
 class Gt6853Device : public DeviceType,
-                     fidl::WireServer<fuchsia_input_report::InputDevice>,
+                     public fidl::WireServer<fuchsia_input_report::InputDevice>,
                      public ddk::EmptyProtocol<ZX_PROTOCOL_INPUTREPORT> {
  public:
   enum class Register : uint16_t {
@@ -91,7 +93,6 @@ class Gt6853Device : public DeviceType,
 
   void DdkRelease() { delete this; }
 
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkUnbind(ddk::UnbindTxn txn);
 
   void GetInputReportsReader(GetInputReportsReaderRequestView request,

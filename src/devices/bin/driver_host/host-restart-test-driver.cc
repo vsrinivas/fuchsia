@@ -24,7 +24,8 @@ namespace {
 using fuchsia_device_restarttest::TestDevice;
 
 class TestHostRestartDriver;
-using DeviceType = ddk::Device<TestHostRestartDriver, ddk::Unbindable, ddk::MessageableOld>;
+using DeviceType =
+    ddk::Device<TestHostRestartDriver, ddk::Unbindable, ddk::Messageable<TestDevice>::Mixin>;
 
 class TestHostRestartDriver : public DeviceType, public fidl::WireServer<TestDevice> {
  public:
@@ -35,14 +36,6 @@ class TestHostRestartDriver : public DeviceType, public fidl::WireServer<TestDev
   // Device protocol implementation.
   void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
-
-  // Device message ops implementation.
-
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-    DdkTransaction transaction(txn);
-    fidl::WireDispatch<TestDevice>(this, msg, &transaction);
-    return transaction.Status();
-  }
 
   void GetPid(GetPidRequestView request, GetPidCompleter::Sync& _completer) override;
 };

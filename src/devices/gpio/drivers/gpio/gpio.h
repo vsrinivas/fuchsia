@@ -18,9 +18,9 @@
 namespace gpio {
 
 class GpioDevice;
-using GpioDeviceType = ddk::Device<GpioDevice, ddk::Unbindable, ddk::MessageableOld>;
 using fuchsia_hardware_gpio::Gpio;
 using fuchsia_hardware_gpio::wire::GpioFlags;
+using GpioDeviceType = ddk::Device<GpioDevice, ddk::Unbindable, ddk::Messageable<Gpio>::Mixin>;
 
 static_assert(GPIO_PULL_DOWN == static_cast<uint32_t>(GpioFlags::kPullDown),
               "ConfigIn PULL_DOWN flag doesn't match.");
@@ -40,11 +40,6 @@ class GpioDevice : public GpioDeviceType,
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-    DdkTransaction transaction(txn);
-    fidl::WireDispatch<Gpio>(this, msg, &transaction);
-    return transaction.Status();
-  }
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 

@@ -347,12 +347,6 @@ void Lp50xxLight::SetGroupRgbValue(SetGroupRgbValueRequestView request,
   }
 }
 
-zx_status_t Lp50xxLight::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  DdkTransaction transaction(txn);
-  fidl::WireDispatch<fuchsia_hardware_light::Light>(this, msg, &transaction);
-  return transaction.Status();
-}
-
 void Lp50xxLight::DdkRelease() { delete this; }
 
 zx_status_t Lp50xxLight::InitHelper() {
