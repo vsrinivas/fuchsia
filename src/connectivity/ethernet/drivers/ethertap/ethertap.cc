@@ -28,35 +28,14 @@
       zxlogf(INFO, "ethertap: " args);           \
   } while (0)
 
-#define ETHERTAP_OPT_TRACE (fuchsia_hardware_ethertap_OPT_TRACE)
-#define ETHERTAP_OPT_TRACE_PACKETS (fuchsia_hardware_ethertap_OPT_TRACE_PACKETS)
-#define ETHERTAP_OPT_REPORT_PARAM (fuchsia_hardware_ethertap_OPT_REPORT_PARAM)
-#define ETHERTAP_OPT_ONLINE (fuchsia_hardware_ethertap_OPT_ONLINE)
+#define ETHERTAP_OPT_TRACE (fuchsia_hardware_ethertap::wire::kOptTrace)
+#define ETHERTAP_OPT_TRACE_PACKETS (fuchsia_hardware_ethertap::wire::kOptTracePackets)
+#define ETHERTAP_OPT_REPORT_PARAM (fuchsia_hardware_ethertap::wire::kOptReportParam)
+#define ETHERTAP_OPT_ONLINE (fuchsia_hardware_ethertap::wire::kOptOnline)
 
 namespace eth {
 
-static zx_status_t fidl_tap_ctl_open_device(void* ctx, const char* name_data, size_t name_size,
-                                            const fuchsia_hardware_ethertap_Config* config,
-                                            zx_handle_t device_handle, fidl_txn_t* txn) {
-  auto ctl = static_cast<TapCtl*>(ctx);
-
-  // copy provided name so we can add a null termination:
-  ZX_DEBUG_ASSERT(name_size <= fuchsia_hardware_ethertap_MAX_NAME_LENGTH);
-  char name[fuchsia_hardware_ethertap_MAX_NAME_LENGTH + 1];
-  // NOTE(brunodalbo): if name_data contains inline null characters, displaying it may not match
-  // exactly what we got from FIDL. Because this is mostly used for debugging, we can let it pass.
-  // Issue 38101 to tracks having sized strings in DDK API.
-  memcpy(name, name_data, name_size);
-  name[name_size] = '\0';
-
-  auto status = ctl->OpenDevice(name, config, zx::channel(device_handle));
-  return fuchsia_hardware_ethertap_TapControlOpenDevice_reply(txn, status);
-}
-
-static const fuchsia_hardware_ethertap_TapControl_ops_t tap_ctl_ops_ = {
-    .OpenDevice = fidl_tap_ctl_open_device};
-
-TapCtl::TapCtl(zx_device_t* device) : ddk::Device<TapCtl, ddk::MessageableOld>(device) {}
+TapCtl::TapCtl(zx_device_t* device) : DeviceType(device) {}
 
 zx_status_t TapCtl::Create(void* ctx, zx_device_t* parent) {
   auto dev = std::unique_ptr<TapCtl>(new TapCtl(parent));
@@ -72,13 +51,20 @@ zx_status_t TapCtl::Create(void* ctx, zx_device_t* parent) {
 
 void TapCtl::DdkRelease() { delete this; }
 
-zx_status_t TapCtl::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  return fuchsia_hardware_ethertap_TapControl_dispatch(this, txn, msg, &tap_ctl_ops_);
+void TapCtl::OpenDevice(OpenDeviceRequestView request, OpenDeviceCompleter::Sync& completer) {
+  // copy provided name so we can add a null termination:
+  ZX_DEBUG_ASSERT(request->name.size() <= fuchsia_hardware_ethertap::wire::kMaxNameLength);
+  char name[fuchsia_hardware_ethertap::wire::kMaxNameLength + 1];
+  memcpy(name, request->name.data(), request->name.size());
+  name[request->name.size()] = '\0';
+
+  completer.Reply(OpenDeviceInternal(name, request->config, std::move(request->device)));
 }
 
-zx_status_t TapCtl::OpenDevice(const char* name, const fuchsia_hardware_ethertap_Config* config,
-                               zx::channel device) {
-  if (config->mtu > fuchsia_hardware_ethertap_MAX_MTU) {
+zx_status_t TapCtl::OpenDeviceInternal(
+    const char* name, const fuchsia_hardware_ethertap::wire::Config& config,
+    fidl::ServerEnd<fuchsia_hardware_ethertap::TapDevice> device) {
+  if (config.mtu > fuchsia_hardware_ethertap::wire::kMaxMtu) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -118,16 +104,16 @@ static zx_status_t fidl_tap_device_set_online(void* ctx, bool online) {
 static const fuchsia_hardware_ethertap_TapDevice_ops_t tap_device_ops_ = {
     .WriteFrame = fidl_tap_device_write_frame, .SetOnline = fidl_tap_device_set_online};
 
-TapDevice::TapDevice(zx_device_t* device, const fuchsia_hardware_ethertap_Config* config,
-                     zx::channel server)
+TapDevice::TapDevice(zx_device_t* device, const fuchsia_hardware_ethertap::wire::Config& config,
+                     fidl::ServerEnd<fuchsia_hardware_ethertap::TapDevice> server)
     : ddk::Device<TapDevice, ddk::Unbindable>(device),
-      options_(config->options),
-      features_(config->features | ETHERNET_FEATURE_SYNTH),
-      mtu_(config->mtu),
-      online_((config->options & ETHERTAP_OPT_ONLINE) != 0),
-      channel_(std::move(server)) {
+      options_(config.options),
+      features_(config.features | ETHERNET_FEATURE_SYNTH),
+      mtu_(config.mtu),
+      online_((config.options & ETHERTAP_OPT_ONLINE) != 0),
+      channel_(server.TakeChannel()) {
   ZX_DEBUG_ASSERT(channel_.is_valid());
-  memcpy(mac_, config->mac.octets, 6);
+  memcpy(mac_, config.mac.octets.data(), 6);
 
   int ret = thrd_create_with_name(&thread_, tap_device_thread, reinterpret_cast<void*>(this),
                                   "ethertap-thread");

@@ -101,10 +101,10 @@ class EthertapTests : public zxtest::Test {
   }
 
   void SetupTapCtlMessenger() {
-    messenger_.SetMessageOp(ddk_.tap_ctl(),
-                            [](void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-                              return static_cast<eth::TapCtl*>(ctx)->DdkMessage(msg, txn);
-                            });
+    messenger_.SetMessageOp(
+        ddk_.tap_ctl(), [](void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
+          return static_cast<eth::TapCtl*>(ctx)->ddk_device_proto_.message(ctx, msg, txn);
+        });
   }
 
  protected:

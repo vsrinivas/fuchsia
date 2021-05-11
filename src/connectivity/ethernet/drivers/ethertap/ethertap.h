@@ -7,6 +7,7 @@
 
 #include <fuchsia/hardware/ethernet/cpp/banjo.h>
 #include <fuchsia/hardware/ethertap/c/fidl.h>
+#include <fuchsia/hardware/ethertap/llcpp/fidl.h>
 #include <lib/ddk/device.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/socket.h>
@@ -19,24 +20,34 @@
 #include <ddktl/device.h>
 #include <fbl/mutex.h>
 
+class EthertapTests;
+
 namespace eth {
 
-class TapCtl : public ddk::Device<TapCtl, ddk::MessageableOld> {
+class TapCtl;
+using DeviceType =
+    ddk::Device<TapCtl, ddk::Messageable<fuchsia_hardware_ethertap::TapControl>::Mixin>;
+
+class TapCtl : public DeviceType, public fidl::WireServer<fuchsia_hardware_ethertap::TapControl> {
  public:
   TapCtl(zx_device_t* device);
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
   void DdkRelease();
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
-  zx_status_t OpenDevice(const char* name, const fuchsia_hardware_ethertap_Config* config,
-                         zx::channel device);
+  zx_status_t OpenDeviceInternal(const char* name,
+                                 const fuchsia_hardware_ethertap::wire::Config& config,
+                                 fidl::ServerEnd<fuchsia_hardware_ethertap::TapDevice> device);
+  void OpenDevice(OpenDeviceRequestView request, OpenDeviceCompleter::Sync& completer) override;
+
+ private:
+  friend ::EthertapTests;
 };
 
 class TapDevice : public ddk::Device<TapDevice, ddk::Unbindable>,
                   public ddk::EthernetImplProtocol<TapDevice, ddk::base_protocol> {
  public:
-  TapDevice(zx_device_t* device, const fuchsia_hardware_ethertap_Config* config,
-            zx::channel server);
+  TapDevice(zx_device_t* device, const fuchsia_hardware_ethertap::wire::Config& config,
+            fidl::ServerEnd<fuchsia_hardware_ethertap::TapDevice> server);
 
   void DdkRelease();
   void DdkUnbind(ddk::UnbindTxn txn);
