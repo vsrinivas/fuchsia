@@ -110,15 +110,7 @@ pub fn sys_mprotect(
     length: usize,
     prot: u32,
 ) -> Result<SyscallResult, Errno> {
-    // SAFETY: This is safe because the vmar belongs to a different process.
-    unsafe { ctx.task.mm.root_vmar.protect(addr.ptr(), length, mmap_prot_to_vm_opt(prot)) }
-        .map_err(|s| match s {
-            zx::Status::INVALID_ARGS => EINVAL,
-            // TODO: This should still succeed and change protection on whatever is mapped.
-            zx::Status::NOT_FOUND => EINVAL,
-            zx::Status::ACCESS_DENIED => EACCES,
-            _ => EINVAL, // impossible!
-        })?;
+    ctx.task.mm.protect(addr, length, mmap_prot_to_vm_opt(prot))?;
     Ok(SUCCESS)
 }
 

@@ -54,6 +54,19 @@ impl Mapping {
             name: CString::default(),
         }
     }
+
+    fn with_flags(&self, flags: zx::VmarFlags) -> Mapping {
+        Mapping {
+            base: self.base,
+            vmo: self.vmo.clone(),
+            vmo_offset: self.vmo_offset,
+            permissions: flags
+                & (zx::VmarFlags::PERM_READ
+                    | zx::VmarFlags::PERM_WRITE
+                    | zx::VmarFlags::PERM_EXECUTE),
+            name: self.name.clone(),
+        }
+    }
 }
 
 const PROGRAM_BREAK_LIMIT: u64 = 64 * 1024 * 1024;
@@ -71,6 +84,7 @@ struct ProgramBreak {
 }
 
 /// The policy about whether the address space can be dumped.
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum DumpPolicy {
     /// The address space cannot be dumped.
     ///
@@ -265,6 +279,30 @@ impl MemoryManager {
         }?;
         let end = (addr + length).round_up(*PAGE_SIZE);
         mappings.remove(&(addr..end));
+        Ok(())
+    }
+
+    pub fn protect(
+        &self,
+        addr: UserAddress,
+        length: usize,
+        flags: zx::VmarFlags,
+    ) -> Result<(), Errno> {
+        let mut mappings = self.mappings.write();
+        let (_, mapping) = mappings.get(&addr).ok_or(EINVAL)?;
+        let mapping = mapping.with_flags(flags);
+
+        // SAFETY: This is safe because the vmar belongs to a different process.
+        unsafe { self.root_vmar.protect(addr.ptr(), length, flags) }.map_err(|s| match s {
+            zx::Status::INVALID_ARGS => EINVAL,
+            // TODO: This should still succeed and change protection on whatever is mapped.
+            zx::Status::NOT_FOUND => EINVAL,
+            zx::Status::ACCESS_DENIED => EACCES,
+            _ => impossible_error(s),
+        })?;
+
+        let end = (addr + length).round_up(*PAGE_SIZE);
+        mappings.insert(addr..end, mapping);
         Ok(())
     }
 
