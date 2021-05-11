@@ -182,6 +182,7 @@ bitflags! {
     }
 }
 
+#[derive(Clone)]
 struct FdTableEntry {
     file: FileHandle,
 
@@ -204,6 +205,11 @@ pub struct FdTable {
 impl FdTable {
     pub fn new() -> Arc<FdTable> {
         Arc::new(FdTable { table: RwLock::new(HashMap::new()) })
+    }
+
+    #[cfg(test)]
+    pub fn fork(&self) -> Arc<FdTable> {
+        Arc::new(FdTable { table: RwLock::new(self.table.read().clone()) })
     }
 
     pub fn insert(&self, fd: FdNumber, file: FileHandle) {
@@ -265,6 +271,27 @@ mod test {
         assert!(Arc::ptr_eq(&files.get(fd0).unwrap(), &file));
         assert!(Arc::ptr_eq(&files.get(fd1).unwrap(), &file));
         assert_eq!(files.get(FdNumber::from_raw(fd1.raw() + 1)).map(|_| ()), Err(EBADF));
+    }
+
+    #[test]
+    fn test_fd_table_fork() {
+        let files = FdTable::new();
+        let file = SyslogFile::new();
+
+        let fd0 = files.install_fd(file.clone()).unwrap();
+        let fd1 = files.install_fd(file.clone()).unwrap();
+        let fd2 = FdNumber::from_raw(2);
+
+        let forked = files.fork();
+
+        assert_eq!(Arc::as_ptr(&files.get(fd0).unwrap()), Arc::as_ptr(&forked.get(fd0).unwrap()));
+        assert_eq!(Arc::as_ptr(&files.get(fd1).unwrap()), Arc::as_ptr(&forked.get(fd1).unwrap()));
+        assert!(files.get(fd2).is_err());
+        assert!(forked.get(fd2).is_err());
+
+        files.set_flags(fd0, FdFlags::CLOEXEC).unwrap();
+        assert_eq!(FdFlags::CLOEXEC, files.get_flags(fd0).unwrap());
+        assert_ne!(FdFlags::CLOEXEC, forked.get_flags(fd0).unwrap());
     }
 
     #[test]
