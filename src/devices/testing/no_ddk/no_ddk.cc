@@ -124,6 +124,9 @@ __EXPORT bool device_get_fragment(zx_device_t* dev, const char* name, zx_device_
   return false;
 }
 
+__EXPORT
+void device_fidl_transaction_take_ownership(fidl_txn_t* txn, device_fidl_txn_t* new_txn) {}
+
 // Please do not use get_root_resource() in new code. See ZX-1467.
 __EXPORT
 zx_handle_t get_root_resource() { return ZX_HANDLE_INVALID; }
