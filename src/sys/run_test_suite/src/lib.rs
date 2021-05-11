@@ -296,7 +296,7 @@ pub struct TestStreams<'a> {
 }
 
 impl<'a> TestStreams<'a> {
-    fn into_log_and_result(
+    pub fn into_log_and_result(
         self,
     ) -> (LogStream, LocalBoxStream<'a, Result<RunResult, anyhow::Error>>) {
         let Self { results, logs } = self;

@@ -9,6 +9,10 @@ use regex::Regex;
 use run_test_suite_lib::{diagnostics, output, Outcome, RunResult, TestParams};
 use std::io::Write;
 use std::str::from_utf8;
+use test_output_directory::{
+    self as directory,
+    testing::{ExpectedSuite, ExpectedTestCase, ExpectedTestRun},
+};
 
 /// split and sort output as output can come in any order.
 /// `output` is of type vec<u8> and `expected_output` is a string.
@@ -843,4 +847,49 @@ async fn test_max_severity(max_severity: Severity) {
         }
         _ => unreachable!("Not used"),
     }
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_stdout_to_directory() {
+    let output_dir = tempfile::tempdir().expect("create temp directory");
+    let harness = fuchsia_component::client::connect_to_protocol::<HarnessMarker>()
+        .expect("connecting to HarnessProxy");
+
+    let mut test_params = new_test_params(
+        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/log_ansi_test.cm",
+        harness,
+    );
+    test_params.timeout = std::num::NonZeroU32::new(600);
+
+    let outcome = run_test_suite_lib::run_tests_and_get_outcome(
+        test_params,
+        diagnostics::LogCollectionOptions::default(),
+        std::num::NonZeroU16::new(1).unwrap(),
+        false,
+        Some(output_dir.path().to_path_buf()),
+    )
+    .await;
+
+    assert_eq!(outcome, Outcome::Passed);
+
+    let expected_test_run = ExpectedTestRun::new(directory::Outcome::Passed);
+    let expected_test_suites = vec![ExpectedSuite::new(
+        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/log_ansi_test.cm",
+        directory::Outcome::Passed,
+    )
+    .with_case(ExpectedTestCase::new("log_ansi_test", directory::Outcome::Passed))
+    .with_case(
+        ExpectedTestCase::new("stdout_ansi_test", directory::Outcome::Passed)
+            .with_artifact("stdout", "\u{1b}[31mred stdout\u{1b}[0m\n"),
+    )];
+
+    let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
+
+    directory::testing::assert_run_result(output_dir.path(), &run_result, &expected_test_run);
+
+    directory::testing::assert_suite_results(
+        output_dir.path(),
+        &suite_results,
+        &expected_test_suites,
+    );
 }
