@@ -1,0 +1,15 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+fidl("fuchsia.input.keymap") {
+  # This is a temporary API for simplified keyboard settings, built as part of
+  # a proof of concept.  It will be significantly changed for production use.
+  sdk_category = "internal"
+
+  sources = [ "keymap.fidl" ]
+
+  public_deps = []
+}
