@@ -193,15 +193,7 @@ class ContiguousSystemRamMemoryAllocator : public MemoryAllocator {
   inspect::ValueList properties_;
 };
 
-fuchsia_sysmem_DriverConnector_ops_t driver_connector_ops = {
-    .Connect = fidl::Binder<Device>::BindMember<&Device::Connect>,
-};
-
 }  // namespace
-
-zx_status_t Device::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  return fuchsia_sysmem_DriverConnector_dispatch(this, txn, msg, &driver_connector_ops);
-}
 
 Device::Device(zx_device_t* parent_device, Driver* parent_driver)
     : DdkDeviceType(parent_device),
@@ -484,14 +476,12 @@ zx_status_t Device::Bind() {
   return ZX_OK;
 }
 
-zx_status_t Device::Connect(zx_handle_t allocator_request) {
-  zx::channel local_allocator_request(allocator_request);
-  return async::PostTask(
-      loop_.dispatcher(),
-      [this, local_allocator_request = std::move(local_allocator_request)]() mutable {
-        // The Allocator is channel-owned / self-owned.
-        Allocator::CreateChannelOwned(std::move(local_allocator_request), this);
-      });
+void Device::Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) {
+  async::PostTask(loop_.dispatcher(),
+                  [this, allocator_request = std::move(request->allocator_request)]() mutable {
+                    // The Allocator is channel-owned / self-owned.
+                    Allocator::CreateChannelOwned(allocator_request.TakeChannel(), this);
+                  });
 }
 
 zx_status_t Device::SysmemConnect(zx::channel allocator_request) {

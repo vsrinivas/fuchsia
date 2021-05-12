@@ -37,7 +37,8 @@
 namespace sysmem_driver {
 
 class Device;
-using DdkDeviceType = ddk::Device<Device, ddk::MessageableOld, ddk::Unbindable>;
+using DdkDeviceType =
+    ddk::Device<Device, ddk::Messageable<fuchsia_sysmem::DriverConnector>::Mixin, ddk::Unbindable>;
 
 class Driver;
 class BufferCollectionToken;
@@ -50,6 +51,7 @@ struct Settings {
 
 class Device final : public DdkDeviceType,
                      public ddk::SysmemProtocol<Device, ddk::base_protocol>,
+                     public fidl::WireServer<fuchsia_sysmem::DriverConnector>,
                      public MemoryAllocator::Owner {
  public:
   Device(zx_device_t* parent_device, Driver* parent_driver);
@@ -73,7 +75,6 @@ class Device final : public DdkDeviceType,
   [[nodiscard]] zx_status_t SysmemUnregisterSecureMem();
 
   // Ddk mixin implementations.
-  [[nodiscard]] zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease() { delete this; }
 
@@ -86,7 +87,7 @@ class Device final : public DdkDeviceType,
 
   inspect::Node* heap_node() override { return &heaps_; }
 
-  [[nodiscard]] zx_status_t Connect(zx_handle_t allocator_request);
+  void Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) override;
 
   [[nodiscard]] uint32_t pdev_device_info_vid();
 
