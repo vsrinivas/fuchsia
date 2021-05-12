@@ -1,0 +1,478 @@
+#!/bin/bash
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+#### CATEGORY=Build
+#### EXPERIMENTAL
+### [EXPERIMENTAL] locally replicate the result of infra builds and tests
+##
+## This command attempts to replicate the result of an infra bot by reading
+## build information and translating to corresponding local 'fx' commands.
+##
+## usage: fx vendor google repro [-h|--help] <BUILD_ID>|<BUILD_URL>|<FINT_PARAMS_FILE>
+##
+##  BUILD_ID: the id of a build, prefixed or not by "b". For example:
+##       b8860637037546448224 or 8860637037546448224
+##
+##  BUILD_URL: the URL you are redirected to when you click on a box in the
+##       "Tryjob" section of a Gerrit CL. For example:
+##       https://ci.chromium.org/p/fuchsia/builders/try/fuchsia-x64-release/b8860637037546448224?
+##
+##  FINT_PARAMS_FILE: a local path to a fint params file, usually a *.fint.textproto file
+##       in //integration/infra/config/generated/*/specs/. For example:
+##       integration/infra/config/generated/fuchsia/specs/try/fuchsia-x64-release.fint.textproto
+##
+## Please provide feedback on go/fx-repro-feedback
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+
+set -euf -o pipefail
+
+function create_builddir_name {
+  if [[ -n "$build_id" ]]; then
+    echo "out/repro_${build_id}"
+  else
+    echo "out/repro_${project}_${bucket}_${builder}"
+  fi
+}
+
+function repro {
+  local project="$1"
+  local bucket="$2"
+  local builder="$3"
+  local build_id="$4"
+
+  local fint_params_file fint_params_file_relative build_dir_name
+  local instructions_file
+
+  local can_sync_to=true
+  local no_sync_to_reason
+
+  if ! fx-command-exists "sync-to"; then
+    can_sync_to=false
+    no_sync_to_reason="\`fx sync-to\` is not available in a public checkout."
+  fi
+
+  if [[ -z "$build_id" ]]; then
+    can_sync_to=false
+  else
+    check_bb_auth
+    build=$(get_build "$build_id")
+    if [[ -z "$build" ]]; then
+      fx-error "Could not retrieve build from buildbucket."
+      return 1
+    fi
+
+    project="$(get_builder_field project)"
+    bucket="$(get_builder_field bucket)"
+    builder="$(get_builder_field builder)"
+
+    if [ "$project" == "fuchsia" ]; then
+      # `sync-to` doesn't support public builds, so `repro` can't support them either.
+      can_sync_to=false
+      no_sync_to_reason="\`fx sync-to\` only supports internal builds (see https://fxbug.dev/66019)."
+    elif [[ "$bucket" = *try ]]; then
+      # `sync-to` can't resolve the commit hashes that result from patching
+      # changes in CQ builds.
+      can_sync_to=false
+      no_sync_to_reason="\`fx sync-to\` doesn't work on tryjobs (see https://fxbug.dev/72533)."
+    fi
+
+    build_url="https://luci-milo.appspot.com/p/${project}/builders/${bucket}/${builder}/b${build_id}"
+  fi
+
+  # Note that it's not a strict requirement that a fint params file have the
+  # same name as its builder; it just happens to be the case for most builders
+  # (except the builder that do multiple builds and thus have multiple fint
+  # params files).
+  # TODO(olivernewman): Expose the entire contents of the fint params file
+  # contents from the builder as an output property and have this script
+  # retrieve that property instead of reading from disk to ensure that we
+  # always use the same version of the fint params as infra does.
+  fint_params_file_relative="integration/infra/config/generated/${project}/specs/${bucket}/${builder}.fint.textproto"
+  fint_params_file="${FUCHSIA_DIR}/${fint_params_file_relative}"
+
+  if [[ ! -f "${fint_params_file}" ]]; then
+    fx-error "Cannot find fint parameters for this build: ${fint_params_file}"
+    fx-error "If this is an internal builder, make sure your Fuchsia source tree has the internal"
+    fx-error "integration repository as described in https://fuchsia.dev/internal/intree/get-started/smart-display/get-build-source"
+    return 1
+  fi
+
+  build_dir_name="$(create_builddir_name)"
+  instructions_file="${FUCHSIA_DIR}/${build_dir_name}.instructions"
+
+  fx-config-read
+  if [[ "${FUCHSIA_BUILD_DIR}" =~ out/repro_ ]]; then
+    fx-error "Build directory is still set to a previous fx repro run: ${FUCHSIA_BUILD_DIR#${FUCHSIA_DIR}/}"
+    fx-error "Please restore it to the previous state."
+    if [[ -f "${FUCHSIA_BUILD_DIR}.instructions" ]]; then
+      fx-error "Instructions in ${FUCHSIA_BUILD_DIR#${FUCHSIA_DIR}/}.instructions"
+    else
+      fx-error "# fx set-build-dir out/default"
+    fi
+    exit 1
+  fi
+
+  rm -f "${instructions_file}"
+
+  print_comment "Fint params file: //$fint_params_file_relative"
+  if [[ -n "$build_id" ]]; then
+    print_comment "Build URL: $build_url"
+  fi
+
+  print_spacer
+
+  if $can_sync_to; then
+    print_comment "Sync the Fuchsia source tree to the same commit:"
+    print_cmd "fx vendor google sync-to ${build_id}"
+    print_spacer
+  elif [[ -n "$build_id" ]]; then
+    print_comment "WARNING: Can't reproduce this build's checkout state."
+    print_comment "$no_sync_to_reason"
+    print_comment "Make sure your local checkout corresponds to the code used by the build."
+    print_spacer
+  fi
+
+  print_comment "Set the build configuration:"
+  if is_feature_enabled "legacy_set"; then
+    # TODO(fxbug.dev/68465): Delete this code after the old fx set codepath has
+    # been deleted.
+    fint_params_contents="$(<"$fint_params_file")"
+    repro_build_config
+  else
+    # TODO(fxbug.dev/68465): Stop setting the --disable flag after the
+    # legacy_set feature has been deleted.
+    print_cmd "fx --disable=legacy_set --dir=${build_dir_name} set --fint-params-path '$fint_params_file_relative'"
+  fi
+  print_spacer
+
+  print_comment "Build:"
+  if is_feature_enabled "legacy_set"; then
+    # TODO(fxbug.dev/68465): Delete this code after the old fx set codepath has
+    # been deleted.
+    print_cmd "fx build"
+  else
+    print_cmd "fx build --fint-params-path '$fint_params_file_relative'"
+  fi
+  print_spacer
+
+  print_comment "If necessary, start an emulator or connect a device"
+  print_spacer
+
+  print_comment "Run tests (use the flag '--e2e' if you also want to run E2E tests):"
+  repro_test_commands
+  print_spacer
+
+  if [[ -n "$build_id" ]]; then
+    print_comment "Run only failed tests:"
+    repro_failed_test_commands
+    print_spacer
+  fi
+
+  if [[ "$(build_has_binary_sizes)" == "true" ]]; then
+    print_comment "Check component sizes:"
+    print_cmd "fx size_checker -build-dir ${build_dir_name} -sizes-json-out ${FUCHSIA_DIR}/${build_dir_name}.sizes.json"
+    print_spacer
+  fi
+
+  print_comment "Restore to the previous state:"
+  print_cmd "fx set-build-dir ${FUCHSIA_BUILD_DIR#${FUCHSIA_DIR}/}"
+  print_cmd "rm -Rf ${FUCHSIA_DIR}/${build_dir_name}         # optional"
+  if $can_sync_to; then
+    print_cmd "fx vendor google sync-to reset"
+  fi
+
+  # TODO: add instructions to run botanist, for example:
+  # "Execute the steps in 'Reproducing the task locally' from https://chrome-swarming.appspot.com/task?id=4d23bde27aab0910"
+  # or, to simplify, just print out the botanist command line, e.g.:
+  # ./botanist -level trace run -images gs://fuchsia-artifacts-internal/builds/8875967070288043824/images/images.json -timeout 1800s -syslog syslog.txt -repo http://localhost:8080/fuchsia-artifacts-internal/builds/8875967070288043824/packages/repository -blobs http://localhost:8080/fuchsia-artifacts-internal/blobs -ssh private_key -config ./qemu.json ./testrunner -out-dir out -snapshot-output snapshot.zip -per-test-timeout 300s tests.json]
+  #
+
+  echo ""
+  cat "${instructions_file}"
+  echo
+  echo "*** These instructions are saved to ${instructions_file#${FUCHSIA_DIR}/} in case you need them later."
+  echo "*** Please, provide feedback on go/fx-repro-feedback"
+  echo
+}
+
+function repro_failed_test_commands {
+  local status
+  status="$(get_build_status)"
+  if [[ "$status" != "FAILURE" ]]; then
+    print_comment "Status of this build is $status. Failed tests can only exist in builds with status 'FAILURE'"
+    return
+  fi
+
+  local failed_tests
+  failed_tests="$(get_failed_tests)"
+  if [[ -z "$failed_tests" ]]; then
+    print_comment "Could not find the failed_test_names property in this build."
+    print_comment "Maybe it failed in other stages, e.g. build, or it is an old build. Only recent builds export the names of failed tests as properties."
+    print_comment "If this is an old build, you may find failed tests in $build_url"
+    return
+  fi
+  repro_test_commands "$failed_tests"
+}
+
+function repro_test_commands {
+  local failed_tests=("$@")
+
+  print_cmd "fx test ${failed_tests[*]}"
+}
+
+function jq {
+  jq_command="$1"
+  json_obj="$2"
+  fx-command-run jq -r "$jq_command" <<< "$json_obj"
+}
+
+function get_build_status {
+  jq ".status" "$build"
+}
+
+function get_builder_field {
+  jq ".builder.$1" "$build"
+}
+
+# Returns a space-separated list of all the tests that failed for the build.
+function get_failed_tests {
+  jq '.output.properties.failed_test_names? // [] | unique | join(" ")' "$build"
+}
+
+# Returns "true" or "false" depending on whether the build exposes a
+# "binary_sizes" output property.
+function build_has_binary_sizes {
+  jq '.output.properties | has("binary_sizes")' "$build"
+}
+
+function usage {
+  fx-command-help
+}
+
+function print {
+  if [[ -n "${instructions_file}" ]]; then
+    echo -e "$@" >> "${instructions_file}"
+  else
+    echo -e "$@"
+  fi
+}
+function print_cmd {
+  print "$@"
+}
+
+function print_spacer {
+  print ""
+}
+
+function print_comment {
+  print "# $*"
+}
+
+function check_bb_auth {
+  local bbtool="${FUCHSIA_DIR}/prebuilt/tools/buildbucket/bb"
+  while ! "$bbtool" auth-info >/dev/null 2>&1; do
+    fx-warn "Please login to Buildbucket first:"
+    "$bbtool" auth-login
+  done
+}
+
+function get_build {
+  local build_id="$1"
+  "${FUCHSIA_DIR}/prebuilt/tools/buildbucket/bb" get "$build_id" -json -fields "status,builder,output.properties"
+}
+
+function main {
+  # Expect exactly one state.
+  if [[ $# -ne 1 ]]; then
+    fx-error "BUILD_URL or FINT_PARAMS_FILE missing."
+    usage
+    return 1
+  fi
+
+  if [[ "$1" =~ ^(-h|--help)$ ]]; then
+    usage
+    return 0
+  fi
+
+
+  local build_url="$1"
+  build_url="${build_url#http://}"
+  build_url="${build_url#https://}"
+
+  local project="" bucket="" builder="" build_id=""
+  if [[ "${build_url}" =~ ^b?([0-9]+)[?]?$ ]]; then
+    build_id="${BASH_REMATCH[1]}"
+
+  elif [[ "${build_url}" =~ ^cr-buildbucket.appspot.com/build/b?([0-9]+) ]]; then
+    build_id="${BASH_REMATCH[1]}"
+
+  elif [[ "${build_url}" =~ -subbuild/ ]]; then
+    fx-error "The URL you pasted is from a subbuild, which doesn't have enough information"
+    fx-error "to reproduce the entire build. Please go back and find the correponding tryjob"
+    fx-error "without the '-subbuild' suffix."
+    return 1
+
+  elif [[ "${build_url}" =~ ^integration/infra/config/generated/(.+)/specs/(.+)/(.+).textproto$ ]]; then
+    local fint_params="${FUCHSIA_DIR}/${build_url}"
+    if [[ ! -f "${fint_params}" ]]; then
+      fx-error "Cannot find file ${fint_params}"
+      usage
+      return 1
+    fi
+    project="${BASH_REMATCH[1]}"
+    bucket="${BASH_REMATCH[2]}"
+    builder="${BASH_REMATCH[3]}"
+
+  elif [[ "${build_url}" =~ ^(luci-milo.appspot.com|ci.chromium.org)(/ui)?/p/(.+)/builders/(.+)/(.+)/b([0-9]+) ]]; then
+    build_id="${BASH_REMATCH[6]}"
+
+  else
+    fx-error "Unsupported build ID, build URL or fint params file: ${build_url}"
+    usage
+    return 1
+  fi
+
+  repro "$project" "$bucket" "$builder" "$build_id"
+}
+
+################################## LEGACY CODE #################################
+# TODO(fxbug.dev/68465): Delete this code after the old fx set codepath has
+# been deleted.
+
+function repro_build_config {
+  local product board gn_args build_type variants
+
+  product="$(get_product)"
+  if [[ -z "${product}" ]]; then
+    unsupported_params "Cannot find product definition"
+    exit 1
+  fi
+  board="$(get_board)"
+  if [[ -z "${board}" ]]; then
+    board="$(get_target)"
+    if [[ -z "${board}" ]]; then
+      unsupported_params "Cannot find board definition"
+      exit 1
+    fi
+  fi
+  build_type="$(get1 optimize)"
+  build_type="$(to_lower "$build_type")"
+  gn_args=""
+
+  local cmd=( fx --dir "${build_dir_name}" set "$(get_product).${board}" )
+
+  if [[ "${build_type}" == "release" ]]; then
+    cmd+=("--release")
+  fi
+
+  while IFS= read -r line ; do if [[ -n "$line" ]]; then
+    cmd+=( "--with-base" "'$line'" )
+  fi; done <<< "$(getN base_packages)"
+  while IFS= read -r line ; do if [[ -n "$line" ]]; then
+    cmd+=( "--with" "'$line'" )
+  fi; done <<< "$(getN universe_packages)"
+  while IFS= read -r line ; do if [[ -n "$line" ]]; then
+    cmd+=( "--with-cache" "'$line'" )
+  fi; done <<< "$(getN cache_packages)"
+  while IFS= read -r line ; do if [[ -n "$line" ]]; then
+    cmd+=( "--args" "'$line'" )
+  fi; done <<< "$(getN gn_args)"
+
+  # for most variants, we can use "fx set --variant" argument, but in some cases,
+  # for example --fuzz-with, the fint_params has the full variant object specified in
+  # the variants proto field, so we need to give raw gn args to 'fx set'.
+  # Alternatively, we could check if the fint_params has exactly what fx set --fuzz-with
+  # generates, but that would add too many dependencies on internal knowledge of
+  # both fint params and fx set, without an easy way to detect when either changes.
+  variants="$(getN variants)"
+  if [[ $variants =~ \{ ]]; then
+    gn_args+="select_variant = ["
+    while IFS= read -r line ; do if [[ -n "$line" ]]; then
+      if [[ $line =~ \{ ]]; then
+        gn_args+="$line,"
+      else
+        # simple variants need to be quoted
+        gn_args+="\\\"$line\\\","
+      fi
+    fi; done <<< "$variants"
+    gn_args+="]"
+  else
+    while IFS= read -r line ; do if [[ -n "$line" ]]; then
+      cmd+=( "--variant" "'$line'" )
+    fi; done <<< "$variants"
+  fi
+
+  if [[ -n "$gn_args" ]]; then
+    cmd+=( "--args '$gn_args'" )
+  fi
+  print_cmd "${cmd[@]}"
+}
+
+function get_board {
+  get board <<< "$fint_params_contents" | sed 's/.*\/\([^/]*\).gni/\1/'
+}
+function get_target {
+  to_lower "$(get target_arch <<< "$fint_params_contents")"
+}
+function get_product {
+  get product <<< "$fint_params_contents" | sed 's/.*\/\([^/]*\).gni/\1/'
+}
+function getN {
+  get "$1" 0 <<< "$fint_params_contents"
+}
+function get1 {
+  get "$1" 1 <<< "$fint_params_contents"
+}
+# Warning: the code below performs a fragile parse of the fint params proto.
+# In order to improve the robustness of this code, it should use the protobuf schema
+# in //tools/integration/cmd/fint/proto/static.proto.
+function get {
+  local name="$1"
+  local multiple=0
+  if [[ $# -eq 3 ]]; then
+    multiple=$2
+  fi
+
+  # remote leading spaces
+  sed 's/^ *//' |
+  # extract a field from a section
+  awk "
+    {
+      found=0;
+    }
+    /^$name: / {
+      if ($multiple == 1 && found == 1) {
+        print \"Found more than one instance of $name. Aborting.\"
+        exit 22
+      }
+      sub(/^$name: /, \"\")
+      print
+      found=1
+    }
+  " | sed 's/^\s*"//; s/"\s*$//; s/\\//g;'  # now remove quotes and backslashes if needed
+}
+
+function to_lower {
+  echo "$1" | tr '[:upper:]' '[:lower:]'
+}
+
+function unsupported_params {
+  local message="$*"
+  fx-error "Cannot convert these fint params to 'fx' commands: $message"
+  fx-error "If this is not expected, please report at go/fx-repro-unsupported"
+  fx-error "And attach the following information:"
+  {
+    echo "--------------------------------"
+    echo "Error: $message"
+    echo "$fint_params_file:"
+    echo "$fint_params_contents"
+    echo "--------------------------------"
+  } >/dev/stderr
+}
+
+############################## END LEGACY CODE #################################
+
+main "$@"

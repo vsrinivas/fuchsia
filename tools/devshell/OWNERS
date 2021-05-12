@@ -22,6 +22,9 @@ per-file             list-products,ninjatrace2json,set-build-dir,use      = file
 per-file             list-packages,get-src-dir                            = file: /build/OWNERS
 # per-file-COMPONENT list-packages,get-src-dir                            = Build>Workflow
 
+per-file             repro = olivernewman@google.com
+# per-file-COMPONENT repro = Build>Workflow
+
 per-file             set = olivernewman@google.com
 # per-file-COMPONENT set = Tools>Fx
 
