@@ -303,7 +303,7 @@ static int cmd_vm(int argc, const cmd_args* argv, uint32_t flags) {
       goto notenoughargs;
     }
 
-    VmAspace* aspace = VmAspace::vaddr_to_aspace(argv[2].u);
+    VmAspace* aspace = VmAspace::vaddr_to_aspace(argv[3].u);
     if (!aspace) {
       printf("ERROR: outside of any address space\n");
       return -1;
