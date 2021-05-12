@@ -21,10 +21,11 @@ executable("unittests") {
     "focus_transfer_test.cc",
     "gesture_arena_test.cc",
     "gfx_legacy_contender_test.cc",
-    "input_injection_test.cc",
+    "injector_unittest.cc",
     "mouse_delivery_test.cc",
     "pointer_capture_test.cc",
     "pointer_event_conversion_test.cc",
+    "pointerinjector_registry_unittest.cc",
     "touch_source_test.cc",
     "view_tree_input_integration_test.cc",
   ]

@@ -106,8 +106,6 @@ InputSystem::InputSystem(SystemContext context, fxl::WeakPtr<gfx::SceneGraph> sc
     : System(std::move(context)),
       scene_graph_(scene_graph),
       request_focus_(std::move(request_focus)) {
-  FX_CHECK(scene_graph);
-
   a11y_pointer_event_registry_ = std::make_unique<A11yPointerEventRegistry>(
       this->context()->app_context(),
       /*on_register=*/
