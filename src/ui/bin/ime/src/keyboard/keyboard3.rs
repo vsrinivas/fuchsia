@@ -104,11 +104,6 @@ struct KeyListenerStore {
 struct Subscriber {
     pub view_ref: ViewRef,
     pub listener: ui_input3::KeyboardListenerProxy,
-
-    /// Pressed keys that were reported to client.
-    /// This is used to notify client about keys that were released while
-    /// the client was out of the focus.
-    pub held_keys: HashSet<input::Key>,
 }
 
 impl KeyboardService {
@@ -135,9 +130,23 @@ impl KeyboardService {
             Some(view_ref) => view_ref,
             None => return,
         };
+
         if let Some(subscriber) = store.subscribers.get(&focused_view) {
-            let mut subscriber = subscriber.lock().await;
-            subscriber.held_keys = store.keys_pressed.clone();
+            let subscriber = subscriber.lock().await;
+
+            // Create CANCEL events for keys are currently pressed.
+            let cancel_events = store.keys_pressed.iter().map(|key| ui_input3::KeyEvent {
+                key: Some(*key),
+                type_: Some(ui_input3::KeyEventType::Cancel),
+                ..ui_input3::KeyEvent::EMPTY
+            });
+
+            // Send the CANCEL events to the client that's about to lose focus.
+            let dispatches = cancel_events.map(|event| subscriber.listener.on_key_event(event));
+
+            if let Err(e) = future::try_join_all(dispatches).await {
+                fx_log_warn!("Error sending cancel events {:?} to {:?}", e, subscriber.view_ref);
+            };
         };
         store.focused_view = None;
     }
@@ -152,28 +161,18 @@ impl KeyboardService {
         };
         let subscriber = subscriber.lock().await;
 
-        // Find keys that were released since the focused client was last notified.
-        let released_keys_iter =
-            subscriber.held_keys.difference(&store.keys_pressed).map(|key| ui_input3::KeyEvent {
-                key: Some(*key),
-                type_: Some(ui_input3::KeyEventType::Cancel),
-                ..ui_input3::KeyEvent::EMPTY
-            });
+        // Create SYNC events for keys that were already pressed before the client got focus.
+        let sync_events = store.keys_pressed.iter().map(|key| ui_input3::KeyEvent {
+            key: Some(*key),
+            type_: Some(ui_input3::KeyEventType::Sync),
+            ..ui_input3::KeyEvent::EMPTY
+        });
 
-        // Find keys that were pressed since the focused client was last notified.
-        let pressed_keys_iter =
-            store.keys_pressed.difference(&subscriber.held_keys).map(|key| ui_input3::KeyEvent {
-                key: Some(*key),
-                type_: Some(ui_input3::KeyEventType::Sync),
-                ..ui_input3::KeyEvent::EMPTY
-            });
+        // Send the SYNC events to the newly focused client.
+        let dispatches = sync_events.map(|event| subscriber.listener.on_key_event(event));
 
-        let keys_iter = released_keys_iter
-            .chain(pressed_keys_iter)
-            .map(|event| subscriber.listener.on_key_event(event));
-
-        if let Err(e) = future::try_join_all(keys_iter).await {
-            fx_log_warn!("Error sending sync/cancel events {:?} to {:?}", e, subscriber.view_ref);
+        if let Err(e) = future::try_join_all(dispatches).await {
+            fx_log_warn!("Error sending sync events {:?} to {:?}", e, subscriber.view_ref);
         };
     }
 
@@ -257,11 +256,7 @@ impl KeyListenerStore {
         view_ref: ViewRef,
         listener: ui_input3::KeyboardListenerProxy,
     ) {
-        let subscriber = Arc::new(Mutex::new(Subscriber {
-            view_ref: view_ref.clone(),
-            listener,
-            held_keys: HashSet::new(),
-        }));
+        let subscriber = Arc::new(Mutex::new(Subscriber { view_ref: view_ref.clone(), listener }));
         self.subscribers.insert(view_ref, subscriber);
     }
 
@@ -521,9 +516,11 @@ mod tests {
             assert!(matches!(activated_listener, future::Either::Left { .. }));
         }
 
-        // Change focus to another client, expect SYNC event.
-        future::join(
+        // Change focus to another client, expect CANCEL for unfocused client and SYNC for focused
+        // client.
+        future::join3(
             helper.service.handle_focus_change(other_view_ref),
+            expect_key_and_type(&mut listener, input::Key::A, ui_input3::KeyEventType::Cancel),
             expect_key_and_type(&mut other_listener, input::Key::A, ui_input3::KeyEventType::Sync),
         )
         .await;

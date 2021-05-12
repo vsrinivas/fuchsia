@@ -3,15 +3,15 @@
 // found in the LICENSE file.
 #![cfg(test)]
 
-use fidl_fuchsia_ui_keyboard_focus as fidl_focus;
-use fuchsia_async as fasync;
-use fuchsia_syslog::fx_log_debug;
 use {
     anyhow::{Context as _, Result},
+    fidl::endpoints::ServiceMarker as _,
     fidl_fuchsia_input as input, fidl_fuchsia_ui_input3 as ui_input3,
-    fidl_fuchsia_ui_views as ui_views,
+    fidl_fuchsia_ui_keyboard_focus as fidl_focus, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_scenic as scenic,
+    fuchsia_syslog::fx_log_debug,
+    futures::FutureExt,
     futures::{
         future,
         stream::{FusedStream, StreamExt},
@@ -64,21 +64,6 @@ async fn dispatch_and_expect_key_event<'a>(
     assert_eq!(was_handled?, true);
     assert_eq!(event_result.key, event.key);
     assert_eq!(event_result.type_, event.type_);
-    Ok(())
-}
-
-async fn focus_and_expect_key_event(
-    focus_ctl: &fidl_focus::ControllerProxy,
-    listener: &mut ui_input3::KeyboardListenerRequestStream,
-    view_ref: &mut ui_views::ViewRef,
-    event: ui_input3::KeyEvent,
-) -> Result<()> {
-    let (event_result, focus_result) =
-        future::join(expect_key_event(listener), focus_ctl.notify(view_ref)).await;
-
-    focus_result?;
-
-    assert_eq!(event, event_result);
     Ok(())
 }
 
@@ -153,9 +138,26 @@ async fn test_disconnecting_keyboard_client_disconnects_listener_with_connection
     Ok(())
 }
 
+/// Connects to the given discoverable service, with a readable context on error.
+fn connect_to_service<P>() -> Result<P>
+where
+    P: fidl::endpoints::Proxy,
+    P::Service: fidl::endpoints::DiscoverableService,
+{
+    connect_to_protocol::<P::Service>()
+        .with_context(|| format!("Failed to connect to {}", P::Service::DEBUG_NAME))
+}
+
 fn connect_to_focus_controller() -> Result<fidl_focus::ControllerProxy> {
-    connect_to_protocol::<fidl_focus::ControllerMarker>()
-        .context("Failed to connect to fuchsia.ui.keyboard.focus.Controller")
+    connect_to_service::<_>()
+}
+
+fn connect_to_keyboard_service() -> Result<ui_input3::KeyboardProxy> {
+    connect_to_service::<_>()
+}
+
+fn connect_to_key_event_injector() -> Result<ui_input3::KeyEventInjectorProxy> {
+    connect_to_service::<_>()
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -164,25 +166,22 @@ async fn test_disconnecting_keyboard_client_disconnects_listener_via_key_event_i
     fuchsia_syslog::init_with_tags(&["keyboard3_integration_test"])
         .expect("syslog init should not fail");
 
-    let key_event_injector = connect_to_protocol::<ui_input3::KeyEventInjectorMarker>()
-        .context("Failed to connect to fuchsia.ui.input3.KeyEventInjector")?;
+    let key_event_injector = connect_to_key_event_injector()?;
 
     let key_dispatcher =
         test_helpers::KeyEventInjectorDispatcher { key_event_injector: &key_event_injector };
     let key_simulator = test_helpers::KeySimulator::new(&key_dispatcher);
 
-    let keyboard_service_client = connect_to_protocol::<ui_input3::KeyboardMarker>()
-        .context("Failed to connect to input3 Keyboard service")?;
+    let keyboard_service_client_a = connect_to_keyboard_service().context("client_a")?;
 
-    let keyboard_service_other_client = connect_to_protocol::<ui_input3::KeyboardMarker>()
-        .context("Failed to establish another connection to input3 Keyboard service")?;
+    let keyboard_service_client_b = connect_to_keyboard_service().context("client_b")?;
 
     test_disconnecting_keyboard_client_disconnects_listener_with_connections(
         connect_to_focus_controller()?,
         &key_simulator,
         // This one will be dropped as part of the test, so needs to be moved.
-        keyboard_service_client,
-        &keyboard_service_other_client,
+        keyboard_service_client_a,
+        &keyboard_service_client_b,
     )
     .await
 }
@@ -190,26 +189,26 @@ async fn test_disconnecting_keyboard_client_disconnects_listener_via_key_event_i
 async fn test_sync_cancel_with_connections(
     focus_ctl: fidl_focus::ControllerProxy,
     key_simulator: &'_ test_helpers::KeySimulator<'_>,
-    keyboard_service_client: &ui_input3::KeyboardProxy,
-    keyboard_service_other_client: &ui_input3::KeyboardProxy,
+    keyboard_service_client_a: &ui_input3::KeyboardProxy,
+    keyboard_service_client_b: &ui_input3::KeyboardProxy,
 ) -> Result<()> {
     // Create fake client.
-    let (listener_client_end, mut listener) =
+    let (listener_client_end_a, mut listener_a) =
         fidl::endpoints::create_request_stream::<ui_input3::KeyboardListenerMarker>()?;
-    let view_ref = scenic::ViewRefPair::new()?.view_ref;
+    let view_ref_a = scenic::ViewRefPair::new()?.view_ref;
 
-    keyboard_service_client
-        .add_listener(&mut scenic::duplicate_view_ref(&view_ref)?, listener_client_end)
+    keyboard_service_client_a
+        .add_listener(&mut scenic::duplicate_view_ref(&view_ref_a)?, listener_client_end_a)
         .await
         .expect("add_listener for first client");
 
     // Create another fake client.
-    let (other_listener_client_end, mut other_listener) =
+    let (listener_client_end_b, mut listener_b) =
         fidl::endpoints::create_request_stream::<ui_input3::KeyboardListenerMarker>()?;
-    let other_view_ref = scenic::ViewRefPair::new()?.view_ref;
+    let view_ref_b = scenic::ViewRefPair::new()?.view_ref;
 
-    keyboard_service_other_client
-        .add_listener(&mut scenic::duplicate_view_ref(&other_view_ref)?, other_listener_client_end)
+    keyboard_service_client_b
+        .add_listener(&mut scenic::duplicate_view_ref(&view_ref_b)?, listener_client_end_b)
         .await
         .expect("add_listener for another client");
 
@@ -225,40 +224,55 @@ async fn test_sync_cancel_with_connections(
         ..ui_input3::KeyEvent::EMPTY
     };
 
-    // Focus first client.
-    focus_ctl.notify(&mut scenic::duplicate_view_ref(&view_ref)?).await?;
+    // Focus client A.
+    focus_ctl.notify(&mut scenic::duplicate_view_ref(&view_ref_a)?).await?;
 
-    // Press the key.
-    dispatch_and_expect_key_event(&key_simulator, &mut listener, event1_press).await?;
+    // Press the key and expect client A to receive the event.
+    dispatch_and_expect_key_event(&key_simulator, &mut listener_a, event1_press).await?;
 
-    // Focus second client, expect sync event.
-    focus_and_expect_key_event(
-        &focus_ctl,
-        &mut other_listener,
-        &mut scenic::duplicate_view_ref(&other_view_ref)?,
-        ui_input3::KeyEvent {
-            key: Some(input::Key::A),
-            type_: Some(ui_input3::KeyEventType::Sync),
-            ..ui_input3::KeyEvent::EMPTY
-        },
+    assert!(listener_b.next().now_or_never().is_none(), "listener_b should have no events yet");
+
+    // Focus client B.
+    // Expect a cancel event for client A and a sync event for the client B.
+    let (focus_result, client_a_event, client_b_event) = future::join3(
+        focus_ctl.notify(&mut scenic::duplicate_view_ref(&view_ref_b)?),
+        expect_key_event(&mut listener_a),
+        expect_key_event(&mut listener_b),
     )
-    .await?;
+    .await;
 
-    // Release the key.
-    dispatch_and_expect_key_event(&key_simulator, &mut other_listener, event1_release).await?;
+    focus_result?;
 
-    // Focus first client again, expect CANCEL for the first key.
-    focus_and_expect_key_event(
-        &focus_ctl,
-        &mut listener,
-        &mut scenic::duplicate_view_ref(&view_ref)?,
+    assert_eq!(
         ui_input3::KeyEvent {
             key: Some(input::Key::A),
             type_: Some(ui_input3::KeyEventType::Cancel),
             ..ui_input3::KeyEvent::EMPTY
         },
-    )
-    .await?;
+        client_a_event
+    );
+
+    assert_eq!(
+        ui_input3::KeyEvent {
+            key: Some(input::Key::A),
+            type_: Some(ui_input3::KeyEventType::Sync),
+            ..ui_input3::KeyEvent::EMPTY
+        },
+        client_b_event
+    );
+
+    // Release the key and expect client B to receive an event.
+    dispatch_and_expect_key_event(&key_simulator, &mut listener_b, event1_release).await?;
+
+    assert!(listener_a.next().now_or_never().is_none(), "listener_a should have no more events");
+
+    // Focus client A again.
+    focus_ctl.notify(&mut scenic::duplicate_view_ref(&view_ref_a)?).await?;
+
+    assert!(
+        listener_a.next().now_or_never().is_none(),
+        "listener_a should have no more events after receiving focus"
+    );
 
     Ok(())
 }
@@ -269,24 +283,21 @@ async fn test_sync_cancel_via_key_event_injector() -> Result<()> {
         .expect("syslog init should not fail");
 
     // This test dispatches keys via KeyEventInjector.
-    let key_event_injector = connect_to_protocol::<ui_input3::KeyEventInjectorMarker>()
-        .context("Failed to connect to fuchsia.ui.input3.KeyEventInjector")?;
+    let key_event_injector = connect_to_key_event_injector()?;
 
     let key_dispatcher =
         test_helpers::KeyEventInjectorDispatcher { key_event_injector: &key_event_injector };
     let key_simulator = test_helpers::KeySimulator::new(&key_dispatcher);
 
-    let keyboard_service_client = connect_to_protocol::<ui_input3::KeyboardMarker>()
-        .context("Failed to connect to input3 Keyboard service")?;
+    let keyboard_service_client_a = connect_to_keyboard_service().context("client_a")?;
 
-    let keyboard_service_other_client = connect_to_protocol::<ui_input3::KeyboardMarker>()
-        .context("Failed to establish another connection to input3 Keyboard service")?;
+    let keyboard_service_client_b = connect_to_keyboard_service().context("client_b")?;
 
     test_sync_cancel_with_connections(
         connect_to_focus_controller()?,
         &key_simulator,
-        &keyboard_service_client,
-        &keyboard_service_other_client,
+        &keyboard_service_client_a,
+        &keyboard_service_client_b,
     )
     .await
 }
