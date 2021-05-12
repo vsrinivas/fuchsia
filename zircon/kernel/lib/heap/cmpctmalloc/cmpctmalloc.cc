@@ -444,7 +444,7 @@ static int find_nonempty_bucket(int index) TA_REQ(TheHeapLock::Get()) {
   if (mask != 0) {
     return (index & ~0x1f) + __builtin_clz(mask);
   }
-  for (index = ZX_ROUNDUP(index + 1, 32); index <= NUMBER_OF_BUCKETS; index += 32) {
+  for (index = ZX_ROUNDUP(index + 1, 32); index < NUMBER_OF_BUCKETS; index += 32) {
     mask = theheap.free_list_bits[index >> 5];
     if (mask != 0u) {
       return index + __builtin_clz(mask);
