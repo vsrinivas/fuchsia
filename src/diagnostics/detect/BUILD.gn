@@ -72,7 +72,7 @@ fuchsia_package("triage-detect") {
 }
 
 fuchsia_unittest_package("triage-detect-tests") {
-  manifest = "meta/triage-detect-tests.cmx"
+  v2 = true
   deps = [ ":lib_test" ]
 }
 
