@@ -306,7 +306,7 @@ int _getaddrinfo_from_dns(struct address buf[MAXADDRS], char canon[256], const c
       fidl::ObjectView<fnet::wire::LookupIpOptions2::Frame_>::FromExternal(&frame));
   bool trueVal = true;
   fidl::ObjectView trueView = fidl::ObjectView<bool>::FromExternal(&trueVal);
-  // TODO(https://fxbug.dev/64876): Use address sorting from the DNS service.
+  // TODO(https://fxbug.dev/76522): Use address sorting from the DNS service.
   switch (family) {
     case AF_UNSPEC:
       options.set_ipv4_lookup(trueView);
