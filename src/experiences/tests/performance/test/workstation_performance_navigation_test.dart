@@ -10,7 +10,13 @@ import 'package:sl4f/sl4f.dart' as sl4f;
 import 'package:sl4f/trace_processing.dart';
 import 'package:test/test.dart';
 
+const _blueUrl = 'http://127.0.0.1:8080/blue.html';
 const _catapultConverterPath = 'runtime_deps/catapult_converter';
+const _greenUrl = 'http://127.0.0.1:8080/green.html';
+// TODO(fxb/69334): Get rid of the space in the hint text.
+const _newTabHintText = '     SEARCH';
+const _pinkUrl = 'http://127.0.0.1:8080/pink.html';
+const _redUrl = 'http://127.0.0.1:8080/red.html';
 const _testNameTitle = 'workstation-navigation';
 const _testserverUrl =
     'fuchsia-pkg://fuchsia.com/ermine_testserver#meta/ermine_testserver.cmx';
@@ -18,15 +24,24 @@ const _testSuite = 'workstation-performance-navigation-test';
 const _timeout = Duration(seconds: _timeoutSeconds);
 const _timeoutSeconds = 10;
 const _trace2jsonPath = 'runtime_deps/trace2json';
+const _yellowUrl = 'http://127.0.0.1:8080/yellow.html';
 
 void main() {
   sl4f.Dump dump;
   Directory dumpDir;
   ErmineDriver ermine;
+  sl4f.Input input;
   bool measureInputLatency = false;
   sl4f.Performance performance;
   sl4f.Sl4f sl4fDriver;
   sl4f.WebDriverConnector webDriverConnector;
+
+  final blueTabFinder = find.text('Blue Page');
+  final greenTabFinder = find.text('Green Page');
+  final newTabFinder = find.text('NEW TAB');
+  final redTabFinder = find.text('Red Page');
+  final pinkTabFinder = find.text('Pink Page');
+  final yellowTabFinder = find.text('Yellow Page');
 
   final metricsSpecs = [
     sl4f.MetricsSpec(name: 'cpu'),
@@ -47,6 +62,8 @@ void main() {
 
     ermine = ErmineDriver(sl4fDriver);
     await ermine.setUp();
+
+    input = sl4f.Input(sl4fDriver);
 
     webDriverConnector =
         sl4f.WebDriverConnector('runtime_deps/chromedriver', sl4fDriver);
@@ -75,10 +92,12 @@ void main() {
     await browser.requestData(stopUrl);
     await browser.waitFor(find.text(stopUrl), timeout: _timeout);
     expect(await ermine.isStopped(_testserverUrl), isTrue);
+    print('Stopped the test server');
 
     await ermine.driver.requestData('close');
     await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
     expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
+    print('Closed the browser');
 
     await webDriverConnector?.tearDown();
     await ermine.tearDown();
@@ -118,6 +137,89 @@ void main() {
         isNotNull);
 
     await browser.close();
+    await ermine.driver.requestData('close');
+    await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
+    expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
+  });
+
+  test('Trace performance of opening 5 tabs in Simple Browser', () async {
+    FlutterDriver browser;
+    browser = await ermine.launchSimpleBrowser();
+
+    // Enable capturing of input_latency metrics
+    measureInputLatency = true;
+
+    // Initialize tracing session for performance tracking
+    final traceSession = await performance.initializeTracing();
+    await traceSession.start();
+
+    // Opens yellow.html in the first tab.
+    await browser.tap(find.byValueKey('new_tab'));
+    await browser.waitFor(find.text(_newTabHintText), timeout: _timeout);
+    await input.text(_yellowUrl);
+    await input.keyPress(kEnterKey);
+    await browser.waitUntilNoTransientCallbacks(timeout: _timeout);
+    await browser.waitFor(yellowTabFinder, timeout: _timeout);
+
+    // Opens red.html in the second tab.
+    await browser.tap(find.byValueKey('new_tab'));
+    await browser.waitFor(find.text(_newTabHintText), timeout: _timeout);
+    await input.text(_redUrl);
+    await input.keyPress(kEnterKey);
+    await browser.waitUntilNoTransientCallbacks(timeout: _timeout);
+    await browser.waitFor(redTabFinder, timeout: _timeout);
+
+    // Opens green.html in the third tab.
+    await browser.tap(find.byValueKey('new_tab'));
+    await browser.waitFor(find.text(_newTabHintText), timeout: _timeout);
+    await input.text(_greenUrl);
+    await input.keyPress(kEnterKey);
+    await browser.waitUntilNoTransientCallbacks(timeout: _timeout);
+    await browser.waitFor(greenTabFinder, timeout: _timeout);
+
+    // Opens pink.html in the fourth tab.
+    await browser.tap(find.byValueKey('new_tab'));
+    await browser.waitFor(find.text(_newTabHintText), timeout: _timeout);
+    await input.text(_pinkUrl);
+    await input.keyPress(kEnterKey);
+    await browser.waitUntilNoTransientCallbacks(timeout: _timeout);
+    await browser.waitFor(pinkTabFinder, timeout: _timeout);
+
+    // Opens blue.html in the fifth tab.
+    await browser.tap(find.byValueKey('new_tab'));
+    await browser.waitFor(find.text(_newTabHintText), timeout: _timeout);
+    await input.text(_blueUrl);
+    await input.keyPress(kEnterKey);
+    await browser.waitUntilNoTransientCallbacks(timeout: _timeout);
+    await browser.waitFor(blueTabFinder, timeout: _timeout);
+
+    // Stop tracing session
+    await traceSession.stop();
+
+    // Verify 5 tabs launched.
+    expect(await browser.getText(newTabFinder), isNotNull);
+    expect(await browser.getText(yellowTabFinder), isNotNull);
+    expect(await browser.getText(redTabFinder), isNotNull);
+    expect(await browser.getText(greenTabFinder), isNotNull);
+    expect(await browser.getText(pinkTabFinder), isNotNull);
+    expect(await browser.getText(blueTabFinder), isNotNull);
+    expect(await browser.getText(find.text(_blueUrl)), isNotNull);
+
+    // Download and format data from trace for visualization
+    final fxtTraceFile = await traceSession
+        .terminateAndDownload('$_testNameTitle-tab-opening-test');
+    final jsonTraceFile =
+        await performance.convertTraceFileToJson(_trace2jsonPath, fxtTraceFile);
+    final metricsSpecSet = MetricsSpecSet(
+        testName: '$_testNameTitle-tab-opening-test',
+        testSuite: _testSuite,
+        metricsSpecs: metricsSpecs);
+
+    expect(
+        await performance.processTrace(metricsSpecSet, jsonTraceFile,
+            converterPath: _catapultConverterPath),
+        isNotNull);
+
     await ermine.driver.requestData('close');
     await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
     expect(await ermine.isStopped(simpleBrowserUrl), isTrue);

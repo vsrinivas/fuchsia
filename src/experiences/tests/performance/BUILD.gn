@@ -51,6 +51,7 @@ if (is_host) {
     sources = [
       "$root_out_dir/catapult_converter",
       "$root_out_dir/trace2json",
+      "//prebuilt/third_party/chromedriver/linux-x64/chromedriver",
     ]
     outputs = [ "$target_gen_dir/runtime_deps/{{source_file_part}}" ]
 
