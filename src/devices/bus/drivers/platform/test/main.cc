@@ -28,14 +28,6 @@ namespace {
 using devmgr_integration_test::IsolatedDevmgr;
 using devmgr_integration_test::RecursiveWaitForFile;
 
-zbi_platform_id_t kPlatformId = []() {
-  zbi_platform_id_t plat_id = {};
-  plat_id.vid = PDEV_VID_TEST;
-  plat_id.pid = PDEV_PID_PBUS_TEST;
-  strcpy(plat_id.board_name, "pbus-test");
-  return plat_id;
-}();
-
 #define BOARD_REVISION_TEST 42
 
 const zbi_board_info_t kBoardInfo = []() {
@@ -44,15 +36,16 @@ const zbi_board_info_t kBoardInfo = []() {
   return board_info;
 }();
 
-zx_status_t GetBootItem(uint32_t type, uint32_t extra, zx::vmo* out, uint32_t* length) {
+zx_status_t GetBootItem(const zbi_platform_id_t* platform_id, uint32_t type, uint32_t extra,
+                        zx::vmo* out, uint32_t* length) {
   zx::vmo vmo;
   switch (type) {
     case ZBI_TYPE_PLATFORM_ID: {
-      zx_status_t status = zx::vmo::create(sizeof(kPlatformId), 0, &vmo);
+      zx_status_t status = zx::vmo::create(sizeof(*platform_id), 0, &vmo);
       if (status != ZX_OK) {
         return status;
       }
-      status = vmo.write(&kPlatformId, 0, sizeof(kPlatformId));
+      status = vmo.write(platform_id, 0, sizeof(*platform_id));
       if (status != ZX_OK) {
         return status;
       }
@@ -83,7 +76,17 @@ TEST(PbusTest, Enumeration) {
   devmgr_launcher::Args args;
   args.sys_device_driver = "/boot/driver/platform-bus.so";
   args.driver_search_paths.push_back("/boot/driver");
-  args.get_boot_item = GetBootItem;
+  args.get_boot_item = [](uint32_t type, uint32_t extra, zx::vmo* out, uint32_t* length) {
+    zbi_platform_id_t kPlatformId = []() {
+      zbi_platform_id_t plat_id = {};
+      plat_id.vid = PDEV_VID_TEST;
+      plat_id.pid = PDEV_PID_PBUS_TEST;
+      strcpy(plat_id.board_name, "pbus-test");
+      return plat_id;
+    }();
+
+    return GetBootItem(&kPlatformId, type, extra, out, length);
+  };
 
   IsolatedDevmgr devmgr;
   ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr));
@@ -169,7 +172,16 @@ TEST(PbusTest, BoardInfo) {
   devmgr_launcher::Args args;
   args.sys_device_driver = "/boot/driver/platform-bus.so";
   args.driver_search_paths.push_back("/boot/driver");
-  args.get_boot_item = GetBootItem;
+  args.get_boot_item = [](uint32_t type, uint32_t extra, zx::vmo* out, uint32_t* length) {
+    zbi_platform_id_t kPlatformId = []() {
+      zbi_platform_id_t plat_id = {};
+      strcpy(plat_id.board_name, "pbus-test");
+      // Avoid specifying a VID/DID to ensure board driver doesn't bind.
+      return plat_id;
+    }();
+
+    return GetBootItem(&kPlatformId, type, extra, out, length);
+  };
 
   IsolatedDevmgr devmgr;
   ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr));
