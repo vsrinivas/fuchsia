@@ -84,9 +84,13 @@ pub struct SignArgs {
 #[argh(subcommand, name = "image")]
 pub struct ImageArgs {
     /// the configuration file that specifies the packages, binaries, and
-    /// settings used to assemble an image.
+    /// settings specific to the product being assembled.
     #[argh(option)]
-    pub config: PathBuf,
+    pub product: PathBuf,
+    /// the configuration file that specifies the packages, binaries, and
+    /// settings specific to the board being assembled.
+    #[argh(option)]
+    pub board: PathBuf,
     /// the directory to write assembled outputs to.
     #[argh(option)]
     pub outdir: PathBuf,

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::config::Config;
+use crate::config::{from_reader, BoardConfig, ProductConfig};
 use anyhow::{Context, Result};
 use assembly_base_package::BasePackageBuilder;
 use ffx_assembly_args::ImageArgs;
@@ -16,43 +16,49 @@ use std::path::Path;
 use zbi::ZbiBuilder;
 
 pub fn assemble(args: ImageArgs) -> Result<()> {
-    let ImageArgs { config, outdir, gendir } = args;
-    let config = read_config(config)?;
+    let ImageArgs { product, board, outdir, gendir } = args;
+    let (product, _board) = read_configs(product, board)?;
     let gendir = gendir.unwrap_or(outdir.clone());
-    let base_package = construct_base_package(&outdir, &gendir, &config)?;
+    let base_package = construct_base_package(&outdir, &gendir, &product)?;
     let base_merkle = MerkleTree::from_reader(&base_package)
         .context("Failed to calculate the base merkle")?
         .root();
     println!("Base merkle: {}", base_merkle);
-    let _zbi = construct_zbi(&outdir, &gendir, &config, Some(base_merkle))?;
+    let _zbi = construct_zbi(&outdir, &gendir, &product, Some(base_merkle))?;
 
     Ok(())
 }
 
-fn read_config(config_path: impl AsRef<Path>) -> Result<Config> {
-    let mut config = File::open(config_path)?;
-    let config = Config::from_reader(&mut config).context("Failed to read the image config")?;
-    Ok(config)
+fn read_configs(
+    product: impl AsRef<Path>,
+    board: impl AsRef<Path>,
+) -> Result<(ProductConfig, BoardConfig)> {
+    let mut product = File::open(product)?;
+    let mut board = File::open(board)?;
+    let product: ProductConfig =
+        from_reader(&mut product).context("Failed to read the product config")?;
+    let board: BoardConfig = from_reader(&mut board).context("Failed to read the board config")?;
+    Ok((product, board))
 }
 
 fn construct_base_package(
     outdir: impl AsRef<Path>,
     gendir: impl AsRef<Path>,
-    config: &Config,
+    product: &ProductConfig,
 ) -> Result<File> {
     let mut base_pkg_builder = BasePackageBuilder::default();
-    for pkg_manifest_path in &config.extra_packages_for_base_package {
+    for pkg_manifest_path in &product.extra_packages_for_base_package {
         let pkg_manifest = pkg_manifest_from_path(pkg_manifest_path)?;
         base_pkg_builder.add_files_from_package(pkg_manifest);
     }
-    for pkg_manifest_path in &config.base_packages {
+    for pkg_manifest_path in &product.base_packages {
         let pkg_manifest = pkg_manifest_from_path(pkg_manifest_path)?;
         base_pkg_builder.add_base_package(pkg_manifest).context(format!(
             "Failed to add package to base package list with manifest: {}",
             pkg_manifest_path.display()
         ))?;
     }
-    for pkg_manifest_path in &config.cache_packages {
+    for pkg_manifest_path in &product.cache_packages {
         let pkg_manifest = pkg_manifest_from_path(pkg_manifest_path)?;
         base_pkg_builder.add_cache_package(pkg_manifest).context(format!(
             "Failed to add package to cache package list with manifest: {}",
@@ -82,13 +88,13 @@ fn pkg_manifest_from_path(path: impl AsRef<Path>) -> Result<PackageManifest> {
 fn construct_zbi(
     outdir: impl AsRef<Path>,
     gendir: impl AsRef<Path>,
-    config: &Config,
+    product: &ProductConfig,
     base_merkle: Option<Hash>,
 ) -> Result<File> {
     let mut zbi_builder = ZbiBuilder::default();
 
     // Add the kernel image.
-    zbi_builder.set_kernel(&config.kernel_image);
+    zbi_builder.set_kernel(&product.kernel_image);
 
     // Instruct devmgr that a /system volume is required.
     zbi_builder.add_boot_arg("devmgr.require-system=true");
@@ -101,7 +107,7 @@ fn construct_zbi(
 
         // Add the pkgfs blobs to the boot arguments, so that pkgfs can be bootstrapped out of blobfs,
         // before the blobfs service is available.
-        let pkgfs_manifest: PackageManifest = config
+        let pkgfs_manifest: PackageManifest = product
             .base_packages
             .iter()
             .find_map(|p| {
@@ -120,12 +126,12 @@ fn construct_zbi(
     }
 
     // Add the command line.
-    for cmd in &config.kernel_cmdline {
+    for cmd in &product.kernel_cmdline {
         zbi_builder.add_cmdline_arg(cmd);
     }
 
     // Add the BootFS files.
-    for bootfs_entry in &config.bootfs_files {
+    for bootfs_entry in &product.bootfs_files {
         zbi_builder.add_bootfs_file(&bootfs_entry.source, &bootfs_entry.destination);
     }
 
