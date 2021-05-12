@@ -34,22 +34,27 @@ fn format(volume: &File, size: u64) -> Result<()> {
 }
 
 fn compute_size(files: &HashMap<&str, Vec<u8>>) -> u64 {
-    // min_size is the minimum image size, as the tool currently always builds fat32.
-    let min_size = 63 * 1024 * 1024;
+    // min_size is the minimum image size
+    let min_size = 1024 * 1024;
     // Fudge factor (percentage) to account for filesystem metadata.
-    let fudge_factor = 5;
+    let fudge_factor = 10;
+    // sectors per track is 63, and a sector is 512, so we must round to the nearest
+    // 32256.
+    let size_alignment = 63 * 512;
 
     let mut total: u64 = 0;
     for (_name, content) in files {
         total += content.len() as u64;
     }
 
-    // Reserve 5% more space for metadata
     total += total * fudge_factor / 100;
-    // Align to full sector size.
-    total = (total + 511) & !512;
 
-    return max(min_size, total);
+    // Ensure total is larger than min_size
+    total = max(min_size, total);
+
+    // Align to the legacy track size
+    total = (total + size_alignment - 1) / size_alignment * size_alignment;
+    return total;
 }
 
 fn copy_files(volume: &File, files: &HashMap<&str, Vec<u8>>) -> Result<()> {
@@ -125,6 +130,7 @@ mod test {
     use {
         super::*,
         ffx_efi_args::{CreateCommand, EfiCommand, EfiSubcommand},
+        std::fs::metadata,
         tempfile::tempdir,
     };
 
@@ -211,6 +217,53 @@ mod test {
         check_file_content(&output, "bootdata.bin", bootdata_content)?;
         check_file_content(&output, "zircon.bin", zircon_content)?;
         check_file_content(&output, "zedboot.bin", zedboot_content)?;
+        let output_size = metadata(output)?.len();
+
+        // Check that produced image is at least 1MiB
+        assert!(output_size >= 1024 * 1024, "size = {}", output_size);
+
+        // Check that the image is aligned to legacy track size.
+        assert_eq!(output_size % 63 * 512, 0);
+
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_create_worst_case_reservation() -> Result<()> {
+        let tmpdir = tempdir()?;
+        let tmppath = |name| tmpdir.path().join(name).to_str().unwrap().to_string();
+
+        // Worst case of overhead for image exactly 1MiB
+        let size = 1024 * 1024 * 100 / 105;
+        let output = tmppath("test_output");
+        let bootloader = tmppath("test_bootloader");
+        let bootloader_content = "b".repeat(size);
+
+        set_file_content(&bootloader, &bootloader_content)?;
+
+        let result = command(EfiCommand {
+            subcommand: EfiSubcommand::Create(CreateCommand {
+                output: output.clone(),
+                cmdline: None,
+                bootdata: None,
+                efi_bootloader: Some(bootloader),
+                zircon: None,
+                zedboot: None,
+            }),
+        })
+        .await
+        .unwrap();
+        assert_eq!(result, ());
+
+        check_file_content(&output, "EFI/BOOT/BOOTX64.EFI", &bootloader_content)?;
+        let output_size = metadata(output)?.len();
+
+        // Check that produced image is at least 1MiB
+        assert!(output_size > 1024 * 1024, "size = {}", output_size);
+
+        // Check that the image is aligned to legacy track size.
+        assert_eq!(output_size % 63 * 512, 0);
+
         Ok(())
     }
 }
