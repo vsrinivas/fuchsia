@@ -110,13 +110,15 @@ impl DaemonEventHandler {
                                     "Doing autoconnect for default target: {}",
                                     nodename.as_ref().map(|x| x.as_str()).unwrap_or("<unknown>")
                                 );
-                                t_clone.run_host_pipe().await;
+                                t_clone.run_host_pipe();
                             }
                         }
                     }
                 };
 
-                let _: ((), ()) = futures::join!(target.run_mdns_monitor(), autoconnect_fut);
+                target.run_mdns_monitor();
+
+                let _ = autoconnect_fut.await;
 
                 // Updates state last so that if tasks are waiting on this state, everything is
                 // already running and there aren't any races.
@@ -151,7 +153,7 @@ impl DaemonEventHandler {
 
         log::trace!("Target from Overnet {} is {}", node_id, target.nodename_str());
         let target = tc.merge_insert(target).await;
-        target.run_logger().await;
+        target.run_logger();
     }
 
     async fn handle_fastboot(&self, t: TargetInfo, tc: &TargetCollection) {
@@ -169,7 +171,7 @@ impl DaemonEventHandler {
                         _ => s,
                     })
                     .await;
-                target.run_fastboot_monitor().await;
+                target.run_fastboot_monitor();
             })
             .await;
     }
@@ -200,7 +202,7 @@ impl DaemonServiceProvider for Daemon {
             .map_err(|e| anyhow!("{:#?}", e))
             .context("getting default target")?;
         // Ensure auto-connect has at least started.
-        target.run_host_pipe().await;
+        target.run_host_pipe();
         target
             .events
             .wait_for(None, |e| e == TargetEvent::RcsActivated)
@@ -351,7 +353,7 @@ impl Daemon {
                 _ => s,
             })
             .await;
-        target.run_host_pipe().await
+        target.run_host_pipe();
     }
 
     /// get_target attempts to get the target that matches the match string if
@@ -445,7 +447,7 @@ impl Daemon {
                                 .map(|t| {
                                     async move {
                                         if t.is_connected() {
-                                            Some(t.to_fidl_target().await)
+                                            Some(t.to_fidl_target())
                                         } else {
                                             None
                                         }
@@ -455,7 +457,7 @@ impl Daemon {
                                 .collect(),
                             _ => match self.target_collection.get_connected(value) {
                                 Some(t) => {
-                                    vec![async move { Some(t.to_fidl_target().await) }.boxed_local()]
+                                    vec![async move { Some(t.to_fidl_target()) }.boxed_local()]
                                 }
                                 None => vec![],
                             },
@@ -486,7 +488,7 @@ impl Daemon {
                 }
 
                 // Ensure auto-connect has at least started.
-                target.run_host_pipe().await;
+                target.run_host_pipe();
                 match target.events.wait_for(None, |e| e == TargetEvent::RcsActivated).await {
                     Ok(()) => (),
                     Err(e) => {
@@ -1258,7 +1260,7 @@ mod test {
         .await;
 
         assert_eq!(
-            t.task_manager.task_snapshot(crate::target::TargetTaskType::HostPipe).await,
+            t.task_manager.task_snapshot(crate::target::TargetTaskType::HostPipe),
             ffx_daemon_core::task::TaskSnapshot::NotRunning
         );
 
@@ -1280,7 +1282,7 @@ mod test {
             .unwrap());
 
         assert_eq!(
-            t.task_manager.task_snapshot(crate::target::TargetTaskType::HostPipe).await,
+            t.task_manager.task_snapshot(crate::target::TargetTaskType::HostPipe),
             ffx_daemon_core::task::TaskSnapshot::Running
         );
 

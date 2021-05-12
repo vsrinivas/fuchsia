@@ -48,9 +48,8 @@ pub use crate::target_task::*;
 
 const IDENTIFY_HOST_TIMEOUT_MILLIS: u64 = 1000;
 const DEFAULT_SSH_PORT: u16 = 22;
-#[async_trait(?Send)]
 pub trait ToFidlTarget {
-    async fn to_fidl_target(self) -> bridge::Target;
+    fn to_fidl_target(self) -> bridge::Target;
 }
 
 #[derive(Debug, Clone)]
@@ -664,9 +663,9 @@ impl Target {
         Self::from_inner(inner)
     }
 
-    async fn rcs_state(&self) -> bridge::RemoteControlState {
-        let loop_running = self.task_manager.task_snapshot(TargetTaskType::HostPipe).await
-            == TaskSnapshot::Running;
+    fn rcs_state(&self) -> bridge::RemoteControlState {
+        let loop_running =
+            self.task_manager.task_snapshot(TargetTaskType::HostPipe) == TaskSnapshot::Running;
         let state = self.inner.state.borrow();
         match (loop_running, &state.connection_state) {
             (true, ConnectionState::Rcs(_)) => bridge::RemoteControlState::Up,
@@ -971,25 +970,25 @@ impl Target {
         Ok(target)
     }
 
-    pub async fn run_host_pipe(&self) {
-        self.task_manager.spawn_detached(TargetTaskType::HostPipe).await
+    pub fn run_host_pipe(&self) {
+        self.task_manager.spawn_detached(TargetTaskType::HostPipe);
     }
 
-    pub async fn run_mdns_monitor(&self) {
-        self.task_manager.spawn_detached(TargetTaskType::MdnsMonitor).await;
+    pub fn run_mdns_monitor(&self) {
+        self.task_manager.spawn_detached(TargetTaskType::MdnsMonitor);
     }
 
-    pub async fn run_fastboot_monitor(&self) {
-        self.task_manager.spawn_detached(TargetTaskType::FastbootMonitor).await;
+    pub fn run_fastboot_monitor(&self) {
+        self.task_manager.spawn_detached(TargetTaskType::FastbootMonitor);
     }
 
-    pub async fn run_logger(&self) {
-        self.task_manager.spawn_detached(TargetTaskType::ProactiveLog).await;
+    pub fn run_logger(&self) {
+        self.task_manager.spawn_detached(TargetTaskType::ProactiveLog);
     }
 
     pub async fn init_remote_proxy(&self) -> Result<RemoteControlProxy> {
         // Ensure auto-connect has at least started.
-        self.run_host_pipe().await;
+        self.run_host_pipe();
         match self.events.wait_for(None, |e| e == TargetEvent::RcsActivated).await {
             Ok(()) => (),
             Err(e) => {
@@ -1012,13 +1011,12 @@ impl EventSynthesizer<DaemonEvent> for Target {
     }
 }
 
-#[async_trait(?Send)]
 impl ToFidlTarget for Target {
-    async fn to_fidl_target(self) -> bridge::Target {
+    fn to_fidl_target(self) -> bridge::Target {
         let (addrs, last_response, rcs_state, serial_number, build_config, state) = (
             self.addrs(),
             self.last_response(),
-            self.rcs_state().await,
+            self.rcs_state(),
             self.serial(),
             self.build_config(),
             self.state(),
@@ -1893,8 +1891,9 @@ mod test {
         }
         // Assures multiple "simultaneous" invocations to start the target
         // doesn't put it into a bad state that would hang.
-        let _: ((), (), ()) =
-            futures::join!(t.run_host_pipe(), t.run_host_pipe(), t.run_host_pipe());
+        t.run_host_pipe();
+        t.run_host_pipe();
+        t.run_host_pipe();
     }
 
     struct RcsStateTest {
@@ -1933,7 +1932,7 @@ mod test {
             ));
             t.addrs_insert((a2, 2).into());
             if test.loop_started {
-                t.run_host_pipe().await;
+                t.run_host_pipe();
             }
             {
                 *t.inner.state.borrow_mut() = TargetState {
@@ -1947,7 +1946,7 @@ mod test {
                     },
                 };
             }
-            assert_eq!(t.rcs_state().await, test.expected);
+            assert_eq!(t.rcs_state(), test.expected);
         }
     }
 
@@ -1965,7 +1964,7 @@ mod test {
         t.addrs_insert((a1, 1).into());
         t.addrs_insert((a2, 1).into());
 
-        let t_conv = t.clone().to_fidl_target().await;
+        let t_conv = t.clone().to_fidl_target();
         assert_eq!(t.nodename().unwrap(), t_conv.nodename.unwrap().to_string());
         let addrs = t.addrs();
         let conv_addrs = t_conv.addresses.unwrap();

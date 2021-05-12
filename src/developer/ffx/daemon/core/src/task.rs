@@ -4,8 +4,7 @@
 
 use {
     futures::future::FutureExt, futures::future::LocalBoxFuture, futures::future::Shared,
-    futures::lock::Mutex, std::collections::hash_map::Entry, std::collections::HashMap,
-    std::fmt::Debug, std::hash::Hash, std::sync::Arc,
+    std::cell::RefCell, std::collections::HashMap, std::fmt::Debug, std::hash::Hash, std::rc::Rc,
 };
 
 /// An abstraction for a one-task-at-a-time task manager.
@@ -14,7 +13,7 @@ use {
 /// one running at a time. An arbitrary number of listeners can await these
 /// Futures.
 pub struct SingleFlight<T, R> {
-    guarded_task_map: Arc<Mutex<HashMap<T, Shared<LocalBoxFuture<'static, R>>>>>,
+    tasks: Rc<RefCell<HashMap<T, Shared<LocalBoxFuture<'static, R>>>>>,
     spawner: Box<dyn 'static + Fn(T) -> LocalBoxFuture<'static, R>>,
 }
 
@@ -30,21 +29,18 @@ impl<T: Hash + Eq + PartialEq + Clone + 'static, R: Clone + 'static> SingleFligh
     /// must be clonable as its output (see `spawn`) can be waited on by an
     /// arbitrary number of waiters.
     pub fn new(func: impl Fn(T) -> LocalBoxFuture<'static, R> + 'static) -> Self {
-        let guarded_task_map = Arc::new(Mutex::new(HashMap::new()));
         let spawner = Box::new(func);
-        Self { guarded_task_map, spawner }
+        Self { tasks: Rc::new(RefCell::new(HashMap::new())), spawner }
     }
 
     fn make_cleanup_task(&self, t: T) -> Shared<LocalBoxFuture<'static, R>> {
-        let task = (self.spawner)(t.clone());
-        let weak_map = Arc::downgrade(&self.guarded_task_map);
         // Converts the future into something that will
         // automagically clean itself up when complete.
+        let task_fut = (self.spawner)(t.clone());
+        let tasks = Rc::downgrade(&self.tasks);
         let task = async move {
-            let res = task.await;
-            if let Some(map) = weak_map.upgrade() {
-                map.lock().await.remove(&t);
-            }
+            let res = task_fut.await;
+            tasks.upgrade().map(|tasks| tasks.borrow_mut().remove(&t));
             res
         };
         task.boxed_local().shared()
@@ -67,20 +63,18 @@ impl<T: Hash + Eq + PartialEq + Clone + 'static, R: Clone + 'static> SingleFligh
     /// from the pool.
     #[allow(unused)] // Unused yet (will be used w/ paving, etc).
     pub async fn spawn(&self, t: T) -> Shared<LocalBoxFuture<'static, R>> {
-        let mut map = self.guarded_task_map.lock().await;
         // This cannot be done using `or_insert` as the code inside that
         // function must not be executed if there is not an entry. Furthermore,
         // `or_insert_with` is not used as we need to exit prematurely in the
         // event that no task can be created. That is why this is a manual
         // `match` rather than purely functional.
-        match map.entry(t.clone()) {
-            Entry::Vacant(e) => {
-                let task = self.make_cleanup_task(t);
-                e.insert(task.clone());
-                task
-            }
-            Entry::Occupied(e) => e.get().clone(),
+        if let Some(task) = self.tasks.borrow().get(&t) {
+            return task.clone();
         }
+
+        let task = self.make_cleanup_task(t.clone());
+        self.tasks.borrow_mut().insert(t, task.clone());
+        task
     }
 
     /// Spawns an auto-cleaning task that runs at most once.
@@ -88,18 +82,11 @@ impl<T: Hash + Eq + PartialEq + Clone + 'static, R: Clone + 'static> SingleFligh
     /// Different from `spawn()` in that no future is returned. This polls
     /// itself and then cleans itself up from the tracked running tasks after
     /// completion.
-    pub async fn spawn_detached(&self, t: T) {
-        let mut map = self.guarded_task_map.lock().await;
-        match map.entry(t.clone()) {
-            Entry::Vacant(e) => {
-                let task = self.make_cleanup_task(t);
-                e.insert(task.clone());
-                fuchsia_async::Task::local(async move {
-                    let _ = task.await;
-                })
-                .detach();
-            }
-            _ => {}
+    pub fn spawn_detached(&self, t: T) {
+        if !self.tasks.borrow().contains_key(&t) {
+            let task = self.make_cleanup_task(t.clone());
+            self.tasks.borrow_mut().insert(t, task.clone());
+            fuchsia_async::Task::local(task).detach();
         }
     }
 
@@ -113,9 +100,8 @@ impl<T: Hash + Eq + PartialEq + Clone + 'static, R: Clone + 'static> SingleFligh
     ///
     /// For emphasis: do NOT use this function for control flow of any kind
     /// under any circumstances.
-    pub async fn task_snapshot(&self, t: T) -> TaskSnapshot {
-        let map = self.guarded_task_map.lock().await;
-        if map.contains_key(&t) {
+    pub fn task_snapshot(&self, t: T) -> TaskSnapshot {
+        if self.tasks.borrow().contains_key(&t) {
             TaskSnapshot::Running
         } else {
             TaskSnapshot::NotRunning
@@ -127,6 +113,7 @@ impl<T: Hash + Eq + PartialEq + Clone + 'static, R: Clone + 'static> SingleFligh
 mod test {
     use super::*;
     use fuchsia_async::Task;
+    use futures::lock::Mutex;
     use lazy_static::lazy_static;
 
     lazy_static! {
@@ -170,11 +157,11 @@ mod test {
         );
 
         assert_eq!(
-            mgr.task_snapshot(TestTaskType::TaskThatExitsImmediately).await,
+            mgr.task_snapshot(TestTaskType::TaskThatExitsImmediately),
             TaskSnapshot::Running
         );
         assert_eq!(
-            mgr.task_snapshot(TestTaskType::TaskThatGloballyRunsOnce).await,
+            mgr.task_snapshot(TestTaskType::TaskThatGloballyRunsOnce),
             TaskSnapshot::Running
         );
 
@@ -185,11 +172,11 @@ mod test {
         assert!(d);
 
         assert_eq!(
-            mgr.task_snapshot(TestTaskType::TaskThatExitsImmediately).await,
+            mgr.task_snapshot(TestTaskType::TaskThatExitsImmediately),
             TaskSnapshot::NotRunning
         );
         assert_eq!(
-            mgr.task_snapshot(TestTaskType::TaskThatGloballyRunsOnce).await,
+            mgr.task_snapshot(TestTaskType::TaskThatGloballyRunsOnce),
             TaskSnapshot::NotRunning
         );
     }
@@ -198,9 +185,6 @@ mod test {
     async fn test_task_that_polls_itself() {
         let mgr = setup();
         assert!(mgr.spawn(TestTaskType::TaskThatPollsItself).await.await);
-        assert_eq!(
-            mgr.task_snapshot(TestTaskType::TaskThatPollsItself).await,
-            TaskSnapshot::NotRunning
-        );
+        assert_eq!(mgr.task_snapshot(TestTaskType::TaskThatPollsItself), TaskSnapshot::NotRunning);
     }
 }
