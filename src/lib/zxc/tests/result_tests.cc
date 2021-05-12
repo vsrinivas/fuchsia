@@ -59,6 +59,29 @@ static_assert(!std::is_constructible_v<fitx::result<fitx::failed, int>, fitx::er
 static_assert(!std::is_constructible_v<fitx::result<fitx::failed, int>, fitx::error<nothing>>);
 static_assert(std::is_constructible_v<fitx::result<fitx::failed, int>, fitx::error<fitx::failed>>);
 
+// Ensure that success/error types and helpers do not return references to their arguments when
+// deducing the value/error types.
+[[maybe_unused]]
+constexpr auto return_success(int value) {
+  return fitx::success(value);
+}
+[[maybe_unused]]
+constexpr auto return_error(int value) {
+  return fitx::error(value);
+}
+[[maybe_unused]]
+constexpr auto return_ok(int value) {
+  return fitx::ok(value);
+}
+[[maybe_unused]]
+constexpr auto return_as_error(int value) {
+  return fitx::as_error(value);
+}
+static_assert(std::is_same_v<fitx::success<int>, decltype(return_success(10))>);
+static_assert(std::is_same_v<fitx::error<int>, decltype(return_error(10))>);
+static_assert(std::is_same_v<fitx::success<int>, decltype(return_ok(10))>);
+static_assert(std::is_same_v<fitx::error<int>, decltype(return_as_error(10))>);
+
 #if 0 || TEST_DOES_NOT_COMPILE
 static_assert(fitx::result<fitx::success<>>{});
 static_assert(fitx::result<int, fitx::failed>{});

@@ -49,7 +49,7 @@ inline zx::status<fidl::UnownedClientEnd<fuchsia_io::Directory>> NsValue(
     std::string_view path) {
   for (auto& entry : entries) {
     if (std::equal(path.begin(), path.end(), entry.path().begin())) {
-      return zx::ok(entry.directory());
+      return zx::ok<fidl::UnownedClientEnd<fuchsia_io::Directory>>(entry.directory());
     }
   }
   return zx::error(ZX_ERR_NOT_FOUND);

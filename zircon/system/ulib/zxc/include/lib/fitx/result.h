@@ -132,8 +132,8 @@ error(T) -> error<T>;
 //   }
 //
 template <typename E>
-constexpr error<E> as_error(E&& error_value) {
-  return error<E>(std::forward<E>(error_value));
+constexpr error<std::decay_t<E>> as_error(E&& error_value) {
+  return error<std::decay_t<E>>(std::forward<E>(error_value));
 }
 
 // Type representing success with zero or one value.
@@ -207,8 +207,8 @@ success(T) -> success<T>;
 //     return fitx::ok(string);
 //   }
 template <typename T>
-constexpr success<T> ok(T&& value) {
-  return success<T>(std::forward<T>(value));
+constexpr success<std::decay_t<T>> ok(T&& value) {
+  return success<std::decay_t<T>>(std::forward<T>(value));
 }
 
 // Overload for empty value success.
