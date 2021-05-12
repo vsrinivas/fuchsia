@@ -4,7 +4,7 @@
 
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
-import("//build/host.gni")
+import("//tools/fidl/lib/fidlgentest/fidlgentest_go_test.gni")
 
 go_library("fidlgen") {
   sources = [
@@ -20,43 +20,23 @@ go_library("fidlgen") {
 }
 
 go_library("fidlgen_test_lib") {
+  testonly = true
+  deps = [ ":fidlgen" ]
   sources = [
     "identifiers_test.go",
     "names_test.go",
     "strings_test.go",
     "types_test.go",
   ]
-
-  deps = [
-    ":fidlgen",
-    "//tools/fidl/lib/fidlgentest",
-  ]
 }
 
 if (is_host) {
-  fidlc_target = "//tools/fidl/fidlc($host_toolchain)"
-  fidlc_binary = get_label_info(fidlc_target, "root_out_dir") + "/fidlc"
-
-  go_test("fidlgen_lib_test") {
+  fidlgentest_go_test("fidlgen_lib_test") {
     gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen" ]
-
-    args = [
-      "--fidlc",
-      rebase_path(fidlc_binary, root_build_dir),
-    ]
-
     deps = [
       ":fidlgen_test_lib",
       "//third_party/golibs:github.com/google/go-cmp",
-      "//tools/fidl/lib/fidlgentest",
     ]
-
-    non_go_deps = [ ":copy_fidlc" ]
-  }
-
-  host_test_data("copy_fidlc") {
-    sources = [ fidlc_binary ]
-    deps = [ fidlc_target ]
   }
 }
 

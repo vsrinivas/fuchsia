@@ -3,7 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/go/go_library.gni")
-import("//build/go/go_test.gni")
+import("//build/testing/host_test_data.gni")
+import("//tools/fidl/lib/fidlgentest/fidlgentest_go_test.gni")
 
 go_library("fidlgentest") {
   sources = [
@@ -14,24 +15,9 @@ go_library("fidlgentest") {
 }
 
 if (is_host) {
-  fidlc_target = "//tools/fidl/fidlc($host_toolchain)"
-
-  go_test("fidlgentest_lib_test") {
+  fidlgentest_go_test("fidlgentest_lib_test") {
     gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgentest" ]
-
-    fidlc_binary = get_label_info(fidlc_target, "root_out_dir") + "/fidlc"
-    args = [
-      "--fidlc",
-      rebase_path(fidlc_binary, root_build_dir),
-    ]
-
     deps = [ ":fidlgentest" ]
-    non_go_deps = [ ":copy_fidlc" ]
-  }
-
-  host_test_data("copy_fidlc") {
-    sources = [ get_label_info(fidlc_target, "root_out_dir") + "/fidlc" ]
-    deps = [ fidlc_target ]
   }
 }
 

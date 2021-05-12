@@ -4,20 +4,17 @@
 
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
-import("//build/go/go_test.gni")
 import("//build/host.gni")
 import("//build/rust/fidl_rust.gni")
 import("//build/rust/toolchain.gni")
 import("//build/testing/golden_test.gni")
 import("//tools/fidl/fidlc/testdata/info.gni")
+import("//tools/fidl/lib/fidlgentest/fidlgentest_go_test.gni")
 
 if (is_host) {
   go_library("gopkg") {
     name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_rust/..."
-    deps = [
-      "//tools/fidl/lib/fidlgen",
-      "//tools/fidl/lib/fidlgentest",
-    ]
+    deps = [ "//tools/fidl/lib/fidlgen" ]
     sources = [
       "codegen/bits.tmpl.go",
       "codegen/codegen.go",
@@ -43,27 +40,12 @@ if (is_host) {
     deps = [ ":gopkg" ]
   }
 
-  fidlc_target = "//tools/fidl/fidlc($host_toolchain)"
-
-  go_test("fidlgen_rust_lib_tests") {
+  fidlgentest_go_test("fidlgen_rust_lib_tests") {
     gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_rust/codegen" ]
-
-    fidlc_binary = get_label_info(fidlc_target, "root_out_dir") + "/fidlc"
-    args = [
-      "--fidlc",
-      rebase_path(fidlc_binary, root_build_dir),
-    ]
-
     deps = [
       ":gopkg",
       "//third_party/golibs:github.com/google/go-cmp",
     ]
-    non_go_deps = [ ":copy_fidlc" ]
-  }
-
-  host_test_data("copy_fidlc") {
-    sources = [ get_label_info(fidlc_target, "root_out_dir") + "/fidlc" ]
-    deps = [ fidlc_target ]
   }
 
   golden_test("fidlgen_rust_golden_tests") {
