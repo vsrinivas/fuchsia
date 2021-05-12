@@ -134,3 +134,9 @@ protocol MsgWrapper {
     TestTable() -> (TestTable result);
     TestResourceTable() -> (TestResourceTable result);
 };
+
+protocol TypesTest {
+    NonNullableChannel(zx.handle:CHANNEL channel);
+    RequestOf512Bytes(array<byte>:496 value);
+    RequestOf513Bytes(array<byte>:497 value);
+};

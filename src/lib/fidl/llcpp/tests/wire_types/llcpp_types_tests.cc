@@ -2,23 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fidl/internal.h>
-#include <lib/fidl/llcpp/array.h>
-#include <lib/fidl/llcpp/coding.h>
-#include <lib/fidl/llcpp/message.h>
-#include <lib/fidl/llcpp/sync_call.h>
+#include <lib/fidl/llcpp/message_storage.h>
 #include <lib/zx/channel.h>
-#include <zircon/fidl.h>
 
 #include <memory>
 #include <optional>
 #include <utility>
 
-#include <fidl/test/coding/fuchsia/llcpp/fidl.h>
-#include <zxtest/zxtest.h>
+#include <fidl/llcpp/types/test/llcpp/fidl.h>
+#include <gtest/gtest.h>
 
-using ::fidl_test_coding_fuchsia::TypesTest;
-using NonNullableChannelRequest = TypesTest::NonNullableChannelRequest;
+using ::fidl_llcpp_types_test::TypesTest;
+using NonNullableChannelRequest = fidl::WireRequest<TypesTest::NonNullableChannel>;
 
 namespace {
 
@@ -55,7 +50,7 @@ TEST(LlcppTypesTests, EncodedMessageTest) {
 
 // Start with a message, then encode, decode and encode again.
 TEST(LlcppTypesTests, RoundTripTest) {
-  TypesTest::NonNullableChannelRequest msg(10);
+  NonNullableChannelRequest msg(10);
 
   // Capture the extra handle here; it will not be cleaned by encoded_message
   zx::channel channel_1;
@@ -65,57 +60,54 @@ TEST(LlcppTypesTests, RoundTripTest) {
   zx_handle_t unsafe_handle_backup(msg.channel.get());
 
   // We need to define our own storage because it is used after encoded is deleted.
-  FIDL_ALIGNDECL uint8_t storage[sizeof(TypesTest::NonNullableChannelRequest)];
+  FIDL_ALIGNDECL uint8_t storage[sizeof(NonNullableChannelRequest)];
 
-  auto encoded = new fidl::UnownedEncodedMessage<TypesTest::NonNullableChannelRequest>(
-      storage, sizeof(storage), &msg);
-  EXPECT_EQ(encoded->GetOutgoingMessage().byte_actual(),
-            sizeof(TypesTest::NonNullableChannelRequest));
+  auto* encoded =
+      new fidl::UnownedEncodedMessage<NonNullableChannelRequest>(storage, sizeof(storage), &msg);
+  EXPECT_EQ(encoded->status(), ZX_OK);
+  auto encoded_bytes = encoded->GetOutgoingMessage().CopyBytes();
+  EXPECT_EQ(encoded_bytes.size(), sizeof(NonNullableChannelRequest));
 
   uint8_t golden_encoded[] = {0x0a, 0x00, 0x00, 0x00,   // txid
                               0x00, 0x00, 0x00, 0x01,   // flags and version
-                              0xa1, 0xd4, 0x9b, 0x76,   // low bytes of ordinal
-                              0x82, 0x41, 0x13, 0x06,   // high bytes of ordinal
+                              0x4c, 0xf1, 0x17, 0xe9,   // low bytes of ordinal
+                              0xa3, 0x24, 0xcb, 0x2d,   // high bytes of ordinal
                               0xff, 0xff, 0xff, 0xff,   // handle present
                               0x00, 0x00, 0x00, 0x00};  // Padding
 
   // Byte-accurate comparison
-  EXPECT_EQ(memcmp(golden_encoded, encoded->GetOutgoingMessage().bytes(),
-                   encoded->GetOutgoingMessage().byte_actual()),
-            0);
+  EXPECT_EQ(memcmp(golden_encoded, encoded_bytes.data(), encoded_bytes.size()), 0);
 
   HelperExpectPeerValid(channel_1);
 
   // Decode
-  auto decoded =
-      fidl::DecodedMessage<TypesTest::NonNullableChannelRequest>::FromOutgoingWithRawHandleCopy(
-          encoded);
+  auto converted = fidl::OutgoingToIncomingMessage(encoded->GetOutgoingMessage());
+  auto& incoming = converted.incoming_message();
+  ASSERT_EQ(ZX_OK, incoming.status());
+  auto decoded = fidl::DecodedMessage<NonNullableChannelRequest>(std::move(incoming));
   EXPECT_TRUE(decoded.ok());
-  EXPECT_NULL(decoded.error(), "%s", decoded.error());
-  EXPECT_EQ(decoded.PrimaryObject()->_hdr.txid, 10);
-  EXPECT_EQ(decoded.PrimaryObject()->_hdr.ordinal, 0x6134182769bd4a1lu);
+  EXPECT_EQ(decoded.error_message(), nullptr) << decoded.error_message();
+  EXPECT_EQ(decoded.PrimaryObject()->_hdr.txid, 10u);
+  EXPECT_EQ(decoded.PrimaryObject()->_hdr.ordinal, 0x2DCB24A3E917F14Clu);
   EXPECT_EQ(decoded.PrimaryObject()->channel.get(), unsafe_handle_backup);
   // encoded_message should be consumed
-  EXPECT_EQ(encoded->GetOutgoingMessage().handle_actual(), 0);
+  EXPECT_EQ(encoded->GetOutgoingMessage().handle_actual(), 0u);
   delete encoded;
-  // At this point, encoded is destroyed but not decoded, it should not accidentally close the
+  // At this point, |encoded| is destroyed but not |decoded|, it should not accidentally close the
   // channel.
   HelperExpectPeerValid(channel_1);
 
   // Encode
   {
-    fidl::OwnedEncodedMessage<TypesTest::NonNullableChannelRequest> encoded2(
-        decoded.PrimaryObject());
+    fidl::OwnedEncodedMessage<NonNullableChannelRequest> encoded2(decoded.PrimaryObject());
     EXPECT_TRUE(encoded2.ok());
-    EXPECT_NULL(encoded2.error(), "%s", encoded2.error());
+    EXPECT_EQ(encoded2.error_message(), nullptr) << encoded2.error_message();
 
     // Byte-level comparison
-    EXPECT_EQ(encoded2.GetOutgoingMessage().byte_actual(),
-              sizeof(TypesTest::NonNullableChannelRequest));
-    EXPECT_EQ(memcmp(golden_encoded, encoded2.GetOutgoingMessage().bytes(),
-                     encoded2.GetOutgoingMessage().byte_actual()),
-              0);
-    EXPECT_EQ(encoded2.GetOutgoingMessage().handle_actual(), 1);
+    auto encoded2_bytes = encoded2.GetOutgoingMessage().CopyBytes();
+    EXPECT_EQ(encoded2_bytes.size(), sizeof(NonNullableChannelRequest));
+    EXPECT_EQ(memcmp(golden_encoded, encoded2_bytes.data(), encoded2_bytes.size()), 0);
+    EXPECT_EQ(encoded2.GetOutgoingMessage().handle_actual(), 1u);
     EXPECT_EQ(encoded2.GetOutgoingMessage().handles()[0].handle, unsafe_handle_backup);
 
     HelperExpectPeerValid(channel_1);
@@ -143,8 +135,8 @@ TEST(LlcppTypesTests, StringView) {
   view.Set(allocator, "123");
 
   EXPECT_FALSE(view.empty());
-  EXPECT_EQ(view.size(), 3);
-  EXPECT_BYTES_EQ(view.data(), "123", 3);
+  EXPECT_EQ(view.size(), 3u);
+  EXPECT_EQ(std::string(view.data(), 3), "123");
 
   EXPECT_EQ(view.at(1), '2');
 }
@@ -162,18 +154,19 @@ TEST(LlcppTypesTests, VectorView) {
   view[1] = data[1];
   view[2] = data[2];
 
-  EXPECT_EQ(view.count(), 3);
-  EXPECT_BYTES_EQ(view.data(), data, 3);
+  EXPECT_EQ(view.count(), 3u);
+  EXPECT_EQ(std::vector<int>(std::begin(view), std::end(view)),
+            std::vector<int>(std::begin(data), std::end(data)));
 
   EXPECT_EQ(view.at(1), 2);
 }
 
 TEST(LlcppTypesTests, InlineMessageBuffer) {
   fidl::internal::InlineMessageBuffer<32> buffer;
-  ASSERT_EQ(32, buffer.size());
+  ASSERT_EQ(32u, buffer.size());
   ASSERT_EQ(reinterpret_cast<uint8_t*>(&buffer), buffer.data());
   ASSERT_EQ(buffer.data(), buffer.view().data);
-  ASSERT_EQ(32, buffer.view().capacity);
+  ASSERT_EQ(32u, buffer.view().capacity);
 
   const fidl::internal::InlineMessageBuffer<32> const_buffer;
   ASSERT_EQ(reinterpret_cast<const uint8_t*>(&const_buffer), const_buffer.data());
@@ -181,10 +174,10 @@ TEST(LlcppTypesTests, InlineMessageBuffer) {
 
 TEST(LlcppTypesTests, BoxedMessageBuffer) {
   fidl::internal::BoxedMessageBuffer<32> buffer;
-  ASSERT_EQ(32, buffer.size());
+  ASSERT_EQ(32u, buffer.size());
   ASSERT_NE(reinterpret_cast<uint8_t*>(&buffer), buffer.data());
   ASSERT_EQ(buffer.data(), buffer.view().data);
-  ASSERT_EQ(32, buffer.view().capacity);
+  ASSERT_EQ(32u, buffer.view().capacity);
 
   const fidl::internal::BoxedMessageBuffer<32> const_buffer;
   ASSERT_NE(reinterpret_cast<const uint8_t*>(&const_buffer), const_buffer.data());
@@ -192,17 +185,19 @@ TEST(LlcppTypesTests, BoxedMessageBuffer) {
 
 TEST(LlcppTypesTests, ResponseStorageAllocationStrategyTest) {
   // The stack allocation limit of 512 bytes is defined in
-  // zircon/system/ulib/fidl/include/lib/fidl/llcpp/sync_call.h
+  // tools/fidl/lib/fidlgen_cpp/protocol.go
 
-  static_assert(sizeof(TypesTest::RequestOf512BytesRequest) == 512);
+  static_assert(sizeof(fidl::WireRequest<TypesTest::RequestOf512Bytes>) == 512);
   // Buffers for messages no bigger than 512 bytes are embedded, for this request,
   // OwnedEncodedMessage size is bigger than 512 bytes.
-  static_assert(sizeof(fidl::OwnedEncodedMessage<TypesTest::RequestOf512BytesRequest>) > 512);
+  static_assert(sizeof(fidl::OwnedEncodedMessage<fidl::WireRequest<TypesTest::RequestOf512Bytes>>) >
+                512);
 
-  static_assert(sizeof(TypesTest::RequestOf513BytesRequest) == 520);
+  static_assert(sizeof(fidl::WireRequest<TypesTest::RequestOf513Bytes>) == 520);
   // Buffers for messages bigger than 512 bytes are store on the heap, for this request,
   // OwnedEncodedMessage size is smaller than 512 bytes.
-  static_assert(sizeof(fidl::OwnedEncodedMessage<TypesTest::RequestOf513BytesRequest>) < 512);
+  static_assert(sizeof(fidl::OwnedEncodedMessage<fidl::WireRequest<TypesTest::RequestOf513Bytes>>) <
+                512);
 }
 
 }  // namespace

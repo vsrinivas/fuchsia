@@ -12,6 +12,7 @@ group("wire_types") {
     ":fidl_llcpp_builder_tests",
     ":fidl_llcpp_builder_tests_bin($host_toolchain)",
     ":fidl_llcpp_wire_type_api_tests",
+    ":fidl_llcpp_wire_type_api_tests_bin($host_toolchain)",
   ]
 }
 
@@ -21,23 +22,30 @@ fidl("fidl.llcpp.types.test") {
   host_llcpp = true
 }
 
-# TODO(fxbug.dev/71459): This test is Fuchsia-exclusive for now, because
-# the referenced FIDL library does not compile under host.
 test("fidl_llcpp_wire_type_api_tests_bin") {
   output_name = "fidl_llcpp_wire_type_api_tests"
   sources = [
     "bits_test.cc",
     "enum_test.cc",
-    "table_test.cc",
-    "traits_test.cc",
-    "xunion_test.cc",
   ]
   deps = [
     ":fidl.llcpp.types.test_llcpp",
-    "//src/lib/fidl/llcpp/tests:types_test_utils",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]
+
+  if (is_fuchsia) {
+    sources += [
+      # These tests use the wire messaging layer.
+      "llcpp_types_tests.cc",
+      "traits_test.cc",
+
+      # These tests use handles.
+      "table_test.cc",
+      "xunion_test.cc",
+    ]
+    deps += [ "//src/lib/fidl/llcpp/tests:types_test_utils" ]
+  }
 }
 
 fuchsia_unittest_package("fidl_llcpp_wire_type_api_tests") {
