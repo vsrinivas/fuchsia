@@ -530,8 +530,48 @@ impl Painter {
         }
     }
 
+    fn write_to_tile(
+        &self,
+        tile: &mut [TileSlice],
+        solid_color: Option<[u8; 4]>,
+        flusher: Option<&dyn Flusher>,
+    ) {
+        let tile_len = tile.len();
+        if let Some(solid_color) = solid_color {
+            for slice in tile.iter_mut().take(tile_len) {
+                let slice = slice.as_mut_slice();
+                for color in slice.iter_mut() {
+                    *color = solid_color;
+                }
+            }
+        } else {
+            let srgb: &[[u8; 4]] = unsafe {
+                std::slice::from_raw_parts(mem::transmute(self.srgb.as_ptr()), self.srgb.len() * 16)
+            };
+
+            for (y, slice) in tile.iter_mut().enumerate().take(tile_len) {
+                let slice = slice.as_mut_slice();
+                for (x, color) in slice.iter_mut().enumerate() {
+                    *color = srgb[x * TILE_SIZE + y];
+                }
+            }
+        }
+
+        if let Some(flusher) = flusher {
+            for slice in tile.iter_mut().take(tile_len) {
+                let slice = slice.as_mut_slice();
+                flusher.flush(if let Some(subslice) = slice.get_mut(..TILE_SIZE) {
+                    subslice
+                } else {
+                    slice
+                });
+            }
+        }
+    }
+
     pub fn paint_tile_row<S: LayerStyles>(
         &mut self,
+        j: usize,
         mut segments: &[CompactSegment],
         styles: &S,
         clear_color: [f32; 4],
@@ -553,8 +593,6 @@ impl Painter {
                 covers[segment.tile_y() as usize] += segment.cover();
             }
         }
-
-        let j = segments[0].tile_j() as usize;
 
         let mut covers_left_of_row: BTreeMap<u16, [i8x16; TILE_SIZE / 16]> = BTreeMap::new();
         let mut populate_covers = |limit: Option<i16>| {
@@ -608,7 +646,6 @@ impl Painter {
                         current_segments
                     })
                     .unwrap_or(&[]);
-            let tile_len = tile.len();
 
             let is_unchanged = layers_per_tile
                 .map(|layers_per_tile| {
@@ -618,14 +655,7 @@ impl Painter {
 
             if current_segments.is_empty() && self.queue.is_empty() {
                 if !is_unchanged {
-                    let tile_color = to_bytes(clear_color);
-
-                    for slice in tile.iter_mut().take(tile_len) {
-                        let slice = slice.as_mut_slice();
-                        for color in slice.iter_mut() {
-                            *color = tile_color;
-                        }
-                    }
+                    self.write_to_tile(tile, Some(to_bytes(clear_color)), flusher);
                 }
 
                 continue;
@@ -633,44 +663,14 @@ impl Painter {
 
             if !is_unchanged {
                 if let Some(color) = self.top_carry_layer_solid_opaque(current_segments, styles) {
-                    let tile_color = to_bytes(color);
-
-                    for slice in tile.iter_mut().take(tile_len) {
-                        let slice = slice.as_mut_slice();
-                        for color in slice.iter_mut() {
-                            *color = tile_color;
-                        }
-                    }
+                    self.write_to_tile(tile, Some(to_bytes(color)), flusher);
                 } else {
                     self.clear(clear_color);
 
                     self.paint_tile(i, j, current_segments, styles);
                     self.compute_srgb();
 
-                    let srgb: &[[u8; 4]] = unsafe {
-                        std::slice::from_raw_parts(
-                            mem::transmute(self.srgb.as_ptr()),
-                            self.srgb.len() * 16,
-                        )
-                    };
-
-                    for (y, slice) in tile.iter_mut().enumerate().take(tile_len) {
-                        let slice = slice.as_mut_slice();
-                        for (x, color) in slice.iter_mut().enumerate() {
-                            *color = srgb[x * TILE_SIZE + y];
-                        }
-                    }
-                }
-
-                if let Some(flusher) = flusher {
-                    for slice in tile.iter_mut().take(tile_len) {
-                        let slice = slice.as_mut_slice();
-                        flusher.flush(if let Some(subslice) = slice.get_mut(..TILE_SIZE) {
-                            subslice
-                        } else {
-                            slice
-                        });
-                    }
+                    self.write_to_tile(tile, None, flusher);
                 }
             } else {
                 let mut covers = BTreeMap::new();

@@ -287,7 +287,7 @@ mod tests {
     }
 
     #[test]
-    fn background_color_untouched() {
+    fn background_color_clear() {
         let mut buffer = [GREEN];
         let mut composition = Composition::new();
 
@@ -297,7 +297,7 @@ mod tests {
             None,
         );
 
-        assert_eq!(buffer, [GREEN]);
+        assert_eq!(buffer, [RED]);
     }
 
     #[test]
@@ -556,6 +556,51 @@ mod tests {
             Buffer {
                 buffer: &mut buffer,
                 width: 2 * TILE_SIZE,
+                layer_cache: layer_cache.clone(),
+                ..Default::default()
+            },
+            BLACKF,
+            None,
+        );
+
+        assert_eq!(buffer[0], BLACK);
+
+        composition.get_mut(layer_id).unwrap().set_transform(&[
+            1.0,
+            0.0,
+            0.0,
+            1.0,
+            -(TILE_SIZE as f32),
+            0.0,
+        ]);
+
+        composition.render(
+            Buffer {
+                buffer: &mut buffer,
+                width: TILE_SIZE,
+                layer_cache: layer_cache.clone(),
+                ..Default::default()
+            },
+            BLACKF,
+            None,
+        );
+
+        assert_eq!(buffer[0], RED);
+
+        composition.get_mut(layer_id).unwrap().set_transform(&[
+            1.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            TILE_SIZE as f32,
+        ]);
+        dbg!("HERE");
+
+        composition.render(
+            Buffer {
+                buffer: &mut buffer,
+                width: TILE_SIZE,
                 layer_cache: layer_cache.clone(),
                 ..Default::default()
             },
