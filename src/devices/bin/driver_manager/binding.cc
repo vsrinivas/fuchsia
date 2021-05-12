@@ -14,6 +14,7 @@
 #include "device.h"
 #include "src/devices/lib/bind/ffi_bindings.h"
 #include "src/devices/lib/log/log.h"
+#include "src/lib/fxl/strings/utf_codecs.h"
 
 namespace internal {
 
@@ -159,9 +160,20 @@ bool driver_is_bindable(const Driver* drv, uint32_t protocol_id,
       properties[i] = device_property_t{.key = props[i].id, .value = props[i].value};
     }
 
-    // TODO(fxb/74654): Match device string properties to the bind rules.
+    fbl::Array<device_str_property_t> str_properties(new device_str_property_t[str_props.size()],
+                                                     str_props.size());
+    for (size_t i = 0; i < str_props.size(); i++) {
+      if (!fxl::IsStringUTF8(str_props[i].key) || !fxl::IsStringUTF8(str_props[i].value)) {
+        LOGF(ERROR, "String properties are not in UTF-8 encoding");
+        return false;
+      }
+      str_properties[i] = device_str_property_t{.key = str_props[i].key.c_str(),
+                                                .value = str_props[i].value.c_str()};
+    }
+
     return match_bind_rules(bytecode ? bytecode->get() : nullptr, drv->binding_size,
-                            properties.get(), props.size(), protocol_id, autobind);
+                            properties.get(), props.size(), str_properties.get(),
+                            str_properties.size(), protocol_id, autobind);
   }
 
   LOGF(ERROR, "Invalid bytecode version: %i", drv->bytecode_version);
