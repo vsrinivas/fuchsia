@@ -15,7 +15,7 @@ use {
     fdio::service_connect,
     fidl_fuchsia_sys2::EventSourceMarker,
     fidl_fuchsia_sys_internal::{ComponentEventProviderMarker, LogConnectorMarker},
-    fuchsia_async as fasync,
+    fuchsia_async::{self as fasync, LocalExecutor, SendExecutor},
     fuchsia_component::client::connect_to_protocol,
     fuchsia_component::server::MissingStartupHandle,
     fuchsia_syslog, fuchsia_zircon as zx,
@@ -74,9 +74,21 @@ pub struct Args {
 
 fn main() -> Result<(), Error> {
     let opt: Args = argh::from_env();
+    let log_server = init_diagnostics(&opt).context("initializing diagnostics")?;
 
-    let mut executor = fasync::Executor::new()?;
+    let config = configs::parse_config(&opt.config_path).context("parsing configuration")?;
+    debug!("Configuration parsed.");
 
+    let num_threads = config.num_threads;
+    debug!("Running executor with {} threads.", num_threads);
+    SendExecutor::new()?
+        .run(async_main(opt, config, log_server), num_threads)
+        .context("async main")?;
+    debug!("Exiting.");
+    Ok(())
+}
+
+fn init_diagnostics(opt: &Args) -> Result<Option<zx::Socket>, Error> {
     let mut log_server = None;
     if opt.consume_own_logs {
         assert!(!opt.log_to_debuglog, "cannot specify both consume-own-logs and log-to-debuglog");
@@ -85,7 +97,7 @@ fn main() -> Result<(), Error> {
         fuchsia_syslog::init_with_socket_and_name(log_client, "archivist")?;
     } else if opt.log_to_debuglog {
         assert!(!opt.consume_own_logs, "cannot specify both consume-own-logs and log-to-debuglog");
-        executor.run_singlethreaded(stdout_to_debuglog::init()).unwrap();
+        LocalExecutor::new()?.run_singlethreaded(stdout_to_debuglog::init()).unwrap();
 
         log::set_logger(&STDOUT_LOGGER).unwrap();
         log::set_max_level(log::LevelFilter::Info);
@@ -99,39 +111,31 @@ fn main() -> Result<(), Error> {
     }
 
     diagnostics::init();
+    Ok(log_server)
+}
 
-    let archivist_configuration: configs::Config = match configs::parse_config(&opt.config_path) {
-        Ok(config) => config,
-        Err(parsing_error) => panic!("Parsing configuration failed: {}", parsing_error),
-    };
-    debug!("Configuration parsed.");
-
-    let num_threads = archivist_configuration.num_threads;
-
+async fn async_main(
+    opt: Args,
+    archivist_configuration: configs::Config,
+    log_server: Option<zx::Socket>,
+) -> Result<(), Error> {
     let mut archivist = archivist::ArchivistBuilder::new(archivist_configuration)?;
     debug!("Archivist initialized from configuration.");
 
-    executor
-        .run_singlethreaded(archivist.install_log_services(archivist::LogOpts {
-            ingest_v2_logs: !opt.disable_event_source,
-        }));
-    executor
-        .run_singlethreaded(async {
-            if !opt.disable_component_event_provider {
-                let legacy_event_provider = connect_to_protocol::<ComponentEventProviderMarker>()
-                    .context("failed to connect to event provider")?;
-                archivist.add_event_source("v1", Box::new(legacy_event_provider)).await;
-            }
+    archivist
+        .install_log_services(archivist::LogOpts { ingest_v2_logs: !opt.disable_event_source })
+        .await;
+    if !opt.disable_component_event_provider {
+        let legacy_event_provider = connect_to_protocol::<ComponentEventProviderMarker>()
+            .context("failed to connect to event provider")?;
+        archivist.add_event_source("v1", Box::new(legacy_event_provider)).await;
+    }
 
-            if !opt.disable_event_source {
-                let event_source = connect_to_protocol::<EventSourceMarker>()
-                    .context("failed to connect to event source")?;
-                archivist.add_event_source("v2", Box::new(event_source)).await;
-            }
-
-            Ok::<(), Error>(())
-        })
-        .context("failed to add event lifecycle event sources")?;
+    if !opt.disable_event_source {
+        let event_source = connect_to_protocol::<EventSourceMarker>()
+            .context("failed to connect to event source")?;
+        archivist.add_event_source("v2", Box::new(event_source)).await;
+    }
 
     if let Some(socket) = log_server {
         archivist.consume_own_logs(socket);
@@ -152,18 +156,13 @@ fn main() -> Result<(), Error> {
 
     if !opt.disable_log_connector {
         let connector = connect_to_protocol::<LogConnectorMarker>()?;
-        executor.run_singlethreaded(
-            archivist.add_event_source(
-                "log_connector",
-                Box::new(LogConnectorEventSource::new(connector)),
-            ),
-        );
+        archivist
+            .add_event_source("log_connector", Box::new(LogConnectorEventSource::new(connector)))
+            .await;
     }
 
     if !opt.disable_klog {
-        let debuglog = executor
-            .run_singlethreaded(logs::KernelDebugLog::new())
-            .context("Failed to read kernel logs")?;
+        let debuglog = logs::KernelDebugLog::new().await.context("Failed to read kernel logs")?;
         fasync::Task::spawn(archivist.data_repo().clone().drain_debuglog(debuglog)).detach();
     }
 
@@ -195,10 +194,8 @@ fn main() -> Result<(), Error> {
         fuchsia_runtime::take_startup_handle(fuchsia_runtime::HandleType::DirectoryRequest.into())
             .ok_or(MissingStartupHandle)?;
 
-    debug!("Running executor with {} threads.", num_threads);
-    executor.run(archivist.run(zx::Channel::from(startup_handle)), num_threads)?;
+    archivist.run(zx::Channel::from(startup_handle)).await?;
 
-    debug!("Exiting.");
     Ok(())
 }
 
