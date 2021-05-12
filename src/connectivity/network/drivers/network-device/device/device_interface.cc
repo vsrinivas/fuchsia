@@ -81,7 +81,7 @@ DeviceInterface::~DeviceInterface() {
 }
 
 zx_status_t DeviceInterface::Init(const char* parent_name) {
-  LOG_TRACE("network-device: Init");
+  LOGF_TRACE("network-device: %s('%s')", __FUNCTION__, parent_name);
   if (!device_.is_valid()) {
     LOG_ERROR("network-device: init: no protocol");
     return ZX_ERR_INTERNAL;
@@ -169,7 +169,7 @@ zx_status_t DeviceInterface::Init(const char* parent_name) {
 void DeviceInterface::Teardown(fit::callback<void()> teardown_callback) {
   // stop all rx queue operation immediately.
   rx_queue_->JoinThread();
-  LOG_TRACE("network-device: Teardown");
+  LOGF_TRACE("network-device: %s", __FUNCTION__);
 
   control_lock_.Acquire();
   // Can't call teardown again until the teardown process has ended.
@@ -309,6 +309,7 @@ void DeviceInterface::NetworkDeviceIfcSnoop(const rx_buffer_t* rx_list, size_t r
 }
 
 void DeviceInterface::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) {
+  LOGF_TRACE("network-device: %s", __FUNCTION__);
   SharedAutoLock lock(&control_lock_);
   // TODO(http://fxbug.dev/64310): Remove port0 requirement once FIDL is migrated to multi-port
   // version.
@@ -319,7 +320,6 @@ void DeviceInterface::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync
     }
     auto& port_info = port0->info();
 
-    LOG_TRACE("network-device: GetInfo");
     netdev::wire::Info info{
         .class_ = static_cast<netdev::wire::DeviceClass>(port_info.device_class),
         .min_descriptor_length = sizeof(buffer_descriptor_t) / sizeof(uint64_t),
@@ -563,7 +563,7 @@ void DeviceInterface::SessionStopped(Session& session) {
 }
 
 void DeviceInterface::StartDevice() {
-  LOG_TRACE("network-device: StartDevice");
+  LOGF_TRACE("network-device: %s", __FUNCTION__);
 
   bool start = false;
   {
@@ -593,13 +593,13 @@ void DeviceInterface::StartDevice() {
 }
 
 void DeviceInterface::StartDeviceInner() {
-  LOG_TRACE("network-device: StartDeviceInner");
+  LOGF_TRACE("network-device: %s", __FUNCTION__);
   device_.Start([](void* cookie) { reinterpret_cast<DeviceInterface*>(cookie)->DeviceStarted(); },
                 this);
 }
 
 void DeviceInterface::StopDevice(std::optional<TeardownState> continue_teardown) {
-  LOG_TRACE("network-device: StopDevice");
+  LOGF_TRACE("network-device: %s", __FUNCTION__);
   bool stop = false;
   switch (device_status_) {
     case DeviceStatus::STOPPED:
@@ -628,7 +628,7 @@ void DeviceInterface::StopDevice(std::optional<TeardownState> continue_teardown)
 }
 
 void DeviceInterface::StopDeviceInner() {
-  LOG_TRACE("network-device: StopDeviceInner");
+  LOGF_TRACE("network-device: %s", __FUNCTION__);
   device_.Stop([](void* cookie) { reinterpret_cast<DeviceInterface*>(cookie)->DeviceStopped(); },
                this);
 }
@@ -641,7 +641,7 @@ PendingDeviceOperation DeviceInterface::SetDeviceStatus(DeviceStatus status) {
 }
 
 void DeviceInterface::DeviceStarted() {
-  LOG_TRACE("network-device: DeviceStarted");
+  LOGF_TRACE("network-device: %s", __FUNCTION__);
   control_lock_.Acquire();
   switch (SetDeviceStatus(DeviceStatus::STARTED)) {
     case PendingDeviceOperation::STOP:
@@ -658,7 +658,7 @@ void DeviceInterface::DeviceStarted() {
 }
 
 void DeviceInterface::DeviceStopped() {
-  LOG_TRACE("network-device: DeviceStopped");
+  LOGF_TRACE("network-device: %s", __FUNCTION__);
   control_lock_.Acquire();
   PendingDeviceOperation pending_op = SetDeviceStatus(DeviceStatus::STOPPED);
   if (ContinueTeardown(TeardownState::SESSIONS)) {
@@ -806,7 +806,7 @@ zx::status<AttachedPort> DeviceInterface::AcquirePort(uint8_t port_id,
 }
 
 void DeviceInterface::OnPortTeardownComplete(DevicePort& port) {
-  LOGF_TRACE("network-device: OnPortTeardownComplete(%d)", port.id());
+  LOGF_TRACE("network-device: %s(%d)", __FUNCTION__, port.id());
 
   control_lock_.Acquire();
   bool stop_device = false;
@@ -884,7 +884,7 @@ void DeviceInterface::QueueTx(const tx_buffer_t* tx, size_t count) {
 }
 
 void DeviceInterface::NotifyDeadSession(Session& dead_session) {
-  LOGF_TRACE("network-device: NotifyDeadSession '%s'", dead_session.name());
+  LOGF_TRACE("network-device: %s('%s')", __FUNCTION__, dead_session.name());
   // First of all, stop all data-plane operations with stopped session.
   if (!dead_session.IsPaused()) {
     // Stop the session.
@@ -908,7 +908,7 @@ void DeviceInterface::NotifyDeadSession(Session& dead_session) {
 
   // we can destroy the session immediately.
   if (session_ptr->ShouldDestroy()) {
-    LOGF_TRACE("network-device: NotifyDeadSession '%s' destroying session", dead_session.name());
+    LOGF_TRACE("network-device: %s('%s') destroying session", __FUNCTION__, dead_session.name());
     ReleaseVmo(*session_ptr);
     session_ptr = nullptr;
     ContinueTeardown(TeardownState::SESSIONS);
@@ -918,9 +918,9 @@ void DeviceInterface::NotifyDeadSession(Session& dead_session) {
   // otherwise, add it to the list of dead sessions so we can wait for buffers to be returned before
   // destroying it.
   LOGF_TRACE(
-      "network-device: NotifyDeadSession: session '%s' is dead, waiting for buffers to be "
+      "network-device: %s('%s') session is dead, waiting for buffers to be "
       "reclaimed",
-      session_ptr->name());
+      __FUNCTION__, session_ptr->name());
   dead_sessions_.push_back(std::move(session_ptr));
   control_lock_.Release();
 }
@@ -941,12 +941,12 @@ void DeviceInterface::PruneDeadSessions() __TA_REQUIRES_SHARED(control_lock_) {
       // that postponing the destruction on the dispatcher is always safe.
       async::PostTask(dispatcher_, [&session, this]() {
         fbl::AutoLock lock(&control_lock_);
-        LOGF_TRACE("network-device: PruneDeadSessions: destroying %s", session.name());
+        LOGF_TRACE("network-device: destroying %s", session.name());
         ReleaseVmo(session);
         dead_sessions_.erase(session);
       });
     } else {
-      LOGF_TRACE("network-device: PruneDeadSessions: %s still pending", session.name());
+      LOGF_TRACE("network-device: %s: %s still pending", __FUNCTION__, session.name());
     }
   }
 }
