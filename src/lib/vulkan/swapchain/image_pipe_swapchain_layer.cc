@@ -235,6 +235,9 @@ void ImagePipeSwapchain::Cleanup(VkDevice device, const VkAllocationCallbacks* p
   VkLayerDispatchTable* pDisp =
       GetLayerDataPtr(get_dispatch_key(device), layer_data_map)->device_dispatch_table.get();
 
+  // Wait for device to be idle to ensure no QueueSubmit operations caused by Present are pending.
+  pDisp->DeviceWaitIdle(device);
+
   for (auto& image : images_) {
     surface()->RemoveImage(image.id);
     pDisp->DestroyImage(device, image.image, pAllocator);
