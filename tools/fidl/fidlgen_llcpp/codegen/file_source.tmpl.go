@@ -17,10 +17,11 @@ const fileSourceTmpl = `
 
 {{- range .Decls }}
 {{- if Eq .Kind Kinds.Const }}{{ template "ConstDefinition" . }}{{- end }}
-{{- if Eq .Kind Kinds.Protocol }}
-{{ template "ProtocolDefinition" . }}
-{{ template "EventSenderDefinition" . }}
-{{- end }}
+{{- if Eq .Kind Kinds.Protocol }}{{ $protocol := . }}
+{{- range $transport, $_ := .Transports }}{{- if eq $transport "Channel" -}}
+{{ template "ProtocolDefinition" $protocol }}
+{{ template "EventSenderDefinition" $protocol }}
+{{- end }}{{ end }}{{ end }}
 {{- if Eq .Kind Kinds.Struct }}{{ template "StructDefinition" . }}{{- end }}
 {{- if Eq .Kind Kinds.Union }}{{ template "UnionDefinition" . }}{{- end }}
 {{- if Eq .Kind Kinds.Table }}{{ template "TableDefinition" . }}{{- end }}

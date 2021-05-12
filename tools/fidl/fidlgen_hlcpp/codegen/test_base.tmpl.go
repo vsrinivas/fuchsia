@@ -19,14 +19,15 @@ const testBaseTemplate = `
 #include <{{ .PrimaryHeader }}>
 
 {{- range .Decls }}
-  {{- if Eq .Kind Kinds.Protocol }}
-{{ EnsureNamespace .TestBase }}
-class {{ .TestBase.Name }} : public {{ . }} {
+  {{- if Eq .Kind Kinds.Protocol }}{{ $protocol := .}}
+  {{- range $transport, $_ := .Transports }}{{- if eq $transport "Channel" }}
+{{ EnsureNamespace $protocol.TestBase }}
+class {{ $protocol.TestBase.Name }} : public {{ $protocol }} {
   public:
-  virtual ~{{ .TestBase.Name }}() { }
+  virtual ~{{ $protocol.TestBase.Name }}() { }
   virtual void NotImplemented_(const std::string& name) = 0;
 
-  {{- range .Methods }}
+  {{- range $protocol.Methods }}
     {{- if .HasRequest }}
   void {{ template "RequestMethodSignature" . }} override {
     NotImplemented_("{{ .Name }}");
@@ -36,7 +37,7 @@ class {{ .TestBase.Name }} : public {{ . }} {
 
 };
   {{- end }}
-{{- end -}}
+{{- end }}{{ end }}{{ end -}}
 
 {{ EndOfFile }}
 {{ end }}

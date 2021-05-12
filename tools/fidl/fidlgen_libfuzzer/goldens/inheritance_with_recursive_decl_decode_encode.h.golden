@@ -20,6 +20,7 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 3>
                 ::fidl::fuzzing::DecoderEncoderImpl<::fidl::WireRequest<
                     ::fidl_test_inheritancewithrecursivedecl::Parent::First>>,
         },
+
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::fidl::WireRequest<::fidl_test_"
                               "inheritancewithrecursivedecl::Child::First>",

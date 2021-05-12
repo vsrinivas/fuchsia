@@ -14,16 +14,17 @@ const testBaseTmpl = `
 #include <{{ .PrimaryHeader }}>
 
 {{- range .Decls }}
-  {{- if Eq .Kind Kinds.Protocol }}
-{{ EnsureNamespace .TestBase }}
+  {{- if Eq .Kind Kinds.Protocol }}{{ $protocol := .}}
+  {{- range $transport, $_ := .Transports }}{{- if eq $transport "Channel" }}
+{{ EnsureNamespace $protocol.TestBase }}
 
 
-class {{ .TestBase.Name }} : public {{ .WireServer }} {
+class {{ $protocol.TestBase.Name }} : public {{ $protocol.WireServer }} {
   public:
-  virtual ~{{ .TestBase.Name }}() { }
+  virtual ~{{ $protocol.TestBase.Name }}() { }
   virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
 
-  {{- range .Methods }}
+  {{- range $protocol.Methods }}
     {{- if .HasRequest }}
     virtual void {{ .Name }}(
         {{ .WireRequestView.Self }} request, {{ .WireCompleter }}::Sync& completer) override {
@@ -33,7 +34,7 @@ class {{ .TestBase.Name }} : public {{ .WireServer }} {
   {{- end }}
 };
   {{- end }}
-{{- end -}}
+{{- end }}{{ end }}{{ end -}}
 
 {{ EndOfFile }}
 {{ end }}

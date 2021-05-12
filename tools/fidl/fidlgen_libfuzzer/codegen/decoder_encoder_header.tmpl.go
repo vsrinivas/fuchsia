@@ -23,7 +23,10 @@ namespace fuzzing {
 inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, {{ CountDecoderEncoders .Decls }}>
 {{ range .Library }}{{ . }}_{{ end }}decoder_encoders = {
 {{ range .Decls }}
-{{- if Eq .Kind Kinds.Protocol -}}{{ template "ProtocolDecoderEncoders" . }}{{- end -}}
+{{- if Eq .Kind Kinds.Protocol -}}{{ $protocol := . }}
+{{ range $transport, $_ := .Transports -}}{{ if eq $transport "Channel" -}}
+{{ template "ProtocolDecoderEncoders" $protocol }}
+{{- end }}{{ end }}{{ end -}}
 {{- if Eq .Kind Kinds.Struct }}{{ template "DecoderEncoder" . }}{{- end -}}
 {{- if Eq .Kind Kinds.Table }}{{ template "DecoderEncoder" . }}{{- end -}}
 {{- end }}

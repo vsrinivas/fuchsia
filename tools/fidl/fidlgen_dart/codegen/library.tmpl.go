@@ -78,8 +78,9 @@ import '{{ .AsyncURL }}' as {{ .LocalName }};
 typedef _VoidCallback = void Function();
 
 {{ range $protocol := .Protocols -}}
+{{- range $transport, $_ := .Transports }}{{- if eq $transport "Channel" -}}
 {{ template "ProtocolAsyncDeclaration" $protocol }}
-{{ end -}}
+{{ end -}}{{ end }}{{ end }}
 
 {{- end -}}
 
@@ -111,8 +112,9 @@ import './fidl_async.dart';
 // ignore_for_file: unused_shown_name
 
 {{ range $protocol := .Protocols -}}
+{{- range $transport, $_ := .Transports }}{{- if eq $transport "Channel" -}}
 {{ template "ProtocolTestDeclaration" $protocol }}
-{{ end -}}
+{{ end -}}{{ end }}{{ end }}
 
 {{- end -}}
 

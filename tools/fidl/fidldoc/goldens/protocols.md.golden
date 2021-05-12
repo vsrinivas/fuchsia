@@ -122,7 +122,7 @@
     </table>
 
 ## DiscoverableProtocol {#DiscoverableProtocol}
-*Defined in [fidl.test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=67)*
+*Defined in [fidl.test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=72)*
 
 
 ### Method {#fidl.test.protocols/DiscoverableProtocol.Method}
@@ -136,7 +136,7 @@
 
 
 ## HandleRightsProtocol {#HandleRightsProtocol}
-*Defined in [fidl.test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=71)*
+*Defined in [fidl.test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=76)*
 
 
 ### AnEvent {#fidl.test.protocols/HandleRightsProtocol.AnEvent}
@@ -193,8 +193,32 @@
             </td>
         </tr></table>
 
+## SyscallProtocol {#SyscallProtocol}
+*Defined in [fidl.test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=56)*
+
+
+### MethodA {#fidl.test.protocols/SyscallProtocol.MethodA}
+
+
+#### Request
+<table>
+    <tr><th>Name</th><th>Type</th></tr>
+    <tr>
+            <td><code>a</code></td>
+            <td>
+                <code>int64</code>
+            </td>
+        </tr><tr>
+            <td><code>b</code></td>
+            <td>
+                <code>int64</code>
+            </td>
+        </tr></table>
+
+
+
 ## Transitional {#Transitional}
-*Defined in [fidl.test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=55)*
+*Defined in [fidl.test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=60)*
 
 
 ### Event {#fidl.test.protocols/Transitional.Event}

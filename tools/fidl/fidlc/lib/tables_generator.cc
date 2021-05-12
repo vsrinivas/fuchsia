@@ -222,6 +222,8 @@ void TablesGenerator::Generate(const coded::BitsType& bits_type) {
   Emit(&tables_file_, "\"};\n\n");
 }
 
+// TODO(fxbug.dev/56727) Consider filtering out structs that are not used because they are
+// only referenced by channel transports.
 void TablesGenerator::Generate(const coded::StructType& struct_type) {
   std::string fields_array_name = NameFields(struct_type.coded_name);
 

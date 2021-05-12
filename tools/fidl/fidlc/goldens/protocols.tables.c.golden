@@ -66,6 +66,9 @@ const struct FidlCodedStruct fidl_test_protocols_TransitionalOneWayRequestTable 
 __LOCAL extern const struct FidlCodedStruct fidl_test_protocols_TransitionalEventEventTable;
 const struct FidlCodedStruct fidl_test_protocols_TransitionalEventEventTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=24u, .name="fidl.test.protocols/TransitionalEventEvent"};
 
+__LOCAL extern const struct FidlCodedStruct fidl_test_protocols_SyscallProtocolMethodARequestTable;
+const struct FidlCodedStruct fidl_test_protocols_SyscallProtocolMethodARequestTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=32u, .name="fidl.test.protocols/SyscallProtocolMethodARequest"};
+
 __LOCAL extern const struct FidlCodedStruct fidl_test_protocols_ChannelProtocolMethodARequestTable;
 const struct FidlCodedStruct fidl_test_protocols_ChannelProtocolMethodARequestTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=32u, .name="fidl.test.protocols/ChannelProtocolMethodARequest"};
 

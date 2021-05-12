@@ -26,6 +26,7 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 4>
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
                 ::fidl::WireResponse<::fidl_test_inheritance::Super::Foo>>,
         },
+
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name =
                 "::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo>",

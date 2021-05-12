@@ -60,6 +60,7 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 6>
                 ::fidl::fuzzing::DecoderEncoderImpl<::fidl::WireRequest<
                     ::fidl_test_protocolrequest::Parent::TakeChildRequest>>,
         },
+
 };
 
 }  // namespace fuzzing

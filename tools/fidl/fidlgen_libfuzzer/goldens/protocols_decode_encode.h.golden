@@ -9,7 +9,7 @@
 
 namespace fuzzing {
 
-inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 41>
+inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 42>
     fidl_test_protocols_decoder_encoders = {
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::fidl_test_protocols::wire::"
@@ -19,6 +19,7 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 41>
                 ::fidl_test_protocols::wire::
                     WithErrorSyntaxHandleInResultResponse>,
         },
+
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::fidl::WireRequest<::fidl_test_protocols::"
                               "HandleRightsProtocol::NoResponseMethod>",
@@ -76,6 +77,7 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 41>
                 ::fidl_test_protocols::wire::
                     WithErrorSyntaxErrorAsEnumResponse>,
         },
+
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::fidl::WireRequest<::fidl_test_protocols::"
                               "Transitional::Request>",
@@ -108,6 +110,7 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 41>
                 ::fidl::fuzzing::DecoderEncoderImpl<::fidl::WireResponse<
                     ::fidl_test_protocols::Transitional::Event>>,
         },
+
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::fidl::WireRequest<::fidl_test_protocols::"
                               "ChannelProtocol::MethodA>",
@@ -172,6 +175,7 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 41>
                 ::fidl::fuzzing::DecoderEncoderImpl<::fidl::WireResponse<
                     ::fidl_test_protocols::ChannelProtocol::MutateSocket>>,
         },
+
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name =
                 "::fidl::WireRequest<::fidl_test_protocols::"
@@ -290,6 +294,7 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 41>
                     ::fidl_test_protocols::WithAndWithoutRequestResponse::
                         OnWithResponse>>,
         },
+
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::fidl::WireRequest<::fidl_test_protocols::"
                               "WithErrorSyntax::ResponseAsStruct>",
@@ -354,6 +359,7 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 41>
                 ::fidl::fuzzing::DecoderEncoderImpl<::fidl::WireResponse<
                     ::fidl_test_protocols::WithErrorSyntax::HandleInResult>>,
         },
+
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::fidl::WireRequest<::fidl_test_protocols::"
                               "DiscoverableProtocol::Method>",

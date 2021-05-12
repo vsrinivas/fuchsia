@@ -52,6 +52,11 @@ protocol ChannelProtocol {
     MutateSocket(handle:SOCKET a) -> (handle:SOCKET b);
 };
 
+[Transport = "Syscall"]
+protocol SyscallProtocol {
+    MethodA(int64 a, int64 b);
+};
+
 protocol Transitional {
     [Transitional]
     Request(int64 x) -> (int64 y);

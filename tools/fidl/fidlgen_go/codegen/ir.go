@@ -1071,6 +1071,8 @@ func Compile(fidlData fidlgen.Root) Root {
 		r.Enums = append(r.Enums, c.compileEnum(v))
 	}
 	for _, v := range fidlData.Structs {
+		// TODO(fxbug.dev/56727) Consider filtering out structs that are not used because they are
+		// only referenced by channel transports.
 		if v.Anonymous {
 			// these Structs still need to have their correct name (...Response or
 			// ...Request) generated, which occurs in compileMethod. Only then

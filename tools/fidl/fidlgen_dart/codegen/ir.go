@@ -145,6 +145,7 @@ type TableMember struct {
 
 // Protocol represents an protocol declaration.
 type Protocol struct {
+	fidlgen.Attributes
 	Name        string
 	ServiceName string
 	ServiceData string
@@ -922,6 +923,7 @@ func (c *compiler) compileMethod(val fidlgen.Method, protocol Protocol, fidlProt
 func (c *compiler) compileProtocol(val fidlgen.Protocol) Protocol {
 	ci := fidlgen.ParseCompoundIdentifier(val.Name)
 	r := Protocol{
+		val.Attributes,
 		c.compileUpperCamelCompoundIdentifier(ci, "", declarationContext),
 		val.GetServiceName(),
 		c.compileUpperCamelCompoundIdentifier(ci, "Data", declarationContext),

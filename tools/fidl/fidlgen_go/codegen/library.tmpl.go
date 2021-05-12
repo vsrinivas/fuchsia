@@ -46,9 +46,10 @@ var _ {{ $.BindingsAlias }}.Bits = {{ .Name }}(0)
 {{ range .Tables -}}
 {{ template "TableDefinition" . }}
 {{ end -}}
-{{ range .Protocols -}}
-{{ template "ProtocolDefinition" . }}
-{{ end -}}
+{{ range $protocol := .Protocols -}}
+{{ range $transport, $_ := .Transports -}}{{ if eq $transport "Channel" -}}
+{{ template "ProtocolDefinition" $protocol }}
+{{ end }}{{ end }}{{ end -}}
 
 {{- end -}}
 `

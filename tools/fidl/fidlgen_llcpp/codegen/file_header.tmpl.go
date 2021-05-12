@@ -55,7 +55,10 @@ const fileHeaderTmpl = `
 {{- range .Decls }}
 {{- if Eq .Kind Kinds.Bits }}{{ template "BitsForwardDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Enum }}{{ template "EnumForwardDeclaration" . }}{{- end }}
-{{- if Eq .Kind Kinds.Protocol }}{{ template "ProtocolForwardDeclaration" . }}{{- end }}
+{{- if Eq .Kind Kinds.Protocol -}}{{ $protocol := . }}
+{{- range $transport, $_ := .Transports }}{{- if eq $transport "Channel" -}}
+{{ template "ProtocolForwardDeclaration" $protocol }}
+{{- end }}{{ end }}{{- end }}
 {{- if Eq .Kind Kinds.Service }}{{ template "ServiceForwardDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Struct }}{{ template "StructForwardDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Table }}{{ template "TableForwardDeclaration" . }}{{- end }}
@@ -72,7 +75,10 @@ const fileHeaderTmpl = `
 
 {{- range .Decls }}
 {{- if Eq .Kind Kinds.Const }}{{ template "ConstDeclaration" . }}{{- end }}
-{{- if Eq .Kind Kinds.Protocol }}{{ template "ProtocolDeclaration" . }}{{- end }}
+{{- if Eq .Kind Kinds.Protocol -}}{{ $protocol := . }}
+{{- range $transport, $_ := .Transports }}{{- if eq $transport "Channel" -}}
+{{ template "ProtocolDeclaration" $protocol }}
+{{- end }}{{ end }}{{- end }}
 {{- if Eq .Kind Kinds.Service }}{{ template "ServiceDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Struct }}{{ template "StructDeclaration" . }}{{- end }}
 {{- end }}
@@ -82,7 +88,10 @@ const fileHeaderTmpl = `
 
 {{- range .Decls }}
 {{- if Eq .Kind Kinds.Bits }}{{ template "BitsTraits" . }}{{- end }}
-{{- if Eq .Kind Kinds.Protocol }}{{ template "ProtocolTraits" . }}{{- end }}
+{{- if Eq .Kind Kinds.Protocol -}}{{ $protocol := . }}
+{{- range $transport, $_ := .Transports }}{{- if eq $transport "Channel" -}}
+{{ template "ProtocolTraits" $protocol }}
+{{- end }}{{ end }}{{- end }}
 {{- if Eq .Kind Kinds.Struct }}{{ template "StructTraits" . }}{{- end }}
 {{- if Eq .Kind Kinds.Table }}{{ template "TableTraits" . }}{{- end }}
 {{- if Eq .Kind Kinds.Union }}{{ template "UnionTraits" . }}{{- end }}
@@ -90,15 +99,16 @@ const fileHeaderTmpl = `
 {{- end }}
 
 {{- range .Decls }}
-    {{- if Eq .Kind Kinds.Protocol }}
-        {{- range .TwoWayMethods }}
+    {{- if Eq .Kind Kinds.Protocol }}{{ $protocol := . }}
+    {{- range $transport, $_ := .Transports }}{{- if eq $transport "Channel" -}}
+        {{- range $protocol.TwoWayMethods }}
             {{ template "MethodResponseContextDeclaration" . }}
         {{- end }}
-        {{ template "ProtocolClientImplDeclaration" . }}
+        {{ template "ProtocolClientImplDeclaration" $protocol }}
         {{ "" }}
-        {{ template "EventSenderDeclaration" . }}
+        {{ template "EventSenderDeclaration" $protocol }}
         {{ "" }}
-    {{- end }}
+    {{- end }}{{ end }}{{ end }}
 {{- end }}
 {{ "" }}
 
