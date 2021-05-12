@@ -5,7 +5,9 @@
 #include <fuchsia/accessibility/semantics/cpp/fidl.h>
 #include <fuchsia/fonts/cpp/fidl.h>
 #include <fuchsia/hardware/display/cpp/fidl.h>
+#include <fuchsia/intl/cpp/fidl.h>
 #include <fuchsia/memorypressure/cpp/fidl.h>
+#include <fuchsia/net/interfaces/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/test/ui/cpp/fidl.h>
@@ -22,8 +24,6 @@
 #include <lib/sys/cpp/testing/enclosing_environment.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/trace-provider/provider.h>
-#include <lib/trace/event.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/ui/scenic/cpp/session.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
@@ -73,12 +73,33 @@ using GfxEvent = fuchsia::ui::gfx::Event;
 // Set this as low as you can that still works across all test platforms.
 constexpr zx::duration kTimeout = zx::min(5);
 
-// Fuchsia components that this test launches.
-// Root presenter is included in this test's package so the two components have the same
-// /config/data. This allows the test to control the display rotation read by root presenter.
-constexpr char kRootPresenter[] =
-    "fuchsia-pkg://fuchsia.com/touch-input-test#meta/root_presenter-for-test.cmx";
-constexpr char kScenic[] = "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx";
+// Common services for each test.
+const std::map<std::string, std::string> LocalServices() {
+  return {
+      // Root presenter is included in this test's package so the two components have the same
+      // /config/data. This allows the test to control the display rotation read by root presenter.
+      {"fuchsia.ui.input.InputDeviceRegistry",
+       "fuchsia-pkg://fuchsia.com/touch-input-test#meta/root_presenter.cmx"},
+      {"fuchsia.ui.policy.Presenter",
+       "fuchsia-pkg://fuchsia.com/touch-input-test#meta/root_presenter.cmx"},
+      // Scenic protocols.
+      {"fuchsia.ui.scenic.Scenic", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
+      {"fuchsia.ui.pointerinjector.Registry", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
+      {"fuchsia.ui.focus.FocusChainListenerRegistry",
+       "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
+      // Misc protocols.
+      {"fuchsia.cobalt.LoggerFactory",
+       "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx"},
+      {"fuchsia.hardware.display.Provider",
+       "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx"},
+  };
+}
+
+// Allow these global services from outside the test environment.
+const std::vector<std::string> GlobalServices() {
+  return {"fuchsia.vulkan.loader.Loader", "fuchsia.sysmem.Allocator",
+          "fuchsia.scheduler.ProfileProvider"};
+}
 
 class TouchInputBase : public sys::testing::TestWithEnvironment, public ResponseListener {
  protected:
@@ -89,60 +110,36 @@ class TouchInputBase : public sys::testing::TestWithEnvironment, public Response
 
   explicit TouchInputBase(const std::vector<LaunchableService>& extra_services)
       : response_listener_(this) {
-    bool trace_provider_already_started = false;
-    if (!trace::TraceProviderWithFdio::CreateSynchronously(
-            dispatcher(), "touch-input-test", &trace_provider_, &trace_provider_already_started)) {
-      FX_LOGS(ERROR) << "Trace provider registration failed.";
-    }
-
-    auto services = sys::testing::EnvironmentServices::Create(real_env());
-    zx_status_t is_ok;
+    auto services = TestWithEnvironment::CreateServices();
 
     // Key part of service setup: have this test component vend the |ResponseListener| service in
     // the constructed environment.
-    is_ok = services->AddService<ResponseListener>(
+    zx_status_t is_ok = services->AddService<ResponseListener>(
         [this](fidl::InterfaceRequest<ResponseListener> request) {
           response_listener_.Bind(std::move(request));
         });
     FX_CHECK(is_ok == ZX_OK);
 
-    // Set up Scenic inside the test environment.
-    {
-      auto launch_info_provider = []() {
-        fuchsia::sys::LaunchInfo launch_info;
-        launch_info.url = kScenic;
-        if (FX_VLOG_IS_ON(1)) {
-          launch_info.arguments.emplace();
-          launch_info.arguments->push_back("--verbose=2");
-        }
-        return launch_info;
-      };
-
-      is_ok = services->AddServiceWithLaunchInfo(kScenic, launch_info_provider,
-                                                 fuchsia::ui::scenic::Scenic::Name_);
-      FX_CHECK(is_ok == ZX_OK);
-      is_ok = services->AddServiceWithLaunchInfo({.url = kScenic},
-                                                 fuchsia::ui::pointerinjector::Registry::Name_);
-      FX_CHECK(is_ok == ZX_OK);
+    // Add common services.
+    for (const auto& [name, url] : LocalServices()) {
+      const zx_status_t is_ok = services->AddServiceWithLaunchInfo({.url = url}, name);
+      FX_CHECK(is_ok == ZX_OK) << "Failed to add service " << name;
     }
 
-    // Set up Root Presenter inside the test environment.
-    is_ok = services->AddServiceWithLaunchInfo({.url = kRootPresenter},
-                                               fuchsia::ui::input::InputDeviceRegistry::Name_);
-    FX_CHECK(is_ok == ZX_OK);
-
-    is_ok = services->AddServiceWithLaunchInfo({.url = kRootPresenter},
-                                               fuchsia::ui::policy::Presenter::Name_);
-    FX_CHECK(is_ok == ZX_OK);
+    // Enable services from outside this test.
+    for (const auto& service : GlobalServices()) {
+      const zx_status_t is_ok = services->AllowParentService(service);
+      FX_CHECK(is_ok == ZX_OK) << "Failed to add service " << service;
+    }
 
     // Add test-specific launchable services.
     for (const auto& service_info : extra_services) {
-      is_ok = services->AddServiceWithLaunchInfo({.url = service_info.url}, service_info.name);
+      const zx_status_t is_ok =
+          services->AddServiceWithLaunchInfo({.url = service_info.url}, service_info.name);
       FX_CHECK(is_ok == ZX_OK) << "Failed to add service " << service_info.name;
     }
 
-    test_env_ = CreateNewEnclosingEnvironment("touch_input_test_env", std::move(services),
-                                              {.inherit_parent_services = true});
+    test_env_ = CreateNewEnclosingEnvironment("touch_input_test_env", std::move(services));
 
     WaitForEnclosingEnvToStart(test_env_.get());
 
@@ -271,7 +268,6 @@ class TouchInputBase : public sys::testing::TestWithEnvironment, public Response
   };
 
   fidl::Binding<fuchsia::test::ui::ResponseListener> response_listener_;
-  std::unique_ptr<trace::TraceProviderWithFdio> trace_provider_;
   std::unique_ptr<sys::testing::EnclosingEnvironment> test_env_;
   std::unique_ptr<scenic::Session> session_;
   int injection_count_ = 0;
@@ -288,7 +284,6 @@ class TouchInputTest : public TouchInputBase {
 };
 
 TEST_F(TouchInputTest, FlutterTap) {
-  TRACE_DURATION("touch-input-test", "TouchInputTest::FlutterTap");
   const std::string kOneFlutter = "fuchsia-pkg://fuchsia.com/one-flutter#meta/one-flutter.cmx";
   uint32_t display_width = 0;
   uint32_t display_height = 0;
@@ -317,8 +312,8 @@ TEST_F(TouchInputTest, FlutterTap) {
     //
     // Hence, a tap in the center of the display's top-right quadrant is observed by the child
     // view as a tap in the center of its top-left quadrant.
-    float expected_x = display_height / 4.f;
-    float expected_y = display_width / 4.f;
+    float expected_x = static_cast<float>(display_height) / 4.f;
+    float expected_y = static_cast<float>(display_width) / 4.f;
 
     FX_LOGS(INFO) << "Flutter received tap at (" << pointer_data.local_x() << ", "
                   << pointer_data.local_y() << ").";
@@ -331,9 +326,6 @@ TEST_F(TouchInputTest, FlutterTap) {
     FX_LOGS(INFO) << "Input Injection Time (ns): " << input_injection_time.get();
     FX_LOGS(INFO) << "Flutter Received Time (ns): " << pointer_data.time_received();
     FX_LOGS(INFO) << "Elapsed Time (ns): " << elapsed_time.to_nsecs();
-    TRACE_INSTANT("touch-input-test", "input_latency", TRACE_SCOPE_PROCESS, "input_injection_time",
-                  input_injection_time.get(), "flutter_received_time", pointer_data.time_received(),
-                  "elapsed_time", elapsed_time.to_nsecs());
 
     // Allow for minor rounding differences in coordinates.
     EXPECT_NEAR(pointer_data.local_x(), expected_x, 1);
@@ -441,8 +433,8 @@ TEST_F(TouchInputTest, CppGfxClientTap) {
     //
     // Hence, a tap in the center of the display's top-right quadrant is observed by the child
     // view as a tap in the center of its top-left quadrant.
-    float expected_x = display_height / 4.f;
-    float expected_y = display_width / 4.f;
+    float expected_x = static_cast<float>(display_height) / 4.f;
+    float expected_y = static_cast<float>(display_width) / 4.f;
 
     FX_LOGS(INFO) << "CppGfxClient received tap at (" << pointer_data.local_x() << ", "
                   << pointer_data.local_y() << ").";
@@ -541,8 +533,10 @@ class WebEngineTest : public TouchInputBase {
             {.url = kFontsProvider, .name = fuchsia::fonts::Provider::Name_},
             {.url = kImeService, .name = fuchsia::ui::input::ImeService::Name_},
             {.url = kImeService, .name = fuchsia::ui::input::ImeVisibilityService::Name_},
+            {.url = kIntl, .name = fuchsia::intl::PropertyProvider::Name_},
             {.url = kMemoryPressureProvider, .name = fuchsia::memorypressure::Provider::Name_},
             {.url = kNetstack, .name = fuchsia::netstack::Netstack::Name_},
+            {.url = kNetstack, .name = fuchsia::net::interfaces::State::Name_},
             {.url = kSemanticsManager,
              .name = fuchsia::accessibility::semantics::SemanticsManager::Name_},
             {.url = kWebContextProvider, .name = fuchsia::web::ContextProvider::Name_},
@@ -583,6 +577,8 @@ class WebEngineTest : public TouchInputBase {
   static constexpr char kFontsProvider[] = "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cmx";
   static constexpr char kImeService[] =
       "fuchsia-pkg://fuchsia.com/ime_service#meta/ime_service.cmx";
+  static constexpr char kIntl[] =
+      "fuchsia-pkg://fuchsia.com/intl_property_manager#meta/intl_property_manager.cmx";
   static constexpr char kMemoryPressureProvider[] =
       "fuchsia-pkg://fuchsia.com/memory_monitor#meta/memory_monitor.cmx";
   static constexpr char kNetstack[] = "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx";
@@ -631,8 +627,8 @@ TEST_F(WebEngineTest, ChromiumTap) {
     //
     // Hence, a tap in the center of the display's top-right quadrant is observed by the child
     // view as a tap in the center of its top-left quadrant.
-    float expected_x = display_height / 4.f;
-    float expected_y = display_width / 4.f;
+    float expected_x = static_cast<float>(display_height) / 4.f;
+    float expected_y = static_cast<float>(display_width) / 4.f;
 
     // Convert Chromium's position, which is in logical pixels, to a position in physical
     // pixels. Note that Chromium reports integer values, so this conversion introduces an

@@ -2,66 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//build/config.gni")
 import("//build/fidl/fidl.gni")
-import("//build/test.gni")
-import("//build/test/test_package.gni")
 
-group("tests") {
-  testonly = true
-  deps = [
-    ":touch-input-test",
-    ":touch-input-test-display_rotation",
-
-    # The deps below are necessary on minimal product configs.
-    "//src/graphics/bin/vulkan_loader",
-
-    # TODO(fxbug.dev/24643): remove
-    "//src/chromium:web_engine",
-    "//src/ui/bin/ime:ime_service",
-    "//src/ui/bin/root_presenter",
-    "//src/ui/scenic",
-    "//src/ui/tests/integration_input_tests/touch/cpp-gfx-client",
-    "//src/ui/tests/integration_input_tests/touch/one-chromium",
-    "//src/ui/tests/integration_input_tests/touch/one-flutter",
-  ]
-}
-
-test_package("touch-input-test") {
-  deps = [
-    ":touch-input-test-bin",
-    "//src/ui/bin/root_presenter",
-    "//src/ui/bin/root_presenter:bin",
-  ]
-
-  tests = [
-    {
-      name = "touch-input-test"
-      environments = [ nuc_env ]
-    },
-  ]
-
-  # Add root presenter to the test package so they share the same /config/data which is necessary
-  # for injecting the display rotation into root presenter
-  meta = [
-    {
-      path = rebase_path(
-              "//src/ui/bin/root_presenter/meta/root_presenter_base.cmx")
-      dest = "root_presenter-for-test.cmx"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "root_presenter"
-    },
-  ]
-
-  data_deps = [
-    "//src/ui/scenic",
-    "//src/ui/tests/integration_input_tests/touch/one-chromium",
-    "//src/ui/tests/integration_input_tests/touch/one-flutter",
-  ]
+fidl("fuchsia.test.ui") {
+  sdk_category = "internal"
+  sources = [ "response_listener.test.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }
 
 config_data("touch-input-test-display_rotation") {
@@ -71,7 +19,8 @@ config_data("touch-input-test-display_rotation") {
   outputs = [ "display_rotation" ]
 }
 
-test("touch-input-test-bin") {
+executable("touch-input-test-bin") {
+  testonly = true
   sources = [ "touch-input-test.cc" ]
   output_name = "touch-input-test"
   deps = [
@@ -82,7 +31,9 @@ test("touch-input-test-bin") {
     "//sdk/fidl/fuchsia.accessibility.semantics",
     "//sdk/fidl/fuchsia.fonts",
     "//sdk/fidl/fuchsia.hardware.display",
+    "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.memorypressure",
+    "//sdk/fidl/fuchsia.net.interfaces",
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.app",
@@ -103,16 +54,44 @@ test("touch-input-test-bin") {
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/trace",
-    "//zircon/system/ulib/trace-provider:trace-provider-so",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
-fidl("fuchsia.test.ui") {
-  sdk_category = "internal"
-  sources = [ "response_listener.test.fidl" ]
-  public_deps = [ "//zircon/vdso/zx" ]
+fuchsia_component("touch-input-test-component") {
+  testonly = true
+  manifest = "meta/touch-input-test.cmx"
+  deps = [ ":touch-input-test-bin" ]
+}
+
+fuchsia_test_package("touch-input-test") {
+  test_components = [ ":touch-input-test-component" ]
+  deps = [
+    ":touch-input-test-display_rotation",
+    "//src/ui/bin/root_presenter:component_v1_for_test",
+  ]
+  test_specs = {
+    environments = [ nuc_env ]
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":touch-input-test",
+
+    # The deps below are necessary on minimal product configs.
+    "//garnet/bin/trace_manager",
+    "//garnet/examples/intl/manager:intl_property_manager",
+    "//src/chromium:web_engine",
+    "//src/cobalt/bin/testing/mock_cobalt",
+    "//src/flutter",
+    "//src/graphics/bin/vulkan_loader",
+    "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider",
+    "//src/ui/bin/ime:ime_service",
+    "//src/ui/bin/root_presenter:component_v1_for_test",
+    "//src/ui/scenic",
+    "//src/ui/tests/integration_input_tests/touch/cpp-gfx-client",
+    "//src/ui/tests/integration_input_tests/touch/one-chromium",
+    "//src/ui/tests/integration_input_tests/touch/one-flutter",
+  ]
 }

@@ -1,9 +1,6 @@
 {
     "facets": {
         "fuchsia.test": {
-            "injected-services": {
-                "fuchsia.tracing.provider.Registry": "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx"
-            },
             "system-services": [
                 "fuchsia.scheduler.ProfileProvider"
             ]
@@ -14,17 +11,17 @@
         "src/lib/vulkan/test-application.shard.cmx"
     ],
     "program": {
-        "binary": "test/touch-input-test"
+        "binary": "bin/touch-input-test"
     },
     "sandbox": {
         "features": [
             "config-data"
         ],
         "services": [
+            "fuchsia.scheduler.ProfileProvider",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
             "fuchsia.sys.Loader",
-            "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.pointerinjector.Registry"
         ]
     }

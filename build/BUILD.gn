@@ -72,7 +72,6 @@ group("deprecated_package") {
     "//src/ui/tests/integration_input_tests/keyboard/*",
     "//src/ui/tests/integration_input_tests/scenic/*",
     "//src/ui/tests/integration_input_tests/shortcut/*",
-    "//src/ui/tests/integration_input_tests/touch/*",
     "//src/ui/tests/scenic-stress-tests/*",
     "//src/virtualization/bin/guest/*",
     "//third_party/Vulkan-Tools/cube/*",

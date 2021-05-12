@@ -707,7 +707,6 @@ config("Wno-conversion") {
     "//src/ui/scenic/lib/scenic/util/*",
     "//src/ui/scenic/lib/scheduling/*",
     "//src/ui/scenic/lib/watchdog/*",
-    "//src/ui/tests/integration_input_tests/touch:*",
     "//src/ui/tools/simple-touch/*",
     "//src/ui/tools/tiles_ctl/*",
     "//src/virtualization/bin/guest/*",

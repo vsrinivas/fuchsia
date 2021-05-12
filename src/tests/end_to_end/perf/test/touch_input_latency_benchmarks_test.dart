@@ -50,5 +50,6 @@ void _addTest(String testName) {
 void main() {
   enableLoggingOutput();
 
-  _addTest('fuchsia.input_latency.one-flutter');
+  // TODO(fxbug.dev/76494): Reenable with independent test.
+  // _addTest('fuchsia.input_latency.one-flutter');
 }
