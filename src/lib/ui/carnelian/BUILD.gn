@@ -560,6 +560,7 @@ carnelian_examples = [
   },
   {
     name = "layout_gallery"
+    additional_deps = [ ":robotoslab" ]
   },
   {
     name = "png"

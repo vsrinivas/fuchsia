@@ -231,7 +231,7 @@ impl ViewAssistant for SpinningSquareViewAssistant {
         let mut scene_details = self.scene_details.take().unwrap_or_else(|| {
             let mut builder = SceneBuilder::new().background_color(self.background_color);
             let mut square = None;
-            builder.group().stack().contents(|builder| {
+            builder.group().stack().center().contents(|builder| {
                 let square_facet =
                     SpinningSquareFacet::new(self.square_color, self.start, context.size);
                 square = Some(builder.facet(Box::new(square_facet)));
