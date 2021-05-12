@@ -98,6 +98,10 @@ class Snapshot {
   // - This operation is O(N) in the depth of the view tree.
   bool IsDescendant(zx_koid_t descendant_koid, zx_koid_t ancestor_koid) const;
 
+  // Given a node's koid, return the list of all ancestors, ordered from closest to most distant.
+  // Precondition: |koid| must exist in the |view_tree|.
+  std::vector<zx_koid_t> GetAncestorsOf(zx_koid_t koid) const;
+
   bool operator==(const Snapshot& other) const {
     return root == other.root && view_tree == other.view_tree &&
            unconnected_views == other.unconnected_views;

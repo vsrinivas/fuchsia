@@ -184,4 +184,32 @@ TEST(IsDescendantTest, Comprehensive) {
   EXPECT_FALSE(snapshot.IsDescendant(/*descendant*/ 124124, /*ancestor*/ 1));
 }
 
+// Check GetAncestorsOf() for various nodes in this ViewTree:
+//    1
+//  /   \
+// 2     3
+// |     |
+// 4     5
+TEST(GetAncestorsOfTest, Comprehensive) {
+  Snapshot snapshot;
+  {
+    auto& view_tree = snapshot.view_tree;
+    view_tree[1].parent = ZX_KOID_INVALID;
+    view_tree[1].children = {2, 3};
+    view_tree[2].parent = 1;
+    view_tree[2].children = {4};
+    view_tree[3].parent = 1;
+    view_tree[3].children = {5};
+    view_tree[4].parent = 2;
+    view_tree[5].parent = 3;
+  }
+
+  // Check all the valid parent chains.
+  EXPECT_TRUE(snapshot.GetAncestorsOf(1).empty());
+  EXPECT_THAT(snapshot.GetAncestorsOf(2), testing::ElementsAre(1));
+  EXPECT_THAT(snapshot.GetAncestorsOf(3), testing::ElementsAre(1));
+  EXPECT_THAT(snapshot.GetAncestorsOf(4), testing::ElementsAre(2, 1));
+  EXPECT_THAT(snapshot.GetAncestorsOf(5), testing::ElementsAre(3, 1));
+}
+
 }  // namespace view_tree::test

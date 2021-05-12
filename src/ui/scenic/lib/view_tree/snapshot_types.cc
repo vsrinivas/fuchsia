@@ -63,6 +63,19 @@ bool Snapshot::IsDescendant(zx_koid_t descendant_koid, zx_koid_t ancestor_koid) 
   return false;
 }
 
+std::vector<zx_koid_t> Snapshot::GetAncestorsOf(zx_koid_t koid) const {
+  FX_DCHECK(view_tree.count(koid) != 0) << "precondition";
+  std::vector<zx_koid_t> ancestors;
+  zx_koid_t parent_koid = view_tree.at(koid).parent;
+  while (parent_koid != ZX_KOID_INVALID) {
+    FX_DCHECK(view_tree.count(parent_koid) != 0);
+    ancestors.emplace_back(parent_koid);
+    parent_koid = view_tree.at(parent_koid).parent;
+  }
+
+  return ancestors;
+}
+
 std::ostream& operator<<(std::ostream& os, const ViewNode& node) {
   const std::string indent = "  ";
   os << "[\n";
