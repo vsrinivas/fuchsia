@@ -11,6 +11,9 @@ use std::mem;
 use std::sync::Arc;
 use zerocopy::{AsBytes, FromBytes};
 
+#[cfg(test)]
+use std::collections::HashMap;
+
 use crate::collections::*;
 use crate::logging::*;
 use crate::types::*;
@@ -42,10 +45,10 @@ struct Mapping {
 }
 
 impl Mapping {
-    fn new(base: UserAddress, vmo: zx::Vmo, vmo_offset: u64, flags: zx::VmarFlags) -> Mapping {
+    fn new(base: UserAddress, vmo: Arc<zx::Vmo>, vmo_offset: u64, flags: zx::VmarFlags) -> Mapping {
         Mapping {
             base,
-            vmo: Arc::new(vmo),
+            vmo,
             vmo_offset,
             permissions: flags
                 & (zx::VmarFlags::PERM_READ
@@ -221,10 +224,53 @@ impl MemoryManager {
         return Ok(brk.current);
     }
 
+    #[cfg(test)]
+    pub fn snapshot_to(&self, target: &MemoryManager) -> Result<(), Errno> {
+        // TODO: Snapshot program_break.
+        // TODO: Snapshot dumpable.
+
+        let mappings = self.mappings.read();
+        let mut vmos = HashMap::<zx::Koid, Result<Arc<zx::Vmo>, zx::Status>>::new();
+
+        for (range, mapping) in mappings.iter() {
+            let vmo_info = mapping.vmo.info().map_err(impossible_error)?;
+            let entry = vmos.entry(vmo_info.koid).or_insert_with(|| {
+                if vmo_info.flags.contains(zx::VmoInfoFlags::PAGER_BACKED) {
+                    Ok(mapping.vmo.clone())
+                } else {
+                    mapping
+                        .vmo
+                        .create_child(zx::VmoChildOptions::SNAPSHOT, 0, vmo_info.size_bytes)
+                        .map(|vmo| Arc::new(vmo))
+                }
+            });
+            match entry {
+                Ok(target_vmo) => {
+                    let vmo_offset = mapping.vmo_offset + (range.start - mapping.base) as u64;
+                    let length = range.end - range.start;
+                    target
+                        .map_internal(
+                            range.start - target.vmar_base,
+                            target_vmo.clone(),
+                            vmo_offset,
+                            length,
+                            mapping.permissions | zx::VmarFlags::SPECIFIC,
+                        )
+                        .map_err(Self::get_errno_for_map_err)?;
+                }
+                Err(_) => {
+                    return Err(ENOMEM);
+                }
+            };
+        }
+
+        Ok(())
+    }
+
     fn map_internal(
         &self,
         vmar_offset: usize,
-        vmo: zx::Vmo,
+        vmo: Arc<zx::Vmo>,
         vmo_offset: u64,
         length: usize,
         flags: zx::VmarFlags,
@@ -262,7 +308,7 @@ impl MemoryManager {
         flags: zx::VmarFlags,
     ) -> Result<UserAddress, Errno> {
         let vmar_offset = if addr.is_null() { 0 } else { addr - self.vmar_base };
-        self.map_internal(vmar_offset, vmo, vmo_offset, length, flags)
+        self.map_internal(vmar_offset, Arc::new(vmo), vmo_offset, length, flags)
             .map_err(Self::get_errno_for_map_err)
     }
 
@@ -397,7 +443,7 @@ impl elf_load::Mapper for MemoryManager {
         length: usize,
         flags: zx::VmarFlags,
     ) -> Result<usize, zx::Status> {
-        let vmo = vmo.duplicate_handle(zx::Rights::SAME_RIGHTS)?;
+        let vmo = Arc::new(vmo.duplicate_handle(zx::Rights::SAME_RIGHTS)?);
         self.map_internal(vmar_offset, vmo, vmo_offset, length, flags).map(|addr| addr.ptr())
     }
 }

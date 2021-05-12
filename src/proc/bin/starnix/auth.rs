@@ -4,7 +4,7 @@
 
 use crate::types::*;
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Credentials {
     pub uid: uid_t,
     pub gid: uid_t,

@@ -232,11 +232,7 @@ mod tests {
         assert_eq!(stack_start_addr, original_stack_start_addr - payload_size);
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn test_load_hello_starnix() {
-        let (_kernel, task_owner) = create_kernel_and_task();
-        let task = &task_owner.task;
-
+    fn load_hello_starnix(task: &Task) -> Result<(), Errno> {
         let executable = syncio::directory_open_vmo(
             &task.fs.root,
             &"bin/hello_starnix",
@@ -248,6 +244,14 @@ mod tests {
         let argv = &vec![];
         let environ = &vec![];
 
+        load_executable(&task, executable, argv, environ)
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_load_hello_starnix() {
+        let (_kernel, task_owner) = create_kernel_and_task();
+        let task = &task_owner.task;
+
         // Currently, load_executable also starts the thread. We need to install
         // an exception handler so that the test framework doesn't see any
         // BAD_SYSCALL exceptions.
@@ -256,8 +260,40 @@ mod tests {
             .thread
             .create_exception_channel()
             .expect("failed to create exception channel");
-        load_executable(&task, executable, argv, environ).expect("failed to load executable");
+
+        load_hello_starnix(task).expect("failed to load executable");
 
         assert!(task.mm.get_mapping_count() > 0);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_snapshot_hello_starnix() {
+        let (kernel, task_owner) = create_kernel_and_task();
+        let task = &task_owner.task;
+
+        // Currently, load_executable also starts the thread. We need to install
+        // an exception handler so that the test framework doesn't see any
+        // BAD_SYSCALL exceptions.
+        let _exceptions = task_owner
+            .task
+            .thread
+            .create_exception_channel()
+            .expect("failed to create exception channel");
+
+        load_hello_starnix(task).expect("failed to load executable");
+
+        let task_owner2 = Task::new(
+            &kernel,
+            &CString::new("another-task").unwrap(),
+            task.files.clone(),
+            task.fs.clone(),
+            task.creds.clone(),
+        )
+        .expect("failed to create second task");
+
+        let task2 = &task_owner2.task;
+        task.mm.snapshot_to(&task2.mm).expect("failed to snapshot mm");
+
+        assert_eq!(task.mm.get_mapping_count(), task2.mm.get_mapping_count());
     }
 }
