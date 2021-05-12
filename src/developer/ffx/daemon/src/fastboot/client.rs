@@ -475,7 +475,7 @@ mod test {
                 if let Some(RebootListenerRequest::OnReboot { control_handle: _ }) =
                     stream.try_next().await?
                 {
-                    return target.events.push(TargetEvent::Rediscovered).await;
+                    return target.events.push(TargetEvent::Rediscovered);
                 }
                 bail!("did not receive reboot event");
             },

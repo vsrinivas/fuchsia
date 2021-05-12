@@ -310,8 +310,8 @@ impl<T: 'static + EventTrait> Queue<T> {
         }
     }
 
-    pub async fn push(&self, event: T) -> Result<()> {
-        self.inner_tx.send(event).await.map_err(|e| anyhow!("event queue push: {:#}", e))
+    pub fn push(&self, event: T) -> Result<()> {
+        self.inner_tx.try_send(event).map_err(|e| anyhow!("event queue push: {:#}", e))
     }
 }
 
@@ -392,7 +392,7 @@ mod test {
             queue.add_handler(TestHookFirst { callbacks_done: tx_from_callback.clone() }),
             queue.add_handler(TestHookSecond { callbacks_done: tx_from_callback }),
         );
-        queue.push(5).await.unwrap();
+        queue.push(5).unwrap();
         assert!(rx_from_callback.next().await.unwrap());
         assert!(rx_from_callback.next().await.unwrap());
     }
@@ -401,24 +401,22 @@ mod test {
     async fn test_wait_for_event_once_async() {
         let fake_events = Rc::new(FakeEventStruct {});
         let queue = Queue::new(&fake_events);
-        let (res1, res2) = futures::join!(
-            queue.wait_for_async(None, |e| async move {
+        queue.push(5).unwrap();
+        queue
+            .wait_for_async(None, |e| async move {
                 assert_eq!(e, 5);
                 true
-            }),
-            queue.push(5)
-        );
-        res1.unwrap();
-        res2.unwrap();
+            })
+            .await
+            .unwrap();
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_wait_for_event_once() {
         let fake_events = Rc::new(FakeEventStruct {});
         let queue = Queue::new(&fake_events);
-        let (res1, res2) = futures::join!(queue.wait_for(None, |e| e == 5), queue.push(5),);
-        res1.unwrap();
-        res2.unwrap();
+        queue.push(5).unwrap();
+        queue.wait_for(None, |e| e == 5).await.unwrap();
     }
 
     struct FakeEventSynthesizer {}
@@ -520,7 +518,7 @@ mod test {
         let (handler, mut handler_dropped_rx) = EventFailer::new();
         let (handler2, mut handler_dropped_rx2) = EventFailer::new();
         let ((), ()) = futures::join!(queue.add_handler(handler), queue.add_handler(handler2));
-        queue.push(EventFailerInput::Fail).await.unwrap();
+        queue.push(EventFailerInput::Fail).unwrap();
         assert!(handler_dropped_rx.next().await.unwrap());
         assert!(handler_dropped_rx2.next().await.unwrap());
     }
@@ -532,7 +530,7 @@ mod test {
         let (handler, mut handler_dropped_rx) = EventFailer::new();
         let (handler2, mut handler_dropped_rx2) = EventFailer::new();
         let ((), ()) = futures::join!(queue.add_handler(handler), queue.add_handler(handler2));
-        queue.push(EventFailerInput::Complete).await.unwrap();
+        queue.push(EventFailerInput::Complete).unwrap();
         assert!(handler_dropped_rx.next().await.unwrap());
         assert!(handler_dropped_rx2.next().await.unwrap());
     }

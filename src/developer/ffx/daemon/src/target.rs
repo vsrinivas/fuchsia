@@ -476,8 +476,7 @@ impl Target {
                         }
                     }
                     _ => s,
-                })
-                .await;
+                });
                 Timer::new(Duration::from_secs(1)).await;
             } else {
                 log::debug!("parent target dropped in mdns monitor loop. exiting");
@@ -507,8 +506,7 @@ impl Target {
                         }
                     }
                     _ => s,
-                })
-                .await;
+                });
                 Timer::new(Duration::from_secs(1)).await;
             } else {
                 log::debug!("parent target dropped in serial monitor loop. exiting");
@@ -738,7 +736,7 @@ impl Target {
     ///
     /// If the state changes, this will push a `ConnectionStateChanged` event
     /// to the event queue.
-    pub async fn update_connection_state<F>(&self, func: F)
+    pub fn update_connection_state<F>(&self, func: F)
     where
         F: FnOnce(ConnectionState) -> ConnectionState + Sized,
     {
@@ -749,13 +747,14 @@ impl Target {
         ));
         self.inner.state.borrow_mut().connection_state = update;
         if former_state != self.inner.state.borrow().connection_state {
-            let _ = self
-                .events
+            self.events
                 .push(TargetEvent::ConnectionStateChanged(
                     former_state,
                     self.inner.state.borrow().connection_state.clone(),
                 ))
-                .await;
+                .unwrap_or_else(|e| {
+                    log::error!("Failed to push state change for {:?}: {:?}", self, e)
+                });
         }
     }
 
@@ -845,8 +844,7 @@ impl Target {
         s.update_connection_state(|s| {
             assert_eq!(s, ConnectionState::Disconnected);
             ConnectionState::Mdns(Utc::now())
-        })
-        .await;
+        });
         s
     }
 
@@ -903,13 +901,13 @@ impl Target {
         }
     }
 
-    async fn overwrite_state(&self, mut other: TargetState) {
+    fn overwrite_state(&self, mut other: TargetState) {
         if let Some(rcs) = other.connection_state.take_rcs() {
             // Nots this so that we know to push an event.
             let rcs_activated = !self.inner.state.borrow().connection_state.is_rcs();
             self.inner.state.borrow_mut().connection_state = ConnectionState::Rcs(rcs);
             if rcs_activated {
-                self.events.push(TargetEvent::RcsActivated).await.unwrap_or_else(|err| {
+                self.events.push(TargetEvent::RcsActivated).unwrap_or_else(|err| {
                     log::warn!("unable to enqueue RCS activation event: {:#}", err)
                 });
             }
@@ -967,7 +965,7 @@ impl Target {
         };
         let target =
             Target::from_identify(identify).map_err(|e| RcsConnectionError::TargetError(e))?;
-        target.update_connection_state(move |_| ConnectionState::Rcs(rcs)).await;
+        target.update_connection_state(move |_| ConnectionState::Rcs(rcs));
         Ok(target)
     }
 
@@ -1461,16 +1459,14 @@ impl TargetCollection {
             to_update.update_last_response(new_target.last_response());
             to_update.addrs_extend(new_target.addrs());
             to_update.update_boot_timestamp(new_target.boot_timestamp_nanos());
-            to_update
-                .overwrite_state(TargetState {
-                    connection_state: std::mem::replace(
-                        &mut new_target.inner.state.borrow_mut().connection_state,
-                        ConnectionState::Disconnected,
-                    ),
-                })
-                .await;
+            to_update.overwrite_state(TargetState {
+                connection_state: std::mem::replace(
+                    &mut new_target.inner.state.borrow_mut().connection_state,
+                    ConnectionState::Disconnected,
+                ),
+            });
 
-            to_update.events.push(TargetEvent::Rediscovered).await.unwrap_or_else(|err| {
+            to_update.events.push(TargetEvent::Rediscovered).unwrap_or_else(|err| {
                 log::warn!("unable to enqueue rediscovered event: {:#}", err)
             });
             to_update.clone()
@@ -1486,7 +1482,6 @@ impl TargetCollection {
                 if let Some(event_queue) = self.events.borrow().as_ref() {
                     event_queue
                         .push(DaemonEvent::NewTarget(info))
-                        .await
                         .unwrap_or_else(|e| log::warn!("unable to push new target event: {}", e));
                 }
             }
@@ -1650,17 +1645,14 @@ mod test {
             _ => (),
         }
         let now = Utc::now();
-        other_target
-            .update_connection_state(|s| {
-                assert_eq!(s, ConnectionState::Disconnected);
-                ConnectionState::Mdns(now)
-            })
-            .await;
+        other_target.update_connection_state(|s| {
+            assert_eq!(s, ConnectionState::Disconnected);
+            ConnectionState::Mdns(now)
+        });
         t.update_connection_state(|s| {
             assert_eq!(s, ConnectionState::Disconnected);
             ConnectionState::Mdns(now)
-        })
-        .await;
+        });
         assert_eq!(&tc.get_connected(nodename.clone()).unwrap(), &t);
     }
 
@@ -1981,8 +1973,7 @@ mod test {
         t.update_connection_state(|s| {
             assert_eq!(s, ConnectionState::Disconnected);
             ConnectionState::Mdns(Utc::now())
-        })
-        .await;
+        });
         let vec = t.synthesize_events().await;
         assert_eq!(vec.len(), 1);
         assert_eq!(
@@ -2115,11 +2106,8 @@ mod test {
         let fut = t.events.wait_for(None, |e| e == TargetEvent::RcsActivated);
         let mut new_state = TargetState::default();
         new_state.connection_state = ConnectionState::Rcs(conn);
-        // This is a bit of a race, so it's possible that state will be
-        // updated before the wait_for invocation is registered with the
-        // event queue, but either way this should succeed.
-        let (res, ()) = futures::join!(fut, t.overwrite_state(new_state));
-        res.unwrap();
+        t.overwrite_state(new_state);
+        fut.await.unwrap();
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -2160,8 +2148,7 @@ mod test {
             assert_eq!(s, ConnectionState::Disconnected);
 
             ConnectionState::Mdns(fake_time_clone)
-        })
-        .await;
+        });
         assert_eq!(ConnectionState::Mdns(fake_time), t.inner.state.borrow_mut().connection_state);
     }
 
@@ -2172,8 +2159,7 @@ mod test {
         t.update_connection_state(|s| {
             assert_eq!(s, ConnectionState::Disconnected);
             ConnectionState::Mdns(now)
-        })
-        .await;
+        });
         let events = t.events.clone();
         let _task = fuchsia_async::Task::local(async move {
             Target::mdns_monitor_loop(t.downgrade(), Duration::from_secs(2))
@@ -2198,8 +2184,7 @@ mod test {
         t.update_connection_state(|s| {
             assert_eq!(s, ConnectionState::Disconnected);
             ConnectionState::Fastboot(now)
-        })
-        .await;
+        });
         let events = t.events.clone();
         let _task = fuchsia_async::Task::local(async move {
             Target::fastboot_monitor_loop(t.downgrade(), Duration::from_secs(2))

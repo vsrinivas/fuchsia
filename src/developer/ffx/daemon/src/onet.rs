@@ -184,12 +184,10 @@ impl HostPipeConnection {
                 .map_err(|e| format!("host-pipe error running try-wait: {}", e.to_string()))
             {
                 Ok(_) => {
-                    target
-                        .update_connection_state(|s| match s {
-                            ConnectionState::Rcs(_) => ConnectionState::Disconnected,
-                            _ => s,
-                        })
-                        .await;
+                    target.update_connection_state(|s| match s {
+                        ConnectionState::Rcs(_) => ConnectionState::Disconnected,
+                        _ => s,
+                    });
                     log::debug!("rcs disconnected, exiting");
                     return Ok(());
                 }

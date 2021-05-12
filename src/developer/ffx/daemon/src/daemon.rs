@@ -113,14 +113,12 @@ impl DaemonEventHandler {
 
                 // Updates state last so that if tasks are waiting on this state, everything is
                 // already running and there aren't any races.
-                target
-                    .update_connection_state(|s| match s {
-                        ConnectionState::Disconnected | ConnectionState::Mdns(_) => {
-                            ConnectionState::Mdns(Utc::now())
-                        }
-                        _ => s,
-                    })
-                    .await;
+                target.update_connection_state(|s| match s {
+                    ConnectionState::Disconnected | ConnectionState::Mdns(_) => {
+                        ConnectionState::Mdns(Utc::now())
+                    }
+                    _ => s,
+                });
             }
         })
     }
@@ -154,14 +152,12 @@ impl DaemonEventHandler {
         );
         tc.merge_insert(Target::from_target_info(t.into()))
             .then(|target| async move {
-                target
-                    .update_connection_state(|s| match s {
-                        ConnectionState::Disconnected | ConnectionState::Fastboot(_) => {
-                            ConnectionState::Fastboot(Utc::now())
-                        }
-                        _ => s,
-                    })
-                    .await;
+                target.update_connection_state(|s| match s {
+                    ConnectionState::Disconnected | ConnectionState::Fastboot(_) => {
+                        ConnectionState::Fastboot(Utc::now())
+                    }
+                    _ => s,
+                });
                 target.run_fastboot_monitor();
             })
             .await;
@@ -347,12 +343,10 @@ impl Daemon {
 
         let target = self.target_collection.merge_insert(target).await;
 
-        target
-            .update_connection_state(|s| match s {
-                ConnectionState::Disconnected => ConnectionState::Manual,
-                _ => s,
-            })
-            .await;
+        target.update_connection_state(|s| match s {
+            ConnectionState::Disconnected => ConnectionState::Manual,
+            _ => s,
+        });
         target.run_host_pipe();
     }
 
@@ -401,7 +395,7 @@ impl Daemon {
                             s.iter().find(|name| *name == RemoteControlMarker::NAME).is_some()
                         });
                         if peer_has_rcs {
-                            queue.push(DaemonEvent::OvernetPeer(peer.id.id)).await.unwrap_or_else(
+                            queue.push(DaemonEvent::OvernetPeer(peer.id.id)).unwrap_or_else(
                                 |err| {
                                     log::warn!(
                                         "Overnet discovery failed to enqueue event: {}",
@@ -855,7 +849,6 @@ mod test {
                     addresses: t.addrs().iter().cloned().collect(),
                     ..Default::default()
                 })))
-                .await
                 .unwrap();
 
             self.event_queue
@@ -879,7 +872,6 @@ mod test {
                     serial: Some(this_serial.clone()),
                     ..Default::default()
                 })))
-                .await
                 .unwrap();
             self.event_queue
                 .wait_for(None, move |e| match e {
@@ -905,8 +897,7 @@ mod test {
                     tc.merge_insert(Target::from_target_info(t.into()))
                         .then(|target| async move {
                             target
-                                .update_connection_state(|_| ConnectionState::Fastboot(Utc::now()))
-                                .await;
+                                .update_connection_state(|_| ConnectionState::Fastboot(Utc::now()));
                         })
                         .await;
                 }
@@ -1256,8 +1247,7 @@ mod test {
             } else {
                 panic!("state not updated by event, should be set to MDNS state.");
             }
-        })
-        .await;
+        });
 
         assert_eq!(
             t.task_manager.task_snapshot(crate::target::TargetTaskType::HostPipe),

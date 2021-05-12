@@ -374,7 +374,6 @@ pub(crate) fn spawn_fastboot_discovery(queue: events::Queue<DaemonEvent>) {
                         serial: Some(dev.serial),
                         ..Default::default()
                     })))
-                    .await
                     .unwrap_or_else(|err| {
                         log::warn!("Fastboot discovery failed to enqueue event: {}", err)
                     });

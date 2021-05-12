@@ -223,7 +223,6 @@ async fn recv_loop(sock: Arc<UdpSocket>, e: events::Queue<DaemonEvent>) {
                 sock.local_addr().unwrap()
             );
             e.push(DaemonEvent::WireTraffic(WireTrafficType::Mdns(info)))
-                .await
                 .unwrap_or_else(|err| log::debug!("mdns discovery was unable to publish: {}", err));
         }
     }
