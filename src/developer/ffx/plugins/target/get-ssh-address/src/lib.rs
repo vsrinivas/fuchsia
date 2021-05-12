@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{anyhow, Result},
+    anyhow::Result,
     bridge::TargetAddrInfo,
-    ffx_core::ffx_plugin,
+    ffx_core::{ffx_error, ffx_plugin},
     ffx_get_ssh_address_args::GetSshAddressCommand,
     fidl_fuchsia_developer_bridge as bridge,
     fidl_fuchsia_net::{IpAddress, Ipv4Address, Ipv6Address},
@@ -14,6 +14,10 @@ use {
     std::net::IpAddr,
     std::time::Duration,
 };
+
+// This constant can be removed, and the implementation can assert that a port
+// always comes from the daemon after some transition period (~May '21).
+const DEFAULT_SSH_PORT: u16 = 22;
 
 #[ffx_plugin()]
 pub async fn get_ssh_address(
@@ -33,7 +37,13 @@ async fn get_ssh_address_impl<W: Write>(
     let res = daemon_proxy
         .get_ssh_address(target.as_deref(), timeout.as_nanos() as i64)
         .await?
-        .map_err(|e| anyhow!("getting ssh addr: {:?}", e))?;
+        .map_err(|e| {
+            ffx_error!(
+                "Failed to get SSH address of {}: {:?}",
+                target.unwrap_or("a unique target".to_string()),
+                e
+            )
+        })?;
 
     let (ip, scope, port) = match res {
         TargetAddrInfo::Ip(info) => {
@@ -64,9 +74,7 @@ async fn get_ssh_address_impl<W: Write>(
             write!(writer, "]")?;
         }
     }
-    if port > 0 {
-        write!(writer, ":{}", port)?;
-    }
+    write!(writer, ":{}", if port == 0 { DEFAULT_SSH_PORT } else { port })?;
     writeln!(writer)?;
 
     Ok(())

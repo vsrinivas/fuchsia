@@ -573,10 +573,15 @@ impl Daemon {
             }
             DaemonRequest::GetSshAddress { responder, target, timeout } => {
                 let fut = async move {
-                    let target = self.get_target(target).await?;
                     let poll_duration = std::time::Duration::from_millis(15);
                     loop {
-                        if let Some(addr_info) = target.ssh_address_info().await {
+                        if let Some(addr_info) = match self.get_target(target.clone()).await {
+                            Ok(t) => t.ssh_address_info().await,
+                            Err(DaemonError::TargetAmbiguous) => {
+                                return Err(DaemonError::TargetAmbiguous)
+                            }
+                            Err(_) => None,
+                        } {
                             return Ok(addr_info);
                         }
                         Timer::new(poll_duration).await;
@@ -1186,6 +1191,26 @@ mod test {
 
         let r = proxy.get_ssh_address(Some("toothpaste"), 1).await.unwrap();
         assert_eq!(r, Err(DaemonError::Timeout));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_get_ssh_address_target_ambiguous() {
+        let (proxy, daemon, _task) = spawn_test_daemon().await;
+
+        let target = Target::new_autoconnected("foobar").await;
+        target.addrs_insert(TargetAddr::new("[fe80::1%1]:0").unwrap()).await;
+        daemon.target_collection.merge_insert(target).await;
+
+        let target = Target::new_autoconnected("whoistarget").await;
+        target.addrs_insert(TargetAddr::new("[fe80::2%1]:0").unwrap()).await;
+        daemon.target_collection.merge_insert(target).await;
+
+        assert_eq!(daemon.target_collection.targets().await.len(), 2);
+        assert!(daemon.target_collection.get("foobar").await.is_some());
+        assert!(daemon.target_collection.get("whoistarget").await.is_some());
+
+        let r = proxy.get_ssh_address(None, std::i64::MAX).await.unwrap();
+        assert_eq!(r, Err(DaemonError::TargetAmbiguous));
     }
 
     struct FakeConfigReader {

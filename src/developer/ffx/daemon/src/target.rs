@@ -13,7 +13,7 @@ use {
     crate::onet::HostPipeConnection,
     anyhow::{anyhow, bail, Context, Error, Result},
     async_trait::async_trait,
-    bridge::{DaemonError, TargetAddrInfo, TargetIp, TargetIpPort},
+    bridge::{DaemonError, TargetAddrInfo, TargetIpPort},
     chrono::{DateTime, Utc},
     ffx_daemon_core::events::{self, EventSynthesizer},
     ffx_daemon_core::task::{SingleFlight, TaskSnapshot},
@@ -47,7 +47,7 @@ use {
 pub use crate::target_task::*;
 
 const IDENTIFY_HOST_TIMEOUT_MILLIS: u64 = 1000;
-
+const DEFAULT_SSH_PORT: u16 = 22;
 #[async_trait(?Send)]
 pub trait ToFidlTarget {
     async fn to_fidl_target(self) -> bridge::Target;
@@ -650,10 +650,9 @@ impl Target {
             };
             let scope_id = addr.scope_id();
 
-            Some(match self.ssh_port().await {
-                Some(port) => TargetAddrInfo::IpPort(TargetIpPort { ip, port, scope_id }),
-                None => TargetAddrInfo::Ip(TargetIp { ip, scope_id }),
-            })
+            let port = self.ssh_port().await.unwrap_or(DEFAULT_SSH_PORT);
+
+            Some(TargetAddrInfo::IpPort(TargetIpPort { ip, port, scope_id }))
         } else {
             None
         }
@@ -1624,6 +1623,7 @@ impl TargetCollection {
 mod test {
     use {
         super::*,
+        bridge::TargetIp,
         chrono::offset::TimeZone,
         fidl, fidl_fuchsia_developer_remotecontrol as rcs,
         futures::executor::block_on,
@@ -2685,7 +2685,7 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_ssh_address_info_no_port() {
+    async fn test_ssh_address_info_no_port_provides_default_port() {
         let target = Target::new_with_addr_entries(
             Some("foo"),
             vec![TargetAddrEntry::from((
@@ -2696,15 +2696,16 @@ mod test {
             .into_iter(),
         );
 
-        let ip = match target.ssh_address_info().await.unwrap() {
-            TargetAddrInfo::Ip(ip) => match ip.ip {
-                IpAddress::Ipv4(i) => IpAddr::from(i.addr),
-                IpAddress::Ipv6(i) => IpAddr::from(i.addr),
+        let (ip, port) = match target.ssh_address_info().await.unwrap() {
+            TargetAddrInfo::IpPort(TargetIpPort { ip, port, .. }) => match ip {
+                IpAddress::Ipv4(i) => (IpAddr::from(i.addr), port),
+                IpAddress::Ipv6(i) => (IpAddr::from(i.addr), port),
             },
             _ => panic!("unexpected type"),
         };
 
         assert_eq!(ip, "::1".parse::<IpAddr>().unwrap());
+        assert_eq!(port, 22);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

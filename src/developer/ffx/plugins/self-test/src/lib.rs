@@ -11,9 +11,17 @@ mod test;
 
 #[ffx_plugin()]
 pub async fn selftest(cmd: SelftestCommand) -> Result<()> {
-    let default_tests =
-        tests![test_isolated, test_daemon_echo, test_daemon_config_flag, test_daemon_stop,];
-    let mut target_tests = tests![test_target_list,];
+    let default_tests = tests![
+        test_isolated,
+        test_daemon_echo,
+        test_daemon_config_flag,
+        test_daemon_stop,
+        test_target_get_ssh_address_timeout,
+        test_manual_target_add_get_ssh_address,
+        test_manual_target_add_get_ssh_address_late_add,
+    ];
+    let mut target_tests =
+        tests![test_target_list, test_target_get_ssh_address_target_includes_port];
 
     let mut tests = default_tests;
     if cmd.include_target {
@@ -109,5 +117,106 @@ async fn test_target_list() -> Result<()> {
     for (got, want) in headerline.split_whitespace().zip(headers) {
         ensure!(got == want, format!("assertion failed:\nLEFT: {:?}\nRIGHT: {:?}", got, want));
     }
+    Ok(())
+}
+
+async fn test_target_get_ssh_address_timeout() -> Result<()> {
+    let isolate = Isolate::new("get-ssh-address")?;
+
+    let mut cmd = isolate.ffx(&["--target", "noexist", "target", "get-ssh-address", "-t", "1"]);
+    let (stdout, stderr) = fuchsia_async::Task::blocking(async move {
+        let out = cmd.output().context("failed to execute")?;
+        let stdout = String::from_utf8(out.stdout).context("convert from utf8")?;
+        let stderr = String::from_utf8(out.stderr).context("convert from utf8")?;
+        Ok::<_, anyhow::Error>((stdout, stderr))
+    })
+    .await?;
+
+    ensure!(stdout.lines().count() == 0);
+    // stderr names the target, and says timeout.
+    ensure!(stderr.contains("noexist"));
+    ensure!(stderr.contains("Timeout"));
+
+    Ok(())
+}
+
+async fn test_target_get_ssh_address_target_includes_port() -> Result<()> {
+    let isolate = Isolate::new("get-ssh-address")?;
+
+    let mut cmd = isolate.ffx(&["target", "list", "-f", "s"]);
+    let out =
+        fuchsia_async::Task::blocking(async move { cmd.output().context("failed to execute") })
+            .await
+            .context("getting target list")?;
+
+    ensure!(out.status.success(), "Looking up a target name failed: {:?}", out);
+    let stdout = String::from_utf8(out.stdout.clone()).context("convert from utf8")?;
+    let first_line = stdout.lines().next().expect("at least one target to be found");
+    // The second element should be the target name
+    let target_name =
+        first_line.split_whitespace().skip(1).next().expect("target name to be in second element");
+
+    let mut cmd = isolate.ffx(&["--target", target_name, "target", "get-ssh-address", "-t", "5"]);
+    let out = fuchsia_async::Task::blocking(async move {
+        let out = cmd.output().context("failed to execute")?;
+        Ok::<_, anyhow::Error>(out)
+    })
+    .await?;
+
+    let stdout = String::from_utf8(out.stdout.clone()).context("convert from utf8")?;
+    let stderr = String::from_utf8(out.stderr.clone()).context("convert from utf8")?;
+
+    ensure!(stdout.contains(":22"), "expected stdout to contain ':22', got {:?}", out);
+    ensure!(stderr.lines().count() == 0);
+    // TODO: establish a good way to assert against the whole target address.
+
+    Ok(())
+}
+
+async fn test_manual_target_add_get_ssh_address() -> Result<()> {
+    let isolate = Isolate::new("target-add-get-ssh-address")?;
+
+    let mut cmd = isolate.ffx(&["target", "add", "[::1]:8022"]);
+    let _ = fuchsia_async::Task::blocking(async move { cmd.output() }).await;
+
+    let mut cmd = isolate.ffx(&["--target", "[::1]:8022", "target", "get-ssh-address"]);
+    let (stdout, stderr) = fuchsia_async::Task::blocking(async move {
+        let out = cmd.output().context("failed to execute")?;
+        let stdout = String::from_utf8(out.stdout).context("convert from utf8")?;
+        let stderr = String::from_utf8(out.stderr).context("convert from utf8")?;
+        Ok::<_, anyhow::Error>((stdout, stderr))
+    })
+    .await?;
+
+    ensure!(stdout.contains("[::1]:8022"));
+    ensure!(stderr.lines().count() == 0);
+    // TODO: establish a good way to assert against the whole target address.
+
+    Ok(())
+}
+
+async fn test_manual_target_add_get_ssh_address_late_add() -> Result<()> {
+    let isolate = Isolate::new("target-add-get-ssh-address")?;
+
+    let mut cmd = isolate.ffx(&["--target", "[::1]:8022", "target", "get-ssh-address", "-t", "10"]);
+    let task = fuchsia_async::Task::blocking(async move {
+        let out = cmd.output().context("failed to execute")?;
+        let stdout = String::from_utf8(out.stdout).context("convert from utf8")?;
+        let stderr = String::from_utf8(out.stderr).context("convert from utf8")?;
+        Ok::<_, anyhow::Error>((stdout, stderr))
+    });
+
+    // The get-ssh-address should pick up targets added after it has started, as well as before.
+    fuchsia_async::Timer::new(Duration::from_millis(500)).await;
+
+    let mut cmd = isolate.ffx(&["target", "add", "[::1]:8022"]);
+    let _ = fuchsia_async::Task::blocking(async move { cmd.output() }).await;
+
+    let (stdout, stderr) = task.await?;
+
+    ensure!(stdout.contains("[::1]:8022"));
+    ensure!(stderr.lines().count() == 0);
+    // TODO: establish a good way to assert against the whole target address.
+
     Ok(())
 }
