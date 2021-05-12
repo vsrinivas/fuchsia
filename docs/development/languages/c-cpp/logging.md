@@ -23,7 +23,7 @@ following in your component manifest:
    ```json5
    {
      include: [
-       "sdk/lib/diagnostics/syslog/client.shard.cmx"
+       "sdk/lib/diagnostics/syslog/client.shard.cml"
      ],
      ...
    }
