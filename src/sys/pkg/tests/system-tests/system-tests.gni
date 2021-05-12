@@ -6,7 +6,7 @@ import("//build/testing/host_test.gni")
 
 # The service account that allows the test to download build artifacts.
 _environment_service_account =
-    "internal-artifacts-readers@fuchsia-infra.iam.gserviceaccount.com"
+    "artifact-readers@fuchsia-infra.iam.gserviceaccount.com"
 
 # A template that configures a System Test Upgrade Suite against a given release
 # builder.

@@ -36,12 +36,8 @@ if (is_host) {
 }
 
 if (is_linux || is_mac) {
-  # The service account that allows the test to download build artifacts.
-  _service_account = "artifact-readers@fuchsia-infra.iam.gserviceaccount.com"
-
   e2e_tests_pave("nuc-release-pave") {
     release_builder = "fuchsia/global.ci/fuchsia-x64-release-build_only"
-    service_account = _service_account
 
     environments = [
       {

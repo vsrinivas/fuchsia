@@ -104,12 +104,7 @@ group("system_tests") {
 }
 
 if (is_linux || is_mac) {
-  # The service account that allows the test to download build artifacts.
-  _service_account = "artifact-readers@fuchsia-infra.iam.gserviceaccount.com"
-
   system_test_reboot_suite("nuc-release-reboot") {
-    service_account = _service_account
-
     environments = [
       {
         dimensions = {
@@ -124,8 +119,6 @@ if (is_linux || is_mac) {
   }
 
   system_test_reboot_suite("nuc-release-reboot-longevity") {
-    service_account = _service_account
-
     environments = [
       {
         dimensions = {
@@ -142,7 +135,6 @@ if (is_linux || is_mac) {
   system_test_upgrade_suite("nuc-release-upgrade") {
     downgrade_release_builder =
         "fuchsia/global.ci/fuchsia-x64-release-build_only"
-    service_account = _service_account
 
     environments = [
       {
@@ -160,7 +152,6 @@ if (is_linux || is_mac) {
   system_test_upgrade_suite("nuc-release-upgrade-longevity") {
     downgrade_release_builder =
         "fuchsia/global.ci/fuchsia-x64-release-build_only"
-    service_account = _service_account
 
     environments = [
       {

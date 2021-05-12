@@ -7,8 +7,7 @@ import("//build/testing/host_test.gni")
 # A template that configures a System Test pave test against a given release builder.  The SSH key,
 # upgrade build ID and target device must come environment variables.
 template("e2e_tests_pave") {
-  _service_account =
-      "internal-artifacts-readers@fuchsia-infra.iam.gserviceaccount.com"
+  _service_account = "artifact-readers@fuchsia-infra.iam.gserviceaccount.com"
   if (defined(invoker.service_account)) {
     assert(invoker.service_account != "",
            "'$target_name' cannot have an empty service_account")
