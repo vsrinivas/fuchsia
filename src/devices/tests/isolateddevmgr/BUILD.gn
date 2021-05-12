@@ -21,7 +21,7 @@ fidl("fuchsia.device.manager.test") {
 driver_module("isolateddevmgr-test-driver") {
   sources = [ "test-driver.cc" ]
   deps = [
-    ":fuchsia.device.manager.test_c",
+    ":fuchsia.device.manager.test_llcpp",
     ":metadata-test-bind",
     "//sdk/lib/fdio",
     "//src/devices/lib/driver",

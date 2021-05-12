@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/device/manager/test/c/fidl.h>
+#include <fuchsia/device/manager/test/llcpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
@@ -16,47 +16,42 @@
 #include "src/devices/tests/isolateddevmgr/metadata-test-bind.h"
 
 class IsolatedDevMgrTestDriver;
-using DeviceType = ddk::Device<IsolatedDevMgrTestDriver, ddk::Unbindable, ddk::MessageableOld>;
-class IsolatedDevMgrTestDriver : public DeviceType {
+using DeviceType = ddk::Device<IsolatedDevMgrTestDriver, ddk::Unbindable,
+                               ddk::Messageable<fuchsia_device_manager_test::Metadata>::Mixin>;
+class IsolatedDevMgrTestDriver : public DeviceType,
+                                 public fidl::WireServer<fuchsia_device_manager_test::Metadata> {
  public:
   IsolatedDevMgrTestDriver(zx_device_t* parent) : DeviceType(parent) {}
   zx_status_t Bind();
   void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
- private:
-  static zx_status_t FidlGetMetadata(void* ctx, uint32_t type, fidl_txn_t* txn);
+  void GetMetadata(GetMetadataRequestView request, GetMetadataCompleter::Sync& completer);
 };
 
-zx_status_t IsolatedDevMgrTestDriver::FidlGetMetadata(void* ctx, uint32_t type, fidl_txn_t* txn) {
-  IsolatedDevMgrTestDriver* driver = reinterpret_cast<IsolatedDevMgrTestDriver*>(ctx);
+void IsolatedDevMgrTestDriver::GetMetadata(GetMetadataRequestView request,
+                                           GetMetadataCompleter::Sync& completer) {
   size_t size;
-  zx_status_t status = driver->DdkGetMetadataSize(type, &size);
+  zx_status_t status = DdkGetMetadataSize(request->type, &size);
   if (status != ZX_OK) {
-    return status;
+    completer.Close(status);
+    return;
   }
 
   std::vector<uint8_t> metadata;
   metadata.resize(size);
 
-  status = driver->DdkGetMetadata(type, metadata.data(), metadata.size(), &size);
+  status = DdkGetMetadata(request->type, metadata.data(), metadata.size(), &size);
   if (status != ZX_OK) {
-    return status;
+    completer.Close(status);
+    return;
   }
   if (size != metadata.size()) {
-    return ZX_ERR_INTERNAL;
+    completer.Close(ZX_ERR_INTERNAL);
+    return;
   }
 
-  return fuchsia_device_manager_test_MetadataGetMetadata_reply(txn, metadata.data(),
-                                                               metadata.size());
-}
-
-zx_status_t IsolatedDevMgrTestDriver::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  static const fuchsia_device_manager_test_Metadata_ops_t kOps = {
-      .GetMetadata = IsolatedDevMgrTestDriver::FidlGetMetadata,
-  };
-  return fuchsia_device_manager_test_Metadata_dispatch(this, txn, msg, &kOps);
+  completer.Reply(fidl::VectorView<uint8_t>::FromExternal(metadata));
 }
 
 zx_status_t IsolatedDevMgrTestDriver::Bind() { return DdkAdd("metadata-test"); }
