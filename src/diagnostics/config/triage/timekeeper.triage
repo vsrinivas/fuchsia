@@ -17,6 +17,7 @@
         primary_source_unhealthy: "And(primary_source_status != \"Launched\", primary_source_status != \"Ok\", primary_source_status != \"Initializing\")",
         primary_filter_ok: "Option(primary_filter_state_0_counter, primary_estimate_0_counter) > 0",
         clock_started: "current_utc > backstop",
+
         // On devices that no longer report kernel UTC report a difference of 0.
         clock_difference: "current_utc - Option(kernel_utc, current_utc)",
         rtc_present: "And(rtc_initialization != \"NoDevices\", rtc_initialization != \"InvalidBeforeBackstop\")",
@@ -50,22 +51,26 @@
         clock_inconsistency: {
             type: "Warning",
             trigger: "And(clock_started, Or(clock_difference > Seconds(2), clock_difference < Seconds(-2)))",
-            print: "Kernel and Userspace UTC clocks differ by more than 2 seconds, file bugs in the Time component",
+            print: "Kernel and Userspace UTC clocks differ by more than 2 seconds",
+            file_bug: "Time",
         },
         rtc_could_not_be_read: {
             type: "Warning",
             trigger: "And(rtc_present, Not(rtc_read_ok))",
-            print: "Real time clock present but could not be read. See timekeeper.cmx:root/real_time_clock. File bugs in the Time component",
+            print: "Real time clock present but could not be read. See timekeeper.cmx:root/real_time_clock",
+            file_bug: "Time",
         },
         rtc_write_failures: {
             type: "Warning",
             trigger: "And(rtc_present, rtc_write_failure_count > 0)",
-            print: "Failures while writing to real time clock. See timekeeper.cmx:root/real_time_clock. File bugs in the Time component",
+            print: "Failures while writing to real time clock. See timekeeper.cmx:root/real_time_clock",
+            file_bug: "Time",
         },
         last_update_stale: {
             type: "Warning",
             trigger: "And(Not(Missing(last_update_mono)), (current_mono - last_update_mono) > Hours(1))",
-            print: "Most recent update to the UTC clock was over a hour ago. File bugs in the Time component",
+            print: "Most recent update to the UTC clock was over a hour ago",
+            file_bug: "Time",
         },
         error_too_high: {
             type: "Warning",

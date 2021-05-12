@@ -350,7 +350,8 @@ mod test {
                     let action = Action::Warning(Warning {
                         trigger: Metric::Eval($trigger.to_string()),
                         print: $print.to_string(),
-                        tag: $tag
+                        tag: $tag,
+                        file_bug: None,
                     });
                     m.insert($key.to_string(), action);
                 )+

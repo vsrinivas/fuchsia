@@ -22,12 +22,14 @@
         dropped_frames: {
             type: "Warning",
             trigger: "total_dropped_frames > 0",
-            print: "We dropped some frames in the past 10 minutes. Please file bugs under Scenic.",
+            print: "We dropped some frames in the past 10 minutes",
+            file_bug: "Scenic",
         },
         delayed_frames: {
             type: "Warning",
             trigger: "delay_ratio > .05",
-            print: "We delayed over 5% of frames in the past 10 minutes. Please file bugs under Scenic.",
+            print: "We delayed over 5% of frames in the past 10 minutes",
+            file_bug: "Scenic",
         },
         frames_per_second: {
             type: "Gauge",

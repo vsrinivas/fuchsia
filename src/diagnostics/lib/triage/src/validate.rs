@@ -197,7 +197,8 @@ mod test {
                     Action::Warning(Warning {
                         trigger: Metric::Eval("true".to_string()),
                         print: "good".to_string(),
-                        tag: None
+                        tag: None,
+                        file_bug: None,
                     })
                 ),
                 (
@@ -205,7 +206,8 @@ mod test {
                     Action::Warning(Warning {
                         trigger: Metric::Eval("false".to_string()),
                         print: "what?!?".to_string(),
-                        tag: None
+                        tag: None,
+                        file_bug: None,
                     })
                 )
             )
@@ -285,7 +287,8 @@ mod test {
                     Action::Warning(Warning {
                         trigger: Metric::Eval("Now()==250000000".to_string()),
                         print: "time_billion".to_string(),
-                        tag: None
+                        tag: None,
+                        file_bug: None,
                     })
                 ),
                 (
@@ -293,7 +296,8 @@ mod test {
                     Action::Warning(Warning {
                         trigger: Metric::Eval("Missing(Now())".to_string()),
                         print: "time_missing".to_string(),
-                        tag: None
+                        tag: None,
+                        file_bug: None,
                     })
                 )
             )

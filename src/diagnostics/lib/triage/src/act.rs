@@ -139,6 +139,7 @@ pub enum Action {
 pub struct Warning {
     pub trigger: Metric, // An expression to evaluate which determines if this action triggers.
     pub print: String,   // What to print if trigger is true
+    pub file_bug: Option<String>, // Describes where bugs should be filed if this action triggers.
     pub tag: Option<String>, // An optional tag to associate with this Action
 }
 
@@ -229,7 +230,12 @@ impl ActionContext<'_> {
     fn update_warnings(&mut self, action: &Warning, namespace: &String, _name: &String) {
         match self.metric_state.eval_action_metric(namespace, &action.trigger) {
             MetricValue::Bool(true) => {
-                self.action_results.add_warning(format!("[WARNING] {}.", action.print));
+                if let Some(file_bug) = &action.file_bug {
+                    self.action_results
+                        .add_warning(format!("[BUG:{}] {}.", file_bug, action.print));
+                } else {
+                    self.action_results.add_warning(format!("[WARNING] {}.", action.print));
+                }
                 true
             }
             MetricValue::Bool(false) => false,
@@ -337,6 +343,7 @@ mod test {
             Action::Warning(Warning {
                 trigger: Metric::Eval("true".to_string()),
                 print: "True was fired".to_string(),
+                file_bug: Some("Some>Monorail>Component".to_string()),
                 tag: None,
             }),
         );
@@ -345,6 +352,7 @@ mod test {
             Action::Warning(Warning {
                 trigger: Metric::Eval("false".to_string()),
                 print: "False was fired".to_string(),
+                file_bug: None,
                 tag: None,
             }),
         );
@@ -353,6 +361,7 @@ mod test {
             Action::Warning(Warning {
                 trigger: Metric::Eval("true_array".to_string()),
                 print: "True array was fired".to_string(),
+                file_bug: None,
                 tag: None,
             }),
         );
@@ -361,6 +370,7 @@ mod test {
             Action::Warning(Warning {
                 trigger: Metric::Eval("false_array".to_string()),
                 print: "False array was fired".to_string(),
+                file_bug: None,
                 tag: None,
             }),
         );
@@ -370,6 +380,7 @@ mod test {
             Action::Warning(Warning {
                 trigger: Metric::Eval("0 < 10".to_string()),
                 print: "Inequality triggered".to_string(),
+                file_bug: None,
                 tag: None,
             }),
         );
@@ -377,8 +388,8 @@ mod test {
         let no_data = Vec::new();
         let mut context = ActionContext::new(&metrics, &actions, &no_data, None);
         let results = context.process();
-        assert!(includes(results.get_warnings(), "[WARNING] True was fired"));
-        assert!(includes(results.get_warnings(), "[WARNING] Inequality triggered"));
+        assert!(includes(results.get_warnings(), "[BUG:Some>Monorail>Component] True was fired."));
+        assert!(includes(results.get_warnings(), "[WARNING] Inequality triggered."));
         assert!(includes(results.get_warnings(), "[WARNING] True array was fired"));
         assert!(!includes(results.get_warnings(), "False was fired"));
         assert!(!includes(results.get_warnings(), "False array was fired"));
@@ -485,6 +496,7 @@ mod test {
                 trigger: Metric::Eval("Now() == 1234".to_string()),
                 print: "1234".to_string(),
                 tag: None,
+                file_bug: None,
             }),
         );
         action_file.insert(
@@ -493,6 +505,7 @@ mod test {
                 trigger: Metric::Eval("Missing(Now())".to_string()),
                 print: "missing".to_string(),
                 tag: None,
+                file_bug: None,
             }),
         );
         actions.insert("file".to_string(), action_file);
