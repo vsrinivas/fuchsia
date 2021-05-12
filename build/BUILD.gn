@@ -168,6 +168,13 @@ group("non_hermetic_deps") {
 
   # See: fxrev.dev/528291
   visibility += [ "//build/rust/*" ]
+
+  non_default_checkout_users = [
+    # This git repo is only checked out when the vulkan-cts attribute is set.
+    "//third_party/vulkan-cts/fuchsia/*",
+    "//third_party/arm-mali-bifrost/*",
+  ]
+  visibility += non_default_checkout_users
 }
 
 # Build targets that use the legacy zx_library and zx_host_tool templates
