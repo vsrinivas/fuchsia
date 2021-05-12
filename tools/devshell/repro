@@ -27,7 +27,7 @@
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 
-set -euf -o pipefail
+set -eu -o pipefail
 
 function create_builddir_name {
   if [[ -n "$build_id" ]]; then
