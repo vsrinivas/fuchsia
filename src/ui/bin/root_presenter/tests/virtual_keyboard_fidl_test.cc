@@ -338,8 +338,8 @@ TEST_F(VirtualKeyboardFidlTest, NewManagerClientCanConnectAfterFirstDisconnects)
 namespace fuchsia_input_virtualkeyboard_manager_methods {
 
 // TODO: Add tests that verify that WatchTypeAndVisibility() is resolved by
-// RequestShow() and RequestHide(), after VirtualKeyboardCoordinator
-// propagates that information to VirtualKeyboardManager.
+// RequestShow(), RequestHide(), and SetTextType(), after
+// VirtualKeyboardCoordinator propagates that information to VirtualKeyboardManager.
 
 TEST_F(VirtualKeyboardFidlTest, WatchTypeAndVisibilityDoesNotError) {
   zx_status_t status = ZX_OK;

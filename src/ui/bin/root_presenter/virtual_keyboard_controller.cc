@@ -20,6 +20,8 @@ VirtualKeyboardController::VirtualKeyboardController(
 
 void VirtualKeyboardController::SetTextType(fuchsia::input::virtualkeyboard::TextType text_type) {
   FX_LOGS(INFO) << __PRETTY_FUNCTION__;
+  text_type_ = text_type;
+  NotifyCoordinator();
 }
 
 void VirtualKeyboardController::RequestShow() {

@@ -34,6 +34,10 @@ class FakeVirtualKeyboardCoordinator : public VirtualKeyboardCoordinator {
   }
 
   // Test support.
+  void Reset() {
+    want_visible_.reset();
+    requested_text_type_.reset();
+  }
   const auto& want_visible() { return want_visible_; }
   const auto& requested_text_type() { return requested_text_type_; }
 
@@ -218,6 +222,23 @@ TEST_F(VirtualKeyboardControllerTest, RequestHideDoesNotCrashWhenCoordinatorIsNu
   controller.RequestHide();
 }
 
+TEST_F(VirtualKeyboardControllerTest, SetTextTypeKeepsKeyboardShown) {
+  VirtualKeyboardController controller(coordinator(), view_ref(),
+                                       fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC);
+  controller.RequestShow();
+  coordinator()->Reset();
+  controller.SetTextType(::fuchsia::input::virtualkeyboard::TextType::PHONE);
+  ASSERT_EQ(true, coordinator()->want_visible());
+}
+
+TEST_F(VirtualKeyboardControllerTest, SetTextTypeKeepsKeyboardHidden) {
+  VirtualKeyboardController controller(coordinator(), view_ref(),
+                                       fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC);
+  coordinator()->Reset();
+  controller.SetTextType(::fuchsia::input::virtualkeyboard::TextType::PHONE);
+  ASSERT_EQ(false, coordinator()->want_visible());
+}
+
 class VirtualKeyboardControllerTextTypeParamFixture
     : public VirtualKeyboardControllerTest,
       public testing::WithParamInterface<fuchsia::input::virtualkeyboard::TextType> {};
@@ -229,16 +250,26 @@ TEST_P(VirtualKeyboardControllerTextTypeParamFixture,
   ASSERT_EQ(expected_text_type, coordinator()->requested_text_type());
 }
 
+TEST_P(VirtualKeyboardControllerTextTypeParamFixture, SetTextTypeInformsCoordinator) {
+  auto expected_text_type = GetParam();
+  VirtualKeyboardController(coordinator(), view_ref(),
+                            fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC)
+      .SetTextType(expected_text_type);
+  ASSERT_EQ(expected_text_type, coordinator()->requested_text_type());
+}
+
 INSTANTIATE_TEST_SUITE_P(VirtualKeyboardControllerTextTypeParameterizedTests,
                          VirtualKeyboardControllerTextTypeParamFixture,
                          ::testing::Values(fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC,
                                            fuchsia::input::virtualkeyboard::TextType::NUMERIC,
                                            fuchsia::input::virtualkeyboard::TextType::PHONE));
 
-TEST_F(VirtualKeyboardControllerTest, SetTextTypeDoesNotCrash) {
-  VirtualKeyboardController(coordinator(), view_ref(),
-                            fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC)
-      .SetTextType(fuchsia::input::virtualkeyboard::TextType::NUMERIC);
+TEST_F(VirtualKeyboardControllerTest, SetTextTypeDoesNotCrashWhenCoordinatorIsNull) {
+  std::optional<FakeVirtualKeyboardCoordinator> coordinator(std::in_place);
+  VirtualKeyboardController controller(coordinator->GetWeakPtr(), view_ref(),
+                                       fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC);
+  coordinator.reset();
+  controller.SetTextType(fuchsia::input::virtualkeyboard::TextType::NUMERIC);
 }
 
 }  // namespace

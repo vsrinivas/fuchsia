@@ -54,9 +54,13 @@ class VirtualKeyboardController : public fuchsia::input::virtualkeyboard::Contro
   // `fuchsia.ui.views.View` does not have focus.
   fuchsia::input::virtualkeyboard::TextType text_type_;
 
-  // Whether or not `this` wants the keyboard to be visible. The value may differ
-  // from the ground truth about visibility, which is owned by the client of the
-  // `fuchsia.input.virtualkeyboard.Manager` protocol.
+  // Whether or not `this` wants the keyboard to be visible.
+  //
+  // `want_visible_` is cached so that `this` can send the visibility bit
+  // to `coordinator_` when SetTextType() is called.
+  //
+  // The value may differ from the ground truth about visibility, which is owned by
+  // the client of the `fuchsia.input.virtualkeyboard.Manager` protocol.
   //
   // Currently, `want_visible_` differs from the actual visibility only during the
   // transient periods when either
