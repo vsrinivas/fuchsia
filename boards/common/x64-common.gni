@@ -69,6 +69,7 @@ board_package_labels = [
   "//src/power/thermd:config",
   "//garnet/packages/prod:drivers-support",
   "//src/hwinfo:default_board_config",
+  "//src/graphics/lib/magma/gnbuild/magma-intel-gen:libvulkan_intel_gen",
 ]
 
 max_fuchsia_zbi_size = "16777216"  # 16 MiB

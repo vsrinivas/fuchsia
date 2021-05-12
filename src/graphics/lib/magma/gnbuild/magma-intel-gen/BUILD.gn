@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/components/fuchsia_package_with_single_component.gni")
 import("//build/config.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
 
@@ -37,7 +38,7 @@ if (target_cpu == "x64") {
       testonly = true
     }
 
-    deps = [ "//third_party/mesa:magma_vulkan" ]
+    deps = []
 
     if (magma_enable_developer_build) {
       deps += [ "$msd_intel_gen_build_root:msd_intel_test" ]
@@ -47,6 +48,20 @@ if (target_cpu == "x64") {
 
     # This package is reachable from //garnet/packages/prod:all
     allowed_in_extra_deps = true
+  }
+
+  resource("vulkan_metadata") {
+    sources = [ "metadata.json" ]
+    outputs = [ "data/metadata.json" ]
+  }
+
+  fuchsia_package_with_single_component("libvulkan_intel_gen") {
+    component_name = "vulkan"
+    deps = [
+      ":vulkan_metadata",
+      "//third_party/mesa:magma_vulkan",
+    ]
+    manifest = "meta/vulkan.cml"
   }
 
   icd_config_data("magma-intel-gen-config") {
