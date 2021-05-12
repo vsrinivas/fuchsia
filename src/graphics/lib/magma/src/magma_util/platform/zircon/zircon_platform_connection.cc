@@ -160,6 +160,7 @@ void ZirconPlatformConnection::FlowControl(uint64_t size) {
   }
 }
 
+// Deprecated: TODO(fxbug.dev/76457) remove
 void ZirconPlatformConnection::ImportBuffer(ImportBufferRequestView request,
                                             ImportBufferCompleter::Sync& completer) {
   DLOG("ZirconPlatformConnection - ImportBuffer");
@@ -172,6 +173,7 @@ void ZirconPlatformConnection::ImportBuffer(ImportBufferRequestView request,
     SetError(&completer, MAGMA_STATUS_INVALID_ARGS);
 }
 
+// Deprecated: TODO(fxbug.dev/76457) remove
 void ZirconPlatformConnection::ReleaseBuffer(ReleaseBufferRequestView request,
                                              ReleaseBufferCompleter::Sync& completer) {
   DLOG("ZirconPlatformConnection: ReleaseBuffer");
@@ -184,7 +186,19 @@ void ZirconPlatformConnection::ReleaseBuffer(ReleaseBufferRequestView request,
 void ZirconPlatformConnection::ImportObject(ImportObjectRequestView request,
                                             ImportObjectCompleter::Sync& completer) {
   DLOG("ZirconPlatformConnection: ImportObject");
-  FlowControl();
+  auto object_type = static_cast<PlatformObject::Type>(request->object_type);
+
+  uint64_t size = 0;
+
+  if (object_type == magma::PlatformObject::BUFFER) {
+    zx::unowned_vmo vmo(request->object.get());
+    zx_status_t status = vmo->get_size(&size);
+    if (status != ZX_OK) {
+      SetError(&completer, MAGMA_STATUS_INVALID_ARGS);
+      return;
+    }
+  }
+  FlowControl(size);
 
   if (!delegate_->ImportObject(request->object.release(),
                                static_cast<PlatformObject::Type>(request->object_type)))

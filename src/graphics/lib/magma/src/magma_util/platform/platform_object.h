@@ -11,7 +11,7 @@ namespace magma {
 
 class PlatformObject {
  public:
-  enum Type { SEMAPHORE = 10 };
+  enum Type { SEMAPHORE = 10, BUFFER = 11 };
 
   // returns a unique, immutable id for the underlying object
   virtual uint64_t id() = 0;

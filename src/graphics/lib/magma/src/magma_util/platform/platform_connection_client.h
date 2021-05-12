@@ -37,13 +37,6 @@ class PlatformConnectionClient : public magma_connection {
                                                           uint32_t device_notification_handle,
                                                           uint64_t max_inflight_messages,
                                                           uint64_t max_inflight_bytes);
-
-  // Imports a buffer for use in the system driver
-  virtual magma_status_t ImportBuffer(PlatformBuffer* buffer) = 0;
-  // Destroys the buffer with |buffer_id| within this connection
-  // returns false if |buffer_id| has not been imported
-  virtual magma_status_t ReleaseBuffer(uint64_t buffer_id) = 0;
-
   // Imports an object for use in the system driver
   virtual magma_status_t ImportObject(uint32_t handle, PlatformObject::Type object_type) = 0;
 

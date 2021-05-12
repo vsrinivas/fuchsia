@@ -30,6 +30,11 @@ enum Status {
     BAD_STATE = 9;
 };
 
+enum ObjectType {
+    SEMAPHORE = 10;
+    BUFFER = 11;
+};
+
 enum BufferOp {
     /// Eagerly populate GPU page tables with the pages mapping in this range, committing pages as
     /// needed. This is not needed for MAGMA_GPU_MAP_FLAG_GROWABLE allocations, since the page
@@ -116,17 +121,17 @@ struct BufferOffset {
 /// If a system driver error occurs, the connection will be closed and a Status sent via epitaph.
 /// If negative, the Epitaph represents a Zircon error.
 protocol Primary {
-    /// Imports a buffer for use in the system driver.
+    /// Deprecated: Imports a buffer for use in the system driver.
     ImportBuffer(zx.handle:VMO buffer);
 
-    /// Destroys the buffer with `buffer_id` within this connection.
+    /// Deprecated: Destroys the buffer with `buffer_id` within this connection.
     ReleaseBuffer(zx.koid buffer_id);
 
     /// Imports an object for use in the system driver.
-    ImportObject(zx.handle object, uint32 object_type);
+    ImportObject(zx.handle object, ObjectType object_type);
 
     /// Destroys the object with `object_id` within this connection.
-    ReleaseObject(zx.koid object_id, uint32 object_type);
+    ReleaseObject(zx.koid object_id, ObjectType object_type);
 
     /// Creates context `context_id`.
     CreateContext(uint32 context_id);

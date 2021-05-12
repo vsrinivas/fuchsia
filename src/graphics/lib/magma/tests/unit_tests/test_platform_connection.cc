@@ -158,8 +158,11 @@ class TestPlatformConnection {
     shared_data_->test_buffer_id = buf->id();
     FlowControlInit();
 
-    EXPECT_EQ(client_connection_->ImportBuffer(buf.get()), 0);
-    EXPECT_EQ(client_connection_->GetError(), 0);
+    uint32_t handle;
+    EXPECT_TRUE(buf->duplicate_handle(&handle));
+    EXPECT_EQ(client_connection_->ImportObject(handle, magma::PlatformObject::BUFFER),
+              MAGMA_STATUS_OK);
+    EXPECT_EQ(client_connection_->GetError(), MAGMA_STATUS_OK);
     FlowControlCheck(1, buf->size());
   }
 
@@ -168,13 +171,18 @@ class TestPlatformConnection {
     shared_data_->test_buffer_id = buf->id();
     FlowControlInit();
 
-    EXPECT_EQ(client_connection_->ImportBuffer(buf.get()), 0);
-    EXPECT_EQ(client_connection_->ReleaseBuffer(shared_data_->test_buffer_id), 0);
-    EXPECT_EQ(client_connection_->GetError(), 0);
+    uint32_t handle;
+    EXPECT_TRUE(buf->duplicate_handle(&handle));
+    EXPECT_EQ(client_connection_->ImportObject(handle, magma::PlatformObject::BUFFER),
+              MAGMA_STATUS_OK);
+    EXPECT_EQ(client_connection_->ReleaseObject(shared_data_->test_buffer_id,
+                                                magma::PlatformObject::BUFFER),
+              MAGMA_STATUS_OK);
+    EXPECT_EQ(client_connection_->GetError(), MAGMA_STATUS_OK);
     FlowControlCheck(2, buf->size());
   }
 
-  void TestImportObject() {
+  void TestImportSemaphore() {
     auto semaphore = magma::PlatformSemaphore::Create();
     ASSERT_TRUE(semaphore);
     shared_data_->test_semaphore_id = semaphore->id();
@@ -182,12 +190,13 @@ class TestPlatformConnection {
 
     uint32_t handle;
     EXPECT_TRUE(semaphore->duplicate_handle(&handle));
-    EXPECT_EQ(client_connection_->ImportObject(handle, magma::PlatformObject::SEMAPHORE), 0);
-    EXPECT_EQ(client_connection_->GetError(), 0);
+    EXPECT_EQ(client_connection_->ImportObject(handle, magma::PlatformObject::SEMAPHORE),
+              MAGMA_STATUS_OK);
+    EXPECT_EQ(client_connection_->GetError(), MAGMA_STATUS_OK);
     FlowControlCheckOneMessage();
   }
 
-  void TestReleaseObject() {
+  void TestReleaseSemaphore() {
     auto semaphore = magma::PlatformSemaphore::Create();
     ASSERT_TRUE(semaphore);
     shared_data_->test_semaphore_id = semaphore->id();
@@ -195,11 +204,12 @@ class TestPlatformConnection {
 
     uint32_t handle;
     EXPECT_TRUE(semaphore->duplicate_handle(&handle));
-    EXPECT_EQ(client_connection_->ImportObject(handle, magma::PlatformObject::SEMAPHORE), 0);
+    EXPECT_EQ(client_connection_->ImportObject(handle, magma::PlatformObject::SEMAPHORE),
+              MAGMA_STATUS_OK);
     EXPECT_EQ(client_connection_->ReleaseObject(shared_data_->test_semaphore_id,
                                                 magma::PlatformObject::SEMAPHORE),
-              0);
-    EXPECT_EQ(client_connection_->GetError(), 0);
+              MAGMA_STATUS_OK);
+    EXPECT_EQ(client_connection_->GetError(), MAGMA_STATUS_OK);
     FlowControlCheck(2, 0);
   }
 
@@ -245,16 +255,22 @@ class TestPlatformConnection {
     shared_data_->test_buffer_id = buf->id();
     FlowControlInit();
 
-    EXPECT_EQ(client_connection_->ImportBuffer(buf.get()), 0);
-    EXPECT_EQ(client_connection_->MapBufferGpu(buf->id(), page_size() * 1000, 1u, 2u, 5), 0);
-    EXPECT_EQ(client_connection_->UnmapBufferGpu(buf->id(), page_size() * 1000), 0);
-    EXPECT_EQ(client_connection_->CommitBuffer(buf->id(), 1000, 2000), 0);
+    uint32_t handle;
+    EXPECT_TRUE(buf->duplicate_handle(&handle));
+    EXPECT_EQ(client_connection_->ImportObject(handle, magma::PlatformObject::BUFFER),
+              MAGMA_STATUS_OK);
+    EXPECT_EQ(
+        client_connection_->MapBufferGpu(buf->id(), page_size() * 1000 /* address */,
+                                         1u /* page_offset */, 2u /* page_count */, 5 /* flags */),
+        MAGMA_STATUS_OK);
+    EXPECT_EQ(client_connection_->UnmapBufferGpu(buf->id(), page_size() * 1000), MAGMA_STATUS_OK);
+    EXPECT_EQ(client_connection_->CommitBuffer(buf->id(), 1000, 2000), MAGMA_STATUS_OK);
     EXPECT_EQ(client_connection_->BufferRangeOp(buf->id(), MAGMA_BUFFER_RANGE_OP_POPULATE_TABLES,
                                                 1000, 2000),
-              0);
+              MAGMA_STATUS_OK);
     EXPECT_EQ(client_connection_->BufferRangeOp(buf->id(), MAGMA_BUFFER_RANGE_OP_DEPOPULATE_TABLES,
                                                 1000, 2000),
-              0);
+              MAGMA_STATUS_OK);
     EXPECT_EQ(client_connection_->GetError(), 0);
     FlowControlCheck(6, buf->size());
   }
@@ -442,26 +458,26 @@ class TestDelegate : public magma::PlatformConnection::Delegate {
   TestDelegate(std::shared_ptr<SharedData> shared_data) : shared_data_(shared_data) {}
 
   magma::Status ImportBuffer(uint32_t handle, uint64_t* buffer_id_out) override {
-    std::unique_lock<std::mutex> lock(shared_data_->mutex);
-    auto buf = magma::PlatformBuffer::Import(handle);
-    EXPECT_EQ(buf->id(), shared_data_->test_buffer_id);
-    shared_data_->test_complete = true;
-    return MAGMA_STATUS_OK;
+    return MAGMA_STATUS_UNIMPLEMENTED;
   }
-
-  magma::Status ReleaseBuffer(uint64_t buffer_id) override {
-    std::unique_lock<std::mutex> lock(shared_data_->mutex);
-    EXPECT_EQ(buffer_id, shared_data_->test_buffer_id);
-    shared_data_->test_complete = true;
-    return MAGMA_STATUS_OK;
-  }
+  magma::Status ReleaseBuffer(uint64_t buffer_id) override { return MAGMA_STATUS_UNIMPLEMENTED; }
 
   magma::Status ImportObject(uint32_t handle, magma::PlatformObject::Type object_type) override {
     std::unique_lock<std::mutex> lock(shared_data_->mutex);
-    auto semaphore = magma::PlatformSemaphore::Import(handle);
-    if (!semaphore)
-      return MAGMA_STATUS_INVALID_ARGS;
-    EXPECT_EQ(semaphore->id(), shared_data_->test_semaphore_id);
+    switch (object_type) {
+      case magma::PlatformObject::SEMAPHORE: {
+        auto semaphore = magma::PlatformSemaphore::Import(handle);
+        if (!semaphore)
+          return MAGMA_STATUS_INVALID_ARGS;
+        EXPECT_EQ(semaphore->id(), shared_data_->test_semaphore_id);
+      } break;
+      case magma::PlatformObject::BUFFER: {
+        auto buffer = magma::PlatformBuffer::Import(handle);
+        if (!buffer)
+          return MAGMA_STATUS_INVALID_ARGS;
+        EXPECT_EQ(buffer->id(), shared_data_->test_buffer_id);
+      } break;
+    }
     shared_data_->test_complete = true;
     return MAGMA_STATUS_OK;
   }
@@ -469,7 +485,18 @@ class TestDelegate : public magma::PlatformConnection::Delegate {
   magma::Status ReleaseObject(uint64_t object_id,
                               magma::PlatformObject::Type object_type) override {
     std::unique_lock<std::mutex> lock(shared_data_->mutex);
-    EXPECT_EQ(object_id, shared_data_->test_semaphore_id);
+    switch (object_type) {
+      case magma::PlatformObject::SEMAPHORE: {
+        EXPECT_EQ(object_id, shared_data_->test_semaphore_id);
+        break;
+      }
+      case magma::PlatformObject::BUFFER: {
+        EXPECT_EQ(object_id, shared_data_->test_buffer_id);
+        break;
+      }
+      default:
+        EXPECT_TRUE(false);
+    }
     shared_data_->test_complete = true;
     return MAGMA_STATUS_OK;
   }
@@ -714,16 +741,16 @@ TEST(PlatformConnection, ReleaseBuffer) {
   Test->TestReleaseBuffer();
 }
 
-TEST(PlatformConnection, ImportObject) {
+TEST(PlatformConnection, ImportSemaphore) {
   auto Test = TestPlatformConnection::Create();
   ASSERT_NE(Test, nullptr);
-  Test->TestImportObject();
+  Test->TestImportSemaphore();
 }
 
-TEST(PlatformConnection, ReleaseObject) {
+TEST(PlatformConnection, ReleaseSemaphore) {
   auto Test = TestPlatformConnection::Create();
   ASSERT_NE(Test, nullptr);
-  Test->TestReleaseObject();
+  Test->TestReleaseSemaphore();
 }
 
 TEST(PlatformConnection, CreateContext) {

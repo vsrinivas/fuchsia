@@ -104,10 +104,14 @@ magma_status_t magma_create_buffer(magma_connection_t connection, uint64_t size,
   if (!platform_buffer)
     return DRET(MAGMA_STATUS_MEMORY_ERROR);
 
-  magma_status_t result =
-      magma::PlatformConnectionClient::cast(connection)->ImportBuffer(platform_buffer.get());
+  uint32_t handle;
+  if (!platform_buffer->duplicate_handle(&handle))
+    return DRET_MSG(MAGMA_STATUS_ACCESS_DENIED, "failed to duplicate handle");
+
+  magma_status_t result = magma::PlatformConnectionClient::cast(connection)
+                              ->ImportObject(handle, magma::PlatformObject::BUFFER);
   if (result != MAGMA_STATUS_OK)
-    return DRET(result);
+    return DRET_MSG(result, "ImportObject failed");
 
   *size_out = platform_buffer->size();
   *buffer_out =
@@ -118,7 +122,8 @@ magma_status_t magma_create_buffer(magma_connection_t connection, uint64_t size,
 
 void magma_release_buffer(magma_connection_t connection, magma_buffer_t buffer) {
   auto platform_buffer = reinterpret_cast<magma::PlatformBuffer*>(buffer);
-  magma::PlatformConnectionClient::cast(connection)->ReleaseBuffer(platform_buffer->id());
+  magma::PlatformConnectionClient::cast(connection)
+      ->ReleaseObject(platform_buffer->id(), magma::PlatformObject::BUFFER);
   delete platform_buffer;
 }
 
@@ -171,10 +176,14 @@ magma_status_t magma_import(magma_connection_t connection, uint32_t buffer_handl
   if (!platform_buffer)
     return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "PlatformBuffer::Import failed");
 
-  magma_status_t result =
-      magma::PlatformConnectionClient::cast(connection)->ImportBuffer(platform_buffer.get());
+  uint32_t handle;
+  if (!platform_buffer->duplicate_handle(&handle))
+    return DRET_MSG(MAGMA_STATUS_ACCESS_DENIED, "failed to duplicate handle");
+
+  magma_status_t result = magma::PlatformConnectionClient::cast(connection)
+                              ->ImportObject(handle, magma::PlatformObject::BUFFER);
   if (result != MAGMA_STATUS_OK)
-    return DRET_MSG(result, "ImportBuffer failed");
+    return DRET_MSG(result, "ImportObject failed");
 
   *buffer_out = reinterpret_cast<magma_buffer_t>(platform_buffer.release());
 

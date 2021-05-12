@@ -169,37 +169,30 @@ PrimaryWrapper::PrimaryWrapper(zx::channel channel, uint64_t max_inflight_messag
   }
 }
 
-magma_status_t PrimaryWrapper::ImportBuffer(zx::vmo vmo) {
+static_assert(static_cast<uint32_t>(magma::PlatformObject::SEMAPHORE) ==
+              static_cast<uint32_t>(fuchsia_gpu_magma::wire::ObjectType::kSemaphore));
+static_assert(static_cast<uint32_t>(magma::PlatformObject::BUFFER) ==
+              static_cast<uint32_t>(fuchsia_gpu_magma::wire::ObjectType::kBuffer));
+
+magma_status_t PrimaryWrapper::ImportObject(zx::handle handle,
+                                            magma::PlatformObject::Type object_type) {
   uint64_t size = 0;
-  vmo.get_size(&size);
+
+  if (object_type == magma::PlatformObject::BUFFER) {
+    zx::unowned_vmo vmo(handle.get());
+    zx_status_t status = vmo->get_size(&size);
+    if (status != ZX_OK)
+      return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "get_size failed: %d", status);
+  }
 
   std::lock_guard<std::mutex> lock(flow_control_mutex_);
   FlowControl(size);
 
-  zx_status_t status = client_->ImportBuffer(std::move(vmo)).status();
+  auto wire_object_type = static_cast<fuchsia_gpu_magma::wire::ObjectType>(object_type);
+
+  zx_status_t status = client_->ImportObject(std::move(handle), wire_object_type).status();
   if (status == ZX_OK) {
     UpdateFlowControl(size);
-  }
-  return MagmaChannelStatus(status);
-}
-
-magma_status_t PrimaryWrapper::ReleaseBuffer(uint64_t buffer_id) {
-  std::lock_guard<std::mutex> lock(flow_control_mutex_);
-  FlowControl();
-  zx_status_t status = client_->ReleaseBuffer(buffer_id).status();
-  if (status == ZX_OK) {
-    UpdateFlowControl();
-  }
-  return MagmaChannelStatus(status);
-}
-
-magma_status_t PrimaryWrapper::ImportObject(zx::handle handle,
-                                            magma::PlatformObject::Type object_type) {
-  std::lock_guard<std::mutex> lock(flow_control_mutex_);
-  FlowControl();
-  zx_status_t status = client_->ImportObject(std::move(handle), object_type).status();
-  if (status == ZX_OK) {
-    UpdateFlowControl();
   }
   return MagmaChannelStatus(status);
 }
@@ -208,7 +201,10 @@ magma_status_t PrimaryWrapper::ReleaseObject(uint64_t object_id,
                                              magma::PlatformObject::Type object_type) {
   std::lock_guard<std::mutex> lock(flow_control_mutex_);
   FlowControl();
-  zx_status_t status = client_->ReleaseObject(object_id, object_type).status();
+
+  auto wire_object_type = static_cast<fuchsia_gpu_magma::wire::ObjectType>(object_type);
+
+  zx_status_t status = client_->ReleaseObject(object_id, wire_object_type).status();
   if (status == ZX_OK) {
     UpdateFlowControl();
   }
@@ -517,37 +513,6 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
                                  uint64_t max_inflight_messages, uint64_t max_inflight_bytes)
       : client_(std::move(channel), max_inflight_messages, max_inflight_bytes),
         notification_channel_(std::move(notification_channel)) {}
-
-  // Imports a buffer for use in the system driver
-  magma_status_t ImportBuffer(PlatformBuffer* buffer) override {
-    DLOG("ZirconPlatformConnectionClient: ImportBuffer");
-    if (!buffer)
-      return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "attempting to import null buffer");
-
-    uint32_t duplicate_handle;
-    if (!buffer->duplicate_handle(&duplicate_handle))
-      return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "failed to get duplicate_handle");
-
-    zx::vmo vmo(duplicate_handle);
-    magma_status_t result = client_.ImportBuffer(std::move(vmo));
-    if (result != MAGMA_STATUS_OK) {
-      return DRET_MSG(result, "failed to write to channel");
-    }
-
-    return MAGMA_STATUS_OK;
-  }
-
-  // Destroys the buffer with |buffer_id| within this connection
-  // returns false if the buffer with |buffer_id| has not been imported
-  magma_status_t ReleaseBuffer(uint64_t buffer_id) override {
-    DLOG("ZirconPlatformConnectionClient: ReleaseBuffer");
-    magma_status_t result = client_.ReleaseBuffer(buffer_id);
-
-    if (result != MAGMA_STATUS_OK)
-      return DRET_MSG(result, "failed to write to channel");
-
-    return MAGMA_STATUS_OK;
-  }
 
   magma_status_t ImportObject(uint32_t handle, PlatformObject::Type object_type) override {
     DLOG("ZirconPlatformConnectionClient: ImportObject");

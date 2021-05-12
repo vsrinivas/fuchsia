@@ -277,6 +277,11 @@ magma::Status MagmaSystemConnection::ImportObject(uint32_t handle,
     return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "failed to lock device");
 
   switch (object_type) {
+    case magma::PlatformObject::BUFFER: {
+      uint64_t id;
+      return ImportBuffer(handle, &id);
+    }
+
     case magma::PlatformObject::SEMAPHORE: {
       uint64_t id;
       if (!magma::PlatformObject::IdFromHandle(handle, &id))
@@ -309,6 +314,9 @@ magma::Status MagmaSystemConnection::ImportObject(uint32_t handle,
 magma::Status MagmaSystemConnection::ReleaseObject(uint64_t object_id,
                                                    magma::PlatformObject::Type object_type) {
   switch (object_type) {
+    case magma::PlatformObject::BUFFER:
+      return ReleaseBuffer(object_id);
+
     case magma::PlatformObject::SEMAPHORE: {
       auto iter = semaphore_map_.find(object_id);
       if (iter == semaphore_map_.end())

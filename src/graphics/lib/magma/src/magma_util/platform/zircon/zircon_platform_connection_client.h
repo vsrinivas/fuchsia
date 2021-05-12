@@ -21,8 +21,6 @@ class PrimaryWrapper {
  public:
   PrimaryWrapper(zx::channel channel, uint64_t max_inflight_messages, uint64_t max_inflight_bytes);
 
-  magma_status_t ImportBuffer(zx::vmo vmo);
-  magma_status_t ReleaseBuffer(uint64_t buffer_id);
   magma_status_t ImportObject(zx::handle handle, magma::PlatformObject::Type object_type);
   magma_status_t ReleaseObject(uint64_t object_id, magma::PlatformObject::Type object_type);
   magma_status_t CreateContext(uint32_t context_id);
