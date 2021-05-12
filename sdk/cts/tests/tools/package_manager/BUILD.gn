@@ -42,10 +42,19 @@ if (is_host) {
 
     testonly = true
 
-    hermetic_deps = false
+    _package_json = "$_shared_out_dir/obj/sdk/cts/tests/tools/package_manager/components/cts-package-manager-sample-component/package_manifest.json"
+    _meta_far = "$_shared_out_dir/obj/sdk/cts/tests/tools/package_manager/components/cts-package-manager-sample-component/meta.far"
+    inputs = [
+      _package_json,
+      _meta_far,
+    ]
+
     script = "//sdk/cts/build/scripts/gather_package_deps.py"
 
-    outputs = [ "$target_gen_dir/pm_deps/package.tar" ]
+    output_tar = "$target_gen_dir/pm_deps/package.tar"
+    outputs = [ output_tar ]
+
+    depfile = "${output_tar}.d"
 
     deps = [
       "components:cts-package-manager-sample-component($default_toolchain)",
@@ -53,13 +62,13 @@ if (is_host) {
 
     args = [
       "--package_json_path",
-      rebase_path(
-          "$_shared_out_dir/obj/sdk/cts/tests/tools/package_manager/components/cts-package-manager-sample-component/package_manifest.json"),
+      rebase_path(_package_json, root_build_dir),
       "--meta_far_path",
-      rebase_path(
-          "$_shared_out_dir/obj/sdk/cts/tests/tools/package_manager/components/cts-package-manager-sample-component/meta.far"),
+      rebase_path(_meta_far, root_build_dir),
       "--output_dir",
-      rebase_path("${target_gen_dir}/pm_deps"),
+      rebase_path("${target_gen_dir}/pm_deps", root_build_dir),
+      "--depfile",
+      rebase_path(depfile, root_build_dir),
     ]
   }
 

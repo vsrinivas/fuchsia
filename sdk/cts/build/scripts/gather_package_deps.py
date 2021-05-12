@@ -27,7 +27,7 @@ class GatherPackageDeps:
     # Selects everything that comes after '/' and/or any number of '../'.
     path_stripper = re.compile(r'(?:(?:\.\.\/)+)?\/?(.+)')
 
-    def __init__(self, package_json_path, meta_far_path, output_dir):
+    def __init__(self, package_json_path, meta_far_path, output_dir, depfile):
         if package_json_path and os.path.exists(package_json_path):
             self.package_json_path = package_json_path
         else:
@@ -42,6 +42,11 @@ class GatherPackageDeps:
             self.output_dir = output_dir
         else:
             raise ValueError('output_dir cannot be empty')
+
+        if depfile:
+            self.depfile = depfile
+        else:
+            raise ValueError('depfile cannot be empty')
 
     def parse_package_json(self):
         manifest_dict = {}
@@ -85,8 +90,7 @@ class GatherPackageDeps:
                 f.write(archive_path + '=' + source_path + '\n')
             f.write('meta/package=meta.far\n')
 
-    def archive_output(self):
-        tar_path = os.path.join(self.output_dir, 'package.tar')
+    def archive_output(self, tar_path):
         # Explicitly use the GNU_FORMAT because the current dart library
         # (v.3.0.0) does not support parsing other tar formats that allow for
         # filenames longer than 100 characters.
@@ -99,13 +103,24 @@ class GatherPackageDeps:
                     if input_path == tar_path:
                         continue
                     tar.add(input_path, arcname=relative_path)
+                    # Removes files added to archive otherwise they'll be
+                    # considered as unexpected outputs.
+                    os.remove(input_path)
 
     def run(self):
         manifest_dict = self.parse_package_json()
+
+        # Record deps before manifest_dict is updated.
+        deps = ' '.join(manifest_dict.values())
+
         self.copy_meta_far()
         self.copy_to_output_dir(manifest_dict)
         self.write_new_manifest(manifest_dict)
-        self.archive_output()
+        tar_path = os.path.join(self.output_dir, 'package.tar')
+        self.archive_output(tar_path)
+
+        with open(self.depfile, 'w') as f:
+            f.write(f'{tar_path}: {deps}\n')
 
 
 def main():
@@ -126,11 +141,17 @@ def main():
         help=
         'The path to where the new manifest and all required files will be copied to.'
     )
+    parser.add_argument(
+        '--depfile',
+        required=True,
+        help='The path to write a depfile, see depfile from GN.',
+    )
     args = parser.parse_args()
 
     try:
         gatherer = GatherPackageDeps(
-            args.package_json_path, args.meta_far_path, args.output_dir).run()
+            args.package_json_path, args.meta_far_path, args.output_dir,
+            args.depfile).run()
     except Exception as e:
         print('GatherPackageDeps errored during run: %s' % e)
         return 1
