@@ -75,6 +75,10 @@ zx::status<std::unique_ptr<RxQueue>> RxQueue::Create(DeviceInterface* parent) {
 }
 
 void RxQueue::TriggerRxWatch() {
+  if (!running_) {
+    return;
+  }
+
   zx_port_packet_t packet;
   packet.type = ZX_PKT_TYPE_USER;
   packet.key = kTriggerRxKey;
@@ -111,10 +115,7 @@ void RxQueue::JoinThread() {
     }
     // Mark the queue as not running anymore.
     running_ = false;
-    thrd_join(*rx_watch_thread_, nullptr);
-    // Dispose of the port and the thread handle.
-    rx_watch_port_.reset();
-    rx_watch_thread_.reset();
+    thrd_join(*std::exchange(rx_watch_thread_, std::nullopt), nullptr);
   }
 }
 
