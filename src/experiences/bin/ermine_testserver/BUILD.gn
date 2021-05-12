@@ -29,12 +29,14 @@ resource("browser_test_files") {
     "public/simple_browser_test/index.html",
     "public/simple_browser_test/input.html",
     "public/simple_browser_test/next.html",
+    "public/simple_browser_test/pink.html",
     "public/simple_browser_test/popup.html",
     "public/simple_browser_test/red.html",
     "public/simple_browser_test/sample_audio.mp3",
     "public/simple_browser_test/sample_video.mp4",
     "public/simple_browser_test/style.css",
     "public/simple_browser_test/video.html",
+    "public/simple_browser_test/yellow.html",
   ]
   outputs = [ "data/simple_browser_test/{{source_file_part}}" ]
 }
