@@ -124,8 +124,7 @@ impl UnixListener {
     /// ```
     pub fn incoming(&self) -> Incoming<'_> {
         Incoming {
-            listener: self,
-            accept: None,
+            incoming: Box::pin(self.inner.incoming()),
         }
     }
 
@@ -160,9 +159,9 @@ impl TryFrom<std::os::unix::net::UnixListener> for UnixListener {
     }
 }
 
-impl Into<Arc<Async<std::os::unix::net::UnixListener>>> for UnixListener {
-    fn into(self) -> Arc<Async<std::os::unix::net::UnixListener>> {
-        self.inner
+impl From<UnixListener> for Arc<Async<std::os::unix::net::UnixListener>> {
+    fn from(val: UnixListener) -> Self {
+        val.inner
     }
 }
 
@@ -185,9 +184,10 @@ impl AsRawSocket for UnixListener {
 /// This stream is infinite, i.e awaiting the next connection will never result in [`None`]. It is
 /// created by the [`UnixListener::incoming()`] method.
 pub struct Incoming<'a> {
-    listener: &'a UnixListener,
-    accept: Option<
-        Pin<Box<dyn Future<Output = io::Result<(UnixStream, SocketAddr)>> + Send + Sync + 'a>>,
+    incoming: Pin<
+        Box<
+            dyn Stream<Item = io::Result<Async<std::os::unix::net::UnixStream>>> + Send + Sync + 'a,
+        >,
     >,
 }
 
@@ -195,25 +195,14 @@ impl Stream for Incoming<'_> {
     type Item = io::Result<UnixStream>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        loop {
-            if self.accept.is_none() {
-                self.accept = Some(Box::pin(self.listener.accept()));
-            }
-
-            if let Some(f) = &mut self.accept {
-                let res = ready!(f.as_mut().poll(cx));
-                self.accept = None;
-                return Poll::Ready(Some(res.map(|(stream, _)| stream)));
-            }
-        }
+        let res = ready!(Pin::new(&mut self.incoming).poll_next(cx));
+        Poll::Ready(res.map(|res| res.map(|stream| UnixStream::new(Arc::new(stream)))))
     }
 }
 
 impl fmt::Debug for Incoming<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Incoming")
-            .field("listener", self.listener)
-            .finish()
+        write!(f, "Incoming {{ ... }}")
     }
 }
 
@@ -369,9 +358,9 @@ impl TryFrom<std::os::unix::net::UnixStream> for UnixStream {
     }
 }
 
-impl Into<Arc<Async<std::os::unix::net::UnixStream>>> for UnixStream {
-    fn into(self) -> Arc<Async<std::os::unix::net::UnixStream>> {
-        self.inner
+impl From<UnixStream> for Arc<Async<std::os::unix::net::UnixStream>> {
+    fn from(val: UnixStream) -> Self {
+        val.inner
     }
 }
 
@@ -738,9 +727,9 @@ impl TryFrom<std::os::unix::net::UnixDatagram> for UnixDatagram {
     }
 }
 
-impl Into<Arc<Async<std::os::unix::net::UnixDatagram>>> for UnixDatagram {
-    fn into(self) -> Arc<Async<std::os::unix::net::UnixDatagram>> {
-        self.inner
+impl From<UnixDatagram> for Arc<Async<std::os::unix::net::UnixDatagram>> {
+    fn from(val: UnixDatagram) -> Self {
+        val.inner
     }
 }
 

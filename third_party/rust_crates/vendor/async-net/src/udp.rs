@@ -610,9 +610,9 @@ impl TryFrom<std::net::UdpSocket> for UdpSocket {
     }
 }
 
-impl Into<Arc<Async<std::net::UdpSocket>>> for UdpSocket {
-    fn into(self) -> Arc<Async<std::net::UdpSocket>> {
-        self.inner
+impl From<UdpSocket> for Arc<Async<std::net::UdpSocket>> {
+    fn from(val: UdpSocket) -> Self {
+        val.inner
     }
 }
 

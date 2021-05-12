@@ -1,3 +1,8 @@
+# Version 1.6.0
+
+- Add `From` impls for conversion into inner networking types `Arc<Async<T>>`. (#12)
+- Optimize allocations in Listeners. (#11)
+
 # Version 1.5.0
 
 - Add `Into` impls for conversion into inner networking types `Arc<Async<T>>`.

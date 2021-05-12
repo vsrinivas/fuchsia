@@ -13,16 +13,15 @@
 [package]
 edition = "2018"
 name = "async-net"
-version = "1.5.0"
+version = "1.6.0"
 authors = ["Stjepan Glavina <stjepang@gmail.com>"]
 description = "Async networking primitives for TCP/UDP/Unix communication"
-homepage = "https://github.com/stjepang/async-net"
+homepage = "https://github.com/smol-rs/async-net"
 documentation = "https://docs.rs/async-net"
-readme = "README.md"
 keywords = ["networking", "uds", "mio", "reactor", "std"]
 categories = ["asynchronous", "network-programming", "os"]
 license = "Apache-2.0 OR MIT"
-repository = "https://github.com/stjepang/async-net"
+repository = "https://github.com/smol-rs/async-net"
 [dependencies.async-io]
 version = "1.0.0"
 

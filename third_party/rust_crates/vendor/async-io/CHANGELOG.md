@@ -1,3 +1,12 @@
+# Version 1.4.1
+
+- Remove dependency on deprecated `vec-arena`. (#60)
+
+# Version 1.4.0
+
+- Implement `AsRef<T>` and `AsMut<T>` for `Async<T>`. (#44)
+- Remove dependency on deprecated `nb-connect`. (#55)
+
 # Version 1.3.1
 
 - Lower MSRV to 1.41.0

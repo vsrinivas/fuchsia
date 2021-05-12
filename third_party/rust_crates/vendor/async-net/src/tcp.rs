@@ -169,8 +169,7 @@ impl TcpListener {
     /// ```
     pub fn incoming(&self) -> Incoming<'_> {
         Incoming {
-            listener: self,
-            accept: None,
+            incoming: Box::pin(self.inner.incoming()),
         }
     }
 
@@ -228,9 +227,9 @@ impl TryFrom<std::net::TcpListener> for TcpListener {
     }
 }
 
-impl Into<Arc<Async<std::net::TcpListener>>> for TcpListener {
-    fn into(self) -> Arc<Async<std::net::TcpListener>> {
-        self.inner
+impl From<TcpListener> for Arc<Async<std::net::TcpListener>> {
+    fn from(val: TcpListener) -> Self {
+        val.inner
     }
 }
 
@@ -253,35 +252,22 @@ impl AsRawSocket for TcpListener {
 /// This stream is infinite, i.e awaiting the next connection will never result in [`None`]. It is
 /// created by the [`TcpListener::incoming()`] method.
 pub struct Incoming<'a> {
-    listener: &'a TcpListener,
-    accept: Option<
-        Pin<Box<dyn Future<Output = io::Result<(TcpStream, SocketAddr)>> + Send + Sync + 'a>>,
-    >,
+    incoming:
+        Pin<Box<dyn Stream<Item = io::Result<Async<std::net::TcpStream>>> + Send + Sync + 'a>>,
 }
 
 impl Stream for Incoming<'_> {
     type Item = io::Result<TcpStream>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        loop {
-            if self.accept.is_none() {
-                self.accept = Some(Box::pin(self.listener.accept()));
-            }
-
-            if let Some(f) = &mut self.accept {
-                let res = ready!(f.as_mut().poll(cx));
-                self.accept = None;
-                return Poll::Ready(Some(res.map(|(stream, _)| stream)));
-            }
-        }
+        let res = ready!(Pin::new(&mut self.incoming).poll_next(cx));
+        Poll::Ready(res.map(|res| res.map(|stream| TcpStream::new(Arc::new(stream)))))
     }
 }
 
 impl fmt::Debug for Incoming<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Incoming")
-            .field("listener", self.listener)
-            .finish()
+        write!(f, "Incoming {{ ... }}")
     }
 }
 
@@ -567,9 +553,9 @@ impl From<Async<std::net::TcpStream>> for TcpStream {
     }
 }
 
-impl Into<Arc<Async<std::net::TcpStream>>> for TcpStream {
-    fn into(self) -> Arc<Async<std::net::TcpStream>> {
-        self.inner
+impl From<TcpStream> for Arc<Async<std::net::TcpStream>> {
+    fn from(val: TcpStream) -> Self {
+        val.inner
     }
 }
 

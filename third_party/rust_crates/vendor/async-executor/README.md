@@ -1,9 +1,9 @@
 # async-executor
 
-[![Build](https://github.com/stjepang/async-executor/workflows/Build%20and%20test/badge.svg)](
-https://github.com/stjepang/async-executor/actions)
-[![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](
-https://github.com/stjepang/async-executor)
+[![Build](https://github.com/smol-rs/async-executor/workflows/Build%20and%20test/badge.svg)](
+https://github.com/smol-rs/async-executor/actions)
+[![License](https://img.shields.io/badge/license-Apache--2.0_OR_MIT-blue.svg)](
+https://github.com/smol-rs/async-executor)
 [![Cargo](https://img.shields.io/crates/v/async-executor.svg)](
 https://crates.io/crates/async-executor)
 [![Documentation](https://docs.rs/async-executor/badge.svg)](
@@ -25,7 +25,7 @@ let task = ex.spawn(async {
     println!("Hello world");
 });
 
-// Run the executor until the task complets.
+// Run the executor until the task completes.
 future::block_on(ex.run(task));
 ```
 

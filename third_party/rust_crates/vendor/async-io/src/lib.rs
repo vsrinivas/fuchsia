@@ -8,7 +8,7 @@
 //!
 //! For concrete async networking types built on top of this crate, see [`async-net`].
 //!
-//! [many other]: https://github.com/stjepang/async-io/tree/master/examples
+//! [many other]: https://github.com/smol-rs/async-io/tree/master/examples
 //! [`async-net`]: https://docs.rs/async-net
 //!
 //! # Implementation
@@ -77,6 +77,7 @@ use std::os::windows::io::{AsRawSocket, RawSocket};
 use futures_lite::io::{AsyncRead, AsyncWrite};
 use futures_lite::stream::{self, Stream};
 use futures_lite::{future, pin, ready};
+use socket2::{Domain, Protocol, SockAddr, Socket, Type};
 
 use crate::reactor::{Reactor, Source};
 
@@ -411,8 +412,8 @@ impl Stream for Timer {
 /// For higher-level primitives built on top of [`Async`], look into [`async-net`] or
 /// [`async-process`] (on Unix).
 ///
-/// [`async-net`]: https://github.com/stjepang/async-net
-/// [`async-process`]: https://github.com/stjepang/async-process
+/// [`async-net`]: https://github.com/smol-rs/async-net
+/// [`async-process`]: https://github.com/smol-rs/async-process
 ///
 /// ### Supported types
 ///
@@ -423,8 +424,8 @@ impl Stream for Timer {
 /// [`Stdin`][`std::io::Stdin`], [`Stdout`][`std::io::Stdout`], or [`Stderr`][`std::io::Stderr`]
 /// because all operating systems have issues with them when put in non-blocking mode.
 ///
-/// [timerfd]: https://github.com/stjepang/async-io/blob/master/examples/linux-timerfd.rs
-/// [inotify]: https://github.com/stjepang/async-io/blob/master/examples/linux-inotify.rs
+/// [timerfd]: https://github.com/smol-rs/async-io/blob/master/examples/linux-timerfd.rs
+/// [inotify]: https://github.com/smol-rs/async-io/blob/master/examples/linux-inotify.rs
 ///
 /// ### Concurrent I/O
 ///
@@ -915,6 +916,18 @@ impl<T> Async<T> {
     }
 }
 
+impl<T> AsRef<T> for Async<T> {
+    fn as_ref(&self) -> &T {
+        self.get_ref()
+    }
+}
+
+impl<T> AsMut<T> for Async<T> {
+    fn as_mut(&mut self) -> &mut T {
+        self.get_mut()
+    }
+}
+
 impl<T> Drop for Async<T> {
     fn drop(&mut self) {
         if self.io.is_some() {
@@ -1099,7 +1112,7 @@ impl Async<TcpListener> {
     /// ```
     pub fn bind<A: Into<SocketAddr>>(addr: A) -> io::Result<Async<TcpListener>> {
         let addr = addr.into();
-        Ok(Async::new(TcpListener::bind(addr)?)?)
+        Async::new(TcpListener::bind(addr)?)
     }
 
     /// Accepts a new incoming TCP connection.
@@ -1178,7 +1191,10 @@ impl Async<TcpStream> {
     /// ```
     pub async fn connect<A: Into<SocketAddr>>(addr: A) -> io::Result<Async<TcpStream>> {
         // Begin async connect.
-        let stream = Async::new(nb_connect::tcp(addr)?)?;
+        let addr = addr.into();
+        let domain = Domain::for_address(addr);
+        let socket = connect(addr.into(), domain, Some(Protocol::TCP))?;
+        let stream = Async::new(TcpStream::from(socket))?;
 
         // The stream becomes writable when connected.
         stream.writable().await?;
@@ -1244,7 +1260,7 @@ impl Async<UdpSocket> {
     /// ```
     pub fn bind<A: Into<SocketAddr>>(addr: A) -> io::Result<Async<UdpSocket>> {
         let addr = addr.into();
-        Ok(Async::new(UdpSocket::bind(addr)?)?)
+        Async::new(UdpSocket::bind(addr)?)
     }
 
     /// Receives a single datagram message.
@@ -1426,7 +1442,7 @@ impl Async<UnixListener> {
     /// ```
     pub fn bind<P: AsRef<Path>>(path: P) -> io::Result<Async<UnixListener>> {
         let path = path.as_ref().to_owned();
-        Ok(Async::new(UnixListener::bind(path)?)?)
+        Async::new(UnixListener::bind(path)?)
     }
 
     /// Accepts a new incoming UDS stream connection.
@@ -1506,7 +1522,8 @@ impl Async<UnixStream> {
     /// ```
     pub async fn connect<P: AsRef<Path>>(path: P) -> io::Result<Async<UnixStream>> {
         // Begin async connect.
-        let stream = Async::new(nb_connect::unix(path)?)?;
+        let socket = connect(SockAddr::unix(path)?, Domain::UNIX, None)?;
+        let stream = Async::new(UnixStream::from(socket))?;
 
         // The stream becomes writable when connected.
         stream.writable().await?;
@@ -1560,7 +1577,7 @@ impl Async<UnixDatagram> {
     /// ```
     pub fn bind<P: AsRef<Path>>(path: P) -> io::Result<Async<UnixDatagram>> {
         let path = path.as_ref().to_owned();
-        Ok(Async::new(UnixDatagram::bind(path)?)?)
+        Async::new(UnixDatagram::bind(path)?)
     }
 
     /// Creates a UDS datagram socket not bound to any address.
@@ -1576,7 +1593,7 @@ impl Async<UnixDatagram> {
     /// # std::io::Result::Ok(()) });
     /// ```
     pub fn unbound() -> io::Result<Async<UnixDatagram>> {
-        Ok(Async::new(UnixDatagram::unbound()?)?)
+        Async::new(UnixDatagram::unbound()?)
     }
 
     /// Creates an unnamed pair of connected Unix datagram sockets.
@@ -1713,4 +1730,42 @@ async fn optimistic(fut: impl Future<Output = io::Result<()>>) -> io::Result<()>
         }
     })
     .await
+}
+
+fn connect(addr: SockAddr, domain: Domain, protocol: Option<Protocol>) -> io::Result<Socket> {
+    let sock_type = Type::STREAM;
+    #[cfg(any(
+        target_os = "android",
+        target_os = "dragonfly",
+        target_os = "freebsd",
+        target_os = "fuchsia",
+        target_os = "illumos",
+        target_os = "linux",
+        target_os = "netbsd",
+        target_os = "openbsd"
+    ))]
+    // If we can, set nonblocking at socket creation for unix
+    let sock_type = sock_type.nonblocking();
+    // This automatically handles cloexec on unix, no_inherit on windows and nosigpipe on macos
+    let socket = Socket::new(domain, sock_type, protocol)?;
+    #[cfg(not(any(
+        target_os = "android",
+        target_os = "dragonfly",
+        target_os = "freebsd",
+        target_os = "fuchsia",
+        target_os = "illumos",
+        target_os = "linux",
+        target_os = "netbsd",
+        target_os = "openbsd"
+    )))]
+    // If the current platform doesn't support nonblocking at creation, enable it after creation
+    socket.set_nonblocking(true)?;
+    match socket.connect(&addr) {
+        Ok(_) => {}
+        #[cfg(unix)]
+        Err(err) if err.raw_os_error() == Some(libc::EINPROGRESS) => {}
+        Err(err) if err.kind() == io::ErrorKind::WouldBlock => {}
+        Err(err) => return Err(err),
+    }
+    Ok(socket)
 }
