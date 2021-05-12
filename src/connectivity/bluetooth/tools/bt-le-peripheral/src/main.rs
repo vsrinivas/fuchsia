@@ -433,6 +433,7 @@ mod tests {
                     };
                     return Ok((mock, conn_server_end));
                 }
+                _ => return Err(format_err!("le.Peripheral method mock not implemented")),
             }
         }
         Err(format_err!("le.Peripheral connection failed"))

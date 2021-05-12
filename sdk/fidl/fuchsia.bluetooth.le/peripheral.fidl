@@ -4,6 +4,7 @@
 
 library fuchsia.bluetooth.le;
 
+[Deprecated]
 enum PeripheralError {
     /// The operation or parameters requested are not supported on the current hardware.
     NOT_SUPPORTED = 1;
@@ -65,15 +66,16 @@ table AdvertisingParameters {
     /// Defaults to [`fuchsia.bluetooth.le/AdvertisingModeHint.SLOW`] if not present.
     3: AdvertisingModeHint mode_hint;
 
-    /// [[DEPRECATED]]: Prefer to use the ConnectionOptions field for new code.
     /// If present and true then the controller will broadcast connectable advertisements which
     /// allows remote LE centrals to initiate a connection to the Peripheral. If false or otherwise
     /// not present then the advertisements will be non-connectable.
+    [Deprecated = "Prefer to use the connection_options field for new code."]
     4: bool connectable;
 
-    /// If present, the controller will broadcast connectable advertisements which allow remote LE
-    /// centrals to initiate connections to the Peripheral. The fields of ConnectionOptions will
-    /// configure any connections set up from advertising.
+    /// If present, the controller will broadcast connectable advertisements
+    /// which allow peers to initiate connections to the Peripheral. The fields
+    /// of `ConnectionOptions` will configure any connections set up from
+    /// advertising.
     5: ConnectionOptions connection_options;
 };
 
@@ -83,8 +85,71 @@ table AdvertisingParameters {
 protocol AdvertisingHandle {
 };
 
+/// Protocol that is valid for the duration of advertising. The caller can close
+/// the protocol to stop advertising. If the system internally stops advertising
+/// for any reason, the protocol will be closed to communicate this to the
+/// client.
+protocol AdvertisedPeripheral {
+    /// Called when a remote LE central connects to this peripheral when
+    /// connectable advertising is enabled via
+    /// [`fuchsia.bluetooth.le/Peripheral.Advertise`].
+    ///
+    /// The returned [`fuchsia.bluetooth.le/Connection`] protocol can be used to
+    /// interact with the peer. It also represents a peripheral's ownership over
+    /// the connection: the client can drop the protocol to request a
+    /// disconnection. Similarly, the protocol is closed by the system to
+    /// indicate that the connection to the peer has been lost.
+    ///
+    /// + request `peer` Information about the central that initiated the
+    ///   connection.
+    /// + request `connection` Represents the connection.
+    /// - response An empty response should be sent immediately to
+    ///   acknowledge the connection (for flow control).
+    OnConnected(Peer peer, Connection connection) -> ();
+};
+
 [Discoverable]
 protocol Peripheral {
+    /// Start advertising continuously as a LE peripheral. If advertising cannot
+    /// be initiated then `advertised_peripheral` will be closed with an
+    /// epitaph.
+    ///
+    /// This method can get called any number of times and successive calls can
+    /// be made to reconfigure the advertising parameters.
+    ///
+    /// If the client closes its end of the
+    /// [`fuchsia.bluetooth.le/AdvertisedPeripheral`] channel,
+    /// advertising will be stopped. If the handle is closed before the request
+    /// is fulfilled, advertising may be briefly enabled before it is
+    /// terminated.
+    ///
+    /// The following epitaphs may be sent by the `advertised_peripheral`
+    /// protocol on error:
+    /// + `ZX_ERR_OUT_OF_RANGE`: The encoded advertising or scan response data
+    ///    is too long. Specify fewer or shorter fields.
+    /// + `ZX_ERR_INVALID_ARGS`: The requested parameters are invalid.
+    /// + `ZX_ERR_NOT_SUPPORTED`: The operation or parameters are not supported
+    ///   on the current hardware.
+    /// + `ZX_ERR_CANCELED`: The request to advertise was canceled, for example
+    ///    by issuing a new request.
+    /// + `ZX_ERR_INTERNAL`: Advertising could not be initiated due to a system
+    ///    error.
+    ///
+    /// + request `parameters` Parameters used while configuring the advertising
+    ///   instance.
+    /// + request `advertised_peripheral` Protocol that remains valid for the
+    ///   duration of this advertising session.
+    /// - response An empty response will be returned when the advertisement has
+    ///   been completed (after the `advertised_peripheral` protocol has been
+    ///   closed). An empty response will be sent when the advertisement is
+    ///   successfully stopped (due to error or release of the
+    ///   `advertised_peripheral` protocol). To prevent overlapping similar
+    ///   advertisements and transient errors with limited advertising
+    ///   resources, waiting for a response is recommended before calling
+    ///   `Advertise` again.
+    [Transitional = "Not yet implemented"]
+    Advertise(AdvertisingParameters parameters, AdvertisedPeripheral advertised_peripheral) -> ();
+
     /// Start advertising as a LE peripheral. An empty response is sent to indicate when advertising
     /// has successfully initiated. If advertising cannot be initiated, then the response will
     /// contain a [`fuchsia.bluetooth.le/PeripheralError`].
@@ -105,6 +170,7 @@ protocol Peripheral {
     /// + request `handle` Handle that remains valid for the duration of this advertising session.
     /// * error Returns a [`fuchsia.bluetooth.le/PeripheralError`] if advertising cannot be
     ///         initiated. In this case the `handle` will be closed.
+    [Deprecated]
     StartAdvertising(AdvertisingParameters parameters, request<AdvertisingHandle> handle) -> () error PeripheralError;
 
     /// Event delivered when a remote LE central initiates a connection to this Peripheral when
@@ -118,5 +184,6 @@ protocol Peripheral {
     ///
     /// + request `peer` Information about the central that initiated the connection.
     /// + request `handle` Represents the connection.
+    [Deprecated]
     -> OnPeerConnected(Peer peer, Connection connection);
 };
