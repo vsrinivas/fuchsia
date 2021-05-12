@@ -336,9 +336,9 @@ impl TryFrom<u8> for SubnetMask {
 
     /// Returns a `Ok(SubnetMask)` with the `ones` high-order bits set if `ones` < 32, else `Err`.
     fn try_from(ones: u8) -> Result<Self, Self::Error> {
-        if ones >= U32_BITS {
+        if ones > U32_BITS {
             Err(anyhow::format_err!(
-                "failed precondition: argument must be < 32 (bit length of an IPv4 address)",
+                "failed precondition: argument must be <= 32 (bit length of an IPv4 address)",
             ))
         } else {
             Ok(SubnetMask { ones })
@@ -413,8 +413,13 @@ mod tests {
     fn test_try_from_ipv4addr_with_consecutive_ones_returns_mask() {
         assert_eq!(
             SubnetMask::try_from(std_ip_v4!("255.255.255.0"))
-                .expect("failed to create subnet mask"),
+                .expect("failed to create /24 subnet mask"),
             SubnetMask { ones: 24 }
+        );
+        assert_eq!(
+            SubnetMask::try_from(std_ip_v4!("255.255.255.255"))
+                .expect("failed to create /32 subnet mask"),
+            SubnetMask { ones: 32 }
         );
     }
 
@@ -424,13 +429,31 @@ mod tests {
     }
 
     #[test]
+    fn subnet_mask_try_from_u8() {
+        for ones in 0..=U32_BITS {
+            assert_eq!(
+                SubnetMask::try_from(ones).expect("expected valid subnet mask"),
+                SubnetMask { ones }
+            );
+        }
+
+        let _: anyhow::Error =
+            SubnetMask::try_from(U32_BITS + 1).expect_err("expected invalid subnet mask");
+    }
+
+    #[test]
     fn test_into_ipv4addr_returns_ipv4addr() {
-        let v1: Ipv4Addr = SubnetMask { ones: 24 }.into();
-        let v2: Ipv4Addr = SubnetMask { ones: 0 }.into();
-        let v3: Ipv4Addr = SubnetMask { ones: 32 }.into();
-        assert_eq!(v1, std_ip_v4!("255.255.255.0"));
-        assert_eq!(v2, Ipv4Addr::UNSPECIFIED);
-        assert_eq!(v3, std_ip_v4!("255.255.255.255"));
+        let mask: Ipv4Addr =
+            SubnetMask::try_from(24).expect("expected 24 to be a valid subnet mask").into();
+        assert_eq!(mask, std_ip_v4!("255.255.255.0"));
+
+        let mask: Ipv4Addr =
+            SubnetMask::try_from(0).expect("expected 0 to be a valid subnet mask").into();
+        assert_eq!(mask, Ipv4Addr::UNSPECIFIED);
+
+        let mask: Ipv4Addr =
+            SubnetMask::try_from(32).expect("expected 32 to be a valid subnet mask").into();
+        assert_eq!(mask, std_ip_v4!("255.255.255.255"));
     }
 
     #[test]
