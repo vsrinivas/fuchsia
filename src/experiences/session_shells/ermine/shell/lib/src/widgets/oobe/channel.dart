@@ -59,7 +59,13 @@ class Channel extends StatelessWidget {
               if (snapshot.hasData) {
                 List<String> channels = snapshot.data;
                 if (!channels.contains(model.channel.value)) {
-                  channels.add(model.channel.value);
+                  if (channels.contains(
+                      model.getShortChannelName(model.channel.value))) {
+                    model.channel.value =
+                        model.getShortChannelName(model.channel.value);
+                  } else {
+                    channels.add(model.channel.value);
+                  }
                 }
                 return AnimatedBuilder(
                   animation: model.channel,
@@ -193,5 +199,21 @@ class ChannelModel {
         break;
     }
     return description;
+  }
+
+  // Hack to deal with weird channel names.
+  String getShortChannelName(String name) {
+    switch (name) {
+      case '2gmrtg05aspff9bisjxsu46no.fuchsia-updates.googleusercontent.com':
+        return 'test';
+      case '4igty6t46noanfx782kp9ywyc.fuchsia-updates.googleusercontent.com':
+        return 'dogfood';
+      case 'b5cvjayvpm75pukjav4d4hurk.fuchsia-updates.googleusercontent.com':
+        return 'beta';
+      case '4x15snlqjzlsgunidd0q1hj8n.fuchsia-updates.googleusercontent.com':
+        return 'stable';
+      default:
+        return '';
+    }
   }
 }
