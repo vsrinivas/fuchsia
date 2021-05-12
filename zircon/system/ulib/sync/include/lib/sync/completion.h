@@ -225,7 +225,7 @@ typedef struct sync_completion {
   zx_futex_t futex;
 
 #ifdef __cplusplus
-  sync_completion() : futex(0) {}
+  constexpr sync_completion() : futex(0) {}
 #endif
 } sync_completion_t;
 

@@ -23,7 +23,7 @@ typedef struct __TA_CAPABILITY("mutex") sync_mutex {
   zx_futex_t futex;
 
 #ifdef __cplusplus
-  sync_mutex() : futex(0) {}
+  constexpr sync_mutex() : futex(0) {}
 #endif
 } sync_mutex_t;
 

@@ -19,7 +19,7 @@ typedef struct sync_condition {
   void* tail;
 
 #ifdef __cplusplus
-  sync_condition() : lock(0), head(nullptr), tail(nullptr) {}
+  constexpr sync_condition() : lock(0), head(nullptr), tail(nullptr) {}
 #endif
 } sync_condition_t;
 

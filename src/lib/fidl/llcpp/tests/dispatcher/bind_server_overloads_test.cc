@@ -61,7 +61,6 @@ class BindServerOverloads : public zxtest::Test {
 // Test that |BindServer| correctly destroys a server it uniquely owns.
 TEST_F(BindServerOverloads, UniquePtrWithoutUnboundHook) {
   sync_completion_t destroyed;
-  sync_completion_t unbound;
   auto result = fidl::BindServer(dispatcher(), std::move(endpoints()->server),
                                  std::make_unique<Server>(&destroyed));
 
@@ -94,7 +93,6 @@ TEST_F(BindServerOverloads, UniquePtrWithUnboundHook) {
 // via a |shared_ptr|.
 TEST_F(BindServerOverloads, SharedPtrWithoutUnboundHook) {
   sync_completion_t destroyed;
-  sync_completion_t unbound;
   auto result = fidl::BindServer(dispatcher(), std::move(endpoints()->server),
                                  std::make_shared<Server>(&destroyed));
 
@@ -151,7 +149,6 @@ TEST_F(BindServerOverloads, SharedPtrWithUnboundHookAndSharedOwnership) {
 // Test borrowing a server implementation with a raw pointer.
 TEST_F(BindServerOverloads, RawPtrWithoutUnboundHook) {
   sync_completion_t destroyed;
-  sync_completion_t unbound;
 
   cpp17::optional<Server> server{&destroyed};
   auto result = fidl::BindServer(dispatcher(), std::move(endpoints()->server), &server.value());

@@ -318,7 +318,7 @@ TEST(BindServerTestCase, CallbackErrorClientTriggered) {
     sync_completion_t* worker_done_;
     std::unique_ptr<async::Loop> worker_;
   };
-  sync_completion_t worker_start, worker_done, error, closed;
+  sync_completion_t worker_start, worker_done, error;
 
   // Launches a thread so we can wait on the server error.
   auto server = std::make_unique<ErrorServer>(&worker_start, &worker_done);
