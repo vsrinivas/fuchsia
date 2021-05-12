@@ -8,9 +8,13 @@ Given the library declaration:
 library fuchsia.examples;
 ```
 
-Bindings code for this library is generated in the `fuchsia_examples`
-namespace, and [test scaffolding](#test-scaffolding) is generated in the
-`fuchsia::examples::testing` namespace.
+[Protocol types](#protocols) are generated in the `fuchsia_examples` namespace.
+[Domain objects](#type-definitions) for this library are generated in the
+`fuchsia_examples::wire` namespace, and [test scaffolding](#test-scaffolding)
+is generated in the `fuchsia::examples::testing` namespace.
+
+Generated type names are transformed to follow the
+[Google C++ style guide][cpp-style].
 
 ## Constants {#constants}
 
@@ -24,8 +28,8 @@ following constants:
 Are generated in the header file as:
 
 ```c++
-constexpr uint8_t BOARD_SIZE = 9u;
-extern const char[] NAME;
+constexpr uint8_t kBoardSize = 9u;
+extern const char[] kName;
 ```
 
 The correspondence between FIDL primitive types and C++ types is outlined in
@@ -89,9 +93,9 @@ The FIDL toolchain generates a `FileMode` class with a static member for each
 flag, as well as a `kMask` member that contains a mask of all bits members (in
 this example `0b111`):
 
-* `const static FileMode READ`
-* `const static FileMode WRITE`
-* `const static FileMode EXECUTE`
+* `const static FileMode kRead`
+* `const static FileMode kWrite`
+* `const static FileMode kExecute`
 * `const static FileMode kMask`
 
 `FileMode` provides the following methods:
@@ -106,7 +110,7 @@ this example `0b111`):
   members.
 * Bitwise operators: Implementations for the `|`, `|=`, `&`, `&=`, `^`, `^=`,
   and `~` operators are provided, allowing bitwise operations on the bits like
-  `mode |= FileMode::EXECUTE`.
+  `mode |= FileMode::kExecute`.
 * Comparison operators `==` and `!=`.
 * Explicit conversion functions for `uint16_t` and `bool`.
 
@@ -140,9 +144,9 @@ type, or `uint32_t` if none is specified:
 
 ```c++
 enum class LocationType : uint32_t {
-    MUSEUM = 1u;
-    AIRPORT = 2u;
-    RESTAURANT = 3u;
+    kMuseum = 1u;
+    kAirport = 2u;
+    kRestaurant = 3u;
 };
 ```
 
@@ -174,9 +178,9 @@ The generated class contains a static member for each enum member, which are
 guaranteed to match the members of the `enum class` in the equivalent
 [strict][lang-flexible] enum:
 
-* `const static LocationType MUSEUM`
-* `const static LocationType AIRPORT`
-* `const static LocationType RESTAURANT`
+* `const static LocationType kMuseum`
+* `const static LocationType kAirport`
+* `const static LocationType kRestaurant`
 
 ### Structs {#structs}
 
@@ -1177,6 +1181,7 @@ methods `StartGame` and `MakeMove`, which are implemented to just call
 completer)`, respectively.
 
 <!-- xrefs -->
+[cpp-style]: https://google.github.io/styleguide/cppguide.html#Naming
 [llcpp-allocation]: /docs/development/languages/fidl/guides/llcpp-memory-ownership.md
 [llcpp-async-example]:
 /docs/development/languages/fidl/tutorials/llcpp/topics/async-completer.md
