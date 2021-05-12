@@ -59,7 +59,7 @@ std::unique_ptr<vfs::PseudoDir> CreateConfigPseudoDir(std::string config_str) {
 
 bool IsRunning() {
   // If there exists a path that exposes the BasemgrDebug protocol, then basemgr is running.
-  return files::Glob({kBasemgrDebugV1Glob}).size() != 0;
+  return files::Glob({kBasemgrDebugSessionGlob, kBasemgrDebugV1Glob}).size() != 0;
 }
 
 fit::promise<void, zx_status_t> Launch(fuchsia::sys::Launcher* launcher,
@@ -198,7 +198,8 @@ fit::promise<void, zx_status_t> DeletePersistentConfig(fuchsia::sys::Launcher* l
 }
 
 fit::result<fuchsia::modular::internal::BasemgrDebugPtr, zx_status_t> ConnectToBasemgrDebug() {
-  return ConnectInPaths<fuchsia::modular::internal::BasemgrDebug>({kBasemgrDebugV1Glob});
+  return ConnectInPaths<fuchsia::modular::internal::BasemgrDebug>(
+      {kBasemgrDebugSessionGlob, kBasemgrDebugV1Glob});
 }
 
 }  // namespace modular::session

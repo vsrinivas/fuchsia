@@ -147,6 +147,34 @@ TEST_F(SessionTest, ConnectToBasemgrDebugV1) {
   EXPECT_TRUE(got_request);
 }
 
+// Tests that |ConnectToBasemgrDebug| can connect to |BasemgrDebug| served under
+// the hub-v2 path that exists when basemgr is running as a session.
+TEST_F(SessionTest, ConnectToBasemgrDebugSession) {
+  static constexpr auto kTestBasemgrDebugPath =
+      "/hub-v2/children/core/children/session-manager/children/session:session/"
+      "exec/expose/fuchsia.modular.internal.BasemgrDebug";
+
+  // Serve the |BasemgrDebug| service in the process namespace at the path
+  // |kTestBasemgrDebugPath|.
+  bool got_request{false};
+  fidl::InterfaceRequestHandler<fuchsia::modular::internal::BasemgrDebug> handler =
+      [&](fidl::InterfaceRequest<fuchsia::modular::internal::BasemgrDebug> request) {
+        got_request = true;
+      };
+  ServeBasemgrDebugAt(kTestBasemgrDebugPath, std::move(handler));
+
+  // Connect to the |BasemgrDebug| service.
+  auto result = modular::session::ConnectToBasemgrDebug();
+  EXPECT_TRUE(result.is_ok());
+
+  // Ensure that the proxy returned is connected to the instance served above.
+  fuchsia::modular::internal::BasemgrDebugPtr basemgr_debug = result.take_value();
+  basemgr_debug->StartSessionWithRandomId();
+
+  RunLoopUntil([&]() { return got_request; });
+  EXPECT_TRUE(got_request);
+}
+
 // Tests that Launch starts basemgr as a v1 component with the fuchsia::sys::Launcher protocol.
 TEST_F(SessionTest, Launch) {
   sys::testing::FakeLauncher launcher;
@@ -243,6 +271,29 @@ TEST_F(SessionTest, ShutdownV1) {
   static constexpr auto kTestBasemgrDebugPath = "/hub/c/basemgr.cmx/12345/out/debug/basemgr";
 
   // Serve the |BasemgrDebug| service in the process namespace at the path |kTestBasemgrDebugPath|.
+  TestBasemgrDebug basemgr_debug;
+  ServeBasemgrDebugAt(kTestBasemgrDebugPath, basemgr_debug.GetHandler());
+
+  ASSERT_TRUE(basemgr_debug.is_running());
+
+  auto result = RunPromise(modular::session::Shutdown());
+  EXPECT_TRUE(result.is_ok());
+
+  // Ensure that the proxy returned is connected to the instance served above.
+  RunLoopUntil([&]() { return !basemgr_debug.is_running(); });
+  EXPECT_FALSE(basemgr_debug.is_running());
+}
+
+// Tests that Shutdown can shut down basemgr when the |BasemgrDebug| protocol is
+// served under the hub-v2 path that exists when basemgr is running as a
+// session.
+TEST_F(SessionTest, ShutdownSession) {
+  static constexpr auto kTestBasemgrDebugPath =
+      "/hub-v2/children/core/children/session-manager/children/session:session/"
+      "exec/expose/fuchsia.modular.internal.BasemgrDebug";
+
+  // Serve the |BasemgrDebug| service in the process namespace at the path
+  // |kTestBasemgrDebugPath|.
   TestBasemgrDebug basemgr_debug;
   ServeBasemgrDebugAt(kTestBasemgrDebugPath, basemgr_debug.GetHandler());
 
