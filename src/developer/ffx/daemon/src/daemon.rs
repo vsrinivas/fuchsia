@@ -12,7 +12,7 @@ use {
     crate::mdns::MdnsTargetFinder,
     crate::target::{
         target_addr_info_to_socketaddr, ConnectionState, RcsConnection, Target, TargetAddrEntry,
-        TargetCollection, TargetEvent, ToFidlTarget,
+        TargetCollection, TargetEvent,
     },
     crate::target_control::TargetControl,
     anyhow::{anyhow, Context, Result},
@@ -447,7 +447,7 @@ impl Daemon {
                                 .map(|t| {
                                     async move {
                                         if t.is_connected() {
-                                            Some(t.to_fidl_target())
+                                            Some(t.into())
                                         } else {
                                             None
                                         }
@@ -457,7 +457,7 @@ impl Daemon {
                                 .collect(),
                             _ => match self.target_collection.get_connected(value) {
                                 Some(t) => {
-                                    vec![async move { Some(t.to_fidl_target()) }.boxed_local()]
+                                    vec![async move { Some(t.into()) }.boxed_local()]
                                 }
                                 None => vec![],
                             },

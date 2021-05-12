@@ -1011,49 +1011,42 @@ impl EventSynthesizer<DaemonEvent> for Target {
     }
 }
 
-impl ToFidlTarget for Target {
-    fn to_fidl_target(self) -> bridge::Target {
-        let (addrs, last_response, rcs_state, serial_number, build_config, state) = (
-            self.addrs(),
-            self.last_response(),
-            self.rcs_state(),
-            self.serial(),
-            self.build_config(),
-            self.state(),
-        );
-
-        let (product_config, board_config) = build_config
+impl From<Target> for bridge::Target {
+    fn from(target: Target) -> Self {
+        let (product_config, board_config) = target
+            .build_config()
             .map(|b| (Some(b.product_config), Some(b.board_config)))
             .unwrap_or((None, None));
 
-        bridge::Target {
-            nodename: self.nodename(),
-            serial_number,
-            addresses: Some(addrs.iter().map(|a| a.into()).collect()),
-            age_ms: Some(
-                match Utc::now().signed_duration_since(last_response).num_milliseconds() {
-                    dur if dur < 0 => {
-                        log::trace!(
-                            "negative duration encountered on target '{}': {}",
-                            self.inner.nodename_str(),
-                            dur
-                        );
-                        0
-                    }
-                    dur => dur,
-                } as u64,
-            ),
+        Self {
+            nodename: target.nodename(),
+            serial_number: target.serial(),
+            addresses: Some(target.addrs().into_iter().map(|a| a.into()).collect()),
+            age_ms: Some(match Utc::now()
+                .signed_duration_since(target.last_response())
+                .num_milliseconds()
+            {
+                dur if dur < 0 => {
+                    log::trace!(
+                        "negative duration encountered on target '{}': {}",
+                        target.nodename_str(),
+                        dur
+                    );
+                    0
+                }
+                dur => dur,
+            } as u64),
             product_config,
             board_config,
-            rcs_state: Some(rcs_state),
-            target_state: Some(match state.connection_state {
+            rcs_state: Some(target.rcs_state()),
+            target_state: Some(match target.state().connection_state {
                 ConnectionState::Disconnected => FidlTargetState::Disconnected,
                 ConnectionState::Manual | ConnectionState::Mdns(_) | ConnectionState::Rcs(_) => {
                     FidlTargetState::Product
                 }
                 ConnectionState::Fastboot(_) => FidlTargetState::Fastboot,
             }),
-            ssh_address: self.ssh_address_info(),
+            ssh_address: target.ssh_address_info(),
             // TODO(awdavies): Gather more information here when possible.
             target_type: Some(bridge::TargetType::Unknown),
             ..bridge::Target::EMPTY
@@ -1951,7 +1944,7 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_target_to_fidl_target() {
+    async fn test_target_into_bridge_target() {
         let t = Target::new("cragdune-the-impaler");
         let a1 = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1));
         let a2 = IpAddr::V6(Ipv6Addr::new(
@@ -1964,7 +1957,7 @@ mod test {
         t.addrs_insert((a1, 1).into());
         t.addrs_insert((a2, 1).into());
 
-        let t_conv = t.clone().to_fidl_target();
+        let t_conv: bridge::Target = t.clone().into();
         assert_eq!(t.nodename().unwrap(), t_conv.nodename.unwrap().to_string());
         let addrs = t.addrs();
         let conv_addrs = t_conv.addresses.unwrap();
