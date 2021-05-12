@@ -79,6 +79,59 @@ class Namer {
 
 constexpr int kRepeatTestCount = 100;
 
+// TODO(fxbug.dev/75526): this test is temporarily validating undesired
+//  behavior, and will be altered in the next change.
+TEST(DeclarationOrderTest, GoodAllowUnusedAnonymousNames) {
+  for (int i = 0; i < kRepeatTestCount; i++) {
+    Namer namer;
+    auto source = namer.mangle(R"FIDL(
+library example;
+
+protocol #Protocol# {
+    Method() -> ();
+};
+
+)FIDL");
+    TestLibrary library(source);
+    ASSERT_COMPILED_AND_CONVERT(library);
+    auto decl_order = library.declaration_order();
+    ASSERT_EQ(3, decl_order.size());
+    ASSERT_DECL_NAME(decl_order[0], "SomeLongAnonymousPrefix1");
+    ASSERT_DECL_NAME(decl_order[1], "SomeLongAnonymousPrefix0");
+    ASSERT_DECL_NAME(decl_order[2], namer.of("Protocol"));
+  }
+}
+
+// TODO(fxbug.dev/75526): this test is temporarily validating undesired
+//  behavior, and will be altered in the next change.
+TEST(DeclarationOrderTest, GoodAnonymousNamesSparseNumbering) {
+  for (int i = 0; i < kRepeatTestCount; i++) {
+    Namer namer;
+    auto source = namer.mangle(R"FIDL(
+library example;
+
+protocol #Protocol# {
+    Method1(string arg) -> ();
+    Method2() -> (string ret);
+    -> Event1();
+    -> Event2(string ret);
+};
+
+)FIDL");
+    TestLibrary library(source);
+    ASSERT_COMPILED_AND_CONVERT(library);
+    auto decl_order = library.declaration_order();
+    ASSERT_EQ(7, decl_order.size());
+    ASSERT_DECL_NAME(decl_order[0], "SomeLongAnonymousPrefix5");
+    ASSERT_DECL_NAME(decl_order[1], "SomeLongAnonymousPrefix4");
+    ASSERT_DECL_NAME(decl_order[2], "SomeLongAnonymousPrefix3");
+    ASSERT_DECL_NAME(decl_order[3], "SomeLongAnonymousPrefix2");
+    ASSERT_DECL_NAME(decl_order[4], "SomeLongAnonymousPrefix1");
+    ASSERT_DECL_NAME(decl_order[5], "SomeLongAnonymousPrefix0");
+    ASSERT_DECL_NAME(decl_order[6], namer.of("Protocol"));
+  }
+}
+
 TEST(DeclarationOrderTest, GoodNonnullableRef) {
   for (int i = 0; i < kRepeatTestCount; i++) {
     Namer namer;
