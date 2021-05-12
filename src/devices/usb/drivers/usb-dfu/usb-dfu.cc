@@ -5,8 +5,7 @@
 #include "usb-dfu.h"
 
 #include <fuchsia/hardware/usb/c/banjo.h>
-#include <fuchsia/hardware/usb/fwloader/c/fidl.h>
-#include <fuchsia/mem/c/fidl.h>
+#include <fuchsia/mem/llcpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/zx/vmo.h>
@@ -25,23 +24,6 @@ constexpr uint32_t kReqTimeoutSecs = 1;
 
 inline uint8_t MSB(int n) { return static_cast<uint8_t>(n >> 8); }
 inline uint8_t LSB(int n) { return static_cast<uint8_t>(n & 0xFF); }
-
-zx_status_t fidl_LoadPrebuiltFirmware(void* ctx, fuchsia_hardware_usb_fwloader_PrebuiltType type,
-                                      fidl_txn_t* txn) {
-  // TODO(jocelyndang): implement this.
-  return fuchsia_hardware_usb_fwloader_DeviceLoadPrebuiltFirmware_reply(txn, ZX_ERR_NOT_SUPPORTED);
-}
-
-zx_status_t fidl_LoadFirmware(void* ctx, const fuchsia_mem_Buffer* firmware, fidl_txn_t* txn) {
-  auto fp = static_cast<usb::Dfu*>(ctx);
-  zx_status_t status = fp->LoadFirmware(zx::vmo(firmware->vmo), firmware->size);
-  return fuchsia_hardware_usb_fwloader_DeviceLoadFirmware_reply(txn, status);
-}
-
-fuchsia_hardware_usb_fwloader_Device_ops_t fidl_ops = {
-    .LoadPrebuiltFirmware = fidl_LoadPrebuiltFirmware,
-    .LoadFirmware = fidl_LoadFirmware,
-};
 
 }  // namespace
 
@@ -128,26 +110,37 @@ zx_status_t Dfu::GetState(uint8_t* out_state) {
   return ZX_OK;
 }
 
-zx_status_t Dfu::LoadFirmware(zx::vmo fw_vmo, size_t fw_size) {
-  if (fw_size == 0) {
-    return ZX_ERR_INVALID_ARGS;
+void Dfu::LoadPrebuiltFirmware(LoadPrebuiltFirmwareRequestView request,
+                               LoadPrebuiltFirmwareCompleter::Sync& completer) {
+  // TODO(jocelyndang): implement this.
+  completer.Reply(ZX_ERR_NOT_SUPPORTED);
+}
+
+void Dfu::LoadFirmware(LoadFirmwareRequestView request, LoadFirmwareCompleter::Sync& completer) {
+  if (request->firmware.size == 0) {
+    completer.Reply(ZX_ERR_INVALID_ARGS);
+    return;
   }
   size_t vmo_size;
-  zx_status_t status = fw_vmo.get_size(&vmo_size);
+  zx_status_t status = request->firmware.vmo.get_size(&vmo_size);
   if (status != ZX_OK) {
     zxlogf(ERROR, "failed to get firmware vmo size, err: %d", status);
-    return ZX_ERR_INVALID_ARGS;
+    completer.Reply(ZX_ERR_INVALID_ARGS);
+    return;
   }
-  if (vmo_size < fw_size) {
-    zxlogf(ERROR, "invalid vmo, vmo size was %lu, fw size was %lu", vmo_size, fw_size);
-    return ZX_ERR_INVALID_ARGS;
+  if (vmo_size < request->firmware.size) {
+    zxlogf(ERROR, "invalid vmo, vmo size was %lu, fw size was %lu", vmo_size,
+           request->firmware.size);
+    completer.Reply(ZX_ERR_INVALID_ARGS);
+    return;
   }
 
   // We need to be in the DFU Idle state.
   uint8_t state;
   status = GetState(&state);
   if (status != ZX_OK) {
-    return status;
+    completer.Reply(status);
+    return;
   }
   switch (state) {
     case USB_DFU_STATE_DFU_IDLE:
@@ -159,13 +152,15 @@ zx_status_t Dfu::LoadFirmware(zx::vmo fw_vmo, size_t fw_size) {
       status = ClearStatus();
       if (status != ZX_OK) {
         zxlogf(ERROR, "could not clear error status, got err: %d", status);
-        return status;
+        completer.Reply(status);
+        return;
       }
       break;
     default:
       // TODO(jocelyndang): handle more states.
       zxlogf(ERROR, "device is in an unexpected state: %u", state);
-      return ZX_ERR_BAD_STATE;
+      completer.Reply(ZX_ERR_BAD_STATE);
+      return;
   }
 
   // Write the firmware to the device.
@@ -177,35 +172,36 @@ zx_status_t Dfu::LoadFirmware(zx::vmo fw_vmo, size_t fw_size) {
 
   size_t len_to_write;
   do {
-    len_to_write = std::min(fw_size - vmo_offset, static_cast<size_t>(func_desc_.wTransferSize));
+    len_to_write = std::min(request->firmware.size - vmo_offset,
+                            static_cast<size_t>(func_desc_.wTransferSize));
     zxlogf(DEBUG, "fetching block %u, offset %lu len %lu", block_num, vmo_offset, len_to_write);
-    zx_status_t status = fw_vmo.read(write_buf, vmo_offset, len_to_write);
+    zx_status_t status = request->firmware.vmo.read(write_buf, vmo_offset, len_to_write);
     if (status != ZX_OK) {
-      return status;
+      completer.Reply(status);
+      return;
     }
     status = Download(block_num, write_buf, len_to_write);
     if (status != ZX_OK) {
-      return status;
+      completer.Reply(status);
+      return;
     }
     usb_dfu_get_status_data_t dfu_status;
     status = GetStatus(&dfu_status);
     if (status != ZX_OK) {
-      return status;
+      completer.Reply(status);
+      return;
     }
     if (dfu_status.bStatus != USB_DFU_STATUS_OK) {
       zxlogf(ERROR, "bad status %u", dfu_status.bStatus);
-      return ZX_ERR_IO;
+      completer.Reply(ZX_ERR_IO);
+      return;
     }
     // The device expects the block number to wrap around to zero, so no need to bounds check.
     block_num++;
     vmo_offset += len_to_write;
   } while (len_to_write != 0);  // The device expects a zero length transfer to signify the end.
 
-  return usb_reset_device(&usb_);
-}
-
-zx_status_t Dfu::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  return fuchsia_hardware_usb_fwloader_Device_dispatch(this, txn, msg, &fidl_ops);
+  completer.Reply(usb_reset_device(&usb_));
 }
 
 zx_status_t Dfu::Bind() {
