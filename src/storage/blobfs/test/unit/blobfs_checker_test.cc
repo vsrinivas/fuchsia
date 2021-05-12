@@ -427,7 +427,7 @@ TEST_F(BlobfsCheckerTest, CorruptVersion) {
 TEST_F(BlobfsCheckerTest, CorruptFlagsInExtentContainer) {
   std::unique_ptr<BlockDevice> device;
   CorruptExtentContainer(
-      [](ExtentContainer& container) { container.header.flags |= kBlobFlagLZ4Compressed; }, {},
+      [](ExtentContainer& container) { container.header.flags |= kBlobFlagChunkCompressed; }, {},
       &device);
   ASSERT_EQ(setup_.Mount(std::move(device)), ZX_OK);
 
@@ -499,7 +499,7 @@ TEST_F(BlobfsCheckerTest, CorruptUnallocatedNode) {
     }
     ASSERT_LT(i, kBlobfsInodesPerBlock);
 
-    node[i].header.flags = kBlobFlagLZ4Compressed;
+    node[i].header.flags = kBlobFlagChunkCompressed;
 
     // Write the change back.
     request.opcode = BLOCKIO_WRITE;

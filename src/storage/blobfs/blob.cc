@@ -106,16 +106,6 @@ struct Blob::WriteInfo {
   }
 };
 
-bool SupportsPaging(CompressionAlgorithm algorithm) {
-  return algorithm == CompressionAlgorithm::kUncompressed ||
-         algorithm == CompressionAlgorithm::kChunked;
-}
-
-bool SupportsPaging(const Inode& inode) {
-  zx::status<CompressionAlgorithm> status = AlgorithmForInode(inode);
-  return status.is_ok() && SupportsPaging(status.value());
-}
-
 zx_status_t Blob::VerifyNullBlob() const {
   ZX_ASSERT_MSG(blob_size_ == 0, "Inode blob size is not zero :%lu", blob_size_);
   std::unique_ptr<BlobVerifier> verifier;
@@ -129,9 +119,8 @@ zx_status_t Blob::VerifyNullBlob() const {
 
 uint64_t Blob::SizeData() const {
   std::lock_guard lock(mutex_);
-  if (state() == BlobState::kReadablePaged || state() == BlobState::kReadableLegacy) {
+  if (state() == BlobState::kReadable)
     return blob_size_;
-  }
   return 0;
 }
 
@@ -149,7 +138,7 @@ Blob::Blob(Blobfs* bs, const digest::Digest& digest)
 Blob::Blob(Blobfs* bs, uint32_t node_index, const Inode& inode)
     : CacheNode(bs->vfs(), digest::Digest(inode.merkle_root_hash)),
       blobfs_(bs),
-      state_(SupportsPaging(inode) ? BlobState::kReadablePaged : BlobState::kReadableLegacy),
+      state_(BlobState::kReadable),
       syncing_state_(SyncingState::kDone),
       map_index_(node_index),
 #if !defined(ENABLE_BLOBFS_NEW_PAGER)
@@ -623,8 +612,7 @@ zx_status_t Blob::MarkReadable(CompressionAlgorithm compression_algorithm) {
       return status;
     }
   }
-  set_state(SupportsPaging(compression_algorithm) ? BlobState::kReadablePaged
-                                                  : BlobState::kReadableLegacy);
+  set_state(BlobState::kReadable);
   syncing_state_ = SyncingState::kSyncing;
   write_info_.reset();
   return ZX_OK;
@@ -638,7 +626,7 @@ zx_status_t Blob::GetReadableEvent(zx::event* out) {
     status = zx::event::create(0, &readable_event_);
     if (status != ZX_OK) {
       return status;
-    } else if (state() == BlobState::kReadablePaged || state() == BlobState::kReadableLegacy) {
+    } else if (state() == BlobState::kReadable) {
       readable_event_.signal(0u, ZX_USER_SIGNAL_0);
     }
   }
@@ -655,7 +643,7 @@ zx_status_t Blob::GetReadableEvent(zx::event* out) {
 zx_status_t Blob::CloneDataVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out_size) {
   TRACE_DURATION("blobfs", "Blobfs::CloneVmo", "rights", rights);
 
-  if (!IsReadable()) {
+  if (state_ != BlobState::kReadable) {
     return ZX_ERR_BAD_STATE;
   }
   if (blob_size_ == 0) {
@@ -784,7 +772,7 @@ zx_status_t Blob::ReadInternal(void* data, size_t len, size_t off, size_t* actua
   // can easily forget to open the blob before trying to read.
   ZX_DEBUG_ASSERT(open_count() > 0);
 
-  if (!IsReadable())
+  if (state_ != BlobState::kReadable)
     return ZX_ERR_BAD_STATE;
 
   if (!IsDataLoaded()) {
@@ -801,7 +789,7 @@ zx_status_t Blob::ReadInternal(void* data, size_t len, size_t off, size_t* actua
 
     // The readable state should never change (from the value we checked at the top of this
     // function) by attempting to load from disk, that only happens when we try to write.
-    ZX_DEBUG_ASSERT(IsReadable());
+    ZX_DEBUG_ASSERT(state_ == BlobState::kReadable);
   }
 
   if (blob_size_ == 0) {
@@ -817,19 +805,11 @@ zx_status_t Blob::ReadInternal(void* data, size_t len, size_t off, size_t* actua
   }
   ZX_DEBUG_ASSERT(IsDataLoaded());
 
-  if (state_ == BlobState::kReadablePaged) {
-    // Send pager-backed vmo reads through the pager. This will potentially page-in the data by
-    // reentering us from the kernel on the pager thread.
-    ZX_DEBUG_ASSERT(paged_vmo().is_valid());
-    if (zx_status_t status = paged_vmo().read(data, off, len); status != ZX_OK)
-      return status;
-  } else {
-    // For the unpaged case, read directly out of our local copy.
-    ZX_DEBUG_ASSERT(unpaged_backing_data_.is_valid());
-    if (zx_status_t status = unpaged_backing_data_.read(data, off, len); status != ZX_OK)
-      return status;
-  }
-
+  // Send reads through the pager. This will potentially page-in the data by reentering us from the
+  // kernel on the pager thread.
+  ZX_DEBUG_ASSERT(paged_vmo().is_valid());
+  if (zx_status_t status = paged_vmo().read(data, off, len); status != ZX_OK)
+    return status;
   *actual = len;
   return ZX_OK;
 }
@@ -879,8 +859,8 @@ zx_status_t Blob::LoadPagedVmosFromDisk() {
     set_overridden_cache_policy(*cache_policy);
   }
 
-  zx::status<BlobLoader::PagedLoadResult> load_result =
-      blobfs_->loader().LoadBlobPaged(map_index_, &blobfs_->blob_corruption_notifier());
+  zx::status<BlobLoader::LoadResult> load_result =
+      blobfs_->loader().LoadBlob(map_index_, &blobfs_->blob_corruption_notifier());
   if (load_result.is_error())
     return load_result.error_value();
 
@@ -905,20 +885,6 @@ zx_status_t Blob::LoadPagedVmosFromDisk() {
 
 #endif
 
-zx_status_t Blob::LoadUnpagedVmosFromDisk() {
-  ZX_ASSERT_MSG(!IsDataLoaded(), "Data VMO is not loaded.");
-
-  zx::status<BlobLoader::UnpagedLoadResult> load_result =
-      blobfs_->loader().LoadBlob(map_index_, &blobfs_->blob_corruption_notifier());
-  if (load_result.is_error())
-    return load_result.error_value();
-
-  unpaged_backing_data_ = std::move(load_result->data_vmo);
-  merkle_mapping_ = std::move(load_result->merkle);
-
-  return ZX_OK;
-}
-
 zx_status_t Blob::LoadVmosFromDisk() {
   // We expect the file to be open in FIDL for this to be called. Whether the paged vmo is
   // registered with the pager is dependent on the HasReferences() flag so this should not get
@@ -933,13 +899,7 @@ zx_status_t Blob::LoadVmosFromDisk() {
     return VerifyNullBlob();
   }
 
-  zx_status_t status;
-  if (state_ == BlobState::kReadablePaged) {
-    status = LoadPagedVmosFromDisk();
-  } else {
-    status = LoadUnpagedVmosFromDisk();
-  }
-
+  zx_status_t status = LoadPagedVmosFromDisk();
   if (status == ZX_OK)
     SetPagedVmoName(true);
 
@@ -972,15 +932,8 @@ zx_status_t Blob::QueueUnlink() {
 zx_status_t Blob::Verify() {
   {
     std::lock_guard lock(mutex_);
-    if (auto status = LoadVmosFromDisk(); status != ZX_OK) {
+    if (auto status = LoadVmosFromDisk(); status != ZX_OK)
       return status;
-    }
-
-    if (state_ != BlobState::kReadablePaged) {
-      // Blobs that are not pager-backed are already verified when they are loaded so failures will
-      // have been reported above.
-      return ZX_OK;
-    }
   }
 
   // For non-pager-backed blobs, commit the entire blob in memory. This will cause all of the pages
@@ -1003,7 +956,7 @@ zx_status_t Blob::Verify() {
     // difficult to imagine in practice). If this were to happen, we would prefer to err on the side
     // of reporting a blob valid rather than mistakenly reporting errors that might cause a valid
     // blob to be deleted.
-    if (state_ != BlobState::kReadablePaged)
+    if (state_ != BlobState::kReadable)
       return ZX_OK;
 
     if (blob_size_ == 0) {
@@ -1033,14 +986,7 @@ BlobCache& Blob::GetCache() { return blobfs_->GetCache(); }
 
 bool Blob::ShouldCache() const {
   std::lock_guard lock(mutex_);
-  switch (state()) {
-    // All "Valid", cacheable states, where the blob still exists on storage.
-    case BlobState::kReadablePaged:
-    case BlobState::kReadableLegacy:
-      return true;
-    default:
-      return false;
-  }
+  return state() == BlobState::kReadable;
 }
 
 void Blob::ActivateLowMemory() {
@@ -1367,7 +1313,7 @@ zx_status_t Blob::TryPurge() {
 zx_status_t Blob::Purge() {
   ZX_DEBUG_ASSERT(Purgeable());
 
-  if (IsReadable()) {
+  if (state_ == BlobState::kReadable) {
     // A readable blob should only be purged if it has been unlinked.
     ZX_ASSERT_MSG(deletable_, "Should not purge blob which is not unlinked.");
 

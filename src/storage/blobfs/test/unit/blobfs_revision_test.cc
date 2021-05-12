@@ -27,11 +27,6 @@ std::unique_ptr<BlockDevice> CreateFakeBlockDevice(uint64_t num_blocks) {
   return std::make_unique<FakeBlockDevice>(num_blocks, kBlockSize);
 }
 
-std::unique_ptr<BlockDevice> CreateFakeFVMBlockDevice(uint64_t num_blocks) {
-  return std::make_unique<FakeFVMBlockDevice>(num_blocks, kBlockSize, /*slice_size=*/32768,
-                                              /*slice_capacity=*/500);
-}
-
 template <uint64_t oldest_minor_version,
           std::unique_ptr<BlockDevice> (*DeviceFactory)(uint64_t) = CreateFakeBlockDevice,
           uint64_t num_blocks = kNumBlocks>
@@ -56,83 +51,47 @@ class BlobfsTestAtMinorVersion : public BlobfsTestSetup, public testing::Test {
   }
 };
 
-using BlobfsTestAtRev1 = BlobfsTestAtMinorVersion<kBlobfsMinorVersionBackupSuperblock - 1>;
-using BlobfsTestAtRev1WithFvm =
-    BlobfsTestAtMinorVersion<kBlobfsMinorVersionBackupSuperblock - 1, CreateFakeFVMBlockDevice>;
 using BlobfsTestAtRev2 = BlobfsTestAtMinorVersion<kBlobfsMinorVersionBackupSuperblock>;
-using BlobfsTestAtRev3 = BlobfsTestAtMinorVersion<kBlobfsMinorVersionNoOldCompressionFormats>;
 using BlobfsTestAtRev4 =
     BlobfsTestAtMinorVersion<kBlobfsMinorVersionHostToolHandlesNullBlobCorrectly>;
 using BlobfsTestAtFutureRev = BlobfsTestAtMinorVersion<kBlobfsCurrentMinorVersion + 1>;
 
-TEST_F(BlobfsTestAtRev1, UpgradedToLaterMinorVersion) {
-  Mount(CreateAndFormat(), ReadWriteOptions());
-  auto device = Unmount();
-
-  // Read the superblock, verify the oldest revision is set to the current revision
-  // This involves three migration steps:
-  //  - 1->2 (NOP, since FVM is disabled so there's no backup superblock)
-  //  - 2->3 (Overwrite blobs in old compression formats)
-  //  - 3->4 (Fix zero-length extent in the null blob)
-  uint8_t block[kBlobfsBlockSize] = {};
-  static_assert(sizeof(block) >= sizeof(Superblock));
-  ASSERT_EQ(device->ReadBlock(0, kBlobfsBlockSize, &block), ZX_OK);
-  Superblock* info = reinterpret_cast<Superblock*>(block);
-  EXPECT_EQ(info->oldest_minor_version, kBlobfsMinorVersionHostToolHandlesNullBlobCorrectly);
-
-  ASSERT_EQ(Fsck(std::move(device), ReadOnlyOptions()), ZX_OK);
+// Writing v2 isn't supported, formatting should fail.
+TEST_F(BlobfsTestAtRev2, WontFormat) {
+  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, Mount(CreateAndFormat(), ReadWriteOptions()));
 }
 
-TEST_F(BlobfsTestAtRev1WithFvm, OldInstanceTriggersWriteToBackupSuperblock) {
-  Mount(CreateAndFormat(), ReadWriteOptions());
-  ASSERT_TRUE(blobfs()->Info().flags & kBlobFlagFVM);
-  auto device = Unmount();
-
-  // Read the superblock, verify the oldest revision is set to the current revision
-  // This involves three migration steps:
-  //  - 1->2 (Add backup superblock)
-  //  - 2->3 (Overwrite blobs in old compression formats)
-  //  - 3->4 (Fix zero-length extent in the null blob)
-  uint8_t block[kBlobfsBlockSize] = {};
-  static_assert(sizeof(block) >= sizeof(Superblock));
-  ASSERT_EQ(device->ReadBlock(0, kBlobfsBlockSize, &block), ZX_OK);
-  Superblock* info = reinterpret_cast<Superblock*>(block);
-  EXPECT_EQ(info->oldest_minor_version, kBlobfsMinorVersionHostToolHandlesNullBlobCorrectly);
-
-  ASSERT_EQ(Fsck(std::move(device), ReadOnlyOptions()), ZX_OK);
-}
-
-TEST_F(BlobfsTestAtRev2, UpgradedToLaterMinorVersion) {
+// Tests that revision 2 won't load. This is a "rev 4" test because we can't actually write
+// revision 2 formats. To bypass this, the test creates a rev 4 image and manually updates the
+// superblock to rev 2.
+TEST_F(BlobfsTestAtRev4, WontReadRev2) {
   Mount(CreateAndFormat(), ReadWriteOptions());
   auto device = Unmount();
 
-  // Read the superblock, verify the oldest revision is set to the current revision
-  // This involves two migration steps:
-  //  - 2->3 (Overwrite blobs in old compression formats)
-  //  - 3->4 (Fix zero-length extent in the null blob)
-  uint8_t block[kBlobfsBlockSize] = {};
-  static_assert(sizeof(block) >= sizeof(Superblock));
-  ASSERT_EQ(device->ReadBlock(0, kBlobfsBlockSize, &block), ZX_OK);
-  Superblock* info = reinterpret_cast<Superblock*>(block);
-  EXPECT_EQ(info->oldest_minor_version, kBlobfsMinorVersionHostToolHandlesNullBlobCorrectly);
+  // Read the superblock block.
+  {
+    // Scope the vmo buffer. Destroying implicitly on test exit seems to cause ordering issues.
+    storage::VmoBuffer buffer;
+    ASSERT_EQ(buffer.Initialize(device.get(), 1, kBlobfsBlockSize, "test_buffer"), ZX_OK);
+    block_fifo_request_t request{
+        .opcode = BLOCKIO_READ,
+        .vmoid = buffer.vmoid(),
+        .length = kBlobfsBlockSize / kBlockSize,
+        .vmo_offset = 0,
+        .dev_offset = 0,
+    };
+    ASSERT_EQ(device->FifoTransaction(&request, 1), ZX_OK);
 
-  ASSERT_EQ(Fsck(std::move(device), ReadOnlyOptions()), ZX_OK);
-}
+    // Downgrade to revision 2.
+    Superblock* info = reinterpret_cast<Superblock*>(buffer.Data(0));
+    info->oldest_minor_version = kBlobfsMinorVersionBackupSuperblock;
 
-TEST_F(BlobfsTestAtRev3, UpgradedToLaterMinorVersion) {
-  Mount(CreateAndFormat(), ReadWriteOptions());
-  auto device = Unmount();
+    request.opcode = BLOCKIO_WRITE;
+    ASSERT_EQ(device->FifoTransaction(&request, 1), ZX_OK);
+  }
 
-  // Read the superblock, verify the oldest revision is set to the current revision
-  // This involves two migration steps:
-  //  - 3->4 (Fix zero-length extent in the null blob)
-  uint8_t block[kBlobfsBlockSize] = {};
-  static_assert(sizeof(block) >= sizeof(Superblock));
-  ASSERT_EQ(device->ReadBlock(0, kBlobfsBlockSize, &block), ZX_OK);
-  Superblock* info = reinterpret_cast<Superblock*>(block);
-  EXPECT_EQ(info->oldest_minor_version, kBlobfsMinorVersionHostToolHandlesNullBlobCorrectly);
-
-  ASSERT_EQ(Fsck(std::move(device), ReadOnlyOptions()), ZX_OK);
+  // The device should now fail to mount.
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, Mount(std::move(device)));
 }
 
 TEST_F(BlobfsTestAtRev4, NotUpgraded) {

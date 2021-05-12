@@ -23,7 +23,6 @@
 
 #include "src/storage/blobfs/blob_layout.h"
 #include "src/storage/blobfs/compression/chunked.h"
-#include "src/storage/blobfs/compression/zstd_plain.h"
 #include "src/storage/blobfs/compression_settings.h"
 #include "src/storage/blobfs/test/blob_utils.h"
 #include "src/storage/blobfs/test/integration/fdio_test.h"
@@ -111,20 +110,6 @@ class ExternalDecompressorTest : public ::testing::Test {
   fzl::OwnedVmoMapper decompressed_mapper_;
   std::unique_ptr<ExternalDecompressorClient> client_;
 };
-
-// Simple success case for full decompression
-TEST_F(ExternalDecompressorTest, FullDecompression) {
-  size_t compressed_size;
-  std::unique_ptr<ZSTDCompressor> compressor = nullptr;
-  ASSERT_EQ(ZX_OK,
-            ZSTDCompressor::Create({CompressionAlgorithm::kZstd, kCompressionLevel}, kDataSize,
-                                   compressed_mapper_.start(), kMapSize, &compressor));
-  CompressData(std::move(compressor), input_data_, &compressed_size);
-  ExternalDecompressor decompressor(client_.get(), CompressionAlgorithm::kZstd);
-  ASSERT_EQ(ZX_OK, decompressor.Decompress(kDataSize, compressed_size));
-
-  ASSERT_EQ(0, memcmp(input_data_, decompressed_mapper_.start(), kDataSize));
-}
 
 // Get a full range mapping for a SeekableDecompressor.
 zx::status<std::vector<CompressionMapping>> GetMappings(SeekableDecompressor* decompressor,
@@ -252,53 +237,6 @@ TEST_F(ExternalDecompressorE2ePagedTest, MultiframeDecompression) {
   ASSERT_NO_FATAL_FAILURE(
       GetUintMetric({"paged_read_stats"}, "remote_decompressions", &decompressions));
   ASSERT_EQ(decompressions, 1ul);
-}
-
-class ExternalDecompressorE2eUnpagedTest : public FdioTest {
- public:
-  ExternalDecompressorE2eUnpagedTest() {
-    MountOptions options;
-    // ZSTD files will be done all at once.
-    options.compression_settings = {CompressionAlgorithm::kZstd, 14};
-    options.sandbox_decompression = true;
-    set_mount_options(options);
-  }
-
-  // The ZSTD algorithm requires an older revision.
-  uint64_t GetOldestMinorVersion() const override { return kBlobfsMinorVersionBackupSuperblock; }
-
-  // Using the kCompactMerkleTreeAtEnd requires a higher version of blobfs that doesn't support
-  // ZSTD.
-  BlobLayoutFormat GetBlobLayoutFormat() const override {
-    return BlobLayoutFormat::kPaddedMerkleTreeAtStart;
-  }
-};
-
-TEST_F(ExternalDecompressorE2eUnpagedTest, VerifyRemoteDecompression) {
-  // Create a new blob on the mounted filesystem.
-  std::unique_ptr<BlobInfo> info = GenerateRealisticBlob(".", kDataSize);
-  {
-    fbl::unique_fd fd(openat(root_fd(), info->path, O_CREAT | O_RDWR));
-    ASSERT_TRUE(fd.is_valid());
-    ASSERT_EQ(ftruncate(fd.get(), info->size_data), 0);
-    ASSERT_EQ(StreamAll(write, fd.get(), info->data.get(), info->size_data), 0)
-        << "Failed to write Data";
-  }
-
-  uint64_t before_decompressions;
-  ASSERT_NO_FATAL_FAILURE(
-      GetUintMetric({"unpaged_read_stats"}, "remote_decompressions", &before_decompressions));
-
-  {
-    fbl::unique_fd fd(openat(root_fd(), info->path, O_RDONLY));
-    ASSERT_TRUE(fd.is_valid());
-    ASSERT_NO_FATAL_FAILURE(VerifyContents(fd.get(), info->data.get(), info->size_data));
-  }
-
-  uint64_t after_decompressions;
-  ASSERT_NO_FATAL_FAILURE(
-      GetUintMetric({"unpaged_read_stats"}, "remote_decompressions", &after_decompressions));
-  ASSERT_GT(after_decompressions, before_decompressions);
 }
 
 }  // namespace

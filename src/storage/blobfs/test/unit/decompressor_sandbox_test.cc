@@ -15,7 +15,6 @@
 #include "src/storage/blobfs/compression/chunked.h"
 #include "src/storage/blobfs/compression/decompressor_sandbox/decompressor_impl.h"
 #include "src/storage/blobfs/compression/external_decompressor.h"
-#include "src/storage/blobfs/compression/zstd_plain.h"
 #include "src/storage/blobfs/compression_settings.h"
 
 namespace blobfs {
@@ -119,27 +118,6 @@ class DecompressorSandboxTest : public ::testing::Test {
   zx::fifo fifo_;
 };
 
-// Simple success case for full decompression
-TEST_F(DecompressorSandboxTest, FullDecompression) {
-  size_t compressed_size;
-  std::unique_ptr<ZSTDCompressor> compressor = nullptr;
-  ASSERT_EQ(ZX_OK,
-            ZSTDCompressor::Create({CompressionAlgorithm::kZstd, kCompressionLevel}, kDataSize,
-                                   compressed_mapper_.start(), kMapSize, &compressor));
-  CompressData(std::move(compressor), input_data_, &compressed_size);
-  wire::DecompressRequest request = {
-      {0, kDataSize},
-      {0, compressed_size},
-      ExternalDecompressorClient::CompressionAlgorithmLocalToFidl(CompressionAlgorithm::kZstd),
-  };
-
-  wire::DecompressResponse response;
-  SendRequest(&request, &response);
-  ASSERT_EQ(ZX_OK, response.status);
-  ASSERT_EQ(kDataSize, response.size);
-  ASSERT_EQ(0, memcmp(input_data_, decompressed_mapper_.start(), kDataSize));
-}
-
 // Decompress all chunks from a chunked compressed file as a single call.
 TEST_F(DecompressorSandboxTest, ChunkedFullDecompression) {
   size_t compressed_size;
@@ -210,7 +188,7 @@ TEST_F(DecompressorSandboxTest, CorruptedInput) {
   wire::DecompressRequest request = {
       {0, kDataSize},
       {0, kDataSize},
-      ExternalDecompressorClient::CompressionAlgorithmLocalToFidl(CompressionAlgorithm::kZstd)};
+      ExternalDecompressorClient::CompressionAlgorithmLocalToFidl(CompressionAlgorithm::kChunked)};
   wire::DecompressResponse response;
   SendRequest(&request, &response);
   // Error is really specific to the compression lib. Just verify that it failed.
@@ -219,7 +197,7 @@ TEST_F(DecompressorSandboxTest, CorruptedInput) {
   request = {
       {0, kDataSize},
       {0, kDataSize},
-      ExternalDecompressorClient::CompressionAlgorithmLocalToFidl(CompressionAlgorithm::kZstd)};
+      ExternalDecompressorClient::CompressionAlgorithmLocalToFidl(CompressionAlgorithm::kChunked)};
   SendRequest(&request, &response);
   // Error is really specific to the compression lib. Just verify that it failed.
   ASSERT_NE(ZX_OK, response.status);
@@ -243,7 +221,7 @@ TEST_F(DecompressorSandboxTest, NonzeroOffsetsForFullDecompression) {
   wire::DecompressRequest request = {
       {12, kDataSize},
       {0, kDataSize},
-      ExternalDecompressorClient::CompressionAlgorithmLocalToFidl(CompressionAlgorithm::kZstd)};
+      ExternalDecompressorClient::CompressionAlgorithmLocalToFidl(CompressionAlgorithm::kChunked)};
   wire::DecompressResponse response;
   SendRequest(&request, &response);
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, response.status);

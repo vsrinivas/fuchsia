@@ -20,9 +20,6 @@
 #include "src/storage/blobfs/common.h"
 #include "src/storage/blobfs/compression/blob_compressor.h"
 #include "src/storage/blobfs/compression/decompressor.h"
-#include "src/storage/blobfs/compression/lz4.h"
-#include "src/storage/blobfs/compression/zstd_plain.h"
-#include "src/storage/blobfs/compression/zstd_seekable.h"
 #include "src/storage/blobfs/format.h"
 #include "src/storage/blobfs/mkfs.h"
 #include "src/storage/blobfs/test/blob_utils.h"
@@ -113,104 +110,6 @@ void RunCompressDecompressTest(CompressionAlgorithm algorithm, DataType data_typ
   DecompressionHelper(algorithm, compressor->Data(), compressor->Size(), input.get(), size);
 }
 
-TEST(CompressorTests, CompressDecompressLZ4Random1) {
-  RunCompressDecompressTest(CompressionAlgorithm::kLz4, DataType::Random, 1 << 0, 1 << 0);
-}
-
-TEST(CompressorTests, CompressDecompressLZ4Random2) {
-  RunCompressDecompressTest(CompressionAlgorithm::kLz4, DataType::Random, 1 << 1, 1 << 0);
-}
-
-TEST(CompressorTests, CompressDecompressLZ4Random3) {
-  RunCompressDecompressTest(CompressionAlgorithm::kLz4, DataType::Random, 1 << 10, 1 << 5);
-}
-
-TEST(CompressorTests, CompressDecompressLZ4Random4) {
-  RunCompressDecompressTest(CompressionAlgorithm::kLz4, DataType::Random, 1 << 15, 1 << 10);
-}
-
-TEST(CompressorTests, CompressDecompressLZ4Compressible1) {
-  RunCompressDecompressTest(CompressionAlgorithm::kLz4, DataType::Random, 1 << 0, 1 << 0);
-}
-
-TEST(CompressorTests, CompressDecompressLZ4Compressible2) {
-  RunCompressDecompressTest(CompressionAlgorithm::kLz4, DataType::Random, 1 << 1, 1 << 0);
-}
-
-TEST(CompressorTests, CompressDecompressLZ4Compressible3) {
-  RunCompressDecompressTest(CompressionAlgorithm::kLz4, DataType::Random, 1 << 10, 1 << 5);
-}
-
-TEST(CompressorTests, CompressDecompressLZ4Compressible4) {
-  RunCompressDecompressTest(CompressionAlgorithm::kLz4, DataType::Random, 1 << 15, 1 << 10);
-}
-
-TEST(CompressorTests, CompressDecompressZSTDRandom1) {
-  RunCompressDecompressTest(CompressionAlgorithm::kZstd, DataType::Random, 1 << 0, 1 << 0);
-}
-
-TEST(CompressorTests, CompressDecompressZSTDRandom2) {
-  RunCompressDecompressTest(CompressionAlgorithm::kZstd, DataType::Random, 1 << 1, 1 << 0);
-}
-
-TEST(CompressorTests, CompressDecompressZSTDRandom3) {
-  RunCompressDecompressTest(CompressionAlgorithm::kZstd, DataType::Random, 1 << 10, 1 << 5);
-}
-
-TEST(CompressorTests, CompressDecompressZSTDRandom4) {
-  RunCompressDecompressTest(CompressionAlgorithm::kZstd, DataType::Random, 1 << 15, 1 << 10);
-}
-
-TEST(CompressorTests, CompressDecompressZSTDCompressible1) {
-  RunCompressDecompressTest(CompressionAlgorithm::kZstd, DataType::Random, 1 << 0, 1 << 0);
-}
-
-TEST(CompressorTests, CompressDecompressZSTDCompressible2) {
-  RunCompressDecompressTest(CompressionAlgorithm::kZstd, DataType::Random, 1 << 1, 1 << 0);
-}
-
-TEST(CompressorTests, CompressDecompressZSTDCompressible3) {
-  RunCompressDecompressTest(CompressionAlgorithm::kZstd, DataType::Random, 1 << 10, 1 << 5);
-}
-
-TEST(CompressorTests, CompressDecompressZSTDCompressible4) {
-  RunCompressDecompressTest(CompressionAlgorithm::kZstd, DataType::Random, 1 << 15, 1 << 10);
-}
-
-TEST(CompressorTests, CompressDecompressZSTDSeekableRandom1) {
-  RunCompressDecompressTest(CompressionAlgorithm::kZstdSeekable, DataType::Random, 1 << 0, 1 << 0);
-}
-
-TEST(CompressorTests, CompressDecompressZSTDSeekableRandom2) {
-  RunCompressDecompressTest(CompressionAlgorithm::kZstdSeekable, DataType::Random, 1 << 1, 1 << 0);
-}
-
-TEST(CompressorTests, CompressDecompressZSTDSeekableRandom3) {
-  RunCompressDecompressTest(CompressionAlgorithm::kZstdSeekable, DataType::Random, 1 << 10, 1 << 5);
-}
-
-TEST(CompressorTests, CompressDecompressZSTDSeekableRandom4) {
-  RunCompressDecompressTest(CompressionAlgorithm::kZstdSeekable, DataType::Random, 1 << 15,
-                            1 << 10);
-}
-
-TEST(CompressorTests, CompressDecompressZSTDSeekableCompressible1) {
-  RunCompressDecompressTest(CompressionAlgorithm::kZstdSeekable, DataType::Random, 1 << 0, 1 << 0);
-}
-
-TEST(CompressorTests, CompressDecompressZSTDSeekableCompressible2) {
-  RunCompressDecompressTest(CompressionAlgorithm::kZstdSeekable, DataType::Random, 1 << 1, 1 << 0);
-}
-
-TEST(CompressorTests, CompressDecompressZSTDSeekableCompressible3) {
-  RunCompressDecompressTest(CompressionAlgorithm::kZstdSeekable, DataType::Random, 1 << 10, 1 << 5);
-}
-
-TEST(CompressorTests, CompressDecompressZSTDSeekableCompressible4) {
-  RunCompressDecompressTest(CompressionAlgorithm::kZstdSeekable, DataType::Random, 1 << 15,
-                            1 << 10);
-}
-
 TEST(CompressorTests, CompressDecompressChunkRandom1) {
   RunCompressDecompressTest(CompressionAlgorithm::kChunked, DataType::Random, 1 << 0, 1 << 0);
 }
@@ -243,9 +142,9 @@ TEST(CompressorTests, CompressDecompressChunkCompressible4) {
   RunCompressDecompressTest(CompressionAlgorithm::kChunked, DataType::Random, 1 << 15, 1 << 10);
 }
 
-void RunUpdateNoDataTest(CompressionAlgorithm algorithm) {
+TEST(CompressorTests, UpdateNoData) {
   const size_t input_size = 1024;
-  CompressionSettings settings{.compression_algorithm = algorithm};
+  CompressionSettings settings{.compression_algorithm = CompressionAlgorithm::kChunked};
   auto compressor = BlobCompressor::Create(settings, input_size);
   ASSERT_TRUE(compressor);
 
@@ -259,15 +158,8 @@ void RunUpdateNoDataTest(CompressionAlgorithm algorithm) {
 
   // Ensure that even with the addition of a zero-length buffer, we still decompress
   // to the expected output.
-  DecompressionHelper(algorithm, compressor->Data(), compressor->Size(), input.get(), input_size);
-}
-
-TEST(CompressorTests, UpdateNoDataLZ4) { RunUpdateNoDataTest(CompressionAlgorithm::kLz4); }
-
-TEST(CompressorTests, UpdateNoDataZSTD) { RunUpdateNoDataTest(CompressionAlgorithm::kZstd); }
-
-TEST(CompressorTests, UpdateNoDataZSTDSeekable) {
-  RunUpdateNoDataTest(CompressionAlgorithm::kZstdSeekable);
+  DecompressionHelper(CompressionAlgorithm::kChunked, compressor->Data(), compressor->Size(),
+                      input.get(), input_size);
 }
 
 void DecompressionRoundHelper(CompressionAlgorithm algorithm, const void* compressed_buf,
@@ -311,99 +203,21 @@ void RunCompressRoundDecompressTest(CompressionAlgorithm algorithm, DataType dat
   DecompressionRoundHelper(algorithm, compressor->Data(), rounded_size, input.get(), size);
 }
 
-TEST(CompressorTests, CompressRoundDecompressLZ4Random1) {
-  RunCompressRoundDecompressTest(CompressionAlgorithm::kLz4, DataType::Random, 1 << 0, 1 << 0);
+TEST(CompressorTests, CompressRoundDecompressRandom1) {
+  RunCompressRoundDecompressTest(CompressionAlgorithm::kChunked, DataType::Random, 1 << 0, 1 << 0);
 }
 
-TEST(CompressorTests, CompressRoundDecompressLZ4Random2) {
-  RunCompressRoundDecompressTest(CompressionAlgorithm::kLz4, DataType::Random, 1 << 1, 1 << 0);
+TEST(CompressorTests, CompressRoundDecompressRandom2) {
+  RunCompressRoundDecompressTest(CompressionAlgorithm::kChunked, DataType::Random, 1 << 1, 1 << 0);
 }
 
-TEST(CompressorTests, CompressRoundDecompressLZ4Random3) {
-  RunCompressRoundDecompressTest(CompressionAlgorithm::kLz4, DataType::Random, 1 << 10, 1 << 5);
+TEST(CompressorTests, CompressRoundDecompressRandom3) {
+  RunCompressRoundDecompressTest(CompressionAlgorithm::kChunked, DataType::Random, 1 << 10, 1 << 5);
 }
 
-TEST(CompressorTests, CompressRoundDecompressLZ4Random4) {
-  RunCompressRoundDecompressTest(CompressionAlgorithm::kLz4, DataType::Random, 1 << 15, 1 << 10);
-}
-
-TEST(CompressorTests, CompressRoundDecompressZSTDRandom1) {
-  RunCompressRoundDecompressTest(CompressionAlgorithm::kZstd, DataType::Random, 1 << 0, 1 << 0);
-}
-
-TEST(CompressorTests, CompressRoundDecompressZSTDRandom2) {
-  RunCompressRoundDecompressTest(CompressionAlgorithm::kZstd, DataType::Random, 1 << 1, 1 << 0);
-}
-
-TEST(CompressorTests, CompressRoundDecompressZSTDRandom3) {
-  RunCompressRoundDecompressTest(CompressionAlgorithm::kZstd, DataType::Random, 1 << 10, 1 << 5);
-}
-
-TEST(CompressorTests, CompressRoundDecompressZSTDRandom4) {
-  RunCompressRoundDecompressTest(CompressionAlgorithm::kZstd, DataType::Random, 1 << 15, 1 << 10);
-}
-
-TEST(CompressorTests, CompressRoundDecompressZSTDSeekableRandom1) {
-  RunCompressRoundDecompressTest(CompressionAlgorithm::kZstdSeekable, DataType::Random, 1 << 0,
-                                 1 << 0);
-}
-
-TEST(CompressorTests, CompressRoundDecompressZSTDSeekableRandom2) {
-  RunCompressRoundDecompressTest(CompressionAlgorithm::kZstdSeekable, DataType::Random, 1 << 1,
-                                 1 << 0);
-}
-
-TEST(CompressorTests, CompressRoundDecompressZSTDSeekableRandom3) {
-  RunCompressRoundDecompressTest(CompressionAlgorithm::kZstdSeekable, DataType::Random, 1 << 10,
-                                 1 << 5);
-}
-
-TEST(CompressorTests, CompressRoundDecompressZSTDSeekableRandom4) {
-  RunCompressRoundDecompressTest(CompressionAlgorithm::kZstdSeekable, DataType::Random, 1 << 15,
+TEST(CompressorTests, CompressRoundDecompressRandom4) {
+  RunCompressRoundDecompressTest(CompressionAlgorithm::kChunked, DataType::Random, 1 << 15,
                                  1 << 10);
-}
-
-// Regression test class: Ensure that decompression that is not advancing buffers terminates, even
-// if the "size of next recommended input" hint from zstd is a non-zero, non-error value. It turns
-// out, this hint is not intended to be authoritative, in the sense that it can be a non-zero,
-// non-error value even though subsequent invocations of `ZSTD_decompressStream` will make no
-// progress.
-class NonZeroHintNonAdvancingZSTDDecompressor : public AbstractZSTDDecompressor {
- public:
-  NonZeroHintNonAdvancingZSTDDecompressor() = default;
-
-  // AbstractZSTDDecompressor interface.
-  size_t DecompressStream(ZSTD_DStream* zds, ZSTD_outBuffer* output,
-                          ZSTD_inBuffer* input) const final {
-    // Do not advance streams, but return non-zero, non-error value.
-    EXPECT_FALSE(ZSTD_isError(kDecompressStreamReturn));
-    return kDecompressStreamReturn;
-  }
-
- private:
-  static const size_t kDecompressStreamReturn = 1;
-};
-
-// Regression test for fxbug.dev/44603.
-// This test prevents regressing to the following *incorrect* logic:
-//
-//     do { ... r = ZSTD_decompressStream(...) ... } while (r != 0);
-//
-// The value of `r`, when not an error code, is a hint at the size of the next chunk to pass to
-// `ZSTD_decompressStream`. Sometimes, this value is non-zero even though invoking
-// `ZSTD_decompressStream` again will make no progress, inducing an infinite loop.
-// See fxbug.dev/44603 for details.
-TEST(CompressorTests, DecompressZSTDNonZeroNonAdvancing) {
-  constexpr size_t kCompressedSize = 1;
-  constexpr size_t kUncompressedSize = 2;
-  uint8_t compressed_buf[kCompressedSize] = {0x00};
-  uint8_t uncompressed_buf[kUncompressedSize] = {0x00, 0x00};
-  size_t compressed_size = kCompressedSize;
-  size_t uncompressed_size = kUncompressedSize;
-  NonZeroHintNonAdvancingZSTDDecompressor decompressor;
-  ASSERT_EQ(decompressor.Decompress(uncompressed_buf, &uncompressed_size, compressed_buf,
-                                    compressed_size),
-            ZX_OK);
 }
 
 class BlobfsTestFixture : public testing::Test {

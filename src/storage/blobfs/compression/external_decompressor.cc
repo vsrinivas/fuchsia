@@ -166,21 +166,17 @@ zx_status_t ExternalDecompressorClient::SendMessage(
   return ZX_OK;
 }
 
-CompressionAlgorithm ExternalDecompressorClient::CompressionAlgorithmFidlToLocal(
+std::optional<CompressionAlgorithm> ExternalDecompressorClient::CompressionAlgorithmFidlToLocal(
     const fuchsia_blobfs_internal::wire::CompressionAlgorithm algorithm) {
   using Fidl = fuchsia_blobfs_internal::wire::CompressionAlgorithm;
   switch (algorithm) {
     case Fidl::kUncompressed:
       return CompressionAlgorithm::kUncompressed;
-    case Fidl::kLz4:
-      return CompressionAlgorithm::kLz4;
-    case Fidl::kZstd:
-      return CompressionAlgorithm::kZstd;
-    case Fidl::kZstdSeekable:
-      return CompressionAlgorithm::kZstdSeekable;
     case Fidl::kChunked:
     case Fidl::kChunkedPartial:
       return CompressionAlgorithm::kChunked;
+    default:
+      return std::nullopt;
   }
 }
 
@@ -190,15 +186,12 @@ ExternalDecompressorClient::CompressionAlgorithmLocalToFidl(CompressionAlgorithm
   switch (algorithm) {
     case CompressionAlgorithm::kUncompressed:
       return Fidl::kUncompressed;
-    case CompressionAlgorithm::kLz4:
-      return Fidl::kLz4;
-    case CompressionAlgorithm::kZstd:
-      return Fidl::kZstd;
-    case CompressionAlgorithm::kZstdSeekable:
-      return Fidl::kZstdSeekable;
     case CompressionAlgorithm::kChunked:
       return Fidl::kChunked;
   }
+
+  ZX_DEBUG_ASSERT(false);
+  return Fidl::kUncompressed;
 }
 
 zx::status<fuchsia_blobfs_internal::wire::CompressionAlgorithm>
@@ -208,11 +201,11 @@ ExternalDecompressorClient::CompressionAlgorithmLocalToFidlForPartial(
     case CompressionAlgorithm::kChunked:
       return zx::ok(fuchsia_blobfs_internal::wire::CompressionAlgorithm::kChunkedPartial);
     case CompressionAlgorithm::kUncompressed:
-    case CompressionAlgorithm::kLz4:
-    case CompressionAlgorithm::kZstd:
-    case CompressionAlgorithm::kZstdSeekable:
       return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
+
+  ZX_DEBUG_ASSERT(false);
+  return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
 ExternalDecompressor::ExternalDecompressor(ExternalDecompressorClient* client,

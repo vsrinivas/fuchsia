@@ -11,6 +11,8 @@
 #include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
 
+#include <optional>
+
 #include "src/storage/blobfs/compression/seekable_decompressor.h"
 #include "src/storage/blobfs/compression_settings.h"
 
@@ -35,8 +37,8 @@ class ExternalDecompressorClient {
   // decompressed size matches the `decompressed.size`. Starts by calling `Prepare()`.
   zx_status_t SendMessage(const fuchsia_blobfs_internal::wire::DecompressRequest& request);
 
-  // Convert from fidl compatible enum to local.
-  static CompressionAlgorithm CompressionAlgorithmFidlToLocal(
+  // Convert from fidl compatible enum to local. Returns nullopt if invalid.
+  static std::optional<CompressionAlgorithm> CompressionAlgorithmFidlToLocal(
       fuchsia_blobfs_internal::wire::CompressionAlgorithm algorithm);
 
   // Convert to fidl compatible enum from local.

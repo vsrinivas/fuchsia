@@ -34,12 +34,6 @@ fs_metrics::CompressionFormat FormatForInode(const Inode& inode) {
   if (inode.IsCompressed()) {
     auto compression = inode.header.flags & kBlobFlagMaskAnyCompression;
     switch (compression) {
-      case kBlobFlagLZ4Compressed:
-        return fs_metrics::CompressionFormat::kCompressedLZ4;
-      case kBlobFlagZSTDCompressed:
-        return fs_metrics::CompressionFormat::kCompressedZSTD;
-      case kBlobFlagZSTDSeekableCompressed:
-        return fs_metrics::CompressionFormat::kCompressedZSTDSeekable;
       case kBlobFlagChunkCompressed:
         return fs_metrics::CompressionFormat::kCompressedZSTDChunked;
       default:
@@ -83,26 +77,8 @@ void PrintReadMetrics(ReadMetrics& metrics) {
   FX_LOGS(INFO) << "    Uncompressed: Read " << snapshot.read_bytes / mb << " MB (spent "
                 << TicksToMs(zx::ticks(snapshot.read_ticks)) << " ms)";
 
-  snapshot = metrics.GetSnapshot(CompressionAlgorithm::kLz4);
-  FX_LOGS(INFO) << "    LZ4: Read " << snapshot.read_bytes / mb << " MB (spent "
-                << TicksToMs(zx::ticks(snapshot.read_ticks)) << " ms) | Decompressed "
-                << snapshot.decompress_bytes / mb << " MB (spent "
-                << TicksToMs(zx::ticks(snapshot.decompress_ticks)) << " ms)";
-
   snapshot = metrics.GetSnapshot(CompressionAlgorithm::kChunked);
   FX_LOGS(INFO) << "    Chunked: Read " << snapshot.read_bytes / mb << " MB (spent "
-                << TicksToMs(zx::ticks(snapshot.read_ticks)) << " ms) | Decompressed "
-                << snapshot.decompress_bytes / mb << " MB (spent "
-                << TicksToMs(zx::ticks(snapshot.decompress_ticks)) << " ms)";
-
-  snapshot = metrics.GetSnapshot(CompressionAlgorithm::kZstd);
-  FX_LOGS(INFO) << "    ZSTD: Read " << snapshot.read_bytes / mb << " MB (spent "
-                << TicksToMs(zx::ticks(snapshot.read_ticks)) << " ms) | Decompressed "
-                << snapshot.decompress_bytes / mb << " MB (spent "
-                << TicksToMs(zx::ticks(snapshot.decompress_ticks)) << " ms)";
-
-  snapshot = metrics.GetSnapshot(CompressionAlgorithm::kZstdSeekable);
-  FX_LOGS(INFO) << "    ZSTD Seekable: Read " << snapshot.read_bytes / mb << " MB (spent "
                 << TicksToMs(zx::ticks(snapshot.read_ticks)) << " ms) | Decompressed "
                 << snapshot.decompress_bytes / mb << " MB (spent "
                 << TicksToMs(zx::ticks(snapshot.decompress_ticks)) << " ms)";

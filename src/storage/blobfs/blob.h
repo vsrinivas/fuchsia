@@ -51,12 +51,11 @@ class Blobfs;
 class BlobDataProducer;
 
 enum class BlobState : uint8_t {
-  kEmpty,           // After open.
-  kDataWrite,       // After space reserved (but allocation not yet persisted).
-  kReadablePaged,   // After writing.
-  kReadableLegacy,  // Readable, but using legacy compression algorithms, so not paged.
-  kPurged,          // After unlink,
-  kError,           // Unrecoverable error state.
+  kEmpty,      // After open.
+  kDataWrite,  // After space reserved (but allocation not yet persisted).
+  kReadable,   // After writing.
+  kPurged,     // After unlink,
+  kError,      // Unrecoverable error state.
 };
 
 class Blob final : public CacheNode, fbl::Recyclable<Blob> {
@@ -164,13 +163,6 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // Reads in and verifies the contents of this Blob.
   zx_status_t Verify() __TA_EXCLUDES(mutex_);
 
-  // Returns whether the blob's is primarily pager-backed. We can still page from these blobs,
-  // but have to stopre an intermediate copy in unpaged_backing_data_.
-  bool IsPagerBacked() const __TA_EXCLUDES(mutex_) {
-    std::scoped_lock lock(mutex_);
-    return state_ == BlobState::kReadablePaged;
-  }
-
  private:
   friend class BlobLoaderTest;
   friend class BlobTest;
@@ -183,7 +175,7 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // Note that this *must* be called on the main dispatch thread; otherwise the underlying state of
   // the blob could change after (or during) the call, and the blob might not really be purgeable.
   bool Purgeable() const __TA_REQUIRES_SHARED(mutex_) {
-    return !HasReferences() && (deletable_ || !IsReadable());
+    return !HasReferences() && (deletable_ || state_ != BlobState::kReadable);
   }
 
   // Vnode protected overrides:
@@ -203,9 +195,6 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
 
   void set_state(BlobState new_state) __TA_REQUIRES(mutex_) { state_ = new_state; };
   BlobState state() const __TA_REQUIRES_SHARED(mutex_) { return state_; }
-  bool IsReadable() const __TA_REQUIRES_SHARED(mutex_) {
-    return state_ == BlobState::kReadablePaged || state_ == BlobState::kReadableLegacy;
-  }
 
   // After writing the blob, marks the blob as readable.
   [[nodiscard]] zx_status_t MarkReadable(CompressionAlgorithm compression_algorithm)
@@ -259,7 +248,6 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   //
   // If paging is disabled, the entire data VMO is loaded in and verified. Idempotent.
   zx_status_t LoadPagedVmosFromDisk() __TA_REQUIRES(mutex_);
-  zx_status_t LoadUnpagedVmosFromDisk() __TA_REQUIRES(mutex_);
   zx_status_t LoadVmosFromDisk() __TA_REQUIRES(mutex_);
 
   // Initializes the data VMO for writing.  Idempotent.

@@ -17,9 +17,6 @@ namespace blobfs {
 // Unique identifiers for each |Compressor|/|Decompressor| strategy.
 enum class CompressionAlgorithm {
   kUncompressed = 0,
-  kLz4,
-  kZstd,
-  kZstdSeekable,
   kChunked,
 };
 

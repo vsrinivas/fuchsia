@@ -6,7 +6,6 @@
 
 #include <gtest/gtest.h>
 #include <src/lib/chunked-compression/compression-params.h>
-#include <zstd/zstd.h>
 
 #include "src/storage/blobfs/format.h"
 
@@ -14,15 +13,15 @@ namespace blobfs {
 namespace {
 
 // Simple basic conversion test.
-TEST(CompressionSettingsTest, CompressionAlgorithmToStringConvertLZ4) {
-  ASSERT_STREQ(CompressionAlgorithmToString(CompressionAlgorithm::kLz4), "LZ4");
+TEST(CompressionSettingsTest, CompressionAlgorithmToStringConvertChunked) {
+  ASSERT_STREQ(CompressionAlgorithmToString(CompressionAlgorithm::kChunked), "ZSTD_CHUNKED");
 }
 
 // Simple basic conversion for compression enabled.
-TEST(CompressionSettingsTest, AlgorithmForInodeConvertLZ4) {
+TEST(CompressionSettingsTest, AlgorithmForInodeConvertChunked) {
   Inode inode;
-  inode.header.flags = kBlobFlagLZ4Compressed;
-  ASSERT_EQ(AlgorithmForInode(inode), CompressionAlgorithm::kLz4);
+  inode.header.flags = kBlobFlagChunkCompressed;
+  ASSERT_EQ(AlgorithmForInode(inode), CompressionAlgorithm::kChunked);
 }
 
 // Conversion when no compression flags are enabled.
@@ -32,26 +31,19 @@ TEST(CompressionSettingsTest, AlgorithmForInodeConvertUncompressed) {
   ASSERT_EQ(AlgorithmForInode(inode).value(), CompressionAlgorithm::kUncompressed);
 }
 
-TEST(CompressionSettingsTest, AlgorithmForInodeMultipleFlagsSet) {
-  Inode inode;
-  inode.header.flags = kBlobFlagLZ4Compressed | kBlobFlagZSTDCompressed;
-  ASSERT_FALSE(AlgorithmForInode(inode).is_ok());
-}
-
 // Simple basic conversion test.
-TEST(CompressionSettingsTest, CompressionInodeHeaderFlagsConvertLZ4) {
-  ASSERT_EQ(CompressionInodeHeaderFlags(CompressionAlgorithm::kLz4), kBlobFlagLZ4Compressed);
+TEST(CompressionSettingsTest, CompressionInodeHeaderFlagsConvertChunked) {
+  ASSERT_EQ(CompressionInodeHeaderFlags(CompressionAlgorithm::kChunked), kBlobFlagChunkCompressed);
 }
 
-// Apply a couple of CompressionAlgorithms, verify that they come back right
-// despite multiple calls.
+// Apply a couple of CompressionAlgorithms, verify that they come back right despite multiple calls.
 TEST(CompressionSettingsTest, SetCompressionAlgorithmCalledTwice) {
   Inode inode;
   inode.header.flags = kBlobFlagAllocated;  // Ensure that this stays set.
-  SetCompressionAlgorithm(&inode, CompressionAlgorithm::kLz4);
-  ASSERT_EQ(inode.header.flags, kBlobFlagLZ4Compressed | kBlobFlagAllocated);
-  SetCompressionAlgorithm(&inode, CompressionAlgorithm::kZstd);
-  ASSERT_EQ(inode.header.flags, kBlobFlagZSTDCompressed | kBlobFlagAllocated);
+  SetCompressionAlgorithm(&inode, CompressionAlgorithm::kChunked);
+  ASSERT_EQ(inode.header.flags, kBlobFlagChunkCompressed | kBlobFlagAllocated);
+  SetCompressionAlgorithm(&inode, CompressionAlgorithm::kChunked);
+  ASSERT_EQ(inode.header.flags, kBlobFlagChunkCompressed | kBlobFlagAllocated);
 }
 
 // Anything is valid with no compression level setings.
@@ -63,14 +55,6 @@ TEST(CompressionSettingsTest, IsValidWithNoSettings) {
 // There should be no compression settings for UNCOMPRESSED.
 TEST(CompressionSettingsTest, IsValidCompressionLevelUncompressed) {
   CompressionSettings settings = {CompressionAlgorithm::kUncompressed, 4};
-  ASSERT_FALSE(settings.IsValid());
-}
-
-// Check range limits on ZSTD.
-TEST(CompressionSettingsTest, IsValidCompressionLevelZSTD) {
-  CompressionSettings settings = {CompressionAlgorithm::kZstd, ZSTD_minCLevel()};
-  ASSERT_TRUE(settings.IsValid());
-  settings.compression_level = ZSTD_maxCLevel() + 1;
   ASSERT_FALSE(settings.IsValid());
 }
 

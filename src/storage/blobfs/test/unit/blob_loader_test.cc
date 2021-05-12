@@ -59,16 +59,6 @@ class BlobLoaderTest : public TestWithParam<TestParamType> {
     FilesystemOptions fs_options{
         .blob_layout_format = blob_layout_format_,
     };
-    switch (compression_algorithm) {
-      case CompressionAlgorithm::kUncompressed:
-      case CompressionAlgorithm::kChunked:
-        break;
-      case CompressionAlgorithm::kZstd:
-      case CompressionAlgorithm::kZstdSeekable:
-      case CompressionAlgorithm::kLz4:
-        fs_options.oldest_minor_version = kBlobfsMinorVersionBackupSuperblock;
-        break;
-    }
     options_ = {.compression_settings = {
                     .compression_algorithm = compression_algorithm,
                 }};
@@ -121,39 +111,28 @@ class BlobLoaderTest : public TestWithParam<TestParamType> {
 
   uint32_t LookupInode(const BlobInfo& info) { return LookupBlob(info)->Ino(); }
 
-  zx_status_t LoadBlobData(Blob* blob, std::vector<uint8_t>* data) {
-    data->clear();
-
-    TestScopedVnodeOpen opener(blob);  // Blob must be open to get the data.
-
-    fs::VnodeAttributes attrs;
-    if (zx_status_t status = blob->GetAttributes(&attrs); status != ZX_OK)
-      return status;
-
-    // Always read, even for 0-length blobs, to make sure we test the read path in this case.
-    data->resize(attrs.content_size + 1);
-    size_t actual = 0xdedbeef;  // Make sure this gets written to.
-    if (zx_status_t status = blob->Read(&(*data)[0], data->size(), 0, &actual); status != ZX_OK)
-      return status;
-
-    EXPECT_EQ(attrs.content_size, actual);
-    data->resize(actual);
-
-    return ZX_OK;
-  }
-
-  std::vector<uint8_t> LoadPagedBlobData(Blob* blob) {
+  zx_status_t LoadBlobData(Blob* blob, std::vector<uint8_t>& data) {
     TestScopedVnodeOpen opener(blob);  // Blob must be open to get the vmo.
 
     zx::vmo vmo;
     size_t size = 0;
-    EXPECT_EQ(ZX_OK, blob->GetVmo(fuchsia_io::wire::kVmoFlagRead, &vmo, &size));
-    EXPECT_TRUE(vmo.is_valid());
+    if (zx_status_t status = blob->GetVmo(fuchsia_io::wire::kVmoFlagRead, &vmo, &size);
+        status != ZX_OK)
+      return status;
+    EXPECT_TRUE(vmo.is_valid());  // Always expect a valid blob on success.
 
     // Use vmo::read instead of direct read so that we can synchronously fail if the pager fails.
+    data.resize(size);
+    if (zx_status_t status = vmo.read(&data[0], 0, size); status != ZX_OK) {
+      data.resize(0);
+      return status;
+    }
+    return ZX_OK;
+  }
+
+  std::vector<uint8_t> LoadBlobData(Blob* blob) {
     std::vector<uint8_t> result;
-    result.resize(size);
-    EXPECT_EQ(vmo.read(&result[0], 0, size), ZX_OK);
+    EXPECT_EQ(ZX_OK, LoadBlobData(blob, result));
     return result;
   }
 
@@ -200,10 +179,6 @@ class BlobLoaderTest : public TestWithParam<TestParamType> {
   BlobLayoutFormat blob_layout_format_;
 };
 
-// A separate parameterized test fixture that will only be run with compression algorithms that
-// support paging.
-using BlobLoaderPagedTest = BlobLoaderTest;
-
 TEST_P(BlobLoaderTest, SmallBlob) {
   size_t blob_len = 1024;
   std::unique_ptr<BlobInfo> info = AddBlob(blob_len);
@@ -211,28 +186,9 @@ TEST_P(BlobLoaderTest, SmallBlob) {
   // We explicitly don't check the compression algorithm was respected here, since files this small
   // don't need to be compressed.
 
-  auto result = loader().LoadBlob(LookupInode(*info), nullptr);
-  ASSERT_TRUE(result.is_ok());
-
-  ASSERT_TRUE(result->data_vmo.is_valid());
-  ASSERT_GE(result->data_mapper.size(), info->size_data);
-  EXPECT_EQ(memcmp(result->data_mapper.start(), info->data.get(), info->size_data), 0);
-
-  EXPECT_FALSE(result->merkle.vmo().is_valid());
-  EXPECT_EQ(result->merkle.size(), 0ul);
-}
-
-TEST_P(BlobLoaderPagedTest, SmallBlob) {
-  size_t blob_len = 1024;
-  std::unique_ptr<BlobInfo> info = AddBlob(blob_len);
-  ASSERT_EQ(setup_.Remount(options_), ZX_OK);
-  // We explicitly don't check the compression algorithm was respected here, since files this small
-  // don't need to be compressed.
-
   auto blob = LookupBlob(*info);
-  EXPECT_TRUE(blob->IsPagerBacked());
 
-  std::vector<uint8_t> data = LoadPagedBlobData(blob.get());
+  std::vector<uint8_t> data = LoadBlobData(blob.get());
   ASSERT_TRUE(info->DataEquals(&data[0], data.size()));
 
   // Verify there's no Merkle data for this small blob.
@@ -247,14 +203,12 @@ TEST_P(BlobLoaderTest, LargeBlob) {
   ASSERT_EQ(setup_.Remount(options_), ZX_OK);
   ASSERT_EQ(LookupCompression(*info), ExpectedAlgorithm());
 
-  auto result = loader().LoadBlob(LookupInode(*info), nullptr);
-  ASSERT_TRUE(result.is_ok());
+  auto blob = LookupBlob(*info);
 
-  ASSERT_TRUE(result->data_vmo.is_valid());
-  ASSERT_GE(result->data_mapper.size(), info->size_data);
-  EXPECT_EQ(memcmp(result->data_mapper.start(), info->data.get(), info->size_data), 0);
+  std::vector<uint8_t> data = LoadBlobData(blob.get());
+  ASSERT_TRUE(info->DataEquals(&data[0], data.size()));
 
-  CheckMerkleTreeContents(result->merkle, *info);
+  CheckMerkleTreeContents(GetBlobMerkleMapper(blob.get()), *info);
 }
 
 TEST_P(BlobLoaderTest, LargeBlobWithNonAlignedLength) {
@@ -263,62 +217,12 @@ TEST_P(BlobLoaderTest, LargeBlobWithNonAlignedLength) {
   ASSERT_EQ(setup_.Remount(options_), ZX_OK);
   ASSERT_EQ(LookupCompression(*info), ExpectedAlgorithm());
 
-  auto result = loader().LoadBlob(LookupInode(*info), nullptr);
-  ASSERT_TRUE(result.is_ok());
-
-  ASSERT_TRUE(result->data_vmo.is_valid());
-  ASSERT_GE(result->data_mapper.size(), info->size_data);
-  EXPECT_EQ(memcmp(result->data_mapper.start(), info->data.get(), info->size_data), 0);
-
-  CheckMerkleTreeContents(result->merkle, *info);
-}
-
-TEST_P(BlobLoaderPagedTest, LargeBlob) {
-  size_t blob_len = 1 << 18;
-  std::unique_ptr<BlobInfo> info = AddBlob(blob_len);
-  ASSERT_EQ(setup_.Remount(options_), ZX_OK);
-  ASSERT_EQ(LookupCompression(*info), ExpectedAlgorithm());
-
   auto blob = LookupBlob(*info);
-  EXPECT_TRUE(blob->IsPagerBacked());
 
-  std::vector<uint8_t> data = LoadPagedBlobData(blob.get());
+  std::vector<uint8_t> data = LoadBlobData(blob.get());
   ASSERT_TRUE(info->DataEquals(&data[0], data.size()));
 
   CheckMerkleTreeContents(GetBlobMerkleMapper(blob.get()), *info);
-}
-
-TEST_P(BlobLoaderPagedTest, LargeBlobWithNonAlignedLength) {
-  size_t blob_len = (1 << 18) - 1;
-  std::unique_ptr<BlobInfo> info = AddBlob(blob_len);
-  ASSERT_EQ(setup_.Remount(options_), ZX_OK);
-  ASSERT_EQ(LookupCompression(*info), ExpectedAlgorithm());
-
-  auto blob = LookupBlob(*info);
-  EXPECT_TRUE(blob->IsPagerBacked());
-
-  std::vector<uint8_t> data = LoadPagedBlobData(blob.get());
-  ASSERT_TRUE(info->DataEquals(&data[0], data.size()));
-
-  CheckMerkleTreeContents(GetBlobMerkleMapper(blob.get()), *info);
-}
-
-TEST_P(BlobLoaderTest, MediumBlobWithRoomForMerkleTree) {
-  // In the compact layout the Merkle tree can fit perfectly into the room leftover at the end of
-  // the data.
-  ASSERT_EQ(setup_.blobfs()->Info().block_size, digest::kDefaultNodeSize);
-  size_t blob_len = (digest::kDefaultNodeSize - digest::kSha256Length) * 3;
-  std::unique_ptr<BlobInfo> info = AddBlob(blob_len);
-  ASSERT_EQ(setup_.Remount(options_), ZX_OK);
-
-  auto result = loader().LoadBlob(LookupInode(*info), nullptr);
-  ASSERT_TRUE(result.is_ok());
-
-  ASSERT_TRUE(result->data_vmo.is_valid());
-  ASSERT_GE(result->data_mapper.size(), info->size_data);
-  EXPECT_EQ(memcmp(result->data_mapper.start(), info->data.get(), info->size_data), 0);
-
-  CheckMerkleTreeContents(result->merkle, *info);
 }
 
 TEST_P(BlobLoaderTest, NullBlobWithCorruptedMerkleRootFailsToLoad) {
@@ -330,9 +234,6 @@ TEST_P(BlobLoaderTest, NullBlobWithCorruptedMerkleRootFailsToLoad) {
     TestScopedVnodeOpen open(blob);  // Blob must be open to verify.
     ASSERT_EQ(ZX_OK, blob->Verify());
   }
-
-  std::vector<uint8_t> data;
-  ASSERT_EQ(ZX_OK, LoadBlobData(blob.get(), &data));
 
   uint8_t corrupt_merkle_root[digest::kSha256Length] = "-corrupt-null-blob-merkle-root-";
   {
@@ -362,21 +263,18 @@ TEST_P(BlobLoaderTest, NullBlobWithCorruptedMerkleRootFailsToLoad) {
   Digest corrupt_digest(corrupt_merkle_root);
   strncpy(corrupt_info.path, corrupt_digest.ToString().c_str(), sizeof(info->path));
 
-  // Loading the data should report corruption.
+  // Loading the data should report corruption. This can't use LoadBlobData() because that reads via
+  // a VMO which doesn't work for 0-length blobs.
   auto corrupt_blob = LookupBlob(corrupt_info);
-  EXPECT_EQ(ZX_ERR_IO_DATA_INTEGRITY, LoadBlobData(corrupt_blob.get(), &data));
+  TestScopedVnodeOpen open(corrupt_blob);
+  char data_buf;
+  size_t num_read = 0;
+  EXPECT_EQ(ZX_ERR_IO_DATA_INTEGRITY, corrupt_blob->Read(&data_buf, 0, 0, &num_read));
 }
 
 TEST_P(BlobLoaderTest, LoadBlobWithAnInvalidNodeIndexIsAnError) {
   uint32_t invalid_node_index = kMaxNodeId - 1;
   auto result = loader().LoadBlob(invalid_node_index, nullptr);
-  ASSERT_TRUE(result.is_error());
-  EXPECT_EQ(result.error_value(), ZX_ERR_INVALID_ARGS);
-}
-
-TEST_P(BlobLoaderPagedTest, LoadBlobPagedWithAnInvalidNodeIndexIsAnError) {
-  uint32_t invalid_node_index = kMaxNodeId - 1;
-  auto result = loader().LoadBlobPaged(invalid_node_index, nullptr);
   ASSERT_TRUE(result.is_error());
   EXPECT_EQ(result.error_value(), ZX_ERR_INVALID_ARGS);
 }
@@ -393,7 +291,7 @@ TEST_P(BlobLoaderTest, LoadBlobWithACorruptNextNodeIndexIsAnError) {
   inode->header.next_node = invalid_node_index;
   inode->extent_count = 2;
 
-  auto result = loader().LoadBlobPaged(node_index, nullptr);
+  auto result = loader().LoadBlob(node_index, nullptr);
   ASSERT_TRUE(result.is_error());
   EXPECT_EQ(result.error_value(), ZX_ERR_IO_DATA_INTEGRITY);
 }
@@ -404,21 +302,14 @@ std::string GetTestParamName(const TestParamInfo<TestParamType>& param) {
          GetCompressionAlgorithmName(compression_algorithm);
 }
 
-constexpr std::array<CompressionAlgorithm, 4> kCompressionAlgorithms = {
+constexpr std::array<CompressionAlgorithm, 2> kCompressionAlgorithms = {
     CompressionAlgorithm::kUncompressed,
-    CompressionAlgorithm::kZstd,
-    CompressionAlgorithm::kZstdSeekable,
     CompressionAlgorithm::kChunked,
 };
 
 constexpr std::array<CompressionAlgorithm, 2> kPagingCompressionAlgorithms = {
     CompressionAlgorithm::kUncompressed,
     CompressionAlgorithm::kChunked,
-};
-
-constexpr std::array<BlobLayoutFormat, 2> kBlobLayoutFormats = {
-    BlobLayoutFormat::kPaddedMerkleTreeAtStart,
-    BlobLayoutFormat::kCompactMerkleTreeAtEnd,
 };
 
 INSTANTIATE_TEST_SUITE_P(OldFormat, BlobLoaderTest,
@@ -429,11 +320,6 @@ INSTANTIATE_TEST_SUITE_P(OldFormat, BlobLoaderTest,
 INSTANTIATE_TEST_SUITE_P(/*no prefix*/, BlobLoaderTest,
                          Combine(ValuesIn(kPagingCompressionAlgorithms),
                                  Values(BlobLayoutFormat::kCompactMerkleTreeAtEnd)),
-                         GetTestParamName);
-
-INSTANTIATE_TEST_SUITE_P(/*no prefix*/, BlobLoaderPagedTest,
-                         Combine(ValuesIn(kPagingCompressionAlgorithms),
-                                 ValuesIn(kBlobLayoutFormats)),
                          GetTestParamName);
 
 }  // namespace blobfs

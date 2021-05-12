@@ -80,17 +80,23 @@ void HandleFifo(const fzl::OwnedVmoMapper& compressed_mapper,
       break;
     case fuchsia_blobfs_internal::wire::CompressionAlgorithm::kLz4:
     case fuchsia_blobfs_internal::wire::CompressionAlgorithm::kZstd:
-    case fuchsia_blobfs_internal::wire::CompressionAlgorithm::kZstdSeekable:
+    case fuchsia_blobfs_internal::wire::CompressionAlgorithm::kZstdSeekable: {
+      response->status = ZX_ERR_NOT_SUPPORTED;
+      break;
+    }
     case fuchsia_blobfs_internal::wire::CompressionAlgorithm::kChunked:
       if (request->decompressed.offset != 0 || request->compressed.offset != 0) {
         bytes_decompressed = 0;
         response->status = ZX_ERR_NOT_SUPPORTED;
-      } else {
-        CompressionAlgorithm algorithm =
-            ExternalDecompressorClient::CompressionAlgorithmFidlToLocal(request->algorithm);
+      } else if (auto algorithm_or = ExternalDecompressorClient::CompressionAlgorithmFidlToLocal(
+                     request->algorithm)) {
         response->status =
             DecompressFull(decompressed_mapper, compressed_mapper, request->decompressed.size,
-                           request->compressed.size, algorithm, &bytes_decompressed);
+                           request->compressed.size, *algorithm_or, &bytes_decompressed);
+      } else {
+        // Invalid compression algorithm.
+        bytes_decompressed = 0;
+        response->status = ZX_ERR_NOT_SUPPORTED;
       }
       break;
     case fuchsia_blobfs_internal::wire::CompressionAlgorithm::kUncompressed:

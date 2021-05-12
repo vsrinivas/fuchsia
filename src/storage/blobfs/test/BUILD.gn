@@ -9,7 +9,6 @@ import("//build/test.gni")
 group("test") {
   testonly = true
   deps = [
-    ":blobfs-fuzzers",
     ":blobfs-unittest",
     ":blobfs_host($host_toolchain)",
     "integration:tests",
@@ -104,9 +103,7 @@ test("blobfs_unittest") {
     "//src/storage/blobfs:fuchsia.blobfs.internal",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//third_party/zstd:zstdseek",
     "//zircon/public/lib/cksum",
-    "//zircon/public/lib/lz4",
     "//zircon/public/lib/safemath",
     "//zircon/public/lib/sync",
     "//zircon/system/ulib/block-client:fake-device",
@@ -133,45 +130,5 @@ test("blobfs_host") {
     "//src/lib/fxl/test:gtest_main",
     "//src/storage/blobfs",
     "//third_party/googletest:gtest",
-  ]
-}
-
-fuzzer("zstd-fuzzer") {
-  sources = [ "zstd_fuzzer.cc" ]
-  deps = [
-    "//src/storage/blobfs",
-    "//third_party/zstd",
-  ]
-}
-
-fuzzer("lz4-fuzzer") {
-  sources = [ "lz4_fuzzer.cc" ]
-  deps = [
-    "//src/storage/blobfs",
-    "//zircon/public/lib/lz4",
-  ]
-}
-
-fuzzer("zstd-seekable-symmetric-fuzzer") {
-  sources = [ "zstd_seekable_symmetric_fuzzer.cc" ]
-  deps = [
-    "//src/storage/blobfs",
-    "//third_party/zstd:zstdseek",
-  ]
-}
-
-fuzzer("zstd-seekable-fuzzer") {
-  sources = [ "zstd_seekable_fuzzer.cc" ]
-  deps = [
-    "//src/storage/blobfs",
-    "//third_party/zstd:zstdseek",
-  ]
-}
-
-fuzzers_package("blobfs-fuzzers") {
-  cpp_fuzzers = [
-    ":zstd-fuzzer",
-    ":zstd-seekable-fuzzer",
-    ":zstd-seekable-symmetric-fuzzer",
   ]
 }

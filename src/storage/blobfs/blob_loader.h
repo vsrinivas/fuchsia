@@ -32,15 +32,9 @@ namespace blobfs {
 // contents as needed.
 class BlobLoader {
  public:
-  struct PagedLoadResult {
+  struct LoadResult {
     pager::UserPagerInfo pager_info;
     std::unique_ptr<BlobLayout> layout;
-    fzl::OwnedVmoMapper merkle;
-  };
-  struct UnpagedLoadResult {
-    zx::vmo data_vmo;
-    fzl::VmoMapper data_mapper;
-
     fzl::OwnedVmoMapper merkle;
   };
 
@@ -57,20 +51,6 @@ class BlobLoader {
                                        std::shared_ptr<BlobfsMetrics> metrics,
                                        bool sandbox_decompression);
 
-  // Loads the merkle tree and data for the blob with index |node_index|.
-  //
-  // |data_out| will be a VMO containing all of the data of the blob, padded up to a block size.
-  // |merkle_out| will be a VMO containing the merkle tree of the blob. For small blobs, there
-  // may be no merkle tree (i.e. the entire 'tree' is just a single hash stored inline in the
-  // inode), in which case no VMO is returned.
-  //
-  // This method verifies the following correctness properties:
-  //  - The stored merkle tree is well-formed.
-  //  - The blob's merkle root in |inode| matches the root of the merkle tree stored on-disk.
-  //  - The blob's contents match the merkle tree.
-  zx::status<UnpagedLoadResult> LoadBlob(uint32_t node_index,
-                                         const BlobCorruptionNotifier* corruption_notifier);
-
   // Loads the merkle tree for the blob referenced |inode|, and prepare a pager-backed VMO for
   // data.
   //
@@ -80,8 +60,8 @@ class BlobLoader {
   //
   // This method does *NOT* immediately verify the integrity of the blob's data, this will be
   // lazily verified by the pager as chunks of the blob are loaded.
-  zx::status<PagedLoadResult> LoadBlobPaged(uint32_t node_index,
-                                            const BlobCorruptionNotifier* corruption_notifier);
+  zx::status<LoadResult> LoadBlob(uint32_t node_index,
+                                  const BlobCorruptionNotifier* corruption_notifier);
 
  private:
   BlobLoader(TransactionManager* txn_manager, BlockIteratorProvider* block_iter_provider,
@@ -106,14 +86,6 @@ class BlobLoader {
                                    std::unique_ptr<SeekableDecompressor>* decompressor_out);
   zx_status_t LoadMerkle(uint32_t node_index, const BlobLayout& blob_layout,
                          const fzl::OwnedVmoMapper& mapper) const;
-  zx_status_t LoadData(uint32_t node_index, const BlobLayout& blob_layout, zx::vmo& vmo,
-                       fzl::VmoMapper& mapper) const;
-  zx_status_t LoadAndDecompressData(uint32_t node_index, const Inode& inode,
-                                    const BlobLayout& blob_layout, zx::vmo& vmo,
-                                    void* mapped_data) const;
-
-  // Verifies that |merkle_root| is the root hash of the null blob.
-  zx_status_t VerifyNullBlob(Digest merkle_root, const BlobCorruptionNotifier* notifier);
 
   // Reads |block_count| blocks starting at |block_offset| from the blob specified by |node_index|
   // into |vmo|.

@@ -36,7 +36,7 @@ Inode CreateInode(ByteCountType file_size, BlockCountType block_count) {
 
 Inode CreateCompressedInode(ByteCountType file_size, BlockCountType block_count) {
   Inode inode = CreateInode(file_size, block_count);
-  inode.header.flags = kBlobFlagZSTDCompressed;
+  inode.header.flags = kBlobFlagChunkCompressed;
   return inode;
 }
 

@@ -16,8 +16,6 @@ static_assert(false, "Fuchsia only header");
 #include <optional>
 
 #include <fbl/macros.h>
-#include <lz4/lz4frame.h>
-#include <zstd/zstd.h>
 
 #include "src/storage/blobfs/compression/compressor.h"
 #include "src/storage/blobfs/compression_settings.h"

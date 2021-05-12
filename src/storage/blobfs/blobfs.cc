@@ -1064,94 +1064,9 @@ void Blobfs::FsckAtEndOfTransaction() {
 }
 
 zx_status_t Blobfs::Migrate() {
-  if (zx_status_t status = MigrateToRev3(); status != ZX_OK) {
-    return status;
-  }
+  if (info_.oldest_minor_version < kBlobfsMinorVersionNoOldCompressionFormats)
+    return ZX_ERR_NOT_SUPPORTED;  // Too old to support migration.
   return MigrateToRev4();
-}
-
-zx_status_t Blobfs::MigrateToRev3() {
-  if (writability_ != Writability::Writable ||
-      write_compression_settings_.compression_algorithm != CompressionAlgorithm::kChunked ||
-      info_.oldest_minor_version != kBlobfsMinorVersionNoOldCompressionFormats - 1) {
-    return ZX_OK;
-  }
-  FX_LOGS(INFO) << "Migrating to minor version " << kBlobfsMinorVersionNoOldCompressionFormats;
-  constexpr size_t kBufferSize = 128 * 1024;
-  auto buffer = std::make_unique<uint8_t[]>(kBufferSize);
-  int migrated = 0;
-  for (uint32_t node_index = 0; node_index < info_.inode_count; ++node_index) {
-    auto inode = GetNode(node_index);
-    ZX_ASSERT_MSG(inode.is_ok(), "Failed to get node %u: %s", node_index, inode.status_string());
-    // If the blob supports paging, then it is either uncompressed or is a supported compression
-    // algorithm.
-    if (!inode->header.IsAllocated() || inode->header.IsExtentContainer() ||
-        SupportsPaging(*inode.value())) {
-      continue;
-    }
-
-    // Make a copy of the blob.
-    fbl::RefPtr<CacheNode> cache_node;
-    Digest digest(inode->merkle_root_hash);
-    if (zx_status_t status = GetCache().Lookup(digest, &cache_node); status != ZX_OK) {
-      FX_LOGS(ERROR) << "Unexpectedly not in cache: " << zx_status_get_string(status);
-      return status;
-    }
-    auto blob = fbl::RefPtr<Blob>::Downcast(std::move(cache_node));
-    fs::ScopedVnodeOpen blob_opener;
-    if (zx_status_t status = blob_opener.Open(blob); status != ZX_OK) {
-      FX_LOGS(ERROR) << "Open error: " << zx_status_get_string(status);
-      return status;
-    }
-    // blob->OpenValidating(fs::VnodeConnectionOptions(), nullptr);
-    uint64_t len = blob->SizeData();
-    FX_LOGS(INFO) << "Migrating " << node_index << ": " << digest.ToString() << " (" << len
-                  << " bytes)";
-
-    // Create and open the new blob.
-    fbl::RefPtr<Blob> new_blob = fbl::MakeRefCounted<Blob>(this, digest);
-    fs::ScopedVnodeOpen new_blob_opener;
-    if (zx_status_t status = new_blob_opener.Open(new_blob); status != ZX_OK) {
-      FX_LOGS(ERROR) << "Open error: " << zx_status_get_string(status);
-      return status;
-    }
-
-    if (zx_status_t status = new_blob->Truncate(len); status != ZX_OK) {
-      FX_LOGS(ERROR) << "Truncate error: " << zx_status_get_string(status);
-      return status;
-    }
-
-    new_blob->SetOldBlob(*blob);
-    uint64_t offset = 0;
-    while (len > 0) {
-      size_t todo = std::min<uint64_t>(len, kBufferSize);
-      if (zx_status_t status = blob->Read(buffer.get(), todo, offset, &todo); status != ZX_OK) {
-        FX_LOGS(ERROR) << "Error reading old blob: " << zx_status_get_string(status);
-        return status;
-      }
-      size_t written;
-      if (zx_status_t status = new_blob->Write(buffer.get(), todo, offset, &written);
-          status != ZX_OK) {
-        if (status == ZX_ERR_NO_SPACE) {
-          // Treat out-of-space as not fatal.
-          FX_LOGS(INFO) << "Migration aborted: out-of-space";
-          return ZX_OK;
-        }
-        FX_LOGS(ERROR) << "Error writing new blob: " << zx_status_get_string(status);
-        return status;
-      }
-      ZX_ASSERT(written == todo);  // We don't do partial writes.
-      len -= todo;
-      offset += todo;
-    }
-    ++migrated;
-  }
-  FX_LOGS(INFO) << "Migrated " << migrated << " blob(s)";
-  BlobTransaction transaction;
-  info_.oldest_minor_version = kBlobfsMinorVersionNoOldCompressionFormats;
-  WriteInfo(transaction);
-  transaction.Commit(*journal_);
-  return ZX_OK;
 }
 
 zx_status_t Blobfs::MigrateToRev4() {

@@ -16,7 +16,6 @@
 #include "src/storage/blobfs/compression/chunked.h"
 #include "src/storage/blobfs/compression/compressor.h"
 #include "src/storage/blobfs/compression/seekable_decompressor.h"
-#include "src/storage/blobfs/compression/zstd_seekable.h"
 #include "src/storage/blobfs/format.h"
 
 namespace blobfs {

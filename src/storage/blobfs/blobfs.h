@@ -288,9 +288,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   // Performs zero or more passes which each migrate blobfs from oldest_minor_version N -> N+1 by
   // performing some reparative action. See MigrateToRevN.
   zx_status_t Migrate();
-  // Migrates all blobs away from unsupported compression formats.
-  // NOP if oldest_minor_version >= kBlobfsMinorVersionNoOldCompressionFormats.
-  zx_status_t MigrateToRev3();
+
   // Repairs the Inode of the null blob (if present) to not have a zero-length extent.
   // NOP if oldest_minor_version >= kBlobfsMinorVersionHostToolHandlesNullBlobCorrectly.
   zx_status_t MigrateToRev4();

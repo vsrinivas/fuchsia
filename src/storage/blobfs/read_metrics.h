@@ -75,9 +75,6 @@ class ReadMetrics {
   ReadMetrics::PerCompressionMetrics* GetMetrics(CompressionAlgorithm algorithm);
 
   PerCompressionMetrics uncompressed_metrics_;
-  PerCompressionMetrics lz4_metrics_;
-  PerCompressionMetrics zstd_metrics_;
-  PerCompressionMetrics zstd_seekable_metrics_;
   PerCompressionMetrics chunked_metrics_;
 
   uint64_t remote_decompressions_ = 0;

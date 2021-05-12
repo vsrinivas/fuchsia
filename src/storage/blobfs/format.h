@@ -325,26 +325,19 @@ constexpr uint32_t kMaxNodeId = 0xffffffffu;
 // Both inodes and extent containers can be allocated.
 constexpr uint16_t kBlobFlagAllocated = 1 << 0;
 
-// Identifies that the on-disk storage of the blob is LZ4 compressed.
-constexpr uint16_t kBlobFlagLZ4Compressed = 1 << 1;
+// Bits 1, 3, and 4 were used for obsolete compression flags. They were set only for old internal
+// test builds and no devices were released with these flags. They can be assumed to be 0 if needed
+// for future uses.
 
 // Identifies that this node is a container for extents.
 constexpr uint16_t kBlobFlagExtentContainer = 1 << 2;
-
-// Identifies that the on-disk storage of the blob is ZSTD compressed.
-constexpr uint16_t kBlobFlagZSTDCompressed = 1 << 3;
-
-// Identifies that the on-disk storage of the blob is ZSTD-seekable compressed.
-constexpr uint16_t kBlobFlagZSTDSeekableCompressed = 1 << 4;
 
 // Identifies that the on-disk storage of the blob is chunk-compression compressed.
 constexpr uint16_t kBlobFlagChunkCompressed = 1 << 5;
 // When adding another compression flag, it must be added to kBlobFlagMaskAnyCompression below.
 
-// Bitmask of all compression flags.
-constexpr uint16_t kBlobFlagMaskAnyCompression =
-    (kBlobFlagLZ4Compressed | kBlobFlagZSTDCompressed | kBlobFlagZSTDSeekableCompressed |
-     kBlobFlagChunkCompressed);
+// Bitmask of all compression flags (this allows additional flags to be added more easily).
+constexpr uint16_t kBlobFlagMaskAnyCompression = kBlobFlagChunkCompressed;
 
 // This mask is the mask of all valid flag bits, but we should be tolerant if we encounter bits set
 // on a filesystem in case the filesystem has been touched by a future version of blobfs.

@@ -10,9 +10,6 @@ namespace blobfs {
 
 ReadMetrics::ReadMetrics(inspect::Node* read_metrics_node)
     : uncompressed_metrics_(read_metrics_node->CreateChild("uncompressed")),
-      lz4_metrics_(read_metrics_node->CreateChild("lz4")),
-      zstd_metrics_(read_metrics_node->CreateChild("zstd")),
-      zstd_seekable_metrics_(read_metrics_node->CreateChild("zstd_seekable")),
       chunked_metrics_(read_metrics_node->CreateChild("chunked")),
       remote_decompressions_node_(
           read_metrics_node->CreateUint("remote_decompressions", remote_decompressions_)) {}
@@ -28,47 +25,47 @@ ReadMetrics::PerCompressionMetrics* ReadMetrics::GetMetrics(CompressionAlgorithm
   switch (algorithm) {
     case CompressionAlgorithm::kUncompressed:
       return &uncompressed_metrics_;
-    case CompressionAlgorithm::kLz4:
-      return &lz4_metrics_;
-    case CompressionAlgorithm::kZstd:
-      return &zstd_metrics_;
     case CompressionAlgorithm::kChunked:
       return &chunked_metrics_;
-    case CompressionAlgorithm::kZstdSeekable:
-      return &zstd_seekable_metrics_;
   }
+
+  return nullptr;
 }
 
 void ReadMetrics::IncrementDiskRead(CompressionAlgorithm algorithm, uint64_t read_size,
                                     fs::Duration read_duration) {
-  auto metrics = GetMetrics(algorithm);
-  metrics->read_ticks += read_duration;
-  metrics->read_bytes += read_size;
-  metrics->read_ticks_node.Add(read_duration.get());
-  metrics->read_bytes_node.Add(read_size);
+  if (auto metrics = GetMetrics(algorithm)) {
+    metrics->read_ticks += read_duration;
+    metrics->read_bytes += read_size;
+    metrics->read_ticks_node.Add(read_duration.get());
+    metrics->read_bytes_node.Add(read_size);
+  }
 }
 
 void ReadMetrics::IncrementDecompression(CompressionAlgorithm algorithm, uint64_t decompressed_size,
                                          fs::Duration decompress_duration, bool remote) {
-  auto metrics = GetMetrics(algorithm);
-  metrics->decompress_ticks += decompress_duration;
-  metrics->decompress_bytes += decompressed_size;
-  metrics->decompress_ticks_node.Add(decompress_duration.get());
-  metrics->decompress_bytes_node.Add(decompressed_size);
-  if (remote) {
-    remote_decompressions_++;
-    remote_decompressions_node_.Add(1);
+  if (auto metrics = GetMetrics(algorithm)) {
+    metrics->decompress_ticks += decompress_duration;
+    metrics->decompress_bytes += decompressed_size;
+    metrics->decompress_ticks_node.Add(decompress_duration.get());
+    metrics->decompress_bytes_node.Add(decompressed_size);
+    if (remote) {
+      remote_decompressions_++;
+      remote_decompressions_node_.Add(1);
+    }
   }
 }
 
 ReadMetrics::PerCompressionSnapshot ReadMetrics::GetSnapshot(CompressionAlgorithm algorithm) {
-  auto metrics = GetMetrics(algorithm);
-  return PerCompressionSnapshot{
-      .read_ticks = metrics->read_ticks.get(),
-      .read_bytes = metrics->read_bytes,
-      .decompress_ticks = metrics->decompress_ticks.get(),
-      .decompress_bytes = metrics->decompress_bytes,
-  };
+  if (auto metrics = GetMetrics(algorithm)) {
+    return PerCompressionSnapshot{
+        .read_ticks = metrics->read_ticks.get(),
+        .read_bytes = metrics->read_bytes,
+        .decompress_ticks = metrics->decompress_ticks.get(),
+        .decompress_bytes = metrics->decompress_bytes,
+    };
+  }
+  return PerCompressionSnapshot();
 }
 
 }  // namespace blobfs

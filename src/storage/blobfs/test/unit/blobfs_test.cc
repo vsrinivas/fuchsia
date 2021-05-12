@@ -224,13 +224,6 @@ TEST_F(BlobfsTest, BlockIteratorByNodeIndexWithAnInvalidNodeIndexIsAnError) {
   EXPECT_EQ(block_iterator.status_value(), ZX_ERR_INVALID_ARGS);
 }
 
-TEST_F(BlobfsTest, DeprecatedCompressionAlgorithmsReturnsError) {
-  MountOptions options = {.compression_settings = {
-                              .compression_algorithm = CompressionAlgorithm::kLz4,
-                          }};
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, Remount(options));
-}
-
 using BlobfsTestWithLargeDevice =
     BlobfsTestAtRevision<blobfs::kBlobfsCurrentMinorVersion,
                          /*num_blocks=*/2560 * kBlobfsBlockSize / kBlockSize>;

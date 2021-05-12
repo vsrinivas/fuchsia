@@ -184,15 +184,12 @@ std::string GetCompressionAlgorithmName(CompressionAlgorithm compression_algorit
   switch (compression_algorithm) {
     case CompressionAlgorithm::kUncompressed:
       return "Uncompressed";
-    case CompressionAlgorithm::kLz4:
-      return "Lz4";
-    case CompressionAlgorithm::kZstd:
-      return "Zstd";
-    case CompressionAlgorithm::kZstdSeekable:
-      return "ZstdSeekable";
     case CompressionAlgorithm::kChunked:
       return "Chunked";
   }
+
+  ZX_DEBUG_ASSERT(false);
+  return "INVALID";
 }
 
 }  // namespace blobfs

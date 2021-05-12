@@ -75,7 +75,8 @@ TEST(FsckTest, TestBadBackupSuperblock) {
   ASSERT_NE(Fsck(std::move(device), MountOptions()), ZX_OK);
 }
 
-TEST(FsckTest, TestNoBackupSuperblockOnOldRevisionPassesFsck) {
+// This format is no longer supported for reading.
+TEST(FsckTest, TestNoBackupSuperblockOnOldRevisionFailsFsck) {
   auto device = std::make_unique<block_client::FakeFVMBlockDevice>(
       400, kBlobfsBlockSize, /*slice_size=*/32768, /*slice_capacity=*/500);
   ASSERT_TRUE(device);
@@ -88,7 +89,7 @@ TEST(FsckTest, TestNoBackupSuperblockOnOldRevisionPassesFsck) {
   memset(&superblock, 0xaf, sizeof(superblock));
   DeviceBlockWrite(device.get(), &superblock, sizeof(superblock), kBlobfsBlockSize);
 
-  ASSERT_EQ(Fsck(std::move(device), MountOptions{.writability = Writability::ReadOnlyDisk}), ZX_OK);
+  ASSERT_NE(Fsck(std::move(device), MountOptions{.writability = Writability::ReadOnlyDisk}), ZX_OK);
 }
 
 }  // namespace

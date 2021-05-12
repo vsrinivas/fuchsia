@@ -45,6 +45,8 @@ namespace fio = fuchsia_io;
 class BlobTest : public BlobfsTestSetup,
                  public testing::TestWithParam<std::tuple<BlobLayoutFormat, CompressionAlgorithm>> {
  public:
+  // Tests that need to test migration from a specific revision can override this method to
+  // specify an older minor revision. See also blobfs_revision_test.cc for general migration tests.
   virtual uint64_t GetOldestMinorVersion() const { return kBlobfsCurrentMinorVersion; }
 
   void SetUp() override {
@@ -73,12 +75,6 @@ class BlobTest : public BlobfsTestSetup,
     std::lock_guard lock(blob.mutex_);
     return blob.paged_vmo();
   }
-};
-
-// Return an old revsions so we can test migrating blobs.
-class BlobTestWithOldMinorVersion : public BlobTest {
- public:
-  uint64_t GetOldestMinorVersion() const override { return kBlobfsMinorVersionBackupSuperblock; }
 };
 
 namespace {
@@ -200,52 +196,6 @@ TEST_P(BlobTest, ReadingBlobZerosTail) {
   EXPECT_EQ(vmo.read(&data, PAGE_SIZE - 1, 1), ZX_OK);
   // The corrupted bit in the tail was zeroed when being read.
   EXPECT_EQ(data, 0);
-}
-
-TEST_P(BlobTestWithOldMinorVersion, ReadWriteAllCompressionFormats) {
-  auto root = OpenRoot();
-  std::unique_ptr<BlobInfo> info = GenerateRealisticBlob("", 1 << 16);
-
-  // Write the blob
-  {
-    fbl::RefPtr<fs::Vnode> file;
-    ASSERT_EQ(root->Create(info->path + 1, 0, &file), ZX_OK);
-    size_t out_actual = 0;
-    EXPECT_EQ(file->Truncate(info->size_data), ZX_OK);
-    EXPECT_EQ(file->Write(info->data.get(), info->size_data, 0, &out_actual), ZX_OK);
-    EXPECT_EQ(out_actual, info->size_data);
-  }
-
-  for (int pass = 0; pass < 2; ++pass) {
-    // Read back the blob
-    fbl::RefPtr<fs::Vnode> file;
-    ASSERT_EQ(root->Lookup(info->path + 1, &file), ZX_OK);
-
-    // File must be open to read, but closed for the remount to happen below.
-    {
-      TestScopedVnodeOpen opener(file);
-
-      size_t actual;
-      uint8_t data[info->size_data];
-      EXPECT_EQ(file->Read(&data, info->size_data, 0, &actual), ZX_OK);
-      EXPECT_EQ(info->size_data, actual);
-      EXPECT_EQ(memcmp(data, info->data.get(), info->size_data), 0);
-    }
-
-    if (pass == 1) {
-      // Check that it got migrated.
-      auto blob = fbl::RefPtr<Blob>::Downcast(file);
-      EXPECT_TRUE(blob->IsPagerBacked());
-      EXPECT_GE(blobfs()->Info().oldest_minor_version, kBlobfsMinorVersionNoOldCompressionFormats);
-    } else {
-      // Don't hold onto the file past the lifetime of the blobfs that it came from.
-      file.reset();
-      Remount();
-      root = OpenRoot();
-    }
-  }
-
-  EXPECT_EQ(Fsck(Unmount(), MountOptions()), ZX_OK);
 }
 
 TEST_P(BlobTest, WriteBlobWithSharedBlockInCompactFormat) {
@@ -584,88 +534,6 @@ TEST_P(BlobTest, WritesToArbitraryOffsetsFails) {
   ASSERT_EQ(out_actual, info->size_data - 10);
 }
 
-using BlobMigrationTest = BlobTestWithOldMinorVersion;
-
-TEST_P(BlobMigrationTest, MigrateLargeBlobSucceeds) {
-  auto root = OpenRoot();
-  std::unique_ptr<BlobInfo> info = GenerateRandomBlob("", 300 * 1024);
-
-  // Write the blob
-  {
-    fbl::RefPtr<fs::Vnode> file;
-    ASSERT_EQ(root->Create(info->path + 1, 0, &file), ZX_OK);
-    auto blob = fbl::RefPtr<Blob>::Downcast(file);
-    size_t out_actual = 0;
-    EXPECT_EQ(blob->PrepareWrite(info->size_data, /*compress=*/true), ZX_OK);
-    EXPECT_EQ(blob->Write(info->data.get(), info->size_data, 0, &out_actual), ZX_OK);
-    EXPECT_EQ(out_actual, info->size_data);
-  }
-
-  ASSERT_EQ(ZX_OK, Remount());
-  root = OpenRoot();
-
-  {
-    // Read back the blob
-    fbl::RefPtr<fs::Vnode> file;
-    ASSERT_EQ(root->Lookup(info->path + 1, &file), ZX_OK);
-    TestScopedVnodeOpen opener(file);  // Must be open to read or get the Vmo.
-
-    size_t actual;
-    auto data = std::make_unique<uint8_t[]>(info->size_data);
-    EXPECT_EQ(file->Read(data.get(), info->size_data, 0, &actual), ZX_OK);
-    EXPECT_EQ(info->size_data, actual);
-    EXPECT_EQ(memcmp(data.get(), info->data.get(), info->size_data), 0);
-
-    auto blob = fbl::RefPtr<Blob>::Downcast(std::move(file));
-    EXPECT_TRUE(blob->IsPagerBacked());
-    EXPECT_GE(blobfs()->Info().oldest_minor_version, kBlobfsMinorVersionNoOldCompressionFormats);
-  }
-
-  EXPECT_EQ(Fsck(Unmount(), MountOptions()), ZX_OK);
-}
-
-TEST_P(BlobMigrationTest, MigrateWhenNoSpaceSkipped) {
-  auto root = OpenRoot();
-  // Create a blob that takes up half the disk.
-  std::unique_ptr<BlobInfo> info =
-      GenerateRandomBlob("", kTestDeviceNumBlocks * kTestDeviceBlockSize / 2);
-
-  {
-    fbl::RefPtr<fs::Vnode> file;
-    ASSERT_EQ(root->Create(info->path + 1, 0, &file), ZX_OK);
-    auto blob = fbl::RefPtr<Blob>::Downcast(file);
-    TestScopedVnodeOpen opener(file);  // Must be open to write.
-
-    size_t out_actual = 0;
-    EXPECT_EQ(blob->PrepareWrite(info->size_data, /*compress=*/true), ZX_OK);
-    EXPECT_EQ(blob->Write(info->data.get(), info->size_data, 0, &out_actual), ZX_OK);
-    EXPECT_EQ(out_actual, info->size_data);
-  }
-
-  // Remount
-  ASSERT_EQ(ZX_OK, Remount());
-  root = OpenRoot();
-
-  {
-    // Read back the blob
-    fbl::RefPtr<fs::Vnode> file;
-    ASSERT_EQ(root->Lookup(info->path + 1, &file), ZX_OK);
-    TestScopedVnodeOpen opener(file);  // Must be open to read.
-
-    size_t actual;
-    auto data = std::make_unique<uint8_t[]>(info->size_data);
-    EXPECT_EQ(file->Read(data.get(), info->size_data, 0, &actual), ZX_OK);
-    EXPECT_EQ(info->size_data, actual);
-    EXPECT_EQ(memcmp(data.get(), info->data.get(), info->size_data), 0);
-  }
-
-  // The blob shouldn't have been migrated and the filesystem oldest minor version shouldn't have
-  // changed.
-  EXPECT_GE(blobfs()->Info().oldest_minor_version, kBlobfsMinorVersionBackupSuperblock);
-
-  EXPECT_EQ(Fsck(Unmount(), MountOptions()), ZX_OK);
-}
-
 std::string GetTestParamName(
     const ::testing::TestParamInfo<std::tuple<BlobLayoutFormat, CompressionAlgorithm>>& param) {
   const auto& [layout, algorithm] = param.param;
@@ -677,21 +545,6 @@ INSTANTIATE_TEST_SUITE_P(
     testing::Combine(testing::Values(BlobLayoutFormat::kPaddedMerkleTreeAtStart,
                                      BlobLayoutFormat::kCompactMerkleTreeAtEnd),
                      testing::Values(CompressionAlgorithm::kChunked)),
-    GetTestParamName);
-
-INSTANTIATE_TEST_SUITE_P(
-    /*no prefix*/, BlobTestWithOldMinorVersion,
-    testing::Combine(testing::Values(BlobLayoutFormat::kPaddedMerkleTreeAtStart),
-                     testing::Values(CompressionAlgorithm::kUncompressed,
-                                     CompressionAlgorithm::kLz4, CompressionAlgorithm::kZstd,
-                                     CompressionAlgorithm::kZstdSeekable,
-                                     CompressionAlgorithm::kChunked)),
-    GetTestParamName);
-
-INSTANTIATE_TEST_SUITE_P(
-    /*no prefix*/, BlobMigrationTest,
-    testing::Combine(testing::Values(BlobLayoutFormat::kPaddedMerkleTreeAtStart),
-                     testing::Values(CompressionAlgorithm::kZstd)),
     GetTestParamName);
 
 }  // namespace

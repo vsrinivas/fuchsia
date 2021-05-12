@@ -51,7 +51,6 @@ test("external_decompressor_integration") {
     "//src/storage/blobfs:fuchsia.blobfs.internal",
     "//src/storage/blobfs/test:test_utils",
     "//third_party/googletest:gtest",
-    "//third_party/zstd",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

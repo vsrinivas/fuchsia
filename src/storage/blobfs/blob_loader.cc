@@ -88,9 +88,9 @@ zx::status<BlobLoader> BlobLoader::Create(TransactionManager* txn_manager,
                            std::move(decompressor_client)));
 }
 
-zx::status<BlobLoader::UnpagedLoadResult> BlobLoader::LoadBlob(
+zx::status<BlobLoader::LoadResult> BlobLoader::LoadBlob(
     uint32_t node_index, const BlobCorruptionNotifier* corruption_notifier) {
-  UnpagedLoadResult result;
+  LoadResult result;
 
   ZX_DEBUG_ASSERT(read_mapper_.vmo().is_valid());
   auto inode = node_finder_->GetNode(node_index);
@@ -106,76 +106,11 @@ zx::status<BlobLoader::UnpagedLoadResult> BlobLoader::LoadBlob(
   // should happen only during development and in the second case there may be more corruption and
   // we want to unmount the filesystem before any more damage is done.
   ZX_ASSERT_MSG(inode->header.IsInode() && inode->header.IsAllocated(),
-                "LoadBlob failed. Inode->header.IsInode():%u inode->header.IsAllocated():%u",
-                inode->header.IsInode(), inode->header.IsAllocated());
-  ZX_ASSERT_MSG(inode->blob_size > 0, "Inode blob size should be greater than zero: %ld",
-                inode->blob_size);
-  TRACE_DURATION("blobfs", "BlobLoader::LoadBlob", "blob_size", inode->blob_size);
-
-  auto blob_layout = BlobLayout::CreateFromInode(GetBlobLayoutFormat(txn_manager_->Info()),
-                                                 *inode.value(), GetBlockSize());
-  if (blob_layout.is_error()) {
-    FX_LOGS(ERROR) << "Failed to create blob layout: " << blob_layout.status_string();
-    return blob_layout.take_error();
-  }
-
-  std::unique_ptr<BlobVerifier> verifier;
-  if (zx_status_t status = InitMerkleVerifier(node_index, *inode.value(), *blob_layout.value(),
-                                              corruption_notifier, &result.merkle, &verifier);
-      status != ZX_OK) {
-    return zx::error(status);
-  }
-
-  uint64_t file_block_aligned_size = blob_layout->FileBlockAlignedSize();
-
-  if (zx_status_t status = result.data_mapper.CreateAndMap(
-          file_block_aligned_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &result.data_vmo);
-      status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to initialize data vmo; error: " << zx_status_get_string(status);
-    return zx::error(status);
-  }
-
-  zx_status_t status =
-      inode->IsCompressed()
-          ? LoadAndDecompressData(node_index, *inode.value(), *blob_layout.value(), result.data_vmo,
-                                  result.data_mapper.start())
-          : LoadData(node_index, *blob_layout.value(), result.data_vmo, result.data_mapper);
-  if (status != ZX_OK) {
-    return zx::error(status);
-  }
-
-  if (zx_status_t status =
-          verifier->Verify(result.data_mapper.start(), inode->blob_size, file_block_aligned_size);
-      status != ZX_OK) {
-    return zx::error(status);
-  }
-
-  return zx::ok(std::move(result));
-}
-
-zx::status<BlobLoader::PagedLoadResult> BlobLoader::LoadBlobPaged(
-    uint32_t node_index, const BlobCorruptionNotifier* corruption_notifier) {
-  PagedLoadResult result;
-
-  ZX_DEBUG_ASSERT(read_mapper_.vmo().is_valid());
-  auto inode = node_finder_->GetNode(node_index);
-  if (inode.is_error()) {
-    return inode.take_error();
-  }
-
-  // LoadBlobPaged should only be called for nonempty Inodes. If this doesn't hold, one of two
-  // things happened:
-  //   - Programmer error
-  //   - Corruption of a blob's Inode
-  // In either case it is preferable to ASSERT than to return an error here, since the first case
-  // should happen only during development and in the second case there may be more corruption and
-  // we want to unmount the filesystem before any more damage is done.
-  ZX_ASSERT_MSG(inode->header.IsInode() && inode->header.IsAllocated(),
-                "LoadBlobPaged failed as inode->header.IsInode():%u inode->header.IsAllocated():%u",
+                "LoadBlob failed as inode->header.IsInode():%u inode->header.IsAllocated():%u",
                 inode->header.IsInode(), inode->header.IsAllocated());
   ZX_ASSERT_MSG(inode->blob_size > 0, "Inode blob size should be greater than zero: %lu",
                 inode->blob_size);
-  TRACE_DURATION("blobfs", "BlobLoader::LoadBlobPaged", "blob_size", inode->blob_size);
+  TRACE_DURATION("blobfs", "BlobLoader::LoadBlob", "blob_size", inode->blob_size);
 
   // Create and save the layout.
   auto blob_layout_or = BlobLayout::CreateFromInode(GetBlobLayoutFormat(txn_manager_->Info()),
@@ -257,27 +192,12 @@ zx_status_t BlobLoader::InitForDecompression(
     const BlobVerifier& verifier, std::unique_ptr<SeekableDecompressor>* decompressor_out) {
   zx::status<CompressionAlgorithm> algorithm_status = AlgorithmForInode(inode);
   if (algorithm_status.is_error()) {
-    FX_LOGS(ERROR) << "Cannot decode blob due to multiple compression flags.";
+    FX_LOGS(ERROR) << "Cannot decode blob due to invalid compression flags.";
     return algorithm_status.status_value();
   }
-  CompressionAlgorithm algorithm = algorithm_status.value();
 
-  switch (algorithm) {
-    case CompressionAlgorithm::kUncompressed:
-      return ZX_OK;
-    case CompressionAlgorithm::kChunked:
-      break;
-    case CompressionAlgorithm::kLz4:
-    case CompressionAlgorithm::kZstd:
-    case CompressionAlgorithm::kZstdSeekable:
-      // Callers should have guarded against calling this code path with an algorithm that does not
-      // support paging.
-      FX_LOGS(ERROR) << "Algorithm " << CompressionAlgorithmToString(algorithm)
-                     << " does not support paging; this path should not be called.\n"
-                        "This is most likely programmer error.";
-      ZX_DEBUG_ASSERT(false);
-      return ZX_ERR_NOT_SUPPORTED;
-  }
+  if (algorithm_status.value() == CompressionAlgorithm::kUncompressed)
+    return ZX_OK;
 
   TRACE_DURATION("blobfs", "BlobLoader::InitDecompressor");
 
@@ -334,98 +254,6 @@ zx_status_t BlobLoader::LoadMerkle(uint32_t node_index, const BlobLayout& blob_l
   }
 
   metrics_->IncrementMerkleDiskRead(bytes_read.value(), ticker.End());
-  return ZX_OK;
-}
-
-zx_status_t BlobLoader::LoadData(uint32_t node_index, const BlobLayout& blob_layout, zx::vmo& vmo,
-                                 fzl::VmoMapper& mapper) const {
-  TRACE_DURATION("blobfs", "BlobLoader::LoadData");
-
-  fs::Ticker ticker(metrics_->Collecting());
-  auto bytes_read =
-      LoadBlocks(node_index, blob_layout.DataBlockOffset(), blob_layout.DataBlockCount(), vmo);
-  if (bytes_read.is_error()) {
-    return bytes_read.error_value();
-  }
-  metrics_->unpaged_read_metrics().IncrementDiskRead(CompressionAlgorithm::kUncompressed,
-                                                     bytes_read.value(), ticker.End());
-
-  ZeroMerkleTreeWithinDataVmo(mapper.start(), mapper.size(), blob_layout);
-  return ZX_OK;
-}
-
-zx_status_t BlobLoader::LoadAndDecompressData(uint32_t node_index, const Inode& inode,
-                                              const BlobLayout& blob_layout, zx::vmo& vmo,
-                                              void* mapped_data) const {
-  zx::status<CompressionAlgorithm> algorithm_or = AlgorithmForInode(inode);
-  if (algorithm_or.is_error()) {
-    FX_LOGS(ERROR) << "Blob has no known compression format";
-    return algorithm_or.status_value();
-  }
-  CompressionAlgorithm algorithm = algorithm_or.value();
-  ZX_DEBUG_ASSERT(algorithm != CompressionAlgorithm::kUncompressed);
-
-  TRACE_DURATION("blobfs", "BlobLoader::LoadAndDecompressData", "compressed_size",
-                 blob_layout.DataSizeUpperBound(), "blob_size", inode.blob_size);
-
-  auto decommit_used = fit::defer([this, length = blob_layout.DataSizeUpperBound()]() {
-    read_mapper_.vmo().op_range(ZX_VMO_OP_DECOMMIT, 0, fbl::round_up(length, kBlobfsBlockSize),
-                                nullptr, 0);
-  });
-  fs::Ticker read_ticker(metrics_->Collecting());
-  auto bytes_read = LoadBlocks(node_index, blob_layout.DataBlockOffset(),
-                               blob_layout.DataBlockCount(), read_mapper_.vmo());
-  if (bytes_read.is_error()) {
-    return bytes_read.error_value();
-  }
-  metrics_->unpaged_read_metrics().IncrementDiskRead(algorithm, bytes_read.value(),
-                                                     read_ticker.End());
-
-  ZeroMerkleTreeWithinDataVmo(read_mapper_.start(), read_mapper_.size(), blob_layout);
-
-  fs::Ticker ticker(metrics_->Collecting());
-
-  // Decompress into the target buffer.
-  size_t target_size = inode.blob_size;
-  zx_status_t status;
-  if (decompressor_client_) {
-    ZX_DEBUG_ASSERT(sandbox_vmo_.is_valid());
-    auto decommit_sandbox = fit::defer([this, length = target_size]() {
-      sandbox_vmo_.op_range(ZX_VMO_OP_DECOMMIT, 0, fbl::round_up(length, ZX_PAGE_SIZE), nullptr, 0);
-    });
-    ExternalDecompressor decompressor(decompressor_client_.get(), algorithm);
-    status = decompressor.Decompress(target_size, blob_layout.DataSizeUpperBound());
-    if (status == ZX_OK) {
-      // Consider breaking this up into chunked reads and decommits to limit memory usage.
-      zx_status_t read_status = sandbox_vmo_.read(mapped_data, 0, target_size);
-      if (read_status != ZX_OK) {
-        FX_LOGS(ERROR) << "Failed to transfer data out of the sandbox vmo: "
-                       << zx_status_get_string(read_status);
-        return read_status;
-      }
-    }
-  } else {
-    std::unique_ptr<Decompressor> decompressor;
-    status = Decompressor::Create(algorithm, &decompressor);
-    if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Failed to create decompressor: " << zx_status_get_string(status);
-      return status;
-    }
-    status = decompressor->Decompress(mapped_data, &target_size, read_mapper_.start(),
-                                      blob_layout.DataSizeUpperBound());
-  }
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to decompress data: " << zx_status_get_string(status);
-    return status;
-  } else if (target_size != inode.blob_size) {
-    FX_LOGS(ERROR) << "Failed to fully decompress blob (" << target_size << " of "
-                   << inode.blob_size << " expected)";
-    return ZX_ERR_IO_DATA_INTEGRITY;
-  }
-
-  metrics_->unpaged_read_metrics().IncrementDecompression(algorithm, inode.blob_size, ticker.End(),
-                                                          decompressor_client_ != nullptr);
-
   return ZX_OK;
 }
 
@@ -492,15 +320,5 @@ void BlobLoader::ZeroMerkleTreeWithinDataVmo(void* mapped_data, size_t mapped_da
 }
 
 uint32_t BlobLoader::GetBlockSize() const { return txn_manager_->Info().block_size; }
-
-zx_status_t BlobLoader::VerifyNullBlob(Digest merkle_root, const BlobCorruptionNotifier* notifier) {
-  std::unique_ptr<BlobVerifier> verifier;
-  if (zx_status_t status =
-          BlobVerifier::CreateWithoutTree(std::move(merkle_root), metrics_, 0, notifier, &verifier);
-      status != ZX_OK) {
-    return status;
-  }
-  return verifier->Verify(nullptr, 0, 0);
-}
 
 }  // namespace blobfs
