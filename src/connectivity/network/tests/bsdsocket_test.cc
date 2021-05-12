@@ -1636,10 +1636,9 @@ class HangupTest : public ::testing::TestWithParam<hangupParams> {};
 TEST_P(HangupTest, DuringConnect) {
   auto const& [closeTarget, hangupMethod] = GetParam();
 
-  fbl::unique_fd client, listener;
-  ASSERT_TRUE(client = fbl::unique_fd(socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)))
+  fbl::unique_fd listener;
+  ASSERT_TRUE(listener = fbl::unique_fd(socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)))
       << strerror(errno);
-  ASSERT_TRUE(listener = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
 
   struct sockaddr_in addr_in = {
       .sin_family = AF_INET,
@@ -1656,27 +1655,110 @@ TEST_P(HangupTest, DuringConnect) {
   }
   ASSERT_EQ(listen(listener.get(), 0), 0) << strerror(errno);
 
-  // Connect asynchronously and immediately hang up.
-  int ret1 = connect(client.get(), addr, addr_len);
-#if !defined(__Fuchsia__)
-  // Linux connect may succeed if the handshake completes before the system call returns.
-  if (ret1 != 0)
-#endif
+  fbl::unique_fd established_client;
+  ASSERT_TRUE(established_client = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0)))
+      << strerror(errno);
+  ASSERT_EQ(connect(established_client.get(), addr, addr_len), 0) << strerror(errno);
+
+  // Ensure that the accept queue has the completed connection.
   {
-    ASSERT_EQ(ret1, -1);
-    ASSERT_EQ(errno, EINPROGRESS) << strerror(errno);
+    pollfd pfd = {
+        .fd = listener.get(),
+        .events = POLLIN,
+    };
+    int n = poll(&pfd, 1, kTimeout);
+    ASSERT_GE(n, 0) << strerror(errno);
+    ASSERT_EQ(n, 1);
+    ASSERT_EQ(pfd.revents, POLLIN);
   }
+
+  auto ExpectLastError = [](const fbl::unique_fd& fd, int expected) {
+    int err;
+    socklen_t optlen = sizeof(err);
+    ASSERT_EQ(getsockopt(fd.get(), SOL_SOCKET, SO_ERROR, &err, &optlen), 0) << strerror(errno);
+    ASSERT_EQ(optlen, sizeof(err));
+    EXPECT_EQ(err, expected) << " err=" << strerror(err) << " expected=" << strerror(expected);
+  };
+
+  // Connect asynchronously since this one will end up in SYN-SENT.
+  fbl::unique_fd connecting_client;
+  ASSERT_TRUE(connecting_client = fbl::unique_fd(socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)))
+      << strerror(errno);
+  EXPECT_EQ(connect(connecting_client.get(), addr, addr_len), -1);
+  EXPECT_EQ(errno, EINPROGRESS) << strerror(errno);
 
   switch (closeTarget) {
     case CloseTarget::CLIENT:
       switch (hangupMethod) {
-        case HangupMethod::kClose:
-          ASSERT_EQ(close(client.release()), 0) << strerror(errno);
-          // Since we're closing the client, there's nothing more to do.
-          return;
-        case HangupMethod::kShutdown:
-          ASSERT_EQ(shutdown(client.get(), SHUT_RD), 0) << strerror(errno);
+        case HangupMethod::kClose: {
+          ASSERT_EQ(close(established_client.release()), 0) << strerror(errno);
+          // Closing the established client isn't enough; the connection must be accepted before the
+          // connecting client can make progress.
+          EXPECT_EQ(connect(connecting_client.get(), addr, addr_len), -1) << strerror(errno);
+          EXPECT_EQ(errno, EALREADY) << strerror(errno);
+
+          ASSERT_EQ(close(connecting_client.release()), 0) << strerror(errno);
+
+          // Established connection is still in the accept queue, even though it's closed.
+          fbl::unique_fd accepted;
+          EXPECT_TRUE(accepted = fbl::unique_fd(accept(listener.get(), nullptr, nullptr)))
+              << strerror(errno);
+
+          // Incomplete connection never made it into the queue.
+          EXPECT_FALSE(accepted = fbl::unique_fd(accept(listener.get(), nullptr, nullptr)));
+          EXPECT_EQ(errno, EAGAIN) << strerror(errno);
+
           break;
+        }
+        case HangupMethod::kShutdown: {
+          ASSERT_EQ(shutdown(connecting_client.get(), SHUT_RD), 0) << strerror(errno);
+
+          {
+            pollfd pfd = {
+                .fd = connecting_client.get(),
+                .events = POLLIN,
+            };
+            int n = poll(&pfd, 1, kTimeout);
+            EXPECT_GE(n, 0) << strerror(errno);
+            EXPECT_EQ(n, 1);
+#if !defined(__Fuchsia__)
+            // TODO(https://fxbug.dev/76353): Fuchsia doesn't distinguish between
+            // connected-and-shutdown and unconnected-and-shutdown.
+            EXPECT_EQ(pfd.revents, POLLHUP | POLLERR);
+#else
+            EXPECT_EQ(pfd.revents, POLLIN);
+#endif
+          }
+
+          EXPECT_EQ(connect(connecting_client.get(), addr, addr_len), -1);
+#if !defined(__Fuchsia__)
+          EXPECT_EQ(errno, EINPROGRESS) << strerror(errno);
+#else
+          // TODO(https://fxbug.dev/61594): Fuchsia doesn't allow never-connected socket reuse.
+          EXPECT_EQ(errno, EALREADY) << strerror(errno);
+#endif
+          // connect result was consumed by the connect call.
+          ASSERT_NO_FATAL_FAILURE(ExpectLastError(connecting_client, 0));
+
+          ASSERT_EQ(shutdown(established_client.get(), SHUT_RD), 0) << strerror(errno);
+
+          {
+            pollfd pfd = {
+                .fd = established_client.get(),
+                .events = POLLIN,
+            };
+            int n = poll(&pfd, 1, kTimeout);
+            EXPECT_GE(n, 0) << strerror(errno);
+            EXPECT_EQ(n, 1);
+            EXPECT_EQ(pfd.revents, POLLIN);
+          }
+
+          EXPECT_EQ(connect(established_client.get(), addr, addr_len), -1);
+          EXPECT_EQ(errno, EISCONN) << strerror(errno);
+          ASSERT_NO_FATAL_FAILURE(ExpectLastError(established_client, 0));
+
+          break;
+        }
       }
       break;
     case CloseTarget::SERVER: {
@@ -1688,85 +1770,64 @@ TEST_P(HangupTest, DuringConnect) {
           ASSERT_EQ(shutdown(listener.get(), SHUT_RD), 0) << strerror(errno);
           break;
       }
-      break;
-    }
-  }
 
-  // Wait for the connection to close.
-  {
-    struct pollfd pfd = {
-        .fd = client.get(),
-        .events = POLLIN,
-    };
-
-    int n = poll(&pfd, 1, kTimeout);
-    ASSERT_GE(n, 0) << strerror(errno);
-    ASSERT_EQ(n, 1);
-
-    switch (closeTarget) {
-      case CloseTarget::CLIENT:
-        ASSERT_EQ(pfd.revents, POLLIN);
-        break;
-      case CloseTarget::SERVER:
-        ASSERT_EQ(pfd.revents, POLLIN | POLLERR | POLLHUP);
-        break;
-    }
-  }
-
-  // Retrieve the error; this sets errno.
-  int ret2 = connect(client.get(), addr, addr_len);
+      const struct {
+        const fbl::unique_fd& fd;
+        const int connect_result;
+        const int last_error;
+      } expectations[] = {
+          {
+              .fd = established_client,
 #if defined(__Fuchsia__)
-  if (closeTarget == CloseTarget::CLIENT) {
-    // TODO(https://fxbug.dev/76353): This sometimes fails and sometimes doesn't. See below.
-  } else
-#endif
-  {
-    EXPECT_EQ(ret2, -1);
-  }
-
-  // Retrieve the error again, this does not mutate errno unless it fails.
-  int err;
-  socklen_t optlen = sizeof(err);
-  ASSERT_EQ(getsockopt(client.get(), SOL_SOCKET, SO_ERROR, &err, &optlen), 0) << strerror(errno);
-  ASSERT_EQ(optlen, sizeof(err));
-
-  // NB: ret1 is allowed to be success or EINPROGRESS on Linux. I was never able to see the success
-  // case locally, so EXPECT the EINPROGRESS value as a hint in case this flakes in CQ.
-  EXPECT_EQ(ret1, -1);
-  switch (closeTarget) {
-    case CloseTarget::CLIENT:
-#if defined(__Fuchsia__)
-      if (ret2 != 0) {
-        // ret2 was retrieved before the handshake completed. poll returned early.
-        EXPECT_EQ(errno, EALREADY) << strerror(errno);
-      } else {
-        // ret2 was successful, so errno wasn't modified.
-        //
-        // TODO(https://fxbug.dev/76353): Linux somehow returns EISCONN in this case, even though
-        // the first successful connection result was never returned to us. We should match that
-        // behavior, but more work is required to understand where the successful result was dropped
-        // (likely a side effect of the shutdown call).
-        EXPECT_EQ(errno, EINPROGRESS) << strerror(errno);
-      }
+              // We're doing the wrong thing here. Broadly what seems to be happening:
+              // - closing the listener causes a RST to be sent
+              // - when RST is received, the endpoint moves to an error state
+              // - loop{Read,Write} observes the error and stores it in the terminal error
+              // - tcpip.Endpoint.Connect returns ErrConnectionAborted
+              //   - the terminal error is returned
+              //
+              // Linux seems to track connectedness separately from the TCP state machine state;
+              // when an endpoint becomes connected, it never becomes unconnected with respect to
+              // the behavior of `connect`.
+              //
+              // Since the call to tcpip.Endpoint.Connect does the wrong thing, this is likely a
+              // gVisor bug.
+              .connect_result = ECONNRESET,
+              .last_error = 0,
 #else
-      EXPECT_EQ(errno, EISCONN) << strerror(errno);
+              .connect_result = EISCONN,
+              .last_error = ECONNRESET,
 #endif
-      EXPECT_EQ(err, 0) << strerror(err);
-      break;
-    case CloseTarget::SERVER:
-      switch (errno) {
-        case ECONNRESET:
-          // Listener was closed during or after handshake.
-          break;
-        case ECONNREFUSED:
-          // Listener was closed before handshake.
-          break;
-        default:
-          ADD_FAILURE() << strerror(errno);
+          },
+          {
+              .fd = connecting_client,
+              .connect_result = ECONNREFUSED,
+              .last_error = 0,
+          },
+      };
+
+      for (size_t i = 0; i < std::size(expectations); i++) {
+        SCOPED_TRACE("i=" + std::to_string(i));
+
+        const auto& expected = expectations[i];
+        pollfd pfd = {
+            .fd = expected.fd.get(),
+            .events = POLLIN,
+        };
+        int n = poll(&pfd, 1, kTimeout);
+        EXPECT_GE(n, 0) << strerror(errno);
+        EXPECT_EQ(n, 1);
+        EXPECT_EQ(pfd.revents, POLLIN | POLLHUP | POLLERR);
+
+        EXPECT_EQ(connect(expected.fd.get(), addr, addr_len), -1);
+        EXPECT_EQ(errno, expected.connect_result)
+            << " errno=" << strerror(errno) << " expected=" << strerror(expected.connect_result);
+
+        ASSERT_NO_FATAL_FAILURE(ExpectLastError(expected.fd, expected.last_error));
       }
-      // Error should have been consumed by the second connect call.
-      EXPECT_EQ(err, 0) << strerror(err);
+
       break;
+    }
   }
 }
 
@@ -3319,7 +3380,6 @@ void TestListenWhileConnect(const IOMethod& ioMethod, void (*stopListen)(fbl::un
       << strerror(errno);
 
   // Ensure that the accept queue has the completed connection.
-  constexpr int kTimeout = 10000;
   {
     pollfd pfd = {
         .fd = listener.get(),
@@ -3334,20 +3394,8 @@ void TestListenWhileConnect(const IOMethod& ioMethod, void (*stopListen)(fbl::un
   fbl::unique_fd connecting_client;
   ASSERT_TRUE(connecting_client = fbl::unique_fd(socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)))
       << strerror(errno);
-  int ret = connect(connecting_client.get(), reinterpret_cast<sockaddr*>(&addr), sizeof(addr));
-  // Linux manpage for connect, for EINPROGRESS error:
-  // "The socket is nonblocking and the connection cannot be completed immediately."
-  // Which means that the non-blocking connect may succeed (ie. ret == 0) in the unlikely case
-  // where the connection does complete immediately before the system call returns.
-  //
-  // On Fuchsia, a non-blocking connect would always fail with EINPROGRESS.
-#if !defined(__Fuchsia__)
-  if (ret != 0)
-#endif
-  {
-    EXPECT_EQ(ret, -1);
-    EXPECT_EQ(errno, EINPROGRESS) << strerror(errno);
-  }
+  EXPECT_EQ(connect(connecting_client.get(), reinterpret_cast<sockaddr*>(&addr), sizeof(addr)), -1);
+  EXPECT_EQ(errno, EINPROGRESS) << strerror(errno);
 
   ASSERT_NO_FATAL_FAILURE(stopListen(listener));
 
