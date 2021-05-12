@@ -590,9 +590,8 @@ std::unique_ptr<raw::Using> Parser::ParseUsing(raw::AttributeList attributes, AS
       return Fail();
   }
 
-  return std::make_unique<raw::Using>(
-      scope.GetSourceElement(), std::make_unique<Token>(decl_start_token), std::move(attributes),
-      std::move(using_path), std::move(maybe_alias));
+  return std::make_unique<raw::Using>(scope.GetSourceElement(), std::move(attributes),
+                                      std::move(using_path), std::move(maybe_alias));
 }
 
 std::unique_ptr<raw::TypeConstructorOld> Parser::ParseTypeConstructorOld() {
@@ -1589,9 +1588,17 @@ std::unique_ptr<raw::UnionDeclaration> Parser::ParseUnionDeclaration(
     return Fail(ErrMustHaveNonReservedMember);
 
   const auto resourceness = modifiers.resourceness.value_or(types::Resourceness::kValue);
-  if (resourceness == types::Resourceness::kResource) {
+  if (modifiers.resourceness_token && modifiers.strictness_token) {
+    // If both modifiers are present, the decl_start_token is whichever occurred
+    // earlier in the file.
+    if (modifiers.resourceness_token->span() < modifiers.strictness_token->span()) {
+      decl_start_token = modifiers.resourceness_token.value();
+    } else {
+      decl_start_token = modifiers.strictness_token.value();
+    }
+  } else if (modifiers.resourceness_token) {
     decl_start_token = modifiers.resourceness_token.value();
-  } else if (modifiers.strictness != std::nullopt) {
+  } else if (modifiers.strictness_token) {
     decl_start_token = modifiers.strictness_token.value();
   }
 
@@ -2062,7 +2069,6 @@ std::unique_ptr<raw::Layout> Parser::ParseLayout(
 // we assume that it is a named layout with constraints ("type B"). If a parse
 // failure occurs, std::monostate is returned.
 raw::ConstraintOrSubtype Parser::ParseTokenAfterColon() {
-  ASTScope scope(this);
   std::unique_ptr<raw::TypeConstructorNew> type_ctor;
   std::unique_ptr<raw::TypeConstraints> constraints;
   ConsumeToken(OfKind(Token::Kind::kColon));
@@ -2070,6 +2076,7 @@ raw::ConstraintOrSubtype Parser::ParseTokenAfterColon() {
     Fail();
     return std::monostate();
   }
+  ASTScope scope(this);
 
   // If the token after the colon is the opener to a constraints list, we know
   // for sure that the identifier before the colon must be a

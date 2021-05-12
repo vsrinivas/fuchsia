@@ -636,7 +636,6 @@ alias quux = vector<server_end:P>:4;
   ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
 }
 
-// TODO(fxbug.dev/76282): fix constraint ordering
 TEST(ConverterTests, ParameterBecomesConstraint) {
   std::string old_version = R"FIDL(
 library example;
@@ -653,8 +652,8 @@ library example;
 
 protocol MyProtocol {};
 type Foo = resource struct {
-  b client_end:<optional,MyProtocol>;
-  d server_end:<optional,MyProtocol>;
+  b client_end:<MyProtocol,optional>;
+  d server_end:<MyProtocol,optional>;
 };
 )FIDL";
 
@@ -676,7 +675,7 @@ library example;
 
 using zx;
 
-alias foo = zx.handle:<optional,VMO>;
+alias foo = zx.handle:<VMO,optional>;
 )FIDL";
 
   ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
@@ -697,7 +696,7 @@ library example;
 
 using zx;
 
-alias foo = zx.handle:<optional,VMO,zx.rights.DUPLICATE | zx.rights.TRANSFER>;
+alias foo = zx.handle:<VMO,zx.rights.DUPLICATE | zx.rights.TRANSFER,optional>;
 )FIDL";
 
   fidl::ExperimentalFlags flags;
@@ -717,7 +716,7 @@ alias foo = vector<vector<array<uint8>:5>?>:9?;
   std::string new_version = R"FIDL(
 library example;
 
-alias foo = vector<vector<array<uint8,5>>:optional>:<optional,9>;
+alias foo = vector<vector<array<uint8,5>>:optional>:<9,optional>;
 )FIDL";
 
   ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
@@ -1290,9 +1289,9 @@ protocol P {};
 
 type S = resource struct {
   p client_end:P;
-  po client_end:<optional,P>;
+  po client_end:<P,optional>;
   r server_end:P;
-  ro server_end:<optional,P>;
+  ro server_end:<P,optional>;
 };
 )FIDL";
 
@@ -1319,9 +1318,9 @@ library example;
 type S = struct {
   v1 vector<uint8>;
   v2 vector<uint8>:optional;
-  v3 vector<uint8>:<optional,16>;
+  v3 vector<uint8>:<16,optional>;
   v4 vector<vector<uint8>:optional>:16;
-  v5 vector<vector<vector<uint8>:<optional,16>>>:optional;
+  v5 vector<vector<vector<uint8>:<16,optional>>>:optional;
 };
 )FIDL";
 
@@ -1429,7 +1428,7 @@ library example;
 using zx;
 
 type S = resource struct {
-  a array<zx.handle:<optional,PORT,zx.rights.DUPLICATE | zx.rights.TRANSFER>,5>;
+  a array<zx.handle:<PORT,zx.rights.DUPLICATE | zx.rights.TRANSFER,optional>,5>;
 };
 )FIDL";
 
@@ -1616,7 +1615,7 @@ a int32
 // 26
 // 27
 // 28
-b vector<zx.handle:<optional,VMO,zx.rights.DUPLICATE>>:<optional,16>
+b vector<zx.handle:<VMO,zx.rights.DUPLICATE,optional>>:<16,optional>
 // 29
 ;
 // 30
@@ -1737,7 +1736,7 @@ library example;
 type T = table {
   1: v1 vector<uint8>;
   2: v2 vector<array<uint8,4>>:16;
-  3: v3 vector<vector<array<uint8,4>>:<optional,16>>:32;
+  3: v3 vector<vector<array<uint8,4>>:<16,optional>>:32;
 };
 )FIDL";
 
@@ -1952,7 +1951,7 @@ library example;
 
 protocol P {};
 
-type U = resource strict union {
+type U = strict resource union {
   1: p client_end:P;
   2: r server_end:P;
 };
@@ -1979,7 +1978,7 @@ library example;
 type U = strict union {
   1: v1 vector<uint8>;
   2: v2 vector<array<uint8,4>>:16;
-  3: v3 vector<vector<array<uint8,4>>:<optional,16>>:32;
+  3: v3 vector<vector<array<uint8,4>>:<16,optional>>:32;
 };
 )FIDL";
 
@@ -2003,7 +2002,7 @@ library example;
 
 using zx;
 
-type U = resource strict union {
+type U = strict resource union {
   1: h zx.handle:VMO;
 };
 )FIDL";
@@ -2018,7 +2017,7 @@ library example;
 
 using zx;
 
-resource flexible union U {
+flexible resource union U {
   1: zx.handle:VMO h;
 };
 )FIDL";
@@ -2028,7 +2027,7 @@ library example;
 
 using zx;
 
-type U = resource flexible union {
+type U = flexible resource union {
   1: h zx.handle:VMO;
 };
 )FIDL";
@@ -2043,7 +2042,7 @@ library example;
 
 using zx;
 
-resource strict union U {
+strict resource union U {
   1: zx.handle:VMO h;
 };
 )FIDL";
@@ -2053,7 +2052,7 @@ library example;
 
 using zx;
 
-type U = resource strict union {
+type U = strict resource union {
   1: h zx.handle:VMO;
 };
 )FIDL";
@@ -2078,7 +2077,7 @@ library example;
 
 using zx;
 
-type U = resource strict union {
+type U = strict resource union {
   1: h zx.handle:<CHANNEL,zx.rights.DUPLICATE | zx.rights.TRANSFER>;
 };
 )FIDL";
@@ -2230,11 +2229,11 @@ type Foo = resource struct {
   b2 string:optional;
   v1 vector<E>:16;
   v2 vector<T>:16;
-  v3 vector<U>:<optional,16>;
+  v3 vector<U>:<16,optional>;
   p1 client_end:P;
-  p2 client_end:<optional,P>;
+  p2 client_end:<P,optional>;
   r1 server_end:P;
-  r2 server_end:<optional,P>;
+  r2 server_end:<P,optional>;
   h1 zx.handle:optional;
   h2 handle;
 };
@@ -2320,7 +2319,7 @@ type Foo = resource struct {
   b2 handle:optional;
   v1 vector<int8>:16;
   v2 vector<int16>:16;
-  v3 vector<uint8>:<optional,16>;
+  v3 vector<uint8>:<16,optional>;
   p1 client_end:uint32;
   h1 int64;
 };
@@ -2430,7 +2429,7 @@ type Foo = resource struct {
   p1 P;
   p2 P:optional;
   r1 server_end:P;
-  r2 server_end:<optional,P>;
+  r2 server_end:<P,optional>;
   h1 H;
   h2 I;
 };
@@ -2566,7 +2565,7 @@ type Foo = resource struct {
   p1 P;
   p2 P:optional;
   r1 server_end:P;
-  r2 server_end:<optional,P>;
+  r2 server_end:<P,optional>;
   h1 H;
   h2 I;
 };
@@ -2646,9 +2645,9 @@ type Foo = resource struct {
   v2 vector<dep1.T>:16;
   v3 dep1.V:16;
   p1 client_end:dep1.P;
-  p2 client_end:<optional,dep1.P>;
+  p2 client_end:<dep1.P,optional>;
   r1 server_end:dep1.P;
-  r2 server_end:<optional,dep1.P>;
+  r2 server_end:<dep1.P,optional>;
   h1 dep1.H;
   h2 dep1.I;
 };
@@ -2750,7 +2749,7 @@ type Foo = resource struct {
   p1 dep2.P;
   p2 dep2.P:optional;
   r1 server_end:dep2.P;
-  r2 server_end:<optional,dep2.P>;
+  r2 server_end:<dep2.P,optional>;
   h1 dep2.H;
   h2 dep2.I;
 };
@@ -2853,7 +2852,7 @@ type Foo = resource struct {
   p1 d2.P;
   p2 d2.P:optional;
   r1 server_end:d2.P;
-  r2 server_end:<optional,d2.P>;
+  r2 server_end:<d2.P,optional>;
   h1 d2.H;
   h2 d2.I;
 };
@@ -2963,7 +2962,7 @@ type Foo = resource struct {
   p1 PP;
   p2 PP:optional;
   r1 server_end:PP;
-  r2 server_end:<optional,PP>;
+  r2 server_end:<PP,optional>;
   h1 HH;
   h2 II;
 };

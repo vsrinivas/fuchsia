@@ -99,11 +99,18 @@ std::string element_type_str(ElementType type) { return kElementTypeNames[type];
 constexpr std::string_view kMarkerLeft = "«";
 constexpr std::string_view kMarkerRight = "»";
 
+// Used to delineate the decl_start_tokens that have been temporarily added to
+// the raw AST for fidlconv.
+constexpr std::string_view kDeclStartTokenLeft = "⸢";
+constexpr std::string_view kDeclStartTokenRight = "⸥";
+
 class SourceSpanVisitor : public fidl::raw::TreeVisitor {
  public:
   SourceSpanVisitor(ElementType test_case_type) : test_case_type_(test_case_type) {}
 
   const std::multiset<std::string>& spans() { return spans_; }
+
+  const std::multiset<std::string>& decl_start_tokens() { return decl_start_tokens_; }
 
   void OnIdentifier(std::unique_ptr<fidl::raw::Identifier> const& element) override {
     CheckSpanOfType(ElementType::Identifier, *element);
@@ -174,6 +181,7 @@ class SourceSpanVisitor : public fidl::raw::TreeVisitor {
   }
   void OnBitsDeclaration(std::unique_ptr<fidl::raw::BitsDeclaration> const& element) override {
     CheckSpanOfType(ElementType::BitsDeclaration, *element);
+    CheckDeclStartToken(ElementType::BitsDeclaration, *element->decl_start_token);
     TreeVisitor::OnBitsDeclaration(element);
   }
   void OnEnumMember(std::unique_ptr<fidl::raw::EnumMember> const& element) override {
@@ -182,6 +190,7 @@ class SourceSpanVisitor : public fidl::raw::TreeVisitor {
   }
   void OnEnumDeclaration(std::unique_ptr<fidl::raw::EnumDeclaration> const& element) override {
     CheckSpanOfType(ElementType::EnumDeclaration, *element);
+    CheckDeclStartToken(ElementType::EnumDeclaration, *element->decl_start_token);
     TreeVisitor::OnEnumDeclaration(element);
   }
   void OnParameter(std::unique_ptr<fidl::raw::Parameter> const& element) override {
@@ -229,6 +238,7 @@ class SourceSpanVisitor : public fidl::raw::TreeVisitor {
   }
   void OnStructDeclaration(std::unique_ptr<fidl::raw::StructDeclaration> const& element) override {
     CheckSpanOfType(ElementType::StructDeclaration, *element);
+    CheckDeclStartToken(ElementType::StructDeclaration, *element->decl_start_token);
     TreeVisitor::OnStructDeclaration(element);
   }
   void OnTableMember(std::unique_ptr<fidl::raw::TableMember> const& element) override {
@@ -237,6 +247,7 @@ class SourceSpanVisitor : public fidl::raw::TreeVisitor {
   }
   void OnTableDeclaration(std::unique_ptr<fidl::raw::TableDeclaration> const& element) override {
     CheckSpanOfType(ElementType::TableDeclaration, *element);
+    CheckDeclStartToken(ElementType::TableDeclaration, *element->decl_start_token);
     TreeVisitor::OnTableDeclaration(element);
   }
   void OnUnionMember(std::unique_ptr<fidl::raw::UnionMember> const& element) override {
@@ -245,6 +256,7 @@ class SourceSpanVisitor : public fidl::raw::TreeVisitor {
   }
   void OnUnionDeclaration(std::unique_ptr<fidl::raw::UnionDeclaration> const& element) override {
     CheckSpanOfType(ElementType::UnionDeclaration, *element);
+    CheckDeclStartToken(ElementType::UnionDeclaration, *element->decl_start_token);
     TreeVisitor::OnUnionDeclaration(element);
   }
 
@@ -335,12 +347,24 @@ class SourceSpanVisitor : public fidl::raw::TreeVisitor {
     spans_.insert(std::string(element.span().data()));
   }
 
+  // TODO(fxbug.dev/70247): when fidlconv is removed, make sure to remove all of
+  //  the "decl_start_token" stuff as well, as that is the only tool that uses
+  //  it.
+  void CheckDeclStartToken(const ElementType type, const fidl::Token& token) {
+    if (type != test_case_type_) {
+      return;
+    }
+    decl_start_tokens_.insert(std::string(token.span().data()));
+  }
+
   ElementType test_case_type_;
   std::multiset<std::string> spans_;
+  std::multiset<std::string> decl_start_tokens_;
 };
 
 std::string replace_markers(const std::string& source, std::string_view left_replace,
-                            std::string_view right_replace) {
+                            std::string_view right_replace, const std::string_view marker_left,
+                            const std::string_view marker_right) {
   std::string result(source);
 
   const auto replace_all = [&](std::string_view pattern, std::string_view replace_with) {
@@ -351,18 +375,22 @@ std::string replace_markers(const std::string& source, std::string_view left_rep
     }
   };
 
-  replace_all(kMarkerLeft, left_replace);
-  replace_all(kMarkerRight, right_replace);
+  replace_all(marker_left, left_replace);
+  replace_all(marker_right, right_replace);
   return result;
 }
 
-std::string remove_markers(const std::string& source) { return replace_markers(source, "", ""); }
+std::string remove_markers(const std::string& source) {
+  auto removed_span_markers = replace_markers(source, "", "", kMarkerLeft, kMarkerRight);
+  return replace_markers(removed_span_markers, "", "", kDeclStartTokenLeft, kDeclStartTokenRight);
+}
 
 // Extracts marked source spans from a given source string.
-// If source spans are incorrectly marked (missing or extra markers), returns an
-// empty set; otherwise, returns a multiset of expected spans.
-std::multiset<std::string> extract_expected_spans(const std::string& source,
-                                                  std::vector<std::string>* errors) {
+// If source spans are incorrectly marked (missing or extra markers), returns
+// std::nullopt; otherwise, returns a multiset of expected spans.
+std::optional<std::multiset<std::string>> extract_expected_spans(
+    const std::string& source, std::vector<std::string>* errors, const std::string_view marker_left,
+    const std::string_view marker_right) {
   std::stack<size_t> stack;
   std::multiset<std::string> spans;
 
@@ -371,18 +399,17 @@ std::multiset<std::string> extract_expected_spans(const std::string& source,
   };
 
   for (size_t i = 0; i < source.length();) {
-    if (match(i, kMarkerLeft)) {
-      i += kMarkerLeft.length();
+    if (match(i, marker_left)) {
+      i += marker_left.length();
       stack.push(i);
-    } else if (match(i, kMarkerRight)) {
+    } else if (match(i, marker_right)) {
       if (stack.empty()) {
         std::stringstream error_msg;
-        error_msg << "unexpected closing marker '" << kMarkerRight << "' at position " << i
+        error_msg << "unexpected closing marker '" << marker_right << "' at position " << i
                   << " in source string";
         errors->push_back(error_msg.str());
         // Return an empty set if errors
-        spans.clear();
-        break;
+        return std::nullopt;
       }
 
       const std::string span = remove_markers(source.substr(stack.top(),  // index of left marker
@@ -390,7 +417,7 @@ std::multiset<std::string> extract_expected_spans(const std::string& source,
       );
       stack.pop();
       spans.insert(span);
-      i += kMarkerRight.length();
+      i += marker_right.length();
     } else {
       i += 1;
     }
@@ -398,10 +425,10 @@ std::multiset<std::string> extract_expected_spans(const std::string& source,
 
   if (!stack.empty()) {
     std::stringstream error_msg;
-    error_msg << "expected closing marker '" << kMarkerRight << "'";
+    error_msg << "expected closing marker '" << marker_right << "'";
     errors->push_back(error_msg.str());
     // Return an empty set if errors
-    spans.clear();
+    return std::nullopt;
   }
 
   return spans;
@@ -472,13 +499,21 @@ const uint16 two_fifty_seven = «one | two_fifty_six»;
 «const uint32 C_BINARY_L = 0B101010111100110111101111»;
       )FIDL"}},
     {ElementType::EnumDeclaration,
-     {R"FIDL(library example; «enum TestEnum { A = 1; B = 2; }»;)FIDL"}},
+     {
+         R"FIDL(library example; «⸢enum⸥ TestEnum { A = 1; B = 2; }»;)FIDL",
+         R"FIDL(library example; «[attr] ⸢strict⸥ enum TestEnum { A = 1; B = 2; }»;)FIDL",
+         R"FIDL(library example; «⸢flexible⸥ enum TestEnum { A = 1; B = 2; }»;)FIDL",
+     }},
     {ElementType::EnumMember,
      {
          R"FIDL(library x; enum y { «[attr] A = identifier»; };)FIDL",
      }},
     {ElementType::BitsDeclaration,
-     {R"FIDL(library example; «bits TestBits { A = 1; B = 2; }»;)FIDL"}},
+     {
+         R"FIDL(library example; «⸢bits⸥ TestBits { A = 1; B = 2; }»;)FIDL",
+         R"FIDL(library example; «⸢strict⸥ bits TestBits { A = 1; B = 2; }»;)FIDL",
+         R"FIDL(library example; «[attr] ⸢flexible⸥ bits TestBits { A = 1; B = 2; }»;)FIDL",
+     }},
     {ElementType::BitsMember,
      {
          R"FIDL(library x; bits y { «A = 0x1»; «B = 0x2»; };)FIDL",
@@ -555,7 +590,9 @@ const uint16 two_fifty_seven = «one | two_fifty_six»;
      }},
     {ElementType::StructDeclaration,
      {
-         R"FIDL(library x; «struct X { bool y; [attr] int32 z = 2; }»;)FIDL",
+         R"FIDL(library x; «⸢struct⸥ X { bool y; [attr] int32 z = 2; }»;)FIDL",
+         R"FIDL(library x; «⸢resource⸥ struct X { bool y; [attr] int32 z = 2; }»;)FIDL",
+         R"FIDL(library x; «[attr] ⸢resource⸥ struct X { bool y; [attr] int32 z = 2; }»;)FIDL",
      }},
     {ElementType::StructMember,
      {
@@ -563,10 +600,16 @@ const uint16 two_fifty_seven = «one | two_fifty_six»;
      }},
     {ElementType::TableDeclaration,
      {
-         R"FIDL(library x; «[attr] table X {
+         R"FIDL(library x; «[attr] ⸢resource⸥ table X {
           1: bool y;
           2: reserved;
           [attr] 3: int32 z;
+      }»;)FIDL",
+         R"FIDL(library x; «⸢resource⸥ table X {
+          1: bool y;
+      }»;)FIDL",
+         R"FIDL(library x; «⸢table⸥ X {
+          1: bool y;
       }»;)FIDL",
      }},
     {ElementType::TableMember,
@@ -579,11 +622,26 @@ const uint16 two_fifty_seven = «one | two_fifty_six»;
      }},
     {ElementType::UnionDeclaration,
      {
-         R"FIDL(library x; «[attr] union X {
+         R"FIDL(library x; «[attr] ⸢union⸥ X {
           1: int64 intval;
           2: reserved;
           [attr] 3: float64 floatval;
           4: string:MAX_STRING_SIZE stringval;
+      }»;)FIDL",
+         R"FIDL(library x; «[attr] ⸢strict⸥ union X {
+          1: int64 intval;
+      }»;)FIDL",
+         R"FIDL(library x; «⸢flexible⸥ union X {
+          1: int64 intval;
+      }»;)FIDL",
+         R"FIDL(library x; «⸢resource⸥ union X {
+          1: int64 intval;
+      }»;)FIDL",
+         R"FIDL(library x; «⸢flexible⸥ resource union X {
+          1: int64 intval;
+      }»;)FIDL",
+         R"FIDL(library x; «[attr] ⸢resource⸥ flexible union X {
+          1: int64 intval;
       }»;)FIDL",
      }},
     {ElementType::UnionMember,
@@ -692,10 +750,13 @@ const std::vector<TestCase> new_syntax_test_cases = {
           type B = «bits {
             A = 1;
           }»;
-          type S = «struct {
+          type E = «strict enum {
+            A = 1;
+          }»;
+          type S = «resource struct {
             intval int64;
           }»;
-          type U = «union {
+          type U = «flexible resource union {
             1: intval int64;
           }»:optional;
          )FIDL",
@@ -744,7 +805,7 @@ const std::vector<TestCase> new_syntax_test_cases = {
          R"FIDL(library x; type y = «string:100»;)FIDL",
          R"FIDL(library x; type y = «string:<100,optional>»;)FIDL",
          R"FIDL(library x;
-          type e = «enum : «uint32» {
+          type e = «flexible enum : «uint32» {
             A = 1;
           }»;
          )FIDL",
@@ -798,7 +859,9 @@ void RunParseTests(const std::vector<TestCase>& cases, const std::string& insert
       // Insert the specified left/right padding.
       auto marked_source =
           replace_markers(unpadded_source, insert_left_padding + kMarkerLeft.data(),
-                          kMarkerRight.data() + insert_right_padding);
+                          kMarkerRight.data() + insert_right_padding, kMarkerLeft, kMarkerRight);
+      auto source_with_decl_token_markers_removed =
+          replace_markers(marked_source, "", "", kDeclStartTokenLeft, kDeclStartTokenRight);
 
       // Parse the source with markers removed
       fidl::ExperimentalFlags experimental_flags;
@@ -813,42 +876,65 @@ void RunParseTests(const std::vector<TestCase>& cases, const std::string& insert
         break;
       }
 
-      // Get the expected spans from the marked source
-      std::multiset<std::string> expected_spans = extract_expected_spans(marked_source, &errors);
+      // Get the expected decl_start_tokens from the marked source
+      auto expected_decl_start_tokens_result =
+          extract_expected_spans(marked_source, &errors, kDeclStartTokenLeft, kDeclStartTokenRight);
       // Returns an empty set when there are errors
-      if (expected_spans.empty()) {
+      if (!expected_decl_start_tokens_result) {
         break;
       }
+      auto expected_decl_start_tokens = expected_decl_start_tokens_result.value();
+
+      // Get the expected spans from the marked source
+      auto expected_spans_result = extract_expected_spans(source_with_decl_token_markers_removed,
+                                                          &errors, kMarkerLeft, kMarkerRight);
+      // Returns an empty set when there are errors
+      if (!expected_spans_result) {
+        break;
+      }
+      auto expected_spans = expected_spans_result.value();
 
       // Get the actual spans by walking the AST
       SourceSpanVisitor visitor(test_case.type);
       visitor.OnFile(ast);
       std::multiset<std::string> actual_spans = visitor.spans();
+      std::multiset<std::string> actual_decl_start_tokens = visitor.decl_start_tokens();
 
-      // Report errors where the checker found unexpected spans
-      // (spans in actual but not expected)
-      std::multiset<std::string> actual_minus_expected;
-      std::set_difference(actual_spans.begin(), actual_spans.end(), expected_spans.begin(),
-                          expected_spans.end(),
-                          std::inserter(actual_minus_expected, actual_minus_expected.begin()));
-      for (const auto& span : actual_minus_expected) {
-        std::stringstream error_msg;
-        error_msg << "unexpected occurrence of type " << element_type_str(test_case.type) << ": "
-                  << kMarkerLeft << span << kMarkerRight;
-        errors.push_back(error_msg.str());
-      }
+      // Repeat the actual vs expected comparison twice - once for the spans,
+      // and then again for the decl_start_tokens.
+      auto expecteds =
+          std::vector<std::multiset<std::string>>({expected_spans, expected_decl_start_tokens});
+      auto actuals =
+          std::vector<std::multiset<std::string>>({actual_spans, actual_decl_start_tokens});
+      auto left_markers = std::vector<std::string_view>({kMarkerLeft, kDeclStartTokenLeft});
+      auto right_markers = std::vector<std::string_view>({kMarkerRight, kDeclStartTokenRight});
+      for (size_t i = 0; i < expecteds.size(); ++i) {
+        // Report errors where the checker found unexpected spans
+        // (spans in actual but not expected)
+        std::multiset<std::string> actual_minus_expected;
+        std::set_difference(actuals[i].begin(), actuals[i].end(), expecteds[i].begin(),
+                            expecteds[i].end(),
+                            std::inserter(actual_minus_expected, actual_minus_expected.begin()));
+        for (const auto& span : actual_minus_expected) {
+          std::stringstream error_msg;
+          error_msg << "unexpected occurrence of type " << element_type_str(test_case.type) << ": "
+                    << left_markers[i] << span << right_markers[i];
+          errors.push_back(error_msg.str());
+        }
 
-      // Report errors if the checker failed to find expected spans
-      // (spans in expected but not actual)
-      std::multiset<std::string> expected_minus_actual;
-      std::set_difference(expected_spans.begin(), expected_spans.end(), actual_spans.begin(),
-                          actual_spans.end(),
-                          std::inserter(expected_minus_actual, expected_minus_actual.begin()));
-      for (const auto& span : expected_minus_actual) {
-        std::stringstream error_msg;
-        error_msg << "expected (but didn't find) span of type " << element_type_str(test_case.type)
-                  << ": " << kMarkerLeft << span << kMarkerRight;
-        errors.push_back(error_msg.str());
+        // Report errors if the checker failed to find expected spans
+        // (spans in expected but not actual)
+        std::multiset<std::string> expected_minus_actual;
+        std::set_difference(expecteds[i].begin(), expecteds[i].end(), actuals[i].begin(),
+                            actuals[i].end(),
+                            std::inserter(expected_minus_actual, expected_minus_actual.begin()));
+        for (const auto& span : expected_minus_actual) {
+          std::stringstream error_msg;
+          error_msg << "expected (but didn't find) " << (i == 0 ? "span" : "decl_start_token")
+                    << " of type " << element_type_str(test_case.type) << ": " << left_markers[i]
+                    << span << right_markers[i];
+          errors.push_back(error_msg.str());
+        }
       }
     }
 

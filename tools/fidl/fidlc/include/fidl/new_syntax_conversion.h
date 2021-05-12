@@ -223,8 +223,14 @@ class FlexibleTypeConversion : public MemberedDeclarationConversion {
   std::optional<types::Strictness> strictness_;
 
  protected:
+  // There is a small inconsistency: converting back to the old syntax always
+  // orders resourceness after strictness, even if the original declaration was
+  // in the reverse order.  In other words, for old syntax printing, `resource
+  // flexible union` gets reprinted as `flexible resource union`. This only
+  // occurs for `union`, as it is the only declaration that can carry both
+  // modifiers.  This oversight is okay for the purposes of fidlconv.
   std::string get_modifiers(fidl::utils::Syntax syntax) override {
-    std::string modifiers = MemberedDeclarationConversion::get_modifiers(syntax);
+    std::string modifiers;
     if (syntax == fidl::utils::Syntax::kNew) {
       modifiers += ((strictness_.value_or(types::Strictness::kStrict) == types::Strictness::kStrict)
                         ? "strict "
@@ -236,7 +242,7 @@ class FlexibleTypeConversion : public MemberedDeclarationConversion {
         modifiers += "flexible ";
       }
     }
-    return modifiers;
+    return modifiers + MemberedDeclarationConversion::get_modifiers(syntax);
   }
 };
 

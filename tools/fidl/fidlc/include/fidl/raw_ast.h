@@ -451,18 +451,15 @@ class AliasDeclaration final : public SourceElement {
 
 class Using final : public SourceElement {
  public:
-  Using(SourceElement const& element, std::unique_ptr<Token> decl_start_token,
-        AttributeList attributes, std::unique_ptr<CompoundIdentifier> using_path,
-        std::unique_ptr<Identifier> maybe_alias)
+  Using(SourceElement const& element, AttributeList attributes,
+        std::unique_ptr<CompoundIdentifier> using_path, std::unique_ptr<Identifier> maybe_alias)
       : SourceElement(element),
-        decl_start_token(std::move(decl_start_token)),
         attributes(std::move(attributes)),
         using_path(std::move(using_path)),
         maybe_alias(std::move(maybe_alias)) {}
 
   void Accept(TreeVisitor* visitor) const;
 
-  std::unique_ptr<Token> decl_start_token;
   AttributeList attributes;
   std::unique_ptr<CompoundIdentifier> using_path;
   std::unique_ptr<Identifier> maybe_alias;

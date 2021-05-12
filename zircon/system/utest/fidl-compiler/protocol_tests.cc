@@ -626,56 +626,6 @@ type Foo = resource struct {
 }
 
 TEST(ProtocolTests, GoodTypedChannels) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-  TestLibrary library(R"FIDL(
-library example;
-
-protocol MyProtocol {};
-
-type Foo = resource struct {
-  a client_end:MyProtocol;
-  b client_end:<MyProtocol, optional>;
-  c server_end:MyProtocol;
-  d server_end:<MyProtocol, optional>;
-};
-)FIDL",
-                      experimental_flags);
-  ASSERT_COMPILED(library);
-
-  auto container = library.LookupStruct("Foo");
-  ASSERT_NOT_NULL(container);
-  ASSERT_EQ(container->members.size(), 4);
-
-  size_t i = 0;
-
-  auto a_type_base = GetType(container->members[i++].type_ctor);
-  ASSERT_EQ(a_type_base->kind, fidl::flat::Type::Kind::kTransportSide);
-  const auto* a_type = static_cast<const fidl::flat::TransportSideType*>(a_type_base);
-  EXPECT_EQ(a_type->end, fidl::flat::TransportSide::kClient);
-  EXPECT_EQ(a_type->nullability, fidl::types::Nullability::kNonnullable);
-
-  auto b_type_base = GetType(container->members[i++].type_ctor);
-  ASSERT_EQ(b_type_base->kind, fidl::flat::Type::Kind::kTransportSide);
-  const auto* b_type = static_cast<const fidl::flat::TransportSideType*>(b_type_base);
-  EXPECT_EQ(a_type->end, fidl::flat::TransportSide::kClient);
-  EXPECT_EQ(b_type->nullability, fidl::types::Nullability::kNullable);
-
-  auto c_type_base = GetType(container->members[i++].type_ctor);
-  ASSERT_EQ(c_type_base->kind, fidl::flat::Type::Kind::kTransportSide);
-  const auto* c_type = static_cast<const fidl::flat::TransportSideType*>(c_type_base);
-  EXPECT_EQ(c_type->end, fidl::flat::TransportSide::kServer);
-  EXPECT_EQ(c_type->nullability, fidl::types::Nullability::kNonnullable);
-
-  auto d_type_base = GetType(container->members[i++].type_ctor);
-  ASSERT_EQ(d_type_base->kind, fidl::flat::Type::Kind::kTransportSide);
-  const auto* d_type = static_cast<const fidl::flat::TransportSideType*>(d_type_base);
-  EXPECT_EQ(d_type->end, fidl::flat::TransportSide::kServer);
-  EXPECT_EQ(d_type->nullability, fidl::types::Nullability::kNullable);
-}
-
-// TODO(fxbug.dev/76282): Convert this correctly and merge this with GoodTypedChannels
-TEST(ProtocolTests, GoodTypedChannelsOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -688,7 +638,7 @@ resource struct Foo {
   request<MyProtocol>? d;
 };
 )FIDL");
-  ASSERT_COMPILED(library);
+  ASSERT_COMPILED_AND_CONVERT(library);
 
   auto container = library.LookupStruct("Foo");
   ASSERT_NOT_NULL(container);

@@ -74,14 +74,12 @@ std::string TypeConversion::Write(fidl::utils::Syntax syntax) {
   std::vector<std::string> constraints;
   std::string id = type_ctor_->identifier->copy_to_str();
 
-  // Nullability is the first constraint.
+  // Special case: nullable types whose underlying type resolves to "struct"
+  // need to be wrapped in "box<...>" instead of setting ":optional."
   if (type_ctor_->nullability == types::Nullability::kNullable) {
-    // Special case: nullable types whose underlying type resolves to "struct"
-    // need to be wrapped in "box<...>" instead of setting ":optional."
     if (underlying_type_.kind() == UnderlyingType::Kind::kStruct) {
       return prefix() + "box<" + id + ">";
     }
-    constraints.emplace_back("optional");
   }
 
   // Certain wrapped types require special handling.
@@ -136,6 +134,9 @@ std::string TypeConversion::Write(fidl::utils::Syntax syntax) {
   }
   if (type_ctor_->handle_rights != nullptr) {
     constraints.emplace_back(type_ctor_->handle_rights->copy_to_str());
+  }
+  if (type_ctor_->nullability == types::Nullability::kNullable) {
+    constraints.emplace_back("optional");
   }
 
   // Build and append the constraints list.
