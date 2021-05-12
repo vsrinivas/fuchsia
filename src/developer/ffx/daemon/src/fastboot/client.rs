@@ -75,7 +75,7 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
     }
 
     async fn prepare_device(&self, listener: &RebootListenerProxy) -> Result<()> {
-        match self.target.get_connection_state().await {
+        match self.target.get_connection_state() {
             ConnectionState::Fastboot(_) => Ok(()),
             _ => {
                 listener.on_reboot()?;
@@ -91,7 +91,7 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
                         e == TargetEvent::Rediscovered
                     })
                 ) {
-                    Ok(_) => match self.target.get_connection_state().await {
+                    Ok(_) => match self.target.get_connection_state() {
                         ConnectionState::Fastboot(_) => Ok(()),
                         _ => bail!("Could not reboot device to fastboot - state does not match"),
                     },

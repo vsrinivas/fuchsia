@@ -99,7 +99,7 @@ impl DaemonEventHandler {
         );
         tc.merge_insert(Target::from_target_info(t.clone())).then(|target| {
             async move {
-                let nodename = target.nodename().await;
+                let nodename = target.nodename();
 
                 let t_clone = target.clone();
                 let autoconnect_fut = async move {
@@ -133,7 +133,7 @@ impl DaemonEventHandler {
     }
 
     async fn handle_overnet_peer(&self, node_id: u64, tc: &TargetCollection) {
-        let rcs = match RcsConnection::new(&mut NodeId { id: node_id }).await {
+        let rcs = match RcsConnection::new(&mut NodeId { id: node_id }) {
             Ok(rcs) => rcs,
             Err(e) => {
                 log::error!("Target from Overnet {} failed to connect to RCS: {:?}", node_id, e);
@@ -149,7 +149,7 @@ impl DaemonEventHandler {
             }
         };
 
-        log::trace!("Target from Overnet {} is {}", node_id, target.nodename_str().await);
+        log::trace!("Target from Overnet {} is {}", node_id, target.nodename_str());
         let target = tc.merge_insert(target).await;
         target.run_logger().await;
     }
@@ -208,7 +208,6 @@ impl DaemonServiceProvider for Daemon {
             .context("waiting for RCS activation")?;
         let rcs = target
             .rcs()
-            .await
             .ok_or(anyhow!("rcs disconnected after event fired"))
             .context("getting rcs instance")?;
         let (server, client) = fidl::Channel::create().context("creating zx channel")?;
@@ -257,10 +256,10 @@ impl EventHandler<DaemonEvent> for DaemonEventHandler {
 }
 
 impl Daemon {
-    pub async fn new() -> Daemon {
+    pub fn new() -> Daemon {
         let target_collection = Arc::new(TargetCollection::new());
         let event_queue = events::Queue::new(&target_collection);
-        target_collection.set_event_queue(event_queue.clone()).await;
+        target_collection.set_event_queue(event_queue.clone());
 
         #[cfg(not(test))]
         let manual_targets = manual_targets::Config::default();
@@ -341,7 +340,7 @@ impl Daemon {
 
         let target = Target::new_with_addr_entries(Option::<String>::None, Some(tae).into_iter());
         if addr.port() != 0 {
-            target.set_ssh_port(Some(addr.port())).await;
+            target.set_ssh_port(Some(addr.port()));
         }
 
         let target = self.target_collection.merge_insert(target).await;
@@ -442,11 +441,10 @@ impl Daemon {
                             "" => self
                                 .target_collection
                                 .targets()
-                                .await
                                 .drain(..)
                                 .map(|t| {
                                     async move {
-                                        if t.is_connected().await {
+                                        if t.is_connected() {
                                             Some(t.to_fidl_target().await)
                                         } else {
                                             None
@@ -455,7 +453,7 @@ impl Daemon {
                                     .boxed_local()
                                 })
                                 .collect(),
-                            _ => match self.target_collection.get_connected(value).await {
+                            _ => match self.target_collection.get_connected(value) {
                                 Some(t) => {
                                     vec![async move { Some(t.to_fidl_target().await) }.boxed_local()]
                                 }
@@ -478,8 +476,8 @@ impl Daemon {
                         return Ok(());
                     }
                 };
-                if matches!(target.get_connection_state().await, ConnectionState::Fastboot(_)) {
-                    let nodename = target.nodename().await.unwrap_or("<No Nodename>".to_string());
+                if matches!(target.get_connection_state(), ConnectionState::Fastboot(_)) {
+                    let nodename = target.nodename().unwrap_or("<No Nodename>".to_string());
                     log::warn!("Attempting to connect to RCS on a fastboot target: {}", nodename);
                     responder
                         .send(&mut Err(DaemonError::TargetInFastboot))
@@ -499,7 +497,7 @@ impl Daemon {
                         return Ok(());
                     }
                 }
-                let mut rcs = match target.rcs().await {
+                let mut rcs = match target.rcs() {
                     Some(r) => r,
                     None => {
                         log::warn!("rcs dropped after event fired");
@@ -576,7 +574,7 @@ impl Daemon {
                     let poll_duration = std::time::Duration::from_millis(15);
                     loop {
                         if let Some(addr_info) = match self.get_target(target.clone()).await {
-                            Ok(t) => t.ssh_address_info().await,
+                            Ok(t) => t.ssh_address_info(),
                             Err(DaemonError::TargetAmbiguous) => {
                                 return Err(DaemonError::TargetAmbiguous)
                             }
@@ -608,10 +606,10 @@ impl Daemon {
                 responder.send(&mut Ok(())).context("error sending response")?;
             }
             DaemonRequest::RemoveTarget { target_id, responder } => {
-                let target = self.target_collection.get(target_id.clone()).await;
+                let target = self.target_collection.get(target_id.clone());
                 if let Some(target) = target {
-                    let ssh_port = target.ssh_port().await;
-                    for addr in target.manual_addrs().await {
+                    let ssh_port = target.ssh_port();
+                    for addr in target.manual_addrs() {
                         let mut sockaddr = SocketAddr::from(addr);
                         ssh_port.map(|p| sockaddr.set_port(p));
                         let _ = self.manual_targets.remove(format!("{}", sockaddr)).await.map_err(
@@ -621,7 +619,7 @@ impl Daemon {
                         );
                     }
                 }
-                let result = self.target_collection.remove_target(target_id.clone()).await;
+                let result = self.target_collection.remove_target(target_id.clone());
                 responder.send(&mut Ok(result)).context("error sending response")?;
             }
             DaemonRequest::GetHash { responder } => {
@@ -845,15 +843,14 @@ mod test {
 
     impl TargetControl {
         pub async fn send_mdns_discovery_event(&mut self, t: Target) {
-            let nodename =
-                t.nodename().await.expect("Should not send mDns discovery for unnamed node.");
+            let nodename = t.nodename().expect("Should not send mDns discovery for unnamed node.");
 
             let nodename_clone = nodename.clone();
 
             self.event_queue
                 .push(DaemonEvent::WireTraffic(WireTrafficType::Mdns(TargetInfo {
                     nodename: Some(nodename.clone()),
-                    addresses: t.addrs().await.iter().cloned().collect(),
+                    addresses: t.addrs().iter().cloned().collect(),
                     ..Default::default()
                 })))
                 .await
@@ -869,12 +866,12 @@ mod test {
                 .await
                 .unwrap();
 
-            let target = self.tc.get(nodename).await.unwrap();
+            let target = self.tc.get(nodename).unwrap();
             target.events.wait_for(None, |e| e == TargetEvent::RcsActivated).await.unwrap();
         }
 
         pub async fn send_fastboot_discovery_event(&mut self, t: Target) {
-            let this_serial = t.serial().await.expect("fastboot target must have serial.");
+            let this_serial = t.serial().expect("fastboot target must have serial.");
             self.event_queue
                 .push(DaemonEvent::WireTraffic(WireTrafficType::Fastboot(TargetInfo {
                     serial: Some(this_serial.clone()),
@@ -945,7 +942,7 @@ mod test {
     }
 
     async fn spawn_test_daemon() -> (DaemonProxy, Daemon, Task<Result<()>>) {
-        let d = Daemon::new().await;
+        let d = Daemon::new();
 
         let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
 
@@ -958,7 +955,7 @@ mod test {
     async fn spawn_daemon_server_with_target_ctrl_for_fastboot(
         stream: DaemonRequestStream,
     ) -> TargetControl {
-        let d = Daemon::new().await;
+        let d = Daemon::new();
         d.event_queue
             .add_handler(TestHookFakeFastboot { tc: Arc::downgrade(&d.target_collection) })
             .await;
@@ -976,7 +973,7 @@ mod test {
     }
 
     async fn spawn_daemon_server_with_target_ctrl(stream: DaemonRequestStream) -> TargetControl {
-        let d = Daemon::new().await;
+        let d = Daemon::new();
         d.event_queue
             .add_handler(TestHookFakeRcs { tc: Arc::downgrade(&d.target_collection) })
             .await;
@@ -1178,13 +1175,13 @@ mod test {
         let (proxy, daemon, _task) = spawn_test_daemon().await;
 
         let target = Target::new_autoconnected("foobar").await;
-        target.addrs_insert(TargetAddr::new("[fe80::1%1]:0").unwrap()).await;
-        let addr_info = target.ssh_address_info().await.unwrap();
+        target.addrs_insert(TargetAddr::new("[fe80::1%1]:0").unwrap());
+        let addr_info = target.ssh_address_info().unwrap();
 
         daemon.target_collection.merge_insert(target).await;
 
-        assert_eq!(daemon.target_collection.targets().await.len(), 1);
-        assert!(daemon.target_collection.get("foobar").await.is_some());
+        assert_eq!(daemon.target_collection.targets().len(), 1);
+        assert!(daemon.target_collection.get("foobar").is_some());
 
         let r = proxy.get_ssh_address(Some("foobar"), std::i64::MAX).await.unwrap();
         assert_eq!(r, Ok(addr_info));
@@ -1198,16 +1195,16 @@ mod test {
         let (proxy, daemon, _task) = spawn_test_daemon().await;
 
         let target = Target::new_autoconnected("foobar").await;
-        target.addrs_insert(TargetAddr::new("[fe80::1%1]:0").unwrap()).await;
+        target.addrs_insert(TargetAddr::new("[fe80::1%1]:0").unwrap());
         daemon.target_collection.merge_insert(target).await;
 
         let target = Target::new_autoconnected("whoistarget").await;
-        target.addrs_insert(TargetAddr::new("[fe80::2%1]:0").unwrap()).await;
+        target.addrs_insert(TargetAddr::new("[fe80::2%1]:0").unwrap());
         daemon.target_collection.merge_insert(target).await;
 
-        assert_eq!(daemon.target_collection.targets().await.len(), 2);
-        assert!(daemon.target_collection.get("foobar").await.is_some());
-        assert!(daemon.target_collection.get("whoistarget").await.is_some());
+        assert_eq!(daemon.target_collection.targets().len(), 2);
+        assert!(daemon.target_collection.get("foobar").is_some());
+        assert!(daemon.target_collection.get("whoistarget").is_some());
 
         let r = proxy.get_ssh_address(None, std::i64::MAX).await.unwrap();
         assert_eq!(r, Err(DaemonError::TargetAmbiguous));
@@ -1242,7 +1239,7 @@ mod test {
         };
         assert!(!handler
             .on_event(DaemonEvent::WireTraffic(WireTrafficType::Mdns(TargetInfo {
-                nodename: Some(t.nodename().await.expect("mdns target should always have a name.")),
+                nodename: Some(t.nodename().expect("mdns target should always have a name.")),
                 ..Default::default()
             })))
             .await
@@ -1276,7 +1273,7 @@ mod test {
         };
         assert!(!handler
             .on_event(DaemonEvent::WireTraffic(WireTrafficType::Mdns(TargetInfo {
-                nodename: Some(t.nodename().await.expect("Handling Mdns traffic for unnamed node")),
+                nodename: Some(t.nodename().expect("Handling Mdns traffic for unnamed node")),
                 ..Default::default()
             })))
             .await
@@ -1311,7 +1308,7 @@ mod test {
         assert_eq!(target.addresses.as_ref().unwrap().len(), 1);
         assert_eq!(target.addresses.unwrap()[0], info);
 
-        let addrs = ctrl.tc.targets().await.iter().next().unwrap().manual_addrs().await;
+        let addrs = ctrl.tc.targets().iter().next().unwrap().manual_addrs();
         assert_eq!(addrs[0], TargetAddr::from(info));
     }
 
@@ -1330,36 +1327,36 @@ mod test {
         });
         daemon_proxy.add_target(&mut info).await.unwrap().unwrap();
 
-        let addrs = ctrl.tc.targets().await.iter().next().unwrap().manual_addrs().await;
+        let addrs = ctrl.tc.targets().iter().next().unwrap().manual_addrs();
         assert_eq!(addrs[0], TargetAddr::from(info));
-        let port = ctrl.tc.targets().await.iter().next().unwrap().ssh_port().await;
+        let port = ctrl.tc.targets().iter().next().unwrap().ssh_port();
         assert_eq!(port, Some(8022));
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_get_target_empty() {
-        let d = Daemon::new().await;
+        let d = Daemon::new();
         let nodename = "where-is-my-hasenpfeffer";
         let t = Target::new_autoconnected(nodename).await;
         d.target_collection.merge_insert(t.clone()).await;
-        assert_eq!(nodename, d.get_target(None).await.unwrap().nodename().await.unwrap());
+        assert_eq!(nodename, d.get_target(None).await.unwrap().nodename().unwrap());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_get_target_query() {
-        let d = Daemon::new().await;
+        let d = Daemon::new();
         let nodename = "where-is-my-hasenpfeffer";
         let t = Target::new_autoconnected(nodename).await;
         d.target_collection.merge_insert(t.clone()).await;
         assert_eq!(
             nodename,
-            d.get_target(Some(nodename.to_string())).await.unwrap().nodename().await.unwrap()
+            d.get_target(Some(nodename.to_string())).await.unwrap().nodename().unwrap()
         );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_get_target_ambiguous() {
-        let d = Daemon::new().await;
+        let d = Daemon::new();
         let t = Target::new_autoconnected("where-is-my-hasenpfeffer").await;
         let t2 = Target::new_autoconnected("it-is-rabbit-season").await;
         d.target_collection.merge_insert(t.clone()).await;
@@ -1397,7 +1394,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_persisted_manual_target_load() {
-        let daemon = Daemon::new().await;
+        let daemon = Daemon::new();
         daemon.manual_targets.add("127.0.0.1:8022".to_string()).await.unwrap();
 
         // This happens in daemon.start(), but we want to avoid binding the
@@ -1406,7 +1403,7 @@ mod test {
 
         let target = daemon.get_target(Some("127.0.0.1:8022".to_string())).await.unwrap();
         let ta = TargetAddr::from("127.0.0.1:8022".parse::<SocketAddr>().unwrap());
-        assert_eq!(target.ssh_address().await, Some(ta));
+        assert_eq!(target.ssh_address(), Some(ta));
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -1427,7 +1424,7 @@ mod test {
 
         assert_eq!(r, Ok(()));
 
-        assert_eq!(1, daemon.target_collection.targets().await.len());
+        assert_eq!(1, daemon.target_collection.targets().len());
 
         assert_eq!(daemon.manual_targets.get().await.unwrap(), vec!["[fe80::1%1]:8022"]);
     }
@@ -1438,13 +1435,13 @@ mod test {
         daemon.manual_targets.add("127.0.0.1:8022".to_string()).await.unwrap();
         daemon.load_manual_targets().await;
 
-        assert_eq!(1, daemon.target_collection.targets().await.len());
+        assert_eq!(1, daemon.target_collection.targets().len());
 
         let r = proxy.remove_target("127.0.0.1:8022").await.unwrap();
 
         assert_eq!(r, Ok(true));
 
-        assert_eq!(0, daemon.target_collection.targets().await.len());
+        assert_eq!(0, daemon.target_collection.targets().len());
 
         assert_eq!(daemon.manual_targets.get_or_default().await, Vec::<String>::new());
     }

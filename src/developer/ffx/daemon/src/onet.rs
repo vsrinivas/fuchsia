@@ -171,8 +171,8 @@ impl HostPipeConnection {
         loop {
             log::debug!("Spawning new host-pipe instance");
             let target = target.upgrade().ok_or("parent Arc<> lost. exiting".to_owned())?;
-            let addrs = target.addrs().await;
-            let port = target.ssh_port().await;
+            let addrs = target.addrs();
+            let port = target.ssh_port();
             let mut cmd = cmd_func(addrs, port, target.id()).await.map_err(|e| e.to_string())?;
 
             // Attempts to run the command. If it exits successfully (disconnect due to peer

@@ -326,9 +326,9 @@ impl Logger {
     async fn run_logger(&self) -> Result<()> {
         let target = self.target.upgrade().context("lost parent Arc")?;
 
-        log::info!("starting logger for {}", target.nodename_str().await);
-        let remote_proxy = target.rcs().await.context("failed to get RCS")?.proxy;
-        let nodename = target.nodename_str().await;
+        log::info!("starting logger for {}", target.nodename_str());
+        let remote_proxy = target.rcs().context("failed to get RCS")?.proxy;
+        let nodename = target.nodename_str();
 
         let (log_proxy, log_server_end) = create_proxy::<RemoteDiagnosticsBridgeMarker>()?;
         let selector = parse_selector(BRIDGE_SELECTOR).unwrap();
@@ -347,10 +347,9 @@ impl Logger {
             target.stream_info()
         };
 
-        let nodename = target.nodename_str().await;
+        let nodename = target.nodename_str();
         let boot_timestamp: i64 = target
             .boot_timestamp_nanos()
-            .await
             .with_context(|| format!("no boot timestamp for target {:?}", &nodename))?
             .try_into()?;
         streamer.setup_stream(nodename.clone(), boot_timestamp).await?;

@@ -53,7 +53,7 @@ impl TargetControl {
         log::debug!("target control - received req: {:?}", req);
         match req {
             TargetControlRequest::Reboot { state, responder } => {
-                match self.target.get_connection_state().await {
+                match self.target.get_connection_state() {
                     ConnectionState::Fastboot(_) => match state {
                         TargetRebootState::Product => {
                             match self.get_fastboot_proxy().await?.reboot().await? {
@@ -331,7 +331,7 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_fastboot_reboot_product() -> Result<()> {
         let (target, proxy) = setup().await;
-        target.set_state(ConnectionState::Fastboot(Utc::now())).await;
+        target.set_state(ConnectionState::Fastboot(Utc::now()));
         proxy
             .reboot(TargetRebootState::Product)
             .await?
@@ -341,7 +341,7 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_fastboot_reboot_recovery() -> Result<()> {
         let (target, proxy) = setup().await;
-        target.set_state(ConnectionState::Fastboot(Utc::now())).await;
+        target.set_state(ConnectionState::Fastboot(Utc::now()));
         assert!(proxy.reboot(TargetRebootState::Recovery).await?.is_err());
         Ok(())
     }
@@ -349,7 +349,7 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_fastboot_reboot_bootloader() -> Result<()> {
         let (target, proxy) = setup().await;
-        target.set_state(ConnectionState::Fastboot(Utc::now())).await;
+        target.set_state(ConnectionState::Fastboot(Utc::now()));
         proxy
             .reboot(TargetRebootState::Bootloader)
             .await?
