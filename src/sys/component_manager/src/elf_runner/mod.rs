@@ -312,11 +312,22 @@ impl ElfRunner {
                 })
                 .expect("failed to set process as critical");
         }
+
         let process_koid = process
             .get_koid()
             .map_err(|e| ElfRunnerError::component_process_id_error(resolved_url.clone(), e))?
             .raw_koid();
-        let runtime_dir = runtime_dir_builder.job_id(job_koid).process_id(process_koid).serve();
+
+        let process_start_time = process
+            .info()
+            .map_err(|e| ElfRunnerError::component_process_id_error(resolved_url.clone(), e))?
+            .start_time;
+
+        let runtime_dir = runtime_dir_builder
+            .job_id(job_koid)
+            .process_id(process_koid)
+            .process_start_time(process_start_time)
+            .serve();
         Ok(Some(ElfComponent::new(
             runtime_dir,
             Job::from(component_job),
@@ -708,13 +719,16 @@ mod tests {
         assert_eq!("foo", read_file(&runtime_dir_proxy, "args/0").await);
         assert_eq!("bar", read_file(&runtime_dir_proxy, "args/1").await);
 
-        // Process Id and Job Id will vary with every run of this test. Here we verify that
-        // they exist in the runtime directory, they can be parsed as unsigned integers, they're
-        // greater than zero and they are not the same value. Those are about the only invariants
-        // we can verify across test runs.
+        // Process Id, Process Start Time, Job Id will vary with every run of this test. Here we
+        // verify that they exist in the runtime directory, they can be parsed as integers,
+        // they're greater than zero and they are not the same value. Those are about the only
+        // invariants we can verify across test runs.
         let process_id = read_file(&runtime_dir_proxy, "elf/process_id").await.parse::<u64>()?;
+        let process_start_time =
+            read_file(&runtime_dir_proxy, "elf/process_start_time").await.parse::<i64>()?;
         let job_id = read_file(&runtime_dir_proxy, "elf/job_id").await.parse::<u64>()?;
         assert!(process_id > 0);
+        assert!(process_start_time > 0);
         assert!(job_id > 0);
         assert_ne!(process_id, job_id);
 

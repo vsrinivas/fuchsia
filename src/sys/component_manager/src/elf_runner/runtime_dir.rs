@@ -20,6 +20,7 @@ pub struct RuntimeDirBuilder {
     args: Vec<String>,
     job_id: Option<u64>,
     process_id: Option<u64>,
+    process_start_time: Option<i64>,
     server_end: ServerEnd<NodeMarker>,
 }
 
@@ -27,7 +28,7 @@ impl RuntimeDirBuilder {
     pub fn new(server_end: ServerEnd<DirectoryMarker>) -> Self {
         // Transform the server end to speak Node protocol only
         let server_end = ServerEnd::<NodeMarker>::new(server_end.into_channel());
-        Self { args: vec![], job_id: None, process_id: None, server_end }
+        Self { args: vec![], job_id: None, process_id: None, process_start_time: None, server_end }
     }
 
     pub fn args(mut self, args: Vec<String>) -> Self {
@@ -42,6 +43,11 @@ impl RuntimeDirBuilder {
 
     pub fn process_id(mut self, process_id: u64) -> Self {
         self.process_id = Some(process_id);
+        self
+    }
+
+    pub fn process_start_time(mut self, process_start_time: i64) -> Self {
+        self.process_start_time = Some(process_start_time);
         self
     }
 
@@ -75,6 +81,15 @@ impl RuntimeDirBuilder {
             runtime_tree_builder
                 .add_entry(["elf", "process_id"], read_only_static(process_id.to_string()))
                 .expect("Failed to add process_id to runtime/elf directory");
+        }
+
+        if let Some(process_start_time) = self.process_start_time {
+            runtime_tree_builder
+                .add_entry(
+                    ["elf", "process_start_time"],
+                    read_only_static(process_start_time.to_string()),
+                )
+                .expect("Failed to add process_start_time to runtime/elf directory");
         }
 
         let runtime_directory = runtime_tree_builder.build();
