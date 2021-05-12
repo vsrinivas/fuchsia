@@ -443,6 +443,10 @@ Since unit tests are very common, two simplified templates are provided:
   package with a single component to be run as a test, shorthand for a single
   `fuchsia_unittest_component()` target paired with a `fuchsia_test_package()`.
 
+Note: By default these templates generate Components V2 (.cml) manifests. You may pass
+`v2 = false` to either `fuchsia_unittest_component` or `fuchsia_unittest_package`
+to generate a V1 (.cmx) manifest instead.
+
 #### Unit tests with manifests {#unit-tests-with-manifests}
 
 The examples below demonstrate building a test executable and defining a

@@ -48,6 +48,9 @@ template("fuzzer_component") {
     forward_variables_from(invoker, [ "visibility" ])
     component_name = invoker.fuzzer
     deps = invoker.deps + [ ":$meta_target_name" ]
+
+    # TODO(fxbug.dev/76528) Support fuzzers in v2 testing.
+    v2 = false
   }
 
   group(meta_target_name) {

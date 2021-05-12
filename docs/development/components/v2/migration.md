@@ -339,18 +339,15 @@ In the example above, the test component's manifest is simple enough that it can
 be generated for you at build time by `fuchsia_unittest_package` or
 `fuchsia_unittest_component`.
 This is the [preferred practice][unit-tests-with-generated-manifests] for simple
-unit tests. To allow the GN target to generate your CML file, edit it to remove
-the `manifest` and mark the target as `v2`:
+unit tests. To allow the GN target to generate your CML file, simply edit it to remove
+the `manifest`.
 
 ```gn
 fuchsia_unittest_package("fonts_test") {
   {{ '<strike>' }}manifest = "meta/fonts_test.cml"{{ '</strike>' }}
-  {{ '<strong>' }}v2 = true{{ '</strong>' }}
   deps = [ ":font_test" ]
 }
 ```
-
-<!-- TODO(crjohns): when v2 becomes the default, update the above. -->
 
 #### Test with system services {#system-services}
 

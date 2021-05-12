@@ -45,6 +45,10 @@ fuchsia_unittest_package("lib-component-go-unittests") {
   test_specs = {
     environments = [ emu_env ]
   }
+
+  # This is a test of running as a Go component, so it cannot use a v2
+  # test runner which intercepts the directory request.
+  v2 = false
 }
 
 group("tests") {

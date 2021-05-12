@@ -76,6 +76,15 @@ static_library("gtest") {
       ]
     }
   }
+
+  metadata = {
+    # Used by the fuchsia_test_component_manifest() template.
+    test_component_manifest_cml = [
+      {
+        include = [ "src/sys/test_runners/gtest/default.shard.cml" ]
+      },
+    ]
+  }
 }
 
 # Library that defines the FRIEND_TEST macro.

@@ -15,7 +15,10 @@ hwreg_asm_header("test-header") {
 
 test("hwreg-asm-header-test") {
   sources = [ "test-header-test.cc" ]
-  deps = [ ":test-header" ]
+  deps = [
+    ":test-header",
+    "//src/sys/testing/elftest",
+  ]
 }
 
 fuchsia_unittest_package("hwreg-asm-header-test-package") {

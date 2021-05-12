@@ -9,6 +9,7 @@ test("libc-test") {
   sources = [ "libc.c" ]
   deps = [
     # For unittests of _impl.h headers.
+    "//src/sys/testing/elftest",
     "//zircon/third_party/ulib/musl:musl_internal_testing",
   ]
 }

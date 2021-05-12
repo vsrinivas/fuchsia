@@ -142,3 +142,21 @@ group("tests") {
     "starnix:tests",
   ]
 }
+
+# Use this group to include fuchsia.process.Launcher in generated test manifests.
+#
+# Intended for use in tests for test runners.
+group("test-with-process-launcher") {
+  testonly = true
+  metadata = {
+    test_component_manifest_cml = [
+      {
+        use = [
+          {
+            protocol = [ "fuchsia.process.Launcher" ]
+          },
+        ]
+      },
+    ]
+  }
+}

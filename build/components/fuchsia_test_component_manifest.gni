@@ -35,7 +35,7 @@ template("fuchsia_test_component_manifest") {
   other_target = "${target_name}_other"
   generated_file(other_target) {
     forward_variables_from(invoker, [ "deps" ])
-    if (defined(invoker.v2) && invoker.v2) {
+    if (!defined(invoker.v2) || invoker.v2) {
       data_keys = [ "test_component_manifest_cml" ]
     } else {
       data_keys = [ "test_component_manifest_cmx" ]
@@ -49,7 +49,7 @@ template("fuchsia_test_component_manifest") {
   cmc_merge(target_name) {
     forward_variables_from(invoker, [ "visibility" ])
     output_name = invoker.target_name
-    if (defined(invoker.v2) && invoker.v2) {
+    if (!defined(invoker.v2) || invoker.v2) {
       output_name += ".cml"
     } else {
       output_name += ".cmx"

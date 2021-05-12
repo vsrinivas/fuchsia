@@ -30,7 +30,12 @@ test("fdio-constructor") {
   # here rather than in the group() above, because this will be evaluated
   # after variant selection has chosen which build to actually test.
   if (!toolchain_variant.instrumented) {
-    deps = [ ":no-static-ctor" ]
+    deps = [
+      ":no-static-ctor",
+      "//src/sys/testing/elftest",
+    ]
+  } else {
+    deps = [ "//src/sys/testing/elftest" ]
   }
 }
 

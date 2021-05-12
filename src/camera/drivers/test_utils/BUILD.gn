@@ -85,7 +85,6 @@ executable("fake_buffer_collection_unittest_bin") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
   ]
 }
 

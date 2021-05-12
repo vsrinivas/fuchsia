@@ -13,6 +13,7 @@ import("//build/test.gni")
 # (i.e. all runtime dependencies are installed and loaded properly).
 test("noop-test") {
   sources = [ "noop-test.cc" ]
+  deps = [ "//src/sys/testing/elftest" ]
 }
 
 fuchsia_unittest_package("noop-test-package") {

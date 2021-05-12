@@ -1,0 +1,24 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Dependencies for simple ELF tests that report success through return code.
+#
+# This target provides the necessary runner declarations to execute
+# tests that do not depend on a testing library. For instance, gtest
+# automatically imports the gtest_runner, but there is no library that
+# regular ELF tests need to depend on to run.
+#
+# Depending on this target ensures that automatically generated component
+# manifests can be run using the elf_test runner.
+group("elftest") {
+  testonly = true
+  metadata = {
+    # Used by the fuchsia_test_component_manifest() template.
+    test_component_manifest_cml = [
+      {
+        include = [ "src/sys/test_runners/elf/default.shard.cml" ]
+      },
+    ]
+  }
+}

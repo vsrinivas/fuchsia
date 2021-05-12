@@ -70,7 +70,7 @@ zx_library("zxtest") {
     # Used by the fuchsia_test_component_manifest() template.
     test_component_manifest_cml = [
       {
-        include = [ "src/sys/test_runners/elf/elf_test_runner.shard.cml" ]
+        include = [ "src/sys/test_runners/elf/default.shard.cml" ]
       },
     ]
   }

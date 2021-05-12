@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_test.gni")
 
 rustc_library("testing") {
   with_unit_tests = true
@@ -12,7 +12,7 @@ rustc_library("testing") {
   sources = [ "src/lib.rs" ]
 }
 
-rustc_binary("testing_integration_test") {
+rustc_test("testing_integration_test") {
   deps = [ ":testing" ]
   edition = "2018"
   source_root = "tests/integration_test.rs"
@@ -20,7 +20,7 @@ rustc_binary("testing_integration_test") {
   sources = [ "tests/integration_test.rs" ]
 }
 
-rustc_binary("testing_integration_test_two") {
+rustc_test("testing_integration_test_two") {
   deps = [ ":testing" ]
   edition = "2018"
   source_root = "tests/integration_test_two.rs"

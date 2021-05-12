@@ -107,6 +107,9 @@ test("goldfish-control-device-test") {
 fuchsia_unittest_package("goldfish-control-device-test-package") {
   package_name = "goldfish-control-device-test"
   deps = [ ":goldfish-control-device-test" ]
+
+  # TODO(fxbug.dev/76529): Switch to v2 when this no longer depends on both gtest and zxtest.
+  v2 = false
 }
 
 group("tests") {

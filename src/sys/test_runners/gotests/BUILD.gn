@@ -75,7 +75,10 @@ group("gotests") {
 }
 
 fuchsia_unittest_component("test-component") {
-  deps = [ ":bin_test" ]
+  deps = [
+    ":bin_test",
+    "//src/sys/test_runners:test-with-process-launcher",
+  ]
 }
 
 fuchsia_test_package("go-test-runner-test") {
