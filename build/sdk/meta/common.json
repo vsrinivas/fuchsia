@@ -1,52 +1,90 @@
 {
-  "$schema": "http://json-schema.org/draft-04/schema#",
-  "id": "http://fuchsia.com/schemas/sdk/common.json",
-  "definitions": {
-    "file": {
-      "description": "Path to a file from the root of the SDK",
-      "type": "string"
-    },
-    "type": {
-      "description": "Represents the type of an SDK element",
-      "type": "string"
-    },
-    "sdk_element": {
-      "description": "Base type for SDK elements",
-      "type": "object",
-      "properties": {
-        "type": {
-          "description": "The type of the element",
-          "$ref": "#/definitions/type"
+    "id": "http://fuchsia.com/schemas/sdk/common.json",
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "definitions": {
+        "banjo_library_name": {
+            "description": "Name of a BANJO library",
+            "type": "string"
         },
-        "name": {
-          "description": "The name of the element",
-          "type": "string"
+        "cc_library_name": {
+            "description": "Name of a C/C++ library",
+            "type": "string"
+        },
+        "envelope": {
+            "additionalProperties": false,
+            "description": "A versioned envelope.",
+            "properties": {
+                "data": {
+                    "description": "The payload."
+                },
+                "version": {
+                    "description": "An opaque version of the data held in the envelope.",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "version",
+                "data"
+            ],
+            "type": "object"
+        },
+        "fidl_library_name": {
+            "description": "Name of a FIDL library",
+            "type": "string"
+        },
+        "file": {
+            "description": "Path to a file from the root of the SDK",
+            "type": "string"
+        },
+        "sdk_element": {
+            "description": "Base type for SDK elements",
+            "properties": {
+                "name": {
+                    "description": "The name of the element",
+                    "type": "string"
+                },
+                "type": {
+                    "$ref": "#/definitions/type",
+                    "description": "The type of the element"
+                }
+            },
+            "required": [
+                "name",
+                "type"
+            ],
+            "type": "object"
+        },
+        "target_arch": {
+            "description": "Target architecture",
+            "enum": [
+                "arm64",
+                "x64"
+            ],
+            "type": "string"
+        },
+        "type": {
+            "description": "Represents the type of an SDK element",
+            "type": "string"
+        },
+        "versioned_sdk_element": {
+            "allOf": [
+                {
+                    "$ref": "#/definitions/envelope"
+                },
+                {
+                    "properties": {
+                        "data": {
+                            "oneOf": [
+                                {
+                                    "$ref": "#/definitions/sdk_element"
+                                }
+                            ]
+                        }
+                    },
+                    "type": "object"
+                }
+            ],
+            "type": "object"
         }
-      },
-      "required": [
-        "name",
-        "type"
-      ]
-    },
-    "banjo_library_name": {
-      "description": "Name of a BANJO library",
-      "type": "string"
-    },
-    "fidl_library_name": {
-      "description": "Name of a FIDL library",
-      "type": "string"
-    },
-    "cc_library_name": {
-      "description": "Name of a C/C++ library",
-      "type": "string"
-    },
-    "target_arch": {
-      "description": "Target architecture",
-      "type": "string",
-      "enum": [
-        "arm64",
-        "x64"
-      ]
     }
-  }
 }

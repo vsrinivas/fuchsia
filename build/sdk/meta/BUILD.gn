@@ -17,9 +17,11 @@ schemas = [
   "device_profile.json",
   "documentation.json",
   "fidl_library.json",
+  "hardware.json",
   "host_tool.json",
   "loadable_module.json",
   "manifest.json",
+  "physical_device.json",
   "sysroot.json",
 ]
 
@@ -89,7 +91,9 @@ rustc_library("rust") {
     "cc_prebuilt_library.json",
     "device_profile.json",
     "data.json",
+    "hardware.json",
     "manifest.json",
+    "physical_device.json",
     "banjo_library.json",
     "common.json",
   ]
