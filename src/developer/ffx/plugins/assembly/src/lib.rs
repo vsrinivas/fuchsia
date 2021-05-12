@@ -5,7 +5,9 @@
 use {anyhow::Result, ffx_assembly_args::*, ffx_core::ffx_plugin};
 
 mod config;
+mod extra_hash_descriptor;
 mod operations;
+pub mod vbmeta;
 pub mod vfs;
 
 #[ffx_plugin("assembly_enabled")]

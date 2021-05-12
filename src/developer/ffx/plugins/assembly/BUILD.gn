@@ -11,11 +11,13 @@ ffx_plugin("ffx_assembly") {
   sources = [
     "src/args.rs",
     "src/config.rs",
+    "src/extra_hash_descriptor.rs",
     "src/lib.rs",
     "src/operations.rs",
     "src/operations/extract.rs",
     "src/operations/image.rs",
     "src/operations/vbmeta.rs",
+    "src/vbmeta.rs",
     "src/vfs.rs",
   ]
   args_deps = []
