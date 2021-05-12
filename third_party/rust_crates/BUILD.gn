@@ -482,10 +482,8 @@ group("pretty_assertions") {
   deps = [ ":pretty_assertions-v0_5_1" ]
 }
 
-if (current_os == "fuchsia") {
-  group("prettytable-rs") {
-    deps = [ ":prettytable-rs-v0_8_0" ]
-  }
+group("prettytable-rs") {
+  deps = [ ":prettytable-rs-v0_8_0" ]
 }
 
 group("proc-macro-hack") {

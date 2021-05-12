@@ -102,6 +102,7 @@ pin-project = "1.0.4"
 pin-utils = "0.1.0"
 png = "0.14" # saved for future use
 pretty_assertions = "0.5.1"
+prettytable-rs = "0.8.0"
 proc-macro-hack = "0.5.19"
 proptest = "0.9.3"
 proptest-derive = "0.1.1"
@@ -184,7 +185,6 @@ num-bigint = { version = "0.2", features = ["rand"] }
 openat = "0.1.17"
 owning_ref = "0.4.0"
 pretty = "0.5.2"
-prettytable-rs = "0.8.0"
 proc-macro-nested = "0.1.7"
 rust_icu_common = { version = "1.0.0", default-features = false, features = ["renaming"] }
 rust_icu_sys = { version = "1.0.0", default-features = false, features = ["renaming", "icu_version_in_env", "icu_version_67_plus"] }
