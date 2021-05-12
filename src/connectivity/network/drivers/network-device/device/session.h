@@ -165,10 +165,6 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
 
   inline void TxTaken() { in_flight_tx_++; }
   inline void RxTaken() { in_flight_rx_++; }
-  inline bool RxReturned() __TA_REQUIRES(parent_->rx_lock()) {
-    ZX_ASSERT(in_flight_rx_-- != 0);
-    return rx_valid_;
-  }
   inline void StopRx() __TA_REQUIRES(parent_->rx_lock()) { rx_valid_ = false; }
   [[nodiscard]] inline bool ShouldDestroy() {
     if (in_flight_rx_ == 0 && in_flight_tx_ == 0) {
@@ -201,6 +197,7 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   uint8_t ClearDataVmo();
 
  private:
+  inline void RxReturned() { ZX_ASSERT(in_flight_rx_-- != 0); }
   inline void TxReturned(size_t count) { ZX_ASSERT(in_flight_tx_.fetch_sub(count) >= count); }
 
   Session(async_dispatcher_t* dispatcher, netdev::wire::SessionInfo& info, fidl::StringView name,

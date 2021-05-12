@@ -227,7 +227,7 @@ struct TxResult {
     /// - `ZX_ERR_NO_RESOURCES` if the transmit failed to allocate space in its output queue for the
     /// frame.
     /// - `ZX_ERR_UNAVAILABLE` if the device is offline (or went offline before getting a
-    /// confirmation that the frame was sent).
+    /// confirmation that the frame was sent) or stopped.
     /// - `ZX_ERR_INTERNAL` or any other unlisted errors will be reported as a generic
     /// [`fuchsia.hardware.network/TxReturnFlags.TX_RET_ERROR`].
     zx.status status;
@@ -293,14 +293,22 @@ protocol NetworkDeviceIfc {
     /// Number of buffers in a single call must be limited to the
     /// [`fuchsia.hardware.network.device/DeviceInfo.rx_depth`] reported by the `NetworkDeviceImpl`
     /// that is returning the buffers.
+    ///
+    /// Buffers with zero length are considered "unfulfilled". They're not reported to any sessions
+    /// and the buffer space comprising them may be reused. Devices should return any outstanding
+    /// buffer space as unfulfilled on stop. See
+    /// [`fuchsia.hardware.network.device/NetworkDeviceImpl.Stop`].
+    ///
     /// By calling `CompleteRx` the caller relinquishes ownership of all buffers that are being
     /// marked as complete.
     CompleteRx(vector<RxBuffer>:MAX rx);
     /// Notifies interface of complete transmit buffers.
     /// Callers should attempt to batch as many buffers as possible in a single call.
+    ///
     /// Number of buffers in a single call must be limited to the
     /// [`fuchsia.hardware.network.device/DeviceInfo.tx_depth`] reported by the `NetworkDeviceImpl`
     /// that is returning the buffers.
+    ///
     /// By calling `CompleteTx` the caller relinquishes ownership of all buffers that are being
     /// returned.
     CompleteTx(vector<TxResult>:MAX tx);
@@ -420,7 +428,7 @@ protocol NetworkDeviceImpl {
     /// Initializes the network device.
     /// `Init` is only called once during the lifetime of the device to register `iface` as the
     /// callback target for the Network Device implementation.
-    /// Upon initialization, the device is expected to be in a "Stopped" state, the `Start` method
+    /// Upon initialization, the device is expected to be in the "Stopped" state, the `Start` method
     /// will be called once the data path needs to be opened.
     Init(NetworkDeviceIfc iface) -> (zx.status s);
     /// Starts the device's data path.
@@ -432,33 +440,45 @@ protocol NetworkDeviceImpl {
     /// upheld.
     [Async]
     Start() -> ();
-    /// Stops the network device, data-path callbacks to the NetworkDeviceIfc are no longer allowed
-    /// after `Stop` returns.
-    /// Implementation may turn off the rx path on the underlying hardware upon receiving this call.
-    /// Upon completion, no more calls can be made to open data path sessions with
-    /// `NetworkDeviceIfc` (doing so is a logic error and may be protected by assertions) and all
-    /// the data buffers that were previously held by the implementation are automatically returned
-    /// back. Pending tx buffers will be returned with an incomplete error, and pending rx buffers
-    /// will be reclaimed.
+    /// Stops the network device.
+    ///
+    /// The device implementation must return all outstanding Tx and Rx buffers upon receiving this
+    /// call. Any new buffers received in the stopped state must be returned with an appropriate
+    /// error (tx) or unfulfilled (rx). See
+    /// [`fuchsia.hardware.network.device/NetworkDeviceIfc.CompleteTx`] and
+    /// [`fuchsia.hardware.network.device/NetworkDeviceIfc.CompleteRx`] for details.
+    ///
+    /// The device implementation may perform any power saving measures after observing stop.
     [Async]
     Stop() -> ();
     /// Gets information about the device. Device information must not change over the course
     /// of the lifetime of the device.
     GetInfo() -> (DeviceInfo info);
     /// Enqueues a list of buffers for transmission on the network device.
+    ///
     /// The driver takes ownership of the buffer and must complete the tx transaction by using
     /// [`fuchsia.hardware.network.device/NetworkDeviceIfc.CompleteTx`] operations once it is done
     /// with each buffer in `buffers`.
+    ///
     /// The total number of outstanding tx buffers given to a device will never exceed the reported
     /// [`fuchsia.hardware.network.device/DeviceInfo.tx_depth`] value. Which also means that no more
     /// than `tx_depth` buffers are going to be informed at once in a single call to `QueueTx`.
+    ///
+    /// Buffers enqueued while the device in is the stopped state must be returned with an
+    /// appropriate error. See [`fuchsia.hardware.network.device/TxResult.status`] for specific
+    /// error codes.
     QueueTx(vector<TxBuffer>:MAX buffers);
     /// Enqueues a list of rx buffer space on the network device.
+    ///
     /// The driver takes ownership of the buffer and must complete the transaction (once network
     /// data arrives) using [`fuchsia.hardware.network.device/NetworkDeviceIfc.CompleteRx`].
+    ///
     /// The total number of outstanding rx buffers given to a device will never exceed the reported
     /// [`fuchsia.hardware.network.device/DeviceInfo.rx_depth`] value. Which also means that no more
     /// than `rx_depth` buffers are going to be informed at once in a single call to `QueueRxSpace`.
+    ///
+    /// Buffers enqueued while the device in is the stopped state must be returned with a zero
+    /// length.
     QueueRxSpace(vector<RxSpaceBuffer>:MAX buffers);
     /// Informs device that a new VMO is being used to store frame data.
     /// Implementers must store the VMO handle referenced by `vmo_id` until

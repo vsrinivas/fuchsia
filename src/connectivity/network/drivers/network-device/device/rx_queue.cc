@@ -135,28 +135,6 @@ void RxQueue::PurgeSession(Session& session) {
   }
 }
 
-void RxQueue::Reclaim() {
-  for (auto i = in_flight_->begin(); i != in_flight_->end(); ++i) {
-    auto& buff = in_flight_->Get(*i);
-    // Reclaim the buffer if the device has it.
-    if (buff.flags & kDeviceHasBuffer) {
-      ReclaimBuffer(*i);
-    }
-  }
-}
-
-void RxQueue::ReclaimBuffer(uint32_t id) {
-  auto& buff = in_flight_->Get(id);
-  buff.session->AssertParentRxLock(*parent_);
-  if (buff.session->RxReturned()) {
-    buff.flags &= static_cast<uint16_t>(~kDeviceHasBuffer);
-    available_queue_->Push(id);
-  } else {
-    in_flight_->Free(id);
-  }
-  device_buffer_count_--;
-}
-
 std::tuple<RxQueue::InFlightBuffer*, uint32_t> RxQueue::GetBuffer() {
   if (available_queue_->count() != 0) {
     auto idx = available_queue_->Pop();
@@ -203,8 +181,6 @@ zx_status_t RxQueue::PrepareBuff(rx_space_buffer_t* buff) {
     return status;
   }
 
-  // Mark that this buffer belongs to implementation.
-  session_buffer->flags |= kDeviceHasBuffer;
   session_buffer->session->RxTaken();
   device_buffer_count_++;
   return ZX_OK;
@@ -216,8 +192,6 @@ void RxQueue::CompleteRxList(const rx_buffer_t* rx, size_t count) {
   device_buffer_count_ -= count;
   while (count--) {
     auto& session_buffer = in_flight_->Get(rx->id);
-    // Mark that the buffer does not belong to device anymore:
-    session_buffer.flags &= static_cast<uint16_t>(~kDeviceHasBuffer);
     session_buffer.session->AssertParentControlLockShared(*parent_);
     session_buffer.session->AssertParentRxLock(*parent_);
     if (session_buffer.session->CompleteRx(session_buffer.descriptor_index, rx)) {

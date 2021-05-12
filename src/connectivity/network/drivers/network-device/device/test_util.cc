@@ -129,24 +129,49 @@ zx_status_t FakeNetworkDeviceImpl::NetworkDeviceImplInit(
 
 void FakeNetworkDeviceImpl::NetworkDeviceImplStart(network_device_impl_start_callback callback,
                                                    void* cookie) {
+  fbl::AutoLock lock(&lock_);
+  EXPECT_FALSE(device_started_) << "called start on already started device";
+  device_started_ = true;
   if (auto_start_) {
     callback(cookie);
   } else {
     ZX_ASSERT(!(pending_start_callback_ || pending_stop_callback_));
     pending_start_callback_ = [cookie, callback]() { callback(cookie); };
   }
-  event_.signal(0, kEventStart);
+  EXPECT_OK(event_.signal(0, kEventStart));
 }
 
 void FakeNetworkDeviceImpl::NetworkDeviceImplStop(network_device_impl_stop_callback callback,
                                                   void* cookie) {
+  fbl::AutoLock lock(&lock_);
+  EXPECT_TRUE(device_started_) << "called stop on already stopped device";
+  device_started_ = false;
+  zx_signals_t clear;
   if (auto_stop_) {
+    RxReturnTransaction rx_return(this);
+    while (!rx_buffers_.is_empty()) {
+      std::unique_ptr rx_buffer = rx_buffers_.pop_front();
+      rx_buffer->return_buffer().length = 0;
+      rx_return.Enqueue(std::move(rx_buffer));
+    }
+    rx_return.Commit();
+
+    TxReturnTransaction tx_return(this);
+    while (!tx_buffers_.is_empty()) {
+      std::unique_ptr tx_buffer = tx_buffers_.pop_front();
+      tx_buffer->set_status(ZX_ERR_UNAVAILABLE);
+      tx_return.Enqueue(std::move(tx_buffer));
+    }
+    tx_return.Commit();
     callback(cookie);
+    // Must clear the queue signals if we're clearing the queues automatically.
+    clear = kEventTx | kEventRxAvailable;
   } else {
     ZX_ASSERT(!(pending_start_callback_ || pending_stop_callback_));
     pending_stop_callback_ = [cookie, callback]() { callback(cookie); };
+    clear = 0;
   }
-  event_.signal(0, kEventStop);
+  EXPECT_OK(event_.signal(clear, kEventStop));
 }
 
 void FakeNetworkDeviceImpl::NetworkDeviceImplGetInfo(device_info_t* out_info) { *out_info = info_; }
@@ -155,65 +180,88 @@ void FakeNetworkDeviceImpl::NetworkDeviceImplQueueTx(const tx_buffer_t* buf_list
                                                      size_t buf_count) {
   EXPECT_NE(buf_count, 0u);
   ASSERT_TRUE(device_client_.is_valid());
-  if (auto_return_tx_) {
+
+  fbl::AutoLock lock(&lock_);
+  fbl::Span buffers(buf_list, buf_count);
+  if (immediate_return_tx_ || !device_started_) {
+    const zx_status_t return_status = device_started_ ? ZX_OK : ZX_ERR_UNAVAILABLE;
     ASSERT_TRUE(buf_count < kTxDepth);
-    tx_result_t results[kTxDepth];
-    auto* r = results;
-    for (size_t i = buf_count; i; i--) {
-      r->status = ZX_OK;
-      r->id = buf_list->id;
-      buf_list++;
-      r++;
+    std::array<tx_result_t, kTxDepth> results;
+    auto r = results.begin();
+    for (const tx_buffer_t& buff : buffers) {
+      *r++ = {
+          .id = buff.id,
+          .status = return_status,
+      };
     }
-    device_client_.CompleteTx(results, buf_count);
-  } else {
-    while (buf_count--) {
-      auto back = std::make_unique<TxBuffer>(buf_list);
-      tx_buffers_.push_back(std::move(back));
-      buf_list++;
-    }
+    device_client_.CompleteTx(results.data(), buf_count);
+    return;
   }
-  event_.signal(0, kEventTx);
+
+  for (const tx_buffer_t& buff : buffers) {
+    auto back = std::make_unique<TxBuffer>(&buff);
+    tx_buffers_.push_back(std::move(back));
+  }
+  EXPECT_OK(event_.signal(0, kEventTx));
 }
 
 void FakeNetworkDeviceImpl::NetworkDeviceImplQueueRxSpace(const rx_space_buffer_t* buf_list,
                                                           size_t buf_count) {
   ASSERT_TRUE(device_client_.is_valid());
-  while (buf_count--) {
-    auto back = std::make_unique<RxBuffer>(buf_list);
-    rx_buffers_.push_back(std::move(back));
-    buf_list++;
+
+  fbl::AutoLock lock(&lock_);
+  fbl::Span buffers(buf_list, buf_count);
+  if (immediate_return_rx_ || !device_started_) {
+    const uint64_t length = device_started_ ? kAutoReturnRxLength : 0;
+    ASSERT_TRUE(buf_count < kTxDepth);
+    std::array<rx_buffer_t, kTxDepth> results;
+    auto r = results.begin();
+    for (const rx_space_buffer_t& buff : buffers) {
+      *r++ = {
+          .id = buff.id,
+          .length = length,
+          .meta =
+              {
+                  .port = kPort0,
+                  .frame_type =
+                      static_cast<uint8_t>(fuchsia_hardware_network::wire::FrameType::kEthernet),
+              },
+      };
+    }
+    device_client_.CompleteRx(results.data(), buf_count);
+    return;
   }
-  event_.signal(0, kEventRxAvailable);
+
+  for (const rx_space_buffer_t& buff : buffers) {
+    auto back = std::make_unique<RxBuffer>(&buff);
+    rx_buffers_.push_back(std::move(back));
+  }
+  EXPECT_OK(event_.signal(0, kEventRxAvailable));
 }
 
 fit::function<zx::unowned_vmo(uint8_t)> FakeNetworkDeviceImpl::VmoGetter() {
   return [this](uint8_t id) { return zx::unowned_vmo(vmos_[id]); };
 }
 
-void FakeNetworkDeviceImpl::ReturnAllTx() {
-  ASSERT_TRUE(device_client_.is_valid());
-
-  TxReturnTransaction tx(this);
-  while (!tx_buffers_.is_empty()) {
-    tx.Enqueue(tx_buffers_.pop_front());
-  }
-  tx.Commit();
-}
-
 bool FakeNetworkDeviceImpl::TriggerStart() {
-  if (pending_start_callback_) {
-    pending_start_callback_();
-    pending_start_callback_ = nullptr;
+  fbl::AutoLock lock(&lock_);
+  auto cb = std::move(pending_start_callback_);
+  lock.release();
+
+  if (cb) {
+    cb();
     return true;
   }
   return false;
 }
 
 bool FakeNetworkDeviceImpl::TriggerStop() {
-  if (pending_stop_callback_) {
-    pending_stop_callback_();
-    pending_stop_callback_ = nullptr;
+  fbl::AutoLock lock(&lock_);
+  auto cb = std::move(pending_stop_callback_);
+  lock.release();
+
+  if (cb) {
+    cb();
     return true;
   }
   return false;

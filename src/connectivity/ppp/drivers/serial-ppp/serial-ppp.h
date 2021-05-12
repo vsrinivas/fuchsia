@@ -125,8 +125,10 @@ class SerialPpp final : public DeviceType,
 
   fbl::Mutex rx_lock_;
   std::queue<PendingBuffer> rx_space_ __TA_GUARDED(rx_lock_);
+  bool rx_available_ __TA_GUARDED(rx_lock_) = false;
   fbl::Mutex tx_lock_;
   std::queue<PendingBuffer> pending_tx_ __TA_GUARDED(tx_lock_);
+  bool tx_available_ __TA_GUARDED(tx_lock_) = false;
   vmo_store::VmoStore<vmo_store::SlabStorage<uint8_t>> vmos_;
 
   // Buffer to accumulate rx frames, to be used only in |WorkerLoop| thread.

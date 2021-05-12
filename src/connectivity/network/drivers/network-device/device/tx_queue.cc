@@ -89,21 +89,8 @@ uint32_t TxQueue::Enqueue(Session* session, uint16_t descriptor) {
   return in_flight_->Push(InFlightBuffer(session, ZX_OK, descriptor));
 }
 
-void TxQueue::MarkComplete(uint32_t id, zx_status_t status) {
-  auto& buff = in_flight_->Get(id);
-  buff.result = status;
-  return_queue_->Push(id);
-}
-
-bool TxQueue::Reclaim() {
-  for (auto i = in_flight_->begin(); i != in_flight_->end(); ++i) {
-    MarkComplete(*i, ZX_ERR_UNAVAILABLE);
-  }
-  return ReturnBuffers();
-}
-
 bool TxQueue::ReturnBuffers() {
-  uint32_t count = 0;
+  size_t count = 0;
 
   uint16_t desc_buffer[kMaxFifoDepth];
   ZX_ASSERT(return_queue_->count() <= kMaxFifoDepth);
@@ -140,7 +127,9 @@ bool TxQueue::ReturnBuffers() {
 void TxQueue::CompleteTxList(const tx_result_t* tx, size_t count) {
   fbl::AutoLock lock(&parent_->tx_lock());
   while (count--) {
-    MarkComplete(tx->id, tx->status);
+    InFlightBuffer& buff = in_flight_->Get(tx->id);
+    buff.result = tx->status;
+    return_queue_->Push(tx->id);
     tx++;
   }
   bool was_full = ReturnBuffers();

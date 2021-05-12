@@ -692,6 +692,8 @@ void Session::ReturnTxDescriptors(const uint16_t* descriptors, size_t count) {
 
 bool Session::LoadAvailableRxDescriptors(RxQueue::SessionTransaction& transact) {
   transact.AssertLock(*parent_);
+  LOGF_TRACE("network-device(%s): %s available:%ld transaction:%d", name(), __FUNCTION__,
+             rx_avail_queue_count_, transact.remaining());
   if (rx_avail_queue_count_ == 0) {
     return false;
   }
@@ -725,8 +727,11 @@ zx_status_t Session::LoadRxDescriptors(RxQueue::SessionTransaction& transact) {
     if (status != ZX_OK) {
       return status;
     }
+  } else if (!rx_valid_) {
+    return ZX_ERR_BAD_STATE;
   }
-  // If FetchRxDescriptors succeeded, that means we MUST be able to load available.
+  // If we get here, we either have available descriptors or fetching more descriptors succeeded.
+  // Loading from the available pool must succeed.
   ZX_ASSERT(LoadAvailableRxDescriptors(transact));
   return ZX_OK;
 }

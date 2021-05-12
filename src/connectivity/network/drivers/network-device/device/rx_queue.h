@@ -71,17 +71,14 @@ class RxQueue {
   };
 
  private:
-  static constexpr uint16_t kDeviceHasBuffer = 0x01;
-
   explicit RxQueue(DeviceInterface* parent) : parent_(parent) {}
 
   struct InFlightBuffer {
     InFlightBuffer() = default;
     InFlightBuffer(Session* session, uint16_t descriptor_index)
-        : session(session), descriptor_index(descriptor_index), flags(0) {}
+        : session(session), descriptor_index(descriptor_index) {}
     Session* session;
     uint16_t descriptor_index;
-    uint16_t flags;
   };
   // Get a single buffer from the queue, along with its identifier. On success, the buffer is popped
   // from the queue. The returned buffer pointer is still owned by the queue and the pointer should

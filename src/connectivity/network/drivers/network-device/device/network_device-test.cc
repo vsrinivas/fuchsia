@@ -124,7 +124,8 @@ class NetworkDeviceTest : public ::testing::Test {
                               fidl::VectorView<netdev::wire::FrameType>()) {
     // automatically increment to test_session_(a, b, c, etc...)
     char session_name[] = "test_session_a";
-    session_name[strlen(session_name) - 1] = static_cast<char>('a' + session_counter_);
+    session_name[strlen(session_name) - 1] =
+        static_cast<char>('a' + (session_counter_ % ('z' - 'a')));
     session_counter_++;
 
     fidl::WireSyncClient connection = OpenConnection();
@@ -146,6 +147,36 @@ void PrintVec(const std::string& name, const std::vector<uint8_t>& vec) {
   }
   printf("\n");
 }
+
+enum class RxTxSwitch {
+  Rx,
+  Tx,
+};
+
+const char* rxTxSwitchToString(RxTxSwitch rxtx) {
+  switch (rxtx) {
+    case RxTxSwitch::Tx:
+      return "Tx";
+    case RxTxSwitch::Rx:
+      return "Rx";
+  }
+}
+
+RxTxSwitch flipRxTxSwitch(RxTxSwitch rxtx) {
+  switch (rxtx) {
+    case RxTxSwitch::Tx:
+      return RxTxSwitch::Rx;
+    case RxTxSwitch::Rx:
+      return RxTxSwitch::Tx;
+  }
+}
+
+const std::string rxTxParamTestToString(const ::testing::TestParamInfo<RxTxSwitch>& info) {
+  return rxTxSwitchToString(info.param);
+}
+
+// Helper class to instantiate test suites that have an Rx and Tx variant.
+class RxTxParamTest : public NetworkDeviceTest, public ::testing::WithParamInterface<RxTxSwitch> {};
 
 TEST_F(NetworkDeviceTest, CanCreate) { ASSERT_OK(CreateDevice()); }
 
@@ -244,11 +275,12 @@ TEST_F(NetworkDeviceTest, RxBufferBuild) {
   ASSERT_OK(session.SendRx(all_descs, kDescTests, &sent));
   ASSERT_EQ(sent, kDescTests);
   ASSERT_OK(WaitRxAvailable());
+  fbl::DoublyLinkedList rx_buffers = impl_.TakeRxBuffers();
   RxReturnTransaction return_session(&impl_);
   // load the buffers from the fake device implementation and check them.
   // We call "pop_back" on the buffer list because network_device feeds Rx buffers in a LIFO order.
   // check first descriptor:
-  auto rx = impl_.rx_buffers().pop_back();
+  auto rx = rx_buffers.pop_back();
   ASSERT_TRUE(rx);
   ASSERT_EQ(rx->buff().data.parts_count, 1u);
   ASSERT_EQ(rx->buff().data.parts_list[0].offset, session.descriptor(0)->offset);
@@ -257,7 +289,7 @@ TEST_F(NetworkDeviceTest, RxBufferBuild) {
   rx->return_buffer().meta.flags = static_cast<uint32_t>(RxFlags::kRxAccel0);
   return_session.Enqueue(std::move(rx));
   // check second descriptor:
-  rx = impl_.rx_buffers().pop_back();
+  rx = rx_buffers.pop_back();
   ASSERT_TRUE(rx);
   ASSERT_EQ(rx->buff().data.parts_count, 1u);
   desc = session.descriptor(1);
@@ -268,7 +300,7 @@ TEST_F(NetworkDeviceTest, RxBufferBuild) {
   rx->return_buffer().meta.flags = static_cast<uint32_t>(RxFlags::kRxAccel1);
   return_session.Enqueue(std::move(rx));
   // check third descriptor:
-  rx = impl_.rx_buffers().pop_back();
+  rx = rx_buffers.pop_back();
   ASSERT_TRUE(rx);
   ASSERT_EQ(rx->buff().data.parts_count, 3u);
   auto* d0 = session.descriptor(2);
@@ -285,7 +317,7 @@ TEST_F(NetworkDeviceTest, RxBufferBuild) {
   rx->return_buffer().meta.flags = static_cast<uint32_t>(RxFlags::kRxAccel2);
   return_session.Enqueue(std::move(rx));
   // ensure no more rx buffers were actually returned:
-  ASSERT_TRUE(impl_.rx_buffers().is_empty());
+  ASSERT_TRUE(rx_buffers.is_empty());
   // commit the returned buffers
   return_session.Commit();
   // check that all descriptors were returned to the queue:
@@ -373,14 +405,14 @@ TEST_F(NetworkDeviceTest, TxBufferBuild) {
   ASSERT_OK(WaitTx());
   TxReturnTransaction return_session(&impl_);
   // load the buffers from the fake device implementation and check them.
-  auto tx = impl_.tx_buffers().pop_front();
+  auto tx = impl_.PopTxBuffer();
   ASSERT_TRUE(tx);
   ASSERT_EQ(tx->buff().data.parts_count, 1u);
   ASSERT_EQ(tx->buff().data.parts_list[0].offset, session.descriptor(0)->offset);
   ASSERT_EQ(tx->buff().data.parts_list[0].length, kDefaultBufferLength);
   return_session.Enqueue(std::move(tx));
   // check second descriptor:
-  tx = impl_.tx_buffers().pop_front();
+  tx = impl_.PopTxBuffer();
   ASSERT_TRUE(tx);
   ASSERT_EQ(tx->buff().data.parts_count, 1u);
   desc = session.descriptor(1);
@@ -390,7 +422,7 @@ TEST_F(NetworkDeviceTest, TxBufferBuild) {
   tx->set_status(ZX_ERR_UNAVAILABLE);
   return_session.Enqueue(std::move(tx));
   // check third descriptor:
-  tx = impl_.tx_buffers().pop_front();
+  tx = impl_.PopTxBuffer();
   ASSERT_TRUE(tx);
   ASSERT_EQ(tx->buff().data.parts_count, 3u);
   auto* d0 = session.descriptor(2);
@@ -405,7 +437,7 @@ TEST_F(NetworkDeviceTest, TxBufferBuild) {
   tx->set_status(ZX_ERR_NOT_SUPPORTED);
   return_session.Enqueue(std::move(tx));
   // ensure no more tx buffers were actually enqueued:
-  ASSERT_TRUE(impl_.tx_buffers().is_empty());
+  ASSERT_FALSE(impl_.PopTxBuffer());
   // commit the returned buffers
   return_session.Commit();
   // check that all descriptors were returned to the queue:
@@ -487,8 +519,8 @@ TEST_F(NetworkDeviceTest, TwoSessionsTx) {
   session_b.SendTxData(1, sent_buff_b);
   ASSERT_OK(WaitTx());
   // wait until we have two frames waiting:
-  auto buff_a = impl_.tx_buffers().pop_front();
-  auto buff_b = impl_.tx_buffers().pop_front();
+  auto buff_a = impl_.PopTxBuffer();
+  auto buff_b = impl_.PopTxBuffer();
   std::vector<uint8_t> data_a;
   std::vector<uint8_t> data_b;
   auto vmo_provider = impl_.VmoGetter();
@@ -549,7 +581,7 @@ TEST_F(NetworkDeviceTest, TwoSessionsRx) {
   auto vmo_provider = impl_.VmoGetter();
   RxReturnTransaction return_session(&impl_);
   for (uint16_t i = 0; i < kBufferCount; i++) {
-    auto buff = impl_.rx_buffers().pop_front();
+    auto buff = impl_.PopRxBuffer();
     std::vector<uint8_t> data(kDataLen, static_cast<uint8_t>(i));
     ASSERT_OK(buff->WriteData(data, vmo_provider));
     return_session.Enqueue(std::move(buff));
@@ -625,7 +657,7 @@ TEST_F(NetworkDeviceTest, ClosingPrimarySession) {
   ASSERT_OK(session_b.SendRx(1));
   ASSERT_OK(WaitRxAvailable());
   // impl_ now owns session_a's RxBuffer
-  auto rx_buff = impl_.rx_buffers().pop_front();
+  auto rx_buff = impl_.PopRxBuffer();
   ASSERT_EQ(rx_buff->buff().data.parts_list[0].length, kDefaultBufferLength / 2);
   // let's close session_a, it should not be closed until we return the buffers
   ASSERT_OK(session_a.Close());
@@ -634,7 +666,7 @@ TEST_F(NetworkDeviceTest, ClosingPrimarySession) {
             ZX_ERR_TIMED_OUT);
   // Session B should've now become primary. Provide enough buffers to fill the device queues.
   uint16_t target_descriptor = 0;
-  while (impl_.rx_buffers().size_slow() < impl_.info().rx_depth - 1) {
+  while (impl_.rx_buffer_count() < impl_.info().rx_depth - 1) {
     session_b.ResetDescriptor(target_descriptor);
     ASSERT_OK(session_b.SendRx(target_descriptor++));
     ASSERT_OK(WaitRxAvailable());
@@ -677,11 +709,14 @@ TEST_F(NetworkDeviceTest, DelayedStart) {
   ASSERT_OK(session_a.SetPaused(true));
   ASSERT_OK(session_a.SetPaused(false));
   ASSERT_OK(WaitSessionStarted());
-  ASSERT_TRUE(impl_.tx_buffers().is_empty());
+  ASSERT_FALSE(impl_.PopRxBuffer());
   ASSERT_TRUE(impl_.TriggerStart());
   ASSERT_OK(WaitTx());
-  ASSERT_FALSE(impl_.tx_buffers().is_empty());
-  impl_.ReturnAllTx();
+  std::unique_ptr tx_buffer = impl_.PopTxBuffer();
+  ASSERT_TRUE(tx_buffer);
+  TxReturnTransaction transaction(&impl_);
+  transaction.Enqueue(std::move(tx_buffer));
+  transaction.Commit();
 
   // pause the session again and wait for stop.
   ASSERT_OK(session_a.SetPaused(true));
@@ -719,55 +754,82 @@ TEST_F(NetworkDeviceTest, DelayedStop) {
   ASSERT_TRUE(impl_.TriggerStop());
   ASSERT_OK(WaitStart());
 
-  // With the session running, send down a tx frame and then close the session.
-  // The session should NOT be closed until we actually call TriggerStop.
+  // With the session running, send down a tx frame and then close the session. The session should
+  // NOT be closed until we actually both call TriggerStop and return the outstanding buffer.
   session_a.ResetDescriptor(0);
   ASSERT_OK(session_a.SendTx(0));
   ASSERT_OK(WaitTx());
   ASSERT_OK(session_a.Close());
   ASSERT_OK(WaitStop());
-  // Session must not have been closed yet:
+  // Session must not have been closed yet.
   ASSERT_EQ(session_a.session().channel().wait_one(ZX_CHANNEL_PEER_CLOSED,
                                                    zx::deadline_after(zx::msec(20)), nullptr),
             ZX_ERR_TIMED_OUT);
   ASSERT_TRUE(impl_.TriggerStop());
+
+  // Session must not have been closed yet.
+  ASSERT_EQ(session_a.session().channel().wait_one(ZX_CHANNEL_PEER_CLOSED,
+                                                   zx::deadline_after(zx::msec(20)), nullptr),
+            ZX_ERR_TIMED_OUT);
+
+  // Return the outstanding buffer.
+  std::unique_ptr buffer = impl_.PopTxBuffer();
+  TxReturnTransaction transaction(&impl_);
+  transaction.Enqueue(std::move(buffer));
+  transaction.Commit();
+  // Now session should close.
   ASSERT_OK(session_a.WaitClosed(TEST_DEADLINE));
 }
 
-TEST_F(NetworkDeviceTest, ReclaimBuffers) {
+TEST_P(RxTxParamTest, WaitsForAllBuffersReturned) {
   ASSERT_OK(CreateDevice());
   fidl::WireSyncClient connection = OpenConnection();
-  TestSession session_a;
-  ASSERT_OK(OpenSession(&session_a));
-  ASSERT_OK(session_a.SetPaused(false));
+  TestSession session;
+  ASSERT_OK(OpenSession(&session));
+  ASSERT_OK(session.SetPaused(false));
   ASSERT_OK(WaitStart());
-  session_a.ResetDescriptor(0);
-  session_a.ResetDescriptor(1);
-  ASSERT_OK(session_a.SendRx(0));
-  ASSERT_OK(session_a.SendTx(1));
+  session.ResetDescriptor(0);
+  session.ResetDescriptor(1);
+  ASSERT_OK(session.SendRx(0));
+  ASSERT_OK(session.SendTx(1));
   ASSERT_OK(WaitTx());
   ASSERT_OK(WaitRxAvailable());
-  ASSERT_EQ(impl_.tx_buffers().size_slow(), 1u);
-  ASSERT_EQ(impl_.rx_buffers().size_slow(), 1u);
-  ASSERT_OK(session_a.SetPaused(true));
+
+  fbl::DoublyLinkedList rx_buffers = impl_.TakeRxBuffers();
+  ASSERT_EQ(rx_buffers.size_slow(), 1u);
+  fbl::DoublyLinkedList tx_buffers = impl_.TakeTxBuffers();
+  ASSERT_EQ(tx_buffers.size_slow(), 1u);
+
+  ASSERT_OK(session.Close());
   ASSERT_OK(WaitStop());
-  impl_.tx_buffers().clear();
-  impl_.rx_buffers().clear();
 
-  // check that the tx buffer was reclaimed
-  uint16_t desc;
-  ASSERT_OK(session_a.FetchTx(&desc));
-  ASSERT_EQ(desc, 1u);
-  // check that the return flags reflect the error
-  ASSERT_EQ(session_a.descriptor(1)->return_flags,
-            static_cast<uint32_t>(netdev::wire::TxReturnFlags::kTxRetError |
-                                  netdev::wire::TxReturnFlags::kTxRetNotAvailable));
+  // Session will not close until we return the buffers we're holding.
+  ASSERT_STATUS(session.WaitClosed(zx::deadline_after(zx::msec(10))), ZX_ERR_TIMED_OUT);
 
-  // Unpause the session again and fetch rx buffers to confirm that the Rx buffer was reclaimed
-  ASSERT_OK(session_a.SetPaused(false));
-  ASSERT_OK(WaitStart());
-  ASSERT_OK(WaitRxAvailable());
-  ASSERT_EQ(impl_.rx_buffers().size_slow(), 1u);
+  // Test parameter controls which buffers we'll return first.
+  auto return_buffer = [this, &tx_buffers, &rx_buffers](RxTxSwitch which) {
+    switch (which) {
+      case RxTxSwitch::Tx: {
+        TxReturnTransaction transaction(&impl_);
+        std::unique_ptr buffer = tx_buffers.pop_front();
+        buffer->set_status(ZX_ERR_UNAVAILABLE);
+        transaction.Enqueue(std::move(buffer));
+        transaction.Commit();
+      } break;
+      case RxTxSwitch::Rx: {
+        RxReturnTransaction transaction(&impl_);
+        std::unique_ptr buffer = rx_buffers.pop_front();
+        buffer->return_buffer().length = 0;
+        transaction.Enqueue(std::move(buffer));
+        transaction.Commit();
+      } break;
+    }
+  };
+
+  return_buffer(GetParam());
+  ASSERT_STATUS(session.WaitClosed(zx::deadline_after(zx::msec(10))), ZX_ERR_TIMED_OUT);
+  return_buffer(flipRxTxSwitch(GetParam()));
+  ASSERT_OK(session.WaitClosed(TEST_DEADLINE));
 }
 
 TEST_F(NetworkDeviceTest, Teardown) {
@@ -803,8 +865,8 @@ TEST_F(NetworkDeviceTest, TeardownWithReclaim) {
   ASSERT_OK(session_a.SendTx(1));
   ASSERT_OK(WaitTx());
   ASSERT_OK(WaitRxAvailable());
-  ASSERT_EQ(impl_.tx_buffers().size_slow(), 1u);
-  ASSERT_EQ(impl_.rx_buffers().size_slow(), 1u);
+  ASSERT_EQ(impl_.rx_buffer_count(), 1u);
+  ASSERT_EQ(impl_.tx_buffer_count(), 1u);
 
   DiscardDeviceSync();
   session_a.WaitClosed(TEST_DEADLINE);
@@ -832,23 +894,34 @@ TEST_F(NetworkDeviceTest, TxHeadLength) {
   ASSERT_OK(session.SendTx(descs, 2, &sent));
   ASSERT_EQ(sent, 2u);
   ASSERT_OK(WaitTx());
-  auto buffs = impl_.tx_buffers().begin();
-  std::vector<uint8_t> data;
 
   auto vmo_provider = impl_.VmoGetter();
-  // check first buffer
-  ASSERT_EQ(buffs->buff().head_length, kHeadLength);
-  ASSERT_OK(buffs->GetData(&data, vmo_provider));
-  ASSERT_EQ(data.size(), kHeadLength + 1u);
-  ASSERT_EQ(data[kHeadLength], 0xAA);
-  buffs++;
-  // check second buffer
-  ASSERT_EQ(buffs->buff().head_length, kHeadLength);
-  ASSERT_OK(buffs->GetData(&data, vmo_provider));
-  ASSERT_EQ(data.size(), kHeadLength + 1u);
-  ASSERT_EQ(data[kHeadLength], 0xBB);
-  buffs++;
-  ASSERT_EQ(buffs, impl_.tx_buffers().end());
+  TxReturnTransaction transaction(&impl_);
+  constexpr struct {
+    uint8_t expect;
+    const char* name;
+  } kCheckTable[] = {
+      {
+          .expect = 0xAA,
+          .name = "first buffer",
+      },
+      {
+          .expect = 0xBB,
+          .name = "second buffer",
+      },
+  };
+  for (const auto& check : kCheckTable) {
+    SCOPED_TRACE(check.name);
+    std::unique_ptr buffer = impl_.PopTxBuffer();
+    std::vector<uint8_t> data;
+    ASSERT_TRUE(buffer);
+    ASSERT_EQ(buffer->buff().head_length, kHeadLength);
+    ASSERT_OK(buffer->GetData(&data, vmo_provider));
+    ASSERT_EQ(data.size(), kHeadLength + 1u);
+    ASSERT_EQ(data[kHeadLength], check.expect);
+    transaction.Enqueue(std::move(buffer));
+  }
+  transaction.Commit();
 }
 
 TEST_F(NetworkDeviceTest, InvalidTxFrameType) {
@@ -864,7 +937,7 @@ TEST_F(NetworkDeviceTest, InvalidTxFrameType) {
   // Session should be killed because of contract breach:
   ASSERT_OK(session.WaitClosed(TEST_DEADLINE));
   // We should NOT have received that frame:
-  ASSERT_TRUE(impl_.tx_buffers().is_empty());
+  ASSERT_FALSE(impl_.PopTxBuffer());
 }
 
 TEST_F(NetworkDeviceTest, RxFrameTypeFilter) {
@@ -877,7 +950,7 @@ TEST_F(NetworkDeviceTest, RxFrameTypeFilter) {
   session.ResetDescriptor(0);
   ASSERT_OK(session.SendRx(0));
   ASSERT_OK(WaitRxAvailable());
-  auto buff = impl_.rx_buffers().pop_front();
+  auto buff = impl_.PopRxBuffer();
   buff->return_buffer().meta.frame_type = static_cast<uint8_t>(netdev::wire::FrameType::kIpv4);
   buff->return_buffer().length = 10;
   RxReturnTransaction rx_transaction(&impl_);
@@ -926,7 +999,7 @@ TEST_F(NetworkDeviceTest, ObserveStatus) {
 
 // Test that returning tx buffers in the body of QueueTx is allowed and works.
 TEST_F(NetworkDeviceTest, ReturnTxInline) {
-  impl_.set_auto_return_tx(true);
+  impl_.set_immediate_return_tx(true);
   ASSERT_OK(CreateDevice());
   fidl::WireSyncClient connection = OpenConnection();
   TestSession session;
@@ -935,7 +1008,7 @@ TEST_F(NetworkDeviceTest, ReturnTxInline) {
   ASSERT_OK(WaitStart());
   session.ResetDescriptor(0x02);
   ASSERT_OK(session.SendTx(0x02));
-  ASSERT_OK(WaitTx());
+  ASSERT_OK(session.tx_fifo().wait_one(ZX_FIFO_READABLE, TEST_DEADLINE, nullptr));
   uint16_t desc;
   ASSERT_OK(session.FetchTx(&desc));
   EXPECT_EQ(desc, 0x02);
@@ -993,7 +1066,7 @@ TEST_F(NetworkDeviceTest, RejectsSmallRxBuffers) {
   // Session should be killed because of contract breach:
   ASSERT_OK(session.WaitClosed(TEST_DEADLINE));
   // We should NOT have received that frame:
-  ASSERT_TRUE(impl_.rx_buffers().is_empty());
+  ASSERT_FALSE(impl_.PopRxBuffer());
 }
 
 TEST_F(NetworkDeviceTest, RejectsSmallTxBuffers) {
@@ -1011,7 +1084,7 @@ TEST_F(NetworkDeviceTest, RejectsSmallTxBuffers) {
   // Session should be killed because of contract breach:
   ASSERT_OK(session.WaitClosed(TEST_DEADLINE));
   // We should NOT have received that frame:
-  ASSERT_TRUE(impl_.tx_buffers().is_empty());
+  ASSERT_FALSE(impl_.PopTxBuffer());
 }
 
 TEST_F(NetworkDeviceTest, RespectsRxThreshold) {
@@ -1040,7 +1113,7 @@ TEST_F(NetworkDeviceTest, RespectsRxThreshold) {
   for (uint16_t i = 0; i < half_depth; i++) {
     ASSERT_OK(session.SendRx(descriptors[i]));
     ASSERT_OK(WaitRxAvailable());
-    ASSERT_EQ(impl_.rx_buffers().size_slow(), i + 1u);
+    ASSERT_EQ(impl_.rx_buffer_count(), i + 1u);
   }
   // Send the rest of the buffers.
   size_t actual;
@@ -1048,12 +1121,12 @@ TEST_F(NetworkDeviceTest, RespectsRxThreshold) {
       session.SendRx(descriptors.data() + half_depth, descriptors.size() - half_depth, &actual));
   ASSERT_EQ(actual, descriptors.size() - half_depth);
   ASSERT_OK(WaitRxAvailable());
-  ASSERT_EQ(impl_.rx_buffers().size_slow(), impl_.info().rx_depth);
+  ASSERT_EQ(impl_.rx_buffer_count(), impl_.info().rx_depth);
 
   // Return the maximum number of buffers that we can return without hitting the threshold.
   for (uint16_t i = impl_.info().rx_depth - impl_.info().rx_threshold - 1; i != 0; i--) {
     RxReturnTransaction return_session(&impl_);
-    return_session.EnqueueWithSize(impl_.rx_buffers().pop_front(), kReturnBufferSize);
+    return_session.EnqueueWithSize(impl_.PopRxBuffer(), kReturnBufferSize);
     return_session.Commit();
     // Check that no more buffers are enqueued.
     ASSERT_STATUS(WaitRxAvailable(zx::time::infinite_past()), ZX_ERR_TIMED_OUT)
@@ -1064,10 +1137,10 @@ TEST_F(NetworkDeviceTest, RespectsRxThreshold) {
 
   // Return one more buffer to cross the threshold.
   RxReturnTransaction return_session(&impl_);
-  return_session.EnqueueWithSize(impl_.rx_buffers().pop_front(), kReturnBufferSize);
+  return_session.EnqueueWithSize(impl_.PopRxBuffer(), kReturnBufferSize);
   return_session.Commit();
   ASSERT_OK(WaitRxAvailable());
-  ASSERT_EQ(impl_.rx_buffers().size_slow(), impl_.info().rx_depth);
+  ASSERT_EQ(impl_.rx_buffer_count(), impl_.info().rx_depth);
 }
 
 TEST_F(NetworkDeviceTest, RxQueueIdlesOnPausedSession) {
@@ -1168,10 +1241,10 @@ TEST_F(NetworkDeviceTest, OnlyReceiveOnSubscribedPorts) {
   ASSERT_OK(session.SendRx(descriptors.data(), descriptors.size(), &actual));
   ASSERT_EQ(actual, descriptors.size());
   ASSERT_OK(WaitRxAvailable());
-  ASSERT_EQ(impl_.rx_buffers().size_slow(), descriptors.size());
+  ASSERT_EQ(impl_.rx_buffer_count(), descriptors.size());
   RxReturnTransaction return_session(&impl_);
   for (size_t i = 0; i < descriptors.size(); i++) {
-    auto rx_space = impl_.rx_buffers().pop_back();
+    std::unique_ptr rx_space = impl_.PopRxBuffer();
     // Set the port ID to the index, we should expect the session to only see port0.
     uint8_t port_id = static_cast<uint8_t>(i);
     rx_space->return_buffer().meta.port = port_id;
@@ -1188,7 +1261,7 @@ TEST_F(NetworkDeviceTest, OnlyReceiveOnSubscribedPorts) {
 
   // The unused descriptor comes right back to us.
   ASSERT_OK(WaitRxAvailable());
-  ASSERT_EQ(impl_.rx_buffers().size_slow(), 1u);
+  ASSERT_EQ(impl_.rx_buffer_count(), 1u);
 }
 
 TEST_F(NetworkDeviceTest, SessionsAttachToPort) {
@@ -1261,6 +1334,176 @@ TEST_F(NetworkDeviceTest, TxOnUnattachedPort) {
             static_cast<uint32_t>(netdev::wire::TxReturnFlags::kTxRetError |
                                   netdev::wire::TxReturnFlags::kTxRetNotAvailable));
 }
+
+enum class BufferReturnMethod {
+  NoReturn,
+  ManualReturn,
+  ImmediateReturn,
+};
+
+using RxTxBufferReturnParameters = std::tuple<RxTxSwitch, BufferReturnMethod, bool>;
+
+const std::string rxTxBufferReturnTestToString(
+    const ::testing::TestParamInfo<RxTxBufferReturnParameters>& info) {
+  std::stringstream ss;
+  auto [rxtx, return_method, auto_stop] = info.param;
+  ss << rxTxSwitchToString(rxtx);
+  switch (return_method) {
+    case BufferReturnMethod::NoReturn:
+      ss << "NoReturn";
+      break;
+    case BufferReturnMethod::ManualReturn:
+      ss << "ManualReturn";
+      break;
+    case BufferReturnMethod::ImmediateReturn:
+      ss << "ImmediateReturn";
+      break;
+  }
+  if (auto_stop) {
+    ss << "AutoStop";
+  } else {
+    ss << "NoAutoStop";
+  }
+  return ss.str();
+}
+class RxTxBufferReturnTest : public NetworkDeviceTest,
+                             public ::testing::WithParamInterface<RxTxBufferReturnParameters> {};
+
+TEST_P(RxTxBufferReturnTest, TestRaceFramesWithDeviceStop) {
+  // Test that racing a closing session with data on the Tx FIFO will do the right thing:
+  // - No buffers referencing old VMO IDs remain.
+  // - The device is stopped appropriately.
+  // - VMOs are cleaned up.
+  //
+  // Some correctness assertions exercised here are part of the test fixtures and enforce correct
+  // contract:
+  // - NetworkDeviceImplStart and NetworkDeviceImplStop can't be called when device is already in
+  // that state.
+  ASSERT_OK(CreateDevice());
+
+  auto [rxtx, return_method, auto_stop] = GetParam();
+  impl_.set_auto_stop(auto_stop);
+
+  // Run the test multiple times to increase chance of reproducing race in a single run.
+  constexpr uint16_t kIterations = 10;
+  for (uint16_t i = 0; i < kIterations; i++) {
+    TestSession session;
+    ASSERT_OK(OpenSession(&session));
+    ASSERT_OK(session.SetPaused(false));
+    ASSERT_OK(WaitStart());
+    session.ResetDescriptor(i);
+    fit::function<void()> manual_return;
+    switch (rxtx) {
+      case RxTxSwitch::Rx:
+        impl_.set_immediate_return_rx(return_method == BufferReturnMethod::ImmediateReturn);
+        ASSERT_OK(session.SendRx(i));
+        if (return_method == BufferReturnMethod::ManualReturn) {
+          ASSERT_OK(WaitRxAvailable());
+          std::unique_ptr buffer = impl_.PopRxBuffer();
+          buffer->return_buffer().length = kDefaultBufferLength;
+          ASSERT_FALSE(impl_.PopRxBuffer());
+          manual_return = [this, buffer = std::move(buffer)]() mutable {
+            RxReturnTransaction transact(&impl_);
+            transact.Enqueue(std::move(buffer));
+            transact.Commit();
+          };
+        }
+        break;
+      case RxTxSwitch::Tx:
+        impl_.set_immediate_return_tx(return_method == BufferReturnMethod::ImmediateReturn);
+        ASSERT_OK(session.SendTx(i));
+        if (return_method == BufferReturnMethod::ManualReturn) {
+          ASSERT_OK(WaitTx());
+          std::unique_ptr buffer = impl_.PopTxBuffer();
+          buffer->set_status(ZX_OK);
+          ASSERT_FALSE(impl_.PopTxBuffer());
+          manual_return = [this, buffer = std::move(buffer)]() mutable {
+            TxReturnTransaction transact(&impl_);
+            transact.Enqueue(std::move(buffer));
+            transact.Commit();
+          };
+        }
+        break;
+    }
+    session.Close();
+    if (manual_return) {
+      manual_return();
+    }
+    ASSERT_OK(WaitStop());
+    if (!auto_stop) {
+      ASSERT_TRUE(impl_.TriggerStop());
+    }
+
+    for (;;) {
+      zx_wait_item_t items[] = {
+          {
+              .handle = session.channel().get(),
+              .waitfor = ZX_CHANNEL_PEER_CLOSED,
+          },
+          {
+              .handle = impl_.events().get(),
+              .waitfor = kEventTx | kEventRxAvailable,
+          },
+      };
+      auto& [session_wait, events_wait] = items;
+      ASSERT_OK(zx_object_wait_many(items, std::size(items), TEST_DEADLINE.get()));
+      // Here's where we observe and assert on our races. We're waiting for the session to close,
+      // but we're racing with rx buffers becoming available again and the session teardown itself.
+      if (events_wait.pending & kEventRxAvailable) {
+        ASSERT_OK(impl_.events().signal(kEventRxAvailable, 0));
+        // If new rx buffers came back to us, the session must not have been closed.
+        ASSERT_FALSE(session_wait.pending & ZX_CHANNEL_PEER_CLOSED);
+        RxReturnTransaction return_rx(&impl_);
+        for (std::unique_ptr buffer = impl_.PopRxBuffer(); buffer; buffer = impl_.PopRxBuffer()) {
+          buffer->return_buffer().length = 0;
+          return_rx.Enqueue(std::move(buffer));
+        }
+        return_rx.Commit();
+      }
+
+      // When no returns and no auto stopping we may have the pending tx frame that hasn't been
+      // returned yet.
+      if (return_method == BufferReturnMethod::NoReturn && !auto_stop) {
+        if (events_wait.pending & kEventTx) {
+          ASSERT_OK(impl_.events().signal(kEventTx, 0));
+          // If we still have pending tx buffers then the session must not have been closed.
+          ASSERT_FALSE(session_wait.pending & ZX_CHANNEL_PEER_CLOSED);
+          TxReturnTransaction return_tx(&impl_);
+          for (std::unique_ptr buffer = impl_.PopTxBuffer(); buffer; buffer = impl_.PopTxBuffer()) {
+            buffer->set_status(ZX_ERR_UNAVAILABLE);
+            return_tx.Enqueue(std::move(buffer));
+          }
+          return_tx.Commit();
+        }
+      } else {
+        ASSERT_FALSE(events_wait.pending & kEventTx);
+      }
+
+      if (session_wait.pending & ZX_CHANNEL_PEER_CLOSED) {
+        ASSERT_FALSE(events_wait.pending & kEventTx);
+        ASSERT_FALSE(events_wait.pending & kEventRxAvailable);
+        break;
+      }
+    }
+
+    fbl::Span vmos = impl_.vmos();
+    for (auto vmo = vmos.begin(); vmo != vmos.end(); vmo++) {
+      ASSERT_FALSE(vmo->is_valid())
+          << "unreleased VMO found at " << std::distance(vmo, vmos.begin());
+    }
+  }
+}
+
+INSTANTIATE_TEST_SUITE_P(NetworkDeviceTest, RxTxBufferReturnTest,
+                         ::testing::Combine(::testing::Values(RxTxSwitch::Rx, RxTxSwitch::Tx),
+                                            ::testing::Values(BufferReturnMethod::NoReturn,
+                                                              BufferReturnMethod::ManualReturn,
+                                                              BufferReturnMethod::ImmediateReturn),
+                                            ::testing::Bool()),
+                         rxTxBufferReturnTestToString);
+
+INSTANTIATE_TEST_SUITE_P(NetworkDeviceTest, RxTxParamTest,
+                         ::testing::Values(RxTxSwitch::Rx, RxTxSwitch::Tx), rxTxParamTestToString);
 
 }  // namespace testing
 }  // namespace network

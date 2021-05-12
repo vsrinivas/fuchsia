@@ -27,11 +27,6 @@ class TxQueue {
   static zx::status<std::unique_ptr<TxQueue>> Create(DeviceInterface* parent);
   ~TxQueue() = default;
 
-  // Reclaims all tx buffers currently held by the device implementation.
-  //
-  // Returns true if the device buffers were full before reclaiming.
-  [[nodiscard]] bool Reclaim() __TA_REQUIRES(parent_->tx_lock(), parent_->tx_buffers_lock());
-
   // Helper functions with TA annotations that bridges the gap between parent's locks and local
   // locking requirements; TA is not otherwise able to tell that the |parent| and |parent_| are the
   // same entity.
@@ -89,8 +84,6 @@ class TxQueue {
 
   // Adds the provided session:descriptor tuple to the queue and returns the buffer id.
   uint32_t Enqueue(Session* session, uint16_t descriptor) __TA_REQUIRES(parent_->tx_lock());
-  // Marks the buffer with id as complete with the given status.
-  void MarkComplete(uint32_t id, zx_status_t status) __TA_REQUIRES(parent_->tx_lock());
   // Returns all outstanding completed buffers to their respective sessions.
   //
   // Returns true if device buffers were full and sessions should be notified.

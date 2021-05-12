@@ -294,10 +294,12 @@ void DeviceInterface::NetworkDeviceIfcRemovePort(uint8_t port_id) {
 }
 
 void DeviceInterface::NetworkDeviceIfcCompleteRx(const rx_buffer_t* rx_list, size_t rx_count) {
+  LOGF_TRACE("network-device: %s(_, %ld)", __FUNCTION__, rx_count);
   rx_queue_->CompleteRxList(rx_list, rx_count);
 }
 
 void DeviceInterface::NetworkDeviceIfcCompleteTx(const tx_result_t* tx_list, size_t tx_count) {
+  LOGF_TRACE("network-device: %s(_, %ld)", __FUNCTION__, tx_count);
   tx_queue_->CompleteTxList(tx_list, tx_count);
 }
 
@@ -632,38 +634,22 @@ void DeviceInterface::StopDeviceInner() {
 }
 
 PendingDeviceOperation DeviceInterface::SetDeviceStatus(DeviceStatus status) {
-  auto pending_op = pending_device_op_;
+  PendingDeviceOperation pending_op = pending_device_op_;
   device_status_ = status;
   pending_device_op_ = PendingDeviceOperation::NONE;
-  if (status == DeviceStatus::STOPPED) {
-    tx_queue_->AssertParentTxLocked(*this);
-    tx_queue_->AssertParentTxBuffersLocked(*this);
-    bool was_full = tx_queue_->Reclaim();
-
-    rx_queue_->AssertParentRxLocked(*this);
-    rx_queue_->Reclaim();
-
-    if (was_full) {
-      NotifyTxQueueAvailable();
-    }
-    PruneDeadSessions();
-  }
   return pending_op;
 }
 
 void DeviceInterface::DeviceStarted() {
   LOG_TRACE("network-device: DeviceStarted");
-  PendingDeviceOperation pending_op;
-  {
-    fbl::AutoLock tx_lock(&tx_lock_);
-    fbl::AutoLock tx_buff_lock(&tx_buffers_lock_);
-    fbl::AutoLock rx_lock(&rx_lock_);
-    control_lock_.Acquire();
-    pending_op = SetDeviceStatus(DeviceStatus::STARTED);
-  }
-  if (pending_op == PendingDeviceOperation::STOP) {
-    StopDevice();
-    return;
+  control_lock_.Acquire();
+  switch (SetDeviceStatus(DeviceStatus::STARTED)) {
+    case PendingDeviceOperation::STOP:
+      StopDevice();
+      return;
+    case PendingDeviceOperation::NONE:
+    case PendingDeviceOperation::START:
+      break;
   }
   NotifyTxQueueAvailable();
   control_lock_.Release();
@@ -673,21 +659,18 @@ void DeviceInterface::DeviceStarted() {
 
 void DeviceInterface::DeviceStopped() {
   LOG_TRACE("network-device: DeviceStopped");
-  PendingDeviceOperation pending_op;
-  {
-    fbl::AutoLock tx_lock(&tx_lock_);
-    fbl::AutoLock tx_buff_lock(&tx_buffers_lock_);
-    fbl::AutoLock rx_lock(&rx_lock_);
-    control_lock_.Acquire();
-    pending_op = SetDeviceStatus(DeviceStatus::STOPPED);
-  }
-
+  control_lock_.Acquire();
+  PendingDeviceOperation pending_op = SetDeviceStatus(DeviceStatus::STOPPED);
   if (ContinueTeardown(TeardownState::SESSIONS)) {
     return;
   }
-
-  if (pending_op == PendingDeviceOperation::START) {
-    StartDevice();
+  switch (pending_op) {
+    case PendingDeviceOperation::START:
+      StartDevice();
+      return;
+    case PendingDeviceOperation::NONE:
+    case PendingDeviceOperation::STOP:
+      break;
   }
 }
 
@@ -891,10 +874,14 @@ void DeviceInterface::NotifyTxReturned(bool was_full) {
 }
 
 void DeviceInterface::QueueRxSpace(const rx_space_buffer_t* rx, size_t count) {
+  LOGF_TRACE("network-device: %s(_, %ld)", __FUNCTION__, count);
   device_.QueueRxSpace(rx, count);
 }
 
-void DeviceInterface::QueueTx(const tx_buffer_t* tx, size_t count) { device_.QueueTx(tx, count); }
+void DeviceInterface::QueueTx(const tx_buffer_t* tx, size_t count) {
+  LOGF_TRACE("network-device: %s(_, %ld)", __FUNCTION__, count);
+  device_.QueueTx(tx, count);
+}
 
 void DeviceInterface::NotifyDeadSession(Session& dead_session) {
   LOGF_TRACE("network-device: NotifyDeadSession '%s'", dead_session.name());

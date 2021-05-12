@@ -161,7 +161,9 @@ class DeviceAdapter : public ddk::NetworkDeviceImplProtocol<DeviceAdapter>,
   std::array<uint8_t, fuchsia_hardware_network::wire::kMaxFrameTypes> rx_types_{};
   std::array<tx_support_t, fuchsia_hardware_network::wire::kMaxFrameTypes> tx_types_{};
   std::queue<Buffer> tx_buffers_ __TA_GUARDED(tx_lock_);
+  bool tx_available_ __TA_GUARDED(tx_lock_) = false;
   std::queue<Buffer> rx_buffers_ __TA_GUARDED(rx_lock_);
+  bool rx_available_ __TA_GUARDED(rx_lock_) = false;
   std::vector<rx_buffer_t> return_rx_list_ __TA_GUARDED(rx_lock_);
   std::vector<tx_result_t> return_tx_list_ __TA_GUARDED(tx_lock_);
   ddk::NetworkDeviceIfcProtocolClient device_iface_;

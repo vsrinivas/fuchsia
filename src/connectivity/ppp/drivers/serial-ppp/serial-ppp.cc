@@ -367,6 +367,14 @@ void SerialPpp::NetworkDeviceImplStart(network_device_impl_start_callback callba
     port_ = std::move(port);
     thread_ = std::thread([&] { WorkerLoop(); });
   }
+  {
+    fbl::AutoLock lock(&rx_lock_);
+    rx_available_ = true;
+  }
+  {
+    fbl::AutoLock lock(&tx_lock_);
+    tx_available_ = true;
+  }
   port_status_t new_status = {.mtu = kDefaultMtu,
                               .flags = static_cast<uint32_t>(netdev::wire::StatusFlags::kOnline)};
   netdevice_protocol_.PortStatusChanged(kPortId, &new_status);
@@ -379,14 +387,32 @@ void SerialPpp::NetworkDeviceImplStop(network_device_impl_stop_callback callback
   port_status_t new_status = {.mtu = kDefaultMtu, .flags = 0};
   netdevice_protocol_.PortStatusChanged(kPortId, &new_status);
 
-  // Clear pending buffers.
+  // Return all pending buffers.
   {
     fbl::AutoLock lock(&rx_lock_);
-    rx_space_ = {};
+    rx_available_ = false;
+    while (!rx_space_.empty()) {
+      const PendingBuffer& space = rx_space_.front();
+      rx_buffer_t buffer = {
+          .id = space.id,
+          .length = 0,
+      };
+      netdevice_protocol_.CompleteRx(&buffer, 1);
+      rx_space_.pop();
+    }
   }
   {
     fbl::AutoLock lock(&tx_lock_);
-    pending_tx_ = {};
+    tx_available_ = false;
+    while (!pending_tx_.empty()) {
+      const PendingBuffer& space = pending_tx_.front();
+      tx_result_t result = {
+          .id = space.id,
+          .status = ZX_ERR_UNAVAILABLE,
+      };
+      netdevice_protocol_.CompleteTx(&result, 1);
+      pending_tx_.pop();
+    }
   }
   callback(cookie);
 }
@@ -409,22 +435,26 @@ void SerialPpp::NetworkDeviceImplQueueTx(const tx_buffer_t* buf_list, size_t buf
   {
     fbl::AutoLock lock(&tx_lock_);
     for (auto buffer : fbl::Span(buf_list, buf_count)) {
-      zx_status_t status = ZX_OK;
-      if (buffer.data.parts_count == 1) {
+      zx_status_t status = [this, &buffer]() __TA_REQUIRES(tx_lock_) {
+        if (!tx_available_) {
+          return ZX_ERR_UNAVAILABLE;
+        }
+        if (buffer.data.parts_count != 1) {
+          return ZX_ERR_NOT_SUPPORTED;
+        }
         auto& data = *buffer.data.parts_list;
         auto* stored_vmo = vmos_.GetVmo(buffer.data.vmo_id);
-        if (stored_vmo) {
-          pending_tx_.push(
-              PendingBuffer{.id = buffer.id,
-                            .data = stored_vmo->data().subspan(data.offset, data.length),
-                            .type = buffer.meta.frame_type});
-        } else {
-          status = ZX_ERR_INVALID_ARGS;
+        if (!stored_vmo) {
+          return ZX_ERR_INVALID_ARGS;
         }
-      } else {
-        status = ZX_ERR_NOT_SUPPORTED;
-      }
 
+        pending_tx_.push(PendingBuffer{
+            .id = buffer.id,
+            .data = stored_vmo->data().subspan(data.offset, data.length),
+            .type = buffer.meta.frame_type,
+        });
+        return ZX_OK;
+      }();
       if (status != ZX_OK) {
         auto& r = inline_return[inline_return_count++];
         r.id = buffer.id;
@@ -451,29 +481,52 @@ void SerialPpp::NetworkDeviceImplQueueRxSpace(const rx_space_buffer_t* buf_list,
   {
     fbl::AutoLock lock(&rx_lock_);
     for (auto buffer : fbl::Span(buf_list, buf_count)) {
-      if (buffer.data.parts_count != 1) {
-        zxlogf(WARNING, "ignoring scatter-gather rx space buffer (%ld parts)",
-               buffer.data.parts_count);
-        continue;
-      }
-      auto& data = *buffer.data.parts_list;
-      if (data.length < kDefaultMtu) {
-        zxlogf(WARNING, "ignoring small rx buffer with size %ld", data.length);
-        continue;
-      }
+      bool return_buffer = [this, &buffer]() __TA_REQUIRES(rx_lock_) {
+        if (!rx_available_) {
+          return true;
+        }
 
-      auto* vmo = vmos_.GetVmo(buffer.data.vmo_id);
-      if (!vmo) {
-        zxlogf(WARNING, "ignoring rx buffer with invalid VMO id: %d", buffer.data.vmo_id);
-        continue;
-      }
+        if (buffer.data.parts_count != 1) {
+          zxlogf(WARNING, "ignoring scatter-gather rx space buffer (%ld parts)",
+                 buffer.data.parts_count);
+          return true;
+        }
+        auto& data = *buffer.data.parts_list;
+        if (data.length < kDefaultMtu) {
+          zxlogf(WARNING, "ignoring small rx buffer with size %ld", data.length);
+          return true;
+        }
 
-      rx_space_.push(
-          PendingBuffer{.id = buffer.id, .data = vmo->data().subspan(data.offset, data.length)});
+        auto* vmo = vmos_.GetVmo(buffer.data.vmo_id);
+        if (!vmo) {
+          zxlogf(WARNING, "ignoring rx buffer with invalid VMO id: %d", buffer.data.vmo_id);
+          return true;
+        }
+
+        rx_space_.push(PendingBuffer{
+            .id = buffer.id,
+            .data = vmo->data().subspan(data.offset, data.length),
+        });
+
+        return false;
+      }();
+
+      if (return_buffer) {
+        // Return the buffer with an empty length immediately, we can't use it.
+        rx_buffer_t rx_buffer = {
+            .id = buffer.id,
+            .length = 0,
+        };
+        netdevice_protocol_.CompleteRx(&rx_buffer, 1);
+      }
     }
   }
 
-  zx_port_packet_t packet = {.key = kTriggerRxKey, .type = ZX_PKT_TYPE_USER, .status = ZX_OK};
+  zx_port_packet_t packet = {
+      .key = kTriggerRxKey,
+      .type = ZX_PKT_TYPE_USER,
+      .status = ZX_OK,
+  };
   zx_status_t status = port_.queue(&packet);
   if (status != ZX_OK) {
     zxlogf(ERROR, "failed to trigger rx on port: %s", zx_status_get_string(status));

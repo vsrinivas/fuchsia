@@ -200,8 +200,7 @@ class DeviceInterface : public fidl::WireServer<netdev::Device>,
   // sessions are destroyed.
   void DeviceStopped();
 
-  PendingDeviceOperation SetDeviceStatus(DeviceStatus status)
-      __TA_REQUIRES(control_lock_, tx_lock_, rx_lock_, tx_buffers_lock_);
+  PendingDeviceOperation SetDeviceStatus(DeviceStatus status) __TA_REQUIRES(control_lock_);
 
   // Notifies the device implementation that the VMO used by the provided session will no longer be
   // used. It is called right before sessions are destroyed.

@@ -12,6 +12,7 @@
 #include <vector>
 
 #include <fbl/intrusive_double_list.h>
+#include <gtest/gtest.h>
 
 #include "definitions.h"
 #include "device_interface.h"
@@ -23,6 +24,7 @@ constexpr uint16_t kRxDepth = 16;
 constexpr uint16_t kTxDepth = 16;
 constexpr uint16_t kDefaultDescriptorCount = 256;
 constexpr uint64_t kDefaultBufferLength = ZX_PAGE_SIZE / 2;
+constexpr uint64_t kAutoReturnRxLength = 512;
 
 class RxReturnTransaction;
 class TxReturnTransaction;
@@ -160,13 +162,20 @@ class FakeNetworkDeviceImpl : public ddk::NetworkDeviceImplProtocol<FakeNetworkD
   void NetworkDeviceImplGetInfo(device_info_t* out_info);
   void NetworkDeviceImplQueueTx(const tx_buffer_t* buf_list, size_t buf_count);
   void NetworkDeviceImplQueueRxSpace(const rx_space_buffer_t* buf_list, size_t buf_count);
-  void NetworkDeviceImplPrepareVmo(uint8_t vmo_id, zx::vmo vmo) { vmos_[vmo_id] = std::move(vmo); }
-  void NetworkDeviceImplReleaseVmo(uint8_t vmo_id) { vmos_[vmo_id].reset(); }
+  void NetworkDeviceImplPrepareVmo(uint8_t vmo_id, zx::vmo vmo) {
+    zx::vmo& slot = vmos_[vmo_id];
+    EXPECT_FALSE(slot.is_valid()) << "vmo " << static_cast<uint32_t>(vmo_id) << " already prepared";
+    slot = std::move(vmo);
+  }
+  void NetworkDeviceImplReleaseVmo(uint8_t vmo_id) {
+    zx::vmo& slot = vmos_[vmo_id];
+    EXPECT_TRUE(slot.is_valid()) << "vmo " << static_cast<uint32_t>(vmo_id) << " already released";
+    slot.reset();
+  }
   void NetworkDeviceImplSetSnoop(bool snoop) { /* do nothing , only auto-snooping is allowed */
   }
 
   fit::function<zx::unowned_vmo(uint8_t)> VmoGetter();
-  void ReturnAllTx();
 
   const zx::event& events() const { return event_; }
 
@@ -174,9 +183,39 @@ class FakeNetworkDeviceImpl : public ddk::NetworkDeviceImplProtocol<FakeNetworkD
 
   FakeNetworkPortImpl& port0() { return port0_; }
 
-  fbl::DoublyLinkedList<std::unique_ptr<RxBuffer>>& rx_buffers() { return rx_buffers_; }
+  std::unique_ptr<RxBuffer> PopRxBuffer() __TA_EXCLUDES(lock_) {
+    fbl::AutoLock lock(&lock_);
+    return rx_buffers_.pop_front();
+  }
 
-  fbl::DoublyLinkedList<std::unique_ptr<TxBuffer>>& tx_buffers() { return tx_buffers_; }
+  std::unique_ptr<TxBuffer> PopTxBuffer() __TA_EXCLUDES(lock_) {
+    fbl::AutoLock lock(&lock_);
+    return tx_buffers_.pop_front();
+  }
+
+  fbl::DoublyLinkedList<std::unique_ptr<TxBuffer>> TakeTxBuffers() __TA_EXCLUDES(lock_) {
+    fbl::AutoLock lock(&lock_);
+    fbl::DoublyLinkedList<std::unique_ptr<TxBuffer>> r;
+    tx_buffers_.swap(r);
+    return r;
+  }
+
+  fbl::DoublyLinkedList<std::unique_ptr<RxBuffer>> TakeRxBuffers() __TA_EXCLUDES(lock_) {
+    fbl::AutoLock lock(&lock_);
+    fbl::DoublyLinkedList<std::unique_ptr<RxBuffer>> r;
+    rx_buffers_.swap(r);
+    return r;
+  }
+
+  size_t rx_buffer_count() __TA_EXCLUDES(lock_) {
+    fbl::AutoLock lock(&lock_);
+    return rx_buffers_.size_slow();
+  }
+
+  size_t tx_buffer_count() __TA_EXCLUDES(lock_) {
+    fbl::AutoLock lock(&lock_);
+    return tx_buffers_.size_slow();
+  }
 
   void set_auto_start(bool auto_start) { auto_start_ = auto_start; }
 
@@ -192,23 +231,29 @@ class FakeNetworkDeviceImpl : public ddk::NetworkDeviceImplProtocol<FakeNetworkD
     return network_device_impl_protocol_t{.ops = &network_device_impl_protocol_ops_, .ctx = this};
   }
 
-  void set_auto_return_tx(bool auto_return) { auto_return_tx_ = auto_return; }
+  void set_immediate_return_tx(bool auto_return) { immediate_return_tx_ = auto_return; }
+  void set_immediate_return_rx(bool auto_return) { immediate_return_rx_ = auto_return; }
 
   ddk::NetworkDeviceIfcProtocolClient& client() { return device_client_; }
 
+  fbl::Span<const zx::vmo> vmos() { return fbl::Span(vmos_.begin(), vmos_.end()); }
+
  private:
+  fbl::Mutex lock_;
   FakeNetworkPortImpl port0_;
   std::array<zx::vmo, MAX_VMOS> vmos_;
   device_info_t info_{};
   ddk::NetworkDeviceIfcProtocolClient device_client_;
-  fbl::DoublyLinkedList<std::unique_ptr<RxBuffer>> rx_buffers_;
-  fbl::DoublyLinkedList<std::unique_ptr<TxBuffer>> tx_buffers_;
+  fbl::DoublyLinkedList<std::unique_ptr<RxBuffer>> rx_buffers_ __TA_GUARDED(lock_);
+  fbl::DoublyLinkedList<std::unique_ptr<TxBuffer>> tx_buffers_ __TA_GUARDED(lock_);
   zx::event event_;
   bool auto_start_ = true;
   bool auto_stop_ = true;
-  bool auto_return_tx_ = false;
-  fit::function<void()> pending_start_callback_;
-  fit::function<void()> pending_stop_callback_;
+  bool immediate_return_tx_ = false;
+  bool immediate_return_rx_ = false;
+  bool device_started_ __TA_GUARDED(lock_) = false;
+  fit::function<void()> pending_start_callback_ __TA_GUARDED(lock_);
+  fit::function<void()> pending_stop_callback_ __TA_GUARDED(lock_);
 };
 
 class TestSession {
@@ -267,6 +312,7 @@ class TestSession {
   uint64_t canonical_offset(uint16_t index) const { return buffer_length_ * index; }
 
   const zx::fifo& tx_fifo() const { return fifos_.tx; }
+  const zx::channel& channel() const { return session_.channel(); }
 
  private:
   uint16_t descriptors_count_{};

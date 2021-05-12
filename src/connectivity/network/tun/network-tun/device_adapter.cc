@@ -58,9 +58,19 @@ zx_status_t DeviceAdapter::NetworkDeviceImplInit(const network_device_ifc_protoc
 
 void DeviceAdapter::NetworkDeviceImplStart(network_device_impl_start_callback callback,
                                            void* cookie) {
+  bool tx_valid;
   {
     fbl::AutoLock lock(&state_lock_);
     has_sessions_ = true;
+    tx_valid = online_;
+  }
+  {
+    fbl::AutoLock lock(&rx_lock_);
+    rx_available_ = true;
+  }
+  {
+    fbl::AutoLock lock(&tx_lock_);
+    tx_available_ = tx_valid;
   }
   parent_->OnHasSessionsChanged(this);
   callback(cookie);
@@ -73,16 +83,30 @@ void DeviceAdapter::NetworkDeviceImplStop(network_device_impl_stop_callback call
     has_sessions_ = false;
   }
   {
-    // discard all rx buffers
+    // Return all rx buffers.
     fbl::AutoLock lock(&rx_lock_);
+    rx_available_ = false;
     while (!rx_buffers_.empty()) {
+      const Buffer& buffer = rx_buffers_.front();
+      rx_buffer_t return_buffer = {
+          .id = buffer.id(),
+          .length = 0,
+      };
+      device_iface_.CompleteRx(&return_buffer, 1);
       rx_buffers_.pop();
     }
   }
   {
-    // discard all tx buffers
+    // Return all tx buffers.
     fbl::AutoLock lock(&tx_lock_);
+    tx_available_ = false;
     while (!tx_buffers_.empty()) {
+      const Buffer& buffer = tx_buffers_.front();
+      tx_result_t result = {
+          .id = buffer.id(),
+          .status = ZX_ERR_UNAVAILABLE,
+      };
+      device_iface_.CompleteTx(&result, 1);
       tx_buffers_.pop();
     }
   }
@@ -94,20 +118,16 @@ void DeviceAdapter::NetworkDeviceImplGetInfo(device_info_t* out_info) { *out_inf
 
 void DeviceAdapter::NetworkDeviceImplQueueTx(const tx_buffer_t* buf_list, size_t buf_count) {
   {
-    fbl::AutoLock state_lock(&state_lock_);
-
-    if (!online_) {
-      FX_VLOGF(1, "tun", "Discarding %d tx buffers because device is offline", buf_count);
-
-      fbl::AutoLock lock(&tx_lock_);
+    fbl::AutoLock tx_lock(&tx_lock_);
+    if (!tx_available_) {
+      FX_VLOGF(1, "tun", "Discarding %d tx buffers, tx queue is invalid", tx_available_);
       while (buf_count--) {
-        EnqueueTx(buf_list->id, ZX_ERR_BAD_STATE);
+        EnqueueTx(buf_list->id, ZX_ERR_UNAVAILABLE);
         buf_list++;
       }
       CommitTx();
       return;
     }
-    fbl::AutoLock lock(&tx_lock_);
     while (buf_count--) {
       tx_buffers_.emplace(vmos_.MakeTxBuffer(buf_list, parent_->config().report_metadata));
       buf_list++;
@@ -121,6 +141,17 @@ void DeviceAdapter::NetworkDeviceImplQueueRxSpace(const rx_space_buffer_t* buf_l
   bool has_buffers;
   {
     fbl::AutoLock lock(&rx_lock_);
+    if (!rx_available_) {
+      while (buf_count--) {
+        rx_buffer_t buffer = {
+            .id = buf_list->id,
+            .length = 0,
+        };
+        device_iface_.CompleteRx(&buffer, 1);
+        buf_list++;
+      }
+      return;
+    }
     while (buf_count--) {
       rx_buffers_.emplace(vmos_.MakeRxSpaceBuffer(buf_list++));
     }
@@ -178,12 +209,13 @@ void DeviceAdapter::SetOnline(bool online) {
     new_status.flags =
         online_ ? static_cast<uint32_t>(fuchsia_hardware_network::wire::StatusFlags::kOnline) : 0;
 
-    if (!online_) {
-      // if going offline, discard all pending tx buffers
-      {
-        fbl::AutoLock tx_lock(&tx_lock_);
+    {
+      fbl::AutoLock tx_lock(&tx_lock_);
+      tx_available_ = online_ && has_sessions_;
+      // If going offline, discard all pending tx buffers.
+      if (!tx_available_) {
         while (!tx_buffers_.empty()) {
-          EnqueueTx(tx_buffers_.front().id(), ZX_ERR_BAD_STATE);
+          EnqueueTx(tx_buffers_.front().id(), ZX_ERR_UNAVAILABLE);
           tx_buffers_.pop();
         }
         CommitTx();
