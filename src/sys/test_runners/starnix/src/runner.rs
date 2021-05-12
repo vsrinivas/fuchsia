@@ -5,9 +5,11 @@
 use {
     crate::test_suite::handle_suite_requests,
     anyhow::{anyhow, Error},
+    fidl::endpoints::ServerEnd,
     fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_data as fdata,
     fidl_fuchsia_test as ftest, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
+    fuchsia_zircon as zx,
     futures::{StreamExt, TryStreamExt},
     runner::component::ComponentNamespace,
     std::convert::TryFrom,
@@ -29,9 +31,7 @@ pub async fn handle_runner_requests(
 ) -> Result<(), Error> {
     while let Some(event) = request_stream.try_next().await? {
         match event {
-            fcrunner::ComponentRunnerRequest::Start {
-                start_info, controller: _controller, ..
-            } => {
+            fcrunner::ComponentRunnerRequest::Start { start_info, controller, .. } => {
                 let outgoing_dir_channel = start_info
                     .outgoing_dir
                     .ok_or(anyhow!("Missing outgoing directory."))?
@@ -44,8 +44,14 @@ pub async fn handle_runner_requests(
                 )?;
 
                 fasync::Task::local(async move {
-                    match serve_test_suite(&component_url, program, outgoing_dir_channel, namespace)
-                        .await
+                    match serve_test_suite(
+                        &component_url,
+                        program,
+                        outgoing_dir_channel,
+                        namespace,
+                        controller,
+                    )
+                    .await
                     {
                         Ok(_) => {
                             fuchsia_syslog::fx_log_info!(
@@ -77,11 +83,13 @@ pub async fn handle_runner_requests(
 /// - `program`: The program data associated with the run request for the test component.
 /// - `outgoing_dir_channel`: The channel for the directory to serve the test suite protocol from.
 /// - `namespace`: The incoming namespace to provide to the test component.
+/// - `controller`: The component controller associated with the test component.
 async fn serve_test_suite(
     test_url: &str,
     program: fdata::Dictionary,
     outgoing_dir_channel: fidl::Channel,
     namespace: ComponentNamespace,
+    controller: ServerEnd<fcrunner::ComponentControllerMarker>,
 ) -> Result<(), Error> {
     let test_url = test_url.to_string();
 
@@ -89,7 +97,7 @@ async fn serve_test_suite(
     outgoing_dir.dir("svc").add_fidl_service(TestComponentExposedServices::Suite);
     outgoing_dir.serve_connection(outgoing_dir_channel)?;
 
-    while let Some(service_request) = outgoing_dir.next().await {
+    if let Some(service_request) = outgoing_dir.next().await {
         match service_request {
             TestComponentExposedServices::Suite(stream) => {
                 let test_url = test_url.to_string();
@@ -102,6 +110,7 @@ async fn serve_test_suite(
                         fuchsia_syslog::fx_log_err!("Error serving test suite requsets: {:?}", e)
                     }
                 }
+                let _ = controller.close_with_epitaph(zx::Status::OK);
             }
         }
     }
@@ -114,6 +123,7 @@ mod tests {
     use {
         super::*,
         fidl::endpoints::{create_proxy, DiscoverableService},
+        fidl_fuchsia_component_runner::ComponentControllerMarker,
         fidl_fuchsia_io as fio, fidl_fuchsia_test as ftest, fuchsia_async as fasync,
     };
 
@@ -128,12 +138,14 @@ mod tests {
     async fn test_serving_test_suite_in_svc() {
         let (directory_proxy, directory_server) =
             create_proxy::<fio::DirectoryMarker>().expect("Couldn't create case iterator.");
+        let (_, controller) = create_proxy::<ComponentControllerMarker>().unwrap();
         fasync::Task::local(async move {
             let _ = serve_test_suite(
                 "test",
                 fdata::Dictionary { entries: None, ..fdata::Dictionary::EMPTY },
                 directory_server.into_channel(),
                 ComponentNamespace::try_from(vec![]).unwrap(),
+                controller,
             )
             .await;
         })
