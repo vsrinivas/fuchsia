@@ -29,11 +29,13 @@ class FakeVirtualKeyboardCoordinator : public VirtualKeyboardCoordinator {
   }
   void RequestTypeAndVisibility(fuchsia::input::virtualkeyboard::TextType text_type,
                                 bool is_visibile) override {
+    requested_text_type_ = text_type;
     want_visible_ = is_visibile;
   }
 
   // Test support.
   const auto& want_visible() { return want_visible_; }
+  const auto& requested_text_type() { return requested_text_type_; }
 
   fxl::WeakPtr<FakeVirtualKeyboardCoordinator> GetWeakPtr() {
     return weak_ptr_factory_.GetWeakPtr();
@@ -41,6 +43,7 @@ class FakeVirtualKeyboardCoordinator : public VirtualKeyboardCoordinator {
 
  private:
   std::optional<bool> want_visible_;
+  std::optional<fuchsia::input::virtualkeyboard::TextType> requested_text_type_;
   fxl::WeakPtrFactory<FakeVirtualKeyboardCoordinator> weak_ptr_factory_;
 };
 
@@ -214,6 +217,23 @@ TEST_F(VirtualKeyboardControllerTest, RequestHideDoesNotCrashWhenCoordinatorIsNu
   coordinator.reset();
   controller.RequestHide();
 }
+
+class VirtualKeyboardControllerTextTypeParamFixture
+    : public VirtualKeyboardControllerTest,
+      public testing::WithParamInterface<fuchsia::input::virtualkeyboard::TextType> {};
+
+TEST_P(VirtualKeyboardControllerTextTypeParamFixture,
+       RequestShowInformsCoordinatorOfInitialTextType) {
+  auto expected_text_type = GetParam();
+  VirtualKeyboardController(coordinator(), view_ref(), expected_text_type).RequestShow();
+  ASSERT_EQ(expected_text_type, coordinator()->requested_text_type());
+}
+
+INSTANTIATE_TEST_SUITE_P(VirtualKeyboardControllerTextTypeParameterizedTests,
+                         VirtualKeyboardControllerTextTypeParamFixture,
+                         ::testing::Values(fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC,
+                                           fuchsia::input::virtualkeyboard::TextType::NUMERIC,
+                                           fuchsia::input::virtualkeyboard::TextType::PHONE));
 
 TEST_F(VirtualKeyboardControllerTest, SetTextTypeDoesNotCrash) {
   VirtualKeyboardController(coordinator(), view_ref(),

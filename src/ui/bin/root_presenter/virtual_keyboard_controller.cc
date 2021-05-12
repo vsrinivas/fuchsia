@@ -16,7 +16,7 @@ namespace root_presenter {
 VirtualKeyboardController::VirtualKeyboardController(
     fxl::WeakPtr<VirtualKeyboardCoordinator> coordinator, fuchsia::ui::views::ViewRef view_ref,
     fuchsia::input::virtualkeyboard::TextType text_type)
-    : coordinator_(std::move(coordinator)), want_visible_(false) {}
+    : coordinator_(std::move(coordinator)), text_type_(text_type), want_visible_(false) {}
 
 void VirtualKeyboardController::SetTextType(fuchsia::input::virtualkeyboard::TextType text_type) {
   FX_LOGS(INFO) << __PRETTY_FUNCTION__;
@@ -65,8 +65,7 @@ void VirtualKeyboardController::MaybeNotifyWatcher() {
 
 void VirtualKeyboardController::NotifyCoordinator() {
   if (coordinator_) {
-    coordinator_->RequestTypeAndVisibility(fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC,
-                                           want_visible_);
+    coordinator_->RequestTypeAndVisibility(text_type_, want_visible_);
   } else {
     FX_LOGS(WARNING) << "Ignoring RequestShow()/RequestHide(): no `coordinator_`";
   }
