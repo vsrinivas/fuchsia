@@ -395,6 +395,47 @@ struct CpuidMonitorMwaitD : public CpuidIoValueBase<CpuidMonitorMwaitD, 0x5, 0x0
 };
 
 //---------------------------------------------------------------------------//
+// Leaf/Function 0x6.
+//
+// [intel/vol2]: Table 3-8.  Information Returned by CPUID Instruction.
+// [amd/vol3]: E.3.5  Function 6h—Power Management Related Features.
+//---------------------------------------------------------------------------//
+
+struct CpuidThermalAndPowerFeatureFlagsA
+    : public CpuidIoValueBase<CpuidThermalAndPowerFeatureFlagsA, 0x6, 0x0, CpuidIo::kEax> {
+  // Bits [31:21] are reserved.
+  DEF_BIT(20, ignoring_idle_logical_processor_hwp);
+  DEF_BIT(19, hw_feedback);
+  DEF_BIT(18, fast_access_mode);
+  DEF_BIT(17, flexible_hwp);
+  DEF_BIT(16, hwp_peci_override);
+  DEF_BIT(15, hwp_capabilities);
+  DEF_BIT(14, turbo_max);
+  DEF_BIT(13, hdc);
+  // Bit 12 is reserved.
+  DEF_BIT(11, hwp_package_level_request);
+  DEF_BIT(10, hwp_epp);
+  DEF_BIT(9, hwp_activity_window);
+  DEF_BIT(8, hwp_notification);
+  DEF_BIT(7, hwp);
+  DEF_BIT(6, ptm);
+  DEF_BIT(5, ecmd);
+  DEF_BIT(4, pln);
+  // Bit 3 is reserved.
+  DEF_BIT(2, arat);
+  DEF_BIT(1, turbo);
+  DEF_BIT(0, digital_temperature_sensor);
+};
+
+struct CpuidThermalAndPowerFeatureFlagsC
+    : public CpuidIoValueBase<CpuidThermalAndPowerFeatureFlagsC, 0x6, 0x0, CpuidIo::kEcx> {
+  DEF_RSVDZ_FIELD(31, 4);
+  DEF_BIT(3, performance_energy_bias_preference);
+  DEF_RSVDZ_FIELD(2, 1);
+  DEF_BIT(0, hardware_coordination_feedback_capabality);
+};
+
+//---------------------------------------------------------------------------//
 // Leaf/Function 0x7.
 //
 // [intel/vol2]: Table 3-8.  Information Returned by CPUID Instruction.
@@ -935,6 +976,30 @@ struct CpuidL3CacheInformation
 
   // Indeterminate if std::nullopt.
   std::optional<bool> fully_associative() const;
+};
+
+//---------------------------------------------------------------------------//
+// Leaf/Function 0x8000'0007
+//
+// [amd/vol3]: E.4.6  Function 8000_0007h—Processor Power Management and RAS Capabilities.
+//---------------------------------------------------------------------------//
+
+struct CpuidAdvancedPowerFeatureFlags
+    : public CpuidIoValueBase<CpuidAdvancedPowerFeatureFlags, 0x8000'0007, 0x0, CpuidIo::kEdx> {
+  // Bits [31:13] are reserved.
+  DEF_BIT(12, proc_power_reporting);
+  DEF_BIT(11, proc_feedback_interface);
+  DEF_BIT(10, eff_freq);
+  DEF_BIT(9, cpb);
+  DEF_BIT(8, tsc_invariant);
+  DEF_BIT(7, hw_pstate);
+  DEF_BIT(6, has_100mhz_steps);
+  // Bit 5 is reserved.
+  DEF_BIT(4, tm);
+  DEF_BIT(3, ttp);
+  DEF_BIT(2, vid);
+  DEF_BIT(1, fid);
+  DEF_BIT(0, ts);
 };
 
 //---------------------------------------------------------------------------//

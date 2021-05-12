@@ -59,7 +59,8 @@ enum class X86Msr : uint32_t {
 
   IA32_ARCH_CAPABILITIES = 0x0000'010a,  // Enumeration of architectural features.
 
-  IA32_TSX_CTRL = 0x0000'0122,  // TSX control.
+  IA32_TSX_CTRL = 0x0000'0122,     // TSX control.
+  IA32_MISC_ENABLE = 0x0000'01a0,  // Miscellaneous processor features.
 
   IA32_DEBUGCTL = 0x0000'01d9,  // Debug control.
 
@@ -73,6 +74,7 @@ enum class X86Msr : uint32_t {
   MSR_LBR_INFO_0 = 0x0000'0dc0,            // Additional information of 0th LBR.
 
   // Sparsely documented, non-architectural AMD MSRs.
+  MSRC001_0015 = 0xc001'0015,        // AMD Hardware Configuration.
   MSR_VIRT_SPEC_CTRL = 0xc001'011f,  // Virtualized speculation control.
   MSRC001_1020 = 0xc001'1020,        // AMD load-store configuration.
   MSRC001_1028 = 0xc001'1028,

@@ -159,12 +159,14 @@ void x86_feature_debug(void);
 #define X86_FEATURE_SSE2 X86_CPUID_BIT(0x1, 3, 26)
 #define X86_FEATURE_TM X86_CPUID_BIT(0x1, 3, 29)
 #define X86_FEATURE_DTS X86_CPUID_BIT(0x6, 0, 0)
+#define X86_FEATURE_TURBO X86_CPUID_BIT(0x6, 0, 1)
 #define X86_FEATURE_PLN X86_CPUID_BIT(0x6, 0, 4)
 #define X86_FEATURE_PTM X86_CPUID_BIT(0x6, 0, 6)
 #define X86_FEATURE_HWP X86_CPUID_BIT(0x6, 0, 7)
 #define X86_FEATURE_HWP_NOT X86_CPUID_BIT(0x6, 0, 8)
 #define X86_FEATURE_HWP_ACT X86_CPUID_BIT(0x6, 0, 9)
 #define X86_FEATURE_HWP_PREF X86_CPUID_BIT(0x6, 0, 10)
+#define X86_FEATURE_TURBO_MAX X86_CPUID_BIT(0x6, 0, 14)
 #define X86_FEATURE_HW_FEEDBACK X86_CPUID_BIT(0x6, 2, 0)
 #define X86_FEATURE_PERF_BIAS X86_CPUID_BIT(0x6, 2, 3)
 #define X86_FEATURE_FSGSBASE X86_CPUID_BIT(0x7, 1, 0)
@@ -333,19 +335,10 @@ static inline bool x86_cpu_has_enhanced_ibrs(void) {
   return g_has_enhanced_ibrs;
 }
 
-enum Turbostate {
-  ENABLED,
-  DISABLED,
-};
-
 // Vendor-specific per-cpu init functions, in amd.cpp/intel.cpp
 void x86_amd_init_percpu(void);
 void x86_intel_init_percpu(void);
 bool x86_intel_cpu_has_rsb_fallback(const cpu_id::CpuId* cpuid, MsrAccess* msr);
-void x86_amd_cpu_set_turbo(const cpu_id::CpuId* cpu, MsrAccess* msr, Turbostate state);
-void x86_intel_cpu_set_turbo(const cpu_id::CpuId* cpu, MsrAccess* msr, Turbostate state);
-// Enable or disable Turbo/CPB on the current CPU
-void x86_cpu_set_turbo(const cpu_id::CpuId* cpuid, MsrAccess* msr, Turbostate state);
 uint32_t x86_amd_get_patch_level(void);
 uint32_t x86_intel_get_patch_level(void);
 

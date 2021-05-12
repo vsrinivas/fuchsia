@@ -402,40 +402,6 @@ static bool test_mds_taa_mitigation() {
   END_TEST;
 }
 
-static bool test_turbo_enable_disable() {
-  BEGIN_TEST;
-
-  // Test turbo enable/disable on an Intel Skylake-U processor w/ Turbo.
-  {
-    FakeMsrAccess fake_msrs = {};
-    fake_msrs.msrs_[0] = {X86_MSR_IA32_MISC_ENABLE, 0x850089};
-    x86_intel_cpu_set_turbo(&cpu_id::kCpuIdCorei5_6260U, &fake_msrs, Turbostate::DISABLED);
-    EXPECT_TRUE(fake_msrs.read_msr(X86_MSR_IA32_MISC_ENABLE) &
-                X86_MSR_IA32_MISC_ENABLE_TURBO_DISABLE);
-    x86_intel_cpu_set_turbo(&cpu_id::kCpuIdCorei5_6260U, &fake_msrs, Turbostate::ENABLED);
-    EXPECT_FALSE(fake_msrs.read_msr(X86_MSR_IA32_MISC_ENABLE) &
-                 X86_MSR_IA32_MISC_ENABLE_TURBO_DISABLE);
-  }
-
-  // Test turbo enable/disable on a processor without turbo
-  {
-    FakeMsrAccess fake_msrs = {};  // Access to unimplemented MSRs will crash.
-    x86_intel_cpu_set_turbo(&cpu_id::kCpuIdCeleronJ3455, &fake_msrs, Turbostate::ENABLED);
-  }
-
-  // Test an AMD Threadripper
-  {
-    FakeMsrAccess fake_msrs = {};
-    fake_msrs.msrs_[0] = {X86_MSR_K7_HWCR, 0xb000010};
-    x86_amd_cpu_set_turbo(&cpu_id::kCpuIdThreadRipper2970wx, &fake_msrs, Turbostate::DISABLED);
-    EXPECT_TRUE(fake_msrs.read_msr(X86_MSR_K7_HWCR) & X86_MSR_K7_HWCR_CPB_DISABLE);
-    x86_amd_cpu_set_turbo(&cpu_id::kCpuIdThreadRipper2970wx, &fake_msrs, Turbostate::ENABLED);
-    EXPECT_FALSE(fake_msrs.read_msr(X86_MSR_K7_HWCR) & X86_MSR_K7_HWCR_CPB_DISABLE);
-  }
-
-  END_TEST;
-}
-
 }  // anonymous namespace
 
 UNITTEST_START_TESTCASE(x64_platform_tests)
@@ -449,5 +415,4 @@ UNITTEST("test pkg power limit change", test_x64_power_limits)
 UNITTEST("test amd_platform_init", test_amd_platform_init)
 UNITTEST("test spectre v2 mitigation building blocks", test_spectre_v2_mitigations)
 UNITTEST("test mds mitigation building blocks", test_mds_taa_mitigation)
-UNITTEST("test enable/disable turbo/core performance boost", test_turbo_enable_disable)
 UNITTEST_END_TESTCASE(x64_platform_tests, "x64_platform_tests", "")

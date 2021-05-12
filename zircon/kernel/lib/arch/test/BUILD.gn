@@ -21,6 +21,7 @@ if (is_host) {
       "fake-msr-tests.cc",
       "lbr-tests.cc",
       "nop-tests.cc",
+      "power-tests.cc",
       "speculation-tests.cc",
     ]
     deps = [

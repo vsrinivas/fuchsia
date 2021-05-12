@@ -33,29 +33,6 @@ void x86_amd_set_lfence_serializing(const cpu_id::CpuId* cpuid, MsrAccess* msr) 
   }
 }
 
-void x86_amd_cpu_set_turbo(const cpu_id::CpuId* cpu, MsrAccess* msr, Turbostate state) {
-  if (cpu->ReadFeatures().HasFeature(cpu_id::Features::HYPERVISOR)) {
-    return;
-  }
-  if (!cpu->ReadFeatures().HasFeature(cpu_id::Features::CPB)) {
-    return;
-  }
-
-  uint64_t value = msr->read_msr(/*msr_index=*/X86_MSR_K7_HWCR);
-  uint64_t new_value = value;
-  switch (state) {
-    case Turbostate::ENABLED:
-      new_value &= ~(X86_MSR_K7_HWCR_CPB_DISABLE);
-      break;
-    case Turbostate::DISABLED:
-      new_value |= (X86_MSR_K7_HWCR_CPB_DISABLE);
-      break;
-  }
-  if (new_value != value) {
-    msr->write_msr(/*msr_index=*/X86_MSR_K7_HWCR, /*value=*/new_value);
-  }
-}
-
 void x86_amd_init_percpu(void) {
   cpu_id::CpuId cpuid;
   MsrAccess msr;

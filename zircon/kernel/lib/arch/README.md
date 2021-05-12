@@ -259,6 +259,8 @@ the identifiers are expected to be one of the following:
 
 **\[amd/rg/17h/00h-0Fh\]** ~ [Revision Guide for AMD Family 17h Models 00h-0Fh Processors](https://www.amd.com/system/files/TechDocs/55449_Fam_17h_M_00h-0Fh_Rev_Guide.pdf), June 2018
 
+**\[amd/ppr/17h/01h,08h\]** ~ [Processor Programming Reference (PPR) for AMD Family 17h Models 01h,08h, Revision B2 Processors](https://developer.amd.com/resources/developer-guides-manuals/), June 2019
+
 **\[amd/ibc\]** ~ [AMD64 Technology: Indirect Branch Control Extension](https://developer.amd.com/wp-content/resources/Architecture_Guidelines_Update_Indirect_Branch_Control.pdf)
 
 **\[amd/ssbd\]** ~ [AMD64 Technology: Speculative Store Bypass Disable](https://developer.amd.com/wp-content/resources/124441_AMD64_SpeculativeStoreBypassDisable_Whitepaper_final.pdf)

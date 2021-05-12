@@ -288,7 +288,9 @@ static zx_status_t handle_cpuid(const ExitInfo& exit_info, AutoVmcs* vmcs,
               1u << X86_FEATURE_PLN.bit |
               // Disable HWP MSRs.
               1u << X86_FEATURE_HWP.bit | 1u << X86_FEATURE_HWP_NOT.bit |
-              1u << X86_FEATURE_HWP_ACT.bit | 1u << X86_FEATURE_HWP_PREF.bit);
+              1u << X86_FEATURE_HWP_ACT.bit | 1u << X86_FEATURE_HWP_PREF.bit |
+              // Don't advertise Turbo.
+              1u << X86_FEATURE_TURBO.bit | 1u << X86_FEATURE_TURBO_MAX.bit);
           break;
         case X86_CPUID_PERFORMANCE_MONITORING: {
           // Disable all performance monitoring.

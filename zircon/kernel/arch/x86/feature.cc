@@ -12,6 +12,7 @@
 #include <lib/arch/x86/cache.h>
 #include <lib/arch/x86/extension.h>
 #include <lib/arch/x86/feature.h>
+#include <lib/arch/x86/power.h>
 #include <lib/arch/x86/speculation.h>
 #include <lib/boot-options/boot-options.h>
 #include <lib/cmdline.h>
@@ -236,11 +237,13 @@ void x86_cpu_feature_init() {
 
 // Invoked on each CPU during boot, after platform init has taken place.
 void x86_cpu_feature_late_init_percpu(void) {
+  const bool on_boot_cpu = arch_curr_cpu_num() == 0;
+
   arch::BootCpuidIo cpuid;
   hwreg::X86MsrIo msr;
 
   // Same reasoning as was done in x86_cpu_feature_init() for the boot CPU.
-  if (!gBootOptions->x86_disable_spec_mitigations && arch_curr_cpu_num() != 0) {
+  if (!gBootOptions->x86_disable_spec_mitigations && !on_boot_cpu) {
     arch::DisableTsx(cpuid, msr);
   }
 
@@ -267,6 +270,18 @@ void x86_cpu_feature_late_init_percpu(void) {
     }
   }
 
+  // Enable/disable Turbo on the processor.
+  if (arch::SetX86CpuTurboState(cpuid, msr, gBootOptions->x86_turbo)) {
+    // Since IA32_MISC_ENABLE may be updated and leaf 0x6 references the
+    // former's state, repopulate the boot CPUID cache.
+    if (on_boot_cpu) {
+      arch::InitializeBootCpuid();
+      printf("Turbo performance boost: %s\n", gBootOptions->x86_turbo ? "enabled" : "disabled");
+    }
+  } else if (on_boot_cpu) {
+    printf("Turbo performance boost: unsupported\n");
+  }
+
   // TODO(fxbug.dev/61093): Replace with newer lib/arch and hwreg counterparts.
   cpu_id::CpuId cpuid_old;
   MsrAccess msr_old;
@@ -275,10 +290,6 @@ void x86_cpu_feature_late_init_percpu(void) {
   if (gBootOptions->x86_hwp) {
     x86::IntelHwpInit(&cpuid_old, &msr_old, gBootOptions->x86_hwp_policy);
   }
-
-  // Enable/disable Turbo on the processor.
-  x86_cpu_set_turbo(&cpuid_old, &msr_old,
-                    gBootOptions->x86_turbo ? Turbostate::ENABLED : Turbostate::DISABLED);
 
   // If we are running under a hypervisor and paravirtual EOI (PV_EOI) is available, enable it.
   if (x86_hypervisor_has_pv_eoi()) {
@@ -909,20 +920,6 @@ const x86_microarch_config_t* get_microarch_config(const cpu_id::CpuId* cpuid) {
   }
 
   return &unknown_vendor_config;
-}
-
-void x86_cpu_set_turbo(const cpu_id::CpuId* cpu, MsrAccess* msr, Turbostate state) {
-  auto vendor = cpu->ReadManufacturerInfo().manufacturer();
-  switch (vendor) {
-    case cpu_id::ManufacturerInfo::AMD:
-      x86_amd_cpu_set_turbo(cpu, msr, state);
-      break;
-    case cpu_id::ManufacturerInfo::INTEL:
-      x86_intel_cpu_set_turbo(cpu, msr, state);
-      break;
-    default:
-      break;
-  }
 }
 
 extern "C" {

@@ -138,29 +138,6 @@ bool x86_intel_cpu_has_rsb_fallback(const cpu_id::CpuId* cpuid, MsrAccess* msr) 
          (microarch_config->x86_microarch == X86_MICROARCH_UNKNOWN);
 }
 
-void x86_intel_cpu_set_turbo(const cpu_id::CpuId* cpu, MsrAccess* msr, Turbostate state) {
-  if (cpu->ReadFeatures().HasFeature(cpu_id::Features::HYPERVISOR)) {
-    return;
-  }
-  if (!cpu->ReadFeatures().HasFeature(cpu_id::Features::TURBO)) {
-    return;
-  }
-
-  uint64_t value = msr->read_msr(/*msr_index=*/X86_MSR_IA32_MISC_ENABLE);
-  uint64_t new_value = value;
-  switch (state) {
-    case Turbostate::ENABLED:
-      new_value &= ~(X86_MSR_IA32_MISC_ENABLE_TURBO_DISABLE);
-      break;
-    case Turbostate::DISABLED:
-      new_value |= (X86_MSR_IA32_MISC_ENABLE_TURBO_DISABLE);
-      break;
-  }
-  if (new_value != value) {
-    msr->write_msr(/*msr_index=*/X86_MSR_IA32_MISC_ENABLE, /*value=*/new_value);
-  }
-}
-
 void x86_intel_init_percpu(void) {
   cpu_id::CpuId cpuid;
 
