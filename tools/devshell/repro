@@ -10,7 +10,7 @@
 ## This command attempts to replicate the result of an infra bot by reading
 ## build information and translating to corresponding local 'fx' commands.
 ##
-## usage: fx vendor google repro [-h|--help] <BUILD_ID>|<BUILD_URL>|<FINT_PARAMS_FILE>
+## usage: fx repro [-h|--help] <BUILD_ID>|<BUILD_URL>|<FINT_PARAMS_FILE>
 ##
 ##  BUILD_ID: the id of a build, prefixed or not by "b". For example:
 ##       b8860637037546448224 or 8860637037546448224
@@ -25,9 +25,10 @@
 ##
 ## Please provide feedback on go/fx-repro-feedback
 
+source "${FUCHSIA_DIR}/tools/devshell/lib/style.sh" || exit $?
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 
-set -eu -o pipefail
+set -e -o pipefail
 
 function create_builddir_name {
   if [[ -n "$build_id" ]]; then
@@ -126,7 +127,7 @@ function repro {
 
   if $can_sync_to; then
     print_comment "Sync the Fuchsia source tree to the same commit:"
-    print_cmd "fx vendor google sync-to ${build_id}"
+    print_cmd "fx sync-to ${build_id}"
     print_spacer
   elif [[ -n "$build_id" ]]; then
     print_comment "WARNING: Can't reproduce this build's checkout state."
@@ -179,10 +180,12 @@ function repro {
 
   print_comment "Restore to the previous state:"
   print_cmd "fx set-build-dir ${FUCHSIA_BUILD_DIR#${FUCHSIA_DIR}/}"
-  print_cmd "rm -Rf ${FUCHSIA_DIR}/${build_dir_name}         # optional"
   if $can_sync_to; then
-    print_cmd "fx vendor google sync-to reset"
+    print_cmd "fx sync-to reset"
   fi
+  print_spacer
+  print_comment "(Optional) Remove the repro build directory:"
+  print_cmd "rm -Rf ${FUCHSIA_DIR}/${build_dir_name}"
 
   # TODO: add instructions to run botanist, for example:
   # "Execute the steps in 'Reproducing the task locally' from https://chrome-swarming.appspot.com/task?id=4d23bde27aab0910"
@@ -190,12 +193,9 @@ function repro {
   # ./botanist -level trace run -images gs://fuchsia-artifacts-internal/builds/8875967070288043824/images/images.json -timeout 1800s -syslog syslog.txt -repo http://localhost:8080/fuchsia-artifacts-internal/builds/8875967070288043824/packages/repository -blobs http://localhost:8080/fuchsia-artifacts-internal/blobs -ssh private_key -config ./qemu.json ./testrunner -out-dir out -snapshot-output snapshot.zip -per-test-timeout 300s tests.json]
   #
 
-  echo ""
-  cat "${instructions_file}"
   echo
   echo "*** These instructions are saved to ${instructions_file#${FUCHSIA_DIR}/} in case you need them later."
-  echo "*** Please, provide feedback on go/fx-repro-feedback"
-  echo
+  echo "*** Please, provide feedback on http://go/fx-repro-feedback"
 }
 
 function repro_failed_test_commands {
@@ -254,13 +254,16 @@ function usage {
 
 function print {
   if [[ -n "${instructions_file}" ]]; then
-    echo -e "$@" >> "${instructions_file}"
-  else
-    echo -e "$@"
+    echo -e "$*" >> "${instructions_file}"
   fi
+  echo -e "$*"
 }
+
 function print_cmd {
-  print "$@"
+  if [[ -n "${instructions_file}" ]]; then
+    echo -e "$*" >> "${instructions_file}"
+  fi
+  style::echo --green "$*"
 }
 
 function print_spacer {
