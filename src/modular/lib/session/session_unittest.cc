@@ -213,6 +213,10 @@ TEST_F(SessionTest, LaunchProvidesConfig) {
 
   auto expected_config_str = modular::ConfigToJsonString(modular_config);
 
+  // Create an async loop to serve basemgr's namespace directory.
+  async::Loop serve_loop{&kAsyncLoopConfigNoAttachToCurrentThread};
+  serve_loop.StartThread();
+
   bool launched{false};
   launcher.RegisterComponent(
       kBasemgrV1Url,
@@ -245,24 +249,21 @@ TEST_F(SessionTest, LaunchProvidesConfig) {
         // The config that basemgr received should be the same as the one passed to Launch.
         ASSERT_EQ(expected_config_str, config_str);
 
+        // The thread serving the config PseudoDir must be destroyed before the dir itself.
+        serve_loop.Quit();
+        serve_loop.JoinThreads();
+
         // Launch must receive the OnDirectoryReady event to return.
         TestComponentController controller;
         controller.Connect(std::move(controller_request));
         controller.SendOnDirectoryReady();
       });
 
-  // Create an async loop to serve basemgr's namespace directory.
-  async::Loop serve_loop{&kAsyncLoopConfigNoAttachToCurrentThread};
-  serve_loop.StartThread();
-
   auto result = RunPromise(
       modular::session::Launch(&launcher, std::move(modular_config), serve_loop.dispatcher()));
   EXPECT_TRUE(result.is_ok());
 
   EXPECT_TRUE(launched);
-
-  serve_loop.Quit();
-  serve_loop.JoinThreads();
 }
 
 // Tests that Shutdown can shut down basemgr when the |BasemgrDebug| protocol is served

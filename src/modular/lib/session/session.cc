@@ -103,7 +103,9 @@ fit::promise<void, zx_status_t> Launch(fuchsia::sys::Launcher* launcher,
         launcher->CreateComponent(std::move(launch_info), controller.NewRequest());
 
         return bridge.consumer.promise().and_then(
-            [controller = std::move(controller)]() { controller->Detach(); });
+            [controller = std::move(controller), config_dir = std::move(config_dir)]() {
+              controller->Detach();
+            });
       });
 }
 
