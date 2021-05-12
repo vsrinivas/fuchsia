@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/device/test/c/fidl.h>
+#include <fuchsia/device/test/llcpp/fidl.h>
 #include <fuchsia/hardware/test/cpp/banjo.h>
 #include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
@@ -26,14 +26,16 @@
 namespace {
 
 class TestDevice;
-using TestDeviceType = ddk::Device<TestDevice, ddk::MessageableOld, ddk::Unbindable>;
+using TestDeviceType =
+    ddk::Device<TestDevice, ddk::Messageable<fuchsia_device_test::Device>::Mixin, ddk::Unbindable>;
 
-class TestDevice : public TestDeviceType, public ddk::TestProtocol<TestDevice, ddk::base_protocol> {
+class TestDevice : public TestDeviceType,
+                   public fidl::WireServer<fuchsia_device_test::Device>,
+                   public ddk::TestProtocol<TestDevice, ddk::base_protocol> {
  public:
   TestDevice(zx_device_t* parent) : TestDeviceType(parent) {}
 
   // Methods required by the ddk mixins
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease();
   void DdkUnbind(ddk::UnbindTxn txn);
 
@@ -45,7 +47,11 @@ class TestDevice : public TestDeviceType, public ddk::TestProtocol<TestDevice, d
   zx_status_t TestRunTests(test_report_t* out_report);
   void TestDestroy();
 
-  void SetChannel(zx::channel c);
+  void RunTests(RunTestsRequestView request, RunTestsCompleter::Sync& completer);
+  void SetOutputSocket(SetOutputSocketRequestView request,
+                       SetOutputSocketCompleter::Sync& completer);
+  void SetChannel(SetChannelRequestView request, SetChannelCompleter::Sync& completer);
+  void Destroy(DestroyRequestView request, DestroyCompleter::Sync& completer);
 
  private:
   zx::socket output_;
@@ -54,26 +60,27 @@ class TestDevice : public TestDeviceType, public ddk::TestProtocol<TestDevice, d
 };
 
 class TestRootDevice;
-using TestRootDeviceType = ddk::Device<TestRootDevice, ddk::MessageableOld, ddk::Unbindable>;
+using TestRootDeviceType =
+    ddk::Device<TestRootDevice, ddk::Messageable<fuchsia_device_test::RootDevice>::Mixin,
+                ddk::Unbindable>;
 
-class TestRootDevice : public TestRootDeviceType {
+class TestRootDevice : public TestRootDeviceType,
+                       public fidl::WireServer<fuchsia_device_test::RootDevice> {
  public:
   TestRootDevice(zx_device_t* parent) : TestRootDeviceType(parent) {}
 
   zx_status_t Bind() { return DdkAdd("test"); }
 
   // Methods required by the ddk mixins
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease() { delete this; }
   void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
-  static zx_status_t FidlCreateDevice(void* ctx, const char* name_data, size_t name_len,
-                                      zx_handle_t client_remote_raw, fidl_txn_t* txn);
+  void CreateDevice(CreateDeviceRequestView request, CreateDeviceCompleter::Sync& completer);
 
  private:
   // Create a new child device with this |name|
-  zx_status_t CreateDevice(std::string_view name, zx::channel client_remote, char* path_out,
-                           size_t path_size, size_t* path_actual);
+  zx_status_t CreateDeviceInternal(std::string_view name, zx::channel client_remote, char* path_out,
+                                   size_t path_size, size_t* path_actual);
 };
 
 void TestDevice::TestSetOutputSocket(zx::socket socket) { output_ = std::move(socket); }
@@ -98,50 +105,30 @@ void TestDevice::TestDestroy() {
   DdkAsyncRemove();
 }
 
-static zx_status_t fidl_SetOutputSocket(void* ctx, zx_handle_t raw_socket) {
-  zx::socket socket(raw_socket);
-  auto dev = static_cast<TestDevice*>(ctx);
-  dev->TestSetOutputSocket(std::move(socket));
-  return ZX_OK;
+void TestDevice::SetOutputSocket(SetOutputSocketRequestView request,
+                                 SetOutputSocketCompleter::Sync& completer) {
+  TestSetOutputSocket(std::move(request->sock));
 }
 
-void TestDevice::SetChannel(zx::channel c) { channel_ = std::move(c); }
-
-static zx_status_t fidl_SetChannel(void* ctx, zx_handle_t raw_channel) {
-  zx::channel channel(raw_channel);
-  auto dev = static_cast<TestDevice*>(ctx);
-  dev->SetChannel(std::move(channel));
-  return ZX_OK;
+void TestDevice::SetChannel(SetChannelRequestView request, SetChannelCompleter::Sync& completer) {
+  channel_ = std::move(request->chan);
 }
 
-static zx_status_t fidl_RunTests(void* ctx, fidl_txn_t* txn) {
-  auto dev = static_cast<TestDevice*>(ctx);
+void TestDevice::RunTests(RunTestsRequestView request, RunTestsCompleter::Sync& completer) {
   test_report_t report = {};
-  fuchsia_device_test_TestReport fidl_report = {};
+  fuchsia_device_test::wire::TestReport fidl_report = {};
 
-  zx_status_t status = dev->TestRunTests(&report);
+  zx_status_t status = TestRunTests(&report);
   if (status == ZX_OK) {
     fidl_report.test_count = report.n_tests;
     fidl_report.success_count = report.n_success;
     fidl_report.failure_count = report.n_failed;
   }
-  return fuchsia_device_test_DeviceRunTests_reply(txn, status, &fidl_report);
+  completer.Reply(status, fidl_report);
 }
 
-static zx_status_t fidl_Destroy(void* ctx) {
-  auto dev = static_cast<TestDevice*>(ctx);
-  dev->TestDestroy();
-  return ZX_OK;
-}
-
-zx_status_t TestDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  static const fuchsia_device_test_Device_ops_t kOps = {
-      .RunTests = fidl_RunTests,
-      .SetOutputSocket = fidl_SetOutputSocket,
-      .SetChannel = fidl_SetChannel,
-      .Destroy = fidl_Destroy,
-  };
-  return fuchsia_device_test_Device_dispatch(this, txn, msg, &kOps);
+void TestDevice::Destroy(DestroyRequestView request, DestroyCompleter::Sync& completer) {
+  TestDestroy();
 }
 
 void TestDevice::DdkRelease() { delete this; }
@@ -151,9 +138,10 @@ void TestDevice::DdkUnbind(ddk::UnbindTxn txn) {
   txn.Reply();
 }
 
-zx_status_t TestRootDevice::CreateDevice(std::string_view name, zx::channel client_remote,
-                                         char* path_out, size_t path_size, size_t* path_actual) {
-  static_assert(fuchsia_device_test_MAX_DEVICE_NAME_LEN == ZX_DEVICE_NAME_MAX);
+zx_status_t TestRootDevice::CreateDeviceInternal(std::string_view name, zx::channel client_remote,
+                                                 char* path_out, size_t path_size,
+                                                 size_t* path_actual) {
+  static_assert(fuchsia_device_test::wire::kMaxDeviceNameLen == ZX_DEVICE_NAME_MAX);
 
   char devname[ZX_DEVICE_NAME_MAX + 1] = {};
   if (name.size() > 0) {
@@ -167,7 +155,7 @@ zx_status_t TestRootDevice::CreateDevice(std::string_view name, zx::channel clie
     devname[strlen(devname) - 3] = 0;
   }
 
-  if (path_size < strlen(devname) + sizeof(fuchsia_device_test_CONTROL_DEVICE) + 1) {
+  if (path_size < strlen(devname) + strlen(fuchsia_device_test::wire::kControlDevice) + 1) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
 
@@ -181,27 +169,17 @@ zx_status_t TestRootDevice::CreateDevice(std::string_view name, zx::channel clie
   __UNUSED auto ptr = device.release();
 
   *path_actual =
-      snprintf(path_out, path_size, "%s/%s", fuchsia_device_test_CONTROL_DEVICE, devname);
+      snprintf(path_out, path_size, "%s/%s", fuchsia_device_test::wire::kControlDevice, devname);
   return ZX_OK;
 }
 
-zx_status_t TestRootDevice::FidlCreateDevice(void* ctx, const char* name_data, size_t name_len,
-                                             zx_handle_t client_remote_raw, fidl_txn_t* txn) {
-  auto root = static_cast<TestRootDevice*>(ctx);
-  zx::channel client_remote{client_remote_raw};
-
-  char path[fuchsia_device_test_MAX_DEVICE_PATH_LEN];
+void TestRootDevice::CreateDevice(CreateDeviceRequestView request,
+                                  CreateDeviceCompleter::Sync& completer) {
+  char path[fuchsia_device_test::wire::kMaxDevicePathLen];
   size_t path_size = 0;
-  zx_status_t status = root->CreateDevice(std::string_view(name_data, name_len),
-                                          std::move(client_remote), path, sizeof(path), &path_size);
-  return fuchsia_device_test_RootDeviceCreateDevice_reply(txn, status, path, path_size);
-}
-
-zx_status_t TestRootDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  static const fuchsia_device_test_RootDevice_ops_t kOps = {
-      .CreateDevice = TestRootDevice::FidlCreateDevice,
-  };
-  return fuchsia_device_test_RootDevice_dispatch(this, txn, msg, &kOps);
+  zx_status_t status = CreateDeviceInternal(request->name.get(), std::move(request->device_request),
+                                            path, sizeof(path), &path_size);
+  completer.Reply(status, fidl::StringView::FromExternal(path, path_size));
 }
 
 zx_status_t TestDriverBind(void* ctx, zx_device_t* dev) {
