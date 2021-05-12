@@ -27,6 +27,7 @@ driver_module("vim3") {
     "vim3-emmc.cc",
     "vim3-eth.cc",
     "vim3-gpio.cc",
+    "vim3-hdmi.cc",
     "vim3-i2c.cc",
     "vim3-mali.cc",
     "vim3-nna.cc",

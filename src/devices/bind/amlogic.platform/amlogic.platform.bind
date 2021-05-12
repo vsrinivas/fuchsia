@@ -60,4 +60,5 @@ extend uint fuchsia.BIND_PLATFORM_DEV_DID {
   RADAR_SENSOR = 0x26,
   THERMISTOR = 0x27,
   THERMAL_DDR = 0x28,
+  HDMI = 0x2B,
 };

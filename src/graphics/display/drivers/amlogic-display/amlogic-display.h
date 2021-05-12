@@ -117,12 +117,9 @@ class AmlogicDisplay
     *out_size = UINT32_MAX;
     return ZX_OK;
   }
-  zx_status_t I2cImplSetBitrate(uint32_t bus_id, uint32_t bitrate) {
-    // no-op
-    return ZX_OK;
-  }
+  zx_status_t I2cImplSetBitrate(uint32_t bus_id, uint32_t bitrate) { return ZX_OK; }  // no-op
   zx_status_t I2cImplTransact(uint32_t bus_id, const i2c_impl_op_t* op_list, size_t op_count) {
-    return vout_->I2cImplTransact(bus_id, op_list, op_count);
+    return vout_->EdidTransfer(bus_id, op_list, op_count);
   }
 
   // Required functions for DeviceType

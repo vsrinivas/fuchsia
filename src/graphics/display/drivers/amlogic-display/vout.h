@@ -75,12 +75,13 @@ class Vout {
     }
   }
 
-  zx_status_t I2cImplTransact(uint32_t bus_id, const i2c_impl_op_t* op_list, size_t op_count);
   void DisplayConnected();
   void DisplayDisconnected();
   bool CheckMode(const display_mode_t* mode);
   zx_status_t ApplyConfiguration(const display_mode_t* mode);
   zx_status_t OnDisplaysChanged(added_display_info_t& info);
+
+  zx_status_t EdidTransfer(uint32_t bus_id, const i2c_impl_op_t* op_list, size_t op_count);
 
   void Dump();
 

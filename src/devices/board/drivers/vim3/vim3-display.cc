@@ -22,11 +22,7 @@ constexpr pbus_mmio_t display_mmios[] = {
         .base = A311D_VPU_BASE,
         .length = A311D_VPU_LENGTH,
     },
-    {
-        // HDMITX
-        .base = A311D_HDMITX_BASE,
-        .length = A311D_HDMITX_LENGTH,
-    },
+    {},
     {},
     {
         // HHI
@@ -97,6 +93,10 @@ static const zx_bind_inst_t canvas_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_AMLOGIC_CANVAS),
 };
 
+static const zx_bind_inst_t hdmi_match[] = {
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_HDMI),
+};
+
 static const device_fragment_part_t hpd_gpio_fragment[] = {
     {countof(root_match), root_match},
     {countof(hpd_gpio_match), hpd_gpio_match},
@@ -112,10 +112,16 @@ static const device_fragment_part_t canvas_fragment[] = {
     {countof(canvas_match), canvas_match},
 };
 
+static const device_fragment_part_t hdmi_fragment[] = {
+    {countof(root_match), root_match},
+    {countof(hdmi_match), hdmi_match},
+};
+
 static const device_fragment_t fragments[] = {
     {"gpio", countof(hpd_gpio_fragment), hpd_gpio_fragment},
     {"sysmem", countof(sysmem_fragment), sysmem_fragment},
     {"canvas", countof(canvas_fragment), canvas_fragment},
+    {"hdmi", countof(hdmi_fragment), hdmi_fragment},
 };
 
 zx_status_t Vim3::DisplayInit() {

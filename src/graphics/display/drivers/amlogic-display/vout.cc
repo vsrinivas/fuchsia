@@ -109,15 +109,28 @@ zx_status_t Vout::InitHdmi(zx_device_t* parent) {
   supports_capture_ = kHdmiSupportedFeatures.capture;
   supports_hpd_ = kHdmiSupportedFeatures.hpd;
 
+  ddk::HdmiProtocolClient hdmi(parent, "hdmi");
+  if (!hdmi.is_valid()) {
+    zxlogf(ERROR, "Could not get hdmi fragment");
+    return ZX_ERR_INTERNAL;
+  }
+  zx::channel client_end, server_end;
+  zx_status_t status;
+  if ((status = zx::channel::create(0, &client_end, &server_end)) != ZX_OK) {
+    zxlogf(ERROR, "Could not create channel %d\n", status);
+    return status;
+  }
+  hdmi.Connect(std::move(server_end));
+
   fbl::AllocChecker ac;
-  hdmi_.hdmi_host = fbl::make_unique_checked<amlogic_display::AmlHdmiHost>(&ac, parent);
+  hdmi_.hdmi_host =
+      fbl::make_unique_checked<amlogic_display::AmlHdmiHost>(&ac, parent, std::move(client_end));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
-
-  zx_status_t status = hdmi_.hdmi_host->Init();
+  status = hdmi_.hdmi_host->Init();
   if (status != ZX_OK) {
-    DISP_ERROR("Could not initialize HDMI host\n");
+    zxlogf(ERROR, "Could not initialize HDMI host %d\n", status);
     return status;
   }
 
@@ -228,15 +241,6 @@ bool Vout::IsFormatSupported(zx_pixel_format_t format) {
   }
 }
 
-zx_status_t Vout::I2cImplTransact(uint32_t bus_id, const i2c_impl_op_t* op_list, size_t op_count) {
-  switch (type_) {
-    case kHdmi:
-      return hdmi_.hdmi_host->I2cImplTransact(bus_id, op_list, op_count);
-    default:
-      return ZX_ERR_NOT_SUPPORTED;
-  }
-}
-
 void Vout::DisplayConnected() {
   switch (type_) {
     case kHdmi:
@@ -307,6 +311,16 @@ zx_status_t Vout::OnDisplaysChanged(added_display_info_t& info) {
       hdmi_.hdmi_host->UpdateOutputColorFormat(
           info.is_standard_srgb_out ? fuchsia_hardware_hdmi::wire::ColorFormat::kCfRgb
                                     : fuchsia_hardware_hdmi::wire::ColorFormat::kCf444);
+      return ZX_OK;
+    default:
+      return ZX_ERR_NOT_SUPPORTED;
+  }
+}
+
+zx_status_t Vout::EdidTransfer(uint32_t bus_id, const i2c_impl_op_t* op_list, size_t op_count) {
+  switch (type_) {
+    case kHdmi:
+      hdmi_.hdmi_host->EdidTransfer(bus_id, op_list, op_count);
       return ZX_OK;
     default:
       return ZX_ERR_NOT_SUPPORTED;

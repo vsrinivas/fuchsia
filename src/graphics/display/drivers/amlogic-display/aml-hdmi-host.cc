@@ -4,7 +4,7 @@
 
 #include "aml-hdmi-host.h"
 
-#include <fbl/alloc_checker.h>
+#include <lib/ddk/debug.h>
 
 #include "cbus-regs.h"
 #include "hhi-regs.h"
@@ -55,39 +55,30 @@ void TranslateDisplayMode(fidl::AnyAllocator& allocator, const display_mode_t& i
 }  // namespace
 
 zx_status_t AmlHdmiHost::Init() {
-  // Map registers
   auto status = pdev_.MapMmio(MMIO_VPU, &vpu_mmio_);
   if (status != ZX_OK) {
-    DISP_ERROR("Could not map VPU mmio\n");
+    DISP_ERROR("Could not map VPU mmio %d\n", status);
     return status;
   }
 
   status = pdev_.MapMmio(MMIO_HHI, &hhi_mmio_);
   if (status != ZX_OK) {
-    DISP_ERROR("Could not map HHI mmio\n");
+    DISP_ERROR("Could not map HHI mmio %d\n", status);
     return status;
   }
 
   status = pdev_.MapMmio(MMIO_CBUS, &cbus_mmio_);
   if (status != ZX_OK) {
-    DISP_ERROR("Could not map CBUS mmio\n");
+    DISP_ERROR("Could not map CBUS mmio %d\n", status);
     return status;
   }
 
-  fbl::AllocChecker ac;
-  hdmitx_ = fbl::make_unique_checked<amlogic_display::AmlHdmitx>(&ac, pdev_);
-  if (!ac.check()) {
-    DISP_ERROR("Could not create AmlHdmitx object\n");
-    return ZX_ERR_NO_MEMORY;
+  auto res = hdmi_.PowerUp(1);  // only supports 1 display for now.
+  if ((res.status() != ZX_OK) || res->result.is_err()) {
+    zxlogf(ERROR, "Power Up failed\n");
+    return ZX_ERR_INTERNAL;
   }
-
-  status = hdmitx_->Init();
-  if (status != ZX_OK) {
-    DISP_ERROR("Could not initialize HDMITX\n");
-    return status;
-  }
-
-  return HostOn();
+  return ZX_OK;
 }
 
 zx_status_t AmlHdmiHost::HostOn() {
@@ -111,7 +102,12 @@ zx_status_t AmlHdmiHost::HostOn() {
   // power up HDMI Memory (bits 15:8)
   HhiMemPdReg0::Get().ReadFrom(&(*hhi_mmio_)).set_hdmi(0).WriteTo(&(*hhi_mmio_));
 
-  return hdmitx_->InitHw();
+  auto res = hdmi_.Reset(1);  // only supports 1 display for now
+  if ((res.status() != ZX_OK) || res->result.is_err()) {
+    zxlogf(ERROR, "Reset failed\n");
+    return ZX_ERR_INTERNAL;
+  }
+  return ZX_OK;
 }
 
 void AmlHdmiHost::HostOff() {
@@ -121,7 +117,10 @@ void AmlHdmiHost::HostOff() {
   /* Disable HPLL */
   WRITE32_REG(HHI, HHI_HDMI_PLL_CNTL0, 0);
 
-  return hdmitx_->ShutDown();
+  auto res = hdmi_.PowerDown(1);  // only supports 1 display for now
+  if (res.status() != ZX_OK) {
+    zxlogf(ERROR, "Power Down failed\n");
+  }
 }
 
 zx_status_t AmlHdmiHost::ModeSet(const display_mode_t& mode) {
@@ -148,10 +147,10 @@ zx_status_t AmlHdmiHost::ModeSet(const display_mode_t& mode) {
   fidl::FidlAllocator<2048> allocator;
   DisplayMode translated_mode(allocator);
   TranslateDisplayMode(allocator, mode, color_, &translated_mode);
-  auto status = hdmitx_->InitInterface(translated_mode);
-  if (status != ZX_OK) {
-    DISP_ERROR("Unable to initialize interface %d\n", status);
-    return status;
+  auto res = hdmi_.ModeSet(1, translated_mode);  // only supports 1 display for now
+  if ((res.status() != ZX_OK) || res->result.is_err()) {
+    DISP_ERROR("Unable to initialize interface\n");
+    return ZX_ERR_INTERNAL;
   }
 
   // Setup HDMI related registers in VPU
@@ -190,6 +189,49 @@ zx_status_t AmlHdmiHost::ModeSet(const display_mode_t& mode) {
   ConfigPhy();
 
   DISP_INFO("done!!\n");
+  return ZX_OK;
+}
+
+zx_status_t AmlHdmiHost::EdidTransfer(uint32_t bus_id, const i2c_impl_op_t* op_list,
+                                      size_t op_count) {
+  auto ops = std::make_unique<EdidOp[]>(op_count);
+  auto writes = std::make_unique<fidl::VectorView<uint8_t>[]>(op_count);
+  auto reads = std::make_unique<uint8_t[]>(op_count);
+  size_t write_cnt = 0;
+  size_t read_cnt = 0;
+  for (size_t i = 0; i < op_count; ++i) {
+    ops[i].address = op_list[i].address;
+    ops[i].is_write = !op_list[i].is_read;
+    if (op_list[i].is_read) {
+      reads[read_cnt] = op_list[i].data_size;
+      read_cnt++;
+    } else {
+      writes[write_cnt] = fidl::VectorView<uint8_t>::FromExternal(
+          const_cast<uint8_t*>(op_list[i].data_buffer), op_list[i].data_size);
+      write_cnt++;
+    }
+  }
+  auto all_ops = fidl::VectorView<EdidOp>::FromExternal(ops.get(), op_count);
+  auto all_writes =
+      fidl::VectorView<fidl::VectorView<uint8_t>>::FromExternal(writes.get(), write_cnt);
+  auto all_reads = fidl::VectorView<uint8_t>::FromExternal(reads.get(), read_cnt);
+
+  auto res = hdmi_.EdidTransfer(all_ops, all_writes, all_reads);
+  if ((res.status() != ZX_OK) || res->result.is_err()) {
+    DISP_ERROR("Unable to perform Edid Transfer\n");
+    return ZX_ERR_INTERNAL;
+  }
+
+  auto read = res->result.response().read_segments_data;
+  read_cnt = 0;
+  for (size_t i = 0; i < op_count; ++i) {
+    if (!op_list[i].is_read) {
+      continue;
+    }
+    memcpy(op_list[i].data_buffer, read[read_cnt].data(), read[read_cnt].count());
+    read_cnt++;
+  }
+
   return ZX_OK;
 }
 

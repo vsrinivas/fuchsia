@@ -5,16 +5,22 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_AML_HDMI_HOST_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_AML_HDMI_HOST_H_
 
+#include <fuchsia/hardware/display/controller/cpp/banjo.h>
+#include <fuchsia/hardware/hdmi/cpp/banjo.h>
 #include <fuchsia/hardware/hdmi/llcpp/fidl.h>
+#include <fuchsia/hardware/i2cimpl/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
+#include <lib/mmio/mmio.h>
 
-#include "aml-hdmitx.h"
+#include "common.h"
 
 namespace amlogic_display {
 
 using fuchsia_hardware_hdmi::wire::ColorDepth;
 using fuchsia_hardware_hdmi::wire::ColorFormat;
 using fuchsia_hardware_hdmi::wire::ColorParam;
+using fuchsia_hardware_hdmi::wire::DisplayMode;
+using fuchsia_hardware_hdmi::wire::EdidOp;
 
 #define VID_PLL_DIV_1 0
 #define VID_PLL_DIV_2 1
@@ -93,12 +99,14 @@ struct hdmi_param {
 // VPU and HHI register handling, HDMI parameters, etc.
 class AmlHdmiHost {
  public:
-  explicit AmlHdmiHost(zx_device_t* parent) : pdev_(ddk::PDev::FromFragment(parent)) {}
+  explicit AmlHdmiHost(zx_device_t* parent, zx::channel&& chan)
+      : pdev_(ddk::PDev::FromFragment(parent)), hdmi_(std::move(chan)) {}
 
   zx_status_t Init();
   zx_status_t HostOn();
   void HostOff();
   zx_status_t ModeSet(const display_mode_t& mode);
+  zx_status_t EdidTransfer(uint32_t bus_id, const i2c_impl_op_t* op_list, size_t op_count);
 
   void UpdateOutputColorFormat(ColorFormat output_color_format) {
     color_.output_color_format = output_color_format;
@@ -106,9 +114,6 @@ class AmlHdmiHost {
 
   zx_status_t GetVic(const display_mode_t* disp_timing);
   zx_status_t GetVic(display_mode_t* disp_timing);
-  zx_status_t I2cImplTransact(uint32_t bus_id, const i2c_impl_op_t* op_list, size_t op_count) {
-    return hdmitx_->I2cImplTransact(bus_id, op_list, op_count);
-  }
 
   zx_status_t ConfigurePll();
 
@@ -123,7 +128,7 @@ class AmlHdmiHost {
 
   ddk::PDev pdev_;
 
-  std::unique_ptr<AmlHdmitx> hdmitx_;
+  fidl::WireSyncClient<fuchsia_hardware_hdmi::Hdmi> hdmi_;
 
   std::optional<ddk::MmioBuffer> vpu_mmio_;
   std::optional<ddk::MmioBuffer> hhi_mmio_;
