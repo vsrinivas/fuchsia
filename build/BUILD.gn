@@ -40,25 +40,15 @@ group("deprecated_package") {
   # Maintainers will accept changes to the allowlist below that support
   # refactors, such as moving a legacy target to a different directory.
 
-  non_default_checkout_users = [
-    # This git repo is only checked out when the vulkan-cts attribute is set.
-    "//third_party/vulkan-cts/fuchsia/*",
-    "//third_party/vulkan-cts/fuchsia/split-cts/*",
-  ]
-
-  visibility = non_default_checkout_users
-
   # To regenerate:
   # fx gn refs $(fx get-build-dir) //build:deprecated_package | sed 's|\(.*\):.*|"\1/*",|' | sort | uniq
-  visibility += [
+  visibility = [
     "//sdk/dart/fuchsia_inspect/test/integration/*",
     "//sdk/dart/fuchsia_inspect/test/validator_puppet/*",
-    "//src/intl/intl_services/*",
     "//src/intl/intl_services/tests/*",
     "//src/lib/ui/carnelian/*",
     "//src/sys/pkg/bin/pkgctl/*",
     "//src/sys/pkg/bin/update/*",
-    "//src/sys/pkg/tests/pkg-resolver/*",
     "//src/sys/pkg/tests/pkgctl/*",
     "//src/sys/pkg/tests/update/*",
     "//src/tests/intl/timezone/*",
@@ -69,12 +59,8 @@ group("deprecated_package") {
     "//src/ui/lib/escher/*",
     "//src/ui/scenic/*",
     "//src/ui/tests/integration_flutter_tests/embedder/*",
-    "//src/ui/tests/integration_input_tests/keyboard/*",
     "//src/ui/tests/integration_input_tests/scenic/*",
-    "//src/ui/tests/integration_input_tests/shortcut/*",
-    "//src/ui/tests/scenic-stress-tests/*",
     "//src/virtualization/bin/guest/*",
-    "//third_party/Vulkan-Tools/cube/*",
   ]
 }
 
