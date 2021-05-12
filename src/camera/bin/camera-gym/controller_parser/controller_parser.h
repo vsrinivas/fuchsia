@@ -13,7 +13,7 @@ namespace camera {
 // ControllerParser supplies a parser for the control commands.
 class ControllerParser {
  public:
-  explicit ControllerParser(std::string app);
+  ControllerParser() = default;
 
   fit::result<std::vector<fuchsia::camera::gym::Command>> ParseArgcArgv(int argc,
                                                                         const char** argv);
@@ -47,8 +47,6 @@ class ControllerParser {
   // types[] array may be up to MAX_VALUES types + 1 terminating '\0'.
   fit::result<camera::ControllerParser::ValuesArray> ParseValues(const std::string& args,
                                                                  const char* types);
-
-  std::string app_;
 };
 
 }  // namespace camera

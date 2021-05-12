@@ -26,7 +26,7 @@ class ControllerParserTest : public testing::Test {
 
 TEST_F(ControllerParserTest, TestSingleCommandPassCases) {
   fit::result<std::vector<fuchsia::camera::gym::Command>> result;
-  set_controller_parser(std::make_unique<ControllerParser>("fake-app-name"));
+  set_controller_parser(std::make_unique<ControllerParser>());
   {
     const int argc = 2;
     const char* argv[] = {"fake", "--set-config=0", nullptr};
@@ -379,7 +379,7 @@ TEST_F(ControllerParserTest, TestSingleCommandPassCases) {
 
 TEST_F(ControllerParserTest, TestSingleCommandFailCases) {
   fit::result<std::vector<fuchsia::camera::gym::Command>> result;
-  set_controller_parser(std::make_unique<ControllerParser>("fake-app-name"));
+  set_controller_parser(std::make_unique<ControllerParser>());
   {
     // Should fail: Missing argument.
     const int argc = 2;
@@ -685,7 +685,7 @@ TEST_F(ControllerParserTest, TestSingleCommandFailCases) {
 
 TEST_F(ControllerParserTest, TestMultipleCommandPassCases) {
   fit::result<std::vector<fuchsia::camera::gym::Command>> result;
-  set_controller_parser(std::make_unique<ControllerParser>("fake-app-name"));
+  set_controller_parser(std::make_unique<ControllerParser>());
   {
     const int argc = 3;
     const char* argv[] = {"fake", "--set-config-async=234", "--add-stream=876", nullptr};
@@ -739,7 +739,7 @@ TEST_F(ControllerParserTest, TestMultipleCommandPassCases) {
 
 TEST_F(ControllerParserTest, TestMultipleCommandFailCases) {
   fit::result<std::vector<fuchsia::camera::gym::Command>> result;
-  set_controller_parser(std::make_unique<ControllerParser>("fake-app-name"));
+  set_controller_parser(std::make_unique<ControllerParser>());
   {
     // Should fail: Invalid character for argument
     const int argc = 3;

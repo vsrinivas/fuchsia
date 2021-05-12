@@ -13,6 +13,7 @@
 
 #include <gtest/gtest_prod.h>
 
+#include "fuchsia/camera/gym/cpp/fidl.h"
 #include "fuchsia/math/cpp/fidl.h"
 #include "src/camera/bin/camera-gym/moving_window.h"
 
@@ -38,6 +39,12 @@ class StreamCycler {
                    RemoveCollectionHandler on_remove_collection, ShowBufferHandler on_show_buffer,
                    MuteStateHandler on_mute_changed);
 
+  using CommandStatusHandler =
+      fit::function<void(fuchsia::camera::gym::Controller_SendCommand_Result)>;
+
+  // Manual mode entry points:
+  void ExecuteCommand(fuchsia::camera::gym::Command command, CommandStatusHandler handler);
+
  private:
   explicit StreamCycler(async_dispatcher_t* dispatcher, bool manual_mode = false);
 
@@ -61,6 +68,9 @@ class StreamCycler {
   // Kick off the sequence to connect a single stream.
   void ConnectToStream(uint32_t config_index, uint32_t stream_index);
 
+  // Notification to camera-gym that the crop region has been set.
+  void WatchCropRegionCallback(uint32_t stream_index, std::unique_ptr<fuchsia::math::RectF> region);
+
   // Next camera frame on given stream is available.
   void OnNextFrame(uint32_t stream_index, fuchsia::camera3::FrameInfo frame_info);
 
@@ -69,6 +79,20 @@ class StreamCycler {
 
   // Utility to return what the next config_index should be.
   uint32_t NextConfigIndex();
+
+  // Manual mode entry points:
+  void PostedExecuteCommand(fuchsia::camera::gym::Command command, CommandStatusHandler handler);
+
+  void ExecuteSetConfigCommand(fuchsia::camera::gym::SetConfigCommand& command);
+  void ExecuteAddStreamCommand(fuchsia::camera::gym::AddStreamCommand& command);
+  void ExecuteSetCropCommand(fuchsia::camera::gym::SetCropCommand& command);
+  void ExecuteSetResolutionCommand(fuchsia::camera::gym::SetResolutionCommand& command);
+
+  // When a command successfully executes, CommandSuccessNotify must be called.
+  void CommandSuccessNotify();
+
+  // When a command experiences any failure in execution, CommandFailureNotify must be called.
+  void CommandFailureNotify(::fuchsia::camera::gym::CommandError status);
 
   async_dispatcher_t* dispatcher_;
   fuchsia::camera3::DeviceWatcherPtr watcher_;
@@ -80,12 +104,16 @@ class StreamCycler {
 
   // Only set by WatchCurrentConfigurationCallback().
   // Only used by ConnectToAllStreams() and NextConfigIndex().
+  // Set to the config_index AFTER being notified that the config was set by the driver stack.
   uint32_t current_config_index_;
 
   AddCollectionHandler add_collection_handler_;
   RemoveCollectionHandler remove_collection_handler_;
   ShowBufferHandler show_buffer_handler_;
   MuteStateHandler mute_state_handler_;
+
+  // TODO(?????) - Is this really the ideal way to communicate status back?
+  CommandStatusHandler command_status_handler_;
 
   // Track the moving region of interest
   MovingWindow moving_window_;
@@ -98,11 +126,20 @@ class StreamCycler {
     std::optional<uint32_t>
         source_highlight;  // Stream on which to highlight this stream's crop region.
     std::optional<fuchsia::math::RectF> highlight;
+    fuchsia::sysmem::ImageFormat_2 image_format;
   };
   std::map<uint32_t, StreamInfo> stream_infos_;
 
   friend class CameraGymTest;
+  friend class CameraGymStreamCyclerTest;
   FRIEND_TEST(CameraGymTest, PendingCollectionId);
+  FRIEND_TEST(StreamCyclerTest, SimpleConfiguration_ManualMode_ConnectToStream);
+  FRIEND_TEST(StreamCyclerTest, ComplexConfiguration_ManualMode_WatchCurrentConfigurationCallback);
+  FRIEND_TEST(StreamCyclerTest, ComplexConfiguration_ManualMode_ExecuteSetConfigCommand_SameConfig);
+  FRIEND_TEST(StreamCyclerTest,
+              ComplexConfiguration_ManualMode_ExecuteSetConfigCommand_DifferentConfig);
+  FRIEND_TEST(StreamCyclerTest, ComplexConfiguration_ManualMode_ExecuteAddStreamCommand);
+  FRIEND_TEST(StreamCyclerTest, ComplexConfiguration_ManualMode_ExecuteSetCropCommand);
 };
 
 }  // namespace camera

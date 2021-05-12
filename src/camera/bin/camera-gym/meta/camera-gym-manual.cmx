@@ -10,6 +10,7 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.camera.gym.Controller",
             "fuchsia.camera3.DeviceWatcher",
             "fuchsia.sys.Environment",
             "fuchsia.sysmem.Allocator",

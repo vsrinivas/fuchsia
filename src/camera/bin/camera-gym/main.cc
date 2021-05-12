@@ -20,6 +20,7 @@
 #include <set>
 
 #include "src/camera/bin/camera-gym/buffer_collage.h"
+#include "src/camera/bin/camera-gym/controller_receiver.h"
 #include "src/camera/bin/camera-gym/lifecycle_impl.h"
 #include "src/camera/bin/camera-gym/stream_cycler.h"
 #include "src/lib/fxl/command_line.h"
@@ -57,8 +58,8 @@ int main(int argc, char* argv[]) {
   }
 
   // Create the collage.
-  auto collage_result = camera::BufferCollage::Create(std::move(scenic), std::move(allocator),
-                                                      std::move(presenter), [&] { loop.Quit(); });
+  auto collage_result = camera::BufferCollage::Create(
+      std::move(scenic), std::move(allocator), std::move(presenter), [&loop] { loop.Quit(); });
   if (collage_result.is_error()) {
     FX_PLOGS(ERROR, collage_result.error()) << "Failed to create BufferCollage.";
     return EXIT_FAILURE;
@@ -101,8 +102,9 @@ int main(int argc, char* argv[]) {
   std::set<uint32_t> collection_ids;
 
   camera::StreamCycler::AddCollectionHandler add_collection_handler =
-      [&](fuchsia::sysmem::BufferCollectionTokenHandle token,
-          fuchsia::sysmem::ImageFormat_2 image_format, std::string description) -> uint32_t {
+      [&collage, &collection_ids](fuchsia::sysmem::BufferCollectionTokenHandle token,
+                                  fuchsia::sysmem::ImageFormat_2 image_format,
+                                  std::string description) -> uint32_t {
     auto result = fit::run_single_threaded(
         collage->AddCollection(std::move(token), image_format, description));
     if (result.is_error()) {
@@ -113,14 +115,16 @@ int main(int argc, char* argv[]) {
     return result.value();
   };
 
-  camera::StreamCycler::RemoveCollectionHandler remove_collection_handler = [&](uint32_t id) {
-    collection_ids.erase(id);
-    collage->RemoveCollection(id);
-  };
+  camera::StreamCycler::RemoveCollectionHandler remove_collection_handler =
+      [&collage, &collection_ids](uint32_t id) {
+        collection_ids.erase(id);
+        collage->RemoveCollection(id);
+      };
 
   camera::StreamCycler::ShowBufferHandler show_buffer_handler =
-      [&](uint32_t collection_id, uint32_t buffer_index, zx::eventpair release_fence,
-          std::optional<fuchsia::math::RectF> subregion) {
+      [&collage, &device_muted](uint32_t collection_id, uint32_t buffer_index,
+                                zx::eventpair release_fence,
+                                std::optional<fuchsia::math::RectF> subregion) {
         collage->PostShowBuffer(collection_id, buffer_index, std::move(release_fence),
                                 std::move(subregion));
         if (!device_muted) {
@@ -129,7 +133,8 @@ int main(int argc, char* argv[]) {
         }
       };
 
-  camera::StreamCycler::MuteStateHandler mute_handler = [&](bool muted) {
+  camera::StreamCycler::MuteStateHandler mute_handler = [&collage, &collection_ids,
+                                                         &device_muted](bool muted) {
     collage->PostSetMuteIconVisibility(muted);
     if (muted) {
       // Immediately hide all collections on mute.
@@ -143,9 +148,21 @@ int main(int argc, char* argv[]) {
   cycler->SetHandlers(std::move(add_collection_handler), std::move(remove_collection_handler),
                       std::move(show_buffer_handler), std::move(mute_handler));
 
+  std::unique_ptr<camera::ControllerReceiver> controller_receiver;
   if (manual_mode) {
+    controller_receiver = std::make_unique<camera::ControllerReceiver>();
+
     FX_LOGS(INFO) << "Running in manual mode.";
-    FX_LOGS(INFO) << "This is a placeholder. Dropping through to automatic mode for now.";
+
+    // Bridge ControllerReceiver to StreamCycler.
+    camera::ControllerReceiver::CommandHandler command_handler =
+        [&cycler](fuchsia::camera::gym::Command command,
+                  camera::ControllerReceiver::SendCommandCallback callback) {
+          cycler->ExecuteCommand(std::move(command), std::move(callback));
+        };
+    controller_receiver->SetHandlers(std::move(command_handler));
+
+    context->outgoing()->AddPublicService(controller_receiver->GetHandler());
   } else {
     FX_LOGS(INFO) << "Running in automatic mode.";
   }
@@ -154,7 +171,7 @@ int main(int argc, char* argv[]) {
   context->outgoing()->AddPublicService(collage->GetHandler());
 
   // Publish a handler for the Lifecycle protocol that cleanly quits the component.
-  LifecycleImpl lifecycle([&] { loop.Quit(); });
+  LifecycleImpl lifecycle([&loop] { loop.Quit(); });
   context->outgoing()->AddPublicService(lifecycle.GetHandler());
 
   loop.Run();

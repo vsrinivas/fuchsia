@@ -19,8 +19,6 @@ using AddStreamCommand = fuchsia::camera::gym::AddStreamCommand;
 using SetCropCommand = fuchsia::camera::gym::SetCropCommand;
 using SetResolutionCommand = fuchsia::camera::gym::SetResolutionCommand;
 
-ControllerParser::ControllerParser(std::string app) : app_(app) {}
-
 fit::result<std::vector<Command>> ControllerParser::ParseArgcArgv(int argc, const char** argv) {
   ZX_ASSERT(argc > 0);
   std::vector<Command> commands;
@@ -95,7 +93,7 @@ fit::result<Command> ControllerParser::ParseOneCommand(const std::string& name,
       return fit::ok(std::move(command));
     }
   } else {
-    fprintf(stderr, "%s: Command not understood: \"%s\"\n", app_.c_str(), name.c_str());
+    fprintf(stderr, "Command not understood: \"%s\"\n", name.c_str());
   }
   return fit::error();
 }
@@ -105,7 +103,7 @@ fit::result<SetConfigCommand> ControllerParser::ParseSetConfigCommand(const std:
                                                                       bool async) {
   auto result = ParseValues(value, "i");
   if (result.is_error()) {
-    fprintf(stderr, "%s: Failed to parse arguments: \"%s\"\n", app_.c_str(), name.c_str());
+    fprintf(stderr, "Failed to parse arguments: \"%s\"\n", name.c_str());
     return fit::error();
   }
   ValuesArray values = result.take_value();
@@ -120,7 +118,7 @@ fit::result<AddStreamCommand> ControllerParser::ParseAddStreamCommand(const std:
                                                                       bool async) {
   auto result = ParseValues(value, "i");
   if (result.is_error()) {
-    fprintf(stderr, "%s: Failed to parse arguments: \"%s\"\n", app_.c_str(), name.c_str());
+    fprintf(stderr, "Failed to parse arguments: \"%s\"\n", name.c_str());
     return fit::error();
   }
   ValuesArray values = result.take_value();
@@ -135,7 +133,7 @@ fit::result<SetCropCommand> ControllerParser::ParseSetCropCommand(const std::str
                                                                   bool async) {
   auto result = ParseValues(value, "iffff");
   if (result.is_error()) {
-    fprintf(stderr, "%s: Failed to parse arguments: \"%s\"\n", app_.c_str(), name.c_str());
+    fprintf(stderr, "Failed to parse arguments: \"%s\"\n", name.c_str());
     return fit::error();
   }
   ValuesArray values = result.take_value();
@@ -153,7 +151,7 @@ fit::result<SetResolutionCommand> ControllerParser::ParseSetResolutionCommand(
     const std::string& name, const std::string& value, bool async) {
   auto result = ParseValues(value, "iii");
   if (result.is_error()) {
-    fprintf(stderr, "%s: Failed to parse arguments: \"%s\"\n", app_.c_str(), name.c_str());
+    fprintf(stderr, "Failed to parse arguments: \"%s\"\n", name.c_str());
     return fit::error();
   }
   ValuesArray values = result.take_value();

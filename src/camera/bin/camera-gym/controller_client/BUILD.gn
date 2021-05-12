@@ -1,0 +1,44 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+source_set("lib") {
+  sources = [
+    "controller_client_app.cc",
+    "controller_client_app.h",
+  ]
+
+  public_deps = [
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_legacy",
+    "//src/camera/bin/camera-gym/controller_error:lib",
+    "//src/camera/bin/camera-gym/fidl:controller",
+    "//src/lib/fxl",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+executable("bin") {
+  output_name = "camera-gym-ctl"
+
+  sources = [ "main.cc" ]
+
+  deps = [
+    ":lib",
+    "//sdk/lib/sys/cpp",
+    "//src/camera/bin/camera-gym/controller_parser:lib",
+    "//src/lib/fxl",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_shell_package("camera-gym-ctl") {
+  deps = [ ":bin" ]
+  manifest = "meta/camera-gym-ctl.cmx"
+}

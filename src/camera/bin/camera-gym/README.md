@@ -33,3 +33,19 @@ fx shell tiles_ctl stop
 
 fx shell run basemgr.cmx
 
+### How to Run Manual Mode
+
+camera-gym-ctl accepts lists of commands and sends them, one at a time, to camera-gym.
+camera-gym must be started in manual mode. (Use "fx camera-gym --manual".)
+
+There are short scripts that run these configs + streams in cycles:
+
+### How to Run Manual Mode Scripts
+
+test_simple.sh
+
+  Running this bash script will cycle through all configs and all streams forever.
+
+test_crop.sh
+
+  Running this bash script will cycle through crop settings in steps of 1/40's.
