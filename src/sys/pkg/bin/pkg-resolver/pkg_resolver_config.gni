@@ -28,3 +28,46 @@ template("pkg_resolver_config") {
     forward_variables_from(invoker, [ "deps" ])
   }
 }
+
+# Defines repository persistence configuration to be included in the
+# config-data package. This is kept as a separate template to more
+# easily allow product definitions to choose whether to enable this
+# feature when dynamic configuration is enabled. (The alternative
+# requires spelling out templates for every combination, and having
+# products explicitly include the one they want while explicitly
+# excluding the others.)
+#
+# Combinations of dependencies of these targets:
+# pkg_resolver_config | resolver_persisted_repos_config | outcome
+# --------------------+---------------------------------+---------------
+# set                 | set                             | dynrepos work
+#                     |                                 | persist works
+# --------------------+---------------------------------+---------------
+# unset               | set                             | neither works
+# --------------------+---------------------------------+---------------
+# set                 | unset                           | dynrepos work
+#                     |                                 | no persist
+# --------------------+---------------------------------+---------------
+# unset               | unset                           | neither works
+# --------------------+---------------------------------+---------------
+#
+#   persisted_repos_dir
+#     [string] directory in which to persist TUF metadata for a repo.
+#
+template("resolver_persisted_repos_config") {
+  cfg = {
+    forward_variables_from(invoker, [ "persisted_repos_dir" ])
+    assert(defined(persisted_repos_dir), "persisted_repos_dir must be defined")
+  }
+
+  config_path = "$target_gen_dir/pkg_resolver_repo_config.json"
+
+  write_file(config_path, cfg, "json")
+
+  config_data(target_name) {
+    for_pkg = "pkg-resolver"
+    outputs = [ "persisted_repos_dir.json" ]
+    sources = [ config_path ]
+    forward_variables_from(invoker, [ "deps" ])
+  }
+}

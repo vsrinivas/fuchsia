@@ -8,8 +8,8 @@ use {
     fuchsia_async as fasync,
     fuchsia_zircon::Status,
     lib::{
-        get_repos, make_repo, make_repo_config, mock_filesystem, Config, DirOrProxy, MountsBuilder,
-        TestEnvBuilder,
+        get_repos, make_repo, make_repo_config, mock_filesystem, DirOrProxy, EnableDynamicConfig,
+        MountsBuilder, TestEnvBuilder,
     },
 };
 
@@ -19,7 +19,7 @@ async fn no_load_dynamic_repos_if_disabled() {
         .mounts(
             MountsBuilder::new()
                 .dynamic_repositories(make_repo_config(&make_repo()))
-                .config(Config { enable_dynamic_configuration: false })
+                .enable_dynamic_config(EnableDynamicConfig { enable_dynamic_configuration: false })
                 .build(),
         )
         .build()
@@ -33,7 +33,11 @@ async fn no_load_dynamic_repos_if_disabled() {
 #[fasync::run_singlethreaded(test)]
 async fn add_succeeds() {
     let env = TestEnvBuilder::new()
-        .mounts(MountsBuilder::new().config(Config { enable_dynamic_configuration: true }).build())
+        .mounts(
+            MountsBuilder::new()
+                .enable_dynamic_config(EnableDynamicConfig { enable_dynamic_configuration: true })
+                .build(),
+        )
         .build()
         .await;
     let repo = make_repo();
@@ -47,7 +51,11 @@ async fn add_succeeds() {
 #[fasync::run_singlethreaded(test)]
 async fn add_fails_if_disabled() {
     let env = TestEnvBuilder::new()
-        .mounts(MountsBuilder::new().config(Config { enable_dynamic_configuration: false }).build())
+        .mounts(
+            MountsBuilder::new()
+                .enable_dynamic_config(EnableDynamicConfig { enable_dynamic_configuration: false })
+                .build(),
+        )
         .build()
         .await;
     let repo = make_repo();
@@ -64,7 +72,11 @@ async fn add_fails_if_disabled() {
 #[fasync::run_singlethreaded(test)]
 async fn remove_fails_with_not_found() {
     let env = TestEnvBuilder::new()
-        .mounts(MountsBuilder::new().config(Config { enable_dynamic_configuration: true }).build())
+        .mounts(
+            MountsBuilder::new()
+                .enable_dynamic_config(EnableDynamicConfig { enable_dynamic_configuration: true })
+                .build(),
+        )
         .build()
         .await;
 
@@ -79,7 +91,11 @@ async fn remove_fails_with_not_found() {
 #[fasync::run_singlethreaded(test)]
 async fn remove_fails_with_access_denied_if_disabled() {
     let env = TestEnvBuilder::new()
-        .mounts(MountsBuilder::new().config(Config { enable_dynamic_configuration: false }).build())
+        .mounts(
+            MountsBuilder::new()
+                .enable_dynamic_config(EnableDynamicConfig { enable_dynamic_configuration: false })
+                .build(),
+        )
         .build()
         .await;
 
@@ -97,7 +113,7 @@ async fn attempt_to_open_persisted_dynamic_repos() {
     let env = TestEnvBuilder::new()
         .mounts(
             MountsBuilder::new()
-                .config(Config { enable_dynamic_configuration: true })
+                .enable_dynamic_config(EnableDynamicConfig { enable_dynamic_configuration: true })
                 .pkg_resolver_data(DirOrProxy::Proxy(proxy))
                 .build(),
         )
@@ -118,7 +134,7 @@ async fn no_attempt_to_open_persisted_dynamic_repos_if_disabled() {
     let env = TestEnvBuilder::new()
         .mounts(
             MountsBuilder::new()
-                .config(Config { enable_dynamic_configuration: false })
+                .enable_dynamic_config(EnableDynamicConfig { enable_dynamic_configuration: false })
                 .pkg_resolver_data(DirOrProxy::Proxy(proxy))
                 .build(),
         )
@@ -153,7 +169,7 @@ async fn load_dynamic_repos() {
     let env = TestEnvBuilder::new()
         .mounts(
             MountsBuilder::new()
-                .config(Config { enable_dynamic_configuration: true })
+                .enable_dynamic_config(EnableDynamicConfig { enable_dynamic_configuration: true })
                 .dynamic_repositories(make_repo_config(&repo))
                 .build(),
         )

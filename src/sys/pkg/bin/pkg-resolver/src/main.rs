@@ -308,7 +308,7 @@ fn load_repo_manager(
     // to update the system.
     let dynamic_repo_path =
         if config.enable_dynamic_configuration() { Some(DYNAMIC_REPO_PATH) } else { None };
-    match RepositoryManagerBuilder::new(dynamic_repo_path, experiments)
+    let builder = match RepositoryManagerBuilder::new(dynamic_repo_path, experiments)
         .unwrap_or_else(|(builder, err)| {
             fx_log_err!("error loading dynamic repo config: {:#}", anyhow!(err));
             builder
@@ -324,7 +324,7 @@ fn load_repo_manager(
                 metrics::RepositoryManagerLoadStaticConfigsMetricDimensionResult::Success
                     .as_event_code(),
                 0,
-                1
+                1,
             );
             builder
         }
@@ -336,7 +336,7 @@ fn load_repo_manager(
                     metrics::REPOSITORY_MANAGER_LOAD_STATIC_CONFIGS_METRIC_ID,
                     dimension_result.as_event_code(),
                     0,
-                    1
+                    1,
                 );
                 match &err {
                     crate::repository_manager::LoadError::Io { path: _, error }
@@ -349,7 +349,13 @@ fn load_repo_manager(
             }
             builder
         }
-    }.cobalt_sender(cobalt_sender)
+    };
+
+    match config.persisted_repos_dir() {
+        Some(repo) => builder.with_persisted_repos_dir(repo),
+        None => builder,
+    }
+    .cobalt_sender(cobalt_sender)
     .build()
 }
 

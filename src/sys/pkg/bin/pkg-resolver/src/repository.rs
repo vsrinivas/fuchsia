@@ -204,6 +204,10 @@ fn get_local_repo(
             Ok(Box::new(local))
         }
         RepositoryStorageType::Persistent => {
+            // This can only be true when config_repos.json was present, parsed, and contained a
+            // non-empty string value for the persistence directory. Therefore, even in cases where
+            // `enable_dynamic_configuration` is set, a `RST::Persistent` repo will still yield the
+            // error in the else case below.
             let persisted_repos_dir = if let Some(persisted_repos_dir) = persisted_repos_dir {
                 persisted_repos_dir
             } else {

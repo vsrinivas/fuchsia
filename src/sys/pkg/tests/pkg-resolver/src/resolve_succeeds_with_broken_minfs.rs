@@ -19,8 +19,8 @@ use {
     futures::future::BoxFuture,
     futures::prelude::*,
     lib::{
-        get_repos, get_rules, mock_filesystem, Config, DirOrProxy, MountsBuilder, TestEnv,
-        TestEnvBuilder, EMPTY_REPO_PATH,
+        get_repos, get_rules, mock_filesystem, DirOrProxy, EnableDynamicConfig, MountsBuilder,
+        TestEnv, TestEnvBuilder, EMPTY_REPO_PATH,
     },
     std::sync::{
         atomic::{AtomicBool, AtomicU64},
@@ -408,7 +408,7 @@ async fn create_testenv_serves_repo<H: OpenRequestHandler + Send + Sync + 'stati
     let env = TestEnvBuilder::new()
         .mounts(
             MountsBuilder::new()
-                .config(Config { enable_dynamic_configuration: true })
+                .enable_dynamic_config(EnableDynamicConfig { enable_dynamic_configuration: true })
                 .pkg_resolver_data(DirOrProxy::Proxy(proxy))
                 .build(),
         )

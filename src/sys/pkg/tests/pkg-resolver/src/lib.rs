@@ -84,19 +84,25 @@ pub struct Mounts {
 }
 
 #[derive(Serialize)]
-pub struct Config {
+pub struct EnableDynamicConfig {
     pub enable_dynamic_configuration: bool,
+}
+
+#[derive(Serialize)]
+pub struct PersistedReposConfig {
+    pub persisted_repos_dir: String,
 }
 
 #[derive(Default)]
 pub struct MountsBuilder {
     pkg_resolver_data: Option<DirOrProxy>,
     pkg_resolver_config_data: Option<DirOrProxy>,
-    config: Option<Config>,
+    enable_dynamic_config: Option<EnableDynamicConfig>,
     static_repository: Option<RepositoryConfig>,
     dynamic_rewrite_rules: Option<RuleConfig>,
     dynamic_repositories: Option<RepositoryConfigs>,
     custom_config_data: Vec<(PathBuf, String)>,
+    persisted_repos_config: Option<PersistedReposConfig>,
 }
 
 impl MountsBuilder {
@@ -111,8 +117,12 @@ impl MountsBuilder {
         self.pkg_resolver_config_data = Some(pkg_resolver_config_data);
         self
     }
-    pub fn config(mut self, config: Config) -> Self {
-        self.config = Some(config);
+    pub fn enable_dynamic_config(mut self, config: EnableDynamicConfig) -> Self {
+        self.enable_dynamic_config = Some(config);
+        self
+    }
+    pub fn persisted_repos_config(mut self, config: PersistedReposConfig) -> Self {
+        self.persisted_repos_config = Some(config);
         self
     }
     pub fn static_repository(mut self, static_repository: RepositoryConfig) -> Self {
@@ -141,8 +151,11 @@ impl MountsBuilder {
                 .pkg_resolver_config_data
                 .unwrap_or_else(|| DirOrProxy::Dir(tempfile::tempdir().expect("/tmp to exist"))),
         };
-        if let Some(config) = self.config {
-            mounts.add_config(&config);
+        if let Some(config) = self.enable_dynamic_config {
+            mounts.add_enable_dynamic_config(&config);
+        }
+        if let Some(config) = self.persisted_repos_config {
+            mounts.add_persisted_repos_config(&config);
         }
         if let Some(config) = self.static_repository {
             mounts.add_static_repository(config);
@@ -161,9 +174,18 @@ impl MountsBuilder {
 }
 
 impl Mounts {
-    fn add_config(&self, config: &Config) {
+    fn add_enable_dynamic_config(&self, config: &EnableDynamicConfig) {
         if let DirOrProxy::Dir(ref d) = self.pkg_resolver_config_data {
             let f = File::create(d.path().join("config.json")).unwrap();
+            serde_json::to_writer(BufWriter::new(f), &config).unwrap();
+        } else {
+            panic!("not supported");
+        }
+    }
+
+    fn add_persisted_repos_config(&self, config: &PersistedReposConfig) {
+        if let DirOrProxy::Dir(ref d) = self.pkg_resolver_config_data {
+            let f = File::create(d.path().join("persisted_repos_dir.json")).unwrap();
             serde_json::to_writer(BufWriter::new(f), &config).unwrap();
         } else {
             panic!("not supported");
@@ -296,7 +318,11 @@ impl
             // Note: this means that we'll produce different envs from TestEnvBuilder::new().build().await
             // vs TestEnvBuilder::new().mounts(MountsBuilder::new().build()).build()
             mounts: || {
-                MountsBuilder::new().config(Config { enable_dynamic_configuration: true }).build()
+                MountsBuilder::new()
+                    .enable_dynamic_config(EnableDynamicConfig {
+                        enable_dynamic_configuration: true,
+                    })
+                    .build()
             },
             boot_arguments_service: None,
             local_mirror_repo: None,
