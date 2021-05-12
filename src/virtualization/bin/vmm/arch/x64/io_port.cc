@@ -123,7 +123,8 @@ zx_status_t Pm1Handler::Init(Guest* guest) {
   if (status != ZX_OK) {
     return status;
   }
-  return guest->CreateMapping(TrapType::PIO_SYNC, kPm1ControlPort, kPm1Size, kPm1ControlPort, this);
+  return guest->CreateMapping(TrapType::PIO_SYNC, kPm1ControlPort, kPm1Size, kPm1ControlPortOffset,
+                              this);
 }
 
 zx_status_t Pm1Handler::Read(uint64_t addr, IoValue* value) const {
@@ -164,7 +165,14 @@ zx_status_t Pm1Handler::Write(uint64_t addr, const IoValue& value) {
       uint16_t slp_type = bits_shift(value.u16, 12, 10);
       if (slp_en != 0) {
         // Only power-off transitions are supported.
-        return slp_type == kSlpTyp5 ? ZX_ERR_STOP : ZX_ERR_NOT_SUPPORTED;
+        if (slp_type == kSlpTyp5) {
+          return ZX_ERR_NOT_SUPPORTED;
+        }
+
+        // Power off.
+        //
+        // Returning ZX_ERR_CANCELED will cause the VMM to gracefully shut down.
+        return ZX_ERR_CANCELED;
       }
       break;
     }
