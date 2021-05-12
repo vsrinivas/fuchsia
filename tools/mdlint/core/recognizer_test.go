@@ -16,6 +16,8 @@ type xrefDef struct {
 }
 
 type recognizeLinksTestCase struct {
+	ignore string
+
 	input    string
 	xrefUses []string
 	hrefUses []string
@@ -171,9 +173,29 @@ func TestRecognizeLinks(t *testing.T) {
 				"(https://man7.org/linux/man-pages/man5/procfs.5.html)",
 			},
 		},
+		{
+			ignore: "fxbug.dev/76515",
+			input: `
+For instance, [fidlgen_rust] [would like to know](http://fxbug.dev/61760)
+whether a type may ever contain a floating point number to determine which...
+
+[fidlgen_rust]: /some/url/here`,
+			xrefUses: []string{
+				"[fidlgen_rust]",
+			},
+			hrefUses: []string{
+				"(http://fxbug.dev/61760)",
+			},
+			xrefDefs: []xrefDef{
+				{"[fidlgen_rust]", "/some/url/here"},
+			},
+		},
 	}
 	for inputNum, ex := range cases {
 		t.Run(fmt.Sprintf("input #%d", inputNum), func(t *testing.T) {
+			if len(ex.ignore) != 0 {
+				return
+			}
 			t.Log(strconv.Quote(ex.input))
 			var (
 				acc       = &recognizerAcc{}
