@@ -31,9 +31,6 @@ executable("vkext_bin") {
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/fbl",
   ]
-
-  # TODO(fxbug.dev/58615): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("vkext_linux") {
