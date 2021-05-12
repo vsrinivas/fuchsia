@@ -24,7 +24,6 @@ go_library("fidlgen_cpp") {
     "struct.go",
     "table.go",
     "template_funcs.go",
-    "typed_channel_migration.go",
     "union.go",
   ]
 }
