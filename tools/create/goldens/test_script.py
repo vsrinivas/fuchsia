@@ -50,6 +50,7 @@ def main():
     parser.add_argument(
         'golden_files', help='path to the JSON file listing all golden files')
     parser.add_argument('project_type', help='project type as per fx create')
+    parser.add_argument('project_subtype', help='project subtype as per fx create')
     parser.add_argument('project_name', help='project name as per fx create')
     parser.add_argument(
         'create_args',
@@ -64,8 +65,9 @@ def main():
     # Create a temporary directory to house the generated project.
     with tempfile.TemporaryDirectory() as project_dir:
         args = [
-            proc_args.create_bin, proc_args.project_type,
-            os.path.join(project_dir, proc_args.project_name)
+            proc_args.create_bin,
+            proc_args.project_type, proc_args.project_subtype,
+            "--path", os.path.join(project_dir, proc_args.project_name)
         ] + proc_args.create_args
 
         # Call the create tool

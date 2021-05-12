@@ -9,6 +9,7 @@ mod util;
 mod test_util;
 
 use anyhow::{anyhow, bail, Context};
+use argh::FromArgs;
 use chrono::{Datelike, Utc};
 use handlebars::Handlebars;
 use serde::Serialize;
@@ -16,19 +17,18 @@ use std::collections::HashMap;
 use std::path::{Component, Path, PathBuf};
 use std::str::FromStr;
 use std::{fmt, fs, io};
-use structopt::StructOpt;
 use termion::{color, style};
 
 const LANG_AGNOSTIC_EXTENSION: &'static str = "tmpl";
 
 fn main() -> Result<(), anyhow::Error> {
-    let args = CreateArgs::from_args();
+    let args: CreateArgs = argh::from_env();
     let templates_dir_path = util::get_templates_dir_path()?;
 
     // Get the list of template file paths available to this project type and language.
     let template_files = find_template_files(
         &templates_dir_path.join("templates.json"),
-        &args.project_type,
+        &args.project_template()?,
         &args.lang,
         &StdFs,
     )?;
@@ -37,7 +37,7 @@ fn main() -> Result<(), anyhow::Error> {
     let template_tree = TemplateTree::from_file_list(
         &templates_dir_path,
         &template_files,
-        &args.project_type,
+        &args.project_template()?,
         &StdFs,
     )?;
 
@@ -89,47 +89,52 @@ fn main() -> Result<(), anyhow::Error> {
 }
 
 /// Creates scaffolding for new projects.
-///
-/// Eg.
-///
-/// fx create component-v1 src/sys/my-project --lang rust
-#[derive(Debug, StructOpt)]
-#[structopt(name = "fx-create", rename_all = "kebab")]
+#[derive(Debug, FromArgs)]
+#[argh(
+    name = "fx-create",
+    description = "Creates scaffolding for new projects.",
+    note = "Create a new project scaffold based on templates for Fuchsia software.
+
+The last segment of the project path represents the project name and will be
+used as the GN build target name. GN-style paths are supported (//src/sys).
+The last segment of the path must start with an alphabetic character and be
+followed by zero or more alphanumeric characters, or the `-` character.",
+    example = "To create a new component project:
+    $ fx create component v2 --path <project-path> --lang rust
+
+Supports the following project types:
+    create component v2   # CML-based component launched by Component Manager
+    create component v1   # CMX-based component launched by appmgr
+    create driver         # Driver launched in a devhost"
+)]
 struct CreateArgs {
-    /// The type of project to create.
-    ///
-    /// This can be one of:
-    ///
-    /// - component-v1: A V1 component launched with appmgr,
-    ///
-    /// - component-v2: A V2 component launched with Component Manager,
-    ///
-    /// - driver: A driver launched in a devhost,
+    /// type of the newly created project.
+    #[argh(positional)]
     project_type: String,
 
-    /// The path at which to create the new project.
-    ///
-    /// The last segment of the path will be the name of the GN target.
-    /// GN-style paths are supported (//src/sys).
-    /// The last segment of the path must start with an alphabetic
-    /// character and be followed by zero or more alphanumeric characters,
-    /// or the `-` character.
+    /// optional subtype. If not provided, the subtype is 'default'.
+    #[argh(positional, default = "String::from(\"default\")")]
+    project_subtype: String,
+
+    /// destination path for the new project.
+    #[argh(option, long = "path")]
     project_path: ProjectPath,
 
-    /// The programming language.
-    #[structopt(short, long)]
+    /// programming language for the new project.
+    /// Supported options: 'rust', 'cpp'
+    #[argh(option)]
     lang: Language,
 
-    /// Override for the project include path. For testing.
-    #[structopt(long)]
+    /// override for the project include path. For testing.
+    #[argh(option)]
     override_project_path: Option<PathBuf>,
 
-    /// Override the copyright year. For testing.
-    #[structopt(long)]
+    /// override the copyright year. For testing.
+    #[argh(option)]
     override_copyright_year: Option<u32>,
 
-    /// When set, does not emit anything to stdout.
-    #[structopt(long)]
+    /// when set, do not emit anything to stdout.
+    #[argh(switch)]
     silent: bool,
 }
 
@@ -180,6 +185,11 @@ impl CreateArgs {
     /// Returns the absolute path to the new project.
     fn absolute_project_path(&self) -> io::Result<PathBuf> {
         Ok(self.project_path.project_parent.join(&self.project_path.project_name))
+    }
+
+    /// Returns the template name of the project type
+    fn project_template(&self) -> io::Result<String> {
+        Ok(format!("{}-{}", self.project_type, self.project_subtype))
     }
 }
 
@@ -372,7 +382,7 @@ impl TemplateArgs {
                 .to_str()
                 .ok_or_else(|| anyhow!("invalid path {:?}", &project_path))?
                 .to_string(),
-            project_type: create_args.project_type.clone(),
+            project_type: create_args.project_template()?,
         })
     }
 }

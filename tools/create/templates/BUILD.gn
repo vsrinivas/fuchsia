@@ -33,12 +33,12 @@ if (is_host) {
       "component-v2/{{snake_case PROJECT_NAME}}.cc.tmpl-cpp",
       "component-v2/{{snake_case PROJECT_NAME}}.h.tmpl-cpp",
       "component-v2/{{snake_case PROJECT_NAME}}_unittest.cc.tmpl-cpp",
-      "driver/BUILD.gn.tmpl-cpp",
-      "driver/README.md.tmpl",
-      "driver/unit-tests.cc.tmpl-cpp",
-      "driver/{{snake_case PROJECT_NAME}}.bind.tmpl-cpp",
-      "driver/{{snake_case PROJECT_NAME}}.cc.tmpl-cpp",
-      "driver/{{snake_case PROJECT_NAME}}.h.tmpl-cpp",
+      "driver-default/BUILD.gn.tmpl-cpp",
+      "driver-default/README.md.tmpl",
+      "driver-default/unit-tests.cc.tmpl-cpp",
+      "driver-default/{{snake_case PROJECT_NAME}}.bind.tmpl-cpp",
+      "driver-default/{{snake_case PROJECT_NAME}}.cc.tmpl-cpp",
+      "driver-default/{{snake_case PROJECT_NAME}}.h.tmpl-cpp",
     ]
     outputs =
         [ "${host_tools_dir}/create_templates/{{source_target_relative}}" ]

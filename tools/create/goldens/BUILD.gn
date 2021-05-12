@@ -40,7 +40,8 @@ group("tests") {
 # Create a Rust v1 component project named `my-component-v1-rust` and
 # compare its file contents to the golden project of the same name.
 golden_test("my-component-v1-rust") {
-  project_type = "component-v1"
+  project_type = "component"
+  project_subtype = "v1"
   language = "rust"
   golden_files = [
     "my-component-v1-rust/BUILD.gn",
@@ -53,7 +54,8 @@ golden_test("my-component-v1-rust") {
 # Create a C++ v1 component project named `my-component-v1-cpp` and
 # compare its file contents to the golden project of the same name.
 golden_test("my-component-v1-cpp") {
-  project_type = "component-v1"
+  project_type = "component"
+  project_subtype = "v1"
   language = "cpp"
   golden_files = [
     "my-component-v1-cpp/BUILD.gn",
@@ -69,7 +71,8 @@ golden_test("my-component-v1-cpp") {
 # Create a C++ v2 component project named `my-component-v2-cpp` and
 # compare its file contents to the golden project of the same name.
 golden_test("my-component-v2-cpp") {
-  project_type = "component-v2"
+  project_type = "component"
+  project_subtype = "v2"
   language = "cpp"
   golden_files = [
     "my-component-v2-cpp/BUILD.gn",
@@ -86,7 +89,8 @@ golden_test("my-component-v2-cpp") {
 # Create a Rust v2 component project named `my-component-v2-rust` and
 # compare its file contents to the golden project of the same name.
 golden_test("my-component-v2-rust") {
-  project_type = "component-v2"
+  project_type = "component"
+  project_subtype = "v2"
   language = "rust"
   golden_files = [
     "my-component-v2-rust/BUILD.gn",
