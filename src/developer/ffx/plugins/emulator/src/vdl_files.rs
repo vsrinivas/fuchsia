@@ -421,8 +421,20 @@ impl VDLFiles {
 
         if start_command.emu_only || start_command.monitor {
             match monitored_child_process(&child_arc) {
-                Ok(_) => return Ok(()),
-                Err(e) => ffx_bail!("emulator launcher did not terminate propertly, error: {}", e),
+                Ok(_) => {
+                    self.stop_vdl(&KillCommand {
+                        launched_proto: Some(self.output_proto.display().to_string()),
+                        vdl_path: Some(vdl.display().to_string()),
+                    })?;
+                    return Ok(());
+                }
+                Err(e) => {
+                    self.stop_vdl(&KillCommand {
+                        launched_proto: Some(self.output_proto.display().to_string()),
+                        vdl_path: Some(vdl.display().to_string()),
+                    })?;
+                    ffx_bail!("emulator launcher did not terminate propertly, error: {}", e)
+                }
             }
         }
 
