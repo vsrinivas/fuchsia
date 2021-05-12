@@ -15,6 +15,7 @@ pub mod syscalls;
 use crate::auth::Credentials;
 use crate::fs::{FdTable, FileSystem};
 use crate::mm::MemoryManager;
+use crate::signals::types::*;
 use crate::types::*;
 
 // # Ownership structure

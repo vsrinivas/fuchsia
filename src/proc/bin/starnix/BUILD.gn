@@ -72,6 +72,9 @@ if (target_cpu == "x64") {
       "mm/mod.rs",
       "mm/syscalls.rs",
       "runner.rs",
+      "signals/mod.rs",
+      "signals/syscalls.rs",
+      "signals/types.rs",
       "syscalls/decls.rs",
       "syscalls/mod.rs",
       "syscalls/syscall_context.rs",
@@ -83,7 +86,6 @@ if (target_cpu == "x64") {
       "testing.rs",
       "types/errno.rs",
       "types/mod.rs",
-      "types/signal.rs",
       "types/uapi.rs",
       "types/user_address.rs",
     ]

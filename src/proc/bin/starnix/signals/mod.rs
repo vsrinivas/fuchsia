@@ -2,10 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-mod errno;
-pub mod uapi;
-mod user_address;
+pub mod syscalls;
+pub mod types;
 
-pub use errno::*;
-pub use uapi::*;
-pub use user_address::*;
+pub use types::*;

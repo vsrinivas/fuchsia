@@ -16,6 +16,7 @@ mod loader;
 mod logging;
 mod mm;
 mod runner;
+mod signals;
 mod syscalls;
 mod task;
 mod types;
