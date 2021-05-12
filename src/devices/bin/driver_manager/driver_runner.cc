@@ -580,15 +580,20 @@ void DriverRunner::Bind(Node& node, fdf::wire::NodeAddArgs args,
   auto match_callback = [this, callback = callback.share(), &node](
                             fidl::WireResponse<fdf::DriverIndex::MatchDriver>* response) mutable {
     if (response->result.is_err()) {
-      LOGF(ERROR, "Failed to match driver %s: %s", node.name().data(),
+      LOGF(ERROR, "Failed to match driver '%s': %s", node.name().data(),
            zx_status_get_string(response->result.err()));
       callback(zx::error(response->result.err()));
       return;
     }
-    auto& url = response->result.response().url;
-    auto start_result = StartDriver(node, url.get());
+    auto& matched_driver = response->result.response().driver;
+    if (!matched_driver.has_url()) {
+      LOGF(ERROR, "Failed to match driver '%s', driver URL is missing", node.name().data());
+      callback(zx::error(ZX_ERR_INVALID_ARGS));
+      return;
+    }
+    auto start_result = StartDriver(node, matched_driver.url().get());
     if (start_result.is_error()) {
-      LOGF(ERROR, "Failed to start driver %s: %s", node.name().data(),
+      LOGF(ERROR, "Failed to start driver '%s': %s", node.name().data(),
            zx_status_get_string(start_result.error_value()));
       callback(start_result.take_error());
       return;
@@ -597,7 +602,7 @@ void DriverRunner::Bind(Node& node, fdf::wire::NodeAddArgs args,
   };
   auto match_result = driver_index_->MatchDriver(std::move(args), std::move(match_callback));
   if (!match_result.ok()) {
-    LOGF(ERROR, "Failed to call match driver %s: %s", node.name().data(),
+    LOGF(ERROR, "Failed to call match driver '%s': %s", node.name().data(),
          match_result.error_message());
     callback(zx::error(match_result.status()));
   }

@@ -90,7 +90,10 @@ impl Indexer {
             match driver.matches(&properties) {
                 Ok(matched_properties) => {
                     if matched_properties.is_some() {
-                        return Ok((driver.url.clone(), fdf::NodeAddArgs::EMPTY));
+                        return Ok(fdf::MatchedDriver {
+                            url: Some(driver.url.clone()),
+                            ..fdf::MatchedDriver::EMPTY
+                        });
                     }
                     continue;
                 }
@@ -261,7 +264,7 @@ mod tests {
             let args =
                 fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
             let result = proxy.match_driver(args).await.unwrap();
-            let (received_url, _) = result.unwrap();
+            let received_url = result.unwrap().url.unwrap();
             assert_eq!(url.to_string(), received_url);
         })
         .await;
@@ -297,7 +300,7 @@ mod tests {
                     ..fdf::NodeAddArgs::EMPTY
                 };
                 let result = proxy.match_driver(args).await.unwrap();
-                let (received_url, _) = result.unwrap();
+                let received_url = result.unwrap().url.unwrap();
                 assert_eq!(
                     "fuchsia-pkg://my-test-driver#meta/my-driver.cm".to_string(),
                     received_url
@@ -314,7 +317,7 @@ mod tests {
                     ..fdf::NodeAddArgs::EMPTY
                 };
                 let result = proxy.match_driver(args).await.unwrap();
-                let (received_url, _) = result.unwrap();
+                let received_url = result.unwrap().url.unwrap();
                 assert_eq!(
                     "fuchsia-pkg://my-test-driver#meta/my-driver2.cm".to_string(),
                     received_url

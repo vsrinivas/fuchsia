@@ -217,7 +217,6 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
                              if (name == "second") {
                                return zx::ok(FakeDriverIndex::MatchResult{
                                    .url = "fuchsia-boot:///#meta/second-driver.cm",
-                                   .matched_args = std::move(args),
                                });
                              } else {
                                return zx::error(ZX_ERR_NOT_FOUND);
@@ -713,7 +712,6 @@ TEST_F(DriverRunnerTest, StartSecondDriver_UseProperties) {
             args.properties()[0].value() == 0x2301) {
           return zx::ok(FakeDriverIndex::MatchResult{
               .url = "fuchsia-boot:///#meta/second-driver.cm",
-              .matched_args = std::move(args),
           });
         } else {
           return zx::error(ZX_ERR_NOT_FOUND);
@@ -923,7 +921,6 @@ TEST_F(DriverRunnerTest, StartDriverChain_UnbindSecondNode) {
                                  std::string name(args.name().data(), args.name().size());
                                  return zx::ok(FakeDriverIndex::MatchResult{
                                      .url = "fuchsia-boot:///#meta/" + name + "-driver.cm",
-                                     .matched_args = std::move(args),
                                  });
                                });
   auto driver_index_client = driver_index.Connect();

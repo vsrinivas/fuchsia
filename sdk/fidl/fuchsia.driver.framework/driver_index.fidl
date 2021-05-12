@@ -8,10 +8,21 @@ using fuchsia.url;
 
 using zx;
 
+/// Driver matched by the driver index.
+table MatchedDriver {
+    /// URL of the driver.
+    1: string:fuchsia.url.MAX_URL_LENGTH url;
+
+    /// Node ID for a composite driver (optional).
+    2: uint32 node_id;
+
+    /// Total number of nodes for a composite driver (optional).
+    3: uint32 num_nodes;
+};
+
 /// Protocol through which the driver index can be queried.
 [Discoverable]
 protocol DriverIndex {
     /// Match a set of device arguments to a driver package URL.
-    MatchDriver(NodeAddArgs args)
-        -> (string:fuchsia.url.MAX_URL_LENGTH url, NodeAddArgs matched_args) error zx.status;
+    MatchDriver(NodeAddArgs args) -> (MatchedDriver driver) error zx.status;
 };
