@@ -2,23 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use diagnostics_reader::{tree_assertion, Inspect};
-use diagnostics_testing::{EnvWithDiagnostics, Launched};
+use diagnostics_reader::{tree_assertion, ArchiveReader, Inspect};
 use fuchsia_async as fasync;
+use fuchsia_component::client;
+use fuchsia_zircon::DurationNum;
+
+const RETRY_DELAY_MS: i64 = 300;
 
 #[fuchsia::test]
 async fn log_attribution() {
-    let env = EnvWithDiagnostics::new().await;
-
-    let package = "fuchsia-pkg://fuchsia.com/log-stats-tests#meta/";
-    let stats_manifest = "log-stats.cmx";
-    let stats_url = format!("{}{}", package, stats_manifest);
-
-    let Launched { mut app, reader } = env.launch(&stats_url, None);
-    let _app = fasync::Task::spawn(async move {
-        app.wait().await.unwrap();
-        panic!("log stats should not exit during test!");
-    });
+    let _dir =
+        client::open_childs_exposed_directory("log-stats", None).await.expect("child is running");
 
     // We expect two logs from log-stats itself:
     // - INFO: Maintaining.
@@ -29,19 +23,29 @@ async fn log_attribution() {
         total_logs: 2u64,
 
         by_component: {
-            "fuchsia-pkg://fuchsia.com/log-stats-tests#meta/log-stats.cmx": contains {
+            "fuchsia-pkg://fuchsia.com/log-stats-tests#meta/log-stats.cm": contains {
                 info_logs: 2u64,
                 total_logs: 2u64,
             }
         },
     });
 
+    let reader = ArchiveReader::new().add_selector("log-stats:root");
     loop {
-        let hierarchy =
-            reader.snapshot::<Inspect>().await.into_iter().next().unwrap().payload.unwrap();
+        let hierarchy = reader
+            .snapshot::<Inspect>()
+            .await
+            .expect("got results")
+            .into_iter()
+            .next()
+            .unwrap()
+            .payload
+            .unwrap();
 
         if assertion.run(&hierarchy).is_ok() {
             break;
         }
+
+        fasync::Timer::new(fasync::Time::after(RETRY_DELAY_MS.millis())).await;
     }
 }

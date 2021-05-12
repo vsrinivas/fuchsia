@@ -1,0 +1,39 @@
+{
+    include: [
+        "sdk/lib/diagnostics/inspect/client.shard.cml",
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/sys/test_runners/rust/default.shard.cml",
+    ],
+    program: {
+        binary: "bin/log_stats_integration_tests",
+    },
+    children: [
+        {
+            name: "log-stats",
+            url: "fuchsia-pkg://fuchsia.com/log-stats-tests#meta/log-stats.cm",
+        },
+    ],
+    use: [
+        { protocol: "fuchsia.diagnostics.ArchiveAccessor" },
+        {
+            protocol: "fuchsia.sys2.Realm",
+            from: "framework",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.diagnostics.ArchiveAccessor",
+                "fuchsia.logger.LogSink",
+            ],
+            from: "parent",
+            to: [ "#log-stats" ],
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: [ "#log-stats" ],
+            rights: [ "r*" ],
+        },
+    ],
+}

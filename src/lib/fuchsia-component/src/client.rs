@@ -169,7 +169,9 @@ pub fn connect_to_protocol_at<S: DiscoverableService>(
 }
 
 /// Connect to a FIDL protocol using the provided path.
-pub fn connect_to_protocol_at_path<S: ServiceMarker>(protocol_path: &str) -> Result<S::Proxy, Error> {
+pub fn connect_to_protocol_at_path<S: ServiceMarker>(
+    protocol_path: &str,
+) -> Result<S::Proxy, Error> {
     let (proxy, server) = zx::Channel::create()?;
     connect_channel_to_protocol_at_path(server, protocol_path)?;
     let proxy = fasync::Channel::from_channel(proxy)?;
@@ -274,22 +276,23 @@ pub fn connect_to_unified_service_instance_at_dir<US: UnifiedServiceMarker>(
 /// Opens the exposed directory from a child. Only works in CFv2, and only works if this component
 /// uses `fuchsia.sys2.Realm`.
 pub async fn open_childs_exposed_directory(
-    child_name: String,
+    child_name: impl Into<String>,
     collection_name: Option<String>,
 ) -> Result<DirectoryProxy, Error> {
     let realm_proxy = connect_to_protocol::<RealmMarker>()?;
     let (directory_proxy, server_end) =
         fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>()?;
+    let name: String = child_name.into();
     realm_proxy
         .bind_child(
-            &mut ChildRef { name: child_name.clone(), collection: collection_name.clone() },
+            &mut ChildRef { name: name.clone(), collection: collection_name.clone() },
             server_end,
         )
         .await?
         .map_err(|e| {
             format_err!(
                 "failed to bind to child {} in collection {:?}: {:?}",
-                child_name,
+                name,
                 collection_name,
                 e
             )
