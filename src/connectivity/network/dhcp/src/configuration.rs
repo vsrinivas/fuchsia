@@ -288,6 +288,15 @@ pub struct SubnetMask {
 }
 
 impl SubnetMask {
+    /// Returns a `SubnetMask` without checking the value.
+    ///
+    /// # Safety
+    ///
+    /// The value must be <= 32 (the size of an IPv4 address in bits).
+    pub const unsafe fn new_unchecked(ones: u8) -> Self {
+        SubnetMask { ones }
+    }
+
     /// Returns a byte-array representation of the `SubnetMask` in Network (Big-Endian) byte-order.
     pub fn octets(&self) -> [u8; 4] {
         self.to_u32().to_be_bytes()
@@ -409,6 +418,17 @@ mod tests {
             }
         }};
     }
+
+    #[test]
+    fn subnet_mask_new_unchecked() {
+        for ones in 0..=U32_BITS {
+            assert_eq!(
+                unsafe { SubnetMask::new_unchecked(ones) },
+                SubnetMask::try_from(ones).expect("expected a valid subnet mask")
+            );
+        }
+    }
+
     #[test]
     fn test_try_from_ipv4addr_with_consecutive_ones_returns_mask() {
         assert_eq!(

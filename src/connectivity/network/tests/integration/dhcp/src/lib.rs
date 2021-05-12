@@ -13,7 +13,6 @@ use net_declare::{fidl_ip_v4, fidl_mac};
 use netstack_testing_common::environments::{KnownServices, Netstack2, TestSandboxExt as _};
 use netstack_testing_common::Result;
 use netstack_testing_macros::variants_test;
-use std::convert::TryFrom as _;
 
 // Encapsulates a minimal configuration needed to test a DHCP client/server combination.
 struct DhcpTestConfig<'a> {
@@ -68,31 +67,27 @@ impl DhcpTestConfig<'_> {
     }
 }
 
-fn default_test_config() -> Result<DhcpTestConfig<'static>> {
-    let mask = dhcp::configuration::SubnetMask::try_from(25)?;
-    Ok(DhcpTestConfig {
-        server_addr: fidl_ip_v4!("192.168.0.1"),
-        managed_addrs: dhcp::configuration::ManagedAddresses {
-            mask: mask,
-            pool_range_start: std::net::Ipv4Addr::new(192, 168, 0, 2),
-            pool_range_stop: std::net::Ipv4Addr::new(192, 168, 0, 5),
-        },
-        netemul_device_name: "eth2",
-    })
-}
+const DEFAULT_TEST_CONFIG: DhcpTestConfig<'static> = DhcpTestConfig {
+    server_addr: fidl_ip_v4!("192.168.0.1"),
+    managed_addrs: dhcp::configuration::ManagedAddresses {
+        // We know this is safe because 25 is less than the size of an IPv4 address in bits.
+        mask: unsafe { dhcp::configuration::SubnetMask::new_unchecked(25) },
+        pool_range_start: std::net::Ipv4Addr::new(192, 168, 0, 2),
+        pool_range_stop: std::net::Ipv4Addr::new(192, 168, 0, 5),
+    },
+    netemul_device_name: "eth2",
+};
 
-fn alt_test_config() -> Result<DhcpTestConfig<'static>> {
-    let mask = dhcp::configuration::SubnetMask::try_from(24)?;
-    Ok(DhcpTestConfig {
-        server_addr: fidl_ip_v4!("192.168.1.1"),
-        managed_addrs: dhcp::configuration::ManagedAddresses {
-            mask: mask,
-            pool_range_start: std::net::Ipv4Addr::new(192, 168, 1, 2),
-            pool_range_stop: std::net::Ipv4Addr::new(192, 168, 1, 5),
-        },
-        netemul_device_name: "eth3",
-    })
-}
+const ALT_TEST_CONFIG: DhcpTestConfig<'static> = DhcpTestConfig {
+    server_addr: fidl_ip_v4!("192.168.1.1"),
+    managed_addrs: dhcp::configuration::ManagedAddresses {
+        // We know this is safe because 25 is less than the size of an IPv4 address in bits.
+        mask: unsafe { dhcp::configuration::SubnetMask::new_unchecked(25) },
+        pool_range_start: std::net::Ipv4Addr::new(192, 168, 1, 2),
+        pool_range_stop: std::net::Ipv4Addr::new(192, 168, 1, 5),
+    },
+    netemul_device_name: "eth3",
+};
 
 const DEFAULT_NETWORK_NAME: &'static str = "net";
 
@@ -456,7 +451,6 @@ async fn test_dhcp<E: netemul::Endpoint>(
 
 #[variants_test]
 async fn acquire_dhcp_with_dhcpd_bound_device<E: netemul::Endpoint>(name: &str) -> Result {
-    let config = default_test_config().context("failed to create test config")?;
     test_dhcp::<E>(
         name,
         &mut [DhcpTestNetwork {
@@ -465,16 +459,19 @@ async fn acquire_dhcp_with_dhcpd_bound_device<E: netemul::Endpoint>(name: &str) 
                 DhcpTestEndpoint {
                     name: "server-ep",
                     env: DhcpTestEnv::Server,
-                    static_addrs: vec![config.server_subnet()],
+                    static_addrs: vec![DEFAULT_TEST_CONFIG.server_subnet()],
                 },
                 DhcpTestEndpoint {
                     name: "client-ep",
-                    env: DhcpTestEnv::Client(config.expected_acquired()),
+                    env: DhcpTestEnv::Client(DEFAULT_TEST_CONFIG.expected_acquired()),
                     static_addrs: Vec::new(),
                 },
             ],
         }],
-        &mut [Settings { parameters: &mut config.dhcp_parameters(), options: &mut [] }],
+        &mut [Settings {
+            parameters: &mut DEFAULT_TEST_CONFIG.dhcp_parameters(),
+            options: &mut [],
+        }],
         1,
         false,
     )
@@ -485,8 +482,7 @@ async fn acquire_dhcp_with_dhcpd_bound_device<E: netemul::Endpoint>(name: &str) 
 async fn acquire_dhcp_then_renew_with_dhcpd_bound_device<E: netemul::Endpoint>(
     name: &str,
 ) -> Result {
-    let config = default_test_config().context("failed to create test config")?;
-    let mut parameters = config.dhcp_parameters();
+    let mut parameters = DEFAULT_TEST_CONFIG.dhcp_parameters();
     // A realistic lease length that won't expire within the test timeout of 2 minutes.
     const LONG_LEASE: u32 = 60 * 60 * 24;
     // A short client renewal time which will trigger well before the test timeout of 2 minutes.
@@ -507,11 +503,11 @@ async fn acquire_dhcp_then_renew_with_dhcpd_bound_device<E: netemul::Endpoint>(
                 DhcpTestEndpoint {
                     name: "server-ep",
                     env: DhcpTestEnv::Server,
-                    static_addrs: vec![config.server_subnet()],
+                    static_addrs: vec![DEFAULT_TEST_CONFIG.server_subnet()],
                 },
                 DhcpTestEndpoint {
                     name: "client-ep",
-                    env: DhcpTestEnv::Client(config.expected_acquired()),
+                    env: DhcpTestEnv::Client(DEFAULT_TEST_CONFIG.expected_acquired()),
                     static_addrs: Vec::new(),
                 },
             ],
@@ -528,8 +524,7 @@ async fn acquire_dhcp_then_renew_with_dhcpd_bound_device<E: netemul::Endpoint>(
 
 #[variants_test]
 async fn acquire_dhcp_with_dhcpd_bound_device_dup_addr<E: netemul::Endpoint>(name: &str) -> Result {
-    let config = default_test_config().context("failed to create test config")?;
-    let expected_acquired = config.expected_acquired();
+    let expected_acquired = DEFAULT_TEST_CONFIG.expected_acquired();
     let expected_addr = match expected_acquired.addr {
         fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address { addr: mut octets }) => {
             // We expect to assign the address numericaly succeeding the default client address
@@ -568,7 +563,7 @@ async fn acquire_dhcp_with_dhcpd_bound_device_dup_addr<E: netemul::Endpoint>(nam
                 DhcpTestEndpoint {
                     name: "server-ep",
                     env: DhcpTestEnv::Server,
-                    static_addrs: vec![config.server_subnet()],
+                    static_addrs: vec![DEFAULT_TEST_CONFIG.server_subnet()],
                 },
                 DhcpTestEndpoint {
                     name: "server-ep2",
@@ -582,7 +577,10 @@ async fn acquire_dhcp_with_dhcpd_bound_device_dup_addr<E: netemul::Endpoint>(nam
                 },
             ],
         }],
-        &mut [Settings { parameters: &mut config.dhcp_parameters(), options: &mut [] }],
+        &mut [Settings {
+            parameters: &mut DEFAULT_TEST_CONFIG.dhcp_parameters(),
+            options: &mut [],
+        }],
         1,
         false,
     )
@@ -591,8 +589,6 @@ async fn acquire_dhcp_with_dhcpd_bound_device_dup_addr<E: netemul::Endpoint>(nam
 
 #[variants_test]
 async fn acquire_dhcp_with_multiple_network<E: netemul::Endpoint>(name: &str) -> Result {
-    let default_config = default_test_config().context("failed to create default test config")?;
-    let alt_config = alt_test_config().context("failed to create alt test config")?;
     test_dhcp::<E>(
         name,
         &mut [
@@ -602,11 +598,11 @@ async fn acquire_dhcp_with_multiple_network<E: netemul::Endpoint>(name: &str) ->
                     DhcpTestEndpoint {
                         name: "server-ep1",
                         env: DhcpTestEnv::Server,
-                        static_addrs: vec![default_config.server_subnet()],
+                        static_addrs: vec![DEFAULT_TEST_CONFIG.server_subnet()],
                     },
                     DhcpTestEndpoint {
                         name: "client-ep1",
-                        env: DhcpTestEnv::Client(default_config.expected_acquired()),
+                        env: DhcpTestEnv::Client(DEFAULT_TEST_CONFIG.expected_acquired()),
                         static_addrs: Vec::new(),
                     },
                 ],
@@ -617,19 +613,19 @@ async fn acquire_dhcp_with_multiple_network<E: netemul::Endpoint>(name: &str) ->
                     DhcpTestEndpoint {
                         name: "server-ep2",
                         env: DhcpTestEnv::Server,
-                        static_addrs: vec![alt_config.server_subnet()],
+                        static_addrs: vec![ALT_TEST_CONFIG.server_subnet()],
                     },
                     DhcpTestEndpoint {
                         name: "client-ep2",
-                        env: DhcpTestEnv::Client(alt_config.expected_acquired()),
+                        env: DhcpTestEnv::Client(ALT_TEST_CONFIG.expected_acquired()),
                         static_addrs: Vec::new(),
                     },
                 ],
             },
         ],
         &mut [
-            Settings { parameters: &mut default_config.dhcp_parameters(), options: &mut [] },
-            Settings { parameters: &mut alt_config.dhcp_parameters(), options: &mut [] },
+            Settings { parameters: &mut DEFAULT_TEST_CONFIG.dhcp_parameters(), options: &mut [] },
+            Settings { parameters: &mut ALT_TEST_CONFIG.dhcp_parameters(), options: &mut [] },
         ],
         1,
         false,
@@ -697,10 +693,11 @@ impl PersistenceMode {
 // This collection of parameters is defined as a function because we need to allocate a Vec which
 // cannot be done statically, i.e. as a constant.
 fn test_dhcpd_parameters() -> Result<Vec<fidl_fuchsia_net_dhcp::Parameter>> {
-    let config = default_test_config().context("failed to create test config")?;
     Ok(vec![
-        fidl_fuchsia_net_dhcp::Parameter::IpAddrs(vec![config.server_addr]),
-        fidl_fuchsia_net_dhcp::Parameter::AddressPool(config.managed_addrs.into_fidl()),
+        fidl_fuchsia_net_dhcp::Parameter::IpAddrs(vec![DEFAULT_TEST_CONFIG.server_addr]),
+        fidl_fuchsia_net_dhcp::Parameter::AddressPool(
+            DEFAULT_TEST_CONFIG.managed_addrs.into_fidl(),
+        ),
         fidl_fuchsia_net_dhcp::Parameter::Lease(fidl_fuchsia_net_dhcp::LeaseLength {
             default: Some(60),
             max: Some(60),
@@ -815,12 +812,11 @@ async fn acquire_dhcp_server_after_restart<E: netemul::Endpoint>(
         .context("failed to create client environment")?;
 
     let network = sandbox.create_network(name).await.context("failed to create network")?;
-    let config = default_test_config().context("failed to create test config")?;
     let _server_ep = server_env
         .join_network::<E, _>(
             &network,
             "server-ep",
-            &netemul::InterfaceConfig::StaticIp(config.server_subnet()),
+            &netemul::InterfaceConfig::StaticIp(DEFAULT_TEST_CONFIG.server_subnet()),
         )
         .await
         .context("failed to create server network endpoint")?;
@@ -833,17 +829,24 @@ async fn acquire_dhcp_server_after_restart<E: netemul::Endpoint>(
     // persistent storage.
     {
         let (mut dhcpd, dhcp_server) = setup_component_proxy(mode, &server_env)?;
-        let () = set_server_settings(&dhcp_server, &mut config.dhcp_parameters(), &mut []).await?;
+        let () =
+            set_server_settings(&dhcp_server, &mut DEFAULT_TEST_CONFIG.dhcp_parameters(), &mut [])
+                .await?;
         let () = dhcp_server
             .start_serving()
             .await
             .context("failed to call dhcp/Server.StartServing")?
             .map_err(fuchsia_zircon::Status::from_raw)
             .context("dhcp/Server.StartServing returned error")?;
-        let () =
-            client_acquires_addr(&client_env, &[client_ep], config.expected_acquired(), 1, false)
-                .await
-                .context("client failed to acquire address")?;
+        let () = client_acquires_addr(
+            &client_env,
+            &[client_ep],
+            DEFAULT_TEST_CONFIG.expected_acquired(),
+            1,
+            false,
+        )
+        .await
+        .context("client failed to acquire address")?;
         let () =
             dhcp_server.stop_serving().await.context("failed to call dhcp/Server.StopServing")?;
         let () = cleanup_component(&mut dhcpd).await?;
@@ -951,12 +954,11 @@ async fn test_dhcp_server_persistence_mode<E: netemul::Endpoint>(
         .context("failed to create server environment")?;
 
     let network = sandbox.create_network(name).await.context("failed to create network")?;
-    let config = default_test_config().context("failed to create test config")?;
     let _server_ep = server_env
         .join_network::<E, _>(
             &network,
             "server-ep",
-            &netemul::InterfaceConfig::StaticIp(config.server_subnet()),
+            &netemul::InterfaceConfig::StaticIp(DEFAULT_TEST_CONFIG.server_subnet()),
         )
         .await
         .context("failed to create server network endpoint")?;
