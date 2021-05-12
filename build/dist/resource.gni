@@ -145,6 +145,7 @@ template("resource_group") {
   group(target_name) {
     forward_variables_from(invoker,
                            [
+                             "deps",
                              "testonly",
                              "visibility",
                            ])

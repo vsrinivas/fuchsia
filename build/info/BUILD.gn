@@ -69,6 +69,7 @@ if (is_fuchsia) {
         dest = "data/minimum-utc-stamp"
       },
     ]
+    deps = [ ":latest-commit-date" ]
   }
 
   fuchsia_package("build-info") {
