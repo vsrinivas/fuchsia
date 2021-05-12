@@ -17,7 +17,6 @@ use {
     crate::target_control::TargetControl,
     anyhow::{anyhow, Context, Result},
     ascendd::Ascendd,
-    async_lock::Mutex,
     async_trait::async_trait,
     chrono::Utc,
     diagnostics_data::Timestamp,
@@ -39,22 +38,14 @@ use {
     futures::prelude::*,
     hoist::{hoist, OvernetInstance},
     services::{DaemonServiceProvider, ServiceError, ServiceRegister},
+    std::cell::Cell,
     std::convert::TryInto,
     std::net::SocketAddr,
-    std::sync::{Arc, Weak},
+    std::rc::{Rc, Weak},
     std::time::Duration,
 };
 
 // Daemon
-#[derive(Clone)]
-pub struct Daemon {
-    pub event_queue: events::Queue<DaemonEvent>,
-
-    target_collection: Arc<TargetCollection>,
-    ascendd: Arc<Mutex<Option<Ascendd>>>,
-    manual_targets: Arc<dyn manual_targets::ManualTargets + Send>,
-    service_register: ServiceRegister,
-}
 
 // This is just for mocking config values for unit testing.
 #[async_trait(?Send)]
@@ -79,12 +70,12 @@ pub struct DaemonEventHandler {
     // holding the event queue itself (as is the case with the target collection
     // here).
     target_collection: Weak<TargetCollection>,
-    config_reader: Arc<dyn ConfigReader>,
+    config_reader: Rc<dyn ConfigReader>,
 }
 
 impl DaemonEventHandler {
     fn new(target_collection: Weak<TargetCollection>) -> Self {
-        Self { target_collection, config_reader: Arc::new(DefaultConfigReader::default()) }
+        Self { target_collection, config_reader: Rc::new(DefaultConfigReader::default()) }
     }
 
     fn handle_mdns<'a>(
@@ -239,7 +230,7 @@ impl EventHandler<DaemonEvent> for DaemonEventHandler {
         match event {
             DaemonEvent::WireTraffic(traffic) => match traffic {
                 WireTrafficType::Mdns(t) => {
-                    self.handle_mdns(t, &tc, Arc::downgrade(&self.config_reader)).await;
+                    self.handle_mdns(t, &tc, Rc::downgrade(&self.config_reader)).await;
                 }
                 WireTrafficType::Fastboot(t) => {
                     self.handle_fastboot(t, &tc).await;
@@ -257,9 +248,18 @@ impl EventHandler<DaemonEvent> for DaemonEventHandler {
     }
 }
 
+#[derive(Clone)]
+pub struct Daemon {
+    event_queue: events::Queue<DaemonEvent>,
+    target_collection: Rc<TargetCollection>,
+    ascendd: Rc<Cell<Option<Ascendd>>>,
+    manual_targets: Rc<dyn manual_targets::ManualTargets>,
+    service_register: ServiceRegister,
+}
+
 impl Daemon {
     pub fn new() -> Daemon {
-        let target_collection = Arc::new(TargetCollection::new());
+        let target_collection = Rc::new(TargetCollection::new());
         let event_queue = events::Queue::new(&target_collection);
         target_collection.set_event_queue(event_queue.clone());
 
@@ -271,13 +271,13 @@ impl Daemon {
         Self {
             target_collection,
             event_queue,
-            ascendd: Arc::new(Mutex::new(None)),
-            manual_targets: Arc::new(manual_targets),
             service_register: ServiceRegister::new(create_service_register_map()),
+            ascendd: Rc::new(Cell::new(None)),
+            manual_targets: Rc::new(manual_targets),
         }
     }
 
-    pub async fn start(&self) -> Result<()> {
+    pub async fn start(&mut self) -> Result<()> {
         self.load_manual_targets().await;
         self.start_discovery().await?;
         self.start_ascendd().await?;
@@ -286,7 +286,7 @@ impl Daemon {
 
     /// Start all discovery tasks
     async fn start_discovery(&self) -> Result<()> {
-        let daemon_event_handler = DaemonEventHandler::new(Arc::downgrade(&self.target_collection));
+        let daemon_event_handler = DaemonEventHandler::new(Rc::downgrade(&self.target_collection));
         self.event_queue.add_handler(daemon_event_handler).await;
 
         // TODO: these tasks could and probably should be managed by the daemon
@@ -304,7 +304,7 @@ impl Daemon {
         Ok(())
     }
 
-    async fn start_ascendd(&self) -> Result<()> {
+    async fn start_ascendd(&mut self) -> Result<()> {
         // Start the ascendd socket only after we have registered our services.
         log::info!("Starting ascendd");
 
@@ -315,7 +315,7 @@ impl Daemon {
             blocking::Unblock::new(std::io::stdout()),
         )?;
 
-        self.ascendd.lock().await.replace(ascendd);
+        self.ascendd.replace(Some(ascendd));
 
         Ok(())
     }
@@ -839,7 +839,7 @@ mod test {
 
     struct TargetControl {
         event_queue: events::Queue<DaemonEvent>,
-        tc: Arc<TargetCollection>,
+        tc: Rc<TargetCollection>,
         _task: Task<()>,
     }
 
@@ -959,7 +959,7 @@ mod test {
     ) -> TargetControl {
         let d = Daemon::new();
         d.event_queue
-            .add_handler(TestHookFakeFastboot { tc: Arc::downgrade(&d.target_collection) })
+            .add_handler(TestHookFakeFastboot { tc: Rc::downgrade(&d.target_collection) })
             .await;
         let event_clone = d.event_queue.clone();
         let res = TargetControl {
@@ -977,7 +977,7 @@ mod test {
     async fn spawn_daemon_server_with_target_ctrl(stream: DaemonRequestStream) -> TargetControl {
         let d = Daemon::new();
         d.event_queue
-            .add_handler(TestHookFakeRcs { tc: Arc::downgrade(&d.target_collection) })
+            .add_handler(TestHookFakeRcs { tc: Rc::downgrade(&d.target_collection) })
             .await;
         let event_clone = d.event_queue.clone();
         let res = TargetControl {
@@ -1229,12 +1229,12 @@ mod test {
     async fn test_daemon_mdns_event_handler() {
         let t = Target::new("this-town-aint-big-enough-for-the-three-of-us");
 
-        let tc = Arc::new(TargetCollection::new());
+        let tc = Rc::new(TargetCollection::new());
         tc.merge_insert(t.clone()).await;
 
         let handler = DaemonEventHandler {
-            target_collection: Arc::downgrade(&tc),
-            config_reader: Arc::new(FakeConfigReader {
+            target_collection: Rc::downgrade(&tc),
+            config_reader: Rc::new(FakeConfigReader {
                 query_expected: "target.default".to_owned(),
                 value: "florp".to_owned(),
             }),
@@ -1267,8 +1267,8 @@ mod test {
         // This handler will now return the value of the default target as
         // intended.
         let handler = DaemonEventHandler {
-            target_collection: Arc::downgrade(&tc),
-            config_reader: Arc::new(FakeConfigReader {
+            target_collection: Rc::downgrade(&tc),
+            config_reader: Rc::new(FakeConfigReader {
                 query_expected: "target.default".to_owned(),
                 value: "this-town-aint-big-enough-for-the-three-of-us".to_owned(),
             }),

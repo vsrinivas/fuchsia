@@ -38,7 +38,8 @@ use {
     std::fmt::{Debug, Display},
     std::hash::{Hash, Hasher},
     std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6},
-    std::sync::{Arc, Weak},
+    std::rc::{Rc, Weak},
+    std::sync::Arc,
     std::time::Duration,
     timeout::{timeout, TimeoutError},
     usb_bulk::AsyncInterface as Interface,
@@ -434,7 +435,7 @@ impl WeakTarget {
         Some(Target {
             inner,
             events,
-            task_manager: Arc::new(SingleFlight::new(|_| {
+            task_manager: Rc::new(SingleFlight::new(|_| {
                 futures::future::ready(Ok(())).boxed_local()
             })),
         })
@@ -445,13 +446,13 @@ impl WeakTarget {
 pub struct Target {
     pub events: events::Queue<TargetEvent>,
 
-    // TODO(awdavies): This shouldn't need to be behind an Arc<>, but for some
+    // TODO(awdavies): This shouldn't need to be behind an Rc<>, but for some
     // reason (probably something to do with the merge_insert function in the
     // TargetCollection struct?) this will drop all tasks immediately if this
-    // isn't an Arc<>.
-    pub task_manager: Arc<SingleFlight<TargetTaskType, Result<(), String>>>,
+    // isn't an Rc<>.
+    pub task_manager: Rc<SingleFlight<TargetTaskType, Result<(), String>>>,
 
-    inner: Arc<TargetInner>,
+    inner: Rc<TargetInner>,
 }
 
 impl Target {
@@ -522,14 +523,14 @@ impl Target {
     }
 
     pub fn downgrade(&self) -> WeakTarget {
-        WeakTarget { events: self.events.clone(), inner: Arc::downgrade(&self.inner) }
+        WeakTarget { events: self.events.clone(), inner: Rc::downgrade(&self.inner) }
     }
 
-    fn from_inner(inner: Arc<TargetInner>) -> Self {
+    fn from_inner(inner: Rc<TargetInner>) -> Self {
         let events = events::Queue::new(&inner);
-        let weak_inner = Arc::downgrade(&inner);
+        let weak_inner = Rc::downgrade(&inner);
         let weak_target = WeakTarget { inner: weak_inner, events: events.clone() };
-        let task_manager = Arc::new(SingleFlight::new(move |t| match t {
+        let task_manager = Rc::new(SingleFlight::new(move |t| match t {
             TargetTaskType::HostPipe => HostPipeConnection::new(weak_target.clone()).boxed_local(),
             TargetTaskType::MdnsMonitor => Target::mdns_monitor_loop(
                 weak_target.clone(),
@@ -552,7 +553,7 @@ impl Target {
     where
         S: Into<String>,
     {
-        let inner = Arc::new(TargetInner::new(Some(nodename.into())));
+        let inner = Rc::new(TargetInner::new(Some(nodename.into())));
         Self::from_inner(inner)
     }
 
@@ -561,7 +562,7 @@ impl Target {
         S: Into<String>,
     {
         let inner =
-            Arc::new(TargetInner::new_with_boot_timestamp(nodename.into(), boot_timestamp_nanos));
+            Rc::new(TargetInner::new_with_boot_timestamp(nodename.into(), boot_timestamp_nanos));
         Self::from_inner(inner)
     }
 
@@ -569,7 +570,7 @@ impl Target {
     where
         S: Into<String>,
     {
-        let inner = Arc::new(TargetInner::new_with_addrs(nodename.map(Into::into), addrs));
+        let inner = Rc::new(TargetInner::new_with_addrs(nodename.map(Into::into), addrs));
         Self::from_inner(inner)
     }
 
@@ -579,7 +580,7 @@ impl Target {
         I: Iterator<Item = TargetAddrEntry>,
     {
         use std::iter::FromIterator;
-        let inner = Arc::new(TargetInner::new_with_addr_entries(
+        let inner = Rc::new(TargetInner::new_with_addr_entries(
             nodename.map(Into::into),
             BTreeSet::from_iter(entries),
         ));
@@ -587,7 +588,7 @@ impl Target {
     }
 
     pub fn new_with_serial(serial: &str) -> Self {
-        let inner = Arc::new(TargetInner::new_with_serial(serial));
+        let inner = Rc::new(TargetInner::new_with_serial(serial));
         Self::from_inner(inner)
     }
 
@@ -659,7 +660,7 @@ impl Target {
     /// testing.
     #[cfg(test)]
     pub fn new_with_time<S: Into<String>>(nodename: S, time: DateTime<Utc>) -> Self {
-        let inner = Arc::new(TargetInner::new_with_time(nodename.into(), time));
+        let inner = Rc::new(TargetInner::new_with_time(nodename.into(), time));
         Self::from_inner(inner)
     }
 
@@ -1364,8 +1365,8 @@ impl TargetCollection {
     }
 
     #[cfg(test)]
-    fn new_with_queue() -> Arc<Self> {
-        let target_collection = Arc::new(Self::new());
+    fn new_with_queue() -> Rc<Self> {
+        let target_collection = Rc::new(Self::new());
         let queue = events::Queue::new(&target_collection);
         target_collection.set_event_queue(queue);
         target_collection
@@ -1596,7 +1597,7 @@ mod test {
     const TEST_SERIAL: &'static str = "test-serial";
 
     async fn clone_target(t: &Target) -> Target {
-        let inner = Arc::new(TargetInner::clone(&t.inner));
+        let inner = Rc::new(TargetInner::clone(&t.inner));
         Target::from_inner(inner)
     }
 
@@ -1849,7 +1850,7 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_query_matches_nodename() {
         let query = TargetQuery::from("foo");
-        let target = Arc::new(Target::new("foo"));
+        let target = Rc::new(Target::new("foo"));
         assert!(query.matches(&target));
     }
 
@@ -1877,7 +1878,7 @@ mod test {
     // Most of this is now handled in `task.rs`
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_disconnect_multiple_invocations() {
-        let t = Arc::new(Target::new("flabbadoobiedoo"));
+        let t = Rc::new(Target::new("flabbadoobiedoo"));
         {
             let addr: TargetAddr = (IpAddr::from([192, 168, 0, 1]), 0).into();
             t.addrs_insert(addr);
@@ -2070,7 +2071,7 @@ mod test {
         let t2 = Target::new("this-is-a-crunchy-falafel");
         let t3 = Target::new("i-should-probably-eat-lunch");
 
-        let tc = Arc::new(TargetCollection::new());
+        let tc = Rc::new(TargetCollection::new());
         let queue = events::Queue::new(&tc);
         let (handler, rx) = EventPusher::new();
         queue.add_handler(handler).await;

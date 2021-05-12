@@ -15,7 +15,7 @@ use {
     std::fmt::Debug,
     std::hash::Hash,
     std::pin::Pin,
-    std::sync::{Arc, Weak},
+    std::rc::{Rc, Weak},
     std::time::Duration,
     timeout::timeout,
 };
@@ -40,7 +40,7 @@ impl<T: EventTrait> EventSynthesizer<T> for Weak<dyn EventSynthesizer<T>> {
         let this = match self.upgrade() {
             Some(t) => t,
             None => {
-                log::info!("event synthesizer parent Arc<_> lost");
+                log::info!("event synthesizer parent Rc<_> lost");
                 return Vec::new();
             }
         };
@@ -67,7 +67,7 @@ struct Dispatcher<T: EventTrait + 'static> {
 }
 
 impl<T: EventTrait + 'static> Dispatcher<T> {
-    async fn handler_helper(event: T, inner: Arc<DispatcherInner<T>>) -> Result<()> {
+    async fn handler_helper(event: T, inner: Rc<DispatcherInner<T>>) -> Result<()> {
         inner
             .handler
             .on_event(event)
@@ -96,9 +96,9 @@ impl<T: EventTrait + 'static> Dispatcher<T> {
 
     fn new(handler: impl EventHandler<T> + 'static) -> Self {
         let (event_in, queue) = async_channel::unbounded::<T>();
-        let inner = Arc::new(DispatcherInner { handler: Box::new(handler), event_in });
+        let inner = Rc::new(DispatcherInner { handler: Box::new(handler), event_in });
         Self {
-            inner: Arc::downgrade(&inner),
+            inner: Rc::downgrade(&inner),
             _task: Task::local(async move {
                 queue
                     .map(|e| Ok(e))
@@ -125,13 +125,13 @@ impl<T: EventTrait + 'static> Dispatcher<T> {
 struct PredicateHandlerFuture<F: Future<Output = Result<()>>> {
     // Hack to track whether this future has been dropped, so that eventually
     // the dispatcher will clean the handler up later.
-    _inner: Arc<()>,
+    _inner: Rc<()>,
     #[pin]
     fut: F,
 }
 
 impl<F: Future<Output = Result<()>>> PredicateHandlerFuture<F> {
-    fn new(inner: Arc<()>, fut: F) -> Self {
+    fn new(inner: Rc<()>, fut: F) -> Self {
         Self { _inner: inner, fut }
     }
 }
@@ -188,7 +188,7 @@ where
     }
 }
 
-type Handlers<T> = Arc<Mutex<Vec<Dispatcher<T>>>>;
+type Handlers<T> = Rc<Mutex<Vec<Dispatcher<T>>>>;
 
 #[derive(Clone)]
 pub struct Queue<T: EventTrait + 'static> {
@@ -196,9 +196,9 @@ pub struct Queue<T: EventTrait + 'static> {
     handlers: Handlers<T>,
     state: Weak<dyn EventSynthesizer<T>>,
 
-    // Arc<_> so that the client can drop multiple of these clients without
+    // Rc<_> so that the client can drop multiple of these clients without
     // having the underlying task dropped/canceled.
-    _processor_task: Arc<Task<()>>,
+    _processor_task: Rc<Task<()>>,
 }
 
 struct Processor<T: 'static + EventTrait> {
@@ -213,25 +213,25 @@ impl<T: 'static + EventTrait> Queue<T> {
     /// When this is called, an event processing task is started in the
     /// background and tied to the lifetimes of these objects. Once all objects
     /// are dropped, the background process will be shutdown automatically.
-    pub fn new(state: &Arc<impl EventSynthesizer<T> + 'static>) -> Self {
+    pub fn new(state: &Rc<impl EventSynthesizer<T> + 'static>) -> Self {
         let (inner_tx, inner_rx) = async_channel::unbounded::<T>();
-        let handlers = Arc::new(Mutex::new(Vec::<Dispatcher<T>>::new()));
+        let handlers = Rc::new(Mutex::new(Vec::<Dispatcher<T>>::new()));
         let proc = Processor::<T> { inner_rx: Some(inner_rx), handlers: handlers.clone() };
-        let state = Arc::downgrade(state);
-        Self { inner_tx, handlers, state, _processor_task: Arc::new(Task::local(proc.process())) }
+        let state = Rc::downgrade(state);
+        Self { inner_tx, handlers, state, _processor_task: Rc::new(Task::local(proc.process())) }
     }
 
     /// Creates an event queue (see `new`) with a single handler to start.
     #[allow(unused)] // TODO(awdavies): This will be needed later for target events.
     pub fn new_with_handler(
-        state: &Arc<impl EventSynthesizer<T> + 'static>,
+        state: &Rc<impl EventSynthesizer<T> + 'static>,
         handler: impl EventHandler<T> + 'static,
     ) -> Self {
         let (inner_tx, inner_rx) = async_channel::unbounded::<T>();
-        let handlers = Arc::new(Mutex::new(vec![Dispatcher::new(handler)]));
+        let handlers = Rc::new(Mutex::new(vec![Dispatcher::new(handler)]));
         let proc = Processor::<T> { inner_rx: Some(inner_rx), handlers: handlers.clone() };
-        let state = Arc::downgrade(state);
-        Self { inner_tx, handlers, state, _processor_task: Arc::new(Task::local(proc.process())) }
+        let state = Rc::downgrade(state);
+        Self { inner_tx, handlers, state, _processor_task: Rc::new(Task::local(proc.process())) }
     }
 
     /// Adds an event handler, which is fired every time an event comes in.
@@ -247,7 +247,7 @@ impl<T: 'static + EventTrait> Queue<T> {
         let synth_events = self.state.synthesize_events().await;
         let dispatcher = Dispatcher::new(handler);
         for event in synth_events.iter() {
-            // If an error occurs in the event handler its Arc<_> will be dropped,
+            // If an error occurs in the event handler its Rc<_> will be dropped,
             // so just return if there's an error. The result for continuing and
             // adding the dispatcher anyway would be about the same, this just
             // makes cleanup slightly faster.
@@ -289,8 +289,8 @@ impl<T: 'static + EventTrait> Queue<T> {
     where
         F1: Future<Output = bool> + 'static,
     {
-        let link = Arc::new(());
-        let parent_link = Arc::downgrade(&link);
+        let link = Rc::new(());
+        let parent_link = Rc::downgrade(&link);
         let (handler, mut handler_done) = PredicateHandler::new(parent_link, move |t| predicate(t));
         let fut = async move {
             handler_done
@@ -386,7 +386,7 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_receive_two_handlers() {
         let (tx_from_callback, mut rx_from_callback) = async_channel::unbounded::<bool>();
-        let fake_events = Arc::new(FakeEventStruct {});
+        let fake_events = Rc::new(FakeEventStruct {});
         let queue = Queue::new(&fake_events);
         let ((), ()) = futures::join!(
             queue.add_handler(TestHookFirst { callbacks_done: tx_from_callback.clone() }),
@@ -399,7 +399,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_wait_for_event_once_async() {
-        let fake_events = Arc::new(FakeEventStruct {});
+        let fake_events = Rc::new(FakeEventStruct {});
         let queue = Queue::new(&fake_events);
         let (res1, res2) = futures::join!(
             queue.wait_for_async(None, |e| async move {
@@ -414,7 +414,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_wait_for_event_once() {
-        let fake_events = Arc::new(FakeEventStruct {});
+        let fake_events = Rc::new(FakeEventStruct {});
         let queue = Queue::new(&fake_events);
         let (res1, res2) = futures::join!(queue.wait_for(None, |e| e == 5), queue.push(5),);
         res1.unwrap();
@@ -432,7 +432,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_wait_for_event_synthetic() {
-        let fake_events = Arc::new(FakeEventSynthesizer {});
+        let fake_events = Rc::new(FakeEventSynthesizer {});
         let queue = Queue::new(&fake_events);
         let (one, two, three, four) = futures::join!(
             queue.wait_for(None, |e| e == 7),
@@ -454,8 +454,8 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn event_synthesis_dropped_state() {
-        let fake_events = Arc::new(FakeEventSynthesizer {});
-        let weak = Arc::downgrade(&fake_events);
+        let fake_events = Rc::new(FakeEventSynthesizer {});
+        let weak = Rc::downgrade(&fake_events);
         std::mem::drop(fake_events);
         let vec = test_event_synth_func(weak).await;
         assert_eq!(vec.len(), 0);
@@ -506,7 +506,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn event_failure_drops_handler_synth_events() {
-        let fake_events = Arc::new(EventFailerState {});
+        let fake_events = Rc::new(EventFailerState {});
         let queue = Queue::new(&fake_events);
         let (handler, mut handler_dropped_rx) = EventFailer::new();
         queue.add_handler(handler).await;
@@ -515,7 +515,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn event_failure_drops_handler() {
-        let fake_events = Arc::new(FakeEventStruct {});
+        let fake_events = Rc::new(FakeEventStruct {});
         let queue = Queue::new(&fake_events);
         let (handler, mut handler_dropped_rx) = EventFailer::new();
         let (handler2, mut handler_dropped_rx2) = EventFailer::new();
@@ -527,7 +527,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn event_done_drops_handler() {
-        let fake_events = Arc::new(FakeEventStruct {});
+        let fake_events = Rc::new(FakeEventStruct {});
         let queue = Queue::new(&fake_events);
         let (handler, mut handler_dropped_rx) = EventFailer::new();
         let (handler2, mut handler_dropped_rx2) = EventFailer::new();
@@ -539,7 +539,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn event_wait_for_timeout() {
-        let fake_events = Arc::new(FakeEventStruct {});
+        let fake_events = Rc::new(FakeEventStruct {});
         let queue = Queue::<i32>::new(&fake_events);
         assert!(queue.wait_for(Some(Duration::from_millis(1)), |_| true).await.is_err());
     }

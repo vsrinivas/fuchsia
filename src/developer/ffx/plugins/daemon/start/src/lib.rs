@@ -6,6 +6,6 @@ use {anyhow::Result, ffx_core::ffx_plugin, ffx_daemon_start_args::StartCommand};
 
 #[ffx_plugin()]
 pub async fn daemon(_cmd: StartCommand) -> Result<()> {
-    let daemon = ffx_daemon::Daemon::new();
+    let mut daemon = ffx_daemon::Daemon::new();
     daemon.start().await
 }
