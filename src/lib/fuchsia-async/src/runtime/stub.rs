@@ -73,7 +73,7 @@ pub mod executor {
         /// Stub run_singlethreaded, panics if used.
         pub fn run_singlethreaded<F>(&mut self, _: F) -> F::Output
         where
-            F: core::future::Future + 'static,
+            F: core::future::Future,
         {
             unimplemented!();
         }
