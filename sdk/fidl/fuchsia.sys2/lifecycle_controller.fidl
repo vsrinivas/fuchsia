@@ -29,5 +29,5 @@ protocol LifecycleController {
     ///
     /// The function returns once the component successfully stops, or the
     /// operation fails.
-    Stop(string:fuchsia.component.MAX_MONIKER_LENGTH moniker) -> () error fuchsia.component.Error;
+    Stop(string:fuchsia.component.MAX_MONIKER_LENGTH moniker, bool is_recursive) -> () error fuchsia.component.Error;
 };

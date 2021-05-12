@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::{error::ModelError, model::Model},
+    crate::model::{component::BindReason, error::ModelError, model::Model},
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_sys2 as fsys,
     futures::prelude::*,
     moniker::{AbsoluteMoniker, RelativeMoniker},
@@ -16,33 +16,70 @@ pub struct LifecycleController {
     prefix: AbsoluteMoniker,
 }
 
+enum LifecycleOperation {
+    Bind,
+    Resolve,
+    Stop,
+}
+
 impl LifecycleController {
     pub fn new(model: Weak<Model>, prefix: AbsoluteMoniker) -> Self {
         Self { model, prefix }
     }
 
-    pub async fn serve(&self, mut stream: fsys::LifecycleControllerRequestStream) {
-        while let Ok(Some(fsys::LifecycleControllerRequest::Resolve { moniker, responder })) =
-            stream.try_next().await
+    async fn perform_operation(
+        &self,
+        operation: LifecycleOperation,
+        moniker: String,
+    ) -> Result<(), fcomponent::Error> {
+        if let (Some(model), Ok(moniker)) =
+            (self.model.upgrade(), RelativeMoniker::try_from(moniker.as_str()))
         {
-            let mut res = match (self.model.upgrade(), RelativeMoniker::try_from(moniker.as_str()))
-            {
-                (Some(model), Ok(moniker)) => {
-                    match AbsoluteMoniker::from_relative(&self.prefix, &moniker) {
-                        Ok(abs_moniker) => {
-                            model.look_up(&abs_moniker).await.map(|_| ()).map_err(|e| match e {
-                                ModelError::ResolverError { .. } => {
-                                    fcomponent::Error::InstanceCannotResolve
-                                }
-                                _ => fcomponent::Error::Internal,
-                            })
-                        }
-                        _ => Err(fcomponent::Error::InstanceNotFound),
+            if let Ok(abs_moniker) = AbsoluteMoniker::from_relative(&self.prefix, &moniker) {
+                match model.look_up(&abs_moniker).await {
+                    Ok(component) => match operation {
+                        LifecycleOperation::Resolve => Ok(()),
+                        LifecycleOperation::Bind => component
+                            .bind(&BindReason::Debug)
+                            .await
+                            .map(|_| ())
+                            .map_err(|_| fcomponent::Error::Internal),
+                        LifecycleOperation::Stop => component
+                            .stop_instance(false)
+                            .await
+                            .map(|_| ())
+                            .map_err(|_| fcomponent::Error::Internal),
+                    },
+                    Err(ModelError::ResolverError { .. }) => {
+                        Err(fcomponent::Error::InstanceCannotResolve)
                     }
+                    Err(_) => Err(fcomponent::Error::Internal),
                 }
-                _ => Err(fcomponent::Error::InstanceNotFound),
-            };
-            let _ = responder.send(&mut res);
+            } else {
+                Err(fcomponent::Error::InstanceNotFound)
+            }
+        } else {
+            Err(fcomponent::Error::InstanceNotFound)
+        }
+    }
+
+    pub async fn serve(&self, mut stream: fsys::LifecycleControllerRequestStream) {
+        while let Ok(Some(operation)) = stream.try_next().await {
+            match operation {
+                fsys::LifecycleControllerRequest::Resolve { moniker, responder } => {
+                    let mut res =
+                        self.perform_operation(LifecycleOperation::Resolve, moniker).await;
+                    let _ = responder.send(&mut res);
+                }
+                fsys::LifecycleControllerRequest::Bind { moniker, responder } => {
+                    let mut res = self.perform_operation(LifecycleOperation::Bind, moniker).await;
+                    let _ = responder.send(&mut res);
+                }
+                fsys::LifecycleControllerRequest::Stop { moniker, responder, is_recursive: _ } => {
+                    let mut res = self.perform_operation(LifecycleOperation::Stop, moniker).await;
+                    let _ = responder.send(&mut res);
+                }
+            }
         }
     }
 }

@@ -51,3 +51,27 @@ pub async fn resolve_component(path: &str, relative_moniker: &str, expect_succes
         result.unwrap_err();
     }
 }
+
+pub async fn bind_component(path: &str, relative_moniker: &str, expect_success: bool) {
+    info!("Attempting to bind {} from {}", relative_moniker, path);
+    let lifecycle_controller_proxy =
+        connect_to_protocol_at_path::<fsys::LifecycleControllerMarker>(path).unwrap();
+    let result = lifecycle_controller_proxy.bind(relative_moniker).await.unwrap();
+    if expect_success {
+        result.unwrap();
+    } else {
+        result.unwrap_err();
+    }
+}
+
+pub async fn stop_component(path: &str, relative_moniker: &str, expect_success: bool) {
+    info!("Attempting to stop {} from {}", relative_moniker, path);
+    let lifecycle_controller_proxy =
+        connect_to_protocol_at_path::<fsys::LifecycleControllerMarker>(path).unwrap();
+    let result = lifecycle_controller_proxy.stop(relative_moniker, false).await.unwrap();
+    if expect_success {
+        result.unwrap();
+    } else {
+        result.unwrap_err();
+    }
+}

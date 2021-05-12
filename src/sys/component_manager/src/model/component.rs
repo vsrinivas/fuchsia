@@ -83,6 +83,8 @@ pub enum BindReason {
     BasePkgResolver,
     /// Indicates that the component is starting because a call to bind_child was made.
     BindChild { parent: AbsoluteMoniker },
+    /// Indicates that the component is starting because of debugging.
+    Debug,
     /// Indicates that the component was marked as eagerly starting by the parent.
     // TODO(fxbug.dev/50714): Include the parent BindReason.
     // parent: ExtendedMoniker,
@@ -111,6 +113,7 @@ impl fmt::Display for BindReason {
                 BindReason::BindChild { parent } => {
                     format!("its parent '{}' requested to bind to it", parent)
                 }
+                BindReason::Debug => "it was requested to run for debugging purpose".to_string(),
                 BindReason::Eager => "it's eager".to_string(),
                 BindReason::Root => "it's the root".to_string(),
                 BindReason::Scheduled => "it was scheduled to run".to_string(),
