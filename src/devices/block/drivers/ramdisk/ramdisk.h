@@ -7,7 +7,7 @@
 
 #include <fuchsia/hardware/block/cpp/banjo.h>
 #include <fuchsia/hardware/block/partition/cpp/banjo.h>
-#include <fuchsia/hardware/ramdisk/c/fidl.h>
+#include <fuchsia/hardware/ramdisk/llcpp/fidl.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #include <lib/operation/block.h>
@@ -28,9 +28,11 @@ namespace ramdisk {
 
 class Ramdisk;
 using RamdiskDeviceType =
-    ddk::Device<Ramdisk, ddk::GetProtocolable, ddk::GetSizable, ddk::Unbindable, ddk::MessageableOld>;
+    ddk::Device<Ramdisk, ddk::GetProtocolable, ddk::GetSizable, ddk::Unbindable,
+                ddk::Messageable<fuchsia_hardware_ramdisk::Ramdisk>::Mixin>;
 
 class Ramdisk : public RamdiskDeviceType,
+                public fidl::WireServer<fuchsia_hardware_ramdisk::Ramdisk>,
                 public ddk::BlockImplProtocol<Ramdisk, ddk::base_protocol>,
                 public ddk::BlockPartitionProtocol<Ramdisk> {
  public:
@@ -47,7 +49,6 @@ class Ramdisk : public RamdiskDeviceType,
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
   zx_off_t DdkGetSize();
   void DdkUnbind(ddk::UnbindTxn txn);
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease();
 
   // Block Protocol
@@ -55,11 +56,11 @@ class Ramdisk : public RamdiskDeviceType,
   void BlockImplQueue(block_op_t* txn, block_impl_queue_callback completion_cb, void* cookie);
 
   // FIDL interface Ramdisk
-  zx_status_t FidlSetFlags(uint32_t flags, fidl_txn_t* txn);
-  zx_status_t FidlWake(fidl_txn_t* txn);
-  zx_status_t FidlSleepAfter(uint64_t count, fidl_txn_t* txn);
-  zx_status_t FidlGetBlockCounts(fidl_txn_t* txn);
-  zx_status_t FidlGrow(uint64_t required_size, fidl_txn_t* txn);
+  void SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer);
+  void Wake(WakeRequestView request, WakeCompleter::Sync& completer);
+  void SleepAfter(SleepAfterRequestView request, SleepAfterCompleter::Sync& completer);
+  void GetBlockCounts(GetBlockCountsRequestView request, GetBlockCountsCompleter::Sync& completer);
+  void Grow(GrowRequestView request, GrowCompleter::Sync& completer);
 
   // Partition Protocol
   zx_status_t BlockPartitionGetGuid(guidtype_t guid_type, guid_t* out_guid);
@@ -71,19 +72,6 @@ class Ramdisk : public RamdiskDeviceType,
 
   // Processes requests made to the ramdisk until it is unbound.
   void ProcessRequests();
-
-  static const fuchsia_hardware_ramdisk_Ramdisk_ops* Ops() {
-    using Binder = fidl::Binder<Ramdisk>;
-
-    static const fuchsia_hardware_ramdisk_Ramdisk_ops kOps = {
-        .SetFlags = Binder::BindMember<&Ramdisk::FidlSetFlags>,
-        .Wake = Binder::BindMember<&Ramdisk::FidlWake>,
-        .SleepAfter = Binder::BindMember<&Ramdisk::FidlSleepAfter>,
-        .GetBlockCounts = Binder::BindMember<&Ramdisk::FidlGetBlockCounts>,
-        .Grow = Binder::BindMember<&Ramdisk::FidlGrow>,
-    };
-    return &kOps;
-  }
 
   static int WorkerThunk(void* arg) {
     Ramdisk* dev = reinterpret_cast<Ramdisk*>(arg);
@@ -134,7 +122,7 @@ class Ramdisk : public RamdiskDeviceType,
   //
   // See |asleep_| comment above for reasoning.
   uint64_t pre_sleep_write_block_count_ TA_GUARDED(lock_) = 0;
-  fuchsia_hardware_ramdisk_BlockWriteCounts block_counts_ TA_GUARDED(lock_){};
+  fuchsia_hardware_ramdisk::wire::BlockWriteCounts block_counts_ TA_GUARDED(lock_){};
 
   thrd_t worker_ = {};
   char name_[ZBI_PARTITION_NAME_LEN];

@@ -94,10 +94,6 @@ void Ramdisk::DdkUnbind(ddk::UnbindTxn txn) {
   txn.Reply();
 }
 
-zx_status_t Ramdisk::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  return fuchsia_hardware_ramdisk_Ramdisk_dispatch(this, txn, msg, Ops());
-}
-
 void Ramdisk::DdkRelease() {
   // Wake up the worker thread, in case it is sleeping
   sync_completion_signal(&signal_);
@@ -173,19 +169,19 @@ void Ramdisk::BlockImplQueue(block_op_t* bop, block_impl_queue_callback completi
   }
 }
 
-zx_status_t Ramdisk::FidlSetFlags(uint32_t flags, fidl_txn_t* txn) {
+void Ramdisk::SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer) {
   {
     fbl::AutoLock lock(&lock_);
-    flags_ = flags;
+    flags_ = request->flags;
   }
-  return fuchsia_hardware_ramdisk_RamdiskSetFlags_reply(txn, ZX_OK);
+  completer.Reply(ZX_OK);
 }
 
-zx_status_t Ramdisk::FidlWake(fidl_txn_t* txn) {
+void Ramdisk::Wake(WakeRequestView request, WakeCompleter::Sync& completer) {
   {
     fbl::AutoLock lock(&lock_);
 
-    if (flags_ & fuchsia_hardware_ramdisk_RAMDISK_FLAG_DISCARD_NOT_FLUSHED_ON_WAKE) {
+    if (flags_ & fuchsia_hardware_ramdisk::wire::kRamdiskFlagDiscardNotFlushedOnWake) {
       // Fill all blocks with a fill pattern.
       for (uint64_t block : blocks_written_since_last_flush_) {
         void* addr = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(mapping_.start()) +
@@ -200,30 +196,32 @@ zx_status_t Ramdisk::FidlWake(fidl_txn_t* txn) {
     pre_sleep_write_block_count_ = 0;
     sync_completion_signal(&signal_);
   }
-  return fuchsia_hardware_ramdisk_RamdiskWake_reply(txn, ZX_OK);
+  completer.Reply(ZX_OK);
 }
 
-zx_status_t Ramdisk::FidlSleepAfter(uint64_t block_count, fidl_txn_t* txn) {
+void Ramdisk::SleepAfter(SleepAfterRequestView request, SleepAfterCompleter::Sync& completer) {
   {
     fbl::AutoLock lock(&lock_);
     asleep_ = false;
     memset(&block_counts_, 0, sizeof(block_counts_));
-    pre_sleep_write_block_count_ = block_count;
+    pre_sleep_write_block_count_ = request->count;
 
-    if (block_count == 0) {
+    if (request->count == 0) {
       asleep_ = true;
     }
   }
-  return fuchsia_hardware_ramdisk_RamdiskSleepAfter_reply(txn, ZX_OK);
+  completer.Reply(ZX_OK);
 }
 
-zx_status_t Ramdisk::FidlGetBlockCounts(fidl_txn_t* txn) {
-  fuchsia_hardware_ramdisk_BlockWriteCounts block_counts;
+void Ramdisk::GetBlockCounts(GetBlockCountsRequestView request,
+                             GetBlockCountsCompleter::Sync& completer) {
+  fidl::FidlAllocator allocator;
+  fidl::ObjectView<fuchsia_hardware_ramdisk::wire::BlockWriteCounts> block_counts(allocator);
   {
     fbl::AutoLock lock(&lock_);
-    memcpy(&block_counts, &block_counts_, sizeof(block_counts_));
+    memcpy(block_counts.get(), &block_counts_, sizeof(block_counts_));
   }
-  return fuchsia_hardware_ramdisk_RamdiskGetBlockCounts_reply(txn, ZX_OK, &block_counts);
+  completer.Reply(ZX_OK, block_counts);
 }
 
 zx_status_t Ramdisk::BlockPartitionGetGuid(guidtype_t guid_type, guid_t* out_guid) {
@@ -244,22 +242,25 @@ zx_status_t Ramdisk::BlockPartitionGetName(char* out_name, size_t capacity) {
   return ZX_OK;
 }
 
-zx_status_t Ramdisk::FidlGrow(uint64_t required_size, fidl_txn_t* txn) {
+void Ramdisk::Grow(GrowRequestView request, GrowCompleter::Sync& completer) {
   fbl::AutoLock lock(&lock_);
-  if (required_size < block_size_ * block_count_) {
-    return fuchsia_hardware_ramdisk_RamdiskGrow_reply(txn, ZX_ERR_INVALID_ARGS);
+  if (request->new_size < block_size_ * block_count_) {
+    completer.Reply(ZX_ERR_INVALID_ARGS);
+    return;
   }
 
-  if (required_size % block_size_ != 0) {
-    return fuchsia_hardware_ramdisk_RamdiskGrow_reply(txn, ZX_ERR_INVALID_ARGS);
+  if (request->new_size % block_size_ != 0) {
+    completer.Reply(ZX_ERR_INVALID_ARGS);
+    return;
   }
-  zx_status_t status = mapping_.Grow(required_size);
+  zx_status_t status = mapping_.Grow(request->new_size);
   if (status != ZX_OK) {
-    return fuchsia_hardware_ramdisk_RamdiskGrow_reply(txn, status);
+    completer.Reply(status);
+    return;
   }
 
-  block_count_ = required_size / block_size_;
-  return fuchsia_hardware_ramdisk_RamdiskGrow_reply(txn, ZX_OK);
+  block_count_ = request->new_size / block_size_;
+  completer.Reply(ZX_OK);
 }
 
 void Ramdisk::ProcessRequests() {
@@ -275,7 +276,7 @@ void Ramdisk::ProcessRequests() {
     do {
       {
         fbl::AutoLock lock(&lock_);
-        defer = (flags_ & fuchsia_hardware_ramdisk_RAMDISK_FLAG_RESUME_ON_WAKE) != 0;
+        defer = (flags_ & fuchsia_hardware_ramdisk::wire::kRamdiskFlagResumeOnWake) != 0;
         block_write_limit = pre_sleep_write_block_count_ == 0 && !asleep_
                                 ? std::numeric_limits<uint64_t>::max()
                                 : pre_sleep_write_block_count_;
@@ -358,10 +359,10 @@ void Ramdisk::ProcessRequests() {
           pre_sleep_write_block_count_ -= blocks;
           asleep_ = (pre_sleep_write_block_count_ == 0);
 
-          if (flags_ & fuchsia_hardware_ramdisk_RAMDISK_FLAG_DISCARD_NOT_FLUSHED_ON_WAKE) {
+          if (flags_ & fuchsia_hardware_ramdisk::wire::kRamdiskFlagDiscardNotFlushedOnWake) {
             for (uint64_t block = txn->operation()->rw.offset_dev, count = blocks; count > 0;
                  ++block, --count) {
-              if (!(flags_ & fuchsia_hardware_ramdisk_RAMDISK_FLAG_DISCARD_RANDOM) ||
+              if (!(flags_ & fuchsia_hardware_ramdisk::wire::kRamdiskFlagDiscardRandom) ||
                   distribution(random)) {
                 blocks_written_since_last_flush_.push_back(block);
               }

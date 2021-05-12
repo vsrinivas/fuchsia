@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/ramdisk/c/fidl.h>
+#include <fuchsia/hardware/ramdisk/llcpp/fidl.h>
 #include <lib/ddk/driver.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/zx/status.h>
@@ -21,70 +21,52 @@ namespace ramdisk {
 namespace {
 
 class RamdiskController;
-using RamdiskControllerDeviceType = ddk::Device<RamdiskController, ddk::MessageableOld>;
+using RamdiskControllerDeviceType =
+    ddk::Device<RamdiskController,
+                ddk::Messageable<fuchsia_hardware_ramdisk::RamdiskController>::Mixin>;
 
-class RamdiskController : public RamdiskControllerDeviceType {
+class RamdiskController : public RamdiskControllerDeviceType,
+                          public fidl::WireServer<fuchsia_hardware_ramdisk::RamdiskController> {
  public:
   RamdiskController(zx_device_t* parent) : RamdiskControllerDeviceType(parent) {}
 
   // Device Protocol
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease() { delete this; }
 
  private:
   // FIDL Interface RamdiskController.
-  zx_status_t Create(uint64_t block_size, uint64_t block_count,
-                     const fuchsia_hardware_ramdisk_GUID* type_guid, fidl_txn_t* txn);
-  zx_status_t CreateFromVmo(zx_handle_t vmo, fidl_txn_t* txn);
-  zx_status_t FidlCreateFromVmoWithBlockSize(zx_handle_t vmo, uint64_t block_size, fidl_txn_t* txn);
+  void Create(CreateRequestView request, CreateCompleter::Sync& completer);
+  void CreateFromVmo(CreateFromVmoRequestView request, CreateFromVmoCompleter::Sync& completer);
+  void CreateFromVmoWithBlockSize(CreateFromVmoWithBlockSizeRequestView request,
+                                  CreateFromVmoWithBlockSizeCompleter::Sync& completer);
 
   // Other methods:
   // ConfigureDevice returns the name of the device if successful.
   zx::status<std::string> ConfigureDevice(zx::vmo vmo, uint64_t block_size, uint64_t block_count,
                                           const uint8_t* type_guid);
 
-  zx::status<std::string> CreateFromVmoWithBlockSize(zx::vmo vmo, uint64_t block_size);
-
-  static const fuchsia_hardware_ramdisk_RamdiskController_ops* Ops() {
-    using Binder = fidl::Binder<RamdiskController>;
-
-    static const fuchsia_hardware_ramdisk_RamdiskController_ops kOps = {
-        .Create = Binder::BindMember<&RamdiskController::Create>,
-        .CreateFromVmo = Binder::BindMember<&RamdiskController::CreateFromVmo>,
-        .CreateFromVmoWithBlockSize =
-            Binder::BindMember<&RamdiskController::FidlCreateFromVmoWithBlockSize>,
-    };
-    return &kOps;
-  }
+  zx::status<std::string> CreateFromVmoWithBlockSizeInternal(zx::vmo vmo, uint64_t block_size);
 };
 
-zx_status_t RamdiskController::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  return fuchsia_hardware_ramdisk_RamdiskController_dispatch(this, txn, msg, Ops());
-}
-
-zx_status_t RamdiskController::Create(uint64_t block_size, uint64_t block_count,
-                                      const fuchsia_hardware_ramdisk_GUID* type_guid,
-                                      fidl_txn_t* txn) {
-  auto failure_response = [&txn](zx_status_t status) -> zx_status_t {
-    return fuchsia_hardware_ramdisk_RamdiskControllerCreate_reply(txn, status, nullptr, 0);
-  };
-
+void RamdiskController::Create(CreateRequestView request, CreateCompleter::Sync& completer) {
   zx::vmo vmo;
-  zx_status_t status = zx::vmo::create(block_size * block_count, ZX_VMO_RESIZABLE, &vmo);
+  zx_status_t status =
+      zx::vmo::create(request->block_size * request->block_count, ZX_VMO_RESIZABLE, &vmo);
   if (status != ZX_OK) {
-    return failure_response(status);
+    completer.Reply(status, fidl::StringView());
+    return;
   }
-  auto name_or = ConfigureDevice(std::move(vmo), block_size, block_count,
-                                 type_guid ? type_guid->value : nullptr);
+  auto name_or = ConfigureDevice(std::move(vmo), request->block_size, request->block_count,
+                                 request->type_guid ? request->type_guid->value.data() : nullptr);
   if (name_or.is_error()) {
-    return failure_response(status);
+    completer.Reply(status, fidl::StringView());
+    return;
   }
-  return fuchsia_hardware_ramdisk_RamdiskControllerCreate_reply(txn, ZX_OK, name_or.value().data(),
-                                                                name_or.value().length());
+  completer.Reply(ZX_OK, fidl::StringView::FromExternal(name_or.value()));
 }
 
-zx::status<std::string> RamdiskController::CreateFromVmoWithBlockSize(zx::vmo vmo,
-                                                                      uint64_t block_size) {
+zx::status<std::string> RamdiskController::CreateFromVmoWithBlockSizeInternal(zx::vmo vmo,
+                                                                              uint64_t block_size) {
   zx_info_handle_count_t handle_count_info;
   zx_status_t status = vmo.get_info(ZX_INFO_HANDLE_COUNT, &handle_count_info,
                                     sizeof(handle_count_info), nullptr, nullptr);
@@ -114,27 +96,27 @@ zx::status<std::string> RamdiskController::CreateFromVmoWithBlockSize(zx::vmo vm
                          nullptr);
 }
 
-zx_status_t RamdiskController::CreateFromVmo(zx_handle_t vmo, fidl_txn_t* txn) {
-  auto name_or = CreateFromVmoWithBlockSize(zx::vmo(vmo), PAGE_SIZE);
+void RamdiskController::CreateFromVmo(CreateFromVmoRequestView request,
+                                      CreateFromVmoCompleter::Sync& completer) {
+  auto name_or = CreateFromVmoWithBlockSizeInternal(std::move(request->vmo), PAGE_SIZE);
   if (name_or.is_error()) {
-    return fuchsia_hardware_ramdisk_RamdiskControllerCreateFromVmo_reply(
-        txn, name_or.status_value(), nullptr, 0);
+    completer.Reply(name_or.status_value(), fidl::StringView());
+    return;
   }
 
-  return fuchsia_hardware_ramdisk_RamdiskControllerCreateFromVmo_reply(
-      txn, ZX_OK, name_or.value().data(), name_or.value().length());
+  completer.Reply(ZX_OK, fidl::StringView::FromExternal(name_or.value()));
 }
 
-zx_status_t RamdiskController::FidlCreateFromVmoWithBlockSize(zx_handle_t vmo, uint64_t block_size,
-                                                              fidl_txn_t* txn) {
-  auto name_or = CreateFromVmoWithBlockSize(zx::vmo(vmo), block_size);
+void RamdiskController::CreateFromVmoWithBlockSize(
+    CreateFromVmoWithBlockSizeRequestView request,
+    CreateFromVmoWithBlockSizeCompleter::Sync& completer) {
+  auto name_or = CreateFromVmoWithBlockSizeInternal(std::move(request->vmo), request->block_size);
   if (name_or.is_error()) {
-    return fuchsia_hardware_ramdisk_RamdiskControllerCreateFromVmoWithBlockSize_reply(
-        txn, name_or.status_value(), nullptr, 0);
+    completer.Reply(name_or.status_value(), fidl::StringView());
+    return;
   }
 
-  return fuchsia_hardware_ramdisk_RamdiskControllerCreateFromVmoWithBlockSize_reply(
-      txn, ZX_OK, name_or.value().data(), name_or.value().length());
+  completer.Reply(ZX_OK, fidl::StringView::FromExternal(name_or.value()));
 }
 
 zx::status<std::string> RamdiskController::ConfigureDevice(zx::vmo vmo, uint64_t block_size,
