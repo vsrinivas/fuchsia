@@ -81,156 +81,16 @@ template("vbmeta") {
   assert(avb_key != "", "avb_key must be specified")
   assert(avb_atx_metadata != "", "avb metadata must be specified")
   output_file = "$root_out_dir/$output_file"
-  output_vbmeta_desc_file = "${output_file}.desc"
-  if (defined(invoker.prop_from_file)) {
-    output_vbmeta_props_zbi_file = "${output_file}.props.zbi"
-  }
-
-  if (defined(invoker.prop_from_file)) {
-    action("${target_name}__zbi_props") {
-      script = zbi_tool_path
-
-      forward_variables_from(invoker,
-                             [
-                               "testonly",
-                               "visibility",
-                               "deps",
-                             ])
-
-      outputs = [ output_vbmeta_props_zbi_file ]
-      args = [
-        "--output",
-        rebase_path(outputs[0], root_build_dir),
-      ]
-      sources = []
-      foreach(entry, invoker.prop_from_file) {
-        file = rebase_path(entry.file, root_build_dir)
-        sources += [ entry.file ]
-        args += [
-          "-T",
-          "${entry.type}",
-          "${file}",
-        ]
-      }
-      if (!defined(deps)) {
-        deps = []
-      }
-      deps += [ zbi_tool_target ]
-    }
-  }
-
-  target_name_avbtool = "${target_name}.avbtool"
-  output_file_avbtool = "${output_file}.avbtool"
-
-  target_name_ffx = "${target_name}.ffx"
-  output_file_ffx = "${output_file}.ffx"
-
-  salt_action = target_name_ffx
-  salt_file = "$target_out_dir/$salt_action.salt"
-
-  action("${target_name_avbtool}__vb_desc") {
-    # TODO(fxbug.dev/69047): This is a "stamping" action, figure out how to
-    # handle this class of actions.
-    hermetic_deps = false
-    script = "//third_party/android/platform/external/avb/avbtool.py"
-
-    forward_variables_from(invoker,
-                           [
-                             "testonly",
-                             "visibility",
-                             "deps",
-                           ])
-
-    if (!defined(deps)) {
-      deps = []
-    }
-    deps += [ ":$salt_action" ]
-
-    inputs = [
-      zbi[0],
-      salt_file,
-    ]
-    outputs = [ output_vbmeta_desc_file ]
-    args = [
-      "add_hash_footer",
-      "--salt",
-      "@" + rebase_path(salt_file, root_build_dir),
-      "--image",
-      rebase_path(inputs[0], root_build_dir),
-      "--partition_name",
-      zvb_partition_name,
-      "--do_not_append_vbmeta_image",
-      "--output_vbmeta_image",
-      rebase_path(outputs[0], root_build_dir),
-      "--partition_size",
-
-      # we are not going to add footer into image,
-      # so, we do not care about a partition size checking.
-      # `partition_size' is a mandatory option, thus let
-      # use obviously big number for the partition size to pass
-      # verification. 200M should be good enough.
-      # TODO (dmitryya@) fix avbtool to do not check partition
-      # size if --do_not_append_vbmeta_image is specified.
-      "209715200",
-    ]
-  }
-
-  action(target_name_avbtool) {
-    script = "//third_party/android/platform/external/avb/avbtool.py"
-
-    forward_variables_from(invoker,
-                           [
-                             "testonly",
-                             "visibility",
-                             "deps",
-                           ])
-
-    deps += [ ":${target_name}__vb_desc" ]
-    if (defined(invoker.prop_from_file)) {
-      deps += [ ":${target_name}__zbi_props" ]
-    }
-
-    inputs = [
-      avb_key,
-      avb_atx_metadata,
-      output_vbmeta_desc_file,
-    ]
-    outputs = [ output_file_avbtool ]
-    args = [
-      "make_vbmeta_image",
-      "--output",  # output of VBMETA image
-      rebase_path(outputs[0], root_build_dir),
-      "--key",  # a key for signing
-      rebase_path(avb_key, root_build_dir),
-      "--algorithm",  # an algorithm for signing
-      avb_algorithm,
-      "--public_key_metadata",  # avb metadata
-      rebase_path(avb_atx_metadata, root_build_dir),
-      "--include_descriptors_from_image",
-      rebase_path(output_vbmeta_desc_file, root_build_dir),
-    ]
-    foreach(entry, board_extra_vbmeta_images) {
-      file = rebase_path(entry, root_build_dir)
-      args += [
-        "--include_descriptors_from_image",
-        file,
-      ]
-    }
-    if (defined(invoker.prop_from_file)) {
-      inputs += [ output_vbmeta_props_zbi_file ]
-      args += [
-        "--prop_from_file",
-        "zbi:" + rebase_path(output_vbmeta_props_zbi_file, root_build_dir),
-      ]
-    }
-  }
-
   additional_descriptor_labels = []
+
+  # TODO: Remove this set of actions when additional descriptors are moved to
+  # JSON files instead of vbmeta files that the descriptors need to be extracted
+  # from.
   foreach(entry, board_extra_vbmeta_images) {
     extra_vbmeta_filename = get_path_info(entry, "file")
     descriptor_output_filename =
-        "$target_name_ffx.additional_descriptor.$extra_vbmeta_filename.json"
-    descriptor_output_file = "$target_out_dir/$descriptor_output_filename"
+        "${target_name}.additional_descriptor.${extra_vbmeta_filename}.json"
+    descriptor_output_file = "${target_out_dir}/${descriptor_output_filename}"
     additional_descriptor_labels += [ ":$descriptor_output_filename" ]
 
     action(descriptor_output_filename) {
@@ -264,12 +124,13 @@ template("vbmeta") {
   assert(avb_algorithm == "SHA512_RSA4096",
          "setting 'avb_algorithm' is not supported at this time")
 
-  ffx_action(target_name_ffx) {
+  ffx_action(target_name) {
     forward_variables_from(invoker,
                            [
                              "testonly",
                              "visibility",
                              "deps",
+                             "metadata",
                            ])
 
     args = [
@@ -287,9 +148,7 @@ template("vbmeta") {
       "--image-path",
       rebase_path(zbi[0], root_build_dir),
       "--output",
-      rebase_path(output_file_ffx, root_build_dir),
-      "--salt-outfile",
-      rebase_path(salt_file, root_build_dir),
+      rebase_path(output_file, root_build_dir),
     ]
     inputs = [
       avb_key,
@@ -324,37 +183,6 @@ template("vbmeta") {
       not_needed(additional_descriptor_labels)
     }
 
-    outputs = [
-      output_file_ffx,
-      salt_file,
-    ]
-  }
-
-  verify_files_match("$target_name.avbtool.matches") {
-    forward_variables_from(invoker, [ "testonly" ])
-    deps = [
-      ":$target_name_avbtool",
-      ":$target_name_ffx",
-    ]
-
-    first = output_file_avbtool
-    second = output_file_ffx
-  }
-
-  # the final copy action
-  copy(target_name) {
-    forward_variables_from(invoker,
-                           [
-                             "testonly",
-                             "visibility",
-                             "deps",
-                             "metadata",
-                           ])
-    deps += [
-      ":$target_name.avbtool.matches",
-      ":$target_name_ffx",
-    ]
-    sources = [ output_file_ffx ]
     outputs = [ output_file ]
   }
 }
