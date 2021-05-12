@@ -20,7 +20,7 @@ class StubCrashReporter : public fuchsia::exception::internal::CrashReporter {
 
   virtual void Send(zx::exception exception, zx::process process, zx::thread thread,
                     SendCallback callback) override {
-    callback();
+    callback("unused moniker");
     on_done_();
   }
 

@@ -8,5 +8,8 @@ visibility = [ "//src/developer/forensics/exceptions/*" ]
 fidl("fuchsia.exception.internal") {
   sources = [ "crash_reporter.internal.fidl" ]
 
-  public_deps = [ "//zircon/vdso/zx" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.component",
+    "//zircon/vdso/zx",
+  ]
 }

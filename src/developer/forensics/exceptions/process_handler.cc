@@ -95,8 +95,9 @@ void ProcessHandler::Handle(zx::exception exception, zx::process process, zx::th
     crash_reporter_.Bind(std::move(client), dispatcher_);
   }
 
+  // TODO(fxbug.dev/76150): increment the moniker's crash count and expose it via Inspect.
   crash_reporter_->Send(std::move(exception), std::move(process), std::move(thread),
-                        [this] { on_available_(); });
+                        [this](const ::fidl::StringPtr unused_moniker) { on_available_(); });
 }
 
 }  // namespace exceptions

@@ -14,11 +14,15 @@
 #include "src/developer/forensics/exceptions/handler/report_builder.h"
 #include "src/developer/forensics/utils/fit/timeout.h"
 #include "src/lib/fsl/handles/object_info.h"
+#include "src/lib/fxl/strings/join_strings.h"
 
 namespace forensics {
 namespace exceptions {
 namespace handler {
 namespace {
+
+using fuchsia::feedback::CrashReport;
+using fuchsia::sys::internal::SourceIdentity;
 
 // Either resets the exception immediately if the process only has one thread or with a 5s delay
 // otherwise.
@@ -51,10 +55,18 @@ void ResetException(async_dispatcher_t* dispatcher, zx::exception exception,
   }
 }
 
-}  // namespace
+::fidl::StringPtr CreateMoniker(const SourceIdentity& source_identity) {
+  if (!source_identity.has_realm_path() || !source_identity.has_component_name()) {
+    return std::nullopt;
+  }
 
-using fuchsia::feedback::CrashReport;
-using fuchsia::sys::internal::SourceIdentity;
+  std::vector<std::string> moniker_parts = source_identity.realm_path();
+  moniker_parts.push_back(source_identity.component_name());
+
+  return fxl::JoinStrings(moniker_parts, "/");
+}
+
+}  // namespace
 
 CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
                              std::shared_ptr<sys::ServiceDirectory> services,
@@ -101,7 +113,7 @@ void CrashReporter::Send(zx::exception exception, zx::process crashed_process,
             crash_reporter->File(builder.Consume(),
                                  [](fuchsia::feedback::CrashReporter_File_Result result) {});
 
-            callback();
+            callback(CreateMoniker(component_lookup));
 
             return ::fit::ok();
           });

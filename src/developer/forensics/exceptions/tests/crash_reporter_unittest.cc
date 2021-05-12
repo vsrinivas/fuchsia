@@ -78,11 +78,9 @@ class StubCrashIntrospect : public fuchsia::sys::internal::CrashIntrospect {
       const auto& info = tids_to_component_infos_[thread_koid];
 
       SourceIdentity source_identity;
-      source_identity.set_component_url(info.component_url);
-
-      if (info.realm_path.has_value()) {
-        source_identity.set_realm_path(info.realm_path.value());
-      }
+      source_identity.set_component_url(info.component_url)
+          .set_realm_path(info.realm_path)
+          .set_component_name(info.component_name);
 
       callback(CrashIntrospect_FindComponentByThreadKoid_Result::WithResponse(
           CrashIntrospect_FindComponentByThreadKoid_Response(std::move(source_identity))));
@@ -97,7 +95,8 @@ class StubCrashIntrospect : public fuchsia::sys::internal::CrashIntrospect {
 
   struct ComponentInfo {
     std::string component_url;
-    std::optional<std::vector<std::string>> realm_path;
+    std::vector<std::string> realm_path;
+    std::string component_name;
   };
 
   void AddThreadKoidToComponentInfo(uint64_t thread_koid, ComponentInfo component_info) {
@@ -114,7 +113,7 @@ class HandlerTest : public UnitTestFixture {
  public:
   void HandleException(
       zx::exception exception, zx::duration component_lookup_timeout,
-      ::fit::closure callback = [] {}) {
+      CrashReporter::SendCallback callback = [](::fidl::StringPtr moniker) {}) {
     handler_ = std::make_unique<CrashReporter>(dispatcher(), services(), component_lookup_timeout);
 
     zx::process process;
@@ -130,7 +129,7 @@ class HandlerTest : public UnitTestFixture {
 
   void HandleException(
       zx::process process, zx::thread thread, zx::duration component_lookup_timeout,
-      ::fit::closure callback = [] {}) {
+      CrashReporter::SendCallback callback = [](::fidl::StringPtr moniker) {}) {
     handler_ = std::make_unique<CrashReporter>(dispatcher(), services(), component_lookup_timeout);
 
     handler_->Send(zx::exception{}, std::move(process), std::move(thread), std::move(callback));
@@ -201,9 +200,17 @@ TEST_F(HandlerTest, NoIntrospectConnection) {
   ASSERT_TRUE(RetrieveExceptionContext(&exception));
 
   bool called = false;
-  HandleException(std::move(exception.exception), kDefaultTimeout, [&called] { called = true; });
+  std::optional<std::string> out_moniker{std::nullopt};
+  HandleException(std::move(exception.exception), kDefaultTimeout,
+                  [&called, &out_moniker](const ::fidl::StringPtr moniker) {
+                    called = true;
+                    if (moniker.has_value()) {
+                      out_moniker = moniker.value();
+                    }
+                  });
 
   ASSERT_TRUE(called);
+  ASSERT_FALSE(out_moniker.has_value());
   EXPECT_EQ(crash_reporter().reports().size(), 1u);
 
   // We kill the jobs. This kills the underlying process. We do this so that the crashed process
@@ -219,10 +226,32 @@ TEST_F(HandlerTest, NoCrashReporterConnection) {
   ExceptionContext exception;
   ASSERT_TRUE(RetrieveExceptionContext(&exception));
 
+  zx::thread thread;
+  ASSERT_EQ(exception.exception.get_thread(&thread), ZX_OK);
+  const zx_koid_t thread_koid = fsl::GetKoid(thread.get());
+
+  const std::string kComponentUrl = "component_url";
+  const std::vector<std::string> kRealmPath = {"realm", "path"};
+  const std::string kComponentName = "component_name";
+  introspect().AddThreadKoidToComponentInfo(thread_koid, StubCrashIntrospect::ComponentInfo{
+                                                             .component_url = kComponentUrl,
+                                                             .realm_path = kRealmPath,
+                                                             .component_name = kComponentName,
+                                                         });
+
   bool called = false;
-  HandleException(std::move(exception.exception), kDefaultTimeout, [&called] { called = true; });
+  std::optional<std::string> out_moniker{std::nullopt};
+  HandleException(std::move(exception.exception), kDefaultTimeout,
+                  [&called, &out_moniker](const ::fidl::StringPtr moniker) {
+                    called = true;
+                    if (moniker.has_value()) {
+                      out_moniker = moniker.value();
+                    }
+                  });
 
   ASSERT_TRUE(called);
+  ASSERT_TRUE(out_moniker.has_value());
+  EXPECT_EQ(out_moniker.value(), "realm/path/component_name");
 
   // The stub shouldn't be called.
   EXPECT_EQ(crash_reporter().reports().size(), 0u);
@@ -252,17 +281,28 @@ TEST_F(HandlerTest, NoException) {
   const zx_koid_t thread_koid = fsl::GetKoid(thread.get());
 
   const std::string kComponentUrl = "component_url";
+  const std::vector<std::string> kRealmPath = {"realm", "path"};
+  const std::string kComponentName = "component_name";
   introspect().AddThreadKoidToComponentInfo(thread_koid, StubCrashIntrospect::ComponentInfo{
                                                              .component_url = kComponentUrl,
-                                                             .realm_path = std::nullopt,
+                                                             .realm_path = kRealmPath,
+                                                             .component_name = kComponentName,
                                                          });
   exception.exception.reset();
 
   bool called = false;
+  std::optional<std::string> out_moniker{std::nullopt};
   HandleException(std::move(process), std::move(thread), zx::duration::infinite(),
-                  [&called] { called = true; });
+                  [&called, &out_moniker](const ::fidl::StringPtr moniker) {
+                    called = true;
+                    if (moniker.has_value()) {
+                      out_moniker = moniker.value();
+                    }
+                  });
 
   ASSERT_TRUE(called);
+  ASSERT_TRUE(out_moniker.has_value());
+  EXPECT_EQ(out_moniker.value(), "realm/path/component_name");
 
   ASSERT_EQ(crash_reporter().reports().size(), 1u);
   auto& report = crash_reporter().reports().front();
@@ -271,6 +311,7 @@ TEST_F(HandlerTest, NoException) {
                       {
                           {"crash.process.name", process_name},
                           {"crash.process.koid", std::to_string(process_koid)},
+                          {"crash.realm-path", "/realm/path"},
                           {"crash.thread.name", thread_name},
                           {"crash.thread.koid", std::to_string(thread_koid)},
                       });
