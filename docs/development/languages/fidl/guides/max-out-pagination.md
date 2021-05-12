@@ -1,11 +1,13 @@
 # Max out pagination
 
-Author: pascallouis@google.com
-
 This document describes the best ways to calculate the size both in terms of
 bytes and handles of elements as they are added to a vector. This should be
 done in order to maximize the number of elements that can be batched at once
 while satisfying the kernel caps on channel writes.
+
+Note: Use the [measure-tape](/tools/fidl/measure-tape/) tool to implement the
+techniques described below. In the Fuchsia Source Tree, this tool has direct
+build integration.
 
 ## Summary
 
@@ -30,7 +32,7 @@ Consider the [WatchPeers][bts-watch-peers] method of the
 `fuchsia.bluetooth.sys.Access` protocol, defined as:
 
 ```fidl
-WatchPeers() -> (vector<Peer> updated, vector<bt.PeerId> removed);
+WatchPeers() -> (vector<Peer>:MAX updated, vector<bt.PeerId>:MAX removed);
 ```
 
 First, a request or response is preceded by a header, i.e. a fixed 16 bytes or
@@ -68,7 +70,7 @@ Consider the [Enqueue][scenic-enqueue] method of the
 `fuchsia.scenic.Session` protocol, defined as:
 
 ```fidl
-Enqueue(vector<Command> cmds);
+Enqueue(vector<Command>:MAX cmds);
 ```
 
 A request or response is preceded by a header, i.e. a fixed 16 bytes or
