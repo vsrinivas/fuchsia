@@ -66,6 +66,21 @@ struct TypeShape {
   uint32_t MaxOutOfLine() const { return max_out_of_line; }
   bool HasPadding() const { return has_padding; }
   bool HasFlexibleEnvelope() const { return has_flexible_envelope; }
+
+  // This is a named constructor for the specific case of generating a type
+  // shape to represent a method interaction kind (that is, request or response)
+  // with no payload body.
+  static TypeShape ForEmptyPayload();
+
+ private:
+  explicit TypeShape(uint32_t inline_size, uint32_t alignment)
+      : inline_size(inline_size),
+        alignment(alignment),
+        depth(0),
+        max_handles(0),
+        max_out_of_line(0),
+        has_padding(false),
+        has_flexible_envelope(false) {}
 };
 
 // |FieldShape| describes the offset and padding information for members that are contained within

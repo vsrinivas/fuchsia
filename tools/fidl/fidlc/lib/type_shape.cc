@@ -175,18 +175,12 @@ class UnalignedSizeVisitor final : public TypeShapeVisitor<DataSize> {
   std::any Visit(const flat::Service& object) override { return DataSize(kHandleSize); }
 
   std::any Visit(const flat::Struct& object) override {
-    if (object.members.empty()) {
-      // Object is an empty struct
-      if (object.is_request_or_response && wire_format() != WireFormat::kV1Header) {
-        return DataSize(kSizeOfTransactionHeader);
-      }
-      return DataSize(1);
-    }
-
     DataSize size = 0;
-
     if (object.is_request_or_response && wire_format() != WireFormat::kV1Header) {
       size += kSizeOfTransactionHeader;
+    }
+    if (object.members.empty()) {
+      return DataSize(1 + size);
     }
 
     for (const auto& member : object.members) {
@@ -1092,6 +1086,10 @@ TypeShape::TypeShape(const flat::Object& object, WireFormat wire_format)
 
 TypeShape::TypeShape(const flat::Object* object, WireFormat wire_format)
     : TypeShape(*object, wire_format) {}
+
+TypeShape TypeShape::ForEmptyPayload() {
+  return TypeShape(kSizeOfTransactionHeader, kAlignmentOfTransactionHeader);
+}
 
 FieldShape::FieldShape(const flat::StructMember& member, const WireFormat wire_format) {
   assert(member.parent);

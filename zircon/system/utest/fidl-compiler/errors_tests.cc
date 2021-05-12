@@ -24,7 +24,7 @@ protocol Example {
   auto methods = &library.LookupProtocol("Example")->methods;
   ASSERT_EQ(methods->size(), 1);
   auto method = &methods->at(0);
-  auto response = method->maybe_response;
+  auto response = method->maybe_response_payload;
   ASSERT_NOT_NULL(response);
   ASSERT_EQ(response->members.size(), 1);
   auto response_member = &response->members.at(0);

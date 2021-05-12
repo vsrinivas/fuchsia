@@ -170,53 +170,6 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
 #endif
   }
   if (protocol_selection_ == 1) {
-#if !defined(PROTOCOL_fidl_test_protocols_DiscoverableProtocol)
-    // Selected protocol from FIDL file that is not part of this fuzzer.
-    xprintf(
-        "Early exit: Chose disabled protocol: "
-        "fidl_test_protocols_DiscoverableProtocol\n");
-    return 0;
-#else
-
-    ::fidl::InterfacePtr< ::fidl::test::protocols::DiscoverableProtocol>
-        protocol_;
-
-    xprintf("Starting fidl_test_protocols_DiscoverableProtocol service\n");
-    ::fidl::fuzzing::Fuzzer< ::fidl::test::protocols::DiscoverableProtocol>
-        fuzzer_(loop_->dispatcher());
-    if ((status_ = fuzzer_.Init()) != ZX_OK) {
-      xprintf("Early exit: fuzzer.Init returned bad status: %d\n", status_);
-      return 0;
-    }
-
-    if ((status_ = fuzzer_.BindService()) != ZX_OK) {
-      xprintf("Early exit: fuzzer.BindService returned bad status: %d\n",
-              status_);
-      return 0;
-    }
-
-    if ((status_ = fuzzer_.BindClient(&protocol_, loop_->dispatcher())) !=
-        ZX_OK) {
-      xprintf("Early exit: fuzzer.BindClient returned bad status: %d\n",
-              status_);
-      return 0;
-    }
-
-    FuzzInput src_(data_, size_);
-
-    uint8_t method_selector_ = data_[1];
-    uint8_t method_selection_ = method_selector_ % 1;
-
-    loop_->RunUntilIdle();
-
-    if ((status_ = fuzzer_.WaitForCallback()) != ZX_OK) {
-      xprintf("fuzzer.WaitForCallback returned bad status: %d\n", status_);
-    }
-
-    protocol_.Unbind();
-#endif
-  }
-  if (protocol_selection_ == 2) {
 #if !defined(PROTOCOL_fidl_test_protocols_Transitional)
     // Selected protocol from FIDL file that is not part of this fuzzer.
     xprintf(
@@ -331,7 +284,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
     protocol_.Unbind();
 #endif
   }
-  if (protocol_selection_ == 3) {
+  if (protocol_selection_ == 2) {
 #if !defined(PROTOCOL_fidl_test_protocols_ChannelProtocol)
     // Selected protocol from FIDL file that is not part of this fuzzer.
     xprintf(
@@ -524,7 +477,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
     protocol_.Unbind();
 #endif
   }
-  if (protocol_selection_ == 4) {
+  if (protocol_selection_ == 3) {
 #if !defined(PROTOCOL_fidl_test_protocols_WithAndWithoutRequestResponse)
     // Selected protocol from FIDL file that is not part of this fuzzer.
     xprintf(
@@ -685,7 +638,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
     protocol_.Unbind();
 #endif
   }
-  if (protocol_selection_ == 5) {
+  if (protocol_selection_ == 4) {
 #if !defined(PROTOCOL_fidl_test_protocols_WithErrorSyntax)
     // Selected protocol from FIDL file that is not part of this fuzzer.
     xprintf(
@@ -721,6 +674,53 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
 
     uint8_t method_selector_ = data_[1];
     uint8_t method_selection_ = method_selector_ % 4;
+
+    loop_->RunUntilIdle();
+
+    if ((status_ = fuzzer_.WaitForCallback()) != ZX_OK) {
+      xprintf("fuzzer.WaitForCallback returned bad status: %d\n", status_);
+    }
+
+    protocol_.Unbind();
+#endif
+  }
+  if (protocol_selection_ == 5) {
+#if !defined(PROTOCOL_fidl_test_protocols_DiscoverableProtocol)
+    // Selected protocol from FIDL file that is not part of this fuzzer.
+    xprintf(
+        "Early exit: Chose disabled protocol: "
+        "fidl_test_protocols_DiscoverableProtocol\n");
+    return 0;
+#else
+
+    ::fidl::InterfacePtr< ::fidl::test::protocols::DiscoverableProtocol>
+        protocol_;
+
+    xprintf("Starting fidl_test_protocols_DiscoverableProtocol service\n");
+    ::fidl::fuzzing::Fuzzer< ::fidl::test::protocols::DiscoverableProtocol>
+        fuzzer_(loop_->dispatcher());
+    if ((status_ = fuzzer_.Init()) != ZX_OK) {
+      xprintf("Early exit: fuzzer.Init returned bad status: %d\n", status_);
+      return 0;
+    }
+
+    if ((status_ = fuzzer_.BindService()) != ZX_OK) {
+      xprintf("Early exit: fuzzer.BindService returned bad status: %d\n",
+              status_);
+      return 0;
+    }
+
+    if ((status_ = fuzzer_.BindClient(&protocol_, loop_->dispatcher())) !=
+        ZX_OK) {
+      xprintf("Early exit: fuzzer.BindClient returned bad status: %d\n",
+              status_);
+      return 0;
+    }
+
+    FuzzInput src_(data_, size_);
+
+    uint8_t method_selector_ = data_[1];
+    uint8_t method_selection_ = method_selector_ % 1;
 
     loop_->RunUntilIdle();
 

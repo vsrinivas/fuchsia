@@ -78,14 +78,6 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 41>
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::fidl::WireRequest<::fidl_test_protocols::"
-                              "DiscoverableProtocol::Method>",
-            .has_flexible_envelope = false,
-            .decoder_encoder =
-                ::fidl::fuzzing::DecoderEncoderImpl<::fidl::WireRequest<
-                    ::fidl_test_protocols::DiscoverableProtocol::Method>>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::fidl::WireRequest<::fidl_test_protocols::"
                               "Transitional::Request>",
             .has_flexible_envelope = false,
             .decoder_encoder =
@@ -361,6 +353,14 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 41>
             .decoder_encoder =
                 ::fidl::fuzzing::DecoderEncoderImpl<::fidl::WireResponse<
                     ::fidl_test_protocols::WithErrorSyntax::HandleInResult>>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::fidl::WireRequest<::fidl_test_protocols::"
+                              "DiscoverableProtocol::Method>",
+            .has_flexible_envelope = false,
+            .decoder_encoder =
+                ::fidl::fuzzing::DecoderEncoderImpl<::fidl::WireRequest<
+                    ::fidl_test_protocols::DiscoverableProtocol::Method>>,
         },
 };
 

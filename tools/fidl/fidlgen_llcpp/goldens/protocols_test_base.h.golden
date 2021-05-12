@@ -26,20 +26,6 @@ class HandleRightsProtocol_TestBase
   }
 };
 
-class DiscoverableProtocol_TestBase
-    : public ::fidl::WireServer<::fidl_test_protocols::DiscoverableProtocol> {
- public:
-  virtual ~DiscoverableProtocol_TestBase() {}
-  virtual void NotImplemented_(const std::string& name,
-                               ::fidl::CompleterBase& completer) = 0;
-  virtual void Method(
-      MethodRequestView request,
-      ::fidl::WireServer<::fidl_test_protocols::DiscoverableProtocol>::
-          MethodCompleter::Sync& completer) override {
-    NotImplemented_("Method", completer);
-  }
-};
-
 class Transitional_TestBase
     : public ::fidl::WireServer<::fidl_test_protocols::Transitional> {
  public:
@@ -164,6 +150,20 @@ class WithErrorSyntax_TestBase
       ::fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>::
           HandleInResultCompleter::Sync& completer) override {
     NotImplemented_("HandleInResult", completer);
+  }
+};
+
+class DiscoverableProtocol_TestBase
+    : public ::fidl::WireServer<::fidl_test_protocols::DiscoverableProtocol> {
+ public:
+  virtual ~DiscoverableProtocol_TestBase() {}
+  virtual void NotImplemented_(const std::string& name,
+                               ::fidl::CompleterBase& completer) = 0;
+  virtual void Method(
+      MethodRequestView request,
+      ::fidl::WireServer<::fidl_test_protocols::DiscoverableProtocol>::
+          MethodCompleter::Sync& completer) override {
+    NotImplemented_("Method", completer);
   }
 };
 }  // namespace testing

@@ -761,20 +761,25 @@ struct Protocol final : public TypeDecl {
     Method& operator=(Method&&) = default;
 
     Method(std::unique_ptr<AttributeList> attributes, std::unique_ptr<raw::Identifier> identifier,
-           SourceSpan name, Struct* maybe_request, Struct* maybe_response)
+           SourceSpan name, bool has_request, Struct* maybe_request, bool has_response,
+           Struct* maybe_response)
         : Attributable(AttributePlacement::kMethod, std::move(attributes)),
           identifier(std::move(identifier)),
           name(name),
-          maybe_request(maybe_request),
-          maybe_response(maybe_response),
+          has_request(has_request),
+          maybe_request_payload(maybe_request),
+          has_response(has_response),
+          maybe_response_payload(maybe_response),
           generated_ordinal64(nullptr) {
-      assert(this->maybe_request != nullptr || this->maybe_response != nullptr);
+      assert(this->has_request || this->has_response);
     }
 
     std::unique_ptr<raw::Identifier> identifier;
     SourceSpan name;
-    Struct* maybe_request;
-    Struct* maybe_response;
+    bool has_request;
+    Struct* maybe_request_payload;
+    bool has_response;
+    Struct* maybe_response_payload;
     // This is set to the |Protocol| instance that owns this |Method|,
     // when the |Protocol| is constructed.
     Protocol* owning_protocol = nullptr;
@@ -1284,8 +1289,9 @@ class Library {
   void ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_declaration);
   void ConsumeProtocolDeclaration(std::unique_ptr<raw::ProtocolDeclaration> protocol_declaration);
   bool ConsumeResourceDeclaration(std::unique_ptr<raw::ResourceDeclaration> resource_declaration);
-  bool ConsumeParameterList(Name name, std::unique_ptr<raw::ParameterList> parameter_list,
-                            bool anonymous, Struct** out_struct_decl);
+  bool ConsumeParameterList(std::optional<Name> assigned_name,
+                            std::unique_ptr<raw::ParameterList> parameter_list, bool anonymous,
+                            Struct** out_struct_decl);
   bool CreateMethodResult(const Name& protocol_name, SourceSpan response_span,
                           raw::ProtocolMethod* method, Struct* in_response, Struct** out_response);
   void ConsumeServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration> service_decl);

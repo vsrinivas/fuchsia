@@ -149,8 +149,9 @@ bool MessageStructAllowed(const flat::Library* library, const flat::Struct* args
 }
 
 bool MethodAllowed(const flat::Library* library, const flat::Protocol::Method& method) {
-  return MethodAlwaysAllowed(method) || (MessageStructAllowed(library, method.maybe_request) &&
-                                         MessageStructAllowed(library, method.maybe_response));
+  return MethodAlwaysAllowed(method) ||
+         (MessageStructAllowed(library, method.maybe_request_payload) &&
+          MessageStructAllowed(library, method.maybe_response_payload));
 }
 
 CGenerator::Member MessageHeader() {
@@ -749,9 +750,9 @@ CGenerator::Member CreateMember(const flat::Library* library, const T& decl,
 bool GetMethodParameters(const flat::Library* library, const CGenerator::NamedMethod& method_info,
                          std::vector<CGenerator::Member>* request,
                          std::vector<CGenerator::Member>* response) {
-  if (request) {
-    request->reserve(method_info.request->parameters.size());
-    for (const auto& parameter : method_info.request->parameters) {
+  if (request && method_info.request->parameters) {
+    request->reserve(method_info.request->parameters->size());
+    for (const auto& parameter : *method_info.request->parameters) {
       bool allowed = true;
       request->push_back(CreateMember(library, parameter, &allowed));
       if (!allowed) {
@@ -764,9 +765,9 @@ bool GetMethodParameters(const flat::Library* library, const CGenerator::NamedMe
     }
   }
 
-  if (response && method_info.response) {
-    response->reserve(method_info.response->parameters.size());
-    for (const auto& parameter : method_info.response->parameters) {
+  if (response && method_info.response && method_info.response->parameters) {
+    response->reserve(method_info.response->parameters->size());
+    for (const auto& parameter : *method_info.response->parameters) {
       bool allowed = true;
       response->push_back(CreateMember(library, parameter, &allowed));
       if (!allowed) {
@@ -969,21 +970,39 @@ std::map<const flat::Decl*, CGenerator::NamedProtocol> CGenerator::NameProtocols
       named_method.ordinal_name = NameOrdinal(method_name);
       named_method.identifier = NameIdentifier(method.name);
       named_method.c_name = method_name;
-      if (method.maybe_request != nullptr) {
+      if (method.has_request) {
         std::string c_name = NameMessage(method_name, types::MessageKind::kRequest);
         std::string coded_name = NameTable(c_name);
+        const auto typeshape = method.maybe_request_payload
+                                   ? method.maybe_request_payload->typeshape(WireFormat::kV1NoEe)
+                                   : TypeShape::ForEmptyPayload();
+        const auto* members =
+            method.maybe_request_payload ? &method.maybe_request_payload->members : nullptr;
+        // TODO(fxbug.dev/76316): remove this assert once this generator is able
+        //  to properly handle empty structs as payloads.  Since no new uses of
+        //  the C bindings are allowed, it may be prudent to leave this assert
+        //  in.
+        assert(!members || (members && !members->empty()));
         named_method.request = std::make_unique<NamedMessage>(
-            NamedMessage{std::move(c_name), std::move(coded_name), method.maybe_request->members,
-                         method.maybe_request->typeshape(WireFormat::kV1NoEe)});
+            NamedMessage{std::move(c_name), std::move(coded_name), members, typeshape});
       }
-      if (method.maybe_response != nullptr) {
+      if (method.has_response) {
         auto message_kind =
-            method.maybe_request ? types::MessageKind::kResponse : types::MessageKind::kEvent;
+            method.has_request ? types::MessageKind::kResponse : types::MessageKind::kEvent;
         std::string c_name = NameMessage(method_name, message_kind);
         std::string coded_name = NameTable(c_name);
+        const auto typeshape = method.maybe_response_payload != nullptr
+                                   ? method.maybe_response_payload->typeshape(WireFormat::kV1NoEe)
+                                   : TypeShape::ForEmptyPayload();
+        const auto* members =
+            method.maybe_response_payload ? &method.maybe_response_payload->members : nullptr;
+        // TODO(fxbug.dev/76316): remove this assert once this generator is able
+        //  to properly handle empty structs as payloads.  Since no new uses of
+        //  the C bindings are allowed, it may be prudent to leave this assert
+        //  in.
+        assert(!members || (members && !members->empty()));
         named_method.response = std::make_unique<NamedMessage>(
-            NamedMessage{std::move(c_name), std::move(coded_name), method.maybe_response->members,
-                         method.maybe_response->typeshape(WireFormat::kV1NoEe)});
+            NamedMessage{std::move(c_name), std::move(coded_name), members, typeshape});
       }
       named_protocol.methods.push_back(std::move(named_method));
     }
@@ -1105,10 +1124,15 @@ void CGenerator::ProduceMessageDeclaration(const NamedMessage& named_message) {
   // both include the message header, and ensure the message is FIDL aligned.
 
   std::vector<CGenerator::Member> members;
-  members.reserve(1 + named_message.parameters.size());
-  members.push_back(MessageHeader());
-  for (const auto& parameter : named_message.parameters) {
-    members.push_back(CreateMember(library_, parameter));
+  if (named_message.parameters) {
+    members.reserve(1 + named_message.parameters->size());
+    members.push_back(MessageHeader());
+    for (const auto& parameter : *named_message.parameters) {
+      members.push_back(CreateMember(library_, parameter));
+    }
+  } else {
+    members.reserve(1);
+    members.push_back(MessageHeader());
   }
 
   GenerateStructDeclaration(named_message.c_name, members, StructKind::kMessage);

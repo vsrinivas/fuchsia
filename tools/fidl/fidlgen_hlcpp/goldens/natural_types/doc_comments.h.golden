@@ -17,15 +17,6 @@ class Struct;
 class StrictUnion;
 
 #ifdef __Fuchsia__
-
-/// interface comment #1
-///
-/// interface comment #3
-class Interface;
-using InterfaceHandle = ::fidl::InterfaceHandle<Interface>;
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 class Service;
 #endif  // __Fuchsia__
 
@@ -298,6 +289,15 @@ inline zx_status_t Clone(::fidl::test::doccomments::MyFlexibleBits value,
   *result = value;
   return ZX_OK;
 }
+
+#ifdef __Fuchsia__
+
+/// interface comment #1
+///
+/// interface comment #3
+class Interface;
+using InterfaceHandle = ::fidl::InterfaceHandle<Interface>;
+#endif  // __Fuchsia__
 
 class FlexibleUnion;
 

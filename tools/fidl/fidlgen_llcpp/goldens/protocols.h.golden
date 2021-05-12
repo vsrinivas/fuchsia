@@ -159,8 +159,6 @@ class WithErrorSyntaxErrorAsPrimitiveResult;
 
 struct WithErrorSyntaxErrorAsEnumResponse;
 }  // namespace wire
-class DiscoverableProtocol;
-
 class Transitional;
 
 class ChannelProtocol;
@@ -178,6 +176,8 @@ enum class ErrorEnum : uint32_t {
 class WithErrorSyntaxErrorAsEnumResult;
 }  // namespace wire
 class WithErrorSyntax;
+
+class DiscoverableProtocol;
 namespace wire {
 
 #ifdef __Fuchsia__
@@ -2458,358 +2458,6 @@ struct WithErrorSyntaxErrorAsEnumResponse {
 };
 
 }  // namespace wire
-__LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_DiscoverableProtocolMethodRequestTable;
-
-__LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_DiscoverableProtocolMethodResponseTable;
-
-class DiscoverableProtocol final {
-  DiscoverableProtocol() = delete;
-
- public:
-  class Method final {
-    Method() = delete;
-  };
-};
-}  // namespace fidl_test_protocols
-#ifdef __Fuchsia__
-
-template <>
-struct ::fidl::internal::ProtocolDetails<
-    ::fidl_test_protocols::DiscoverableProtocol> {
-  static constexpr char DiscoverableName[] =
-      "fidl.test.protocols.DiscoverableProtocol";
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-struct ::fidl::internal::WireServerDispatcher<
-    ::fidl_test_protocols::DiscoverableProtocol>
-    final {
-  WireServerDispatcher() = delete;
-  static ::fidl::DispatchResult TryDispatch(
-      ::fidl::WireServer<::fidl_test_protocols::DiscoverableProtocol>* impl,
-      ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
-  static ::fidl::DispatchResult Dispatch(
-      ::fidl::WireServer<::fidl_test_protocols::DiscoverableProtocol>* impl,
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
-};
-#endif  // __Fuchsia__
-
-template <>
-struct ::fidl::WireRequest<::fidl_test_protocols::DiscoverableProtocol::Method>
-    final {
-  FIDL_ALIGNDECL
-  fidl_message_header_t _hdr;
-  explicit WireRequest(zx_txid_t _txid) { _InitHeader(_txid); }
-
-  static constexpr const fidl_type_t* Type =
-      &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 16;
-  static constexpr uint32_t AltMaxOutOfLine = 0;
-  static constexpr bool HasFlexibleEnvelope = false;
-  static constexpr bool HasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-      ::fidl::internal::TransactionalMessageKind::kRequest;
-
-  class UnownedEncodedMessage final {
-   public:
-    UnownedEncodedMessage(uint8_t* _backing_buffer,
-                          uint32_t _backing_buffer_size, zx_txid_t _txid)
-        : message_(::fidl::OutgoingMessage::ConstructorArgs{
-              .iovecs = iovecs_,
-              .iovec_capacity = ::fidl::internal::IovecBufferSize,
-              .backing_buffer = _backing_buffer,
-              .backing_buffer_capacity = _backing_buffer_size,
-          }) {
-      FIDL_ALIGNDECL WireRequest _request(_txid);
-      message_.Encode<WireRequest>(&_request);
-    }
-    UnownedEncodedMessage(uint8_t* _backing_buffer,
-                          uint32_t _backing_buffer_size, WireRequest* request)
-        : message_(::fidl::OutgoingMessage::ConstructorArgs{
-              .iovecs = iovecs_,
-              .iovec_capacity = ::fidl::internal::IovecBufferSize,
-              .backing_buffer = _backing_buffer,
-              .backing_buffer_capacity = _backing_buffer_size,
-          }) {
-      message_.Encode<WireRequest>(request);
-    }
-    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
-    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
-    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
-    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-    bool ok() const { return message_.status() == ZX_OK; }
-    const char* error_message() const { return message_.error_message(); }
-
-    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-#ifdef __Fuchsia__
-    template <typename ChannelLike>
-    void Write(ChannelLike&& client) {
-      message_.Write(std::forward<ChannelLike>(client));
-    }
-#endif  // __Fuchsia__
-   private:
-    ::fidl::internal::IovecBuffer iovecs_;
-    ::fidl::OutgoingMessage message_;
-  };
-
-  class OwnedEncodedMessage final {
-   public:
-    explicit OwnedEncodedMessage(zx_txid_t _txid)
-        : message_(backing_buffer_.data(), backing_buffer_.size(), _txid) {}
-    explicit OwnedEncodedMessage(WireRequest* request)
-        : message_(backing_buffer_.data(), backing_buffer_.size(), request) {}
-    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
-    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
-    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif  // __Fuchsia__
-    bool ok() const { return message_.ok(); }
-    const char* error_message() const { return message_.error_message(); }
-
-    ::fidl::OutgoingMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
-#ifdef __Fuchsia__
-    template <typename ChannelLike>
-    void Write(ChannelLike&& client) {
-      message_.Write(std::forward<ChannelLike>(client));
-    }
-#endif  // __Fuchsia__
-   private:
-    ::fidl::internal::InlineMessageBuffer<16> backing_buffer_;
-    UnownedEncodedMessage message_;
-  };
-
- public:
-  class DecodedMessage final
-      : public ::fidl::internal::DecodedMessageBase<::fidl::WireRequest<
-            ::fidl_test_protocols::DiscoverableProtocol::Method>> {
-   public:
-    using DecodedMessageBase<::fidl::WireRequest<
-        ::fidl_test_protocols::DiscoverableProtocol::Method>>::
-        DecodedMessageBase;
-
-    DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
-                   zx_handle_info_t* handles = nullptr,
-                   uint32_t handle_actual = 0)
-        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
-                                                     handles, handle_actual)) {}
-
-    ::fidl::WireRequest<::fidl_test_protocols::DiscoverableProtocol::Method>*
-    PrimaryObject() {
-      ZX_DEBUG_ASSERT(ok());
-      return reinterpret_cast<::fidl::WireRequest<
-          ::fidl_test_protocols::DiscoverableProtocol::Method>*>(bytes());
-    }
-
-    // Release the ownership of the decoded message. That means that the handles
-    // won't be closed When the object is destroyed. After calling this method,
-    // the |DecodedMessage| object should not be used anymore.
-    void ReleasePrimaryObject() { ResetBytes(); }
-  };
-
- private:
-  void _InitHeader(zx_txid_t _txid);
-};
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::WireResult<::fidl_test_protocols::DiscoverableProtocol::Method>
-    final : public ::fidl::Result {
- public:
-  explicit WireResult(
-      ::fidl::UnownedClientEnd<::fidl_test_protocols::DiscoverableProtocol>
-          _client);
-  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
-  WireResult(WireResult&&) = delete;
-  WireResult(const WireResult&) = delete;
-  WireResult* operator=(WireResult&&) = delete;
-  WireResult* operator=(const WireResult&) = delete;
-  ~WireResult() = default;
-
- private:
-};
-template <>
-class ::fidl::WireUnownedResult<
-    ::fidl_test_protocols::DiscoverableProtocol::Method>
-    final : public ::fidl::Result {
- public:
-  explicit WireUnownedResult(
-      ::fidl::UnownedClientEnd<::fidl_test_protocols::DiscoverableProtocol>
-          _client);
-  explicit WireUnownedResult(const ::fidl::Result& result)
-      : ::fidl::Result(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
-  WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
-  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
-  ~WireUnownedResult() = default;
-};
-
-// Methods to make a sync FIDL call directly on an unowned channel or a
-// const reference to a
-// |fidl::ClientEnd<::fidl_test_protocols::DiscoverableProtocol>|, avoiding
-// setting up a client.
-template <>
-class ::fidl::internal::WireCaller<::fidl_test_protocols::DiscoverableProtocol>
-    final {
- public:
-  explicit WireCaller(
-      ::fidl::UnownedClientEnd<::fidl_test_protocols::DiscoverableProtocol>
-          client_end)
-      : client_end_(client_end) {}
-
-  // Allocates 16 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  static ::fidl::WireResult<::fidl_test_protocols::DiscoverableProtocol::Method>
-  Method(::fidl::UnownedClientEnd<::fidl_test_protocols::DiscoverableProtocol>
-             _client_end) {
-    return ::fidl::WireResult<
-        ::fidl_test_protocols::DiscoverableProtocol::Method>(_client_end);
-  }
-  // Allocates 16 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  ::fidl::WireResult<::fidl_test_protocols::DiscoverableProtocol::Method>
-  Method() && {
-    return ::fidl::WireResult<
-        ::fidl_test_protocols::DiscoverableProtocol::Method>(client_end_);
-  }
-
- private:
-  ::fidl::UnownedClientEnd<::fidl_test_protocols::DiscoverableProtocol>
-      client_end_;
-};
-template <>
-class ::fidl::internal::WireEventHandlerInterface<
-    ::fidl_test_protocols::DiscoverableProtocol> {
- public:
-  WireEventHandlerInterface() = default;
-  virtual ~WireEventHandlerInterface() = default;
-};
-
-template <>
-class ::fidl::WireAsyncEventHandler<::fidl_test_protocols::DiscoverableProtocol>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_protocols::DiscoverableProtocol> {
- public:
-  WireAsyncEventHandler() = default;
-
-  virtual void Unbound(::fidl::UnbindInfo info) {}
-};
-
-template <>
-class ::fidl::WireSyncEventHandler<::fidl_test_protocols::DiscoverableProtocol>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_protocols::DiscoverableProtocol> {
- public:
-  WireSyncEventHandler() = default;
-
-  // Method called when an unknown event is found. This methods gives the status
-  // which, in this case, is returned by HandleOneEvent.
-  virtual zx_status_t Unknown() = 0;
-
-  // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the
-  // corresponding virtual method.
-  ::fidl::Result HandleOneEvent(
-      ::fidl::UnownedClientEnd<::fidl_test_protocols::DiscoverableProtocol>
-          client_end);
-};
-template <>
-class ::fidl::WireSyncClient<::fidl_test_protocols::DiscoverableProtocol>
-    final {
- public:
-  WireSyncClient() = default;
-
-  explicit WireSyncClient(
-      ::fidl::ClientEnd<::fidl_test_protocols::DiscoverableProtocol> client_end)
-      : client_end_(std::move(client_end)) {}
-
-  ~WireSyncClient() = default;
-  WireSyncClient(WireSyncClient&&) = default;
-  WireSyncClient& operator=(WireSyncClient&&) = default;
-
-  const ::fidl::ClientEnd<::fidl_test_protocols::DiscoverableProtocol>&
-  client_end() const {
-    return client_end_;
-  }
-  ::fidl::ClientEnd<::fidl_test_protocols::DiscoverableProtocol>& client_end() {
-    return client_end_;
-  }
-
-  const ::zx::channel& channel() const { return client_end_.channel(); }
-  ::zx::channel* mutable_channel() { return &client_end_.channel(); }
-
-  // Allocates 16 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  ::fidl::WireResult<::fidl_test_protocols::DiscoverableProtocol::Method>
-  Method() {
-    return ::fidl::WireResult<
-        ::fidl_test_protocols::DiscoverableProtocol::Method>(
-        this->client_end());
-  }
-
- private:
-  ::fidl::ClientEnd<::fidl_test_protocols::DiscoverableProtocol> client_end_;
-};
-
-// Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
-template <>
-class ::fidl::WireServer<::fidl_test_protocols::DiscoverableProtocol>
-    : public ::fidl::internal::IncomingMessageDispatcher {
- public:
-  WireServer() = default;
-  virtual ~WireServer() = default;
-
-  // The FIDL protocol type that is implemented by this server.
-  using _EnclosingProtocol = ::fidl_test_protocols::DiscoverableProtocol;
-
-  using MethodCompleter = ::fidl::Completer<>;
-  class MethodRequestView {
-   public:
-    MethodRequestView(
-        ::fidl::WireRequest<
-            ::fidl_test_protocols::DiscoverableProtocol::Method>* request)
-        : request_(request) {}
-    ::fidl::WireRequest<::fidl_test_protocols::DiscoverableProtocol::Method>*
-    operator->() const {
-      return request_;
-    }
-
-   private:
-    ::fidl::WireRequest<::fidl_test_protocols::DiscoverableProtocol::Method>*
-        request_;
-  };
-
-  virtual void Method(MethodRequestView request,
-                      MethodCompleter::Sync& _completer) = 0;
-
- private:
-  ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
-                                          ::fidl::Transaction* txn) final;
-};
-#endif  // __Fuchsia__
-
-namespace fidl_test_protocols {
 __LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_TransitionalRequestRequestTable;
 
@@ -11354,6 +11002,358 @@ class ::fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>
 };
 #endif  // __Fuchsia__
 
+namespace fidl_test_protocols {
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_DiscoverableProtocolMethodRequestTable;
+
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_DiscoverableProtocolMethodResponseTable;
+
+class DiscoverableProtocol final {
+  DiscoverableProtocol() = delete;
+
+ public:
+  class Method final {
+    Method() = delete;
+  };
+};
+}  // namespace fidl_test_protocols
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::ProtocolDetails<
+    ::fidl_test_protocols::DiscoverableProtocol> {
+  static constexpr char DiscoverableName[] =
+      "fidl.test.protocols.DiscoverableProtocol";
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireServerDispatcher<
+    ::fidl_test_protocols::DiscoverableProtocol>
+    final {
+  WireServerDispatcher() = delete;
+  static ::fidl::DispatchResult TryDispatch(
+      ::fidl::WireServer<::fidl_test_protocols::DiscoverableProtocol>* impl,
+      ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
+  static ::fidl::DispatchResult Dispatch(
+      ::fidl::WireServer<::fidl_test_protocols::DiscoverableProtocol>* impl,
+      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
+};
+#endif  // __Fuchsia__
+
+template <>
+struct ::fidl::WireRequest<::fidl_test_protocols::DiscoverableProtocol::Method>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t _hdr;
+  explicit WireRequest(zx_txid_t _txid) { _InitHeader(_txid); }
+
+  static constexpr const fidl_type_t* Type =
+      &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 16;
+  static constexpr uint32_t AltMaxOutOfLine = 0;
+  static constexpr bool HasFlexibleEnvelope = false;
+  static constexpr bool HasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+
+  class UnownedEncodedMessage final {
+   public:
+    UnownedEncodedMessage(uint8_t* _backing_buffer,
+                          uint32_t _backing_buffer_size, zx_txid_t _txid)
+        : message_(::fidl::OutgoingMessage::ConstructorArgs{
+              .iovecs = iovecs_,
+              .iovec_capacity = ::fidl::internal::IovecBufferSize,
+              .backing_buffer = _backing_buffer,
+              .backing_buffer_capacity = _backing_buffer_size,
+          }) {
+      FIDL_ALIGNDECL WireRequest _request(_txid);
+      message_.Encode<WireRequest>(&_request);
+    }
+    UnownedEncodedMessage(uint8_t* _backing_buffer,
+                          uint32_t _backing_buffer_size, WireRequest* request)
+        : message_(::fidl::OutgoingMessage::ConstructorArgs{
+              .iovecs = iovecs_,
+              .iovec_capacity = ::fidl::internal::IovecBufferSize,
+              .backing_buffer = _backing_buffer,
+              .backing_buffer_capacity = _backing_buffer_size,
+          }) {
+      message_.Encode<WireRequest>(request);
+    }
+    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+    bool ok() const { return message_.status() == ZX_OK; }
+    const char* error_message() const { return message_.error_message(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+#ifdef __Fuchsia__
+    template <typename ChannelLike>
+    void Write(ChannelLike&& client) {
+      message_.Write(std::forward<ChannelLike>(client));
+    }
+#endif  // __Fuchsia__
+   private:
+    ::fidl::internal::IovecBuffer iovecs_;
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedEncodedMessage final {
+   public:
+    explicit OwnedEncodedMessage(zx_txid_t _txid)
+        : message_(backing_buffer_.data(), backing_buffer_.size(), _txid) {}
+    explicit OwnedEncodedMessage(WireRequest* request)
+        : message_(backing_buffer_.data(), backing_buffer_.size(), request) {}
+    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+    bool ok() const { return message_.ok(); }
+    const char* error_message() const { return message_.error_message(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+#ifdef __Fuchsia__
+    template <typename ChannelLike>
+    void Write(ChannelLike&& client) {
+      message_.Write(std::forward<ChannelLike>(client));
+    }
+#endif  // __Fuchsia__
+   private:
+    ::fidl::internal::InlineMessageBuffer<16> backing_buffer_;
+    UnownedEncodedMessage message_;
+  };
+
+ public:
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<::fidl::WireRequest<
+            ::fidl_test_protocols::DiscoverableProtocol::Method>> {
+   public:
+    using DecodedMessageBase<::fidl::WireRequest<
+        ::fidl_test_protocols::DiscoverableProtocol::Method>>::
+        DecodedMessageBase;
+
+    DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                   zx_handle_info_t* handles = nullptr,
+                   uint32_t handle_actual = 0)
+        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
+                                                     handles, handle_actual)) {}
+
+    ::fidl::WireRequest<::fidl_test_protocols::DiscoverableProtocol::Method>*
+    PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<::fidl::WireRequest<
+          ::fidl_test_protocols::DiscoverableProtocol::Method>*>(bytes());
+    }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the |DecodedMessage| object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
+  };
+
+ private:
+  void _InitHeader(zx_txid_t _txid);
+};
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::WireResult<::fidl_test_protocols::DiscoverableProtocol::Method>
+    final : public ::fidl::Result {
+ public:
+  explicit WireResult(
+      ::fidl::UnownedClientEnd<::fidl_test_protocols::DiscoverableProtocol>
+          _client);
+  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  WireResult(WireResult&&) = delete;
+  WireResult(const WireResult&) = delete;
+  WireResult* operator=(WireResult&&) = delete;
+  WireResult* operator=(const WireResult&) = delete;
+  ~WireResult() = default;
+
+ private:
+};
+template <>
+class ::fidl::WireUnownedResult<
+    ::fidl_test_protocols::DiscoverableProtocol::Method>
+    final : public ::fidl::Result {
+ public:
+  explicit WireUnownedResult(
+      ::fidl::UnownedClientEnd<::fidl_test_protocols::DiscoverableProtocol>
+          _client);
+  explicit WireUnownedResult(const ::fidl::Result& result)
+      : ::fidl::Result(result) {}
+  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(const WireUnownedResult&) = delete;
+  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  ~WireUnownedResult() = default;
+};
+
+// Methods to make a sync FIDL call directly on an unowned channel or a
+// const reference to a
+// |fidl::ClientEnd<::fidl_test_protocols::DiscoverableProtocol>|, avoiding
+// setting up a client.
+template <>
+class ::fidl::internal::WireCaller<::fidl_test_protocols::DiscoverableProtocol>
+    final {
+ public:
+  explicit WireCaller(
+      ::fidl::UnownedClientEnd<::fidl_test_protocols::DiscoverableProtocol>
+          client_end)
+      : client_end_(client_end) {}
+
+  // Allocates 16 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  static ::fidl::WireResult<::fidl_test_protocols::DiscoverableProtocol::Method>
+  Method(::fidl::UnownedClientEnd<::fidl_test_protocols::DiscoverableProtocol>
+             _client_end) {
+    return ::fidl::WireResult<
+        ::fidl_test_protocols::DiscoverableProtocol::Method>(_client_end);
+  }
+  // Allocates 16 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<::fidl_test_protocols::DiscoverableProtocol::Method>
+  Method() && {
+    return ::fidl::WireResult<
+        ::fidl_test_protocols::DiscoverableProtocol::Method>(client_end_);
+  }
+
+ private:
+  ::fidl::UnownedClientEnd<::fidl_test_protocols::DiscoverableProtocol>
+      client_end_;
+};
+template <>
+class ::fidl::internal::WireEventHandlerInterface<
+    ::fidl_test_protocols::DiscoverableProtocol> {
+ public:
+  WireEventHandlerInterface() = default;
+  virtual ~WireEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::WireAsyncEventHandler<::fidl_test_protocols::DiscoverableProtocol>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_protocols::DiscoverableProtocol> {
+ public:
+  WireAsyncEventHandler() = default;
+
+  virtual void Unbound(::fidl::UnbindInfo info) {}
+};
+
+template <>
+class ::fidl::WireSyncEventHandler<::fidl_test_protocols::DiscoverableProtocol>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_protocols::DiscoverableProtocol> {
+ public:
+  WireSyncEventHandler() = default;
+
+  // Method called when an unknown event is found. This methods gives the status
+  // which, in this case, is returned by HandleOneEvent.
+  virtual zx_status_t Unknown() = 0;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the
+  // corresponding virtual method.
+  ::fidl::Result HandleOneEvent(
+      ::fidl::UnownedClientEnd<::fidl_test_protocols::DiscoverableProtocol>
+          client_end);
+};
+template <>
+class ::fidl::WireSyncClient<::fidl_test_protocols::DiscoverableProtocol>
+    final {
+ public:
+  WireSyncClient() = default;
+
+  explicit WireSyncClient(
+      ::fidl::ClientEnd<::fidl_test_protocols::DiscoverableProtocol> client_end)
+      : client_end_(std::move(client_end)) {}
+
+  ~WireSyncClient() = default;
+  WireSyncClient(WireSyncClient&&) = default;
+  WireSyncClient& operator=(WireSyncClient&&) = default;
+
+  const ::fidl::ClientEnd<::fidl_test_protocols::DiscoverableProtocol>&
+  client_end() const {
+    return client_end_;
+  }
+  ::fidl::ClientEnd<::fidl_test_protocols::DiscoverableProtocol>& client_end() {
+    return client_end_;
+  }
+
+  const ::zx::channel& channel() const { return client_end_.channel(); }
+  ::zx::channel* mutable_channel() { return &client_end_.channel(); }
+
+  // Allocates 16 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<::fidl_test_protocols::DiscoverableProtocol::Method>
+  Method() {
+    return ::fidl::WireResult<
+        ::fidl_test_protocols::DiscoverableProtocol::Method>(
+        this->client_end());
+  }
+
+ private:
+  ::fidl::ClientEnd<::fidl_test_protocols::DiscoverableProtocol> client_end_;
+};
+
+// Pure-virtual interface to be implemented by a server.
+// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
+// and |fidl::ServerEnd<SomeProtocol>|).
+template <>
+class ::fidl::WireServer<::fidl_test_protocols::DiscoverableProtocol>
+    : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  WireServer() = default;
+  virtual ~WireServer() = default;
+
+  // The FIDL protocol type that is implemented by this server.
+  using _EnclosingProtocol = ::fidl_test_protocols::DiscoverableProtocol;
+
+  using MethodCompleter = ::fidl::Completer<>;
+  class MethodRequestView {
+   public:
+    MethodRequestView(
+        ::fidl::WireRequest<
+            ::fidl_test_protocols::DiscoverableProtocol::Method>* request)
+        : request_(request) {}
+    ::fidl::WireRequest<::fidl_test_protocols::DiscoverableProtocol::Method>*
+    operator->() const {
+      return request_;
+    }
+
+   private:
+    ::fidl::WireRequest<::fidl_test_protocols::DiscoverableProtocol::Method>*
+        request_;
+  };
+
+  virtual void Method(MethodRequestView request,
+                      MethodCompleter::Sync& _completer) = 0;
+
+ private:
+  ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
+                                          ::fidl::Transaction* txn) final;
+};
+#endif  // __Fuchsia__
+
 namespace fidl {
 
 template <>
@@ -11577,20 +11577,6 @@ static_assert(
     sizeof(::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse) ==
     ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse::
         PrimarySize);
-
-template <>
-struct IsFidlType<
-    ::fidl::WireRequest<::fidl_test_protocols::DiscoverableProtocol::Method>>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<
-    ::fidl::WireRequest<::fidl_test_protocols::DiscoverableProtocol::Method>>
-    : public std::true_type {};
-static_assert(
-    sizeof(::fidl::WireRequest<
-           ::fidl_test_protocols::DiscoverableProtocol::Method>) ==
-    ::fidl::WireRequest<
-        ::fidl_test_protocols::DiscoverableProtocol::Method>::PrimarySize);
 
 template <>
 struct IsFidlType<
@@ -12181,6 +12167,19 @@ static_assert(
              result) == 16);
 #endif  // __Fuchsia__
 
+template <>
+struct IsFidlType<
+    ::fidl::WireRequest<::fidl_test_protocols::DiscoverableProtocol::Method>>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::fidl::WireRequest<::fidl_test_protocols::DiscoverableProtocol::Method>>
+    : public std::true_type {};
+static_assert(
+    sizeof(::fidl::WireRequest<
+           ::fidl_test_protocols::DiscoverableProtocol::Method>) ==
+    ::fidl::WireRequest<
+        ::fidl_test_protocols::DiscoverableProtocol::Method>::PrimarySize);
 }  // namespace fidl
 #ifdef __Fuchsia__
 
@@ -12343,93 +12342,6 @@ class ::fidl::internal::WireWeakEventSender<
 
   std::weak_ptr<::fidl::internal::AsyncServerBinding<
       ::fidl_test_protocols::HandleRightsProtocol>>
-      binding_;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::internal::WireClientImpl<
-    ::fidl_test_protocols::DiscoverableProtocol>
-    final : private ::fidl::internal::ClientBase {
- public:
-  // Allocates 16 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  ::fidl::Result Method();
-
-  ::fidl::WireAsyncEventHandler<::fidl_test_protocols::DiscoverableProtocol>*
-  event_handler() const {
-    return event_handler_.get();
-  }
-
- private:
-  friend class ::fidl::Client<::fidl_test_protocols::DiscoverableProtocol>;
-  friend class ::fidl::internal::ControlBlock<
-      ::fidl_test_protocols::DiscoverableProtocol>;
-
-  explicit WireClientImpl(std::shared_ptr<::fidl::WireAsyncEventHandler<
-                              ::fidl_test_protocols::DiscoverableProtocol>>
-                              event_handler)
-      : event_handler_(std::move(event_handler)) {}
-
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      fidl::IncomingMessage& msg) override;
-
-  std::shared_ptr<::fidl::WireAsyncEventHandler<
-      ::fidl_test_protocols::DiscoverableProtocol>>
-      event_handler_;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-// |EventSender| owns a server endpoint of a channel speaking
-// the DiscoverableProtocol protocol, and can send events in that protocol.
-template <>
-class ::fidl::WireEventSender<::fidl_test_protocols::DiscoverableProtocol> {
- public:
-  // Constructs an event sender with an invalid channel.
-  WireEventSender() = default;
-
-  explicit WireEventSender(
-      ::fidl::ServerEnd<::fidl_test_protocols::DiscoverableProtocol> server_end)
-      : server_end_(std::move(server_end)) {}
-
-  // The underlying server channel endpoint, which may be replaced at run-time.
-  const ::fidl::ServerEnd<::fidl_test_protocols::DiscoverableProtocol>&
-  server_end() const {
-    return server_end_;
-  }
-  ::fidl::ServerEnd<::fidl_test_protocols::DiscoverableProtocol>& server_end() {
-    return server_end_;
-  }
-
-  const ::zx::channel& channel() const { return server_end_.channel(); }
-  ::zx::channel& channel() { return server_end_.channel(); }
-
-  // Whether the underlying channel is valid.
-  bool is_valid() const { return server_end_.is_valid(); }
-
- private:
-  ::fidl::ServerEnd<::fidl_test_protocols::DiscoverableProtocol> server_end_;
-};
-
-template <>
-class ::fidl::internal::WireWeakEventSender<
-    ::fidl_test_protocols::DiscoverableProtocol> {
- public:
- private:
-  friend class ::fidl::ServerBindingRef<
-      ::fidl_test_protocols::DiscoverableProtocol>;
-
-  explicit WireWeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding<
-          ::fidl_test_protocols::DiscoverableProtocol>>
-          binding)
-      : binding_(std::move(binding)) {}
-
-  std::weak_ptr<::fidl::internal::AsyncServerBinding<
-      ::fidl_test_protocols::DiscoverableProtocol>>
       binding_;
 };
 #endif  // __Fuchsia__
@@ -13469,6 +13381,93 @@ class ::fidl::internal::WireWeakEventSender<
 
   std::weak_ptr<::fidl::internal::AsyncServerBinding<
       ::fidl_test_protocols::WithErrorSyntax>>
+      binding_;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::WireClientImpl<
+    ::fidl_test_protocols::DiscoverableProtocol>
+    final : private ::fidl::internal::ClientBase {
+ public:
+  // Allocates 16 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::Result Method();
+
+  ::fidl::WireAsyncEventHandler<::fidl_test_protocols::DiscoverableProtocol>*
+  event_handler() const {
+    return event_handler_.get();
+  }
+
+ private:
+  friend class ::fidl::Client<::fidl_test_protocols::DiscoverableProtocol>;
+  friend class ::fidl::internal::ControlBlock<
+      ::fidl_test_protocols::DiscoverableProtocol>;
+
+  explicit WireClientImpl(std::shared_ptr<::fidl::WireAsyncEventHandler<
+                              ::fidl_test_protocols::DiscoverableProtocol>>
+                              event_handler)
+      : event_handler_(std::move(event_handler)) {}
+
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      fidl::IncomingMessage& msg) override;
+
+  std::shared_ptr<::fidl::WireAsyncEventHandler<
+      ::fidl_test_protocols::DiscoverableProtocol>>
+      event_handler_;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+// |EventSender| owns a server endpoint of a channel speaking
+// the DiscoverableProtocol protocol, and can send events in that protocol.
+template <>
+class ::fidl::WireEventSender<::fidl_test_protocols::DiscoverableProtocol> {
+ public:
+  // Constructs an event sender with an invalid channel.
+  WireEventSender() = default;
+
+  explicit WireEventSender(
+      ::fidl::ServerEnd<::fidl_test_protocols::DiscoverableProtocol> server_end)
+      : server_end_(std::move(server_end)) {}
+
+  // The underlying server channel endpoint, which may be replaced at run-time.
+  const ::fidl::ServerEnd<::fidl_test_protocols::DiscoverableProtocol>&
+  server_end() const {
+    return server_end_;
+  }
+  ::fidl::ServerEnd<::fidl_test_protocols::DiscoverableProtocol>& server_end() {
+    return server_end_;
+  }
+
+  const ::zx::channel& channel() const { return server_end_.channel(); }
+  ::zx::channel& channel() { return server_end_.channel(); }
+
+  // Whether the underlying channel is valid.
+  bool is_valid() const { return server_end_.is_valid(); }
+
+ private:
+  ::fidl::ServerEnd<::fidl_test_protocols::DiscoverableProtocol> server_end_;
+};
+
+template <>
+class ::fidl::internal::WireWeakEventSender<
+    ::fidl_test_protocols::DiscoverableProtocol> {
+ public:
+ private:
+  friend class ::fidl::ServerBindingRef<
+      ::fidl_test_protocols::DiscoverableProtocol>;
+
+  explicit WireWeakEventSender(
+      std::weak_ptr<::fidl::internal::AsyncServerBinding<
+          ::fidl_test_protocols::DiscoverableProtocol>>
+          binding)
+      : binding_(std::move(binding)) {}
+
+  std::weak_ptr<::fidl::internal::AsyncServerBinding<
+      ::fidl_test_protocols::DiscoverableProtocol>>
       binding_;
 };
 #endif  // __Fuchsia__

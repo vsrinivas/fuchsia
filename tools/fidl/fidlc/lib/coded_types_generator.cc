@@ -301,27 +301,36 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl, const WireFormat
       for (const auto& method_with_info : protocol_decl->all_methods) {
         assert(method_with_info.method != nullptr);
         const auto& method = *method_with_info.method;
-        auto CompileMessage = [&](const flat::Struct& message) -> void {
+        auto CompileMessage = [&](const flat::Struct* message) -> void {
           std::unique_ptr<coded::MessageType>& coded_message =
               coded_protocol->messages_during_compile[i++];
           std::vector<coded::StructElement>& request_elements = coded_message->elements;
           uint32_t field_num = 0;
           bool is_noop = true;
-          for (const auto parameter : FlattenedStructMembers(message, wire_format)) {
-            auto coded_parameter_type =
-                CompileType(parameter.type, coded::CodingContext::kOutsideEnvelope, wire_format);
-            if (!coded_parameter_type->is_noop) {
-              request_elements.push_back(coded::StructField(
-                  parameter.type->Resourceness(), parameter.offset, coded_parameter_type));
-              is_noop = false;
+
+          // TODO(fxbug.dev/76316): remove this assert once this generator is able to
+          //  properly handle empty structs as payloads.
+          assert((!message || (message && !message->members.empty())) &&
+                 "cannot process empty message payloads");
+
+          if (message) {
+            for (const auto parameter : FlattenedStructMembers(*message, wire_format)) {
+              auto coded_parameter_type =
+                  CompileType(parameter.type, coded::CodingContext::kOutsideEnvelope, wire_format);
+              if (!coded_parameter_type->is_noop) {
+                request_elements.push_back(coded::StructField(
+                    parameter.type->Resourceness(), parameter.offset, coded_parameter_type));
+                is_noop = false;
+              }
+              if (parameter.padding != 0) {
+                request_elements.push_back(coded::StructPadding::FromLength(
+                    parameter.inline_size + parameter.offset, parameter.padding));
+                is_noop = false;
+              }
+              field_num++;
             }
-            if (parameter.padding != 0) {
-              request_elements.push_back(coded::StructPadding::FromLength(
-                  parameter.inline_size + parameter.offset, parameter.padding));
-              is_noop = false;
-            }
-            field_num++;
           }
+
           coded_message->is_noop = is_noop;
           // We move the coded_message to coded_types_ so that we'll generate tables for the
           // message in the proper order.
@@ -331,11 +340,11 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl, const WireFormat
           coded_protocol->messages_after_compile.push_back(
               static_cast<const coded::MessageType*>(coded_types_.back().get()));
         };
-        if (method.maybe_request) {
-          CompileMessage(*method.maybe_request);
+        if (method.has_request) {
+          CompileMessage(method.maybe_request_payload);
         }
-        if (method.maybe_response) {
-          CompileMessage(*method.maybe_response);
+        if (method.has_response) {
+          CompileMessage(method.maybe_response_payload);
         }
       }
       break;
@@ -487,20 +496,28 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl, const WireFormat w
         const auto& method = *method_with_info.method;
         std::string method_name = NameMethod(protocol_name, method);
         std::string method_qname = NameMethod(protocol_qname, method);
-        auto CreateMessage = [&](const flat::Struct& message, types::MessageKind kind) -> void {
+        auto CreateMessage = [&](const flat::Struct* message, types::MessageKind kind) -> void {
           std::string message_name = NameMessage(method_name, kind);
           std::string message_qname = NameMessage(method_qname, kind);
+
+          // TODO(fxbug.dev/76316): remove this assert once this generator is
+          //  able to properly handle empty structs as payloads.
+          assert((!message || (message && !message->members.empty())) &&
+                 "cannot process empty message payloads");
+
+          auto typeshape =
+              message != nullptr ? message->typeshape(wire_format) : TypeShape::ForEmptyPayload();
           protocol_messages.push_back(std::make_unique<coded::MessageType>(
-              std::move(message_name), std::vector<coded::StructElement>(),
-              message.typeshape(wire_format).InlineSize(), std::move(message_qname)));
+              std::move(message_name), std::vector<coded::StructElement>(), typeshape.InlineSize(),
+              std::move(message_qname)));
         };
-        if (method.maybe_request) {
-          CreateMessage(*method.maybe_request, types::MessageKind::kRequest);
+        if (method.has_request) {
+          CreateMessage(method.maybe_request_payload, types::MessageKind::kRequest);
         }
-        if (method.maybe_response) {
+        if (method.has_response) {
           auto kind =
-              method.maybe_request ? types::MessageKind::kResponse : types::MessageKind::kEvent;
-          CreateMessage(*method.maybe_response, kind);
+              method.has_request ? types::MessageKind::kResponse : types::MessageKind::kEvent;
+          CreateMessage(method.maybe_response_payload, kind);
         }
       }
       named_coded_types_.emplace(

@@ -1791,11 +1791,12 @@ bool SimpleLayoutConstraint(Reporter* reporter, const std::unique_ptr<Attribute>
     }
     case AttributePlacement::kMethod: {
       auto method = static_cast<const Protocol::Method*>(attributable);
-      if (method->maybe_request && !SimpleLayoutConstraint(reporter, attr, method->maybe_request)) {
+      if (method->maybe_request_payload &&
+          !SimpleLayoutConstraint(reporter, attr, method->maybe_request_payload)) {
         return false;
       }
-      if (method->maybe_response &&
-          !SimpleLayoutConstraint(reporter, attr, method->maybe_response)) {
+      if (method->maybe_response_payload &&
+          !SimpleLayoutConstraint(reporter, attr, method->maybe_response_payload)) {
         return false;
       }
       return true;
@@ -2889,24 +2890,25 @@ void Library::ConsumeProtocolDeclaration(
     }
 
     SourceSpan method_name = method->identifier->span();
+    bool has_request = method->maybe_request != nullptr;
     Struct* maybe_request = nullptr;
-    if (method->maybe_request != nullptr) {
-      auto request_span = method->maybe_request->span();
-      auto request_name = Name::CreateDerived(this, request_span, NextAnonymousName());
-      if (!ConsumeParameterList(std::move(request_name), std::move(method->maybe_request), true,
+    if (has_request) {
+      if (!ConsumeParameterList(std::nullopt, std::move(method->maybe_request), true,
                                 &maybe_request))
         return;
     }
 
+    bool has_response = method->maybe_response != nullptr;
     Struct* maybe_response = nullptr;
-    if (method->maybe_response != nullptr) {
+    if (has_response) {
       const bool has_error = (method->maybe_error_ctor != nullptr);
 
       SourceSpan response_span = method->maybe_response->span();
-      Name response_name = Name::CreateDerived(
-          this, response_span,
-          has_error ? StringJoin({name.decl_name(), method_name.data(), "Response"}, "_")
-                    : NextAnonymousName());
+      std::optional<Name> response_name =
+          !has_error ? std::nullopt
+                     : std::make_optional<Name>(Name::CreateDerived(
+                           this, response_span,
+                           StringJoin({name.decl_name(), method_name.data(), "Response"}, "_")));
       if (!ConsumeParameterList(std::move(response_name), std::move(method->maybe_response),
                                 !has_error, &maybe_response))
         return;
@@ -2917,10 +2919,10 @@ void Library::ConsumeProtocolDeclaration(
       }
     }
 
-    assert(maybe_request != nullptr || maybe_response != nullptr);
+    assert(has_request || has_response);
     methods.emplace_back(std::move(attributes), std::move(method->identifier),
-                         std::move(method_name), std::move(maybe_request),
-                         std::move(maybe_response));
+                         std::move(method_name), has_request, std::move(maybe_request),
+                         has_response, std::move(maybe_response));
   }
 
   std::unique_ptr<AttributeList> attributes;
@@ -2979,8 +2981,25 @@ std::unique_ptr<TypeConstructorOld> Library::IdentifierTypeForDecl(const Decl* d
                                               nullability);
 }
 
-bool Library::ConsumeParameterList(Name name, std::unique_ptr<raw::ParameterList> parameter_list,
+bool Library::ConsumeParameterList(std::optional<Name> assigned_name,
+                                   std::unique_ptr<raw::ParameterList> parameter_list,
                                    bool is_request_or_response, Struct** out_struct_decl) {
+  // If is_request_or_response is false, this parameter list is being generated
+  // as one of two members in the "Foo_Result" union.  In this case, we proceed
+  // with generating an empty struct, so that the first member of this union,
+  // "Foo_Response," may be filled.  In the other case, an empty parameter list
+  // means that the body payload is expected to be empty, so the out_struct_decl
+  // should be left as null to indicate as much.
+  if (is_request_or_response && parameter_list->parameter_list.empty()) {
+    return true;
+  }
+
+  // If the name is unset, we need to generate an anonymous name for the struct
+  // representing this parameter list.
+  Name name = assigned_name.has_value()
+              ? assigned_name.value()
+              : Name::CreateDerived(this, parameter_list->span(), NextAnonymousName());
+
   std::vector<Struct::Member> members;
   for (auto& parameter : parameter_list->parameter_list) {
     std::unique_ptr<AttributeList> attributes;
@@ -4217,11 +4236,11 @@ bool Library::DeclDependencies(const Decl* decl, std::set<const Decl*>* out_edge
         }
       }
       for (const auto& method : protocol_decl->methods) {
-        if (method.maybe_request != nullptr) {
-          edges.insert(method.maybe_request);
+        if (method.maybe_request_payload != nullptr) {
+          edges.insert(method.maybe_request_payload);
         }
-        if (method.maybe_response != nullptr) {
-          edges.insert(method.maybe_response);
+        if (method.maybe_response_payload != nullptr) {
+          edges.insert(method.maybe_response_payload);
         }
       }
       break;
@@ -5072,12 +5091,12 @@ bool Library::CompileProtocol(Protocol* protocol_declaration) {
     return false;
 
   for (auto& method : protocol_declaration->methods) {
-    if (method.maybe_request) {
-      if (!CompileDecl(method.maybe_request))
+    if (method.maybe_request_payload) {
+      if (!CompileDecl(method.maybe_request_payload))
         return false;
     }
-    if (method.maybe_response) {
-      if (!CompileDecl(method.maybe_response))
+    if (method.maybe_response_payload) {
+      if (!CompileDecl(method.maybe_response_payload))
         return false;
     }
   }

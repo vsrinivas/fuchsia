@@ -21,14 +21,6 @@ class HandleRightsProtocol_TestBase
   }
 };
 
-class DiscoverableProtocol_TestBase
-    : public ::fidl::test::protocols::DiscoverableProtocol {
- public:
-  virtual ~DiscoverableProtocol_TestBase() {}
-  virtual void NotImplemented_(const std::string& name) = 0;
-  void Method() override { NotImplemented_("Method"); }
-};
-
 class Transitional_TestBase : public ::fidl::test::protocols::Transitional {
  public:
   virtual ~Transitional_TestBase() {}
@@ -101,6 +93,14 @@ class WithErrorSyntax_TestBase
   void HandleInResult(HandleInResultCallback callback) override {
     NotImplemented_("HandleInResult");
   }
+};
+
+class DiscoverableProtocol_TestBase
+    : public ::fidl::test::protocols::DiscoverableProtocol {
+ public:
+  virtual ~DiscoverableProtocol_TestBase() {}
+  virtual void NotImplemented_(const std::string& name) = 0;
+  void Method() override { NotImplemented_("Method"); }
 };
 }  // namespace testing
 }  // namespace protocols

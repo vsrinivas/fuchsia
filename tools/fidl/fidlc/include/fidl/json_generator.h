@@ -166,7 +166,7 @@ class JSONGenerator : public utils::JsonWriter<JSONGenerator> {
                                  flat::TypeConstructorPtr type_ctor,
                                  Position position = Position::kSubsequent);
   void GenerateExperimentalMaybeFromTypeAlias(const flat::LayoutInvocation& invocation);
-  void GenerateRequest(const std::string& prefix, const flat::Struct& value);
+  void GenerateRequest(const std::string& prefix, const flat::Struct* value);
   void GenerateDeclarationsEntry(int count, const flat::Name& name, std::string_view decl_kind);
   void GenerateDeclarationsMember(const flat::Library* library,
                                   Position position = Position::kSubsequent);
@@ -176,8 +176,7 @@ class JSONGenerator : public utils::JsonWriter<JSONGenerator> {
   void GenerateExternalDeclarationsMember(const flat::Library* library,
                                           Position position = Position::kSubsequent);
   void GenerateTypeShapes(const flat::Object& object);
-  void GenerateTypeShapes(std::string prefix, const flat::Object& object,
-                          bool is_request_or_response = false);
+  void GenerateTypeShapes(std::string prefix, const flat::Struct* value);
   void GenerateFieldShapes(const flat::Struct::Member& struct_member,
                            bool is_request_or_response = false);
 

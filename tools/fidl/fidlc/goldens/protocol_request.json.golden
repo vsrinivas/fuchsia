@@ -69,7 +69,7 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.protocolrequest/SomeLongAnonymousPrefix1",
+          "maybe_response_payload": "fidl.test.protocolrequest/SomeLongAnonymousPrefix0",
           "maybe_response_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -122,7 +122,7 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.protocolrequest/SomeLongAnonymousPrefix3",
+          "maybe_response_payload": "fidl.test.protocolrequest/SomeLongAnonymousPrefix1",
           "maybe_response_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -164,7 +164,7 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.protocolrequest/SomeLongAnonymousPrefix4",
+          "maybe_request_payload": "fidl.test.protocolrequest/SomeLongAnonymousPrefix2",
           "maybe_request_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -207,7 +207,7 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.protocolrequest/SomeLongAnonymousPrefix5",
+          "maybe_request_payload": "fidl.test.protocolrequest/SomeLongAnonymousPrefix3",
           "maybe_request_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -226,7 +226,7 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "fidl.test.protocolrequest/SomeLongAnonymousPrefix1",
+      "name": "fidl.test.protocolrequest/SomeLongAnonymousPrefix0",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
         "line": 7,
@@ -266,7 +266,7 @@
       }
     },
     {
-      "name": "fidl.test.protocolrequest/SomeLongAnonymousPrefix3",
+      "name": "fidl.test.protocolrequest/SomeLongAnonymousPrefix1",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
         "line": 8,
@@ -306,7 +306,7 @@
       }
     },
     {
-      "name": "fidl.test.protocolrequest/SomeLongAnonymousPrefix4",
+      "name": "fidl.test.protocolrequest/SomeLongAnonymousPrefix2",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
         "line": 9,
@@ -346,7 +346,7 @@
       }
     },
     {
-      "name": "fidl.test.protocolrequest/SomeLongAnonymousPrefix5",
+      "name": "fidl.test.protocolrequest/SomeLongAnonymousPrefix3",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
         "line": 10,
@@ -399,8 +399,6 @@
     "fidl.test.protocolrequest/SomeLongAnonymousPrefix0": "struct",
     "fidl.test.protocolrequest/SomeLongAnonymousPrefix1": "struct",
     "fidl.test.protocolrequest/SomeLongAnonymousPrefix2": "struct",
-    "fidl.test.protocolrequest/SomeLongAnonymousPrefix3": "struct",
-    "fidl.test.protocolrequest/SomeLongAnonymousPrefix4": "struct",
-    "fidl.test.protocolrequest/SomeLongAnonymousPrefix5": "struct"
+    "fidl.test.protocolrequest/SomeLongAnonymousPrefix3": "struct"
   }
 }

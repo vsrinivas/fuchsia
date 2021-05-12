@@ -36,10 +36,11 @@
 #include <zircon/fidl.h>
 
 namespace fidl_test_bindingsdenylist {
-class OnlyLibfuzzerAndDeps;
 namespace wire {
 class OnlyLlcpp;
 }  // namespace wire
+class OnlyLibfuzzerAndDeps;
+
 class OnlyCppAndDeps;
 namespace wire {
 
@@ -926,6 +927,15 @@ constexpr uint32_t kAllBindings = 0u;
 namespace fidl {
 
 template <>
+struct IsFidlType<::fidl_test_bindingsdenylist::wire::OnlyLlcpp>
+    : public std::true_type {};
+template <>
+struct IsUnion<::fidl_test_bindingsdenylist::wire::OnlyLlcpp>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::fidl_test_bindingsdenylist::wire::OnlyLlcpp>);
+
+template <>
 struct IsFidlType<
     ::fidl::WireRequest<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                             LibfuzzerNeedsNonemptyProtocol>>
@@ -958,15 +968,6 @@ static_assert(
                LibfuzzerNeedsNonemptyProtocol>) ==
     ::fidl::WireResponse<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                              LibfuzzerNeedsNonemptyProtocol>::PrimarySize);
-
-template <>
-struct IsFidlType<::fidl_test_bindingsdenylist::wire::OnlyLlcpp>
-    : public std::true_type {};
-template <>
-struct IsUnion<::fidl_test_bindingsdenylist::wire::OnlyLlcpp>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::fidl_test_bindingsdenylist::wire::OnlyLlcpp>);
 }  // namespace fidl
 #ifdef __Fuchsia__
 

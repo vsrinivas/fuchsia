@@ -109,10 +109,10 @@ union ExampleUnion {
   ASSERT_NOT_NULL(example_protocol);
   EXPECT_TRUE(example_protocol->attributes->HasAttribute("OnProtocol"));
   EXPECT_TRUE(example_protocol->methods.front().attributes->HasAttribute("OnMethod"));
-  ASSERT_NOT_NULL(example_protocol->methods.front().maybe_request);
-  EXPECT_TRUE(
-      example_protocol->methods.front().maybe_request->members.front().attributes->HasAttribute(
-          "OnParameter"));
+  ASSERT_NOT_NULL(example_protocol->methods.front().maybe_request_payload);
+  EXPECT_TRUE(example_protocol->methods.front()
+                  .maybe_request_payload->members.front()
+                  .attributes->HasAttribute("OnParameter"));
 
   auto example_service = library.LookupService("ExampleService");
   ASSERT_NOT_NULL(example_service);

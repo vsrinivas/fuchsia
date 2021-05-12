@@ -54,9 +54,6 @@ static const struct FidlStructElement Fields52fidl_test_protocols_HandleRightsPr
 };
 const struct FidlCodedStruct fidl_test_protocols_HandleRightsProtocolAnEventEventTable = {.tag=kFidlTypeStruct, .elements=Fields52fidl_test_protocols_HandleRightsProtocolAnEventEvent, .element_count=2u, .size=24u, .name="fidl.test.protocols/HandleRightsProtocolAnEventEvent"};
 
-__LOCAL extern const struct FidlCodedStruct fidl_test_protocols_DiscoverableProtocolMethodRequestTable;
-const struct FidlCodedStruct fidl_test_protocols_DiscoverableProtocolMethodRequestTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=16u, .name="fidl.test.protocols/DiscoverableProtocolMethodRequest"};
-
 __LOCAL extern const struct FidlCodedStruct fidl_test_protocols_TransitionalRequestRequestTable;
 const struct FidlCodedStruct fidl_test_protocols_TransitionalRequestRequestTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=24u, .name="fidl.test.protocols/TransitionalRequestRequest"};
 
@@ -198,6 +195,9 @@ static const struct FidlStructElement Fields57fidl_test_protocols_WithErrorSynta
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset=16u, .field_type=(fidl_type_t*)(&fidl_test_protocols_WithErrorSyntax_HandleInResult_ResultTable)}}
 };
 const struct FidlCodedStruct fidl_test_protocols_WithErrorSyntaxHandleInResultResponseTable = {.tag=kFidlTypeStruct, .elements=Fields57fidl_test_protocols_WithErrorSyntaxHandleInResultResponse, .element_count=1u, .size=40u, .name="fidl.test.protocols/WithErrorSyntaxHandleInResultResponse"};
+
+__LOCAL extern const struct FidlCodedStruct fidl_test_protocols_DiscoverableProtocolMethodRequestTable;
+const struct FidlCodedStruct fidl_test_protocols_DiscoverableProtocolMethodRequestTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=16u, .name="fidl.test.protocols/DiscoverableProtocolMethodRequest"};
 
 
 const struct FidlCodedBits fidl_test_protocols_rightsTable = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Strict, .mask=3ul, .name="fidl.test.protocols/rights"};

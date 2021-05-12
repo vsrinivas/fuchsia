@@ -79,9 +79,9 @@ class Namer {
 
 constexpr int kRepeatTestCount = 100;
 
-// TODO(fxbug.dev/75526): this test is temporarily validating undesired
-//  behavior, and will be altered in the next change.
-TEST(DeclarationOrderTest, GoodAllowUnusedAnonymousNames) {
+// This test ensures that there are no unused anonymous structs in the
+// declaration order output.
+TEST(DeclarationOrderTest, GoodNoUnusedAnonymousNames) {
   for (int i = 0; i < kRepeatTestCount; i++) {
     Namer namer;
     auto source = namer.mangle(R"FIDL(
@@ -95,40 +95,34 @@ protocol #Protocol# {
     TestLibrary library(source);
     ASSERT_COMPILED_AND_CONVERT(library);
     auto decl_order = library.declaration_order();
-    ASSERT_EQ(3, decl_order.size());
-    ASSERT_DECL_NAME(decl_order[0], "SomeLongAnonymousPrefix1");
-    ASSERT_DECL_NAME(decl_order[1], "SomeLongAnonymousPrefix0");
-    ASSERT_DECL_NAME(decl_order[2], namer.of("Protocol"));
+    ASSERT_EQ(1, decl_order.size());
+    ASSERT_DECL_NAME(decl_order[0], namer.of("Protocol"));
   }
 }
 
-// TODO(fxbug.dev/75526): this test is temporarily validating undesired
-//  behavior, and will be altered in the next change.
-TEST(DeclarationOrderTest, GoodAnonymousNamesSparseNumbering) {
+// This test ensures that there are no "holes" in the anonymous number range.
+TEST(DeclarationOrderTest, GoodAnonymousNamesDenseNumbering) {
   for (int i = 0; i < kRepeatTestCount; i++) {
     Namer namer;
     auto source = namer.mangle(R"FIDL(
 library example;
 
 protocol #Protocol# {
-    Method1(string arg) -> ();
-    Method2() -> (string ret);
+    Method1(string arg) -> (); // SomeLongAnonymousPrefix0
+    Method2() -> (string ret); // SomeLongAnonymousPrefix1
     -> Event1();
-    -> Event2(string ret);
+    -> Event2(string ret);     // SomeLongAnonymousPrefix2
 };
 
 )FIDL");
     TestLibrary library(source);
     ASSERT_COMPILED_AND_CONVERT(library);
     auto decl_order = library.declaration_order();
-    ASSERT_EQ(7, decl_order.size());
-    ASSERT_DECL_NAME(decl_order[0], "SomeLongAnonymousPrefix5");
-    ASSERT_DECL_NAME(decl_order[1], "SomeLongAnonymousPrefix4");
-    ASSERT_DECL_NAME(decl_order[2], "SomeLongAnonymousPrefix3");
-    ASSERT_DECL_NAME(decl_order[3], "SomeLongAnonymousPrefix2");
-    ASSERT_DECL_NAME(decl_order[4], "SomeLongAnonymousPrefix1");
-    ASSERT_DECL_NAME(decl_order[5], "SomeLongAnonymousPrefix0");
-    ASSERT_DECL_NAME(decl_order[6], namer.of("Protocol"));
+    ASSERT_EQ(4, decl_order.size());
+    ASSERT_DECL_NAME(decl_order[0], "SomeLongAnonymousPrefix2");
+    ASSERT_DECL_NAME(decl_order[1], "SomeLongAnonymousPrefix1");
+    ASSERT_DECL_NAME(decl_order[2], "SomeLongAnonymousPrefix0");
+    ASSERT_DECL_NAME(decl_order[3], namer.of("Protocol"));
   }
 }
 

@@ -12,10 +12,6 @@
           "kind": "struct",
           "resource": false
         },
-        "bottom/SomeLongAnonymousPrefix1": {
-          "kind": "struct",
-          "resource": false
-        },
         "bottom/Foo": {
           "kind": "struct",
           "resource": false
@@ -97,7 +93,7 @@
               }
             }
           ],
-          "maybe_response_payload": "bottom/SomeLongAnonymousPrefix1",
+          "maybe_response_payload": "bottom/SomeLongAnonymousPrefix0",
           "maybe_response_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -115,7 +111,7 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "bottom/SomeLongAnonymousPrefix1",
+      "name": "bottom/SomeLongAnonymousPrefix0",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/transitive_dependencies_compose/bottom.test.fidl",
         "line": 8,

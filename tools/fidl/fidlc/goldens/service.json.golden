@@ -198,11 +198,11 @@
   "union_declarations": [],
   "type_alias_declarations": [],
   "declaration_order": [
-    "fidl.test.service/SecondProtocol",
-    "fidl.test.service/FirstProtocol",
     "fidl.test.service/SingleMemberService",
+    "fidl.test.service/SecondProtocol",
     "fidl.test.service/MultiHomogeneousMemberService",
     "fidl.test.service/MultiHeterogeneousMemberService",
+    "fidl.test.service/FirstProtocol",
     "fidl.test.service/EmptyService"
   ],
   "declarations": {
@@ -211,8 +211,6 @@
     "fidl.test.service/EmptyService": "service",
     "fidl.test.service/SingleMemberService": "service",
     "fidl.test.service/MultiHeterogeneousMemberService": "service",
-    "fidl.test.service/MultiHomogeneousMemberService": "service",
-    "fidl.test.service/SomeLongAnonymousPrefix0": "struct",
-    "fidl.test.service/SomeLongAnonymousPrefix1": "struct"
+    "fidl.test.service/MultiHomogeneousMemberService": "service"
   }
 }

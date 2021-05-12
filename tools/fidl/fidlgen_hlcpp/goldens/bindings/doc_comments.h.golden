@@ -17,15 +17,6 @@ class Struct;
 class StrictUnion;
 
 #ifdef __Fuchsia__
-
-/// interface comment #1
-///
-/// interface comment #3
-class Interface;
-using InterfaceHandle = ::fidl::InterfaceHandle<Interface>;
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
 class Service;
 #endif  // __Fuchsia__
 
@@ -298,6 +289,15 @@ inline zx_status_t Clone(::fidl::test::doccomments::MyFlexibleBits value,
   *result = value;
   return ZX_OK;
 }
+
+#ifdef __Fuchsia__
+
+/// interface comment #1
+///
+/// interface comment #3
+class Interface;
+using InterfaceHandle = ::fidl::InterfaceHandle<Interface>;
+#endif  // __Fuchsia__
 
 class FlexibleUnion;
 
@@ -1012,6 +1012,10 @@ struct Equality<::fidl::test::doccomments::FlexibleUnion> {
 namespace test {
 namespace doccomments {
 #ifdef __Fuchsia__
+class Service;
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 
 /// interface comment #1
 ///
@@ -1031,7 +1035,52 @@ constexpr uint64_t kInterface_OnEvent_Ordinal = 0x37812b697096f6falu;
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-class Service;
+
+/// service comment #1
+///
+/// service comment #3
+class Service final {
+ public:
+  class Handler;
+
+  static constexpr char Name[] = "fidl.test.doccomments.Service";
+
+  explicit Service(std::unique_ptr<::fidl::ServiceConnector> service)
+      : service_(std::move(service)) {}
+
+  explicit operator bool() const { return !!service_; }
+  /// Returns a |fidl::MemberConnector| which can be used to connect to the
+  /// member protocol "interface".
+  ::fidl::MemberConnector<::fidl::test::doccomments::Interface> interface()
+      const {
+    return ::fidl::MemberConnector<::fidl::test::doccomments::Interface>(
+        service_.get(), "interface");
+  }
+
+ private:
+  std::unique_ptr<::fidl::ServiceConnector> service_;
+};
+
+/// Facilitates member protocol registration for servers.
+class Service::Handler final {
+ public:
+  /// Constructs a new |Handler|. Does not take ownership of |service|.
+  explicit Handler(::fidl::ServiceHandlerBase* service) : service_(service) {}
+  /// Adds member "interface" to the service instance. |handler| is invoked when
+  /// a connection is made to the member protocol.
+  ///
+  /// # Errors
+  ///
+  /// Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
+  zx_status_t add_interface(
+      ::fidl::InterfaceRequestHandler<::fidl::test::doccomments::Interface>
+          handler) {
+    return service_->AddMember("interface", std::move(handler));
+  }
+
+ private:
+  ::fidl::ServiceHandlerBase* const service_;
+};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1126,55 +1175,6 @@ class Interface_SyncProxy : public ::fidl::test::doccomments::Interface_Sync {
  private:
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<Interface>;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-/// service comment #1
-///
-/// service comment #3
-class Service final {
- public:
-  class Handler;
-
-  static constexpr char Name[] = "fidl.test.doccomments.Service";
-
-  explicit Service(std::unique_ptr<::fidl::ServiceConnector> service)
-      : service_(std::move(service)) {}
-
-  explicit operator bool() const { return !!service_; }
-  /// Returns a |fidl::MemberConnector| which can be used to connect to the
-  /// member protocol "interface".
-  ::fidl::MemberConnector<::fidl::test::doccomments::Interface> interface()
-      const {
-    return ::fidl::MemberConnector<::fidl::test::doccomments::Interface>(
-        service_.get(), "interface");
-  }
-
- private:
-  std::unique_ptr<::fidl::ServiceConnector> service_;
-};
-
-/// Facilitates member protocol registration for servers.
-class Service::Handler final {
- public:
-  /// Constructs a new |Handler|. Does not take ownership of |service|.
-  explicit Handler(::fidl::ServiceHandlerBase* service) : service_(service) {}
-  /// Adds member "interface" to the service instance. |handler| is invoked when
-  /// a connection is made to the member protocol.
-  ///
-  /// # Errors
-  ///
-  /// Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
-  zx_status_t add_interface(
-      ::fidl::InterfaceRequestHandler<::fidl::test::doccomments::Interface>
-          handler) {
-    return service_->AddMember("interface", std::move(handler));
-  }
-
- private:
-  ::fidl::ServiceHandlerBase* const service_;
 };
 #endif  // __Fuchsia__
 

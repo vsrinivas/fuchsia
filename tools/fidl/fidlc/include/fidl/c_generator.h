@@ -62,7 +62,9 @@ class CGenerator {
   struct NamedMessage {
     std::string c_name;
     std::string coded_name;
-    const std::vector<flat::Struct::Member>& parameters;
+    // A nullptr for parameters is used to represent an absent request/response
+    // payload (as opposed to a payload that is simply an empty struct).
+    const std::vector<flat::Struct::Member>* parameters;
     const TypeShape typeshape;
   };
 

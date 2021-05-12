@@ -1983,6 +1983,38 @@ struct ExternalSimpleStruct {
                                                     }));
 }
 
+// TODO(fxbug.dev/75526): using empty structs as request/response payloads is
+//  only supported in the new syntax.  Until this is supported and we can write
+//  this test in the new syntax, we "fake" an empty struct payload by generating
+//  the flat::Struct ourselves, rather than using the compiled output.
+TEST(TypeshapeTests, GoodEmptyStructPayload) {
+  TestLibrary library(R"FIDL(
+library example;
+
+struct Empty {};
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+
+  auto empty = library.LookupStruct("Empty");
+  ASSERT_NOT_NULL(empty);
+
+  const fidl::flat::Struct fake_payload(
+      nullptr, empty->name, std::vector<fidl::flat::StructMember>(), std::nullopt, true);
+  ASSERT_NO_FAILURES(CheckTypeShape(&fake_payload,
+                                    Expected{
+                                        .inline_size = 24,
+                                        .alignment = 8,
+                                    },
+                                    Expected{
+                                        .inline_size = 24,
+                                        .alignment = 8,
+                                    },
+                                    Expected{
+                                        .inline_size = 8,
+                                        .alignment = 8,
+                                    }));
+}
+
 TEST(TypeshapeTests, GoodRecursiveRequest) {
   TestLibrary library(R"FIDL(
 library example;
@@ -2011,7 +2043,8 @@ protocol MessagePort {
   ASSERT_NOT_NULL(message_port);
   ASSERT_EQ(message_port->methods.size(), 1);
   auto& post_message = message_port->methods[0];
-  auto post_message_request = post_message.maybe_request;
+  auto post_message_request = post_message.maybe_request_payload;
+  EXPECT_EQ(post_message.has_request, true);
   ASSERT_NOT_NULL(post_message_request);
   ASSERT_NO_FAILURES(CheckTypeShape(post_message_request,
                                     Expected{
@@ -2063,7 +2096,8 @@ protocol MessagePort {
   ASSERT_NOT_NULL(message_port);
   ASSERT_EQ(message_port->methods.size(), 1);
   auto& post_message = message_port->methods[0];
-  auto post_message_request = post_message.maybe_request;
+  auto post_message_request = post_message.maybe_request_payload;
+  EXPECT_EQ(post_message.has_request, true);
   ASSERT_NOT_NULL(post_message_request);
   ASSERT_NO_FAILURES(CheckTypeShape(post_message_request,
                                     Expected{
@@ -2112,7 +2146,8 @@ protocol MessagePort {
   ASSERT_NOT_NULL(message_port);
   ASSERT_EQ(message_port->methods.size(), 1);
   auto& post_message = message_port->methods[0];
-  auto post_message_request = post_message.maybe_request;
+  auto post_message_request = post_message.maybe_request_payload;
+  EXPECT_EQ(post_message.has_request, true);
   ASSERT_NOT_NULL(post_message_request);
   ASSERT_NO_FAILURES(CheckTypeShape(post_message_request,
                                     Expected{
@@ -2161,7 +2196,8 @@ protocol MessagePort {
   ASSERT_NOT_NULL(message_port);
   ASSERT_EQ(message_port->methods.size(), 1);
   auto& post_message = message_port->methods[0];
-  auto post_message_request = post_message.maybe_request;
+  auto post_message_request = post_message.maybe_request_payload;
+  EXPECT_EQ(post_message.has_request, true);
   ASSERT_NOT_NULL(post_message_request);
   ASSERT_NO_FAILURES(CheckTypeShape(post_message_request,
                                     Expected{
@@ -2442,24 +2478,9 @@ protocol Child {
   ASSERT_NOT_NULL(child);
   ASSERT_EQ(child->all_methods.size(), 1);
   auto& sync_with_info = child->all_methods[0];
-  auto sync_request = sync_with_info.method->maybe_request;
-  ASSERT_NOT_NULL(sync_request);
-  ASSERT_NO_FAILURES(CheckTypeShape(sync_request,
-                                    Expected{
-                                        .inline_size = 16,
-                                        .alignment = 8,
-                                    },
-                                    Expected{
-                                        .inline_size = 16,
-                                        .alignment = 8,
-                                    },
-                                    // Note that this typeshape is not actually included
-                                    // in the JSON IR since it corresponds to an empty
-                                    // payload.
-                                    Expected{
-                                        .inline_size = 8,
-                                        .alignment = 8,
-                                    }));
+  auto sync_request = sync_with_info.method->maybe_request_payload;
+  EXPECT_EQ(sync_with_info.method->has_request, true);
+  ASSERT_NULL(sync_request);
 }
 
 TEST(TypeshapeTests, GoodUnionSize8Alignment4Sandwich) {

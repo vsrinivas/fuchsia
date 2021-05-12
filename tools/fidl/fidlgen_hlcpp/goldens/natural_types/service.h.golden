@@ -11,19 +11,13 @@ namespace fidl {
 namespace test {
 namespace service {
 #ifdef __Fuchsia__
+class SingleMemberService;
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 
 class SecondProtocol;
 using SecondProtocolHandle = ::fidl::InterfaceHandle<SecondProtocol>;
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-class FirstProtocol;
-using FirstProtocolHandle = ::fidl::InterfaceHandle<FirstProtocol>;
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-class SingleMemberService;
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -32,6 +26,12 @@ class MultiHomogeneousMemberService;
 
 #ifdef __Fuchsia__
 class MultiHeterogeneousMemberService;
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+class FirstProtocol;
+using FirstProtocolHandle = ::fidl::InterfaceHandle<FirstProtocol>;
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__

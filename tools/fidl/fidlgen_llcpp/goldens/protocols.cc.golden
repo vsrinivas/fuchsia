@@ -594,115 +594,6 @@ void ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult::
 }
 
 namespace fidl_test_protocols {
-[[maybe_unused]] constexpr uint64_t kDiscoverableProtocol_Method_Ordinal =
-    16177161678225767lu;
-
-extern "C" const fidl_type_t
-    fidl_test_protocols_DiscoverableProtocolMethodRequestTable;
-
-extern "C" const fidl_type_t
-    fidl_test_protocols_DiscoverableProtocolMethodResponseTable;
-#ifdef __Fuchsia__
-}  // namespace fidl_test_protocols
-::fidl::WireResult<::fidl_test_protocols::DiscoverableProtocol::Method>::
-    WireResult(
-        ::fidl::UnownedClientEnd<::fidl_test_protocols::DiscoverableProtocol>
-            _client) {
-  ::fidl::OwnedEncodedMessage<
-      ::fidl::WireRequest<::fidl_test_protocols::DiscoverableProtocol::Method>>
-      _request(zx_txid_t(0));
-  auto& _outgoing = _request.GetOutgoingMessage();
-  _outgoing.Write(_client);
-  SetResult(_outgoing);
-}
-namespace fidl_test_protocols {
-#endif  // __Fuchsia__
-
-}  // namespace fidl_test_protocols
-#ifdef __Fuchsia__
-::fidl::Result fidl::internal::WireClientImpl<
-    ::fidl_test_protocols::DiscoverableProtocol>::Method() {
-  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    auto _res = ::fidl::WireResult<
-        ::fidl_test_protocols::DiscoverableProtocol::Method>(
-        ::fidl::UnownedClientEnd<::fidl_test_protocols::DiscoverableProtocol>(
-            _channel->handle()));
-    return _res;
-  }
-  return ::fidl::Result::Unbound();
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-std::optional<::fidl::UnbindInfo> fidl::internal::
-    WireClientImpl<::fidl_test_protocols::DiscoverableProtocol>::DispatchEvent(
-        fidl::IncomingMessage& msg) {
-  return ::fidl::UnbindInfo::UnknownOrdinal();
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-::fidl::DispatchResult fidl::internal::WireServerDispatcher<
-    ::fidl_test_protocols::DiscoverableProtocol>::
-    TryDispatch(
-        ::fidl::WireServer<::fidl_test_protocols::DiscoverableProtocol>* impl,
-        ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn) {
-  static const ::fidl::internal::MethodEntry entries[] = {
-      {
-          ::fidl_test_protocols::kDiscoverableProtocol_Method_Ordinal,
-          [](void* interface, ::fidl::IncomingMessage&& msg,
-             ::fidl::Transaction* txn) {
-            auto* primary = reinterpret_cast<::fidl::WireRequest<
-                ::fidl_test_protocols::DiscoverableProtocol::Method>*>(
-                msg.bytes());
-            ::fidl::WireServer<::fidl_test_protocols::DiscoverableProtocol>::
-                MethodCompleter::Sync completer(txn);
-            reinterpret_cast<::fidl::WireServer<
-                ::fidl_test_protocols::DiscoverableProtocol>*>(interface)
-                ->Method(primary, completer);
-            return ZX_OK;
-          },
-      },
-  };
-  return ::fidl::internal::TryDispatch(
-      impl, msg, txn, entries,
-      entries + sizeof(entries) / sizeof(::fidl::internal::MethodEntry));
-}
-
-::fidl::DispatchResult fidl::internal::
-    WireServerDispatcher<::fidl_test_protocols::DiscoverableProtocol>::Dispatch(
-        ::fidl::WireServer<::fidl_test_protocols::DiscoverableProtocol>* impl,
-        ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
-  ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
-  if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
-    std::move(msg).CloseHandles();
-    txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal());
-  }
-  return dispatch_result;
-}
-::fidl::DispatchResult
-fidl::WireServer<::fidl_test_protocols::DiscoverableProtocol>::dispatch_message(
-    fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
-  return ::fidl::internal::WireServerDispatcher<
-      ::fidl_test_protocols::DiscoverableProtocol>::Dispatch(this,
-                                                             std::move(msg),
-                                                             txn);
-}
-#endif  // __Fuchsia__
-
-void ::fidl::WireRequest<::fidl_test_protocols::DiscoverableProtocol::Method>::
-    _InitHeader(zx_txid_t _txid) {
-  fidl_init_txn_header(
-      &_hdr, _txid,
-      ::fidl_test_protocols::kDiscoverableProtocol_Method_Ordinal);
-}
-
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__
-
-namespace fidl_test_protocols {
 [[maybe_unused]] constexpr uint64_t kTransitional_Request_Ordinal =
     7121112290509197032lu;
 
@@ -4609,6 +4500,115 @@ void ::fidl::WireResponse<
   result._CloseHandles();
 }
 #endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
+namespace fidl_test_protocols {
+[[maybe_unused]] constexpr uint64_t kDiscoverableProtocol_Method_Ordinal =
+    16177161678225767lu;
+
+extern "C" const fidl_type_t
+    fidl_test_protocols_DiscoverableProtocolMethodRequestTable;
+
+extern "C" const fidl_type_t
+    fidl_test_protocols_DiscoverableProtocolMethodResponseTable;
+#ifdef __Fuchsia__
+}  // namespace fidl_test_protocols
+::fidl::WireResult<::fidl_test_protocols::DiscoverableProtocol::Method>::
+    WireResult(
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::DiscoverableProtocol>
+            _client) {
+  ::fidl::OwnedEncodedMessage<
+      ::fidl::WireRequest<::fidl_test_protocols::DiscoverableProtocol::Method>>
+      _request(zx_txid_t(0));
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Write(_client);
+  SetResult(_outgoing);
+}
+namespace fidl_test_protocols {
+#endif  // __Fuchsia__
+
+}  // namespace fidl_test_protocols
+#ifdef __Fuchsia__
+::fidl::Result fidl::internal::WireClientImpl<
+    ::fidl_test_protocols::DiscoverableProtocol>::Method() {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    auto _res = ::fidl::WireResult<
+        ::fidl_test_protocols::DiscoverableProtocol::Method>(
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::DiscoverableProtocol>(
+            _channel->handle()));
+    return _res;
+  }
+  return ::fidl::Result::Unbound();
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+std::optional<::fidl::UnbindInfo> fidl::internal::
+    WireClientImpl<::fidl_test_protocols::DiscoverableProtocol>::DispatchEvent(
+        fidl::IncomingMessage& msg) {
+  return ::fidl::UnbindInfo::UnknownOrdinal();
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+::fidl::DispatchResult fidl::internal::WireServerDispatcher<
+    ::fidl_test_protocols::DiscoverableProtocol>::
+    TryDispatch(
+        ::fidl::WireServer<::fidl_test_protocols::DiscoverableProtocol>* impl,
+        ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn) {
+  static const ::fidl::internal::MethodEntry entries[] = {
+      {
+          ::fidl_test_protocols::kDiscoverableProtocol_Method_Ordinal,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
+             ::fidl::Transaction* txn) {
+            auto* primary = reinterpret_cast<::fidl::WireRequest<
+                ::fidl_test_protocols::DiscoverableProtocol::Method>*>(
+                msg.bytes());
+            ::fidl::WireServer<::fidl_test_protocols::DiscoverableProtocol>::
+                MethodCompleter::Sync completer(txn);
+            reinterpret_cast<::fidl::WireServer<
+                ::fidl_test_protocols::DiscoverableProtocol>*>(interface)
+                ->Method(primary, completer);
+            return ZX_OK;
+          },
+      },
+  };
+  return ::fidl::internal::TryDispatch(
+      impl, msg, txn, entries,
+      entries + sizeof(entries) / sizeof(::fidl::internal::MethodEntry));
+}
+
+::fidl::DispatchResult fidl::internal::
+    WireServerDispatcher<::fidl_test_protocols::DiscoverableProtocol>::Dispatch(
+        ::fidl::WireServer<::fidl_test_protocols::DiscoverableProtocol>* impl,
+        ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
+  ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
+  if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
+    std::move(msg).CloseHandles();
+    txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal());
+  }
+  return dispatch_result;
+}
+::fidl::DispatchResult
+fidl::WireServer<::fidl_test_protocols::DiscoverableProtocol>::dispatch_message(
+    fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
+  return ::fidl::internal::WireServerDispatcher<
+      ::fidl_test_protocols::DiscoverableProtocol>::Dispatch(this,
+                                                             std::move(msg),
+                                                             txn);
+}
+#endif  // __Fuchsia__
+
+void ::fidl::WireRequest<::fidl_test_protocols::DiscoverableProtocol::Method>::
+    _InitHeader(zx_txid_t _txid) {
+  fidl_init_txn_header(
+      &_hdr, _txid,
+      ::fidl_test_protocols::kDiscoverableProtocol_Method_Ordinal);
+}
 
 #ifdef __Fuchsia__
 

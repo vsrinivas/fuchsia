@@ -383,15 +383,15 @@ void JSONGenerator::Generate(const flat::Protocol::MethodWithInfo& method_with_i
     GenerateObjectMember("ordinal", value.generated_ordinal64, Position::kFirst);
     GenerateObjectMember("name", value.name);
     GenerateObjectMember("location", NameSpan(value.name));
-    GenerateObjectMember("has_request", value.maybe_request != nullptr);
+    GenerateObjectMember("has_request", value.has_request);
     if (value.attributes && !value.attributes->attributes.empty())
       GenerateObjectMember("maybe_attributes", value.attributes);
-    if (value.maybe_request != nullptr) {
-      GenerateRequest("maybe_request", *value.maybe_request);
+    if (value.has_request) {
+      GenerateRequest("maybe_request", value.maybe_request_payload);
     }
-    GenerateObjectMember("has_response", value.maybe_response != nullptr);
-    if (value.maybe_response != nullptr) {
-      GenerateRequest("maybe_response", *value.maybe_response);
+    GenerateObjectMember("has_response", value.has_response);
+    if (value.has_response) {
+      GenerateRequest("maybe_response", value.maybe_response_payload);
     }
     GenerateObjectMember("is_composed", method_with_info.is_composed);
   });
@@ -509,7 +509,11 @@ void JSONGenerator::GenerateParameterizedType(TypeKind parent_type_kind, const f
   });
 }
 
-void JSONGenerator::GenerateRequest(const std::string& prefix, const flat::Struct& value) {
+void JSONGenerator::GenerateRequest(const std::string& prefix, const flat::Struct* value) {
+  // TODO(fxbug.dev/76316): remove this assert once this generator is able to
+  //  properly handle empty structs as payloads.
+  assert((!value || (value && !value->members.empty())) && "cannot process empty message payloads");
+
   // Temporarily hardcode the generation of request/response struct members to use the old
   // wire format, in order to maintain compatibility during the transition for fxbug.dev/7704.
   // This block of code is copied from JsonWriter::GenerateArray (with the difference
@@ -517,26 +521,30 @@ void JSONGenerator::GenerateRequest(const std::string& prefix, const flat::Struc
   GenerateObjectPunctuation(Position::kSubsequent);
   EmitObjectKey(prefix);
   EmitArrayBegin();
-  if (value.members.begin() != value.members.end()) {
-    Indent();
-    EmitNewlineWithIndent();
-  }
-  for (auto it = value.members.begin(); it != value.members.end(); ++it) {
-    if (it != value.members.begin())
-      EmitArraySeparator();
-    // call Generate with is_request_response = true on each struct member
-    Generate(*it, true);
-  }
-  if (value.members.begin() != value.members.end()) {
-    Outdent();
-    EmitNewlineWithIndent();
+  if (value) {
+    if (value->members.begin() != value->members.end()) {
+      Indent();
+      EmitNewlineWithIndent();
+    }
+    for (auto it = value->members.begin(); it != value->members.end(); ++it) {
+      if (it != value->members.begin())
+        EmitArraySeparator();
+      // call Generate with is_request_response = true on each struct member
+      Generate(*it, true);
+    }
+    if (value->members.begin() != value->members.end()) {
+      Outdent();
+      EmitNewlineWithIndent();
+    }
   }
   EmitArrayEnd();
 
-  if (!value.members.empty()) {
-    GenerateObjectMember(prefix + "_payload", value.name);
+  if (value) {
+    if (!value->members.empty()) {
+      GenerateObjectMember(prefix + "_payload", value->name);
+    }
   }
-  GenerateTypeShapes(prefix, value, true);
+  GenerateTypeShapes(prefix, value);
 }
 
 void JSONGenerator::Generate(const flat::Resource::Property& value) {
@@ -803,19 +811,18 @@ void JSONGenerator::Generate(const flat::Library* library) {
 }
 
 void JSONGenerator::GenerateTypeShapes(const flat::Object& object) {
-  GenerateTypeShapes("", object);
+  GenerateObjectMember("type_shape_v1", TypeShape(object, WireFormat::kV1Header));
 }
 
-void JSONGenerator::GenerateTypeShapes(std::string prefix, const flat::Object& object,
-                                       bool is_request_or_response) {
+void JSONGenerator::GenerateTypeShapes(std::string prefix, const flat::Struct* value) {
+  assert((!value || (value && value->is_request_or_response)) &&
+         "non-null value must be a request/response");
   if (prefix.size() > 0) {
     prefix.push_back('_');
   }
 
-  // NOTE: while the transition for fxbug.dev/7024 is ongoing, we need to treat request/responses
-  // specially as before, but this will be removed once the transition is complete
-  const auto& v1 = is_request_or_response ? WireFormat::kV1NoEe : WireFormat::kV1Header;
-  GenerateObjectMember(prefix + "type_shape_v1", TypeShape(object, v1));
+  auto typeshape = value ? TypeShape(value, WireFormat::kV1NoEe) : TypeShape::ForEmptyPayload();
+  GenerateObjectMember(prefix + "type_shape_v1", typeshape);
 }
 
 void JSONGenerator::GenerateFieldShapes(const flat::Struct::Member& struct_member,
@@ -956,14 +963,14 @@ std::set<const flat::Library*, LibraryComparator> TransitiveDependencies(
   // cross-library protocol composition.
   for (const auto& protocol : library->protocol_declarations_) {
     for (const auto method_with_info : protocol->all_methods) {
-      if (auto request = method_with_info.method->maybe_request) {
+      if (auto request = method_with_info.method->maybe_request_payload) {
         for (const auto& member : request->members) {
           if (auto dep_library = flat::GetName(member.type_ctor).library()) {
             add_dependency(dep_library);
           }
         }
       }
-      if (auto response = method_with_info.method->maybe_response) {
+      if (auto response = method_with_info.method->maybe_response_payload) {
         for (const auto& member : response->members) {
           if (auto dep_library = flat::GetName(member.type_ctor).library()) {
             add_dependency(dep_library);
@@ -997,11 +1004,11 @@ std::vector<const flat::Struct*> AllStructs(const flat::Library* library) {
       if (!method_with_info.is_composed)
         continue;
       const auto& method = method_with_info.method;
-      if (method->maybe_request && !method->maybe_request->members.empty()) {
-        all_structs.push_back(method->maybe_request);
+      if (method->maybe_request_payload) {
+        all_structs.push_back(method->maybe_request_payload);
       }
-      if (method->maybe_response && !method->maybe_response->members.empty()) {
-        all_structs.push_back(method->maybe_response);
+      if (method->maybe_response_payload) {
+        all_structs.push_back(method->maybe_response_payload);
       }
     }
   }

@@ -554,10 +554,10 @@
   ],
   "type_alias_declarations": [],
   "declaration_order": [
-    "fidl.test.bindingsdenylist/OnlyLibfuzzerAndDeps",
     "fidl.test.bindingsdenylist/OnlySyzkaller",
     "fidl.test.bindingsdenylist/OnlyRust",
     "fidl.test.bindingsdenylist/OnlyLlcpp",
+    "fidl.test.bindingsdenylist/OnlyLibfuzzerAndDeps",
     "fidl.test.bindingsdenylist/OnlyHlcpp",
     "fidl.test.bindingsdenylist/OnlyGo",
     "fidl.test.bindingsdenylist/OnlyDart",
@@ -571,8 +571,6 @@
     "fidl.test.bindingsdenylist/OnlyLibfuzzerAndDeps": "interface",
     "fidl.test.bindingsdenylist/OnlyCppAndDeps": "interface",
     "fidl.test.bindingsdenylist/OnlyHlcpp": "service",
-    "fidl.test.bindingsdenylist/SomeLongAnonymousPrefix0": "struct",
-    "fidl.test.bindingsdenylist/SomeLongAnonymousPrefix1": "struct",
     "fidl.test.bindingsdenylist/OnlyGo": "struct",
     "fidl.test.bindingsdenylist/OnlyRust": "table",
     "fidl.test.bindingsdenylist/OnlyLlcpp": "union"

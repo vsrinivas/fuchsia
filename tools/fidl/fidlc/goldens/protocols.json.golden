@@ -316,7 +316,7 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.protocols/SomeLongAnonymousPrefix4",
+          "maybe_response_payload": "fidl.test.protocols/SomeLongAnonymousPrefix0",
           "maybe_response_type_shape_v1": {
             "inline_size": 32,
             "alignment": 8,
@@ -357,7 +357,7 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.protocols/SomeLongAnonymousPrefix5",
+          "maybe_request_payload": "fidl.test.protocols/SomeLongAnonymousPrefix1",
           "maybe_request_type_shape_v1": {
             "inline_size": 32,
             "alignment": 8,
@@ -399,7 +399,7 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.protocols/SomeLongAnonymousPrefix6",
+          "maybe_request_payload": "fidl.test.protocols/SomeLongAnonymousPrefix2",
           "maybe_request_type_shape_v1": {
             "inline_size": 32,
             "alignment": 8,
@@ -451,7 +451,7 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.protocols/SomeLongAnonymousPrefix8",
+          "maybe_request_payload": "fidl.test.protocols/SomeLongAnonymousPrefix3",
           "maybe_request_type_shape_v1": {
             "inline_size": 32,
             "alignment": 8,
@@ -481,7 +481,7 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.protocols/SomeLongAnonymousPrefix9",
+          "maybe_response_payload": "fidl.test.protocols/SomeLongAnonymousPrefix4",
           "maybe_response_type_shape_v1": {
             "inline_size": 32,
             "alignment": 8,
@@ -546,7 +546,7 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.protocols/SomeLongAnonymousPrefix11",
+          "maybe_response_payload": "fidl.test.protocols/SomeLongAnonymousPrefix5",
           "maybe_response_type_shape_v1": {
             "inline_size": 32,
             "alignment": 8,
@@ -611,7 +611,7 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.protocols/SomeLongAnonymousPrefix13",
+          "maybe_response_payload": "fidl.test.protocols/SomeLongAnonymousPrefix6",
           "maybe_response_type_shape_v1": {
             "inline_size": 40,
             "alignment": 8,
@@ -664,7 +664,7 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.protocols/SomeLongAnonymousPrefix15",
+          "maybe_response_payload": "fidl.test.protocols/SomeLongAnonymousPrefix7",
           "maybe_response_type_shape_v1": {
             "inline_size": 40,
             "alignment": 8,
@@ -717,7 +717,7 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.protocols/SomeLongAnonymousPrefix17",
+          "maybe_response_payload": "fidl.test.protocols/SomeLongAnonymousPrefix8",
           "maybe_response_type_shape_v1": {
             "inline_size": 40,
             "alignment": 8,
@@ -770,7 +770,7 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.protocols/SomeLongAnonymousPrefix19",
+          "maybe_response_payload": "fidl.test.protocols/SomeLongAnonymousPrefix9",
           "maybe_response_type_shape_v1": {
             "inline_size": 40,
             "alignment": 8,
@@ -873,7 +873,7 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.protocols/SomeLongAnonymousPrefix20",
+          "maybe_request_payload": "fidl.test.protocols/SomeLongAnonymousPrefix10",
           "maybe_request_type_shape_v1": {
             "inline_size": 32,
             "alignment": 8,
@@ -933,7 +933,7 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.protocols/SomeLongAnonymousPrefix21",
+          "maybe_response_payload": "fidl.test.protocols/SomeLongAnonymousPrefix11",
           "maybe_response_type_shape_v1": {
             "inline_size": 32,
             "alignment": 8,
@@ -991,7 +991,7 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.protocols/SomeLongAnonymousPrefix22",
+          "maybe_request_payload": "fidl.test.protocols/SomeLongAnonymousPrefix12",
           "maybe_request_type_shape_v1": {
             "inline_size": 32,
             "alignment": 8,
@@ -1021,7 +1021,7 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.protocols/SomeLongAnonymousPrefix23",
+          "maybe_response_payload": "fidl.test.protocols/SomeLongAnonymousPrefix13",
           "maybe_response_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -1065,7 +1065,7 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.protocols/SomeLongAnonymousPrefix24",
+          "maybe_request_payload": "fidl.test.protocols/SomeLongAnonymousPrefix14",
           "maybe_request_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -1120,7 +1120,7 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.protocols/SomeLongAnonymousPrefix26",
+          "maybe_request_payload": "fidl.test.protocols/SomeLongAnonymousPrefix15",
           "maybe_request_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -1153,7 +1153,7 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.protocols/SomeLongAnonymousPrefix27",
+          "maybe_response_payload": "fidl.test.protocols/SomeLongAnonymousPrefix16",
           "maybe_response_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -1219,7 +1219,7 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.protocols/SomeLongAnonymousPrefix28",
+          "maybe_request_payload": "fidl.test.protocols/SomeLongAnonymousPrefix17",
           "maybe_request_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -1249,7 +1249,7 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.protocols/SomeLongAnonymousPrefix29",
+          "maybe_response_payload": "fidl.test.protocols/SomeLongAnonymousPrefix18",
           "maybe_response_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -1303,7 +1303,7 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.protocols/SomeLongAnonymousPrefix30",
+          "maybe_request_payload": "fidl.test.protocols/SomeLongAnonymousPrefix19",
           "maybe_request_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -1359,7 +1359,7 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.protocols/SomeLongAnonymousPrefix31",
+          "maybe_response_payload": "fidl.test.protocols/SomeLongAnonymousPrefix20",
           "maybe_response_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -1463,7 +1463,7 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.protocols/SomeLongAnonymousPrefix33",
+          "maybe_request_payload": "fidl.test.protocols/SomeLongAnonymousPrefix21",
           "maybe_request_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -1508,7 +1508,7 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.protocols/SomeLongAnonymousPrefix34",
+          "maybe_request_payload": "fidl.test.protocols/SomeLongAnonymousPrefix22",
           "maybe_request_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -1541,7 +1541,7 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.protocols/SomeLongAnonymousPrefix35",
+          "maybe_response_payload": "fidl.test.protocols/SomeLongAnonymousPrefix23",
           "maybe_response_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -1586,7 +1586,7 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.protocols/SomeLongAnonymousPrefix36",
+          "maybe_response_payload": "fidl.test.protocols/SomeLongAnonymousPrefix24",
           "maybe_response_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -1604,7 +1604,7 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "fidl.test.protocols/SomeLongAnonymousPrefix4",
+      "name": "fidl.test.protocols/SomeLongAnonymousPrefix0",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 26,
@@ -1643,7 +1643,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/SomeLongAnonymousPrefix5",
+      "name": "fidl.test.protocols/SomeLongAnonymousPrefix1",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 27,
@@ -1682,7 +1682,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/SomeLongAnonymousPrefix6",
+      "name": "fidl.test.protocols/SomeLongAnonymousPrefix2",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 28,
@@ -1721,7 +1721,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/SomeLongAnonymousPrefix8",
+      "name": "fidl.test.protocols/SomeLongAnonymousPrefix3",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 29,
@@ -1760,7 +1760,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/SomeLongAnonymousPrefix9",
+      "name": "fidl.test.protocols/SomeLongAnonymousPrefix4",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 29,
@@ -1799,7 +1799,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/SomeLongAnonymousPrefix11",
+      "name": "fidl.test.protocols/SomeLongAnonymousPrefix5",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 31,
@@ -1911,7 +1911,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/SomeLongAnonymousPrefix13",
+      "name": "fidl.test.protocols/SomeLongAnonymousPrefix6",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 40,
@@ -1972,7 +1972,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/SomeLongAnonymousPrefix15",
+      "name": "fidl.test.protocols/SomeLongAnonymousPrefix7",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 41,
@@ -2033,7 +2033,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/SomeLongAnonymousPrefix17",
+      "name": "fidl.test.protocols/SomeLongAnonymousPrefix8",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 42,
@@ -2115,7 +2115,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/SomeLongAnonymousPrefix19",
+      "name": "fidl.test.protocols/SomeLongAnonymousPrefix9",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 43,
@@ -2155,7 +2155,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/SomeLongAnonymousPrefix20",
+      "name": "fidl.test.protocols/SomeLongAnonymousPrefix10",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 48,
@@ -2211,7 +2211,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/SomeLongAnonymousPrefix21",
+      "name": "fidl.test.protocols/SomeLongAnonymousPrefix11",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 49,
@@ -2267,7 +2267,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/SomeLongAnonymousPrefix22",
+      "name": "fidl.test.protocols/SomeLongAnonymousPrefix12",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 50,
@@ -2323,7 +2323,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/SomeLongAnonymousPrefix23",
+      "name": "fidl.test.protocols/SomeLongAnonymousPrefix13",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 50,
@@ -2362,7 +2362,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/SomeLongAnonymousPrefix24",
+      "name": "fidl.test.protocols/SomeLongAnonymousPrefix14",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 51,
@@ -2404,7 +2404,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/SomeLongAnonymousPrefix26",
+      "name": "fidl.test.protocols/SomeLongAnonymousPrefix15",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 52,
@@ -2446,7 +2446,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/SomeLongAnonymousPrefix27",
+      "name": "fidl.test.protocols/SomeLongAnonymousPrefix16",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 52,
@@ -2488,7 +2488,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/SomeLongAnonymousPrefix28",
+      "name": "fidl.test.protocols/SomeLongAnonymousPrefix17",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 57,
@@ -2527,7 +2527,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/SomeLongAnonymousPrefix29",
+      "name": "fidl.test.protocols/SomeLongAnonymousPrefix18",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 57,
@@ -2566,7 +2566,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/SomeLongAnonymousPrefix30",
+      "name": "fidl.test.protocols/SomeLongAnonymousPrefix19",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 60,
@@ -2605,7 +2605,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/SomeLongAnonymousPrefix31",
+      "name": "fidl.test.protocols/SomeLongAnonymousPrefix20",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 63,
@@ -2644,7 +2644,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/SomeLongAnonymousPrefix33",
+      "name": "fidl.test.protocols/SomeLongAnonymousPrefix21",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 72,
@@ -2686,7 +2686,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/SomeLongAnonymousPrefix34",
+      "name": "fidl.test.protocols/SomeLongAnonymousPrefix22",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 73,
@@ -2728,7 +2728,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/SomeLongAnonymousPrefix35",
+      "name": "fidl.test.protocols/SomeLongAnonymousPrefix23",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 73,
@@ -2770,7 +2770,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/SomeLongAnonymousPrefix36",
+      "name": "fidl.test.protocols/SomeLongAnonymousPrefix24",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 74,
@@ -3069,13 +3069,13 @@
     "fidl.test.protocols/WithErrorSyntax_ErrorAsPrimitive_Response",
     "fidl.test.protocols/WithErrorSyntax_ErrorAsPrimitive_Result",
     "fidl.test.protocols/WithErrorSyntax_ErrorAsEnum_Response",
-    "fidl.test.protocols/DiscoverableProtocol",
     "fidl.test.protocols/Transitional",
     "fidl.test.protocols/ChannelProtocol",
     "fidl.test.protocols/WithAndWithoutRequestResponse",
     "fidl.test.protocols/ErrorEnum",
     "fidl.test.protocols/WithErrorSyntax_ErrorAsEnum_Result",
-    "fidl.test.protocols/WithErrorSyntax"
+    "fidl.test.protocols/WithErrorSyntax",
+    "fidl.test.protocols/DiscoverableProtocol"
   ],
   "declarations": {
     "fidl.test.protocols/rights": "bits",
@@ -3094,41 +3094,29 @@
     "fidl.test.protocols/SomeLongAnonymousPrefix3": "struct",
     "fidl.test.protocols/SomeLongAnonymousPrefix4": "struct",
     "fidl.test.protocols/SomeLongAnonymousPrefix5": "struct",
+    "fidl.test.protocols/WithErrorSyntax_ResponseAsStruct_Response": "struct",
     "fidl.test.protocols/SomeLongAnonymousPrefix6": "struct",
+    "fidl.test.protocols/WithErrorSyntax_ErrorAsPrimitive_Response": "struct",
     "fidl.test.protocols/SomeLongAnonymousPrefix7": "struct",
+    "fidl.test.protocols/WithErrorSyntax_ErrorAsEnum_Response": "struct",
     "fidl.test.protocols/SomeLongAnonymousPrefix8": "struct",
+    "fidl.test.protocols/WithErrorSyntax_HandleInResult_Response": "struct",
     "fidl.test.protocols/SomeLongAnonymousPrefix9": "struct",
     "fidl.test.protocols/SomeLongAnonymousPrefix10": "struct",
     "fidl.test.protocols/SomeLongAnonymousPrefix11": "struct",
     "fidl.test.protocols/SomeLongAnonymousPrefix12": "struct",
-    "fidl.test.protocols/WithErrorSyntax_ResponseAsStruct_Response": "struct",
     "fidl.test.protocols/SomeLongAnonymousPrefix13": "struct",
     "fidl.test.protocols/SomeLongAnonymousPrefix14": "struct",
-    "fidl.test.protocols/WithErrorSyntax_ErrorAsPrimitive_Response": "struct",
     "fidl.test.protocols/SomeLongAnonymousPrefix15": "struct",
     "fidl.test.protocols/SomeLongAnonymousPrefix16": "struct",
-    "fidl.test.protocols/WithErrorSyntax_ErrorAsEnum_Response": "struct",
     "fidl.test.protocols/SomeLongAnonymousPrefix17": "struct",
     "fidl.test.protocols/SomeLongAnonymousPrefix18": "struct",
-    "fidl.test.protocols/WithErrorSyntax_HandleInResult_Response": "struct",
     "fidl.test.protocols/SomeLongAnonymousPrefix19": "struct",
     "fidl.test.protocols/SomeLongAnonymousPrefix20": "struct",
     "fidl.test.protocols/SomeLongAnonymousPrefix21": "struct",
     "fidl.test.protocols/SomeLongAnonymousPrefix22": "struct",
     "fidl.test.protocols/SomeLongAnonymousPrefix23": "struct",
     "fidl.test.protocols/SomeLongAnonymousPrefix24": "struct",
-    "fidl.test.protocols/SomeLongAnonymousPrefix25": "struct",
-    "fidl.test.protocols/SomeLongAnonymousPrefix26": "struct",
-    "fidl.test.protocols/SomeLongAnonymousPrefix27": "struct",
-    "fidl.test.protocols/SomeLongAnonymousPrefix28": "struct",
-    "fidl.test.protocols/SomeLongAnonymousPrefix29": "struct",
-    "fidl.test.protocols/SomeLongAnonymousPrefix30": "struct",
-    "fidl.test.protocols/SomeLongAnonymousPrefix31": "struct",
-    "fidl.test.protocols/SomeLongAnonymousPrefix32": "struct",
-    "fidl.test.protocols/SomeLongAnonymousPrefix33": "struct",
-    "fidl.test.protocols/SomeLongAnonymousPrefix34": "struct",
-    "fidl.test.protocols/SomeLongAnonymousPrefix35": "struct",
-    "fidl.test.protocols/SomeLongAnonymousPrefix36": "struct",
     "fidl.test.protocols/WithErrorSyntax_ResponseAsStruct_Result": "union",
     "fidl.test.protocols/WithErrorSyntax_ErrorAsPrimitive_Result": "union",
     "fidl.test.protocols/WithErrorSyntax_ErrorAsEnum_Result": "union",
