@@ -59,7 +59,7 @@ test("fidl_llcpp_manual_conformance_tests_bin") {
   output_name = "fidl_llcpp_manual_conformance_tests"
   sources = [ "manual_conformance_test.cc" ]
   deps = [
-    "//sdk/lib/fidl/cpp/test:fidl_test_llcpp",
+    "//sdk/testing/fidl:fidl_test_llcpp",
     "//src/lib/fidl/llcpp/tests/conformance:conformance_utils",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",

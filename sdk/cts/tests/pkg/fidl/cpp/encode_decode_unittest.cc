@@ -9,7 +9,6 @@
 #include <utility>
 #include <vector>
 
-#include <cts/tests/pkg/fidl/cpp/test/test_util.h>
 #include <zxtest/zxtest.h>
 
 #include "fidl/test/unionmigration/cpp/fidl.h"
@@ -17,8 +16,9 @@
 #include "lib/fidl/cpp/interface_ptr.h"
 #include "lib/fidl/cpp/internal/message_reader.h"
 #include "lib/fidl/cpp/internal/proxy_controller.h"
-#include "lib/fidl/cpp/test/async_loop_for_test.h"
-#include "lib/fidl/cpp/test/frobinator_impl.h"
+#include "test/test_util.h"
+#include "testing/fidl/async_loop_for_test.h"
+#include "testing/fidl/frobinator_impl.h"
 
 namespace fidl {
 namespace {

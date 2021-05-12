@@ -14,8 +14,8 @@ cts_executable("element-manager-test-bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.element",
-    "//sdk/lib/fidl/cpp/test:fidl_test",
     "//sdk/lib/sys/cpp",
+    "//sdk/testing/fidl:fidl_test",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

@@ -25,7 +25,7 @@ test("fidl_llcpp_message_container_tests_bin") {
   ]
   deps = [
     ":fidl.llcpp.linearized.test_llcpp",
-    "//sdk/lib/fidl/cpp/test:fidl_test_llcpp",
+    "//sdk/testing/fidl:fidl_test_llcpp",
     "//src/lib/fidl/llcpp/tests:types_test_utils",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",

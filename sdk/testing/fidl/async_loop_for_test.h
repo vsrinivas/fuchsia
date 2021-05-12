@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIDL_CPP_TEST_ASYNC_LOOP_FOR_TEST_H_
-#define LIB_FIDL_CPP_TEST_ASYNC_LOOP_FOR_TEST_H_
+#ifndef TESTING_FIDL_ASYNC_LOOP_FOR_TEST_H_
+#define TESTING_FIDL_ASYNC_LOOP_FOR_TEST_H_
 
 #include <lib/async/dispatcher.h>
 #include <zircon/types.h>
@@ -40,4 +40,4 @@ class AsyncLoopForTest {
 }  // namespace test
 }  // namespace fidl
 
-#endif  // LIB_FIDL_CPP_TEST_ASYNC_LOOP_FOR_TEST_H_
+#endif  // TESTING_FIDL_ASYNC_LOOP_FOR_TEST_H_

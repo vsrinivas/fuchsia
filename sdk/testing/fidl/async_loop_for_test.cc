@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/fidl/cpp/test/async_loop_for_test.h"
+#include "async_loop_for_test.h"
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>

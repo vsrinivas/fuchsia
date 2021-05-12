@@ -12,8 +12,8 @@
 
 #include "fidl/test/frobinator/cpp/fidl.h"
 #include "lib/fidl/cpp/binding.h"
-#include "lib/fidl/cpp/test/async_loop_for_test.h"
-#include "lib/fidl/cpp/test/frobinator_impl.h"
+#include "testing/fidl/async_loop_for_test.h"
+#include "testing/fidl/frobinator_impl.h"
 
 namespace fidl {
 namespace {

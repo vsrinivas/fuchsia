@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/fidl/cpp/thread_safe_binding_set.h"
+#include <lib/fidl/cpp/thread_safe_binding_set.h>
 
 #include <zxtest/zxtest.h>
 
-#include "lib/fidl/cpp/test/async_loop_for_test.h"
-#include "lib/fidl/cpp/test/frobinator_impl.h"
+#include "testing/fidl/async_loop_for_test.h"
+#include "testing/fidl/frobinator_impl.h"
 
 namespace fidl {
 namespace {

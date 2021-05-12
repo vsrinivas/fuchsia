@@ -46,8 +46,8 @@ cts_source_set("host_test_sources") {
   deps = [
     ":test_util",
     "//sdk/lib/fidl/cpp:cpp_base",
-    "//sdk/lib/fidl/cpp/test:fidl_test",
     "//sdk/lib/stdcompat",
+    "//sdk/testing/fidl:fidl_test",
     "//zircon/public/lib/zxtest",
   ]
 }
@@ -60,9 +60,6 @@ cts_source_set("test_sources") {
   # include_base = "//sdk"
 
   sources = [
-    "//sdk/lib/fidl/cpp/internal/message_reader_unittest.cc",
-    "//sdk/lib/fidl/cpp/internal/proxy_controller_unittest.cc",
-    "//sdk/lib/fidl/cpp/internal/stub_controller_unittest.cc",
     "binding_set_unittest.cc",
     "binding_unittest.cc",
     "collision_unittest.cc",
@@ -73,7 +70,10 @@ cts_source_set("test_sources") {
     "interface_ptr_set_unittest.cc",
     "interface_ptr_unittest.cc",
     "interface_request_unittest.cc",
+    "message_reader_unittest.cc",
     "message_unittest.cc",
+    "proxy_controller_unittest.cc",
+    "stub_controller_unittest.cc",
     "synchronous_interface_ptr_unittest.cc",
     "thread_safe_binding_set_unittest.cc",
   ]
@@ -82,12 +82,12 @@ cts_source_set("test_sources") {
     ":test_util",
     ":union_migration_test_fidl",
     "//sdk/lib/fidl/cpp",
-    "//sdk/lib/fidl/cpp:test_support",
-    "//sdk/lib/fidl/cpp/test",
-    "//sdk/lib/fidl/cpp/test:collision_test",
-    "//sdk/lib/fidl/cpp/test:fidl_test",
-    "//sdk/lib/fidl/cpp/test:fidl_test_handles",
     "//sdk/lib/fit-promise",
+    "//sdk/testing/fidl:collision_test",
+    "//sdk/testing/fidl:fidl_test",
+    "//sdk/testing/fidl:fidl_test_handles",
+    "//sdk/testing/fidl:test",
+    "//sdk/testing/fidl:test_support",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -102,12 +102,11 @@ cts_executable("fidl_hlcpp_conformance_tests_bin") {
   testonly = true
 
   output_name = "fidl_hlcpp_conformance_tests"
-  sources = [ "//sdk/lib/fidl/cpp/test/async_loop_for_test.cc" ]
 
   deps = [
     ":conformance_test_sources",
-    "//sdk/lib/fidl/cpp:test_support",
-    "//sdk/lib/fidl/cpp/test",
+    "//sdk/testing/fidl:test",
+    "//sdk/testing/fidl:test_support",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -124,13 +123,12 @@ cts_executable("fidl_hlcpp_unit_tests_bin") {
   testonly = true
 
   output_name = "fidl_hlcpp_unit_tests"
-  sources = [ "//sdk/lib/fidl/cpp/test/async_loop_for_test.cc" ]
 
   deps = [
     ":host_test_sources",
     ":test_sources",
-    "//sdk/lib/fidl/cpp:test_support",
-    "//sdk/lib/fidl/cpp/test",
+    "//sdk/testing/fidl:test",
+    "//sdk/testing/fidl:test_support",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

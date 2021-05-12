@@ -6,7 +6,7 @@ import("//build/test.gni")
 
 test("josh_tests_bin") {
   deps = [
-    "//sdk/lib/fidl/cpp/test",
+    "//sdk/testing/fidl:test",
     "//src/developer/shell/josh/console:tests",
     "//src/developer/shell/josh/lib:tests",
     "//src/lib/fxl/test:gtest_main",

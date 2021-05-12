@@ -24,8 +24,6 @@ import("//sdk/cts/build/write_cts_file.gni")
 #     List of files to create an executable from.
 #     Type: list(labels)
 template("cts_executable") {
-  assert(defined(invoker.sources), "Sources must be defined.")
-
   if (defined(invoker.deps) && invoker.deps != []) {
     cts_element("${target_name}_verify_deps") {
       deps = invoker.deps

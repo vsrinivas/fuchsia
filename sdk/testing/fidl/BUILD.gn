@@ -1,9 +1,22 @@
-# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/fidl/fidl.gni")
 import("//sdk/cts/build/cts.gni")
+
+cts_source_set("test_support") {
+  testonly = true
+
+  public = [ "async_loop_for_test.h" ]
+
+  sources = [ "async_loop_for_test.cc" ]
+
+  public_deps = [
+    "//zircon/public/lib/async",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
 
 cts_source_set("test") {
   testonly = true

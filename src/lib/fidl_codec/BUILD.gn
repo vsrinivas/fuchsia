@@ -91,8 +91,8 @@ executable("fidl_codec_test_bin") {
     ":list_for_test",
     ":value_proto",
     "//sdk/fidl/fuchsia.sys",
-    "//sdk/lib/fidl/cpp:test_support",
-    "//sdk/lib/fidl/cpp/test",
+    "//sdk/testing/fidl:test",
+    "//sdk/testing/fidl:test_support",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
@@ -124,10 +124,10 @@ action("json_for_test") {
     ":fidl-composed($fidl_toolchain)",
     ":fidl-sys($fidl_toolchain)",
     "//sdk/fidl/fuchsia.io($fidl_toolchain)",
-    "//sdk/lib/fidl/cpp/test:frobinator($fidl_toolchain)",
+    "//sdk/testing/fidl:frobinator($fidl_toolchain)",
   ]
   inputs = [
-    "${root_build_dir}/fidling/gen/sdk/lib/fidl/cpp/test/frobinator.fidl.json",
+    "${root_build_dir}/fidling/gen/sdk/testing/fidl/frobinator.fidl.json",
     "${root_build_dir}/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io.fidl.json",
     "${root_build_dir}/fidling/gen/src/lib/fidl_codec/fidl.fidl.json",
     "${root_build_dir}/fidling/gen/src/lib/fidl_codec/fidl-composed.fidl.json",

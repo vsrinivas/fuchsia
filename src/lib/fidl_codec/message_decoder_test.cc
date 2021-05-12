@@ -7,7 +7,6 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/fidl/cpp/test/frobinator_impl.h>
 
 #include <iostream>
 #include <memory>
@@ -17,6 +16,7 @@
 
 #include <gtest/gtest.h>
 #include <test/fidlcodec/examples/cpp/fidl.h>
+#include <testing/fidl/frobinator_impl.h>
 
 #include "src/lib/fidl_codec/fidl_codec_test.h"
 #include "src/lib/fidl_codec/library_loader.h"

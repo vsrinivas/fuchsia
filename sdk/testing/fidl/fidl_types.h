@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIDL_CPP_TEST_FIDL_TYPES_H_
-#define LIB_FIDL_CPP_TEST_FIDL_TYPES_H_
+#ifndef TESTING_FIDL_FIDL_TYPES_H_
+#define TESTING_FIDL_FIDL_TYPES_H_
 
 #include <lib/fidl/coding.h>
 #include <lib/fidl/internal.h>
@@ -19,4 +19,4 @@ extern const FidlCodedStruct zero_arg_message_type;
 }
 #endif
 
-#endif  // LIB_FIDL_CPP_TEST_FIDL_TYPES_H_
+#endif  // TESTING_FIDL_FIDL_TYPES_H_

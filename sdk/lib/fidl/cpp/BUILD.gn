@@ -150,19 +150,3 @@ sdk_source_set("cpp_base") {
     ]
   }
 }
-
-cts_source_set("test_support") {
-  testonly = true
-
-  public = [ "test/async_loop_for_test.h" ]
-
-  public_deps = [ "//zircon/public/lib/async" ]
-}
-
-group("tests") {
-  testonly = true
-  deps = [
-    "fuzzing:tests",
-    "//sdk/cts/tests/pkg/fidl/cpp:tests",
-  ]
-}

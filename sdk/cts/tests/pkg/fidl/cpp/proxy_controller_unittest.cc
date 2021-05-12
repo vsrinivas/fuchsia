@@ -12,9 +12,9 @@
 #include <zxtest/zxtest.h>
 
 #include "lib/fidl/cpp/string.h"
-#include "lib/fidl/cpp/test/async_loop_for_test.h"
-#include "lib/fidl/cpp/test/fidl_types.h"
 #include "lib/fidl/txn_header.h"
+#include "testing/fidl/async_loop_for_test.h"
+#include "testing/fidl/fidl_types.h"
 
 namespace fidl {
 namespace internal {

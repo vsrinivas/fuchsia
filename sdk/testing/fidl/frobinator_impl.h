@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIDL_CPP_TEST_FROBINATOR_IMPL_H_
-#define LIB_FIDL_CPP_TEST_FROBINATOR_IMPL_H_
+#ifndef TESTING_FIDL_FROBINATOR_IMPL_H_
+#define TESTING_FIDL_FROBINATOR_IMPL_H_
 
 #include <lib/fit/function.h>
 
@@ -36,4 +36,4 @@ class FrobinatorImpl : public fidl::test::frobinator::Frobinator {
 }  // namespace test
 }  // namespace fidl
 
-#endif  // LIB_FIDL_CPP_TEST_FROBINATOR_IMPL_H_
+#endif  // TESTING_FIDL_FROBINATOR_IMPL_H_
