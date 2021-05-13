@@ -38,6 +38,9 @@ pub enum LaunchError {
     #[error("Error launching process: {:?}", _0)]
     ProcessLaunch(zx::Status),
 
+    #[error("Error launching process: {:?}", _0)]
+    Fidl(#[from] fidl::Error),
+
     #[error("Error launching process, cannot create socket {:?}", _0)]
     CreateSocket(zx::Status),
 
@@ -67,6 +70,8 @@ pub struct LaunchProcessArgs<'a> {
     /// Extra handle infos to add. Handles for stdout, stderr, and utc_clock are added.
     /// The UTC clock handle is cloned from the current process.
     pub handle_infos: Option<Vec<fproc::HandleInfo>>,
+    /// Handle to lib loader protocol client.
+    pub loader_proxy_chan: Option<zx::Channel>,
 }
 
 /// Launches process, assigns a logger as stdout/stderr to launched process.
@@ -120,6 +125,7 @@ async fn launch_process_impl(
             name_infos: args.name_infos,
             environs: args.environs,
             launcher: &launcher,
+            loader_proxy_chan: args.loader_proxy_chan,
         })
         .await
         .map_err(LaunchError::LoadInfo)?;
@@ -245,6 +251,7 @@ mod tests {
             }]
             .try_into()
             .unwrap(),
+            loader_proxy_chan: None,
         };
         let (mock_proxy, mut mock_stream) = create_proxy_and_stream::<fproc::LauncherMarker>()
             .expect("failed to create mock handles");

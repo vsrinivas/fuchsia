@@ -12,39 +12,53 @@ use {
     io_util,
     log::*,
     std::path::Path,
+    std::sync::Arc,
 };
+
+/// Helper function to load `object_name` from `search_dirs`.
+/// This function looks in the given directories, and returns the
+/// first VMO matching |object_name| that is found.
+pub async fn load_object(
+    search_dirs: &Vec<Arc<DirectoryProxy>>,
+    object_name: &str,
+) -> Result<zx::Vmo, Vec<Error>> {
+    let mut errors = vec![];
+    for dir_proxy in search_dirs {
+        match load_vmo(dir_proxy, &object_name).await {
+            Ok(b) => {
+                return Ok(b);
+            }
+            Err(e) => errors.push(e),
+        }
+    }
+    Err(errors.into())
+}
 
 /// start will expose the `fuchsia.ldsvc.Loader` service over the given channel, providing VMO
 /// buffers of requested library object names from `lib_proxy`.
 ///
 /// `lib_proxy` must have been opened with at minimum OPEN_RIGHT_READABLE and OPEN_RIGHT_EXECUTABLE
 /// rights.
-pub fn start(lib_proxy: DirectoryProxy, chan: zx::Channel) {
+pub fn start(lib_proxy: Arc<DirectoryProxy>, chan: zx::Channel) {
     fasync::Task::spawn(
         async move {
-            let mut search_dirs =
-                vec![io_util::clone_directory(&lib_proxy, fio::CLONE_FLAG_SAME_RIGHTS)?];
+            let mut search_dirs = vec![lib_proxy.clone()];
             // Wait for requests
             let mut stream =
                 LoaderRequestStream::from_channel(fasync::Channel::from_channel(chan)?);
-            'request_loop: while let Some(req) = stream.try_next().await? {
+            while let Some(req) = stream.try_next().await? {
                 match req {
                     LoaderRequest::Done { control_handle } => {
                         control_handle.shutdown();
                     }
                     LoaderRequest::LoadObject { object_name, responder } => {
-                        let mut errors = vec![];
-                        for dir_proxy in &search_dirs {
-                            match load_vmo(dir_proxy, &object_name).await {
-                                Ok(b) => {
-                                    responder.send(zx::sys::ZX_OK, Some(b))?;
-                                    continue 'request_loop;
-                                }
-                                Err(e) => errors.push(e),
+                        match load_object(&search_dirs, &object_name).await {
+                            Ok(vmo) => responder.send(zx::sys::ZX_OK, Some(vmo))?,
+                            Err(e) => {
+                                warn!("failed to load object: {:?}", e);
+                                responder.send(zx::sys::ZX_ERR_NOT_FOUND, None)?;
                             }
                         }
-                        warn!("failed to load object: {:?}", errors);
-                        responder.send(zx::sys::ZX_ERR_NOT_FOUND, None)?;
                     }
                     LoaderRequest::Config { config, responder } => {
                         match parse_config_string(&lib_proxy, &config) {
@@ -59,9 +73,7 @@ pub fn start(lib_proxy: DirectoryProxy, chan: zx::Channel) {
                         }
                     }
                     LoaderRequest::Clone { loader, responder } => {
-                        let new_lib_proxy =
-                            io_util::clone_directory(&lib_proxy, fio::CLONE_FLAG_SAME_RIGHTS)?;
-                        start(new_lib_proxy, loader.into_channel());
+                        start(lib_proxy.clone(), loader.into_channel());
                         responder.send(zx::sys::ZX_OK)?;
                     }
                 }
@@ -104,10 +116,10 @@ pub async fn load_vmo<'a>(
 /// parses a config string from the `fuchsia.ldsvc.Loader` service. See
 /// `//docs/concepts/booting/program_loading.md` for a description of the format. Returns the set
 /// of directories which should be searched for objects.
-fn parse_config_string(
-    dir_proxy: &DirectoryProxy,
+pub fn parse_config_string(
+    dir_proxy: &Arc<DirectoryProxy>,
     config: &str,
-) -> Result<Vec<DirectoryProxy>, Error> {
+) -> Result<Vec<Arc<DirectoryProxy>>, Error> {
     if config.contains("/") {
         return Err(format_err!("'/' character found in loader service config string"));
     }
@@ -117,15 +129,14 @@ fn parse_config_string(
             &Path::new(&config[..config.len() - 1]),
             fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
         )?;
-        Ok(vec![sub_dir_proxy])
+        Ok(vec![sub_dir_proxy.into()])
     } else {
-        let dir_proxy_clone = io_util::clone_directory(dir_proxy, fio::CLONE_FLAG_SAME_RIGHTS)?;
         let sub_dir_proxy = io_util::open_directory(
             dir_proxy,
             &Path::new(config),
             fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
         )?;
-        Ok(vec![sub_dir_proxy, dir_proxy_clone])
+        Ok(vec![sub_dir_proxy.into(), dir_proxy.clone()])
     }
 }
 
@@ -165,7 +176,7 @@ mod tests {
         }
 
         let (loader_proxy, loader_service) = fidl::endpoints::create_proxy::<LoaderMarker>()?;
-        start(pkg_lib, loader_service.into_channel());
+        start(pkg_lib.into(), loader_service.into_channel());
 
         for (obj_name, should_succeed) in vec![
             // Should be able to access lib/ld.so.1
@@ -210,7 +221,7 @@ mod tests {
             fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
         )?;
         let (loader_proxy, loader_service) = fidl::endpoints::create_proxy::<LoaderMarker>()?;
-        start(pkg_lib, loader_service.into_channel());
+        start(pkg_lib.into(), loader_service.into_channel());
 
         // Attempt to access things with different configurations
         for (obj_name, config, expected_result) in vec![
