@@ -21,28 +21,8 @@
 
 namespace {
 
-// GMock matcher to determine if a given result was successful,
-// printing the error if not.
-//
-// Can be used as: EXPECT_THAT(view.operation(), IsOk());
-MATCHER(IsOk, "") {
-  if (arg.is_ok()) {
-    return true;
-  }
-  *result_listener << "had error: " << arg.error_value();
-  return false;
-}
-
-// As above, but also matches against the value:
-//
-// EXPECT_THAT(view.operation(), IsOkAndHolds(Eq(3u)));
-template <typename X>
-auto IsOkAndHolds(X matcher) {
-  return ::testing::AllOf(
-      IsOk(), ::testing::ResultOf([](const auto& val) { return val.value(); }, matcher));
-}
-
 using ZbiMemoryImage = zbitl::Image<fbl::Array<std::byte>>;
+using Bytes = std::basic_string<std::byte>;
 
 // Create an empty zbitl::Image that can be written to.
 ZbiMemoryImage CreateImage() {
@@ -70,8 +50,8 @@ void AppendPayload(ZbiMemoryImage& zbi, uint32_t type, zbitl::ByteView bytes) {
 
 // Append the given objects together as a series of bytes.
 template <typename... T>
-std::basic_string<std::byte> JoinBytes(const T&... object) {
-  std::basic_string<std::byte> result;
+Bytes JoinBytes(const T&... object) {
+  Bytes result;
 
   // Add the bytes from a single item to |result|.
   auto add_item = [&result](const auto& x) {
@@ -136,66 +116,23 @@ TEST(MemRangeIterator, DefaultContainer) {
   zbitl::MemRangeTable container;
 
   EXPECT_EQ(container.begin(), container.end());
-  EXPECT_THAT(container.take_error(), IsOk());
+  EXPECT_EQ(container.size(), 0u);
 }
 
-TEST(MemRangeIterator, EmptyZbi) {
+TEST(MemRangeTableFromView, EmptyZbi) {
   ZbiMemoryImage zbi = CreateImage();
-  zbitl::MemRangeTable container{AsView(zbi)};
-
-  // Expect nothing to be found.
-  EXPECT_EQ(container.begin(), container.end());
-  EXPECT_THAT(container.size(), IsOkAndHolds(0u));
-  EXPECT_THAT(container.take_error(), IsOk());
+  auto result = zbitl::MemRangeTable::FromView(AsView(zbi));
+  ASSERT_TRUE(result.is_error());
+  EXPECT_EQ(result.error_value(), "No memory information found.");
 }
 
-TEST(MemRangeIterator, BadZbi) {
+TEST(MemRangeTableFromView, BadZbi) {
   zbi_header_t header = ZBI_CONTAINER_HEADER(0);
   header.crc32 = 0xffffffff;  // bad CRC.
   zbitl::View<zbitl::ByteView> view(zbitl::AsBytes(header));
-  zbitl::MemRangeTable container{view};
 
-  // Expect nothing to be found.
-  EXPECT_EQ(container.begin(), container.end());
-
-  // Expect an error.
-  auto error = container.take_error();
+  auto error = zbitl::MemRangeTable::FromView(view);
   ASSERT_TRUE(error.is_error());
-  EXPECT_EQ(error.error_value(), "bad crc32 field in item without CRC");
-
-  // Expect size() to return an error.
-  auto size_error = container.size();
-  ASSERT_TRUE(size_error.is_error());
-  EXPECT_EQ(size_error.error_value(), "bad crc32 field in item without CRC");
-}
-
-TEST(MemRangeIterator, RequireErrorToBeCalled) {
-  ZbiMemoryImage zbi = CreateImage();
-
-  // Iterate through an empty item and then destroy it without calling Error().
-  ASSERT_DEATH(
-      {
-        zbitl::MemRangeTable container{AsView(zbi)};
-
-        // Expect nothing to be found.
-        EXPECT_EQ(container.begin(), container.end());
-
-        // Don't call `take_error`: expect process death during object destruction.
-      },
-      "destroyed .* without check");
-}
-
-TEST(MemRangeIterator, NoErrorNeededAfterMove) {
-  ZbiMemoryImage zbi = CreateImage();
-  zbitl::MemRangeTable container{AsView(zbi)};
-
-  // Iterate through an empty item.
-  container.begin();
-
-  // Move the value, and check the error in its new location. We shouldn't
-  // need to check the first any longer.
-  zbitl::MemRangeTable new_container = std::move(container);
-  EXPECT_THAT(new_container.take_error(), IsOk());
 }
 
 TEST(MemRangeIterator, EmptyPayload) {
@@ -204,84 +141,71 @@ TEST(MemRangeIterator, EmptyPayload) {
   AppendPayload(zbi, ZBI_TYPE_E820_TABLE, {});
 
   // Expect nothing to be found.
-  zbitl::MemRangeTable container{AsView(zbi)};
+  zbitl::MemRangeTable container = zbitl::MemRangeTable::FromView(AsView(zbi)).value();
   EXPECT_EQ(container.begin(), container.end());
-  EXPECT_THAT(container.take_error(), IsOk());
 }
 
 TEST(MemRangeIterator, EfiItem) {
   // Construct a ZBI with a single payload consisting of EFI entries.
-  ZbiMemoryImage zbi = CreateImage();
-  AppendPayload(zbi, ZBI_TYPE_EFI_MEMORY_MAP,
-                JoinBytes(uint64_t{sizeof(efi_memory_descriptor)},
-                          efi_memory_descriptor{
-                              .PhysicalStart = 0x1000,
-                              .NumberOfPages = 1,
-                          },
-                          efi_memory_descriptor{
-                              .PhysicalStart = 0x2000,
-                              .NumberOfPages = 1,
-                          }));
+  Bytes payload = JoinBytes(uint64_t{sizeof(efi_memory_descriptor)},
+                            efi_memory_descriptor{
+                                .PhysicalStart = 0x1000,
+                                .NumberOfPages = 1,
+                            },
+                            efi_memory_descriptor{
+                                .PhysicalStart = 0x2000,
+                                .NumberOfPages = 1,
+                            });
+  zbitl::MemRangeTable container =
+      zbitl::MemRangeTable::FromSpan(ZBI_TYPE_EFI_MEMORY_MAP, payload).value();
 
   // Ensure the entries are correct.
-  zbitl::MemRangeTable container{AsView(zbi)};
-  EXPECT_THAT(container.size(), IsOkAndHolds(2u));
-  std::vector<zbi_mem_range_t> ranges(container.begin(), container.end());
-  ASSERT_TRUE(container.take_error().is_ok());
-  ASSERT_EQ(ranges.size(), 2u);
-  EXPECT_EQ(ranges[0].paddr, 0x1000u);
-  EXPECT_EQ(ranges[1].paddr, 0x2000u);
+  EXPECT_EQ(container.size(), 2u);
+  EXPECT_EQ(container[0].paddr, 0x1000u);
+  EXPECT_EQ(container[1].paddr, 0x2000u);
 }
 
 TEST(MemRangeIterator, ZbiMemRangeItem) {
   // Construct a ZBI with a single payload consisting of zbi_mem_range_t entries.
-  ZbiMemoryImage zbi = CreateImage();
-  AppendPayload(zbi, ZBI_TYPE_MEM_CONFIG,
-                JoinBytes(
-                    zbi_mem_range_t{
-                        .paddr = 0x1000,
-                        .length = 0x1000,
-                    },
-                    zbi_mem_range_t{
-                        .paddr = 0x2000,
-                        .length = 0x1000,
-                    }));
+  Bytes payload = JoinBytes(
+      zbi_mem_range_t{
+          .paddr = 0x1000,
+          .length = 0x1000,
+      },
+      zbi_mem_range_t{
+          .paddr = 0x2000,
+          .length = 0x1000,
+      });
+  zbitl::MemRangeTable container =
+      zbitl::MemRangeTable::FromSpan(ZBI_TYPE_MEM_CONFIG, payload).value();
 
   // Ensure the entries are correct.
-  zbitl::MemRangeTable container{AsView(zbi)};
-  EXPECT_THAT(container.size(), IsOkAndHolds(2u));
-  std::vector<zbi_mem_range_t> ranges(container.begin(), container.end());
-  ASSERT_TRUE(container.take_error().is_ok());
-  ASSERT_EQ(ranges.size(), 2u);
-  EXPECT_EQ(ranges[0].paddr, 0x1000u);
-  EXPECT_EQ(ranges[1].paddr, 0x2000u);
+  EXPECT_EQ(container.size(), 2u);
+  EXPECT_EQ(container[0].paddr, 0x1000u);
+  EXPECT_EQ(container[1].paddr, 0x2000u);
 }
 
 TEST(MemRangeIterator, E820Item) {
   // Construct a ZBI with a single payload consisting of e820entry_t entries.
-  ZbiMemoryImage zbi = CreateImage();
-  AppendPayload(zbi, ZBI_TYPE_E820_TABLE,
-                JoinBytes(
-                    e820entry_t{
-                        .addr = 0x1000,
-                        .size = 0x1000,
-                    },
-                    e820entry_t{
-                        .addr = 0x2000,
-                        .size = 0x1000,
-                    }));
+  Bytes payload = JoinBytes(
+      e820entry_t{
+          .addr = 0x1000,
+          .size = 0x1000,
+      },
+      e820entry_t{
+          .addr = 0x2000,
+          .size = 0x1000,
+      });
+  zbitl::MemRangeTable container =
+      zbitl::MemRangeTable::FromSpan(ZBI_TYPE_E820_TABLE, payload).value();
 
   // Ensure the entries are correct.
-  zbitl::MemRangeTable container{AsView(zbi)};
-  EXPECT_THAT(container.size(), IsOkAndHolds(2u));
-  std::vector<zbi_mem_range_t> ranges(container.begin(), container.end());
-  ASSERT_TRUE(container.take_error().is_ok());
-  ASSERT_EQ(ranges.size(), 2u);
-  EXPECT_EQ(ranges[0].paddr, 0x1000u);
-  EXPECT_EQ(ranges[1].paddr, 0x2000u);
+  EXPECT_EQ(container.size(), 2u);
+  EXPECT_EQ(container[0].paddr, 0x1000u);
+  EXPECT_EQ(container[1].paddr, 0x2000u);
 }
 
-TEST(MemRangeIterator, MixedItems) {
+TEST(MemRangeIterator, LastItemSelected) {
   // Construct a ZBI with a mixed set of payloads.
   ZbiMemoryImage zbi = CreateImage();
   AppendPayload(zbi, ZBI_TYPE_E820_TABLE,
@@ -300,15 +224,10 @@ TEST(MemRangeIterator, MixedItems) {
                                                                        .NumberOfPages = 3,
                                                                    }));
 
-  // Ensure the entries are correct.
-  zbitl::MemRangeTable container{AsView(zbi)};
-  EXPECT_THAT(container.size(), IsOkAndHolds(3u));
-  std::vector<zbi_mem_range_t> ranges(container.begin(), container.end());
-  ASSERT_TRUE(container.take_error().is_ok());
-  ASSERT_EQ(ranges.size(), 3u);
-  EXPECT_EQ(ranges[0].paddr, 0x1000u);
-  EXPECT_EQ(ranges[1].paddr, 0x2000u);
-  EXPECT_EQ(ranges[2].paddr, 0x3000u);
+  // Ensure the last item was selected.
+  zbitl::MemRangeTable container = zbitl::MemRangeTable::FromView(AsView(zbi)).value();
+  ASSERT_EQ(container.size(), 1u);
+  EXPECT_EQ(container[0].paddr, 0x3000u);
 }
 
 TEST(MemRangeIterator, OtherItems) {
@@ -323,43 +242,11 @@ TEST(MemRangeIterator, OtherItems) {
                 }));
 
   // Ensure the entries are correct.
-  zbitl::MemRangeTable container{AsView(zbi)};
-  EXPECT_THAT(container.size(), IsOkAndHolds(1u));
+  zbitl::MemRangeTable container = zbitl::MemRangeTable::FromView(AsView(zbi)).value();
+  EXPECT_EQ(container.size(), 1u);
   std::vector<zbi_mem_range_t> ranges(container.begin(), container.end());
-  ASSERT_TRUE(container.take_error().is_ok());
   ASSERT_EQ(ranges.size(), 1u);
   EXPECT_EQ(ranges[0].paddr, 0x1000u);
-}
-
-// Call size() in the middle of iterating through a ZBI.
-TEST(MemRangeIterator, SizeDuringIteration) {
-  ZbiMemoryImage zbi = CreateImage();
-  AppendPayload(zbi, ZBI_TYPE_E820_TABLE,
-                zbitl::AsBytes(e820entry_t{
-                    .addr = 0x1000,
-                    .size = 0x1000,
-                }));
-  AppendPayload(zbi, ZBI_TYPE_MEM_CONFIG,
-                zbitl::AsBytes(zbi_mem_range_t{
-                    .paddr = 0x2000,
-                    .length = 0x2000,
-                }));
-
-  // Start iteration.
-  zbitl::MemRangeTable container{AsView(zbi)};
-  auto it = container.begin();
-  EXPECT_EQ((*it).paddr, 0x1000u);
-
-  // Call size.
-  EXPECT_THAT(container.size(), IsOkAndHolds(2u));
-
-  // Finish the iteration.
-  EXPECT_EQ((*it).paddr, 0x1000u);
-  ++it;
-  EXPECT_EQ((*it).paddr, 0x2000u);
-  ++it;
-  EXPECT_EQ(it, container.end());
-  EXPECT_TRUE(container.take_error().is_ok());
 }
 
 TEST(MemRangeIterator, InvalidPayload) {
@@ -373,12 +260,10 @@ TEST(MemRangeIterator, InvalidPayload) {
                     },
                     uint8_t{0x0}));
 
-  // Ensure we encounter an error during iteration.
-  zbitl::MemRangeTable container{AsView(zbi)};
-  EXPECT_TRUE(container.size().is_error());
-  std::vector<zbi_mem_range_t> ranges(container.begin(), container.end());
-  ASSERT_TRUE(container.take_error().is_error());
-  ASSERT_EQ(ranges.size(), 0u);
+  // Ensure that no table is created.
+  auto result = zbitl::MemRangeTable::FromView(AsView(zbi));
+  ASSERT_TRUE(result.is_error());
+  EXPECT_EQ(result.error_value(), "Invalid size for MemConfig table");
 }
 
 TEST(MemRangeIterator, EfiRealData) {
@@ -525,9 +410,8 @@ TEST(MemRangeIterator, EfiRealData) {
   AppendPayload(zbi, ZBI_TYPE_EFI_MEMORY_MAP, payload);
 
   // Ensure we read the correct number of entries.
-  zbitl::MemRangeTable container{AsView(zbi)};
+  zbitl::MemRangeTable container = zbitl::MemRangeTable::FromView(AsView(zbi)).value();
   std::vector<zbi_mem_range_t> ranges(container.begin(), container.end());
-  ASSERT_TRUE(container.take_error().is_ok());
   ASSERT_EQ(ranges.size(), 40u);
 
   // Verify the first and last entries.
@@ -657,10 +541,9 @@ TEST(MemRangeMerger, MemRangeTableIterator) {
                           }));
 
   // Merge elements together.
-  zbitl::MemRangeTable container{AsView(zbi)};
+  zbitl::MemRangeTable container = zbitl::MemRangeTable::FromView(AsView(zbi)).value();
   zbitl::MemRangeMerger merger(container.begin(), container.end());
   std::vector<zbi_mem_range_t> ranges(merger.begin(), merger.end());
-  ASSERT_TRUE(container.take_error().is_ok());
   ASSERT_EQ(ranges.size(), 1u);
   EXPECT_EQ(ranges[0].paddr, 0x1000u);
   EXPECT_EQ(ranges[0].length, 0x3000u);

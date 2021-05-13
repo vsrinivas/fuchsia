@@ -104,19 +104,16 @@ const zbi_header_t* platform_get_zbi(void) {
 //
 // Allocation takes place from early booth memory, which cannot be released.
 static ktl::span<zbi_mem_range_t> get_memory_ranges(ktl::span<std::byte> zbi) {
-  zbitl::MemRangeTable range_table{zbitl::View(zbitl::ByteView(zbi.data(), zbi.size()))};
-
-  // Get the total number of memory ranges in the ZBI.
-  size_t num_ranges = 0;
-  if (auto result = range_table.size(); result.is_error()) {
-    printf("get_memory_ranges: failed to get number of memory ranges: %*s\n",
-           static_cast<int>(result.error_value().size()), result.error_value().data());
-    panic("Failed to count memory ranges in ZBI.");
-  } else {
-    num_ranges = result.value();
+  zbitl::View zbi_view(zbitl::ByteView(zbi.data(), zbi.size()));
+  fitx::result<std::string_view, zbitl::MemRangeTable> range_table =
+      zbitl::MemRangeTable::FromView(zbi_view);
+  if (range_table.is_error()) {
+    panic("Failed to find memory information in ZBI: %*s\n",
+          static_cast<int>(range_table.error_value().size()), range_table.error_value().data());
   }
 
   // Allocate memory for the ranges.
+  size_t num_ranges = range_table->size();
   zbi_mem_range_t* ranges =
       reinterpret_cast<zbi_mem_range_t*>(boot_alloc_mem(sizeof(zbi_mem_range_t) * num_ranges));
   ZX_ASSERT(ranges != nullptr);
@@ -124,16 +121,10 @@ static ktl::span<zbi_mem_range_t> get_memory_ranges(ktl::span<std::byte> zbi) {
   // Itereate over the the range table (which converts the various memory range formats into
   // zbi_mem_range_t), and make a copy.
   size_t n = 0;
-  for (const zbi_mem_range_t& range : range_table) {
+  for (const zbi_mem_range_t& range : *range_table) {
     ranges[n++] = range;
   }
   ZX_ASSERT(n == num_ranges);
-  if (auto result = range_table.take_error(); result.is_error()) {
-    printf("get_memory_ranges: failed to enumerate memory ranges: %*s\n",
-           static_cast<int>(result.error_value().size()), result.error_value().data());
-    panic("Failed to iterate over memory ranges in ZBI.");
-  }
-
   return {ranges, num_ranges};
 }
 

@@ -6,6 +6,7 @@
 #define LIB_ZBITL_ITEMS_MEM_CONFIG_H_
 
 #include <lib/fitx/result.h>
+#include <lib/zbitl/items/internal/mem_range_types.h>
 #include <lib/zbitl/view.h>
 #include <zircon/boot/image.h>
 
@@ -15,55 +16,51 @@
 namespace zbitl {
 
 // MemRangeTable allows iterating over all memory ranges specified in a
-// given ZBI.
+// given ZBI item.
 //
-// Memory ranges may be represented in multiple input formats in the ZBI,
-// and may also be spread across multiple ZBI items. The class will allow
-// all such items to be iterated over in order.
+// Memory ranges may be represented in multiple input formats in the
+// ZBI. The class allows the various formats to be uniformly handled.
 //
 // The iterator can be used as follows:
 //
 // ```
-// zbitl::View<zbitl::ByteView> zbi = ...;
-// zbitl::MemRangeTable container{zbi};
+// zbitl::MemRangeTable container = zbitl::MemRangeTable::FromItem(item);
 //
 // // Process all the items.
 // for (zbi_mem_range_t range : container) {
 //   Process(range);
 // }
-//
-// // Check for errors: must be done before container destruction.
-// if (auto result = container.take_error(); result.is_error()) {
-//   // ...
-// }
 // ```
-//
-// If a ZBI contains multiple different items specifying physical memory
-// ranges, the iterator will iterate through all of them.
 class MemRangeTable {
  public:
   MemRangeTable();
-  explicit MemRangeTable(View<ByteView> view);
 
-  MemRangeTable(const MemRangeTable&) = default;
-  MemRangeTable(MemRangeTable&&) = default;
+  // Create a MemRangeTable from the given ZBI view.
+  //
+  // If the View contains multiple memory range tables, the last is used.
+  static fitx::result<std::string_view, MemRangeTable> FromView(View<ByteView> view);
 
+  // Create a MemRangeTable from the given ZBI item.
+  static fitx::result<std::string_view, MemRangeTable> FromItem(View<ByteView>::iterator it);
+
+  // Create a MemRangeTable from the given memory range, assumed to be of type `zbi_type`.
+  static fitx::result<std::string_view, MemRangeTable> FromSpan(uint32_t zbi_type,
+                                                                ByteView payload);
+
+  // Copy and move constructors.
+  MemRangeTable(const MemRangeTable&) noexcept = default;
+  MemRangeTable(MemRangeTable&&) noexcept = default;
+
+  // begin/end iterators over the items in the table.
   class iterator;
-  iterator begin();
-  iterator end();
+  iterator begin() const { return iterator(this, 0); }
+  iterator end() const { return iterator(this, size()); }
 
-  // Return the number of memory ranges in the table, or an error if the input
-  // ZBI is invalid.
-  //
-  // O(n) in the number of entries in the ZBI, but more efficient than
-  // iterating over every entry, which would be O(n + m) where "m" is the
-  // number of ranges.
-  fitx::result<std::string_view, size_t> size() const;
+  // Return the number of memory ranges in the table.
+  size_t size() const;
 
-  // Return any error encountered during ZBI iteration.
-  //
-  // Must always be called prior to object destruction.
-  fitx::result<std::string_view> take_error();
+  // Get the n'th item. Input must be strictly less than the result of `size()`.
+  zbi_mem_range_t operator[](size_t n) const;
 
   class iterator {
    public:
@@ -85,33 +82,32 @@ class MemRangeTable {
     zbi_mem_range_t operator*() const;
 
     // Increment operators: move iterator to next element.
-    iterator& operator++();    // prefix
-    iterator operator++(int);  // postfix
+    iterator& operator++() {  // prefix
+      ++offset_;
+      return *this;
+    }
+    iterator operator++(int) {  // postfix
+      MemRangeTable::iterator old = *this;
+      ++*this;
+      return old;
+    }
 
    private:
     friend class MemRangeTable;
+    iterator(const MemRangeTable* parent, size_t offset) : parent_(parent), offset_(offset) {}
 
-    explicit iterator(MemRangeTable* parent);
-    iterator(MemRangeTable* parent, View<ByteView>::iterator it, size_t offset);
-
-    // Parent table.
-    MemRangeTable* parent_ = nullptr;
-
-    // The current payload we are returning results on.
-    //
-    // Invariant: `it_` is either nullopt, or is a valid non-end iterator into parent_->view_.
-    std::optional<View<ByteView>::iterator> it_ = std::nullopt;
+    // Parent MemRangeTable.
+    const MemRangeTable* parent_ = nullptr;
 
     // The current offset of the current payload.
     size_t offset_ = 0;
   };
 
  private:
-  // Parent view.
-  View<ByteView> view_;
-
-  // Any error we locally encountered during iteration.
-  fitx::result<std::string_view> error_ = fitx::ok();
+  explicit MemRangeTable(internal::MemConfigTable table) : table_(table) {}
+  explicit MemRangeTable(internal::E820Table table) : table_(table) {}
+  explicit MemRangeTable(internal::EfiTable table) : table_(table) {}
+  std::variant<internal::MemConfigTable, internal::E820Table, internal::EfiTable> table_;
 };
 
 // Takes an iterator yielding a sorted list of zbi_mem_range_t items, and merges

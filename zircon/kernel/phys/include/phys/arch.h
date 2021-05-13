@@ -15,6 +15,6 @@ void ArchSetUp();
 
 // Perform any architecture-specific address space set up that needs to
 // be done prior to using memory outside the program's .data / .bss / etc.
-void ArchSetUpAddressSpace(memalloc::Allocator& allocator, zbitl::MemRangeTable table);
+void ArchSetUpAddressSpace(memalloc::Allocator& allocator, const zbitl::MemRangeTable& table);
 
 #endif  // ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_ARCH_H_

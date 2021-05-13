@@ -21,21 +21,10 @@ namespace {
 
 using ZbiView = zbitl::View<zbitl::ByteView>;
 
-// Ensure that the given result is not an error.
-//
-// If an error, panic.
-void AssertNoError(fitx::result<std::string_view> result) {
-  if (unlikely(result.is_error())) {
-    ZX_PANIC("Error while scanning memory ranges: %.*s\n",
-             static_cast<int>(result.error_value().size()), result.error_value().data());
-  }
-}
-
 // Print all memory ranges in the given ZbiView.
-void PrintMemoryRanges(const ZbiView& view) {
-  zbitl::MemRangeTable container{view};
+void PrintMemoryRanges(const zbitl::MemRangeTable& table) {
   printf("Memory ranges present in ZBI:\n");
-  for (const auto& range : container) {
+  for (const auto& range : table) {
     ktl::string_view name = zbitl::MemRangeTypeName(range.type);
     if (name.empty()) {
       name = "unknown";
@@ -45,7 +34,6 @@ void PrintMemoryRanges(const ZbiView& view) {
            static_cast<int>(name.size()), name.data(), range.type);
   }
   printf("\n");
-  AssertNoError(container.take_error());
 }
 
 }  // namespace
@@ -54,13 +42,20 @@ void InitMemory(void* zbi) {
   zbitl::View<zbitl::ByteView> view{
       zbitl::StorageFromRawHeader(static_cast<const zbi_header_t*>(zbi))};
 
+  // Find memory information.
+  fitx::result<std::string_view, zbitl::MemRangeTable> memory =
+      zbitl::MemRangeTable::FromView(view);
+  if (memory.is_error()) {
+    ZX_PANIC("Could not read system memory layout: %*s.\n",
+             static_cast<int>(memory.error_value().size()), memory.error_value().data());
+  }
+
   // Print memory information.
-  PrintMemoryRanges(view);
+  PrintMemoryRanges(*memory);
 
   // Add all memory claimed to be free to the allocator.
   memalloc::Allocator& allocator = Allocation::GetAllocator();
-  zbitl::MemRangeTable container{view};
-  for (const auto& range : container) {
+  for (const auto& range : *memory) {
     // Ignore reserved memory on our first pass.
     if (range.type != ZBI_MEM_RANGE_RAM) {
       continue;
@@ -68,17 +63,15 @@ void InitMemory(void* zbi) {
     zx::status<> result = allocator.AddRange(range.paddr, range.length);
     ZX_ASSERT(result.is_ok());
   }
-  AssertNoError(container.take_error());
 
   // Remove any memory region marked as reserved.
-  for (const auto& range : container) {
+  for (const auto& range : *memory) {
     if (range.type != ZBI_MEM_RANGE_RESERVED) {
       continue;
     }
     zx::status<> result = allocator.RemoveRange(range.paddr, range.length);
     ZX_ASSERT(result.is_ok());
   }
-  AssertNoError(container.take_error());
 
   // Remove space occupied by the ZBI.
   zx::status<> result =
@@ -89,5 +82,5 @@ void InitMemory(void* zbi) {
   Allocation::InitReservedRanges();
 
   // Set up our own address space.
-  ArchSetUpAddressSpace(Allocation::GetAllocator(), container);
+  ArchSetUpAddressSpace(Allocation::GetAllocator(), *memory);
 }

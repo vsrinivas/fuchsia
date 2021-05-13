@@ -6,7 +6,7 @@
 
 #include <phys/arch.h>
 
-void ArchSetUpAddressSpace(memalloc::Allocator& allocator, zbitl::MemRangeTable table) {
+void ArchSetUpAddressSpace(memalloc::Allocator& allocator, const zbitl::MemRangeTable& table) {
   // TODO(fxb/67632): Implement support for creating an ARM page table,
   // allowing us to run using CPU caches enabled.
 }

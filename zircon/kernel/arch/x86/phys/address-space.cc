@@ -92,7 +92,7 @@ void SwitchToPageTable(Paddr root) {
 }
 
 void CreateBootstapPageTable(page_table::MemoryManager& allocator,
-                             zbitl::MemRangeTable memory_map) {
+                             const zbitl::MemRangeTable& memory_map) {
   // Get the range of addresses in the memory map.
   //
   // It is okay if we over-approximate the required ranges, but we want to ensure
@@ -105,7 +105,6 @@ void CreateBootstapPageTable(page_table::MemoryManager& allocator,
     max_addr = ktl::max(range.paddr + range.length, max_addr);
     ranges++;
   }
-  ZX_ASSERT(memory_map.take_error().is_ok());
 
   // Ensure we encountered at least one range (and hence our memory
   // range is non-empty).
@@ -137,7 +136,7 @@ void CreateBootstapPageTable(page_table::MemoryManager& allocator,
 
 }  // namespace
 
-void ArchSetUpAddressSpace(memalloc::Allocator& allocator, zbitl::MemRangeTable table) {
+void ArchSetUpAddressSpace(memalloc::Allocator& allocator, const zbitl::MemRangeTable& table) {
   // On x86, we don't have any guarantee that all the memory in our address space
   // is actually mapped in.
   //
@@ -146,7 +145,7 @@ void ArchSetUpAddressSpace(memalloc::Allocator& allocator, zbitl::MemRangeTable 
   BootstrapMemoryManager bootstrap_allocator(bootstrap_memory);
 
   // Map in the address space.
-  CreateBootstapPageTable(bootstrap_allocator, ktl::move(table));
+  CreateBootstapPageTable(bootstrap_allocator, table);
 
   // Release unused bootsrap memory into the general pool.
   bootstrap_allocator.Release(allocator);

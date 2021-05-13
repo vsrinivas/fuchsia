@@ -10,13 +10,15 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   zbitl::View view(zbitl::AsBytes(data, size));
 
   // Iterate through the table.
-  zbitl::MemRangeTable table{view};
-  for (const auto& item : table) {
-    (void)item;
-  }
+  fitx::result<std::string_view, zbitl::MemRangeTable> result =
+      zbitl::MemRangeTable::FromView(view);
 
-  // Ignore any errors.
-  (void)table.take_error();
+  // Iterate through the table.
+  if (result.is_ok()) {
+    for (const auto& item : *result) {
+      (void)item;
+    }
+  }
 
   return 0;
 }
