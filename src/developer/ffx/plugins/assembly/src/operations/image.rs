@@ -16,14 +16,21 @@ use std::path::Path;
 use zbi::ZbiBuilder;
 
 pub fn assemble(args: ImageArgs) -> Result<()> {
-    let ImageArgs { product, board, outdir, gendir } = args;
+    let ImageArgs { product, board, outdir, gendir, full } = args;
+
     let (product, _board) = read_configs(product, board)?;
     let gendir = gendir.unwrap_or(outdir.clone());
+
     let base_package = construct_base_package(&outdir, &gendir, &product)?;
     let base_merkle = MerkleTree::from_reader(&base_package)
         .context("Failed to calculate the base merkle")?
         .root();
     println!("Base merkle: {}", base_merkle);
+
+    if !full {
+        return Ok(());
+    }
+
     let _zbi = construct_zbi(&outdir, &gendir, &product, Some(base_merkle))?;
 
     Ok(())

@@ -97,6 +97,11 @@ pub struct ImageArgs {
     /// the directory to write generated intermediate files to.
     #[argh(option)]
     pub gendir: Option<PathBuf>,
+
+    /// run all assembly steps, even though they haven't yet been fully integrated.
+    /// This is a temporary argument.
+    #[argh(switch)]
+    pub full: bool,
 }
 
 /// extract information from an image.
