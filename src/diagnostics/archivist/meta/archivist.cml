@@ -1,7 +1,6 @@
 {
-    include: [ "sdk/lib/diagnostics/inspect/client.shard.cml" ],
+    include: [ "src/diagnostics/archivist/meta/common.shard.cml" ],
     program: {
-        runner: "elf",
         binary: "bin/archivist",
         args: [
             "--log-to-debuglog",
@@ -11,17 +10,13 @@
             "--service-config-path",
             "/config/data/archivist_service_config.json",
         ],
-        lifecycle: { stop_event: "notify" },
         main_process_critical: "true",
     },
     capabilities: [
         {
             protocol: [
-                "fuchsia.diagnostics.ArchiveAccessor",
                 "fuchsia.diagnostics.FeedbackArchiveAccessor",
                 "fuchsia.diagnostics.LegacyMetricsArchiveAccessor",
-                "fuchsia.logger.Log",
-                "fuchsia.logger.LogSink",
             ],
         },
     ],
@@ -36,39 +31,6 @@
                 "fuchsia.diagnostics.internal.SamplerController",
                 "fuchsia.sys.internal.ComponentEventProvider",
                 "fuchsia.sys.internal.LogConnector",
-                "fuchsia.sys2.EventSource",
-            ],
-        },
-        {
-            event: [
-                "running",
-                "started",
-                "stopped",
-            ],
-            from: "parent",
-            modes: [ "async" ],
-        },
-        {
-            event: "capability_ready",
-            from: "parent",
-            as: "diagnostics_ready",
-            filter: { name: "diagnostics" },
-            modes: [ "async" ],
-        },
-        {
-            event: "capability_requested",
-            from: "parent",
-            as: "log_sink_requested",
-            filter: { name: "fuchsia.logger.LogSink" },
-            modes: [ "async" ],
-        },
-        {
-            event_stream: "EventStream",
-            subscriptions: [
-                {
-                    event: "log_sink_requested",
-                    mode: "async",
-                },
             ],
         },
         {
@@ -80,11 +42,8 @@
     expose: [
         {
             protocol: [
-                "fuchsia.diagnostics.ArchiveAccessor",
                 "fuchsia.diagnostics.FeedbackArchiveAccessor",
                 "fuchsia.diagnostics.LegacyMetricsArchiveAccessor",
-                "fuchsia.logger.Log",
-                "fuchsia.logger.LogSink",
             ],
             from: "self",
         },

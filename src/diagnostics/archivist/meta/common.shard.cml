@@ -1,0 +1,65 @@
+// This shard is meant to contain stuff that is meant to be shared across all flavors of the
+// archivist.
+{
+    include: [ "sdk/lib/diagnostics/inspect/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        lifecycle: { stop_event: "notify" },
+    },
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.diagnostics.ArchiveAccessor",
+                "fuchsia.logger.Log",
+                "fuchsia.logger.LogSink",
+            ],
+        },
+    ],
+    use: [
+        {
+            protocol: [ "fuchsia.sys2.EventSource" ],
+        },
+        {
+            event: [
+                "running",
+                "started",
+                "stopped",
+            ],
+            from: "parent",
+            modes: [ "async" ],
+        },
+        {
+            event: "capability_ready",
+            from: "parent",
+            as: "diagnostics_ready",
+            filter: { name: "diagnostics" },
+            modes: [ "async" ],
+        },
+        {
+            event: "capability_requested",
+            from: "parent",
+            as: "log_sink_requested",
+            filter: { name: "fuchsia.logger.LogSink" },
+            modes: [ "async" ],
+        },
+        {
+            event_stream: "EventStream",
+            subscriptions: [
+                {
+                    event: "log_sink_requested",
+                    mode: "async",
+                },
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.diagnostics.ArchiveAccessor",
+                "fuchsia.logger.Log",
+                "fuchsia.logger.LogSink",
+            ],
+            from: "self",
+        },
+    ],
+}
