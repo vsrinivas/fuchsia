@@ -954,10 +954,31 @@ std::unique_ptr<raw::ParameterListNew> Parser::ParseParameterListNew() {
 
   std::unique_ptr<raw::AttributeListNew> attributes = MaybeParseAttributeListNew();
   if (!Ok())
-    Fail();
+    return Fail();
 
-  if (Peek().kind() != Token::Kind::kRightParen)
+  if (attributes) {
+    auto& attrs = attributes->attributes;
+    if (!attrs.empty() && attrs[0].name == "doc") {
+      auto& args = attrs[0].args;
+      if (!args.empty() && args[0].value->kind == raw::Literal::Kind::kDocComment) {
+        Fail(ErrDocCommentOnParameters);
+        const auto result = RecoverToEndOfParamList();
+        if (result == RecoverResult::Failure) {
+          return Fail();
+        }
+      }
+    }
+  }
+
+  if (Peek().kind() != Token::Kind::kRightParen) {
     type_ctor = ParseTypeConstructorNew();
+    if (!Ok()) {
+      const auto result = RecoverToEndOfParamList();
+      if (result == RecoverResult::Failure) {
+        return Fail();
+      }
+    }
+  }
 
   ConsumeToken(OfKind(Token::Kind::kRightParen));
   if (!Ok())
@@ -1064,8 +1085,10 @@ void Parser::ParseProtocolMember(
     std::vector<std::unique_ptr<raw::ProtocolMethod>>* methods) {
   ASTScope scope(this);
   raw::AttributeList attributes = MaybeParseAttributeList();
-  if (!Ok())
+  if (!Ok()) {
     Fail();
+    return;
+  }
 
   switch (Peek().kind()) {
     case Token::Kind::kArrow: {
@@ -1086,12 +1109,13 @@ void Parser::ParseProtocolMember(
         add(composed_protocols, [&] { return ParseComposeProtocol(std::move(attributes), scope); });
       } else {
         Fail(ErrUnrecognizedProtocolMember);
+        return;
       }
       break;
     }
     default:
       Fail(ErrExpectedProtocolMember);
-      break;
+      return;
   }
 }
 
@@ -2162,6 +2186,9 @@ std::unique_ptr<raw::TypeConstructorNew> Parser::ParseTypeConstructorNew() {
   switch (Peek().kind()) {
     case Token::Kind::kLeftCurly: {
       auto layout = ParseLayout(scope, modifiers, std::move(identifier), /*subtype_ctor=*/nullptr);
+      if (!Ok())
+        return Fail();
+
       layout_ref =
           std::make_unique<raw::InlineLayoutReference>(scope.GetSourceElement(), std::move(layout));
       break;
@@ -2179,6 +2206,11 @@ std::unique_ptr<raw::TypeConstructorNew> Parser::ParseTypeConstructorNew() {
                        auto named_ref = static_cast<raw::NamedLayoutReference*>(layout_ref.get());
                        auto layout = ParseLayout(scope, modifiers, std::move(named_ref->identifier),
                                                  std::move(type_ctor));
+                       if (!Ok()) {
+                         Fail();
+                         return;
+                       }
+
                        layout_ref = std::make_unique<raw::InlineLayoutReference>(
                            scope.GetSourceElement(), std::move(layout));
                      },
@@ -2226,7 +2258,8 @@ raw::TypeConstructor Parser::ParseTypeConstructor() {
 std::unique_ptr<raw::TypeDecl> Parser::ParseTypeDecl(
     std::unique_ptr<raw::AttributeListNew> attributes, ASTScope& scope) {
   ConsumeToken(IdentifierOfSubkind(Token::Subkind::kType));
-  assert(Ok() && "caller should check first token");
+  if (!Ok())
+    return Fail();
 
   auto identifier = ParseIdentifier();
   if (!Ok())
@@ -2468,6 +2501,28 @@ Parser::RecoverResult Parser::RecoverToEndOfListItem() {
 
 Parser::RecoverResult Parser::RecoverToEndOfParam() {
   return RecoverToEndOfListItem<Token::Kind::kRightParen>();
+}
+
+Parser::RecoverResult Parser::RecoverToEndOfParamList() {
+  if (ConsumedEOF()) {
+    return RecoverResult::Failure;
+  }
+
+  RecoverAllErrors();
+
+  static const auto exit_tokens = std::set<Token::Kind>{
+      Token::Kind::kRightParen,
+  };
+  if (!ConsumeTokensUntil(exit_tokens)) {
+    return RecoverResult::Failure;
+  }
+
+  switch (Peek().combined()) {
+    case CASE_TOKEN(Token::Kind::kRightParen):
+      return RecoverResult::EndOfScope;
+    default:
+      return RecoverResult::Failure;
+  }
 }
 
 }  // namespace fidl

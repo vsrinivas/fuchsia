@@ -399,6 +399,7 @@ class Parser {
   template <Token::Kind ClosingToken>
   RecoverResult RecoverToEndOfListItem();
   RecoverResult RecoverToEndOfParam();
+  RecoverResult RecoverToEndOfParamList();
 
   // Utility function used by RecoverTo* methods
   bool ConsumeTokensUntil(std::set<Token::Kind> tokens);

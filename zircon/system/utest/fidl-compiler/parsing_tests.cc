@@ -18,6 +18,18 @@ namespace {
 // Test that an invalid compound identifier fails parsing. Regression
 // test for fxbug.dev/7600.
 TEST(ParsingTests, BadCompoundIdentifierTest) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  // The leading 0 in the library name causes parsing an Identifier
+  // to fail, and then parsing a CompoundIdentifier to fail.
+  TestLibrary library(R"FIDL(
+library 0fidl.test.badcompoundidentifier;
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
+}
+
+TEST(ParsingTests, BadCompoundIdentifierTestOld) {
   // The leading 0 in the library name causes parsing an Identifier
   // to fail, and then parsing a CompoundIdentifier to fail.
   TestLibrary library(R"FIDL(
@@ -28,6 +40,18 @@ library 0fidl.test.badcompoundidentifier;
 
 // Test that library name formatting checks are done in the parser
 TEST(ParsingTests, BadLibraryNameTest) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library a_b;
+)FIDL",
+                      experimental_flags);
+
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidLibraryNameComponent);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "a_b");
+}
+
+TEST(ParsingTests, BadLibraryNameTestOld) {
   TestLibrary library(R"FIDL(
 library a_b;
 )FIDL");
@@ -77,7 +101,7 @@ struct InStruct {
     bool reserved;
 };
 )FIDL");
-  EXPECT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
 }
 
 TEST(ParsingTests, GoodParsingHandlesInStructTest) {
@@ -152,7 +176,7 @@ resource struct Handles {
 };
 )FIDL");
 
-  EXPECT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
 }
 
 TEST(ParsingTests, GoodParsingHandleConstraintTest) {
@@ -186,7 +210,7 @@ resource struct Handles {
 )FIDL",
                       std::move(experimental_flags));
 
-  EXPECT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
 }
 
 // Test that otherwise reserved words can be appropriarely parsed when context
@@ -230,7 +254,7 @@ union InUnion {
     23: bool reserved;
 };
 )FIDL");
-  EXPECT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
 }
 
 // Test that otherwise reserved words can be appropriately parsed when context
@@ -274,10 +298,25 @@ protocol InProtocol {
     foo(struct arg, int32 arg2, struct arg3);
 };
 )FIDL");
-  EXPECT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
 }
 
 TEST(ParsingTests, BadCharPoundSignTest) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library test;
+
+type Test = struct {
+    #uint8 uint8;
+};
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidCharacter);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "#");
+}
+
+TEST(ParsingTests, BadCharPoundSignTestOld) {
   TestLibrary library(R"FIDL(
 library test;
 
@@ -290,6 +329,21 @@ struct Test {
 }
 
 TEST(ParsingTests, BadCharSlashTest) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library test;
+
+type Test = struct / {
+    uint8 uint8;
+};
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidCharacter);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "/");
+}
+
+TEST(ParsingTests, BadCharSlashTestOld) {
   TestLibrary library(R"FIDL(
 library test;
 
@@ -302,6 +356,21 @@ struct Test / {
 }
 
 TEST(ParsingTests, BadIdentifierTest) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library test;
+
+type test_ = struct {
+    uint8 uint8;
+};
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidIdentifier);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "test_");
+}
+
+TEST(ParsingTests, BadIdentifierTestOld) {
   TestLibrary library(R"FIDL(
 library test;
 
@@ -323,6 +392,25 @@ class LocaleSwapper {
 };
 
 TEST(ParsingTests, BadInvalidCharacterTest) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  LocaleSwapper swapper("de_DE.iso88591");
+  TestLibrary library("invalid.character.fidl", R"FIDL(
+library fidl.test.maxbytes;
+
+// This is all alphanumeric in the appropriate locale, but not a valid
+// identifier.
+type ß = struct {
+    x int32;
+};
+
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrInvalidCharacter,
+                                      fidl::ErrInvalidCharacter);
+}
+
+TEST(ParsingTests, BadInvalidCharacterTestOld) {
   LocaleSwapper swapper("de_DE.iso88591");
   TestLibrary library("invalid.character.fidl", R"FIDL(
 library fidl.test.maxbytes;
@@ -346,10 +434,68 @@ struct Empty {
 };
 
 )FIDL");
-  EXPECT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
 }
 
 TEST(ParsingTests, BadErrorOnTypeAliasBeforeImports) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  SharedAmongstLibraries shared;
+  TestLibrary dependency("dependent.fidl", R"FIDL(
+library dependent;
+
+struct Something {};
+)FIDL",
+                         &shared);
+  TestLibrary converted_dependency;
+  ASSERT_COMPILED_AND_CONVERT_INTO(dependency, converted_dependency);
+
+  TestLibrary library("example.fidl", R"FIDL(
+library example;
+
+alias foo = int16;
+using dependent;
+
+type UseDependent = struct {
+    field dependent.Something;
+};
+)FIDL",
+                      &shared, experimental_flags);
+  ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
+  ASSERT_ERRORED_DURING_COMPILE_WITH_DEP(library, converted_dependency,
+                                         fidl::ErrLibraryImportsMustBeGroupedAtTopOfFile);
+}
+
+TEST(ParsingTests, BadErrorOnTypeAliasBeforeImportsWithOldDep) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  SharedAmongstLibraries shared;
+  TestLibrary dependency("dependent.fidl", R"FIDL(
+library dependent;
+
+struct Something {};
+)FIDL",
+                         &shared);
+  TestLibrary cloned_dependency;
+  ASSERT_COMPILED_AND_CLONE_INTO(dependency, cloned_dependency);
+
+  TestLibrary library("example.fidl", R"FIDL(
+library example;
+
+alias foo = int16;
+using dependent;
+
+type UseDependent = struct {
+    field dependent.Something;
+};
+)FIDL",
+                      &shared, experimental_flags);
+  ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
+  ASSERT_ERRORED_DURING_COMPILE_WITH_DEP(library, cloned_dependency,
+                                         fidl::ErrLibraryImportsMustBeGroupedAtTopOfFile);
+}
+
+TEST(ParsingTests, BadErrorOnTypeAliasBeforeImportsOld) {
   SharedAmongstLibraries shared;
   TestLibrary dependency("dependent.fidl", R"FIDL(
 library dependent;
@@ -375,6 +521,32 @@ struct UseDependent {
 }
 
 TEST(ParsingTests, GoodAttributeValueHasCorrectContents) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library("example.fidl", R"FIDL(
+  library example;
+
+  @foo("Bar")
+  type Empty = struct{};
+)FIDL",
+                      experimental_flags);
+
+  std::unique_ptr<fidl::raw::File> ast;
+  ASSERT_TRUE(library.Parse(&ast));
+
+  fidl::raw::AttributeNew attribute =
+      std::move(ast->type_decls.front()->attributes->attributes.front());
+  ASSERT_STR_EQ(attribute.name.c_str(), "foo");
+  ASSERT_TRUE(attribute.args.size() == 1);
+
+  fidl::raw::AttributeArg arg = std::move(attribute.args[0]);
+  ASSERT_STR_EQ(static_cast<fidl::raw::StringLiteral*>(arg.value.get())->MakeContents(), "Bar");
+}
+
+// TODO(fxbug.dev/70247): this "Good" test is copied because it cannot use the
+//  full ASSERT_CONVERTED_AND_COMPILE macro, since the condition we are testing
+//  is a valid parse tree generation.
+TEST(ParsingTests, GoodAttributeValueHasCorrectContentsOld) {
   TestLibrary library("example.fidl", R"FIDL(
   library example;
 
@@ -393,6 +565,35 @@ TEST(ParsingTests, GoodAttributeValueHasCorrectContents) {
 }
 
 TEST(ParsingTests, GoodMultilineCommentHasCorrectContents) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library("example.fidl", R"FIDL(
+  library example;
+
+  /// A
+  /// multiline
+  /// comment!
+  type Empty = struct {};
+)FIDL",
+                      experimental_flags);
+
+  std::unique_ptr<fidl::raw::File> ast;
+  ASSERT_TRUE(library.Parse(&ast));
+
+  fidl::raw::AttributeNew attribute =
+      std::move(ast->type_decls.front()->attributes->attributes.front());
+  ASSERT_STR_EQ(attribute.name.c_str(), "doc");
+  ASSERT_TRUE(attribute.args.size() == 1);
+
+  fidl::raw::AttributeArg arg = std::move(attribute.args[0]);
+  ASSERT_STR_EQ(static_cast<fidl::raw::DocCommentLiteral*>(arg.value.get())->MakeContents(),
+                " A\n multiline\n comment!\n");
+}
+
+// TODO(fxbug.dev/70247): this "Good" test is copied because it cannot use the
+//  full ASSERT_CONVERTED_AND_COMPILE macro, since the condition we are testing
+//  is a valid parse tree generation.
+TEST(ParsingTests, GoodMultilineCommentHasCorrectContentsOld) {
   TestLibrary library("example.fidl", R"FIDL(
   library example;
 
@@ -422,12 +623,44 @@ library example;
 struct Empty{};
 )FIDL");
 
-  ASSERT_COMPILED(library);
+  ASSERT_COMPILED_AND_CONVERT(library);
   const auto& warnings = library.warnings();
-  ASSERT_GE(warnings.size(), 1);
+  // TODO(fxbug.dev/70247): The number of warnings has doubled, as we are going
+  //  to collect every warning twice: once for the original compilation, and
+  //  once again for the converted one.  This number will need to be halved
+  //  during cleanup.
+  ASSERT_EQ(warnings.size(), 2);
   ASSERT_ERR(warnings[0], fidl::WarnBlankLinesWithinDocCommentBlock);
+  ASSERT_ERR(warnings[1], fidl::WarnBlankLinesWithinDocCommentBlock);
 }
 
+// TODO(fxbug.dev/70247): This test cannot be run by converting old code, and so
+//  must maintain a manual copy here until conversion is complete.  See the test
+//  with below for more info.
+TEST(NewSyntaxTests, WarnCommentInsideDocCommentTestNew) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library("example.fidl", R"FIDL(
+library example;
+
+/// start
+// middle
+/// end
+type Empty = struct {};
+)FIDL",
+                      experimental_flags);
+
+  ASSERT_TRUE(library.Compile());
+  const auto& warnings = library.warnings();
+  ASSERT_GE(warnings.size(), 1);
+  ASSERT_ERR(warnings[0], fidl::WarnCommentWithinDocCommentBlock);
+}
+
+// TODO(fxbug.dev/70247): The converter moves the errant comment into the proper
+//  location, so this test no longer produces warnings after conversion.  A
+//  manual copy of the test has been added to above - once conversion is
+//  completed and ASSERT_COMPILED_AND_CONVERT is removed, that test should be
+//  copied in place of this one.
 TEST(ParsingTests, WarnCommentInsideDocCommentTest) {
   TestLibrary library("example.fidl", R"FIDL(
 library example;
@@ -438,7 +671,7 @@ library example;
 struct Empty{};
 )FIDL");
 
-  ASSERT_COMPILED(library);
+  ASSERT_COMPILED_AND_CONVERT(library);
   const auto& warnings = library.warnings();
   ASSERT_GE(warnings.size(), 1);
   ASSERT_ERR(warnings[0], fidl::WarnCommentWithinDocCommentBlock);
@@ -455,14 +688,36 @@ library example;
 struct Empty{};
 )FIDL");
 
-  ASSERT_COMPILED(library);
+  ASSERT_COMPILED_AND_CONVERT(library);
   const auto& warnings = library.warnings();
-  ASSERT_EQ(warnings.size(), 2);
+  // TODO(fxbug.dev/70247): The number of warnings has doubled, as we are going
+  //  to collect every warning twice: once for the original compilation, and
+  //  once again for the converted one.  This number will need to be halved
+  //  during cleanup.
+  ASSERT_EQ(warnings.size(), 4);
   ASSERT_ERR(warnings[0], fidl::WarnCommentWithinDocCommentBlock);
   ASSERT_ERR(warnings[1], fidl::WarnBlankLinesWithinDocCommentBlock);
+  ASSERT_ERR(warnings[2], fidl::WarnCommentWithinDocCommentBlock);
+  ASSERT_ERR(warnings[3], fidl::WarnBlankLinesWithinDocCommentBlock);
 }
 
 TEST(ParsingTests, BadDocCommentNotAllowedOnParams) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library("example.fidl", R"FIDL(
+library example;
+
+protocol Example {
+  Method(/// Doc comment
+         struct { b bool; });
+};
+)FIDL",
+                      experimental_flags);
+
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDocCommentOnParameters);
+}
+
+TEST(ParsingTests, BadDocCommentNotAllowedOnParamsOld) {
   TestLibrary library("example.fidl", R"FIDL(
 library example;
 
@@ -473,6 +728,24 @@ protocol Example {
 )FIDL");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDocCommentOnParameters);
+}
+
+TEST(ParsingTests, BadRecoverableParamListParsing) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library("example.fidl", R"FIDL(
+library example;
+
+protocol Example {
+  Method(/// Doc comment
+      { b bool; }) -> (/// Doc comment
+      struct  { b bool; });
+};
+)FIDL",
+                      experimental_flags);
+
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrDocCommentOnParameters,
+                                      fidl::ErrDocCommentOnParameters);
 }
 
 TEST(ParsingTests, GoodCommentsSurroundingDocCommentTest) {
@@ -488,9 +761,8 @@ library example;
 struct Empty{};
 )FIDL");
 
-  std::unique_ptr<fidl::raw::File> ast;
   library.set_warnings_as_errors(true);
-  ASSERT_TRUE(library.Parse(&ast));
+  ASSERT_COMPILED_AND_CONVERT(library);
 }
 
 TEST(ParsingTests, GoodBlankLinesAfterDocCommentTest) {
@@ -504,9 +776,8 @@ library example;
 struct Empty{};
 )FIDL");
 
-  std::unique_ptr<fidl::raw::File> ast;
   library.set_warnings_as_errors(true);
-  ASSERT_TRUE(library.Parse(&ast));
+  ASSERT_COMPILED_AND_CONVERT(library);
 }
 
 TEST(ParsingTests, GoodBlankLinesAfterDocCommentWithCommentTest) {
@@ -521,9 +792,8 @@ library example;
 struct Empty{};
 )FIDL");
 
-  std::unique_ptr<fidl::raw::File> ast;
   library.set_warnings_as_errors(true);
-  ASSERT_TRUE(library.Parse(&ast));
+  ASSERT_COMPILED_AND_CONVERT(library);
 }
 
 TEST(ParsingTests, WarnTrailingDocCommentTest) {
@@ -534,13 +804,34 @@ struct Empty{};
 /// bad
 )FIDL");
 
-  ASSERT_COMPILED(library);
+  ASSERT_COMPILED_AND_CONVERT(library);
   const auto& warnings = library.warnings();
-  ASSERT_EQ(warnings.size(), 1);
+  // TODO(fxbug.dev/70247): The number of warnings has doubled, as we are going
+  //  to collect every warning twice: once for the original compilation, and
+  //  once again for the converted one.  This number will need to be halved
+  //  during cleanup.
+  ASSERT_EQ(warnings.size(), 2);
   ASSERT_ERR(warnings[0], fidl::WarnDocCommentMustBeFollowedByDeclaration);
+  ASSERT_ERR(warnings[1], fidl::WarnDocCommentMustBeFollowedByDeclaration);
 }
 
 TEST(ParsingTests, BadFinalMemberMissingSemicolon) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+type Struct = struct {
+    uint_value uint8;
+    foo string // error: missing semicolon
+};
+)FIDL",
+                      experimental_flags);
+
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
+}
+
+TEST(ParsingTests, BadFinalMemberMissingSemicolonOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -550,11 +841,31 @@ struct Struct {
 };
 )FIDL");
 
-  std::unique_ptr<fidl::raw::File> ast;
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind);
 }
 
-TEST(ParsingTests, BadFinalMemberMissingNameAndSemicolon) {
+// NOTE(fxbug.dev/72924): this test is slightly different from the old syntax
+// one that it replaces, in that the "missing" portion of the struct member is a
+// type, not a name.
+TEST(ParsingTests, BadFinalMemberMissingTypeAndSemicolon) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+type Struct = struct {
+    uint_value uint8;
+    string_value
+}; // error: want type, got "}"
+   // error: want "}", got EOF
+)FIDL",
+                      experimental_flags);
+
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind,
+                                      fidl::ErrUnexpectedTokenOfKind);
+}
+
+TEST(ParsingTests, BadFinalMemberMissingNameAndSemicolonOld) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -565,7 +876,6 @@ struct Struct {
    // error: want "}", got EOF
 )FIDL");
 
-  std::unique_ptr<fidl::raw::File> ast;
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrUnexpectedTokenOfKind,
                                       fidl::ErrUnexpectedTokenOfKind);
 }
