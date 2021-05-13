@@ -16,12 +16,6 @@ import (
 
 type EncodedCompoundIdentifier = fidlgen.EncodedCompoundIdentifier
 
-type Type struct {
-	Decl     string
-	DeclType fidlgen.DeclType
-	Derives  derives
-}
-
 type Bits struct {
 	fidlgen.Bits
 	Name    string
@@ -571,7 +565,7 @@ func (c *compiler) compileConstant(val fidlgen.Constant, typ fidlgen.Type) strin
 	case fidlgen.LiteralConstant:
 		return compileLiteral(val.Literal, typ)
 	case fidlgen.BinaryOperator:
-		decl := c.compileType(typ, false).Decl
+		decl := c.compileType(typ, false)
 		// from_bits isn't a const function, so from_bits_truncate must be used.
 		return fmt.Sprintf("%s::from_bits_truncate(%s)", decl, val.Value)
 	default:
@@ -592,7 +586,7 @@ func (c *compiler) compileConst(val fidlgen.Const) Const {
 	} else {
 		r = Const{
 			Attributes: val.Attributes,
-			Type:       c.compileType(val.Type, false).Decl,
+			Type:       c.compileType(val.Type, false),
 			Name:       name,
 			Value:      c.compileConstant(val.Value, val.Type),
 		}
@@ -672,13 +666,12 @@ func (c *compiler) fieldHandleInformation(val *fidlgen.Type) FieldHandleInformat
 	}
 }
 
-func (c *compiler) compileType(val fidlgen.Type, borrowed bool) Type {
+func (c *compiler) compileType(val fidlgen.Type, borrowed bool) string {
 	var r string
-	var declType fidlgen.DeclType
 	switch val.Kind {
 	case fidlgen.ArrayType:
 		t := c.compileType(*val.ElementType, borrowed)
-		r = fmt.Sprintf("[%s; %v]", t.Decl, *val.ElementCount)
+		r = fmt.Sprintf("[%s; %v]", t, *val.ElementCount)
 		if borrowed {
 			r = fmt.Sprintf("&mut %s", r)
 		}
@@ -691,12 +684,12 @@ func (c *compiler) compileType(val fidlgen.Type, borrowed bool) Type {
 			// the bit patterns for bool values, so we omit them
 			// from the optimization.
 			if val.ElementType.Kind == fidlgen.PrimitiveType && val.ElementType.PrimitiveSubtype != fidlgen.Bool {
-				inner = fmt.Sprintf("&[%s]", t.Decl)
+				inner = fmt.Sprintf("&[%s]", t)
 			} else {
-				inner = fmt.Sprintf("&mut dyn ExactSizeIterator<Item = %s>", t.Decl)
+				inner = fmt.Sprintf("&mut dyn ExactSizeIterator<Item = %s>", t)
 			}
 		} else {
-			inner = fmt.Sprintf("Vec<%s>", t.Decl)
+			inner = fmt.Sprintf("Vec<%s>", t)
 		}
 		if val.Nullable {
 			r = fmt.Sprintf("Option<%s>", inner)
@@ -738,8 +731,7 @@ func (c *compiler) compileType(val fidlgen.Type, borrowed bool) Type {
 		if !ok {
 			panic(fmt.Sprintf("unknown identifier: %v", val.Identifier))
 		}
-		declType = declInfo.Type
-		switch declType {
+		switch declInfo.Type {
 		case fidlgen.BitsDeclType, fidlgen.EnumDeclType:
 			// Bits and enums are small, simple, and never contain handles,
 			// so no need to borrow
@@ -771,23 +763,20 @@ func (c *compiler) compileType(val fidlgen.Type, borrowed bool) Type {
 				r = fmt.Sprintf("Option<%s>", r)
 			}
 		default:
-			panic(fmt.Sprintf("unknown declaration type: %v", declType))
+			panic(fmt.Sprintf("unknown declaration type: %v", declInfo.Type))
 		}
 	default:
 		panic(fmt.Sprintf("unknown type kind: %v", val.Kind))
 	}
 
-	return Type{
-		Decl:     r,
-		DeclType: declType,
-	}
+	return r
 }
 
 func (c *compiler) compileBits(val fidlgen.Bits) Bits {
 	e := Bits{
 		Bits:    val,
 		Name:    c.compileCamelCompoundIdentifier(val.Name),
-		Type:    c.compileType(val.Type, false).Decl,
+		Type:    c.compileType(val.Type, false),
 		Members: []BitsMember{},
 	}
 	for _, v := range val.Members {
@@ -850,8 +839,8 @@ func (c *compiler) compileParameterArray(payload fidlgen.EncodedCompoundIdentifi
 		wrapperName, hasHandleMetadata := c.compileHandleMetadataWrapper(&v.Type)
 		parameters = append(parameters, Parameter{
 			OGType:            v.Type,
-			Type:              c.compileType(v.Type, false).Decl,
-			BorrowedType:      c.compileType(v.Type, true).Decl,
+			Type:              c.compileType(v.Type, false),
+			BorrowedType:      c.compileType(v.Type, true),
 			Name:              compileSnakeIdentifier(v.Name),
 			HandleWrapperName: wrapperName,
 			HasHandleMetadata: hasHandleMetadata,
@@ -924,11 +913,10 @@ func (c *compiler) compileService(val fidlgen.Service) Service {
 }
 
 func (c *compiler) compileStructMember(val fidlgen.StructMember) StructMember {
-	memberType := c.compileType(val.Type, false)
 	hi := c.fieldHandleInformation(&val.Type)
 	return StructMember{
 		Attributes:        val.Attributes,
-		Type:              memberType.Decl,
+		Type:              c.compileType(val.Type, false),
 		OGType:            val.Type,
 		Name:              compileSnakeIdentifier(val.Name),
 		Offset:            val.FieldShapeV1.Offset,
@@ -1129,7 +1117,7 @@ func (c *compiler) compileUnionMember(val fidlgen.UnionMember) UnionMember {
 	hi := c.fieldHandleInformation(&val.Type)
 	return UnionMember{
 		Attributes:        val.Attributes,
-		Type:              c.compileType(val.Type, false).Decl,
+		Type:              c.compileType(val.Type, false),
 		OGType:            val.Type,
 		Name:              compileCamelIdentifier(val.Name),
 		Ordinal:           val.Ordinal,
@@ -1191,7 +1179,7 @@ func (c *compiler) compileTable(table fidlgen.Table) Table {
 		members = append(members, TableMember{
 			Attributes:        member.Attributes,
 			OGType:            member.Type,
-			Type:              c.compileType(member.Type, false).Decl,
+			Type:              c.compileType(member.Type, false),
 			Name:              compileSnakeIdentifier(member.Name),
 			Ordinal:           member.Ordinal,
 			HasHandleMetadata: hi.hasHandleMetadata,

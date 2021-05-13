@@ -279,11 +279,13 @@ impl<'a, 'b> Encoder<'a, 'b> {
 
     /// Extends buf by `len` bytes and calls the provided closure to write
     /// out-of-line data, with `offset` set to the start of the new region.
+    /// `len` must be nonzero.
     #[inline(always)]
     pub fn write_out_of_line<F>(&mut self, len: usize, recursion_depth: usize, f: F) -> Result<()>
     where
         F: FnOnce(&mut Encoder<'_, '_>, usize, usize) -> Result<()>,
     {
+        debug_assert!(len > 0);
         let new_offset = self.buf.len();
         let new_depth = recursion_depth + 1;
         Self::check_recursion_depth(new_depth)?;
@@ -592,8 +594,7 @@ impl<'a> Decoder<'a> {
         panic!("invalid padding bytes detected, but missing when generating error");
     }
 
-    /// Runs the provided closure inside an decoder modified
-    /// to read out-of-line data.
+    /// Runs the provided closure inside an decoder modified to read out-of-line data.
     #[inline(always)]
     pub fn read_out_of_line<F, R>(&mut self, len: usize, f: F) -> Result<R>
     where
@@ -608,7 +609,13 @@ impl<'a> Decoder<'a> {
         }
 
         // Validate padding bytes at the end of the block.
-        // Safety: self.next_out_of_line <= self.buf.len() based on the if-statement above.
+        // Safety:
+        // - self.next_out_of_line <= self.buf.len() based on the if-statement above.
+        // - If `len` is 0, `next_out_of_line` is unchanged and this will read
+        //   the prior 8 bytes. This is valid because at least 8 inline bytes
+        //   are always read before calling `read_out_of_line`. The `mask` will
+        //   be zero so the check will not fail.
+        debug_assert!(self.next_out_of_line >= 8);
         let last_u64 = unsafe {
             let last_u64_ptr = self.buf.get_unchecked(self.next_out_of_line - 8);
             mem::transmute::<*const u8, *const u64>(last_u64_ptr).read_unaligned()
@@ -3045,7 +3052,7 @@ macro_rules! fidl_table {
                         // Zero reserved fields.
                         _encoder.padding(_offset + _prev_end_offset, cur_offset - _prev_end_offset);
 
-                        // Encode present field.
+                        // Encode field.
                         $(
                             _encoder.set_next_handle_subtype($member_handle_subtype);
                             _encoder.set_next_handle_rights($member_handle_rights);
@@ -3148,7 +3155,6 @@ macro_rules! fidl_table {
                             $crate::encoding::ALLOC_PRESENT_U64 => {
                                 decoder.read_out_of_line(
                                     decoder.inline_size_of::<$member_ty>(),
-
                                     |decoder, offset| {
                                         $(
                                             decoder.set_next_handle_subtype($member_handle_subtype);
