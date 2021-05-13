@@ -65,9 +65,10 @@ unified_only = [
   "resource",
   "system-event",
 
-  # This builds its own separate test binary in its own BUILD.gn file, but is
-  # also included in the unified standalone test binary.
+  # These build their own separate test binaries in their own BUILD.gn files,
+  # but are also included in the unified standalone test binary.
   "//zircon/system/ulib/c:unittests",
+  "//src/lib/elfldltl:unittests",
 ]
 
 # Build each test as a standalone binary meant to be run by runtests.

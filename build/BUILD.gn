@@ -231,6 +231,7 @@ group("deprecated_zx_wrapper_allowlist") {
     "//src/graphics/display/lib/device-protocol-display/*",
     "//src/lib/ddk/*",
     "//src/lib/ddktl/*",
+    "//src/lib/elfldltl/*",
     "//src/lib/framebuffer/*",
     "//src/lib/storage/fs_management/*",
     "//src/media/audio/lib/simple-audio-stream/*",
