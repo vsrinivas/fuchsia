@@ -22,10 +22,13 @@ use {
     futures::{channel::mpsc, FutureExt as _, SinkExt as _, StreamExt as _, TryStreamExt as _},
     log::{debug, error, info, warn},
     pin_utils::pin_mut,
-    std::collections::{HashMap, HashSet},
-    std::sync::{
-        atomic::{AtomicU64, Ordering},
-        Arc,
+    std::{
+        borrow::Cow,
+        collections::hash_map::{Entry, HashMap},
+        sync::{
+            atomic::{AtomicU64, Ordering},
+            Arc,
+        },
     },
     thiserror::Error,
     vfs::directory::{
@@ -52,7 +55,7 @@ enum CreateRealmError {
     #[error("capability name not provided")]
     CapabilityNameNotProvided,
     #[error("duplicate capability '{0}' used by component '{1}'")]
-    DuplicateCapabilityUse(String, String),
+    DuplicateCapabilityUse(Cow<'static, str>, String),
     #[error("realm builder error: {0:?}")]
     RealmBuilderError(#[from] fcomponent::error::Error),
 }
@@ -146,16 +149,18 @@ async fn create_realm_instance(
                     let () = components_using_all.push(name);
                 }
                 ChildUses::Capabilities(caps) => {
-                    let mut unique_caps = HashSet::new();
+                    // TODO(https://github.com/rust-lang/rust/issues/60896): use std's HashSet.
+                    type HashSet<T> = HashMap<T, ()>;
+                    let mut unique_caps: HashSet<Cow<'_, _>> = HashSet::new();
                     for cap in caps {
                         let service_name = match cap {
                             fnetemul::Capability::LogSink(fnetemul::Empty {}) => {
                                 let () = route_log_sink_to_component(&mut builder, &name)?;
-                                flogger::LogSinkMarker::SERVICE_NAME.to_string()
+                                flogger::LogSinkMarker::SERVICE_NAME.into()
                             }
                             fnetemul::Capability::NetemulNetworkContext(fnetemul::Empty {}) => {
                                 let () = route_network_context_to_component(&mut builder, &name)?;
-                                fnetemul_network::NetworkContextMarker::SERVICE_NAME.to_string()
+                                fnetemul_network::NetworkContextMarker::SERVICE_NAME.into()
                             }
                             fnetemul::Capability::NetemulSyncManager(fnetemul::Empty {}) => todo!(),
                             fnetemul::Capability::NetemulDevfs(fnetemul::Empty {}) => todo!(),
@@ -178,14 +183,20 @@ async fn create_realm_instance(
                                     source: RouteEndpoint::component(source),
                                     targets: vec![RouteEndpoint::component(&name)],
                                 });
-                                capability
+                                capability.into()
                             }
                         };
-                        if !unique_caps.insert(service_name.clone()) {
-                            return Err(CreateRealmError::DuplicateCapabilityUse(
-                                service_name,
-                                name,
-                            ));
+                        match unique_caps.entry(service_name) {
+                            Entry::Occupied(entry) => {
+                                let (service_name, ()) = entry.remove_entry();
+                                return Err(CreateRealmError::DuplicateCapabilityUse(
+                                    service_name,
+                                    name,
+                                ));
+                            }
+                            Entry::Vacant(entry) => {
+                                let () = entry.insert(());
+                            }
                         }
                     }
                 }
