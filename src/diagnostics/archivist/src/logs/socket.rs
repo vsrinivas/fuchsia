@@ -107,7 +107,6 @@ mod tests {
         fx_log_packet_t, LogsField, Message, Severity, METADATA_SIZE, TEST_IDENTITY,
     };
     use super::*;
-    use diagnostics_hierarchy::hierarchy;
     use diagnostics_log_encoding::{
         encode::Encoder, Argument, Record, Severity as StreamSeverity, Value,
     };
@@ -126,20 +125,19 @@ mod tests {
         let mut ls =
             LogMessageSocket::new(sout, TEST_IDENTITY.clone(), Default::default()).unwrap();
         sin.write(packet.as_bytes()).unwrap();
-        let expected_p = Message::new(
-            zx::Time::from_nanos(packet.metadata.time),
-            Severity::Info,
-            METADATA_SIZE + 6 /* tag */+ 6, /* msg */
-            packet.metadata.dropped_logs as u64,
-            &*TEST_IDENTITY,
-            hierarchy! {
-                root: {
-                    LogsField::ProcessId => packet.metadata.pid,
-                    LogsField::ThreadId => packet.metadata.tid,
-                    LogsField::Tag => "AAAAA",
-                    LogsField::Msg => "BBBBB",
-                }
-            },
+        let expected_p = Message::from(
+            diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
+                timestamp_nanos: zx::Time::from_nanos(packet.metadata.time).into(),
+                component_url: TEST_IDENTITY.url.clone(),
+                moniker: TEST_IDENTITY.to_string(),
+                severity: Severity::Info,
+                size_bytes: METADATA_SIZE + 6 /* tag */+ 6, /* msg */
+            })
+            .set_pid(packet.metadata.pid)
+            .set_tid(packet.metadata.tid)
+            .add_tag("AAAAA")
+            .set_message("BBBBB".to_string())
+            .build(),
         );
 
         let result_message = ls.next().await.unwrap();
@@ -169,18 +167,20 @@ mod tests {
         encoder.write_record(&record).unwrap();
         let encoded = &buffer.get_ref()[..buffer.position() as usize];
 
-        let expected_p = Message::new(
-            timestamp,
-            Severity::Fatal,
-            encoded.len(),
-            0, // dropped logs
-            &*TEST_IDENTITY,
-            hierarchy! {
-                root: {
-                    LogsField::Other("key".to_string()) => "value",
-                    LogsField::Tag => "tag-a",
-                }
-            },
+        let expected_p = Message::from(
+            diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
+                timestamp_nanos: timestamp.into(),
+                component_url: TEST_IDENTITY.url.clone(),
+                moniker: TEST_IDENTITY.to_string(),
+                severity: Severity::Fatal,
+                size_bytes: encoded.len(),
+            })
+            .add_tag("tag-a")
+            .add_key(diagnostics_data::LogsProperty::String(
+                LogsField::Other("key".to_string()),
+                "value".to_string(),
+            ))
+            .build(),
         );
 
         let mut stream =

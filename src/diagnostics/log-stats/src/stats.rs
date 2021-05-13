@@ -316,9 +316,9 @@ pub enum LogSource {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, archivist_lib::logs::message::*, diagnostics_data::hierarchy,
-        fuchsia_async as fasync, fuchsia_inspect::testing::*, fuchsia_inspect::*,
-        fuchsia_zircon as zx, futures::Future, proptest::prelude::*, std::panic,
+        super::*, archivist_lib::logs::message::*, fuchsia_async as fasync,
+        fuchsia_inspect::testing::*, fuchsia_inspect::*, fuchsia_zircon as zx, futures::Future,
+        proptest::prelude::*, std::panic,
     };
 
     struct GranularTestState {
@@ -751,19 +751,18 @@ mod tests {
         let mut state = GranularTestState::new()?;
 
         // Simple structured log
-        let msg = Message::new(
-            zx::Time::from_nanos(1),
-            Severity::Error,
-            0, // size
-            0, // dropped
-            &*TEST_IDENTITY,
-            hierarchy! {
-                root: {
-                    LogsField::Msg => "[irrelevant_tag(32)] Hello",
-                    LogsField::FilePath => "path/to/file.cc",
-                    LogsField::LineNumber => 123u64,
-                }
-            },
+        let msg = Message::from(
+            LogsDataBuilder::new(BuilderArgs {
+                timestamp_nanos: zx::Time::from_nanos(1).into(),
+                component_url: TEST_IDENTITY.url.clone(),
+                moniker: TEST_IDENTITY.to_string(),
+                severity: Severity::Error,
+                size_bytes: 0,
+            })
+            .set_message("[irrelevant_tag(32)] Hello".to_string())
+            .set_line(123u64)
+            .set_file("path/to/file.cc".to_string())
+            .build(),
         );
 
         state.granular_stats.record_log(&msg);
@@ -783,18 +782,17 @@ mod tests {
         );
 
         // Line number field missing. Should parse the message instead.
-        let msg = Message::new(
-            zx::Time::from_nanos(1),
-            Severity::Error,
-            0, // size
-            0, // dropped
-            &*TEST_IDENTITY,
-            hierarchy! {
-                root: {
-                    LogsField::Msg => "[tag(1)] Msg",
-                    LogsField::FilePath => "some/other/file.cc",
-                }
-            },
+        let msg = Message::from(
+            LogsDataBuilder::new(BuilderArgs {
+                timestamp_nanos: zx::Time::from_nanos(1).into(),
+                component_url: TEST_IDENTITY.url.clone(),
+                moniker: TEST_IDENTITY.to_string(),
+                severity: Severity::Error,
+                size_bytes: 0,
+            })
+            .set_message("[irrelevant_tag(32)] Hello".to_string())
+            .set_file("path/to/file.cc".to_string())
+            .build(),
         );
         state.granular_stats.record_log(&msg);
         assert_data_tree!(state.inspector,
@@ -808,8 +806,8 @@ mod tests {
                     "count": 1u64
                 },
                 "1": {
-                    "file_path": "tag",
-                    "line_no": 1u64,
+                    "file_path": "irrelevant_tag",
+                    "line_no": 32u64,
                     "count": 1u64
                 }
               }
@@ -818,18 +816,16 @@ mod tests {
         );
 
         // No file field. Will parse the message instead.
-        let msg = Message::new(
-            zx::Time::from_nanos(1),
-            Severity::Error,
-            0, // size
-            0, // dropped
-            &*TEST_IDENTITY,
-            hierarchy! {
-                root: {
-                    LogsField::Msg => "[file.rs(99)] Testing 1 2 3",
-                    LogsField::LineNumber => 931u64,
-                }
-            },
+        let msg = Message::from(
+            LogsDataBuilder::new(BuilderArgs {
+                timestamp_nanos: zx::Time::from_nanos(1).into(),
+                component_url: TEST_IDENTITY.url.clone(),
+                moniker: TEST_IDENTITY.to_string(),
+                severity: Severity::Error,
+                size_bytes: 0,
+            })
+            .set_message("[irrelevant_tag(32)] Hello".to_string())
+            .build(),
         );
         state.granular_stats.record_log(&msg);
         assert_data_tree!(state.inspector,
@@ -843,14 +839,9 @@ mod tests {
                     "count": 1u64
                 },
                 "1": {
-                    "file_path": "tag",
-                    "line_no": 1u64,
-                    "count": 1u64
-                },
-                "2": {
-                    "file_path": "file.rs",
-                    "line_no": 99u64,
-                    "count": 1u64
+                    "file_path": "irrelevant_tag",
+                    "line_no": 32u64,
+                    "count": 2u64
                 }
               }
             }
@@ -1065,17 +1056,16 @@ mod tests {
     }
 
     fn create_message_with_severity(msg: &str, severity: Severity) -> Message {
-        Message::new(
-            zx::Time::from_nanos(1),
-            severity,
-            METADATA_SIZE + 1 + msg.len(),
-            0, // dropped
-            &*TEST_IDENTITY,
-            hierarchy! {
-                root: {
-                    LogsField::Msg => msg,
-                }
-            },
+        Message::from(
+            LogsDataBuilder::new(BuilderArgs {
+                timestamp_nanos: zx::Time::from_nanos(1).into(),
+                component_url: TEST_IDENTITY.url.clone(),
+                moniker: TEST_IDENTITY.to_string(),
+                severity: severity,
+                size_bytes: METADATA_SIZE + 1 + msg.len(),
+            })
+            .set_message(msg.to_string())
+            .build(),
         )
     }
 

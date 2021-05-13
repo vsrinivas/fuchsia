@@ -390,9 +390,7 @@ mod test {
         async_channel::{Receiver, Sender},
         async_lock::Mutex,
         async_trait::async_trait,
-        ffx_log_test_utils::{
-            setup_fake_archive_iterator, FakeArchiveIteratorResponse, LogsDataBuilder,
-        },
+        ffx_log_test_utils::{setup_fake_archive_iterator, FakeArchiveIteratorResponse},
         ffx_log_utils::symbolizer::FakeSymbolizerForTest,
         fidl::endpoints::RequestStream,
         fidl_fuchsia_developer_remotecontrol::{
@@ -655,7 +653,15 @@ mod test {
     }
 
     fn target_log(timestamp: i64, msg: &str) -> LogsData {
-        LogsDataBuilder::new().timestamp(Timestamp::from(timestamp)).message(msg).build()
+        diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
+            timestamp_nanos: timestamp.into(),
+            component_url: String::default(),
+            moniker: String::default(),
+            severity: diagnostics_data::Severity::Info,
+            size_bytes: 1,
+        })
+        .set_message(msg)
+        .build()
     }
 
     async fn make_default_target(expected_logs: Vec<FakeArchiveIteratorResponse>) -> Target {

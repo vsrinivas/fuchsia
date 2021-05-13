@@ -7,8 +7,6 @@ use crate::{
     logs::{error::StreamError, stats::LogStreamStats},
 };
 use byteorder::{ByteOrder, LittleEndian};
-use diagnostics_data::{LogError, LogsHierarchy, Timestamp};
-use diagnostics_hierarchy::DiagnosticsHierarchy;
 use diagnostics_log_encoding::{Severity as StreamSeverity, Value, ValueUnknown};
 use fidl_fuchsia_logger::{LogLevelFilter, LogMessage, MAX_DATAGRAM_LEN_BYTES};
 use fidl_fuchsia_sys_internal::SourceIdentity;
@@ -27,7 +25,10 @@ use std::{
     sync::Arc,
 };
 
-pub use diagnostics_data::{hierarchy, LogsData, LogsField, LogsMetadata, LogsProperty, Severity};
+pub use diagnostics_data::{
+    hierarchy, BuilderArgs, LogError, LogsData, LogsDataBuilder, LogsField, LogsMetadata,
+    LogsProperty, Severity,
+};
 
 const UNKNOWN_COMPONENT_NAME: &str = "UNKNOWN";
 
@@ -90,55 +91,28 @@ impl MessageId {
     }
 }
 
-impl Message {
-    pub fn new(
-        timestamp: impl Into<Timestamp>,
-        severity: impl Into<Severity>,
-        size_bytes: usize,
-        dropped_before: u64,
-        source: &ComponentIdentity,
-        mut payload: DiagnosticsHierarchy<LogsField>,
-    ) -> Self {
-        payload.sort();
-        let mut errors = vec![];
-        if dropped_before > 0 {
-            errors.push(LogError::DroppedLogs { count: dropped_before });
-        }
-        Self {
-            id: MessageId::next(),
-            stats: Default::default(),
-            data: LogsData::for_logs(
-                source.to_string(),
-                Some(payload),
-                timestamp,
-                &source.url,
-                severity,
-                size_bytes,
-                errors,
-            ),
-        }
+impl From<LogsData> for Message {
+    fn from(data: LogsData) -> Self {
+        Self { data, id: MessageId::next(), stats: Default::default() }
     }
+}
 
+impl Message {
     /// Returns a new Message which encodes a count of dropped messages in its metadata.
     pub fn for_dropped(count: u64, source: &ComponentIdentity, timestamp: i64) -> Self {
         let message = format!("Rolled {} logs out of buffer", count);
-        Self {
-            id: MessageId::next(),
-            stats: Default::default(),
-            data: LogsData::for_logs(
-                source.to_string(),
-                Some(hierarchy! {
-                    root: {
-                        LogsField::Msg => message,
-                    }
-                }),
-                timestamp,
-                &source.url,
-                Severity::Warn,
-                0, // size_bytes
-                vec![LogError::DroppedLogs { count }],
-            ),
-        }
+        Message::from(
+            LogsDataBuilder::new(BuilderArgs {
+                timestamp_nanos: timestamp.into(),
+                component_url: source.url.clone(),
+                moniker: source.to_string(),
+                severity: Severity::Warn,
+                size_bytes: 0,
+            })
+            .add_error(LogError::DroppedLogs { count })
+            .set_message(message)
+            .build(),
+        )
     }
 
     pub(crate) fn with_stats(mut self, stats: &Arc<LogStreamStats>) -> Self {
@@ -208,27 +182,24 @@ impl Message {
             if bytes[msg_end] == 0 {
                 let message = str::from_utf8(&bytes[msg_start..msg_end])?.to_owned();
                 let message_len = message.len();
-                let mut contents = hierarchy! {
-                    root: {
-                        LogsField::ProcessId => pid,
-                        LogsField::ThreadId => tid,
-                        LogsField::Msg => message,
-                    }
-                };
-                for tag in tags {
-                    contents.add_property(LogsProperty::String(LogsField::Tag, tag));
-                }
 
                 let (severity, verbosity) = severity.for_structured();
-                let mut new = Message::new(
-                    time,
+                let raw_nanos = time.into_nanos();
+                let mut builder = LogsDataBuilder::new(BuilderArgs {
+                    timestamp_nanos: diagnostics_data::Timestamp::from(raw_nanos),
+                    component_url: source.url.clone(),
+                    moniker: source.to_string(),
                     severity,
-                    cursor + message_len + 1,
-                    dropped_logs,
-                    source,
-                    contents,
-                );
-
+                    size_bytes: cursor + message_len + 1,
+                })
+                .set_pid(pid)
+                .set_tid(tid)
+                .set_dropped(dropped_logs)
+                .set_message(message);
+                for tag in tags {
+                    builder = builder.add_tag(tag);
+                }
+                let mut new = Message::from(builder.build());
                 if let Some(verbosity) = verbosity {
                     new.set_legacy_verbosity(verbosity);
                 }
@@ -250,47 +221,67 @@ impl Message {
 
         let mut properties = vec![];
         let mut dropped_logs = 0;
+        let mut tags = vec![];
+        let mut pid = None;
+        let mut tid = None;
+        let mut msg = None;
+        let mut file = None;
+        let mut line = None;
         // Raw value from the client that we don't trust (not yet sanitized)
         let mut severity_untrusted: Option<i64> = None;
         for a in record.arguments {
             let label = LogsField::from(a.name);
 
-            if matches!(label, LogsField::Dropped) {
-                match a.value {
-                    Value::SignedInt(v) => Ok(dropped_logs = v as u64),
-                    Value::UnsignedInt(v) => Ok(dropped_logs = v),
-                    Value::Floating(f) => Err(StreamError::ExpectedInteger {
+            match (a.value, label) {
+                (Value::SignedInt(v), LogsField::Dropped) => {
+                    dropped_logs = v as u64;
+                }
+                (Value::UnsignedInt(v), LogsField::Dropped) => {
+                    dropped_logs = v;
+                }
+                (Value::Floating(f), LogsField::Dropped) => {
+                    return Err(StreamError::ExpectedInteger {
                         value: format!("{:?}", f),
                         found: "float",
-                    }),
-                    Value::Text(t) => Err(StreamError::ExpectedInteger { value: t, found: "text" }),
-                    ValueUnknown!() => {
-                        Err(StreamError::ExpectedInteger { value: "".into(), found: "unknown" })
-                    }
-                }?
-            } else {
-                if matches!(label, LogsField::Verbosity) {
-                    match a.value {
-                        Value::SignedInt(v) => {
-                            severity_untrusted = Some(v);
-                            Ok(())
-                        }
-                        Value::Text(t) => {
-                            Err(StreamError::ExpectedInteger { value: t, found: "text" })
-                        }
-                        ValueUnknown!() => {
-                            Err(StreamError::ExpectedInteger { value: "".into(), found: "unknown" })
-                        }
-                    }?
-                } else {
-                    properties.push(match a.value {
-                        Value::SignedInt(v) => LogsProperty::Int(label, v),
-                        Value::UnsignedInt(v) => LogsProperty::Uint(label, v),
-                        Value::Floating(v) => LogsProperty::Double(label, v),
-                        Value::Text(v) => LogsProperty::String(label, v),
-                        ValueUnknown!() => return Err(StreamError::UnrecognizedValue),
                     })
                 }
+                (Value::Text(t), LogsField::Dropped) => {
+                    return Err(StreamError::ExpectedInteger { value: t, found: "text" });
+                }
+                (Value::SignedInt(v), LogsField::Verbosity) => {
+                    severity_untrusted = Some(v);
+                }
+                (_, LogsField::Verbosity) => {
+                    return Err(StreamError::ExpectedInteger { value: "".into(), found: "other" });
+                }
+                (Value::Text(text), LogsField::Tag) => {
+                    tags.push(text);
+                }
+                (_, LogsField::Tag) => {
+                    return Err(StreamError::UnrecognizedValue);
+                }
+                (Value::UnsignedInt(v), LogsField::ProcessId) if pid.is_none() => {
+                    pid = Some(v);
+                }
+                (Value::UnsignedInt(v), LogsField::ThreadId) if tid.is_none() => {
+                    tid = Some(v);
+                }
+                (Value::Text(v), LogsField::Msg) if msg.is_none() => {
+                    msg = Some(v);
+                }
+                (Value::Text(v), LogsField::FilePath) if file.is_none() => {
+                    file = Some(v);
+                }
+                (Value::UnsignedInt(v), LogsField::LineNumber) if line.is_none() => {
+                    line = Some(v);
+                }
+                (value, label) => properties.push(match value {
+                    Value::SignedInt(v) => LogsProperty::Int(label, v),
+                    Value::UnsignedInt(v) => LogsProperty::Uint(label, v),
+                    Value::Floating(v) => LogsProperty::Double(label, v),
+                    Value::Text(v) => LogsProperty::String(label, v),
+                    ValueUnknown!() => return Err(StreamError::UnrecognizedValue),
+                }),
             }
         }
 
@@ -301,14 +292,27 @@ impl Message {
             LegacySeverity::try_from(record.severity).unwrap()
         };
         let (severity, verbosity) = raw_severity.for_structured();
-        let mut ret = Message::new(
-            record.timestamp,
+        let mut builder = LogsDataBuilder::new(BuilderArgs {
+            timestamp_nanos: record.timestamp.into(),
+            component_url: source.url.clone(),
+            moniker: source.to_string(),
             severity,
-            bytes.len(),
-            dropped_logs,
-            source,
-            LogsHierarchy::new("root", properties, vec![]),
-        );
+            size_bytes: bytes.len(),
+        })
+        .maybe_set_pid(pid)
+        .maybe_set_tid(tid)
+        .maybe_set_file(file)
+        .maybe_set_line(line)
+        .set_dropped(dropped_logs)
+        .maybe_set_message(msg);
+        for prop in properties {
+            builder = builder.add_key(prop);
+        }
+        for tag in tags {
+            builder = builder.add_tag(tag);
+        }
+        let mut ret = Message::from(builder.build());
+
         if severity_untrusted.is_some() && verbosity.is_some() {
             ret.set_legacy_verbosity(verbosity.unwrap())
         }
@@ -335,69 +339,48 @@ impl Message {
     /// messages.
     #[cfg(test)]
     fn clear_legacy_verbosity(&mut self) {
-        self.payload_mut()
+        self.payload_message_mut()
+            .unwrap()
             .properties
             .retain(|p| !matches!(p, LogsProperty::Int(LogsField::Verbosity, _)));
     }
 
-    /// Assign the `legacy` value to this message.
     pub(crate) fn set_legacy_verbosity(&mut self, legacy: i8) {
-        self.payload_mut().properties.push(LogsProperty::Int(LogsField::Verbosity, legacy.into()));
-    }
-
-    /// Unconditionally returns the payload because we always have a root hierarchy for logs.
-    fn payload(&self) -> &LogsHierarchy {
-        self.payload.as_ref().expect("Message is always constructed with a payload")
-    }
-
-    /// Unconditionally returns the payload because we always have a root hierarchy for logs.
-    fn payload_mut(&mut self) -> &mut LogsHierarchy {
-        self.payload.as_mut().expect("Message is always constructed with a payload")
+        if let Some(payload_message) = self.payload_message_mut() {
+            payload_message.properties.push(LogsProperty::Int(LogsField::Verbosity, legacy.into()));
+        }
     }
 
     pub fn verbosity(&self) -> Option<i8> {
-        self.payload()
-            .properties
-            .iter()
-            .filter_map(|property| match property {
-                LogsProperty::Int(LogsField::Verbosity, verbosity) => Some(*verbosity as i8),
-                _ => None,
-            })
-            .next()
+        self.payload_message().and_then(|payload| {
+            payload
+                .properties
+                .iter()
+                .filter_map(|property| match property {
+                    LogsProperty::Int(LogsField::Verbosity, verbosity) => Some(*verbosity as i8),
+                    _ => None,
+                })
+                .next()
+        })
     }
 
     /// Returns the pid associated with the message, if one exists.
     pub fn pid(&self) -> Option<u64> {
-        self.payload()
-            .properties
-            .iter()
-            .filter_map(|property| match property {
-                LogsProperty::Uint(LogsField::ProcessId, pid) => Some(*pid),
-                _ => None,
-            })
-            .next()
+        self.metadata.pid
     }
 
     /// Returns the tid associated with the message, if one exists.
     pub fn tid(&self) -> Option<u64> {
-        self.payload()
-            .properties
-            .iter()
-            .filter_map(|property| match property {
-                LogsProperty::Uint(LogsField::ThreadId, tid) => Some(*tid),
-                _ => None,
-            })
-            .next()
+        self.metadata.tid
     }
-
     /// Returns any tags associated with the message.
-    pub fn tags(&'_ self) -> impl Iterator<Item = &'_ str> {
+    pub fn tags(&self) -> Box<dyn Iterator<Item = &str> + '_> {
         // Multiple tags are supported for the `LogMessage` format and are represented
         // as multiple instances of LogsField::Tag arguments.
-        self.payload().properties.iter().filter_map(|property| match property {
-            LogsProperty::String(LogsField::Tag, tag) => Some(tag.as_str()),
-            _ => None,
-        })
+        match &self.metadata.tags {
+            None => Box::new(std::iter::empty()),
+            Some(tags) => Box::new(tags.iter().map(|item| item.as_str())),
+        }
     }
 
     /// Returns number of dropped logs if reported in the message.
@@ -414,14 +397,11 @@ impl Message {
             .flatten()
     }
 
-    fn non_legacy_contents(&self) -> impl Iterator<Item = &LogsProperty> {
-        self.payload().properties.iter().filter_map(|prop| {
-            if prop.key().is_legacy() {
-                None
-            } else {
-                Some(prop)
-            }
-        })
+    fn non_legacy_contents(&self) -> Box<dyn Iterator<Item = &LogsProperty> + '_> {
+        match self.payload_args() {
+            None => Box::new(std::iter::empty()),
+            Some(payload) => Box::new(payload.properties.iter()),
+        }
     }
 
     /// The name of the component from which this message originated.
@@ -432,23 +412,17 @@ impl Message {
     /// Convert this `Message` to a FIDL representation suitable for sending to `LogListenerSafe`.
     pub fn for_listener(&self) -> LogMessage {
         let mut msg = self.msg().unwrap_or("").to_string();
-        let mut file = None;
-        let mut line = None;
 
         for property in self.non_legacy_contents() {
             match property {
-                LogsProperty::String(LogsField::FilePath, tag) => {
-                    file = Some(tag);
-                }
-                LogsProperty::Uint(LogsField::LineNumber, tag) => {
-                    line = Some(tag);
-                }
                 other => {
                     write!(&mut msg, " {}", other)
                         .expect("allocations have to fail for this to fail");
                 }
             }
         }
+        let file = self.metadata.file.as_ref();
+        let line = self.metadata.line.as_ref();
         if let (Some(file), Some(line)) = (file, line) {
             msg = format!("[{}({})] {}", file, line, msg);
         }
@@ -811,20 +785,20 @@ mod tests {
 
         let buffer = &packet.as_bytes()[..METADATA_SIZE + data_size + 1]; // null-terminate message
         let parsed = Message::from_logger(&*TEST_IDENTITY, buffer).unwrap();
-        let expected = Message::new(
-            packet.metadata.time,
-            Severity::Debug,
-            METADATA_SIZE + data_size,
-            packet.metadata.dropped_logs as _,
-            &*TEST_IDENTITY,
-            hierarchy! {
-                root: {
-                    LogsField::ProcessId => packet.metadata.pid,
-                    LogsField::ThreadId => packet.metadata.tid,
-                    LogsField::Tag => "AAAAAAAAAAA",
-                    LogsField::Msg => "BBBBB",
-                }
-            },
+        let expected = Message::from(
+            LogsDataBuilder::new(BuilderArgs {
+                timestamp_nanos: packet.metadata.time.into(),
+                component_url: TEST_IDENTITY.url.clone(),
+                moniker: TEST_IDENTITY.to_string(),
+                severity: Severity::Debug,
+                size_bytes: METADATA_SIZE + b_end,
+            })
+            .set_dropped(packet.metadata.dropped_logs.into())
+            .set_pid(packet.metadata.pid)
+            .set_message("BBBBB".to_string())
+            .add_tag("AAAAAAAAAAA")
+            .set_tid(packet.metadata.tid)
+            .build(),
         );
 
         assert_eq!(parsed, expected);
@@ -854,34 +828,36 @@ mod tests {
 
         let buffer = &packet.as_bytes()[..METADATA_SIZE + b_end + 1]; // null-terminate message
         let parsed = Message::from_logger(&*TEST_IDENTITY, buffer).unwrap();
-        let expected = Message::new(
-            packet.metadata.time,
-            Severity::Debug,
-            METADATA_SIZE + b_end,
-            packet.metadata.dropped_logs as _,
-            &*TEST_IDENTITY,
-            hierarchy! {
-                root: {
-                    LogsField::ProcessId => packet.metadata.pid,
-                    LogsField::ThreadId => packet.metadata.tid,
-                    LogsField::Tag => TEST_IDENTITY.to_string(),
-                    LogsField::Tag => "AAAAA",
-                    LogsField::Msg => "BBBBB",
-                }
-            },
+        let expected = Message::from(
+            LogsDataBuilder::new(BuilderArgs {
+                timestamp_nanos: packet.metadata.time.into(),
+                component_url: TEST_IDENTITY.url.clone(),
+                moniker: TEST_IDENTITY.to_string(),
+                severity: Severity::Debug,
+                size_bytes: METADATA_SIZE + b_end,
+            })
+            .set_pid(packet.metadata.pid)
+            .set_dropped(packet.metadata.dropped_logs.into())
+            .set_message("BBBBB".to_string())
+            .add_tag(TEST_IDENTITY.to_string())
+            .add_tag("AAAAA")
+            .set_tid(packet.metadata.tid)
+            .build(),
         );
         assert_eq!(parsed, expected);
     }
 
     #[test]
     fn component_identity_preserved() {
-        let test_message = Message::new(
-            0i64, // time
-            Severity::Debug,
-            0usize, // size
-            0u64,   // dropped
-            &*TEST_IDENTITY,
-            hierarchy! {root: {}},
+        let test_message = Message::from(
+            LogsDataBuilder::new(BuilderArgs {
+                timestamp_nanos: 0i64.into(),
+                component_url: TEST_IDENTITY.url.clone(),
+                moniker: TEST_IDENTITY.to_string(),
+                severity: Severity::Debug,
+                size_bytes: 0,
+            })
+            .build(),
         );
         assert_eq!(&test_message.moniker, &TEST_IDENTITY.relative_moniker.join("/"));
         assert_eq!(&test_message.metadata.component_url, &TEST_IDENTITY.url);
@@ -936,21 +912,21 @@ mod tests {
 
         let buffer = &packet.as_bytes()[..METADATA_SIZE + data_size + 1]; // null-terminated
         let parsed = Message::from_logger(&*TEST_IDENTITY, buffer).unwrap();
-        let expected = Message::new(
-            packet.metadata.time,
-            Severity::Debug,
-            METADATA_SIZE + data_size,
-            packet.metadata.dropped_logs as u64,
-            &*TEST_IDENTITY,
-            hierarchy! {
-                root: {
-                    LogsField::ProcessId => packet.metadata.pid,
-                    LogsField::ThreadId => packet.metadata.tid,
-                    LogsField::Tag => "AAAAAAAAAAA",
-                    LogsField::Tag => "BBBBB",
-                    LogsField::Msg => "CCCCC",
-                }
-            },
+        let expected = Message::from(
+            LogsDataBuilder::new(BuilderArgs {
+                timestamp_nanos: packet.metadata.time.into(),
+                component_url: TEST_IDENTITY.url.clone(),
+                moniker: TEST_IDENTITY.to_string(),
+                severity: Severity::Debug,
+                size_bytes: METADATA_SIZE + data_size,
+            })
+            .set_dropped(packet.metadata.dropped_logs.into())
+            .set_pid(packet.metadata.pid)
+            .set_message("CCCCC".to_string())
+            .add_tag("AAAAAAAAAAA")
+            .add_tag("BBBBB")
+            .set_tid(packet.metadata.tid)
+            .build(),
         );
 
         assert_eq!(parsed, expected);
@@ -984,36 +960,26 @@ mod tests {
         let min_parsed = Message::from_logger(&*TEST_IDENTITY, min_buffer).unwrap();
         let full_parsed = Message::from_logger(&*TEST_IDENTITY, full_buffer).unwrap();
 
-        let mut expected_properties = vec![
-            LogsProperty::Uint(LogsField::ProcessId, packet.metadata.pid),
-            LogsProperty::Uint(LogsField::ThreadId, packet.metadata.tid),
-            LogsProperty::String(
-                LogsField::Msg,
-                String::from_utf8(vec![msg_ascii as u8; msg_len]).unwrap(),
-            ),
-        ];
-        let mut tag_properties = (0..MAX_TAGS as _)
+        let tag_properties = (0..MAX_TAGS as _)
             .map(|tag_num| {
-                LogsProperty::String(
-                    LogsField::Tag,
-                    String::from_utf8(vec![('A' as c_char + tag_num) as u8; tag_len]).unwrap(),
-                )
+                String::from_utf8(vec![('A' as c_char + tag_num) as u8; tag_len]).unwrap()
             })
-            .collect::<Vec<LogsProperty>>();
-        expected_properties.append(&mut tag_properties);
-        let mut expected_contents = LogsHierarchy::new("root", expected_properties, vec![]);
-
-        // sort hierarchies so we can do direct comparison
-        expected_contents.sort();
-
-        let expected_message = Message::new(
-            packet.metadata.time,
-            Severity::Debug,
-            METADATA_SIZE + msg_end,
-            packet.metadata.dropped_logs as u64,
-            &*TEST_IDENTITY,
-            expected_contents,
-        );
+            .collect::<Vec<_>>();
+        let mut builder = LogsDataBuilder::new(BuilderArgs {
+            timestamp_nanos: packet.metadata.time.into(),
+            component_url: TEST_IDENTITY.url.clone(),
+            moniker: TEST_IDENTITY.to_string(),
+            severity: Severity::Debug,
+            size_bytes: METADATA_SIZE + msg_end,
+        })
+        .set_dropped(packet.metadata.dropped_logs.into())
+        .set_pid(packet.metadata.pid)
+        .set_message(String::from_utf8(vec![msg_ascii as u8; msg_len]).unwrap())
+        .set_tid(packet.metadata.tid);
+        for tag in tag_properties {
+            builder = builder.add_tag(tag);
+        }
+        let expected_message = Message::from(builder.build());
 
         assert_eq!(min_parsed, expected_message);
         assert_eq!(full_parsed, expected_message);
@@ -1045,31 +1011,22 @@ mod tests {
 
         let buffer = &packet.as_bytes()[..METADATA_SIZE + msg_start + 1]; // null-terminated
         let parsed = Message::from_logger(&*TEST_IDENTITY, buffer).unwrap();
-
-        let mut expected_contents = hierarchy! {root: {
-            LogsField::ProcessId => packet.metadata.pid,
-            LogsField::ThreadId => packet.metadata.tid,
-            LogsField::Msg => "",
-        }};
+        let mut builder = LogsDataBuilder::new(BuilderArgs {
+            timestamp_nanos: packet.metadata.time.into(),
+            component_url: TEST_IDENTITY.url.clone(),
+            moniker: TEST_IDENTITY.to_string(),
+            severity: Severity::Debug,
+            size_bytes: 48,
+        })
+        .set_dropped(packet.metadata.dropped_logs as u64)
+        .set_pid(packet.metadata.pid)
+        .set_tid(packet.metadata.tid)
+        .set_message("".to_string());
         for tag_num in 0..MAX_TAGS as _ {
-            expected_contents.add_property(LogsProperty::String(
-                LogsField::Tag,
-                String::from_utf8(vec![('A' as c_char + tag_num) as u8; 2]).unwrap(),
-            ));
+            builder = builder
+                .add_tag(String::from_utf8(vec![('A' as c_char + tag_num) as u8; 2]).unwrap());
         }
-        expected_contents.sort();
-
-        assert_eq!(
-            parsed,
-            Message::new(
-                packet.metadata.time,
-                Severity::Debug,
-                METADATA_SIZE + msg_start,
-                packet.metadata.dropped_logs as u64,
-                &*TEST_IDENTITY,
-                expected_contents,
-            ),
-        );
+        assert_eq!(parsed, Message::from(builder.build()));
     }
 
     #[test]
@@ -1085,19 +1042,19 @@ mod tests {
 
         assert_eq!(
             parsed,
-            Message::new(
-                packet.metadata.time,
-                Severity::Debug,
-                METADATA_SIZE + 3,
-                packet.metadata.dropped_logs as u64,
-                &*TEST_IDENTITY,
-                hierarchy! {
-                    root: {
-                        LogsField::ProcessId => packet.metadata.pid,
-                        LogsField::ThreadId => packet.metadata.tid,
-                        LogsField::Msg => "AA",
-                    }
-                },
+            Message::from(
+                LogsDataBuilder::new(BuilderArgs {
+                    timestamp_nanos: zx::Time::from_nanos(3).into(),
+                    component_url: TEST_IDENTITY.url.clone(),
+                    moniker: TEST_IDENTITY.to_string(),
+                    severity: Severity::Debug,
+                    size_bytes: METADATA_SIZE + 3,
+                })
+                .set_dropped(packet.metadata.dropped_logs as u64)
+                .set_pid(packet.metadata.pid)
+                .set_tid(packet.metadata.tid)
+                .set_message("AA".to_string())
+                .build()
             )
         );
     }
@@ -1111,19 +1068,19 @@ mod tests {
 
         let mut buffer = &packet.as_bytes()[..METADATA_SIZE + 2]; // tag size + null
         let mut parsed = Message::from_logger(&*TEST_IDENTITY, buffer).unwrap();
-        let mut expected_message = Message::new(
-            packet.metadata.time,
-            Severity::Info,
-            METADATA_SIZE + 1,
-            packet.metadata.dropped_logs as u64,
-            &*TEST_IDENTITY,
-            hierarchy! {
-                root: {
-                    LogsField::ProcessId => packet.metadata.pid,
-                    LogsField::ThreadId => packet.metadata.tid,
-                    LogsField::Msg => "",
-                }
-            },
+        let mut expected_message = Message::from(
+            LogsDataBuilder::new(BuilderArgs {
+                timestamp_nanos: packet.metadata.time.into(),
+                component_url: TEST_IDENTITY.url.clone(),
+                moniker: TEST_IDENTITY.to_string(),
+                severity: Severity::Info,
+                size_bytes: METADATA_SIZE + 1,
+            })
+            .set_pid(packet.metadata.pid)
+            .set_message("".to_string())
+            .set_dropped(10)
+            .set_tid(packet.metadata.tid)
+            .build(),
         );
 
         assert_eq!(parsed, expected_message);
@@ -1167,17 +1124,19 @@ mod tests {
 
         let mut buffer = &packet.as_bytes()[..METADATA_SIZE + 2]; // tag size + null
         let mut parsed = Message::from_logger(&*TEST_IDENTITY, buffer).unwrap();
-        let mut expected_message = Message::new(
-            zx::Time::from_nanos(packet.metadata.time),
-            Severity::Debug,
-            METADATA_SIZE + 1,
-            packet.metadata.dropped_logs as u64,
-            &*TEST_IDENTITY,
-            hierarchy! {root: {
-                LogsField::ProcessId => packet.metadata.pid,
-                LogsField::ThreadId => packet.metadata.tid,
-                LogsField::Msg => "",
-            }},
+        let mut expected_message = Message::from(
+            LogsDataBuilder::new(BuilderArgs {
+                timestamp_nanos: zx::Time::from_nanos(3).into(),
+                component_url: TEST_IDENTITY.url.clone(),
+                moniker: TEST_IDENTITY.to_string(),
+                severity: Severity::Debug,
+                size_bytes: METADATA_SIZE + 1,
+            })
+            .set_dropped(packet.metadata.dropped_logs as u64)
+            .set_pid(1)
+            .set_tid(2)
+            .set_message("".to_string())
+            .build(),
         );
         expected_message.clear_legacy_verbosity();
         expected_message.set_legacy_verbosity(10);
@@ -1259,23 +1218,23 @@ mod tests {
         let parsed = Message::from_structured(&*TEST_IDENTITY, encoded).unwrap();
         assert_eq!(
             parsed,
-            Message::new(
-                zx::Time::from_nanos(72),
-                Severity::Error,
-                encoded.len(),
-                2, // dropped
-                &*TEST_IDENTITY,
-                hierarchy! {
-                    root: {
-                        LogsField::FilePath => "some_file.cc",
-                        LogsField::LineNumber => 420u64,
-                        LogsField::Other("arg1".to_string()) => -23i64,
-                        LogsField::ProcessId => 43u64,
-                        LogsField::ThreadId => 912u64,
-                        LogsField::Tag => "tag",
-                        LogsField::Msg => "msg",
-                    }
-                },
+            Message::from(
+                LogsDataBuilder::new(BuilderArgs {
+                    timestamp_nanos: zx::Time::from_nanos(72).into(),
+                    component_url: TEST_IDENTITY.url.clone(),
+                    moniker: TEST_IDENTITY.to_string(),
+                    severity: Severity::Error,
+                    size_bytes: 224,
+                })
+                .set_dropped(2)
+                .set_file("some_file.cc".to_string())
+                .set_line(420)
+                .set_pid(43u64)
+                .set_tid(912u64)
+                .add_tag("tag")
+                .set_message("msg".to_string())
+                .add_key(LogsProperty::Int(LogsField::Other("arg1".to_string()), -23i64))
+                .build()
             )
         );
         assert_eq!(
@@ -1308,17 +1267,18 @@ mod tests {
         let parsed = Message::from_structured(&*TEST_IDENTITY, encoded).unwrap();
         assert_eq!(
             parsed,
-            Message::new(
-                zx::Time::from_nanos(72),
-                Severity::Error,
-                encoded.len(),
-                0, // dropped
-                &*TEST_IDENTITY,
-                hierarchy! { root: {
-                    LogsField::Tag => "tag1",
-                    LogsField::Tag => "tag2",
-                    LogsField::Tag => "tag3",
-                }},
+            Message::from(
+                LogsDataBuilder::new(BuilderArgs {
+                    timestamp_nanos: zx::Time::from_nanos(72).into(),
+                    component_url: TEST_IDENTITY.url.clone(),
+                    moniker: TEST_IDENTITY.to_string(),
+                    severity: Severity::Error,
+                    size_bytes: encoded.len(),
+                })
+                .add_tag("tag1")
+                .add_tag("tag2")
+                .add_tag("tag3")
+                .build()
             )
         );
 
@@ -1331,13 +1291,15 @@ mod tests {
         let parsed = Message::from_structured(&*TEST_IDENTITY, encoded).unwrap();
         assert_eq!(
             parsed,
-            Message::new(
-                zx::Time::from_nanos(72),
-                Severity::Error,
-                encoded.len(),
-                0, // dropped
-                &*TEST_IDENTITY,
-                hierarchy! {root:{}},
+            Message::from(
+                LogsDataBuilder::new(BuilderArgs {
+                    timestamp_nanos: zx::Time::from_nanos(72).into(),
+                    component_url: TEST_IDENTITY.url.clone(),
+                    moniker: TEST_IDENTITY.to_string(),
+                    severity: Severity::Error,
+                    size_bytes: encoded.len(),
+                })
+                .build()
             )
         );
 
@@ -1352,13 +1314,15 @@ mod tests {
         ($raw:expr, $expected:expr) => {
             let legacy = LegacySeverity::try_from($raw).unwrap();
             let (severity, verbosity) = legacy.for_structured();
-            let mut msg = Message::new(
-                0i64, // timestamp
-                severity,
-                1, // size
-                0, // dropped logs
-                &*TEST_IDENTITY,
-                hierarchy! {root: {}},
+            let mut msg = Message::from(
+                LogsDataBuilder::new(BuilderArgs {
+                    timestamp_nanos: 0i64.into(),
+                    component_url: TEST_IDENTITY.url.clone(),
+                    moniker: TEST_IDENTITY.to_string(),
+                    severity,
+                    size_bytes: 1,
+                })
+                .build(),
             );
             if let Some(v) = verbosity {
                 msg.set_legacy_verbosity(v);

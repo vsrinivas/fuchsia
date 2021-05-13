@@ -4,7 +4,7 @@
 
 use {
     anyhow::{anyhow, Context as _, Error, Result},
-    diagnostics_data::{Logs, LogsData, LogsField, LogsHierarchy, LogsProperty},
+    diagnostics_data::{Logs, LogsData},
     diagnostics_reader::{ArchiveReader, Error as ReaderError},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_developer_remotecontrol::{
@@ -142,25 +142,10 @@ fn truncate_to_char_boundary(s: &str, mut max_bytes: usize) -> &str {
 }
 
 fn truncate_log_msg(mut logs: LogsData) -> Result<(LogsData, u32)> {
-    let msg = String::from(logs.msg().ok_or(anyhow!("missing log message"))?);
-    let orig_len: u32 = msg.len().try_into()?;
-
-    logs.payload = logs.payload.map(|p| {
-        let props = p
-            .properties
-            .into_iter()
-            .map(|prop| {
-                if *prop.key() == LogsField::Msg {
-                    let new_msg = truncate_to_char_boundary(&msg, MAX_DATAGRAM_LEN_BYTES as usize);
-                    return LogsProperty::String(LogsField::Msg, new_msg.to_string());
-                }
-
-                prop
-            })
-            .collect();
-        LogsHierarchy::new(p.name, props, p.children)
-    });
-
+    let msg_mut = logs.msg_mut().ok_or(anyhow!("missing log message"))?;
+    let orig_len: u32 = msg_mut.len().try_into()?;
+    let new_msg = truncate_to_char_boundary(msg_mut, MAX_DATAGRAM_LEN_BYTES as usize);
+    *msg_mut = new_msg.to_string();
     let truncated_chars =
         if MAX_DATAGRAM_LEN_BYTES > orig_len { 0 } else { orig_len - MAX_DATAGRAM_LEN_BYTES };
     return Ok((logs, max(0, truncated_chars).try_into()?));
@@ -270,7 +255,6 @@ mod test {
         super::*,
         anyhow::Error,
         diagnostics_data::Severity,
-        diagnostics_reader::hierarchy,
         fidl::endpoints::create_proxy,
         fidl_fuchsia_developer_remotecontrol::{
             ArchiveIteratorMarker, RemoteDiagnosticsBridgeMarker, RemoteDiagnosticsBridgeProxy,
@@ -356,20 +340,15 @@ mod test {
     }
 
     fn make_log(timestamp: i64, msg: String) -> LogsData {
-        let hierarchy = hierarchy! {
-            root: {
-                LogsField::Msg => msg,
-            }
-        };
-        LogsData::for_logs(
-            String::from("test/moniker"),
-            Some(hierarchy),
-            timestamp,
-            String::from("fake-url"),
-            Severity::Error,
-            1,
-            vec![],
-        )
+        diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
+            timestamp_nanos: timestamp.into(),
+            component_url: String::from("fake-url"),
+            moniker: String::from("test/moniker"),
+            severity: Severity::Error,
+            size_bytes: 1,
+        })
+        .set_message(msg)
+        .build()
     }
 
     fn make_short_log(timestamp: i64) -> LogsData {

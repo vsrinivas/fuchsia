@@ -37,14 +37,16 @@ constexpr char kMessage1Json[] = R"JSON(
   {
     "metadata": {
       "timestamp": 1234000000000,
-      "severity": "INFO"
+      "severity": "INFO",
+      "pid": 200,
+      "tid": 300,
+      "tags": ["tag_1", "tag_a"]
     },
     "payload": {
       "root": {
-        "message": "Message 1",
-        "pid": 200,
-        "tid": 300,
-        "tag": "tag_1, tag_a"
+        "message": {
+          "value": "Message 1"
+        }
       }
     }
   }
@@ -56,14 +58,16 @@ constexpr char kMessage2Json[] = R"JSON(
   {
     "metadata": {
       "timestamp": 1234000000000,
-      "severity": "INFO"
+      "severity": "INFO",
+      "pid": 200,
+      "tid": 300,
+      "tags": ["tag_2"]
     },
     "payload": {
       "root": {
-        "message": "Message 2",
-        "pid": 200,
-        "tid": 300,
-        "tag": "tag_2"
+        "message": {
+          "value": "Message 2"
+        }
       }
     }
   }
@@ -75,14 +79,16 @@ constexpr char kMessage3Json[] = R"JSON(
   {
     "metadata": {
       "timestamp": 1234000000000,
-      "severity": "INFO"
+      "severity": "INFO",
+      "pid": 200,
+      "tid": 300,
+      "tags": ["tag_3"]
     },
     "payload": {
       "root": {
-        "message": "Message 3",
-        "pid": 200,
-        "tid": 300,
-        "tag": "tag_3"
+        "message": {
+          "value": "Message 3"
+        }
       }
     }
   }

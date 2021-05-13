@@ -194,6 +194,12 @@ impl DiagnosticsData for Logs {
             component_url: metadata.component_url,
             timestamp: metadata.timestamp,
             errors: Some(vec![LogError::Other(Error { message: error })]),
+            dropped: metadata.dropped,
+            file: metadata.file,
+            line: metadata.line,
+            pid: metadata.pid,
+            tags: metadata.tags,
+            tid: metadata.tid,
         }
     }
 }
@@ -315,6 +321,24 @@ pub struct LogsMetadata {
 
     /// Size of the original message on the wire, in bytes.
     pub size_bytes: usize,
+
+    /// Tags to add at the beginning of the message
+    pub tags: Option<Vec<String>>,
+
+    /// The process ID
+    pub pid: Option<u64>,
+
+    /// The thread ID
+    pub tid: Option<u64>,
+
+    /// The file name
+    pub file: Option<String>,
+
+    /// The line number
+    pub line: Option<u64>,
+
+    /// Number of dropped messages
+    pub dropped: Option<u64>,
 }
 
 /// Severities a log message can have, often called the log's "level".
@@ -503,6 +527,214 @@ impl Data<Inspect> {
     }
 }
 
+/// Internal state of the LogsDataBuilder impl
+/// External customers should not directly access these fields.
+pub struct LogsDataBuilder {
+    /// List of errors
+    errors: Vec<LogError>,
+    /// Message in log
+    msg: Option<String>,
+    /// List of tags
+    tags: Vec<String>,
+    /// Process ID
+    pid: Option<u64>,
+    /// Thread ID
+    tid: Option<u64>,
+    /// File name
+    file: Option<String>,
+    /// Line number
+    line: Option<u64>,
+    /// Number of dropped messages
+    dropped: Option<u64>,
+    /// BuilderArgs that was passed in at construction time
+    args: BuilderArgs,
+    /// List of KVPs from the user
+    keys: Vec<Property<LogsField>>,
+}
+
+pub struct BuilderArgs {
+    /// The moniker for the component
+    pub moniker: String,
+    /// The timestamp of the message in nanoseconds
+    pub timestamp_nanos: Timestamp,
+    /// The component URL
+    pub component_url: String,
+    /// The message severity
+    pub severity: Severity,
+    /// Size of the message encoded in wire format in bytes.
+    /// This value does not actually correspond to memory usage
+    /// in anything other than wire format and should not be used
+    /// for memory accounting purposes.
+    pub size_bytes: usize,
+}
+
+impl LogsDataBuilder {
+    /// Constructs a new LogsDataBuilder
+    pub fn new(args: BuilderArgs) -> Self {
+        LogsDataBuilder {
+            args,
+            errors: vec![],
+            msg: None,
+            dropped: Some(0),
+            file: None,
+            line: None,
+            pid: None,
+            tags: vec![],
+            tid: None,
+            keys: vec![],
+        }
+    }
+
+    /// Sets the number of dropped messages.
+    /// If value is greater than zero, a DroppedLogs error
+    /// will also be added to the list of errors or updated if
+    /// already present.
+
+    #[must_use = "You must call build on your builder to consume its result"]
+    pub fn set_dropped(mut self, value: u64) -> Self {
+        self.dropped = Some(value);
+        if value <= 0 {
+            return self;
+        }
+        let val = self.errors.iter_mut().find_map(|error| {
+            if let LogError::DroppedLogs { count } = error {
+                Some(count)
+            } else {
+                None
+            }
+        });
+        if let Some(v) = val {
+            *v = value;
+        } else {
+            self.errors.push(LogError::DroppedLogs { count: value });
+        }
+        self
+    }
+
+    /// Sets the process ID that logged the message
+    #[must_use = "You must call build on your builder to consume its result"]
+    pub fn set_pid(mut self, value: u64) -> Self {
+        self.pid = Some(value);
+        self
+    }
+
+    /// Sets the process ID that logged the message, if present.
+
+    #[must_use = "You must call build on your builder to consume its result"]
+    pub fn maybe_set_pid(mut self, value: Option<u64>) -> Self {
+        self.pid = value;
+        self
+    }
+
+    /// Sets the thread ID that logged the message
+    #[must_use = "You must call build on your builder to consume its result"]
+    pub fn set_tid(mut self, value: u64) -> Self {
+        self.tid = Some(value);
+        self
+    }
+
+    /// Sets the thread ID that logged the message, if present.
+    #[must_use = "You must call build on your builder to consume its result"]
+    pub fn maybe_set_tid(mut self, value: Option<u64>) -> Self {
+        self.tid = value;
+        self
+    }
+
+    /// Constructs a LogsData from this builder
+    pub fn build(self) -> LogsData {
+        let mut args = vec![];
+        if let Some(msg) = self.msg {
+            args.push(LogsProperty::String(LogsField::MsgStructured, msg));
+        }
+        let mut payload_fields = vec![DiagnosticsHierarchy::new("message", args, vec![])];
+        if !self.keys.is_empty() {
+            let val = DiagnosticsHierarchy::new("keys", self.keys, vec![]);
+            payload_fields.push(val);
+        }
+        let mut payload = LogsHierarchy::new("root", vec![], payload_fields);
+        payload.sort();
+        let mut ret = LogsData::for_logs(
+            self.args.moniker,
+            Some(payload),
+            self.args.timestamp_nanos,
+            self.args.component_url,
+            self.args.severity,
+            self.args.size_bytes,
+            self.errors,
+        );
+        ret.metadata.dropped = self.dropped;
+        ret.metadata.file = self.file;
+        ret.metadata.line = self.line;
+        ret.metadata.pid = self.pid;
+        ret.metadata.tid = self.tid;
+        ret.metadata.tags = Some(self.tags);
+        return ret;
+    }
+
+    /// Adds an error
+    #[must_use = "You must call build on your builder to consume its result"]
+    pub fn add_error(mut self, error: LogError) -> Self {
+        self.errors.push(error);
+        self
+    }
+
+    /// Sets the message to be printed in the log message
+    #[must_use = "You must call build on your builder to consume its result"]
+    pub fn set_message(mut self, msg: impl Into<String>) -> Self {
+        self.msg = Some(msg.into());
+        self
+    }
+
+    /// Sets the message to be printed in the log message, if present.
+    #[must_use = "You must call build on your builder to consume its result"]
+    pub fn maybe_set_message(mut self, msg: Option<String>) -> Self {
+        self.msg = msg;
+        self
+    }
+
+    /// Sets the file name that printed this message.
+    #[must_use = "You must call build on your builder to consume its result"]
+    pub fn set_file(mut self, file: impl Into<String>) -> Self {
+        self.file = Some(file.into());
+        self
+    }
+
+    /// Sets the line number that printed this message.
+    #[must_use = "You must call build on your builder to consume its result"]
+    pub fn set_line(mut self, line: u64) -> Self {
+        self.line = Some(line);
+        self
+    }
+
+    /// Sets the file name that printed this message, if present.
+    #[must_use = "You must call build on your builder to consume its result"]
+    pub fn maybe_set_file(mut self, file: Option<String>) -> Self {
+        self.file = file;
+        self
+    }
+
+    /// Sets the line number that printed this message, if present.
+    #[must_use = "You must call build on your builder to consume its result"]
+    pub fn maybe_set_line(mut self, line: Option<u64>) -> Self {
+        self.line = line;
+        self
+    }
+
+    /// Adds a property to the list of key value pairs that are a part of this log message.
+    #[must_use = "You must call build on your builder to consume its result"]
+    pub fn add_key(mut self, kvp: Property<LogsField>) -> Self {
+        self.keys.push(kvp);
+        self
+    }
+
+    /// Adds a tag to the list of tags that precede this log message.
+    #[must_use = "You must call build on your builder to consume its result"]
+    pub fn add_tag(mut self, tag: impl Into<String>) -> Self {
+        self.tags.push(tag.into());
+        self
+    }
+}
+
 impl Data<Logs> {
     /// Creates a new data instance for logs.
     pub fn for_logs(
@@ -527,82 +759,71 @@ impl Data<Logs> {
                 severity: severity.into(),
                 size_bytes,
                 errors,
+                dropped: None,
+                file: None,
+                line: None,
+                pid: None,
+                tags: None,
+                tid: None,
             },
         }
     }
 
     /// Returns the string log associated with the message, if one exists.
     pub fn msg(&self) -> Option<&str> {
+        self.payload_message().as_ref().and_then(|p| {
+            p.properties.iter().find_map(|property| match property {
+                LogsProperty::String(LogsField::MsgStructured, msg) => Some(msg.as_str()),
+                _ => None,
+            })
+        })
+    }
+
+    pub fn msg_mut(&mut self) -> Option<&mut String> {
+        self.payload_message_mut().and_then(|p| {
+            p.properties.iter_mut().find_map(|property| match property {
+                LogsProperty::String(LogsField::MsgStructured, msg) => Some(msg),
+                _ => None,
+            })
+        })
+    }
+
+    pub fn payload_message(&self) -> Option<&DiagnosticsHierarchy<LogsField>> {
         self.payload
             .as_ref()
-            .map(|p| {
-                p.properties
-                    .iter()
-                    .filter_map(|property| match property {
-                        LogsProperty::String(LogsField::Msg, msg) => Some(msg.as_str()),
-                        _ => None,
-                    })
-                    .next()
-            })
-            .flatten()
+            .and_then(|p| p.children.iter().find(|property| property.name.as_str() == "message"))
+    }
+
+    pub fn payload_args(&self) -> Option<&DiagnosticsHierarchy<LogsField>> {
+        self.payload
+            .as_ref()
+            .and_then(|p| p.children.iter().find(|property| property.name.as_str() == "keys"))
+    }
+
+    pub fn payload_message_mut(&mut self) -> Option<&mut DiagnosticsHierarchy<LogsField>> {
+        self.payload.as_mut().and_then(|p| {
+            p.children.iter_mut().find(|property| property.name.as_str() == "message")
+        })
     }
 
     /// Returns the file path associated with the message, if one exists.
     pub fn file_path(&self) -> Option<&str> {
-        self.payload
-            .as_ref()
-            .map(|p| {
-                p.properties
-                    .iter()
-                    .filter_map(|property| match property {
-                        LogsProperty::String(LogsField::FilePath, msg) => Some(msg.as_str()),
-                        _ => None,
-                    })
-                    .next()
-            })
-            .flatten()
+        self.metadata.file.as_ref().map(|file| file.as_str())
     }
 
     /// Returns the line number associated with the message, if one exists.
     pub fn line_number(&self) -> Option<&u64> {
-        self.payload
-            .as_ref()
-            .map(|p| {
-                p.properties
-                    .iter()
-                    .filter_map(|property| match property {
-                        LogsProperty::Uint(LogsField::LineNumber, msg) => Some(msg),
-                        _ => None,
-                    })
-                    .next()
-            })
-            .flatten()
+        self.metadata.line.as_ref()
     }
 
     /// Returns the pid associated with the message, if one exists.
     pub fn pid(&self) -> Option<u64> {
-        self.payload.as_ref().and_then(|p| {
-            p.properties
-                .iter()
-                .filter_map(|property| match property {
-                    LogsProperty::Uint(LogsField::ProcessId, pid) => Some(*pid),
-                    _ => None,
-                })
-                .next()
-        })
+        self.metadata.pid
     }
 
     /// Returns the tid associated with the message, if one exists.
     pub fn tid(&self) -> Option<u64> {
-        self.payload.as_ref().and_then(|p| {
-            p.properties
-                .iter()
-                .filter_map(|property| match property {
-                    LogsProperty::Uint(LogsField::ThreadId, tid) => Some(*tid),
-                    _ => None,
-                })
-                .next()
-        })
+        self.metadata.tid
     }
 }
 
@@ -610,22 +831,8 @@ impl fmt::Display for Data<Logs> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // Multiple tags are supported for the `LogMessage` format and are represented
         // as multiple instances of LogsField::Tag arguments.
-        let tags = self
-            .payload
-            .as_ref()
-            .map(|p| {
-                p.properties
-                    .iter()
-                    .filter_map(|property| match property {
-                        LogsProperty::String(LogsField::Tag, tag) => Some(tag.as_str()),
-                        _ => None,
-                    })
-                    .collect::<Vec<_>>()
-            })
-            .unwrap_or(vec![]);
         let kvps = self
-            .payload
-            .as_ref()
+            .payload_args()
             .map(|p| {
                 p.properties
                     .iter()
@@ -673,24 +880,6 @@ impl fmt::Display for Data<Logs> {
                     .collect::<Vec<_>>()
             })
             .unwrap_or(vec![]);
-        let mut file = None;
-        let mut line = None;
-
-        for p in self.payload.as_ref() {
-            for property in &p.properties {
-                match property {
-                    LogsProperty::String(LogsField::FilePath, tag) => {
-                        file = Some(tag.to_string());
-                        ()
-                    }
-                    LogsProperty::Uint(LogsField::LineNumber, tag) => {
-                        line = Some(tag);
-                        ()
-                    }
-                    _ => (),
-                }
-            }
-        }
         let time: Duration = self.metadata.timestamp.into();
         write!(
             f,
@@ -701,15 +890,18 @@ impl fmt::Display for Data<Logs> {
             self.tid().map(|s| s.to_string()).unwrap_or("".to_string()),
             self.moniker,
         )?;
-        let mut file_line_str = "".to_string();
-        if file.is_some() && line.is_some() {
-            file_line_str = format!(" [{}({})]", file.unwrap(), line.unwrap());
+        match &self.metadata.tags {
+            Some(tags) if !tags.is_empty() => {
+                write!(f, "[{}]", tags.join(","))?;
+            }
+            _ => {}
         }
-        if !tags.is_empty() {
-            write!(f, "[{}]", tags.join(","))?;
+        write!(f, " {}:", self.metadata.severity)?;
+        if let (Some(file), Some(line)) = (&self.metadata.file, &self.metadata.line) {
+            write!(f, " [{}({})]", file, line)?;
         }
 
-        write!(f, " {}:{} {}", self.metadata.severity, file_line_str, self.msg().unwrap_or(""))?;
+        write!(f, " {}", self.msg().unwrap_or(""))?;
         if !kvps.is_empty() {
             for kvp in kvps {
                 write!(f, " {}", kvp)?;
@@ -733,6 +925,7 @@ pub enum LogsField {
     Tag,
     Verbosity,
     Msg,
+    MsgStructured,
     FilePath,
     LineNumber,
     Other(String),
@@ -744,6 +937,7 @@ pub const PID_LABEL: &str = "pid";
 pub const TID_LABEL: &str = "tid";
 pub const DROPPED_LABEL: &str = "num_dropped";
 pub const TAG_LABEL: &str = "tag";
+pub const MESSAGE_LABEL_STRUCTURED: &str = "value";
 pub const MESSAGE_LABEL: &str = "message";
 pub const VERBOSITY_LABEL: &str = "verbosity";
 pub const FILE_PATH_LABEL: &str = "file";
@@ -775,6 +969,7 @@ impl AsRef<str> for LogsField {
             Self::Verbosity => VERBOSITY_LABEL,
             Self::FilePath => FILE_PATH_LABEL,
             Self::LineNumber => LINE_NUMBER_LABEL,
+            Self::MsgStructured => MESSAGE_LABEL_STRUCTURED,
             Self::Other(str) => str.as_str(),
         }
     }
@@ -795,6 +990,7 @@ where
             MESSAGE_LABEL => Self::Msg,
             FILE_PATH_LABEL => Self::FilePath,
             LINE_NUMBER_LABEL => Self::LineNumber,
+            MESSAGE_LABEL_STRUCTURED => Self::MsgStructured,
             _ => Self::Other(s.to_string()),
         }
     }
@@ -1013,27 +1209,22 @@ mod tests {
 
     #[test]
     fn display_for_logs() {
-        let hierarchy = hierarchy! {
-            root: {
-                LogsField::ProcessId => 123u64,
-                LogsField::ThreadId => 456u64,
-                LogsField::Tag => "foo",
-                LogsField::Tag => "bar",
-                LogsField::Msg => "some message",
-                LogsField::FilePath => "some_file.cc",
-                LogsField::LineNumber => 420u64,
-                LogsField::Other("test".to_string()) => "property",
-            }
-        };
-        let data = LogsData::for_logs(
-            String::from("moniker"),
-            Some(hierarchy),
-            Timestamp::from(12345678000i64),
-            String::from("fake-url"),
-            Severity::Info,
-            1,
-            vec![],
-        );
+        let data = LogsDataBuilder::new(BuilderArgs {
+            timestamp_nanos: Timestamp::from(12345678000i64).into(),
+            component_url: String::from("fake-url"),
+            moniker: String::from("moniker"),
+            severity: Severity::Info,
+            size_bytes: 1,
+        })
+        .set_pid(123)
+        .set_tid(456)
+        .set_message("some message".to_string())
+        .set_file("some_file.cc".to_string())
+        .set_line(420)
+        .add_tag("foo")
+        .add_tag("bar")
+        .add_key(LogsProperty::String(LogsField::Other("test".to_string()), "property".to_string()))
+        .build();
 
         assert_eq!(
             "[00012.345678][123][456][moniker][foo,bar] INFO: [some_file.cc(420)] some message test=property",
@@ -1043,22 +1234,17 @@ mod tests {
 
     #[test]
     fn display_for_logs_no_tags() {
-        let hierarchy = hierarchy! {
-            root: {
-                LogsField::ProcessId => 123u64,
-                LogsField::ThreadId => 456u64,
-                LogsField::Msg => "some message",
-            }
-        };
-        let data = LogsData::for_logs(
-            String::from("moniker"),
-            Some(hierarchy),
-            Timestamp::from(12345678000i64),
-            String::from("fake-url"),
-            Severity::Info,
-            1,
-            vec![],
-        );
+        let data = LogsDataBuilder::new(BuilderArgs {
+            timestamp_nanos: Timestamp::from(12345678000i64).into(),
+            component_url: String::from("fake-url"),
+            moniker: String::from("moniker"),
+            severity: Severity::Info,
+            size_bytes: 1,
+        })
+        .set_pid(123)
+        .set_tid(456)
+        .set_message("some message".to_string())
+        .build();
 
         assert_eq!("[00012.345678][123][456][moniker] INFO: some message", format!("{}", data))
     }

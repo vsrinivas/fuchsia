@@ -532,14 +532,16 @@ TEST_F(DatastoreTest, GetAttachments_SysLog) {
   {
     "metadata": {
       "timestamp": 15604000000000,
-      "severity": "INFO"
+      "severity": "INFO",
+      "pid": 7559,
+      "tid": 7687,
+      "tags": ["foo"]
     },
     "payload": {
       "root": {
-        "message": "log message",
-        "pid": 7559,
-        "tid": 7687,
-        "tag": "foo"
+        "message": {
+          "value": "log message"
+        }
       }
     }
   }

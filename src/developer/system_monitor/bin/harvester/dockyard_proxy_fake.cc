@@ -138,10 +138,10 @@ bool DockyardProxyFake::CheckLogSubstringSent(
     document.Parse(json_array);
     assert(document.IsArray());
     for (auto& json_log : document.GetArray()) {
-      std::string message(
-          rapidjson::GetValueByPointerWithDefault(
-              json_log, "/payload/root/message", "", document.GetAllocator())
-              .GetString());
+      std::string message(rapidjson::GetValueByPointerWithDefault(
+                              json_log, "/payload/root/message/value", "",
+                              document.GetAllocator())
+                              .GetString());
       if (message.find(log_message) != std::string::npos) {
         return true;
       }

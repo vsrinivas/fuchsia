@@ -55,10 +55,8 @@ async fn test_components_logs_to_stdout() {
                 futures::future::ready(
                     !(is_go
                         && log
-                            .payload
-                            .as_ref()
-                            .and_then(|p| p.get_property("message"))
-                            .and_then(|s| s.string())
+                            .msg()
+                            .map(|s| s.to_string())
                             .map(|s| s.starts_with("runtime") || s.starts_with("syscall"))
                             .unwrap_or(false)),
                 )
@@ -185,7 +183,7 @@ fn assert_all_have_attribution(messages: &[Data<Logs>], component: &Component) {
 fn assert_any_has_content(messages: &[Data<Logs>], payload: &str, severity: Severity) {
     let check_content = |msg: &Data<Logs>| {
         msg.metadata.severity == severity
-            && msg.payload.as_ref().unwrap().get_property("message").unwrap().string().unwrap()
+            && msg.payload_message().unwrap().get_property("value").unwrap().string().unwrap()
                 == payload
     };
 

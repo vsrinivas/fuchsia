@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use diagnostics_hierarchy::testing::AnyProperty;
 use diagnostics_reader::{assert_data_tree, ArchiveReader, Data, Logs, Severity};
 use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMarker, LogMessage};
 use fuchsia_async::Task;
@@ -29,10 +28,11 @@ async fn launch_example_and_read_hello_world() {
     assert_eq!(new_next.metadata.severity, Severity::Info);
     assert_eq!(new_next.metadata.component_url, url);
     assert_eq!(new_next.moniker, "logs_example");
-    assert_data_tree!(new_next.payload.unwrap(), root: {
-        "message": "should print",
-        "pid": AnyProperty,
-        "tid": AnyProperty,
+    assert_data_tree!(new_next.payload.unwrap(), root:
+    {
+        "message": {
+            "value": "should print",
+        }
     });
 
     let (next, new_next) = (logs.next().await.unwrap(), new_logs.next().await.unwrap());
@@ -45,12 +45,18 @@ async fn launch_example_and_read_hello_world() {
     assert_eq!(new_next.metadata.severity, Severity::Info);
     assert_eq!(new_next.metadata.component_url, url);
     assert_eq!(new_next.moniker, "logs_example");
-    assert_data_tree!(new_next.payload.unwrap(), root: {
-        "message": "hello, world!",
-        "foo": 1u64,
-        "bar": "baz",
-        "pid": AnyProperty,
-        "tid": AnyProperty,
+    eprintln!("{:?}", new_next);
+    assert_data_tree!(new_next.payload.unwrap(), root:
+    {
+        "message":
+        {
+            "value": "hello, world!",
+        },
+        "keys":
+        {
+            "foo": 1u64,
+            "bar": "baz",
+        }
     });
 
     let (next, new_next) = (logs.next().await.unwrap(), new_logs.next().await.unwrap());
@@ -63,10 +69,12 @@ async fn launch_example_and_read_hello_world() {
     assert_eq!(new_next.metadata.severity, Severity::Warn);
     assert_eq!(new_next.metadata.component_url, url);
     assert_eq!(new_next.moniker, "logs_example");
-    assert_data_tree!(new_next.payload.unwrap(), root: {
-        "message": "warning: using old api",
-        "pid": AnyProperty,
-        "tid": AnyProperty,
+    assert_data_tree!(new_next.payload.unwrap(), root:
+    {
+    "message":
+        {
+            "value": "warning: using old api",
+        }
     });
 }
 

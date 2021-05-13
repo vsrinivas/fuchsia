@@ -6,15 +6,22 @@
       "component_url": "fuchsia-pkg://fuchsia.com/iquery-tests#meta/basic_component.cmx",
       "timestamp": "TIMESTAMP",
       "severity": "INFO",
-      "size_bytes": 74
+      "size_bytes": 74,
+      "tags": [
+        "iquery_basic_component"
+      ],
+      "pid": "PID",
+      "tid": "TID",
+      "file": null,
+      "line": null,
+      "dropped": 0
     },
     "moniker": "log-test/basic_component.cmx",
     "payload": {
       "root": {
-        "message": "Is great to have! ",
-        "pid": "PID",
-        "tag": "iquery_basic_component",
-        "tid": "TID"
+        "message": {
+          "value": "Is great to have! "
+        }
       }
     },
     "version": 1

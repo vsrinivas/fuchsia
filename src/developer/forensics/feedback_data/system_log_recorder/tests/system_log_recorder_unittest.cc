@@ -52,13 +52,15 @@ std::string BuildLogMessage(const std::string& message) {
   {
     "metadata": {
       "timestamp": 15604000000000,
-      "severity": "INFO"
+      "severity": "INFO",
+      "pid": 7559,
+      "tid": 7687
     },
     "payload": {
       "root": {
-      "message": "%s",
-        "pid": 7559,
-        "tid": 7687
+      "message": {
+        "value": "%s"
+        }
       }
     }
   }

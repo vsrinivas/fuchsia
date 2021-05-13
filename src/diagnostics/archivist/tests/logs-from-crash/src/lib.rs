@@ -19,9 +19,9 @@ async fn logs_from_crashing_component() {
 
     log::info!("test started");
     let our_message = logs.next().await.unwrap();
-    assert_data_tree!(our_message.payload.as_ref().unwrap(), root: contains {
-        "message": "test started",
-    });
+    assert_data_tree!(our_message.payload.as_ref().unwrap(), root:{"message": contains {
+        "value": "test started",
+    }});
 
     let crasher_status = fuchsia_component::client::launch(
         &fuchsia_component::client::launcher().unwrap(),
@@ -36,19 +36,19 @@ async fn logs_from_crashing_component() {
 
     let crasher_info = logs.next().await.unwrap();
     assert_eq!(crasher_info.metadata.severity, Severity::Info);
-    assert_data_tree!(crasher_info.payload.unwrap(), root: contains {
-        "message": "crasher has initialized",
-    });
+    assert_data_tree!(crasher_info.payload.unwrap(), root:{"message": contains {
+        "value": "crasher has initialized",
+    }});
 
     let crasher_warn = logs.next().await.unwrap();
     assert_eq!(crasher_warn.metadata.severity, Severity::Warn);
-    assert_data_tree!(crasher_warn.payload.unwrap(), root: contains {
-        "message": "crasher is approaching the crash",
-    });
+    assert_data_tree!(crasher_warn.payload.unwrap(), root:{"message": contains {
+        "value": "crasher is approaching the crash",
+    }});
 
     let crasher_error = logs.next().await.unwrap();
     assert_eq!(crasher_error.metadata.severity, Severity::Error);
-    assert_data_tree!(crasher_error.payload.unwrap(), root: contains {
-        "message": "oh no we're crashing",
-    });
+    assert_data_tree!(crasher_error.payload.unwrap(), root:{"message": contains {
+        "value": "oh no we're crashing",
+    }});
 }

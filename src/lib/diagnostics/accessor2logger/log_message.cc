@@ -22,11 +22,10 @@ namespace diagnostics::accessor2logger {
 namespace {
 const char kPidLabel[] = "pid";
 const char kTidLabel[] = "tid";
-const char kTagLabel[] = "tag";
 const char kFileLabel[] = "file";
 const char kLineLabel[] = "line";
 const char kTagsLabel[] = "tags";
-const char kMessageLabel[] = "message";
+const char kMessageLabel[] = "value";
 
 inline int32_t StringToSeverity(const std::string& input) {
   if (strcasecmp(input.c_str(), "trace") == 0) {
@@ -60,6 +59,10 @@ inline fit::result<LogMessage, std::string> JsonToLogMessage(rapidjson::Value& v
   if (metadata == value.MemberEnd() || payload == value.MemberEnd() ||
       !metadata->value.IsObject() || !payload->value.IsObject()) {
     return fit::error("Expected metadata and payload objects");
+  }
+  auto root = payload->value.FindMember("root");
+  if (!root->value.IsObject()) {
+    return fit::error("Expected payload.root to be an object if present");
   }
 
   auto timestamp = metadata->value.FindMember("timestamp");
@@ -100,6 +103,10 @@ inline fit::result<LogMessage, std::string> JsonToLogMessage(rapidjson::Value& v
     if (!payload->value.IsObject()) {
       return fit::error("Expected payload.root to be an object if present");
     }
+    payload = payload->value.FindMember("message");
+    if (!payload->value.IsObject()) {
+      return fit::error("Expected payload.root.message to be an object if present");
+    }
   }
   std::string msg;
   std::string filename;
@@ -111,13 +118,14 @@ inline fit::result<LogMessage, std::string> JsonToLogMessage(rapidjson::Value& v
     std::string name = it->name.GetString();
     if (name == kMessageLabel && it->value.IsString()) {
       msg = std::move(it->value.GetString());
-    } else if (name == kTagLabel) {
-      // TODO(fxbug.dev/63007): Parse only "tags"
-      if (!it->value.IsString()) {
-        return fit::error("Tag field must contain a single string value");
-      }
-      ret.tags.emplace_back(std::move(it->value.GetString()));
-    } else if (name == kTagsLabel) {
+    }
+  }
+  for (auto it = metadata->value.MemberBegin(); it != metadata->value.MemberEnd(); ++it) {
+    if (!it->name.IsString()) {
+      return fit::error("A key is not a string");
+    }
+    std::string name = it->name.GetString();
+    if (name == kTagsLabel) {
       if (it->value.IsString()) {
         ret.tags.emplace_back(std::move(it->value.GetString()));
       } else if (it->value.IsArray()) {
@@ -139,7 +147,15 @@ inline fit::result<LogMessage, std::string> JsonToLogMessage(rapidjson::Value& v
       filename = it->value.GetString();
     } else if (name == kLineLabel && it->value.IsUint64()) {
       line_number = it->value.GetUint64();
-    } else {
+    }
+  }
+  auto kvps = root->value.FindMember("keys");
+  if ((kvps != root->value.MemberEnd()) && kvps->value.IsObject() && (kvps->name == "keys")) {
+    for (auto it = kvps->value.MemberBegin(); it != kvps->value.MemberEnd(); ++it) {
+      if (!it->name.IsString()) {
+        return fit::error("A key is not a string");
+      }
+      std::string name = it->name.GetString();
       // If the name of the field is not a known special field, treat it as a key/value pair and
       // append to the message.
       kv_mapping << " " << std::move(name) << "=";

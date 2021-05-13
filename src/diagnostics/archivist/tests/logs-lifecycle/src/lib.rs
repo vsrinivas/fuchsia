@@ -55,6 +55,6 @@ fn check_message(message: Data<Logs>) {
     assert!(message.moniker == "logs_when_launched");
     assert_eq!(message.metadata.component_url, LOGS_WHEN_LAUNCHED_URL);
 
-    let payload = message.payload.unwrap();
-    assert_eq!(payload.get_property("message").unwrap().string().unwrap(), "Hello, world! ");
+    let payload = message.payload_message().unwrap();
+    assert_eq!(payload.get_property("value").unwrap().string().unwrap(), "Hello, world! ");
 }

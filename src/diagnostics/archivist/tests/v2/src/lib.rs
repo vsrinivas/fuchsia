@@ -169,9 +169,9 @@ async fn log_attribution() {
         assert_eq!(log_record.moniker, "driver");
         assert_eq!(log_record.metadata.component_url, DRIVER_COMPONENT);
         assert_eq!(log_record.metadata.severity, Severity::Info);
-        assert_data_tree!(log_record.payload.unwrap(), root: contains {
-            "message".to_string() => log_str.to_string(),
-            "tag".to_string() => "log_attribution".to_string(),
-        });
+        assert_data_tree!(log_record.payload.unwrap(), root:{"message": contains {
+            "value".to_string() => log_str.to_string(),
+        }});
+        assert_eq!(log_record.metadata.tags.unwrap()[0], "log_attribution");
     }
 }

@@ -129,15 +129,19 @@ const char VALID_MESSAGE_FOR_SEVERITY[] = R"JSON(
   {
     "metadata": {
       "timestamp": 1000,
-      "severity": "%s"
+      "severity": "%s",
+      "pid": 200,
+      "tid": 300,
+      "tags": ["a"]
     },
     "payload": {
       "root": {
-        "message": "Hello world",
-        "pid": 200,
-        "tid": 300,
-        "tag": "a",
-        "arbitrary_kv": 1024
+        "message": {
+          "value": "Hello world"
+        },
+        "keys": {
+          "arbitrary_kv": 1024
+        }
       }
     }
   }
@@ -149,27 +153,39 @@ const char TWO_FLAT_VALID_INFO_MESSAGES[] = R"JSON(
   {
     "metadata": {
       "timestamp": 1000,
-      "severity": "INFO"
-    },
-    "payload": {
-      "message": "Hello world",
+      "severity": "INFO",
       "pid": 200,
       "tid": 300,
-      "tag": "a",
-      "arbitrary_kv": 1024
+      "tags": ["a"]
+    },
+    "payload": {
+      "root": {
+        "message": {
+          "value": "Hello world"
+        },
+        "keys": {
+          "arbitrary_kv": 1024
+        }
+      }
     }
   },
   {
     "metadata": {
       "timestamp": 1000,
-      "severity": "INFO"
-    },
-    "payload": {
-      "message": "Hello world",
+      "severity": "INFO",
       "pid": 200,
       "tid": 300,
-      "tag": "a",
-      "arbitrary_kv": 1024
+      "tags": ["a"]
+    },
+    "payload": {
+      "root": {
+        "message": {
+            "value": "Hello world"
+        },
+        "keys": {
+          "arbitrary_kv": 1024
+        }
+      }
     }
   }
 ]
@@ -268,14 +284,18 @@ const char META_TEMPLATE[] = R"JSON(
 [
   {
     "metadata": {
+      "pid": 200,
+      "tid": 300,
       %s
     },
     "payload": {
       "root": {
-        "message": "Hello world",
-        "pid": 200,
-        "tid": 300,
-        "arbitrary_kv": 1024
+        "message": {
+          "value": "Hello world"
+        },
+        "keys": {
+          "arbitrary_kv": 1024
+        }
       }
     }
   }
@@ -288,14 +308,18 @@ const char MONIKER_TEMPLATE[] = R"JSON(
     "moniker": "%s",
     "metadata": {
       "timestamp": 1000,
-      "severity": "INFO"
+      "severity": "INFO",
+      "pid": 200,
+      "tid": 300
     },
     "payload": {
       "root": {
-        "message": "Hello world",
-        "pid": 200,
-        "tid": 300,
-        "arbitrary_kv": 1024
+        "message": {
+          "value": "Hello world"
+        },
+        "keys": {
+          "arbitrary_kv": 1024
+        }
       }
     }
   }
@@ -419,20 +443,76 @@ TEST(LogMessage, FileValidation) {
 TEST(LogMessage, MessageFormatting) {
   std::vector<ValidationTestCase> cases;
   cases.emplace_back(ValidationTestCase{
-      .input = fxl::StringPrintf(PAYLOAD_TEMPLATE,
-                                 R"({"message": "Hello, world", "file":"test.cc", "line":420})"),
+      .input = R"JSON(
+[
+  {
+    "metadata": {
+      "timestamp": 1000,
+      "severity": "INFO",
+      "file": "test.cc",
+      "line": 420
+    },
+    "payload": {
+      "root": {
+        "message": {
+          "value": "Hello, world"
+        }
+      }
+    }
+  }
+]
+)JSON",
       .expected_message = "[test.cc(420)] Hello, world",
   });
   cases.emplace_back(ValidationTestCase{
-      .input = fxl::StringPrintf(PAYLOAD_TEMPLATE, R"({"message": "Hello, world", "kv": "ok"})"),
+      .input = R"JSON(
+[
+  {
+    "metadata": {
+      "timestamp": 1000,
+      "severity": "INFO"
+    },
+    "payload": {
+      "root": {
+        "message": {
+          "value": "Hello, world"
+        },
+        "keys": {
+          "kv": "ok"
+        }
+      }
+    }
+  }
+]
+)JSON",
       .expected_message = "Hello, world kv=ok",
   });
   cases.emplace_back(ValidationTestCase{
-      .input = fxl::StringPrintf(
-          PAYLOAD_TEMPLATE,
-          R"({"message": "Hello, world", "int": -5, "intp": 5, "repeat": 2, "repeat": 2, "uint": 9223400000000000000, "float": 5.25})"),
-      .expected_message =
-          "Hello, world int=-5 intp=5 repeat=2 repeat=2 uint=9223400000000000000 float=5.25",
+      .input = R"JSON(
+[
+  {
+    "metadata": {
+      "timestamp": 1000,
+      "severity": "INFO"
+    },
+    "payload": {
+      "root": {
+        "message": {
+          "value": "Hello, world"
+        },
+        "keys": {
+          "int": -5,
+          "intp": 5,
+          "repeat": 2,
+          "uint": 9223400000000000000,
+          "float": 5.25
+        }
+      }
+    }
+  }
+]
+)JSON",
+      .expected_message = "Hello, world int=-5 intp=5 repeat=2 uint=9223400000000000000 float=5.25",
   });
 
   RunValidationCases(std::move(cases));
@@ -441,39 +521,108 @@ TEST(LogMessage, MessageFormatting) {
 TEST(LogMessage, Tags) {
   std::vector<ValidationTestCase> cases;
   cases.emplace_back(ValidationTestCase{
-      .input = fxl::StringPrintf(PAYLOAD_TEMPLATE, R"({"tag": "hello"})"),
+      .input = R"JSON(
+[
+  {
+    "metadata": {
+      "timestamp": 1000,
+      "severity": "INFO",
+      "tags": ["hello"]
+    },
+    "payload": {
+      "root": {
+        "message": {
+          "value": ""
+        }
+      }
+    }
+  }
+]
+)JSON",
       .expected_tags = std::vector<std::string>{"hello"},
   });
   cases.emplace_back(ValidationTestCase{
-      .input = fxl::StringPrintf(PAYLOAD_TEMPLATE, R"({"tags": "hello"})"),
+      .input = R"JSON(
+[
+  {
+    "metadata": {
+      "timestamp": 1000,
+      "severity": "INFO",
+      "tags": "hello"
+    },
+    "payload": {
+      "root": {
+        "message": {
+          "value": ""
+        }
+      }
+    }
+  }
+]
+)JSON",
       .expected_tags = std::vector<std::string>{"hello"},
   });
   cases.emplace_back(ValidationTestCase{
-      .input = fxl::StringPrintf(PAYLOAD_TEMPLATE, R"({"tag": "hello", "tag": "world"})"),
+      .input = R"JSON(
+[
+  {
+    "metadata": {
+      "timestamp": 1000,
+      "severity": "INFO",
+      "tags": ["hello", "world"]
+    },
+    "payload": {
+      "root": {
+        "message": {
+          "value": ""
+        }
+      }
+    }
+  }
+]
+)JSON",
       .expected_tags = std::vector<std::string>{"hello", "world"},
   });
   cases.emplace_back(ValidationTestCase{
-      .input = fxl::StringPrintf(PAYLOAD_TEMPLATE, R"({"tags": "hello", "tags": "world"})"),
-      .expected_tags = std::vector<std::string>{"hello", "world"},
-  });
-  cases.emplace_back(ValidationTestCase{
-      .input = fxl::StringPrintf(PAYLOAD_TEMPLATE, R"({"tags": ["hello", "world"]})"),
-      .expected_tags = std::vector<std::string>{"hello", "world"},
-  });
-  cases.emplace_back(ValidationTestCase{
-      .input = fxl::StringPrintf(PAYLOAD_TEMPLATE, R"({"tag": ["hello", "world"]})"),
-      .expected_error = "Tag field must contain a single string value",
-  });
-  cases.emplace_back(ValidationTestCase{
-      .input = fxl::StringPrintf(PAYLOAD_TEMPLATE, R"({"tags": ["hello", 3]})"),
+      .input = R"JSON(
+[
+  {
+    "metadata": {
+      "timestamp": 1000,
+      "severity": "INFO",
+      "tags": ["hello", 3]
+    },
+    "payload": {
+      "root": {
+        "message": {
+          "value": ""
+        }
+      }
+    }
+  }
+]
+)JSON",
       .expected_error = "Tags array must contain strings",
   });
   cases.emplace_back(ValidationTestCase{
-      .input = fxl::StringPrintf(PAYLOAD_TEMPLATE, R"({"tag": "hello", "tag": 3})"),
-      .expected_error = "Tag field must contain a single string value",
-  });
-  cases.emplace_back(ValidationTestCase{
-      .input = fxl::StringPrintf(PAYLOAD_TEMPLATE, R"({"tags": "hello", "tags": 3})"),
+      .input = R"JSON(
+[
+  {
+    "metadata": {
+      "timestamp": 1000,
+      "severity": "INFO",
+      "tags": 3
+    },
+    "payload": {
+      "root": {
+        "message": {
+          "value": ""
+        }
+      }
+    }
+  }
+]
+)JSON",
       .expected_error = "Tags must be a string or array of strings",
   });
   cases.emplace_back(ValidationTestCase{

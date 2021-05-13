@@ -104,7 +104,6 @@ mod tests {
         events::types::ComponentIdentifier,
         logs::message::{LegacySeverity, Severity},
     };
-    use diagnostics_hierarchy::hierarchy;
 
     fn test_message() -> Message {
         let identity = ComponentIdentity::from_identifier_and_url(
@@ -114,13 +113,15 @@ mod tests {
             },
             "fuchsia-pkg://not-a-package",
         );
-        Message::new(
-            fuchsia_zircon::Time::from_nanos(1),
-            Severity::Info,
-            1, // size
-            0, // dropped logs
-            &identity,
-            hierarchy! {root: {}},
+        Message::from(
+            diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
+                timestamp_nanos: fuchsia_zircon::Time::from_nanos(1).into(),
+                component_url: identity.url.clone(),
+                moniker: identity.to_string(),
+                severity: Severity::Info,
+                size_bytes: 1,
+            })
+            .build(),
         )
     }
 

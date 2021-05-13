@@ -128,7 +128,7 @@ mod tests {
         multiplex::PinStream,
         stats::LogStreamStats,
     };
-    use diagnostics_data::{hierarchy, LogsField, Severity};
+    use diagnostics_data::Severity;
     use fidl_fuchsia_diagnostics::StreamMode;
     use futures::{Stream, StreamExt};
     use std::{
@@ -186,18 +186,17 @@ mod tests {
     }
 
     fn fake_message(timestamp: i64) -> Message {
-        Message::new(
-            timestamp,
-            Severity::Debug,
-            50,
-            0,
-            &*TEST_IDENTITY,
-            hierarchy! {
-                root: {
-                    LogsField::ProcessId => 123,
-                    LogsField::ThreadId => 456,
-                }
-            },
+        Message::from(
+            diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
+                timestamp_nanos: timestamp.into(),
+                component_url: TEST_IDENTITY.url.clone(),
+                moniker: TEST_IDENTITY.to_string(),
+                severity: Severity::Debug,
+                size_bytes: 50,
+            })
+            .set_pid(123)
+            .set_tid(456)
+            .build(),
         )
     }
 }

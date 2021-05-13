@@ -9,12 +9,12 @@ use crate::{
     events::types::ComponentIdentifier,
     logs::{
         error::LogsError,
-        message::{LogsField, Message, Severity, METADATA_SIZE},
+        message::{Message, Severity, METADATA_SIZE},
     },
 };
 use async_trait::async_trait;
 use byteorder::{ByteOrder, LittleEndian};
-use diagnostics_hierarchy::hierarchy;
+use diagnostics_data::{BuilderArgs, LogsDataBuilder};
 use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_boot::ReadOnlyLogMarker;
 use fuchsia_async as fasync;
@@ -170,20 +170,20 @@ pub fn convert_debuglog_to_log_message(buf: &[u8]) -> Option<Message> {
     };
 
     let size = METADATA_SIZE + 5 /*'klog' tag*/ + contents.len() + 1;
-    Some(Message::new(
-        time,
-        severity,
-        size,
-        0, // TODO(fxbug.dev/48548) dropped_logs
-        &*KERNEL_IDENTITY,
-        hierarchy! {
-            root: {
-                LogsField::ProcessId => pid,
-                LogsField::ThreadId => tid,
-                LogsField::Tag => "klog",
-                LogsField::Msg => contents,
-            }
-        },
+    Some(Message::from(
+        LogsDataBuilder::new(BuilderArgs {
+            timestamp_nanos: time.into(),
+            component_url: KERNEL_IDENTITY.url.to_string(),
+            moniker: KERNEL_IDENTITY.to_string(),
+            severity,
+            size_bytes: size,
+        })
+        .set_pid(pid)
+        .set_tid(tid)
+        .add_tag("klog".to_string())
+        .set_dropped(0)
+        .set_message(contents)
+        .build(),
     ))
 }
 
@@ -201,20 +201,19 @@ mod tests {
         let log_message = convert_debuglog_to_log_message(&klog.to_vec()).unwrap();
         assert_eq!(
             log_message,
-            Message::new(
-                klog.timestamp,
-                Severity::Info,
-                METADATA_SIZE + 6 + "test log".len(),
-                0, // dropped logs
-                &*KERNEL_IDENTITY,
-                hierarchy! {
-                    root: {
-                        LogsField::ProcessId => klog.pid,
-                        LogsField::ThreadId => klog.tid,
-                        LogsField::Tag => "klog",
-                        LogsField::Msg => "test log",
-                    }
-                },
+            Message::from(
+                LogsDataBuilder::new(BuilderArgs {
+                    timestamp_nanos: klog.timestamp.into(),
+                    component_url: KERNEL_IDENTITY.url.clone(),
+                    moniker: KERNEL_IDENTITY.to_string(),
+                    severity: Severity::Info,
+                    size_bytes: METADATA_SIZE + 6 + "test log".len(),
+                })
+                .set_pid(klog.pid)
+                .set_tid(klog.tid)
+                .add_tag("klog")
+                .set_message("test log".to_string())
+                .build()
             )
         );
         // make sure the `klog` tag still shows up for legacy listeners
@@ -236,22 +235,22 @@ mod tests {
         let log_message = convert_debuglog_to_log_message(&klog.to_vec()).unwrap();
         assert_eq!(
             log_message,
-            Message::new(
-                klog.timestamp,
-                Severity::Info,
-                METADATA_SIZE + 6 + zx::sys::ZX_LOG_RECORD_MAX - 32,
-                0, // dropped logs
-                &*KERNEL_IDENTITY,
-                hierarchy! {
-                    root: {
-                        LogsField::ProcessId => klog.pid,
-                        LogsField::ThreadId => klog.tid,
-                        LogsField::Tag => "klog",
-                        LogsField::Msg => String::from_utf8(
-                            vec!['a' as u8; zx::sys::ZX_LOG_RECORD_MAX - 32]).unwrap()
-                    }
-                },
-            ),
+            Message::from(
+                LogsDataBuilder::new(BuilderArgs {
+                    timestamp_nanos: klog.timestamp.into(),
+                    component_url: KERNEL_IDENTITY.url.clone(),
+                    moniker: KERNEL_IDENTITY.to_string(),
+                    severity: Severity::Info,
+                    size_bytes: METADATA_SIZE + 6 + zx::sys::ZX_LOG_RECORD_MAX - 32,
+                })
+                .set_pid(klog.pid)
+                .set_tid(klog.tid)
+                .add_tag("klog")
+                .set_message(
+                    String::from_utf8(vec!['a' as u8; zx::sys::ZX_LOG_RECORD_MAX - 32]).unwrap()
+                )
+                .build()
+            )
         );
 
         // empty message
@@ -259,20 +258,19 @@ mod tests {
         let log_message = convert_debuglog_to_log_message(&klog.to_vec()).unwrap();
         assert_eq!(
             log_message,
-            Message::new(
-                klog.timestamp,
-                Severity::Info,
-                METADATA_SIZE + 6,
-                0, // dropped logs
-                &*KERNEL_IDENTITY,
-                hierarchy! {
-                    root: {
-                        LogsField::ProcessId => klog.pid,
-                        LogsField::ThreadId => klog.tid,
-                        LogsField::Tag => "klog",
-                        LogsField::Msg => "",
-                    }
-                },
+            Message::from(
+                LogsDataBuilder::new(BuilderArgs {
+                    timestamp_nanos: klog.timestamp.into(),
+                    component_url: KERNEL_IDENTITY.url.clone(),
+                    moniker: KERNEL_IDENTITY.to_string(),
+                    severity: Severity::Info,
+                    size_bytes: METADATA_SIZE + 6,
+                })
+                .set_pid(klog.pid)
+                .set_tid(klog.tid)
+                .add_tag("klog")
+                .set_message("".to_string())
+                .build()
             ),
         );
 
@@ -299,20 +297,19 @@ mod tests {
 
         assert_eq!(
             log_bridge.existing_logs().await.unwrap(),
-            vec![Message::new(
-                klog.timestamp,
-                Severity::Info,
-                METADATA_SIZE + 6 + "test log".len(),
-                0, // dropped logs
-                &*KERNEL_IDENTITY,
-                hierarchy! {
-                    root: {
-                        LogsField::ProcessId => klog.pid,
-                        LogsField::ThreadId => klog.tid,
-                        LogsField::Tag => "klog".to_string(),
-                        LogsField::Msg => "test log".to_string(),
-                    }
-                },
+            vec![Message::from(
+                LogsDataBuilder::new(BuilderArgs {
+                    timestamp_nanos: klog.timestamp.into(),
+                    component_url: KERNEL_IDENTITY.url.clone(),
+                    moniker: KERNEL_IDENTITY.to_string(),
+                    severity: Severity::Info,
+                    size_bytes: METADATA_SIZE + 6 + "test log".len(),
+                })
+                .set_pid(klog.pid)
+                .set_tid(klog.tid)
+                .add_tag("klog")
+                .set_message("test log".to_string())
+                .build()
             )]
         );
 

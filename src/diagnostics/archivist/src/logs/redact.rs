@@ -256,23 +256,21 @@ impl Redactor {
 mod test {
     use super::*;
     use crate::logs::message::{Message, Severity, TEST_IDENTITY};
-    use diagnostics_data::{hierarchy, LogsField};
     use futures::stream::iter as iter2stream;
     use pretty_assertions::assert_eq;
     use std::sync::Arc;
 
     fn test_message(contents: &str) -> Message {
-        Message::new(
-            0, // time
-            Severity::Info,
-            0, // size
-            0, // dropped_logs
-            &*TEST_IDENTITY,
-            hierarchy! {
-                root: {
-                    LogsField::Msg => contents.to_string(),
-                }
-            },
+        Message::from(
+            diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
+                timestamp_nanos: 0.into(),
+                component_url: TEST_IDENTITY.url.clone(),
+                moniker: TEST_IDENTITY.to_string(),
+                severity: Severity::Info,
+                size_bytes: 0,
+            })
+            .set_message(contents.to_string())
+            .build(),
         )
     }
 

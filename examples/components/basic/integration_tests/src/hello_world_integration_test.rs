@@ -4,7 +4,7 @@
 
 use {
     anyhow::{anyhow, Error},
-    diagnostics_reader::{assert_data_tree, ArchiveReader, Logs},
+    diagnostics_reader::{ArchiveReader, Logs},
     fidl::endpoints::create_proxy,
     fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_sys2 as fsys,
@@ -43,10 +43,7 @@ async fn hello_world_integration_test() -> Result<(), Error> {
     // We should see two log messages, one that states that logging started and the hello world
     // message we're expecting.
     let logs = log_stream.take(1).next().await.expect("got log result")?;
-
-    assert_data_tree!(logs.payload.unwrap(), root: contains {
-        message: "Hippo: Hello World!",
-    });
+    assert_eq!(logs.msg().unwrap(), "Hippo: Hello World!");
 
     Ok(())
 }

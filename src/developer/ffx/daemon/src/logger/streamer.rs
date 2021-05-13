@@ -856,7 +856,6 @@ mod test {
         super::*,
         diagnostics_data::LogsData,
         ffx_log_data::LogData,
-        ffx_log_test_utils::LogsDataBuilder,
         fuchsia_async::TimeoutExt,
         std::collections::HashMap,
         std::time::Duration,
@@ -906,7 +905,15 @@ mod test {
     }
 
     fn make_target_log(ts: i64, msg: String) -> LogsData {
-        LogsDataBuilder::new().message(&msg).timestamp(Timestamp::from(ts)).build()
+        diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
+            timestamp_nanos: ts.into(),
+            component_url: String::default(),
+            moniker: String::default(),
+            severity: diagnostics_data::Severity::Info,
+            size_bytes: 1,
+        })
+        .set_message(&msg)
+        .build()
     }
 
     fn make_malformed_log(ts: i64) -> LogEntry {

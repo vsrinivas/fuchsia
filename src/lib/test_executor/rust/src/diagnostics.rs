@@ -204,7 +204,7 @@ impl Stream for ArchiveLogStream {
 mod tests {
     use {
         super::*,
-        diagnostics_data::{hierarchy, LogsData, LogsField, Severity, Timestamp},
+        diagnostics_data::{Severity, Timestamp},
         fidl::endpoints::ServerEnd,
         fuchsia_async as fasync,
         futures::TryStreamExt,
@@ -406,20 +406,16 @@ mod tests {
     }
 
     fn get_json_data(value: i64) -> String {
-        let hierarchy = hierarchy! {
-            root: {
-                LogsField::Msg => format!("{}", value),
-            }
-        };
-        let data = LogsData::for_logs(
-            String::from("test/moniker"),
-            Some(hierarchy),
-            Timestamp::from(0),
-            String::from("fake-url"),
-            Severity::Info,
-            1,
-            vec![],
-        );
+        let data = diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
+            timestamp_nanos: Timestamp::from(0).into(),
+            component_url: String::from("fake-url"),
+            moniker: String::from("test/moniker"),
+            severity: Severity::Info,
+            size_bytes: 1,
+        })
+        .set_message(value.to_string())
+        .build();
+
         serde_json::to_string(&data).expect("serialize to json")
     }
 }
