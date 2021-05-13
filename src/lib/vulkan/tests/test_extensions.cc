@@ -60,6 +60,7 @@ TEST(Swapchain, InstanceExtensions) {
   };
   VkInstance instance;
   ASSERT_EQ(VK_SUCCESS, vkCreateInstance(&inst_info, nullptr, &instance));
+  vkDestroyInstance(instance, nullptr);
 }
 
 TEST(Swapchain, DeviceExtensions) {
@@ -114,4 +115,7 @@ TEST(Swapchain, DeviceExtensions) {
       .pEnabledFeatures = nullptr};
   VkDevice device;
   EXPECT_EQ(VK_SUCCESS, vkCreateDevice(physical_devices[0], &device_create_info, nullptr, &device));
+
+  vkDestroyDevice(device, nullptr);
+  vkDestroyInstance(instance, nullptr);
 }

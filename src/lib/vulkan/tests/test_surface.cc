@@ -38,6 +38,12 @@ class TestSurface {
     init_ = true;
   }
 
+  ~TestSurface() {
+    if (vk_instance_) {
+      vkDestroyInstance(vk_instance_, nullptr);
+    }
+  }
+
   void CreateSurface(bool use_dynamic_symbol) {
     ASSERT_TRUE(init_);
 
@@ -118,7 +124,9 @@ class TestSurface {
   bool init_ = false;
 };
 
-TEST(Surface, CreateImagePipeSurface) { TestSurface(false).CreateSurface(false); }
+TEST(Surface, CreateImagePipeSurface) {
+  TestSurface(false /* use_framebuffer */).CreateSurface(false /* use_dynamic_symbol */);
+}
 
 TEST(Surface, CreateImagePipeSurfaceDynamicSymbol) { TestSurface(false).CreateSurface(true); }
 
