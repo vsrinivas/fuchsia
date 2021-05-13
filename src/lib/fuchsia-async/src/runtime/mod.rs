@@ -28,6 +28,9 @@ pub use implementation::{
     timer::Timer,
 };
 
+/// An alias for a single-threaded executor, will be its own type in a future change.
+pub type TestExecutor = LocalExecutor;
+
 /// Wrapper around `Executor`, restricted to running single threaded.
 pub struct LocalExecutor(implementation::executor::Executor);
 
