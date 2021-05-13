@@ -5,10 +5,10 @@
 use {
     crate::events::{DaemonEvent, TargetInfo, TryIntoTargetInfo, WireTrafficType},
     crate::target::*,
-    anyhow::{bail, Context as _, Result},
+    anyhow::{anyhow, bail, Context as _, Result},
     async_io::Async,
     async_net::UdpSocket,
-    byteorder::LittleEndian,
+    byteorder::{ByteOrder, LittleEndian},
     ffx_daemon_core::events,
     fuchsia_async::{Task, Timer},
     netext::{get_mcast_interfaces, IsLocalAddr},
@@ -20,9 +20,19 @@ use {
 };
 
 const ZEDBOOT_MCAST_V6: Ipv6Addr = Ipv6Addr::new(0xff02, 0, 0, 0, 0, 0, 0, 1);
-const ZEDBOOT_PORT: u16 = 33331;
+const ZEDBOOT_CMD_SERVER_PORT: u16 = 33330;
+const ZEDBOOT_ADVERT_PORT: u16 = 33331;
 const ZEDBOOT_MAGIC: u32 = 0xAA774217;
 const ZEDBOOT_REDISCOVERY_INTERFACE_INTERVAL: Duration = Duration::from_secs(5);
+
+// Commands
+const ZEDBOOT_REBOOT: u32 = 12;
+const ZEDBOOT_SHELL_CMD: u32 = 6;
+
+const ZEDBOOT_REBOOT_BOOTLOADER_CMD: &str = "dm reboot-bootloader\0";
+const ZEDBOOT_REBOOT_BOOTLOADER_CMD_LEN: usize = 37;
+const ZEDBOOT_REBOOT_RECOVERY_CMD: &str = "dm reboot-recovery\0";
+const ZEDBOOT_REBOOT_RECOVERY_CMD_LEN: usize = 35;
 
 #[derive(FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
@@ -31,6 +41,17 @@ struct ZedbootHeader {
     cookie: U32<LittleEndian>,
     cmd: U32<LittleEndian>,
     arg: U32<LittleEndian>,
+}
+
+impl ZedbootHeader {
+    fn new(cookie: u32, cmd: u32, arg: u32) -> Self {
+        Self {
+            magic: U32::<LittleEndian>::from(ZEDBOOT_MAGIC),
+            cookie: U32::<LittleEndian>::from(cookie),
+            cmd: U32::<LittleEndian>::from(cmd),
+            arg: U32::<LittleEndian>::from(arg),
+        }
+    }
 }
 
 struct ZedbootPacket<B: ByteSlice> {
@@ -54,7 +75,7 @@ pub(crate) fn zedboot_discovery(e: events::Queue<DaemonEvent>) -> Result<Task<()
 }
 
 async fn port() -> u16 {
-    ffx_config::get("discovery.zedboot.advert_port").await.unwrap_or(ZEDBOOT_PORT)
+    ffx_config::get("discovery.zedboot.advert_port").await.unwrap_or(ZEDBOOT_ADVERT_PORT)
 }
 
 // interface_discovery iterates over all multicast interfaces
@@ -216,4 +237,62 @@ fn make_listen_socket(listen_addr: SocketAddr) -> Result<UdpSocket> {
     }
     .into();
     Ok(Async::new(socket)?.into())
+}
+
+async fn make_sender_socket(addr: SocketAddr) -> Result<UdpSocket> {
+    let socket: std::net::UdpSocket = {
+        let socket = socket2::Socket::new(
+            socket2::Domain::IPV6,
+            socket2::Type::DGRAM,
+            Some(socket2::Protocol::UDP),
+        )
+        .context("construct datagram socket")?;
+        socket.set_only_v6(true).context("set_only_v6")?;
+        socket.set_reuse_address(true).context("set_reuse_address")?;
+        socket.set_reuse_port(true).context("set_reuse_port")?;
+        socket
+    }
+    .into();
+    let result: UdpSocket = Async::new(socket)?.into();
+    result.connect(addr).await.context("connect to remote address")?;
+    Ok(result)
+}
+
+pub(crate) async fn reboot(to_addr: TargetAddr) -> Result<()> {
+    let zed = ZedbootHeader::new(1, ZEDBOOT_REBOOT, 0);
+    let mut to_sock: SocketAddr = to_addr.into();
+    to_sock.set_port(ZEDBOOT_CMD_SERVER_PORT);
+    log::info!("Sending Zedboot reboot to {}", to_sock);
+    let sock = make_sender_socket(to_sock).await?;
+    unsafe {
+        sock.send(zed.as_bytes()).await.map_err(|e| anyhow!("Sending error: {}", e)).map(|_| ())
+    }
+}
+
+pub(crate) async fn reboot_to_bootloader(to_addr: TargetAddr) -> Result<()> {
+    let mut buf = [0u8; ZEDBOOT_REBOOT_BOOTLOADER_CMD_LEN];
+    LittleEndian::write_u32(&mut buf[..4], ZEDBOOT_MAGIC);
+    LittleEndian::write_u32(&mut buf[4..8], 1);
+    LittleEndian::write_u32(&mut buf[8..12], ZEDBOOT_SHELL_CMD);
+    LittleEndian::write_u32(&mut buf[12..16], 0);
+    buf[16..].copy_from_slice(&ZEDBOOT_REBOOT_BOOTLOADER_CMD.as_bytes()[..]);
+    let mut to_sock: SocketAddr = to_addr.into();
+    to_sock.set_port(ZEDBOOT_CMD_SERVER_PORT);
+    log::info!("Sending Zedboot reboot to {}", to_sock);
+    let sock = make_sender_socket(to_sock).await?;
+    sock.send(&buf).await.map_err(|e| anyhow!("Sending error: {}", e)).map(|_| ())
+}
+
+pub(crate) async fn reboot_to_recovery(to_addr: TargetAddr) -> Result<()> {
+    let mut buf = [0u8; ZEDBOOT_REBOOT_RECOVERY_CMD_LEN];
+    LittleEndian::write_u32(&mut buf[..4], ZEDBOOT_MAGIC);
+    LittleEndian::write_u32(&mut buf[4..8], 1);
+    LittleEndian::write_u32(&mut buf[8..12], ZEDBOOT_SHELL_CMD);
+    LittleEndian::write_u32(&mut buf[12..16], 0);
+    buf[16..].copy_from_slice(&ZEDBOOT_REBOOT_RECOVERY_CMD.as_bytes()[..]);
+    let mut to_sock: SocketAddr = to_addr.into();
+    to_sock.set_port(ZEDBOOT_CMD_SERVER_PORT);
+    log::info!("Sending Zedboot reboot to {}", to_sock);
+    let sock = make_sender_socket(to_sock).await?;
+    sock.send(&buf).await.map_err(|e| anyhow!("Sending error: {}", e)).map(|_| ())
 }

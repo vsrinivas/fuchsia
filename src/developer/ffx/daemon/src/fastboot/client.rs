@@ -7,6 +7,7 @@ use {
         UploadProgressListener,
     },
     crate::target::{ConnectionState, Target, TargetEvent},
+    crate::zedboot::reboot_to_bootloader,
     anyhow::{anyhow, bail, Context, Result},
     async_once::Once,
     async_trait::async_trait,
@@ -74,30 +75,51 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
         Ok(())
     }
 
+    async fn reboot_from_zedboot(&self, listener: &RebootListenerProxy) -> Result<()> {
+        listener.on_reboot()?;
+        match self.target.netsvc_address() {
+            Some(addr) => {
+                reboot_to_bootloader(addr).await?;
+                self.target
+                    .events
+                    .wait_for(Some(Duration::from_secs(30)), |e| e == TargetEvent::Rediscovered)
+                    .await?;
+                match self.target.get_connection_state() {
+                    ConnectionState::Fastboot(_) => Ok(()),
+                    _ => bail!("Could not reboot device to fastboot - state does not match"),
+                }
+            }
+            None => bail!("Could not determine address to send Zedboot Reboot command"),
+        }
+    }
+
+    async fn reboot_from_product(&self, listener: &RebootListenerProxy) -> Result<()> {
+        listener.on_reboot()?;
+        match try_join!(
+            async {
+                match self.get_admin_proxy().await?.reboot_to_bootloader().await {
+                    Ok(_) => Ok(()),
+                    Err(_e @ FidlError::ClientChannelClosed { .. }) => Ok(()),
+                    Err(e) => bail!(e),
+                }
+            },
+            self.target
+                .events
+                .wait_for(Some(Duration::from_secs(30)), |e| { e == TargetEvent::Rediscovered })
+        ) {
+            Ok(_) => match self.target.get_connection_state() {
+                ConnectionState::Fastboot(_) => Ok(()),
+                _ => bail!("Could not reboot device to fastboot - state does not match"),
+            },
+            Err(e) => Err(e),
+        }
+    }
+
     async fn prepare_device(&self, listener: &RebootListenerProxy) -> Result<()> {
         match self.target.get_connection_state() {
             ConnectionState::Fastboot(_) => Ok(()),
-            _ => {
-                listener.on_reboot()?;
-                match try_join!(
-                    async {
-                        match self.get_admin_proxy().await?.reboot_to_bootloader().await {
-                            Ok(_) => Ok(()),
-                            Err(_e @ FidlError::ClientChannelClosed { .. }) => Ok(()),
-                            Err(e) => bail!(e),
-                        }
-                    },
-                    self.target.events.wait_for(Some(Duration::from_secs(10)), |e| {
-                        e == TargetEvent::Rediscovered
-                    })
-                ) {
-                    Ok(_) => match self.target.get_connection_state() {
-                        ConnectionState::Fastboot(_) => Ok(()),
-                        _ => bail!("Could not reboot device to fastboot - state does not match"),
-                    },
-                    Err(e) => Err(e),
-                }
-            }
+            ConnectionState::Zedboot(_) => self.reboot_from_zedboot(listener).await,
+            _ => self.reboot_from_product(listener).await,
         }
     }
 

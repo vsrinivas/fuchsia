@@ -423,6 +423,19 @@ impl TargetInner {
         ssh_address_from(self.addrs.borrow().iter())
     }
 
+    pub fn netsvc_address(&self) -> Option<TargetAddr> {
+        use itertools::Itertools;
+        // Order e1 & e2 by most recent timestamp
+        let recency = |e1: &TargetAddrEntry, e2: &TargetAddrEntry| e2.timestamp.cmp(&e1.timestamp);
+        // TODO(fxb/76325) `.find(|t| t.netsvc)` doesn't work for some reason, using next()
+        self.addrs
+            .borrow()
+            .iter()
+            .sorted_by(|e1, e2| recency(e1, e2))
+            .next()
+            .map(|t| t.addr.clone())
+    }
+
     /// Dependency injection constructor so we can insert a fake time for
     /// testing.
     #[cfg(test)]
@@ -707,6 +720,10 @@ impl Target {
 
     pub fn ssh_address(&self) -> Option<TargetAddr> {
         self.inner.ssh_address()
+    }
+
+    pub fn netsvc_address(&self) -> Option<TargetAddr> {
+        self.inner.netsvc_address()
     }
 
     pub fn ssh_address_info(&self) -> Option<bridge::TargetAddrInfo> {

@@ -9,8 +9,8 @@ use {
     fidl_fuchsia_developer_bridge::{TargetControlProxy, TargetRebootError, TargetRebootState},
 };
 
-const RECOVERY_WARNING: &str = "WARNING: Rebooting into recovery partition. ffx cannot yet perform\ntarget operations when in zedboot or recovery mode.";
-
+const BOOT_TO_ZED: &str = "Cannot reboot from Bootloader state to Recovery state.";
+const REBOOT_TO_PRODUCT: &str = "\nReboot to Product state with `ffx target reboot` and try again.";
 const COMM_ERR: &str = "There was a communication error with the device. Please try again. \n\
                         If the problem persists, try running `ffx doctor` for further diagnostics";
 
@@ -21,7 +21,7 @@ pub async fn reboot(target_proxy: TargetControlProxy, cmd: RebootCommand) -> Res
     match res {
         Ok(Ok(_)) => Ok(()),
         Ok(Err(TargetRebootError::FastbootToRecovery)) => {
-            ffx_bail!("Cannot reboot from fastboot to recovery")
+            ffx_bail!("{}{}", BOOT_TO_ZED, REBOOT_TO_PRODUCT)
         }
         Ok(Err(TargetRebootError::TargetCommunication))
         | Ok(Err(TargetRebootError::FastbootCommunication)) => ffx_bail!("{}", COMM_ERR),
@@ -36,10 +36,7 @@ fn reboot_state(cmd: &RebootCommand) -> Result<TargetRebootState> {
             ffx_bail!("Cannot specify booth bootloader and recovery switches at the same time.")
         }
         (true, false) => Ok(TargetRebootState::Bootloader),
-        (false, true) => {
-            println!("{}", RECOVERY_WARNING);
-            Ok(TargetRebootState::Recovery)
-        }
+        (false, true) => Ok(TargetRebootState::Recovery),
         (false, false) => Ok(TargetRebootState::Product),
     }
 }

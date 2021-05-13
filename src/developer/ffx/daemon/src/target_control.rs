@@ -5,6 +5,7 @@
 use {
     crate::fastboot::Fastboot,
     crate::target::{ConnectionState, Target},
+    crate::zedboot::{reboot, reboot_to_bootloader, reboot_to_recovery},
     anyhow::{anyhow, bail, Result},
     async_once::Once,
     fidl::endpoints::create_endpoints,
@@ -100,6 +101,33 @@ impl TargetControl {
                             responder.send(&mut Err(TargetRebootError::FastbootToRecovery))?;
                         }
                     },
+                    ConnectionState::Zedboot(_) => {
+                        let mut response = if let Some(addr) = self.target.netsvc_address() {
+                            match state {
+                                TargetRebootState::Product => {
+                                    reboot(addr).await.map(|_| ()).map_err(|e| {
+                                        log::error!("zedboot reboot failed {:?}", e);
+                                        TargetRebootError::TargetCommunication
+                                    })
+                                }
+                                TargetRebootState::Bootloader => {
+                                    reboot_to_bootloader(addr).await.map(|_| ()).map_err(|e| {
+                                        log::error!("zedboot reboot to bootloader failed {:?}", e);
+                                        TargetRebootError::TargetCommunication
+                                    })
+                                }
+                                TargetRebootState::Recovery => {
+                                    reboot_to_recovery(addr).await.map(|_| ()).map_err(|e| {
+                                        log::error!("zedboot reboot to recovery failed {:?}", e);
+                                        TargetRebootError::TargetCommunication
+                                    })
+                                }
+                            }
+                        } else {
+                            Err(TargetRebootError::TargetCommunication)
+                        };
+                        responder.send(&mut response)?;
+                    }
                     // Everything else use AdminProxy
                     _ => match state {
                         TargetRebootState::Product => {
@@ -354,5 +382,21 @@ mod test {
             .reboot(TargetRebootState::Bootloader)
             .await?
             .map_err(|e| anyhow!("error rebooting: {:?}", e))
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_zedboot_reboot_bootloader() -> Result<()> {
+        let (target, proxy) = setup().await;
+        target.set_state(ConnectionState::Zedboot(Utc::now()));
+        assert!(proxy.reboot(TargetRebootState::Bootloader).await?.is_err());
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_zedboot_reboot_recovery() -> Result<()> {
+        let (target, proxy) = setup().await;
+        target.set_state(ConnectionState::Zedboot(Utc::now()));
+        assert!(proxy.reboot(TargetRebootState::Recovery).await?.is_err());
+        Ok(())
     }
 }
