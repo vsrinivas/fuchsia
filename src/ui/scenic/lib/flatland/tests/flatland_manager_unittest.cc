@@ -272,9 +272,9 @@ TEST_F(FlatlandManagerTest, ManagerDiesBeforeClients) {
   EXPECT_EQ(removed_sessions_.size(), 1ul);
   EXPECT_TRUE(removed_sessions_.count(id));
 
-  RunLoopUntilIdle();
-
-  EXPECT_FALSE(flatland.is_bound());
+  // Wait until unbound.
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&flatland]() { return !flatland.is_bound(); }, zx::sec(10),
+                                        zx::msec(100)));
 }
 
 TEST_F(FlatlandManagerTest, ManagerImmediatelySendsPresentTokens) {

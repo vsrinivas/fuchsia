@@ -23,6 +23,7 @@
 #include "src/ui/scenic/lib/flatland/tests/mock_flatland_presenter.h"
 #include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
+#include "src/ui/scenic/lib/utils/dispatcher_holder.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
 
 #include <glm/gtx/matrix_transform_2d.hpp>
@@ -277,7 +278,8 @@ class FlatlandTest : public gtest::TestLoopFixture {
   Flatland CreateFlatland() {
     auto session_id = scheduling::GetNextSessionId();
     flatlands_.push_back({});
-    return Flatland(dispatcher(), flatlands_.back().NewRequest(), session_id,
+    return Flatland(std::make_shared<utils::UnownedDispatcherHolder>(dispatcher()),
+                    flatlands_.back().NewRequest(), session_id,
                     /*destroy_instance_functon=*/[]() {}, flatland_presenter_, link_system_,
                     uber_struct_system_->AllocateQueueForSession(session_id),
                     {buffer_collection_importer_});
@@ -3453,7 +3455,8 @@ TEST_F(FlatlandTest, ImageImportPassesAndFailsOnDifferentImportersTest) {
   auto session_id = scheduling::GetNextSessionId();
   fuchsia::ui::scenic::internal::FlatlandPtr flatland_ptr;
   auto flatland = Flatland(
-      dispatcher(), flatland_ptr.NewRequest(), session_id,
+      std::make_shared<utils::UnownedDispatcherHolder>(dispatcher()), flatland_ptr.NewRequest(),
+      session_id,
       /*destroy_instance_functon=*/[]() {}, flatland_presenter_, link_system_,
       uber_struct_system_->AllocateQueueForSession(session_id), importers);
   EXPECT_CALL(*local_mock_buffer_collection_importer, ImportBufferCollection(_, _, _))

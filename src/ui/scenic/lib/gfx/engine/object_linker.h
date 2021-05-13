@@ -172,7 +172,7 @@ class ObjectLinker : public ObjectLinkerBase {
 
     // Initialize the Link with an |object| and callbacks for |link_resolved|
     // and |link_invalidated| events, making it ready for connection to its peer.
-    // peer. The |link_invalidated| event is guaranteed to be called regardless of
+    // The |link_invalidated| event is guaranteed to be called regardless of
     // whether or not the |link_resolved| callback is, including if this Link
     // is destroyed, in which case |on_destruction| will be true.
     void Initialize(fit::function<void(PeerObj peer_object)> link_resolved = nullptr,

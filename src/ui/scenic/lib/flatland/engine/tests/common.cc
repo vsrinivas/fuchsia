@@ -34,12 +34,12 @@ DisplayCompositorTestBase::FakeFlatlandSession::LinkToParent(FakeFlatlandSession
   // Create the parent link.
   fidl::InterfacePtr<GraphLink> graph_link;
   LinkSystem::ParentLink parent_link = link_system_->CreateParentLink(
-      std::move(child_token), graph_link.NewRequest(), graph_.CreateTransform());
+      dispatcher_holder_, std::move(child_token), graph_link.NewRequest(), graph_.CreateTransform());
 
   // Create the child link.
   fidl::InterfacePtr<ContentLink> content_link;
   LinkSystem::ChildLink child_link = link_system_->CreateChildLink(
-      std::move(parent_token), LinkProperties(), content_link.NewRequest(),
+      dispatcher_holder_, std::move(parent_token), LinkProperties(), content_link.NewRequest(),
       parent_session.graph_.CreateTransform());
 
   // Run the loop to establish the link.

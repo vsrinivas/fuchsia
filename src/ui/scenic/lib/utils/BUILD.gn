@@ -7,6 +7,7 @@ import("//build/test.gni")
 
 source_set("utils") {
   sources = [
+    "dispatcher_holder.h",
     "helpers.cc",
     "helpers.h",
     "math.cc",
@@ -17,6 +18,7 @@ source_set("utils") {
     "//sdk/fidl/fuchsia.sysmem",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//src/ui/lib/glm_workaround:glm_workaround",
+    "//zircon/public/lib/async-cpp",
   ]
 
   deps = [

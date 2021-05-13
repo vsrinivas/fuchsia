@@ -32,11 +32,12 @@ LinkSystem::LinkSystem(TransformHandle::InstanceId instance_id)
     : instance_id_(instance_id), link_graph_(instance_id_) {}
 
 LinkSystem::ChildLink LinkSystem::CreateChildLink(
-    ContentLinkToken token, fuchsia::ui::scenic::internal::LinkProperties initial_properties,
+    std::shared_ptr<utils::DispatcherHolder> dispatcher_holder, ContentLinkToken token,
+    fuchsia::ui::scenic::internal::LinkProperties initial_properties,
     fidl::InterfaceRequest<ContentLink> content_link, TransformHandle graph_handle) {
   FX_DCHECK(token.value.is_valid());
 
-  auto impl = std::make_shared<GraphLinkImpl>();
+  auto impl = std::make_shared<GraphLinkImpl>(std::move(dispatcher_holder));
   const TransformHandle link_handle = link_graph_.CreateTransform();
 
   ObjectLinker::ImportLink importer =
@@ -91,12 +92,12 @@ LinkSystem::ChildLink LinkSystem::CreateChildLink(
   });
 }
 
-LinkSystem::ParentLink LinkSystem::CreateParentLink(GraphLinkToken token,
-                                                    fidl::InterfaceRequest<GraphLink> graph_link,
-                                                    TransformHandle link_origin) {
+LinkSystem::ParentLink LinkSystem::CreateParentLink(
+    std::shared_ptr<utils::DispatcherHolder> dispatcher_holder, GraphLinkToken token,
+    fidl::InterfaceRequest<GraphLink> graph_link, TransformHandle link_origin) {
   FX_DCHECK(token.value.is_valid());
 
-  auto impl = std::make_shared<ContentLinkImpl>();
+  auto impl = std::make_shared<ContentLinkImpl>(std::move(dispatcher_holder));
 
   ObjectLinker::ExportLink exporter =
       linker_.CreateExport({.interface = std::move(graph_link), .child_handle = link_origin},

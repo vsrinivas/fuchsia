@@ -7,15 +7,16 @@
 
 #include <fuchsia/ui/scenic/internal/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
+#include <lib/fidl/cpp/interface_request.h>
 
 // clang-format off
 #include "src/ui/lib/glm_workaround/glm_workaround.h"
+#include <glm/mat3x3.hpp>
 // clang-format on
 
 #include <unordered_map>
 #include <unordered_set>
 
-#include "lib/fidl/cpp/interface_request.h"
 #include "src/ui/scenic/lib/flatland/global_matrix_data.h"
 #include "src/ui/scenic/lib/flatland/global_topology_data.h"
 #include "src/ui/scenic/lib/flatland/hanging_get_helper.h"
@@ -23,8 +24,7 @@
 #include "src/ui/scenic/lib/flatland/transform_handle.h"
 #include "src/ui/scenic/lib/flatland/uber_struct.h"
 #include "src/ui/scenic/lib/gfx/engine/object_linker.h"
-
-#include <glm/mat3x3.hpp>
+#include "src/ui/scenic/lib/utils/dispatcher_holder.h"
 
 namespace flatland {
 
@@ -32,6 +32,9 @@ namespace flatland {
 // pieces of information.
 class GraphLinkImpl : public fuchsia::ui::scenic::internal::GraphLink {
  public:
+  explicit GraphLinkImpl(std::shared_ptr<utils::DispatcherHolder> dispatcher_holder)
+      : layout_helper_(dispatcher_holder), status_helper_(std::move(dispatcher_holder)) {}
+
   void UpdateLayoutInfo(fuchsia::ui::scenic::internal::LayoutInfo info) {
     layout_helper_.Update(std::move(info));
   }
@@ -66,6 +69,9 @@ class GraphLinkImpl : public fuchsia::ui::scenic::internal::GraphLink {
 // pieces of information.
 class ContentLinkImpl : public fuchsia::ui::scenic::internal::ContentLink {
  public:
+  explicit ContentLinkImpl(std::shared_ptr<utils::DispatcherHolder> dispatcher_holder)
+      : status_helper_(std::move(dispatcher_holder)) {}
+
   void UpdateLinkStatus(fuchsia::ui::scenic::internal::ContentLinkStatus status) {
     status_helper_.Update(std::move(status));
   }
@@ -147,7 +153,11 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
   //
   // Link handles are excluded from global topologies, so the |graph_handle| is provided by the
   // parent as the attachment point for the ContentLinkImpl.
+  //
+  // |dispatcher_holder| allows hanging-get response-callbacks to be invoked from the appropriate
+  // Flatland session thread.
   ChildLink CreateChildLink(
+      std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
       fuchsia::ui::scenic::internal::ContentLinkToken token,
       fuchsia::ui::scenic::internal::LinkProperties initial_properties,
       fidl::InterfaceRequest<fuchsia::ui::scenic::internal::ContentLink> content_link,
@@ -155,7 +165,11 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
 
   // Creates the parent end of a link. Once both ends of a Link have been created, the LinkSystem
   // will create a local topology that connects the internal Link to the ParentLink's |link_origin|.
+  //
+  // |dispatcher_holder| allows hanging-get response-callbacks to be invoked from the appropriate
+  // Flatland session thread.
   ParentLink CreateParentLink(
+      std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
       fuchsia::ui::scenic::internal::GraphLinkToken token,
       fidl::InterfaceRequest<fuchsia::ui::scenic::internal::GraphLink> graph_link,
       TransformHandle link_origin);

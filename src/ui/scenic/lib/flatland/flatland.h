@@ -9,6 +9,7 @@
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/scenic/internal/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
 
@@ -34,6 +35,7 @@
 #include "src/ui/scenic/lib/gfx/engine/object_linker.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
 #include "src/ui/scenic/lib/scheduling/present2_helper.h"
+#include "src/ui/scenic/lib/utils/dispatcher_holder.h"
 
 namespace flatland {
 
@@ -54,13 +56,13 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // |flatland_presenter|, |link_system|, |uber_struct_queue|, and |buffer_collection_importers|
   // allow this Flatland object to access resources shared by all Flatland instances for actions
   // like frame scheduling, linking, buffer allocation, and presentation to the global scene graph.
-  explicit Flatland(async_dispatcher_t* dispatcher,
+  explicit Flatland(std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
                     fidl::InterfaceRequest<fuchsia::ui::scenic::internal::Flatland> request,
                     scheduling::SessionId session_id,
                     std::function<void()> destroy_instance_function,
-                    const std::shared_ptr<FlatlandPresenter>& flatland_presenter,
-                    const std::shared_ptr<LinkSystem>& link_system,
-                    const std::shared_ptr<UberStructSystem::UberStructQueue>& uber_struct_queue,
+                    std::shared_ptr<FlatlandPresenter> flatland_presenter,
+                    std::shared_ptr<LinkSystem> link_system,
+                    std::shared_ptr<UberStructSystem::UberStructQueue> uber_struct_queue,
                     const std::vector<std::shared_ptr<allocation::BufferCollectionImporter>>&
                         buffer_collection_importers);
   ~Flatland();
@@ -149,7 +151,8 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   void CloseConnection();
 
   // The dispatcher this Flatland instance is running on.
-  async_dispatcher_t* dispatcher_;
+  async_dispatcher_t* dispatcher() const { return dispatcher_holder_->dispatcher(); }
+  std::shared_ptr<utils::DispatcherHolder> dispatcher_holder_;
 
   // The FIDL bindings for this Flatland instance, which reference |this| as the implementation and
   // run on |dispatcher_|.

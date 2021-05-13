@@ -10,6 +10,7 @@
 #include <lib/zx/eventpair.h>
 
 #include <memory>
+#include <utility>
 
 #include "src/lib/fsl/handles/object_info.h"
 
@@ -30,17 +31,17 @@ using fuchsia::ui::scenic::internal::Vec2;
 
 namespace flatland {
 
-Flatland::Flatland(async_dispatcher_t* dispatcher,
+Flatland::Flatland(std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
                    fidl::InterfaceRequest<fuchsia::ui::scenic::internal::Flatland> request,
                    scheduling::SessionId session_id,
                    std::function<void()> destroy_instance_function,
-                   const std::shared_ptr<FlatlandPresenter>& flatland_presenter,
-                   const std::shared_ptr<LinkSystem>& link_system,
-                   const std::shared_ptr<UberStructSystem::UberStructQueue>& uber_struct_queue,
+                   std::shared_ptr<FlatlandPresenter> flatland_presenter,
+                   std::shared_ptr<LinkSystem> link_system,
+                   std::shared_ptr<UberStructSystem::UberStructQueue> uber_struct_queue,
                    const std::vector<std::shared_ptr<allocation::BufferCollectionImporter>>&
                        buffer_collection_importers)
-    : dispatcher_(dispatcher),
-      binding_(this, std::move(request), dispatcher_),
+    : dispatcher_holder_(std::move(dispatcher_holder)),
+      binding_(this, std::move(request), dispatcher_holder_->dispatcher()),
       session_id_(session_id),
       destroy_instance_function_(std::move(destroy_instance_function)),
       peer_closed_waiter_(binding_.channel().get(), ZX_CHANNEL_PEER_CLOSED),
@@ -49,15 +50,16 @@ Flatland::Flatland(async_dispatcher_t* dispatcher,
           binding_.events().OnFramePresented(std::move(info));
         }
       }),
-      flatland_presenter_(flatland_presenter),
-      link_system_(link_system),
-      uber_struct_queue_(uber_struct_queue),
+      flatland_presenter_(std::move(flatland_presenter)),
+      link_system_(std::move(link_system)),
+      uber_struct_queue_(std::move(uber_struct_queue)),
       buffer_collection_importers_(buffer_collection_importers),
       transform_graph_(session_id_),
       local_root_(transform_graph_.CreateTransform()) {
   zx_status_t status = peer_closed_waiter_.Begin(
-      dispatcher_, [this](async_dispatcher_t* dispatcher, async::WaitOnce* wait, zx_status_t status,
-                          const zx_packet_signal_t* signal) { destroy_instance_function_(); });
+      dispatcher(),
+      [this](async_dispatcher_t* dispatcher, async::WaitOnce* wait, zx_status_t status,
+             const zx_packet_signal_t* signal) { destroy_instance_function_(); });
   FX_DCHECK(status == ZX_OK);
 }
 
@@ -131,7 +133,7 @@ void Flatland::Present(fuchsia::ui::scenic::internal::PresentArgs args, PresentC
       // ensure that the wait object lives. The callback will not trigger without this.
       auto wait = std::make_shared<async::WaitOnce>(image_release_fence.get(), ZX_EVENT_SIGNALED);
       status =
-          wait->Begin(dispatcher_,
+          wait->Begin(dispatcher(),
                       [copy_ref = wait, importer_ref = buffer_collection_importers_,
                        images_to_release](async_dispatcher_t*, async::WaitOnce*, zx_status_t status,
                                           const zx_packet_signal_t* /*signal*/) mutable {
@@ -173,7 +175,7 @@ void Flatland::Present(fuchsia::ui::scenic::internal::PresentArgs args, PresentC
     auto present_id = flatland_presenter_->RegisterPresent(
         session_id_, std::move(*args.mutable_release_fences()));
     present2_helper_.RegisterPresent(present_id,
-                                     /*present_received_time=*/zx::time(async_now(dispatcher_)));
+                                     /*present_received_time=*/zx::time(async_now(dispatcher())));
 
     // Safe to capture |this| because the Flatland is guaranteed to outlive |fence_queue_|,
     // Flatland is non-movable and FenceQueue does not fire closures after destruction.
@@ -222,8 +224,8 @@ void Flatland::LinkToParent(GraphLinkToken token, fidl::InterfaceRequest<GraphLi
   // immediately, parents can inform children of layout changes, and child clients can perform
   // layout decisions before their first call to Present().
   auto link_origin = transform_graph_.CreateTransform();
-  LinkSystem::ParentLink link =
-      link_system_->CreateParentLink(std::move(token), std::move(graph_link), link_origin);
+  LinkSystem::ParentLink link = link_system_->CreateParentLink(dispatcher_holder_, std::move(token),
+                                                               std::move(graph_link), link_origin);
 
   // This portion of the method is feed-forward. The parent-child relationship between
   // |link_origin| and |local_root_| establishes the Transform hierarchy between the two instances,
@@ -515,8 +517,9 @@ void Flatland::CreateLink(ContentId link_id, ContentLinkToken token, LinkPropert
   // the LinkSystem immediately, so the child can receive them as soon as possible.
   LinkProperties initial_properties;
   fidl::Clone(properties, &initial_properties);
-  LinkSystem::ChildLink link = link_system_->CreateChildLink(
-      std::move(token), std::move(initial_properties), std::move(content_link), graph_handle);
+  LinkSystem::ChildLink link = link_system_->CreateChildLink(dispatcher_holder_, std::move(token),
+                                                             std::move(initial_properties),
+                                                             std::move(content_link), graph_handle);
 
   if (link_id.value == kInvalidId) {
     FX_LOGS(ERROR) << "CreateLink called with ContentId zero";

@@ -50,6 +50,7 @@ source_set("flatland") {
     "//src/ui/scenic/lib/display",
     "//src/ui/scenic/lib/flatland/buffers",
     "//src/ui/scenic/lib/utils",
+    "//zircon/system/ulib/async-default",
   ]
 
   deps = [

@@ -6,7 +6,12 @@
 #define SRC_UI_SCENIC_LIB_FLATLAND_HANGING_GET_HELPER_H_
 
 #include <fuchsia/ui/scenic/internal/cpp/fidl.h>
+#include <lib/async/cpp/task.h>
+#include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
+#include <lib/syslog/cpp/macros.h>
+
+#include "src/ui/scenic/lib/utils/dispatcher_holder.h"
 
 namespace flatland {
 /// A helper class for managing [hanging get
@@ -29,7 +34,14 @@ class HangingGetHelper {
  public:
   using Callback = fit::function<void(Data)>;
 
-  HangingGetHelper() = default;
+  // Hanging get responses are sent on the provided |dispatcher|.
+  // TODO(fxbug.dev/76183): |dispatcher| is used because the FIDL HLCPP bindings require method
+  // responses to be sent from the same thread that handled the method.  This may change in the
+  // future; if so the |dispatcher| may no longer be necessary.
+  explicit HangingGetHelper(std::shared_ptr<utils::DispatcherHolder> dispatcher_holder)
+      : dispatcher_holder_(std::move(dispatcher_holder)) {
+    FX_DCHECK(dispatcher_holder_);
+  }
 
   void Update(Data data) {
     if (last_data_ && fidl::Equals(last_data_.value(), data)) {
@@ -50,12 +62,21 @@ class HangingGetHelper {
     if (data_ && callback_) {
       last_data_ = Data();
       fidl::Clone(data_.value(), &last_data_.value());
-      callback_(std::move(data_.value()));
+
+      // Invoke callback on the appropriate Flatland instance thread.
+      auto status = async::PostTask(
+          dispatcher_holder_->dispatcher(),
+          [data{std::move(data_.value())}, callback{std::move(callback_)}]() mutable {
+            callback(std::move(data));
+          });
+      FX_DCHECK(status == ZX_OK);
+
       data_.reset();
       callback_ = nullptr;
     }
   }
 
+  std::shared_ptr<utils::DispatcherHolder> dispatcher_holder_;
   std::optional<Data> data_;
   std::optional<Data> last_data_;
   Callback callback_;

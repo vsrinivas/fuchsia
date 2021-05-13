@@ -26,14 +26,17 @@ FlatlandManager::FlatlandManager(
 
 FlatlandManager::~FlatlandManager() {
   // Clean up externally managed resources.
-  for (const auto& [session_id, instance] : flatland_instances_) {
-    uber_struct_system_->RemoveSession(session_id);
-    flatland_presenter_->RemoveSession(session_id);
+  for (auto it = flatland_instances_.begin(); it != flatland_instances_.end();) {
+    // Use post-increment because otherwise the iterator would be invalidated when the entry is
+    // erased within RemoveFlatlandInstance().
+    RemoveFlatlandInstance(it++->first);
   }
 }
 
 void FlatlandManager::CreateFlatland(
     fidl::InterfaceRequest<fuchsia::ui::scenic::internal::Flatland> request) {
+  CheckIsOnMainThread();
+
   const scheduling::SessionId id = uber_struct_system_->GetNextInstanceId();
   FX_DCHECK(flatland_instances_.find(id) == flatland_instances_.end());
 
@@ -42,13 +45,15 @@ void FlatlandManager::CreateFlatland(
   FX_DCHECK(result.second);
 
   auto& instance = result.first->second;
+  instance->loop =
+      std::make_shared<utils::LoopDispatcherHolder>(&kAsyncLoopConfigNoAttachToCurrentThread);
   instance->impl = std::make_shared<Flatland>(
-      instance->loop.dispatcher(), std::move(request), id,
+      instance->loop, std::move(request), id,
       std::bind(&FlatlandManager::DestroyInstanceFunction, this, id), flatland_presenter_,
       link_system_, uber_struct_system_->AllocateQueueForSession(id), buffer_collection_importers_);
 
   const std::string name = "Flatland ID=" + std::to_string(id);
-  zx_status_t status = instance->loop.StartThread(name.c_str());
+  zx_status_t status = instance->loop->loop().StartThread(name.c_str());
   FX_DCHECK(status == ZX_OK);
 
   // TODO(fxbug.dev/44211): this logic may move into FrameScheduler
@@ -77,6 +82,8 @@ void FlatlandManager::CreateFlatland(
 scheduling::SessionUpdater::UpdateResults FlatlandManager::UpdateSessions(
     const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update,
     uint64_t trace_id) {
+  CheckIsOnMainThread();
+
   auto results = uber_struct_system_->UpdateSessions(sessions_to_update);
 
   // Prepares the return of tokens to each session that didn't fail to update.
@@ -100,6 +107,8 @@ scheduling::SessionUpdater::UpdateResults FlatlandManager::UpdateSessions(
 }
 
 void FlatlandManager::OnCpuWorkDone() {
+  CheckIsOnMainThread();
+
   // Get 8 frames of data, which we then pass onto all Flatland instances that had updates this
   // frame.
   //
@@ -138,6 +147,8 @@ void FlatlandManager::OnFramePresented(
                              std::map<scheduling::PresentId, /*latched_time*/ zx::time>>&
         latched_times,
     scheduling::PresentTimestamps present_times) {
+  CheckIsOnMainThread();
+
   for (const auto& [session_id, latch_times] : latched_times) {
     auto instance_kv = flatland_instances_.find(session_id);
 
@@ -154,16 +165,19 @@ size_t FlatlandManager::GetSessionCount() const { return flatland_instances_.siz
 
 void FlatlandManager::SendPresentTokens(FlatlandInstance* instance, uint32_t num_present_tokens,
                                         Flatland::FuturePresentationInfos presentation_infos) {
-  // The Flatland impl must be accessed on the thread it is bound to. |instance| may be destroyed
-  // before the task is dispatched, so capture a weak_ptr to the impl since the tokens do not
-  // need to be returned when the instance is destroyed.
+  CheckIsOnMainThread();
+
+  // The Flatland impl must be accessed on the thread it is bound to; post a task to that thread.
   std::weak_ptr<Flatland> weak_impl = instance->impl;
-  async::PostTask(instance->loop.dispatcher(),
+  async::PostTask(instance->loop->dispatcher(),
                   [weak_impl, num_present_tokens,
                    presentation_infos = std::move(presentation_infos)]() mutable {
-                    if (auto impl = weak_impl.lock()) {
-                      impl->OnPresentProcessed(num_present_tokens, std::move(presentation_infos));
-                    }
+                    // |impl| is guaranteed to be non-null.  When destroying an instance, the
+                    // manager erases the entry from the map, which means that subsequently
+                    // |instance| would not be found to pass it to this method.
+                    auto impl = weak_impl.lock();
+                    FX_CHECK(impl) << "Missing Flatland instance in SendPresentTokens().";
+                    impl->OnPresentProcessed(num_present_tokens, std::move(presentation_infos));
                   });
 }
 
@@ -171,24 +185,30 @@ void FlatlandManager::SendFramePresented(
     FlatlandInstance* instance,
     const std::map<scheduling::PresentId, /*latched_time*/ zx::time>& latched_times,
     scheduling::PresentTimestamps present_times) {
-  // The Flatland impl must be accessed on the thread it is bound to. |instance| may be destroyed
-  // before the task is dispatched, so capture a weak_ptr to the impl.
+  CheckIsOnMainThread();
+
+  // The Flatland impl must be accessed on the thread it is bound to; post a task to that thread.
   std::weak_ptr<Flatland> weak_impl = instance->impl;
-  async::PostTask(instance->loop.dispatcher(), [weak_impl, latched_times, present_times]() {
-    if (auto impl = weak_impl.lock()) {
-      impl->OnFramePresented(latched_times, present_times);
-    }
+  async::PostTask(instance->loop->dispatcher(), [weak_impl, latched_times, present_times]() {
+    // |impl| is guaranteed to be non-null.  When destroying an instance, the manager erases the
+    // entry from the map, which means that subsequently |instance| would not be found to pass it to
+    // this method.
+    auto impl = weak_impl.lock();
+    FX_CHECK(impl) << "Missing Flatland instance in SendFramePresented().";
+    impl->OnFramePresented(latched_times, present_times);
   });
 }
 
 void FlatlandManager::RemoveFlatlandInstance(scheduling::SessionId session_id) {
+  CheckIsOnMainThread();
+
   auto instance_kv = flatland_instances_.find(session_id);
   FX_DCHECK(instance_kv != flatland_instances_.end());
 
   // The Flatland impl must be destroyed on the thread that owns the looper it is bound to. Remove
   // the instance from the map, then push cleanup onto the worker thread. Note that the closure
   // exists only to transfer the cleanup responsibilities to the worker thread.
-  async::PostTask(instance_kv->second->loop.dispatcher(),
+  async::PostTask(instance_kv->second->loop->dispatcher(),
                   [instance = std::move(instance_kv->second)]() {});
 
   // Other resource cleanup can safely occur on the main thread.

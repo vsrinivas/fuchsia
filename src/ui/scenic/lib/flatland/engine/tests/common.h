@@ -20,6 +20,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "lib/async/dispatcher.h"
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/ui/scenic/lib/flatland/engine/display_compositor.h"
@@ -32,6 +33,7 @@
 #include "src/ui/scenic/lib/flatland/renderer/renderer.h"
 #include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
+#include "src/ui/scenic/lib/utils/dispatcher_holder.h"
 
 #include <glm/gtx/matrix_transform_2d.hpp>
 
@@ -41,6 +43,7 @@ class DisplayCompositorTestBase : public gtest::RealLoopFixture {
  public:
   void SetUp() override {
     gtest::RealLoopFixture::SetUp();
+    dispatcher_holder_ = std::make_shared<utils::UnownedDispatcherHolder>(dispatcher());
     uber_struct_system_ = std::make_shared<UberStructSystem>();
     link_system_ = std::make_shared<LinkSystem>(uber_struct_system_->GetNextInstanceId());
     async_set_default_dispatcher(dispatcher());
@@ -53,6 +56,7 @@ class DisplayCompositorTestBase : public gtest::RealLoopFixture {
     // Move the channel to a local variable which will go out of scope
     // and close when this function returns.
     zx::channel local(std::move(local_));
+    dispatcher_holder_.reset();
     gtest::RealLoopFixture::TearDown();
   }
 
@@ -90,11 +94,12 @@ class DisplayCompositorTestBase : public gtest::RealLoopFixture {
 
   class FakeFlatlandSession {
    public:
-    FakeFlatlandSession(const std::shared_ptr<UberStructSystem>& uber_struct_system,
-                        const std::shared_ptr<LinkSystem>& link_system,
-                        DisplayCompositorTestBase* harness)
-        : uber_struct_system_(uber_struct_system),
-          link_system_(link_system),
+    FakeFlatlandSession(std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
+                        std::shared_ptr<UberStructSystem> uber_struct_system,
+                        std::shared_ptr<LinkSystem> link_system, DisplayCompositorTestBase* harness)
+        : dispatcher_holder_(std::move(dispatcher_holder)),
+          uber_struct_system_(std::move(uber_struct_system)),
+          link_system_(std::move(link_system)),
           harness_(harness),
           id_(uber_struct_system_->GetNextInstanceId()),
           graph_(id_),
@@ -138,6 +143,8 @@ class DisplayCompositorTestBase : public gtest::RealLoopFixture {
     void PushUberStruct(std::unique_ptr<UberStruct> uber_struct);
 
    private:
+    std::shared_ptr<utils::DispatcherHolder> dispatcher_holder_;
+
     // Shared systems for all sessions.
     std::shared_ptr<UberStructSystem> uber_struct_system_;
     std::shared_ptr<LinkSystem> link_system_;
@@ -161,7 +168,7 @@ class DisplayCompositorTestBase : public gtest::RealLoopFixture {
   };
 
   FakeFlatlandSession CreateSession() {
-    return FakeFlatlandSession(uber_struct_system_, link_system_, this);
+    return FakeFlatlandSession(dispatcher_holder_, uber_struct_system_, link_system_, this);
   }
 
  protected:
@@ -172,6 +179,8 @@ class DisplayCompositorTestBase : public gtest::RealLoopFixture {
   const std::shared_ptr<LinkSystem>& link_system() const { return link_system_; }
 
  private:
+  std::shared_ptr<utils::DispatcherHolder> dispatcher_holder_;
+
   // Systems that are populated with data from Flatland instances.
   std::shared_ptr<UberStructSystem> uber_struct_system_;
   std::shared_ptr<LinkSystem> link_system_;
