@@ -18,8 +18,7 @@ protocol Example {
 };
 
 )FIDL");
-
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
 
   auto methods = &library.LookupProtocol("Example")->methods;
   ASSERT_EQ(methods->size(), 1);
@@ -64,8 +63,19 @@ protocol Example {
 };
 
 )FIDL");
+  ASSERT_COMPILED_AND_CONVERT(library);
+}
 
-  ASSERT_TRUE(library.Compile());
+TEST(ErrorsTests, GoodErrorEmptyStructAsSuccess) {
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol Example {
+    Method() -> () error uint32;
+};
+
+)FIDL");
+  ASSERT_COMPILED_AND_CONVERT(library);
 }
 
 TEST(ErrorsTests, GoodErrorEnum) {
@@ -83,8 +93,7 @@ protocol Example {
 };
 
 )FIDL");
-
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
 }
 
 TEST(ErrorsTests, GoodErrorEnumAfter) {
@@ -102,8 +111,7 @@ enum ErrorType : int32 {
 };
 
 )FIDL");
-
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
 }
 
 TEST(ErrorsTests, BadErrorUnknownIdentifier) {
@@ -113,7 +121,7 @@ TEST(ErrorsTests, BadErrorUnknownIdentifier) {
 library example;
 
 protocol Example {
-    Method() -> (foo string) error ErrorType;
+    Method() -> (struct { foo string; }) error ErrorType;
 };
 )FIDL",
                       experimental_flags);
@@ -142,7 +150,7 @@ TEST(ErrorsTests, BadErrorWrongPrimitive) {
 library example;
 
 protocol Example {
-    Method() -> (foo string) error float32;
+    Method() -> (struct { foo string; }) error float32;
 };
 )FIDL",
                       experimental_flags);

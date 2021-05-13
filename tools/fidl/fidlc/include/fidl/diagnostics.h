@@ -180,6 +180,19 @@ constexpr ErrorDef ErrUnknownAttributeOnInvalidType(
 constexpr ErrorDef ErrUnknownAttributeOnMultipleMembers(
     "[Unknown] attribute can be only applied to one member.");
 constexpr ErrorDef ErrComposingNonProtocol("This declaration is not a protocol");
+constexpr ErrorDef ErrNamedParameterListTypesNotYetSupported(
+    "using named types in this position is not yet allowed, use `struct { ... }` instead "
+    "(http://fxbug.dev/76349)");
+constexpr ErrorDef<flat::Decl *> ErrInvalidParameterListType(
+    "'{}' cannot be used as a parameter list");
+constexpr ErrorDef<flat::Decl *> ErrNotYetSupportedParameterListType(
+    "'{}' cannot be yet be used as a parameter list (http://fxbug.dev/76349)");
+constexpr ErrorDef<SourceSpan> ErrResponsesWithErrorsMustNotBeEmpty(
+    "must define success type of method '{}'");
+constexpr ErrorDef<flat::Name> ErrNotYetSupportedEmptyPayloadStructs(
+    "method '{}' cannot yet have an empty struct as a payload (http://fxbug.dev/76349)");
+constexpr ErrorDef<flat::Name> ErrNotYetSupportedAttributesOnPayloadStructs(
+    "method '{}' cannot yet have attributes on its payload type (http://fxbug.dev/74955)");
 constexpr ErrorDef<std::string_view, SourceSpan> ErrDuplicateMethodName(
     "multiple protocol methods named '{}'; previous was at {}");
 constexpr ErrorDef<std::string_view, std::string_view, SourceSpan, std::string>

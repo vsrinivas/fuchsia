@@ -301,7 +301,9 @@ class Parser {
       std::unique_ptr<raw::AttributeListOld> attributes, ASTScope&, const Modifiers&);
 
   std::unique_ptr<raw::Parameter> ParseParameter();
-  std::unique_ptr<raw::ParameterList> ParseParameterList();
+  std::unique_ptr<raw::ParameterListOld> ParseParameterListOld();
+  std::unique_ptr<raw::ParameterListNew> ParseParameterListNew();
+  raw::ParameterList ParseParameterList();
   std::unique_ptr<raw::ProtocolMethod> ParseProtocolEvent(raw::AttributeList attributes,
                                                           ASTScope& scope);
   std::unique_ptr<raw::ProtocolMethod> ParseProtocolMethod(

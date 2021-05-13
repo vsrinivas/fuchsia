@@ -905,7 +905,7 @@ std::unique_ptr<raw::Parameter> Parser::ParseParameter() {
                                           std::move(identifier), std::move(attributes));
 }
 
-std::unique_ptr<raw::ParameterList> Parser::ParseParameterList() {
+std::unique_ptr<raw::ParameterListOld> Parser::ParseParameterListOld() {
   ASTScope scope(this);
   std::vector<std::unique_ptr<raw::Parameter>> parameter_list;
 
@@ -940,7 +940,38 @@ std::unique_ptr<raw::ParameterList> Parser::ParseParameterList() {
   if (!Ok())
     return Fail();
 
-  return std::make_unique<raw::ParameterList>(scope.GetSourceElement(), std::move(parameter_list));
+  return std::make_unique<raw::ParameterListOld>(scope.GetSourceElement(),
+                                                 std::move(parameter_list));
+}
+
+std::unique_ptr<raw::ParameterListNew> Parser::ParseParameterListNew() {
+  ASTScope scope(this);
+  std::unique_ptr<raw::TypeConstructorNew> type_ctor;
+
+  ConsumeToken(OfKind(Token::Kind::kLeftParen));
+  if (!Ok())
+    return Fail();
+
+  std::unique_ptr<raw::AttributeListNew> attributes = MaybeParseAttributeListNew();
+  if (!Ok())
+    Fail();
+
+  if (Peek().kind() != Token::Kind::kRightParen)
+    type_ctor = ParseTypeConstructorNew();
+
+  ConsumeToken(OfKind(Token::Kind::kRightParen));
+  if (!Ok())
+    return Fail();
+
+  return std::make_unique<raw::ParameterListNew>(scope.GetSourceElement(), std::move(attributes),
+                                                 std::move(type_ctor));
+}
+
+raw::ParameterList Parser::ParseParameterList() {
+  if (syntax_ == fidl::utils::Syntax::kNew) {
+    return ParseParameterListNew();
+  }
+  return ParseParameterListOld();
 }
 
 std::unique_ptr<raw::ProtocolMethod> Parser::ParseProtocolEvent(raw::AttributeList attributes,
@@ -953,7 +984,7 @@ std::unique_ptr<raw::ProtocolMethod> Parser::ParseProtocolEvent(raw::AttributeLi
   if (!Ok())
     return Fail();
 
-  auto parse_params = [this](std::unique_ptr<raw::ParameterList>* params_out) {
+  auto parse_params = [this](raw::ParameterList* params_out) {
     if (!Ok())
       return false;
     *params_out = ParseParameterList();
@@ -963,7 +994,8 @@ std::unique_ptr<raw::ProtocolMethod> Parser::ParseProtocolEvent(raw::AttributeLi
     return true;
   };
 
-  std::unique_ptr<raw::ParameterList> response;
+  std::unique_ptr<raw::ParameterListOld> request;
+  raw::ParameterList response;
   if (!parse_params(&response))
     return Fail();
 
@@ -975,42 +1007,42 @@ std::unique_ptr<raw::ProtocolMethod> Parser::ParseProtocolEvent(raw::AttributeLi
   }
 
   assert(method_name);
-  assert(response);
+  assert(raw::IsParameterListDefined(response));
 
   return std::make_unique<raw::ProtocolMethod>(scope.GetSourceElement(), std::move(attributes),
-                                               std::move(method_name), nullptr /* maybe_request */,
+                                               std::move(method_name), std::move(request),
                                                std::move(response), std::move(maybe_error));
 }
 
 std::unique_ptr<raw::ProtocolMethod> Parser::ParseProtocolMethod(
     raw::AttributeList attributes, ASTScope& scope, std::unique_ptr<raw::Identifier> method_name) {
-  auto parse_params = [this](std::unique_ptr<raw::ParameterList>* params_out) {
+  auto parse_params = [this](raw::ParameterList* params_out) {
     *params_out = ParseParameterList();
     if (!Ok())
       return false;
     return true;
   };
 
-  std::unique_ptr<raw::ParameterList> request;
+  raw::ParameterList request;
   if (!parse_params(&request))
     return Fail();
 
-  std::unique_ptr<raw::ParameterList> maybe_response;
-  std::unique_ptr<raw::TypeConstructorOld> maybe_error;
+  raw::ParameterList maybe_response;
+  raw::TypeConstructor maybe_error;
   if (MaybeConsumeToken(OfKind(Token::Kind::kArrow))) {
     if (!Ok())
       return Fail();
     if (!parse_params(&maybe_response))
       return Fail();
     if (MaybeConsumeToken(IdentifierOfSubkind(Token::Subkind::kError))) {
-      maybe_error = ParseTypeConstructorOld();
+      maybe_error = ParseTypeConstructor();
       if (!Ok())
         return Fail();
     }
   }
 
   assert(method_name);
-  assert(request);
+  assert(raw::IsParameterListDefined(request));
 
   return std::make_unique<raw::ProtocolMethod>(scope.GetSourceElement(), std::move(attributes),
                                                std::move(method_name), std::move(request),

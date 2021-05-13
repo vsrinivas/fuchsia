@@ -1983,7 +1983,7 @@ struct ExternalSimpleStruct {
                                                     }));
 }
 
-// TODO(fxbug.dev/75526): using empty structs as request/response payloads is
+// TODO(fxbug.dev/76349): using empty structs as request/response payloads is
 //  only supported in the new syntax.  Until this is supported and we can write
 //  this test in the new syntax, we "fake" an empty struct payload by generating
 //  the flat::Struct ourselves, rather than using the compiled output.

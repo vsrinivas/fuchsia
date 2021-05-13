@@ -134,11 +134,11 @@ class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
     TreeVisitor::OnBitsDeclaration(element);
   }
 
-  void OnParameterList(std::unique_ptr<ParameterList> const& element) override {
+  void OnParameterListOld(std::unique_ptr<ParameterListOld> const& element) override {
     has_encountered_param_list_start_ = false;
     is_param_list_first_param_on_same_line_ = std::nullopt;
     ScopedBool method(is_param_decl_);
-    TreeVisitor::OnParameterList(element);
+    TreeVisitor::OnParameterListOld(element);
   }
 
   void OnProtocolMethod(std::unique_ptr<ProtocolMethod> const& element) override {

@@ -541,10 +541,19 @@ class Parameter final : public SourceElement {
   AttributeList attributes;
 };
 
-class ParameterList final : public SourceElement {
+class ParameterListNew;
+class ParameterListOld;
+using ParameterList =
+    std::variant<std::unique_ptr<ParameterListNew>, std::unique_ptr<ParameterListOld>>;
+
+bool IsParameterListDefined(const raw::ParameterList& maybe_parameter_list);
+
+SourceSpan GetSpan(const raw::ParameterList& parameter_list);
+
+class ParameterListOld final : public SourceElement {
  public:
-  ParameterList(SourceElement const& element,
-                std::vector<std::unique_ptr<Parameter>> parameter_list)
+  ParameterListOld(SourceElement const& element,
+                   std::vector<std::unique_ptr<Parameter>> parameter_list)
       : SourceElement(element), parameter_list(std::move(parameter_list)) {}
 
   void Accept(TreeVisitor* visitor) const;
@@ -552,13 +561,29 @@ class ParameterList final : public SourceElement {
   std::vector<std::unique_ptr<Parameter>> parameter_list;
 };
 
+class ParameterListNew final : public SourceElement {
+ public:
+  ParameterListNew(SourceElement const& element, std::unique_ptr<AttributeListNew> attributes,
+                   std::unique_ptr<TypeConstructorNew> type_ctor)
+      : SourceElement(element),
+        attributes(std::move(attributes)),
+        type_ctor(std::move(type_ctor)) {}
+
+  void Accept(TreeVisitor* visitor) const;
+
+  // TODO(fxbug.dev/74955): this is only parsed to report an error at compile
+  //  time that attributes are not yet allowed at this position.  When the
+  //  complete solution that allows attributes on any anonymous layout is
+  //  implemented, that error and this field should be removed.
+  std::unique_ptr<AttributeListNew> attributes;
+  std::unique_ptr<TypeConstructorNew> type_ctor;
+};
+
 class ProtocolMethod : public SourceElement {
  public:
   ProtocolMethod(SourceElement const& element, AttributeList attributes,
-                 std::unique_ptr<Identifier> identifier,
-                 std::unique_ptr<ParameterList> maybe_request,
-                 std::unique_ptr<ParameterList> maybe_response,
-                 std::unique_ptr<TypeConstructorOld> maybe_error_ctor)
+                 std::unique_ptr<Identifier> identifier, ParameterList maybe_request,
+                 ParameterList maybe_response, raw::TypeConstructor maybe_error_ctor)
       : SourceElement(element),
         attributes(std::move(attributes)),
         identifier(std::move(identifier)),
@@ -566,8 +591,8 @@ class ProtocolMethod : public SourceElement {
         maybe_response(std::move(maybe_response)),
         maybe_error_ctor(std::move(maybe_error_ctor)) {
     // `maybe_response` must exist if `maybe_error_ctor` is exists.
-    if (maybe_error_ctor) {
-      assert(maybe_response);
+    if (IsTypeConstructorDefined(maybe_error_ctor)) {
+      assert(IsParameterListDefined(maybe_response));
     }
   }
 
@@ -575,9 +600,9 @@ class ProtocolMethod : public SourceElement {
 
   AttributeList attributes;
   std::unique_ptr<Identifier> identifier;
-  std::unique_ptr<ParameterList> maybe_request;
-  std::unique_ptr<ParameterList> maybe_response;
-  std::unique_ptr<TypeConstructorOld> maybe_error_ctor;
+  ParameterList maybe_request;
+  ParameterList maybe_response;
+  raw::TypeConstructor maybe_error_ctor;
 };
 
 class ComposeProtocol final : public SourceElement {

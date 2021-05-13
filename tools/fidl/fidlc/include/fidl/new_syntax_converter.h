@@ -123,7 +123,7 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
 
   // Methods.
   void OnParameter(std::unique_ptr<raw::Parameter> const& element) override;
-  void OnParameterList(std::unique_ptr<raw::ParameterList> const& element) override;
+  void OnParameterListOld(std::unique_ptr<raw::ParameterListOld> const& element) override;
   void OnProtocolMethod(std::unique_ptr<raw::ProtocolMethod> const& element) override;
 
   // Resource Property.

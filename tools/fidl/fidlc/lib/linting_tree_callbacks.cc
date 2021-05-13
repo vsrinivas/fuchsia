@@ -120,7 +120,7 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
     }
     void OnProtocolMethod(std::unique_ptr<raw::ProtocolMethod> const& element) override {
       ProcessGapText(element->start_);
-      if (element->maybe_request != nullptr) {
+      if (raw::IsParameterListDefined(element->maybe_request)) {
         for (auto& callback : callbacks_.method_callbacks_) {
           callback(*element.get());
         }

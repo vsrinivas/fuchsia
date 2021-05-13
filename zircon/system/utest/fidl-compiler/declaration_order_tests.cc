@@ -100,8 +100,6 @@ protocol #Protocol# {
   }
 }
 
-// TODO(fxbug.dev/75526): reverted to old syntax only until the change
-//  implementing the new method syntax lands.
 // This test ensures that there are no "holes" in the anonymous number range.
 TEST(DeclarationOrderTest, GoodAnonymousNamesDenseNumbering) {
   for (int i = 0; i < kRepeatTestCount; i++) {
@@ -118,7 +116,7 @@ protocol #Protocol# {
 
 )FIDL");
     TestLibrary library(source);
-    ASSERT_TRUE(library.Compile());
+    ASSERT_COMPILED_AND_CONVERT(library);
     auto decl_order = library.declaration_order();
     ASSERT_EQ(4, decl_order.size());
     ASSERT_DECL_NAME(decl_order[0], "SomeLongAnonymousPrefix2");
@@ -128,8 +126,6 @@ protocol #Protocol# {
   }
 }
 
-// TODO(fxbug.dev/75526): reverted to old syntax only until the change
-//  implementing the new method syntax lands.
 TEST(DeclarationOrderTest, GoodNonnullableRef) {
   for (int i = 0; i < kRepeatTestCount; i++) {
     Namer namer;
@@ -148,7 +144,7 @@ protocol #Protocol# {
 
 )FIDL");
     TestLibrary library(source);
-    ASSERT_TRUE(library.Compile());
+    ASSERT_COMPILED_AND_CONVERT(library);
     auto decl_order = library.declaration_order();
     ASSERT_EQ(4, decl_order.size());
     ASSERT_DECL_NAME(decl_order[0], namer.of("Element"));
@@ -308,8 +304,6 @@ struct #Payload# {
   }
 }
 
-// TODO(fxbug.dev/75526): reverted to old syntax only until the change
-//  implementing the new method syntax lands.
 TEST(DeclarationOrderTest, GoodNonnullableUnionInStruct) {
   for (int i = 0; i < kRepeatTestCount; i++) {
     Namer namer;
@@ -334,7 +328,7 @@ union #Xunion# {
 
 )FIDL");
     TestLibrary library(source);
-    ASSERT_TRUE(library.Compile());
+    ASSERT_COMPILED_AND_CONVERT(library);
     auto decl_order = library.declaration_order();
     ASSERT_EQ(5, decl_order.size());
     ASSERT_DECL_NAME(decl_order[0], namer.of("Payload"));
@@ -345,8 +339,6 @@ union #Xunion# {
   }
 }
 
-// TODO(fxbug.dev/75526): reverted to old syntax only until the change
-//  implementing the new method syntax lands.
 TEST(DeclarationOrderTest, GoodNullableUnionInStruct) {
   for (int i = 0; i < kRepeatTestCount; i++) {
     Namer namer;
@@ -371,7 +363,7 @@ union #Xunion# {
 
 )FIDL");
     TestLibrary library(source);
-    ASSERT_TRUE(library.Compile());
+    ASSERT_COMPILED_AND_CONVERT(library);
     auto decl_order = library.declaration_order();
     ASSERT_EQ(5, decl_order.size());
 

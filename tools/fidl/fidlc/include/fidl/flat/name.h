@@ -226,6 +226,9 @@ class Name final {
   std::variant<std::monostate, SourcedNameContext, DerivedNameContext, IntrinsicNameContext>
       name_context_;
   std::optional<std::string> member_name_;
+
+ public:
+  bool is_sourced() const { return std::get_if<SourcedNameContext>(&name_context_); }
 };
 
 }  // namespace flat

@@ -29,8 +29,6 @@ protocol Empty {};
   EXPECT_EQ(protocol->all_methods.size(), 0);
 }
 
-// TODO(fxbug.dev/75526): reverted to old syntax only until the change
-//  implementing the new method syntax lands.
 TEST(ProtocolTests, GoodValidComposeMethod) {
   TestLibrary library(R"FIDL(
 library example;
@@ -44,7 +42,7 @@ protocol HasComposeMethod2 {
 };
 
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
 
   auto protocol1 = library.LookupProtocol("HasComposeMethod1");
   ASSERT_NOT_NULL(protocol1);
@@ -496,7 +494,7 @@ library example;
 
 type S = struct {};
 protocol P {
-    Method(r server_end:<S, optional>);
+    Method(struct { r server_end:<S, optional>; });
 };
 )FIDL",
                       experimental_flags);
@@ -522,7 +520,7 @@ TEST(ProtocolTests, BadRequestMustBeParameterized) {
 library example;
 
 protocol P {
-    Method(r server_end);
+    Method(struct { r server_end; });
 };
 )FIDL",
                       experimental_flags);
@@ -588,7 +586,7 @@ TEST(ProtocolTests, BadDuplicateParameterName) {
 library example;
 
 protocol P {
-  MethodWithDuplicateParams(foo uint8, foo uint8);
+  MethodWithDuplicateParams(struct {foo uint8; foo uint8; });
 };
 )FIDL",
                       std::move(experimental_flags));

@@ -164,7 +164,17 @@ class TreeVisitor {
     element->Accept(this);
   }
   virtual void OnParameter(std::unique_ptr<Parameter> const& element) { element->Accept(this); }
-  virtual void OnParameterList(std::unique_ptr<ParameterList> const& element) {
+  void OnParameterList(ParameterList const& element) {
+    std::visit(fidl::utils::matchers{
+                   [this](const std::unique_ptr<ParameterListOld>& e) { OnParameterListOld(e); },
+                   [this](const std::unique_ptr<ParameterListNew>& e) { OnParameterListNew(e); },
+               },
+               element);
+  }
+  virtual void OnParameterListOld(std::unique_ptr<ParameterListOld> const& element) {
+    element->Accept(this);
+  }
+  virtual void OnParameterListNew(std::unique_ptr<ParameterListNew> const& element) {
     element->Accept(this);
   }
   virtual void OnProtocolMethod(std::unique_ptr<ProtocolMethod> const& element) {

@@ -114,7 +114,7 @@ becomes:
 protocol-method = ( attribute-list ) , IDENTIFIER , method-params
                   ( "->" , method-params ( "error" type-constructor ) ) ;
 protocol-event = ( attribute-list ) , "->" , IDENTIFIER , method-params;
-method-params = "(" , type , ")"
+method-params = "(" , type-constructor , ")"
 ```
 
 A `type` is [as defined in RFC-0050][grammar], i.e. it is either a

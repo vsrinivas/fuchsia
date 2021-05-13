@@ -82,6 +82,7 @@ namespace {
   DO(Layout)                    \
   DO(InlineLayoutReference)     \
   DO(NamedLayoutReference)      \
+  DO(ParameterListNew)          \
   DO(TypeConstraints)           \
   DO(TypeConstructorNew)        \
   DO(TypeDecl)
@@ -197,9 +198,13 @@ class SourceSpanVisitor : public fidl::raw::TreeVisitor {
     CheckSpanOfType(ElementType::Parameter, *element);
     TreeVisitor::OnParameter(element);
   }
-  void OnParameterList(std::unique_ptr<fidl::raw::ParameterList> const& element) override {
+  void OnParameterListOld(std::unique_ptr<fidl::raw::ParameterListOld> const& element) override {
     CheckSpanOfType(ElementType::ParameterList, *element);
-    TreeVisitor::OnParameterList(element);
+    TreeVisitor::OnParameterListOld(element);
+  }
+  void OnParameterListNew(std::unique_ptr<fidl::raw::ParameterListNew> const& element) override {
+    CheckSpanOfType(ElementType::ParameterListNew, *element);
+    TreeVisitor::OnParameterListNew(element);
   }
   void OnProtocolMethod(std::unique_ptr<fidl::raw::ProtocolMethod> const& element) override {
     CheckSpanOfType(ElementType::ProtocolMethod, *element);
@@ -790,6 +795,15 @@ const std::vector<TestCase> new_syntax_test_cases = {
           };
          )FIDL",
      }},
+    {ElementType::ParameterListNew,
+     {
+         R"FIDL(library x; protocol X { Method«()» -> «()»; };)FIDL",
+         R"FIDL(library x; protocol X { Method«(struct {})» -> «(struct {})»; };)FIDL",
+         R"FIDL(library x; protocol X { Method«(struct { a int32; b bool; })» -> «(struct { c uint8; d bool; })»; };)FIDL",
+         R"FIDL(library x; protocol X { -> Event«()»; };)FIDL",
+         R"FIDL(library x; protocol X { -> Event«(struct {})»; };)FIDL",
+         R"FIDL(library x; protocol X { -> Event«(struct { a int32; b bool; })»; };)FIDL",
+     }},
     {ElementType::TypeConstraints,
      {
          R"FIDL(library x; type y = array<uint8,4>;)FIDL",
@@ -822,6 +836,7 @@ const std::vector<TestCase> new_syntax_test_cases = {
             }»;
           }»;
          )FIDL",
+         R"FIDL(library x; protocol X { Method(«struct { a «int32»; b «bool»; }») -> («struct {}») error «uint32»; };)FIDL",
      }},
     {ElementType::TypeDecl,
      {

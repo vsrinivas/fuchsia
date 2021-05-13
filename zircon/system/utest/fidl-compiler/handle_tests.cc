@@ -108,7 +108,7 @@ library example;
 using zx;
 
 protocol P {
-    Method(h zx.handle:<VMO, 1>);  // rights must be zx.rights-typed.
+    Method(struct { h zx.handle:<VMO, 1>; });  // rights must be zx.rights-typed.
 };
 )FIDL",
                                std::move(experimental_flags));

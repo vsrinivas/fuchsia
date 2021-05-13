@@ -110,8 +110,6 @@ protocol Example {
   ASSERT_COMPILED_AND_CONVERT(library);
 }
 
-// TODO(fxbug.dev/75526): reverted to old syntax only until the change
-//  implementing the new method syntax lands.
 TEST(CanonicalNamesTests, GoodMethodParameters) {
   TestLibrary library(R"FIDL(
 library example;
@@ -124,11 +122,9 @@ protocol Example {
   ) -> ();
 };
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
 }
 
-// TODO(fxbug.dev/75526): reverted to old syntax only until the change
-//  implementing the new method syntax lands.
 TEST(CanonicalNamesTests, GoodMethodResults) {
   TestLibrary library(R"FIDL(
 library example;
@@ -141,7 +137,7 @@ protocol Example {
   );
 };
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
 }
 
 // TODO(fxbug.dev/71536): Convert tests after implementing client/server end in
@@ -536,7 +532,7 @@ TEST(CanonicalNamesTests, BadMethodParameters) {
 library example;
 
 protocol Example {
-  example(fooBar bool, FooBar bool) -> ();
+  example(struct { fooBar bool; FooBar bool; }) -> ();
 };
 )FIDL",
                       experimental_flags);
@@ -567,7 +563,7 @@ TEST(CanonicalNamesTests, BadMethodResults) {
 library example;
 
 protocol Example {
-  example() -> (fooBar bool, FooBar bool);
+  example() -> (struct { fooBar bool; FooBar bool; });
 };
 )FIDL",
                       experimental_flags);

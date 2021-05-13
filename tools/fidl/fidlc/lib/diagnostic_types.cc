@@ -63,6 +63,58 @@ std::string Display(const flat::Attribute* a) { return a->name; }
 
 std::string Display(const flat::Constant* c) { return NameFlatConstant(c); }
 
+std::string Display(const flat::Decl* d) {
+  std::string decl_kind;
+  switch (d->kind) {
+    case flat::Decl::Kind::kBits: {
+      decl_kind = "bits";
+      break;
+    }
+    case flat::Decl::Kind::kConst: {
+      decl_kind = "const";
+      break;
+    }
+    case flat::Decl::Kind::kEnum: {
+      decl_kind = "enum";
+      break;
+    }
+    case flat::Decl::Kind::kProtocol: {
+      decl_kind = "protocol";
+      break;
+    }
+    case flat::Decl::Kind::kResource: {
+      decl_kind = "resource";
+      break;
+    }
+    case flat::Decl::Kind::kService: {
+      decl_kind = "resource";
+      break;
+    }
+    case flat::Decl::Kind::kStruct: {
+      decl_kind = "struct";
+      break;
+    }
+    case flat::Decl::Kind::kTable: {
+      decl_kind = "table";
+      break;
+    }
+    case flat::Decl::Kind::kTypeAlias: {
+      decl_kind = "alias";
+      break;
+    }
+    case flat::Decl::Kind::kUnion: {
+      decl_kind = "union";
+      break;
+    }
+  }
+
+  if (d->name.is_sourced()) {
+    return decl_kind + " " + d->GetName();
+  }
+
+  return decl_kind;
+}
+
 std::string Display(const flat::TypeConstructorOld* tc) { return NameFlatTypeConstructorOld(tc); }
 
 std::string Display(const flat::Type* t) { return NameFlatType(t); }

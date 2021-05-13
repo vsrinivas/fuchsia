@@ -45,6 +45,14 @@ bool IsTypeConstructorDefined(const raw::TypeConstructor& maybe_type_ctor) {
       maybe_type_ctor);
 }
 
+bool IsParameterListDefined(const raw::ParameterList& maybe_parameter_list) {
+  return std::visit([](const auto& e) -> bool { return e != nullptr; }, maybe_parameter_list);
+}
+
+SourceSpan GetSpan(const raw::ParameterList& parameter_list) {
+  return std::visit([](const auto& e) -> SourceSpan { return e->span(); }, parameter_list);
+}
+
 SourceElementMark::SourceElementMark(TreeVisitor* tv, const SourceElement& element)
     : tv_(tv), element_(element) {
   tv_->OnSourceElementStart(element_);
@@ -226,10 +234,17 @@ void Parameter::Accept(TreeVisitor* visitor) const {
   visitor->OnIdentifier(identifier);
 }
 
-void ParameterList::Accept(TreeVisitor* visitor) const {
+void ParameterListOld::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
   for (auto parameter = parameter_list.begin(); parameter != parameter_list.end(); ++parameter) {
     visitor->OnParameter(*parameter);
+  }
+}
+
+void ParameterListNew::Accept(TreeVisitor* visitor) const {
+  SourceElementMark sem(visitor, *this);
+  if (type_ctor) {
+    visitor->OnTypeConstructorNew(type_ctor);
   }
 }
 
@@ -239,14 +254,14 @@ void ProtocolMethod::Accept(TreeVisitor* visitor) const {
     visitor->OnAttributeList(attributes);
   }
   visitor->OnIdentifier(identifier);
-  if (maybe_request != nullptr) {
+  if (raw::IsParameterListDefined(maybe_request)) {
     visitor->OnParameterList(maybe_request);
   }
-  if (maybe_response != nullptr) {
+  if (raw::IsParameterListDefined(maybe_response)) {
     visitor->OnParameterList(maybe_response);
   }
-  if (maybe_error_ctor != nullptr) {
-    visitor->OnTypeConstructorOld(maybe_error_ctor);
+  if (raw::IsTypeConstructorDefined(maybe_error_ctor)) {
+    visitor->OnTypeConstructor(maybe_error_ctor);
   }
 }
 

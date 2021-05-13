@@ -2804,15 +2804,18 @@ void Library::ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_
 bool Library::CreateMethodResult(const Name& protocol_name, SourceSpan response_span,
                                  raw::ProtocolMethod* method, Struct* in_response,
                                  Struct** out_response) {
+  SourceSpan method_name_span = method->identifier->span();
+  auto error_name = Name::CreateDerived(
+      this, response_span,
+      StringJoin({protocol_name.decl_name(), method_name_span.data(), "Error"}, "_"));
+
   // Compile the error type.
-  std::unique_ptr<TypeConstructorOld> error_type_ctor;
-  if (!ConsumeTypeConstructorOld(std::move(method->maybe_error_ctor), &error_type_ctor))
+  flat::TypeConstructor error_type_ctor;
+  if (!ConsumeTypeConstructor(std::move(method->maybe_error_ctor), error_name, &error_type_ctor))
     return false;
 
   // Make the Result union containing the response struct and the
   // error type.
-  SourceSpan method_name_span = method->identifier->span();
-
   // TODO(fxbug.dev/8027): Join spans of response and error constructor for `result_name`.
   auto result_name = Name::CreateDerived(
       this, response_span,
@@ -2859,7 +2862,7 @@ bool Library::CreateMethodResult(const Name& protocol_name, SourceSpan response_
 
 void Library::ConsumeProtocolDeclaration(
     std::unique_ptr<raw::ProtocolDeclaration> protocol_declaration) {
-  auto name = Name::CreateSourced(this, protocol_declaration->identifier->span());
+  auto protocol_name = Name::CreateSourced(this, protocol_declaration->identifier->span());
 
   std::vector<Protocol::ComposedProtocol> composed_protocols;
   std::set<Name> seen_composed_protocols;
@@ -2869,8 +2872,8 @@ void Library::ConsumeProtocolDeclaration(
       return;
     }
 
-    auto& protocol_name = raw_composed->protocol_name;
-    auto composed_protocol_name = CompileCompoundIdentifier(protocol_name.get());
+    auto& raw_protocol_name = raw_composed->protocol_name;
+    auto composed_protocol_name = CompileCompoundIdentifier(raw_protocol_name.get());
     if (!composed_protocol_name)
       return;
     if (!seen_composed_protocols.insert(composed_protocol_name.value()).second) {
@@ -2890,39 +2893,50 @@ void Library::ConsumeProtocolDeclaration(
     }
 
     SourceSpan method_name = method->identifier->span();
-    bool has_request = method->maybe_request != nullptr;
+    bool has_request = raw::IsParameterListDefined(method->maybe_request);
     Struct* maybe_request = nullptr;
     if (has_request) {
-      if (!ConsumeParameterList(std::nullopt, std::move(method->maybe_request), true,
-                                &maybe_request))
+      bool result = std::visit(
+          [this, method_name, &maybe_request](auto params) -> bool {
+            return ConsumeParameterList(method_name, std::nullopt, std::move(params), true, &maybe_request);
+          },
+          std::move(method->maybe_request));
+      if (!result)
         return;
     }
 
-    bool has_response = method->maybe_response != nullptr;
     Struct* maybe_response = nullptr;
+    bool has_response = raw::IsParameterListDefined(method->maybe_response);
     if (has_response) {
-      const bool has_error = (method->maybe_error_ctor != nullptr);
+      const bool has_error = raw::IsTypeConstructorDefined(method->maybe_error_ctor);
 
-      SourceSpan response_span = method->maybe_response->span();
+      SourceSpan response_span = raw::GetSpan(method->maybe_response);
+      auto method_response_name =
+          StringJoin({protocol_name.decl_name(), method_name.data(), "Response"}, "_");
       std::optional<Name> response_name =
           !has_error ? std::nullopt
-                     : std::make_optional<Name>(Name::CreateDerived(
-                           this, response_span,
-                           StringJoin({name.decl_name(), method_name.data(), "Response"}, "_")));
-      if (!ConsumeParameterList(std::move(response_name), std::move(method->maybe_response),
-                                !has_error, &maybe_response))
+                     : std::make_optional<Name>(
+              Name::CreateDerived(this, response_span, method_response_name));
+
+      bool result = std::visit(
+          [this, method_name, response_name(std::move(response_name)), has_error,
+              &maybe_response](auto params) -> bool {
+            return ConsumeParameterList(method_name, response_name, std::move(params), !has_error,
+                                        &maybe_response);
+          },
+          std::move(method->maybe_response));
+      if (!result)
         return;
 
       if (has_error) {
-        if (!CreateMethodResult(name, response_span, method.get(), maybe_response, &maybe_response))
+        if (!CreateMethodResult(protocol_name, response_span, method.get(), maybe_response, &maybe_response))
           return;
       }
     }
 
     assert(has_request || has_response);
-    methods.emplace_back(std::move(attributes), std::move(method->identifier),
-                         std::move(method_name), has_request, std::move(maybe_request),
-                         has_response, std::move(maybe_response));
+    methods.emplace_back(std::move(attributes), std::move(method->identifier), method_name,
+                         has_request, maybe_request, has_response, maybe_response);
   }
 
   std::unique_ptr<AttributeList> attributes;
@@ -2930,8 +2944,120 @@ void Library::ConsumeProtocolDeclaration(
     return;
   }
 
-  RegisterDecl(std::make_unique<Protocol>(std::move(attributes), std::move(name),
+  RegisterDecl(std::make_unique<Protocol>(std::move(attributes), std::move(protocol_name),
                                           std::move(composed_protocols), std::move(methods)));
+}
+
+bool Library::ConsumeParameterList(SourceSpan method_name, std::optional<Name> assigned_name,
+                                   std::unique_ptr<raw::ParameterListOld> parameters,
+                                   bool is_request_or_response, Struct** out_struct_decl) {
+  // If is_request_or_response is false, this parameter list is being generated
+  // as one of two members in the "Foo_Result" union.  In this case, we proceed
+  // with generating an empty struct, so that the first member of this union,
+  // "Foo_Response," may be filled.  In the other case, an empty parameter list
+  // means that the body payload is expected to be empty, so the out_struct_decl
+  // should be left as null to indicate as much.
+  if (is_request_or_response && parameters->parameter_list.empty()) {
+    return true;
+  }
+
+  // If the name is unset, we need to generate an anonymous name for the struct
+  // representing this parameter list.
+  Name name = assigned_name.has_value()
+              ? assigned_name.value()
+              : Name::CreateDerived(this, parameters->span(), NextAnonymousName());
+
+  std::vector<Struct::Member> members;
+  for (auto& parameter : parameters->parameter_list) {
+    std::unique_ptr<AttributeList> attributes;
+    if (!ConsumeAttributeList(std::move(parameter->attributes), &attributes)) {
+      return false;
+    }
+
+    TypeConstructor type_ctor;
+    // TODO(fxbug.dev/73285): finalize layout naming
+    auto param_name = Name::CreateDerived(
+        this, parameter->span(),
+        std::string(name.decl_name()) +
+            utils::to_upper_camel_case(std::string(parameter->identifier->span().data())));
+    if (!ConsumeTypeConstructor(std::move(parameter->type_ctor), param_name, &type_ctor))
+      return false;
+    ValidateAttributesPlacement(AttributePlacement::kStructMember, attributes.get());
+    members.emplace_back(std::move(type_ctor), parameter->identifier->span(),
+        /* maybe_default_value=*/nullptr, std::move(attributes));
+  }
+
+  if (!RegisterDecl(std::make_unique<Struct>(nullptr /* attributes */, std::move(name),
+                                             std::move(members), std::nullopt /* resourceness */,
+                                             is_request_or_response)))
+    return false;
+
+  *out_struct_decl = struct_declarations_.back().get();
+  return true;
+}
+
+bool Library::ConsumeParameterList(SourceSpan method_name, std::optional<Name> assigned_name,
+                                   std::unique_ptr<raw::ParameterListNew> parameters,
+                                   bool is_request_or_response, Struct** out_struct_decl) {
+  // If is_request_or_response is false, this parameter list is being generated
+  // as one of two members in the "Foo_Result" union.  In this case, we proceed
+  // with generating an empty struct, so that the first member of this union,
+  // "Foo_Response," may be filled.  In the other case, an empty parameter list
+  // means that the body payload is expected to be empty, so the out_struct_decl
+  // should be left as null to indicate as much.
+  if (!parameters->type_ctor) {
+    if (!is_request_or_response) {
+      Fail(ErrResponsesWithErrorsMustNotBeEmpty, parameters->span(), method_name);
+      return false;
+    }
+    return true;
+  }
+
+  // If the name is unset, we need to generate an anonymous name for the struct
+  // representing this parameter list.
+  Name name = assigned_name.has_value()
+              ? assigned_name.value()
+              : Name::CreateDerived(this, parameters->span(), NextAnonymousName());
+
+  // TODO(fxbug.dev/74955): Once full-fledged anonymous layout attributes are
+  //  implemented, this error check can be removed.
+  if (parameters->attributes) {
+    Fail(ErrNotYetSupportedAttributesOnPayloadStructs, name);
+  }
+
+  std::unique_ptr<TypeConstructorNew> unused_type_ctor;
+  if (!ConsumeTypeConstructorNew(std::move(parameters->type_ctor), name,
+      /*raw_attribute_list=*/nullptr, is_request_or_response,
+      /*out_type_=*/nullptr))
+    return false;
+
+  auto* decl = LookupDeclByName(name);
+  if (!decl)
+    return false;
+
+  switch (decl->kind) {
+    case Decl::Kind::kStruct: {
+      auto struct_decl = static_cast<Struct*>(decl);
+      if (is_request_or_response && struct_decl->members.empty()) {
+        Fail(ErrNotYetSupportedEmptyPayloadStructs, name);
+      }
+      break;
+    }
+    case Decl::Kind::kBits:
+    case Decl::Kind::kEnum: {
+      return Fail(ErrInvalidParameterListType, decl);
+    }
+    case Decl::Kind::kTable:
+    case Decl::Kind::kUnion: {
+      return Fail(ErrNotYetSupportedParameterListType, decl);
+    }
+    default: {
+      assert(false && "unexpected decl kind");
+    }
+  }
+
+  *out_struct_decl = struct_declarations_.back().get();
+  return true;
 }
 
 bool Library::ConsumeResourceDeclaration(
@@ -2979,53 +3105,6 @@ std::unique_ptr<TypeConstructorOld> Library::IdentifierTypeForDecl(const Decl* d
                                               std::optional<Name>() /* handle_subtype_identifier */,
                                               nullptr /* handle_rights */, nullptr /* maybe_size */,
                                               nullability);
-}
-
-bool Library::ConsumeParameterList(std::optional<Name> assigned_name,
-                                   std::unique_ptr<raw::ParameterList> parameter_list,
-                                   bool is_request_or_response, Struct** out_struct_decl) {
-  // If is_request_or_response is false, this parameter list is being generated
-  // as one of two members in the "Foo_Result" union.  In this case, we proceed
-  // with generating an empty struct, so that the first member of this union,
-  // "Foo_Response," may be filled.  In the other case, an empty parameter list
-  // means that the body payload is expected to be empty, so the out_struct_decl
-  // should be left as null to indicate as much.
-  if (is_request_or_response && parameter_list->parameter_list.empty()) {
-    return true;
-  }
-
-  // If the name is unset, we need to generate an anonymous name for the struct
-  // representing this parameter list.
-  Name name = assigned_name.has_value()
-                  ? assigned_name.value()
-                  : Name::CreateDerived(this, parameter_list->span(), NextAnonymousName());
-
-  std::vector<Struct::Member> members;
-  for (auto& parameter : parameter_list->parameter_list) {
-    std::unique_ptr<AttributeList> attributes;
-    if (!ConsumeAttributeList(std::move(parameter->attributes), &attributes)) {
-      return false;
-    }
-
-    TypeConstructor type_ctor;
-    // TODO(fxbug.dev/73285): finalize layout naming
-    auto param_name = Name::CreateDerived(
-        this, parameter->span(),
-        std::string(name.decl_name()) +
-            utils::to_upper_camel_case(std::string(parameter->identifier->span().data())));
-    if (!ConsumeTypeConstructor(std::move(parameter->type_ctor), param_name, &type_ctor))
-      return false;
-    ValidateAttributesPlacement(AttributePlacement::kStructMember, attributes.get());
-    members.emplace_back(std::move(type_ctor), parameter->identifier->span(),
-                         nullptr /* maybe_default_value */, std::move(attributes));
-  }
-
-  if (!RegisterDecl(std::make_unique<Struct>(nullptr /* attributes */, std::move(name),
-                                             std::move(members), std::nullopt /* resourceness */,
-                                             is_request_or_response)))
-    return false;
-  *out_struct_decl = struct_declarations_.back().get();
-  return true;
 }
 
 void Library::ConsumeServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration> service_decl) {
@@ -3201,7 +3280,8 @@ bool Library::ConsumeValueLayout(std::unique_ptr<raw::Layout> layout, const Name
   std::unique_ptr<TypeConstructorNew> subtype_ctor;
   if (layout->subtype_ctor != nullptr) {
     if (!ConsumeTypeConstructorNew(std::move(layout->subtype_ctor), context,
-                                   /*raw_attribute_list=*/nullptr, &subtype_ctor))
+                                   /*raw_attribute_list=*/nullptr, /*is_request_or_response=*/false,
+                                   &subtype_ctor))
       return false;
   } else {
     subtype_ctor = TypeConstructorNew::CreateSizeType();
@@ -3240,7 +3320,8 @@ bool Library::ConsumeOrdinaledLayout(std::unique_ptr<raw::Layout> layout, const 
             utils::to_upper_camel_case(std::string(member->identifier->span().data())));
     std::unique_ptr<TypeConstructorNew> type_ctor;
     if (!ConsumeTypeConstructorNew(std::move(member->type_ctor), name_of_anonymous_layout,
-                                   /*raw_attribute_list=*/nullptr, &type_ctor))
+                                   /*raw_attribute_list=*/nullptr, /*is_request_or_response=*/false,
+                                   &type_ctor))
       return false;
 
     members.emplace_back(std::move(member->ordinal), std::move(type_ctor),
@@ -3259,7 +3340,8 @@ bool Library::ConsumeOrdinaledLayout(std::unique_ptr<raw::Layout> layout, const 
 }
 
 bool Library::ConsumeStructLayout(std::unique_ptr<raw::Layout> layout, const Name& context,
-                                  std::unique_ptr<raw::AttributeListNew> raw_attribute_list) {
+                                  std::unique_ptr<raw::AttributeListNew> raw_attribute_list,
+                                  bool is_request_or_response) {
   std::vector<Struct::Member> members;
   for (auto& mem : layout->members) {
     auto member = static_cast<raw::StructLayoutMember*>(mem.get());
@@ -3275,7 +3357,8 @@ bool Library::ConsumeStructLayout(std::unique_ptr<raw::Layout> layout, const Nam
 
     std::unique_ptr<TypeConstructorNew> type_ctor;
     if (!ConsumeTypeConstructorNew(std::move(member->type_ctor), name_of_anonymous_layout,
-                                   /*raw_attribute_list=*/nullptr, &type_ctor))
+                                   /*raw_attribute_list=*/nullptr, /*is_request_or_response=*/false,
+                                   &type_ctor))
       return false;
 
     std::unique_ptr<Constant> default_value;
@@ -3293,12 +3376,13 @@ bool Library::ConsumeStructLayout(std::unique_ptr<raw::Layout> layout, const Nam
   }
 
   RegisterDecl(std::make_unique<Struct>(std::move(attributes), context, std::move(members),
-                                        layout->resourceness));
+                                        layout->resourceness, is_request_or_response));
   return true;
 }
 
 bool Library::ConsumeLayout(std::unique_ptr<raw::Layout> layout, const Name& context,
-                            std::unique_ptr<raw::AttributeListNew> raw_attribute_list) {
+                            std::unique_ptr<raw::AttributeListNew> raw_attribute_list,
+                            bool is_request_or_response) {
   switch (layout->kind) {
     case raw::Layout::Kind::kBits: {
       return ConsumeValueLayout<Bits, Bits::Member>(std::move(layout), context,
@@ -3309,7 +3393,8 @@ bool Library::ConsumeLayout(std::unique_ptr<raw::Layout> layout, const Name& con
                                                     std::move(raw_attribute_list));
     }
     case raw::Layout::Kind::kStruct: {
-      return ConsumeStructLayout(std::move(layout), context, std::move(raw_attribute_list));
+      return ConsumeStructLayout(std::move(layout), context, std::move(raw_attribute_list),
+                                 is_request_or_response);
     }
     case raw::Layout::Kind::kTable: {
       return ConsumeOrdinaledLayout<Table, Table::Member>(std::move(layout), context,
@@ -3327,6 +3412,7 @@ bool Library::ConsumeLayout(std::unique_ptr<raw::Layout> layout, const Name& con
 bool Library::ConsumeTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew> raw_type_ctor,
                                         const Name& context,
                                         std::unique_ptr<raw::AttributeListNew> raw_attribute_list,
+                                        bool is_request_or_response,
                                         std::unique_ptr<TypeConstructorNew>* out_type_ctor) {
   if (raw_type_ctor->layout_ref->kind == raw::LayoutReference::Kind::kInline) {
     // TODO(fxbug.dev/74683): If we don't want users to be able to refer to anonymous
@@ -3340,7 +3426,8 @@ bool Library::ConsumeTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew>
       return Fail(ErrCannotConstrainInLayoutDecl, constraints->span());
     }
     auto inline_ref = static_cast<raw::InlineLayoutReference*>(raw_type_ctor->layout_ref.get());
-    if (!ConsumeLayout(std::move(inline_ref->layout), context, std::move(raw_attribute_list)))
+    if (!ConsumeLayout(std::move(inline_ref->layout), context, std::move(raw_attribute_list),
+                       is_request_or_response))
       return false;
 
     std::vector<std::unique_ptr<LayoutParameter>> no_params;
@@ -3350,6 +3437,14 @@ bool Library::ConsumeTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew>
           context, std::make_unique<LayoutParameterList>(std::move(no_params), std::nullopt),
           std::make_unique<TypeConstraints>(std::move(no_constraints), std::nullopt));
     return true;
+  }
+
+  // TODO(fxbug.dev/76349): named parameter lists are not yet allowed, so we
+  //  need to ensure that is_request_or_response is false at this point.  Once
+  //  that feature is enabled, this check can be removed.
+  if (is_request_or_response) {
+    Fail(ErrNamedParameterListTypesNotYetSupported, raw_type_ctor->span());
+    return false;
   }
 
   auto named_ref = static_cast<raw::NamedLayoutReference*>(raw_type_ctor->layout_ref.get());
@@ -3378,10 +3473,11 @@ bool Library::ConsumeTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew>
         }
         case raw::LayoutParameter::Kind::kType: {
           auto type_param = static_cast<raw::TypeLayoutParameter*>(param.get());
-          std::unique_ptr<TypeConstructorNew> type_ctor;
           auto nested_name = Name::CreateDerived(this, name_span, context.full_name());
+          std::unique_ptr<TypeConstructorNew> type_ctor;
           if (!ConsumeTypeConstructorNew(std::move(type_param->type_ctor), nested_name,
-                                         /*raw_attribute_list=*/nullptr, &type_ctor))
+                                         /*raw_attribute_list=*/nullptr, is_request_or_response,
+                                         &type_ctor))
             return false;
 
           std::unique_ptr<LayoutParameter> consumed =
@@ -3436,7 +3532,8 @@ bool Library::ConsumeTypeConstructor(raw::TypeConstructor raw_type_ctor, const N
                         [&, this](std::unique_ptr<raw::TypeConstructorNew> e) -> bool {
                           std::unique_ptr<TypeConstructorNew> out;
                           bool result = ConsumeTypeConstructorNew(
-                              std::move(e), context, /*raw_attribute_list=*/nullptr, &out);
+                              std::move(e), context, /*raw_attribute_list=*/nullptr,
+                              /*is_request_or_response=*/false, &out);
                           *out_type = std::move(out);
                           return result;
                         },
@@ -3455,6 +3552,7 @@ void Library::ConsumeTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl) {
   }
 
   ConsumeTypeConstructorNew(std::move(type_decl->type_ctor), name, std::move(type_decl->attributes),
+                            /*is_request_or_response=*/false,
                             /*out_type=*/nullptr);
 }
 

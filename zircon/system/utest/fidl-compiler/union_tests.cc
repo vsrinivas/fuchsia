@@ -480,32 +480,15 @@ type Foo = strict union {};
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustHaveNonReservedMember);
 }
 
-TEST(UnionTests, GoodErrorSyntaxExplicitOrdinalsOld) {
-  TestLibrary error_library(R"FIDL(
+TEST(UnionTests, GoodErrorSyntaxExplicitOrdinals) {
+  TestLibrary library(R"FIDL(
 library example;
 protocol Example {
   Method() -> () error int32;
 };
 )FIDL");
-  ASSERT_TRUE(error_library.Compile());
-  const fidl::flat::Union* error_union = error_library.LookupUnion("Example_Method_Result");
-  ASSERT_NOT_NULL(error_union);
-  ASSERT_EQ(error_union->members.front().ordinal->value, 1);
-  ASSERT_EQ(error_union->members.back().ordinal->value, 2);
-}
-
-TEST(UnionTests, GoodErrorSyntaxExplicitOrdinals) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-  TestLibrary error_library(R"FIDL(
-library example;
-protocol Example {
-  Method() -> () error int32;
-};
-)FIDL",
-                            std::move(experimental_flags));
-  ASSERT_TRUE(error_library.Compile());
-  const fidl::flat::Union* error_union = error_library.LookupUnion("Example_Method_Result");
+  ASSERT_COMPILED_AND_CONVERT(library);
+  const fidl::flat::Union* error_union = library.LookupUnion("Example_Method_Result");
   ASSERT_NOT_NULL(error_union);
   ASSERT_EQ(error_union->members.front().ordinal->value, 1);
   ASSERT_EQ(error_union->members.back().ordinal->value, 2);

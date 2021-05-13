@@ -289,11 +289,12 @@ void ConvertingTreeVisitor::OnParameter(const std::unique_ptr<raw::Parameter>& e
   TreeVisitor::OnParameter(element);
 }
 
-void ConvertingTreeVisitor::OnParameterList(const std::unique_ptr<raw::ParameterList>& element) {
+void ConvertingTreeVisitor::OnParameterListOld(
+    const std::unique_ptr<raw::ParameterListOld>& element) {
   std::unique_ptr<Conversion> conv =
       std::make_unique<ParameterListConversion>(in_response_with_error_);
   Converting converting(this, std::move(conv), element->start_, element->end_);
-  TreeVisitor::OnParameterList(element);
+  TreeVisitor::OnParameterListOld(element);
 }
 
 void ConvertingTreeVisitor::OnProtocolMethod(const std::unique_ptr<raw::ProtocolMethod>& element) {
@@ -304,15 +305,15 @@ void ConvertingTreeVisitor::OnProtocolMethod(const std::unique_ptr<raw::Protocol
     OnAttributeList(element->attributes);
   }
   OnIdentifier(element->identifier);
-  if (element->maybe_request != nullptr) {
+  if (raw::IsParameterListDefined(element->maybe_request)) {
     OnParameterList(element->maybe_request);
   }
-  in_response_with_error_ = element->maybe_error_ctor != nullptr;
-  if (element->maybe_response != nullptr) {
+  in_response_with_error_ = raw::IsTypeConstructorDefined(element->maybe_error_ctor);
+  if (raw::IsParameterListDefined(element->maybe_response)) {
     OnParameterList(element->maybe_response);
   }
   if (in_response_with_error_) {
-    OnTypeConstructorOld(element->maybe_error_ctor);
+    OnTypeConstructor(element->maybe_error_ctor);
   }
 }
 

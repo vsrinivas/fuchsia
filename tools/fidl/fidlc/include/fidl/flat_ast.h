@@ -258,7 +258,7 @@ const LayoutInvocation& GetLayoutInvocation(const T& type_ctor) {
 }
 
 struct TypeAlias;
-struct Protocol;
+class Protocol;
 
 // This is a struct used to group together all data produced during compilation
 // that might be used by consumers that are downstream from type compilation
@@ -755,7 +755,8 @@ struct Union final : public TypeDecl {
   std::any AcceptAny(VisitorAny* visitor) const override;
 };
 
-struct Protocol final : public TypeDecl {
+class Protocol final : public TypeDecl {
+ public:
   struct Method : public Attributable {
     Method(Method&&) = default;
     Method& operator=(Method&&) = default;
@@ -1289,9 +1290,12 @@ class Library {
   void ConsumeEnumDeclaration(std::unique_ptr<raw::EnumDeclaration> enum_declaration);
   void ConsumeProtocolDeclaration(std::unique_ptr<raw::ProtocolDeclaration> protocol_declaration);
   bool ConsumeResourceDeclaration(std::unique_ptr<raw::ResourceDeclaration> resource_declaration);
-  bool ConsumeParameterList(std::optional<Name> assigned_name,
-                            std::unique_ptr<raw::ParameterList> parameter_list, bool anonymous,
-                            Struct** out_struct_decl);
+  bool ConsumeParameterList(SourceSpan method_name, std::optional<Name> assigned_name,
+                            std::unique_ptr<raw::ParameterListOld> parameter_list,
+                            bool is_request_or_response, Struct** out_struct_decl);
+  bool ConsumeParameterList(SourceSpan method_name, std::optional<Name> assigned_name,
+                            std::unique_ptr<raw::ParameterListNew> parameter_layout,
+                            bool is_request_or_response, Struct** out_struct_decl);
   bool CreateMethodResult(const Name& protocol_name, SourceSpan response_span,
                           raw::ProtocolMethod* method, Struct* in_response, Struct** out_response);
   void ConsumeServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration> service_decl);
@@ -1310,6 +1314,7 @@ class Library {
   bool ConsumeTypeConstructorNew(std::unique_ptr<raw::TypeConstructorNew> raw_type_ctor,
                                  const Name& context,
                                  std::unique_ptr<raw::AttributeListNew> raw_attribute_list,
+                                 bool is_request_or_response,
                                  std::unique_ptr<TypeConstructorNew>* out_type);
   bool ConsumeTypeConstructor(raw::TypeConstructor raw_type_ctor, const Name& context,
                               TypeConstructor* out_type);
@@ -1320,7 +1325,8 @@ class Library {
   bool ConsumeOrdinaledLayout(std::unique_ptr<raw::Layout>, const Name&,
                               std::unique_ptr<raw::AttributeListNew> raw_attribute_list);
   bool ConsumeStructLayout(std::unique_ptr<raw::Layout>, const Name&,
-                           std::unique_ptr<raw::AttributeListNew> raw_attribute_list);
+                           std::unique_ptr<raw::AttributeListNew> raw_attribute_list,
+                           bool is_request_or_response);
 
   // Here, T is expected to be an value-carrying flat AST class (ie, Bits or
   // Enum), while M is its "Member" sub-class.
@@ -1328,7 +1334,8 @@ class Library {
   bool ConsumeValueLayout(std::unique_ptr<raw::Layout>, const Name&,
                           std::unique_ptr<raw::AttributeListNew> raw_attribute_list);
   bool ConsumeLayout(std::unique_ptr<raw::Layout>, const Name&,
-                     std::unique_ptr<raw::AttributeListNew> raw_attribute_list);
+                     std::unique_ptr<raw::AttributeListNew> raw_attribute_list,
+                     bool is_request_or_response);
   // end new syntax
 
   bool TypeCanBeConst(const Type* type);
