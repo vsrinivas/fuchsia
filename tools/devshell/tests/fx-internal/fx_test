@@ -54,12 +54,21 @@ EOF
 
 # test for `fx help`
 TEST_fx-help() {
+  # check that the usage and --full lines are present
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "$(${fx} help | grep "Run Fuchsia")" "Run Fuchsia development commands"
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "$(${fx} help | grep "usage:")" "usage: fx"
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "$(${fx} help | grep "\-\-full")" "--full"
+}
+
+# test for `fx help --full`
+TEST_fx-help-full() {
   local subcommand="mycommand1"
   local summary="Simple mock script used to test help extraction"
   _create_subcommand "${subcommand}" "tools/devshell" "howdy!" "${summary}" "line1" "line2"
-  # check the command name and summary
-  BT_EXPECT_STRING_CONTAINS_SUBSTRING "$(${fx} help | grep "${subcommand}")" "${subcommand}"
-  BT_EXPECT_STRING_CONTAINS_SUBSTRING "$(${fx} help | grep "${subcommand}")" "${summary}"
+  # check the sections are included, and the command name and summary
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "$(${fx} help --full | grep "Run Fuchsia")" "Run Fuchsia development commands"
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "$(${fx} help --full | grep "${subcommand}")" "${subcommand}"
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "$(${fx} help --full | grep "${subcommand}")" "${summary}"
 }
 
 # ensure that categories are normalized
@@ -69,7 +78,7 @@ TEST_fx-normalized-category() {
   local norm_category_header="Category uppercase 1:"
   _create_subcommand "${subcommand}" "tools/devshell" "howdy!" "summary1" "line1" "line2" "${category}"
   # check that the normalized category shows up in fx help
-  BT_EXPECT_EQ "$(${fx} help | grep -B 1 "${subcommand}" | head -n 1)" "${norm_category_header}"
+  BT_EXPECT_EQ "$(${fx} help --full | grep -B 1 "${subcommand}" | head -n 1)" "${norm_category_header}"
 }
 
 # test for `fx help <subcommand>`

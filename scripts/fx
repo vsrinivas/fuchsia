@@ -90,19 +90,86 @@ function help_command {
   fi
 }
 
-function usage {
+function helpheader {
   cat <<END
-usage: fx [--dir BUILD_DIR] [-d DEVICE_NAME] [-i] [-x] COMMAND [...]
-
 Run Fuchsia development commands. Must be run from a directory
 that is contained in a Platform Source Tree.
 
+  For full help, use \`fx help --full\`.
+
+  For detailed help on any command, use \`fx help <command>\`.
+
+
 host shell extensions: (requires "source scripts/fx-env.sh")
-  fx-update-path        add useful tools to the PATH
-  fx-set-prompt         display the current configuration in the shell prompt
-
+  fx-update-path            Add useful tools to the PATH
+  fx-set-prompt             Display the current configuration in the shell prompt
 END
+}
 
+function shorthelp {
+  helpheader
+  cat <<END
+
+configure and build
+  set <product>.<board>     Set the product and board that will be built
+  list-products             List available products
+  list-boards               List available  boards
+  status                    Show the current target configuration
+  build                     Build the currently set configuration
+  clean                     Clean the build artifacts
+
+use the emulator
+  emu                       Emulate a device and interact with it
+                            You can hit return after the emulator starts up
+                            to enter the shell. Or use \`fx shell\` commands.
+  emu --headless            Run without a graphic terminal
+  shell dm shutdown         Shut down Fuchsia on the emulator
+  emu -h                    Show emu help
+
+test
+  test <component>          Run a test
+  test --info [<pattern>]   List tests in the current build
+  help test                 Detailed help for the test command
+
+preparing a fuchsia target and device
+  list-devices              List all reachable Fuchsia targets
+  set-device                Set the default target for the build
+  unset-device              Unset the default target
+  flash                     Install Fuchsia from fastboot
+  ota                       Send incremental over-the-air update to the device
+  serve                     Start the package server and attach to a
+                            running Fuchsia target
+
+start a remote shell on a Fuchsia target
+  shell                     Initiate an interactive SSH session
+  shell <cmd>               Run a command
+
+other
+  format-code               Format code, usually to prepare for review
+
+example basic workflow using an emulator
+  $ fx set core.qemu-x64 --with //examples/hello_world
+  $ fx build
+  $ fx emu --headless -N                # headless with networking
+  $ fx serve                            # [Start in a new window]
+  $ fx test hello-world-cpp-unittests   # [Start in a new window] Run test
+  $ fx shell dm shutdown                # Shut down the emulator
+
+online documentation
+  Fuchsia development:    https://fuchsia.dev/fuchsia-src/development
+  Fuchsia workflows:      https://fuchsia.dev/fuchsia-src/development/build/fx
+END
+}
+
+function usage {
+  cat <<END
+usage: fx [--dir BUILD_DIR] [-d DEVICE_NAME] [-i] [-x] COMMAND [...]
+END
+  shorthelp
+}
+
+function fullhelp {
+  helpheader
   help_list_commands "$@"
 }
 
@@ -216,7 +283,10 @@ while [[ $# -ne 0 ]]; do
       break
       ;;
     help|--help)
-      if [[ $# -lt 2 || "$2" =~ ^\-\-.* ]]; then
+      if [[ "$2" =~ ^\-\-full ]]; then
+        shift
+        fullhelp "$@"
+      elif [[ $# -lt 2 || "$2" =~ ^\-\-.* ]]; then
         shift
         usage "$@"
       else
