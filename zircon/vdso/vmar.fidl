@@ -42,7 +42,6 @@ protocol vmar {
 
     /// Perform an operation on VMOs mapped into this VMAR.
     /// Rights: If op is ZX_VMO_OP_DECOMMIT, affected mappings must be writable.
-    [Blocking]
     vmar_op_range(handle:VMAR handle,
                   uint32 op,
                   vaddr address,
