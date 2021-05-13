@@ -31,7 +31,7 @@ driver_module("virtio_socket") {
   ]
   deps = [
     ":virtio_socket_bind",
-    "//sdk/fidl/fuchsia.hardware.vsock:fuchsia.hardware.vsock_c",
+    "//sdk/fidl/fuchsia.hardware.vsock:fuchsia.hardware.vsock_llcpp",
     "//src/devices/bus/lib/virtio",
     "//src/devices/lib/driver",
     "//src/lib/ddktl",

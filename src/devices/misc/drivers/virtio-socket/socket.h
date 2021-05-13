@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_MISC_DRIVERS_VIRTIO_SOCKET_SOCKET_H_
 #define SRC_DEVICES_MISC_DRIVERS_VIRTIO_SOCKET_SOCKET_H_
 
-#include <fuchsia/hardware/vsock/c/fidl.h>
+#include <fuchsia/hardware/vsock/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
@@ -32,31 +32,36 @@
 
 namespace virtio {
 
-using vsock_Addr = fuchsia_hardware_vsock_Addr;
+namespace vsock = fuchsia_hardware_vsock;
+
+class SocketDevice;
+using DeviceType =
+    ddk::Device<SocketDevice, ddk::Unbindable, ddk::Messageable<vsock::Device>::Mixin>;
 
 class SocketDevice : public Device,
-                     public ddk::Device<SocketDevice, ddk::Unbindable, ddk::MessageableOld>,
+                     public DeviceType,
+                     public fidl::WireServer<vsock::Device>,
                      public ddk::EmptyProtocol<ZX_PROTOCOL_CONSOLE> {
  public:
-  class ConnectionKey;
+  struct ConnectionKey;
 
   explicit SocketDevice(zx_device_t* device, zx::bti, std::unique_ptr<Backend> backend);
   virtual ~SocketDevice() override;
 
   // DDKTL hooks:
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void DdkRelease();
   void DdkUnbind(ddk::UnbindTxn txn) { virtio::Device::Unbind(std::move(txn)); }
 
-  // Handlers for the incoming FIDL message endpoint. Public as the messages
-  // get forwarded by C dispatch code.
-  void MessageStart(zx::channel callbacks);
-  zx_status_t MessageSendRst(const ConnectionKey& key);
-  zx_status_t MessageSendShutdown(const ConnectionKey& key);
-  zx_status_t MessageSendRequest(const ConnectionKey& key, zx::socket data);
-  zx_status_t MessageSendResponse(const ConnectionKey& key, zx::socket data);
-  zx_status_t MessageSendVmo(const ConnectionKey& key, zx::vmo vmo, uint64_t off, uint64_t len);
-  uint32_t MessageGetCid();
+  // fuchsia.hardware.vsock.Device implementation.
+  void Start(StartRequestView request, StartCompleter::Sync& completer) override;
+  void SendRst(SendRstRequestView request, SendRstCompleter::Sync& completer) override;
+  void SendShutdown(SendShutdownRequestView request,
+                    SendShutdownCompleter::Sync& completer) override;
+  void SendRequest(SendRequestRequestView request, SendRequestCompleter::Sync& completer) override;
+  void SendResponse(SendResponseRequestView request,
+                    SendResponseCompleter::Sync& completer) override;
+  void SendVmo(SendVmoRequestView request, SendVmoCompleter::Sync& completer) override;
+  void GetCid(GetCidRequestView request, GetCidCompleter::Sync& completer) override;
 
   zx_status_t Init() override;
 
@@ -65,21 +70,19 @@ class SocketDevice : public Device,
   void IrqConfigChange() override;
   const char* tag() const override { return "virtio-vsock"; }
 
-  // ConnectionKey is mostly a wrapper around vsock_Addr that provides
+  // ConnectionKey is mostly a wrapper around vsock::wire::Addr that provides
   // an equality operation for use as the Key in a HashMap.
-  class ConnectionKey {
-   public:
-    ConnectionKey(const vsock_Addr& addr) : addr_(addr) {}
+  struct ConnectionKey {
+    ConnectionKey(const vsock::wire::Addr& addr) : addr(addr) {}
     ConnectionKey(uint32_t local_port, uint32_t remote_cid, uint32_t remote_port)
-        : addr_({.local_port = local_port, .remote_cid = remote_cid, .remote_port = remote_port}) {}
+        : addr({.local_port = local_port, .remote_cid = remote_cid, .remote_port = remote_port}) {}
     static ConnectionKey FromHdr(virtio_vsock_hdr_t* hdr) {
       return ConnectionKey(hdr->dst_port, static_cast<uint32_t>(hdr->src_cid), hdr->src_port);
     }
-    vsock_Addr addr_;
-    bool operator==(const ConnectionKey& addr) const {
-      return addr_.local_port == addr.addr_.local_port &&
-             addr_.remote_cid == addr.addr_.remote_cid &&
-             addr_.remote_port == addr.addr_.remote_port;
+    vsock::wire::Addr addr;
+    bool operator==(const ConnectionKey& key) const {
+      return addr.local_port == key.addr.local_port && addr.remote_cid == key.addr.remote_cid &&
+             addr.remote_port == key.addr.remote_port;
     }
   };
 
@@ -365,12 +368,6 @@ class SocketDevice : public Device,
 
   void RemoveCallbacksLocked() TA_REQ(lock_);
 
-  // Helper for ensuring we only use the callbacks_ handle to perform a callback
-  // when we have a valid handle. Also serves to convert a ConnectionKey to a
-  // raw vsock_Addr.
-  void PerformCallbackLocked(zx_status_t (*func)(zx_handle_t, const vsock_Addr*),
-                             const ConnectionKey& key) TA_REQ(lock_);
-
   bool QueuedForTxLocked(fbl::RefPtr<Connection> conn) TA_REQ(lock_);
   void QueueForTxLocked(fbl::RefPtr<Connection> conn) TA_REQ(lock_);
   void DequeueTxLocked(fbl::RefPtr<Connection> conn) TA_REQ(lock_);
@@ -397,7 +394,7 @@ class SocketDevice : public Device,
   RxIoBufferRing rx_ TA_GUARDED(lock_);
   TxIoBufferRing tx_ TA_GUARDED(lock_);
   RxIoBufferRing event_ TA_GUARDED(lock_);
-  zx::channel callbacks_ TA_GUARDED(lock_);
+  fidl::WireSyncClient<vsock::Callbacks> callbacks_ TA_GUARDED(lock_);
 
   // List of connections that have pending TX but are waiting for either more
   // credit from the remote, or more TX descriptors.

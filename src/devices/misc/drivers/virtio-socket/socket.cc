@@ -5,7 +5,7 @@
 #include "socket.h"
 
 #include <assert.h>
-#include <fuchsia/hardware/vsock/c/fidl.h>
+#include <fuchsia/hardware/vsock/llcpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/io-buffer.h>
@@ -39,68 +39,13 @@ static constexpr uint16_t kRxId = 0u;
 static constexpr uint16_t kTxId = 1u;
 static constexpr uint16_t kEventId = 2u;
 
-// Wrappers for linking generated C fidl interfaces to the actual message handlers
-// in a SocketDevice
-static zx_status_t fidl_Start(void* ctx, zx_handle_t cb, fidl_txn_t* txn) {
-  virtio::SocketDevice* sock = static_cast<virtio::SocketDevice*>(ctx);
-  sock->MessageStart(zx::channel(cb));
-  return fuchsia_hardware_vsock_DeviceStart_reply(txn, ZX_OK);
-}
-static zx_status_t fidl_SendRequest(void* ctx, const vsock_Addr* addr, zx_handle_t socket,
-                                    fidl_txn_t* txn) {
-  virtio::SocketDevice* sock = static_cast<virtio::SocketDevice*>(ctx);
-  zx_status_t status = sock->MessageSendRequest(*addr, zx::socket(socket));
-  return fuchsia_hardware_vsock_DeviceSendRequest_reply(txn, status);
-}
-static zx_status_t fidl_SendShutdown(void* ctx, const vsock_Addr* addr, fidl_txn_t* txn) {
-  virtio::SocketDevice* sock = static_cast<virtio::SocketDevice*>(ctx);
-  zx_status_t status = sock->MessageSendShutdown(*addr);
-  return fuchsia_hardware_vsock_DeviceSendShutdown_reply(txn, status);
-}
-static zx_status_t fidl_SendRst(void* ctx, const vsock_Addr* addr, fidl_txn_t* txn) {
-  virtio::SocketDevice* sock = static_cast<virtio::SocketDevice*>(ctx);
-  zx_status_t status = sock->MessageSendRst(*addr);
-  return fuchsia_hardware_vsock_DeviceSendRst_reply(txn, status);
-}
-static zx_status_t fidl_SendResponse(void* ctx, const vsock_Addr* addr, zx_handle_t socket,
-                                     fidl_txn_t* txn) {
-  virtio::SocketDevice* sock = static_cast<virtio::SocketDevice*>(ctx);
-  zx_status_t status = sock->MessageSendResponse(*addr, zx::socket(socket));
-  return fuchsia_hardware_vsock_DeviceSendResponse_reply(txn, status);
-}
-static zx_status_t fidl_GetCid(void* ctx, fidl_txn_t* txn) {
-  virtio::SocketDevice* sock = static_cast<virtio::SocketDevice*>(ctx);
-  return fuchsia_hardware_vsock_DeviceGetCid_reply(txn, sock->MessageGetCid());
-}
-static zx_status_t fidl_SendVmo(void* ctx, const vsock_Addr* addr, zx_handle_t vmo, uint64_t off,
-                                uint64_t len, fidl_txn_t* txn) {
-  virtio::SocketDevice* sock = static_cast<virtio::SocketDevice*>(ctx);
-  zx_status_t status = sock->MessageSendVmo(*addr, zx::vmo(vmo), off, len);
-  return fuchsia_hardware_vsock_DeviceSendVmo_reply(txn, status);
-}
-
-static fuchsia_hardware_vsock_Device_ops_t fidl_ops = {
-    .Start = fidl_Start,
-    .SendRequest = fidl_SendRequest,
-    .SendShutdown = fidl_SendShutdown,
-    .SendRst = fidl_SendRst,
-    .SendResponse = fidl_SendResponse,
-    .GetCid = fidl_GetCid,
-    .SendVmo = fidl_SendVmo,
-};
-
-zx_status_t SocketDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  zx_status_t status = fuchsia_hardware_vsock_Device_dispatch(this, txn, msg, &fidl_ops);
-  return status;
-}
-
 static virtio_vsock_hdr_t make_hdr(const SocketDevice::ConnectionKey& key, uint16_t op,
                                    uint32_t cid, const SocketDevice::CreditInfo& credit) {
   return virtio_vsock_hdr_t{
       .src_cid = cid,
-      .dst_cid = key.addr_.remote_cid,
-      .src_port = key.addr_.local_port,
-      .dst_port = key.addr_.remote_port,
+      .dst_cid = key.addr.remote_cid,
+      .src_port = key.addr.local_port,
+      .dst_port = key.addr.remote_port,
       .len = 0,
       .type = 1,
       .op = op,
@@ -112,7 +57,7 @@ static virtio_vsock_hdr_t make_hdr(const SocketDevice::ConnectionKey& key, uint1
 
 SocketDevice::SocketDevice(zx_device_t* bus_device, zx::bti bti, std::unique_ptr<Backend> backend)
     : virtio::Device(bus_device, std::move(bti), std::move(backend)),
-      ddk::Device<SocketDevice, ddk::Unbindable, ddk::MessageableOld>(bus_device),
+      DeviceType(bus_device),
       dispatch_loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
       rx_(this, kDataBacklog, kFrameSize),
       tx_(this, kDataBacklog, kFrameSize),
@@ -123,13 +68,13 @@ SocketDevice::SocketDevice(zx_device_t* bus_device, zx::bti bti, std::unique_ptr
 
 SocketDevice::~SocketDevice() {}
 
-void SocketDevice::MessageStart(zx::channel callbacks) {
+void SocketDevice::Start(StartRequestView request, StartCompleter::Sync& completer) {
   fbl::AutoLock lock(&lock_);
-  if (callbacks_.is_valid()) {
+  if (callbacks_.client_end().is_valid()) {
     RemoveCallbacksLocked();
   }
-  callbacks_ = std::move(callbacks);
-  callback_closed_handler_.set_object(callbacks_.get());
+  callbacks_ = fidl::BindSyncClient(std::move(request->cb));
+  callback_closed_handler_.set_object(callbacks_.channel().get());
   callback_closed_handler_.set_trigger(ZX_SOCKET_PEER_CLOSED);
   callback_closed_handler_.Begin(dispatch_loop_.dispatcher());
 
@@ -137,102 +82,116 @@ void SocketDevice::MessageStart(zx::channel callbacks) {
   // queueing new ones.
   UpdateRxRingLocked();
 }
-
-zx_status_t SocketDevice::MessageSendRst(const ConnectionKey& key) {
+void SocketDevice::SendRst(SendRstRequestView request, SendRstCompleter::Sync& completer) {
   fbl::AutoLock lock(&lock_);
-  CleanupConAndRstLocked(key.addr_);
-  return ZX_OK;
+  CleanupConAndRstLocked(request->addr);
+  completer.Reply(ZX_OK);
 }
 
-zx_status_t SocketDevice::MessageSendShutdown(const ConnectionKey& key) {
+void SocketDevice::SendShutdown(SendShutdownRequestView request,
+                                SendShutdownCompleter::Sync& completer) {
   fbl::AutoLock lock(&lock_);
-  if (!callbacks_.is_valid()) {
-    return ZX_ERR_BAD_STATE;
+  if (!callbacks_.client_end().is_valid()) {
+    completer.Reply(ZX_ERR_BAD_STATE);
+    return;
   }
 
-  auto conn = connections_.find(key);
+  auto conn = connections_.find(request->addr);
   if (conn == connections_.end() || conn->IsShuttingDown()) {
-    return ZX_ERR_BAD_STATE;
+    completer.Reply(ZX_ERR_BAD_STATE);
+    return;
   }
 
   if (conn->BeginShutdown()) {
     SendOpLocked(conn.CopyPointer(), VIRTIO_VSOCK_OP_SHUTDOWN);
   }
-  return ZX_OK;
+  completer.Reply(ZX_OK);
 }
 
-zx_status_t SocketDevice::MessageSendRequest(const ConnectionKey& key, zx::socket data) {
+void SocketDevice::SendRequest(SendRequestRequestView request,
+                               SendRequestCompleter::Sync& completer) {
   fbl::AutoLock lock(&lock_);
-  if (!callbacks_.is_valid()) {
-    return ZX_ERR_BAD_STATE;
+  if (!callbacks_.client_end().is_valid()) {
+    completer.Reply(ZX_ERR_BAD_STATE);
+    return;
   }
 
-  if (connections_.find(key) != connections_.end()) {
-    return ZX_ERR_ALREADY_BOUND;
+  if (connections_.find(request->addr) != connections_.end()) {
+    completer.Reply(ZX_ERR_ALREADY_BOUND);
+    return;
   }
   fbl::AllocChecker ac;
   auto conn = fbl::MakeRefCountedChecked<Connection>(
-      &ac, key, std::move(data), fbl::BindMember(this, &SocketDevice::ConnectionSocketSignalled),
-      cid_, lock_);
+      &ac, request->addr, std::move(request->data),
+      fbl::BindMember(this, &SocketDevice::ConnectionSocketSignalled), cid_, lock_);
   if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
+    completer.Reply(ZX_ERR_NO_MEMORY);
+    return;
   }
   connections_.insert(conn);
   SendOpLocked(conn, VIRTIO_VSOCK_OP_REQUEST);
-  return ZX_OK;
+  completer.Reply(ZX_OK);
 }
 
-zx_status_t SocketDevice::MessageSendResponse(const ConnectionKey& key, zx::socket data) {
+void SocketDevice::SendResponse(SendResponseRequestView request,
+                                SendResponseCompleter::Sync& completer) {
   fbl::AutoLock lock(&lock_);
-  if (!callbacks_.is_valid()) {
-    return ZX_ERR_BAD_STATE;
+  if (!callbacks_.client_end().is_valid()) {
+    completer.Reply(ZX_ERR_BAD_STATE);
+    return;
   }
 
-  if (connections_.find(key) != connections_.end()) {
-    return ZX_ERR_ALREADY_BOUND;
+  if (connections_.find(request->addr) != connections_.end()) {
+    completer.Reply(ZX_ERR_ALREADY_BOUND);
+    return;
   }
   fbl::AllocChecker ac;
   auto conn = fbl::MakeRefCountedChecked<Connection>(
-      &ac, key, std::move(data), fbl::BindMember(this, &SocketDevice::ConnectionSocketSignalled),
-      cid_, lock_);
+      &ac, request->addr, std::move(request->data),
+      fbl::BindMember(this, &SocketDevice::ConnectionSocketSignalled), cid_, lock_);
   if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
+    completer.Reply(ZX_ERR_NO_MEMORY);
+    return;
   }
 
   conn->MakeActive(dispatch_loop_.dispatcher());
 
   connections_.insert(conn);
   SendOpLocked(conn, VIRTIO_VSOCK_OP_RESPONSE);
-  return ZX_OK;
+  completer.Reply(ZX_OK);
 }
 
-zx_status_t SocketDevice::MessageSendVmo(const ConnectionKey& key, zx::vmo vmo, uint64_t off,
-                                         uint64_t len) {
+void SocketDevice::SendVmo(SendVmoRequestView request, SendVmoCompleter::Sync& completer) {
   fbl::AutoLock lock(&lock_);
-  if (!callbacks_.is_valid()) {
-    return ZX_ERR_BAD_STATE;
+  if (!callbacks_.client_end().is_valid()) {
+    completer.Reply(ZX_ERR_BAD_STATE);
+    return;
   }
 
-  auto conn = connections_.find(key);
+  auto conn = connections_.find(request->addr);
   if (conn == connections_.end()) {
-    return ZX_ERR_NOT_FOUND;
+    completer.Reply(ZX_ERR_NOT_FOUND);
+    return;
   }
   // Forbid the zero length as the VMO transfer code will get confused.
-  if (len == 0) {
-    return ZX_ERR_INVALID_ARGS;
+  if (request->len == 0) {
+    completer.Reply(ZX_ERR_INVALID_ARGS);
+    return;
   }
-  zx_status_t result = conn->SetVmo(bti_, std::move(vmo), off, len, bti_contiguity_);
+  zx_status_t result =
+      conn->SetVmo(bti_, std::move(request->vmo), request->off, request->len, bti_contiguity_);
   if (result != ZX_OK) {
-    return result;
+    completer.Reply(result);
+    return;
   }
   ContinueTxLocked(false, conn.CopyPointer());
 
-  return ZX_OK;
+  completer.Reply(ZX_OK);
 }
 
-uint32_t SocketDevice::MessageGetCid() {
+void SocketDevice::GetCid(GetCidRequestView request, GetCidCompleter::Sync& completer) {
   fbl::AutoLock lock(&lock_);
-  return cid_;
+  completer.Reply(cid_);
 }
 
 zx_status_t SocketDevice::Init() {
@@ -322,7 +281,9 @@ void SocketDevice::IrqRingUpdate() {
         auto conn = connections_.find(key);
         if (conn != connections_.end()) {
           if (conn->NotifyVmoTxComplete(payload)) {
-            PerformCallbackLocked(fuchsia_hardware_vsock_CallbacksSendVmoComplete, key);
+            if (callbacks_.client_end().is_valid()) {
+              callbacks_.SendVmoComplete(conn->GetKey().addr);
+            }
           }
         }
       });
@@ -343,7 +304,7 @@ void SocketDevice::IrqRingUpdate() {
   while (!has_pending_op_.is_empty()) {
     auto conn = has_pending_op_.pop_front();
     uint16_t op = conn->TakePendingOp();
-    if (!SendOp_RawLocked(conn->GetKey().addr_, op, conn->GetCreditInfo())) {
+    if (!SendOp_RawLocked(conn->GetKey().addr, op, conn->GetCreditInfo())) {
       conn->QueueOp(op);
       has_pending_op_.push_front(conn);
       break;
@@ -391,7 +352,7 @@ void SocketDevice::UpdateRxRingLocked() {
   // Refuse to process rx buffers if we don't have callbacks. If the callbacks
   // somehow vanish mid process then that's fine, we'll just dump a lot of
   // requests on the floor, but there's little else we can do.
-  if (!callbacks_.is_valid()) {
+  if (!callbacks_.client_end().is_valid()) {
     return;
   }
   rx_.ProcessDescriptors<virtio_vsock_hdr_t>(
@@ -407,7 +368,9 @@ void SocketDevice::RxOpLocked(ConnectionIterator conn, const ConnectionKey& key,
     case VIRTIO_VSOCK_OP_REQUEST:
       // Don't care if we have a connection or not, just send it to the
       // service.
-      PerformCallbackLocked(fuchsia_hardware_vsock_CallbacksRequest, key);
+      if (callbacks_.client_end().is_valid()) {
+        callbacks_.Request(key.addr);
+      }
       break;
     case VIRTIO_VSOCK_OP_RESPONSE: {
       // Check for existing partial connection.
@@ -419,14 +382,18 @@ void SocketDevice::RxOpLocked(ConnectionIterator conn, const ConnectionKey& key,
       }
       // Upgrade the channel.
       conn->MakeActive(dispatch_loop_.dispatcher());
-      PerformCallbackLocked(fuchsia_hardware_vsock_CallbacksResponse, key);
+      if (callbacks_.client_end().is_valid()) {
+        callbacks_.Response(key.addr);
+      }
       break;
     }
     case VIRTIO_VSOCK_OP_RST:
       if (conn != connections_.end()) {
         CleanupConLocked(conn.CopyPointer());
       }
-      PerformCallbackLocked(fuchsia_hardware_vsock_CallbacksRst, key);
+      if (callbacks_.client_end().is_valid()) {
+        callbacks_.Rst(key.addr);
+      }
       break;
     case VIRTIO_VSOCK_OP_SHUTDOWN:
       if (conn != connections_.end()) {
@@ -436,7 +403,9 @@ void SocketDevice::RxOpLocked(ConnectionIterator conn, const ConnectionKey& key,
         DequeueTxLocked(conn.CopyPointer());
         DequeueOpLocked(conn.CopyPointer());
       }
-      PerformCallbackLocked(fuchsia_hardware_vsock_CallbacksShutdown, key);
+      if (callbacks_.client_end().is_valid()) {
+        callbacks_.Shutdown(key.addr);
+      }
       break;
     case VIRTIO_VSOCK_OP_CREDIT_UPDATE:
       if (conn == connections_.end()) {
@@ -531,7 +500,9 @@ void SocketDevice::CleanupConLocked(fbl::RefPtr<Connection> conn) {
 }
 
 void SocketDevice::NotifyAndCleanupConLocked(fbl::RefPtr<Connection> conn) {
-  PerformCallbackLocked(fuchsia_hardware_vsock_CallbacksRst, conn->GetKey());
+  if (callbacks_.client_end().is_valid()) {
+    callbacks_.Rst(conn->GetKey().addr);
+  }
   CleanupConLocked(conn);
 }
 
@@ -552,16 +523,9 @@ void SocketDevice::RemoveCallbacksLocked() {
   }
   connections_.clear();
   callback_closed_handler_.Cancel();
-  callbacks_.reset();
+  callbacks_.client_end().reset();
   has_pending_tx_.clear();
   // We don't clear pending ops as we need our RST ops to finish sending.
-}
-
-void SocketDevice::PerformCallbackLocked(zx_status_t (*func)(zx_handle_t, const vsock_Addr*),
-                                         const ConnectionKey& key) {
-  if (callbacks_.is_valid()) {
-    func(callbacks_.get(), &key.addr_);
-  }
 }
 
 bool SocketDevice::QueuedForTxLocked(fbl::RefPtr<Connection> conn) {
@@ -683,8 +647,8 @@ void SocketDevice::TransportResetLocked() {
   has_pending_tx_.clear();
   has_pending_op_.clear();
   UpdateCidLocked();
-  if (callbacks_.is_valid()) {
-    fuchsia_hardware_vsock_CallbacksTransportReset(callbacks_.get(), cid_);
+  if (callbacks_.client_end().is_valid()) {
+    callbacks_.TransportReset(cid_);
   }
 }
 
@@ -922,7 +886,7 @@ SocketDevice::CreditInfo SocketDevice::Connection::GetCreditInfo() {
 }
 
 virtio_vsock_hdr_t SocketDevice::Connection::MakeHdr(uint16_t op) {
-  return make_hdr(key_.addr_, op, cid_, GetCreditInfo());
+  return make_hdr(key_.addr, op, cid_, GetCreditInfo());
 }
 
 void SocketDevice::Connection::Close(async_dispatcher_t* dispatcher) {
@@ -1000,8 +964,8 @@ uint16_t SocketDevice::Connection::TakePendingOp() {
   return pending_op_;
 }
 
-size_t SocketDevice::Connection::GetHash(const ConnectionKey& addr) {
-  return addr.addr_.local_port + addr.addr_.remote_port + addr.addr_.remote_cid;
+size_t SocketDevice::Connection::GetHash(const ConnectionKey& key) {
+  return key.addr.local_port + key.addr.remote_port + key.addr.remote_cid;
 }
 
 const SocketDevice::ConnectionKey& SocketDevice::Connection::GetKey() const { return key_; }
