@@ -38,6 +38,8 @@ enum DaemonError {
     /// while the daaemon is actively shutting down, and should be extremely
     /// rare.
     BAD_SERVICE_REGISTER_STATE = 12;
+    /// When attempting to connect to RCS on a Fastboot device.
+    TARGET_IN_ZEDBOOT = 13;
 };
 
 [Discoverable]

@@ -13,6 +13,8 @@ pub(crate) const FASTBOOT_CHECK_INTERVAL_SECS: u64 = 3;
 
 pub(crate) const FASTBOOT_DROP_GRACE_PERIOD_SECS: u64 = 2;
 
+pub(crate) const ZEDBOOT_DROP_GRACE_PERIOD_SECS: u64 = 2;
+
 // Delay between retry attempts to find the RCS.
 pub(crate) const RETRY_DELAY: Duration = Duration::from_millis(200);
 

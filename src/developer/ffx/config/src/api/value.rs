@@ -129,6 +129,22 @@ impl TryFrom<ConfigValue> for u64 {
     }
 }
 
+impl ValueStrategy for u16 {}
+
+impl TryFrom<ConfigValue> for u16 {
+    type Error = ConfigError;
+
+    fn try_from(value: ConfigValue) -> std::result::Result<Self, Self::Error> {
+        value
+            .0
+            .and_then(|v| {
+                v.as_u64().or_else(|| if let Value::String(s) = v { s.parse().ok() } else { None })
+            })
+            .and_then(|v| u16::try_from(v).ok())
+            .ok_or(anyhow!("no configuration Number value found").into())
+    }
+}
+
 impl ValueStrategy for i64 {}
 
 impl TryFrom<ConfigValue> for i64 {

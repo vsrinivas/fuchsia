@@ -54,6 +54,7 @@ if (is_host) {
       "//third_party/rust_crates:async-net",
       "//third_party/rust_crates:async-trait",
       "//third_party/rust_crates:blocking",
+      "//third_party/rust_crates:byteorder",
       "//third_party/rust_crates:chrono",
       "//third_party/rust_crates:futures",
       "//third_party/rust_crates:futures-lite",
@@ -94,6 +95,7 @@ if (is_host) {
       "src/target_control.rs",
       "src/target_task.rs",
       "src/util.rs",
+      "src/zedboot.rs",
     ]
     inputs = [ "data/config.json" ]
   }

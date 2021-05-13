@@ -30,6 +30,7 @@ mod ssh;
 mod target_control;
 mod target_task;
 mod util;
+mod zedboot;
 
 pub mod target;
 pub use constants::{get_socket, LOG_FILE_PREFIX};

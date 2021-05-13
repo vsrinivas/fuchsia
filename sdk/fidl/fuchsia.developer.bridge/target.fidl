@@ -30,6 +30,7 @@ enum TargetState {
     DISCONNECTED = 2;
     PRODUCT = 3;
     FASTBOOT = 4;
+    ZEDBOOT = 5;
 };
 
 // TODO(awdavies): Add more target types. Hardware? Product state?

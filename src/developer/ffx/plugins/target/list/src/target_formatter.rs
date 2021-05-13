@@ -300,6 +300,7 @@ impl StringifiedTarget {
             bridge::TargetState::Disconnected => "Disconnected".to_string(),
             bridge::TargetState::Product => "Product".to_string(),
             bridge::TargetState::Fastboot => "Fastboot".to_string(),
+            bridge::TargetState::Zedboot => "Zedboot (R)".to_string(),
         }
     }
 }

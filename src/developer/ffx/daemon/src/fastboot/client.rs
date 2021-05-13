@@ -508,6 +508,8 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    // Disabling until we can make this not rely on a timeout
+    #[ignore]
     async fn test_reboot_bootloader_sends_rediscovered_error_if_not_rediscovered() -> Result<()> {
         let (reboot_client, reboot_server) = create_endpoints::<RebootListenerMarker>()?;
         let mut stream = reboot_server.into_stream()?;

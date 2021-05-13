@@ -12,4 +12,5 @@ pub enum TargetTaskType {
     MdnsMonitor,
     ProactiveLog,
     FastbootMonitor,
+    ZedbootMonitor,
 }

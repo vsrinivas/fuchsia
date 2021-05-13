@@ -15,6 +15,7 @@ use {
         TargetCollection, TargetEvent,
     },
     crate::target_control::TargetControl,
+    crate::zedboot::zedboot_discovery,
     anyhow::{anyhow, Context, Result},
     ascendd::Ascendd,
     async_trait::async_trait,
@@ -162,6 +163,24 @@ impl DaemonEventHandler {
             })
             .await;
     }
+
+    async fn handle_zedboot(&self, t: TargetInfo, tc: &TargetCollection) {
+        log::trace!(
+            "Found new target via zedboot: {}",
+            t.nodename.clone().unwrap_or("<unknown>".to_string())
+        );
+        tc.merge_insert(Target::from_netsvc_target_info(t.into()))
+            .then(|target| async move {
+                target.update_connection_state(|s| match s {
+                    ConnectionState::Disconnected | ConnectionState::Zedboot(_) => {
+                        ConnectionState::Zedboot(Utc::now())
+                    }
+                    _ => s,
+                });
+                target.run_zedboot_monitor();
+            })
+            .await;
+    }
 }
 
 #[async_trait(?Send)]
@@ -231,6 +250,9 @@ impl EventHandler<DaemonEvent> for DaemonEventHandler {
                 WireTrafficType::Fastboot(t) => {
                     self.handle_fastboot(t, &tc).await;
                 }
+                WireTrafficType::Zedboot(t) => {
+                    self.handle_zedboot(t, &tc).await;
+                }
             },
             DaemonEvent::OvernetPeer(node_id) => {
                 self.handle_overnet_peer(node_id, &tc).await;
@@ -251,6 +273,7 @@ pub struct Daemon {
     ascendd: Rc<Cell<Option<Ascendd>>>,
     manual_targets: Rc<dyn manual_targets::ManualTargets>,
     service_register: ServiceRegister,
+    tasks: Vec<Rc<Task<()>>>,
 }
 
 impl Daemon {
@@ -270,6 +293,7 @@ impl Daemon {
             service_register: ServiceRegister::new(create_service_register_map()),
             ascendd: Rc::new(Cell::new(None)),
             manual_targets: Rc::new(manual_targets),
+            tasks: Vec::new(),
         }
     }
 
@@ -281,7 +305,7 @@ impl Daemon {
     }
 
     /// Start all discovery tasks
-    async fn start_discovery(&self) -> Result<()> {
+    async fn start_discovery(&mut self) -> Result<()> {
         let daemon_event_handler = DaemonEventHandler::new(Rc::downgrade(&self.target_collection));
         self.event_queue.add_handler(daemon_event_handler).await;
 
@@ -289,6 +313,7 @@ impl Daemon {
         // instead of being detached.
         Daemon::spawn_onet_discovery(self.event_queue.clone());
         spawn_fastboot_discovery(self.event_queue.clone());
+        self.tasks.push(Rc::new(zedboot_discovery(self.event_queue.clone())?));
 
         let config = TargetFinderConfig {
             interface_discovery_interval: Duration::from_secs(1),
@@ -480,6 +505,14 @@ impl Daemon {
                         .context("sending error response")?;
                     return Ok(());
                 }
+                if matches!(target.get_connection_state(), ConnectionState::Zedboot(_)) {
+                    let nodename = target.nodename().unwrap_or("<No Nodename>".to_string());
+                    log::warn!("Attempting to connect to RCS on a zedboot target: {}", nodename);
+                    responder
+                        .send(&mut Err(DaemonError::TargetInZedboot))
+                        .context("sending error response")?;
+                    return Ok(());
+                }
 
                 // Ensure auto-connect has at least started.
                 target.run_host_pipe();
@@ -570,7 +603,15 @@ impl Daemon {
                     let poll_duration = std::time::Duration::from_millis(15);
                     loop {
                         if let Some(addr_info) = match self.get_target(target.clone()).await {
-                            Ok(t) => t.ssh_address_info(),
+                            Ok(t) => match t.get_connection_state() {
+                                ConnectionState::Zedboot(_) => {
+                                    return Err(DaemonError::TargetInZedboot);
+                                }
+                                ConnectionState::Fastboot(_) => {
+                                    return Err(DaemonError::TargetInFastboot);
+                                }
+                                _ => t.ssh_address_info(),
+                            },
                             Err(DaemonError::TargetAmbiguous) => {
                                 return Err(DaemonError::TargetAmbiguous)
                             }
@@ -827,6 +868,10 @@ mod test {
         tc: Weak<TargetCollection>,
     }
 
+    struct TestHookFakeZedboot {
+        tc: Weak<TargetCollection>,
+    }
+
     struct TestHookFakeRcs {
         tc: Weak<TargetCollection>,
     }
@@ -877,6 +922,29 @@ mod test {
                 .wait_for(None, move |e| match e {
                     DaemonEvent::NewTarget(TargetInfo { serial, .. }) => {
                         serial.map(|s| s == this_serial).unwrap_or(false)
+                    }
+                    _ => false,
+                })
+                .await
+                .unwrap();
+        }
+
+        pub async fn send_zedboot_discovery_event(&mut self, t: Target) {
+            let nodename =
+                t.nodename().expect("Should not send zedboot discovery for unnamed node.");
+
+            let nodename_clone = nodename.clone();
+            self.event_queue
+                .push(DaemonEvent::WireTraffic(WireTrafficType::Zedboot(TargetInfo {
+                    nodename: Some(nodename.clone()),
+                    addresses: t.addrs().iter().cloned().collect(),
+                    ..Default::default()
+                })))
+                .unwrap();
+            self.event_queue
+                .wait_for(None, move |e| match e {
+                    DaemonEvent::NewTarget(TargetInfo { nodename, .. }) => {
+                        nodename.map(|n| n == nodename_clone).unwrap_or(false)
                     }
                     _ => false,
                 })
@@ -934,6 +1002,29 @@ mod test {
         }
     }
 
+    #[async_trait(?Send)]
+    impl EventHandler<DaemonEvent> for TestHookFakeZedboot {
+        async fn on_event(&self, event: DaemonEvent) -> Result<bool> {
+            let tc = match self.tc.upgrade() {
+                Some(t) => t,
+                None => return Ok(true),
+            };
+            match event {
+                DaemonEvent::WireTraffic(WireTrafficType::Zedboot(t)) => {
+                    tc.merge_insert(Target::from_netsvc_target_info(t.into()))
+                        .then(|target| async move {
+                            target.update_connection_state(|_| ConnectionState::Zedboot(Utc::now()))
+                        })
+                        .await;
+                }
+                DaemonEvent::NewTarget(_) => {}
+                e => panic!("unexpected event: {:#?}", e),
+            }
+
+            Ok(false)
+        }
+    }
+
     async fn spawn_test_daemon() -> (DaemonProxy, Daemon, Task<Result<()>>) {
         let d = Daemon::new();
 
@@ -951,6 +1042,26 @@ mod test {
         let d = Daemon::new();
         d.event_queue
             .add_handler(TestHookFakeFastboot { tc: Rc::downgrade(&d.target_collection) })
+            .await;
+        let event_clone = d.event_queue.clone();
+        let res = TargetControl {
+            event_queue: event_clone,
+            tc: d.target_collection.clone(),
+            _task: Task::local(async move {
+                d.handle_requests_from_stream(stream)
+                    .await
+                    .unwrap_or_else(|err| log::warn!("Fatal error handling request: {:?}", err));
+            }),
+        };
+        res
+    }
+
+    async fn spawn_daemon_server_with_target_ctrl_for_zedboot(
+        stream: DaemonRequestStream,
+    ) -> TargetControl {
+        let d = Daemon::new();
+        d.event_queue
+            .add_handler(TestHookFakeZedboot { tc: Rc::downgrade(&d.target_collection) })
             .await;
         let event_clone = d.event_queue.clone();
         let res = TargetControl {
@@ -1004,6 +1115,21 @@ mod test {
         let mut res = spawn_daemon_server_with_target_ctrl_for_fastboot(stream).await;
         let fake_target = Target::new_with_serial("florp");
         res.send_fastboot_discovery_event(fake_target).await;
+        res
+    }
+
+    async fn spawn_daemon_server_with_fake_zedboot_target(
+        nodename: &str,
+        stream: DaemonRequestStream,
+    ) -> TargetControl {
+        let mut res = spawn_daemon_server_with_target_ctrl_for_zedboot(stream).await;
+        let fake_target = Target::new_with_netsvc_addrs(
+            Some(nodename.to_string()),
+            BTreeSet::from_iter(
+                vec![TargetAddr::from("[fe80::1%1]:22".parse::<SocketAddr>().unwrap())].into_iter(),
+            ),
+        );
+        res.send_zedboot_discovery_event(fake_target).await;
         res
     }
 
@@ -1381,6 +1507,19 @@ mod test {
         match got {
             Err(DaemonError::TargetInFastboot) => Ok(()),
             _ => bail!("Expecting target in fastboot error message."),
+        }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_rcs_on_zedboot_error_msg() -> Result<()> {
+        let (daemon_proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
+        let (_, remote_server_end) = fidl::endpoints::create_proxy::<RemoteControlMarker>()?;
+        let mut _ctrl = spawn_daemon_server_with_fake_zedboot_target("florp", stream).await;
+        let got = daemon_proxy.get_remote_control(None, remote_server_end).await?;
+        match got {
+            Err(DaemonError::TargetInZedboot) => Ok(()),
+            _ => bail!("Expecting target in zedboot error message."),
         }
     }
 

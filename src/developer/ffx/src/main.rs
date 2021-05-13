@@ -88,6 +88,10 @@ const TARGET_IN_FASTBOOT: &str = "\
 This command cannot be run against a target in the Fastboot state. Try
 rebooting the device or flashing the device into a running state.";
 
+const TARGET_IN_ZEDBOOT: &str = "\
+This command cannot be run against a target in the Zedboot state. Try
+rebooting the device.";
+
 const DAEMON_CONNECTION_ISSUE: &str = "\
 Timed out waiting on the Daemon.\nRun `ffx doctor` for further diagnostics";
 
@@ -126,6 +130,7 @@ impl Injection {
             Err(DaemonError::TargetNotFound) => Err(target_not_found(target)),
             Err(DaemonError::TargetCacheError) => Err(ffx_error!(TARGET_FAILURE_MSG).into()),
             Err(DaemonError::TargetInFastboot) => Err(ffx_error!(TARGET_IN_FASTBOOT).into()),
+            Err(DaemonError::TargetInZedboot) => Err(ffx_error!(TARGET_IN_ZEDBOOT).into()),
             Err(e) => Err(anyhow!("unexpected failure connecting to RCS: {:?}", e)),
         }
     }

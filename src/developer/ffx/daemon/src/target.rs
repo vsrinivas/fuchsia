@@ -6,6 +6,7 @@ use {
     crate::constants::{
         FASTBOOT_CHECK_INTERVAL_SECS, FASTBOOT_DROP_GRACE_PERIOD_SECS,
         MDNS_BROADCAST_INTERVAL_SECS, MDNS_TARGET_DROP_GRACE_PERIOD_SECS,
+        ZEDBOOT_DROP_GRACE_PERIOD_SECS,
     },
     crate::events::{DaemonEvent, TargetInfo},
     crate::fastboot::open_interface_with_serial,
@@ -152,6 +153,8 @@ pub enum ConnectionState {
     Manual,
     /// Contains the last known interface update with a Fastboot serial number.
     Fastboot(DateTime<Utc>),
+    /// Contains the last known interface update with a Fastboot serial number.
+    Zedboot(DateTime<Utc>),
 }
 
 impl Default for ConnectionState {
@@ -193,6 +196,8 @@ pub(crate) struct TargetAddrEntry {
     timestamp: DateTime<Utc>,
     // If the target entry was added manually
     manual: bool,
+    // If the target comes from netsvc,
+    netsvc: bool,
 }
 
 impl PartialEq for TargetAddrEntry {
@@ -206,20 +211,27 @@ impl Eq for TargetAddrEntry {}
 impl From<(TargetAddr, DateTime<Utc>)> for TargetAddrEntry {
     fn from(t: (TargetAddr, DateTime<Utc>)) -> Self {
         let (addr, timestamp) = t;
-        Self { addr, timestamp, manual: false }
+        Self { addr, timestamp, manual: false, netsvc: false }
     }
 }
 
 impl From<(TargetAddr, DateTime<Utc>, bool)> for TargetAddrEntry {
     fn from(t: (TargetAddr, DateTime<Utc>, bool)) -> Self {
         let (addr, timestamp, manual) = t;
-        Self { addr, timestamp, manual }
+        Self { addr, timestamp, manual, netsvc: false }
+    }
+}
+
+impl From<(TargetAddr, DateTime<Utc>, bool, bool)> for TargetAddrEntry {
+    fn from(t: (TargetAddr, DateTime<Utc>, bool, bool)) -> Self {
+        let (addr, timestamp, manual, netsvc) = t;
+        Self { addr, timestamp, manual, netsvc }
     }
 }
 
 impl From<TargetAddr> for TargetAddrEntry {
     fn from(addr: TargetAddr) -> Self {
-        Self { addr, timestamp: Utc::now(), manual: false }
+        Self { addr, timestamp: Utc::now(), manual: false, netsvc: false }
     }
 }
 
@@ -277,7 +289,10 @@ where
         }
     };
 
-    iter.sorted_by(|e1, e2| manual_link_local_recency(e1, e2)).next().map(|e| e.addr.clone())
+    iter.filter(|t| !t.netsvc)
+        .sorted_by(|e1, e2| manual_link_local_recency(e1, e2))
+        .next()
+        .map(|e| e.addr.clone())
 }
 
 #[derive(Debug, Default, Clone)]
@@ -358,6 +373,15 @@ impl TargetInner {
     pub fn new_with_addrs(nodename: Option<String>, addrs: BTreeSet<TargetAddr>) -> Self {
         Self {
             addrs: RefCell::new(addrs.iter().map(|e| (*e, Utc::now()).into()).collect()),
+            ..Self::new(nodename)
+        }
+    }
+
+    pub fn new_with_netsvc_addrs(nodename: Option<String>, addrs: BTreeSet<TargetAddr>) -> Self {
+        Self {
+            addrs: RefCell::new(
+                addrs.iter().map(|e| (*e, Utc::now(), false, true).into()).collect(),
+            ),
             ..Self::new(nodename)
         }
     }
@@ -520,6 +544,36 @@ impl Target {
         self.inner.state.borrow().connection_state.is_connected()
     }
 
+    async fn zedboot_monitor_loop(weak_target: WeakTarget, limit: Duration) -> Result<(), String> {
+        let limit = chrono::Duration::from_std(limit).map_err(|e| format!("{:?}", e))?;
+        loop {
+            if let Some(t) = weak_target.upgrade() {
+                let nodename = t.nodename_str();
+                t.update_connection_state(|s| match s {
+                    ConnectionState::Zedboot(ref time) => {
+                        let now = Utc::now();
+                        if now.signed_duration_since(*time) > limit {
+                            log::debug!(
+                                "dropping target '{}'. zedboot state older than {}",
+                                nodename,
+                                limit
+                            );
+                            ConnectionState::Disconnected
+                        } else {
+                            s
+                        }
+                    }
+                    _ => s,
+                });
+                Timer::new(Duration::from_secs(1)).await;
+            } else {
+                log::debug!("parent target dropped in serial monitor loop. exiting");
+                break;
+            }
+        }
+        Ok(())
+    }
+
     pub fn downgrade(&self) -> WeakTarget {
         WeakTarget { events: self.events.clone(), inner: Rc::downgrade(&self.inner) }
     }
@@ -541,6 +595,11 @@ impl Target {
             TargetTaskType::FastbootMonitor => Target::fastboot_monitor_loop(
                 weak_target.clone(),
                 Duration::from_secs(FASTBOOT_CHECK_INTERVAL_SECS + FASTBOOT_DROP_GRACE_PERIOD_SECS),
+            )
+            .boxed_local(),
+            TargetTaskType::ZedbootMonitor => Target::zedboot_monitor_loop(
+                weak_target.clone(),
+                Duration::from_secs(ZEDBOOT_DROP_GRACE_PERIOD_SECS),
             )
             .boxed_local(),
         }));
@@ -585,6 +644,14 @@ impl Target {
         Self::from_inner(inner)
     }
 
+    pub fn new_with_netsvc_addrs<S>(nodename: Option<S>, addrs: BTreeSet<TargetAddr>) -> Self
+    where
+        S: Into<String>,
+    {
+        let inner = Rc::new(TargetInner::new_with_netsvc_addrs(nodename.map(Into::into), addrs));
+        Self::from_inner(inner)
+    }
+
     pub fn new_with_serial(serial: &str) -> Self {
         let inner = Rc::new(TargetInner::new_with_serial(serial));
         Self::from_inner(inner)
@@ -596,6 +663,10 @@ impl Target {
         } else {
             Self::new_with_addrs(t.nodename.take(), t.addresses.drain(..).collect())
         }
+    }
+
+    pub fn from_netsvc_target_info(mut t: TargetInfo) -> Self {
+        Self::new_with_netsvc_addrs(t.nodename.take(), t.addresses.drain(..).collect())
     }
 
     pub fn target_info(&self) -> TargetInfo {
@@ -985,6 +1056,10 @@ impl Target {
         self.task_manager.spawn_detached(TargetTaskType::ProactiveLog);
     }
 
+    pub fn run_zedboot_monitor(&self) {
+        self.task_manager.spawn_detached(TargetTaskType::ZedbootMonitor);
+    }
+
     pub async fn init_remote_proxy(&self) -> Result<RemoteControlProxy> {
         // Ensure auto-connect has at least started.
         self.run_host_pipe();
@@ -1044,6 +1119,7 @@ impl From<Target> for bridge::Target {
                     FidlTargetState::Product
                 }
                 ConnectionState::Fastboot(_) => FidlTargetState::Fastboot,
+                ConnectionState::Zedboot(_) => FidlTargetState::Zedboot,
             }),
             ssh_address: target.ssh_address_info(),
             // TODO(awdavies): Gather more information here when possible.
@@ -2761,5 +2837,59 @@ mod test {
         let sa = "[fe80::1%1]:8022".parse::<SocketAddr>().unwrap();
 
         assert_eq!(target_addr_info_to_socketaddr(tai), sa);
+    }
+
+    #[test]
+    fn test_target_addr_entry_from_with_netsvc() {
+        let ta = TargetAddrEntry::from((
+            TargetAddr::from(("127.0.0.1".parse::<IpAddr>().unwrap(), 0)),
+            Utc::now(),
+            false,
+            true,
+        ));
+        assert_eq!(ta.netsvc, true);
+        let ta = TargetAddrEntry::from((
+            TargetAddr::from(("127.0.0.1".parse::<IpAddr>().unwrap(), 0)),
+            Utc::now(),
+            false,
+            false,
+        ));
+        assert_eq!(ta.netsvc, false);
+    }
+
+    #[test]
+    fn test_netsvc_target_has_no_ssh() {
+        let start = std::time::SystemTime::now();
+        use std::iter::FromIterator;
+
+        // An empty set returns nothing.
+        let addrs = BTreeSet::<TargetAddrEntry>::new();
+        assert_eq!(ssh_address_from(addrs.iter()), None);
+
+        let addrs = BTreeSet::from_iter(vec![(
+            ("2000::1".parse().unwrap(), 0).into(),
+            start.into(),
+            false,
+            true,
+        )
+            .into()]);
+        assert_eq!(ssh_address_from(addrs.iter()), None);
+
+        let addrs = BTreeSet::from_iter(vec![
+            (("2000::1".parse().unwrap(), 0).into(), start.into(), false, true).into(),
+            (("fe80::1".parse().unwrap(), 0).into(), start.into(), false).into(),
+        ]);
+
+        assert_eq!(ssh_address_from(addrs.iter()), Some(("fe80::1".parse().unwrap(), 0).into()));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_netsvc_ssh_address_info_should_be_none() {
+        let ip = "f111::4".parse().unwrap();
+        let mut addr_set = BTreeSet::new();
+        addr_set.replace(TargetAddr { ip, scope_id: 0xbadf00d });
+        let target = Target::new_with_netsvc_addrs(Some("foo"), addr_set);
+
+        assert!(target.ssh_address_info().is_none());
     }
 }

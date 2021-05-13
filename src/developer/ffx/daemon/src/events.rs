@@ -29,6 +29,7 @@ pub enum WireTrafficType {
     #[allow(dead_code)]
     Mdns(TargetInfo),
     Fastboot(TargetInfo),
+    Zedboot(TargetInfo),
 }
 
 /// Encapsulates an event that occurs on the daemon.

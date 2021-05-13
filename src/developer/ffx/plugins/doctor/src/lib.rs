@@ -68,6 +68,7 @@ enum StepType {
     NoTargetsFound,
     TerminalNoTargetsFound,
     SkippedFastboot(Option<String>),
+    SkippedZedboot(Option<String>),
     CheckingTarget(Option<String>),
     RcsAttemptStarted(usize, usize),
     ConnectingToRcs,
@@ -159,6 +160,13 @@ impl std::fmt::Display for StepType {
                 TARGET_CHOICE_HELP,
                 style::Reset
             ),
+            StepType::SkippedZedboot(nodename) => format!(
+                "{}\nSkipping target in zedboot: '{}'. {}{}",
+                style::Bold,
+                nodename.as_ref().unwrap_or(&"UNKNOWN".to_string()),
+                TARGET_CHOICE_HELP,
+                style::Reset
+            ),
             StepType::CheckingTarget(nodename) => format!(
                 "{}\nChecking target: '{}'. {}{}",
                 style::Bold,
@@ -185,6 +193,9 @@ impl std::fmt::Display for StepType {
                                 s.push_str(&format!("{}✗ {}\n", color::Fg(color::Red), nodename));
                             }
                             TargetCheckResult::SkippedFastboot => {
+                                s.push_str(&format!("skipped: {}\n", nodename));
+                            }
+                            TargetCheckResult::SkippedZedboot => {
                                 s.push_str(&format!("skipped: {}\n", nodename));
                             }
                         }
@@ -273,6 +284,7 @@ enum TargetCheckResult {
     Success,
     Failed,
     SkippedFastboot,
+    SkippedZedboot,
 }
 
 #[ffx_plugin()]
@@ -488,6 +500,11 @@ async fn execute_steps(
                 step_handler
                     .output_step(StepType::SkippedFastboot(target.nodename.clone()))
                     .await?;
+                continue;
+            }
+            Some(TargetState::Zedboot) => {
+                target_results.insert(target.nodename.clone(), TargetCheckResult::SkippedZedboot);
+                step_handler.output_step(StepType::SkippedZedboot(target.nodename.clone())).await?;
                 continue;
             }
         }
