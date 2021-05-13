@@ -134,6 +134,31 @@ void fill_band_infos(const struct iwl_nvm_data* nvm_data, const wlan_info_band_t
   }
 }
 
+static struct iwl_mvm_sta* alloc_ap_mvm_sta(const uint8_t bssid[]) {
+  struct iwl_mvm_sta* mvm_sta = calloc(1, sizeof(struct iwl_mvm_sta));
+  if (!mvm_sta) {
+    return NULL;
+  }
+
+  for (size_t i = 0; i < ARRAY_SIZE(mvm_sta->txq); i++) {
+    mvm_sta->txq[i] = calloc(1, sizeof(struct iwl_mvm_txq));
+  }
+  memcpy(mvm_sta->addr, bssid, ETH_ALEN);
+
+  return mvm_sta;
+}
+
+static void free_ap_mvm_sta(struct iwl_mvm_sta* mvm_sta) {
+  if (!mvm_sta) {
+    return;
+  }
+
+  for (size_t i = 0; i < ARRAY_SIZE(mvm_sta->txq); i++) {
+    free(mvm_sta->txq[i]);
+  }
+  free(mvm_sta);
+}
+
 /////////////////////////////////////       MAC       //////////////////////////////////////////////
 
 zx_status_t mac_query(void* ctx, uint32_t options, wlanmac_info_t* info) {
@@ -202,6 +227,14 @@ zx_status_t mac_start(void* ctx, const wlanmac_ifc_protocol_t* ifc, zx_handle_t*
 void mac_stop(void* ctx) {
   struct iwl_mvm_vif* mvmvif = ctx;
 
+  for (size_t i = 0; i < ARRAY_SIZE(mvmvif->mvm->fw_id_to_mac_id); i++) {
+    struct iwl_mvm_sta* mvm_sta = mvmvif->mvm->fw_id_to_mac_id[i];
+    if (mvm_sta) {
+      free_ap_mvm_sta(mvm_sta);
+      mvmvif->mvm->fw_id_to_mac_id[i] = NULL;
+    }
+  }
+
   zx_status_t ret = iwl_mvm_mac_remove_interface(mvmvif);
   if (ret != ZX_OK) {
     IWL_ERR(mvmvif, "Cannot remove MAC interface: %s\n", zx_status_get_string(ret));
@@ -209,8 +242,13 @@ void mac_stop(void* ctx) {
 }
 
 zx_status_t mac_queue_tx(void* ctx, uint32_t options, wlan_tx_packet_t* pkt) {
-  IWL_ERR(ctx, "%s() needs porting ... see fxbug.dev/36742\n", __func__);
-  return ZX_ERR_NOT_SUPPORTED;
+  struct iwl_mvm_vif* mvmvif = ctx;
+
+  mtx_lock(&mvmvif->mvm->mutex);
+  zx_status_t ret = iwl_mvm_mac_tx(mvmvif, pkt);
+  mtx_unlock(&mvmvif->mvm->mutex);
+
+  return ret;
 }
 
 // This function will ensure the mvmvif->phy_ctxt is valid (either get a free one from pool
@@ -257,31 +295,6 @@ zx_status_t mac_set_channel(void* ctx, uint32_t options, const wlan_channel_t* c
   }
 
   return ret;
-}
-
-static struct iwl_mvm_sta* alloc_ap_mvm_sta(const uint8_t bssid[]) {
-  struct iwl_mvm_sta* mvm_sta = calloc(1, sizeof(struct iwl_mvm_sta));
-  if (!mvm_sta) {
-    return NULL;
-  }
-
-  for (size_t i = 0; i < ARRAY_SIZE(mvm_sta->txq); i++) {
-    mvm_sta->txq[i] = calloc(1, sizeof(struct iwl_mvm_txq));
-  }
-  memcpy(mvm_sta->addr, bssid, ETH_ALEN);
-
-  return mvm_sta;
-}
-
-static void free_ap_mvm_sta(struct iwl_mvm_sta* mvm_sta) {
-  if (!mvm_sta) {
-    return;
-  }
-
-  for (size_t i = 0; i < ARRAY_SIZE(mvm_sta->txq); i++) {
-    free(mvm_sta->txq[i]);
-  }
-  free(mvm_sta);
 }
 
 zx_status_t mac_configure_bss(void* ctx, uint32_t options, const wlan_bss_config_t* config) {
@@ -345,7 +358,11 @@ unlock:
   mtx_unlock(&mvmvif->mvm->mutex);
 
 exit:
-  free_ap_mvm_sta(mvm_sta);
+  // If it is successful, the ownership has been transferred.
+  if (ret != ZX_OK) {
+    free_ap_mvm_sta(mvm_sta);
+    mvmvif->mvm->fw_id_to_mac_id[mvmvif->ap_sta_id] = NULL;
+  }
   return ret;
 }
 

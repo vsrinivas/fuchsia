@@ -19,7 +19,9 @@ extern "C" {
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/device.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/fake-ddk-tester.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/mock_trans.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/single-ap-test.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/wlan-pkt-builder.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/wlan-device.h"
 
 namespace wlan::testing {
@@ -514,7 +516,7 @@ TEST_F(WlanDeviceTest, PhyDestroyInvalidZxdev) {
 
 // The class for WLAN device MAC testing.
 //
-class MacInterfaceTest : public WlanDeviceTest {
+class MacInterfaceTest : public WlanDeviceTest, public MockTrans {
  public:
   MacInterfaceTest() : ifc_{ .ops = &proto_ops_, } , proto_ops_{ .recv = recv_wrapper, } {
     mvmvif_sta_.sme_channel = sme_channel_;
@@ -533,6 +535,11 @@ class MacInterfaceTest : public WlanDeviceTest {
     if (original_send_cmd) {
       sim_trans_.iwl_trans()->ops->send_cmd = original_send_cmd;
     }
+
+    // Stop the MAC to free resources we allocated.
+    // This must be called after we verify the expected commands and restore the mock command
+    // callback so that the stop command doesn't mess up the test case expectation.
+    wlanmac_ops.stop(&mvmvif_sta_);
   }
 
   // Used in MockCommand constructor to indicate if the command needs to be either
@@ -631,6 +638,23 @@ class MacInterfaceTest : public WlanDeviceTest {
       printf("  ==> 0x%04x\n", it->cmd_id_);
     }
     ASSERT_TRUE(expected_cmd_ids.empty(), "The expected command set is not empty.");
+
+    mock_tx_.VerifyAndClear();
+  }
+
+  // Mock function for Tx.
+  mock_function::MockFunction<zx_status_t,  // return value
+                              size_t,       // packet size
+                              uint16_t,     // cmd + group_id
+                              int           // txq_id
+                              >
+      mock_tx_;
+
+  static zx_status_t tx_wrapper(struct iwl_trans* trans, const wlan_tx_packet_t* pkt,
+                                const struct iwl_device_cmd* dev_cmd, int txq_id) {
+    auto test = GET_TEST(MacInterfaceTest, trans);
+    return test->mock_tx_.Call(pkt->packet_head.data_size,
+                               WIDE_ID(dev_cmd->hdr.group_id, dev_cmd->hdr.cmd), txq_id);
   }
 
   wlanmac_ifc_protocol_t ifc_;
@@ -755,6 +779,35 @@ TEST_F(MacInterfaceTest, TestExceptionHandling) {
 TEST_F(MacInterfaceTest, AssociateToOpenNetwork) {
   ASSERT_EQ(ZX_OK, SetChannel(&kChannel));
   ASSERT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
+}
+
+TEST_F(MacInterfaceTest, TxPktNotSupportedRole) {
+  SetChannel(&kChannel);
+  ConfigureBss(&kBssConfig);
+  BIND_TEST(sim_trans_.iwl_trans());
+
+  // Set to an unsupported role.
+  mvmvif_sta_.mac_role = WLAN_INFO_MAC_ROLE_AP;
+
+  bindTx(tx_wrapper);
+  WlanPktBuilder builder;
+  std::shared_ptr<WlanPktBuilder::WlanPkt> wlan_pkt = builder.build();
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, wlanmac_ops.queue_tx(&mvmvif_sta_, 0, wlan_pkt->pkt()));
+  unbindTx();
+}
+
+// To test if a packet can be sent out.
+TEST_F(MacInterfaceTest, TxPkt) {
+  SetChannel(&kChannel);
+  ConfigureBss(&kBssConfig);
+  BIND_TEST(sim_trans_.iwl_trans());
+
+  bindTx(tx_wrapper);
+  WlanPktBuilder builder;
+  std::shared_ptr<WlanPktBuilder::WlanPkt> wlan_pkt = builder.build();
+  mock_tx_.ExpectCall(ZX_OK, wlan_pkt->len(), WIDE_ID(0, TX_CMD), IWL_MVM_DQA_MIN_MGMT_QUEUE);
+  ASSERT_EQ(ZX_OK, wlanmac_ops.queue_tx(&mvmvif_sta_, 0, wlan_pkt->pkt()));
+  unbindTx();
 }
 
 }  // namespace

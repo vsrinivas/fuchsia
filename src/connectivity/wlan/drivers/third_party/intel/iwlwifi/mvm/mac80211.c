@@ -568,9 +568,25 @@ out:
     spin_unlock(&mvm->d0i3_tx_lock);
     return defer;
 }
+#endif  // NEEDS_PORTING
 
-static void iwl_mvm_mac_tx(struct ieee80211_hw* hw, struct ieee80211_tx_control* control,
-                           struct sk_buff* skb) {
+zx_status_t iwl_mvm_mac_tx(struct iwl_mvm_vif* mvmvif, const wlan_tx_packet_t* pkt) {
+  iwl_assert_lock_held(&mvmvif->mvm->mutex);
+
+  if (mvmvif->mac_role != WLAN_INFO_MAC_ROLE_CLIENT) {
+    IWL_ERR(mvmvif, "%s(): not supported MAC role %d yet\n", __func__, mvmvif->mac_role);
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  struct iwl_mvm_sta* mvmsta = mvmvif->mvm->fw_id_to_mac_id[mvmvif->ap_sta_id];
+  if (!mvmsta) {
+    IWL_ERR(mvmvif, "%s(): mvmsta is NULL. mvmvif->ap_sta_id=%d\n", __func__, mvmvif->ap_sta_id);
+    return ZX_ERR_INTERNAL;
+  }
+
+  return iwl_mvm_tx_skb(mvmvif->mvm, pkt, mvmsta);
+
+#if 0   // NEEDS_PORTING
     struct iwl_mvm* mvm = IWL_MAC80211_GET_MVM(hw);
     struct ieee80211_sta* sta = control->sta;
     struct ieee80211_tx_info* info = IEEE80211_SKB_CB(skb);
@@ -617,8 +633,8 @@ static void iwl_mvm_mac_tx(struct ieee80211_hw* hw, struct ieee80211_tx_control*
     return;
 drop:
     ieee80211_free_txskb(hw, skb);
-}
 #endif  // NEEDS_PORTING
+}
 
 void iwl_mvm_mac_itxq_xmit(struct ieee80211_hw* hw, struct ieee80211_txq* txq) {
 #if 0   // NEEDS_PORTING
@@ -2804,9 +2820,12 @@ zx_status_t iwl_mvm_mac_sta_state(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta
         mvm->last_ebs_successful = true;
         iwl_mvm_check_uapsd(mvm, vif, sta->addr);
 #endif  // NEEDS_PORTING
+
     ret = ZX_OK;
+
+  } else if (old_state == IWL_STA_AUTH && new_state == IWL_STA_ASSOC) {
 #if 0   // NEEDS_PORTING
-    } else if (old_state == IWL_STA_AUTH && new_state == IWL_STA_ASSOC) {
+        // TODO(36677): Supports AP role
         if (mvmvif->mac_role == WLAN_INFO_MAC_ROLE_AP) {
             mvmvif->ap_assoc_sta_count++;
             iwl_mvm_mac_ctxt_changed(mvmvif, false, NULL);
@@ -2816,7 +2835,11 @@ zx_status_t iwl_mvm_mac_sta_state(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta
         }
 
         iwl_mvm_rs_rate_init(mvm, sta, mvmvif->phy_ctxt->channel->band, false);
-        ret = iwl_mvm_update_sta(mvm, vif, sta);
+#endif  // NEEDS_PORTING
+
+    ret = iwl_mvm_update_sta(mvm, mvm_sta);
+
+#if 0   // NEEDS_PORTING
     } else if (old_state == IWL_STA_ASSOC && new_state == IWL_STA_AUTHORIZED) {
         /* we don't support TDLS during DCM */
         if (iwl_mvm_phy_ctx_count(mvm) > 1) { iwl_mvm_teardown_tdls_peers(mvm); }
