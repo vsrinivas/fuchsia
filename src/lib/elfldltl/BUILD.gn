@@ -13,8 +13,9 @@ zx_library("elfldltl") {
 
   sdk = "source"
   sdk_headers = [
-    # TODO(fxbug.dev/68283): more to come
+    "lib/elfldltl/constants.h",
     "lib/elfldltl/field.h",
+    "lib/elfldltl/layout.h",
   ]
   sdk_migrated = true
 
@@ -36,7 +37,10 @@ test("elfldltl-unittests") {
 
 # These pure unit tests can be included in a standalone ZBI test binary too.
 source_set("unittests") {
-  sources = [ "field-tests.cc" ]
+  sources = [
+    "field-tests.cc",
+    "layout-tests.cc",
+  ]
   deps = [
     ".",
     "//sdk/lib/stdcompat",

@@ -8,6 +8,33 @@ or big-endian byte order, via template parameters.  Thus it is suitable for
 cross-tools without assumptions about host machine or operating system details,
 as well as for ELF target build environments of various sorts.
 
+## Format layouts and constants
+
+The library provides the ELF format layouts and constants in a modern C++ API
+using canonical style.  It does not intend to be an exhaustive API for all of
+the ELF format.  It provides the full range of data structures and constants
+used in dynamic linking and loading, and some others that are of use in related
+tools.  It does not provide full details needed for compilers, linkers,
+debuggers, etc.  In some instances it defines all constants of a particular
+type, while in others it defines only the subset actually used or supported by
+the toolkit.  It provides details from the formal ELF specification and for de
+facto standard GNU and LLVM extensions on the same footing.  The constants and
+data structures largely mimic the spellings used in the ELF specification,
+which come from the traditional `<elf.h>` C API.  However, these definitions
+use C++ scoping and canonical identifier styles that do not overlap with it.
+
+The generic ELF format constants are defined in
+[`<lib/elfldltl/constants.h>`](include/lib/elfldltl/constants.h).  These are
+mostly `enum class` types that apply to all format variants and machines.
+Types selecting format variant and machine also include convenient `kNative`
+aliases for the native platform being compiled for.
+
+ELF data layouts are defined in
+[`<lib/elfldltl/layout.h>`](include/lib/elfldltl/layout.h).  These are provided
+as C++ struct types within the `elfldltl::Elf` template class, which is
+parameterized by class (32-bit vs 64-bit) and data format (byte order) with
+default template arguments matching the native platform being compiled for.
+
 ## Field accessors
 
 ELF format data types are defined using a simple set of generic wrapper
