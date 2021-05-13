@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_BLOCK_DRIVERS_ZXCRYPT_DEVICE_MANAGER_H_
 #define SRC_DEVICES_BLOCK_DRIVERS_ZXCRYPT_DEVICE_MANAGER_H_
 
+#include <fuchsia/hardware/block/encrypted/llcpp/fidl.h>
 #include <lib/ddk/device.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -24,8 +25,12 @@ namespace zxcrypt {
 // operations.  To perform block operations, |Unseal| must first be called with a valid key and
 // slot, which will cause an unsealed |zxcrypt::Device| to be added to the device tree.
 class DeviceManager;
-using DeviceManagerType = ddk::Device<DeviceManager, ddk::Unbindable, ddk::MessageableOld>;
-class DeviceManager final : public DeviceManagerType {
+using DeviceManagerType =
+    ddk::Device<DeviceManager, ddk::Unbindable,
+                ddk::Messageable<fuchsia_hardware_block_encrypted::DeviceManager>::Mixin>;
+class DeviceManager final
+    : public DeviceManagerType,
+      public fidl::WireServer<fuchsia_hardware_block_encrypted::DeviceManager> {
  public:
   explicit DeviceManager(zx_device_t* parent) : DeviceManagerType(parent), state_(kBinding) {}
   ~DeviceManager() = default;
@@ -40,19 +45,16 @@ class DeviceManager final : public DeviceManagerType {
   void DdkUnbind(ddk::UnbindTxn txn) __TA_EXCLUDES(mtx_);
   void DdkRelease();
 
-  // ddk::MessageableOld methods
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) __TA_EXCLUDES(mtx_);
-
   // Unseals the zxcrypt volume and adds it as a |zxcrypt::Device| to the device tree.
-  zx_status_t Unseal(const uint8_t* ikm, size_t ikm_len, key_slot_t slot) __TA_EXCLUDES(mtx_);
+  void Unseal(UnsealRequestView request, UnsealCompleter::Sync& completer) __TA_EXCLUDES(mtx_);
 
   // Removes the unsealed |zxcrypt::Device|, if present.
-  zx_status_t Seal() __TA_EXCLUDES(mtx_);
+  void Seal(SealRequestView request, SealCompleter::Sync& completer) __TA_EXCLUDES(mtx_);
 
   // Clobbers the superblock (and any backup superblocks), preventing future
   // Unseal operations from succeeding (provided no other program is
   // manipulating the underlying block device).
-  zx_status_t Shred() __TA_EXCLUDES(mtx_);
+  void Shred(ShredRequestView request, ShredCompleter::Sync& completer) __TA_EXCLUDES(mtx_);
 
  private:
   // Represents the state of this device.

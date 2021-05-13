@@ -4,7 +4,7 @@
 
 #include "src/devices/block/drivers/zxcrypt/device-manager.h"
 
-#include <fuchsia/hardware/block/encrypted/c/fidl.h>
+#include <fuchsia/hardware/block/encrypted/llcpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
@@ -72,60 +72,36 @@ void DeviceManager::DdkUnbind(ddk::UnbindTxn txn) {
 
 void DeviceManager::DdkRelease() { delete this; }
 
-zx_status_t Unseal(void* ctx, const uint8_t* key_data, const size_t key_count, uint8_t slot,
-                   fidl_txn_t* txn) {
-  DeviceManager* device = reinterpret_cast<DeviceManager*>(ctx);
-  key_slot_t key_slot = static_cast<key_slot_t>(slot);  // widens
-  zx_status_t status = device->Unseal(key_data, key_count, key_slot);
-  return fuchsia_hardware_block_encrypted_DeviceManagerUnseal_reply(txn, status);
-}
-
-zx_status_t Seal(void* ctx, fidl_txn_t* txn) {
-  DeviceManager* device = reinterpret_cast<DeviceManager*>(ctx);
-  zx_status_t status = device->Seal();
-  return fuchsia_hardware_block_encrypted_DeviceManagerSeal_reply(txn, status);
-}
-
-zx_status_t Shred(void* ctx, fidl_txn_t* txn) {
-  DeviceManager* device = reinterpret_cast<DeviceManager*>(ctx);
-  zx_status_t status = device->Shred();
-  return fuchsia_hardware_block_encrypted_DeviceManagerShred_reply(txn, status);
-}
-
-static fuchsia_hardware_block_encrypted_DeviceManager_ops_t fidl_ops = {
-    .Unseal = Unseal, .Seal = Seal, .Shred = Shred};
-
-zx_status_t DeviceManager::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  return fuchsia_hardware_block_encrypted_DeviceManager_dispatch(this, txn, msg, &fidl_ops);
-}
-
-zx_status_t DeviceManager::Unseal(const uint8_t* ikm, size_t ikm_len, key_slot_t slot) {
+void DeviceManager::Unseal(UnsealRequestView request, UnsealCompleter::Sync& completer) {
   fbl::AutoLock lock(&mtx_);
   if (state_ != kSealed) {
     zxlogf(ERROR, "can't unseal zxcrypt, state=%d", state_);
-    return ZX_ERR_BAD_STATE;
+    completer.Reply(ZX_ERR_BAD_STATE);
+    return;
   }
-  return UnsealLocked(ikm, ikm_len, slot);
+  completer.Reply(UnsealLocked(request->key.data(), request->key.count(), request->slot));
 }
 
-zx_status_t DeviceManager::Seal() {
+void DeviceManager::Seal(SealRequestView request, SealCompleter::Sync& completer) {
   zx_status_t rc;
   fbl::AutoLock lock(&mtx_);
 
   if (state_ != kUnsealed && state_ != kShredded) {
     zxlogf(ERROR, "can't seal zxcrypt, state=%d", state_);
-    return ZX_ERR_BAD_STATE;
+    completer.Reply(ZX_ERR_BAD_STATE);
+    return;
   }
   if ((rc = device_rebind(zxdev())) != ZX_OK) {
     zxlogf(ERROR, "failed to rebind zxcrypt: %s", zx_status_get_string(rc));
-    return rc;
+    completer.Reply(rc);
+    return;
   }
 
   state_ = kSealed;
-  return ZX_OK;
+  completer.Reply(ZX_OK);
 }
 
-zx_status_t DeviceManager::Shred() {
+void DeviceManager::Shred(ShredRequestView request, ShredCompleter::Sync& completer) {
   fbl::AutoLock lock(&mtx_);
 
   // We want to shred the underlying volume, but if we have an unsealed device,
@@ -138,17 +114,19 @@ zx_status_t DeviceManager::Shred() {
   rc = DdkVolume::OpenOpaque(parent(), &volume_to_shred);
   if (rc != ZX_OK) {
     zxlogf(ERROR, "failed to open volume to shred: %s", zx_status_get_string(rc));
-    return rc;
+    completer.Reply(rc);
+    return;
   }
 
   rc = volume_to_shred->Shred();
   if (rc != ZX_OK) {
     zxlogf(ERROR, "failed to shred volume: %s", zx_status_get_string(rc));
-    return rc;
+    completer.Reply(rc);
+    return;
   }
 
   state_ = kShredded;
-  return ZX_OK;
+  completer.Reply(ZX_OK);
 }
 
 zx_status_t DeviceManager::UnsealLocked(const uint8_t* ikm, size_t ikm_len, key_slot_t slot) {
