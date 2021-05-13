@@ -3,7 +3,7 @@
     program: {
         // Read from the FeedbackArchiveAccessor
         accessor: "FEEDBACK",
-        timeout_seconds: "1",
+        timeout_seconds: "5",
         cases: [
             // Check that a value is in a certain range.
             "example:root:value WHERE [a] And(a >= 5, a < 10)",
