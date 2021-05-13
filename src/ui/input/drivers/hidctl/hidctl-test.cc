@@ -15,11 +15,11 @@ TEST(HidctlTest, DdkLifecycle) {
 
   zx::socket local, remote;
   ASSERT_OK(zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
-  const fuchsia_hardware_hidctl_HidCtlConfig config = {};
+  const fuchsia_hardware_hidctl::wire::HidCtlConfig config = {};
   fbl::Array<const uint8_t> report_desc;
 
   auto hiddev = std::unique_ptr<hidctl::HidDevice>(new hidctl::HidDevice(
-      fake_ddk::kFakeParent, &config, std::move(report_desc), std::move(local)));
+      fake_ddk::kFakeParent, config, std::move(report_desc), std::move(local)));
   ASSERT_OK(hiddev->DdkAdd("hidctl-dev"));
 
   hiddev->DdkAsyncRemove();
@@ -33,11 +33,11 @@ TEST(HidctlTest, DdkLifecycleWorkerThreadExit) {
 
   zx::socket local, remote;
   ASSERT_OK(zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
-  const fuchsia_hardware_hidctl_HidCtlConfig config = {};
+  const fuchsia_hardware_hidctl::wire::HidCtlConfig config = {};
   fbl::Array<const uint8_t> report_desc;
 
   auto hiddev = std::unique_ptr<hidctl::HidDevice>(new hidctl::HidDevice(
-      fake_ddk::kFakeParent, &config, std::move(report_desc), std::move(local)));
+      fake_ddk::kFakeParent, config, std::move(report_desc), std::move(local)));
   ASSERT_OK(hiddev->DdkAdd("hidctl-dev"));
 
   // This should cause the worker thread to exit and call DdkAsyncRemove() on the device.

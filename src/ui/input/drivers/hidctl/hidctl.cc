@@ -4,7 +4,7 @@
 
 #include "hidctl.h"
 
-#include <fuchsia/hardware/hidctl/c/fidl.h>
+#include <fuchsia/hardware/hidctl/llcpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
@@ -35,29 +35,28 @@ zx_status_t HidCtl::Create(void* ctx, zx_device_t* parent) {
   return status;
 }
 
-zx_status_t HidCtl::FidlMakeHidDevice(void* ctx, const fuchsia_hardware_hidctl_HidCtlConfig* config,
-                                      const uint8_t* rpt_desc_data, size_t rpt_desc_count,
-                                      fidl_txn_t* txn) {
-  HidCtl* hidctl = static_cast<HidCtl*>(ctx);
-
+void HidCtl::MakeHidDevice(MakeHidDeviceRequestView request,
+                           MakeHidDeviceCompleter::Sync& completer) {
   // Create the sockets for Sending/Recieving fake HID reports.
   zx::socket local, remote;
   zx_status_t status = zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote);
   if (status != ZX_OK) {
-    return status;
+    completer.Close(status);
+    return;
   }
 
   // Create the fake HID device.
-  uint8_t* report_desc_data = new uint8_t[rpt_desc_count];
-  memcpy(report_desc_data, rpt_desc_data, rpt_desc_count);
-  fbl::Array<const uint8_t> report_desc(report_desc_data, rpt_desc_count);
+  uint8_t* report_desc_data = new uint8_t[request->rpt_desc.count()];
+  memcpy(report_desc_data, request->rpt_desc.data(), request->rpt_desc.count());
+  fbl::Array<const uint8_t> report_desc(report_desc_data, request->rpt_desc.count());
   auto hiddev = std::unique_ptr<hidctl::HidDevice>(
-      new hidctl::HidDevice(hidctl->zxdev(), config, std::move(report_desc), std::move(local)));
+      new hidctl::HidDevice(zxdev(), request->config, std::move(report_desc), std::move(local)));
 
   status = hiddev->DdkAdd("hidctl-dev");
   if (status != ZX_OK) {
     zxlogf(ERROR, "hidctl: could not add hid device: %d", status);
-    return status;
+    completer.Close(status);
+    return;
   }
   // The device thread will be created in DdkInit.
 
@@ -65,18 +64,10 @@ zx_status_t HidCtl::FidlMakeHidDevice(void* ctx, const fuchsia_hardware_hidctl_H
   // devmgr owns the memory until release is called
   __UNUSED auto ptr = hiddev.release();
 
-  zx_handle_t report_socket = remote.release();
-  return fuchsia_hardware_hidctl_DeviceMakeHidDevice_reply(txn, report_socket);
+  completer.Reply(std::move(remote));
 }
 
-zx_status_t HidCtl::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  static const fuchsia_hardware_hidctl_Device_ops_t kOps = {
-      .MakeHidDevice = HidCtl::FidlMakeHidDevice,
-  };
-  return fuchsia_hardware_hidctl_Device_dispatch(this, txn, msg, &kOps);
-}
-
-HidCtl::HidCtl(zx_device_t* device) : ddk::Device<HidCtl, ddk::MessageableOld>(device) {}
+HidCtl::HidCtl(zx_device_t* device) : DeviceType(device) {}
 
 void HidCtl::DdkRelease() { delete this; }
 
@@ -87,11 +78,11 @@ int hid_device_thread(void* arg) {
 
 #define HID_SHUTDOWN ZX_USER_SIGNAL_7
 
-HidDevice::HidDevice(zx_device_t* device, const fuchsia_hardware_hidctl_HidCtlConfig* config,
+HidDevice::HidDevice(zx_device_t* device, const fuchsia_hardware_hidctl::wire::HidCtlConfig& config,
                      fbl::Array<const uint8_t> report_desc, zx::socket data)
     : ddk::Device<HidDevice, ddk::Initializable, ddk::Unbindable>(device),
-      boot_device_(config->boot_device),
-      dev_class_(config->dev_class),
+      boot_device_(config.boot_device),
+      dev_class_(config.dev_class),
       report_desc_(std::move(report_desc)),
       data_(std::move(data)) {
   ZX_DEBUG_ASSERT(data_.is_valid());

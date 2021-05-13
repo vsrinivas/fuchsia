@@ -6,7 +6,7 @@
 #define SRC_UI_INPUT_DRIVERS_HIDCTL_HIDCTL_H_
 
 #include <fuchsia/hardware/hidbus/cpp/banjo.h>
-#include <fuchsia/hardware/hidctl/c/fidl.h>
+#include <fuchsia/hardware/hidctl/llcpp/fidl.h>
 #include <lib/ddk/device.h>
 #include <lib/zx/socket.h>
 #include <threads.h>
@@ -21,25 +21,22 @@
 
 namespace hidctl {
 
-class HidCtl : public ddk::Device<HidCtl, ddk::MessageableOld> {
+class HidCtl;
+using DeviceType = ddk::Device<HidCtl, ddk::Messageable<fuchsia_hardware_hidctl::Device>::Mixin>;
+class HidCtl : public DeviceType, public fidl::WireServer<fuchsia_hardware_hidctl::Device> {
  public:
   HidCtl(zx_device_t* device);
   static zx_status_t Create(void* ctx, zx_device_t* parent);
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
   void DdkRelease();
 
- private:
-  static zx_status_t FidlMakeHidDevice(void* ctx,
-                                       const fuchsia_hardware_hidctl_HidCtlConfig* config,
-                                       const uint8_t* rpt_desc_data, size_t rpt_desc_count,
-                                       fidl_txn_t* txn);
+  void MakeHidDevice(MakeHidDeviceRequestView request, MakeHidDeviceCompleter::Sync& completer);
 };
 
 class HidDevice : public ddk::Device<HidDevice, ddk::Initializable, ddk::Unbindable>,
                   public ddk::HidbusProtocol<HidDevice, ddk::base_protocol> {
  public:
-  HidDevice(zx_device_t* device, const fuchsia_hardware_hidctl_HidCtlConfig* config,
+  HidDevice(zx_device_t* device, const fuchsia_hardware_hidctl::wire::HidCtlConfig& config,
             fbl::Array<const uint8_t> report_desc, zx::socket data);
 
   void DdkRelease();
