@@ -51,7 +51,8 @@ def main():
             # renamed and reused. Ignore it so as not to create conflicting
             # shebang files.
             continue
-        shebang_file = os.path.join(args.output_directory, "__shebang__", dest)
+        shebang_file = os.path.join(
+            args.output_directory, "__untraced_shebangs__", dest)
         shebang_files.append(shebang_file)
         os.makedirs(os.path.dirname(shebang_file), exist_ok=True)
         with open(shebang_file, 'w') as f:

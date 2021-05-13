@@ -876,7 +876,7 @@ def main():
         # fxbug.dev/68397: some actions are known to generate implicit outputs in
         # these directories that are unknown before the metadata collection phase.
         # It was decided to tolerate this behavior.
-        "__shebang__",
+        "__untraced_shebangs__",
         # fxbug.dev/75057: some actions write files in temporary directories
         # that are later deleted in the action. shutil.rmtree is usually used to
         # delete such directories, and it registers read on deleted directories
