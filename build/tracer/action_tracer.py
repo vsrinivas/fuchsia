@@ -943,7 +943,7 @@ should not be declared as dependencies.
 
     # Check for overall correctness, print diagnostics,
     # and exit with the right code.
-    if args.check_access_permissions:
+    if args.check_access_permissions and retval == 0:
         # Verify the filesystem access trace.
         unexpected_accesses = check_access_permissions(
             accesses=file_access_sets, constraints=access_constraints)
