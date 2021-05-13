@@ -167,26 +167,6 @@ static struct clock_info clks[] = {
     {.idx = 70, .name = "aud2pll"},
 };
 
-zx_status_t fidl_clk_measure(void* ctx, uint32_t clk, fidl_txn_t* txn) {
-  auto dev = static_cast<MtkClk*>(ctx);
-  fuchsia_hardware_clock_FrequencyInfo info;
-
-  dev->ClkMeasure(clk, &info);
-
-  return fuchsia_hardware_clock_DeviceMeasure_reply(txn, &info);
-}
-
-zx_status_t fidl_clk_get_count(void* ctx, fidl_txn_t* txn) {
-  auto dev = static_cast<MtkClk*>(ctx);
-
-  return fuchsia_hardware_clock_DeviceGetCount_reply(txn, dev->GetClkCount());
-}
-
-static const fuchsia_hardware_clock_Device_ops_t fidl_ops_ = {
-    .Measure = fidl_clk_measure,
-    .GetCount = fidl_clk_get_count,
-};
-
 namespace {
 
 class FrequencyMeterControl : public hwreg::RegisterBase<FrequencyMeterControl, uint32_t> {
@@ -317,25 +297,29 @@ zx_status_t MtkClk::ClockImplGetNumInputs(uint32_t id, uint32_t* out) {
 
 zx_status_t MtkClk::ClockImplGetInput(uint32_t id, uint32_t* out) { return ZX_ERR_NOT_SUPPORTED; }
 
-zx_status_t MtkClk::ClkMeasure(uint32_t clk, fuchsia_hardware_clock_FrequencyInfo* info) {
-  if (clk >= std::size(clks)) {
-    return ZX_ERR_INVALID_ARGS;
+void MtkClk::Measure(MeasureRequestView request, MeasureCompleter::Sync& completer) {
+  fuchsia_hardware_clock::wire::FrequencyInfo info;
+
+  if (request->clock >= std::size(clks)) {
+    completer.Close(ZX_ERR_INVALID_ARGS);
+    return;
   }
 
-  size_t max_len = sizeof(info->name);
-  size_t len = strnlen(clks[clk].name, max_len);
+  size_t max_len = info.name.size();
+  size_t len = strnlen(clks[request->clock].name, max_len);
   if (len == max_len) {
-    return ZX_ERR_INVALID_ARGS;
+    completer.Close(ZX_ERR_INVALID_ARGS);
+    return;
   }
 
-  memcpy(info->name, clks[clk].name, len + 1);
+  memcpy(info.name.data(), clks[request->clock].name, len + 1);
 
   constexpr uint32_t kWindowSize = 512;
   constexpr uint32_t kFixedClockFreqMHz = 26000000 / 1000000;
   FrequencyMeterControl::Get().FromValue(0).set_reset(true).WriteTo(&mmio_);
   FrequencyMeterControl::Get().FromValue(0).set_reset(false).WriteTo(&mmio_);
   auto ctrl = FrequencyMeterControl::Get().FromValue(0);
-  ctrl.set_window(kWindowSize - 1).set_monclk_sel(clks[clk].idx);
+  ctrl.set_window(kWindowSize - 1).set_monclk_sel(clks[request->clock].idx);
   ctrl.set_fixclk_sel(FrequencyMeterControl::kFixClk26Mhz).set_enable(true);
   ctrl.WriteTo(&mmio_);
 
@@ -348,18 +332,16 @@ zx_status_t MtkClk::ClkMeasure(uint32_t clk, fuchsia_hardware_clock_FrequencyInf
 
   constexpr uint32_t kFrequencyMeterReadData = 0x14;
   uint32_t count = mmio_.Read32(kFrequencyMeterReadData);
-  info->frequency = (count * kFixedClockFreqMHz) / kWindowSize;
+  info.frequency = (count * kFixedClockFreqMHz) / kWindowSize;
   FrequencyMeterControl::Get().FromValue(0).set_reset(true).WriteTo(&mmio_);
   FrequencyMeterControl::Get().FromValue(0).set_reset(false).WriteTo(&mmio_);
-  return ZX_OK;
+
+  completer.Reply(info);
 }
 
-uint32_t MtkClk::GetClkCount() { return static_cast<uint32_t>(std::size(clks)); }
-
-zx_status_t MtkClk::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  return fuchsia_hardware_clock_Device_dispatch(this, txn, msg, &fidl_ops_);
+void MtkClk::GetCount(GetCountRequestView request, GetCountCompleter::Sync& completer) {
+  completer.Reply(static_cast<uint32_t>(std::size(clks)));
 }
-
 }  // namespace clk
 
 zx_status_t mtk_clk_bind(void* ctx, zx_device_t* parent) { return clk::MtkClk::Create(parent); }

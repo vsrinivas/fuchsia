@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_CLOCK_DRIVERS_MTK_CLK_MTK_CLK_H_
 #define SRC_DEVICES_CLOCK_DRIVERS_MTK_CLK_MTK_CLK_H_
 
-#include <fuchsia/hardware/clock/c/fidl.h>
+#include <fuchsia/hardware/clock/llcpp/fidl.h>
 #include <fuchsia/hardware/clockimpl/cpp/banjo.h>
 #include <lib/mmio/mmio.h>
 
@@ -14,9 +14,11 @@
 namespace clk {
 
 class MtkClk;
-using DeviceType = ddk::Device<MtkClk, ddk::MessageableOld>;
+using DeviceType = ddk::Device<MtkClk, ddk::Messageable<fuchsia_hardware_clock::Device>::Mixin>;
 
-class MtkClk : public DeviceType, public ddk::ClockImplProtocol<MtkClk, ddk::base_protocol> {
+class MtkClk : public DeviceType,
+               public fidl::WireServer<fuchsia_hardware_clock::Device>,
+               public ddk::ClockImplProtocol<MtkClk, ddk::base_protocol> {
  public:
   static zx_status_t Create(zx_device_t* parent);
 
@@ -36,10 +38,8 @@ class MtkClk : public DeviceType, public ddk::ClockImplProtocol<MtkClk, ddk::bas
   zx_status_t ClockImplGetNumInputs(uint32_t id, uint32_t* out);
   zx_status_t ClockImplGetInput(uint32_t id, uint32_t* out);
 
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
-
-  zx_status_t ClkMeasure(uint32_t clk, fuchsia_hardware_clock_FrequencyInfo* info);
-  uint32_t GetClkCount();
+  void Measure(MeasureRequestView request, MeasureCompleter::Sync& completer);
+  void GetCount(GetCountRequestView request, GetCountCompleter::Sync& completer);
 
  private:
   MtkClk(zx_device_t* parent, ddk::MmioBuffer mmio) : DeviceType(parent), mmio_(std::move(mmio)) {}
