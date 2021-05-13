@@ -42,9 +42,22 @@ fn str_to_syn_path(path: &str) -> syn::Path {
 fn variants_test_inner(input: TokenStream, variants: &[Variant<'_>]) -> TokenStream {
     let item = input.clone();
     let mut item = syn::parse_macro_input!(item as syn::ItemFn);
-    let impl_attrs = item.attrs;
-    item.attrs = Vec::new();
-    let syn::Signature { ident: name, generics, output, inputs, .. } = &item.sig;
+    let syn::ItemFn { attrs, vis: _, ref sig, block: _ } = &mut item;
+    let impl_attrs = std::mem::replace(attrs, Vec::new());
+    let syn::Signature {
+        constness: _,
+        asyncness: _,
+        unsafety: _,
+        abi: _,
+        fn_token: _,
+        ident: name,
+        generics,
+        paren_token: _,
+        inputs,
+        variadic: _,
+        output,
+    } = sig;
+
     let arg = if let Some(arg) = inputs.first() {
         arg
     } else {
@@ -52,8 +65,9 @@ fn variants_test_inner(input: TokenStream, variants: &[Variant<'_>]) -> TokenStr
             .to_compile_error()
             .into();
     };
+
     let arg_type = match arg {
-        syn::FnArg::Typed(t) => &t.ty,
+        syn::FnArg::Typed(syn::PatType { attrs: _, pat: _, colon_token: _, ty }) => ty,
         other => {
             return syn::Error::new_spanned(
                 inputs,
@@ -66,8 +80,14 @@ fn variants_test_inner(input: TokenStream, variants: &[Variant<'_>]) -> TokenStr
             .into()
         }
     };
+
     let arg_type = match arg_type.as_ref() {
-        syn::Type::Reference(r) => &r.elem,
+        syn::Type::Reference(syn::TypeReference {
+            and_token: _,
+            lifetime: _,
+            mutability: _,
+            elem,
+        }) => elem,
         other => {
             return syn::Error::new_spanned(
                 inputs,
@@ -80,8 +100,9 @@ fn variants_test_inner(input: TokenStream, variants: &[Variant<'_>]) -> TokenStr
             .into()
         }
     };
+
     let arg_type = match arg_type.as_ref() {
-        syn::Type::Path(p) => &p.path,
+        syn::Type::Path(syn::TypePath { qself: _, path }) => path,
         other => {
             return syn::Error::new_spanned(
                 inputs,
@@ -94,6 +115,7 @@ fn variants_test_inner(input: TokenStream, variants: &[Variant<'_>]) -> TokenStr
             .into()
         }
     };
+
     if !arg_type.is_ident("str") {
         return syn::Error::new_spanned(
             inputs,
@@ -137,7 +159,12 @@ fn variants_test_inner(input: TokenStream, variants: &[Variant<'_>]) -> TokenStr
             .expect("only expect a single bound for each generic parameter");
 
         let trait_type_bound = match type_bound {
-            syn::TypeParamBound::Trait(t) => &t.path,
+            syn::TypeParamBound::Trait(syn::TraitBound {
+                paren_token: _,
+                modifier: _,
+                lifetimes: _,
+                path,
+            }) => path,
             other => {
                 return syn::Error::new_spanned(
                     proc_macro2::TokenStream::from(input),
@@ -213,32 +240,40 @@ fn variants_test_inner(input: TokenStream, variants: &[Variant<'_>]) -> TokenStr
 
         // Pass in the remaining inputs.
         for arg in impl_inputs.iter() {
-            let arg = if let syn::FnArg::Typed(t) = arg {
-                t
-            } else {
-                return syn::Error::new_spanned(
-                    proc_macro2::TokenStream::from(input),
-                    format!("expected typed fn arg; got = {:#?}", arg),
-                )
-                .to_compile_error()
-                .into();
+            let arg = match arg {
+                syn::FnArg::Typed(syn::PatType { attrs: _, pat, colon_token: _, ty: _ }) => pat,
+                other => {
+                    return syn::Error::new_spanned(
+                        proc_macro2::TokenStream::from(input),
+                        format!("expected typed fn arg; got = {:#?}", other),
+                    )
+                    .to_compile_error()
+                    .into()
+                }
             };
 
-            let arg = if let syn::Pat::Ident(i) = arg.pat.as_ref() {
-                i
-            } else {
-                return syn::Error::new_spanned(
-                    proc_macro2::TokenStream::from(input),
-                    format!("expected ident fn arg; got = {:#?}", arg),
-                )
-                .to_compile_error()
-                .into();
+            let arg = match arg.as_ref() {
+                syn::Pat::Ident(syn::PatIdent {
+                    attrs: _,
+                    by_ref: _,
+                    mutability: _,
+                    ident,
+                    subpat: _,
+                }) => ident,
+                other => {
+                    return syn::Error::new_spanned(
+                        proc_macro2::TokenStream::from(input),
+                        format!("expected ident fn arg; got = {:#?}", other),
+                    )
+                    .to_compile_error()
+                    .into()
+                }
             };
 
             args.push(syn::Expr::Path(syn::ExprPath {
                 attrs: Vec::new(),
                 qself: None,
-                path: arg.ident.clone().into(),
+                path: arg.clone().into(),
             }));
         }
 
