@@ -419,8 +419,6 @@ typedef struct zx_protocol_device {
 // Device Accessors
 const char* device_get_name(zx_device_t* dev);
 
-zx_device_t* device_get_parent(zx_device_t* dev) __DEPRECATE;
-
 // protocols look like:
 // typedef struct {
 //     protocol_xyz_ops_t* ops;

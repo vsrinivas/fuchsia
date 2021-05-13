@@ -362,7 +362,6 @@ This means that in order to access the data elements, you need to call an access
 Function                | Purpose
 ------------------------|-------------------------------------------
 **device_get_name()**        | Retrieves the name of the device
-**device_get_parent()**      | Retrieves the parent device of the device
 
 ### Administrative functions
 

@@ -251,11 +251,6 @@ __EXPORT zx_status_t device_set_profile_by_role(zx_device_t* device, zx_handle_t
 
 __EXPORT const char* device_get_name(zx_device_t* dev) { return dev->name(); }
 
-__EXPORT zx_device_t* device_get_parent(zx_device_t* dev) {
-  // The caller should not hold on to this past the lifetime of |dev|.
-  return dev->parent().get();
-}
-
 struct GenericProtocol {
   void* ops;
   void* ctx;
