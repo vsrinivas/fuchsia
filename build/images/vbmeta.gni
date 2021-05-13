@@ -15,37 +15,24 @@ declare_args() {
   # and the paving script will pave vbmeta images to the target device.
   use_vbmeta = false
 
-  # If true, /config/devmgr config will be included into a vbmeta image
-  # instead of bootfs.
-  include_devmgr_config_in_vbmeta = false
-
   # a key which will be used to sign VBMETA and images for AVB
   avb_key = ""
 
   # AVB metadata which will be used to validate public key
   avb_atx_metadata = ""
 
-  # AVB algorithm type.Supported options:
-  #   SHA256_RSA2048
-  #   SHA256_RSA4096
-  #   SHA256_RSA8192
-  #   SHA512_RSA2048
-  #   SHA512_RSA4096
-  #   SHA512_RSA8192
-  avb_algorithm = "SHA512_RSA4096"
-
   # Partition name from where image will be verified
   zvb_partition_name = "zircon"
-
-  # Board level extra vbmeta images to be combined into the top-level vbmeta
-  # struct.
-  board_extra_vbmeta_images = []
 
   # Board level extra vbmeta descriptors to be combined into the top-level
   # vbmeta struct (these are in json format)
   #
   # see //build/images/vbmeta/README.md for more information about these.
   board_extra_vbmeta_descriptors = []
+
+  # DEPRECATED:  Remove when no boards set a value for these.
+  board_extra_vbmeta_images = []
+  avb_algorithm = "DEPRECATED"
 }
 
 # Template for producing VBMETA image for AVB
@@ -57,12 +44,6 @@ declare_args() {
 #   zbi (required)
 #       [list-of-strings] path to a ZBI image to be included in AVB chain.
 #       Must only contain a single entry.
-#
-#   prop_from_file (required)
-#       [list of type/file] a list of pairs |type| and |file|.
-#       |type| is one of ZBI item types (w/o ZBI_TYPE_ prefix);
-#       |file| is a path to file to be stored in a vbmeta image
-#       as ZBI_TYPE_|type| items in 'zbi' property.
 #
 #   deps (usually required)
 #   testonly, metadata
@@ -81,48 +62,6 @@ template("vbmeta") {
   assert(avb_key != "", "avb_key must be specified")
   assert(avb_atx_metadata != "", "avb metadata must be specified")
   output_file = "$root_out_dir/$output_file"
-  additional_descriptor_labels = []
-
-  # TODO: Remove this set of actions when additional descriptors are moved to
-  # JSON files instead of vbmeta files that the descriptors need to be extracted
-  # from.
-  foreach(entry, board_extra_vbmeta_images) {
-    extra_vbmeta_filename = get_path_info(entry, "file")
-    descriptor_output_filename =
-        "${target_name}.additional_descriptor.${extra_vbmeta_filename}.json"
-    descriptor_output_file = "${target_out_dir}/${descriptor_output_filename}"
-    additional_descriptor_labels += [ ":$descriptor_output_filename" ]
-
-    action(descriptor_output_filename) {
-      script = "//build/images/assembly/extract_descriptor_fields.py"
-      forward_variables_from(invoker,
-                             [
-                               "testonly",
-                               "visibility",
-                             ])
-
-      avbtool = "//third_party/android/platform/external/avb/avbtool.py"
-      args = [
-        "--avbtool",
-        rebase_path(avbtool, root_build_dir),
-        "--vbmeta",
-        rebase_path(entry, root_build_dir),
-        "--output",
-        rebase_path(descriptor_output_file, root_build_dir),
-      ]
-      inputs = [
-        avbtool,
-        entry,
-      ]
-      outputs = [ descriptor_output_file ]
-    }
-  }
-
-  # TODO(fxbug.dev/75889): Remove these build_args in a separate cleanup pass
-  assert(include_devmgr_config_in_vbmeta == false,
-         "placing the devmgr config in vbmeta is not supported at this time")
-  assert(avb_algorithm == "SHA512_RSA4096",
-         "setting 'avb_algorithm' is not supported at this time")
 
   ffx_action(target_name) {
     forward_variables_from(invoker,
@@ -165,24 +104,12 @@ template("vbmeta") {
       inputs += [ descriptor_file ]
     }
 
-    if (board_extra_vbmeta_descriptors == []) {
-      # TODO: Remove this set of actions when additional descriptors are moved to
-      # JSON files instead of vbmeta files that the descriptors need to be extracted
-      # from.
-      foreach(descriptor_target, additional_descriptor_labels) {
-        descriptor_outputs = get_target_outputs(descriptor_target)
-        descriptor_file = descriptor_outputs[0]
-        args += [
-          "--additional-descriptor",
-          rebase_path(descriptor_file, root_build_dir),
-        ]
-        inputs += [ descriptor_file ]
-        deps += [ descriptor_target ]
-      }
-    } else {
-      not_needed(additional_descriptor_labels)
-    }
-
     outputs = [ output_file ]
   }
 }
+
+# DEPRECATED: Remove when no boards set a value for this.
+not_needed([
+             "board_extra_vbmeta_images",
+             "avb_algorithm",
+           ])

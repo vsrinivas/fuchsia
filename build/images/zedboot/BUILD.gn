@@ -125,10 +125,7 @@ zbi("zbi") {
     "//zircon/kernel",
   ]
   deps += zedboot_deps
-
-  if (!include_devmgr_config_in_vbmeta) {
-    deps += [ ":devmgr_config" ]
-  }
+  deps += [ ":devmgr_config" ]
 
   metadata = {
     images = [
@@ -235,23 +232,6 @@ if (use_vbmeta) {
       deps = [ ":zbi" ]
       zbi_outputs = get_target_outputs(":zbi")
       zbi = [ zbi_outputs[0] ]
-    }
-    if (include_devmgr_config_in_vbmeta) {
-      deps += [ ":devmgr_config.txt" ]
-
-      boot_args_file = get_target_outputs(":devmgr_config.txt")
-
-      # expecting a single file
-      assert([ boot_args_file[0] ] == boot_args_file,
-             "expect a single output file form 'devmgr_config.txt' target")
-
-      prop_from_file = [
-        {
-          # zbi item type w/o ZBI_TYPE_ prefix
-          type = "IMAGE_ARGS"
-          file = boot_args_file[0]
-        },
-      ]
     }
 
     metadata = {

@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/host.gni")
-import("//build/images/vbmeta.gni")
 import("//build/rust/rustc_library.gni")
 
 if (is_host) {
@@ -118,7 +117,7 @@ if (is_host) {
       "--key",  # a key for signing
       rebase_path(test_avb_key, root_build_dir),
       "--algorithm",  # an algorithm for signing
-      avb_algorithm,
+      "SHA512_RSA4096",
       "--public_key_metadata",  # avb metadata
       rebase_path(test_avb_atx_metadata, root_build_dir),
       "--include_descriptors_from_image",

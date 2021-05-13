@@ -138,7 +138,3 @@ declare_args() {
 
 assert(custom_signing_script == "" || !use_vboot,
        "custom_signing_script and use_vboot cannot be used together!")
-
-assert(
-    !include_devmgr_config_in_vbmeta || use_vbmeta,
-    "include_devmgr_config_in_vbmeta cannot be used if use_vbmeta is not set!")
