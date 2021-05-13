@@ -8,6 +8,8 @@
 
 #include <list>
 
+#include "inspector/inspector.h"
+
 namespace component {
 
 namespace {
@@ -112,8 +114,8 @@ fbl::String DebugInfoRetriever::GetInfo(const zx::process* process, zx_koid_t* t
 #endif
 
     fprintf(output, "arch: %s\n", arch);
-    inspector_print_backtrace(output, process->get(), entry.thread.get(), dso.info, pc, sp, fp,
-                              true);
+    inspector_print_backtrace_markup(output, process->get(), entry.thread.get(), dso.info, pc, sp,
+                                     fp);
 
     fprintf(output, "\n");
   }

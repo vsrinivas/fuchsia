@@ -14,8 +14,12 @@
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
 
+#include <vector>
+
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
+#include <fbl/string.h>
+#include <fbl/string_printf.h>
 #include <ngunwind/fuchsia.h>
 #include <ngunwind/libunwind.h>
 
@@ -25,26 +29,12 @@
 
 namespace inspector {
 
-constexpr unsigned int kBacktraceFrameLimit = 50;
+constexpr int kBacktraceFrameLimit = 50;
 
-static void btprint(FILE* f, inspector_dsoinfo_t* dso_list, uint32_t n, uintptr_t pc, uintptr_t sp,
-                    bool use_new_format) {
-  if (use_new_format) {
-    fprintf(f, "{{{bt:%u:%#" PRIxPTR ":sp %#" PRIxPTR "}}}\n", n, pc, sp);
-    return;
-  }
-
-  inspector_dsoinfo_t* dso = inspector_dso_lookup(dso_list, pc);
-  if (dso == nullptr) {
-    // The pc is not in any DSO.
-    fprintf(f, "bt#%02u: pc %p sp %p\n", n, (void*)pc, (void*)sp);
-    return;
-  }
-
-  fprintf(f, "bt#%02u: pc %p sp %p (%s,%p)", n, (void*)pc, (void*)sp, dso->name,
-          (void*)(pc - dso->base));
-  fprintf(f, "\n");
-}
+struct Frame {
+  uint64_t pc;
+  fbl::String source;
+};
 
 static int dso_lookup_for_unw(void* context, unw_word_t pc, unw_word_t* base, const char** name) {
   auto dso_list = reinterpret_cast<inspector_dsoinfo_t*>(context);
@@ -56,13 +46,12 @@ static int dso_lookup_for_unw(void* context, unw_word_t pc, unw_word_t* base, co
   return 1;
 }
 
-static void inspector_print_backtrace_impl(FILE* f, zx_handle_t process, zx_handle_t thread,
-                                           inspector_dsoinfo_t* dso_list, uintptr_t pc,
-                                           uintptr_t sp, uintptr_t fp, bool use_libunwind,
-                                           bool use_new_format) {
-  // Set up libunwind if requested.
+static std::vector<Frame> unwind_from_ngunwind(zx_handle_t process, zx_handle_t thread,
+                                               inspector_dsoinfo_t* dso_list, uintptr_t pc,
+                                               uintptr_t sp, uintptr_t fp) {
+  // Set up libunwind
+  bool libunwind_ok = true;
 
-  bool libunwind_ok = use_libunwind;
   if (verbosity_level > 0) {
     // Don't turn on libunwind debugging for -d1.
     // Note: max libunwind debugging level is 16
@@ -108,9 +97,10 @@ static void inspector_print_backtrace_impl(FILE* f, zx_handle_t process, zx_hand
 
   // On with the show.
 
-  uint32_t n = 1;
-  btprint(f, dso_list, n++, pc, sp, use_new_format);
-  while ((sp >= 0x1000000) && (n < kBacktraceFrameLimit)) {
+  std::vector<Frame> frames;
+  frames.push_back({pc, fbl::StringPrintf("sp %#" PRIxPTR, sp)});
+
+  while ((sp >= 0x1000000) && (frames.size() < kBacktraceFrameLimit)) {
     if (libunwind_ok) {
       int ret = unw_step(&cursor);
       if (ret < 0) {
@@ -133,33 +123,116 @@ static void inspector_print_backtrace_impl(FILE* f, zx_handle_t process, zx_hand
         break;
       }
     }
-    btprint(f, dso_list, n++, pc, sp, use_new_format);
-  }
-
-  if (!use_new_format) {
-    fprintf(f, "bt#%02d: end\n", n);
-  }
-
-  if (n >= kBacktraceFrameLimit) {
-    fprintf(f, "warning: backtrace frame limit exceeded; backtrace may be truncated\n");
+    frames.push_back({pc, fbl::StringPrintf("sp %#" PRIxPTR, sp)});
   }
 
   unw_destroy_addr_space(remote_as);
   unw_destroy_fuchsia(fuchsia);
+  return frames;
+}
+
+#if defined(__aarch64__)
+
+// Return vector of frames unwound from the shadow call stack, the current frame being the first.
+static std::vector<Frame> unwind_from_shadow_call_stack(zx_handle_t process, zx_handle_t thread) {
+  zx_thread_state_general_regs_t regs;
+  if (inspector_read_general_regs(thread, &regs) != ZX_OK) {
+    print_error("inspector_read_general_regs failed");
+    return {};
+  }
+
+  // The current frame must be obtained from the context.
+  std::vector<Frame> frames = {{regs.pc, "from pc"}};
+
+  // It's hard for us to know whether regs.lr is pushed on the SCS or not because some functions
+  // that never call a subroutine may skip the step. Instead we'll check whether the first frame in
+  // the SCS is equal to lr, which might drop one frame for recursive functions. However, it's
+  // acceptable because we are only checking whether SCS is a subsequence of the regular stack
+  // below.
+  uint64_t lr = regs.lr;
+
+  // ssp points to the last entry in the SCS. r18 points to the next free slot in the SCS.
+  uint64_t ssp = regs.r[18] - 8;
+  uint64_t scs_page[PAGE_SIZE / 8];
+
+  bool loop = true;
+  while (loop) {
+    // Read the whole page at once for performance.
+    uint64_t page_start = ssp / PAGE_SIZE * PAGE_SIZE;
+    uint64_t num_frames = (ssp % PAGE_SIZE / 8) + 1;
+    if (read_mem(process, page_start, scs_page, num_frames * 8) != ZX_OK) {
+      break;
+    }
+
+    if (lr) {
+      if (lr != scs_page[num_frames - 1]) {
+        frames.push_back({lr, "from lr"});
+      }
+      lr = 0;
+    }
+
+    while (num_frames > 0) {
+      // pc = 0 marks the end of the SCS.
+      if (frames.size() >= kBacktraceFrameLimit || scs_page[num_frames - 1] == 0) {
+        loop = false;
+        break;
+      }
+      frames.push_back({scs_page[num_frames - 1],
+                        fbl::StringPrintf("ssp %#" PRIxPTR, page_start + (num_frames - 1) * 8)});
+      num_frames--;
+    }
+
+    ssp = page_start - 8;
+  }
+
+  return frames;
+}
+
+#else
+
+static std::vector<Frame> unwind_from_shadow_call_stack(zx_handle_t process, zx_handle_t thread) {
+  return {};
+}
+
+#endif
+
+static void print_stack(FILE* f, const std::vector<Frame>& stack) {
+  int n = 0;
+  for (auto& frame : stack) {
+    fprintf(f, "{{{bt:%u:%#" PRIxPTR ":%s}}}\n", n++, frame.pc, frame.source.c_str());
+  }
+  if (n >= kBacktraceFrameLimit) {
+    fprintf(f, "warning: backtrace frame limit exceeded; backtrace may be truncated\n");
+  }
 }
 
 extern "C" __EXPORT void inspector_print_backtrace_markup(FILE* f, zx_handle_t process,
                                                           zx_handle_t thread,
                                                           inspector_dsoinfo_t* dso_list,
-                                                          uintptr_t pc, uintptr_t sp, uintptr_t fp,
-                                                          bool use_libunwind) {
-  inspector_print_backtrace_impl(f, process, thread, dso_list, pc, sp, fp, use_libunwind, true);
-}
+                                                          uintptr_t pc, uintptr_t sp,
+                                                          uintptr_t fp) {
+  // Check the consistency between ngunwind's stack and SCS. Print both if they mismatch.
+  std::vector<Frame> stack = unwind_from_ngunwind(process, thread, dso_list, pc, sp, fp);
+  std::vector<Frame> scs = unwind_from_shadow_call_stack(process, thread);
 
-extern "C" __EXPORT void inspector_print_backtrace(FILE* f, zx_handle_t process, zx_handle_t thread,
-                                                   inspector_dsoinfo_t* dso_list, uintptr_t pc,
-                                                   uintptr_t sp, uintptr_t fp, bool use_libunwind) {
-  inspector_print_backtrace_impl(f, process, thread, dso_list, pc, sp, fp, use_libunwind, false);
+  // The SCS should be a subsequence of the real stack, because some functions may have SCS disabled
+  // and we might drop one frame for recursive functions (see unwind_from_shadow_call_stack above).
+  auto scs_it = scs.begin();
+  for (auto& frame : stack) {
+    if (scs_it != scs.end() && scs_it->pc == frame.pc) {
+      scs_it++;
+    }
+  }
+
+  if (scs_it != scs.end()) {
+    print_stack(f, scs);
+    fprintf(
+        f,
+        "warning: the backtrace above is from the shadow call stack because the backtrace from "
+        "metadata-based unwinding is incomplete or corrupted. Here's the original backtrace:\n");
+  }
+
+  print_stack(f, stack);
 }
 
 }  // namespace inspector

@@ -124,7 +124,7 @@ void dump_thread(zx_handle_t process, inspector_dsoinfo_t* dso_list, uint64_t ti
   fprintf(out, "bottom of user stack:\n");
   dump_memory(process, sp, kMemoryDumpSize, out);
 
-  inspector_print_backtrace_markup(out, process, thread, dso_list, pc, sp, fp, true);
+  inspector_print_backtrace_markup(out, process, thread, dso_list, pc, sp, fp);
 
   if (verbosity_level >= 1)
     fprintf(out, "Done handling thread %" PRIu64 ".%" PRIu64 ".\n", get_koid(process),

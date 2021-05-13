@@ -238,17 +238,12 @@ static void print_exception_report(FILE* out, const zx_exception_report_t& repor
 
 __EXPORT void inspector_print_stack_trace(FILE* out, zx_handle_t process, zx_handle_t thread,
                                           const zx_thread_state_general_regs* regs) {
-  // Whether to use libunwind or not.
-  // If not then we use a simple algorithm that assumes ABI-specific
-  // frame pointers are present.
-  const bool use_libunwind = true;
-
   inspector_dsoinfo_t* dso_list = inspector_dso_fetch_list(process);
   inspector_print_markup_context(out, process);
 
   inspector::decoded_registers decoded = inspector::decode_registers(regs);
   inspector_print_backtrace_markup(out, process, thread, dso_list, decoded.pc, decoded.sp,
-                                   decoded.fp, use_libunwind);
+                                   decoded.fp);
   inspector_dso_free_list(dso_list);
 }
 

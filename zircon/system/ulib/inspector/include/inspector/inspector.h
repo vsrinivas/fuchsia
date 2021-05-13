@@ -4,7 +4,8 @@
 
 // A suite of utilities for inspecting processes.
 
-#pragma once
+#ifndef INSPECTOR_INSPECTOR_H_
+#define INSPECTOR_INSPECTOR_H_
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -34,18 +35,10 @@ extern void inspector_set_verbosity(int level);
 // Print a backtrace of |thread| to |f|.
 // |thread| must currently be stopped: either suspended or in an exception.
 // The format of the output is verify specific: It outputs the format
-// documented at docs/zircon/symbolizer_markup.md
+// documented at //docs/reference/kernel/symbolizer_markup.md
 extern void inspector_print_backtrace_markup(FILE* f, zx_handle_t process, zx_handle_t thread,
                                              inspector_dsoinfo_t* dso_list, uintptr_t pc,
-                                             uintptr_t sp, uintptr_t fp, bool use_libunwind);
-
-// Print a backtrace of |thread| to |f|.
-// |thread| must currently be stopped: either suspended or in an exception.
-// The format of the output is verify specific: It is read by
-// zircon/scripts/symbolize in order to add source location to the output.
-extern void inspector_print_backtrace(FILE* f, zx_handle_t process, zx_handle_t thread,
-                                      inspector_dsoinfo_t* dso_list, uintptr_t pc, uintptr_t sp,
-                                      uintptr_t fp, bool use_libunwind);
+                                             uintptr_t sp, uintptr_t fp);
 
 // Fetch the list of the DSOs of |process|.
 // |name| is the name of the application binary.
@@ -103,3 +96,5 @@ void inspector_print_debug_info(FILE* out, zx_handle_t process, zx_handle_t thre
 void inspector_print_debug_info_for_all_threads(FILE* out, zx_handle_t process);
 
 __END_CDECLS
+
+#endif  // INSPECTOR_INSPECTOR_H_
