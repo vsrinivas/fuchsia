@@ -1383,10 +1383,9 @@ mod test {
             .await
             .unwrap());
 
-        assert_eq!(
-            t.task_manager.task_snapshot(crate::target::TargetTaskType::HostPipe),
-            ffx_daemon_core::task::TaskSnapshot::Running
-        );
+        while t.task_manager.task_snapshot(crate::target::TargetTaskType::HostPipe)
+            != ffx_daemon_core::task::TaskSnapshot::Running
+        {}
 
         // TODO(awdavies): RCS, Fastboot, etc. events.
     }
