@@ -33,18 +33,18 @@ to do something other than the above. In this case, there are a few well
 supported methods:
 
 * Always execute `$FUCHSIA_DIR/scripts/fx` explicitly
-* Use a tool like [dotenv](https://www.npmjs.com/package/dotenv){:.external} to add
+* Use a tool like [direnv](https://direnv.net/){:.external} or
+  [dotenv](https://www.npmjs.com/package/dotenv){:.external} to add
   `$FUCHSIA_DIR/.jiri_root/bin` to your `$PATH` while working in a particular
   Fuchsia directory.
 
 Caution: It is not recommended (though presently works) to copy `fx` to other places,
 such as `~/bin/fx` (as this could one day break), or to add
-`$FUCHSIA_DIR/scripts` to your `$PATH` (as reviewers of code in `//scripts`)
+`$FUCHSIA_DIR/scripts` to your `$PATH`. Reviewers of code in `//scripts`
 do not block the addition of files in that directory, which could lead to
 unpredictable behaviors (for example, that directory contains binaries with
 generic names like "bootstrap" which may unintentionally override the
 behavior of other systems).
-cco
 
 ## Common daily tools {#common-daily-tools}
 
