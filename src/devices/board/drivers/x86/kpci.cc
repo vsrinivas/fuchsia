@@ -545,8 +545,7 @@ zx_protocol_device_t acpi_device_proto = [] {
 
 // This pci_init initializes the kernel pci driver and is not compiled in at the same time as the
 // userspace pci driver under development.
-zx_status_t pci_init(zx_device_t* sysdev, zx_device_t* platform_bus, ACPI_HANDLE object,
-                     ACPI_DEVICE_INFO* info) {
+zx_status_t pci_init(zx_device_t* platform_bus, ACPI_HANDLE object, ACPI_DEVICE_INFO* info) {
   // Report current resources to kernel PCI driver
   // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   zx_status_t status = pci_report_current_resources(get_root_resource());
@@ -572,12 +571,12 @@ zx_status_t pci_init(zx_device_t* sysdev, zx_device_t* platform_bus, ACPI_HANDLE
 
   free(arg);
 
-  // Publish PCI root as /dev/sys/ level.
+  // Publish PCI root as /dev/sys/platform/ level.
   // Only publish one PCI root device for all PCI roots
   // TODO: store context for PCI root protocol
   std::array<zx_device_prop_t, 4> props;
   auto args = get_device_add_args("pci", info, &props);
-  auto device = std::make_unique<acpi::Device>(sysdev, object, platform_bus);
+  auto device = std::make_unique<acpi::Device>(platform_bus, object, platform_bus);
 
   args.version = DEVICE_ADD_ARGS_VERSION;
   args.ctx = device.get();
@@ -588,13 +587,14 @@ zx_status_t pci_init(zx_device_t* sysdev, zx_device_t* platform_bus, ACPI_HANDLE
   args.proto_id = ZX_PROTOCOL_PCIROOT;
   args.proto_ops = get_pciroot_ops();
 
-  if (zx_status_t status = device_add(sysdev, &args, device->mutable_zxdev()); status != ZX_OK) {
-    zxlogf(ERROR, "acpi: error %d in device_add, parent=%s(%p)", status, device_get_name(sysdev),
-           sysdev);
+  if (zx_status_t status = device_add(platform_bus, &args, device->mutable_zxdev());
+      status != ZX_OK) {
+    zxlogf(ERROR, "acpi: error %d in device_add, parent=%s(%p)", status,
+           device_get_name(platform_bus), platform_bus);
     return status;
   } else {
     zxlogf(INFO, "acpi: published device %s(%p), parent=%s(%p), handle=%p", args.name, device.get(),
-           device_get_name(sysdev), sysdev, device->acpi_handle());
+           device_get_name(platform_bus), platform_bus, device->acpi_handle());
     // device_add takes ownership of args.ctx, but only on success.
     device.release();
   }

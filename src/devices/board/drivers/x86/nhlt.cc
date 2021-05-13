@@ -7,12 +7,11 @@
 #include <inttypes.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/zircon-internal/align.h>
 #include <limits.h>
 #include <stdio.h>
 #include <zircon/process.h>
-
-#include <lib/ddk/metadata.h>
 
 #include "acpi-private.h"
 #include "errors.h"
@@ -128,10 +127,10 @@ zx_status_t nhlt_publish_metadata(zx_device_t* dev, uint8_t bbn, uint64_t adr, A
   void* nhlt = (void*)(vaddr + page_offset);
 
   // Publish the NHLT as metadata on the future PCI device node...
-  // The canonical path to the PCI device is /dev/sys/pci/<b:d.f>
+  // The canonical path to the PCI device is /dev/sys/platform/pci/<b:d.f>
   char path[PATH_MAX];
-  snprintf(path, sizeof(path), "/dev/sys/pci/%02x:%02x.%01x", bbn, (unsigned)((adr >> 16) & 0xFFFF),
-           (unsigned)(adr & 0xFFFF));
+  snprintf(path, sizeof(path), "/dev/sys/platform/pci/%02x:%02x.%01x", bbn,
+           (unsigned)((adr >> 16) & 0xFFFF), (unsigned)(adr & 0xFFFF));
   status = device_publish_metadata(dev, path, DEVICE_METADATA_ACPI_HDA_NHLT, nhlt, size);
   if (status != ZX_OK) {
     zxlogf(ERROR, "acpi: failed to publish NHLT metadata (res %d)", status);

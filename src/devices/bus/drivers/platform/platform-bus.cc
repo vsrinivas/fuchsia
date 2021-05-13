@@ -97,17 +97,8 @@ zx_status_t PlatformBus::PBusDeviceAdd(const pbus_dev_t* pdev) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  zx_device_t* parent_dev;
-  if (pdev->vid == PDEV_VID_GENERIC && pdev->pid == PDEV_PID_GENERIC &&
-      pdev->did == PDEV_DID_KPCI) {
-    // Add PCI root at top level.
-    parent_dev = parent();
-  } else {
-    parent_dev = zxdev();
-  }
-
   std::unique_ptr<platform_bus::PlatformDevice> dev;
-  auto status = PlatformDevice::Create(pdev, parent_dev, this, PlatformDevice::Isolated, &dev);
+  auto status = PlatformDevice::Create(pdev, zxdev(), this, PlatformDevice::Isolated, &dev);
   if (status != ZX_OK) {
     return status;
   }

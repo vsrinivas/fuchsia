@@ -66,10 +66,10 @@ impl Config {
     // At the time of writing, typical topological paths appear similar to:
     //
     // PCI:
-    // "/dev/sys/pci/02:00.0/e1000/ethernet"
+    // "/dev/sys/platform/pci/02:00.0/e1000/ethernet"
     //
     // USB:
-    // "/dev/sys/pci/00:14.0/xhci/usb/007/ifc-000/<snip>/wlan/wlan-ethernet/ethernet"
+    // "/dev/sys/platform/pci/00:14.0/xhci/usb/007/ifc-000/<snip>/wlan/wlan-ethernet/ethernet"
     // 00:14:0 following "/pci/" represents BDF (Bus Device Function)
     //
     // SDIO
@@ -279,7 +279,7 @@ mod tests {
             // usb interfaces
             TestCase {
                 topological_path: String::from(
-                    "@/dev/sys/pci/00:14.0/xhci/usb/004/004/ifc-000/ax88179/ethernet",
+                    "@/dev/sys/platform/pci/00:14.0/xhci/usb/004/004/ifc-000/ax88179/ethernet",
                 ),
                 mac: [0x01, 0x01, 0x01, 0x01, 0x01, 0x01],
                 wlan: true,
@@ -287,7 +287,7 @@ mod tests {
             },
             TestCase {
                 topological_path: String::from(
-                    "@/dev/sys/pci/00:15.0/xhci/usb/004/004/ifc-000/ax88179/ethernet",
+                    "@/dev/sys/platform/pci/00:15.0/xhci/usb/004/004/ifc-000/ax88179/ethernet",
                 ),
                 mac: [0x02, 0x02, 0x02, 0x02, 0x02, 0x02],
                 wlan: false,
@@ -295,13 +295,13 @@ mod tests {
             },
             // pci intefaces
             TestCase {
-                topological_path: String::from("@/dev/sys/pci/00:14.0/ethernet"),
+                topological_path: String::from("@/dev/sys/platform/pci/00:14.0/ethernet"),
                 mac: [0x03, 0x03, 0x03, 0x03, 0x03, 0x03],
                 wlan: true,
                 want_name: "wlanp0014",
             },
             TestCase {
-                topological_path: String::from("@/dev/sys/pci/00:15.0/ethernet"),
+                topological_path: String::from("@/dev/sys/platform/pci/00:15.0/ethernet"),
                 mac: [0x04, 0x04, 0x04, 0x04, 0x04, 0x04],
                 wlan: false,
                 want_name: "ethp0015",
@@ -351,7 +351,7 @@ mod tests {
     #[test]
     fn test_get_stable_name() {
         let test1 = TestCase {
-            topological_path: String::from("@/dev/sys/pci/00:14.0/ethernet"),
+            topological_path: String::from("@/dev/sys/platform/pci/00:14.0/ethernet"),
             mac: [0x01, 0x01, 0x01, 0x01, 0x01, 0x01],
             wlan: true,
             want_name: "wlanp0014",
@@ -389,8 +389,9 @@ mod tests {
 
     #[test]
     fn test_get_usb_255() {
-        let topo_usb =
-            String::from("@/dev/sys/pci/00:14.0/xhci/usb/004/004/ifc-000/ax88179/ethernet");
+        let topo_usb = String::from(
+            "@/dev/sys/platform/pci/00:14.0/xhci/usb/004/004/ifc-000/ax88179/ethernet",
+        );
 
         // test cases for 256 usb interfaces
         let mut config = Config { names: vec![] };

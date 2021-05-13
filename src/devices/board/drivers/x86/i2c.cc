@@ -5,6 +5,7 @@
 #include "i2c.h"
 
 #include <lib/ddk/debug.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <stdio.h>
 #include <zircon/hw/i2c.h>
@@ -13,7 +14,6 @@
 #include <vector>
 
 #include <acpica/acpi.h>
-#include <lib/ddk/metadata.h>
 
 #include "acpi-private.h"
 #include "dev.h"
@@ -173,10 +173,11 @@ zx_status_t I2cBusPublishMetadata(zx_device_t* dev, uint8_t pci_bus_num, uint64_
   }
 
   // Publish the I2C device details as metadata on the future PCI device node.
-  // The canonical path to the PCI device is /dev/sys/pci/<b:d.f>
+  // The canonical path to the PCI device is /dev/sys/platform/pci/<b:d.f>
   char path[PATH_MAX];
-  snprintf(path, sizeof(path), "/dev/sys/pci/%02x:%02x.%01x", static_cast<uint32_t>(pci_bus_num),
-           static_cast<uint32_t>((adr >> 16) & 0xFFFF), static_cast<uint32_t>(adr & 0xFFFF));
+  snprintf(path, sizeof(path), "/dev/sys/platform/pci/%02x:%02x.%01x",
+           static_cast<uint32_t>(pci_bus_num), static_cast<uint32_t>((adr >> 16) & 0xFFFF),
+           static_cast<uint32_t>(adr & 0xFFFF));
 
   zx_status_t status =
       device_publish_metadata(dev, path, DEVICE_METADATA_ACPI_I2C_DEVICES, found_devices.data(),

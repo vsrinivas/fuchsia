@@ -32,7 +32,7 @@ class TemporaryFvmPartition {
   // Create a new partition.
   //
   // |fvm_path| should be the path to an FVM instance, such as
-  // "/dev/sys/pci/00:00.0/ahci/sata0/block/fvm".
+  // "/dev/sys/platform/pci/00:00.0/ahci/sata0/block/fvm".
   //
   // |bytes_requested| is the maximum number of bytes callers will be able to use on the partition.
   // The returned partition may have greater than the requested number of bytes due to rounding and

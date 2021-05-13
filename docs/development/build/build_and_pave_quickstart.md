@@ -100,7 +100,7 @@ To perform an initial build and deploy of Fuchsia with `fx`, do the following:
     ```
 
 1.  Take note of the HDD or SSD's device path from the output of `lsblk`. An
-    example path looks like `/dev/sys/pci/00:17.0/ahci/sata0/block`.
+    example path looks like `/dev/sys/platform/pci/00:17.0/ahci/sata0/block`.
 
 1.  On your target device, run:
 

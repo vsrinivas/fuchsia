@@ -154,7 +154,7 @@ TEST_F(DeviceEnumerationTest, QemuArm64Test) {
   static const char* kDevicePaths[] = {
       "sys/platform/qemu-bus",
       "sys/platform/00:00:6/rtc",
-      "sys/pci/00:00.0",
+      "sys/platform/pci/00:00.0",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
@@ -580,13 +580,15 @@ TEST_F(DeviceEnumerationTest, LuisTest) {
 
 TEST_F(DeviceEnumerationTest, EveTest) {
   static const char* kDevicePaths[] = {
-      "sys/pci/00:1f.3/intel-hda-000/output-stream-001",     // Controller headphones/speakers.
-      "sys/pci/00:1f.3/intel-hda-000/output-stream-003",     // Controller headphones/speakers.
-      "sys/pci/00:1f.3/intel-hda-000/input-stream-002",      // Controller mics.
-      "sys/pci/00:19.2/i2c-bus-9d64/i2c/i2c-0-57/max98927",  // Codec left speaker.
-      "sys/pci/00:19.2/i2c-bus-9d64/i2c/i2c-0-58/max98927",  // Codec right speaker.
-      "sys/pci/00:19.2/i2c-bus-9d64/i2c/i2c-0-19/alc5663",   // Codec headphones.
-      "sys/pci/00:19.2/i2c-bus-9d64/i2c/i2c-0-87/alc5514",   // Codec mics.
+      "sys/platform/pci/00:1f.3/intel-hda-000/output-stream-001",     // Controller
+                                                                      // headphones/speakers.
+      "sys/platform/pci/00:1f.3/intel-hda-000/output-stream-003",     // Controller
+                                                                      // headphones/speakers.
+      "sys/platform/pci/00:1f.3/intel-hda-000/input-stream-002",      // Controller mics.
+      "sys/platform/pci/00:19.2/i2c-bus-9d64/i2c/i2c-0-57/max98927",  // Codec left speaker.
+      "sys/platform/pci/00:19.2/i2c-bus-9d64/i2c/i2c-0-58/max98927",  // Codec right speaker.
+      "sys/platform/pci/00:19.2/i2c-bus-9d64/i2c/i2c-0-19/alc5663",   // Codec headphones.
+      "sys/platform/pci/00:19.2/i2c-bus-9d64/i2c/i2c-0-87/alc5514",   // Codec mics.
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
@@ -763,17 +765,17 @@ TEST_F(DeviceEnumerationTest, VisaliaTest) {
 
 TEST_F(DeviceEnumerationTest, NocturneTest) {
   static const char* kDevicePaths[] = {
-      "sys/pci/00:1f.3/intel-hda-000/input-stream-002",
-      "sys/pci/00:1f.3/intel-hda-000/output-stream-001",
-      "sys/pci/00:02.0/intel_i915/intel-gpu-core/msd-intel-gen",
-      "sys/pci/00:02.0/intel_i915/display-controller",
+      "sys/platform/pci/00:1f.3/intel-hda-000/input-stream-002",
+      "sys/platform/pci/00:1f.3/intel-hda-000/output-stream-001",
+      "sys/platform/pci/00:02.0/intel_i915/intel-gpu-core/msd-intel-gen",
+      "sys/platform/pci/00:02.0/intel_i915/display-controller",
       "sys/platform/acpi/TSR0",
       "sys/platform/acpi/TSR1",
       "sys/platform/acpi/TSR2",
       "sys/platform/acpi/TSR3",
       "sys/platform/acpi/acpi-lid/hid-device-000",
       "sys/platform/acpi/acpi-pwrbtn/hid-device-000",
-      "sys/pci/00:15.0/i2c-bus-9d60/000a/i2c-hid/hid-device-000",
+      "sys/platform/pci/00:15.0/i2c-bus-9d60/000a/i2c-hid/hid-device-000",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
@@ -806,8 +808,8 @@ TEST_F(DeviceEnumerationTest, QemuX64Q35Test) {
   static const char* kDevicePaths[] = {
       "class/sysmem/000",
 
-      "sys/pci/00:00.0",
-      "sys/pci/00:1f.2/ahci",
+      "sys/platform/pci/00:00.0",
+      "sys/platform/pci/00:1f.2/ahci",
 
       "sys/platform/acpi",
       "sys/platform/acpi/acpi-pwrbtn",
@@ -823,9 +825,9 @@ TEST_F(DeviceEnumerationTest, QemuX64Q35Test) {
   printf("INFO: AEMU board detected. Test enumerating AEMU-specific devices.\n");
 
   static const char* kAemuDevicePaths[] = {
-      "sys/pci/00:01.0/virtio-input",
-      "sys/pci/00:02.0/virtio-input",
-      "sys/pci/00:0b.0/goldfish-address-space",
+      "sys/platform/pci/00:01.0/virtio-input",
+      "sys/platform/pci/00:02.0/virtio-input",
+      "sys/platform/pci/00:0b.0/goldfish-address-space",
 
       "sys/platform/acpi/goldfish",
       "sys/platform/acpi/goldfish/goldfish-pipe",

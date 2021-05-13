@@ -11,7 +11,7 @@ use std::path::PathBuf;
 use std::vec;
 use structopt::StructOpt;
 
-const PCI_DIR: &str = "/dev/sys/pci/";
+const PCI_DIR: &str = "/dev/sys/platform/pci/";
 
 #[derive(StructOpt, Debug)]
 struct Config {

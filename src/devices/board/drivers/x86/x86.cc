@@ -49,7 +49,7 @@ int X86::Thread() {
     return status;
   }
 
-  status = publish_acpi_devices(parent(), sys_root_, zxdev());
+  status = publish_acpi_devices(parent(), zxdev());
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: publish_acpi_devices() failed: %d", __func__, status);
     return status;
@@ -90,19 +90,8 @@ zx_status_t X86::Create(void* ctx, zx_device_t* parent, std::unique_ptr<X86>* ou
     return status;
   }
 
-  // TODO(fxbug.dev/34631): Remove this use of device_get_parent().  For now, suppress this
-  // deprecation warning to not spam the build logs
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-  zx_device_t* sys_root = device_get_parent(parent);
-#pragma GCC diagnostic pop
-  if (sys_root == NULL) {
-    zxlogf(ERROR, "%s: failed to find parent node of platform (expected sys)", __func__);
-    return ZX_ERR_INTERNAL;
-  }
-
   fbl::AllocChecker ac;
-  *out = fbl::make_unique_checked<X86>(&ac, parent, &pbus, sys_root);
+  *out = fbl::make_unique_checked<X86>(&ac, parent, &pbus);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }

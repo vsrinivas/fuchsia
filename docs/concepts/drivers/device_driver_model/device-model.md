@@ -70,4 +70,4 @@ A new driver host (pid 2052) is created, set up with a proxy device for PCI 00:0
 and the intel ethernet driver is loaded and bound to it.
 
 Proxy devices are invisible within the Device filesystem, so this ethernet device
-appears as `/dev/sys/pci/00:02:00/e1000`.
+appears as `/dev/sys/platform/pci/00:02:00/e1000`.

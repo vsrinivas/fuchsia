@@ -87,14 +87,14 @@ kernel partitions is an extension of that device.
 
         $ lsblk
         ID  SIZE TYPE             LABEL                FLAGS  DEVICE
-        000 232G                                              /dev/sys/pci/00:1e.4/pci-sdhci/sdhci/sdmmc/block
-        001   5G data             STATE                       /dev/sys/pci/00:1e.4/pci-sdhci/sdhci/sdmmc/block/part-000/block
-        002  16M cros kernel      KERN-A                      /dev/sys/pci/00:1e.4/pci-sdhci/sdhci/sdmmc/block/part-001/block
-        003   4G cros rootfs      ROOT-A                      /dev/sys/pci/00:1e.4/pci-sdhci/sdhci/sdmmc/block/part-002/block
-        004  16M cros kernel      KERN-B                      /dev/sys/pci/00:1e.4/pci-sdhci/sdhci/sdmmc/block/part-003/block
-        005   4G cros rootfs      ROOT-B                      /dev/sys/pci/00:1e.4/pci-sdhci/sdhci/sdmmc/block/part-004/block
-        006  64M cros kernel      KERN-C                      /dev/sys/pci/00:1e.4/pci-sdhci/sdhci/sdmmc/block/part-005/block
-        007   4G cros rootfs      ROOT-C                      /dev/sys/pci/00:1e.4/pci-sdhci/sdhci/sdmmc/block/part-006/block
+        000 232G                                              /dev/sys/platform/pci/00:1e.4/pci-sdhci/sdhci/sdmmc/block
+        001   5G data             STATE                       /dev/sys/platform/pci/00:1e.4/pci-sdhci/sdhci/sdmmc/block/part-000/block
+        002  16M cros kernel      KERN-A                      /dev/sys/platform/pci/00:1e.4/pci-sdhci/sdhci/sdmmc/block/part-001/block
+        003   4G cros rootfs      ROOT-A                      /dev/sys/platform/pci/00:1e.4/pci-sdhci/sdhci/sdmmc/block/part-002/block
+        004  16M cros kernel      KERN-B                      /dev/sys/platform/pci/00:1e.4/pci-sdhci/sdhci/sdmmc/block/part-003/block
+        005   4G cros rootfs      ROOT-B                      /dev/sys/platform/pci/00:1e.4/pci-sdhci/sdhci/sdmmc/block/part-004/block
+        006  64M cros kernel      KERN-C                      /dev/sys/platform/pci/00:1e.4/pci-sdhci/sdhci/sdmmc/block/part-005/block
+        007   4G cros rootfs      ROOT-C                      /dev/sys/platform/pci/00:1e.4/pci-sdhci/sdhci/sdmmc/block/part-006/block
 4. Use the `gpt` command to look at the device's (eg. 000) partition map.
 
         $ gpt dump /dev/class/block/000

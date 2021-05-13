@@ -12,7 +12,7 @@
             "class/display-controller",
             "class/input",
             "class/input-report",
-            "sys/pci",
+            "sys/platform/pci",
             "sys/platform"
         ],
         "features": [

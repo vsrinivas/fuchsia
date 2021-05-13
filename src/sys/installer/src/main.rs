@@ -55,9 +55,9 @@ async fn block_device_get_info(
     let topo_path = maybe_path.ok_or(anyhow!("Failed to get topo path for device"))?;
 
     // partitions have paths like this:
-    // /dev/sys/pci/00:14.0/xhci/usb-bus/001/001/ifc-000/ums/lun-000/block/part-000/block
+    // /dev/sys/platform/pci/00:14.0/xhci/usb-bus/001/001/ifc-000/ums/lun-000/block/part-000/block
     // while disks are like this:
-    // /dev/sys/pci/00:17.0/ahci/sata2/block
+    // /dev/sys/platform/pci/00:17.0/ahci/sata2/block
     if topo_path.contains("/block/part-") {
         // This is probably a partition, skip it
         return Ok(None);
@@ -353,12 +353,13 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_get_info_basic() -> Result<(), Error> {
-        let chan = mock_block_device("/dev/sys/pci/00:17.0/ahci/sata2/block", 100, 512, true)?;
+        let chan =
+            mock_block_device("/dev/sys/platform/pci/00:17.0/ahci/sata2/block", 100, 512, true)?;
         let info = block_device_get_info(chan).await?;
         assert!(info.is_some());
 
         let (path, size) = info.unwrap();
-        assert_eq!(path, "/dev/sys/pci/00:17.0/ahci/sata2/block");
+        assert_eq!(path, "/dev/sys/platform/pci/00:17.0/ahci/sata2/block");
         assert_eq!(size, 100 * 512);
         Ok(())
     }
@@ -366,7 +367,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_get_info_weird_block_size() -> Result<(), Error> {
         let chan = mock_block_device(
-            "/dev/sys/pci/00:14.0/xhci/usb-bus/001/001/ifc-000/ums/lun-000/block",
+            "/dev/sys/platform/pci/00:14.0/xhci/usb-bus/001/001/ifc-000/ums/lun-000/block",
             1000,
             4,
             true,
@@ -375,15 +376,22 @@ mod tests {
         assert!(info.is_some());
 
         let (path, size) = info.unwrap();
-        assert_eq!(path, "/dev/sys/pci/00:14.0/xhci/usb-bus/001/001/ifc-000/ums/lun-000/block");
+        assert_eq!(
+            path,
+            "/dev/sys/platform/pci/00:14.0/xhci/usb-bus/001/001/ifc-000/ums/lun-000/block"
+        );
         assert_eq!(size, 1000 * 4);
         Ok(())
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_get_info_partitions() -> Result<(), Error> {
-        let chan =
-            mock_block_device("/dev/sys/pci/00:17.0/ahci/sata2/block/part-000/block", 0, 0, false)?;
+        let chan = mock_block_device(
+            "/dev/sys/platform/pci/00:17.0/ahci/sata2/block/part-000/block",
+            0,
+            0,
+            false,
+        )?;
         let info = block_device_get_info(chan).await?;
         assert!(info.is_none());
         Ok(())
@@ -392,7 +400,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_get_info_usb_partitions() -> Result<(), Error> {
         let chan = mock_block_device(
-            "/dev/sys/pci/00:14.0/xhci/usb-bus/001/001/ifc-000/ums/lun-000/block/part-003/block",
+            "/dev/sys/platform/pci/00:14.0/xhci/usb-bus/001/001/ifc-000/ums/lun-000/block/part-003/block",
             0,
             0,
             false,

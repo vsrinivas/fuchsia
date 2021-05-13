@@ -27,8 +27,7 @@ using DeviceType = ddk::Device<X86, ddk::Messageable<fuchsia_hardware_acpi::Acpi
 // This is the main class for the X86 platform bus driver.
 class X86 : public DeviceType, public fidl::WireServer<fuchsia_hardware_acpi::Acpi> {
  public:
-  explicit X86(zx_device_t* parent, pbus_protocol_t* pbus, zx_device_t* sys_root)
-      : DeviceType(parent), pbus_(pbus), sys_root_(sys_root) {}
+  explicit X86(zx_device_t* parent, pbus_protocol_t* pbus) : DeviceType(parent), pbus_(pbus) {}
   ~X86();
 
   static zx_status_t Create(void* ctx, zx_device_t* parent, std::unique_ptr<X86>* out);
@@ -74,9 +73,6 @@ class X86 : public DeviceType, public fidl::WireServer<fuchsia_hardware_acpi::Ac
                                  va_list args) { zxlogvf_etc(severity, file, line, msg, args); }};
 
   ddk::PBusProtocolClient pbus_;
-
-  // This is our parents parent.
-  zx_device_t* sys_root_;
 
   thrd_t thread_;
 

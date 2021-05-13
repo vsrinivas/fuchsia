@@ -95,13 +95,13 @@ debug it against.
 There are two ways to specify the device:
 
  - Its path within /dev/class, e.g. `class/bt-transport/000`.
- - Its topological path, e.g. `sys/pci/00:14.0/xhci/usb-bus/003/003/ifc-000/bt_transport_usb`.
+ - Its topological path, e.g. `sys/platform/pci/00:14.0/xhci/usb-bus/003/003/ifc-000/bt_transport_usb`.
 
 Both of the paths are relative to /dev/.
 
 The topological path can be determined from the ouptut of `dm dump`. For example,
 tracing the path to the node `[bt_transport_usb]` in the output below gives the
-topological path `sys/pci/00:14.0/xhci/usb-bus/003/003/ifc-000/bt_transport_usb`.
+topological path `sys/platform/pci/00:14.0/xhci/usb-bus/003/003/ifc-000/bt_transport_usb`.
 
 ```
 [root]

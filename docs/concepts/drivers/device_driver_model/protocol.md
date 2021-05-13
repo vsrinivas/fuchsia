@@ -30,7 +30,7 @@ be achieved otherwise.
 
 Classes represent a promise that a device implements an Interface or Protocol.
 Devices exist in the Device Filesystem under a topological path, like
-`/sys/pci/00:02:00/e1000`. If they are a specific class, they also appear
+`/sys/platform/pci/00:02:00/e1000`. If they are a specific class, they also appear
 as an alias under `/dev/class/CLASSNAME/...`. The `e1000` driver implements
 the Ethermac interface, so it also shows up at `/dev/class/ethermac/000`. The names
 within class directories are unique but not meaningful, and are assigned on demand.

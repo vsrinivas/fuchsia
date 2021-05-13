@@ -412,8 +412,7 @@ zx_status_t pci_root_host_init() {
   return ZX_OK;
 }
 
-zx_status_t pci_init(zx_device_t* sys_root, zx_device_t* parent, ACPI_HANDLE object,
-                     ACPI_DEVICE_INFO* info) {
+zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* info) {
   zx_status_t status = pci_root_host_init();
   if (status != ZX_OK) {
     zxlogf(ERROR, "Error initializing PCI root host, attempting to boot regardless: %d", status);

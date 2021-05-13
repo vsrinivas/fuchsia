@@ -2714,7 +2714,9 @@ mod tests {
         test_config.device_config = Some(build_full_config());
 
         assert_eq!(
-            test_config.get_interface_by_device_id("/dev/sys/pci/test_wan_up_id/ethernet").unwrap(),
+            test_config
+                .get_interface_by_device_id("/dev/sys/platform/pci/test_wan_up_id/ethernet")
+                .unwrap(),
             &build_full_config().device.interfaces.unwrap()[1].interface
         );
 
@@ -2729,9 +2731,11 @@ mod tests {
         let mut test_config = create_test_config_no_paths();
         test_config.device_config = Some(build_full_config());
 
-        assert!(test_config.device_id_is_an_uplink("/dev/sys/pci/test_wan_up_id/ethernet"),);
+        assert!(
+            test_config.device_id_is_an_uplink("/dev/sys/platform/pci/test_wan_up_id/ethernet"),
+        );
         assert_eq!(
-            test_config.device_id_is_an_uplink("/dev/sys/pci/test_lan_up_id/ethernet"),
+            test_config.device_id_is_an_uplink("/dev/sys/platform/pci/test_lan_up_id/ethernet"),
             false
         );
         assert!(test_config.device_id_is_an_uplink("does_not_exist"));
@@ -2743,11 +2747,11 @@ mod tests {
         test_config.device_config = Some(build_full_config());
 
         assert_eq!(
-            test_config.device_id_is_a_downlink("/dev/sys/pci/test_lan_up_id/ethernet"),
+            test_config.device_id_is_a_downlink("/dev/sys/platform/pci/test_lan_up_id/ethernet"),
             true
         );
         assert_eq!(
-            test_config.device_id_is_a_downlink("/dev/sys/pci/test_wan_up_id/ethernet"),
+            test_config.device_id_is_a_downlink("/dev/sys/platform/pci/test_wan_up_id/ethernet"),
             false
         );
         assert_eq!(test_config.device_id_is_a_downlink("does_not_exist"), false);

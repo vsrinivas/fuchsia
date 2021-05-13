@@ -17,7 +17,7 @@ struct Opt {
     driver_path: String,
 
     /// The path of the device to debug, relative to the /dev directory.
-    /// E.g. "sys/pci/00:1f.6" or "class/usb-device/000"
+    /// E.g. "sys/platform/pci/00:1f.6" or "class/usb-device/000"
     device_path: String,
 
     /// Print out the device properties.
