@@ -487,8 +487,10 @@ struct iwl_mvm_vif {
   // Merged from 'struct ieee80211_vif'
   bool ht_enabled;
   struct {
-    uint8_t dtim_period;  // Number of beacons. In most cases, it is 3.
-    uint16_t beacon_int;  // In time unit. In most cases, it is 100.
+    uint8_t dtim_period;       // Number of beacons. In most cases, it is 3.
+    uint16_t beacon_int;       // In time unit. In most cases, it is 100.
+    uint16_t listen_interval;  // In time unit. Indicates how often the STA needs to wake up to
+                               // listen beacon. 0 means never enter power saving mode.
     uint8_t bssid[ETH_ALEN];
     wlan_channel_t chandef;
 
@@ -497,6 +499,7 @@ struct iwl_mvm_vif {
     bool use_short_preamble;
     bool use_short_slot;
     bool ht_operation_mode;
+    bool assoc;  // true if the interface is associated.
   } bss_conf;
 };
 

@@ -27,6 +27,8 @@ extern "C" {
 namespace wlan::testing {
 namespace {
 
+static constexpr size_t kListenInterval = 100;
+
 typedef mock_function::MockFunction<void, void*, uint32_t, const void*, size_t,
                                     const wlan_rx_info_t*>
     recv_cb_t;
@@ -60,7 +62,7 @@ class WlanDeviceTest : public SingleApTest {
             .mac_role = WLAN_INFO_MAC_ROLE_CLIENT,
             .bss_conf =
                 {
-                    .beacon_int = 100,
+                    .beacon_int = kListenInterval,
                 },
         } {}
   ~WlanDeviceTest() {}
@@ -589,6 +591,11 @@ class MacInterfaceTest : public WlanDeviceTest, public MockTrans {
     return wlanmac_ops.configure_bss(&mvmvif_sta_, option, config);
   }
 
+  zx_status_t ConfigureAssoc(const wlan_assoc_ctx_t* config) {
+    uint32_t option = 0;
+    return wlanmac_ops.configure_assoc(&mvmvif_sta_, option, config);
+  }
+
   // The following functions are for mocking up the firmware commands.
   //
   // The mock function will return the special error ZX_ERR_INTERNAL when the expectation
@@ -663,6 +670,9 @@ class MacInterfaceTest : public WlanDeviceTest, public MockTrans {
       .bssid = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06},
       .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
       .remote = true,
+  };
+  static constexpr wlan_assoc_ctx_t kAssocCtx = {
+      .listen_interval = kListenInterval,
   };
 };
 
@@ -773,12 +783,32 @@ TEST_F(MacInterfaceTest, TestExceptionHandling) {
   ASSERT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
 }
 
-// The test is used to test the typical procedure to connect to an open network. Will be updated
-// in the following CLs.
+// The test is used to test the typical procedure to connect to an open network.
 //
 TEST_F(MacInterfaceTest, AssociateToOpenNetwork) {
   ASSERT_EQ(ZX_OK, SetChannel(&kChannel));
   ASSERT_EQ(ZX_OK, ConfigureBss(&kBssConfig));
+  struct iwl_mvm_sta* mvm_sta = mvmvif_sta_.mvm->fw_id_to_mac_id[mvmvif_sta_.ap_sta_id];
+  ASSERT_EQ(IWL_STA_NONE, mvm_sta->sta_state);
+
+  ASSERT_EQ(ZX_OK, ConfigureAssoc(&kAssocCtx));
+  ASSERT_EQ(IWL_STA_ASSOC, mvm_sta->sta_state);
+  ASSERT_EQ(true, mvmvif_sta_.bss_conf.assoc);
+  ASSERT_EQ(kListenInterval, mvmvif_sta_.bss_conf.listen_interval);
+}
+
+TEST_F(MacInterfaceTest, AssociateToOpenNetworkNullStation) {
+  SetChannel(&kChannel);
+  ConfigureBss(&kBssConfig);
+
+  // Replace the STA pointer with NULL and expect the association will fail.
+  auto org = mvmvif_sta_.mvm->fw_id_to_mac_id[mvmvif_sta_.ap_sta_id];
+  mvmvif_sta_.mvm->fw_id_to_mac_id[mvmvif_sta_.ap_sta_id] = nullptr;
+
+  ASSERT_EQ(ZX_ERR_BAD_STATE, ConfigureAssoc(&kAssocCtx));
+
+  // We have to recover the pointer so that the MAC stop function can recycle the memory.
+  mvmvif_sta_.mvm->fw_id_to_mac_id[mvmvif_sta_.ap_sta_id] = org;
 }
 
 TEST_F(MacInterfaceTest, TxPktNotSupportedRole) {

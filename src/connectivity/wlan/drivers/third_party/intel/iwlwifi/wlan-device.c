@@ -144,6 +144,7 @@ static struct iwl_mvm_sta* alloc_ap_mvm_sta(const uint8_t bssid[]) {
     mvm_sta->txq[i] = calloc(1, sizeof(struct iwl_mvm_txq));
   }
   memcpy(mvm_sta->addr, bssid, ETH_ALEN);
+  mtx_init(&mvm_sta->lock, mtx_plain);
 
   return mvm_sta;
 }
@@ -299,6 +300,7 @@ zx_status_t mac_set_channel(void* ctx, uint32_t options, const wlan_channel_t* c
 
 zx_status_t mac_configure_bss(void* ctx, uint32_t options, const wlan_bss_config_t* config) {
   struct iwl_mvm_vif* mvmvif = ctx;
+  zx_status_t ret = ZX_OK;
 
   IWL_INFO(mvmvif, "mac_configure_bss(bssid=%02x:%02x:%02x:%02x:%02x:%02x, type=%d, remote=%d)\n",
            config->bssid[0], config->bssid[1], config->bssid[2], config->bssid[3], config->bssid[4],
@@ -322,7 +324,8 @@ zx_status_t mac_configure_bss(void* ctx, uint32_t options, const wlan_bss_config
     return ZX_ERR_NO_RESOURCES;
   }
 
-  zx_status_t ret = iwl_mvm_mac_sta_state(mvmvif, mvm_sta, IWL_STA_NOTEXIST, IWL_STA_NONE);
+  // mvm_sta ownership is transfered to mvm->fw_id_to_mac_id[] in iwl_mvm_add_sta().
+  ret = iwl_mvm_mac_sta_state(mvmvif, mvm_sta, IWL_STA_NOTEXIST, IWL_STA_NONE);
   if (ret != ZX_OK) {
     IWL_ERR(mvmvif, "cannot set MVM STA state: %s\n", zx_status_get_string(ret));
     goto exit;
@@ -381,14 +384,58 @@ zx_status_t mac_set_key(void* ctx, uint32_t options, const wlan_key_config_t* ke
   return ZX_ERR_NOT_SUPPORTED;
 }
 
+// Set the association result to the firmware.
+//
+// The current mac context is set by mac_configure_bss() with default values.
+//   TODO(fxbug.dev/36683): supports HT (802.11n)
+//   TODO(fxbug.dev/36684): supports VHT (802.11ac)
+//
 zx_status_t mac_configure_assoc(void* ctx, uint32_t options, const wlan_assoc_ctx_t* assoc_ctx) {
-  IWL_ERR(ctx, "%s() needs porting ... see fxbug.dev/36742\n", __func__);
-  return ZX_ERR_NOT_SUPPORTED;
+  struct iwl_mvm_vif* mvmvif = ctx;
+  zx_status_t ret = ZX_OK;
+
+  struct iwl_mvm_sta* mvm_sta = mvmvif->mvm->fw_id_to_mac_id[mvmvif->ap_sta_id];
+  if (!mvm_sta) {
+    IWL_ERR(mvmvif, "sta info is not set before association.\n");
+    ret = ZX_ERR_BAD_STATE;
+    goto out;
+  }
+
+  // Below are to simulate the behavior of iwl_mvm_bss_info_changed_station().
+  ret = iwl_mvm_mac_sta_state(mvmvif, mvm_sta, IWL_STA_NONE, IWL_STA_AUTH);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvmvif, "cannot set state from NONE to AUTH: %s\n", zx_status_get_string(ret));
+    goto out;
+  }
+  ret = iwl_mvm_mac_sta_state(mvmvif, mvm_sta, IWL_STA_AUTH, IWL_STA_ASSOC);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvmvif, "cannot set state from AUTH to ASSOC: %s\n", zx_status_get_string(ret));
+    goto out;
+  }
+
+  // Tell firmware to pass multicast packets to driver.
+  iwl_mvm_configure_filter(mvmvif->mvm);
+
+  mtx_lock(&mvmvif->mvm->mutex);
+
+  // Update the MAC context in the firmware.
+  mvmvif->bss_conf.assoc = true;
+  mvmvif->bss_conf.listen_interval = assoc_ctx->listen_interval;
+  ret = iwl_mvm_mac_ctxt_changed(mvmvif, false, NULL);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvmvif, "cannot update MAC context in the firmware: %s\n", zx_status_get_string(ret));
+    goto unlock;
+  }
+
+unlock:
+  mtx_unlock(&mvmvif->mvm->mutex);
+out:
+  return ret;
 }
 
 zx_status_t mac_clear_assoc(void* ctx, uint32_t options, const uint8_t* peer_addr,
                             size_t peer_addr_size) {
-  IWL_ERR(ctx, "%s() needs porting ... see fxbug.dev/36742\n", __func__);
+  IWL_ERR(ctx, "%s() needs porting ... see TODO(fxbug.dev/36742)\n", __func__);
   return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -571,14 +618,21 @@ zx_status_t phy_start_iface(void* ctx, zx_device_t* zxdev, uint16_t idx) {
       // instance, it will be released in mac_release().
       // TODO: It does not look clean to have unbind happen here.
       iwl_mvm_unbind_mvmvif(mvm, idx);
+
+      goto unlock;
     }
+
+    // Once MVM is started, copy the MAC address to mvmvif.
+    struct iwl_nvm_data* nvm_data = mvmvif->mvm->nvm_data;
+    memcpy(mvmvif->addr, nvm_data->hw_addr, ETH_ALEN);
   }
 
+unlock:
   mtx_unlock(&mvm->mutex);
   return ret;
 }
 
-// This function is unifies create and start of MAC interface.
+// This function unifies the create and start of MAC interface.
 // TODO (fxbug.dev/63618) - can be removed once we get rid of ops structure.
 zx_status_t phy_create_and_start_iface(void* ctx, const wlanphy_impl_create_iface_req_t* req,
                                        uint16_t* out_iface_id) {
