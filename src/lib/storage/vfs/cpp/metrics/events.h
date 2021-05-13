@@ -58,7 +58,7 @@ enum class Event : uint32_t {
   kFragmentationFreeFragments = 34,
 
   // This is an event used to identify last or invalid event.
-  kInvalidEvent = 32,
+  kInvalidEvent = 35,
 };
 
 enum class Component {
