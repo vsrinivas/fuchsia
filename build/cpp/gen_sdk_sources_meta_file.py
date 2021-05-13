@@ -17,11 +17,18 @@ def main():
         '--root', help='Root of the library in the SDK', required=True)
     parser.add_argument(
         '--deps', help='Path to metadata files of dependencies', nargs='*')
+    parser.add_argument(
+        '--dep_names', help='List of dependency names', nargs='*')
     parser.add_argument('--sources', help='List of library sources', nargs='*')
     parser.add_argument('--headers', help='List of public headers', nargs='+')
     parser.add_argument(
         '--include-dir', help='Path to the include directory', required=True)
     args = parser.parse_args()
+
+    if len(args.deps) != len(args.dep_names):
+        raise Exception(
+            'Length of deps %s != length of dep_names %s' %
+            (len(args.deps), len(args.dep_names)))
 
     metadata = {
         'type': 'cc_source_library',
@@ -36,7 +43,8 @@ def main():
     deps = []
     banjo_deps = []
     fidl_deps = []
-    for spec in args.deps:
+    banjo_deps = []
+    for idx, spec in enumerate(args.deps):
         with open(spec, 'r') as spec_file:
             data = json.load(spec_file)
         if not data:
@@ -45,10 +53,11 @@ def main():
         name = data['name']
         if type == 'cc_source_library' or type == 'cc_prebuilt_library':
             deps.append(name)
-        elif type == 'banjo_library':
-            banjo_deps.append(name)
         elif type == 'fidl_library':
-            fidl_deps.append(name)
+            if args.dep_names[idx].endswith('banjo_cpp'):
+                banjo_deps.append(name)
+            else:
+                fidl_deps.append(name)
         else:
             raise Exception('Unsupported dependency type: %s' % type)
     metadata['deps'] = sorted(set(deps))

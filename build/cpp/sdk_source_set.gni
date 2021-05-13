@@ -95,6 +95,7 @@ template("sdk_source_set") {
   sdk_metas = []
   sdk_deps = []
   all_deps = []
+  dep_names = []
   if (defined(invoker.deps)) {
     all_deps += invoker.deps
   }
@@ -109,6 +110,7 @@ template("sdk_source_set") {
     gen_dir = get_label_info(sdk_dep, "target_gen_dir")
     name = get_label_info(sdk_dep, "name")
     sdk_metas += [ rebase_path("$gen_dir/$name.meta.json") ]
+    dep_names += [ get_label_info(dep, "name") ]
   }
 
   # Sort headers vs. sources.
@@ -195,6 +197,7 @@ template("sdk_source_set") {
       "$file_base/include",
     ]
     args += [ "--deps" ] + sdk_metas
+    args += [ "--dep_names" ] + dep_names
     args += [ "--sources" ] + sdk_metadata_sources
     args += [ "--headers" ] + sdk_metadata_headers
 
