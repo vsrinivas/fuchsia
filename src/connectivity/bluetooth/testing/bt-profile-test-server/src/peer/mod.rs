@@ -68,7 +68,7 @@ pub struct MockPeer {
     id: PeerId,
 
     /// The nested environment for this peer. Used for the sandboxed launching of profiles.
-    env: NestedEnvironment,
+    env: Option<NestedEnvironment>,
 
     /// The PeerObserver relay for this peer. This is used to send updates about this peer.
     /// If not set, no updates will be relayed.
@@ -97,7 +97,7 @@ pub struct MockPeer {
 impl MockPeer {
     pub fn new(
         id: PeerId,
-        env: NestedEnvironment,
+        env: Option<NestedEnvironment>,
         observer: Option<bredr::PeerObserverProxy>,
     ) -> Self {
         // TODO(fxbug.dev/55462): If provided, take event stream of `observer` and listen for close.
@@ -118,8 +118,8 @@ impl MockPeer {
         self.id
     }
 
-    pub fn env(&self) -> &NestedEnvironment {
-        &self.env
+    pub fn env(&self) -> Option<&NestedEnvironment> {
+        self.env.as_ref()
     }
 
     /// Returns the set of active searches, identified by their Service Class ID.
@@ -167,8 +167,18 @@ impl MockPeer {
         let profile_url = launch_info.url;
 
         // Launch the component and grab the event stream.
-        let app =
-            client::launch(self.env.launcher(), profile_url.clone(), Some(launch_info.arguments))?;
+        let app = {
+            // if there is no launcher we might have been started as part of a v2
+            // profile server
+            let launcher = self
+                .env
+                .as_ref()
+                .ok_or_else(|| {
+                    format_err!("Failed to launch profile, no environment provided to mock peer")
+                })?
+                .launcher();
+            client::launch(launcher, profile_url.clone(), Some(launch_info.arguments))?
+        };
         let component_stream = app.controller().take_event_stream();
 
         let entry = self.launched_profiles.lazy_entry(&next_profile_handle);
@@ -540,7 +550,7 @@ mod tests {
         Ok((env, test_env_clone))
     }
 
-    /// Creates a MockPeer with the sandboxed NestedEnvironment.
+    /// (v1 only) Creates a MockPeer with the sandboxed NestedEnvironment.
     /// Returns the MockPeer, the relay for updates for the peer, and a TestEnvironment object
     /// to keep alive relevant state.
     fn create_mock_peer(
@@ -549,7 +559,7 @@ mod tests {
     {
         let (env, test_env) = setup_environment(id)?;
         let (proxy, stream) = create_proxy_and_stream::<bredr::PeerObserverMarker>().unwrap();
-        Ok((MockPeer::new(id, env, Some(proxy)), stream, test_env))
+        Ok((MockPeer::new(id, Some(env), Some(proxy)), stream, test_env))
     }
 
     /// Returns the launch information for the bt-a2dp component.

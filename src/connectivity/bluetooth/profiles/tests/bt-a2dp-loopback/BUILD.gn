@@ -8,6 +8,7 @@ import("//build/rust/rustc_binary.gni")
 rustc_binary("bin") {
   output_name = "bt_a2dp_loopback"
   source_root = "src/main.rs"
+  testonly = true
 
   deps = [
     "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",

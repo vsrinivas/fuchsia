@@ -4,19 +4,17 @@
 
 use {
     anyhow::{format_err, Error},
-    bt_profile_test_server_client::ProfileTestHarness,
+    bt_profile_test_server_client::v2::{PiconetMember, ProfileTestHarnessV2},
     fidl::encoding::Decodable,
     fidl_fuchsia_bluetooth_bredr as bredr, fuchsia_async as fasync,
-    fuchsia_bluetooth::types::PeerId,
     fuchsia_bluetooth::types::{Channel, Uuid},
     fuchsia_zircon as zx,
     futures::{stream::StreamExt, TryFutureExt},
     std::convert::TryInto,
 };
 
-/// AVRCP component URL.
-const AVRCP_URL: &str = fuchsia_component::fuchsia_single_component_package_url!("bt-avrcp");
-
+/// AVRCP component V2 URL.
+const AVRCP_URL_V2: &str = "fuchsia-pkg://fuchsia.com/bt-avrcp-integration-tests#meta/bt-avrcp.cm";
 /// Attribute ID for SDP Support Features.
 const SDP_SUPPORTED_FEATURES: u16 = 0x0311;
 
@@ -51,34 +49,23 @@ fn avrcp_controller_service_definition() -> bredr::ServiceDefinition {
 /// discovered by another peer in the mock piconet.
 #[fasync::run_singlethreaded(test)]
 async fn test_avrcp_target_service_advertisement() -> Result<(), Error> {
-    let test_harness = ProfileTestHarness::new().expect("Failed to create profile test harness");
+    let mut test_harness = ProfileTestHarnessV2::new().await;
+    let spec = test_harness.add_mock_piconet_member("mock-peer".to_string()).await?;
+    let profile_observer =
+        test_harness.add_profile("bt-avrcp-profile".to_string(), AVRCP_URL_V2.to_string()).await?;
+    let test_topology = test_harness.build().await?;
 
-    // Create MockPeer #1 to be driven by the test.
-    let id1 = PeerId(1);
-    let mock_peer1 = test_harness.register_peer(id1).await?;
+    let peer1 = PiconetMember::new_from_spec(spec, &test_topology)
+        .expect("failed to create piconet member from spec");
+    let mut results_requests = peer1.register_service_search(
+        bredr::ServiceClassProfileIdentifier::AvRemoteControlTarget,
+        vec![],
+    )?;
 
-    // Peer #1 adds a search for AVRCP Target in the piconet.
-    let mut results_requests = mock_peer1
-        .register_service_search(
-            bredr::ServiceClassProfileIdentifier::AvRemoteControlTarget,
-            vec![],
-        )
-        .await?;
-
-    // MockPeer #2 is the profile-under-test: AVRCP.
-    let id2 = PeerId(2);
-    let mock_peer2 = test_harness.register_peer(id2).await?;
-    let launch_info = bredr::LaunchInfo {
-        component_url: Some(AVRCP_URL.to_string()),
-        ..bredr::LaunchInfo::EMPTY
-    };
-    mock_peer2.launch_profile(launch_info).await.expect("launch profile should be ok");
-
-    // We expect Peer #1 to discover AVRCP's service advertisement.
     let service_found_fut = results_requests.select_next_some().map_err(|e| format_err!("{:?}", e));
     let bredr::SearchResultsRequest::ServiceFound { peer_id, responder, .. } =
         service_found_fut.await?;
-    assert_eq!(id2, peer_id.into());
+    assert_eq!(profile_observer.profile_id, peer_id.into());
     responder.send()?;
 
     Ok(())
@@ -88,31 +75,20 @@ async fn test_avrcp_target_service_advertisement() -> Result<(), Error> {
 /// discovered by another peer in the mock piconet.
 #[fasync::run_singlethreaded(test)]
 async fn test_avrcp_controller_service_advertisement() -> Result<(), Error> {
-    let test_harness = ProfileTestHarness::new().expect("Failed to create profile test harness");
+    let mut test_harness = ProfileTestHarnessV2::new().await;
+    let spec = test_harness.add_mock_piconet_member("mock-peer".to_string()).await?;
+    let profile_observer =
+        test_harness.add_profile("bt-avrcp-profile".to_string(), AVRCP_URL_V2.to_string()).await?;
+    let test_topology = test_harness.build().await?;
 
-    // Create MockPeer #1 to be driven by the test.
-    let id1 = PeerId(3);
-    let mock_peer1 = test_harness.register_peer(id1).await?;
-
-    // Peer #1 adds a search for AVRCP Controllers in the piconet.
-    let mut results_requests = mock_peer1
-        .register_service_search(bredr::ServiceClassProfileIdentifier::AvRemoteControl, vec![])
-        .await?;
-
-    // MockPeer #2 is the profile-under-test: AVRCP.
-    let id2 = PeerId(4);
-    let mock_peer2 = test_harness.register_peer(id2).await?;
-    let launch_info = bredr::LaunchInfo {
-        component_url: Some(AVRCP_URL.to_string()),
-        ..bredr::LaunchInfo::EMPTY
-    };
-    mock_peer2.launch_profile(launch_info).await.expect("launch profile should be ok");
-
-    // We expect Peer #1 to discover AVRCP's service advertisement.
+    let peer1 = PiconetMember::new_from_spec(spec, &test_topology)
+        .expect("failed to create piconet member from spec");
+    let mut results_requests = peer1
+        .register_service_search(bredr::ServiceClassProfileIdentifier::AvRemoteControl, vec![])?;
     let service_found_fut = results_requests.select_next_some().map_err(|e| format_err!("{:?}", e));
     let bredr::SearchResultsRequest::ServiceFound { peer_id, responder, .. } =
         service_found_fut.await?;
-    assert_eq!(id2, peer_id.into());
+    assert_eq!(profile_observer.profile_id, peer_id.into());
     responder.send()?;
 
     Ok(())
@@ -122,49 +98,38 @@ async fn test_avrcp_controller_service_advertisement() -> Result<(), Error> {
 /// providing it, and attempts to connect to the mock peer.
 #[fasync::run_singlethreaded(test)]
 async fn test_avrcp_search_and_connect() -> Result<(), Error> {
-    let test_harness = ProfileTestHarness::new().expect("Failed to create profile test harness");
+    let mut test_harness = ProfileTestHarnessV2::new().await;
+    let spec = test_harness.add_mock_piconet_member("mock-peer".to_string()).await?;
+    let mut profile_observer =
+        test_harness.add_profile("bt-avrcp-profile".to_string(), AVRCP_URL_V2.to_string()).await?;
+    let test_topology = test_harness.build().await?;
 
-    // MockPeer #1 is driven by the test.
-    let id1 = PeerId(4532);
-    let mut mock_peer1 = test_harness.register_peer(id1).await?;
+    let (peer1_id, peer1) = (
+        spec.id.0,
+        PiconetMember::new_from_spec(spec, &test_topology)
+            .expect("failed to create piconet member from spec"),
+    );
 
     // Peer #1 advertises an AVRCP CT service.
     let service_defs = vec![avrcp_controller_service_definition()];
-    let mut connect_requests = mock_peer1.register_service_advertisement(service_defs).await?;
+    let mut connect_requests = peer1
+        .register_service_advertisement(service_defs)
+        .expect("Mock peer failed to register service advertisement");
 
-    // MockPeer #2 is the profile-under-test: AVRCP.
-    let id2 = PeerId(923445);
-    let mut mock_peer2 = test_harness.register_peer(id2).await?;
-    let launch_info = bredr::LaunchInfo {
-        component_url: Some(AVRCP_URL.to_string()),
-        ..bredr::LaunchInfo::EMPTY
-    };
-    mock_peer2.launch_profile(launch_info).await.expect("launch profile should be ok");
-
-    // We expect AVRCP to discover Peer #1's service advertisement.
     if let bredr::PeerObserverRequest::ServiceFound { peer_id, responder, .. } =
-        mock_peer2.expect_observer_request().await?
+        profile_observer.expect_observer_request().await?
     {
-        assert_eq!(id1, peer_id.into());
+        assert_eq!(peer1_id, peer_id.value);
         responder.send()?;
     }
 
     // We then expect AVRCP to attempt to connect to Peer #1.
     let _channel = match connect_requests.select_next_some().await? {
         bredr::ConnectionReceiverRequest::Connected { peer_id, channel, .. } => {
-            assert_eq!(id2, peer_id.into());
+            assert_eq!(profile_observer.profile_id, peer_id.into());
             channel
         }
     };
-
-    // The observer of Peer #1 should be relayed of the connection attempt.
-    match mock_peer1.expect_observer_request().await? {
-        bredr::PeerObserverRequest::PeerConnected { peer_id, responder, .. } => {
-            assert_eq!(id2, peer_id.into());
-            responder.send()?;
-        }
-        x => return Err(format_err!("Expected PeerConnected but got: {:?}", x)),
-    }
     Ok(())
 }
 
@@ -173,38 +138,35 @@ async fn test_avrcp_search_and_connect() -> Result<(), Error> {
 /// sending/receiving data should be OK.
 #[fasync::run_singlethreaded(test)]
 async fn test_remote_initiates_connection_to_avrcp() -> Result<(), Error> {
-    let test_harness = ProfileTestHarness::new().expect("Failed to create profile test harness");
+    let mut test_harness = ProfileTestHarnessV2::new().await;
+    let spec = test_harness.add_mock_piconet_member("mock-peer".to_string()).await?;
+    let mut profile_observer =
+        test_harness.add_profile("bt-avrcp-profile".to_string(), AVRCP_URL_V2.to_string()).await?;
+    let test_topology = test_harness.build().await?;
 
-    // MockPeer #1 is driven by the test.
-    let id1 = PeerId(89712);
-    let mock_peer1 = test_harness.register_peer(id1).await?;
+    let (peer1_id, peer1) = (
+        spec.id.0,
+        PiconetMember::new_from_spec(spec, &test_topology)
+            .expect("failed to create piconet member from spec"),
+    );
 
     // Peer #1 advertises an AVRCP CT service.
     let service_defs = vec![avrcp_controller_service_definition()];
-    let mut connect_requests = mock_peer1.register_service_advertisement(service_defs).await?;
+    let mut connect_requests = peer1
+        .register_service_advertisement(service_defs)
+        .expect("Mock peer failed to register service advertisement");
 
-    // MockPeer #2 is the profile-under-test: AVRCP.
-    let id2 = PeerId(23418);
-    let mut mock_peer2 = test_harness.register_peer(id2).await?;
-    let launch_info = bredr::LaunchInfo {
-        component_url: Some(AVRCP_URL.to_string()),
-        ..bredr::LaunchInfo::EMPTY
-    };
-    mock_peer2.launch_profile(launch_info).await.expect("launch profile should be ok");
-
-    // We expect AVRCP to discover Peer #1's service advertisement.
     if let bredr::PeerObserverRequest::ServiceFound { peer_id, responder, .. } =
-        mock_peer2.expect_observer_request().await?
+        profile_observer.expect_observer_request().await?
     {
-        assert_eq!(id1, peer_id.into());
+        assert_eq!(peer1_id, peer_id.value);
         responder.send()?;
     }
 
     // We then expect AVRCP to attempt to connect to Peer #1.
-    // Peer #1 rejects the connection as it will initiate a connection itself.
     match connect_requests.select_next_some().await? {
         bredr::ConnectionReceiverRequest::Connected { peer_id, .. } => {
-            assert_eq!(id2, peer_id.into());
+            assert_eq!(profile_observer.profile_id, peer_id.into());
         }
     };
 
@@ -219,18 +181,17 @@ async fn test_remote_initiates_connection_to_avrcp() -> Result<(), Error> {
         ..bredr::L2capParameters::new_empty()
     };
     let params = bredr::ConnectParameters::L2cap(l2cap);
-    let channel = mock_peer1.make_connection(id2, params).await?;
+    let channel = peer1.make_connection(profile_observer.profile_id, params).await?;
     let channel: Channel = channel.try_into()?;
 
-    // The observer of bt-avrcp.cmx should be relayed of the connection attempt.
-    match mock_peer2.expect_observer_request().await? {
+    // The observer of bt-avrcp.cm should be notified of the connection attempt.
+    match profile_observer.expect_observer_request().await? {
         bredr::PeerObserverRequest::PeerConnected { peer_id, responder, .. } => {
-            assert_eq!(id1, peer_id.into());
+            assert_eq!(peer1_id, peer_id.value);
             responder.send()?;
         }
         x => return Err(format_err!("Expected PeerConnected but got: {:?}", x)),
     }
-
     let mut vec = Vec::new();
     let read_fut = channel.read_datagram(&mut vec);
 
@@ -256,46 +217,50 @@ async fn test_remote_initiates_connection_to_avrcp() -> Result<(), Error> {
 /// after the control channel. We expect AVRCP to drop the incoming channel.
 #[fasync::run_singlethreaded(test)]
 async fn test_remote_initiates_browse_channel_before_control() -> Result<(), Error> {
-    let test_harness = ProfileTestHarness::new().expect("Failed to create profile test harness");
+    let mut test_harness = ProfileTestHarnessV2::new().await;
+    let spec = test_harness.add_mock_piconet_member("mock-peer".to_string()).await?;
+    let mut profile_observer =
+        test_harness.add_profile("bt-avrcp-profile".to_string(), AVRCP_URL_V2.to_string()).await?;
+    let test_topology = test_harness.build().await?;
 
-    // MockPeer #1 is driven by the test.
-    let id1 = PeerId(138);
-    let mock_peer1 = test_harness.register_peer(id1).await?;
+    let (peer1_id, peer1) = (
+        spec.id.0,
+        PiconetMember::new_from_spec(spec, &test_topology)
+            .expect("failed to create piconet member from spec"),
+    );
 
-    // Peer #1 searches for AVRCP CT services.
-    let mut results_requests = mock_peer1
-        .register_service_search(bredr::ServiceClassProfileIdentifier::AvRemoteControl, vec![])
-        .await?;
+    // Peer #1 advertises an AVRCP CT service.
+    let service_defs = vec![avrcp_controller_service_definition()];
+    let mut connect_requests = peer1
+        .register_service_advertisement(service_defs)
+        .expect("Mock peer failed to register service advertisement");
 
-    // MockPeer #2 is the profile-under-test: AVRCP.
-    let id2 = PeerId(1076);
-    let mut mock_peer2 = test_harness.register_peer(id2).await?;
-    let launch_info = bredr::LaunchInfo {
-        component_url: Some(AVRCP_URL.to_string()),
-        ..bredr::LaunchInfo::EMPTY
+    if let bredr::PeerObserverRequest::ServiceFound { peer_id, responder, .. } =
+        profile_observer.expect_observer_request().await?
+    {
+        assert_eq!(peer1_id, peer_id.value);
+        responder.send()?;
+    }
+
+    // We then expect AVRCP to attempt to connect to Peer #1.
+    match connect_requests.select_next_some().await? {
+        bredr::ConnectionReceiverRequest::Connected { peer_id, .. } => {
+            assert_eq!(profile_observer.profile_id, peer_id.into());
+        }
     };
-    mock_peer2.launch_profile(launch_info).await.expect("launch profile should be ok");
-
-    // We expect Peer #1 to discover AVRCP's service advertisement.
-    let service_found_fut = results_requests.select_next_some().map_err(|e| format_err!("{:?}", e));
-    let bredr::SearchResultsRequest::ServiceFound { peer_id, responder, .. } =
-        service_found_fut.await?;
-    assert_eq!(id2, peer_id.into());
-    responder.send()?;
-
     // Peer #1 tries to initiate a browse channel connection.
     let l2cap = bredr::L2capParameters {
         psm: Some(bredr::PSM_AVCTP_BROWSE),
         ..bredr::L2capParameters::new_empty()
     };
     let params = bredr::ConnectParameters::L2cap(l2cap);
-    let channel = mock_peer1.make_connection(id2, params).await?;
+    let channel = peer1.make_connection(profile_observer.profile_id, params).await?;
     let channel: Channel = channel.try_into()?;
 
-    // The observer of AVRCP should be relayed of the connection attempt.
-    match mock_peer2.expect_observer_request().await? {
+    // The observer of bt-avrcp.cm should be notified of the connection attempt.
+    match profile_observer.expect_observer_request().await? {
         bredr::PeerObserverRequest::PeerConnected { peer_id, responder, .. } => {
-            assert_eq!(id1, peer_id.into());
+            assert_eq!(peer1_id, peer_id.value);
             responder.send()?;
         }
         x => return Err(format_err!("Expected PeerConnected but got: {:?}", x)),

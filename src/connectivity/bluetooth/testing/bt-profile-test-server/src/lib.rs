@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 //! Client utilities for launching and interacting with the Profile Test Server.
-
 use {
     anyhow::{format_err, Context, Error},
     fidl::{
@@ -17,6 +16,9 @@ use {
     fuchsia_zircon::{Duration, DurationNum},
     futures::{stream::StreamExt, TryFutureExt},
 };
+
+#[path = "lib_v2.rs"]
+pub mod v2;
 
 /// The component URL of the Profile Test Server - used in integration tests.
 static PROFILE_TEST_SERVER_URL: &str =

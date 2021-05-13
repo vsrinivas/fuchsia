@@ -6,6 +6,7 @@
 
 use {
     anyhow::{format_err, Error},
+    argh::FromArgs,
     async_utils::stream::{StreamItem, WithEpitaph, WithTag},
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_bluetooth::ErrorCode,
@@ -36,11 +37,12 @@ use crate::{peer::MockPeer, types::LaunchInfo};
 /// the piconet.
 pub struct TestProfileServer {
     inner: Arc<Mutex<TestProfileServerInner>>,
+    proxy_launcher_enabled: bool,
 }
 
 impl TestProfileServer {
-    pub fn new() -> Self {
-        Self { inner: Arc::new(Mutex::new(TestProfileServerInner::new())) }
+    pub fn new(proxy_launcher_enabled: bool) -> Self {
+        Self { inner: Arc::new(Mutex::new(TestProfileServerInner::new())), proxy_launcher_enabled }
     }
 
     fn contains_peer(&self, id: &PeerId) -> bool {
@@ -72,15 +74,22 @@ impl TestProfileServer {
             .detach();
         });
 
-        let env_name = format!("peer_{}", id);
-        let options = EnvironmentOptions {
-            inherit_parent_services: true,
-            use_parent_runners: false,
-            kill_on_oom: false,
-            delete_storage_on_death: false,
+        let env = if self.proxy_launcher_enabled {
+            let env_name = format!("peer_{}", id);
+            let options = EnvironmentOptions {
+                inherit_parent_services: true,
+                use_parent_runners: false,
+                kill_on_oom: false,
+                delete_storage_on_death: false,
+            };
+            Some(
+                peer_service_fs
+                    .create_nested_environment_with_options(env_name.as_str(), options)?,
+            )
+        } else {
+            None
         };
-        let env =
-            peer_service_fs.create_nested_environment_with_options(env_name.as_str(), options)?;
+
         let observer = observer.into_proxy()?;
         let mock_peer = MockPeer::new(id, env, Some(observer));
 
@@ -498,12 +507,24 @@ async fn handle_test_client_connection(
     }
 }
 
+#[derive(Debug, FromArgs)]
+/// Run the Bluetooth Profile Test Server, which is a mock piconet manager.
+struct Options {
+    #[argh(switch)]
+    /// whether we should run in v1 mode. LaunchProfile can only be used with
+    /// v1. This defaults to false so the Profile Test Server defaults to v2
+    /// mode.
+    v1: bool,
+}
+
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), anyhow::Error> {
     fuchsia_syslog::init_with_tags(&["bt-profile-test-server"])
         .expect("Unable to initialize logger");
 
-    let profile_server = TestProfileServer::new();
+    let args: Options = argh::from_env();
+
+    let profile_server = TestProfileServer::new(args.v1);
 
     let (test_sender, test_receiver) = mpsc::channel(0);
 
@@ -567,7 +588,7 @@ mod tests {
     #[test]
     fn test_register_peer() -> Result<(), Error> {
         let mut exec = fasync::Executor::new().unwrap();
-        let pts = TestProfileServer::new();
+        let pts = TestProfileServer::new(true);
         let (mut sender, receiver) = mpsc::channel(0);
 
         // The main handler - this is under test.
@@ -596,7 +617,7 @@ mod tests {
     #[test]
     fn test_advertisement_request_resolves_when_terminated() {
         let mut exec = fasync::Executor::new().unwrap();
-        let pts = TestProfileServer::new();
+        let pts = TestProfileServer::new(true);
         let (mut sender, receiver) = mpsc::channel(0);
 
         // The main handler - this is under test.

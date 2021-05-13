@@ -5,8 +5,9 @@
 import("//build/components.gni")
 import("//build/rust/rustc_test.gni")
 
-rustc_test("tests_bin") {
+rustc_test("bin") {
   output_name = "bt_avrcp_integration_tests"
+  edition = "2018"
   source_root = "src/main.rs"
 
   deps = [
@@ -19,6 +20,7 @@ rustc_test("tests_bin") {
     "//src/lib/fuchsia-component",
     "//src/lib/trace/rust:trace",
     "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/sys/lib/fuchsia-component-test",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
@@ -26,13 +28,19 @@ rustc_test("tests_bin") {
   sources = [ "src/main.rs" ]
 }
 
-fuchsia_test_component("bt_avrcp_integration_tests") {
-  manifest = "meta/bt-avrcp-integration-tests.cmx"
-  deps = [ ":tests_bin" ]
+fuchsia_test_component("component") {
+  manifest = "meta/bt-avrcp-integration-tests.cml"
+  deps = [ ":bin" ]
 }
 
 fuchsia_test_package("bt-avrcp-integration-tests") {
-  test_components = [ ":bt_avrcp_integration_tests" ]
+  test_components = [ ":component" ]
+
+  deps = [
+    "//src/connectivity/bluetooth/profiles/bt-avrcp:component-v2",
+    "//src/connectivity/bluetooth/testing/bt-profile-test-server",
+    "//src/lib/fuchsia-component-test/framework_intermediary:fuchsia_component_test_framework_intermediary_component",
+  ]
 }
 
 group("tests") {
