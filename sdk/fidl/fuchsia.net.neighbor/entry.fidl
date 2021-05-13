@@ -13,10 +13,10 @@ using zx;
 ///   1. Dynamic entries are discovered automatically by neighbor discovery
 ///      protocols (e.g. ARP, NDP). These protocols will attempt to reconfirm
 ///      reachability with the device once its `state` becomes
-///      [`EntryState.stale`].
+///      [`EntryState.STALE`].
 ///   2. Static entries are explicitly added by a user with
 ///      [`Controller.AddStaticEntry`] and have no expiration. Their `state` is
-///      always [`EntryState.static`].
+///      always [`EntryState.STATIC`].
 table Entry {
     /// Identifier for the interface used for communicating with the neighbor.
     1: fuchsia.net.interface_id interface;
@@ -29,7 +29,7 @@ table Entry {
     3: EntryState state;
 
     /// MAC address of the neighboring device's network interface controller.
-    /// Absent for dynamic entries in [`EntryState.incomplete`].
+    /// Absent for dynamic entries in [`EntryState.INCOMPLETE`].
     4: fuchsia.net.MacAddress mac;
 
     /// Timestamp when this entry has changed `state`.
