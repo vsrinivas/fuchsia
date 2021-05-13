@@ -456,15 +456,11 @@ impl ImageFiles {
     }
 
     pub fn update_paths_from_cache(&mut self, cache_root: &PathBuf) {
-        if self.amber_files.is_some() {
-            self.amber_files = Some(cache_root.join("package_archive"));
-        }
-        self.build_args = cache_root.join("images").join("buildargs");
-        if self.fvm.is_some() {
-            self.fvm = Some(cache_root.join("images").join("femu-fvm"));
-        }
+        self.amber_files = Some(cache_root.join("package_archive"));
+        self.fvm = Some(cache_root.join("images").join("femu-fvm"));
         self.kernel = cache_root.join("images").join("femu-kernel");
         self.zbi = cache_root.join("images").join("zircon-a.zbi");
+        self.build_args = cache_root.join("images").join("buildargs");
     }
 
     pub fn stage_files(&mut self, dir: &PathBuf) -> Result<()> {
