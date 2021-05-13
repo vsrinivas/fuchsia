@@ -314,7 +314,6 @@ TEST_F(FeedbackDataIntegrationTest, DataProvider_GetSnapshot_CheckKeys) {
                                         Key(kAttachmentAnnotations),
                                         Key(kAttachmentBuildSnapshot),
                                         Key(kAttachmentInspect),
-                                        Key(kAttachmentLogKernel),
                                         Key(kAttachmentLogSystem),
                                         Key(kAttachmentMetadata),
                                     }));
