@@ -113,26 +113,32 @@ async fn serve_harness(
 
 /// Constructs a test package to be used in the integration tests.
 async fn make_test_package() -> Package {
-    let hello_world_contents = "hello world".as_bytes();
-    let tmp = repeat_by_n('a', (fidl_fuchsia_io::MAX_BUF + 1).try_into().unwrap());
-    let exceeds_max_buf_contents = tmp.as_bytes();
-    let empty_contents = "".as_bytes();
+    let exceeds_max_buf_contents =
+        repeat_by_n('a', (fidl_fuchsia_io::MAX_BUF + 1).try_into().unwrap());
 
-    let mut builder = PackageBuilder::new("test-package");
+    let contents = "contents".as_bytes();
+    let mut builder = PackageBuilder::new("test-package")
+        .add_resource_at("file", contents)
+        .add_resource_at("dir/file", contents)
+        .add_resource_at("dir/dir/file", contents)
+        .add_resource_at("dir/dir/dir/file", contents)
+        .add_resource_at("meta/file", contents)
+        .add_resource_at("meta/dir/file", contents)
+        .add_resource_at("meta/dir/dir/file", contents)
+        .add_resource_at("meta/dir/dir/dir/file", contents)
+        .add_resource_at("exceeds_max_buf", exceeds_max_buf_contents.as_bytes())
+        .add_resource_at("meta/exceeds_max_buf", exceeds_max_buf_contents.as_bytes());
 
-    // Populate each kind of directory node with various files.
-    for base in ["", "dir/", "dir/dir/", "meta/", "meta/dir/"] {
-        builder = builder
-            .add_resource_at(format!("{}hello_world", base), hello_world_contents)
-            .add_resource_at(format!("{}exceeds_max_buf", base), exceeds_max_buf_contents);
-
+    // Make directory nodes of each kind (root dir, non-meta subdir, meta dir, meta subdir)
+    // that overflow the fuchsia.io/Directory.ReadDirents buffer.
+    for base in ["", "dir_overflow_readdirents/", "meta/", "meta/dir_overflow_readdirents/"] {
         // In the integration tests, we'll want to be able to test calling ReadDirents on a
         // directory. Since ReadDirents returns `MAX_BUF` bytes worth of directory entries, we need
         // to have test coverage for the "overflow" case where the directory has more than
         // `MAX_BUF` bytes worth of directory entries.
         //
         // Through math, we determine that we can achieve this overflow with 31 files whose names
-        // are length at *least* `MAX_FILENAME`. Here is this math:
+        // are length `MAX_FILENAME`. Here is this math:
         /*
            ReadDirents -> vector<uint8>:MAX_BUF
 
@@ -163,7 +169,7 @@ async fn make_test_package() -> Package {
                     base,
                     repeat_by_n(seed, fidl_fuchsia_io::MAX_FILENAME.try_into().unwrap())
                 ),
-                empty_contents,
+                &b""[..],
             )
         }
     }
