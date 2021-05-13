@@ -89,39 +89,38 @@ impl DaemonEventHandler {
             "Found new target via mdns: {}",
             t.nodename.clone().unwrap_or("<unknown>".to_string())
         );
-        tc.merge_insert(Target::from_target_info(t.clone())).then(|target| {
-            async move {
-                let nodename = target.nodename();
+        let target = tc.merge_insert(Target::from_target_info(t.clone()));
+        async move {
+            let nodename = target.nodename();
 
-                let t_clone = target.clone();
-                let autoconnect_fut = async move {
-                    if let Some(cr) = cr.upgrade() {
-                        if let Some(s) = cr.get("target.default").await.ok().flatten() {
-                            if nodename.as_ref().map(|x| x == &s).unwrap_or(false) {
-                                log::trace!(
-                                    "Doing autoconnect for default target: {}",
-                                    nodename.as_ref().map(|x| x.as_str()).unwrap_or("<unknown>")
-                                );
-                                t_clone.run_host_pipe();
-                            }
+            let t_clone = target.clone();
+            let autoconnect_fut = async move {
+                if let Some(cr) = cr.upgrade() {
+                    if let Some(s) = cr.get("target.default").await.ok().flatten() {
+                        if nodename.as_ref().map(|x| x == &s).unwrap_or(false) {
+                            log::trace!(
+                                "Doing autoconnect for default target: {}",
+                                nodename.as_ref().map(|x| x.as_str()).unwrap_or("<unknown>")
+                            );
+                            t_clone.run_host_pipe();
                         }
                     }
-                };
+                }
+            };
 
-                target.run_mdns_monitor();
+            target.run_mdns_monitor();
 
-                let _ = autoconnect_fut.await;
+            let _ = autoconnect_fut.await;
 
-                // Updates state last so that if tasks are waiting on this state, everything is
-                // already running and there aren't any races.
-                target.update_connection_state(|s| match s {
-                    ConnectionState::Disconnected | ConnectionState::Mdns(_) => {
-                        ConnectionState::Mdns(Utc::now())
-                    }
-                    _ => s,
-                });
-            }
-        })
+            // Updates state last so that if tasks are waiting on this state, everything is
+            // already running and there aren't any races.
+            target.update_connection_state(|s| match s {
+                ConnectionState::Disconnected | ConnectionState::Mdns(_) => {
+                    ConnectionState::Mdns(Utc::now())
+                }
+                _ => s,
+            });
+        }
     }
 
     async fn handle_overnet_peer(&self, node_id: u64, tc: &TargetCollection) {
@@ -142,26 +141,23 @@ impl DaemonEventHandler {
         };
 
         log::trace!("Target from Overnet {} is {}", node_id, target.nodename_str());
-        let target = tc.merge_insert(target).await;
+        let target = tc.merge_insert(target);
         target.run_logger();
     }
 
-    async fn handle_fastboot(&self, t: TargetInfo, tc: &TargetCollection) {
+    fn handle_fastboot(&self, t: TargetInfo, tc: &TargetCollection) {
         log::trace!(
             "Found new target via fastboot: {}",
             t.nodename.clone().unwrap_or("<unknown>".to_string())
         );
-        tc.merge_insert(Target::from_target_info(t.into()))
-            .then(|target| async move {
-                target.update_connection_state(|s| match s {
-                    ConnectionState::Disconnected | ConnectionState::Fastboot(_) => {
-                        ConnectionState::Fastboot(Utc::now())
-                    }
-                    _ => s,
-                });
-                target.run_fastboot_monitor();
-            })
-            .await;
+        let target = tc.merge_insert(Target::from_target_info(t.into()));
+        target.update_connection_state(|s| match s {
+            ConnectionState::Disconnected | ConnectionState::Fastboot(_) => {
+                ConnectionState::Fastboot(Utc::now())
+            }
+            _ => s,
+        });
+        target.run_fastboot_monitor();
     }
 
     async fn handle_zedboot(&self, t: TargetInfo, tc: &TargetCollection) {
@@ -169,17 +165,14 @@ impl DaemonEventHandler {
             "Found new target via zedboot: {}",
             t.nodename.clone().unwrap_or("<unknown>".to_string())
         );
-        tc.merge_insert(Target::from_netsvc_target_info(t.into()))
-            .then(|target| async move {
-                target.update_connection_state(|s| match s {
-                    ConnectionState::Disconnected | ConnectionState::Zedboot(_) => {
-                        ConnectionState::Zedboot(Utc::now())
-                    }
-                    _ => s,
-                });
-                target.run_zedboot_monitor();
-            })
-            .await;
+        let target = tc.merge_insert(Target::from_netsvc_target_info(t.into()));
+        target.update_connection_state(|s| match s {
+            ConnectionState::Disconnected | ConnectionState::Zedboot(_) => {
+                ConnectionState::Zedboot(Utc::now())
+            }
+            _ => s,
+        });
+        target.run_zedboot_monitor();
     }
 }
 
@@ -248,7 +241,7 @@ impl EventHandler<DaemonEvent> for DaemonEventHandler {
                     self.handle_mdns(t, &tc, Rc::downgrade(&self.config_reader)).await;
                 }
                 WireTrafficType::Fastboot(t) => {
-                    self.handle_fastboot(t, &tc).await;
+                    self.handle_fastboot(t, &tc);
                 }
                 WireTrafficType::Zedboot(t) => {
                     self.handle_zedboot(t, &tc).await;
@@ -366,12 +359,12 @@ impl Daemon {
             target.set_ssh_port(Some(addr.port()));
         }
 
-        let target = self.target_collection.merge_insert(target).await;
-
         target.update_connection_state(|s| match s {
             ConnectionState::Disconnected => ConnectionState::Manual,
             _ => s,
         });
+
+        let target = self.target_collection.merge_insert(target);
         target.run_host_pipe();
     }
 
@@ -962,12 +955,8 @@ mod test {
             };
             match event {
                 DaemonEvent::WireTraffic(WireTrafficType::Fastboot(t)) => {
-                    tc.merge_insert(Target::from_target_info(t.into()))
-                        .then(|target| async move {
-                            target
-                                .update_connection_state(|_| ConnectionState::Fastboot(Utc::now()));
-                        })
-                        .await;
+                    let target = tc.merge_insert(Target::from_target_info(t.into()));
+                    target.update_connection_state(|_| ConnectionState::Fastboot(Utc::now()));
                 }
                 DaemonEvent::NewTarget(_) => {}
                 e => panic!("unexpected event: {:#?}", e),
@@ -986,14 +975,14 @@ mod test {
             };
             match event {
                 DaemonEvent::WireTraffic(WireTrafficType::Mdns(t)) => {
-                    tc.merge_insert(Target::from_target_info(t)).await;
+                    tc.merge_insert(Target::from_target_info(t));
                 }
                 DaemonEvent::NewTarget(TargetInfo { nodename: Some(n), addresses, .. }) => {
                     let rcs = RcsConnection::new_with_proxy(
                         setup_fake_target_service(n, addresses.iter().map(Into::into).collect()),
                         &NodeId { id: 0u64 },
                     );
-                    tc.merge_insert(Target::from_rcs_connection(rcs).await.unwrap()).await;
+                    tc.merge_insert(Target::from_rcs_connection(rcs).await.unwrap());
                 }
                 e => panic!("unexpected event: {:#?}", e),
             }
@@ -1011,11 +1000,8 @@ mod test {
             };
             match event {
                 DaemonEvent::WireTraffic(WireTrafficType::Zedboot(t)) => {
-                    tc.merge_insert(Target::from_netsvc_target_info(t.into()))
-                        .then(|target| async move {
-                            target.update_connection_state(|_| ConnectionState::Zedboot(Utc::now()))
-                        })
-                        .await;
+                    let target = tc.merge_insert(Target::from_netsvc_target_info(t.into()));
+                    target.update_connection_state(|_| ConnectionState::Zedboot(Utc::now()))
                 }
                 DaemonEvent::NewTarget(_) => {}
                 e => panic!("unexpected event: {:#?}", e),
@@ -1293,11 +1279,11 @@ mod test {
     async fn test_get_ssh_address() {
         let (proxy, daemon, _task) = spawn_test_daemon().await;
 
-        let target = Target::new_autoconnected("foobar").await;
+        let target = Target::new_autoconnected("foobar");
         target.addrs_insert(TargetAddr::new("[fe80::1%1]:0").unwrap());
         let addr_info = target.ssh_address_info().unwrap();
 
-        daemon.target_collection.merge_insert(target).await;
+        daemon.target_collection.merge_insert(target);
 
         assert_eq!(daemon.target_collection.targets().len(), 1);
         assert!(daemon.target_collection.get("foobar").is_some());
@@ -1313,13 +1299,13 @@ mod test {
     async fn test_get_ssh_address_target_ambiguous() {
         let (proxy, daemon, _task) = spawn_test_daemon().await;
 
-        let target = Target::new_autoconnected("foobar").await;
+        let target = Target::new_autoconnected("foobar");
         target.addrs_insert(TargetAddr::new("[fe80::1%1]:0").unwrap());
-        daemon.target_collection.merge_insert(target).await;
+        daemon.target_collection.merge_insert(target);
 
-        let target = Target::new_autoconnected("whoistarget").await;
+        let target = Target::new_autoconnected("whoistarget");
         target.addrs_insert(TargetAddr::new("[fe80::2%1]:0").unwrap());
-        daemon.target_collection.merge_insert(target).await;
+        daemon.target_collection.merge_insert(target);
 
         assert_eq!(daemon.target_collection.targets().len(), 2);
         assert!(daemon.target_collection.get("foobar").is_some());
@@ -1347,7 +1333,7 @@ mod test {
         let t = Target::new("this-town-aint-big-enough-for-the-three-of-us");
 
         let tc = Rc::new(TargetCollection::new());
-        tc.merge_insert(t.clone()).await;
+        tc.merge_insert(t.clone());
 
         let handler = DaemonEventHandler {
             target_collection: Rc::downgrade(&tc),
@@ -1455,8 +1441,8 @@ mod test {
     async fn test_get_target_empty() {
         let d = Daemon::new();
         let nodename = "where-is-my-hasenpfeffer";
-        let t = Target::new_autoconnected(nodename).await;
-        d.target_collection.merge_insert(t.clone()).await;
+        let t = Target::new_autoconnected(nodename);
+        d.target_collection.merge_insert(t.clone());
         assert_eq!(nodename, d.get_target(None).await.unwrap().nodename().unwrap());
     }
 
@@ -1464,8 +1450,8 @@ mod test {
     async fn test_get_target_query() {
         let d = Daemon::new();
         let nodename = "where-is-my-hasenpfeffer";
-        let t = Target::new_autoconnected(nodename).await;
-        d.target_collection.merge_insert(t.clone()).await;
+        let t = Target::new_autoconnected(nodename);
+        d.target_collection.merge_insert(t.clone());
         assert_eq!(
             nodename,
             d.get_target(Some(nodename.to_string())).await.unwrap().nodename().unwrap()
@@ -1475,10 +1461,10 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_get_target_ambiguous() {
         let d = Daemon::new();
-        let t = Target::new_autoconnected("where-is-my-hasenpfeffer").await;
-        let t2 = Target::new_autoconnected("it-is-rabbit-season").await;
-        d.target_collection.merge_insert(t.clone()).await;
-        d.target_collection.merge_insert(t2.clone()).await;
+        let t = Target::new_autoconnected("where-is-my-hasenpfeffer");
+        let t2 = Target::new_autoconnected("it-is-rabbit-season");
+        d.target_collection.merge_insert(t.clone());
+        d.target_collection.merge_insert(t2.clone());
         assert_eq!(Err(DaemonError::TargetAmbiguous), d.get_target(None).await);
     }
 
