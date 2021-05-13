@@ -202,18 +202,22 @@ template("dart_tool") {
   snapshot_target_name = target_name + "_snapshot"
 
   _dart_package_config_target_name = "${target_name}_dart_package"
+
+  # Write output of this dart_package_config in a "packages" subdirectory so it
+  # doesn't conflict with another package config produced by the dart_library
+  # above. For example when dart analyzer runs in ${target_gen_dir} for the
+  # dart_library above, it can incorrectly read this package config if it's in
+  # the same directory.
+  _dart_package_config_output = "${target_gen_dir}/packages/${_dart_package_config_target_name}_package_config.json"
   dart_package_config(_dart_package_config_target_name) {
     forward_variables_from(invoker,
                            [
                              "testonly",
                              "visibility",
                            ])
+    outputs = [ _dart_package_config_output ]
     deps = _dart_deps
   }
-
-  _package_config_output =
-      get_target_outputs(":$_dart_package_config_target_name")
-  _packages_path = _package_config_output[0]
 
   # Creates a snapshot file.
   # The main advantage of snapshotting is that it sets up source dependencies
@@ -257,7 +261,7 @@ template("dart_tool") {
       "--no-sound-null-safety",
       "--snapshot=" + rebase_path(snapshot_path, root_build_dir),
       "--snapshot-depfile=" + rebase_path(depfile, root_build_dir),
-      "--packages=" + rebase_path(_packages_path, root_build_dir),
+      "--packages=" + rebase_path(_dart_package_config_output, root_build_dir),
       main_uri,
     ]
 
