@@ -9,14 +9,15 @@ use {
             merge::{Merger, MergerIterator},
             types::{ItemRef, LayerIterator},
         },
-        object_handle::ObjectHandle,
+        object_handle::{ObjectHandle, ObjectProperties},
         object_store::{
             current_time,
             record::{
                 ObjectAttributes, ObjectItem, ObjectKey, ObjectKeyData, ObjectKind, ObjectValue,
+                Timestamp,
             },
             transaction::{Mutation, Transaction},
-            HandleOptions, ObjectStore, StoreObjectHandle,
+            HandleOptions, ObjectStore, ObjectStoreMutation, StoreObjectHandle,
         },
     },
     anyhow::{anyhow, bail, Error},
@@ -104,9 +105,9 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> Directory<S> {
         }
     }
 
-    pub async fn create_child_dir(
+    pub async fn create_child_dir<'a>(
         &self,
-        transaction: &mut Transaction<'_>,
+        transaction: &mut Transaction<'a>,
         name: &str,
     ) -> Result<Directory<S>, Error> {
         let handle = Directory::create(transaction, &self.owner).await?;
@@ -117,12 +118,13 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> Directory<S> {
                 ObjectValue::child(handle.object_id(), ObjectDescriptor::Directory),
             ),
         );
+        self.update_timestamps(transaction, None, Some(current_time())).await?;
         Ok(handle)
     }
 
-    pub async fn create_child_file(
+    pub async fn create_child_file<'a>(
         &self,
-        transaction: &mut Transaction<'_>,
+        transaction: &mut Transaction<'a>,
         name: &str,
     ) -> Result<StoreObjectHandle<S>, Error> {
         let handle =
@@ -134,15 +136,16 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> Directory<S> {
                 ObjectValue::child(handle.object_id(), ObjectDescriptor::File),
             ),
         );
+        self.update_timestamps(transaction, None, Some(current_time())).await?;
         Ok(handle)
     }
 
-    pub fn add_child_volume(
+    pub async fn add_child_volume<'a>(
         &self,
-        transaction: &mut Transaction<'_>,
+        transaction: &mut Transaction<'a>,
         volume_name: &str,
         store_object_id: u64,
-    ) {
+    ) -> Result<(), Error> {
         transaction.add(
             self.store().store_object_id(),
             Mutation::replace_or_insert_object(
@@ -150,18 +153,19 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> Directory<S> {
                 ObjectValue::child(store_object_id, ObjectDescriptor::Volume),
             ),
         );
+        self.update_timestamps(transaction, None, Some(current_time())).await
     }
 
     /// Inserts a child into the directory.
     ///
     /// Requires transaction locks on |self|.
-    pub fn insert_child<'a>(
+    pub async fn insert_child<'a>(
         &self,
         transaction: &mut Transaction<'a>,
         name: &str,
         object_id: u64,
         descriptor: ObjectDescriptor,
-    ) {
+    ) -> Result<(), Error> {
         transaction.add(
             self.store().store_object_id(),
             Mutation::replace_or_insert_object(
@@ -169,6 +173,68 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> Directory<S> {
                 ObjectValue::child(object_id, descriptor),
             ),
         );
+        self.update_timestamps(transaction, None, Some(current_time())).await
+    }
+
+    /// Updates the timestamps for the object.  If either argument is None, that timestamp is not
+    /// modified.
+    pub async fn update_timestamps<'a>(
+        &self,
+        transaction: &mut Transaction<'a>,
+        crtime: Option<Timestamp>,
+        mtime: Option<Timestamp>,
+    ) -> Result<(), Error> {
+        if let (None, None) = (crtime.as_ref(), mtime.as_ref()) {
+            return Ok(());
+        }
+        let mut item = if let Some(ObjectStoreMutation { item, .. }) = transaction
+            .get_object_mutation(self.store().store_object_id(), ObjectKey::object(self.object_id))
+        {
+            item.clone()
+        } else {
+            self.store()
+                .tree()
+                .find(&ObjectKey::object(self.object_id))
+                .await?
+                .ok_or(anyhow!(FxfsError::NotFound))?
+        };
+        if let ObjectValue::Object { ref mut attributes, .. } = item.value {
+            if let Some(time) = crtime {
+                attributes.creation_time = time;
+            }
+            if let Some(time) = mtime {
+                attributes.modification_time = time;
+            }
+        } else {
+            bail!(FxfsError::Inconsistent);
+        };
+        transaction.add(
+            self.store().store_object_id(),
+            Mutation::replace_or_insert_object(item.key, item.value),
+        );
+        Ok(())
+    }
+
+    pub async fn get_properties(&self) -> Result<ObjectProperties, Error> {
+        let item = self
+            .store()
+            .tree()
+            .find(&ObjectKey::object(self.object_id))
+            .await?
+            .ok_or(anyhow!(FxfsError::NotFound))?;
+        match item.value {
+            ObjectValue::Object {
+                kind: ObjectKind::Directory,
+                attributes: ObjectAttributes { creation_time, modification_time },
+            } => Ok(ObjectProperties {
+                refs: 0,
+                allocated_size: 0,
+                data_attribute_size: 0,
+                creation_time,
+                modification_time,
+            }),
+            _ => bail!(FxfsError::Inconsistent),
+        }
     }
 
     /// Returns an iterator that will return directory entries skipping deleted ones.  Example
@@ -282,6 +348,7 @@ pub async fn replace_child<'a, S: AsRef<ObjectStore> + Send + Sync + 'static>(
             }
         }
     };
+    let now = current_time();
     let new_value = if let Some((src_dir, src_name)) = src {
         transaction.add(
             src_dir.store().store_object_id(),
@@ -290,6 +357,7 @@ pub async fn replace_child<'a, S: AsRef<ObjectStore> + Send + Sync + 'static>(
                 ObjectValue::None,
             ),
         );
+        src_dir.update_timestamps(transaction, None, Some(now.clone())).await?;
         let (id, descriptor) = src_dir.lookup(src_name).await?.ok_or(FxfsError::NotFound)?;
         ObjectValue::child(id, descriptor)
     } else {
@@ -299,6 +367,7 @@ pub async fn replace_child<'a, S: AsRef<ObjectStore> + Send + Sync + 'static>(
         dst.0.store().store_object_id(),
         Mutation::replace_or_insert_object(ObjectKey::child(dst.0.object_id, dst.1), new_value),
     );
+    dst.0.update_timestamps(transaction, None, Some(now)).await?;
     Ok(deleted_id_and_descriptor)
 }
 
@@ -350,7 +419,9 @@ mod tests {
                 .create_child_file(&mut transaction, "baz")
                 .await
                 .expect("create_child_file failed");
-            dir.add_child_volume(&mut transaction, "corge", 100);
+            dir.add_child_volume(&mut transaction, "corge", 100)
+                .await
+                .expect("add_child_volume failed");
             transaction.commit().await;
             fs.sync(SyncOptions::default()).await.expect("sync failed");
             dir.object_id()

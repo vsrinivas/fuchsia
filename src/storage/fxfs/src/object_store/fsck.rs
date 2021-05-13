@@ -340,12 +340,10 @@ mod tests {
             .expect("create_child_directory failed");
 
         // Add an extra reference to the child file.
-        child_dir.insert_child(
-            &mut transaction,
-            "test",
-            child_file.object_id(),
-            ObjectDescriptor::File,
-        );
+        child_dir
+            .insert_child(&mut transaction, "test", child_file.object_id(), ObjectDescriptor::File)
+            .await
+            .expect("insert_child failed");
         transaction.commit().await;
 
         let error = format!("{}", fsck(&fs).await.expect_err("fsck succeeded"));

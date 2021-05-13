@@ -10,7 +10,7 @@ use {
             self,
             directory::{self, ObjectDescriptor},
             transaction::{LockKey, Transaction},
-            ObjectStore,
+            ObjectStore, Timestamp,
         },
         server::{
             errors::map_to_status,
@@ -360,9 +360,36 @@ impl MutableDirectory for FxDirectory {
         Ok(())
     }
 
-    async fn set_attrs(&self, _flags: u32, _attrs: NodeAttributes) -> Result<(), Status> {
-        log::error!("set_attrs not implemented");
-        Err(Status::NOT_SUPPORTED)
+    async fn set_attrs(&self, flags: u32, attrs: NodeAttributes) -> Result<(), Status> {
+        let crtime = if flags & fidl_fuchsia_io::NODE_ATTRIBUTE_FLAG_CREATION_TIME > 0 {
+            Some(Timestamp::from_nanos(attrs.creation_time))
+        } else {
+            None
+        };
+        let mtime = if flags & fidl_fuchsia_io::NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME > 0 {
+            Some(Timestamp::from_nanos(attrs.modification_time))
+        } else {
+            None
+        };
+        if let (None, None) = (crtime.as_ref(), mtime.as_ref()) {
+            return Ok(());
+        }
+
+        let fs = self.store().filesystem();
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[LockKey::object(
+                self.store().store_object_id(),
+                self.directory.object_id(),
+            )])
+            .await
+            .map_err(map_to_status)?;
+        self.directory
+            .update_timestamps(&mut transaction, crtime, mtime)
+            .await
+            .map_err(map_to_status)?;
+        transaction.commit().await;
+        Ok(())
     }
 
     fn get_filesystem(&self) -> &dyn Filesystem {
@@ -512,7 +539,16 @@ impl Directory for FxDirectory {
     }
 
     async fn get_attrs(&self) -> Result<NodeAttributes, Status> {
-        Err(Status::NOT_SUPPORTED)
+        let props = self.directory.get_properties().await.map_err(map_to_status)?;
+        Ok(NodeAttributes {
+            mode: 0u32, // TODO(jfsulliv): Mode bits
+            id: self.directory.object_id(),
+            content_size: props.data_attribute_size,
+            storage_size: props.allocated_size,
+            link_count: props.refs,
+            creation_time: props.creation_time.as_nanos(),
+            modification_time: props.modification_time.as_nanos(),
+        })
     }
 
     fn close(&self) -> Result<(), Status> {
@@ -1079,6 +1115,60 @@ mod tests {
         assert_eq!(expected_entries, parse_entries(&buf));
 
         close_dir_checked(parent).await;
+        fixture.close().await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_set_attrs() {
+        let fixture = TestFixture::new().await;
+        let root = fixture.root();
+
+        let dir = open_dir_checked(
+            &root,
+            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            MODE_TYPE_DIRECTORY,
+            "foo",
+        )
+        .await;
+
+        let (status, initial_attrs) = dir.get_attr().await.expect("FIDL call failed");
+        Status::ok(status).expect("get_attr failed");
+
+        let crtime = initial_attrs.creation_time ^ 1u64;
+        let mtime = initial_attrs.modification_time ^ 1u64;
+
+        let mut attrs = initial_attrs.clone();
+        attrs.creation_time = crtime;
+        attrs.modification_time = mtime;
+        let status = dir
+            .set_attr(fidl_fuchsia_io::NODE_ATTRIBUTE_FLAG_CREATION_TIME, &mut attrs)
+            .await
+            .expect("FIDL call failed");
+        Status::ok(status).expect("set_attr failed");
+
+        let mut expected_attrs = initial_attrs.clone();
+        expected_attrs.creation_time = crtime; // Only crtime is updated so far.
+        let (status, attrs) = dir.get_attr().await.expect("FIDL call failed");
+        Status::ok(status).expect("get_attr failed");
+        assert_eq!(expected_attrs, attrs);
+
+        let mut attrs = initial_attrs.clone();
+        attrs.creation_time = 0u64; // This should be ignored since we don't set the flag.
+        attrs.modification_time = mtime;
+        let status = dir
+            .set_attr(fidl_fuchsia_io::NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME, &mut attrs)
+            .await
+            .expect("FIDL call failed");
+        Status::ok(status).expect("set_attr failed");
+
+        let mut expected_attrs = initial_attrs.clone();
+        expected_attrs.creation_time = crtime;
+        expected_attrs.modification_time = mtime;
+        let (status, attrs) = dir.get_attr().await.expect("FIDL call failed");
+        Status::ok(status).expect("get_attr failed");
+        assert_eq!(expected_attrs, attrs);
+
+        close_dir_checked(dir).await;
         fixture.close().await;
     }
 }

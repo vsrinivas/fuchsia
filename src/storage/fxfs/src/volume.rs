@@ -47,11 +47,9 @@ impl RootVolume {
         let root_directory = Directory::create(&mut transaction, &store).await?;
         store.set_root_directory_object_id(&mut transaction, root_directory.object_id());
 
-        self.volume_directory.add_child_volume(
-            &mut transaction,
-            volume_name,
-            store.store_object_id(),
-        );
+        self.volume_directory
+            .add_child_volume(&mut transaction, volume_name, store.store_object_id())
+            .await?;
         transaction.commit().await;
 
         Ok(store)
