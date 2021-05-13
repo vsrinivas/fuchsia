@@ -60,13 +60,18 @@ std::vector<ScreenReaderMessageGenerator::UtteranceAndContext>
 ScreenReaderMessageGenerator::DescribeNode(const Node* node) {
   std::vector<UtteranceAndContext> description;
   {
-    // If this node is a radio button or a toggle switch, the label is part of the whole message
-    // that describes it.
+    // If this node is a radio button, slider, or toggle switch, the label is part of the whole
+    // message that describes it.
     if (node->has_role() && node->role() == fuchsia::accessibility::semantics::Role::RADIO_BUTTON) {
       description.emplace_back(DescribeRadioButton(node));
     } else if (node->has_role() &&
                node->role() == fuchsia::accessibility::semantics::Role::TOGGLE_SWITCH) {
       description.emplace_back(DescribeToggleSwitch(node));
+    } else if (node->has_role() &&
+               node->role() == fuchsia::accessibility::semantics::Role::SLIDER) {
+      Utterance utterance;
+      utterance.set_message(GetSliderLabelAndRangeMessage(node));
+      description.emplace_back(UtteranceAndContext{.utterance = std::move(utterance)});
     } else if (node->has_attributes() && node->attributes().has_label() &&
                !node->attributes().label().empty()) {
       Utterance utterance;
@@ -96,11 +101,6 @@ ScreenReaderMessageGenerator::DescribeNode(const Node* node) {
                   std::make_move_iterator(check_box_description.end()),
                   std::back_inserter(description));
       } else if (node->role() == Role::SLIDER) {
-        // Add the slider's range value to the label utterance, if specified.
-        auto& label_utterance = description.back().utterance;
-        label_utterance.set_message(GetSliderLabelAndRangeMessage(node));
-
-        // Add a role description for the slider.
         description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_SLIDER));
       }
     }

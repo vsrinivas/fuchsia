@@ -446,5 +446,71 @@ TEST(ScreenReaderUtilTest, GetNodesToExcludeDifferentActions) {
   }
 }
 
+TEST(ScreenReaderUtilTest, GetNodesToExcludeDifferentActionsNoLabel) {
+  MockSemanticsSource mock_semantics_source;
+  const zx_koid_t koid = 0;
+
+  {
+    fuchsia::accessibility::semantics::Node node;
+    node.set_node_id(0u);
+    *(node.mutable_child_ids()) = {1u, 2u};
+    mock_semantics_source.CreateSemanticNode(koid, std::move(node));
+  }
+
+  {
+    fuchsia::accessibility::semantics::Node node;
+    node.set_node_id(1u);
+    mock_semantics_source.CreateSemanticNode(koid, std::move(node));
+  }
+
+  {
+    fuchsia::accessibility::semantics::Node node;
+    node.set_node_id(2u);
+    *(node.mutable_child_ids()) = {3u};
+    *(node.mutable_actions()) = {fuchsia::accessibility::semantics::Action::SECONDARY};
+    fuchsia::accessibility::semantics::Attributes attributes;
+    node.set_attributes(std::move(attributes));
+    mock_semantics_source.CreateSemanticNode(koid, std::move(node));
+  }
+
+  {
+    fuchsia::accessibility::semantics::Node node;
+    node.set_node_id(3u);
+    *(node.mutable_child_ids()) = {4u};
+    *(node.mutable_actions()) = {fuchsia::accessibility::semantics::Action::DEFAULT,
+                                 fuchsia::accessibility::semantics::Action::SET_VALUE};
+    fuchsia::accessibility::semantics::Attributes attributes;
+    attributes.set_label("label");
+    node.set_attributes(std::move(attributes));
+    mock_semantics_source.CreateSemanticNode(koid, std::move(node));
+  }
+
+  {
+    fuchsia::accessibility::semantics::Node node;
+    node.set_node_id(4u);
+    *(node.mutable_actions()) = {fuchsia::accessibility::semantics::Action::DEFAULT};
+    fuchsia::accessibility::semantics::Attributes attributes;
+    attributes.set_label("label");
+    node.set_attributes(std::move(attributes));
+    mock_semantics_source.CreateSemanticNode(koid, std::move(node));
+  }
+
+  {
+    auto nodes_to_exclude = GetNodesToExclude(koid, 2u, &mock_semantics_source);
+    EXPECT_TRUE(nodes_to_exclude.empty());
+  }
+
+  {
+    auto nodes_to_exclude = GetNodesToExclude(koid, 3u, &mock_semantics_source);
+    EXPECT_EQ(nodes_to_exclude.size(), 1u);
+    EXPECT_NE(nodes_to_exclude.find(4u), nodes_to_exclude.end());
+  }
+
+  {
+    auto nodes_to_exclude = GetNodesToExclude(koid, 4u, &mock_semantics_source);
+    EXPECT_TRUE(nodes_to_exclude.empty());
+  }
+}
+
 }  // namespace
 }  // namespace accessibility_test

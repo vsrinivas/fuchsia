@@ -112,8 +112,15 @@ std::set<uint32_t> GetNodesToExclude(zx_koid_t koid, uint32_t node_id,
     return nodes_to_exclude;
   }
 
-  if (node->has_child_ids() && node->has_attributes() && node->attributes().has_label()) {
-    auto label = node->attributes().label();
+  // We are only interested in the motif where one node has several descendants
+  // with the same label.
+  if (!node->has_attributes() || !node->attributes().has_label()) {
+    return nodes_to_exclude;
+  }
+
+  const auto label = node->attributes().label();
+
+  if (node->has_child_ids()) {
     auto current_node = node;
     while (current_node) {
       // If current node does not have the same label as node, then the one
@@ -153,7 +160,6 @@ std::set<uint32_t> GetNodesToExclude(zx_koid_t koid, uint32_t node_id,
   }
 
   if (!nodes_to_exclude.empty() || !node->has_child_ids() || node->child_ids().empty()) {
-    auto label = node->attributes().label();
     auto current_node = semantics_source->GetParentNode(koid, node_id);
     if (!current_node) {
       // Node was deleted, no need to continue;
