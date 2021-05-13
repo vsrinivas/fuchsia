@@ -204,7 +204,7 @@ mod tests {
                 types::{Item, LayerIterator},
                 LSMTree,
             },
-            object_store::record::{ObjectItem, ObjectKey, ObjectValue},
+            object_store::record::{ObjectItem, ObjectKey, ObjectValue, Timestamp},
         },
         anyhow::Error,
         fuchsia_async as fasync,
@@ -894,11 +894,17 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_tombstone_discards_all_other_records() {
         let tombstone = Item::new(ObjectKey::tombstone(1), ObjectValue::None);
-        let other_object = Item::new(ObjectKey::object(2), ObjectValue::file(1, 0));
+        let other_object = Item::new(
+            ObjectKey::object(2),
+            ObjectValue::file(1, 0, Timestamp::default(), Timestamp::default()),
+        );
         test_merge(
             &[tombstone.clone()],
             &[
-                Item::new(ObjectKey::object(1), ObjectValue::file(1, 100)),
+                Item::new(
+                    ObjectKey::object(1),
+                    ObjectValue::file(1, 100, Timestamp::default(), Timestamp::default()),
+                ),
                 Item::new(ObjectKey::attribute(1, 0), ObjectValue::attribute(100)),
                 Item::new(ObjectKey::extent(1, 0, 0..100), ObjectValue::extent(5000)),
                 other_object.clone(),

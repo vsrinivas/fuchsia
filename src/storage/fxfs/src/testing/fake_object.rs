@@ -8,9 +8,10 @@ use {
             buffer::{Buffer, BufferRef, MutableBufferRef},
             buffer_allocator::{BufferAllocator, MemBufferSource},
         },
-        object_handle::ObjectHandle,
-        object_store::transaction::{
-            LockKey, LockManager, ReadGuard, Transaction, TransactionHandler,
+        object_handle::{ObjectHandle, ObjectProperties},
+        object_store::{
+            transaction::{LockKey, LockManager, ReadGuard, Transaction, TransactionHandler},
+            Timestamp,
         },
     },
     anyhow::Error,
@@ -139,6 +140,26 @@ impl ObjectHandle for FakeObjectHandle {
         _range: Range<u64>,
     ) -> Result<Vec<Range<u64>>, Error> {
         panic!("Unsupported");
+    }
+
+    async fn update_timestamps<'a>(
+        &'a self,
+        _transaction: Option<&mut Transaction<'a>>,
+        _ctime: Option<Timestamp>,
+        _mtime: Option<Timestamp>,
+    ) -> Result<(), Error> {
+        Ok(())
+    }
+
+    async fn get_properties(&self) -> Result<ObjectProperties, Error> {
+        let size = self.object.get_size();
+        Ok(ObjectProperties {
+            refs: 1u64,
+            allocated_size: size,
+            data_attribute_size: size,
+            creation_time: Timestamp::zero(),
+            modification_time: Timestamp::zero(),
+        })
     }
 
     async fn new_transaction<'a>(&self) -> Result<Transaction<'a>, Error> {

@@ -8,6 +8,7 @@ use {
     crate::lsm_tree::types::{Item, ItemRef, NextKey, OrdLowerBound, OrdUpperBound},
     serde::{Deserialize, Serialize},
     std::cmp::{max, min},
+    std::convert::From,
     std::ops::Range,
 };
 
@@ -275,16 +276,60 @@ impl ExtentValue {
     }
 }
 
+/// UNIX epoch based timestamp in the UTC timezone.
+#[derive(Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
+pub struct Timestamp {
+    pub secs: u64,
+    pub nanos: u32,
+}
+
+impl Timestamp {
+    const NSEC_PER_SEC: u64 = 1_000_000_000;
+
+    pub const fn zero() -> Self {
+        Self { secs: 0, nanos: 0 }
+    }
+
+    pub const fn from_nanos(nanos: u64) -> Self {
+        let subsec_nanos = (nanos % Self::NSEC_PER_SEC) as u32;
+        Self { secs: nanos / Self::NSEC_PER_SEC, nanos: subsec_nanos }
+    }
+
+    pub fn as_nanos(&self) -> u64 {
+        Self::NSEC_PER_SEC
+            .checked_mul(self.secs)
+            .and_then(|val| val.checked_add(self.nanos as u64))
+            .unwrap_or(0u64)
+    }
+}
+
+impl From<std::time::Duration> for Timestamp {
+    fn from(duration: std::time::Duration) -> Timestamp {
+        Timestamp { secs: duration.as_secs(), nanos: duration.subsec_nanos() }
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum ObjectKind {
     File {
         /// The number of references to this file.
         refs: u64,
-        /// The number of bytes allocated to all extents for this file.
+        /// The number of bytes allocated to all extents across all attributes for this file.
         allocated_size: u64,
     },
     Directory,
     Graveyard,
+}
+
+/// Object-level attributes.  Note that these are not the same as "attributes" in the
+/// ObjectValue::Attribute sense, which refers to an arbitrary data payload associated with an
+/// object.  This naming collision is unfortunate.
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct ObjectAttributes {
+    /// The timestamp at which the object was created (i.e. crtime).
+    pub creation_time: Timestamp,
+    /// The timestamp at which the object's data was last modified (i.e. mtime).
+    pub modification_time: Timestamp,
 }
 
 /// ObjectValue is the value of an item in the object store.
@@ -298,7 +343,7 @@ pub enum ObjectValue {
     /// (None) i.e. their value is really a boolean: None => false, Some => true.
     Some,
     /// The value for an ObjectKey::Object record.
-    Object { kind: ObjectKind },
+    Object { kind: ObjectKind, attributes: ObjectAttributes },
     /// An attribute associated with a file object. |size| is the size of the attribute in bytes.
     Attribute { size: u64 },
     /// An extent associated with an object.
@@ -310,8 +355,16 @@ pub enum ObjectValue {
 
 impl ObjectValue {
     /// Creates an ObjectValue for a file object.
-    pub fn file(refs: u64, allocated_size: u64) -> ObjectValue {
-        ObjectValue::Object { kind: ObjectKind::File { refs, allocated_size } }
+    pub fn file(
+        refs: u64,
+        allocated_size: u64,
+        creation_time: Timestamp,
+        modification_time: Timestamp,
+    ) -> ObjectValue {
+        ObjectValue::Object {
+            kind: ObjectKind::File { refs, allocated_size },
+            attributes: ObjectAttributes { creation_time, modification_time },
+        }
     }
     /// Creates an ObjectValue for an object attribute.
     pub fn attribute(size: u64) -> ObjectValue {

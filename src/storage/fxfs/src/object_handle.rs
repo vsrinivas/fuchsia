@@ -5,7 +5,7 @@
 use {
     crate::{
         device::buffer::{Buffer, BufferRef, MutableBufferRef},
-        object_store::transaction::Transaction,
+        object_store::{transaction::Transaction, Timestamp},
     },
     anyhow::{bail, Error},
     async_trait::async_trait,
@@ -15,6 +15,21 @@ use {
 // Some places use Default and assume that zero is an invalid object ID, so this cannot be changed
 // easily.
 pub const INVALID_OBJECT_ID: u64 = 0;
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ObjectProperties {
+    /// The number of references to this object.
+    pub refs: u64,
+    /// The number of bytes allocated to all extents across all attributes for this object.
+    pub allocated_size: u64,
+    /// The logical content size for the default data attribute of this object, i.e. the size of a
+    /// file.  (Objects with no data attribute have size 0.)
+    pub data_attribute_size: u64,
+    /// The timestamp at which the object was created (i.e. crtime).
+    pub creation_time: Timestamp,
+    /// The timestamp at which the objects's data was last modified (i.e. mtime).
+    pub modification_time: Timestamp,
+}
 
 #[async_trait]
 pub trait ObjectHandle: Send + Sync + 'static {
@@ -60,6 +75,21 @@ pub trait ObjectHandle: Send + Sync + 'static {
         transaction: &mut Transaction<'a>,
         range: Range<u64>,
     ) -> Result<Vec<Range<u64>>, Error>;
+
+    /// Updates the timestamps for the object.  If either argument is None, that timestamp is not
+    /// modified.
+    /// If |transaction| is unset, the updates can be deferred until a later write.
+    /// |get_properties| must immediately reflect the new values, though (i.e. they must be
+    /// buffered).
+    async fn update_timestamps<'a>(
+        &'a self,
+        transaction: Option<&mut Transaction<'a>>,
+        crtime: Option<Timestamp>,
+        mtime: Option<Timestamp>,
+    ) -> Result<(), Error>;
+
+    /// Gets the object's properties.
+    async fn get_properties(&self) -> Result<ObjectProperties, Error>;
 
     /// Returns a new transaction including a lock for this handle.
     async fn new_transaction<'a>(&self) -> Result<Transaction<'a>, Error>;

@@ -6,7 +6,7 @@ use {
     crate::{
         device::buffer::{Buffer, BufferRef, MutableBufferRef},
         lsm_tree::types::LayerIterator,
-        object_handle::ObjectHandle,
+        object_handle::{ObjectHandle, ObjectProperties},
         object_store::{
             constants::SUPER_BLOCK_OBJECT_ID,
             journal::{
@@ -14,7 +14,7 @@ use {
                 writer::JournalWriter,
                 JournalCheckpoint,
             },
-            record::ObjectItem,
+            record::{ObjectItem, Timestamp},
             transaction::Transaction,
             Device, ObjectStore,
         },
@@ -163,6 +163,19 @@ impl ObjectHandle for SuperBlockHandle {
         unreachable!();
     }
 
+    async fn update_timestamps<'a>(
+        &'a self,
+        _transaction: Option<&mut Transaction<'a>>,
+        _ctime: Option<Timestamp>,
+        _mtime: Option<Timestamp>,
+    ) -> Result<(), Error> {
+        unreachable!();
+    }
+
+    async fn get_properties(&self) -> Result<ObjectProperties, Error> {
+        unreachable!();
+    }
+
     async fn new_transaction<'a>(&self) -> Result<Transaction<'a>, Error> {
         unreachable!();
     }
@@ -285,7 +298,7 @@ mod tests {
                 allocator::Allocator,
                 constants::SUPER_BLOCK_OBJECT_ID,
                 filesystem::Filesystem,
-                journal::JournalCheckpoint,
+                journal::{journal_handle_options, JournalCheckpoint},
                 testing::{fake_allocator::FakeAllocator, fake_filesystem::FakeFilesystem},
                 transaction::TransactionHandler,
                 HandleOptions, ObjectStore,
@@ -315,7 +328,7 @@ mod tests {
 
         // Create a large number of objects in the root parent store so that we test handling of
         // extents.
-        for _ in 0..10000 {
+        for _ in 0..8000 {
             let mut transaction =
                 fs.clone().new_transaction(&[]).await.expect("new_transaction failed");
             ObjectStore::create_object(
@@ -344,7 +357,7 @@ mod tests {
             &root_store,
             &mut transaction,
             SUPER_BLOCK_OBJECT_ID,
-            HandleOptions { overwrite: true, ..Default::default() },
+            journal_handle_options(),
         )
         .await
         .expect("create_object_with_id failed");

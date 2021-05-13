@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        object_handle::{ObjectHandle, ObjectHandleExt},
+        object_handle::ObjectHandle,
         object_store::journal::{fletcher64, Checksum, JournalCheckpoint},
     },
     anyhow::Error,
@@ -85,7 +85,13 @@ impl<OH> JournalWriter<OH> {
                 let mut buf = handle.allocate_buffer(to_do);
                 buf.as_mut_slice()[..to_do].copy_from_slice(self.buf.drain(..to_do).as_slice());
                 buf.as_mut_slice()[to_do..].fill(0u8);
-                handle.write(self.checkpoint.file_offset, buf.as_ref()).await?;
+                let mut txn = handle.new_transaction().await?;
+                handle.txn_write(&mut txn, self.checkpoint.file_offset, buf.as_ref()).await?;
+                // Any mutations would rely on the journal to be applied, so the transaction must be
+                // empty. Writes are done in overwrite mode and the journal file is pre-allocated,
+                // so they should not cause any mutations to be added to the transaction.
+                assert!(txn.is_empty());
+                txn.commit().await;
                 self.checkpoint.file_offset += to_do as u64;
                 self.checkpoint.checksum = self.last_checksum;
             }

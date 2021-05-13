@@ -151,7 +151,7 @@ impl Fsck {
             match (key, value) {
                 (
                     ObjectKey { object_id, data: ObjectKeyData::Object },
-                    ObjectValue::Object { kind },
+                    ObjectValue::Object { kind, .. },
                 ) => {
                     let refs = match kind {
                         ObjectKind::File { refs, .. } => *refs,

@@ -5,7 +5,7 @@
 use {
     crate::{
         object_handle::{ObjectHandle, ObjectHandleExt},
-        object_store::StoreObjectHandle,
+        object_store::{StoreObjectHandle, Timestamp},
         server::{directory::FxDirectory, errors::map_to_status, node::FxNode, volume::FxVolume},
     },
     async_trait::async_trait,
@@ -120,7 +120,6 @@ impl File for FxFile {
     }
 
     async fn write_at(&self, offset: u64, content: &[u8]) -> Result<u64, Status> {
-        // TODO(jfsulliv): Update mtime.
         let mut buf = self.handle.allocate_buffer(content.len());
         buf.as_mut_slice()[..content.len()].copy_from_slice(content);
         self.handle.write(offset, buf.as_ref()).await.map_err(map_to_status)?;
@@ -136,7 +135,6 @@ impl File for FxFile {
     }
 
     async fn truncate(&self, length: u64) -> Result<(), Status> {
-        // TODO(jfsulliv): Update mtime.
         let mut transaction = self.handle.new_transaction().await.map_err(map_to_status)?;
         self.handle.truncate(&mut transaction, length).await.map_err(map_to_status)?;
         transaction.commit().await;
@@ -153,22 +151,52 @@ impl File for FxFile {
     }
 
     async fn get_attrs(&self) -> Result<NodeAttributes, Status> {
-        log::error!("get_attrs not implemented");
-        Err(Status::NOT_SUPPORTED)
+        let props = self.handle.get_properties().await.map_err(map_to_status)?;
+        // TODO(jfsulliv): This assumes that we always get the data attribute at index 0 of
+        // |attribute_sizes|.
+        Ok(NodeAttributes {
+            mode: 0u32, // TODO(jfsulliv): Mode bits
+            id: self.handle.object_id(),
+            content_size: props.data_attribute_size,
+            storage_size: props.allocated_size,
+            link_count: props.refs,
+            creation_time: props.creation_time.as_nanos(),
+            modification_time: props.modification_time.as_nanos(),
+        })
     }
 
     async fn set_attrs(
         &self,
-        _flags: u32,
-        _attrs: NodeAttributes,
+        flags: u32,
+        attrs: NodeAttributes,
         may_defer: bool,
     ) -> Result<(), Status> {
-        if may_defer {
-            // TODO(jfsulliv): Cache the new attributes.
+        let crtime = if flags & fidl_fuchsia_io::NODE_ATTRIBUTE_FLAG_CREATION_TIME > 0 {
+            Some(Timestamp::from_nanos(attrs.creation_time))
+        } else {
+            None
+        };
+        let mtime = if flags & fidl_fuchsia_io::NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME > 0 {
+            Some(Timestamp::from_nanos(attrs.modification_time))
+        } else {
+            None
+        };
+        if let (None, None) = (crtime.as_ref(), mtime.as_ref()) {
             return Ok(());
         }
-        log::error!("set_attrs not implemented");
-        Err(Status::NOT_SUPPORTED)
+        let mut transaction = if may_defer {
+            None
+        } else {
+            Some(self.handle.new_transaction().await.map_err(map_to_status)?)
+        };
+        self.handle
+            .update_timestamps(transaction.as_mut(), crtime, mtime)
+            .await
+            .map_err(map_to_status)?;
+        if let Some(t) = transaction {
+            t.commit().await;
+        }
+        Ok(())
     }
 
     async fn close(&self) -> Result<(), Status> {
@@ -187,6 +215,7 @@ mod tests {
     use {
         crate::{
             device::DeviceHolder,
+            object_handle::INVALID_OBJECT_ID,
             server::testing::{close_file_checked, open_file_checked, TestFixture},
             testing::fake_device::FakeDevice,
         },
@@ -209,8 +238,73 @@ mod tests {
                 .await;
 
         let (status, buf) = file.read(fio::MAX_BUF).await.expect("FIDL call failed");
-        Status::ok(status).expect("File read was successful");
+        Status::ok(status).expect("read failed");
         assert!(buf.is_empty());
+
+        let (status, attrs) = file.get_attr().await.expect("FIDL call failed");
+        Status::ok(status).expect("get_attr failed");
+        // TODO(jfsulliv): Check mode
+        assert_ne!(attrs.id, INVALID_OBJECT_ID);
+        assert_eq!(attrs.content_size, 0u64);
+        assert_eq!(attrs.storage_size, 0u64);
+        assert_eq!(attrs.link_count, 1u64);
+        assert_ne!(attrs.creation_time, 0u64);
+        assert_ne!(attrs.modification_time, 0u64);
+        assert_eq!(attrs.creation_time, attrs.modification_time);
+
+        close_file_checked(file).await;
+        fixture.close().await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_set_attrs() {
+        let fixture = TestFixture::new().await;
+        let root = fixture.root();
+
+        let file = open_file_checked(
+            &root,
+            OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            MODE_TYPE_FILE,
+            "foo",
+        )
+        .await;
+
+        let (status, initial_attrs) = file.get_attr().await.expect("FIDL call failed");
+        Status::ok(status).expect("get_attr failed");
+
+        let crtime = initial_attrs.creation_time ^ 1u64;
+        let mtime = initial_attrs.modification_time ^ 1u64;
+
+        let mut attrs = initial_attrs.clone();
+        attrs.creation_time = crtime;
+        attrs.modification_time = mtime;
+        let status = file
+            .set_attr(fidl_fuchsia_io::NODE_ATTRIBUTE_FLAG_CREATION_TIME, &mut attrs)
+            .await
+            .expect("FIDL call failed");
+        Status::ok(status).expect("set_attr failed");
+
+        let mut expected_attrs = initial_attrs.clone();
+        expected_attrs.creation_time = crtime; // Only crtime is updated so far.
+        let (status, attrs) = file.get_attr().await.expect("FIDL call failed");
+        Status::ok(status).expect("get_attr failed");
+        assert_eq!(expected_attrs, attrs);
+
+        let mut attrs = initial_attrs.clone();
+        attrs.creation_time = 0u64; // This should be ignored since we don't set the flag.
+        attrs.modification_time = mtime;
+        let status = file
+            .set_attr(fidl_fuchsia_io::NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME, &mut attrs)
+            .await
+            .expect("FIDL call failed");
+        Status::ok(status).expect("set_attr failed");
+
+        let mut expected_attrs = initial_attrs.clone();
+        expected_attrs.creation_time = crtime;
+        expected_attrs.modification_time = mtime;
+        let (status, attrs) = file.get_attr().await.expect("FIDL call failed");
+        Status::ok(status).expect("get_attr failed");
+        assert_eq!(expected_attrs, attrs);
 
         close_file_checked(file).await;
         fixture.close().await;
@@ -242,6 +336,11 @@ mod tests {
         assert_eq!(buf.len(), expected_output.as_bytes().len());
         assert!(buf.iter().eq(expected_output.as_bytes().iter()));
 
+        let (status, attrs) = file.get_attr().await.expect("FIDL call failed");
+        Status::ok(status).expect("get_attr failed");
+        assert_eq!(attrs.content_size, expected_output.as_bytes().len() as u64);
+        assert_eq!(attrs.storage_size, 512u64);
+
         close_file_checked(file).await;
         fixture.close().await;
     }
@@ -269,6 +368,11 @@ mod tests {
                 Status::ok(status).expect("File read was successful");
                 assert_eq!(buf, vec![0xaa as u8; 8192]);
             }
+
+            let (status, attrs) = file.get_attr().await.expect("FIDL call failed");
+            Status::ok(status).expect("get_attr failed");
+            assert_eq!(attrs.content_size, 8192u64);
+            assert_eq!(attrs.storage_size, 8192u64);
 
             close_file_checked(file).await;
             device = fixture.close().await;
@@ -302,6 +406,11 @@ mod tests {
         Status::ok(status).expect("File read was successful");
         assert_eq!(buf.len(), expected_output.as_bytes().len());
         assert!(buf.iter().eq(expected_output.as_bytes().iter()));
+
+        let (status, attrs) = file.get_attr().await.expect("FIDL call failed");
+        Status::ok(status).expect("get_attr failed");
+        assert_eq!(attrs.content_size, expected_output.as_bytes().len() as u64);
+        assert_eq!(attrs.storage_size, 512u64);
 
         close_file_checked(file).await;
         fixture.close().await;

@@ -10,7 +10,10 @@ use {
             types::{ItemRef, LayerIterator},
         },
         object_store::{
-            record::{ObjectItem, ObjectKey, ObjectKeyData, ObjectKind, ObjectValue},
+            current_time,
+            record::{
+                ObjectAttributes, ObjectItem, ObjectKey, ObjectKeyData, ObjectKind, ObjectValue,
+            },
             transaction::{Mutation, Transaction},
             ObjectStore,
         },
@@ -43,11 +46,18 @@ impl Graveyard {
     ) -> Result<Graveyard, Error> {
         store.ensure_open().await?;
         let object_id = store.get_next_object_id();
+        let now = current_time();
         transaction.add(
             store.store_object_id,
             Mutation::insert_object(
                 ObjectKey::object(object_id),
-                ObjectValue::Object { kind: ObjectKind::Graveyard },
+                ObjectValue::Object {
+                    kind: ObjectKind::Graveyard,
+                    attributes: ObjectAttributes {
+                        creation_time: now.clone(),
+                        modification_time: now,
+                    },
+                },
             ),
         );
         Ok(Graveyard { store: store.clone(), object_id })
@@ -56,8 +66,9 @@ impl Graveyard {
     /// Opens a graveyard object in `store`.
     pub async fn open(store: &Arc<ObjectStore>, object_id: u64) -> Result<Graveyard, Error> {
         store.ensure_open().await?;
-        if let ObjectItem { value: ObjectValue::Object { kind: ObjectKind::Graveyard }, .. } =
-            store.tree.find(&ObjectKey::object(object_id)).await?.ok_or(FxfsError::NotFound)?
+        if let ObjectItem {
+            value: ObjectValue::Object { kind: ObjectKind::Graveyard, .. }, ..
+        } = store.tree.find(&ObjectKey::object(object_id)).await?.ok_or(FxfsError::NotFound)?
         {
             Ok(Graveyard { store: store.clone(), object_id })
         } else {

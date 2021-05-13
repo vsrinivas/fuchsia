@@ -116,7 +116,7 @@ pub enum JournalRecord {
     Commit,
 }
 
-fn journal_handle_options() -> HandleOptions {
+pub(super) fn journal_handle_options() -> HandleOptions {
     HandleOptions { overwrite: true, ..Default::default() }
 }
 
