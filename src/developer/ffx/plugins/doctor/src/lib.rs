@@ -31,6 +31,8 @@ mod constants;
 mod daemon_manager;
 mod recorder;
 
+const DEFAULT_TARGET_CONFIG: &str = "target.default";
+
 macro_rules! success_or_continue {
     ($fut:expr, $handler:ident, $v:ident, $e:expr) => {
         match $fut.await {
@@ -54,7 +56,7 @@ macro_rules! success_or_continue {
 
 #[derive(Debug, PartialEq)]
 enum StepType {
-    Started(Option<String>),
+    Started(Result<Option<String>, String>, Option<String>),
     AttemptStarted(usize, usize),
     DaemonForceRestart,
     DaemonRunning,
@@ -111,10 +113,21 @@ impl StepType {
 impl std::fmt::Display for StepType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let s = match self {
-            StepType::Started(version_str) => {
+            StepType::Started(default_target, version_str) => {
+                let default_str = match default_target {
+                    Ok(t) => {
+                        if t.is_none() || t.as_ref().unwrap().is_empty() {
+                            "(none set)".to_string()
+                        } else {
+                            t.clone().unwrap()
+                        }
+                    }
+                    Err(e) => format!("config read failed: {:?}", e),
+                };
                 let welcome_str = format!(
-                    "\nWelcome to ffx doctor. Frontend version: {}\n",
-                    version_str.as_ref().unwrap_or(&"Unknown".to_string())
+                    "\nWelcome to ffx doctor.\n- Frontend version: {}\n- Default target: {}\n",
+                    version_str.as_ref().unwrap_or(&"Unknown".to_string()),
+                    default_str
                 );
                 format!("{}{}\n{}{}", style::Bold, welcome_str, DAEMON_CHECK_INTRO, style::Reset)
             }
@@ -180,7 +193,7 @@ impl std::fmt::Display for StepType {
             StepType::ConnectingToRcs => CONNECTING_TO_RCS.to_string(),
             StepType::CommunicatingWithRcs => COMMUNICATING_WITH_RCS.to_string(),
             StepType::TargetSummary(results) => {
-                let mut s = format!("\n\n{}{}\n", style::Bold, TARGET_SUMMARY);
+                let mut s = format!("\n\n{}{}\n", style::Bold, TARGET_SUMMARY,);
                 let keys = results.keys().into_iter().sorted_by_key(|k| format!("{:?}", k));
                 for key in keys {
                     for nodename_opt in results.get(key).unwrap_or(&vec![]).iter() {
@@ -322,6 +335,9 @@ pub async fn doctor_cmd(cmd: DoctorCommand) -> Result<()> {
 
     let recorder = Arc::new(Mutex::new(DoctorRecorder::new()));
     let mut handler = DefaultDoctorStepHandler::new(recorder.clone());
+    let default_target = get(DEFAULT_TARGET_CONFIG)
+        .await
+        .map_err(|e: ffx_config::api::ConfigError| format!("{:?}", e));
 
     doctor(
         &mut handler,
@@ -331,6 +347,7 @@ pub async fn doctor_cmd(cmd: DoctorCommand) -> Result<()> {
         delay,
         cmd.restart_daemon,
         build_info().build_version,
+        default_target,
         DoctorRecorderParameters {
             record: cmd.record,
             log_root,
@@ -351,6 +368,7 @@ async fn doctor(
     retry_delay: Duration,
     restart_daemon: bool,
     build_version_string: Option<String>,
+    default_target: Result<Option<String>, String>,
     record_params: DoctorRecorderParameters,
 ) -> Result<()> {
     execute_steps(
@@ -361,6 +379,7 @@ async fn doctor(
         retry_delay,
         restart_daemon,
         build_version_string,
+        default_target,
     )
     .await?;
 
@@ -392,8 +411,9 @@ async fn execute_steps(
     retry_delay: Duration,
     restart_daemon: bool,
     build_version_string: Option<String>,
+    default_target: Result<Option<String>, String>,
 ) -> Result<()> {
-    step_handler.output_step(StepType::Started(build_version_string)).await?;
+    step_handler.output_step(StepType::Started(default_target, build_version_string)).await?;
 
     let mut proxy_opt: Option<DaemonProxy> = None;
     let mut targets_opt: Option<Vec<Target>> = None;
@@ -550,6 +570,7 @@ async fn execute_steps(
 
     let grouped_map = target_results.into_iter().map(|(k, v)| (v, k)).into_group_map();
     let has_failure = grouped_map.get(&TargetCheckResult::Failed).is_some();
+
     step_handler.output_step(StepType::TargetSummary(grouped_map)).await?;
 
     if has_failure {
@@ -1126,7 +1147,7 @@ mod test {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_single_try_no_daemon_running_no_targets() {
+    async fn test_single_try_no_daemon_running_no_targets_with_default_target() {
         let fake = FakeDaemonManager::new(
             vec![false],
             vec![Ok(false)],
@@ -1143,6 +1164,7 @@ mod test {
             DEFAULT_RETRY_DELAY,
             false,
             version_str(),
+            Ok(Some(NODENAME.to_string())),
             record_params_no_record(),
         )
         .await
@@ -1150,7 +1172,10 @@ mod test {
 
         handler
             .assert_matches_steps(vec![
-                TestStepEntry::output_step(StepType::Started(version_str())),
+                TestStepEntry::output_step(StepType::Started(
+                    Ok(Some(NODENAME.to_string())),
+                    version_str(),
+                )),
                 TestStepEntry::step(StepType::DaemonRunning),
                 TestStepEntry::result(StepResult::Other(NONE_RUNNING.to_string())),
                 TestStepEntry::step(StepType::KillingZombieDaemons),
@@ -1190,6 +1215,7 @@ mod test {
             DEFAULT_RETRY_DELAY,
             false,
             version_str(),
+            Ok(None),
             record_params_no_record(),
         )
         .await
@@ -1197,7 +1223,7 @@ mod test {
 
         handler
             .assert_matches_steps(vec![
-                TestStepEntry::output_step(StepType::Started(version_str())),
+                TestStepEntry::output_step(StepType::Started(Ok(None), version_str())),
                 TestStepEntry::step(StepType::DaemonRunning),
                 TestStepEntry::result(StepResult::Other(FOUND.to_string())),
                 TestStepEntry::step(StepType::ConnectingToDaemon),
@@ -1232,6 +1258,7 @@ mod test {
             DEFAULT_RETRY_DELAY,
             false,
             version_str(),
+            Ok(None),
             record_params_no_record(),
         )
         .await
@@ -1239,7 +1266,7 @@ mod test {
 
         handler
             .assert_matches_steps(vec![
-                TestStepEntry::output_step(StepType::Started(version_str())),
+                TestStepEntry::output_step(StepType::Started(Ok(None), version_str())),
                 TestStepEntry::step(StepType::DaemonRunning),
                 TestStepEntry::result(StepResult::Other(FOUND.to_string())),
                 TestStepEntry::step(StepType::ConnectingToDaemon),
@@ -1292,6 +1319,7 @@ mod test {
             DEFAULT_RETRY_DELAY,
             false,
             version_str(),
+            Ok(None),
             record_params_no_record(),
         )
         .await
@@ -1299,7 +1327,7 @@ mod test {
         tx.send(()).unwrap();
         handler
             .assert_matches_steps(vec![
-                TestStepEntry::output_step(StepType::Started(version_str())),
+                TestStepEntry::output_step(StepType::Started(Ok(None), version_str())),
                 TestStepEntry::step(StepType::DaemonRunning),
                 TestStepEntry::result(StepResult::Other(NONE_RUNNING.to_string())),
                 TestStepEntry::step(StepType::KillingZombieDaemons),
@@ -1347,6 +1375,7 @@ mod test {
             DEFAULT_RETRY_DELAY,
             false,
             version_str(),
+            Ok(None),
             record_params_no_record(),
         )
         .await
@@ -1355,7 +1384,7 @@ mod test {
 
         handler
             .assert_matches_steps(vec![
-                TestStepEntry::output_step(StepType::Started(version_str())),
+                TestStepEntry::output_step(StepType::Started(Ok(None), version_str())),
                 TestStepEntry::step(StepType::DaemonRunning),
                 TestStepEntry::result(StepResult::Other(FOUND.to_string())),
                 TestStepEntry::step(StepType::ConnectingToDaemon),
@@ -1404,6 +1433,7 @@ mod test {
             DEFAULT_RETRY_DELAY,
             false,
             version_str(),
+            Ok(None),
             record_params_no_record(),
         )
         .await
@@ -1415,7 +1445,7 @@ mod test {
 
         handler
             .assert_matches_steps(vec![
-                TestStepEntry::output_step(StepType::Started(version_str())),
+                TestStepEntry::output_step(StepType::Started(Ok(None), version_str())),
                 TestStepEntry::step(StepType::DaemonRunning),
                 TestStepEntry::result(StepResult::Other(FOUND.to_string())),
                 TestStepEntry::step(StepType::ConnectingToDaemon),
@@ -1457,6 +1487,7 @@ mod test {
             DEFAULT_RETRY_DELAY,
             false,
             version_str(),
+            Ok(None),
             record_params_no_record(),
         )
         .await
@@ -1465,7 +1496,7 @@ mod test {
 
         handler
             .assert_matches_steps(vec![
-                TestStepEntry::output_step(StepType::Started(version_str())),
+                TestStepEntry::output_step(StepType::Started(Ok(None), version_str())),
                 TestStepEntry::step(StepType::DaemonRunning),
                 TestStepEntry::result(StepResult::Other(FOUND.to_string())),
                 TestStepEntry::step(StepType::ConnectingToDaemon),
@@ -1500,6 +1531,7 @@ mod test {
             DEFAULT_RETRY_DELAY,
             true,
             version_str(),
+            Ok(None),
             record_params_no_record(),
         )
         .await
@@ -1507,7 +1539,7 @@ mod test {
 
         handler
             .assert_matches_steps(vec![
-                TestStepEntry::output_step(StepType::Started(version_str())),
+                TestStepEntry::output_step(StepType::Started(Ok(None), version_str())),
                 TestStepEntry::output_step(StepType::DaemonForceRestart),
                 TestStepEntry::step(StepType::DaemonRunning),
                 TestStepEntry::result(StepResult::Other(NONE_RUNNING.to_string())),
@@ -1542,14 +1574,24 @@ mod test {
         let root = temp.path().to_path_buf();
         let (fake_recorder, params) = record_params_with_temp(root);
 
-        doctor(&mut handler, &fake, "", 1, DEFAULT_RETRY_DELAY, false, version_str(), params)
-            .await
-            .unwrap();
+        doctor(
+            &mut handler,
+            &fake,
+            "",
+            1,
+            DEFAULT_RETRY_DELAY,
+            false,
+            version_str(),
+            Ok(None),
+            params,
+        )
+        .await
+        .unwrap();
 
         let r = fake_recorder.lock().await;
         handler
             .assert_matches_steps(vec![
-                TestStepEntry::output_step(StepType::Started(version_str())),
+                TestStepEntry::output_step(StepType::Started(Ok(None), version_str())),
                 TestStepEntry::step(StepType::DaemonRunning),
                 TestStepEntry::result(StepResult::Other(FOUND.to_string())),
                 TestStepEntry::step(StepType::ConnectingToDaemon),
@@ -1588,6 +1630,7 @@ mod test {
             DEFAULT_RETRY_DELAY,
             false,
             version_str(),
+            Ok(None),
             record_params_no_record(),
         )
         .await
@@ -1600,7 +1643,7 @@ mod test {
 
         handler
             .assert_matches_steps(vec![
-                TestStepEntry::output_step(StepType::Started(version_str())),
+                TestStepEntry::output_step(StepType::Started(Ok(None), version_str())),
                 TestStepEntry::step(StepType::DaemonRunning),
                 TestStepEntry::result(StepResult::Other(FOUND.to_string())),
                 TestStepEntry::step(StepType::ConnectingToDaemon),
@@ -1647,6 +1690,7 @@ mod test {
             DEFAULT_RETRY_DELAY,
             false,
             version_str(),
+            Ok(None),
             record_params_no_record(),
         )
         .await
@@ -1657,7 +1701,7 @@ mod test {
 
         handler
             .assert_matches_steps(vec![
-                TestStepEntry::output_step(StepType::Started(version_str())),
+                TestStepEntry::output_step(StepType::Started(Ok(None), version_str())),
                 TestStepEntry::step(StepType::DaemonRunning),
                 TestStepEntry::result(StepResult::Other(FOUND.to_string())),
                 TestStepEntry::step(StepType::ConnectingToDaemon),

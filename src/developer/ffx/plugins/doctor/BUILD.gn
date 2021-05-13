@@ -25,6 +25,7 @@ ffx_plugin("ffx_doctor") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:log",
+    "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:termion",
     "//third_party/rust_crates:zip",
