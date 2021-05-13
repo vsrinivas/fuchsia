@@ -105,4 +105,102 @@
     <string name="screen_reader_on_hint">Screen Reader on.</string>
     <!-- Spoken message to alert the user that the Screen Reader, an assistive technology software used by the blindn and visually impaired to access computers or smartphones, is off. -->
     <string name="screen_reader_off_hint">Screen Reader off.</string>
+    <!-- Spoken description for the exclamation symbol "!".-->
+    <string name="exclamation_symbol_name">Exclamation mark</string>
+    <!-- Spoken description for the question mark symbol "?".-->
+    <string name="question_mark_symbol_name">Question mark</string>
+    <!-- Spoken description for the underscore symbol "_". -->
+    <string name="underscore_symbol_name">underscore</string>
+    <!-- Spoken description for the forward slash symbol "/". -->
+    <string name="forward_slash_symbol_name">slash</string>
+    <!-- Spoken description for comma symbol ",". The suggested Chinese translation is 全角逗号. -->
+    <string name="comma_symbol_name">comma</string>
+    <!-- Spoken description for period symbol ".". -->
+    <string name="period_symbol_name">period</string>
+    <!-- Spoken description for the less-than symbol "<". -->
+    <string name="less_than_symbol_name">less-than</string>
+    <!-- Spoken description for the greater-than symbol ">". -->
+    <string name="greater_than_symbol_name">greater-than</string>
+    <!-- Spoken description for the at symbol "@". -->
+    <string name="at_symbol_name">at</string>
+    <!-- Spoken description for the pound symbol "#". -->
+    <string name="pound_symbol_name">pound</string>
+    <!-- Spoken description for the dollar symbol "$". -->
+    <string name="dollar_symbol_name">dollar</string>
+    <!-- Spoken description for the percent symbol "%". -->
+    <string name="percent_symbol_name">percent</string>
+    <!-- Spoken description for the ampersand symbol "&". -->
+    <string name="ampersand_symbol_name">ampersand</string>
+    <!-- Spoken description for the dash symbol "-". -->
+    <string name="dash_symbol_name">Dash</string>
+    <!-- Spoken description for the plus symbol "+". -->
+    <string name="plus_symbol_name">Plus</string>
+    <!-- Spoken description for the equals symbol "=". -->
+    <string name="equals_symbol_name">Equals</string>
+    <!-- Spoken description for the left parenthesis symbol "(". -->
+    <string name="left_parenthesis_symbol_name">left parenthesis</string>
+    <!-- Spoken description for the right parenthesis symbol ")". -->
+    <string name="right_parenthesis_symbol_name">right parenthesis</string>
+    <!-- Spoken description for the backslash symbol "\".  -->
+    <string name="backslash_symbol_name">backslash</string>
+    <!-- Spoken description for asterisk symbol "*".  -->
+    <string name="asterisk_symbol_name">star</string>
+    <!-- Spoken description for the double quotation mark symbol """. -->
+    <string name="double_quotation_mark_symbol_name">quote</string>
+    <!-- Spoken description for the single quotation mark symbol "'". -->
+    <string name="single_quotation_mark_symbol_name">apostrophe</string>
+    <!-- Spoken description for the colon symbol ":".-->
+    <string name="colon_symbol_name">colon</string>
+    <!-- Spoken description for the semicolon symbol ";".-->
+    <string name="semicolon_symbol_name">semicolon</string>
+    <!-- Spoken description for the tilde symbol "~".-->
+    <string name="tilde_symbol_name">tilde</string>
+    <!-- Spoken description for the grave accent "`". -->
+    <string name="grave_accent_symbol_name">grave accent</string>
+    <!-- Spoken description for the vertical line symbol "|". -->
+    <string name="vertical_line_symbol_name">vertical line</string>
+    <!-- Spoken description for square root symbol "√". -->
+    <string name="square_root_symbol_name">square root</string>
+    <!-- Spoken description for bullet symbol "•". -->
+    <string name="bullet_symbol_name">bullet</string>
+    <!-- Spoken description for multiplication symbol "✕". -->
+    <string name="multiplication_symbol_name">multiplication sign</string>
+    <!-- Spoken description for the division symbol "÷". -->
+    <string name="division_symbol_name">division sign</string>
+    <!-- Spoken description for the pilcrow symbol "¶". -->
+    <string name="pilcrow_symbol_name">pilcrow sign</string>
+    <!-- Spoken description for the pi symbol "π". -->
+    <string name="pi_symbol_name">pi</string>
+    <!-- Spoken description for the delta symbol "∆". -->
+    <string name="delta_symbol_name">delta</string>
+    <!-- Spoken description for the British pound symbol "£". -->
+    <string name="british_pound_symbol_name">pound sign</string>
+    <!-- Spoken description for the cent symbol "¢". -->
+    <string name="cent_symbol_name">cent sign</string>
+    <!-- Spoken description for the Euro symbol "€". -->
+    <string name="euro_symbol_name">euro sign</string>
+    <!-- Spoken description for the Yen symbol "¥". -->
+    <string name="yen_symbol_name">yen sign</string>
+    <!-- Spoken description for the caret symbol "^". -->
+    <string name="caret_symbol_name">caret</string>
+    <!-- Spoken description for the degree symbol "°". -->
+    <string name="degree_symbol_name">degree sign</string>
+    <!-- Spoken description for the left curly bracket symbol "{". -->
+    <string name="left_curly_bracket_symbol_name">left brace</string>
+    <!-- Spoken description for the right curly bracket symbol "}". -->
+    <string name="right_curly_bracket_symbol_name">right brace</string>
+    <!-- Spoken description for the copyright symbol "©". -->
+    <string name="copyright_symbol_name">copyright sign</string>
+    <!-- Spoken description for the registered trademark symbol "®". -->
+    <string name="registered_trademark_symbol_name">registered trademark sign</string>
+    <!-- Spoken description for the trademark symbol "™". -->
+    <string name="trademark_symbol_name">trademark sign</string>
+    <!-- Spoken description for the left square bracket symbol "[". -->
+    <string name="left_square_bracket_symbol_name">left bracket</string>
+    <!-- Spoken description for the right square bracket symbol "]". -->
+    <string name="right_square_bracket_symbol_name">right bracket</string>
+    <!-- Spoken description for the inverted exclamation point symbol "¡". -->
+    <string name="inverted_exclamation_point_symbol_name">inverted exclamation mark</string>
+    <!-- Spoken description for the inverted question mark symbol "¿". -->
+    <string name="inverted_question_mark_symbol_name">inverted question mark</string>
 </resources>
