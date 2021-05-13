@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <zircon/errors.h>
+#include <zircon/syscalls.h>
 
 #include <ddktl/device.h>
 

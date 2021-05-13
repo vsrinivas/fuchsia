@@ -100,6 +100,9 @@ zx_status_t FragmentProxy::DdkGetProtocol(uint32_t proto_id, void* out) {
     case ZX_PROTOCOL_DSI:
       proto->ops = &dsi_protocol_ops_;
       return ZX_OK;
+    case ZX_PROTOCOL_PCI:
+      proto->ops = &pci_protocol_ops_;
+      return ZX_OK;
     default:
       zxlogf(ERROR, "%s unsupported protocol \'%u\'", __func__, proto_id);
       return ZX_ERR_NOT_SUPPORTED;

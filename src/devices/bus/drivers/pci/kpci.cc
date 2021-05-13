@@ -208,7 +208,6 @@ zx_status_t KernelPci::DdkRxrpc(zx_handle_t ch) {
     return ZX_ERR_INTERNAL;
   }
 
-  zxlogf(TRACE, "[%#x] <-- op %u txid %#x", ch, request.op, request.txid);
   switch (request.op) {
     case PCI_OP_CONFIG_READ:
       return RpcConfigRead(ch, &request, &response);
@@ -436,8 +435,6 @@ zx_status_t KernelPci::RpcReply(zx_handle_t ch, zx_status_t status, zx_handle_t*
   resp->op = req->op;
   resp->txid = req->txid;
   resp->ret = status;
-  zxlogf(TRACE, "[%#x] --> op %u txid %#x = %s", ch, resp->op, resp->txid,
-         zx_status_get_string(resp->ret));
   return zx_channel_write(ch, 0, resp, sizeof(PciRpcMsg), handle, handle_cnt);
 }
 

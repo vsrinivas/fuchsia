@@ -6,12 +6,15 @@
 #define SRC_DEVICES_INTERNAL_DRIVERS_FRAGMENT_PROXY_PROTOCOL_H_
 
 #include <fuchsia/hardware/amlogiccanvas/c/banjo.h>
+#include <fuchsia/hardware/pci/c/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <fuchsia/hardware/power/c/banjo.h>
 #include <fuchsia/hardware/pwm/c/banjo.h>
 #include <fuchsia/hardware/tee/c/banjo.h>
 #include <fuchsia/hardware/usb/modeswitch/c/banjo.h>
 #include <fuchsia/hardware/vreg/c/banjo.h>
+
+#include "src/devices/bus/drivers/pci/proxy_rpc.h"
 
 namespace fragment {
 
@@ -452,6 +455,31 @@ enum class DsiOp {
 struct DsiProxyRequest {
   ProxyRequest header;
   DsiOp op;
+};
+
+struct PciRpcRequest {
+  ProxyRequest header;
+  pci::PciRpcOp op;
+  union {
+    pci::PciMsgBar bar;
+    pci::PciMsgCfg cfg;
+    pci::PciMsgIrq irq;
+    pci::PciMsgCapability cap;
+    uint32_t bti_index;
+    bool enable;
+  };
+};
+
+struct PciRpcResponse {
+  ProxyResponse header;
+  pci::PciRpcOp op;
+  union {
+    pci::PciMsgBar bar;
+    pci::PciMsgCfg cfg;
+    pci::PciMsgIrq irq;
+    pci::PciMsgDeviceInfo info;
+    pci::PciMsgCapability cap;
+  };
 };
 
 }  // namespace fragment

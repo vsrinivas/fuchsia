@@ -5,14 +5,13 @@
 #define SRC_DEVICES_PCI_TESTING_PCI_PROTOCOL_FAKE_H_
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <fuchsia/hardware/pci/cpp/banjo.h>
-#include <lib/ddk/device.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/interrupt.h>
 #include <zircon/errors.h>
 #include <zircon/hw/pci.h>
 #include <zircon/status.h>
-
+#include <ddktl/device.h>
 #include <array>
 #include <optional>
 #include <vector>
@@ -27,7 +26,7 @@
 #define kFakePciInternalError "Internal FakePciProtocol Error"
 
 namespace pci {
-class FakePciProtocol : public ddk::PciProtocol<FakePciProtocol> {
+class FakePciProtocol : public ddk::PciProtocol<FakePciProtocol, ddk::base_protocol> {
  public:
   FakePciProtocol() { reset(); }
 

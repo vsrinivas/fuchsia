@@ -71,7 +71,7 @@ using PciMsgDeviceInfo = pcie_device_info_t;
 
 struct PciRpcMsg {
   zx_txid_t txid;  // handled by zx_channel_call
-  uint32_t op;
+  PciRpcOp op;
   zx_status_t ret;
   union {
     PciMsgBar bar;

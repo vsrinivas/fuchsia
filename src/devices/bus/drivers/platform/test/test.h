@@ -36,6 +36,7 @@ class TestBoard : public TestBoardType {
   zx_status_t GoldfishPipeInit();
   zx_status_t GoldfishSyncInit();
   zx_status_t GpioInit();
+  zx_status_t PciInit();
   zx_status_t I2cInit();
   zx_status_t SpiInit();
   zx_status_t PowerInit();

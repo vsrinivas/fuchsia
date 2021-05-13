@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/goldfish/sync/c/banjo.h>
 #include <fuchsia/hardware/gpio/c/banjo.h>
 #include <fuchsia/hardware/i2c/c/banjo.h>
+#include <fuchsia/hardware/pci/c/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <fuchsia/hardware/power/c/banjo.h>
 #include <fuchsia/hardware/pwm/c/banjo.h>
@@ -18,6 +19,7 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/i2c.h>
 #include <lib/spi/spi.h>
@@ -28,8 +30,6 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
-
-#include <lib/ddk/metadata.h>
 
 #include "src/devices/bus/drivers/platform/test/test-composite-bind.h"
 #include "src/devices/bus/drivers/platform/test/test-metadata.h"
@@ -56,6 +56,7 @@ enum Fragments_2 {
   FRAGMENT_PWM_2,
   FRAGMENT_RPMB_2,
   FRAGMENT_VREG_2,
+  FRAGMENT_PCI_2,
   FRAGMENT_COUNT_2,
 };
 
@@ -538,6 +539,16 @@ static zx_status_t test_vreg(vreg_protocol_t* vreg) {
   return ZX_OK;
 }
 
+static zx_status_t test_pci(pci_protocol_t* pci) {
+  pcie_device_info_t info = {0};
+  zx_status_t status = pci_get_device_info(pci, &info);
+  if (status == ZX_OK) {
+    status = (info.device_id = PDEV_DID_TEST_PCI) ? ZX_OK : ZX_ERR_INTERNAL;
+  }
+
+  return status;
+}
+
 static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
   zx_status_t status;
 
@@ -596,6 +607,7 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
   goldfish_address_space_protocol_t goldfish_address_space;
   goldfish_pipe_protocol_t goldfish_pipe;
   goldfish_sync_protocol_t goldfish_sync;
+  pci_protocol_t pci;
 
   if (metadata.composite_device_id == PDEV_DID_TEST_COMPOSITE_1) {
     if (count != FRAGMENT_COUNT_1) {
@@ -649,6 +661,7 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
       zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_I2C", DRIVER_NAME);
       return status;
     }
+
     if ((status = test_clock(&clock)) != ZX_OK) {
       zxlogf(ERROR, "%s: test_clock failed: %d", DRIVER_NAME, status);
       return status;
@@ -735,6 +748,15 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
       zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_VREG", DRIVER_NAME);
       return status;
     }
+    status = device_get_protocol(fragments[FRAGMENT_PCI_2].device, ZX_PROTOCOL_PCI, &pci);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_PCI", DRIVER_NAME);
+      return status;
+    }
+    if (strncmp(fragments[FRAGMENT_PCI_2].name, "pci", 32)) {
+      zxlogf(ERROR, "%s: Unexpected name: %s", DRIVER_NAME, fragments[FRAGMENT_PCI_2].name);
+      return ZX_ERR_INTERNAL;
+    }
 
     if ((status = test_clock(&clock)) != ZX_OK) {
       zxlogf(ERROR, "%s: test_clock failed: %d", DRIVER_NAME, status);
@@ -758,6 +780,10 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
     }
     if ((status = test_vreg(&vreg)) != ZX_OK) {
       zxlogf(ERROR, "%s: test_vreg failed: %d", DRIVER_NAME, status);
+      return status;
+    }
+    if ((status = test_pci(&pci)) != ZX_OK) {
+      zxlogf(ERROR, "%s: test_pci failed: %d", DRIVER_NAME, status);
       return status;
     }
   } else if (metadata.composite_device_id == PDEV_DID_TEST_GOLDFISH_CONTROL_COMPOSITE) {

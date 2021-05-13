@@ -126,6 +126,8 @@ TEST(PbusTest, Enumeration) {
   EXPECT_EQ(
       RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:20/test-goldfish-sync", &fd),
       ZX_OK);
+  EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:21/test-pci", &fd),
+            ZX_OK);
 
   const int dirfd = devmgr.devfs_root().get();
   struct stat st;
@@ -144,6 +146,7 @@ TEST(PbusTest, Enumeration) {
   EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:1c/test-goldfish-pipe", &st, 0), 0);
   EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:1d/test-goldfish-address-space", &st, 0), 0);
   EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:20/test-goldfish-sync", &st, 0), 0);
+  EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:21/test-pci", &st, 0), 0);
 
   // Check that we see multiple entries that begin with "fragment-" for a device that is a
   // fragment of multiple composites

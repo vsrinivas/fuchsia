@@ -27,6 +27,7 @@
 #include <fuchsia/hardware/tee/cpp/banjo.h>
 #include <fuchsia/hardware/usb/modeswitch/cpp/banjo.h>
 #include <fuchsia/hardware/vreg/cpp/banjo.h>
+#include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
 #include <lib/zx/channel.h>
@@ -34,6 +35,7 @@
 #include <ddktl/device.h>
 
 #include "proxy-protocol.h"
+#include "src/devices/bus/drivers/pci/proxy.h"
 
 namespace fragment {
 
@@ -63,7 +65,11 @@ class FragmentProxy : public FragmentProxyBase,
                       public ddk::GoldfishAddressSpaceProtocol<FragmentProxy>,
                       public ddk::GoldfishPipeProtocol<FragmentProxy>,
                       public ddk::DsiProtocol<FragmentProxy>,
-                      public ddk::GoldfishSyncProtocol<FragmentProxy> {
+                      public ddk::GoldfishSyncProtocol<FragmentProxy>,
+                      // TOOD(fxbug.dev/32978): PciProxyBase implements
+                      // ddk::PciProtocol so it can be shared between the two
+                      // PCI drivers until migration is complete.
+                      public ddk::PciProtocol<FragmentProxy> {
  public:
   FragmentProxy(zx_device_t* parent, zx::channel rpc)
       : FragmentProxyBase(parent), rpc_(std::move(rpc)) {}
@@ -172,8 +178,37 @@ class FragmentProxy : public FragmentProxyBase,
   zx_status_t CodecConnect(zx::channel chan);
   zx_status_t DaiConnect(zx::channel chan);
 
+  // PCI
+  zx_status_t PciGetBar(uint32_t bar_id, pci_bar_t* out_res);
+  zx_status_t PciEnableBusMaster(bool enable);
+  zx_status_t PciResetDevice();
+  zx_status_t PciAckInterrupt();
+  zx_status_t PciMapInterrupt(uint32_t which_irq, zx::interrupt* out_handle);
+  zx_status_t PciConfigureIrqMode(uint32_t requested_irq_count, pci_irq_mode_t* mode);
+  zx_status_t PciQueryIrqMode(pci_irq_mode_t mode, uint32_t* out_max_irqs);
+  zx_status_t PciSetIrqMode(pci_irq_mode_t mode, uint32_t requested_irq_count);
+  zx_status_t PciGetDeviceInfo(pcie_device_info_t* out_into);
+  zx_status_t PciConfigRead8(uint16_t offset, uint8_t* out_value);
+  zx_status_t PciConfigRead16(uint16_t offset, uint16_t* out_value);
+  zx_status_t PciConfigRead32(uint16_t offset, uint32_t* out_value);
+  zx_status_t PciConfigWrite8(uint16_t offset, uint8_t value);
+  zx_status_t PciConfigWrite16(uint16_t offset, uint16_t value);
+  zx_status_t PciConfigWrite32(uint16_t offset, uint32_t value);
+  zx_status_t PciGetFirstCapability(uint8_t cap_id, uint8_t* out_offset);
+  zx_status_t PciGetNextCapability(uint8_t cap_id, uint8_t offset, uint8_t* out_offset);
+  zx_status_t PciGetFirstExtendedCapability(uint16_t cap_id, uint16_t* out_offset);
+  zx_status_t PciGetNextExtendedCapability(uint16_t cap_id, uint16_t offset, uint16_t* out_offset);
+  zx_status_t PciGetBti(uint32_t index, zx::bti* out_bti);
+
  private:
   zx::channel rpc_;
+  // Helpers to marshal PCI config-based RPC.
+  zx_status_t PciRpc(pci::PciRpcOp op, zx_handle_t* rd_handle, const zx_handle_t* wr_handle,
+                     PciRpcRequest* req, PciRpcResponse* resp);
+  template <typename T>
+  zx_status_t PciConfigRead(uint16_t offset, T* out_value);
+  template <typename T>
+  zx_status_t PciConfigWrite(uint16_t offset, T value);
 };
 
 }  // namespace fragment

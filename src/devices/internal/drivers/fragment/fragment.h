@@ -23,6 +23,7 @@
 #include <fuchsia/hardware/i2c/cpp/banjo.h>
 #include <fuchsia/hardware/isp/cpp/banjo.h>
 #include <fuchsia/hardware/mipicsi/cpp/banjo.h>
+#include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <fuchsia/hardware/power/cpp/banjo.h>
 #include <fuchsia/hardware/powerimpl/cpp/banjo.h>
@@ -41,6 +42,7 @@
 #include <fuchsia/hardware/vreg/cpp/banjo.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
+#include <lib/ddk/fragment-device.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
 
@@ -108,7 +110,8 @@ class Fragment : public FragmentBase {
         rpmb_client_(parent, ZX_PROTOCOL_RPMB),
         registers_client_(parent, ZX_PROTOCOL_REGISTERS),
         vreg_client_(parent, ZX_PROTOCOL_VREG),
-        dsi_client_(parent, ZX_PROTOCOL_DSI) {}
+        dsi_client_(parent, ZX_PROTOCOL_DSI),
+        pci_client_(parent, ZX_PROTOCOL_PCI) {}
 
   static zx_status_t Bind(void* ctx, zx_device_t* parent);
 
@@ -205,6 +208,9 @@ class Fragment : public FragmentBase {
   zx_status_t RpcDsi(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
                      uint32_t* out_resp_size, zx::handle* req_handles, uint32_t req_handle_count,
                      zx::handle* resp_handles, uint32_t* resp_handle_count);
+  zx_status_t RpcPci(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                     uint32_t* out_resp_size, zx::handle* req_handles, uint32_t req_handle_count,
+                     zx::handle* resp_handles, uint32_t* resp_handle_count);
 
   static void I2cTransactCallback(void* cookie, zx_status_t status, const i2c_op_t* op_list,
                                   size_t op_count);
@@ -246,6 +252,7 @@ class Fragment : public FragmentBase {
   ProtocolClient<ddk::RegistersProtocolClient, registers_protocol_t> registers_client_;
   ProtocolClient<ddk::VregProtocolClient, vreg_protocol_t> vreg_client_;
   ProtocolClient<ddk::DsiProtocolClient, dsi_protocol_t> dsi_client_;
+  ProtocolClient<ddk::PciProtocolClient, pci_protocol_t> pci_client_;
 };
 
 }  // namespace fragment

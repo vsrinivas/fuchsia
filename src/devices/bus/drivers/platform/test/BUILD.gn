@@ -48,6 +48,7 @@ driver_module("test-board") {
     "test-goldfish.cc",
     "test-gpio.cc",
     "test-i2c.cc",
+    "test-pci.cc",
     "test-power.cc",
     "test-pwm.cc",
     "test-rpmb.cc",
@@ -335,6 +336,34 @@ bind_rules("test-vreg-bind") {
   ]
 }
 
+bind_rules("test-pci-bind") {
+  rules = "test/test-pci.bind"
+  output = "test-pci-bind.h"
+  deps = [
+    "//src/devices/bind/fuchsia.pci",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/test.platform",
+  ]
+}
+
+driver_module("test-pci") {
+  testonly = true
+  configs += [ "//build/config:all_source" ]
+  sources = [ "test/pci.cc" ]
+  deps = [
+    ":test-pci-bind",
+    "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
+    "//src/devices/lib/driver",
+    "//src/devices/pci/testing:pci-protocol-fake",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
+  ]
+}
+
 driver_module("test-vreg") {
   configs += [ "//build/config:all_source" ]
   sources = [ "test/vreg.cc" ]
@@ -369,6 +398,7 @@ driver_module("test-composite") {
     "//sdk/banjo/fuchsia.hardware.goldfish.sync:fuchsia.hardware.goldfish.sync_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.i2c:fuchsia.hardware.i2c_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.power:fuchsia.hardware.power_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.pwm:fuchsia.hardware.pwm_banjo_cpp",
@@ -444,6 +474,7 @@ isolated_devmgr_unittest_package("platform-bus-test") {
     ":test-goldfish-sync",
     ":test-gpio",
     ":test-i2c",
+    ":test-pci",
     ":test-power",
     ":test-pwm",
     ":test-rpmb",
