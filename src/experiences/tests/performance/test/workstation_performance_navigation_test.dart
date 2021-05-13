@@ -355,4 +355,114 @@ void main() {
     await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
     expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
   });
+
+  test('Trace performance of switching tabs in Simple Browser', () async {
+    FlutterDriver browser;
+    browser = await ermine.launchSimpleBrowser();
+
+    // Opens yellow.html in the first tab.
+    await browser.tap(find.byValueKey('new_tab'));
+    await browser.waitFor(find.text(_newTabHintText), timeout: _timeout);
+    await input.text(_yellowUrl);
+    await input.keyPress(kEnterKey);
+    await browser.waitUntilNoTransientCallbacks(timeout: _timeout);
+    await browser.waitFor(yellowTabFinder, timeout: _timeout);
+
+    // Opens red.html in the second tab.
+    await browser.tap(find.byValueKey('new_tab'));
+    await browser.waitFor(find.text(_newTabHintText), timeout: _timeout);
+    await input.text(_redUrl);
+    await input.keyPress(kEnterKey);
+    await browser.waitUntilNoTransientCallbacks(timeout: _timeout);
+    await browser.waitFor(redTabFinder, timeout: _timeout);
+
+    // Opens green.html in the third tab.
+    await browser.tap(find.byValueKey('new_tab'));
+    await browser.waitFor(find.text(_newTabHintText), timeout: _timeout);
+    await input.text(_greenUrl);
+    await input.keyPress(kEnterKey);
+    await browser.waitUntilNoTransientCallbacks(timeout: _timeout);
+    await browser.waitFor(greenTabFinder, timeout: _timeout);
+
+    // Opens pink.html in the fourth tab.
+    await browser.tap(find.byValueKey('new_tab'));
+    await browser.waitFor(find.text(_newTabHintText), timeout: _timeout);
+    await input.text(_pinkUrl);
+    await input.keyPress(kEnterKey);
+    await browser.waitUntilNoTransientCallbacks(timeout: _timeout);
+    await browser.waitFor(pinkTabFinder, timeout: _timeout);
+
+    // Opens blue.html in the fifth tab.
+    await browser.tap(find.byValueKey('new_tab'));
+    await browser.waitFor(find.text(_newTabHintText), timeout: _timeout);
+    await input.text(_blueUrl);
+    await input.keyPress(kEnterKey);
+    await browser.waitUntilNoTransientCallbacks(timeout: _timeout);
+    await browser.waitFor(blueTabFinder, timeout: _timeout);
+
+    // Verify 5 tabs launched.
+    expect(await browser.getText(newTabFinder), isNotNull);
+    expect(await browser.getText(yellowTabFinder), isNotNull);
+    expect(await browser.getText(redTabFinder), isNotNull);
+    expect(await browser.getText(greenTabFinder), isNotNull);
+    expect(await browser.getText(pinkTabFinder), isNotNull);
+    expect(await browser.getText(blueTabFinder), isNotNull);
+
+    // Verify fifth tab is open.
+    expect(await browser.getText(find.text(_blueUrl)), isNotNull);
+
+    // Verify the order of tabs.
+    expect(await _waitForTabArrangement(browser, yellowTabFinder, redTabFinder),
+        isTrue,
+        reason: 'The Yellow tab is not on the left side of the Red tab:');
+    expect(await _waitForTabArrangement(browser, redTabFinder, greenTabFinder),
+        isTrue,
+        reason: 'The Red tab is not on the left side of the Green tab');
+    expect(await _waitForTabArrangement(browser, greenTabFinder, pinkTabFinder),
+        isTrue,
+        reason: 'The Green tab is not on the left side of the Pink tab');
+    expect(await _waitForTabArrangement(browser, greenTabFinder, pinkTabFinder),
+        isTrue,
+        reason: 'The Green tab is not on the left side of the Pink tab');
+    expect(await _waitForTabArrangement(browser, pinkTabFinder, blueTabFinder),
+        isTrue,
+        reason: 'The Pink tab is not on the left side of the Blue tab');
+
+    // Enable capturing of input_latency metrics.
+    measureInputLatency = true;
+
+    // Initialize tracing session for performance tracking.
+    final traceSession = await performance.initializeTracing();
+    await traceSession.start();
+
+    // Switch from fifth tab to first tab.
+    // TODO(fxb/76591): Transition pointer interactions to use Sl4f.Input
+    await browser.tap(yellowTabFinder);
+    await browser.waitFor(find.text(_yellowUrl));
+
+    // Stop tracing session.
+    await traceSession.stop();
+
+    // Verify first tab is open.
+    expect(await browser.getText(find.text(_yellowUrl)), isNotNull);
+
+    // Download and format data from trace for visualization.
+    final fxtTraceFile = await traceSession
+        .terminateAndDownload('$_testNameTitle-tab-rearranging-test');
+    final jsonTraceFile =
+        await performance.convertTraceFileToJson(_trace2jsonPath, fxtTraceFile);
+    final metricsSpecSet = MetricsSpecSet(
+        testName: '$_testNameTitle-tab-rearranging-test',
+        testSuite: _testSuite,
+        metricsSpecs: metricsSpecs);
+
+    expect(
+        await performance.processTrace(metricsSpecSet, jsonTraceFile,
+            converterPath: _catapultConverterPath),
+        isNotNull);
+
+    await ermine.driver.requestData('close');
+    await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
+    expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
+  });
 }
