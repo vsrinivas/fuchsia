@@ -318,7 +318,7 @@ source_set("main") {
 config_data("sysmgr_config") {
   for_pkg = "sysmgr"
 
-  sources = [ "config/sysmgr.config" ]
+  sources = [ "configs/sysmgr.config" ]
   outputs = [ "device_id_provider.config" ]
 
   visibility += [ "*" ]

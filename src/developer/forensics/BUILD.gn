@@ -207,7 +207,7 @@ config_data("crash_reports_upload_to_prod_server_config") {
 }
 
 resource("feedback_data_config") {
-  sources = [ "feedback_data/config.json" ]
+  sources = [ "feedback_data/configs/default.json" ]
 
   outputs = [ "data/feedback_data/config.json" ]
 }
