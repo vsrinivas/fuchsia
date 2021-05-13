@@ -41,23 +41,24 @@ fn str_to_syn_path(path: &str) -> syn::Path {
 
 fn variants_test_inner(input: TokenStream, variants: &[Variant<'_>]) -> TokenStream {
     let item = input.clone();
-    let item = syn::parse_macro_input!(item as syn::ItemFn);
+    let mut item = syn::parse_macro_input!(item as syn::ItemFn);
+    let impl_attrs = item.attrs;
+    item.attrs = Vec::new();
     let syn::Signature { ident: name, generics, output, inputs, .. } = &item.sig;
-    if inputs.len() != 1 {
+    let arg = if let Some(arg) = inputs.first() {
+        arg
+    } else {
         return syn::Error::new_spanned(inputs, "test functions must have a name argument")
             .to_compile_error()
             .into();
-    }
-
-    // Should not panic because of the earlier check.
-    let arg = inputs.last().expect("only expect a single argument for test functions");
+    };
     let arg_type = match arg {
         syn::FnArg::Typed(t) => &t.ty,
         other => {
             return syn::Error::new_spanned(
                 inputs,
                 format!(
-                    "test functions may only have a typed argument (`&str`); got = {:#?}",
+                    "test function's first argument must be a `&str` for test name; got = {:#?}",
                     other
                 ),
             )
@@ -71,7 +72,7 @@ fn variants_test_inner(input: TokenStream, variants: &[Variant<'_>]) -> TokenStr
             return syn::Error::new_spanned(
                 inputs,
                 format!(
-                    "test functions may only have a reference typed argument (`&str`); got = {:#?}",
+                    "test function's first argument must be a `&str` for test name; got = {:#?}",
                     other
                 ),
             )
@@ -84,16 +85,22 @@ fn variants_test_inner(input: TokenStream, variants: &[Variant<'_>]) -> TokenStr
         other => {
             return syn::Error::new_spanned(
                 inputs,
-                format!("test functions may only have a reference to a typed argument (`&str`); got = {:#?}", other),
+                format!(
+                    "test function's first argument must be a `&str` for test name; got = {:#?}",
+                    other
+                ),
             )
             .to_compile_error()
             .into()
         }
     };
     if !arg_type.is_ident("str") {
-        return syn::Error::new_spanned(inputs, "test functions may only have a `&str` argument")
-            .to_compile_error()
-            .into();
+        return syn::Error::new_spanned(
+            inputs,
+            "test function's first argument must be a `&str`  for test name",
+        )
+        .to_compile_error()
+        .into();
     }
 
     // We only care about generic type parameters and their last trait bound.
@@ -192,18 +199,56 @@ fn variants_test_inner(input: TokenStream, variants: &[Variant<'_>]) -> TokenStr
             }
         }
 
-        let mut args = syn::punctuated::Punctuated::<_, syn::token::Comma>::new();
-        args.push(syn::Expr::Lit(syn::ExprLit {
+        // Ignore the first argument to the original test function from the list of
+        // inputs which we pass in explicitly through `args` (the test name).
+        let impl_inputs = inputs
+            .iter()
+            .enumerate()
+            .filter_map(|(i, item)| if i == 0 { None } else { Some(item.clone()) })
+            .collect::<Vec<_>>();
+        let mut args = vec![syn::Expr::Lit(syn::ExprLit {
             attrs: vec![],
             lit: syn::Lit::Str(syn::LitStr::new(&test_name_str, Span::call_site())),
-        }));
+        })];
+
+        // Pass in the remaining inputs.
+        for arg in impl_inputs.iter() {
+            let arg = if let syn::FnArg::Typed(t) = arg {
+                t
+            } else {
+                return syn::Error::new_spanned(
+                    proc_macro2::TokenStream::from(input),
+                    format!("expected typed fn arg; got = {:#?}", arg),
+                )
+                .to_compile_error()
+                .into();
+            };
+
+            let arg = if let syn::Pat::Ident(i) = arg.pat.as_ref() {
+                i
+            } else {
+                return syn::Error::new_spanned(
+                    proc_macro2::TokenStream::from(input),
+                    format!("expected ident fn arg; got = {:#?}", arg),
+                )
+                .to_compile_error()
+                .into();
+            };
+
+            args.push(syn::Expr::Path(syn::ExprPath {
+                attrs: Vec::new(),
+                qself: None,
+                path: arg.ident.clone().into(),
+            }));
+        }
 
         impls.push(quote! {
+            #(#impl_attrs)*
             #[fuchsia_async::run_singlethreaded(test)]
-            async fn #test_name () #output {
-                #name :: < #(#params),* > ( #args ).await
+            async fn #test_name ( #(#impl_inputs),* ) #output {
+                #name :: < #(#params),* > ( #(#args),* ).await
             }
-        })
+        });
     }
 
     let result = quote! {

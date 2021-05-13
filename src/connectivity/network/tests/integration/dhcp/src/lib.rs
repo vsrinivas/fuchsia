@@ -13,6 +13,7 @@ use net_declare::{fidl_ip_v4, fidl_mac};
 use netstack_testing_common::environments::{KnownServices, Netstack2, TestSandboxExt as _};
 use netstack_testing_common::Result;
 use netstack_testing_macros::variants_test;
+use test_case::test_case;
 
 // Encapsulates a minimal configuration needed to test a DHCP client/server combination.
 struct DhcpTestConfig<'a> {
@@ -106,6 +107,13 @@ struct DhcpTestEndpoint<'a> {
     /// static_addrs holds the static addresses configured on the endpoint
     /// before any server or client is started.
     static_addrs: Vec<fidl_fuchsia_net::Subnet>,
+}
+
+struct DhcpTestCase<'a, 'b> {
+    network_configs: &'a mut [DhcpTestNetwork<'a>],
+    dhcp_settings: &'b mut [Settings<'b>],
+    cycles: usize,
+    client_renews: bool,
 }
 
 /// A network can have multiple endpoints. Each endpoint can be attached to a
@@ -312,13 +320,180 @@ struct Settings<'a> {
 /// The DHCP client's renewal path is tested with the `client_renews` flag. If this flag is enabled,
 /// the user will likely want to set custom renewal and rebinding times, with short values, so as to
 /// minimize time spent waiting for renewal to trigger.
+#[variants_test]
+#[test_case(
+    "acquire_with_dhcpd_bound_device",
+    DhcpTestCase{
+        network_configs: &mut [DhcpTestNetwork {
+            name: DEFAULT_NETWORK_NAME,
+            eps: &mut [
+                DhcpTestEndpoint {
+                    name: "server-ep",
+                    env: DhcpTestEnv::Server,
+                    static_addrs: vec![DEFAULT_TEST_CONFIG.server_subnet()],
+                },
+                DhcpTestEndpoint {
+                    name: "client-ep",
+                    env: DhcpTestEnv::Client(DEFAULT_TEST_CONFIG.expected_acquired()),
+                    static_addrs: Vec::new(),
+                },
+            ],
+        }],
+        dhcp_settings: &mut [Settings {
+            parameters: &mut DEFAULT_TEST_CONFIG.dhcp_parameters(),
+            options: &mut [],
+        }],
+        cycles:1,
+        client_renews: false,
+    }; "acquire dhcp with dhcpd bound device")]
+#[test_case(
+    "acquire_with_multiple_networks",
+    DhcpTestCase{
+        network_configs: &mut [
+            DhcpTestNetwork {
+                name: "net1",
+                eps: &mut [
+                    DhcpTestEndpoint {
+                        name: "server-ep1",
+                        env: DhcpTestEnv::Server,
+                        static_addrs: vec![DEFAULT_TEST_CONFIG.server_subnet()],
+                    },
+                    DhcpTestEndpoint {
+                        name: "client-ep1",
+                        env: DhcpTestEnv::Client(DEFAULT_TEST_CONFIG.expected_acquired()),
+                        static_addrs: Vec::new(),
+                    },
+                ],
+            },
+            DhcpTestNetwork {
+                name: "net2",
+                eps: &mut [
+                    DhcpTestEndpoint {
+                        name: "server-ep2",
+                        env: DhcpTestEnv::Server,
+                        static_addrs: vec![ALT_TEST_CONFIG.server_subnet()],
+                    },
+                    DhcpTestEndpoint {
+                        name: "client-ep2",
+                        env: DhcpTestEnv::Client(ALT_TEST_CONFIG.expected_acquired()),
+                        static_addrs: Vec::new(),
+                    },
+                ],
+            },
+        ],
+        dhcp_settings: &mut [
+            Settings { parameters: &mut DEFAULT_TEST_CONFIG.dhcp_parameters(), options: &mut [] },
+            Settings { parameters: &mut ALT_TEST_CONFIG.dhcp_parameters(), options: &mut [] },
+        ],
+        cycles:1,
+        client_renews:false,
+    }; "acquire dhcp with multiple networks")]
+#[test_case(
+    "acquire_then_renew_with_dhcpd_bound_device",
+    {
+        // A realistic lease length that won't expire within the test timeout of 2 minutes.
+        const LONG_LEASE: u32 = 60 * 60 * 24;
+        // A short client renewal time which will trigger well before the test timeout of 2 minutes.
+        const SHORT_RENEW: u32 = 3;
+
+        DhcpTestCase{
+            network_configs: &mut [DhcpTestNetwork {
+                name: DEFAULT_NETWORK_NAME,
+                eps: &mut [
+                    DhcpTestEndpoint {
+                        name: "server-ep",
+                        env: DhcpTestEnv::Server,
+                        static_addrs: vec![DEFAULT_TEST_CONFIG.server_subnet()],
+                    },
+                    DhcpTestEndpoint {
+                        name: "client-ep",
+                        env: DhcpTestEnv::Client(DEFAULT_TEST_CONFIG.expected_acquired()),
+                        static_addrs: Vec::new(),
+                    },
+                ],
+            }],
+            dhcp_settings: &mut [Settings {
+                parameters: &mut vec![fidl_fuchsia_net_dhcp::Parameter::Lease(fidl_fuchsia_net_dhcp::LeaseLength {
+                    default: Some(LONG_LEASE),
+                    max: Some(LONG_LEASE),
+                    ..fidl_fuchsia_net_dhcp::LeaseLength::EMPTY
+                })],
+                options: &mut [fidl_fuchsia_net_dhcp::Option_::RenewalTimeValue(SHORT_RENEW)],
+            }],
+            cycles:1,
+            client_renews: true,
+        }
+    }; "acquire dhcp then renew with dhcpd bound device")]
+#[test_case(
+    "acquire_with_dhcpd_bound_device_dup_addr",
+    {
+        let expected_acquired = DEFAULT_TEST_CONFIG.expected_acquired();
+        let expected_addr = match expected_acquired.addr {
+            fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address { addr: mut octets }) => {
+                // We expect to assign the address numericaly succeeding the default client address
+                // since the default client address will be assigned to a neighbor of the client so
+                // the client should decline the offer and restart DHCP.
+                *octets.iter_mut().last().expect("IPv4 addresses have a non-zero number of octets") +=
+                    1;
+
+                fidl_fuchsia_net::Subnet {
+                    addr: fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
+                        addr: octets,
+                    }),
+                    ..expected_acquired
+                }
+            }
+            fidl_fuchsia_net::IpAddress::Ipv6(a) => {
+                panic!("expected IPv4 address; got IPv6 address = {:?}", a)
+            }
+        };
+
+        DhcpTestCase {
+            network_configs: &mut [DhcpTestNetwork {
+                name: DEFAULT_NETWORK_NAME,
+                eps: &mut [
+                    // Use two separate endpoints for the server so that its unicast responses to
+                    // the expected address acquired actually reach the network. This is not a hack around
+                    // Fuchsia behavior: Linux behaves the same way. On Linux, given an endpoint that
+                    // is BINDTODEVICE, unicasting to an IP address bound to another endpoint on the
+                    // same host WILL reach the network, rather than going through loopback. However,
+                    // if the first endpoint is NOT BINDTODEVICE, the outgoing message will be sent via
+                    // loopback.
+                    DhcpTestEndpoint {
+                        name: "server-ep",
+                        env: DhcpTestEnv::Server,
+                        static_addrs: vec![DEFAULT_TEST_CONFIG.server_subnet()],
+                    },
+                    DhcpTestEndpoint {
+                        name: "server-ep2",
+                        env: DhcpTestEnv::Server,
+                        static_addrs: vec![expected_acquired],
+                    },
+                    DhcpTestEndpoint {
+                        name: "client-ep",
+                        env: DhcpTestEnv::Client(expected_addr),
+                        static_addrs: Vec::new(),
+                    },
+                ],
+            }],
+            dhcp_settings: &mut [Settings {
+                parameters: &mut DEFAULT_TEST_CONFIG.dhcp_parameters(),
+                options: &mut [],
+            }],
+            cycles: 1,
+            client_renews: false,
+        }
+    }; "acquire dhcp with dhcpd bound device dup addr")]
 async fn test_dhcp<E: netemul::Endpoint>(
-    name: &str,
-    network_configs: &mut [DhcpTestNetwork<'_>],
-    dhcp_settings: &mut [Settings<'_>],
-    cycles: usize,
-    client_renews: bool,
+    test_name: &str,
+    sub_test_name: &str,
+    test_case: DhcpTestCase<'_, '_>,
 ) -> Result {
+    let DhcpTestCase { network_configs, dhcp_settings, cycles, client_renews } = test_case;
+
+    let name = format!("{}_{}", test_name, sub_test_name);
+    let name = name.as_str();
+
     let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
 
     let sandbox_ref = &sandbox;
@@ -446,190 +621,6 @@ async fn test_dhcp<E: netemul::Endpoint>(
         client_acquires_addr(client_env_ref, interfaces, *expected_acquired, cycles, client_renews)
             .await
     })
-    .await
-}
-
-#[variants_test]
-async fn acquire_dhcp_with_dhcpd_bound_device<E: netemul::Endpoint>(name: &str) -> Result {
-    test_dhcp::<E>(
-        name,
-        &mut [DhcpTestNetwork {
-            name: DEFAULT_NETWORK_NAME,
-            eps: &mut [
-                DhcpTestEndpoint {
-                    name: "server-ep",
-                    env: DhcpTestEnv::Server,
-                    static_addrs: vec![DEFAULT_TEST_CONFIG.server_subnet()],
-                },
-                DhcpTestEndpoint {
-                    name: "client-ep",
-                    env: DhcpTestEnv::Client(DEFAULT_TEST_CONFIG.expected_acquired()),
-                    static_addrs: Vec::new(),
-                },
-            ],
-        }],
-        &mut [Settings {
-            parameters: &mut DEFAULT_TEST_CONFIG.dhcp_parameters(),
-            options: &mut [],
-        }],
-        1,
-        false,
-    )
-    .await
-}
-
-#[variants_test]
-async fn acquire_dhcp_then_renew_with_dhcpd_bound_device<E: netemul::Endpoint>(
-    name: &str,
-) -> Result {
-    let mut parameters = DEFAULT_TEST_CONFIG.dhcp_parameters();
-    // A realistic lease length that won't expire within the test timeout of 2 minutes.
-    const LONG_LEASE: u32 = 60 * 60 * 24;
-    // A short client renewal time which will trigger well before the test timeout of 2 minutes.
-    const SHORT_RENEW: u32 = 3;
-    let () = parameters.push(
-        fidl_fuchsia_net_dhcp::Parameter::Lease(fidl_fuchsia_net_dhcp::LeaseLength {
-            default: Some(LONG_LEASE),
-            max: Some(LONG_LEASE),
-            ..fidl_fuchsia_net_dhcp::LeaseLength::EMPTY
-        })
-        .into(),
-    );
-    test_dhcp::<E>(
-        name,
-        &mut [DhcpTestNetwork {
-            name: DEFAULT_NETWORK_NAME,
-            eps: &mut [
-                DhcpTestEndpoint {
-                    name: "server-ep",
-                    env: DhcpTestEnv::Server,
-                    static_addrs: vec![DEFAULT_TEST_CONFIG.server_subnet()],
-                },
-                DhcpTestEndpoint {
-                    name: "client-ep",
-                    env: DhcpTestEnv::Client(DEFAULT_TEST_CONFIG.expected_acquired()),
-                    static_addrs: Vec::new(),
-                },
-            ],
-        }],
-        &mut [Settings {
-            parameters: &mut parameters,
-            options: &mut [fidl_fuchsia_net_dhcp::Option_::RenewalTimeValue(SHORT_RENEW)],
-        }],
-        1,
-        true,
-    )
-    .await
-}
-
-#[variants_test]
-async fn acquire_dhcp_with_dhcpd_bound_device_dup_addr<E: netemul::Endpoint>(name: &str) -> Result {
-    let expected_acquired = DEFAULT_TEST_CONFIG.expected_acquired();
-    let expected_addr = match expected_acquired.addr {
-        fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address { addr: mut octets }) => {
-            // We expect to assign the address numericaly succeeding the default client address
-            // since the default client address will be assigned to a neighbor of the client so
-            // the client should decline the offer and restart DHCP.
-            *octets.iter_mut().last().expect("IPv4 addresses have a non-zero number of octets") +=
-                1;
-
-            fidl_fuchsia_net::Subnet {
-                addr: fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
-                    addr: octets,
-                }),
-                ..expected_acquired
-            }
-        }
-        fidl_fuchsia_net::IpAddress::Ipv6(a) => {
-            return Err(anyhow::anyhow!("expected IPv4 address; got IPv6 address = {:?}", a));
-        }
-    };
-
-    // Tests that if the client detects an address is already assigned to a neighbor,
-    // the client will decline the request and restart DHCP. In this test, the neighbor
-    // with the address assigned is the DHCP server.
-    test_dhcp::<E>(
-        name,
-        &mut [DhcpTestNetwork {
-            name: DEFAULT_NETWORK_NAME,
-            eps: &mut [
-                // Use two separate endpoints for the server so that its unicast responses to
-                // the expected address acquired actually reach the network. This is not a hack around
-                // Fuchsia behavior: Linux behaves the same way. On Linux, given an endpoint that
-                // is BINDTODEVICE, unicasting to an IP address bound to another endpoint on the
-                // same host WILL reach the network, rather than going through loopback. However,
-                // if the first endpoint is NOT BINDTODEVICE, the outgoing message will be sent via
-                // loopback.
-                DhcpTestEndpoint {
-                    name: "server-ep",
-                    env: DhcpTestEnv::Server,
-                    static_addrs: vec![DEFAULT_TEST_CONFIG.server_subnet()],
-                },
-                DhcpTestEndpoint {
-                    name: "server-ep2",
-                    env: DhcpTestEnv::Server,
-                    static_addrs: vec![expected_acquired],
-                },
-                DhcpTestEndpoint {
-                    name: "client-ep",
-                    env: DhcpTestEnv::Client(expected_addr),
-                    static_addrs: Vec::new(),
-                },
-            ],
-        }],
-        &mut [Settings {
-            parameters: &mut DEFAULT_TEST_CONFIG.dhcp_parameters(),
-            options: &mut [],
-        }],
-        1,
-        false,
-    )
-    .await
-}
-
-#[variants_test]
-async fn acquire_dhcp_with_multiple_network<E: netemul::Endpoint>(name: &str) -> Result {
-    test_dhcp::<E>(
-        name,
-        &mut [
-            DhcpTestNetwork {
-                name: "net1",
-                eps: &mut [
-                    DhcpTestEndpoint {
-                        name: "server-ep1",
-                        env: DhcpTestEnv::Server,
-                        static_addrs: vec![DEFAULT_TEST_CONFIG.server_subnet()],
-                    },
-                    DhcpTestEndpoint {
-                        name: "client-ep1",
-                        env: DhcpTestEnv::Client(DEFAULT_TEST_CONFIG.expected_acquired()),
-                        static_addrs: Vec::new(),
-                    },
-                ],
-            },
-            DhcpTestNetwork {
-                name: "net2",
-                eps: &mut [
-                    DhcpTestEndpoint {
-                        name: "server-ep2",
-                        env: DhcpTestEnv::Server,
-                        static_addrs: vec![ALT_TEST_CONFIG.server_subnet()],
-                    },
-                    DhcpTestEndpoint {
-                        name: "client-ep2",
-                        env: DhcpTestEnv::Client(ALT_TEST_CONFIG.expected_acquired()),
-                        static_addrs: Vec::new(),
-                    },
-                ],
-            },
-        ],
-        &mut [
-            Settings { parameters: &mut DEFAULT_TEST_CONFIG.dhcp_parameters(), options: &mut [] },
-            Settings { parameters: &mut ALT_TEST_CONFIG.dhcp_parameters(), options: &mut [] },
-        ],
-        1,
-        false,
-    )
     .await
 }
 
