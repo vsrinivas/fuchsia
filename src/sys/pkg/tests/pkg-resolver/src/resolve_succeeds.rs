@@ -12,7 +12,6 @@ use {
     fuchsia_inspect::assert_data_tree,
     fuchsia_merkle::MerkleTree,
     fuchsia_pkg_testing::{serve::responder, Package, PackageBuilder, RepositoryBuilder},
-    fuchsia_zircon::Status,
     futures::{join, prelude::*},
     http_uri_ext::HttpUriExt as _,
     lib::{
@@ -324,19 +323,19 @@ async fn error_codes() {
     // Invalid URL
     assert_matches!(
         env.resolve_package("fuchsia-pkg://test/bad-url!").await,
-        Err(Status::INVALID_ARGS)
+        Err(fidl_fuchsia_pkg::ResolveError::InvalidUrl)
     );
 
     // Nonexistant repo
     assert_matches!(
         env.resolve_package("fuchsia-pkg://nonexistent-repo/a").await,
-        Err(Status::BAD_STATE)
+        Err(fidl_fuchsia_pkg::ResolveError::Internal)
     );
 
     // Nonexistant package
     assert_matches!(
         env.resolve_package("fuchsia-pkg://test/nonexistent").await,
-        Err(Status::NOT_FOUND)
+        Err(fidl_fuchsia_pkg::ResolveError::PackageNotFound)
     );
 
     env.stop().await;
@@ -493,7 +492,7 @@ async fn use_cached_package() {
     // the package can't be resolved before the repository is configured.
     assert_matches!(
         env.resolve_package("fuchsia-pkg://test/resolve-twice").await,
-        Err(Status::BAD_STATE)
+        Err(fidl_fuchsia_pkg::ResolveError::Internal)
     );
 
     env.register_repo(&served_repository).await;
@@ -501,7 +500,7 @@ async fn use_cached_package() {
     // the package can't be resolved before the repository can be updated without error.
     assert_matches!(
         env.resolve_package("fuchsia-pkg://test/resolve-twice").await,
-        Err(Status::INTERNAL)
+        Err(fidl_fuchsia_pkg::ResolveError::Internal)
     );
 
     // package resolves as expected.

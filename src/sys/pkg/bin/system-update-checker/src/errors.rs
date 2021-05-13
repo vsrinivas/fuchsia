@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use fuchsia_url::pkg_url::PkgUrl;
-use fuchsia_zircon as zx;
 use std::io;
 
 #[derive(Debug, thiserror::Error)]
@@ -42,7 +41,7 @@ pub enum UpdatePackage {
     ResolveFidl(#[source] fidl::Error),
 
     #[error("resolving update package")]
-    Resolve(#[source] zx::Status),
+    Resolve(#[source] fidl_fuchsia_pkg_ext::ResolveError),
 
     #[error("extracting the 'packages' manifest")]
     ExtractPackagesManifest(#[source] update_package::ParsePackageError),

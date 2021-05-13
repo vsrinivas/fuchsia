@@ -90,7 +90,28 @@ zx::status<fidl::WireSyncClient<fio::Directory>> PackageResolver::Resolve(
       std::move(selectors), std::move(remote));
   if (!result.ok() || result.Unwrap()->result.is_err()) {
     LOGF(ERROR, "Failed to resolve package");
-    return zx::error(!result.ok() ? ZX_ERR_INTERNAL : result.Unwrap()->result.err());
+    if (!result.ok()) {
+      return zx::error(ZX_ERR_INTERNAL);
+    } else {
+      switch (result.Unwrap()->result.err()) {
+        case fuchsia_pkg::wire::ResolveError::kIo:
+          return zx::error(ZX_ERR_IO);
+        case fuchsia_pkg::wire::ResolveError::kAccessDenied:
+          return zx::error(ZX_ERR_ACCESS_DENIED);
+        case fuchsia_pkg::wire::ResolveError::kRepoNotFound:
+          return zx::error(ZX_ERR_NOT_FOUND);
+        case fuchsia_pkg::wire::ResolveError::kPackageNotFound:
+          return zx::error(ZX_ERR_NOT_FOUND);
+        case fuchsia_pkg::wire::ResolveError::kUnavailableBlob:
+          return zx::error(ZX_ERR_UNAVAILABLE);
+        case fuchsia_pkg::wire::ResolveError::kInvalidUrl:
+          return zx::error(ZX_ERR_INVALID_ARGS);
+        case fuchsia_pkg::wire::ResolveError::kNoSpace:
+          return zx::error(ZX_ERR_NO_SPACE);
+        default:
+          return zx::error(ZX_ERR_INTERNAL);
+      }
+    }
   }
   return zx::ok(fidl::WireSyncClient<fio::Directory>(std::move(local)));
 }

@@ -17,7 +17,6 @@ use {
     fuchsia_component::client::connect_to_protocol,
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
     fuchsia_url::pkg_url::PkgUrl,
-    fuchsia_zircon::Status,
     futures::prelude::*,
     std::{cmp::Ordering, str::FromStr},
     update_package::{SystemVersion, UpdatePackage},
@@ -230,7 +229,7 @@ impl UsbUpdateChecker<'_> {
             .resolve(&url.to_string(), &mut vec![].into_iter(), remote)
             .await
             .context("Sending FIDL request")?
-            .map_err(Status::from_raw)
+            .map_err(|e| anyhow!("Package resolver error: {:?}", e))
             .context("Resolving pacakge")?;
 
         let meta_proxy = io_util::open_file(

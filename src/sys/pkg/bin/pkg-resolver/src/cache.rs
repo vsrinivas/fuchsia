@@ -214,16 +214,34 @@ pub enum CacheError {
     Get(#[from] pkg::cache::GetError),
 }
 
+pub(crate) trait ToResolveError {
+    fn to_resolve_error(&self) -> pkg::ResolveError;
+}
+
+impl ToResolveError for Status {
+    fn to_resolve_error(&self) -> pkg::ResolveError {
+        match *self {
+            Status::ACCESS_DENIED => pkg::ResolveError::AccessDenied,
+            Status::IO => pkg::ResolveError::Io,
+            Status::NOT_FOUND => pkg::ResolveError::PackageNotFound,
+            Status::NO_SPACE => pkg::ResolveError::NoSpace,
+            Status::UNAVAILABLE => pkg::ResolveError::UnavailableBlob,
+            Status::INVALID_ARGS => pkg::ResolveError::InvalidUrl,
+            Status::INTERNAL => pkg::ResolveError::Internal,
+            _ => pkg::ResolveError::Internal,
+        }
+    }
+}
+
 pub(crate) trait ToResolveStatus {
     fn to_resolve_status(&self) -> Status;
 }
 
 // From resolver.fidl:
-// * `ZX_ERR_ACCESS_DENIED` if the resolver does not have permission to fetch a package blob.
-// * `ZX_ERR_IO` if there is some other unspecified error during I/O.
-// * `ZX_ERR_NOT_FOUND` if the package or a package blob does not exist.
-// * `ZX_ERR_NO_SPACE` if there is no space available to store the package.
-// * `ZX_ERR_UNAVAILABLE` if the resolver is currently unable to fetch a package blob.
+// * `ZX_ERR_INTERNAL` if the resolver encountered an otherwise unspecified error
+//   while handling the request
+// * `ZX_ERR_NOT_FOUND` if the package does not exist.
+// * `ZX_ERR_ADDRESS_UNREACHABLE` if the resolver does not know about the repo.
 impl ToResolveStatus for CacheError {
     fn to_resolve_status(&self) -> Status {
         match self {

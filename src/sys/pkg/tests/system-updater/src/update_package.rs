@@ -64,7 +64,8 @@ async fn rejects_invalid_package_name() {
 async fn fails_if_package_unavailable() {
     let env = TestEnv::builder().build();
 
-    env.resolver.mock_resolve_failure(UPDATE_PKG_URL, Status::NOT_FOUND);
+    env.resolver
+        .mock_resolve_failure(UPDATE_PKG_URL, fidl_fuchsia_pkg::ResolveError::PackageNotFound);
 
     let result = env.run_update().await;
     assert!(result.is_err(), "system updater succeeded when it should fail");

@@ -336,6 +336,7 @@ rustc_test("resolve_resumes_blob_gets") {
 
   deps = [
     ":lib",
+    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//src/lib/fuchsia-async",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/pkg/lib/fuchsia-pkg-testing",
@@ -494,6 +495,7 @@ rustc_test("system_cache_fallback") {
   deps = [
     ":lib",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fdio/rust:fdio",
@@ -524,6 +526,7 @@ rustc_test("base_pinning") {
   deps = [
     ":lib",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",

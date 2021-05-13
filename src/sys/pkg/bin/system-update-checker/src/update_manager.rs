@@ -646,7 +646,6 @@ pub(crate) mod tests {
     use event_queue::{ClosedClient, Notify};
     use fuchsia_async::{DurationExt, TimeoutExt};
     use fuchsia_zircon::prelude::*;
-    use fuchsia_zircon::{self as zx};
     use futures::channel::mpsc::{channel, Receiver, Sender};
     use futures::channel::oneshot;
     use futures::future::BoxFuture;
@@ -715,7 +714,7 @@ pub(crate) mod tests {
         pub fn new_error() -> Self {
             Self::new(|| {
                 Err(errors::Error::UpdatePackage(errors::UpdatePackage::Resolve(
-                    zx::Status::INTERNAL,
+                    fidl_fuchsia_pkg_ext::ResolveError::Internal,
                 )))
             })
         }

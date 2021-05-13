@@ -457,7 +457,7 @@ async fn assert_resolve_package_with_failing_pkgfs_fails(
     let () = env.proxies.repo_manager.add(repo_config.into()).await?.map_err(Status::from_raw)?;
     let res = env.resolve_package(format!("fuchsia-pkg://test/{}", pkg.name()).as_str()).await;
 
-    assert_matches!(res, Err(Status::IO));
+    assert_matches!(res, Err(fidl_fuchsia_pkg::ResolveError::Io));
     assert_eq!(failing_file_call_count.load(std::sync::atomic::Ordering::SeqCst), 1);
 
     Ok(())

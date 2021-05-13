@@ -26,6 +26,7 @@ source_set("lib") {
 
   public_deps = [
     "//garnet/lib/loader",
+    "//garnet/public/lib/fostr/fidl/fuchsia.pkg",
     "//garnet/public/lib/json",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol",
     "//sdk/fidl/fuchsia.pkg",

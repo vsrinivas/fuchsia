@@ -892,7 +892,7 @@ impl<P: PkgFs> TestEnv<P> {
     pub fn resolve_package(
         &self,
         url: &str,
-    ) -> impl Future<Output = Result<DirectoryProxy, Status>> {
+    ) -> impl Future<Output = Result<DirectoryProxy, fidl_fuchsia_pkg::ResolveError>> {
         resolve_package(&self.proxies.resolver, url)
     }
 
@@ -1019,12 +1019,12 @@ pub async fn make_pkg_with_extra_blobs(s: &str, n: u32) -> Package {
 pub fn resolve_package(
     resolver: &PackageResolverProxy,
     url: &str,
-) -> impl Future<Output = Result<DirectoryProxy, Status>> {
+) -> impl Future<Output = Result<DirectoryProxy, fidl_fuchsia_pkg::ResolveError>> {
     let (package, package_server_end) = fidl::endpoints::create_proxy().unwrap();
     let selectors: Vec<&str> = vec![];
     let response_fut = resolver.resolve(url, &mut selectors.into_iter(), package_server_end);
     async move {
-        let () = response_fut.await.unwrap().map_err(Status::from_raw)?;
+        let () = response_fut.await.unwrap()?;
         Ok(package)
     }
 }

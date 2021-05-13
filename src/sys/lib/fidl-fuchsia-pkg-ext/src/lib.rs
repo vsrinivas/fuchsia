@@ -16,7 +16,7 @@ pub use crate::repo::{
 };
 
 mod errors;
-pub use crate::errors::{BlobIdParseError, RepositoryParseError};
+pub use crate::errors::{BlobIdParseError, RepositoryParseError, ResolveError};
 
 mod measure;
 pub use crate::measure::Measurable;

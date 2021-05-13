@@ -125,6 +125,7 @@ pub mod for_tests {
     use {
         super::*,
         crate::cache::for_tests::CacheForTest,
+        anyhow::anyhow,
         fidl_fuchsia_io::DirectoryProxy,
         fidl_fuchsia_pkg::PackageResolverMarker,
         fidl_fuchsia_pkg_ext::RepositoryConfigs,
@@ -228,7 +229,7 @@ pub mod for_tests {
                 .resolve(url, &mut selectors.into_iter(), package_remote)
                 .await
                 .unwrap()
-                .map_err(zx::Status::from_raw)?;
+                .map_err(|e| anyhow!("Package resolver error: {:?}", e))?;
             Ok(package)
         }
     }

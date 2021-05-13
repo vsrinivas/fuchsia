@@ -66,7 +66,7 @@ async fn check_for_system_update_impl(
     paver: &PaverProxy,
     target_channel_manager: &dyn TargetChannelUpdater,
     last_known_update_package: Option<&Hash>,
-) -> Result<SystemUpdateStatus, crate::errors::Error> {
+) -> Result<SystemUpdateStatus, Error> {
     let update_pkg = latest_update_package(package_resolver, target_channel_manager).await?;
     let latest_update_merkle = update_pkg.hash().await.map_err(errors::UpdatePackage::Hash)?;
     let current_system_image = current_system_image_merkle(file_system)?;
@@ -114,9 +114,7 @@ async fn check_for_system_update_impl(
     up_to_date
 }
 
-fn current_system_image_merkle(
-    file_system: &impl FileSystem,
-) -> Result<Hash, crate::errors::Error> {
+fn current_system_image_merkle(file_system: &impl FileSystem) -> Result<Hash, Error> {
     Ok(file_system
         .read_to_string("/pkgfs/system/meta")
         .map_err(Error::ReadSystemMeta)?
@@ -136,7 +134,7 @@ async fn latest_update_package(
     let () = fut
         .await
         .map_err(errors::UpdatePackage::ResolveFidl)?
-        .map_err(|raw| errors::UpdatePackage::Resolve(zx::Status::from_raw(raw)))?;
+        .map_err(|raw| errors::UpdatePackage::Resolve(raw.into()))?;
     Ok(UpdatePackage::new(dir_proxy))
 }
 
@@ -488,7 +486,7 @@ pub mod test_check_for_system_update_impl {
                 _selectors: &mut dyn ExactSizeIterator<Item = &str>,
                 _dir: fidl::endpoints::ServerEnd<fidl_fuchsia_io::DirectoryMarker>,
             ) -> Self::ResolveResponseFut {
-                future::ok(Err(fuchsia_zircon::Status::INTERNAL.into_raw()))
+                future::ok(Err(fidl_fuchsia_pkg::ResolveError::Internal))
             }
             type GetHashResponseFut =
                 future::Ready<Result<PackageResolverGetHashResult, fidl::Error>>;

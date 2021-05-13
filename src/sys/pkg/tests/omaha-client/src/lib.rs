@@ -992,7 +992,7 @@ async fn test_omaha_client_perform_pending_reboot_after_out_of_space() {
     // ...but the system image package should fail with NO_SPACE
     env.proxies
         .resolver.url("fuchsia-pkg://fuchsia.com/system_image/0?hash=beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead")
-        .fail(zx::Status::NO_SPACE);
+        .fail(fidl_fuchsia_pkg::ResolveError::NoSpace);
 
     let mut stream = env.check_now().await;
 

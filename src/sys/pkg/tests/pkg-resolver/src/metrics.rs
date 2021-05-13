@@ -54,7 +54,7 @@ async fn assert_elapsed_duration_events(
 async fn verify_resolve_emits_cobalt_events_with_metric_id(
     pkg: Package,
     responder: Option<impl HttpResponder>,
-    expected_resolve_result: Result<(), Status>,
+    expected_resolve_result: Result<(), fidl_fuchsia_pkg::ResolveError>,
     metric_id: u32,
     expected_events: Vec<impl AsEventCodes>,
 ) {
@@ -217,7 +217,7 @@ async fn resolve_failure_regular_unreachable() {
     let env = TestEnvBuilder::new().build().await;
     assert_eq!(
         env.resolve_package("fuchsia-pkg://example.com/missing").await.map(|_| ()),
-        Err(Status::BAD_STATE),
+        Err(fidl_fuchsia_pkg::ResolveError::Internal),
     );
 
     env.assert_count_events(
@@ -271,7 +271,7 @@ async fn resolve_duration_failure() {
     let env = TestEnvBuilder::new().build().await;
     assert_eq!(
         env.resolve_package("fuchsia-pkg://example.com/missing").await.map(|_| ()),
-        Err(Status::BAD_STATE),
+        Err(fidl_fuchsia_pkg::ResolveError::Internal),
     );
 
     assert_elapsed_duration_events(
@@ -339,7 +339,7 @@ async fn pkg_resolver_fetch_blob_failure() {
     verify_resolve_emits_cobalt_events_with_metric_id(
         pkg,
         Some(responder),
-        Err(Status::UNAVAILABLE),
+        Err(fidl_fuchsia_pkg::ResolveError::UnavailableBlob),
         metrics::FETCH_BLOB_METRIC_ID,
         vec![
             (
@@ -377,7 +377,7 @@ async fn merkle_for_url_failure() {
     verify_resolve_emits_cobalt_events_with_metric_id(
         PackageBuilder::new("just_meta_far").build().await.expect("created pkg"),
         Some(responder::ForPath::new("/2.targets.json", delete_targets_stanza)),
-        Err(Status::INTERNAL),
+        Err(fidl_fuchsia_pkg::ResolveError::Internal),
         metrics::MERKLE_FOR_URL_METRIC_ID,
         vec![metrics::MerkleForUrlMetricDimensionResult::TufError],
     )
@@ -405,7 +405,7 @@ async fn create_tuf_client_error() {
     verify_resolve_emits_cobalt_events_with_metric_id(
         PackageBuilder::new("just_meta_far").build().await.expect("created pkg"),
         Some(responder),
-        Err(Status::INTERNAL),
+        Err(fidl_fuchsia_pkg::ResolveError::Internal),
         metrics::CREATE_TUF_CLIENT_METRIC_ID,
         vec![metrics::CreateTufClientMetricDimensionResult::NotFound],
     )
@@ -432,7 +432,7 @@ async fn update_tuf_client_error() {
             "/2.targets.json",
             responder::StaticResponseCode::not_found(),
         )),
-        Err(Status::NOT_FOUND),
+        Err(fidl_fuchsia_pkg::ResolveError::PackageNotFound),
         metrics::UPDATE_TUF_CLIENT_METRIC_ID,
         vec![metrics::UpdateTufClientMetricDimensionResult::NotFound],
     )

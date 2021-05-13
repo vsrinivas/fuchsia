@@ -6,7 +6,6 @@ use {
     fidl_fuchsia_pkg_ext::RepositoryConfigBuilder,
     fuchsia_async as fasync,
     fuchsia_pkg_testing::{serve::responder, PackageBuilder, RepositoryBuilder},
-    fuchsia_zircon::Status,
     lib::{ResolverVariant, TestEnvBuilder, EMPTY_REPO_PATH},
     std::sync::Arc,
 };
@@ -38,7 +37,7 @@ async fn resolve_disallow_local_mirror_fails() {
     let pkg_url = format!("fuchsia-pkg://test/{}", pkg.name());
     let result = env.resolve_package(&pkg_url).await;
 
-    assert_eq!(result.unwrap_err(), Status::INTERNAL);
+    assert_eq!(result.unwrap_err(), fidl_fuchsia_pkg::ResolveError::Internal);
 
     env.stop().await;
 }
@@ -72,7 +71,7 @@ async fn resolve_local_and_remote_mirrors_fails() {
     let pkg_url = format!("fuchsia-pkg://test/{}", pkg.name());
     let result = env.resolve_package(&pkg_url).await;
 
-    assert_eq!(result.unwrap_err(), Status::INTERNAL);
+    assert_eq!(result.unwrap_err(), fidl_fuchsia_pkg::ResolveError::Internal);
 
     env.stop().await;
 }
@@ -98,7 +97,7 @@ async fn create_tuf_client_timeout() {
     // it obtains metadata.
     let result = env.resolve_package("fuchsia-pkg://test/missing-package").await;
 
-    assert_eq!(result.unwrap_err(), Status::INTERNAL);
+    assert_eq!(result.unwrap_err(), fidl_fuchsia_pkg::ResolveError::Internal);
 
     env.assert_count_events(
         metrics::CREATE_TUF_CLIENT_METRIC_ID,
@@ -142,7 +141,7 @@ async fn update_tuf_client_timeout() {
     // The resolve will still fail, even though pkg-resolver normally ignores failed tuf updates,
     // see fxbug.dev/43646, because the tuf client actually downloads most of the metadata during
     // the first update, not during creation.
-    assert_eq!(result.unwrap_err(), Status::INTERNAL);
+    assert_eq!(result.unwrap_err(), fidl_fuchsia_pkg::ResolveError::Internal);
 
     env.assert_count_events(
         metrics::UPDATE_TUF_CLIENT_METRIC_ID,
@@ -178,7 +177,7 @@ async fn download_blob_header_timeout() {
     env.proxies.repo_manager.add(repo_config.into()).await.unwrap().unwrap();
 
     let result = env.resolve_package("fuchsia-pkg://test/test").await;
-    assert_eq!(result.unwrap_err(), Status::UNAVAILABLE);
+    assert_eq!(result.unwrap_err(), fidl_fuchsia_pkg::ResolveError::UnavailableBlob);
 
     env.assert_count_events(
         metrics::FETCH_BLOB_METRIC_ID,
@@ -219,19 +218,5 @@ async fn download_blob_body_timeout() {
     env.proxies.repo_manager.add(repo_config.into()).await.unwrap().unwrap();
 
     let result = env.resolve_package("fuchsia-pkg://test/test").await;
-    assert_eq!(result.unwrap_err(), Status::UNAVAILABLE);
-
-    env.assert_count_events(
-        metrics::FETCH_BLOB_METRIC_ID,
-        vec![
-            (
-                metrics::FetchBlobMetricDimensionResult::BlobBodyDeadlineExceeded,
-                metrics::FetchBlobMetricDimensionResumed::False
-            );
-            2
-        ],
-    )
-    .await;
-
-    env.stop().await;
+    assert_eq!(result.unwrap_err(), fidl_fuchsia_pkg::ResolveError::UnavailableBlob);
 }

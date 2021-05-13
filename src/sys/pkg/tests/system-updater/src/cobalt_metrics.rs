@@ -5,7 +5,7 @@
 use {super::*, pretty_assertions::assert_eq};
 
 async fn test_resolve_error_maps_to_cobalt_status_code(
-    status: Status,
+    error: fidl_fuchsia_pkg::ResolveError,
     expected_status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode,
 ) {
     let env = TestEnv::builder().build();
@@ -18,7 +18,7 @@ async fn test_resolve_error_maps_to_cobalt_status_code(
         .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
         .add_file("zbi", "fake zbi");
 
-    env.resolver.url(pkg_url).fail(status);
+    env.resolver.url(pkg_url).fail(error);
 
     let result = env.run_update().await;
     assert!(result.is_err(), "system updater succeeded when it should fail");
@@ -38,7 +38,7 @@ async fn test_resolve_error_maps_to_cobalt_status_code(
 #[fasync::run_singlethreaded(test)]
 async fn reports_untrusted_tuf_repo() {
     test_resolve_error_maps_to_cobalt_status_code(
-        Status::ADDRESS_UNREACHABLE,
+        fidl_fuchsia_pkg::ResolveError::AccessDenied,
         metrics::OtaResultAttemptsMetricDimensionStatusCode::ErrorUntrustedTufRepo,
     )
     .await;
@@ -47,7 +47,7 @@ async fn reports_untrusted_tuf_repo() {
 #[fasync::run_singlethreaded(test)]
 async fn reports_out_of_space() {
     test_resolve_error_maps_to_cobalt_status_code(
-        Status::NO_SPACE,
+        fidl_fuchsia_pkg::ResolveError::NoSpace,
         metrics::OtaResultAttemptsMetricDimensionStatusCode::ErrorStorageOutOfSpace,
     )
     .await;
@@ -56,7 +56,7 @@ async fn reports_out_of_space() {
 #[fasync::run_singlethreaded(test)]
 async fn reports_misc_storage() {
     test_resolve_error_maps_to_cobalt_status_code(
-        Status::IO,
+        fidl_fuchsia_pkg::ResolveError::Io,
         metrics::OtaResultAttemptsMetricDimensionStatusCode::ErrorStorage,
     )
     .await;
@@ -65,7 +65,7 @@ async fn reports_misc_storage() {
 #[fasync::run_singlethreaded(test)]
 async fn reports_network() {
     test_resolve_error_maps_to_cobalt_status_code(
-        Status::UNAVAILABLE,
+        fidl_fuchsia_pkg::ResolveError::UnavailableBlob,
         metrics::OtaResultAttemptsMetricDimensionStatusCode::ErrorNetworking,
     )
     .await;

@@ -36,6 +36,9 @@ enum ResolveError : int32 {
 
     /// The resolver is currently unable to fetch a repository's metadata.
     UNAVAILABLE_REPO_METADATA = 9;
+
+    /// The `package_url` provided to resolver is invalid.
+    INVALID_URL = 10;
 };
 
 /// This resolves packages from a repository.
@@ -55,23 +58,13 @@ protocol PackageResolver {
     ///   parameter will be ignored.
     /// + request `dir` a request for a directory that will be resolved when the package has
     ///   been successfully cached.
-    /// * error a zx_status value indicating failure. One of the following:
-    ///     * `ZX_ERR_ACCESS_DENIED` if the resolver does not have permission to fetch a
-    ///       package blob.
-    ///     * `ZX_ERR_INTERNAL` if the resolver encountered an otherwise unspecified error while
-    ///       handling the request.
-    ///     * `ZX_ERR_IO` if there is some other unspecified error during I/O.
-    ///     * `ZX_ERR_NOT_FOUND` if the package or a blob in the package does not exist.
-    ///     * `ZX_ERR_NO_SPACE` if there is no space available to store the package.
-    ///     * `ZX_ERR_UNAVAILABLE` if the resolver is currently unable to fetch a package blob.
-    ///     * `ZX_ERR_BAD_STATE` if the resolver does not know about the repository specified by
-    ///       `package_url`.
-    // TODO(fxbug.dev/45811) change `package_url` from string to PackageUrl.
+    /// * error indicates failure. See `ResolveError` for values and error scenarios.
+    // TODO(fxbug.dev/45811) change `package_url` from string to PackageUrl
     Resolve(
         string package_url,
         vector<string> selectors,
         request<fuchsia.io.Directory> dir
-        ) -> () error zx.status;
+        ) -> () error ResolveError;
 
     /// Determines the hash of a package.
     ///

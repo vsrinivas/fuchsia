@@ -6,7 +6,7 @@ use {
     crate::{
         cache::{
             BasePackageIndex, BlobFetcher, CacheError::*, MerkleForError, MerkleForError::*,
-            ToResolveStatus as _,
+            ToResolveError as _, ToResolveStatus as _,
         },
         font_package_manager::FontPackageManager,
         queue,
@@ -125,7 +125,7 @@ pub async fn run_resolver_service(
                             Instant::now().duration_since(start_time).as_micros() as i64,
                         );
                         responder
-                            .send(&mut response.map_err(|status| status.into_raw()))
+                            .send(&mut response.map_err(|status| status.to_resolve_error().into()))
                             .with_context(
                                 || format!(
                                     "sending fuchsia.pkg/PackageResolver.Resolve response for {:?}",

@@ -59,7 +59,8 @@ async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
             let () = resolver
                 .resolve(&pkg_url, &mut selectors.iter().map(|s| s.as_str()), dir_server_end)
                 .await?
-                .map_err(zx::Status::from_raw)?;
+                .map_err(fidl_fuchsia_pkg_ext::ResolveError::from)
+                .with_context(|| format!("Failed to resolve {}", pkg_url))?;
 
             println!("package contents:");
             let mut stream = files_async::readdir_recursive(&dir, /*timeout=*/ None);

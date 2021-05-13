@@ -8,7 +8,6 @@ use {
         serve::{responder, HttpRange},
         Package, PackageBuilder, RepositoryBuilder,
     },
-    fuchsia_zircon::Status,
     futures::future::{BoxFuture, FutureExt as _},
     hyper::{Body, Response},
     lib::{
@@ -217,7 +216,10 @@ async fn resume_validates_content_range() {
 
     let env = TestEnvBuilder::new().build().await;
     env.register_repo(&served_repository).await;
-    assert_eq!(env.resolve_package(&pkg_url).await.unwrap_err(), Status::UNAVAILABLE);
+    assert_eq!(
+        env.resolve_package(&pkg_url).await.unwrap_err(),
+        fidl_fuchsia_pkg::ResolveError::UnavailableBlob
+    );
 
     env.assert_count_events(
         metrics::FETCH_BLOB_METRIC_ID,
@@ -304,7 +306,10 @@ async fn resume_validates_content_length() {
 
     let env = TestEnvBuilder::new().build().await;
     env.register_repo(&served_repository).await;
-    assert_eq!(env.resolve_package(&pkg_url).await.unwrap_err(), Status::UNAVAILABLE);
+    assert_eq!(
+        env.resolve_package(&pkg_url).await.unwrap_err(),
+        fidl_fuchsia_pkg::ResolveError::UnavailableBlob
+    );
 
     env.assert_count_events(
         metrics::FETCH_BLOB_METRIC_ID,
@@ -356,7 +361,10 @@ async fn resume_validates_206_status() {
 
     let env = TestEnvBuilder::new().build().await;
     env.register_repo(&served_repository).await;
-    assert_eq!(env.resolve_package(&pkg_url).await.unwrap_err(), Status::UNAVAILABLE);
+    assert_eq!(
+        env.resolve_package(&pkg_url).await.unwrap_err(),
+        fidl_fuchsia_pkg::ResolveError::UnavailableBlob
+    );
 
     env.assert_count_events(
         metrics::FETCH_BLOB_METRIC_ID,
@@ -406,7 +414,10 @@ async fn resume_enforces_max_resumption_limit() {
         .build()
         .await;
     env.register_repo(&served_repository).await;
-    assert_eq!(env.resolve_package(&pkg_url).await.unwrap_err(), Status::UNAVAILABLE);
+    assert_eq!(
+        env.resolve_package(&pkg_url).await.unwrap_err(),
+        fidl_fuchsia_pkg::ResolveError::UnavailableBlob
+    );
 
     env.assert_count_events(
         metrics::FETCH_BLOB_METRIC_ID,

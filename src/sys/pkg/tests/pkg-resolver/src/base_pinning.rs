@@ -73,7 +73,10 @@ async fn test_base_pinning_rejects_urls_with_resource() {
     let env = TestEnvBuilder::new().pkgfs(pkgfs).build().await;
 
     let pkg_url = format!("fuchsia-pkg://fuchsia.com/{}/0#should-not-be-here", pkg_name,);
-    assert_matches!(env.resolve_package(&pkg_url).await, Err(Status::INVALID_ARGS));
+    assert_matches!(
+        env.resolve_package(&pkg_url).await,
+        Err(fidl_fuchsia_pkg::ResolveError::InvalidUrl)
+    );
     assert_matches!(env.get_hash(pkg_url).await, Err(Status::INVALID_ARGS));
 
     env.stop().await;

@@ -12,7 +12,6 @@ use {
         serve::{responder, HttpResponder},
         Package, PackageBuilder, RepositoryBuilder,
     },
-    fuchsia_zircon::Status,
     lib::{
         extra_blob_contents, make_pkg_with_extra_blobs, ResolverVariant, TestEnvBuilder,
         EMPTY_REPO_PATH, FILE_SIZE_LARGE_ENOUGH_TO_TRIGGER_HYPER_BATCHING,
@@ -24,7 +23,7 @@ use {
 async fn verify_resolve_fails_then_succeeds<H: HttpResponder>(
     pkg: Package,
     responder: H,
-    failure_status: Status,
+    failure_error: fidl_fuchsia_pkg::ResolveError,
 ) {
     let env = TestEnvBuilder::new().build().await;
 
@@ -50,7 +49,7 @@ async fn verify_resolve_fails_then_succeeds<H: HttpResponder>(
     env.register_repo(&served_repository).await;
 
     // First resolve fails with the expected error.
-    assert_matches!(env.resolve_package(&pkg_url).await, Err(status) if status == failure_status);
+    assert_matches!(env.resolve_package(&pkg_url).await, Err(error) if error == failure_error);
 
     // Disabling the custom responder allows the subsequent resolves to succeed.
     should_fail.unset();
@@ -68,7 +67,7 @@ async fn second_resolve_succeeds_when_far_404() {
     verify_resolve_fails_then_succeeds(
         pkg,
         responder::ForPath::new(path_to_override, responder::StaticResponseCode::not_found()),
-        Status::UNAVAILABLE,
+        fidl_fuchsia_pkg::ResolveError::UnavailableBlob,
     )
     .await
 }
@@ -88,7 +87,7 @@ async fn second_resolve_succeeds_when_blob_404() {
     verify_resolve_fails_then_succeeds(
         pkg,
         responder::ForPath::new(path_to_override, responder::StaticResponseCode::not_found()),
-        Status::UNAVAILABLE,
+        fidl_fuchsia_pkg::ResolveError::UnavailableBlob,
     )
     .await
 }
@@ -108,7 +107,7 @@ async fn second_resolve_succeeds_when_far_errors_mid_download() {
     verify_resolve_fails_then_succeeds(
         pkg,
         responder::ForPath::new(path_to_override, responder::OneByteShortThenError),
-        Status::UNAVAILABLE,
+        fidl_fuchsia_pkg::ResolveError::UnavailableBlob,
     )
     .await
 }
@@ -129,7 +128,7 @@ async fn second_resolve_succeeds_when_blob_errors_mid_download() {
     verify_resolve_fails_then_succeeds(
         pkg,
         responder::ForPath::new(path_to_override, responder::OneByteShortThenError),
-        Status::UNAVAILABLE,
+        fidl_fuchsia_pkg::ResolveError::UnavailableBlob,
     )
     .await
 }
@@ -149,7 +148,7 @@ async fn second_resolve_succeeds_disconnect_before_far_complete() {
     verify_resolve_fails_then_succeeds(
         pkg,
         responder::ForPath::new(path_to_override, responder::OneByteShortThenDisconnect),
-        Status::UNAVAILABLE,
+        fidl_fuchsia_pkg::ResolveError::UnavailableBlob,
     )
     .await
 }
@@ -170,7 +169,7 @@ async fn second_resolve_succeeds_disconnect_before_blob_complete() {
     verify_resolve_fails_then_succeeds(
         pkg,
         responder::ForPath::new(path_to_override, responder::OneByteShortThenDisconnect),
-        Status::UNAVAILABLE,
+        fidl_fuchsia_pkg::ResolveError::UnavailableBlob,
     )
     .await
 }
@@ -183,7 +182,7 @@ async fn second_resolve_succeeds_when_far_corrupted() {
     verify_resolve_fails_then_succeeds(
         pkg,
         responder::ForPath::new(path_to_override, responder::OneByteFlipped),
-        Status::IO,
+        fidl_fuchsia_pkg::ResolveError::Io,
     )
     .await
 }
@@ -200,7 +199,7 @@ async fn second_resolve_succeeds_when_blob_corrupted() {
     verify_resolve_fails_then_succeeds(
         pkg,
         responder::ForPath::new(path_to_override, responder::OneByteFlipped),
-        Status::IO,
+        fidl_fuchsia_pkg::ResolveError::Io,
     )
     .await
 }
@@ -221,7 +220,7 @@ async fn second_resolve_succeeds_when_tuf_metadata_update_fails() {
     verify_resolve_fails_then_succeeds(
         pkg,
         responder::ForPath::new("/2.snapshot.json", responder::OneByteShortThenDisconnect),
-        Status::INTERNAL,
+        fidl_fuchsia_pkg::ResolveError::Internal,
     )
     .await
 }

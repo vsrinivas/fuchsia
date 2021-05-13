@@ -71,7 +71,7 @@ void PackageUpdatingLoader::LoadUrl(std::string url, LoadUrlCallback callback) {
                      fuchsia::pkg::PackageResolver_Resolve_Result result) mutable {
     if (result.is_err()) {
       // TODO: only fail soft on NOT_FOUND?
-      FX_VLOGS(1) << "Package update failed with " << zx_status_get_string(result.err())
+      FX_VLOGS(1) << "Package update failed with " << result.err()
                   << ". Loading package without update: " << url;
       PackageLoader::LoadUrl(url, std::move(callback));
       return;

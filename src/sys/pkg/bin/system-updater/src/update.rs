@@ -16,7 +16,6 @@ use {
     fuchsia_async::{Task, TimeoutExt as _},
     fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_url::pkg_url::PkgUrl,
-    fuchsia_zircon::Status,
     futures::{prelude::*, stream::FusedStream},
     parking_lot::Mutex,
     std::{pin::Pin, sync::Arc, time::Duration},
@@ -95,9 +94,10 @@ enum PrepareError {
 impl PrepareError {
     fn reason(&self) -> PrepareFailureReason {
         match self {
-            Self::ResolveUpdate(ResolveError::Status(Status::NO_SPACE, _)) => {
-                PrepareFailureReason::OutOfSpace
-            }
+            Self::ResolveUpdate(ResolveError::Error(
+                fidl_fuchsia_pkg_ext::ResolveError::NoSpace,
+                _,
+            )) => PrepareFailureReason::OutOfSpace,
             Self::UnsupportedDowngrade { .. } => PrepareFailureReason::UnsupportedDowngrade,
             _ => PrepareFailureReason::Internal,
         }
@@ -117,7 +117,7 @@ enum FetchError {
 impl FetchError {
     fn reason(&self) -> FetchFailureReason {
         match self {
-            Self::Resolve(ResolveError::Status(Status::NO_SPACE, _)) => {
+            Self::Resolve(ResolveError::Error(fidl_fuchsia_pkg_ext::ResolveError::NoSpace, _)) => {
                 FetchFailureReason::OutOfSpace
             }
             _ => FetchFailureReason::Internal,

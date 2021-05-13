@@ -54,7 +54,8 @@ async fn fails_on_update_package_fetch_error() {
         .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH));
 
     let system_image_url = SYSTEM_IMAGE_URL;
-    env.resolver.mock_resolve_failure(system_image_url, Status::NOT_FOUND);
+    env.resolver
+        .mock_resolve_failure(system_image_url, fidl_fuchsia_pkg::ResolveError::PackageNotFound);
 
     let result = env.run_update().await;
     assert!(result.is_err(), "system updater succeeded when it should fail");
@@ -154,7 +155,7 @@ async fn fails_on_content_package_fetch_error() {
             handle_pkg5.wait().await;
 
             // Return a failure for pkg2, and success for the other blocked packages.
-            handle_pkg2.fail(Status::NOT_FOUND).await;
+            handle_pkg2.fail(fidl_fuchsia_pkg::ResolveError::PackageNotFound).await;
 
             handle_pkg1.resolve(&pkg1).await;
             handle_pkg3.resolve(&pkg3).await;
@@ -253,11 +254,11 @@ async fn fails_when_package_cache_sync_fails() {
 /// Verifies that when we fail to resolve the update package, we get a Prepare failure with the
 /// expected `PrepareFailureReason`.
 async fn assert_prepare_failure_reason(
-    resolve_status: Status,
+    resolve_error: fidl_fuchsia_pkg::ResolveError,
     expected_reason: PrepareFailureReason,
 ) {
     let env = TestEnv::builder().build();
-    env.resolver.mock_resolve_failure(UPDATE_PKG_URL, resolve_status);
+    env.resolver.mock_resolve_failure(UPDATE_PKG_URL, resolve_error);
 
     let mut attempt = env.start_update().await.unwrap();
 
@@ -267,29 +268,59 @@ async fn assert_prepare_failure_reason(
 
 #[fasync::run_singlethreaded(test)]
 async fn prepare_failure_reason_out_of_space() {
-    assert_prepare_failure_reason(Status::NO_SPACE, PrepareFailureReason::OutOfSpace).await;
+    assert_prepare_failure_reason(
+        fidl_fuchsia_pkg::ResolveError::NoSpace,
+        PrepareFailureReason::OutOfSpace,
+    )
+    .await;
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn prepare_failure_reason_internal() {
-    assert_prepare_failure_reason(Status::ACCESS_DENIED, PrepareFailureReason::Internal).await;
-    assert_prepare_failure_reason(Status::ADDRESS_UNREACHABLE, PrepareFailureReason::Internal)
-        .await;
-    assert_prepare_failure_reason(Status::INTERNAL, PrepareFailureReason::Internal).await;
-    assert_prepare_failure_reason(Status::IO, PrepareFailureReason::Internal).await;
-    assert_prepare_failure_reason(Status::NOT_FOUND, PrepareFailureReason::Internal).await;
-    assert_prepare_failure_reason(Status::UNAVAILABLE, PrepareFailureReason::Internal).await;
+    assert_prepare_failure_reason(
+        fidl_fuchsia_pkg::ResolveError::AccessDenied,
+        PrepareFailureReason::Internal,
+    )
+    .await;
+    assert_prepare_failure_reason(
+        fidl_fuchsia_pkg::ResolveError::RepoNotFound,
+        PrepareFailureReason::Internal,
+    )
+    .await;
+    assert_prepare_failure_reason(
+        fidl_fuchsia_pkg::ResolveError::Internal,
+        PrepareFailureReason::Internal,
+    )
+    .await;
+    assert_prepare_failure_reason(
+        fidl_fuchsia_pkg::ResolveError::Io,
+        PrepareFailureReason::Internal,
+    )
+    .await;
+    assert_prepare_failure_reason(
+        fidl_fuchsia_pkg::ResolveError::PackageNotFound,
+        PrepareFailureReason::Internal,
+    )
+    .await;
+    assert_prepare_failure_reason(
+        fidl_fuchsia_pkg::ResolveError::UnavailableBlob,
+        PrepareFailureReason::Internal,
+    )
+    .await;
 }
 
 /// Verifies that when we fail to resolve a non-update package, we get a Fetch failure with the
 /// expected `FetchFailureReason`.
-async fn assert_fetch_failure_reason(resolve_status: Status, expected_reason: FetchFailureReason) {
+async fn assert_fetch_failure_reason(
+    resolve_error: fidl_fuchsia_pkg::ResolveError,
+    expected_reason: FetchFailureReason,
+) {
     let env = TestEnv::builder().build();
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([SYSTEM_IMAGE_URL]))
         .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH));
-    env.resolver.mock_resolve_failure(SYSTEM_IMAGE_URL, resolve_status);
+    env.resolver.mock_resolve_failure(SYSTEM_IMAGE_URL, resolve_error);
 
     let mut attempt = env.start_update().await.unwrap();
 
@@ -316,15 +347,40 @@ async fn assert_fetch_failure_reason(resolve_status: Status, expected_reason: Fe
 
 #[fasync::run_singlethreaded(test)]
 async fn fetch_failure_reason_out_of_space() {
-    assert_fetch_failure_reason(Status::NO_SPACE, FetchFailureReason::OutOfSpace).await;
+    assert_fetch_failure_reason(
+        fidl_fuchsia_pkg::ResolveError::NoSpace,
+        FetchFailureReason::OutOfSpace,
+    )
+    .await;
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn fetch_failure_reason_internal() {
-    assert_fetch_failure_reason(Status::ACCESS_DENIED, FetchFailureReason::Internal).await;
-    assert_fetch_failure_reason(Status::ADDRESS_UNREACHABLE, FetchFailureReason::Internal).await;
-    assert_fetch_failure_reason(Status::INTERNAL, FetchFailureReason::Internal).await;
-    assert_fetch_failure_reason(Status::IO, FetchFailureReason::Internal).await;
-    assert_fetch_failure_reason(Status::NOT_FOUND, FetchFailureReason::Internal).await;
-    assert_fetch_failure_reason(Status::UNAVAILABLE, FetchFailureReason::Internal).await;
+    assert_fetch_failure_reason(
+        fidl_fuchsia_pkg::ResolveError::AccessDenied,
+        FetchFailureReason::Internal,
+    )
+    .await;
+    assert_fetch_failure_reason(
+        fidl_fuchsia_pkg::ResolveError::RepoNotFound,
+        FetchFailureReason::Internal,
+    )
+    .await;
+    assert_fetch_failure_reason(
+        fidl_fuchsia_pkg::ResolveError::Internal,
+        FetchFailureReason::Internal,
+    )
+    .await;
+    assert_fetch_failure_reason(fidl_fuchsia_pkg::ResolveError::Io, FetchFailureReason::Internal)
+        .await;
+    assert_fetch_failure_reason(
+        fidl_fuchsia_pkg::ResolveError::PackageNotFound,
+        FetchFailureReason::Internal,
+    )
+    .await;
+    assert_fetch_failure_reason(
+        fidl_fuchsia_pkg::ResolveError::UnavailableBlob,
+        FetchFailureReason::Internal,
+    )
+    .await;
 }

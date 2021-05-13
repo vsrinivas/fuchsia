@@ -37,7 +37,7 @@ const char kEchoServerURL[] =
 
 class PackageResolverMock : public fuchsia::pkg::PackageResolver {
  public:
-  explicit PackageResolverMock(zx_status_t status) : status_(status) {}
+  explicit PackageResolverMock(std::optional<fuchsia::pkg::ResolveError> error) : error_(error) {}
 
   virtual void Resolve(::std::string package_uri, ::std::vector<::std::string> selectors,
                        ::fidl::InterfaceRequest<fuchsia::io::Directory> dir,
@@ -48,10 +48,11 @@ class PackageResolverMock : public fuchsia::pkg::PackageResolver {
     }
     args_ = std::make_tuple(package_uri, v_selectors);
     fdio_service_connect("/pkg", dir.TakeChannel().release());
-    if (status_ == ZX_OK) {
-      callback(fuchsia::pkg::PackageResolver_Resolve_Result::WithResponse({}));
+    if (error_) {
+      callback(fuchsia::pkg::PackageResolver_Resolve_Result::WithErr(
+          std::forward<fuchsia::pkg::ResolveError>(error_.value())));
     } else {
-      callback(fuchsia::pkg::PackageResolver_Resolve_Result::WithErr(int(status_)));
+      callback(fuchsia::pkg::PackageResolver_Resolve_Result::WithResponse({}));
     }
   }
 
@@ -69,7 +70,7 @@ class PackageResolverMock : public fuchsia::pkg::PackageResolver {
   const ArgsTuple& args() const { return args_; }
 
  private:
-  const zx_status_t status_;
+  std::optional<fuchsia::pkg::ResolveError> error_;
   ArgsTuple args_;
   fidl::BindingSet<fuchsia::pkg::PackageResolver> bindings_;
 };
@@ -148,7 +149,7 @@ class PackageUpdatingLoaderTest : public sys::testing::TestWithEnvironment {
 };
 
 TEST_F(PackageUpdatingLoaderTest, Success) {
-  PackageResolverMock resolver_service(ZX_OK);
+  PackageResolverMock resolver_service(std::nullopt);
   ServiceProviderMock provider_service(&resolver_service);
   Init(&provider_service);
 
@@ -173,7 +174,8 @@ TEST_F(PackageUpdatingLoaderTest, Success) {
 }
 
 TEST_F(PackageUpdatingLoaderTest, Failure) {
-  PackageResolverMock resolver_service(ZX_ERR_NOT_FOUND);
+  PackageResolverMock resolver_service(
+      (std::optional<fuchsia::pkg::ResolveError>(fuchsia::pkg::ResolveError::PACKAGE_NOT_FOUND)));
   ServiceProviderMock provider_service(&resolver_service);
   Init(&provider_service);
 
@@ -199,7 +201,7 @@ TEST_F(PackageUpdatingLoaderTest, Failure) {
 }
 
 TEST_F(PackageUpdatingLoaderTest, HandleResolverDisconnectCorrectly) {
-  PackageResolverMock resolver_service(ZX_OK);
+  PackageResolverMock resolver_service(std::nullopt);
   ServiceProviderMock service_provider(&resolver_service);
   Init(&service_provider);
 

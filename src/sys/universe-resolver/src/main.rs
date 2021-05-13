@@ -147,11 +147,12 @@ async fn resolve_package(
         .resolve(&package_url.to_string(), &mut selectors.into_iter(), server_end)
         .await
         .map_err(ResolverError::IoError)?
-        .map_err(Status::from_raw)
         .map_err(|err| match err {
-            Status::NOT_FOUND => ResolverError::PackageNotFound,
-            Status::ADDRESS_UNREACHABLE | Status::UNAVAILABLE => ResolverError::Unavailable,
-            Status::NO_SPACE => ResolverError::NoSpace,
+            fidl_fuchsia_pkg::ResolveError::PackageNotFound => ResolverError::PackageNotFound,
+            fidl_fuchsia_pkg::ResolveError::RepoNotFound
+            | fidl_fuchsia_pkg::ResolveError::UnavailableBlob
+            | fidl_fuchsia_pkg::ResolveError::UnavailableRepoMetadata => ResolverError::Unavailable,
+            fidl_fuchsia_pkg::ResolveError::NoSpace => ResolverError::NoSpace,
             _ => ResolverError::Internal,
         })?;
     Ok(proxy)
@@ -202,7 +203,7 @@ mod tests {
         anyhow::Error,
         fidl::{encoding::encode_persistent, endpoints::ServerEnd},
         fidl_fuchsia_mem,
-        fidl_fuchsia_pkg::{self as fpkg, PackageResolverRequest},
+        fidl_fuchsia_pkg::PackageResolverRequest,
         fidl_fuchsia_sys2::{self as fsys, ComponentResolverMarker},
         fuchsia_async as fasync,
         fuchsia_component::server as fserver,
@@ -210,7 +211,6 @@ mod tests {
             builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
             mock::{Mock, MockHandles},
         },
-        fuchsia_zircon as zx,
         fuchsia_zircon::Vmo,
         futures::{channel::mpsc, join, lock::Mutex},
         matches::assert_matches,
@@ -230,14 +230,17 @@ mod tests {
     ) -> Result<(), Error> {
         let mut fs = fserver::ServiceFs::new();
         fs.dir("svc").add_fidl_service(
-            move |mut req_stream: fpkg::PackageResolverRequestStream| {
+            move |mut req_stream: fidl_fuchsia_pkg::PackageResolverRequestStream| {
                 let tx = trigger.clone();
                 fasync::Task::local(async move {
-                    while let Some(fpkg::PackageResolverRequest::Resolve { responder, .. }) =
+                    while let Some(fidl_fuchsia_pkg::PackageResolverRequest::Resolve {
+                        responder,
+                        ..
+                    }) =
                         req_stream.try_next().await.expect("Serving package resolver stream failed")
                     {
                         responder
-                            .send(&mut Err(zx::Status::NOT_FOUND.into_raw()))
+                            .send(&mut Err(fidl_fuchsia_pkg::ResolveError::PackageNotFound))
                             .expect("failed sending package resolver response to client");
 
                         {
@@ -648,7 +651,7 @@ mod tests {
             while let Some(request) = server.try_next().await.unwrap() {
                 match request {
                     PackageResolverRequest::Resolve { responder, .. } => {
-                        responder.send(&mut Err(Status::NO_SPACE.into_raw())).unwrap();
+                        responder.send(&mut Err(fidl_fuchsia_pkg::ResolveError::NoSpace)).unwrap();
                     }
                     _ => panic!("unexpected API call"),
                 }

@@ -16,8 +16,8 @@ pub enum ResolveError {
     #[error("fidl error while resolving {1}")]
     Fidl(#[source] fidl::Error, PkgUrl),
 
-    #[error("bad status while resolving {1}")]
-    Status(#[source] fuchsia_zircon::Status, PkgUrl),
+    #[error("error while resolving {1}")]
+    Error(#[source] fidl_fuchsia_pkg_ext::ResolveError, PkgUrl),
 
     #[error("while creating fidl proxy and stream")]
     CreateProxy(#[source] fidl::Error),
@@ -56,8 +56,7 @@ async fn resolve_package(
     let res = pkg_resolver.resolve(&url.to_string(), &mut std::iter::empty(), dir_server_end);
     let res = res.await.map_err(|e| ResolveError::Fidl(e, url.clone()))?;
 
-    let () = res
-        .map_err(|raw| ResolveError::Status(fuchsia_zircon::Status::from_raw(raw), url.clone()))?;
+    let () = res.map_err(|raw| ResolveError::Error(raw.into(), url.clone()))?;
 
     Ok(dir)
 }

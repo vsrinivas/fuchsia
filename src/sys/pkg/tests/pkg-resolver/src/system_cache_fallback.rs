@@ -157,7 +157,10 @@ async fn test_cache_fallback_fails_if_url_merkle_differs() {
     env.register_repo_at_url(&served_repository, "fuchsia-pkg://fuchsia.com").await;
     let wrong_hash = make_different_hash(pkg.meta_far_merkle_root());
     let pkg_url = format!("fuchsia-pkg://fuchsia.com/{}?hash={}", pkg_name, wrong_hash);
-    assert_matches!(env.resolve_package(&pkg_url).await, Err(Status::INTERNAL));
+    assert_matches!(
+        env.resolve_package(&pkg_url).await,
+        Err(fidl_fuchsia_pkg::ResolveError::Internal)
+    );
 
     // Check that get_hash fallback behavior matches resolve.
     assert_matches!(env.get_hash(pkg_url).await, Err(Status::INTERNAL));
@@ -332,7 +335,10 @@ async fn test_pkgfs_out_of_space_does_not_fall_back_to_cache_packages_with_large
     env.register_repo_at_url(&served_repository, "fuchsia-pkg://fuchsia.com").await;
 
     let pkg_url = format!("fuchsia-pkg://fuchsia.com/{}", pkg_name);
-    assert_matches!(env.resolve_package(&pkg_url).await, Err(Status::NO_SPACE));
+    assert_matches!(
+        env.resolve_package(&pkg_url).await,
+        Err(fidl_fuchsia_pkg::ResolveError::NoSpace)
+    );
 
     env.stop().await;
 }
@@ -387,7 +393,10 @@ async fn test_pkgfs_out_of_space_does_not_fall_back_to_cache_packages() {
     env.register_repo_at_url(&served_repository, "fuchsia-pkg://fuchsia.com").await;
 
     let pkg_url = format!("fuchsia-pkg://fuchsia.com/{}", pkg_name);
-    assert_matches!(env.resolve_package(&pkg_url).await, Err(Status::NO_SPACE));
+    assert_matches!(
+        env.resolve_package(&pkg_url).await,
+        Err(fidl_fuchsia_pkg::ResolveError::NoSpace)
+    );
 
     env.stop().await;
 }
@@ -457,7 +466,10 @@ async fn test_pkgfs_out_of_space_does_not_fall_back_to_previous_ephemeral_packag
 
     // pkg-resolver should refuse to fall back to a previous version of the package, and fail
     // with NO_SPACE
-    assert_matches!(env.resolve_package(&pkg_url).await, Err(Status::NO_SPACE));
+    assert_matches!(
+        env.resolve_package(&pkg_url).await,
+        Err(fidl_fuchsia_pkg::ResolveError::NoSpace)
+    );
 
     env.stop().await;
 }
@@ -485,7 +497,7 @@ async fn test_resolve_fails_not_in_repo() {
 
     let pkg_url = format!("fuchsia-pkg://fuchsia.com/{}", pkg.name());
     let res = env.resolve_package(&pkg_url).await;
-    assert_matches!(res, Err(Status::NOT_FOUND));
+    assert_matches!(res, Err(fidl_fuchsia_pkg::ResolveError::PackageNotFound));
 
     // Check that get_hash fallback behavior matches resolve.
     let hash = env.get_hash(pkg_url).await;
@@ -540,7 +552,7 @@ async fn test_resolve_falls_back_not_in_repo() {
     // We should return NOT_FOUND, and the inspect metric should not increment.
     let nonexistent_pkg_url = "fuchsia-pkg://fuchsia.com/definitely_not_found".to_string();
     let res = env.resolve_package(&nonexistent_pkg_url).await;
-    assert_matches!(res, Err(Status::NOT_FOUND));
+    assert_matches!(res, Err(fidl_fuchsia_pkg::ResolveError::PackageNotFound));
 
     // Check that get_hash fallback behavior matches resolve for the nonexistent package
     let hash = env.get_hash(nonexistent_pkg_url).await;

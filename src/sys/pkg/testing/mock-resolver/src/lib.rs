@@ -142,7 +142,7 @@ pub fn handle_package_directory_stream(
 
 #[derive(Debug)]
 enum Expectation {
-    Immediate(Result<TestPackage, Status>),
+    Immediate(Result<TestPackage, fidl_fuchsia_pkg::ResolveError>),
     BlockOnce(Option<oneshot::Sender<PendingResolve>>),
 }
 
@@ -187,8 +187,12 @@ impl MockResolverService {
         self.register_custom_package(&name, &name, merkle, "fuchsia.com")
     }
 
-    pub fn mock_resolve_failure(&self, url: impl Into<String>, response_status: Status) {
-        self.url(url).fail(response_status);
+    pub fn mock_resolve_failure(
+        &self,
+        url: impl Into<String>,
+        error: fidl_fuchsia_pkg::ResolveError,
+    ) {
+        self.url(url).fail(error);
     }
 
     /// Registers a package with the given name and merkle root, returning a handle to add files to
@@ -271,18 +275,15 @@ impl MockResolverService {
 
         (*self.resolve_hook)(&package_url);
 
-        match self
-            .expectations
-            .lock()
-            .get_mut(&package_url)
-            .unwrap_or(&mut Expectation::Immediate(Err(Status::NOT_FOUND)))
-        {
+        match self.expectations.lock().get_mut(&package_url).unwrap_or(&mut Expectation::Immediate(
+            Err(fidl_fuchsia_pkg::ResolveError::PackageNotFound),
+        )) {
             Expectation::Immediate(Ok(package)) => {
                 package.serve_on(dir);
                 responder.send(&mut Ok(()))?;
             }
-            Expectation::Immediate(Err(status)) => {
-                responder.send(&mut Err(status.into_raw()))?;
+            Expectation::Immediate(Err(error)) => {
+                responder.send(&mut Err(*error))?;
             }
             Expectation::BlockOnce(handler) => {
                 let handler = handler.take().unwrap();
@@ -301,8 +302,8 @@ pub struct ForUrl<'a> {
 
 impl<'a> ForUrl<'a> {
     /// Fail resolve requests for the given URL with the given error status.
-    pub fn fail(self, status: Status) {
-        self.svc.expectations.lock().insert(self.url, Expectation::Immediate(Err(status)));
+    pub fn fail(self, error: fidl_fuchsia_pkg::ResolveError) {
+        self.svc.expectations.lock().insert(self.url, Expectation::Immediate(Err(error)));
     }
 
     /// Succeed resolve requests for the given URL by serving the given package.
@@ -355,8 +356,8 @@ impl ResolveHandler {
     }
 
     /// Wait for the request and fail the resolve with the given status.
-    pub async fn fail(self, status: Status) {
-        self.into_pending().await.responder.send(&mut Err(status.into_raw())).unwrap();
+    pub async fn fail(self, error: fidl_fuchsia_pkg::ResolveError) {
+        self.into_pending().await.responder.send(&mut Err(error)).unwrap();
     }
 
     /// Wait for the request and succeed the resolve by serving the given package.
@@ -384,12 +385,12 @@ mod tests {
     fn do_resolve(
         proxy: &PackageResolverProxy,
         url: &str,
-    ) -> impl Future<Output = Result<DirectoryProxy, Status>> {
+    ) -> impl Future<Output = Result<DirectoryProxy, fidl_fuchsia_pkg::ResolveError>> {
         let (package_dir, package_dir_server_end) = fidl::endpoints::create_proxy().unwrap();
         let fut = proxy.resolve(url, &mut std::iter::empty(), package_dir_server_end);
 
         async move {
-            let () = fut.await.unwrap().map_err(Status::from_raw)?;
+            let () = fut.await.unwrap()?;
             Ok(package_dir)
         }
     }
@@ -448,8 +449,8 @@ mod tests {
 
         handle_first.wait().await;
 
-        handle_second.fail(Status::NOT_FOUND).await;
-        assert_matches!(second_fut.await, Err(Status::NOT_FOUND));
+        handle_second.fail(fidl_fuchsia_pkg::ResolveError::PackageNotFound).await;
+        assert_matches!(second_fut.await, Err(fidl_fuchsia_pkg::ResolveError::PackageNotFound));
 
         let pkg = resolver.package("second", "fake merkle");
         handle_first.resolve(&pkg).await;

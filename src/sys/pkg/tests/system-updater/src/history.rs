@@ -254,7 +254,9 @@ async fn replaces_bogus_history() {
 async fn increments_attempts_counter_on_retry() {
     let env = TestEnv::builder().build();
 
-    env.resolver.url("fuchsia-pkg://fuchsia.com/not-found").fail(Status::NOT_FOUND);
+    env.resolver
+        .url("fuchsia-pkg://fuchsia.com/not-found")
+        .fail(fidl_fuchsia_pkg::ResolveError::PackageNotFound);
     env.resolver
         .register_package("update", UPDATE_HASH)
         .add_file("packages.json", make_packages_json([]))
