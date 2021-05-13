@@ -56,6 +56,18 @@ void VirtualKeyboardController::WatchVisibility(WatchVisibilityCallback callback
   }
 }
 
+void VirtualKeyboardController::OnUserAction(UserAction action) {
+  switch (action) {
+    case UserAction::HIDE_KEYBOARD:
+      want_visible_ = false;
+      break;
+    case UserAction::SHOW_KEYBOARD:
+      want_visible_ = true;
+      break;
+  }
+  MaybeNotifyWatcher();
+}
+
 void VirtualKeyboardController::MaybeNotifyWatcher() {
   FX_LOGS(INFO) << __PRETTY_FUNCTION__;
   if (watch_callback_ && want_visible_ != last_sent_visible_) {

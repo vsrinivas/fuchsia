@@ -59,7 +59,7 @@ class FidlBoundVirtualKeyboardCoordinator
   void NotifyVisibilityChange(
       bool is_visible, fuchsia::input::virtualkeyboard::VisibilityChangeReason reason) override;
   void RequestTypeAndVisibility(fuchsia::input::virtualkeyboard::TextType text_type,
-                                bool is_visibile) override;
+                                bool is_visible) override;
 
  private:
   using ControllerBinding =

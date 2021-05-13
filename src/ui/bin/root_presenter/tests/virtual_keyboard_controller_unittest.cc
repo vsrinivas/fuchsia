@@ -8,6 +8,8 @@
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
 
+#include <optional>
+
 #include <gtest/gtest.h>
 #include <src/lib/testing/loop_fixture/test_loop_fixture.h>
 
@@ -28,9 +30,9 @@ class FakeVirtualKeyboardCoordinator : public VirtualKeyboardCoordinator {
     FX_NOTIMPLEMENTED();
   }
   void RequestTypeAndVisibility(fuchsia::input::virtualkeyboard::TextType text_type,
-                                bool is_visibile) override {
+                                bool is_visible) override {
     requested_text_type_ = text_type;
-    want_visible_ = is_visibile;
+    want_visible_ = is_visible;
   }
 
   // Test support.
@@ -235,6 +237,23 @@ TEST_F(VirtualKeyboardControllerTest, SetTextTypeKeepsKeyboardHidden) {
   VirtualKeyboardController controller(coordinator(), view_ref(),
                                        fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC);
   coordinator()->Reset();
+  controller.SetTextType(::fuchsia::input::virtualkeyboard::TextType::PHONE);
+  ASSERT_EQ(false, coordinator()->want_visible());
+}
+
+TEST_F(VirtualKeyboardControllerTest, SetTextTypeDoesNotReopenKeyboardClosedByUser) {
+  // Create controller, and request that the keyboard be shown.
+  VirtualKeyboardController controller(coordinator(), view_ref(),
+                                       fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC);
+  controller.RequestShow();
+  ASSERT_EQ(true, coordinator()->want_visible());
+
+  // Report that the user hid the keyboard, and reset previous state of the fake coordinator.
+  controller.OnUserAction(VirtualKeyboardController::UserAction::HIDE_KEYBOARD);
+  coordinator()->Reset();
+  ASSERT_EQ(std::nullopt, coordinator()->want_visible());
+
+  // Modify the text type. This should not override the user's choice to hide the keyboard.
   controller.SetTextType(::fuchsia::input::virtualkeyboard::TextType::PHONE);
   ASSERT_EQ(false, coordinator()->want_visible());
 }

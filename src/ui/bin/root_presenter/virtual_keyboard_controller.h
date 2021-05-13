@@ -18,6 +18,8 @@ class VirtualKeyboardCoordinator;
 // watch for changes in virtual keyboard visibility.
 class VirtualKeyboardController : public fuchsia::input::virtualkeyboard::Controller {
  public:
+  enum class UserAction { HIDE_KEYBOARD, SHOW_KEYBOARD };
+
   VirtualKeyboardController(fxl::WeakPtr<VirtualKeyboardCoordinator> coordinator,
                             fuchsia::ui::views::ViewRef view_ref,
                             fuchsia::input::virtualkeyboard::TextType text_type);
@@ -28,6 +30,17 @@ class VirtualKeyboardController : public fuchsia::input::virtualkeyboard::Contro
   void RequestShow() override;
   void RequestHide() override;
   void WatchVisibility(WatchVisibilityCallback callback) override;
+
+  // Informs `this` that the ground-truth of keyboard visibility has changed, due
+  // to the user's interaction with the keyboard.
+  //
+  // This enables the Controller to avoid inadvertently overriding the user's
+  // intent. For example, after the user presses the dismiss button on the
+  // keyboard, SetTextType() will not have the side-effect of re-opening
+  // the keyboard.
+  //
+  // Called by VirtualKeyboardCoordinator.
+  void OnUserAction(UserAction action);
 
  private:
   void MaybeNotifyWatcher();
