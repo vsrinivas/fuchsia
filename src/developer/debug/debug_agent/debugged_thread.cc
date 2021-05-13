@@ -6,7 +6,6 @@
 
 #include <inttypes.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/zx/clock.h>
 #include <lib/zx/time.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/debug.h>
@@ -20,6 +19,7 @@
 #include "src/developer/debug/debug_agent/hardware_breakpoint.h"
 #include "src/developer/debug/debug_agent/process_breakpoint.h"
 #include "src/developer/debug/debug_agent/software_breakpoint.h"
+#include "src/developer/debug/debug_agent/time.h"
 #include "src/developer/debug/debug_agent/unwind.h"
 #include "src/developer/debug/debug_agent/watchpoint.h"
 #include "src/developer/debug/ipc/agent_protocol.h"
@@ -123,7 +123,7 @@ void DebuggedThread::OnException(std::unique_ptr<ExceptionHandle> exception_hand
   debug_ipc::NotifyException exception{};
   exception.type = type;
   exception.exception = thread_handle_->GetExceptionRecord();
-  exception.timestamp = zx::clock::get_monotonic().get();
+  exception.timestamp = GetNowTimestamp();
 
   switch (type) {
     case debug_ipc::ExceptionType::kSingleStep:
@@ -485,7 +485,7 @@ void DebuggedThread::SendThreadNotification() const {
   DEBUG_LOG(Thread) << ThreadPreamble(this) << "Sending starting notification.";
   debug_ipc::NotifyThread notify;
   notify.record = GetThreadRecord(debug_ipc::ThreadRecord::StackAmount::kMinimal);
-  notify.timestamp = zx::clock::get_monotonic().get();
+  notify.timestamp = GetNowTimestamp();
 
   debug_ipc::MessageWriter writer;
   debug_ipc::WriteNotifyThread(debug_ipc::MsgHeader::Type::kNotifyThreadStarting, notify, &writer);

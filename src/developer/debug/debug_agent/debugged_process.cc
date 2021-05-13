@@ -7,7 +7,6 @@
 #include <inttypes.h>
 #include <lib/fit/defer.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/zx/clock.h>
 #include <lib/zx/time.h>
 #include <zircon/syscalls/exception.h>
 
@@ -22,6 +21,7 @@
 #include "src/developer/debug/debug_agent/process_breakpoint.h"
 #include "src/developer/debug/debug_agent/software_breakpoint.h"
 #include "src/developer/debug/debug_agent/thread_handle.h"
+#include "src/developer/debug/debug_agent/time.h"
 #include "src/developer/debug/debug_agent/watchpoint.h"
 #include "src/developer/debug/ipc/agent_protocol.h"
 #include "src/developer/debug/ipc/message_reader.h"
@@ -344,7 +344,7 @@ void DebuggedProcess::SendModuleNotification() {
   debug_ipc::NotifyModules notify;
   notify.process_koid = koid();
   notify.modules = module_list_.modules();
-  notify.timestamp = zx::clock::get_monotonic().get();
+  notify.timestamp = GetNowTimestamp();
 
   // All threads are assumed to be stopped.
   for (auto& [thread_koid, thread_ptr] : threads_)
@@ -531,7 +531,7 @@ void DebuggedProcess::OnProcessTerminated() {
   debug_ipc::NotifyProcessExiting notify;
   notify.process_koid = koid();
   notify.return_code = process_handle_->GetReturnCode();
-  notify.timestamp = zx::clock::get_monotonic().get();
+  notify.timestamp = GetNowTimestamp();
 
   debug_ipc::MessageWriter writer;
   debug_ipc::WriteNotifyProcessExiting(notify, &writer);
@@ -580,7 +580,7 @@ void DebuggedProcess::OnThreadExiting(std::unique_ptr<ExceptionHandle> exception
   debug_ipc::NotifyThread notify;
   notify.record.id = {.process = koid(), .thread = thread_id};
   notify.record.state = debug_ipc::ThreadRecord::State::kDead;
-  notify.timestamp = zx::clock::get_monotonic().get();
+  notify.timestamp = GetNowTimestamp();
 
   debug_ipc::MessageWriter writer;
   debug_ipc::WriteNotifyThread(debug_ipc::MsgHeader::Type::kNotifyThreadExiting, notify, &writer);
@@ -718,7 +718,7 @@ void DebuggedProcess::SendIO(debug_ipc::NotifyIO::Type type, const std::vector<c
     // We tell whether this is a piece of a bigger message.
     notify.more_data_available = size > 0;
     notify.data = std::move(msg);
-    notify.timestamp = zx::clock::get_monotonic().get();
+    notify.timestamp = GetNowTimestamp();
 
     debug_ipc::MessageWriter writer;
     debug_ipc::WriteNotifyIO(notify, &writer);

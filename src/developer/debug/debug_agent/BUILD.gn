@@ -58,6 +58,8 @@ static_library("lib") {
     "system_interface.cc",
     "system_interface.h",
     "thread_handle.h",
+    "time.h",
+    "time_zircon.cc",
     "unwind.cc",
     "unwind.h",
     "watchpoint.cc",

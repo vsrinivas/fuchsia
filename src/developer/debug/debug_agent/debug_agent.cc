@@ -10,7 +10,6 @@
 #include <lib/fit/defer.h>
 #include <lib/sys/cpp/termination_reason.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/zx/clock.h>
 #include <lib/zx/time.h>
 #include <zircon/features.h>
 #include <zircon/status.h>
@@ -24,6 +23,7 @@
 #include "src/developer/debug/debug_agent/exception_handle.h"
 #include "src/developer/debug/debug_agent/process_breakpoint.h"
 #include "src/developer/debug/debug_agent/system_interface.h"
+#include "src/developer/debug/debug_agent/time.h"
 #include "src/developer/debug/debug_agent/zircon_job_handle.h"
 #include "src/developer/debug/debug_agent/zircon_process_handle.h"
 #include "src/developer/debug/ipc/agent_protocol.h"
@@ -191,12 +191,12 @@ void DebugAgent::OnLaunch(const debug_ipc::LaunchRequest& request, debug_ipc::La
       break;
   }
 
-  reply->timestamp = zx::clock::get_monotonic().get();
+  reply->timestamp = GetNowTimestamp();
   reply->status = ZX_ERR_INVALID_ARGS;
 }
 
 void DebugAgent::OnKill(const debug_ipc::KillRequest& request, debug_ipc::KillReply* reply) {
-  reply->timestamp = zx::clock::get_monotonic().get();
+  reply->timestamp = GetNowTimestamp();
   // See first if the process is in limbo.
   LimboProvider& limbo = system_interface_->GetLimboProvider();
   if (limbo.Valid() && limbo.IsProcessInLimbo(request.process_koid)) {
@@ -225,7 +225,7 @@ void DebugAgent::OnKill(const debug_ipc::KillRequest& request, debug_ipc::KillRe
 }
 
 void DebugAgent::OnDetach(const debug_ipc::DetachRequest& request, debug_ipc::DetachReply* reply) {
-  reply->timestamp = zx::clock::get_monotonic().get();
+  reply->timestamp = GetNowTimestamp();
   switch (request.type) {
     case debug_ipc::TaskType::kJob: {
       auto debug_job = GetDebuggedJob(request.koid);
@@ -422,7 +422,7 @@ void DebugAgent::OnProcessStatus(const debug_ipc::ProcessStatusRequest& request,
     debug_ipc::NotifyProcessStarting notify = {};
     notify.koid = process->koid();
     notify.name = process->process_handle().GetName();
-    notify.timestamp = zx::clock::get_monotonic().get();
+    notify.timestamp = GetNowTimestamp();
 
     debug_ipc::MessageWriter writer;
     debug_ipc::WriteNotifyProcessStarting(notify, &writer);
@@ -632,7 +632,7 @@ void SendAttachReply(DebugAgent* debug_agent, uint32_t transaction_id, zx_status
   reply.status = status;
   reply.koid = process_koid;
   reply.name = process_name;
-  reply.timestamp = zx::clock::get_monotonic().get();
+  reply.timestamp = GetNowTimestamp();
 
   debug_ipc::MessageWriter writer;
   debug_ipc::WriteReply(reply, transaction_id, &writer);
@@ -687,7 +687,7 @@ void DebugAgent::OnAttach(uint32_t transaction_id, const debug_ipc::AttachReques
     reply.name = job->GetName();
     reply.koid = job->GetKoid();
     reply.status = AddDebuggedJob(std::move(job));
-    reply.timestamp = zx::clock::get_monotonic().get();
+    reply.timestamp = GetNowTimestamp();
   } else {
     DEBUG_LOG(Agent) << "Failed to attach to job.";
   }
@@ -941,7 +941,7 @@ void DebugAgent::OnProcessStart(const std::string& filter,
   notify.koid = process_koid;
   notify.name = description.process_name;
   notify.component_id = description.component_id;
-  notify.timestamp = zx::clock::get_monotonic().get();
+  notify.timestamp = GetNowTimestamp();
 
   debug_ipc::MessageWriter writer;
   debug_ipc::WriteNotifyProcessStarting(notify, &writer);
@@ -1007,7 +1007,7 @@ void DebugAgent::OnProcessEnteredLimbo(const LimboProvider::Record& record) {
   process_starting.type = debug_ipc::NotifyProcessStarting::Type::kLimbo;
   process_starting.koid = process_koid;
   process_starting.name = std::move(process_name);
-  process_starting.timestamp = zx::clock::get_monotonic().get();
+  process_starting.timestamp = GetNowTimestamp();
 
   debug_ipc::MessageWriter writer;
   debug_ipc::WriteNotifyProcessStarting(std::move(process_starting), &writer);
