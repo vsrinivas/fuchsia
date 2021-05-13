@@ -3,13 +3,14 @@
 // found in the LICENSE file.
 
 use crate::peer::calls::{CallIdx, CallState};
+use profile_client::Error as ProfileError;
 use {std::error::Error as StdError, thiserror::Error};
 
 /// Errors that occur during the operation of the HFP Bluetooth Profile component.
 #[derive(Error, Debug)]
 pub enum Error {
     #[error("Error using BR/EDR resource {:?}", .resource)]
-    ProfileResourceError { resource: ProfileResource, source: Box<dyn StdError> },
+    ProfileResourceError { resource: ProfileError },
     #[error("System error encountered: {}", .message)]
     System { message: String, source: Box<dyn StdError> },
     #[error("Peer removed")]
@@ -20,40 +21,13 @@ pub enum Error {
     ClientProtocol(Box<dyn StdError>),
 }
 
-#[derive(Debug)]
-pub enum ProfileResource {
-    SearchResults,
-    ConnectionReceiver,
-    Advertise,
+impl From<ProfileError> for Error {
+    fn from(src: ProfileError) -> Self {
+        Self::ProfileResourceError { resource: src }
+    }
 }
 
-#[derive(Debug, Error)]
-#[error("Advertisement Terminated")]
-pub struct AdvertisementTerminated;
-
 impl Error {
-    /// Make a new ProfileResourceError
-    fn profile_resource<E: StdError + 'static>(resource: ProfileResource, e: E) -> Self {
-        Error::ProfileResourceError { resource, source: Box::new(e) }
-    }
-
-    /// An error occurred when attempting to register an advertisement.
-    pub fn profile_advertise<E: StdError + 'static>(e: E) -> Self {
-        Self::profile_resource(ProfileResource::Advertise, e)
-    }
-
-    /// An error occurred when attempting to use the fuchsia.bluetooth.bredr.SearchResults fidl
-    /// protocol.
-    pub fn profile_search_results<E: StdError + 'static>(e: E) -> Self {
-        Self::profile_resource(ProfileResource::SearchResults, e)
-    }
-
-    /// An error occurred when attempting to use the fuchsia.bluetooth.bredr.ConnectionReceiver fidl
-    /// protocol.
-    pub fn profile_connection_receiver<E: StdError + 'static>(e: E) -> Self {
-        Self::profile_resource(ProfileResource::ConnectionReceiver, e)
-    }
-
     /// An error occurred when interacting with the system.
     ///
     /// This allocates memory which could fail if the error is an OOM.

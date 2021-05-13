@@ -12,7 +12,8 @@ use {
 };
 
 use crate::{
-    config::AudioGatewayFeatureSupport, fidl_service::run_services, hfp::Hfp, profile::Profile,
+    config::AudioGatewayFeatureSupport, fidl_service::run_services, hfp::Hfp,
+    profile::register_audio_gateway,
 };
 
 mod config;
@@ -29,13 +30,19 @@ async fn main() -> Result<(), Error> {
     fuchsia_syslog::init().context("Could not initialize logger")?;
 
     let feature_support = AudioGatewayFeatureSupport::load()?;
-    let profile = Profile::register_audio_gateway(feature_support)?;
+    let (profile_client, profile_svc) = register_audio_gateway(feature_support)?;
 
     let (call_manager_sender, call_manager_receiver) = mpsc::channel(1);
     let (test_request_sender, test_request_receiver) = mpsc::channel(1);
 
-    let hfp =
-        Hfp::new(profile, call_manager_receiver, feature_support, test_request_receiver).run();
+    let hfp = Hfp::new(
+        profile_client,
+        profile_svc,
+        call_manager_receiver,
+        feature_support,
+        test_request_receiver,
+    )
+    .run();
     pin_mut!(hfp);
 
     let mut fs = ServiceFs::new();

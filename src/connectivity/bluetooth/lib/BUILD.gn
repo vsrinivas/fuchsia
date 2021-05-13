@@ -18,6 +18,7 @@ group("lib") {
     "fuchsia-audio-device-output",
     "fuchsia-bluetooth",
     "packet-encoding",
+    "profile-client",
   ]
 }
 
@@ -36,5 +37,6 @@ group("tests") {
     "fuchsia-audio-device-output:tests",
     "fuchsia-bluetooth:tests",
     "packet-encoding:tests",
+    "profile-client:tests",
   ]
 }

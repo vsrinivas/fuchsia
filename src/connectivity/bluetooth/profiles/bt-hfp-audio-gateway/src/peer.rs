@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use self::task::PeerTask;
-use crate::{config::AudioGatewayFeatureSupport, error::Error, profile::ProfileEvent};
+use crate::{config::AudioGatewayFeatureSupport, error::Error};
 use {
     async_utils::channel::TrySend,
     core::{
@@ -16,6 +16,7 @@ use {
     fuchsia_async::Task,
     fuchsia_bluetooth::types::PeerId,
     futures::{channel::mpsc, Future, FutureExt, SinkExt},
+    profile_client::ProfileEvent,
 };
 
 pub mod calls;

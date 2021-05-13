@@ -35,6 +35,7 @@ use {
     futures::{self, Stream, StreamExt},
     log::{debug, error, info, trace, warn},
     parking_lot::Mutex,
+    profile_client as profile,
     std::{collections::HashSet, convert::TryFrom, sync::Arc},
 };
 
@@ -45,7 +46,6 @@ mod encoding;
 mod latm;
 mod pcm_audio;
 mod player;
-mod profile;
 mod sink_task;
 mod source_task;
 mod sources;
@@ -478,7 +478,10 @@ fn setup_profiles(
     let mut profile = profile::ProfileClient::advertise(
         proxy,
         &mut service_defs[..],
-        config.channel_mode.clone(),
+        bredr::ChannelParameters {
+            channel_mode: Some(config.channel_mode.clone()),
+            ..bredr::ChannelParameters::EMPTY
+        },
     )?;
 
     const ATTRS: [u16; 4] = [

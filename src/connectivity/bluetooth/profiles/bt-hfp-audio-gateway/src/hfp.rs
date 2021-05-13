@@ -5,25 +5,24 @@
 use {
     async_utils::stream::FutureMap,
     fidl::endpoints::{Proxy, ServerEnd},
+    fidl_fuchsia_bluetooth_bredr::ProfileProxy,
     fidl_fuchsia_bluetooth_hfp::{CallManagerProxy, PeerHandlerMarker},
     fidl_fuchsia_bluetooth_hfp_test::HfpTestRequest,
     fuchsia_bluetooth::types::PeerId,
     futures::{channel::mpsc::Receiver, select, stream::StreamExt},
+    profile_client::{ProfileClient, ProfileEvent},
     std::{collections::hash_map::Entry, matches},
 };
 
-use crate::{
-    config::AudioGatewayFeatureSupport,
-    error::Error,
-    peer::Peer,
-    profile::{Profile, ProfileEvent},
-};
+use crate::{config::AudioGatewayFeatureSupport, error::Error, peer::Peer};
 
 /// Manages operation of the HFP functionality.
 pub struct Hfp {
     config: AudioGatewayFeatureSupport,
-    /// The `profile` provides Hfp with a means to drive the fuchsia.bluetooth.bredr related APIs.
-    profile: Profile,
+    /// The `profile_client` provides Hfp with a means to drive the fuchsia.bluetooth.bredr related APIs.
+    profile_client: ProfileClient,
+    /// The client connection to the `fuchsia.bluetooth.bredr.Profile` protocol.
+    profile_svc: ProfileProxy,
     /// The `call_manager` provides Hfp with a means to interact with clients of the
     /// fuchsia.bluetooth.hfp.Hfp and fuchsia.bluetooth.hfp.CallManager protocols.
     call_manager: Option<CallManagerProxy>,
@@ -36,13 +35,15 @@ pub struct Hfp {
 impl Hfp {
     /// Create a new `Hfp` with the provided `profile`.
     pub fn new(
-        profile: Profile,
+        profile_client: ProfileClient,
+        profile_svc: ProfileProxy,
         call_manager_registration: Receiver<CallManagerProxy>,
         config: AudioGatewayFeatureSupport,
         test_requests: Receiver<HfpTestRequest>,
     ) -> Self {
         Self {
-            profile,
+            profile_client,
+            profile_svc,
             call_manager_registration,
             call_manager: None,
             peers: FutureMap::new(),
@@ -57,7 +58,7 @@ impl Hfp {
         loop {
             select! {
                 // If the profile stream ever terminates, the component should shut down.
-                event = self.profile.next() => {
+                event = self.profile_client.next() => {
                     if let Some(event) = event {
                         self.handle_profile_event(event?).await?;
                     } else {
@@ -99,7 +100,7 @@ impl Hfp {
         let id = event.peer_id();
         let peer = match self.peers.inner().entry(id) {
             Entry::Vacant(entry) => {
-                let mut peer = Peer::new(id, self.profile.proxy(), self.config)?;
+                let mut peer = Peer::new(id, self.profile_svc.clone(), self.config)?;
                 if let Some(proxy) = self.call_manager.clone() {
                     let server_end = peer.build_handler().await?;
                     if Self::send_peer_connected(&proxy, peer.id(), server_end).await.is_err() {
@@ -166,14 +167,14 @@ mod tests {
 
     #[fasync::run_until_stalled(test)]
     async fn profile_error_propagates_error_from_hfp_run() {
-        let (profile, server) = setup_profile_and_test_server();
+        let (profile, profile_svc, server) = setup_profile_and_test_server();
         // dropping the server is expected to produce an error from Hfp::run
         drop(server);
 
         let (_tx, rx1) = mpsc::channel(1);
         let (_, rx2) = mpsc::channel(1);
 
-        let hfp = Hfp::new(profile, rx1, AudioGatewayFeatureSupport::default(), rx2);
+        let hfp = Hfp::new(profile, profile_svc, rx1, AudioGatewayFeatureSupport::default(), rx2);
         let result = hfp.run().await;
         assert!(result.is_err());
     }
@@ -183,7 +184,7 @@ mod tests {
     /// a call manager.
     #[fasync::run_until_stalled(test)]
     async fn new_profile_event_initiates_connections_to_profile_and_call_manager_() {
-        let (profile, server) = setup_profile_and_test_server();
+        let (profile, profile_svc, server) = setup_profile_and_test_server();
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<CallManagerMarker>().unwrap();
 
@@ -194,7 +195,8 @@ mod tests {
 
         // Run hfp in a background task since we are testing that the profile server observes the
         // expected behavior when interacting with hfp.
-        let hfp = Hfp::new(profile, receiver, AudioGatewayFeatureSupport::default(), rx);
+        let hfp =
+            Hfp::new(profile, profile_svc, receiver, AudioGatewayFeatureSupport::default(), rx);
         let _hfp_task = fasync::Task::local(hfp.run());
 
         // Drive both services to expected steady states without any errors.

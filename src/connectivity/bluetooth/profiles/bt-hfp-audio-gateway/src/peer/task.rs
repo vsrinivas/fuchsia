@@ -20,6 +20,7 @@ use {
         FutureExt, StreamExt,
     },
     log::{debug, info, warn},
+    profile_client::ProfileEvent,
     std::{convert::TryInto, fmt},
 };
 
@@ -35,7 +36,7 @@ use super::{
     PeerRequest,
 };
 
-use crate::{config::AudioGatewayFeatureSupport, error::Error, profile::ProfileEvent};
+use crate::{config::AudioGatewayFeatureSupport, error::Error};
 
 pub(super) struct PeerTask {
     id: PeerId,
@@ -166,10 +167,13 @@ impl PeerTask {
 
     async fn peer_request(&mut self, request: PeerRequest) -> Result<(), Error> {
         match request {
-            PeerRequest::Profile(ProfileEvent::ConnectionRequest { protocol, channel, id: _ }) => {
+            PeerRequest::Profile(ProfileEvent::PeerConnected { protocol, channel, id: _ }) => {
+                let protocol = protocol.iter().map(ProtocolDescriptor::from).collect();
                 self.on_connection_request(protocol, channel)
             }
             PeerRequest::Profile(ProfileEvent::SearchResult { protocol, attributes, id: _ }) => {
+                let protocol = protocol.map(|p| p.iter().map(ProtocolDescriptor::from).collect());
+                let attributes = attributes.iter().map(Attribute::from).collect();
                 self.on_search_result(protocol, attributes).await
             }
             PeerRequest::Handle(handler) => self.on_peer_handler(handler).await?,

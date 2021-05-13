@@ -613,7 +613,6 @@ impl TryFrom<&ChannelParameters> for fidl_bredr::ChannelParameters {
 mod tests {
     use super::*;
     use fidl::encoding::Decodable;
-    use fidl_fuchsia_bluetooth_bredr as fidl_bredr;
 
     #[test]
     fn test_find_descriptors_fails_with_no_descriptors() {
