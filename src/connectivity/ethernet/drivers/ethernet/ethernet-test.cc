@@ -59,8 +59,8 @@ class FakeEthernetImplProtocol
 
   void EthernetImplGetBti(zx::bti* bti) { bti->reset(); }
 
-  bool TestInfo(fuchsia_hardware_ethernet_Info* info) {
-    if (memcmp(mac_, info->mac.octets, ETH_MAC_SIZE) || (info->mtu != 1500)) {
+  bool TestInfo(fuchsia_hardware_ethernet::wire::Info* info) {
+    if (memcmp(mac_, info->mac.octets.data(), ETH_MAC_SIZE) || (info->mtu != 1500)) {
       return false;
     }
     return true;
@@ -183,23 +183,34 @@ class EthernetDeviceTest {
   ~EthernetDeviceTest() { edev0->DestroyAllEthDev(); }
 
   void Start() {
-    zx_status_t out_status = ZX_ERR_INTERNAL;
-    fuchsia_hardware_ethernet_Fifos fifos = {};
-    ASSERT_OK(fuchsia_hardware_ethernet_DeviceGetFifos(FidlChannel(), &out_status, &fifos));
-    tx_fifo_ = zx::fifo(fifos.tx);
-    EXPECT_TRUE(tx_fifo_.is_valid());
-    rx_fifo_ = zx::fifo(fifos.rx);
-    rx_fifo_depth_ = fifos.rx_depth;
-    tx_fifo_depth_ = fifos.tx_depth;
-    EXPECT_TRUE(rx_fifo_.is_valid());
-    ASSERT_OK(zx::vmo::create(2 * sizeof(ethernet_netbuf_t), 0, &buf_));
-    ASSERT_OK(fuchsia_hardware_ethernet_DeviceSetIOBuffer(FidlChannel(), buf_.get(), &out_status));
-    ASSERT_OK(out_status);
-    ASSERT_OK(fuchsia_hardware_ethernet_DeviceStart(FidlChannel(), &out_status));
-    ASSERT_OK(out_status);
+    {
+      auto result = FidlClient().GetFifos();
+      ASSERT_OK(result.status());
+      ASSERT_OK(result->status);
+      tx_fifo_ = std::move(result->info->tx);
+      EXPECT_TRUE(tx_fifo_.is_valid());
+      rx_fifo_ = std::move(result->info->rx);
+      rx_fifo_depth_ = result->info->rx_depth;
+      tx_fifo_depth_ = result->info->tx_depth;
+      EXPECT_TRUE(rx_fifo_.is_valid());
+    }
+    {
+      ASSERT_OK(zx::vmo::create(2 * sizeof(ethernet_netbuf_t), 0, &buf_));
+      auto result = FidlClient().SetIoBuffer(std::move(buf_));
+      ASSERT_OK(result.status());
+      ASSERT_OK(result->status);
+    }
+    {
+      auto result = FidlClient().Start();
+      ASSERT_OK(result.status());
+      ASSERT_OK(result->status);
+    }
   }
 
-  zx_handle_t FidlChannel() { return tester.ddk().FidlClient().get(); }
+  fidl::internal::WireCaller<fuchsia_hardware_ethernet::Device> FidlClient() {
+    return fidl::WireCall(
+        fidl::UnownedClientEnd<fuchsia_hardware_ethernet::Device>(tester.ddk().FidlClient().get()));
+  }
 
   zx::fifo& TransmitFifo() { return tx_fifo_; }
 
@@ -228,28 +239,26 @@ TEST(EthernetTest, MultipleOpenTest) {
 
 TEST(EthernetTest, SetClientNameTest) {
   EthernetDeviceTest test;
-  zx_status_t call_status = ZX_OK;
-  ASSERT_OK(fuchsia_hardware_ethernet_DeviceSetClientName(test.FidlChannel(), "ethtest",
-                                                          strlen("ethtest"), &call_status));
-  ASSERT_OK(call_status);
+  std::string name("ethtest");
+  auto result = test.FidlClient().SetClientName(fidl::StringView::FromExternal(name));
+  ASSERT_OK(result.status());
+  ASSERT_OK(result->status);
 }
 
 TEST(EthernetTest, GetInfoTest) {
   EthernetDeviceTest test;
-  fuchsia_hardware_ethernet_Info info = {};
-  ASSERT_OK(fuchsia_hardware_ethernet_DeviceGetInfo(test.FidlChannel(), &info));
-  EXPECT_TRUE(test.tester.ethmac().TestInfo(&info));
+  auto result = test.FidlClient().GetInfo();
+  ASSERT_OK(result.status());
+  EXPECT_TRUE(test.tester.ethmac().TestInfo(&result->info));
 }
 
 TEST(EthernetTest, GetFifosTest) {
   EthernetDeviceTest test;
-  zx_status_t out_status = ZX_ERR_INTERNAL;
-  fuchsia_hardware_ethernet_Fifos fifos = {};
-
-  ASSERT_OK(fuchsia_hardware_ethernet_DeviceGetFifos(test.FidlChannel(), &out_status, &fifos));
-  ASSERT_OK(out_status);
-  EXPECT_TRUE(fifos.rx != ZX_HANDLE_INVALID);
-  EXPECT_TRUE(fifos.tx != ZX_HANDLE_INVALID);
+  auto result = test.FidlClient().GetFifos();
+  ASSERT_OK(result.status());
+  ASSERT_OK(result->status);
+  EXPECT_TRUE(result->info->rx != ZX_HANDLE_INVALID);
+  EXPECT_TRUE(result->info->tx != ZX_HANDLE_INVALID);
 }
 
 TEST(EthernetTest, AddDeviceAsNotPromiscuous) {
@@ -259,96 +268,107 @@ TEST(EthernetTest, AddDeviceAsNotPromiscuous) {
 
 TEST(EthernetTest, SetPromiscuousModeTest) {
   EthernetDeviceTest test;
-  zx_status_t out_status = ZX_ERR_INTERNAL;
 
-  ASSERT_OK(
-      fuchsia_hardware_ethernet_DeviceSetPromiscuousMode(test.FidlChannel(), true, &out_status));
-  ASSERT_OK(out_status);
-  EXPECT_EQ(test.tester.ethmac().TestPromiscuous(), 1, "");
+  {
+    auto result = test.FidlClient().SetPromiscuousMode(true);
+    ASSERT_OK(result.status());
+    ASSERT_OK(result->status);
+    EXPECT_EQ(test.tester.ethmac().TestPromiscuous(), 1, "");
+  }
 
-  out_status = ZX_ERR_INTERNAL;
-  ASSERT_OK(
-      fuchsia_hardware_ethernet_DeviceSetPromiscuousMode(test.FidlChannel(), false, &out_status));
-  ASSERT_OK(out_status);
-  EXPECT_EQ(test.tester.ethmac().TestPromiscuous(), 0, "");
+  {
+    auto result = test.FidlClient().SetPromiscuousMode(false);
+    ASSERT_OK(result.status());
+    ASSERT_OK(result->status);
+    EXPECT_EQ(test.tester.ethmac().TestPromiscuous(), 0, "");
+  }
 }
 
 TEST(EthernetTest, ConfigMulticastAddMacTest) {
   EthernetDeviceTest test;
-  zx_status_t out_status = ZX_ERR_INTERNAL;
-  /* 1st bit should be 1 in multicast */
-  fuchsia_hardware_ethernet_MacAddress wrong_addr = {
-      .octets = {0x00, 0xaa, 0xbb, 0xbb, 0xcc, 0xcc}};
-  ASSERT_OK(fuchsia_hardware_ethernet_DeviceConfigMulticastAddMac(test.FidlChannel(), &wrong_addr,
-                                                                  &out_status));
-  ASSERT_OK(!out_status);
-  fuchsia_hardware_ethernet_MacAddress right_addr = {
-      .octets = {0x01, 0xaa, 0xbb, 0xbb, 0xcc, 0xcc}};
-  ASSERT_OK(fuchsia_hardware_ethernet_DeviceConfigMulticastAddMac(test.FidlChannel(), &right_addr,
-                                                                  &out_status));
-  ASSERT_OK(out_status);
+  {
+    /* 1st bit should be 1 in multicast */
+    fuchsia_hardware_ethernet::wire::MacAddress wrong_addr = {
+        .octets = {0x00, 0xaa, 0xbb, 0xbb, 0xcc, 0xcc}};
+
+    auto result = test.FidlClient().ConfigMulticastAddMac(wrong_addr);
+    ASSERT_OK(result.status());
+    ASSERT_NOT_OK(result->status);
+  }
+
+  {
+    fuchsia_hardware_ethernet::wire::MacAddress right_addr = {
+        .octets = {0x01, 0xaa, 0xbb, 0xbb, 0xcc, 0xcc}};
+    auto result = test.FidlClient().ConfigMulticastAddMac(right_addr);
+    ASSERT_OK(result.status());
+    ASSERT_OK(result->status);
+  }
 }
 
 TEST(EthernetTest, ConfigMulticastDeleteMacTest) {
   EthernetDeviceTest test;
-  zx_status_t out_status = ZX_ERR_INTERNAL;
-  fuchsia_hardware_ethernet_MacAddress addr = {.octets = {0xaa, 0xaa, 0xbb, 0xbb, 0xcc, 0xcc}};
-  ASSERT_OK(fuchsia_hardware_ethernet_DeviceConfigMulticastDeleteMac(test.FidlChannel(), &addr,
-                                                                     &out_status));
-  ASSERT_OK(out_status);
+  fuchsia_hardware_ethernet::wire::MacAddress addr = {
+      .octets = {0xaa, 0xaa, 0xbb, 0xbb, 0xcc, 0xcc}};
+  auto result = test.FidlClient().ConfigMulticastDeleteMac(addr);
+  ASSERT_OK(result.status());
+  ASSERT_OK(result->status);
 }
 
 TEST(EthernetTest, ConfigMulticastSetPromiscuousModeTest) {
   EthernetDeviceTest test;
-  zx_status_t out_status = ZX_ERR_INTERNAL;
-  ASSERT_OK(fuchsia_hardware_ethernet_DeviceConfigMulticastSetPromiscuousMode(test.FidlChannel(),
-                                                                              true, &out_status));
-  ASSERT_OK(out_status);
+  {
+    auto result = test.FidlClient().ConfigMulticastSetPromiscuousMode(true);
+    ASSERT_OK(result.status());
+    ASSERT_OK(result->status);
+  }
 
-  out_status = ZX_ERR_INTERNAL;
-  ASSERT_OK(fuchsia_hardware_ethernet_DeviceConfigMulticastSetPromiscuousMode(test.FidlChannel(),
-                                                                              false, &out_status));
-  ASSERT_OK(out_status);
+  {
+    auto result = test.FidlClient().ConfigMulticastSetPromiscuousMode(false);
+    ASSERT_OK(result.status());
+    ASSERT_OK(result->status);
+  }
 }
 
 TEST(EthernetTest, ConfigMulticastTestFilterTest) {
   EthernetDeviceTest test;
-  zx_status_t out_status = ZX_ERR_INTERNAL;
-  ASSERT_OK(
-      fuchsia_hardware_ethernet_DeviceConfigMulticastTestFilter(test.FidlChannel(), &out_status));
-  ASSERT_OK(out_status);
+  auto result = test.FidlClient().ConfigMulticastTestFilter();
+  ASSERT_OK(result.status());
+  ASSERT_OK(result->status);
 }
 
 TEST(EthernetTest, DumpRegistersTest) {
   EthernetDeviceTest test;
-  zx_status_t out_status = ZX_ERR_INTERNAL;
-  ASSERT_OK(fuchsia_hardware_ethernet_DeviceDumpRegisters(test.FidlChannel(), &out_status));
-  ASSERT_OK(out_status);
+  auto result = test.FidlClient().DumpRegisters();
+  ASSERT_OK(result.status());
+  ASSERT_OK(result->status);
   EXPECT_TRUE(test.tester.ethmac().TestDump());
 }
 
 TEST(EthernetTest, SetIOBufferTest) {
   EthernetDeviceTest test;
-  zx_status_t out_status = ZX_ERR_INTERNAL;
-  EXPECT_TRUE(fuchsia_hardware_ethernet_DeviceSetIOBuffer(test.FidlChannel(), ZX_HANDLE_INVALID,
-                                                          &out_status) != ZX_OK);
-  EXPECT_TRUE(out_status != ZX_OK);
+  {
+    auto result = test.FidlClient().SetIoBuffer(zx::vmo());
+    ASSERT_NOT_OK(result.status());
+  }
   zx::vmo buf;
   ASSERT_OK(zx::vmo::create(2 * sizeof(ethernet_netbuf_t), 0, &buf));
-  ASSERT_OK(
-      fuchsia_hardware_ethernet_DeviceSetIOBuffer(test.FidlChannel(), buf.get(), &out_status));
-  ASSERT_OK(out_status);
+
+  {
+    auto result = test.FidlClient().SetIoBuffer(std::move(buf));
+    ASSERT_OK(result.status());
+    ASSERT_OK(result->status);
+  }
 }
 
 TEST(EthernetTest, StartTest) {
   EthernetDeviceTest test;
-  zx_status_t out_status = ZX_OK;
   // test bad state
-  ASSERT_OK(fuchsia_hardware_ethernet_DeviceStart(test.FidlChannel(), &out_status));
-  EXPECT_TRUE(out_status != ZX_OK);
+  auto result = test.FidlClient().Start();
+  ASSERT_OK(result.status());
+  ASSERT_NOT_OK(result->status);
 
   // test valid case
-  test.Start();
+  ASSERT_NO_FATAL_FAILURES(test.Start());
 
   // test client interfaces
   EXPECT_TRUE(test.tester.ethmac().TestIfc());
@@ -356,10 +376,9 @@ TEST(EthernetTest, StartTest) {
 
 TEST(EthernetTest, GetStatusTest) {
   EthernetDeviceTest test;
-  uint32_t device_status;
 
   // Start device.
-  test.Start();
+  ASSERT_NO_FATAL_FAILURES(test.Start());
 
   // Set mock ethmac status.
   EXPECT_TRUE(test.tester.ethmac().SetStatus(1));
@@ -367,25 +386,26 @@ TEST(EthernetTest, GetStatusTest) {
   // Verify FIFO is signalled.
   zx::fifo& rx = test.ReceiveFifo();
   zx_signals_t pending;
-  ASSERT_OK(
-      rx.wait_one(fuchsia_hardware_ethernet_SIGNAL_STATUS, zx::time::infinite_past(), &pending));
-  ASSERT_EQ(pending & fuchsia_hardware_ethernet_SIGNAL_STATUS,
-            fuchsia_hardware_ethernet_SIGNAL_STATUS);
+  ASSERT_OK(rx.wait_one(fuchsia_hardware_ethernet::wire::kSignalStatus, zx::time::infinite_past(),
+                        &pending));
+  ASSERT_EQ(pending & fuchsia_hardware_ethernet::wire::kSignalStatus,
+            fuchsia_hardware_ethernet::wire::kSignalStatus);
 
   // Verify status.
-  ASSERT_OK(fuchsia_hardware_ethernet_DeviceGetStatus(test.FidlChannel(), &device_status));
-  EXPECT_EQ(device_status, 1);
+  auto result = test.FidlClient().GetStatus();
+  ASSERT_OK(result.status());
+  EXPECT_EQ(result->device_status, fuchsia_hardware_ethernet::wire::DeviceStatus::kOnline);
 
   // Status is cleared by reading through FIDL.
-  ASSERT_STATUS(
-      rx.wait_one(fuchsia_hardware_ethernet_SIGNAL_STATUS, zx::time::infinite_past(), &pending),
-      ZX_ERR_TIMED_OUT);
+  ASSERT_STATUS(rx.wait_one(fuchsia_hardware_ethernet::wire::kSignalStatus,
+                            zx::time::infinite_past(), &pending),
+                ZX_ERR_TIMED_OUT);
 
   // Verify that updating status to the same value doesn't assert FIFO signals.
   EXPECT_TRUE(test.tester.ethmac().SetStatus(1));
-  ASSERT_STATUS(
-      rx.wait_one(fuchsia_hardware_ethernet_SIGNAL_STATUS, zx::time::infinite_past(), &pending),
-      ZX_ERR_TIMED_OUT);
+  ASSERT_STATUS(rx.wait_one(fuchsia_hardware_ethernet::wire::kSignalStatus,
+                            zx::time::infinite_past(), &pending),
+                ZX_ERR_TIMED_OUT);
 }
 
 TEST(EthernetTest, SendTest) {
@@ -440,14 +460,14 @@ TEST(EthernetTest, ReceiveTest) {
 
 TEST(EthernetTest, ListenStartTest) {
   EthernetDeviceTest test;
-  zx_status_t out_status = ZX_ERR_INTERNAL;
 
   // start device
   test.Start();
 
   // Set listen start
-  ASSERT_OK(fuchsia_hardware_ethernet_DeviceListenStart(test.FidlChannel(), &out_status));
-  ASSERT_OK(out_status);
+  auto result = test.FidlClient().ListenStart();
+  ASSERT_OK(result.status());
+  ASSERT_OK(result->status);
 
   // send packet
   eth_fifo_entry_t entry = {
@@ -480,11 +500,13 @@ TEST(EthernetTest, ListenStartTest) {
 
 TEST(EthernetTest, ListenStopTest) {
   EthernetDeviceTest test;
-  ASSERT_OK(fuchsia_hardware_ethernet_DeviceListenStop(test.FidlChannel()));
+  auto result = test.FidlClient().ListenStop();
+  ASSERT_OK(result.status());
 }
 
 TEST(EthernetTest, StopTest) {
   EthernetDeviceTest test;
   test.Start();
-  ASSERT_OK(fuchsia_hardware_ethernet_DeviceStop(test.FidlChannel()));
+  auto result = test.FidlClient().Stop();
+  ASSERT_OK(result.status());
 }

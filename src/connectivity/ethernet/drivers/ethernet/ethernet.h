@@ -6,8 +6,8 @@
 #define SRC_CONNECTIVITY_ETHERNET_DRIVERS_ETHERNET_ETHERNET_H_
 
 #include <fuchsia/hardware/ethernet/c/banjo.h>
-#include <fuchsia/hardware/ethernet/c/fidl.h>
 #include <fuchsia/hardware/ethernet/cpp/banjo.h>
+#include <fuchsia/hardware/ethernet/llcpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
@@ -90,7 +90,7 @@ class EthDev0 : public EthDev0Type, public ddk::EmptyProtocol<ZX_PROTOCOL_ETHERN
 
   ddk::EthernetImplProtocolClient mac_;
   ethernet_info_t info_ = {};
-  uint32_t status_ = 0;
+  fuchsia_hardware_ethernet::wire::DeviceStatus status_ = {};
 
   int32_t promisc_requesters_ = 0;
   int32_t multicast_promisc_requesters_ = 0;
@@ -102,9 +102,11 @@ class EthDev0 : public EthDev0Type, public ddk::EmptyProtocol<ZX_PROTOCOL_ETHERN
   fbl::DoublyLinkedList<fbl::RefPtr<EthDev>> list_idle_ __TA_GUARDED(ethdev_lock_);
 };
 
-using EthDevType = ddk::Device<EthDev, ddk::Openable, ddk::Closable, ddk::MessageableOld>;
+using EthDevType = ddk::Device<EthDev, ddk::Openable, ddk::Closable,
+                               ddk::Messageable<fuchsia_hardware_ethernet::Device>::Mixin>;
 
 class EthDev : public EthDevType,
+               public fidl::WireServer<fuchsia_hardware_ethernet::Device>,
                public ddk::EmptyProtocol<ZX_PROTOCOL_ETHERNET>,
                public fbl::DoublyLinkedListable<fbl::RefPtr<EthDev>>,
                public fbl::RefCounted<EthDev> {
@@ -119,33 +121,30 @@ class EthDev : public EthDevType,
   zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
   zx_status_t DdkClose(uint32_t flags);
   void DdkRelease();
-  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   zx_status_t AddDevice(zx_device_t** out);
 
   // These methods are guarded by EthDev0's ethdev_lock_.
-  zx_status_t MsgGetInfoLocked(fidl_txn_t* txn) __TA_REQUIRES(edev0_->ethdev_lock_);
-  zx_status_t MsgGetFifosLocked(fidl_txn_t* txn) __TA_REQUIRES(edev0_->ethdev_lock_);
-  zx_status_t MsgSetIOBufferLocked(zx_handle_t h, fidl_txn_t* txn)
-      __TA_REQUIRES(edev0_->ethdev_lock_);
-  zx_status_t MsgStartLocked(fidl_txn_t* txn) __TA_REQUIRES(edev0_->ethdev_lock_);
-  zx_status_t MsgStopLocked(fidl_txn_t* txn) __TA_REQUIRES(edev0_->ethdev_lock_);
-  zx_status_t MsgListenStartLocked(fidl_txn_t* txn) __TA_REQUIRES(edev0_->ethdev_lock_);
-  zx_status_t MsgListenStopLocked(fidl_txn_t* txn) __TA_REQUIRES(edev0_->ethdev_lock_);
-  zx_status_t MsgSetClientNameLocked(const char* buf, size_t len, fidl_txn_t* txn)
-      __TA_REQUIRES(edev0_->ethdev_lock_);
-  zx_status_t MsgGetStatusLocked(fidl_txn_t* txn) __TA_REQUIRES(edev0_->ethdev_lock_);
-  zx_status_t MsgSetPromiscLocked(bool enabled, fidl_txn_t* txn)
-      __TA_REQUIRES(edev0_->ethdev_lock_);
-  zx_status_t MsgConfigMulticastAddMacLocked(const fuchsia_hardware_ethernet_MacAddress* mac,
-                                             fidl_txn_t* txn) __TA_REQUIRES(edev0_->ethdev_lock_);
-  zx_status_t MsgConfigMulticastDeleteMacLocked(const fuchsia_hardware_ethernet_MacAddress* mac,
-                                                fidl_txn_t* txn)
-      __TA_REQUIRES(edev0_->ethdev_lock_);
-  zx_status_t MsgConfigMulticastSetPromiscuousModeLocked(bool enabled, fidl_txn_t* txn)
-      __TA_REQUIRES(edev0_->ethdev_lock_);
-  zx_status_t MsgConfigMulticastTestFilterLocked(fidl_txn_t* txn)
-      __TA_REQUIRES(edev0_->ethdev_lock_);
-  zx_status_t MsgDumpRegistersLocked(fidl_txn_t* txn) __TA_REQUIRES(edev0_->ethdev_lock_);
+  void GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer);
+  void GetFifos(GetFifosRequestView request, GetFifosCompleter::Sync& completer);
+  void SetIoBuffer(SetIoBufferRequestView request, SetIoBufferCompleter::Sync& completer);
+  void Start(StartRequestView request, StartCompleter::Sync& completer);
+  void Stop(StopRequestView request, StopCompleter::Sync& completer);
+  void ListenStart(ListenStartRequestView request, ListenStartCompleter::Sync& completer);
+  void ListenStop(ListenStopRequestView request, ListenStopCompleter::Sync& completer);
+  void SetClientName(SetClientNameRequestView request, SetClientNameCompleter::Sync& completer);
+  void GetStatus(GetStatusRequestView request, GetStatusCompleter::Sync& completer);
+  void SetPromiscuousMode(SetPromiscuousModeRequestView request,
+                          SetPromiscuousModeCompleter::Sync& completer);
+  void ConfigMulticastAddMac(ConfigMulticastAddMacRequestView request,
+                             ConfigMulticastAddMacCompleter::Sync& completer);
+  void ConfigMulticastDeleteMac(ConfigMulticastDeleteMacRequestView request,
+                                ConfigMulticastDeleteMacCompleter::Sync& completer);
+  void ConfigMulticastSetPromiscuousMode(
+      ConfigMulticastSetPromiscuousModeRequestView request,
+      ConfigMulticastSetPromiscuousModeCompleter::Sync& completer);
+  void ConfigMulticastTestFilter(ConfigMulticastTestFilterRequestView request,
+                                 ConfigMulticastTestFilterCompleter::Sync& completer);
+  void DumpRegisters(DumpRegistersRequestView request, DumpRegistersCompleter::Sync& completer);
   ~EthDev();
 
  private:
@@ -212,13 +211,11 @@ class EthDev : public EthDevType,
   void ClearFilteringLocked() __TA_REQUIRES(edev0_->ethdev_lock_);
   zx_status_t SetClientNameLocked(const void* in_buf, size_t in_len)
       __TA_REQUIRES(edev0_->ethdev_lock_);
-  zx_status_t GetStatusLocked(void* out_buf, size_t out_len, size_t* out_actual)
-      __TA_REQUIRES(edev0_->ethdev_lock_);
   zx_status_t StartLocked() __TA_REQUIRES(edev0_->ethdev_lock_);
   zx_status_t TransmitListenLocked(bool yes) __TA_REQUIRES(edev0_->ethdev_lock_);
-  zx_status_t GetFifosLocked(struct fuchsia_hardware_ethernet_Fifos* fifos)
+  zx_status_t GetFifosLocked(fuchsia_hardware_ethernet::wire::Fifos* fifos)
       __TA_REQUIRES(edev0_->ethdev_lock_);
-  zx_status_t SetIObufLocked(zx_handle_t vmo) __TA_REQUIRES(edev0_->ethdev_lock_);
+  zx_status_t SetIObufLocked(zx::vmo vmo) __TA_REQUIRES(edev0_->ethdev_lock_);
 
   // This is used for signaling that TransmitThread() should exit.
   static const zx_signals_t kSignalFifoTerminate = ZX_USER_SIGNAL_0;
@@ -229,7 +226,7 @@ class EthDev : public EthDevType,
   uint32_t num_multicast_ = 0;
 
   uint32_t state_ = 0;
-  char name_[fuchsia_hardware_ethernet_MAX_CLIENT_NAME_LEN + 1] = "";
+  char name_[fuchsia_hardware_ethernet::wire::kMaxClientNameLen + 1] = "";
 
   // Fifos are named from the perspective of the packet from the client
   // to the network interface.

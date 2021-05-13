@@ -25,7 +25,7 @@ driver_module("ethernet") {
   deps = [
     ":ethernet_bind",
     "//sdk/banjo/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_banjo_cpp",
-    "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_c",
+    "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_llcpp",
     "//sdk/lib/fidl/cpp:cpp_base",
     "//src/devices/lib/dev-operation",
     "//src/devices/lib/driver",
@@ -51,7 +51,7 @@ test("ethernet-unittest") {
   deps = [
     ":ethernet_bind",
     "//sdk/banjo/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_banjo_cpp",
-    "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_c",
+    "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_llcpp",
     "//sdk/lib/fidl/cpp:cpp_base",
     "//src/devices/lib/dev-operation",
     "//src/devices/testing/fake_ddk",

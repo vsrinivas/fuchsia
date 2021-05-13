@@ -222,12 +222,13 @@ void EthDev0::SetStatus(uint32_t status) {
   zxlogf(DEBUG, "eth: status() %08x", status);
 
   fbl::AutoLock lock(&ethdev_lock_);
-  static_assert(ETHERNET_STATUS_ONLINE == fuchsia_hardware_ethernet_DeviceStatus_ONLINE, "");
-  static_assert(fuchsia_hardware_ethernet_SIGNAL_STATUS == ZX_USER_SIGNAL_0, "");
-  if (status != status_) {
-    status_ = status;
+  static_assert(ETHERNET_STATUS_ONLINE ==
+                static_cast<uint32_t>(fuchsia_hardware_ethernet::wire::DeviceStatus::kOnline));
+  static_assert(fuchsia_hardware_ethernet::wire::kSignalStatus == ZX_USER_SIGNAL_0);
+  if (status != static_cast<uint32_t>(status_)) {
+    status_ = fuchsia_hardware_ethernet::wire::DeviceStatus(status);
     for (auto& edev : list_active_) {
-      edev.receive_fifo_.signal_peer(0, fuchsia_hardware_ethernet_SIGNAL_STATUS);
+      edev.receive_fifo_.signal_peer(0, fuchsia_hardware_ethernet::wire::kSignalStatus);
     }
   }
 }
@@ -402,24 +403,23 @@ int EthDev::TransmitThread() {
   return 0;
 }
 
-zx_status_t EthDev::GetFifosLocked(struct fuchsia_hardware_ethernet_Fifos* fifos) {
+zx_status_t EthDev::GetFifosLocked(fuchsia_hardware_ethernet::wire::Fifos* fifos) {
   zx_status_t status;
-  struct fuchsia_hardware_ethernet_Fifos temp_fifo;
+  fuchsia_hardware_ethernet::wire::Fifos temp_fifo;
   zx::fifo transmit_fifo;
   zx::fifo receive_fifo;
-  if ((status = zx_fifo_create(kFifoDepth, kFifoEntrySize, 0, &temp_fifo.tx,
-                               transmit_fifo.reset_and_get_address())) < 0) {
+  if ((status = zx::fifo::create(kFifoDepth, kFifoEntrySize, 0, &temp_fifo.tx, &transmit_fifo)) !=
+      ZX_OK) {
     zxlogf(ERROR, "eth_create  [%s]: failed to create tx fifo: %d", name_, status);
     return status;
   }
-  if ((status = zx_fifo_create(kFifoDepth, kFifoEntrySize, 0, &temp_fifo.rx,
-                               receive_fifo.reset_and_get_address())) < 0) {
+  if ((status = zx::fifo::create(kFifoDepth, kFifoEntrySize, 0, &temp_fifo.rx, &receive_fifo)) !=
+      ZX_OK) {
     zxlogf(ERROR, "eth_create  [%s]: failed to create rx fifo: %d", name_, status);
-    zx_handle_close(temp_fifo.tx);
     return status;
   }
 
-  *fifos = temp_fifo;
+  *fifos = std::move(temp_fifo);
   transmit_fifo_ = std::move(transmit_fifo);
   receive_fifo_ = std::move(receive_fifo);
   transmit_fifo_depth_ = kFifoDepth;
@@ -430,14 +430,13 @@ zx_status_t EthDev::GetFifosLocked(struct fuchsia_hardware_ethernet_Fifos* fifos
   return ZX_OK;
 }
 
-zx_status_t EthDev::SetIObufLocked(zx_handle_t vmo) {
+zx_status_t EthDev::SetIObufLocked(zx::vmo io_vmo) {
   if (io_vmo_.is_valid() || io_buffer_.start() != nullptr) {
     return ZX_ERR_ALREADY_BOUND;
   }
 
   size_t size;
   zx_status_t status;
-  zx::vmo io_vmo = zx::vmo(vmo);
   fzl::VmoMapper io_buffer;
   std::unique_ptr<zx_paddr_t[]> paddr_map = nullptr;
   zx::pmt pmt;
@@ -530,7 +529,7 @@ zx_status_t EthDev::StartLocked() TA_NO_THREAD_SAFETY_ANALYSIS {
     edev0_->list_idle_.erase(*this);
     edev0_->list_active_.push_back(fbl::RefPtr(this));
     // Trigger the status signal so the client will query the status at the start.
-    receive_fifo_.signal_peer(0, fuchsia_hardware_ethernet_SIGNAL_STATUS);
+    receive_fifo_.signal_peer(0, fuchsia_hardware_ethernet::wire::kSignalStatus);
   } else {
     zxlogf(ERROR, "eth [%s]: failed to start mac: %d", name_, status);
   }
@@ -579,145 +578,139 @@ zx_status_t EthDev::SetClientNameLocked(const void* in_buf, size_t in_len) {
   return ZX_OK;
 }
 
-zx_status_t EthDev::GetStatusLocked(void* out_buf, size_t out_len, size_t* out_actual) {
-  if (out_len < sizeof(uint32_t)) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  if (!receive_fifo_.is_valid()) {
-    return ZX_ERR_BAD_STATE;
-  }
-  if (receive_fifo_.signal_peer(fuchsia_hardware_ethernet_SIGNAL_STATUS, 0) != ZX_OK) {
-    return ZX_ERR_INTERNAL;
-  }
+#define STATE_CHECK()                    \
+  do {                                   \
+    if (state_ & kStateDead) {           \
+      completer.Close(ZX_ERR_BAD_STATE); \
+      return;                            \
+    }                                    \
+  } while (0)
 
-  uint32_t* status = reinterpret_cast<uint32_t*>(out_buf);
-  *status = edev0_->status_;
-  *out_actual = sizeof(*status);
-  return ZX_OK;
-}
-
-#define REPLY(x) fuchsia_hardware_ethernet_Device##x##_reply
-
-zx_status_t EthDev::MsgGetInfoLocked(fidl_txn_t* txn) {
-  fuchsia_hardware_ethernet_Info info = {};
-  memcpy(info.mac.octets, edev0_->info_.mac, ETH_MAC_SIZE);
+void EthDev::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) {
+  fbl::AutoLock lock(&edev0_->ethdev_lock_);
+  STATE_CHECK();
+  fuchsia_hardware_ethernet::wire::Info info = {};
+  memcpy(info.mac.octets.data(), edev0_->info_.mac, ETH_MAC_SIZE);
   if (edev0_->info_.features & ETHERNET_FEATURE_WLAN) {
-    info.features |= fuchsia_hardware_ethernet_Features_WLAN;
+    info.features |= fuchsia_hardware_ethernet::wire::Features::kWlan;
   }
   if (edev0_->info_.features & ETHERNET_FEATURE_SYNTH) {
-    info.features |= fuchsia_hardware_ethernet_Features_SYNTHETIC;
+    info.features |= fuchsia_hardware_ethernet::wire::Features::kSynthetic;
   }
   info.mtu = edev0_->info_.mtu;
-  return REPLY(GetInfo)(txn, &info);
+
+  completer.Reply(info);
 }
 
-zx_status_t EthDev::MsgGetFifosLocked(fidl_txn_t* txn) {
-  fuchsia_hardware_ethernet_Fifos fifos;
-  return REPLY(GetFifos)(txn, GetFifosLocked(&fifos), &fifos);
-}
-
-zx_status_t EthDev::MsgSetIOBufferLocked(zx_handle_t h, fidl_txn_t* txn) {
-  return REPLY(SetIOBuffer)(txn, SetIObufLocked(h));
-}
-
-zx_status_t EthDev::MsgStartLocked(fidl_txn_t* txn) { return REPLY(Start)(txn, StartLocked()); }
-
-zx_status_t EthDev::MsgStopLocked(fidl_txn_t* txn) {
-  StopLocked();
-  return REPLY(Stop)(txn);
-}
-
-zx_status_t EthDev::MsgListenStartLocked(fidl_txn_t* txn) {
-  return REPLY(ListenStart)(txn, TransmitListenLocked(true));
-}
-
-zx_status_t EthDev::MsgListenStopLocked(fidl_txn_t* txn) {
-  TransmitListenLocked(false);
-  return REPLY(ListenStop)(txn);
-}
-
-zx_status_t EthDev::MsgSetClientNameLocked(const char* buf, size_t len, fidl_txn_t* txn) {
-  return REPLY(SetClientName)(txn, SetClientNameLocked(buf, len));
-}
-
-zx_status_t EthDev::MsgGetStatusLocked(fidl_txn_t* txn) {
-  if (!receive_fifo_.is_valid()) {
-    return ZX_ERR_BAD_STATE;
-  }
-
-  if (receive_fifo_.signal_peer(fuchsia_hardware_ethernet_SIGNAL_STATUS, 0) != ZX_OK) {
-    return ZX_ERR_INTERNAL;
-  }
-
-  return REPLY(GetStatus)(txn, edev0_->status_);
-}
-
-zx_status_t EthDev::MsgSetPromiscLocked(bool enabled, fidl_txn_t* txn) {
-  return REPLY(SetPromiscuousMode)(txn, SetPromiscLocked(enabled));
-}
-
-zx_status_t EthDev::MsgConfigMulticastAddMacLocked(const fuchsia_hardware_ethernet_MacAddress* mac,
-                                                   fidl_txn_t* txn) {
-  zx_status_t status = AddMulticastAddressLocked(mac->octets);
-  return REPLY(ConfigMulticastAddMac)(txn, status);
-}
-
-zx_status_t EthDev::MsgConfigMulticastDeleteMacLocked(
-    const fuchsia_hardware_ethernet_MacAddress* mac, fidl_txn_t* txn) {
-  zx_status_t status = DelMulticastAddressLocked(mac->octets);
-  return REPLY(ConfigMulticastDeleteMac)(txn, status);
-}
-
-zx_status_t EthDev::MsgConfigMulticastSetPromiscuousModeLocked(bool enabled, fidl_txn_t* txn) {
-  zx_status_t status = SetMulticastPromiscLocked(enabled);
-  return REPLY(ConfigMulticastSetPromiscuousMode)(txn, status);
-}
-
-zx_status_t EthDev::MsgConfigMulticastTestFilterLocked(fidl_txn_t* txn) {
-  zxlogf(INFO, "MULTICAST_TEST_FILTER invoked. Turning multicast-promisc off unconditionally.");
-  zx_status_t status = TestClearMulticastPromiscLocked();
-  return REPLY(ConfigMulticastTestFilter)(txn, status);
-}
-
-zx_status_t EthDev::MsgDumpRegistersLocked(fidl_txn_t* txn) {
-  zx_status_t status = edev0_->mac_.SetParam(ETHERNET_SETPARAM_DUMP_REGS, 0, nullptr, 0);
-  return REPLY(DumpRegisters)(txn, status);
-}
-
-#undef REPLY
-
-static const fuchsia_hardware_ethernet_Device_ops_t* FIDLOps() {
-  using Binder = fidl::Binder<EthDev>;
-
-  static fuchsia_hardware_ethernet_Device_ops_t kOps = {
-      .GetInfo = Binder::BindMember<&EthDev::MsgGetInfoLocked>,
-      .GetFifos = Binder::BindMember<&EthDev::MsgGetFifosLocked>,
-      .SetIOBuffer = Binder::BindMember<&EthDev::MsgSetIOBufferLocked>,
-      .Start = Binder::BindMember<&EthDev::MsgStartLocked>,
-      .Stop = Binder::BindMember<&EthDev::MsgStopLocked>,
-      .ListenStart = Binder::BindMember<&EthDev::MsgListenStartLocked>,
-      .ListenStop = Binder::BindMember<&EthDev::MsgListenStopLocked>,
-      .SetClientName = Binder::BindMember<&EthDev::MsgSetClientNameLocked>,
-      .GetStatus = Binder::BindMember<&EthDev::MsgGetStatusLocked>,
-      .SetPromiscuousMode = Binder::BindMember<&EthDev::MsgSetPromiscLocked>,
-      .ConfigMulticastAddMac = Binder::BindMember<&EthDev::MsgConfigMulticastAddMacLocked>,
-      .ConfigMulticastDeleteMac = Binder::BindMember<&EthDev::MsgConfigMulticastDeleteMacLocked>,
-      .ConfigMulticastSetPromiscuousMode =
-          Binder::BindMember<&EthDev::MsgConfigMulticastSetPromiscuousModeLocked>,
-      .ConfigMulticastTestFilter = Binder::BindMember<&EthDev::MsgConfigMulticastTestFilterLocked>,
-      .DumpRegisters = Binder::BindMember<&EthDev::MsgDumpRegistersLocked>,
-  };
-  return &kOps;
-}
-
-zx_status_t EthDev::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
+void EthDev::GetFifos(GetFifosRequestView request, GetFifosCompleter::Sync& completer) {
   fbl::AutoLock lock(&edev0_->ethdev_lock_);
-  if (state_ & kStateDead) {
-    return ZX_ERR_BAD_STATE;
-  }
-  zx_status_t status = fuchsia_hardware_ethernet_Device_dispatch(this, txn, msg, FIDLOps());
-  return status;
+  STATE_CHECK();
+  fidl::FidlAllocator allocator;
+  fidl::ObjectView<fuchsia_hardware_ethernet::wire::Fifos> fifos(allocator);
+  completer.Reply(GetFifosLocked(fifos.get()), fifos);
 }
+
+void EthDev::SetIoBuffer(SetIoBufferRequestView request, SetIoBufferCompleter::Sync& completer) {
+  fbl::AutoLock lock(&edev0_->ethdev_lock_);
+  STATE_CHECK();
+  completer.Reply(SetIObufLocked(std::move(request->h)));
+}
+
+void EthDev::Start(StartRequestView request, StartCompleter::Sync& completer) {
+  fbl::AutoLock lock(&edev0_->ethdev_lock_);
+  STATE_CHECK();
+  completer.Reply(StartLocked());
+}
+
+void EthDev::Stop(StopRequestView request, StopCompleter::Sync& completer) {
+  fbl::AutoLock lock(&edev0_->ethdev_lock_);
+  STATE_CHECK();
+  StopLocked();
+  completer.Reply();
+}
+
+void EthDev::ListenStart(ListenStartRequestView request, ListenStartCompleter::Sync& completer) {
+  fbl::AutoLock lock(&edev0_->ethdev_lock_);
+  STATE_CHECK();
+  completer.Reply(TransmitListenLocked(true));
+}
+
+void EthDev::ListenStop(ListenStopRequestView request, ListenStopCompleter::Sync& completer) {
+  fbl::AutoLock lock(&edev0_->ethdev_lock_);
+  STATE_CHECK();
+  TransmitListenLocked(false);
+  completer.Reply();
+}
+
+void EthDev::SetClientName(SetClientNameRequestView request,
+                           SetClientNameCompleter::Sync& completer) {
+  fbl::AutoLock lock(&edev0_->ethdev_lock_);
+  STATE_CHECK();
+  completer.Reply(SetClientNameLocked(request->name.data(), request->name.size()));
+}
+
+void EthDev::GetStatus(GetStatusRequestView request, GetStatusCompleter::Sync& completer) {
+  fbl::AutoLock lock(&edev0_->ethdev_lock_);
+  STATE_CHECK();
+
+  if (!receive_fifo_.is_valid()) {
+    completer.Close(ZX_ERR_BAD_STATE);
+    return;
+  }
+
+  if (receive_fifo_.signal_peer(fuchsia_hardware_ethernet::wire::kSignalStatus, 0) != ZX_OK) {
+    completer.Close(ZX_ERR_INTERNAL);
+    return;
+  }
+
+  completer.Reply(edev0_->status_);
+}
+
+void EthDev::SetPromiscuousMode(SetPromiscuousModeRequestView request,
+                                SetPromiscuousModeCompleter::Sync& completer) {
+  fbl::AutoLock lock(&edev0_->ethdev_lock_);
+  STATE_CHECK();
+  completer.Reply(SetPromiscLocked(request->enabled));
+}
+
+void EthDev::ConfigMulticastAddMac(ConfigMulticastAddMacRequestView request,
+                                   ConfigMulticastAddMacCompleter::Sync& completer) {
+  fbl::AutoLock lock(&edev0_->ethdev_lock_);
+  STATE_CHECK();
+  completer.Reply(AddMulticastAddressLocked(request->addr.octets.data()));
+}
+
+void EthDev::ConfigMulticastDeleteMac(ConfigMulticastDeleteMacRequestView request,
+                                      ConfigMulticastDeleteMacCompleter::Sync& completer) {
+  fbl::AutoLock lock(&edev0_->ethdev_lock_);
+  STATE_CHECK();
+  completer.Reply(DelMulticastAddressLocked(request->addr.octets.data()));
+}
+
+void EthDev::ConfigMulticastSetPromiscuousMode(
+    ConfigMulticastSetPromiscuousModeRequestView request,
+    ConfigMulticastSetPromiscuousModeCompleter::Sync& completer) {
+  fbl::AutoLock lock(&edev0_->ethdev_lock_);
+  STATE_CHECK();
+  completer.Reply(SetMulticastPromiscLocked(request->enabled));
+}
+
+void EthDev::ConfigMulticastTestFilter(ConfigMulticastTestFilterRequestView request,
+                                       ConfigMulticastTestFilterCompleter::Sync& completer) {
+  fbl::AutoLock lock(&edev0_->ethdev_lock_);
+  STATE_CHECK();
+  zxlogf(INFO, "MULTICAST_TEST_FILTER invoked. Turning multicast-promisc off unconditionally.");
+  completer.Reply(TestClearMulticastPromiscLocked());
+}
+
+void EthDev::DumpRegisters(DumpRegistersRequestView request,
+                           DumpRegistersCompleter::Sync& completer) {
+  fbl::AutoLock lock(&edev0_->ethdev_lock_);
+  STATE_CHECK();
+  completer.Reply(edev0_->mac_.SetParam(ETHERNET_SETPARAM_DUMP_REGS, 0, nullptr, 0));
+}
+
+#undef STATE_CHECK
 
 // Kill transmit thread, release buffers, etc
 // called from unbind and close.
