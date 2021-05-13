@@ -277,6 +277,37 @@ convenient alternative, instead of `write_file`, for this purpose. However due
 to a [bug][response_file_bug] rooted in Ninja, we currently don't allow
 `response_file_contents` in our builds.
 
+### Creating and deleting temporary directories
+
+It is a common pattern in build scripts to create a temporary (staging)
+directory, and delete it later in the action. Some actions also check whether
+a staging directory exists from previous builds, and deletes it before
+populating again.
+
+[`shutil.rmtree`][shutil_rmtree] is a common function used to delete staging
+directories. However, due to a limitation in our tracer, this would sometimes
+result in spurious unexpected reads. See also: [Issue 75057: Properly handle
+directory deletion from shutil.rmtree in action tracer][shutil_rmtree_bug].
+
+To get around this, you can create temporary directories and write temporary
+files into a special directory `__untraced_tmp__`. Accesses to files in this
+special directory will be ignored by the tracer. __Because of this, this feature
+should not be used lightly.__
+
+For example, assuming `bar.py` always deletes all files in the `--tmp-dir`
+passed to it, then re-populates:
+
+```
+action(target_name) {
+  script = "bar.py"
+  args = [
+    "--tmp-dir"
+    rebase_path("${target_gen_dir}/${target_name}/__untraced_tmp__", root_build_dir)
+  ]
+  ...
+}
+```
+
 See also: [hermetic actions in open projects][hermetic-actions-bb]
 
 [action]: https://gn.googlesource.com/gn/+/master/docs/reference.md#func_action
@@ -288,4 +319,6 @@ See also: [hermetic actions in open projects][hermetic-actions-bb]
 [relative-paths]: /docs/concepts/build_system/best_practices.md#prefer-relative-paths-from-rebase-path
 [response_file_bug]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=76068
 [response_file_contents]: https://gn.googlesource.com/gn/+/master/docs/reference.md#var_response_file_contents
+[shutil_rmtree]: https://docs.python.org/3/library/shutil.html#shutil.rmtree
+[shutil_rmtree_bug]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=75057
 [write_file]: https://gn.googlesource.com/gn/+/master/docs/reference.md#func_write_file

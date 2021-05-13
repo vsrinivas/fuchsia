@@ -877,6 +877,12 @@ def main():
         # these directories that are unknown before the metadata collection phase.
         # It was decided to tolerate this behavior.
         "__shebang__",
+        # fxbug.dev/75057: some actions write files in temporary directories
+        # that are later deleted in the action. shutil.rmtree is usually used to
+        # delete such directories, and it registers read on deleted directories
+        # that the tracer can't ignore. In these cases we allow actions to
+        # freely write and read files in a special directory.
+        "__untraced_tmp__",
         # This temporary directory is only used to find nonterministic outputs.
         ".tmp-repro",
     }
