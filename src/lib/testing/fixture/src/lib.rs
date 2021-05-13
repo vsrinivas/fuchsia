@@ -114,7 +114,9 @@ fn fixture_inner(wrapper_fn: syn::Ident, input: syn::ItemFn) -> Result<TokenStre
 /// inputs to the test body. For a non-async test, the wrapper function could
 /// have a signature like this:
 ///
-/// fn setup(test_name: &str, test: impl FnOnce()) { /* ... */}
+/// ```
+/// fn setup(test_name: &str, test: impl FnOnce()) { /* ... */ }
+/// ```
 #[proc_macro_attribute]
 pub fn fixture(attrs: TokenStream, input: TokenStream) -> TokenStream {
     let wrapper_fn = syn::parse_macro_input!(attrs as syn::Ident);
