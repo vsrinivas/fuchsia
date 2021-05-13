@@ -4,8 +4,8 @@
 
 use {
     crate::{
-        Context, DaemonServiceProvider, FidlService, FidlStreamHandler, NameToStreamHandlerMap,
-        ServiceRegister, StreamHandler,
+        Context, DaemonServiceProvider, FidlService, NameToStreamHandlerMap, ServiceRegister,
+        StreamHandler,
     },
     anyhow::{anyhow, bail, Context as _, Result},
     async_trait::async_trait,
@@ -14,11 +14,12 @@ use {
     fidl_fuchsia_diagnostics as diagnostics,
     futures::future::LocalBoxFuture,
     futures::prelude::*,
+    std::rc::Rc,
     std::sync::Arc,
 };
 
 pub struct ClosureStreamHandler<S: DiscoverableService> {
-    func: Arc<dyn Fn(&Context, Request<S>) -> Result<()>>,
+    func: Rc<dyn Fn(&Context, Request<S>) -> Result<()>>,
 }
 
 #[async_trait(?Send)]
@@ -32,7 +33,7 @@ where
         server: Arc<ServeInner>,
     ) -> Result<LocalBoxFuture<'static, Result<()>>> {
         let mut stream = <S as ServiceMarker>::RequestStream::from_inner(server, false);
-        let weak_func = Arc::downgrade(&self.func);
+        let weak_func = Rc::downgrade(&self.func);
         let fut = Box::pin(async move {
             while let Ok(Some(req)) = stream.try_next().await {
                 if let Some(func) = weak_func.upgrade() {
@@ -63,11 +64,11 @@ impl FakeDaemon {
         S::Proxy::from_channel(client)
     }
 
-    pub async fn shutdown(mut self) -> Result<()> {
+    pub async fn shutdown(&self) -> Result<()> {
         self.register
-            .take()
+            .as_ref()
             .expect("must have register set")
-            .shutdown(Context::new(self))
+            .shutdown(Context::new(self.clone()))
             .await
             .map_err(Into::into)
     }
@@ -119,14 +120,14 @@ impl FakeDaemonBuilder {
         Self::default()
     }
 
-    pub fn register_service_closure<S, F>(mut self, f: F) -> Self
+    pub fn register_instanced_service_closure<S, F>(mut self, f: F) -> Self
     where
         S: DiscoverableService,
         F: Fn(&Context, Request<S>) -> Result<()> + 'static,
     {
         if let Some(_) = self.map.insert(
             S::SERVICE_NAME.to_owned(),
-            Box::new(ClosureStreamHandler::<S> { func: Arc::new(f) }),
+            Box::new(ClosureStreamHandler::<S> { func: Rc::new(f) }),
         ) {
             panic!("duplicate service registered: {:#?}", S::SERVICE_NAME);
         }
@@ -137,10 +138,10 @@ impl FakeDaemonBuilder {
     where
         F: 'static,
     {
-        if let Some(_) = self.map.insert(
-            F::Service::SERVICE_NAME.to_owned(),
-            Box::new(FidlStreamHandler::<F>::default()),
-        ) {
+        if let Some(_) = self
+            .map
+            .insert(F::Service::SERVICE_NAME.to_owned(), Box::new(F::StreamHandler::default()))
+        {
             panic!("duplicate service registered under: {}", F::Service::SERVICE_NAME);
         }
         self
@@ -148,5 +149,22 @@ impl FakeDaemonBuilder {
 
     pub fn build(self) -> FakeDaemon {
         FakeDaemon { register: Some(ServiceRegister::new(self.map)) }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fidl_fuchsia_ffx_test as ffx_test;
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_err_double_shutdown() {
+        let f = FakeDaemonBuilder::new()
+            .register_instanced_service_closure::<ffx_test::NoopMarker, _>(|_, req| match req {
+                ffx_test::NoopRequest::DoNoop { responder } => responder.send().map_err(Into::into),
+            })
+            .build();
+        f.shutdown().await.unwrap();
+        assert!(f.shutdown().await.is_err());
     }
 }

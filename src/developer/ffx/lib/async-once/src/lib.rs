@@ -11,6 +11,12 @@ pub struct Once<T: 'static> {
     value: OnceCell<T>,
 }
 
+impl<T> Default for Once<T> {
+    fn default() -> Self {
+        Self { mutex: Mutex::new(()), value: OnceCell::new() }
+    }
+}
+
 impl<T> Once<T> {
     pub fn new() -> Self {
         Self { mutex: Mutex::new(()), value: OnceCell::new() }
@@ -71,6 +77,31 @@ mod test {
     fn test_get_or_init() {
         lazy_static::lazy_static!(
             static ref ONCE: Once<bool> = Once::new();
+        );
+
+        static COUNTER: AtomicUsize = AtomicUsize::new(0);
+
+        let val = block_on(ONCE.get_or_init(async {
+            COUNTER.fetch_add(1, Ordering::SeqCst);
+            true
+        }));
+
+        assert_eq!(*val, true);
+        assert_eq!(COUNTER.load(Ordering::SeqCst), 1);
+
+        let val = block_on(ONCE.get_or_init(async {
+            COUNTER.fetch_add(1, Ordering::SeqCst);
+            false
+        }));
+
+        assert_eq!(*val, true);
+        assert_eq!(COUNTER.load(Ordering::SeqCst), 1);
+    }
+
+    #[test]
+    fn test_get_or_init_default_initializer() {
+        lazy_static::lazy_static!(
+            static ref ONCE: Once<bool> = Once::default();
         );
 
         static COUNTER: AtomicUsize = AtomicUsize::new(0);

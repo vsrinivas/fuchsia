@@ -7,6 +7,7 @@ use {
     async_trait::async_trait,
     fidl::endpoints::Proxy,
     fidl_fuchsia_diagnostics as diagnostics, selectors,
+    std::rc::Rc,
 };
 
 #[async_trait(?Send)]
@@ -22,13 +23,14 @@ pub trait DaemonServiceProvider {
 
 /// A struct containing the current service's active context when invoking the
 /// handle function. This is intended to interface with the Daemon.
+#[derive(Clone)]
 pub struct Context {
-    inner: Box<dyn DaemonServiceProvider>,
+    inner: Rc<dyn DaemonServiceProvider>,
 }
 
 impl Context {
     pub fn new(t: impl DaemonServiceProvider + 'static) -> Self {
-        Self { inner: Box::new(t) }
+        Self { inner: Rc::new(t) }
     }
 
     pub async fn open_target_proxy<S>(

@@ -11,4 +11,4 @@ pub use context::{Context, DaemonServiceProvider};
 pub use core_service_macros::ffx_service;
 pub use fake_daemon::{FakeDaemon, FakeDaemonBuilder};
 pub use register::{NameToStreamHandlerMap, ServiceError, ServiceRegister};
-pub use services::{FidlService, FidlStreamHandler, StreamHandler};
+pub use services::{FidlInstancedStreamHandler, FidlService, FidlStreamHandler, StreamHandler};

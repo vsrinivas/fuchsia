@@ -13,6 +13,7 @@ pub struct Echo;
 #[async_trait(?Send)]
 impl FidlService for Echo {
     type Service = bridge::EchoMarker;
+    type StreamHandler = FidlInstancedStreamHandler<Self>;
 
     async fn handle(&self, _cx: &Context, req: bridge::EchoRequest) -> Result<()> {
         match req {

@@ -4,11 +4,12 @@
 use {
     crate::{Context, StreamHandler},
     anyhow::Result,
-    async_lock::Mutex,
     fidl::server::ServeInner,
     fuchsia_async::Task,
+    std::cell::RefCell,
     std::collections::hash_map::Entry,
     std::collections::HashMap,
+    std::rc::Rc,
     std::sync::atomic::{AtomicBool, AtomicUsize, Ordering},
     std::sync::{Arc, Weak},
     thiserror::Error,
@@ -21,15 +22,15 @@ type NameToServiceHandleMap = HashMap<String, ServiceHandleMap>;
 #[derive(Default)]
 struct ServiceRegisterInner {
     service_map: NameToStreamHandlerMap,
-    handles: Mutex<NameToServiceHandleMap>,
+    handles: RefCell<NameToServiceHandleMap>,
     next_task_id: AtomicUsize,
     stopping: AtomicBool,
 }
 
 impl ServiceRegisterInner {
-    async fn drain_handles(&self) -> Vec<LabeledServiceHandle> {
+    fn drain_handles(&self) -> Vec<LabeledServiceHandle> {
         let mut res = Vec::new();
-        for (name, mut map) in self.handles.lock().await.drain() {
+        for (name, mut map) in self.handles.borrow_mut().drain() {
             for (id, t) in map.drain() {
                 let name = name.clone();
                 res.push(LabeledServiceHandle { name, id, inner: t });
@@ -38,8 +39,8 @@ impl ServiceRegisterInner {
         res
     }
 
-    async fn remove_handle(&self, s: &String, id: &usize) -> Option<ServiceHandle> {
-        self.handles.lock().await.get_mut(s).and_then(|e| e.remove(id))
+    fn remove_handle(&self, s: &String, id: &usize) -> Option<ServiceHandle> {
+        self.handles.borrow_mut().get_mut(s).and_then(|e| e.remove(id))
     }
 }
 
@@ -89,17 +90,16 @@ pub enum ServiceError {
 
 #[derive(Default, Clone)]
 pub struct ServiceRegister {
-    inner: Arc<ServiceRegisterInner>,
+    inner: Rc<ServiceRegisterInner>,
 }
 
 impl ServiceRegister {
     pub fn new(map: NameToStreamHandlerMap) -> Self {
         // TODO(awdavies): Start the static services. Probably need the daemon
         // to just do this on its own.
-        Self { inner: Arc::new(ServiceRegisterInner { service_map: map, ..Default::default() }) }
+        Self { inner: Rc::new(ServiceRegisterInner { service_map: map, ..Default::default() }) }
     }
 
-    // TODO(awdavies): Should return more actionable error for the user.
     pub async fn open(
         &self,
         name: String,
@@ -114,36 +114,37 @@ impl ServiceRegister {
         let task_id = self.inner.next_task_id.fetch_add(1, Ordering::SeqCst);
         let svc =
             self.inner.service_map.get(&name).ok_or(ServiceError::NoServiceFound(name.clone()))?;
-        let weak_inner = Arc::downgrade(&self.inner);
-        let mut handles = self.inner.handles.lock().await;
+        let weak_inner = Rc::downgrade(&self.inner);
         let server = Arc::new(ServeInner::new(server_channel));
         let weak_server = Arc::downgrade(&server);
         let name_copy = name.clone();
-        let fut_complete_task = async move {
+        let fut = svc.open(cx, server).await?;
+        let new_task = async move {
+            fut.await.unwrap_or_else(|e| log::warn!("running service stream handler: {:#?}", e));
             if let Some(inner) = weak_inner.upgrade() {
-                if let Some(handle) = inner.remove_handle(&name_copy, &task_id).await {
+                if let Some(handle) = inner.remove_handle(&name_copy, &task_id) {
                     log::info!("dropping service task: {}-{}", name_copy, task_id);
                     let r = handle.shutdown().await;
                     log::info!("shutdown result for {}-{}: {:?}", name_copy, task_id, r);
                 }
             }
-        };
-        let fut = svc.open(cx, server).await?;
-        let new_task = async move {
-            fut.await.unwrap_or_else(|e| log::warn!("running service stream handler: {:#?}", e));
-            fut_complete_task.await;
             Ok(())
         };
-        let handle = ServiceHandle { task: Task::local(new_task), handle: weak_server };
-        match handles.entry(name.clone()) {
+        match self.inner.handles.borrow_mut().entry(name.clone()) {
             Entry::Occupied(mut e) => {
-                if let Some(_s) = e.get_mut().insert(task_id, handle) {
+                if let Some(_s) = e.get_mut().insert(
+                    task_id,
+                    ServiceHandle { task: Task::local(new_task), handle: weak_server },
+                ) {
                     return Err(ServiceError::DuplicateTaskId(name, task_id));
                 }
             }
             Entry::Vacant(e) => {
                 let mut new_map = HashMap::new();
-                new_map.insert(task_id, handle);
+                new_map.insert(
+                    task_id,
+                    ServiceHandle { task: Task::local(new_task), handle: weak_server },
+                );
                 e.insert(new_map);
             }
         }
@@ -165,7 +166,6 @@ impl ServiceRegister {
         let handler_futs = self
             .inner
             .drain_handles()
-            .await
             .drain(..)
             .map(|h| async move {
                 let name = h.name.clone();
@@ -227,6 +227,7 @@ mod test {
     #[async_trait(?Send)]
     impl FidlService for NoopService {
         type Service = ffx_test::NoopMarker;
+        type StreamHandler = FidlStreamHandler<Self>;
 
         async fn handle(&self, _cx: &Context, req: ffx_test::NoopRequest) -> Result<()> {
             match req {

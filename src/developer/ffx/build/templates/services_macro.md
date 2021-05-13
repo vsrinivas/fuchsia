@@ -33,7 +33,7 @@ pub fn generate_service_map(_item: TokenStream) -> TokenStream {
             {% for dep in deps %}
             map.insert(
                 <<{{ dep.lib }}::ServiceType as FidlService>::Service as DiscoverableService>::SERVICE_NAME.to_owned(),
-                Box::new(FidlStreamHandler::<{{ dep.lib }}::ServiceType>::default()),
+                Box::new(<{{dep.lib }}::ServiceType as FidlService>::StreamHandler::default()),
             );
             {% endfor %}
             map
