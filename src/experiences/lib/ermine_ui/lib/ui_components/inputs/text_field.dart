@@ -20,6 +20,7 @@ class ErmineTextField extends StatelessWidget {
   final bool autofocus;
   final bool enabled;
   final bool enableInteractiveSelection;
+  final bool expands;
   final bool obscureText;
   final String obscuringCharacter;
   final String? restorationId;
@@ -45,6 +46,7 @@ class ErmineTextField extends StatelessWidget {
     this.autofocus = false,
     this.enabled = true,
     this.enableInteractiveSelection = true,
+    this.expands = false,
     this.obscureText = false,
     this.obscuringCharacter = '*',
     this.restorationId,
@@ -102,6 +104,7 @@ class ErmineTextField extends StatelessWidget {
         focusNode: focusNode,
         enabled: enabled,
         enableInteractiveSelection: enableInteractiveSelection,
+        expands: expands,
         obscureText: obscureText,
         obscuringCharacter: obscuringCharacter,
         restorationId: restorationId,

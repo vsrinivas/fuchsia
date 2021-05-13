@@ -475,16 +475,85 @@ class Strings {
         desc: 'The title displayed for the privacy policy',
       );
 
-  static String get oobeSshKeysTitle => Intl.message(
+  static String get oobeSshKeysAddTitle => Intl.message(
         'Add Your SSH Key',
-        name: 'oobeSshKeysTitle',
+        name: 'oobeSshKeysAddTitle',
         desc: 'The title displayed for adding an SSH key in the OOBE',
       );
 
-  static String get oobeSshKeysDesc => Intl.message(
-        'Register your SSH key either by pulling from your Gitbub account or by adding manually.',
+  static String get oobeSshKeysConfirmTitle => Intl.message(
+        'Confirm Your Key',
+        name: 'oobeSshKeysConfirmTitle',
+        desc:
+            'The title displayed for confirming the SSH key to be added in the OOBE',
+      );
+
+  static String get oobeSshKeysErrorTitle => Intl.message(
+        'Something Went Wrong',
+        name: 'oobeSshKeysErrorTitle',
+        desc:
+            'The title displayed when an error occurs while adding an SSH key in the OOBE',
+      );
+
+  static String get oobeSshKeysSuccessTitle => Intl.message(
+        'You Are All Set',
+        name: 'oobeSshKeysSuccessTitle',
+        desc:
+            'The title displayed when an SSH key was successfully added in the OOBE',
+      );
+
+  static String get oobeSshKeysAddDesc => Intl.message(
+        'Register your SSH key either by pulling from your Gitbub account or by adding manually. The workstation will be still available even if you skip this step. However, it will not be possible to access to the device for development without a valid key. You can also set it up later in Settings.',
         name: 'oobeSshKeysDesc',
         desc: 'The description displayed of adding an SSH key in the OOBE',
+      );
+
+  static String oobeSshKeysSelectionDesc(int numKeys) => Intl.message(
+        'We found $numKeys key(s) from your github account. Please continue adding a key if the following information is correct.',
+        name: 'oobeSshKeysGithubConfirmDesc',
+        desc:
+            'The description displayed when confirming which SSH key that was pulled from github should be added in the OOBE',
+      );
+
+  static String oobeSshKeysGithubErrorDesc(String username) => Intl.message(
+        'Unable to pull a key from the github account, $username.\nPlease check if the username is correct and try again.',
+        name: 'oobeSshKeysConfirmDesc',
+        desc:
+            'The description displayed when an error occurs while pulling SSH keys from GitHub',
+      );
+
+  static String oobeSshKeysHttpErrorDesc(int status, String statusPhrase) =>
+      Intl.message(
+        'Unable to pull a key from github.\nHTTP request returned status: $status: $statusPhrase.',
+        name: 'oobeSshKeysHttpErrorDesc',
+        desc:
+            'The description displayed when the API call to GitHub does not return an OK status',
+      );
+
+  static String get oobeSshKeysFidlErrorDesc => Intl.message(
+        'Unable to add the key you provided.\nPlease check if the key you entered is correct and try again.',
+        name: 'oobeSshKeysFidlErrorDesc',
+        desc:
+            'The description displayed when an error occurs while adding an SSH to the device',
+      );
+
+  static String get oobeSshKeysSuccessDesc => Intl.message(
+        'Your SSH key has been successfully added.\nYou are now ready to use Fuchsia Workstation. Enjoy!',
+        name: 'oobeSshKeysSuccessDesc',
+        desc:
+            'The description displayed when an SSH key was successfully added in the OOBE',
+      );
+
+  static String get oobeSshKeysGithubMethod => Intl.message(
+        'via GitHub',
+        name: 'oobeSshKeysGithubMethod',
+        desc: 'The text displayed for choosing to add a key from github',
+      );
+
+  static String get oobeSshKeysManualMethod => Intl.message(
+        'Manually',
+        name: 'oobeSshKeysManualMethod',
+        desc: 'The text displayed for choosing to add a key manually',
       );
 
   static String get next => Intl.message(
@@ -509,5 +578,41 @@ class Strings {
         'Close',
         name: 'close',
         desc: 'The label for the "close" button.',
+      );
+
+  static String get add => Intl.message(
+        'Add',
+        name: 'add',
+        desc: 'The label for the "add" button.',
+      );
+
+  static String get retry => Intl.message(
+        'Retry',
+        name: 'retry',
+        desc: 'The label for the "retry" button.',
+      );
+
+  static String get ok => Intl.message(
+        'Ok',
+        name: 'ok',
+        desc: 'The label for the "ok" button.',
+      );
+
+  static String get username => Intl.message(
+        'Username',
+        name: 'username',
+        desc: 'The label for the "username" text field.',
+      );
+
+  static String get key => Intl.message(
+        'Key',
+        name: 'key',
+        desc: 'The label for the SSH key text field.',
+      );
+
+  static String get sshKeys => Intl.message(
+        'SSH Key(s)',
+        name: 'sshKeys',
+        desc: 'The label for displaying one or more SSH keys.',
       );
 }

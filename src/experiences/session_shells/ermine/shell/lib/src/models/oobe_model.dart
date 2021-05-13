@@ -26,7 +26,7 @@ class OobeModel {
       Channel.withSvcPath(onBack, onNext),
       // TODO(fxbug.dev/73407): Complete data sharing feature.
       // DataSharing.withSvcPath(onBack, onNext),
-      SshKeys(onBack: onBack, onNext: onNext),
+      SshKeys.withSvcPath(onBack, onNext),
     ];
   }
 

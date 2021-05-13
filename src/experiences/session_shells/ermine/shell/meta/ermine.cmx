@@ -26,6 +26,7 @@
             "fuchsia.session.ElementManager",
             "fuchsia.settings.Intl",
             "fuchsia.settings.Privacy",
+            "fuchsia.ssh.AuthorizedKeys",
             "fuchsia.sys.Environment",
             "fuchsia.ui.brightness.Control",
             "fuchsia.ui.focus.FocusChainListenerRegistry",
