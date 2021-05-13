@@ -508,11 +508,7 @@ async fn setup_network_realm(
             )
         })?
         .add_route(CapabilityRoute {
-            capability: Capability::directory(
-                DEVFS,
-                DEVFS_PATH,
-                fio2::Operations::from_bits(fio2::R_STAR_DIR).unwrap(),
-            ),
+            capability: Capability::directory(DEVFS, DEVFS_PATH, fio2::R_STAR_DIR),
             source: RouteEndpoint::component(ISOLATED_DEVMGR_COMPONENT_NAME),
             targets: vec![RouteEndpoint::component(NETWORK_CONTEXT_COMPONENT_NAME)],
         })

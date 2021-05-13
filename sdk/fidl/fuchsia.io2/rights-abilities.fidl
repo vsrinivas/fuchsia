@@ -50,30 +50,29 @@ bits Operations : uint64 {
     ADMIN = 0x100000000000000;
 };
 
-/// Right Aliases - Useful constants for commonly used collections of
-/// rights. Currently FIDL doesn't support expressions on assignment so
-/// these cannot be defined. They are left here as documentation.
 /// Alias for directory permission alias r*
-/// CONNECT | ENUMERATE | TRAVERSE | READ_BYTES | GET_ATTRIBUTES
-const uint64 R_STAR_DIR = 0xD3;
+const Operations R_STAR_DIR = Operations.CONNECT | Operations.ENUMERATE |
+    Operations.TRAVERSE | Operations.READ_BYTES | Operations.GET_ATTRIBUTES;
 
 /// Alias for directory permission alias rw*
-/// CONNECT | ENUMERATE | TRAVERSE | READ_BYTES | WRITE_BYTES |
-/// MODIFY_DIRECTORY | GET_ATTRIBUTES | UPDATE_ATTRIBUTES
-const uint64 RW_STAR_DIR = 0x1F7;
+const Operations RW_STAR_DIR = Operations.CONNECT | Operations.ENUMERATE |
+    Operations.TRAVERSE | Operations.READ_BYTES | Operations.WRITE_BYTES |
+    Operations.MODIFY_DIRECTORY | Operations.GET_ATTRIBUTES |
+    Operations.UPDATE_ATTRIBUTES;
 
 /// Alias for directory permission alias rx*
-/// CONNECT | ENUMERATE | TRAVERSE | READ_BYTES | GET_ATTRIBUTES | EXECUTE
-const uint64 RX_STAR_DIR = 0xDB;
+const Operations RX_STAR_DIR = Operations.CONNECT | Operations.ENUMERATE |
+    Operations.TRAVERSE | Operations.READ_BYTES | Operations.GET_ATTRIBUTES |
+    Operations.EXECUTE;
 
 /// Alias for directory permission alias w*
-/// CONNECT | ENUMERATE | TRAVERSE | WRITE_BYTES | MODIFY_DIRECTORY |
-/// UPDATE_ATTRIBUTES
-const uint64 W_STAR_DIR = 0x1E5;
+const Operations W_STAR_DIR = Operations.CONNECT | Operations.ENUMERATE |
+    Operations.TRAVERSE | Operations.WRITE_BYTES | Operations.MODIFY_DIRECTORY |
+    Operations.UPDATE_ATTRIBUTES;
 
 /// Alias for directory permission alias x*
-/// CONNECT | ENUMERATE | TRAVERSE | EXECUTE
-const uint64 X_STAR_DIR = 0xC9;
+const Operations X_STAR_DIR = Operations.CONNECT | Operations.ENUMERATE |
+    Operations.TRAVERSE | Operations.EXECUTE;
 
 /// Rights are properties specific to a connection. They limit which operations
 /// are allowed on a connection.

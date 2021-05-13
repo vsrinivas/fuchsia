@@ -53,10 +53,9 @@ async fn boot_resolver_can_be_routed_from_component_manager() {
 
     // Supply a fake boot directory which is really just an alias to this package's pkg directory.
     // TODO(fxbug.dev/37534): Add the execute bit when supported.
-    let read_star_rights = fio2::Operations::from_bits(fio2::R_STAR_DIR).unwrap();
     builder
         .add_route(CapabilityRoute {
-            capability: Capability::directory("boot", "/boot", read_star_rights),
+            capability: Capability::directory("boot", "/boot", fio2::R_STAR_DIR),
             source: RouteEndpoint::component("mock-boot"),
             targets: vec![RouteEndpoint::component("component-manager")],
         })

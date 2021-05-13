@@ -101,11 +101,7 @@ impl TestEnvBuilder {
         // Route the mock `/usb` directory from the mock source to the component-under-test.
         builder
             .add_route(CapabilityRoute {
-                capability: Capability::directory(
-                    "usb",
-                    "/usb",
-                    fio2::Operations::from_bits(fio2::R_STAR_DIR).unwrap(),
-                ),
+                capability: Capability::directory("usb", "/usb", fio2::R_STAR_DIR),
                 source: RouteEndpoint::component(USB_MOCK_COMPONENT),
                 targets: vec![RouteEndpoint::component(COMPONENT_UNDER_TEST)],
             })

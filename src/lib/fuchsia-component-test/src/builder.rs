@@ -206,7 +206,7 @@ struct Component {
 ///            capability: Capability::Directory(
 ///                "artifacts",
 ///                "/path-for-artifacts",
-///                fio2::Operations::from_bits(fio2::RW_STAR_DIR).unwrap()
+///                fio2::RW_STAR_DIR
 ///            ),
 ///            source: RouteEndpoint::component("c/d"),
 ///            targets: vec![RouteEndpoint::AboveRoot],
@@ -1778,11 +1778,7 @@ mod tests {
             )
             .unwrap()
             .add_route(CapabilityRoute {
-                capability: Capability::directory(
-                    "example-dir",
-                    "/example",
-                    fio2::Operations::from_bits(fio2::RW_STAR_DIR).unwrap(),
-                ),
+                capability: Capability::directory("example-dir", "/example", fio2::RW_STAR_DIR),
                 source: RouteEndpoint::component("b"),
                 targets: vec![RouteEndpoint::component("c")],
             })
@@ -1855,7 +1851,7 @@ mod tests {
                         capabilities: vec![CapabilityDecl::Directory(DirectoryDecl {
                             name: "example-dir".try_into().unwrap(),
                             source_path: "/example".try_into().unwrap(),
-                            rights: fio2::Operations::from_bits(fio2::RW_STAR_DIR).unwrap(),
+                            rights: fio2::RW_STAR_DIR,
                         })],
                         exposes: vec![ExposeDecl::Directory(ExposeDirectoryDecl {
                             source: ExposeSource::Self_,
@@ -1894,11 +1890,7 @@ mod tests {
             })
             .unwrap()
             .add_route(CapabilityRoute {
-                capability: Capability::directory(
-                    "example-dir",
-                    "/example",
-                    fio2::Operations::from_bits(fio2::RW_STAR_DIR).unwrap(),
-                ),
+                capability: Capability::directory("example-dir", "/example", fio2::RW_STAR_DIR),
                 source: RouteEndpoint::component("b"),
                 targets: vec![RouteEndpoint::component("a"), RouteEndpoint::component("c")],
             })
@@ -1987,11 +1979,7 @@ mod tests {
             .await
             .unwrap()
             .add_route(CapabilityRoute {
-                capability: Capability::directory(
-                    "example-dir",
-                    "/example",
-                    fio2::Operations::from_bits(fio2::RW_STAR_DIR).unwrap(),
-                ),
+                capability: Capability::directory("example-dir", "/example", fio2::RW_STAR_DIR),
                 source: RouteEndpoint::component("a/b"),
                 targets: vec![RouteEndpoint::component("c/d")],
             })
@@ -2107,7 +2095,7 @@ mod tests {
                                 source: UseSource::Parent,
                                 source_name: "example-dir".try_into().unwrap(),
                                 target_path: "/example".try_into().unwrap(),
-                                rights: fio2::Operations::from_bits(fio2::RW_STAR_DIR).unwrap(),
+                                rights: fio2::RW_STAR_DIR,
                                 subdir: None,
                             }),
                             UseDecl::Protocol(UseProtocolDecl {

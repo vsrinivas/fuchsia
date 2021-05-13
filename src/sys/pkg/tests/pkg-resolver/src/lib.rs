@@ -12,7 +12,6 @@ use {
     fidl_fuchsia_boot::{ArgumentsRequest, ArgumentsRequestStream},
     fidl_fuchsia_cobalt::{CobaltEvent, CountEvent, EventPayload},
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
-    fidl_fuchsia_io2::Operations,
     fidl_fuchsia_pkg::{
         ExperimentToggle as Experiment, FontResolverMarker, FontResolverProxy, PackageCacheMarker,
         PackageResolverAdminMarker, PackageResolverAdminProxy, PackageResolverMarker,
@@ -436,8 +435,6 @@ where
         });
 
         let fs_holder = Mutex::new(Some(fs));
-        let read_star_rights = Operations::from_bits(fidl_fuchsia_io2::R_STAR_DIR).unwrap();
-        let read_write_star_rights = Operations::from_bits(fidl_fuchsia_io2::RW_STAR_DIR).unwrap();
 
         let mut builder = RealmBuilder::new().await.unwrap();
         builder
@@ -532,7 +529,7 @@ where
 
             // Directory routes
             .add_route(CapabilityRoute {
-                capability: Capability::directory("pkgfs", "/pkgfs", read_write_star_rights),
+                capability: Capability::directory("pkgfs", "/pkgfs", fidl_fuchsia_io2::RW_STAR_DIR),
                 source: RouteEndpoint::component("service_reflector"),
                 targets: vec![
                     RouteEndpoint::component("pkg_cache"),
@@ -540,26 +537,26 @@ where
                 ],
             }).unwrap()
             .add_route(CapabilityRoute {
-                capability: Capability::directory("blob", "/blob", read_write_star_rights),
+                capability: Capability::directory("blob", "/blob", fidl_fuchsia_io2::RW_STAR_DIR),
                 source: RouteEndpoint::component("service_reflector"),
                 targets: vec![ RouteEndpoint::component("pkg_cache") ],
             }).unwrap()
             // route mock /usb to local_mirror
             .add_route(CapabilityRoute {
-                capability: Capability::directory("usb", "/usb", read_write_star_rights),
+                capability: Capability::directory("usb", "/usb", fidl_fuchsia_io2::RW_STAR_DIR),
                 source: RouteEndpoint::component("service_reflector"),
                 targets: vec![ RouteEndpoint::component("local_mirror") ],
             }).unwrap()
 
             .add_route(CapabilityRoute {
-                capability: Capability::directory("config-data", "/config/data", read_star_rights),
+                capability: Capability::directory("config-data", "/config/data", fidl_fuchsia_io2::R_STAR_DIR),
                 source: RouteEndpoint::component("service_reflector"),
                 targets: vec![
                     RouteEndpoint::component("pkg_resolver_wrapper"),
                 ],
             }).unwrap()
             .add_route(CapabilityRoute {
-                capability: Capability::directory("root-ssl-certificates", "/config/ssl", read_star_rights),
+                capability: Capability::directory("root-ssl-certificates", "/config/ssl", fidl_fuchsia_io2::R_STAR_DIR),
                 source: RouteEndpoint::component("service_reflector"),
                 targets: vec![
                     RouteEndpoint::component("pkg_resolver_wrapper"),
@@ -568,7 +565,7 @@ where
 
             // TODO(fxbug.dev/75658): Change to storage once convenient.
             .add_route(CapabilityRoute {
-                capability: Capability::directory("data", "/data", read_write_star_rights),
+                capability: Capability::directory("data", "/data", fidl_fuchsia_io2::RW_STAR_DIR),
                 source: RouteEndpoint::component("service_reflector"),
                 targets: vec![
                     RouteEndpoint::component("pkg_resolver_wrapper"),

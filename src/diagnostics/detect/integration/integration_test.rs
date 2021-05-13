@@ -292,7 +292,7 @@ async fn run_a_test(test_data: TestData) -> Result<(), Error> {
         })
         .unwrap();
 
-    let rights = fio2::Operations::from_bits(fio2::R_STAR_DIR).unwrap();
+    let rights = fio2::R_STAR_DIR;
     builder
         .add_route(CapabilityRoute {
             capability: Capability::directory("config-data", "/config", rights),
