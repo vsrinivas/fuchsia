@@ -171,6 +171,39 @@ std::string NameAndTypeConversion::Write(fidl::utils::Syntax syntax) {
   return prefix() + identifier_->copy_to_str() + " " + ctor;
 };
 
+std::string ParameterListConversion::Write(fidl::utils::Syntax syntax) {
+  std::string out = prefix();
+  out += "(";
+  if (syntax == fidl::utils::Syntax::kOld) {
+    std::string last_seen;
+    for (size_t i = 0; i < parameters_.size(); ++i) {
+      // No commas before first entry
+      if (!last_seen.empty()) {
+        if (last_seen.at(0) != '[') {
+          out += ",";
+        }
+        out += " ";
+      }
+      last_seen = std::string(parameters_[i]);
+      out += parameters_[i];
+    }
+  } else {
+    if (!parameters_.empty() || in_response_with_error_) {
+      out += "struct { ";
+      for (auto& parameter : parameters_) {
+        out += parameter;
+        // No semi-colons after attributes.
+        if (parameter.at(0) != '@') {
+          out += ";";
+        }
+        out += " ";
+      }
+      out += "}";
+    }
+  }
+  return out + ")";
+};
+
 std::string MemberedDeclarationConversion::Write(fidl::utils::Syntax syntax) {
   std::string out;
   if (syntax == fidl::utils::Syntax::kOld) {

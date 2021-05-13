@@ -177,6 +177,22 @@ class NameAndTypeConversion : public Conversion {
   std::string Write(fidl::utils::Syntax syntax) override;
 };
 
+// Converts parameters lists, such that old parameter lists are now rendered as
+// anonymous, inline structs.
+class ParameterListConversion : public Conversion {
+ public:
+  explicit ParameterListConversion(bool in_response_with_error)
+      : in_response_with_error_(in_response_with_error) {}
+  ~ParameterListConversion() override = default;
+
+  std::vector<std::string> parameters_;
+  bool in_response_with_error_;
+
+  void AddChildText(std::string child) override { parameters_.push_back(child); }
+
+  std::string Write(fidl::utils::Syntax syntax) override;
+};
+
 // An abstract class for the conversion of "membered" types, ie types that may
 // have an arbitrary number of members defined in a "{...}" block.  Examples of
 // such types include protocol, struct, table, union, etc.

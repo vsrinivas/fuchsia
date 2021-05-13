@@ -111,7 +111,7 @@ protocol P2 {
 
 [Transport = "Syscall"]
 protocol P3 {
-  [Transitional] M3();
+  [Transitional] M3([Foo = "Bar"] bool b, [Baz = "Qux"] int8 c);
 };
 
 [NoDoc]
@@ -158,7 +158,7 @@ protocol P2 {
 
 @transport("Syscall")
 protocol P3 {
-  @transitional M3();
+  @transitional M3(struct { @foo("Bar") b bool; @baz("Qux") c int8; });
 };
 
 @no_doc
@@ -209,7 +209,7 @@ protocol P2 {
 
 [Transport2 = "Syscall"]
 protocol P3 {
-  [Transitional2] M3();
+  [Transitional2] M3([Foo = "Bar"] bool b, [Baz = "Qux"] int8 c);
 };
 
 [NoDoc2]
@@ -255,7 +255,7 @@ protocol P2 {
 
 @transport2("Syscall")
 protocol P3 {
-  @transitional2 M3();
+  @transitional2 M3(struct { @foo("Bar") b bool; @baz("Qux") c int8; });
 };
 
 @no_doc2
@@ -324,7 +324,7 @@ protocol P2 {
 [Transport = "Syscall"]
 protocol P3 {
   /// For M3
-[Transitional] M3();
+[Transitional] M3([Foo = "Bar"] bool b, [Baz = "Qux"] int8 c);
 };
 
 /// For X
@@ -385,7 +385,7 @@ protocol P2 {
 @transport("Syscall")
 protocol P3 {
   /// For M3
-@transitional M3();
+@transitional M3(struct { @foo("Bar") b bool; @baz("Qux") c int8; });
 };
 
 /// For X
@@ -1057,7 +1057,49 @@ protocol Foo {
 library example;
 
 protocol Foo {
-  DoFoo(a string, b int32);
+  DoFoo(struct { a string; b int32; });
+};
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
+}
+
+TEST(ConverterTests, ProtocolEmpty) {
+  std::string old_version = R"FIDL(
+library example;
+
+protocol Foo {
+  DoFoo() -> ();
+};
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+protocol Foo {
+  DoFoo() -> ();
+};
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
+}
+
+TEST(ConverterTests, ProtocolWithEvent) {
+  std::string old_version = R"FIDL(
+library example;
+
+protocol Foo {
+  -> DoFoo(bool a, uint8 b);
+};
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+protocol Foo {
+  -> DoFoo(struct { a bool; b uint8; });
 };
 )FIDL";
 
@@ -1070,7 +1112,7 @@ TEST(ConverterTests, ProtocolWithResponse) {
 library example;
 
 protocol Foo {
-  DoFoo(string a, int32 b) -> (bool c);
+  DoFoo(string a, int32 b) -> (bool c, uint8 d);
 };
 )FIDL";
 
@@ -1078,7 +1120,7 @@ protocol Foo {
 library example;
 
 protocol Foo {
-  DoFoo(a string, b int32) -> (c bool);
+  DoFoo(struct { a string; b int32; }) -> (struct { c bool; d uint8; });
 };
 )FIDL";
 
@@ -1091,7 +1133,7 @@ TEST(ConverterTests, ProtocolWithResponseAndError) {
 library example;
 
 protocol Foo {
-  DoFoo(string a, int32 b) -> (bool c) error int32;
+  DoFoo(string a, int32 b) -> (bool c, uint8 d) error int32;
 };
 )FIDL";
 
@@ -1099,7 +1141,29 @@ protocol Foo {
 library example;
 
 protocol Foo {
-  DoFoo(a string, b int32) -> (c bool) error int32;
+  DoFoo(struct { a string; b int32; }) -> (struct { c bool; d uint8; }) error int32;
+};
+)FIDL";
+
+  ASSERT_STR_EQ(old_version, ToOldSyntax(old_version));
+  ASSERT_STR_EQ(new_version, ToNewSyntax(old_version));
+}
+
+// Tests the special
+TEST(ConverterTests, ProtocolEmptyWithResponseAndError) {
+  std::string old_version = R"FIDL(
+library example;
+
+protocol Foo {
+  DoFoo() -> () error int32;
+};
+)FIDL";
+
+  std::string new_version = R"FIDL(
+library example;
+
+protocol Foo {
+  DoFoo() -> (struct { }) error int32;
 };
 )FIDL";
 

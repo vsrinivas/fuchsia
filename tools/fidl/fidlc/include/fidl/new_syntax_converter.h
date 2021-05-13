@@ -24,7 +24,11 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
 
  public:
   explicit ConvertingTreeVisitor(fidl::utils::Syntax syntax, const flat::Library* library)
-      : to_syntax_(syntax), last_conversion_end_(nullptr), last_comment_(0), library_(library) {}
+      : to_syntax_(syntax),
+        last_conversion_end_(nullptr),
+        in_response_with_error_(false),
+        last_comment_(0),
+        library_(library) {}
   // TODO(azaslavsky): I'll eventually remove the commented out block below.  At
   //   the moment it serves as a useful list of TreeVisitor methods that are
   //   intended to be left unmodified by the ConvertingTreeVisitor.
@@ -38,10 +42,8 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   // void OnLiteral(std::unique_ptr<fidl::raw::Literal> const&) override;
   // void OnLiteralConstant(std::unique_ptr<LiteralConstant> const&) override;
   // void OnNullability(types::Nullability nullability) override;
-  // void OnParameterList(std::unique_ptr<ParameterList> const&) override;
   // void OnPrimitiveSubtype(types::PrimitiveSubtype subtype) override;
   // void OnProtocolDeclaration(std::unique_ptr<ProtocolDeclaration> const&) override;
-  // void OnProtocolMethod(std::unique_ptr<ProtocolMethod> const&) override;
   // void OnResourceDeclaration(std::unique_ptr<fidl::raw::ResourceDeclaration> const&) override;
   // void OnServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration> const&) override;
   // void OnSourceElementStart(const raw::SourceElement&) override;
@@ -119,8 +121,10 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   // Files.
   void OnFile(std::unique_ptr<raw::File> const& element) override;
 
-  // Method Parameters.
+  // Methods.
   void OnParameter(std::unique_ptr<raw::Parameter> const& element) override;
+  void OnParameterList(std::unique_ptr<raw::ParameterList> const& element) override;
+  void OnProtocolMethod(std::unique_ptr<raw::ProtocolMethod> const& element) override;
 
   // Resource Property.
   void OnResourceProperty(std::unique_ptr<fidl::raw::ResourceProperty> const& element) override;
@@ -212,6 +216,14 @@ class ConvertingTreeVisitor : public raw::DeclarationOrderTreeVisitor {
   // (meaning this is the second visit), then the visit is a noop, resulting in
   // only one conversion in the correct place.
   std::set<raw::AttributeListOld*> attribute_lists_seen_;
+
+  // ParameterLists for responses of methods that also return errors must be
+  // converted slightly differently - whereas a regular two-way method with no
+  // response parameters like `Foo() -> ()` would be left untouched, such a
+  // method with an error, like `Foo() -> () error zx.status` must have an empty
+  // struct in the response position, like `MyMethod() -> () error zx.status`.
+  // This boolean keeps track of whether or not we have entered such a response.
+  bool in_response_with_error_;
 
   // Keeps track of the last comment in the comments_ list to have been "tested"
   // for being inside a conversion span.  The char pointer at the vector index

@@ -29,6 +29,8 @@ protocol Empty {};
   EXPECT_EQ(protocol->all_methods.size(), 0);
 }
 
+// TODO(fxbug.dev/75526): reverted to old syntax only until the change
+//  implementing the new method syntax lands.
 TEST(ProtocolTests, GoodValidComposeMethod) {
   TestLibrary library(R"FIDL(
 library example;
@@ -42,7 +44,7 @@ protocol HasComposeMethod2 {
 };
 
 )FIDL");
-  ASSERT_COMPILED_AND_CONVERT(library);
+  ASSERT_TRUE(library.Compile());
 
   auto protocol1 = library.LookupProtocol("HasComposeMethod1");
   ASSERT_NOT_NULL(protocol1);

@@ -2997,8 +2997,8 @@ bool Library::ConsumeParameterList(std::optional<Name> assigned_name,
   // If the name is unset, we need to generate an anonymous name for the struct
   // representing this parameter list.
   Name name = assigned_name.has_value()
-              ? assigned_name.value()
-              : Name::CreateDerived(this, parameter_list->span(), NextAnonymousName());
+                  ? assigned_name.value()
+                  : Name::CreateDerived(this, parameter_list->span(), NextAnonymousName());
 
   std::vector<Struct::Member> members;
   for (auto& parameter : parameter_list->parameter_list) {

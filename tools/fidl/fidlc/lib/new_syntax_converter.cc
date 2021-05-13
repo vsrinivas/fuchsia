@@ -277,11 +277,43 @@ void ConvertingTreeVisitor::OnFile(std::unique_ptr<fidl::raw::File> const& eleme
 }
 
 void ConvertingTreeVisitor::OnParameter(const std::unique_ptr<raw::Parameter>& element) {
+  if (raw::IsAttributeListDefined(element->attributes)) {
+    ConvertingTreeVisitor::OnAttributeListOld(
+        std::get<std::unique_ptr<raw::AttributeListOld>>(element->attributes));
+  }
+
   const auto& type_ctor = std::get<std::unique_ptr<raw::TypeConstructorOld>>(element->type_ctor);
   std::unique_ptr<Conversion> conv =
       std::make_unique<NameAndTypeConversion>(element->identifier, type_ctor);
   Converting converting(this, std::move(conv), type_ctor->start_, element->identifier->end_);
   TreeVisitor::OnParameter(element);
+}
+
+void ConvertingTreeVisitor::OnParameterList(const std::unique_ptr<raw::ParameterList>& element) {
+  std::unique_ptr<Conversion> conv =
+      std::make_unique<ParameterListConversion>(in_response_with_error_);
+  Converting converting(this, std::move(conv), element->start_, element->end_);
+  TreeVisitor::OnParameterList(element);
+}
+
+void ConvertingTreeVisitor::OnProtocolMethod(const std::unique_ptr<raw::ProtocolMethod>& element) {
+  // This code should be functionally identical to that found in the original
+  // TreeVisitor->OnProtocolMethod, except that it sets in_response_with_error_
+  // before processing the potential response parameters list.
+  if (raw::IsAttributeListDefined(element->attributes)) {
+    OnAttributeList(element->attributes);
+  }
+  OnIdentifier(element->identifier);
+  if (element->maybe_request != nullptr) {
+    OnParameterList(element->maybe_request);
+  }
+  in_response_with_error_ = element->maybe_error_ctor != nullptr;
+  if (element->maybe_response != nullptr) {
+    OnParameterList(element->maybe_response);
+  }
+  if (in_response_with_error_) {
+    OnTypeConstructorOld(element->maybe_error_ctor);
+  }
 }
 
 void ConvertingTreeVisitor::OnResourceProperty(
