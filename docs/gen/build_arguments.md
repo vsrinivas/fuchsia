@@ -100,15 +100,8 @@ example, because the package is in base).
 From //build/security.gni:118
 
 ### avb_algorithm
-AVB algorithm type.Supported options:
-  SHA256_RSA2048
-  SHA256_RSA4096
-  SHA256_RSA8192
-  SHA512_RSA2048
-  SHA512_RSA4096
-  SHA512_RSA8192
 
-**Current value (from the default):** `"SHA512_RSA4096"`
+**Current value (from the default):** `"DEPRECATED"`
 
 From //build/images/vbmeta.gni:35
 
@@ -117,14 +110,14 @@ AVB metadata which will be used to validate public key
 
 **Current value (from the default):** `""`
 
-From //build/images/vbmeta.gni:26
+From //build/images/vbmeta.gni:22
 
 ### avb_key
 a key which will be used to sign VBMETA and images for AVB
 
 **Current value (from the default):** `""`
 
-From //build/images/vbmeta.gni:23
+From //build/images/vbmeta.gni:19
 
 ### base_driver_package_labels
 If you add fuchsia_driver_package labels to this variable, any drivers in these packages will
@@ -301,15 +294,14 @@ see //build/images/vbmeta/README.md for more information about these.
 
 **Current value (from the default):** `[]`
 
-From //build/images/vbmeta.gni:48
+From //build/images/vbmeta.gni:31
 
 ### board_extra_vbmeta_images
-Board level extra vbmeta images to be combined into the top-level vbmeta
-struct.
+DEPRECATED:  Remove when no boards set a value for these.
 
 **Current value (from the default):** `[]`
 
-From //build/images/vbmeta.gni:42
+From //build/images/vbmeta.gni:34
 
 ### board_has_libvulkan_arm_mali
 Board files can set this to true if they have a package with a mali libvulkan VCD.
@@ -349,7 +341,7 @@ From //boards/arm64.gni:30
 
 From //build/board.gni:15
 
-**Current value for `target_cpu = "x64"`:** `["//src/power/thermd", "//src/power/thermd:config", "//garnet/packages/prod:drivers-support", "//src/hwinfo:default_board_config"]`
+**Current value for `target_cpu = "x64"`:** `["//src/power/thermd", "//src/power/thermd:config", "//garnet/packages/prod:drivers-support", "//src/hwinfo:default_board_config", "//src/graphics/lib/magma/gnbuild/magma-intel-gen:libvulkan_intel_gen"]`
 
 From //boards/common/x64-common.gni:67
 
@@ -1550,14 +1542,6 @@ being linked directly into the binary.
 
 From [//third_party/icu/config.gni:8](https://chromium.googlesource.com/chromium/deps/icu/+/d879aac9717d15679125cfe8c26b482006f107f3/config.gni#8)
 
-### include_devmgr_config_in_vbmeta
-If true, /config/devmgr config will be included into a vbmeta image
-instead of bootfs.
-
-**Current value (from the default):** `false`
-
-From //build/images/vbmeta.gni:20
-
 ### include_fvm_blob_sparse
 Include fvm.blob.sparse.blk image into the build if set to true
 
@@ -2056,7 +2040,7 @@ From //build/images/filesystem_limits.gni:31
 
 **Current value for `target_cpu = "x64"`:** `"16777216"`
 
-From //boards/common/x64-common.gni:74
+From //boards/common/x64-common.gni:75
 
 **Overridden from the default:** `"0"`
 
@@ -2091,7 +2075,7 @@ From //build/images/filesystem_limits.gni:34
 
 **Current value for `target_cpu = "x64"`:** `"16777216"`
 
-From //boards/common/x64-common.gni:75
+From //boards/common/x64-common.gni:76
 
 **Overridden from the default:** `"0"`
 
@@ -4016,7 +4000,7 @@ Partition name from where image will be verified
 
 **Current value (from the default):** `"zircon"`
 
-From //build/images/vbmeta.gni:38
+From //build/images/vbmeta.gni:25
 
 ### zx_assert_level
 Controls which asserts are enabled.
