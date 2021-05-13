@@ -13,8 +13,8 @@ table MatchedDriver {
     /// URL of the driver.
     1: string:fuchsia.url.MAX_URL_LENGTH url;
 
-    /// Node ID for a composite driver (optional).
-    2: uint32 node_id;
+    /// Node index for a composite driver (optional).
+    2: uint32 node_index;
 
     /// Total number of nodes for a composite driver (optional).
     3: uint32 num_nodes;

@@ -13,7 +13,7 @@ class FakeDriverIndex final : public fidl::WireServer<fuchsia_driver_framework::
  public:
   struct MatchResult {
     std::string url;
-    std::optional<uint32_t> node_id;
+    std::optional<uint32_t> node_index;
     std::optional<uint32_t> num_nodes;
   };
 
@@ -41,8 +41,8 @@ class FakeDriverIndex final : public fidl::WireServer<fuchsia_driver_framework::
     fidl::FidlAllocator allocator;
     fuchsia_driver_framework::wire::MatchedDriver driver(allocator);
     driver.set_url(allocator, fidl::StringView::FromExternal(match->url));
-    if (match->node_id) {
-      driver.set_node_id(allocator, *match->node_id);
+    if (match->node_index) {
+      driver.set_node_index(allocator, *match->node_index);
     }
     if (match->num_nodes) {
       driver.set_num_nodes(allocator, *match->num_nodes);
