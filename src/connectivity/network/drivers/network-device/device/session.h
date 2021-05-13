@@ -147,13 +147,18 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   zx_status_t LoadRxDescriptors(RxQueue::SessionTransaction& transact);
   // Sets the data in the space buffer `buff` to region described by `descriptor_index`.
   zx_status_t FillRxSpace(uint16_t descriptor_index, rx_space_buffer_t* buff);
-  // Completes rx for `descriptor_index`. Returns true if the buffer can be immediately reused.
-  bool CompleteRx(uint16_t descriptor_index, const rx_buffer_t* buff)
-      __TA_REQUIRES_SHARED(parent_->control_lock()) __TA_REQUIRES(parent_->rx_lock());
+  // Completes rx for a single frame described by `frame_info`.
+  //
+  // Returns true if the buffers comprising `frame_info` can immediately be reused.
+  bool CompleteRx(const RxFrameInfo& frame_info) __TA_REQUIRES_SHARED(parent_->control_lock())
+      __TA_REQUIRES(parent_->rx_lock());
   // Completes rx by copying the data from another session into one of this session's available rx
   // buffers.
-  void CompleteRxWith(const Session& owner, uint16_t owner_index, const rx_buffer_t* buff)
+  void CompleteRxWith(const Session& owner, const RxFrameInfo& frame_info)
       __TA_REQUIRES_SHARED(parent_->control_lock()) __TA_REQUIRES(parent_->rx_lock());
+  // Marks a single rx space buffer as complete, but does not consume it as it was unfulfilled.
+  // Returns true iff the session is active and space buffers can be reused.
+  bool CompleteUnfulfilledRx() __TA_REQUIRES(parent_->rx_lock());
   // Copies data from a tx frame from another session into one of this session's available rx
   // buffers.
   bool ListenFromTx(const Session& owner, uint16_t owner_index) __TA_REQUIRES(parent_->rx_lock());
@@ -197,7 +202,7 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   uint8_t ClearDataVmo();
 
  private:
-  inline void RxReturned() { ZX_ASSERT(in_flight_rx_-- != 0); }
+  inline void RxReturned(size_t count) { ZX_ASSERT(in_flight_rx_.fetch_sub(count) >= count); }
   inline void TxReturned(size_t count) { ZX_ASSERT(in_flight_tx_.fetch_sub(count) >= count); }
 
   Session(async_dispatcher_t* dispatcher, netdev::wire::SessionInfo& info, fidl::StringView name,
@@ -225,8 +230,7 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   const buffer_descriptor_t* descriptor(uint16_t index) const;
   fbl::Span<uint8_t> data_at(uint64_t offset, uint64_t len) const;
   // Loads a completed rx buffer information back into the descriptor with the provided index.
-  zx_status_t LoadRxInfo(uint16_t descriptor_index, const rx_buffer_t* buff)
-      __TA_REQUIRES(parent_->rx_lock());
+  zx_status_t LoadRxInfo(const RxFrameInfo& info) __TA_REQUIRES(parent_->rx_lock());
   // Loads all rx descriptors that are already available into the given transaction.
   bool LoadAvailableRxDescriptors(RxQueue::SessionTransaction& transact);
   // Fetches rx descriptors from the rx FIFO.

@@ -993,19 +993,18 @@ void DeviceInterface::CommitAllSessions() {
   PruneDeadSessions();
 }
 
-void DeviceInterface::CopySessionData(const Session& owner, uint16_t owner_index,
-                                      const rx_buffer_t* buff) {
+void DeviceInterface::CopySessionData(const Session& owner, const RxFrameInfo& frame_info) {
   if (primary_session_ && primary_session_.get() != &owner) {
     primary_session_->AssertParentRxLock(*this);
     primary_session_->AssertParentControlLockShared(*this);
-    primary_session_->CompleteRxWith(owner, owner_index, buff);
+    primary_session_->CompleteRxWith(owner, frame_info);
   }
 
   for (auto& session : sessions_) {
     if (&session != &owner) {
       session.AssertParentRxLock(*this);
       session.AssertParentControlLockShared(*this);
-      session.CompleteRxWith(owner, owner_index, buff);
+      session.CompleteRxWith(owner, frame_info);
     }
   }
 }

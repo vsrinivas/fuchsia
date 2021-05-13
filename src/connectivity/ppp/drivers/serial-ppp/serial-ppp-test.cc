@@ -30,6 +30,11 @@ class SerialPppHarness : public zxtest::Test {
   static constexpr uint8_t kVmoId = 0;
   static constexpr uint64_t kDefaultBufferReservation = 2048;
 
+  struct RxBuffer {
+    buffer_metadata_t meta;
+    rx_buffer_part_t data_part;
+  };
+
   static constexpr uint64_t kVmoSize = ppp::SerialPpp::kFifoDepth * 2 * ZX_PAGE_SIZE;
   void SetUp() override {
     zx::vmo device_vmo;
@@ -58,7 +63,7 @@ class SerialPppHarness : public zxtest::Test {
     netdevice_proto_ops_ = network_device_ifc_protocol_ops_t{
         .port_status_changed =
             [](void* ctx, uint8_t port_id, const port_status_t* new_status) {
-              auto self = static_cast<SerialPppHarness*>(ctx);
+              auto* self = static_cast<SerialPppHarness*>(ctx);
               fbl::AutoLock lock(&self->lock_);
               self->status_ = *new_status;
               EXPECT_EQ(port_id, ppp::SerialPpp::kPortId);
@@ -66,22 +71,26 @@ class SerialPppHarness : public zxtest::Test {
             },
         .add_port =
             [](void* ctx, uint8_t port_id, const network_port_protocol_t* port) {
-              auto self = static_cast<SerialPppHarness*>(ctx);
+              auto* self = static_cast<SerialPppHarness*>(ctx);
               EXPECT_EQ(port_id, ppp::SerialPpp::kPortId);
               self->port_ = ddk::NetworkPortProtocolClient(port);
             },
         .complete_rx =
             [](void* ctx, const rx_buffer_t* rx_list, size_t rx_count) {
-              auto self = static_cast<SerialPppHarness*>(ctx);
+              auto* self = static_cast<SerialPppHarness*>(ctx);
               fbl::AutoLock lock(&self->lock_);
               for (auto buffer : fbl::Span(rx_list, rx_count)) {
-                self->rx_completed_.push(buffer);
+                EXPECT_EQ(buffer.data_count, 1u);
+                self->rx_completed_.push(RxBuffer{
+                    .meta = buffer.meta,
+                    .data_part = buffer.data_list[0],
+                });
               }
               EXPECT_OK(self->event_.signal(0, kEventRxCompleted));
             },
         .complete_tx =
             [](void* ctx, const tx_result_t* tx_list, size_t tx_count) {
-              auto self = static_cast<SerialPppHarness*>(ctx);
+              auto* self = static_cast<SerialPppHarness*>(ctx);
               fbl::AutoLock lock(&self->lock_);
               for (auto buffer : fbl::Span(tx_list, tx_count)) {
                 self->tx_completed_.push(buffer);
@@ -118,12 +127,9 @@ class SerialPppHarness : public zxtest::Test {
     };
     tx_buffer_t buffer = {
         .id = id,
-        .data =
-            {
-                .vmo_id = kVmoId,
-                .parts_list = &part,
-                .parts_count = 1,
-            },
+        .vmo = kVmoId,
+        .data_list = &part,
+        .data_count = 1,
         .meta =
             {
                 .info = frame_info_t{},
@@ -138,16 +144,19 @@ class SerialPppHarness : public zxtest::Test {
   }
 
   void PushRxSpace(uint32_t id, uint64_t offset, uint64_t length = kDefaultBufferReservation) {
-    buffer_region_t part = {.offset = offset, .length = length};
     rx_space_buffer_t space = {
-        .id = id,
-        .data = {.vmo_id = kVmoId, .parts_list = &part, .parts_count = 1},
-    };
+        .id = id, .vmo = kVmoId, .region = {.offset = offset, .length = length}};
     device_->NetworkDeviceImplQueueRxSpace(&space, 1);
   }
 
   fbl::Span<uint8_t> vmo_data() {
     return fbl::Span<uint8_t>(static_cast<uint8_t*>(vmo_.start()), kVmoSize);
+  }
+
+  fbl::Span<uint8_t> buffer_data(const RxBuffer& buffer) {
+    return vmo_data().subspan(
+        buffer.data_part.id * kDefaultBufferReservation + buffer.data_part.offset,
+        buffer.data_part.length);
   }
 
   void TearDown() override { device_->Shutdown(); }
@@ -165,19 +174,19 @@ class SerialPppHarness : public zxtest::Test {
   zx::event& Event() { return event_; }
   zx::socket& Socket() { return socket_; }
 
-  cpp17::optional<rx_buffer_t> PopRx() {
+  cpp17::optional<RxBuffer> PopRx() {
     fbl::AutoLock lock(&lock_);
     if (rx_completed_.empty()) {
       return cpp17::nullopt;
     }
-    rx_buffer_t ret = rx_completed_.front();
+    RxBuffer ret = rx_completed_.front();
     rx_completed_.pop();
     return ret;
   }
 
-  fit::result<rx_buffer_t, zx_status_t> WaitRx() {
+  fit::result<RxBuffer, zx_status_t> WaitRx() {
     for (;;) {
-      auto buffer = PopRx();
+      cpp17::optional buffer = PopRx();
       if (buffer.has_value()) {
         return fit::ok(*buffer);
       }
@@ -198,9 +207,9 @@ class SerialPppHarness : public zxtest::Test {
     return ret;
   }
 
-  std::queue<rx_buffer_t> PopAllRxAndClearEvent() {
+  std::queue<RxBuffer> PopAllRxAndClearEvent() {
     fbl::AutoLock lock(&lock_);
-    auto ret = std::move(rx_completed_);
+    std::queue ret = std::move(rx_completed_);
     rx_completed_ = {};
     EXPECT_OK(event_.signal(kEventRxCompleted, 0));
     return ret;
@@ -208,7 +217,7 @@ class SerialPppHarness : public zxtest::Test {
 
   std::queue<tx_result_t> PopAllTxAndClearEvent() {
     fbl::AutoLock lock(&lock_);
-    auto ret = std::move(tx_completed_);
+    std::queue ret = std::move(tx_completed_);
     tx_completed_ = {};
     EXPECT_OK(event_.signal(kEventTxCompleted, 0));
     return ret;
@@ -216,7 +225,7 @@ class SerialPppHarness : public zxtest::Test {
 
   cpp17::optional<port_status_t> TakeStatus() {
     fbl::AutoLock lock(&lock_);
-    auto ret = status_;
+    cpp17::optional ret = status_;
     status_.reset();
     return ret;
   }
@@ -231,7 +240,7 @@ class SerialPppHarness : public zxtest::Test {
 
   fbl::Mutex lock_;
   cpp17::optional<port_status_t> status_ __TA_GUARDED(lock_);
-  std::queue<rx_buffer_t> rx_completed_ __TA_GUARDED(lock_);
+  std::queue<RxBuffer> rx_completed_ __TA_GUARDED(lock_);
   std::queue<tx_result_t> tx_completed_ __TA_GUARDED(lock_);
   fzl::VmoMapper vmo_;
 };
@@ -287,7 +296,7 @@ TEST_F(SerialPppHarness, DriverTxEscapedFcs) {
                                 information.size());
   Tx(0, 0, netdev::wire::FrameType::kIpv4, span);
   ASSERT_OK(Wait(kEventTxCompleted));
-  auto tx_result = PopTx();
+  cpp17::optional tx_result = PopTx();
   ASSERT_TRUE(tx_result.has_value());
   ASSERT_OK(tx_result->status);
   ASSERT_EQ(tx_result->id, 0);
@@ -308,7 +317,7 @@ TEST_F(SerialPppHarness, DriverTxEmpty) {
                                 information.size());
   Tx(0, 0, netdev::wire::FrameType::kIpv6, span);
   ASSERT_OK(Wait(kEventTxCompleted));
-  auto tx_result = PopTx();
+  cpp17::optional tx_result = PopTx();
   ASSERT_TRUE(tx_result.has_value());
   ASSERT_OK(tx_result->status);
   ASSERT_EQ(tx_result->id, 0);
@@ -346,10 +355,10 @@ TEST_F(SerialPppHarness, DriverRxSingleFrame) {
   ASSERT_OK(Socket().write(0, serial_data.data(), serial_data.size(), &actual));
   ASSERT_EQ(actual, serial_data.size());
   ASSERT_OK(Wait(kEventRxCompleted));
-  auto rx_buffer = PopRx();
+  cpp17::optional rx_buffer = PopRx();
   ASSERT_TRUE(rx_buffer.has_value());
   ASSERT_EQ(rx_buffer->meta.frame_type, static_cast<uint8_t>(netdev::wire::FrameType::kIpv4));
-  auto rx_data = vmo_data().subspan(0, rx_buffer->length);
+  fbl::Span rx_data = buffer_data(*rx_buffer);
   ASSERT_EQ(rx_data.size(), information.length());
   ASSERT_BYTES_EQ(rx_data.data(), information.data(), rx_data.size());
 }
@@ -365,10 +374,10 @@ TEST_F(SerialPppHarness, DriverRxSingleFrameFiller) {
   ASSERT_OK(Socket().write(0, serial_data.data(), serial_data.size(), &actual));
   ASSERT_EQ(actual, serial_data.size());
   ASSERT_OK(Wait(kEventRxCompleted));
-  auto rx_buffer = PopRx();
+  cpp17::optional rx_buffer = PopRx();
   ASSERT_TRUE(rx_buffer.has_value());
   ASSERT_EQ(rx_buffer->meta.frame_type, static_cast<uint8_t>(netdev::wire::FrameType::kIpv4));
-  auto rx_data = vmo_data().subspan(0, rx_buffer->length);
+  fbl::Span rx_data = buffer_data(*rx_buffer);
   ASSERT_EQ(rx_data.size(), information.length());
   ASSERT_BYTES_EQ(rx_data.data(), information.data(), rx_data.size());
 }
@@ -387,14 +396,14 @@ TEST_F(SerialPppHarness, DriverRxTwoJoinedFrames) {
   ASSERT_OK(Socket().write(0, serial_data.data(), serial_data.size(), &actual));
   ASSERT_EQ(actual, serial_data.size());
 
-  auto validate_rx = [this](const rx_buffer_t& result, const std::string& expect) {
+  auto validate_rx = [this](const RxBuffer& result, const std::string& expect) {
     ASSERT_EQ(result.meta.frame_type, static_cast<uint8_t>(netdev::wire::FrameType::kIpv4),
-              "buffer %d", result.id);
-    auto data = vmo_data().subspan(result.id * kDefaultBufferReservation, result.length);
-    ASSERT_EQ(data.size(), expect.size(), "buffer %d", result.id);
-    ASSERT_BYTES_EQ(data.data(), expect.data(), data.size(), "buffer %d", result.id);
+              "buffer %d", result.data_part.id);
+    fbl::Span data = buffer_data(result);
+    ASSERT_EQ(data.size(), expect.size(), "buffer %d", result.data_part.id);
+    ASSERT_BYTES_EQ(data.data(), expect.data(), data.size(), "buffer %d", result.data_part.id);
   };
-  auto rx = WaitRx();
+  fit::result rx = WaitRx();
   ASSERT_TRUE(rx.is_ok(), "rx failed: %s", zx_status_get_string(rx.error()));
   ASSERT_NO_FATAL_FAILURES(validate_rx(rx.take_value(), information0));
   rx = WaitRx();
@@ -411,10 +420,10 @@ TEST_F(SerialPppHarness, DriverRxEmpty) {
   ASSERT_OK(Socket().write(0, serial_data.data(), serial_data.size(), &actual));
   ASSERT_EQ(actual, serial_data.size());
   ASSERT_OK(Wait(kEventRxCompleted));
-  auto rx_buffer = PopRx();
+  cpp17::optional rx_buffer = PopRx();
   ASSERT_TRUE(rx_buffer.has_value());
   ASSERT_EQ(rx_buffer->meta.frame_type, static_cast<uint8_t>(netdev::wire::FrameType::kIpv6));
-  ASSERT_EQ(rx_buffer->length, 0);
+  ASSERT_EQ(rx_buffer->data_part.length, 0);
 }
 
 TEST_F(SerialPppHarness, DriverRxBadProtocol) {
@@ -428,10 +437,10 @@ TEST_F(SerialPppHarness, DriverRxBadProtocol) {
   ASSERT_OK(Socket().write(0, serial_data.data(), serial_data.size(), &actual));
   ASSERT_EQ(actual, serial_data.size());
   ASSERT_OK(Wait(kEventRxCompleted));
-  auto rx_buffer = PopRx();
+  cpp17::optional rx_buffer = PopRx();
   ASSERT_TRUE(rx_buffer.has_value());
   ASSERT_EQ(rx_buffer->meta.frame_type, static_cast<uint8_t>(netdev::wire::FrameType::kIpv6));
-  ASSERT_EQ(rx_buffer->length, 0);
+  ASSERT_EQ(rx_buffer->data_part.length, 0);
 }
 
 TEST_F(SerialPppHarness, DriverRxBadHeader) {
@@ -445,10 +454,10 @@ TEST_F(SerialPppHarness, DriverRxBadHeader) {
   ASSERT_OK(Socket().write(0, serial_data.data(), serial_data.size(), &actual));
   ASSERT_EQ(actual, serial_data.size());
   ASSERT_OK(Wait(kEventRxCompleted));
-  auto rx_buffer = PopRx();
+  cpp17::optional rx_buffer = PopRx();
   ASSERT_TRUE(rx_buffer.has_value());
   ASSERT_EQ(rx_buffer->meta.frame_type, static_cast<uint8_t>(netdev::wire::FrameType::kIpv6));
-  ASSERT_EQ(rx_buffer->length, 0);
+  ASSERT_EQ(rx_buffer->data_part.length, 0);
 }
 
 TEST_F(SerialPppHarness, DriverRxTooShort) {
@@ -462,10 +471,10 @@ TEST_F(SerialPppHarness, DriverRxTooShort) {
   ASSERT_OK(Socket().write(0, serial_data.data(), serial_data.size(), &actual));
   ASSERT_EQ(actual, serial_data.size());
   ASSERT_OK(Wait(kEventRxCompleted));
-  auto rx_buffer = PopRx();
+  cpp17::optional rx_buffer = PopRx();
   ASSERT_TRUE(rx_buffer.has_value());
   ASSERT_EQ(rx_buffer->meta.frame_type, static_cast<uint8_t>(netdev::wire::FrameType::kIpv6));
-  ASSERT_EQ(rx_buffer->length, 0);
+  ASSERT_EQ(rx_buffer->data_part.length, 0);
 }
 
 TEST_F(SerialPppHarness, DriverRxTooLong) {
@@ -484,10 +493,10 @@ TEST_F(SerialPppHarness, DriverRxTooLong) {
   ASSERT_EQ(actual, serial_data_2.size());
 
   ASSERT_OK(Wait(kEventRxCompleted));
-  auto rx_buffer = PopRx();
+  cpp17::optional rx_buffer = PopRx();
   ASSERT_TRUE(rx_buffer.has_value());
   ASSERT_EQ(rx_buffer->meta.frame_type, static_cast<uint8_t>(netdev::wire::FrameType::kIpv6));
-  ASSERT_EQ(rx_buffer->length, 0);
+  ASSERT_EQ(rx_buffer->data_part.length, 0);
 }
 
 TEST_F(SerialPppHarness, DriverRxBadFrameCheckSequence) {
@@ -502,10 +511,10 @@ TEST_F(SerialPppHarness, DriverRxBadFrameCheckSequence) {
   ASSERT_EQ(actual, serial_data.size());
 
   ASSERT_OK(Wait(kEventRxCompleted));
-  auto rx_buffer = PopRx();
+  cpp17::optional rx_buffer = PopRx();
   ASSERT_TRUE(rx_buffer.has_value());
   ASSERT_EQ(rx_buffer->meta.frame_type, static_cast<uint8_t>(netdev::wire::FrameType::kIpv6));
-  ASSERT_EQ(rx_buffer->length, 0);
+  ASSERT_EQ(rx_buffer->data_part.length, 0);
 }
 
 TEST_F(SerialPppHarness, DriverRxTimeout) {
@@ -530,10 +539,10 @@ TEST_F(SerialPppHarness, DriverRxTimeout) {
 
   // Only the second frame must have been received.
   ASSERT_OK(Wait(kEventRxCompleted));
-  auto rx_buffer = PopRx();
+  cpp17::optional rx_buffer = PopRx();
   ASSERT_TRUE(rx_buffer.has_value());
   ASSERT_EQ(rx_buffer->meta.frame_type, static_cast<uint8_t>(netdev::wire::FrameType::kIpv4));
-  auto data = vmo_data().subspan(0, rx_buffer->length);
+  fbl::Span data = buffer_data(*rx_buffer);
   ASSERT_EQ(data.size(), expect.size());
   ASSERT_BYTES_EQ(data.data(), expect.data(), data.size());
 }
@@ -627,11 +636,11 @@ TEST_F(SerialPppHarness, CycleTraffic) {
              serial_expect.size()) {
         fbl::Span<uint8_t> serial_frame(socket_read_buffer.data(), serial_expect.size());
 
-        auto maybe_frame = ppp::DeserializeFrame(serial_frame);
+        fit::result maybe_frame = ppp::DeserializeFrame(serial_frame);
         ASSERT_TRUE(maybe_frame.is_ok(), "failed to deserialize: %d, buffer=[%s], expect=[%s]",
                     maybe_frame.error(), hex_buffer(serial_frame).c_str(),
                     hex_buffer(fbl::Span(serial_expect.data(), serial_expect.size())).c_str());
-        auto& frame = maybe_frame.value();
+        ppp::Frame& frame = maybe_frame.value();
         ASSERT_EQ(frame.protocol, ppp::Protocol::Ipv4);
         ASSERT_EQ(frame.information.size(), sizeof(tx_serial_count));
         ASSERT_BYTES_EQ(frame.information.data(), reinterpret_cast<uint8_t*>(&tx_serial_count),
@@ -645,22 +654,22 @@ TEST_F(SerialPppHarness, CycleTraffic) {
       }
     }
     if (wait[1].pending & kEventRxCompleted) {
-      auto received = PopAllRxAndClearEvent();
+      std::queue received = PopAllRxAndClearEvent();
       while (!received.empty()) {
-        rx_buffer_t buffer = received.front();
+        RxBuffer buffer = received.front();
         received.pop();
-        ASSERT_EQ(buffer.id, rx_driver_count % ppp::SerialPpp::kFifoDepth);
-        uint64_t offset = buffer.id * kDefaultBufferReservation;
+        ASSERT_EQ(buffer.data_part.id, rx_driver_count % ppp::SerialPpp::kFifoDepth);
+        uint64_t offset = buffer.data_part.id * kDefaultBufferReservation;
         ASSERT_EQ(buffer.meta.frame_type, static_cast<uint8_t>(netdev::wire::FrameType::kIpv4));
-        ASSERT_EQ(buffer.length, sizeof(rx_driver_count));
+        ASSERT_EQ(buffer.data_part.length, sizeof(rx_driver_count));
         ASSERT_BYTES_EQ(vmo_data().begin() + offset, reinterpret_cast<uint8_t*>(&rx_driver_count),
                         sizeof(rx_driver_count));
         rx_driver_count++;
-        PushRxSpace(buffer.id, offset);
+        PushRxSpace(buffer.data_part.id, offset);
       }
     }
     if (wait[1].pending & kEventTxCompleted) {
-      auto tx_completed = PopAllTxAndClearEvent();
+      std::queue tx_completed = PopAllTxAndClearEvent();
       while (!tx_completed.empty()) {
         tx_result_t result = tx_completed.front();
         tx_completed.pop();
@@ -689,7 +698,7 @@ TEST_F(SerialPppHarness, TestStatus) {
   bool online = true;
   for (int i = 0; i < 5; i++) {
     ASSERT_OK(Wait(kEventStatusChanged));
-    auto status = TakeStatus();
+    cpp17::optional status = TakeStatus();
     ASSERT_TRUE(status.has_value());
     port_status_t read;
     Port().GetStatus(&read);

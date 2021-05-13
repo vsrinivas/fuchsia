@@ -249,125 +249,124 @@ TEST_F(NetworkDeviceTest, RxBufferBuild) {
   ASSERT_OK(OpenSession(&session));
   session.SetPaused(false);
   ASSERT_OK(WaitStart());
-  constexpr size_t kDescTests = 3;
-  // send three Rx descriptors:
-  // - A simple descriptor with just data length
-  // - A descriptor with head and tail removed
-  // - A chained descriptor with simple data lengths.
-  uint16_t all_descs[kDescTests + 1] = {0, 1, 2};
-  session.ResetDescriptor(0);
-  auto* desc = session.ResetDescriptor(1);
-  desc->head_length = 16;
-  desc->tail_length = 32;
-  desc->data_length -= desc->head_length + desc->tail_length;
-  desc = session.ResetDescriptor(2);
-  desc->data_length = 10;
-  desc->chain_length = 2;
-  desc->nxt = 3;
-  desc = session.ResetDescriptor(3);
-  desc->data_length = 20;
-  desc->chain_length = 1;
-  desc->nxt = 4;
-  desc = session.ResetDescriptor(4);
-  desc->data_length = 30;
-  desc->chain_length = 0;
+
+  constexpr uint16_t kDescriptor0 = 0;
+  constexpr uint16_t kDescriptor1 = 1;
+  constexpr uint16_t kDescriptor2 = 2;
+
+  constexpr struct {
+    uint16_t space_head;
+    uint16_t space_tail;
+    uint16_t descriptor;
+    uint32_t offset;
+    uint32_t length;
+    bool chain;
+    std::optional<RxFlags> flags;
+  } kDescriptorSetup[] = {{
+                              .descriptor = kDescriptor0,
+                              .length = 64,
+                              .chain = false,
+                              .flags = RxFlags::kRxAccel0,
+                          },
+                          {
+                              .space_head = 16,
+                              .descriptor = kDescriptor1,
+                              .length = 15,
+                              .chain = true,
+                              .flags = RxFlags::kRxAccel1,
+                          },
+                          {
+                              .space_tail = 32,
+                              .descriptor = kDescriptor2,
+                              .offset = 64,
+                              .length = 8,
+                              .chain = true,
+                          }};
+  for (const auto& setup : kDescriptorSetup) {
+    buffer_descriptor_t* desc = session.ResetDescriptor(setup.descriptor);
+    desc->head_length = setup.space_head;
+    desc->tail_length = setup.space_tail;
+    desc->data_length -= setup.space_head + setup.space_tail;
+  }
+
+  uint16_t all_descs[std::size(kDescriptorSetup)] = {kDescriptor0, kDescriptor1, kDescriptor2};
   size_t sent;
-  ASSERT_OK(session.SendRx(all_descs, kDescTests, &sent));
-  ASSERT_EQ(sent, kDescTests);
+  ASSERT_OK(session.SendRx(all_descs, std::size(all_descs), &sent));
+  ASSERT_EQ(sent, std::size(kDescriptorSetup));
   ASSERT_OK(WaitRxAvailable());
-  fbl::DoublyLinkedList rx_buffers = impl_.TakeRxBuffers();
+
+  // Get the expected VMO ID for all buffers.
+  std::optional first_vmo = impl_.first_vmo_id();
+  ASSERT_TRUE(first_vmo.has_value());
+  uint8_t want_vmo = first_vmo.value();
+
   RxReturnTransaction return_session(&impl_);
-  // load the buffers from the fake device implementation and check them.
-  // We call "pop_back" on the buffer list because network_device feeds Rx buffers in a LIFO order.
-  // check first descriptor:
-  auto rx = rx_buffers.pop_back();
-  ASSERT_TRUE(rx);
-  ASSERT_EQ(rx->buff().data.parts_count, 1u);
-  ASSERT_EQ(rx->buff().data.parts_list[0].offset, session.descriptor(0)->offset);
-  ASSERT_EQ(rx->buff().data.parts_list[0].length, kDefaultBufferLength);
-  rx->return_buffer().length = 64;
-  rx->return_buffer().meta.flags = static_cast<uint32_t>(RxFlags::kRxAccel0);
-  return_session.Enqueue(std::move(rx));
-  // check second descriptor:
-  rx = rx_buffers.pop_back();
-  ASSERT_TRUE(rx);
-  ASSERT_EQ(rx->buff().data.parts_count, 1u);
-  desc = session.descriptor(1);
-  ASSERT_EQ(rx->buff().data.parts_list[0].offset, desc->offset + desc->head_length);
-  ASSERT_EQ(rx->buff().data.parts_list[0].length,
-            kDefaultBufferLength - desc->head_length - desc->tail_length);
-  rx->return_buffer().length = 15;
-  rx->return_buffer().meta.flags = static_cast<uint32_t>(RxFlags::kRxAccel1);
-  return_session.Enqueue(std::move(rx));
-  // check third descriptor:
-  rx = rx_buffers.pop_back();
-  ASSERT_TRUE(rx);
-  ASSERT_EQ(rx->buff().data.parts_count, 3u);
-  auto* d0 = session.descriptor(2);
-  auto* d1 = session.descriptor(3);
-  auto* d2 = session.descriptor(4);
-  ASSERT_EQ(rx->buff().data.parts_list[0].offset, d0->offset);
-  ASSERT_EQ(rx->buff().data.parts_list[0].length, d0->data_length);
-  ASSERT_EQ(rx->buff().data.parts_list[1].offset, d1->offset);
-  ASSERT_EQ(rx->buff().data.parts_list[1].length, d1->data_length);
-  ASSERT_EQ(rx->buff().data.parts_list[2].offset, d2->offset);
-  ASSERT_EQ(rx->buff().data.parts_list[2].length, d2->data_length);
-  // set the total length up to a part of the middle buffer:
-  rx->return_buffer().length = 25;
-  rx->return_buffer().meta.flags = static_cast<uint32_t>(RxFlags::kRxAccel2);
-  return_session.Enqueue(std::move(rx));
-  // ensure no more rx buffers were actually returned:
-  ASSERT_TRUE(rx_buffers.is_empty());
-  // commit the returned buffers
+
+  // Prepare a chained return.
+  auto chained_return = std::make_unique<RxReturn>();
+  fbl::DoublyLinkedList buffers = impl_.TakeRxBuffers();
+  for (const auto& descriptor_setup : kDescriptorSetup) {
+    SCOPED_TRACE(descriptor_setup.descriptor);
+    // Load the buffers from the fake device implementation and check them.
+    // We call "pop_back" on the buffer list because network_device feeds Rx buffers in a LIFO
+    // order.
+    std::unique_ptr rx = buffers.pop_back();
+    ASSERT_TRUE(rx);
+    const rx_space_buffer_t& space = rx->space();
+    ASSERT_EQ(space.vmo, want_vmo);
+    buffer_descriptor_t* descriptor = session.descriptor(descriptor_setup.descriptor);
+    ASSERT_EQ(space.region.offset, descriptor->offset + descriptor->head_length);
+    ASSERT_EQ(space.region.length, descriptor->data_length + descriptor->tail_length);
+
+    rx->return_part().offset = descriptor_setup.offset;
+    rx->return_part().length = descriptor_setup.length;
+    if (descriptor_setup.chain) {
+      if (descriptor_setup.flags.has_value()) {
+        chained_return->buffer().meta.flags = static_cast<uint32_t>(*descriptor_setup.flags);
+      }
+      chained_return->PushPart(std::move(rx));
+    } else {
+      std::unique_ptr ret = std::make_unique<RxReturn>(std::move(rx));
+      if (descriptor_setup.flags.has_value()) {
+        ret->buffer().meta.flags = static_cast<uint32_t>(*descriptor_setup.flags);
+      }
+      return_session.Enqueue(std::move(ret));
+    }
+  }
+  chained_return->buffer().meta.flags = static_cast<uint32_t>(RxFlags::kRxAccel1);
+  return_session.Enqueue(std::move(chained_return));
+  // Ensure no more rx buffers were actually returned:
+  ASSERT_TRUE(buffers.is_empty());
+  // Commit the returned buffers.
   return_session.Commit();
-  // check that all descriptors were returned to the queue:
+  // Check that all descriptors were returned to the queue:
   size_t read_back;
-  ASSERT_OK(session.FetchRx(all_descs, kDescTests + 1, &read_back));
-  ASSERT_EQ(read_back, kDescTests);
-  EXPECT_EQ(all_descs[0], 0u);
-  EXPECT_EQ(all_descs[1], 1u);
-  EXPECT_EQ(all_descs[2], 2u);
-  // finally check all the stuff that was returned:
-  // check returned first descriptor:
-  desc = session.descriptor(0);
-  EXPECT_EQ(desc->offset, session.canonical_offset(0));
-  EXPECT_EQ(desc->chain_length, 0u);
-  EXPECT_EQ(desc->inbound_flags, static_cast<uint32_t>(RxFlags::kRxAccel0));
-  EXPECT_EQ(desc->head_length, 0u);
-  EXPECT_EQ(desc->data_length, 64u);
-  EXPECT_EQ(desc->tail_length, 0u);
-  // check returned second descriptor:
-  desc = session.descriptor(1);
-  EXPECT_EQ(desc->offset, session.canonical_offset(1));
-  EXPECT_EQ(desc->chain_length, 0u);
-  EXPECT_EQ(desc->inbound_flags, static_cast<uint32_t>(RxFlags::kRxAccel1));
-  EXPECT_EQ(desc->head_length, 16u);
-  EXPECT_EQ(desc->data_length, 15u);
-  EXPECT_EQ(desc->tail_length, 32u);
-  // check returned third descriptor and the chained ones:
-  desc = session.descriptor(2);
-  EXPECT_EQ(desc->offset, session.canonical_offset(2));
-  EXPECT_EQ(desc->chain_length, 2u);
-  EXPECT_EQ(desc->nxt, 3u);
-  EXPECT_EQ(desc->inbound_flags, static_cast<uint32_t>(RxFlags::kRxAccel2));
-  EXPECT_EQ(desc->head_length, 0u);
-  EXPECT_EQ(desc->data_length, 10u);
-  EXPECT_EQ(desc->tail_length, 0u);
-  desc = session.descriptor(3);
-  EXPECT_EQ(desc->offset, session.canonical_offset(3));
-  EXPECT_EQ(desc->chain_length, 1u);
-  EXPECT_EQ(desc->nxt, 4u);
-  EXPECT_EQ(desc->inbound_flags, 0u);
-  EXPECT_EQ(desc->head_length, 0u);
-  EXPECT_EQ(desc->data_length, 15u);
-  EXPECT_EQ(desc->tail_length, 0u);
-  desc = session.descriptor(4);
-  EXPECT_EQ(desc->offset, session.canonical_offset(4));
-  EXPECT_EQ(desc->chain_length, 0u);
-  EXPECT_EQ(desc->inbound_flags, 0u);
-  EXPECT_EQ(desc->head_length, 0u);
-  EXPECT_EQ(desc->data_length, 0u);
-  EXPECT_EQ(desc->tail_length, 0u);
+  ASSERT_OK(session.FetchRx(all_descs, std::size(all_descs), &read_back));
+  // We chained descriptors 2 descriptors together, so we should observe one less than the number of
+  // descriptors returned.
+  ASSERT_EQ(read_back, std::size(kDescriptorSetup) - 1);
+  EXPECT_EQ(all_descs[0], kDescriptor0);
+  EXPECT_EQ(all_descs[1], kDescriptor1);
+  // Finally check all the stuff that was returned.
+  for (const auto& setup : kDescriptorSetup) {
+    SCOPED_TRACE(setup.descriptor);
+    buffer_descriptor_t* desc = session.descriptor(setup.descriptor);
+    EXPECT_EQ(desc->port_id, 0);
+    EXPECT_EQ(desc->offset, session.canonical_offset(setup.descriptor));
+    if (setup.descriptor == kDescriptor1) {
+      // This descriptor should have a chain.
+      EXPECT_EQ(desc->chain_length, 1u);
+      EXPECT_EQ(desc->nxt, kDescriptor2);
+    } else {
+      EXPECT_EQ(desc->chain_length, 0u);
+    }
+    if (setup.flags.has_value()) {
+      EXPECT_EQ(desc->inbound_flags, static_cast<uint32_t>(*setup.flags));
+    }
+    EXPECT_EQ(desc->head_length, setup.offset);
+    EXPECT_EQ(desc->data_length, setup.length);
+    EXPECT_EQ(desc->tail_length, kDefaultBufferLength - setup.length - setup.offset);
+  }
 }
 
 TEST_F(NetworkDeviceTest, TxBufferBuild) {
@@ -407,33 +406,34 @@ TEST_F(NetworkDeviceTest, TxBufferBuild) {
   // load the buffers from the fake device implementation and check them.
   auto tx = impl_.PopTxBuffer();
   ASSERT_TRUE(tx);
-  ASSERT_EQ(tx->buff().data.parts_count, 1u);
-  ASSERT_EQ(tx->buff().data.parts_list[0].offset, session.descriptor(0)->offset);
-  ASSERT_EQ(tx->buff().data.parts_list[0].length, kDefaultBufferLength);
+  ASSERT_EQ(tx->buffer().data_count, 1u);
+  ASSERT_EQ(tx->buffer().data_list[0].offset, session.descriptor(0)->offset);
+  ASSERT_EQ(tx->buffer().data_list[0].length, kDefaultBufferLength);
   return_session.Enqueue(std::move(tx));
   // check second descriptor:
   tx = impl_.PopTxBuffer();
   ASSERT_TRUE(tx);
-  ASSERT_EQ(tx->buff().data.parts_count, 1u);
+  ASSERT_EQ(tx->buffer().data_count, 1u);
   desc = session.descriptor(1);
-  ASSERT_EQ(tx->buff().data.parts_list[0].offset, desc->offset + desc->head_length);
-  ASSERT_EQ(tx->buff().data.parts_list[0].length,
+  ASSERT_EQ(tx->buffer().data_list[0].offset, desc->offset + desc->head_length);
+  ASSERT_EQ(tx->buffer().data_list[0].length,
             kDefaultBufferLength - desc->head_length - desc->tail_length);
   tx->set_status(ZX_ERR_UNAVAILABLE);
   return_session.Enqueue(std::move(tx));
   // check third descriptor:
   tx = impl_.PopTxBuffer();
   ASSERT_TRUE(tx);
-  ASSERT_EQ(tx->buff().data.parts_count, 3u);
-  auto* d0 = session.descriptor(2);
-  auto* d1 = session.descriptor(3);
-  auto* d2 = session.descriptor(4);
-  ASSERT_EQ(tx->buff().data.parts_list[0].offset, d0->offset);
-  ASSERT_EQ(tx->buff().data.parts_list[0].length, d0->data_length);
-  ASSERT_EQ(tx->buff().data.parts_list[1].offset, d1->offset);
-  ASSERT_EQ(tx->buff().data.parts_list[1].length, d1->data_length);
-  ASSERT_EQ(tx->buff().data.parts_list[2].offset, d2->offset);
-  ASSERT_EQ(tx->buff().data.parts_list[2].length, d2->data_length);
+  ASSERT_EQ(tx->buffer().data_count, 3u);
+  {
+    uint16_t descriptor = 2;
+    for (const buffer_region_t& region :
+         fbl::Span(tx->buffer().data_list, tx->buffer().data_count)) {
+      SCOPED_TRACE(descriptor);
+      buffer_descriptor_t* d = session.descriptor(descriptor++);
+      ASSERT_EQ(region.offset, d->offset);
+      ASSERT_EQ(region.length, d->data_length);
+    }
+  }
   tx->set_status(ZX_ERR_NOT_SUPPORTED);
   return_session.Enqueue(std::move(tx));
   // ensure no more tx buffers were actually enqueued:
@@ -519,13 +519,16 @@ TEST_F(NetworkDeviceTest, TwoSessionsTx) {
   session_b.SendTxData(1, sent_buff_b);
   ASSERT_OK(WaitTx());
   // wait until we have two frames waiting:
-  auto buff_a = impl_.PopTxBuffer();
-  auto buff_b = impl_.PopTxBuffer();
-  std::vector<uint8_t> data_a;
-  std::vector<uint8_t> data_b;
-  auto vmo_provider = impl_.VmoGetter();
-  ASSERT_OK(buff_a->GetData(&data_a, vmo_provider));
-  ASSERT_OK(buff_b->GetData(&data_b, vmo_provider));
+  std::unique_ptr buff_a = impl_.PopTxBuffer();
+  std::unique_ptr buff_b = impl_.PopTxBuffer();
+  VmoProvider vmo_provider = impl_.VmoGetter();
+  zx::status data_status_a = buff_a->GetData(vmo_provider);
+  ASSERT_OK(data_status_a.status_value());
+  std::vector data_a = std::move(data_status_a.value());
+
+  zx::status data_status_b = buff_b->GetData(vmo_provider);
+  ASSERT_OK(data_status_b.status_value());
+  std::vector data_b = std::move(data_status_b.value());
   // can't rely on ordering here:
   if (data_a.size() != sent_buff_a.size()) {
     std::swap(buff_a, buff_b);
@@ -588,23 +591,29 @@ TEST_F(NetworkDeviceTest, TwoSessionsRx) {
   }
   return_session.Commit();
 
-  auto checker = [kBufferCount, kDataLen](TestSession* session) {
+  auto checker = [kBufferCount, kDataLen](TestSession& session) {
     uint16_t descriptors[kBufferCount];
     size_t rd;
-    ASSERT_OK(session->FetchRx(descriptors, kBufferCount, &rd));
+    ASSERT_OK(session.FetchRx(descriptors, kBufferCount, &rd));
     ASSERT_EQ(rd, kBufferCount);
     for (uint32_t i = 0; i < kBufferCount; i++) {
-      auto* desc = session->descriptor(descriptors[i]);
+      auto* desc = session.descriptor(descriptors[i]);
       ASSERT_EQ(desc->data_length, kDataLen);
-      auto* data = session->buffer(desc->offset);
+      auto* data = session.buffer(desc->offset);
       for (uint32_t j = 0; j < kDataLen; j++) {
         ASSERT_EQ(*data, static_cast<uint8_t>(i));
         data++;
       }
     }
   };
-  checker(&session_a);
-  checker(&session_b);
+  {
+    SCOPED_TRACE("session_a");
+    checker(session_a);
+  }
+  {
+    SCOPED_TRACE("session_b");
+    checker(session_b);
+  }
 }
 
 TEST_F(NetworkDeviceTest, ListenSession) {
@@ -649,17 +658,15 @@ TEST_F(NetworkDeviceTest, ClosingPrimarySession) {
   ASSERT_OK(WaitSessionStarted());
   ASSERT_OK(session_b.SetPaused(false));
   ASSERT_OK(WaitSessionStarted());
-  // send one buffer on each session
-  auto* d = session_a.ResetDescriptor(0);
+  buffer_descriptor_t* d = session_a.ResetDescriptor(0);
   d->data_length = kDefaultBufferLength / 2;
   session_b.ResetDescriptor(1);
   ASSERT_OK(session_a.SendRx(0));
-  ASSERT_OK(session_b.SendRx(1));
   ASSERT_OK(WaitRxAvailable());
-  // impl_ now owns session_a's RxBuffer
-  auto rx_buff = impl_.PopRxBuffer();
-  ASSERT_EQ(rx_buff->buff().data.parts_list[0].length, kDefaultBufferLength / 2);
-  // let's close session_a, it should not be closed until we return the buffers
+  // Implementation now owns session a's RxBuffer.
+  std::unique_ptr rx_buff = impl_.PopRxBuffer();
+  ASSERT_EQ(rx_buff->space().region.length, kDefaultBufferLength / 2);
+  // Let's close session_a, it should not be closed until we return the buffers.
   ASSERT_OK(session_a.Close());
   ASSERT_EQ(session_a.session().channel().wait_one(ZX_CHANNEL_PEER_CLOSED,
                                                    zx::deadline_after(zx::msec(20)), nullptr),
@@ -677,7 +684,7 @@ TEST_F(NetworkDeviceTest, ClosingPrimarySession) {
 
   // And now return data.
   constexpr uint32_t kReturnLength = 5;
-  rx_buff->return_buffer().length = kReturnLength;
+  rx_buff->SetReturnLength(kReturnLength);
   RxReturnTransaction rx_transaction(&impl_);
   rx_transaction.Enqueue(std::move(rx_buff));
   rx_transaction.Commit();
@@ -819,7 +826,7 @@ TEST_P(RxTxParamTest, WaitsForAllBuffersReturned) {
       case RxTxSwitch::Rx: {
         RxReturnTransaction transaction(&impl_);
         std::unique_ptr buffer = rx_buffers.pop_front();
-        buffer->return_buffer().length = 0;
+        buffer->return_part().length = 0;
         transaction.Enqueue(std::move(buffer));
         transaction.Commit();
       } break;
@@ -913,10 +920,11 @@ TEST_F(NetworkDeviceTest, TxHeadLength) {
   for (const auto& check : kCheckTable) {
     SCOPED_TRACE(check.name);
     std::unique_ptr buffer = impl_.PopTxBuffer();
-    std::vector<uint8_t> data;
     ASSERT_TRUE(buffer);
-    ASSERT_EQ(buffer->buff().head_length, kHeadLength);
-    ASSERT_OK(buffer->GetData(&data, vmo_provider));
+    ASSERT_EQ(buffer->buffer().head_length, kHeadLength);
+    zx::status status = buffer->GetData(vmo_provider);
+    ASSERT_OK(status.status_value());
+    std::vector<uint8_t>& data = status.value();
     ASSERT_EQ(data.size(), kHeadLength + 1u);
     ASSERT_EQ(data[kHeadLength], check.expect);
     transaction.Enqueue(std::move(buffer));
@@ -950,11 +958,12 @@ TEST_F(NetworkDeviceTest, RxFrameTypeFilter) {
   session.ResetDescriptor(0);
   ASSERT_OK(session.SendRx(0));
   ASSERT_OK(WaitRxAvailable());
-  auto buff = impl_.PopRxBuffer();
-  buff->return_buffer().meta.frame_type = static_cast<uint8_t>(netdev::wire::FrameType::kIpv4);
-  buff->return_buffer().length = 10;
+  std::unique_ptr buff = impl_.PopRxBuffer();
+  buff->SetReturnLength(10);
+  std::unique_ptr ret = std::make_unique<RxReturn>(std::move(buff));
+  ret->buffer().meta.frame_type = static_cast<uint8_t>(netdev::wire::FrameType::kIpv4);
   RxReturnTransaction rx_transaction(&impl_);
-  rx_transaction.Enqueue(std::move(buff));
+  rx_transaction.Enqueue(std::move(ret));
   rx_transaction.Commit();
 
   uint16_t ret_desc;
@@ -1107,8 +1116,8 @@ TEST_F(NetworkDeviceTest, RespectsRxThreshold) {
 
   // Fill up to half depth one buffer at a time, waiting for each one to be observed by the device
   // driver implementation. The slow dripping of buffers will force the Rx queue to enter
-  // steady-state so we're not racing the return buffer signals with the session started and device
-  // started ones.
+  // steady-state so we're not racing the return buffer signals with the session started and
+  // device started ones.
   uint16_t half_depth = impl_.info().rx_depth / 2;
   for (uint16_t i = 0; i < half_depth; i++) {
     ASSERT_OK(session.SendRx(descriptors[i]));
@@ -1126,7 +1135,9 @@ TEST_F(NetworkDeviceTest, RespectsRxThreshold) {
   // Return the maximum number of buffers that we can return without hitting the threshold.
   for (uint16_t i = impl_.info().rx_depth - impl_.info().rx_threshold - 1; i != 0; i--) {
     RxReturnTransaction return_session(&impl_);
-    return_session.EnqueueWithSize(impl_.PopRxBuffer(), kReturnBufferSize);
+    std::unique_ptr buff = impl_.PopRxBuffer();
+    buff->SetReturnLength(kReturnBufferSize);
+    return_session.Enqueue(std::move(buff));
     return_session.Commit();
     // Check that no more buffers are enqueued.
     ASSERT_STATUS(WaitRxAvailable(zx::time::infinite_past()), ZX_ERR_TIMED_OUT)
@@ -1137,7 +1148,9 @@ TEST_F(NetworkDeviceTest, RespectsRxThreshold) {
 
   // Return one more buffer to cross the threshold.
   RxReturnTransaction return_session(&impl_);
-  return_session.EnqueueWithSize(impl_.PopRxBuffer(), kReturnBufferSize);
+  std::unique_ptr buff = impl_.PopRxBuffer();
+  buff->SetReturnLength(kReturnBufferSize);
+  return_session.Enqueue(std::move(buff));
   return_session.Commit();
   ASSERT_OK(WaitRxAvailable());
   ASSERT_EQ(impl_.rx_buffer_count(), impl_.info().rx_depth);
@@ -1245,12 +1258,13 @@ TEST_F(NetworkDeviceTest, OnlyReceiveOnSubscribedPorts) {
   RxReturnTransaction return_session(&impl_);
   for (size_t i = 0; i < descriptors.size(); i++) {
     std::unique_ptr rx_space = impl_.PopRxBuffer();
-    // Set the port ID to the index, we should expect the session to only see port0.
     uint8_t port_id = static_cast<uint8_t>(i);
-    rx_space->return_buffer().meta.port = port_id;
     // Write some data so the buffer makes it into the session.
-    ASSERT_OK(rx_space->WriteData(&port_id, sizeof(port_id), impl_.VmoGetter()));
-    return_session.Enqueue(std::move(rx_space));
+    ASSERT_OK(rx_space->WriteData(fbl::Span(&port_id, sizeof(port_id)), impl_.VmoGetter()));
+    std::unique_ptr ret = std::make_unique<RxReturn>(std::move(rx_space));
+    // Set the port ID to the index, we should expect the session to only see port 0.
+    ret->buffer().meta.port = port_id;
+    return_session.Enqueue(std::move(ret));
   }
   return_session.Commit();
   ASSERT_OK(session.FetchRx(descriptors.data(), descriptors.size(), &actual));
@@ -1335,6 +1349,98 @@ TEST_F(NetworkDeviceTest, TxOnUnattachedPort) {
                                   netdev::wire::TxReturnFlags::kTxRetNotAvailable));
 }
 
+TEST_F(NetworkDeviceTest, RxCrossSessionChaining) {
+  // Test that attempting to chain Rx buffers that originated from different sessions will cause
+  // the frame to be dropped and that no descriptors will be swallowed.
+  ASSERT_OK(CreateDevice());
+  TestSession session_a;
+  ASSERT_OK(OpenSession(&session_a));
+  ASSERT_OK(session_a.SetPaused(false));
+  ASSERT_OK(WaitSessionStarted());
+  ASSERT_OK(WaitStart());
+  // Send a single descriptor to the device and wait for it to be available.
+  session_a.ResetDescriptor(0);
+  ASSERT_OK(session_a.SendRx(0));
+  ASSERT_OK(WaitRxAvailable());
+  std::unique_ptr buffer_a = impl_.PopRxBuffer();
+  ASSERT_TRUE(buffer_a);
+  // Start a second session.
+  TestSession session_b;
+  ASSERT_OK(OpenSession(&session_b));
+  ASSERT_OK(session_b.SetPaused(false));
+  ASSERT_OK(WaitSessionStarted());
+  session_b.ResetDescriptor(0);
+  ASSERT_OK(session_b.SendRx(0));
+
+  // Close session A, it should no longer be primary. Then we should receive the rx buffer from
+  // session B.
+  ASSERT_OK(session_a.Close());
+  ASSERT_OK(WaitRxAvailable());
+  // We still hold buffer from Session A, it can't be fully closed yet.
+  ASSERT_STATUS(session_a.WaitClosed(zx::time::infinite_past()), ZX_ERR_TIMED_OUT);
+
+  std::unique_ptr buffer_b = impl_.PopRxBuffer();
+  ASSERT_TRUE(buffer_b);
+  rx_space_buffer_t space_b = buffer_b->space();
+
+  // Space from each buffer must've come from different VMOs.
+  ASSERT_NE(buffer_a->space().vmo, buffer_b->space().vmo);
+  // Return both buffers as a single chained rx frame.
+  buffer_a->return_part().length = 0xdead;
+  buffer_b->return_part().length = 0xbeef;
+  auto ret = std::make_unique<RxReturn>();
+  ret->PushPart(std::move(buffer_a));
+  ret->PushPart(std::move(buffer_b));
+  {
+    RxReturnTransaction transaction(&impl_);
+    transaction.Enqueue(std::move(ret));
+    transaction.Commit();
+  }
+
+  // By committing the transaction, the expectation is:
+  // - Session A must've stopped because all its buffers have been returned.
+  // - Session B must not have received any buffers through the FIFO because the frame must be
+  // discarded.
+  // - Buffer B must come back to the available buffer queue because it Session B is still valid and
+  // the frame was discarded.
+  ASSERT_OK(session_a.WaitClosed(zx::time::infinite()));
+  {
+    uint16_t descriptor = 0xFFFF;
+    ASSERT_STATUS(session_b.FetchRx(&descriptor), ZX_ERR_SHOULD_WAIT)
+        << "descriptor=" << descriptor;
+  }
+  ASSERT_OK(WaitRxAvailable());
+  std::unique_ptr buffer_b_again = impl_.PopRxBuffer();
+  ASSERT_TRUE(buffer_b_again);
+  const rx_space_buffer_t& space = buffer_b_again->space();
+  EXPECT_EQ(space.vmo, space_b.vmo);
+  EXPECT_EQ(space.region.offset, space_b.region.offset);
+  EXPECT_EQ(space.region.length, space_b.region.length);
+  {
+    RxReturnTransaction transaction(&impl_);
+    transaction.Enqueue(std::move(buffer_b_again));
+    transaction.Commit();
+  }
+}
+
+TEST_F(NetworkDeviceTest, SessionRejectsChainedRxSpace) {
+  // Tests that sessions do not accept chained descriptors on the Rx FIFO.
+  ASSERT_OK(CreateDevice());
+  TestSession session;
+  ASSERT_OK(OpenSession(&session));
+  ASSERT_OK(session.SetPaused(false));
+  ASSERT_OK(WaitStart());
+  session.ResetDescriptor(1);
+  {
+    buffer_descriptor_t* desc = session.ResetDescriptor(0);
+    desc->chain_length = 1;
+    desc->nxt = 1;
+  }
+  ASSERT_OK(session.SendRx(0));
+  // Session will be closed because of bad descriptor.
+  ASSERT_OK(session.WaitClosed(zx::time::infinite()));
+}
+
 enum class BufferReturnMethod {
   NoReturn,
   ManualReturn,
@@ -1400,7 +1506,7 @@ TEST_P(RxTxBufferReturnTest, TestRaceFramesWithDeviceStop) {
         if (return_method == BufferReturnMethod::ManualReturn) {
           ASSERT_OK(WaitRxAvailable());
           std::unique_ptr buffer = impl_.PopRxBuffer();
-          buffer->return_buffer().length = kDefaultBufferLength;
+          buffer->return_part().length = kDefaultBufferLength;
           ASSERT_FALSE(impl_.PopRxBuffer());
           manual_return = [this, buffer = std::move(buffer)]() mutable {
             RxReturnTransaction transact(&impl_);
@@ -1455,7 +1561,7 @@ TEST_P(RxTxBufferReturnTest, TestRaceFramesWithDeviceStop) {
         ASSERT_FALSE(session_wait.pending & ZX_CHANNEL_PEER_CLOSED);
         RxReturnTransaction return_rx(&impl_);
         for (std::unique_ptr buffer = impl_.PopRxBuffer(); buffer; buffer = impl_.PopRxBuffer()) {
-          buffer->return_buffer().length = 0;
+          buffer->return_part().length = 0;
           return_rx.Enqueue(std::move(buffer));
         }
         return_rx.Commit();

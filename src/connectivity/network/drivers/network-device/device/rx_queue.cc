@@ -43,30 +43,35 @@ zx::status<std::unique_ptr<RxQueue>> RxQueue::Create(DeviceInterface* parent) {
 
   auto device_depth = parent->info().rx_depth;
 
-  queue->space_buffers_.reset(new (&ac) rx_space_buffer_t[device_depth]);
+  std::unique_ptr<rx_space_buffer_t[]> buffers(new (&ac) rx_space_buffer_t[device_depth]);
   if (!ac.check()) {
     return zx::error(ZX_ERR_NO_MEMORY);
   }
-
-  queue->buffer_parts_.reset(new (&ac) BufferParts[device_depth]);
-  if (!ac.check()) {
-    return zx::error(ZX_ERR_NO_MEMORY);
-  }
-  for (uint32_t i = 0; i < device_depth; i++) {
-    queue->space_buffers_[i].data.parts_list = queue->buffer_parts_[i].data();
-  }
-
   zx_status_t status;
   if ((status = zx::port::create(0, &queue->rx_watch_port_)) != ZX_OK) {
     LOGF_ERROR("network-device: failed to create rx watch port: %s", zx_status_get_string(status));
     return zx::error(status);
   }
 
+  using ThreadArgs = std::tuple<RxQueue*, std::unique_ptr<rx_space_buffer_t[]>>;
+  auto* thread_args = new (&ac) ThreadArgs(queue.get(), std::move(buffers));
+  if (!ac.check()) {
+    return zx::error(ZX_ERR_NO_MEMORY);
+  }
+
   thrd_t watch_thread;
-  if (thrd_create_with_name(
-          &watch_thread, [](void* ctx) { return reinterpret_cast<RxQueue*>(ctx)->WatchThread(); },
-          reinterpret_cast<void*>(queue.get()), "netdevice:rx_watch") != thrd_success) {
-    LOG_ERROR("network-device: rx queue failed to create thread");
+  if (int result = thrd_create_with_name(
+          &watch_thread,
+          [](void* ctx) {
+            auto* args = reinterpret_cast<ThreadArgs*>(ctx);
+            auto [queue, space_buffers] = std::move(*args);
+            delete args;
+            return queue->WatchThread(std::move(space_buffers));
+          },
+          thread_args, "netdevice:rx_watch");
+      result != thrd_success) {
+    LOGF_ERROR("network-device: rx queue failed to create thread: %d", result);
+    delete thread_args;
     return zx::error(ZX_ERR_INTERNAL);
   }
   queue->rx_watch_thread_ = watch_thread;
@@ -186,21 +191,86 @@ zx_status_t RxQueue::PrepareBuff(rx_space_buffer_t* buff) {
   return ZX_OK;
 }
 
-void RxQueue::CompleteRxList(const rx_buffer_t* rx, size_t count) {
+void RxQueue::CompleteRxList(const rx_buffer_t* rx_buffer_list, size_t count) {
   fbl::AutoLock lock(&parent_->rx_lock());
   SharedAutoLock control_lock(&parent_->control_lock());
   device_buffer_count_ -= count;
-  while (count--) {
-    auto& session_buffer = in_flight_->Get(rx->id);
-    session_buffer.session->AssertParentControlLockShared(*parent_);
-    session_buffer.session->AssertParentRxLock(*parent_);
-    if (session_buffer.session->CompleteRx(session_buffer.descriptor_index, rx)) {
-      // We can reuse the descriptor.
-      available_queue_->Push(rx->id);
-    } else {
-      in_flight_->Free(rx->id);
+  for (const auto& rx_buffer : fbl::Span(rx_buffer_list, count)) {
+    ZX_ASSERT_MSG(rx_buffer.data_count <= MAX_BUFFER_PARTS,
+                  "too many buffer parts in rx buffer: %ld", rx_buffer.data_count);
+
+    std::array<SessionRxBuffer, MAX_BUFFER_PARTS> session_parts;
+    auto session_parts_iter = session_parts.begin();
+    bool drop_frame = false;
+    uint32_t total_length = 0;
+
+    Session* primary_session = nullptr;
+    fbl::Span rx_parts(rx_buffer.data_list, rx_buffer.data_count);
+    for (const rx_buffer_part_t& rx_part : rx_parts) {
+      InFlightBuffer& in_flight_buffer = in_flight_->Get(rx_part.id);
+
+      total_length += rx_part.length;
+      *session_parts_iter++ = SessionRxBuffer{
+          .descriptor = in_flight_buffer.descriptor_index,
+          .offset = rx_part.offset,
+          .length = rx_part.length,
+      };
+
+      if (primary_session && in_flight_buffer.session != primary_session) {
+        // Received buffers from different sessions, meaning the primary session just changed and
+        // the device chained things together.
+        // If we don't want to drop this frame, we'd need to figure out which one is the new primary
+        // session, try and allocate buffers from it and copy things.
+        // That's complicated enough and this is unexpected enough that the current decision is to
+        // drop the frame on the floor.
+        LOGF_WARN(
+            "network-device: dropping chained frame with %ld buffers spanning different sessions: "
+            "%s, %s",
+            rx_buffer.data_count, primary_session->name(), in_flight_buffer.session->name());
+        drop_frame = true;
+      }
+      ZX_DEBUG_ASSERT(in_flight_buffer.session != nullptr);
+      primary_session = in_flight_buffer.session;
     }
-    rx++;
+
+    if (!primary_session) {
+      // Buffer contained no parts.
+      LOG_WARN("network-device: attempted to return an rx buffer with no parts");
+      continue;
+    }
+
+    // Drop any frames containing no data or where inconsistencies were found above.
+    if (total_length == 0 || drop_frame) {
+      for (const rx_buffer_part_t& rx_part : rx_parts) {
+        InFlightBuffer& in_flight_buffer = in_flight_->Get(rx_part.id);
+        in_flight_buffer.session->AssertParentRxLock(*parent_);
+        if (in_flight_buffer.session->CompleteUnfulfilledRx()) {
+          // Make buffer available again for reuse if session is still valid.
+          available_queue_->Push(rx_part.id);
+        } else {
+          // Free it otherwise.
+          in_flight_->Free(rx_part.id);
+        }
+      }
+      continue;
+    }
+
+    const RxFrameInfo frame_info = {
+        .meta = rx_buffer.meta,
+        .buffers = fbl::Span(session_parts.begin(), session_parts_iter),
+        .total_length = total_length,
+    };
+    primary_session->AssertParentControlLockShared(*parent_);
+    primary_session->AssertParentRxLock(*parent_);
+    if (primary_session->CompleteRx(frame_info)) {
+      std::for_each(rx_parts.begin(), rx_parts.end(),
+                    [this](const rx_buffer_part_t& rx)
+                        __TA_REQUIRES(parent_->rx_lock()) { available_queue_->Push(rx.id); });
+    } else {
+      std::for_each(rx_parts.begin(), rx_parts.end(),
+                    [this](const rx_buffer_part_t& rx)
+                        __TA_REQUIRES(parent_->rx_lock()) { in_flight_->Free(rx.id); });
+    }
   }
   parent_->CommitAllSessions();
   if (device_buffer_count_ <= parent_->rx_notify_threshold()) {
@@ -208,8 +278,8 @@ void RxQueue::CompleteRxList(const rx_buffer_t* rx, size_t count) {
   }
 }
 
-int RxQueue::WatchThread() {
-  auto loop = [this]() -> zx_status_t {
+int RxQueue::WatchThread(std::unique_ptr<rx_space_buffer_t[]> space_buffers) {
+  auto loop = [this, space_buffers = std::move(space_buffers)]() -> zx_status_t {
     fbl::RefPtr<RefCountedFifo> observed_fifo(nullptr);
     bool waiting_on_fifo = false;
     for (;;) {
@@ -266,7 +336,7 @@ int RxQueue::WatchThread() {
       size_t push_count = parent_->info().rx_depth - device_buffer_count_;
       if (parent_->IsDataPlaneOpen()) {
         for (; pushed < push_count; pushed++) {
-          if (PrepareBuff(&space_buffers_[pushed]) != ZX_OK) {
+          if (PrepareBuff(&space_buffers[pushed]) != ZX_OK) {
             break;
           }
         }
@@ -289,7 +359,7 @@ int RxQueue::WatchThread() {
       control_lock.release();
 
       if (pushed != 0) {
-        parent_->QueueRxSpace(space_buffers_.get(), static_cast<uint32_t>(pushed));
+        parent_->QueueRxSpace(space_buffers.get(), static_cast<uint32_t>(pushed));
       }
 
       // No point waiting in RX fifo if we filled the device buffers, we'll get a signal to wait

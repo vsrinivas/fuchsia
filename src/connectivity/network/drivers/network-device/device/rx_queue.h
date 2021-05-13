@@ -44,7 +44,8 @@ class RxQueue {
   // Called by the DeviceInterface parent when the session is marked as dead.
   void PurgeSession(Session& session);
   // Returns rx buffers to their respective sessions.
-  void CompleteRxList(const rx_buffer_t* rx, size_t count) __TA_EXCLUDES(parent_->rx_lock());
+  void CompleteRxList(const rx_buffer_t* rx_buffer_list, size_t count)
+      __TA_EXCLUDES(parent_->rx_lock());
   // Notifies watcher thread that the primary session changed.
   void TriggerSessionChanged();
   // Poke watcher thread to try to fetch more rx descriptors.
@@ -89,7 +90,7 @@ class RxQueue {
   // Returns ZX_ERR_NO_RESOURCES if there are no buffers available.
   zx_status_t PrepareBuff(rx_space_buffer_t* buff) __TA_REQUIRES(parent_->rx_lock())
       __TA_REQUIRES_SHARED(parent_->control_lock());
-  int WatchThread();
+  int WatchThread(std::unique_ptr<rx_space_buffer_t[]> space_buffers);
   // Reclaims the buffer with `id` from the device. If the buffer's session is still valid, gives it
   // to the session, otherwise drops it.
   void ReclaimBuffer(uint32_t id) __TA_REQUIRES(parent_->rx_lock());
@@ -99,10 +100,6 @@ class RxQueue {
   std::unique_ptr<IndexedSlab<InFlightBuffer>> in_flight_ __TA_GUARDED(parent_->rx_lock());
   std::unique_ptr<RingQueue<uint32_t>> available_queue_ __TA_GUARDED(parent_->rx_lock());
   size_t device_buffer_count_ __TA_GUARDED(parent_->rx_lock()) = 0;
-
-  // there are pre-allocated buffers that are only used by the rx watch thread.
-  std::unique_ptr<rx_space_buffer_t[]> space_buffers_;
-  std::unique_ptr<BufferParts[]> buffer_parts_;
 
   zx::port rx_watch_port_;
   std::optional<thrd_t> rx_watch_thread_{};

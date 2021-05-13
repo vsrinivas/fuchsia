@@ -17,7 +17,8 @@
 namespace network {
 namespace tun {
 
-class Buffer;
+class TxBuffer;
+class RxBuffer;
 
 // A data structure that stores keyed VMOs and allocates buffers.
 //
@@ -86,11 +87,12 @@ class VmoStore {
   // T data;
   // src_store.Read(src_id, src_offset, len, back_inserter(data));
   // dst_store.Write(dst_id, dst_offset, len, data.begin());
-  static zx_status_t Copy(VmoStore* src_store, uint8_t src_id, size_t src_offset,
-                          VmoStore* dst_store, uint8_t dst_id, size_t dst_offset, size_t len);
+  static zx_status_t Copy(VmoStore& src_store, uint8_t src_id, size_t src_offset,
+                          VmoStore& dst_store, uint8_t dst_id, size_t dst_offset, size_t len);
 
-  Buffer MakeTxBuffer(const tx_buffer_t* tx, bool get_meta);
-  Buffer MakeRxSpaceBuffer(const rx_space_buffer_t* space);
+  TxBuffer MakeTxBuffer(const tx_buffer_t& tx, bool get_meta);
+  RxBuffer MakeRxSpaceBuffer(const rx_space_buffer_t& space);
+  RxBuffer MakeEmptyRxBuffer();
 
  private:
   zx::status<fbl::Span<uint8_t>> GetMappedVmo(uint8_t id);
@@ -120,14 +122,36 @@ class Buffer {
   zx_status_t Write(const uint8_t* data, size_t count);
   zx_status_t Write(const fidl::VectorView<uint8_t>& data);
   zx_status_t Write(const std::vector<uint8_t>& data);
-  // Copies data from `other` into this buffer, returning the number of bytes written in `total`.
-  zx_status_t CopyFrom(Buffer* other, size_t* total);
+  // Copies data from `other` into this buffer, returning the number of bytes written on success.
+  zx::status<size_t> CopyFrom(Buffer& other);
+  // Returns this buffer's length in bytes.
+  uint64_t length() const { return total_length_; }
 
-  inline fuchsia_hardware_network::wire::FrameType frame_type() const {
-    return frame_type_.value();
-  }
+ protected:
+  struct BufferPart {
+    uint32_t buffer_id;
+    uint8_t vmo_id;
+    buffer_region_t region;
+  };
 
-  inline uint32_t id() const { return id_; }
+  void PushPart(const BufferPart& part);
+  explicit Buffer(VmoStore* vmo_store) : vmo_store_(vmo_store) {}
+
+  fbl::Span<BufferPart> parts() { return fbl::Span(parts_.data(), parts_count_); }
+  fbl::Span<const BufferPart> parts() const { return fbl::Span(parts_.data(), parts_count_); }
+
+ private:
+  // Pointer to parent VMO store, not owned.
+  VmoStore* const vmo_store_;
+  std::array<BufferPart, MAX_BUFFER_PARTS> parts_;
+  size_t parts_count_ = 0;
+  uint64_t total_length_ = 0;
+};
+
+class TxBuffer : public Buffer {
+ public:
+  inline fuchsia_hardware_network::wire::FrameType frame_type() const { return frame_type_; }
+  uint32_t id() const { return parts().begin()->buffer_id; }
 
   inline std::optional<fuchsia_net_tun::wire::FrameMetadata> TakeMetadata() {
     return std::exchange(meta_, std::nullopt);
@@ -135,20 +159,50 @@ class Buffer {
 
  protected:
   friend VmoStore;
-  // Creates a device buffer from a tx request buffer.
-  Buffer(const tx_buffer_t* tx, bool get_meta, VmoStore* vmo_store);
-  // Creates a device buffer from an rx space buffer.
-  Buffer(const rx_space_buffer_t* space, VmoStore* vmo_store);
+  TxBuffer(const tx_buffer_t& tx, bool get_meta, VmoStore* vmo_store);
 
  private:
-  const uint32_t id_{};
-  // Pointer to parent VMO store, not owned.
-  VmoStore* const vmo_store_;
-  const uint8_t vmo_id_;
-  std::array<buffer_region_t, MAX_BUFFER_PARTS> parts_{};
-  const size_t parts_count_{};
+  fuchsia_hardware_network::wire::FrameType frame_type_;
   std::optional<fuchsia_net_tun::wire::FrameMetadata> meta_;
-  const std::optional<fuchsia_hardware_network::wire::FrameType> frame_type_;
+};
+
+class RxBuffer : public Buffer {
+ public:
+  // Adds more rx buffer space to this buffer.
+  void PushRxSpace(const rx_space_buffer_t& space);
+
+  // Calls the provided closure function once for each buffer space in this RxBuffer.
+  template <typename F>
+  void WithSpace(F fn) {
+    for (BufferPart& part : parts()) {
+      fn(rx_space_buffer_t{
+          .id = part.buffer_id,
+          .vmo = part.vmo_id,
+          .region = part.region,
+      });
+    }
+  }
+
+  // Calls the provided closure function once for each return buffer part in this RxBuffer. The
+  // total length of the buffer parts is capped to `written_length` bytes.
+  template <typename F>
+  void WithReturn(size_t written_length, F fn) {
+    for (BufferPart& part : parts()) {
+      size_t length = std::min(written_length, part.region.length);
+      // Length is expected to be less than max uint32 because of max MTU, but guard it here with a
+      // debug assertion so the cast is still clearly safe.
+      ZX_DEBUG_ASSERT(length <= std::numeric_limits<uint32_t>::max());
+      fn(rx_buffer_part_t{
+          .id = part.buffer_id,
+          .length = static_cast<uint32_t>(length),
+      });
+      written_length -= length;
+    }
+  }
+
+ protected:
+  friend VmoStore;
+  explicit RxBuffer(VmoStore* vmo_store) : Buffer(vmo_store) {}
 };
 
 }  // namespace tun

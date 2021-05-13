@@ -14,7 +14,7 @@
 /// The API contract is based on three key concepts:
 /// - Frame Types
 /// - Receive and Transmit buffers
-/// - `BufferData` memory layout
+/// - Memory layout
 ///
 /// Frame Types are the defined contract that is exposed to applications, which convey the data type
 /// contained in a tx or rx buffer. The supported frame types are defined in
@@ -81,8 +81,7 @@ using fuchsia.hardware.network.mac;
 /// frames they receive.
 const uint32 FEATURE_NO_AUTO_SNOOP = 0x01;
 
-/// Maximum number of [`fuchsia.hardware.network.device/BufferRegion`] parts in a
-/// [`fuchsia.hardware.network.device/BufferData`].
+/// Maximum number of disjoint parts a buffer may have.
 // NOTE: the number 4 should cover the most common use case for split buffers: 1 contiguous buffer
 // for header, 1 contiguous buffer for data, 0 or 1 contiguous buffer for trailer. Rounded up to
 // nearest power of two.
@@ -130,16 +129,6 @@ struct BufferRegion {
     uint64 length;
 };
 
-/// A buffer representation that references the data inside a VMO.
-struct BufferData {
-    /// Identifier of VMO backing the data in this buffer.
-    /// The VMO identifier matches the one reported to devices through
-    /// [`fuchsia.hardware.network.device/NetworkDeviceImpl.PrepareVmo`].
-    vmo_id vmo_id;
-    /// Regions of VMO holding frame data.
-    vector<BufferRegion>:MAX_BUFFER_PARTS parts;
-};
-
 /// No extra frame metadata, [`fuchsia.hardware.network.device/FrameInfo.info_type`] must be
 /// [`fuchsia.hardware.network/InfoType.NO_INFO`].
 struct NoInfo {
@@ -176,8 +165,10 @@ struct BufferMetadata {
 struct TxBuffer {
     /// Unique buffer identifier.
     buffer_id id;
-    /// Description of data in this buffer.
-    BufferData data;
+    /// Identifier of VMO backing the data in this buffer.
+    vmo_id vmo;
+    /// Regions of VMO holding frame data.
+    vector<BufferRegion>:MAX_BUFFER_PARTS data;
     /// Metadata associated with this buffer.
     BufferMetadata meta;
     /// Length of header bytes in the data contained in this buffer. Will always be either 0 or the
@@ -191,25 +182,42 @@ struct TxBuffer {
 };
 
 /// A buffer with allocated space to receive frames in. An `RxSpaceBuffer` must always be returned
-/// as an [`fuchsia.hardware.network.device/RxBuffer`] using
-/// [`fuchsia.hardware.network.device/NetworkDeviceIfc.CompleteRx`].
+/// as an [`fuchsia.hardware.network.device/RxBufferPart`] within a
+/// [`fuchsia.hardware.network.device/NetworkDeviceIfc.RxBuffer`].
 struct RxSpaceBuffer {
     /// Unique buffer identifier.
     buffer_id id;
-    /// Description of data in this buffer.
-    BufferData data;
+    /// Identifier of VMO backing the data in this buffer.
+    vmo_id vmo;
+    /// VMO region where buffer space is located.
+    BufferRegion region;
+};
+
+/// A single contiguous part of an [`fuchsia.hardware.network.device/RxBuffer`], created from a
+/// [`fuchsia.hardware.network.device/RxSpaceBuffer`].
+struct RxBufferPart {
+    /// The buffer identifier informed in the [`fuchsia.hardware.network.device/RxSpaceBuffer`] that
+    /// originated this `RxBuffer`.
+    buffer_id id;
+    /// Offset in bytes from [`fuchsia.hardware.network.device/RxSpaceBuffer`]'s start where inbound
+    /// data begins.
+    ///
+    /// This is a relative offset within the region defined by the originating space, not an
+    /// absolute offset in the space's VMO.
+    uint32 offset;
+    /// The total length in bytes written in the [`fuchsia.hardware.network.device/RxSpaceBuffer`]
+    /// referenced by `id`, excluding any `offset` bytes.
+    uint32 length;
 };
 
 /// A buffer containing a single frame received by the device.
 struct RxBuffer {
-    /// The buffer identifier informed in the [`fuchsia.hardware.network.device/RxSpaceBuffer`] that
-    /// originated this `RxBuffer`.
-    buffer_id id;
-    /// The total length of bytes written in the [`fuchsia.hardware.network.device/RxSpaceBuffer`]
-    /// referenced by `id`, excluding any `offset` bytes.
-    uint64 length;
     /// Metadata associated with buffer.
     BufferMetadata meta;
+    /// Fulfilled rx buffer space comprising this frame.
+    ///
+    /// Must have at least one part.
+    vector<RxBufferPart>:MAX_BUFFER_PARTS data;
 };
 
 /// The result of a tx operation, reported to [`fuchsia.hardware.network.device/NetworkDeviceIfc`]
@@ -481,15 +489,15 @@ protocol NetworkDeviceImpl {
     /// length.
     QueueRxSpace(vector<RxSpaceBuffer>:MAX buffers);
     /// Informs device that a new VMO is being used to store frame data.
-    /// Implementers must store the VMO handle referenced by `vmo_id` until
+    /// Implementers must store the VMO handle referenced by `id` until
     /// [`fuchsia.hardware.network.device/NetworkDeviceImpl.ReleaseVmo`] is called with the same
-    /// `vmo_id`.
-    PrepareVmo(uint8 vmo_id, zx.handle:VMO vmo);
-    /// Device may dispose of all references to the VMO referenced by vmo_id, no more buffers will
+    /// `id`.
+    PrepareVmo(vmo_id id, zx.handle:VMO vmo);
+    /// Device may dispose of all references to the VMO referenced by `id`, no more buffers will
     /// be sent with this identifier.
     /// `ReleaseVmo` is guaranteed to only be called when the implementation holds no buffers
-    /// that reference that `vmo_id`.
-    ReleaseVmo(uint8 vmo_id);
+    /// that reference that `id`.
+    ReleaseVmo(vmo_id id);
     /// Informs the device that it should start or stop reporting snooped transmit frames through
     /// [`fuchsia.hardware.network.device/NetworkDeviceIfc.Snoop`].
     SetSnoop(bool snoop);

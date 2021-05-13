@@ -30,6 +30,24 @@ struct RefCountedFifo : public fbl::RefCounted<RefCountedFifo> {
   zx::fifo fifo;
 };
 
+// Contains information about a filled Rx descriptor.
+//
+// Used to convey fulfilled rx frames in terms of descriptor indices.
+struct SessionRxBuffer {
+  uint16_t descriptor;
+  uint32_t offset;
+  uint32_t length;
+};
+
+// Helper struct containing information on an incoming complete rx frame.
+//
+// Used to cache common calculation and reduce number of arguments in functions.
+struct RxFrameInfo {
+  const buffer_metadata_t& meta;
+  fbl::Span<const SessionRxBuffer> buffers;
+  uint32_t total_length;
+};
+
 enum class DeviceStatus { STARTING, STARTED, STOPPING, STOPPED };
 
 enum class PendingDeviceOperation { NONE, START, STOP };
@@ -100,7 +118,7 @@ class DeviceInterface : public fidl::WireServer<netdev::Device>,
   // Commits all pending rx buffers in all active sessions.
   void CommitAllSessions() __TA_REQUIRES_SHARED(control_lock_) __TA_REQUIRES(rx_lock_);
   // Copies the received data described by `buff` to all sessions other than `owner`.
-  void CopySessionData(const Session& owner, uint16_t owner_index, const rx_buffer_t* buff)
+  void CopySessionData(const Session& owner, const RxFrameInfo& frame_info)
       __TA_REQUIRES_SHARED(control_lock_) __TA_REQUIRES(rx_lock_);
   // Notifies all listening sessions of a new tx transaction from session `owner` and descriptor
   // `owner_index`.

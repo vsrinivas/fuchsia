@@ -13,8 +13,6 @@
 namespace network {
 namespace tun {
 
-constexpr uint16_t kFifoDepth = 128;
-
 zx::status<std::unique_ptr<DeviceAdapter>> DeviceAdapter::Create(
     async_dispatcher_t* dispatcher, DeviceAdapterParent* parent, bool online,
     std::optional<fuchsia_net::wire::MacAddress> mac) {
@@ -87,10 +85,14 @@ void DeviceAdapter::NetworkDeviceImplStop(network_device_impl_stop_callback call
     fbl::AutoLock lock(&rx_lock_);
     rx_available_ = false;
     while (!rx_buffers_.empty()) {
-      const Buffer& buffer = rx_buffers_.front();
-      rx_buffer_t return_buffer = {
-          .id = buffer.id(),
+      const rx_space_buffer_t& buffer = rx_buffers_.front();
+      rx_buffer_part_t part = {
+          .id = buffer.id,
           .length = 0,
+      };
+      rx_buffer_t return_buffer = {
+          .data_list = &part,
+          .data_count = 1,
       };
       device_iface_.CompleteRx(&return_buffer, 1);
       rx_buffers_.pop();
@@ -101,7 +103,7 @@ void DeviceAdapter::NetworkDeviceImplStop(network_device_impl_stop_callback call
     fbl::AutoLock lock(&tx_lock_);
     tx_available_ = false;
     while (!tx_buffers_.empty()) {
-      const Buffer& buffer = tx_buffers_.front();
+      const TxBuffer& buffer = tx_buffers_.front();
       tx_result_t result = {
           .id = buffer.id(),
           .status = ZX_ERR_UNAVAILABLE,
@@ -119,17 +121,17 @@ void DeviceAdapter::NetworkDeviceImplGetInfo(device_info_t* out_info) { *out_inf
 void DeviceAdapter::NetworkDeviceImplQueueTx(const tx_buffer_t* buf_list, size_t buf_count) {
   {
     fbl::AutoLock tx_lock(&tx_lock_);
+    fbl::Span buffers(buf_list, buf_count);
     if (!tx_available_) {
       FX_VLOGF(1, "tun", "Discarding %d tx buffers, tx queue is invalid", tx_available_);
-      while (buf_count--) {
-        EnqueueTx(buf_list->id, ZX_ERR_UNAVAILABLE);
-        buf_list++;
+      for (const tx_buffer_t& b : buffers) {
+        EnqueueTx(b.id, ZX_ERR_UNAVAILABLE);
       }
       CommitTx();
       return;
     }
-    while (buf_count--) {
-      tx_buffers_.emplace(vmos_.MakeTxBuffer(buf_list, parent_->config().report_metadata));
+    for (const tx_buffer_t& b : buffers) {
+      tx_buffers_.emplace(vmos_.MakeTxBuffer(b, parent_->config().report_metadata));
       buf_list++;
     }
   }
@@ -141,19 +143,23 @@ void DeviceAdapter::NetworkDeviceImplQueueRxSpace(const rx_space_buffer_t* buf_l
   bool has_buffers;
   {
     fbl::AutoLock lock(&rx_lock_);
+    fbl::Span buffers(buf_list, buf_count);
     if (!rx_available_) {
-      while (buf_count--) {
-        rx_buffer_t buffer = {
-            .id = buf_list->id,
+      for (const rx_space_buffer_t& space : buffers) {
+        rx_buffer_part_t part = {
+            .id = space.id,
             .length = 0,
         };
+        rx_buffer_t buffer = {
+            .data_list = &part,
+            .data_count = 1,
+        };
         device_iface_.CompleteRx(&buffer, 1);
-        buf_list++;
       }
       return;
     }
-    while (buf_count--) {
-      rx_buffers_.emplace(vmos_.MakeRxSpaceBuffer(buf_list++));
+    for (const rx_space_buffer_t& space : buffers) {
+      rx_buffers_.push(space);
     }
     has_buffers = !rx_buffers_.empty();
   }
@@ -231,7 +237,7 @@ bool DeviceAdapter::HasSession() {
   return has_sessions_;
 }
 
-bool DeviceAdapter::TryGetTxBuffer(fit::callback<zx_status_t(Buffer*, size_t)> callback) {
+bool DeviceAdapter::TryGetTxBuffer(fit::callback<zx_status_t(TxBuffer&, size_t)> callback) {
   uint32_t id;
 
   fbl::AutoLock lock(&tx_lock_);
@@ -240,7 +246,7 @@ bool DeviceAdapter::TryGetTxBuffer(fit::callback<zx_status_t(Buffer*, size_t)> c
   }
   auto& buff = tx_buffers_.front();
   auto avail = tx_buffers_.size() - 1;
-  zx_status_t status = callback(&buff, avail);
+  zx_status_t status = callback(buff, avail);
   id = buff.id();
   tx_buffers_.pop();
 
@@ -260,22 +266,24 @@ zx::status<size_t> DeviceAdapter::WriteRxFrame(
     }
   }
 
+  if (count > parent_->config().mtu) {
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  }
+
   fbl::AutoLock lock(&rx_lock_);
   if (rx_buffers_.empty()) {
     return zx::error(ZX_ERR_SHOULD_WAIT);
   }
-  auto& buff = rx_buffers_.front();
-  if (zx_status_t status = buff.Write(data, count); status != ZX_OK) {
+  zx::status alloc = AllocRxSpace(count);
+  if (alloc.is_error()) {
+    return alloc.take_error();
+  }
+  RxBuffer buffer = std::move(alloc.value());
+  if (zx_status_t status = buffer.Write(data, count); status != ZX_OK) {
+    ReclaimRxSpace(std::move(buffer));
     return zx::error(status);
   }
-
-  uint32_t id = buff.id();
-  rx_buffers_.pop();
-
-  // NB: cast is only safe as long as MAX_MTU in FIDL is less than uint32 max. Guard that with a
-  // static assertion.
-  static_assert(fuchsia_net_tun::wire::kMaxMtu <= std::numeric_limits<uint32_t>::max());
-  EnqueueRx(frame_type, id, static_cast<uint32_t>(count), meta);
+  EnqueueRx(frame_type, std::move(buffer), count, meta);
   CommitRx();
 
   return zx::ok(rx_buffers_.size());
@@ -298,36 +306,34 @@ void DeviceAdapter::CopyTo(DeviceAdapter* other, bool return_failed_buffers) {
   fbl::AutoLock rx_lock(&other->rx_lock_);
 
   while (!tx_buffers_.empty()) {
-    auto& tx_buff = tx_buffers_.front();
-    if (other->rx_buffers_.empty()) {
+    TxBuffer& tx_buff = tx_buffers_.front();
+    zx::status alloc_rx = other->AllocRxSpace(tx_buff.length());
+    if (alloc_rx.is_error()) {
       if (!return_failed_buffers) {
         // stop once we run out of rx buffers to copy to
         FX_VLOG(1, "tun", "DeviceAdapter:CopyTo: no more rx buffers");
         break;
       }
       EnqueueTx(tx_buff.id(), ZX_ERR_NO_RESOURCES);
+      tx_buffers_.pop();
+      continue;
+    }
+    RxBuffer rx_buff = std::move(alloc_rx.value());
+    zx::status status = rx_buff.CopyFrom(tx_buff);
+    if (status.is_error()) {
+      FX_LOGF(ERROR, "tun", "DeviceAdapter:CopyTo: Failed to copy buffer: %s",
+              status.status_string());
+      EnqueueTx(tx_buff.id(), status.status_value());
+      other->ReclaimRxSpace(std::move(rx_buff));
     } else {
-      auto& rx_buff = other->rx_buffers_.front();
-      size_t actual;
-      zx_status_t status = rx_buff.CopyFrom(&tx_buff, &actual);
-      if (status != ZX_OK) {
-        FX_LOGF(ERROR, "tun", "DeviceAdapter:CopyTo: Failed to copy buffer: %s",
-                zx_status_get_string(status));
-        EnqueueTx(tx_buff.id(), status);
-      } else {
-        // enqueue the data to be returned in other, and enqueue the complete tx in self.
-        std::optional meta = tx_buff.TakeMetadata();
-        if (meta.has_value()) {
-          meta->flags = 0;
-        }
-        // NB: cast is only safe as long as MAX_MTU in FIDL is less than uint32 max. Guard that with
-        // a static assertion.
-        static_assert(fuchsia_net_tun::wire::kMaxMtu <= std::numeric_limits<uint32_t>::max());
-        other->EnqueueRx(tx_buff.frame_type(), rx_buff.id(), static_cast<uint32_t>(actual), meta);
-        EnqueueTx(tx_buff.id(), ZX_OK);
-
-        other->rx_buffers_.pop();
+      size_t length = status.value();
+      // Enqueue the data to be returned in other, and enqueue the complete tx in self.
+      std::optional meta = tx_buff.TakeMetadata();
+      if (meta.has_value()) {
+        meta->flags = 0;
       }
+      other->EnqueueRx(tx_buff.frame_type(), std::move(rx_buff), length, meta);
+      EnqueueTx(tx_buff.id(), ZX_OK);
     }
     tx_buffers_.pop();
   }
@@ -351,22 +357,39 @@ void DeviceAdapter::TeardownSync() {
   sync_completion_wait_deadline(&completion, ZX_TIME_INFINITE);
 }
 
-void DeviceAdapter::EnqueueRx(fuchsia_hardware_network::wire::FrameType frame_type,
-                              uint32_t buffer_id, uint32_t length,
-                              const std::optional<fuchsia_net_tun::wire::FrameMetadata>& meta) {
-  auto& ret = return_rx_list_.emplace_back();
-  ret.id = buffer_id;
-  ret.meta.frame_type = static_cast<uint32_t>(frame_type);
-  ret.length = length;
+void DeviceAdapter::EnqueueRx(fuchsia_hardware_network::wire::FrameType frame_type, RxBuffer buffer,
+                              size_t length,
+                              const std::optional<fuchsia_net_tun::wire::FrameMetadata>& meta)
+    __TA_REQUIRES(rx_lock_) {
+  // Written length must always fit the buffer.
+  ZX_DEBUG_ASSERT(buffer.length() >= length);
+  size_t old_rx_parts_count = return_rx_parts_count_;
+  buffer.WithReturn(length, [this](const rx_buffer_part_t& part) {
+    // WithReturn is called inline.
+    []() __TA_ASSERT(rx_lock_) {}();
+
+    // We should not be producing zero-length parts.
+    ZX_DEBUG_ASSERT(part.length != 0);
+    // Can't accumulate more parts than can fit in our array.
+    ZX_ASSERT(return_rx_parts_count_ <= return_rx_parts_.size());
+    return_rx_parts_[return_rx_parts_count_++] = part;
+  });
+  rx_buffer_t& ret = return_rx_list_.emplace_back(rx_buffer_t{
+      .meta =
+          {
+              .port = kPort0,
+              .info_type = static_cast<uint32_t>(fuchsia_hardware_network::wire::InfoType::kNoInfo),
+              .frame_type = static_cast<uint8_t>(frame_type),
+          },
+      .data_list = &return_rx_parts_[old_rx_parts_count],
+      .data_count = return_rx_parts_count_ - old_rx_parts_count,
+  });
   if (meta) {
     ret.meta.flags = meta->flags;
     ret.meta.info_type = static_cast<uint32_t>(meta->info_type);
     if (meta->info_type != fuchsia_hardware_network::wire::InfoType::kNoInfo) {
       FX_LOGF(WARNING, "tun", "Unrecognized info type %d", ret.meta.info_type);
     }
-  } else {
-    ret.meta.flags = 0;
-    ret.meta.info_type = static_cast<uint32_t>(fuchsia_hardware_network::wire::InfoType::kNoInfo);
   }
 }
 
@@ -374,6 +397,7 @@ void DeviceAdapter::CommitRx() {
   if (!return_rx_list_.empty()) {
     device_iface_.CompleteRx(return_rx_list_.data(), return_rx_list_.size());
     return_rx_list_.clear();
+    return_rx_parts_count_ = 0;
   }
 }
 
@@ -400,6 +424,8 @@ DeviceAdapter::DeviceAdapter(DeviceAdapterParent* parent, bool online)
           .rx_threshold = kFifoDepth / 2,
           .max_buffer_length = fuchsia_net_tun::wire::kMaxMtu,
           .buffer_alignment = 1,
+          // TODO(https://fxbug.dev/75933): Lift restriction on minimum rx buffer length being the
+          // MTU. That will allow us to observe rx buffer chaining on tun.
           .min_rx_buffer_length = parent->config().mtu,
           .min_tx_buffer_length = parent->config().min_tx_buffer_length,
       }),
@@ -421,6 +447,32 @@ DeviceAdapter::DeviceAdapter(DeviceAdapterParent* parent, bool online)
     tx_types_[i].supported_flags =
         static_cast<uint32_t>(parent_->config().tx_types[i].supported_flags);
   }
+}
+
+zx::status<RxBuffer> DeviceAdapter::AllocRxSpace(size_t length) __TA_REQUIRES(rx_lock_) {
+  RxBuffer buffer = vmos_.MakeEmptyRxBuffer();
+  while (!rx_buffers_.empty()) {
+    const rx_space_buffer_t& space = rx_buffers_.front();
+    buffer.PushRxSpace(space);
+    uint32_t space_length = space.region.length;
+    rx_buffers_.pop();
+    if (space_length >= length) {
+      return zx::ok(std::move(buffer));
+    }
+    length -= space_length;
+  }
+  // Ran out of rx buffers and didn't find what we wanted, need to reclaim the space from buffer.
+  ReclaimRxSpace(std::move(buffer));
+  return zx::error(ZX_ERR_SHOULD_WAIT);
+}
+
+void DeviceAdapter::ReclaimRxSpace(RxBuffer buffer) __TA_REQUIRES(rx_lock_) {
+  buffer.WithSpace([this](const rx_space_buffer_t& space) {
+    // WithSpace is called inline.
+    []() __TA_ASSERT(rx_lock_) {}();
+
+    rx_buffers_.push(space);
+  });
 }
 
 }  // namespace tun

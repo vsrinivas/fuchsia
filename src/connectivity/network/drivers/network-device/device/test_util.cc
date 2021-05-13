@@ -11,44 +11,38 @@
 namespace network {
 namespace testing {
 
-zx_status_t TxBuffer::GetData(std::vector<uint8_t>* copy,
-                              const AnyBuffer::VmoProvider& vmo_provider) {
+zx::status<std::vector<uint8_t>> TxBuffer::GetData(const VmoProvider& vmo_provider) {
   if (!vmo_provider) {
-    return ZX_ERR_INTERNAL;
+    return zx::error(ZX_ERR_INTERNAL);
   }
-  auto vmo = vmo_provider(buffer_.data.vmo_id);
-  // can't use this with the current test set up, return internal error
-  if (buffer_.data.parts_count != 1 || !vmo->is_valid()) {
-    return ZX_ERR_INTERNAL;
+  // We don't support copying chained buffers.
+  if (buffer_.data_count != 1) {
+    return zx::error(ZX_ERR_INTERNAL);
   }
-  copy->resize(buffer_.data.parts_list[0].length);
-  return vmo->read(&copy->at(0), buffer_.data.parts_list[0].offset,
-                   buffer_.data.parts_list[0].length);
+  zx::unowned_vmo vmo = vmo_provider(buffer_.vmo);
+  if (!vmo->is_valid()) {
+    return zx::error(ZX_ERR_INTERNAL);
+  }
+  std::vector<uint8_t> copy;
+  copy.resize(buffer_.data_list[0].length);
+  zx_status_t status =
+      vmo->read(copy.data(), buffer_.data_list[0].offset, buffer_.data_list[0].length);
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+  return zx::ok(std::move(copy));
 }
 
-zx_status_t RxBuffer::WriteData(const uint8_t* data, size_t len,
-                                const AnyBuffer::VmoProvider& vmo_provider) {
+zx_status_t RxBuffer::WriteData(fbl::Span<const uint8_t> data, const VmoProvider& vmo_provider) {
   if (!vmo_provider) {
     return ZX_ERR_INTERNAL;
   }
-  auto vmo = vmo_provider(buffer_.data.vmo_id);
-  // we only support simple buffers here for testing
-  if (buffer_.data.parts_count != 1 || !vmo->is_valid()) {
-    return ZX_ERR_INTERNAL;
-  }
-  if (buffer_.data.parts_list[0].length < len) {
+  if (data.size() > space_.region.length) {
     return ZX_ERR_INVALID_ARGS;
   }
-  return_.length = len;
-  return vmo->write(data, buffer_.data.parts_list[0].offset, len);
-}
-
-void RxBuffer::FillReturn() {
-  return_.length = 0;
-  return_.meta.info_type = static_cast<uint32_t>(netdev::wire::InfoType::kNoInfo);
-  return_.meta.flags = 0;
-  return_.meta.frame_type = static_cast<uint8_t>(netdev::wire::FrameType::kEthernet);
-  return_.id = buffer_.id;
+  zx::unowned_vmo vmo = vmo_provider(space_.vmo);
+  return_part_.length = static_cast<uint32_t>(data.size());
+  return vmo->write(data.begin(), space_.region.offset, data.size());
 }
 
 FakeNetworkPortImpl::FakeNetworkPortImpl()
@@ -151,7 +145,7 @@ void FakeNetworkDeviceImpl::NetworkDeviceImplStop(network_device_impl_stop_callb
     RxReturnTransaction rx_return(this);
     while (!rx_buffers_.is_empty()) {
       std::unique_ptr rx_buffer = rx_buffers_.pop_front();
-      rx_buffer->return_buffer().length = 0;
+      rx_buffer->return_part().length = 0;
       rx_return.Enqueue(std::move(rx_buffer));
     }
     rx_return.Commit();
@@ -199,7 +193,7 @@ void FakeNetworkDeviceImpl::NetworkDeviceImplQueueTx(const tx_buffer_t* buf_list
   }
 
   for (const tx_buffer_t& buff : buffers) {
-    auto back = std::make_unique<TxBuffer>(&buff);
+    auto back = std::make_unique<TxBuffer>(buff);
     tx_buffers_.push_back(std::move(back));
   }
   EXPECT_OK(event_.signal(0, kEventTx));
@@ -212,20 +206,28 @@ void FakeNetworkDeviceImpl::NetworkDeviceImplQueueRxSpace(const rx_space_buffer_
   fbl::AutoLock lock(&lock_);
   fbl::Span buffers(buf_list, buf_count);
   if (immediate_return_rx_ || !device_started_) {
-    const uint64_t length = device_started_ ? kAutoReturnRxLength : 0;
+    const uint32_t length = device_started_ ? kAutoReturnRxLength : 0;
     ASSERT_TRUE(buf_count < kTxDepth);
     std::array<rx_buffer_t, kTxDepth> results;
+    std::array<rx_buffer_part_t, kTxDepth> parts;
     auto r = results.begin();
-    for (const rx_space_buffer_t& buff : buffers) {
-      *r++ = {
-          .id = buff.id,
+    auto p = parts.begin();
+    for (const rx_space_buffer_t& space : buffers) {
+      rx_buffer_part_t& part = *p++;
+      rx_buffer_t& rx_buffer = *r++;
+      part = {
+          .id = space.id,
           .length = length,
+      };
+      rx_buffer = {
           .meta =
               {
                   .port = kPort0,
                   .frame_type =
                       static_cast<uint8_t>(fuchsia_hardware_network::wire::FrameType::kEthernet),
               },
+          .data_list = &part,
+          .data_count = 1,
       };
     }
     device_client_.CompleteRx(results.data(), buf_count);
@@ -233,7 +235,7 @@ void FakeNetworkDeviceImpl::NetworkDeviceImplQueueRxSpace(const rx_space_buffer_
   }
 
   for (const rx_space_buffer_t& buff : buffers) {
-    auto back = std::make_unique<RxBuffer>(&buff);
+    auto back = std::make_unique<RxBuffer>(buff);
     rx_buffers_.push_back(std::move(back));
   }
   EXPECT_OK(event_.signal(0, kEventRxAvailable));
@@ -395,17 +397,13 @@ zx_status_t TestSession::WaitClosed(zx::time deadline) {
 }
 
 buffer_descriptor_t* TestSession::ResetDescriptor(uint16_t index) {
-  auto* desc = descriptor(index);
-  desc->frame_type = static_cast<uint8_t>(netdev::wire::FrameType::kEthernet);
-  desc->offset = canonical_offset(index);
-  desc->info_type = static_cast<uint32_t>(netdev::wire::InfoType::kNoInfo);
-  desc->head_length = 0;
-  desc->data_length = static_cast<uint32_t>(buffer_length_);
-  desc->tail_length = 0;
-  desc->inbound_flags = 0;
-  desc->return_flags = 0;
-  desc->chain_length = 0;
-  desc->nxt = 0;
+  buffer_descriptor_t* desc = descriptor(index);
+  *desc = {
+      .frame_type = static_cast<uint8_t>(netdev::wire::FrameType::kEthernet),
+      .info_type = static_cast<uint32_t>(netdev::wire::InfoType::kNoInfo),
+      .offset = canonical_offset(index),
+      .data_length = static_cast<uint32_t>(buffer_length_),
+  };
   return desc;
 }
 

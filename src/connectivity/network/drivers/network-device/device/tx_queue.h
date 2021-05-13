@@ -98,7 +98,8 @@ class TxQueue {
   // pre-allocated buffers that are locked to only allow a single session thread to send tx buffers
   // to the device at once.
   std::unique_ptr<tx_buffer_t[]> tx_buffers_ __TA_GUARDED(parent_->tx_buffers_lock());
-  std::unique_ptr<BufferParts[]> buffer_parts_ __TA_GUARDED(parent_->tx_buffers_lock());
+  std::unique_ptr<BufferParts<buffer_region_t>[]> buffer_parts_
+      __TA_GUARDED(parent_->tx_buffers_lock());
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(TxQueue);
 };

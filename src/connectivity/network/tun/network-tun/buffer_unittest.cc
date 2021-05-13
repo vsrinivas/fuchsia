@@ -46,24 +46,27 @@ class BufferTest : public ::testing::Test {
 };
 
 TEST_F(BufferTest, TestBufferBuildTx) {
-  buffer_region_t regions[2];
-  regions[0].offset = 10;
-  regions[0].length = 5;
-  regions[1].offset = 100;
-  regions[1].length = 3;
-  MintVmo(regions[0]);
-  MintVmo(regions[1]);
-  tx_buffer_t tx;
-  tx.id = 1;
-  tx.data.vmo_id = kVmoId;
-  tx.data.parts_count = 2;
-  tx.data.parts_list = regions;
-  tx.head_length = 0;
-  tx.tail_length = 0;
-  tx.meta.frame_type = static_cast<uint8_t>(fuchsia_hardware_network::wire::FrameType::kEthernet);
-  tx.meta.info_type = static_cast<uint32_t>(fuchsia_hardware_network::wire::InfoType::kNoInfo);
-  tx.meta.flags = static_cast<uint32_t>(fuchsia_hardware_network::wire::TxFlags::kTxAccel0);
-  auto b = vmos_.MakeTxBuffer(&tx, true);
+  buffer_region_t regions[] = {
+      {.offset = 10, .length = 5},
+      {.offset = 100, .length = 3},
+  };
+  for (const buffer_region_t& region : regions) {
+    MintVmo(region);
+  }
+  tx_buffer_t tx = {
+      .id = 1,
+      .vmo = kVmoId,
+      .data_list = regions,
+      .data_count = std::size(regions),
+      .meta =
+          {
+              .info_type = static_cast<uint32_t>(fuchsia_hardware_network::wire::InfoType::kNoInfo),
+              .flags = static_cast<uint32_t>(fuchsia_hardware_network::wire::TxFlags::kTxAccel0),
+              .frame_type =
+                  static_cast<uint8_t>(fuchsia_hardware_network::wire::FrameType::kEthernet),
+          },
+  };
+  TxBuffer b = vmos_.MakeTxBuffer(tx, true);
   EXPECT_EQ(b.id(), tx.id);
   EXPECT_EQ(b.frame_type(), fuchsia_hardware_network::wire::FrameType::kEthernet);
   auto meta = b.TakeMetadata();
@@ -76,137 +79,143 @@ TEST_F(BufferTest, TestBufferBuildTx) {
 }
 
 TEST_F(BufferTest, TestBufferBuildRx) {
-  buffer_region_t parts[2];
-  rx_space_buffer_t space;
-  space.id = 1;
-  space.data.vmo_id = kVmoId;
-  space.data.parts_count = 2;
-  space.data.parts_list = parts;
-
-  parts[0].offset = 10;
-  parts[0].length = 5;
-  parts[1].offset = 100;
-  parts[1].length = 3;
-
-  auto b = vmos_.MakeRxSpaceBuffer(&space);
-
-  EXPECT_EQ(b.id(), space.id);
+  const rx_space_buffer_t space_1 = {
+      .id = 1,
+      .vmo = kVmoId,
+      .region =
+          {
+              .offset = 10,
+              .length = 5,
+          },
+  };
+  const rx_space_buffer_t space_2 = {
+      .id = 2,
+      .vmo = kVmoId,
+      .region =
+          {
+              .offset = 100,
+              .length = 3,
+          },
+  };
+  RxBuffer b = vmos_.MakeRxSpaceBuffer(space_1);
+  b.PushRxSpace(space_2);
   std::vector<uint8_t> wr_data({0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0x00, 0x01, 0x02});
   ASSERT_OK(b.Write(wr_data));
-  EXPECT_EQ(ReadVmo(parts[0]), std::vector<uint8_t>({0xAA, 0xBB, 0xCC, 0xDD, 0xEE}));
-  EXPECT_EQ(ReadVmo(parts[1]), std::vector<uint8_t>({0x00, 0x01, 0x02}));
+  EXPECT_EQ(ReadVmo(space_1.region), std::vector<uint8_t>({0xAA, 0xBB, 0xCC, 0xDD, 0xEE}));
+  EXPECT_EQ(ReadVmo(space_2.region), std::vector<uint8_t>({0x00, 0x01, 0x02}));
 }
 
 TEST_F(BufferTest, CopyBuffer) {
-  buffer_region_t tx_parts[3];
-  tx_parts[0].offset = 0;
-  tx_parts[0].length = 5;
-  tx_parts[1].offset = 10;
-  tx_parts[1].length = 3;
-  tx_parts[2].offset = 20;
-  tx_parts[2].length = 2;
-  MintVmo(tx_parts[0]);
-  MintVmo(tx_parts[1]);
-  MintVmo(tx_parts[0]);
-  MintVmo(tx_parts[2]);
-  tx_buffer_t tx;
-  tx.id = 1;
-  tx.data.vmo_id = kVmoId;
-  tx.data.parts_count = 3;
-  tx.data.parts_list = tx_parts;
+  buffer_region_t tx_parts[3] = {
+      {.offset = 0, .length = 5},
+      {.offset = 10, .length = 3},
+      {.offset = 20, .length = 2},
+  };
+  for (const buffer_region_t& region : tx_parts) {
+    MintVmo(region);
+  }
+  tx_buffer_t tx = {
+      .id = 1,
+      .vmo = kVmoId,
+      .data_list = tx_parts,
+      .data_count = std::size(tx_parts),
+  };
 
-  auto b_tx = vmos_.MakeTxBuffer(&tx, false);
+  TxBuffer b_tx = vmos_.MakeTxBuffer(tx, false);
 
-  buffer_region_t rx_parts[3];
-  rx_space_buffer_t space;
-  space.id = 1;
-  space.data.vmo_id = kVmoId;
-  space.data.parts_count = 3;
-  space.data.parts_list = rx_parts;
+  rx_space_buffer_t rx_space[3] = {
+      {.id = 2, .vmo = kVmoId, .region = {.offset = 100, .length = 3}},
+      {.id = 3, .vmo = kVmoId, .region = {.offset = 110, .length = 5}},
+      {.id = 4, .vmo = kVmoId, .region = {.offset = 120, .length = 100}},
+  };
 
-  rx_parts[0].offset = 100;
-  rx_parts[0].length = 3;
-  rx_parts[1].offset = 110;
-  rx_parts[1].length = 5;
-  rx_parts[2].offset = 120;
-  rx_parts[2].length = 100;
+  RxBuffer b_rx = vmos_.MakeEmptyRxBuffer();
+  for (const rx_space_buffer_t& space : rx_space) {
+    b_rx.PushRxSpace(space);
+  }
 
-  auto b_rx = vmos_.MakeRxSpaceBuffer(&space);
+  zx::status status = b_rx.CopyFrom(b_tx);
+  ASSERT_OK(status.status_value());
+  EXPECT_EQ(status.value(), 10ul);
 
-  size_t total;
-  ASSERT_OK(b_rx.CopyFrom(&b_tx, &total));
-  EXPECT_EQ(total, 10ul);
-
-  EXPECT_EQ(ReadVmo(rx_parts[0]), std::vector<uint8_t>({0x00, 0x01, 0x02}));
-  EXPECT_EQ(ReadVmo(rx_parts[1]), std::vector<uint8_t>({0x03, 0x04, 0x00, 0x01, 0x02}));
-  EXPECT_EQ(ReadVmo(buffer_region_t{.offset = rx_parts[2].offset, .length = 2}),
+  EXPECT_EQ(ReadVmo(rx_space[0].region), std::vector<uint8_t>({0x00, 0x01, 0x02}));
+  EXPECT_EQ(ReadVmo(rx_space[1].region), std::vector<uint8_t>({0x03, 0x04, 0x00, 0x01, 0x02}));
+  EXPECT_EQ(ReadVmo(buffer_region_t{
+                .offset = rx_space[2].region.offset,
+                .length = 2,
+            }),
             std::vector<uint8_t>({0x00, 0x01}));
 }
 
 TEST_F(BufferTest, WriteFailure) {
-  buffer_region_t parts;
-  rx_space_buffer_t space;
-  space.id = 1;
-  space.data.vmo_id = kVmoId;
-  space.data.parts_count = 1;
-  space.data.parts_list = &parts;
-
-  parts.offset = 10;
-  parts.length = 3;
-
   {
     // Write more than buffer's length is invalid.
-    auto b = vmos_.MakeRxSpaceBuffer(&space);
+    RxBuffer b = vmos_.MakeRxSpaceBuffer(rx_space_buffer_t{
+        .id = 1,
+        .vmo = kVmoId,
+        .region = {.offset = 10, .length = 3},
+    });
     ASSERT_EQ(b.Write({0x01, 0x02, 0x03, 0x04}), ZX_ERR_OUT_OF_RANGE);
   }
   {
     // A buffer that doesn't fit its VMO is invalid.
-    parts.offset = kVmoSize;
-    auto b = vmos_.MakeRxSpaceBuffer(&space);
+    RxBuffer b = vmos_.MakeRxSpaceBuffer(rx_space_buffer_t{
+        .id = 1,
+        .vmo = kVmoId,
+        .region = {.offset = kVmoSize, .length = 3},
+    });
     ASSERT_EQ(b.Write({0x01}), ZX_ERR_OUT_OF_RANGE);
   }
   {
     // A buffer with an invalid vmo_id is invalid.
-    space.data.vmo_id = kVmoId + 1;
-    auto b = vmos_.MakeRxSpaceBuffer(&space);
+    RxBuffer b = vmos_.MakeRxSpaceBuffer(rx_space_buffer_t{
+        .id = 1,
+        .vmo = kVmoId + 1,
+        .region = {.offset = 10, .length = 3},
+    });
     ASSERT_EQ(b.Write({0x01}), ZX_ERR_NOT_FOUND);
   }
 }
 
 TEST_F(BufferTest, ReadFailure) {
-  buffer_region_t parts;
-  tx_buffer_t tx_buffer;
-  tx_buffer.id = 1;
-  tx_buffer.data.vmo_id = kVmoId;
-  tx_buffer.data.parts_count = 1;
-  tx_buffer.data.parts_list = &parts;
-
-  parts.length = 3;
   std::vector<uint8_t> data;
-
   {
     // A buffer that doesn't fit its VMO is invalid.
-    parts.offset = kVmoSize;
-    auto b = vmos_.MakeTxBuffer(&tx_buffer, false);
+    buffer_region_t part = {.offset = kVmoSize, .length = 10};
+    TxBuffer b = vmos_.MakeTxBuffer(
+        tx_buffer_t{
+            .id = 1,
+            .vmo = kVmoId,
+            .data_list = &part,
+            .data_count = 1,
+        },
+        false);
     ASSERT_EQ(b.Read(data), ZX_ERR_OUT_OF_RANGE);
   }
   {
     // A buffer with an invalid vmo_id is invalid.
-    tx_buffer.data.vmo_id = kVmoId + 1;
-    auto b = vmos_.MakeTxBuffer(&tx_buffer, false);
+    buffer_region_t part = {.length = 10};
+    TxBuffer b = vmos_.MakeTxBuffer(
+        tx_buffer_t{
+            .id = 1,
+            .vmo = kVmoId + 1,
+            .data_list = &part,
+            .data_count = 1,
+        },
+        false);
     ASSERT_EQ(b.Read(data), ZX_ERR_NOT_FOUND);
   }
 }
 
 TEST_F(BufferTest, CopyFailure) {
   // Source region is out of range.
-  ASSERT_EQ(VmoStore::Copy(&vmos_, kVmoId, kVmoSize, &vmos_, kVmoId, 0, 10), ZX_ERR_OUT_OF_RANGE);
+  ASSERT_EQ(VmoStore::Copy(vmos_, kVmoId, kVmoSize, vmos_, kVmoId, 0, 10), ZX_ERR_OUT_OF_RANGE);
   // Destination region is out of range,
-  ASSERT_EQ(VmoStore::Copy(&vmos_, kVmoId, 0, &vmos_, kVmoId, kVmoSize, 10), ZX_ERR_OUT_OF_RANGE);
+  ASSERT_EQ(VmoStore::Copy(vmos_, kVmoId, 0, vmos_, kVmoId, kVmoSize, 10), ZX_ERR_OUT_OF_RANGE);
   // Source region is has bad id.
-  ASSERT_EQ(VmoStore::Copy(&vmos_, kVmoId + 1, 0, &vmos_, kVmoId, 0, 10), ZX_ERR_NOT_FOUND);
+  ASSERT_EQ(VmoStore::Copy(vmos_, kVmoId + 1, 0, vmos_, kVmoId, 0, 10), ZX_ERR_NOT_FOUND);
   // Destination region is has bad id.
-  ASSERT_EQ(VmoStore::Copy(&vmos_, kVmoId, 0, &vmos_, kVmoId + 1, 0, 10), ZX_ERR_NOT_FOUND);
+  ASSERT_EQ(VmoStore::Copy(vmos_, kVmoId, 0, vmos_, kVmoId + 1, 0, 10), ZX_ERR_NOT_FOUND);
 }
 
 }  // namespace testing

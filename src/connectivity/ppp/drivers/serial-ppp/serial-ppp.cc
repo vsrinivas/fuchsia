@@ -267,21 +267,30 @@ bool SerialPpp::ConsumeSerial(bool fetch_from_socket) {
         continue;
       }
     }
+    rx_buffer_part_t part;
     rx_buffer_t complete;
     {
       fbl::AutoLock lock(&rx_lock_);
       auto& buffer = rx_space_.front();
       auto copied =
           std::copy(frame.information.begin(), frame.information.end(), buffer.data.begin());
-      complete = {.id = buffer.id,
-                  .length = static_cast<uint64_t>(copied - buffer.data.begin()),
-                  .meta = {
-                      .port = kPortId,
-                      .info = {},
-                      .info_type = 0,
-                      .flags = 0,
-                      .frame_type = static_cast<uint8_t>(frame_type),
-                  }};
+      part = {
+          .id = buffer.id,
+          .offset = 0,
+          .length = static_cast<uint32_t>(copied - buffer.data.begin()),
+      };
+      complete = {
+          .meta =
+              {
+                  .port = kPortId,
+                  .info = {},
+                  .info_type = 0,
+                  .flags = 0,
+                  .frame_type = static_cast<uint8_t>(frame_type),
+              },
+          .data_list = &part,
+          .data_count = 1,
+      };
       rx_space_.pop();
       has_more_rx_space = !rx_space_.empty();
     }
@@ -393,9 +402,13 @@ void SerialPpp::NetworkDeviceImplStop(network_device_impl_stop_callback callback
     rx_available_ = false;
     while (!rx_space_.empty()) {
       const PendingBuffer& space = rx_space_.front();
-      rx_buffer_t buffer = {
+      rx_buffer_part_t part = {
           .id = space.id,
           .length = 0,
+      };
+      rx_buffer_t buffer = {
+          .data_list = &part,
+          .data_count = 1,
       };
       netdevice_protocol_.CompleteRx(&buffer, 1);
       rx_space_.pop();
@@ -439,11 +452,11 @@ void SerialPpp::NetworkDeviceImplQueueTx(const tx_buffer_t* buf_list, size_t buf
         if (!tx_available_) {
           return ZX_ERR_UNAVAILABLE;
         }
-        if (buffer.data.parts_count != 1) {
+        if (buffer.data_count != 1) {
           return ZX_ERR_NOT_SUPPORTED;
         }
-        auto& data = *buffer.data.parts_list;
-        auto* stored_vmo = vmos_.GetVmo(buffer.data.vmo_id);
+        auto& data = *buffer.data_list;
+        auto* stored_vmo = vmos_.GetVmo(buffer.vmo);
         if (!stored_vmo) {
           return ZX_ERR_INVALID_ARGS;
         }
@@ -485,21 +498,16 @@ void SerialPpp::NetworkDeviceImplQueueRxSpace(const rx_space_buffer_t* buf_list,
         if (!rx_available_) {
           return true;
         }
+        buffer_region_t& data = buffer.region;
 
-        if (buffer.data.parts_count != 1) {
-          zxlogf(WARNING, "ignoring scatter-gather rx space buffer (%ld parts)",
-                 buffer.data.parts_count);
-          return true;
-        }
-        auto& data = *buffer.data.parts_list;
         if (data.length < kDefaultMtu) {
           zxlogf(WARNING, "ignoring small rx buffer with size %ld", data.length);
           return true;
         }
 
-        auto* vmo = vmos_.GetVmo(buffer.data.vmo_id);
+        auto* vmo = vmos_.GetVmo(buffer.vmo);
         if (!vmo) {
-          zxlogf(WARNING, "ignoring rx buffer with invalid VMO id: %d", buffer.data.vmo_id);
+          zxlogf(WARNING, "ignoring rx buffer with invalid VMO id: %d", buffer.vmo);
           return true;
         }
 
@@ -513,9 +521,13 @@ void SerialPpp::NetworkDeviceImplQueueRxSpace(const rx_space_buffer_t* buf_list,
 
       if (return_buffer) {
         // Return the buffer with an empty length immediately, we can't use it.
-        rx_buffer_t rx_buffer = {
+        rx_buffer_part_t part = {
             .id = buffer.id,
             .length = 0,
+        };
+        rx_buffer_t rx_buffer = {
+            .data_list = &part,
+            .data_count = 1,
         };
         netdevice_protocol_.CompleteRx(&rx_buffer, 1);
       }

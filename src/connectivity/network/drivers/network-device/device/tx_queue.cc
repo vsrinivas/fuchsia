@@ -74,12 +74,12 @@ zx::status<std::unique_ptr<TxQueue>> TxQueue::Create(DeviceInterface* parent) {
     return zx::error(ZX_ERR_NO_MEMORY);
   }
 
-  queue->buffer_parts_.reset(new (&ac) BufferParts[capacity]);
+  queue->buffer_parts_.reset(new (&ac) BufferParts<buffer_region_t>[capacity]);
   if (!ac.check()) {
     return zx::error(ZX_ERR_NO_MEMORY);
   }
   for (uint32_t i = 0; i < capacity; i++) {
-    queue->tx_buffers_[i].data.parts_list = queue->buffer_parts_[i].data();
+    queue->tx_buffers_[i].data_list = queue->buffer_parts_[i].data();
   }
 
   return zx::ok(std::move(queue));

@@ -102,7 +102,7 @@ class DeviceAdapter : public ddk::NetworkDeviceImplProtocol<DeviceAdapter>,
   // including the one given to it).
   // Returns `true` if a buffer was successfully allocated. The buffer given to `callback` is
   // discarded from the list of pending buffers and marked as pending for return.
-  bool TryGetTxBuffer(fit::callback<zx_status_t(Buffer*, size_t)> callback);
+  bool TryGetTxBuffer(fit::callback<zx_status_t(TxBuffer&, size_t)> callback);
   // Attempts to write `data` and `meta` into an available rx buffer and return it to the
   // `NetworkDeviceInterface`.
   // Returns the number of remaining available buffers.
@@ -129,11 +129,12 @@ class DeviceAdapter : public ddk::NetworkDeviceImplProtocol<DeviceAdapter>,
   const std::unique_ptr<MacAdapter>& mac() const { return mac_; }
 
  private:
+  static constexpr uint16_t kFifoDepth = 128;
   DeviceAdapter(DeviceAdapterParent* parent, bool online);
 
   // Enqueues a single fulfilled rx frame.
-  void EnqueueRx(fuchsia_hardware_network::wire::FrameType frame_type, uint32_t buffer_id,
-                 uint32_t length, const std::optional<fuchsia_net_tun::wire::FrameMetadata>& meta)
+  void EnqueueRx(fuchsia_hardware_network::wire::FrameType frame_type, RxBuffer buffer,
+                 size_t length, const std::optional<fuchsia_net_tun::wire::FrameMetadata>& meta)
       __TA_REQUIRES(rx_lock_);
   // Commits all pending rx buffers, returning them to the `NetworkDeviceInterface`.
   void CommitRx() __TA_REQUIRES(rx_lock_);
@@ -143,6 +144,9 @@ class DeviceAdapter : public ddk::NetworkDeviceImplProtocol<DeviceAdapter>,
   void EnqueueTx(uint32_t id, zx_status_t status) __TA_REQUIRES(tx_lock_);
   // Commits all pending tx frames, returning them to the `NetworkDeviceInterface`.
   void CommitTx() __TA_REQUIRES(tx_lock_);
+  // Allocates rx buffer space with at least `length` bytes.
+  zx::status<RxBuffer> AllocRxSpace(size_t length) __TA_REQUIRES(rx_lock_);
+  void ReclaimRxSpace(RxBuffer buffer) __TA_REQUIRES(rx_lock_);
 
   std::unique_ptr<NetworkDeviceInterface> device_;
   DeviceAdapterParent* const parent_;  // pointer to parent, not owned.
@@ -160,11 +164,13 @@ class DeviceAdapter : public ddk::NetworkDeviceImplProtocol<DeviceAdapter>,
   VmoStore vmos_;
   std::array<uint8_t, fuchsia_hardware_network::wire::kMaxFrameTypes> rx_types_{};
   std::array<tx_support_t, fuchsia_hardware_network::wire::kMaxFrameTypes> tx_types_{};
-  std::queue<Buffer> tx_buffers_ __TA_GUARDED(tx_lock_);
+  std::queue<TxBuffer> tx_buffers_ __TA_GUARDED(tx_lock_);
   bool tx_available_ __TA_GUARDED(tx_lock_) = false;
-  std::queue<Buffer> rx_buffers_ __TA_GUARDED(rx_lock_);
+  std::queue<rx_space_buffer_t> rx_buffers_ __TA_GUARDED(rx_lock_);
   bool rx_available_ __TA_GUARDED(rx_lock_) = false;
   std::vector<rx_buffer_t> return_rx_list_ __TA_GUARDED(rx_lock_);
+  std::array<rx_buffer_part_t, kFifoDepth> return_rx_parts_ __TA_GUARDED(rx_lock_);
+  size_t return_rx_parts_count_ __TA_GUARDED(rx_lock_) = 0;
   std::vector<tx_result_t> return_tx_list_ __TA_GUARDED(tx_lock_);
   ddk::NetworkDeviceIfcProtocolClient device_iface_;
   const device_info_t device_info_;

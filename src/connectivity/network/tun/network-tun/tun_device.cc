@@ -152,9 +152,9 @@ bool TunDevice::RunWriteFrame() {
 
 void TunDevice::RunReadFrame() {
   while (!pending_read_frame_.empty()) {
-    bool success = device_->TryGetTxBuffer([this](Buffer* buff, size_t avail) {
+    bool success = device_->TryGetTxBuffer([this](TxBuffer& buff, size_t avail) {
       std::vector<uint8_t> data;
-      zx_status_t status = buff->Read(data);
+      zx_status_t status = buff.Read(data);
       if (status != ZX_OK) {
         FX_LOGF(ERROR, "tun", "Failed to read from tx buffer: %s", zx_status_get_string(status));
         // The error reported here is relayed back to clients as an errored tx frame. There's a
@@ -172,14 +172,14 @@ void TunDevice::RunReadFrame() {
           fidl::ObjectView<fuchsia_net_tun::wire::Frame::Frame_>::FromExternal(&fidl_frame));
       fidl::VectorView data_view = fidl::VectorView<uint8_t>::FromExternal(data);
       frame.set_data(fidl::ObjectView<fidl::VectorView<uint8_t>>::FromExternal(&data_view));
-      netdev::wire::FrameType frame_type = buff->frame_type();
+      netdev::wire::FrameType frame_type = buff.frame_type();
       frame.set_frame_type(fidl::ObjectView<netdev::wire::FrameType>::FromExternal(&frame_type));
-      std::optional meta = buff->TakeMetadata();
+      std::optional meta = buff.TakeMetadata();
       if (meta.has_value()) {
         frame.set_meta(
             fidl::ObjectView<fuchsia_net_tun::wire::FrameMetadata>::FromExternal(&meta.value()));
       }
-      pending_read_frame_.front().ReplySuccess(std::move(frame));
+      pending_read_frame_.front().ReplySuccess(frame);
       pending_read_frame_.pop();
       if (avail == 0) {
         // clear Signals::READABLE if we don't have any more tx buffers.

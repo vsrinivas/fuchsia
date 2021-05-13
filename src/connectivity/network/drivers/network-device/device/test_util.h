@@ -24,73 +24,98 @@ constexpr uint16_t kRxDepth = 16;
 constexpr uint16_t kTxDepth = 16;
 constexpr uint16_t kDefaultDescriptorCount = 256;
 constexpr uint64_t kDefaultBufferLength = ZX_PAGE_SIZE / 2;
-constexpr uint64_t kAutoReturnRxLength = 512;
+constexpr uint32_t kAutoReturnRxLength = 512;
 
 class RxReturnTransaction;
 class TxReturnTransaction;
+using VmoProvider = fit::function<zx::unowned_vmo(uint8_t)>;
 
-template <typename T>
-class AnyBuffer {
+class TxBuffer : public fbl::DoublyLinkedListable<std::unique_ptr<TxBuffer>> {
  public:
-  using VmoProvider = fit::function<zx::unowned_vmo(uint8_t)>;
-
-  AnyBuffer() {
-    memset(&buffer_, 0x00, sizeof(T));
-    buffer_.data.parts_list = parts_.data();
-  }
-
-  explicit AnyBuffer(const T* buff) {
-    buffer_ = *buff;
-    for (size_t i = 0; i < buffer_.data.parts_count; i++) {
-      parts_[i] = buffer_.data.parts_list[i];
+  explicit TxBuffer(const tx_buffer_t& buffer) : buffer_(buffer) {
+    for (size_t i = 0; i < buffer_.data_count; i++) {
+      parts_[i] = buffer_.data_list[i];
     }
-    buffer_.data.parts_list = parts_.data();
+    buffer_.data_list = parts_.data();
   }
-
-  const T& buff() const { return buffer_; }
-
- protected:
-  T buffer_{};
-  internal::BufferParts parts_{};
-};
-
-class TxBuffer : public fbl::DoublyLinkedListable<std::unique_ptr<TxBuffer>>,
-                 public AnyBuffer<tx_buffer_t> {
- public:
-  explicit TxBuffer(const tx_buffer_t* b) : AnyBuffer<tx_buffer_t>(b), status_(ZX_OK) {}
 
   zx_status_t status() const { return status_; }
 
   void set_status(zx_status_t status) { status_ = status; }
 
-  zx_status_t GetData(std::vector<uint8_t>* copy, const VmoProvider& vmo_provider);
+  zx::status<std::vector<uint8_t>> GetData(const VmoProvider& vmo_provider);
+
+  tx_result_t result() {
+    return {
+        .id = buffer_.id,
+        .status = status_,
+    };
+  }
+
+  tx_buffer_t& buffer() { return buffer_; }
 
  private:
+  tx_buffer_t buffer_{};
+  internal::BufferParts<buffer_region_t> parts_{};
   zx_status_t status_ = ZX_OK;
 };
 
-class RxBuffer : public fbl::DoublyLinkedListable<std::unique_ptr<RxBuffer>>,
-                 public AnyBuffer<rx_space_buffer_t> {
+class RxBuffer : public fbl::DoublyLinkedListable<std::unique_ptr<RxBuffer>> {
  public:
-  explicit RxBuffer(const rx_space_buffer_t* buff) : AnyBuffer<rx_space_buffer_t>(buff) {
-    FillReturn();
-  }
-
-  ~RxBuffer() { free(info_); }
-
-  rx_buffer_t& return_buffer() { return return_; }
+  explicit RxBuffer(const rx_space_buffer_t& space)
+      : space_(space),
+        return_part_(rx_buffer_part_t{
+            .id = space.id,
+        }) {}
 
   zx_status_t WriteData(const std::vector<uint8_t>& data, const VmoProvider& vmo_provider) {
-    return WriteData(&data[0], data.size(), vmo_provider);
+    return WriteData(fbl::Span(data.data(), data.size()), vmo_provider);
   }
 
-  zx_status_t WriteData(const uint8_t* data, size_t len, const VmoProvider& vmo_provider);
+  zx_status_t WriteData(fbl::Span<const uint8_t> data, const VmoProvider& vmo_provider);
+
+  rx_buffer_part_t& return_part() { return return_part_; }
+  rx_space_buffer_t& space() { return space_; }
+
+  void SetReturnLength(uint32_t length) { return_part_.length = length; }
 
  private:
-  void FillReturn();
+  rx_space_buffer_t space_{};
+  rx_buffer_part_t return_part_{};
+};
 
-  rx_buffer_t return_{};
-  void* info_ = nullptr;
+class RxReturn : public fbl::DoublyLinkedListable<std::unique_ptr<RxReturn>> {
+ public:
+  RxReturn()
+      : buffer_(rx_buffer_t{
+            .meta =
+                {
+                    .info_type = static_cast<uint32_t>(netdev::wire::InfoType::kNoInfo),
+                    .frame_type = static_cast<uint8_t>(netdev::wire::FrameType::kEthernet),
+                },
+            .data_list = parts_.begin(),
+            .data_count = 0,
+        }) {}
+  // RxReturn can't be moved because it keeps pointers to the return buffer internally.
+  RxReturn(RxReturn&&) = delete;
+  explicit RxReturn(std::unique_ptr<RxBuffer> buffer) : RxReturn() { PushPart(std::move(buffer)); }
+
+  // Pushes buffer space into the return buffer.
+  //
+  // NB: We don't really need the unique pointer here, we just copy the information we need. But
+  // requiring the unique pointer to be passed enforces the buffer ownership semantics. Also
+  // RxBuffers usually sit in the available queue as a pointer already.
+  void PushPart(std::unique_ptr<RxBuffer> buffer) {
+    ZX_ASSERT(buffer_.data_count < parts_.size());
+    parts_[buffer_.data_count++] = buffer->return_part();
+  }
+
+  const rx_buffer_t& buffer() const { return buffer_; }
+  rx_buffer_t& buffer() { return buffer_; }
+
+ private:
+  internal::BufferParts<rx_buffer_part_t> parts_{};
+  rx_buffer_t buffer_{};
 };
 
 constexpr zx_signals_t kEventStart = ZX_USER_SIGNAL_0;
@@ -217,6 +242,15 @@ class FakeNetworkDeviceImpl : public ddk::NetworkDeviceImplProtocol<FakeNetworkD
     return tx_buffers_.size_slow();
   }
 
+  std::optional<uint8_t> first_vmo_id() {
+    for (size_t i = 0; i < vmos_.size(); i++) {
+      if (vmos_[i].is_valid()) {
+        return i;
+      }
+    }
+    return std::nullopt;
+  }
+
   void set_auto_start(bool auto_start) { auto_start_ = auto_start; }
 
   void set_auto_stop(bool auto_stop) { auto_stop_ = auto_stop; }
@@ -329,14 +363,13 @@ class RxReturnTransaction {
  public:
   explicit RxReturnTransaction(FakeNetworkDeviceImpl* impl) : client_(impl->client()) {}
 
-  void Enqueue(std::unique_ptr<RxBuffer> buffer) {
-    return_buffers_[count_++] = buffer->return_buffer();
+  void Enqueue(std::unique_ptr<RxReturn> buffer) {
+    return_buffers_[count_++] = buffer->buffer();
     buffers_.push_back(std::move(buffer));
   }
 
-  void EnqueueWithSize(std::unique_ptr<RxBuffer> buffer, uint64_t return_length) {
-    buffer->return_buffer().length = return_length;
-    Enqueue(std::move(buffer));
+  void Enqueue(std::unique_ptr<RxBuffer> buffer) {
+    Enqueue(std::make_unique<RxReturn>(std::move(buffer)));
   }
 
   void Commit() {
@@ -349,7 +382,7 @@ class RxReturnTransaction {
   rx_buffer_t return_buffers_[kRxDepth]{};
   size_t count_ = 0;
   ddk::NetworkDeviceIfcProtocolClient client_;
-  fbl::DoublyLinkedList<std::unique_ptr<RxBuffer>> buffers_;
+  fbl::DoublyLinkedList<std::unique_ptr<RxReturn>> buffers_;
 
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(RxReturnTransaction);
 };
@@ -358,11 +391,7 @@ class TxReturnTransaction {
  public:
   explicit TxReturnTransaction(FakeNetworkDeviceImpl* impl) : client_(impl->client()) {}
 
-  void Enqueue(std::unique_ptr<TxBuffer> buffer) {
-    auto* b = &return_buffers_[count_++];
-    b->status = buffer->status();
-    b->id = buffer->buff().id;
-  }
+  void Enqueue(std::unique_ptr<TxBuffer> buffer) { return_buffers_[count_++] = buffer->result(); }
 
   void Commit() {
     client_.CompleteTx(return_buffers_, count_);

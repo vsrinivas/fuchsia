@@ -17,7 +17,8 @@ namespace netdev = fuchsia_hardware_network;
 constexpr uint16_t kMaxFifoDepth = ZX_PAGE_SIZE / sizeof(uint16_t);
 
 namespace internal {
-using BufferParts = std::array<buffer_region_t, MAX_BUFFER_PARTS>;
+template <typename T>
+using BufferParts = std::array<T, MAX_BUFFER_PARTS>;
 using DataVmoStore = vmo_store::VmoStore<vmo_store::SlabStorage<uint8_t>>;
 }  // namespace internal
 

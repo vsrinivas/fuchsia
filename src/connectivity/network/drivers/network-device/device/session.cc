@@ -189,10 +189,11 @@ zx::status<netdev::wire::Fifos> Session::Init() {
   }
 
   thrd_t thread;
-  if (thrd_create_with_name(
+  if (int result = thrd_create_with_name(
           &thread, [](void* ctx) { return reinterpret_cast<Session*>(ctx)->Thread(); },
-          reinterpret_cast<void*>(this), "netdevice:session") != thrd_success) {
-    LOGF_ERROR("network-device(%s): session failed to create thread", name());
+          reinterpret_cast<void*>(this), "netdevice:session");
+      result != thrd_success) {
+    LOGF_ERROR("network-device(%s): session failed to create thread: %d", name(), result);
     return zx::error(ZX_ERR_INTERNAL);
   }
   thread_ = thread;
@@ -368,8 +369,8 @@ zx_status_t Session::FetchTx() {
   transaction.AssertParentTxLock(*parent_);
   parent_->ListenSessionData(*this, descriptors);
 
-  uint32_t req_header_length = parent_->info().tx_head_length;
-  uint32_t req_tail_length = parent_->info().tx_tail_length;
+  uint16_t req_header_length = parent_->info().tx_head_length;
+  uint16_t req_tail_length = parent_->info().tx_tail_length;
 
   uint32_t total_length = 0;
   SharedAutoLock lock(&parent_->control_lock());
@@ -416,17 +417,7 @@ zx_status_t Session::FetchTx() {
       return ZX_ERR_IO_INVALID;
     }
 
-    auto* buffer = transaction.GetBuffer();
-    buffer->meta.flags = desc->inbound_flags;
-    buffer->meta.frame_type = desc->frame_type;
-    buffer->meta.info_type = desc->info_type;
-    if (buffer->meta.info_type != static_cast<uint32_t>(netdev::wire::InfoType::kNoInfo)) {
-      LOGF_WARN("network-device(%s): Info type (%d) not recognized, discarding information", name(),
-                buffer->meta.info_type);
-    }
-
-    buffer->data.vmo_id = vmo_id_;
-    buffer->data.parts_count = 0;
+    tx_buffer_t* buffer = transaction.GetBuffer();
 
     // check header space:
     if (desc->head_length < req_header_length) {
@@ -434,7 +425,6 @@ zx_status_t Session::FetchTx() {
                  desc->head_length);
       return ZX_ERR_IO_INVALID;
     }
-    buffer->head_length = req_header_length;
     auto skip_front = desc->head_length - req_header_length;
 
     // check tail space:
@@ -443,7 +433,32 @@ zx_status_t Session::FetchTx() {
                  desc->tail_length);
       return ZX_ERR_IO_INVALID;
     }
-    buffer->tail_length = req_tail_length;
+
+    auto info_type = static_cast<netdev::wire::InfoType>(buffer->meta.info_type);
+    switch (info_type) {
+      case netdev::wire::InfoType::kNoInfo:
+        break;
+      default:
+        LOGF_WARN("network-device(%s): info type (%d) not recognized, discarding information",
+                  name(), buffer->meta.info_type);
+        info_type = netdev::wire::InfoType::kNoInfo;
+        break;
+    }
+
+    *buffer = {
+        .vmo = vmo_id_,
+        .data_list = buffer->data_list,
+        .data_count = 0,
+        .meta =
+            {
+                .port = desc->port_id,
+                .info_type = static_cast<uint32_t>(info_type),
+                .flags = desc->inbound_flags,
+                .frame_type = desc->frame_type,
+            },
+        .head_length = req_header_length,
+        .tail_length = req_tail_length,
+    };
 
     // chain_length is the number of buffers to follow, so it must be strictly less than the maximum
     // descriptor chain value.
@@ -456,19 +471,24 @@ zx_status_t Session::FetchTx() {
 
     bool add_head_space = buffer->head_length != 0;
     for (;;) {
-      auto* cur = const_cast<buffer_region_t*>(&buffer->data.parts_list[buffer->data.parts_count]);
+      auto* cur = const_cast<buffer_region_t*>(&buffer->data_list[buffer->data_count]);
       if (add_head_space) {
-        cur->offset = desc->offset + skip_front;
-        cur->length = desc->data_length + buffer->head_length;
+        *cur = {
+            .offset = desc->offset + skip_front,
+            .length = desc->data_length + buffer->head_length,
+
+        };
       } else {
-        cur->offset = desc->offset + desc->head_length;
-        cur->length = desc->data_length;
+        *cur = {
+            .offset = desc->offset + desc->head_length,
+            .length = desc->data_length,
+        };
       }
       if (expect_chain == 0 && buffer->tail_length) {
         cur->length += buffer->tail_length;
       }
       total_length += desc->data_length;
-      buffer->data.parts_count++;
+      buffer->data_count++;
 
       add_head_space = false;
       if (expect_chain == 0) {
@@ -743,122 +763,137 @@ void Session::Kill() {
 }
 
 zx_status_t Session::FillRxSpace(uint16_t descriptor_index, rx_space_buffer_t* buff) {
-  auto* desc = descriptor(descriptor_index);
+  buffer_descriptor_t* desc = descriptor(descriptor_index);
   ZX_ASSERT(desc != nullptr);
-  ZX_ASSERT(buff->data.parts_list != nullptr);
 
-  // chain_length is the number of buffers to follow, so it must be strictly less than the maximum
-  // descriptor chain value.
-  if (desc->chain_length >= netdev::wire::kMaxDescriptorChain) {
-    LOGF_ERROR("network-device(%s): received invalid chain length: %d", name(), desc->chain_length);
+  // chain_length is the number of buffers to follow. Rx buffers are always single buffers.
+  if (desc->chain_length != 0) {
+    LOGF_ERROR("network-device(%s): received invalid chain length for rx buffer: %d", name(),
+               desc->chain_length);
     return ZX_ERR_INVALID_ARGS;
   }
-  buff->data.parts_count = 0;
-
-  // We need the const cast here to go around banjo code generation. It looks very ugly, though.
-  auto* buffer_parts = const_cast<buffer_region_t*>(buff->data.parts_list);
-  buff->data.vmo_id = vmo_id_;
-
-  auto expect_chain = desc->chain_length;
-  uint32_t total_length = 0;
-  for (;;) {
-    buffer_parts->offset = desc->offset + desc->head_length;
-    buffer_parts->length = desc->data_length;
-    buff->data.parts_count++;
-    total_length += desc->data_length;
-    buffer_parts++;
-    if (expect_chain == 0) {
-      break;
-    }
-    uint16_t didx = desc->nxt;
-    desc = descriptor(didx);
-    if (desc == nullptr) {
-      LOGF_ERROR("network-device(%s): invalid chained descriptor index: %d", name(), didx);
-      return ZX_ERR_INVALID_ARGS;
-    }
-    if (desc->chain_length != expect_chain - 1) {
-      LOGF_ERROR("network-device(%s): invalid next chain length %d on descriptor %d", name(),
-                 desc->chain_length, didx);
-      return ZX_ERR_INVALID_ARGS;
-    }
-    expect_chain--;
-  }
-  if (total_length < parent_->info().min_rx_buffer_length) {
+  if (desc->data_length < parent_->info().min_rx_buffer_length) {
     LOGF_ERROR("netwok-device(%s): rx buffer length %d less than required minimum of %d", name(),
-               total_length, parent_->info().min_rx_buffer_length);
+               desc->data_length, parent_->info().min_rx_buffer_length);
     return ZX_ERR_INVALID_ARGS;
   }
-
+  *buff = {
+      .id = buff->id,
+      .vmo = vmo_id_,
+      .region =
+          {
+              .offset = desc->offset + desc->head_length,
+              .length = desc->data_length + desc->tail_length,
+          },
+  };
   return ZX_OK;
 }
 
-bool Session::CompleteRx(uint16_t descriptor_index, const rx_buffer_t* buff) {
+bool Session::CompleteRx(const RxFrameInfo& frame_info) {
   ZX_ASSERT(IsPrimary());
 
-  // Always mark a single buffer as returned upon completion.
-  auto defer = fit::defer([this]() {
-    []() __TA_ASSERT(parent_->rx_lock()) {}();
-    RxReturned();
-  });
+  // Always mark buffers as returned upon completion.
+  auto defer = fit::defer([this, &frame_info]() { RxReturned(frame_info.buffers.size()); });
 
-  if (buff->length != 0) {
-    // Copy session data to other sessions (if any) even if this session is paused.
-    parent_->CopySessionData(*this, descriptor_index, buff);
+  // Copy session data to other sessions (if any) even if this session is paused.
+  parent_->CopySessionData(*this, frame_info);
 
-    if (IsSubscribedToFrameType(buff->meta.port, buff->meta.frame_type) && !paused_.load()) {
-      // We validated the descriptor coming in, writing it back should always work.
-      ZX_ASSERT(LoadRxInfo(descriptor_index, buff) == ZX_OK);
-      rx_return_queue_[rx_return_queue_count_++] = descriptor_index;
-      // Never allow reusing a frame that has been put in the return queue.
-      return false;
-    }
+  // Allow the buffer to be reused as long as our rx path is still valid.
+  bool allow_reuse = rx_valid_;
+
+  if (IsSubscribedToFrameType(frame_info.meta.port, frame_info.meta.frame_type) &&
+      !paused_.load()) {
+    // Allow reuse if any issue happens loading descriptor configuration.
+    // NB: Error logging happens at LoadRxInfo at a greater granularity, we only care about success
+    // here.
+    allow_reuse &= LoadRxInfo(frame_info) != ZX_OK;
   }
 
-  // Allow the buffer to be immediately reused as long as our rx path is still valid.
-  return rx_valid_;
+  return allow_reuse;
 }
 
-void Session::CompleteRxWith(const Session& owner, uint16_t owner_index, const rx_buffer_t* buff) {
-  // can't call this if owner is self.
+void Session::CompleteRxWith(const Session& owner, const RxFrameInfo& frame_info) {
+  // Shouldn't call CompleteRxWith where owner is self. Assertion enforces that
+  // DeviceInterface::CopySessionData does the right thing.
   ZX_ASSERT(&owner != this);
-  if (!IsSubscribedToFrameType(buff->meta.port, buff->meta.frame_type) || paused_.load()) {
-    // don't do anything if we're paused or not subscribed to this frame type.
+  if (!IsSubscribedToFrameType(frame_info.meta.port, frame_info.meta.frame_type) ||
+      paused_.load()) {
+    // Don't do anything if we're paused or not subscribed to this frame type.
     return;
   }
 
-  if (rx_avail_queue_count_ == 0) {
-    // can't do much if we can't fetch more descriptors
-    if (FetchRxDescriptors() != ZX_OK) {
+  // Allocate enough descriptors to fit all the data that we want to copy from the other session.
+  std::array<SessionRxBuffer, MAX_BUFFER_PARTS> parts_storage;
+  auto parts_iter = parts_storage.begin();
+  uint16_t* rx_queue_pick = &rx_avail_queue_[rx_avail_queue_count_];
+  uint32_t remaining = frame_info.total_length;
+  bool attempted_fetch = false;
+  while (remaining != 0) {
+    if (parts_iter == parts_storage.end()) {
+      // Chained too many parts, this session is not providing buffers large enough.
+      LOGF_WARN(
+          "network-device(%s): failed to allocate %d bytes with %ld buffer parts (%d bytes "
+          "remaining); frame dropped",
+          name(), frame_info.total_length, parts_storage.size(), remaining);
       return;
     }
-  }
-  // shouldn't get here without available descriptors
-  ZX_ASSERT(rx_avail_queue_count_ > 0);
-  rx_avail_queue_count_--;
-  auto target_desc = rx_avail_queue_[rx_avail_queue_count_];
-  zx_status_t status = LoadRxInfo(target_desc, buff);
-  if (status == ZX_ERR_NO_RESOURCES) {
-    // buffer too long and didn't fit the descriptor. just return it to the queue.
-    rx_avail_queue_[rx_avail_queue_count_] = target_desc;
-    rx_avail_queue_count_++;
-  } else if (status != ZX_OK) {
-    // something else happened when loading the information, this session is feeding us invalid
-    // descriptors. Just kill the session.
-    Kill();
-    return;
+    if (rx_avail_queue_count_ == 0) {
+      // We allow a fetch attempt only once, which gives the session a chance to have returned
+      // enough descriptors for this chained case.
+      if (attempted_fetch) {
+        return;
+      }
+      attempted_fetch = true;
+
+      // Can't do much if we can't fetch more descriptors. We have to drop this frame.
+      // We intentionally don't log here because this becomes too noisy.
+      // TODO(https://fxbug.dev/74434): Log here sparingly as part of "no buffers available"
+      // strategy.
+      if (FetchRxDescriptors() != ZX_OK) {
+        return;
+      }
+
+      // FetchRxDescriptors modifies the available rx queue, we need to build the parts again.
+      remaining = frame_info.total_length;
+      parts_iter = parts_storage.begin();
+      rx_queue_pick = &rx_avail_queue_[rx_avail_queue_count_];
+      continue;
+    }
+    SessionRxBuffer& session_buffer = *parts_iter++;
+    session_buffer.descriptor = *(--rx_queue_pick);
+    buffer_descriptor_t* desc = descriptor(session_buffer.descriptor);
+    uint32_t desc_length = desc->data_length + desc->head_length + desc->tail_length;
+    session_buffer.offset = 0;
+    session_buffer.length = std::min(desc_length, remaining);
+    remaining -= session_buffer.length;
   }
 
-  // copy the data from the owner VMO into our own.
-  // we can assume that the owner descriptor is valid, because the descriptor was validated when
+  fbl::Span<const SessionRxBuffer> parts(parts_storage.begin(), parts_iter);
+  zx_status_t status = LoadRxInfo(RxFrameInfo{
+      .meta = frame_info.meta,
+      .buffers = parts,
+      .total_length = frame_info.total_length,
+  });
+  // LoadRxInfo only fails if we can't fulfill the total length with the given buffer parts. It
+  // shouldn't fail here because we hand crafted the parts above to fulfill the total frame length.
+  ZX_ASSERT_MSG(status == ZX_OK, "failed to load frame information to copy session: %s",
+                zx_status_get_string(status));
+  rx_avail_queue_count_ -= parts.size();
+
+  const uint16_t first_descriptor = parts.begin()->descriptor;
+
+  // Copy the data from the owner VMO into our own.
+  // We can assume that the owner descriptor is valid, because the descriptor was validated when
   // passing it down to the device.
-  // Also, we know that our own descriptor is valid, because we already pre-loaded the information
-  // by calling LoadRxInfo above.
-  auto* owner_desc = owner.descriptor(owner_index);
-  auto* desc = descriptor(target_desc);
-  auto len = buff->length;
+  // Also, we know that our own descriptor is valid, because we already pre-loaded the
+  // information by calling LoadRxInfo above.
+  const buffer_descriptor_t* owner_desc = owner.descriptor(frame_info.buffers.begin()->descriptor);
+  buffer_descriptor_t* desc = descriptor(first_descriptor);
+
+  remaining = frame_info.total_length;
   uint32_t owner_off = 0;
   uint32_t self_off = 0;
-  while (len > 0) {
+  while (remaining > 0) {
     ZX_ASSERT(desc && owner_desc);
     auto owner_len = owner_desc->data_length - owner_off;
     auto self_len = desc->data_length - self_off;
@@ -879,12 +914,13 @@ void Session::CompleteRxWith(const Session& owner, uint16_t owner_index, const r
       owner_desc = owner.descriptor(owner_desc->nxt);
       owner_off = 0;
     }
-    len -= copy_len;
+    remaining -= copy_len;
   }
+}
 
-  // add the descriptor to the return queue.
-  rx_return_queue_[rx_return_queue_count_] = target_desc;
-  rx_return_queue_count_++;
+bool Session::CompleteUnfulfilledRx() {
+  RxReturned(1);
+  return rx_valid_;
 }
 
 bool Session::ListenFromTx(const Session& owner, uint16_t owner_index) {
@@ -968,55 +1004,65 @@ bool Session::ListenFromTx(const Session& owner, uint16_t owner_index) {
   return true;
 }
 
-zx_status_t Session::LoadRxInfo(uint16_t descriptor_index, const rx_buffer_t* buff) {
-  auto* desc = descriptor(descriptor_index);
-  if (desc == nullptr) {
-    LOGF_ERROR("network-device(%s): invalid descriptor index %d", name(), descriptor_index);
-    return ZX_ERR_INVALID_ARGS;
-  }
-  auto len = static_cast<uint32_t>(buff->length);
+zx_status_t Session::LoadRxInfo(const RxFrameInfo& info) {
+  // Expected to have been checked at upper layers. See RxQueue::CompleteRxList.
+  // - Buffer parts does not violate maximum parts contract.
+  // - No empty frames must reach us here.
+  ZX_DEBUG_ASSERT(info.buffers.size() <= netdev::wire::kMaxDescriptorChain);
+  ZX_DEBUG_ASSERT(!info.buffers.empty());
 
-  if (buff->meta.info_type != static_cast<uint32_t>(netdev::wire::InfoType::kNoInfo)) {
-    LOGF_WARN("network-device(%s): InfoType not recognized :%d", name(), buff->meta.info_type);
-  } else {
-    desc->info_type = static_cast<uint32_t>(netdev::wire::InfoType::kNoInfo);
-  }
-  desc->frame_type = buff->meta.frame_type;
-  desc->inbound_flags = buff->meta.flags;
-  desc->port_id = buff->meta.port;
-  if (desc->chain_length >= netdev::wire::kMaxDescriptorChain) {
-    LOGF_ERROR("network-device(%s): invalid descriptor %d chain length %d", name(),
-               descriptor_index, desc->chain_length);
-    return ZX_ERR_INVALID_ARGS;
-  }
-  auto didx = descriptor_index;
-  while (len > 0) {
-    if (desc->data_length >= len) {
-      desc->data_length = len;
-      len = 0;
-    } else {
-      len -= desc->data_length;
-      if (desc->chain_length == 0) {
-        LOGF_ERROR("network-device(%s): can't fill entire length in descriptor %d => %d: %d",
-                   name(), descriptor_index, didx, len);
-        return ZX_ERR_NO_RESOURCES;
-      }
-      didx = desc->nxt;
-      desc = descriptor(didx);
-      if (desc == nullptr) {
-        LOGF_ERROR("network-device(%s): invalid descriptor chain %d => %d", name(),
-                   descriptor_index, didx);
-        return ZX_ERR_INVALID_ARGS;
-      }
+  buffer_descriptor_t* desc = nullptr;
+
+  auto buffers_iterator = info.buffers.end();
+  uint8_t chain_len = 0;
+  uint16_t next_desc_index = 0xFFFF;
+  do {
+    buffers_iterator--;
+    const SessionRxBuffer& buffer = *buffers_iterator;
+    desc = descriptor(buffer.descriptor);
+    if (desc == nullptr) {
+      LOGF_ERROR("network-device(%s): invalid descriptor index %d", name(), buffer.descriptor);
+      return ZX_ERR_INVALID_ARGS;
     }
-  }
+    uint32_t available_len = desc->data_length + desc->head_length + desc->tail_length;
+    // Total consumed length for the descriptor is the offset + length because length is counted
+    // from the offset on fulfilled buffer parts.
+    uint32_t consumed_part_length = buffer.offset + buffer.length;
+    if (consumed_part_length > available_len) {
+      LOGF_ERROR("network-device(%s): invalid returned buffer length: %d, descriptor fits %d",
+                 name(), consumed_part_length, available_len);
+      return ZX_ERR_INVALID_ARGS;
+    }
+    // NB: Update only the fields that we need to update here instead of using literals; we're
+    // writing into shared memory and we don't want to write over all fields nor trust compiler
+    // optimizations to elide "a = a" statements.
+    desc->head_length = buffer.offset;
+    desc->data_length = buffer.length;
+    desc->tail_length = available_len - consumed_part_length;
+    desc->chain_length = chain_len;
+    desc->nxt = next_desc_index;
+    chain_len++;
+    next_desc_index = buffer.descriptor;
+  } while (buffers_iterator != info.buffers.begin());
 
-  // zero out the data of any final chained parts
-  while (desc->chain_length != 0) {
-    desc = descriptor(desc->nxt);
-    desc->data_length = 0;
+  // The descriptor pointer now points to the first descriptor in the chain, where we store the
+  // metadata.
+  auto info_type = static_cast<netdev::wire::InfoType>(info.meta.info_type);
+  switch (info_type) {
+    case netdev::wire::InfoType::kNoInfo:
+      break;
+    default:
+      LOGF_WARN("network-device(%s): info type (%d) not recognized, discarding information", name(),
+                info.meta.info_type);
+      info_type = netdev::wire::InfoType::kNoInfo;
+      break;
   }
+  desc->info_type = static_cast<uint32_t>(info_type);
+  desc->frame_type = info.meta.frame_type;
+  desc->inbound_flags = info.meta.flags;
+  desc->port_id = info.meta.port;
 
+  rx_return_queue_[rx_return_queue_count_++] = buffers_iterator->descriptor;
   return ZX_OK;
 }
 
