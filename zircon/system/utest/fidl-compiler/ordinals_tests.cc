@@ -14,27 +14,27 @@
 
 namespace {
 
-const std::string kPrologWithHandleDefinition(R"FIDL(
-library methodhasher;
-
-enum obj_type : uint32 {
-    NONE = 0;
-    CHANNEL = 4;
-};
-
-resource_definition handle : uint32 {
-    properties {
-        obj_type subtype;
-    };
-};
-)FIDL");
-
 // Since a number of these tests rely on specific properties of 64b hashes
 // which are computationally prohibitive to reverse engineer, we rely on
 // a stubbed out method hasher `GetGeneratedOrdinal64ForTesting` defined
 // in test_library.h.
 
-TEST(OrdinalsTest, GoodOrdinalCannotBeZero) {
+TEST(OrdinalsTests, BadOrdinalCannotBeZero) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library methodhasher;
+
+protocol Special {
+    ThisOneHashesToZero() -> (struct { i int64; });
+};
+
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrGeneratedZeroValueOrdinal);
+}
+
+TEST(OrdinalsTests, BadOrdinalCannotBeZeroOld) {
   TestLibrary library(R"FIDL(
 library methodhasher;
 
@@ -46,14 +46,21 @@ protocol Special {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrGeneratedZeroValueOrdinal);
 }
 
-TEST(OrdinalsTest, BadClashingOrdinalValues) {
-  TestLibrary library(kPrologWithHandleDefinition + R"FIDL(
+TEST(OrdinalsTests, BadClashingOrdinalValues) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  auto library = WithLibraryZx(R"FIDL(
+library methodhasher;
+
+using zx;
+
 protocol Special {
-    ClashOne(string s, bool b) -> (int32 i);
-    ClashTwo(string s) -> (handle:CHANNEL r);
+    ClashOne(struct { s string; b bool; }) -> (struct { i int32; });
+    ClashTwo(struct { s string; }) -> (struct { r zx.handle:CHANNEL; });
 };
 
-// )FIDL");
+)FIDL",
+                               experimental_flags);
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMethodOrdinal);
 
   // The FTP requires the error message as follows
@@ -64,16 +71,73 @@ protocol Special {
               ("Selector pattern not found in error: " + library.errors()[0]->msg).c_str());
 }
 
-TEST(OrdinalsTest, BadClashingOrdinalValuesWithAttribute) {
-  TestLibrary library(kPrologWithHandleDefinition + R"FIDL(
+TEST(OrdinalsTests, BadClashingOrdinalValuesOld) {
+  fidl::ExperimentalFlags experimental_flags;
+  auto library = WithLibraryZx(R"FIDL(
+library methodhasher;
+
+using zx;
+
+protocol Special {
+    ClashOne(string s, bool b) -> (int32 i);
+    ClashTwo(string s) -> (zx.handle:CHANNEL r);
+};
+
+)FIDL",
+                               experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMethodOrdinal);
+
+  // The FTP requires the error message as follows
+  const std::regex pattern(R"REGEX(\[\s*Selector\s*=\s*"(ClashOne|ClashTwo)_"\s*\])REGEX");
+  std::smatch sm;
+  std::string error_msg(library.errors()[0]->msg);
+  ASSERT_TRUE(std::regex_search(error_msg, sm, pattern), "%s",
+              ("Selector pattern not found in error: " + library.errors()[0]->msg).c_str());
+}
+
+TEST(OrdinalsTests, BadClashingOrdinalValuesWithAttribute) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  auto library = WithLibraryZx(R"FIDL(
+library methodhasher;
+
+using zx;
+
+protocol Special {
+    @selector("ClashOne")
+    foo(struct { s string; b bool; }) -> (struct { i int32; });
+    @selector("ClashTwo")
+    bar(struct { s string; }) -> (struct { r zx.handle:CHANNEL; });
+};
+
+)FIDL",
+                               experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMethodOrdinal);
+
+  // The FTP requires the error message as follows
+  const std::regex pattern(R"REGEX(\[\s*Selector\s*=\s*"(ClashOne|ClashTwo)_"\s*\])REGEX");
+  std::smatch sm;
+  std::string error_msg(library.errors()[0]->msg);
+  ASSERT_TRUE(std::regex_search(error_msg, sm, pattern), "%s",
+              ("Selector pattern not found in error: " + library.errors()[0]->msg).c_str());
+}
+
+TEST(OrdinalsTests, BadClashingOrdinalValuesWithAttributeOld) {
+  fidl::ExperimentalFlags experimental_flags;
+  auto library = WithLibraryZx(R"FIDL(
+library methodhasher;
+
+using zx;
+
 protocol Special {
     [Selector = "ClashOne"]
     foo(string s, bool b) -> (int32 i);
     [Selector = "ClashTwo"]
-    bar(string s) -> (handle:CHANNEL r);
+    bar(string s) -> (zx.handle:CHANNEL r);
 };
 
-)FIDL");
+)FIDL",
+                               experimental_flags);
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMethodOrdinal);
 
   // The FTP requires the error message as follows
@@ -84,19 +148,25 @@ protocol Special {
               ("Selector pattern not found in error: " + library.errors()[0]->msg).c_str());
 }
 
-TEST(OrdinalsTest, GoodAttributeResolvesClashes) {
-  TestLibrary library(kPrologWithHandleDefinition + R"FIDL(
+TEST(OrdinalsTests, GoodAttributeResolvesClashes) {
+  fidl::ExperimentalFlags experimental_flags;
+  auto library = WithLibraryZx(R"FIDL(
+library methodhasher;
+
+using zx;
+
 protocol Special {
     [Selector = "ClashOneReplacement"]
     ClashOne(string s, bool b) -> (int32 i);
-    ClashTwo(string s) -> (handle:CHANNEL r);
+    ClashTwo(string s) -> (zx.handle:CHANNEL r);
 };
 
-)FIDL");
-  ASSERT_TRUE(library.Compile());
+)FIDL",
+                               experimental_flags);
+  ASSERT_COMPILED_AND_CONVERT(library);
 }
 
-TEST(OrdinalsTest, GoodOrdinalValueIsSha256) {
+TEST(OrdinalsTests, GoodOrdinalValueIsSha256) {
   TestLibrary library(R"FIDL(
 library a.b.c;
 
@@ -104,7 +174,7 @@ protocol protocol {
     selector(string s, bool b) -> (int32 i);
 };
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
 
   const char hash_name64[] = "a.b.c/protocol.selector";
   uint8_t digest64[SHA256_DIGEST_LENGTH];
@@ -116,7 +186,7 @@ protocol protocol {
   ASSERT_EQ(actual_hash64, expected_hash64, "Expected 64bits hash is not correct");
 }
 
-TEST(OrdinalsTest, GoodSelectorWithFullPath) {
+TEST(OrdinalsTests, GoodSelectorWithFullPath) {
   TestLibrary library(R"FIDL(
 library not.important;
 
@@ -125,7 +195,7 @@ protocol at {
     all();
 };
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
 
   const char hash_name64[] = "a.b.c/protocol.selector";
   uint8_t digest64[SHA256_DIGEST_LENGTH];
@@ -137,7 +207,23 @@ protocol at {
   ASSERT_EQ(actual_hash64, expected_hash64, "Expected 64bits hash is not correct");
 }
 
-TEST(OrdinalsTest, GoodSelectorValueIsValidated) {
+TEST(OrdinalsTests, BadSelectorValueIsValidated) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library not.important;
+
+protocol at {
+    // missing two components after the slash
+    @selector("a.b.c/selector")
+    all();
+};
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidSelectorValue);
+}
+
+TEST(OrdinalsTests, BadSelectorValueIsValidatedOld) {
   TestLibrary library(R"FIDL(
 library not.important;
 
@@ -151,7 +237,7 @@ protocol at {
 }
 
 // generated by gen_ordinal_value_is_first64bits_of_sha256_test.sh
-TEST(OrdinalsTest, BadOrdinalValueIsFirst64BitsOfSha256) {
+TEST(OrdinalsTests, GoodOrdinalValueIsFirst64BitsOfSha256) {
   TestLibrary library(R"FIDL(
 library a.b.c;
 
@@ -190,7 +276,7 @@ protocol protocol {
     s31();
 };
 )FIDL");
-  ASSERT_TRUE(library.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library);
 
   const fidl::flat::Protocol* iface = library.LookupProtocol("protocol");
   EXPECT_EQ(iface->methods[0].generated_ordinal64->value, 0x3b1625372e15f1ae);
@@ -227,7 +313,7 @@ protocol protocol {
   EXPECT_EQ(iface->methods[31].generated_ordinal64->value, 0x54fd307bb5bfab2d);
 }
 
-TEST(OrdinalsTest, GoodHackToRenameFuchsiaIoToFuchsiaIoOne) {
+TEST(OrdinalsTests, GoodHackToRenameFuchsiaIoToFuchsiaIoOne) {
   TestLibrary library_io(R"FIDL(
 library fuchsia.io;
 
@@ -235,7 +321,7 @@ protocol SomeProtocol {
     SomeMethod();
 };
 )FIDL");
-  ASSERT_TRUE(library_io.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library_io);
 
   TestLibrary library_io_one(R"FIDL(
 library fuchsia.io1;
@@ -244,7 +330,7 @@ protocol SomeProtocol {
     SomeMethod();
 };
 )FIDL");
-  ASSERT_TRUE(library_io_one.Compile());
+  ASSERT_COMPILED_AND_CONVERT(library_io_one);
 
   const fidl::flat::Protocol* io_protocol = library_io.LookupProtocol("SomeProtocol");
   uint64_t io_hash64 = io_protocol->methods[0].generated_ordinal64->value;
