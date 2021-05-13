@@ -33,6 +33,7 @@ use {
     futures::StreamExt,
     futures::TryStreamExt,
     legacy_element_management::SimpleElementManager,
+    std::fs,
     std::rc::Rc,
     std::sync::{Arc, Weak},
 };
@@ -63,9 +64,15 @@ async fn launch_ermine() -> Result<(App, zx::Channel), Error> {
         client_chan,
     );
 
+    // Check if shell is overridden. Otherwise use the default ermine shell.
+    let shell_url = match fs::read_to_string("/config/data/shell") {
+        Ok(url) => url,
+        Err(_) => "fuchsia-pkg://fuchsia.com/ermine#meta/ermine.cmx".to_string()
+    };
+
     let app = launch_with_options(
         &launcher,
-        "fuchsia-pkg://fuchsia.com/ermine#meta/ermine.cmx".to_string(),
+        shell_url,
         None,
         launch_options,
     )?;

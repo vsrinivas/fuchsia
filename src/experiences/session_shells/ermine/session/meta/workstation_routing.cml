@@ -27,6 +27,12 @@
             path: "/dev/class/input-report",
         },
         {
+            directory: "config-data",
+            from: "parent",
+            rights: [ "r*" ],
+            path: "/config/data",
+        },
+        {
             protocol: [
                 "fuchsia.sys.Launcher",
                 "fuchsia.ui.focus.FocusChainListenerRegistry",
@@ -75,6 +81,12 @@
             protocol: [ "fuchsia.session.scene.Manager" ],
             from: "#scene_manager",
             to: [ "#workstation_session" ],
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: [ "#workstation_session" ],
+            subdir: "workstation_session",
         },
     ],
     expose: [

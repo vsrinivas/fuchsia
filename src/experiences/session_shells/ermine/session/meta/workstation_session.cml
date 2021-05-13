@@ -38,6 +38,12 @@
                 "fuchsia.ui.views.ViewRefInstalled",
             ],
         },
+        {
+            directory: "config-data",
+            from: "parent",
+            rights: [ "r*" ],
+            path: "/config/data",
+        },
     ],
     offer: [
         {
