@@ -2631,133 +2631,6 @@ INSTANTIATE_TEST_SUITE_P(NetDatagramTest, AnyAddrDatagramSocketTest,
                                            AddrKind::Kind::V4MAPPEDV6),
                          [](const auto info) { return info.param.AddrKindToString(); });
 
-template <int socktype>
-class LoopbackAddrSocketTest : public SocketTest<socktype> {
- protected:
-  struct sockaddr_storage Address(uint16_t port) const override {
-    struct sockaddr_storage addr {
-      .ss_family = this->Domain(),
-    };
-
-    switch (this->GetParam().Kind()) {
-      case AddrKind::Kind::V4: {
-        auto sin = reinterpret_cast<struct sockaddr_in*>(&addr);
-        sin->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-        sin->sin_port = htons(port);
-        return addr;
-      }
-      case AddrKind::Kind::V6: {
-        auto sin6 = reinterpret_cast<struct sockaddr_in6*>(&addr);
-        sin6->sin6_addr = IN6ADDR_LOOPBACK_INIT;
-        sin6->sin6_port = htons(port);
-        return addr;
-      }
-      case AddrKind::Kind::V4MAPPEDV6: {
-        auto sin6 = reinterpret_cast<struct sockaddr_in6*>(&addr);
-        sin6->sin6_addr = IN6ADDR_LOOPBACK_INIT;
-        sin6->sin6_addr.s6_addr[10] = 0xff;
-        sin6->sin6_addr.s6_addr[11] = 0xff;
-        sin6->sin6_port = htons(port);
-        return addr;
-      }
-    }
-  }
-};
-
-using LoopbackDatagramSocketTest = LoopbackAddrSocketTest<SOCK_DGRAM>;
-
-template <typename F>
-void AssertClearError(const fbl::unique_fd& sock, F fn) {
-  char bytes[1];
-  struct pollfd pfd = {
-      .fd = sock.get(),
-  };
-  // Send a UDP packet to trigger a port unreachable response. Expect a POLLERR to be signaled on
-  // the socket.
-  ASSERT_EQ(send(sock.get(), bytes, sizeof(bytes), 0), ssize_t(sizeof(bytes))) << strerror(errno);
-  int n = poll(&pfd, 1, kTimeout);
-  ASSERT_GE(n, 0) << strerror(errno);
-  ASSERT_EQ(n, 1);
-  ASSERT_EQ(pfd.revents & POLLERR, POLLERR);
-  fn();
-  n = poll(&pfd, 1, 0);
-  ASSERT_GE(n, 0) << strerror(errno);
-  ASSERT_EQ(n, 0);
-}
-
-TEST_P(LoopbackDatagramSocketTest, POLLERR) {
-  char bytes[1];
-  struct iovec iov[] = {{
-      .iov_base = bytes,
-      .iov_len = sizeof(bytes),
-  }};
-  struct msghdr msg = {
-      .msg_iov = iov,
-      .msg_iovlen = std::size(iov),
-  };
-
-  {
-    // Connect to an existing remote but on a port that is not being used.
-    struct sockaddr_storage loopback = Address(htons(1337));
-    socklen_t addrlen = AddrLen();
-    ASSERT_EQ(connect(sock().get(), reinterpret_cast<const struct sockaddr*>(&loopback), addrlen),
-              0)
-        << strerror(errno);
-  }
-
-  // Precondition sanity check: no pending events on the socket.
-  struct pollfd pfd = {
-      .fd = sock().get(),
-  };
-  int n = poll(&pfd, 1, 0);
-  ASSERT_GE(n, 0) << strerror(errno);
-  ASSERT_EQ(n, 0);
-
-  {
-    SCOPED_TRACE("send");
-    AssertClearError(sock(), [&]() {
-      EXPECT_EQ(send(sock().get(), bytes, sizeof(bytes), 0), -1);
-      EXPECT_EQ(errno, ECONNREFUSED) << strerror(errno);
-    });
-  }
-  {
-    SCOPED_TRACE("recv");
-    AssertClearError(sock(), [&]() {
-      EXPECT_EQ(recv(sock().get(), bytes, sizeof(bytes), 0), -1);
-      EXPECT_EQ(errno, ECONNREFUSED) << strerror(errno);
-    });
-  }
-  {
-    SCOPED_TRACE("sendmsg");
-    AssertClearError(sock(), [&]() {
-      EXPECT_EQ(sendmsg(sock().get(), &msg, 0), -1);
-      EXPECT_EQ(errno, ECONNREFUSED) << strerror(errno);
-    });
-  }
-  {
-    SCOPED_TRACE("recvmsg");
-    AssertClearError(sock(), [&]() {
-      EXPECT_EQ(recvmsg(sock().get(), &msg, 0), -1);
-      EXPECT_EQ(errno, ECONNREFUSED) << strerror(errno);
-    });
-  }
-  {
-    SCOPED_TRACE("getsockopt with SO_ERROR");
-    AssertClearError(sock(), [&]() {
-      int err;
-      socklen_t optlen = sizeof(err);
-      EXPECT_EQ(getsockopt(sock().get(), SOL_SOCKET, SO_ERROR, &err, &optlen), 0)
-          << strerror(errno);
-      EXPECT_EQ(optlen, sizeof(err));
-      EXPECT_EQ(err, ECONNREFUSED) << strerror(err);
-    });
-  }
-}
-
-INSTANTIATE_TEST_SUITE_P(NetDatagramTest, LoopbackDatagramSocketTest,
-                         ::testing::Values(AddrKind::Kind::V4, AddrKind::Kind::V6),
-                         [](const auto info) { return info.param.AddrKindToString(); });
-
 class IOMethod {
  public:
   enum class Op {
@@ -3173,6 +3046,195 @@ INSTANTIATE_TEST_SUITE_P(IOMethodTests, IOMethodTest,
                                            IOMethod::Op::WRITEV, IOMethod::Op::SEND,
                                            IOMethod::Op::SENDTO, IOMethod::Op::SENDMSG),
                          [](const auto info) { return info.param.IOMethodToString(); });
+
+class IOReadingMethodTest : public ::testing::TestWithParam<IOMethod> {};
+
+TEST_P(IOReadingMethodTest, DatagramSocketErrorWhileBlocked) {
+  fbl::unique_fd fd;
+  ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
+
+  {
+    // Connect to an existing remote but on a port that is not being used.
+    struct sockaddr_in addr = {
+        .sin_family = AF_INET,
+        .sin_port = htons(1337),
+        .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
+    };
+    ASSERT_EQ(connect(fd.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
+        << strerror(errno);
+  }
+
+  std::latch fut_started(1);
+  const auto fut = std::async(std::launch::async, [&, readMethod = GetParam()]() {
+    fut_started.count_down();
+
+    char bytes[1];
+    // Block while waiting for data to be received.
+    ASSERT_EQ(readMethod.executeIO(fd.get(), bytes, sizeof(bytes)), -1);
+    ASSERT_EQ(errno, ECONNREFUSED) << strerror(errno);
+  });
+  fut_started.wait();
+  ASSERT_NO_FATAL_FAILURE(AssertBlocked(fut));
+
+  {
+    // Precondition sanity check: no pending events on the socket.
+    struct pollfd pfd = {
+        .fd = fd.get(),
+    };
+    int n = poll(&pfd, 1, 0);
+    ASSERT_GE(n, 0) << strerror(errno);
+    ASSERT_EQ(n, 0);
+  }
+
+  char bytes[1];
+  // Send a UDP packet to trigger a port unreachable response.
+  ASSERT_EQ(send(fd.get(), bytes, sizeof(bytes), 0), ssize_t(sizeof(bytes))) << strerror(errno);
+  // The blocking recv call should terminate with an error.
+  ASSERT_EQ(fut.wait_for(std::chrono::milliseconds(kTimeout)), std::future_status::ready);
+
+  {
+    // Postcondition sanity check: no pending events on the socket, the POLLERR should've been
+    // cleared by the readMethod call.
+    struct pollfd pfd = {
+        .fd = fd.get(),
+    };
+    int n = poll(&pfd, 1, 0);
+    ASSERT_GE(n, 0) << strerror(errno);
+    ASSERT_EQ(n, 0);
+  }
+
+  ASSERT_EQ(close(fd.release()), 0) << strerror(errno);
+}
+
+INSTANTIATE_TEST_SUITE_P(IOReadingMethodTests, IOReadingMethodTest,
+                         ::testing::Values(IOMethod::Op::READ, IOMethod::Op::READV,
+                                           IOMethod::Op::RECV, IOMethod::Op::RECVFROM,
+                                           IOMethod::Op::RECVMSG),
+                         [](const ::testing::TestParamInfo<IOMethod>& info) {
+                           return info.param.IOMethodToString();
+                         });
+
+template <typename F>
+void TestDatagramSocketClearPoller(bool nonblocking, F consumeError) {
+  int flags = 0;
+  if (nonblocking) {
+    flags |= SOCK_NONBLOCK;
+  }
+
+  fbl::unique_fd fd;
+  ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM | flags, 0))) << strerror(errno);
+
+  {
+    // Connect to an existing remote but on a port that is not being used.
+    struct sockaddr_in addr = {
+        .sin_family = AF_INET,
+        .sin_port = htons(1337),
+        .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
+    };
+
+    ASSERT_EQ(connect(fd.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
+        << strerror(errno);
+  }
+
+  {
+    // Precondition sanity check: no pending events on the socket.
+    struct pollfd pfd = {
+        .fd = fd.get(),
+    };
+    int n = poll(&pfd, 1, 0);
+    ASSERT_GE(n, 0) << strerror(errno);
+    ASSERT_EQ(n, 0);
+  }
+
+  {
+    // Send a UDP packet to trigger a port unreachable response.
+    char bytes[1];
+    ASSERT_EQ(send(fd.get(), bytes, sizeof(bytes), 0), ssize_t(sizeof(bytes))) << strerror(errno);
+  }
+
+  {
+    // Expect a POLLERR to be signaled on the socket.
+    struct pollfd pfd = {
+        .fd = fd.get(),
+    };
+    int n = poll(&pfd, 1, kTimeout);
+    ASSERT_GE(n, 0) << strerror(errno);
+    ASSERT_EQ(n, 1);
+    ASSERT_EQ(pfd.revents & POLLERR, POLLERR);
+  }
+
+  consumeError(fd);
+
+  {
+    struct pollfd pfd = {
+        .fd = fd.get(),
+    };
+    int n = poll(&pfd, 1, 0);
+    ASSERT_GE(n, 0) << strerror(errno);
+    ASSERT_EQ(n, 0);
+  }
+
+  ASSERT_EQ(close(fd.release()), 0) << strerror(errno);
+}
+
+std::string nonBlockingToString(bool nonblocking) {
+  if (nonblocking) {
+    return "NonBlocking";
+  }
+  return "Blocking";
+}
+
+class NonBlockingOptionTest : public ::testing::TestWithParam<bool> {};
+
+TEST_P(NonBlockingOptionTest, DatagramSocketClearErrorWithGetSockOpt) {
+  bool nonblocking = GetParam();
+
+  TestDatagramSocketClearPoller(nonblocking, [&](const fbl::unique_fd& fd) {
+    int err;
+    socklen_t optlen = sizeof(err);
+    EXPECT_EQ(getsockopt(fd.get(), SOL_SOCKET, SO_ERROR, &err, &optlen), 0) << strerror(errno);
+    EXPECT_EQ(optlen, sizeof(err));
+    EXPECT_EQ(err, ECONNREFUSED) << strerror(err);
+  });
+}
+
+INSTANTIATE_TEST_SUITE_P(NetDatagramTest, NonBlockingOptionTest, ::testing::Values(false, true),
+                         [](const ::testing::TestParamInfo<bool>& info) {
+                           return nonBlockingToString(info.param);
+                         });
+
+using nonBlockingOptionIOParams = std::tuple<IOMethod, bool>;
+
+class NonBlockingOptionIOTest : public ::testing::TestWithParam<nonBlockingOptionIOParams> {};
+
+TEST_P(NonBlockingOptionIOTest, DatagramSocketClearErrorWithIO) {
+  auto const& [ioMethod, nonblocking] = GetParam();
+
+  TestDatagramSocketClearPoller(nonblocking, [op = ioMethod](const fbl::unique_fd& fd) {
+    char bytes[1];
+    EXPECT_EQ(op.executeIO(fd.get(), bytes, sizeof(bytes)), -1);
+    EXPECT_EQ(errno, ECONNREFUSED) << strerror(errno);
+  });
+}
+
+std::string nonBlockingOptionIOParamsToString(
+    const ::testing::TestParamInfo<nonBlockingOptionIOParams> info) {
+  auto const& [ioMethod, nonblocking] = info.param;
+  std::stringstream s;
+  s << nonBlockingToString(nonblocking);
+  s << ioMethod.IOMethodToString();
+  return s.str();
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    NetDatagramTest, NonBlockingOptionIOTest,
+    ::testing::Combine(::testing::Values(IOMethod::Op::READ, IOMethod::Op::READV,
+                                         IOMethod::Op::RECV, IOMethod::Op::RECVFROM,
+                                         IOMethod::Op::RECVMSG, IOMethod::Op::WRITE,
+                                         IOMethod::Op::WRITEV, IOMethod::Op::SEND,
+                                         IOMethod::Op::SENDTO, IOMethod::Op::SENDMSG),
+                       ::testing::Values(false, true)),
+    nonBlockingOptionIOParamsToString);
 
 using connectingIOParams = std::tuple<IOMethod, bool>;
 
@@ -3820,6 +3882,7 @@ TEST_P(BlockedIOTest, CloseWhileBlocked) {
   // in enclosing function.
   const auto fut = std::async(std::launch::async, [&, op = ioMethod]() {
     fut_started.count_down();
+
     char c;
     if (closeRST) {
       ASSERT_EQ(op.executeIO(client().get(), &c, sizeof(c)), -1);
