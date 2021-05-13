@@ -5,7 +5,7 @@
 #ifndef SRC_CONNECTIVITY_BLUETOOTH_HCI_VENDOR_INTEL_DEVICE_H_
 #define SRC_CONNECTIVITY_BLUETOOTH_HCI_VENDOR_INTEL_DEVICE_H_
 
-#include <fuchsia/hardware/bluetooth/c/fidl.h>
+#include <fuchsia/hardware/bluetooth/llcpp/fidl.h>
 #include <fuchsia/hardware/bt/hci/c/banjo.h>
 #include <fuchsia/hardware/bt/hci/cpp/banjo.h>
 #include <lib/ddk/driver.h>
@@ -21,9 +21,11 @@ namespace btintel {
 class Device;
 
 using DeviceType = ddk::Device<Device, ddk::Initializable, ddk::GetProtocolable, ddk::Unbindable,
-                               ddk::MessageableOld>;
+                               ddk::Messageable<fuchsia_hardware_bluetooth::Hci>::Mixin>;
 
-class Device : public DeviceType, public ddk::BtHciProtocol<Device, ddk::base_protocol> {
+class Device : public DeviceType,
+               public fidl::WireServer<fuchsia_hardware_bluetooth::Hci>,
+               public ddk::BtHciProtocol<Device, ddk::base_protocol> {
  public:
   Device(zx_device_t* device, bt_hci_protocol_t* hci, bool secure);
 
@@ -51,15 +53,12 @@ class Device : public DeviceType, public ddk::BtHciProtocol<Device, ddk::base_pr
   zx_status_t BtHciOpenSnoopChannel(zx::channel in);
 
  private:
-  static zx_status_t OpenCommandChannel(void* ctx, zx_handle_t in);
-  static zx_status_t OpenAclDataChannel(void* ctx, zx_handle_t in);
-  static zx_status_t OpenSnoopChannel(void* ctx, zx_handle_t in);
-
-  static constexpr fuchsia_hardware_bluetooth_Hci_ops_t fidl_ops_ = {
-      .OpenCommandChannel = OpenCommandChannel,
-      .OpenAclDataChannel = OpenAclDataChannel,
-      .OpenSnoopChannel = OpenSnoopChannel,
-  };
+  void OpenCommandChannel(OpenCommandChannelRequestView request,
+                          OpenCommandChannelCompleter::Sync& completer);
+  void OpenAclDataChannel(OpenAclDataChannelRequestView request,
+                          OpenAclDataChannelCompleter::Sync& completer);
+  void OpenSnoopChannel(OpenSnoopChannelRequestView request,
+                        OpenSnoopChannelCompleter::Sync& completer);
 
   zx_status_t LoadSecureFirmware(zx::channel* cmd, zx::channel* acl);
   zx_status_t LoadLegacyFirmware(zx::channel* cmd, zx::channel* acl);

@@ -114,23 +114,17 @@ zx_status_t Device::DdkGetProtocol(uint32_t proto_id, void* out_proto) {
   return ZX_OK;
 }
 
-zx_status_t Device::OpenCommandChannel(void* ctx, zx_handle_t in) {
-  auto& self = *static_cast<btintel::Device*>(ctx);
-  return self.BtHciOpenCommandChannel(zx::channel(in));
+void Device::OpenCommandChannel(OpenCommandChannelRequestView request,
+                                OpenCommandChannelCompleter::Sync& completer) {
+  BtHciOpenCommandChannel(std::move(request->channel));
 }
-
-zx_status_t Device::OpenAclDataChannel(void* ctx, zx_handle_t in) {
-  auto& self = *static_cast<btintel::Device*>(ctx);
-  return self.BtHciOpenAclDataChannel(zx::channel(in));
+void Device::OpenAclDataChannel(OpenAclDataChannelRequestView request,
+                                OpenAclDataChannelCompleter::Sync& completer) {
+  BtHciOpenAclDataChannel(std::move(request->channel));
 }
-
-zx_status_t Device::OpenSnoopChannel(void* ctx, zx_handle_t in) {
-  auto& self = *static_cast<btintel::Device*>(ctx);
-  return self.BtHciOpenSnoopChannel(zx::channel(in));
-}
-
-zx_status_t Device::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
-  return fuchsia_hardware_bluetooth_Hci_dispatch(this, txn, msg, &fidl_ops_);
+void Device::OpenSnoopChannel(OpenSnoopChannelRequestView request,
+                              OpenSnoopChannelCompleter::Sync& completer) {
+  BtHciOpenSnoopChannel(std::move(request->channel));
 }
 
 zx_status_t Device::LoadSecureFirmware(zx::channel* cmd, zx::channel* acl) {
