@@ -1851,7 +1851,8 @@ TEST(LocalhostTest, RaceLocalPeerClose) {
 #if !defined(__Fuchsia__)
   // Make the listener non-blocking so that we can let accept system call return
   // below when there are no acceptable connections.
-  int flags = fcntl(listener.get(), F_GETFL, 0);
+  int flags;
+  ASSERT_GE(flags = fcntl(listener.get(), F_GETFL, 0), 0) << strerror(errno);
   ASSERT_EQ(fcntl(listener.get(), F_SETFL, flags | O_NONBLOCK), 0) << strerror(errno);
 #endif
   struct sockaddr_in addr = {
@@ -1894,8 +1895,8 @@ TEST(LocalhostTest, RaceLocalPeerClose) {
 
       // Accept the connection and close it, adding new racing signal (operating on `close`) to
       // Netstack.
-      int local = accept(listener.get(), nullptr, nullptr);
-      if (local < 0) {
+      auto local = fbl::unique_fd(accept(listener.get(), nullptr, nullptr));
+      if (!local.is_valid()) {
 #if !defined(__Fuchsia__)
         // We get EAGAIN when there are no pending acceptable connections. Though the peer
         // connect was a blocking call, it can return before the final ACK is sent out causing
@@ -1904,13 +1905,13 @@ TEST(LocalhostTest, RaceLocalPeerClose) {
         //
         // The above race does not currently exist on Fuchsia where the final ACK would always
         // be sent out over lo before connect() call returns.
-        ASSERT_EQ(errno, EAGAIN) << strerror(errno);
-      } else {
-        ASSERT_EQ(close(local), 0)
+        ASSERT_EQ(errno, EAGAIN)
 #else
         FAIL()
 #endif
             << strerror(errno);
+      } else {
+        ASSERT_EQ(close(local.release()), 0) << strerror(errno);
       }
     });
   }
@@ -3339,8 +3340,10 @@ TEST_P(ConnectingIOTest, BlockedIO) {
   // Asynchronously block on I/O from the test client socket.
   const auto fut = std::async(std::launch::async, [&, err = closeListener]() {
     // Make the socket blocking.
-    int flags = fcntl(test_client.get(), F_GETFL, 0);
-    EXPECT_EQ(0, fcntl(test_client.get(), F_SETFL, flags ^ O_NONBLOCK)) << strerror(errno);
+    int flags;
+    EXPECT_GE(flags = fcntl(test_client.get(), F_GETFL, 0), 0) << strerror(errno);
+    EXPECT_EQ(flags & O_NONBLOCK, O_NONBLOCK);
+    EXPECT_EQ(fcntl(test_client.get(), F_SETFL, flags ^ O_NONBLOCK), 0) << strerror(errno);
 
     fut_started.count_down();
 
@@ -3410,7 +3413,6 @@ INSTANTIATE_TEST_SUITE_P(
                        ::testing::Values(false, true)),
     connectingIOParamsToString);
 
-namespace {
 // Test close/shutdown of listening socket with multiple non-blocking connects.
 // This tests client sockets in connected and connecting states.
 void TestListenWhileConnect(const IOMethod& ioMethod, void (*stopListen)(fbl::unique_fd&)) {
@@ -3534,7 +3536,6 @@ INSTANTIATE_TEST_SUITE_P(NetStreamTest, StopListenWhileConnect,
                          [](const ::testing::TestParamInfo<IOMethod>& info) {
                            return info.param.IOMethodToString();
                          });
-}  // namespace
 
 TEST(NetStreamTest, NonBlockingConnectRefused) {
   fbl::unique_fd acptfd;
@@ -3554,10 +3555,8 @@ TEST(NetStreamTest, NonBlockingConnectRefused) {
   // No listen() on acptfd.
 
   fbl::unique_fd connfd;
-  ASSERT_TRUE(connfd = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
-
-  int flags = fcntl(connfd.get(), F_GETFL, 0);
-  ASSERT_EQ(0, fcntl(connfd.get(), F_SETFL, flags | O_NONBLOCK));
+  ASSERT_TRUE(connfd = fbl::unique_fd(socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)))
+      << strerror(errno);
 
   int ret;
   EXPECT_EQ(
