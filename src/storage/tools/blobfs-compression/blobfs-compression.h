@@ -16,7 +16,6 @@ struct CompressionCliOptionStruct {
   std::string source_file;
   std::string compressed_file;
   bool disable_size_alignment = false;
-  bool use_compact_merkle_tree = false;
 
   fbl::unique_fd source_file_fd;
   fbl::unique_fd compressed_file_fd;

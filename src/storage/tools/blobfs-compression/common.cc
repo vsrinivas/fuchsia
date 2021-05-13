@@ -138,8 +138,8 @@ zx_status_t BlobfsCompress(const uint8_t* src, const size_t src_sz, uint8_t* des
   }
 
   // Include merkle tree size in the compressed size.
-  const size_t merkle_tree_size = digest::CalculateMerkleTreeSize(
-      src_sz, digest::kDefaultNodeSize, cli_options.use_compact_merkle_tree);
+  const size_t merkle_tree_size =
+      digest::CalculateMerkleTreeSize(src_sz, digest::kDefaultNodeSize, false);
   compressed_size += merkle_tree_size;
 
   // Final size output should be aligned with block size unless disabled explicitly.

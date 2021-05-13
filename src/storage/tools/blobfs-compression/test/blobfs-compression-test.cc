@@ -93,24 +93,40 @@ TEST(BlobfsCompressionTest, CompressWithMerkleTree) {
   memset(data.get(), 0x00, len);
   BufferFill(data.get(), len, 0);
 
-  // By default, we use non-compact merkle tree for calculation.
-  size_t compressed_len_with_non_compact_merkle_tree;
+  // We use non-compact merkle tree for calculation.
+  size_t compressed_len_with_merkle_tree;
+  chunked_compression::CompressionParams params = blobfs::GetDefaultChunkedCompressionParams(len);
+  size_t compressed_limit = params.ComputeOutputSizeLimit(len);
+  fbl::Array<uint8_t> compressed_data(new uint8_t[compressed_limit], compressed_limit);
+  ASSERT_EQ(BlobfsCompress(data.get(), len, compressed_data.get(), &compressed_len_with_merkle_tree,
+                           params, {}),
+            ZX_OK);
+  // In this scenario, it is correct. But it is not always true mathematically.
+  ASSERT_GT(compressed_data.size(), compressed_len_with_merkle_tree);
+}
+
+TEST(BlobfsCompressionTest, DisableSizeAlignment) {
+  const size_t len = 1000000ul;  // Must be bigger than digest:kDefaultNodeSize.
+  fbl::Array<uint8_t> data(new uint8_t[len], len);
+  memset(data.get(), 0x00, len);
+  BufferFill(data.get(), len, 0);
+
+  // We use non-compact merkle tree for calculation.
+  size_t compressed_len_with_aligned_size;
   chunked_compression::CompressionParams params = blobfs::GetDefaultChunkedCompressionParams(len);
   size_t compressed_limit = params.ComputeOutputSizeLimit(len);
   fbl::Array<uint8_t> compressed_data(new uint8_t[compressed_limit], compressed_limit);
   ASSERT_EQ(BlobfsCompress(data.get(), len, compressed_data.get(),
-                           &compressed_len_with_non_compact_merkle_tree, params, {}),
+                           &compressed_len_with_aligned_size, params, {}),
             ZX_OK);
-  // In this case, it is correct. But it is not always true mathematically.
-  ASSERT_GT(compressed_data.size(), compressed_len_with_non_compact_merkle_tree);
 
-  size_t compressed_len_with_compact_merkle_tree;
-  ASSERT_EQ(BlobfsCompress(data.get(), len, nullptr, &compressed_len_with_compact_merkle_tree,
-                           params, {.use_compact_merkle_tree = true}),
+  size_t compressed_len_without_size_alignment;
+  ASSERT_EQ(BlobfsCompress(data.get(), len, nullptr, &compressed_len_without_size_alignment, params,
+                           {.disable_size_alignment = true}),
             ZX_OK);
 
   // Non-compact merkle tree has a larger padding size than the compact merkle tree.
-  ASSERT_GT(compressed_len_with_non_compact_merkle_tree, compressed_len_with_compact_merkle_tree);
+  ASSERT_GT(compressed_len_with_aligned_size, compressed_len_without_size_alignment);
 }
 
 }  // namespace blobfs_compress

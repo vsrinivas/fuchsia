@@ -34,6 +34,10 @@ const auto kCliOptions = std::set<std::string>({
 
 void usage(const char* fname) {
   fprintf(stderr, "Usage: %s [--option1=value --option2 ...]\n\n", fname);
+  fprintf(stderr,
+      "The tool will output the maximum possible compressed file size using the exact same \n"
+      "compression implementation in blobfs. The merkle tree used here is a non-compact merkle \n"
+      "tree as it contributes to a bigger size than a compact merkle tree.\n\n");
   fprintf(stderr, "Options:\n");
   fprintf(stderr, "--%s=/path/to/file\n    %s\n", "source_file",
           "(required) the file to be compressed.");
@@ -41,8 +45,6 @@ void usage(const char* fname) {
           "(optional) the compressed file output path (override if existing).");
   fprintf(stderr, "--%s\n    %s\n", "disable_size_alignment",
           "not align the final compressed output size with block size.");
-  fprintf(stderr, "--%s\n    %s\n", "use_compact_merkle_tree",
-          "specify to use the future compact merkle tree for calculation.");
   fprintf(stderr, "--%s\n    %s\n", "help", "print this usage message.");
   fprintf(stderr, "--%s\n    %s\n", "verbose", "show debugging information.");
 }
@@ -124,7 +126,6 @@ int main(int argc, char** argv) {
   // Parse command line options.
   blobfs_compress::CompressionCliOptionStruct options = {
       .disable_size_alignment = cl.HasOption("disable_size_alignment", nullptr),
-      .use_compact_merkle_tree = cl.HasOption("use_compact_merkle_tree", nullptr),
   };
   cl.GetOptionValue("source_file", &options.source_file);
   options.source_file_fd.reset(open(options.source_file.c_str(), O_RDONLY));
