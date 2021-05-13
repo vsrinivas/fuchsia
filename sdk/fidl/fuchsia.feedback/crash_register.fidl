@@ -37,10 +37,16 @@ protocol CrashReportingProductRegister {
 /// Product release information to report to the crash server.
 table CrashReportingProduct {
     /// The product name on the crash server.
+    /// * The first character has to be alphanumeric. The remaining characters must be printable,
+    ///   but cannot be a space, which leaves values 33 to 127 in the ASCII table. Any other
+    ///   characters will result in a ZX_ERR_INVALID_ARGS epitaph.
     /// * Missing this required field will result in a ZX_ERR_INVALID_ARGS epitaph.
     1: string:MAX name;
 
     /// Optional product version of the component.
+    /// * The first character has to be alphanumeric. The remaining characters must be printable,
+    ///   but cannot be a space, which leaves values 33 to 127 in the ASCII table. Any other
+    ///   characters will result in a ZX_ERR_INVALID_ARGS epitaph.
     ///
     /// If no version is specified then none is reported to the crash server.
     2: string:MAX version;
