@@ -3,21 +3,19 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        device::{Device, DeviceHolder},
-        object_store::{
-            allocator::Allocator,
-            filesystem::{Filesystem, ObjectManager},
-            journal::JournalCheckpoint,
-            transaction::{
-                LockKey, LockManager, ReadGuard, Transaction, TransactionHandler, TxnMutation,
-            },
-            ObjectStore,
+    crate::object_store::{
+        allocator::Allocator,
+        filesystem::{Filesystem, ObjectManager},
+        journal::JournalCheckpoint,
+        transaction::{
+            LockKey, LockManager, ReadGuard, Transaction, TransactionHandler, TxnMutation,
         },
+        ObjectStore,
     },
     anyhow::Error,
     async_trait::async_trait,
     std::sync::Arc,
+    storage_device::{Device, DeviceHolder},
 };
 
 pub struct FakeFilesystem {

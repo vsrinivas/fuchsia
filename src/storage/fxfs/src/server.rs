@@ -145,14 +145,12 @@ impl FxfsServer {
 #[cfg(test)]
 mod tests {
     use {
-        crate::{
-            device::DeviceHolder, object_store::FxFilesystem, server::FxfsServer,
-            testing::fake_device::FakeDevice,
-        },
+        crate::{object_store::FxFilesystem, server::FxfsServer},
         anyhow::Error,
         fidl_fuchsia_fs::AdminMarker,
         fidl_fuchsia_io::DirectoryMarker,
         fuchsia_async as fasync,
+        storage_device::{fake_device::FakeDevice, DeviceHolder},
     };
 
     #[fasync::run(2, test)]

@@ -6,6 +6,7 @@ group("storage") {
   deps = [
     "pseudo-fs",
     "ramdevice_client",
+    "storage_device",
     "vfs/cpp",
     "vfs/rust:vfs",
   ]
@@ -21,6 +22,7 @@ group("tests") {
     "fuchsia-watch:tests",
     "pseudo-fs:tests",
     "ramdevice_client:tests",
+    "storage_device:tests",
     "vfs/cpp:tests",
     "vfs/rust:tests",
   ]

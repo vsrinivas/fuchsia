@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    super::buffer_allocator::BufferAllocator,
+    crate::buffer_allocator::BufferAllocator,
     std::ops::{Bound, Range, RangeBounds},
     std::slice::SliceIndex,
 };

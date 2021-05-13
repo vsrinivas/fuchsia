@@ -3,9 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{device::DeviceHolder, object_store::FxFilesystem},
-    anyhow::Error,
-    std::sync::Arc,
+    crate::object_store::FxFilesystem, anyhow::Error, std::sync::Arc, storage_device::DeviceHolder,
 };
 
 pub async fn mount(device: DeviceHolder) -> Result<Arc<FxFilesystem>, Error> {

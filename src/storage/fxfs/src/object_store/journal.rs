@@ -655,7 +655,6 @@ impl<OH> JournalWriter<OH> {
 mod tests {
     use {
         crate::{
-            device::DeviceHolder,
             object_handle::{ObjectHandle, ObjectHandleExt},
             object_store::{
                 directory::Directory,
@@ -664,9 +663,9 @@ mod tests {
                 transaction::TransactionHandler,
                 HandleOptions, ObjectStore,
             },
-            testing::fake_device::FakeDevice,
         },
         fuchsia_async as fasync,
+        storage_device::{fake_device::FakeDevice, DeviceHolder},
     };
 
     const TEST_DEVICE_BLOCK_SIZE: u32 = 512;

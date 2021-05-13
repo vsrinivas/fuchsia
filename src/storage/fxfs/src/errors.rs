@@ -26,6 +26,8 @@ pub enum FxfsError {
     NoSpace,
     #[error("Deleted")]
     Deleted,
+    #[error("Invalid arguments")]
+    InvalidArgs,
 }
 
 impl FxfsError {

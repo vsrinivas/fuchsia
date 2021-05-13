@@ -559,13 +559,9 @@ impl Directory for FxDirectory {
 #[cfg(test)]
 mod tests {
     use {
-        crate::{
-            device::DeviceHolder,
-            server::testing::{
-                close_dir_checked, close_file_checked, open_dir, open_dir_checked, open_file,
-                open_file_checked, TestFixture,
-            },
-            testing::fake_device::FakeDevice,
+        crate::server::testing::{
+            close_dir_checked, close_file_checked, open_dir, open_dir_checked, open_file,
+            open_file_checked, TestFixture,
         },
         fidl_fuchsia_io::{
             DirectoryProxy, SeekOrigin, MAX_BUF, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE,
@@ -578,6 +574,7 @@ mod tests {
         io_util::{read_file_bytes, write_file_bytes},
         rand::Rng,
         std::{sync::Arc, time::Duration},
+        storage_device::{fake_device::FakeDevice, DeviceHolder},
     };
 
     #[fasync::run_singlethreaded(test)]

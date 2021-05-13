@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::device::{
+    crate::{
         buffer::{Buffer, BufferRef, MutableBufferRef},
         buffer_allocator::{BufferAllocator, MemBufferSource},
         Device,
@@ -16,6 +16,7 @@ use {
     },
 };
 
+/// A Device backed by a memory buffer.
 pub struct FakeDevice {
     allocator: BufferAllocator,
     data: Mutex<Vec<u8>>,

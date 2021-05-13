@@ -1,0 +1,59 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/components/fuchsia_unittest_component.gni")
+import("//build/rust/rustc_library.gni")
+
+lib_srcs = [
+  "src/buffer_allocator.rs",
+  "src/buffer.rs",
+  "src/fake_device.rs",
+  "src/file_backed_device.rs",
+  "src/lib.rs",
+]
+
+lib_deps = [
+  "//src/lib/fuchsia-async",
+  "//third_party/rust_crates:anyhow",
+  "//third_party/rust_crates:async-trait",
+  "//third_party/rust_crates:futures",
+  "//third_party/rust_crates:log",
+  "//third_party/rust_crates:num",
+  "//third_party/rust_crates:rand",
+]
+
+if (is_fuchsia) {
+  lib_srcs += [ "src/block_device.rs" ]
+  lib_deps += [
+    "//src/lib/fuchsia-runtime",
+    "//src/lib/storage/block_client/rust:remote-block-device",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+  ]
+}
+
+rustc_library("storage_device") {
+  with_unit_tests = true
+  edition = "2018"
+  deps = lib_deps
+  sources = lib_srcs
+}
+
+fuchsia_component("storage-device-test") {
+  testonly = true
+  deps = [ ":storage_device_test" ]
+  manifest = "meta/storage_device_test.cml"
+}
+
+fuchsia_test_package("storage-device-tests") {
+  test_components = [ ":storage-device-test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":storage-device-tests",
+    "//src/storage/testing:storage-isolated-devmgr",
+  ]
+}

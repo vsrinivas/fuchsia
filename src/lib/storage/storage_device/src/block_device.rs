@@ -4,17 +4,14 @@
 
 use {
     crate::{
-        device::{
-            buffer::{Buffer, BufferRef, MutableBufferRef},
-            buffer_allocator::{BufferAllocator, BufferSource},
-            Device,
-        },
-        errors::FxfsError,
+        buffer::{Buffer, BufferRef, MutableBufferRef},
+        buffer_allocator::{BufferAllocator, BufferSource},
+        Device,
     },
     anyhow::{bail, ensure, Error},
     async_trait::async_trait,
     fuchsia_runtime::vmar_root_self,
-    fuchsia_zircon::{self as zx, AsHandleRef},
+    fuchsia_zircon::{self as zx, AsHandleRef, Status},
     remote_block_device::{BlockClient, BufferSlice, MutableBufferSlice, VmoId},
     std::{any::Any, cell::UnsafeCell, ffi::CString, ops::Range},
 };
@@ -143,7 +140,7 @@ impl Device for BlockDevice {
 
     async fn write(&self, offset: u64, buffer: BufferRef<'_>) -> Result<(), Error> {
         if self.read_only {
-            bail!(FxfsError::ReadOnlyFilesystem);
+            bail!(Status::ACCESS_DENIED);
         }
         if buffer.len() == 0 {
             return Ok(());
@@ -187,11 +184,9 @@ impl Drop for BlockDevice {
 #[cfg(test)]
 mod tests {
     use {
-        crate::{
-            device::{block_device::BlockDevice, Device},
-            errors::FxfsError,
-        },
+        crate::{block_device::BlockDevice, Device},
         fuchsia_async as fasync,
+        fuchsia_zircon::Status,
         remote_block_device::testing::FakeBlockClient,
     };
 
@@ -239,7 +234,7 @@ mod tests {
             .expect("new failed");
         let mut buf1 = device.allocate_buffer(8192);
         buf1.as_mut_slice().fill(0xaa as u8);
-        assert!(FxfsError::ReadOnlyFilesystem
-            .matches(&device.write(65536, buf1.as_ref()).await.expect_err("Write succeeded")));
+        let err = device.write(65536, buf1.as_ref()).await.expect_err("Write succeeded");
+        assert_eq!(err.root_cause().downcast_ref::<Status>().unwrap(), &Status::ACCESS_DENIED);
     }
 }

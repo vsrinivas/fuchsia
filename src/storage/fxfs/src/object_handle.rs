@@ -3,13 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        device::buffer::{Buffer, BufferRef, MutableBufferRef},
-        object_store::{transaction::Transaction, Timestamp},
-    },
+    crate::object_store::{transaction::Transaction, Timestamp},
     anyhow::{bail, Error},
     async_trait::async_trait,
     std::ops::Range,
+    storage_device::buffer::{Buffer, BufferRef, MutableBufferRef},
 };
 
 // Some places use Default and assume that zero is an invalid object ID, so this cannot be changed

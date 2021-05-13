@@ -4,10 +4,6 @@
 
 use {
     crate::{
-        device::{
-            buffer::{Buffer, BufferRef, MutableBufferRef},
-            buffer_allocator::{BufferAllocator, MemBufferSource},
-        },
         object_handle::{ObjectHandle, ObjectProperties},
         object_store::{
             transaction::{LockKey, LockManager, ReadGuard, Transaction, TransactionHandler},
@@ -21,6 +17,10 @@ use {
         ops::Range,
         sync::{Arc, Mutex},
         vec::Vec,
+    },
+    storage_device::{
+        buffer::{Buffer, BufferRef, MutableBufferRef},
+        buffer_allocator::{BufferAllocator, MemBufferSource},
     },
 };
 

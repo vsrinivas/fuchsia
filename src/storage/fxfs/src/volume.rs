@@ -135,17 +135,14 @@ pub async fn root_volume(fs: &Arc<FxFilesystem>) -> Result<RootVolume, Error> {
 mod tests {
     use {
         super::root_volume,
-        crate::{
-            device::DeviceHolder,
-            object_store::{
-                directory::Directory,
-                filesystem::{FxFilesystem, SyncOptions},
-                transaction::TransactionHandler,
-            },
-            testing::fake_device::FakeDevice,
+        crate::object_store::{
+            directory::Directory,
+            filesystem::{FxFilesystem, SyncOptions},
+            transaction::TransactionHandler,
         },
         anyhow::Error,
         fuchsia_async as fasync,
+        storage_device::{fake_device::FakeDevice, DeviceHolder},
     };
 
     #[fasync::run_singlethreaded(test)]

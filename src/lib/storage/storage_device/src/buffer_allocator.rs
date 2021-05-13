@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    super::buffer::{round_down, round_up, Buffer},
+    crate::buffer::{round_down, round_up, Buffer},
     std::any::Any,
     std::cell::UnsafeCell,
     std::collections::BTreeMap,
@@ -258,7 +258,7 @@ impl BufferAllocator {
 #[cfg(test)]
 mod tests {
     use {
-        crate::device::{
+        crate::{
             buffer::Buffer,
             buffer_allocator::{order, BufferAllocator, MemBufferSource},
         },

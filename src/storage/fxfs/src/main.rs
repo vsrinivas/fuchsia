@@ -9,13 +9,9 @@ use {
     fuchsia_component::server::MissingStartupHandle,
     fuchsia_runtime::HandleType,
     fuchsia_syslog, fuchsia_zircon as zx,
-    fxfs::{
-        device::{block_device::BlockDevice, DeviceHolder},
-        mkfs, mount,
-        object_store::fsck::fsck,
-        server::FxfsServer,
-    },
+    fxfs::{mkfs, mount, object_store::fsck::fsck, server::FxfsServer},
     remote_block_device::RemoteBlockClient,
+    storage_device::{block_device::BlockDevice, DeviceHolder},
 };
 
 #[derive(FromArgs, PartialEq, Debug)]

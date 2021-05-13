@@ -4,7 +4,6 @@
 
 use {
     crate::{
-        device::{Device, DeviceHolder},
         object_handle::INVALID_OBJECT_ID,
         object_store::{
             allocator::Allocator,
@@ -26,6 +25,7 @@ use {
         collections::HashMap,
         sync::{Arc, Mutex, RwLock},
     },
+    storage_device::{Device, DeviceHolder},
 };
 
 #[async_trait]
@@ -500,7 +500,6 @@ impl AsRef<LockManager> for FxFilesystem {
 mod tests {
     use {
         crate::{
-            device::DeviceHolder,
             object_handle::{ObjectHandle, ObjectHandleExt},
             object_store::{
                 directory::Directory,
@@ -508,10 +507,10 @@ mod tests {
                 fsck::fsck,
                 transaction::TransactionHandler,
             },
-            testing::fake_device::FakeDevice,
         },
         fuchsia_async as fasync,
         futures::future::join_all,
+        storage_device::{fake_device::FakeDevice, DeviceHolder},
     };
 
     const TEST_DEVICE_BLOCK_SIZE: u32 = 512;

@@ -656,13 +656,11 @@ impl Drop for WriteGuard<'_> {
 mod tests {
     use {
         super::{LockKey, LockManager, LockState, Mutation, TransactionHandler},
-        crate::{
-            device::DeviceHolder, object_store::testing::fake_filesystem::FakeFilesystem,
-            testing::fake_device::FakeDevice,
-        },
+        crate::object_store::testing::fake_filesystem::FakeFilesystem,
         fuchsia_async as fasync,
         futures::{channel::oneshot::channel, future::FutureExt, join},
         std::{sync::Mutex, task::Poll, time::Duration},
+        storage_device::{fake_device::FakeDevice, DeviceHolder},
     };
 
     #[fasync::run_singlethreaded(test)]

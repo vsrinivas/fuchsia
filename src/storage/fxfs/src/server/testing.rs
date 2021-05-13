@@ -4,10 +4,8 @@
 
 use {
     crate::{
-        device::DeviceHolder,
         object_store::{fsck::fsck, FxFilesystem},
         server::volume::FxVolumeAndRoot,
-        testing::fake_device::FakeDevice,
         volume::root_volume,
     },
     anyhow::Error,
@@ -18,6 +16,7 @@ use {
     },
     fuchsia_zircon::Status,
     std::sync::Arc,
+    storage_device::{fake_device::FakeDevice, DeviceHolder},
     vfs::{
         directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path,
         registry::token_registry,

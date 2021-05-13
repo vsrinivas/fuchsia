@@ -382,7 +382,6 @@ pub fn remove(transaction: &mut Transaction<'_>, store: &ObjectStore, object_id:
 mod tests {
     use {
         crate::{
-            device::DeviceHolder,
             errors::FxfsError,
             object_store::{
                 directory::{replace_child, Directory},
@@ -390,9 +389,9 @@ mod tests {
                 transaction::TransactionHandler,
                 HandleOptions, ObjectDescriptor, ObjectHandle, ObjectHandleExt, ObjectStore,
             },
-            testing::fake_device::FakeDevice,
         },
         fuchsia_async as fasync,
+        storage_device::{fake_device::FakeDevice, DeviceHolder},
     };
 
     const TEST_DEVICE_BLOCK_SIZE: u32 = 512;

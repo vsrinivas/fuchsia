@@ -486,7 +486,6 @@ impl LayerIterator<AllocatorKey, AllocatorValue> for CoalescingIterator<'_> {
 mod tests {
     use {
         crate::{
-            device::DeviceHolder,
             lsm_tree::{
                 skip_list_layer::SkipListLayer,
                 types::{Item, ItemRef, Layer, LayerIterator, MutableLayer},
@@ -503,7 +502,6 @@ mod tests {
                 transaction::TransactionHandler,
                 ObjectStore,
             },
-            testing::fake_device::FakeDevice,
         },
         fuchsia_async as fasync,
         std::{
@@ -511,6 +509,7 @@ mod tests {
             ops::{Bound, Range},
             sync::Arc,
         },
+        storage_device::{fake_device::FakeDevice, DeviceHolder},
     };
 
     // TODO(jfsulliv): move to a range_utils module or something similar.

@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    crate::{device::DeviceHolder, object_store::FxFilesystem, volume::root_volume},
+    crate::{object_store::FxFilesystem, volume::root_volume},
     anyhow::Error,
+    storage_device::DeviceHolder,
 };
 
 pub async fn mkfs(device: DeviceHolder) -> Result<(), Error> {

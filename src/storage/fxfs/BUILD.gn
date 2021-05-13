@@ -3,12 +3,14 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/components/fuchsia_unittest_component.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 
 fxfs_deps = [
   "//src/lib/async-utils",
   "//src/lib/fuchsia-async",
+  "//src/lib/storage/storage_device",
   "//third_party/rust_crates:anyhow",
   "//third_party/rust_crates:async-trait",
   "//third_party/rust_crates:bincode",
@@ -16,7 +18,6 @@ fxfs_deps = [
   "//third_party/rust_crates:either-v1_5_0",
   "//third_party/rust_crates:futures",
   "//third_party/rust_crates:log",
-  "//third_party/rust_crates:num",
   "//third_party/rust_crates:once_cell",
   "//third_party/rust_crates:rand",
   "//third_party/rust_crates:serde",
@@ -26,10 +27,6 @@ fxfs_deps = [
 fxfs_test_deps = [ "//third_party/rust_crates:matches" ]
 
 fxfs_sources = [
-  "src/device.rs",
-  "src/device/buffer.rs",
-  "src/device/buffer_allocator.rs",
-  "src/device/file_backed_device.rs",
   "src/errors.rs",
   "src/lib.rs",
   "src/lsm_tree.rs",
@@ -59,7 +56,6 @@ fxfs_sources = [
   "src/object_store/testing/fake_filesystem.rs",
   "src/object_store/transaction.rs",
   "src/testing.rs",
-  "src/testing/fake_device.rs",
   "src/testing/fake_object.rs",
   "src/volume.rs",
 ]
@@ -73,7 +69,6 @@ if (is_fuchsia) {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-runtime",
-    "//src/lib/storage/block_client/rust:remote-block-device",
     "//src/lib/storage/vfs/rust:vfs",
     "//src/lib/zircon/rust:fuchsia-zircon",
   ]
@@ -82,7 +77,6 @@ if (is_fuchsia) {
     "//garnet/lib/rust/io_util",
   ]
   fxfs_sources += [
-    "src/device/block_device.rs",
     "src/server.rs",
     "src/server/directory.rs",
     "src/server/errors.rs",
@@ -103,10 +97,8 @@ rustc_library("lib") {
   test_deps = fxfs_test_deps
 }
 
-fuchsia_component("fxfs-test") {
-  testonly = true
+fuchsia_unittest_component("fxfs-test") {
   deps = [ ":lib_test" ]
-  manifest = "meta/fxfs_lib_test.cml"
 }
 
 fuchsia_test_package("fxfs-tests") {

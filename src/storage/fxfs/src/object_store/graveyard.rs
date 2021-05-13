@@ -177,12 +177,9 @@ impl GraveyardIterator<'_, '_> {
 mod tests {
     use {
         super::Graveyard,
-        crate::{
-            device::DeviceHolder,
-            object_store::{filesystem::FxFilesystem, transaction::TransactionHandler},
-            testing::fake_device::FakeDevice,
-        },
+        crate::object_store::{filesystem::FxFilesystem, transaction::TransactionHandler},
         fuchsia_async as fasync,
+        storage_device::{fake_device::FakeDevice, DeviceHolder},
     };
 
     const TEST_DEVICE_BLOCK_SIZE: u32 = 512;

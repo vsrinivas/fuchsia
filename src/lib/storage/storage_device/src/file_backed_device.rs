@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::device::{
+    crate::{
         buffer::{Buffer, BufferRef, MutableBufferRef},
         buffer_allocator::{BufferAllocator, MemBufferSource},
         Device,
@@ -94,7 +94,7 @@ impl Device for FileBackedDevice {
 #[cfg(test)]
 mod tests {
     use {
-        crate::device::{file_backed_device::FileBackedDevice, Device},
+        crate::{file_backed_device::FileBackedDevice, Device},
         fuchsia_async as fasync,
         std::fs::{File, OpenOptions},
         std::path::PathBuf,

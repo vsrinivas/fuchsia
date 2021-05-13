@@ -4,7 +4,6 @@
 
 use {
     crate::{
-        device::buffer::{Buffer, BufferRef, MutableBufferRef},
         lsm_tree::types::LayerIterator,
         object_handle::{ObjectHandle, ObjectProperties},
         object_store::{
@@ -16,7 +15,7 @@ use {
             },
             record::{ObjectItem, Timestamp},
             transaction::Transaction,
-            Device, ObjectStore,
+            ObjectStore,
         },
     },
     anyhow::{bail, Error},
@@ -28,6 +27,10 @@ use {
         collections::HashMap,
         ops::{Bound, Range},
         sync::Arc,
+    },
+    storage_device::{
+        buffer::{Buffer, BufferRef, MutableBufferRef},
+        Device,
     },
 };
 
@@ -291,7 +294,6 @@ mod tests {
     use {
         super::{SuperBlock, MIN_SUPER_BLOCK_SIZE},
         crate::{
-            device::DeviceHolder,
             lsm_tree::types::LayerIterator,
             object_handle::ObjectHandle,
             object_store::{
@@ -303,10 +305,10 @@ mod tests {
                 transaction::TransactionHandler,
                 HandleOptions, ObjectStore,
             },
-            testing::fake_device::FakeDevice,
         },
         fuchsia_async as fasync,
         std::{ops::Bound, sync::Arc},
+        storage_device::{fake_device::FakeDevice, DeviceHolder},
     };
 
     const TEST_DEVICE_BLOCK_SIZE: u32 = 512;

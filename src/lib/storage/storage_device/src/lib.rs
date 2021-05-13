@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::device::buffer::{Buffer, BufferRef, MutableBufferRef},
+    crate::buffer::{Buffer, BufferRef, MutableBufferRef},
     anyhow::Error,
     async_trait::async_trait,
     std::{ops::Deref, sync::Arc},
@@ -17,6 +17,8 @@ pub mod block_device;
 
 #[cfg(target_family = "unix")]
 pub mod file_backed_device;
+
+pub mod fake_device;
 
 #[async_trait]
 /// Device is an abstract representation of an underlying block device.
@@ -43,7 +45,6 @@ pub trait Device: Send + Sync {
     /// Flush the device.
     async fn flush(&self) -> Result<(), Error>;
     /// Reopens the device, making it usable again. (Only implemented for testing devices.)
-    #[cfg(test)]
     fn reopen(&self) {
         unreachable!();
     }
@@ -64,7 +65,6 @@ impl DeviceHolder {
 
     // Ensures there are no dangling references to the device. Useful for tests to ensure orderly
     // shutdown.
-    #[cfg(test)]
     pub fn ensure_unique(&self) {
         assert_eq!(Arc::strong_count(&self.0), 1);
     }

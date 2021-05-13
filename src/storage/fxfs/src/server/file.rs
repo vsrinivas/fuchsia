@@ -214,10 +214,8 @@ impl File for FxFile {
 mod tests {
     use {
         crate::{
-            device::DeviceHolder,
             object_handle::INVALID_OBJECT_ID,
             server::testing::{close_file_checked, open_file_checked, TestFixture},
-            testing::fake_device::FakeDevice,
         },
         fidl_fuchsia_io::{
             self as fio, SeekOrigin, MODE_TYPE_FILE, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE,
@@ -226,6 +224,7 @@ mod tests {
         fuchsia_async as fasync,
         fuchsia_zircon::Status,
         io_util::{read_file_bytes, write_file_bytes},
+        storage_device::{fake_device::FakeDevice, DeviceHolder},
     };
 
     #[fasync::run_singlethreaded(test)]

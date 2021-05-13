@@ -219,7 +219,6 @@ mod tests {
     use {
         super::fsck,
         crate::{
-            device::DeviceHolder,
             lsm_tree::types::{Item, ItemRef, LayerIterator},
             object_handle::ObjectHandle,
             object_store::{
@@ -232,10 +231,10 @@ mod tests {
                 transaction::TransactionHandler,
                 HandleOptions, ObjectStore,
             },
-            testing::fake_device::FakeDevice,
         },
         fuchsia_async as fasync,
         std::ops::Bound,
+        storage_device::{fake_device::FakeDevice, DeviceHolder},
     };
 
     const TEST_DEVICE_BLOCK_SIZE: u32 = 512;

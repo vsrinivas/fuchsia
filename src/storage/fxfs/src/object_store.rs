@@ -21,10 +21,6 @@ pub use record::{ObjectDescriptor, Timestamp};
 
 use {
     crate::{
-        device::{
-            buffer::{Buffer, BufferRef, MutableBufferRef},
-            Device,
-        },
         errors::FxfsError,
         lsm_tree::{types::LayerIterator, LSMTree},
         object_handle::{ObjectHandle, ObjectHandleExt, ObjectProperties, INVALID_OBJECT_ID},
@@ -55,6 +51,10 @@ use {
             Arc, Mutex, Weak,
         },
         time::{Duration, SystemTime, UNIX_EPOCH},
+    },
+    storage_device::{
+        buffer::{Buffer, BufferRef, MutableBufferRef},
+        Device,
     },
 };
 
@@ -1441,7 +1441,6 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> ObjectHandle for StoreObject
 mod tests {
     use {
         crate::{
-            device::DeviceHolder,
             lsm_tree::types::{ItemRef, LayerIterator},
             object_handle::{ObjectHandle, ObjectHandleExt, ObjectProperties},
             object_store::{
@@ -1453,7 +1452,6 @@ mod tests {
                 transaction::TransactionHandler,
                 HandleOptions, ObjectStore, StoreObjectHandle,
             },
-            testing::fake_device::FakeDevice,
         },
         fuchsia_async as fasync,
         futures::{channel::oneshot::channel, join},
@@ -1464,6 +1462,7 @@ mod tests {
             sync::{Arc, Mutex},
             time::Duration,
         },
+        storage_device::{fake_device::FakeDevice, DeviceHolder},
     };
 
     const TEST_DEVICE_BLOCK_SIZE: u32 = 512;
