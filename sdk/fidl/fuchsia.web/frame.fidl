@@ -329,6 +329,21 @@ protocol Frame {
     /// Valid themes are `LIGHT`, `DARK`, and `AUTO`. The default color scheme is `LIGHT`.
     /// If `DEFAULT` is specified, the [`Frame`] will disconnect with `ZX_ERR_INVALID_ARGS`.
     SetPreferredTheme(fuchsia.settings.ThemeType theme);
+
+    /// Sets scale factor (zoom level) that should be applied to web content rendered in this
+    /// frame. Values above 1.0 make all web content (including text and images) larger, while
+    /// values below 1.0 will make it smaller. In other words, values above 1.0 are used to zoom in
+    /// and values below 1.0 zoom out. The overall ratio between physical pixel and CSS pixel is a
+    /// product of the scale set with this method and the scale provided by Scenic (see
+    /// [`fuchsia.ui.gfx.Metrics`]). That product is visible to the web content as
+    /// `window.devicePixelRatio`.
+    ///
+    /// This method does not have any effect on the size of the view on the screen and the
+    /// resolution at which the view is rendered. Native (non-web) UI elements, such as default
+    /// scroll bars and default mouse cursor, are not scaled. User may zoom the page further when
+    /// pinch-zoom is enabled (see [`InputTypes.GESTURE_PINCH`]).
+    [Transitional]
+    SetPageScale(float32 scale);
 };
 
 resource table WebMessage {
