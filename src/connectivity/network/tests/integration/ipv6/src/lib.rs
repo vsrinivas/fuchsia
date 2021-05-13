@@ -7,12 +7,14 @@
 use std::mem::size_of;
 
 use fidl_fuchsia_net as net;
+use fidl_fuchsia_net_stack as net_stack;
 use fidl_fuchsia_netstack as netstack;
 use fidl_fuchsia_netstack_ext::RouteTable;
 use fidl_fuchsia_sys as sys;
 use fuchsia_async::{self as fasync, DurationExt as _, TimeoutExt as _};
 use fuchsia_component::client::AppBuilder;
 use fuchsia_zircon as zx;
+use test_case::test_case;
 
 use anyhow::{self, Context};
 use futures::{
@@ -160,12 +162,28 @@ async fn consistent_initial_ipv6_addrs<E: netemul::Endpoint>(name: &str) {
 /// Tests that `EXPECTED_ROUTER_SOLICIATIONS` Router Solicitation messages are transmitted
 /// when the interface is brought up.
 #[variants_test]
-async fn sends_router_solicitations<E: netemul::Endpoint>(name: &str) {
+#[test_case("host", false ; "host")]
+#[test_case("router", true ; "router")]
+async fn sends_router_solicitations<E: netemul::Endpoint>(
+    test_name: &str,
+    sub_test_name: &str,
+    forwarding: bool,
+) {
+    let name = format!("{}_{}", test_name, sub_test_name);
+    let name = name.as_str();
+
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
-    let (_network, _environment, _netstack, _iface, fake_ep) =
+    let (_network, environment, _netstack, _iface, fake_ep) =
         setup_network::<E, _>(&sandbox, name).await.expect("error setting up network");
 
-    // Make sure exactly `EXPECTED_ROUTER_SOLICIATIONS` RS messages are transmited
+    if forwarding {
+        let stack = environment
+            .connect_to_service::<net_stack::StackMarker>()
+            .expect("failed to get stack proxy");
+        let () = stack.enable_ip_forwarding().await.expect("error enabling IP forwarding");
+    }
+
+    // Make sure exactly `EXPECTED_ROUTER_SOLICIATIONS` RS messages are transmitted
     // by the netstack.
     let mut observed_rs = 0;
     loop {
@@ -266,10 +284,25 @@ async fn sends_router_solicitations<E: netemul::Endpoint>(name: &str) {
 
 /// Tests that both stable and temporary SLAAC addresses are generated for a SLAAC prefix.
 #[variants_test]
-async fn slaac_with_privacy_extensions<E: netemul::Endpoint>(name: &str) {
+#[test_case("host", false ; "host")]
+#[test_case("router", true ; "router")]
+async fn slaac_with_privacy_extensions<E: netemul::Endpoint>(
+    test_name: &str,
+    sub_test_name: &str,
+    forwarding: bool,
+) {
+    let name = format!("{}_{}", test_name, sub_test_name);
+    let name = name.as_str();
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
     let (_network, environment, _netstack, iface, fake_ep) =
         setup_network::<E, _>(&sandbox, name).await.expect("error setting up network");
+
+    if forwarding {
+        let stack = environment
+            .connect_to_service::<net_stack::StackMarker>()
+            .expect("failed to get stack proxy");
+        let () = stack.enable_ip_forwarding().await.expect("error enabling IP forwarding");
+    }
 
     // Wait for a Router Solicitation.
     //
@@ -588,7 +621,13 @@ async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) {
 }
 
 #[variants_test]
-async fn router_and_prefix_discovery<E: netemul::Endpoint>(name: &str) {
+#[test_case("host", false ; "host")]
+#[test_case("router", true ; "router")]
+async fn router_and_prefix_discovery<E: netemul::Endpoint>(
+    test_name: &str,
+    sub_test_name: &str,
+    forwarding: bool,
+) {
     async fn check_route_table<P>(netstack: &netstack::NetstackProxy, pred: P)
     where
         P: Fn(&Vec<netstack::RouteTableEntry>) -> bool,
@@ -613,9 +652,19 @@ async fn router_and_prefix_discovery<E: netemul::Endpoint>(name: &str) {
         )
     }
 
+    let name = format!("{}_{}", test_name, sub_test_name);
+    let name = name.as_str();
+
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
-    let (_network, _environment, netstack, iface, fake_ep) =
+    let (_network, environment, netstack, iface, fake_ep) =
         setup_network::<E, _>(&sandbox, name).await.expect("failed to setup network");
+
+    if forwarding {
+        let stack = environment
+            .connect_to_service::<net_stack::StackMarker>()
+            .expect("failed to get stack proxy");
+        let () = stack.enable_ip_forwarding().await.expect("error enabling IP forwarding");
+    }
 
     let pi = PrefixInformation::new(
         ipv6_consts::PREFIX.prefix(),  /* prefix_length */

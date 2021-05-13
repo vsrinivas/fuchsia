@@ -126,18 +126,9 @@ const (
 	// handleRAs is the configuration for when Router Advertisements should be
 	// handled.
 	//
-	// This is the default configuration on linux, as per
-	// https://www.kernel.org/doc/Documentation/networking/ip-sysctl.txt:
-	//
-	//   accept_ra - INTEGER
-	//
-	//     Accept Router Advertisements; autoconfigure using them.
-	//
-	//     ...
-	//
-	//     Functional default: enabled if local forwarding is disabled.
-	//                         disabled if local forwarding is enabled.
-	handleRAs = ipv6.HandlingRAsEnabledWhenForwardingDisabled
+	// We want to handle router advertisements even when operating as a router
+	// so that we can perform router/prefix discovery and SLAAC.
+	handleRAs = ipv6.HandlingRAsAlwaysEnabled
 )
 
 type atomicBool uint32
