@@ -69,6 +69,11 @@ struct MiscFeaturesMsr : public X86MsrBase<MiscFeaturesMsr, X86Msr::IA32_MISC_EN
   DEF_BIT(3, automatic_thermal_control_circuit);
   // Bits [2:1] are reserved.
   DEF_BIT(0, fast_strings);
+
+  template <typename CpuidIoProvider>
+  static bool IsSupported(CpuidIoProvider&& cpuid) {
+    return arch::GetVendor(cpuid) == arch::Vendor::kIntel;
+  }
 };
 
 // [amd/ppr/17h/01h,08h]:  2.1.14.2 MSRs - MSRC000_0xxx.

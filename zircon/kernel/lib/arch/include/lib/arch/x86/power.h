@@ -36,14 +36,17 @@ inline bool SetX86CpuTurboState(CpuidIoProvider&& cpuid, MsrIoProvider&& msr, bo
   //
   // IDA stands for "Intel Dynamic Acceleration", an earlier name/iteration of
   // Intel Turbo Boost.
-  const auto intel_features = cpuid.template Read<CpuidThermalAndPowerFeatureFlagsA>();
-  auto misc_enable = MiscFeaturesMsr::Get().ReadFrom(&msr);
-  const bool intel_supported_and_on = intel_features.turbo() || intel_features.turbo_max();
-  const bool intel_supported_and_off = misc_enable.ida_disable();
-  const bool intel_supported = intel_supported_and_on || intel_supported_and_off;
-  if (intel_supported) {
-    misc_enable.set_ida_disable(!enable).WriteTo(&msr);
-    return true;
+  if (MiscFeaturesMsr::IsSupported(cpuid) &&
+      CpuidSupports<CpuidThermalAndPowerFeatureFlagsA>(cpuid)) {
+    const auto intel_features = cpuid.template Read<CpuidThermalAndPowerFeatureFlagsA>();
+    auto misc_enable = MiscFeaturesMsr::Get().ReadFrom(&msr);
+    const bool intel_supported_and_on = intel_features.turbo() || intel_features.turbo_max();
+    const bool intel_supported_and_off = misc_enable.ida_disable();
+    const bool intel_supported = intel_supported_and_on || intel_supported_and_off;
+    if (intel_supported) {
+      misc_enable.set_ida_disable(!enable).WriteTo(&msr);
+      return true;
+    }
   }
 
   // The AMD way.
