@@ -456,51 +456,51 @@ struct FidlHasTypeTag final : fidl_type {
   FidlHasTypeTag() = delete;
 };
 
-constexpr FidlTypeTag fidl_type::type_tag() const {
+__ALWAYS_INLINE constexpr FidlTypeTag fidl_type::type_tag() const {
   return static_cast<const FidlHasTypeTag*>(this)->tag;
 }
 
-constexpr const FidlCodedPrimitive& fidl_type::coded_primitive() const {
+__ALWAYS_INLINE constexpr const FidlCodedPrimitive& fidl_type::coded_primitive() const {
   return *static_cast<const FidlCodedPrimitive*>(this);
 }
 
-constexpr const FidlCodedEnum& fidl_type::coded_enum() const {
+__ALWAYS_INLINE constexpr const FidlCodedEnum& fidl_type::coded_enum() const {
   return *static_cast<const FidlCodedEnum*>(this);
 }
 
-constexpr const FidlCodedBits& fidl_type::coded_bits() const {
+__ALWAYS_INLINE constexpr const FidlCodedBits& fidl_type::coded_bits() const {
   return *static_cast<const FidlCodedBits*>(this);
 }
 
-constexpr const FidlCodedStruct& fidl_type::coded_struct() const {
+__ALWAYS_INLINE constexpr const FidlCodedStruct& fidl_type::coded_struct() const {
   return *static_cast<const FidlCodedStruct*>(this);
 }
 
-constexpr const FidlCodedStructPointer& fidl_type::coded_struct_pointer() const {
+__ALWAYS_INLINE constexpr const FidlCodedStructPointer& fidl_type::coded_struct_pointer() const {
   return *static_cast<const FidlCodedStructPointer*>(this);
 }
 
-constexpr const FidlCodedTable& fidl_type::coded_table() const {
+__ALWAYS_INLINE constexpr const FidlCodedTable& fidl_type::coded_table() const {
   return *static_cast<const FidlCodedTable*>(this);
 }
 
-constexpr const FidlCodedXUnion& fidl_type::coded_xunion() const {
+__ALWAYS_INLINE constexpr const FidlCodedXUnion& fidl_type::coded_xunion() const {
   return *static_cast<const FidlCodedXUnion*>(this);
 }
 
-constexpr const FidlCodedArray& fidl_type::coded_array() const {
+__ALWAYS_INLINE constexpr const FidlCodedArray& fidl_type::coded_array() const {
   return *static_cast<const FidlCodedArray*>(this);
 }
 
-constexpr const FidlCodedHandle& fidl_type::coded_handle() const {
+__ALWAYS_INLINE constexpr const FidlCodedHandle& fidl_type::coded_handle() const {
   return *static_cast<const FidlCodedHandle*>(this);
 }
 
-constexpr const FidlCodedString& fidl_type::coded_string() const {
+__ALWAYS_INLINE constexpr const FidlCodedString& fidl_type::coded_string() const {
   return *static_cast<const FidlCodedString*>(this);
 }
 
-constexpr const FidlCodedVector& fidl_type::coded_vector() const {
+__ALWAYS_INLINE constexpr const FidlCodedVector& fidl_type::coded_vector() const {
   return *static_cast<const FidlCodedVector*>(this);
 }
 
