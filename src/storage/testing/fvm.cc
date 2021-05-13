@@ -79,20 +79,18 @@ zx::status<std::string> CreateFvmPartition(const std::string& device_path, int s
     return zx::error(ZX_ERR_BAD_STATE);
   }
 
-  alloc_req_t request;
-  memset(&request, 0, sizeof(request));
-  request.slice_count = 1;
+  alloc_req_t request = {.slice_count = 1};
   memcpy(request.name, options.name.data(), options.name.size());
   request.name[options.name.size()] = 0;
   memcpy(request.type, options.type ? options.type->data() : kTestPartGUID, sizeof(request.type));
   memcpy(request.guid, kTestUniqueGUID, sizeof(request.guid));
 
-  fbl::unique_fd fd(fvm_allocate_partition(fvm_fd.get(), &request));
+  auto fd = fbl::unique_fd(fvm_allocate_partition(fvm_fd.get(), &request));
   if (!fd) {
     FX_LOGS(ERROR) << "Could not allocate FVM partition";
     return zx::error(ZX_ERR_BAD_STATE);
   }
-  close(fvm_fd.release());
+  fvm_fd.reset();
 
   char partition_path[PATH_MAX];
   fd.reset(open_partition(kTestUniqueGUID, request.type, 0, partition_path));

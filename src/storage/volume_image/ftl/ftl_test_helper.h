@@ -26,7 +26,10 @@ struct InMemoryRawNand {
 class InMemoryNdm final : public ftl::NdmBaseDriver {
  public:
   explicit InMemoryNdm(InMemoryRawNand* raw_nand, uint64_t page_size, uint64_t oob_size)
-      : raw_nand_(raw_nand), page_size_(page_size), oob_size_(oob_size) {}
+      : NdmBaseDriver(ftl::DefaultLogger()),
+        raw_nand_(raw_nand),
+        page_size_(page_size),
+        oob_size_(oob_size) {}
 
   // Performs driver initialization. Returns an error string, or nullptr on
   // success.
@@ -64,6 +67,9 @@ class InMemoryNdm final : public ftl::NdmBaseDriver {
   // Returns whether a given page is empty or not. |data| and |spare| store
   // the contents of the page.
   bool IsEmptyPage(uint32_t page_num, const uint8_t* data, const uint8_t* spare) final;
+
+  uint32_t PageSize() final { return static_cast<uint32_t>(page_size_); }
+  uint8_t SpareSize() final { return static_cast<uint8_t>(oob_size_); }
 
  private:
   InMemoryRawNand* raw_nand_ = nullptr;

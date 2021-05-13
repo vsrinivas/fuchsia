@@ -47,7 +47,7 @@ class NdmRamDriver final : public ftl::NdmBaseDriver {
  public:
   explicit NdmRamDriver(const ftl::VolumeOptions& options) : NdmRamDriver(options, {}) {}
   NdmRamDriver(const ftl::VolumeOptions& options, const TestOptions& test_options)
-      : options_(options), test_options_(test_options) {}
+      : NdmBaseDriver(ftl::DefaultLogger()), options_(options), test_options_(test_options) {}
   ~NdmRamDriver() final = default;
 
   // Extends the visible volume to the whole size of the storage.
@@ -75,6 +75,8 @@ class NdmRamDriver final : public ftl::NdmBaseDriver {
   int NandErase(uint32_t page_num) final;
   int IsBadBlock(uint32_t page_num) final;
   bool IsEmptyPage(uint32_t page_num, const uint8_t* data, const uint8_t* spare) final;
+  uint32_t PageSize() final;
+  uint8_t SpareSize() final;
 
  private:
   // Reads or Writes a single page.

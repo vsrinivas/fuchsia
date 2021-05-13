@@ -155,7 +155,7 @@ struct ndm {
   int (*erase_block)(ui32 pn, void* dev);
   int (*is_block_bad)(ui32 pn, void* dev);
 
-  Logger logger;
+  FtlLogger logger;
 
   // Device Dependent Variables
   void* dev;          // optional value set by driver

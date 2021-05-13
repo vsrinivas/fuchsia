@@ -99,7 +99,8 @@ class FtlVolumeWrapperTest : public zxtest::Test {
 
     ftl_volume_wrapper_ = std::make_unique<FtlVolumeWrapper>(std::move(volume));
     volume_->set_ftl_instance(ftl_volume_wrapper_.get());
-    ASSERT_OK(ftl_volume_wrapper_->Init(std::unique_ptr<ftl::NdmBaseDriver>()));
+    ASSERT_OK(
+        ftl_volume_wrapper_->Init(std::unique_ptr<ftl::NdmBaseDriver>(ftl::DefaultLogger())));
     ASSERT_TRUE(volume_->initialized());
   }
 

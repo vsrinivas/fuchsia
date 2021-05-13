@@ -70,7 +70,16 @@ class NandDriverImpl final : public ftl::NandDriver {
  public:
   NandDriverImpl(const nand_protocol_t* parent, const bad_block_protocol_t* bad_block,
                  ftl::OperationCounters* counters)
-      : parent_(parent), bad_block_protocol_(bad_block), counters_(counters) {}
+      : NandDriver(FtlLogger{
+            .trace = &LogTrace,
+            .debug = &LogDebug,
+            .info = &LogInfo,
+            .warn = &LogWarning,
+            .error = &LogError,
+        }),
+        parent_(parent),
+        bad_block_protocol_(bad_block),
+        counters_(counters) {}
   ~NandDriverImpl() final {}
 
   // NdmDriver interface:
@@ -84,6 +93,8 @@ class NandDriverImpl final : public ftl::NandDriver {
   int IsBadBlock(uint32_t page_num) final;
   bool IsEmptyPage(uint32_t page_num, const uint8_t* data, const uint8_t* spare) final;
   void TryEraseRange(uint32_t start_block, uint32_t end_block) final;
+  uint32_t PageSize() final { return info_.page_size; }
+  uint8_t SpareSize() final { return info_.oob_size; }
   const nand_info_t& info() const final { return info_; }
 
  private:
@@ -137,14 +148,7 @@ const char* NandDriverImpl::Attach(const ftl::Volume* ftl_volume) {
   } else if (BadBbtReservation()) {
     return "Unable to use bad block reservation";
   }
-  ftl::LoggerProxy logger = {
-      .trace = &LogTrace,
-      .debug = &LogDebug,
-      .info = &LogInfo,
-      .warn = &LogWarning,
-      .error = &LogError,
-  };
-  const char* error = CreateNdmVolumeWithLogger(ftl_volume, options, true, logger);
+  const char* error = CreateNdmVolume(ftl_volume, options, true);
   if (error) {
     // Retry allowing the volume to be fixed as needed.
     zxlogf(INFO, "FTL: About to retry volume creation");

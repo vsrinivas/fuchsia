@@ -5,6 +5,8 @@
 #include "ram-nand.h"
 
 #include <lib/ddk/binding.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/metadata.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,7 +17,6 @@
 #include <algorithm>
 #include <utility>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/bad-block.h>
 #include <ddk/metadata/nand.h>
 #include <fbl/algorithm.h>
@@ -140,6 +141,11 @@ zx_status_t NandDevice::Bind(const fuchsia_hardware_nand_RamNandInfo& info) {
       {BIND_PROTOCOL, 0, ZX_PROTOCOL_NAND},
       {BIND_NAND_CLASS, 0, params_.nand_class},
   };
+
+  fail_after_ = info.fail_after;
+  if (fail_after_ > 0) {
+    zxlogf(INFO, "fail-after: %u", fail_after_);
+  }
 
   return DdkAdd(ddk::DeviceAddArgs(name).set_props(props));
 }
@@ -323,11 +329,35 @@ int NandDevice::WorkerThread() {
     zx_status_t status = ZX_OK;
 
     switch (operation->command) {
-      case NAND_OP_READ:
       case NAND_OP_WRITE:
+        if (fail_after_ > 0) {
+          if (write_count_ >= fail_after_) {
+            status = ZX_ERR_IO;
+            break;
+          }
+          if (write_count_ + operation->rw.length > fail_after_) {
+            const uint32_t old_length = operation->rw.length;
+            operation->rw.length = fail_after_ - write_count_;
+            status = ReadWriteData(operation);
+            if (status == ZX_OK) {
+              status = ReadWriteOob(operation);
+            }
+            if (status == ZX_OK) {
+              write_count_ = fail_after_;
+              status = ZX_ERR_IO;
+            }
+            operation->rw.length = old_length;
+            break;
+          }
+        }
+        __FALLTHROUGH;
+      case NAND_OP_READ:
         status = ReadWriteData(operation);
         if (status == ZX_OK) {
           status = ReadWriteOob(operation);
+        }
+        if (status == ZX_OK && operation->command == NAND_OP_WRITE) {
+          write_count_ += operation->rw.length;
         }
         break;
 

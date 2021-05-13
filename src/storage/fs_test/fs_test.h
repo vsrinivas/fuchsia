@@ -51,6 +51,11 @@ struct TestFilesystemOptions {
   // for OOB.
   zx::unowned_vmo ram_nand_vmo;
   bool use_fvm = false;
+
+  // If non-zero, create a dummy FVM partition which has the effect of moving the location of the
+  // partition under test to be at a different offset on the underlying device.
+  uint64_t dummy_fvm_partition_size = 0;
+
   uint64_t device_block_size = 0;
   uint64_t device_block_count = 0;
   uint64_t fvm_slice_size = 0;
@@ -62,6 +67,9 @@ struct TestFilesystemOptions {
 
   // The format blobfs should store blobs in.
   std::optional<blobfs::BlobLayoutFormat> blob_layout_format;
+
+  // If using ram_nand, the number of writes after which writes should fail.
+  uint32_t fail_after;
 };
 
 std::ostream& operator<<(std::ostream& out, const TestFilesystemOptions& options);

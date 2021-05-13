@@ -37,6 +37,7 @@ zx_library("ftl") {
     "ftln/ftln_intrnl.c",
     "ftln/ftln_rd.c",
     "ftln/ftln_util.c",
+    "ftln/stats.c",
     "ftln/ndm-driver.cc",
     "ftln/volume.cc",
     "ndm/ndm_init.c",
